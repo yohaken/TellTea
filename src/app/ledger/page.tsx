@@ -246,7 +246,7 @@ function LedgerView() {
                               <circle cx="12" cy="13" r="3"/>
                             </svg>
                           ) : (
-                            <span>เพิ่มรูป</span>
+                            "+"
                           )}
                         </button>
                       </td>
@@ -254,8 +254,7 @@ function LedgerView() {
                       <td className="col-out">{row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}</td>
                       <td className="col-act">
                         <button type="button" className="sheet-edit" onClick={() => setEditing(row)}>
-                          <span>ลบ</span>
-                          <span>แก้ไข</span>
+                          ลบ/แก้ไข
                         </button>
                       </td>
                     </tr>

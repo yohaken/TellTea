@@ -720,9 +720,10 @@ textarea {
 }
 
 .sheet-table .col-photo {
-  width: 2.8rem;
+  width: 2.2rem;
   text-align: center;
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .col-photo .photo-btn {
@@ -733,6 +734,8 @@ textarea {
 
 .sheet-table .col-desc {
   text-align: left;
+  line-height: 1.25;
+  word-break: break-word;
 }
 
 .sheet-table .col-in,
@@ -753,8 +756,9 @@ textarea {
 }
 
 .sheet-table .col-act {
-  width: 2.8rem;
+  width: 3.6rem;
   text-align: center;
+  white-space: nowrap;
 }
 
 .sheet-table tr.row-in {
@@ -768,20 +772,12 @@ textarea {
 .sheet-edit {
   border: 0;
   background: transparent;
-  cursor: pointer;
-  padding: 0.1rem 0;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.05rem;
-  line-height: 1.2;
-  font-size: 0.65rem;
   color: var(--tea-leaf);
+  font-size: 0.72rem;
   font-weight: 700;
-}
-
-.sheet-edit span {
-  display: block;
+  cursor: pointer;
+  padding: 0.2rem;
+  white-space: nowrap;
 }
 
 .photo-btn {
@@ -789,11 +785,14 @@ textarea {
   background: transparent;
   cursor: pointer;
   color: rgba(28, 42, 31, 0.45);
-  font-size: 0.72rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
   padding: 0.15rem;
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
+  justify-content: center;
+  white-space: nowrap;
   transition: color 120ms;
 }
 
