@@ -123,3 +123,87 @@ export function parseLedgerWorkbook(
     createdAt: base + index,
   }));
 }
+
+export type ImportOwnerBookRow = {
+  date: number;
+  description: string;
+  amountOut: number;
+  type: string;
+  createdBy: string;
+  createdAt: number;
+  sourceRow: number;
+};
+
+/** Parse owner books sheet: วันที่ | รายการ | ออก | (type optional) */
+export function parseOwnerBooksWorkbook(
+  data: ArrayBuffer | Uint8Array,
+  createdBy: string,
+): ImportOwnerBookRow[] {
+  const workbook = XLSX.read(data, { type: "array", cellDates: false });
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) throw new Error("ไม่พบชีทในไฟล์");
+
+  const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+    header: 1,
+    defval: null,
+    raw: true,
+  }) as unknown[][];
+
+  const headerIndex = findHeaderIndex(rows);
+  if (headerIndex < 0) {
+    throw new Error("ไม่พบหัวตาราง วันที่ / รายการ");
+  }
+
+  const header = mapHeader(rows[headerIndex] || []);
+  const colDate = header["วันที่"];
+  const colDesc = header["รายการ"];
+  const colOut = header["ออก"];
+  const colType =
+    header["type"] ?? header["Type"] ?? header["หมวด"] ?? header["note"];
+
+  if (colDate == null || colDesc == null || colOut == null) {
+    throw new Error("คอลัมน์ไม่ครบ — ต้องมี วันที่, รายการ, ออก");
+  }
+
+  // บช. เจ้าของ.xlsx: category (sga/Asset/cogs) sits in the column after ออก
+  const typeColFallback = colType == null ? colOut + 1 : null;
+
+  const parsed: Omit<ImportOwnerBookRow, "createdAt">[] = [];
+
+  for (let i = headerIndex + 1; i < rows.length; i += 1) {
+    const row = rows[i] || [];
+    const description = String(row[colDesc] ?? "").trim();
+    if (!description) continue;
+
+    const amountOut = toNumber(row[colOut]);
+    if (amountOut <= 0) continue;
+
+    const dateMs = cellToDateMs(row[colDate]);
+    if (dateMs == null) {
+      throw new Error(`แถว ${i + 1}: วันที่ไม่ถูกต้อง (${String(row[colDate])})`);
+    }
+
+    let type = "";
+    if (colType != null) {
+      type = String(row[colType] ?? "").trim();
+    } else if (typeColFallback != null) {
+      const raw = row[typeColFallback];
+      if (typeof raw === "string") type = raw.trim();
+    }
+
+    parsed.push({
+      date: dateMs,
+      description,
+      amountOut,
+      type,
+      createdBy,
+      sourceRow: i + 1,
+    });
+  }
+
+  const base = Date.now();
+  return parsed.map((row, index) => ({
+    ...row,
+    createdAt: base + index,
+  }));
+}

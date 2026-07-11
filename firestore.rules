@@ -54,6 +54,11 @@ service cloud.firestore {
       allow update, delete: if isStaff();
     }
 
+    // บัญชีส่วนตัวเจ้าของ — ออกอย่างเดียว เฉพาะเจ้าของ
+    match /ownerBooks/{entryId} {
+      allow read, write: if isOwner();
+    }
+
     match /stock/{itemId} {
       allow read: if isStaff();
       allow create, delete: if isOwner();
