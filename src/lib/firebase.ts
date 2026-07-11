@@ -49,7 +49,7 @@ export function getDb() {
 }
 
 export const OWNER_EMAIL = normalizeOwnerEmail(
-  process.env.NEXT_PUBLIC_OWNER_EMAIL || "phiraphong.yoh@gmail.com",
+  process.env.NEXT_PUBLIC_OWNER_EMAIL || "yohaken@gmail.com",
 );
 
 function normalizeOwnerEmail(email: string) {

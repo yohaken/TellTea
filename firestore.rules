@@ -22,7 +22,7 @@ service cloud.firestore {
     }
 
     function isOwnerEmail() {
-      return signedIn() && email() == 'phiraphong.yoh@gmail.com';
+      return signedIn() && email() == 'yohaken@gmail.com';
     }
 
     match /staff/{staffEmail} {
