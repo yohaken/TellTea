@@ -17,38 +17,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { staff, user, signOut } = useAuth();
   const isOwner = staff?.role === "owner";
+  const emailShort = user?.email?.split("@")[0] || "";
 
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <div>
-          <p className="brand">TellTea</p>
-          <p className="topbar-sub">จัดการร้าน</p>
-        </div>
-        <div className="topbar-user">
-          <span>{user?.email}</span>
-          <button type="button" className="ghost-btn" onClick={() => void signOut()}>
-            <LogOut size={16} />
-            ออก
-          </button>
-        </div>
-      </header>
+    <div className="phone-frame">
+      <div className="app-shell">
+        <header className="topbar">
+          <div>
+            <p className="brand">TellTea</p>
+            <p className="topbar-sub">จัดการร้าน</p>
+          </div>
+          <div className="topbar-user">
+            <span className="topbar-email" title={user?.email || ""}>
+              {emailShort}
+            </span>
+            <button type="button" className="ghost-btn icon-btn" onClick={() => void signOut()} aria-label="ออกจากระบบ">
+              <LogOut size={18} />
+            </button>
+          </div>
+        </header>
 
-      <main className="main-panel">{children}</main>
+        <main className="main-panel">{children}</main>
 
-      <nav className="bottom-nav">
-        {links
-          .filter((l) => !l.ownerOnly || isOwner)
-          .map(({ href, label, icon: Icon }) => {
-            const active = pathname === href || pathname.startsWith(href.replace(/\/$/, ""));
-            return (
-              <Link key={href} href={href} className={cn("nav-item", active && "active")}>
-                <Icon size={20} />
-                <span>{label}</span>
-              </Link>
-            );
-          })}
-      </nav>
+        <nav className="bottom-nav">
+          {links
+            .filter((l) => !l.ownerOnly || isOwner)
+            .map(({ href, label, icon: Icon }) => {
+              const active = pathname === href || pathname.startsWith(href.replace(/\/$/, ""));
+              return (
+                <Link key={href} href={href} className={cn("nav-item", active && "active")}>
+                  <Icon size={22} />
+                  <span>{label}</span>
+                </Link>
+              );
+            })}
+        </nav>
+      </div>
     </div>
   );
 }

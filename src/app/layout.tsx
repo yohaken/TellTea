@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Sarabun } from "next/font/google";
 import { AuthProvider } from "@/lib/auth";
 import "./globals.css";
@@ -18,6 +18,23 @@ const body = Sarabun({
 export const metadata: Metadata = {
   title: "TellTea — จัดการร้าน",
   description: "ระบบจัดการร้านชา TellTea สำหรับเจ้าของและพนักงาน",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "TellTea",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#2f6b4f",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
