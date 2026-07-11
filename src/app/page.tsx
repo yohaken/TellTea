@@ -9,10 +9,21 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "ready") router.replace("/ledger/");
-    else if (status === "signedOut" || status === "unconfigured" || status === "denied") {
+    if (status === "ready") {
+      router.replace("/ledger/");
+      return;
+    }
+    if (status === "signedOut" || status === "unconfigured" || status === "denied") {
       router.replace("/login/");
     }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (status !== "loading") return;
+    const timer = window.setTimeout(() => {
+      router.replace("/login/");
+    }, 2500);
+    return () => window.clearTimeout(timer);
   }, [status, router]);
 
   return (

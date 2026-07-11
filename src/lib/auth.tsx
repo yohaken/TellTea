@@ -74,7 +74,9 @@ async function resolveStaff(user: User): Promise<StaffMember | null> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>("loading");
+  const [status, setStatus] = useState<AuthStatus>(() =>
+    isFirebaseConfigured() ? "loading" : "unconfigured",
+  );
   const [user, setUser] = useState<User | null>(null);
   const [staff, setStaff] = useState<StaffMember | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -93,40 +95,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const auth = getFirebaseAuth();
-    let unsub = () => {};
 
-    (async () => {
+    // Don't block auth listener on persistence/redirect — that caused stuck "loading"
+    void setPersistence(auth, browserLocalPersistence).catch((err) => {
+      setError(mapAuthError(err));
+    });
+
+    if (sessionStorage.getItem(REDIRECT_FLAG) === "1") {
+      sessionStorage.removeItem(REDIRECT_FLAG);
+      void getRedirectResult(auth).catch((err) => {
+        setError(mapAuthError(err));
+      });
+    }
+
+    const unsub = onAuthStateChanged(auth, async (next) => {
+      setError(null);
+      if (!next) {
+        setUser(null);
+        setStaff(null);
+        setStatus("signedOut");
+        return;
+      }
+      setUser(next);
+      setStatus("loading");
       try {
-        await setPersistence(auth, browserLocalPersistence);
-        if (sessionStorage.getItem(REDIRECT_FLAG) === "1") {
-          sessionStorage.removeItem(REDIRECT_FLAG);
-          await getRedirectResult(auth);
-        }
+        const member = await resolveStaff(next);
+        setStaff(member);
+        setStatus(member ? "ready" : "denied");
       } catch (err) {
         setError(mapAuthError(err));
+        setStaff(null);
+        setStatus("denied");
       }
-
-      unsub = onAuthStateChanged(auth, async (next) => {
-        setError(null);
-        if (!next) {
-          setUser(null);
-          setStaff(null);
-          setStatus("signedOut");
-          return;
-        }
-        setUser(next);
-        setStatus("loading");
-        try {
-          const member = await resolveStaff(next);
-          setStaff(member);
-          setStatus(member ? "ready" : "denied");
-        } catch (err) {
-          setError(mapAuthError(err));
-          setStaff(null);
-          setStatus("denied");
-        }
-      });
-    })();
+    });
 
     return () => unsub();
   }, []);

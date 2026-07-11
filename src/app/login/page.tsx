@@ -12,6 +12,8 @@ export default function LoginPage() {
     if (status === "ready") router.replace("/ledger/");
   }, [status, router]);
 
+  const blocked = status === "unconfigured";
+
   return (
     <div className="hero-login">
       <div className="hero-copy">
@@ -26,7 +28,7 @@ export default function LoginPage() {
         ) : null}
         {error ? <p className="error-text">{error}</p> : null}
         {status === "denied" ? (
-          <p className="muted" style={{ marginBottom: "0.75rem" }}>
+          <p className="muted" style={{ marginBottom: "0.75rem", textAlign: "left" }}>
             บัญชีนี้ยังไม่อยู่ในรายชื่อพนักงาน ให้เจ้าของเพิ่มอีเมลก่อน
           </p>
         ) : null}
@@ -34,9 +36,9 @@ export default function LoginPage() {
           type="button"
           className="primary-btn"
           onClick={() => void signIn()}
-          disabled={status === "loading" || status === "unconfigured"}
+          disabled={blocked}
         >
-          เข้าสู่ระบบด้วย Google
+          {status === "loading" ? "กำลังเตรียมระบบ..." : "เข้าสู่ระบบด้วย Google"}
         </button>
       </div>
     </div>
