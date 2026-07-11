@@ -1,12 +1,23 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+
+function isInAppBrowser() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /Line\//i.test(ua) || /FBAN|FBAV/i.test(ua) || /Instagram/i.test(ua);
+}
 
 export default function LoginPage() {
   const { status, signIn, error } = useAuth();
   const router = useRouter();
+  const [inApp, setInApp] = useState(false);
+
+  useEffect(() => {
+    setInApp(isInAppBrowser());
+  }, []);
 
   useEffect(() => {
     if (status === "ready") router.replace("/ledger/");
@@ -21,6 +32,11 @@ export default function LoginPage() {
         <p>บัญชีร้าน — เจ้าของโอนเข้า พนักงานบันทึกเงินออก</p>
       </div>
       <div className="hero-actions">
+        {inApp ? (
+          <p className="error-text" style={{ marginBottom: "0.75rem" }}>
+            เปิดจากแอปแชทอาจล็อกอินไม่ได้ — กด … แล้วเลือก “เปิดในเบราว์เซอร์”
+          </p>
+        ) : null}
         {status === "unconfigured" ? (
           <p className="error-text">
             ยังไม่ได้ตั้งค่า Firebase — คัดลอก `.env.example` เป็น `.env.local` แล้วใส่ค่าจาก Firebase Console
