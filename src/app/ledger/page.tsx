@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type FormEvent,
@@ -13,8 +14,10 @@ import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import {
   deleteLedgerEntry,
+  frequentDescriptions,
   LEDGER_LIVE_MAX,
   LEDGER_PAGE_SIZE,
+  listRecentLedgerEntries,
   recomputeLedgerBalance,
   subscribeLedgerBalance,
   subscribeLedgerPage,
@@ -276,10 +279,23 @@ function EditEntryModal({
   const [amount, setAmount] = useState(String(isIn ? entry.amountIn : entry.amountOut));
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+
+  const filteredSuggestions = useMemo(() => {
+    const q = description.trim().toLowerCase();
+    if (!q) return suggestions.slice(0, 10);
+    return suggestions.filter((s) => s.toLowerCase().includes(q)).slice(0, 10);
+  }, [description, suggestions]);
+
+  useEffect(() => {
+    void listRecentLedgerEntries(200)
+      .then((entries) => setSuggestions(frequentDescriptions(entries)))
+      .catch(() => setSuggestions([]));
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -372,8 +388,23 @@ function EditEntryModal({
               id="edit-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              autoComplete="off"
               required
             />
+            {filteredSuggestions.length > 0 ? (
+              <div className="suggest-list" role="listbox" aria-label="รายการที่ใช้บ่อย">
+                {filteredSuggestions.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className="suggest-chip"
+                    onClick={() => setDescription(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
           <div className="field">
             <label htmlFor="edit-amount">{isIn ? "เงินเข้า" : "เงินออก"}</label>
