@@ -22,6 +22,11 @@ import {
 } from "@/lib/ledger";
 import { guessTypeFromDescription } from "@/lib/ledger-labels";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
+import {
+  compressImageForUpload,
+  fileToReceiptDataUrl,
+  saveImageToDevice,
+} from "@/lib/receipts";
 import type { LedgerEntry } from "@/lib/types";
 import { formatBaht, formatDateShort, parseDateInput, todayInputValue } from "@/lib/utils";
 
@@ -270,18 +275,53 @@ function EditEntryModal({
   const [description, setDescription] = useState(entry.description);
   const [amount, setAmount] = useState(String(isIn ? entry.amountIn : entry.amountOut));
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
+    };
+  }, [receiptPreview]);
+
+  async function handleReceiptFile(file: File | null) {
+    if (!file) return;
+    setNotice(null);
+    try {
+      const how = await saveImageToDevice(file);
+      setNotice(
+        how === "shared"
+          ? "เปิดเมนูแชร์แล้ว — เลือกบันทึกรูปลงเครื่องได้"
+          : "บันทึกรูปลงเครื่องแล้ว",
+      );
+      const compressed = await compressImageForUpload(file);
+      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
+      setReceiptFile(compressed);
+      setReceiptPreview(URL.createObjectURL(compressed));
+    } catch (err) {
+      onError((err as Error).message || "ใช้รูปไม่สำเร็จ");
+    }
+  }
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
       const value = Number(amount);
+      let receiptUrl = entry.receiptUrl || "";
+      if (receiptFile) {
+        receiptUrl = await fileToReceiptDataUrl(receiptFile);
+      }
       await updateLedgerEntry(entry.id, {
         date: parseDateInput(date),
         description,
         amountIn: isIn ? value : 0,
         amountOut: isIn ? 0 : value,
         type: entry.type || guessTypeFromDescription(description),
+        receiptUrl,
       });
       onSaved();
     } catch (err) {
@@ -305,7 +345,7 @@ function EditEntryModal({
   }
 
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop edit-modal" role="presentation" onClick={onClose}>
       <div
         className="modal-card"
         role="dialog"
@@ -314,7 +354,8 @@ function EditEntryModal({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="panel-title">ลบ / แก้ไข</h2>
-        <form onSubmit={(e) => void onSave(e)}>
+        {notice ? <p className="muted" style={{ margin: "0 0 0.75rem" }}>{notice}</p> : null}
+        <form className="form-card" onSubmit={(e) => void onSave(e)}>
           <div className="field">
             <label htmlFor="edit-date">วันที่</label>
             <input
@@ -347,9 +388,61 @@ function EditEntryModal({
               required
             />
           </div>
+
+          <div className="field">
+            <span className="field-label">สลิป / รูปถ่าย</span>
+            <div className="receipt-actions">
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={() => cameraRef.current?.click()}
+              >
+                ถ่ายด้วยกล้อง
+              </button>
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => galleryRef.current?.click()}
+              >
+                เลือกจากคลังรูป
+              </button>
+            </div>
+            <input
+              ref={cameraRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="sr-only"
+              onChange={(e) => void handleReceiptFile(e.target.files?.[0] || null)}
+            />
+            <input
+              ref={galleryRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => void handleReceiptFile(e.target.files?.[0] || null)}
+            />
+            {receiptPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={receiptPreview} alt="ตัวอย่างสลิป" className="receipt-preview" />
+            ) : entry.receiptUrl ? (
+              <div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={entry.receiptUrl} alt="สลิปเดิม" className="receipt-preview" />
+                <p className="muted" style={{ marginTop: "0.25rem", fontSize: "0.8rem" }}>
+                  ถ่ายใหม่จะแทนที่รูปเดิม
+                </p>
+              </div>
+            ) : (
+              <p className="muted" style={{ marginTop: "0.5rem", textAlign: "left" }}>
+                ถ่ายแล้วระบบพยายามบันทึกลงเครื่องทันที แล้วแนบเข้าบิลนี้
+              </p>
+            )}
+          </div>
+
           <div className="btn-row">
             <button type="submit" className="primary-btn" disabled={busy}>
-              บันทึก
+              {busy ? "กำลังบันทึก..." : "บันทึก"}
             </button>
             <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
               ยกเลิก
@@ -358,7 +451,7 @@ function EditEntryModal({
           <button
             type="button"
             className="danger-btn"
-            style={{ width: "100%", marginTop: "0.75rem" }}
+            style={{ width: "100%" }}
             disabled={busy}
             onClick={() => void onDelete()}
           >

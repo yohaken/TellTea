@@ -788,6 +788,28 @@ textarea {
   z-index: 50;
 }
 
+.modal-backdrop.edit-modal {
+  background: var(--background);
+  place-items: start center;
+  padding: 0;
+  z-index: 20;
+}
+
+.modal-backdrop.edit-modal .modal-card {
+  width: 100%;
+  max-width: 100%;
+  max-height: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 1rem 1rem;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.modal-backdrop.edit-modal .panel-title {
+  padding-top: 0.5rem;
+}
+
 .modal-card {
   width: min(100%, 28rem);
   max-height: min(88dvh, 40rem);
