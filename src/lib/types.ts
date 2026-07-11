@@ -28,3 +28,25 @@ export type LedgerEntryInput = {
   type: string;
   createdBy: string;
 };
+
+/** สต็อกเบาๆ — ของใช้ประจำร้าน ไม่ใช่คลังสินค้าเต็มระบบ */
+export type StockItem = {
+  id: string;
+  name: string;
+  unit: string;
+  qty: number;
+  /** เตือนเมื่อเหลือไม่เกินจำนวนนี้ (0 = ไม่เตือน) */
+  minQty: number;
+  note?: string;
+  updatedAt: number;
+  updatedBy: string;
+};
+
+export type StockItemInput = {
+  name: string;
+  unit: string;
+  qty: number;
+  minQty: number;
+  note?: string;
+  updatedBy: string;
+};

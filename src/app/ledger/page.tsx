@@ -56,14 +56,17 @@ function LedgerView() {
       </div>
 
       <div className="quick-actions">
+        <Link href="/out/" className="primary-btn action-out">
+          บันทึกเงินออก
+        </Link>
+        <Link href="/stock/" className="ghost-btn" style={{ width: "100%" }}>
+          สต็อก
+        </Link>
         {isOwner ? (
           <Link href="/in/" className="primary-btn action-in">
             โอนเข้า
           </Link>
         ) : null}
-        <Link href="/out/" className="primary-btn action-out">
-          บันทึกเงินออก
-        </Link>
       </div>
 
       <h1 className="panel-title">รายการ</h1>

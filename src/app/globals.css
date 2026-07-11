@@ -533,6 +533,14 @@ textarea {
   grid-template-columns: 1fr 1fr;
 }
 
+.quick-actions:has(> :nth-child(3)) {
+  grid-template-columns: 1fr 1fr;
+}
+
+.quick-actions:has(> :nth-child(3)) > :last-child {
+  grid-column: 1 / -1;
+}
+
 .primary-btn.action-in {
   background: #1f8f4e;
   box-shadow: 0 10px 24px rgba(31, 143, 78, 0.28);
@@ -633,6 +641,96 @@ textarea {
 .import-preview p {
   margin: 0.2rem 0;
   font-size: 0.92rem;
+}
+
+.stock-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.stock-list {
+  margin-top: 0.85rem;
+  padding: 0.35rem 0.9rem;
+}
+
+.stock-row {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--tea-line);
+}
+
+.stock-row:last-child {
+  border-bottom: 0;
+}
+
+.stock-row.is-low {
+  background: linear-gradient(90deg, rgba(196, 90, 26, 0.1), transparent 75%);
+  margin: 0 -0.9rem;
+  padding-left: 0.9rem;
+  padding-right: 0.9rem;
+}
+
+.stock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.qty-btn {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--tea-line);
+  background: white;
+  cursor: pointer;
+  font-size: 1.15rem;
+}
+
+.stock-qty-input {
+  width: 4.5rem;
+  min-height: 2.35rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--tea-line);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.35rem 0.5rem;
+  text-align: center;
+}
+
+.more-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.more-card {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: var(--tea-card);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 10px 30px rgba(28, 42, 31, 0.06);
+}
+
+.more-card strong {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.more-card p {
+  margin: 0;
+  color: rgba(28, 42, 31, 0.55);
+  font-size: 0.88rem;
+}
+
+@media (min-width: 640px) {
+  .stock-row {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
 }
 
 @keyframes drift {

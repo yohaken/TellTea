@@ -2,16 +2,32 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowDownLeft, ArrowUpRight, BookOpen, FileSpreadsheet, LogOut, Users } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  BookOpen,
+  Boxes,
+  FileSpreadsheet,
+  LogOut,
+  MoreHorizontal,
+  Users,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-const links = [
+/** งานวันต่อวัน — พนักงานและเจ้าของใช้ร่วมกัน */
+const dailyLinks = [
   { href: "/ledger/", label: "บัญชี", icon: BookOpen },
-  { href: "/out/", label: "เงินออก", icon: ArrowUpRight },
-  { href: "/in/", label: "โอนเข้า", icon: ArrowDownLeft, ownerOnly: true },
-  { href: "/import/", label: "นำเข้า", icon: FileSpreadsheet, ownerOnly: true },
-  { href: "/staff/", label: "พนักงาน", icon: Users, ownerOnly: true },
+  { href: "/out/", label: "จ่าย", icon: ArrowUpRight },
+  { href: "/stock/", label: "สต็อก", icon: Boxes },
+];
+
+/** เครื่องมือเจ้าของ — ช่วงเทสเจ้าของเข้าได้หมด */
+const ownerLinks = [
+  { href: "/in/", label: "โอนเข้า", icon: ArrowDownLeft },
+  { href: "/import/", label: "นำเข้า", icon: FileSpreadsheet },
+  { href: "/staff/", label: "พนักงาน", icon: Users },
+  { href: "/more/", label: "อื่นๆ", icon: MoreHorizontal },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -19,6 +35,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { staff, user, signOut } = useAuth();
   const isOwner = staff?.role === "owner";
   const emailShort = user?.email?.split("@")[0] || "";
+  const roleLabel = isOwner ? "เจ้าของ · เทสได้ทุกหน้า" : "พนักงาน";
+
+  const links = isOwner
+    ? [
+        ...dailyLinks,
+        { href: "/more/", label: "อื่นๆ", icon: MoreHorizontal },
+      ]
+    : dailyLinks;
 
   return (
     <div className="phone-frame">
@@ -26,7 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="topbar">
           <div>
             <p className="brand">TellTea</p>
-            <p className="topbar-sub">บัญชีร้าน</p>
+            <p className="topbar-sub">{roleLabel}</p>
           </div>
           <div className="topbar-user">
             <span className="topbar-email" title={user?.email || ""}>
@@ -46,17 +70,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="main-panel">{children}</main>
 
         <nav className="bottom-nav">
-          {links
-            .filter((l) => !l.ownerOnly || isOwner)
-            .map(({ href, label, icon: Icon }) => {
-              const active = pathname === href || pathname.startsWith(href.replace(/\/$/, ""));
-              return (
-                <Link key={href} href={href} className={cn("nav-item", active && "active")}>
-                  <Icon size={22} />
-                  <span>{label}</span>
-                </Link>
-              );
-            })}
+          {links.map(({ href, label, icon: Icon }) => {
+            const active =
+              pathname === href ||
+              pathname.startsWith(href.replace(/\/$/, "")) ||
+              (href === "/more/" &&
+                ownerLinks.some(
+                  (l) => l.href !== "/more/" && pathname.startsWith(l.href.replace(/\/$/, "")),
+                ));
+            return (
+              <Link key={href} href={href} className={cn("nav-item", active && "active")}>
+                <Icon size={22} />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
         </nav>
       </div>
     </div>

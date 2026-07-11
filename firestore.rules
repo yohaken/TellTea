@@ -45,13 +45,21 @@ service cloud.firestore {
         && request.resource.data.amountIn >= 0
         && request.resource.data.amountOut >= 0
         && (
-          // เจ้าของเท่านั้นที่โอนเข้า (amountIn > 0)
           (request.resource.data.amountIn > 0 && request.resource.data.amountOut == 0 && isOwner())
-          // พนักงาน/เจ้าของบันทึกเงินออก
           || (request.resource.data.amountOut > 0 && request.resource.data.amountIn == 0)
         );
       allow delete: if isOwner();
       allow update: if false;
+    }
+
+    // สต็อกเบาๆ — พนักงานกับเจ้าของปรับจำนวนได้, เจ้าของเพิ่ม/ลบรายการ
+    match /stock/{itemId} {
+      allow read: if isStaff();
+      allow create, delete: if isOwner();
+      allow update: if isStaff()
+        && request.resource.data.name is string
+        && request.resource.data.qty is number
+        && request.resource.data.qty >= 0;
     }
   }
 }
