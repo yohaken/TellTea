@@ -3,22 +3,87 @@ import {
   collection,
   deleteDoc,
   doc,
+  DocumentSnapshot,
+  getAggregateFromServer,
   getDocs,
   limit,
   orderBy,
   query,
+  startAfter,
+  sum,
   updateDoc,
   writeBatch,
+  type QueryDocumentSnapshot,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 import type { LedgerEntry, LedgerEntryInput } from "./types";
 import type { ImportLedgerRow } from "./xlsx-import";
 
+export const LEDGER_PAGE_SIZE = 60;
+
+export type LedgerPage = {
+  entries: LedgerEntry[];
+  cursor: QueryDocumentSnapshot | null;
+  hasMore: boolean;
+};
+
+function mapEntry(d: QueryDocumentSnapshot): LedgerEntry {
+  return { id: d.id, ...(d.data() as Omit<LedgerEntry, "id">) };
+}
+
+/** Newest first — for the ledger table (paginated). */
+export async function listLedgerPage(
+  pageSize = LEDGER_PAGE_SIZE,
+  after?: DocumentSnapshot | null,
+): Promise<LedgerPage> {
+  const col = collection(getDb(), "ledger");
+  const q = after
+    ? query(
+        col,
+        orderBy("date", "desc"),
+        orderBy("createdAt", "desc"),
+        startAfter(after),
+        limit(pageSize),
+      )
+    : query(col, orderBy("date", "desc"), orderBy("createdAt", "desc"), limit(pageSize));
+
+  const snap = await getDocs(q);
+  const docs = snap.docs;
+  return {
+    entries: docs.map(mapEntry),
+    cursor: docs.length ? docs[docs.length - 1]! : null,
+    hasMore: docs.length >= pageSize,
+  };
+}
+
+/** Fast balance without downloading every row. */
+export async function getLedgerBalance(): Promise<number> {
+  const snap = await getAggregateFromServer(collection(getDb(), "ledger"), {
+    totalIn: sum("amountIn"),
+    totalOut: sum("amountOut"),
+  });
+  return (snap.data().totalIn || 0) - (snap.data().totalOut || 0);
+}
+
+/** Full scan — only for rare tools (import preview / migration). Prefer paginated APIs. */
 export async function listLedgerEntries(): Promise<LedgerEntry[]> {
   const snap = await getDocs(
     query(collection(getDb(), "ledger"), orderBy("date", "asc"), orderBy("createdAt", "asc")),
   );
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<LedgerEntry, "id">) }));
+  return snap.docs.map(mapEntry);
+}
+
+/** Recent outs for suggestion chips — small page only. */
+export async function listRecentLedgerEntries(max = 200): Promise<LedgerEntry[]> {
+  const snap = await getDocs(
+    query(
+      collection(getDb(), "ledger"),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+      limit(max),
+    ),
+  );
+  return snap.docs.map(mapEntry);
 }
 
 function validateLedgerPayload(payload: {

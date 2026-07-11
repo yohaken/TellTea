@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
-import { addLedgerEntry, frequentDescriptions, listLedgerEntries } from "@/lib/ledger";
+import { addLedgerEntry, frequentDescriptions, listRecentLedgerEntries } from "@/lib/ledger";
 import { guessTypeFromDescription, labelLedgerType } from "@/lib/ledger-labels";
 import {
   compressImageForUpload,
@@ -57,7 +57,7 @@ function MoneyOutView() {
   }, [description, suggestions]);
 
   useEffect(() => {
-    void listLedgerEntries()
+    void listRecentLedgerEntries(200)
       .then((entries) => setSuggestions(frequentDescriptions(entries)))
       .catch(() => setSuggestions([]));
   }, []);

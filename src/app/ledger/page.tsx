@@ -1,13 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import Link from "next/link";
+import type { QueryDocumentSnapshot } from "firebase/firestore";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import {
-  currentBalance,
   deleteLedgerEntry,
-  listLedgerEntries,
+  getLedgerBalance,
+  LEDGER_PAGE_SIZE,
+  listLedgerPage,
   updateLedgerEntry,
 } from "@/lib/ledger";
 import { guessTypeFromDescription } from "@/lib/ledger-labels";
@@ -26,10 +34,16 @@ export default function LedgerPage() {
 function LedgerView() {
   const { staff } = useAuth();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
+  const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [editing, setEditing] = useState<LedgerEntry | null>(null);
+  const cursorRef = useRef<QueryDocumentSnapshot | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadingMoreRef = useRef(false);
   const isOwner = staff?.role === "owner";
 
   useEffect(() => {
@@ -44,33 +58,75 @@ function LedgerView() {
     });
   }, []);
 
+  const refreshBalance = useCallback(async () => {
+    try {
+      setBalance(await getLedgerBalance());
+    } catch {
+      // Balance is secondary — table can still show
+    }
+  }, []);
+
   const reload = useCallback(async () => {
     setLoading(true);
     setError(null);
+    cursorRef.current = null;
     try {
-      setEntries(await listLedgerEntries());
+      const [page] = await Promise.all([listLedgerPage(LEDGER_PAGE_SIZE), refreshBalance()]);
+      setEntries(page.entries);
+      cursorRef.current = page.cursor;
+      setHasMore(page.hasMore);
     } catch (err) {
       setError((err as Error).message || "โหลดบัญชีไม่สำเร็จ");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [refreshBalance]);
+
+  const loadMore = useCallback(async () => {
+    if (!hasMore || loadingMoreRef.current || !cursorRef.current) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const page = await listLedgerPage(LEDGER_PAGE_SIZE, cursorRef.current);
+      setEntries((prev) => {
+        const seen = new Set(prev.map((e) => e.id));
+        return [...prev, ...page.entries.filter((e) => !seen.has(e.id))];
+      });
+      cursorRef.current = page.cursor;
+      setHasMore(page.hasMore);
+    } catch (err) {
+      setError((err as Error).message || "โหลดเพิ่มไม่สำเร็จ");
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [hasMore]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
 
-  const rows = useMemo(
-    () => [...entries].sort((a, b) => b.date - a.date || b.createdAt - a.createdAt),
-    [entries],
-  );
-  const balance = useMemo(() => currentBalance(entries), [entries]);
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node || loading) return;
+    const observer = new IntersectionObserver(
+      (items) => {
+        if (items.some((item) => item.isIntersecting)) {
+          void loadMore();
+        }
+      },
+      { root: null, rootMargin: "240px", threshold: 0 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loadMore, loading, hasMore, entries.length]);
 
   return (
     <div>
       <div className="balance-hero">
         <p>คงเหลือ</p>
-        <strong>{formatBaht(balance)}</strong>
+        <strong>{balance == null ? "…" : formatBaht(balance)}</strong>
       </div>
 
       <div className="quick-actions">
@@ -100,49 +156,56 @@ function LedgerView() {
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading && rows.length === 0 ? (
+      {!loading && entries.length === 0 ? (
         <p className="empty">ยังไม่มีรายการ — เริ่มจากโอนเข้าหรือบันทึกเงินออก</p>
       ) : !loading ? (
-        <div className="sheet-wrap" style={{ fontSize: `${zoom}em` }}>
-          <table className="sheet-table">
-            <thead>
-              <tr>
-                <th className="col-date">วันที่</th>
-                <th className="col-desc">รายการ</th>
-                <th className="col-in">เข้า</th>
-                <th className="col-out">ออก</th>
-                <th className="col-act">จัดการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} className={row.amountIn > 0 ? "row-in" : "row-out"}>
-                  <td className="col-date">{formatDateShort(row.date)}</td>
-                  <td className="col-desc">
-                    {row.description}
-                    {row.receiptUrl ? (
-                      <a
-                        className="receipt-link"
-                        href={row.receiptUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        สลิป
-                      </a>
-                    ) : null}
-                  </td>
-                  <td className="col-in">{row.amountIn > 0 ? formatBaht(row.amountIn) : ""}</td>
-                  <td className="col-out">{row.amountOut > 0 ? formatBaht(row.amountOut) : ""}</td>
-                  <td className="col-act">
-                    <button type="button" className="sheet-edit" onClick={() => setEditing(row)}>
-                      ลบ/แก้ไข
-                    </button>
-                  </td>
+        <>
+          <div className="sheet-wrap" style={{ fontSize: `${zoom}em` }}>
+            <table className="sheet-table">
+              <thead>
+                <tr>
+                  <th className="col-date">วันที่</th>
+                  <th className="col-desc">รายการ</th>
+                  <th className="col-in">เข้า</th>
+                  <th className="col-out">ออก</th>
+                  <th className="col-act">จัดการ</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {entries.map((row) => (
+                  <tr key={row.id} className={row.amountIn > 0 ? "row-in" : "row-out"}>
+                    <td className="col-date">{formatDateShort(row.date)}</td>
+                    <td className="col-desc">
+                      {row.description}
+                      {row.receiptUrl ? (
+                        <a
+                          className="receipt-link"
+                          href={row.receiptUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          สลิป
+                        </a>
+                      ) : null}
+                    </td>
+                    <td className="col-in">{row.amountIn > 0 ? formatBaht(row.amountIn) : ""}</td>
+                    <td className="col-out">{row.amountOut > 0 ? formatBaht(row.amountOut) : ""}</td>
+                    <td className="col-act">
+                      <button type="button" className="sheet-edit" onClick={() => setEditing(row)}>
+                        ลบ/แก้ไข
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div ref={sentinelRef} className="load-more-sentinel" aria-hidden />
+          {loadingMore ? <p className="empty">กำลังโหลดเพิ่ม...</p> : null}
+          {!hasMore && entries.length > 0 ? (
+            <p className="empty muted-foot">ครบทุกรายการแล้ว ({entries.length})</p>
+          ) : null}
+        </>
       ) : null}
 
       {editing ? (

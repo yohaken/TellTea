@@ -498,6 +498,15 @@ textarea {
   color: rgba(28, 42, 31, 0.55);
 }
 
+.muted-foot {
+  font-size: 0.85rem;
+  padding-top: 0.25rem;
+}
+
+.load-more-sentinel {
+  height: 1px;
+}
+
 .balance-hero {
   background: linear-gradient(135deg, #dff3ff 0%, #c8ebf8 100%);
   border: 1px solid rgba(255, 255, 255, 0.85);
