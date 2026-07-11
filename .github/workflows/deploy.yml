@@ -18,7 +18,6 @@ jobs:
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
       NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
       NEXT_PUBLIC_OWNER_EMAIL: phiraphong.yoh@gmail.com
-      GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
 
     steps:
       - name: Checkout
@@ -36,8 +35,10 @@ jobs:
       - name: Build static export
         run: npm run build
 
-      - name: Write service account
-        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$GOOGLE_APPLICATION_CREDENTIALS"
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Deploy Hosting + Firestore rules
         run: npx firebase-tools@latest deploy --only hosting,firestore --project mypeer-501909 --non-interactive
