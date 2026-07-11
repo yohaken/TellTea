@@ -31,14 +31,10 @@
 
 ## ล็อกอินมือถือ
 
-แอปตั้ง `authDomain` ให้ตรงโดเมนที่เปิด (เช่น `telltea-shop.web.app`) เพื่อให้ Google redirect อยู่ same-origin
-
-ถ้าขึ้น `redirect_uri_mismatch` ให้เพิ่มใน  
-Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client (Web):
-
-`https://telltea-shop.web.app/__/auth/handler`
+ใช้ `authDomain` ของ Firebase (`mypeer-501909.firebaseapp.com`) + ล็อกอินแบบ **popup** เป็นหลัก
 
 เปิดด้วย **Safari / Chrome** โดยตรง — หลีกเลี่ยงเปิดจาก LINE / Facebook in-app browser
+(ในแอปแชทมักโดนบล็อกหน้าต่าง Google)
 
 ## พัฒนาในเครื่อง
 
