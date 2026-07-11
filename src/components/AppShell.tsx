@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { AppBrand } from "@/components/AppBrand";
+import { LowBalanceAlert } from "@/components/LowBalanceAlert";
 import { cn } from "@/lib/utils";
 
 /** งานวันต่อวัน — พนักงานและเจ้าของใช้ร่วมกัน */
@@ -25,6 +26,7 @@ const dailyLinks = [
 
 /** เครื่องมือเจ้าของ — ช่วงเทสเจ้าของเข้าได้หมด */
 const ownerLinks = [
+  { href: "/alerts/", label: "แจ้งเตือน", icon: MoreHorizontal },
   { href: "/in/", label: "โอนเข้า", icon: ArrowDownLeft },
   { href: "/import/", label: "นำเข้า", icon: FileSpreadsheet },
   { href: "/staff/", label: "พนักงาน", icon: Users },
@@ -69,6 +71,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="main-panel">{children}</main>
+
+        <LowBalanceAlert />
 
         <nav className="bottom-nav">
           {links.map(({ href, label, icon: Icon }) => {

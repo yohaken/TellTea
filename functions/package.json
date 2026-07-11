@@ -1,0 +1,14 @@
+{
+  "name": "telltea-functions",
+  "description": "TellTea Cloud Functions — low-balance Web Push",
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "firebase-admin": "^13.4.0",
+    "firebase-functions": "^6.4.0",
+    "web-push": "^3.6.7"
+  }
+}

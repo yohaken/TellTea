@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownLeft, FileSpreadsheet, Users } from "lucide-react";
+import { ArrowDownLeft, Bell, FileSpreadsheet, Users } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 
@@ -26,6 +26,12 @@ function MoreView() {
   if (staff?.role !== "owner") return null;
 
   const tools = [
+    {
+      href: "/alerts/",
+      title: "แจ้งเตือนยอดต่ำ",
+      desc: "ตั้งเกณฑ์ + แจ้งถึงมือถือเมื่อเงินใกล้หมด",
+      icon: Bell,
+    },
     {
       href: "/in/",
       title: "โอนเข้า",

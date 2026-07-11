@@ -43,6 +43,10 @@ next-env.d.ts
 
 # firebase
 .firebase/
+firebase-debug.log
+firebase-debug.*.log
+functions/.env
+functions/node_modules/
 
 # local shop ledger spreadsheets (import via UI / scripts)
 *.xlsx

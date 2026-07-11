@@ -17,6 +17,7 @@ jobs:
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
       NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
       NEXT_PUBLIC_OWNER_EMAIL: yohaken@gmail.com
 
     steps:
@@ -40,5 +41,15 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
-      - name: Deploy Hosting + Firestore rules
-        run: npx firebase-tools@latest deploy --only hosting,firestore --project mypeer-501909 --non-interactive
+      - name: Install Cloud Functions deps
+        run: npm ci
+        working-directory: functions
+
+      - name: Write Functions env
+        run: |
+          printf 'VAPID_PUBLIC_KEY=%s\nVAPID_PRIVATE_KEY=%s\n' \
+            "${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}" \
+            "${{ secrets.VAPID_PRIVATE_KEY }}" > functions/.env
+
+      - name: Deploy Hosting + Firestore + Functions
+        run: npx firebase-tools@latest deploy --only hosting,firestore,functions --project mypeer-501909 --non-interactive

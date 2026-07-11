@@ -63,9 +63,22 @@ service cloud.firestore {
         && request.resource.data.qty >= 0;
     }
 
-    // Running cash totals — written by the app on every ledger change.
+    // Running cash totals + alert settings
     match /meta/{docId} {
-      allow read, write: if isStaff();
+      allow read: if isStaff();
+      allow write: if isOwner()
+        || (isStaff() && (docId == 'ledger' || docId == 'lowBalanceAlert'));
+    }
+
+    // Owner device Web Push subscriptions
+    match /pushSubscriptions/{id} {
+      allow read: if isOwner();
+      allow create, update: if isOwner()
+        && request.resource.data.email == email()
+        && request.resource.data.role == 'owner'
+        && request.resource.data.endpoint is string
+        && request.resource.data.keys.keys().hasAll(['p256dh', 'auth']);
+      allow delete: if isOwner() && resource.data.email == email();
     }
 
     // One-time Google ID tokens for TellTea mobile auth bridge.
