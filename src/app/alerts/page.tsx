@@ -32,6 +32,7 @@ function AlertsView() {
   const [threshold, setThreshold] = useState(String(DEFAULT_ALERT_SETTINGS.lowBalanceThreshold));
   const [enabled, setEnabled] = useState(true);
   const [balanceFontSize, setBalanceFontSize] = useState(DEFAULT_ALERT_SETTINGS.balanceFontSize);
+  const [actionBtnScale, setActionBtnScale] = useState(DEFAULT_ALERT_SETTINGS.actionBtnScale);
   const [pushStatus, setPushStatus] = useState<string>("ยังไม่เปิดบนเครื่องนี้");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -47,6 +48,7 @@ function AlertsView() {
         setThreshold(String(s.lowBalanceThreshold));
         setEnabled(s.lowBalanceEnabled);
         setBalanceFontSize(s.balanceFontSize);
+        setActionBtnScale(s.actionBtnScale);
       })
       .catch((err) => setError((err as Error).message));
 
@@ -75,6 +77,7 @@ function AlertsView() {
           lowBalanceThreshold: Number(threshold),
           lowBalanceEnabled: enabled,
           balanceFontSize,
+          actionBtnScale,
         },
         user.email,
       );
@@ -177,6 +180,32 @@ function AlertsView() {
           </div>
           <p className="field-hint">
             แสดงผลที่ขนาด {balanceFontSize.toFixed(2)}rem
+          </p>
+        </div>
+
+        <div className="field">
+          <label htmlFor="actionBtnScale">
+            ขนาดปุ่ม &quot;จ่าย&quot; และ &quot;โอนเข้า&quot; (ใช้กับทุกคนในร้าน)
+          </label>
+          <div className="slider-row">
+            <span className="slider-val" style={{ fontSize: "0.75rem" }}>
+              เล็ก
+            </span>
+            <input
+              id="actionBtnScale"
+              type="range"
+              min="0.8"
+              max="1.8"
+              step="0.05"
+              value={actionBtnScale}
+              onChange={(e) => setActionBtnScale(Number(e.target.value))}
+            />
+            <span className="slider-val" style={{ fontSize: "1.1rem" }}>
+              ใหญ่
+            </span>
+          </div>
+          <p className="field-hint">
+            ปรับขนาดปุ่ม ×{actionBtnScale.toFixed(2)}
           </p>
         </div>
 

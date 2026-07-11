@@ -15,7 +15,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { AppBrand } from "@/components/AppBrand";
 import { LowBalanceAlert } from "@/components/LowBalanceAlert";
-import { BalanceSizeProvider } from "@/components/BalanceSizeProvider";
+import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { cn } from "@/lib/utils";
 
 /** งานวันต่อวัน — พนักงานและเจ้าของใช้ร่วมกัน */
@@ -75,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <LowBalanceAlert />
 
-        <BalanceSizeProvider />
+        <UiSettingsProvider />
 
         <nav className="bottom-nav">
           {links.map(({ href, label, icon: Icon }) => {

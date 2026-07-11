@@ -14,6 +14,8 @@ export type AlertSettings = {
   lowBalanceEnabled: boolean;
   /** ขนาดตัวอักษรของยอดคงเหลือ (rem) */
   balanceFontSize: number;
+  /** ขนาดของปุ่มจ่าย/โอนเข้า (scale) */
+  actionBtnScale: number;
   updatedAt: number;
   updatedBy: string;
 };
@@ -22,6 +24,7 @@ export const DEFAULT_ALERT_SETTINGS: AlertSettings = {
   lowBalanceThreshold: 5000,
   lowBalanceEnabled: true,
   balanceFontSize: 1.15,
+  actionBtnScale: 1,
   updatedAt: 0,
   updatedBy: "",
 };
@@ -38,23 +41,26 @@ export async function getAlertSettings(): Promise<AlertSettings> {
     lowBalanceThreshold: Number(data.lowBalanceThreshold) || DEFAULT_ALERT_SETTINGS.lowBalanceThreshold,
     lowBalanceEnabled: data.lowBalanceEnabled !== false,
     balanceFontSize: clampBalanceFontSize(Number(data.balanceFontSize)),
+    actionBtnScale: clampActionBtnScale(data.actionBtnScale),
     updatedAt: Number(data.updatedAt) || 0,
     updatedBy: String(data.updatedBy || ""),
   };
 }
 
 export async function saveAlertSettings(
-  patch: Pick<AlertSettings, "lowBalanceThreshold" | "lowBalanceEnabled" | "balanceFontSize">,
+  patch: Pick<AlertSettings, "lowBalanceThreshold" | "lowBalanceEnabled" | "balanceFontSize" | "actionBtnScale">,
   updatedBy: string,
 ): Promise<void> {
   const threshold = Math.max(0, Number(patch.lowBalanceThreshold) || 0);
   const fontSize = clampBalanceFontSize(patch.balanceFontSize);
+  const btnScale = clampActionBtnScale(patch.actionBtnScale);
   await setDoc(
     settingsRef(),
     {
       lowBalanceThreshold: threshold,
       lowBalanceEnabled: Boolean(patch.lowBalanceEnabled),
       balanceFontSize: fontSize,
+      actionBtnScale: btnScale,
       updatedAt: Date.now(),
       updatedBy,
     },
@@ -65,6 +71,11 @@ export async function saveAlertSettings(
 export function clampBalanceFontSize(value: unknown): number {
   const n = Number(value);
   return Number.isFinite(n) ? Math.min(3, Math.max(0.7, Math.round(n * 100) / 100)) : DEFAULT_ALERT_SETTINGS.balanceFontSize;
+}
+
+export function clampActionBtnScale(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(1.8, Math.max(0.8, Math.round(n * 100) / 100)) : DEFAULT_ALERT_SETTINGS.actionBtnScale;
 }
 
 export function subscribeAlertSettings(
@@ -84,6 +95,7 @@ export function subscribeAlertSettings(
           Number(data.lowBalanceThreshold) || DEFAULT_ALERT_SETTINGS.lowBalanceThreshold,
         lowBalanceEnabled: data.lowBalanceEnabled !== false,
         balanceFontSize: clampBalanceFontSize(data.balanceFontSize),
+        actionBtnScale: clampActionBtnScale(data.actionBtnScale),
         updatedAt: Number(data.updatedAt) || 0,
         updatedBy: String(data.updatedBy || ""),
       });
