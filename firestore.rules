@@ -48,11 +48,10 @@ service cloud.firestore {
           (request.resource.data.amountIn > 0 && request.resource.data.amountOut == 0 && isOwner())
           || (request.resource.data.amountOut > 0 && request.resource.data.amountIn == 0)
         );
-      allow delete: if isOwner();
-      allow update: if false;
+      // ร้านเล็ก — พนักงานแก้/ลบรายการที่บันทึกผิดได้
+      allow update, delete: if isStaff();
     }
 
-    // สต็อกเบาๆ — พนักงานกับเจ้าของปรับจำนวนได้, เจ้าของเพิ่ม/ลบรายการ
     match /stock/{itemId} {
       allow read: if isStaff();
       allow create, delete: if isOwner();

@@ -18,6 +18,8 @@ export type LedgerEntry = {
   type: string;
   createdBy: string;
   createdAt: number;
+  /** URL สลิป/รูปใบเสร็จ (ถ้ามี) */
+  receiptUrl?: string;
 };
 
 export type LedgerEntryInput = {
@@ -27,6 +29,7 @@ export type LedgerEntryInput = {
   amountOut: number;
   type: string;
   createdBy: string;
+  receiptUrl?: string;
 };
 
 /** สต็อกเบาๆ — ของใช้ประจำร้าน ไม่ใช่คลังสินค้าเต็มระบบ */
