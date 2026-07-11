@@ -1,7 +1,6 @@
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const functions = require("firebase-functions/v1");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
-const { logger } = require("firebase-functions");
 const webpush = require("web-push");
 
 initializeApp();
@@ -23,7 +22,7 @@ function formatBaht(n) {
 
 async function sendToOwnerSubscriptions(payload) {
   if (!VAPID_PRIVATE) {
-    logger.error("VAPID_PRIVATE_KEY missing — skip push");
+    console.error("VAPID_PRIVATE_KEY missing — skip push");
     return { sent: 0, failed: 0 };
   }
 
@@ -32,7 +31,7 @@ async function sendToOwnerSubscriptions(payload) {
   const db = getFirestore();
   const snap = await db.collection("pushSubscriptions").where("role", "==", "owner").get();
   if (snap.empty) {
-    logger.info("No owner push subscriptions");
+    console.log("No owner push subscriptions");
     return { sent: 0, failed: 0 };
   }
 
@@ -52,7 +51,7 @@ async function sendToOwnerSubscriptions(payload) {
         sent += 1;
       } catch (err) {
         failed += 1;
-        logger.warn("push failed", docSnap.id, err?.statusCode || err?.message);
+        console.warn("push failed", docSnap.id, err?.statusCode || err?.message);
         if (err?.statusCode === 404 || err?.statusCode === 410) {
           await docSnap.ref.delete().catch(() => undefined);
         }
@@ -63,17 +62,15 @@ async function sendToOwnerSubscriptions(payload) {
   return { sent, failed };
 }
 
-exports.onLedgerBalanceWritten = onDocumentWritten(
-  {
-    document: "meta/ledger",
-    region: "asia-southeast1",
-  },
-  async (event) => {
-    const after = event.data?.after;
-    if (!after?.exists) return;
+exports.onLedgerBalanceWritten = functions
+  .region("asia-southeast1")
+  .firestore.document("meta/ledger")
+  .onWrite(async (change) => {
+    const after = change.after;
+    if (!after.exists) return null;
 
     const balance = Number(after.data().balance);
-    if (!Number.isFinite(balance)) return;
+    if (!Number.isFinite(balance)) return null;
 
     const db = getFirestore();
     const settingsSnap = await db.doc("meta/settings").get();
@@ -96,15 +93,14 @@ exports.onLedgerBalanceWritten = onDocumentWritten(
           { merge: true },
         );
       }
-      return;
+      return null;
     }
 
-    // Balance is low
     const lastPushAt = Number(alert.lastPushAt) || 0;
     const stillCooling = Date.now() - lastPushAt < COOLDOWN_MS;
     if (alert.active && stillCooling) {
       await alertRef.set({ active: true, balance, threshold: thresholdSafe }, { merge: true });
-      return;
+      return null;
     }
 
     const result = await sendToOwnerSubscriptions({
@@ -124,6 +120,6 @@ exports.onLedgerBalanceWritten = onDocumentWritten(
       { merge: true },
     );
 
-    logger.info("low balance push", { balance, threshold: thresholdSafe, ...result });
-  },
-);
+    console.log("low balance push", { balance, threshold: thresholdSafe, ...result });
+    return null;
+  });
