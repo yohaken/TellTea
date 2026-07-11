@@ -733,12 +733,6 @@ textarea {
 
 .sheet-table .col-desc {
   text-align: left;
-  line-height: 1.35;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  word-break: break-word;
-  overflow: hidden;
 }
 
 .sheet-table .col-in,
