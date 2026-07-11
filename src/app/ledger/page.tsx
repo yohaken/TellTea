@@ -6,7 +6,6 @@ import {
   useLayoutEffect,
   useRef,
   useState,
-  type CSSProperties,
   type FormEvent,
 } from "react";
 import Link from "next/link";
@@ -14,15 +13,15 @@ import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import {
   deleteLedgerEntry,
-  getLedgerBalance,
   LEDGER_LIVE_MAX,
   LEDGER_PAGE_SIZE,
+  recomputeLedgerBalance,
+  subscribeLedgerBalance,
   subscribeLedgerPage,
   updateLedgerEntry,
 } from "@/lib/ledger";
 import { guessTypeFromDescription } from "@/lib/ledger-labels";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
-import { loadSheetZoom, saveSheetZoom } from "@/lib/prefs";
 import type { LedgerEntry } from "@/lib/types";
 import { formatBaht, formatDateShort, parseDateInput, todayInputValue } from "@/lib/utils";
 
@@ -44,37 +43,24 @@ function LedgerView() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [liveLimit, setLiveLimit] = useState(LEDGER_PAGE_SIZE);
-  const [zoom, setZoom] = useState(1);
   const [editing, setEditing] = useState<LedgerEntry | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const balanceRef = useRef<number | null>(null);
   const hasRowsRef = useRef(false);
-  const balanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sawServerRef = useRef(false);
   const isOwner = staff?.role === "owner";
 
   useLayoutEffect(() => {
     const cached = loadCachedLedger();
     if (cached?.entries.length) {
       setEntries(cached.entries);
-      setBalance(cached.balance);
-      balanceRef.current = cached.balance;
+      if (cached.balance != null) {
+        setBalance(cached.balance);
+        balanceRef.current = cached.balance;
+      }
       setHasMore(cached.hasMore);
       setLoading(false);
       hasRowsRef.current = true;
     }
-  }, []);
-
-  useEffect(() => {
-    setZoom(loadSheetZoom(1));
-  }, []);
-
-  const changeZoom = useCallback((delta: number) => {
-    setZoom((prev) => {
-      const next = Math.min(1.6, Math.max(0.7, Math.round((prev + delta) * 100) / 100));
-      saveSheetZoom(next);
-      return next;
-    });
   }, []);
 
   const persistSnapshot = useCallback(
@@ -88,27 +74,43 @@ function LedgerView() {
     [],
   );
 
-  const scheduleBalance = useCallback(() => {
-    if (balanceTimerRef.current) clearTimeout(balanceTimerRef.current);
-    balanceTimerRef.current = setTimeout(() => {
-      void getLedgerBalance()
-        .then((next) => {
-          setBalance(next);
-          balanceRef.current = next;
-          const cached = loadCachedLedger();
-          if (cached) saveCachedLedger({ ...cached, balance: next });
-        })
-        .catch(() => {
-          /* keep last known balance */
-        });
-    }, 280);
+  useEffect(() => {
+    const unsub = subscribeLedgerBalance(
+      (next) => {
+        setBalance(next);
+        balanceRef.current = next;
+        const cached = loadCachedLedger();
+        if (cached) saveCachedLedger({ ...cached, balance: next });
+      },
+      (err) => {
+        if (balanceRef.current == null) {
+          setError(err.message || "โหลดยอดคงเหลือไม่สำเร็จ");
+        }
+      },
+    );
+
+    // One-time full recompute after this release so meta/ledger is correct
+    // even if older aggregate reads failed silently.
+    try {
+      const seedKey = "telltea_balance_seed_v6";
+      if (typeof window !== "undefined" && !window.localStorage.getItem(seedKey)) {
+        void recomputeLedgerBalance()
+          .then(() => window.localStorage.setItem(seedKey, "1"))
+          .catch(() => {
+            /* subscribe bootstrap still runs if meta missing */
+          });
+      }
+    } catch {
+      // ignore
+    }
+
+    return unsub;
   }, []);
 
   useEffect(() => {
     setError(null);
     if (hasRowsRef.current) setRefreshing(true);
     else setLoading(true);
-    sawServerRef.current = false;
 
     const unsub = subscribeLedgerPage(
       liveLimit,
@@ -118,18 +120,8 @@ function LedgerView() {
         hasRowsRef.current = page.entries.length > 0;
         setLoading(false);
         setLoadingMore(false);
+        setRefreshing(false);
         persistSnapshot(page.entries, page.hasMore, balanceRef.current);
-
-        if (!page.fromCache) {
-          sawServerRef.current = true;
-          setRefreshing(false);
-          scheduleBalance();
-        } else if (sawServerRef.current) {
-          setRefreshing(false);
-        } else {
-          setRefreshing(false);
-          scheduleBalance();
-        }
       },
       (err) => {
         setLoading(false);
@@ -141,11 +133,8 @@ function LedgerView() {
       },
     );
 
-    return () => {
-      unsub();
-      if (balanceTimerRef.current) clearTimeout(balanceTimerRef.current);
-    };
-  }, [liveLimit, persistSnapshot, scheduleBalance]);
+    return () => unsub();
+  }, [liveLimit, persistSnapshot]);
 
   const loadMore = useCallback(() => {
     if (!hasMore || loadingMore || liveLimit >= LEDGER_LIVE_MAX) return;
@@ -170,11 +159,11 @@ function LedgerView() {
 
   return (
     <div>
-      <div className="balance-hero">
-        <p>
+      <div className="balance-bar">
+        <span>
           คงเหลือ
           {refreshing ? <span className="sync-dot" aria-hidden> ·</span> : null}
-        </p>
+        </span>
         <strong>{balance == null ? "…" : formatBaht(balance)}</strong>
       </div>
 
@@ -189,19 +178,6 @@ function LedgerView() {
         ) : null}
       </div>
 
-      <div className="sheet-toolbar">
-        <span>ขนาดตาราง</span>
-        <div className="zoom-controls">
-          <button type="button" className="qty-btn" aria-label="ย่อ" onClick={() => changeZoom(-0.1)}>
-            −
-          </button>
-          <span className="zoom-label">{Math.round(zoom * 100)}%</span>
-          <button type="button" className="qty-btn" aria-label="ขยาย" onClick={() => changeZoom(0.1)}>
-            +
-          </button>
-        </div>
-      </div>
-
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
@@ -209,10 +185,7 @@ function LedgerView() {
         <p className="empty">ยังไม่มีรายการ — เริ่มจากโอนเข้าหรือบันทึกเงินออก</p>
       ) : !loading ? (
         <>
-          <div
-            className="sheet-wrap"
-            style={{ "--sheet-zoom": zoom } as CSSProperties}
-          >
+          <div className="sheet-wrap">
             <table className="sheet-table">
               <thead>
                 <tr>
@@ -268,10 +241,7 @@ function LedgerView() {
         <EditEntryModal
           entry={editing}
           onClose={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
-            scheduleBalance();
-          }}
+          onSaved={() => setEditing(null)}
           onError={setError}
         />
       ) : null}

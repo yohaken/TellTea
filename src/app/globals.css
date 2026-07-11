@@ -535,19 +535,19 @@ textarea {
   height: 1px;
 }
 
-.balance-hero {
-  background: linear-gradient(135deg, #dff3ff 0%, #c8ebf8 100%);
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  border-radius: 1.15rem;
-  padding: 1.1rem 1.15rem;
-  margin-bottom: 0.85rem;
-  box-shadow: 0 10px 30px rgba(28, 42, 31, 0.06);
+.balance-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 0.55rem;
+  padding: 0.35rem 0.15rem;
 }
 
-.balance-hero p {
-  margin: 0;
+.balance-bar > span {
   color: rgba(28, 42, 31, 0.55);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .sync-dot {
@@ -561,20 +561,19 @@ textarea {
   }
 }
 
-.balance-hero strong {
-  display: block;
-  margin-top: 0.25rem;
+.balance-bar strong {
   font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(1.8rem, 8vw, 2.2rem);
+  font-size: 1.15rem;
   letter-spacing: -0.02em;
   color: #1a4f63;
+  font-variant-numeric: tabular-nums;
 }
 
 .quick-actions {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.55rem;
-  margin-bottom: 1rem;
+  gap: 0.45rem;
+  margin-bottom: 0.65rem;
 }
 
 .quick-actions:has(> :nth-child(2)) {
@@ -604,7 +603,6 @@ textarea {
 }
 
 .sheet-wrap {
-  --sheet-zoom: 1;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   border-radius: 0.85rem;
@@ -616,13 +614,13 @@ textarea {
 .sheet-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: calc(0.82rem * var(--sheet-zoom));
-  min-width: calc(320px * var(--sheet-zoom));
+  font-size: 0.82rem;
+  min-width: 320px;
 }
 
 .sheet-table th,
 .sheet-table td {
-  padding: calc(0.45rem * var(--sheet-zoom)) calc(0.5rem * var(--sheet-zoom));
+  padding: 0.45rem 0.5rem;
   border-bottom: 1px solid rgba(28, 42, 31, 0.1);
   vertical-align: middle;
 }
@@ -632,7 +630,7 @@ textarea {
   top: 0;
   background: #f3efe4;
   font-weight: 700;
-  font-size: calc(0.75rem * var(--sheet-zoom));
+  font-size: 0.75rem;
   color: rgba(28, 42, 31, 0.7);
   text-align: left;
   white-space: nowrap;
@@ -651,7 +649,7 @@ textarea {
 }
 
 .sheet-table .col-date {
-  width: calc(4.6rem * var(--sheet-zoom));
+  width: 4.6rem;
   white-space: nowrap;
   color: rgba(28, 42, 31, 0.65);
 }
@@ -679,7 +677,7 @@ textarea {
 }
 
 .sheet-table .col-act {
-  width: calc(2.4rem * var(--sheet-zoom));
+  width: 2.4rem;
   text-align: center;
 }
 
@@ -691,35 +689,11 @@ textarea {
   background: rgba(28, 42, 31, 0.03);
 }
 
-.sheet-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin: 0.35rem 0 0.65rem;
-  font-size: 0.85rem;
-  color: rgba(28, 42, 31, 0.65);
-}
-
-.zoom-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.zoom-label {
-  min-width: 3.2rem;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: var(--tea-ink);
-}
-
 .sheet-edit {
   border: 0;
   background: transparent;
   color: var(--tea-leaf);
-  font-size: calc(0.72rem * var(--sheet-zoom, 1));
+  font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
   padding: 0.2rem;
@@ -1084,17 +1058,6 @@ textarea {
     width: auto;
     min-width: 16rem;
     justify-self: start;
-  }
-
-  .balance-hero {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .balance-hero strong {
-    margin-top: 0;
   }
 
   .ledger-row {

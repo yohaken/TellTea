@@ -5,13 +5,16 @@ import {
   doc,
   DocumentSnapshot,
   getAggregateFromServer,
+  getDoc,
   getDocs,
   getDocsFromCache,
   getDocsFromServer,
+  increment,
   limit,
   onSnapshot,
   orderBy,
   query,
+  setDoc,
   startAfter,
   sum,
   updateDoc,
@@ -36,7 +39,13 @@ export type LedgerPage = {
 };
 
 function mapEntry(d: QueryDocumentSnapshot): LedgerEntry {
-  return { id: d.id, ...(d.data() as Omit<LedgerEntry, "id">) };
+  const data = d.data() as Omit<LedgerEntry, "id">;
+  return {
+    id: d.id,
+    ...data,
+    amountIn: Number(data.amountIn) || 0,
+    amountOut: Number(data.amountOut) || 0,
+  };
 }
 
 function toPage(docs: QueryDocumentSnapshot[], pageSize: number, fromCache: boolean): LedgerPage {
@@ -59,6 +68,10 @@ function ledgerPageQuery(pageSize: number, after?: DocumentSnapshot | null) {
         limit(pageSize),
       )
     : query(col, orderBy("date", "desc"), orderBy("createdAt", "desc"), limit(pageSize));
+}
+
+function ledgerMetaRef() {
+  return doc(getDb(), "meta", "ledger");
 }
 
 /** Prefer IndexedDB cache, then server — feels instant on repeat opens. */
@@ -112,13 +125,123 @@ export function subscribeLedgerPage(
   );
 }
 
-/** Fast balance without downloading every row. */
+async function sumLedgerTotals(): Promise<{ totalIn: number; totalOut: number }> {
+  try {
+    const snap = await getAggregateFromServer(collection(getDb(), "ledger"), {
+      totalIn: sum("amountIn"),
+      totalOut: sum("amountOut"),
+    });
+    return {
+      totalIn: Number(snap.data().totalIn) || 0,
+      totalOut: Number(snap.data().totalOut) || 0,
+    };
+  } catch {
+    // Aggregate can fail (field types / SDK) — fall back to chunked scan.
+    let totalIn = 0;
+    let totalOut = 0;
+    let cursor: QueryDocumentSnapshot | undefined;
+    for (;;) {
+      const constraints = cursor
+        ? [orderBy("createdAt", "asc"), startAfter(cursor), limit(400)]
+        : [orderBy("createdAt", "asc"), limit(400)];
+      const snap = await getDocs(query(collection(getDb(), "ledger"), ...constraints));
+      if (snap.empty) break;
+      for (const d of snap.docs) {
+        const data = d.data();
+        totalIn += Number(data.amountIn) || 0;
+        totalOut += Number(data.amountOut) || 0;
+      }
+      cursor = snap.docs[snap.docs.length - 1]!;
+      if (snap.docs.length < 400) break;
+    }
+    return { totalIn, totalOut };
+  }
+}
+
+/** Rebuild meta/ledger from all rows — durable source of truth for the UI. */
+export async function recomputeLedgerBalance(): Promise<number> {
+  const { totalIn, totalOut } = await sumLedgerTotals();
+  const balance = totalIn - totalOut;
+  await setDoc(
+    ledgerMetaRef(),
+    { balance, totalIn, totalOut, updatedAt: Date.now() },
+    { merge: true },
+  );
+  return balance;
+}
+
+async function applyBalanceDelta(deltaIn: number, deltaOut: number): Promise<void> {
+  const dIn = Number(deltaIn) || 0;
+  const dOut = Number(deltaOut) || 0;
+  if (dIn === 0 && dOut === 0) return;
+
+  const ref = ledgerMetaRef();
+  const existing = await getDoc(ref);
+  if (!existing.exists()) {
+    await recomputeLedgerBalance();
+    return;
+  }
+
+  await setDoc(
+    ref,
+    {
+      balance: increment(dIn - dOut),
+      totalIn: increment(dIn),
+      totalOut: increment(dOut),
+      updatedAt: Date.now(),
+    },
+    { merge: true },
+  );
+}
+
+/**
+ * Live cash balance from meta/ledger (updated on every write).
+ * Bootstraps the meta doc once if missing.
+ */
+export function subscribeLedgerBalance(
+  onBalance: (balance: number, fromCache: boolean) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
+  let bootstrapping = false;
+
+  return onSnapshot(
+    ledgerMetaRef(),
+    (snap) => {
+      if (!snap.exists()) {
+        if (bootstrapping) return;
+        bootstrapping = true;
+        void recomputeLedgerBalance()
+          .then((balance) => onBalance(balance, false))
+          .catch((err) => {
+            onError?.(err instanceof Error ? err : new Error(String(err)));
+          })
+          .finally(() => {
+            bootstrapping = false;
+          });
+        return;
+      }
+      const data = snap.data() as { balance?: unknown };
+      const balance = Number(data.balance);
+      onBalance(Number.isFinite(balance) ? balance : 0, snap.metadata.fromCache);
+    },
+    (err) => {
+      onError?.(err instanceof Error ? err : new Error(String(err)));
+    },
+  );
+}
+
+/** Read cached meta, or recompute. Prefer subscribeLedgerBalance in UI. */
 export async function getLedgerBalance(): Promise<number> {
-  const snap = await getAggregateFromServer(collection(getDb(), "ledger"), {
-    totalIn: sum("amountIn"),
-    totalOut: sum("amountOut"),
-  });
-  return (snap.data().totalIn || 0) - (snap.data().totalOut || 0);
+  try {
+    const snap = await getDoc(ledgerMetaRef());
+    if (snap.exists()) {
+      const balance = Number(snap.data().balance);
+      if (Number.isFinite(balance)) return balance;
+    }
+  } catch {
+    // fall through
+  }
+  return recomputeLedgerBalance();
 }
 
 /** Full scan — only for rare tools (import preview / migration). Prefer paginated APIs. */
@@ -174,6 +297,7 @@ export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
   };
   validateLedgerPayload(payload);
   const ref = await addDoc(collection(getDb(), "ledger"), payload);
+  await applyBalanceDelta(payload.amountIn, payload.amountOut);
   return ref.id;
 }
 
@@ -183,6 +307,13 @@ export async function updateLedgerEntry(
     Pick<LedgerEntry, "date" | "description" | "amountIn" | "amountOut" | "type" | "receiptUrl">
   >,
 ): Promise<void> {
+  const entryRef = doc(getDb(), "ledger", id);
+  const prevSnap = await getDoc(entryRef);
+  if (!prevSnap.exists()) throw new Error("ไม่พบรายการ");
+  const prev = prevSnap.data() as LedgerEntry;
+  const prevIn = Number(prev.amountIn) || 0;
+  const prevOut = Number(prev.amountOut) || 0;
+
   const next: Record<string, string | number> = {};
   if (patch.date != null) next.date = patch.date;
   if (patch.description != null) next.description = patch.description.trim();
@@ -191,14 +322,18 @@ export async function updateLedgerEntry(
   if (patch.type != null) next.type = patch.type;
   if (patch.receiptUrl != null) next.receiptUrl = patch.receiptUrl;
 
+  const nextIn = next.amountIn != null ? Number(next.amountIn) : prevIn;
+  const nextOut = next.amountOut != null ? Number(next.amountOut) : prevOut;
+
   if (next.amountIn != null && next.amountOut != null) {
     validateLedgerPayload({
-      description: String(next.description || "-"),
-      amountIn: Number(next.amountIn),
-      amountOut: Number(next.amountOut),
+      description: String(next.description ?? prev.description ?? "-"),
+      amountIn: nextIn,
+      amountOut: nextOut,
     });
   }
-  await updateDoc(doc(getDb(), "ledger", id), next);
+  await updateDoc(entryRef, next);
+  await applyBalanceDelta(nextIn - prevIn, nextOut - prevOut);
 }
 
 export async function importLedgerEntries(
@@ -230,6 +365,7 @@ export async function importLedgerEntries(
     onProgress?.(done, rows.length);
   }
 
+  await recomputeLedgerBalance();
   return done;
 }
 
@@ -250,11 +386,21 @@ export async function deleteAllLedgerEntries(
     onProgress?.(deleted);
     if (snap.docs.length < 400) break;
   }
+  await setDoc(
+    ledgerMetaRef(),
+    { balance: 0, totalIn: 0, totalOut: 0, updatedAt: Date.now() },
+    { merge: true },
+  );
   return deleted;
 }
 
 export async function deleteLedgerEntry(id: string): Promise<void> {
-  await deleteDoc(doc(getDb(), "ledger", id));
+  const entryRef = doc(getDb(), "ledger", id);
+  const prevSnap = await getDoc(entryRef);
+  if (!prevSnap.exists()) return;
+  const prev = prevSnap.data() as LedgerEntry;
+  await deleteDoc(entryRef);
+  await applyBalanceDelta(-(Number(prev.amountIn) || 0), -(Number(prev.amountOut) || 0));
 }
 
 export function withRunningBalance(entries: LedgerEntry[]) {

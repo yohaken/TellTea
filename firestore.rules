@@ -63,6 +63,11 @@ service cloud.firestore {
         && request.resource.data.qty >= 0;
     }
 
+    // Running cash totals — written by the app on every ledger change.
+    match /meta/{docId} {
+      allow read, write: if isStaff();
+    }
+
     // One-time Google ID tokens for TellTea mobile auth bridge.
     // IDs are 48-char random hex; readable only before expiry; no listing.
     match /loginTickets/{ticketId} {
