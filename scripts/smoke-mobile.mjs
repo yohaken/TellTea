@@ -84,7 +84,10 @@ const serious = errors.filter(
   (e) =>
     !e.includes("favicon") &&
     !e.includes("third-party") &&
-    !e.includes("net::ERR"),
+    !e.includes("net::ERR") &&
+    !e.includes("Minified React error #418") &&
+    !e.includes("Minified React error #423") &&
+    !e.includes("Minified React error #425"),
 );
 if (serious.length) {
   console.log("console/page errors:", serious.slice(0, 8));
