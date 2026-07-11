@@ -9,6 +9,7 @@ import {
   DEFAULT_ALERT_SETTINGS,
   getAlertSettings,
   saveAlertSettings,
+  clampBalanceFontSize,
 } from "@/lib/settings";
 import {
   disableOwnerPush,
@@ -30,6 +31,7 @@ function AlertsView() {
   const router = useRouter();
   const [threshold, setThreshold] = useState(String(DEFAULT_ALERT_SETTINGS.lowBalanceThreshold));
   const [enabled, setEnabled] = useState(true);
+  const [balanceFontSize, setBalanceFontSize] = useState(DEFAULT_ALERT_SETTINGS.balanceFontSize);
   const [pushStatus, setPushStatus] = useState<string>("ยังไม่เปิดบนเครื่องนี้");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -44,6 +46,7 @@ function AlertsView() {
       .then((s) => {
         setThreshold(String(s.lowBalanceThreshold));
         setEnabled(s.lowBalanceEnabled);
+        setBalanceFontSize(s.balanceFontSize);
       })
       .catch((err) => setError((err as Error).message));
 
@@ -71,6 +74,7 @@ function AlertsView() {
         {
           lowBalanceThreshold: Number(threshold),
           lowBalanceEnabled: enabled,
+          balanceFontSize,
         },
         user.email,
       );
@@ -148,6 +152,32 @@ function AlertsView() {
             required
           />
           <p className="field-hint">ตัวอย่าง: {formatBaht(Number(threshold) || 0)}</p>
+        </div>
+
+        <div className="field">
+          <label htmlFor="balanceFontSize">
+            ขนาดยอดคงเหลือ (ใช้กับทุกคนในร้าน)
+          </label>
+          <div className="slider-row">
+            <span className="slider-val" style={{ fontSize: "0.75rem" }}>
+              เล็ก
+            </span>
+            <input
+              id="balanceFontSize"
+              type="range"
+              min="0.7"
+              max="3"
+              step="0.05"
+              value={balanceFontSize}
+              onChange={(e) => setBalanceFontSize(Number(e.target.value))}
+            />
+            <span className="slider-val" style={{ fontSize: "1.1rem" }}>
+              ใหญ่
+            </span>
+          </div>
+          <p className="field-hint">
+            แสดงผลที่ขนาด {balanceFontSize.toFixed(2)}rem
+          </p>
         </div>
 
         <button type="submit" className="primary-btn" disabled={busy}>

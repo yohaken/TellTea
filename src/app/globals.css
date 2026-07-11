@@ -157,6 +157,23 @@ textarea {
   color: rgba(28, 42, 31, 0.55);
 }
 
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.slider-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--tea-leaf);
+}
+
+.slider-val {
+  color: rgba(28, 42, 31, 0.55);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .text-link {
   color: var(--tea-leaf);
   font-weight: 600;

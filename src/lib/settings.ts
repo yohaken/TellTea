@@ -12,6 +12,8 @@ export type AlertSettings = {
   lowBalanceThreshold: number;
   /** เปิดการแจ้งเตือนยอดต่ำ */
   lowBalanceEnabled: boolean;
+  /** ขนาดตัวอักษรของยอดคงเหลือ (rem) */
+  balanceFontSize: number;
   updatedAt: number;
   updatedBy: string;
 };
@@ -19,6 +21,7 @@ export type AlertSettings = {
 export const DEFAULT_ALERT_SETTINGS: AlertSettings = {
   lowBalanceThreshold: 5000,
   lowBalanceEnabled: true,
+  balanceFontSize: 1.15,
   updatedAt: 0,
   updatedBy: "",
 };
@@ -34,26 +37,34 @@ export async function getAlertSettings(): Promise<AlertSettings> {
   return {
     lowBalanceThreshold: Number(data.lowBalanceThreshold) || DEFAULT_ALERT_SETTINGS.lowBalanceThreshold,
     lowBalanceEnabled: data.lowBalanceEnabled !== false,
+    balanceFontSize: clampBalanceFontSize(Number(data.balanceFontSize)),
     updatedAt: Number(data.updatedAt) || 0,
     updatedBy: String(data.updatedBy || ""),
   };
 }
 
 export async function saveAlertSettings(
-  patch: Pick<AlertSettings, "lowBalanceThreshold" | "lowBalanceEnabled">,
+  patch: Pick<AlertSettings, "lowBalanceThreshold" | "lowBalanceEnabled" | "balanceFontSize">,
   updatedBy: string,
 ): Promise<void> {
   const threshold = Math.max(0, Number(patch.lowBalanceThreshold) || 0);
+  const fontSize = clampBalanceFontSize(patch.balanceFontSize);
   await setDoc(
     settingsRef(),
     {
       lowBalanceThreshold: threshold,
       lowBalanceEnabled: Boolean(patch.lowBalanceEnabled),
+      balanceFontSize: fontSize,
       updatedAt: Date.now(),
       updatedBy,
     },
     { merge: true },
   );
+}
+
+export function clampBalanceFontSize(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(3, Math.max(0.7, Math.round(n * 100) / 100)) : DEFAULT_ALERT_SETTINGS.balanceFontSize;
 }
 
 export function subscribeAlertSettings(
@@ -72,6 +83,7 @@ export function subscribeAlertSettings(
         lowBalanceThreshold:
           Number(data.lowBalanceThreshold) || DEFAULT_ALERT_SETTINGS.lowBalanceThreshold,
         lowBalanceEnabled: data.lowBalanceEnabled !== false,
+        balanceFontSize: clampBalanceFontSize(data.balanceFontSize),
         updatedAt: Number(data.updatedAt) || 0,
         updatedBy: String(data.updatedBy || ""),
       });
