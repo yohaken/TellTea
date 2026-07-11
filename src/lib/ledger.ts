@@ -9,6 +9,7 @@ import {
   getDocsFromCache,
   getDocsFromServer,
   limit,
+  onSnapshot,
   orderBy,
   query,
   startAfter,
@@ -17,12 +18,15 @@ import {
   writeBatch,
   type QueryDocumentSnapshot,
   type Query,
+  type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 import type { LedgerEntry, LedgerEntryInput } from "./types";
 import type { ImportLedgerRow } from "./xlsx-import";
 
 export const LEDGER_PAGE_SIZE = 60;
+/** Cap live window so mobile stays light; scroll still grows up to this. */
+export const LEDGER_LIVE_MAX = 480;
 
 export type LedgerPage = {
   entries: LedgerEntry[];
@@ -84,6 +88,28 @@ export async function listLedgerPage(
     const snap = await getDocs(q);
     return toPage(snap.docs, pageSize, snap.metadata.fromCache);
   }
+}
+
+/**
+ * Live newest-first window. Grows with `limitCount` (infinite scroll).
+ * Cache hit first, then server pushes — no manual refresh.
+ */
+export function subscribeLedgerPage(
+  limitCount: number,
+  onPage: (page: LedgerPage) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
+  const size = Math.max(1, Math.min(limitCount, LEDGER_LIVE_MAX));
+  const q = ledgerPageQuery(size, null) as Query;
+  return onSnapshot(
+    q,
+    (snap) => {
+      onPage(toPage(snap.docs, size, snap.metadata.fromCache));
+    },
+    (err) => {
+      onError?.(err instanceof Error ? err : new Error(String(err)));
+    },
+  );
 }
 
 /** Fast balance without downloading every row. */

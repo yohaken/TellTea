@@ -10,14 +10,14 @@ import {
   type FormEvent,
 } from "react";
 import Link from "next/link";
-import type { QueryDocumentSnapshot } from "firebase/firestore";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import {
   deleteLedgerEntry,
   getLedgerBalance,
+  LEDGER_LIVE_MAX,
   LEDGER_PAGE_SIZE,
-  listLedgerPage,
+  subscribeLedgerPage,
   updateLedgerEntry,
 } from "@/lib/ledger";
 import { guessTypeFromDescription } from "@/lib/ledger-labels";
@@ -43,13 +43,14 @@ function LedgerView() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [liveLimit, setLiveLimit] = useState(LEDGER_PAGE_SIZE);
   const [zoom, setZoom] = useState(1);
   const [editing, setEditing] = useState<LedgerEntry | null>(null);
-  const cursorRef = useRef<QueryDocumentSnapshot | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const loadingMoreRef = useRef(false);
   const balanceRef = useRef<number | null>(null);
   const hasRowsRef = useRef(false);
+  const balanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sawServerRef = useRef(false);
   const isOwner = staff?.role === "owner";
 
   useLayoutEffect(() => {
@@ -76,17 +77,6 @@ function LedgerView() {
     });
   }, []);
 
-  const refreshBalance = useCallback(async () => {
-    try {
-      const next = await getLedgerBalance();
-      setBalance(next);
-      balanceRef.current = next;
-      return next;
-    } catch {
-      return null;
-    }
-  }, []);
-
   const persistSnapshot = useCallback(
     (nextEntries: LedgerEntry[], nextHasMore: boolean, nextBalance: number | null) => {
       saveCachedLedger({
@@ -98,69 +88,70 @@ function LedgerView() {
     [],
   );
 
-  const reload = useCallback(async () => {
-    if (hasRowsRef.current) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
-    cursorRef.current = null;
-    try {
-      const cachedPage = await listLedgerPage(LEDGER_PAGE_SIZE, null, { preferCache: true });
-      if (cachedPage.entries.length) {
-        setEntries(cachedPage.entries);
-        cursorRef.current = cachedPage.cursor;
-        setHasMore(cachedPage.hasMore);
-        setLoading(false);
-        hasRowsRef.current = true;
-      }
-
-      const page = cachedPage.fromCache
-        ? await listLedgerPage(LEDGER_PAGE_SIZE, null, { preferCache: false })
-        : cachedPage;
-
-      setEntries(page.entries);
-      cursorRef.current = page.cursor;
-      setHasMore(page.hasMore);
-      hasRowsRef.current = page.entries.length > 0;
-      const nextBalance = await refreshBalance();
-      persistSnapshot(page.entries, page.hasMore, nextBalance ?? balanceRef.current);
-    } catch (err) {
-      if (!hasRowsRef.current) {
-        setError((err as Error).message || "โหลดบัญชีไม่สำเร็จ");
-      }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [persistSnapshot, refreshBalance]);
-
-  const loadMore = useCallback(async () => {
-    if (!hasMore || loadingMoreRef.current || !cursorRef.current) return;
-    loadingMoreRef.current = true;
-    setLoadingMore(true);
-    setError(null);
-    try {
-      const page = await listLedgerPage(LEDGER_PAGE_SIZE, cursorRef.current, {
-        preferCache: false,
-      });
-      setEntries((prev) => {
-        const seen = new Set(prev.map((e) => e.id));
-        const merged = [...prev, ...page.entries.filter((e) => !seen.has(e.id))];
-        persistSnapshot(merged, page.hasMore, balanceRef.current);
-        return merged;
-      });
-      cursorRef.current = page.cursor;
-      setHasMore(page.hasMore);
-    } catch (err) {
-      setError((err as Error).message || "โหลดเพิ่มไม่สำเร็จ");
-    } finally {
-      loadingMoreRef.current = false;
-      setLoadingMore(false);
-    }
-  }, [hasMore, persistSnapshot]);
+  const scheduleBalance = useCallback(() => {
+    if (balanceTimerRef.current) clearTimeout(balanceTimerRef.current);
+    balanceTimerRef.current = setTimeout(() => {
+      void getLedgerBalance()
+        .then((next) => {
+          setBalance(next);
+          balanceRef.current = next;
+          const cached = loadCachedLedger();
+          if (cached) saveCachedLedger({ ...cached, balance: next });
+        })
+        .catch(() => {
+          /* keep last known balance */
+        });
+    }, 280);
+  }, []);
 
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    setError(null);
+    if (hasRowsRef.current) setRefreshing(true);
+    else setLoading(true);
+    sawServerRef.current = false;
+
+    const unsub = subscribeLedgerPage(
+      liveLimit,
+      (page) => {
+        setEntries(page.entries);
+        setHasMore(page.hasMore && liveLimit < LEDGER_LIVE_MAX);
+        hasRowsRef.current = page.entries.length > 0;
+        setLoading(false);
+        setLoadingMore(false);
+        persistSnapshot(page.entries, page.hasMore, balanceRef.current);
+
+        if (!page.fromCache) {
+          sawServerRef.current = true;
+          setRefreshing(false);
+          scheduleBalance();
+        } else if (sawServerRef.current) {
+          setRefreshing(false);
+        } else {
+          setRefreshing(false);
+          scheduleBalance();
+        }
+      },
+      (err) => {
+        setLoading(false);
+        setRefreshing(false);
+        setLoadingMore(false);
+        if (!hasRowsRef.current) {
+          setError(err.message || "โหลดบัญชีไม่สำเร็จ");
+        }
+      },
+    );
+
+    return () => {
+      unsub();
+      if (balanceTimerRef.current) clearTimeout(balanceTimerRef.current);
+    };
+  }, [liveLimit, persistSnapshot, scheduleBalance]);
+
+  const loadMore = useCallback(() => {
+    if (!hasMore || loadingMore || liveLimit >= LEDGER_LIVE_MAX) return;
+    setLoadingMore(true);
+    setLiveLimit((n) => Math.min(n + LEDGER_PAGE_SIZE, LEDGER_LIVE_MAX));
+  }, [hasMore, loadingMore, liveLimit]);
 
   useEffect(() => {
     const node = sentinelRef.current;
@@ -168,7 +159,7 @@ function LedgerView() {
     const observer = new IntersectionObserver(
       (items) => {
         if (items.some((item) => item.isIntersecting)) {
-          void loadMore();
+          loadMore();
         }
       },
       { root: null, rootMargin: "240px", threshold: 0 },
@@ -264,7 +255,11 @@ function LedgerView() {
           <div ref={sentinelRef} className="load-more-sentinel" aria-hidden />
           {loadingMore ? <p className="empty">กำลังโหลดเพิ่ม...</p> : null}
           {!hasMore && entries.length > 0 ? (
-            <p className="empty muted-foot">ครบทุกรายการแล้ว ({entries.length})</p>
+            <p className="empty muted-foot">
+              {liveLimit >= LEDGER_LIVE_MAX && entries.length >= LEDGER_LIVE_MAX
+                ? `แสดงล่าสุด ${entries.length} รายการ (อัปเดตอัตโนมัติ)`
+                : `ครบทุกรายการแล้ว (${entries.length})`}
+            </p>
           ) : null}
         </>
       ) : null}
@@ -275,7 +270,7 @@ function LedgerView() {
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
-            void reload();
+            scheduleBalance();
           }}
           onError={setError}
         />
