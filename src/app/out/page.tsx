@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import { addLedgerEntry } from "@/lib/ledger";
+import { guessTypeFromDescription, labelLedgerType } from "@/lib/ledger-labels";
 import { parseDateInput, todayInputValue } from "@/lib/utils";
 
 const TYPE_OPTIONS = [
+  { value: "auto", label: "อัตโนมัติจากชื่อรายการ" },
   { value: "cogs", label: "ต้นทุน (cogs)" },
   { value: "sga", label: "ค่าใช้จ่าย (sga)" },
   { value: "asset", label: "สินทรัพย์ (asset)" },
@@ -23,14 +25,18 @@ export default function MoneyOutPage() {
 }
 
 function MoneyOutView() {
-  const { user } = useAuth();
+  const { user, staff } = useAuth();
   const router = useRouter();
+  const isOwner = staff?.role === "owner";
   const [date, setDate] = useState(todayInputValue());
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [type, setType] = useState("cogs");
+  const [typeMode, setTypeMode] = useState("auto");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const autoType = useMemo(() => guessTypeFromDescription(description), [description]);
+  const resolvedType = typeMode === "auto" ? autoType : typeMode;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -43,7 +49,7 @@ function MoneyOutView() {
         description,
         amountIn: 0,
         amountOut: Number(amount),
-        type,
+        type: resolvedType,
         createdBy: user.email,
       });
       router.replace("/ledger/");
@@ -58,7 +64,7 @@ function MoneyOutView() {
     <div>
       <h1 className="panel-title">บันทึกเงินออก</h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        โอนสั่งซื้อของ / จ่ายค่าใช้จ่าย แล้วบันทึกรายการเงินออก
+        ใส่แค่วันที่ รายการ และจำนวนเงิน — หมวดระบบจัดให้อัตโนมัติ
       </p>
       {error ? <p className="error-text">{error}</p> : null}
 
@@ -78,16 +84,6 @@ function MoneyOutView() {
           />
         </div>
         <div className="field">
-          <label htmlFor="type">หมวด</label>
-          <select id="type" value={type} onChange={(e) => setType(e.target.value)}>
-            {TYPE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
           <label htmlFor="amount">จำนวนเงินออก (บาท)</label>
           <input
             id="amount"
@@ -101,6 +97,25 @@ function MoneyOutView() {
             required
           />
         </div>
+
+        {isOwner ? (
+          <div className="field">
+            <label htmlFor="type">หมวด (เจ้าของแก้ได้ · พนักงานไม่เห็นช่องนี้)</label>
+            <select id="type" value={typeMode} onChange={(e) => setTypeMode(e.target.value)}>
+              {TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            {typeMode === "auto" && description ? (
+              <p className="muted" style={{ marginTop: "0.35rem", textAlign: "left" }}>
+                จะบันทึกเป็น: {labelLedgerType(autoType)}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         <button type="submit" className="primary-btn action-out" disabled={busy}>
           {busy ? "กำลังบันทึก..." : "บันทึกเงินออก"}
         </button>

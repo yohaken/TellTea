@@ -555,6 +555,102 @@ textarea {
   padding: 0.35rem 0.9rem;
 }
 
+.sheet-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 10px 30px rgba(28, 42, 31, 0.06);
+}
+
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  min-width: 320px;
+}
+
+.sheet-table th,
+.sheet-table td {
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.1);
+  vertical-align: middle;
+}
+
+.sheet-table th {
+  position: sticky;
+  top: 0;
+  background: #f3efe4;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: rgba(28, 42, 31, 0.7);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sheet-table th.col-in {
+  background: #b7e4c0;
+  color: #1b4332;
+  text-align: right;
+}
+
+.sheet-table th.col-out {
+  background: #f4a261;
+  color: #5c2c0c;
+  text-align: right;
+}
+
+.sheet-table .col-date {
+  width: 4.6rem;
+  white-space: nowrap;
+  color: rgba(28, 42, 31, 0.65);
+}
+
+.sheet-table .col-desc {
+  text-align: left;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.sheet-table .col-in,
+.sheet-table .col-out {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.sheet-table .col-in {
+  color: #1f8f4e;
+}
+
+.sheet-table .col-out {
+  color: #c45a1a;
+}
+
+.sheet-table .col-act {
+  width: 2.4rem;
+  text-align: center;
+}
+
+.sheet-table tr.row-in {
+  background: rgba(31, 143, 78, 0.1);
+}
+
+.sheet-table tr.row-out:nth-child(even) {
+  background: rgba(28, 42, 31, 0.03);
+}
+
+.sheet-del {
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0.15rem;
+}
+
 .ledger-row {
   display: flex;
   gap: 0.55rem;

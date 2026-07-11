@@ -8,11 +8,9 @@ import {
   currentBalance,
   deleteLedgerEntry,
   listLedgerEntries,
-  withRunningBalance,
 } from "@/lib/ledger";
 import type { LedgerEntry } from "@/lib/types";
 import { formatBaht, formatDateShort } from "@/lib/utils";
-import { labelLedgerType } from "@/lib/ledger-labels";
 
 export default function LedgerPage() {
   return (
@@ -45,7 +43,11 @@ function LedgerView() {
     void reload();
   }, [reload]);
 
-  const rows = useMemo(() => withRunningBalance(entries).reverse(), [entries]);
+  // newest first — like scrolling the sheet from the bottom up for daily use
+  const rows = useMemo(
+    () => [...entries].sort((a, b) => b.date - a.date || b.createdAt - a.createdAt),
+    [entries],
+  );
   const balance = useMemo(() => currentBalance(entries), [entries]);
 
   return (
@@ -69,51 +71,55 @@ function LedgerView() {
         ) : null}
       </div>
 
-      <h1 className="panel-title">รายการ</h1>
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading && rows.length === 0 ? (
         <p className="empty">ยังไม่มีรายการ — เริ่มจากโอนเข้าหรือบันทึกเงินออก</p>
-      ) : (
-        <div className="list-card ledger-list">
-          {rows.map((row) => (
-            <div
-              key={row.id}
-              className={`ledger-row ${row.amountIn > 0 ? "is-in" : "is-out"}`}
-            >
-              <div className="ledger-main">
-                <div className="ledger-top">
-                  <span className="ledger-date">{formatDateShort(row.date)}</span>
-                  {row.type ? <span className="ledger-type">{labelLedgerType(row.type)}</span> : null}
-                </div>
-                <strong>{row.description}</strong>
-                <div className="ledger-amounts">
-                  {row.amountIn > 0 ? (
-                    <span className="amt-in">+{formatBaht(row.amountIn)}</span>
-                  ) : (
-                    <span className="amt-out">−{formatBaht(row.amountOut)}</span>
-                  )}
-                  <span className="amt-bal">คงเหลือ {formatBaht(row.balance)}</span>
-                </div>
-              </div>
-              {isOwner ? (
-                <button
-                  type="button"
-                  className="danger-btn"
-                  onClick={() =>
-                    void deleteLedgerEntry(row.id)
-                      .then(reload)
-                      .catch((err) => setError(err.message || "ลบไม่สำเร็จ"))
-                  }
-                >
-                  ลบ
-                </button>
-              ) : null}
-            </div>
-          ))}
+      ) : !loading ? (
+        <div className="sheet-wrap">
+          <table className="sheet-table">
+            <thead>
+              <tr>
+                <th className="col-date">วันที่</th>
+                <th className="col-desc">รายการ</th>
+                <th className="col-in">เข้า</th>
+                <th className="col-out">ออก</th>
+                {isOwner ? <th className="col-act" /> : null}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id} className={row.amountIn > 0 ? "row-in" : "row-out"}>
+                  <td className="col-date">{formatDateShort(row.date)}</td>
+                  <td className="col-desc">{row.description}</td>
+                  <td className="col-in">
+                    {row.amountIn > 0 ? formatBaht(row.amountIn) : ""}
+                  </td>
+                  <td className="col-out">
+                    {row.amountOut > 0 ? formatBaht(row.amountOut) : ""}
+                  </td>
+                  {isOwner ? (
+                    <td className="col-act">
+                      <button
+                        type="button"
+                        className="sheet-del"
+                        onClick={() =>
+                          void deleteLedgerEntry(row.id)
+                            .then(reload)
+                            .catch((err) => setError(err.message || "ลบไม่สำเร็จ"))
+                        }
+                      >
+                        ลบ
+                      </button>
+                    </td>
+                  ) : null}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
