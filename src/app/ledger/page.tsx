@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type FormEvent,
 } from "react";
 import Link from "next/link";
@@ -217,7 +218,10 @@ function LedgerView() {
         <p className="empty">ยังไม่มีรายการ — เริ่มจากโอนเข้าหรือบันทึกเงินออก</p>
       ) : !loading ? (
         <>
-          <div className="sheet-wrap" style={{ fontSize: `${zoom}em` }}>
+          <div
+            className="sheet-wrap"
+            style={{ "--sheet-zoom": zoom } as CSSProperties}
+          >
             <table className="sheet-table">
               <thead>
                 <tr>

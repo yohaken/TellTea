@@ -604,6 +604,7 @@ textarea {
 }
 
 .sheet-wrap {
+  --sheet-zoom: 1;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   border-radius: 0.85rem;
@@ -615,13 +616,13 @@ textarea {
 .sheet-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
-  min-width: 320px;
+  font-size: calc(0.82rem * var(--sheet-zoom));
+  min-width: calc(320px * var(--sheet-zoom));
 }
 
 .sheet-table th,
 .sheet-table td {
-  padding: 0.45rem 0.5rem;
+  padding: calc(0.45rem * var(--sheet-zoom)) calc(0.5rem * var(--sheet-zoom));
   border-bottom: 1px solid rgba(28, 42, 31, 0.1);
   vertical-align: middle;
 }
@@ -631,7 +632,7 @@ textarea {
   top: 0;
   background: #f3efe4;
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * var(--sheet-zoom));
   color: rgba(28, 42, 31, 0.7);
   text-align: left;
   white-space: nowrap;
@@ -650,7 +651,7 @@ textarea {
 }
 
 .sheet-table .col-date {
-  width: 4.6rem;
+  width: calc(4.6rem * var(--sheet-zoom));
   white-space: nowrap;
   color: rgba(28, 42, 31, 0.65);
 }
@@ -678,7 +679,7 @@ textarea {
 }
 
 .sheet-table .col-act {
-  width: 2.4rem;
+  width: calc(2.4rem * var(--sheet-zoom));
   text-align: center;
 }
 
@@ -718,7 +719,7 @@ textarea {
   border: 0;
   background: transparent;
   color: var(--tea-leaf);
-  font-size: 0.72rem;
+  font-size: calc(0.72rem * var(--sheet-zoom, 1));
   font-weight: 700;
   cursor: pointer;
   padding: 0.2rem;
