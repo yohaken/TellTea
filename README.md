@@ -31,10 +31,15 @@
 
 ## ล็อกอินมือถือ
 
-ใช้ `authDomain` ของ Firebase (`mypeer-501909.firebaseapp.com`) + ล็อกอินแบบ **popup** เป็นหลัก
+ใช้ `authDomain` = `mypeer-501909.firebaseapp.com` และล็อกอินแบบ **redirect**
+(popup จาก `telltea-shop.web.app` จะเจอ `redirect_uri_mismatch` เพราะ Google ยังไม่มี origin นี้)
 
 เปิดด้วย **Safari / Chrome** โดยตรง — หลีกเลี่ยงเปิดจาก LINE / Facebook in-app browser
-(ในแอปแชทมักโดนบล็อกหน้าต่าง Google)
+
+ถ้าต้องการใช้ popup ได้ด้วย ให้เพิ่มใน Google Cloud Console → Credentials → OAuth Web client:
+
+- Authorized JavaScript origins: `https://telltea-shop.web.app`
+- Authorized redirect URIs: `https://telltea-shop.web.app/__/auth/handler`
 
 ## พัฒนาในเครื่อง
 

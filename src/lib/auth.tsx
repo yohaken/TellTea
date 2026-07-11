@@ -39,6 +39,28 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const REDIRECT_FLAG = "telltea_auth_redirect";
 
+/**
+ * Popup uses storagerelay://https/<app-origin> which Google rejects unless
+ * that origin is listed as an Authorized JavaScript origin.
+ * telltea-shop.web.app is NOT on that list — only the Firebase authDomain
+ * handler URI works today. Prefer redirect so Google sees:
+ * https://mypeer-501909.firebaseapp.com/__/auth/handler
+ */
+function shouldUseRedirect() {
+  if (typeof window === "undefined") return true;
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") return false;
+  // Hosting custom site / multi-site — redirect only
+  if (host === "telltea-shop.web.app" || host === "telltea-shop.firebaseapp.com") {
+    return true;
+  }
+  // Phones / PWA: popup often blocked anyway
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPad|iPod|Android/i.test(ua)) return true;
+  if (window.matchMedia?.("(display-mode: standalone)").matches) return true;
+  return false;
+}
+
 function mapAuthError(error: unknown) {
   const code = (error as { code?: string })?.code || "";
   const message = (error as Error)?.message || "";
@@ -46,7 +68,7 @@ function mapAuthError(error: unknown) {
     return "การล็อกอินถูกยกเลิก";
   }
   if (code === "auth/popup-blocked") {
-    return "เบราว์เซอร์บล็อกหน้าต่างล็อกอิน — ลองอีกครั้ง หรือเปิดใน Chrome/Safari";
+    return "เบราว์เซอร์บล็อกหน้าต่างล็อกอิน — ลองอีกครั้ง";
   }
   if (code === "auth/unauthorized-domain") {
     return "โดเมนนี้ยังไม่อนุญาตใน Firebase Auth";
@@ -106,7 +128,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const result = await getRedirectResult(auth);
         sessionStorage.removeItem(REDIRECT_FLAG);
         if (pending && !result && !auth.currentUser && !cancelled) {
-          setError("ล็อกอินมือถือไม่สำเร็จ — เปิดใน Chrome หรือ Safari แล้วลองใหม่");
+          setError(
+            "ล็อกอินมือถือไม่สำเร็จ — เปิดใน Safari/Chrome (ไม่ใช่ LINE) แล้วลองใหม่",
+          );
         }
       } catch (err) {
         sessionStorage.removeItem(REDIRECT_FLAG);
@@ -156,16 +180,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     provider.addScope("profile");
     provider.setCustomParameters({ prompt: "select_account" });
 
-    // Prefer popup on every device (including phones). Redirect is a fallback only —
-    // it breaks more often on mobile (in-app browsers / storage partitioning).
     try {
+      if (shouldUseRedirect()) {
+        sessionStorage.setItem(REDIRECT_FLAG, "1");
+        await signInWithRedirect(auth, provider);
+        return;
+      }
       await signInWithPopup(auth, provider);
     } catch (err) {
       const code = (err as { code?: string })?.code;
-      if (code === "auth/popup-closed-by-user") {
-        setError(mapAuthError(err));
-        return;
-      }
       if (
         code === "auth/popup-blocked" ||
         code === "auth/operation-not-supported-in-this-environment" ||
