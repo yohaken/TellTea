@@ -68,7 +68,31 @@ textarea {
   letter-spacing: -0.03em;
   margin: 0;
   color: var(--tea-leaf);
-  line-height: 1;
+  line-height: 1.15;
+}
+
+.brand-name {
+  display: inline;
+}
+
+.brand-version {
+  display: inline;
+  font-family: var(--font-body), "Sarabun", sans-serif;
+  font-size: 0.42em;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: rgba(28, 42, 31, 0.55);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.brand-compact {
+  font-size: 1.55rem;
+  line-height: 1.2;
+}
+
+.brand-compact .brand-version {
+  font-size: 0.55em;
 }
 
 .center-screen {
@@ -257,6 +281,10 @@ textarea {
 
 .topbar .brand {
   font-size: 1.55rem;
+}
+
+.topbar .brand-version {
+  font-size: 0.55em;
 }
 
 .topbar-user {

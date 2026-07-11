@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { AppBrand } from "@/components/AppBrand";
 
 export default function HomePage() {
   const { status } = useAuth();
@@ -28,7 +29,7 @@ export default function HomePage() {
 
   return (
     <div className="center-screen">
-      <p className="brand">TellTea</p>
+      <AppBrand />
       <p className="muted">กำลังเปิดบัญชีร้าน...</p>
     </div>
   );

@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { AppBrand } from "@/components/AppBrand";
 import { cn } from "@/lib/utils";
 
 /** งานวันต่อวัน — พนักงานและเจ้าของใช้ร่วมกัน */
@@ -49,7 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="app-shell">
         <header className="topbar">
           <div>
-            <p className="brand">TellTea</p>
+            <AppBrand compact />
             <p className="topbar-sub">{roleLabel}</p>
           </div>
           <div className="topbar-user">

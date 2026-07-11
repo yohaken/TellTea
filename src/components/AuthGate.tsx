@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { AppBrand } from "./AppBrand";
 import { AppShell } from "./AppShell";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
@@ -18,7 +19,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   if (status === "loading") {
     return (
       <div className="center-screen">
-        <p className="brand">TellTea</p>
+        <AppBrand />
         <p className="muted">กำลังตรวจสอบสิทธิ์...</p>
       </div>
     );
@@ -27,7 +28,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   if (status === "denied") {
     return (
       <div className="center-screen">
-        <p className="brand">TellTea</p>
+        <AppBrand />
         <h1>ยังไม่มีสิทธิ์เข้าใช้งาน</h1>
         <p className="muted">
           อีเมล <strong>{user?.email}</strong> ยังไม่อยู่ในรายชื่อพนักงาน

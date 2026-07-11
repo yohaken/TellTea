@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { AppBrand } from "@/components/AppBrand";
 
 function isInAppBrowser() {
   if (typeof navigator === "undefined") return false;
@@ -28,7 +29,7 @@ export default function LoginPage() {
   return (
     <div className="hero-login">
       <div className="hero-copy">
-        <p className="brand">TellTea</p>
+        <AppBrand />
         <p>บัญชีร้าน — เจ้าของโอนเข้า พนักงานบันทึกเงินออก</p>
       </div>
       <div className="hero-actions">
