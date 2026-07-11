@@ -666,38 +666,27 @@ textarea {
   padding: 0.35rem 0.9rem;
 }
 
-.sheet-edge {
-  margin: 0 calc(-1rem);
-  width: calc(100% + 2rem);
-}
-
 .sheet-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  border-radius: 0.85rem;
   background: rgba(255, 255, 255, 0.78);
-  border-top: 1px solid rgba(255, 255, 255, 0.85);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.85);
   box-shadow: 0 10px 30px rgba(28, 42, 31, 0.06);
 }
 
 .sheet-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
   font-size: 0.82rem;
   min-width: 320px;
 }
 
-.sheet-table col {
-  transition: width 80ms;
-}
-
 .sheet-table th,
 .sheet-table td {
-  padding: 0.35rem 0.35rem;
+  padding: 0.35rem 0.5rem;
   border-bottom: 1px solid rgba(28, 42, 31, 0.1);
   vertical-align: middle;
-  overflow: hidden;
 }
 
 .sheet-table th {
@@ -723,24 +712,15 @@ textarea {
   text-align: right;
 }
 
-.col-rsz {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 8px;
-  cursor: col-resize;
-  z-index: 2;
-  -webkit-tap-highlight-color: transparent;
-}
-
 .sheet-table .col-date {
+  width: 3.6rem;
   white-space: nowrap;
   color: rgba(28, 42, 31, 0.6);
   font-size: 0.75rem;
 }
 
 .sheet-table .col-photo {
+  width: 2.8rem;
   text-align: center;
   vertical-align: middle;
 }
@@ -758,10 +738,12 @@ textarea {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   word-break: break-word;
+  overflow: hidden;
 }
 
 .sheet-table .col-in,
 .sheet-table .col-out {
+  width: 1%;
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -777,6 +759,7 @@ textarea {
 }
 
 .sheet-table .col-act {
+  width: 2.8rem;
   text-align: center;
 }
 
@@ -1163,16 +1146,6 @@ textarea {
   .main-panel {
     padding-left: 1.35rem;
     padding-right: 1.35rem;
-  }
-
-  .sheet-edge {
-    margin: 0 calc(-1.35rem);
-    width: calc(100% + 2.7rem);
-  }
-
-  .sheet-wrap {
-    border-radius: 0.85rem;
-    border: 1px solid rgba(255, 255, 255, 0.85);
   }
 
   .quick-actions:has(> :nth-child(2)) {
