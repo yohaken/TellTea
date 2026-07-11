@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  BookMarked,
   BookOpen,
   Boxes,
   FileSpreadsheet,
@@ -27,6 +28,7 @@ const dailyLinks = [
 
 /** เครื่องมือเจ้าของ — ช่วงเทสเจ้าของเข้าได้หมด */
 const ownerLinks = [
+  { href: "/owner-books/", label: "บช.เจ้าของ", icon: BookMarked },
   { href: "/alerts/", label: "แจ้งเตือน", icon: MoreHorizontal },
   { href: "/in/", label: "โอนเข้า", icon: ArrowDownLeft },
   { href: "/import/", label: "นำเข้า", icon: FileSpreadsheet },

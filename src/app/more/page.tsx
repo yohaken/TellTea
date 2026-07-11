@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownLeft, Bell, FileSpreadsheet, Users } from "lucide-react";
+import { ArrowDownLeft, Bell, BookMarked, FileSpreadsheet, Users } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 
@@ -26,6 +26,12 @@ function MoreView() {
   if (staff?.role !== "owner") return null;
 
   const tools = [
+    {
+      href: "/owner-books/",
+      title: "บัญชีเจ้าของ",
+      desc: "บช.ส่วนตัวเจ้าของร้าน — เฉพาะเจ้าของเห็น · ยังไม่มีข้อมูล",
+      icon: BookMarked,
+    },
     {
       href: "/alerts/",
       title: "แจ้งเตือนยอดต่ำ",
