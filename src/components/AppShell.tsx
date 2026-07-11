@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowDownLeft, ArrowUpRight, BookOpen, LogOut, Users } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, BookOpen, FileSpreadsheet, LogOut, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +10,7 @@ const links = [
   { href: "/ledger/", label: "บัญชี", icon: BookOpen },
   { href: "/out/", label: "เงินออก", icon: ArrowUpRight },
   { href: "/in/", label: "โอนเข้า", icon: ArrowDownLeft, ownerOnly: true },
+  { href: "/import/", label: "นำเข้า", icon: FileSpreadsheet, ownerOnly: true },
   { href: "/staff/", label: "พนักงาน", icon: Users, ownerOnly: true },
 ];
 

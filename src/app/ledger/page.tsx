@@ -12,6 +12,7 @@ import {
 } from "@/lib/ledger";
 import type { LedgerEntry } from "@/lib/types";
 import { formatBaht, formatDateShort } from "@/lib/utils";
+import { labelLedgerType } from "@/lib/ledger-labels";
 
 export default function LedgerPage() {
   return (
@@ -81,7 +82,7 @@ function LedgerView() {
               <div className="ledger-main">
                 <div className="ledger-top">
                   <span className="ledger-date">{formatDateShort(row.date)}</span>
-                  {row.type ? <span className="ledger-type">{row.type}</span> : null}
+                  {row.type ? <span className="ledger-type">{labelLedgerType(row.type)}</span> : null}
                 </div>
                 <strong>{row.description}</strong>
                 <div className="ledger-amounts">

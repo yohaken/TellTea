@@ -4,11 +4,14 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  limit,
   orderBy,
   query,
+  writeBatch,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 import type { LedgerEntry, LedgerEntryInput } from "./types";
+import type { ImportLedgerRow } from "./xlsx-import";
 
 export async function listLedgerEntries(): Promise<LedgerEntry[]> {
   const snap = await getDocs(
@@ -41,6 +44,58 @@ export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
   }
   const ref = await addDoc(collection(getDb(), "ledger"), payload);
   return ref.id;
+}
+
+/** Import many rows (xlsx). Batches of 400. */
+export async function importLedgerEntries(
+  rows: ImportLedgerRow[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<number> {
+  const db = getDb();
+  const chunkSize = 400;
+  let done = 0;
+
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    const batch = writeBatch(db);
+    for (const row of chunk) {
+      const ref = doc(collection(db, "ledger"));
+      batch.set(ref, {
+        date: row.date,
+        description: row.description,
+        amountIn: row.amountIn,
+        amountOut: row.amountOut,
+        type: row.type || "",
+        createdBy: row.createdBy,
+        createdAt: row.createdAt,
+      });
+    }
+    await batch.commit();
+    done += chunk.length;
+    onProgress?.(done, rows.length);
+  }
+
+  return done;
+}
+
+export async function deleteAllLedgerEntries(
+  onProgress?: (done: number) => void,
+): Promise<number> {
+  const db = getDb();
+  let deleted = 0;
+  for (;;) {
+    const snap = await getDocs(
+      query(collection(db, "ledger"), orderBy("createdAt", "asc"), limit(400)),
+    );
+    if (snap.empty) break;
+    const batch = writeBatch(db);
+    snap.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    deleted += snap.docs.length;
+    onProgress?.(deleted);
+    if (snap.docs.length < 400) break;
+  }
+  return deleted;
 }
 
 export async function deleteLedgerEntry(id: string): Promise<void> {

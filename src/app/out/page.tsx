@@ -7,7 +7,12 @@ import { useAuth } from "@/lib/auth";
 import { addLedgerEntry } from "@/lib/ledger";
 import { parseDateInput, todayInputValue } from "@/lib/utils";
 
-const TYPE_OPTIONS = ["น้ำแข็ง", "วัตถุดิบ", "แม็คโคร", "ท็อปเวิลด์", "ค่าแรง", "อื่นๆ"];
+const TYPE_OPTIONS = [
+  { value: "cogs", label: "ต้นทุน (cogs)" },
+  { value: "sga", label: "ค่าใช้จ่าย (sga)" },
+  { value: "asset", label: "สินทรัพย์ (asset)" },
+  { value: "อื่นๆ", label: "อื่นๆ" },
+];
 
 export default function MoneyOutPage() {
   return (
@@ -23,7 +28,7 @@ function MoneyOutView() {
   const [date, setDate] = useState(todayInputValue());
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [type, setType] = useState("วัตถุดิบ");
+  const [type, setType] = useState("cogs");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,8 +81,8 @@ function MoneyOutView() {
           <label htmlFor="type">หมวด</label>
           <select id="type" value={type} onChange={(e) => setType(e.target.value)}>
             {TYPE_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </select>
