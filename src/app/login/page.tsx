@@ -34,7 +34,7 @@ export default function LoginPage() {
       <div className="hero-actions">
         {inApp ? (
           <p className="error-text" style={{ marginBottom: "0.75rem" }}>
-            เปิดจาก LINE/แชทมักโดนบล็อก Google — กด ⋯ แล้วเลือก “เปิดในเบราว์เซอร์”
+            เปิดจาก LINE/แชทมักล็อกอินไม่ได้ — กด ⋯ แล้วเลือก “เปิดในเบราว์เซอร์”
             (Safari หรือ Chrome)
           </p>
         ) : null}

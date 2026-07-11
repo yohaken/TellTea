@@ -11,10 +11,9 @@ import {
 } from "react";
 import {
   GoogleAuthProvider,
-  getRedirectResult,
   onAuthStateChanged,
+  signInWithCredential,
   signInWithPopup,
-  signInWithRedirect,
   signOut as firebaseSignOut,
   type User,
 } from "firebase/auth";
@@ -37,29 +36,13 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const REDIRECT_FLAG = "telltea_auth_redirect";
-
 /**
- * Popup uses storagerelay://https/<app-origin> which Google rejects unless
- * that origin is listed as an Authorized JavaScript origin.
- * telltea-shop.web.app is NOT on that list — only the Firebase authDomain
- * handler URI works today. Prefer redirect so Google sees:
- * https://mypeer-501909.firebaseapp.com/__/auth/handler
+ * Long-term mobile-safe Google login:
+ * Complete OAuth on mypeer-501909.firebaseapp.com (registered redirect_uri),
+ * then return a Google ID token to telltea-shop and signInWithCredential.
  */
-function shouldUseRedirect() {
-  if (typeof window === "undefined") return true;
-  const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1") return false;
-  // Hosting custom site / multi-site — redirect only
-  if (host === "telltea-shop.web.app" || host === "telltea-shop.firebaseapp.com") {
-    return true;
-  }
-  // Phones / PWA: popup often blocked anyway
-  const ua = navigator.userAgent || "";
-  if (/iPhone|iPad|iPod|Android/i.test(ua)) return true;
-  if (window.matchMedia?.("(display-mode: standalone)").matches) return true;
-  return false;
-}
+export const TELLTEA_AUTH_BRIDGE =
+  "https://mypeer-501909.firebaseapp.com/telltea-auth.html";
 
 function mapAuthError(error: unknown) {
   const code = (error as { code?: string })?.code || "";
@@ -80,6 +63,9 @@ function mapAuthError(error: unknown) {
   ) {
     return "ตั้งค่า Google Sign-In ยังไม่ครบ — แจ้งเจ้าของร้าน";
   }
+  if (code === "auth/invalid-credential" || code === "auth/invalid-id-token") {
+    return "โทเคนล็อกอินหมดอายุ — กดเข้าสู่ระบบอีกครั้ง";
+  }
   if (code === "permission-denied") {
     return "อ่านสิทธิ์พนักงานไม่ได้ — ลองออกแล้วเข้าใหม่";
   }
@@ -96,6 +82,26 @@ async function resolveStaff(user: User): Promise<StaffMember | null> {
   const bootstrapped = await ensureOwnerBootstrap(email, user.displayName);
   if (bootstrapped) return bootstrapped;
   return getStaffMember(email);
+}
+
+function consumeBridgeToken(): string | null {
+  if (typeof window === "undefined") return null;
+  const hash = window.location.hash.startsWith("#")
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  if (!hash) return null;
+  const params = new URLSearchParams(hash);
+  const token = params.get("google_id_token");
+  if (!token) return null;
+  window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  return token;
+}
+
+function shouldUseAuthBridge() {
+  // localhost can keep popup; production always uses the firebaseapp bridge
+  if (typeof window === "undefined") return true;
+  const host = window.location.hostname;
+  return !(host === "localhost" || host === "127.0.0.1");
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -123,17 +129,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     void (async () => {
+      const bridgeToken = consumeBridgeToken();
+      if (!bridgeToken) return;
       try {
-        const pending = sessionStorage.getItem(REDIRECT_FLAG) === "1";
-        const result = await getRedirectResult(auth);
-        sessionStorage.removeItem(REDIRECT_FLAG);
-        if (pending && !result && !auth.currentUser && !cancelled) {
-          setError(
-            "ล็อกอินมือถือไม่สำเร็จ — เปิดใน Safari/Chrome (ไม่ใช่ LINE) แล้วลองใหม่",
-          );
-        }
+        setStatus("loading");
+        await signInWithCredential(auth, GoogleAuthProvider.credential(bridgeToken));
       } catch (err) {
-        sessionStorage.removeItem(REDIRECT_FLAG);
         if (!cancelled) setError(mapAuthError(err));
       }
     })();
@@ -174,35 +175,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     setError(null);
+
+    if (shouldUseAuthBridge()) {
+      const returnTo = `${window.location.origin}/login/`;
+      window.location.assign(
+        `${TELLTEA_AUTH_BRIDGE}?return=${encodeURIComponent(returnTo)}`,
+      );
+      return;
+    }
+
     const auth = getFirebaseAuth();
     const provider = new GoogleAuthProvider();
     provider.addScope("email");
     provider.addScope("profile");
     provider.setCustomParameters({ prompt: "select_account" });
-
     try {
-      if (shouldUseRedirect()) {
-        sessionStorage.setItem(REDIRECT_FLAG, "1");
-        await signInWithRedirect(auth, provider);
-        return;
-      }
       await signInWithPopup(auth, provider);
     } catch (err) {
-      const code = (err as { code?: string })?.code;
-      if (
-        code === "auth/popup-blocked" ||
-        code === "auth/operation-not-supported-in-this-environment" ||
-        code === "auth/cancelled-popup-request"
-      ) {
-        try {
-          sessionStorage.setItem(REDIRECT_FLAG, "1");
-          await signInWithRedirect(auth, provider);
-          return;
-        } catch (redirectErr) {
-          setError(mapAuthError(redirectErr));
-          return;
-        }
-      }
       setError(mapAuthError(err));
     }
   }, []);
