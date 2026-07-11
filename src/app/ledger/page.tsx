@@ -199,6 +199,7 @@ function LedgerView() {
                 <tr>
                   <th className="col-date">วันที่</th>
                   <th className="col-desc">รายการ</th>
+                  <th className="col-photo">รูปภาพ</th>
                   <th className="col-in">เข้า</th>
                   <th className="col-out">ออก</th>
                   <th className="col-act">จัดการ</th>
@@ -208,18 +209,24 @@ function LedgerView() {
                 {entries.map((row) => (
                   <tr key={row.id} className={row.amountIn > 0 ? "row-in" : "row-out"}>
                     <td className="col-date">{formatDateShort(row.date)}</td>
-                    <td className="col-desc">
-                      {row.description}
+                    <td className="col-desc">{row.description}</td>
+                    <td className="col-photo">
                       {row.receiptUrl ? (
                         <a
-                          className="receipt-link"
+                          className="photo-link"
                           href={row.receiptUrl}
                           target="_blank"
                           rel="noopener noreferrer"
+                          title="เปิดรูป"
                         >
-                          สลิป
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.1a2 2 0 0 0 1.5-.7l2.3-2.3a2 2 0 0 1 1.4-.6H16a2 2 0 0 1 1.4.6l2.3 2.3a2 2 0 0 0 1.5.7H21a2 2 0 0 1 2 2z"/>
+                            <circle cx="12" cy="13" r="3"/>
+                          </svg>
                         </a>
-                      ) : null}
+                      ) : (
+                        <span className="photo-none">–</span>
+                      )}
                     </td>
                     <td className="col-in">{row.amountIn > 0 ? formatBaht(row.amountIn) : ""}</td>
                     <td className="col-out">{row.amountOut > 0 ? formatBaht(row.amountOut) : ""}</td>
