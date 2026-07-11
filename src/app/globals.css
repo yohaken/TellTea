@@ -550,6 +550,17 @@ textarea {
   font-size: 0.85rem;
 }
 
+.sync-dot {
+  color: rgba(28, 42, 31, 0.4);
+  animation: sync-pulse 1s ease-in-out infinite;
+}
+
+@keyframes sync-pulse {
+  50% {
+    opacity: 0.2;
+  }
+}
+
 .balance-hero strong {
   display: block;
   margin-top: 0.25rem;

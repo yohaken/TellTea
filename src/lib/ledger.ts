@@ -6,6 +6,8 @@ import {
   DocumentSnapshot,
   getAggregateFromServer,
   getDocs,
+  getDocsFromCache,
+  getDocsFromServer,
   limit,
   orderBy,
   query,
@@ -14,6 +16,7 @@ import {
   updateDoc,
   writeBatch,
   type QueryDocumentSnapshot,
+  type Query,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 import type { LedgerEntry, LedgerEntryInput } from "./types";
@@ -25,19 +28,25 @@ export type LedgerPage = {
   entries: LedgerEntry[];
   cursor: QueryDocumentSnapshot | null;
   hasMore: boolean;
+  fromCache: boolean;
 };
 
 function mapEntry(d: QueryDocumentSnapshot): LedgerEntry {
   return { id: d.id, ...(d.data() as Omit<LedgerEntry, "id">) };
 }
 
-/** Newest first — for the ledger table (paginated). */
-export async function listLedgerPage(
-  pageSize = LEDGER_PAGE_SIZE,
-  after?: DocumentSnapshot | null,
-): Promise<LedgerPage> {
+function toPage(docs: QueryDocumentSnapshot[], pageSize: number, fromCache: boolean): LedgerPage {
+  return {
+    entries: docs.map(mapEntry),
+    cursor: docs.length ? docs[docs.length - 1]! : null,
+    hasMore: docs.length >= pageSize,
+    fromCache,
+  };
+}
+
+function ledgerPageQuery(pageSize: number, after?: DocumentSnapshot | null) {
   const col = collection(getDb(), "ledger");
-  const q = after
+  return after
     ? query(
         col,
         orderBy("date", "desc"),
@@ -46,14 +55,35 @@ export async function listLedgerPage(
         limit(pageSize),
       )
     : query(col, orderBy("date", "desc"), orderBy("createdAt", "desc"), limit(pageSize));
+}
 
-  const snap = await getDocs(q);
-  const docs = snap.docs;
-  return {
-    entries: docs.map(mapEntry),
-    cursor: docs.length ? docs[docs.length - 1]! : null,
-    hasMore: docs.length >= pageSize,
-  };
+/** Prefer IndexedDB cache, then server — feels instant on repeat opens. */
+export async function listLedgerPage(
+  pageSize = LEDGER_PAGE_SIZE,
+  after?: DocumentSnapshot | null,
+  opts?: { preferCache?: boolean },
+): Promise<LedgerPage> {
+  const q = ledgerPageQuery(pageSize, after) as Query;
+  const preferCache = opts?.preferCache !== false && !after;
+
+  if (preferCache) {
+    try {
+      const cached = await getDocsFromCache(q);
+      if (!cached.empty) {
+        return toPage(cached.docs, pageSize, true);
+      }
+    } catch {
+      // no local cache yet
+    }
+  }
+
+  try {
+    const snap = await getDocsFromServer(q);
+    return toPage(snap.docs, pageSize, false);
+  } catch {
+    const snap = await getDocs(q);
+    return toPage(snap.docs, pageSize, snap.metadata.fromCache);
+  }
 }
 
 /** Fast balance without downloading every row. */

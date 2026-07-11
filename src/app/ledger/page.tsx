@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
@@ -19,6 +20,7 @@ import {
   updateLedgerEntry,
 } from "@/lib/ledger";
 import { guessTypeFromDescription } from "@/lib/ledger-labels";
+import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
 import { loadSheetZoom, saveSheetZoom } from "@/lib/prefs";
 import type { LedgerEntry } from "@/lib/types";
 import { formatBaht, formatDateShort, parseDateInput, todayInputValue } from "@/lib/utils";
@@ -37,6 +39,7 @@ function LedgerView() {
   const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -44,7 +47,21 @@ function LedgerView() {
   const cursorRef = useRef<QueryDocumentSnapshot | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const loadingMoreRef = useRef(false);
+  const balanceRef = useRef<number | null>(null);
+  const hasRowsRef = useRef(false);
   const isOwner = staff?.role === "owner";
+
+  useLayoutEffect(() => {
+    const cached = loadCachedLedger();
+    if (cached?.entries.length) {
+      setEntries(cached.entries);
+      setBalance(cached.balance);
+      balanceRef.current = cached.balance;
+      setHasMore(cached.hasMore);
+      setLoading(false);
+      hasRowsRef.current = true;
+    }
+  }, []);
 
   useEffect(() => {
     setZoom(loadSheetZoom(1));
@@ -60,29 +77,60 @@ function LedgerView() {
 
   const refreshBalance = useCallback(async () => {
     try {
-      setBalance(await getLedgerBalance());
+      const next = await getLedgerBalance();
+      setBalance(next);
+      balanceRef.current = next;
+      return next;
     } catch {
-      // Balance is secondary — table can still show
+      return null;
     }
   }, []);
 
+  const persistSnapshot = useCallback(
+    (nextEntries: LedgerEntry[], nextHasMore: boolean, nextBalance: number | null) => {
+      saveCachedLedger({
+        entries: nextEntries.slice(0, LEDGER_PAGE_SIZE),
+        hasMore: nextHasMore,
+        balance: nextBalance,
+      });
+    },
+    [],
+  );
+
   const reload = useCallback(async () => {
-    setLoading(true);
+    if (hasRowsRef.current) setRefreshing(true);
+    else setLoading(true);
     setError(null);
     cursorRef.current = null;
     try {
-      // Load rows first so the table is usable even if aggregate is slow/fails.
-      const page = await listLedgerPage(LEDGER_PAGE_SIZE);
+      const cachedPage = await listLedgerPage(LEDGER_PAGE_SIZE, null, { preferCache: true });
+      if (cachedPage.entries.length) {
+        setEntries(cachedPage.entries);
+        cursorRef.current = cachedPage.cursor;
+        setHasMore(cachedPage.hasMore);
+        setLoading(false);
+        hasRowsRef.current = true;
+      }
+
+      const page = cachedPage.fromCache
+        ? await listLedgerPage(LEDGER_PAGE_SIZE, null, { preferCache: false })
+        : cachedPage;
+
       setEntries(page.entries);
       cursorRef.current = page.cursor;
       setHasMore(page.hasMore);
-      void refreshBalance();
+      hasRowsRef.current = page.entries.length > 0;
+      const nextBalance = await refreshBalance();
+      persistSnapshot(page.entries, page.hasMore, nextBalance ?? balanceRef.current);
     } catch (err) {
-      setError((err as Error).message || "โหลดบัญชีไม่สำเร็จ");
+      if (!hasRowsRef.current) {
+        setError((err as Error).message || "โหลดบัญชีไม่สำเร็จ");
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [refreshBalance]);
+  }, [persistSnapshot, refreshBalance]);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || loadingMoreRef.current || !cursorRef.current) return;
@@ -90,10 +138,14 @@ function LedgerView() {
     setLoadingMore(true);
     setError(null);
     try {
-      const page = await listLedgerPage(LEDGER_PAGE_SIZE, cursorRef.current);
+      const page = await listLedgerPage(LEDGER_PAGE_SIZE, cursorRef.current, {
+        preferCache: false,
+      });
       setEntries((prev) => {
         const seen = new Set(prev.map((e) => e.id));
-        return [...prev, ...page.entries.filter((e) => !seen.has(e.id))];
+        const merged = [...prev, ...page.entries.filter((e) => !seen.has(e.id))];
+        persistSnapshot(merged, page.hasMore, balanceRef.current);
+        return merged;
       });
       cursorRef.current = page.cursor;
       setHasMore(page.hasMore);
@@ -103,7 +155,7 @@ function LedgerView() {
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [hasMore]);
+  }, [hasMore, persistSnapshot]);
 
   useEffect(() => {
     void reload();
@@ -127,7 +179,10 @@ function LedgerView() {
   return (
     <div>
       <div className="balance-hero">
-        <p>คงเหลือ</p>
+        <p>
+          คงเหลือ
+          {refreshing ? <span className="sync-dot" aria-hidden> ·</span> : null}
+        </p>
         <strong>{balance == null ? "…" : formatBaht(balance)}</strong>
       </div>
 

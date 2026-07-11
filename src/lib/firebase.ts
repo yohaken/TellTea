@@ -7,13 +7,17 @@ import {
   browserPopupRedirectResolver,
   type Auth,
 } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore,
+} from "firebase/firestore";
 
 /**
  * Keep authDomain on the Firebase default host.
- * Custom hosting domains (telltea-shop.web.app) need an extra OAuth redirect URI
- * in Google Cloud Console — without it mobile redirect shows "blocked"/mismatch.
- * Popup + firebaseapp.com authDomain works on phone browsers without that step.
+ * TellTea production login uses the firebaseapp auth bridge.
  */
 const PROJECT_DEFAULTS = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
@@ -57,7 +61,6 @@ export function getFirebaseAuth() {
         popupRedirectResolver: browserPopupRedirectResolver,
       });
     } catch {
-      // Already initialized (HMR / remount)
       auth = getAuth(firebaseApp);
     }
   }
@@ -66,7 +69,16 @@ export function getFirebaseAuth() {
 
 export function getDb() {
   if (!db) {
-    db = getFirestore(getFirebaseApp());
+    const firebaseApp = getFirebaseApp();
+    try {
+      db = initializeFirestore(firebaseApp, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
+      });
+    } catch {
+      db = getFirestore(firebaseApp);
+    }
   }
   return db;
 }

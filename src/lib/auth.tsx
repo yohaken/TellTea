@@ -18,6 +18,7 @@ import {
   type User,
 } from "firebase/auth";
 import { deleteDoc, doc, getDoc } from "firebase/firestore";
+import { clearAppCaches, loadCachedStaff, saveCachedStaff } from "./cache";
 import { getDb, getFirebaseAuth, isFirebaseConfigured } from "./firebase";
 import { ensureOwnerBootstrap, getStaffMember } from "./staff";
 import type { StaffMember } from "./types";
@@ -180,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       if (!next) {
         if (bridgePending) return;
+        clearAppCaches();
         setUser(null);
         setStaff(null);
         setStatus("signedOut");
@@ -187,14 +189,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setError(null);
       setUser(next);
-      setStatus("loading");
+
+      const email = emailFromUser(next);
+      const cached = email ? loadCachedStaff(email) : null;
+      if (cached) {
+        // Trust last known staff role immediately — verify in background.
+        setStaff(cached);
+        setStatus("ready");
+      } else {
+        setStatus("loading");
+      }
+
       try {
         const member = await resolveStaff(next);
         if (cancelled) return;
         setStaff(member);
-        setStatus(member ? "ready" : "denied");
+        if (member) {
+          saveCachedStaff(member);
+          setStatus("ready");
+        } else {
+          clearAppCaches();
+          setStatus("denied");
+        }
       } catch (err) {
         if (cancelled) return;
+        if (cached) {
+          // Keep trusting cache if network/staff read blips.
+          setError(null);
+          setStatus("ready");
+          return;
+        }
         setError(mapAuthError(err));
         setStaff(null);
         setStatus("denied");
@@ -236,6 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    clearAppCaches();
     await firebaseSignOut(getFirebaseAuth());
   }, []);
 
