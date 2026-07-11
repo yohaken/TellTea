@@ -61,6 +61,64 @@ function LedgerView() {
   const hasRowsRef = useRef(false);
   const isOwner = staff?.role === "owner";
 
+  // ---- column resize ----
+  const SAVE_KEY = "tlt_col_w";
+  const [colWidths, setColWidths] = useState<Record<string, number>>(() => {
+    try {
+      if (typeof window === "undefined") return {};
+      const raw = window.localStorage.getItem(SAVE_KEY);
+      return raw ? (JSON.parse(raw) as Record<string, number>) : {};
+    } catch {
+      return {};
+    }
+  });
+  const colWidthsRef = useRef(colWidths);
+  colWidthsRef.current = colWidths;
+  const resizing = useRef<{ col: string; startX: number; startW: number } | null>(null);
+
+  const onResizeStart = useCallback(
+    (col: string, e: React.MouseEvent | React.TouchEvent) => {
+      const x =
+        "touches" in e
+          ? (e as React.TouchEvent).touches[0].clientX
+          : (e as React.MouseEvent).clientX;
+      const cell = (e.target as HTMLElement).closest("th");
+      const w = cell?.offsetWidth ?? 80;
+      resizing.current = { col, startX: x, startW: w };
+      e.preventDefault();
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const onMove = (e: globalThis.MouseEvent | globalThis.TouchEvent) => {
+      if (!resizing.current) return;
+      const x = "touches" in e ? (e as TouchEvent).touches[0].clientX : (e as MouseEvent).clientX;
+      const delta = x - resizing.current.startX;
+      const newW = Math.max(32, resizing.current.startW + delta);
+      setColWidths((prev) => ({ ...prev, [resizing.current!.col]: newW }));
+    };
+    const onUp = () => {
+      if (!resizing.current) return;
+      try {
+        window.localStorage.setItem(SAVE_KEY, JSON.stringify(colWidthsRef.current));
+      } catch {
+        /* ignore */
+      }
+      resizing.current = null;
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    document.addEventListener("touchmove", onMove, { passive: false });
+    document.addEventListener("touchend", onUp);
+    return () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend", onUp);
+    };
+  }, []);
+
   useLayoutEffect(() => {
     const cached = loadCachedLedger();
     if (cached?.entries.length) {
@@ -216,13 +274,73 @@ function LedgerView() {
           <div className="sheet-edge">
             <div className="sheet-wrap">
               <table className="sheet-table">
+                <colgroup>
+                  <col
+                    style={
+                      colWidths.date != null
+                        ? { width: colWidths.date }
+                        : { width: "3.6rem" }
+                    }
+                  />
+                  <col
+                    style={
+                      colWidths.desc != null
+                        ? { width: colWidths.desc }
+                        : undefined
+                    }
+                  />
+                  <col style={{ width: "2.6rem" }} />
+                  <col
+                    style={
+                      colWidths.in != null
+                        ? { width: colWidths.in }
+                        : { width: "1%" }
+                    }
+                  />
+                  <col
+                    style={
+                      colWidths.out != null
+                        ? { width: colWidths.out }
+                        : { width: "1%" }
+                    }
+                  />
+                  <col style={{ width: "3rem" }} />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th className="col-date">วันที่</th>
-                    <th className="col-desc">รายการ</th>
+                    <th className="col-date">
+                      วันที่
+                      <span
+                        className="col-rsz"
+                        onMouseDown={(e) => onResizeStart("date", e)}
+                        onTouchStart={(e) => onResizeStart("date", e)}
+                      />
+                    </th>
+                    <th className="col-desc">
+                      รายการ
+                      <span
+                        className="col-rsz"
+                        onMouseDown={(e) => onResizeStart("desc", e)}
+                        onTouchStart={(e) => onResizeStart("desc", e)}
+                      />
+                    </th>
                     <th className="col-photo">รูปภาพ</th>
-                    <th className="col-in">เข้า</th>
-                    <th className="col-out">ออก</th>
+                    <th className="col-in">
+                      เข้า
+                      <span
+                        className="col-rsz"
+                        onMouseDown={(e) => onResizeStart("in", e)}
+                        onTouchStart={(e) => onResizeStart("in", e)}
+                      />
+                    </th>
+                    <th className="col-out">
+                      ออก
+                      <span
+                        className="col-rsz"
+                        onMouseDown={(e) => onResizeStart("out", e)}
+                        onTouchStart={(e) => onResizeStart("out", e)}
+                      />
+                    </th>
                     <th className="col-act">จัดการ</th>
                   </tr>
                 </thead>
