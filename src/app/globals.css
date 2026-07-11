@@ -719,27 +719,15 @@ textarea {
 }
 
 .sheet-table .col-photo {
-  width: 2rem;
+  width: 4rem;
   text-align: center;
   vertical-align: middle;
 }
 
-.col-photo .photo-link {
+.col-photo .photo-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #2f6b4f;
-  text-decoration: none;
-  transition: transform 120ms;
-}
-
-.col-photo .photo-link:hover {
-  transform: scale(1.2);
-}
-
-.col-photo .photo-none {
-  color: rgba(28, 42, 31, 0.22);
-  font-size: 0.8rem;
 }
 
 .sheet-table .col-desc {
@@ -786,6 +774,39 @@ textarea {
   cursor: pointer;
   padding: 0.2rem;
   white-space: nowrap;
+}
+
+.photo-btn {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: rgba(28, 42, 31, 0.45);
+  font-size: 0.72rem;
+  padding: 0.15rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  transition: color 120ms;
+}
+
+.photo-btn:hover {
+  color: var(--tea-leaf);
+}
+
+.photo-btn.has-photo {
+  color: var(--tea-leaf);
+}
+
+.photo-action-card {
+  width: min(100%, 24rem);
+  background: #f7f3e8;
+  border-radius: 1.1rem;
+  padding: 1.15rem;
+  box-shadow: var(--shadow);
+}
+
+.photo-action-card .receipt-actions {
+  margin-bottom: 0;
 }
 
 .modal-backdrop {

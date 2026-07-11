@@ -52,6 +52,10 @@ function LedgerView() {
   const [hasMore, setHasMore] = useState(false);
   const [liveLimit, setLiveLimit] = useState(LEDGER_PAGE_SIZE);
   const [editing, setEditing] = useState<LedgerEntry | null>(null);
+  const [photoRowId, setPhotoRowId] = useState<string | null>(null);
+  const photoEntryRef = useRef<LedgerEntry | null>(null);
+  const photoCameraRef = useRef<HTMLInputElement>(null);
+  const photoGalleryRef = useRef<HTMLInputElement>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const balanceRef = useRef<number | null>(null);
   const hasRowsRef = useRef(false);
@@ -150,6 +154,22 @@ function LedgerView() {
     setLiveLimit((n) => Math.min(n + LEDGER_PAGE_SIZE, LEDGER_LIVE_MAX));
   }, [hasMore, loadingMore, liveLimit]);
 
+  async function handleRowPhotoFile(file: File | null) {
+    if (!file || !photoEntryRef.current) return;
+    const row = photoEntryRef.current;
+    try {
+      const compressed = await compressImageForUpload(file);
+      const receiptUrl = await fileToReceiptDataUrl(compressed);
+      await updateLedgerEntry(row.id, { receiptUrl });
+      saveImageToDevice(file).catch(() => {});
+    } catch (err) {
+      setError((err as Error).message || "ใช้รูปไม่สำเร็จ");
+    } finally {
+      setPhotoRowId(null);
+      photoEntryRef.current = null;
+    }
+  }
+
   useEffect(() => {
     const node = sentinelRef.current;
     if (!node || loading) return;
@@ -211,22 +231,24 @@ function LedgerView() {
                     <td className="col-date">{formatDateShort(row.date)}</td>
                     <td className="col-desc">{row.description}</td>
                     <td className="col-photo">
-                      {row.receiptUrl ? (
-                        <a
-                          className="photo-link"
-                          href={row.receiptUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="เปิดรูป"
-                        >
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <button
+                        type="button"
+                        className={row.receiptUrl ? "photo-btn has-photo" : "photo-btn"}
+                        onClick={() => {
+                          photoEntryRef.current = row;
+                          setPhotoRowId(row.id);
+                        }}
+                        title="เพิ่มรูป"
+                      >
+                        {row.receiptUrl ? (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.1a2 2 0 0 0 1.5-.7l2.3-2.3a2 2 0 0 1 1.4-.6H16a2 2 0 0 1 1.4.6l2.3 2.3a2 2 0 0 0 1.5.7H21a2 2 0 0 1 2 2z"/>
                             <circle cx="12" cy="13" r="3"/>
                           </svg>
-                        </a>
-                      ) : (
-                        <span className="photo-none">–</span>
-                      )}
+                        ) : (
+                          <span>เพิ่มรูป</span>
+                        )}
+                      </button>
                     </td>
                     <td className="col-in">{row.amountIn > 0 ? formatBaht(row.amountIn) : ""}</td>
                     <td className="col-out">{row.amountOut > 0 ? formatBaht(row.amountOut) : ""}</td>
@@ -259,6 +281,59 @@ function LedgerView() {
           onSaved={() => setEditing(null)}
           onError={setError}
         />
+      ) : null}
+
+      <input
+        ref={photoCameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        onChange={(e) => void handleRowPhotoFile(e.target.files?.[0] || null)}
+      />
+      <input
+        ref={photoGalleryRef}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={(e) => void handleRowPhotoFile(e.target.files?.[0] || null)}
+      />
+
+      {photoRowId ? (
+        <div
+          className="modal-backdrop"
+          onClick={() => { setPhotoRowId(null); photoEntryRef.current = null; }}
+        >
+          <div className="photo-action-card" onClick={(e) => e.stopPropagation()}>
+            <p style={{ margin: "0 0 0.75rem", fontWeight: 700, fontSize: "0.95rem" }}>
+              เพิ่มรูป
+            </p>
+            <div className="receipt-actions">
+              <button
+                type="button"
+                className="primary-btn action-out"
+                onClick={() => photoCameraRef.current?.click()}
+              >
+                ถ่ายภาพ
+              </button>
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => photoGalleryRef.current?.click()}
+              >
+                แนบรูป
+              </button>
+            </div>
+            <button
+              type="button"
+              className="ghost-btn"
+              style={{ width: "100%", marginTop: "0.5rem" }}
+              onClick={() => { setPhotoRowId(null); photoEntryRef.current = null; }}
+            >
+              ยกเลิก
+            </button>
+          </div>
+        </div>
       ) : null}
     </div>
   );
