@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function email() {
+      return request.auth.token.email.lower();
+    }
+
+    function staffPath() {
+      return /databases/$(database)/documents/staff/$(email());
+    }
+
+    function isStaff() {
+      return signedIn() && exists(staffPath());
+    }
+
+    function isOwner() {
+      return isStaff() && get(staffPath()).data.role == 'owner';
+    }
+
+    function isOwnerEmail() {
+      return signedIn() && email() == 'phiraphong.yoh@gmail.com';
+    }
+
+    match /staff/{staffEmail} {
+      allow read: if isStaff() || (isOwnerEmail() && staffEmail == email());
+      // Bootstrap first owner from configured owner email
+      allow create: if isOwner()
+        || (isOwnerEmail()
+            && staffEmail == email()
+            && request.resource.data.email == email()
+            && request.resource.data.role == 'owner');
+      allow update, delete: if isOwner();
+    }
+
+    match /menu/{itemId} {
+      allow read: if isStaff();
+      allow write: if isStaff();
+    }
+
+    match /orders/{orderId} {
+      allow read: if isStaff();
+      allow create: if isStaff()
+        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.total is number
+        && request.resource.data.items is list;
+      allow update, delete: if isOwner();
+    }
+  }
+}

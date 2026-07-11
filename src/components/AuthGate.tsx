@@ -1,0 +1,54 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth";
+import { AppShell } from "./AppShell";
+
+export function AuthGate({ children }: { children: React.ReactNode }) {
+  const { status, error, signIn, signOut, user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "signedOut" || status === "unconfigured") {
+      router.replace("/login/");
+    }
+  }, [status, router]);
+
+  if (status === "loading") {
+    return (
+      <div className="center-screen">
+        <p className="brand">TellTea</p>
+        <p className="muted">กำลังตรวจสอบสิทธิ์...</p>
+      </div>
+    );
+  }
+
+  if (status === "denied") {
+    return (
+      <div className="center-screen">
+        <p className="brand">TellTea</p>
+        <h1>ยังไม่มีสิทธิ์เข้าใช้งาน</h1>
+        <p className="muted">
+          อีเมล <strong>{user?.email}</strong> ยังไม่อยู่ในรายชื่อพนักงาน
+          ให้เจ้าของร้านเพิ่มอีเมลนี้ในหน้าพนักงาน
+        </p>
+        {error ? <p className="error-text">{error}</p> : null}
+        <div className="btn-row">
+          <button type="button" className="primary-btn" onClick={() => void signOut()}>
+            ออกจากระบบ
+          </button>
+          <button type="button" className="ghost-btn" onClick={() => void signIn()}>
+            ลองบัญชีอื่น
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (status !== "ready") {
+    return null;
+  }
+
+  return <AppShell>{children}</AppShell>;
+}

@@ -1,0 +1,468 @@
+@import "tailwindcss";
+
+:root {
+  --tea-ink: #1c2a1f;
+  --tea-leaf: #2f6b4f;
+  --tea-matcha: #7fb77e;
+  --tea-foam: #f3efe4;
+  --tea-steam: #dff0e4;
+  --tea-amber: #c9852d;
+  --tea-line: rgba(28, 42, 31, 0.12);
+  --tea-card: rgba(255, 255, 255, 0.72);
+  --danger: #b42318;
+  --shadow: 0 18px 50px rgba(28, 42, 31, 0.12);
+  --background: var(--tea-foam);
+  --foreground: var(--tea-ink);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--foreground);
+  font-family: var(--font-body), "Sarabun", sans-serif;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(127, 183, 126, 0.35), transparent 36%),
+    radial-gradient(circle at 88% 0%, rgba(201, 133, 45, 0.22), transparent 28%),
+    linear-gradient(160deg, #f7f3e8 0%, #e7f0e4 48%, #f4efe3 100%);
+  background-attachment: fixed;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.brand {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  letter-spacing: -0.03em;
+  margin: 0;
+  color: var(--tea-leaf);
+  line-height: 1;
+}
+
+.center-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  gap: 0.85rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.center-screen h1 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.muted {
+  color: rgba(28, 42, 31, 0.68);
+  margin: 0;
+  max-width: 28rem;
+  justify-self: center;
+}
+
+.error-text {
+  color: var(--danger);
+  margin: 0;
+}
+
+.primary-btn,
+.ghost-btn,
+.danger-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.8rem 1.25rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.primary-btn:hover,
+.ghost-btn:hover,
+.danger-btn:hover {
+  transform: translateY(-1px);
+}
+
+.primary-btn {
+  background: var(--tea-leaf);
+  color: white;
+  box-shadow: 0 10px 24px rgba(47, 107, 79, 0.28);
+}
+
+.ghost-btn {
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--tea-ink);
+  border: 1px solid var(--tea-line);
+}
+
+.danger-btn {
+  background: rgba(180, 35, 24, 0.1);
+  color: var(--danger);
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.hero-login {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-login::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(28, 42, 31, 0.08), rgba(28, 42, 31, 0.55)),
+    url("/hero-tea.svg") center/cover no-repeat;
+  z-index: 0;
+  animation: drift 18s ease-in-out infinite alternate;
+}
+
+.hero-login > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-copy {
+  display: grid;
+  align-content: end;
+  gap: 0.75rem;
+  padding: clamp(1.5rem, 5vw, 3.5rem);
+  color: #f7f3e8;
+}
+
+.hero-copy .brand {
+  color: #f7f3e8;
+  font-size: clamp(3.4rem, 12vw, 6rem);
+  text-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
+.hero-copy p {
+  margin: 0;
+  max-width: 22rem;
+  font-size: 1.05rem;
+  opacity: 0.92;
+}
+
+.hero-actions {
+  padding: 1.25rem clamp(1.5rem, 5vw, 3.5rem) 2rem;
+  background: linear-gradient(180deg, transparent, rgba(243, 239, 228, 0.96) 28%);
+}
+
+.app-shell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.1rem 0.6rem;
+}
+
+.topbar-sub {
+  margin: 0.15rem 0 0;
+  color: rgba(28, 42, 31, 0.55);
+  font-size: 0.85rem;
+}
+
+.topbar .brand {
+  font-size: 1.7rem;
+}
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.82rem;
+  color: rgba(28, 42, 31, 0.65);
+}
+
+.main-panel {
+  padding: 0.4rem 1.1rem 5.5rem;
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 0.85rem;
+  transform: translateX(-50%);
+  width: min(520px, calc(100% - 1.2rem));
+  display: grid;
+  grid-auto-flow: column;
+  gap: 0.25rem;
+  padding: 0.4rem;
+  border-radius: 1.2rem;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.nav-item {
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  padding: 0.55rem 0.35rem;
+  border-radius: 0.9rem;
+  font-size: 0.75rem;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.nav-item.active {
+  background: var(--tea-steam);
+  color: var(--tea-leaf);
+  font-weight: 700;
+}
+
+.panel-title {
+  margin: 0 0 0.85rem;
+  font-size: 1.35rem;
+}
+
+.menu-grid,
+.stats-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.menu-grid {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.stats-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+
+.menu-tile,
+.stat-tile,
+.list-card,
+.cart-panel,
+.form-card {
+  background: var(--tea-card);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 1.1rem;
+  box-shadow: 0 10px 30px rgba(28, 42, 31, 0.06);
+}
+
+.menu-tile {
+  padding: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.menu-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.menu-tile:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.menu-tile strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.menu-tile span {
+  color: var(--tea-amber);
+  font-weight: 700;
+}
+
+.menu-tile small {
+  display: block;
+  margin-top: 0.35rem;
+  color: rgba(28, 42, 31, 0.5);
+}
+
+.stat-tile {
+  padding: 1rem;
+}
+
+.stat-tile p {
+  margin: 0;
+  color: rgba(28, 42, 31, 0.55);
+  font-size: 0.85rem;
+}
+
+.stat-tile strong {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.5rem;
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.pos-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .pos-layout {
+    grid-template-columns: 1.4fr 0.9fr;
+    align-items: start;
+  }
+
+  .main-panel {
+    padding-bottom: 2rem;
+  }
+
+  .bottom-nav {
+    position: sticky;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    left: auto;
+    transform: none;
+    border-radius: 0;
+    margin-top: 1rem;
+  }
+
+  .app-shell {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+}
+
+.cart-panel,
+.form-card,
+.list-card {
+  padding: 1rem;
+}
+
+.cart-line,
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--tea-line);
+}
+
+.cart-line:last-child,
+.list-row:last-child {
+  border-bottom: 0;
+}
+
+.qty-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.qty-controls button {
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--tea-line);
+  background: white;
+  cursor: pointer;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.8rem;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  border-radius: 0.85rem;
+  border: 1px solid var(--tea-line);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 0.75rem 0.9rem;
+}
+
+.pay-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.pay-toggle button {
+  border-radius: 0.9rem;
+  border: 1px solid var(--tea-line);
+  background: white;
+  padding: 0.75rem;
+  cursor: pointer;
+}
+
+.pay-toggle button.active {
+  background: var(--tea-steam);
+  border-color: var(--tea-matcha);
+  color: var(--tea-leaf);
+  font-weight: 700;
+}
+
+.empty {
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+@keyframes drift {
+  from {
+    transform: scale(1.02) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.08) translate3d(-1.5%, 1%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-login::before,
+  .primary-btn,
+  .ghost-btn,
+  .menu-tile {
+    animation: none;
+    transition: none;
+  }
+}
