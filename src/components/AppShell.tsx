@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CupSoda, LayoutGrid, LogOut, Users, Wallet } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, BookOpen, LogOut, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { href: "/pos/", label: "ขาย", icon: CupSoda },
-  { href: "/menu/", label: "เมนู", icon: LayoutGrid },
-  { href: "/today/", label: "วันนี้", icon: Wallet },
+  { href: "/ledger/", label: "บัญชี", icon: BookOpen },
+  { href: "/out/", label: "เงินออก", icon: ArrowUpRight },
+  { href: "/in/", label: "โอนเข้า", icon: ArrowDownLeft, ownerOnly: true },
   { href: "/staff/", label: "พนักงาน", icon: Users, ownerOnly: true },
 ];
 
@@ -25,13 +25,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="topbar">
           <div>
             <p className="brand">TellTea</p>
-            <p className="topbar-sub">จัดการร้าน</p>
+            <p className="topbar-sub">บัญชีร้าน</p>
           </div>
           <div className="topbar-user">
             <span className="topbar-email" title={user?.email || ""}>
               {emailShort}
             </span>
-            <button type="button" className="ghost-btn icon-btn" onClick={() => void signOut()} aria-label="ออกจากระบบ">
+            <button
+              type="button"
+              className="ghost-btn icon-btn"
+              onClick={() => void signOut()}
+              aria-label="ออกจากระบบ"
+            >
               <LogOut size={18} />
             </button>
           </div>

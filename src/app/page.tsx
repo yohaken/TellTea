@@ -9,7 +9,7 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "ready") router.replace("/pos/");
+    if (status === "ready") router.replace("/ledger/");
     else if (status === "signedOut" || status === "unconfigured" || status === "denied") {
       router.replace("/login/");
     }
@@ -18,7 +18,7 @@ export default function HomePage() {
   return (
     <div className="center-screen">
       <p className="brand">TellTea</p>
-      <p className="muted">กำลังเปิดร้าน...</p>
+      <p className="muted">กำลังเปิดบัญชีร้าน...</p>
     </div>
   );
 }

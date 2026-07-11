@@ -13,18 +13,39 @@ export function formatBaht(amount: number) {
   return new Intl.NumberFormat("th-TH", {
     style: "currency",
     currency: "THB",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(amount);
+}
+
+export function formatDateShort(ms: number) {
+  const d = new Date(ms);
+  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+}
+
+/** parse D/M/YYYY or YYYY-MM-DD to local midnight */
+export function parseDateInput(value: string): number {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, day] = value.split("-").map(Number);
+    return new Date(y, m - 1, day).getTime();
+  }
+  const parts = value.split("/").map(Number);
+  if (parts.length === 3) {
+    const [day, m, y] = parts;
+    return new Date(y, m - 1, day).getTime();
+  }
+  throw new Error("รูปแบบวันที่ไม่ถูกต้อง");
+}
+
+export function todayInputValue(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export function startOfLocalDay(date = new Date()) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-export function endOfLocalDay(date = new Date()) {
-  const d = new Date(date);
-  d.setHours(23, 59, 59, 999);
   return d.getTime();
 }

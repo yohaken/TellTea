@@ -16,8 +16,8 @@ const body = Sarabun({
 });
 
 export const metadata: Metadata = {
-  title: "TellTea — จัดการร้าน",
-  description: "ระบบจัดการร้านชา TellTea สำหรับเจ้าของและพนักงาน",
+  title: "TellTea — บัญชีร้าน",
+  description: "บัญชีเข้า–ออก TellTea — เจ้าของโอนเข้า พนักงานบันทึกเงินออก",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

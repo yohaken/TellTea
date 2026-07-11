@@ -27,7 +27,6 @@ service cloud.firestore {
 
     match /staff/{staffEmail} {
       allow read: if isStaff() || (isOwnerEmail() && staffEmail == email());
-      // Bootstrap first owner from configured owner email
       allow create: if isOwner()
         || (isOwnerEmail()
             && staffEmail == email()
@@ -36,18 +35,23 @@ service cloud.firestore {
       allow update, delete: if isOwner();
     }
 
-    match /menu/{itemId} {
-      allow read: if isStaff();
-      allow write: if isStaff();
-    }
-
-    match /orders/{orderId} {
+    match /ledger/{entryId} {
       allow read: if isStaff();
       allow create: if isStaff()
         && request.resource.data.createdBy == request.auth.token.email
-        && request.resource.data.total is number
-        && request.resource.data.items is list;
-      allow update, delete: if isOwner();
+        && request.resource.data.description is string
+        && request.resource.data.amountIn is number
+        && request.resource.data.amountOut is number
+        && request.resource.data.amountIn >= 0
+        && request.resource.data.amountOut >= 0
+        && (
+          // เจ้าของเท่านั้นที่โอนเข้า (amountIn > 0)
+          (request.resource.data.amountIn > 0 && request.resource.data.amountOut == 0 && isOwner())
+          // พนักงาน/เจ้าของบันทึกเงินออก
+          || (request.resource.data.amountOut > 0 && request.resource.data.amountIn == 0)
+        );
+      allow delete: if isOwner();
+      allow update: if false;
     }
   }
 }

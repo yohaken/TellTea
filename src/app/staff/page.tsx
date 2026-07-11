@@ -31,7 +31,7 @@ function StaffView() {
 
   useEffect(() => {
     if (staff && staff.role !== "owner") {
-      router.replace("/pos/");
+      router.replace("/ledger/");
       return;
     }
     void reload().catch((err) => setError(err.message || "โหลดพนักงานไม่สำเร็จ"));
@@ -61,8 +61,8 @@ function StaffView() {
   return (
     <div>
       <h1 className="panel-title">พนักงาน</h1>
-      <p className="muted" style={{ marginBottom: "1rem" }}>
-        เพิ่มอีเมล Google ของพนักงาน — พวกเขาจะเข้าได้ผ่านลิงก์เดียวกัน
+      <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
+        เพิ่มอีเมล Google ของพนักงานจัดการร้าน — ให้บันทึกเงินออกและดูยอดคงเหลือได้
       </p>
       {error ? <p className="error-text">{error}</p> : null}
 

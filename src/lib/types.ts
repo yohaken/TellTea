@@ -7,38 +7,24 @@ export type StaffMember = {
   createdAt: number;
 };
 
-export type MenuItem = {
+/** สมุดบัญชีเข้า–ออก ตามชีทร้าน */
+export type LedgerEntry = {
   id: string;
-  name: string;
-  price: number;
-  category: string;
-  available: boolean;
-  sortOrder: number;
-  updatedAt: number;
-};
-
-export type OrderItem = {
-  menuId: string;
-  name: string;
-  price: number;
-  qty: number;
-};
-
-export type PaymentMethod = "cash" | "transfer";
-
-export type Order = {
-  id: string;
-  items: OrderItem[];
-  total: number;
-  paymentMethod: PaymentMethod;
+  /** วันของรายการ (local midnight ms) */
+  date: number;
+  description: string;
+  amountIn: number;
+  amountOut: number;
+  type: string;
   createdBy: string;
   createdAt: number;
-  note?: string;
 };
 
-export type CartLine = {
-  menuId: string;
-  name: string;
-  price: number;
-  qty: number;
+export type LedgerEntryInput = {
+  date: number;
+  description: string;
+  amountIn: number;
+  amountOut: number;
+  type: string;
+  createdBy: string;
 };

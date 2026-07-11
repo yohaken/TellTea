@@ -9,14 +9,14 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (status === "ready") router.replace("/pos/");
+    if (status === "ready") router.replace("/ledger/");
   }, [status, router]);
 
   return (
     <div className="hero-login">
       <div className="hero-copy">
         <p className="brand">TellTea</p>
-        <p>เปิดลิงก์นี้ แล้วล็อกอินด้วย Google เพื่อขาย เมนู และดูยอดวันนี้</p>
+        <p>บัญชีร้าน — เจ้าของโอนเข้า พนักงานบันทึกเงินออก</p>
       </div>
       <div className="hero-actions">
         {status === "unconfigured" ? (
