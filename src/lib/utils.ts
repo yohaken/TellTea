@@ -18,9 +18,17 @@ export function formatBaht(amount: number) {
   }).format(amount);
 }
 
+/** Plain number without currency symbol */
+export function formatPlainNumber(amount: number) {
+  return new Intl.NumberFormat("th-TH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 export function formatDateShort(ms: number) {
   const d = new Date(ms);
-  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+  return `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(-2)}`;
 }
 
 /** parse D/M/YYYY or YYYY-MM-DD to local midnight */

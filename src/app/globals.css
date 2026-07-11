@@ -666,12 +666,17 @@ textarea {
   padding: 0.35rem 0.9rem;
 }
 
+.sheet-edge {
+  margin: 0 calc(-1rem);
+  width: calc(100% + 2rem);
+}
+
 .sheet-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  border-radius: 0.85rem;
   background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.85);
   box-shadow: 0 10px 30px rgba(28, 42, 31, 0.06);
 }
 
@@ -684,7 +689,7 @@ textarea {
 
 .sheet-table th,
 .sheet-table td {
-  padding: 0.45rem 0.5rem;
+  padding: 0.35rem 0.35rem;
   border-bottom: 1px solid rgba(28, 42, 31, 0.1);
   vertical-align: middle;
 }
@@ -713,13 +718,14 @@ textarea {
 }
 
 .sheet-table .col-date {
-  width: 4.6rem;
+  width: 3.5rem;
   white-space: nowrap;
-  color: rgba(28, 42, 31, 0.65);
+  color: rgba(28, 42, 31, 0.6);
+  font-size: 0.75rem;
 }
 
 .sheet-table .col-photo {
-  width: 4rem;
+  width: 2.8rem;
   text-align: center;
   vertical-align: middle;
 }
@@ -732,8 +738,11 @@ textarea {
 
 .sheet-table .col-desc {
   text-align: left;
-  line-height: 1.25;
-  word-break: break-word;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
 }
 
 .sheet-table .col-in,
@@ -753,7 +762,7 @@ textarea {
 }
 
 .sheet-table .col-act {
-  width: 2.4rem;
+  width: 2.8rem;
   text-align: center;
 }
 
@@ -768,12 +777,20 @@ textarea {
 .sheet-edit {
   border: 0;
   background: transparent;
-  color: var(--tea-leaf);
-  font-size: 0.72rem;
-  font-weight: 700;
   cursor: pointer;
-  padding: 0.2rem;
-  white-space: nowrap;
+  padding: 0.1rem 0;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  line-height: 1.2;
+  font-size: 0.65rem;
+  color: var(--tea-leaf);
+  font-weight: 700;
+}
+
+.sheet-edit span {
+  display: block;
 }
 
 .photo-btn {
@@ -1132,6 +1149,16 @@ textarea {
   .main-panel {
     padding-left: 1.35rem;
     padding-right: 1.35rem;
+  }
+
+  .sheet-edge {
+    margin: 0 calc(-1.35rem);
+    width: calc(100% + 2.7rem);
+  }
+
+  .sheet-wrap {
+    border-radius: 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.85);
   }
 
   .quick-actions:has(> :nth-child(2)) {

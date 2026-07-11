@@ -31,7 +31,7 @@ import {
   saveImageToDevice,
 } from "@/lib/receipts";
 import type { LedgerEntry } from "@/lib/types";
-import { formatBaht, formatDateShort, parseDateInput, todayInputValue } from "@/lib/utils";
+import { formatBaht, formatDateShort, formatPlainNumber, parseDateInput, todayInputValue } from "@/lib/utils";
 
 export default function LedgerPage() {
   return (
@@ -213,54 +213,57 @@ function LedgerView() {
         <p className="empty">ยังไม่มีรายการ — เริ่มจากโอนเข้าหรือบันทึกเงินออก</p>
       ) : !loading ? (
         <>
-          <div className="sheet-wrap">
-            <table className="sheet-table">
-              <thead>
-                <tr>
-                  <th className="col-date">วันที่</th>
-                  <th className="col-desc">รายการ</th>
-                  <th className="col-photo">รูปภาพ</th>
-                  <th className="col-in">เข้า</th>
-                  <th className="col-out">ออก</th>
-                  <th className="col-act">จัดการ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((row) => (
-                  <tr key={row.id} className={row.amountIn > 0 ? "row-in" : "row-out"}>
-                    <td className="col-date">{formatDateShort(row.date)}</td>
-                    <td className="col-desc">{row.description}</td>
-                    <td className="col-photo">
-                      <button
-                        type="button"
-                        className={row.receiptUrl ? "photo-btn has-photo" : "photo-btn"}
-                        onClick={() => {
-                          photoEntryRef.current = row;
-                          setPhotoRowId(row.id);
-                        }}
-                        title="เพิ่มรูป"
-                      >
-                        {row.receiptUrl ? (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.1a2 2 0 0 0 1.5-.7l2.3-2.3a2 2 0 0 1 1.4-.6H16a2 2 0 0 1 1.4.6l2.3 2.3a2 2 0 0 0 1.5.7H21a2 2 0 0 1 2 2z"/>
-                            <circle cx="12" cy="13" r="3"/>
-                          </svg>
-                        ) : (
-                          <span>เพิ่มรูป</span>
-                        )}
-                      </button>
-                    </td>
-                    <td className="col-in">{row.amountIn > 0 ? formatBaht(row.amountIn) : ""}</td>
-                    <td className="col-out">{row.amountOut > 0 ? formatBaht(row.amountOut) : ""}</td>
-                    <td className="col-act">
-                      <button type="button" className="sheet-edit" onClick={() => setEditing(row)}>
-                        ลบ/แก้ไข
-                      </button>
-                    </td>
+          <div className="sheet-edge">
+            <div className="sheet-wrap">
+              <table className="sheet-table">
+                <thead>
+                  <tr>
+                    <th className="col-date">วันที่</th>
+                    <th className="col-desc">รายการ</th>
+                    <th className="col-photo">รูปภาพ</th>
+                    <th className="col-in">เข้า</th>
+                    <th className="col-out">ออก</th>
+                    <th className="col-act">จัดการ</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {entries.map((row) => (
+                    <tr key={row.id} className={row.amountIn > 0 ? "row-in" : "row-out"}>
+                      <td className="col-date">{formatDateShort(row.date)}</td>
+                      <td className="col-desc" title={row.description}>{row.description}</td>
+                      <td className="col-photo">
+                        <button
+                          type="button"
+                          className={row.receiptUrl ? "photo-btn has-photo" : "photo-btn"}
+                          onClick={() => {
+                            photoEntryRef.current = row;
+                            setPhotoRowId(row.id);
+                          }}
+                          title="เพิ่มรูป"
+                        >
+                          {row.receiptUrl ? (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.1a2 2 0 0 0 1.5-.7l2.3-2.3a2 2 0 0 1 1.4-.6H16a2 2 0 0 1 1.4.6l2.3 2.3a2 2 0 0 0 1.5.7H21a2 2 0 0 1 2 2z"/>
+                              <circle cx="12" cy="13" r="3"/>
+                            </svg>
+                          ) : (
+                            <span>เพิ่มรูป</span>
+                          )}
+                        </button>
+                      </td>
+                      <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>
+                      <td className="col-out">{row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}</td>
+                      <td className="col-act">
+                        <button type="button" className="sheet-edit" onClick={() => setEditing(row)}>
+                          <span>ลบ</span>
+                          <span>แก้ไข</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
           <div ref={sentinelRef} className="load-more-sentinel" aria-hidden />
           {loadingMore ? <p className="empty">กำลังโหลดเพิ่ม...</p> : null}
