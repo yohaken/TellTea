@@ -17,7 +17,8 @@ import {
   signOut as firebaseSignOut,
   type User,
 } from "firebase/auth";
-import { getFirebaseAuth, isFirebaseConfigured } from "./firebase";
+import { deleteDoc, doc, getDoc } from "firebase/firestore";
+import { getDb, getFirebaseAuth, isFirebaseConfigured } from "./firebase";
 import { ensureOwnerBootstrap, getStaffMember } from "./staff";
 import type { StaffMember } from "./types";
 import { normalizeEmail } from "./utils";
@@ -38,8 +39,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 /**
  * Long-term mobile-safe Google login:
- * Complete OAuth on mypeer-501909.firebaseapp.com (registered redirect_uri),
- * then return a Google ID token to telltea-shop and signInWithCredential.
+ * OAuth completes on mypeer-501909.firebaseapp.com, stores a short-lived ticket,
+ * then TellTea exchanges it with signInWithCredential.
  */
 export const TELLTEA_AUTH_BRIDGE =
   "https://mypeer-501909.firebaseapp.com/telltea-auth.html";
@@ -84,21 +85,34 @@ async function resolveStaff(user: User): Promise<StaffMember | null> {
   return getStaffMember(email);
 }
 
-function consumeBridgeToken(): string | null {
+function takeTicketFromUrl(): string | null {
   if (typeof window === "undefined") return null;
-  const hash = window.location.hash.startsWith("#")
-    ? window.location.hash.slice(1)
-    : window.location.hash;
-  if (!hash) return null;
-  const params = new URLSearchParams(hash);
-  const token = params.get("google_id_token");
-  if (!token) return null;
-  window.history.replaceState(null, "", window.location.pathname + window.location.search);
-  return token;
+  const url = new URL(window.location.href);
+  const ticket = url.searchParams.get("ticket");
+  if (!ticket) return null;
+  url.searchParams.delete("ticket");
+  window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  return ticket;
+}
+
+async function idTokenFromTicket(ticket: string): Promise<string> {
+  const ref = doc(getDb(), "loginTickets", ticket);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    throw new Error("ลิงก์ล็อกอินหมดอายุ — กดเข้าสู่ระบบอีกครั้ง");
+  }
+  const data = snap.data() as { idToken?: string; exp?: number };
+  void deleteDoc(ref).catch(() => undefined);
+  if (!data.idToken) {
+    throw new Error("ลิงก์ล็อกอินไม่ถูกต้อง");
+  }
+  if (data.exp && data.exp < Date.now()) {
+    throw new Error("ลิงก์ล็อกอินหมดอายุ — กดเข้าสู่ระบบอีกครั้ง");
+  }
+  return data.idToken;
 }
 
 function shouldUseAuthBridge() {
-  // localhost can keep popup; production always uses the firebaseapp bridge
   if (typeof window === "undefined") return true;
   const host = window.location.hostname;
   return !(host === "localhost" || host === "127.0.0.1");
@@ -127,21 +141,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const auth = getFirebaseAuth();
     let cancelled = false;
+    let bridgePending = false;
 
     void (async () => {
-      const bridgeToken = consumeBridgeToken();
-      if (!bridgeToken) return;
+      const ticket = takeTicketFromUrl();
+      if (!ticket) return;
+      bridgePending = true;
+      setStatus("loading");
+      setError(null);
       try {
-        setStatus("loading");
-        await signInWithCredential(auth, GoogleAuthProvider.credential(bridgeToken));
+        const idToken = await idTokenFromTicket(ticket);
+        await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
       } catch (err) {
         if (!cancelled) setError(mapAuthError(err));
+      } finally {
+        bridgePending = false;
+        if (!cancelled && !auth.currentUser) {
+          setStatus("signedOut");
+        }
       }
     })();
+
+    // Don't leave mobile users stuck on "กำลังเตรียมระบบ..."
+    const readyTimeout = window.setTimeout(() => {
+      if (!cancelled && !bridgePending && !auth.currentUser) {
+        setStatus((prev) => (prev === "loading" ? "signedOut" : prev));
+      }
+    }, 6000);
+
+    void auth.authStateReady().then(() => {
+      if (cancelled || bridgePending) return;
+      if (!auth.currentUser) {
+        setStatus((prev) => (prev === "loading" ? "signedOut" : prev));
+      }
+    });
 
     const unsub = onAuthStateChanged(auth, async (next) => {
       if (cancelled) return;
       if (!next) {
+        if (bridgePending) return;
         setUser(null);
         setStaff(null);
         setStatus("signedOut");
@@ -165,6 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(readyTimeout);
       unsub();
     };
   }, []);

@@ -71,10 +71,12 @@ function LedgerView() {
     setError(null);
     cursorRef.current = null;
     try {
-      const [page] = await Promise.all([listLedgerPage(LEDGER_PAGE_SIZE), refreshBalance()]);
+      // Load rows first so the table is usable even if aggregate is slow/fails.
+      const page = await listLedgerPage(LEDGER_PAGE_SIZE);
       setEntries(page.entries);
       cursorRef.current = page.cursor;
       setHasMore(page.hasMore);
+      void refreshBalance();
     } catch (err) {
       setError((err as Error).message || "โหลดบัญชีไม่สำเร็จ");
     } finally {

@@ -34,12 +34,18 @@
 TellTea ใช้ **auth bridge** ถาวรบน  
 `https://mypeer-501909.firebaseapp.com/telltea-auth.html`
 
-เหตุผล: Google OAuth ของโปรเจกต์นี้รับ `redirect_uri` ของ `*.firebaseapp.com` อยู่แล้ว  
-แต่ยังไม่รับ `telltea-shop.web.app` — การล็อกอินบนโดเมนแอปจึงถูกส่งไปทำ OAuth ที่ firebaseapp.com แล้วส่ง Google ID token กลับมา
+OAuth จบที่ firebaseapp.com (redirect URI ที่ Google รับอยู่แล้ว) แล้วส่ง **ticket สั้นๆ**
+กลับมา TellTea — ไม่ยัด Google ID token ยาวๆ ใน URL (มือถือตัด hash บ่อย)
 
 เปิดด้วย **Safari / Chrome** โดยตรง — หลีกเลี่ยง LINE / Facebook in-app browser
 
-ไฟล์ bridge อยู่ใน repo P-Note (`frontend/telltea-auth.html`) เพื่อไม่ให้ถูกทับตอน deploy โน้ต
+ไฟล์ bridge อยู่ใน repo P-Note (`frontend/telltea-auth.html`)
+
+### เทสก่อน deploy
+
+```bash
+node scripts/smoke-mobile.mjs
+```
 
 ## พัฒนาในเครื่อง
 

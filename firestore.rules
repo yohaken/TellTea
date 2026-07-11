@@ -62,5 +62,22 @@ service cloud.firestore {
         && request.resource.data.qty is number
         && request.resource.data.qty >= 0;
     }
+
+    // One-time Google ID tokens for TellTea mobile auth bridge.
+    // IDs are 48-char random hex; readable only before expiry; no listing.
+    match /loginTickets/{ticketId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['idToken', 'createdAt', 'exp'])
+        && request.resource.data.idToken is string
+        && request.resource.data.idToken.size() > 20
+        && request.resource.data.idToken.size() < 5000
+        && request.resource.data.createdAt is number
+        && request.resource.data.exp is number
+        && request.resource.data.exp > request.time.toMillis()
+        && request.resource.data.exp < request.time.toMillis() + 300000;
+      allow get: if resource.data.exp > request.time.toMillis();
+      allow delete: if true;
+      allow list, update: if false;
+    }
   }
 }
