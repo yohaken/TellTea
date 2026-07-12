@@ -35,7 +35,6 @@ import {
 } from "@/lib/receipts";
 import type { LedgerEntry } from "@/lib/types";
 import {
-  formatBaht,
   formatDateShort,
   formatPlainNumber,
   parseDateInput,
@@ -206,7 +205,7 @@ function LedgerView() {
           คงเหลือ
           {refreshing ? <span className="sync-dot" aria-hidden> ·</span> : null}
         </span>
-        <strong>{balance == null ? "…" : formatBaht(balance)}</strong>
+        <strong>{balance == null ? "…" : `฿${formatPlainNumber(balance)}`}</strong>
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}

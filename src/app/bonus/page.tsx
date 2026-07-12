@@ -6,6 +6,7 @@ import { CircleDollarSign } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import {
+  BONUS_DEDUCTION_RULES,
   computeMonthBonus,
   monthInputValue,
   parseMonthInput,
@@ -13,6 +14,7 @@ import {
   thaiMonthYearLabel,
   type MonthBonusReport,
 } from "@/lib/bonus";
+import { subscribeChecklistRecords, type ChecklistRecord } from "@/lib/checklist";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import { subscribeOtEntries, type OtEntry } from "@/lib/ot";
@@ -21,6 +23,10 @@ import { formatPlainNumber } from "@/lib/utils";
 
 function fmt(n: number) {
   return formatPlainNumber(n);
+}
+
+function fmtPct(n: number) {
+  return n % 1 === 0 ? `${n.toFixed(0)}%` : `${n.toFixed(2)}%`;
 }
 
 export default function BonusPage() {
@@ -38,6 +44,7 @@ function BonusView() {
   const [month, setMonth] = useState(monthInputValue());
   const [otEntries, setOtEntries] = useState<OtEntry[]>([]);
   const [prodEntries, setProdEntries] = useState<ProdEntry[]>([]);
+  const [checkRecords, setCheckRecords] = useState<ChecklistRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,16 +72,21 @@ function BonusView() {
       (rows) => setProdEntries(rows),
       (err) => setError(err.message),
     );
+    const unsubCheck = subscribeChecklistRecords(
+      (rows) => setCheckRecords(rows),
+      (err) => setError(err.message),
+    );
     return () => {
       unsubOt();
       unsubProd();
+      unsubCheck();
     };
   }, [staff, canView]);
 
   const report = useMemo(() => {
     const { year, month: m } = parseMonthInput(month);
-    return computeMonthBonus(otEntries, prodEntries, employees, year, m);
-  }, [otEntries, prodEntries, employees, month]);
+    return computeMonthBonus(otEntries, prodEntries, employees, year, m, checkRecords);
+  }, [otEntries, prodEntries, employees, checkRecords, month]);
 
   const myRow = useMemo(
     () => pickMyBonusRow(report, employees, staff?.displayName),
@@ -106,9 +118,17 @@ function BonusView() {
       </div>
 
       <div className="bonus-summary-bar">
-        <span>Pool ขาย ฿{fmt(report.totalSalesPool)}</span>
-        <strong>รวม ฿{fmt(report.totalRemaining)}</strong>
+        <div className="bonus-summary-pool">
+          <span className="bonus-summary-label">โบนัสขายเบเกอรี่ รวม</span>
+          <strong className="bonus-summary-pool-amt">฿{fmt(report.totalSalesPool)}</strong>
+        </div>
+        <div className="bonus-summary-total">
+          <span className="bonus-summary-label">คงเหลือรวม</span>
+          <strong>฿{fmt(report.totalRemaining)}</strong>
+        </div>
       </div>
+
+      <BonusDeductionRulesTable report={report} />
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
@@ -139,8 +159,20 @@ function BonusView() {
               <dt>รวม</dt>
               <dd>฿{fmt(myRow.total)}</dd>
             </div>
+            <div>
+              <dt>หักโบนัส ({fmtPct(myRow.deductPct)})</dt>
+              <dd className="bonus-my-deduct">−฿{fmt(myRow.deductAmount)}</dd>
+            </div>
+            <div>
+              <dt>ผิดพลาด / ของเสีย</dt>
+              <dd>
+                {myRow.generalFailCount} / {fmt(myRow.wasteQty)}
+              </dd>
+            </div>
           </dl>
-          <p className="muted bonus-live-note">อัปเดตทันทีเมื่อมีการกรอก OT / ผลิต</p>
+          <p className="muted bonus-live-note">
+            อัปเดตทันทีเมื่อมีการกรอก OT / ผลิต / SmartCheck
+          </p>
         </section>
       ) : null}
 
@@ -166,7 +198,40 @@ function BonusView() {
       ) : null}
 
       <p className="muted bonus-footnote">
-        M1: ขาย = pool รวม ÷ จำนวนคน · ผลิต/OT จากยอดจริง · ยังไม่รวมตัด % (Phase 2)
+        ขาย = pool รวม ÷ จำนวนคน · ผลิต/OT จากยอดจริง · หักจาก SmartCheck ไม่ผ่าน ({BONUS_DEDUCTION_RULES[0].pctPerUnit}%/ครั้ง) และของเสีย ({BONUS_DEDUCTION_RULES[1].pctPerUnit}%/หน่วย)
+      </p>
+    </div>
+  );
+}
+
+function BonusDeductionRulesTable({ report }: { report: MonthBonusReport }) {
+  const counts = [
+    report.deductionSummary.generalFailCount,
+    report.deductionSummary.wasteQty,
+  ];
+
+  return (
+    <div className="sheet-wrap bonus-deduct-wrap">
+      <table className="sheet-table bonus-deduct-table">
+        <thead>
+          <tr>
+            <th>รายการ</th>
+            <th className="col-out">%</th>
+            <th className="col-out">จำนวน</th>
+          </tr>
+        </thead>
+        <tbody>
+          {BONUS_DEDUCTION_RULES.map((rule, idx) => (
+            <tr key={rule.id}>
+              <td>{rule.label}</td>
+              <td className="col-out">{fmtPct(rule.pctPerUnit)}</td>
+              <td className="col-out">{counts[idx]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="muted bonus-deduct-note">
+        สรุปหักโบนัสทั้งร้านในเดือนนี้ — หักรวม ฿{fmt(report.totalDeducted)}
       </p>
     </div>
   );
@@ -193,6 +258,7 @@ function BonusTable({
             <th className="col-out">ผลิต</th>
             <th className="col-out">OT</th>
             <th className="col-out">รวม</th>
+            <th className="col-out bonus-th-deduct">หักโบนัส</th>
             <th className="col-out bonus-th-final">คงเหลือ</th>
           </tr>
         </thead>
@@ -206,6 +272,19 @@ function BonusTable({
                 <td className="col-out">{fmt(row.prodBonus)}</td>
                 <td className="col-out">{fmt(row.otMain)}</td>
                 <td className="col-out">{fmt(row.total)}</td>
+                <td
+                  className="col-out bonus-th-deduct"
+                  title={`ผิดพลาด ${row.generalFailCount} · ของเสีย ${fmt(row.wasteQty)}`}
+                >
+                  {row.deductAmount > 0 ? (
+                    <>
+                      <span className="bonus-deduct-pct">{fmtPct(row.deductPct)}</span>
+                      <span className="bonus-deduct-amt">−{fmt(row.deductAmount)}</span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </td>
                 <td className="col-out bonus-th-final">
                   <strong>฿{fmt(row.remaining)}</strong>
                 </td>
@@ -216,6 +295,7 @@ function BonusTable({
         <tfoot>
           <tr className="bonus-foot-row">
             <td colSpan={5}>รวมทั้งร้าน</td>
+            <td className="col-out bonus-th-deduct">−{fmt(report.totalDeducted)}</td>
             <td className="col-out bonus-th-final">
               <strong>฿{fmt(report.totalRemaining)}</strong>
             </td>
