@@ -9,6 +9,7 @@ import {
   type FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import { guessTypeFromDescription } from "@/lib/ledger-labels";
@@ -351,17 +352,27 @@ function OwnerEntryModal({
   }
 
   return (
-    <div className="modal-backdrop edit-modal" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop edit-modal" role="presentation">
       <div
         className="modal-card"
         role="dialog"
         aria-modal="true"
         aria-label={mode === "add" ? "บันทึกเงินออก" : "แก้ไขรายการ"}
-        onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="panel-title">{mode === "add" ? "บันทึกเงินออก" : "ลบ / แก้ไข"}</h2>
-        {notice ? <p className="muted" style={{ margin: "0 0 0.75rem" }}>{notice}</p> : null}
-        <form className="form-card" onSubmit={(e) => void onSave(e)}>
+        <div className="entry-toolbar">
+          <h2 className="panel-title">{mode === "add" ? "บันทึกเงินออก" : "แก้ไขรายการ"}</h2>
+          <button
+            type="button"
+            className="ghost-btn icon-btn"
+            aria-label="ปิด"
+            disabled={busy}
+            onClick={onClose}
+          >
+            <X size={18} />
+          </button>
+        </div>
+        {notice ? <p className="muted" style={{ margin: "0 0 0.55rem" }}>{notice}</p> : null}
+        <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
           <div className="field">
             <label htmlFor="ob-date">วันที่</label>
             <input
@@ -441,14 +452,14 @@ function OwnerEntryModal({
                 className="primary-btn"
                 onClick={() => cameraRef.current?.click()}
               >
-                ถ่ายด้วยกล้อง
+                ถ่ายรูป
               </button>
               <button
                 type="button"
                 className="ghost-btn"
                 onClick={() => galleryRef.current?.click()}
               >
-                เลือกจากคลังรูป
+                แนบรูป
               </button>
             </div>
             <input
@@ -470,39 +481,33 @@ function OwnerEntryModal({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={receiptPreview} alt="ตัวอย่างสลิป" className="receipt-preview" />
             ) : entry?.receiptUrl ? (
-              <div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={entry.receiptUrl} alt="สลิปเดิม" className="receipt-preview" />
-                <p className="muted" style={{ marginTop: "0.25rem", fontSize: "0.8rem" }}>
-                  ถ่ายใหม่จะแทนที่รูปเดิม
-                </p>
-              </div>
-            ) : (
-              <p className="muted" style={{ marginTop: "0.5rem", textAlign: "left" }}>
-                ถ่ายแล้วระบบพยายามบันทึกลงเครื่องทันที แล้วแนบเข้าบิลนี้
-              </p>
-            )}
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={entry.receiptUrl} alt="สลิปเดิม" className="receipt-preview" />
+            ) : null}
           </div>
 
-          <div className="btn-row">
+          <div className="entry-actions">
             <button type="submit" className="primary-btn" disabled={busy}>
               {busy ? "กำลังบันทึก..." : "บันทึก"}
             </button>
             <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
-              ยกเลิก
+              ออก
             </button>
+            {mode === "edit" ? (
+              <button
+                type="button"
+                className="trash-btn"
+                aria-label="ลบรายการ"
+                title="ลบรายการ"
+                disabled={busy}
+                onClick={() => void onDelete()}
+              >
+                <Trash2 size={16} />
+              </button>
+            ) : (
+              <span aria-hidden style={{ width: "2.6rem" }} />
+            )}
           </div>
-          {mode === "edit" ? (
-            <button
-              type="button"
-              className="danger-btn"
-              style={{ width: "100%" }}
-              disabled={busy}
-              onClick={() => void onDelete()}
-            >
-              ลบรายการนี้
-            </button>
-          ) : null}
         </form>
       </div>
     </div>

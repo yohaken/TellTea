@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import { addLedgerEntry, frequentDescriptions, listRecentLedgerEntries } from "@/lib/ledger";
@@ -118,14 +120,16 @@ function MoneyOutView() {
 
   return (
     <div>
-      <h1 className="panel-title">บันทึกเงินออก</h1>
-      <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        ใส่วันที่ รายการ จำนวนเงิน — ถ่ายสลิปด้วยกล้องเต็มจอได้ทั้ง iPhone และ Android
-      </p>
+      <div className="entry-toolbar">
+        <h1 className="panel-title">บันทึกเงินออก</h1>
+        <Link href="/ledger/" className="ghost-btn icon-btn" aria-label="ออก">
+          <X size={18} />
+        </Link>
+      </div>
       {error ? <p className="error-text">{error}</p> : null}
       {notice ? <p className="muted">{notice}</p> : null}
 
-      <form className="form-card" onSubmit={(e) => void onSubmit(e)}>
+      <form className="form-card entry-form" onSubmit={(e) => void onSubmit(e)}>
         <div className="field">
           <label htmlFor="date">วันที่</label>
           <input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
@@ -158,7 +162,7 @@ function MoneyOutView() {
         </div>
 
         <div className="field">
-          <label htmlFor="amount">จำนวนเงินออก (บาท)</label>
+          <label htmlFor="amount">จำนวนเงินออก</label>
           <input
             id="amount"
             type="number"
@@ -180,17 +184,16 @@ function MoneyOutView() {
               className="primary-btn"
               onClick={() => cameraRef.current?.click()}
             >
-              ถ่ายด้วยกล้อง
+              ถ่ายรูป
             </button>
             <button
               type="button"
               className="ghost-btn"
               onClick={() => galleryRef.current?.click()}
             >
-              เลือกจากคลังรูป
+              แนบรูป
             </button>
           </div>
-          {/* capture=environment = เปิดกล้องหลังแบบ native เต็มฟังก์ชัน บน iOS/Android */}
           <input
             ref={cameraRef}
             type="file"
@@ -209,16 +212,12 @@ function MoneyOutView() {
           {receiptPreview ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={receiptPreview} alt="ตัวอย่างสลิป" className="receipt-preview" />
-          ) : (
-            <p className="muted" style={{ marginTop: "0.5rem", textAlign: "left" }}>
-              ถ่ายแล้วระบบพยายามบันทึกลงเครื่องทันที แล้วแนบเข้าบิลนี้
-            </p>
-          )}
+          ) : null}
         </div>
 
         {isOwner ? (
           <div className="field">
-            <label htmlFor="type">หมวด (เจ้าของแก้ได้ · พนักงานไม่เห็นช่องนี้)</label>
+            <label htmlFor="type">หมวด</label>
             <select id="type" value={typeMode} onChange={(e) => setTypeMode(e.target.value)}>
               {TYPE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -227,16 +226,22 @@ function MoneyOutView() {
               ))}
             </select>
             {typeMode === "auto" && description ? (
-              <p className="muted" style={{ marginTop: "0.35rem", textAlign: "left" }}>
+              <p className="muted" style={{ marginTop: "0.25rem", textAlign: "left", fontSize: "0.8rem" }}>
                 จะบันทึกเป็น: {labelLedgerType(autoType)}
               </p>
             ) : null}
           </div>
         ) : null}
 
-        <button type="submit" className="primary-btn action-out" disabled={busy}>
-          {busy ? "กำลังบันทึก..." : "บันทึกเงินออก"}
-        </button>
+        <div className="entry-actions">
+          <button type="submit" className="primary-btn action-out" disabled={busy}>
+            {busy ? "กำลังบันทึก..." : "บันทึก"}
+          </button>
+          <Link href="/ledger/" className="ghost-btn" style={{ display: "inline-flex" }}>
+            ออก
+          </Link>
+          <span aria-hidden style={{ width: "2.6rem" }} />
+        </div>
       </form>
     </div>
   );

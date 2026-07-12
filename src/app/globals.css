@@ -870,21 +870,138 @@ textarea {
   place-items: start center;
   padding: 0;
   z-index: 20;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-backdrop.edit-modal .modal-card {
-  width: 100%;
+  width: min(100%, var(--shell-max));
   max-width: 100%;
   max-height: none;
+  min-height: 100dvh;
   border-radius: 0;
   background: transparent;
-  padding: 0 1rem 1rem;
+  padding: 0 1rem calc(1rem + var(--safe-bottom));
   box-shadow: none;
   overflow: visible;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-backdrop.edit-modal .panel-title {
-  padding-top: 0.5rem;
+  padding-top: 0;
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.entry-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: calc(0.55rem + var(--safe-top)) 0 0.55rem;
+  background: linear-gradient(180deg, rgba(247, 243, 232, 0.98), rgba(247, 243, 232, 0.9));
+  backdrop-filter: blur(8px);
+}
+
+.entry-toolbar .ghost-btn.icon-btn {
+  flex-shrink: 0;
+}
+
+.entry-form.form-card {
+  padding: 0.75rem;
+}
+
+.entry-form .field {
+  margin-bottom: 0.55rem;
+  gap: 0.25rem;
+}
+
+.entry-form .field input,
+.entry-form .field select,
+.entry-form .field textarea {
+  min-height: 2.45rem;
+  padding: 0.55rem 0.75rem;
+}
+
+.entry-form .suggest-chip {
+  padding: 0.3rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.entry-actions {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.65rem;
+  position: sticky;
+  bottom: 0;
+  padding: 0.65rem 0 calc(0.35rem + var(--safe-bottom));
+  background: linear-gradient(180deg, transparent, rgba(247, 243, 232, 0.96) 28%);
+}
+
+.entry-actions .primary-btn {
+  width: 100%;
+  min-height: 2.6rem;
+}
+
+.entry-actions .ghost-btn {
+  min-width: 4.5rem;
+  min-height: 2.6rem;
+  padding: 0.55rem 0.85rem;
+}
+
+.trash-btn {
+  width: 2.6rem;
+  height: 2.6rem;
+  min-height: 2.6rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(180, 35, 24, 0.08);
+  color: var(--danger);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.trash-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.trash-btn:active {
+  transform: scale(0.96);
+}
+
+.receipt-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.receipt-actions .primary-btn,
+.receipt-actions .ghost-btn {
+  width: 100%;
+  min-height: 2.45rem;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.9rem;
+}
+
+.receipt-preview {
+  display: block;
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  margin-top: 0.5rem;
+  border: 1px solid var(--tea-line);
 }
 
 .modal-card {
@@ -915,22 +1032,6 @@ textarea {
   text-align: left;
 }
 
-.receipt-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-}
-
-.receipt-preview {
-  display: block;
-  width: 100%;
-  max-height: 220px;
-  object-fit: cover;
-  border-radius: 0.85rem;
-  margin-top: 0.65rem;
-  border: 1px solid var(--tea-line);
-}
-
 .field-label {
   display: block;
   margin-bottom: 0.35rem;
@@ -955,6 +1056,21 @@ textarea {
 
   .modal-card {
     border-radius: 1.1rem;
+  }
+
+  .modal-backdrop.edit-modal {
+    place-items: start center;
+    padding-top: 0.75rem;
+  }
+
+  .modal-backdrop.edit-modal .modal-card {
+    min-height: auto;
+    max-height: calc(100dvh - 1.5rem);
+    overflow: auto;
+    border-radius: 1.1rem;
+    background: rgba(247, 243, 232, 0.96);
+    box-shadow: var(--shadow);
+    padding: 0 1.15rem 1rem;
   }
 }
 
