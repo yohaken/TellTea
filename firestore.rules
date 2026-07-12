@@ -78,6 +78,7 @@ service cloud.firestore {
               'legalLastName',
               'idCardPhotoUrl',
               'personalProfileComplete',
+              'personalDataConsentAt',
             ]);
     }
 

@@ -37,6 +37,7 @@ export function loadCachedStaff(staffId: string): StaffMember | null {
       legalLastName: parsed.legalLastName,
       idCardPhotoUrl: parsed.idCardPhotoUrl,
       personalProfileComplete: parsed.personalProfileComplete,
+      personalDataConsentAt: parsed.personalDataConsentAt,
       createdAt: parsed.createdAt,
       permissions: parsed.permissions,
     };

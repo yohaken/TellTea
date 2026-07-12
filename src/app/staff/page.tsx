@@ -30,6 +30,7 @@ import {
 } from "@/lib/permissions";
 import { formatPhoneDisplay, staffAccountLabel } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
+import { StaffPersonalInfoButton } from "@/components/StaffPersonalInfoModal";
 
 export default function StaffPage() {
   return (
@@ -173,6 +174,8 @@ function StaffView() {
     }
   }
 
+  const isOwner = staff?.role === "owner";
+
   if (!can(staff, "staffManage")) return null;
 
   return (
@@ -298,7 +301,10 @@ function StaffView() {
                           : ""}
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: "0.35rem" }}>
+                  <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+                    {isOwner && member.role === "staff" ? (
+                      <StaffPersonalInfoButton member={member} />
+                    ) : null}
                     {member.role === "staff" ? (
                       <button
                         type="button"

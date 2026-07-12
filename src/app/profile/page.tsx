@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { IdCard, UserCircle } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { PhotoAttachField } from "@/components/PhotoAttachField";
+import { PersonalDataConsentField } from "@/components/PersonalDataConsentField";
 import { useAuth } from "@/lib/auth";
 import {
   linkEmployeeProfile,
@@ -32,6 +33,7 @@ function ProfileView() {
   const [legalFirstName, setLegalFirstName] = useState(staff?.legalFirstName || "");
   const [legalLastName, setLegalLastName] = useState(staff?.legalLastName || "");
   const [idCardPhotoUrl, setIdCardPhotoUrl] = useState(staff?.idCardPhotoUrl || "");
+  const [consent, setConsent] = useState(!!staff?.personalDataConsentAt);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +50,7 @@ function ProfileView() {
     setLegalFirstName(staff.legalFirstName || "");
     setLegalLastName(staff.legalLastName || "");
     setIdCardPhotoUrl(staff.idCardPhotoUrl || "");
+    setConsent(!!staff.personalDataConsentAt);
     setEmployeeId(staff.employeeId || "");
   }, [staff]);
 
@@ -81,6 +84,10 @@ function ProfileView() {
       setError("ถ่ายหรือแนบรูปบัตรประชาชน");
       return;
     }
+    if (!consent && !staff.personalDataConsentAt) {
+      setError("ต้องยินยอมการเก็บข้อมูลส่วนตัวก่อนบันทึก");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -89,6 +96,7 @@ function ProfileView() {
         legalLastName: legalLastName.trim(),
         idCardPhotoUrl,
         personalProfileComplete: true,
+        personalDataConsentAt: staff.personalDataConsentAt || Date.now(),
       });
       saveCachedStaff(updated);
       await refreshStaff();
@@ -200,7 +208,16 @@ function ProfileView() {
               onChange={setIdCardPhotoUrl}
               onError={setError}
             />
-            <button type="submit" className="primary-btn" disabled={busy}>
+            <PersonalDataConsentField
+              checked={consent}
+              onChange={setConsent}
+              disabled={busy || !!staff?.personalDataConsentAt}
+            />
+            <button
+              type="submit"
+              className="primary-btn"
+              disabled={busy || (!consent && !staff?.personalDataConsentAt)}
+            >
               {busy ? "กำลังบันทึก..." : "บันทึกข้อมูลส่วนตัว"}
             </button>
           </form>

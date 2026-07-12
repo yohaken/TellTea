@@ -822,6 +822,41 @@ body.modal-open .main-panel {
   font-size: 0.78rem;
 }
 
+.pdpa-consent-field {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  text-align: left;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin: 0.5rem 0 0.75rem;
+  color: rgba(28, 42, 31, 0.82);
+}
+
+.pdpa-consent-field input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.staff-id-preview-wrap {
+  margin-top: 0.5rem;
+  border-radius: 0.65rem;
+  overflow: hidden;
+  border: 1px solid rgba(28, 42, 31, 0.12);
+  background: #fff;
+}
+
+.staff-id-preview {
+  display: block;
+  width: 100%;
+  max-height: 16rem;
+  object-fit: contain;
+}
+
+.staff-personal-info-card .panel-title {
+  margin-bottom: 0.35rem;
+}
+
 .profile-prompt-banner--personal {
   background: rgba(255, 235, 235, 0.95);
   border-color: rgba(180, 50, 40, 0.28);

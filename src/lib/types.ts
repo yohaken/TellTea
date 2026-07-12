@@ -24,6 +24,8 @@ export type StaffMember = {
   idCardPhotoUrl?: string;
   /** true เมื่อกรอกข้อมูลส่วนตัวครบแล้ว */
   personalProfileComplete?: boolean;
+  /** เวลาที่ยินยอม PDPA (ms) */
+  personalDataConsentAt?: number;
   createdAt: number;
   /** Fine-grained page/feature access — owners always get full set in resolvePermissions */
   permissions?: Partial<StaffPermissions>;

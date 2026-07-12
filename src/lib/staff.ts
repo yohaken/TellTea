@@ -225,6 +225,7 @@ export type StaffProfilePatch = {
   legalLastName?: string | null;
   idCardPhotoUrl?: string | null;
   personalProfileComplete?: boolean;
+  personalDataConsentAt?: number | null;
 };
 
 export async function updateStaffProfile(
@@ -270,6 +271,10 @@ export async function updateStaffProfile(
   }
   if (patch.personalProfileComplete !== undefined) {
     next.personalProfileComplete = patch.personalProfileComplete;
+  }
+  if (patch.personalDataConsentAt !== undefined) {
+    next.personalDataConsentAt =
+      patch.personalDataConsentAt == null ? deleteField() : patch.personalDataConsentAt;
   }
 
   await updateDoc(staffRef(staffId), next);

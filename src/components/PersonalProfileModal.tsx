@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { IdCard } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { PhotoAttachField } from "@/components/PhotoAttachField";
+import { PersonalDataConsentField } from "@/components/PersonalDataConsentField";
 import { useAuth } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { needsPersonalProfileSetup } from "@/lib/profile";
@@ -23,6 +24,7 @@ export function PersonalProfileModal() {
   const [legalFirstName, setLegalFirstName] = useState("");
   const [legalLastName, setLegalLastName] = useState("");
   const [idCardPhotoUrl, setIdCardPhotoUrl] = useState("");
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,6 +50,10 @@ export function PersonalProfileModal() {
       setError("ถ่ายหรือแนบรูปบัตรประชาชน");
       return;
     }
+    if (!consent) {
+      setError("ต้องยินยอมการเก็บข้อมูลส่วนตัวก่อนบันทึก");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -56,6 +62,7 @@ export function PersonalProfileModal() {
         legalLastName: legalLastName.trim(),
         idCardPhotoUrl,
         personalProfileComplete: true,
+        personalDataConsentAt: Date.now(),
       });
       saveCachedStaff(updated);
       await refreshStaff();
@@ -125,7 +132,8 @@ export function PersonalProfileModal() {
           <p className="muted form-hint-inline">
             ถ่ายด้วยกล้องหรือแนบจากคลังรูปได้
           </p>
-          <button type="submit" className="primary-btn" disabled={busy}>
+          <PersonalDataConsentField checked={consent} onChange={setConsent} disabled={busy} />
+          <button type="submit" className="primary-btn" disabled={busy || !consent}>
             {busy ? "กำลังบันทึก..." : "บันทึกและปิด"}
           </button>
         </form>
