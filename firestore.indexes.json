@@ -108,13 +108,6 @@
       ]
     },
     {
-      "collectionGroup": "taskTemplates",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "taskOccurrences",
       "queryScope": "COLLECTION",
       "fields": [
