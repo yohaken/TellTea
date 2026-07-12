@@ -3,18 +3,17 @@
 import {
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
-  Camera,
   CheckCircle2,
   ClipboardCheck,
   Trash2,
   X,
 } from "lucide-react";
+import { PhotoAttachField } from "@/components/PhotoAttachField";
 import {
   buildCheckHistoryGrid,
   checkMonthInputValue,
@@ -31,7 +30,6 @@ import { useAuth } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
-import { fileToReceiptDataUrl } from "@/lib/receipts";
 import {
   CHECK_SHIFTS,
   deleteCheckSession,
@@ -198,7 +196,6 @@ function CheckForm({
   const [failModal, setFailModal] = useState<{ index: number; remark: string; preview: string } | null>(null);
   const [passConfirm, setPassConfirm] = useState<{ index: number; itemName: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   useBodyScrollLock(!!failModal || !!passConfirm);
 
@@ -275,10 +272,6 @@ function CheckForm({
       onError("กรุณาระบุปัญหา (Remark) เมื่อไม่ผ่าน");
       return;
     }
-    if (!imageUrl) {
-      onError("กรุณาแนบรูปหลักฐานเมื่อไม่ผ่าน");
-      return;
-    }
     setDrafts((prev) =>
       prev.map((d, i) =>
         i === failModal.index
@@ -297,8 +290,8 @@ function CheckForm({
     }
     const fails = drafts.filter((d) => d.status === "fail");
     for (const f of fails) {
-      if (!f.remark.trim() || !f.imageUrl) {
-        onError(`รายการ "${f.itemName}" ไม่ผ่าน — ต้องมีหมายเหตุและรูป`);
+      if (!f.remark.trim()) {
+        onError(`รายการ "${f.itemName}" ไม่ผ่าน — ต้องระบุหมายเหตุ`);
         return;
       }
     }
@@ -534,16 +527,9 @@ function CheckForm({
           itemName={drafts[failModal.index]?.itemName || ""}
           remark={failModal.remark}
           preview={failModal.preview}
-          fileRef={fileRef}
           onRemarkChange={(remark) => setFailModal((m) => (m ? { ...m, remark } : null))}
-          onImagePick={async (file) => {
-            try {
-              const url = await fileToReceiptDataUrl(file);
-              setFailModal((m) => (m ? { ...m, preview: url } : null));
-            } catch (err) {
-              onError((err as Error).message || "อัปโหลดรูปไม่สำเร็จ");
-            }
-          }}
+          onPreviewChange={(preview) => setFailModal((m) => (m ? { ...m, preview } : null))}
+          onError={onError}
           onCancel={() => setFailModal(null)}
           onSave={() => saveFailModal(failModal.preview)}
         />
@@ -610,18 +596,18 @@ function FailModal({
   itemName,
   remark,
   preview,
-  fileRef,
   onRemarkChange,
-  onImagePick,
+  onPreviewChange,
+  onError,
   onCancel,
   onSave,
 }: {
   itemName: string;
   remark: string;
   preview: string;
-  fileRef: React.RefObject<HTMLInputElement | null>;
   onRemarkChange: (v: string) => void;
-  onImagePick: (file: File) => void;
+  onPreviewChange: (url: string) => void;
+  onError: (msg: string) => void;
   onCancel: () => void;
   onSave: () => void;
 }) {
@@ -642,7 +628,7 @@ function FailModal({
             <X size={18} />
           </button>
         </div>
-        <p className="muted check-hint">ระบุปัญหาและแนบรูปหลักฐาน — บังคับก่อนบันทึก</p>
+        <p className="muted check-hint">ระบุปัญหา — แนบรูปได้ถ้ามี (ไม่บังคับ)</p>
         <div className="field">
           <label htmlFor="fail-remark">หมายเหตุ / ปัญหา</label>
           <textarea
@@ -654,32 +640,13 @@ function FailModal({
             required
           />
         </div>
-        <div className="field">
-          <span className="field-label">รูปหลักฐาน</span>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="check-file-input"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void onImagePick(file);
-            }}
-          />
-          <button
-            type="button"
-            className="check-camera-btn"
-            onClick={() => fileRef.current?.click()}
-          >
-            <Camera size={18} aria-hidden />
-            {preview ? "ถ่าย/เลือกรูปใหม่" : "เปิดกล้อง / เลือกรูป"}
-          </button>
-          {preview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="ตัวอย่างหลักฐาน" className="check-fail-preview" />
-          ) : null}
-        </div>
+        <PhotoAttachField
+          value={preview}
+          onChange={onPreviewChange}
+          onError={onError}
+          label="รูปหลักฐาน (ถ้ามี)"
+          galleryOnly
+        />
         <button type="button" className="primary-btn action-out" onClick={onSave}>
           บันทึก &quot;ไม่ผ่าน&quot;
         </button>

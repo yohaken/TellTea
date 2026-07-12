@@ -8,11 +8,14 @@ export function PhotoAttachField({
   onChange,
   onError,
   label = "แนบรูป (ถ้ามี)",
+  galleryOnly = false,
 }: {
   value: string;
   onChange: (url: string) => void;
   onError?: (msg: string) => void;
   label?: string;
+  /** แนบจากแกลเลอรีอย่างเดียว — บนมือถือยังเลือกถ่ายรูปจากตัวเลือกไฟล์ได้ */
+  galleryOnly?: boolean;
 }) {
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -35,22 +38,35 @@ export function PhotoAttachField({
     <div className="field photo-attach-field">
       <span className="field-label">{label}</span>
       <div className="receipt-actions">
-        <button
-          type="button"
-          className="primary-btn"
-          disabled={busy}
-          onClick={() => cameraRef.current?.click()}
-        >
-          {busy ? "กำลังอัปโหลด..." : "ถ่ายรูป"}
-        </button>
-        <button
-          type="button"
-          className="ghost-btn"
-          disabled={busy}
-          onClick={() => galleryRef.current?.click()}
-        >
-          แนบรูป
-        </button>
+        {galleryOnly ? (
+          <button
+            type="button"
+            className="primary-btn"
+            disabled={busy}
+            onClick={() => galleryRef.current?.click()}
+          >
+            {busy ? "กำลังอัปโหลด..." : "แนบรูป"}
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="primary-btn"
+              disabled={busy}
+              onClick={() => cameraRef.current?.click()}
+            >
+              {busy ? "กำลังอัปโหลด..." : "ถ่ายรูป"}
+            </button>
+            <button
+              type="button"
+              className="ghost-btn"
+              disabled={busy}
+              onClick={() => galleryRef.current?.click()}
+            >
+              แนบรูป
+            </button>
+          </>
+        )}
       </div>
       {value ? (
         <button type="button" className="ghost-btn photo-attach-clear" onClick={() => onChange("")}>
@@ -61,14 +77,16 @@ export function PhotoAttachField({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={value} alt="" className="photo-attach-preview" />
       ) : null}
-      <input
-        ref={cameraRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="sr-only"
-        onChange={(e) => void onFile(e.target.files?.[0])}
-      />
+      {galleryOnly ? null : (
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="sr-only"
+          onChange={(e) => void onFile(e.target.files?.[0])}
+        />
+      )}
       <input
         ref={galleryRef}
         type="file"
