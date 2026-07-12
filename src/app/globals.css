@@ -2237,6 +2237,29 @@ textarea {
   margin-bottom: 0;
 }
 
+.photo-preview-card {
+  width: min(100%, 22rem);
+}
+
+.photo-preview-full {
+  display: block;
+  width: 100%;
+  max-height: min(70dvh, 28rem);
+  object-fit: contain;
+  border-radius: 0.65rem;
+  background: rgba(28, 42, 31, 0.06);
+}
+
+.check-danger-zone {
+  margin-top: 0.85rem;
+  border-color: rgba(193, 18, 31, 0.18);
+}
+
+.check-clear-records-btn {
+  color: #9b2226;
+  border-color: rgba(193, 18, 31, 0.25);
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

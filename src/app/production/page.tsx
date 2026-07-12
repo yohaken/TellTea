@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { ChefHat, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock, type ModuleTab } from "@/components/ModuleTabDock";
+import { EntryPhotoCell, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachField } from "@/components/PhotoAttachField";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -405,6 +406,8 @@ function ProdTable({
   onEdit: (row: ProdEntry) => void;
   onError: (msg: string) => void;
 }) {
+  const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
+
   async function setStatus(row: ProdEntry, status: ProdStatus) {
     try {
       await updateProdEntry(row.id, { status });
@@ -427,6 +430,7 @@ function ProdTable({
   }
 
   return (
+    <>
     <div className="sheet-wrap">
       <table className="sheet-table prod-table">
         <thead>
@@ -459,9 +463,17 @@ function ProdTable({
                 <td className="col-date">{formatDateShort(row.date)}</td>
                 <td className="col-desc">{row.workerNames.join(", ")}</td>
                 <td className="col-desc">
-                  <button type="button" className="desc-link" onClick={() => onEdit(row)}>
-                    {row.productName}
-                  </button>
+                  <div className="desc-with-photo">
+                    <button type="button" className="desc-link" onClick={() => onEdit(row)}>
+                      {row.productName}
+                    </button>
+                    <EntryPhotoCell
+                      imageUrl={row.imageUrl}
+                      label={row.productName}
+                      onView={(url) => setPreview({ url, title: row.productName })}
+                      onAdd={() => onEdit(row)}
+                    />
+                  </div>
                 </td>
                 <td className="col-out">{formatPlainNumber(row.qtyProduced)}</td>
                 <td className="col-out">{row.qtyWaste ? formatPlainNumber(row.qtyWaste) : "—"}</td>
@@ -526,6 +538,10 @@ function ProdTable({
         </tbody>
       </table>
     </div>
+    {preview ? (
+      <ImagePreviewModal url={preview.url} title={preview.title} onClose={() => setPreview(null)} />
+    ) : null}
+    </>
   );
 }
 

@@ -4,6 +4,7 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -301,4 +302,24 @@ export async function deleteCheckSession(checkId: string): Promise<void> {
   const batch = writeBatch(getDb());
   snap.docs.forEach((d) => batch.delete(d.ref));
   await batch.commit();
+}
+
+/** Owner: wipe all checklist records (fresh start after CSV import). */
+export async function deleteAllChecklistRecords(
+  onProgress?: (done: number) => void,
+): Promise<number> {
+  let deleted = 0;
+  for (;;) {
+    const snap = await getDocs(
+      query(recordsCol(), orderBy("createdAt", "asc"), limit(400)),
+    );
+    if (snap.empty) break;
+    const batch = writeBatch(getDb());
+    snap.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    deleted += snap.docs.length;
+    onProgress?.(deleted);
+    if (snap.docs.length < 400) break;
+  }
+  return deleted;
 }

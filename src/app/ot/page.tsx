@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { Coffee, LayoutGrid, Table2, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock, type ModuleTab } from "@/components/ModuleTabDock";
+import { EntryPhotoCell, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachField } from "@/components/PhotoAttachField";
 import { useAuth } from "@/lib/auth";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
@@ -217,7 +218,6 @@ function OtView() {
           entries={entries}
           staff={staff}
           isOwner={isOwner}
-          bonusRate={bonusRate}
           onEdit={openEdit}
           onError={setError}
         />
@@ -504,14 +504,12 @@ function OtTable({
   entries,
   staff,
   isOwner,
-  bonusRate,
   onEdit,
   onError,
 }: {
   entries: OtEntry[];
   staff: StaffMember | null;
   isOwner: boolean;
-  bonusRate: number;
   onEdit: (row: OtEntry) => void;
   onError: (msg: string) => void;
 }) {
@@ -519,6 +517,7 @@ function OtTable({
   const [month, setMonth] = useState(monthInputValue());
   const [statusFilter, setStatusFilter] = useState<OtStatus | "all">("all");
   const [mineOnly, setMineOnly] = useState(false);
+  const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
 
   const myName = staff?.displayName || "";
 
@@ -614,11 +613,6 @@ function OtTable({
         ค้าง ฿{formatPlainNumber(summary.unpaidBonus)}
       </p>
 
-      <p className="ot-formula-banner muted">
-        โบนัส/คน = (เครื่อง + อื่นๆ + โคน + ขนมปัง − เคลม − ลด + เพิ่ม) × เรท ÷ จำนวนคน
-        {" · "}เรทปัจจุบัน ฿{formatPlainNumber(bonusRate)}/หน่วย
-      </p>
-
       {!filtered.length ? (
         <p className="empty">ไม่มีรายการในเดือน/ตัวกรองนี้</p>
       ) : tableView === "sheet" ? (
@@ -627,6 +621,7 @@ function OtTable({
           isOwner={isOwner}
           onEdit={onEdit}
           onError={onError}
+          onViewPhoto={(url, title) => setPreview({ url, title })}
         />
       ) : (
         <OtCardList
@@ -634,8 +629,12 @@ function OtTable({
           isOwner={isOwner}
           onEdit={onEdit}
           onError={onError}
+          onViewPhoto={(url, title) => setPreview({ url, title })}
         />
       )}
+      {preview ? (
+        <ImagePreviewModal url={preview.url} title={preview.title} onClose={() => setPreview(null)} />
+      ) : null}
     </div>
   );
 }
@@ -645,11 +644,13 @@ function OtSheetTable({
   isOwner,
   onEdit,
   onError,
+  onViewPhoto,
 }: {
   groups: DateGroup[];
   isOwner: boolean;
   onEdit: (row: OtEntry) => void;
   onError: (msg: string) => void;
+  onViewPhoto: (url: string, title: string) => void;
 }) {
   async function setStatus(row: OtEntry, status: OtStatus) {
     try {
@@ -659,7 +660,7 @@ function OtSheetTable({
     }
   }
 
-  const colCount = 19 + (isOwner ? 1 : 0);
+  const colCount = 20 + (isOwner ? 1 : 0);
 
   return (
     <div className="sheet-wrap ot-sheet-wrap">
@@ -685,6 +686,7 @@ function OtSheetTable({
             <th className="ot-th-result ot-col-bonus col-sticky-right">โบนัส/คน</th>
             <th className="ot-th-result col-act">คน</th>
             <th className="ot-th-result col-act">สถานะ</th>
+            <th className="ot-th-result col-act">รูป</th>
             {isOwner ? <th className="ot-th-result col-act" /> : null}
           </tr>
         </thead>
@@ -751,6 +753,16 @@ function OtSheetTable({
                         </span>
                       )}
                     </td>
+                    <td className="col-act">
+                      <EntryPhotoCell
+                        imageUrl={row.imageUrl}
+                        label={`${formatDateShort(row.date)} ${labelOtShift(row.shift)}`}
+                        onView={(url) =>
+                          onViewPhoto(url, `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`)
+                        }
+                        onAdd={() => onEdit(row)}
+                      />
+                    </td>
                     {isOwner ? (
                       <td className="col-act">
                         <button
@@ -790,11 +802,13 @@ function OtCardList({
   isOwner,
   onEdit,
   onError,
+  onViewPhoto,
 }: {
   entries: OtEntry[];
   isOwner: boolean;
   onEdit: (row: OtEntry) => void;
   onError: (msg: string) => void;
+  onViewPhoto: (url: string, title: string) => void;
 }) {
   async function setStatus(row: OtEntry, status: OtStatus) {
     try {
@@ -844,6 +858,14 @@ function OtCardList({
                 <span className="ot-card-shift">{labelOtShift(row.shift)}</span>
               </div>
               <div className="ot-card-actions">
+                <EntryPhotoCell
+                  imageUrl={row.imageUrl}
+                  label={`${formatDateShort(row.date)} ${labelOtShift(row.shift)}`}
+                  onView={(url) =>
+                    onViewPhoto(url, `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`)
+                  }
+                  onAdd={() => onEdit(row)}
+                />
                 {isOwner ? (
                   <select
                     className={`prod-status ot-card-status ${statusClass}`}

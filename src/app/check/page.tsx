@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
+import { CheckTabDock } from "@/components/CheckTabDock";
 import { useAuth } from "@/lib/auth";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
@@ -27,6 +28,7 @@ import {
   addChecklistItem,
   deleteChecklistItem,
   deleteCheckSession,
+  deleteAllChecklistRecords,
   getSessionForShift,
   groupRecordsBySession,
   labelCheckShift,
@@ -118,44 +120,12 @@ function CheckView() {
   if (!can(staff, "checklist")) return null;
 
   return (
-    <div>
-      <div className="entry-toolbar" style={{ position: "static", paddingTop: 0 }}>
-        <h1 className="panel-title" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-          <ClipboardCheck size={20} aria-hidden />
+    <div className="module-page">
+      <div className="module-page-head">
+        <h1 className="panel-title module-page-title">
+          <ClipboardCheck size={18} aria-hidden />
           SmartCheck SOP
         </h1>
-      </div>
-
-      <div className="prod-tabs" role="tablist" aria-label="มุมมอง SmartCheck">
-        <button
-          type="button"
-          role="tab"
-          className={tab === "check" ? "prod-tab is-active" : "prod-tab"}
-          aria-selected={tab === "check"}
-          onClick={() => setTab("check")}
-        >
-          เช็ค
-        </button>
-        <button
-          type="button"
-          role="tab"
-          className={tab === "summary" ? "prod-tab is-active" : "prod-tab"}
-          aria-selected={tab === "summary"}
-          onClick={() => setTab("summary")}
-        >
-          ภาพรวม
-        </button>
-        {isOwner ? (
-          <button
-            type="button"
-            role="tab"
-            className={tab === "setup" ? "prod-tab is-active" : "prod-tab"}
-            aria-selected={tab === "setup"}
-            onClick={() => setTab("setup")}
-          >
-            ตั้งค่า
-          </button>
-        ) : null}
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -185,6 +155,8 @@ function CheckView() {
           onError={setError}
         />
       ) : null}
+
+      <CheckTabDock tab={tab} isOwner={isOwner} onSelect={setTab} />
     </div>
   );
 }
@@ -804,6 +776,8 @@ function CheckSetup({
   const [name, setName] = useState("");
   const [groupLabel, setGroupLabel] = useState("ทั่วไป");
   const [busy, setBusy] = useState(false);
+  const [clearBusy, setClearBusy] = useState(false);
+  const [clearMsg, setClearMsg] = useState<string | null>(null);
 
   async function reload() {
     setItems(await listChecklistItems());
@@ -846,6 +820,27 @@ function CheckSetup({
       onReload();
     } catch (err) {
       onError((err as Error).message || "ลบไม่สำเร็จ");
+    }
+  }
+
+  async function onClearAllRecords() {
+    if (
+      !window.confirm(
+        "ลบบันทึกความพร้อมทั้งหมด? (รวมข้อมูลที่เคย import จาก CSV) — ไม่สามารถย้อนกลับ",
+      )
+    ) {
+      return;
+    }
+    if (!window.confirm("ยืนยันอีกครั้ง — ลบทุกรอบที่บันทึกไว้")) return;
+    setClearBusy(true);
+    setClearMsg(null);
+    try {
+      const n = await deleteAllChecklistRecords();
+      setClearMsg(n ? `ลบแล้ว ${n} แถว` : "ไม่มีบันทึกให้ลบ");
+    } catch (err) {
+      onError((err as Error).message || "ลบบันทึกไม่สำเร็จ");
+    } finally {
+      setClearBusy(false);
     }
   }
 
@@ -902,6 +897,22 @@ function CheckSetup({
           </ul>
         </section>
       ))}
+
+      <section className="form-card entry-form check-danger-zone">
+        <h2 className="panel-title" style={{ fontSize: "1rem" }}>เริ่มใหม่</h2>
+        <p className="muted check-hint">
+          ลบบันทึกความพร้อมทั้งหมด (รวมข้อมูลเก่าจาก CSV) — รายการตรวจ SOP ด้านบนยังอยู่
+        </p>
+        <button
+          type="button"
+          className="ghost-btn check-clear-records-btn"
+          disabled={clearBusy}
+          onClick={() => void onClearAllRecords()}
+        >
+          {clearBusy ? "กำลังลบ..." : "ลบบันทึกทั้งหมด"}
+        </button>
+        {clearMsg ? <p className="muted check-import-preview">{clearMsg}</p> : null}
+      </section>
     </div>
   );
 }
