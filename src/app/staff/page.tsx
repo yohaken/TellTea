@@ -31,6 +31,9 @@ import {
 import { formatPhoneDisplay, staffAccountLabel } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
 import { StaffPersonalInfoButton } from "@/components/StaffPersonalInfoModal";
+import { StaffReadinessTable } from "@/components/StaffReadinessTable";
+import { listStaffPersonalMap } from "@/lib/staff-personal";
+import type { StaffPersonalData } from "@/lib/types";
 
 export default function StaffPage() {
   return (
@@ -66,6 +69,7 @@ function StaffView() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  const [personalMap, setPersonalMap] = useState<Map<string, StaffPersonalData>>(new Map());
 
   const linkOptions = employeesForLink(employees);
 
@@ -73,6 +77,13 @@ function StaffView() {
     const [emps, staffList] = await Promise.all([listEmployees(), listStaff()]);
     setEmployees(emps);
     setMembers(staffList);
+    if (staff?.role === "owner") {
+      try {
+        setPersonalMap(await listStaffPersonalMap());
+      } catch {
+        setPersonalMap(new Map());
+      }
+    }
   }
 
   useEffect(() => {
@@ -185,6 +196,14 @@ function StaffView() {
         ขั้นที่ 1 เพิ่มชื่อในร้าน · ขั้นที่ 2 สร้างบัญชีและเชื่อมชื่อ (หรือให้พนักงานเชื่อมเองที่โปรไฟล์)
       </p>
       {error ? <p className="error-text">{error}</p> : null}
+
+      {isOwner ? (
+        <StaffReadinessTable
+          members={members}
+          employees={employees}
+          personalByStaffId={personalMap}
+        />
+      ) : null}
 
       <section className="staff-hub-section">
         <h2 className="panel-title" style={{ fontSize: "1.05rem" }}>

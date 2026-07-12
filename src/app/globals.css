@@ -823,6 +823,103 @@ body.modal-open .main-panel {
   margin-bottom: 1rem;
 }
 
+.staff-readiness-section {
+  margin-bottom: 1.25rem;
+}
+
+.staff-readiness-summary {
+  text-align: left;
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+}
+
+.staff-readiness-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.staff-readiness-table {
+  min-width: 34rem;
+  font-size: 0.82rem;
+}
+
+.staff-readiness-table th,
+.staff-readiness-table td {
+  padding: 0.4rem 0.35rem;
+  vertical-align: middle;
+}
+
+.staff-ready-col-name {
+  min-width: 5.5rem;
+  text-align: left;
+}
+
+.staff-ready-col-account {
+  max-width: 7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font-size: 0.78rem;
+}
+
+.staff-ready-col-check,
+.staff-ready-col-check-h {
+  width: 2.1rem;
+  text-align: center;
+}
+
+.staff-ready-col-status {
+  min-width: 4.8rem;
+  text-align: left;
+}
+
+.staff-ready-ok {
+  color: var(--tea-leaf);
+  font-weight: 700;
+}
+
+.staff-ready-miss {
+  color: rgba(0, 59, 92, 0.28);
+}
+
+.staff-ready-pill {
+  display: inline-block;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.staff-ready-pill.is-complete {
+  background: rgba(0, 119, 182, 0.12);
+  color: var(--tea-leaf);
+}
+
+.staff-ready-pill.is-partial {
+  background: rgba(201, 133, 45, 0.15);
+  color: #9a5b00;
+}
+
+.staff-ready-pill.is-blocked,
+.staff-ready-pill.is-none {
+  background: rgba(180, 35, 24, 0.1);
+  color: var(--danger);
+}
+
+.staff-ready-tag {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--danger);
+  margin-top: 0.1rem;
+}
+
+.staff-ready-row-complete {
+  background: rgba(0, 119, 182, 0.04);
+}
+
 .profile-modal-backdrop {
   z-index: 55;
   touch-action: none;

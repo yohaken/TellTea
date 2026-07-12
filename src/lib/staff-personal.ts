@@ -1,4 +1,4 @@
-import { deleteField, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { deleteField, doc, getDoc, setDoc, updateDoc, collection, getDocs } from "firebase/firestore";
 import { getDb } from "./firebase";
 import type { StaffPersonalData } from "./types";
 
@@ -10,6 +10,16 @@ export async function getStaffPersonal(staffId: string): Promise<StaffPersonalDa
   const snap = await getDoc(staffPersonalRef(staffId));
   if (!snap.exists()) return null;
   return snap.data() as StaffPersonalData;
+}
+
+/** เจ้าของ — โหลดข้อมูลส่วนตัวทุกคนสำหรับตารางสรุป */
+export async function listStaffPersonalMap(): Promise<Map<string, StaffPersonalData>> {
+  const snap = await getDocs(collection(getDb(), "staffPersonal"));
+  const map = new Map<string, StaffPersonalData>();
+  for (const d of snap.docs) {
+    map.set(d.id, d.data() as StaffPersonalData);
+  }
+  return map;
 }
 
 export type StaffPersonalPatch = {
