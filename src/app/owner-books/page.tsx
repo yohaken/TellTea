@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -39,6 +40,7 @@ import {
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
+import { filterOwnerBookRows } from "@/lib/smart-search";
 
 export default function OwnerBooksPage() {
   return (
@@ -64,7 +66,11 @@ function OwnerBooksView() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [editing, setEditing] = useState<OwnerBookEntry | null>(null);
   const [adding, setAdding] = useState(false);
+  const [query, setQuery] = useState("");
+  const [searchPool, setSearchPool] = useState<OwnerBookEntry[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const deferredQuery = useDeferredValue(query.trim());
 
   useEffect(() => {
     if (staff && !can(staff, "ownerBooks")) {
@@ -100,15 +106,44 @@ function OwnerBooksView() {
     return unsub;
   }, [staff, liveLimit]);
 
+  useEffect(() => {
+    if (!deferredQuery) {
+      setSearchPool(null);
+      setSearchLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setSearchLoading(true);
+    void listOwnerBookEntries()
+      .then((rows) => {
+        if (!cancelled) setSearchPool(rows);
+      })
+      .catch((err) => {
+        if (!cancelled) setError((err as Error).message || "ค้นหาไม่สำเร็จ");
+      })
+      .finally(() => {
+        if (!cancelled) setSearchLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [deferredQuery]);
+
+  const filteredEntries = useMemo(() => {
+    const source = deferredQuery ? searchPool ?? entries : entries;
+    return filterOwnerBookRows(source, deferredQuery);
+  }, [entries, searchPool, deferredQuery]);
+
   const loadMore = useCallback(() => {
+    if (deferredQuery) return;
     if (!hasMore || loadingMore || liveLimit >= OWNER_BOOKS_LIVE_MAX) return;
     setLoadingMore(true);
     setLiveLimit((n) => Math.min(n + OWNER_BOOKS_PAGE_SIZE, OWNER_BOOKS_LIVE_MAX));
-  }, [hasMore, loadingMore, liveLimit]);
+  }, [hasMore, loadingMore, liveLimit, deferredQuery]);
 
   useEffect(() => {
     const node = sentinelRef.current;
-    if (!node || loading) return;
+    if (!node || loading || deferredQuery) return;
     const observer = new IntersectionObserver(
       (items) => {
         if (items.some((item) => item.isIntersecting)) loadMore();
@@ -117,7 +152,7 @@ function OwnerBooksView() {
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [loadMore, loading, hasMore, entries.length]);
+  }, [loadMore, loading, hasMore, entries.length, deferredQuery]);
 
   if (!can(staff, "ownerBooks")) return null;
 
@@ -138,6 +173,35 @@ function OwnerBooksView() {
         </button>
       </div>
 
+      <div className="table-search">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="ค้นหา รายการ / ประเภท / note / ยอด / วันที่…"
+          autoComplete="off"
+          enterKeyHint="search"
+          aria-label="ค้นหาในตาราง"
+        />
+        {query.trim() ? (
+          <button
+            type="button"
+            className="ghost-btn table-search-clear"
+            onClick={() => setQuery("")}
+            aria-label="ล้างคำค้น"
+          >
+            ล้าง
+          </button>
+        ) : null}
+      </div>
+      {deferredQuery ? (
+        <p className="muted table-search-meta">
+          {searchLoading
+            ? "กำลังค้นหาทั้งบัญชี…"
+            : `พบ ${filteredEntries.length} รายการ`}
+        </p>
+      ) : null}
+
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
@@ -157,7 +221,7 @@ function OwnerBooksView() {
                 </tr>
               </thead>
               <tbody>
-                {entries.map((row) => (
+                {filteredEntries.map((row) => (
                   <tr key={row.id} className="row-out">
                     <td className="col-date">{formatDateShort(row.date)}</td>
                     <td className="col-desc">
@@ -186,14 +250,17 @@ function OwnerBooksView() {
               </tbody>
             </table>
           </div>
-          <div ref={sentinelRef} className="load-more-sentinel" aria-hidden />
-          {loadingMore ? <p className="empty">กำลังโหลดเพิ่ม...</p> : null}
-          {!hasMore && entries.length > 0 ? (
+          {!deferredQuery ? <div ref={sentinelRef} className="load-more-sentinel" aria-hidden /> : null}
+          {loadingMore && !deferredQuery ? <p className="empty">กำลังโหลดเพิ่ม...</p> : null}
+          {!deferredQuery && !hasMore && entries.length > 0 ? (
             <p className="empty muted-foot">
               {liveLimit >= OWNER_BOOKS_LIVE_MAX && entries.length >= OWNER_BOOKS_LIVE_MAX
                 ? `แสดงล่าสุด ${entries.length} รายการ`
                 : `ครบทุกรายการแล้ว (${entries.length})`}
             </p>
+          ) : null}
+          {deferredQuery && !searchLoading && filteredEntries.length === 0 ? (
+            <p className="empty">ไม่พบรายการที่ตรงกับ «{deferredQuery}»</p>
           ) : null}
         </>
       ) : null}
