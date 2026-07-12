@@ -120,14 +120,15 @@ async function commit(token, writes) {
 
 async function setMetaLedger(token, balance, totalIn, totalOut) {
   const name = `projects/${PROJECT}/databases/(default)/documents/meta/ledger`;
+  const base = `https://firestore.googleapis.com/v1/${name}`;
   const fields = {
     balance: firestoreValue(balance),
     totalIn: firestoreValue(totalIn),
     totalOut: firestoreValue(totalOut),
     updatedAt: firestoreValue(Date.now()),
   };
-  const mask = "balance,totalIn,totalOut,updatedAt";
-  const patchRes = await fetch(`${name}?updateMask.fieldPaths=${mask.replace(/,/g, "&updateMask.fieldPaths=")}`, {
+  const mask = "balance&updateMask.fieldPaths=totalIn&updateMask.fieldPaths=totalOut&updateMask.fieldPaths=updatedAt";
+  const patchRes = await fetch(`${base}?updateMask.fieldPaths=${mask}`, {
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${token}`,
