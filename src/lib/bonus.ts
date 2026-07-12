@@ -1,13 +1,7 @@
 import type { Employee } from "./employees";
-import type { ChecklistRecord } from "./checklist";
+import type { BonusDeductionRule, WorkerDeductionCounts } from "./bonus-deductions";
 import { computeOtBonus, type OtEntry } from "./ot";
 import { computeProdBonus, type ProdEntry } from "./production";
-
-/** อัตราหักโบนัสต่อครั้ง/หน่วย */
-export const BONUS_DEDUCTION_RULES = [
-  { id: "generalFail", label: "ผิดพลาดทั่วไป", pctPerUnit: 1 },
-  { id: "waste", label: "ของเสีย", pctPerUnit: 3 },
-] as const;
 
 export type WorkerMonthBonus = {
   workerId: string;
@@ -19,18 +13,13 @@ export type WorkerMonthBonus = {
   /** โบนัสหลัก OT / ชง */
   otMain: number;
   total: number;
-  /** จำนวนครั้งไม่ผ่าน SmartCheck */
+  /** จำนวนที่เจ้าของระบุ — ผิดพลาดทั่วไป */
   generalFailCount: number;
-  /** จำนวนของเสีย (หน่วย) */
+  /** จำนวนที่เจ้าของระบุ — ของเสีย */
   wasteQty: number;
   deductPct: number;
   deductAmount: number;
   remaining: number;
-};
-
-export type BonusDeductionSummary = {
-  generalFailCount: number;
-  wasteQty: number;
 };
 
 export type MonthBonusReport = {
@@ -40,7 +29,6 @@ export type MonthBonusReport = {
   totalSalesPool: number;
   totalDeducted: number;
   totalRemaining: number;
-  deductionSummary: BonusDeductionSummary;
   rows: WorkerMonthBonus[];
 };
 
@@ -84,10 +72,17 @@ function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
 
-export function computeWorkerDeductPct(generalFailCount: number, wasteQty: number) {
+export function computeWorkerDeductPct(
+  counts: WorkerDeductionCounts,
+  rules: BonusDeductionRule[],
+) {
+  const pctById = Object.fromEntries(rules.map((r) => [r.id, r.pctPerUnit])) as Record<
+    string,
+    number
+  >;
   const raw =
-    generalFailCount * BONUS_DEDUCTION_RULES[0].pctPerUnit +
-    wasteQty * BONUS_DEDUCTION_RULES[1].pctPerUnit;
+    counts.generalFailCount * (pctById.generalFail || 0) +
+    counts.wasteQty * (pctById.waste || 0);
   return Math.min(100, round2(raw));
 }
 
@@ -97,15 +92,13 @@ export function computeMonthBonus(
   employees: Employee[],
   year: number,
   month: number,
-  checkRecords: ChecklistRecord[] = [],
+  deductionRules: BonusDeductionRule[],
+  workerCounts: Record<string, WorkerDeductionCounts>,
 ): MonthBonusReport {
   const active = employees.filter((e) => e.active);
 
   const otMonth = otEntries.filter((e) => isInMonth(e.date, year, month));
   const prodMonth = prodEntries.filter((e) => isInMonth(e.date, year, month));
-  const checkMonth = checkRecords.filter(
-    (r) => r.status === "fail" && isInMonth(r.date, year, month),
-  );
 
   const totalSalesPool = round2(
     prodMonth.reduce((sum, row) => sum + computeProdBonus(row).salesBonus, 0),
@@ -116,17 +109,11 @@ export function computeMonthBonus(
 
   const byName = new Map<
     string,
-    { workerId: string; otMain: number; prodBonus: number; generalFailCount: number; wasteQty: number }
+    { workerId: string; otMain: number; prodBonus: number }
   >();
 
   for (const emp of active) {
-    byName.set(emp.name, {
-      workerId: emp.id,
-      otMain: 0,
-      prodBonus: 0,
-      generalFailCount: 0,
-      wasteQty: 0,
-    });
+    byName.set(emp.name, { workerId: emp.id, otMain: 0, prodBonus: 0 });
   }
 
   function ensureWorker(name: string) {
@@ -136,8 +123,6 @@ export function computeMonthBonus(
         workerId: active.find((e) => namesMatch(e.name, canonical))?.id || canonical,
         otMain: 0,
         prodBonus: 0,
-        generalFailCount: 0,
-        wasteQty: 0,
       });
     }
     return canonical;
@@ -154,27 +139,21 @@ export function computeMonthBonus(
 
   for (const row of prodMonth) {
     const c = computeProdBonus(row);
-    const wasteEach = row.workerNames.length
-      ? round2((Number(row.qtyWaste) || 0) / row.workerNames.length)
-      : 0;
     for (const rawName of row.workerNames) {
       const name = ensureWorker(rawName);
       const slot = byName.get(name)!;
       slot.prodBonus = round2(slot.prodBonus + c.bonusPerPerson);
-      slot.wasteQty = round2(slot.wasteQty + wasteEach);
     }
-  }
-
-  for (const row of checkMonth) {
-    const name = ensureWorker(row.inspector);
-    const slot = byName.get(name)!;
-    slot.generalFailCount += 1;
   }
 
   const rows: WorkerMonthBonus[] = [...byName.entries()]
     .map(([workerName, slot]) => {
+      const counts = workerCounts[slot.workerId] || {
+        generalFailCount: 0,
+        wasteQty: 0,
+      };
       const total = round2(salesShareEach + slot.prodBonus + slot.otMain);
-      const deductPct = computeWorkerDeductPct(slot.generalFailCount, slot.wasteQty);
+      const deductPct = computeWorkerDeductPct(counts, deductionRules);
       const deductAmount = round2(total * (deductPct / 100));
       const remaining = round2(Math.max(0, total - deductAmount));
       return {
@@ -184,21 +163,14 @@ export function computeMonthBonus(
         prodBonus: slot.prodBonus,
         otMain: slot.otMain,
         total,
-        generalFailCount: slot.generalFailCount,
-        wasteQty: slot.wasteQty,
+        generalFailCount: counts.generalFailCount,
+        wasteQty: counts.wasteQty,
         deductPct,
         deductAmount,
         remaining,
       };
     })
     .sort((a, b) => b.remaining - a.remaining || a.workerName.localeCompare(b.workerName, "th"));
-
-  const deductionSummary: BonusDeductionSummary = {
-    generalFailCount: checkMonth.length,
-    wasteQty: round2(
-      prodMonth.reduce((sum, row) => sum + (Number(row.qtyWaste) || 0), 0),
-    ),
-  };
 
   const totalDeducted = round2(rows.reduce((s, r) => s + r.deductAmount, 0));
   const totalRemaining = round2(rows.reduce((s, r) => s + r.remaining, 0));
@@ -210,7 +182,6 @@ export function computeMonthBonus(
     totalSalesPool,
     totalDeducted,
     totalRemaining,
-    deductionSummary,
     rows,
   };
 }

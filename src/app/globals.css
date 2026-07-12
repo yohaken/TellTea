@@ -2265,13 +2265,30 @@ body.modal-open .main-panel {
 }
 
 .bonus-deduct-table th.col-out {
-  width: 3rem;
+  width: 3.5rem;
 }
 
 .bonus-deduct-note {
   margin: 0.35rem 0.45rem 0;
   font-size: 0.65rem;
   text-align: left;
+}
+
+.bonus-edit-cell {
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline dotted rgba(28, 42, 31, 0.35);
+  text-underline-offset: 0.12rem;
+}
+
+.bonus-th-count {
+  background: rgba(243, 239, 228, 0.85);
+  min-width: 2rem;
 }
 
 .bonus-my-deduct {
@@ -2367,7 +2384,7 @@ body.modal-open .main-panel {
 }
 
 .bonus-table {
-  min-width: 24rem;
+  min-width: 28rem;
 }
 
 .bonus-th-deduct {

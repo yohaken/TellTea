@@ -1,25 +1,35 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { CircleDollarSign } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import {
-  BONUS_DEDUCTION_RULES,
+  saveBonusDeductionRulePct,
+  saveWorkerDeductionCounts,
+  subscribeBonusDeductionMonth,
+  subscribeBonusDeductionSettings,
+  type BonusDeductionMonthDoc,
+  type BonusDeductionRule,
+  type BonusDeductionRuleId,
+  type BonusDeductionSettings,
+} from "@/lib/bonus-deductions";
+import {
   computeMonthBonus,
   monthInputValue,
   parseMonthInput,
   pickMyBonusRow,
   thaiMonthYearLabel,
   type MonthBonusReport,
+  type WorkerMonthBonus,
 } from "@/lib/bonus";
-import { subscribeChecklistRecords, type ChecklistRecord } from "@/lib/checklist";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import { subscribeOtEntries, type OtEntry } from "@/lib/ot";
 import { subscribeProdEntries, type ProdEntry } from "@/lib/production";
 import { formatPlainNumber } from "@/lib/utils";
+import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 function fmt(n: number) {
   return formatPlainNumber(n);
@@ -28,6 +38,10 @@ function fmt(n: number) {
 function fmtPct(n: number) {
   return n % 1 === 0 ? `${n.toFixed(0)}%` : `${n.toFixed(2)}%`;
 }
+
+type EditTarget =
+  | { kind: "rule"; rule: BonusDeductionRule }
+  | { kind: "counts"; row: WorkerMonthBonus };
 
 export default function BonusPage() {
   return (
@@ -44,13 +58,18 @@ function BonusView() {
   const [month, setMonth] = useState(monthInputValue());
   const [otEntries, setOtEntries] = useState<OtEntry[]>([]);
   const [prodEntries, setProdEntries] = useState<ProdEntry[]>([]);
-  const [checkRecords, setCheckRecords] = useState<ChecklistRecord[]>([]);
+  const [deductionSettings, setDeductionSettings] = useState<BonusDeductionSettings | null>(null);
+  const [deductionMonth, setDeductionMonth] = useState<BonusDeductionMonthDoc | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(isOwner);
+  const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
 
   const canView = can(staff, "bonus");
+  const { year, month: monthIdx } = parseMonthInput(month);
+
+  useBodyScrollLock(!!editTarget);
 
   useEffect(() => {
     if (staff && !canView) router.replace("/ledger/");
@@ -72,24 +91,43 @@ function BonusView() {
       (rows) => setProdEntries(rows),
       (err) => setError(err.message),
     );
-    const unsubCheck = subscribeChecklistRecords(
-      (rows) => setCheckRecords(rows),
+    const unsubSettings = subscribeBonusDeductionSettings(
+      (settings) => setDeductionSettings(settings),
       (err) => setError(err.message),
     );
     return () => {
       unsubOt();
       unsubProd();
-      unsubCheck();
+      unsubSettings();
     };
   }, [staff, canView]);
 
+  useEffect(() => {
+    if (!canView) return;
+    const unsubMonth = subscribeBonusDeductionMonth(
+      year,
+      monthIdx,
+      (doc) => setDeductionMonth(doc),
+      (err) => setError(err.message),
+    );
+    return () => unsubMonth();
+  }, [canView, year, monthIdx]);
+
   const report = useMemo(() => {
-    const { year, month: m } = parseMonthInput(month);
-    return computeMonthBonus(otEntries, prodEntries, employees, year, m, checkRecords);
-  }, [otEntries, prodEntries, employees, checkRecords, month]);
+    if (!deductionSettings || !deductionMonth) return null;
+    return computeMonthBonus(
+      otEntries,
+      prodEntries,
+      employees,
+      year,
+      monthIdx,
+      deductionSettings.rules,
+      deductionMonth.workers,
+    );
+  }, [otEntries, prodEntries, employees, deductionSettings, deductionMonth, year, monthIdx]);
 
   const myRow = useMemo(
-    () => pickMyBonusRow(report, employees, staff?.displayName),
+    () => (report ? pickMyBonusRow(report, employees, staff?.displayName) : null),
     [report, employees, staff?.displayName],
   );
 
@@ -113,27 +151,37 @@ function BonusView() {
           aria-label="เดือน"
         />
         <span className="bonus-toolbar-meta muted">
-          {thaiMonthYearLabel(report.year, report.month)} · {report.employeeCount} คน
+          {report
+            ? `${thaiMonthYearLabel(report.year, report.month)} · ${report.employeeCount} คน`
+            : "…"}
         </span>
       </div>
 
-      <div className="bonus-summary-bar">
-        <div className="bonus-summary-pool">
-          <span className="bonus-summary-label">โบนัสขายเบเกอรี่ รวม</span>
-          <strong className="bonus-summary-pool-amt">฿{fmt(report.totalSalesPool)}</strong>
-        </div>
-        <div className="bonus-summary-total">
-          <span className="bonus-summary-label">คงเหลือรวม</span>
-          <strong>฿{fmt(report.totalRemaining)}</strong>
-        </div>
-      </div>
+      {report ? (
+        <>
+          <div className="bonus-summary-bar">
+            <div className="bonus-summary-pool">
+              <span className="bonus-summary-label">โบนัสขายเบเกอรี่ รวม</span>
+              <strong className="bonus-summary-pool-amt">฿{fmt(report.totalSalesPool)}</strong>
+            </div>
+            <div className="bonus-summary-total">
+              <span className="bonus-summary-label">คงเหลือรวม</span>
+              <strong>฿{fmt(report.totalRemaining)}</strong>
+            </div>
+          </div>
 
-      <BonusDeductionRulesTable report={report} />
+          <BonusDeductionRulesTable
+            rules={deductionSettings?.rules || []}
+            isOwner={isOwner}
+            onEditRule={(rule) => setEditTarget({ kind: "rule", rule })}
+          />
+        </>
+      ) : null}
 
       {error ? <p className="error-text">{error}</p> : null}
-      {loading ? <p className="empty">กำลังโหลด...</p> : null}
+      {loading || !report ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading && myRow ? (
+      {!loading && report && myRow ? (
         <section className="bonus-my-card">
           <header className="bonus-my-head">
             <div>
@@ -171,12 +219,12 @@ function BonusView() {
             </div>
           </dl>
           <p className="muted bonus-live-note">
-            อัปเดตทันทีเมื่อมีการกรอก OT / ผลิต / SmartCheck
+            อัปเดตทันทีเมื่อมีการกรอก OT / ผลิต · จำนวนหักโดยเจ้าของ
           </p>
         </section>
       ) : null}
 
-      {!loading && !myRow && staff?.displayName ? (
+      {!loading && report && !myRow && staff?.displayName ? (
         <p className="muted bonus-no-match">
           ไม่พบชื่อ &quot;{staff.displayName}&quot; ในรายชื่อพนักงาน — ตรวจที่{" "}
           <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
@@ -193,23 +241,43 @@ function BonusView() {
         </button>
       ) : null}
 
-      {!loading && (isOwner || showAll) ? (
-        <BonusTable report={report} highlightName={myRow?.workerName} />
+      {!loading && report && (isOwner || showAll) ? (
+        <BonusTable
+          report={report}
+          highlightName={myRow?.workerName}
+          isOwner={isOwner}
+          onEditCounts={(row) => setEditTarget({ kind: "counts", row })}
+        />
       ) : null}
 
-      <p className="muted bonus-footnote">
-        ขาย = pool รวม ÷ จำนวนคน · ผลิต/OT จากยอดจริง · หักจาก SmartCheck ไม่ผ่าน ({BONUS_DEDUCTION_RULES[0].pctPerUnit}%/ครั้ง) และของเสีย ({BONUS_DEDUCTION_RULES[1].pctPerUnit}%/หน่วย)
-      </p>
+      {report ? (
+        <p className="muted bonus-footnote">
+          ขาย = pool รวม ÷ จำนวนคน · ผลิต/OT จากยอดจริง · เจ้าของกรอกจำนวนหักต่อคน · % เรทถาวรใช้ทุกเดือน
+        </p>
+      ) : null}
+
+      {editTarget ? (
+        <BonusEditModal
+          target={editTarget}
+          onClose={() => setEditTarget(null)}
+          onError={setError}
+          year={year}
+          month={monthIdx}
+        />
+      ) : null}
     </div>
   );
 }
 
-function BonusDeductionRulesTable({ report }: { report: MonthBonusReport }) {
-  const counts = [
-    report.deductionSummary.generalFailCount,
-    report.deductionSummary.wasteQty,
-  ];
-
+function BonusDeductionRulesTable({
+  rules,
+  isOwner,
+  onEditRule,
+}: {
+  rules: BonusDeductionRule[];
+  isOwner: boolean;
+  onEditRule: (rule: BonusDeductionRule) => void;
+}) {
   return (
     <div className="sheet-wrap bonus-deduct-wrap">
       <table className="sheet-table bonus-deduct-table">
@@ -217,21 +285,34 @@ function BonusDeductionRulesTable({ report }: { report: MonthBonusReport }) {
           <tr>
             <th>รายการ</th>
             <th className="col-out">%</th>
-            <th className="col-out">จำนวน</th>
           </tr>
         </thead>
         <tbody>
-          {BONUS_DEDUCTION_RULES.map((rule, idx) => (
+          {rules.map((rule) => (
             <tr key={rule.id}>
               <td>{rule.label}</td>
-              <td className="col-out">{fmtPct(rule.pctPerUnit)}</td>
-              <td className="col-out">{counts[idx]}</td>
+              <td className="col-out">
+                {isOwner ? (
+                  <button
+                    type="button"
+                    className="bonus-edit-cell"
+                    onClick={() => onEditRule(rule)}
+                    title="แตะเพื่อแก้ %"
+                  >
+                    {fmtPct(rule.pctPerUnit)}
+                  </button>
+                ) : (
+                  fmtPct(rule.pctPerUnit)
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
       <p className="muted bonus-deduct-note">
-        สรุปหักโบนัสทั้งร้านในเดือนนี้ — หักรวม ฿{fmt(report.totalDeducted)}
+        {isOwner
+          ? "แตะ % เพื่อแก้เรทถาวร · กรอกจำนวนต่อคนในตารางด้านล่าง"
+          : "เรทหักโบนัส — เจ้าของกำหนดจำนวนหักต่อคนในแต่ละเดือน"}
       </p>
     </div>
   );
@@ -240,9 +321,13 @@ function BonusDeductionRulesTable({ report }: { report: MonthBonusReport }) {
 function BonusTable({
   report,
   highlightName,
+  isOwner,
+  onEditCounts,
 }: {
   report: MonthBonusReport;
   highlightName?: string;
+  isOwner: boolean;
+  onEditCounts: (row: WorkerMonthBonus) => void;
 }) {
   if (!report.rows.length) {
     return <p className="empty">ยังไม่มีข้อมูลโบนัสในเดือนนี้</p>;
@@ -258,6 +343,8 @@ function BonusTable({
             <th className="col-out">ผลิต</th>
             <th className="col-out">OT</th>
             <th className="col-out">รวม</th>
+            <th className="col-out bonus-th-count">ผิด</th>
+            <th className="col-out bonus-th-count">เสีย</th>
             <th className="col-out bonus-th-deduct">หักโบนัส</th>
             <th className="col-out bonus-th-final">คงเหลือ</th>
           </tr>
@@ -272,10 +359,35 @@ function BonusTable({
                 <td className="col-out">{fmt(row.prodBonus)}</td>
                 <td className="col-out">{fmt(row.otMain)}</td>
                 <td className="col-out">{fmt(row.total)}</td>
-                <td
-                  className="col-out bonus-th-deduct"
-                  title={`ผิดพลาด ${row.generalFailCount} · ของเสีย ${fmt(row.wasteQty)}`}
-                >
+                <td className="col-out bonus-th-count">
+                  {isOwner ? (
+                    <button
+                      type="button"
+                      className="bonus-edit-cell"
+                      onClick={() => onEditCounts(row)}
+                      title="แตะเพื่อแก้จำนวนผิดพลาด / ของเสีย"
+                    >
+                      {row.generalFailCount}
+                    </button>
+                  ) : (
+                    row.generalFailCount
+                  )}
+                </td>
+                <td className="col-out bonus-th-count">
+                  {isOwner ? (
+                    <button
+                      type="button"
+                      className="bonus-edit-cell"
+                      onClick={() => onEditCounts(row)}
+                      title="แตะเพื่อแก้จำนวนผิดพลาด / ของเสีย"
+                    >
+                      {fmt(row.wasteQty)}
+                    </button>
+                  ) : (
+                    fmt(row.wasteQty)
+                  )}
+                </td>
+                <td className="col-out bonus-th-deduct">
                   {row.deductAmount > 0 ? (
                     <>
                       <span className="bonus-deduct-pct">{fmtPct(row.deductPct)}</span>
@@ -294,7 +406,7 @@ function BonusTable({
         </tbody>
         <tfoot>
           <tr className="bonus-foot-row">
-            <td colSpan={5}>รวมทั้งร้าน</td>
+            <td colSpan={7}>รวมทั้งร้าน</td>
             <td className="col-out bonus-th-deduct">−{fmt(report.totalDeducted)}</td>
             <td className="col-out bonus-th-final">
               <strong>฿{fmt(report.totalRemaining)}</strong>
@@ -302,6 +414,127 @@ function BonusTable({
           </tr>
         </tfoot>
       </table>
+    </div>
+  );
+}
+
+function BonusEditModal({
+  target,
+  onClose,
+  onError,
+  year,
+  month,
+}: {
+  target: EditTarget;
+  onClose: () => void;
+  onError: (msg: string) => void;
+  year: number;
+  month: number;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [pct, setPct] = useState(
+    target.kind === "rule" ? String(target.rule.pctPerUnit) : "",
+  );
+  const [generalFailCount, setGeneralFailCount] = useState(
+    target.kind === "counts" ? String(target.row.generalFailCount) : "0",
+  );
+  const [wasteQty, setWasteQty] = useState(
+    target.kind === "counts" ? String(target.row.wasteQty) : "0",
+  );
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      if (target.kind === "rule") {
+        await saveBonusDeductionRulePct(target.rule.id as BonusDeductionRuleId, Number(pct));
+      } else {
+        await saveWorkerDeductionCounts(year, month, target.row.workerId, {
+          generalFailCount: Number(generalFailCount) || 0,
+          wasteQty: Number(wasteQty) || 0,
+        });
+      }
+      onClose();
+    } catch (err) {
+      onError((err as Error).message || "บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const title =
+    target.kind === "rule"
+      ? `แก้เรท ${target.rule.label}`
+      : `หักโบนัส — ${target.row.workerName}`;
+
+  return (
+    <div className="modal-backdrop edit-modal is-module-form" onClick={onClose}>
+      <form
+        className="modal-card module-form-card"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={(e) => void onSubmit(e)}
+      >
+        <h2 className="panel-title" style={{ fontSize: "1rem", marginBottom: "0.65rem" }}>
+          {title}
+        </h2>
+
+        {target.kind === "rule" ? (
+          <div className="field">
+            <label htmlFor="bonus-rule-pct">หัก % ต่อครั้ง/หน่วย</label>
+            <input
+              id="bonus-rule-pct"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={pct}
+              onChange={(e) => setPct(e.target.value)}
+              required
+              autoFocus
+            />
+            <p className="muted form-hint-inline">เรทถาวร — ใช้ทุกเดือน</p>
+          </div>
+        ) : (
+          <>
+            <div className="field">
+              <label htmlFor="bonus-fail-count">ผิดพลาดทั่วไป (ครั้ง)</label>
+              <input
+                id="bonus-fail-count"
+                type="number"
+                min="0"
+                step="1"
+                inputMode="numeric"
+                value={generalFailCount}
+                onChange={(e) => setGeneralFailCount(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="bonus-waste-qty">ของเสีย (หน่วย)</label>
+              <input
+                id="bonus-waste-qty"
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={wasteQty}
+                onChange={(e) => setWasteQty(e.target.value)}
+                required
+              />
+            </div>
+          </>
+        )}
+
+        <div className="module-form-actions">
+          <button type="button" className="ghost-btn" onClick={onClose} disabled={busy}>
+            ยกเลิก
+          </button>
+          <button type="submit" className="primary-btn" disabled={busy}>
+            {busy ? "กำลังบันทึก..." : "บันทึก"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

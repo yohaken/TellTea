@@ -150,6 +150,11 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    match /bonusDeductionMonths/{monthKey} {
+      allow read: if hasPerm('bonus');
+      allow write: if isOwner();
+    }
+
     match /meta/{docId} {
       allow read: if isStaff();
       allow write: if isOwner()
