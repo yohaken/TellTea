@@ -12,7 +12,7 @@ import {
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 
-export type ProdStatus = "unpaid" | "paid";
+export type ProdStatus = "unpaid" | "pending" | "paid";
 
 export type ProdProduct = {
   id: string;
@@ -87,7 +87,9 @@ export function computeProdBonus(entry: {
 }
 
 export function labelProdStatus(status: ProdStatus) {
-  return status === "paid" ? "จ่ายโบนัสแล้ว" : "ยังไม่จ่าย";
+  if (status === "paid") return "จ่ายโบนัสแล้ว";
+  if (status === "pending") return "เตรียมจ่ายโบนัส";
+  return "ยังไม่จ่าย";
 }
 
 function productsCol() {
@@ -260,9 +262,12 @@ export async function seedProdCatalogIfEmpty(): Promise<{ products: number; work
       { name: "มันอบ", salesRate: 0.6, prodRate: 1.25 },
       { name: "ขนมปังมันม่วง", salesRate: 0.6, prodRate: 1.8 },
       { name: "บราวนี่", salesRate: 0.6, prodRate: 1.25 },
-      { name: "ซอฟคุ้กกี้-โกโก้", salesRate: 0.6, prodRate: 1.25 },
-      { name: "ซอฟคุ้กกี้-มัจฉะ", salesRate: 0.6, prodRate: 1.25 },
+      { name: "ซอฟคุ๊กกี้-โกโก้", salesRate: 0.6, prodRate: 1.25 },
+      { name: "ซอฟคุ๊กกี้-มัจฉะ", salesRate: 0.6, prodRate: 1.25 },
+      { name: "ซอฟคุ๊กกี้", salesRate: 0.6, prodRate: 1.25 },
       { name: "ชิโอปัง", salesRate: 0.6, prodRate: 1.8 },
+      { name: "เค๊กกล้วยหอม", salesRate: 0.6, prodRate: 1.25 },
+      { name: "วาฟเฟิล", salesRate: 1.04, prodRate: 1.3 },
     ];
     for (const row of starter) {
       await addProdProduct(row);
@@ -270,7 +275,7 @@ export async function seedProdCatalogIfEmpty(): Promise<{ products: number; work
     }
   }
   if (!workers.length) {
-    for (const name of ["เป้", "เตย", "ทัพ"]) {
+    for (const name of ["เป้", "เตย", "ทัพ", "ใบบัว"]) {
       await addProdWorker(name);
       w += 1;
     }

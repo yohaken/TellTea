@@ -747,6 +747,12 @@ textarea {
   color: #1b4332;
 }
 
+.prod-status.is-pending {
+  background: #e7f1ff;
+  border-color: #3b6ea5;
+  color: #1e3a5f;
+}
+
 .prod-status-pill {
   display: inline-block;
   font-size: 0.65rem;
@@ -761,6 +767,11 @@ textarea {
 .prod-status-pill.is-paid {
   background: #d8f3dc;
   color: #1b4332;
+}
+
+.prod-status-pill.is-pending {
+  background: #e7f1ff;
+  color: #1e3a5f;
 }
 
 .prod-setup .list-card {

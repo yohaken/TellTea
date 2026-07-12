@@ -474,16 +474,31 @@ function ProdTable({
                 <td className="col-act">
                   {isOwner ? (
                     <select
-                      className={row.status === "paid" ? "prod-status is-paid" : "prod-status"}
+                      className={
+                        row.status === "paid"
+                          ? "prod-status is-paid"
+                          : row.status === "pending"
+                            ? "prod-status is-pending"
+                            : "prod-status"
+                      }
                       value={row.status}
                       onChange={(e) => void setStatus(row, e.target.value as ProdStatus)}
                       aria-label="สถานะโบนัส"
                     >
                       <option value="unpaid">ยังไม่จ่าย</option>
+                      <option value="pending">เตรียมจ่ายโบนัส</option>
                       <option value="paid">จ่ายโบนัสแล้ว</option>
                     </select>
                   ) : (
-                    <span className={row.status === "paid" ? "prod-status-pill is-paid" : "prod-status-pill"}>
+                    <span
+                      className={
+                        row.status === "paid"
+                          ? "prod-status-pill is-paid"
+                          : row.status === "pending"
+                            ? "prod-status-pill is-pending"
+                            : "prod-status-pill"
+                      }
+                    >
                       {labelProdStatus(row.status)}
                     </span>
                   )}
