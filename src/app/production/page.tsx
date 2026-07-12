@@ -9,7 +9,7 @@ import {
 import { useRouter } from "next/navigation";
 import { ChefHat, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
-import { ModuleTabDock, type ModuleTab } from "@/components/ModuleTabDock";
+import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { EntryPhotoCell, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachField } from "@/components/PhotoAttachField";
 import { useAuth } from "@/lib/auth";
@@ -38,8 +38,6 @@ import {
   todayInputValue,
 } from "@/lib/utils";
 
-type Tab = Exclude<ModuleTab, "form">;
-
 export default function ProductionPage() {
   return (
     <AuthGate>
@@ -52,7 +50,7 @@ function ProductionView() {
   const { user, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
-  const [tab, setTab] = useState<Tab>("table");
+  const [setupOpen, setSetupOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [entries, setEntries] = useState<ProdEntry[]>([]);
   const [products, setProducts] = useState<ProdProduct[]>([]);
@@ -94,26 +92,32 @@ function ProductionView() {
   }, [staff, isOwner]);
 
   useEffect(() => {
-    if (tab === "setup" && !isOwner) setTab("table");
-  }, [tab, isOwner]);
+    if (setupOpen && !isOwner) setSetupOpen(false);
+  }, [setupOpen, isOwner]);
 
   if (!can(staff, "production")) return null;
 
   const activeProducts = products.filter((p) => p.active);
   const activeWorkers = workers.filter((w) => w.active);
 
-  function selectTab(next: ModuleTab) {
-    if (next === "form") {
-      setEditing(null);
-      setFormOpen(true);
+  function openAdd() {
+    setEditing(null);
+    setSetupOpen(false);
+    setFormOpen(true);
+  }
+
+  function openSetup() {
+    if (setupOpen) {
+      setSetupOpen(false);
       return;
     }
     setFormOpen(false);
     setEditing(null);
-    setTab(next);
+    setSetupOpen(true);
   }
 
   function openEdit(row: ProdEntry) {
+    setSetupOpen(false);
     setEditing(row);
     setFormOpen(true);
   }
@@ -135,7 +139,7 @@ function ProductionView() {
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading && tab === "table" ? (
+      {!loading && !setupOpen ? (
         <ProdTable
           entries={entries}
           isOwner={isOwner}
@@ -144,7 +148,7 @@ function ProductionView() {
         />
       ) : null}
 
-      {!loading && tab === "setup" && isOwner ? (
+      {!loading && setupOpen && isOwner ? (
         <ProdSetup
           products={products}
           onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
@@ -153,7 +157,7 @@ function ProductionView() {
       ) : null}
 
       {formOpen && !loading ? (
-        <div className="modal-backdrop edit-modal" onClick={closeForm}>
+        <div className="modal-backdrop edit-modal is-module-form" onClick={closeForm}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <ProdEntryForm
               key={editing?.id || "new"}
@@ -162,9 +166,7 @@ function ProductionView() {
               workers={activeWorkers}
               createdBy={user?.email || ""}
               onError={setError}
-              onSaved={() => {
-                closeForm();
-              }}
+              onSaved={closeForm}
               onCancelEdit={closeForm}
             />
           </div>
@@ -172,11 +174,12 @@ function ProductionView() {
       ) : null}
 
       <ModuleTabDock
-        tab={tab}
+        setupActive={setupOpen}
         isOwner={isOwner}
         ariaLabel="มุมมองผลิต"
         formOpen={formOpen}
-        onSelect={selectTab}
+        onAdd={openAdd}
+        onSetup={openSetup}
       />
     </div>
   );
@@ -271,33 +274,44 @@ function ProdEntryForm({
   }
 
   return (
-    <form className="form-card entry-form" onSubmit={(e) => void onSubmit(e)}>
-      {entry ? (
-        <div className="entry-toolbar" style={{ position: "static", padding: "0 0 0.45rem" }}>
-          <h2 className="panel-title" style={{ fontSize: "1rem" }}>แก้ไขรายการ</h2>
-          <button type="button" className="ghost-btn icon-btn" aria-label="ยกเลิกแก้ไข" onClick={onCancelEdit}>
-            <X size={18} />
-          </button>
-        </div>
-      ) : (
-        <h2 className="panel-title" style={{ fontSize: "1rem", marginBottom: "0.55rem" }}>
-          บันทึกผลิต
-        </h2>
-      )}
+    <form className="form-card entry-form module-entry-form" onSubmit={(e) => void onSubmit(e)}>
+      <div className="entry-toolbar module-form-head">
+        <h2 className="panel-title">{entry ? "แก้ไขรายการ" : "บันทึกผลิต"}</h2>
+        <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onCancelEdit}>
+          <X size={18} />
+        </button>
+      </div>
 
       {!products.length || !workers.length ? (
-        <p className="muted" style={{ textAlign: "left" }}>
-          ยังไม่มีสินค้าหรือรายชื่อพนักงานผลิต — ให้เจ้าของไปแท็บ «ตั้งค่า» ก่อน
+        <p className="muted form-hint-inline">
+          ยังไม่มีสินค้าหรือรายชื่อพนักงาน — ให้เจ้าของไปตั้งค่าก่อน
         </p>
       ) : null}
 
-      <div className="field">
-        <label htmlFor="prod-date">วันที่</label>
-        <input id="prod-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+      <div className="stock-form-grid">
+        <div className="field">
+          <label htmlFor="prod-date">วันที่</label>
+          <input id="prod-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+        </div>
+        <div className="field">
+          <label htmlFor="prod-product">สินค้า</label>
+          <select
+            id="prod-product"
+            value={productId}
+            onChange={(e) => setProductId(e.target.value)}
+            required
+          >
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="field">
-        <span className="field-label">พนักงาน (สูงสุด 2 คน)</span>
+        <span className="field-label">พนักงาน (สูงสุด 2)</span>
         <div className="suggest-list">
           {workers.map((w) => {
             const on = selectedWorkers.includes(w.id);
@@ -315,48 +329,33 @@ function ProdEntryForm({
         </div>
       </div>
 
-      <div className="field">
-        <label htmlFor="prod-product">สินค้า</label>
-        <select
-          id="prod-product"
-          value={productId}
-          onChange={(e) => setProductId(e.target.value)}
-          required
-        >
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="field">
-        <label htmlFor="prod-qty">ผลิต</label>
-        <input
-          id="prod-qty"
-          type="number"
-          min="0.01"
-          step="0.01"
-          inputMode="decimal"
-          value={qty}
-          onChange={(e) => setQty(e.target.value)}
-          required
-        />
-      </div>
-
-      <div className="field">
-        <label htmlFor="prod-waste">ทิ้ง / หมดอายุ / เสีย</label>
-        <input
-          id="prod-waste"
-          type="number"
-          min="0"
-          step="0.01"
-          inputMode="decimal"
-          value={waste}
-          onChange={(e) => setWaste(e.target.value)}
-          placeholder="0"
-        />
+      <div className="stock-form-grid">
+        <div className="field">
+          <label htmlFor="prod-qty">ผลิต</label>
+          <input
+            id="prod-qty"
+            type="number"
+            min="0.01"
+            step="0.01"
+            inputMode="decimal"
+            value={qty}
+            onChange={(e) => setQty(e.target.value)}
+            required
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="prod-waste">ทิ้ง/เสีย</label>
+          <input
+            id="prod-waste"
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            value={waste}
+            onChange={(e) => setWaste(e.target.value)}
+            placeholder="0"
+          />
+        </div>
       </div>
 
       <div className="field">
@@ -369,27 +368,21 @@ function ProdEntryForm({
         />
       </div>
 
-      <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} />
+      <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} label="แนบรูป" />
 
       {Number(qty) > 0 && selectedWorkers.length > 0 ? (
-        <p className="muted" style={{ margin: "0 0 0.55rem", textAlign: "left", fontSize: "0.82rem" }}>
-          ตัวอย่างโบนัส/คน ≈ {formatPlainNumber(preview.bonusPerPerson)} บาท
-          {" "}(ผลิต × เรทผลิต ÷ {preview.workerCount} คน)
+        <p className="muted form-hint-inline">
+          โบนัส/คน ≈ {formatPlainNumber(preview.bonusPerPerson)} บาท
         </p>
       ) : null}
 
-      <div className="entry-actions">
+      <div className="entry-actions module-form-actions">
         <button type="submit" className="primary-btn action-out" disabled={busy || !products.length}>
           {busy ? "กำลังบันทึก..." : "บันทึก"}
         </button>
-        {entry ? (
-          <button type="button" className="ghost-btn" disabled={busy} onClick={onCancelEdit}>
-            ออก
-          </button>
-        ) : (
-          <span aria-hidden style={{ width: "2.6rem" }} />
-        )}
-        <span aria-hidden style={{ width: "2.6rem" }} />
+        <button type="button" className="ghost-btn" disabled={busy} onClick={onCancelEdit}>
+          ออก
+        </button>
       </div>
     </form>
   );

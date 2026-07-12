@@ -13,7 +13,7 @@ export function CheckTabDock({
 }) {
   return (
     <div
-      className={isOwner ? "module-tab-dock" : "module-tab-dock is-staff"}
+      className={isOwner ? "module-tab-dock" : "module-tab-dock is-dual"}
       role="tablist"
       aria-label="มุมมอง SmartCheck"
     >

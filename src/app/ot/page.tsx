@@ -10,7 +10,7 @@ import {
 import { useRouter } from "next/navigation";
 import { Coffee, LayoutGrid, Table2, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
-import { ModuleTabDock, type ModuleTab } from "@/components/ModuleTabDock";
+import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { EntryPhotoCell, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachField } from "@/components/PhotoAttachField";
 import { useAuth } from "@/lib/auth";
@@ -39,7 +39,6 @@ import {
   todayInputValue,
 } from "@/lib/utils";
 
-type Tab = Exclude<ModuleTab, "form">;
 type TableView = "sheet" | "cards";
 
 const SHIFT_ORDER: Record<OtShiftId, number> = {
@@ -139,7 +138,7 @@ function OtView() {
   const { user, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
-  const [tab, setTab] = useState<Tab>("table");
+  const [setupOpen, setSetupOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [entries, setEntries] = useState<OtEntry[]>([]);
   const [workers, setWorkers] = useState<Employee[]>([]);
@@ -175,23 +174,29 @@ function OtView() {
   }, [staff]);
 
   useEffect(() => {
-    if (tab === "setup" && !isOwner) setTab("table");
-  }, [tab, isOwner]);
+    if (setupOpen && !isOwner) setSetupOpen(false);
+  }, [setupOpen, isOwner]);
 
   if (!can(staff, "otBonus")) return null;
 
-  function selectTab(next: ModuleTab) {
-    if (next === "form") {
-      setEditing(null);
-      setFormOpen(true);
+  function openAdd() {
+    setEditing(null);
+    setSetupOpen(false);
+    setFormOpen(true);
+  }
+
+  function openSetup() {
+    if (setupOpen) {
+      setSetupOpen(false);
       return;
     }
     setFormOpen(false);
     setEditing(null);
-    setTab(next);
+    setSetupOpen(true);
   }
 
   function openEdit(row: OtEntry) {
+    setSetupOpen(false);
     setEditing(row);
     setFormOpen(true);
   }
@@ -213,7 +218,7 @@ function OtView() {
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading && tab === "table" ? (
+      {!loading && !setupOpen ? (
         <OtTable
           entries={entries}
           staff={staff}
@@ -223,7 +228,7 @@ function OtView() {
         />
       ) : null}
 
-      {!loading && tab === "setup" && isOwner ? (
+      {!loading && setupOpen && isOwner ? (
         <OtSetup
           bonusRate={bonusRate}
           onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
@@ -232,7 +237,7 @@ function OtView() {
       ) : null}
 
       {formOpen && !loading ? (
-        <div className="modal-backdrop edit-modal" onClick={closeForm}>
+        <div className="modal-backdrop edit-modal is-module-form" onClick={closeForm}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <OtEntryForm
               key={editing?.id || "new"}
@@ -249,11 +254,12 @@ function OtView() {
       ) : null}
 
       <ModuleTabDock
-        tab={tab}
+        setupActive={setupOpen}
         isOwner={isOwner}
         ariaLabel="มุมมอง OT"
         formOpen={formOpen}
-        onSelect={selectTab}
+        onAdd={openAdd}
+        onSetup={openSetup}
       />
     </div>
   );
@@ -370,22 +376,16 @@ function OtEntryForm({
   }
 
   return (
-    <form className="form-card entry-form" onSubmit={(e) => void onSubmit(e)}>
-      {entry ? (
-        <div className="entry-toolbar" style={{ position: "static", padding: "0 0 0.45rem" }}>
-          <h2 className="panel-title" style={{ fontSize: "1rem" }}>แก้ไขรายการ</h2>
-          <button type="button" className="ghost-btn icon-btn" aria-label="ยกเลิกแก้ไข" onClick={onCancelEdit}>
-            <X size={18} />
-          </button>
-        </div>
-      ) : (
-        <h2 className="panel-title" style={{ fontSize: "1rem", marginBottom: "0.55rem" }}>
-          บันทึก OT
-        </h2>
-      )}
+    <form className="form-card entry-form module-entry-form" onSubmit={(e) => void onSubmit(e)}>
+      <div className="entry-toolbar module-form-head">
+        <h2 className="panel-title">{entry ? "แก้ไขรายการ" : "บันทึก OT"}</h2>
+        <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onCancelEdit}>
+          <X size={18} />
+        </button>
+      </div>
 
       {!workers.length ? (
-        <p className="muted" style={{ textAlign: "left" }}>
+        <p className="muted form-hint-inline">
           ยังไม่มีรายชื่อพนักงาน — เพิ่มที่{" "}
           <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
         </p>
@@ -397,7 +397,7 @@ function OtEntryForm({
           <input id="ot-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
         </div>
         <div className="field">
-          <label htmlFor="ot-shift">รอบงาน</label>
+          <label htmlFor="ot-shift">รอบ</label>
           <select id="ot-shift" value={shift} onChange={(e) => setShift(e.target.value as OtShiftId)} required>
             {OT_SHIFTS.map((s) => (
               <option key={s.id} value={s.id}>
@@ -409,7 +409,7 @@ function OtEntryForm({
       </div>
 
       <div className="field">
-        <span className="field-label">พนักงาน (สูงสุด 2 คน)</span>
+        <span className="field-label">พนักงาน (สูงสุด 2)</span>
         <div className="suggest-list">
           {workers.map((w) => {
             const on = selectedWorkers.includes(w.id);
@@ -427,75 +427,79 @@ function OtEntryForm({
         </div>
       </div>
 
-      <div className="field">
-        <label htmlFor="ot-machine">เลขเครื่อง (ต่อรอบ)</label>
-        <input
-          id="ot-machine"
-          type="number"
-          min="0"
-          step="1"
-          inputMode="numeric"
-          value={machineCount}
-          onChange={(e) => setMachineCount(e.target.value)}
-          required
-        />
-      </div>
-
       <div className="stock-form-grid">
+        <div className="field">
+          <label htmlFor="ot-machine">เครื่อง</label>
+          <input
+            id="ot-machine"
+            type="number"
+            min="0"
+            step="1"
+            inputMode="numeric"
+            value={machineCount}
+            onChange={(e) => setMachineCount(e.target.value)}
+            required
+          />
+        </div>
         <div className="field">
           <label htmlFor="ot-other">แก้วอื่นๆ</label>
           <input id="ot-other" type="number" min="0" step="1" inputMode="numeric" value={otherCups} onChange={(e) => setOtherCups(e.target.value)} />
         </div>
+      </div>
+
+      <div className="stock-form-grid">
         <div className="field">
-          <label htmlFor="ot-cone">ไอศครีมโคน</label>
+          <label htmlFor="ot-cone">โคน</label>
           <input id="ot-cone" type="number" min="0" step="1" inputMode="numeric" value={iceCreamCones} onChange={(e) => setIceCreamCones(e.target.value)} />
         </div>
-      </div>
-
-      <div className="stock-form-grid">
         <div className="field">
-          <label htmlFor="ot-bread">ขนมปังแผ่น</label>
+          <label htmlFor="ot-bread">ขนมปัง</label>
           <input id="ot-bread" type="number" min="0" step="1" inputMode="numeric" value={breadSlices} onChange={(e) => setBreadSlices(e.target.value)} />
         </div>
-        <div className="field">
-          <label htmlFor="ot-claim">แก้วเคลม</label>
-          <input id="ot-claim" type="number" min="0" step="1" inputMode="numeric" value={claimCups} onChange={(e) => setClaimCups(e.target.value)} />
-        </div>
       </div>
 
       <div className="stock-form-grid">
+        <div className="field">
+          <label htmlFor="ot-claim">เคลม</label>
+          <input id="ot-claim" type="number" min="0" step="1" inputMode="numeric" value={claimCups} onChange={(e) => setClaimCups(e.target.value)} />
+        </div>
         <div className="field">
           <label htmlFor="ot-deduct">ลด</label>
           <input id="ot-deduct" type="number" min="0" step="1" inputMode="numeric" value={deductQty} onChange={(e) => setDeductQty(e.target.value)} />
         </div>
-        <div className="field">
-          <label htmlFor="ot-deduct-reason">สาเหตุลด</label>
-          <input id="ot-deduct-reason" value={deductReason} onChange={(e) => setDeductReason(e.target.value)} placeholder="เช่น แก้วแตก" />
-        </div>
       </div>
 
       <div className="stock-form-grid">
         <div className="field">
+          <label htmlFor="ot-deduct-reason">สาเหตุลด</label>
+          <input id="ot-deduct-reason" value={deductReason} onChange={(e) => setDeductReason(e.target.value)} placeholder="แก้วแตก" />
+        </div>
+        <div className="field">
           <label htmlFor="ot-add">เพิ่ม</label>
           <input id="ot-add" type="number" min="0" step="1" inputMode="numeric" value={addQty} onChange={(e) => setAddQty(e.target.value)} />
         </div>
-        <div className="field">
-          <label htmlFor="ot-add-reason">สาเหตุเพิ่ม</label>
-          <input id="ot-add-reason" value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="เช่น ไม่ปิดฝา" />
-        </div>
       </div>
 
-      <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} />
+      <div className="field">
+        <label htmlFor="ot-add-reason">สาเหตุเพิ่ม</label>
+        <input id="ot-add-reason" value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="ไม่ปิดฝา" />
+      </div>
 
-      <p className="muted" style={{ textAlign: "left", margin: "0.25rem 0 0.65rem" }}>
-        สรุป {formatPlainNumber(preview.summaryQty)} · รวมโบนัส ฿{formatPlainNumber(preview.totalBonus)} ·{" "}
-        <strong>โบนัส/คน ฿{formatPlainNumber(preview.bonusPerPerson)}</strong>
-        {" "}(เรท {formatPlainNumber(rate)})
+      <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} label="แนบรูป" />
+
+      <p className="muted form-hint-inline">
+        สรุป {formatPlainNumber(preview.summaryQty)} · ฿{formatPlainNumber(preview.totalBonus)} ·{" "}
+        <strong>฿{formatPlainNumber(preview.bonusPerPerson)}/คน</strong>
       </p>
 
-      <button type="submit" className="primary-btn" disabled={busy || !workers.length}>
-        {busy ? "กำลังบันทึก..." : entry ? "บันทึกการแก้ไข" : "บันทึก"}
-      </button>
+      <div className="entry-actions module-form-actions">
+        <button type="submit" className="primary-btn" disabled={busy || !workers.length}>
+          {busy ? "กำลังบันทึก..." : "บันทึก"}
+        </button>
+        <button type="button" className="ghost-btn" disabled={busy} onClick={onCancelEdit}>
+          ออก
+        </button>
+      </div>
     </form>
   );
 }
