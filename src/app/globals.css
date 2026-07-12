@@ -2168,6 +2168,112 @@ body.modal-open .main-panel {
   white-space: nowrap;
 }
 
+/* ── Ops hub (รายจ่าย & งาน) ── */
+.ops-page .ops-owner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.ops-tab-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+
+.ops-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.35rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(28, 42, 31, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.62);
+  cursor: pointer;
+}
+
+.ops-tab.is-active {
+  background: rgba(74, 107, 62, 0.16);
+  border-color: var(--tea-leaf);
+  color: var(--tea-leaf);
+}
+
+.ops-panel {
+  margin-bottom: 0.75rem;
+}
+
+.ops-panel-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.92rem;
+}
+
+.ops-panel-hint {
+  margin: 0 0 0.55rem;
+  font-size: 0.74rem;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.ops-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 1.25rem 0.75rem;
+  border-radius: 0.85rem;
+  border: 1px dashed rgba(28, 42, 31, 0.16);
+  background: rgba(255, 255, 255, 0.55);
+  color: rgba(28, 42, 31, 0.5);
+  font-size: 0.82rem;
+  margin-bottom: 0.65rem;
+}
+
+.ops-preview-block {
+  text-align: left;
+}
+
+.ops-preview-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.ops-roadmap {
+  margin-top: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.75rem;
+  background: rgba(223, 240, 228, 0.45);
+  text-align: left;
+}
+
+.ops-roadmap-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.82rem;
+}
+
+.ops-roadmap-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: rgba(28, 42, 31, 0.72);
+}
+
+.ops-roadmap-list li + li {
+  margin-top: 0.35rem;
+}
+
 /* ── SmartCheck SOP ── */
 .check-hint {
   text-align: left;
@@ -4138,6 +4244,12 @@ body.modal-open .main-panel {
   background: rgba(74, 107, 62, 0.14);
   color: var(--tea-leaf);
   font-weight: 600;
+}
+
+.suggest-chip.is-disabled {
+  opacity: 0.72;
+  cursor: default;
+  pointer-events: none;
 }
 
 .field-label {
