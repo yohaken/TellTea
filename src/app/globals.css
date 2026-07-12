@@ -778,6 +778,105 @@ textarea {
   padding: 0.35rem 0.65rem;
 }
 
+.ot-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.ot-card {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 0.95rem;
+  box-shadow: 0 8px 22px rgba(28, 42, 31, 0.05);
+  padding: 0.75rem 0.85rem 0.85rem;
+}
+
+.ot-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.ot-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.55rem;
+  min-width: 0;
+}
+
+.ot-card-date {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.ot-card-shift {
+  font-size: 0.72rem;
+  color: rgba(28, 42, 31, 0.55);
+  white-space: nowrap;
+}
+
+.ot-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.ot-card-status {
+  max-width: 7.5rem;
+}
+
+.ot-card-workers {
+  margin: 0.45rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.ot-card-bonus {
+  margin: 0.35rem 0 0.55rem;
+  font-size: 0.82rem;
+  color: rgba(28, 42, 31, 0.62);
+}
+
+.ot-card-bonus strong {
+  font-size: 1.15rem;
+  font-family: var(--font-display), Georgia, serif;
+  color: var(--tea-leaf);
+  font-weight: 700;
+}
+
+.ot-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.ot-card-stat {
+  background: rgba(243, 239, 228, 0.7);
+  border-radius: 0.55rem;
+  padding: 0.35rem 0.4rem;
+  min-width: 0;
+}
+
+.ot-card-stat dt {
+  margin: 0;
+  font-size: 0.62rem;
+  color: rgba(28, 42, 31, 0.5);
+  font-weight: 600;
+}
+
+.ot-card-stat dd {
+  margin: 0.1rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
 .primary-btn.action-in {
   background: #1f8f4e;
   box-shadow: 0 10px 24px rgba(31, 143, 78, 0.28);

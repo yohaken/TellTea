@@ -431,116 +431,100 @@ function OtTable({
   }
 
   return (
-    <div className="table-scroll">
-      <table className="data-table dense-table">
-        <thead>
-          <tr>
-            <th>วันที่</th>
-            <th>รอบ</th>
-            <th>คน</th>
-            <th>เครื่อง</th>
-            {isOwner ? (
-              <>
-                <th>อื่นๆ</th>
-                <th>โคน</th>
-                <th>ขนมปัง</th>
-                <th>เคลม</th>
-                <th>ลด</th>
-                <th>เพิ่ม</th>
-                <th>สรุป</th>
-                <th>รวม</th>
-              </>
-            ) : null}
-            <th>โบนัส/คน</th>
-            <th>สถานะ</th>
-            {isOwner ? <th /> : null}
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((row) => {
-            const c = computeOtBonus(row);
-            return (
-              <tr key={row.id}>
-                <td>
-                  <button type="button" className="linkish" onClick={() => onEdit(row)}>
-                    {formatDateShort(row.date)}
+    <div className="ot-list">
+      {entries.map((row) => {
+        const c = computeOtBonus(row);
+        const statusClass =
+          row.status === "paid"
+            ? "is-paid"
+            : row.status === "pending"
+              ? "is-pending"
+              : "";
+        const detailItems = [
+          { label: "เครื่อง", value: formatPlainNumber(row.machineCount) },
+          ...(isOwner
+            ? [
+                { label: "อื่นๆ", value: formatPlainNumber(row.otherCups || 0) },
+                { label: "โคน", value: formatPlainNumber(row.iceCreamCones || 0) },
+                { label: "ขนมปัง", value: formatPlainNumber(row.breadSlices || 0) },
+                { label: "เคลม", value: formatPlainNumber(row.claimCups || 0) },
+                {
+                  label: "ลด",
+                  value: formatPlainNumber(row.deductQty || 0),
+                  title: row.deductReason || undefined,
+                },
+                {
+                  label: "เพิ่ม",
+                  value: formatPlainNumber(row.addQty || 0),
+                  title: row.addReason || undefined,
+                },
+                { label: "สรุป", value: formatPlainNumber(c.summaryQty) },
+                { label: "รวม", value: `฿${formatPlainNumber(c.totalBonus)}` },
+              ]
+            : []),
+        ];
+
+        return (
+          <article key={row.id} className="ot-card">
+            <header className="ot-card-head">
+              <div className="ot-card-meta">
+                <button type="button" className="desc-link ot-card-date" onClick={() => onEdit(row)}>
+                  {formatDateShort(row.date)}
+                </button>
+                <span className="ot-card-shift">{labelOtShift(row.shift)}</span>
+              </div>
+              <div className="ot-card-actions">
+                {isOwner ? (
+                  <select
+                    className={`prod-status ot-card-status ${statusClass}`}
+                    value={row.status}
+                    onChange={(e) => void setStatus(row, e.target.value as OtStatus)}
+                    aria-label="สถานะโบนัส"
+                  >
+                    <option value="unpaid">ยังไม่จ่าย</option>
+                    <option value="pending">เตรียมจ่ายโบนัส</option>
+                    <option value="paid">จ่ายโบนัสแล้ว</option>
+                  </select>
+                ) : (
+                  <span className={`prod-status-pill ${statusClass}`}>
+                    {labelOtStatus(row.status)}
+                  </span>
+                )}
+                {isOwner ? (
+                  <button
+                    type="button"
+                    className="ghost-btn icon-btn"
+                    aria-label="ลบ"
+                    onClick={() => {
+                      if (!window.confirm("ลบรายการนี้?")) return;
+                      void deleteOtEntry(row.id).catch((err) =>
+                        onError(err.message || "ลบไม่สำเร็จ"),
+                      );
+                    }}
+                  >
+                    <Trash2 size={16} />
                   </button>
-                </td>
-                <td style={{ fontSize: "0.72rem", whiteSpace: "nowrap" }}>{labelOtShift(row.shift)}</td>
-                <td>{row.workerNames.join(", ")}</td>
-                <td className="num">{formatPlainNumber(row.machineCount)}</td>
-                {isOwner ? (
-                  <>
-                    <td className="num">{formatPlainNumber(row.otherCups || 0)}</td>
-                    <td className="num">{formatPlainNumber(row.iceCreamCones || 0)}</td>
-                    <td className="num">{formatPlainNumber(row.breadSlices || 0)}</td>
-                    <td className="num">{formatPlainNumber(row.claimCups || 0)}</td>
-                    <td className="num" title={row.deductReason || undefined}>
-                      {formatPlainNumber(row.deductQty || 0)}
-                    </td>
-                    <td className="num" title={row.addReason || undefined}>
-                      {formatPlainNumber(row.addQty || 0)}
-                    </td>
-                    <td className="num">{formatPlainNumber(c.summaryQty)}</td>
-                    <td className="num">{formatPlainNumber(c.totalBonus)}</td>
-                  </>
                 ) : null}
-                <td className="num">
-                  <strong>{formatPlainNumber(c.bonusPerPerson)}</strong>
-                </td>
-                <td>
-                  {isOwner ? (
-                    <select
-                      className={
-                        row.status === "paid"
-                          ? "prod-status is-paid"
-                          : row.status === "pending"
-                            ? "prod-status is-pending"
-                            : "prod-status"
-                      }
-                      value={row.status}
-                      onChange={(e) => void setStatus(row, e.target.value as OtStatus)}
-                      aria-label="สถานะโบนัส"
-                    >
-                      <option value="unpaid">ยังไม่จ่าย</option>
-                      <option value="pending">เตรียมจ่ายโบนัส</option>
-                      <option value="paid">จ่ายโบนัสแล้ว</option>
-                    </select>
-                  ) : (
-                    <span
-                      className={
-                        row.status === "paid"
-                          ? "prod-status-pill is-paid"
-                          : row.status === "pending"
-                            ? "prod-status-pill is-pending"
-                            : "prod-status-pill"
-                      }
-                    >
-                      {labelOtStatus(row.status)}
-                    </span>
-                  )}
-                </td>
-                {isOwner ? (
-                  <td>
-                    <button
-                      type="button"
-                      className="ghost-btn icon-btn"
-                      aria-label="ลบ"
-                      onClick={() =>
-                        void deleteOtEntry(row.id).catch((err) =>
-                          onError(err.message || "ลบไม่สำเร็จ"),
-                        )
-                      }
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
-                ) : null}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+              </div>
+            </header>
+
+            <p className="ot-card-workers">{row.workerNames.join(", ")}</p>
+
+            <p className="ot-card-bonus">
+              โบนัส/คน <strong>฿{formatPlainNumber(c.bonusPerPerson)}</strong>
+            </p>
+
+            <dl className="ot-card-grid">
+              {detailItems.map((item) => (
+                <div key={item.label} className="ot-card-stat" title={item.title}>
+                  <dt>{item.label}</dt>
+                  <dd>{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </article>
+        );
+      })}
     </div>
   );
 }
