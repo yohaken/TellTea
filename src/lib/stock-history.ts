@@ -180,6 +180,7 @@ export function buildStockHistoryTimeline(
   }
 
   const filledRounds = rows.filter((r) => r.session).length;
+  rows.sort((a, b) => b.dateMs - a.dateMs);
   const oldest = rows[rows.length - 1];
   const newest = rows[0];
   const rangeLabel =

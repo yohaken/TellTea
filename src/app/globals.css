@@ -2351,6 +2351,26 @@ body.modal-open .main-panel {
   margin: 0.5rem 0;
 }
 
+.stock-count-form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.15rem;
+}
+
+.stock-count-form-head .check-hint {
+  margin: 0;
+  flex: 1;
+  text-align: left;
+}
+
+.stock-count-clear-btn {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.55rem;
+}
+
 .stock-count-line {
   display: grid;
   grid-template-columns: 1fr 5rem 2.5rem;

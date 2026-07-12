@@ -34,7 +34,7 @@ import {
   type StockHistoryTimelineRow,
 } from "@/lib/stock-history";
 import { seedStockItemsIfEmpty, subscribeStockItems } from "@/lib/stock";
-import { formatDateShort, formatPlainNumber, parseDateInput } from "@/lib/utils";
+import { formatDateShort, formatStockQty, parseDateInput } from "@/lib/utils";
 
 type DraftLine = {
   itemId: string;
@@ -308,9 +308,9 @@ function StockHistoryRow({
               type="button"
               className="stock-history-cell is-filled"
               onClick={onOpen}
-              title={`${col.name}: ${qty != null ? formatPlainNumber(qty) : "—"} ${col.unit}`}
+              title={`${col.name}: ${qty != null ? formatStockQty(qty) : "—"} ${col.unit}`}
             >
-              {qty != null ? formatPlainNumber(qty) : "—"}
+              {qty != null ? formatStockQty(qty) : "—"}
             </button>
           </td>
         );
@@ -365,7 +365,7 @@ function StockCountDetailModal({
               return (
                 <tr key={col.itemId}>
                   <td>{col.name}</td>
-                  <td className="col-out">{line != null ? formatPlainNumber(line.qty) : "—"}</td>
+                  <td className="col-out">{line != null ? formatStockQty(line.qty) : "—"}</td>
                   <td>{col.unit}</td>
                 </tr>
               );
@@ -456,7 +456,7 @@ function StockCountForm({
       const lines = drafts.map((d) => ({
         itemId: d.itemId,
         itemName: d.itemName,
-        qty: Number(d.qty) || 0,
+        qty: Math.max(0, Math.round(Number(d.qty) || 0)),
       }));
       const dateMs = parseDateInput(
         `${year}-${String(month + 1).padStart(2, "0")}-${String(dayOfMonth).padStart(2, "0")}`,
@@ -557,12 +557,22 @@ function StockCountForm({
     );
   }
 
+  function clearAllToZero() {
+    if (!window.confirm("เคลียร์ทุกรายการเป็น 0?")) return;
+    setDrafts((prev) => prev.map((line) => ({ ...line, qty: "0" })));
+  }
+
   return (
     <form className="check-form stock-count-form" onSubmit={(e) => void onSubmit(e)}>
       <h2 className="panel-title">
         {roundLabel(dayOfMonth)} · {inspector?.name}
       </h2>
-      <p className="muted check-hint">กรอกยอดคงเหลือที่นับได้ (snapshot)</p>
+      <div className="stock-count-form-head">
+        <p className="muted check-hint">กรอกยอดคงเหลือที่นับได้ (snapshot)</p>
+        <button type="button" className="ghost-btn stock-count-clear-btn" onClick={clearAllToZero}>
+          เคลียร์เป็น 0
+        </button>
+      </div>
 
       <div className="stock-count-lines">
         {drafts.map((line, idx) => {
@@ -573,8 +583,8 @@ function StockCountForm({
               <input
                 type="number"
                 min="0"
-                step="any"
-                inputMode="decimal"
+                step="1"
+                inputMode="numeric"
                 value={line.qty}
                 onChange={(e) => {
                   const next = [...drafts];

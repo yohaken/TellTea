@@ -26,6 +26,14 @@ export function formatPlainNumber(amount: number) {
   }).format(amount);
 }
 
+/** Integer qty — stock counts, pieces, units (no decimals) */
+export function formatStockQty(amount: number) {
+  return new Intl.NumberFormat("th-TH", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(amount));
+}
+
 export function formatDateShort(ms: number) {
   const d = new Date(ms);
   return `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(-2)}`;
