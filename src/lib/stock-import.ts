@@ -1,7 +1,8 @@
 import { collection, doc, writeBatch } from "firebase/firestore";
+import { stockCountSessionId } from "./stock-count";
 import { DEFAULT_STOCK_ITEMS, listStockItems } from "./stock";
 import { getDb } from "./firebase";
-import type { StockMovementType } from "./types";
+import type { StockCountRound, StockMovementType } from "./types";
 
 export type ParsedStockCount = { date: number; qty: number };
 
@@ -36,6 +37,7 @@ export type StockImportResult = {
   productsCreated: number;
   productsUpdated: number;
   movements: number;
+  sessions: number;
   parseSkipped: number;
 };
 
@@ -523,6 +525,48 @@ export function parseStockCsv(
   return { products, movements, skipped, format };
 }
 
+function isCountRoundDay(day: number): day is StockCountRound {
+  return day === 1 || day === 10 || day === 20;
+}
+
+export type ParsedCountSession = {
+  year: number;
+  month: number;
+  dayOfMonth: StockCountRound;
+  date: number;
+  lines: { itemId: string; itemName: string; qty: number }[];
+};
+
+export function buildCountSessionsFromPreview(
+  preview: StockImportPreview,
+  itemIdByName: Map<string, string>,
+): ParsedCountSession[] {
+  const sessionMap = new Map<string, ParsedCountSession>();
+
+  for (const p of preview.products) {
+    const itemId = itemIdByName.get(norm(p.name));
+    if (!itemId) continue;
+    for (const c of p.counts) {
+      const d = new Date(c.date);
+      const day = d.getDate();
+      if (!isCountRoundDay(day)) continue;
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const key = stockCountSessionId(year, month, day);
+      let session = sessionMap.get(key);
+      if (!session) {
+        session = { year, month, dayOfMonth: day, date: c.date, lines: [] };
+        sessionMap.set(key, session);
+      }
+      session.lines.push({ itemId, itemName: p.name, qty: c.qty });
+    }
+  }
+
+  return [...sessionMap.values()]
+    .filter((s) => s.lines.length > 0)
+    .sort((a, b) => a.date - b.date);
+}
+
 function stockDocFields(
   input: {
     name: string;
@@ -573,6 +617,7 @@ export async function importStockCsvText(
   let productsCreated = 0;
   let productsUpdated = 0;
   let movementCount = 0;
+  let sessionCount = 0;
 
   let batch = writeBatch(db);
   let ops = 0;
@@ -618,7 +663,34 @@ export async function importStockCsvText(
     if (ops >= 400) await flush();
   }
 
+  const parsedSessions = buildCountSessionsFromPreview(preview, itemIdByName);
+  for (const s of parsedSessions) {
+    const id = stockCountSessionId(s.year, s.month, s.dayOfMonth);
+    const sessionRef = doc(db, "stockCountSessions", id);
+    batch.set(sessionRef, {
+      date: s.date,
+      dayOfMonth: s.dayOfMonth,
+      year: s.year,
+      month: s.month,
+      inspector: "Import CSV",
+      inspectorId: null,
+      submittedAt: s.date,
+      createdBy,
+      lines: s.lines.map((line) => ({
+        itemId: line.itemId,
+        itemName: line.itemName,
+        qty: line.qty,
+      })),
+      updatedAt: now,
+      source: "csv-import",
+    });
+    sessionCount += 1;
+    ops += 1;
+    if (ops >= 400) await flush();
+  }
+
   for (const m of preview.movements) {
+    if (parsedSessions.length) continue;
     const itemId = itemIdByName.get(norm(m.itemName));
     if (!itemId) continue;
     const moveRef = doc(collection(db, "stockMovements"));
@@ -644,17 +716,23 @@ export async function importStockCsvText(
     productsCreated,
     productsUpdated,
     movements: movementCount,
+    sessions: sessionCount,
     parseSkipped: preview.skipped.length,
   };
 }
 
 export function previewStockImportLabel(preview: StockImportPreview): string {
+  const sessionCount = buildCountSessionsFromPreview(
+    preview,
+    new Map(preview.products.map((p) => [norm(p.name), "x"])),
+  ).length;
   const moveIn = preview.movements.filter((m) => m.type === "IN").length;
   const moveOut = preview.movements.filter((m) => m.type === "OUT").length;
   const moveAdj = preview.movements.filter((m) => m.type === "ADJUST").length;
   return (
     `พบ ${preview.products.length} รายการ (${preview.format})` +
-    ` · IN ${moveIn} · OUT ${moveOut} · ADJ ${moveAdj}` +
+    (sessionCount ? ` · ${sessionCount} รอบนับ` : "") +
+    (sessionCount ? "" : ` · IN ${moveIn} · OUT ${moveOut} · ADJ ${moveAdj}`) +
     (preview.skipped.length ? ` · ข้าม ${preview.skipped.length} แถว` : "")
   );
 }

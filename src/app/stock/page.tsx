@@ -24,15 +24,14 @@ import {
 } from "@/lib/stock-count";
 import type { StockCountRound, StockCountSession, StockItem } from "@/lib/types";
 import {
-  buildStockHistoryGrid,
-  computeStockHistoryMonthStats,
+  buildStockHistoryTimeline,
   formatStockCountTimeShort,
   inspectorShort,
   parseStockMonthInput,
   roundLabel,
-  stockMonthInputValue,
+  timelineRoundLabel,
   type StockHistoryItemCol,
-  type StockHistoryRoundRow,
+  type StockHistoryTimelineRow,
 } from "@/lib/stock-history";
 import { seedStockItemsIfEmpty, subscribeStockItems } from "@/lib/stock";
 import { formatDateShort, formatPlainNumber, parseDateInput } from "@/lib/utils";
@@ -159,17 +158,14 @@ function StockHistoryView({
   isOwner: boolean;
   onError: (msg: string | null) => void;
 }) {
-  const [month, setMonth] = useState(stockMonthInputValue());
   const [filter, setFilter] = useState<"all" | "missing">("all");
-  const [detail, setDetail] = useState<StockHistoryRoundRow | null>(null);
-
-  const { year, month: monthIdx } = parseStockMonthInput(month);
+  const [detail, setDetail] = useState<StockHistoryTimelineRow | null>(null);
 
   useBodyScrollLock(!!detail);
 
   const grid = useMemo(
-    () => buildStockHistoryGrid(sessions, items, year, monthIdx),
-    [sessions, items, year, monthIdx],
+    () => buildStockHistoryTimeline(sessions, items),
+    [sessions, items],
   );
 
   const rows = useMemo(
@@ -177,10 +173,7 @@ function StockHistoryView({
     [grid.rows, filter],
   );
 
-  const stats = useMemo(
-    () => computeStockHistoryMonthStats(grid.rows, items.length),
-    [grid.rows, items.length],
-  );
+  const stats = grid.stats;
 
   async function onDeleteSession(sessionId: string) {
     if (!window.confirm("ลบรอบนับนี้?")) return;
@@ -203,13 +196,6 @@ function StockHistoryView({
   return (
     <div className="stock-summary-view">
       <div className="check-history-toolbar stock-history-toolbar">
-        <input
-          type="month"
-          className="ot-slim-input"
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          aria-label="เดือน"
-        />
         <div className="check-filter-pills" role="group" aria-label="ตัวกรอง">
           <button
             type="button"
@@ -227,12 +213,13 @@ function StockHistoryView({
           </button>
         </div>
         <p className="muted check-history-stats">
-          {stats.rounds}/{stats.expectedRounds} รอบ · {stats.itemsTracked} รายการ
+          {stats.filledRounds}/{stats.totalRounds} รอบ · {stats.itemsTracked} รายการ
+          {stats.rangeLabel !== "—" ? ` · ${stats.rangeLabel}` : ""}
         </p>
       </div>
 
       <p className="muted check-history-hint">
-        แถว = รอบนับ (วันที่ 1 · 10 · 20) · คอลัมน์ = สินค้า · แตะช่องดูรายละเอียด
+        ประวัติย้อนหลังทุกเดือนที่มีข้อมูล · แถว = รอบนับ (1 · 10 · 20) · แตะช่องดูรายละเอียด
       </p>
 
       {rows.length ? (
@@ -251,7 +238,7 @@ function StockHistoryView({
             <tbody>
               {rows.map((row) => (
                 <StockHistoryRow
-                  key={row.dayOfMonth}
+                  key={row.rowKey}
                   row={row}
                   columns={grid.columns}
                   onOpen={() => row.session && setDetail(row)}
@@ -263,8 +250,8 @@ function StockHistoryView({
       ) : (
         <p className="empty">
           {filter === "missing"
-            ? "ครบทุกรอบในเดือนนี้แล้ว"
-            : "ยังไม่มีรอบในเดือนนี้ — กด + นับสต็อก"}
+            ? "ครบทุกรอบในช่วงนี้แล้ว"
+            : "ยังไม่มีประวัติ — กด + นับสต็อก หรือนำเข้า CSV ที่ ตั้งค่า"}
         </p>
       )}
 
@@ -286,7 +273,7 @@ function StockHistoryRow({
   columns,
   onOpen,
 }: {
-  row: StockHistoryRoundRow;
+  row: StockHistoryTimelineRow;
   columns: StockHistoryItemCol[];
   onOpen: () => void;
 }) {
@@ -296,7 +283,7 @@ function StockHistoryRow({
   return (
     <tr className={isMissing ? "stock-history-row-missing" : "stock-history-row-filled"}>
       <td className="stock-history-date">
-        {roundLabel(row.dayOfMonth)}
+        {timelineRoundLabel(row)}
         {hasSession ? (
           <span className="stock-history-meta-inline">
             {inspectorShort(row.session!.inspector)} · {formatStockCountTimeShort(row.session!.submittedAt)}
@@ -339,7 +326,7 @@ function StockCountDetailModal({
   onClose,
   onDelete,
 }: {
-  row: StockHistoryRoundRow;
+  row: StockHistoryTimelineRow;
   columns: StockHistoryItemCol[];
   isOwner: boolean;
   onClose: () => void;
@@ -353,7 +340,7 @@ function StockCountDetailModal({
         <div className="modal-head">
           <div>
             <h2 className="panel-title" style={{ fontSize: "1rem" }}>
-              {roundLabel(row.dayOfMonth)} · {formatDateShort(row.dateMs)}
+              {timelineRoundLabel(row)} · {formatDateShort(row.dateMs)}
             </h2>
             <p className="muted check-detail-sub">
               {session.inspector} · {formatStockCountTimeShort(session.submittedAt)}

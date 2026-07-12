@@ -80,7 +80,9 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string) => void 
       const [y, m] = importMonth.split("-").map(Number);
       const result = await importStockCsvText(text, userEmail, y, m);
       setImportPreview(
-        `นำเข้าแล้ว — สร้าง ${result.productsCreated} · อัปเดต ${result.productsUpdated} · ประวัติ ${result.movements}` +
+        `นำเข้าแล้ว — สร้าง ${result.productsCreated} · อัปเดต ${result.productsUpdated}` +
+          (result.sessions ? ` · ${result.sessions} รอบนับ` : "") +
+          (result.movements ? ` · ประวัติ ${result.movements}` : "") +
           (result.parseSkipped ? ` · ข้าม ${result.parseSkipped} แถว` : ""),
       );
     } catch (err) {
@@ -142,8 +144,8 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string) => void 
       <div className="form-card entry-form check-import-card">
         <h3 className="panel-title" style={{ fontSize: "1rem" }}>นำเข้า CSV สต๊อก</h3>
         <p className="muted check-hint">
-          เลือกไฟล์จาก Google Sheet (TELL TEA - สต๊อกสินค้า.csv) — รองรับทั้งตารางเช็คทุก 10 วัน
-          (คอลัมน์วันที่) และรายการคงเหลือตรงๆ
+          เลือกไฟล์ TELL TEA - สต๊อกสินค้า.csv — นำเข้ารายการ + ประวัติรอบนับ (วันที่ 1·10·20)
+          · ตั้งเดือนเริ่มต้นตรงกับแถวแรกในไฟล์ (เช่น 7/2026)
         </p>
         <div className="check-import-row">
           <input

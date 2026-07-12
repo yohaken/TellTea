@@ -5,7 +5,11 @@
 import { readFileSync, existsSync } from "fs";
 import path from "path";
 import { GoogleAuth } from "google-auth-library";
-import { parseStockCsv } from "../src/lib/stock-import";
+import {
+  buildCountSessionsFromPreview,
+  parseStockCsv,
+} from "../src/lib/stock-import";
+import { stockCountSessionId } from "../src/lib/stock-count";
 
 const PROJECT = "mypeer-501909";
 const CREATED_BY = process.env.CREATED_BY || "yohaken@gmail.com";
@@ -26,6 +30,20 @@ function firestoreValue(value: unknown) {
   if (typeof value === "number") {
     if (Number.isInteger(value)) return { integerValue: String(value) };
     return { doubleValue: value };
+  }
+  if (Array.isArray(value)) {
+    return {
+      arrayValue: {
+        values: value.map((v) => firestoreValue(v)),
+      },
+    };
+  }
+  if (typeof value === "object") {
+    const fields: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      fields[k] = firestoreValue(v);
+    }
+    return { mapValue: { fields } };
   }
   throw new Error(`unsupported ${typeof value}`);
 }
@@ -101,10 +119,7 @@ async function main() {
     throw new Error(`parse failed — ${preview.skipped.length} skipped rows`);
   }
 
-  console.log(`parsed ${preview.products.length} products, ${preview.movements.length} movements (${preview.format})`);
-  preview.products.forEach((p) =>
-    console.log(`  ${p.name}: ${p.qty} (${p.counts.length} counts)`),
-  );
+  console.log(`parsed ${preview.products.length} products (${preview.format})`);
 
   const token = await getToken();
   const stockDocs = await listDocs(token, "stock");
@@ -142,29 +157,42 @@ async function main() {
     });
   }
 
-  for (const m of preview.movements) {
-    const itemId = itemIdByName.get(norm(m.itemName));
-    if (!itemId) continue;
+  const sessions = buildCountSessionsFromPreview(preview, itemIdByName);
+  for (const s of sessions) {
+    const id = stockCountSessionId(s.year, s.month, s.dayOfMonth);
     writes.push({
       update: {
-        name: `projects/${PROJECT}/databases/(default)/documents/stockMovements/${randomId()}`,
+        name: `projects/${PROJECT}/databases/(default)/documents/stockCountSessions/${id}`,
         fields: docFields({
-          itemId,
-          itemName: m.itemName,
-          type: m.type,
-          quantity: m.quantity,
-          date: m.date,
-          inspector: CREATED_BY,
-          remark: m.remark,
-          createdAt: now,
+          date: s.date,
+          dayOfMonth: s.dayOfMonth,
+          year: s.year,
+          month: s.month,
+          inspector: "Import CSV",
+          inspectorId: null,
+          submittedAt: s.date,
           createdBy: CREATED_BY,
+          lines: s.lines.map((line) => ({
+            itemId: line.itemId,
+            itemName: line.itemName,
+            qty: line.qty,
+          })),
+          updatedAt: now,
+          source: "csv-import",
         }),
       },
     });
   }
 
+  preview.products.forEach((p) =>
+    console.log(`  ${p.name}: ${p.qty} (${p.counts.length} counts)`),
+  );
+  console.log(`  → ${sessions.length} count sessions`);
+
   await commitWrites(token, writes);
-  console.log(`done — upsert ${preview.products.length} products, ${preview.movements.length} movements`);
+  console.log(
+    `done — upsert ${preview.products.length} products, ${sessions.length} count sessions`,
+  );
 }
 
 main().catch((err) => {
