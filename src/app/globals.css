@@ -768,6 +768,15 @@ textarea {
   white-space: nowrap;
 }
 
+.sheet-table .col-updated {
+  width: 1%;
+  white-space: nowrap;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  color: rgba(28, 42, 31, 0.55);
+  line-height: 1.2;
+}
+
 .sheet-table .col-note {
   max-width: 6rem;
   font-size: 0.72rem;
@@ -872,24 +881,26 @@ textarea {
 }
 
 .modal-backdrop.edit-modal {
-  background: var(--background);
-  place-items: start center;
-  padding: 0;
-  z-index: 20;
+  place-items: center;
+  align-content: center;
+  padding: calc(0.65rem + var(--safe-top)) 0.65rem calc(0.65rem + var(--safe-bottom));
+  background: rgba(28, 42, 31, 0.45);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+  z-index: 40;
 }
 
 .modal-backdrop.edit-modal .modal-card {
-  width: min(100%, var(--shell-max));
+  width: min(100%, 24rem);
   max-width: 100%;
-  max-height: none;
-  min-height: 100dvh;
-  border-radius: 0;
-  background: transparent;
-  padding: 0 1rem calc(1rem + var(--safe-bottom));
-  box-shadow: none;
-  overflow: visible;
+  max-height: min(88dvh, 36rem);
+  min-height: 0;
+  border-radius: 1.1rem;
+  background: #f7f3e8;
+  padding: 0.85rem 0.9rem 0.55rem;
+  box-shadow: var(--shadow);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
 }
@@ -897,7 +908,33 @@ textarea {
 .modal-backdrop.edit-modal .panel-title {
   padding-top: 0;
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
+}
+
+.modal-backdrop.edit-modal .entry-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 0 0 0.45rem;
+  background: #f7f3e8;
+  backdrop-filter: none;
+}
+
+.modal-backdrop.edit-modal .form-card.entry-form {
+  background: transparent;
+  box-shadow: none;
+  border: 0;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+}
+
+.modal-backdrop.edit-modal .entry-actions {
+  position: sticky;
+  bottom: 0;
+  margin-top: 0.5rem;
+  padding: 0.55rem 0 0.35rem;
+  background: linear-gradient(180deg, transparent, #f7f3e8 22%);
 }
 
 .entry-toolbar {

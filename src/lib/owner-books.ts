@@ -46,11 +46,14 @@ export type OwnerBooksPage = {
 
 function mapEntry(d: QueryDocumentSnapshot): OwnerBookEntry {
   const data = d.data() as Omit<OwnerBookEntry, "id">;
+  const createdAt = Number(data.createdAt) || 0;
   return {
     id: d.id,
     ...data,
     amountIn: 0,
     amountOut: Number(data.amountOut) || 0,
+    createdAt,
+    updatedAt: Number(data.updatedAt) || createdAt,
     note: typeof data.note === "string" ? data.note : "",
   };
 }
@@ -154,6 +157,7 @@ async function applyOwnerOutDelta(deltaOut: number): Promise<void> {
 }
 
 export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<string> {
+  const now = Date.now();
   const payload = {
     date: input.date,
     description: input.description.trim(),
@@ -161,7 +165,8 @@ export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<str
     amountOut: Number(input.amountOut) || 0,
     type: (input.type || "").trim(),
     createdBy: input.createdBy,
-    createdAt: Date.now(),
+    createdAt: now,
+    updatedAt: now,
     receiptUrl: input.receiptUrl || "",
     note: (input.note || "").trim(),
   };
@@ -183,7 +188,7 @@ export async function updateOwnerBookEntry(
   const prev = prevSnap.data() as OwnerBookEntry;
   const prevOut = Number(prev.amountOut) || 0;
 
-  const next: Record<string, string | number> = {};
+  const next: Record<string, string | number> = { updatedAt: Date.now() };
   if (patch.date != null) next.date = patch.date;
   if (patch.description != null) next.description = patch.description.trim();
   if (patch.amountOut != null) next.amountOut = Number(patch.amountOut);
@@ -221,6 +226,7 @@ export async function importOwnerBookEntries(
         type: row.type || "",
         createdBy: row.createdBy,
         createdAt: row.createdAt,
+        updatedAt: row.createdAt,
         receiptUrl: "",
         note: "",
       });

@@ -18,6 +18,8 @@ export type LedgerEntry = {
   type: string;
   createdBy: string;
   createdAt: number;
+  /** เวลาแก้ไขล่าสุด (ms) — แถวเก่าอาจไม่มี ใช้ createdAt แทนตอนแสดง */
+  updatedAt?: number;
   /** URL สลิป/รูปใบเสร็จ (ถ้ามี) */
   receiptUrl?: string;
 };

@@ -9,10 +9,10 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import Link from "next/link";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import {
+  addLedgerEntry,
   deleteLedgerEntry,
   frequentDescriptions,
   LEDGER_LIVE_MAX,
@@ -32,7 +32,15 @@ import {
   saveImageToDevice,
 } from "@/lib/receipts";
 import type { LedgerEntry } from "@/lib/types";
-import { formatBaht, formatDateShort, formatPlainNumber, parseDateInput, todayInputValue } from "@/lib/utils";
+import {
+  entryUpdatedAt,
+  formatBaht,
+  formatDateShort,
+  formatDateTimeShort,
+  formatPlainNumber,
+  parseDateInput,
+  todayInputValue,
+} from "@/lib/utils";
 import { Trash2, X } from "lucide-react";
 
 export default function LedgerPage() {
@@ -44,7 +52,7 @@ export default function LedgerPage() {
 }
 
 function LedgerView() {
-  const { staff } = useAuth();
+  const { user, staff } = useAuth();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +62,7 @@ function LedgerView() {
   const [hasMore, setHasMore] = useState(false);
   const [liveLimit, setLiveLimit] = useState(LEDGER_PAGE_SIZE);
   const [editing, setEditing] = useState<LedgerEntry | null>(null);
+  const [adding, setAdding] = useState<"out" | "in" | null>(null);
   const [photoRowId, setPhotoRowId] = useState<string | null>(null);
   const photoEntryRef = useRef<LedgerEntry | null>(null);
   const photoCameraRef = useRef<HTMLInputElement>(null);
@@ -198,13 +207,21 @@ function LedgerView() {
       </div>
 
       <div className="quick-actions">
-        <Link href="/out/" className="primary-btn action-out">
+        <button
+          type="button"
+          className="primary-btn action-out"
+          onClick={() => setAdding("out")}
+        >
           บันทึกเงินออก
-        </Link>
+        </button>
         {isOwner ? (
-          <Link href="/in/" className="primary-btn action-in">
+          <button
+            type="button"
+            className="primary-btn action-in"
+            onClick={() => setAdding("in")}
+          >
             โอนเข้า
-          </Link>
+          </button>
         ) : null}
       </div>
 
@@ -224,6 +241,7 @@ function LedgerView() {
                   <th className="col-photo">รูปภาพ</th>
                   <th className="col-in">เข้า</th>
                   <th className="col-out">ออก</th>
+                  <th className="col-updated">แก้ไขล่าสุด</th>
                 </tr>
               </thead>
                 <tbody>
@@ -262,6 +280,7 @@ function LedgerView() {
                       </td>
                       <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>
                       <td className="col-out">{row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}</td>
+                      <td className="col-updated">{formatDateTimeShort(entryUpdatedAt(row))}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -285,6 +304,25 @@ function LedgerView() {
           isOwner={isOwner}
           onClose={() => setEditing(null)}
           onSaved={() => setEditing(null)}
+          onError={setError}
+        />
+      ) : null}
+
+      {adding === "out" && user?.email ? (
+        <AddOutModal
+          createdBy={user.email}
+          isOwner={isOwner}
+          onClose={() => setAdding(null)}
+          onSaved={() => setAdding(null)}
+          onError={setError}
+        />
+      ) : null}
+
+      {adding === "in" && user?.email && isOwner ? (
+        <AddInModal
+          createdBy={user.email}
+          onClose={() => setAdding(null)}
+          onSaved={() => setAdding(null)}
           onError={setError}
         />
       ) : null}
@@ -348,6 +386,290 @@ function LedgerView() {
 function toDateInput(ms: number) {
   const d = new Date(ms);
   return todayInputValue(d);
+}
+
+function AddOutModal({
+  createdBy,
+  isOwner,
+  onClose,
+  onSaved,
+  onError,
+}: {
+  createdBy: string;
+  isOwner: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+  onError: (msg: string) => void;
+}) {
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const [date, setDate] = useState(todayInputValue());
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [typeMode, setTypeMode] = useState("auto");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [typeFreq, setTypeFreq] = useState<string[]>([]);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+
+  const autoType = useMemo(() => guessTypeFromDescription(description), [description]);
+  const resolvedType = typeMode === "auto" ? autoType : typeMode;
+
+  const filteredSuggestions = useMemo(() => {
+    const q = description.trim().toLowerCase();
+    if (!q) return suggestions.slice(0, 8);
+    return suggestions.filter((s) => s.toLowerCase().includes(q)).slice(0, 8);
+  }, [description, suggestions]);
+
+  useEffect(() => {
+    void listRecentLedgerEntries(200)
+      .then((rows) => {
+        setSuggestions(frequentDescriptions(rows));
+        setTypeFreq(frequentTypes(rows));
+      })
+      .catch(() => {
+        setSuggestions([]);
+        setTypeFreq([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
+    };
+  }, [receiptPreview]);
+
+  async function handleReceiptFile(file: File | null) {
+    if (!file) return;
+    setNotice(null);
+    try {
+      const how = await saveImageToDevice(file);
+      setNotice(
+        how === "shared"
+          ? "เปิดเมนูแชร์แล้ว — เลือกบันทึกรูปลงเครื่องได้"
+          : "บันทึกรูปลงเครื่องแล้ว",
+      );
+      const compressed = await compressImageForUpload(file);
+      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
+      setReceiptFile(compressed);
+      setReceiptPreview(URL.createObjectURL(compressed));
+    } catch (err) {
+      onError((err as Error).message || "ใช้รูปไม่สำเร็จ");
+    }
+  }
+
+  async function onSave(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      let receiptUrl = "";
+      if (receiptFile) receiptUrl = await fileToReceiptDataUrl(receiptFile);
+      await addLedgerEntry({
+        date: parseDateInput(date),
+        description,
+        amountIn: 0,
+        amountOut: Number(amount),
+        type: isOwner ? resolvedType : guessTypeFromDescription(description),
+        createdBy,
+        receiptUrl,
+      });
+      onSaved();
+    } catch (err) {
+      onError((err as Error).message || "บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop edit-modal" role="presentation">
+      <div className="modal-card" role="dialog" aria-modal="true" aria-label="บันทึกเงินออก">
+        <div className="entry-toolbar">
+          <h2 className="panel-title">บันทึกเงินออก</h2>
+          <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+        {notice ? <p className="muted" style={{ margin: "0 0 0.55rem" }}>{notice}</p> : null}
+        <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
+          <div className="field">
+            <label htmlFor="add-out-date">วันที่</label>
+            <input id="add-out-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label htmlFor="add-out-desc">รายการ</label>
+            <input
+              id="add-out-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="เช่น ค่าน้ำแข็ง / แม็คโคร"
+              autoComplete="off"
+              required
+            />
+            {filteredSuggestions.length > 0 ? (
+              <div className="suggest-list" role="listbox" aria-label="รายการที่ใช้บ่อย">
+                {filteredSuggestions.map((item) => (
+                  <button key={item} type="button" className="suggest-chip" onClick={() => setDescription(item)}>
+                    {item}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div className="field">
+            <label htmlFor="add-out-amount">จำนวนเงินออก</label>
+            <input
+              id="add-out-amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <span className="field-label">สลิป / รูปถ่าย</span>
+            <div className="receipt-actions">
+              <button type="button" className="primary-btn" onClick={() => cameraRef.current?.click()}>
+                ถ่ายรูป
+              </button>
+              <button type="button" className="ghost-btn" onClick={() => galleryRef.current?.click()}>
+                แนบรูป
+              </button>
+            </div>
+            <input
+              ref={cameraRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="sr-only"
+              onChange={(e) => void handleReceiptFile(e.target.files?.[0] || null)}
+            />
+            <input
+              ref={galleryRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => void handleReceiptFile(e.target.files?.[0] || null)}
+            />
+            {receiptPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={receiptPreview} alt="ตัวอย่างสลิป" className="receipt-preview" />
+            ) : null}
+          </div>
+          {isOwner ? (
+            <TypePicker
+              id="add-out-type"
+              value={typeMode}
+              onChange={setTypeMode}
+              frequent={typeFreq}
+              autoHint={autoType}
+            />
+          ) : null}
+          <div className="entry-actions">
+            <button type="submit" className="primary-btn action-out" disabled={busy}>
+              {busy ? "กำลังบันทึก..." : "บันทึก"}
+            </button>
+            <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
+              ออก
+            </button>
+            <span aria-hidden style={{ width: "2.6rem" }} />
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AddInModal({
+  createdBy,
+  onClose,
+  onSaved,
+  onError,
+}: {
+  createdBy: string;
+  onClose: () => void;
+  onSaved: () => void;
+  onError: (msg: string) => void;
+}) {
+  const [date, setDate] = useState(todayInputValue());
+  const [description, setDescription] = useState("โอนเข้า");
+  const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function onSave(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await addLedgerEntry({
+        date: parseDateInput(date),
+        description,
+        amountIn: Number(amount),
+        amountOut: 0,
+        type: "โอนเข้า",
+        createdBy,
+      });
+      onSaved();
+    } catch (err) {
+      onError((err as Error).message || "บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop edit-modal" role="presentation">
+      <div className="modal-card" role="dialog" aria-modal="true" aria-label="โอนเข้า">
+        <div className="entry-toolbar">
+          <h2 className="panel-title">โอนเข้า</h2>
+          <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+        <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
+          <div className="field">
+            <label htmlFor="add-in-date">วันที่</label>
+            <input id="add-in-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label htmlFor="add-in-desc">รายการ</label>
+            <input
+              id="add-in-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="add-in-amount">จำนวนเงินเข้า</label>
+            <input
+              id="add-in-amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+            />
+          </div>
+          <div className="entry-actions">
+            <button type="submit" className="primary-btn action-in" disabled={busy}>
+              {busy ? "กำลังบันทึก..." : "บันทึก"}
+            </button>
+            <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
+              ออก
+            </button>
+            <span aria-hidden style={{ width: "2.6rem" }} />
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 function EditEntryModal({

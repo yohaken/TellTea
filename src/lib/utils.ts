@@ -31,6 +31,20 @@ export function formatDateShort(ms: number) {
   return `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(-2)}`;
 }
 
+/** Short date + time for «แก้ไขล่าสุด» column — e.g. 12/7/26 10:42 */
+export function formatDateTimeShort(ms: number) {
+  if (!ms) return "—";
+  const d = new Date(ms);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${formatDateShort(ms)} ${hh}:${mi}`;
+}
+
+/** Prefer updatedAt; fall back to createdAt for legacy rows. */
+export function entryUpdatedAt(entry: { updatedAt?: number; createdAt?: number }) {
+  return Number(entry.updatedAt) || Number(entry.createdAt) || 0;
+}
+
 /** parse D/M/YYYY or YYYY-MM-DD to local midnight */
 export function parseDateInput(value: string): number {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {

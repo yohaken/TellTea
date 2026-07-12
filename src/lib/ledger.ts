@@ -40,11 +40,14 @@ export type LedgerPage = {
 
 function mapEntry(d: QueryDocumentSnapshot): LedgerEntry {
   const data = d.data() as Omit<LedgerEntry, "id">;
+  const createdAt = Number(data.createdAt) || 0;
   return {
     id: d.id,
     ...data,
     amountIn: Number(data.amountIn) || 0,
     amountOut: Number(data.amountOut) || 0,
+    createdAt,
+    updatedAt: Number(data.updatedAt) || createdAt,
   };
 }
 
@@ -285,6 +288,7 @@ function validateLedgerPayload(payload: {
 }
 
 export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
+  const now = Date.now();
   const payload = {
     date: input.date,
     description: input.description.trim(),
@@ -292,7 +296,8 @@ export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
     amountOut: Number(input.amountOut) || 0,
     type: (input.type || "").trim(),
     createdBy: input.createdBy,
-    createdAt: Date.now(),
+    createdAt: now,
+    updatedAt: now,
     receiptUrl: input.receiptUrl || "",
   };
   validateLedgerPayload(payload);
@@ -314,7 +319,7 @@ export async function updateLedgerEntry(
   const prevIn = Number(prev.amountIn) || 0;
   const prevOut = Number(prev.amountOut) || 0;
 
-  const next: Record<string, string | number> = {};
+  const next: Record<string, string | number> = { updatedAt: Date.now() };
   if (patch.date != null) next.date = patch.date;
   if (patch.description != null) next.description = patch.description.trim();
   if (patch.amountIn != null) next.amountIn = Number(patch.amountIn);
@@ -357,6 +362,7 @@ export async function importLedgerEntries(
         type: row.type || "",
         createdBy: row.createdBy,
         createdAt: row.createdAt,
+        updatedAt: row.createdAt,
         receiptUrl: "",
       });
     }
