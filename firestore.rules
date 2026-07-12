@@ -96,6 +96,31 @@ service cloud.firestore {
         );
     }
 
+    // พนักงานกรอก/แก้รายการได้ — เปลี่ยนสถานะจ่ายโบนัสได้เฉพาะเจ้าของ
+    function bonusEntryStaffUpdate() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.status != 'paid'
+        && after.status == before.status
+        && after.createdBy == before.createdBy
+        && after.createdAt == before.createdAt;
+    }
+
+    function prodEntryCreate() {
+      return request.resource.data.createdBy == actorId()
+        && request.resource.data.productName is string
+        && request.resource.data.qtyProduced is number
+        && request.resource.data.qtyProduced > 0
+        && request.resource.data.status == 'unpaid';
+    }
+
+    function otEntryCreate() {
+      return request.resource.data.createdBy == actorId()
+        && request.resource.data.shift is string
+        && request.resource.data.machineCount is number
+        && request.resource.data.status == 'unpaid';
+    }
+
     match /staff/{staffId} {
       allow get: if signedIn() && staffId == resolvedStaffId();
       allow list: if isOwner() || hasPerm('staffManage');
@@ -205,22 +230,19 @@ service cloud.firestore {
     }
     match /prodEntries/{id} {
       allow read: if hasPerm('production');
-      allow create: if hasPerm('production')
-        && request.resource.data.createdBy == actorId()
-        && request.resource.data.productName is string
-        && request.resource.data.qtyProduced is number
-        && request.resource.data.qtyProduced > 0;
-      allow update, delete: if hasPerm('production');
+      allow create: if hasPerm('production') && prodEntryCreate();
+      allow update: if hasPerm('production')
+        && (isOwner() || bonusEntryStaffUpdate());
+      allow delete: if isOwner();
     }
 
     // โบนัสชงเครื่องดื่ม
     match /otEntries/{id} {
       allow read: if hasPerm('otBonus');
-      allow create: if hasPerm('otBonus')
-        && request.resource.data.createdBy == actorId()
-        && request.resource.data.shift is string
-        && request.resource.data.machineCount is number;
-      allow update, delete: if hasPerm('otBonus');
+      allow create: if hasPerm('otBonus') && otEntryCreate();
+      allow update: if hasPerm('otBonus')
+        && (isOwner() || bonusEntryStaffUpdate());
+      allow delete: if isOwner();
     }
 
     // SmartCheck SOP — บันทึกแนวตั้งต่อรายการ
