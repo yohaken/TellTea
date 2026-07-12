@@ -1,13 +1,14 @@
 "use client";
 
 import {
+  Fragment,
   useEffect,
   useMemo,
   useState,
   type FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Coffee, Trash2, X } from "lucide-react";
+import { Coffee, LayoutGrid, Table2, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
@@ -27,6 +28,7 @@ import {
   type OtShiftId,
   type OtStatus,
 } from "@/lib/ot";
+import type { StaffMember } from "@/lib/types";
 import {
   formatDateShort,
   formatPlainNumber,
@@ -35,6 +37,94 @@ import {
 } from "@/lib/utils";
 
 type Tab = "form" | "table" | "setup";
+type TableView = "sheet" | "cards";
+
+const SHIFT_ORDER: Record<OtShiftId, number> = {
+  morning: 0,
+  evening: 1,
+  late: 2,
+};
+
+const OT_ONBOARDING_KEY = "telltea-ot-onboarding-dismissed";
+
+function monthInputValue(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
+function parseMonthInput(value: string) {
+  const [y, m] = value.split("-").map(Number);
+  return { year: y, month: m - 1 };
+}
+
+function isInMonth(ms: number, year: number, month: number) {
+  const d = new Date(ms);
+  return d.getFullYear() === year && d.getMonth() === month;
+}
+
+function entryIncludesName(entry: OtEntry, name: string) {
+  if (!name.trim()) return false;
+  const needle = name.trim().toLowerCase();
+  return entry.workerNames.some((w) => {
+    const hay = w.trim().toLowerCase();
+    return hay === needle || hay.includes(needle) || needle.includes(hay);
+  });
+}
+
+function sortOtEntries(rows: OtEntry[]) {
+  return [...rows].sort((a, b) => {
+    if (a.date !== b.date) return a.date - b.date;
+    const sa = SHIFT_ORDER[a.shift] ?? 9;
+    const sb = SHIFT_ORDER[b.shift] ?? 9;
+    if (sa !== sb) return sa - sb;
+    return a.createdAt - b.createdAt;
+  });
+}
+
+function otQtyCell(n: number) {
+  return n ? formatPlainNumber(n) : "—";
+}
+
+function otFormulaText(entry: OtEntry, computed: ReturnType<typeof computeOtBonus>) {
+  const m = Number(entry.machineCount) || 0;
+  const o = Number(entry.otherCups) || 0;
+  const c = Number(entry.iceCreamCones) || 0;
+  const b = Number(entry.breadSlices) || 0;
+  const cl = Number(entry.claimCups) || 0;
+  const d = Number(entry.deductQty) || 0;
+  const a = Number(entry.addQty) || 0;
+  const rate = Number(entry.bonusRate) || 0;
+  return (
+    `(${m} + ${o} + ${c} + ${b} − ${cl} − ${d} + ${a}) × ${formatPlainNumber(rate)} ÷ ${computed.workerCount} = ฿${formatPlainNumber(computed.bonusPerPerson)}`
+  );
+}
+
+type DateGroup = {
+  date: number;
+  rows: OtEntry[];
+  shiftCount: number;
+  summaryQty: number;
+  totalBonus: number;
+};
+
+function groupByDate(rows: OtEntry[]): DateGroup[] {
+  const sorted = sortOtEntries(rows);
+  const groups: DateGroup[] = [];
+  for (const row of sorted) {
+    let group = groups.find((g) => g.date === row.date);
+    if (!group) {
+      group = { date: row.date, rows: [], shiftCount: 0, summaryQty: 0, totalBonus: 0 };
+      groups.push(group);
+    }
+    group.rows.push(row);
+    const c = computeOtBonus(row);
+    group.shiftCount += 1;
+    group.summaryQty += c.summaryQty;
+    group.totalBonus += c.totalBonus;
+  }
+  return groups;
+}
 
 export default function OtPage() {
   return (
@@ -150,7 +240,9 @@ function OtView() {
       {!loading && tab === "table" ? (
         <OtTable
           entries={entries}
+          staff={staff}
           isOwner={isOwner}
+          bonusRate={bonusRate}
           onEdit={(row) => {
             setEditing(row);
             setTab("form");
@@ -409,6 +501,335 @@ function OtEntryForm({
 
 function OtTable({
   entries,
+  staff,
+  isOwner,
+  bonusRate,
+  onEdit,
+  onError,
+}: {
+  entries: OtEntry[];
+  staff: StaffMember | null;
+  isOwner: boolean;
+  bonusRate: number;
+  onEdit: (row: OtEntry) => void;
+  onError: (msg: string) => void;
+}) {
+  const [tableView, setTableView] = useState<TableView>("sheet");
+  const [month, setMonth] = useState(monthInputValue());
+  const [statusFilter, setStatusFilter] = useState<OtStatus | "all">("all");
+  const [mineOnly, setMineOnly] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  const myName = staff?.displayName || "";
+
+  useEffect(() => {
+    try {
+      setShowOnboarding(localStorage.getItem(OT_ONBOARDING_KEY) !== "1");
+    } catch {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  function dismissOnboarding() {
+    setShowOnboarding(false);
+    try {
+      localStorage.setItem(OT_ONBOARDING_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const filtered = useMemo(() => {
+    const { year, month: m } = parseMonthInput(month);
+    return entries.filter((row) => {
+      if (!isInMonth(row.date, year, m)) return false;
+      if (statusFilter !== "all" && row.status !== statusFilter) return false;
+      if (mineOnly && !entryIncludesName(row, myName)) return false;
+      return true;
+    });
+  }, [entries, month, statusFilter, mineOnly, myName]);
+
+  const summary = useMemo(() => {
+    let shiftCount = 0;
+    let summaryQty = 0;
+    let totalBonus = 0;
+    let unpaidBonus = 0;
+    let myBonus = 0;
+
+    for (const row of filtered) {
+      const c = computeOtBonus(row);
+      shiftCount += 1;
+      summaryQty += c.summaryQty;
+      totalBonus += c.totalBonus;
+      if (row.status === "unpaid") unpaidBonus += c.totalBonus;
+      if (entryIncludesName(row, myName)) myBonus += c.bonusPerPerson;
+    }
+
+    return { shiftCount, summaryQty, totalBonus, unpaidBonus, myBonus };
+  }, [filtered, myName]);
+
+  const dateGroups = useMemo(() => groupByDate(filtered), [filtered]);
+
+  if (!entries.length) {
+    return <p className="empty">ยังไม่มีรายการ OT</p>;
+  }
+
+  return (
+    <div className="ot-table-view">
+      {showOnboarding ? (
+        <div className="ot-onboarding">
+          <div>
+            <strong>เหมือน Sheet เดิม — คอลัมน์เดิม สูตรเดิม แค่ย้ายมาออนไลน์</strong>
+            <p className="muted" style={{ margin: "0.35rem 0 0", textAlign: "left" }}>
+              กรอก = แถวใหม่ · ตาราง = ดูภาพรวมทั้งเดือน · สถานะ = แทนการเคลียร์ตารางสิ้นเดือน
+            </p>
+          </div>
+          <button type="button" className="ghost-btn icon-btn" aria-label="ปิดคำแนะนำ" onClick={dismissOnboarding}>
+            <X size={16} />
+          </button>
+        </div>
+      ) : null}
+
+      <div className="ot-filters">
+        <div className="field ot-filter-field">
+          <label htmlFor="ot-month">เดือน</label>
+          <input id="ot-month" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+        </div>
+        <div className="field ot-filter-field">
+          <label htmlFor="ot-status-filter">สถานะ</label>
+          <select
+            id="ot-status-filter"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as OtStatus | "all")}
+          >
+            <option value="all">ทั้งหมด</option>
+            <option value="unpaid">ยังไม่จ่าย</option>
+            <option value="pending">เตรียมจ่ายโบนัส</option>
+            <option value="paid">จ่ายโบนัสแล้ว</option>
+          </select>
+        </div>
+        {myName ? (
+          <label className="ot-mine-toggle">
+            <input type="checkbox" checked={mineOnly} onChange={(e) => setMineOnly(e.target.checked)} />
+            ของฉัน ({myName})
+          </label>
+        ) : null}
+        <div className="ot-view-toggle" role="group" aria-label="มุมมองตาราง">
+          <button
+            type="button"
+            className={tableView === "sheet" ? "ot-view-btn is-active" : "ot-view-btn"}
+            onClick={() => setTableView("sheet")}
+            aria-pressed={tableView === "sheet"}
+          >
+            <Table2 size={14} aria-hidden />
+            Sheet
+          </button>
+          <button
+            type="button"
+            className={tableView === "cards" ? "ot-view-btn is-active" : "ot-view-btn"}
+            onClick={() => setTableView("cards")}
+            aria-pressed={tableView === "cards"}
+          >
+            <LayoutGrid size={14} aria-hidden />
+            การ์ด
+          </button>
+        </div>
+      </div>
+
+      <div className="ot-summary">
+        <div className="ot-summary-stat">
+          <span className="ot-summary-label">รอบงาน</span>
+          <strong>{summary.shiftCount}</strong>
+        </div>
+        <div className="ot-summary-stat">
+          <span className="ot-summary-label">สรุปหน่วย</span>
+          <strong>{formatPlainNumber(summary.summaryQty)}</strong>
+        </div>
+        <div className="ot-summary-stat">
+          <span className="ot-summary-label">{mineOnly ? "โบนัสของฉัน" : "โบนัสรวม"}</span>
+          <strong>
+            ฿{formatPlainNumber(mineOnly ? summary.myBonus : summary.totalBonus)}
+          </strong>
+        </div>
+        <div className="ot-summary-stat">
+          <span className="ot-summary-label">ยังไม่จ่าย</span>
+          <strong>฿{formatPlainNumber(summary.unpaidBonus)}</strong>
+        </div>
+      </div>
+
+      <p className="ot-formula-banner muted">
+        โบนัส/คน = (เครื่อง + อื่นๆ + โคน + ขนมปัง − เคลม − ลด + เพิ่ม) × เรท ÷ จำนวนคน
+        {" · "}เรทปัจจุบัน ฿{formatPlainNumber(bonusRate)}/หน่วย
+      </p>
+
+      {!filtered.length ? (
+        <p className="empty">ไม่มีรายการในเดือน/ตัวกรองนี้</p>
+      ) : tableView === "sheet" ? (
+        <OtSheetTable
+          groups={dateGroups}
+          isOwner={isOwner}
+          onEdit={onEdit}
+          onError={onError}
+        />
+      ) : (
+        <OtCardList
+          entries={sortOtEntries(filtered).reverse()}
+          isOwner={isOwner}
+          onEdit={onEdit}
+          onError={onError}
+        />
+      )}
+    </div>
+  );
+}
+
+function OtSheetTable({
+  groups,
+  isOwner,
+  onEdit,
+  onError,
+}: {
+  groups: DateGroup[];
+  isOwner: boolean;
+  onEdit: (row: OtEntry) => void;
+  onError: (msg: string) => void;
+}) {
+  async function setStatus(row: OtEntry, status: OtStatus) {
+    try {
+      await updateOtEntry(row.id, { status });
+    } catch (err) {
+      onError((err as Error).message || "อัปเดตสถานะไม่สำเร็จ");
+    }
+  }
+
+  const colCount = 19 + (isOwner ? 1 : 0);
+
+  return (
+    <div className="sheet-wrap ot-sheet-wrap">
+      <table className="sheet-table ot-table">
+        <thead>
+          <tr>
+            <th className="ot-th-staff col-sticky-left ot-col-date">วันที่</th>
+            <th className="ot-th-staff ot-col-worker">พนักงาน-1</th>
+            <th className="ot-th-staff ot-col-worker">พนักงาน-2</th>
+            <th className="ot-th-staff ot-col-shift">รอบงาน</th>
+            <th className="ot-th-machine col-out">เครื่อง</th>
+            <th className="ot-th-prod col-out">อื่นๆ</th>
+            <th className="ot-th-prod col-out">โคน</th>
+            <th className="ot-th-prod col-out">ขนมปัง</th>
+            <th className="ot-th-prod col-out">เคลม</th>
+            <th className="ot-th-deduct col-out">ลด</th>
+            <th className="ot-th-deduct col-note">สาเหตุลด</th>
+            <th className="ot-th-add col-out">เพิ่ม</th>
+            <th className="ot-th-add col-note">สาเหตุเพิ่ม</th>
+            <th className="ot-th-result col-out">สรุป</th>
+            <th className="ot-th-result col-out">เรท</th>
+            <th className="ot-th-result col-out">รวม</th>
+            <th className="ot-th-result ot-col-bonus col-sticky-right">โบนัส/คน</th>
+            <th className="ot-th-result col-act">คน</th>
+            <th className="ot-th-result col-act">สถานะ</th>
+            {isOwner ? <th className="ot-th-result col-act" /> : null}
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((group) => (
+            <Fragment key={group.date}>
+              {group.rows.map((row, idx) => {
+                const c = computeOtBonus(row);
+                const statusClass =
+                  row.status === "paid"
+                    ? "is-paid"
+                    : row.status === "pending"
+                      ? "is-pending"
+                      : "";
+                const w1 = row.workerNames[0] || "—";
+                const w2 = row.workerNames[1] || "—";
+
+                return (
+                  <tr key={row.id} className="row-out">
+                    {idx === 0 ? (
+                      <td className="col-sticky-left ot-col-date ot-date-cell" rowSpan={group.rows.length}>
+                        <button type="button" className="desc-link" onClick={() => onEdit(row)}>
+                          {formatDateShort(group.date)}
+                        </button>
+                      </td>
+                    ) : null}
+                    <td className="ot-col-worker">{w1}</td>
+                    <td className="ot-col-worker">{w2}</td>
+                    <td className="ot-col-shift">{labelOtShift(row.shift)}</td>
+                    <td className="col-out">{formatPlainNumber(row.machineCount)}</td>
+                    <td className="col-out">{otQtyCell(row.otherCups || 0)}</td>
+                    <td className="col-out">{otQtyCell(row.iceCreamCones || 0)}</td>
+                    <td className="col-out">{otQtyCell(row.breadSlices || 0)}</td>
+                    <td className="col-out">{otQtyCell(row.claimCups || 0)}</td>
+                    <td className="col-out">{otQtyCell(row.deductQty || 0)}</td>
+                    <td className="col-note" title={row.deductReason || ""}>{row.deductReason || "—"}</td>
+                    <td className="col-out">{otQtyCell(row.addQty || 0)}</td>
+                    <td className="col-note" title={row.addReason || ""}>{row.addReason || "—"}</td>
+                    <td className="col-out">{formatPlainNumber(c.summaryQty)}</td>
+                    <td className="col-out">{formatPlainNumber(row.bonusRate)}</td>
+                    <td className="col-out">฿{formatPlainNumber(c.totalBonus)}</td>
+                    <td
+                      className="col-sticky-right ot-col-bonus ot-bonus-cell"
+                      title={otFormulaText(row, c)}
+                    >
+                      ฿{formatPlainNumber(c.bonusPerPerson)}
+                    </td>
+                    <td className="col-act">{c.workerCount}</td>
+                    <td className="col-act">
+                      {isOwner ? (
+                        <select
+                          className={`prod-status ${statusClass}`}
+                          value={row.status}
+                          onChange={(e) => void setStatus(row, e.target.value as OtStatus)}
+                          aria-label="สถานะโบนัส"
+                        >
+                          <option value="unpaid">ยังไม่จ่าย</option>
+                          <option value="pending">เตรียมจ่าย</option>
+                          <option value="paid">จ่ายแล้ว</option>
+                        </select>
+                      ) : (
+                        <span className={`prod-status-pill ${statusClass}`}>
+                          {labelOtStatus(row.status)}
+                        </span>
+                      )}
+                    </td>
+                    {isOwner ? (
+                      <td className="col-act">
+                        <button
+                          type="button"
+                          className="trash-btn"
+                          aria-label="ลบ"
+                          onClick={() => {
+                            if (!window.confirm("ลบรายการนี้?")) return;
+                            void deleteOtEntry(row.id).catch((err) =>
+                              onError(err.message || "ลบไม่สำเร็จ"),
+                            );
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    ) : null}
+                  </tr>
+                );
+              })}
+              <tr className="ot-day-summary">
+                <td colSpan={colCount}>
+                  สรุป {formatDateShort(group.date)}: {group.shiftCount} รอบ · สรุปหน่วย{" "}
+                  {formatPlainNumber(group.summaryQty)} · โบนัสรวม ฿{formatPlainNumber(group.totalBonus)}
+                </td>
+              </tr>
+            </Fragment>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function OtCardList({
+  entries,
   isOwner,
   onEdit,
   onError,
@@ -426,10 +847,6 @@ function OtTable({
     }
   }
 
-  if (!entries.length) {
-    return <p className="empty">ยังไม่มีรายการ OT</p>;
-  }
-
   return (
     <div className="ot-list">
       {entries.map((row) => {
@@ -442,26 +859,22 @@ function OtTable({
               : "";
         const detailItems = [
           { label: "เครื่อง", value: formatPlainNumber(row.machineCount) },
-          ...(isOwner
-            ? [
-                { label: "อื่นๆ", value: formatPlainNumber(row.otherCups || 0) },
-                { label: "โคน", value: formatPlainNumber(row.iceCreamCones || 0) },
-                { label: "ขนมปัง", value: formatPlainNumber(row.breadSlices || 0) },
-                { label: "เคลม", value: formatPlainNumber(row.claimCups || 0) },
-                {
-                  label: "ลด",
-                  value: formatPlainNumber(row.deductQty || 0),
-                  title: row.deductReason || undefined,
-                },
-                {
-                  label: "เพิ่ม",
-                  value: formatPlainNumber(row.addQty || 0),
-                  title: row.addReason || undefined,
-                },
-                { label: "สรุป", value: formatPlainNumber(c.summaryQty) },
-                { label: "รวม", value: `฿${formatPlainNumber(c.totalBonus)}` },
-              ]
-            : []),
+          { label: "อื่นๆ", value: otQtyCell(row.otherCups || 0) },
+          { label: "โคน", value: otQtyCell(row.iceCreamCones || 0) },
+          { label: "ขนมปัง", value: otQtyCell(row.breadSlices || 0) },
+          { label: "เคลม", value: otQtyCell(row.claimCups || 0) },
+          {
+            label: "ลด",
+            value: otQtyCell(row.deductQty || 0),
+            title: row.deductReason || undefined,
+          },
+          {
+            label: "เพิ่ม",
+            value: otQtyCell(row.addQty || 0),
+            title: row.addReason || undefined,
+          },
+          { label: "สรุป", value: formatPlainNumber(c.summaryQty) },
+          { label: "รวม", value: `฿${formatPlainNumber(c.totalBonus)}` },
         ];
 
         return (
@@ -510,7 +923,7 @@ function OtTable({
 
             <p className="ot-card-workers">{row.workerNames.join(", ")}</p>
 
-            <p className="ot-card-bonus">
+            <p className="ot-card-bonus" title={otFormulaText(row, c)}>
               โบนัส/คน <strong>฿{formatPlainNumber(c.bonusPerPerson)}</strong>
             </p>
 
