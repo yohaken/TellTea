@@ -48,7 +48,6 @@ import {
   type ChecklistRecord,
   type CheckSessionSummary,
 } from "@/lib/checklist";
-import { seedDemoChecklistRecords, summarizeExistingSessions } from "@/lib/checklist-seed";
 import {
   formatDateShort,
   formatDateTimeShort,
@@ -85,8 +84,6 @@ function CheckView() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [seedBusy, setSeedBusy] = useState(false);
-  const [seedMsg, setSeedMsg] = useState<string | null>(null);
 
   async function reloadCatalog() {
     const [emps, catalog] = await Promise.all([
@@ -135,39 +132,6 @@ function CheckView() {
     setFormOpen(false);
   }
 
-  async function onSeedDemo() {
-    if (
-      !window.confirm(
-        "จำลองข้อมูล SmartCheck ตั้งแต่ 1 ก.ค. ถึงวันนี้?\n\n3 กะ/วัน · ข้ามวัน+กะที่มีแล้ว",
-      )
-    ) {
-      return;
-    }
-    setSeedBusy(true);
-    setSeedMsg(null);
-    try {
-      const emps = await listActiveEmployees();
-      const result = await seedDemoChecklistRecords(
-        emps,
-        {
-          startDate: "2026-07-01",
-          createdBy: actorId || "owner@telltea.local",
-          skipExisting: true,
-        },
-        summarizeExistingSessions(records),
-      );
-      setSeedMsg(
-        result.sessions
-          ? `ใส่แล้ว ${result.sessions} รอบ · ${result.records} แถว`
-          : "ครบแล้ว — ไม่มีช่องว่างให้เติม",
-      );
-    } catch (err) {
-      setError((err as Error).message || "จำลองข้อมูลไม่สำเร็จ");
-    } finally {
-      setSeedBusy(false);
-    }
-  }
-
   return (
     <div className="module-page">
       <div className="module-page-head">
@@ -179,23 +143,6 @@ function CheckView() {
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
-
-      {isOwner && !loading ? (
-        <section className="check-seed-bar">
-          <p className="muted check-hint">
-            ทดสอบระบบ — จำลองบันทึกตั้งแต่ 1 ก.ค. ถึงวันนี้ (ลบทีหลังได้ที่ ตั้งค่า → เริ่มใหม่)
-          </p>
-          <button
-            type="button"
-            className="ghost-btn"
-            disabled={seedBusy}
-            onClick={() => void onSeedDemo()}
-          >
-            {seedBusy ? "กำลังใส่ข้อมูล..." : "จำลองข้อมูลทดสอบ"}
-          </button>
-          {seedMsg ? <p className="muted check-import-preview">{seedMsg}</p> : null}
-        </section>
-      ) : null}
 
       {!loading ? (
         <CheckSummary
