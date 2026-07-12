@@ -2,6 +2,7 @@ const functions = require("firebase-functions/v1");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const webpush = require("web-push");
+const { runSyncWithAdmin } = require("./task-weekly-sync");
 
 initializeApp();
 
@@ -121,5 +122,16 @@ exports.onLedgerBalanceWritten = functions
     );
 
     console.log("low balance push", { balance, threshold: thresholdSafe, ...result });
+    return null;
+  });
+
+exports.syncTaskOccurrencesDaily = functions
+  .region("asia-southeast1")
+  .pubsub.schedule("0 6 * * *")
+  .timeZone("Asia/Bangkok")
+  .onRun(async () => {
+    const db = getFirestore();
+    const result = await runSyncWithAdmin(db);
+    console.log("task occurrence sync", result);
     return null;
   });

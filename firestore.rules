@@ -310,6 +310,14 @@ service cloud.firestore {
       allow read, create, update, delete: if isOwnerEmail();
     }
 
+    match /taskTemplates/{id} {
+      allow read, create, update, delete: if isOwnerEmail();
+    }
+
+    match /taskOccurrences/{id} {
+      allow read, create, update, delete: if isOwnerEmail();
+    }
+
     match /bonusDeductionMonths/{monthKey} {
       allow read: if hasPerm('bonus');
       allow write: if isOwner();

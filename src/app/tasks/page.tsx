@@ -1,13 +1,16 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
 import {
+  BarChart3,
   CalendarClock,
   Camera,
   CheckCircle2,
@@ -15,7 +18,6 @@ import {
   ImageIcon,
   ListTodo,
   Plus,
-  Trash2,
   X,
 } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
@@ -24,44 +26,39 @@ import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { PhotoAttachField } from "@/components/PhotoAttachField";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
-import {
-  canStaffCompleteTask,
-  isAssignTaskFuture,
-  labelAssignRecurrence,
-  newChecklistItemId,
-  sortAssignTasks,
-  startOfLocalDay,
-  todayStartMs,
-  validateTaskCompleteInput,
-} from "@/lib/assign-tasks-logic";
-import {
-  completeAssignTask,
-  createAssignTask,
-  deleteAssignTask,
-  subscribeAllAssignTasks,
-  type AssignChecklistItem,
-  type AssignTask,
-  type AssignTaskRecurrence,
-} from "@/lib/assign-tasks";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { isAppOwnerEmail } from "@/lib/firebase";
+import { completeTaskOccurrence, subscribeTaskOccurrences } from "@/lib/task-occurrences";
 import {
-  formatDateShort,
-  parseDateInput,
-  todayInputValue,
-} from "@/lib/utils";
+  createTaskTemplate,
+  deactivateTaskTemplate,
+  subscribeTaskTemplates,
+} from "@/lib/task-templates";
+import { runTaskOccurrenceSync } from "@/lib/task-sync";
+import type { TaskChecklistItem, TaskOccurrence, TaskTemplate } from "@/lib/task-types";
+import {
+  buildDisciplineReport,
+  canSubmitOccurrence,
+  filterOccurrencesByTab,
+  isOccurrenceOpenSoon,
+  labelCompletedKind,
+  labelWeekday,
+  newChecklistItemId,
+  validateTaskCompleteInput,
+  WEEKDAY_LABELS,
+  type OccurrenceTab,
+} from "@/lib/task-weekly-logic";
+import { formatDateShort } from "@/lib/utils";
 
-type ViewFilter = "pending" | "done" | "all";
-
-const TASK_PRESETS: { title: string; recurrence: AssignTaskRecurrence; checklist: string[] }[] = [
+const TASK_PRESETS: { title: string; weekday: number; checklist: string[] }[] = [
   {
     title: "โพสต์ Facebook ประจำสัปดาห์",
-    recurrence: "weekly",
+    weekday: 1,
     checklist: ["ออกแบบภาพ/ข้อความ", "โพสต์แล้ว", "แคปหน้าจอโพสต์"],
   },
   {
     title: "คอนเทนต์รายเดือน",
-    recurrence: "monthly",
+    weekday: 1,
     checklist: ["ร่างคอนเทนต์", "อนุมัติแล้ว", "เผยแพร่แล้ว", "แนบรูปหลักฐาน"],
   },
 ];
@@ -78,16 +75,18 @@ function TasksView() {
   const { actorId, staff, user } = useAuth();
   const router = useRouter();
   const previewOnly = isAppOwnerEmail(user?.email);
-  const isOwner = staff?.role === "owner";
 
-  const [tasks, setTasks] = useState<AssignTask[]>([]);
+  const [templates, setTemplates] = useState<TaskTemplate[]>([]);
+  const [occurrences, setOccurrences] = useState<TaskOccurrence[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<ViewFilter>("pending");
+  const [tab, setTab] = useState<OccurrenceTab>("thisWeek");
   const [createOpen, setCreateOpen] = useState(false);
-  const [submitTask, setSubmitTask] = useState<AssignTask | null>(null);
+  const [submitOcc, setSubmitOcc] = useState<TaskOccurrence | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const syncedRef = useRef(false);
 
   useEffect(() => {
     if (user && staff && !previewOnly) {
@@ -95,46 +94,77 @@ function TasksView() {
     }
   }, [user, staff, previewOnly, router]);
 
+  const doSync = useCallback(async (tpls: TaskTemplate[], occs: TaskOccurrence[]) => {
+    setSyncing(true);
+    try {
+      await runTaskOccurrenceSync(tpls, occs);
+    } catch (err) {
+      setError((err as Error).message || "ซิงก์รอบงานไม่สำเร็จ");
+    } finally {
+      setSyncing(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!previewOnly) return;
     setLoading(true);
-    let employeesReady = false;
-    let tasksReady = false;
-    const finishLoading = () => {
-      if (employeesReady && tasksReady) setLoading(false);
+    let tplReady = false;
+    let occReady = false;
+    let empReady = false;
+    const finish = () => {
+      if (tplReady && occReady && empReady) setLoading(false);
     };
 
     void listActiveEmployees()
       .then(setEmployees)
       .catch((err) => setError((err as Error).message || "โหลดรายชื่อไม่สำเร็จ"))
       .finally(() => {
-        employeesReady = true;
-        finishLoading();
+        empReady = true;
+        finish();
       });
 
-    const onRows = (rows: AssignTask[]) => {
-      setTasks(rows);
-      if (!tasksReady) {
-        tasksReady = true;
-        finishLoading();
-      }
+    const unsubTpl = subscribeTaskTemplates(
+      (rows) => {
+        setTemplates(rows);
+        if (!tplReady) {
+          tplReady = true;
+          finish();
+        }
+      },
+      (err) => setError(err.message || "โหลดกติกาไม่สำเร็จ"),
+    );
+
+    const unsubOcc = subscribeTaskOccurrences(
+      (rows) => {
+        setOccurrences(rows);
+        if (!occReady) {
+          occReady = true;
+          finish();
+        }
+      },
+      (err) => setError(err.message || "โหลดรอบงานไม่สำเร็จ"),
+    );
+
+    return () => {
+      unsubTpl();
+      unsubOcc();
     };
-
-    const unsub = subscribeAllAssignTasks(onRows, (err) => setError(err.message || "โหลดงานไม่สำเร็จ"));
-
-    return unsub;
   }, [previewOnly]);
 
-  useBodyScrollLock(createOpen || !!submitTask || !!previewUrl);
+  useEffect(() => {
+    if (!previewOnly || loading || syncedRef.current) return;
+    syncedRef.current = true;
+    void doSync(templates.filter((t) => t.active), occurrences);
+  }, [previewOnly, loading, templates, occurrences, doSync]);
 
-  const visible = useMemo(() => {
-    let rows = sortAssignTasks(tasks);
-    if (filter === "pending") rows = rows.filter((t) => t.status === "pending");
-    if (filter === "done") rows = rows.filter((t) => t.status === "completed");
-    return rows;
-  }, [tasks, filter]);
+  useBodyScrollLock(createOpen || !!submitOcc || !!previewUrl);
 
-  const pendingCount = tasks.filter((t) => t.status === "pending").length;
+  const visible = useMemo(() => filterOccurrencesByTab(occurrences, tab), [occurrences, tab]);
+  const activeTemplates = useMemo(() => templates.filter((t) => t.active), [templates]);
+  const discipline = useMemo(() => buildDisciplineReport(occurrences), [occurrences]);
+
+  const thisWeekCount = filterOccurrencesByTab(occurrences, "thisWeek").length;
+  const missedCount = filterOccurrencesByTab(occurrences, "missed").length;
 
   if (!previewOnly) return null;
 
@@ -146,86 +176,131 @@ function TasksView() {
           งานมอบหมาย
         </h1>
         <p className="muted tasks-page-hint">
-          โหมดทดลอง — มอบหมายงาน · ตรวจรูปหลักฐาน (เจ้าของเท่านั้น)
+          ประจำวันในสัปดาห์ · ส่งได้ทุกวัน · รอบใหม่ทุกสัปดาห์ (โหมดทดลอง)
         </p>
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
-      {loading ? <p className="empty">กำลังโหลด...</p> : null}
+      {loading || syncing ? <p className="empty">{loading ? "กำลังโหลด..." : "กำลังอัปเดตรอบงาน..."}</p> : null}
 
       {!loading ? (
         <>
+          {activeTemplates.length ? (
+            <div className="tasks-template-bar">
+              <span className="field-label">กติกาที่เปิดอยู่</span>
+              <div className="tasks-template-chips">
+                {activeTemplates.map((tpl) => (
+                  <span key={tpl.id} className="tasks-template-chip">
+                    {tpl.title} · ทุก{labelWeekday(tpl.weekday)}
+                    <button
+                      type="button"
+                      className="tasks-template-off"
+                      aria-label="ปิดกติกา"
+                      onClick={() => {
+                        if (!window.confirm(`ปิดกติกา "${tpl.title}"?`)) return;
+                        void deactivateTaskTemplate(tpl.id).catch((err) =>
+                          setError((err as Error).message || "ปิดกติกาไม่สำเร็จ"),
+                        );
+                      }}
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="tasks-filter-bar">
             <button
               type="button"
-              className={filter === "pending" ? "tasks-filter is-active" : "tasks-filter"}
-              onClick={() => setFilter("pending")}
+              className={tab === "thisWeek" ? "tasks-filter is-active" : "tasks-filter"}
+              onClick={() => setTab("thisWeek")}
             >
-              ค้างส่ง {pendingCount ? `(${pendingCount})` : ""}
+              สัปดาห์นี้ {thisWeekCount ? `(${thisWeekCount})` : ""}
             </button>
             <button
               type="button"
-              className={filter === "done" ? "tasks-filter is-active" : "tasks-filter"}
-              onClick={() => setFilter("done")}
+              className={tab === "missed" ? "tasks-filter is-active" : "tasks-filter"}
+              onClick={() => setTab("missed")}
             >
-              เสร็จแล้ว
+              ค้าง/พลาด {missedCount ? `(${missedCount})` : ""}
             </button>
-            {isOwner ? (
-              <button
-                type="button"
-                className={filter === "all" ? "tasks-filter is-active" : "tasks-filter"}
-                onClick={() => setFilter("all")}
-              >
-                ทั้งหมด
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className={tab === "history" ? "tasks-filter is-active" : "tasks-filter"}
+              onClick={() => setTab("history")}
+            >
+              ประวัติ
+            </button>
           </div>
 
           {!visible.length ? (
             <p className="empty">
-              {filter === "done" ? "ยังไม่มีงานที่ส่งแล้ว" : "ไม่มีงานค้าง — รอเจ้าของมอบหมาย"}
+              {tab === "history"
+                ? "ยังไม่มีงานที่ส่งแล้ว"
+                : tab === "missed"
+                  ? "ไม่มีงานค้างหรือพลาด"
+                  : "ไม่มีรอบสัปดาห์นี้ — กด + มอบหมาย เพื่อสร้างกติกา"}
             </p>
           ) : (
             <ul className="tasks-list">
-              {visible.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  isOwner={isOwner}
-                  onSubmit={() => setSubmitTask(task)}
+              {visible.map((occ) => (
+                <OccurrenceCard
+                  key={occ.id}
+                  occ={occ}
+                  onSubmit={() => setSubmitOcc(occ)}
                   onViewPhoto={(url) => setPreviewUrl(url)}
-                  onDelete={async () => {
-                    if (!window.confirm("ลบงานนี้?")) return;
-                    try {
-                      await deleteAssignTask(task.id);
-                    } catch (err) {
-                      setError((err as Error).message || "ลบไม่สำเร็จ");
-                    }
-                  }}
                 />
               ))}
             </ul>
           )}
+
+          {discipline.length ? (
+            <section className="tasks-discipline">
+              <h2 className="tasks-discipline-title">
+                <BarChart3 size={16} aria-hidden /> รายงานวินัย (4 สัปดาห์ล่าสุด)
+              </h2>
+              <ul className="tasks-discipline-list">
+                {discipline.map((row) => {
+                  const done = row.onTime + row.late + row.backfill;
+                  const pct = row.total ? Math.round((done / row.total) * 100) : 0;
+                  return (
+                    <li key={row.assigneeId} className="tasks-discipline-row">
+                      <strong>{row.assigneeName}</strong>
+                      <span className="tasks-discipline-pct">{pct}% ส่งแล้ว</span>
+                      <span className="muted tasks-discipline-detail">
+                        ตรงเวลา {row.onTime} · ช้า {row.late} · ย้อนหลัง {row.backfill} · ไม่ส่ง {row.missed}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ) : null}
         </>
       ) : null}
 
       {createOpen ? (
-        <CreateTaskModal
+        <CreateTemplateModal
           employees={employees}
           actorId={actorId}
           onError={setError}
           onClose={() => setCreateOpen(false)}
-          onSaved={() => setCreateOpen(false)}
+          onSaved={async () => {
+            setCreateOpen(false);
+            syncedRef.current = false;
+          }}
         />
       ) : null}
 
-      {submitTask ? (
-        <SubmitTaskModal
-          task={submitTask}
+      {submitOcc ? (
+        <SubmitOccurrenceModal
+          occ={submitOcc}
           actorId={actorId}
           onError={setError}
-          onClose={() => setSubmitTask(null)}
-          onSaved={() => setSubmitTask(null)}
+          onClose={() => setSubmitOcc(null)}
+          onSaved={() => setSubmitOcc(null)}
         />
       ) : null}
 
@@ -233,67 +308,70 @@ function TasksView() {
         <ImagePreviewModal url={previewUrl} title="หลักฐานงาน" onClose={() => setPreviewUrl(null)} />
       ) : null}
 
-      {isOwner ? (
-        <ModuleTabDock
-          ariaLabel="มอบหมายงาน"
-          formOpen={createOpen}
-          onAdd={() => setCreateOpen(true)}
-          addLabel="+ มอบหมาย"
-        />
-      ) : null}
+      <ModuleTabDock
+        ariaLabel="มอบหมายงาน"
+        formOpen={createOpen}
+        onAdd={() => setCreateOpen(true)}
+        addLabel="+ มอบหมาย"
+      />
     </div>
   );
 }
 
-function TaskCard({
-  task,
-  isOwner,
+function OccurrenceCard({
+  occ,
   onSubmit,
   onViewPhoto,
-  onDelete,
 }: {
-  task: AssignTask;
-  isOwner: boolean;
+  occ: TaskOccurrence;
   onSubmit: () => void;
   onViewPhoto: (url: string) => void;
-  onDelete: () => void;
 }) {
-  const future = isAssignTaskFuture(task);
-  const canSubmit = canStaffCompleteTask(task);
-  const done = task.status === "completed";
-  const overdue = !done && !future && startOfLocalDay(task.dueDate) < todayStartMs();
+  const soon = isOccurrenceOpenSoon(occ);
+  const canSubmit = canSubmitOccurrence(occ);
+  const done = occ.status === "completed";
+  const missed = occ.status === "missed";
 
   return (
     <li
       className={
         done
           ? "tasks-card is-done"
-          : future
-            ? "tasks-card is-future"
-            : overdue
-              ? "tasks-card is-overdue"
+          : missed
+            ? "tasks-card is-overdue"
+            : soon
+              ? "tasks-card is-future"
               : "tasks-card"
       }
     >
       <div className="tasks-card-head">
         <div>
-          <h2 className="tasks-card-title">{task.title}</h2>
+          <h2 className="tasks-card-title">{occ.title}</h2>
           <p className="tasks-card-meta">
-            <CalendarClock size={12} aria-hidden /> ส่ง {formatDateShort(task.dueDate)} ·{" "}
-            {labelAssignRecurrence(task.recurrence)}
+            <CalendarClock size={12} aria-hidden />             รอบ {formatDateShort(occ.dueDate)} · ทุก{labelWeekday(new Date(occ.dueDate).getDay())}
           </p>
-          <p className="tasks-card-workers">{task.assigneeNames.join(", ")}</p>
+          <p className="tasks-card-workers">{occ.assigneeNames.join(", ")}</p>
         </div>
-        <span className={`tasks-status-pill ${done ? "is-done" : future ? "is-future" : "is-pending"}`}>
-          {done ? "ส่งแล้ว" : future ? "ยังไม่ถึงกำหนด" : "ค้างส่ง"}
+        <span
+          className={`tasks-status-pill ${
+            done ? "is-done" : missed ? "is-overdue" : soon ? "is-future" : "is-pending"
+          }`}
+        >
+          {done
+            ? labelCompletedKind(occ.completedKind || "on_time")
+            : missed
+              ? "พลาด"
+              : soon
+                ? "ยังไม่เปิดส่ง"
+                : "ค้างส่ง"}
         </span>
       </div>
 
-      {task.note ? <p className="tasks-card-note">{task.note}</p> : null}
+      {occ.note ? <p className="tasks-card-note">{occ.note}</p> : null}
 
       <ul className="tasks-check-preview">
-        {task.checklist.map((item) => {
-          const checked = done ? task.checklistDone.includes(item.id) : false;
+        {occ.checklist.map((item) => {
+          const checked = done ? occ.checklistDone.includes(item.id) : false;
           return (
             <li key={item.id} className={checked ? "is-checked" : ""}>
               {checked ? <CheckCircle2 size={14} /> : <Circle size={14} />}
@@ -304,26 +382,21 @@ function TaskCard({
       </ul>
 
       <div className="tasks-card-actions">
-        {!isOwner && canSubmit ? (
+        {canSubmit ? (
           <button type="button" className="primary-btn tasks-submit-btn" onClick={onSubmit}>
-            <Camera size={16} aria-hidden /> ส่งงาน
+            <Camera size={16} aria-hidden /> {missed ? "ส่งย้อนหลัง" : "ส่งงาน"}
           </button>
         ) : null}
-        {!isOwner && future ? (
-          <p className="muted tasks-future-hint">เปิดส่งได้ตั้งแต่วันกำหนด</p>
+        {soon ? (
+          <p className="muted tasks-future-hint">เปิดส่ง {formatDateShort(occ.openAt)}</p>
         ) : null}
-        {done && task.proofImg ? (
+        {done && occ.proofImg ? (
           <button
             type="button"
             className="ghost-btn tasks-proof-btn"
-            onClick={() => onViewPhoto(task.proofImg!)}
+            onClick={() => onViewPhoto(occ.proofImg!)}
           >
             <ImageIcon size={14} aria-hidden /> ดูรูปหลักฐาน
-          </button>
-        ) : null}
-        {isOwner && !done ? (
-          <button type="button" className="trash-btn" aria-label="ลบ" onClick={() => void onDelete()}>
-            <Trash2 size={14} />
           </button>
         ) : null}
       </div>
@@ -331,7 +404,7 @@ function TaskCard({
   );
 }
 
-function CreateTaskModal({
+function CreateTemplateModal({
   employees,
   actorId,
   onError,
@@ -346,17 +419,16 @@ function CreateTaskModal({
 }) {
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
-  const [due, setDue] = useState(todayInputValue());
-  const [recurrence, setRecurrence] = useState<AssignTaskRecurrence>("once");
+  const [weekday, setWeekday] = useState(1);
   const [selected, setSelected] = useState<string[]>([]);
-  const [checklist, setChecklist] = useState<AssignChecklistItem[]>([
+  const [checklist, setChecklist] = useState<TaskChecklistItem[]>([
     { id: newChecklistItemId(), label: "" },
   ]);
   const [busy, setBusy] = useState(false);
 
   function applyPreset(preset: (typeof TASK_PRESETS)[number]) {
     setTitle(preset.title);
-    setRecurrence(preset.recurrence);
+    setWeekday(preset.weekday);
     setChecklist(preset.checklist.map((label) => ({ id: newChecklistItemId(), label })));
   }
 
@@ -382,20 +454,18 @@ function CreateTaskModal({
     setBusy(true);
     onError("");
     try {
-      await createAssignTask({
+      await createTaskTemplate({
         title,
         note,
+        weekday,
+        checklist: steps,
         assigneeIds: chosen.map((w) => w.id),
         assigneeNames: chosen.map((w) => w.name),
-        dueDate: parseDateInput(due),
-        recurrence,
-        checklist: steps,
-        assignedBy: actorId,
         createdBy: actorId,
       });
       onSaved();
     } catch (err) {
-      onError((err as Error).message || "สร้างงานไม่สำเร็จ");
+      onError((err as Error).message || "สร้างกติกาไม่สำเร็จ");
     } finally {
       setBusy(false);
     }
@@ -406,7 +476,7 @@ function CreateTaskModal({
       <div className="modal-card tasks-form-card" onClick={(e) => e.stopPropagation()}>
         <form className="form-card entry-form module-entry-form tasks-entry-form" onSubmit={(e) => void onSubmit(e)}>
           <div className="entry-toolbar module-form-head">
-            <h2 className="panel-title">มอบหมายงาน</h2>
+            <h2 className="panel-title">มอบหมายงานประจำสัปดาห์</h2>
             <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onClose}>
               <X size={18} />
             </button>
@@ -434,23 +504,21 @@ function CreateTaskModal({
             />
           </div>
 
-          <div className="stock-form-grid">
-            <div className="field">
-              <label htmlFor="task-due">กำหนดส่ง</label>
-              <input id="task-due" type="date" value={due} onChange={(e) => setDue(e.target.value)} required />
+          <div className="field">
+            <span className="field-label">วันรับผิดชอบประจำสัปดาห์</span>
+            <div className="suggest-list">
+              {WEEKDAY_LABELS.map((label, idx) => (
+                <button
+                  key={label}
+                  type="button"
+                  className={weekday === idx ? "suggest-chip is-active" : "suggest-chip"}
+                  onClick={() => setWeekday(idx)}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-            <div className="field">
-              <label htmlFor="task-rec">ความถี่</label>
-              <select
-                id="task-rec"
-                value={recurrence}
-                onChange={(e) => setRecurrence(e.target.value as AssignTaskRecurrence)}
-              >
-                <option value="once">ครั้งเดียว</option>
-                <option value="weekly">รายสัปดาห์</option>
-                <option value="monthly">รายเดือน</option>
-              </select>
-            </div>
+            <p className="muted form-hint-inline">ส่งได้ทุกวัน (รวมล่วงหน้า) · เปิดส่งก่อน 3 วัน</p>
           </div>
 
           <div className="field">
@@ -510,7 +578,7 @@ function CreateTaskModal({
 
           <div className="entry-actions module-form-actions">
             <button type="submit" className="primary-btn" disabled={busy || !employees.length}>
-              {busy ? "กำลังบันทึก..." : "มอบหมาย"}
+              {busy ? "กำลังบันทึก..." : "สร้างกติกา"}
             </button>
             <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
               ออก
@@ -522,14 +590,14 @@ function CreateTaskModal({
   );
 }
 
-function SubmitTaskModal({
-  task,
+function SubmitOccurrenceModal({
+  occ,
   actorId,
   onError,
   onClose,
   onSaved,
 }: {
-  task: AssignTask;
+  occ: TaskOccurrence;
   actorId: string;
   onError: (msg: string) => void;
   onClose: () => void;
@@ -553,7 +621,7 @@ function SubmitTaskModal({
     if (!actorId) return;
     const checkedIds = [...checked];
     const validation = validateTaskCompleteInput({
-      checklist: task.checklist,
+      checklist: occ.checklist,
       checkedIds,
       proofImg: imageUrl,
     });
@@ -564,7 +632,7 @@ function SubmitTaskModal({
     setBusy(true);
     onError("");
     try {
-      await completeAssignTask(task.id, {
+      await completeTaskOccurrence(occ, {
         checklistDone: checkedIds,
         proofImg: imageUrl,
         completedBy: actorId,
@@ -577,24 +645,26 @@ function SubmitTaskModal({
     }
   }
 
-  const allDone = task.checklist.every((c) => checked.has(c.id));
+  const allDone = occ.checklist.every((c) => checked.has(c.id));
 
   return (
     <div className="modal-backdrop edit-modal is-module-form is-tasks-form" onClick={onClose}>
       <div className="modal-card tasks-form-card" onClick={(e) => e.stopPropagation()}>
         <form className="form-card entry-form module-entry-form tasks-entry-form" onSubmit={(e) => void onSubmit(e)}>
           <div className="entry-toolbar module-form-head">
-            <h2 className="panel-title">ส่งงาน</h2>
+            <h2 className="panel-title">{occ.status === "missed" ? "ส่งย้อนหลัง" : "ส่งงาน"}</h2>
             <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onClose}>
               <X size={18} />
             </button>
           </div>
 
-          <p className="tasks-form-slot-bar">{task.title}</p>
-          <p className="muted form-hint-inline">ติ๊กทุกข้อ แล้วแนบรูปหลักฐาน (จอโพสต์ / งานที่ทำ)</p>
+          <p className="tasks-form-slot-bar">{occ.title}</p>
+          <p className="muted form-hint-inline">
+            รอบ {formatDateShort(occ.dueDate)} — ติ๊กทุกข้อ แล้วแนบรูปหลักฐาน
+          </p>
 
           <ul className="tasks-check-submit">
-            {task.checklist.map((item) => {
+            {occ.checklist.map((item) => {
               const on = checked.has(item.id);
               return (
                 <li key={item.id}>

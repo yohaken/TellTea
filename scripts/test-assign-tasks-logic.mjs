@@ -1,5 +1,5 @@
 /**
- * Pure logic tests for assigned tasks (no Firestore).
+ * Weekly task logic + wiring tests.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -8,101 +8,73 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 function startOfLocalDay(ms) {
   const d = new Date(ms);
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 }
 
-function todayStartMs(now = Date.now()) {
-  return startOfLocalDay(now);
+function dueDateForWeekContaining(ms, weekday) {
+  const todayStart = startOfLocalDay(ms);
+  const todayDay = new Date(todayStart).getDay();
+  const daysBack = (todayDay - weekday + 7) % 7;
+  return todayStart - daysBack * DAY_MS;
 }
 
-function isAssignTaskFuture(task, now = Date.now()) {
-  if (task.status === "completed") return false;
-  return startOfLocalDay(task.dueDate) > todayStartMs(now);
+function openAtForDue(dueDate, openDaysBefore = 3) {
+  return startOfLocalDay(dueDate) - openDaysBefore * DAY_MS;
 }
 
-function canStaffCompleteTask(task, now = Date.now()) {
-  if (task.status !== "pending") return false;
-  return startOfLocalDay(task.dueDate) <= todayStartMs(now);
+function shouldMarkMissed(dueDate, now, openDaysBefore = 3) {
+  const nextDue = dueDate + 7 * DAY_MS;
+  return now >= openAtForDue(nextDue, openDaysBefore);
 }
 
-function allChecklistDone(checklist, checkedIds) {
-  if (!checklist.length) return true;
-  const set = new Set(checkedIds);
-  return checklist.every((item) => set.has(item.id));
+function computeCompletedKind(dueDate, completedAt, wasMissed) {
+  if (wasMissed) return "backfill";
+  if (startOfLocalDay(completedAt) <= startOfLocalDay(dueDate)) return "on_time";
+  return "late";
 }
 
-function validateTaskCompleteInput(input) {
-  if (!input.proofImg.trim()) return "แนบรูปหลักฐานก่อนส่งงาน";
-  if (!allChecklistDone(input.checklist, input.checkedIds)) {
-    return "ติ๊ก checklist ให้ครบทุกข้อก่อนส่ง";
-  }
-  return null;
+function canSubmitOccurrence(status, openAt, now) {
+  if (status === "completed") return false;
+  if (status === "missed") return true;
+  return now >= openAt;
 }
 
-function sortAssignTasks(rows) {
-  return [...rows].sort((a, b) => {
-    if (a.status !== b.status) {
-      if (a.status === "pending") return -1;
-      if (b.status === "pending") return 1;
-    }
-    if (a.dueDate !== b.dueDate) return a.dueDate - b.dueDate;
-    return b.updatedAt - a.updatedAt;
-  });
-}
+// Monday 14 July 2025 12:00 local — use explicit date
+const mon14 = new Date(2025, 6, 14, 12, 0, 0).getTime();
+const fri11 = new Date(2025, 6, 11, 12, 0, 0).getTime();
+const wed9 = new Date(2025, 6, 9, 12, 0, 0).getTime();
+const mon21 = new Date(2025, 6, 21, 12, 0, 0).getTime();
 
-const today = todayStartMs();
-const tomorrow = today + 24 * 60 * 60 * 1000;
-const yesterday = today - 24 * 60 * 60 * 1000;
+const dueMon = dueDateForWeekContaining(mon14, 1);
+assert.equal(new Date(dueMon).getDay(), 1);
 
-const pendingToday = { dueDate: today, status: "pending" };
-const pendingTomorrow = { dueDate: tomorrow, status: "pending" };
-const pendingYesterday = { dueDate: yesterday, status: "pending" };
-const completed = { dueDate: yesterday, status: "completed" };
+const openThu = openAtForDue(dueMon, 3);
+assert.equal(canSubmitOccurrence("pending", openThu, fri11), true);
+assert.equal(canSubmitOccurrence("pending", openThu, wed9), false);
+assert.equal(canSubmitOccurrence("missed", openThu, mon21), true);
 
-assert.equal(isAssignTaskFuture(pendingTomorrow, today + 1000), true);
-assert.equal(isAssignTaskFuture(pendingToday, today + 1000), false);
-assert.equal(isAssignTaskFuture(completed, today + 1000), false);
+assert.equal(computeCompletedKind(dueMon, dueMon, false), "on_time");
+assert.equal(computeCompletedKind(dueMon, dueMon + DAY_MS, false), "late");
+assert.equal(computeCompletedKind(dueMon, mon21, true), "backfill");
 
-assert.equal(canStaffCompleteTask(pendingToday, today + 1000), true);
-assert.equal(canStaffCompleteTask(pendingTomorrow, today + 1000), false);
-assert.equal(canStaffCompleteTask(pendingYesterday, today + 1000), true);
-assert.equal(canStaffCompleteTask(completed, today + 1000), false);
-
-const checklist = [
-  { id: "a", label: "step 1" },
-  { id: "b", label: "step 2" },
-];
-assert.equal(validateTaskCompleteInput({ checklist, checkedIds: ["a", "b"], proofImg: "" }), "แนบรูปหลักฐานก่อนส่งงาน");
-assert.equal(validateTaskCompleteInput({ checklist, checkedIds: ["a"], proofImg: "https://x" }), "ติ๊ก checklist ให้ครบทุกข้อก่อนส่ง");
-assert.equal(validateTaskCompleteInput({ checklist, checkedIds: ["a", "b"], proofImg: "https://x" }), null);
-
-const sorted = sortAssignTasks([
-  { status: "completed", dueDate: tomorrow, updatedAt: 1 },
-  { status: "pending", dueDate: tomorrow, updatedAt: 2 },
-  { status: "pending", dueDate: yesterday, updatedAt: 3 },
-]);
-assert.equal(sorted[0].dueDate, yesterday);
-assert.equal(sorted[1].dueDate, tomorrow);
-assert.equal(sorted[2].status, "completed");
+assert.equal(shouldMarkMissed(dueMon, mon14, 3), false);
+assert.equal(shouldMarkMissed(dueMon, mon21, 3), true);
 
 const pageSrc = readFileSync(join(root, "src/app/tasks/page.tsx"), "utf8");
-const cssSrc = readFileSync(join(root, "src/app/globals.css"), "utf8");
 const rulesSrc = readFileSync(join(root, "firestore.rules"), "utf8");
+const fnSrc = readFileSync(join(root, "functions/index.js"), "utf8");
 
+assert.match(pageSrc, /subscribeTaskTemplates/);
+assert.match(pageSrc, /subscribeTaskOccurrences/);
+assert.match(pageSrc, /runTaskOccurrenceSync/);
+assert.match(pageSrc, /buildDisciplineReport/);
 assert.match(pageSrc, /isAppOwnerEmail/);
-assert.match(pageSrc, /subscribeAllAssignTasks/);
-assert.doesNotMatch(pageSrc, /subscribeAssignTasksForEmployee/);
-assert.match(cssSrc, /\.tasks-card/);
-assert.match(cssSrc, /\.tasks-check-btn/);
-assert.match(rulesSrc, /match \/assignTasks\/\{id\}/);
-assert.match(rulesSrc, /allow read, create, update, delete: if isOwnerEmail\(\)/);
+assert.match(rulesSrc, /match \/taskTemplates\/\{id\}/);
+assert.match(rulesSrc, /match \/taskOccurrences\/\{id\}/);
+assert.match(fnSrc, /syncTaskOccurrencesDaily/);
 
-const moreSrc = readFileSync(join(root, "src/app/more/page.tsx"), "utf8");
-const shellSrc = readFileSync(join(root, "src/components/AppShell.tsx"), "utf8");
-assert.match(moreSrc, /isAppOwnerEmail/);
-assert.match(moreSrc, /งานมอบหมาย/);
-assert.doesNotMatch(shellSrc, /\/tasks\//);
-
-console.log("OK assign-tasks logic + page wiring");
+console.log("OK weekly task logic + wiring");
