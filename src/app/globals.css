@@ -3821,7 +3821,11 @@ body.modal-open .main-panel {
 .modal-backdrop.edit-modal.is-ot-form {
   padding: calc(0.35rem + var(--safe-top)) 0.4rem calc(0.35rem + var(--safe-bottom));
   overflow: hidden;
-  touch-action: none;
+}
+
+.modal-backdrop.edit-modal.is-ot-form:has(.is-ot-close) {
+  padding: var(--safe-top) 0 0;
+  place-items: stretch;
 }
 
 .modal-backdrop.edit-modal.is-ot-form .ot-form-card {
@@ -3831,6 +3835,15 @@ body.modal-open .main-panel {
   display: flex;
   flex-direction: column;
   padding: 0.55rem 0.65rem 0.4rem;
+}
+
+.modal-backdrop.edit-modal.is-ot-form:has(.is-ot-close) .ot-form-card {
+  width: 100%;
+  max-width: 100%;
+  max-height: none;
+  height: calc(100dvh - var(--safe-top));
+  border-radius: 0;
+  padding: 0.5rem 0.65rem calc(0.45rem + var(--safe-bottom));
 }
 
 .modal-backdrop.edit-modal.is-ot-form .ot-entry-form {
@@ -3843,13 +3856,17 @@ body.modal-open .main-panel {
 
 .modal-backdrop.edit-modal.is-ot-form .ot-form-head {
   flex-shrink: 0;
+  position: static;
   padding-bottom: 0.25rem;
+  background: #f7f3e8;
 }
 
 .modal-backdrop.edit-modal.is-ot-form .ot-form-body {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-backdrop.edit-modal.is-ot-form .ot-form-slot-bar {
@@ -3879,22 +3896,31 @@ body.modal-open .main-panel {
 }
 
 .modal-backdrop.edit-modal.is-ot-form .ot-form-details {
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  max-height: min(42dvh, 16rem);
-  padding-right: 0.1rem;
-  margin-top: 0.25rem;
+  margin-top: 0.15rem;
+}
+
+.modal-backdrop.edit-modal.is-ot-form .ot-form-details .field {
+  margin-bottom: 0.28rem;
+}
+
+.modal-backdrop.edit-modal.is-ot-form .ot-form-details label[for="ot-machine"] {
+  font-size: 0.72rem;
+}
+
+.modal-backdrop.edit-modal.is-ot-form .ot-form-details #ot-machine {
+  min-height: 1.95rem;
+  padding: 0.32rem 0.45rem;
+  font-size: 0.86rem;
 }
 
 .modal-backdrop.edit-modal.is-ot-form .ot-form-qty-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 0.3rem;
+  gap: 0.28rem;
 }
 
 .modal-backdrop.edit-modal.is-ot-form .ot-form-qty-grid .field {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.2rem;
 }
 
 .modal-backdrop.edit-modal.is-ot-form .ot-form-qty-grid label {
@@ -3902,23 +3928,63 @@ body.modal-open .main-panel {
 }
 
 .modal-backdrop.edit-modal.is-ot-form .ot-form-qty-grid input {
-  min-height: 1.95rem;
-  padding: 0.3rem 0.4rem;
+  min-height: 1.9rem;
+  padding: 0.28rem 0.38rem;
   font-size: 0.8rem;
 }
 
+.modal-backdrop.edit-modal.is-ot-form .ot-form-reason-row {
+  gap: 0.3rem;
+  margin-bottom: 0.15rem;
+}
+
+.modal-backdrop.edit-modal.is-ot-form .ot-form-reason-row input {
+  min-height: 1.9rem;
+  padding: 0.28rem 0.4rem;
+  font-size: 0.78rem;
+}
+
+.modal-backdrop.edit-modal.is-ot-form .photo-attach-field {
+  margin-bottom: 0.15rem;
+}
+
+.modal-backdrop.edit-modal.is-ot-form .photo-attach-field .field-label {
+  font-size: 0.68rem;
+  margin-bottom: 0.12rem;
+}
+
+.modal-backdrop.edit-modal.is-ot-form .photo-attach-field .receipt-actions {
+  gap: 0.3rem;
+  margin-bottom: 0;
+}
+
+.modal-backdrop.edit-modal.is-ot-form .photo-attach-field .receipt-actions .primary-btn,
+.modal-backdrop.edit-modal.is-ot-form .photo-attach-field .receipt-actions .ghost-btn {
+  min-height: 2rem;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.78rem;
+}
+
+.modal-backdrop.edit-modal.is-ot-form .photo-attach-preview {
+  max-height: 3.5rem;
+  margin-top: 0.25rem;
+}
+
 .modal-backdrop.edit-modal.is-ot-form .ot-form-preview {
-  margin: 0.35rem 0 0;
+  margin: 0.25rem 0 0;
   font-size: 0.72rem;
 }
 
 .modal-backdrop.edit-modal.is-ot-form .ot-form-actions {
   flex-shrink: 0;
+  position: static;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.35rem;
-  margin-top: 0.45rem;
-  padding: 0.4rem 0 0.2rem;
+  margin-top: 0.4rem;
+  padding: 0.45rem 0 0.15rem;
+  background: #f7f3e8;
+  box-shadow: none;
 }
 
 .modal-backdrop.edit-modal.is-ot-form .ot-form-actions .ot-form-exit {

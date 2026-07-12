@@ -421,7 +421,7 @@ function OtEntryForm({
 
   return (
     <form
-      className="form-card entry-form module-entry-form ot-entry-form"
+      className={`form-card entry-form module-entry-form ot-entry-form${detailsOpen ? " is-ot-close" : ""}`}
       onSubmit={(e) => e.preventDefault()}
     >
       <div className="entry-toolbar module-form-head ot-form-head">
@@ -534,15 +534,22 @@ function OtEntryForm({
                 <input id="ot-add" type="number" min="0" step="1" inputMode="numeric" value={addQty} onChange={(e) => setAddQty(e.target.value)} />
               </div>
             </div>
-            <div className="field">
-              <label htmlFor="ot-deduct-reason">สาเหตุลด</label>
-              <input id="ot-deduct-reason" value={deductReason} onChange={(e) => setDeductReason(e.target.value)} placeholder="แก้วแตก" />
+            <div className="stock-form-grid ot-form-reason-row">
+              <div className="field">
+                <label htmlFor="ot-deduct-reason">สาเหตุลด</label>
+                <input id="ot-deduct-reason" value={deductReason} onChange={(e) => setDeductReason(e.target.value)} placeholder="แก้วแตก" />
+              </div>
+              <div className="field">
+                <label htmlFor="ot-add-reason">สาเหตุเพิ่ม</label>
+                <input id="ot-add-reason" value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="ไม่ปิดฝา" />
+              </div>
             </div>
-            <div className="field">
-              <label htmlFor="ot-add-reason">สาเหตุเพิ่ม</label>
-              <input id="ot-add-reason" value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="ไม่ปิดฝา" />
-            </div>
-            <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} label="แนบรูป" />
+            <PhotoAttachField
+              value={imageUrl}
+              onChange={setImageUrl}
+              onError={onError}
+              label="รูป (ถ้ามี)"
+            />
           </div>
         ) : null}
 
