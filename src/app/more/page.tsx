@@ -10,6 +10,7 @@ import {
   ChartColumn,
   CircleDollarSign,
   Download,
+  Settings,
   Users,
 } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
@@ -93,6 +94,7 @@ function MoreView() {
   ];
 
   const visible = tools.filter((t) => can(staff, t.perm));
+  const isOwner = staff?.role === "owner";
 
   return (
     <div>
@@ -101,6 +103,15 @@ function MoreView() {
         เครื่องมือตามสิทธิ์ที่ได้รับ
       </p>
       <div className="more-grid">
+        {isOwner ? (
+          <Link href="/settings/" className="more-card">
+            <Settings size={22} />
+            <div>
+              <strong>ตั้งค่าโมดูล</strong>
+              <p>ผลิต · OT — สินค้า เรท และค่าเริ่มต้น</p>
+            </div>
+          </Link>
+        ) : null}
         {visible.map(({ href, title, desc, icon: Icon }) => (
           <Link key={href} href={href} className="more-card">
             <Icon size={22} />

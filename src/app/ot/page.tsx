@@ -24,7 +24,6 @@ import {
   getOtSettings,
   labelOtShift,
   labelOtStatus,
-  saveOtSettings,
   subscribeOtEntries,
   updateOtEntry,
   type OtEntry,
@@ -186,7 +185,6 @@ function OtView() {
   const { user, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
-  const [setupOpen, setSetupOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [entries, setEntries] = useState<OtEntry[]>([]);
   const [workers, setWorkers] = useState<Employee[]>([]);
@@ -221,30 +219,14 @@ function OtView() {
     return unsub;
   }, [staff]);
 
-  useEffect(() => {
-    if (setupOpen && !isOwner) setSetupOpen(false);
-  }, [setupOpen, isOwner]);
-
   if (!can(staff, "otBonus")) return null;
 
   function openAdd() {
     setEditing(null);
-    setSetupOpen(false);
     setFormOpen(true);
   }
 
-  function openSetup() {
-    if (setupOpen) {
-      setSetupOpen(false);
-      return;
-    }
-    setFormOpen(false);
-    setEditing(null);
-    setSetupOpen(true);
-  }
-
   function openEdit(row: OtEntry) {
-    setSetupOpen(false);
     setEditing(row);
     setFormOpen(true);
   }
@@ -266,20 +248,12 @@ function OtView() {
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading && !setupOpen ? (
+      {!loading ? (
         <OtTable
           entries={entries}
           staff={staff}
           isOwner={isOwner}
           onEdit={openEdit}
-          onError={setError}
-        />
-      ) : null}
-
-      {!loading && setupOpen && isOwner ? (
-        <OtSetup
-          bonusRate={bonusRate}
-          onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
           onError={setError}
         />
       ) : null}
@@ -302,12 +276,9 @@ function OtView() {
       ) : null}
 
       <ModuleTabDock
-        setupActive={setupOpen}
-        isOwner={isOwner}
         ariaLabel="มุมมอง OT"
         formOpen={formOpen}
         onAdd={openAdd}
-        onSetup={openSetup}
       />
     </div>
   );
@@ -975,68 +946,6 @@ function OtCardList({
           </article>
         );
       })}
-    </div>
-  );
-}
-
-function OtSetup({
-  bonusRate,
-  onReload,
-  onError,
-}: {
-  bonusRate: number;
-  onReload: () => void;
-  onError: (msg: string) => void;
-}) {
-  const [rate, setRate] = useState(String(bonusRate));
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    setRate(String(bonusRate));
-  }, [bonusRate]);
-
-  async function onSave(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      await saveOtSettings(Number(rate));
-      onReload();
-    } catch (err) {
-      onError((err as Error).message || "บันทึกเรทไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="prod-setup">
-      <p className="muted" style={{ textAlign: "left", marginBottom: "0.75rem" }}>
-        โบนัส/คน = (เลขเครื่อง + อื่นๆ + โคน + ขนมปัง − เคลม − ลด + เพิ่ม) × เรท ÷ จำนวนคน
-      </p>
-      <p className="muted" style={{ textAlign: "left", marginBottom: "0.75rem" }}>
-        รายชื่อพนักงานอยู่ที่{" "}
-        <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
-        {" "}· วันที่เก็บแบบ ว/ด/ป · ไม่ต้องเคลียร์ตารางสิ้นเดือน (ใช้สถานะจ่ายแทน)
-      </p>
-
-      <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
-        <h2 className="panel-title" style={{ fontSize: "1rem" }}>เรทโบนัส / หน่วย</h2>
-        <div className="field">
-          <label htmlFor="ot-rate">บาทต่อหน่วย</label>
-          <input
-            id="ot-rate"
-            type="number"
-            min="0"
-            step="0.01"
-            value={rate}
-            onChange={(e) => setRate(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit" className="primary-btn" disabled={busy}>
-          {busy ? "กำลังบันทึก..." : "บันทึกเรท"}
-        </button>
-      </form>
     </div>
   );
 }

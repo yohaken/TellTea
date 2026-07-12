@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 
 const MORE_PREFIXES = [
   "/more",
+  "/settings",
   "/bonus",
   "/pnl",
   "/owner-books",

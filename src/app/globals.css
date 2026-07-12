@@ -3378,6 +3378,31 @@ textarea {
   font-size: 0.88rem;
 }
 
+.owner-settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.owner-settings-section {
+  padding: 1rem;
+  border-radius: 1rem;
+  background: var(--tea-card);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 10px 30px rgba(28, 42, 31, 0.06);
+}
+
+.owner-settings-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.owner-settings-hint {
+  margin: 0 0 0.85rem;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
 @media (min-width: 640px) {
   .stock-row {
     grid-template-columns: 1fr auto;
