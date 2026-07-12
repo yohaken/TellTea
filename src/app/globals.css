@@ -1491,6 +1491,27 @@ body.modal-open .main-panel {
   box-shadow: 0 4px 16px rgba(27, 67, 50, 0.45);
 }
 
+.module-tab.is-glass-out {
+  color: #b84a12;
+  background: rgba(244, 162, 97, 0.28);
+  border: 1px solid rgba(244, 162, 97, 0.65);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 20px rgba(244, 162, 97, 0.22);
+}
+
+.module-tab.is-glass-out.is-active {
+  color: #a8430e;
+  background: rgba(244, 162, 97, 0.36);
+  border-color: rgba(244, 162, 97, 0.75);
+  box-shadow: 0 6px 22px rgba(244, 162, 97, 0.28);
+}
+
+.module-tab-dock.is-single .module-tab.is-glass-out {
+  min-height: 2.45rem;
+  font-size: 0.84rem;
+  letter-spacing: 0.01em;
+}
+
 .module-tab.is-table {
   color: #1d4e89;
 }
@@ -1509,51 +1530,6 @@ body.modal-open .main-panel {
   background: rgba(156, 102, 68, 0.16);
   color: #7f5539;
   box-shadow: inset 0 0 0 1px rgba(156, 102, 68, 0.3);
-}
-
-.ledger-page {
-  --ledger-dock-h: 2.45rem;
-  padding-bottom: calc(var(--ledger-dock-h) + 0.65rem);
-}
-
-.ledger-action-dock {
-  position: fixed;
-  left: 50%;
-  bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.45rem);
-  transform: translateX(-50%);
-  width: min(calc(100% - 1.4rem), calc(var(--shell-max) - 1.4rem));
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.35rem;
-  z-index: 11;
-}
-
-.ledger-action-dock.is-single {
-  grid-template-columns: 1fr;
-}
-
-.ledger-dock-btn {
-  border: 1px solid rgba(28, 42, 31, 0.12);
-  border-radius: 0.65rem;
-  min-height: 2.35rem;
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 4px 14px rgba(28, 42, 31, 0.06);
-}
-
-.ledger-dock-btn.is-out {
-  color: #c45a1a;
-  border-color: rgba(244, 162, 97, 0.55);
-  background: rgba(244, 162, 97, 0.14);
-}
-
-.ledger-dock-btn.is-in {
-  color: #1f8f4e;
-  border-color: rgba(183, 228, 192, 0.75);
-  background: rgba(183, 228, 192, 0.22);
 }
 
 .photo-attach-field {

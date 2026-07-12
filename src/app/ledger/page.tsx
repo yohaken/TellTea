@@ -23,9 +23,8 @@ import {
   subscribeLedgerPage,
   updateLedgerEntry,
 } from "@/lib/ledger";
-import { LedgerActionDock } from "@/components/LedgerActionDock";
+import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { TypePicker } from "@/components/TypePicker";
-import { can } from "@/lib/permissions";
 import { frequentTypes, guessTypeFromDescription, labelLedgerType } from "@/lib/ledger-labels";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
 import {
@@ -52,7 +51,7 @@ export default function LedgerPage() {
 }
 
 function LedgerView() {
-  const { actorId, staff } = useAuth();
+  const { actorId } = useAuth();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +61,7 @@ function LedgerView() {
   const [hasMore, setHasMore] = useState(false);
   const [liveLimit, setLiveLimit] = useState(LEDGER_PAGE_SIZE);
   const [editing, setEditing] = useState<LedgerEntry | null>(null);
-  const [adding, setAdding] = useState<"out" | "in" | null>(null);
+  const [adding, setAdding] = useState(false);
   const [photoRowId, setPhotoRowId] = useState<string | null>(null);
   const photoEntryRef = useRef<LedgerEntry | null>(null);
   const photoCameraRef = useRef<HTMLInputElement>(null);
@@ -70,7 +69,6 @@ function LedgerView() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const balanceRef = useRef<number | null>(null);
   const hasRowsRef = useRef(false);
-  const canTransferIn = can(staff, "transferIn");
 
   useBodyScrollLock(!!adding || !!editing || !!photoRowId);
 
@@ -199,7 +197,7 @@ function LedgerView() {
   }, [loadMore, loading, hasMore, entries.length]);
 
   return (
-    <div className="ledger-page">
+    <div className="ledger-page module-page">
       <div className="balance-bar">
         <span>
           คงเหลือ
@@ -212,7 +210,7 @@ function LedgerView() {
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading && entries.length === 0 ? (
-        <p className="empty">ยังไม่มีรายการ — เริ่มจากโอนเข้าหรือบันทึกเงินออก</p>
+        <p className="empty">ยังไม่มีรายการ — เริ่มจากบันทึกเงินออก</p>
       ) : !loading ? (
         <>
           <div className="sheet-wrap">
@@ -294,20 +292,11 @@ function LedgerView() {
         />
       ) : null}
 
-      {adding === "out" && actorId ? (
+      {adding && actorId ? (
         <AddOutModal
           createdBy={actorId}
-          onClose={() => setAdding(null)}
-          onSaved={() => setAdding(null)}
-          onError={setError}
-        />
-      ) : null}
-
-      {adding === "in" && actorId && canTransferIn ? (
-        <AddInModal
-          createdBy={actorId}
-          onClose={() => setAdding(null)}
-          onSaved={() => setAdding(null)}
+          onClose={() => setAdding(false)}
+          onSaved={() => setAdding(false)}
           onError={setError}
         />
       ) : null}
@@ -365,10 +354,12 @@ function LedgerView() {
         </div>
       ) : null}
 
-      <LedgerActionDock
-        canTransferIn={canTransferIn}
-        onAddOut={() => setAdding("out")}
-        onAddIn={() => setAdding("in")}
+      <ModuleTabDock
+        ariaLabel="บันทึกรายการ"
+        formOpen={adding}
+        onAdd={() => setAdding(true)}
+        addLabel="บันทึกเงินออก"
+        variant="glass-out"
       />
     </div>
   );
@@ -559,93 +550,6 @@ function AddOutModal({
           />
           <div className="entry-actions">
             <button type="submit" className="primary-btn action-out" disabled={busy}>
-              {busy ? "กำลังบันทึก..." : "บันทึก"}
-            </button>
-            <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
-              ออก
-            </button>
-            <span aria-hidden style={{ width: "2.6rem" }} />
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function AddInModal({
-  createdBy,
-  onClose,
-  onSaved,
-  onError,
-}: {
-  createdBy: string;
-  onClose: () => void;
-  onSaved: () => void;
-  onError: (msg: string) => void;
-}) {
-  const [date, setDate] = useState(todayInputValue());
-  const [description, setDescription] = useState("โอนเข้า");
-  const [amount, setAmount] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function onSave(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      await addLedgerEntry({
-        date: parseDateInput(date),
-        description,
-        amountIn: Number(amount),
-        amountOut: 0,
-        type: "โอนเข้า",
-        createdBy,
-      });
-      onSaved();
-    } catch (err) {
-      onError((err as Error).message || "บันทึกไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="modal-backdrop edit-modal is-module-form" role="presentation">
-      <div className="modal-card" role="dialog" aria-modal="true" aria-label="โอนเข้า">
-        <div className="entry-toolbar module-form-head">
-          <h2 className="panel-title">โอนเข้า</h2>
-          <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
-        <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
-          <div className="field">
-            <label htmlFor="add-in-date">วันที่</label>
-            <input id="add-in-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-          </div>
-          <div className="field">
-            <label htmlFor="add-in-desc">รายการ</label>
-            <input
-              id="add-in-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              required
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="add-in-amount">จำนวนเงินเข้า</label>
-            <input
-              id="add-in-amount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              inputMode="decimal"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
-          </div>
-          <div className="entry-actions">
-            <button type="submit" className="primary-btn action-in" disabled={busy}>
               {busy ? "กำลังบันทึก..." : "บันทึก"}
             </button>
             <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
