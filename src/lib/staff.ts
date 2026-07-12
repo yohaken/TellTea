@@ -17,6 +17,11 @@ import {
   normalizePermissions,
   type StaffPermissions,
 } from "./permissions";
+import {
+  clearEmployeeLinkByEmail,
+  linkEmployeeProfile,
+  listActiveEmployees,
+} from "./employees";
 
 function staffRef(email: string) {
   return doc(getDb(), "staff", normalizeEmail(email));
@@ -65,6 +70,7 @@ export async function listStaff(): Promise<StaffMember[]> {
   return snap.docs.map((d) => mapStaff(d.data() as StaffMember));
 }
 
+/** Create or update account — preserves profile fields (employeeId, profileComplete, etc.). */
 export async function upsertStaff(
   email: string,
   role: StaffRole,
@@ -73,20 +79,71 @@ export async function upsertStaff(
 ): Promise<void> {
   const normalized = normalizeEmail(email);
   const existing = await getStaffMember(normalized);
-  const member: StaffMember = {
+  const patch: Record<string, unknown> = {
     email: normalized,
     role,
-    displayName: displayName || existing?.displayName,
-    createdAt: existing?.createdAt ?? Date.now(),
-    permissions: normalizePermissions(
-      permissions ?? existing?.permissions,
-      role,
-    ),
+    permissions: normalizePermissions(permissions ?? existing?.permissions, role),
   };
-  await setDoc(staffRef(normalized), member);
+  if (displayName !== undefined) {
+    patch.displayName = displayName || deleteField();
+  }
+  if (!existing) {
+    patch.createdAt = Date.now();
+  }
+  await setDoc(staffRef(normalized), patch, { merge: true });
+}
+
+/** Update permissions only — does not touch profile link fields. */
+export async function updateStaffPermissions(
+  email: string,
+  permissions: Partial<StaffPermissions>,
+): Promise<void> {
+  const normalized = normalizeEmail(email);
+  const existing = await getStaffMember(normalized);
+  if (!existing) throw new Error("ไม่พบบัญชีพนักงาน");
+  await updateDoc(staffRef(normalized), {
+    permissions: normalizePermissions(permissions, existing.role),
+  });
+}
+
+/** Owner adds/updates account and optionally links to roster name at creation. */
+export async function upsertStaffWithLink(
+  email: string,
+  role: StaffRole,
+  permissions?: Partial<StaffPermissions>,
+  employeeId?: string,
+): Promise<void> {
+  const normalized = normalizeEmail(email);
+  const existing = await getStaffMember(normalized);
+
+  if (role === "staff" && employeeId) {
+    const employees = await listActiveEmployees();
+    const emp = employees.find((e) => e.id === employeeId);
+    if (!emp) throw new Error("ไม่พบชื่อในรายชื่อร้าน");
+    if (emp.linkedEmail && normalizeEmail(emp.linkedEmail) !== normalized) {
+      throw new Error("ชื่อนี้มีคนเชื่อมบัญชีแล้ว");
+    }
+    await upsertStaff(email, role, permissions, emp.name);
+    await linkEmployeeProfile(employeeId, normalized, emp.name);
+    await updateStaffProfile(normalized, {
+      displayName: emp.name,
+      employeeId,
+      profileComplete: true,
+      profileSnoozeUntil: null,
+    });
+    return;
+  }
+
+  if (!existing) {
+    await upsertStaff(email, role, permissions);
+    return;
+  }
+
+  await upsertStaff(email, role, permissions);
 }
 
 export async function removeStaff(email: string): Promise<void> {
+  await clearEmployeeLinkByEmail(email);
   await deleteDoc(staffRef(email));
 }
 

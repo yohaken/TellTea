@@ -12,15 +12,21 @@ import {
   updateEmployee,
   type Employee,
 } from "@/lib/employees";
-import { listStaff, removeStaff, updateStaffProfile, upsertStaff } from "@/lib/staff";
-import type { StaffMember, StaffRole } from "@/lib/types";
+import {
+  listStaff,
+  removeStaff,
+  updateStaffPermissions,
+  updateStaffProfile,
+  upsertStaffWithLink,
+} from "@/lib/staff";
+import type { StaffMember } from "@/lib/types";
 import {
   DEFAULT_STAFF_PERMISSIONS,
   can,
   normalizePermissions,
   type StaffPermissions,
 } from "@/lib/permissions";
-import { normalizeEmail, formatPlainNumber } from "@/lib/utils";
+import { normalizeEmail } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
 
 export default function StaffPage() {
@@ -31,6 +37,27 @@ export default function StaffPage() {
   );
 }
 
+function employeesForLink(employees: Employee[], email: string): Employee[] {
+  const norm = normalizeEmail(email);
+  return employees.filter(
+    (e) => e.active && (!e.linkedEmail || normalizeEmail(e.linkedEmail) === norm),
+  );
+}
+
+function rosterLinkLabel(emp: Employee): string {
+  if (!emp.linkedEmail) return "ยังไม่มีบัญชี";
+  return `เชื่อม ${emp.linkedEmail} ✓`;
+}
+
+function memberLinkLabel(member: StaffMember, employees: Employee[]): string {
+  const emp = member.employeeId
+    ? employees.find((e) => e.id === member.employeeId)
+    : employees.find((e) => e.linkedEmail && normalizeEmail(e.linkedEmail) === normalizeEmail(member.email));
+  if (emp) return `→ ${emp.name} ✓`;
+  if (member.profileComplete && member.displayName) return `→ ${member.displayName} ✓`;
+  return "ยังไม่เชื่อมชื่อ";
+}
+
 function StaffView() {
   const { staff, refreshStaff } = useAuth();
   const router = useRouter();
@@ -38,11 +65,13 @@ function StaffView() {
   const [members, setMembers] = useState<StaffMember[]>([]);
   const [empName, setEmpName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<StaffRole>("staff");
+  const [linkEmployeeId, setLinkEmployeeId] = useState("");
   const [perms, setPerms] = useState<StaffPermissions>({ ...DEFAULT_STAFF_PERMISSIONS });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editingEmail, setEditingEmail] = useState<string | null>(null);
+
+  const linkOptions = employeesForLink(employees, email);
 
   async function reload() {
     const [emps, staffList] = await Promise.all([listEmployees(), listStaff()]);
@@ -57,6 +86,13 @@ function StaffView() {
     }
     void reload().catch((err) => setError(err.message || "โหลดพนักงานไม่สำเร็จ"));
   }, [staff, router]);
+
+  useEffect(() => {
+    if (!linkEmployeeId) return;
+    if (!linkOptions.some((e) => e.id === linkEmployeeId)) {
+      setLinkEmployeeId("");
+    }
+  }, [linkEmployeeId, linkOptions]);
 
   async function onAddEmployee(e: FormEvent) {
     e.preventDefault();
@@ -78,9 +114,14 @@ function StaffView() {
     setBusy(true);
     setError(null);
     try {
-      await upsertStaff(email, role, role === "owner" ? undefined : perms);
+      await upsertStaffWithLink(
+        email,
+        "staff",
+        perms,
+        linkEmployeeId || undefined,
+      );
       setEmail("");
-      setRole("staff");
+      setLinkEmployeeId("");
       setPerms({ ...DEFAULT_STAFF_PERMISSIONS });
       await reload();
       await refreshStaff();
@@ -119,7 +160,7 @@ function StaffView() {
     setBusy(true);
     setError(null);
     try {
-      await upsertStaff(member.email, member.role, next, member.displayName);
+      await updateStaffPermissions(member.email, next);
       await reload();
       await refreshStaff();
       setEditingEmail(null);
@@ -136,14 +177,16 @@ function StaffView() {
     <div>
       <h1 className="panel-title">ศูนย์รวมพนักงาน</h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        เพิ่มชื่อพนักงานที่นี่ที่เดียว — รายชื่อจะไปโชว์ในหมวดผลิต, OT และหมวดอื่นที่เชื่อมต่อ
+        ขั้นที่ 1 เพิ่มชื่อในร้าน · ขั้นที่ 2 สร้างบัญชีและเชื่อมชื่อ (หรือให้พนักงานเชื่อมเองที่โปรไฟล์)
       </p>
       {error ? <p className="error-text">{error}</p> : null}
 
       <section className="staff-hub-section">
-        <h2 className="panel-title" style={{ fontSize: "1.05rem" }}>รายชื่อพนักงานร้าน</h2>
+        <h2 className="panel-title" style={{ fontSize: "1.05rem" }}>
+          ขั้นที่ 1 — รายชื่อพนักงานร้าน
+        </h2>
         <p className="muted" style={{ textAlign: "left", marginBottom: "0.65rem", fontSize: "0.85rem" }}>
-          ใช้เลือกตอนกรอกผลิต / OT · พนักงานเชื่อมบัญชีเองที่หน้าโปรไฟล์
+          ใช้เลือกตอนกรอกผลิต / OT / เชื่อมบัญชี
         </p>
         <form className="form-card entry-form" onSubmit={(e) => void onAddEmployee(e)}>
           <div className="field">
@@ -179,9 +222,11 @@ function StaffView() {
       </section>
 
       <section className="staff-hub-section" style={{ marginTop: "1.5rem" }}>
-        <h2 className="panel-title" style={{ fontSize: "1.05rem" }}>บัญชีเข้าใช้ระบบ</h2>
+        <h2 className="panel-title" style={{ fontSize: "1.05rem" }}>
+          ขั้นที่ 2 — บัญชีเข้าใช้ระบบ
+        </h2>
         <p className="muted" style={{ textAlign: "left", marginBottom: "0.65rem", fontSize: "0.85rem" }}>
-          อีเมล Google ที่ล็อกอินได้ + สิทธิ์หน้าจอ
+          อีเมล Google + สิทธิ์หน้าจอ · เลือกชื่อในร้านเพื่อเชื่อมทันที (ไม่บังคับ)
         </p>
         <form className="form-card entry-form" onSubmit={(e) => void onSubmitAccount(e)}>
           <div className="field">
@@ -196,30 +241,24 @@ function StaffView() {
             />
           </div>
           <div className="field">
-            <label htmlFor="role">บทบาท</label>
+            <label htmlFor="link-employee">เชื่อมชื่อในร้าน (แนะนำ)</label>
             <select
-              id="role"
-              value={role}
-              onChange={(e) => {
-                const next = e.target.value as StaffRole;
-                setRole(next);
-                setPerms(normalizePermissions(null, next));
-              }}
+              id="link-employee"
+              value={linkEmployeeId}
+              onChange={(e) => setLinkEmployeeId(e.target.value)}
             >
-              <option value="staff">พนักงาน</option>
-              <option value="owner">เจ้าของ</option>
+              <option value="">— ยังไม่เชื่อม / ให้พนักงานตั้งเอง —</option>
+              {linkOptions.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.name}
+                </option>
+              ))}
             </select>
           </div>
-          {role === "staff" ? (
-            <div className="field field-permissions">
-              <span className="field-label">สิทธิ์การใช้งาน</span>
-              <PermissionPicker value={perms} onChange={setPerms} disabled={busy} />
-            </div>
-          ) : (
-            <p className="muted" style={{ textAlign: "left", margin: 0 }}>
-              เจ้าของใช้ได้ทุกหน้าโดยอัตโนมัติ
-            </p>
-          )}
+          <div className="field field-permissions">
+            <span className="field-label">สิทธิ์การใช้งาน</span>
+            <PermissionPicker value={perms} onChange={setPerms} disabled={busy} />
+          </div>
           <button type="submit" className="primary-btn" disabled={busy}>
             {busy ? "กำลังบันทึก..." : "เพิ่ม / อัปเดตบัญชี"}
           </button>
@@ -237,8 +276,11 @@ function StaffView() {
                     <strong>{member.email}</strong>
                     <div className="muted">
                       {member.role === "owner" ? "เจ้าของ" : "พนักงาน"}
-                      {member.displayName ? ` · ${member.displayName}` : " · ยังไม่ตั้งโปรไฟล์"}
-                      {member.profileComplete ? " ✓" : ""}
+                      {member.role === "staff"
+                        ? ` · ${memberLinkLabel(member, employees)}`
+                        : member.displayName
+                          ? ` · ${member.displayName}`
+                          : ""}
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: "0.35rem" }}>
@@ -255,11 +297,16 @@ function StaffView() {
                       <button
                         type="button"
                         className="danger-btn"
-                        onClick={() =>
+                        disabled={busy}
+                        onClick={() => {
+                          if (!window.confirm(`ลบบัญชี ${member.email}?`)) return;
+                          setBusy(true);
                           void removeStaff(member.email)
                             .then(reload)
+                            .then(refreshStaff)
                             .catch((err) => setError(err.message || "ลบไม่สำเร็จ"))
-                        }
+                            .finally(() => setBusy(false));
+                        }}
                       >
                         ลบ
                       </button>
@@ -297,67 +344,12 @@ function EmployeeRosterRow({
   onReload: () => Promise<void>;
   onDelete: () => void;
 }) {
-  const [rate, setRate] = useState(emp.unitRate != null ? String(emp.unitRate) : "");
-
-  useEffect(() => {
-    setRate(emp.unitRate != null ? String(emp.unitRate) : "");
-  }, [emp.unitRate]);
-
-  async function saveRate() {
-    const n = rate.trim() === "" ? null : Number(rate);
-    if (n != null && (!Number.isFinite(n) || n < 0)) {
-      onError("เรทไม่ถูกต้อง");
-      return;
-    }
-    try {
-      await updateEmployee(emp.id, { unitRate: n ?? undefined });
-      await onReload();
-    } catch (err) {
-      onError((err as Error).message || "บันทึกเรทไม่สำเร็จ");
-    }
-  }
-
   return (
     <div className="employee-roster-row">
       <div className="employee-roster-main">
         <strong>{emp.name}</strong>
         <div className="muted employee-roster-meta">
-          {emp.active ? "ใช้งาน" : "ปิดใช้"}
-          {emp.linkedEmail ? ` · เชื่อม ${emp.linkedEmail}` : " · ยังไม่มีบัญชีเชื่อม"}
-          {emp.unitRate != null ? ` · เรท ${formatPlainNumber(emp.unitRate)}` : ""}
-        </div>
-        <div className="employee-roster-rate">
-          <label htmlFor={`rate-${emp.id}`}>เรท/ค่า (ลบได้)</label>
-          <div className="employee-roster-rate-row">
-            <input
-              id={`rate-${emp.id}`}
-              type="number"
-              min="0"
-              step="0.01"
-              inputMode="decimal"
-              value={rate}
-              placeholder="—"
-              onChange={(e) => setRate(e.target.value)}
-            />
-            <button type="button" className="ghost-btn" disabled={busy} onClick={() => void saveRate()}>
-              บันทึก
-            </button>
-            {rate ? (
-              <button
-                type="button"
-                className="ghost-btn"
-                disabled={busy}
-                onClick={() => {
-                  setRate("");
-                  void updateEmployee(emp.id, { unitRate: undefined })
-                    .then(onReload)
-                    .catch((err) => onError(err.message || "ลบเรทไม่สำเร็จ"));
-                }}
-              >
-                ลบเรท
-              </button>
-            ) : null}
-          </div>
+          {emp.active ? "ใช้งาน" : "ปิดใช้"} · {rosterLinkLabel(emp)}
         </div>
       </div>
       <div className="employee-roster-actions">

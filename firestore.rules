@@ -37,6 +37,33 @@ service cloud.firestore {
             && (p == 'ledger' || p == 'stock' || p == 'production' || p == 'otBonus' || p == 'checklist' || p == 'bonus'));
     }
 
+    function staffSelfProfileUpdate() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return after.email == before.email
+        && after.role == before.role
+        && after.createdAt == before.createdAt
+        && after.diff(before).affectedKeys()
+            .hasOnly(['displayName', 'employeeId', 'profileComplete', 'profileSnoozeUntil']);
+    }
+
+    function employeeSelfLinkUpdate() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return after.diff(before).affectedKeys().hasOnly(['linkedEmail', 'updatedAt'])
+        && (
+          after.linkedEmail == email()
+          || (!after.keys().hasAny(['linkedEmail'])
+              && before.keys().hasAny(['linkedEmail'])
+              && before.linkedEmail == email())
+        )
+        && (
+          !after.keys().hasAny(['linkedEmail'])
+          || !before.keys().hasAny(['linkedEmail'])
+          || before.linkedEmail == email()
+        );
+    }
+
     match /staff/{staffEmail} {
       allow get: if signedIn() && staffEmail == email();
       allow list: if isOwner() || hasPerm('staffManage');
@@ -46,7 +73,9 @@ service cloud.firestore {
             && staffEmail == email()
             && request.resource.data.email == email()
             && request.resource.data.role == 'owner');
-      allow update, delete: if isOwner() || hasPerm('staffManage');
+      allow update: if isOwner() || hasPerm('staffManage')
+        || (signedIn() && staffEmail == email() && staffSelfProfileUpdate());
+      allow delete: if isOwner() || hasPerm('staffManage');
     }
 
     match /ledger/{entryId} {
@@ -115,7 +144,8 @@ service cloud.firestore {
     // ศูนย์รวมรายชื่อพนักงานร้าน — เพิ่มที่เดียว ใช้ร่วมหลายหมวด
     match /employees/{id} {
       allow read: if isStaff();
-      allow write: if isOwner() || hasPerm('staffManage');
+      allow create, delete: if isOwner() || hasPerm('staffManage');
+      allow update: if isOwner() || hasPerm('staffManage') || employeeSelfLinkUpdate();
     }
 
     // ผลิต / โบนัส — พนักงานกรอกแถว · เจ้าของตั้งสินค้า

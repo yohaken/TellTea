@@ -374,6 +374,16 @@ body.modal-open .main-panel {
   white-space: nowrap;
 }
 
+.topbar-email-link {
+  text-decoration: none;
+  color: inherit;
+  font-weight: 600;
+}
+
+.topbar-email-link:hover {
+  text-decoration: underline;
+}
+
 .main-panel {
   padding: 0.35rem 1rem calc(var(--nav-h) + var(--safe-bottom) + 1rem);
   overflow-y: auto;

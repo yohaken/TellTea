@@ -75,9 +75,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <p className="topbar-sub">{roleLabel}</p>
           </div>
           <div className="topbar-user">
-            <span className="topbar-email" title={user?.email || ""}>
-              {userLabel}
-            </span>
+            {staff?.role === "staff" ? (
+              <Link
+                href="/profile/"
+                className="topbar-email topbar-email-link"
+                title={user?.email || "โปรไฟล์พนักงาน"}
+              >
+                {userLabel}
+              </Link>
+            ) : (
+              <span className="topbar-email" title={user?.email || ""}>
+                {userLabel}
+              </span>
+            )}
             <button
               type="button"
               className="ghost-btn icon-btn"
