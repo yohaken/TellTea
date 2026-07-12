@@ -6,6 +6,7 @@ import {
   BookOpen,
   Boxes,
   ChefHat,
+  Coffee,
   LogOut,
   MoreHorizontal,
 } from "lucide-react";
@@ -39,6 +40,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       : null,
     can(staff, "production")
       ? { href: "/production/", label: "ผลิต", icon: ChefHat }
+      : null,
+    can(staff, "otBonus")
+      ? { href: "/ot/", label: "OT", icon: Coffee }
       : null,
     can(staff, "stock")
       ? { href: "/stock/", label: "สต็อก", icon: Boxes }

@@ -111,14 +111,14 @@ function StaffView() {
     <div>
       <h1 className="panel-title">ศูนย์รวมพนักงาน</h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        เพิ่มชื่อพนักงานที่นี่ที่เดียว — รายชื่อจะไปโชว์ในหมวดผลิตและหมวดอื่นที่เชื่อมต่อ
+        เพิ่มชื่อพนักงานที่นี่ที่เดียว — รายชื่อจะไปโชว์ในหมวดผลิต, OT และหมวดอื่นที่เชื่อมต่อ
       </p>
       {error ? <p className="error-text">{error}</p> : null}
 
       <section className="staff-hub-section">
         <h2 className="panel-title" style={{ fontSize: "1.05rem" }}>รายชื่อพนักงานร้าน</h2>
         <p className="muted" style={{ textAlign: "left", marginBottom: "0.65rem", fontSize: "0.85rem" }}>
-          ใช้เลือกตอนกรอกผลิต / โบนัส · ไม่ต้องมีอีเมล
+          ใช้เลือกตอนกรอกผลิต / OT · ไม่ต้องมีอีเมล
         </p>
         <form className="form-card entry-form" onSubmit={(e) => void onAddEmployee(e)}>
           <div className="field">

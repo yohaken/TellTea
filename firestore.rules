@@ -34,7 +34,7 @@ service cloud.firestore {
             && get(staffPath()).data.permissions[p] == true)
         || (isStaff()
             && !get(staffPath()).data.keys().hasAny(['permissions'])
-            && (p == 'ledger' || p == 'stock' || p == 'production'));
+            && (p == 'ledger' || p == 'stock' || p == 'production' || p == 'otBonus'));
     }
 
     match /staff/{staffEmail} {
@@ -108,12 +108,23 @@ service cloud.firestore {
       allow update, delete: if hasPerm('production');
     }
 
+    // โบนัส OT / ชงเครื่องดื่ม
+    match /otEntries/{id} {
+      allow read: if hasPerm('otBonus');
+      allow create: if hasPerm('otBonus')
+        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.shift is string
+        && request.resource.data.machineCount is number;
+      allow update, delete: if hasPerm('otBonus');
+    }
+
     match /meta/{docId} {
       allow read: if isStaff();
       allow write: if isOwner()
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
         || (hasPerm('alerts') && docId == 'lowBalanceAlert')
-        || (hasPerm('ownerBooks') && docId == 'ownerBooks');
+        || (hasPerm('ownerBooks') && docId == 'ownerBooks')
+        || (isOwner() && docId == 'otSettings');
     }
 
     match /pushSubscriptions/{id} {
