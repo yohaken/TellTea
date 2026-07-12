@@ -1592,9 +1592,43 @@ body.modal-open .main-panel {
   width: 100%;
   max-height: 8rem;
   object-fit: cover;
-  border-radius: 0.65rem;
-  margin-top: 0.45rem;
-  border: 1px solid rgba(28, 42, 31, 0.1);
+  border-radius: 0.55rem;
+  margin-top: 0.35rem;
+}
+
+.photo-attach-multi-grid {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.photo-attach-multi-grid li {
+  position: relative;
+}
+
+.photo-attach-multi-grid .photo-attach-preview {
+  margin-top: 0;
+  max-height: 4.5rem;
+}
+
+.photo-attach-multi-remove {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.15rem;
+  padding: 0.15rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+}
+
+.photo-attach-multi .receipt-actions .primary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .ot-toolbar-slim {
@@ -3453,6 +3487,31 @@ body.modal-open .main-panel {
 
 .photo-status.has-photo {
   color: var(--tea-leaf);
+  position: relative;
+}
+
+.photo-status-count {
+  position: absolute;
+  top: -0.2rem;
+  right: -0.25rem;
+  min-width: 0.85rem;
+  height: 0.85rem;
+  padding: 0 0.15rem;
+  border-radius: 999px;
+  background: var(--tea-leaf);
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 0.85rem;
+  text-align: center;
+}
+
+.photo-preview-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.45rem;
 }
 
 .photo-status-plus {
@@ -3979,9 +4038,8 @@ body.modal-open .main-panel {
   font-size: 0.78rem;
 }
 
-.modal-backdrop.edit-modal.is-ot-form .photo-attach-preview {
-  max-height: 3.5rem;
-  margin-top: 0.25rem;
+.modal-backdrop.edit-modal.is-ot-form .photo-attach-multi-grid .photo-attach-preview {
+  max-height: 3.25rem;
 }
 
 .modal-backdrop.edit-modal.is-ot-form .ot-form-preview {

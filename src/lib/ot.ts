@@ -43,7 +43,9 @@ export type OtEntry = {
   addQty: number;
   addReason: string;
   bonusRate: number;
+  /** @deprecated ใช้ imageUrls — เก็บรูปแรกเพื่อ backward compat */
   imageUrl?: string;
+  imageUrls?: string[];
   status: OtStatus;
   createdBy: string;
   createdAt: number;
@@ -66,6 +68,7 @@ export type OtEntryInput = {
   addReason?: string;
   bonusRate: number;
   imageUrl?: string;
+  imageUrls?: string[];
   createdBy: string;
 };
 
@@ -141,7 +144,21 @@ export function isOtEntryPlanned(
   return !hasOtQuantities(entry);
 }
 
+export function getOtImageUrls(entry?: Pick<OtEntry, "imageUrl" | "imageUrls"> | null): string[] {
+  if (!entry) return [];
+  if (Array.isArray(entry.imageUrls)) {
+    return entry.imageUrls.map(String).filter((u) => u.trim());
+  }
+  if (entry.imageUrl?.trim()) return [entry.imageUrl.trim()];
+  return [];
+}
+
 function mapOtEntryDoc(id: string, data: Record<string, unknown>): OtEntry {
+  const imageUrls = Array.isArray(data.imageUrls)
+    ? (data.imageUrls as string[]).map(String).filter((u) => u.trim())
+    : data.imageUrl
+      ? [String(data.imageUrl)]
+      : [];
   return {
     id,
     date: Number(data.date) || 0,
@@ -158,7 +175,8 @@ function mapOtEntryDoc(id: string, data: Record<string, unknown>): OtEntry {
     addQty: Number(data.addQty) || 0,
     addReason: String(data.addReason || ""),
     bonusRate: Number(data.bonusRate) || DEFAULT_OT_BONUS_RATE,
-    imageUrl: data.imageUrl ? String(data.imageUrl) : undefined,
+    imageUrl: imageUrls[0],
+    imageUrls,
     status: (data.status as OtStatus) || "unpaid",
     createdBy: String(data.createdBy || ""),
     createdAt: Number(data.createdAt) || 0,
@@ -285,6 +303,11 @@ export function subscribeOtEntries(
 export async function addOtEntry(input: OtEntryInput): Promise<string> {
   if (!input.shift) throw new Error("เลือกรอบงาน");
   const now = Date.now();
+  const imageUrls = (input.imageUrls || [])
+    .map((u) => u.trim())
+    .filter(Boolean);
+  const legacyUrl = (input.imageUrl || "").trim();
+  const urls = imageUrls.length ? imageUrls : legacyUrl ? [legacyUrl] : [];
   const ref = await addDoc(entriesCol(), {
     date: input.date,
     shift: input.shift,
@@ -300,7 +323,8 @@ export async function addOtEntry(input: OtEntryInput): Promise<string> {
     addQty: Number(input.addQty) || 0,
     addReason: (input.addReason || "").trim(),
     bonusRate: Number(input.bonusRate) || DEFAULT_OT_BONUS_RATE,
-    imageUrl: (input.imageUrl || "").trim(),
+    imageUrl: urls[0] || "",
+    imageUrls: urls,
     status: "unpaid" as OtStatus,
     createdBy: input.createdBy,
     createdAt: now,
@@ -329,6 +353,7 @@ export async function updateOtEntry(
       | "addReason"
       | "bonusRate"
       | "imageUrl"
+      | "imageUrls"
       | "status"
     >
   >,
@@ -358,7 +383,15 @@ export async function updateOtEntry(
   if (patch.addQty != null) next.addQty = Number(patch.addQty) || 0;
   if (patch.addReason != null) next.addReason = patch.addReason.trim();
   if (patch.bonusRate != null) next.bonusRate = Number(patch.bonusRate) || DEFAULT_OT_BONUS_RATE;
-  if (patch.imageUrl != null) next.imageUrl = patch.imageUrl.trim();
+  if (patch.imageUrls != null) {
+    const urls = patch.imageUrls.map((u) => u.trim()).filter(Boolean);
+    next.imageUrls = urls;
+    next.imageUrl = urls[0] || "";
+  } else if (patch.imageUrl != null) {
+    const url = patch.imageUrl.trim();
+    next.imageUrl = url;
+    next.imageUrls = url ? [url] : [];
+  }
   if (patch.status != null) next.status = patch.status;
   await updateDoc(ref, next);
 }

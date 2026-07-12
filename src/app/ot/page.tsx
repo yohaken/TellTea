@@ -12,7 +12,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { BulkStatusToolbar } from "@/components/BulkStatusToolbar";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
-import { PhotoAttachField } from "@/components/PhotoAttachField";
+import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
@@ -24,6 +24,7 @@ import {
   computeOtBonus,
   deleteOtEntry,
   getOtSettings,
+  getOtImageUrls,
   hasOtQuantities,
   isOtEntryLocked,
   isOtEntryPlanned,
@@ -274,7 +275,7 @@ function OtEntryForm({
   const [deductReason, setDeductReason] = useState(entry?.deductReason || "");
   const [addQty, setAddQty] = useState(entry ? String(entry.addQty || "") : "");
   const [addReason, setAddReason] = useState(entry?.addReason || "");
-  const [imageUrl, setImageUrl] = useState(entry?.imageUrl || "");
+  const [imageUrls, setImageUrls] = useState<string[]>(() => getOtImageUrls(entry));
   const [detailsOpen, setDetailsOpen] = useState(() =>
     entry ? hasOtQuantities(entry) : false,
   );
@@ -343,7 +344,7 @@ function OtEntryForm({
       addQty: Number(addQty) || 0,
       addReason,
       bonusRate: rate,
-      imageUrl,
+      imageUrls,
     };
   }
 
@@ -384,7 +385,7 @@ function OtEntryForm({
             deductReason: "",
             addQty: 0,
             addReason: "",
-            imageUrl: "",
+            imageUrls: [],
           }
         : base;
       await persist(payload);
@@ -544,11 +545,11 @@ function OtEntryForm({
                 <input id="ot-add-reason" value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="ไม่ปิดฝา" />
               </div>
             </div>
-            <PhotoAttachField
-              value={imageUrl}
-              onChange={setImageUrl}
+            <PhotoAttachMultiField
+              values={imageUrls}
+              onChange={setImageUrls}
               onError={onError}
-              label="รูป (ถ้ามี)"
+              label="รูปสินค้า (แนบได้หลายรูป)"
             />
           </div>
         ) : null}
@@ -638,7 +639,7 @@ function OtTable({
   const [tableView, setTableView] = useState<TableView>("sheet");
   const [statusFilter, setStatusFilter] = useState<OtStatus | "all">("all");
   const [mineOnly, setMineOnly] = useState(false);
-  const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
+  const [preview, setPreview] = useState<{ urls: string[]; title: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
 
@@ -783,7 +784,7 @@ function OtTable({
           }
           onEditSlot={onEditSlot}
           onError={onError}
-          onViewPhoto={(url, title) => setPreview({ url, title })}
+          onViewPhoto={(urls, title) => setPreview({ urls, title })}
         />
       ) : !filtered.length ? (
         <p className="empty">{entries.length ? "ไม่มีรายการตามตัวกรอง" : "ยังไม่มีรายการชง — แตะช่องว่างในตารางเพื่อเริ่ม"}</p>
@@ -802,11 +803,11 @@ function OtTable({
           }
           onEdit={onEdit}
           onError={onError}
-          onViewPhoto={(url, title) => setPreview({ url, title })}
+          onViewPhoto={(urls, title) => setPreview({ urls, title })}
         />
       )}
       {preview ? (
-        <ImagePreviewModal url={preview.url} title={preview.title} onClose={() => setPreview(null)} />
+        <ImagePreviewModal urls={preview.urls} title={preview.title} onClose={() => setPreview(null)} />
       ) : null}
     </div>
   );
@@ -833,7 +834,7 @@ function OtSheetTable({
   onToggleAllVisible: () => void;
   onEditSlot: (target: OtSlotTarget) => void;
   onError: (msg: string) => void;
-  onViewPhoto: (url: string, title: string) => void;
+  onViewPhoto: (urls: string[], title: string) => void;
 }) {
   async function setStatus(row: OtEntry, status: OtStatus) {
     try {
@@ -1013,10 +1014,10 @@ function OtSheetTable({
                     <td className="col-act">
                       {row ? (
                         <EntryPhotoIndicator
-                          imageUrl={row.imageUrl}
+                          imageUrls={getOtImageUrls(row)}
                           label={`${formatDateShort(group.date)} ${slot.shiftLabel}`}
-                          onView={(url) =>
-                            onViewPhoto(url, `${formatDateShort(group.date)} ${slot.shiftLabel}`)
+                          onView={(urls) =>
+                            onViewPhoto(urls, `${formatDateShort(group.date)} ${slot.shiftLabel}`)
                           }
                         />
                       ) : (
@@ -1086,7 +1087,7 @@ function OtCardList({
   onToggleRow: (id: string) => void;
   onEdit: (row: OtEntry) => void;
   onError: (msg: string) => void;
-  onViewPhoto: (url: string, title: string) => void;
+  onViewPhoto: (urls: string[], title: string) => void;
 }) {
   async function setStatus(row: OtEntry, status: OtStatus) {
     try {
@@ -1146,10 +1147,10 @@ function OtCardList({
               </div>
               <div className="ot-card-actions">
                 <EntryPhotoIndicator
-                  imageUrl={row.imageUrl}
+                  imageUrls={getOtImageUrls(row)}
                   label={`${formatDateShort(row.date)} ${labelOtShift(row.shift)}`}
-                  onView={(url) =>
-                    onViewPhoto(url, `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`)
+                  onView={(urls) =>
+                    onViewPhoto(urls, `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`)
                   }
                 />
                 {isOwner ? (

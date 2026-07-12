@@ -585,7 +585,7 @@ function ProdTable({
                         <EntryPhotoIndicator
                           imageUrl={row.imageUrl}
                           label={row.productName}
-                          onView={(url) => setPreview({ url, title: row.productName })}
+                          onView={(urls) => setPreview({ url: urls[0] || "", title: row.productName })}
                         />
                       </div>
                     </td>
