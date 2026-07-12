@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Sarabun } from "next/font/google";
+import { Poppins, Sarabun } from "next/font/google";
 import { AuthProvider } from "@/lib/auth";
 import "./globals.css";
 
-const display = Fraunces({
+const display = Poppins({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["500", "700"],
+  weight: ["500", "600", "700"],
 });
 
 const body = Sarabun({
@@ -18,6 +18,10 @@ const body = Sarabun({
 export const metadata: Metadata = {
   title: "TellTea — บัญชีร้าน",
   description: "บัญชีเข้า–ออก TellTea — เจ้าของโอนเข้า พนักงานบันทึกเงินออก",
+  icons: {
+    icon: "/logo-mark.svg",
+    apple: "/logo-mark.svg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -32,7 +36,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#2f6b4f",
+  themeColor: "#003B5C",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

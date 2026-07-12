@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120" fill="none" role="img" aria-label="Tell Tea">
+  <g stroke="#0077B6" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+    <path fill="#003B5C" d="M58 34c-8 2-14 9-15 18-2 14 8 26 22 28 3 .4 6 .2 9-.5 6-1.5 11-6 13-12 2-5 2-11-1-16-4-7-12-12-21-13-2-.2-4-.2-7-.2Z"/>
+    <path fill="#003B5C" d="M44 58c-10 4-16 12-18 22-1 6 0 12 3 17 4 7 11 12 19 14 2 .5 5 .5 7 0 8-2 14-8 17-16 2-5 2-11-1-16-4-8-12-14-21-16-2-.4-4-.5-6-.5Z"/>
+    <path fill="#003B5C" d="M88 48c0-8 6-14 14-14h34c8 0 14 6 14 14v30c0 12-10 22-22 22H98c-12 0-22-10-22-22V48Z"/>
+    <path fill="#003B5C" d="M136 54c10 0 16 6 16 14s-6 14-16 14"/>
+    <path fill="#003B5C" d="M96 78c0 0 8 10 18 10s18-10 18-10"/>
+    <circle fill="#0077B6" cx="104" cy="72" r="3.2"/>
+    <circle fill="#0077B6" cx="114" cy="76" r="3.2"/>
+    <circle fill="#0077B6" cx="124" cy="72" r="3.2"/>
+    <path fill="none" d="M74 40c8-10 18-12 28-8"/>
+    <path fill="none" d="M82 30c2-8 8-12 14-12"/>
+    <path fill="#003B5C" d="M92 36h8v18c0 2-2 4-4 4s-4-2-4-4V36Z"/>
+  </g>
+  <text x="120" y="108" text-anchor="middle" fill="#003B5C" stroke="#0077B6" stroke-width="0.8" paint-order="stroke fill" font-family="Poppins, Montserrat, Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="0.5">Tell Tea</text>
+</svg>

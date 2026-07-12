@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="Tell Tea">
+  <g stroke="#0077B6" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+    <path fill="#003B5C" d="M18 14c-3 1-5 4-6 7-1 5 3 9 8 10 1 .2 3 .1 4-.2 2-.6 4-2 5-4 1-2 1-4 0-6-1-2-4-4-7-4-1 0-2 0-4 0Z"/>
+    <path fill="#003B5C" d="M13 26c-4 1-6 4-7 8-1 2 0 4 1 6 2 3 5 5 8 5 1 .2 2 .2 3 0 3-1 5-3 6-6 1-2 1-4 0-6-2-3-5-5-8-6-1-.2-2-.2-3-.2Z"/>
+    <path fill="#003B5C" d="M28 22c0-3 2-5 5-5h12c3 0 5 2 5 5v10c0 4-3 7-7 7H31c-4 0-7-3-7-7V22Z"/>
+    <path fill="#003B5C" d="M45 24c3 0 5 2 5 5s-2 5-5 5"/>
+    <circle fill="#0077B6" cx="32" cy="34" r="1.6"/>
+    <circle fill="#0077B6" cx="36" cy="36" r="1.6"/>
+    <circle fill="#0077B6" cx="40" cy="34" r="1.6"/>
+    <path fill="#003B5C" d="M30 18h3v7c0 1-1 1-1 1s-1 0-1-1v-7Z"/>
+  </g>
+</svg>

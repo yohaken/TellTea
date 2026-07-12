@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --tea-ink: #1c2a1f;
-  --tea-leaf: #2f6b4f;
-  --tea-matcha: #7fb77e;
-  --tea-foam: #f3efe4;
-  --tea-steam: #dff0e4;
-  --tea-amber: #c9852d;
-  --tea-line: rgba(28, 42, 31, 0.12);
-  --tea-card: rgba(255, 255, 255, 0.72);
+  --tea-ink: #003b5c;
+  --tea-leaf: #003b5c;
+  --tea-accent: #0077b6;
+  --tea-matcha: #5ba4d4;
+  --tea-foam: #f0f6fa;
+  --tea-steam: #dceef8;
+  --tea-amber: #0077b6;
+  --tea-line: rgba(0, 59, 92, 0.12);
+  --tea-card: rgba(255, 255, 255, 0.82);
   --danger: #b42318;
-  --shadow: 0 18px 50px rgba(28, 42, 31, 0.12);
+  --shadow: 0 18px 50px rgba(0, 59, 92, 0.12);
   --background: var(--tea-foam);
   --foreground: var(--tea-ink);
   /* Mobile-first content width; grows on larger screens */
@@ -42,9 +43,9 @@ body {
   color: var(--foreground);
   font-family: var(--font-body), "Sarabun", sans-serif;
   background:
-    radial-gradient(circle at 12% 10%, rgba(127, 183, 126, 0.35), transparent 36%),
-    radial-gradient(circle at 88% 0%, rgba(201, 133, 45, 0.22), transparent 28%),
-    linear-gradient(160deg, #f7f3e8 0%, #e7f0e4 48%, #f4efe3 100%);
+    radial-gradient(circle at 12% 10%, rgba(0, 119, 182, 0.14), transparent 36%),
+    radial-gradient(circle at 88% 0%, rgba(0, 59, 92, 0.1), transparent 28%),
+    linear-gradient(160deg, #f5fafd 0%, #e8f3fa 48%, #f0f6fa 100%);
   background-attachment: fixed;
   overscroll-behavior: none;
 }
@@ -62,13 +63,36 @@ textarea {
   font-size: 16px; /* avoid iOS zoom on focus */
 }
 
+.brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.brand-wrap-compact {
+  gap: 0.45rem;
+}
+
+.brand-logo {
+  width: auto;
+  height: 2.75rem;
+  flex-shrink: 0;
+}
+
+.brand-logo-compact {
+  height: 1.85rem;
+}
+
 .brand {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), "Poppins", sans-serif;
   font-size: clamp(2rem, 8vw, 2.6rem);
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   margin: 0;
   color: var(--tea-leaf);
   line-height: 1.15;
+  min-width: 0;
 }
 
 .brand-name {
@@ -81,7 +105,7 @@ textarea {
   font-size: 0.42em;
   font-weight: 600;
   letter-spacing: 0;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -115,7 +139,7 @@ textarea {
 }
 
 .muted {
-  color: rgba(28, 42, 31, 0.68);
+  color: rgba(0, 59, 92, 0.68);
   margin: 0;
   max-width: 22rem;
   justify-self: center;
@@ -146,7 +170,7 @@ textarea {
 .field-hint {
   margin: 0.35rem 0 0;
   font-size: 0.8rem;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
 }
 
 .slider-row {
@@ -161,7 +185,7 @@ textarea {
 }
 
 .slider-val {
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -277,7 +301,7 @@ body.modal-open .main-panel {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(28, 42, 31, 0.08), rgba(28, 42, 31, 0.55)),
+    linear-gradient(180deg, rgba(0, 59, 92, 0.08), rgba(0, 59, 92, 0.55)),
     url("/hero-tea.svg") center/cover no-repeat;
   z-index: 0;
   animation: drift 18s ease-in-out infinite alternate;
@@ -294,11 +318,31 @@ body.modal-open .main-panel {
   gap: 0.75rem;
   padding: 1.25rem 1.25rem 0.5rem;
   padding-top: calc(1.25rem + var(--safe-top));
-  color: #f7f3e8;
+  color: #f0f6fa;
 }
 
-.hero-copy .brand {
-  color: #f7f3e8;
+.hero-copy .brand-wrap {
+  justify-content: flex-start;
+}
+
+.hero-brand .brand-logo {
+  display: block;
+  height: clamp(4.5rem, 22vw, 6.5rem);
+  width: auto;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.22));
+}
+
+.hero-brand .brand {
+  display: none;
+}
+
+.hero-copy .brand-wrap:not(.hero-brand) .brand-logo {
+  display: none;
+}
+
+.hero-copy .brand-wrap:not(.hero-brand) .brand {
+  display: block;
+  color: #f0f6fa;
   font-size: clamp(3.2rem, 16vw, 4.4rem);
   text-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
 }
@@ -313,7 +357,7 @@ body.modal-open .main-panel {
 
 .hero-actions {
   padding: 1rem 1.25rem calc(1.25rem + var(--safe-bottom));
-  background: linear-gradient(180deg, transparent, rgba(243, 239, 228, 0.96) 28%);
+  background: linear-gradient(180deg, transparent, rgba(240, 246, 250, 0.96) 28%);
 }
 
 .login-mode-tabs {
@@ -378,13 +422,13 @@ body.modal-open .main-panel {
   position: sticky;
   top: 0;
   z-index: 5;
-  background: linear-gradient(180deg, rgba(247, 243, 232, 0.96), rgba(247, 243, 232, 0.82));
+  background: linear-gradient(180deg, rgba(240, 246, 250, 0.96), rgba(240, 246, 250, 0.82));
   backdrop-filter: blur(10px);
 }
 
 .topbar-sub {
   margin: 0.15rem 0 0;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
   font-size: 0.8rem;
 }
 
@@ -452,7 +496,7 @@ body.modal-open .main-panel {
   padding: 0.55rem 0.2rem;
   border-radius: 0.9rem;
   font-size: 0.72rem;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
   min-height: 3.1rem;
   align-content: center;
 }
@@ -533,7 +577,7 @@ body.modal-open .main-panel {
 
 .stat-tile p {
   margin: 0;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
   font-size: 0.8rem;
 }
 
@@ -541,7 +585,7 @@ body.modal-open .main-panel {
   display: block;
   margin-top: 0.3rem;
   font-size: 1.35rem;
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), "Poppins", sans-serif;
 }
 
 .pos-layout {
@@ -942,7 +986,7 @@ body.modal-open .main-panel {
   display: block;
   font-size: 0.72rem;
   margin-bottom: 0.25rem;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
 }
 
 .employee-roster-rate-row {
@@ -992,7 +1036,7 @@ body.modal-open .main-panel {
 .empty {
   padding: 1.25rem 0.5rem;
   text-align: center;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
 }
 
 .muted-foot {
@@ -1017,7 +1061,7 @@ body.modal-open .main-panel {
 }
 
 .balance-bar > span {
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
   font-size: 0.72rem;
   font-weight: 600;
 }
@@ -1118,7 +1162,7 @@ body.modal-open .main-panel {
 }
 
 .owner-calc-line strong {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), "Poppins", sans-serif;
   font-size: 1rem;
   color: #1a4f63;
   font-variant-numeric: tabular-nums;
@@ -1623,7 +1667,7 @@ body.modal-open .main-panel {
 
 .ot-card-shift {
   font-size: 0.72rem;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
   white-space: nowrap;
 }
 
@@ -1653,7 +1697,7 @@ body.modal-open .main-panel {
 
 .ot-card-bonus strong {
   font-size: 1.15rem;
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), "Poppins", sans-serif;
   color: var(--tea-leaf);
   font-weight: 700;
 }
@@ -1787,7 +1831,7 @@ body.modal-open .main-panel {
 
 .ot-summary-stat strong {
   font-size: 0.95rem;
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), "Poppins", sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--tea-leaf);
 }
@@ -2113,7 +2157,7 @@ body.modal-open .main-panel {
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: #f7f3e8;
+  background: #f0f6fa;
   border-radius: 1.1rem;
   padding: 0.9rem 1rem 1rem;
   box-shadow: var(--shadow);
@@ -2721,7 +2765,7 @@ body.modal-open .main-panel {
 
 .check-fail-meta {
   font-size: 0.68rem;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
 }
 
 .check-fail-photo {
@@ -2992,7 +3036,7 @@ body.modal-open .main-panel {
 
 .bonus-my-total {
   margin: 0;
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-display), "Poppins", sans-serif;
   font-size: 1.35rem;
   font-weight: 700;
   color: var(--tea-leaf);
@@ -3060,7 +3104,7 @@ body.modal-open .main-panel {
   display: block;
   font-size: 0.58rem;
   font-weight: 600;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
 }
 
 .bonus-deduct-amt {
@@ -3259,7 +3303,7 @@ body.modal-open .main-panel {
 .sheet-table .col-note {
   max-width: 4.5rem;
   font-size: 0.65rem;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3327,7 +3371,7 @@ body.modal-open .main-panel {
 
 .photo-action-card {
   width: min(100%, 24rem);
-  background: #f7f3e8;
+  background: #f0f6fa;
   border-radius: 1.1rem;
   padding: 1.15rem;
   box-shadow: var(--shadow);
@@ -3398,7 +3442,7 @@ body.modal-open .main-panel {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   border-radius: 1.1rem;
-  background: #f7f3e8;
+  background: #f0f6fa;
   box-shadow: var(--shadow);
 }
 
@@ -3457,7 +3501,7 @@ body.modal-open .main-panel {
 }
 
 .modal-backdrop.edit-modal .modal-card {
-  background: #f7f3e8;
+  background: #f0f6fa;
 }
 
 .modal-backdrop.edit-modal .panel-title {
@@ -3473,7 +3517,7 @@ body.modal-open .main-panel {
   z-index: 2;
   padding: 0 0 0.45rem;
   margin: 0;
-  background: #f7f3e8;
+  background: #f0f6fa;
   backdrop-filter: none;
 }
 
@@ -3492,7 +3536,7 @@ body.modal-open .main-panel {
   bottom: 0;
   margin-top: 0.5rem;
   padding: 0.55rem 0 0.35rem;
-  background: linear-gradient(180deg, transparent, #f7f3e8 22%);
+  background: linear-gradient(180deg, transparent, #f0f6fa 22%);
 }
 
 .modal-card .entry-actions {
@@ -3515,7 +3559,7 @@ body.modal-open .main-panel {
   z-index: 2;
   padding: 0 0 0.3rem;
   margin: 0;
-  background: #f7f3e8;
+  background: #f0f6fa;
 }
 
 .modal-backdrop.edit-modal.is-module-form .module-form-head .panel-title {
@@ -3803,7 +3847,7 @@ body.modal-open .main-panel {
 
 .ledger-date {
   font-size: 0.78rem;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
 }
 
 .ledger-type {
@@ -4057,7 +4101,7 @@ body.modal-open .main-panel {
 
 .stock-picker-qty {
   font-size: 0.82rem;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
   white-space: nowrap;
 }
 
@@ -4095,7 +4139,7 @@ body.modal-open .main-panel {
 .stock-count-label {
   margin: 0;
   font-size: 0.78rem;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -4340,7 +4384,7 @@ body.modal-open .main-panel {
   flex-direction: column;
   gap: 0.15rem;
   font-size: 0.72rem;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
 }
 
 .stock-setup-grid label.wide {
@@ -4438,7 +4482,7 @@ body.modal-open .main-panel {
 
 .more-card p {
   margin: 0;
-  color: rgba(28, 42, 31, 0.55);
+  color: rgba(0, 59, 92, 0.55);
   font-size: 0.88rem;
 }
 

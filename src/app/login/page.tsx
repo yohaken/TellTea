@@ -66,7 +66,7 @@ export default function LoginPage() {
   return (
     <div className="hero-login">
       <div className="hero-copy">
-        <AppBrand />
+        <AppBrand className="hero-brand" showLogo />
         <p>บัญชีร้าน — เจ้าของโอนเข้า พนักงานบันทึกเงินออก</p>
       </div>
       <div className="hero-actions">

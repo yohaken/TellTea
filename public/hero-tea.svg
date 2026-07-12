@@ -1,24 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" fill="none">
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1f4d38"/>
-      <stop offset="55%" stop-color="#3d7a55"/>
-      <stop offset="100%" stop-color="#c9852d"/>
+      <stop offset="0%" stop-color="#003B5C"/>
+      <stop offset="55%" stop-color="#005f8f"/>
+      <stop offset="100%" stop-color="#0077B6"/>
     </linearGradient>
     <linearGradient id="cup" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#f7f3e8"/>
-      <stop offset="100%" stop-color="#d9e8d5"/>
+      <stop offset="0%" stop-color="#f0f6fa"/>
+      <stop offset="100%" stop-color="#dceef8"/>
     </linearGradient>
   </defs>
   <rect width="1600" height="900" fill="url(#sky)"/>
   <ellipse cx="1180" cy="560" rx="280" ry="70" fill="rgba(0,0,0,0.18)"/>
   <path d="M980 320h340c18 0 32 14 32 32v210c0 78-78 140-170 140h-64c-92 0-170-62-170-140V352c0-18 14-32 32-32z" fill="url(#cup)"/>
-  <path d="M1320 390c70 0 110 42 110 100s-40 100-110 100" stroke="#f7f3e8" stroke-width="28" stroke-linecap="round"/>
-  <path d="M1040 360h260" stroke="#7fb77e" stroke-width="18" stroke-linecap="round" opacity="0.55"/>
-  <path d="M1080 250c20-50 10-90-10-120" stroke="#f7f3e8" stroke-width="10" stroke-linecap="round" opacity="0.55"/>
-  <path d="M1140 240c16-46 8-84-8-112" stroke="#f7f3e8" stroke-width="10" stroke-linecap="round" opacity="0.4"/>
-  <path d="M1200 250c20-50 10-90-10-120" stroke="#f7f3e8" stroke-width="10" stroke-linecap="round" opacity="0.55"/>
-  <circle cx="320" cy="220" r="120" fill="rgba(247,243,232,0.12)"/>
-  <circle cx="420" cy="300" r="70" fill="rgba(247,243,232,0.08)"/>
-  <path d="M180 620c120-90 240-90 360 0 120 90 240 90 360 0" stroke="rgba(247,243,232,0.18)" stroke-width="24" stroke-linecap="round"/>
+  <path d="M1320 390c70 0 110 42 110 100s-40 100-110 100" stroke="#f0f6fa" stroke-width="28" stroke-linecap="round"/>
+  <path d="M1040 360h260" stroke="#5ba4d4" stroke-width="18" stroke-linecap="round" opacity="0.55"/>
+  <path d="M1080 250c20-50 10-90-10-120" stroke="#f0f6fa" stroke-width="10" stroke-linecap="round" opacity="0.55"/>
+  <path d="M1140 240c16-46 8-84-8-112" stroke="#f0f6fa" stroke-width="10" stroke-linecap="round" opacity="0.4"/>
+  <path d="M1200 250c20-50 10-90-10-120" stroke="#f0f6fa" stroke-width="10" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="320" cy="220" r="120" fill="rgba(240,246,250,0.12)"/>
+  <circle cx="420" cy="300" r="70" fill="rgba(240,246,250,0.08)"/>
+  <path d="M180 620c120-90 240-90 360 0 120 90 240 90 360 0" stroke="rgba(240,246,250,0.18)" stroke-width="24" stroke-linecap="round"/>
 </svg>
