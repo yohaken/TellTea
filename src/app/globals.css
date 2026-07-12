@@ -690,6 +690,91 @@ body.modal-open .main-panel {
   margin-bottom: 1rem;
 }
 
+.profile-prompt-banner {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0 0 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.85rem;
+  background: rgba(255, 243, 220, 0.92);
+  border: 1px solid rgba(196, 90, 26, 0.25);
+  color: rgba(28, 42, 31, 0.88);
+}
+
+.profile-prompt-copy {
+  display: grid;
+  gap: 0.15rem;
+  text-align: left;
+  font-size: 0.78rem;
+}
+
+.profile-prompt-copy strong {
+  font-size: 0.86rem;
+}
+
+.profile-prompt-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.profile-prompt-btn {
+  min-height: 2.35rem;
+  width: 100%;
+  font-size: 0.82rem;
+}
+
+.employee-roster-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--tea-line);
+}
+
+.employee-roster-row:last-child {
+  border-bottom: 0;
+}
+
+.employee-roster-meta {
+  font-size: 0.72rem;
+  text-align: left;
+  margin-top: 0.15rem;
+}
+
+.employee-roster-rate {
+  margin-top: 0.45rem;
+  text-align: left;
+}
+
+.employee-roster-rate label {
+  display: block;
+  font-size: 0.72rem;
+  margin-bottom: 0.25rem;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.employee-roster-rate-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.employee-roster-rate-row input {
+  width: min(100%, 6.5rem);
+  min-height: 2.15rem;
+  padding: 0.38rem 0.55rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--tea-line);
+}
+
+.employee-roster-actions {
+  display: flex;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
 .pay-toggle {
   display: grid;
   grid-template-columns: 1fr 1fr;

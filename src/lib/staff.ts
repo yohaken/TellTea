@@ -5,8 +5,10 @@ import {
   collection,
   getDocs,
   deleteDoc,
+  deleteField,
   query,
   orderBy,
+  updateDoc,
 } from "firebase/firestore";
 import { getDb, OWNER_EMAIL } from "./firebase";
 import type { StaffMember, StaffRole } from "./types";
@@ -50,6 +52,7 @@ export async function ensureOwnerBootstrap(
     email: normalized,
     role: "owner",
     displayName: displayName || undefined,
+    profileComplete: true,
     createdAt: Date.now(),
     permissions: normalizePermissions(null, "owner"),
   };
@@ -85,4 +88,42 @@ export async function upsertStaff(
 
 export async function removeStaff(email: string): Promise<void> {
   await deleteDoc(staffRef(email));
+}
+
+export type StaffProfilePatch = {
+  displayName?: string | null;
+  employeeId?: string | null;
+  profileComplete?: boolean;
+  profileSnoozeUntil?: number | null;
+};
+
+export async function updateStaffProfile(
+  email: string,
+  patch: StaffProfilePatch,
+): Promise<StaffMember> {
+  const normalized = normalizeEmail(email);
+  const existing = await getStaffMember(normalized);
+  if (!existing) throw new Error("ไม่พบบัญชีพนักงาน");
+
+  const next: Record<string, unknown> = {};
+  if (patch.displayName !== undefined) {
+    next.displayName =
+      patch.displayName && patch.displayName.trim()
+        ? patch.displayName.trim()
+        : deleteField();
+  }
+  if (patch.employeeId !== undefined) {
+    next.employeeId =
+      patch.employeeId && patch.employeeId.trim() ? patch.employeeId : deleteField();
+  }
+  if (patch.profileComplete !== undefined) next.profileComplete = patch.profileComplete;
+  if (patch.profileSnoozeUntil !== undefined) {
+    next.profileSnoozeUntil =
+      patch.profileSnoozeUntil == null ? deleteField() : patch.profileSnoozeUntil;
+  }
+
+  await updateDoc(staffRef(normalized), next);
+  const updated = await getStaffMember(normalized);
+  if (!updated) throw new Error("อัปเดตโปรไฟล์ไม่สำเร็จ");
+  return updated;
 }

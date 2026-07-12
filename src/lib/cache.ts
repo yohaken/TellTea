@@ -25,7 +25,11 @@ export function loadCachedStaff(email: string): StaffMember | null {
       email: parsed.email,
       role: parsed.role,
       displayName: parsed.displayName,
+      employeeId: parsed.employeeId,
+      profileComplete: parsed.profileComplete,
+      profileSnoozeUntil: parsed.profileSnoozeUntil,
       createdAt: parsed.createdAt,
+      permissions: parsed.permissions,
     };
   } catch {
     return null;

@@ -6,6 +6,12 @@ export type StaffMember = {
   email: string;
   role: StaffRole;
   displayName?: string;
+  /** อ้างอิง employees/{id} — ชื่อในรoster ร้าน */
+  employeeId?: string;
+  /** true เมื่อพนักงานเชื่อมชื่อกับรายชื่อร้านแล้ว */
+  profileComplete?: boolean;
+  /** กด "ภายหลัง" บนแบนเนอร์ — ซ่อนจนกว่าจะถึงเวลานี้ (ms) */
+  profileSnoozeUntil?: number;
   createdAt: number;
   /** Fine-grained page/feature access — owners always get full set in resolvePermissions */
   permissions?: Partial<StaffPermissions>;

@@ -15,7 +15,9 @@ import {
 import { useAuth } from "@/lib/auth";
 import { AppBrand } from "@/components/AppBrand";
 import { LowBalanceAlert } from "@/components/LowBalanceAlert";
+import { ProfilePromptBanner } from "@/components/ProfilePromptBanner";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
+import { profileStatusLabel } from "@/lib/profile";
 import { can, hasAnyExtraPermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +31,7 @@ const MORE_PREFIXES = [
   "/in",
   "/export",
   "/staff",
+  "/profile",
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -36,6 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { staff, user, signOut } = useAuth();
   const isOwner = staff?.role === "owner";
   const emailShort = user?.email?.split("@")[0] || "";
+  const userLabel = profileStatusLabel(staff) || emailShort;
   const roleLabel = isOwner ? "เจ้าของ" : "พนักงาน";
 
   const links = [
@@ -72,7 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="topbar-user">
             <span className="topbar-email" title={user?.email || ""}>
-              {emailShort}
+              {userLabel}
             </span>
             <button
               type="button"
@@ -85,7 +89,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="main-panel">{children}</main>
+        <main className="main-panel">
+          <ProfilePromptBanner />
+          {children}
+        </main>
 
         <LowBalanceAlert />
 

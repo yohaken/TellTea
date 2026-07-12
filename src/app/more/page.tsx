@@ -11,10 +11,12 @@ import {
   CircleDollarSign,
   Download,
   Settings,
+  UserCircle,
   Users,
 } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
+import { needsProfileSetup } from "@/lib/profile";
 import { can, hasAnyExtraPermission, type PermissionKey } from "@/lib/permissions";
 
 export default function MorePage() {
@@ -95,6 +97,7 @@ function MoreView() {
 
   const visible = tools.filter((t) => can(staff, t.perm));
   const isOwner = staff?.role === "owner";
+  const profileIncomplete = needsProfileSetup(staff);
 
   return (
     <div>
@@ -103,6 +106,24 @@ function MoreView() {
         เครื่องมือตามสิทธิ์ที่ได้รับ
       </p>
       <div className="more-grid">
+        {profileIncomplete ? (
+          <Link href="/profile/" className="more-card" style={{ borderColor: "rgba(196, 90, 26, 0.35)" }}>
+            <UserCircle size={22} />
+            <div>
+              <strong>ตั้งโปรไฟล์พนักงาน</strong>
+              <p>เชื่อมชื่อในร้าน — ยังไม่ได้ตั้ง</p>
+            </div>
+          </Link>
+        ) : null}
+        {!profileIncomplete && staff?.role === "staff" ? (
+          <Link href="/profile/" className="more-card">
+            <UserCircle size={22} />
+            <div>
+              <strong>โปรไฟล์</strong>
+              <p>{staff.displayName || "ดู/เปลี่ยนชื่อในร้าน"}</p>
+            </div>
+          </Link>
+        ) : null}
         {isOwner ? (
           <Link href="/settings/" className="more-card">
             <Settings size={22} />

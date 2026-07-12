@@ -7,11 +7,12 @@ import { PermissionPicker } from "@/components/PermissionPicker";
 import { useAuth } from "@/lib/auth";
 import {
   addEmployee,
+  deleteEmployee,
   listEmployees,
   updateEmployee,
   type Employee,
 } from "@/lib/employees";
-import { listStaff, removeStaff, upsertStaff } from "@/lib/staff";
+import { listStaff, removeStaff, updateStaffProfile, upsertStaff } from "@/lib/staff";
 import type { StaffMember, StaffRole } from "@/lib/types";
 import {
   DEFAULT_STAFF_PERMISSIONS,
@@ -19,7 +20,8 @@ import {
   normalizePermissions,
   type StaffPermissions,
 } from "@/lib/permissions";
-import { normalizeEmail } from "@/lib/utils";
+import { normalizeEmail, formatPlainNumber } from "@/lib/utils";
+import { Trash2 } from "lucide-react";
 
 export default function StaffPage() {
   return (
@@ -89,6 +91,30 @@ function StaffView() {
     }
   }
 
+  async function onDeleteEmployee(emp: Employee) {
+    const msg = emp.linkedEmail
+      ? `ลบ "${emp.name}"? บัญชี ${emp.linkedEmail} จะต้องตั้งโปรไฟล์ใหม่`
+      : `ลบ "${emp.name}" จากรายชื่อร้าน?`;
+    if (!window.confirm(msg)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      if (emp.linkedEmail) {
+        await updateStaffProfile(emp.linkedEmail, {
+          employeeId: null,
+          profileComplete: false,
+          displayName: null,
+        });
+      }
+      await deleteEmployee(emp.id);
+      await reload();
+    } catch (err) {
+      setError((err as Error).message || "ลบไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function saveMemberPerms(member: StaffMember, next: StaffPermissions) {
     setBusy(true);
     setError(null);
@@ -117,7 +143,7 @@ function StaffView() {
       <section className="staff-hub-section">
         <h2 className="panel-title" style={{ fontSize: "1.05rem" }}>รายชื่อพนักงานร้าน</h2>
         <p className="muted" style={{ textAlign: "left", marginBottom: "0.65rem", fontSize: "0.85rem" }}>
-          ใช้เลือกตอนกรอกผลิต / OT · ไม่ต้องมีอีเมล
+          ใช้เลือกตอนกรอกผลิต / OT · พนักงานเชื่อมบัญชีเองที่หน้าโปรไฟล์
         </p>
         <form className="form-card entry-form" onSubmit={(e) => void onAddEmployee(e)}>
           <div className="field">
@@ -139,24 +165,14 @@ function StaffView() {
             <p className="muted" style={{ margin: "0.5rem 0", textAlign: "left" }}>ยังไม่มีรายชื่อ</p>
           ) : (
             employees.map((emp) => (
-              <div key={emp.id} className="list-row">
-                <div>
-                  <strong>{emp.name}</strong>
-                  <div className="muted">{emp.active ? "ใช้งาน · แสดงในหมวดอื่น" : "ปิดใช้"}</div>
-                </div>
-                <button
-                  type="button"
-                  className="ghost-btn"
-                  disabled={busy}
-                  onClick={() =>
-                    void updateEmployee(emp.id, { active: !emp.active })
-                      .then(reload)
-                      .catch((err) => setError(err.message || "อัปเดตไม่สำเร็จ"))
-                  }
-                >
-                  {emp.active ? "ปิด" : "เปิด"}
-                </button>
-              </div>
+              <EmployeeRosterRow
+                key={emp.id}
+                emp={emp}
+                busy={busy}
+                onError={setError}
+                onReload={reload}
+                onDelete={() => void onDeleteEmployee(emp)}
+              />
             ))
           )}
         </div>
@@ -219,7 +235,11 @@ function StaffView() {
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "center" }}>
                   <div>
                     <strong>{member.email}</strong>
-                    <div className="muted">{member.role === "owner" ? "เจ้าของ" : "พนักงาน"}</div>
+                    <div className="muted">
+                      {member.role === "owner" ? "เจ้าของ" : "พนักงาน"}
+                      {member.displayName ? ` · ${member.displayName}` : " · ยังไม่ตั้งโปรไฟล์"}
+                      {member.profileComplete ? " ✓" : ""}
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: "0.35rem" }}>
                     {member.role === "staff" ? (
@@ -260,6 +280,109 @@ function StaffView() {
           })}
         </div>
       </section>
+    </div>
+  );
+}
+
+function EmployeeRosterRow({
+  emp,
+  busy,
+  onError,
+  onReload,
+  onDelete,
+}: {
+  emp: Employee;
+  busy: boolean;
+  onError: (msg: string) => void;
+  onReload: () => Promise<void>;
+  onDelete: () => void;
+}) {
+  const [rate, setRate] = useState(emp.unitRate != null ? String(emp.unitRate) : "");
+
+  useEffect(() => {
+    setRate(emp.unitRate != null ? String(emp.unitRate) : "");
+  }, [emp.unitRate]);
+
+  async function saveRate() {
+    const n = rate.trim() === "" ? null : Number(rate);
+    if (n != null && (!Number.isFinite(n) || n < 0)) {
+      onError("เรทไม่ถูกต้อง");
+      return;
+    }
+    try {
+      await updateEmployee(emp.id, { unitRate: n ?? undefined });
+      await onReload();
+    } catch (err) {
+      onError((err as Error).message || "บันทึกเรทไม่สำเร็จ");
+    }
+  }
+
+  return (
+    <div className="employee-roster-row">
+      <div className="employee-roster-main">
+        <strong>{emp.name}</strong>
+        <div className="muted employee-roster-meta">
+          {emp.active ? "ใช้งาน" : "ปิดใช้"}
+          {emp.linkedEmail ? ` · เชื่อม ${emp.linkedEmail}` : " · ยังไม่มีบัญชีเชื่อม"}
+          {emp.unitRate != null ? ` · เรท ${formatPlainNumber(emp.unitRate)}` : ""}
+        </div>
+        <div className="employee-roster-rate">
+          <label htmlFor={`rate-${emp.id}`}>เรท/ค่า (ลบได้)</label>
+          <div className="employee-roster-rate-row">
+            <input
+              id={`rate-${emp.id}`}
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={rate}
+              placeholder="—"
+              onChange={(e) => setRate(e.target.value)}
+            />
+            <button type="button" className="ghost-btn" disabled={busy} onClick={() => void saveRate()}>
+              บันทึก
+            </button>
+            {rate ? (
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={busy}
+                onClick={() => {
+                  setRate("");
+                  void updateEmployee(emp.id, { unitRate: undefined })
+                    .then(onReload)
+                    .catch((err) => onError(err.message || "ลบเรทไม่สำเร็จ"));
+                }}
+              >
+                ลบเรท
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      <div className="employee-roster-actions">
+        <button
+          type="button"
+          className="ghost-btn"
+          disabled={busy}
+          onClick={() =>
+            void updateEmployee(emp.id, { active: !emp.active })
+              .then(onReload)
+              .catch((err) => onError(err.message || "อัปเดตไม่สำเร็จ"))
+          }
+        >
+          {emp.active ? "ปิด" : "เปิด"}
+        </button>
+        <button
+          type="button"
+          className="ghost-btn icon-btn"
+          aria-label={`ลบ ${emp.name}`}
+          disabled={busy}
+          onClick={onDelete}
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
     </div>
   );
 }
