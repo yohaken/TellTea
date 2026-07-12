@@ -5,7 +5,7 @@
  *   FIREBASE_SERVICE_ACCOUNT='{"type":"service_account",...}' node scripts/enable-phone-auth.mjs
  *   GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json node scripts/enable-phone-auth.mjs
  */
-const { GoogleAuth } = require("google-auth-library");
+import { GoogleAuth } from "google-auth-library";
 
 const PROJECT = process.env.FIREBASE_PROJECT_ID || "mypeer-501909";
 

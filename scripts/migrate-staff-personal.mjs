@@ -4,8 +4,8 @@
  * Usage:
  *   FIREBASE_SERVICE_ACCOUNT='{"type":"service_account",...}' node scripts/migrate-staff-personal.mjs
  */
-const { initializeApp, cert, getApps } = require("firebase-admin/app");
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+import { initializeApp, cert, getApps } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 const PROJECT = process.env.FIREBASE_PROJECT_ID || "mypeer-501909";
 
