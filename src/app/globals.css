@@ -860,6 +860,12 @@ textarea {
   padding-bottom: calc(0.75rem + var(--safe-bottom));
 }
 
+.modal-backdrop.photo-backdrop {
+  place-items: center;
+  padding: 1rem;
+  padding-bottom: calc(1rem + var(--safe-bottom));
+}
+
 .modal-backdrop.alert-backdrop {
   place-items: center;
   z-index: 50;
@@ -1030,6 +1036,13 @@ textarea {
   cursor: pointer;
   max-width: 100%;
   text-align: left;
+}
+
+.suggest-chip.is-active {
+  border-color: var(--tea-leaf);
+  background: rgba(74, 107, 62, 0.14);
+  color: var(--tea-leaf);
+  font-weight: 600;
 }
 
 .field-label {

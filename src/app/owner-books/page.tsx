@@ -11,8 +11,9 @@ import {
 import { useRouter } from "next/navigation";
 import { Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
+import { TypePicker } from "@/components/TypePicker";
 import { useAuth } from "@/lib/auth";
-import { guessTypeFromDescription } from "@/lib/ledger-labels";
+import { frequentTypes, guessTypeFromDescription } from "@/lib/ledger-labels";
 import {
   addOwnerBookEntry,
   deleteOwnerBookEntry,
@@ -37,14 +38,6 @@ import {
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
-
-const TYPE_OPTIONS = [
-  { value: "auto", label: "อัตโนมัติจากชื่อรายการ" },
-  { value: "cogs", label: "ต้นทุน (cogs)" },
-  { value: "sga", label: "ค่าใช้จ่าย (sga)" },
-  { value: "asset", label: "สินทรัพย์ (asset)" },
-  { value: "อื่นๆ", label: "อื่นๆ" },
-];
 
 export default function OwnerBooksPage() {
   return (
@@ -246,16 +239,12 @@ function OwnerEntryModal({
   const [date, setDate] = useState(entry ? toDateInput(entry.date) : todayInputValue());
   const [description, setDescription] = useState(entry?.description || "");
   const [amount, setAmount] = useState(entry ? String(entry.amountOut) : "");
-  const [typeMode, setTypeMode] = useState(() => {
-    const t = (entry?.type || "").trim().toLowerCase();
-    if (t === "cogs" || t === "sga" || t === "asset") return t;
-    if (entry?.type) return "อื่นๆ";
-    return "auto";
-  });
+  const [typeMode, setTypeMode] = useState(() => (entry?.type || "").trim() || "auto");
   const [note, setNote] = useState(entry?.note || "");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -272,8 +261,14 @@ function OwnerEntryModal({
 
   useEffect(() => {
     void listOwnerBookEntries()
-      .then((rows) => setSuggestions(frequentOwnerDescriptions(rows)))
-      .catch(() => setSuggestions([]));
+      .then((rows) => {
+        setSuggestions(frequentOwnerDescriptions(rows));
+        setTypeFreq(frequentTypes(rows));
+      })
+      .catch(() => {
+        setSuggestions([]);
+        setTypeFreq([]);
+      });
   }, []);
 
   useEffect(() => {
@@ -420,20 +415,13 @@ function OwnerEntryModal({
               required
             />
           </div>
-          <div className="field">
-            <label htmlFor="ob-type">ประเภท</label>
-            <select
-              id="ob-type"
-              value={TYPE_OPTIONS.some((o) => o.value === typeMode) ? typeMode : "อื่นๆ"}
-              onChange={(e) => setTypeMode(e.target.value)}
-            >
-              {TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <TypePicker
+            id="ob-type"
+            value={typeMode}
+            onChange={setTypeMode}
+            frequent={typeFreq}
+            autoHint={autoType}
+          />
           <div className="field">
             <label htmlFor="ob-note">note</label>
             <input

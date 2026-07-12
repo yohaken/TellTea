@@ -5,23 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
+import { TypePicker } from "@/components/TypePicker";
 import { useAuth } from "@/lib/auth";
 import { addLedgerEntry, frequentDescriptions, listRecentLedgerEntries } from "@/lib/ledger";
-import { guessTypeFromDescription, labelLedgerType } from "@/lib/ledger-labels";
+import { frequentTypes, guessTypeFromDescription } from "@/lib/ledger-labels";
 import {
   compressImageForUpload,
   fileToReceiptDataUrl,
   saveImageToDevice,
 } from "@/lib/receipts";
 import { parseDateInput, todayInputValue } from "@/lib/utils";
-
-const TYPE_OPTIONS = [
-  { value: "auto", label: "อัตโนมัติจากชื่อรายการ" },
-  { value: "cogs", label: "ต้นทุน (cogs)" },
-  { value: "sga", label: "ค่าใช้จ่าย (sga)" },
-  { value: "asset", label: "สินทรัพย์ (asset)" },
-  { value: "อื่นๆ", label: "อื่นๆ" },
-];
 
 export default function MoneyOutPage() {
   return (
@@ -46,6 +39,7 @@ function MoneyOutView() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
 
@@ -60,8 +54,14 @@ function MoneyOutView() {
 
   useEffect(() => {
     void listRecentLedgerEntries(200)
-      .then((entries) => setSuggestions(frequentDescriptions(entries)))
-      .catch(() => setSuggestions([]));
+      .then((entries) => {
+        setSuggestions(frequentDescriptions(entries));
+        setTypeFreq(frequentTypes(entries));
+      })
+      .catch(() => {
+        setSuggestions([]);
+        setTypeFreq([]);
+      });
   }, []);
 
   useEffect(() => {
@@ -216,21 +216,14 @@ function MoneyOutView() {
         </div>
 
         {isOwner ? (
-          <div className="field">
-            <label htmlFor="type">หมวด</label>
-            <select id="type" value={typeMode} onChange={(e) => setTypeMode(e.target.value)}>
-              {TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            {typeMode === "auto" && description ? (
-              <p className="muted" style={{ marginTop: "0.25rem", textAlign: "left", fontSize: "0.8rem" }}>
-                จะบันทึกเป็น: {labelLedgerType(autoType)}
-              </p>
-            ) : null}
-          </div>
+          <TypePicker
+            id="type"
+            label="ประเภท"
+            value={typeMode}
+            onChange={setTypeMode}
+            frequent={typeFreq}
+            autoHint={autoType}
+          />
         ) : null}
 
         <div className="entry-actions">

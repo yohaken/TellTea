@@ -23,7 +23,8 @@ import {
   subscribeLedgerPage,
   updateLedgerEntry,
 } from "@/lib/ledger";
-import { guessTypeFromDescription } from "@/lib/ledger-labels";
+import { TypePicker } from "@/components/TypePicker";
+import { frequentTypes, guessTypeFromDescription } from "@/lib/ledger-labels";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
 import {
   compressImageForUpload,
@@ -223,14 +224,22 @@ function LedgerView() {
                   <th className="col-photo">รูปภาพ</th>
                   <th className="col-in">เข้า</th>
                   <th className="col-out">ออก</th>
-                  <th className="col-act">จัดการ</th>
                 </tr>
               </thead>
                 <tbody>
                   {entries.map((row) => (
                     <tr key={row.id} className={row.amountIn > 0 ? "row-in" : "row-out"}>
                       <td className="col-date">{formatDateShort(row.date)}</td>
-                      <td className="col-desc" title={row.description}>{row.description}</td>
+                      <td className="col-desc">
+                        <button
+                          type="button"
+                          className="desc-link"
+                          title="แตะเพื่อแก้ไข"
+                          onClick={() => setEditing(row)}
+                        >
+                          {row.description}
+                        </button>
+                      </td>
                       <td className="col-photo">
                         <button
                           type="button"
@@ -253,11 +262,6 @@ function LedgerView() {
                       </td>
                       <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>
                       <td className="col-out">{row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}</td>
-                      <td className="col-act">
-                        <button type="button" className="sheet-edit" onClick={() => setEditing(row)}>
-                          ลบ/แก้ไข
-                        </button>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -278,6 +282,7 @@ function LedgerView() {
       {editing ? (
         <EditEntryModal
           entry={editing}
+          isOwner={isOwner}
           onClose={() => setEditing(null)}
           onSaved={() => setEditing(null)}
           onError={setError}
@@ -302,7 +307,7 @@ function LedgerView() {
 
       {photoRowId ? (
         <div
-          className="modal-backdrop"
+          className="modal-backdrop photo-backdrop"
           onClick={() => { setPhotoRowId(null); photoEntryRef.current = null; }}
         >
           <div className="photo-action-card" onClick={(e) => e.stopPropagation()}>
@@ -331,7 +336,7 @@ function LedgerView() {
               style={{ width: "100%", marginTop: "0.5rem" }}
               onClick={() => { setPhotoRowId(null); photoEntryRef.current = null; }}
             >
-              ยกเลิก
+              ออก
             </button>
           </div>
         </div>
@@ -347,11 +352,13 @@ function toDateInput(ms: number) {
 
 function EditEntryModal({
   entry,
+  isOwner,
   onClose,
   onSaved,
   onError,
 }: {
   entry: LedgerEntry;
+  isOwner: boolean;
   onClose: () => void;
   onSaved: () => void;
   onError: (msg: string) => void;
@@ -360,13 +367,18 @@ function EditEntryModal({
   const [date, setDate] = useState(toDateInput(entry.date));
   const [description, setDescription] = useState(entry.description);
   const [amount, setAmount] = useState(String(isIn ? entry.amountIn : entry.amountOut));
+  const [typeMode, setTypeMode] = useState(() => (entry.type || "").trim() || "auto");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+
+  const autoType = useMemo(() => guessTypeFromDescription(description), [description]);
+  const resolvedType = typeMode === "auto" ? autoType : typeMode;
 
   const filteredSuggestions = useMemo(() => {
     const q = description.trim().toLowerCase();
@@ -376,8 +388,14 @@ function EditEntryModal({
 
   useEffect(() => {
     void listRecentLedgerEntries(200)
-      .then((entries) => setSuggestions(frequentDescriptions(entries)))
-      .catch(() => setSuggestions([]));
+      .then((rows) => {
+        setSuggestions(frequentDescriptions(rows));
+        setTypeFreq(frequentTypes(rows));
+      })
+      .catch(() => {
+        setSuggestions([]);
+        setTypeFreq([]);
+      });
   }, []);
 
   useEffect(() => {
@@ -419,7 +437,7 @@ function EditEntryModal({
         description,
         amountIn: isIn ? value : 0,
         amountOut: isIn ? 0 : value,
-        type: entry.type || guessTypeFromDescription(description),
+        type: isOwner ? resolvedType : entry.type || guessTypeFromDescription(description),
         receiptUrl,
       });
       onSaved();
@@ -512,6 +530,16 @@ function EditEntryModal({
               required
             />
           </div>
+
+          {isOwner && !isIn ? (
+            <TypePicker
+              id="edit-type"
+              value={typeMode}
+              onChange={setTypeMode}
+              frequent={typeFreq}
+              autoHint={autoType}
+            />
+          ) : null}
 
           <div className="field">
             <span className="field-label">สลิป / รูปถ่าย</span>
