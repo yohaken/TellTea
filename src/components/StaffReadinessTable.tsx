@@ -8,6 +8,13 @@ import {
 } from "@/lib/staff-readiness";
 import type { Employee } from "@/lib/employees";
 import type { StaffMember, StaffPersonalData } from "@/lib/types";
+import { StaffPersonalInfoButton } from "@/components/StaffPersonalInfoModal";
+
+function actionLabel(row: StaffReadinessRow): string {
+  if (row.kind === "roster-only") return "สร้างบัญชี";
+  if (!row.checks.roster) return "เชื่อมชื่อ";
+  return "แก้ไข";
+}
 
 function CheckCell({ ok, title }: { ok: boolean; title: string }) {
   return (
@@ -42,12 +49,16 @@ export function StaffReadinessTable({
   employees,
   personalByStaffId,
   ownerView = false,
+  busy = false,
+  onEditRow,
 }: {
   members: StaffMember[];
   employees: Employee[];
   personalByStaffId: Map<string, StaffPersonalData>;
   /** เจ้าของเห็นรายละเอียด PDPA/บัตรจาก staffPersonal */
   ownerView?: boolean;
+  busy?: boolean;
+  onEditRow?: (row: StaffReadinessRow) => void;
 }) {
   const rows = buildStaffReadinessRows(members, employees, personalByStaffId);
   const summary = summarizeStaffReadiness(rows);
@@ -87,6 +98,7 @@ export function StaffReadinessTable({
               <th className="staff-ready-col-check-h">PDPA</th>
               <th className="staff-ready-col-check-h">ร้าน</th>
               <th className="staff-ready-col-status">สรุป</th>
+              {onEditRow ? <th className="staff-ready-col-action">จัดการ</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -126,6 +138,28 @@ export function StaffReadinessTable({
                   <td className="staff-ready-col-status">
                     <StatusPill row={row} />
                   </td>
+                  {onEditRow ? (
+                    <td className="staff-ready-col-action">
+                      <div className="staff-ready-actions">
+                        <button
+                          type="button"
+                          className="ghost-btn staff-ready-edit-btn"
+                          disabled={busy}
+                          onClick={() => onEditRow(row)}
+                        >
+                          {actionLabel(row)}
+                        </button>
+                        {ownerView && row.staffId ? (
+                          (() => {
+                            const member = members.find((m) => m.id === row.staffId);
+                            return member && member.role === "staff" ? (
+                              <StaffPersonalInfoButton member={member} />
+                            ) : null;
+                          })()
+                        ) : null}
+                      </div>
+                    </td>
+                  ) : null}
                 </tr>
               );
             })}

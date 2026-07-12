@@ -33,7 +33,12 @@ import { mapFirestoreError } from "@/lib/firestore-errors";
 import { Trash2 } from "lucide-react";
 import { StaffPersonalInfoButton } from "@/components/StaffPersonalInfoModal";
 import { StaffReadinessTable } from "@/components/StaffReadinessTable";
+import {
+  StaffReadinessEditModal,
+  type StaffReadinessEditTarget,
+} from "@/components/StaffReadinessEditModal";
 import { listStaffPersonalMap } from "@/lib/staff-personal";
+import type { StaffReadinessRow } from "@/lib/staff-readiness";
 import type { StaffPersonalData } from "@/lib/types";
 
 export default function StaffPage() {
@@ -73,6 +78,7 @@ function StaffView() {
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
   const [personalMap, setPersonalMap] = useState<Map<string, StaffPersonalData>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [editTarget, setEditTarget] = useState<StaffReadinessEditTarget>(null);
 
   const linkOptions = employeesForLink(employees);
   const isOwner = staff?.role === "owner";
@@ -247,6 +253,56 @@ function StaffView() {
     }
   }
 
+  async function saveReadinessEdit(input: {
+    email: string;
+    phone: string;
+    linkEmployeeId: string;
+    permissions: StaffPermissions;
+  }) {
+    const row = editTarget?.row;
+    if (!row) return;
+    if (!input.email.trim() && !input.phone.trim()) {
+      setError("ใส่อีเมล Google หรือเบอร์โทรอย่างน้อยหนึ่งอย่าง");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const linkedName = input.linkEmployeeId
+        ? employees.find((e) => e.id === input.linkEmployeeId)?.name
+        : undefined;
+      await upsertStaffWithLink({
+        email: input.email.trim() || undefined,
+        phone: input.phone.trim() || undefined,
+        role: "staff",
+        permissions: input.permissions,
+        employeeId: input.linkEmployeeId || row.employeeId || undefined,
+      });
+      const account = input.email.trim() || input.phone.trim();
+      setEditTarget(null);
+      setSuccess(
+        linkedName
+          ? `บันทึก ${account} และเชื่อม "${linkedName}" แล้ว`
+          : `บันทึกบัญชี ${account} แล้ว`,
+      );
+      const { staffOk } = await reload();
+      if (staffOk) setError(null);
+      await refreshStaff();
+    } catch (err) {
+      setSuccess(null);
+      setError(mapFirestoreError(err, "บันทึกไม่สำเร็จ"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function openReadinessEdit(row: StaffReadinessRow) {
+    const member = row.staffId ? members.find((m) => m.id === row.staffId) : undefined;
+    setEditTarget({ row, member });
+    setError(null);
+  }
+
   if (!canManageStaff) return null;
 
   return (
@@ -273,8 +329,18 @@ function StaffView() {
           employees={employees}
           personalByStaffId={personalMap}
           ownerView={isOwner}
+          busy={busy}
+          onEditRow={openReadinessEdit}
         />
       ) : null}
+
+      <StaffReadinessEditModal
+        target={editTarget}
+        employees={employees}
+        busy={busy}
+        onClose={() => setEditTarget(null)}
+        onSave={saveReadinessEdit}
+      />
 
       <section className="staff-hub-section">
         <h2 className="panel-title" style={{ fontSize: "1.05rem" }}>

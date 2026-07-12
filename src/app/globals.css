@@ -874,6 +874,35 @@ body.modal-open .main-panel {
   text-align: left;
 }
 
+.staff-ready-col-action {
+  min-width: 5.5rem;
+  text-align: left;
+}
+
+.staff-ready-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.staff-ready-edit-btn {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.45rem;
+  white-space: nowrap;
+}
+
+.staff-readiness-edit-card {
+  width: min(100%, 24rem);
+}
+
+.staff-readiness-edit-card .btn-row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+
 .staff-ready-ok {
   color: var(--tea-leaf);
   font-weight: 700;

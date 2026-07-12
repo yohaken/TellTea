@@ -14,6 +14,8 @@ export type StaffReadinessChecks = {
 export type StaffReadinessRow = {
   id: string;
   kind: "staff" | "roster-only";
+  staffId?: string;
+  employeeId?: string;
   rosterName: string;
   accountLabel: string;
   checks: StaffReadinessChecks;
@@ -26,7 +28,7 @@ function rosterNameForStaff(member: StaffMember, employees: Employee[]): string 
   const emp = member.employeeId
     ? employees.find((e) => e.id === member.employeeId)
     : employees.find((e) => e.linkedStaffId === member.id);
-  return emp?.name || "—";
+  return emp?.name || "ยังไม่เชื่อมชื่อ";
 }
 
 function assessPersonal(
@@ -88,6 +90,8 @@ export function buildStaffReadinessRows(
     rows.push({
       id: member.id,
       kind: "staff",
+      staffId: member.id,
+      employeeId: member.employeeId || emp?.id,
       rosterName: rosterNameForStaff(member, employees),
       accountLabel: staffAccountLabel(member),
       checks,
@@ -101,6 +105,7 @@ export function buildStaffReadinessRows(
     rows.push({
       id: `emp-${emp.id}`,
       kind: "roster-only",
+      employeeId: emp.id,
       rosterName: emp.name,
       accountLabel: "—",
       checks: {
