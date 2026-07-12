@@ -1,20 +1,49 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
+import { guessTypeFromDescription } from "@/lib/ledger-labels";
 import {
-  deleteAllOwnerBookEntries,
-  importOwnerBookEntries,
+  addOwnerBookEntry,
+  deleteOwnerBookEntry,
+  frequentOwnerDescriptions,
+  listOwnerBookEntries,
   OWNER_BOOKS_LIVE_MAX,
   OWNER_BOOKS_PAGE_SIZE,
   subscribeOwnerBooksPage,
   subscribeOwnerBooksTotalOut,
+  updateOwnerBookEntry,
   type OwnerBookEntry,
 } from "@/lib/owner-books";
-import { parseOwnerBooksWorkbook } from "@/lib/xlsx-import";
-import { formatBaht, formatDateShort, formatPlainNumber } from "@/lib/utils";
+import {
+  compressImageForUpload,
+  fileToReceiptDataUrl,
+  saveImageToDevice,
+} from "@/lib/receipts";
+import {
+  formatBaht,
+  formatDateShort,
+  formatPlainNumber,
+  parseDateInput,
+  todayInputValue,
+} from "@/lib/utils";
+
+const TYPE_OPTIONS = [
+  { value: "auto", label: "อัตโนมัติจากชื่อรายการ" },
+  { value: "cogs", label: "ต้นทุน (cogs)" },
+  { value: "sga", label: "ค่าใช้จ่าย (sga)" },
+  { value: "asset", label: "สินทรัพย์ (asset)" },
+  { value: "อื่นๆ", label: "อื่นๆ" },
+];
 
 export default function OwnerBooksPage() {
   return (
@@ -22,6 +51,10 @@ export default function OwnerBooksPage() {
       <OwnerBooksView />
     </AuthGate>
   );
+}
+
+function toDateInput(ms: number) {
+  return todayInputValue(new Date(ms));
 }
 
 function OwnerBooksView() {
@@ -34,11 +67,8 @@ function OwnerBooksView() {
   const [liveLimit, setLiveLimit] = useState(OWNER_BOOKS_PAGE_SIZE);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [preview, setPreview] = useState<{ count: number; sumOut: number } | null>(null);
-  const [fileBuffer, setFileBuffer] = useState<ArrayBuffer | null>(null);
-  const [showImport, setShowImport] = useState(false);
+  const [editing, setEditing] = useState<OwnerBookEntry | null>(null);
+  const [adding, setAdding] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -96,50 +126,6 @@ function OwnerBooksView() {
 
   if (staff?.role !== "owner") return null;
 
-  async function onFile(file: File | null) {
-    setError(null);
-    setMessage(null);
-    setPreview(null);
-    setFileBuffer(null);
-    if (!file) return;
-    try {
-      const buffer = await file.arrayBuffer();
-      const rows = parseOwnerBooksWorkbook(buffer, user?.email || "import");
-      const sumOut = rows.reduce((s, r) => s + r.amountOut, 0);
-      setFileBuffer(buffer);
-      setPreview({ count: rows.length, sumOut });
-    } catch (err) {
-      setError((err as Error).message || "อ่านไฟล์ไม่สำเร็จ");
-    }
-  }
-
-  async function runImport(replace: boolean) {
-    if (!fileBuffer || !user?.email) return;
-    setBusy(true);
-    setError(null);
-    setMessage(null);
-    try {
-      if (replace) {
-        const removed = await deleteAllOwnerBookEntries((done) => {
-          setMessage(`กำลังลบรายการเดิม... ${done}`);
-        });
-        setMessage(`ลบแล้ว ${removed} รายการ — กำลังนำเข้า...`);
-      }
-      const rows = parseOwnerBooksWorkbook(fileBuffer, user.email);
-      const imported = await importOwnerBookEntries(rows, (done, total) => {
-        setMessage(`นำเข้าแล้ว ${done}/${total}`);
-      });
-      setMessage(`นำเข้าสำเร็จ ${imported} รายการ`);
-      setShowImport(false);
-      setPreview(null);
-      setFileBuffer(null);
-    } catch (err) {
-      setError((err as Error).message || "นำเข้าไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <div>
       <div className="balance-bar">
@@ -151,64 +137,17 @@ function OwnerBooksView() {
         <button
           type="button"
           className="primary-btn action-out"
-          onClick={() => setShowImport((v) => !v)}
+          onClick={() => setAdding(true)}
         >
-          {showImport ? "ปิดนำเข้า" : "นำเข้า Excel"}
+          บันทึกเงินออก
         </button>
       </div>
 
-      {showImport ? (
-        <div className="form-card" style={{ marginBottom: "0.85rem" }}>
-          <p className="muted" style={{ margin: "0 0 0.75rem", textAlign: "left" }}>
-            ไฟล์ <strong>บช. เจ้าของ.xlsx</strong> — คอลัมน์: วันที่ · รายการ · ออก
-          </p>
-          <div className="field">
-            <label htmlFor="owner-xlsx">เลือกไฟล์ .xlsx</label>
-            <input
-              id="owner-xlsx"
-              type="file"
-              accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              onChange={(e) => void onFile(e.target.files?.[0] || null)}
-              disabled={busy}
-            />
-          </div>
-          {preview ? (
-            <div className="import-preview">
-              <p>
-                พบ <strong>{preview.count}</strong> รายการ
-              </p>
-              <p>
-                รวมออก {formatBaht(preview.sumOut)}
-              </p>
-            </div>
-          ) : null}
-          <div className="btn-row">
-            <button
-              type="button"
-              className="primary-btn action-in"
-              disabled={busy || !preview}
-              onClick={() => void runImport(true)}
-            >
-              แทนที่ทั้งหมดแล้วนำเข้า
-            </button>
-            <button
-              type="button"
-              className="ghost-btn"
-              disabled={busy || !preview}
-              onClick={() => void runImport(false)}
-            >
-              เพิ่มต่อท้าย
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       {error ? <p className="error-text">{error}</p> : null}
-      {message ? <p className="muted">{message}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading && entries.length === 0 ? (
-        <p className="empty">ยังไม่มีรายการ — กด &quot;นำเข้า Excel&quot; เลือกไฟล์ บช. เจ้าของ.xlsx</p>
+        <p className="empty">ยังไม่มีรายการ — กดบันทึกเงินออกเพื่อเริ่ม</p>
       ) : !loading ? (
         <>
           <div className="sheet-wrap">
@@ -219,14 +158,22 @@ function OwnerBooksView() {
                   <th className="col-desc">รายการ</th>
                   <th className="col-out">ออก</th>
                   <th className="col-act">หมวด</th>
+                  <th className="col-note">note</th>
                 </tr>
               </thead>
               <tbody>
                 {entries.map((row) => (
                   <tr key={row.id} className="row-out">
                     <td className="col-date">{formatDateShort(row.date)}</td>
-                    <td className="col-desc" title={row.description}>
-                      {row.description}
+                    <td className="col-desc">
+                      <button
+                        type="button"
+                        className="desc-link"
+                        title="แตะเพื่อแก้ไข"
+                        onClick={() => setEditing(row)}
+                      >
+                        {row.description}
+                      </button>
                     </td>
                     <td className="col-out">
                       {row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}
@@ -235,6 +182,9 @@ function OwnerBooksView() {
                       <span className="muted" style={{ fontSize: "0.72rem" }}>
                         {row.type || "—"}
                       </span>
+                    </td>
+                    <td className="col-note" title={row.note || ""}>
+                      {row.note || ""}
                     </td>
                   </tr>
                 ))}
@@ -252,6 +202,309 @@ function OwnerBooksView() {
           ) : null}
         </>
       ) : null}
+
+      {adding && user?.email ? (
+        <OwnerEntryModal
+          mode="add"
+          createdBy={user.email}
+          onClose={() => setAdding(false)}
+          onSaved={() => setAdding(false)}
+          onError={setError}
+        />
+      ) : null}
+
+      {editing && user?.email ? (
+        <OwnerEntryModal
+          mode="edit"
+          entry={editing}
+          createdBy={user.email}
+          onClose={() => setEditing(null)}
+          onSaved={() => setEditing(null)}
+          onError={setError}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function OwnerEntryModal({
+  mode,
+  entry,
+  createdBy,
+  onClose,
+  onSaved,
+  onError,
+}: {
+  mode: "add" | "edit";
+  entry?: OwnerBookEntry;
+  createdBy: string;
+  onClose: () => void;
+  onSaved: () => void;
+  onError: (msg: string) => void;
+}) {
+  const [date, setDate] = useState(entry ? toDateInput(entry.date) : todayInputValue());
+  const [description, setDescription] = useState(entry?.description || "");
+  const [amount, setAmount] = useState(entry ? String(entry.amountOut) : "");
+  const [typeMode, setTypeMode] = useState(() => {
+    const t = (entry?.type || "").trim().toLowerCase();
+    if (t === "cogs" || t === "sga" || t === "asset") return t;
+    if (entry?.type) return "อื่นๆ";
+    return "auto";
+  });
+  const [note, setNote] = useState(entry?.note || "");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+
+  const autoType = useMemo(() => guessTypeFromDescription(description), [description]);
+  const resolvedType = typeMode === "auto" ? autoType : typeMode;
+
+  const filteredSuggestions = useMemo(() => {
+    const q = description.trim().toLowerCase();
+    if (!q) return suggestions.slice(0, 10);
+    return suggestions.filter((s) => s.toLowerCase().includes(q)).slice(0, 10);
+  }, [description, suggestions]);
+
+  useEffect(() => {
+    void listOwnerBookEntries()
+      .then((rows) => setSuggestions(frequentOwnerDescriptions(rows)))
+      .catch(() => setSuggestions([]));
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
+    };
+  }, [receiptPreview]);
+
+  async function handleReceiptFile(file: File | null) {
+    if (!file) return;
+    setNotice(null);
+    try {
+      const how = await saveImageToDevice(file);
+      setNotice(
+        how === "shared"
+          ? "เปิดเมนูแชร์แล้ว — เลือกบันทึกรูปลงเครื่องได้"
+          : "บันทึกรูปลงเครื่องแล้ว",
+      );
+      const compressed = await compressImageForUpload(file);
+      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
+      setReceiptFile(compressed);
+      setReceiptPreview(URL.createObjectURL(compressed));
+    } catch (err) {
+      onError((err as Error).message || "ใช้รูปไม่สำเร็จ");
+    }
+  }
+
+  async function onSave(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      let receiptUrl = entry?.receiptUrl || "";
+      if (receiptFile) {
+        receiptUrl = await fileToReceiptDataUrl(receiptFile);
+      }
+      if (mode === "add") {
+        await addOwnerBookEntry({
+          date: parseDateInput(date),
+          description,
+          amountOut: Number(amount),
+          type: resolvedType,
+          createdBy,
+          receiptUrl,
+          note,
+        });
+      } else if (entry) {
+        await updateOwnerBookEntry(entry.id, {
+          date: parseDateInput(date),
+          description,
+          amountOut: Number(amount),
+          type: resolvedType,
+          receiptUrl,
+          note,
+        });
+      }
+      onSaved();
+    } catch (err) {
+      onError((err as Error).message || "บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDelete() {
+    if (!entry) return;
+    if (!window.confirm("ลบรายการนี้?")) return;
+    setBusy(true);
+    try {
+      await deleteOwnerBookEntry(entry.id);
+      onSaved();
+    } catch (err) {
+      onError((err as Error).message || "ลบไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop edit-modal" role="presentation" onClick={onClose}>
+      <div
+        className="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-label={mode === "add" ? "บันทึกเงินออก" : "แก้ไขรายการ"}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 className="panel-title">{mode === "add" ? "บันทึกเงินออก" : "ลบ / แก้ไข"}</h2>
+        {notice ? <p className="muted" style={{ margin: "0 0 0.75rem" }}>{notice}</p> : null}
+        <form className="form-card" onSubmit={(e) => void onSave(e)}>
+          <div className="field">
+            <label htmlFor="ob-date">วันที่</label>
+            <input
+              id="ob-date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="ob-desc">รายการ</label>
+            <input
+              id="ob-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              autoComplete="off"
+              required
+            />
+            {filteredSuggestions.length > 0 ? (
+              <div className="suggest-list" role="listbox" aria-label="รายการที่ใช้บ่อย">
+                {filteredSuggestions.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className="suggest-chip"
+                    onClick={() => setDescription(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div className="field">
+            <label htmlFor="ob-amount">เงินออก</label>
+            <input
+              id="ob-amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="ob-type">ประเภท</label>
+            <select
+              id="ob-type"
+              value={TYPE_OPTIONS.some((o) => o.value === typeMode) ? typeMode : "อื่นๆ"}
+              onChange={(e) => setTypeMode(e.target.value)}
+            >
+              {TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="ob-note">note</label>
+            <input
+              id="ob-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+
+          <div className="field">
+            <span className="field-label">สลิป / รูปถ่าย</span>
+            <div className="receipt-actions">
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={() => cameraRef.current?.click()}
+              >
+                ถ่ายด้วยกล้อง
+              </button>
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => galleryRef.current?.click()}
+              >
+                เลือกจากคลังรูป
+              </button>
+            </div>
+            <input
+              ref={cameraRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="sr-only"
+              onChange={(e) => void handleReceiptFile(e.target.files?.[0] || null)}
+            />
+            <input
+              ref={galleryRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => void handleReceiptFile(e.target.files?.[0] || null)}
+            />
+            {receiptPreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={receiptPreview} alt="ตัวอย่างสลิป" className="receipt-preview" />
+            ) : entry?.receiptUrl ? (
+              <div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={entry.receiptUrl} alt="สลิปเดิม" className="receipt-preview" />
+                <p className="muted" style={{ marginTop: "0.25rem", fontSize: "0.8rem" }}>
+                  ถ่ายใหม่จะแทนที่รูปเดิม
+                </p>
+              </div>
+            ) : (
+              <p className="muted" style={{ marginTop: "0.5rem", textAlign: "left" }}>
+                ถ่ายแล้วระบบพยายามบันทึกลงเครื่องทันที แล้วแนบเข้าบิลนี้
+              </p>
+            )}
+          </div>
+
+          <div className="btn-row">
+            <button type="submit" className="primary-btn" disabled={busy}>
+              {busy ? "กำลังบันทึก..." : "บันทึก"}
+            </button>
+            <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
+              ยกเลิก
+            </button>
+          </div>
+          {mode === "edit" ? (
+            <button
+              type="button"
+              className="danger-btn"
+              style={{ width: "100%" }}
+              disabled={busy}
+              onClick={() => void onDelete()}
+            >
+              ลบรายการนี้
+            </button>
+          ) : null}
+        </form>
+      </div>
     </div>
   );
 }

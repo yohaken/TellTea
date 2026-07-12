@@ -1,14 +1,18 @@
 import {
+  addDoc,
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
+  increment,
   limit,
   onSnapshot,
   orderBy,
   query,
   setDoc,
   startAfter,
+  updateDoc,
   writeBatch,
   type QueryDocumentSnapshot,
   type Unsubscribe,
@@ -20,8 +24,20 @@ import type { ImportOwnerBookRow } from "./xlsx-import";
 export const OWNER_BOOKS_PAGE_SIZE = 60;
 export const OWNER_BOOKS_LIVE_MAX = 480;
 
-/** Same shape as ledger rows; amountIn is always 0 for owner books. */
-export type OwnerBookEntry = LedgerEntry;
+/** Owner books row — out-only + optional note. */
+export type OwnerBookEntry = LedgerEntry & {
+  note?: string;
+};
+
+export type OwnerBookEntryInput = {
+  date: number;
+  description: string;
+  amountOut: number;
+  type: string;
+  createdBy: string;
+  receiptUrl?: string;
+  note?: string;
+};
 
 export type OwnerBooksPage = {
   entries: OwnerBookEntry[];
@@ -35,6 +51,7 @@ function mapEntry(d: QueryDocumentSnapshot): OwnerBookEntry {
     ...data,
     amountIn: 0,
     amountOut: Number(data.amountOut) || 0,
+    note: typeof data.note === "string" ? data.note : "",
   };
 }
 
@@ -44,6 +61,11 @@ function ownerBooksCol() {
 
 function ownerBooksMetaRef() {
   return doc(getDb(), "meta", "ownerBooks");
+}
+
+function validateOwnerPayload(payload: { description: string; amountOut: number }) {
+  if (!payload.description.trim()) throw new Error("ต้องใส่รายการ");
+  if (!(payload.amountOut > 0)) throw new Error("ต้องใส่จำนวนเงินออก");
 }
 
 export function subscribeOwnerBooksPage(
@@ -111,6 +133,73 @@ async function recomputeOwnerBooksTotal(): Promise<number> {
   return totalOut;
 }
 
+async function applyOwnerOutDelta(deltaOut: number): Promise<void> {
+  const d = Number(deltaOut) || 0;
+  if (d === 0) return;
+  const ref = ownerBooksMetaRef();
+  const existing = await getDoc(ref);
+  if (!existing.exists()) {
+    await recomputeOwnerBooksTotal();
+    return;
+  }
+  await setDoc(
+    ref,
+    {
+      totalOut: increment(d),
+      balance: increment(-d),
+      updatedAt: Date.now(),
+    },
+    { merge: true },
+  );
+}
+
+export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<string> {
+  const payload = {
+    date: input.date,
+    description: input.description.trim(),
+    amountIn: 0,
+    amountOut: Number(input.amountOut) || 0,
+    type: (input.type || "").trim(),
+    createdBy: input.createdBy,
+    createdAt: Date.now(),
+    receiptUrl: input.receiptUrl || "",
+    note: (input.note || "").trim(),
+  };
+  validateOwnerPayload(payload);
+  const ref = await addDoc(ownerBooksCol(), payload);
+  await applyOwnerOutDelta(payload.amountOut);
+  return ref.id;
+}
+
+export async function updateOwnerBookEntry(
+  id: string,
+  patch: Partial<
+    Pick<OwnerBookEntry, "date" | "description" | "amountOut" | "type" | "receiptUrl" | "note">
+  >,
+): Promise<void> {
+  const entryRef = doc(getDb(), "ownerBooks", id);
+  const prevSnap = await getDoc(entryRef);
+  if (!prevSnap.exists()) throw new Error("ไม่พบรายการ");
+  const prev = prevSnap.data() as OwnerBookEntry;
+  const prevOut = Number(prev.amountOut) || 0;
+
+  const next: Record<string, string | number> = {};
+  if (patch.date != null) next.date = patch.date;
+  if (patch.description != null) next.description = patch.description.trim();
+  if (patch.amountOut != null) next.amountOut = Number(patch.amountOut);
+  if (patch.type != null) next.type = patch.type.trim();
+  if (patch.receiptUrl != null) next.receiptUrl = patch.receiptUrl;
+  if (patch.note != null) next.note = patch.note.trim();
+
+  const nextOut = patch.amountOut != null ? Number(patch.amountOut) : prevOut;
+  const nextDesc =
+    patch.description != null ? patch.description.trim() : String(prev.description || "");
+  validateOwnerPayload({ description: nextDesc, amountOut: nextOut });
+
+  await updateDoc(entryRef, next);
+  await applyOwnerOutDelta(nextOut - prevOut);
+}
+
 export async function importOwnerBookEntries(
   rows: ImportOwnerBookRow[],
   onProgress?: (done: number, total: number) => void,
@@ -133,6 +222,7 @@ export async function importOwnerBookEntries(
         createdBy: row.createdBy,
         createdAt: row.createdAt,
         receiptUrl: "",
+        note: "",
       });
     }
     await batch.commit();
@@ -170,8 +260,12 @@ export async function deleteAllOwnerBookEntries(
 }
 
 export async function deleteOwnerBookEntry(id: string): Promise<void> {
-  await deleteDoc(doc(getDb(), "ownerBooks", id));
-  await recomputeOwnerBooksTotal();
+  const entryRef = doc(getDb(), "ownerBooks", id);
+  const prevSnap = await getDoc(entryRef);
+  if (!prevSnap.exists()) return;
+  const prevOut = Number(prevSnap.data().amountOut) || 0;
+  await deleteDoc(entryRef);
+  await applyOwnerOutDelta(-prevOut);
 }
 
 /** Full scan for owner reports (P&L). */
@@ -180,4 +274,21 @@ export async function listOwnerBookEntries(): Promise<OwnerBookEntry[]> {
     query(ownerBooksCol(), orderBy("date", "asc"), orderBy("createdAt", "asc")),
   );
   return snap.docs.map(mapEntry);
+}
+
+/** Frequent descriptions for owner-book suggestion chips. */
+export function frequentOwnerDescriptions(entries: OwnerBookEntry[], limitCount = 12): string[] {
+  const map = new Map<string, { count: number; last: number }>();
+  for (const e of entries) {
+    const key = e.description.trim();
+    if (!key || e.amountOut <= 0) continue;
+    const cur = map.get(key) || { count: 0, last: 0 };
+    cur.count += 1;
+    cur.last = Math.max(cur.last, e.date || e.createdAt || 0);
+    map.set(key, cur);
+  }
+  return [...map.entries()]
+    .sort((a, b) => b[1].count - a[1].count || b[1].last - a[1].last)
+    .slice(0, limitCount)
+    .map(([k]) => k);
 }

@@ -768,6 +768,32 @@ textarea {
   white-space: nowrap;
 }
 
+.sheet-table .col-note {
+  max-width: 6rem;
+  font-size: 0.72rem;
+  color: rgba(28, 42, 31, 0.55);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desc-link {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(47, 107, 79, 0.35);
+  text-underline-offset: 2px;
+}
+
+.desc-link:hover {
+  color: var(--tea-leaf);
+}
+
 .sheet-table tr.row-in {
   background: rgba(31, 143, 78, 0.1);
 }
