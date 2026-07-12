@@ -43,7 +43,7 @@ const PRODUCT_ALIASES: { canonical: string; keys: string[] }[] = [
   { canonical: "ถุงเก็บความเย็น", keys: ["ถุงเก็บความเย็น", "ถุงเก็บ"] },
   { canonical: "ถุงกระดาษเบเกอรี่", keys: ["ถุงกระดาษเบเกอรี่", "ถุงกระดาษ", "กระดาษเบเกอรี่"] },
   { canonical: "แก้วชา", keys: ["แก้วชา", "แก้ว"] },
-  { canonical: "หลอดใหญ่", keys: ["หลอดใหญ่"] },
+  { canonical: "หลอดใหญ่", keys: ["หลอดใหญ่", "หลอดใหญ่-"] },
   { canonical: "หลอดเล็ก 0.5 มล", keys: ["หลอดเล็ก0.5มล", "หลอดเล็ก", "หลอด0.5"] },
   { canonical: "ฝาซีล", keys: ["ฝาซีล", "ฝา"] },
   { canonical: "โซดา", keys: ["โซดา"] },
@@ -200,8 +200,9 @@ function isProductHeader(raw: string) {
 }
 
 function scoreLayout(rows: string[][], year: number, month: number) {
-  let bestIdx = 0;
+  let bestRowIdx = 0;
   let bestRowScore = 0;
+  let bestTransposedIdx = 0;
   let bestTransposedScore = 0;
 
   for (let i = 0; i < Math.min(rows.length, 15); i += 1) {
@@ -214,19 +215,23 @@ function scoreLayout(rows: string[][], year: number, month: number) {
     if (colIndex(row, "คงเหลือ", "qty", "stock", "ยอด") != null) rowScore += 3;
     rowScore += row.filter((c) => parseDateHeader(c, year, month) != null).length * 2;
 
-    if (h0.includes("วันที่") || h0.includes("date")) transposedScore += 6;
+    if (h0.includes("วันที่") || h0.includes("ช่วง") || h0.includes("date")) transposedScore += 6;
     transposedScore += row.slice(1).filter((c) => isProductHeader(c)).length * 2;
 
     if (rowScore > bestRowScore) {
       bestRowScore = rowScore;
-      bestIdx = i;
+      bestRowIdx = i;
     }
-    if (transposedScore > bestTransposedScore) bestTransposedScore = transposedScore;
+    if (transposedScore > bestTransposedScore) {
+      bestTransposedScore = transposedScore;
+      bestTransposedIdx = i;
+    }
   }
 
+  const mode = bestTransposedScore > bestRowScore + 2 ? "transposed" : "row";
   return {
-    headerIdx: bestIdx,
-    mode: bestTransposedScore > bestRowScore + 2 ? "transposed" : "row",
+    headerIdx: mode === "transposed" ? bestTransposedIdx : bestRowIdx,
+    mode,
   } as const;
 }
 
@@ -290,19 +295,30 @@ function parseTransposedGrid(
   }
 
   const countsByProduct = new Map<string, ParsedStockCount[]>();
-  const carry = { day: null as number | null };
+  let monthCursor = month;
+  let yearCursor = year;
+  let prevDay: number | null = null;
 
   for (let i = headerIdx + 1; i < rows.length; i += 1) {
     const row = rows[i] || [];
     while (row.length < headers.length) row.push("");
 
-    const date = parseDateCell(String(row[0] || ""), year, month, carry);
-    if (!date) {
-      if (!row.some((c, col) => col > 0 && toNumber(c) != null)) {
-        skipped.push({ row: i + 1, reason: "no-date" });
-      }
+    const dayCell = String(row[0] || "").trim();
+    if (!dayCell) continue;
+    const day = Number(dayCell.replace(/[^\d]/g, ""));
+    if (!Number.isFinite(day) || day < 1 || day > 31) {
+      skipped.push({ row: i + 1, reason: "no-date", detail: dayCell });
       continue;
     }
+    if (prevDay != null && day < prevDay) {
+      monthCursor += 1;
+      if (monthCursor > 12) {
+        monthCursor = 1;
+        yearCursor += 1;
+      }
+    }
+    prevDay = day;
+    const date = new Date(yearCursor, monthCursor - 1, day).getTime();
 
     let any = false;
     for (const pc of productCols) {
@@ -402,6 +418,14 @@ export function parseStockCsv(
   if (layout.mode === "transposed") {
     const transposed = parseTransposedGrid(rows, headerIdx, year, month);
     if (transposed.products.length) return transposed;
+    return {
+      products: [],
+      movements: [],
+      skipped: transposed.skipped.length
+        ? transposed.skipped
+        : [{ row: headerIdx + 1, reason: "transposed-empty" }],
+      format: "transposed",
+    };
   }
 
   const headers = rows[headerIdx] || [];

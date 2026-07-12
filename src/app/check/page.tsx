@@ -923,7 +923,7 @@ function CheckSetup({
       <div className="form-card entry-form check-import-card">
         <h2 className="panel-title" style={{ fontSize: "1rem" }}>นำเข้า CSV ความพร้อม</h2>
         <p className="muted check-hint">
-          เลือกไฟล์จาก Google Sheet (TELL TEA - ความพร้อม.csv) — ระบบจะแปลงเป็นแถวแนวตั้งอัตโนมัติ
+          เลือกไฟล์ TELL TEA - ความพร้อม.csv · ตั้งเดือนให้ตรงกับข้อมูล (เช่น 2026-07 สำหรับวันที่ 1–10 ในไฟล์)
         </p>
         <div className="check-import-row">
           <input

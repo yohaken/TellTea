@@ -53,4 +53,4 @@ jobs:
           STOCK_YEAR: "2026"
           STOCK_MONTH: "7"
           CREATED_BY: yohaken@gmail.com
-        run: node scripts/import-stock-csv.js "${{ steps.csv.outputs.path }}"
+        run: npx tsx scripts/import-stock-firestore.ts "${{ steps.csv.outputs.path }}"
