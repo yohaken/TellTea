@@ -6,8 +6,8 @@ import { CircleDollarSign } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import {
+  saveBonusDeductionMonthQty,
   saveBonusDeductionRulePct,
-  saveWorkerDeductionCounts,
   subscribeBonusDeductionMonth,
   subscribeBonusDeductionSettings,
   type BonusDeductionMonthDoc,
@@ -22,7 +22,6 @@ import {
   pickMyBonusRow,
   thaiMonthYearLabel,
   type MonthBonusReport,
-  type WorkerMonthBonus,
 } from "@/lib/bonus";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
@@ -40,8 +39,8 @@ function fmtPct(n: number) {
 }
 
 type EditTarget =
-  | { kind: "rule"; rule: BonusDeductionRule }
-  | { kind: "counts"; row: WorkerMonthBonus };
+  | { kind: "rate"; rule: BonusDeductionRule }
+  | { kind: "qty"; rule: BonusDeductionRule; qty: number };
 
 export default function BonusPage() {
   return (
@@ -122,7 +121,7 @@ function BonusView() {
       year,
       monthIdx,
       deductionSettings.rules,
-      deductionMonth.workers,
+      deductionMonth.counts,
     );
   }, [otEntries, prodEntries, employees, deductionSettings, deductionMonth, year, monthIdx]);
 
@@ -170,10 +169,11 @@ function BonusView() {
             </div>
           </div>
 
-          <BonusDeductionRulesTable
-            rules={deductionSettings?.rules || []}
+          <BonusDeductionSummaryTable
+            report={report}
             isOwner={isOwner}
-            onEditRule={(rule) => setEditTarget({ kind: "rule", rule })}
+            onEditRate={(rule) => setEditTarget({ kind: "rate", rule })}
+            onEditQty={(rule, qty) => setEditTarget({ kind: "qty", rule, qty })}
           />
         </>
       ) : null}
@@ -211,15 +211,9 @@ function BonusView() {
               <dt>หักโบนัส ({fmtPct(myRow.deductPct)})</dt>
               <dd className="bonus-my-deduct">−฿{fmt(myRow.deductAmount)}</dd>
             </div>
-            <div>
-              <dt>ผิดพลาด / ของเสีย</dt>
-              <dd>
-                {myRow.generalFailCount} / {fmt(myRow.wasteQty)}
-              </dd>
-            </div>
           </dl>
           <p className="muted bonus-live-note">
-            อัปเดตทันทีเมื่อมีการกรอก OT / ผลิต · จำนวนหักโดยเจ้าของ
+            หัก% จากตารางสรุปทั้งร้าน · อัปเดตทันทีเมื่อมีการกรอก OT / ผลิต
           </p>
         </section>
       ) : null}
@@ -242,17 +236,12 @@ function BonusView() {
       ) : null}
 
       {!loading && report && (isOwner || showAll) ? (
-        <BonusTable
-          report={report}
-          highlightName={myRow?.workerName}
-          isOwner={isOwner}
-          onEditCounts={(row) => setEditTarget({ kind: "counts", row })}
-        />
+        <BonusTable report={report} highlightName={myRow?.workerName} />
       ) : null}
 
       {report ? (
         <p className="muted bonus-footnote">
-          ขาย = pool รวม ÷ จำนวนคน · ผลิต/OT จากยอดจริง · เจ้าของกรอกจำนวนหักต่อคน · % เรทถาวรใช้ทุกเดือน
+          ขาย = pool รวม ÷ จำนวนคน · ผลิต/OT จากยอดจริง · เจ้าของกรอกจำนวนหักทั้งร้านสิ้นเดือน · เรท% ถาวร
         </p>
       ) : null}
 
@@ -269,50 +258,86 @@ function BonusView() {
   );
 }
 
-function BonusDeductionRulesTable({
-  rules,
+function BonusDeductionSummaryTable({
+  report,
   isOwner,
-  onEditRule,
+  onEditRate,
+  onEditQty,
 }: {
-  rules: BonusDeductionRule[];
+  report: MonthBonusReport;
   isOwner: boolean;
-  onEditRule: (rule: BonusDeductionRule) => void;
+  onEditRate: (rule: BonusDeductionRule) => void;
+  onEditQty: (rule: BonusDeductionRule, qty: number) => void;
 }) {
+  const lines = report.deductionLines;
+
   return (
     <div className="sheet-wrap bonus-deduct-wrap">
       <table className="sheet-table bonus-deduct-table">
         <thead>
           <tr>
             <th>รายการ</th>
-            <th className="col-out">%</th>
+            <th className="col-out">จำนวน</th>
+            <th className="col-out">เรท%</th>
+            <th className="col-out bonus-th-line-pct">รวม%</th>
           </tr>
         </thead>
         <tbody>
-          {rules.map((rule) => (
-            <tr key={rule.id}>
-              <td>{rule.label}</td>
+          {lines.map((line) => (
+            <tr key={line.id}>
+              <td>{line.label}</td>
               <td className="col-out">
                 {isOwner ? (
                   <button
                     type="button"
                     className="bonus-edit-cell"
-                    onClick={() => onEditRule(rule)}
-                    title="แตะเพื่อแก้ %"
+                    onClick={() =>
+                      onEditQty(
+                        { id: line.id, label: line.label, pctPerUnit: line.ratePct },
+                        line.qty,
+                      )
+                    }
+                    title="แตะเพื่อแก้จำนวน (เดือนนี้)"
                   >
-                    {fmtPct(rule.pctPerUnit)}
+                    {line.qty}
                   </button>
                 ) : (
-                  fmtPct(rule.pctPerUnit)
+                  line.qty
                 )}
               </td>
+              <td className="col-out">
+                {isOwner ? (
+                  <button
+                    type="button"
+                    className="bonus-edit-cell"
+                    onClick={() =>
+                      onEditRate({ id: line.id, label: line.label, pctPerUnit: line.ratePct })
+                    }
+                    title="แตะเพื่อแก้เรท% (ถาวร)"
+                  >
+                    {fmtPct(line.ratePct)}
+                  </button>
+                ) : (
+                  fmtPct(line.ratePct)
+                )}
+              </td>
+              <td className="col-out bonus-th-line-pct">{fmtPct(line.linePct)}</td>
             </tr>
           ))}
         </tbody>
+        <tfoot>
+          <tr className="bonus-deduct-foot-row">
+            <td colSpan={3}>หักโบนัสรวม</td>
+            <td className="col-out bonus-th-line-pct">
+              <strong>{fmtPct(report.shopDeductPct)}</strong>
+            </td>
+          </tr>
+        </tfoot>
       </table>
       <p className="muted bonus-deduct-note">
         {isOwner
-          ? "แตะ % เพื่อแก้เรทถาวร · กรอกจำนวนต่อคนในตารางด้านล่าง"
-          : "เรทหักโบนัส — เจ้าของกำหนดจำนวนหักต่อคนในแต่ละเดือน"}
+          ? "กรอกจำนวนสิ้นเดือน · แตะเรท% แก้ถาวร · รวม% นำไปหักทุกคน"
+          : "สรุปหักโบนัสทั้งร้าน — ใช้หักโบนัสรายคนด้านล่าง"}
       </p>
     </div>
   );
@@ -321,13 +346,9 @@ function BonusDeductionRulesTable({
 function BonusTable({
   report,
   highlightName,
-  isOwner,
-  onEditCounts,
 }: {
   report: MonthBonusReport;
   highlightName?: string;
-  isOwner: boolean;
-  onEditCounts: (row: WorkerMonthBonus) => void;
 }) {
   if (!report.rows.length) {
     return <p className="empty">ยังไม่มีข้อมูลโบนัสในเดือนนี้</p>;
@@ -343,8 +364,6 @@ function BonusTable({
             <th className="col-out">ผลิต</th>
             <th className="col-out">OT</th>
             <th className="col-out">รวม</th>
-            <th className="col-out bonus-th-count">ผิด</th>
-            <th className="col-out bonus-th-count">เสีย</th>
             <th className="col-out bonus-th-deduct">หักโบนัส</th>
             <th className="col-out bonus-th-final">คงเหลือ</th>
           </tr>
@@ -359,34 +378,6 @@ function BonusTable({
                 <td className="col-out">{fmt(row.prodBonus)}</td>
                 <td className="col-out">{fmt(row.otMain)}</td>
                 <td className="col-out">{fmt(row.total)}</td>
-                <td className="col-out bonus-th-count">
-                  {isOwner ? (
-                    <button
-                      type="button"
-                      className="bonus-edit-cell"
-                      onClick={() => onEditCounts(row)}
-                      title="แตะเพื่อแก้จำนวนผิดพลาด / ของเสีย"
-                    >
-                      {row.generalFailCount}
-                    </button>
-                  ) : (
-                    row.generalFailCount
-                  )}
-                </td>
-                <td className="col-out bonus-th-count">
-                  {isOwner ? (
-                    <button
-                      type="button"
-                      className="bonus-edit-cell"
-                      onClick={() => onEditCounts(row)}
-                      title="แตะเพื่อแก้จำนวนผิดพลาด / ของเสีย"
-                    >
-                      {fmt(row.wasteQty)}
-                    </button>
-                  ) : (
-                    fmt(row.wasteQty)
-                  )}
-                </td>
                 <td className="col-out bonus-th-deduct">
                   {row.deductAmount > 0 ? (
                     <>
@@ -406,7 +397,7 @@ function BonusTable({
         </tbody>
         <tfoot>
           <tr className="bonus-foot-row">
-            <td colSpan={7}>รวมทั้งร้าน</td>
+            <td colSpan={5}>รวมทั้งร้าน</td>
             <td className="col-out bonus-th-deduct">−{fmt(report.totalDeducted)}</td>
             <td className="col-out bonus-th-final">
               <strong>฿{fmt(report.totalRemaining)}</strong>
@@ -432,27 +423,18 @@ function BonusEditModal({
   month: number;
 }) {
   const [busy, setBusy] = useState(false);
-  const [pct, setPct] = useState(
-    target.kind === "rule" ? String(target.rule.pctPerUnit) : "",
-  );
-  const [generalFailCount, setGeneralFailCount] = useState(
-    target.kind === "counts" ? String(target.row.generalFailCount) : "0",
-  );
-  const [wasteQty, setWasteQty] = useState(
-    target.kind === "counts" ? String(target.row.wasteQty) : "0",
+  const [value, setValue] = useState(
+    target.kind === "rate" ? String(target.rule.pctPerUnit) : String(target.qty),
   );
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
-      if (target.kind === "rule") {
-        await saveBonusDeductionRulePct(target.rule.id as BonusDeductionRuleId, Number(pct));
+      if (target.kind === "rate") {
+        await saveBonusDeductionRulePct(target.rule.id as BonusDeductionRuleId, Number(value));
       } else {
-        await saveWorkerDeductionCounts(year, month, target.row.workerId, {
-          generalFailCount: Number(generalFailCount) || 0,
-          wasteQty: Number(wasteQty) || 0,
-        });
+        await saveBonusDeductionMonthQty(year, month, target.rule.id as BonusDeductionRuleId, Number(value));
       }
       onClose();
     } catch (err) {
@@ -463,9 +445,9 @@ function BonusEditModal({
   }
 
   const title =
-    target.kind === "rule"
-      ? `แก้เรท ${target.rule.label}`
-      : `หักโบนัส — ${target.row.workerName}`;
+    target.kind === "rate"
+      ? `เรท% — ${target.rule.label}`
+      : `จำนวน — ${target.rule.label}`;
 
   return (
     <div className="modal-backdrop edit-modal is-module-form" onClick={onClose}>
@@ -478,53 +460,25 @@ function BonusEditModal({
           {title}
         </h2>
 
-        {target.kind === "rule" ? (
-          <div className="field">
-            <label htmlFor="bonus-rule-pct">หัก % ต่อครั้ง/หน่วย</label>
-            <input
-              id="bonus-rule-pct"
-              type="number"
-              min="0"
-              step="0.01"
-              inputMode="decimal"
-              value={pct}
-              onChange={(e) => setPct(e.target.value)}
-              required
-              autoFocus
-            />
-            <p className="muted form-hint-inline">เรทถาวร — ใช้ทุกเดือน</p>
-          </div>
-        ) : (
-          <>
-            <div className="field">
-              <label htmlFor="bonus-fail-count">ผิดพลาดทั่วไป (ครั้ง)</label>
-              <input
-                id="bonus-fail-count"
-                type="number"
-                min="0"
-                step="1"
-                inputMode="numeric"
-                value={generalFailCount}
-                onChange={(e) => setGeneralFailCount(e.target.value)}
-                required
-                autoFocus
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="bonus-waste-qty">ของเสีย (หน่วย)</label>
-              <input
-                id="bonus-waste-qty"
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                value={wasteQty}
-                onChange={(e) => setWasteQty(e.target.value)}
-                required
-              />
-            </div>
-          </>
-        )}
+        <div className="field">
+          <label htmlFor="bonus-edit-value">
+            {target.kind === "rate" ? "เรท % ต่อหน่วย" : "จำนวน (ทั้งร้าน เดือนนี้)"}
+          </label>
+          <input
+            id="bonus-edit-value"
+            type="number"
+            min="0"
+            step={target.kind === "rate" ? "0.01" : "1"}
+            inputMode="decimal"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            required
+            autoFocus
+          />
+          <p className="muted form-hint-inline">
+            {target.kind === "rate" ? "เรทถาวร — ใช้ทุกเดือน" : "กรอกตอนจ่ายโบนัสสิ้นเดือน"}
+          </p>
+        </div>
 
         <div className="module-form-actions">
           <button type="button" className="ghost-btn" onClick={onClose} disabled={busy}>

@@ -2516,7 +2516,18 @@ body.modal-open .main-panel {
 }
 
 .bonus-deduct-table th.col-out {
-  width: 3.5rem;
+  width: 2.8rem;
+}
+
+.bonus-th-line-pct {
+  background: rgba(244, 162, 97, 0.22);
+  min-width: 2.5rem;
+}
+
+.bonus-deduct-foot-row td {
+  background: rgba(244, 162, 97, 0.18);
+  font-weight: 700;
+  font-size: 0.68rem;
 }
 
 .bonus-deduct-note {
@@ -2635,7 +2646,7 @@ body.modal-open .main-panel {
 }
 
 .bonus-table {
-  min-width: 28rem;
+  min-width: 24rem;
 }
 
 .bonus-th-deduct {

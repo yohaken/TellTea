@@ -20,16 +20,22 @@ export type BonusDeductionSettings = {
   updatedAt: number;
 };
 
-export type WorkerDeductionCounts = {
-  generalFailCount: number;
-  wasteQty: number;
-};
+/** จำนวนหักทั้งร้านต่อเดือน — เจ้าของกรอกสิ้นเดือน */
+export type BonusDeductionMonthCounts = Record<BonusDeductionRuleId, number>;
 
 export type BonusDeductionMonthDoc = {
   year: number;
   month: number;
-  workers: Record<string, WorkerDeductionCounts>;
+  counts: BonusDeductionMonthCounts;
   updatedAt: number;
+};
+
+export type BonusDeductionLine = {
+  id: BonusDeductionRuleId;
+  label: string;
+  qty: number;
+  ratePct: number;
+  linePct: number;
 };
 
 export const DEFAULT_BONUS_DEDUCTION_RULES: BonusDeductionRule[] = [
@@ -37,9 +43,9 @@ export const DEFAULT_BONUS_DEDUCTION_RULES: BonusDeductionRule[] = [
   { id: "waste", label: "ของเสีย", pctPerUnit: 3 },
 ];
 
-export const EMPTY_WORKER_DEDUCTION_COUNTS: WorkerDeductionCounts = {
-  generalFailCount: 0,
-  wasteQty: 0,
+export const EMPTY_BONUS_DEDUCTION_COUNTS: BonusDeductionMonthCounts = {
+  generalFail: 0,
+  waste: 0,
 };
 
 function settingsRef() {
@@ -49,6 +55,10 @@ function settingsRef() {
 function monthRef(year: number, month: number) {
   const key = `${year}-${String(month + 1).padStart(2, "0")}`;
   return doc(getDb(), "bonusDeductionMonths", key);
+}
+
+function round2(n: number) {
+  return Math.round(n * 100) / 100;
 }
 
 function normalizeRule(raw: Partial<BonusDeductionRule>, fallback: BonusDeductionRule): BonusDeductionRule {
@@ -72,30 +82,53 @@ export function normalizeBonusDeductionSettings(
   };
 }
 
-function normalizeWorkerCounts(raw: Partial<WorkerDeductionCounts> | undefined): WorkerDeductionCounts {
+function normalizeMonthCounts(raw: Partial<BonusDeductionMonthCounts> | undefined): BonusDeductionMonthCounts {
   return {
-    generalFailCount: Math.max(0, Math.round(Number(raw?.generalFailCount) || 0)),
-    wasteQty: Math.max(0, Number(raw?.wasteQty) || 0),
+    generalFail: Math.max(0, Number(raw?.generalFail) || 0),
+    waste: Math.max(0, Number(raw?.waste) || 0),
   };
 }
 
+/** รองรับข้อมูลเก่าที่เก็บแยกรายคน — ไม่ migrate อัตโนมัติ */
 export function normalizeBonusDeductionMonthDoc(
   year: number,
   month: number,
-  data: Partial<BonusDeductionMonthDoc> | undefined,
+  data: Partial<BonusDeductionMonthDoc & { workers?: unknown }> | undefined,
 ): BonusDeductionMonthDoc {
-  const workers: Record<string, WorkerDeductionCounts> = {};
-  if (data?.workers && typeof data.workers === "object") {
-    for (const [workerId, counts] of Object.entries(data.workers)) {
-      workers[workerId] = normalizeWorkerCounts(counts);
-    }
-  }
   return {
     year,
     month,
-    workers,
+    counts: normalizeMonthCounts(data?.counts),
     updatedAt: Number(data?.updatedAt) || 0,
   };
+}
+
+export function computeRuleLinePct(qty: number, ratePct: number) {
+  return round2(Math.max(0, qty) * Math.max(0, ratePct));
+}
+
+export function buildBonusDeductionLines(
+  counts: BonusDeductionMonthCounts,
+  rules: BonusDeductionRule[],
+): BonusDeductionLine[] {
+  return rules.map((rule) => {
+    const qty = counts[rule.id] || 0;
+    return {
+      id: rule.id,
+      label: rule.label,
+      qty,
+      ratePct: rule.pctPerUnit,
+      linePct: computeRuleLinePct(qty, rule.pctPerUnit),
+    };
+  });
+}
+
+export function computeShopDeductPct(
+  counts: BonusDeductionMonthCounts,
+  rules: BonusDeductionRule[],
+): number {
+  const raw = buildBonusDeductionLines(counts, rules).reduce((sum, line) => sum + line.linePct, 0);
+  return Math.min(100, round2(raw));
 }
 
 export async function getBonusDeductionSettings(): Promise<BonusDeductionSettings> {
@@ -172,25 +205,21 @@ export function subscribeBonusDeductionMonth(
   );
 }
 
-export async function saveWorkerDeductionCounts(
+export async function saveBonusDeductionMonthQty(
   year: number,
   month: number,
-  workerId: string,
-  counts: WorkerDeductionCounts,
+  ruleId: BonusDeductionRuleId,
+  qty: number,
 ): Promise<void> {
   const current = await getBonusDeductionMonth(year, month);
-  const workers = { ...current.workers, [workerId]: normalizeWorkerCounts(counts) };
+  const counts = {
+    ...current.counts,
+    [ruleId]: Math.max(0, Number(qty) || 0),
+  };
   await setDoc(monthRef(year, month), {
     year,
     month,
-    workers,
+    counts,
     updatedAt: Date.now(),
   });
-}
-
-export function getWorkerDeductionCounts(
-  monthDoc: BonusDeductionMonthDoc,
-  workerId: string,
-): WorkerDeductionCounts {
-  return monthDoc.workers[workerId] || EMPTY_WORKER_DEDUCTION_COUNTS;
 }
