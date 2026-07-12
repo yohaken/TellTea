@@ -8,6 +8,7 @@ import {
   ChefHat,
   CircleDollarSign,
   ClipboardCheck,
+  ClipboardList,
   Coffee,
   LogOut,
   MoreHorizontal,
@@ -33,6 +34,7 @@ const MORE_PREFIXES = [
   "/export",
   "/staff",
   "/profile",
+  "/tasks",
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -61,6 +63,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       : null,
     can(staff, "stock")
       ? { href: "/stock/", label: "คลัง", icon: Boxes }
+      : null,
+    can(staff, "assignTasks")
+      ? { href: "/tasks/", label: "งาน", icon: ClipboardList }
       : null,
     hasAnyExtraPermission(staff)
       ? { href: "/more/", label: "อื่นๆ", icon: MoreHorizontal }

@@ -65,7 +65,7 @@ service cloud.firestore {
             && get(staffPath()).data.permissions[p] == true)
         || (isStaff()
             && !get(staffPath()).data.keys().hasAny(['permissions'])
-            && (p == 'ledger' || p == 'stock' || p == 'production' || p == 'otBonus' || p == 'checklist' || p == 'bonus'));
+            && (p == 'ledger' || p == 'stock' || p == 'production' || p == 'otBonus' || p == 'checklist' || p == 'assignTasks' || p == 'bonus'));
     }
 
     function staffSelfProfileUpdate() {
@@ -124,6 +124,47 @@ service cloud.firestore {
         && request.resource.data.shift is string
         && request.resource.data.machineCount is number
         && request.resource.data.status == 'unpaid';
+    }
+
+    function staffEmployeeId() {
+      return isStaff() && get(staffPath()).data.keys().hasAny(['employeeId'])
+        ? get(staffPath()).data.employeeId
+        : '';
+    }
+
+    function isAssignTaskAssignee() {
+      return staffEmployeeId() != ''
+        && staffEmployeeId() in resource.data.assigneeIds;
+    }
+
+    function assignTaskCreate() {
+      return request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.assigneeIds is list
+        && request.resource.data.assigneeIds.size() > 0
+        && request.resource.data.dueDate is number
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdBy == actorId();
+    }
+
+    function assignTaskStaffComplete() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return before.status == 'pending'
+        && after.status == 'completed'
+        && isAssignTaskAssignee()
+        && after.proofImg is string
+        && after.proofImg.size() > 0
+        && after.title == before.title
+        && after.note == before.note
+        && after.assigneeIds == before.assigneeIds
+        && after.assigneeNames == before.assigneeNames
+        && after.dueDate == before.dueDate
+        && after.recurrence == before.recurrence
+        && after.checklist == before.checklist
+        && after.createdBy == before.createdBy
+        && after.createdAt == before.createdAt
+        && after.assignedBy == before.assignedBy;
     }
 
     match /staff/{staffId} {
@@ -263,6 +304,13 @@ service cloud.firestore {
         && request.resource.data.status in ['pass', 'fail'];
       allow delete: if isOwner();
       allow update: if false;
+    }
+
+    match /assignTasks/{id} {
+      allow read: if hasPerm('assignTasks') && (isOwner() || isAssignTaskAssignee());
+      allow create: if isOwner() && hasPerm('assignTasks') && assignTaskCreate();
+      allow update: if isOwner() || assignTaskStaffComplete();
+      allow delete: if isOwner();
     }
 
     match /bonusDeductionMonths/{monthKey} {

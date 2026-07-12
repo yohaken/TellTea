@@ -6,6 +6,7 @@ export const PERMISSION_KEYS = [
   "production",
   "otBonus",
   "checklist",
+  "assignTasks",
   "bonus",
   "ownerBooks",
   "pnl",
@@ -25,6 +26,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   production: "ผลิต / โบนัสเบเกอรี่",
   otBonus: "โบนัสชง",
   checklist: "SmartCheck SOP",
+  assignTasks: "งานมอบหมาย",
   bonus: "สรุปโบนัสเดือน",
   ownerBooks: "บช.เจ้าของ",
   pnl: "สรุปรายเดือน",
@@ -38,8 +40,8 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
 export const PERMISSION_GROUPS: { title: string; hint?: string; keys: PermissionKey[] }[] = [
   {
     title: "หน้าหลัก — ใช้ทุกวัน",
-    hint: "แท็บด้านล่าง: บัญชี · ผลิต · ชง · เช็ค · คลัง · โบนัส",
-    keys: ["ledger", "stock", "production", "otBonus", "checklist", "bonus"],
+    hint: "แท็บด้านล่าง: บัญชี · ผลิต · ชง · เช็ค · คลัง · งาน · โบนัส",
+    keys: ["ledger", "stock", "production", "otBonus", "checklist", "assignTasks", "bonus"],
   },
   {
     title: "อื่นๆ — เครื่องมือเพิ่ม",
@@ -54,6 +56,7 @@ export const DEFAULT_STAFF_PERMISSIONS: StaffPermissions = {
   production: true,
   otBonus: true,
   checklist: true,
+  assignTasks: true,
   bonus: true,
   ownerBooks: false,
   pnl: false,
@@ -69,6 +72,7 @@ export const OWNER_PERMISSIONS: StaffPermissions = {
   production: true,
   otBonus: true,
   checklist: true,
+  assignTasks: true,
   bonus: true,
   ownerBooks: true,
   pnl: true,
