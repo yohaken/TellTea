@@ -1,0 +1,135 @@
+"use client";
+
+import { useEffect, useState, type FormEvent } from "react";
+import { IdCard } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { PhotoAttachField } from "@/components/PhotoAttachField";
+import { useAuth } from "@/lib/auth";
+import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
+import { needsPersonalProfileSetup } from "@/lib/profile";
+import { updateStaffProfile } from "@/lib/staff";
+import { saveCachedStaff } from "@/lib/cache";
+
+/** Modal reel — กรอกข้อมูลส่วนตัวครั้งแรก ปิดไม่ได้จนกว่าจะบันทึกครบ */
+export function PersonalProfileModal() {
+  const { staff, refreshStaff } = useAuth();
+  const pathname = usePathname();
+  const open =
+    !!staff &&
+    staff.role === "staff" &&
+    needsPersonalProfileSetup(staff) &&
+    !pathname.startsWith("/profile");
+
+  const [legalFirstName, setLegalFirstName] = useState("");
+  const [legalLastName, setLegalLastName] = useState("");
+  const [idCardPhotoUrl, setIdCardPhotoUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useBodyScrollLock(open);
+
+  useEffect(() => {
+    if (!staff) return;
+    setLegalFirstName(staff.legalFirstName || "");
+    setLegalLastName(staff.legalLastName || "");
+    setIdCardPhotoUrl(staff.idCardPhotoUrl || "");
+  }, [staff]);
+
+  if (!open) return null;
+
+  async function onSave(e: FormEvent) {
+    e.preventDefault();
+    if (!staff) return;
+    if (!legalFirstName.trim() || !legalLastName.trim()) {
+      setError("ใส่ชื่อจริงและนามสกุล");
+      return;
+    }
+    if (!idCardPhotoUrl.trim()) {
+      setError("ถ่ายหรือแนบรูปบัตรประชาชน");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await updateStaffProfile(staff.id, {
+        legalFirstName: legalFirstName.trim(),
+        legalLastName: legalLastName.trim(),
+        idCardPhotoUrl,
+        personalProfileComplete: true,
+      });
+      saveCachedStaff(updated);
+      await refreshStaff();
+    } catch (err) {
+      setError((err as Error).message || "บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className="modal-backdrop profile-modal-backdrop"
+      role="presentation"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div
+        className="modal-card profile-modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="profile-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="profile-modal-head">
+          <IdCard size={22} aria-hidden />
+          <div>
+            <h2 id="profile-modal-title" className="panel-title">
+              กรอกข้อมูลส่วนตัว
+            </h2>
+            <p className="muted profile-modal-sub">
+              ใช้งานได้ก่อน — กรอกให้ครบเพื่อปิดหน้าต่างนี้
+            </p>
+          </div>
+        </div>
+
+        {error ? <p className="error-text">{error}</p> : null}
+
+        <form className="form-card entry-form profile-modal-form" onSubmit={(e) => void onSave(e)}>
+          <div className="field">
+            <label htmlFor="modal-legal-first">ชื่อจริง</label>
+            <input
+              id="modal-legal-first"
+              value={legalFirstName}
+              onChange={(e) => setLegalFirstName(e.target.value)}
+              placeholder="ตามบัตร ปชช."
+              autoComplete="given-name"
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="modal-legal-last">นามสกุล</label>
+            <input
+              id="modal-legal-last"
+              value={legalLastName}
+              onChange={(e) => setLegalLastName(e.target.value)}
+              placeholder="ตามบัตร ปชช."
+              autoComplete="family-name"
+              required
+            />
+          </div>
+          <PhotoAttachField
+            label="รูปบัตรประชาชน"
+            value={idCardPhotoUrl}
+            onChange={setIdCardPhotoUrl}
+            onError={setError}
+          />
+          <p className="muted form-hint-inline">
+            ถ่ายด้วยกล้องหรือแนบจากคลังรูปได้
+          </p>
+          <button type="submit" className="primary-btn" disabled={busy}>
+            {busy ? "กำลังบันทึก..." : "บันทึกและปิด"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}

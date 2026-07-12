@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { AppBrand } from "@/components/AppBrand";
 import { LowBalanceAlert } from "@/components/LowBalanceAlert";
+import { PersonalProfileModal } from "@/components/PersonalProfileModal";
 import { ProfilePromptBanner } from "@/components/ProfilePromptBanner";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import { profileStatusLabel } from "@/lib/profile";
@@ -105,6 +106,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
 
         <LowBalanceAlert />
+
+        <PersonalProfileModal />
 
         <UiSettingsProvider />
 

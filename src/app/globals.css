@@ -779,6 +779,49 @@ body.modal-open .main-panel {
   margin-bottom: 1rem;
 }
 
+.profile-modal-backdrop {
+  z-index: 55;
+  touch-action: none;
+}
+
+.profile-modal-card {
+  width: min(100%, var(--shell-max, 24rem));
+  max-height: min(90dvh, 40rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+.profile-modal-head {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  margin-bottom: 0.65rem;
+}
+
+.profile-modal-head .panel-title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.profile-modal-sub {
+  margin: 0.2rem 0 0;
+  text-align: left;
+  font-size: 0.8rem;
+}
+
+.profile-modal-form {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.profile-modal-form .form-hint-inline {
+  margin: 0 0 0.65rem;
+  text-align: left;
+  font-size: 0.78rem;
+}
+
 .profile-prompt-banner--personal {
   background: rgba(255, 235, 235, 0.95);
   border-color: rgba(180, 50, 40, 0.28);
