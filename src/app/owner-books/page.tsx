@@ -33,10 +33,8 @@ import {
   saveImageToDevice,
 } from "@/lib/receipts";
 import {
-  entryUpdatedAt,
   formatBaht,
   formatDateShort,
-  formatDateTimeShort,
   formatPlainNumber,
   parseDateInput,
   todayInputValue,
@@ -156,7 +154,6 @@ function OwnerBooksView() {
                   <th className="col-out">ออก</th>
                   <th className="col-act">ประเภท</th>
                   <th className="col-note">note</th>
-                  <th className="col-updated">แก้ไขล่าสุด</th>
                 </tr>
               </thead>
               <tbody>
@@ -184,7 +181,6 @@ function OwnerBooksView() {
                     <td className="col-note" title={row.note || ""}>
                       {row.note || ""}
                     </td>
-                    <td className="col-updated">{formatDateTimeShort(entryUpdatedAt(row))}</td>
                   </tr>
                 ))}
               </tbody>

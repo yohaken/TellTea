@@ -34,10 +34,8 @@ import {
 } from "@/lib/receipts";
 import type { LedgerEntry } from "@/lib/types";
 import {
-  entryUpdatedAt,
   formatBaht,
   formatDateShort,
-  formatDateTimeShort,
   formatPlainNumber,
   parseDateInput,
   todayInputValue,
@@ -242,7 +240,6 @@ function LedgerView() {
                   <th className="col-in">เข้า</th>
                   <th className="col-out">ออก</th>
                   <th className="col-type">ประเภท</th>
-                  <th className="col-updated">แก้ไขล่าสุด</th>
                 </tr>
               </thead>
                 <tbody>
@@ -287,7 +284,6 @@ function LedgerView() {
                           {row.type ? labelLedgerType(row.type) : "—"}
                         </span>
                       </td>
-                      <td className="col-updated">{formatDateTimeShort(entryUpdatedAt(row))}</td>
                     </tr>
                   ))}
                 </tbody>
