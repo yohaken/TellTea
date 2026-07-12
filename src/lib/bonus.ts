@@ -2,7 +2,7 @@ import type { Employee } from "./employees";
 import type { BonusDeductionLine, BonusDeductionMonthCounts, BonusDeductionRule } from "./bonus-deductions";
 import { buildBonusDeductionLines, computeShopDeductPct } from "./bonus-deductions";
 import { computeOtBonus, type OtEntry } from "./ot";
-import { computeProdBonus, type ProdEntry } from "./production";
+import { computeProdBonus, prodEntryCountsTowardBonus, type ProdEntry } from "./production";
 
 export type WorkerMonthBonus = {
   workerId: string;
@@ -83,7 +83,9 @@ export function computeMonthBonus(
   const active = employees.filter((e) => e.active);
 
   const otMonth = otEntries.filter((e) => isInMonth(e.date, year, month));
-  const prodMonth = prodEntries.filter((e) => isInMonth(e.date, year, month));
+  const prodMonth = prodEntries.filter(
+    (e) => isInMonth(e.date, year, month) && prodEntryCountsTowardBonus(e),
+  );
 
   const totalSalesPool = round2(
     prodMonth.reduce((sum, row) => sum + computeProdBonus(row).salesBonus, 0),

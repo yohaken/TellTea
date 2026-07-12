@@ -5,10 +5,15 @@ import type { ProdStatus } from "@/lib/production";
 
 export type PayStatus = ProdStatus | OtStatus;
 
-const STATUS_ACTIONS: { status: PayStatus; label: string; className?: string }[] = [
+const OT_STATUS_ACTIONS: { status: OtStatus; label: string; className?: string }[] = [
   { status: "paid", label: "จ่ายแล้ว", className: "is-paid" },
   { status: "pending", label: "เตรียมจ่าย", className: "is-pending" },
   { status: "unpaid", label: "ยังไม่จ่าย" },
+];
+
+const PROD_STATUS_ACTIONS: { status: ProdStatus; label: string; className?: string }[] = [
+  { status: "paid", label: "จ่ายแล้ว", className: "is-paid" },
+  { status: "unpaid", label: "รอจ่าย" },
 ];
 
 export function BulkStatusToolbar({
@@ -22,6 +27,7 @@ export function BulkStatusToolbar({
   busy,
   visibleCount,
   unpaidCount,
+  variant = "ot",
 }: {
   selectedCount: number;
   month?: string;
@@ -33,7 +39,10 @@ export function BulkStatusToolbar({
   busy?: boolean;
   visibleCount: number;
   unpaidCount: number;
+  variant?: "ot" | "prod";
 }) {
+  const statusActions = variant === "prod" ? PROD_STATUS_ACTIONS : OT_STATUS_ACTIONS;
+  const unpaidLabel = variant === "prod" ? "เลือกรอจ่าย" : "เลือกที่ยังไม่จ่าย";
   return (
     <div className="bulk-status-toolbar">
       {month != null && onMonthChange ? (
@@ -46,7 +55,7 @@ export function BulkStatusToolbar({
         />
       ) : null}
       <button type="button" className="ghost-btn bulk-status-chip" disabled={busy || !unpaidCount} onClick={onSelectUnpaid}>
-        เลือกที่ยังไม่จ่าย ({unpaidCount})
+        {unpaidLabel} ({unpaidCount})
       </button>
       <button type="button" className="ghost-btn bulk-status-chip" disabled={busy || !visibleCount} onClick={onSelectVisible}>
         เลือกที่แสดง ({visibleCount})
@@ -55,7 +64,7 @@ export function BulkStatusToolbar({
       {selectedCount > 0 ? (
         <div className="bulk-status-actions" role="group" aria-label="เปลี่ยนสถานะกลุ่ม">
           <span className="bulk-status-count">เลือก {selectedCount} รายการ</span>
-          {STATUS_ACTIONS.map((action) => (
+          {statusActions.map((action) => (
             <button
               key={action.status}
               type="button"

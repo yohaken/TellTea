@@ -20,7 +20,16 @@ import {
   type Employee,
 } from "./employees";
 
-export type ProdStatus = "unpaid" | "pending" | "paid";
+export type ProdStatus = "unpaid" | "paid";
+
+export function normalizeProdStatus(raw: unknown): ProdStatus {
+  return raw === "paid" ? "paid" : "unpaid";
+}
+
+/** รายการที่ยังนับในโบนัส real-time */
+export function prodEntryCountsTowardBonus(entry: Pick<ProdEntry, "status">) {
+  return normalizeProdStatus(entry.status) === "unpaid";
+}
 
 export type ProdProduct = {
   id: string;
@@ -92,10 +101,9 @@ export function computeProdBonus(entry: {
   return { salesBonus, prodBonus, workerCount, bonusPerPerson };
 }
 
-export function labelProdStatus(status: ProdStatus) {
-  if (status === "paid") return "จ่ายโบนัสแล้ว";
-  if (status === "pending") return "เตรียมจ่ายโบนัส";
-  return "ยังไม่จ่าย";
+export function labelProdStatus(status: ProdStatus | "pending") {
+  if (normalizeProdStatus(status) === "paid") return "จ่ายแล้ว";
+  return "รอจ่าย";
 }
 
 export function isProdEntryLocked(entry: Pick<ProdEntry, "status">) {
@@ -140,7 +148,7 @@ function mapProdEntryDoc(id: string, data: Record<string, unknown>): ProdEntry {
     qtyWaste: Number(data.qtyWaste) || 0,
     note: String(data.note || ""),
     imageUrl: data.imageUrl ? String(data.imageUrl) : undefined,
-    status: (data.status as ProdStatus) || "unpaid",
+    status: normalizeProdStatus(data.status),
     createdBy: String(data.createdBy || ""),
     createdAt: Number(data.createdAt) || 0,
     updatedAt: Number(data.updatedAt) || 0,
@@ -328,7 +336,7 @@ export async function updateProdEntry(
   if (patch.qtyWaste != null) next.qtyWaste = Number(patch.qtyWaste) || 0;
   if (patch.note != null) next.note = patch.note.trim();
   if (patch.imageUrl != null) next.imageUrl = patch.imageUrl.trim();
-  if (patch.status != null) next.status = patch.status;
+  if (patch.status != null) next.status = normalizeProdStatus(patch.status);
   await updateDoc(ref, next);
 }
 
@@ -336,6 +344,7 @@ export async function bulkUpdateProdEntryStatus(
   ids: string[],
   status: ProdStatus,
 ): Promise<number> {
+  const normalized = normalizeProdStatus(status);
   if (!ids.length) return 0;
   const db = getDb();
   let batch = writeBatch(db);
@@ -351,7 +360,7 @@ export async function bulkUpdateProdEntryStatus(
   }
 
   for (const id of ids) {
-    batch.update(doc(db, "prodEntries", id), { status, updatedAt: now });
+    batch.update(doc(db, "prodEntries", id), { status: normalized, updatedAt: now });
     ops += 1;
     count += 1;
     if (ops >= 400) await flush();

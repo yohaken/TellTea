@@ -37,8 +37,7 @@ function parseDateDM(text) {
 
 function mapStatus(raw) {
   const s = String(raw || "").trim();
-  if (s.includes("จ่ายโบนัสแล้ว") && !s.includes("เตรียม")) return "paid";
-  if (s.includes("เตรียม")) return "pending";
+  if (s.includes("จ่าย") && s.includes("แล้ว")) return "paid";
   return "unpaid";
 }
 
