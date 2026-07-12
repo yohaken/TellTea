@@ -2,6 +2,11 @@ name: Import ledger Jul 2026
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/import-ledger-jul.mjs"
+      - ".github/workflows/import-ledger-jul.yml"
 
 jobs:
   import:

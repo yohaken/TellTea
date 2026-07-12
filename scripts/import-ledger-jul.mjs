@@ -20,7 +20,7 @@ function guessType(description, amountIn) {
   return "cogs";
 }
 
-/** Confirmed by owner — order matters for running balance */
+/** Confirmed by owner — order matters for running balance (Jul 10–12 2026) */
 const ROWS = [
   { y: 2026, m: 7, d: 10, description: "กาแฟ", amountIn: 0, amountOut: 2000 },
   { y: 2026, m: 7, d: 10, description: "ค่าน้ำแข็ง 7ถุง", amountIn: 0, amountOut: 280 },
