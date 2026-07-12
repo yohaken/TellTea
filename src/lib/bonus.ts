@@ -1,0 +1,168 @@
+import type { Employee } from "./employees";
+import { computeOtBonus, type OtEntry } from "./ot";
+import { computeProdBonus, type ProdEntry } from "./production";
+
+export type WorkerMonthBonus = {
+  workerId: string;
+  workerName: string;
+  /** ส่วนแบ่ง pool ขายเบเกอรี่ (เท่ากันทุกคน) */
+  salesShare: number;
+  /** โบนัสผลิตเบเกอรี่ */
+  prodBonus: number;
+  /** โบนัสหลัก OT / ชง */
+  otMain: number;
+  total: number;
+  deductPct: number;
+  deductAmount: number;
+  remaining: number;
+};
+
+export type MonthBonusReport = {
+  year: number;
+  month: number;
+  employeeCount: number;
+  totalSalesPool: number;
+  totalRemaining: number;
+  rows: WorkerMonthBonus[];
+};
+
+export function parseMonthInput(value: string) {
+  const [y, m] = value.split("-").map(Number);
+  return { year: y, month: m - 1 };
+}
+
+export function monthInputValue(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
+export function isInMonth(ms: number, year: number, month: number) {
+  const d = new Date(ms);
+  return d.getFullYear() === year && d.getMonth() === month;
+}
+
+export function namesMatch(a: string, b: string) {
+  const x = a.trim().toLowerCase();
+  const y = b.trim().toLowerCase();
+  if (!x || !y) return false;
+  return x === y || x.includes(y) || y.includes(x);
+}
+
+export function findWorkerName(names: string[], roster: Employee[], hint?: string) {
+  if (hint) {
+    const fromHint = roster.find((e) => namesMatch(e.name, hint));
+    if (fromHint) return fromHint.name;
+    if (names.some((n) => namesMatch(n, hint))) return hint;
+  }
+  for (const n of names) {
+    const hit = roster.find((e) => namesMatch(e.name, n));
+    if (hit) return hit.name;
+  }
+  return names[0] || "";
+}
+
+function round2(n: number) {
+  return Math.round(n * 100) / 100;
+}
+
+export function computeMonthBonus(
+  otEntries: OtEntry[],
+  prodEntries: ProdEntry[],
+  employees: Employee[],
+  year: number,
+  month: number,
+): MonthBonusReport {
+  const active = employees.filter((e) => e.active);
+
+  const otMonth = otEntries.filter((e) => isInMonth(e.date, year, month));
+  const prodMonth = prodEntries.filter((e) => isInMonth(e.date, year, month));
+
+  const totalSalesPool = round2(
+    prodMonth.reduce((sum, row) => sum + computeProdBonus(row).salesBonus, 0),
+  );
+
+  const employeeCount = Math.max(1, active.length);
+  const salesShareEach = round2(totalSalesPool / employeeCount);
+
+  const byName = new Map<string, { workerId: string; otMain: number; prodBonus: number }>();
+
+  for (const emp of active) {
+    byName.set(emp.name, { workerId: emp.id, otMain: 0, prodBonus: 0 });
+  }
+
+  function ensureWorker(name: string) {
+    const canonical = findWorkerName([name], active) || name;
+    if (!byName.has(canonical)) {
+      byName.set(canonical, {
+        workerId: active.find((e) => namesMatch(e.name, canonical))?.id || canonical,
+        otMain: 0,
+        prodBonus: 0,
+      });
+    }
+    return canonical;
+  }
+
+  for (const row of otMonth) {
+    const c = computeOtBonus(row);
+    for (const rawName of row.workerNames) {
+      const name = ensureWorker(rawName);
+      const slot = byName.get(name)!;
+      slot.otMain = round2(slot.otMain + c.bonusPerPerson);
+    }
+  }
+
+  for (const row of prodMonth) {
+    const c = computeProdBonus(row);
+    for (const rawName of row.workerNames) {
+      const name = ensureWorker(rawName);
+      const slot = byName.get(name)!;
+      slot.prodBonus = round2(slot.prodBonus + c.bonusPerPerson);
+    }
+  }
+
+  const rows: WorkerMonthBonus[] = [...byName.entries()]
+    .map(([workerName, slot]) => {
+      const total = round2(salesShareEach + slot.prodBonus + slot.otMain);
+      return {
+        workerId: slot.workerId,
+        workerName,
+        salesShare: salesShareEach,
+        prodBonus: slot.prodBonus,
+        otMain: slot.otMain,
+        total,
+        deductPct: 0,
+        deductAmount: 0,
+        remaining: total,
+      };
+    })
+    .sort((a, b) => b.remaining - a.remaining || a.workerName.localeCompare(b.workerName, "th"));
+
+  const totalRemaining = round2(rows.reduce((s, r) => s + r.remaining, 0));
+
+  return {
+    year,
+    month,
+    employeeCount,
+    totalSalesPool,
+    totalRemaining,
+    rows,
+  };
+}
+
+export function pickMyBonusRow(
+  report: MonthBonusReport,
+  roster: Employee[],
+  displayName?: string,
+): WorkerMonthBonus | null {
+  if (!displayName?.trim()) return null;
+  return report.rows.find((r) => namesMatch(r.workerName, displayName)) || null;
+}
+
+export function thaiMonthYearLabel(year: number, month: number) {
+  const months = [
+    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
+  ];
+  return `${months[month]} ${year + 543}`;
+}

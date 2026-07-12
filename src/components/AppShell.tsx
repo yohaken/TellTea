@@ -6,6 +6,7 @@ import {
   BookOpen,
   Boxes,
   ChefHat,
+  CircleDollarSign,
   ClipboardCheck,
   Coffee,
   LogOut,
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 
 const MORE_PREFIXES = [
   "/more",
+  "/bonus",
   "/pnl",
   "/owner-books",
   "/alerts",
@@ -44,6 +46,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       : null,
     can(staff, "otBonus")
       ? { href: "/ot/", label: "OT", icon: Coffee }
+      : null,
+    can(staff, "bonus")
+      ? { href: "/bonus/", label: "โบนัส", icon: CircleDollarSign }
       : null,
     can(staff, "checklist")
       ? { href: "/check/", label: "เช็ค", icon: ClipboardCheck }

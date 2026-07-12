@@ -1648,6 +1648,153 @@ textarea {
   text-align: left;
 }
 
+.bonus-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.4rem;
+}
+
+.bonus-toolbar-meta {
+  font-size: 0.72rem;
+}
+
+.bonus-summary-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  margin-bottom: 0.55rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 236, 179, 0.55);
+  border: 1px solid rgba(230, 194, 0, 0.35);
+  font-size: 0.75rem;
+}
+
+.bonus-summary-bar strong {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 0.95rem;
+  color: #7a4e00;
+}
+
+.bonus-my-card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 0.95rem;
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 0.65rem;
+  box-shadow: 0 8px 24px rgba(28, 42, 31, 0.06);
+  border-left: 4px solid var(--tea-leaf);
+}
+
+.bonus-my-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.bonus-my-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bonus-my-name {
+  margin: 0.1rem 0 0;
+  font-size: 1.05rem;
+}
+
+.bonus-my-total {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--tea-leaf);
+}
+
+.bonus-my-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.bonus-my-grid dt {
+  margin: 0;
+  font-size: 0.62rem;
+  color: rgba(28, 42, 31, 0.52);
+  font-weight: 600;
+}
+
+.bonus-my-grid dd {
+  margin: 0.08rem 0 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bonus-live-note {
+  margin: 0.5rem 0 0;
+  font-size: 0.68rem;
+  text-align: left;
+}
+
+.bonus-no-match {
+  text-align: left;
+  font-size: 0.78rem;
+  margin-bottom: 0.55rem;
+}
+
+.bonus-toggle-all {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  font-size: 0.78rem;
+}
+
+.bonus-footnote {
+  margin: 0.65rem 0 0;
+  font-size: 0.65rem;
+  text-align: left;
+}
+
+.bonus-sheet-wrap {
+  margin-top: 0.25rem;
+}
+
+.bonus-table {
+  min-width: 22rem;
+}
+
+.bonus-table th,
+.bonus-table td {
+  font-size: 0.68rem;
+}
+
+.bonus-th-name {
+  text-align: left;
+  min-width: 3.5rem;
+}
+
+.bonus-th-final {
+  background: rgba(216, 243, 220, 0.45);
+}
+
+.bonus-row-mine {
+  background: rgba(183, 228, 192, 0.35);
+}
+
+.bonus-foot-row td {
+  background: rgba(149, 213, 178, 0.35);
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+
 .list-row.is-muted {
   opacity: 0.55;
 }

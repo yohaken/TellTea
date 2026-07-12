@@ -8,6 +8,7 @@ import {
   Bell,
   BookMarked,
   ChartColumn,
+  CircleDollarSign,
   Download,
   Users,
 } from "lucide-react";
@@ -40,6 +41,13 @@ function MoreView() {
     icon: typeof ChartColumn;
     perm: PermissionKey;
   }[] = [
+    {
+      href: "/bonus/",
+      title: "สรุปโบนัสเดือน",
+      desc: "ขาย + ผลิต + OT แบบ real-time",
+      icon: CircleDollarSign,
+      perm: "bonus",
+    },
     {
       href: "/pnl/",
       title: "สรุปรายเดือน",

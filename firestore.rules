@@ -34,7 +34,7 @@ service cloud.firestore {
             && get(staffPath()).data.permissions[p] == true)
         || (isStaff()
             && !get(staffPath()).data.keys().hasAny(['permissions'])
-            && (p == 'ledger' || p == 'stock' || p == 'production' || p == 'otBonus' || p == 'checklist'));
+            && (p == 'ledger' || p == 'stock' || p == 'production' || p == 'otBonus' || p == 'checklist' || p == 'bonus'));
     }
 
     match /staff/{staffEmail} {
