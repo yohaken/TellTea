@@ -74,11 +74,7 @@ service cloud.firestore {
               'employeeId',
               'profileComplete',
               'profileSnoozeUntil',
-              'legalFirstName',
-              'legalLastName',
-              'idCardPhotoUrl',
               'personalProfileComplete',
-              'personalDataConsentAt',
             ]);
     }
 
@@ -117,6 +113,14 @@ service cloud.firestore {
     match /staffPhones/{phoneId} {
       allow get: if signedIn() && phoneId == phoneDigits();
       allow write: if isOwner() || hasPerm('staffManage');
+    }
+
+    // ข้อมูลส่วนตัวละเอียดอ่อน — เจ้าของอ่านได้, พนักงานอ่าน/เขียนเฉพาะของตัวเอง
+    match /staffPersonal/{staffId} {
+      allow get: if isOwner() || (signedIn() && staffId == resolvedStaffId());
+      allow list: if isOwner();
+      allow create, update: if signedIn() && staffId == resolvedStaffId();
+      allow delete: if isOwner();
     }
 
     match /ledger/{entryId} {

@@ -16,19 +16,22 @@ export type StaffMember = {
   profileComplete?: boolean;
   /** กด "ภายหลัง" บนแบนเนอร์ชื่อร้าน — ซ่อนจนกว่าจะถึงเวลานี้ (ms) */
   profileSnoozeUntil?: number;
-  /** ชื่อจริง (ตามบัตร ปชช.) */
-  legalFirstName?: string;
-  /** นามสกุล (ตามบัตร ปชช.) */
-  legalLastName?: string;
-  /** รูปบัตรประชาชน (data URL บีบอัด) */
-  idCardPhotoUrl?: string;
   /** true เมื่อกรอกข้อมูลส่วนตัวครบแล้ว */
   personalProfileComplete?: boolean;
-  /** เวลาที่ยินยอม PDPA (ms) */
-  personalDataConsentAt?: number;
+  /** โหลดเฉพาะ session ตัวเอง — ไม่มีใน listStaff */
+  personal?: StaffPersonalData;
   createdAt: number;
   /** Fine-grained page/feature access — owners always get full set in resolvePermissions */
   permissions?: Partial<StaffPermissions>;
+};
+
+/** ข้อมูลส่วนตัวละเอียดอ่อน — คอลเลกชัน staffPersonal (เจ้าของอ่านได้) */
+export type StaffPersonalData = {
+  legalFirstName?: string;
+  legalLastName?: string;
+  idCardPhotoUrl?: string;
+  personalDataConsentAt?: number;
+  updatedAt?: number;
 };
 
 /** สมุดบัญชีเข้า–ออก ตามชีทร้าน */

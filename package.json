@@ -27,6 +27,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.20",
+    "firebase-admin": "^13.10.0",
     "firebase-tools": "^15.23.0",
     "google-auth-library": "^10.9.0",
     "playwright": "^1.61.1",

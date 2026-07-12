@@ -33,11 +33,8 @@ export function loadCachedStaff(staffId: string): StaffMember | null {
       employeeId: parsed.employeeId,
       profileComplete: parsed.profileComplete,
       profileSnoozeUntil: parsed.profileSnoozeUntil,
-      legalFirstName: parsed.legalFirstName,
-      legalLastName: parsed.legalLastName,
-      idCardPhotoUrl: parsed.idCardPhotoUrl,
       personalProfileComplete: parsed.personalProfileComplete,
-      personalDataConsentAt: parsed.personalDataConsentAt,
+      personal: parsed.personal,
       createdAt: parsed.createdAt,
       permissions: parsed.permissions,
     };

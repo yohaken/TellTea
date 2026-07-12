@@ -13,7 +13,8 @@ import {
   type Employee,
 } from "@/lib/employees";
 import { needsPersonalProfileSetup, needsRosterLink } from "@/lib/profile";
-import { updateStaffProfile } from "@/lib/staff";
+import { updateStaffProfile, attachStaffPersonal } from "@/lib/staff";
+import { saveStaffPersonal } from "@/lib/staff-personal";
 import { saveCachedStaff } from "@/lib/cache";
 import { formatPhoneDisplay, staffAccountLabel } from "@/lib/utils";
 
@@ -30,10 +31,10 @@ function ProfileView() {
   const router = useRouter();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [employeeId, setEmployeeId] = useState(staff?.employeeId || "");
-  const [legalFirstName, setLegalFirstName] = useState(staff?.legalFirstName || "");
-  const [legalLastName, setLegalLastName] = useState(staff?.legalLastName || "");
-  const [idCardPhotoUrl, setIdCardPhotoUrl] = useState(staff?.idCardPhotoUrl || "");
-  const [consent, setConsent] = useState(!!staff?.personalDataConsentAt);
+  const [legalFirstName, setLegalFirstName] = useState(staff?.personal?.legalFirstName || "");
+  const [legalLastName, setLegalLastName] = useState(staff?.personal?.legalLastName || "");
+  const [idCardPhotoUrl, setIdCardPhotoUrl] = useState(staff?.personal?.idCardPhotoUrl || "");
+  const [consent, setConsent] = useState(!!staff?.personal?.personalDataConsentAt);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,10 +48,10 @@ function ProfileView() {
 
   useEffect(() => {
     if (!staff) return;
-    setLegalFirstName(staff.legalFirstName || "");
-    setLegalLastName(staff.legalLastName || "");
-    setIdCardPhotoUrl(staff.idCardPhotoUrl || "");
-    setConsent(!!staff.personalDataConsentAt);
+    setLegalFirstName(staff.personal?.legalFirstName || "");
+    setLegalLastName(staff.personal?.legalLastName || "");
+    setIdCardPhotoUrl(staff.personal?.idCardPhotoUrl || "");
+    setConsent(!!staff.personal?.personalDataConsentAt);
     setEmployeeId(staff.employeeId || "");
   }, [staff]);
 
@@ -84,21 +85,23 @@ function ProfileView() {
       setError("ถ่ายหรือแนบรูปบัตรประชาชน");
       return;
     }
-    if (!consent && !staff.personalDataConsentAt) {
+    if (!consent && !staff.personal?.personalDataConsentAt) {
       setError("ต้องยินยอมการเก็บข้อมูลส่วนตัวก่อนบันทึก");
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      const updated = await updateStaffProfile(staff.id, {
+      const personal = await saveStaffPersonal(staff.id, {
         legalFirstName: legalFirstName.trim(),
         legalLastName: legalLastName.trim(),
         idCardPhotoUrl,
-        personalProfileComplete: true,
-        personalDataConsentAt: staff.personalDataConsentAt || Date.now(),
+        personalDataConsentAt: staff.personal?.personalDataConsentAt || Date.now(),
       });
-      saveCachedStaff(updated);
+      const updated = await updateStaffProfile(staff.id, {
+        personalProfileComplete: true,
+      });
+      saveCachedStaff({ ...(await attachStaffPersonal(updated)), personal });
       await refreshStaff();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -211,12 +214,12 @@ function ProfileView() {
             <PersonalDataConsentField
               checked={consent}
               onChange={setConsent}
-              disabled={busy || !!staff?.personalDataConsentAt}
+              disabled={busy || !!staff?.personal?.personalDataConsentAt}
             />
             <button
               type="submit"
               className="primary-btn"
-              disabled={busy || (!consent && !staff?.personalDataConsentAt)}
+              disabled={busy || (!consent && !staff?.personal?.personalDataConsentAt)}
             >
               {busy ? "กำลังบันทึก..." : "บันทึกข้อมูลส่วนตัว"}
             </button>

@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { needsPersonalProfileSetup } from "@/lib/profile";
 import { updateStaffProfile } from "@/lib/staff";
+import { saveStaffPersonal } from "@/lib/staff-personal";
 import { saveCachedStaff } from "@/lib/cache";
 
 /** Modal reel — กรอกข้อมูลส่วนตัวครั้งแรก ปิดไม่ได้จนกว่าจะบันทึกครบ */
@@ -32,9 +33,10 @@ export function PersonalProfileModal() {
 
   useEffect(() => {
     if (!staff) return;
-    setLegalFirstName(staff.legalFirstName || "");
-    setLegalLastName(staff.legalLastName || "");
-    setIdCardPhotoUrl(staff.idCardPhotoUrl || "");
+    setLegalFirstName(staff.personal?.legalFirstName || "");
+    setLegalLastName(staff.personal?.legalLastName || "");
+    setIdCardPhotoUrl(staff.personal?.idCardPhotoUrl || "");
+    setConsent(!!staff.personal?.personalDataConsentAt);
   }, [staff]);
 
   if (!open) return null;
@@ -57,14 +59,17 @@ export function PersonalProfileModal() {
     setBusy(true);
     setError(null);
     try {
-      const updated = await updateStaffProfile(staff.id, {
+      const personal = await saveStaffPersonal(staff.id, {
         legalFirstName: legalFirstName.trim(),
         legalLastName: legalLastName.trim(),
         idCardPhotoUrl,
-        personalProfileComplete: true,
         personalDataConsentAt: Date.now(),
       });
-      saveCachedStaff(updated);
+      const updated = await updateStaffProfile(staff.id, {
+        personalProfileComplete: true,
+      });
+      const merged = { ...updated, personal };
+      saveCachedStaff(merged);
       await refreshStaff();
     } catch (err) {
       setError((err as Error).message || "บันทึกไม่สำเร็จ");

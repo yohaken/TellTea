@@ -37,8 +37,26 @@ function staffPhoneRef(phone: string) {
 }
 
 function mapStaff(staffId: string, data: StaffMember): StaffMember {
+  const {
+    legalFirstName: _lf,
+    legalLastName: _ll,
+    idCardPhotoUrl: _id,
+    personalDataConsentAt: _consent,
+    personal: _personal,
+    ...rest
+  } = data as StaffMember & {
+    legalFirstName?: string;
+    legalLastName?: string;
+    idCardPhotoUrl?: string;
+    personalDataConsentAt?: number;
+  };
+  void _lf;
+  void _ll;
+  void _id;
+  void _consent;
+  void _personal;
   return {
-    ...data,
+    ...rest,
     id: staffId,
     permissions: normalizePermissions(data.permissions, data.role),
   };
@@ -221,12 +239,14 @@ export type StaffProfilePatch = {
   employeeId?: string | null;
   profileComplete?: boolean;
   profileSnoozeUntil?: number | null;
-  legalFirstName?: string | null;
-  legalLastName?: string | null;
-  idCardPhotoUrl?: string | null;
   personalProfileComplete?: boolean;
-  personalDataConsentAt?: number | null;
 };
+
+export async function attachStaffPersonal(member: StaffMember): Promise<StaffMember> {
+  const { getStaffPersonal } = await import("./staff-personal");
+  const personal = await getStaffPersonal(member.id);
+  return personal ? { ...member, personal } : member;
+}
 
 export async function updateStaffProfile(
   staffId: string,
@@ -251,30 +271,8 @@ export async function updateStaffProfile(
     next.profileSnoozeUntil =
       patch.profileSnoozeUntil == null ? deleteField() : patch.profileSnoozeUntil;
   }
-  if (patch.legalFirstName !== undefined) {
-    next.legalFirstName =
-      patch.legalFirstName && patch.legalFirstName.trim()
-        ? patch.legalFirstName.trim()
-        : deleteField();
-  }
-  if (patch.legalLastName !== undefined) {
-    next.legalLastName =
-      patch.legalLastName && patch.legalLastName.trim()
-        ? patch.legalLastName.trim()
-        : deleteField();
-  }
-  if (patch.idCardPhotoUrl !== undefined) {
-    next.idCardPhotoUrl =
-      patch.idCardPhotoUrl && patch.idCardPhotoUrl.trim()
-        ? patch.idCardPhotoUrl.trim()
-        : deleteField();
-  }
   if (patch.personalProfileComplete !== undefined) {
     next.personalProfileComplete = patch.personalProfileComplete;
-  }
-  if (patch.personalDataConsentAt !== undefined) {
-    next.personalDataConsentAt =
-      patch.personalDataConsentAt == null ? deleteField() : patch.personalDataConsentAt;
   }
 
   await updateDoc(staffRef(staffId), next);

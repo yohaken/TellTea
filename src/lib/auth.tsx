@@ -26,6 +26,7 @@ import {
   ensureOwnerBootstrap,
   getStaffByPhone,
   getStaffMemberById,
+  attachStaffPersonal,
 } from "./staff";
 import type { StaffMember } from "./types";
 import { normalizeEmail, staffAccountLabel } from "./utils";
@@ -116,15 +117,18 @@ export function actorIdFromUser(user: User | null, staff: StaffMember | null): s
 
 async function resolveStaff(user: User): Promise<StaffMember | null> {
   const email = emailFromUser(user);
+  let member: StaffMember | null = null;
   if (email) {
     const bootstrapped = await ensureOwnerBootstrap(email, user.displayName);
-    if (bootstrapped) return bootstrapped;
-    return getStaffMemberById(email);
+    member = bootstrapped || (await getStaffMemberById(email));
+  } else if (user.phoneNumber) {
+    member = await getStaffByPhone(user.phoneNumber);
   }
-  if (user.phoneNumber) {
-    return getStaffByPhone(user.phoneNumber);
+  if (!member) return null;
+  if (member.role === "staff") {
+    return attachStaffPersonal(member);
   }
-  return null;
+  return member;
 }
 
 function takeTicketFromUrl(): string | null {

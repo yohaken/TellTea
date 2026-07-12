@@ -6,11 +6,9 @@ const SNOOZE_MS = 24 * 60 * 60 * 1000;
 export function needsPersonalProfileSetup(staff: StaffMember | null | undefined): boolean {
   if (!staff || staff.role === "owner") return false;
   if (staff.personalProfileComplete) return false;
-  return (
-    !staff.legalFirstName?.trim() ||
-    !staff.legalLastName?.trim() ||
-    !staff.idCardPhotoUrl?.trim()
-  );
+  const p = staff.personal;
+  if (p?.legalFirstName && p?.legalLastName && p?.idCardPhotoUrl) return false;
+  return true;
 }
 
 /** เชื่อมชื่อในรายชื่อร้าน (ผลิต / OT / โบนัส) */
@@ -32,8 +30,9 @@ export function profileSnoozeUntilNow() {
 
 export function personalProfileLabel(staff: StaffMember | null | undefined): string {
   if (!staff) return "";
-  if (staff.legalFirstName && staff.legalLastName) {
-    return `${staff.legalFirstName} ${staff.legalLastName}`;
+  const p = staff.personal;
+  if (p?.legalFirstName && p?.legalLastName) {
+    return `${p.legalFirstName} ${p.legalLastName}`;
   }
   return "";
 }
