@@ -98,6 +98,20 @@ service cloud.firestore {
       allow update, delete: if isOwner();
     }
 
+    match /stockCountSessions/{sessionId} {
+      allow read: if hasPerm('stock');
+      allow create, update: if hasPerm('stock')
+        && request.resource.data.date is number
+        && request.resource.data.dayOfMonth in [1, 10, 20]
+        && request.resource.data.year is int
+        && request.resource.data.month is int
+        && request.resource.data.inspector is string
+        && request.resource.data.submittedAt is number
+        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.lines is list;
+      allow delete: if isOwner();
+    }
+
     // ศูนย์รวมรายชื่อพนักงานร้าน — เพิ่มที่เดียว ใช้ร่วมหลายหมวด
     match /employees/{id} {
       allow read: if isStaff();

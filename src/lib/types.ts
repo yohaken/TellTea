@@ -109,3 +109,39 @@ export type StockMovementInput = {
   remark?: string;
   createdBy: string;
 };
+
+/** รอบนับสต๊อก — วันที่ 1, 10, 20 ของเดือน */
+export type StockCountRound = 1 | 10 | 20;
+
+export type StockCountLine = {
+  itemId: string;
+  itemName: string;
+  qty: number;
+};
+
+export type StockCountSession = {
+  id: string;
+  /** local midnight ms */
+  date: number;
+  dayOfMonth: StockCountRound;
+  year: number;
+  /** 0-indexed */
+  month: number;
+  inspector: string;
+  inspectorId?: string;
+  submittedAt: number;
+  createdBy: string;
+  lines: StockCountLine[];
+};
+
+export type StockCountSessionInput = {
+  date: number;
+  dayOfMonth: StockCountRound;
+  year: number;
+  month: number;
+  inspector: string;
+  inspectorId?: string;
+  submittedAt: number;
+  createdBy: string;
+  lines: StockCountLine[];
+};

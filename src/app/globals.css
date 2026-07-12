@@ -2221,6 +2221,160 @@ body.modal-open .main-panel {
   color: rgba(28, 42, 31, 0.35);
 }
 
+.stock-settings-link {
+  margin: 0.15rem 0 0;
+  font-size: 0.68rem;
+  text-align: left;
+}
+
+.stock-settings-link a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #2d6a4f;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.stock-history-wrap {
+  margin-top: 0.15rem;
+  overflow-x: auto;
+}
+
+.stock-history-table {
+  min-width: max-content;
+}
+
+.stock-history-table th,
+.stock-history-table td {
+  padding: 0.18rem 0.22rem;
+  font-size: 0.58rem;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.stock-history-th-date {
+  width: 3.4rem;
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #f3efe4;
+}
+
+.stock-history-th-item {
+  min-width: 2.4rem;
+  max-width: 3rem;
+  font-size: 0.52rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: rgba(243, 239, 228, 0.95);
+}
+
+.stock-history-date {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.58rem;
+  text-align: left;
+}
+
+.stock-history-meta-inline {
+  display: block;
+  font-size: 0.48rem;
+  font-weight: 500;
+  color: rgba(28, 42, 31, 0.52);
+}
+
+.stock-history-missing-tag {
+  display: block;
+  font-size: 0.48rem;
+  font-weight: 600;
+  color: #c45a1a;
+}
+
+.stock-history-row-missing {
+  background: rgba(255, 243, 230, 0.35);
+}
+
+.stock-history-row-filled {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.stock-history-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  min-height: 1.4rem;
+  border: none;
+  border-radius: 0.3rem;
+  padding: 0.1rem 0.15rem;
+  font: inherit;
+  font-size: 0.58rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.stock-history-cell.is-pending {
+  color: rgba(28, 42, 31, 0.35);
+  background: rgba(28, 42, 31, 0.04);
+  cursor: default;
+}
+
+.stock-history-cell.is-filled {
+  background: rgba(183, 228, 192, 0.35);
+  color: #1b4332;
+  font-weight: 600;
+}
+
+.stock-detail-card {
+  max-width: min(96vw, 22rem);
+}
+
+.stock-detail-table th,
+.stock-detail-table td {
+  font-size: 0.72rem;
+  padding: 0.25rem 0.35rem;
+}
+
+.stock-count-form .stock-count-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: min(55vh, 18rem);
+  overflow-y: auto;
+  margin: 0.5rem 0;
+}
+
+.stock-count-line {
+  display: grid;
+  grid-template-columns: 1fr 5rem 2.5rem;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+}
+
+.stock-count-line-name {
+  font-weight: 600;
+  text-align: left;
+}
+
+.stock-count-line input {
+  width: 100%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.stock-count-line-unit {
+  font-size: 0.72rem;
+  text-align: left;
+}
+
 .check-detail-card {
   max-height: min(85vh, 32rem);
   overflow-y: auto;

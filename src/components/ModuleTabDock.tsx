@@ -4,10 +4,12 @@ export function ModuleTabDock({
   ariaLabel,
   formOpen,
   onAdd,
+  addLabel = "+ กรอก",
 }: {
   ariaLabel: string;
   formOpen?: boolean;
   onAdd: () => void;
+  addLabel?: string;
 }) {
   return (
     <div className="module-tab-dock is-single" role="tablist" aria-label={ariaLabel}>
@@ -18,7 +20,7 @@ export function ModuleTabDock({
         aria-selected={!!formOpen}
         onClick={onAdd}
       >
-        + กรอก
+        {addLabel}
       </button>
     </div>
   );
