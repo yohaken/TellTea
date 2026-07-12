@@ -245,7 +245,6 @@ export function subscribeOtEntries(
 }
 
 export async function addOtEntry(input: OtEntryInput): Promise<string> {
-  if (!input.workerNames.length) throw new Error("เลือกพนักงานอย่างน้อย 1 คน");
   if (!input.shift) throw new Error("เลือกรอบงาน");
   const now = Date.now();
   const ref = await addDoc(entriesCol(), {
@@ -309,7 +308,6 @@ export async function updateOtEntry(
   if (patch.shift != null) next.shift = patch.shift;
   if (patch.workerIds != null) next.workerIds = patch.workerIds;
   if (patch.workerNames != null) {
-    if (!patch.workerNames.length) throw new Error("เลือกพนักงานอย่างน้อย 1 คน");
     next.workerNames = patch.workerNames;
   }
   if (patch.machineCount != null) next.machineCount = Number(patch.machineCount) || 0;

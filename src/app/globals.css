@@ -1591,6 +1591,12 @@ body.modal-open .main-panel {
   margin-bottom: 0.35rem;
 }
 
+.ot-slim-hint {
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .ot-slim-input {
   font: inherit;
   font-size: 0.72rem;
@@ -2102,6 +2108,25 @@ body.modal-open .main-panel {
   color: #1b4332;
   text-align: left;
   padding: 0.35rem 0.5rem;
+}
+
+.ot-table tr.ot-slot-empty td {
+  background: rgba(28, 42, 31, 0.02);
+  color: rgba(28, 42, 31, 0.42);
+}
+
+.ot-table tr.ot-slot-empty .ot-col-shift {
+  color: rgba(28, 42, 31, 0.62);
+  font-weight: 600;
+}
+
+.ot-slot-edit-btn {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.2rem 0.45rem;
+  min-height: 1.6rem;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 /* ── SmartCheck SOP ── */
