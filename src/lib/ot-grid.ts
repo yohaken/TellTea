@@ -9,6 +9,9 @@ import {
 /** ลำดับแสดงในตาราง — ตามช่วงเวลาใน OT_SHIFTS (ดึก → เช้า → เย็น) */
 export const OT_SHIFT_DISPLAY_ORDER: OtShiftId[] = ["late", "morning", "evening"];
 
+/** วางแผนล่วงหน้าได้กี่วัน (นับจากวันนี้) */
+export const OT_PLAN_AHEAD_DAYS = 3;
+
 export type OtShiftSlot = {
   shiftId: OtShiftId;
   shiftLabel: string;
@@ -35,6 +38,16 @@ function startOfLocalDay(ms: number) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 }
 
+function addLocalDays(ms: number, days: number) {
+  const d = new Date(ms);
+  d.setDate(d.getDate() + days);
+  return startOfLocalDay(d.getTime());
+}
+
+export function isFutureLocalDay(dateMs: number) {
+  return startOfLocalDay(dateMs) > startOfLocalDay(Date.now());
+}
+
 export function localDayKey(ms: number) {
   const d = new Date(ms);
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -57,6 +70,18 @@ export function findOtEntryForSlot(
   shift: OtShiftId,
 ): OtEntry | null {
   return indexEntriesBySlot(entries).get(`${localDayKey(dateMs)}|${shift}`) || null;
+}
+
+/** แตะวันที่ — แก้รายการแรกของวัน (เย็น→เช้า→ดึก เหมือนเดิม) หรือเปิดเพิ่มกะเช้า */
+export function resolveDateTapTarget(group: OtDayGroup): OtSlotTarget {
+  const tapOrder: OtShiftId[] = ["evening", "morning", "late"];
+  for (const shiftId of tapOrder) {
+    const slot = group.slots.find((s) => s.shiftId === shiftId);
+    if (slot?.entry) {
+      return { date: group.date, shift: shiftId, entry: slot.entry };
+    }
+  }
+  return { date: group.date, shift: "morning", entry: null };
 }
 
 function eachLocalDayDesc(newestMs: number, oldestMs: number): number[] {
@@ -95,6 +120,8 @@ export function buildOtGrid(entries: OtEntry[], options: BuildOtGridOptions = {}
   }
 
   if (newest < today) newest = today;
+  const planHorizon = addLocalDays(today, OT_PLAN_AHEAD_DAYS);
+  if (newest < planHorizon) newest = planHorizon;
   if (oldest > newest) oldest = newest;
 
   const slotMap = indexEntriesBySlot(entries);

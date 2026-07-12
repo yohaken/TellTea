@@ -2129,6 +2129,14 @@ body.modal-open .main-panel {
   white-space: nowrap;
 }
 
+.ot-table tr.ot-day-future td {
+  background: rgba(168, 212, 255, 0.08);
+}
+
+.ot-table tr.ot-day-future.ot-slot-empty td {
+  background: rgba(168, 212, 255, 0.12);
+}
+
 /* ── SmartCheck SOP ── */
 .check-hint {
   text-align: left;

@@ -37,6 +37,8 @@ import {
 import {
   buildOtGrid,
   findOtEntryForSlot,
+  isFutureLocalDay,
+  resolveDateTapTarget,
   type OtDayGroup,
   type OtSlotTarget,
 } from "@/lib/ot-grid";
@@ -571,7 +573,7 @@ function OtTable({
   return (
     <div className="ot-table-view">
       <div className="ot-toolbar-slim">
-        <span className="ot-slim-hint muted">ทุกวัน · ใหม่ → เก่า · 3 กะ/วัน</span>
+        <span className="ot-slim-hint muted">ทุกวัน · ใหม่ → เก่า · 3 กะ/วัน · ล่วงหน้า 3 วัน</span>
         <select
           id="ot-status-filter"
           className="ot-slim-input"
@@ -757,7 +759,9 @@ function OtSheetTable({
           </tr>
         </thead>
         <tbody>
-          {groups.map((group) => (
+          {groups.map((group) => {
+            const futureDay = isFutureLocalDay(group.date);
+            return (
             <Fragment key={group.date}>
               {group.slots.map((slot, idx) => {
                 const row = slot.entry;
@@ -777,10 +781,14 @@ function OtSheetTable({
                     key={`${group.date}-${slot.shiftId}`}
                     className={
                       isEmpty
-                        ? "ot-slot-empty row-out"
+                        ? futureDay
+                          ? "ot-slot-empty ot-day-future row-out"
+                          : "ot-slot-empty row-out"
                         : isOtEntryLocked(row!)
                           ? "row-out prod-row-paid"
-                          : "row-out"
+                          : futureDay
+                            ? "ot-day-future row-out"
+                            : "row-out"
                     }
                   >
                     {isOwner ? (
@@ -797,12 +805,28 @@ function OtSheetTable({
                     ) : null}
                     {idx === 0 ? (
                       <td className="col-sticky-left ot-col-date ot-date-cell" rowSpan={slotCount}>
-                        {formatDateShort(group.date)}
+                        <button
+                          type="button"
+                          className="desc-link"
+                          onClick={() => onEditSlot(resolveDateTapTarget(group))}
+                        >
+                          {formatDateShort(group.date)}
+                        </button>
                       </td>
                     ) : null}
                     <td className="ot-col-worker">{w1}</td>
                     <td className="ot-col-worker">{w2}</td>
-                    <td className="ot-col-shift">{slot.shiftLabel}</td>
+                    <td className="ot-col-shift">
+                      <button
+                        type="button"
+                        className={isEmpty ? "desc-link muted" : "desc-link"}
+                        onClick={() =>
+                          onEditSlot({ date: group.date, shift: slot.shiftId, entry: row })
+                        }
+                      >
+                        {slot.shiftLabel}
+                      </button>
+                    </td>
                     <td className="col-out">{row ? formatPlainNumber(row.machineCount) : "—"}</td>
                     <td className="col-out">{row ? otQtyCell(row.otherCups || 0) : "—"}</td>
                     <td className="col-out">{row ? otQtyCell(row.iceCreamCones || 0) : "—"}</td>
@@ -901,7 +925,8 @@ function OtSheetTable({
                 </td>
               </tr>
             </Fragment>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
