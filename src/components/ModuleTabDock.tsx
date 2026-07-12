@@ -7,12 +7,17 @@ export function ModuleTabDock({
   isOwner,
   ariaLabel,
   onSelect,
+  formOpen,
 }: {
-  tab: ModuleTab;
+  tab: Exclude<ModuleTab, "form">;
   isOwner: boolean;
   ariaLabel: string;
   onSelect: (tab: ModuleTab) => void;
+  /** ไฮไลต์ปุ่มกรอกเมื่อ popup เปิดอยู่ */
+  formOpen?: boolean;
 }) {
+  const formActive = !!formOpen;
+
   return (
     <div
       className={isOwner ? "module-tab-dock" : "module-tab-dock is-staff"}
@@ -22,17 +27,17 @@ export function ModuleTabDock({
       <button
         type="button"
         role="tab"
-        className={tab === "form" ? "module-tab is-active" : "module-tab"}
-        aria-selected={tab === "form"}
+        className={formActive ? "module-tab is-add is-active" : "module-tab is-add"}
+        aria-selected={formActive}
         onClick={() => onSelect("form")}
       >
-        กรอก
+        + กรอก
       </button>
       <button
         type="button"
         role="tab"
-        className={tab === "table" ? "module-tab is-active" : "module-tab"}
-        aria-selected={tab === "table"}
+        className={tab === "table" && !formOpen ? "module-tab is-table is-active" : "module-tab is-table"}
+        aria-selected={tab === "table" && !formOpen}
         onClick={() => onSelect("table")}
       >
         ตาราง
@@ -41,7 +46,7 @@ export function ModuleTabDock({
         <button
           type="button"
           role="tab"
-          className={tab === "setup" ? "module-tab is-active" : "module-tab"}
+          className={tab === "setup" ? "module-tab is-setup is-active" : "module-tab is-setup"}
           aria-selected={tab === "setup"}
           onClick={() => onSelect("setup")}
         >

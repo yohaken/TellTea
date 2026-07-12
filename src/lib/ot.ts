@@ -42,6 +42,7 @@ export type OtEntry = {
   addQty: number;
   addReason: string;
   bonusRate: number;
+  imageUrl?: string;
   status: OtStatus;
   createdBy: string;
   createdAt: number;
@@ -63,6 +64,7 @@ export type OtEntryInput = {
   addQty?: number;
   addReason?: string;
   bonusRate: number;
+  imageUrl?: string;
   createdBy: string;
 };
 
@@ -193,6 +195,7 @@ export async function addOtEntry(input: OtEntryInput): Promise<string> {
     addQty: Number(input.addQty) || 0,
     addReason: (input.addReason || "").trim(),
     bonusRate: Number(input.bonusRate) || DEFAULT_OT_BONUS_RATE,
+    imageUrl: (input.imageUrl || "").trim(),
     status: "unpaid" as OtStatus,
     createdBy: input.createdBy,
     createdAt: now,
@@ -220,6 +223,7 @@ export async function updateOtEntry(
       | "addQty"
       | "addReason"
       | "bonusRate"
+      | "imageUrl"
       | "status"
     >
   >,
@@ -244,6 +248,7 @@ export async function updateOtEntry(
   if (patch.addQty != null) next.addQty = Number(patch.addQty) || 0;
   if (patch.addReason != null) next.addReason = patch.addReason.trim();
   if (patch.bonusRate != null) next.bonusRate = Number(patch.bonusRate) || DEFAULT_OT_BONUS_RATE;
+  if (patch.imageUrl != null) next.imageUrl = patch.imageUrl.trim();
   if (patch.status != null) next.status = patch.status;
   await updateDoc(doc(getDb(), "otEntries", id), next);
 }

@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { Coffee, LayoutGrid, Table2, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock, type ModuleTab } from "@/components/ModuleTabDock";
+import { PhotoAttachField } from "@/components/PhotoAttachField";
 import { useAuth } from "@/lib/auth";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
@@ -37,7 +38,7 @@ import {
   todayInputValue,
 } from "@/lib/utils";
 
-type Tab = ModuleTab;
+type Tab = Exclude<ModuleTab, "form">;
 type TableView = "sheet" | "cards";
 
 const SHIFT_ORDER: Record<OtShiftId, number> = {
@@ -45,8 +46,6 @@ const SHIFT_ORDER: Record<OtShiftId, number> = {
   evening: 1,
   late: 2,
 };
-
-const OT_ONBOARDING_KEY = "telltea-ot-onboarding-dismissed";
 
 function monthInputValue(date = new Date()) {
   const y = date.getFullYear();
@@ -75,11 +74,11 @@ function entryIncludesName(entry: OtEntry, name: string) {
 
 function sortOtEntries(rows: OtEntry[]) {
   return [...rows].sort((a, b) => {
-    if (a.date !== b.date) return a.date - b.date;
+    if (a.date !== b.date) return b.date - a.date;
     const sa = SHIFT_ORDER[a.shift] ?? 9;
     const sb = SHIFT_ORDER[b.shift] ?? 9;
-    if (sa !== sb) return sa - sb;
-    return a.createdAt - b.createdAt;
+    if (sa !== sb) return sb - sa;
+    return b.createdAt - a.createdAt;
   });
 }
 
@@ -140,6 +139,7 @@ function OtView() {
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const [tab, setTab] = useState<Tab>("table");
+  const [formOpen, setFormOpen] = useState(false);
   const [entries, setEntries] = useState<OtEntry[]>([]);
   const [workers, setWorkers] = useState<Employee[]>([]);
   const [bonusRate, setBonusRate] = useState(0.6);
@@ -179,9 +179,25 @@ function OtView() {
 
   if (!can(staff, "otBonus")) return null;
 
-  function selectTab(next: Tab) {
-    if (next === "form") setEditing(null);
+  function selectTab(next: ModuleTab) {
+    if (next === "form") {
+      setEditing(null);
+      setFormOpen(true);
+      return;
+    }
+    setFormOpen(false);
+    setEditing(null);
     setTab(next);
+  }
+
+  function openEdit(row: OtEntry) {
+    setEditing(row);
+    setFormOpen(true);
+  }
+
+  function closeForm() {
+    setFormOpen(false);
+    setEditing(null);
   }
 
   return (
@@ -196,32 +212,13 @@ function OtView() {
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading && tab === "form" ? (
-        <OtEntryForm
-          key={editing?.id || "new"}
-          entry={editing}
-          workers={workers}
-          bonusRate={bonusRate}
-          createdBy={user?.email || ""}
-          onError={setError}
-          onSaved={() => {
-            setEditing(null);
-            setTab("table");
-          }}
-          onCancelEdit={() => setEditing(null)}
-        />
-      ) : null}
-
       {!loading && tab === "table" ? (
         <OtTable
           entries={entries}
           staff={staff}
           isOwner={isOwner}
           bonusRate={bonusRate}
-          onEdit={(row) => {
-            setEditing(row);
-            setTab("form");
-          }}
+          onEdit={openEdit}
           onError={setError}
         />
       ) : null}
@@ -234,10 +231,28 @@ function OtView() {
         />
       ) : null}
 
+      {formOpen && !loading ? (
+        <div className="modal-backdrop edit-modal" onClick={closeForm}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <OtEntryForm
+              key={editing?.id || "new"}
+              entry={editing}
+              workers={workers}
+              bonusRate={bonusRate}
+              createdBy={user?.email || ""}
+              onError={setError}
+              onSaved={closeForm}
+              onCancelEdit={closeForm}
+            />
+          </div>
+        </div>
+      ) : null}
+
       <ModuleTabDock
         tab={tab}
         isOwner={isOwner}
         ariaLabel="มุมมอง OT"
+        formOpen={formOpen}
         onSelect={selectTab}
       />
     </div>
@@ -275,6 +290,7 @@ function OtEntryForm({
   const [deductReason, setDeductReason] = useState(entry?.deductReason || "");
   const [addQty, setAddQty] = useState(entry ? String(entry.addQty || "") : "");
   const [addReason, setAddReason] = useState(entry?.addReason || "");
+  const [imageUrl, setImageUrl] = useState(entry?.imageUrl || "");
   const [busy, setBusy] = useState(false);
 
   const rate = entry?.bonusRate ?? bonusRate;
@@ -338,6 +354,7 @@ function OtEntryForm({
         addQty: Number(addQty) || 0,
         addReason,
         bonusRate: rate,
+        imageUrl,
       };
       if (entry) {
         await updateOtEntry(entry.id, payload);
@@ -468,6 +485,8 @@ function OtEntryForm({
         </div>
       </div>
 
+      <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} />
+
       <p className="muted" style={{ textAlign: "left", margin: "0.25rem 0 0.65rem" }}>
         สรุป {formatPlainNumber(preview.summaryQty)} · รวมโบนัส ฿{formatPlainNumber(preview.totalBonus)} ·{" "}
         <strong>โบนัส/คน ฿{formatPlainNumber(preview.bonusPerPerson)}</strong>
@@ -500,26 +519,8 @@ function OtTable({
   const [month, setMonth] = useState(monthInputValue());
   const [statusFilter, setStatusFilter] = useState<OtStatus | "all">("all");
   const [mineOnly, setMineOnly] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const myName = staff?.displayName || "";
-
-  useEffect(() => {
-    try {
-      setShowOnboarding(localStorage.getItem(OT_ONBOARDING_KEY) !== "1");
-    } catch {
-      setShowOnboarding(true);
-    }
-  }, []);
-
-  function dismissOnboarding() {
-    setShowOnboarding(false);
-    try {
-      localStorage.setItem(OT_ONBOARDING_KEY, "1");
-    } catch {
-      /* ignore */
-    }
-  }
 
   const filtered = useMemo(() => {
     const { year, month: m } = parseMonthInput(month);
@@ -558,20 +559,6 @@ function OtTable({
 
   return (
     <div className="ot-table-view">
-      {showOnboarding ? (
-        <div className="ot-onboarding">
-          <div>
-            <strong>เหมือน Sheet เดิม — คอลัมน์เดิม สูตรเดิม แค่ย้ายมาออนไลน์</strong>
-            <p className="muted" style={{ margin: "0.35rem 0 0", textAlign: "left" }}>
-              กรอก = แถวใหม่ · ตาราง = ดูภาพรวมทั้งเดือน · สถานะ = แทนการเคลียร์ตารางสิ้นเดือน
-            </p>
-          </div>
-          <button type="button" className="ghost-btn icon-btn" aria-label="ปิดคำแนะนำ" onClick={dismissOnboarding}>
-            <X size={16} />
-          </button>
-        </div>
-      ) : null}
-
       <div className="ot-toolbar-slim">
         <input
           id="ot-month"
@@ -643,7 +630,7 @@ function OtTable({
         />
       ) : (
         <OtCardList
-          entries={sortOtEntries(filtered).reverse()}
+          entries={sortOtEntries(filtered)}
           isOwner={isOwner}
           onEdit={onEdit}
           onError={onError}

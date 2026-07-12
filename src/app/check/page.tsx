@@ -23,10 +23,6 @@ import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import { fileToReceiptDataUrl } from "@/lib/receipts";
 import {
-  importChecklistCsvText,
-  parseChecklistCsv,
-} from "@/lib/checklist-import";
-import {
   CHECK_SHIFTS,
   addChecklistItem,
   deleteChecklistItem,
@@ -185,7 +181,6 @@ function CheckView() {
 
       {!loading && tab === "setup" && isOwner ? (
         <CheckSetup
-          createdBy={user?.email || ""}
           onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
           onError={setError}
         />
@@ -799,11 +794,9 @@ function CheckSummary({
 }
 
 function CheckSetup({
-  createdBy,
   onReload,
   onError,
 }: {
-  createdBy: string;
   onReload: () => void;
   onError: (msg: string) => void;
 }) {
@@ -811,10 +804,6 @@ function CheckSetup({
   const [name, setName] = useState("");
   const [groupLabel, setGroupLabel] = useState("ทั่วไป");
   const [busy, setBusy] = useState(false);
-  const [importMonth, setImportMonth] = useState("2026-07");
-  const [importPreview, setImportPreview] = useState<string | null>(null);
-  const [importBusy, setImportBusy] = useState(false);
-  const csvTextRef = useRef<string | null>(null);
 
   async function reload() {
     setItems(await listChecklistItems());
@@ -860,50 +849,6 @@ function CheckSetup({
     }
   }
 
-  async function onPickCsv(file: File) {
-    const text = await file.text();
-    const [y, m] = importMonth.split("-").map(Number);
-    const { sessions, skipped } = parseChecklistCsv(text, y, m);
-    if (!sessions.length) {
-      onError(
-        skipped.length
-          ? `อ่านไฟล์ไม่ได้ — ข้าม ${skipped.length} แถว`
-          : "ไม่พบข้อมูลในไฟล์",
-      );
-      setImportPreview(null);
-      return;
-    }
-    setImportPreview(
-      `พบ ${sessions.length} รอบ · ${sessions.reduce((n, s) => n + s.items.length, 0)} รายการ` +
-        (skipped.length ? ` · ข้าม ${skipped.length} แถว` : ""),
-    );
-    csvTextRef.current = text;
-  }
-
-  async function onImportCsv() {
-    const text = csvTextRef.current;
-    if (!text || !createdBy) {
-      onError("เลือกไฟล์ CSV ก่อน");
-      return;
-    }
-    if (!window.confirm("นำเข้าข้อมูลจาก CSV? (ไม่ลบของเดิม)")) return;
-    setImportBusy(true);
-    try {
-      const [y, m] = importMonth.split("-").map(Number);
-      const result = await importChecklistCsvText(text, createdBy, y, m);
-      setImportPreview(
-        `นำเข้าแล้ว ${result.sessions} รอบ · ${result.records} แถว` +
-          (result.parseSkipped ? ` · ข้าม ${result.parseSkipped} แถว` : "") +
-          (result.newEmployees ? ` · พนักงานใหม่ ${result.newEmployees}` : ""),
-      );
-      onReload();
-    } catch (err) {
-      onError((err as Error).message || "นำเข้าไม่สำเร็จ");
-    } finally {
-      setImportBusy(false);
-    }
-  }
-
   const groups = useMemo(() => {
     const map = new Map<string, ChecklistItem[]>();
     for (const item of items) {
@@ -919,43 +864,6 @@ function CheckSetup({
       <p className="muted" style={{ textAlign: "left", marginBottom: "0.75rem" }}>
         ปรับแต่งรายการตรวจ SOP — พนักงานจะเห็นรายการที่เปิดใช้งานเท่านั้น
       </p>
-
-      <div className="form-card entry-form check-import-card">
-        <h2 className="panel-title" style={{ fontSize: "1rem" }}>นำเข้า CSV ความพร้อม</h2>
-        <p className="muted check-hint">
-          เลือกไฟล์ TELL TEA - ความพร้อม.csv · ตั้งเดือนให้ตรงกับข้อมูล (เช่น 2026-07 สำหรับวันที่ 1–10 ในไฟล์)
-        </p>
-        <div className="check-import-row">
-          <input
-            type="month"
-            className="ot-slim-input"
-            value={importMonth}
-            onChange={(e) => setImportMonth(e.target.value)}
-            aria-label="เดือนของวันที่ใน CSV"
-          />
-          <label className="check-import-file">
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              className="check-file-input"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void onPickCsv(f).catch((err) => onError((err as Error).message));
-              }}
-            />
-            เลือก CSV
-          </label>
-          <button
-            type="button"
-            className="primary-btn"
-            disabled={importBusy || !importPreview}
-            onClick={() => void onImportCsv()}
-          >
-            {importBusy ? "กำลังนำเข้า..." : "นำเข้า"}
-          </button>
-        </div>
-        {importPreview ? <p className="muted check-import-preview">{importPreview}</p> : null}
-      </div>
 
       <form className="form-card entry-form" onSubmit={(e) => void onAdd(e)}>
         <h2 className="panel-title" style={{ fontSize: "1rem" }}>เพิ่มรายการ</h2>

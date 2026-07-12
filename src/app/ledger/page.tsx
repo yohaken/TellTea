@@ -23,6 +23,7 @@ import {
   subscribeLedgerPage,
   updateLedgerEntry,
 } from "@/lib/ledger";
+import { LedgerActionDock } from "@/components/LedgerActionDock";
 import { TypePicker } from "@/components/TypePicker";
 import { can } from "@/lib/permissions";
 import { frequentTypes, guessTypeFromDescription, labelLedgerType } from "@/lib/ledger-labels";
@@ -196,32 +197,13 @@ function LedgerView() {
   }, [loadMore, loading, hasMore, entries.length]);
 
   return (
-    <div>
+    <div className="ledger-page">
       <div className="balance-bar">
         <span>
           คงเหลือ
           {refreshing ? <span className="sync-dot" aria-hidden> ·</span> : null}
         </span>
         <strong>{balance == null ? "…" : formatBaht(balance)}</strong>
-      </div>
-
-      <div className="quick-actions">
-        <button
-          type="button"
-          className="primary-btn action-out"
-          onClick={() => setAdding("out")}
-        >
-          บันทึกเงินออก
-        </button>
-        {canTransferIn ? (
-          <button
-            type="button"
-            className="primary-btn action-in"
-            onClick={() => setAdding("in")}
-          >
-            โอนเข้า
-          </button>
-        ) : null}
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -380,6 +362,12 @@ function LedgerView() {
           </div>
         </div>
       ) : null}
+
+      <LedgerActionDock
+        canTransferIn={canTransferIn}
+        onAddOut={() => setAdding("out")}
+        onAddIn={() => setAdding("in")}
+      />
     </div>
   );
 }

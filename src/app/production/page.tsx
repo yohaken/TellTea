@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { ChefHat, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock, type ModuleTab } from "@/components/ModuleTabDock";
+import { PhotoAttachField } from "@/components/PhotoAttachField";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
@@ -36,7 +37,7 @@ import {
   todayInputValue,
 } from "@/lib/utils";
 
-type Tab = ModuleTab;
+type Tab = Exclude<ModuleTab, "form">;
 
 export default function ProductionPage() {
   return (
@@ -51,6 +52,7 @@ function ProductionView() {
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const [tab, setTab] = useState<Tab>("table");
+  const [formOpen, setFormOpen] = useState(false);
   const [entries, setEntries] = useState<ProdEntry[]>([]);
   const [products, setProducts] = useState<ProdProduct[]>([]);
   const [workers, setWorkers] = useState<ProdWorker[]>([]);
@@ -99,9 +101,25 @@ function ProductionView() {
   const activeProducts = products.filter((p) => p.active);
   const activeWorkers = workers.filter((w) => w.active);
 
-  function selectTab(next: Tab) {
-    if (next === "form") setEditing(null);
+  function selectTab(next: ModuleTab) {
+    if (next === "form") {
+      setEditing(null);
+      setFormOpen(true);
+      return;
+    }
+    setFormOpen(false);
+    setEditing(null);
     setTab(next);
+  }
+
+  function openEdit(row: ProdEntry) {
+    setEditing(row);
+    setFormOpen(true);
+  }
+
+  function closeForm() {
+    setFormOpen(false);
+    setEditing(null);
   }
 
   return (
@@ -116,30 +134,11 @@ function ProductionView() {
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading && tab === "form" ? (
-        <ProdEntryForm
-          key={editing?.id || "new"}
-          entry={editing}
-          products={activeProducts}
-          workers={activeWorkers}
-          createdBy={user?.email || ""}
-          onError={setError}
-          onSaved={() => {
-            setEditing(null);
-            setTab("table");
-          }}
-          onCancelEdit={() => setEditing(null)}
-        />
-      ) : null}
-
       {!loading && tab === "table" ? (
         <ProdTable
           entries={entries}
           isOwner={isOwner}
-          onEdit={(row) => {
-            setEditing(row);
-            setTab("form");
-          }}
+          onEdit={openEdit}
           onError={setError}
         />
       ) : null}
@@ -152,10 +151,30 @@ function ProductionView() {
         />
       ) : null}
 
+      {formOpen && !loading ? (
+        <div className="modal-backdrop edit-modal" onClick={closeForm}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <ProdEntryForm
+              key={editing?.id || "new"}
+              entry={editing}
+              products={activeProducts}
+              workers={activeWorkers}
+              createdBy={user?.email || ""}
+              onError={setError}
+              onSaved={() => {
+                closeForm();
+              }}
+              onCancelEdit={closeForm}
+            />
+          </div>
+        </div>
+      ) : null}
+
       <ModuleTabDock
         tab={tab}
         isOwner={isOwner}
         ariaLabel="มุมมองผลิต"
+        formOpen={formOpen}
         onSelect={selectTab}
       />
     </div>
@@ -187,6 +206,7 @@ function ProdEntryForm({
   const [qty, setQty] = useState(entry ? String(entry.qtyProduced) : "");
   const [waste, setWaste] = useState(entry ? String(entry.qtyWaste || 0) : "");
   const [note, setNote] = useState(entry?.note || "");
+  const [imageUrl, setImageUrl] = useState(entry?.imageUrl || "");
   const [busy, setBusy] = useState(false);
 
   const product = products.find((p) => p.id === productId) || null;
@@ -234,6 +254,7 @@ function ProdEntryForm({
         qtyProduced: Number(qty),
         qtyWaste: Number(waste) || 0,
         note,
+        imageUrl,
       };
       if (entry) {
         await updateProdEntry(entry.id, payload);
@@ -347,6 +368,8 @@ function ProdEntryForm({
         />
       </div>
 
+      <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} />
+
       {Number(qty) > 0 && selectedWorkers.length > 0 ? (
         <p className="muted" style={{ margin: "0 0 0.55rem", textAlign: "left", fontSize: "0.82rem" }}>
           ตัวอย่างโบนัส/คน ≈ {formatPlainNumber(preview.bonusPerPerson)} บาท
@@ -400,7 +423,7 @@ function ProdTable({
   }
 
   if (!entries.length) {
-    return <p className="empty">ยังไม่มีรายการผลิต — สลับไปแท็บกรอกเพื่อเริ่ม</p>;
+    return <p className="empty">ยังไม่มีรายการผลิต — กด + กรอก ด้านล่างเพื่อเริ่ม</p>;
   }
 
   return (

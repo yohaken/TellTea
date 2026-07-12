@@ -47,6 +47,7 @@ export type ProdEntry = {
   qtyProduced: number;
   qtyWaste: number;
   note: string;
+  imageUrl?: string;
   status: ProdStatus;
   createdBy: string;
   createdAt: number;
@@ -64,6 +65,7 @@ export type ProdEntryInput = {
   qtyProduced: number;
   qtyWaste: number;
   note?: string;
+  imageUrl?: string;
   createdBy: string;
 };
 
@@ -187,6 +189,7 @@ export async function addProdEntry(input: ProdEntryInput): Promise<string> {
     qtyProduced: Number(input.qtyProduced) || 0,
     qtyWaste: Number(input.qtyWaste) || 0,
     note: (input.note || "").trim(),
+    imageUrl: (input.imageUrl || "").trim(),
     status: "unpaid" as ProdStatus,
     createdBy: input.createdBy,
     createdAt: now,
@@ -210,6 +213,7 @@ export async function updateProdEntry(
       | "qtyProduced"
       | "qtyWaste"
       | "note"
+      | "imageUrl"
       | "status"
     >
   >,
@@ -233,6 +237,7 @@ export async function updateProdEntry(
   }
   if (patch.qtyWaste != null) next.qtyWaste = Number(patch.qtyWaste) || 0;
   if (patch.note != null) next.note = patch.note.trim();
+  if (patch.imageUrl != null) next.imageUrl = patch.imageUrl.trim();
   if (patch.status != null) next.status = patch.status;
   await updateDoc(doc(getDb(), "prodEntries", id), next);
 }

@@ -1,0 +1,75 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { Camera } from "lucide-react";
+import { compressImageForUpload, fileToReceiptDataUrl } from "@/lib/receipts";
+
+export function PhotoAttachField({
+  value,
+  onChange,
+  onError,
+  label = "แนบรูป (ถ้ามี)",
+}: {
+  value: string;
+  onChange: (url: string) => void;
+  onError?: (msg: string) => void;
+  label?: string;
+}) {
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function onFile(file: File | null | undefined) {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const compressed = await compressImageForUpload(file);
+      onChange(await fileToReceiptDataUrl(compressed));
+    } catch (err) {
+      onError?.((err as Error).message || "อัปโหลดรูปไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="field photo-attach-field">
+      <span className="field-label">{label}</span>
+      <div className="photo-attach-row">
+        <button
+          type="button"
+          className="photo-attach-btn"
+          disabled={busy}
+          onClick={() => cameraRef.current?.click()}
+        >
+          <Camera size={16} aria-hidden />
+          {busy ? "กำลังอัปโหลด..." : value ? "เปลี่ยนรูป" : "ถ่าย / แนบรูป"}
+        </button>
+        {value ? (
+          <button type="button" className="ghost-btn photo-attach-clear" onClick={() => onChange("")}>
+            ลบรูป
+          </button>
+        ) : null}
+      </div>
+      {value ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={value} alt="" className="photo-attach-preview" />
+      ) : null}
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        onChange={(e) => void onFile(e.target.files?.[0])}
+      />
+      <input
+        ref={galleryRef}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={(e) => void onFile(e.target.files?.[0])}
+      />
+    </div>
+  );
+}
