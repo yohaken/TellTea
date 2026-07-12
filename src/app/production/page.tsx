@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { ChefHat, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
-import { EntryPhotoCell, ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachField } from "@/components/PhotoAttachField";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -456,7 +456,7 @@ function ProdTable({
                 <td className="col-date">{formatDateShort(row.date)}</td>
                 <td className="col-desc prod-col-worker">{row.workerNames.join(", ")}</td>
                 <td className="col-desc prod-col-product col-sticky-left">
-                  <div className="desc-with-photo">
+                  <div className="prod-name-row">
                     <button
                       type="button"
                       className="desc-link"
@@ -465,11 +465,10 @@ function ProdTable({
                     >
                       {row.productName}
                     </button>
-                    <EntryPhotoCell
+                    <EntryPhotoIndicator
                       imageUrl={row.imageUrl}
                       label={row.productName}
                       onView={(url) => setPreview({ url, title: row.productName })}
-                      onAdd={() => onEdit(row)}
                     />
                   </div>
                 </td>

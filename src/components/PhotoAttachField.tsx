@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera } from "lucide-react";
 import { compressImageForUpload, fileToReceiptDataUrl } from "@/lib/receipts";
 
 export function PhotoAttachField({
@@ -35,22 +34,29 @@ export function PhotoAttachField({
   return (
     <div className="field photo-attach-field">
       <span className="field-label">{label}</span>
-      <div className="photo-attach-row">
+      <div className="receipt-actions">
         <button
           type="button"
-          className="photo-attach-btn"
+          className="primary-btn"
           disabled={busy}
           onClick={() => cameraRef.current?.click()}
         >
-          <Camera size={16} aria-hidden />
-          {busy ? "กำลังอัปโหลด..." : value ? "เปลี่ยนรูป" : "ถ่าย / แนบรูป"}
+          {busy ? "กำลังอัปโหลด..." : "ถ่ายรูป"}
         </button>
-        {value ? (
-          <button type="button" className="ghost-btn photo-attach-clear" onClick={() => onChange("")}>
-            ลบรูป
-          </button>
-        ) : null}
+        <button
+          type="button"
+          className="ghost-btn"
+          disabled={busy}
+          onClick={() => galleryRef.current?.click()}
+        >
+          แนบรูป
+        </button>
       </div>
+      {value ? (
+        <button type="button" className="ghost-btn photo-attach-clear" onClick={() => onChange("")}>
+          ลบรูป
+        </button>
+      ) : null}
       {value ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={value} alt="" className="photo-attach-preview" />

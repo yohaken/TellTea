@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { Coffee, LayoutGrid, Table2, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
-import { EntryPhotoCell, ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachField } from "@/components/PhotoAttachField";
 import { useAuth } from "@/lib/auth";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
@@ -106,23 +106,71 @@ type DateGroup = {
   shiftCount: number;
   summaryQty: number;
   totalBonus: number;
+  missing: boolean;
 };
 
-function groupByDate(rows: OtEntry[]): DateGroup[] {
-  const sorted = sortOtEntries(rows);
-  const groups: DateGroup[] = [];
-  for (const row of sorted) {
-    let group = groups.find((g) => g.date === row.date);
-    if (!group) {
-      group = { date: row.date, rows: [], shiftCount: 0, summaryQty: 0, totalBonus: 0 };
-      groups.push(group);
-    }
-    group.rows.push(row);
-    const c = computeOtBonus(row);
-    group.shiftCount += 1;
-    group.summaryQty += c.summaryQty;
-    group.totalBonus += c.totalBonus;
+function localDayKey(ms: number) {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function groupByDateForMonth(rows: OtEntry[], year: number, month: number): DateGroup[] {
+  const byDay = new Map<string, OtEntry[]>();
+  for (const row of rows) {
+    const key = localDayKey(row.date);
+    const list = byDay.get(key) || [];
+    list.push(row);
+    byDay.set(key, list);
   }
+
+  for (const list of byDay.values()) {
+    list.sort((a, b) => {
+      const sa = SHIFT_ORDER[a.shift] ?? 9;
+      const sb = SHIFT_ORDER[b.shift] ?? 9;
+      if (sa !== sb) return sb - sa;
+      return b.createdAt - a.createdAt;
+    });
+  }
+
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const groups: DateGroup[] = [];
+
+  for (let day = lastDay; day >= 1; day -= 1) {
+    const dateMs = new Date(year, month, day).getTime();
+    const key = `${year}-${month}-${day}`;
+    const dayRows = byDay.get(key) || [];
+
+    if (!dayRows.length) {
+      groups.push({
+        date: dateMs,
+        rows: [],
+        shiftCount: 0,
+        summaryQty: 0,
+        totalBonus: 0,
+        missing: true,
+      });
+      continue;
+    }
+
+    let shiftCount = 0;
+    let summaryQty = 0;
+    let totalBonus = 0;
+    for (const row of dayRows) {
+      const c = computeOtBonus(row);
+      shiftCount += 1;
+      summaryQty += c.summaryQty;
+      totalBonus += c.totalBonus;
+    }
+    groups.push({
+      date: dateMs,
+      rows: dayRows,
+      shiftCount,
+      summaryQty,
+      totalBonus,
+      missing: false,
+    });
+  }
+
   return groups;
 }
 
@@ -554,11 +602,10 @@ function OtTable({
     return { shiftCount, summaryQty, totalBonus, unpaidBonus, myBonus };
   }, [filtered, myName]);
 
-  const dateGroups = useMemo(() => groupByDate(filtered), [filtered]);
-
-  if (!entries.length) {
-    return <p className="empty">ยังไม่มีรายการ OT</p>;
-  }
+  const dateGroups = useMemo(() => {
+    const { year, month: m } = parseMonthInput(month);
+    return groupByDateForMonth(filtered, year, m);
+  }, [filtered, month]);
 
   return (
     <div className="ot-table-view">
@@ -617,9 +664,7 @@ function OtTable({
         ค้าง ฿{formatPlainNumber(summary.unpaidBonus)}
       </p>
 
-      {!filtered.length ? (
-        <p className="empty">ไม่มีรายการในเดือน/ตัวกรองนี้</p>
-      ) : tableView === "sheet" ? (
+      {tableView === "sheet" ? (
         <OtSheetTable
           groups={dateGroups}
           isOwner={isOwner}
@@ -627,6 +672,8 @@ function OtTable({
           onError={onError}
           onViewPhoto={(url, title) => setPreview({ url, title })}
         />
+      ) : !filtered.length ? (
+        <p className="empty">{entries.length ? "ไม่มีรายการในเดือน/ตัวกรองนี้" : "ยังไม่มีรายการ OT"}</p>
       ) : (
         <OtCardList
           entries={sortOtEntries(filtered)}
@@ -695,7 +742,15 @@ function OtSheetTable({
           </tr>
         </thead>
         <tbody>
-          {groups.map((group) => (
+          {groups.map((group) =>
+            group.missing ? (
+              <tr key={group.date} className="ot-day-missing row-out">
+                <td className="col-sticky-left ot-col-date ot-date-cell">{formatDateShort(group.date)}</td>
+                <td colSpan={colCount - 1} className="ot-missing-cell">
+                  ไม่มีบันทึก — ช่วงที่ขาด
+                </td>
+              </tr>
+            ) : (
             <Fragment key={group.date}>
               {group.rows.map((row, idx) => {
                 const c = computeOtBonus(row);
@@ -758,13 +813,12 @@ function OtSheetTable({
                       )}
                     </td>
                     <td className="col-act">
-                      <EntryPhotoCell
+                      <EntryPhotoIndicator
                         imageUrl={row.imageUrl}
                         label={`${formatDateShort(row.date)} ${labelOtShift(row.shift)}`}
                         onView={(url) =>
                           onViewPhoto(url, `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`)
                         }
-                        onAdd={() => onEdit(row)}
                       />
                     </td>
                     {isOwner ? (
@@ -794,7 +848,8 @@ function OtSheetTable({
                 </td>
               </tr>
             </Fragment>
-          ))}
+            ),
+          )}
         </tbody>
       </table>
     </div>
@@ -862,13 +917,12 @@ function OtCardList({
                 <span className="ot-card-shift">{labelOtShift(row.shift)}</span>
               </div>
               <div className="ot-card-actions">
-                <EntryPhotoCell
+                <EntryPhotoIndicator
                   imageUrl={row.imageUrl}
                   label={`${formatDateShort(row.date)} ${labelOtShift(row.shift)}`}
                   onView={(url) =>
                     onViewPhoto(url, `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`)
                   }
-                  onAdd={() => onEdit(row)}
                 />
                 {isOwner ? (
                   <select
