@@ -69,6 +69,7 @@ function OwnerBooksView() {
   const [query, setQuery] = useState("");
   const [searchPool, setSearchPool] = useState<OwnerBookEntry[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(() => new Set());
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const deferredQuery = useDeferredValue(query.trim());
 
@@ -134,6 +135,43 @@ function OwnerBooksView() {
     return filterOwnerBookRows(source, deferredQuery);
   }, [entries, searchPool, deferredQuery]);
 
+  useEffect(() => {
+    setExcludedIds(new Set());
+  }, [deferredQuery]);
+
+  const calcSummary = useMemo(() => {
+    let includedCount = 0;
+    let includedSum = 0;
+    let excludedCount = 0;
+    let excludedSum = 0;
+    for (const row of filteredEntries) {
+      const amt = Number(row.amountOut) || 0;
+      if (excludedIds.has(row.id)) {
+        excludedCount += 1;
+        excludedSum += amt;
+      } else {
+        includedCount += 1;
+        includedSum += amt;
+      }
+    }
+    return { includedCount, includedSum, excludedCount, excludedSum };
+  }, [filteredEntries, excludedIds]);
+
+  function toggleExcluded(id: string) {
+    setExcludedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function clearExcluded() {
+    setExcludedIds(new Set());
+  }
+
+  const showCalcSummary = !loading && filteredEntries.length > 0 && !searchLoading;
+
   const loadMore = useCallback(() => {
     if (deferredQuery) return;
     if (!hasMore || loadingMore || liveLimit >= OWNER_BOOKS_LIVE_MAX) return;
@@ -196,10 +234,38 @@ function OwnerBooksView() {
       </div>
       {deferredQuery ? (
         <p className="muted table-search-meta">
-          {searchLoading
-            ? "กำลังค้นหาทั้งบัญชี…"
-            : `พบ ${filteredEntries.length} รายการ`}
+          {searchLoading ? "กำลังค้นหาทั้งบัญชี…" : null}
         </p>
+      ) : null}
+
+      {showCalcSummary ? (
+        <div className="owner-calc-summary" aria-live="polite">
+          <p className="owner-calc-line">
+            <span>
+              {deferredQuery ? "ผลค้นหา" : "รายการที่แสดง"}
+              {" · "}
+              นับ {calcSummary.includedCount} รายการ
+              {!deferredQuery && hasMore ? " (โหลดเพิ่มได้)" : null}
+            </span>
+            <strong>{formatBaht(calcSummary.includedSum)}</strong>
+          </p>
+          {calcSummary.excludedCount > 0 ? (
+            <p className="owner-calc-line owner-calc-excluded muted">
+              <span>
+                ไม่นับ {calcSummary.excludedCount} รายการ (−{formatBaht(calcSummary.excludedSum)})
+              </span>
+            </p>
+          ) : null}
+          <div className="owner-calc-actions">
+            {excludedIds.size > 0 ? (
+              <button type="button" className="ghost-btn owner-calc-clear" onClick={clearExcluded}>
+                ล้างการไม่รวม
+              </button>
+            ) : (
+              <span className="owner-calc-hint muted">ติ๊ก «ไม่รวม» เพื่อหักออกจากยอดชั่วคราว</span>
+            )}
+          </div>
+        </div>
       ) : null}
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -213,6 +279,7 @@ function OwnerBooksView() {
             <table className="sheet-table">
               <thead>
                 <tr>
+                  <th className="col-exclude" aria-label="ไม่รวม" />
                   <th className="col-date">วันที่</th>
                   <th className="col-desc">รายการ</th>
                   <th className="col-out">ออก</th>
@@ -221,8 +288,20 @@ function OwnerBooksView() {
                 </tr>
               </thead>
               <tbody>
-                {filteredEntries.map((row) => (
-                  <tr key={row.id} className="row-out">
+                {filteredEntries.map((row) => {
+                  const excluded = excludedIds.has(row.id);
+                  return (
+                  <tr key={row.id} className={excluded ? "row-out is-excluded" : "row-out"}>
+                    <td className="col-exclude">
+                      <label className="owner-exclude-check" title="ไม่รวมในยอด">
+                        <input
+                          type="checkbox"
+                          checked={excluded}
+                          onChange={() => toggleExcluded(row.id)}
+                          aria-label={`ไม่รวม ${row.description}`}
+                        />
+                      </label>
+                    </td>
                     <td className="col-date">{formatDateShort(row.date)}</td>
                     <td className="col-desc">
                       <button
@@ -246,7 +325,8 @@ function OwnerBooksView() {
                       {row.note || ""}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

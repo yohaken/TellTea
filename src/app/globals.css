@@ -694,6 +694,91 @@ textarea {
   font-size: 0.8rem;
 }
 
+.owner-calc-summary {
+  margin: 0 0 0.55rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(28, 42, 31, 0.1);
+}
+
+.owner-calc-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin: 0;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.owner-calc-line + .owner-calc-line {
+  margin-top: 0.25rem;
+}
+
+.owner-calc-line strong {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1rem;
+  color: #1a4f63;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.owner-calc-excluded {
+  font-size: 0.78rem;
+}
+
+.owner-calc-actions {
+  margin-top: 0.35rem;
+  text-align: left;
+}
+
+.owner-calc-clear {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.55rem;
+  min-height: auto;
+}
+
+.owner-calc-hint {
+  font-size: 0.72rem;
+}
+
+.sheet-table .col-exclude {
+  width: 1.85rem;
+  min-width: 1.85rem;
+  max-width: 1.85rem;
+  padding-left: 0.15rem;
+  padding-right: 0.15rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.owner-exclude-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.75rem;
+  min-width: 1.75rem;
+  cursor: pointer;
+}
+
+.owner-exclude-check input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--tea-leaf);
+  cursor: pointer;
+}
+
+.sheet-table tr.is-excluded td {
+  opacity: 0.42;
+}
+
+.sheet-table tr.is-excluded .col-out {
+  text-decoration: line-through;
+  text-decoration-color: rgba(28, 42, 31, 0.35);
+}
+
 .prod-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
