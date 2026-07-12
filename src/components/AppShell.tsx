@@ -6,6 +6,7 @@ import {
   BookOpen,
   Boxes,
   ChefHat,
+  ClipboardCheck,
   Coffee,
   LogOut,
   MoreHorizontal,
@@ -43,6 +44,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       : null,
     can(staff, "otBonus")
       ? { href: "/ot/", label: "OT", icon: Coffee }
+      : null,
+    can(staff, "checklist")
+      ? { href: "/check/", label: "เช็ค", icon: ClipboardCheck }
       : null,
     can(staff, "stock")
       ? { href: "/stock/", label: "สต็อก", icon: Boxes }

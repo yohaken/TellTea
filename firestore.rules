@@ -34,7 +34,7 @@ service cloud.firestore {
             && get(staffPath()).data.permissions[p] == true)
         || (isStaff()
             && !get(staffPath()).data.keys().hasAny(['permissions'])
-            && (p == 'ledger' || p == 'stock' || p == 'production' || p == 'otBonus'));
+            && (p == 'ledger' || p == 'stock' || p == 'production' || p == 'otBonus' || p == 'checklist'));
     }
 
     match /staff/{staffEmail} {
@@ -116,6 +116,22 @@ service cloud.firestore {
         && request.resource.data.shift is string
         && request.resource.data.machineCount is number;
       allow update, delete: if hasPerm('otBonus');
+    }
+
+    // SmartCheck SOP — บันทึกแนวตั้งต่อรายการ
+    match /checklistItems/{id} {
+      allow read: if hasPerm('checklist');
+      allow write: if isOwner();
+    }
+    match /checklistRecords/{id} {
+      allow read: if hasPerm('checklist');
+      allow create: if hasPerm('checklist')
+        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.checkId is string
+        && request.resource.data.itemName is string
+        && request.resource.data.status in ['pass', 'fail'];
+      allow delete: if isOwner();
+      allow update: if false;
     }
 
     match /meta/{docId} {
