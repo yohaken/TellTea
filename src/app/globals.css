@@ -1039,12 +1039,65 @@ textarea {
 }
 
 .prod-table {
-  min-width: 36rem;
+  min-width: 38rem;
 }
 
 .prod-table.sheet-table th,
 .prod-table.sheet-table td {
   font-size: 0.68rem;
+}
+
+.prod-table .prod-col-worker {
+  min-width: 2.6rem;
+  max-width: 3.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: keep-all;
+}
+
+.prod-table .prod-col-product {
+  min-width: 6.25rem;
+  max-width: 9rem;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.3;
+  vertical-align: top;
+}
+
+.prod-table .prod-col-product .desc-with-photo {
+  min-width: 5.5rem;
+  align-items: center;
+}
+
+.prod-table .prod-col-product .desc-link {
+  min-width: 4.5rem;
+  text-align: left;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+
+.prod-table .col-sticky-left {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #fff;
+  box-shadow: 2px 0 4px rgba(28, 42, 31, 0.06);
+}
+
+.prod-table thead .prod-col-product.col-sticky-left {
+  background: #f3efe4;
+  z-index: 3;
+}
+
+.prod-table tbody .prod-col-product.col-sticky-left {
+  background: #fff;
+}
+
+.prod-table tr.row-out:nth-child(even) .prod-col-product.col-sticky-left {
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .prod-status {

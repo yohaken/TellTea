@@ -436,8 +436,8 @@ function ProdTable({
         <thead>
           <tr>
             <th className="col-date">วันที่</th>
-            <th className="col-desc">พนักงาน</th>
-            <th className="col-desc">สินค้า</th>
+            <th className="col-desc prod-col-worker">พนักงาน</th>
+            <th className="col-desc prod-col-product col-sticky-left">สินค้า</th>
             <th className="col-out">ผลิต</th>
             <th className="col-out">ทิ้ง/เสีย</th>
             <th className="col-note">หมายเหตุ</th>
@@ -461,10 +461,15 @@ function ProdTable({
             return (
               <tr key={row.id} className="row-out">
                 <td className="col-date">{formatDateShort(row.date)}</td>
-                <td className="col-desc">{row.workerNames.join(", ")}</td>
-                <td className="col-desc">
+                <td className="col-desc prod-col-worker">{row.workerNames.join(", ")}</td>
+                <td className="col-desc prod-col-product col-sticky-left">
                   <div className="desc-with-photo">
-                    <button type="button" className="desc-link" onClick={() => onEdit(row)}>
+                    <button
+                      type="button"
+                      className="desc-link"
+                      title={row.productName}
+                      onClick={() => onEdit(row)}
+                    >
                       {row.productName}
                     </button>
                     <EntryPhotoCell
