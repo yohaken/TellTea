@@ -77,8 +77,8 @@ function MoreView() {
     },
     {
       href: "/staff/",
-      title: "พนักงาน",
-      desc: "เพิ่มอีเมลและกำหนดสิทธิ์การใช้งาน",
+      title: "ศูนย์รวมพนักงาน",
+      desc: "รายชื่อร้าน + บัญชีเข้าใช้ / สิทธิ์",
       icon: Users,
       perm: "staffManage",
     },

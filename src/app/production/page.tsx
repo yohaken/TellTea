@@ -14,7 +14,6 @@ import { can } from "@/lib/permissions";
 import {
   addProdEntry,
   addProdProduct,
-  addProdWorker,
   computeProdBonus,
   deleteProdEntry,
   labelProdStatus,
@@ -24,7 +23,6 @@ import {
   subscribeProdEntries,
   updateProdEntry,
   updateProdProduct,
-  updateProdWorker,
   type ProdEntry,
   type ProdProduct,
   type ProdStatus,
@@ -171,7 +169,6 @@ function ProductionView() {
       {!loading && tab === "setup" && isOwner ? (
         <ProdSetup
           products={products}
-          workers={workers}
           onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
           onError={setError}
         />
@@ -526,19 +523,16 @@ function ProdTable({
 
 function ProdSetup({
   products,
-  workers,
   onReload,
   onError,
 }: {
   products: ProdProduct[];
-  workers: ProdWorker[];
   onReload: () => void;
   onError: (msg: string) => void;
 }) {
   const [pName, setPName] = useState("");
   const [salesRate, setSalesRate] = useState("0.60");
   const [prodRate, setProdRate] = useState("1.25");
-  const [wName, setWName] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function addProduct(e: FormEvent) {
@@ -559,24 +553,15 @@ function ProdSetup({
     }
   }
 
-  async function addWorker(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      await addProdWorker(wName);
-      setWName("");
-      onReload();
-    } catch (err) {
-      onError((err as Error).message || "เพิ่มพนักงานไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <div className="prod-setup">
       <p className="muted" style={{ textAlign: "left", marginBottom: "0.75rem" }}>
         เรทขาย / เรทผลิต เป็นค่าตายตัวต่อสินค้า · โบนัส/คน = ผลิต × เรทผลิต ÷ จำนวนคน
+      </p>
+      <p className="muted" style={{ textAlign: "left", marginBottom: "0.75rem" }}>
+        รายชื่อพนักงานอยู่ที่{" "}
+        <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
+        {" "}— เพิ่มที่เดียว แล้วมาเลือกตอนกรอกผลิต
       </p>
 
       <form className="form-card entry-form" onSubmit={(e) => void addProduct(e)}>
@@ -618,37 +603,6 @@ function ProdSetup({
               }
             >
               {p.active ? "ปิด" : "เปิด"}
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <form className="form-card entry-form" style={{ marginTop: "1rem" }} onSubmit={(e) => void addWorker(e)}>
-        <h2 className="panel-title" style={{ fontSize: "1rem" }}>พนักงานผลิต</h2>
-        <div className="field">
-          <label htmlFor="setup-wname">ชื่อ</label>
-          <input id="setup-wname" value={wName} onChange={(e) => setWName(e.target.value)} required />
-        </div>
-        <button type="submit" className="primary-btn" disabled={busy}>เพิ่มชื่อ</button>
-      </form>
-
-      <div className="list-card" style={{ marginTop: "0.75rem" }}>
-        {workers.map((w) => (
-          <div key={w.id} className="list-row">
-            <div>
-              <strong>{w.name}</strong>
-              <div className="muted">{w.active ? "ใช้งาน" : "ปิดใช้"}</div>
-            </div>
-            <button
-              type="button"
-              className="ghost-btn"
-              onClick={() =>
-                void updateProdWorker(w.id, { active: !w.active })
-                  .then(onReload)
-                  .catch((err) => onError(err.message || "อัปเดตไม่สำเร็จ"))
-              }
-            >
-              {w.active ? "ปิด" : "เปิด"}
             </button>
           </div>
         ))}

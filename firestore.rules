@@ -82,14 +82,21 @@ service cloud.firestore {
         && request.resource.data.qty >= 0;
     }
 
-    // ผลิต / โบนัส — พนักงานกรอกแถว · เจ้าของตั้งสินค้า/คนงาน
+    // ศูนย์รวมรายชื่อพนักงานร้าน — เพิ่มที่เดียว ใช้ร่วมหลายหมวด
+    match /employees/{id} {
+      allow read: if isStaff();
+      allow write: if isOwner() || hasPerm('staffManage');
+    }
+
+    // ผลิต / โบนัส — พนักงานกรอกแถว · เจ้าของตั้งสินค้า
     match /prodProducts/{id} {
       allow read: if hasPerm('production');
       allow write: if isOwner();
     }
+    // legacy — ย้ายไป employees แล้ว
     match /prodWorkers/{id} {
-      allow read: if hasPerm('production');
-      allow write: if isOwner();
+      allow read: if isStaff();
+      allow write: if isOwner() || hasPerm('staffManage');
     }
     match /prodEntries/{id} {
       allow read: if hasPerm('production');

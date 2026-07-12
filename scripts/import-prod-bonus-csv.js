@@ -1,6 +1,6 @@
 /**
- * Import bakery bonus CSV → prodProducts / prodWorkers / prodEntries
- * Clears existing prod* collections first.
+ * Import bakery bonus CSV → prodProducts / employees / prodEntries
+ * Clears existing prod* + employees collections first.
  */
 const fs = require("fs");
 const path = require("path");
@@ -224,7 +224,7 @@ async function main() {
   }
 
   const token = await getToken();
-  for (const col of ["prodEntries", "prodProducts", "prodWorkers"]) {
+  for (const col of ["prodEntries", "prodProducts", "employees", "prodWorkers"]) {
     await deleteCollection(token, col);
   }
 
@@ -259,11 +259,12 @@ async function main() {
     workerIdByName.set(name, id);
     workerWrites.push({
       update: {
-        name: `projects/${PROJECT}/databases/(default)/documents/prodWorkers/${id}`,
+        name: `projects/${PROJECT}/databases/(default)/documents/employees/${id}`,
         fields: docFields({
           name,
           active: true,
           createdAt: now,
+          updatedAt: now,
         }),
       },
     });

@@ -11,6 +11,12 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
+import {
+  addEmployee,
+  listEmployees,
+  updateEmployee,
+  type Employee,
+} from "./employees";
 
 export type ProdStatus = "unpaid" | "pending" | "paid";
 
@@ -26,12 +32,8 @@ export type ProdProduct = {
   updatedAt: number;
 };
 
-export type ProdWorker = {
-  id: string;
-  name: string;
-  active: boolean;
-  createdAt: number;
-};
+/** @deprecated Use Employee from employees.ts — kept as alias for production UI. */
+export type ProdWorker = Employee;
 
 export type ProdEntry = {
   id: string;
@@ -95,9 +97,6 @@ export function labelProdStatus(status: ProdStatus) {
 function productsCol() {
   return collection(getDb(), "prodProducts");
 }
-function workersCol() {
-  return collection(getDb(), "prodWorkers");
-}
 function entriesCol() {
   return collection(getDb(), "prodEntries");
 }
@@ -107,9 +106,9 @@ export async function listProdProducts(): Promise<ProdProduct[]> {
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ProdProduct, "id">) }));
 }
 
+/** Production workers come from the shared employee hub. */
 export async function listProdWorkers(): Promise<ProdWorker[]> {
-  const snap = await getDocs(query(workersCol(), orderBy("name", "asc")));
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ProdWorker, "id">) }));
+  return listEmployees();
 }
 
 export function subscribeProdEntries(
@@ -162,24 +161,14 @@ export async function updateProdProduct(
 }
 
 export async function addProdWorker(name: string): Promise<string> {
-  const n = name.trim();
-  if (!n) throw new Error("ต้องใส่ชื่อพนักงาน");
-  const ref = await addDoc(workersCol(), {
-    name: n,
-    active: true,
-    createdAt: Date.now(),
-  });
-  return ref.id;
+  return addEmployee(name);
 }
 
 export async function updateProdWorker(
   id: string,
   patch: Partial<Pick<ProdWorker, "name" | "active">>,
 ): Promise<void> {
-  const next: Record<string, string | boolean> = {};
-  if (patch.name != null) next.name = patch.name.trim();
-  if (patch.active != null) next.active = patch.active;
-  await updateDoc(doc(getDb(), "prodWorkers", id), next);
+  await updateEmployee(id, patch);
 }
 
 export async function addProdEntry(input: ProdEntryInput): Promise<string> {
