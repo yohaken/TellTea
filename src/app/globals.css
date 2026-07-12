@@ -908,6 +908,15 @@ body.modal-open .main-panel {
   color: var(--danger);
 }
 
+.staff-ready-pill.is-awaiting {
+  background: rgba(201, 133, 45, 0.18);
+  color: #8a5a12;
+}
+
+.staff-ready-row-awaiting {
+  background: rgba(201, 133, 45, 0.06);
+}
+
 .staff-ready-tag {
   display: block;
   font-size: 0.7rem;
@@ -915,6 +924,23 @@ body.modal-open .main-panel {
   color: var(--danger);
   margin-top: 0.1rem;
 }
+
+.staff-ready-tag.is-roster {
+  color: var(--tea-leaf);
+}
+
+.success-text {
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.65rem;
+  background: rgba(47, 107, 79, 0.12);
+  border: 1px solid rgba(47, 107, 79, 0.28);
+  color: var(--tea-leaf);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+}
+
 
 .staff-ready-row-complete {
   background: rgba(127, 183, 126, 0.1);

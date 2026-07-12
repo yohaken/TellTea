@@ -2,7 +2,7 @@
 
 import {
   buildStaffReadinessRows,
-  statusLabel,
+  rowStatusLabel,
   summarizeStaffReadiness,
   type StaffReadinessRow,
 } from "@/lib/staff-readiness";
@@ -27,10 +27,12 @@ function StatusPill({ row }: { row: StaffReadinessRow }) {
         ? "staff-ready-pill is-partial"
         : row.status === "blocked"
           ? "staff-ready-pill is-blocked"
-          : "staff-ready-pill is-none";
+          : row.status === "awaiting-account"
+            ? "staff-ready-pill is-awaiting"
+            : "staff-ready-pill is-none";
   return (
     <span className={cls} title={row.missing.join(" · ") || "ครบแล้ว"}>
-      {statusLabel(row.status)}
+      {rowStatusLabel(row)}
     </span>
   );
 }
@@ -71,7 +73,7 @@ export function StaffReadinessTable({
       <p className="staff-readiness-summary muted">
         พนักงาน {summary.totalStaff} คน · ครบ {summary.complete} · ยังไม่ครบ {summary.partial}
         {summary.blocked ? ` · ล็อกอินไม่ได้ ${summary.blocked}` : ""}
-        {summary.rosterOnly ? ` · มีชื่อแต่ยังไม่มีบัญชี ${summary.rosterOnly}` : ""}
+        {summary.rosterOnly ? ` · รอสร้างบัญชี (ขั้นที่ 2) ${summary.rosterOnly}` : ""}
       </p>
 
       <div className="sheet-wrap staff-readiness-wrap">
@@ -97,11 +99,20 @@ export function StaffReadinessTable({
                 .filter((m) => ["ชื่อจริง", "นามสกุล", "รูปบัตร"].includes(m))
                 .join(", ");
               return (
-                <tr key={row.id} className={row.status === "complete" ? "staff-ready-row-complete" : ""}>
+                <tr
+                  key={row.id}
+                  className={
+                    row.status === "complete"
+                      ? "staff-ready-row-complete"
+                      : row.status === "awaiting-account"
+                        ? "staff-ready-row-awaiting"
+                        : ""
+                  }
+                >
                   <td className="staff-ready-col-name">
                     <strong>{row.rosterName}</strong>
                     {row.kind === "roster-only" ? (
-                      <span className="staff-ready-tag">ยังไม่มีบัญชี</span>
+                      <span className="staff-ready-tag is-roster">ขั้นที่ 1 ✓</span>
                     ) : null}
                   </td>
                   <td className="staff-ready-col-account muted">{row.accountLabel}</td>
@@ -123,8 +134,8 @@ export function StaffReadinessTable({
       </div>
 
       <p className="muted staff-readiness-legend" style={{ textAlign: "left", fontSize: "0.8rem", marginTop: "0.5rem" }}>
-        เข้า = อีเมล/เบอร์ · ส่วนตัว = ชื่อจริง+นามสกุล+บัตร ปชช. · ร้าน = ชื่อในรายชื่อโบนัส/ผลิต
-        {!ownerView ? " · สถานะส่วนตัวอิงจากธงในระบบ (รายละเอียดบัตรเห็นได้เฉพาะเจ้าของ)" : ""}
+        ขั้นที่ 1 = ชื่อในรายชื่อร้าน · ขั้นที่ 2 = บัญชีอีเมล/เบอร์ (เข้า) · ส่วนตัว/PDPA = กรอกที่โปรไฟล์หลังล็อกอิน
+        {!ownerView ? " · รายละเอียดบัตรเห็นได้เฉพาะเจ้าของ" : ""}
       </p>
     </section>
   );

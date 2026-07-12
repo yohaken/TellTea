@@ -68,6 +68,7 @@ function StaffView() {
   const [linkEmployeeId, setLinkEmployeeId] = useState("");
   const [perms, setPerms] = useState<StaffPermissions>({ ...DEFAULT_STAFF_PERMISSIONS });
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
   const [personalMap, setPersonalMap] = useState<Map<string, StaffPersonalData>>(new Map());
@@ -77,20 +78,24 @@ function StaffView() {
   const isOwner = staff?.role === "owner";
   const canManageStaff = can(staff, "staffManage");
 
-  async function reload() {
+  async function reload(): Promise<{ employeesOk: boolean; staffOk: boolean }> {
     const errors: string[] = [];
     let emps: Employee[] = [];
     let staffList: StaffMember[] = [];
+    let employeesOk = true;
+    let staffOk = true;
 
     try {
       emps = await listEmployees();
     } catch (err) {
+      employeesOk = false;
       errors.push(mapFirestoreError(err, "โหลดรายชื่อร้านไม่สำเร็จ"));
     }
 
     try {
       staffList = await listStaff();
     } catch (err) {
+      staffOk = false;
       errors.push(mapFirestoreError(err, "โหลดบัญชีพนักงานไม่สำเร็จ"));
     }
 
@@ -107,7 +112,8 @@ function StaffView() {
       setPersonalMap(new Map());
     }
 
-    setError(errors.length ? errors.join(" · ") : null);
+    if (errors.length) setError(errors.join(" · "));
+    return { employeesOk, staffOk };
   }
 
   useEffect(() => {
@@ -131,13 +137,29 @@ function StaffView() {
 
   async function onAddEmployee(e: FormEvent) {
     e.preventDefault();
+    const name = empName.trim();
+    if (!name) {
+      setError("ใส่ชื่อพนักงาน");
+      return;
+    }
     setBusy(true);
     setError(null);
+    setSuccess(null);
     try {
-      await addEmployee(empName);
+      const id = await addEmployee(name);
+      const now = Date.now();
+      setEmployees((prev) => {
+        if (prev.some((e) => e.id === id)) return prev;
+        return [...prev, { id, name, active: true, createdAt: now, updatedAt: now }].sort((a, b) =>
+          a.name.localeCompare(b.name, "th"),
+        );
+      });
       setEmpName("");
-      await reload();
+      setSuccess(`เพิ่ม "${name}" ในรายชื่อร้านแล้ว (ขั้นที่ 1) — ต่อไปสร้างบัญชีขั้นที่ 2`);
+      const { employeesOk } = await reload();
+      if (employeesOk) setError(null);
     } catch (err) {
+      setSuccess(null);
       setError(mapFirestoreError(err, "เพิ่มชื่อไม่สำเร็จ"));
     } finally {
       setBusy(false);
@@ -152,7 +174,11 @@ function StaffView() {
     }
     setBusy(true);
     setError(null);
+    setSuccess(null);
     try {
+      const linkedName = linkEmployeeId
+        ? employees.find((e) => e.id === linkEmployeeId)?.name
+        : undefined;
       await upsertStaffWithLink({
         email: email.trim() || undefined,
         phone: phone.trim() || undefined,
@@ -160,13 +186,21 @@ function StaffView() {
         permissions: perms,
         employeeId: linkEmployeeId || undefined,
       });
+      const account = email.trim() || phone.trim();
       setEmail("");
       setPhone("");
       setLinkEmployeeId("");
       setPerms({ ...DEFAULT_STAFF_PERMISSIONS });
-      await reload();
+      setSuccess(
+        linkedName
+          ? `สร้างบัญชี ${account} และเชื่อม "${linkedName}" แล้ว`
+          : `สร้างบัญชี ${account} แล้ว — ให้พนักงานเชื่อมชื่อที่โปรไฟล์ได้`,
+      );
+      const { staffOk } = await reload();
+      if (staffOk) setError(null);
       await refreshStaff();
     } catch (err) {
+      setSuccess(null);
       setError(mapFirestoreError(err, "บันทึกบัญชีไม่สำเร็จ"));
     } finally {
       setBusy(false);
@@ -222,6 +256,11 @@ function StaffView() {
         ขั้นที่ 1 เพิ่มชื่อในร้าน · ขั้นที่ 2 สร้างบัญชีและเชื่อมชื่อ (หรือให้พนักงานเชื่อมเองที่โปรไฟล์)
       </p>
       {error ? <p className="error-text">{error}</p> : null}
+      {success ? (
+        <p className="success-text" role="status">
+          {success}
+        </p>
+      ) : null}
       {loading ? (
         <p className="muted" style={{ textAlign: "left", marginBottom: "1rem" }}>
           กำลังโหลดรายชื่อ...
@@ -269,7 +308,7 @@ function StaffView() {
                 emp={emp}
                 busy={busy}
                 onError={setError}
-                onReload={reload}
+                onReload={() => reload().then(() => undefined)}
                 onDelete={() => void onDeleteEmployee(emp)}
               />
             ))

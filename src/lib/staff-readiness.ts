@@ -18,7 +18,7 @@ export type StaffReadinessRow = {
   accountLabel: string;
   checks: StaffReadinessChecks;
   missing: string[];
-  status: "complete" | "partial" | "blocked" | "no-account";
+  status: "complete" | "partial" | "blocked" | "no-account" | "awaiting-account";
 };
 
 function rosterNameForStaff(member: StaffMember, employees: Employee[]): string {
@@ -109,16 +109,22 @@ export function buildStaffReadinessRows(
         legalLastName: false,
         idCard: false,
         pdpa: false,
-        roster: false,
+        roster: true,
       },
-      missing: ["บัญชีล็อกอิน"],
-      status: "no-account",
+      missing: ["บัญชีล็อกอิน (ขั้นที่ 2)"],
+      status: "awaiting-account",
     });
   }
 
   return rows.sort((a, b) => {
     const rank = (s: StaffReadinessRow["status"]) =>
-      s === "no-account" ? 0 : s === "blocked" ? 1 : s === "partial" ? 2 : 3;
+      s === "awaiting-account" || s === "no-account"
+        ? 0
+        : s === "blocked"
+          ? 1
+          : s === "partial"
+            ? 2
+            : 3;
     const d = rank(a.status) - rank(b.status);
     if (d !== 0) return d;
     return a.rosterName.localeCompare(b.rosterName, "th");
@@ -127,7 +133,7 @@ export function buildStaffReadinessRows(
 
 export function summarizeStaffReadiness(rows: StaffReadinessRow[]) {
   const staffRows = rows.filter((r) => r.kind === "staff");
-  const rosterOnly = rows.filter((r) => r.kind === "roster-only");
+  const rosterOnly = rows.filter((r) => r.status === "awaiting-account" || r.kind === "roster-only");
   return {
     totalStaff: staffRows.length,
     complete: staffRows.filter((r) => r.status === "complete").length,
@@ -141,5 +147,10 @@ export function statusLabel(status: StaffReadinessRow["status"]): string {
   if (status === "complete") return "ครบ";
   if (status === "partial") return "ยังไม่ครบ";
   if (status === "blocked") return "ล็อกอินไม่ได้";
+  if (status === "awaiting-account") return "รอสร้างบัญชี";
   return "ยังไม่มีบัญชี";
+}
+
+export function rowStatusLabel(row: StaffReadinessRow): string {
+  return statusLabel(row.status);
 }
