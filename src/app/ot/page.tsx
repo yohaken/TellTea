@@ -5,7 +5,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  type FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
 import { Coffee, LayoutGrid, Lock, Table2, Trash2, X } from "lucide-react";
@@ -25,7 +24,9 @@ import {
   computeOtBonus,
   deleteOtEntry,
   getOtSettings,
+  hasOtQuantities,
   isOtEntryLocked,
+  isOtEntryPlanned,
   labelOtShift,
   labelOtStatus,
   subscribeOtEntries,
@@ -192,14 +193,15 @@ function OtView() {
       ) : null}
 
       {formOpen && !loading ? (
-        <div className="modal-backdrop edit-modal is-module-form" onClick={closeForm}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-backdrop edit-modal is-module-form is-ot-form" onClick={closeForm}>
+          <div className="modal-card ot-form-card" onClick={(e) => e.stopPropagation()}>
             <OtEntryForm
               key={editing?.id || slotDraft ? `${slotDraft?.date}-${slotDraft?.shift}` : "new"}
               entry={editing}
               slotDraft={slotDraft}
               allEntries={entries}
               workers={workers}
+              staff={staff}
               bonusRate={bonusRate}
               createdBy={actorId}
               onError={setError}
@@ -224,6 +226,7 @@ function OtEntryForm({
   slotDraft,
   allEntries,
   workers,
+  staff,
   bonusRate,
   createdBy,
   onError,
@@ -234,12 +237,17 @@ function OtEntryForm({
   slotDraft: { date: number; shift: OtShiftId } | null;
   allEntries: OtEntry[];
   workers: Employee[];
+  staff: StaffMember | null;
   bonusRate: number;
   createdBy: string;
   onError: (msg: string) => void;
   onSaved: () => void;
   onCancelEdit: () => void;
 }) {
+  const slotFixed = !!slotDraft || !!entry;
+  const locked = entry ? isOtEntryLocked(entry) : false;
+  const plannedEntry = entry ? isOtEntryPlanned(entry) : false;
+
   const [date, setDate] = useState(
     entry
       ? todayInputValue(new Date(entry.date))
@@ -248,10 +256,16 @@ function OtEntryForm({
         : todayInputValue(),
   );
   const [shift, setShift] = useState<OtShiftId>(entry?.shift || slotDraft?.shift || "morning");
-  const [selectedWorkers, setSelectedWorkers] = useState<string[]>(
-    entry?.workerIds?.length ? entry.workerIds : [],
+  const [selectedWorkers, setSelectedWorkers] = useState<string[]>(() => {
+    if (entry?.workerIds?.length) return entry.workerIds;
+    if (staff?.employeeId && workers.some((w) => w.id === staff.employeeId)) {
+      return [staff.employeeId];
+    }
+    return [];
+  });
+  const [machineCount, setMachineCount] = useState(
+    entry && hasOtQuantities(entry) ? String(entry.machineCount) : "",
   );
-  const [machineCount, setMachineCount] = useState(entry ? String(entry.machineCount) : "");
   const [otherCups, setOtherCups] = useState(entry ? String(entry.otherCups || "") : "");
   const [iceCreamCones, setIceCreamCones] = useState(entry ? String(entry.iceCreamCones || "") : "");
   const [breadSlices, setBreadSlices] = useState(entry ? String(entry.breadSlices || "") : "");
@@ -261,8 +275,10 @@ function OtEntryForm({
   const [addQty, setAddQty] = useState(entry ? String(entry.addQty || "") : "");
   const [addReason, setAddReason] = useState(entry?.addReason || "");
   const [imageUrl, setImageUrl] = useState(entry?.imageUrl || "");
+  const [detailsOpen, setDetailsOpen] = useState(() =>
+    entry ? hasOtQuantities(entry) : false,
+  );
   const [busy, setBusy] = useState(false);
-  const locked = entry ? isOtEntryLocked(entry) : false;
 
   const rate = entry?.bonusRate ?? bonusRate;
   const preview = useMemo(() => {
@@ -292,6 +308,16 @@ function OtEntryForm({
     entry,
   ]);
 
+  const formTitle = locked
+    ? "ดูรายการ (จ่ายแล้ว)"
+    : detailsOpen
+      ? entry && !plannedEntry
+        ? "แก้ไขยอดชง"
+        : "ปิดกะ — ใส่ยอด"
+      : plannedEntry
+        ? "แก้ไขแผนกะ"
+        : "วางแผนกะ";
+
   function toggleWorker(id: string) {
     if (locked) return;
     setSelectedWorkers((prev) => {
@@ -301,190 +327,287 @@ function OtEntryForm({
     });
   }
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (locked) return;
-    if (!createdBy) return;
+  function buildPayload(chosen: Employee[]) {
+    return {
+      date: parseDateInput(date),
+      shift,
+      workerIds: chosen.map((w) => w.id),
+      workerNames: chosen.map((w) => w.name),
+      machineCount: Number(machineCount) || 0,
+      otherCups: Number(otherCups) || 0,
+      iceCreamCones: Number(iceCreamCones) || 0,
+      breadSlices: Number(breadSlices) || 0,
+      claimCups: Number(claimCups) || 0,
+      deductQty: Number(deductQty) || 0,
+      deductReason,
+      addQty: Number(addQty) || 0,
+      addReason,
+      bonusRate: rate,
+      imageUrl,
+    };
+  }
+
+  async function persist(payload: ReturnType<typeof buildPayload>) {
+    if (entry) {
+      await updateOtEntry(entry.id, payload);
+      return;
+    }
+    const existing = findOtEntryForSlot(allEntries, payload.date, payload.shift);
+    if (existing) {
+      await updateOtEntry(existing.id, payload);
+    } else {
+      await addOtEntry({ ...payload, createdBy });
+    }
+  }
+
+  async function onSavePlan() {
+    if (locked || !createdBy) return;
     const chosen = workers.filter((w) => selectedWorkers.includes(w.id));
     if (!chosen.length) {
       onError("เลือกพนักงานอย่างน้อย 1 คน");
       return;
     }
     setBusy(true);
+    onError("");
     try {
-      const payload = {
-        date: parseDateInput(date),
-        shift,
-        workerIds: chosen.map((w) => w.id),
-        workerNames: chosen.map((w) => w.name),
-        machineCount: Number(machineCount) || 0,
-        otherCups: Number(otherCups) || 0,
-        iceCreamCones: Number(iceCreamCones) || 0,
-        breadSlices: Number(breadSlices) || 0,
-        claimCups: Number(claimCups) || 0,
-        deductQty: Number(deductQty) || 0,
-        deductReason,
-        addQty: Number(addQty) || 0,
-        addReason,
-        bonusRate: rate,
-        imageUrl,
-      };
-      if (entry) {
-        await updateOtEntry(entry.id, payload);
-      } else {
-        const existing = findOtEntryForSlot(allEntries, payload.date, payload.shift);
-        if (existing) {
-          await updateOtEntry(existing.id, payload);
-        } else if (chosen.length) {
-          await addOtEntry({ ...payload, createdBy });
-        } else {
-          onError("เลือกพนักงานอย่างน้อย 1 คน หรือกดยกเลิก");
-          return;
-        }
-      }
+      const base = buildPayload(chosen);
+      const plannedOnly = !entry || isOtEntryPlanned(entry);
+      const payload = plannedOnly
+        ? {
+            ...base,
+            machineCount: 0,
+            otherCups: 0,
+            iceCreamCones: 0,
+            breadSlices: 0,
+            claimCups: 0,
+            deductQty: 0,
+            deductReason: "",
+            addQty: 0,
+            addReason: "",
+            imageUrl: "",
+          }
+        : base;
+      await persist(payload);
       onSaved();
     } catch (err) {
-      onError((err as Error).message || "บันทึกไม่สำเร็จ");
+      onError((err as Error).message || "บันทึกแผนไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onSaveClose() {
+    if (locked || !createdBy) return;
+    const chosen = workers.filter((w) => selectedWorkers.includes(w.id));
+    if (!chosen.length) {
+      onError("เลือกพนักงานอย่างน้อย 1 คน");
+      return;
+    }
+    if (preview.summaryQty === 0) {
+      onError("ยังไม่ใส่ยอด — กรอกเครื่องหรือรายการอื่นก่อนปิดกะ");
+      return;
+    }
+    setBusy(true);
+    onError("");
+    try {
+      await persist(buildPayload(chosen));
+      onSaved();
+    } catch (err) {
+      onError((err as Error).message || "บันทึกยอดไม่สำเร็จ");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <form className="form-card entry-form module-entry-form" onSubmit={(e) => void onSubmit(e)}>
-      <div className="entry-toolbar module-form-head">
-        <h2 className="panel-title">{entry ? (locked ? "ดูรายการ (จ่ายแล้ว)" : "แก้ไขรายการ") : "บันทึกชง"}</h2>
+    <form
+      className="form-card entry-form module-entry-form ot-entry-form"
+      onSubmit={(e) => e.preventDefault()}
+    >
+      <div className="entry-toolbar module-form-head ot-form-head">
+        <h2 className="panel-title">{formTitle}</h2>
         <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onCancelEdit}>
           <X size={18} />
         </button>
       </div>
 
-      {locked ? (
-        <p className="muted form-hint-inline prod-locked-hint">
-          <Lock size={14} aria-hidden /> จ่ายโบนัสแล้ว — เรทและยอดล็อก · เปลี่ยนสถานะได้ที่ตาราง
-        </p>
-      ) : null}
-
-      {!workers.length ? (
-        <p className="muted form-hint-inline">
-          ยังไม่มีรายชื่อพนักงาน — เพิ่มที่{" "}
-          <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
-        </p>
-      ) : null}
-
-      <div className="stock-form-grid">
-        <div className="field">
-          <label htmlFor="ot-date">วันที่</label>
-          <input id="ot-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-        </div>
-        <div className="field">
-          <label htmlFor="ot-shift">รอบ</label>
-          <select id="ot-shift" value={shift} onChange={(e) => setShift(e.target.value as OtShiftId)} required>
-            {OT_SHIFTS.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="field">
-        <span className="field-label">พนักงาน (สูงสุด 2)</span>
-        <div className="suggest-list">
-          {workers.map((w) => {
-            const on = selectedWorkers.includes(w.id);
-            return (
-              <button
-                key={w.id}
-                type="button"
-                className={on ? "suggest-chip is-active" : "suggest-chip"}
-                onClick={() => toggleWorker(w.id)}
-              >
-                {w.name}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="stock-form-grid">
-        <div className="field">
-          <label htmlFor="ot-machine">เครื่อง</label>
-          <input
-            id="ot-machine"
-            type="number"
-            min="0"
-            step="1"
-            inputMode="numeric"
-            value={machineCount}
-            onChange={(e) => setMachineCount(e.target.value)}
-            required
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="ot-other">แก้วอื่นๆ</label>
-          <input id="ot-other" type="number" min="0" step="1" inputMode="numeric" value={otherCups} onChange={(e) => setOtherCups(e.target.value)} />
-        </div>
-      </div>
-
-      <div className="stock-form-grid">
-        <div className="field">
-          <label htmlFor="ot-cone">โคน</label>
-          <input id="ot-cone" type="number" min="0" step="1" inputMode="numeric" value={iceCreamCones} onChange={(e) => setIceCreamCones(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor="ot-bread">ขนมปัง</label>
-          <input id="ot-bread" type="number" min="0" step="1" inputMode="numeric" value={breadSlices} onChange={(e) => setBreadSlices(e.target.value)} />
-        </div>
-      </div>
-
-      <div className="stock-form-grid">
-        <div className="field">
-          <label htmlFor="ot-claim">เคลม</label>
-          <input id="ot-claim" type="number" min="0" step="1" inputMode="numeric" value={claimCups} onChange={(e) => setClaimCups(e.target.value)} />
-        </div>
-        <div className="field">
-          <label htmlFor="ot-deduct">ลด</label>
-          <input id="ot-deduct" type="number" min="0" step="1" inputMode="numeric" value={deductQty} onChange={(e) => setDeductQty(e.target.value)} />
-        </div>
-      </div>
-
-      <div className="stock-form-grid">
-        <div className="field">
-          <label htmlFor="ot-deduct-reason">สาเหตุลด</label>
-          <input id="ot-deduct-reason" value={deductReason} onChange={(e) => setDeductReason(e.target.value)} placeholder="แก้วแตก" />
-        </div>
-        <div className="field">
-          <label htmlFor="ot-add">เพิ่ม</label>
-          <input id="ot-add" type="number" min="0" step="1" inputMode="numeric" value={addQty} onChange={(e) => setAddQty(e.target.value)} />
-        </div>
-      </div>
-
-      <div className="field">
-        <label htmlFor="ot-add-reason">สาเหตุเพิ่ม</label>
-        <input id="ot-add-reason" value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="ไม่ปิดฝา" />
-      </div>
-
-      {!locked ? (
-        <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} label="แนบรูป" />
-      ) : null}
-
-      <p className="muted form-hint-inline">
-        สรุป {formatPlainNumber(preview.summaryQty)} · ฿{formatPlainNumber(preview.totalBonus)} ·{" "}
-        <strong>฿{formatPlainNumber(preview.bonusPerPerson)}/คน</strong>
-        {locked ? ` · เรท ${formatPlainNumber(rate)}` : ""}
-      </p>
-
-      <div className="entry-actions module-form-actions">
-        {!locked ? (
-          <button type="submit" className="primary-btn" disabled={busy || !workers.length}>
-            {busy ? "กำลังบันทึก..." : "บันทึก"}
-          </button>
+      <div className="ot-form-body">
+        {locked ? (
+          <p className="muted form-hint-inline prod-locked-hint">
+            <Lock size={14} aria-hidden /> จ่ายโบนัสแล้ว — เรทและยอดล็อก · เปลี่ยนสถานะได้ที่ตาราง
+          </p>
         ) : null}
-        <button type="button" className="ghost-btn" disabled={busy} onClick={onCancelEdit}>
-          {locked ? "ปิด" : "ออก"}
-        </button>
+
+        {!workers.length ? (
+          <p className="muted form-hint-inline">
+            ยังไม่มีรายชื่อพนักงาน — เพิ่มที่{" "}
+            <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
+          </p>
+        ) : null}
+
+        {slotFixed ? (
+          <p className="ot-form-slot-bar">
+            {formatDateShort(parseDateInput(date))} · {labelOtShift(shift)}
+          </p>
+        ) : (
+          <div className="stock-form-grid ot-form-date-row">
+            <div className="field">
+              <label htmlFor="ot-date">วันที่</label>
+              <input id="ot-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+            </div>
+            <div className="field">
+              <label htmlFor="ot-shift">รอบ</label>
+              <select id="ot-shift" value={shift} onChange={(e) => setShift(e.target.value as OtShiftId)} required>
+                {OT_SHIFTS.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        <div className="field ot-form-workers">
+          <span className="field-label">พนักงาน (สูงสุด 2)</span>
+          <div className="suggest-list">
+            {workers.map((w) => {
+              const on = selectedWorkers.includes(w.id);
+              return (
+                <button
+                  key={w.id}
+                  type="button"
+                  className={on ? "suggest-chip is-active" : "suggest-chip"}
+                  disabled={locked}
+                  onClick={() => toggleWorker(w.id)}
+                >
+                  {w.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {!locked && !detailsOpen ? (
+          <p className="muted form-hint-inline ot-form-plan-hint">
+            วางแผนล่วงหน้าได้ — ใส่แค่ชื่อ · ยอดแก้วค่อยกรอกตอนปิดกะ
+          </p>
+        ) : null}
+
+        {!locked && detailsOpen ? (
+          <div className="ot-form-details">
+            <div className="field">
+              <label htmlFor="ot-machine">เครื่อง</label>
+              <input
+                id="ot-machine"
+                type="number"
+                min="0"
+                step="1"
+                inputMode="numeric"
+                value={machineCount}
+                onChange={(e) => setMachineCount(e.target.value)}
+              />
+            </div>
+            <div className="ot-form-qty-grid">
+              <div className="field">
+                <label htmlFor="ot-other">อื่นๆ</label>
+                <input id="ot-other" type="number" min="0" step="1" inputMode="numeric" value={otherCups} onChange={(e) => setOtherCups(e.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor="ot-cone">โคน</label>
+                <input id="ot-cone" type="number" min="0" step="1" inputMode="numeric" value={iceCreamCones} onChange={(e) => setIceCreamCones(e.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor="ot-bread">ขนมปัง</label>
+                <input id="ot-bread" type="number" min="0" step="1" inputMode="numeric" value={breadSlices} onChange={(e) => setBreadSlices(e.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor="ot-claim">เคลม</label>
+                <input id="ot-claim" type="number" min="0" step="1" inputMode="numeric" value={claimCups} onChange={(e) => setClaimCups(e.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor="ot-deduct">ลด</label>
+                <input id="ot-deduct" type="number" min="0" step="1" inputMode="numeric" value={deductQty} onChange={(e) => setDeductQty(e.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor="ot-add">เพิ่ม</label>
+                <input id="ot-add" type="number" min="0" step="1" inputMode="numeric" value={addQty} onChange={(e) => setAddQty(e.target.value)} />
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="ot-deduct-reason">สาเหตุลด</label>
+              <input id="ot-deduct-reason" value={deductReason} onChange={(e) => setDeductReason(e.target.value)} placeholder="แก้วแตก" />
+            </div>
+            <div className="field">
+              <label htmlFor="ot-add-reason">สาเหตุเพิ่ม</label>
+              <input id="ot-add-reason" value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="ไม่ปิดฝา" />
+            </div>
+            <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} label="แนบรูป" />
+          </div>
+        ) : null}
+
+        {detailsOpen && preview.summaryQty > 0 ? (
+          <p className="muted form-hint-inline ot-form-preview">
+            สรุป {formatPlainNumber(preview.summaryQty)} · ฿{formatPlainNumber(preview.totalBonus)} ·{" "}
+            <strong>฿{formatPlainNumber(preview.bonusPerPerson)}/คน</strong>
+            {locked ? ` · เรท ${formatPlainNumber(rate)}` : ""}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="entry-actions module-form-actions ot-form-actions">
+        {locked ? (
+          <button type="button" className="ghost-btn" disabled={busy} onClick={onCancelEdit}>
+            ปิด
+          </button>
+        ) : (
+          <>
+            {!detailsOpen ? (
+              <>
+                <button
+                  type="button"
+                  className="primary-btn"
+                  disabled={busy || !workers.length}
+                  onClick={() => void onSavePlan()}
+                >
+                  {busy ? "กำลังบันทึก..." : "บันทึกแผน"}
+                </button>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  disabled={busy}
+                  onClick={() => setDetailsOpen(true)}
+                >
+                  ใส่ยอดปิดกะ
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="primary-btn"
+                  disabled={busy || !workers.length}
+                  onClick={() => void onSaveClose()}
+                >
+                  {busy ? "กำลังบันทึก..." : "บันทึกยอด"}
+                </button>
+                {plannedEntry || !entry ? (
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    disabled={busy}
+                    onClick={() => setDetailsOpen(false)}
+                  >
+                    กลับแผน
+                  </button>
+                ) : null}
+              </>
+            )}
+            <button type="button" className="ghost-btn ot-form-exit" disabled={busy} onClick={onCancelEdit}>
+              ออก
+            </button>
+          </>
+        )}
       </div>
     </form>
   );
@@ -766,6 +889,7 @@ function OtSheetTable({
               {group.slots.map((slot, idx) => {
                 const row = slot.entry;
                 const isEmpty = !row;
+                const isPlanned = row ? isOtEntryPlanned(row) : false;
                 const c = row ? computeOtBonus(row) : null;
                 const statusClass =
                   row?.status === "paid"
@@ -784,6 +908,10 @@ function OtSheetTable({
                         ? futureDay
                           ? "ot-slot-empty ot-day-future row-out"
                           : "ot-slot-empty row-out"
+                        : isPlanned
+                          ? futureDay
+                            ? "ot-slot-planned ot-day-future row-out"
+                            : "ot-slot-planned row-out"
                         : isOtEntryLocked(row!)
                           ? "row-out prod-row-paid"
                           : futureDay
@@ -814,7 +942,10 @@ function OtSheetTable({
                         </button>
                       </td>
                     ) : null}
-                    <td className="ot-col-worker">{w1}</td>
+                    <td className="ot-col-worker">
+                      {w1}
+                      {isPlanned ? <span className="ot-planned-pill">วางแผน</span> : null}
+                    </td>
                     <td className="ot-col-worker">{w2}</td>
                     <td className="ot-col-shift">
                       <button
@@ -893,7 +1024,7 @@ function OtSheetTable({
                           onEditSlot({ date: group.date, shift: slot.shiftId, entry: row })
                         }
                       >
-                        {isEmpty ? "เพิ่ม" : "แก้ไข"}
+                        {isEmpty ? "เพิ่ม" : isPlanned ? "แก้แผน" : "แก้ไข"}
                       </button>
                     </td>
                     {isOwner && row && !isOtEntryLocked(row) ? (

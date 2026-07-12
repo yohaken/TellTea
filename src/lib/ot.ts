@@ -103,6 +103,44 @@ export function isOtEntryLocked(entry: Pick<OtEntry, "status">) {
   return entry.status === "paid";
 }
 
+/** มีตัวเลขยอดชง (สรุป ≠ 0) */
+export function hasOtQuantities(
+  entry: Pick<
+    OtEntry,
+    | "machineCount"
+    | "otherCups"
+    | "iceCreamCones"
+    | "breadSlices"
+    | "claimCups"
+    | "deductQty"
+    | "addQty"
+    | "bonusRate"
+    | "workerNames"
+  >,
+) {
+  return computeOtBonus(entry).summaryQty !== 0;
+}
+
+/** วางแผนแล้ว — มีชื่อพนักงาน แต่ยังไม่มียอด */
+export function isOtEntryPlanned(
+  entry: Pick<
+    OtEntry,
+    | "workerNames"
+    | "machineCount"
+    | "otherCups"
+    | "iceCreamCones"
+    | "breadSlices"
+    | "claimCups"
+    | "deductQty"
+    | "addQty"
+    | "bonusRate"
+  >,
+) {
+  const names = (entry.workerNames || []).filter(Boolean);
+  if (!names.length) return false;
+  return !hasOtQuantities(entry);
+}
+
 function mapOtEntryDoc(id: string, data: Record<string, unknown>): OtEntry {
   return {
     id,
