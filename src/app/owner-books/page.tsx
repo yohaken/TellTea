@@ -13,6 +13,7 @@ import { Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { TypePicker } from "@/components/TypePicker";
 import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { frequentTypes, guessTypeFromDescription } from "@/lib/ledger-labels";
 import {
   addOwnerBookEntry,
@@ -68,13 +69,13 @@ function OwnerBooksView() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (staff && staff.role !== "owner") {
+    if (staff && !can(staff, "ownerBooks")) {
       router.replace("/ledger/");
     }
   }, [staff, router]);
 
   useEffect(() => {
-    if (staff?.role !== "owner") return;
+    if (!can(staff, "ownerBooks")) return;
     return subscribeOwnerBooksTotalOut(
       (n) => setTotalOut(n),
       (err) => setError(err.message || "โหลดยอดไม่สำเร็จ"),
@@ -82,7 +83,7 @@ function OwnerBooksView() {
   }, [staff]);
 
   useEffect(() => {
-    if (staff?.role !== "owner") return;
+    if (!can(staff, "ownerBooks")) return;
     setLoading(true);
     const unsub = subscribeOwnerBooksPage(
       liveLimit,
@@ -120,7 +121,7 @@ function OwnerBooksView() {
     return () => observer.disconnect();
   }, [loadMore, loading, hasMore, entries.length]);
 
-  if (staff?.role !== "owner") return null;
+  if (!can(staff, "ownerBooks")) return null;
 
   return (
     <div>

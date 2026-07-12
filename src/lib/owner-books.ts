@@ -228,7 +228,7 @@ export async function importOwnerBookEntries(
         createdAt: row.createdAt,
         updatedAt: row.createdAt,
         receiptUrl: "",
-        note: "",
+        note: row.note || "",
       });
     }
     await batch.commit();

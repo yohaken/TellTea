@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import {
   DEFAULT_ALERT_SETTINGS,
   getAlertSettings,
   saveAlertSettings,
-  clampBalanceFontSize,
 } from "@/lib/settings";
 import {
   disableOwnerPush,
@@ -39,7 +39,7 @@ function AlertsView() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (staff && staff.role !== "owner") router.replace("/ledger/");
+    if (staff && !can(staff, "alerts")) router.replace("/ledger/");
   }, [staff, router]);
 
   useEffect(() => {
@@ -63,7 +63,7 @@ function AlertsView() {
     }
   }, []);
 
-  if (staff?.role !== "owner") return null;
+  if (!can(staff, "alerts")) return null;
 
   async function onSave(e: FormEvent) {
     e.preventDefault();

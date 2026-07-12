@@ -1,3 +1,5 @@
+import type { StaffPermissions } from "./permissions";
+
 export type StaffRole = "owner" | "staff";
 
 export type StaffMember = {
@@ -5,6 +7,8 @@ export type StaffMember = {
   role: StaffRole;
   displayName?: string;
   createdAt: number;
+  /** Fine-grained page/feature access — owners always get full set in resolvePermissions */
+  permissions?: Partial<StaffPermissions>;
 };
 
 /** สมุดบัญชีเข้า–ออก ตามชีทร้าน */

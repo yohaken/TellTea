@@ -3,37 +3,26 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ArrowDownLeft,
-  BookMarked,
   BookOpen,
   Boxes,
-  ChartColumn,
-  FileSpreadsheet,
   LogOut,
   MoreHorizontal,
-  Users,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { AppBrand } from "@/components/AppBrand";
 import { LowBalanceAlert } from "@/components/LowBalanceAlert";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
+import { can, hasAnyExtraPermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
-/** งานวันต่อวัน — พนักงานและเจ้าของใช้ร่วมกัน */
-const dailyLinks = [
-  { href: "/ledger/", label: "บัญชี", icon: BookOpen },
-  { href: "/stock/", label: "สต็อก", icon: Boxes },
-];
-
-/** เครื่องมือเจ้าของ — ช่วงเทสเจ้าของเข้าได้หมด */
-const ownerLinks = [
-  { href: "/pnl/", label: "สรุป", icon: ChartColumn },
-  { href: "/owner-books/", label: "บช.เจ้าของ", icon: BookMarked },
-  { href: "/alerts/", label: "แจ้งเตือน", icon: MoreHorizontal },
-  { href: "/in/", label: "โอนเข้า", icon: ArrowDownLeft },
-  { href: "/import/", label: "นำเข้า", icon: FileSpreadsheet },
-  { href: "/staff/", label: "พนักงาน", icon: Users },
-  { href: "/more/", label: "อื่นๆ", icon: MoreHorizontal },
+const MORE_PREFIXES = [
+  "/more",
+  "/pnl",
+  "/owner-books",
+  "/alerts",
+  "/in",
+  "/export",
+  "/staff",
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -41,14 +30,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { staff, user, signOut } = useAuth();
   const isOwner = staff?.role === "owner";
   const emailShort = user?.email?.split("@")[0] || "";
-  const roleLabel = isOwner ? "เจ้าของ · เทสได้ทุกหน้า" : "พนักงาน";
+  const roleLabel = isOwner ? "เจ้าของ" : "พนักงาน";
 
-  const links = isOwner
-    ? [
-        ...dailyLinks,
-        { href: "/more/", label: "อื่นๆ", icon: MoreHorizontal },
-      ]
-    : dailyLinks;
+  const links = [
+    can(staff, "ledger")
+      ? { href: "/ledger/", label: "บัญชี", icon: BookOpen }
+      : null,
+    can(staff, "stock")
+      ? { href: "/stock/", label: "สต็อก", icon: Boxes }
+      : null,
+    hasAnyExtraPermission(staff)
+      ? { href: "/more/", label: "อื่นๆ", icon: MoreHorizontal }
+      : null,
+  ].filter(Boolean) as { href: string; label: string; icon: typeof BookOpen }[];
 
   return (
     <div className="phone-frame">
@@ -85,9 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               pathname === href ||
               pathname.startsWith(href.replace(/\/$/, "")) ||
               (href === "/more/" &&
-                ownerLinks.some(
-                  (l) => l.href !== "/more/" && pathname.startsWith(l.href.replace(/\/$/, "")),
-                ));
+                MORE_PREFIXES.some((p) => pathname.startsWith(p)));
             return (
               <Link key={href} href={href} className={cn("nav-item", active && "active")}>
                 <Icon size={22} />

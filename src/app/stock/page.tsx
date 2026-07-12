@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import {
   adjustStockQty,
   createStockItem,
@@ -23,6 +24,7 @@ export default function StockPage() {
 function StockView() {
   const { user, staff } = useAuth();
   const isOwner = staff?.role === "owner";
+  const canUseStock = can(staff, "stock");
   const [items, setItems] = useState<StockItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,6 +94,15 @@ function StockView() {
     } catch (err) {
       setError((err as Error).message || "ตั้งจำนวนไม่สำเร็จ");
     }
+  }
+
+  if (!canUseStock) {
+    return (
+      <div>
+        <h1 className="panel-title">สต็อกเบาๆ</h1>
+        <p className="empty">ไม่มีสิทธิ์ดูสต็อก</p>
+      </div>
+    );
   }
 
   return (

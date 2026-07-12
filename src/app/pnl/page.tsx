@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import {
   loadPnlReport,
   saveMonthlyIncome,
@@ -87,7 +88,7 @@ function PnlView() {
   const [draftIncome, setDraftIncome] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (staff && staff.role !== "owner") router.replace("/ledger/");
+    if (staff && !can(staff, "pnl")) router.replace("/ledger/");
   }, [staff, router]);
 
   const refresh = useCallback(async () => {
@@ -110,10 +111,10 @@ function PnlView() {
   }, []);
 
   useEffect(() => {
-    if (staff?.role === "owner") void refresh();
+    if (can(staff, "pnl")) void refresh();
   }, [staff, refresh]);
 
-  if (staff?.role !== "owner") return null;
+  if (!can(staff, "pnl")) return null;
 
   async function onSaveIncome(month: string) {
     if (!user?.email) return;

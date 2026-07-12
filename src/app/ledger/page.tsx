@@ -24,6 +24,7 @@ import {
   updateLedgerEntry,
 } from "@/lib/ledger";
 import { TypePicker } from "@/components/TypePicker";
+import { can } from "@/lib/permissions";
 import { frequentTypes, guessTypeFromDescription, labelLedgerType } from "@/lib/ledger-labels";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
 import {
@@ -70,7 +71,7 @@ function LedgerView() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const balanceRef = useRef<number | null>(null);
   const hasRowsRef = useRef(false);
-  const isOwner = staff?.role === "owner";
+  const canTransferIn = can(staff, "transferIn");
 
   useLayoutEffect(() => {
     const cached = loadCachedLedger();
@@ -214,7 +215,7 @@ function LedgerView() {
         >
           บันทึกเงินออก
         </button>
-        {isOwner ? (
+        {canTransferIn ? (
           <button
             type="button"
             className="primary-btn action-in"
@@ -322,7 +323,7 @@ function LedgerView() {
         />
       ) : null}
 
-      {adding === "in" && user?.email && isOwner ? (
+      {adding === "in" && user?.email && canTransferIn ? (
         <AddInModal
           createdBy={user.email}
           onClose={() => setAdding(null)}

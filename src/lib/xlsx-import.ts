@@ -129,12 +129,13 @@ export type ImportOwnerBookRow = {
   description: string;
   amountOut: number;
   type: string;
+  note: string;
   createdBy: string;
   createdAt: number;
   sourceRow: number;
 };
 
-/** Parse owner books sheet: วันที่ | รายการ | ออก | (type optional) */
+/** Parse owner books sheet: วันที่ | รายการ | ออก | type | … | note */
 export function parseOwnerBooksWorkbook(
   data: ArrayBuffer | Uint8Array,
   createdBy: string,
@@ -158,14 +159,14 @@ export function parseOwnerBooksWorkbook(
   const colDate = header["วันที่"];
   const colDesc = header["รายการ"];
   const colOut = header["ออก"];
-  const colType =
-    header["type"] ?? header["Type"] ?? header["หมวด"] ?? header["note"];
+  const colType = header["type"] ?? header["Type"] ?? header["หมวด"] ?? header["ประเภท"];
+  const colNote = header["note"] ?? header["Note"] ?? header["NOTE"] ?? header["หมายเหตุ"];
 
   if (colDate == null || colDesc == null || colOut == null) {
     throw new Error("คอลัมน์ไม่ครบ — ต้องมี วันที่, รายการ, ออก");
   }
 
-  // บช. เจ้าของ.xlsx: category (sga/Asset/cogs) sits in the column after ออก
+  // บช. เจ้าของ.xlsx: category (sga/Asset/cogs) often unlabeled in column after ออก
   const typeColFallback = colType == null ? colOut + 1 : null;
 
   const parsed: Omit<ImportOwnerBookRow, "createdAt">[] = [];
@@ -186,16 +187,19 @@ export function parseOwnerBooksWorkbook(
     let type = "";
     if (colType != null) {
       type = String(row[colType] ?? "").trim();
-    } else if (typeColFallback != null) {
+    } else if (typeColFallback != null && typeColFallback !== colNote) {
       const raw = row[typeColFallback];
       if (typeof raw === "string") type = raw.trim();
     }
+
+    const note = colNote != null ? String(row[colNote] ?? "").trim() : "";
 
     parsed.push({
       date: dateMs,
       description,
       amountOut,
       type,
+      note,
       createdBy,
       sourceRow: i + 1,
     });

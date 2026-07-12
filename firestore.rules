@@ -25,21 +25,33 @@ service cloud.firestore {
       return signedIn() && email() == 'yohaken@gmail.com';
     }
 
+    // Fine-grained permissions on staff doc; owners always pass.
+    // Staff without permissions map: ledger+stock only (legacy default).
+    function hasPerm(p) {
+      return isOwner()
+        || (isStaff()
+            && get(staffPath()).data.keys().hasAny(['permissions'])
+            && get(staffPath()).data.permissions[p] == true)
+        || (isStaff()
+            && !get(staffPath()).data.keys().hasAny(['permissions'])
+            && (p == 'ledger' || p == 'stock'));
+    }
+
     match /staff/{staffEmail} {
-      // Own doc: any signed-in user can read (needed before isStaff() is known)
       allow get: if signedIn() && staffEmail == email();
-      allow list: if isOwner();
+      allow list: if isOwner() || hasPerm('staffManage');
       allow create: if isOwner()
+        || hasPerm('staffManage')
         || (isOwnerEmail()
             && staffEmail == email()
             && request.resource.data.email == email()
             && request.resource.data.role == 'owner');
-      allow update, delete: if isOwner();
+      allow update, delete: if isOwner() || hasPerm('staffManage');
     }
 
     match /ledger/{entryId} {
-      allow read: if isStaff();
-      allow create: if isStaff()
+      allow read: if hasPerm('ledger');
+      allow create: if hasPerm('ledger')
         && request.resource.data.createdBy == request.auth.token.email
         && request.resource.data.description is string
         && request.resource.data.amountIn is number
@@ -47,52 +59,46 @@ service cloud.firestore {
         && request.resource.data.amountIn >= 0
         && request.resource.data.amountOut >= 0
         && (
-          (request.resource.data.amountIn > 0 && request.resource.data.amountOut == 0 && isOwner())
+          (request.resource.data.amountIn > 0 && request.resource.data.amountOut == 0 && hasPerm('transferIn'))
           || (request.resource.data.amountOut > 0 && request.resource.data.amountIn == 0)
         );
-      // ร้านเล็ก — พนักงานแก้/ลบรายการที่บันทึกผิดได้
-      allow update, delete: if isStaff();
+      allow update, delete: if hasPerm('ledger');
     }
 
-    // บัญชีส่วนตัวเจ้าของ — ออกอย่างเดียว เฉพาะเจ้าของ
     match /ownerBooks/{entryId} {
-      allow read, write: if isOwner();
+      allow read, write: if hasPerm('ownerBooks');
     }
 
-    // รายได้รายเดือนกรอกเอง (สำหรับสรุป P&L)
     match /monthlyIncome/{monthId} {
-      allow read, write: if isOwner();
+      allow read, write: if hasPerm('pnl');
     }
 
     match /stock/{itemId} {
-      allow read: if isStaff();
+      allow read: if hasPerm('stock');
       allow create, delete: if isOwner();
-      allow update: if isStaff()
+      allow update: if hasPerm('stock')
         && request.resource.data.name is string
         && request.resource.data.qty is number
         && request.resource.data.qty >= 0;
     }
 
-    // Running cash totals + alert settings
     match /meta/{docId} {
       allow read: if isStaff();
       allow write: if isOwner()
-        || (isStaff() && (docId == 'ledger' || docId == 'lowBalanceAlert'));
+        || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
+        || (hasPerm('alerts') && docId == 'lowBalanceAlert')
+        || (hasPerm('ownerBooks') && docId == 'ownerBooks');
     }
 
-    // Owner device Web Push subscriptions
     match /pushSubscriptions/{id} {
-      allow read: if isOwner();
-      allow create, update: if isOwner()
+      allow read: if hasPerm('alerts');
+      allow create, update: if hasPerm('alerts')
         && request.resource.data.email == email()
-        && request.resource.data.role == 'owner'
         && request.resource.data.endpoint is string
         && request.resource.data.keys.keys().hasAll(['p256dh', 'auth']);
-      allow delete: if isOwner() && resource.data.email == email();
+      allow delete: if hasPerm('alerts') && resource.data.email == email();
     }
 
-    // One-time Google ID tokens for TellTea mobile auth bridge.
-    // IDs are 48-char random hex; readable only before expiry; no listing.
     match /loginTickets/{ticketId} {
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly(['idToken', 'createdAt', 'exp'])

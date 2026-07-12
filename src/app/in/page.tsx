@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/permissions";
 import { addLedgerEntry } from "@/lib/ledger";
 import { parseDateInput, todayInputValue } from "@/lib/utils";
 
@@ -25,12 +26,12 @@ function TransferInView() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (staff && staff.role !== "owner") {
+    if (staff && !can(staff, "transferIn")) {
       router.replace("/ledger/");
     }
   }, [staff, router]);
 
-  if (staff?.role !== "owner") {
+  if (!can(staff, "transferIn")) {
     return null;
   }
 
