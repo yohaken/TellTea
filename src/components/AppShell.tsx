@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BookOpen,
   Boxes,
+  ChefHat,
   LogOut,
   MoreHorizontal,
 } from "lucide-react";
@@ -35,6 +36,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const links = [
     can(staff, "ledger")
       ? { href: "/ledger/", label: "บัญชี", icon: BookOpen }
+      : null,
+    can(staff, "production")
+      ? { href: "/production/", label: "ผลิต", icon: ChefHat }
       : null,
     can(staff, "stock")
       ? { href: "/stock/", label: "สต็อก", icon: Boxes }

@@ -694,6 +694,79 @@ textarea {
   font-size: 0.8rem;
 }
 
+.prod-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0 0 0.75rem;
+}
+
+.prod-tabs:has(> :nth-child(2):last-child) {
+  grid-template-columns: 1fr 1fr;
+}
+
+.prod-tab {
+  border: 1px solid var(--tea-line);
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 999px;
+  min-height: 2.35rem;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: rgba(28, 42, 31, 0.7);
+}
+
+.prod-tab.is-active {
+  background: rgba(74, 107, 62, 0.14);
+  border-color: var(--tea-leaf);
+  color: var(--tea-leaf);
+}
+
+.prod-table {
+  min-width: 36rem;
+}
+
+.prod-table.sheet-table th,
+.prod-table.sheet-table td {
+  font-size: 0.68rem;
+}
+
+.prod-status {
+  max-width: 6.5rem;
+  font-size: 0.68rem;
+  border-radius: 999px;
+  border: 1px solid rgba(28, 42, 31, 0.2);
+  padding: 0.2rem 0.35rem;
+  background: #fff8e8;
+}
+
+.prod-status.is-paid {
+  background: #d8f3dc;
+  border-color: #2d6a4f;
+  color: #1b4332;
+}
+
+.prod-status-pill {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  background: #fff3cd;
+  color: #7a4e00;
+  white-space: nowrap;
+}
+
+.prod-status-pill.is-paid {
+  background: #d8f3dc;
+  color: #1b4332;
+}
+
+.prod-setup .list-card {
+  padding: 0.35rem 0.65rem;
+}
+
 .primary-btn.action-in {
   background: #1f8f4e;
   box-shadow: 0 10px 24px rgba(31, 143, 78, 0.28);

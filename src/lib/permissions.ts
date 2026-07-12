@@ -3,6 +3,7 @@ import type { StaffMember, StaffRole } from "./types";
 export const PERMISSION_KEYS = [
   "ledger",
   "stock",
+  "production",
   "ownerBooks",
   "pnl",
   "alerts",
@@ -18,6 +19,7 @@ export type StaffPermissions = Record<PermissionKey, boolean>;
 export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   ledger: "บัญชีพนักงาน",
   stock: "สต็อก",
+  production: "ผลิต / โบนัส",
   ownerBooks: "บช.เจ้าของ",
   pnl: "สรุปรายเดือน",
   alerts: "แจ้งเตือนยอดต่ำ",
@@ -29,6 +31,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
 export const DEFAULT_STAFF_PERMISSIONS: StaffPermissions = {
   ledger: true,
   stock: true,
+  production: true,
   ownerBooks: false,
   pnl: false,
   alerts: false,
@@ -40,6 +43,7 @@ export const DEFAULT_STAFF_PERMISSIONS: StaffPermissions = {
 export const OWNER_PERMISSIONS: StaffPermissions = {
   ledger: true,
   stock: true,
+  production: true,
   ownerBooks: true,
   pnl: true,
   alerts: true,

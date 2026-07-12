@@ -34,7 +34,7 @@ service cloud.firestore {
             && get(staffPath()).data.permissions[p] == true)
         || (isStaff()
             && !get(staffPath()).data.keys().hasAny(['permissions'])
-            && (p == 'ledger' || p == 'stock'));
+            && (p == 'ledger' || p == 'stock' || p == 'production'));
     }
 
     match /staff/{staffEmail} {
@@ -80,6 +80,25 @@ service cloud.firestore {
         && request.resource.data.name is string
         && request.resource.data.qty is number
         && request.resource.data.qty >= 0;
+    }
+
+    // ผลิต / โบนัส — พนักงานกรอกแถว · เจ้าของตั้งสินค้า/คนงาน
+    match /prodProducts/{id} {
+      allow read: if hasPerm('production');
+      allow write: if isOwner();
+    }
+    match /prodWorkers/{id} {
+      allow read: if hasPerm('production');
+      allow write: if isOwner();
+    }
+    match /prodEntries/{id} {
+      allow read: if hasPerm('production');
+      allow create: if hasPerm('production')
+        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.productName is string
+        && request.resource.data.qtyProduced is number
+        && request.resource.data.qtyProduced > 0;
+      allow update, delete: if hasPerm('production');
     }
 
     match /meta/{docId} {
