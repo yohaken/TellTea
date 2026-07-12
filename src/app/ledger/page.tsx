@@ -239,7 +239,6 @@ function LedgerView() {
                 <tr>
                   <th className="col-date">วันที่</th>
                   <th className="col-desc">รายการ</th>
-                  <th className="col-photo">รูปภาพ</th>
                   <th className="col-in">เข้า</th>
                   <th className="col-out">ออก</th>
                   <th className="col-type">ประเภท</th>
@@ -251,34 +250,35 @@ function LedgerView() {
                     <tr key={row.id} className={row.amountIn > 0 ? "row-in" : "row-out"}>
                       <td className="col-date">{formatDateShort(row.date)}</td>
                       <td className="col-desc">
-                        <button
-                          type="button"
-                          className="desc-link"
-                          title="แตะเพื่อแก้ไข"
-                          onClick={() => setEditing(row)}
-                        >
-                          {row.description}
-                        </button>
-                      </td>
-                      <td className="col-photo">
-                        <button
-                          type="button"
-                          className={row.receiptUrl ? "photo-btn has-photo" : "photo-btn"}
-                          onClick={() => {
-                            photoEntryRef.current = row;
-                            setPhotoRowId(row.id);
-                          }}
-                          title="เพิ่มรูป"
-                        >
-                          {row.receiptUrl ? (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.1a2 2 0 0 0 1.5-.7l2.3-2.3a2 2 0 0 1 1.4-.6H16a2 2 0 0 1 1.4.6l2.3 2.3a2 2 0 0 0 1.5.7H21a2 2 0 0 1 2 2z"/>
-                              <circle cx="12" cy="13" r="3"/>
-                            </svg>
-                          ) : (
-                            "+"
-                          )}
-                        </button>
+                        <div className="desc-with-photo">
+                          <button
+                            type="button"
+                            className="desc-link"
+                            title="แตะเพื่อแก้ไข"
+                            onClick={() => setEditing(row)}
+                          >
+                            {row.description}
+                          </button>
+                          <button
+                            type="button"
+                            className={row.receiptUrl ? "photo-status has-photo" : "photo-status"}
+                            onClick={() => {
+                              photoEntryRef.current = row;
+                              setPhotoRowId(row.id);
+                            }}
+                            title={row.receiptUrl ? "มีรูป — แตะเพื่อเปลี่ยน" : "เพิ่มรูป"}
+                            aria-label={row.receiptUrl ? "มีรูป" : "เพิ่มรูป"}
+                          >
+                            {row.receiptUrl ? (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.1a2 2 0 0 0 1.5-.7l2.3-2.3a2 2 0 0 1 1.4-.6H16a2 2 0 0 1 1.4.6l2.3 2.3a2 2 0 0 0 1.5.7H21a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="3"/>
+                              </svg>
+                            ) : (
+                              <span className="photo-status-plus" aria-hidden>+</span>
+                            )}
+                          </button>
+                        </div>
                       </td>
                       <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>
                       <td className="col-out">{row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}</td>

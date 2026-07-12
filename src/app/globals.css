@@ -726,23 +726,62 @@ textarea {
   font-size: 0.75rem;
 }
 
-.sheet-table .col-photo {
-  width: 2.2rem;
-  text-align: center;
-  vertical-align: middle;
-  white-space: nowrap;
-}
-
-.col-photo .photo-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .sheet-table .col-desc {
   text-align: left;
   line-height: 1.25;
   word-break: break-word;
+}
+
+.desc-with-photo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.desc-with-photo .desc-link {
+  flex: 1;
+  min-width: 0;
+}
+
+.photo-status {
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  width: 1.55rem;
+  height: 1.55rem;
+  min-width: 1.55rem;
+  min-height: 1.55rem;
+  padding: 0;
+  margin-top: 0.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(28, 42, 31, 0.4);
+  border-radius: 999px;
+}
+
+.photo-status:hover {
+  color: var(--tea-leaf);
+  background: rgba(74, 107, 62, 0.1);
+}
+
+.photo-status.has-photo {
+  color: var(--tea-leaf);
+}
+
+.photo-status-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border: 1px solid rgba(28, 42, 31, 0.28);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .sheet-table .col-in,
