@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -40,7 +41,18 @@ import {
   type ItemUsageTrend,
 } from "@/lib/stock";
 import type { StockItem, StockMovement } from "@/lib/types";
+import {
+  importStockCsvText,
+  parseStockCsv,
+  previewStockImportLabel,
+} from "@/lib/stock-import";
 import { formatBaht, formatPlainNumber, startOfLocalDay } from "@/lib/utils";
+
+function monthInputValue(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
 
 type Tab = "in" | "count" | "dashboard" | "setup";
 
@@ -712,6 +724,51 @@ function SetupTab({
   const [unitCost, setUnitCost] = useState("0");
   const [barcode, setBarcode] = useState("");
   const [busy, setBusy] = useState(false);
+  const [importMonth, setImportMonth] = useState(monthInputValue());
+  const [importPreview, setImportPreview] = useState<string | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const csvTextRef = useRef("");
+
+  async function onPickCsv(file: File) {
+    const text = await file.text();
+    const [y, m] = importMonth.split("-").map(Number);
+    const preview = parseStockCsv(text, y, m);
+    if (!preview.products.length) {
+      onError(
+        preview.skipped.length
+          ? `อ่านไฟล์ไม่ได้ — ข้าม ${preview.skipped.length} แถว`
+          : "ไม่พบรายการในไฟล์",
+      );
+      setImportPreview(null);
+      return;
+    }
+    onError(null);
+    setImportPreview(previewStockImportLabel(preview));
+    csvTextRef.current = text;
+  }
+
+  async function onImportCsv() {
+    const text = csvTextRef.current;
+    if (!text || !userEmail) {
+      onError("เลือกไฟล์ CSV ก่อน");
+      return;
+    }
+    if (!window.confirm("นำเข้าข้อมูลจาก CSV? (อัปเดตรายการที่ชื่อตรงกัน · ไม่ลบของเดิม)")) return;
+    setImportBusy(true);
+    onError(null);
+    try {
+      const [y, m] = importMonth.split("-").map(Number);
+      const result = await importStockCsvText(text, userEmail, y, m);
+      setImportPreview(
+        `นำเข้าแล้ว — สร้าง ${result.productsCreated} · อัปเดต ${result.productsUpdated} · ประวัติ ${result.movements}` +
+          (result.parseSkipped ? ` · ข้าม ${result.parseSkipped} แถว` : ""),
+      );
+    } catch (err) {
+      onError((err as Error).message || "นำเข้าไม่สำเร็จ");
+    } finally {
+      setImportBusy(false);
+    }
+  }
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
@@ -757,6 +814,44 @@ function SetupTab({
 
   return (
     <>
+      <div className="form-card entry-form check-import-card">
+        <h2 className="stock-section-title">นำเข้า CSV สต๊อก</h2>
+        <p className="muted check-hint">
+          เลือกไฟล์จาก Google Sheet (TELL TEA - สต๊อกสินค้า.csv) — รองรับทั้งตารางเช็คทุก 10 วัน
+          (คอลัมน์วันที่) และรายการคงเหลือตรงๆ
+        </p>
+        <div className="check-import-row">
+          <input
+            type="month"
+            className="ot-slim-input"
+            value={importMonth}
+            onChange={(e) => setImportMonth(e.target.value)}
+            aria-label="เดือนอ้างอิงสำหรับคอลัมน์วันที่"
+          />
+          <label className="check-import-file">
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="check-file-input"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void onPickCsv(f).catch((err) => onError((err as Error).message));
+              }}
+            />
+            เลือก CSV
+          </label>
+          <button
+            type="button"
+            className="primary-btn"
+            disabled={importBusy || !importPreview}
+            onClick={() => void onImportCsv()}
+          >
+            {importBusy ? "กำลังนำเข้า..." : "นำเข้า"}
+          </button>
+        </div>
+        {importPreview ? <p className="muted check-import-preview">{importPreview}</p> : null}
+      </div>
+
       <form className="form-card" onSubmit={(e) => void onCreate(e)}>
         <h2 className="stock-section-title">เพิ่มวัตถุดิบ</h2>
         <div className="field">
