@@ -238,7 +238,7 @@ function ProfileView() {
             )}
           </h2>
           <p className="muted" style={{ textAlign: "left", marginBottom: "0.65rem", fontSize: "0.85rem" }}>
-            ใช้ในโบนัส · ผลิต · OT · เช็ค — เลือกทีหลังได้
+            ใช้ในโบนัส · ผลิต · ชง · เช็ค — เลือกทีหลังได้
           </p>
           <div className="field" style={{ marginBottom: "0.75rem" }}>
             <label htmlFor="profile-account">บัญชีที่ล็อกอิน</label>

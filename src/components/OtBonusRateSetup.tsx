@@ -34,7 +34,7 @@ export function OtBonusRateSetup({
 
   return (
     <section className="owner-settings-section">
-      <h2 className="owner-settings-title">โบนัส OT / ชง</h2>
+      <h2 className="owner-settings-title">โบนัสชง</h2>
       <p className="muted owner-settings-hint">
         โบนัส/คน = (เครื่อง + อื่นๆ + โคน + ขนมปัง − เคลม − ลด + เพิ่ม) × เรท ÷ จำนวนคน · พนักงานอยู่ที่{" "}
         <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>

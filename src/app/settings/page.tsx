@@ -67,7 +67,7 @@ function SettingsView() {
         ตั้งค่าโมดูล
       </h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        จัดการค่าเริ่มต้นของผลิต · OT · SmartCheck · คลัง — เฉพาะเจ้าของ
+        จัดการค่าเริ่มต้นของผลิต · ชง · SmartCheck · คลัง — เฉพาะเจ้าของ
       </p>
 
       {error ? <p className="error-text">{error}</p> : null}

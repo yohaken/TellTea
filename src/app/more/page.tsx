@@ -47,7 +47,7 @@ function MoreView() {
     {
       href: "/bonus/",
       title: "สรุปโบนัสเดือน",
-      desc: "ขาย + ผลิต + OT แบบ real-time",
+      desc: "ขาย + ผลิต + ชง แบบ real-time",
       icon: CircleDollarSign,
       perm: "bonus",
     },
@@ -134,7 +134,7 @@ function MoreView() {
             <Settings size={22} />
             <div>
               <strong>ตั้งค่าโมดูล</strong>
-              <p>ผลิต · OT · SmartCheck — สินค้า เรท และรายการเช็ค</p>
+              <p>ผลิต · ชง · SmartCheck — สินค้า เรท และรายการเช็ค</p>
             </div>
           </Link>
         ) : null}

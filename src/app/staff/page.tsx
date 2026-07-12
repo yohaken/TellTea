@@ -191,7 +191,7 @@ function StaffView() {
           ขั้นที่ 1 — รายชื่อพนักงานร้าน
         </h2>
         <p className="muted" style={{ textAlign: "left", marginBottom: "0.65rem", fontSize: "0.85rem" }}>
-          ใช้เลือกตอนกรอกผลิต / OT / เชื่อมบัญชี
+          ใช้เลือกตอนกรอกผลิต / ชง / เชื่อมบัญชี
         </p>
         <form className="form-card entry-form" onSubmit={(e) => void onAddEmployee(e)}>
           <div className="field">

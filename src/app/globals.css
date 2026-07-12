@@ -1209,7 +1209,7 @@ body.modal-open .main-panel {
   color: var(--tea-leaf);
 }
 
-/* Module pages (OT / ผลิต) — content first, tab dock floats above bottom nav */
+/* Module pages (ชง / ผลิต) — content first, tab dock floats above bottom nav */
 .module-page {
   --module-dock-h: 2.65rem;
   padding-bottom: calc(var(--module-dock-h) + 0.65rem);

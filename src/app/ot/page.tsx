@@ -247,7 +247,7 @@ function OtView() {
       <div className="module-page-head">
         <h1 className="panel-title module-page-title">
           <Coffee size={18} aria-hidden />
-          โบนัส OT / ชง
+          โบนัสชง
         </h1>
       </div>
 
@@ -282,7 +282,7 @@ function OtView() {
       ) : null}
 
       <ModuleTabDock
-        ariaLabel="มุมมอง OT"
+        ariaLabel="มุมมองชง"
         formOpen={formOpen}
         onAdd={openAdd}
       />
@@ -406,7 +406,7 @@ function OtEntryForm({
   return (
     <form className="form-card entry-form module-entry-form" onSubmit={(e) => void onSubmit(e)}>
       <div className="entry-toolbar module-form-head">
-        <h2 className="panel-title">{entry ? (locked ? "ดูรายการ (จ่ายแล้ว)" : "แก้ไขรายการ") : "บันทึก OT"}</h2>
+        <h2 className="panel-title">{entry ? (locked ? "ดูรายการ (จ่ายแล้ว)" : "แก้ไขรายการ") : "บันทึกชง"}</h2>
         <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onCancelEdit}>
           <X size={18} />
         </button>
@@ -720,7 +720,7 @@ function OtTable({
           onViewPhoto={(url, title) => setPreview({ url, title })}
         />
       ) : !filtered.length ? (
-        <p className="empty">{entries.length ? "ไม่มีรายการในเดือน/ตัวกรองนี้" : "ยังไม่มีรายการ OT"}</p>
+        <p className="empty">{entries.length ? "ไม่มีรายการในเดือน/ตัวกรองนี้" : "ยังไม่มีรายการชง"}</p>
       ) : (
         <OtCardList
           entries={sortOtEntries(filtered)}

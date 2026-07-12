@@ -51,7 +51,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ? { href: "/production/", label: "ผลิต", icon: ChefHat }
       : null,
     can(staff, "otBonus")
-      ? { href: "/ot/", label: "OT", icon: Coffee }
+      ? { href: "/ot/", label: "ชง", icon: Coffee }
       : null,
     can(staff, "bonus")
       ? { href: "/bonus/", label: "โบนัส", icon: CircleDollarSign }

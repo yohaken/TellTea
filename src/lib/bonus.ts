@@ -11,7 +11,7 @@ export type WorkerMonthBonus = {
   salesShare: number;
   /** โบนัสผลิตเบเกอรี่ */
   prodBonus: number;
-  /** โบนัสหลัก OT / ชง */
+  /** โบนัสชง */
   otMain: number;
   total: number;
   deductPct: number;

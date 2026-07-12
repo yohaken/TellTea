@@ -213,7 +213,7 @@ service cloud.firestore {
       allow update, delete: if hasPerm('production');
     }
 
-    // โบนัส OT / ชงเครื่องดื่ม
+    // โบนัสชงเครื่องดื่ม
     match /otEntries/{id} {
       allow read: if hasPerm('otBonus');
       allow create: if hasPerm('otBonus')

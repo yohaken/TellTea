@@ -23,7 +23,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   ledger: "บัญชีพนักงาน",
   stock: "คลังวัตถุดิบ",
   production: "ผลิต / โบนัสเบเกอรี่",
-  otBonus: "โบนัส OT / ชง",
+  otBonus: "โบนัสชง",
   checklist: "SmartCheck SOP",
   bonus: "สรุปโบนัสเดือน",
   ownerBooks: "บช.เจ้าของ",
@@ -38,7 +38,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
 export const PERMISSION_GROUPS: { title: string; hint?: string; keys: PermissionKey[] }[] = [
   {
     title: "หน้าหลัก — ใช้ทุกวัน",
-    hint: "แท็บด้านล่าง: บัญชี · ผลิต · OT · เช็ค · คลัง · โบนัส",
+    hint: "แท็บด้านล่าง: บัญชี · ผลิต · ชง · เช็ค · คลัง · โบนัส",
     keys: ["ledger", "stock", "production", "otBonus", "checklist", "bonus"],
   },
   {

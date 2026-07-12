@@ -11,7 +11,7 @@ export function needsPersonalProfileSetup(staff: StaffMember | null | undefined)
   return true;
 }
 
-/** เชื่อมชื่อในรายชื่อร้าน (ผลิต / OT / โบนัส) */
+/** เชื่อมชื่อในรายชื่อร้าน (ผลิต / ชง / โบนัส) */
 export function needsRosterLink(staff: StaffMember | null | undefined): boolean {
   if (!staff || staff.role === "owner") return false;
   if (staff.profileComplete) return false;

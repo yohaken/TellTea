@@ -200,7 +200,7 @@ function BonusView() {
               <dd>฿{fmt(myRow.prodBonus)}</dd>
             </div>
             <div>
-              <dt>โบนัสหลัก OT</dt>
+              <dt>โบนัสชง</dt>
               <dd>฿{fmt(myRow.otMain)}</dd>
             </div>
             <div>
@@ -213,7 +213,7 @@ function BonusView() {
             </div>
           </dl>
           <p className="muted bonus-live-note">
-            หัก% จากตารางสรุปทั้งร้าน · อัปเดตทันทีเมื่อมีการกรอก OT / ผลิต
+            หัก% จากตารางสรุปทั้งร้าน · อัปเดตทันทีเมื่อมีการกรอกชง / ผลิต
           </p>
         </section>
       ) : null}
@@ -241,7 +241,7 @@ function BonusView() {
 
       {report ? (
         <p className="muted bonus-footnote">
-          ขาย = pool รวม ÷ จำนวนคน · ผลิต/OT จากยอดจริง · เจ้าของกรอกจำนวนหักทั้งร้านสิ้นเดือน · เรท% ถาวร
+          ขาย = pool รวม ÷ จำนวนคน · ผลิต/ชง จากยอดจริง · เจ้าของกรอกจำนวนหักทั้งร้านสิ้นเดือน · เรท% ถาวร
         </p>
       ) : null}
 
@@ -362,7 +362,7 @@ function BonusTable({
             <th className="bonus-th-name">ชื่อ</th>
             <th className="col-out">ขาย</th>
             <th className="col-out">ผลิต</th>
-            <th className="col-out">OT</th>
+            <th className="col-out">ชง</th>
             <th className="col-out">รวม</th>
             <th className="col-out bonus-th-deduct">หักโบนัส</th>
             <th className="col-out bonus-th-final">คงเหลือ</th>

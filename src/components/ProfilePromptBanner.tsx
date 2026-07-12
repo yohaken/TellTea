@@ -34,7 +34,7 @@ export function ProfilePromptBanner() {
       <UserCircle size={18} aria-hidden />
       <div className="profile-prompt-copy">
         <strong>เลือกชื่อในร้าน</strong>
-        <span>เชื่อมกับรายชื่อผลิต / OT / โบนัส — ตั้งทีหลังได้</span>
+        <span>เชื่อมกับรายชื่อผลิต / ชง / โบนัส — ตั้งทีหลังได้</span>
       </div>
       <div className="profile-prompt-actions">
         <Link href="/profile/" className="primary-btn profile-prompt-btn">
