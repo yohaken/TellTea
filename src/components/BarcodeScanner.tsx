@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, X } from "lucide-react";
+import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 type BarcodeDetectorLike = {
   detect: (source: ImageBitmapSource) => Promise<Array<{ rawValue: string }>>;
@@ -95,6 +96,8 @@ export function BarcodeScanner({
       stopCamera();
     };
   }, [open, onClose, onDetected, stopCamera]);
+
+  useBodyScrollLock(open);
 
   if (!open) return null;
 

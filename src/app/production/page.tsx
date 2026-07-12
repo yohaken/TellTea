@@ -12,6 +12,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachField } from "@/components/PhotoAttachField";
+import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
@@ -87,6 +88,8 @@ function ProductionView() {
     );
     return unsub;
   }, [staff, isOwner]);
+
+  useBodyScrollLock(formOpen);
 
   if (!can(staff, "production")) return null;
 
@@ -371,6 +374,8 @@ function ProdTable({
   onError: (msg: string) => void;
 }) {
   const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
+
+  useBodyScrollLock(!!preview);
 
   async function setStatus(row: ProdEntry, status: ProdStatus) {
     try {

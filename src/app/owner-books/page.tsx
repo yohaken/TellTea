@@ -41,6 +41,7 @@ import {
   todayInputValue,
 } from "@/lib/utils";
 import { filterOwnerBookRows } from "@/lib/smart-search";
+import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 export default function OwnerBooksPage() {
   return (
@@ -72,6 +73,8 @@ function OwnerBooksView() {
   const [excludedIds, setExcludedIds] = useState<Set<string>>(() => new Set());
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const deferredQuery = useDeferredValue(query.trim());
+
+  useBodyScrollLock(adding || !!editing);
 
   useEffect(() => {
     if (staff && !can(staff, "ownerBooks")) {
@@ -495,14 +498,14 @@ function OwnerEntryModal({
   }
 
   return (
-    <div className="modal-backdrop edit-modal" role="presentation">
+    <div className="modal-backdrop edit-modal is-module-form" role="presentation">
       <div
         className="modal-card"
         role="dialog"
         aria-modal="true"
         aria-label={mode === "add" ? "บันทึกเงินออก" : "แก้ไขรายการ"}
       >
-        <div className="entry-toolbar">
+        <div className="entry-toolbar module-form-head">
           <h2 className="panel-title">{mode === "add" ? "บันทึกเงินออก" : "แก้ไขรายการ"}</h2>
           <button
             type="button"

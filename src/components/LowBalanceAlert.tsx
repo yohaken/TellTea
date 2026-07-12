@@ -12,6 +12,7 @@ import {
 } from "@/lib/settings";
 import { showLocalLowBalanceNotification } from "@/lib/push";
 import { formatBaht } from "@/lib/utils";
+import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 const DISMISS_KEY = "telltea_low_balance_dismissed_v1";
 
@@ -72,6 +73,8 @@ export function LowBalanceAlert() {
       );
     }
   }, [balance, settings, isOwner]);
+
+  useBodyScrollLock(open && balance != null);
 
   if (!open || balance == null) return null;
 

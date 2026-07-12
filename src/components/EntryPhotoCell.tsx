@@ -1,6 +1,7 @@
 "use client";
 
 import { ImageIcon, ImageOff } from "lucide-react";
+import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 /** แสดงสถานะรูปในตาราง — มีรูปกดดูได้, ไม่มีรูปแสดงไอคอนจาง */
 export function EntryPhotoIndicator({
@@ -42,6 +43,8 @@ export function ImagePreviewModal({
   title?: string;
   onClose: () => void;
 }) {
+  useBodyScrollLock(true);
+
   return (
     <div className="modal-backdrop photo-backdrop" role="presentation" onClick={onClose}>
       <div

@@ -18,6 +18,7 @@ import {
 import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { useAuth } from "@/lib/auth";
+import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import { fileToReceiptDataUrl } from "@/lib/receipts";
@@ -110,6 +111,8 @@ function CheckView() {
     return unsub;
   }, [staff, isOwner]);
 
+  useBodyScrollLock(formOpen);
+
   if (!can(staff, "checklist")) return null;
 
   function openForm() {
@@ -187,6 +190,8 @@ function CheckForm({
   const [passConfirm, setPassConfirm] = useState<{ index: number; itemName: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useBodyScrollLock(!!failModal || !!passConfirm);
 
   const inspector = employees.find((e) => e.id === inspectorId);
 

@@ -42,6 +42,7 @@ import {
   todayInputValue,
 } from "@/lib/utils";
 import { Trash2, X } from "lucide-react";
+import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 export default function LedgerPage() {
   return (
@@ -71,6 +72,8 @@ function LedgerView() {
   const balanceRef = useRef<number | null>(null);
   const hasRowsRef = useRef(false);
   const canTransferIn = can(staff, "transferIn");
+
+  useBodyScrollLock(!!adding || !!editing || !!photoRowId);
 
   useLayoutEffect(() => {
     const cached = loadCachedLedger();
@@ -471,9 +474,9 @@ function AddOutModal({
   }
 
   return (
-    <div className="modal-backdrop edit-modal" role="presentation">
+    <div className="modal-backdrop edit-modal is-module-form" role="presentation">
       <div className="modal-card" role="dialog" aria-modal="true" aria-label="บันทึกเงินออก">
-        <div className="entry-toolbar">
+        <div className="entry-toolbar module-form-head">
           <h2 className="panel-title">บันทึกเงินออก</h2>
           <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onClose}>
             <X size={18} />
@@ -607,9 +610,9 @@ function AddInModal({
   }
 
   return (
-    <div className="modal-backdrop edit-modal" role="presentation">
+    <div className="modal-backdrop edit-modal is-module-form" role="presentation">
       <div className="modal-card" role="dialog" aria-modal="true" aria-label="โอนเข้า">
-        <div className="entry-toolbar">
+        <div className="entry-toolbar module-form-head">
           <h2 className="panel-title">โอนเข้า</h2>
           <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onClose}>
             <X size={18} />
@@ -767,14 +770,14 @@ function EditEntryModal({
   }
 
   return (
-    <div className="modal-backdrop edit-modal" role="presentation">
+    <div className="modal-backdrop edit-modal is-module-form" role="presentation">
       <div
         className="modal-card"
         role="dialog"
         aria-modal="true"
         aria-label="แก้ไขรายการ"
       >
-        <div className="entry-toolbar">
+        <div className="entry-toolbar module-form-head">
           <h2 className="panel-title">แก้ไขรายการ</h2>
           <button
             type="button"

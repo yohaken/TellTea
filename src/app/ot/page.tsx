@@ -13,6 +13,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachField } from "@/components/PhotoAttachField";
+import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
@@ -218,6 +219,8 @@ function OtView() {
     );
     return unsub;
   }, [staff]);
+
+  useBodyScrollLock(formOpen);
 
   if (!can(staff, "otBonus")) return null;
 
@@ -541,6 +544,8 @@ function OtTable({
   const [statusFilter, setStatusFilter] = useState<OtStatus | "all">("all");
   const [mineOnly, setMineOnly] = useState(false);
   const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
+
+  useBodyScrollLock(!!preview);
 
   const myName = staff?.displayName || "";
 
