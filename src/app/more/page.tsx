@@ -108,7 +108,7 @@ function MoreView() {
             <Settings size={22} />
             <div>
               <strong>ตั้งค่าโมดูล</strong>
-              <p>ผลิต · OT — สินค้า เรท และค่าเริ่มต้น</p>
+              <p>ผลิต · OT · SmartCheck — สินค้า เรท และรายการเช็ค</p>
             </div>
           </Link>
         ) : null}

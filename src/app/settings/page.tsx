@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Settings } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
+import { ChecklistSetup } from "@/components/ChecklistSetup";
 import { OtBonusRateSetup } from "@/components/OtBonusRateSetup";
 import { ProdCatalogSetup } from "@/components/ProdCatalogSetup";
 import { useAuth } from "@/lib/auth";
+import { seedChecklistItemsIfEmpty } from "@/lib/checklist";
 import { getOtSettings } from "@/lib/ot";
 import { listProdProducts, seedProdCatalogIfEmpty, type ProdProduct } from "@/lib/production";
 
@@ -31,6 +33,10 @@ function SettingsView() {
     const [p, ot] = await Promise.all([listProdProducts(), getOtSettings()]);
     setProducts(p);
     setBonusRate(ot.bonusRate);
+  }
+
+  async function reloadChecklist() {
+    await seedChecklistItemsIfEmpty();
   }
 
   useEffect(() => {
@@ -60,7 +66,7 @@ function SettingsView() {
         ตั้งค่าโมดูล
       </h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        จัดการค่าเริ่มต้นของผลิตและ OT — เฉพาะเจ้าของ
+        จัดการค่าเริ่มต้นของผลิต · OT · SmartCheck — เฉพาะเจ้าของ
       </p>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -76,6 +82,10 @@ function SettingsView() {
           <OtBonusRateSetup
             bonusRate={bonusRate}
             onReload={() => void reload().catch((err) => setError((err as Error).message))}
+            onError={setError}
+          />
+          <ChecklistSetup
+            onReload={() => void reloadChecklist().catch((err) => setError((err as Error).message))}
             onError={setError}
           />
         </div>

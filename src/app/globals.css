@@ -1606,6 +1606,10 @@ textarea {
   border-left: 3px solid #2d6a4f;
 }
 
+.check-item.is-pending {
+  border-left: 3px solid rgba(28, 42, 31, 0.18);
+}
+
 .check-item.is-fail {
   border-left: 3px solid #c1121f;
   background: rgba(255, 235, 235, 0.75);
@@ -1655,6 +1659,10 @@ textarea {
   color: #fff;
 }
 
+.check-status-btn:not(.is-active) {
+  opacity: 0.88;
+}
+
 .check-fail-detail {
   margin-top: 0.45rem;
   padding-top: 0.45rem;
@@ -1689,6 +1697,29 @@ textarea {
 
 .check-submit-bar .primary-btn {
   flex: 1;
+}
+
+.check-sub-modal {
+  z-index: 55;
+  padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.75rem);
+}
+
+.check-confirm-card {
+  width: min(100%, 22rem);
+  max-height: min(88dvh, 36rem);
+  overflow-y: auto;
+  background: #f7f3e8;
+  border-radius: 1.1rem;
+  padding: 0.9rem 1rem 1rem;
+  box-shadow: var(--shadow);
+}
+
+.check-fail-modal {
+  text-align: left;
+}
+
+.modal-backdrop.edit-modal.is-check-form .modal-card {
+  max-height: min(88dvh, 38rem);
 }
 
 .check-modal-backdrop {

@@ -5,7 +5,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -13,32 +12,26 @@ import {
   Camera,
   CheckCircle2,
   ClipboardCheck,
-  Plus,
   Trash2,
   X,
 } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
-import { CheckTabDock } from "@/components/CheckTabDock";
+import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { useAuth } from "@/lib/auth";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import { fileToReceiptDataUrl } from "@/lib/receipts";
 import {
   CHECK_SHIFTS,
-  addChecklistItem,
-  deleteChecklistItem,
   deleteCheckSession,
-  deleteAllChecklistRecords,
   getSessionForShift,
   groupRecordsBySession,
   labelCheckShift,
   listActiveChecklistItems,
-  listChecklistItems,
   newCheckId,
   seedChecklistItemsIfEmpty,
   submitChecklistBatch,
   subscribeChecklistRecords,
-  updateChecklistItem,
   type CheckShiftId,
   type CheckStatus,
   type ChecklistItem,
@@ -52,13 +45,13 @@ import {
   todayInputValue,
 } from "@/lib/utils";
 
-type Tab = "check" | "summary" | "setup";
+type DraftStatus = CheckStatus | "pending";
 
 type DraftItem = {
   itemId: string;
   itemName: string;
   groupLabel: string;
-  status: CheckStatus;
+  status: DraftStatus;
   remark: string;
   imageUrl: string;
 };
@@ -75,7 +68,7 @@ function CheckView() {
   const { user, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
-  const [tab, setTab] = useState<Tab>("check");
+  const [formOpen, setFormOpen] = useState(false);
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [records, setRecords] = useState<ChecklistRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -119,6 +112,14 @@ function CheckView() {
 
   if (!can(staff, "checklist")) return null;
 
+  function openForm() {
+    setFormOpen(true);
+  }
+
+  function closeForm() {
+    setFormOpen(false);
+  }
+
   return (
     <div className="module-page">
       <div className="module-page-head">
@@ -131,17 +132,7 @@ function CheckView() {
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading && tab === "check" ? (
-        <CheckForm
-          items={items}
-          employees={employees}
-          createdBy={user?.email || ""}
-          onError={setError}
-          onSubmitted={() => setTab("summary")}
-        />
-      ) : null}
-
-      {!loading && tab === "summary" ? (
+      {!loading ? (
         <CheckSummary
           records={records}
           isOwner={isOwner}
@@ -149,14 +140,26 @@ function CheckView() {
         />
       ) : null}
 
-      {!loading && tab === "setup" && isOwner ? (
-        <CheckSetup
-          onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
-          onError={setError}
-        />
+      {formOpen && !loading ? (
+        <div className="modal-backdrop edit-modal is-module-form is-check-form" onClick={closeForm}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <CheckForm
+              key={formOpen ? "open" : "closed"}
+              items={items}
+              employees={employees}
+              createdBy={user?.email || ""}
+              onError={setError}
+              onClose={closeForm}
+            />
+          </div>
+        </div>
       ) : null}
 
-      <CheckTabDock tab={tab} isOwner={isOwner} onSelect={setTab} />
+      <ModuleTabDock
+        ariaLabel="มุมมอง SmartCheck"
+        formOpen={formOpen}
+        onAdd={openForm}
+      />
     </div>
   );
 }
@@ -166,13 +169,13 @@ function CheckForm({
   employees,
   createdBy,
   onError,
-  onSubmitted,
+  onClose,
 }: {
   items: ChecklistItem[];
   employees: Employee[];
   createdBy: string;
   onError: (msg: string) => void;
-  onSubmitted: () => void;
+  onClose: () => void;
 }) {
   const [step, setStep] = useState<"setup" | "list" | "done">("setup");
   const [date, setDate] = useState(todayInputValue());
@@ -181,6 +184,7 @@ function CheckForm({
   const [drafts, setDrafts] = useState<DraftItem[]>([]);
   const [existingSession, setExistingSession] = useState<CheckSessionSummary | null>(null);
   const [failModal, setFailModal] = useState<{ index: number; remark: string; preview: string } | null>(null);
+  const [passConfirm, setPassConfirm] = useState<{ index: number; itemName: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -199,7 +203,7 @@ function CheckForm({
       return;
     }
     if (!items.length) {
-      onError("ยังไม่มีรายการตรวจ — ให้เจ้าของตั้งค่าก่อน");
+      onError("ยังไม่มีรายการตรวจ — ให้เจ้าของตั้งค่าที่ อื่นๆ → ตั้งค่าโมดูล");
       return;
     }
     setDrafts(
@@ -207,7 +211,7 @@ function CheckForm({
         itemId: item.id,
         itemName: item.name,
         groupLabel: item.groupLabel,
-        status: "pass" as CheckStatus,
+        status: "pending" as DraftStatus,
         remark: "",
         imageUrl: "",
       })),
@@ -215,9 +219,11 @@ function CheckForm({
     setStep("list");
   }
 
+  const answeredCount = drafts.filter((d) => d.status !== "pending").length;
   const failCount = drafts.filter((d) => d.status === "fail").length;
-  const passCount = drafts.length - failCount;
-  const progressPct = drafts.length ? Math.round((drafts.length / drafts.length) * 100) : 0;
+  const passCount = drafts.filter((d) => d.status === "pass").length;
+  const pendingCount = drafts.length - answeredCount;
+  const progressPct = drafts.length ? Math.round((answeredCount / drafts.length) * 100) : 0;
 
   const grouped = useMemo(() => {
     const map = new Map<string, { label: string; items: { draft: DraftItem; index: number }[] }>();
@@ -229,12 +235,14 @@ function CheckForm({
     return [...map.values()];
   }, [drafts]);
 
-  function setPass(index: number) {
+  function confirmPass() {
+    if (!passConfirm) return;
     setDrafts((prev) =>
       prev.map((d, i) =>
-        i === index ? { ...d, status: "pass", remark: "", imageUrl: "" } : d,
+        i === passConfirm.index ? { ...d, status: "pass", remark: "", imageUrl: "" } : d,
       ),
     );
+    setPassConfirm(null);
   }
 
   function openFailModal(index: number) {
@@ -269,6 +277,10 @@ function CheckForm({
 
   async function onSubmit() {
     if (!inspector || !createdBy) return;
+    if (pendingCount > 0) {
+      onError(`ยังไม่ได้ตรวจ ${pendingCount} รายการ — กด ไม่ผ่าน หรือ ผ่าน ทุกข้อ`);
+      return;
+    }
     const fails = drafts.filter((d) => d.status === "fail");
     for (const f of fails) {
       if (!f.remark.trim() || !f.imageUrl) {
@@ -290,7 +302,7 @@ function CheckForm({
           inspectorId: inspector.id,
           itemId: d.itemId,
           itemName: d.itemName,
-          status: d.status,
+          status: d.status as CheckStatus,
           remark: d.remark,
           imageUrl: d.imageUrl,
           submittedAt,
@@ -298,7 +310,6 @@ function CheckForm({
         })),
       );
       setStep("done");
-      onSubmitted();
     } catch (err) {
       onError((err as Error).message || "บันทึกไม่สำเร็จ");
     } finally {
@@ -308,108 +319,110 @@ function CheckForm({
 
   if (!employees.length) {
     return (
-      <p className="muted" style={{ textAlign: "left" }}>
-        ยังไม่มีรายชื่อพนักงาน — เพิ่มที่{" "}
-        <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
-      </p>
+      <>
+        <FormHead title="เช็ค SOP" onClose={onClose} />
+        <p className="muted" style={{ textAlign: "left" }}>
+          ยังไม่มีรายชื่อพนักงาน — เพิ่มที่{" "}
+          <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
+        </p>
+      </>
     );
   }
 
   if (step === "done") {
     return (
-      <div className="check-done-card">
-        <CheckCircle2 size={40} className="check-done-icon" aria-hidden />
-        <h2 className="panel-title">บันทึกเรียบร้อย</h2>
-        <p className="muted">
-          {formatDateShort(parseDateInput(date))} · {labelCheckShift(shift)} · ผู้ตรวจ {inspector?.name}
-        </p>
-        <p className="muted">
-          ผ่าน {passCount} · ไม่ผ่าน {failCount}
-        </p>
-        <button
-          type="button"
-          className="primary-btn"
-          onClick={() => {
-            setStep("setup");
-            setExistingSession(null);
-          }}
-        >
-          เช็ครอบใหม่
-        </button>
-      </div>
+      <>
+        <FormHead title="บันทึกเรียบร้อย" onClose={onClose} />
+        <div className="check-done-card">
+          <CheckCircle2 size={40} className="check-done-icon" aria-hidden />
+          <p className="muted">
+            {formatDateShort(parseDateInput(date))} · {labelCheckShift(shift)} · ผู้ตรวจ {inspector?.name}
+          </p>
+          <p className="muted">
+            ผ่าน {passCount} · ไม่ผ่าน {failCount}
+          </p>
+          <button type="button" className="primary-btn" onClick={onClose}>
+            ปิด
+          </button>
+        </div>
+      </>
     );
   }
 
   if (step === "setup") {
     return (
-      <div className="form-card entry-form">
-        <h2 className="panel-title" style={{ fontSize: "1rem" }}>เริ่มตรวจ SOP</h2>
-        <p className="muted check-hint">
-          เลือกกะและผู้ตรวจก่อน — ทุกรายการเริ่มต้นเป็น &quot;ผ่าน&quot; แก้เฉพาะข้อที่มีปัญหา
-        </p>
+      <>
+        <FormHead title="เริ่มตรวจ SOP" onClose={onClose} />
+        <div className="form-card entry-form">
+          <p className="muted check-hint">
+            เลือกกะและผู้ตรวจ — ทุกรายการเริ่มว่าง ต้องกด ไม่ผ่าน หรือ ผ่าน ทีละข้อ
+          </p>
 
-        <div className="stock-form-grid">
-          <div className="field">
-            <label htmlFor="check-date">วันที่</label>
-            <input
-              id="check-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="check-inspector">ผู้ตรวจ</label>
-            <select
-              id="check-inspector"
-              value={inspectorId}
-              onChange={(e) => setInspectorId(e.target.value)}
-              required
-            >
-              <option value="">— เลือก —</option>
-              {employees.map((e) => (
-                <option key={e.id} value={e.id}>{e.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="field">
-          <span className="field-label">กะ / รอบงาน</span>
-          <div className="check-shift-pills">
-            {CHECK_SHIFTS.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className={shift === s.id ? "check-shift-pill is-active" : "check-shift-pill"}
-                onClick={() => setShift(s.id)}
+          <div className="stock-form-grid">
+            <div className="field">
+              <label htmlFor="check-date">วันที่</label>
+              <input
+                id="check-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="check-inspector">ผู้ตรวจ</label>
+              <select
+                id="check-inspector"
+                value={inspectorId}
+                onChange={(e) => setInspectorId(e.target.value)}
+                required
               >
-                {s.label}
-              </button>
-            ))}
+                <option value="">— เลือก —</option>
+                {employees.map((e) => (
+                  <option key={e.id} value={e.id}>{e.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
+
+          <div className="field">
+            <span className="field-label">กะ / รอบงาน</span>
+            <div className="check-shift-pills">
+              {CHECK_SHIFTS.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={shift === s.id ? "check-shift-pill is-active" : "check-shift-pill"}
+                  onClick={() => setShift(s.id)}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {existingSession ? (
+            <div className="check-existing-banner">
+              <AlertTriangle size={16} aria-hidden />
+              <span>
+                กะนี้เช็คแล้ว ({formatDateTimeShort(existingSession.submittedAt)}) —{" "}
+                {existingSession.failed ? `${existingSession.failed} ไม่ผ่าน` : "ผ่าน 100%"}
+              </span>
+            </div>
+          ) : null}
+
+          <button type="button" className="primary-btn" onClick={startChecklist}>
+            {existingSession ? "เช็คซ้ำ (บันทึกชุดใหม่)" : "เริ่มเช็คลิสต์"}
+          </button>
         </div>
-
-        {existingSession ? (
-          <div className="check-existing-banner">
-            <AlertTriangle size={16} aria-hidden />
-            <span>
-              กะนี้เช็คแล้ว ({formatDateTimeShort(existingSession.submittedAt)}) —{" "}
-              {existingSession.failed ? `${existingSession.failed} ไม่ผ่าน` : "ผ่าน 100%"}
-            </span>
-          </div>
-        ) : null}
-
-        <button type="button" className="primary-btn" onClick={startChecklist}>
-          {existingSession ? "เช็คซ้ำ (บันทึกชุดใหม่)" : "เริ่มเช็คลิสต์"}
-        </button>
-      </div>
+      </>
     );
   }
 
   return (
     <>
+      <FormHead title="ตรวจรายการ" onClose={onClose} />
+
       <div className="check-list-header">
         <div>
           <strong>{formatDateShort(parseDateInput(date))}</strong>
@@ -419,7 +432,8 @@ function CheckForm({
           <div className="check-progress-bar" style={{ width: `${progressPct}%` }} />
         </div>
         <p className="muted check-progress-label">
-          {drafts.length} รายการ · ผ่าน {passCount}
+          ตรวจแล้ว {answeredCount}/{drafts.length}
+          {pendingCount ? ` · ค้าง ${pendingCount}` : ""}
           {failCount ? ` · ไม่ผ่าน ${failCount}` : ""}
         </p>
       </div>
@@ -431,23 +445,37 @@ function CheckForm({
             {group.items.map(({ draft, index }) => (
               <article
                 key={draft.itemId}
-                className={draft.status === "fail" ? "check-item is-fail" : "check-item is-pass"}
+                className={
+                  draft.status === "fail"
+                    ? "check-item is-fail"
+                    : draft.status === "pass"
+                      ? "check-item is-pass"
+                      : "check-item is-pending"
+                }
               >
                 <p className="check-item-name">{draft.itemName}</p>
                 <div className="check-item-actions">
                   <button
                     type="button"
-                    className={draft.status === "pass" ? "check-status-btn is-pass is-active" : "check-status-btn is-pass"}
-                    onClick={() => setPass(index)}
-                  >
-                    ผ่าน
-                  </button>
-                  <button
-                    type="button"
-                    className={draft.status === "fail" ? "check-status-btn is-fail is-active" : "check-status-btn is-fail"}
+                    className={
+                      draft.status === "fail"
+                        ? "check-status-btn is-fail is-active"
+                        : "check-status-btn is-fail"
+                    }
                     onClick={() => openFailModal(index)}
                   >
                     ไม่ผ่าน
+                  </button>
+                  <button
+                    type="button"
+                    className={
+                      draft.status === "pass"
+                        ? "check-status-btn is-pass is-active"
+                        : "check-status-btn is-pass"
+                    }
+                    onClick={() => setPassConfirm({ index, itemName: draft.itemName })}
+                  >
+                    ผ่าน
                   </button>
                 </div>
                 {draft.status === "fail" ? (
@@ -457,7 +485,12 @@ function CheckForm({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={draft.imageUrl} alt="หลักฐาน" className="check-fail-thumb" />
                     ) : null}
-                    <button type="button" className="ghost-btn" style={{ fontSize: "0.72rem" }} onClick={() => openFailModal(index)}>
+                    <button
+                      type="button"
+                      className="ghost-btn"
+                      style={{ fontSize: "0.72rem" }}
+                      onClick={() => openFailModal(index)}
+                    >
                       แก้ไขหมายเหตุ/รูป
                     </button>
                   </div>
@@ -468,12 +501,17 @@ function CheckForm({
         </section>
       ))}
 
-      <div className="check-submit-bar">
+      <div className="entry-actions module-form-actions">
         <button type="button" className="ghost-btn" onClick={() => setStep("setup")}>
           ย้อนกลับ
         </button>
-        <button type="button" className="primary-btn" disabled={busy} onClick={() => void onSubmit()}>
-          {busy ? "กำลังบันทึก..." : "ส่งผลตรวจ"}
+        <button
+          type="button"
+          className="primary-btn"
+          disabled={busy || pendingCount > 0}
+          onClick={() => void onSubmit()}
+        >
+          {busy ? "กำลังบันทึก..." : pendingCount > 0 ? `ค้าง ${pendingCount} รายการ` : "ส่งผลตรวจ"}
         </button>
       </div>
 
@@ -483,11 +521,11 @@ function CheckForm({
           remark={failModal.remark}
           preview={failModal.preview}
           fileRef={fileRef}
-          onRemarkChange={(remark) => setFailModal((m) => m ? { ...m, remark } : null)}
+          onRemarkChange={(remark) => setFailModal((m) => (m ? { ...m, remark } : null))}
           onImagePick={async (file) => {
             try {
               const url = await fileToReceiptDataUrl(file);
-              setFailModal((m) => m ? { ...m, preview: url } : null);
+              setFailModal((m) => (m ? { ...m, preview: url } : null));
             } catch (err) {
               onError((err as Error).message || "อัปโหลดรูปไม่สำเร็จ");
             }
@@ -496,7 +534,61 @@ function CheckForm({
           onSave={() => saveFailModal(failModal.preview)}
         />
       ) : null}
+
+      {passConfirm ? (
+        <PassConfirmModal
+          itemName={passConfirm.itemName}
+          onCancel={() => setPassConfirm(null)}
+          onConfirm={confirmPass}
+        />
+      ) : null}
     </>
+  );
+}
+
+function FormHead({ title, onClose }: { title: string; onClose: () => void }) {
+  return (
+    <div className="entry-toolbar module-form-head">
+      <h2 className="panel-title">{title}</h2>
+      <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" onClick={onClose}>
+        <X size={18} />
+      </button>
+    </div>
+  );
+}
+
+function PassConfirmModal({
+  itemName,
+  onCancel,
+  onConfirm,
+}: {
+  itemName: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="modal-backdrop alert-backdrop check-sub-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pass-confirm-title"
+      onClick={onCancel}
+    >
+      <div className="check-confirm-card" onClick={(e) => e.stopPropagation()}>
+        <h2 id="pass-confirm-title" className="panel-title" style={{ fontSize: "1rem" }}>
+          ยืนยัน &quot;ผ่าน&quot;
+        </h2>
+        <p className="muted check-hint">{itemName}</p>
+        <div className="btn-row">
+          <button type="button" className="ghost-btn" onClick={onCancel}>
+            ยกเลิก
+          </button>
+          <button type="button" className="primary-btn" onClick={onConfirm}>
+            ยืนยันผ่าน
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -520,8 +612,14 @@ function FailModal({
   onSave: () => void;
 }) {
   return (
-    <div className="check-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="fail-modal-title">
-      <div className="check-modal">
+    <div
+      className="modal-backdrop alert-backdrop check-sub-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="fail-modal-title"
+      onClick={onCancel}
+    >
+      <div className="check-confirm-card check-fail-modal" onClick={(e) => e.stopPropagation()}>
         <div className="check-modal-head">
           <h2 id="fail-modal-title" className="panel-title" style={{ fontSize: "1rem" }}>
             ไม่ผ่าน: {itemName}
@@ -707,7 +805,7 @@ function CheckSummary({
                       style={{ fontSize: "0.65rem", marginTop: "0.25rem" }}
                       onClick={() => void onDeleteSession(session.checkId)}
                     >
-                      ลบชุดนี้
+                      <Trash2 size={12} aria-hidden /> ลบชุดนี้
                     </button>
                   ) : null}
                 </>
@@ -719,7 +817,7 @@ function CheckSummary({
 
       {sessions.length ? (
         <section className="check-sheet-section">
-          <h2 className="check-section-title">ตารางบันทึก (แนวตั้ง)</h2>
+          <h2 className="check-section-title">ตารางบันทึก</h2>
           <div className="sheet-wrap">
             <table className="sheet-table check-records-table">
               <thead>
@@ -750,7 +848,9 @@ function CheckSummary({
                         {row.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={row.imageUrl} alt="" className="check-table-thumb" />
-                        ) : "—"}
+                        ) : (
+                          "—"
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -759,160 +859,8 @@ function CheckSummary({
           </div>
         </section>
       ) : (
-        <p className="empty">ยังไม่มีบันทึกวันนี้</p>
+        <p className="empty">ยังไม่มีบันทึกวันนี้ — กด + กรอก เพื่อเริ่มเช็ค</p>
       )}
-    </div>
-  );
-}
-
-function CheckSetup({
-  onReload,
-  onError,
-}: {
-  onReload: () => void;
-  onError: (msg: string) => void;
-}) {
-  const [items, setItems] = useState<ChecklistItem[]>([]);
-  const [name, setName] = useState("");
-  const [groupLabel, setGroupLabel] = useState("ทั่วไป");
-  const [busy, setBusy] = useState(false);
-  const [clearBusy, setClearBusy] = useState(false);
-  const [clearMsg, setClearMsg] = useState<string | null>(null);
-
-  async function reload() {
-    setItems(await listChecklistItems());
-  }
-
-  useEffect(() => {
-    void reload().catch((err) => onError((err as Error).message));
-  }, [onError]);
-
-  async function onAdd(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      await addChecklistItem(name, groupLabel);
-      setName("");
-      await reload();
-      onReload();
-    } catch (err) {
-      onError((err as Error).message || "เพิ่มไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function toggleActive(item: ChecklistItem) {
-    try {
-      await updateChecklistItem(item.id, { active: !item.active });
-      await reload();
-      onReload();
-    } catch (err) {
-      onError((err as Error).message || "อัปเดตไม่สำเร็จ");
-    }
-  }
-
-  async function onDelete(id: string) {
-    if (!window.confirm("ลบรายการนี้?")) return;
-    try {
-      await deleteChecklistItem(id);
-      await reload();
-      onReload();
-    } catch (err) {
-      onError((err as Error).message || "ลบไม่สำเร็จ");
-    }
-  }
-
-  async function onClearAllRecords() {
-    if (
-      !window.confirm(
-        "ลบบันทึกความพร้อมทั้งหมด? (รวมข้อมูลที่เคย import จาก CSV) — ไม่สามารถย้อนกลับ",
-      )
-    ) {
-      return;
-    }
-    if (!window.confirm("ยืนยันอีกครั้ง — ลบทุกรอบที่บันทึกไว้")) return;
-    setClearBusy(true);
-    setClearMsg(null);
-    try {
-      const n = await deleteAllChecklistRecords();
-      setClearMsg(n ? `ลบแล้ว ${n} แถว` : "ไม่มีบันทึกให้ลบ");
-    } catch (err) {
-      onError((err as Error).message || "ลบบันทึกไม่สำเร็จ");
-    } finally {
-      setClearBusy(false);
-    }
-  }
-
-  const groups = useMemo(() => {
-    const map = new Map<string, ChecklistItem[]>();
-    for (const item of items) {
-      const list = map.get(item.groupLabel) || [];
-      list.push(item);
-      map.set(item.groupLabel, list);
-    }
-    return [...map.entries()];
-  }, [items]);
-
-  return (
-    <div className="prod-setup">
-      <p className="muted" style={{ textAlign: "left", marginBottom: "0.75rem" }}>
-        ปรับแต่งรายการตรวจ SOP — พนักงานจะเห็นรายการที่เปิดใช้งานเท่านั้น
-      </p>
-
-      <form className="form-card entry-form" onSubmit={(e) => void onAdd(e)}>
-        <h2 className="panel-title" style={{ fontSize: "1rem" }}>เพิ่มรายการ</h2>
-        <div className="stock-form-grid">
-          <div className="field">
-            <label htmlFor="setup-name">ชื่อรายการ</label>
-            <input id="setup-name" value={name} onChange={(e) => setName(e.target.value)} required />
-          </div>
-          <div className="field">
-            <label htmlFor="setup-group">กลุ่ม</label>
-            <input id="setup-group" value={groupLabel} onChange={(e) => setGroupLabel(e.target.value)} />
-          </div>
-        </div>
-        <button type="submit" className="primary-btn" disabled={busy}>
-          <Plus size={16} aria-hidden /> {busy ? "กำลังเพิ่ม..." : "เพิ่มรายการ"}
-        </button>
-      </form>
-
-      {groups.map(([group, groupItems]) => (
-        <section key={group} className="check-setup-group">
-          <h3 className="check-group-title">{group}</h3>
-          <ul className="check-setup-list">
-            {groupItems.map((item) => (
-              <li key={item.id} className={item.active ? "list-row" : "list-row is-muted"}>
-                <span>{item.name}</span>
-                <div className="check-setup-actions">
-                  <button type="button" className="ghost-btn" onClick={() => void toggleActive(item)}>
-                    {item.active ? "ปิด" : "เปิด"}
-                  </button>
-                  <button type="button" className="ghost-btn icon-btn" aria-label="ลบ" onClick={() => void onDelete(item.id)}>
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-
-      <section className="form-card entry-form check-danger-zone">
-        <h2 className="panel-title" style={{ fontSize: "1rem" }}>เริ่มใหม่</h2>
-        <p className="muted check-hint">
-          ลบบันทึกความพร้อมทั้งหมด (รวมข้อมูลเก่าจาก CSV) — รายการตรวจ SOP ด้านบนยังอยู่
-        </p>
-        <button
-          type="button"
-          className="ghost-btn check-clear-records-btn"
-          disabled={clearBusy}
-          onClick={() => void onClearAllRecords()}
-        >
-          {clearBusy ? "กำลังลบ..." : "ลบบันทึกทั้งหมด"}
-        </button>
-        {clearMsg ? <p className="muted check-import-preview">{clearMsg}</p> : null}
-      </section>
     </div>
   );
 }
