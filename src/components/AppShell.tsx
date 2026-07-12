@@ -54,7 +54,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ? { href: "/check/", label: "เช็ค", icon: ClipboardCheck }
       : null,
     can(staff, "stock")
-      ? { href: "/stock/", label: "สต็อก", icon: Boxes }
+      ? { href: "/stock/", label: "คลัง", icon: Boxes }
       : null,
     hasAnyExtraPermission(staff)
       ? { href: "/more/", label: "อื่นๆ", icon: MoreHorizontal }

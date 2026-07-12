@@ -38,14 +38,22 @@ export type LedgerEntryInput = {
   receiptUrl?: string;
 };
 
-/** สต็อกเบาๆ — ของใช้ประจำร้าน ไม่ใช่คลังสินค้าเต็มระบบ */
+/** Perpetual inventory — วัตถุดิบร้าน (Products) */
 export type StockItem = {
   id: string;
+  /** item_name */
   name: string;
   unit: string;
+  /** current_stock */
   qty: number;
-  /** เตือนเมื่อเหลือไม่เกินจำนวนนี้ (0 = ไม่เตือน) */
+  /** reorder_point — เตือนเมื่อ qty ≤ ค่านี้ */
   minQty: number;
+  /** safety_stock — สต๊อกสำรอง */
+  safetyStock: number;
+  /** ราคาต่อหน่วย (บาท) — ใช้คำนวณมูลค่าคงคลัง */
+  unitCost: number;
+  /** บาร์โค้ดสำหรับสแกนค้นหา */
+  barcode?: string;
   note?: string;
   updatedAt: number;
   updatedBy: string;
@@ -56,6 +64,42 @@ export type StockItemInput = {
   unit: string;
   qty: number;
   minQty: number;
+  safetyStock?: number;
+  unitCost?: number;
+  barcode?: string;
   note?: string;
   updatedBy: string;
+};
+
+export type StockMovementType = "IN" | "OUT" | "ADJUST";
+
+/** ประวัติการขยับสต๊อก (Stock Movements) */
+export type StockMovement = {
+  id: string;
+  itemId: string;
+  itemName: string;
+  type: StockMovementType;
+  /** จำนวนที่ขยับ (เป็นบวกเสมอ) */
+  quantity: number;
+  /** ยอดก่อน / หลัง (ADJUST) */
+  qtyBefore?: number;
+  qtyAfter?: number;
+  date: number;
+  inspector: string;
+  remark: string;
+  createdAt: number;
+  createdBy: string;
+};
+
+export type StockMovementInput = {
+  itemId: string;
+  itemName: string;
+  type: StockMovementType;
+  quantity: number;
+  qtyBefore?: number;
+  qtyAfter?: number;
+  date: number;
+  inspector: string;
+  remark?: string;
+  createdBy: string;
 };

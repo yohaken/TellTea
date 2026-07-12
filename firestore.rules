@@ -79,7 +79,23 @@ service cloud.firestore {
       allow update: if hasPerm('stock')
         && request.resource.data.name is string
         && request.resource.data.qty is number
-        && request.resource.data.qty >= 0;
+        && request.resource.data.qty >= 0
+        && request.resource.data.minQty is number
+        && request.resource.data.minQty >= 0;
+    }
+
+    match /stockMovements/{logId} {
+      allow read: if hasPerm('stock');
+      allow create: if hasPerm('stock')
+        && request.resource.data.itemId is string
+        && request.resource.data.itemName is string
+        && request.resource.data.type in ['IN', 'OUT', 'ADJUST']
+        && request.resource.data.quantity is number
+        && request.resource.data.quantity > 0
+        && request.resource.data.date is number
+        && request.resource.data.inspector is string
+        && request.resource.data.createdBy == request.auth.token.email;
+      allow update, delete: if isOwner();
     }
 
     // ศูนย์รวมรายชื่อพนักงานร้าน — เพิ่มที่เดียว ใช้ร่วมหลายหมวด

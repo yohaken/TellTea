@@ -21,7 +21,7 @@ export type StaffPermissions = Record<PermissionKey, boolean>;
 
 export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   ledger: "บัญชีพนักงาน",
-  stock: "สต็อก",
+  stock: "คลังวัตถุดิบ",
   production: "ผลิต / โบนัสเบเกอรี่",
   otBonus: "โบนัส OT / ชง",
   checklist: "SmartCheck SOP",
