@@ -51,7 +51,7 @@ export default function ProductionPage() {
 }
 
 function ProductionView() {
-  const { user, staff } = useAuth();
+  const { actorId, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const [formOpen, setFormOpen] = useState(false);
@@ -145,7 +145,7 @@ function ProductionView() {
               entry={editing}
               products={activeProducts}
               workers={activeWorkers}
-              createdBy={user?.email || ""}
+              createdBy={actorId}
               onError={setError}
               onSaved={closeForm}
               onCancelEdit={closeForm}

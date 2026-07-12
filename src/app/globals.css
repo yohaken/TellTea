@@ -316,6 +316,43 @@ body.modal-open .main-panel {
   background: linear-gradient(180deg, transparent, rgba(243, 239, 228, 0.96) 28%);
 }
 
+.login-mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+  padding: 0.2rem;
+  border-radius: 0.65rem;
+  background: rgba(28, 42, 31, 0.06);
+}
+
+.login-mode-tab {
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  font: inherit;
+  font-weight: 600;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.login-mode-tab.active {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(28, 42, 31, 0.08);
+}
+
+.login-phone-panel {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.login-phone-panel .entry-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
 /* Mobile-first shell — full width on phones, fluid on larger screens */
 .phone-frame {
   width: min(100%, var(--shell-max));

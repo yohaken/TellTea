@@ -56,7 +56,7 @@ function toDateInput(ms: number) {
 }
 
 function OwnerBooksView() {
-  const { user, staff } = useAuth();
+  const { actorId, staff } = useAuth();
   const router = useRouter();
   const [entries, setEntries] = useState<OwnerBookEntry[]>([]);
   const [totalOut, setTotalOut] = useState<number | null>(null);
@@ -348,21 +348,21 @@ function OwnerBooksView() {
         </>
       ) : null}
 
-      {adding && user?.email ? (
+      {adding && actorId ? (
         <OwnerEntryModal
           mode="add"
-          createdBy={user.email}
+          createdBy={actorId}
           onClose={() => setAdding(false)}
           onSaved={() => setAdding(false)}
           onError={setError}
         />
       ) : null}
 
-      {editing && user?.email ? (
+      {editing && actorId ? (
         <OwnerEntryModal
           mode="edit"
           entry={editing}
-          createdBy={user.email}
+          createdBy={actorId}
           onClose={() => setEditing(null)}
           onSaved={() => setEditing(null)}
           onError={setError}

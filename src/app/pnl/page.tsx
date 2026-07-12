@@ -79,7 +79,7 @@ function CategoryTable({
 }
 
 function PnlView() {
-  const { user, staff } = useAuth();
+  const { actorId, staff } = useAuth();
   const router = useRouter();
   const [data, setData] = useState<PnlReportData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,14 +117,14 @@ function PnlView() {
   if (!can(staff, "pnl")) return null;
 
   async function onSaveIncome(month: string) {
-    if (!user?.email) return;
+    if (!actorId) return;
     setSavingMonth(month);
     setError(null);
     try {
       const raw = draftIncome[month] ?? "";
       const value = raw.trim() === "" ? 0 : Number(raw.replace(/,/g, ""));
       if (!Number.isFinite(value)) throw new Error("ตัวเลขไม่ถูกต้อง");
-      await saveMonthlyIncome(month, value, user.email);
+      await saveMonthlyIncome(month, value, actorId);
       await refresh();
     } catch (err) {
       setError((err as Error).message || "บันทึกรายได้ไม่สำเร็จ");

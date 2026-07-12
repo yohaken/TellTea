@@ -1,16 +1,38 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
+    function hasEmail() {
       return request.auth != null && request.auth.token.email != null;
     }
 
-    function email() {
-      return request.auth.token.email.lower();
+    function hasPhone() {
+      return request.auth != null && request.auth.token.phone_number != null;
+    }
+
+    function signedIn() {
+      return hasEmail() || hasPhone();
+    }
+
+    function authEmail() {
+      return hasEmail() ? request.auth.token.email.lower() : '';
+    }
+
+    function authPhone() {
+      return hasPhone() ? request.auth.token.phone_number : '';
+    }
+
+    function phoneDigits() {
+      return hasPhone() && authPhone().size() > 1 ? authPhone()[1:] : '';
+    }
+
+    function resolvedStaffId() {
+      return hasEmail()
+        ? authEmail()
+        : get(/databases/$(database)/documents/staffPhones/$(phoneDigits())).data.staffId;
     }
 
     function staffPath() {
-      return /databases/$(database)/documents/staff/$(email());
+      return /databases/$(database)/documents/staff/$(resolvedStaffId());
     }
 
     function isStaff() {
@@ -22,7 +44,11 @@ service cloud.firestore {
     }
 
     function isOwnerEmail() {
-      return signedIn() && email() == 'yohaken@gmail.com';
+      return hasEmail() && authEmail() == 'yohaken@gmail.com';
+    }
+
+    function actorId() {
+      return hasEmail() ? authEmail() : authPhone();
     }
 
     // Fine-grained permissions on staff doc; owners always pass.
@@ -40,8 +66,7 @@ service cloud.firestore {
     function staffSelfProfileUpdate() {
       let before = resource.data;
       let after = request.resource.data;
-      return after.email == before.email
-        && after.role == before.role
+      return after.role == before.role
         && after.createdAt == before.createdAt
         && after.diff(before).affectedKeys()
             .hasOnly(['displayName', 'employeeId', 'profileComplete', 'profileSnoozeUntil']);
@@ -50,38 +75,44 @@ service cloud.firestore {
     function employeeSelfLinkUpdate() {
       let before = resource.data;
       let after = request.resource.data;
-      return after.diff(before).affectedKeys().hasOnly(['linkedEmail', 'updatedAt'])
+      return after.diff(before).affectedKeys()
+            .hasOnly(['linkedEmail', 'linkedPhone', 'linkedStaffId', 'updatedAt'])
         && (
-          after.linkedEmail == email()
-          || (!after.keys().hasAny(['linkedEmail'])
-              && before.keys().hasAny(['linkedEmail'])
-              && before.linkedEmail == email())
+          (hasEmail() && after.linkedEmail == authEmail())
+          || (hasPhone() && after.linkedPhone == authPhone())
         )
         && (
-          !after.keys().hasAny(['linkedEmail'])
-          || !before.keys().hasAny(['linkedEmail'])
-          || before.linkedEmail == email()
+          !after.keys().hasAny(['linkedEmail', 'linkedPhone', 'linkedStaffId'])
+          || !before.keys().hasAny(['linkedEmail', 'linkedPhone', 'linkedStaffId'])
+          || (hasEmail() && before.linkedEmail == authEmail())
+          || (hasPhone() && before.linkedPhone == authPhone())
+          || (before.keys().hasAny(['linkedStaffId']) && before.linkedStaffId == resolvedStaffId())
         );
     }
 
-    match /staff/{staffEmail} {
-      allow get: if signedIn() && staffEmail == email();
+    match /staff/{staffId} {
+      allow get: if signedIn() && staffId == resolvedStaffId();
       allow list: if isOwner() || hasPerm('staffManage');
       allow create: if isOwner()
         || hasPerm('staffManage')
         || (isOwnerEmail()
-            && staffEmail == email()
-            && request.resource.data.email == email()
+            && staffId == authEmail()
+            && request.resource.data.email == authEmail()
             && request.resource.data.role == 'owner');
       allow update: if isOwner() || hasPerm('staffManage')
-        || (signedIn() && staffEmail == email() && staffSelfProfileUpdate());
+        || (signedIn() && staffId == resolvedStaffId() && staffSelfProfileUpdate());
       allow delete: if isOwner() || hasPerm('staffManage');
+    }
+
+    match /staffPhones/{phoneId} {
+      allow get: if signedIn() && phoneId == phoneDigits();
+      allow write: if isOwner() || hasPerm('staffManage');
     }
 
     match /ledger/{entryId} {
       allow read: if hasPerm('ledger');
       allow create: if hasPerm('ledger')
-        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.createdBy == actorId()
         && request.resource.data.description is string
         && request.resource.data.amountIn is number
         && request.resource.data.amountOut is number
@@ -123,7 +154,7 @@ service cloud.firestore {
         && request.resource.data.quantity > 0
         && request.resource.data.date is number
         && request.resource.data.inspector is string
-        && request.resource.data.createdBy == request.auth.token.email;
+        && request.resource.data.createdBy == actorId();
       allow update, delete: if isOwner();
     }
 
@@ -136,7 +167,7 @@ service cloud.firestore {
         && request.resource.data.month is int
         && request.resource.data.inspector is string
         && request.resource.data.submittedAt is number
-        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.createdBy == actorId()
         && request.resource.data.lines is list;
       allow delete: if isOwner();
     }
@@ -161,7 +192,7 @@ service cloud.firestore {
     match /prodEntries/{id} {
       allow read: if hasPerm('production');
       allow create: if hasPerm('production')
-        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.createdBy == actorId()
         && request.resource.data.productName is string
         && request.resource.data.qtyProduced is number
         && request.resource.data.qtyProduced > 0;
@@ -172,7 +203,7 @@ service cloud.firestore {
     match /otEntries/{id} {
       allow read: if hasPerm('otBonus');
       allow create: if hasPerm('otBonus')
-        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.createdBy == actorId()
         && request.resource.data.shift is string
         && request.resource.data.machineCount is number;
       allow update, delete: if hasPerm('otBonus');
@@ -186,7 +217,7 @@ service cloud.firestore {
     match /checklistRecords/{id} {
       allow read: if hasPerm('checklist');
       allow create: if hasPerm('checklist')
-        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.createdBy == actorId()
         && request.resource.data.checkId is string
         && request.resource.data.itemName is string
         && request.resource.data.status in ['pass', 'fail'];
@@ -211,14 +242,16 @@ service cloud.firestore {
     match /pushSubscriptions/{id} {
       allow read: if hasPerm('alerts');
       allow create, update: if hasPerm('alerts')
-        && request.resource.data.email == email()
+        && hasEmail()
+        && request.resource.data.email == authEmail()
         && request.resource.data.endpoint is string
         && request.resource.data.keys.keys().hasAll(['p256dh', 'auth']);
-      allow delete: if hasPerm('alerts') && resource.data.email == email();
+      allow delete: if hasPerm('alerts') && hasEmail() && resource.data.email == authEmail();
     }
 
     match /loginTickets/{ticketId} {
-      allow create: if signedIn()
+      allow create: if hasEmail()
+        && signedIn()
         && request.resource.data.keys().hasOnly(['idToken', 'createdAt', 'exp'])
         && request.resource.data.idToken is string
         && request.resource.data.idToken.size() > 20

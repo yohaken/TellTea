@@ -22,7 +22,7 @@ export function ChecklistSetup({
   onReload?: () => void;
   onError: (msg: string) => void;
 }) {
-  const { user } = useAuth();
+  const { actorId } = useAuth();
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [name, setName] = useState("");
   const [groupLabel, setGroupLabel] = useState("ทั่วไป");
@@ -125,7 +125,7 @@ export function ChecklistSetup({
         employees,
         {
           startDate: "2026-07-01",
-          createdBy: user?.email || "owner@telltea.local",
+          createdBy: actorId || "owner@telltea.local",
           skipExisting: true,
         },
         existingRecords,

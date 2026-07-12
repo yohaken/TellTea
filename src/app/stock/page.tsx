@@ -51,7 +51,7 @@ export default function StockPage() {
 }
 
 function StockView() {
-  const { user, staff } = useAuth();
+  const { actorId, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const canUseStock = can(staff, "stock");
@@ -67,10 +67,10 @@ function StockView() {
   }, [staff, router, canUseStock]);
 
   useEffect(() => {
-    if (!canUseStock || !user?.email) return;
+    if (!canUseStock || !actorId) return;
     setLoading(true);
     void Promise.all([
-      seedStockItemsIfEmpty(user.email),
+      seedStockItemsIfEmpty(actorId),
       listActiveEmployees().then(setEmployees),
     ])
       .catch((err) => setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ"))
@@ -88,7 +88,7 @@ function StockView() {
       unsubItems();
       unsubSessions();
     };
-  }, [canUseStock, user?.email]);
+  }, [canUseStock, actorId]);
 
   useBodyScrollLock(formOpen);
 
@@ -129,7 +129,7 @@ function StockView() {
             <StockCountForm
               items={items}
               employees={employees}
-              createdBy={user?.email || ""}
+              createdBy={actorId}
               onError={setError}
               onClose={() => setFormOpen(false)}
             />

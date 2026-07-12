@@ -31,8 +31,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         <AppBrand />
         <h1>ยังไม่มีสิทธิ์เข้าใช้งาน</h1>
         <p className="muted">
-          อีเมล <strong>{user?.email}</strong> ยังไม่อยู่ในรายชื่อพนักงาน
-          ให้เจ้าของร้านเพิ่มอีเมลนี้ในหน้าพนักงาน
+          บัญชี <strong>{user?.email || user?.phoneNumber || "นี้"}</strong> ยังไม่อยู่ในรายชื่อพนักงาน
+          ให้เจ้าของร้านเพิ่มอีเมลหรือเบอร์โทรในหน้าพนักงาน
         </p>
         {error ? <p className="error-text">{error}</p> : null}
         <div className="btn-row">

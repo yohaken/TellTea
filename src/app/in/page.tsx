@@ -17,7 +17,7 @@ export default function TransferInPage() {
 }
 
 function TransferInView() {
-  const { user, staff } = useAuth();
+  const { actorId, staff } = useAuth();
   const router = useRouter();
   const [date, setDate] = useState(todayInputValue());
   const [description, setDescription] = useState("โอนเข้า");
@@ -37,7 +37,7 @@ function TransferInView() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!user?.email) return;
+    if (!actorId) return;
     setBusy(true);
     setError(null);
     try {
@@ -47,7 +47,7 @@ function TransferInView() {
         amountIn: Number(amount),
         amountOut: 0,
         type: "โอนเข้า",
-        createdBy: user.email,
+        createdBy: actorId,
       });
       router.replace("/ledger/");
     } catch (err) {

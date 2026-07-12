@@ -186,7 +186,7 @@ export default function OtPage() {
 }
 
 function OtView() {
-  const { user, staff } = useAuth();
+  const { actorId, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const [formOpen, setFormOpen] = useState(false);
@@ -272,7 +272,7 @@ function OtView() {
               entry={editing}
               workers={workers}
               bonusRate={bonusRate}
-              createdBy={user?.email || ""}
+              createdBy={actorId}
               onError={setError}
               onSaved={closeForm}
               onCancelEdit={closeForm}

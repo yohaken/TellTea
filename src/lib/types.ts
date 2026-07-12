@@ -3,7 +3,11 @@ import type { StaffPermissions } from "./permissions";
 export type StaffRole = "owner" | "staff";
 
 export type StaffMember = {
-  email: string;
+  /** Firestore doc id — email หรือ p_66812345678 */
+  id: string;
+  email?: string;
+  /** E.164 เช่น +66812345678 */
+  phone?: string;
   role: StaffRole;
   displayName?: string;
   /** อ้างอิง employees/{id} — ชื่อในรoster ร้าน */

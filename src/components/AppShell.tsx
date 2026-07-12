@@ -38,7 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { staff, user, signOut } = useAuth();
   const isOwner = staff?.role === "owner";
-  const emailShort = user?.email?.split("@")[0] || "";
+  const emailShort = user?.email?.split("@")[0] || user?.phoneNumber?.slice(-4) || "";
   const userLabel = profileStatusLabel(staff) || emailShort;
   const roleLabel = isOwner ? "เจ้าของ" : "พนักงาน";
 
@@ -79,12 +79,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 href="/profile/"
                 className="topbar-email topbar-email-link"
-                title={user?.email || "โปรไฟล์พนักงาน"}
+                title={user?.email || user?.phoneNumber || "โปรไฟล์พนักงาน"}
               >
                 {userLabel}
               </Link>
             ) : (
-              <span className="topbar-email" title={user?.email || ""}>
+              <span className="topbar-email" title={user?.email || user?.phoneNumber || ""}>
                 {userLabel}
               </span>
             )}

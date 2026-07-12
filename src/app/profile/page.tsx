@@ -13,6 +13,7 @@ import {
 import { needsProfileSetup } from "@/lib/profile";
 import { updateStaffProfile } from "@/lib/staff";
 import { saveCachedStaff } from "@/lib/cache";
+import { formatPhoneDisplay, staffAccountLabel } from "@/lib/utils";
 
 export default function ProfilePage() {
   return (
@@ -32,17 +33,17 @@ function ProfileView() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const email = user?.email || staff?.email || "";
+  const accountLabel = staff ? staffAccountLabel(staff) : "";
   const isOwner = staff?.role === "owner";
   const selected = employees.find((e) => e.id === employeeId);
 
   useEffect(() => {
-    if (!email) return;
+    if (!staff) return;
     setLoading(true);
-    void listEmployeesForProfile(email)
+    void listEmployeesForProfile(staff)
       .then((rows) => {
         setEmployees(rows);
-        if (staff?.employeeId && rows.some((r) => r.id === staff.employeeId)) {
+        if (staff.employeeId && rows.some((r) => r.id === staff.employeeId)) {
           setEmployeeId(staff.employeeId);
         } else if (rows.length === 1) {
           setEmployeeId(rows[0]!.id);
@@ -50,11 +51,11 @@ function ProfileView() {
       })
       .catch((err) => setError((err as Error).message || "โหลดรายชื่อไม่สำเร็จ"))
       .finally(() => setLoading(false));
-  }, [email, staff?.employeeId]);
+  }, [staff]);
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
-    if (!staff || !email) return;
+    if (!staff) return;
     if (!employeeId || !selected) {
       setError("เลือกชื่อในรายชื่อร้าน");
       return;
@@ -62,8 +63,14 @@ function ProfileView() {
     setBusy(true);
     setError(null);
     try {
-      await linkEmployeeProfile(employeeId, email, selected.name);
-      const updated = await updateStaffProfile(email, {
+      await linkEmployeeProfile(
+        employeeId,
+        staff.id,
+        selected.name,
+        staff.email,
+        staff.phone,
+      );
+      const updated = await updateStaffProfile(staff.id, {
         displayName: selected.name,
         employeeId,
         profileComplete: true,
@@ -85,7 +92,7 @@ function ProfileView() {
       <div>
         <h1 className="panel-title">โปรไฟล์</h1>
         <p className="muted" style={{ textAlign: "left" }}>
-          บัญชีเจ้าของใช้ชื่อจาก Google: <strong>{staff?.displayName || email}</strong>
+          บัญชีเจ้าของใช้ชื่อจาก Google: <strong>{staff?.displayName || accountLabel}</strong>
         </p>
       </div>
     );
@@ -110,8 +117,16 @@ function ProfileView() {
         employees.length ? (
           <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
             <div className="field">
-              <label htmlFor="profile-email">บัญชี Google</label>
-              <input id="profile-email" value={email} readOnly />
+              <label htmlFor="profile-account">บัญชีที่ล็อกอิน</label>
+              <input
+                id="profile-account"
+                value={
+                  user?.phoneNumber
+                    ? formatPhoneDisplay(user.phoneNumber)
+                    : accountLabel
+                }
+                readOnly
+              />
             </div>
             <div className="field">
               <label htmlFor="profile-name">ชื่อในรายชื่อร้าน</label>
@@ -125,7 +140,7 @@ function ProfileView() {
                 {employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
                     {emp.name}
-                    {emp.linkedEmail && emp.linkedEmail !== email ? " (มีคนใช้แล้ว)" : ""}
+                    {emp.linkedStaffId && emp.linkedStaffId !== staff?.id ? " (มีคนใช้แล้ว)" : ""}
                   </option>
                 ))}
               </select>

@@ -14,15 +14,20 @@ function canUseStorage() {
   return typeof window !== "undefined";
 }
 
-export function loadCachedStaff(email: string): StaffMember | null {
+export function loadCachedStaff(staffId: string): StaffMember | null {
   if (!canUseStorage()) return null;
   try {
     const raw = window.localStorage.getItem(STAFF_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StaffMember & { cachedAt?: number };
-    if (!parsed?.email || parsed.email !== email) return null;
+    if (!parsed?.id) return null;
+    if (parsed.id !== staffId && parsed.email !== staffId && parsed.phone !== staffId) {
+      return null;
+    }
     return {
+      id: parsed.id,
       email: parsed.email,
+      phone: parsed.phone,
       role: parsed.role,
       displayName: parsed.displayName,
       employeeId: parsed.employeeId,

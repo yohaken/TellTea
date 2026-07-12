@@ -15,14 +15,20 @@ import {
   signInWithCredential,
   signInWithPopup,
   signOut as firebaseSignOut,
+  type ConfirmationResult,
   type User,
 } from "firebase/auth";
 import { deleteDoc, doc, getDoc } from "firebase/firestore";
 import { clearAppCaches, loadCachedStaff, saveCachedStaff } from "./cache";
 import { getDb, getFirebaseAuth, isFirebaseConfigured } from "./firebase";
-import { ensureOwnerBootstrap, getStaffMember } from "./staff";
+import { confirmPhoneOtp, resetPhoneRecaptcha, sendPhoneOtp } from "./phone-auth";
+import {
+  ensureOwnerBootstrap,
+  getStaffByPhone,
+  getStaffMemberById,
+} from "./staff";
 import type { StaffMember } from "./types";
-import { normalizeEmail } from "./utils";
+import { normalizeEmail, staffAccountLabel } from "./utils";
 
 type AuthStatus = "loading" | "signedOut" | "denied" | "ready" | "unconfigured";
 
@@ -30,8 +36,11 @@ type AuthContextValue = {
   status: AuthStatus;
   user: User | null;
   staff: StaffMember | null;
+  actorId: string;
   error: string | null;
   signIn: () => Promise<void>;
+  sendPhoneLoginOtp: (phone: string, recaptchaContainerId: string) => Promise<void>;
+  confirmPhoneLoginOtp: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshStaff: () => Promise<void>;
 };
@@ -68,6 +77,18 @@ function mapAuthError(error: unknown) {
   if (code === "auth/invalid-credential" || code === "auth/invalid-id-token") {
     return "โทเคนล็อกอินหมดอายุ — กดเข้าสู่ระบบอีกครั้ง";
   }
+  if (code === "auth/invalid-verification-code") {
+    return "รหัส OTP ไม่ถูกต้อง";
+  }
+  if (code === "auth/code-expired") {
+    return "รหัส OTP หมดอายุ — ขอรหัสใหม่";
+  }
+  if (code === "auth/too-many-requests") {
+    return "ลองบ่อยเกินไป — รอสักครู่แล้วลองใหม่";
+  }
+  if (code === "auth/captcha-check-failed") {
+    return "ยืนยันตัวตนไม่ผ่าน — รีเฟรชหน้าแล้วลองใหม่";
+  }
   if (code === "permission-denied") {
     return "อ่านสิทธิ์พนักงานไม่ได้ — ลองออกแล้วเข้าใหม่";
   }
@@ -75,15 +96,35 @@ function mapAuthError(error: unknown) {
 }
 
 function emailFromUser(user: User) {
-  return normalizeEmail(user.email || user.providerData?.[0]?.email || "");
+  const raw = user.email || user.providerData?.find((p) => p.email)?.email || "";
+  return raw ? normalizeEmail(raw) : "";
+}
+
+function cacheKeyFromUser(user: User): string | null {
+  const email = emailFromUser(user);
+  if (email) return email;
+  if (user.phoneNumber) return user.phoneNumber;
+  return null;
+}
+
+export function actorIdFromUser(user: User | null, staff: StaffMember | null): string {
+  if (user?.email) return normalizeEmail(user.email);
+  if (user?.phoneNumber) return user.phoneNumber;
+  if (staff) return staffAccountLabel(staff);
+  return "";
 }
 
 async function resolveStaff(user: User): Promise<StaffMember | null> {
   const email = emailFromUser(user);
-  if (!email) return null;
-  const bootstrapped = await ensureOwnerBootstrap(email, user.displayName);
-  if (bootstrapped) return bootstrapped;
-  return getStaffMember(email);
+  if (email) {
+    const bootstrapped = await ensureOwnerBootstrap(email, user.displayName);
+    if (bootstrapped) return bootstrapped;
+    return getStaffMemberById(email);
+  }
+  if (user.phoneNumber) {
+    return getStaffByPhone(user.phoneNumber);
+  }
+  return null;
 }
 
 function takeTicketFromUrl(): string | null {
@@ -126,6 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [staff, setStaff] = useState<StaffMember | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
 
   const refreshStaff = useCallback(async () => {
     if (!user) return;
@@ -163,7 +205,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     })();
 
-    // Don't leave mobile users stuck on "กำลังเตรียมระบบ..."
     const readyTimeout = window.setTimeout(() => {
       if (!cancelled && !bridgePending && !auth.currentUser) {
         setStatus((prev) => (prev === "loading" ? "signedOut" : prev));
@@ -182,6 +223,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!next) {
         if (bridgePending) return;
         clearAppCaches();
+        resetPhoneRecaptcha();
+        setPhoneConfirmation(null);
         setUser(null);
         setStaff(null);
         setStatus("signedOut");
@@ -190,10 +233,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(null);
       setUser(next);
 
-      const email = emailFromUser(next);
-      const cached = email ? loadCachedStaff(email) : null;
+      const cacheKey = cacheKeyFromUser(next);
+      const cached = cacheKey ? loadCachedStaff(cacheKey) : null;
       if (cached) {
-        // Trust last known staff role immediately — verify in background.
         setStaff(cached);
         setStatus("ready");
       } else {
@@ -213,8 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (err) {
         if (cancelled) return;
-        if (cached) {
-          // Keep trusting cache if network/staff read blips.
+        if (cached?.id) {
           setError(null);
           setStatus("ready");
           return;
@@ -259,14 +300,77 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const sendPhoneLoginOtp = useCallback(
+    async (phone: string, recaptchaContainerId: string) => {
+      if (!isFirebaseConfigured()) {
+        setError("Firebase ยังไม่ได้ตั้งค่า");
+        return;
+      }
+      setError(null);
+      try {
+        const confirmation = await sendPhoneOtp(phone, recaptchaContainerId);
+        setPhoneConfirmation(confirmation);
+      } catch (err) {
+        resetPhoneRecaptcha();
+        setError(mapAuthError(err));
+        throw err;
+      }
+    },
+    [],
+  );
+
+  const confirmPhoneLoginOtp = useCallback(
+    async (code: string) => {
+      if (!phoneConfirmation) {
+        setError("ขอรหัส OTP ก่อน");
+        return;
+      }
+      setError(null);
+      try {
+        await confirmPhoneOtp(phoneConfirmation, code);
+        setPhoneConfirmation(null);
+      } catch (err) {
+        setError(mapAuthError(err));
+        throw err;
+      }
+    },
+    [phoneConfirmation],
+  );
+
   const signOut = useCallback(async () => {
     clearAppCaches();
+    resetPhoneRecaptcha();
+    setPhoneConfirmation(null);
     await firebaseSignOut(getFirebaseAuth());
   }, []);
 
+  const actorId = actorIdFromUser(user, staff);
+
   const value = useMemo(
-    () => ({ status, user, staff, error, signIn, signOut, refreshStaff }),
-    [status, user, staff, error, signIn, signOut, refreshStaff],
+    () => ({
+      status,
+      user,
+      staff,
+      actorId,
+      error,
+      signIn,
+      sendPhoneLoginOtp,
+      confirmPhoneLoginOtp,
+      signOut,
+      refreshStaff,
+    }),
+    [
+      status,
+      user,
+      staff,
+      actorId,
+      error,
+      signIn,
+      sendPhoneLoginOtp,
+      confirmPhoneLoginOtp,
+      signOut,
+      refreshStaff,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

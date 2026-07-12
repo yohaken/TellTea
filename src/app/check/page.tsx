@@ -76,7 +76,7 @@ export default function CheckPage() {
 }
 
 function CheckView() {
-  const { user, staff } = useAuth();
+  const { actorId, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const [formOpen, setFormOpen] = useState(false);
@@ -151,7 +151,7 @@ function CheckView() {
         emps,
         {
           startDate: "2026-07-01",
-          createdBy: user?.email || "owner@telltea.local",
+          createdBy: actorId || "owner@telltea.local",
           skipExisting: true,
         },
         summarizeExistingSessions(records),
@@ -212,7 +212,7 @@ function CheckView() {
               key={formOpen ? "open" : "closed"}
               items={items}
               employees={employees}
-              createdBy={user?.email || ""}
+              createdBy={actorId}
               onError={setError}
               onClose={closeForm}
             />

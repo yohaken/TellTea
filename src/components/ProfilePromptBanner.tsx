@@ -17,7 +17,7 @@ export function ProfilePromptBanner() {
 
   async function snooze() {
     if (!staff) return;
-    await updateStaffProfile(staff.email, { profileSnoozeUntil: profileSnoozeUntilNow() });
+    await updateStaffProfile(staff.id, { profileSnoozeUntil: profileSnoozeUntilNow() });
     await refreshStaff();
   }
 

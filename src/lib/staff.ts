@@ -12,32 +12,71 @@ import {
 } from "firebase/firestore";
 import { getDb, OWNER_EMAIL } from "./firebase";
 import type { StaffMember, StaffRole } from "./types";
-import { normalizeEmail } from "./utils";
+import {
+  normalizeEmail,
+  normalizePhone,
+  phoneDigitsFromE164,
+  phoneDocId,
+} from "./utils";
 import {
   normalizePermissions,
   type StaffPermissions,
 } from "./permissions";
 import {
-  clearEmployeeLinkByEmail,
+  clearEmployeeLinkByStaffId,
   linkEmployeeProfile,
   listActiveEmployees,
 } from "./employees";
 
-function staffRef(email: string) {
-  return doc(getDb(), "staff", normalizeEmail(email));
+function staffRef(staffId: string) {
+  return doc(getDb(), "staff", staffId);
 }
 
-function mapStaff(data: StaffMember): StaffMember {
+function staffPhoneRef(phone: string) {
+  return doc(getDb(), "staffPhones", phoneDigitsFromE164(phone));
+}
+
+function mapStaff(staffId: string, data: StaffMember): StaffMember {
   return {
     ...data,
+    id: staffId,
     permissions: normalizePermissions(data.permissions, data.role),
   };
 }
 
-export async function getStaffMember(email: string): Promise<StaffMember | null> {
-  const snap = await getDoc(staffRef(email));
+export function resolveStaffDocId(input: { email?: string; phone?: string }): string {
+  if (input.email) return normalizeEmail(input.email);
+  if (input.phone) return phoneDocId(input.phone);
+  throw new Error("ต้องใส่อีเมลหรือเบอร์โทรอย่างน้อยหนึ่งอย่าง");
+}
+
+async function syncStaffPhoneIndex(staffId: string, phone?: string | null): Promise<void> {
+  if (!phone) return;
+  await setDoc(staffPhoneRef(phone), { staffId });
+}
+
+async function clearStaffPhoneIndex(phone?: string): Promise<void> {
+  if (!phone) return;
+  await deleteDoc(staffPhoneRef(phone)).catch(() => undefined);
+}
+
+export async function getStaffMemberById(staffId: string): Promise<StaffMember | null> {
+  const snap = await getDoc(staffRef(staffId));
   if (!snap.exists()) return null;
-  return mapStaff(snap.data() as StaffMember);
+  return mapStaff(staffId, snap.data() as StaffMember);
+}
+
+/** @deprecated use getStaffMemberById — kept for email-keyed callers */
+export async function getStaffMember(email: string): Promise<StaffMember | null> {
+  return getStaffMemberById(normalizeEmail(email));
+}
+
+export async function getStaffByPhone(phone: string): Promise<StaffMember | null> {
+  const index = await getDoc(staffPhoneRef(phone));
+  if (!index.exists()) return null;
+  const staffId = (index.data() as { staffId?: string }).staffId;
+  if (!staffId) return null;
+  return getStaffMemberById(staffId);
 }
 
 /** First owner bootstrap: create owner doc if signing in as configured owner. */
@@ -46,7 +85,7 @@ export async function ensureOwnerBootstrap(
   displayName?: string | null,
 ): Promise<StaffMember | null> {
   const normalized = normalizeEmail(email);
-  const existing = await getStaffMember(normalized);
+  const existing = await getStaffMemberById(normalized);
   if (existing) return existing;
 
   if (normalized !== OWNER_EMAIL) {
@@ -54,6 +93,7 @@ export async function ensureOwnerBootstrap(
   }
 
   const member: StaffMember = {
+    id: normalized,
     email: normalized,
     role: "owner",
     displayName: displayName || undefined,
@@ -67,84 +107,113 @@ export async function ensureOwnerBootstrap(
 
 export async function listStaff(): Promise<StaffMember[]> {
   const snap = await getDocs(query(collection(getDb(), "staff"), orderBy("createdAt", "asc")));
-  return snap.docs.map((d) => mapStaff(d.data() as StaffMember));
+  return snap.docs.map((d) => mapStaff(d.id, d.data() as StaffMember));
 }
 
-/** Create or update account — preserves profile fields (employeeId, profileComplete, etc.). */
+export type StaffAccountInput = {
+  email?: string;
+  phone?: string;
+  role: StaffRole;
+  permissions?: Partial<StaffPermissions>;
+  displayName?: string;
+  employeeId?: string;
+};
+
+/** Create or update account — preserves profile fields. */
+export async function upsertStaffAccount(input: StaffAccountInput): Promise<string> {
+  const email = input.email?.trim() ? normalizeEmail(input.email) : undefined;
+  const phone = input.phone?.trim() ? normalizePhone(input.phone) : undefined;
+  if (!email && !phone) throw new Error("ต้องใส่อีเมลหรือเบอร์โทรอย่างน้อยหนึ่งอย่าง");
+
+  const staffId = resolveStaffDocId({ email, phone });
+  const existing = await getStaffMemberById(staffId);
+
+  const patch: Record<string, unknown> = {
+    role: input.role,
+    permissions: normalizePermissions(input.permissions ?? existing?.permissions, input.role),
+  };
+  if (email) patch.email = email;
+  if (phone) patch.phone = phone;
+  if (input.displayName !== undefined) {
+    patch.displayName = input.displayName || deleteField();
+  }
+  if (!existing) {
+    patch.createdAt = Date.now();
+  }
+
+  if (phone && existing?.phone && existing.phone !== phone) {
+    await clearStaffPhoneIndex(existing.phone);
+  }
+
+  await setDoc(staffRef(staffId), patch, { merge: true });
+  if (phone) await syncStaffPhoneIndex(staffId, phone);
+
+  return staffId;
+}
+
+/** @deprecated use upsertStaffAccount */
 export async function upsertStaff(
   email: string,
   role: StaffRole,
   permissions?: Partial<StaffPermissions>,
   displayName?: string,
 ): Promise<void> {
-  const normalized = normalizeEmail(email);
-  const existing = await getStaffMember(normalized);
-  const patch: Record<string, unknown> = {
-    email: normalized,
-    role,
-    permissions: normalizePermissions(permissions ?? existing?.permissions, role),
-  };
-  if (displayName !== undefined) {
-    patch.displayName = displayName || deleteField();
-  }
-  if (!existing) {
-    patch.createdAt = Date.now();
-  }
-  await setDoc(staffRef(normalized), patch, { merge: true });
+  await upsertStaffAccount({ email, role, permissions, displayName });
 }
 
-/** Update permissions only — does not touch profile link fields. */
 export async function updateStaffPermissions(
-  email: string,
+  staffId: string,
   permissions: Partial<StaffPermissions>,
 ): Promise<void> {
-  const normalized = normalizeEmail(email);
-  const existing = await getStaffMember(normalized);
+  const existing = await getStaffMemberById(staffId);
   if (!existing) throw new Error("ไม่พบบัญชีพนักงาน");
-  await updateDoc(staffRef(normalized), {
+  await updateDoc(staffRef(staffId), {
     permissions: normalizePermissions(permissions, existing.role),
   });
 }
 
-/** Owner adds/updates account and optionally links to roster name at creation. */
-export async function upsertStaffWithLink(
-  email: string,
-  role: StaffRole,
-  permissions?: Partial<StaffPermissions>,
-  employeeId?: string,
-): Promise<void> {
-  const normalized = normalizeEmail(email);
-  const existing = await getStaffMember(normalized);
+/** Owner adds/updates account and optionally links to roster name. */
+export async function upsertStaffWithLink(input: StaffAccountInput): Promise<string> {
+  const email = input.email?.trim() ? normalizeEmail(input.email) : undefined;
+  const phone = input.phone?.trim() ? normalizePhone(input.phone) : undefined;
+  const staffId = resolveStaffDocId({ email, phone });
 
-  if (role === "staff" && employeeId) {
+  if (input.role === "staff" && input.employeeId) {
     const employees = await listActiveEmployees();
-    const emp = employees.find((e) => e.id === employeeId);
+    const emp = employees.find((e) => e.id === input.employeeId);
     if (!emp) throw new Error("ไม่พบชื่อในรายชื่อร้าน");
-    if (emp.linkedEmail && normalizeEmail(emp.linkedEmail) !== normalized) {
+    if (emp.linkedStaffId && emp.linkedStaffId !== staffId) {
       throw new Error("ชื่อนี้มีคนเชื่อมบัญชีแล้ว");
     }
-    await upsertStaff(email, role, permissions, emp.name);
-    await linkEmployeeProfile(employeeId, normalized, emp.name);
-    await updateStaffProfile(normalized, {
+    await upsertStaffAccount({
+      ...input,
+      email,
+      phone,
       displayName: emp.name,
-      employeeId,
+    });
+    await linkEmployeeProfile(input.employeeId, staffId, emp.name, email, phone);
+    await updateStaffProfile(staffId, {
+      displayName: emp.name,
+      employeeId: input.employeeId,
       profileComplete: true,
       profileSnoozeUntil: null,
     });
-    return;
+    return staffId;
   }
 
-  if (!existing) {
-    await upsertStaff(email, role, permissions);
-    return;
-  }
-
-  await upsertStaff(email, role, permissions);
+  return upsertStaffAccount({ ...input, email, phone });
 }
 
+export async function removeStaffById(staffId: string): Promise<void> {
+  const existing = await getStaffMemberById(staffId);
+  await clearEmployeeLinkByStaffId(staffId);
+  if (existing?.phone) await clearStaffPhoneIndex(existing.phone);
+  await deleteDoc(staffRef(staffId));
+}
+
+/** @deprecated use removeStaffById */
 export async function removeStaff(email: string): Promise<void> {
-  await clearEmployeeLinkByEmail(email);
-  await deleteDoc(staffRef(email));
+  await removeStaffById(normalizeEmail(email));
 }
 
 export type StaffProfilePatch = {
@@ -155,11 +224,10 @@ export type StaffProfilePatch = {
 };
 
 export async function updateStaffProfile(
-  email: string,
+  staffId: string,
   patch: StaffProfilePatch,
 ): Promise<StaffMember> {
-  const normalized = normalizeEmail(email);
-  const existing = await getStaffMember(normalized);
+  const existing = await getStaffMemberById(staffId);
   if (!existing) throw new Error("ไม่พบบัญชีพนักงาน");
 
   const next: Record<string, unknown> = {};
@@ -179,8 +247,8 @@ export async function updateStaffProfile(
       patch.profileSnoozeUntil == null ? deleteField() : patch.profileSnoozeUntil;
   }
 
-  await updateDoc(staffRef(normalized), next);
-  const updated = await getStaffMember(normalized);
+  await updateDoc(staffRef(staffId), next);
+  const updated = await getStaffMemberById(staffId);
   if (!updated) throw new Error("อัปเดตโปรไฟล์ไม่สำเร็จ");
   return updated;
 }

@@ -8,13 +8,15 @@ import { useAuth } from "@/lib/auth";
 import {
   addEmployee,
   deleteEmployee,
+  employeeLinkLabel,
+  employeesForLink,
   listEmployees,
   updateEmployee,
   type Employee,
 } from "@/lib/employees";
 import {
   listStaff,
-  removeStaff,
+  removeStaffById,
   updateStaffPermissions,
   updateStaffProfile,
   upsertStaffWithLink,
@@ -26,7 +28,7 @@ import {
   normalizePermissions,
   type StaffPermissions,
 } from "@/lib/permissions";
-import { normalizeEmail } from "@/lib/utils";
+import { formatPhoneDisplay, staffAccountLabel } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
 
 export default function StaffPage() {
@@ -37,22 +39,14 @@ export default function StaffPage() {
   );
 }
 
-function employeesForLink(employees: Employee[], email: string): Employee[] {
-  const norm = normalizeEmail(email);
-  return employees.filter(
-    (e) => e.active && (!e.linkedEmail || normalizeEmail(e.linkedEmail) === norm),
-  );
-}
-
 function rosterLinkLabel(emp: Employee): string {
-  if (!emp.linkedEmail) return "ยังไม่มีบัญชี";
-  return `เชื่อม ${emp.linkedEmail} ✓`;
+  return employeeLinkLabel(emp);
 }
 
 function memberLinkLabel(member: StaffMember, employees: Employee[]): string {
   const emp = member.employeeId
     ? employees.find((e) => e.id === member.employeeId)
-    : employees.find((e) => e.linkedEmail && normalizeEmail(e.linkedEmail) === normalizeEmail(member.email));
+    : employees.find((e) => e.linkedStaffId === member.id);
   if (emp) return `→ ${emp.name} ✓`;
   if (member.profileComplete && member.displayName) return `→ ${member.displayName} ✓`;
   return "ยังไม่เชื่อมชื่อ";
@@ -65,13 +59,14 @@ function StaffView() {
   const [members, setMembers] = useState<StaffMember[]>([]);
   const [empName, setEmpName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [linkEmployeeId, setLinkEmployeeId] = useState("");
   const [perms, setPerms] = useState<StaffPermissions>({ ...DEFAULT_STAFF_PERMISSIONS });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [editingEmail, setEditingEmail] = useState<string | null>(null);
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
 
-  const linkOptions = employeesForLink(employees, email);
+  const linkOptions = employeesForLink(employees);
 
   async function reload() {
     const [emps, staffList] = await Promise.all([listEmployees(), listStaff()]);
@@ -111,16 +106,22 @@ function StaffView() {
 
   async function onSubmitAccount(e: FormEvent) {
     e.preventDefault();
+    if (!email.trim() && !phone.trim()) {
+      setError("ใส่อีเมล Google หรือเบอร์โทรอย่างน้อยหนึ่งอย่าง");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      await upsertStaffWithLink(
-        email,
-        "staff",
-        perms,
-        linkEmployeeId || undefined,
-      );
+      await upsertStaffWithLink({
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+        role: "staff",
+        permissions: perms,
+        employeeId: linkEmployeeId || undefined,
+      });
       setEmail("");
+      setPhone("");
       setLinkEmployeeId("");
       setPerms({ ...DEFAULT_STAFF_PERMISSIONS });
       await reload();
@@ -133,15 +134,16 @@ function StaffView() {
   }
 
   async function onDeleteEmployee(emp: Employee) {
-    const msg = emp.linkedEmail
-      ? `ลบ "${emp.name}"? บัญชี ${emp.linkedEmail} จะต้องตั้งโปรไฟล์ใหม่`
+    const linked = emp.linkedEmail || emp.linkedPhone || emp.linkedStaffId;
+    const msg = linked
+      ? `ลบ "${emp.name}"? บัญชีที่เชื่อมจะต้องตั้งโปรไฟล์ใหม่`
       : `ลบ "${emp.name}" จากรายชื่อร้าน?`;
     if (!window.confirm(msg)) return;
     setBusy(true);
     setError(null);
     try {
-      if (emp.linkedEmail) {
-        await updateStaffProfile(emp.linkedEmail, {
+      if (emp.linkedStaffId) {
+        await updateStaffProfile(emp.linkedStaffId, {
           employeeId: null,
           profileComplete: false,
           displayName: null,
@@ -160,10 +162,10 @@ function StaffView() {
     setBusy(true);
     setError(null);
     try {
-      await updateStaffPermissions(member.email, next);
+      await updateStaffPermissions(member.id, next);
       await reload();
       await refreshStaff();
-      setEditingEmail(null);
+      setEditingStaffId(null);
     } catch (err) {
       setError((err as Error).message || "บันทึกสิทธิ์ไม่สำเร็จ");
     } finally {
@@ -226,18 +228,28 @@ function StaffView() {
           ขั้นที่ 2 — บัญชีเข้าใช้ระบบ
         </h2>
         <p className="muted" style={{ textAlign: "left", marginBottom: "0.65rem", fontSize: "0.85rem" }}>
-          อีเมล Google + สิทธิ์หน้าจอ · เลือกชื่อในร้านเพื่อเชื่อมทันที (ไม่บังคับ)
+          อีเมล Google หรือเบอร์โทร (อย่างน้อยหนึ่งอย่าง) + สิทธิ์หน้าจอ · เลือกชื่อในร้านเพื่อเชื่อมทันที (ไม่บังคับ)
         </p>
         <form className="form-card entry-form" onSubmit={(e) => void onSubmitAccount(e)}>
           <div className="field">
-            <label htmlFor="email">อีเมล Google</label>
+            <label htmlFor="email">อีเมล Google (ถ้ามี)</label>
             <input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="staff@gmail.com"
-              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="phone">เบอร์โทร (ถ้ามี)</label>
+            <input
+              id="phone"
+              type="tel"
+              inputMode="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="0812345678"
             />
           </div>
           <div className="field">
@@ -266,16 +278,19 @@ function StaffView() {
 
         <div className="list-card" style={{ marginTop: "1rem" }}>
           {members.map((member) => {
-            const isSelf = normalizeEmail(member.email) === normalizeEmail(staff!.email);
-            const editing = editingEmail === member.email;
+            const isSelf = member.id === staff!.id;
+            const editing = editingStaffId === member.id;
             const memberPerms = normalizePermissions(member.permissions, member.role);
             return (
-              <div key={member.email} className="list-row" style={{ flexDirection: "column", alignItems: "stretch", gap: "0.55rem" }}>
+              <div key={member.id} className="list-row" style={{ flexDirection: "column", alignItems: "stretch", gap: "0.55rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "center" }}>
                   <div>
-                    <strong>{member.email}</strong>
+                    <strong>{staffAccountLabel(member)}</strong>
                     <div className="muted">
                       {member.role === "owner" ? "เจ้าของ" : "พนักงาน"}
+                      {member.email && member.phone
+                        ? ` · ${formatPhoneDisplay(member.phone)}`
+                        : ""}
                       {member.role === "staff"
                         ? ` · ${memberLinkLabel(member, employees)}`
                         : member.displayName
@@ -288,7 +303,7 @@ function StaffView() {
                       <button
                         type="button"
                         className="ghost-btn"
-                        onClick={() => setEditingEmail(editing ? null : member.email)}
+                        onClick={() => setEditingStaffId(editing ? null : member.id)}
                       >
                         {editing ? "ปิด" : "สิทธิ์"}
                       </button>
@@ -299,9 +314,9 @@ function StaffView() {
                         className="danger-btn"
                         disabled={busy}
                         onClick={() => {
-                          if (!window.confirm(`ลบบัญชี ${member.email}?`)) return;
+                          if (!window.confirm(`ลบบัญชี ${staffAccountLabel(member)}?`)) return;
                           setBusy(true);
-                          void removeStaff(member.email)
+                          void removeStaffById(member.id)
                             .then(reload)
                             .then(refreshStaff)
                             .catch((err) => setError(err.message || "ลบไม่สำเร็จ"))

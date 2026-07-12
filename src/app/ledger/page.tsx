@@ -52,7 +52,7 @@ export default function LedgerPage() {
 }
 
 function LedgerView() {
-  const { user, staff } = useAuth();
+  const { actorId, staff } = useAuth();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -294,18 +294,18 @@ function LedgerView() {
         />
       ) : null}
 
-      {adding === "out" && user?.email ? (
+      {adding === "out" && actorId ? (
         <AddOutModal
-          createdBy={user.email}
+          createdBy={actorId}
           onClose={() => setAdding(null)}
           onSaved={() => setAdding(null)}
           onError={setError}
         />
       ) : null}
 
-      {adding === "in" && user?.email && canTransferIn ? (
+      {adding === "in" && actorId && canTransferIn ? (
         <AddInModal
-          createdBy={user.email}
+          createdBy={actorId}
           onClose={() => setAdding(null)}
           onSaved={() => setAdding(null)}
           onError={setError}

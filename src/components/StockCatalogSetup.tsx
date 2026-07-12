@@ -24,8 +24,8 @@ function monthInputValue(date = new Date()) {
 }
 
 export function StockCatalogSetup({ onError }: { onError: (msg: string) => void }) {
-  const { user } = useAuth();
-  const userEmail = user?.email || "";
+  const { actorId } = useAuth();
+  const userEmail = actorId;
   const [items, setItems] = useState<StockItem[]>([]);
   const [name, setName] = useState("");
   const [unit, setUnit] = useState("ชิ้น");
