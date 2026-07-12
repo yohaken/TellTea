@@ -270,14 +270,6 @@ service cloud.firestore {
       allow write: if isOwner();
     }
 
-    // รายจ่าย & งานรายวัน — เฟส 1: เจ้าของเท่านั้น
-    match /opsExpenses/{id} {
-      allow read, write: if isOwner();
-    }
-    match /opsTasks/{id} {
-      allow read, write: if isOwner();
-    }
-
     match /meta/{docId} {
       allow read: if isStaff();
       allow write: if isOwner()
