@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownLeft, Bell, BookMarked, FileSpreadsheet, Users } from "lucide-react";
+import { ArrowDownLeft, Bell, BookMarked, ChartColumn, FileSpreadsheet, Users } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 
@@ -27,9 +27,15 @@ function MoreView() {
 
   const tools = [
     {
+      href: "/pnl/",
+      title: "สรุปรายเดือน",
+      desc: "แยกบช. → รวม → กำไรขาดทุน · income กรอกเอง",
+      icon: ChartColumn,
+    },
+    {
       href: "/owner-books/",
       title: "บัญชีเจ้าของ",
-      desc: "บช.ส่วนตัวเจ้าของร้าน — เฉพาะเจ้าของเห็น · ยังไม่มีข้อมูล",
+      desc: "บช.ส่วนตัวเจ้าของร้าน — เฉพาะเจ้าของเห็น",
       icon: BookMarked,
     },
     {

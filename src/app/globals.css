@@ -1215,3 +1215,77 @@ textarea {
     width: min(calc(100% - 2rem), calc(var(--shell-max) - 2rem));
   }
 }
+
+/* Owner monthly P&L report */
+.pnl-section {
+  margin-bottom: 1.25rem;
+}
+
+.pnl-section-title {
+  margin: 0 0 0.55rem;
+  font-size: 1rem;
+}
+
+.pnl-split {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 720px) {
+  .pnl-split {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.pnl-block-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.pnl-staff .pnl-block-title {
+  color: #9a3412;
+}
+
+.pnl-owner .pnl-block-title {
+  color: #1e4d6b;
+}
+
+.pnl-combined .pnl-block-title {
+  color: #854d0e;
+}
+
+.pnl-table {
+  min-width: 0;
+  font-size: 0.78rem;
+}
+
+.pnl-table .col-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.pnl-scroll {
+  overflow-x: auto;
+}
+
+.pnl-wide {
+  min-width: 860px;
+}
+
+.pnl-income-cell {
+  min-width: 5.5rem;
+}
+
+.pnl-income-input {
+  width: 100%;
+  min-height: 2rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--tea-line);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 0.25rem 0.35rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+}

@@ -59,6 +59,11 @@ service cloud.firestore {
       allow read, write: if isOwner();
     }
 
+    // รายได้รายเดือนกรอกเอง (สำหรับสรุป P&L)
+    match /monthlyIncome/{monthId} {
+      allow read, write: if isOwner();
+    }
+
     match /stock/{itemId} {
       allow read: if isStaff();
       allow create, delete: if isOwner();

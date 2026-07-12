@@ -8,6 +8,7 @@ import {
   BookMarked,
   BookOpen,
   Boxes,
+  ChartColumn,
   FileSpreadsheet,
   LogOut,
   MoreHorizontal,
@@ -28,6 +29,7 @@ const dailyLinks = [
 
 /** เครื่องมือเจ้าของ — ช่วงเทสเจ้าของเข้าได้หมด */
 const ownerLinks = [
+  { href: "/pnl/", label: "สรุป", icon: ChartColumn },
   { href: "/owner-books/", label: "บช.เจ้าของ", icon: BookMarked },
   { href: "/alerts/", label: "แจ้งเตือน", icon: MoreHorizontal },
   { href: "/in/", label: "โอนเข้า", icon: ArrowDownLeft },

@@ -173,3 +173,11 @@ export async function deleteOwnerBookEntry(id: string): Promise<void> {
   await deleteDoc(doc(getDb(), "ownerBooks", id));
   await recomputeOwnerBooksTotal();
 }
+
+/** Full scan for owner reports (P&L). */
+export async function listOwnerBookEntries(): Promise<OwnerBookEntry[]> {
+  const snap = await getDocs(
+    query(ownerBooksCol(), orderBy("date", "asc"), orderBy("createdAt", "asc")),
+  );
+  return snap.docs.map(mapEntry);
+}
