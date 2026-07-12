@@ -10,6 +10,7 @@ import {
 import { useRouter } from "next/navigation";
 import { Coffee, LayoutGrid, Table2, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
+import { ModuleTabDock, type ModuleTab } from "@/components/ModuleTabDock";
 import { useAuth } from "@/lib/auth";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
@@ -36,7 +37,7 @@ import {
   todayInputValue,
 } from "@/lib/utils";
 
-type Tab = "form" | "table" | "setup";
+type Tab = ModuleTab;
 type TableView = "sheet" | "cards";
 
 const SHIFT_ORDER: Record<OtShiftId, number> = {
@@ -138,7 +139,7 @@ function OtView() {
   const { user, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
-  const [tab, setTab] = useState<Tab>("form");
+  const [tab, setTab] = useState<Tab>("table");
   const [entries, setEntries] = useState<OtEntry[]>([]);
   const [workers, setWorkers] = useState<Employee[]>([]);
   const [bonusRate, setBonusRate] = useState(0.6);
@@ -172,50 +173,24 @@ function OtView() {
     return unsub;
   }, [staff]);
 
+  useEffect(() => {
+    if (tab === "setup" && !isOwner) setTab("table");
+  }, [tab, isOwner]);
+
   if (!can(staff, "otBonus")) return null;
 
+  function selectTab(next: Tab) {
+    if (next === "form") setEditing(null);
+    setTab(next);
+  }
+
   return (
-    <div>
-      <div className="entry-toolbar" style={{ position: "static", paddingTop: 0 }}>
-        <h1 className="panel-title" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-          <Coffee size={20} aria-hidden />
+    <div className="module-page">
+      <div className="module-page-head">
+        <h1 className="panel-title module-page-title">
+          <Coffee size={18} aria-hidden />
           โบนัส OT / ชง
         </h1>
-      </div>
-
-      <div className="prod-tabs" role="tablist" aria-label="มุมมอง OT">
-        <button
-          type="button"
-          role="tab"
-          className={tab === "form" ? "prod-tab is-active" : "prod-tab"}
-          aria-selected={tab === "form"}
-          onClick={() => {
-            setTab("form");
-            setEditing(null);
-          }}
-        >
-          กรอก
-        </button>
-        <button
-          type="button"
-          role="tab"
-          className={tab === "table" ? "prod-tab is-active" : "prod-tab"}
-          aria-selected={tab === "table"}
-          onClick={() => setTab("table")}
-        >
-          ตาราง
-        </button>
-        {isOwner ? (
-          <button
-            type="button"
-            role="tab"
-            className={tab === "setup" ? "prod-tab is-active" : "prod-tab"}
-            aria-selected={tab === "setup"}
-            onClick={() => setTab("setup")}
-          >
-            ตั้งค่า
-          </button>
-        ) : null}
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -258,6 +233,13 @@ function OtView() {
           onError={setError}
         />
       ) : null}
+
+      <ModuleTabDock
+        tab={tab}
+        isOwner={isOwner}
+        ariaLabel="มุมมอง OT"
+        onSelect={selectTab}
+      />
     </div>
   );
 }
@@ -590,72 +572,60 @@ function OtTable({
         </div>
       ) : null}
 
-      <div className="ot-filters">
-        <div className="field ot-filter-field">
-          <label htmlFor="ot-month">เดือน</label>
-          <input id="ot-month" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
-        </div>
-        <div className="field ot-filter-field">
-          <label htmlFor="ot-status-filter">สถานะ</label>
-          <select
-            id="ot-status-filter"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as OtStatus | "all")}
-          >
-            <option value="all">ทั้งหมด</option>
-            <option value="unpaid">ยังไม่จ่าย</option>
-            <option value="pending">เตรียมจ่ายโบนัส</option>
-            <option value="paid">จ่ายโบนัสแล้ว</option>
-          </select>
-        </div>
+      <div className="ot-toolbar-slim">
+        <input
+          id="ot-month"
+          type="month"
+          className="ot-slim-input"
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+          aria-label="เดือน"
+        />
+        <select
+          id="ot-status-filter"
+          className="ot-slim-input"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as OtStatus | "all")}
+          aria-label="สถานะ"
+        >
+          <option value="all">ทั้งหมด</option>
+          <option value="unpaid">ยังไม่จ่าย</option>
+          <option value="pending">เตรียมจ่าย</option>
+          <option value="paid">จ่ายแล้ว</option>
+        </select>
         {myName ? (
-          <label className="ot-mine-toggle">
+          <label className="ot-slim-chip">
             <input type="checkbox" checked={mineOnly} onChange={(e) => setMineOnly(e.target.checked)} />
-            ของฉัน ({myName})
+            ของฉัน
           </label>
         ) : null}
-        <div className="ot-view-toggle" role="group" aria-label="มุมมองตาราง">
+        <div className="ot-view-toggle ot-view-toggle-slim" role="group" aria-label="มุมมองตาราง">
           <button
             type="button"
             className={tableView === "sheet" ? "ot-view-btn is-active" : "ot-view-btn"}
             onClick={() => setTableView("sheet")}
             aria-pressed={tableView === "sheet"}
+            aria-label="Sheet"
           >
-            <Table2 size={14} aria-hidden />
-            Sheet
+            <Table2 size={13} aria-hidden />
           </button>
           <button
             type="button"
             className={tableView === "cards" ? "ot-view-btn is-active" : "ot-view-btn"}
             onClick={() => setTableView("cards")}
             aria-pressed={tableView === "cards"}
+            aria-label="การ์ด"
           >
-            <LayoutGrid size={14} aria-hidden />
-            การ์ด
+            <LayoutGrid size={13} aria-hidden />
           </button>
         </div>
       </div>
 
-      <div className="ot-summary">
-        <div className="ot-summary-stat">
-          <span className="ot-summary-label">รอบงาน</span>
-          <strong>{summary.shiftCount}</strong>
-        </div>
-        <div className="ot-summary-stat">
-          <span className="ot-summary-label">สรุปหน่วย</span>
-          <strong>{formatPlainNumber(summary.summaryQty)}</strong>
-        </div>
-        <div className="ot-summary-stat">
-          <span className="ot-summary-label">{mineOnly ? "โบนัสของฉัน" : "โบนัสรวม"}</span>
-          <strong>
-            ฿{formatPlainNumber(mineOnly ? summary.myBonus : summary.totalBonus)}
-          </strong>
-        </div>
-        <div className="ot-summary-stat">
-          <span className="ot-summary-label">ยังไม่จ่าย</span>
-          <strong>฿{formatPlainNumber(summary.unpaidBonus)}</strong>
-        </div>
-      </div>
+      <p className="ot-summary-inline muted">
+        รอบ {summary.shiftCount} · หน่วย {formatPlainNumber(summary.summaryQty)} ·{" "}
+        {mineOnly ? "ของฉัน" : "รวม"} ฿{formatPlainNumber(mineOnly ? summary.myBonus : summary.totalBonus)} ·{" "}
+        ค้าง ฿{formatPlainNumber(summary.unpaidBonus)}
+      </p>
 
       <p className="ot-formula-banner muted">
         โบนัส/คน = (เครื่อง + อื่นๆ + โคน + ขนมปัง − เคลม − ลด + เพิ่ม) × เรท ÷ จำนวนคน

@@ -9,6 +9,7 @@ import {
 import { useRouter } from "next/navigation";
 import { ChefHat, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
+import { ModuleTabDock, type ModuleTab } from "@/components/ModuleTabDock";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
@@ -35,7 +36,7 @@ import {
   todayInputValue,
 } from "@/lib/utils";
 
-type Tab = "form" | "table" | "setup";
+type Tab = ModuleTab;
 
 export default function ProductionPage() {
   return (
@@ -49,7 +50,7 @@ function ProductionView() {
   const { user, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
-  const [tab, setTab] = useState<Tab>("form");
+  const [tab, setTab] = useState<Tab>("table");
   const [entries, setEntries] = useState<ProdEntry[]>([]);
   const [products, setProducts] = useState<ProdProduct[]>([]);
   const [workers, setWorkers] = useState<ProdWorker[]>([]);
@@ -89,50 +90,27 @@ function ProductionView() {
     return unsub;
   }, [staff, isOwner]);
 
+  useEffect(() => {
+    if (tab === "setup" && !isOwner) setTab("table");
+  }, [tab, isOwner]);
+
   if (!can(staff, "production")) return null;
 
   const activeProducts = products.filter((p) => p.active);
   const activeWorkers = workers.filter((w) => w.active);
 
+  function selectTab(next: Tab) {
+    if (next === "form") setEditing(null);
+    setTab(next);
+  }
+
   return (
-    <div>
-      <div className="entry-toolbar" style={{ position: "static", paddingTop: 0 }}>
-        <h1 className="panel-title" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-          <ChefHat size={20} aria-hidden />
+    <div className="module-page">
+      <div className="module-page-head">
+        <h1 className="panel-title module-page-title">
+          <ChefHat size={18} aria-hidden />
           ผลิต / โบนัส
         </h1>
-      </div>
-
-      <div className="prod-tabs" role="tablist" aria-label="มุมมองผลิต">
-        <button
-          type="button"
-          role="tab"
-          className={tab === "form" ? "prod-tab is-active" : "prod-tab"}
-          aria-selected={tab === "form"}
-          onClick={() => { setTab("form"); setEditing(null); }}
-        >
-          กรอก
-        </button>
-        <button
-          type="button"
-          role="tab"
-          className={tab === "table" ? "prod-tab is-active" : "prod-tab"}
-          aria-selected={tab === "table"}
-          onClick={() => setTab("table")}
-        >
-          ตาราง
-        </button>
-        {isOwner ? (
-          <button
-            type="button"
-            role="tab"
-            className={tab === "setup" ? "prod-tab is-active" : "prod-tab"}
-            aria-selected={tab === "setup"}
-            onClick={() => setTab("setup")}
-          >
-            ตั้งค่า
-          </button>
-        ) : null}
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -173,6 +151,13 @@ function ProductionView() {
           onError={setError}
         />
       ) : null}
+
+      <ModuleTabDock
+        tab={tab}
+        isOwner={isOwner}
+        ariaLabel="มุมมองผลิต"
+        onSelect={selectTab}
+      />
     </div>
   );
 }
