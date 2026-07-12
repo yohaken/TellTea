@@ -3,11 +3,13 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   orderBy,
   query,
   updateDoc,
+  writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
@@ -94,6 +96,88 @@ export function labelProdStatus(status: ProdStatus) {
   if (status === "paid") return "จ่ายโบนัสแล้ว";
   if (status === "pending") return "เตรียมจ่ายโบนัส";
   return "ยังไม่จ่าย";
+}
+
+export function isProdEntryLocked(entry: Pick<ProdEntry, "status">) {
+  return entry.status === "paid";
+}
+
+/** เรทจากแถวเดิม — เปลี่ยนเฉพาะเมื่อเลือกสินค้าใหม่ */
+export function resolveProdEntryRates(
+  entry: ProdEntry | null,
+  productId: string,
+  product: Pick<ProdProduct, "salesRate" | "prodRate"> | null,
+): { salesRate: number; prodRate: number } {
+  if (!entry) {
+    return {
+      salesRate: Number(product?.salesRate) || 0,
+      prodRate: Number(product?.prodRate) || 0,
+    };
+  }
+  if (productId !== entry.productId) {
+    return {
+      salesRate: Number(product?.salesRate) || 0,
+      prodRate: Number(product?.prodRate) || 0,
+    };
+  }
+  return {
+    salesRate: entry.salesRate,
+    prodRate: entry.prodRate,
+  };
+}
+
+function mapProdEntryDoc(id: string, data: Record<string, unknown>): ProdEntry {
+  return {
+    id,
+    date: Number(data.date) || 0,
+    workerIds: Array.isArray(data.workerIds) ? (data.workerIds as string[]) : [],
+    workerNames: Array.isArray(data.workerNames) ? (data.workerNames as string[]) : [],
+    productId: String(data.productId || ""),
+    productName: String(data.productName || ""),
+    salesRate: Number(data.salesRate) || 0,
+    prodRate: Number(data.prodRate) || 0,
+    qtyProduced: Number(data.qtyProduced) || 0,
+    qtyWaste: Number(data.qtyWaste) || 0,
+    note: String(data.note || ""),
+    imageUrl: data.imageUrl ? String(data.imageUrl) : undefined,
+    status: (data.status as ProdStatus) || "unpaid",
+    createdBy: String(data.createdBy || ""),
+    createdAt: Number(data.createdAt) || 0,
+    updatedAt: Number(data.updatedAt) || 0,
+  };
+}
+
+const PROD_LOCKED_FIELDS = [
+  "date",
+  "workerIds",
+  "workerNames",
+  "productId",
+  "productName",
+  "salesRate",
+  "prodRate",
+  "qtyProduced",
+  "qtyWaste",
+] as const;
+
+function assertProdEntryEditable(
+  current: ProdEntry,
+  patch: Partial<Pick<ProdEntry, (typeof PROD_LOCKED_FIELDS)[number]>>,
+) {
+  if (!isProdEntryLocked(current)) return;
+  for (const key of PROD_LOCKED_FIELDS) {
+    if (patch[key] == null) continue;
+    const next = patch[key];
+    const prev = current[key];
+    if (Array.isArray(next) && Array.isArray(prev)) {
+      if (next.join("|") !== prev.join("|")) {
+        throw new Error("รายการจ่ายแล้ว — แก้ยอด/เรท/พนักงานไม่ได้");
+      }
+      continue;
+    }
+    if (next !== prev) {
+      throw new Error("รายการจ่ายแล้ว — แก้ยอด/เรท/พนักงานไม่ได้");
+    }
+  }
 }
 
 function productsCol() {
@@ -218,6 +302,12 @@ export async function updateProdEntry(
     >
   >,
 ): Promise<void> {
+  const ref = doc(getDb(), "prodEntries", id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("ไม่พบรายการ");
+  const current = mapProdEntryDoc(snap.id, snap.data() as Record<string, unknown>);
+  assertProdEntryEditable(current, patch);
+
   const next: Record<string, string | number | boolean | string[]> = {
     updatedAt: Date.now(),
   };
@@ -239,11 +329,47 @@ export async function updateProdEntry(
   if (patch.note != null) next.note = patch.note.trim();
   if (patch.imageUrl != null) next.imageUrl = patch.imageUrl.trim();
   if (patch.status != null) next.status = patch.status;
-  await updateDoc(doc(getDb(), "prodEntries", id), next);
+  await updateDoc(ref, next);
+}
+
+export async function bulkUpdateProdEntryStatus(
+  ids: string[],
+  status: ProdStatus,
+): Promise<number> {
+  if (!ids.length) return 0;
+  const db = getDb();
+  let batch = writeBatch(db);
+  let ops = 0;
+  let count = 0;
+  const now = Date.now();
+
+  async function flush() {
+    if (ops === 0) return;
+    await batch.commit();
+    batch = writeBatch(db);
+    ops = 0;
+  }
+
+  for (const id of ids) {
+    batch.update(doc(db, "prodEntries", id), { status, updatedAt: now });
+    ops += 1;
+    count += 1;
+    if (ops >= 400) await flush();
+  }
+  await flush();
+  return count;
 }
 
 export async function deleteProdEntry(id: string): Promise<void> {
-  await deleteDoc(doc(getDb(), "prodEntries", id));
+  const ref = doc(getDb(), "prodEntries", id);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    const current = mapProdEntryDoc(snap.id, snap.data() as Record<string, unknown>);
+    if (isProdEntryLocked(current)) {
+      throw new Error("รายการจ่ายแล้ว — ลบไม่ได้");
+    }
+  }
+  await deleteDoc(ref);
 }
 
 /** Seed starter catalog if empty (owner). */

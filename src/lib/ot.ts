@@ -9,6 +9,7 @@ import {
   query,
   setDoc,
   updateDoc,
+  writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
@@ -96,6 +97,73 @@ export function labelOtStatus(status: OtStatus) {
   if (status === "paid") return "จ่ายโบนัสแล้ว";
   if (status === "pending") return "เตรียมจ่ายโบนัส";
   return "ยังไม่จ่าย";
+}
+
+export function isOtEntryLocked(entry: Pick<OtEntry, "status">) {
+  return entry.status === "paid";
+}
+
+function mapOtEntryDoc(id: string, data: Record<string, unknown>): OtEntry {
+  return {
+    id,
+    date: Number(data.date) || 0,
+    shift: (data.shift as OtShiftId) || "morning",
+    workerIds: Array.isArray(data.workerIds) ? (data.workerIds as string[]) : [],
+    workerNames: Array.isArray(data.workerNames) ? (data.workerNames as string[]) : [],
+    machineCount: Number(data.machineCount) || 0,
+    otherCups: Number(data.otherCups) || 0,
+    iceCreamCones: Number(data.iceCreamCones) || 0,
+    breadSlices: Number(data.breadSlices) || 0,
+    claimCups: Number(data.claimCups) || 0,
+    deductQty: Number(data.deductQty) || 0,
+    deductReason: String(data.deductReason || ""),
+    addQty: Number(data.addQty) || 0,
+    addReason: String(data.addReason || ""),
+    bonusRate: Number(data.bonusRate) || DEFAULT_OT_BONUS_RATE,
+    imageUrl: data.imageUrl ? String(data.imageUrl) : undefined,
+    status: (data.status as OtStatus) || "unpaid",
+    createdBy: String(data.createdBy || ""),
+    createdAt: Number(data.createdAt) || 0,
+    updatedAt: Number(data.updatedAt) || 0,
+  };
+}
+
+const OT_LOCKED_FIELDS = [
+  "date",
+  "shift",
+  "workerIds",
+  "workerNames",
+  "machineCount",
+  "otherCups",
+  "iceCreamCones",
+  "breadSlices",
+  "claimCups",
+  "deductQty",
+  "deductReason",
+  "addQty",
+  "addReason",
+  "bonusRate",
+] as const;
+
+function assertOtEntryEditable(
+  current: OtEntry,
+  patch: Partial<Pick<OtEntry, (typeof OT_LOCKED_FIELDS)[number]>>,
+) {
+  if (!isOtEntryLocked(current)) return;
+  for (const key of OT_LOCKED_FIELDS) {
+    if (patch[key] == null) continue;
+    const next = patch[key];
+    const prev = current[key];
+    if (Array.isArray(next) && Array.isArray(prev)) {
+      if (next.join("|") !== prev.join("|")) {
+        throw new Error("รายการจ่ายแล้ว — แก้ยอด/เรทไม่ได้");
+      }
+      continue;
+    }
+    if (next !== prev) {
+      throw new Error("รายการจ่ายแล้ว — แก้ยอด/เรทไม่ได้");
+    }
+  }
 }
 
 export function computeOtBonus(entry: {
@@ -228,6 +296,12 @@ export async function updateOtEntry(
     >
   >,
 ): Promise<void> {
+  const ref = doc(getDb(), "otEntries", id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("ไม่พบรายการ");
+  const current = mapOtEntryDoc(snap.id, snap.data() as Record<string, unknown>);
+  assertOtEntryEditable(current, patch);
+
   const next: Record<string, string | number | boolean | string[]> = {
     updatedAt: Date.now(),
   };
@@ -250,9 +324,42 @@ export async function updateOtEntry(
   if (patch.bonusRate != null) next.bonusRate = Number(patch.bonusRate) || DEFAULT_OT_BONUS_RATE;
   if (patch.imageUrl != null) next.imageUrl = patch.imageUrl.trim();
   if (patch.status != null) next.status = patch.status;
-  await updateDoc(doc(getDb(), "otEntries", id), next);
+  await updateDoc(ref, next);
+}
+
+export async function bulkUpdateOtEntryStatus(ids: string[], status: OtStatus): Promise<number> {
+  if (!ids.length) return 0;
+  const db = getDb();
+  let batch = writeBatch(db);
+  let ops = 0;
+  let count = 0;
+  const now = Date.now();
+
+  async function flush() {
+    if (ops === 0) return;
+    await batch.commit();
+    batch = writeBatch(db);
+    ops = 0;
+  }
+
+  for (const id of ids) {
+    batch.update(doc(db, "otEntries", id), { status, updatedAt: now });
+    ops += 1;
+    count += 1;
+    if (ops >= 400) await flush();
+  }
+  await flush();
+  return count;
 }
 
 export async function deleteOtEntry(id: string): Promise<void> {
-  await deleteDoc(doc(getDb(), "otEntries", id));
+  const ref = doc(getDb(), "otEntries", id);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    const current = mapOtEntryDoc(snap.id, snap.data() as Record<string, unknown>);
+    if (isOtEntryLocked(current)) {
+      throw new Error("รายการจ่ายแล้ว — ลบไม่ได้");
+    }
+  }
+  await deleteDoc(ref);
 }

@@ -2351,6 +2351,85 @@ body.modal-open .main-panel {
   margin: 0.5rem 0;
 }
 
+.bulk-status-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.5rem;
+}
+
+.bulk-status-chip {
+  font-size: 0.72rem;
+  padding: 0.22rem 0.5rem;
+}
+
+.bulk-status-hint {
+  margin: 0;
+  flex: 1 1 100%;
+  font-size: 0.62rem;
+  text-align: left;
+}
+
+.bulk-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 1 1 auto;
+}
+
+.bulk-status-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1b4332;
+}
+
+.bulk-status-btn {
+  font-size: 0.72rem;
+  padding: 0.22rem 0.5rem;
+}
+
+.bulk-status-btn.is-paid {
+  border-color: rgba(45, 106, 79, 0.35);
+  color: #1b4332;
+}
+
+.bulk-status-btn.is-pending {
+  border-color: rgba(196, 90, 26, 0.35);
+  color: #9b4d00;
+}
+
+.bulk-status-clear {
+  font-size: 0.68rem;
+}
+
+.bulk-check-col {
+  width: 1.6rem;
+  text-align: center;
+  padding: 0.15rem !important;
+}
+
+.bulk-check-col input[type="checkbox"] {
+  width: 0.85rem;
+  height: 0.85rem;
+  margin: 0;
+}
+
+.prod-row-paid {
+  background: rgba(216, 243, 220, 0.22);
+}
+
+.prod-locked-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ot-card-check {
+  margin-right: 0.25rem;
+}
+
 .stock-count-form-head {
   display: flex;
   align-items: center;

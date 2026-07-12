@@ -7,21 +7,26 @@ import {
   type FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
-import { ChefHat, Trash2, X } from "lucide-react";
+import { ChefHat, Lock, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
+import { BulkStatusToolbar } from "@/components/BulkStatusToolbar";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachField } from "@/components/PhotoAttachField";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
+import { isInMonth, monthInputValue, parseMonthInput } from "@/lib/bonus";
 import { can } from "@/lib/permissions";
 import {
   addProdEntry,
+  bulkUpdateProdEntryStatus,
   computeProdBonus,
   deleteProdEntry,
+  isProdEntryLocked,
   labelProdStatus,
   listProdProducts,
   listProdWorkers,
+  resolveProdEntryRates,
   seedProdCatalogIfEmpty,
   subscribeProdEntries,
   updateProdEntry,
@@ -175,6 +180,7 @@ function ProdEntryForm({
   onSaved: () => void;
   onCancelEdit: () => void;
 }) {
+  const locked = entry ? isProdEntryLocked(entry) : false;
   const [date, setDate] = useState(entry ? todayInputValue(new Date(entry.date)) : todayInputValue());
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>(
     entry?.workerIds?.length ? entry.workerIds : [],
@@ -187,17 +193,20 @@ function ProdEntryForm({
   const [busy, setBusy] = useState(false);
 
   const product = products.find((p) => p.id === productId) || null;
+  const rates = resolveProdEntryRates(entry, productId, product);
+
   const preview = useMemo(() => {
     const names = workers.filter((w) => selectedWorkers.includes(w.id)).map((w) => w.name);
     return computeProdBonus({
       qtyProduced: Number(qty) || 0,
-      salesRate: product?.salesRate || entry?.salesRate || 0,
-      prodRate: product?.prodRate || entry?.prodRate || 0,
+      salesRate: rates.salesRate,
+      prodRate: rates.prodRate,
       workerNames: names.length ? names : entry?.workerNames || [],
     });
-  }, [qty, product, selectedWorkers, workers, entry]);
+  }, [qty, rates, selectedWorkers, workers, entry]);
 
   function toggleWorker(id: string) {
+    if (locked) return;
     setSelectedWorkers((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
       if (prev.length >= 2) return [prev[1]!, id];
@@ -207,6 +216,7 @@ function ProdEntryForm({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (locked) return;
     if (!createdBy) return;
     const chosen = workers.filter((w) => selectedWorkers.includes(w.id));
     if (!chosen.length) {
@@ -220,14 +230,15 @@ function ProdEntryForm({
     }
     setBusy(true);
     try {
+      const resolved = resolveProdEntryRates(entry, productId, prod ?? null);
       const payload = {
         date: parseDateInput(date),
         workerIds: chosen.map((w) => w.id),
         workerNames: chosen.map((w) => w.name),
         productId: prod?.id || entry!.productId,
         productName: prod?.name || entry!.productName,
-        salesRate: prod?.salesRate ?? entry!.salesRate,
-        prodRate: prod?.prodRate ?? entry!.prodRate,
+        salesRate: resolved.salesRate,
+        prodRate: resolved.prodRate,
         qtyProduced: Number(qty),
         qtyWaste: Number(waste) || 0,
         note,
@@ -249,11 +260,17 @@ function ProdEntryForm({
   return (
     <form className="form-card entry-form module-entry-form" onSubmit={(e) => void onSubmit(e)}>
       <div className="entry-toolbar module-form-head">
-        <h2 className="panel-title">{entry ? "แก้ไขรายการ" : "บันทึกผลิต"}</h2>
+        <h2 className="panel-title">{entry ? (locked ? "ดูรายการ (จ่ายแล้ว)" : "แก้ไขรายการ") : "บันทึกผลิต"}</h2>
         <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onCancelEdit}>
           <X size={18} />
         </button>
       </div>
+
+      {locked ? (
+        <p className="muted form-hint-inline prod-locked-hint">
+          <Lock size={14} aria-hidden /> จ่ายโบนัสแล้ว — เรทและยอดล็อก · เปลี่ยนสถานะได้ที่ตาราง
+        </p>
+      ) : null}
 
       {!products.length || !workers.length ? (
         <p className="muted form-hint-inline">
@@ -265,7 +282,7 @@ function ProdEntryForm({
       <div className="stock-form-grid">
         <div className="field">
           <label htmlFor="prod-date">วันที่</label>
-          <input id="prod-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+          <input id="prod-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required disabled={locked} />
         </div>
         <div className="field">
           <label htmlFor="prod-product">สินค้า</label>
@@ -274,6 +291,7 @@ function ProdEntryForm({
             value={productId}
             onChange={(e) => setProductId(e.target.value)}
             required
+            disabled={locked}
           >
             {products.map((p) => (
               <option key={p.id} value={p.id}>
@@ -283,6 +301,10 @@ function ProdEntryForm({
           </select>
         </div>
       </div>
+
+      {entry && !locked && productId !== entry.productId ? (
+        <p className="muted check-hint">เปลี่ยนสินค้า → ใช้เรทปัจจุบันของสินค้าใหม่</p>
+      ) : null}
 
       <div className="field">
         <span className="field-label">พนักงาน (สูงสุด 2)</span>
@@ -295,6 +317,7 @@ function ProdEntryForm({
                 type="button"
                 className={on ? "suggest-chip is-active" : "suggest-chip"}
                 onClick={() => toggleWorker(w.id)}
+                disabled={locked}
               >
                 {w.name}
               </button>
@@ -315,6 +338,7 @@ function ProdEntryForm({
             value={qty}
             onChange={(e) => setQty(e.target.value)}
             required
+            disabled={locked}
           />
         </div>
         <div className="field">
@@ -328,6 +352,7 @@ function ProdEntryForm({
             value={waste}
             onChange={(e) => setWaste(e.target.value)}
             placeholder="0"
+            disabled={locked}
           />
         </div>
       </div>
@@ -339,23 +364,34 @@ function ProdEntryForm({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           autoComplete="off"
+          disabled={locked}
         />
       </div>
 
-      <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} label="แนบรูป" />
+      {!locked ? (
+        <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} label="แนบรูป" />
+      ) : null}
 
-      {Number(qty) > 0 && selectedWorkers.length > 0 ? (
+      {locked ? (
+        <p className="muted form-hint-inline">
+          เรทขาย {formatPlainNumber(entry!.salesRate)} · เรทผลิต {formatPlainNumber(entry!.prodRate)} · โบนัส/คน{" "}
+          {formatPlainNumber(preview.bonusPerPerson)} บาท
+        </p>
+      ) : Number(qty) > 0 && selectedWorkers.length > 0 ? (
         <p className="muted form-hint-inline">
           โบนัส/คน ≈ {formatPlainNumber(preview.bonusPerPerson)} บาท
+          {entry ? ` · เรทผลิต ${formatPlainNumber(rates.prodRate)} (ติดกับแถวนี้)` : ""}
         </p>
       ) : null}
 
       <div className="entry-actions module-form-actions">
-        <button type="submit" className="primary-btn action-out" disabled={busy || !products.length}>
-          {busy ? "กำลังบันทึก..." : "บันทึก"}
-        </button>
+        {!locked ? (
+          <button type="submit" className="primary-btn action-out" disabled={busy || !products.length}>
+            {busy ? "กำลังบันทึก..." : "บันทึก"}
+          </button>
+        ) : null}
         <button type="button" className="ghost-btn" disabled={busy} onClick={onCancelEdit}>
-          ออก
+          {locked ? "ปิด" : "ออก"}
         </button>
       </div>
     </form>
@@ -371,11 +407,47 @@ function ProdTable({
   entries: ProdEntry[];
   isOwner: boolean;
   onEdit: (row: ProdEntry) => void;
-  onError: (msg: string) => void;
+  onError: (msg: string | null) => void;
 }) {
   const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
+  const [month, setMonth] = useState(monthInputValue());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   useBodyScrollLock(!!preview);
+
+  const { year, month: monthIdx } = parseMonthInput(month);
+  const filtered = useMemo(
+    () => (isOwner ? entries.filter((row) => isInMonth(row.date, year, monthIdx)) : entries),
+    [entries, isOwner, year, monthIdx],
+  );
+
+  const unpaidIds = useMemo(
+    () => filtered.filter((r) => r.status === "unpaid").map((r) => r.id),
+    [filtered],
+  );
+
+  const visibleIds = useMemo(() => filtered.map((r) => r.id), [filtered]);
+
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
+  const someSelected = selected.size > 0;
+
+  function toggleRow(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllVisible() {
+    if (allVisibleSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(visibleIds));
+    }
+  }
 
   async function setStatus(row: ProdEntry, status: ProdStatus) {
     try {
@@ -385,10 +457,32 @@ function ProdTable({
     }
   }
 
+  async function onBulkStatus(status: ProdStatus) {
+    const ids = [...selected];
+    if (!ids.length) return;
+    const label = labelProdStatus(status);
+    if (!window.confirm(`เปลี่ยนสถานะ ${ids.length} รายการเป็น "${label}"?`)) return;
+    setBulkBusy(true);
+    onError(null);
+    try {
+      await bulkUpdateProdEntryStatus(ids, status);
+      setSelected(new Set());
+    } catch (err) {
+      onError((err as Error).message || "อัปเดตกลุ่มไม่สำเร็จ");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function onDelete(row: ProdEntry) {
     if (!window.confirm("ลบรายการนี้?")) return;
     try {
       await deleteProdEntry(row.id);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(row.id);
+        return next;
+      });
     } catch (err) {
       onError((err as Error).message || "ลบไม่สำเร็จ");
     }
@@ -400,120 +494,166 @@ function ProdTable({
 
   return (
     <>
-    <div className="sheet-wrap">
-      <table className="sheet-table prod-table">
-        <thead>
-          <tr>
-            <th className="col-date">วันที่</th>
-            <th className="col-desc prod-col-worker">พนักงาน</th>
-            <th className="col-desc prod-col-product col-sticky-left">สินค้า</th>
-            <th className="col-out">ผลิต</th>
-            <th className="col-out">ทิ้ง/เสีย</th>
-            <th className="col-note">หมายเหตุ</th>
-            {isOwner ? (
-              <>
-                <th className="col-out">เรทขาย</th>
-                <th className="col-out">โบนัสขาย</th>
-                <th className="col-out">เรทผลิต</th>
-                <th className="col-out">โบนัสรวม</th>
-                <th className="col-act">คน</th>
-              </>
-            ) : null}
-            <th className="col-out">โบนัส/คน</th>
-            <th className="col-act">สถานะ</th>
-            <th className="col-act" />
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((row) => {
-            const c = computeProdBonus(row);
-            return (
-              <tr key={row.id} className="row-out">
-                <td className="col-date">{formatDateShort(row.date)}</td>
-                <td className="col-desc prod-col-worker">{row.workerNames.join(", ")}</td>
-                <td className="col-desc prod-col-product col-sticky-left">
-                  <div className="prod-name-row">
-                    <button
-                      type="button"
-                      className="desc-link"
-                      title={row.productName}
-                      onClick={() => onEdit(row)}
-                    >
-                      {row.productName}
-                    </button>
-                    <EntryPhotoIndicator
-                      imageUrl={row.imageUrl}
-                      label={row.productName}
-                      onView={(url) => setPreview({ url, title: row.productName })}
+      {isOwner ? (
+        <BulkStatusToolbar
+          selectedCount={selected.size}
+          month={month}
+          onMonthChange={(v) => {
+            setMonth(v);
+            setSelected(new Set());
+          }}
+          onSelectUnpaid={() => setSelected(new Set(unpaidIds))}
+          onSelectVisible={() => setSelected(new Set(visibleIds))}
+          onClear={() => setSelected(new Set())}
+          onSetStatus={(s) => void onBulkStatus(s as ProdStatus)}
+          busy={bulkBusy}
+          visibleCount={visibleIds.length}
+          unpaidCount={unpaidIds.length}
+        />
+      ) : null}
+
+      {!filtered.length && isOwner ? (
+        <p className="empty">ไม่มีรายการในเดือนนี้</p>
+      ) : (
+        <div className="sheet-wrap">
+          <table className="sheet-table prod-table">
+            <thead>
+              <tr>
+                {isOwner ? (
+                  <th className="col-act bulk-check-col">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = someSelected && !allVisibleSelected;
+                      }}
+                      onChange={toggleAllVisible}
+                      aria-label="เลือกทั้งหมดที่แสดง"
                     />
-                  </div>
-                </td>
-                <td className="col-out">{formatPlainNumber(row.qtyProduced)}</td>
-                <td className="col-out">{row.qtyWaste ? formatPlainNumber(row.qtyWaste) : "—"}</td>
-                <td className="col-note" title={row.note || ""}>{row.note || ""}</td>
+                  </th>
+                ) : null}
+                <th className="col-date">วันที่</th>
+                <th className="col-desc prod-col-worker">พนักงาน</th>
+                <th className="col-desc prod-col-product col-sticky-left">สินค้า</th>
+                <th className="col-out">ผลิต</th>
+                <th className="col-out">ทิ้ง/เสีย</th>
+                <th className="col-note">หมายเหตุ</th>
                 {isOwner ? (
                   <>
-                    <td className="col-out">{formatPlainNumber(row.salesRate)}</td>
-                    <td className="col-out">{formatPlainNumber(c.salesBonus)}</td>
-                    <td className="col-out">{formatPlainNumber(row.prodRate)}</td>
-                    <td className="col-out">{formatPlainNumber(c.prodBonus)}</td>
-                    <td className="col-act">{c.workerCount}</td>
+                    <th className="col-out">เรทขาย</th>
+                    <th className="col-out">โบนัสขาย</th>
+                    <th className="col-out">เรทผลิต</th>
+                    <th className="col-out">โบนัสรวม</th>
+                    <th className="col-act">คน</th>
                   </>
                 ) : null}
-                <td className="col-out">{formatPlainNumber(c.bonusPerPerson)}</td>
-                <td className="col-act">
-                  {isOwner ? (
-                    <select
-                      className={
-                        row.status === "paid"
-                          ? "prod-status is-paid"
-                          : row.status === "pending"
-                            ? "prod-status is-pending"
-                            : "prod-status"
-                      }
-                      value={row.status}
-                      onChange={(e) => void setStatus(row, e.target.value as ProdStatus)}
-                      aria-label="สถานะโบนัส"
-                    >
-                      <option value="unpaid">ยังไม่จ่าย</option>
-                      <option value="pending">เตรียมจ่ายโบนัส</option>
-                      <option value="paid">จ่ายโบนัสแล้ว</option>
-                    </select>
-                  ) : (
-                    <span
-                      className={
-                        row.status === "paid"
-                          ? "prod-status-pill is-paid"
-                          : row.status === "pending"
-                            ? "prod-status-pill is-pending"
-                            : "prod-status-pill"
-                      }
-                    >
-                      {labelProdStatus(row.status)}
-                    </span>
-                  )}
-                </td>
-                <td className="col-act">
-                  {isOwner ? (
-                    <button
-                      type="button"
-                      className="trash-btn"
-                      aria-label="ลบ"
-                      onClick={() => void onDelete(row)}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  ) : null}
-                </td>
+                <th className="col-out">โบนัส/คน</th>
+                <th className="col-act">สถานะ</th>
+                <th className="col-act" />
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-    {preview ? (
-      <ImagePreviewModal url={preview.url} title={preview.title} onClose={() => setPreview(null)} />
-    ) : null}
+            </thead>
+            <tbody>
+              {(isOwner ? filtered : entries).map((row) => {
+                const c = computeProdBonus(row);
+                const locked = isProdEntryLocked(row);
+                return (
+                  <tr key={row.id} className={locked ? "row-out prod-row-paid" : "row-out"}>
+                    {isOwner ? (
+                      <td className="col-act bulk-check-col">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(row.id)}
+                          onChange={() => toggleRow(row.id)}
+                          aria-label={`เลือก ${row.productName}`}
+                        />
+                      </td>
+                    ) : null}
+                    <td className="col-date">{formatDateShort(row.date)}</td>
+                    <td className="col-desc prod-col-worker">{row.workerNames.join(", ")}</td>
+                    <td className="col-desc prod-col-product col-sticky-left">
+                      <div className="prod-name-row">
+                        <button
+                          type="button"
+                          className="desc-link"
+                          title={row.productName}
+                          onClick={() => onEdit(row)}
+                        >
+                          {locked ? <Lock size={11} aria-hidden /> : null} {row.productName}
+                        </button>
+                        <EntryPhotoIndicator
+                          imageUrl={row.imageUrl}
+                          label={row.productName}
+                          onView={(url) => setPreview({ url, title: row.productName })}
+                        />
+                      </div>
+                    </td>
+                    <td className="col-out">{formatPlainNumber(row.qtyProduced)}</td>
+                    <td className="col-out">{row.qtyWaste ? formatPlainNumber(row.qtyWaste) : "—"}</td>
+                    <td className="col-note" title={row.note || ""}>{row.note || ""}</td>
+                    {isOwner ? (
+                      <>
+                        <td className="col-out">{formatPlainNumber(row.salesRate)}</td>
+                        <td className="col-out">{formatPlainNumber(c.salesBonus)}</td>
+                        <td className="col-out">{formatPlainNumber(row.prodRate)}</td>
+                        <td className="col-out">{formatPlainNumber(c.prodBonus)}</td>
+                        <td className="col-act">{c.workerCount}</td>
+                      </>
+                    ) : null}
+                    <td className="col-out">{formatPlainNumber(c.bonusPerPerson)}</td>
+                    <td className="col-act">
+                      {isOwner ? (
+                        <select
+                          className={
+                            row.status === "paid"
+                              ? "prod-status is-paid"
+                              : row.status === "pending"
+                                ? "prod-status is-pending"
+                                : "prod-status"
+                          }
+                          value={row.status}
+                          onChange={(e) => void setStatus(row, e.target.value as ProdStatus)}
+                          aria-label="สถานะโบนัส"
+                        >
+                          <option value="unpaid">ยังไม่จ่าย</option>
+                          <option value="pending">เตรียมจ่ายโบนัส</option>
+                          <option value="paid">จ่ายโบนัสแล้ว</option>
+                        </select>
+                      ) : (
+                        <span
+                          className={
+                            row.status === "paid"
+                              ? "prod-status-pill is-paid"
+                              : row.status === "pending"
+                                ? "prod-status-pill is-pending"
+                                : "prod-status-pill"
+                          }
+                        >
+                          {labelProdStatus(row.status)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="col-act">
+                      {isOwner && !locked ? (
+                        <button
+                          type="button"
+                          className="trash-btn"
+                          aria-label="ลบ"
+                          onClick={() => void onDelete(row)}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {preview ? (
+        <ImagePreviewModal url={preview.url} title={preview.title} onClose={() => setPreview(null)} />
+      ) : null}
     </>
   );
 }

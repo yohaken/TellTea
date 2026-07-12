@@ -8,8 +8,9 @@ import {
   type FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Coffee, LayoutGrid, Table2, Trash2, X } from "lucide-react";
+import { Coffee, LayoutGrid, Lock, Table2, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
+import { BulkStatusToolbar } from "@/components/BulkStatusToolbar";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachField } from "@/components/PhotoAttachField";
@@ -20,9 +21,11 @@ import { can } from "@/lib/permissions";
 import {
   OT_SHIFTS,
   addOtEntry,
+  bulkUpdateOtEntryStatus,
   computeOtBonus,
   deleteOtEntry,
   getOtSettings,
+  isOtEntryLocked,
   labelOtShift,
   labelOtStatus,
   subscribeOtEntries,
@@ -320,6 +323,7 @@ function OtEntryForm({
   const [addReason, setAddReason] = useState(entry?.addReason || "");
   const [imageUrl, setImageUrl] = useState(entry?.imageUrl || "");
   const [busy, setBusy] = useState(false);
+  const locked = entry ? isOtEntryLocked(entry) : false;
 
   const rate = entry?.bonusRate ?? bonusRate;
   const preview = useMemo(() => {
@@ -350,6 +354,7 @@ function OtEntryForm({
   ]);
 
   function toggleWorker(id: string) {
+    if (locked) return;
     setSelectedWorkers((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
       if (prev.length >= 2) return [prev[1]!, id];
@@ -359,6 +364,7 @@ function OtEntryForm({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (locked) return;
     if (!createdBy) return;
     const chosen = workers.filter((w) => selectedWorkers.includes(w.id));
     if (!chosen.length) {
@@ -400,11 +406,17 @@ function OtEntryForm({
   return (
     <form className="form-card entry-form module-entry-form" onSubmit={(e) => void onSubmit(e)}>
       <div className="entry-toolbar module-form-head">
-        <h2 className="panel-title">{entry ? "แก้ไขรายการ" : "บันทึก OT"}</h2>
+        <h2 className="panel-title">{entry ? (locked ? "ดูรายการ (จ่ายแล้ว)" : "แก้ไขรายการ") : "บันทึก OT"}</h2>
         <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onCancelEdit}>
           <X size={18} />
         </button>
       </div>
+
+      {locked ? (
+        <p className="muted form-hint-inline prod-locked-hint">
+          <Lock size={14} aria-hidden /> จ่ายโบนัสแล้ว — เรทและยอดล็อก · เปลี่ยนสถานะได้ที่ตาราง
+        </p>
+      ) : null}
 
       {!workers.length ? (
         <p className="muted form-hint-inline">
@@ -507,19 +519,24 @@ function OtEntryForm({
         <input id="ot-add-reason" value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="ไม่ปิดฝา" />
       </div>
 
-      <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} label="แนบรูป" />
+      {!locked ? (
+        <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} label="แนบรูป" />
+      ) : null}
 
       <p className="muted form-hint-inline">
         สรุป {formatPlainNumber(preview.summaryQty)} · ฿{formatPlainNumber(preview.totalBonus)} ·{" "}
         <strong>฿{formatPlainNumber(preview.bonusPerPerson)}/คน</strong>
+        {locked ? ` · เรท ${formatPlainNumber(rate)}` : ""}
       </p>
 
       <div className="entry-actions module-form-actions">
-        <button type="submit" className="primary-btn" disabled={busy || !workers.length}>
-          {busy ? "กำลังบันทึก..." : "บันทึก"}
-        </button>
+        {!locked ? (
+          <button type="submit" className="primary-btn" disabled={busy || !workers.length}>
+            {busy ? "กำลังบันทึก..." : "บันทึก"}
+          </button>
+        ) : null}
         <button type="button" className="ghost-btn" disabled={busy} onClick={onCancelEdit}>
-          ออก
+          {locked ? "ปิด" : "ออก"}
         </button>
       </div>
     </form>
@@ -544,6 +561,8 @@ function OtTable({
   const [statusFilter, setStatusFilter] = useState<OtStatus | "all">("all");
   const [mineOnly, setMineOnly] = useState(false);
   const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   useBodyScrollLock(!!preview);
 
@@ -582,6 +601,31 @@ function OtTable({
     const { year, month: m } = parseMonthInput(month);
     return groupByDateForMonth(filtered, year, m);
   }, [filtered, month]);
+
+  const unpaidIds = useMemo(
+    () => filtered.filter((r) => r.status === "unpaid").map((r) => r.id),
+    [filtered],
+  );
+  const visibleIds = useMemo(() => filtered.map((r) => r.id), [filtered]);
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
+  const someSelected = selected.size > 0;
+
+  async function onBulkStatus(status: OtStatus) {
+    const ids = [...selected];
+    if (!ids.length) return;
+    const label = labelOtStatus(status);
+    if (!window.confirm(`เปลี่ยนสถานะ ${ids.length} รายการเป็น "${label}"?`)) return;
+    setBulkBusy(true);
+    onError("");
+    try {
+      await bulkUpdateOtEntryStatus(ids, status);
+      setSelected(new Set());
+    } catch (err) {
+      onError((err as Error).message || "อัปเดตกลุ่มไม่สำเร็จ");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
 
   return (
     <div className="ot-table-view">
@@ -640,10 +684,37 @@ function OtTable({
         ค้าง ฿{formatPlainNumber(summary.unpaidBonus)}
       </p>
 
+      {isOwner ? (
+        <BulkStatusToolbar
+          selectedCount={selected.size}
+          onSelectUnpaid={() => setSelected(new Set(unpaidIds))}
+          onSelectVisible={() => setSelected(new Set(visibleIds))}
+          onClear={() => setSelected(new Set())}
+          onSetStatus={(s) => void onBulkStatus(s as OtStatus)}
+          busy={bulkBusy}
+          visibleCount={visibleIds.length}
+          unpaidCount={unpaidIds.length}
+        />
+      ) : null}
+
       {tableView === "sheet" ? (
         <OtSheetTable
           groups={dateGroups}
           isOwner={isOwner}
+          selected={selected}
+          allVisibleSelected={allVisibleSelected}
+          someSelected={someSelected}
+          onToggleRow={(id) =>
+            setSelected((prev) => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            })
+          }
+          onToggleAllVisible={() =>
+            setSelected(allVisibleSelected ? new Set() : new Set(visibleIds))
+          }
           onEdit={onEdit}
           onError={onError}
           onViewPhoto={(url, title) => setPreview({ url, title })}
@@ -654,6 +725,15 @@ function OtTable({
         <OtCardList
           entries={sortOtEntries(filtered)}
           isOwner={isOwner}
+          selected={selected}
+          onToggleRow={(id) =>
+            setSelected((prev) => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            })
+          }
           onEdit={onEdit}
           onError={onError}
           onViewPhoto={(url, title) => setPreview({ url, title })}
@@ -669,12 +749,22 @@ function OtTable({
 function OtSheetTable({
   groups,
   isOwner,
+  selected,
+  allVisibleSelected,
+  someSelected,
+  onToggleRow,
+  onToggleAllVisible,
   onEdit,
   onError,
   onViewPhoto,
 }: {
   groups: DateGroup[];
   isOwner: boolean;
+  selected: Set<string>;
+  allVisibleSelected: boolean;
+  someSelected: boolean;
+  onToggleRow: (id: string) => void;
+  onToggleAllVisible: () => void;
   onEdit: (row: OtEntry) => void;
   onError: (msg: string) => void;
   onViewPhoto: (url: string, title: string) => void;
@@ -687,13 +777,26 @@ function OtSheetTable({
     }
   }
 
-  const colCount = 20 + (isOwner ? 1 : 0);
+  const colCount = 20 + (isOwner ? 2 : 0);
 
   return (
     <div className="sheet-wrap ot-sheet-wrap">
       <table className="sheet-table ot-table">
         <thead>
           <tr>
+            {isOwner ? (
+              <th className="col-act bulk-check-col">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someSelected && !allVisibleSelected;
+                  }}
+                  onChange={onToggleAllVisible}
+                  aria-label="เลือกทั้งหมดที่แสดง"
+                />
+              </th>
+            ) : null}
             <th className="ot-th-staff col-sticky-left ot-col-date">วันที่</th>
             <th className="ot-th-staff ot-col-worker">พนักงาน-1</th>
             <th className="ot-th-staff ot-col-worker">พนักงาน-2</th>
@@ -740,7 +843,17 @@ function OtSheetTable({
                 const w2 = row.workerNames[1] || "—";
 
                 return (
-                  <tr key={row.id} className="row-out">
+                  <tr key={row.id} className={isOtEntryLocked(row) ? "row-out prod-row-paid" : "row-out"}>
+                    {isOwner ? (
+                      <td className="col-act bulk-check-col">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(row.id)}
+                          onChange={() => onToggleRow(row.id)}
+                          aria-label={`เลือก ${formatDateShort(row.date)}`}
+                        />
+                      </td>
+                    ) : null}
                     {idx === 0 ? (
                       <td className="col-sticky-left ot-col-date ot-date-cell" rowSpan={group.rows.length}>
                         <button type="button" className="desc-link" onClick={() => onEdit(row)}>
@@ -797,7 +910,7 @@ function OtSheetTable({
                         }
                       />
                     </td>
-                    {isOwner ? (
+                    {isOwner && !isOtEntryLocked(row) ? (
                       <td className="col-act">
                         <button
                           type="button"
@@ -813,6 +926,8 @@ function OtSheetTable({
                           <Trash2 size={14} />
                         </button>
                       </td>
+                    ) : isOwner ? (
+                      <td className="col-act" />
                     ) : null}
                   </tr>
                 );
@@ -835,12 +950,16 @@ function OtSheetTable({
 function OtCardList({
   entries,
   isOwner,
+  selected,
+  onToggleRow,
   onEdit,
   onError,
   onViewPhoto,
 }: {
   entries: OtEntry[];
   isOwner: boolean;
+  selected: Set<string>;
+  onToggleRow: (id: string) => void;
   onEdit: (row: OtEntry) => void;
   onError: (msg: string) => void;
   onViewPhoto: (url: string, title: string) => void;
@@ -884,11 +1003,20 @@ function OtCardList({
         ];
 
         return (
-          <article key={row.id} className="ot-card">
+          <article key={row.id} className={isOtEntryLocked(row) ? "ot-card prod-row-paid" : "ot-card"}>
             <header className="ot-card-head">
               <div className="ot-card-meta">
+                {isOwner ? (
+                  <input
+                    type="checkbox"
+                    className="ot-card-check"
+                    checked={selected.has(row.id)}
+                    onChange={() => onToggleRow(row.id)}
+                    aria-label="เลือกรายการ"
+                  />
+                ) : null}
                 <button type="button" className="desc-link ot-card-date" onClick={() => onEdit(row)}>
-                  {formatDateShort(row.date)}
+                  {isOtEntryLocked(row) ? <Lock size={11} aria-hidden /> : null} {formatDateShort(row.date)}
                 </button>
                 <span className="ot-card-shift">{labelOtShift(row.shift)}</span>
               </div>
@@ -916,7 +1044,7 @@ function OtCardList({
                     {labelOtStatus(row.status)}
                   </span>
                 )}
-                {isOwner ? (
+                {isOwner && !isOtEntryLocked(row) ? (
                   <button
                     type="button"
                     className="ghost-btn icon-btn"
