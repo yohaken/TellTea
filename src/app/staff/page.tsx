@@ -211,7 +211,7 @@ function StaffView() {
             </select>
           </div>
           {role === "staff" ? (
-            <div className="field">
+            <div className="field field-permissions">
               <span className="field-label">สิทธิ์การใช้งาน</span>
               <PermissionPicker value={perms} onChange={setPerms} disabled={busy} />
             </div>
