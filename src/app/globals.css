@@ -1619,6 +1619,35 @@ textarea {
   align-items: center;
 }
 
+.check-import-card {
+  margin-bottom: 0.65rem;
+}
+
+.check-import-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.check-import-file {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px dashed rgba(28, 42, 31, 0.25);
+  background: rgba(243, 239, 228, 0.5);
+  cursor: pointer;
+}
+
+.check-import-preview {
+  margin: 0.45rem 0 0;
+  font-size: 0.72rem;
+  text-align: left;
+}
+
 .list-row.is-muted {
   opacity: 0.55;
 }
