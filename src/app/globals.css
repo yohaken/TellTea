@@ -2046,6 +2046,242 @@ body.modal-open .main-panel {
   font-size: 0.78rem;
 }
 
+.check-history-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.check-filter-pills {
+  display: inline-flex;
+  gap: 0.2rem;
+}
+
+.check-filter-pill {
+  border: 1px solid rgba(28, 42, 31, 0.12);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+}
+
+.check-filter-pill.is-active {
+  background: rgba(183, 228, 192, 0.45);
+  border-color: rgba(45, 106, 79, 0.35);
+  color: #1b4332;
+}
+
+.check-history-stats {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.62rem;
+  text-align: left;
+}
+
+.check-history-hint {
+  margin: 0 0 0.35rem;
+  font-size: 0.62rem;
+  text-align: left;
+}
+
+.check-history-wrap {
+  margin-top: 0.15rem;
+}
+
+.check-history-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.check-history-table th,
+.check-history-table td {
+  padding: 0.18rem 0.22rem;
+  font-size: 0.58rem;
+  vertical-align: middle;
+}
+
+.check-history-th-date {
+  width: 3.1rem;
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #f3efe4;
+}
+
+.check-history-th-shift {
+  text-align: center;
+  background: rgba(243, 239, 228, 0.95);
+  font-size: 0.55rem;
+}
+
+.check-history-th-fail {
+  width: 1.6rem;
+  text-align: right;
+  background: rgba(244, 162, 97, 0.35);
+}
+
+.check-history-date {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.6rem;
+}
+
+.check-history-today-tag,
+.check-history-missing-tag {
+  display: block;
+  font-size: 0.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.check-history-today-tag {
+  color: #2d6a4f;
+}
+
+.check-history-missing-tag {
+  color: #c45a1a;
+}
+
+.check-history-row-today {
+  background: rgba(216, 243, 220, 0.25);
+}
+
+.check-history-row-issues {
+  background: rgba(255, 235, 235, 0.35);
+}
+
+.check-history-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 1.55rem;
+  border: none;
+  border-radius: 0.35rem;
+  padding: 0.12rem 0.08rem;
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+
+.check-history-cell.is-pending {
+  color: rgba(28, 42, 31, 0.35);
+  background: rgba(28, 42, 31, 0.04);
+  cursor: default;
+}
+
+.check-history-cell.is-pass {
+  background: rgba(183, 228, 192, 0.35);
+  color: #1b4332;
+}
+
+.check-history-cell.is-fail {
+  background: rgba(244, 162, 97, 0.28);
+  color: #9b2226;
+}
+
+.check-history-score {
+  font-size: 0.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+.check-history-meta {
+  font-size: 0.48rem;
+  font-weight: 500;
+  color: rgba(28, 42, 31, 0.52);
+  line-height: 1.1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.check-history-fail-total {
+  font-variant-numeric: tabular-nums;
+}
+
+.check-history-fail-num {
+  color: #c1121f;
+  font-size: 0.62rem;
+}
+
+.check-history-zero {
+  color: rgba(28, 42, 31, 0.35);
+}
+
+.check-detail-card {
+  max-height: min(85vh, 32rem);
+  overflow-y: auto;
+  text-align: left;
+}
+
+.check-detail-sub {
+  margin: 0.15rem 0 0;
+  font-size: 0.68rem;
+}
+
+.check-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin: 0.55rem 0;
+}
+
+.check-detail-item {
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgba(28, 42, 31, 0.08);
+  font-size: 0.62rem;
+}
+
+.check-detail-item.is-pass {
+  background: rgba(216, 243, 220, 0.35);
+}
+
+.check-detail-item.is-fail {
+  grid-column: 1 / -1;
+  background: rgba(255, 235, 235, 0.65);
+  border-color: rgba(193, 18, 31, 0.18);
+}
+
+.check-detail-item-name {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.08rem;
+  font-size: 0.62rem;
+}
+
+.check-detail-remark {
+  margin: 0.25rem 0 0;
+  font-size: 0.58rem;
+  color: rgba(28, 42, 31, 0.72);
+}
+
+.check-detail-photo {
+  width: 100%;
+  max-height: 8rem;
+  object-fit: contain;
+  border-radius: 0.4rem;
+  margin-top: 0.3rem;
+}
+
+.check-detail-delete {
+  font-size: 0.72rem;
+  color: #c1121f;
+}
+
 .check-section-title {
   display: flex;
   align-items: center;

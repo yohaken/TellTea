@@ -15,6 +15,16 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import {
+  buildCheckHistoryGrid,
+  checkMonthInputValue,
+  computeCheckHistoryMonthStats,
+  formatCheckTimeShort,
+  inspectorShort,
+  parseCheckMonthInput,
+  type CheckHistoryDayRow,
+  type CheckHistoryShiftCell,
+} from "@/lib/check-history";
 import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { useAuth } from "@/lib/auth";
@@ -26,7 +36,6 @@ import {
   CHECK_SHIFTS,
   deleteCheckSession,
   getSessionForShift,
-  groupRecordsBySession,
   labelCheckShift,
   listActiveChecklistItems,
   newCheckId,
@@ -732,6 +741,13 @@ function FailModal({
   );
 }
 
+type HistoryFilter = "all" | "issues";
+
+type HistoryDetail = {
+  dateMs: number;
+  cell: CheckHistoryShiftCell;
+};
+
 function CheckSummary({
   records,
   isOwner,
@@ -741,45 +757,39 @@ function CheckSummary({
   isOwner: boolean;
   onError: (msg: string) => void;
 }) {
-  const [date, setDate] = useState(todayInputValue());
-  const dateMs = parseDateInput(date);
+  const [month, setMonth] = useState(checkMonthInputValue());
+  const [filter, setFilter] = useState<HistoryFilter>("all");
+  const [detail, setDetail] = useState<HistoryDetail | null>(null);
 
-  const dayRecords = useMemo(
-    () => records.filter((r) => r.date === dateMs),
-    [records, dateMs],
+  const { year, month: monthIdx } = parseCheckMonthInput(month);
+
+  useBodyScrollLock(!!detail);
+
+  const allRows = useMemo(
+    () => buildCheckHistoryGrid(records, year, monthIdx),
+    [records, year, monthIdx],
   );
 
-  const sessions = useMemo(() => groupRecordsBySession(dayRecords), [dayRecords]);
+  const rows = useMemo(
+    () => (filter === "issues" ? allRows.filter((r) => r.dayFails > 0) : allRows),
+    [allRows, filter],
+  );
 
-  const shiftSummaries = useMemo(() => {
-    const latestByShift = new Map<CheckShiftId, CheckSessionSummary>();
-    for (const session of [...sessions].sort((a, b) => b.submittedAt - a.submittedAt)) {
-      if (!latestByShift.has(session.shift)) {
-        latestByShift.set(session.shift, session);
-      }
-    }
-    return CHECK_SHIFTS.map((s) => {
-      const session = latestByShift.get(s.id) || null;
-      if (!session) {
-        return { shift: s.id, label: s.label, state: "pending" as const, session: null };
-      }
-      if (session.failed === 0) {
-        return { shift: s.id, label: s.label, state: "pass" as const, session };
-      }
-      return { shift: s.id, label: s.label, state: "fail" as const, session };
-    });
-  }, [sessions]);
+  const stats = useMemo(() => computeCheckHistoryMonthStats(allRows), [allRows]);
 
-  const allFails = useMemo(() => {
-    return dayRecords
-      .filter((r) => r.status === "fail")
-      .sort((a, b) => b.submittedAt - a.submittedAt);
-  }, [dayRecords]);
+  const detailRecords = useMemo(() => {
+    if (!detail?.cell.session) return [];
+    const { checkId } = detail.cell.session;
+    return records
+      .filter((r) => r.checkId === checkId)
+      .sort((a, b) => a.itemName.localeCompare(b.itemName, "th"));
+  }, [detail, records]);
 
   async function onDeleteSession(checkId: string) {
     if (!window.confirm("ลบชุดตรวจนี้?")) return;
     try {
       await deleteCheckSession(checkId);
+      setDetail(null);
     } catch (err) {
       onError((err as Error).message || "ลบไม่สำเร็จ");
     }
@@ -787,138 +797,219 @@ function CheckSummary({
 
   return (
     <div className="check-summary-view">
-      <div className="field" style={{ maxWidth: "12rem" }}>
-        <label htmlFor="summary-date">วันที่</label>
+      <div className="check-history-toolbar">
         <input
-          id="summary-date"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
+          type="month"
+          className="ot-slim-input"
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+          aria-label="เดือน"
         />
+        <div className="check-filter-pills" role="group" aria-label="ตัวกรอง">
+          <button
+            type="button"
+            className={filter === "all" ? "check-filter-pill is-active" : "check-filter-pill"}
+            onClick={() => setFilter("all")}
+          >
+            ทั้งหมด
+          </button>
+          <button
+            type="button"
+            className={filter === "issues" ? "check-filter-pill is-active" : "check-filter-pill"}
+            onClick={() => setFilter("issues")}
+          >
+            มีปัญหา
+          </button>
+        </div>
+        <p className="muted check-history-stats">
+          {stats.sessions}/{stats.expectedSessions} กะ · ไม่ผ {stats.failItems}
+          {stats.daysWithIssues ? ` · ${stats.daysWithIssues} วันมีปัญหา` : ""}
+        </p>
       </div>
 
-      {allFails.length ? (
-        <section className="check-fail-alert">
-          <h2 className="check-section-title">
-            <AlertTriangle size={18} aria-hidden />
-            พบปัญหา {allFails.length} รายการ
-          </h2>
-          <div className="check-fail-list">
-            {allFails.map((row) => (
-              <article key={row.id} className="check-fail-card">
-                <header>
-                  <strong>{row.itemName}</strong>
-                  <span className="check-fail-meta">
-                    {labelCheckShift(row.shift)} · {row.inspector} · {formatDateTimeShort(row.submittedAt)}
-                  </span>
-                </header>
-                <p className="check-fail-remark">{row.remark || "—"}</p>
-                {row.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={row.imageUrl} alt="หลักฐาน" className="check-fail-photo" />
-                ) : null}
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : dayRecords.length ? (
-        <div className="check-all-pass-banner">
-          <CheckCircle2 size={20} aria-hidden />
-          วันนี้ไม่พบรายการไม่ผ่าน
-        </div>
-      ) : null}
+      <p className="muted check-history-hint">
+        แต่ละวัน 3 กะ — พนักงานเข้ากะต้องตรวจ · แตะช่องดูรายละเอียด
+      </p>
 
-      <section>
-        <h2 className="check-section-title">สรุปตามกะ — {formatDateShort(dateMs)}</h2>
-        <div className="check-shift-summary-grid">
-          {shiftSummaries.map(({ shift, label, state, session }) => (
-            <div
-              key={shift}
-              className={
-                state === "pass"
-                  ? "check-shift-card is-pass"
-                  : state === "fail"
-                    ? "check-shift-card is-fail"
-                    : "check-shift-card is-pending"
-              }
+      {rows.length ? (
+        <div className="sheet-wrap check-history-wrap">
+          <table className="sheet-table check-history-table">
+            <thead>
+              <tr>
+                <th className="check-history-th-date">วันที่</th>
+                <th className="check-history-th-shift">ดึก</th>
+                <th className="check-history-th-shift">เช้า</th>
+                <th className="check-history-th-shift">เย็น</th>
+                <th className="check-history-th-fail col-out">ไม่ผ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <CheckHistoryRow
+                  key={row.dateMs}
+                  row={row}
+                  onOpen={(cell) => setDetail({ dateMs: row.dateMs, cell })}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="empty">
+          {filter === "issues"
+            ? "ไม่พบวันที่มีปัญหาในเดือนนี้"
+            : "ยังไม่มีบันทึกในเดือนนี้ — กด + กรอก เมื่อเข้ากะ"}
+        </p>
+      )}
+
+      {detail?.cell.session ? (
+        <CheckShiftDetailModal
+          dateMs={detail.dateMs}
+          cell={detail.cell}
+          records={detailRecords}
+          isOwner={isOwner}
+          onClose={() => setDetail(null)}
+          onDelete={() => void onDeleteSession(detail.cell.session!.checkId)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function CheckHistoryRow({
+  row,
+  onOpen,
+}: {
+  row: CheckHistoryDayRow;
+  onOpen: (cell: CheckHistoryShiftCell) => void;
+}) {
+  const todayMs = parseDateInput(todayInputValue());
+  const isToday = row.dateMs === todayMs;
+  const missingShifts = row.shifts.filter((s) => !s.session).length;
+
+  return (
+    <tr className={row.dayFails > 0 ? "check-history-row-issues" : isToday ? "check-history-row-today" : ""}>
+      <td className="check-history-date">
+        {formatDateShort(row.dateMs)}
+        {isToday ? <span className="check-history-today-tag">วันนี้</span> : null}
+        {isToday && missingShifts ? (
+          <span className="check-history-missing-tag">ค้าง {missingShifts} กะ</span>
+        ) : null}
+      </td>
+      {row.shifts.map((cell) => (
+        <td key={cell.shiftId}>
+          <CheckHistoryCell cell={cell} onOpen={() => cell.session && onOpen(cell)} />
+        </td>
+      ))}
+      <td className="col-out check-history-fail-total">
+        {row.dayFails > 0 ? (
+          <strong className="check-history-fail-num">{row.dayFails}</strong>
+        ) : (
+          <span className="check-history-zero">0</span>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function CheckHistoryCell({
+  cell,
+  onOpen,
+}: {
+  cell: CheckHistoryShiftCell;
+  onOpen: () => void;
+}) {
+  const session = cell.session;
+  if (!session) {
+    return (
+      <span className="check-history-cell is-pending" title="ยังไม่เช็ค">
+        —
+      </span>
+    );
+  }
+
+  const state = session.failed > 0 ? "fail" : "pass";
+  return (
+    <button
+      type="button"
+      className={`check-history-cell is-${state}`}
+      onClick={onOpen}
+      title={`${cell.label} · ${session.inspector}`}
+    >
+      <span className="check-history-score">
+        {session.passed}/{session.total}
+      </span>
+      <span className="check-history-meta">
+        {inspectorShort(session.inspector)} · {formatCheckTimeShort(session.submittedAt)}
+      </span>
+    </button>
+  );
+}
+
+function CheckShiftDetailModal({
+  dateMs,
+  cell,
+  records,
+  isOwner,
+  onClose,
+  onDelete,
+}: {
+  dateMs: number;
+  cell: CheckHistoryShiftCell;
+  records: ChecklistRecord[];
+  isOwner: boolean;
+  onClose: () => void;
+  onDelete: () => void;
+}) {
+  const session = cell.session!;
+
+  return (
+    <div className="modal-backdrop edit-modal is-module-form" onClick={onClose}>
+      <div className="modal-card check-detail-card" onClick={(e) => e.stopPropagation()}>
+        <div className="check-modal-head">
+          <div>
+            <h2 className="panel-title" style={{ fontSize: "1rem", margin: 0 }}>
+              {formatDateShort(dateMs)} · {cell.label}
+            </h2>
+            <p className="muted check-detail-sub">
+              {session.inspector} · {formatDateTimeShort(session.submittedAt)} ·{" "}
+              {session.failed ? `${session.failed} ไม่ผ่าน` : "ผ่านครบ"}
+            </p>
+          </div>
+          <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="check-detail-grid">
+          {records.map((row) => (
+            <article
+              key={row.id}
+              className={row.status === "fail" ? "check-detail-item is-fail" : "check-detail-item is-pass"}
             >
-              <span className="check-shift-card-label">{label}</span>
-              {state === "pending" ? (
-                <strong>ยังไม่เช็ค</strong>
-              ) : session ? (
+              <span className="check-detail-item-name">{row.itemName}</span>
+              <span className={row.status === "fail" ? "check-cell-fail" : "check-cell-pass"}>
+                {row.status === "pass" ? "ผ่าน" : "ไม่ผ่าน"}
+              </span>
+              {row.status === "fail" ? (
                 <>
-                  <strong>
-                    {session.failed === 0 ? "ผ่าน 100%" : `${session.failed} ไม่ผ่าน`}
-                  </strong>
-                  <span className="muted" style={{ fontSize: "0.68rem" }}>
-                    {session.inspector} · {formatDateTimeShort(session.submittedAt)}
-                  </span>
-                  <span className="muted" style={{ fontSize: "0.68rem" }}>
-                    {session.passed}/{session.total} ผ่าน
-                  </span>
-                  {isOwner ? (
-                    <button
-                      type="button"
-                      className="ghost-btn"
-                      style={{ fontSize: "0.65rem", marginTop: "0.25rem" }}
-                      onClick={() => void onDeleteSession(session.checkId)}
-                    >
-                      <Trash2 size={12} aria-hidden /> ลบชุดนี้
-                    </button>
+                  <p className="check-detail-remark">{row.remark || "—"}</p>
+                  {row.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={row.imageUrl} alt="หลักฐาน" className="check-detail-photo" />
                   ) : null}
                 </>
               ) : null}
-            </div>
+            </article>
           ))}
         </div>
-      </section>
 
-      {sessions.length ? (
-        <section className="check-sheet-section">
-          <h2 className="check-section-title">ตารางบันทึก</h2>
-          <div className="sheet-wrap">
-            <table className="sheet-table check-records-table">
-              <thead>
-                <tr>
-                  <th>เวลาส่ง</th>
-                  <th>กะ</th>
-                  <th>ผู้ตรวจ</th>
-                  <th>รายการ</th>
-                  <th>สถานะ</th>
-                  <th>หมายเหตุ</th>
-                  <th>รูป</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dayRecords
-                  .sort((a, b) => b.submittedAt - a.submittedAt || a.itemName.localeCompare(b.itemName))
-                  .map((row) => (
-                    <tr key={row.id} className={row.status === "fail" ? "check-row-fail" : ""}>
-                      <td className="col-date">{formatDateTimeShort(row.submittedAt)}</td>
-                      <td>{labelCheckShift(row.shift)}</td>
-                      <td>{row.inspector}</td>
-                      <td className="col-desc">{row.itemName}</td>
-                      <td className={row.status === "fail" ? "check-cell-fail" : "check-cell-pass"}>
-                        {row.status === "pass" ? "ผ่าน" : "ไม่ผ่าน"}
-                      </td>
-                      <td className="col-note">{row.remark || "—"}</td>
-                      <td className="col-act">
-                        {row.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={row.imageUrl} alt="" className="check-table-thumb" />
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ) : (
-        <p className="empty">ยังไม่มีบันทึกวันนี้ — กด + กรอก เพื่อเริ่มเช็ค</p>
-      )}
+        {isOwner ? (
+          <button type="button" className="ghost-btn check-detail-delete" onClick={onDelete}>
+            <Trash2 size={14} aria-hidden /> ลบชุดตรวจนี้
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }
