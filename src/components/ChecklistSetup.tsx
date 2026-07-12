@@ -2,14 +2,18 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 import {
   addChecklistItem,
   deleteAllChecklistRecords,
   deleteChecklistItem,
   listChecklistItems,
+  subscribeChecklistRecords,
   updateChecklistItem,
   type ChecklistItem,
 } from "@/lib/checklist";
+import { seedDemoChecklistRecords, summarizeExistingSessions } from "@/lib/checklist-seed";
+import { listActiveEmployees } from "@/lib/employees";
 
 export function ChecklistSetup({
   onReload,
@@ -18,12 +22,15 @@ export function ChecklistSetup({
   onReload?: () => void;
   onError: (msg: string) => void;
 }) {
+  const { user } = useAuth();
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [name, setName] = useState("");
   const [groupLabel, setGroupLabel] = useState("ทั่วไป");
   const [busy, setBusy] = useState(false);
   const [clearBusy, setClearBusy] = useState(false);
+  const [seedBusy, setSeedBusy] = useState(false);
   const [clearMsg, setClearMsg] = useState<string | null>(null);
+  const [seedMsg, setSeedMsg] = useState<string | null>(null);
 
   async function reload() {
     setItems(await listChecklistItems());
@@ -90,6 +97,55 @@ export function ChecklistSetup({
     }
   }
 
+  async function onSeedDemo() {
+    if (
+      !window.confirm(
+        "จำลองข้อมูล SmartCheck ตั้งแต่ 1 ก.ค. ถึงวันนี้?\n\n3 กะ/วัน · ส่วนใหญ่ผ่าน · มีไม่ผ่านบ้าง\n\nข้ามวัน+กะที่มีข้อมูลแล้ว",
+      )
+    ) {
+      return;
+    }
+    setSeedBusy(true);
+    setSeedMsg(null);
+    try {
+      const [employees, existingRecords] = await Promise.all([
+        listActiveEmployees(),
+        new Promise<Awaited<ReturnType<typeof summarizeExistingSessions>>>((resolve, reject) => {
+          const unsub = subscribeChecklistRecords(
+            (rows) => {
+              unsub();
+              resolve(summarizeExistingSessions(rows));
+            },
+            (err) => reject(err),
+          );
+        }),
+      ]);
+
+      const result = await seedDemoChecklistRecords(
+        employees,
+        {
+          startDate: "2026-07-01",
+          createdBy: user?.email || "owner@telltea.local",
+          skipExisting: true,
+        },
+        existingRecords,
+      );
+
+      setSeedMsg(
+        result.sessions
+          ? `ใส่แล้ว ${result.sessions} รอบ · ${result.records} แถว (${result.fromDate} → ${result.toDate})`
+          : result.skippedSessions
+            ? `ครบแล้ว — ข้าม ${result.skippedSessions} รอบที่มีอยู่`
+            : "ไม่มีข้อมูลใหม่",
+      );
+      onReload?.();
+    } catch (err) {
+      onError((err as Error).message || "จำลองข้อมูลไม่สำเร็จ");
+    } finally {
+      setSeedBusy(false);
+    }
+  }
+
   const groups = useMemo(() => {
     const map = new Map<string, ChecklistItem[]>();
     for (const item of items) {
@@ -149,6 +205,22 @@ export function ChecklistSetup({
           </ul>
         </section>
       ))}
+
+      <section className="form-card entry-form check-danger-zone">
+        <h3 className="panel-title" style={{ fontSize: "1rem" }}>ทดสอบระบบ</h3>
+        <p className="muted check-hint">
+          จำลองบันทึก SmartCheck ตั้งแต่ 1 ก.ค. ถึงวันนี้ (3 กะ/วัน) — ใช้ช่วงเทส แล้วค่อยลบเมื่อเริ่มจริง
+        </p>
+        <button
+          type="button"
+          className="primary-btn"
+          disabled={seedBusy}
+          onClick={() => void onSeedDemo()}
+        >
+          {seedBusy ? "กำลังใส่ข้อมูล..." : "จำลองข้อมูลทดสอบ"}
+        </button>
+        {seedMsg ? <p className="muted check-import-preview">{seedMsg}</p> : null}
+      </section>
 
       <section className="form-card entry-form check-danger-zone">
         <h3 className="panel-title" style={{ fontSize: "1rem" }}>เริ่มใหม่</h3>

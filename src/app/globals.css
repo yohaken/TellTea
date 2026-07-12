@@ -2031,6 +2031,21 @@ body.modal-open .main-panel {
   gap: 0.75rem;
 }
 
+.check-seed-bar {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.55rem 0.65rem;
+  margin-bottom: 0.45rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px dashed rgba(28, 42, 31, 0.14);
+}
+
+.check-seed-bar .ghost-btn {
+  justify-self: start;
+  font-size: 0.78rem;
+}
+
 .check-section-title {
   display: flex;
   align-items: center;

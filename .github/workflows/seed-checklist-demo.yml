@@ -1,0 +1,41 @@
+name: Seed SmartCheck demo
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: "Start date YYYY-MM-DD"
+        required: false
+        default: "2026-07-01"
+      end_date:
+        description: "End date YYYY-MM-DD (blank = today Bangkok)"
+        required: false
+        default: ""
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Seed checklist demo data
+        env:
+          CHECK_START: ${{ inputs.start_date }}
+          CHECK_END: ${{ inputs.end_date }}
+          CREATED_BY: yohaken@gmail.com
+        run: node scripts/seed-checklist-demo.js
