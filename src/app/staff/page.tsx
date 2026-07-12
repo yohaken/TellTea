@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
+import { PermissionPicker } from "@/components/PermissionPicker";
 import { useAuth } from "@/lib/auth";
 import {
   addEmployee,
@@ -14,8 +15,6 @@ import { listStaff, removeStaff, upsertStaff } from "@/lib/staff";
 import type { StaffMember, StaffRole } from "@/lib/types";
 import {
   DEFAULT_STAFF_PERMISSIONS,
-  PERMISSION_KEYS,
-  PERMISSION_LABELS,
   can,
   normalizePermissions,
   type StaffPermissions,
@@ -198,18 +197,7 @@ function StaffView() {
           {role === "staff" ? (
             <div className="field">
               <span className="field-label">สิทธิ์การใช้งาน</span>
-              {PERMISSION_KEYS.map((key) => (
-                <label key={key} className="check-row">
-                  <input
-                    type="checkbox"
-                    checked={perms[key]}
-                    onChange={(e) =>
-                      setPerms((p) => ({ ...p, [key]: e.target.checked }))
-                    }
-                  />
-                  {PERMISSION_LABELS[key]}
-                </label>
-              ))}
+              <PermissionPicker value={perms} onChange={setPerms} disabled={busy} />
             </div>
           ) : (
             <p className="muted" style={{ textAlign: "left", margin: 0 }}>
@@ -287,17 +275,8 @@ function MemberPermEditor({
 }) {
   const [perms, setPerms] = useState(initial);
   return (
-    <div>
-      {PERMISSION_KEYS.map((key) => (
-        <label key={key} className="check-row">
-          <input
-            type="checkbox"
-            checked={perms[key]}
-            onChange={(e) => setPerms((p) => ({ ...p, [key]: e.target.checked }))}
-          />
-          {PERMISSION_LABELS[key]}
-        </label>
-      ))}
+    <div className="permission-editor">
+      <PermissionPicker value={perms} onChange={setPerms} disabled={busy} />
       <button
         type="button"
         className="primary-btn"

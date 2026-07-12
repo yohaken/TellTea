@@ -34,6 +34,20 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   staffManage: "จัดการพนักงาน",
 };
 
+/** จัดกลุ่มสิทธิ์ให้เลือกใน UI ศูนย์พนักงาน */
+export const PERMISSION_GROUPS: { title: string; hint?: string; keys: PermissionKey[] }[] = [
+  {
+    title: "หน้าหลัก — ใช้ทุกวัน",
+    hint: "แท็บด้านล่าง: บัญชี · ผลิต · OT · เช็ค · คลัง · โบนัส",
+    keys: ["ledger", "stock", "production", "otBonus", "checklist", "bonus"],
+  },
+  {
+    title: "อื่นๆ — เครื่องมือเพิ่ม",
+    hint: "แสดงแท็บ อื่นๆ เมื่อเปิดอย่างน้อย 1 สิทธิในกลุ่มนี้",
+    keys: ["ownerBooks", "pnl", "alerts", "transferIn", "exportData", "staffManage"],
+  },
+];
+
 export const DEFAULT_STAFF_PERMISSIONS: StaffPermissions = {
   ledger: true,
   stock: true,

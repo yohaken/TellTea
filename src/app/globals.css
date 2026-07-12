@@ -143,14 +143,6 @@ textarea {
   box-shadow: 0 8px 24px rgba(28, 42, 31, 0.05);
 }
 
-.check-row {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  margin-bottom: 0.85rem;
-  font-weight: 600;
-}
-
 .field-hint {
   margin: 0.35rem 0 0;
   font-size: 0.8rem;
@@ -566,7 +558,7 @@ body.modal-open .main-panel {
   margin-bottom: 0.75rem;
 }
 
-.field input,
+.field input:not([type="checkbox"]):not([type="radio"]),
 .field select,
 .field textarea {
   width: 100%;
@@ -575,6 +567,127 @@ body.modal-open .main-panel {
   background: rgba(255, 255, 255, 0.85);
   padding: 0.8rem 0.9rem;
   min-height: 2.75rem;
+}
+
+.field input[type="checkbox"],
+.field input[type="radio"] {
+  width: 1.05rem;
+  height: 1.05rem;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--tea-leaf);
+}
+
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin-bottom: 0.55rem;
+  font-weight: 500;
+  font-size: 0.88rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.permission-picker {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.permission-group {
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(28, 42, 31, 0.1);
+}
+
+.permission-group-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.permission-group-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--tea-leaf);
+  text-align: left;
+}
+
+.permission-group-hint {
+  margin: 0.2rem 0 0;
+  font-size: 0.72rem;
+  color: rgba(28, 42, 31, 0.52);
+  text-align: left;
+  line-height: 1.35;
+}
+
+.permission-group-toggle {
+  font-size: 0.68rem;
+  padding: 0.28rem 0.45rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.permission-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.permission-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.4rem 0.45rem;
+  border-radius: 0.6rem;
+  background: rgba(243, 239, 228, 0.55);
+  cursor: pointer;
+  text-align: left;
+}
+
+.permission-row:has(input:checked) {
+  background: rgba(74, 107, 62, 0.12);
+  border: 1px solid rgba(74, 107, 62, 0.22);
+}
+
+.permission-row:not(:has(input:checked)) {
+  border: 1px solid transparent;
+}
+
+.permission-row-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.permission-row-text strong {
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.88);
+}
+
+.permission-group-count {
+  margin: 0.4rem 0 0;
+  font-size: 0.68rem;
+  text-align: left;
+}
+
+.permission-editor {
+  padding: 0.55rem 0 0;
+  border-top: 1px dashed rgba(28, 42, 31, 0.12);
+}
+
+.staff-hub-section {
+  margin-bottom: 1rem;
 }
 
 .pay-toggle {
