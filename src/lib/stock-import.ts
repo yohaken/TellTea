@@ -29,7 +29,7 @@ export type StockImportPreview = {
   products: ParsedStockProduct[];
   movements: ParsedStockMovement[];
   skipped: { row: number; reason: string; detail?: string }[];
-  format: "catalog" | "grid";
+  format: "catalog" | "grid" | "transposed";
 };
 
 export type StockImportResult = {
@@ -190,24 +190,165 @@ export function parseDateHeader(cell: string, year: number, month: number): numb
   return null;
 }
 
-function findHeaderRow(rows: string[][], year: number, month: number): number {
+function isProductHeader(raw: string) {
+  const n = norm(raw);
+  if (!n || isSkipRowName(raw)) return false;
+  if (parseDateHeader(raw, 2026, 7) != null) return false;
+  const canonical = canonicalProductName(raw);
+  if (DEFAULT_STOCK_ITEMS.some((d) => d.name === canonical)) return true;
+  return /[\u0E00-\u0E7F]/.test(raw) && raw.length >= 2 && raw.length <= 40;
+}
+
+function scoreLayout(rows: string[][], year: number, month: number) {
   let bestIdx = 0;
-  let bestScore = 0;
+  let bestRowScore = 0;
+  let bestTransposedScore = 0;
+
   for (let i = 0; i < Math.min(rows.length, 15); i += 1) {
     const row = rows[i] || [];
-    let score = 0;
+    let rowScore = 0;
+    let transposedScore = 0;
     const h0 = norm(row[0] || "");
-    if (h0.includes("รายการ") || h0.includes("ชื่อ") || h0.includes("สินค้า")) score += 5;
-    if (colIndex(row, "หน่วย") != null) score += 2;
-    if (colIndex(row, "คงเหลือ", "qty", "stock", "ยอด") != null) score += 3;
-    const dateCols = row.filter((c) => parseDateHeader(c, year, month) != null).length;
-    score += dateCols * 2;
-    if (score > bestScore) {
-      bestScore = score;
+    if (h0.includes("รายการ") || h0.includes("ชื่อ") || h0.includes("สินค้า")) rowScore += 5;
+    if (colIndex(row, "หน่วย") != null) rowScore += 2;
+    if (colIndex(row, "คงเหลือ", "qty", "stock", "ยอด") != null) rowScore += 3;
+    rowScore += row.filter((c) => parseDateHeader(c, year, month) != null).length * 2;
+
+    if (h0.includes("วันที่") || h0.includes("date")) transposedScore += 6;
+    transposedScore += row.slice(1).filter((c) => isProductHeader(c)).length * 2;
+
+    if (rowScore > bestRowScore) {
+      bestRowScore = rowScore;
       bestIdx = i;
     }
+    if (transposedScore > bestTransposedScore) bestTransposedScore = transposedScore;
   }
-  return bestIdx;
+
+  return {
+    headerIdx: bestIdx,
+    mode: bestTransposedScore > bestRowScore + 2 ? "transposed" : "row",
+  } as const;
+}
+
+function findHeaderRow(rows: string[][], year: number, month: number): number {
+  return scoreLayout(rows, year, month).headerIdx;
+}
+
+function parseDateCell(
+  cell: string,
+  year: number,
+  month: number,
+  carry?: { day: number | null },
+): number | null {
+  const fromHeader = parseDateHeader(cell, year, month);
+  if (fromHeader != null) return fromHeader;
+
+  const t = String(cell || "").trim();
+  if (!t) return null;
+  const day = Number(t.replace(/[^\d]/g, ""));
+  if (day >= 1 && day <= 31) {
+    if (carry) carry.day = day;
+    return new Date(year, month - 1, day).getTime();
+  }
+  if (carry?.day != null) return new Date(year, month - 1, carry.day).getTime();
+  return null;
+}
+
+function parseTransposedGrid(
+  rows: string[][],
+  headerIdx: number,
+  year: number,
+  month: number,
+): StockImportPreview {
+  const headers = rows[headerIdx] || [];
+  const skipped: StockImportPreview["skipped"] = [];
+  const productCols: {
+    col: number;
+    name: string;
+    unit: string;
+    minQty: number;
+    safetyStock: number;
+  }[] = [];
+
+  headers.forEach((h, col) => {
+    if (col === 0) return;
+    const raw = String(h || "").trim();
+    if (!isProductHeader(raw)) return;
+    const name = canonicalProductName(raw);
+    const def = DEFAULT_STOCK_ITEMS.find((d) => d.name === name);
+    productCols.push({
+      col,
+      name,
+      unit: def?.unit || "ชิ้น",
+      minQty: def?.minQty || 0,
+      safetyStock: def?.safetyStock || 0,
+    });
+  });
+
+  if (!productCols.length) {
+    return { products: [], movements: [], skipped: [{ row: headerIdx + 1, reason: "no-products" }], format: "transposed" };
+  }
+
+  const countsByProduct = new Map<string, ParsedStockCount[]>();
+  const carry = { day: null as number | null };
+
+  for (let i = headerIdx + 1; i < rows.length; i += 1) {
+    const row = rows[i] || [];
+    while (row.length < headers.length) row.push("");
+
+    const date = parseDateCell(String(row[0] || ""), year, month, carry);
+    if (!date) {
+      if (!row.some((c, col) => col > 0 && toNumber(c) != null)) {
+        skipped.push({ row: i + 1, reason: "no-date" });
+      }
+      continue;
+    }
+
+    let any = false;
+    for (const pc of productCols) {
+      const val = toNumber(row[pc.col] || "");
+      if (val == null) continue;
+      any = true;
+      const list = countsByProduct.get(pc.name) || [];
+      list.push({ date, qty: val });
+      countsByProduct.set(pc.name, list);
+    }
+    if (!any) skipped.push({ row: i + 1, reason: "empty-row" });
+  }
+
+  const products: ParsedStockProduct[] = productCols
+    .map((pc) => {
+      const counts = (countsByProduct.get(pc.name) || []).sort((a, b) => a.date - b.date);
+      const qty = counts.length ? counts[counts.length - 1]!.qty : 0;
+      return {
+        name: pc.name,
+        unit: pc.unit,
+        qty,
+        minQty: pc.minQty,
+        safetyStock: pc.safetyStock,
+        unitCost: 0,
+        barcode: "",
+        counts,
+        sourceRow: headerIdx + 1,
+      };
+    })
+    .filter((p) => p.counts.length > 0);
+
+  const movements: ParsedStockMovement[] = [];
+  for (const p of products) {
+    if (p.counts.length > 1) movements.push(...buildMovementsFromCounts(p.name, p.counts));
+    else if (p.qty > 0) {
+      movements.push({
+        itemName: p.name,
+        type: "ADJUST",
+        quantity: p.qty,
+        date: p.counts[0]?.date ?? Date.now(),
+        remark: "Import CSV — ยอดจากชีท",
+      });
+    }
+  }
+
+  return { products, movements, skipped, format: "transposed" };
 }
 
 function buildMovementsFromCounts(
@@ -256,7 +397,13 @@ export function parseStockCsv(
     return { products: [], movements: [], skipped: [{ row: 0, reason: "empty" }], format: "grid" };
   }
 
-  const headerIdx = findHeaderRow(rows, year, month);
+  const layout = scoreLayout(rows, year, month);
+  const headerIdx = layout.headerIdx;
+  if (layout.mode === "transposed") {
+    const transposed = parseTransposedGrid(rows, headerIdx, year, month);
+    if (transposed.products.length) return transposed;
+  }
+
   const headers = rows[headerIdx] || [];
   const skipped: StockImportPreview["skipped"] = [];
 
@@ -276,7 +423,7 @@ export function parseStockCsv(
   dateCols.sort((a, b) => a.date - b.date);
 
   const isCatalog = qtyCol != null && dateCols.length === 0;
-  const format: "catalog" | "grid" = isCatalog ? "catalog" : "grid";
+  const format: StockImportPreview["format"] = isCatalog ? "catalog" : "grid";
 
   const products: ParsedStockProduct[] = [];
 

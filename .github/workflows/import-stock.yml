@@ -1,0 +1,56 @@
+name: Import stock CSV
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/**"
+      - "scripts/import-stock-csv.js"
+      - "src/lib/stock-import.ts"
+  workflow_dispatch:
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    if: github.repository != ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Find CSV
+        id: csv
+        run: |
+          if [ -f "data/TELL TEA - สต๊อกสินค้า.csv" ]; then
+            echo "path=data/TELL TEA - สต๊อกสินค้า.csv" >> "$GITHUB_OUTPUT"
+          else
+            FILE=$(find data -maxdepth 1 -name '*.csv' -type f | head -1)
+            if [ -z "$FILE" ]; then
+              echo "No CSV in data/ — skip import"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "path=$FILE" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Authenticate to Google Cloud
+        if: steps.csv.outputs.skip != 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Import to Firestore
+        if: steps.csv.outputs.skip != 'true'
+        env:
+          STOCK_YEAR: "2026"
+          STOCK_MONTH: "7"
+          CREATED_BY: yohaken@gmail.com
+        run: node scripts/import-stock-csv.js "${{ steps.csv.outputs.path }}"

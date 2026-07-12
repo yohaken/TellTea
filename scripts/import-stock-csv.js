@@ -10,10 +10,24 @@ const { GoogleAuth } = require("google-auth-library");
 const PROJECT = "mypeer-501909";
 const KEY =
   process.env.FIREBASE_KEY ||
+  process.env.GOOGLE_APPLICATION_CREDENTIALS ||
   "/Users/peerapongyohaken/Downloads/mypeer-501909-3422f8ec89b2.json";
-const CSV_PATH =
-  process.argv[2] ||
-  path.join(process.env.HOME || "", "Downloads", "TELL TEA - สต๊อกสินค้า.csv");
+
+function resolveCsvPath() {
+  if (process.argv[2]) return process.argv[2];
+  const repoData = path.join(__dirname, "../data/TELL TEA - สต๊อกสินค้า.csv");
+  if (fs.existsSync(repoData)) return repoData;
+  const dataDir = path.join(__dirname, "../data");
+  if (fs.existsSync(dataDir)) {
+    const csvs = fs.readdirSync(dataDir).filter((f) => f.toLowerCase().endsWith(".csv"));
+    if (csvs.length === 1) return path.join(dataDir, csvs[0]);
+    const named = csvs.find((f) => f.includes("สต๊อก") || f.toLowerCase().includes("stock"));
+    if (named) return path.join(dataDir, named);
+  }
+  return path.join(process.env.HOME || "", "Downloads", "TELL TEA - สต๊อกสินค้า.csv");
+}
+
+const CSV_PATH = resolveCsvPath();
 const YEAR = Number(process.env.STOCK_YEAR || 2026);
 const MONTH = Number(process.env.STOCK_MONTH || 7);
 const CREATED_BY = process.env.CREATED_BY || "yohaken@gmail.com";
@@ -273,10 +287,9 @@ function randomId() {
 }
 
 async function getToken() {
-  const auth = new GoogleAuth({
-    keyFile: KEY,
-    scopes: ["https://www.googleapis.com/auth/datastore"],
-  });
+  const opts = { scopes: ["https://www.googleapis.com/auth/datastore"] };
+  if (KEY && fs.existsSync(KEY)) opts.keyFile = KEY;
+  const auth = new GoogleAuth(opts);
   const client = await auth.getClient();
   const { token } = await client.getAccessToken();
   if (!token) throw new Error("no token");
@@ -317,7 +330,8 @@ async function commitWrites(token, writes) {
 
 async function main() {
   if (!fs.existsSync(CSV_PATH)) throw new Error(`missing ${CSV_PATH}`);
-  if (!fs.existsSync(KEY)) throw new Error(`missing service account ${KEY}`);
+  const hasKey = (KEY && fs.existsSync(KEY)) || process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!hasKey) throw new Error("missing Firebase credentials (FIREBASE_KEY or GOOGLE_APPLICATION_CREDENTIALS)");
 
   const text = fs.readFileSync(CSV_PATH, "utf8");
   const { products, movements, skipped } = parseStockCsv(text, YEAR, MONTH);
