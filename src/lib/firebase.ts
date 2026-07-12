@@ -86,3 +86,9 @@ export function getDb() {
 export const OWNER_EMAIL = (process.env.NEXT_PUBLIC_OWNER_EMAIL || "yohaken@gmail.com")
   .trim()
   .toLowerCase();
+
+/** เจ้าของร้านคนเดียว — ใช้เปิดฟีเจอร์ทดลองก่อนปล่อยให้พนักงาน */
+export function isAppOwnerEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return email.trim().toLowerCase() === OWNER_EMAIL;
+}

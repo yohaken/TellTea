@@ -9,6 +9,7 @@ import {
   BookMarked,
   ChartColumn,
   CircleDollarSign,
+  ClipboardList,
   Download,
   Settings,
   UserCircle,
@@ -18,6 +19,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import { needsPersonalProfileSetup, needsProfileSetup, personalProfileLabel } from "@/lib/profile";
 import { can, hasAnyExtraPermission, type PermissionKey } from "@/lib/permissions";
+import { isAppOwnerEmail } from "@/lib/firebase";
 
 export default function MorePage() {
   return (
@@ -28,7 +30,7 @@ export default function MorePage() {
 }
 
 function MoreView() {
-  const { staff } = useAuth();
+  const { staff, user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -147,6 +149,15 @@ function MoreView() {
             </div>
           </Link>
         ))}
+        {isAppOwnerEmail(user?.email) ? (
+          <Link href="/tasks/" className="more-card">
+            <ClipboardList size={22} />
+            <div>
+              <strong>งานมอบหมาย</strong>
+              <p>มอบงาน checklist + รูปหลักฐาน (ทดลอง — เจ้าของเท่านั้น)</p>
+            </div>
+          </Link>
+        ) : null}
       </div>
     </div>
   );

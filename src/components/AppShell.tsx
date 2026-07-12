@@ -8,7 +8,6 @@ import {
   ChefHat,
   CircleDollarSign,
   ClipboardCheck,
-  ClipboardList,
   Coffee,
   LogOut,
   MoreHorizontal,
@@ -63,9 +62,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       : null,
     can(staff, "stock")
       ? { href: "/stock/", label: "คลัง", icon: Boxes }
-      : null,
-    can(staff, "assignTasks")
-      ? { href: "/tasks/", label: "งาน", icon: ClipboardList }
       : null,
     hasAnyExtraPermission(staff)
       ? { href: "/more/", label: "อื่นๆ", icon: MoreHorizontal }

@@ -91,13 +91,18 @@ const pageSrc = readFileSync(join(root, "src/app/tasks/page.tsx"), "utf8");
 const cssSrc = readFileSync(join(root, "src/app/globals.css"), "utf8");
 const rulesSrc = readFileSync(join(root, "firestore.rules"), "utf8");
 
+assert.match(pageSrc, /isAppOwnerEmail/);
 assert.match(pageSrc, /subscribeAllAssignTasks/);
-assert.match(pageSrc, /subscribeAssignTasksForEmployee/);
-assert.match(pageSrc, /PhotoAttachField/);
-assert.match(pageSrc, /ModuleTabDock/);
+assert.doesNotMatch(pageSrc, /subscribeAssignTasksForEmployee/);
 assert.match(cssSrc, /\.tasks-card/);
 assert.match(cssSrc, /\.tasks-check-btn/);
 assert.match(rulesSrc, /match \/assignTasks\/\{id\}/);
-assert.match(rulesSrc, /assignTaskStaffComplete/);
+assert.match(rulesSrc, /allow read, create, update, delete: if isOwnerEmail\(\)/);
+
+const moreSrc = readFileSync(join(root, "src/app/more/page.tsx"), "utf8");
+const shellSrc = readFileSync(join(root, "src/components/AppShell.tsx"), "utf8");
+assert.match(moreSrc, /isAppOwnerEmail/);
+assert.match(moreSrc, /งานมอบหมาย/);
+assert.doesNotMatch(shellSrc, /\/tasks\//);
 
 console.log("OK assign-tasks logic + page wiring");

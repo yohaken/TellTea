@@ -39,13 +39,12 @@ import {
   createAssignTask,
   deleteAssignTask,
   subscribeAllAssignTasks,
-  subscribeAssignTasksForEmployee,
   type AssignChecklistItem,
   type AssignTask,
   type AssignTaskRecurrence,
 } from "@/lib/assign-tasks";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
-import { can } from "@/lib/permissions";
+import { isAppOwnerEmail } from "@/lib/firebase";
 import {
   formatDateShort,
   parseDateInput,
@@ -76,10 +75,10 @@ export default function TasksPage() {
 }
 
 function TasksView() {
-  const { actorId, staff } = useAuth();
+  const { actorId, staff, user } = useAuth();
   const router = useRouter();
+  const previewOnly = isAppOwnerEmail(user?.email);
   const isOwner = staff?.role === "owner";
-  const myEmployeeId = staff?.employeeId || "";
 
   const [tasks, setTasks] = useState<AssignTask[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -91,13 +90,13 @@ function TasksView() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (staff && !can(staff, "assignTasks")) {
-      router.replace("/ledger/");
+    if (user && staff && !previewOnly) {
+      router.replace("/more/");
     }
-  }, [staff, router]);
+  }, [user, staff, previewOnly, router]);
 
   useEffect(() => {
-    if (!can(staff, "assignTasks")) return;
+    if (!previewOnly) return;
     setLoading(true);
     let employeesReady = false;
     let tasksReady = false;
@@ -113,13 +112,6 @@ function TasksView() {
         finishLoading();
       });
 
-    if (!isOwner && !myEmployeeId) {
-      setTasks([]);
-      tasksReady = true;
-      finishLoading();
-      return;
-    }
-
     const onRows = (rows: AssignTask[]) => {
       setTasks(rows);
       if (!tasksReady) {
@@ -128,16 +120,10 @@ function TasksView() {
       }
     };
 
-    const unsub = isOwner
-      ? subscribeAllAssignTasks(onRows, (err) => setError(err.message || "โหลดงานไม่สำเร็จ"))
-      : subscribeAssignTasksForEmployee(
-          myEmployeeId,
-          onRows,
-          (err) => setError(err.message || "โหลดงานไม่สำเร็จ"),
-        );
+    const unsub = subscribeAllAssignTasks(onRows, (err) => setError(err.message || "โหลดงานไม่สำเร็จ"));
 
     return unsub;
-  }, [staff, isOwner, myEmployeeId]);
+  }, [previewOnly]);
 
   useBodyScrollLock(createOpen || !!submitTask || !!previewUrl);
 
@@ -150,7 +136,7 @@ function TasksView() {
 
   const pendingCount = tasks.filter((t) => t.status === "pending").length;
 
-  if (!can(staff, "assignTasks")) return null;
+  if (!previewOnly) return null;
 
   return (
     <div className="module-page tasks-page">
@@ -160,24 +146,12 @@ function TasksView() {
           งานมอบหมาย
         </h1>
         <p className="muted tasks-page-hint">
-          {isOwner
-            ? "มอบหมายงาน · ตรวจรูปหลักฐานเมื่อพนักงานส่ง"
-            : "งานของคุณ — ติ๊ก checklist แล้วแนบรูปก่อนส่ง"}
+          โหมดทดลอง — มอบหมายงาน · ตรวจรูปหลักฐาน (เจ้าของเท่านั้น)
         </p>
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
-
-      {!loading && !isOwner && !myEmployeeId ? (
-        <p className="tasks-link-banner">
-          เชื่อมชื่อกับรายชื่อร้านที่{" "}
-          <a href="/profile/" style={{ fontWeight: 700 }}>
-            โปรไฟล์
-          </a>{" "}
-          ก่อนรับงาน
-        </p>
-      ) : null}
 
       {!loading ? (
         <>

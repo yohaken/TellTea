@@ -40,13 +40,13 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
 export const PERMISSION_GROUPS: { title: string; hint?: string; keys: PermissionKey[] }[] = [
   {
     title: "หน้าหลัก — ใช้ทุกวัน",
-    hint: "แท็บด้านล่าง: บัญชี · ผลิต · ชง · เช็ค · คลัง · งาน · โบนัส",
-    keys: ["ledger", "stock", "production", "otBonus", "checklist", "assignTasks", "bonus"],
+    hint: "แท็บด้านล่าง: บัญชี · ผลิต · ชง · เช็ค · คลัง · โบนัส",
+    keys: ["ledger", "stock", "production", "otBonus", "checklist", "bonus"],
   },
   {
     title: "อื่นๆ — เครื่องมือเพิ่ม",
     hint: "แสดงแท็บ อื่นๆ เมื่อเปิดอย่างน้อย 1 สิทธิในกลุ่มนี้",
-    keys: ["ownerBooks", "pnl", "alerts", "transferIn", "exportData", "staffManage"],
+    keys: ["ownerBooks", "pnl", "alerts", "transferIn", "exportData", "staffManage", "assignTasks"],
   },
 ];
 
@@ -56,7 +56,7 @@ export const DEFAULT_STAFF_PERMISSIONS: StaffPermissions = {
   production: true,
   otBonus: true,
   checklist: true,
-  assignTasks: true,
+  assignTasks: false,
   bonus: true,
   ownerBooks: false,
   pnl: false,
@@ -72,7 +72,7 @@ export const OWNER_PERMISSIONS: StaffPermissions = {
   production: true,
   otBonus: true,
   checklist: true,
-  assignTasks: true,
+  assignTasks: false,
   bonus: true,
   ownerBooks: true,
   pnl: true,
