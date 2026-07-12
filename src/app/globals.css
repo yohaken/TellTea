@@ -779,6 +779,30 @@ body.modal-open .main-panel {
   margin-bottom: 1rem;
 }
 
+.profile-prompt-banner--personal {
+  background: rgba(255, 235, 235, 0.95);
+  border-color: rgba(180, 50, 40, 0.28);
+}
+
+.profile-prompt-banner--personal .profile-prompt-actions {
+  grid-template-columns: 1fr;
+}
+
+.profile-badge-warn {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #a34a12;
+  background: rgba(196, 90, 26, 0.12);
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.35rem;
+}
+
+.profile-badge-ok {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #2d6a3e;
+}
+
 .profile-prompt-banner {
   display: grid;
   gap: 0.55rem;

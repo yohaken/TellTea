@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
-import { needsProfileSetup } from "@/lib/profile";
+import { needsPersonalProfileSetup, needsProfileSetup, personalProfileLabel } from "@/lib/profile";
 import { can, hasAnyExtraPermission, type PermissionKey } from "@/lib/permissions";
 
 export default function MorePage() {
@@ -98,6 +98,7 @@ function MoreView() {
   const visible = tools.filter((t) => can(staff, t.perm));
   const isOwner = staff?.role === "owner";
   const profileIncomplete = needsProfileSetup(staff);
+  const personalIncomplete = needsPersonalProfileSetup(staff);
 
   return (
     <div>
@@ -111,7 +112,11 @@ function MoreView() {
             <UserCircle size={22} />
             <div>
               <strong>ตั้งโปรไฟล์พนักงาน</strong>
-              <p>เชื่อมชื่อในร้าน — ยังไม่ได้ตั้ง</p>
+              <p>
+                {personalIncomplete
+                  ? "กรอกชื่อ-นามสกุล + รูปบัตร ปชช."
+                  : "เลือกชื่อในร้าน — ยังไม่ได้ตั้ง"}
+              </p>
             </div>
           </Link>
         ) : null}
@@ -120,7 +125,7 @@ function MoreView() {
             <UserCircle size={22} />
             <div>
               <strong>โปรไฟล์</strong>
-              <p>{staff.displayName || "ดู/เปลี่ยนชื่อในร้าน"}</p>
+              <p>{personalProfileLabel(staff) || staff.displayName || "ดู/แก้ไขโปรไฟล์"}</p>
             </div>
           </Link>
         ) : null}

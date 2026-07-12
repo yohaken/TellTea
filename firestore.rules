@@ -69,7 +69,16 @@ service cloud.firestore {
       return after.role == before.role
         && after.createdAt == before.createdAt
         && after.diff(before).affectedKeys()
-            .hasOnly(['displayName', 'employeeId', 'profileComplete', 'profileSnoozeUntil']);
+            .hasOnly([
+              'displayName',
+              'employeeId',
+              'profileComplete',
+              'profileSnoozeUntil',
+              'legalFirstName',
+              'legalLastName',
+              'idCardPhotoUrl',
+              'personalProfileComplete',
+            ]);
     }
 
     function employeeSelfLinkUpdate() {

@@ -88,6 +88,10 @@ export default function LoginPage() {
           </p>
         ) : null}
 
+        <p className="muted" style={{ marginBottom: "0.75rem", textAlign: "left", fontSize: "0.85rem" }}>
+          เลือกวิธีที่สะดวก — อีเมลต้องเป็น Google ที่เจ้าของเพิ่มไว้แล้ว · เบอร์โทรยืนยันด้วย OTP
+        </p>
+
         <div className="login-mode-tabs" role="tablist" aria-label="วิธีเข้าสู่ระบบ">
           <button
             type="button"

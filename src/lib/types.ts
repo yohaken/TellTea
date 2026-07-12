@@ -14,8 +14,16 @@ export type StaffMember = {
   employeeId?: string;
   /** true เมื่อพนักงานเชื่อมชื่อกับรายชื่อร้านแล้ว */
   profileComplete?: boolean;
-  /** กด "ภายหลัง" บนแบนเนอร์ — ซ่อนจนกว่าจะถึงเวลานี้ (ms) */
+  /** กด "ภายหลัง" บนแบนเนอร์ชื่อร้าน — ซ่อนจนกว่าจะถึงเวลานี้ (ms) */
   profileSnoozeUntil?: number;
+  /** ชื่อจริง (ตามบัตร ปชช.) */
+  legalFirstName?: string;
+  /** นามสกุล (ตามบัตร ปชช.) */
+  legalLastName?: string;
+  /** รูปบัตรประชาชน (data URL บีบอัด) */
+  idCardPhotoUrl?: string;
+  /** true เมื่อกรอกข้อมูลส่วนตัวครบแล้ว */
+  personalProfileComplete?: boolean;
   createdAt: number;
   /** Fine-grained page/feature access — owners always get full set in resolvePermissions */
   permissions?: Partial<StaffPermissions>;

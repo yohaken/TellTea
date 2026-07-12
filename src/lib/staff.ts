@@ -221,6 +221,10 @@ export type StaffProfilePatch = {
   employeeId?: string | null;
   profileComplete?: boolean;
   profileSnoozeUntil?: number | null;
+  legalFirstName?: string | null;
+  legalLastName?: string | null;
+  idCardPhotoUrl?: string | null;
+  personalProfileComplete?: boolean;
 };
 
 export async function updateStaffProfile(
@@ -245,6 +249,27 @@ export async function updateStaffProfile(
   if (patch.profileSnoozeUntil !== undefined) {
     next.profileSnoozeUntil =
       patch.profileSnoozeUntil == null ? deleteField() : patch.profileSnoozeUntil;
+  }
+  if (patch.legalFirstName !== undefined) {
+    next.legalFirstName =
+      patch.legalFirstName && patch.legalFirstName.trim()
+        ? patch.legalFirstName.trim()
+        : deleteField();
+  }
+  if (patch.legalLastName !== undefined) {
+    next.legalLastName =
+      patch.legalLastName && patch.legalLastName.trim()
+        ? patch.legalLastName.trim()
+        : deleteField();
+  }
+  if (patch.idCardPhotoUrl !== undefined) {
+    next.idCardPhotoUrl =
+      patch.idCardPhotoUrl && patch.idCardPhotoUrl.trim()
+        ? patch.idCardPhotoUrl.trim()
+        : deleteField();
+  }
+  if (patch.personalProfileComplete !== undefined) {
+    next.personalProfileComplete = patch.personalProfileComplete;
   }
 
   await updateDoc(staffRef(staffId), next);
