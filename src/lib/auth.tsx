@@ -259,6 +259,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (err) {
         if (cancelled) return;
+        const code = (err as { code?: string })?.code || "";
+        const message = (err as Error)?.message || "";
+        const permissionDenied =
+          code === "permission-denied" || /insufficient permissions/i.test(message);
+        if (permissionDenied) {
+          clearAppCaches();
+          setError(mapAuthError(err));
+          setStaff(null);
+          setStatus("denied");
+          return;
+        }
         if (cached?.id) {
           setError(null);
           setStatus("ready");

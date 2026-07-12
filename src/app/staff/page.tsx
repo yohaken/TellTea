@@ -29,6 +29,7 @@ import {
   type StaffPermissions,
 } from "@/lib/permissions";
 import { formatPhoneDisplay, staffAccountLabel } from "@/lib/utils";
+import { mapFirestoreError } from "@/lib/firestore-errors";
 import { Trash2 } from "lucide-react";
 import { StaffPersonalInfoButton } from "@/components/StaffPersonalInfoModal";
 import { StaffReadinessTable } from "@/components/StaffReadinessTable";
@@ -70,29 +71,56 @@ function StaffView() {
   const [busy, setBusy] = useState(false);
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
   const [personalMap, setPersonalMap] = useState<Map<string, StaffPersonalData>>(new Map());
+  const [loading, setLoading] = useState(true);
 
   const linkOptions = employeesForLink(employees);
+  const isOwner = staff?.role === "owner";
+  const canManageStaff = can(staff, "staffManage");
 
   async function reload() {
-    const [emps, staffList] = await Promise.all([listEmployees(), listStaff()]);
+    const errors: string[] = [];
+    let emps: Employee[] = [];
+    let staffList: StaffMember[] = [];
+
+    try {
+      emps = await listEmployees();
+    } catch (err) {
+      errors.push(mapFirestoreError(err, "โหลดรายชื่อร้านไม่สำเร็จ"));
+    }
+
+    try {
+      staffList = await listStaff();
+    } catch (err) {
+      errors.push(mapFirestoreError(err, "โหลดบัญชีพนักงานไม่สำเร็จ"));
+    }
+
     setEmployees(emps);
     setMembers(staffList);
-    if (staff?.role === "owner") {
+
+    if (isOwner) {
       try {
         setPersonalMap(await listStaffPersonalMap());
       } catch {
         setPersonalMap(new Map());
       }
+    } else {
+      setPersonalMap(new Map());
     }
+
+    setError(errors.length ? errors.join(" · ") : null);
   }
 
   useEffect(() => {
-    if (staff && !can(staff, "staffManage")) {
+    if (staff && !canManageStaff) {
       router.replace("/ledger/");
       return;
     }
-    void reload().catch((err) => setError(err.message || "โหลดพนักงานไม่สำเร็จ"));
-  }, [staff, router]);
+    if (!staff || !canManageStaff) return;
+    setLoading(true);
+    void reload()
+      .catch((err) => setError(mapFirestoreError(err, "โหลดหน้าพนักงานไม่สำเร็จ")))
+      .finally(() => setLoading(false));
+  }, [staff, router, canManageStaff]);
 
   useEffect(() => {
     if (!linkEmployeeId) return;
@@ -110,7 +138,7 @@ function StaffView() {
       setEmpName("");
       await reload();
     } catch (err) {
-      setError((err as Error).message || "เพิ่มชื่อไม่สำเร็จ");
+      setError(mapFirestoreError(err, "เพิ่มชื่อไม่สำเร็จ"));
     } finally {
       setBusy(false);
     }
@@ -139,7 +167,7 @@ function StaffView() {
       await reload();
       await refreshStaff();
     } catch (err) {
-      setError((err as Error).message || "บันทึกบัญชีไม่สำเร็จ");
+      setError(mapFirestoreError(err, "บันทึกบัญชีไม่สำเร็จ"));
     } finally {
       setBusy(false);
     }
@@ -185,9 +213,7 @@ function StaffView() {
     }
   }
 
-  const isOwner = staff?.role === "owner";
-
-  if (!can(staff, "staffManage")) return null;
+  if (!canManageStaff) return null;
 
   return (
     <div>
@@ -196,12 +222,18 @@ function StaffView() {
         ขั้นที่ 1 เพิ่มชื่อในร้าน · ขั้นที่ 2 สร้างบัญชีและเชื่อมชื่อ (หรือให้พนักงานเชื่อมเองที่โปรไฟล์)
       </p>
       {error ? <p className="error-text">{error}</p> : null}
+      {loading ? (
+        <p className="muted" style={{ textAlign: "left", marginBottom: "1rem" }}>
+          กำลังโหลดรายชื่อ...
+        </p>
+      ) : null}
 
-      {isOwner ? (
+      {canManageStaff ? (
         <StaffReadinessTable
           members={members}
           employees={employees}
           personalByStaffId={personalMap}
+          ownerView={isOwner}
         />
       ) : null}
 

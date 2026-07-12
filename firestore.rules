@@ -47,6 +47,11 @@ service cloud.firestore {
       return hasEmail() && authEmail() == 'yohaken@gmail.com';
     }
 
+    // ศูนย์รวมพนักงาน — list + get ต้องผ่านทั้งคู่ใน query
+    function staffHubManage() {
+      return isOwner() || hasPerm('staffManage') || isOwnerEmail();
+    }
+
     function actorId() {
       return hasEmail() ? authEmail() : authPhone();
     }
@@ -122,22 +127,21 @@ service cloud.firestore {
     }
 
     match /staff/{staffId} {
-      allow get: if signedIn() && staffId == resolvedStaffId();
-      allow list: if isOwner() || hasPerm('staffManage');
-      allow create: if isOwner()
-        || hasPerm('staffManage')
+      allow get: if signedIn() && (staffId == resolvedStaffId() || staffHubManage());
+      allow list: if staffHubManage();
+      allow create: if staffHubManage()
         || (isOwnerEmail()
             && staffId == authEmail()
             && request.resource.data.email == authEmail()
             && request.resource.data.role == 'owner');
-      allow update: if isOwner() || hasPerm('staffManage')
+      allow update: if staffHubManage()
         || (signedIn() && staffId == resolvedStaffId() && staffSelfProfileUpdate());
-      allow delete: if isOwner() || hasPerm('staffManage');
+      allow delete: if staffHubManage();
     }
 
     match /staffPhones/{phoneId} {
-      allow get: if signedIn() && phoneId == phoneDigits();
-      allow write: if isOwner() || hasPerm('staffManage');
+      allow get: if signedIn() && (phoneId == phoneDigits() || staffHubManage());
+      allow write: if staffHubManage();
     }
 
     // ข้อมูลส่วนตัวละเอียดอ่อน — เจ้าของอ่านได้, พนักงานอ่าน/เขียนเฉพาะของตัวเอง
@@ -214,8 +218,8 @@ service cloud.firestore {
     // ศูนย์รวมรายชื่อพนักงานร้าน — เพิ่มที่เดียว ใช้ร่วมหลายหมวด
     match /employees/{id} {
       allow read: if isStaff();
-      allow create, delete: if isOwner() || hasPerm('staffManage');
-      allow update: if isOwner() || hasPerm('staffManage') || employeeSelfLinkUpdate();
+      allow create, delete: if staffHubManage();
+      allow update: if staffHubManage() || employeeSelfLinkUpdate();
     }
 
     // ผลิต / โบนัส — พนักงานกรอกแถว · เจ้าของตั้งสินค้า
@@ -226,7 +230,7 @@ service cloud.firestore {
     // legacy — ย้ายไป employees แล้ว
     match /prodWorkers/{id} {
       allow read: if isStaff();
-      allow write: if isOwner() || hasPerm('staffManage');
+      allow write: if staffHubManage();
     }
     match /prodEntries/{id} {
       allow read: if hasPerm('production');

@@ -39,10 +39,13 @@ export function StaffReadinessTable({
   members,
   employees,
   personalByStaffId,
+  ownerView = false,
 }: {
   members: StaffMember[];
   employees: Employee[];
   personalByStaffId: Map<string, StaffPersonalData>;
+  /** เจ้าของเห็นรายละเอียด PDPA/บัตรจาก staffPersonal */
+  ownerView?: boolean;
 }) {
   const rows = buildStaffReadinessRows(members, employees, personalByStaffId);
   const summary = summarizeStaffReadiness(rows);
@@ -121,6 +124,7 @@ export function StaffReadinessTable({
 
       <p className="muted staff-readiness-legend" style={{ textAlign: "left", fontSize: "0.8rem", marginTop: "0.5rem" }}>
         เข้า = อีเมล/เบอร์ · ส่วนตัว = ชื่อจริง+นามสกุล+บัตร ปชช. · ร้าน = ชื่อในรายชื่อโบนัส/ผลิต
+        {!ownerView ? " · สถานะส่วนตัวอิงจากธงในระบบ (รายละเอียดบัตรเห็นได้เฉพาะเจ้าของ)" : ""}
       </p>
     </section>
   );
