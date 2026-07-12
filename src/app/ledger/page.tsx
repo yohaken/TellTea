@@ -24,7 +24,7 @@ import {
   updateLedgerEntry,
 } from "@/lib/ledger";
 import { TypePicker } from "@/components/TypePicker";
-import { frequentTypes, guessTypeFromDescription } from "@/lib/ledger-labels";
+import { frequentTypes, guessTypeFromDescription, labelLedgerType } from "@/lib/ledger-labels";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
 import {
   compressImageForUpload,
@@ -241,6 +241,7 @@ function LedgerView() {
                   <th className="col-photo">รูปภาพ</th>
                   <th className="col-in">เข้า</th>
                   <th className="col-out">ออก</th>
+                  <th className="col-type">ประเภท</th>
                   <th className="col-updated">แก้ไขล่าสุด</th>
                 </tr>
               </thead>
@@ -280,6 +281,11 @@ function LedgerView() {
                       </td>
                       <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>
                       <td className="col-out">{row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}</td>
+                      <td className="col-type">
+                        <span className="muted" style={{ fontSize: "0.72rem" }}>
+                          {row.type ? labelLedgerType(row.type) : "—"}
+                        </span>
+                      </td>
                       <td className="col-updated">{formatDateTimeShort(entryUpdatedAt(row))}</td>
                     </tr>
                   ))}
@@ -301,7 +307,6 @@ function LedgerView() {
       {editing ? (
         <EditEntryModal
           entry={editing}
-          isOwner={isOwner}
           onClose={() => setEditing(null)}
           onSaved={() => setEditing(null)}
           onError={setError}
@@ -311,7 +316,6 @@ function LedgerView() {
       {adding === "out" && user?.email ? (
         <AddOutModal
           createdBy={user.email}
-          isOwner={isOwner}
           onClose={() => setAdding(null)}
           onSaved={() => setAdding(null)}
           onError={setError}
@@ -390,13 +394,11 @@ function toDateInput(ms: number) {
 
 function AddOutModal({
   createdBy,
-  isOwner,
   onClose,
   onSaved,
   onError,
 }: {
   createdBy: string;
-  isOwner: boolean;
   onClose: () => void;
   onSaved: () => void;
   onError: (msg: string) => void;
@@ -471,7 +473,7 @@ function AddOutModal({
         description,
         amountIn: 0,
         amountOut: Number(amount),
-        type: isOwner ? resolvedType : guessTypeFromDescription(description),
+        type: resolvedType,
         createdBy,
         receiptUrl,
       });
@@ -561,15 +563,13 @@ function AddOutModal({
               <img src={receiptPreview} alt="ตัวอย่างสลิป" className="receipt-preview" />
             ) : null}
           </div>
-          {isOwner ? (
-            <TypePicker
-              id="add-out-type"
-              value={typeMode}
-              onChange={setTypeMode}
-              frequent={typeFreq}
-              autoHint={autoType}
-            />
-          ) : null}
+          <TypePicker
+            id="add-out-type"
+            value={typeMode}
+            onChange={setTypeMode}
+            frequent={typeFreq}
+            autoHint={autoType}
+          />
           <div className="entry-actions">
             <button type="submit" className="primary-btn action-out" disabled={busy}>
               {busy ? "กำลังบันทึก..." : "บันทึก"}
@@ -674,13 +674,11 @@ function AddInModal({
 
 function EditEntryModal({
   entry,
-  isOwner,
   onClose,
   onSaved,
   onError,
 }: {
   entry: LedgerEntry;
-  isOwner: boolean;
   onClose: () => void;
   onSaved: () => void;
   onError: (msg: string) => void;
@@ -759,7 +757,7 @@ function EditEntryModal({
         description,
         amountIn: isIn ? value : 0,
         amountOut: isIn ? 0 : value,
-        type: isOwner ? resolvedType : entry.type || guessTypeFromDescription(description),
+        type: isIn ? entry.type || "โอนเข้า" : resolvedType,
         receiptUrl,
       });
       onSaved();
@@ -853,7 +851,7 @@ function EditEntryModal({
             />
           </div>
 
-          {isOwner && !isIn ? (
+          {!isIn ? (
             <TypePicker
               id="edit-type"
               value={typeMode}

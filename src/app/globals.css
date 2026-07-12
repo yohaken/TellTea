@@ -768,6 +768,15 @@ textarea {
   white-space: nowrap;
 }
 
+.sheet-table .col-type {
+  width: 1%;
+  max-width: 5.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.72rem;
+}
+
 .sheet-table .col-updated {
   width: 1%;
   white-space: nowrap;

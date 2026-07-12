@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowDownLeft,
-  ArrowUpRight,
   BookMarked,
   BookOpen,
   Boxes,
@@ -23,7 +22,6 @@ import { cn } from "@/lib/utils";
 /** งานวันต่อวัน — พนักงานและเจ้าของใช้ร่วมกัน */
 const dailyLinks = [
   { href: "/ledger/", label: "บัญชี", icon: BookOpen },
-  { href: "/out/", label: "จ่าย", icon: ArrowUpRight },
   { href: "/stock/", label: "สต็อก", icon: Boxes },
 ];
 

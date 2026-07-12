@@ -153,7 +153,7 @@ function OwnerBooksView() {
                   <th className="col-date">วันที่</th>
                   <th className="col-desc">รายการ</th>
                   <th className="col-out">ออก</th>
-                  <th className="col-act">หมวด</th>
+                  <th className="col-act">ประเภท</th>
                   <th className="col-note">note</th>
                   <th className="col-updated">แก้ไขล่าสุด</th>
                 </tr>
