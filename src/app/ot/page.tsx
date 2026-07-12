@@ -659,7 +659,7 @@ function OtTable({
     let shiftCount = 0;
     let summaryQty = 0;
     let totalBonus = 0;
-    let unpaidBonus = 0;
+    let pendingBonus = 0;
     let myBonus = 0;
 
     for (const row of filtered) {
@@ -667,17 +667,17 @@ function OtTable({
       shiftCount += 1;
       summaryQty += c.summaryQty;
       totalBonus += c.totalBonus;
-      if (row.status === "unpaid") unpaidBonus += c.totalBonus;
+      if (row.status === "pending") pendingBonus += c.totalBonus;
       if (entryIncludesName(row, myName)) myBonus += c.bonusPerPerson;
     }
 
-    return { shiftCount, summaryQty, totalBonus, unpaidBonus, myBonus };
+    return { shiftCount, summaryQty, totalBonus, pendingBonus, myBonus };
   }, [filtered, myName]);
 
   const dateGroups = useMemo(() => buildOtGrid(filtered), [filtered]);
 
-  const unpaidIds = useMemo(
-    () => filtered.filter((r) => r.status === "unpaid").map((r) => r.id),
+  const pendingIds = useMemo(
+    () => filtered.filter((r) => r.status === "pending").map((r) => r.id),
     [filtered],
   );
   const visibleIds = useMemo(() => filtered.map((r) => r.id), [filtered]);
@@ -713,7 +713,6 @@ function OtTable({
           aria-label="สถานะ"
         >
           <option value="all">ทั้งหมด</option>
-          <option value="unpaid">ยังไม่จ่าย</option>
           <option value="pending">เตรียมจ่าย</option>
           <option value="paid">จ่ายแล้ว</option>
         </select>
@@ -748,19 +747,19 @@ function OtTable({
       <p className="ot-summary-inline muted">
         รอบ {summary.shiftCount} · หน่วย {formatPlainNumber(summary.summaryQty)} ·{" "}
         {mineOnly ? "ของฉัน" : "รวม"} ฿{formatPlainNumber(mineOnly ? summary.myBonus : summary.totalBonus)} ·{" "}
-        ค้าง ฿{formatPlainNumber(summary.unpaidBonus)}
+        เตรียมจ่าย ฿{formatPlainNumber(summary.pendingBonus)}
       </p>
 
       {isOwner ? (
         <BulkStatusToolbar
           selectedCount={selected.size}
-          onSelectUnpaid={() => setSelected(new Set(unpaidIds))}
+          onSelectUnpaid={() => setSelected(new Set(pendingIds))}
           onSelectVisible={() => setSelected(new Set(visibleIds))}
           onClear={() => setSelected(new Set())}
           onSetStatus={(s) => void onBulkStatus(s as OtStatus)}
           busy={bulkBusy}
           visibleCount={visibleIds.length}
-          unpaidCount={unpaidIds.length}
+          unpaidCount={pendingIds.length}
         />
       ) : null}
 
@@ -902,9 +901,7 @@ function OtSheetTable({
                 const statusClass =
                   row?.status === "paid"
                     ? "is-paid"
-                    : row?.status === "pending"
-                      ? "is-pending"
-                      : "";
+                    : "is-pending";
                 const w1 = row?.workerNames[0] || "—";
                 const w2 = row?.workerNames[1] || "—";
 
@@ -998,7 +995,6 @@ function OtSheetTable({
                             onChange={(e) => void setStatus(row, e.target.value as OtStatus)}
                             aria-label="สถานะโบนัส"
                           >
-                            <option value="unpaid">ยังไม่จ่าย</option>
                             <option value="pending">เตรียมจ่าย</option>
                             <option value="paid">จ่ายแล้ว</option>
                           </select>
@@ -1101,12 +1097,7 @@ function OtCardList({
     <div className="ot-list">
       {entries.map((row) => {
         const c = computeOtBonus(row);
-        const statusClass =
-          row.status === "paid"
-            ? "is-paid"
-            : row.status === "pending"
-              ? "is-pending"
-              : "";
+        const statusClass = row.status === "paid" ? "is-paid" : "is-pending";
         const detailItems = [
           { label: "เครื่อง", value: formatPlainNumber(row.machineCount) },
           { label: "อื่นๆ", value: otQtyCell(row.otherCups || 0) },
@@ -1160,9 +1151,8 @@ function OtCardList({
                     onChange={(e) => void setStatus(row, e.target.value as OtStatus)}
                     aria-label="สถานะโบนัส"
                   >
-                    <option value="unpaid">ยังไม่จ่าย</option>
-                    <option value="pending">เตรียมจ่ายโบนัส</option>
-                    <option value="paid">จ่ายโบนัสแล้ว</option>
+                    <option value="pending">เตรียมจ่าย</option>
+                    <option value="paid">จ่ายแล้ว</option>
                   </select>
                 ) : (
                   <span className={`prod-status-pill ${statusClass}`}>

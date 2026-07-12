@@ -272,7 +272,7 @@ async function main() {
           addQty: e.addQty,
           addReason: e.addReason,
           bonusRate: e.bonusRate,
-          status: "unpaid",
+          status: "pending",
           createdBy: CREATED_BY,
           createdAt: now + i,
           updatedAt: now + i,

@@ -14,7 +14,11 @@ import {
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 
-export type OtStatus = "unpaid" | "pending" | "paid";
+export type OtStatus = "pending" | "paid";
+
+export function normalizeOtStatus(raw: unknown): OtStatus {
+  return raw === "paid" ? "paid" : "pending";
+}
 
 export type OtShiftId = "late" | "morning" | "evening";
 
@@ -97,9 +101,8 @@ export function parseOtShiftLabel(raw: string): OtShiftId | null {
 }
 
 export function labelOtStatus(status: OtStatus) {
-  if (status === "paid") return "จ่ายโบนัสแล้ว";
-  if (status === "pending") return "เตรียมจ่ายโบนัส";
-  return "ยังไม่จ่าย";
+  if (status === "paid") return "จ่ายแล้ว";
+  return "เตรียมจ่าย";
 }
 
 export function isOtEntryLocked(entry: Pick<OtEntry, "status">) {
@@ -177,7 +180,7 @@ function mapOtEntryDoc(id: string, data: Record<string, unknown>): OtEntry {
     bonusRate: Number(data.bonusRate) || DEFAULT_OT_BONUS_RATE,
     imageUrl: imageUrls[0],
     imageUrls,
-    status: (data.status as OtStatus) || "unpaid",
+    status: normalizeOtStatus(data.status),
     createdBy: String(data.createdBy || ""),
     createdAt: Number(data.createdAt) || 0,
     updatedAt: Number(data.updatedAt) || 0,
@@ -325,7 +328,7 @@ export async function addOtEntry(input: OtEntryInput): Promise<string> {
     bonusRate: Number(input.bonusRate) || DEFAULT_OT_BONUS_RATE,
     imageUrl: urls[0] || "",
     imageUrls: urls,
-    status: "unpaid" as OtStatus,
+    status: "pending" as OtStatus,
     createdBy: input.createdBy,
     createdAt: now,
     updatedAt: now,

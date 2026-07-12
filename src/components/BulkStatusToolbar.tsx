@@ -8,7 +8,6 @@ export type PayStatus = ProdStatus | OtStatus;
 const OT_STATUS_ACTIONS: { status: OtStatus; label: string; className?: string }[] = [
   { status: "paid", label: "จ่ายแล้ว", className: "is-paid" },
   { status: "pending", label: "เตรียมจ่าย", className: "is-pending" },
-  { status: "unpaid", label: "ยังไม่จ่าย" },
 ];
 
 const PROD_STATUS_ACTIONS: { status: ProdStatus; label: string; className?: string }[] = [
@@ -42,7 +41,7 @@ export function BulkStatusToolbar({
   variant?: "ot" | "prod";
 }) {
   const statusActions = variant === "prod" ? PROD_STATUS_ACTIONS : OT_STATUS_ACTIONS;
-  const unpaidLabel = variant === "prod" ? "เลือกรอจ่าย" : "เลือกที่ยังไม่จ่าย";
+  const unpaidLabel = variant === "prod" ? "เลือกรอจ่าย" : "เลือกเตรียมจ่าย";
   return (
     <div className="bulk-status-toolbar">
       {month != null && onMonthChange ? (
