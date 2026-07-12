@@ -3866,6 +3866,61 @@ body.modal-open .main-panel {
   width: 100%;
 }
 
+/* ── Transfer-in — ป๊อบอัพคงที่ เห็นครบในหน้าเดียว ── */
+.modal-backdrop.edit-modal.is-transfer-in-form {
+  overflow: hidden;
+}
+
+.modal-backdrop.edit-modal.is-transfer-in-form .modal-card {
+  width: min(100%, 20.5rem);
+  max-height: none;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  padding: 0.55rem 0.7rem 0.5rem;
+}
+
+.modal-backdrop.edit-modal.is-transfer-in-form .module-form-head {
+  flex-shrink: 0;
+  position: static;
+  padding-bottom: 0.2rem;
+}
+
+.modal-backdrop.edit-modal.is-transfer-in-form .transfer-in-hint {
+  margin: 0 0 0.35rem;
+  flex-shrink: 0;
+}
+
+.modal-backdrop.edit-modal.is-transfer-in-form .transfer-in-error {
+  margin: 0 0 0.35rem;
+  flex-shrink: 0;
+  font-size: 0.78rem;
+}
+
+.modal-backdrop.edit-modal.is-transfer-in-form .transfer-in-form {
+  overflow: visible;
+  flex: 0 0 auto;
+}
+
+.modal-backdrop.edit-modal.is-transfer-in-form .transfer-in-form .field {
+  margin-bottom: 0.32rem;
+}
+
+.modal-backdrop.edit-modal.is-transfer-in-form .photo-attach-field {
+  margin-bottom: 0.28rem;
+}
+
+.modal-backdrop.edit-modal.is-transfer-in-form .photo-attach-preview {
+  max-height: 3.25rem;
+}
+
+.modal-backdrop.edit-modal.is-transfer-in-form .module-form-actions {
+  position: static;
+  background: transparent;
+  margin-top: 0.35rem;
+  padding: 0;
+}
+
 /* ── OT form — ล็อกหน้าเดียว แผน vs ปิดกะ ── */
 .modal-backdrop.edit-modal.is-ot-form {
   padding: calc(0.35rem + var(--safe-top)) 0.4rem calc(0.35rem + var(--safe-bottom));
