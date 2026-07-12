@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
   Boxes,
@@ -18,6 +19,12 @@ import { LowBalanceAlert } from "@/components/LowBalanceAlert";
 import { PersonalProfileModal } from "@/components/PersonalProfileModal";
 import { ProfilePromptBanner } from "@/components/ProfilePromptBanner";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
+import {
+  DEFAULT_NAV_ORDER,
+  sortByNavOrder,
+  subscribeNavOrder,
+  type NavTabKey,
+} from "@/lib/nav-menu";
 import { profileStatusLabel } from "@/lib/profile";
 import { can, hasAnyExtraPermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
@@ -36,6 +43,26 @@ const MORE_PREFIXES = [
   "/tasks",
 ];
 
+const NAV_ICONS = {
+  ledger: BookOpen,
+  production: ChefHat,
+  otBonus: Coffee,
+  bonus: CircleDollarSign,
+  checklist: ClipboardCheck,
+  stock: Boxes,
+  more: MoreHorizontal,
+} as const;
+
+const NAV_HREFS: Record<NavTabKey, string> = {
+  ledger: "/ledger/",
+  production: "/production/",
+  otBonus: "/ot/",
+  bonus: "/bonus/",
+  checklist: "/check/",
+  stock: "/stock/",
+  more: "/more/",
+};
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { staff, user, signOut } = useAuth();
@@ -43,30 +70,49 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const emailShort = user?.email?.split("@")[0] || user?.phoneNumber?.slice(-4) || "";
   const userLabel = profileStatusLabel(staff) || emailShort;
   const roleLabel = isOwner ? "เจ้าของ" : "พนักงาน";
+  const [navOrder, setNavOrder] = useState<NavTabKey[]>([...DEFAULT_NAV_ORDER]);
 
-  const links = [
-    can(staff, "ledger")
-      ? { href: "/ledger/", label: "บัญชี", icon: BookOpen }
-      : null,
-    can(staff, "production")
-      ? { href: "/production/", label: "ผลิต", icon: ChefHat }
-      : null,
-    can(staff, "otBonus")
-      ? { href: "/ot/", label: "ชง", icon: Coffee }
-      : null,
-    can(staff, "bonus")
-      ? { href: "/bonus/", label: "โบนัส", icon: CircleDollarSign }
-      : null,
-    can(staff, "checklist")
-      ? { href: "/check/", label: "เช็ค", icon: ClipboardCheck }
-      : null,
-    can(staff, "stock")
-      ? { href: "/stock/", label: "คลัง", icon: Boxes }
-      : null,
-    hasAnyExtraPermission(staff)
-      ? { href: "/more/", label: "อื่นๆ", icon: MoreHorizontal }
-      : null,
-  ].filter(Boolean) as { href: string; label: string; icon: typeof BookOpen }[];
+  useEffect(() => {
+    return subscribeNavOrder(setNavOrder);
+  }, []);
+
+  const links = useMemo(() => {
+    const visible: { key: NavTabKey; href: string; label: string; icon: typeof BookOpen }[] = [];
+
+    if (can(staff, "ledger")) {
+      visible.push({ key: "ledger", href: NAV_HREFS.ledger, label: "บัญชี", icon: NAV_ICONS.ledger });
+    }
+    if (can(staff, "production")) {
+      visible.push({
+        key: "production",
+        href: NAV_HREFS.production,
+        label: "ผลิต",
+        icon: NAV_ICONS.production,
+      });
+    }
+    if (can(staff, "otBonus")) {
+      visible.push({ key: "otBonus", href: NAV_HREFS.otBonus, label: "ชง", icon: NAV_ICONS.otBonus });
+    }
+    if (can(staff, "bonus")) {
+      visible.push({ key: "bonus", href: NAV_HREFS.bonus, label: "โบนัส", icon: NAV_ICONS.bonus });
+    }
+    if (can(staff, "checklist")) {
+      visible.push({
+        key: "checklist",
+        href: NAV_HREFS.checklist,
+        label: "เช็ค",
+        icon: NAV_ICONS.checklist,
+      });
+    }
+    if (can(staff, "stock")) {
+      visible.push({ key: "stock", href: NAV_HREFS.stock, label: "คลัง", icon: NAV_ICONS.stock });
+    }
+    if (hasAnyExtraPermission(staff)) {
+      visible.push({ key: "more", href: NAV_HREFS.more, label: "อื่นๆ", icon: NAV_ICONS.more });
+    }
+
+    return sortByNavOrder(visible, navOrder);
+  }, [staff, navOrder]);
 
   return (
     <div className="phone-frame">

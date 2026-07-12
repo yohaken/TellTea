@@ -4886,6 +4886,64 @@ body.modal-open .main-panel {
   text-align: left;
 }
 
+.nav-order-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.nav-order-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.55rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.nav-order-rank {
+  flex-shrink: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(74, 107, 62, 0.12);
+  color: var(--tea-leaf);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.nav-order-label {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.nav-order-actions {
+  display: inline-flex;
+  gap: 0.15rem;
+}
+
+.nav-order-foot {
+  margin: 0.5rem 0 0;
+  font-size: 0.65rem;
+  text-align: left;
+}
+
+.nav-order-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.55rem;
+  font-size: 0.74rem;
+}
+
 @media (min-width: 640px) {
   .stock-row {
     grid-template-columns: 1fr auto;

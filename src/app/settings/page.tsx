@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Settings } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { ChecklistSetup } from "@/components/ChecklistSetup";
+import { NavMenuOrderSetup } from "@/components/NavMenuOrderSetup";
 import { OtBonusRateSetup } from "@/components/OtBonusRateSetup";
 import { ProdCatalogSetup } from "@/components/ProdCatalogSetup";
 import { StockCatalogSetup } from "@/components/StockCatalogSetup";
@@ -67,7 +68,7 @@ function SettingsView() {
         ตั้งค่าโมดูล
       </h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        จัดการค่าเริ่มต้นของผลิต · ชง · SmartCheck · คลัง — เฉพาะเจ้าของ
+        จัดการค่าเริ่มต้นของผลิต · ชง · SmartCheck · คลัง · ลำดับเมนู — เฉพาะเจ้าของ
       </p>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -75,6 +76,7 @@ function SettingsView() {
 
       {!loading ? (
         <div className="owner-settings-stack">
+          <NavMenuOrderSetup onError={setError} />
           <ProdCatalogSetup
             products={products}
             onReload={() => void reload().catch((err) => setError((err as Error).message))}
