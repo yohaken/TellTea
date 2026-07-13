@@ -5,8 +5,10 @@ import { ChevronDown, ChevronUp, LayoutList, RotateCcw } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import {
   DEFAULT_DOCK_TAB_KEYS,
+  DEFAULT_DOCK_TAB_MAX,
   DEFAULT_NAV_ORDER,
-  DOCK_TAB_MAX,
+  DOCK_TAB_MAX_LIMIT,
+  DOCK_TAB_MIN,
   moveDockTabKey,
   NAV_MODULE_DESCRIPTIONS,
   NAV_MODULE_KEYS,
@@ -18,11 +20,17 @@ import {
   type NavUiSettings,
 } from "@/lib/nav-menu";
 
+const DOCK_MAX_OPTIONS = Array.from(
+  { length: DOCK_TAB_MAX_LIMIT - DOCK_TAB_MIN + 1 },
+  (_, i) => DOCK_TAB_MIN + i,
+);
+
 export function NavMenuOrderSetup({ onError }: { onError: (msg: string | null) => void }) {
   const { actorId } = useAuth();
   const [ui, setUi] = useState<NavUiSettings>({
     navOrder: [...DEFAULT_NAV_ORDER],
     dockTabKeys: [...DEFAULT_DOCK_TAB_KEYS],
+    dockTabMax: DEFAULT_DOCK_TAB_MAX,
   });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -41,19 +49,14 @@ export function NavMenuOrderSetup({ onError }: { onError: (msg: string | null) =
     return unsub;
   }, [onError]);
 
-  async function persist(next: NavUiSettings) {
+  async function persist(next: Partial<NavUiSettings>) {
     if (!actorId) return;
     setBusy(true);
     onError(null);
     try {
-      await saveNavUi(
-        {
-          navOrder: next.navOrder,
-          dockTabKeys: next.dockTabKeys,
-        },
-        actorId,
-      );
-      setUi(normalizeNavUi(next));
+      const merged = normalizeNavUi({ ...ui, ...next });
+      await saveNavUi(merged, actorId);
+      setUi(merged);
     } catch (err) {
       onError((err as Error).message || "บันทึกเมนูไม่สำเร็จ");
     } finally {
@@ -61,22 +64,27 @@ export function NavMenuOrderSetup({ onError }: { onError: (msg: string | null) =
     }
   }
 
+  async function setDockTabMax(dockTabMax: number) {
+    if (dockTabMax === ui.dockTabMax) return;
+    await persist({ dockTabMax });
+  }
+
   async function toggleDock(key: NavModuleKey, on: boolean) {
     const dockSet = new Set(ui.dockTabKeys);
     if (on) {
-      if (dockSet.size >= DOCK_TAB_MAX) return;
+      if (dockSet.size >= ui.dockTabMax) return;
       dockSet.add(key);
     } else {
       dockSet.delete(key);
     }
     const dockTabKeys = NAV_MODULE_KEYS.filter((k) => dockSet.has(k));
-    await persist({ ...ui, dockTabKeys });
+    await persist({ dockTabKeys });
   }
 
   async function move(key: NavModuleKey, dir: -1 | 1) {
     const next = moveDockTabKey(ui.dockTabKeys, key, dir);
     if (next.join("|") === ui.dockTabKeys.join("|")) return;
-    await persist({ ...ui, dockTabKeys: next });
+    await persist({ dockTabKeys: next });
   }
 
   async function resetDefault() {
@@ -84,6 +92,7 @@ export function NavMenuOrderSetup({ onError }: { onError: (msg: string | null) =
     await persist({
       navOrder: [...DEFAULT_NAV_ORDER],
       dockTabKeys: [...DEFAULT_DOCK_TAB_KEYS],
+      dockTabMax: DEFAULT_DOCK_TAB_MAX,
     });
   }
 
@@ -97,18 +106,35 @@ export function NavMenuOrderSetup({ onError }: { onError: (msg: string | null) =
         เมนูหลัก (แถบล่าง)
       </h2>
       <p className="muted owner-settings-hint">
-        เลือกได้สูงสุด {DOCK_TAB_MAX} โมดูลบนแถบล่าง — ที่ไม่ได้เลือกจะไปอยู่หน้า <strong>อื่นๆ</strong>{" "}
-        อัตโนมัติ พนักงานเห็นเฉพาะตามสิทธิ์
+        กำหนดจำนวนปุ่มและเลือกโมดูลบนแถบล่าง — ที่ไม่ได้เลือกจะไปหน้า <strong>อื่นๆ</strong> อัตโนมัติ
+        (ยังไม่รวมปุ่ม อื่นๆ) พนักงานเห็นเฉพาะตามสิทธิ์
       </p>
 
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading ? (
         <>
-          <p className="nav-dock-count" aria-live="polite">
-            แถบล่าง: <strong>{dockCount}</strong> / {DOCK_TAB_MAX}
-            {dockCount >= DOCK_TAB_MAX ? " — เต็มแล้ว" : ""}
-          </p>
+          <div className="nav-dock-max-picker">
+            <span className="nav-dock-max-label">จำนวนปุ่มสูงสุดบนแถบล่าง</span>
+            <div className="nav-dock-max-options" role="group" aria-label="จำนวนปุ่มสูงสุด">
+              {DOCK_MAX_OPTIONS.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  className={n === ui.dockTabMax ? "primary-btn nav-dock-max-btn" : "ghost-btn nav-dock-max-btn"}
+                  disabled={busy}
+                  aria-pressed={n === ui.dockTabMax}
+                  onClick={() => void setDockTabMax(n)}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <p className="muted nav-dock-max-hint">
+              ปุ่มมากขึ้น = ขนาดเล็กลงเล็กน้อย · ตอนนี้เลือกแล้ว {dockCount} / {ui.dockTabMax}
+              {dockCount >= ui.dockTabMax ? " — เต็มแล้ว" : ""}
+            </p>
+          </div>
 
           <ol className="nav-order-list">
             {NAV_MODULE_KEYS.map((key) => {
@@ -120,7 +146,7 @@ export function NavMenuOrderSetup({ onError }: { onError: (msg: string | null) =
                     <input
                       type="checkbox"
                       checked={onDock}
-                      disabled={busy || (!onDock && dockCount >= DOCK_TAB_MAX)}
+                      disabled={busy || (!onDock && dockCount >= ui.dockTabMax)}
                       onChange={(e) => void toggleDock(key, e.target.checked)}
                     />
                   </label>

@@ -22,6 +22,7 @@ import { ProfilePromptBanner } from "@/components/ProfilePromptBanner";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import {
   DEFAULT_NAV_ORDER,
+  DEFAULT_DOCK_TAB_MAX,
   NAV_MODULE_HREFS,
   NAV_TAB_LABELS,
   resolveNavForUser,
@@ -61,6 +62,7 @@ const NAV_ICONS: Record<NavTabKey, typeof BookOpen> = {
 const DEFAULT_UI: NavUiSettings = {
   navOrder: [...DEFAULT_NAV_ORDER],
   dockTabKeys: [],
+  dockTabMax: DEFAULT_DOCK_TAB_MAX,
 };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -147,10 +149,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <UiSettingsProvider />
 
         <nav
-          className={cn("bottom-nav", links.length >= 5 && "bottom-nav--dense")}
+          className={cn(
+            "bottom-nav",
+            links.length >= 7 && "bottom-nav--compact",
+            links.length >= 5 && links.length < 7 && "bottom-nav--dense",
+          )}
           style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))` }}
         >
           {links.map(({ key, href, label, icon: Icon }) => {
+            const iconSize = links.length >= 7 ? 18 : links.length >= 5 ? 20 : 22;
             const active =
               pathname === href ||
               pathname.startsWith(href.replace(/\/$/, "")) ||
@@ -158,7 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               (key !== "more" && pathname.startsWith(NAV_MODULE_HREFS[key as NavModuleKey]?.replace(/\/$/, "") || ""));
             return (
               <Link key={href} href={href} className={cn("nav-item", active && "active")}>
-                <Icon size={22} />
+                <Icon size={iconSize} />
                 <span>{label}</span>
               </Link>
             );

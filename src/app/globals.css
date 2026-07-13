@@ -518,10 +518,52 @@ body.modal-open .main-panel {
   height: 20px;
 }
 
+.bottom-nav--compact .nav-item {
+  font-size: 0.62rem;
+  padding: 0.45rem 0.08rem;
+  min-height: 2.75rem;
+  gap: 0.06rem;
+}
+
+.bottom-nav--compact .nav-item svg {
+  width: 18px;
+  height: 18px;
+}
+
 .nav-dock-count {
   margin: 0 0 0.55rem;
   font-size: 0.8rem;
   text-align: left;
+}
+
+.nav-dock-max-picker {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0 0 0.75rem;
+  text-align: left;
+}
+
+.nav-dock-max-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.nav-dock-max-options {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.nav-dock-max-btn {
+  min-height: 2.2rem;
+  padding: 0.35rem 0.2rem;
+  font-size: 0.85rem;
+}
+
+.nav-dock-max-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
 }
 
 .nav-dock-toggle {

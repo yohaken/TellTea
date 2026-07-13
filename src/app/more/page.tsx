@@ -23,6 +23,7 @@ import {
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import {
+  DEFAULT_DOCK_TAB_MAX,
   DEFAULT_NAV_ORDER,
   resolveNavForUser,
   subscribeNavUi,
@@ -45,6 +46,7 @@ const MODULE_ICONS: Record<NavModuleKey, typeof BookOpen> = {
 const DEFAULT_UI: NavUiSettings = {
   navOrder: [...DEFAULT_NAV_ORDER],
   dockTabKeys: [],
+  dockTabMax: DEFAULT_DOCK_TAB_MAX,
 };
 
 export default function MorePage() {

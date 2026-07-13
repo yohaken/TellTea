@@ -9,8 +9,13 @@ import { getDb } from "./firebase";
 import { can, hasAnyExtraPermission, type PermissionKey } from "./permissions";
 import type { StaffMember } from "./types";
 
-/** แถบล่างสูงสุด 5 ช่อง (รวม อื่นๆ) — มากกว่านี้ไอคอนเล็กลงและกดยาก */
-export const DOCK_TAB_MAX = 5;
+/** ขอบเขตจำนวนปุ่มโมดูลบนแถบล่าง (ไม่รวม อื่นๆ) — ปรับได้ใน Settings */
+export const DOCK_TAB_MIN = 3;
+export const DOCK_TAB_MAX_LIMIT = 8;
+export const DEFAULT_DOCK_TAB_MAX = 5;
+
+/** @deprecated use DEFAULT_DOCK_TAB_MAX or ui.dockTabMax */
+export const DOCK_TAB_MAX = DEFAULT_DOCK_TAB_MAX;
 
 /** โมดูลที่จัดได้ทั้งแถบล่างและหน้า อื่นๆ */
 export const NAV_MODULE_KEYS = [
@@ -84,6 +89,8 @@ export const DEFAULT_NAV_ORDER: NavTabKey[] = [...NAV_TAB_KEYS];
 export type NavUiSettings = {
   navOrder: NavTabKey[];
   dockTabKeys: NavModuleKey[];
+  /** จำนวนโมดูลสูงสุดบนแถบล่าง (ไม่รวม อื่นๆ) */
+  dockTabMax: number;
 };
 
 function uiRef() {
@@ -113,17 +120,25 @@ export function normalizeNavOrder(input?: string[] | null): NavTabKey[] {
   return out;
 }
 
+export function normalizeDockTabMax(input?: unknown): number {
+  const n = typeof input === "number" ? input : Number(input);
+  if (!Number.isFinite(n)) return DEFAULT_DOCK_TAB_MAX;
+  return Math.min(DOCK_TAB_MAX_LIMIT, Math.max(DOCK_TAB_MIN, Math.round(n)));
+}
+
 export function normalizeDockTabKeys(
   input?: string[] | null,
   order: NavTabKey[] = DEFAULT_NAV_ORDER,
+  dockTabMax: number = DEFAULT_DOCK_TAB_MAX,
 ): NavModuleKey[] {
+  const max = normalizeDockTabMax(dockTabMax);
   const valid = new Set<string>(NAV_MODULE_KEYS);
   const out: NavModuleKey[] = [];
   for (const raw of input || []) {
     if (valid.has(raw) && !out.includes(raw as NavModuleKey)) {
       out.push(raw as NavModuleKey);
     }
-    if (out.length >= DOCK_TAB_MAX) break;
+    if (out.length >= max) break;
   }
   if (out.length > 0) return out;
 
@@ -132,16 +147,22 @@ export function normalizeDockTabKeys(
     if (valid.has(key) && !out.includes(key as NavModuleKey)) {
       out.push(key as NavModuleKey);
     }
-    if (out.length >= DOCK_TAB_MAX) break;
+    if (out.length >= max) break;
   }
-  return out.length > 0 ? out : [...DEFAULT_DOCK_TAB_KEYS];
+  return out.length > 0 ? out : [...DEFAULT_DOCK_TAB_KEYS].slice(0, max);
 }
 
 export function normalizeNavUi(data?: Record<string, unknown> | null): NavUiSettings {
   const navOrder = normalizeNavOrder(data?.navOrder as string[] | undefined);
+  const dockTabMax = normalizeDockTabMax(data?.dockTabMax);
   return {
     navOrder,
-    dockTabKeys: normalizeDockTabKeys(data?.dockTabKeys as string[] | undefined, navOrder),
+    dockTabMax,
+    dockTabKeys: normalizeDockTabKeys(
+      data?.dockTabKeys as string[] | undefined,
+      navOrder,
+      dockTabMax,
+    ),
   };
 }
 
@@ -179,9 +200,11 @@ export function toggleDockTabKey(
   keys: NavModuleKey[],
   key: NavModuleKey,
   on: boolean,
+  dockTabMax: number = DEFAULT_DOCK_TAB_MAX,
 ): NavModuleKey[] {
+  const max = normalizeDockTabMax(dockTabMax);
   if (on) {
-    if (keys.includes(key) || keys.length >= DOCK_TAB_MAX) return keys;
+    if (keys.includes(key) || keys.length >= max) return keys;
     return [...keys, key];
   }
   return keys.filter((k) => k !== key);
@@ -232,7 +255,11 @@ export function resolveNavForUser(
 export async function getNavUi(): Promise<NavUiSettings> {
   const snap = await getDoc(uiRef());
   if (!snap.exists()) {
-    return { navOrder: [...DEFAULT_NAV_ORDER], dockTabKeys: [...DEFAULT_DOCK_TAB_KEYS] };
+    return {
+      navOrder: [...DEFAULT_NAV_ORDER],
+      dockTabKeys: [...DEFAULT_DOCK_TAB_KEYS],
+      dockTabMax: DEFAULT_DOCK_TAB_MAX,
+    };
   }
   return normalizeNavUi(snap.data());
 }
@@ -250,11 +277,12 @@ export async function saveNavOrder(order: NavTabKey[], updatedBy: string): Promi
 }
 
 export async function saveDockTabKeys(keys: NavModuleKey[], updatedBy: string): Promise<void> {
-  const navOrder = normalizeNavOrder((await getDoc(uiRef())).data()?.navOrder as string[]);
+  const snap = await getDoc(uiRef());
+  const ui = normalizeNavUi(snap.data());
   await setDoc(
     uiRef(),
     {
-      dockTabKeys: normalizeDockTabKeys(keys, navOrder),
+      dockTabKeys: normalizeDockTabKeys(keys, ui.navOrder, ui.dockTabMax),
       updatedAt: Date.now(),
       updatedBy,
     },
@@ -263,18 +291,22 @@ export async function saveDockTabKeys(keys: NavModuleKey[], updatedBy: string): 
 }
 
 export async function saveNavUi(
-  partial: Partial<Pick<NavUiSettings, "navOrder" | "dockTabKeys">>,
+  partial: Partial<Pick<NavUiSettings, "navOrder" | "dockTabKeys" | "dockTabMax">>,
   updatedBy: string,
 ): Promise<void> {
   const current = await getNavUi();
   const navOrder = partial.navOrder ? normalizeNavOrder(partial.navOrder) : current.navOrder;
+  const dockTabMax = partial.dockTabMax != null ? normalizeDockTabMax(partial.dockTabMax) : current.dockTabMax;
+  const dockTabKeys = partial.dockTabKeys
+    ? normalizeDockTabKeys(partial.dockTabKeys, navOrder, dockTabMax)
+    : normalizeDockTabKeys(current.dockTabKeys, navOrder, dockTabMax);
+
   await setDoc(
     uiRef(),
     {
-      ...(partial.navOrder ? { navOrder } : {}),
-      ...(partial.dockTabKeys
-        ? { dockTabKeys: normalizeDockTabKeys(partial.dockTabKeys, navOrder) }
-        : {}),
+      navOrder,
+      dockTabMax,
+      dockTabKeys,
       updatedAt: Date.now(),
       updatedBy,
     },
