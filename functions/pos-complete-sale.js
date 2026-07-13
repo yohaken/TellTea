@@ -98,20 +98,20 @@ async function completePosSaleAdmin(db, data, uid) {
 
   const billNo = await db.runTransaction(async (tx) => {
     const posSnap = await tx.get(metaPosRef);
+    const metaSnap = await tx.get(metaLedgerRef);
     const posData = posSnap.data() || {};
     let seq = 1;
     if (posData.billDate === date && typeof posData.billSeq === "number") {
       seq = posData.billSeq + 1;
     }
     const nextBillNo = formatBillNo(date, seq);
-    tx.set(metaPosRef, { billDate: date, billSeq: seq, updatedAt: now }, { merge: true });
 
-    const metaSnap = await tx.get(metaLedgerRef);
     const meta = metaSnap.data() || {};
     const balance = Number(meta.balance) || 0;
     const totalIn = Number(meta.totalIn) || 0;
     const totalOut = Number(meta.totalOut) || 0;
 
+    tx.set(metaPosRef, { billDate: date, billSeq: seq, updatedAt: now }, { merge: true });
     tx.set(saleRef, {
       billNo: nextBillNo,
       deviceId,

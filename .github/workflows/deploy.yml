@@ -42,6 +42,9 @@ jobs:
       - name: Verify POS connectivity wiring
         run: npm run test:pos-connectivity
 
+      - name: Verify POS sale transaction ordering
+        run: npm run test:pos-complete-sale
+
       - name: Enable anonymous sign-in (POS fallback)
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

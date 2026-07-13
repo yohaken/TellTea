@@ -74,10 +74,13 @@ export async function completeCashSale(input: {
     if (code === "functions/invalid-argument") {
       throw new Error(message || "ข้อมูลการขายไม่ถูกต้อง");
     }
-    if (code === "functions/unavailable" || code === "functions/internal") {
-      throw new Error(mapFirestoreError(err, "บันทึกการขาย", "pos"));
+    if (code === "functions/unavailable") {
+      throw new Error("บันทึกการขาย — เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่");
     }
-    throw new Error(mapFirestoreError(err, "บันทึกการขาย", "pos"));
+    if (code === "functions/internal" || code === "functions/deadline-exceeded") {
+      throw new Error(message || mapFirestoreError(err, "บันทึกการขาย", "pos"));
+    }
+    throw new Error(message || mapFirestoreError(err, "บันทึกการขาย", "pos"));
   }
 }
 

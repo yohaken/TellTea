@@ -165,7 +165,8 @@ exports.posCompleteSale = functions
       return await completePosSaleAdmin(db, data, context.auth.uid);
     } catch (err) {
       if (err instanceof functions.https.HttpsError) throw err;
-      console.error("posCompleteSale failed", err);
-      throw new functions.https.HttpsError("internal", "บันทึกการขายไม่สำเร็จ");
+      const detail = err?.message || String(err);
+      console.error("posCompleteSale failed", detail, err);
+      throw new functions.https.HttpsError("internal", `บันทึกการขายไม่สำเร็จ — ${detail.slice(0, 120)}`);
     }
   });

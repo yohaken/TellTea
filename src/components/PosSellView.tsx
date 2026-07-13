@@ -207,7 +207,7 @@ export function PosSellView({
 
   function openCashPay() {
     if (!cartCount) return;
-    setCashInput(String(Math.ceil(total)));
+    setCashInput(String(total));
     setPayMode("cash");
     setQrUrl(null);
     setError(null);
