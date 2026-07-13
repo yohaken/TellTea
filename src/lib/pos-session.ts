@@ -15,14 +15,43 @@ import { getPosDb } from "./pos-firebase";
 import type { PosSession } from "./types";
 import { startOfLocalDay } from "./utils";
 import type { OtShiftId } from "./ot";
+import { withTimeout } from "./pos-timeout";
 
 export const POS_SESSIONS_COL = "posSessions";
 
 const ACTIVE_SESSION_KEY = "telltea-pos-active-session";
 const LOCAL_OPEN_SESSION_KEY = "telltea-pos-local-open-session";
+const PENDING_CLOSED_SESSION_KEY = "telltea-pos-pending-closed-session";
 
 function localOpenSessionStorageKey(deviceId: string) {
   return `${LOCAL_OPEN_SESSION_KEY}:${deviceId}`;
+}
+
+function pendingClosedStorageKey(deviceId: string) {
+  return `${PENDING_CLOSED_SESSION_KEY}:${deviceId}`;
+}
+
+function readPendingClosedSession(deviceId: string): PosSession | null {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(pendingClosedStorageKey(deviceId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PosSession;
+    if (parsed?.deviceId !== deviceId || parsed.status !== "closed") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writePendingClosedSession(deviceId: string, session: PosSession | null) {
+  if (typeof localStorage === "undefined") return;
+  const key = pendingClosedStorageKey(deviceId);
+  if (!session) {
+    localStorage.removeItem(key);
+    return;
+  }
+  localStorage.setItem(key, JSON.stringify(session));
 }
 
 export function readLocalOpenPosSession(deviceId: string): PosSession | null {
@@ -248,9 +277,19 @@ async function fetchRemoteOpenPosSession(deviceId: string): Promise<PosSession |
 
 /** อัปเดตจากเซิร์ฟเวอร์เบื้องหลัง — ไม่บล็อกการเข้างาน */
 export async function reconcilePosSessionFromRemote(deviceId: string): Promise<PosSession | null> {
+  const pendingClosed = readPendingClosedSession(deviceId);
+  if (pendingClosed) {
+    void persistClosedPosSession(pendingClosed);
+  }
+
   try {
     const remote = await fetchRemoteOpenPosSession(deviceId);
     if (remote) {
+      // ปิดบนเครื่องแล้วแต่เซิร์ฟยัง open — อย่าเปิดรอบกลับ
+      if (pendingClosed && pendingClosed.id === remote.id) {
+        void persistClosedPosSession(pendingClosed);
+        return null;
+      }
       storePosSessionId(deviceId, remote.id);
       writeLocalOpenPosSession(deviceId, remote);
       return remote;
@@ -318,32 +357,73 @@ export async function adjustPosSessionTotals(
 }
 
 export async function closePosSession(sessionId: string, deviceId?: string): Promise<PosSession> {
+  const closed = closePosSessionLocal(sessionId, deviceId);
+  void persistClosedPosSession(closed);
+  return closed;
+}
+
+/** ปิดรอบบนเครื่องทันที — ไม่รอเครือข่าย (local-first) */
+export function closePosSessionLocal(
+  sessionId: string,
+  deviceId?: string,
+  previous?: PosSession | null,
+): PosSession {
   const now = Date.now();
+  const base: Record<string, unknown> = previous
+    ? {
+        deviceId: previous.deviceId,
+        date: previous.date,
+        shift: previous.shift,
+        openedAt: previous.openedAt,
+        saleCount: previous.saleCount,
+        totalSales: previous.totalSales,
+      }
+    : { deviceId: deviceId || "" };
+  const closed = mapSession(sessionId, {
+    ...base,
+    status: "closed",
+    closedAt: now,
+    updatedAt: now,
+  });
   if (deviceId) {
     writeLocalOpenPosSession(deviceId, null);
     clearStoredPosSessionId(deviceId);
+    writePendingClosedSession(deviceId, closed);
   }
+  return closed;
+}
 
+/** ส่งสถานะปิดรอบขึ้น Firestore เบื้องหลัง (มี timeout — ไม่ค้าง UI) */
+export async function persistClosedPosSession(session: PosSession): Promise<void> {
+  const now = session.closedAt || Date.now();
   let data: Record<string, unknown> = {};
   try {
-    const snap = await getDoc(sessionRef(sessionId));
+    const snap = await withTimeout(getDoc(sessionRef(session.id)), 4_000, "อ่านรอบหมดเวลา");
     if (snap.exists()) data = snap.data() as Record<string, unknown>;
   } catch {
-    /* offline — ปิดบนเครื่องได้ */
+    /* offline / slow */
   }
 
   const payload = {
     ...data,
-    status: "closed",
+    deviceId: session.deviceId,
+    date: session.date,
+    shift: session.shift,
+    openedAt: session.openedAt,
+    saleCount: session.saleCount,
+    totalSales: session.totalSales,
+    status: "closed" as const,
     closedAt: now,
-    updatedAt: now,
+    updatedAt: Date.now(),
   };
+
   try {
-    await setDoc(sessionRef(sessionId), payload, { merge: true });
+    await withTimeout(setDoc(sessionRef(session.id), payload, { merge: true }), 5_000, "ปิดรอบหมดเวลา");
+    writePendingClosedSession(session.deviceId, null);
   } catch {
-    /* offline */
+    /* คง pending closed ไว้ — boot จะลองซ้ำ */
+    writePendingClosedSession(session.deviceId, session);
   }
-  return mapSession(sessionId, payload);
 }
 
 export function formatPosSessionClock(ts: number): string {

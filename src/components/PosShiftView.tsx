@@ -9,9 +9,8 @@ import {
   summarizeLocalReceipts,
   type PosLocalReceipt,
 } from "@/lib/pos-local-receipts";
-import { listLocalSessionsForDevice, saveLocalClosedSession } from "@/lib/pos-local-sessions";
-import { closePosSession, formatPosSessionClock } from "@/lib/pos-session";
-import { runPosSyncFlush } from "@/lib/pos-sync";
+import { listLocalSessionsForDevice } from "@/lib/pos-local-sessions";
+import { formatPosSessionClock } from "@/lib/pos-session";
 import { PosReceiptPaper } from "@/components/PosReceiptPaper";
 import { printSaleDocuments } from "@/lib/pos-printer/router";
 import { localReceiptToPrintPayload } from "@/lib/pos-receipt-view";
@@ -196,7 +195,7 @@ function ReceiptRow({
 }
 
 export function PosShiftView() {
-  const { session, device, selling, syncSnap, setError } = usePosApp();
+  const { session, device, selling, syncSnap, setError, handleCloseShift: closeShiftFromApp } = usePosApp();
   const [closing, setClosing] = useState(false);
   const [closeShiftDetail, setCloseShiftDetail] = useState<string | null>(null);
   const [tab, setTab] = useState<"current" | "history">("current");
@@ -322,15 +321,7 @@ export function PosShiftView() {
     setClosing(true);
     setError(null);
     try {
-      const flush = await runPosSyncFlush();
-      if (flush.pendingCount + flush.failedCount > 0) {
-        throw new Error(`ยังมีบิลค้างส่ง ${flush.pendingCount + flush.failedCount} รายการ`);
-      }
-
-      const closed = await closePosSession(session.id, device.id);
-      saveLocalClosedSession({
-        ...closed,
-        closedAt: closed.closedAt || Date.now(),
+      await closeShiftFromApp({
         cashTotal: sessionSummary.cashTotal,
         promptpayTotal: sessionSummary.promptpayTotal,
       });

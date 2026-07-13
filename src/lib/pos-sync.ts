@@ -18,6 +18,9 @@ import {
   outboxEntryStatus,
   saleTotalFromPayload,
 } from "./pos-sync-utils";
+import { withTimeout } from "./pos-timeout";
+
+const SALE_CF_TIMEOUT_MS = 12_000;
 
 type CfSaleResult = { saleId: string; billNo: string; change: number; total: number };
 
@@ -29,7 +32,11 @@ export async function invokePosCompleteSale(payload: PosSaleMutationPayload): Pr
     getPosFirebaseFunctions(),
     "posCompleteSale",
   );
-  const result = await posCompleteSale({ ...payload, deviceId: authUid });
+  const result = await withTimeout(
+    posCompleteSale({ ...payload, deviceId: authUid }),
+    SALE_CF_TIMEOUT_MS,
+    "ส่งบิลหมดเวลา — จะลองใหม่ตอนเน็ตกลับ",
+  );
   const data = result.data;
   if (!data?.saleId || !data?.billNo) {
     throw Object.assign(new Error("บันทึกการขาย — ตอบกลับไม่สมบูรณ์"), {

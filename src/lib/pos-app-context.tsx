@@ -24,15 +24,18 @@ import {
 import { isPosStandaloneMode, type BeforeInstallPromptEvent } from "@/lib/pos-install";
 import {
   applyRemotePosSessionUpdate,
-  clearStoredPosSessionId,
+  closePosSessionLocal,
+  persistClosedPosSession,
   persistOpenPosSession,
   readLocalOpenPosSession,
   reconcilePosSessionFromRemote,
   startPosSessionLocal,
   storePosSessionId,
   subscribePosSession,
-  writeLocalOpenPosSession,
 } from "@/lib/pos-session";
+import { saveLocalClosedSession } from "@/lib/pos-local-sessions";
+import { refreshPosSyncSnapshot, runPosSyncFlush } from "@/lib/pos-sync";
+import { settledWithTimeout } from "@/lib/pos-timeout";
 import { getCurrentShiftId } from "@/lib/shift-session";
 import { seedPosMenuIfEmpty } from "@/lib/pos-menu";
 import { startPosMenuPreload } from "@/lib/pos-menu-preload";
@@ -69,6 +72,8 @@ type PosAppContextValue = {
   setLocked: (v: boolean) => void;
   boot: () => Promise<void>;
   handleOpenShift: () => void;
+  /** ปิดรอบบนเครื่องทันที — sync เซิร์ฟเวอร์เงียบด้านหลัง */
+  handleCloseShift: (totals?: { cashTotal: number; promptpayTotal: number }) => Promise<void>;
   installApp: () => Promise<void>;
   performReload: () => void;
 };
@@ -310,6 +315,44 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
     });
   }, [shift]);
 
+  const handleCloseShift = useCallback(
+    async (totals?: { cashTotal: number; promptpayTotal: number }) => {
+      const deviceId = deviceIdRef.current;
+      const current = session;
+      if (!deviceId || !current || current.status !== "open") return;
+
+      setError(null);
+
+      // ลองส่งบิลค้างแบบมี timeout — ไม่ค้างปุ่ม "กำลังทำ..."
+      const flushSnap = await settledWithTimeout(runPosSyncFlush(), 8_000, null);
+      const snap = flushSnap || (await refreshPosSyncSnapshot());
+      if (snap.pendingCount + snap.failedCount > 0) {
+        throw new Error(
+          `ยังมีบิลค้างส่ง ${snap.pendingCount + snap.failedCount} รายการ — รอซิงก์หรือเปิดแผงบิลรอส่ง`,
+        );
+      }
+
+      // ปิดบนเครื่องทันที → UI กลับเข้างานได้เลย
+      const closed = closePosSessionLocal(current.id, deviceId, {
+        ...current,
+        saleCount: current.saleCount,
+        totalSales: current.totalSales,
+      });
+      setSession(closed);
+      saveLocalClosedSession({
+        ...closed,
+        closedAt: closed.closedAt || Date.now(),
+        cashTotal: totals?.cashTotal ?? 0,
+        promptpayTotal: totals?.promptpayTotal ?? 0,
+      });
+
+      // sync เซิร์ฟเวอร์เงียบด้านหลัง
+      void persistClosedPosSession(closed);
+      void runPosSyncFlush();
+    },
+    [session],
+  );
+
   useEffect(() => {
     const deviceId = deviceIdRef.current;
     if (!deviceId || status !== "ready") return;
@@ -418,6 +461,7 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
     setLocked: setLockedPersist,
     boot,
     handleOpenShift,
+    handleCloseShift,
     installApp,
     performReload,
   };
