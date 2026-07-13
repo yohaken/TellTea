@@ -33,7 +33,7 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     lines: Array.isArray(data.lines) ? (data.lines as PosSale["lines"]) : [],
     subtotal: typeof data.subtotal === "number" ? data.subtotal : 0,
     total: typeof data.total === "number" ? data.total : 0,
-    paymentMethod: "cash",
+    paymentMethod: data.paymentMethod === "promptpay" ? "promptpay" : "cash",
     cashReceived: typeof data.cashReceived === "number" ? data.cashReceived : 0,
     change: typeof data.change === "number" ? data.change : 0,
     ledgerEntryId: typeof data.ledgerEntryId === "string" ? data.ledgerEntryId : "",

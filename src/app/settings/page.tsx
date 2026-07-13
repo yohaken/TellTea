@@ -6,6 +6,7 @@ import { Settings } from "lucide-react";
 import { AppUpdateSetup } from "@/components/AppUpdateSetup";
 import { MenuCatalogSetup } from "@/components/MenuCatalogSetup";
 import { PosSalesSetup } from "@/components/PosSalesSetup";
+import { PosPaymentSetup } from "@/components/PosPaymentSetup";
 import { PosDeviceSetup } from "@/components/PosDeviceSetup";
 import { AuthGate } from "@/components/AuthGate";
 import { ChecklistSetup } from "@/components/ChecklistSetup";
@@ -83,6 +84,7 @@ function SettingsView() {
           <AppUpdateSetup onError={setError} />
           <PosDeviceSetup onError={setError} />
           <PosSalesSetup onError={setError} />
+          <PosPaymentSetup onError={setError} />
           <MenuCatalogSetup onError={setError} />
           <NavMenuOrderSetup onError={setError} />
           <ProdCatalogSetup

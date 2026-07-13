@@ -6292,7 +6292,9 @@ body.modal-open .main-panel {
 .pos-lite-header-end {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
 }
 
 .pos-open-shift-btn {
@@ -6465,6 +6467,59 @@ body.modal-open .main-panel {
   align-items: center;
   gap: 0.35rem;
   font-size: 0.92rem;
+}
+
+.pos-sell-hint {
+  margin: 0 0 0.35rem;
+  padding: 0 0.25rem;
+  font-size: 0.72rem;
+}
+
+.pos-sell-item--soldout {
+  opacity: 0.55;
+  background: rgba(28, 42, 31, 0.06);
+}
+
+.pos-sell-item-soldout {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #b42318;
+}
+
+.pos-sell-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pos-sell-pay-btn--qr {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: auto;
+}
+
+.pos-pay-qr {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.pos-pay-qr img {
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.pos-settings-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+}
+
+.pos-settings-check input {
+  margin-top: 0.2rem;
 }
 
 .pos-sell-pay-btn {

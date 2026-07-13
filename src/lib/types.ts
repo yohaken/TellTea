@@ -204,6 +204,8 @@ export type PosSession = {
   totalSales: number;
 };
 
+export type PosSalePaymentMethod = "cash" | "promptpay";
+
 export type PosSale = {
   id: string;
   billNo: string;
@@ -214,7 +216,7 @@ export type PosSale = {
   lines: PosSaleLine[];
   subtotal: number;
   total: number;
-  paymentMethod: "cash";
+  paymentMethod: PosSalePaymentMethod;
   cashReceived: number;
   change: number;
   ledgerEntryId: string;

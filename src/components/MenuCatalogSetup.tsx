@@ -160,7 +160,7 @@ export function MenuCatalogSetup({ onError }: { onError: (msg: string | null) =>
                       <li key={item.id} className="pos-menu-owner-item">
                         <span>
                           {item.name} · ฿{formatPlainNumber(item.price)}
-                          {!item.active ? " (ปิด)" : ""}
+                          {!item.active ? " · ของหมด" : ""}
                         </span>
                         <button
                           type="button"
@@ -171,7 +171,7 @@ export function MenuCatalogSetup({ onError }: { onError: (msg: string | null) =>
                             )
                           }
                         >
-                          {item.active ? "ปิด" : "เปิด"}
+                          {item.active ? "ของหมด" : "เปิดขาย"}
                         </button>
                       </li>
                     ))}

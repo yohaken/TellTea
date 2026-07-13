@@ -143,6 +143,18 @@ export async function addMenuItem(input: {
   }
 }
 
+/** POS quick 86 — toggle sold-out without changing price/name. */
+export async function toggleMenuItemSoldOut(id: string, soldOut: boolean): Promise<void> {
+  try {
+    await updateDoc(doc(getPosDb(), MENU_ITEMS_COL, id), {
+      active: !soldOut,
+      updatedAt: Date.now(),
+    });
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, soldOut ? "ปิดเมนูของหมด" : "เปิดเมนูขาย"));
+  }
+}
+
 export async function updateMenuItem(
   id: string,
   patch: Partial<Pick<MenuItem, "categoryId" | "name" | "price" | "active">>,

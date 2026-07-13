@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Download, Wifi, WifiOff } from "lucide-react";
+import { Download, Printer, Wifi, WifiOff } from "lucide-react";
 import { AppBrand } from "@/components/AppBrand";
 import { PosUpdateWatcher } from "@/components/PosUpdateWatcher";
 import { PosSellView } from "@/components/PosSellView";
@@ -26,9 +26,10 @@ import { getCurrentShiftId } from "@/lib/shift-session";
 import { labelOtShift } from "@/lib/ot";
 import { seedPosMenuIfEmpty } from "@/lib/pos-menu";
 import { isFirebaseConfigured } from "@/lib/firebase";
-import { appVersionLabel } from "@/lib/version";
+import { getPosHardwareSnapshot } from "@/lib/pos-hardware";
 import { isPosSafeToReload, type PosSellBusyState } from "@/lib/pos-reload";
 import type { PosSession } from "@/lib/types";
+import { appVersionLabel } from "@/lib/version";
 
 type PosStatus = "boot" | "connecting" | "ready" | "error";
 
@@ -258,6 +259,7 @@ export default function PosPage() {
   const connectivity = device
     ? getPosConnectivity(device.lastSeenAt, lastHeartbeatAt, online)
     : { deviceOnline: false, pill: "offline-signal" as const, label: "รอสัญญาณ" };
+  const hardware = getPosHardwareSnapshot(online);
 
   return (
     <div className={`pos-lite ${standalone ? "pos-lite--standalone" : ""} ${selling ? "pos-lite--sell" : ""}`}>
@@ -269,6 +271,13 @@ export default function PosPage() {
       <header className="pos-lite-header">
         <AppBrand compact showLogo />
         <div className="pos-lite-header-end">
+          <span
+            className={`pos-lite-pill ${hardware.printerReady ? "pos-lite-pill--ok" : "pos-lite-pill--warn"}`}
+            title={hardware.printerReady ? "พร้อมพิมพ์ใบเสร็จ" : "เครื่องนี้พิมพ์ใบเสร็จไม่ได้"}
+          >
+            <Printer size={12} aria-hidden />
+            {hardware.printerLabel}
+          </span>
           <span
             className={`pos-lite-pill ${connectivity.pill === "online" ? "pos-lite-pill--ok" : "pos-lite-pill--warn"}`}
             title={

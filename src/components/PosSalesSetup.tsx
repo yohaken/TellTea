@@ -90,7 +90,8 @@ export function PosSalesSetup({ onError }: { onError: (msg: string | null) => vo
                 <div className="pos-sales-row-main">
                   <strong>{sale.billNo}</strong>
                   <span className="muted">
-                    {formatTime(sale.createdAt)} · {labelOtShift(sale.shift as "late" | "morning" | "evening")}
+                    {formatTime(sale.createdAt)} · {labelOtShift(sale.shift as "late" | "morning" | "evening")} ·{" "}
+                    {sale.paymentMethod === "promptpay" ? "PromptPay" : "เงินสด"}
                   </span>
                   <span className="pos-sales-row-items">{preview}</span>
                 </div>

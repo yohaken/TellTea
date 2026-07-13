@@ -219,10 +219,17 @@ service cloud.firestore {
         && request.resource.data.lines.size() > 0
         && request.resource.data.total is number
         && request.resource.data.total > 0
-        && request.resource.data.paymentMethod == 'cash'
+        && request.resource.data.paymentMethod in ['cash', 'promptpay']
         && request.resource.data.cashReceived is number
         && request.resource.data.change is number
         && request.resource.data.change >= 0
+        && (
+          (request.resource.data.paymentMethod == 'cash'
+            && request.resource.data.cashReceived >= request.resource.data.total)
+          || (request.resource.data.paymentMethod == 'promptpay'
+            && request.resource.data.cashReceived == 0
+            && request.resource.data.change == 0)
+        )
         && request.resource.data.createdBy == posActorId()
         && request.resource.data.status == 'completed'
         && request.resource.data.billNo is string
@@ -262,7 +269,24 @@ service cloud.firestore {
     }
 
     function posLedgerMetaWrite() {
-      return isPosDeviceAuth();
+      let after = request.resource.data;
+      return isPosDeviceAuth()
+        && after.balance is number
+        && after.totalIn is number
+        && after.updatedAt is number;
+    }
+
+    function posMenuItemSoldOutToggle() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return isPosDeviceAuth()
+        && after.diff(before).affectedKeys().hasOnly(['active', 'updatedAt'])
+        && after.categoryId == before.categoryId
+        && after.name == before.name
+        && after.price == before.price
+        && after.sortOrder == before.sortOrder
+        && after.createdAt == before.createdAt
+        && after.active is bool;
     }
 
     function staffEmployeeId() {
@@ -530,7 +554,8 @@ service cloud.firestore {
     match /menuItems/{id} {
       allow read: if isStaff() || isPosDeviceAuth();
       allow create: if isOwner() || posMenuItemCreate();
-      allow update, delete: if isOwner();
+      allow update: if isOwner() || posMenuItemSoldOutToggle();
+      allow delete: if isOwner();
     }
 
     match /posSessions/{sessionId} {
