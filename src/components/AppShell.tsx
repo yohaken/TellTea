@@ -9,6 +9,7 @@ import {
   ChefHat,
   CircleDollarSign,
   ClipboardCheck,
+  ClipboardList,
   Coffee,
   LogOut,
   MoreHorizontal,
@@ -21,12 +22,15 @@ import { ProfilePromptBanner } from "@/components/ProfilePromptBanner";
 import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import {
   DEFAULT_NAV_ORDER,
-  sortByNavOrder,
-  subscribeNavOrder,
+  NAV_MODULE_HREFS,
+  NAV_TAB_LABELS,
+  resolveNavForUser,
+  subscribeNavUi,
+  type NavModuleKey,
   type NavTabKey,
+  type NavUiSettings,
 } from "@/lib/nav-menu";
 import { profileStatusLabel } from "@/lib/profile";
-import { can, hasAnyExtraPermission } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 const MORE_PREFIXES = [
@@ -43,24 +47,20 @@ const MORE_PREFIXES = [
   "/tasks",
 ];
 
-const NAV_ICONS = {
+const NAV_ICONS: Record<NavTabKey, typeof BookOpen> = {
   ledger: BookOpen,
   production: ChefHat,
   otBonus: Coffee,
   bonus: CircleDollarSign,
   checklist: ClipboardCheck,
   stock: Boxes,
+  assignTasks: ClipboardList,
   more: MoreHorizontal,
-} as const;
+};
 
-const NAV_HREFS: Record<NavTabKey, string> = {
-  ledger: "/ledger/",
-  production: "/production/",
-  otBonus: "/ot/",
-  bonus: "/bonus/",
-  checklist: "/check/",
-  stock: "/stock/",
-  more: "/more/",
+const DEFAULT_UI: NavUiSettings = {
+  navOrder: [...DEFAULT_NAV_ORDER],
+  dockTabKeys: [],
 };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -70,49 +70,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const emailShort = user?.email?.split("@")[0] || user?.phoneNumber?.slice(-4) || "";
   const userLabel = profileStatusLabel(staff) || emailShort;
   const roleLabel = isOwner ? "เจ้าของ" : "พนักงาน";
-  const [navOrder, setNavOrder] = useState<NavTabKey[]>([...DEFAULT_NAV_ORDER]);
+  const [navUi, setNavUi] = useState<NavUiSettings>(DEFAULT_UI);
 
   useEffect(() => {
-    return subscribeNavOrder(setNavOrder);
+    return subscribeNavUi(setNavUi);
   }, []);
 
   const links = useMemo(() => {
-    const visible: { key: NavTabKey; href: string; label: string; icon: typeof BookOpen }[] = [];
+    const { dockModules, showMoreTab } = resolveNavForUser(staff, navUi);
+    const items: {
+      key: NavTabKey;
+      href: string;
+      label: string;
+      icon: (typeof NAV_ICONS)[NavTabKey];
+    }[] = dockModules.map(({ key, href, label }) => ({
+      key,
+      href,
+      label,
+      icon: NAV_ICONS[key],
+    }));
 
-    if (can(staff, "ledger")) {
-      visible.push({ key: "ledger", href: NAV_HREFS.ledger, label: "บัญชี", icon: NAV_ICONS.ledger });
-    }
-    if (can(staff, "production")) {
-      visible.push({
-        key: "production",
-        href: NAV_HREFS.production,
-        label: "ผลิต",
-        icon: NAV_ICONS.production,
+    if (showMoreTab) {
+      items.push({
+        key: "more",
+        href: "/more/",
+        label: NAV_TAB_LABELS.more,
+        icon: NAV_ICONS.more,
       });
     }
-    if (can(staff, "otBonus")) {
-      visible.push({ key: "otBonus", href: NAV_HREFS.otBonus, label: "ชง", icon: NAV_ICONS.otBonus });
-    }
-    if (can(staff, "bonus")) {
-      visible.push({ key: "bonus", href: NAV_HREFS.bonus, label: "โบนัส", icon: NAV_ICONS.bonus });
-    }
-    if (can(staff, "checklist")) {
-      visible.push({
-        key: "checklist",
-        href: NAV_HREFS.checklist,
-        label: "เช็ค",
-        icon: NAV_ICONS.checklist,
-      });
-    }
-    if (can(staff, "stock")) {
-      visible.push({ key: "stock", href: NAV_HREFS.stock, label: "คลัง", icon: NAV_ICONS.stock });
-    }
-    if (hasAnyExtraPermission(staff)) {
-      visible.push({ key: "more", href: NAV_HREFS.more, label: "อื่นๆ", icon: NAV_ICONS.more });
-    }
 
-    return sortByNavOrder(visible, navOrder);
-  }, [staff, navOrder]);
+    return items;
+  }, [staff, navUi]);
 
   return (
     <div className="phone-frame">
@@ -158,13 +146,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <UiSettingsProvider />
 
-        <nav className="bottom-nav">
-          {links.map(({ href, label, icon: Icon }) => {
+        <nav
+          className={cn("bottom-nav", links.length >= 5 && "bottom-nav--dense")}
+          style={{ gridTemplateColumns: `repeat(${links.length}, minmax(0, 1fr))` }}
+        >
+          {links.map(({ key, href, label, icon: Icon }) => {
             const active =
               pathname === href ||
               pathname.startsWith(href.replace(/\/$/, "")) ||
-              (href === "/more/" &&
-                MORE_PREFIXES.some((p) => pathname.startsWith(p)));
+              (href === "/more/" && MORE_PREFIXES.some((p) => pathname.startsWith(p))) ||
+              (key !== "more" && pathname.startsWith(NAV_MODULE_HREFS[key as NavModuleKey]?.replace(/\/$/, "") || ""));
             return (
               <Link key={href} href={href} className={cn("nav-item", active && "active")}>
                 <Icon size={22} />

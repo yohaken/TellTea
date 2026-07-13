@@ -1,15 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowDownLeft,
   Bell,
   BookMarked,
+  BookOpen,
+  Boxes,
   ChartColumn,
+  ChefHat,
   CircleDollarSign,
+  ClipboardCheck,
   ClipboardList,
+  Coffee,
   Download,
   Settings,
   UserCircle,
@@ -17,8 +22,30 @@ import {
 } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
+import {
+  DEFAULT_NAV_ORDER,
+  resolveNavForUser,
+  subscribeNavUi,
+  type NavUiSettings,
+} from "@/lib/nav-menu";
 import { needsPersonalProfileSetup, needsProfileSetup, personalProfileLabel } from "@/lib/profile";
 import { can, hasAnyExtraPermission, type PermissionKey } from "@/lib/permissions";
+import type { NavModuleKey } from "@/lib/nav-menu";
+
+const MODULE_ICONS: Record<NavModuleKey, typeof BookOpen> = {
+  ledger: BookOpen,
+  production: ChefHat,
+  otBonus: Coffee,
+  bonus: CircleDollarSign,
+  checklist: ClipboardCheck,
+  stock: Boxes,
+  assignTasks: ClipboardList,
+};
+
+const DEFAULT_UI: NavUiSettings = {
+  navOrder: [...DEFAULT_NAV_ORDER],
+  dockTabKeys: [],
+};
 
 export default function MorePage() {
   return (
@@ -31,12 +58,19 @@ export default function MorePage() {
 function MoreView() {
   const { staff } = useAuth();
   const router = useRouter();
+  const [navUi, setNavUi] = useState<NavUiSettings>(DEFAULT_UI);
 
   useEffect(() => {
-    if (staff && !hasAnyExtraPermission(staff)) router.replace("/ledger/");
-  }, [staff, router]);
+    return subscribeNavUi(setNavUi);
+  }, []);
 
-  if (!hasAnyExtraPermission(staff)) return null;
+  const { moreModules, showMoreTab } = resolveNavForUser(staff, navUi);
+
+  useEffect(() => {
+    if (staff && !showMoreTab) router.replace("/ledger/");
+  }, [staff, showMoreTab, router]);
+
+  if (!showMoreTab) return null;
 
   const tools: {
     href: string;
@@ -45,13 +79,6 @@ function MoreView() {
     icon: typeof ChartColumn;
     perm: PermissionKey;
   }[] = [
-    {
-      href: "/bonus/",
-      title: "สรุปโบนัสเดือน",
-      desc: "ขาย + ผลิต + ชง แบบ real-time",
-      icon: CircleDollarSign,
-      perm: "bonus",
-    },
     {
       href: "/pnl/",
       title: "สรุปรายเดือน",
@@ -96,16 +123,17 @@ function MoreView() {
     },
   ];
 
-  const visible = tools.filter((t) => can(staff, t.perm));
+  const extraTools = tools.filter((t) => can(staff, t.perm));
   const isOwner = staff?.role === "owner";
   const profileIncomplete = needsProfileSetup(staff);
   const personalIncomplete = needsPersonalProfileSetup(staff);
+  const hasExtras = hasAnyExtraPermission(staff);
 
   return (
     <div>
       <h1 className="panel-title">อื่นๆ</h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        เครื่องมือตามสิทธิ์ที่ได้รับ
+        โมดูลและเครื่องมือเพิ่มเติมตามสิทธิ์
       </p>
       <div className="more-grid">
         {profileIncomplete ? (
@@ -139,7 +167,19 @@ function MoreView() {
             </div>
           </Link>
         ) : null}
-        {visible.map(({ href, title, desc, icon: Icon }) => (
+        {moreModules.map(({ href, label, description, key }) => {
+          const Icon = MODULE_ICONS[key];
+          return (
+            <Link key={key} href={href} className="more-card">
+              <Icon size={22} />
+              <div>
+                <strong>{label}</strong>
+                <p>{description}</p>
+              </div>
+            </Link>
+          );
+        })}
+        {extraTools.map(({ href, title, desc, icon: Icon }) => (
           <Link key={href} href={href} className="more-card">
             <Icon size={22} />
             <div>
@@ -148,14 +188,8 @@ function MoreView() {
             </div>
           </Link>
         ))}
-        {staff ? (
-          <Link href="/tasks/" className="more-card">
-            <ClipboardList size={22} />
-            <div>
-              <strong>งานมอบหมาย</strong>
-              <p>งานประจำสัปดาห์ — เห็นเฉพาะงานที่มอบให้คุณ</p>
-            </div>
-          </Link>
+        {!hasExtras && moreModules.length === 0 && !isOwner && !profileIncomplete ? (
+          <p className="empty">ไม่มีรายการเพิ่มเติม</p>
         ) : null}
       </div>
     </div>

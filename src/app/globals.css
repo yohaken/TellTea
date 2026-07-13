@@ -507,6 +507,54 @@ body.modal-open .main-panel {
   font-weight: 700;
 }
 
+.bottom-nav--dense .nav-item {
+  font-size: 0.66rem;
+  padding: 0.5rem 0.12rem;
+  min-height: 2.95rem;
+}
+
+.bottom-nav--dense .nav-item svg {
+  width: 20px;
+  height: 20px;
+}
+
+.nav-dock-count {
+  margin: 0 0 0.55rem;
+  font-size: 0.8rem;
+  text-align: left;
+}
+
+.nav-dock-toggle {
+  display: flex;
+  align-items: center;
+  padding-top: 0.15rem;
+}
+
+.nav-dock-toggle input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--tea-green, #2f6b4f);
+}
+
+.nav-order-copy {
+  display: grid;
+  gap: 0.1rem;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-order-desc {
+  font-size: 0.72rem;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.nav-order-placement {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--tea-leaf, #2f6b4f);
+}
+
 .panel-title {
   margin: 0 0 0.75rem;
   font-size: 1.25rem;
@@ -5067,9 +5115,10 @@ body.modal-open .main-panel {
 }
 
 .nav-order-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.55rem;
+  align-items: start;
   padding: 0.5rem 0.55rem;
   border-radius: 0.65rem;
   background: rgba(255, 255, 255, 0.82);

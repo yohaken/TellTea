@@ -1,5 +1,5 @@
 /**
- * Nav menu order wiring.
+ * Nav dock + more menu wiring.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -8,40 +8,40 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-function normalizeNavOrder(input) {
-  const keys = ["ledger", "production", "otBonus", "bonus", "checklist", "stock", "more"];
+function normalizeDockTabKeys(input, order) {
+  const keys = ["ledger", "production", "otBonus", "bonus", "checklist", "stock", "assignTasks"];
   const out = [];
   for (const raw of input || []) {
     if (keys.includes(raw) && !out.includes(raw)) out.push(raw);
+    if (out.length >= 5) break;
   }
-  for (const k of keys) {
-    if (!out.includes(k)) out.push(k);
+  if (out.length > 0) return out;
+  for (const key of order || keys) {
+    if (key === "more") continue;
+    if (keys.includes(key) && !out.includes(key)) out.push(key);
+    if (out.length >= 5) break;
   }
   return out;
 }
 
-function sortByNavOrder(items, order) {
-  const rank = new Map(order.map((k, i) => [k, i]));
-  return [...items].sort((a, b) => (rank.get(a.key) ?? 999) - (rank.get(b.key) ?? 999));
-}
-
-const sorted = sortByNavOrder(
-  [
-    { key: "stock", label: "คลัง" },
-    { key: "ledger", label: "บัญชี" },
-    { key: "production", label: "ผลิต" },
-  ],
-  normalizeNavOrder(["production", "ledger", "stock", "otBonus", "bonus", "checklist", "more"]),
-);
-assert.deepEqual(
-  sorted.map((x) => x.key),
-  ["production", "ledger", "stock"],
-);
+const dock = normalizeDockTabKeys(["ledger", "production", "otBonus", "bonus", "checklist"], [
+  "production",
+  "ledger",
+  "stock",
+  "otBonus",
+  "bonus",
+  "checklist",
+  "more",
+]);
+assert.equal(dock.length, 5);
+assert.ok(!dock.includes("stock"));
 
 const shellSrc = readFileSync(join(root, "src/components/AppShell.tsx"), "utf8");
-const settingsSrc = readFileSync(join(root, "src/app/settings/page.tsx"), "utf8");
-assert.match(shellSrc, /subscribeNavOrder/);
-assert.match(shellSrc, /sortByNavOrder/);
-assert.match(settingsSrc, /NavMenuOrderSetup/);
+const setupSrc = readFileSync(join(root, "src/components/NavMenuOrderSetup.tsx"), "utf8");
+const navSrc = readFileSync(join(root, "src/lib/nav-menu.ts"), "utf8");
+assert.match(shellSrc, /resolveNavForUser/);
+assert.match(shellSrc, /subscribeNavUi/);
+assert.match(setupSrc, /DOCK_TAB_MAX/);
+assert.match(navSrc, /dockTabKeys/);
 
-console.log("OK nav menu order");
+console.log("OK nav dock menu");
