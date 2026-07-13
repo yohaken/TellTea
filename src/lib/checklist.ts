@@ -14,6 +14,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
+import { startOfLocalDay } from "./utils";
 
 export type CheckShiftId = "late" | "morning" | "evening";
 
@@ -154,6 +155,25 @@ export function newCheckId() {
   return `chk-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/** Normalize to local midnight — same key as OT / check form date picker */
+export function normalizeCheckDateMs(ms: number) {
+  return startOfLocalDay(new Date(ms));
+}
+
+function mapCheckRecordDoc(id: string, data: Record<string, unknown>): ChecklistRecord {
+  return {
+    id,
+    ...(data as Omit<ChecklistRecord, "id">),
+  };
+}
+
+function sessionFromSnapshotRows(docs: { id: string; data: () => Record<string, unknown> }[]) {
+  if (!docs.length) return null;
+  const rows = docs.map((d) => mapCheckRecordDoc(d.id, d.data()));
+  const latestCheckId = rows[0]!.checkId;
+  return buildSessionSummary(rows.filter((r) => r.checkId === latestCheckId));
+}
+
 export async function listChecklistItems(): Promise<ChecklistItem[]> {
   const snap = await getDocs(query(itemsCol(), orderBy("sortOrder", "asc")));
   return snap.docs.map((d) => ({
@@ -255,21 +275,36 @@ export async function getSessionForShift(
   date: number,
   shift: CheckShiftId,
 ): Promise<CheckSessionSummary | null> {
+  const dateMs = normalizeCheckDateMs(date);
   const snap = await getDocs(
     query(
       recordsCol(),
-      where("date", "==", date),
+      where("date", "==", dateMs),
       where("shift", "==", shift),
       orderBy("submittedAt", "desc"),
     ),
   );
-  if (snap.empty) return null;
-  const rows = snap.docs.map((d) => ({
-    id: d.id,
-    ...(d.data() as Omit<ChecklistRecord, "id">),
-  }));
-  const latestCheckId = rows[0]!.checkId;
-  return buildSessionSummary(rows.filter((r) => r.checkId === latestCheckId));
+  return sessionFromSnapshotRows(snap.docs);
+}
+
+/** Live session for date×shift — used by OT ปิดกะ to skip duplicate SmartCheck */
+export function subscribeCheckSessionForShift(
+  date: number,
+  shift: CheckShiftId,
+  onSession: (session: CheckSessionSummary | null) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
+  const dateMs = normalizeCheckDateMs(date);
+  return onSnapshot(
+    query(
+      recordsCol(),
+      where("date", "==", dateMs),
+      where("shift", "==", shift),
+      orderBy("submittedAt", "desc"),
+    ),
+    (snap) => onSession(sessionFromSnapshotRows(snap.docs)),
+    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
+  );
 }
 
 export function buildSessionSummary(rows: ChecklistRecord[]): CheckSessionSummary | null {
@@ -312,7 +347,7 @@ export async function submitChecklistBatch(
     const ref = doc(recordsCol());
     batch.set(ref, {
       checkId: row.checkId,
-      date: row.date,
+      date: normalizeCheckDateMs(row.date),
       shift: row.shift,
       sessionKind: row.sessionKind || "full",
       inspector: row.inspector,

@@ -1,13 +1,13 @@
 "use client";
 
 import {
+  Suspense,
   useEffect,
   useMemo,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
-  AlertTriangle,
   CheckCircle2,
   ClipboardCheck,
   Trash2,
@@ -67,7 +67,9 @@ type DraftItem = {
 export default function CheckPage() {
   return (
     <AuthGate>
-      <CheckView />
+      <Suspense fallback={<p className="empty">กำลังโหลด...</p>}>
+        <CheckView />
+      </Suspense>
     </AuthGate>
   );
 }
@@ -75,8 +77,10 @@ export default function CheckPage() {
 function CheckView() {
   const { actorId, staff } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isOwner = staff?.role === "owner";
   const [formOpen, setFormOpen] = useState(false);
+  const [formSeed, setFormSeed] = useState<{ date?: string; shift?: CheckShiftId }>({});
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [records, setRecords] = useState<ChecklistRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -118,16 +122,27 @@ function CheckView() {
     return unsub;
   }, [staff, isOwner]);
 
+  useEffect(() => {
+    const date = searchParams.get("date");
+    const shift = searchParams.get("shift");
+    if (!date || !shift) return;
+    if (shift !== "late" && shift !== "morning" && shift !== "evening") return;
+    setFormSeed({ date, shift });
+    setFormOpen(true);
+  }, [searchParams]);
+
   useBodyScrollLock(formOpen);
 
   if (!can(staff, "checklist")) return null;
 
   function openForm() {
+    setFormSeed({});
     setFormOpen(true);
   }
 
   function closeForm() {
     setFormOpen(false);
+    setFormSeed({});
   }
 
   return (
@@ -154,10 +169,12 @@ function CheckView() {
         <div className="modal-backdrop edit-modal is-module-form is-check-form" onClick={closeForm}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <CheckForm
-              key={formOpen ? "open" : "closed"}
+              key={`${formOpen}-${formSeed.date || ""}-${formSeed.shift || ""}`}
               items={items}
               employees={employees}
               createdBy={actorId}
+              initialDate={formSeed.date}
+              initialShift={formSeed.shift}
               onError={setError}
               onClose={closeForm}
             />
@@ -178,18 +195,22 @@ function CheckForm({
   items,
   employees,
   createdBy,
+  initialDate,
+  initialShift,
   onError,
   onClose,
 }: {
   items: ChecklistItem[];
   employees: Employee[];
   createdBy: string;
+  initialDate?: string;
+  initialShift?: CheckShiftId;
   onError: (msg: string) => void;
   onClose: () => void;
 }) {
   const [step, setStep] = useState<"setup" | "list" | "done">("setup");
-  const [date, setDate] = useState(todayInputValue());
-  const [shift, setShift] = useState<CheckShiftId>("morning");
+  const [date, setDate] = useState(initialDate || todayInputValue());
+  const [shift, setShift] = useState<CheckShiftId>(initialShift || "morning");
   const [inspectorId, setInspectorId] = useState("");
   const [drafts, setDrafts] = useState<DraftItem[]>([]);
   const [existingSession, setExistingSession] = useState<CheckSessionSummary | null>(null);
@@ -409,18 +430,31 @@ function CheckForm({
           </div>
 
           {existingSession ? (
-            <div className="check-existing-banner">
-              <AlertTriangle size={16} aria-hidden />
+            <div className="check-existing-banner check-existing-banner--ok">
+              <CheckCircle2 size={16} aria-hidden />
               <span>
                 กะนี้เช็คแล้ว ({formatDateTimeShort(existingSession.submittedAt)}) —{" "}
-                {existingSession.failed ? `${existingSession.failed} ไม่ผ่าน` : "ผ่าน 100%"}
+                {existingSession.failed ? `${existingSession.failed} ไม่ผ่าน` : "ผ่าน 100%"} · ไม่ต้องเช็คซ้ำ
               </span>
             </div>
           ) : null}
 
-          <button type="button" className="primary-btn" onClick={startChecklist}>
-            {existingSession ? "เช็คซ้ำ (บันทึกชุดใหม่)" : "เริ่มเช็คลิสต์"}
-          </button>
+          <div className="check-setup-actions">
+            {existingSession ? (
+              <button type="button" className="primary-btn" onClick={onClose}>
+                เช็คแล้ว — กลับ
+              </button>
+            ) : (
+              <button type="button" className="primary-btn" onClick={startChecklist}>
+                เริ่มเช็คลิสต์
+              </button>
+            )}
+            {existingSession ? (
+              <button type="button" className="ghost-btn" onClick={startChecklist}>
+                เช็คซ้ำ (บันทึกชุดใหม่)
+              </button>
+            ) : null}
+          </div>
         </div>
       </>
     );

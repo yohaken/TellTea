@@ -7,7 +7,8 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Coffee, LayoutGrid, Lock, Table2, Trash2, X } from "lucide-react";
+import Link from "next/link";
+import { Coffee, CheckCircle2, AlertTriangle, LayoutGrid, Lock, Table2, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { BulkStatusToolbar } from "@/components/BulkStatusToolbar";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
@@ -71,11 +72,17 @@ import {
 } from "@/lib/shift-session";
 import {
   formatDateShort,
+  formatDateTimeShort,
   formatPlainNumber,
   parseDateInput,
   startOfLocalDay,
   todayInputValue,
 } from "@/lib/utils";
+import {
+  subscribeCheckSessionForShift,
+  type CheckSessionSummary,
+  type CheckShiftId,
+} from "@/lib/checklist";
 
 type TableView = "sheet" | "cards";
 
@@ -398,6 +405,27 @@ function OtEntryForm({
     draftsFromCheckRecords(closingItems, checkRecords, entry?.checkIdClose),
   );
   const [busy, setBusy] = useState(false);
+  const [checkSession, setCheckSession] = useState<CheckSessionSummary | null>(null);
+  const [checkLoading, setCheckLoading] = useState(true);
+
+  const slotDateMs = parseDateInput(date);
+
+  useEffect(() => {
+    setCheckLoading(true);
+    const unsub = subscribeCheckSessionForShift(
+      slotDateMs,
+      shift as CheckShiftId,
+      (session) => {
+        setCheckSession(session);
+        setCheckLoading(false);
+      },
+      () => {
+        setCheckSession(null);
+        setCheckLoading(false);
+      },
+    );
+    return unsub;
+  }, [slotDateMs, shift]);
 
   const dateMs = parseDateInput(date);
   const slotEntry =
@@ -559,6 +587,10 @@ function OtEntryForm({
       onError("เลือกพนักงานอย่างน้อย 1 คน");
       return;
     }
+    if (!checkSession) {
+      onError("ยังไม่เช็ค SmartCheck กะนี้ — ไปหน้าเช็คก่อนปิดกะ");
+      return;
+    }
     if (preview.summaryQty === 0) {
       onError("ยังไม่ใส่ยอด — กรอกเครื่องหรือรายการอื่นก่อนปิดกะ");
       return;
@@ -692,6 +724,36 @@ function OtEntryForm({
         ) : null}
 
         {!locked && detailsOpen ? (
+          <>
+            {checkLoading ? (
+              <p className="muted form-hint-inline">กำลังตรวจสอบ SmartCheck...</p>
+            ) : checkSession ? (
+              <div className="check-existing-banner check-existing-banner--ok">
+                <CheckCircle2 size={16} aria-hidden />
+                <span>
+                  SmartCheck กะนี้เช็คแล้ว ({formatDateTimeShort(checkSession.submittedAt)}) —{" "}
+                  {checkSession.failed ? `${checkSession.failed} ไม่ผ่าน` : "ผ่าน 100%"} · ไม่ต้องเช็คซ้ำ
+                </span>
+              </div>
+            ) : (
+              <div className="check-existing-banner">
+                <AlertTriangle size={16} aria-hidden />
+                <span>
+                  ยังไม่เช็ค SmartCheck กะนี้ —{" "}
+                  <Link
+                    href={`/check/?date=${encodeURIComponent(date)}&shift=${encodeURIComponent(shift)}`}
+                    className="desc-link"
+                  >
+                    ไปหน้าเช็ค
+                  </Link>{" "}
+                  ก่อนปิดกะ
+                </span>
+              </div>
+            )}
+          </>
+        ) : null}
+
+        {!locked && detailsOpen ? (
           <div className="ot-form-details">
             <div className="field">
               <label htmlFor="ot-machine">เครื่อง</label>
@@ -790,7 +852,13 @@ function OtEntryForm({
                 <button
                   type="button"
                   className="primary-btn"
-                  disabled={busy || !workers.length || liveProgress.missingLabels.length > 0}
+                  disabled={
+                    busy ||
+                    !workers.length ||
+                    checkLoading ||
+                    !checkSession ||
+                    liveProgress.missingLabels.length > 0
+                  }
                   onClick={() => void onSaveClose()}
                 >
                   {busy
