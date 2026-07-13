@@ -35,6 +35,7 @@ import {
   createTaskTemplate,
   deactivateTaskTemplate,
   deleteTaskTemplate,
+  dismissTaskPeriod,
   subscribeTaskTemplates,
   updateTaskTemplate,
 } from "@/lib/task-templates";
@@ -370,6 +371,7 @@ function OccurrenceCard({
   async function onDelete() {
     if (!window.confirm(`ลบรอบงาน "${occ.title}" (${formatDateShort(occ.dueDate)})?`)) return;
     try {
+      await dismissTaskPeriod(occ.templateId, occ.periodKey);
       await deleteTaskOccurrences([occ.id]);
     } catch (err) {
       onError((err as Error).message || "ลบรอบงานไม่สำเร็จ");
@@ -569,7 +571,13 @@ function TemplateFormModal({
     setBusy(true);
     onError("");
     try {
-      if (pendingIds.length) await deleteTaskOccurrences(pendingIds);
+      if (pendingIds.length) {
+        for (const id of pendingIds) {
+          const occ = occurrences.find((o) => o.id === id);
+          if (occ) await dismissTaskPeriod(occ.templateId, occ.periodKey);
+        }
+        await deleteTaskOccurrences(pendingIds);
+      }
       await deleteTaskTemplate(template.id);
       onSaved();
     } catch (err) {

@@ -13,6 +13,8 @@ export type TaskTemplate = {
   assigneeIds: string[];
   assigneeNames: string[];
   active: boolean;
+  /** รอบที่เจ้าของลบแล้ว — sync จะไม่สร้างซ้ำ */
+  dismissedPeriodKeys?: string[];
   createdBy: string;
   createdAt: number;
   updatedAt: number;

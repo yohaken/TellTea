@@ -1,5 +1,6 @@
 import {
   addDoc,
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -35,6 +36,9 @@ function mapTemplate(id: string, data: Record<string, unknown>): TaskTemplate {
     assigneeIds: Array.isArray(data.assigneeIds) ? (data.assigneeIds as string[]) : [],
     assigneeNames: Array.isArray(data.assigneeNames) ? (data.assigneeNames as string[]) : [],
     active: data.active !== false,
+    dismissedPeriodKeys: Array.isArray(data.dismissedPeriodKeys)
+      ? (data.dismissedPeriodKeys as string[]).map(String)
+      : [],
     createdBy: String(data.createdBy || ""),
     createdAt: Number(data.createdAt) || 0,
     updatedAt: Number(data.updatedAt) || 0,
@@ -123,4 +127,12 @@ export async function updateTaskTemplate(id: string, input: TaskTemplatePatch): 
 
 export async function deleteTaskTemplate(id: string): Promise<void> {
   await deleteDoc(doc(getDb(), "taskTemplates", id));
+}
+
+/** บันทึกว่ารอบนี้ถูกลบแล้ว — กัน sync สร้างซ้ำ */
+export async function dismissTaskPeriod(templateId: string, periodKey: string): Promise<void> {
+  await updateDoc(doc(getDb(), "taskTemplates", templateId), {
+    dismissedPeriodKeys: arrayUnion(periodKey),
+    updatedAt: Date.now(),
+  });
 }

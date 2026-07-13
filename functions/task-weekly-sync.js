@@ -30,12 +30,17 @@ function openAtForDue(dueDate, openDaysBefore = DEFAULT_OPEN_DAYS_BEFORE) {
 
 function dueDatesToEnsure(now, weekday, openDaysBefore) {
   const currentDue = dueDateForWeekContaining(now, weekday);
-  const candidates = [currentDue - 7 * DAY_MS, currentDue, currentDue + 7 * DAY_MS];
+  const candidates = [currentDue, currentDue + 7 * DAY_MS];
   const out = [];
   for (const due of candidates) {
     if (now >= openAtForDue(due, openDaysBefore)) out.push(due);
   }
   return [...new Set(out)].sort((a, b) => a - b);
+}
+
+function isPeriodDismissed(template, periodKey) {
+  const keys = template.dismissedPeriodKeys;
+  return Array.isArray(keys) && keys.includes(periodKey);
 }
 
 function shouldMarkMissed(dueDate, now, openDaysBefore = DEFAULT_OPEN_DAYS_BEFORE) {
@@ -61,7 +66,7 @@ function computeSyncOperations(templates, occurrences, now = Date.now()) {
     for (const dueDate of dues) {
       const periodKey = periodKeyFromDue(dueDate);
       const key = `${tpl.id}:${periodKey}`;
-      if (!byKey.has(key)) {
+      if (!byKey.has(key) && !isPeriodDismissed(tpl, periodKey)) {
         create.push({
           templateId: tpl.id,
           periodKey,

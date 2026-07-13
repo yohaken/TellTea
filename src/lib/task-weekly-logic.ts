@@ -47,12 +47,20 @@ export function openAtForDue(dueDate: number, openDaysBefore = DEFAULT_OPEN_DAYS
 
 export function dueDatesToEnsure(now: number, weekday: number, openDaysBefore: number) {
   const currentDue = dueDateForWeekContaining(now, weekday);
-  const candidates = [currentDue - 7 * DAY_MS, currentDue, currentDue + 7 * DAY_MS];
+  // สร้างแค่สัปดาห์นี้ + สัปดาห์หน้า — ไม่ย้อนสร้างสัปดาห์เก่าซ้ำหลังลบ
+  const candidates = [currentDue, currentDue + 7 * DAY_MS];
   const out: number[] = [];
   for (const due of candidates) {
     if (now >= openAtForDue(due, openDaysBefore)) out.push(due);
   }
   return [...new Set(out)].sort((a, b) => a - b);
+}
+
+export function isPeriodDismissed(
+  template: Pick<TaskTemplate, "dismissedPeriodKeys">,
+  periodKey: string,
+) {
+  return (template.dismissedPeriodKeys || []).includes(periodKey);
 }
 
 export function shouldMarkMissed(
@@ -132,7 +140,7 @@ export function computeSyncOperations(
     for (const dueDate of dues) {
       const periodKey = periodKeyFromDue(dueDate);
       const key = `${tpl.id}:${periodKey}`;
-      if (!byKey.has(key)) {
+      if (!byKey.has(key) && !isPeriodDismissed(tpl, periodKey)) {
         create.push({
           templateId: tpl.id,
           periodKey,
@@ -176,7 +184,9 @@ export function filterOccurrencesByTab(
   }
 
   if (tab === "missed") {
+    const cutoff = now - 4 * 7 * DAY_MS;
     return sorted.filter((o) => {
+      if (o.dueDate < cutoff) return false;
       if (o.status === "missed") return true;
       if (o.status === "pending") {
         return shouldMarkMissed(o.dueDate, now, openDaysFromOcc(o));
