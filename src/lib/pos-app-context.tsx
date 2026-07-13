@@ -10,7 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { ensurePosDeviceAuth } from "@/lib/pos-auth";
+import { ensurePosDeviceAuth, readCachedPosDeviceId } from "@/lib/pos-auth";
 import {
   POS_HEARTBEAT_MS,
   ackPosDeviceReload,
@@ -170,37 +170,59 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setStatus("connecting");
     setError(null);
 
-    try {
-      const authUid = await ensurePosDeviceAuth();
-      deviceIdRef.current = authUid;
+    const cachedDeviceId = readCachedPosDeviceId();
 
+    function applyReadyState(authUid: string) {
+      deviceIdRef.current = authUid;
       const localSession = readLocalOpenPosSession(authUid);
       if (localSession) setSession(localSession);
-
       setDevice(optimisticPosDevice(authUid));
       setLastHeartbeatAt(Date.now());
       setStatus("ready");
-
       startPosMenuPreload();
-
-      void registerPosDevice(authUid)
-        .then((registered) => {
-          setDevice(registered);
-          setLastHeartbeatAt(Date.now());
-        })
-        .catch(() => {});
-
-      void reconcilePosSessionFromRemote(authUid).then((merged) => {
-        if (merged) setSession(merged);
-      });
-      void seedPosMenuIfEmpty().catch(() => {});
-    } catch (err) {
-      setStatus("error");
-      setError((err as Error).message || "เชื่อมต่อเครื่อง POS ไม่สำเร็จ");
     }
+
+    async function finishBackgroundAuth(optimistic = false) {
+      try {
+        const authUid = await ensurePosDeviceAuth();
+        deviceIdRef.current = authUid;
+        setDevice(optimisticPosDevice(authUid));
+        setLastHeartbeatAt(Date.now());
+
+        void registerPosDevice(authUid)
+          .then((registered) => {
+            setDevice(registered);
+            setLastHeartbeatAt(Date.now());
+          })
+          .catch(() => {});
+
+        void reconcilePosSessionFromRemote(authUid).then((merged) => {
+          if (merged) setSession(merged);
+        });
+        void seedPosMenuIfEmpty().catch(() => {});
+      } catch (err) {
+        const msg = (err as Error).message || "เชื่อมต่อเครื่อง POS ไม่สำเร็จ";
+        if (optimistic) {
+          setError(msg);
+        } else {
+          setStatus("error");
+          setError(msg);
+        }
+      }
+    }
+
+    // เครื่องที่เคยเข้าแล้ว — ขึ้นหน้าขายทันที ไม่รอ Firebase auth / Cloud Function
+    if (cachedDeviceId) {
+      applyReadyState(cachedDeviceId);
+      void finishBackgroundAuth(true);
+      return;
+    }
+
+    // เครื่องใหม่ — ต้องรอ auth ครั้งแรก (เรียก Cloud Function)
+    setStatus("connecting");
+    await finishBackgroundAuth();
   }, []);
 
   useEffect(() => {

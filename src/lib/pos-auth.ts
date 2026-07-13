@@ -1,15 +1,24 @@
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken, type User } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
+import { isFirebaseConfigured } from "./firebase";
 import { getPosFirebaseAuth, getPosFirebaseFunctions } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
 
 const POS_DEVICE_ID_KEY = "telltea-pos-device-id";
-const AUTH_RESTORE_MS = 1_200;
+/** รอ restore จาก IndexedDB — แต่ไม่บล็อก UI ถ้ามี cached device id */
+const AUTH_RESTORE_MS = 2_500;
+
+let authRestoreFlight: Promise<User | null> | null = null;
 
 function getStoredDeviceId(): string | null {
   if (typeof localStorage === "undefined") return null;
   const id = localStorage.getItem(POS_DEVICE_ID_KEY);
   return id && id.length >= 8 ? id : null;
+}
+
+/** เครื่องที่เคยเข้าแล้ว — ใช้เปิด UI ทันทีโดยไม่รอ auth */
+export function readCachedPosDeviceId(): string | null {
+  return getStoredDeviceId();
 }
 
 function storeDeviceId(id: string) {
@@ -49,6 +58,15 @@ function waitForRestoredAuthUser(timeoutMs = AUTH_RESTORE_MS): Promise<User | nu
   });
 }
 
+function startAuthRestore(): Promise<User | null> {
+  if (!authRestoreFlight) {
+    authRestoreFlight = waitForRestoredAuthUser().finally(() => {
+      authRestoreFlight = null;
+    });
+  }
+  return authRestoreFlight;
+}
+
 async function signInPosWithCustomToken(): Promise<string> {
   const posDeviceAuth = httpsCallable<
     { deviceId?: string },
@@ -68,21 +86,29 @@ async function signInPosWithCustomToken(): Promise<string> {
   return cred.user.uid;
 }
 
-/** Kick IndexedDB auth restore as early as possible (POS layout). */
+/** Kick Firebase Auth + IndexedDB restore as early as possible. */
 export function warmPosAuth(): void {
-  void waitForRestoredAuthUser();
+  if (typeof window === "undefined" || !isFirebaseConfigured()) return;
+  try {
+    getPosFirebaseAuth();
+    void startAuthRestore();
+  } catch {
+    /* ignore during misconfigured builds */
+  }
 }
 
 /** Dedicated POS tablets — auto sign-in, isolated from หลังร้าน Google login. */
 export async function ensurePosDeviceAuth(): Promise<string> {
   const auth = getPosFirebaseAuth();
 
-  const restored = await waitForRestoredAuthUser();
+  const restored = await startAuthRestore();
   if (restored && (await userIsPosDevice(restored))) {
+    storeDeviceId(restored.uid);
     return restored.uid;
   }
 
   if (auth.currentUser && (await userIsPosDevice(auth.currentUser))) {
+    storeDeviceId(auth.currentUser.uid);
     return auth.currentUser.uid;
   }
 
@@ -92,6 +118,7 @@ export async function ensurePosDeviceAuth(): Promise<string> {
     try {
       const cred = await signInAnonymously(auth);
       await cred.user.getIdToken(true);
+      storeDeviceId(cred.user.uid);
       return cred.user.uid;
     } catch (fallbackErr) {
       const msg = (primaryErr as Error).message || "";

@@ -49,7 +49,9 @@ assert.match(readFileSync(join(root, "src/lib/pos-firebase.ts"), "utf8"), /tellt
 assert.match(readFileSync(join(root, "src/lib/pos-url.ts"), "utf8"), /telltea-pos\.web\.app\/pos\//);
 assert.match(readFileSync(join(root, "firebase.json"), "utf8"), /telltea-pos\.web\.app/);
 assert.doesNotMatch(readFileSync(join(root, "scripts/smoke-hosting-export.mjs"), "utf8"), /Missing POS export/);
-assert.match(readFileSync(join(root, "src/lib/pos-auth.ts"), "utf8"), /waitForRestoredAuthUser/);
+assert.match(readFileSync(join(root, "src/lib/pos-auth.ts"), "utf8"), /readCachedPosDeviceId/);
+assert.match(readFileSync(join(root, "src/lib/pos-auth.ts"), "utf8"), /startAuthRestore/);
+assert.match(appCtxSrc, /readCachedPosDeviceId/);
 assert.match(readFileSync(join(root, "src/lib/pos-printer/layout.ts"), "utf8"), /buildUnifiedReceiptBody/);
 assert.match(readFileSync(join(root, "src/lib/pos-printer/receipt-template.ts"), "utf8"), /ยอดสุทธิ/);
 assert.doesNotMatch(readFileSync(join(root, "src/app/pos/page.tsx"), "utf8"), /POS_BOOT_TIMEOUT/);
