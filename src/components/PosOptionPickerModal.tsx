@@ -16,6 +16,7 @@ import {
   type PosCartSelection,
 } from "@/lib/pos-menu-cart";
 import { formatPlainNumber } from "@/lib/utils";
+import { PosLazyMenuImage } from "@/components/PosLazyMenuImage";
 
 function groupHint(group: MenuOptionGroup): string | null {
   if (isSweetnessGroup(group)) return "เลือก 1 ระดับ";
@@ -98,12 +99,11 @@ export function PosOptionPickerModal({
       <div className="pos-modal pos-option-picker pos-option-picker--foodstory">
         <header className="pos-option-picker-hero">
           <div className="pos-option-picker-thumb" aria-hidden>
-            {imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl} alt="" className="pos-option-picker-thumb-img" />
-            ) : (
-              <span className="pos-option-picker-thumb-ph">☕</span>
-            )}
+            <PosLazyMenuImage
+              url={imageUrl}
+              className="pos-option-picker-thumb-img"
+              placeholderClassName="pos-option-picker-thumb-ph"
+            />
           </div>
           <div className="pos-option-picker-hero-text">
             <h2>{itemName}</h2>

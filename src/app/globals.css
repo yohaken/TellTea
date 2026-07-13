@@ -7863,6 +7863,7 @@ body.modal-open .main-panel {
   flex-shrink: 0;
   display: grid;
   place-items: center;
+  position: relative;
 }
 
 .pos-option-picker-thumb-img {
@@ -8314,6 +8315,38 @@ body.modal-open .main-panel {
   object-fit: cover;
   margin: 0;
   border-radius: 0;
+}
+
+.pos-lazy-menu-image {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #f0f2f5;
+}
+
+.pos-lazy-menu-image .pos-sell-item-placeholder,
+.pos-lazy-menu-image .pos-option-picker-thumb-ph {
+  position: relative;
+  z-index: 0;
+}
+
+.pos-lazy-menu-image img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.pos-lazy-menu-image img.is-loaded {
+  opacity: 1;
+}
+
+.pos-menu-item-thumb-ph:empty {
+  display: none;
 }
 
 /* —— FoodStory-style POS shell —— */

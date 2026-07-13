@@ -27,6 +27,7 @@ import {
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
+import { PosLazyMenuImage } from "@/components/PosLazyMenuImage";
 
 type Tab = "categories" | "groups" | "promotions";
 type Screen =
@@ -41,7 +42,7 @@ type QuickAdd =
   | null;
 
 function initialMenuFromCache() {
-  const cached = loadPosMenuCache();
+  const cached = loadPosMenuCache({ withImages: true });
   return {
     categories: cached?.categories ?? [],
     items: cached?.items ?? [],
@@ -304,10 +305,12 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
                                 if (!item) return null;
                                 return (
                                   <div className="pos-menu-item-row">
-                                    {item.imageUrl ? (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img src={item.imageUrl} alt="" className="pos-menu-item-thumb" />
-                                    ) : null}
+                                    <PosLazyMenuImage
+                                      url={item.imageUrl}
+                                      className="pos-menu-item-thumb"
+                                      placeholderClassName="pos-menu-item-thumb-ph"
+                                      placeholder=""
+                                    />
                                     <button
                                       type="button"
                                       className="pos-menu-item-main"

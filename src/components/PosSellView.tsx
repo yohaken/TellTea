@@ -27,6 +27,7 @@ import { PosOptionPickerModal } from "@/components/PosOptionPickerModal";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { PosPayOrderReview } from "@/components/PosPayOrderReview";
 import { PosCashKeypad, parseCashAmount } from "@/components/PosCashKeypad";
+import { PosLazyMenuImage } from "@/components/PosLazyMenuImage";
 
 type PayMode = "cash" | "promptpay" | null;
 
@@ -506,14 +507,7 @@ export function PosSellView({
                 onClick={() => onItemClick(item)}
               >
                 <div className="pos-sell-item-media">
-                  {item.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.imageUrl} alt="" className="pos-sell-item-img" />
-                  ) : (
-                    <span className="pos-sell-item-placeholder" aria-hidden>
-                      ☕
-                    </span>
-                  )}
+                  <PosLazyMenuImage url={item.imageUrl} className="pos-sell-item-img" />
                 </div>
                 <span className="pos-sell-item-name">
                   {item.recommended ? "★ " : ""}
