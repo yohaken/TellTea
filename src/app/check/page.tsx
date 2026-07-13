@@ -25,6 +25,11 @@ import {
   type CheckHistoryDayRow,
   type CheckHistoryShiftCell,
 } from "@/lib/check-history";
+import {
+  checkShiftWindowMessage,
+  getActiveCheckSlot,
+  isCheckShiftOpen,
+} from "@/lib/check-shift-window";
 import { isFutureLocalDay } from "@/lib/ot-grid";
 import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
@@ -138,11 +143,21 @@ function CheckView() {
   if (!can(staff, "checklist")) return null;
 
   function openForm() {
-    setFormSeed({});
+    const active = getActiveCheckSlot();
+    if (active) {
+      setFormSeed({ date: dateMsToInput(active.dateMs), shift: active.shift });
+    } else {
+      setFormSeed({});
+    }
     setFormOpen(true);
   }
 
   function openFormForSlot(dateMs: number, shift: CheckShiftId) {
+    if (!isCheckShiftOpen(dateMs, shift)) {
+      setError(checkShiftWindowMessage(dateMs, shift));
+      return;
+    }
+    setError(null);
     setFormSeed({ date: dateMsToInput(dateMs), shift });
     setFormOpen(true);
   }
@@ -242,6 +257,11 @@ function CheckForm({
       onError("เลือกผู้ตรวจก่อนเริ่ม");
       return;
     }
+    const dateMs = parseDateInput(date);
+    if (!isCheckShiftOpen(dateMs, shift)) {
+      onError(checkShiftWindowMessage(dateMs, shift));
+      return;
+    }
     if (!items.length) {
       onError("ยังไม่มีรายการตรวจ — ให้เจ้าของตั้งค่าที่ อื่นๆ → ตั้งค่าโมดูล");
       return;
@@ -313,6 +333,11 @@ function CheckForm({
 
   async function onSubmit() {
     if (!inspector || !createdBy) return;
+    const dateMs = parseDateInput(date);
+    if (!isCheckShiftOpen(dateMs, shift)) {
+      onError(checkShiftWindowMessage(dateMs, shift));
+      return;
+    }
     if (pendingCount > 0) {
       onError(`ยังไม่ได้ตรวจ ${pendingCount} รายการ — กด ไม่ผ่าน หรือ ผ่าน ทุกข้อ`);
       return;
@@ -386,13 +411,23 @@ function CheckForm({
   }
 
   if (step === "setup") {
+    const dateMs = parseDateInput(date);
+    const shiftOpen = isCheckShiftOpen(dateMs, shift);
+    const windowMsg = checkShiftWindowMessage(dateMs, shift);
+
     return (
       <>
         <FormHead title="เริ่มตรวจ SOP" onClose={onClose} />
         <div className="form-card entry-form">
           <p className="muted check-hint">
-            เลือกกะและผู้ตรวจ — ทุกรายการเริ่มว่าง ต้องกด ไม่ผ่าน หรือ ผ่าน ทีละข้อ
+            เช็คได้เฉพาะช่วงเวลากะ (ดึก 0.3–7 · เช้า 7–17 · เย็น 17–0.3) — ไม่เช็คล่วงหน้ากะอื่น
           </p>
+
+          {!shiftOpen && !existingSession ? (
+            <div className="check-existing-banner">
+              <span>{windowMsg}</span>
+            </div>
+          ) : null}
 
           <div className="stock-form-grid">
             <div className="field">
@@ -453,11 +488,16 @@ function CheckForm({
                 เช็คแล้ว — กลับ
               </button>
             ) : (
-              <button type="button" className="primary-btn" onClick={startChecklist}>
-                เริ่มเช็คลิสต์
+              <button
+                type="button"
+                className="primary-btn"
+                disabled={!shiftOpen}
+                onClick={startChecklist}
+              >
+                {shiftOpen ? "เริ่มเช็คลิสต์" : "รอเวลาเช็คกะนี้"}
               </button>
             )}
-            {existingSession ? (
+            {existingSession && shiftOpen ? (
               <button type="button" className="ghost-btn" onClick={startChecklist}>
                 เช็คซ้ำ (บันทึกชุดใหม่)
               </button>
@@ -790,7 +830,7 @@ function CheckSummary({
       </div>
 
       <p className="muted check-history-hint">
-        แต่ละวัน 3 กะ — แสดงล่วงหน้า {CHECK_PLAN_AHEAD_DAYS} วัน (เหมือนตารางชง) · แตะช่องว่างเพื่อเริ่มเช็ค
+        ตารางแสดงล่วงหน้า {CHECK_PLAN_AHEAD_DAYS} วัน (ดูแผน) — เช็คได้เฉพาะช่วงเวลากะ · แตะช่อง &quot;เช็ค&quot; เมื่อถึงเวลา
       </p>
 
       {rows.length ? (
@@ -851,7 +891,9 @@ function CheckHistoryRow({
   const todayMs = parseDateInput(todayInputValue());
   const isToday = row.dateMs === todayMs;
   const isFuture = isFutureLocalDay(row.dateMs);
-  const missingShifts = row.shifts.filter((s) => !s.session).length;
+  const overdueShifts = row.shifts.filter(
+    (s) => !s.session && !isCheckShiftOpen(row.dateMs, s.shiftId),
+  ).length;
 
   const rowClass = row.dayFails > 0
     ? "check-history-row-issues"
@@ -867,13 +909,14 @@ function CheckHistoryRow({
         {formatDateShort(row.dateMs)}
         {isToday ? <span className="check-history-today-tag">วันนี้</span> : null}
         {isFuture ? <span className="check-history-future-tag">ล่วงหน้า</span> : null}
-        {isToday && missingShifts ? (
-          <span className="check-history-missing-tag">ค้าง {missingShifts} กะ</span>
+        {(isToday || row.dateMs < todayMs) && overdueShifts ? (
+          <span className="check-history-missing-tag">ค้าง {overdueShifts} กะ</span>
         ) : null}
       </td>
       {row.shifts.map((cell) => (
         <td key={cell.shiftId}>
           <CheckHistoryCell
+            dateMs={row.dateMs}
             cell={cell}
             onOpen={() => cell.session && onOpen(cell)}
             onStartCheck={() => onStartCheck(cell.shiftId)}
@@ -892,26 +935,41 @@ function CheckHistoryRow({
 }
 
 function CheckHistoryCell({
+  dateMs,
   cell,
   onOpen,
   onStartCheck,
 }: {
+  dateMs: number;
   cell: CheckHistoryShiftCell;
   onOpen: () => void;
   onStartCheck: () => void;
 }) {
   const session = cell.session;
   if (!session) {
+    const open = isCheckShiftOpen(dateMs, cell.shiftId);
+    if (open) {
+      return (
+        <button
+          type="button"
+          className="check-history-cell is-pending is-tappable"
+          onClick={onStartCheck}
+          title={`${cell.label} · แตะเพื่อเริ่มเช็ค`}
+          aria-label={`${cell.label} ยังไม่เช็ค — เริ่มเช็ค`}
+        >
+          <span className="check-history-pending-label">เช็ค</span>
+        </button>
+      );
+    }
+    const reason = checkShiftWindowMessage(dateMs, cell.shiftId);
     return (
-      <button
-        type="button"
-        className="check-history-cell is-pending is-tappable"
-        onClick={onStartCheck}
-        title={`${cell.label} · แตะเพื่อเริ่มเช็ค`}
-        aria-label={`${cell.label} ยังไม่เช็ค — เริ่มเช็ค`}
+      <span
+        className="check-history-cell is-pending is-locked"
+        title={reason}
+        aria-label={reason}
       >
-        <span className="check-history-pending-label">เช็ค</span>
-      </button>
+        —
+      </span>
     );
   }
 

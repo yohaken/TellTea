@@ -2751,9 +2751,15 @@ body.modal-open .main-panel {
   background: rgba(168, 212, 255, 0.08);
 }
 
-.check-history-row-future .check-history-cell.is-pending.is-tappable {
-  background: rgba(168, 212, 255, 0.14);
-  border-color: rgba(29, 78, 137, 0.22);
+.check-history-cell.is-pending.is-locked {
+  cursor: default;
+  background: rgba(28, 42, 31, 0.04);
+  border: none;
+  color: rgba(28, 42, 31, 0.28);
+}
+
+.check-history-row-future .check-history-cell.is-pending.is-locked {
+  background: rgba(168, 212, 255, 0.08);
 }
 
 .check-history-row-issues {
@@ -2800,6 +2806,11 @@ body.modal-open .main-panel {
   font-weight: 700;
   color: rgba(27, 67, 50, 0.62);
   line-height: 1.2;
+}
+
+.check-history-row-future .check-history-cell.is-pending.is-tappable {
+  background: rgba(168, 212, 255, 0.14);
+  border-color: rgba(29, 78, 137, 0.22);
 }
 
 .check-history-cell.is-pass {
