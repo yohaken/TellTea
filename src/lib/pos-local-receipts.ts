@@ -20,6 +20,9 @@ export type PosLocalReceipt = {
   change?: number;
   createdAt: number;
   pending: boolean;
+  voided?: boolean;
+  voidedAt?: number;
+  voidReason?: string;
 };
 
 const KEY = "telltea-pos-local-receipts";
@@ -35,6 +38,16 @@ function readAll(): PosLocalReceipt[] {
   } catch {
     return [];
   }
+}
+
+/** @internal demo seed */
+export function readAllLocalReceipts(): PosLocalReceipt[] {
+  return readAll();
+}
+
+/** @internal demo seed */
+export function writeAllLocalReceipts(rows: PosLocalReceipt[]) {
+  writeAll(rows);
 }
 
 function writeAll(rows: PosLocalReceipt[]) {
@@ -85,17 +98,34 @@ export function listLocalReceiptsForSession(sessionId: string): PosLocalReceipt[
 }
 
 export function summarizeLocalReceipts(receipts: PosLocalReceipt[]) {
-  const cash = receipts.filter((r) => r.paymentMethod === "cash");
-  const pp = receipts.filter((r) => r.paymentMethod === "promptpay");
+  const active = receipts.filter((r) => !r.voided);
+  const cash = active.filter((r) => r.paymentMethod === "cash");
+  const pp = active.filter((r) => r.paymentMethod === "promptpay");
   return {
-    count: receipts.length,
-    total: Math.round(receipts.reduce((s, r) => s + r.total, 0) * 100) / 100,
+    count: active.length,
+    total: Math.round(active.reduce((s, r) => s + r.total, 0) * 100) / 100,
     cashTotal: Math.round(cash.reduce((s, r) => s + r.total, 0) * 100) / 100,
     cashCount: cash.length,
     promptpayTotal: Math.round(pp.reduce((s, r) => s + r.total, 0) * 100) / 100,
     promptpayCount: pp.length,
-    pendingCount: receipts.filter((r) => r.pending).length,
+    pendingCount: active.filter((r) => r.pending).length,
+    voidedCount: receipts.filter((r) => r.voided).length,
   };
+}
+
+export function voidLocalReceipt(id: string, reason?: string): boolean {
+  const all = readAll();
+  const idx = all.findIndex((r) => r.id === id);
+  if (idx < 0 || all[idx]!.voided) return false;
+  all[idx] = {
+    ...all[idx]!,
+    voided: true,
+    voidedAt: Date.now(),
+    voidReason: reason?.trim() || "ทำลายบิล",
+    pending: false,
+  };
+  writeAll(all);
+  return true;
 }
 
 export function markLocalReceiptSynced(clientMutationId: string, billNo: string) {
