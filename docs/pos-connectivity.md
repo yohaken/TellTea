@@ -43,7 +43,8 @@
 
 ## Checklist เจ้าของ
 
-- [ ] Firebase → Authentication → **Anonymous Enable**
+- [ ] Firebase → Authentication → **Anonymous → Enable** (ถ้าเห็น `auth/admin-restricted-operation` = ยังไม่เปิด)
+- [ ] หรือ GitHub Actions → **Enable Firebase Anonymous Auth (POS)** → Run workflow
 - [ ] หลัง deploy ใหญ่: Settings → **บังคับอัปเดต** หรือกด **อัปเดตเครื่องที่ค้าง**
 - [ ] ดูออนไลน์ที่ Settings → เครื่อง POS (heartbeat 3 นาที)
 

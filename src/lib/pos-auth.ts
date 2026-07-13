@@ -13,9 +13,12 @@ export async function ensurePosDeviceAuth(): Promise<string> {
     return cred.user.uid;
   } catch (err) {
     const code = (err as { code?: string })?.code || "";
-    if (code === "auth/operation-not-allowed") {
+    if (
+      code === "auth/operation-not-allowed"
+      || code === "auth/admin-restricted-operation"
+    ) {
       throw new Error(
-        "ยังไม่เปิด Anonymous Auth ใน Firebase — เจ้าของเปิดที่ Authentication → Sign-in method → Anonymous",
+        "ยังไม่เปิด Anonymous Auth ใน Firebase — เจ้าของเปิดที่ Authentication → Sign-in method → Anonymous (หรือรัน workflow Enable Firebase Anonymous Auth)",
       );
     }
     throw new Error(mapFirestoreError(err, "เข้าสู่ระบบเครื่อง POS"));
