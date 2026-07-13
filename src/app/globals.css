@@ -1156,6 +1156,43 @@ body.modal-open .main-panel {
   font-size: 0.82rem;
 }
 
+.app-update-banner--force {
+  background: rgba(255, 243, 220, 0.96);
+  border-color: rgba(196, 90, 26, 0.3);
+}
+
+.app-release-toggle {
+  margin-top: 0.35rem;
+}
+
+.app-release-toggle-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.65rem;
+  align-items: start;
+  cursor: pointer;
+  text-align: left;
+}
+
+.app-release-toggle-row input {
+  margin-top: 0.2rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--tea-green, #2f6b4f);
+}
+
+.app-release-toggle-copy {
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: rgba(28, 42, 31, 0.82);
+}
+
+.app-release-toggle-copy strong {
+  font-size: 0.86rem;
+  color: rgba(28, 42, 31, 0.92);
+}
+
 .employee-roster-row {
   display: flex;
   flex-direction: column;
