@@ -83,9 +83,12 @@ export function PosOptionPickerModal({
                           onClick={() => toggleChoice(group, opt.id)}
                         >
                           <span className="pos-option-choice-name">{opt.name}</span>
-                          {opt.priceDelta > 0 ? (
+                          {opt.priceDelta > 0 || (opt.priceDeltaMax != null && opt.priceDeltaMax > 0) ? (
                             <span className="pos-option-choice-price">
                               +฿{formatPlainNumber(opt.priceDelta)}
+                              {opt.priceDeltaMax != null && opt.priceDeltaMax > opt.priceDelta
+                                ? `–${formatPlainNumber(opt.priceDeltaMax)}`
+                                : ""}
                             </span>
                           ) : null}
                           {multi ? (

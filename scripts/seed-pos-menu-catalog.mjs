@@ -1,18 +1,22 @@
 /**
- * นำเข้าเมนู POS จาก scripts/data/pos-menu-catalog.mjs
+ * นำเข้าเมนู POS จาก Wongnai CSV export
  *
- *   node scripts/seed-pos-menu-catalog.mjs --dry-run
- *   FIREBASE_SERVICE_ACCOUNT='...' node scripts/seed-pos-menu-catalog.mjs --apply
- *   FIREBASE_SERVICE_ACCOUNT='...' node scripts/seed-pos-menu-catalog.mjs --apply --replace
+ *   npm run seed:pos-menu-catalog -- --dry-run
+ *   npm run seed:pos-menu-catalog -- --apply
+ *   npm run seed:pos-menu-catalog -- --apply --replace
+ *
+ * ใช้ anonymous POS auth (ไม่ต้องมี service account) หรือ firebase-admin ถ้ามี FIREBASE_SERVICE_ACCOUNT
  */
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { flattenCatalog, CATALOG_META } from "./data/pos-menu-catalog.mjs";
+import { seedCatalogToFirestore, buildGroupDoc } from "./lib/pos-firebase-seed.mjs";
 
 const PROJECT = process.env.FIREBASE_PROJECT_ID || "mypeer-501909";
 const APPLY = process.argv.includes("--apply");
 const REPLACE = process.argv.includes("--replace");
 const DRY = process.argv.includes("--dry-run") || !APPLY;
+const USE_ADMIN = process.argv.includes("--admin") || Boolean(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 function loadCredentials() {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_KEY;
@@ -23,46 +27,13 @@ function loadCredentials() {
 function getAdminDb() {
   if (!getApps().length) {
     const credentials = loadCredentials();
-    if (!credentials) throw new Error("ต้องมี FIREBASE_SERVICE_ACCOUNT สำหรับ --apply");
+    if (!credentials) throw new Error("ต้องมี FIREBASE_SERVICE_ACCOUNT สำหรับ --admin");
     initializeApp({ credential: cert(credentials), projectId: PROJECT });
   }
   return getFirestore();
 }
 
-function newChoiceId(prefix) {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-}
-
-function buildGroupDoc(key, def, sortOrder, now) {
-  const options = def.options.map((o, i) => {
-    const row = {
-      id: newChoiceId(key),
-      name: o.name,
-      priceDelta: o.priceDelta,
-      sortOrder: (i + 1) * 100,
-      active: true,
-    };
-    if (typeof o.priceDeltaMax === "number") row.priceDeltaMax = o.priceDeltaMax;
-    return row;
-  });
-  const doc = {
-    name: def.name,
-    required: def.required === true,
-    selectionType: def.selectionType,
-    options,
-    sortOrder,
-    active: true,
-    createdAt: now,
-    updatedAt: now,
-  };
-  if (def.selectionType === "multi") {
-    doc.minSelect = 0;
-    doc.maxSelect = options.length;
-  }
-  return doc;
-}
-
-async function clearCollection(db, name) {
+async function clearCollectionAdmin(db, name) {
   const snap = await db.collection(name).get();
   if (snap.empty) return 0;
   const batch = db.batch();
@@ -71,43 +42,15 @@ async function clearCollection(db, name) {
   return snap.size;
 }
 
-async function main() {
-  const { categories, items, optionGroups } = flattenCatalog();
-  const groupKeys = Object.keys(optionGroups);
-
-  console.log("=== POS menu catalog import ===");
-  console.log("meta:", CATALOG_META.source);
-  console.log(`หมวด ${categories.length} · เมนู ${items.length} · กลุ่มตัวเลือก ${groupKeys.length}`);
-  console.log(`mode: ${DRY ? "dry-run" : REPLACE ? "apply+replace" : "apply"}`);
-
-  const issues = [];
-  for (const item of items) {
-    for (const gk of item.optionGroupKeys) {
-      if (!optionGroups[gk]) issues.push(`เมนู "${item.name}" อ้างกลุ่มไม่มี: ${gk}`);
-    }
-  }
-  if (issues.length) {
-    console.error("ปัญหาความสัมพันธ์:");
-    issues.forEach((x) => console.error(" -", x));
-    process.exit(1);
-  }
-
-  const drinksWithTopping = items.filter((i) => i.optionGroupKeys.includes("topping")).length;
-  const noodle = items.find((i) => i.name.includes("บะหมี่"));
-  console.log(`เครื่องดื่มผูกท็อปปิ้ง: ${drinksWithTopping} รายการ`);
-  console.log(`เมนูอาหารตัวอย่าง: ${noodle?.name} → กลุ่ม [${noodle?.optionGroupKeys.join(", ")}]`);
-
-  if (DRY) {
-    console.log("\nOK dry-run — ใช้ --apply เพื่อเขียน Firestore");
-    return;
-  }
-
+async function seedWithAdmin(catalog, replace) {
   const db = getAdminDb();
   const now = Date.now();
+  const { categories, items, optionGroups } = catalog;
+  const groupKeys = Object.keys(optionGroups);
 
-  if (REPLACE) {
+  if (replace) {
     for (const col of ["menuItems", "menuCategories", "menuOptionGroups"]) {
-      const n = await clearCollection(db, col);
+      const n = await clearCollectionAdmin(db, col);
       console.log(`ลบ ${col}: ${n} docs`);
     }
   }
@@ -139,13 +82,14 @@ async function main() {
   let batch = db.batch();
   let ops = 0;
   for (const item of items) {
-    const optionGroupIds = item.optionGroupKeys
+    const optionGroupIds = (item.optionGroupKeys || [])
       .map((k) => groupIdByKey[k])
       .filter(Boolean);
     const ref = db.collection("menuItems").doc();
     batch.set(ref, {
       categoryId: catIdByKey[item.categoryKey],
       name: item.name,
+      ...(item.nameEn ? { nameEn: item.nameEn } : {}),
       price: item.price,
       sortOrder: item.sortOrder,
       active: true,
@@ -165,11 +109,54 @@ async function main() {
   }
   if (ops) await batch.commit();
   console.log(`สร้างเมนู: ${items.length}`);
+}
+
+async function main() {
+  const catalog = flattenCatalog();
+  const { categories, items, optionGroups } = catalog;
+  const groupKeys = Object.keys(optionGroups);
+
+  console.log("=== POS menu catalog import (Wongnai CSV) ===");
+  console.log("meta:", CATALOG_META.source);
+  console.log(`หมวด ${categories.length} · เมนู ${items.length} · กลุ่มตัวเลือก ${groupKeys.length}`);
+  console.log(`mode: ${DRY ? "dry-run" : REPLACE ? "apply+replace" : "apply"}`);
+
+  const issues = [];
+  for (const item of items) {
+    for (const gk of item.optionGroupKeys || []) {
+      if (!optionGroups[gk]) issues.push(`เมนู "${item.name}" อ้างกลุ่มไม่มี: ${gk}`);
+    }
+  }
+  if (issues.length) {
+    console.error("ปัญหาความสัมพันธ์:");
+    issues.forEach((x) => console.error(" -", x));
+    process.exit(1);
+  }
+
+  const withGroups = items.filter((i) => (i.optionGroupKeys || []).length > 0).length;
+  const ice = items.filter((i) => i.categoryName?.includes("ไอศครีม"));
+  console.log(`เมนูผูกตัวเลือก: ${withGroups}/${items.length}`);
+  console.log(`ไอศครีม (หมวด): ${ice.length} รายการ`);
+
+  if (DRY) {
+    console.log("\nOK dry-run — ใช้ --apply เพื่อเขียน Firestore");
+    return;
+  }
+
+  if (USE_ADMIN && loadCredentials()) {
+    console.log("auth: firebase-admin");
+    await seedWithAdmin(catalog, REPLACE);
+  } else {
+    console.log("auth: anonymous POS client");
+    await seedCatalogToFirestore(catalog, { replace: REPLACE });
+  }
 
   console.log("\nOK seed-pos-menu-catalog applied");
 }
 
-main().catch((err) => {
-  console.error("FAIL:", err.message);
-  process.exit(1);
-});
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("FAIL:", err.message);
+    process.exit(1);
+  });

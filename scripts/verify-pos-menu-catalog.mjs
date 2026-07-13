@@ -1,29 +1,17 @@
 /**
- * ตรวจเมนูบน Firestore หลัง seed (ต้องมี FIREBASE_SERVICE_ACCOUNT)
- * Run: FIREBASE_SERVICE_ACCOUNT='...' npm run verify:pos-menu-catalog
+ * ตรวจเมนูบน Firestore หลัง seed
  */
-import { initializeApp, cert, getApps } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { getSeedDb } from "./lib/pos-firebase-seed.mjs";
+import { collection, getDocs } from "firebase/firestore";
 import { flattenCatalog } from "./data/pos-menu-catalog.mjs";
 
-const PROJECT = process.env.FIREBASE_PROJECT_ID || "mypeer-501909";
-
-function getAdminDb() {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_KEY;
-  if (!raw?.trim().startsWith("{")) throw new Error("ต้องมี FIREBASE_SERVICE_ACCOUNT");
-  if (!getApps().length) {
-    initializeApp({ credential: cert(JSON.parse(raw)), projectId: PROJECT });
-  }
-  return getFirestore();
-}
-
 const expected = flattenCatalog();
-const db = getAdminDb();
+const db = await getSeedDb();
 
 const [cats, items, groups] = await Promise.all([
-  db.collection("menuCategories").get(),
-  db.collection("menuItems").get(),
-  db.collection("menuOptionGroups").get(),
+  getDocs(collection(db, "menuCategories")),
+  getDocs(collection(db, "menuItems")),
+  getDocs(collection(db, "menuOptionGroups")),
 ]);
 
 const issues = [];
@@ -35,25 +23,31 @@ if (items.size < expected.items.length) {
   issues.push(`เมนูใน DB ${items.size} < คาด ${expected.items.length}`);
 }
 if (groups.size < Object.keys(expected.optionGroups).length) {
-  issues.push(`กลุ่มใน DB ${groups.size} < คาด ${Object.keys(expected.optionGroups).length}`);
+  issues.push(
+    `กลุ่มใน DB ${groups.size} < คาด ${Object.keys(expected.optionGroups).length}`,
+  );
 }
 
-const noodle = items.docs.find((d) => d.data().name === "บะหมี่ เกี๊ยวต้มยำ");
-if (!noodle) {
-  issues.push('ไม่พบเมนู "บะหมี่ เกี๊ยวต้มยำ"');
-} else {
-  const data = noodle.data();
-  if (data.price !== 119) issues.push(`บะหมี่ราคาผิด: ${data.price}`);
-  if (!Array.isArray(data.optionGroupIds) || data.optionGroupIds.length < 2) {
-    issues.push("บะหมี่ยังไม่ผูกกลุ่มตัวเลือกครบ");
-  }
+const milo = items.docs.find((d) => d.data().name?.includes("ไมโล"));
+if (!milo) {
+  issues.push('ไม่พบเมนู "ไมโล"');
+} else if (!Array.isArray(milo.data().optionGroupIds) || milo.data().optionGroupIds.length < 2) {
+  issues.push("ไมโลยังไม่ผูกกลุ่มตัวเลือกครบ");
 }
 
-const topping = groups.docs.find((d) => d.data().name === "ท็อปปิ้ง");
-if (!topping) {
-  issues.push('ไม่พบกลุ่ม "ท็อปปิ้ง"');
-} else if ((topping.data().options || []).length < 13) {
-  issues.push(`ท็อปปิ้งมีแค่ ${(topping.data().options || []).length} ตัวเลือก`);
+const sweet = groups.docs.find((d) => d.data().name === "ความหวาน");
+if (!sweet) issues.push('ไม่พบกลุ่ม "ความหวาน"');
+else if ((sweet.data().options || []).length < 5) {
+  issues.push(`ความหวานมีแค่ ${(sweet.data().options || []).length} ตัวเลือก`);
+}
+
+const ice = items.docs.find(
+  (d) => d.data().name?.includes("ไอศกรีมซอฟต์เสิร์ฟ") && d.data().name?.includes("เล็ก"),
+);
+if (!ice) {
+  issues.push("ไม่พบไอศกรีมซอฟต์เสิร์ฟ (เล็ก)");
+} else if (!Array.isArray(ice.data().optionGroupIds) || !ice.data().optionGroupIds.length) {
+  issues.push("ไอศครีมยังไม่ผูกรสชาติ");
 }
 
 if (issues.length) {
@@ -64,3 +58,5 @@ if (issues.length) {
 
 console.log("OK verify-pos-menu-catalog");
 console.log(`  DB: หมวด ${cats.size} · เมนู ${items.size} · กลุ่ม ${groups.size}`);
+
+process.exit(0);
