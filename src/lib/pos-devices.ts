@@ -8,7 +8,8 @@ import {
   setDoc,
   type Unsubscribe,
 } from "firebase/firestore";
-import { CLIENT_BUILD } from "./app-update";
+import { POS_BUILD } from "./pos-version";
+import { collectPosDeviceTelemetry, type PosDeviceTelemetry } from "./pos-device-telemetry";
 import { getPosDb } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
 
@@ -32,6 +33,13 @@ export type PosDevice = {
   syncFailedCount: number;
   syncStuckAt: number;
   syncLastError: string;
+  deviceHint: string;
+  printerLabel: string;
+  printerReady: boolean;
+  standalone: boolean;
+  screenSize: string;
+  platform: string;
+  telemetryAt: number;
 };
 
 function deviceRef(id: string) {
@@ -97,6 +105,26 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
     syncFailedCount: typeof data.syncFailedCount === "number" ? data.syncFailedCount : 0,
     syncStuckAt: typeof data.syncStuckAt === "number" ? data.syncStuckAt : 0,
     syncLastError: typeof data.syncLastError === "string" ? data.syncLastError : "",
+    deviceHint: typeof data.deviceHint === "string" ? data.deviceHint : "",
+    printerLabel: typeof data.printerLabel === "string" ? data.printerLabel : "",
+    printerReady: data.printerReady === true,
+    standalone: data.standalone === true,
+    screenSize: typeof data.screenSize === "string" ? data.screenSize : "",
+    platform: typeof data.platform === "string" ? data.platform : "",
+    telemetryAt: typeof data.telemetryAt === "number" ? data.telemetryAt : 0,
+  };
+}
+
+function telemetryPatch(telemetry?: PosDeviceTelemetry): Record<string, unknown> {
+  const t = telemetry ?? collectPosDeviceTelemetry();
+  return {
+    deviceHint: t.deviceHint,
+    printerLabel: t.printerLabel,
+    printerReady: t.printerReady,
+    standalone: t.standalone,
+    screenSize: t.screenSize,
+    platform: t.platform,
+    telemetryAt: Date.now(),
   };
 }
 
@@ -109,8 +137,9 @@ export async function registerPosDevice(authUid: string): Promise<PosDevice> {
     authUid,
     pairingCode,
     lastSeenAt: now,
-    appBuild: CLIENT_BUILD,
+    appBuild: POS_BUILD,
     userAgent: ua,
+    ...telemetryPatch(),
   };
 
   try {
@@ -144,7 +173,7 @@ export function optimisticPosDevice(authUid: string): PosDevice {
     pairingCode,
     registeredAt: now,
     lastSeenAt: now,
-    appBuild: CLIENT_BUILD,
+    appBuild: POS_BUILD,
     userAgent: ua,
     forceReloadAt: 0,
     lastReloadAckAt: 0,
@@ -153,6 +182,7 @@ export function optimisticPosDevice(authUid: string): PosDevice {
     syncFailedCount: 0,
     syncStuckAt: 0,
     syncLastError: "",
+    ...telemetryPatch(),
   });
 }
 
@@ -165,8 +195,9 @@ export async function heartbeatPosDevice(authUid: string): Promise<void> {
       {
         authUid,
         lastSeenAt: now,
-        appBuild: CLIENT_BUILD,
+        appBuild: POS_BUILD,
         userAgent: ua,
+        ...telemetryPatch(),
       },
       { merge: true },
     );

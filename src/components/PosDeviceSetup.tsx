@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { Monitor, RefreshCw, ExternalLink, Copy, Check } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { CLIENT_BUILD } from "@/lib/app-update";
+import { saveForcePosAutoUpdate, subscribeAppReleaseSettings } from "@/lib/app-release";
+import { POS_BUILD, posVersionLabel } from "@/lib/pos-version";
 import { POS_ENTRY_URL } from "@/lib/pos-url";
-import { posVersionLabel } from "@/lib/pos-version";
 import {
   isPosDeviceOnline,
   posDeviceLabel,
@@ -36,6 +36,23 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
   const [busyId, setBusyId] = useState<string | null>(null);
   const [draftLabels, setDraftLabels] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
+  const [forcePosAutoUpdate, setForcePosAutoUpdate] = useState(false);
+  const [releaseLoading, setReleaseLoading] = useState(true);
+  const [releaseBusy, setReleaseBusy] = useState(false);
+
+  useEffect(() => {
+    const unsub = subscribeAppReleaseSettings(
+      (settings) => {
+        setForcePosAutoUpdate(settings.forcePosAutoUpdate);
+        setReleaseLoading(false);
+      },
+      (err) => {
+        onError(err.message || "โหลดตั้งค่าอัปเดต POS ไม่สำเร็จ");
+        setReleaseLoading(false);
+      },
+    );
+    return unsub;
+  }, [onError]);
 
   useEffect(() => {
     const unsub = subscribePosDevices(
@@ -101,7 +118,7 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
   async function forceReloadStale() {
     if (!actorId) return;
     const staleOnline = devices.filter(
-      (d) => isPosDeviceOnline(d.lastSeenAt) && d.appBuild > 0 && d.appBuild < CLIENT_BUILD,
+      (d) => isPosDeviceOnline(d.lastSeenAt) && d.appBuild > 0 && d.appBuild < POS_BUILD,
     );
     if (!staleOnline.length) {
       onError("ไม่มีเครื่องออนไลน์ที่ค้างเวอร์ชัน");
@@ -115,7 +132,7 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
         actorId,
       );
       onError(null);
-      window.alert(`สั่งอัปเดต ${n} เครื่อง — รีเฟรชเมื่อตะกร้าว่าง`);
+      window.alert(`สั่งอัปเดต ${n} เครื่อง — รีเฟรชอัตโนมัติเมื่อตะกร้าว่าง (พนักงานไม่ต้องกด)`);
     } catch (err) {
       onError((err as Error).message || "สั่งอัปเดตทุกเครื่องไม่สำเร็จ");
     } finally {
@@ -123,9 +140,24 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
     }
   }
 
+  async function togglePosAutoUpdate() {
+    if (!actorId) return;
+    const next = !forcePosAutoUpdate;
+    setReleaseBusy(true);
+    onError(null);
+    try {
+      await saveForcePosAutoUpdate(next, actorId);
+      setForcePosAutoUpdate(next);
+    } catch (err) {
+      onError((err as Error).message || "บันทึกตั้งค่าอัปเดต POS ไม่สำเร็จ");
+    } finally {
+      setReleaseBusy(false);
+    }
+  }
+
   const onlineCount = devices.filter((d) => isPosDeviceOnline(d.lastSeenAt)).length;
   const staleCount = devices.filter(
-    (d) => isPosDeviceOnline(d.lastSeenAt) && d.appBuild > 0 && d.appBuild < CLIENT_BUILD,
+    (d) => isPosDeviceOnline(d.lastSeenAt) && d.appBuild > 0 && d.appBuild < POS_BUILD,
   ).length;
 
   return (
@@ -135,8 +167,29 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
         เครื่อง POS
       </h2>
       <p className="muted settings-card-lead">
-        Phase 0.5 — ติดตั้งแอปบนหน้าจอหลัก (เต็มจอ) · {posVersionLabel()}
+        Phase 0.5 — ติดตั้งแอปบนหน้าจอหลัก (เต็มจอ) · {posVersionLabel()} · รายงานรุ่นเครื่องอัตโนมัติทุก 60 วินาที
       </p>
+
+      {!releaseLoading ? (
+        <div className="app-release-toggle pos-device-auto-update">
+          <label className="app-release-toggle-row">
+            <input
+              type="checkbox"
+              checked={forcePosAutoUpdate}
+              disabled={releaseBusy}
+              onChange={() => void togglePosAutoUpdate()}
+            />
+            <span className="app-release-toggle-copy">
+              <strong>POS อัปเดตเองเมื่อว่าง</strong>
+              <span>
+                {forcePosAutoUpdate
+                  ? "เปิดอยู่ — แท็บเล็ตรีเฟรชเองเมื่อไม่มีลูกค้าจ่าย (ไม่กระทบแท็บหลังบ้าน)"
+                  : "ปิดอยู่ — ใช้ปุ่ม “อัปเดตเครื่องที่ค้าง” หลัง deploy หรือเปิดตัวเลือกนี้"}
+              </span>
+            </span>
+          </label>
+        </div>
+      ) : null}
 
       <div className="pos-install-box">
         <p className="pos-install-label">ลิงก์ติดตั้งแท็บเล็ต (ใช้ URL นี้เท่านั้น)</p>
@@ -192,7 +245,7 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
           {devices.map((device) => {
             const online = isPosDeviceOnline(device.lastSeenAt);
             const busy = busyId === device.id;
-            const buildBehind = device.appBuild > 0 && device.appBuild < CLIENT_BUILD;
+            const buildBehind = device.appBuild > 0 && device.appBuild < POS_BUILD;
 
             return (
               <li key={device.id} className="pos-device-card">
@@ -208,9 +261,23 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
 
                 <p className="muted pos-device-meta">
                   เห็นล่าสุด {formatLastSeen(device.lastSeenAt)}
-                  {device.appBuild ? ` · v${device.appBuild}` : ""}
+                  {device.appBuild ? ` · POS ${device.appBuild}` : ""}
                   {buildBehind ? " · รออัปเดต" : ""}
                 </p>
+
+                {device.deviceHint ? (
+                  <p className="muted pos-device-meta">
+                    รุ่น {device.deviceHint}
+                    {device.screenSize ? ` · จอ ${device.screenSize}` : ""}
+                    {device.standalone ? " · เต็มจอ" : " · ในเบราว์เซอร์"}
+                  </p>
+                ) : null}
+
+                {device.printerLabel ? (
+                  <p className={`muted pos-device-meta ${device.printerReady ? "" : "pos-device-sync-alert"}`}>
+                    พิมพ์: {device.printerLabel}
+                  </p>
+                ) : null}
 
                 {device.syncStuckAt > 0 || device.syncFailedCount > 0 ? (
                   <p className="pos-device-sync-alert">

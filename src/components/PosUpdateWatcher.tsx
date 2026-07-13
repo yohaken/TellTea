@@ -86,8 +86,8 @@ export function PosUpdateWatcher({
     if (!enabled) return;
     return subscribeAppReleaseSettings(
       (settings) => {
-        setForceMode(settings.forceAppUpdate);
-        if (settings.forceAppUpdate) {
+        setForceMode(settings.forceAppUpdate || settings.forcePosAutoUpdate);
+        if (settings.forceAppUpdate || settings.forcePosAutoUpdate) {
           void checkVersion();
         }
       },

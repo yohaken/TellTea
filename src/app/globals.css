@@ -8170,3 +8170,7 @@ body.modal-open .main-panel {
   font-weight: 600;
   padding: 0 0.25rem;
 }
+
+.pos-device-auto-update {
+  margin-bottom: 0.85rem;
+}

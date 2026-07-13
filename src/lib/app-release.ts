@@ -2,11 +2,13 @@ import { doc, onSnapshot, setDoc, type Firestore, type Unsubscribe } from "fireb
 import { getDb } from "./firebase";
 
 export type AppReleaseSettings = {
-  /** เจ้าของเปิด = reload อัตโนมัติเมื่อมี build ใหม่ (เหมาะช่วงพัฒนา) */
+  /** เจ้าของเปิด = reload อัตโนมัติเมื่อมี build ใหม่ (เหมาะช่วงพัฒนา) — ทั้งหลังบ้านและ POS */
   forceAppUpdate: boolean;
+  /** POS เท่านั้น — อัปเดตเงียบเมื่อตะกร้าว่าง ไม่กระทบแท็บหลังบ้าน */
+  forcePosAutoUpdate: boolean;
 };
 
-const DEFAULT: AppReleaseSettings = { forceAppUpdate: false };
+const DEFAULT: AppReleaseSettings = { forceAppUpdate: false, forcePosAutoUpdate: false };
 
 function uiRef(db: Firestore) {
   return doc(db, "meta", "ui");
@@ -15,6 +17,7 @@ function uiRef(db: Firestore) {
 export function normalizeAppReleaseSettings(data?: Record<string, unknown> | null): AppReleaseSettings {
   return {
     forceAppUpdate: data?.forceAppUpdate === true,
+    forcePosAutoUpdate: data?.forcePosAutoUpdate === true,
   };
 }
 
@@ -37,6 +40,18 @@ export async function saveForceAppUpdate(forceAppUpdate: boolean, updatedBy: str
     uiRef(getDb()),
     {
       forceAppUpdate,
+      updatedAt: Date.now(),
+      updatedBy,
+    },
+    { merge: true },
+  );
+}
+
+export async function saveForcePosAutoUpdate(forcePosAutoUpdate: boolean, updatedBy: string): Promise<void> {
+  await setDoc(
+    uiRef(getDb()),
+    {
+      forcePosAutoUpdate,
       updatedAt: Date.now(),
       updatedBy,
     },
