@@ -6,6 +6,9 @@ export type PosLocalReceiptLine = {
   qty: number;
   unitPrice: number;
   options: { groupName: string; choiceNames: string[] }[];
+  /** สำหรับแยกหมวดในรายงานปิดกะ */
+  menuItemId?: string;
+  categoryName?: string;
 };
 
 export type PosLocalReceipt = {
@@ -16,6 +19,8 @@ export type PosLocalReceipt = {
   paymentMethod: PosSalePaymentMethod;
   linePreview: string;
   lines?: PosLocalReceiptLine[];
+  /** ส่วนลดท้ายบิล (บาท) — เก็บเพื่อสรุปปิดกะ */
+  discountBaht?: number;
   cashReceived?: number;
   change?: number;
   createdAt: number;
@@ -63,6 +68,7 @@ export function saleLinesToLocalReceiptLines(lines: PosSaleLine[]): PosLocalRece
       name: baseName,
       qty: line.qty,
       unitPrice: line.price,
+      menuItemId: line.menuItemId || undefined,
       options: (line.options || []).map((g) => ({
         groupName: g.groupName,
         choiceNames: g.choices.map((c) => c.name),

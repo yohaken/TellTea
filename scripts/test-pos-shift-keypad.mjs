@@ -29,10 +29,13 @@ const templateSrc = readFileSync(join(root, "src/lib/pos-printer/shift-snapshot-
 assert.match(templateSrc, /Snapshot ระหว่างรอบการขาย/);
 assert.match(templateSrc, /รายงานยอดการขาย/);
 assert.match(templateSrc, /ไม่ใช่การปิดรอบ/);
+assert.match(templateSrc, /ยอดขายตามหมวดหมู่/);
+assert.match(templateSrc, /รายการขายแยกตามบิล/);
 assert.match(templateSrc, /openShiftReportPrint/);
 
 const reportSrc = readFileSync(join(root, "src/lib/pos-shift-report.ts"), "utf8");
 assert.match(reportSrc, /buildShiftReportPayload/);
+assert.match(reportSrc, /buildShiftReportDetail/);
 
 const versionSrc = readFileSync(join(root, "src/lib/pos-version.ts"), "utf8");
 assert.match(versionSrc, /POS_BUILD = \d+/);
