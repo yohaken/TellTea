@@ -290,13 +290,13 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
     const deviceId = deviceIdRef.current;
     if (!deviceId) return;
     setError(null);
-    const next = startPosSessionLocal(deviceId, shift);
+    const next = startPosSessionLocal(deviceId, getCurrentShiftId());
     storePosSessionId(deviceId, next.id);
     setSession(next);
     void persistOpenPosSession(next).catch(() => {
       /* ขายบนเครื่องได้ต่อ — subscribe จะลองส่งอีกครั้ง */
     });
-  }, [shift]);
+  }, []);
 
   const handleCloseShift = useCallback(
     async (totals?: { cashTotal: number; promptpayTotal: number }) => {
