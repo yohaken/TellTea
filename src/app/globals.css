@@ -2723,7 +2723,8 @@ body.modal-open .main-panel {
 }
 
 .check-history-today-tag,
-.check-history-missing-tag {
+.check-history-missing-tag,
+.check-history-future-tag {
   display: block;
   font-size: 0.5rem;
   font-weight: 600;
@@ -2738,8 +2739,21 @@ body.modal-open .main-panel {
   color: #c45a1a;
 }
 
+.check-history-future-tag {
+  color: #1d4e89;
+}
+
 .check-history-row-today {
   background: rgba(216, 243, 220, 0.25);
+}
+
+.check-history-row-future td {
+  background: rgba(168, 212, 255, 0.08);
+}
+
+.check-history-row-future .check-history-cell.is-pending.is-tappable {
+  background: rgba(168, 212, 255, 0.14);
+  border-color: rgba(29, 78, 137, 0.22);
 }
 
 .check-history-row-issues {

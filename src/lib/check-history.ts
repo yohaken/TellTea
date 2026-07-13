@@ -5,6 +5,10 @@ import {
   type ChecklistRecord,
   type CheckSessionSummary,
 } from "./checklist";
+import { OT_PLAN_AHEAD_DAYS } from "./ot-grid";
+
+/** แสดงวันล่วงหน้าในตาราง — ให้สอดคล้องกับตารางชง */
+export const CHECK_PLAN_AHEAD_DAYS = OT_PLAN_AHEAD_DAYS;
 
 export const CHECK_SHIFT_SHORT: Record<CheckShiftId, string> = {
   late: "ดึก",
@@ -85,7 +89,8 @@ export function buildCheckHistoryGrid(
   today.setHours(0, 0, 0, 0);
   const lastDay = daysInMonth(year, month);
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
-  const maxDay = isCurrentMonth ? today.getDate() : lastDay;
+  const planLastDay = today.getDate() + CHECK_PLAN_AHEAD_DAYS;
+  const maxDay = isCurrentMonth ? Math.min(lastDay, planLastDay) : lastDay;
 
   const rows: CheckHistoryDayRow[] = [];
   for (let day = maxDay; day >= 1; day -= 1) {

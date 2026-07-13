@@ -17,6 +17,7 @@ import { PhotoAttachField } from "@/components/PhotoAttachField";
 import {
   buildCheckHistoryGrid,
   checkMonthInputValue,
+  CHECK_PLAN_AHEAD_DAYS,
   computeCheckHistoryMonthStats,
   formatCheckTimeShort,
   inspectorShort,
@@ -24,6 +25,7 @@ import {
   type CheckHistoryDayRow,
   type CheckHistoryShiftCell,
 } from "@/lib/check-history";
+import { isFutureLocalDay } from "@/lib/ot-grid";
 import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { useAuth } from "@/lib/auth";
@@ -788,7 +790,7 @@ function CheckSummary({
       </div>
 
       <p className="muted check-history-hint">
-        แต่ละวัน 3 กะ — แตะช่องว่างเพื่อเริ่มเช็ค · แตะช่องที่เช็คแล้วดูรายละเอียด
+        แต่ละวัน 3 กะ — แสดงล่วงหน้า {CHECK_PLAN_AHEAD_DAYS} วัน (เหมือนตารางชง) · แตะช่องว่างเพื่อเริ่มเช็ค
       </p>
 
       {rows.length ? (
@@ -848,13 +850,23 @@ function CheckHistoryRow({
 }) {
   const todayMs = parseDateInput(todayInputValue());
   const isToday = row.dateMs === todayMs;
+  const isFuture = isFutureLocalDay(row.dateMs);
   const missingShifts = row.shifts.filter((s) => !s.session).length;
 
+  const rowClass = row.dayFails > 0
+    ? "check-history-row-issues"
+    : isToday
+      ? "check-history-row-today"
+      : isFuture
+        ? "check-history-row-future"
+        : "";
+
   return (
-    <tr className={row.dayFails > 0 ? "check-history-row-issues" : isToday ? "check-history-row-today" : ""}>
+    <tr className={rowClass}>
       <td className="check-history-date">
         {formatDateShort(row.dateMs)}
         {isToday ? <span className="check-history-today-tag">วันนี้</span> : null}
+        {isFuture ? <span className="check-history-future-tag">ล่วงหน้า</span> : null}
         {isToday && missingShifts ? (
           <span className="check-history-missing-tag">ค้าง {missingShifts} กะ</span>
         ) : null}
