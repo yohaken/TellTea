@@ -24,7 +24,16 @@
     "trailingSlash": true,
     "headers": [
       {
-        "source": "**/*.html",
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/version.json",
         "headers": [
           {
             "key": "Cache-Control",

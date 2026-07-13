@@ -127,7 +127,9 @@ service cloud.firestore {
     }
 
     function staffEmployeeId() {
-      return isStaff() && get(staffPath()).data.keys().hasAny(['employeeId'])
+      return isStaff()
+        && get(staffPath()).data.keys().hasAny(['employeeId'])
+        && get(staffPath()).data.employeeId is string
         ? get(staffPath()).data.employeeId
         : '';
     }
@@ -308,14 +310,6 @@ service cloud.firestore {
 
     match /assignTasks/{id} {
       allow read, create, update, delete: if isOwnerEmail();
-    }
-
-    function staffEmployeeId() {
-      return isStaff()
-        && get(staffPath()).data.keys().hasAny(['employeeId'])
-        && get(staffPath()).data.employeeId is string
-        ? get(staffPath()).data.employeeId
-        : '';
     }
 
     function isTaskOccurrenceAssignee() {

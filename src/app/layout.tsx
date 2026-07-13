@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Poppins, Sarabun } from "next/font/google";
+import { AppUpdateWatcher } from "@/components/AppUpdateWatcher";
 import { AuthProvider } from "@/lib/auth";
 import "./globals.css";
 
@@ -43,7 +44,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="th">
       <body className={`${display.variable} ${body.variable} antialiased`}>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <AppUpdateWatcher />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
