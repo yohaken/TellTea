@@ -128,7 +128,10 @@ service cloud.firestore {
 
     function isPosDeviceAuth() {
       return request.auth != null
-        && request.auth.token.firebase.sign_in_provider == 'anonymous';
+        && (
+          request.auth.token.posDevice == true
+          || request.auth.token.firebase.sign_in_provider == 'anonymous'
+        );
     }
 
     function posDeviceCreate() {

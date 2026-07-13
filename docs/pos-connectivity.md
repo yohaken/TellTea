@@ -13,7 +13,7 @@
 
 | ชั้น | หน้าที่ | ช่วง |
 |-----|--------|------|
-| Anonymous Auth | ตัวตนเครื่อง POS | ถาวร (local) |
+| Anonymous Auth | ตัวตนเครื่อง POS (fallback) | ไม่จำเป็นต้องเปิดมือ — ใช้ `posDeviceAuth` Cloud Function เป็นหลัก |
 | `posDevices` heartbeat | `lastSeenAt` ทุก 60s | ออนไลน์ = เห็นสัญญาณภายใน 3 นาที |
 | `posSessions` | เปิดกะ / ยอดขายค้างหลัง reload | ต่อกะเดิมอัตโนมัติ |
 | `forceReloadAt` | เจ้าของสั่งรีเฟรชจาก Settings | รอตะกร้าว่างก่อน reload |
@@ -43,8 +43,7 @@
 
 ## Checklist เจ้าของ
 
-- [ ] Firebase → Authentication → **Anonymous → Enable** (ถ้าเห็น `auth/admin-restricted-operation` = ยังไม่เปิด)
-- [ ] หรือ GitHub Actions → **Enable Firebase Anonymous Auth (POS)** → Run workflow
+- [ ] เปิด `/pos/` บนแท็บเล็ต — **ไม่ต้อง login พนักงาน** (ระบบลงทะเบียนเครื่องอัตโนมัติ)
 - [ ] หลัง deploy ใหญ่: Settings → **บังคับอัปเดต** หรือกด **อัปเดตเครื่องที่ค้าง**
 - [ ] ดูออนไลน์ที่ Settings → เครื่อง POS (heartbeat 3 นาที)
 

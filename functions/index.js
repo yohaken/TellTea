@@ -135,3 +135,19 @@ exports.syncTaskOccurrencesDaily = functions
     console.log("task occurrence sync", result);
     return null;
   });
+
+/** POS tablet sign-in — no Firebase Console Anonymous toggle required. */
+exports.posDeviceAuth = functions
+  .region("asia-southeast1")
+  .https.onCall(async (data) => {
+    const crypto = require("crypto");
+    const { getAuth } = require("firebase-admin/auth");
+
+    let deviceId = typeof data?.deviceId === "string" ? data.deviceId.trim() : "";
+    if (!deviceId || deviceId.length < 8 || deviceId.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(deviceId)) {
+      deviceId = crypto.randomUUID();
+    }
+
+    const token = await getAuth().createCustomToken(deviceId, { posDevice: true });
+    return { token, deviceId };
+  });

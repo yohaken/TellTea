@@ -276,7 +276,7 @@ export default function PosPage() {
                 ? "เชื่อมต่อ TellTea ปกติ"
                 : connectivity.pill === "offline-net"
                   ? "เครื่องไม่มีเน็ต — ตรวจ Wi‑Fi"
-                  : "ส่งสัญญาณไม่ถึงเซิร์ฟเวอร์ — ตรวจ Anonymous Auth หรือลองรีเฟรช"
+                  : "ส่งสัญญาณไม่ถึงเซิร์ฟเวอร์ — ตรวจ Wi‑Fi หรือลองรีเฟรช"
             }
           >
             {connectivity.pill === "online" ? <Wifi size={12} aria-hidden /> : <WifiOff size={12} aria-hidden />}

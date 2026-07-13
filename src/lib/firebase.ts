@@ -14,6 +14,7 @@ import {
   persistentMultipleTabManager,
   type Firestore,
 } from "firebase/firestore";
+import { getFunctions, type Functions } from "firebase/functions";
 
 /**
  * Keep authDomain on the Firebase default host.
@@ -41,6 +42,7 @@ export function isFirebaseConfigured() {
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let db: Firestore | undefined;
+let functions: Functions | undefined;
 
 export function getFirebaseApp() {
   if (!isFirebaseConfigured()) {
@@ -81,6 +83,13 @@ export function getDb() {
     }
   }
   return db;
+}
+
+export function getFirebaseFunctions() {
+  if (!functions) {
+    functions = getFunctions(getFirebaseApp(), "asia-southeast1");
+  }
+  return functions;
 }
 
 export const OWNER_EMAIL = (process.env.NEXT_PUBLIC_OWNER_EMAIL || "yohaken@gmail.com")
