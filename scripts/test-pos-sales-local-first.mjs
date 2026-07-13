@@ -25,8 +25,12 @@ assert.equal(overlay.extraTotalSales, 80);
 const salesSrc = fs.readFileSync(new URL("../src/lib/pos-sales.ts", import.meta.url), "utf8");
 assert.doesNotMatch(salesSrc, /invokePosCompleteSale/);
 assert.doesNotMatch(salesSrc, /isBrowserOnline/);
+assert.match(salesSrc, /stagePendingSale/);
+assert.match(salesSrc, /recordSaleInstant/);
 assert.match(salesSrc, /void runPosSyncFlush\(\)/);
-assert.match(salesSrc, /return enqueueSale/);
+assert.match(salesSrc, /persistSaleInBackground/);
+assert.doesNotMatch(salesSrc, /export async function completeCashSale/);
+assert.doesNotMatch(salesSrc, /export async function completePromptPaySale/);
 
 const syncTypesSrc = fs.readFileSync(new URL("../src/lib/pos-sync-types.ts", import.meta.url), "utf8");
 assert.match(syncTypesSrc, /sessionId: string/);
@@ -37,6 +41,7 @@ assert.match(syncSrc, /sessionId: entry\.payload\.sessionId/);
 const sellSrc = fs.readFileSync(new URL("../src/components/PosSellView.tsx", import.meta.url), "utf8");
 assert.match(sellSrc, /computeSessionPendingOverlay/);
 assert.match(sellSrc, /pendingBills/);
+assert.doesNotMatch(sellSrc, /setBusy\(true\)/);
 assert.match(sellSrc, /บันทึกแล้ว/);
 
 const utilsSrc = fs.readFileSync(new URL("../src/lib/pos-sync-utils.ts", import.meta.url), "utf8");

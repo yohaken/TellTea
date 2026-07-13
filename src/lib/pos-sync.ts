@@ -8,7 +8,7 @@ import {
   removeOutboxEntry,
   resetOutboxForRetry,
 } from "./pos-outbox";
-import type { PosOutboxBillView, PosSaleMutationPayload, PosSaleResult } from "./pos-sync-types";
+import type { PosOutboxBillView, PosOutboxEntry, PosSaleMutationPayload, PosSaleResult } from "./pos-sync-types";
 import {
   formatPendingBillNo,
   isOutboxEntryStuck,
@@ -22,7 +22,7 @@ type CfSaleResult = { saleId: string; billNo: string; change: number; total: num
 
 export async function invokePosCompleteSale(payload: PosSaleMutationPayload): Promise<CfSaleResult> {
   const user = getPosFirebaseAuth().currentUser;
-  if (user) await user.getIdToken(true);
+  if (user) await user.getIdToken(false);
   const authUid = user?.uid || payload.deviceId;
   const posCompleteSale = httpsCallable<PosSaleMutationPayload, CfSaleResult>(
     getPosFirebaseFunctions(),
@@ -38,9 +38,9 @@ export async function invokePosCompleteSale(payload: PosSaleMutationPayload): Pr
   return data;
 }
 
-function mapOutboxViews(entries: Awaited<ReturnType<typeof listOutboxEntries>>): PosOutboxBillView[] {
+function entryToBillView(entry: PosOutboxEntry): PosOutboxBillView {
   const now = Date.now();
-  return entries.map((entry) => ({
+  return {
     id: entry.id,
     billNo: formatPendingBillNo(entry.id),
     sessionId: entry.payload.sessionId,
@@ -53,7 +53,27 @@ function mapOutboxViews(entries: Awaited<ReturnType<typeof listOutboxEntries>>):
     status: outboxEntryStatus(entry),
     lastError: entry.lastError,
     stuck: isOutboxEntryStuck(entry, now),
-  }));
+  };
+}
+
+function mapOutboxViews(entries: Awaited<ReturnType<typeof listOutboxEntries>>): PosOutboxBillView[] {
+  return entries.map((entry) => entryToBillView(entry));
+}
+
+function recomputeSnapshotCounts(bills: PosOutboxBillView[]) {
+  return {
+    pendingCount: bills.filter((b) => b.status === "pending").length,
+    failedCount: bills.filter((b) => b.status === "failed").length,
+    stuckCount: bills.filter((b) => b.stuck).length,
+  };
+}
+
+/** Update sync UI immediately when a sale is recorded on-device (before IDB flush). */
+export function stagePendingSale(entry: PosOutboxEntry): void {
+  if (snapshot.bills.some((b) => b.id === entry.id)) return;
+  const bills = [...snapshot.bills, entryToBillView(entry)].sort((a, b) => a.createdAt - b.createdAt);
+  snapshot = { ...snapshot, bills, ...recomputeSnapshotCounts(bills) };
+  emit();
 }
 
 async function publishDeviceSyncStatus(entries: Awaited<ReturnType<typeof listOutboxEntries>>) {
@@ -151,7 +171,7 @@ export async function refreshPosSyncSnapshot(): Promise<PosSyncSnapshot> {
   const stuckCount = bills.filter((b) => b.stuck).length;
   snapshot = { ...snapshot, pendingCount, failedCount, stuckCount, bills };
   emit();
-  await publishDeviceSyncStatus(entries);
+  void publishDeviceSyncStatus(entries);
   return snapshot;
 }
 

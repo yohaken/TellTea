@@ -4,22 +4,29 @@ const DB_NAME = "telltea-pos-sync";
 const DB_VERSION = 1;
 const STORE = "outbox";
 
+let dbPromise: Promise<IDBDatabase> | null = null;
+
 function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    if (typeof indexedDB === "undefined") {
-      reject(new Error("IndexedDB ไม่พร้อมใช้งาน"));
-      return;
-    }
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onerror = () => reject(req.error || new Error("เปิด outbox ไม่สำเร็จ"));
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE, { keyPath: "id" });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-  });
+  if (typeof indexedDB === "undefined") {
+    return Promise.reject(new Error("IndexedDB ไม่พร้อมใช้งาน"));
+  }
+  if (!dbPromise) {
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onerror = () => {
+        dbPromise = null;
+        reject(req.error || new Error("เปิด outbox ไม่สำเร็จ"));
+      };
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) {
+          db.createObjectStore(STORE, { keyPath: "id" });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+    });
+  }
+  return dbPromise;
 }
 
 function withStore<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
@@ -31,7 +38,6 @@ function withStore<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => I
         const req = fn(store);
         req.onsuccess = () => resolve(req.result as T);
         req.onerror = () => reject(req.error || new Error("outbox transaction failed"));
-        tx.oncomplete = () => db.close();
         tx.onerror = () => reject(tx.error || new Error("outbox transaction failed"));
       }),
   );

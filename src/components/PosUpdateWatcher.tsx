@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { subscribeAppReleaseSettings } from "@/lib/app-release";
-import { CLIENT_BUILD, fetchServerBuild } from "@/lib/app-update";
+import { POS_CLIENT_BUILD, fetchPosServerBuild } from "@/lib/pos-app-update";
 import { getPosDb } from "@/lib/pos-firebase";
 import { isPosSafeToReload, POS_IDLE_BEFORE_RELOAD_MS, type PosSellBusyState } from "@/lib/pos-reload";
 
@@ -15,7 +15,7 @@ const MIN_RELOAD_GAP_MS = 45 * 1000;
 const RELOAD_BUILD_KEY = "telltea_pos_last_reload_build";
 
 /**
- * POS auto-update — polls /version.json and respects owner forceAppUpdate.
+ * POS auto-update — polls /pos-version.json and respects owner forceAppUpdate.
  * Throttled to avoid reload loops on Android (visibility / flaky network).
  */
 export function PosUpdateWatcher({
@@ -36,7 +36,7 @@ export function PosUpdateWatcher({
   const forceModeRef = useRef(forceMode);
   const reloadRequestedRef = useRef(false);
 
-  const hasUpdate = serverBuild != null && serverBuild > CLIENT_BUILD;
+  const hasUpdate = serverBuild != null && serverBuild > POS_CLIENT_BUILD;
   const safe = isPosSafeToReload(sellBusy);
 
   useEffect(() => {
@@ -44,8 +44,8 @@ export function PosUpdateWatcher({
   }, [forceMode]);
 
   const checkVersion = useCallback(async () => {
-    const build = await fetchServerBuild();
-    if (build != null && build > CLIENT_BUILD) {
+    const build = await fetchPosServerBuild();
+    if (build != null && build > POS_CLIENT_BUILD) {
       setServerBuild(build);
     }
   }, []);
@@ -164,7 +164,7 @@ export function PosUpdateWatcher({
     return (
       <div className="pos-update-banner pos-update-banner--force" role="status" aria-live="polite">
         <RefreshCw size={16} aria-hidden className="pos-update-banner-icon" />
-        <span>กำลังอัปเดตเป็น v{serverBuild} — รอตะกร้าว่าง</span>
+        <span>กำลังอัปเดตเป็น POS {serverBuild} — รอตะกร้าว่าง</span>
       </div>
     );
   }
@@ -172,7 +172,7 @@ export function PosUpdateWatcher({
   return (
     <div className="pos-update-banner" role="status" aria-live="polite">
       <RefreshCw size={16} aria-hidden className="pos-update-banner-icon" />
-      <span>มี v{serverBuild} ใหม่</span>
+      <span>มี POS {serverBuild} ใหม่</span>
       <button
         type="button"
         className="ghost-btn pos-update-banner-btn"

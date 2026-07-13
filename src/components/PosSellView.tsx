@@ -42,7 +42,6 @@ export function PosSellView({
   const [payMode, setPayMode] = useState<PayMode>(null);
   const [cashInput, setCashInput] = useState("");
   const [qrUrl, setQrUrl] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [shopName, setShopName] = useState("TellTea");
@@ -90,8 +89,8 @@ export function PosSellView({
   const payOpen = payMode !== null;
 
   useEffect(() => {
-    onBusyChange?.({ cartCount, payOpen, saleBusy: busy });
-  }, [busy, cartCount, onBusyChange, payOpen]);
+    onBusyChange?.({ cartCount, payOpen, saleBusy: false });
+  }, [cartCount, onBusyChange, payOpen]);
 
   const sessionDisplay = useMemo(() => {
     const overlay = computeSessionPendingOverlay(session.id, pendingBills);
@@ -272,12 +271,11 @@ export function PosSellView({
     window.setTimeout(() => setSuccess(null), 2500);
   }
 
-  async function confirmCashPay() {
+  function confirmCashPay() {
     const lines = saleLines();
-    setBusy(true);
     setError(null);
     try {
-      const result = await completeCashSale({
+      const result = completeCashSale({
         deviceId,
         sessionId: session.id,
         shift: session.shift,
@@ -287,17 +285,14 @@ export function PosSellView({
       afterSaleSuccess(result, "cash", lines);
     } catch (err) {
       setError((err as Error).message || "ชำระเงินไม่สำเร็จ");
-    } finally {
-      setBusy(false);
     }
   }
 
-  async function confirmPromptPayPay() {
+  function confirmPromptPayPay() {
     const lines = saleLines();
-    setBusy(true);
     setError(null);
     try {
-      const result = await completePromptPaySale({
+      const result = completePromptPaySale({
         deviceId,
         sessionId: session.id,
         shift: session.shift,
@@ -306,8 +301,6 @@ export function PosSellView({
       afterSaleSuccess(result, "promptpay", lines);
     } catch (err) {
       setError((err as Error).message || "บันทึกการขายไม่สำเร็จ");
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -515,13 +508,12 @@ export function PosSellView({
               type="button"
               className="primary-btn pos-sell-pay-btn"
               disabled={
-                busy ||
                 (payMode === "cash" && cashNum < total) ||
                 (payMode === "promptpay" && !qrUrl)
               }
-              onClick={() => void (payMode === "cash" ? confirmCashPay() : confirmPromptPayPay())}
+              onClick={() => (payMode === "cash" ? confirmCashPay() : confirmPromptPayPay())}
             >
-              {busy ? "กำลังบันทึก..." : "ยืนยันขาย"}
+              ยืนยันขาย
             </button>
           </div>
         </div>

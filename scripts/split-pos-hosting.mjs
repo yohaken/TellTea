@@ -48,6 +48,7 @@ copyDir(path.join(OUT, "icons"), path.join(OUT_POS, "icons"));
 
 for (const file of [
   "version.json",
+  "pos-version.json",
   "sw.js",
   "404.html",
   "favicon.ico",

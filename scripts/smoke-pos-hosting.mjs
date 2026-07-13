@@ -53,6 +53,17 @@ if (fs.existsSync(path.join(ROOT, "out", "pos"))) {
   ok("back-office out/pos removed");
 }
 
+if (!fs.existsSync(path.join(OUT_POS, "pos-version.json"))) {
+  fail("out-pos/pos-version.json missing");
+} else {
+  const posVer = JSON.parse(fs.readFileSync(path.join(OUT_POS, "pos-version.json"), "utf8"));
+  if (posVer.product !== "telltea-pos" || typeof posVer.build !== "number") {
+    fail("pos-version.json must include product telltea-pos and numeric build");
+  } else {
+    ok(`POS pos-version.json build ${posVer.build}`);
+  }
+}
+
 const urlSrc = fs.readFileSync(path.join(ROOT, "src/lib/pos-url.ts"), "utf8");
 if (!urlSrc.includes("telltea-pos.web.app/pos/")) {
   fail("pos-url.ts must point to telltea-pos.web.app/pos/");

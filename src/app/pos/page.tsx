@@ -34,7 +34,7 @@ import { getPosHardwareSnapshot } from "@/lib/pos-hardware";
 import { isPosSafeToReload, type PosSellBusyState } from "@/lib/pos-reload";
 import type { PosSyncSnapshot } from "@/lib/pos-sync";
 import type { PosSession } from "@/lib/types";
-import { appVersionLabel } from "@/lib/version";
+import { posVersionLabel } from "@/lib/pos-version";
 
 type PosStatus = "boot" | "connecting" | "ready" | "error";
 
@@ -372,7 +372,7 @@ export default function PosPage() {
               {syncSnap.failedCount > 0 ? ` (${syncSnap.failedCount} ล้มเหลว)` : ""}
             </button>
           ) : null}
-          <p className="pos-lite-phase">{standalone ? "แอป" : "POS"} · {appVersionLabel()}</p>
+          <p className="pos-lite-phase">{standalone ? "แอป" : "POS"} · {posVersionLabel()}</p>
         </div>
       </header>
 

@@ -5,7 +5,7 @@ import { Monitor, RefreshCw, ExternalLink, Copy, Check } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { CLIENT_BUILD } from "@/lib/app-update";
 import { POS_ENTRY_URL } from "@/lib/pos-url";
-import { appVersionLabel } from "@/lib/version";
+import { posVersionLabel } from "@/lib/pos-version";
 import {
   isPosDeviceOnline,
   posDeviceLabel,
@@ -135,7 +135,7 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
         เครื่อง POS
       </h2>
       <p className="muted settings-card-lead">
-        Phase 0.5 — ติดตั้งแอปบนหน้าจอหลัก (เต็มจอ) · เวอร์ชันแอปหลัก {appVersionLabel()}
+        Phase 0.5 — ติดตั้งแอปบนหน้าจอหลัก (เต็มจอ) · {posVersionLabel()}
       </p>
 
       <div className="pos-install-box">

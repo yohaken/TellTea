@@ -1,8 +1,8 @@
 import { getPosFirebaseAuth } from "./pos-firebase";
-import { addOutboxEntry, getOutboxEntry } from "./pos-outbox";
-import { refreshPosSyncSnapshot, runPosSyncFlush } from "./pos-sync";
+import { addOutboxEntry } from "./pos-outbox";
+import { refreshPosSyncSnapshot, runPosSyncFlush, stagePendingSale } from "./pos-sync";
 import type { PosSaleLine } from "./types";
-import type { PosSaleMutationPayload, PosSaleResult } from "./pos-sync-types";
+import type { PosOutboxEntry, PosSaleMutationPayload, PosSaleResult } from "./pos-sync-types";
 import { createPosMutationId, formatPendingBillNo } from "./pos-sync-utils";
 
 export const POS_SALES_COL = "posSales";
@@ -42,31 +42,27 @@ function optimisticSaleResult(
   };
 }
 
-async function enqueueSale(payload: PosSaleMutationPayload, total: number, change: number): Promise<PosSaleResult> {
-  const existing = await getOutboxEntry(payload.clientMutationId);
-  if (!existing) {
-    await addOutboxEntry({
-      id: payload.clientMutationId,
-      kind: "sale",
-      createdAt: Date.now(),
-      attempts: 0,
-      status: "pending",
-      payload,
-    });
-  }
-  await refreshPosSyncSnapshot();
-  void runPosSyncFlush();
-  return optimisticSaleResult(payload, total, change);
+function persistSaleInBackground(entry: PosOutboxEntry): void {
+  void (async () => {
+    try {
+      await addOutboxEntry(entry);
+      void refreshPosSyncSnapshot();
+      void runPosSyncFlush();
+    } catch {
+      /* PosSyncWatcher retries; sale already shown on screen */
+    }
+  })();
 }
 
-async function completeSale(input: {
+/** Instant local sale — returns before IndexedDB/network; sync runs in background. */
+function recordSaleInstant(input: {
   deviceId: string;
   sessionId: string;
   shift: string;
   lines: PosSaleLine[];
   paymentMethod: "cash" | "promptpay";
   cashReceived: number;
-}): Promise<PosSaleResult> {
+}): PosSaleResult {
   const authUid = getPosFirebaseAuth().currentUser?.uid || input.deviceId;
   const clientMutationId = createPosMutationId(authUid);
   const payload = buildMutationPayload({ ...input, deviceId: authUid, clientMutationId });
@@ -79,16 +75,28 @@ async function completeSale(input: {
       ? Math.round((cashReceived - total) * 100) / 100
       : 0;
 
-  return enqueueSale(payload, total, change);
+  const entry: PosOutboxEntry = {
+    id: clientMutationId,
+    kind: "sale",
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending",
+    payload,
+  };
+
+  stagePendingSale(entry);
+  persistSaleInBackground(entry);
+
+  return optimisticSaleResult(payload, total, change);
 }
 
-export async function completeCashSale(input: {
+export function completeCashSale(input: {
   deviceId: string;
   sessionId: string;
   shift: string;
   lines: PosSaleLine[];
   cashReceived: number;
-}): Promise<PosSaleResult> {
+}): PosSaleResult {
   if (!input.lines.length) {
     throw new Error("ตะกร้าว่าง — เลือกเมนูก่อน");
   }
@@ -101,7 +109,7 @@ export async function completeCashSale(input: {
     throw new Error("เงินที่รับน้อยกว่ายอดขาย");
   }
 
-  return completeSale({
+  return recordSaleInstant({
     deviceId: input.deviceId,
     sessionId: input.sessionId,
     shift: input.shift,
@@ -111,17 +119,17 @@ export async function completeCashSale(input: {
   });
 }
 
-export async function completePromptPaySale(input: {
+export function completePromptPaySale(input: {
   deviceId: string;
   sessionId: string;
   shift: string;
   lines: PosSaleLine[];
-}): Promise<PosSaleResult> {
+}): PosSaleResult {
   if (!input.lines.length) {
     throw new Error("ตะกร้าว่าง — เลือกเมนูก่อน");
   }
 
-  return completeSale({
+  return recordSaleInstant({
     deviceId: input.deviceId,
     sessionId: input.sessionId,
     shift: input.shift,
