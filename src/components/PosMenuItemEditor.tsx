@@ -203,10 +203,15 @@ export function PosMenuItemEditor({
           </div>
           {linkedGroups.length > 1 ? (
             <>
-              <p className="muted pos-menu-sort-hint">ลากเรียงลำดับที่แสดงตอนขาย</p>
+              <p className="muted pos-menu-sort-hint">กด ↑↓ หรือลาก — ลำดับนี้ไปหน้าขาย (กลุ่มตัวเลือกตอนกดเมนู)</p>
               <PosSortableList
                 ids={linkedGroupIds}
-                onReorder={setLinkedGroupIds}
+                onReorder={(ids) => {
+                  setLinkedGroupIds(ids);
+                  void updateMenuItem(item.id, { optionGroupIds: ids }).catch((err) =>
+                    setError((err as Error).message),
+                  );
+                }}
                 className="pos-menu-link-groups-sort"
                 renderItem={(gid) => {
                   const g = activeGroups.find((x) => x.id === gid);

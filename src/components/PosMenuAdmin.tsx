@@ -258,7 +258,9 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
 
           {authReady && tab === "categories" ? (
             <>
-              <p className="muted pos-menu-sort-hint">กด ↑↓ หรือลาก ≡ เพื่อเรียงลำดับ — ใช้บนแท็บเล็ตได้</p>
+              <p className="muted pos-menu-sort-hint">
+                กด ↑↓ หรือลาก ≡ — ลำดับหมวดนี้ไปแท็บขายหลักทันที
+              </p>
               {categories.length ? (
                 <PosSortableList
                   ids={categoryIds}

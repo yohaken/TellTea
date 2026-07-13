@@ -3,7 +3,8 @@
 import { formatPlainNumber } from "@/lib/utils";
 
 const BILLS = [20, 50, 100, 500, 1000] as const;
-const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"] as const;
+/** จัดเรียงแบบเครื่องคิดเลข iPhone — 789 บนสุด · 123 · 0 */
+const DIGITS = ["7", "8", "9", "4", "5", "6", "1", "2", "3"] as const;
 
 export function parseCashAmount(raw: string): number {
   const n = Number(raw.replace(/[^\d.]/g, ""));
@@ -72,7 +73,7 @@ export function PosCashKeypad({ total, value, onChange }: PosCashKeypadProps) {
       </div>
 
       <div className="pos-cash-keypad-pad" role="group" aria-label="ตัวเลข">
-        {DIGITS.slice(0, 9).map((d) => (
+        {DIGITS.map((d) => (
           <button key={d} type="button" className="pos-cash-keypad-digit" onClick={() => appendDigit(d)}>
             {d}
           </button>

@@ -29,6 +29,9 @@ export {
 
 export { buildKitchenTicketHtml, buildReceiptHtml, buildTestPageHtml } from "./layout";
 export { RECEIPT_CHANNEL_LABELS, sampleReceiptPayload } from "./receipt-template";
+export { buildShiftReportHtml, openShiftReportPrint } from "./shift-snapshot-template";
+export { buildShiftReportPayload } from "../pos-shift-report";
+export type { ShiftReportKind, ShiftReportPayload, ShiftReportSummary } from "../pos-shift-report";
 
 export {
   browserPrintJob,

@@ -158,10 +158,10 @@ Modal สรุปรอบ (ยอด, เงินสด, PP)
 
 ### Phase 1 (ทำได้ทันที — ข้อมูลพอ)
 
-- [ ] `buildShiftSnapshotSummary(sessionId)` จาก local receipts
-- [ ] เทมเพลต thermal `shift-snapshot-template.ts`
-- [ ] ปุ่ม `พิมพ์สรุปกลางรอบ` ใน PosShiftView
-- [ ] Z-Report ย่อหลังปิดกะ (ยอดรวม + เงินสด/PP + เวลาเปิด–ปิด)
+- [x] `buildShiftSnapshotSummary(sessionId)` จาก local receipts
+- [x] เทมเพลต thermal `shift-snapshot-template.ts`
+- [x] ปุ่ม `พิมพ์สรุปกลางรอบ` ใน PosShiftView
+- [x] Z-Report ย่อหลังปิดกะ (ยอดรวม + เงินสด/PP + เวลาเปิด–ปิด)
 
 ### Phase 2
 

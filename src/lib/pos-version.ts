@@ -4,7 +4,7 @@
  */
 import { formatAppBuiltAt, APP_BUILT_AT } from "./version";
 
-export const POS_BUILD = 33;
+export const POS_BUILD = 34;
 
 export function posVersionLabel() {
   return `POS ${POS_BUILD} · ${formatAppBuiltAt(APP_BUILT_AT)}`;
