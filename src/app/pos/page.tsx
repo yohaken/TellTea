@@ -15,6 +15,7 @@ import {
 } from "@/lib/pos-devices";
 import { CLIENT_BUILD } from "@/lib/app-update";
 import { isFirebaseConfigured } from "@/lib/firebase";
+import { POS_ENTRY_URL } from "@/lib/pos-url";
 import { appVersionLabel } from "@/lib/version";
 
 type PosStatus = "boot" | "connecting" | "ready" | "error";
@@ -176,7 +177,9 @@ export default function PosPage() {
             </dl>
 
             <p className="pos-lite-hint">
-              เจ้าของดูสถานะและตั้งชื่อเครื่องได้ที่ TellTea → ตั้งค่า → เครื่อง POS
+              ลิงก์ติดตั้ง: <strong>{POS_ENTRY_URL}</strong>
+              <br />
+              เจ้าของดูสถานะได้ที่ TellTea → ตั้งค่า → เครื่อง POS
             </p>
           </>
         ) : null}

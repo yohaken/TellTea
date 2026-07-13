@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Monitor, RefreshCw } from "lucide-react";
+import { Monitor, RefreshCw, ExternalLink, Copy, Check } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { CLIENT_BUILD } from "@/lib/app-update";
+import { POS_ENTRY_URL } from "@/lib/pos-url";
 import { appVersionLabel } from "@/lib/version";
 import {
   isPosDeviceOnline,
@@ -33,6 +34,7 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [draftLabels, setDraftLabels] = useState<Record<string, string>>({});
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const unsub = subscribePosDevices(
@@ -71,6 +73,17 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
     }
   }
 
+  async function copyPosUrl() {
+    onError(null);
+    try {
+      await navigator.clipboard.writeText(POS_ENTRY_URL);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      onError("คัดลอกลิงก์ไม่ได้ — คัดลอกด้วยมือจากกล่องด้านล่าง");
+    }
+  }
+
   async function forceReload(deviceId: string) {
     if (!actorId) return;
     setBusyId(deviceId);
@@ -93,15 +106,35 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
         เครื่อง POS
       </h2>
       <p className="muted settings-card-lead">
-        Phase 0 — แท็บเล็ตเปิด <strong>/pos/</strong> ทิ้งไว้ · เวอร์ชันแอปหลัก {appVersionLabel()}
+        Phase 0 — แท็บเล็ตเปิดลิงก์ด้านล่างทิ้งไว้ · เวอร์ชันแอปหลัก {appVersionLabel()}
       </p>
+
+      <div className="pos-install-box">
+        <p className="pos-install-label">ลิงก์ติดตั้งแท็บเล็ต (ใช้ URL นี้เท่านั้น)</p>
+        <code className="pos-install-url">{POS_ENTRY_URL}</code>
+        <div className="pos-device-actions">
+          <a href={POS_ENTRY_URL} target="_blank" rel="noopener noreferrer" className="primary-btn pos-install-btn">
+            <ExternalLink size={15} aria-hidden />
+            ทดสอบเปิดหน้า POS
+          </a>
+          <button type="button" className="ghost-btn" onClick={() => void copyPosUrl()}>
+            {copied ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
+            {copied ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+          </button>
+        </div>
+        <ol className="pos-install-steps">
+          <li>เปิดลิงก์บนแท็บเล็ตหน้าร้าน</li>
+          <li>ควรเห็น &quot;เครื่องพร้อม · รอเปิดขาย&quot;</li>
+          <li>เพิ่ม Shortcut บนหน้าจอ → เปิดทิ้งไว้ตลอด</li>
+        </ol>
+      </div>
 
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading && devices.length === 0 ? (
         <p className="muted settings-card-lead">
-          ยังไม่มีเครื่องลงทะเบียน — เปิด Shortcut ไปที่{" "}
-          <strong>https://telltea-shop.web.app/pos/</strong> บนแท็บเล็ตหน้าร้าน
+          ยังไม่มีเครื่องลงทะเบียน — กด <strong>ทดสอบเปิดหน้า POS</strong> ด้านบนก่อน
+          แล้วกลับมาดูรายการเครื่องที่นี่
         </p>
       ) : null}
 
