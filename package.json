@@ -16,6 +16,9 @@
     "test:pos-nav-e2e": "node scripts/test-pos-nav-e2e.mjs",
     "test:pos-sell-e2e": "node scripts/test-pos-sell-e2e.mjs",
     "test:pos-e2e-all": "node scripts/test-pos-e2e-all.mjs",
+    "test:pos-menu-catalog-sim": "node scripts/test-pos-menu-catalog-sim.mjs",
+    "seed:pos-menu-catalog": "node scripts/seed-pos-menu-catalog.mjs",
+    "verify:pos-menu-catalog": "node scripts/verify-pos-menu-catalog.mjs",
     "start": "next start",
     "lint": "eslint",
     "export": "next build"
