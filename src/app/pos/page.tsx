@@ -27,6 +27,7 @@ import {
 import { getCurrentShiftId } from "@/lib/shift-session";
 import { labelOtShift } from "@/lib/ot";
 import { seedPosMenuIfEmpty } from "@/lib/pos-menu";
+import { startPosMenuPreload } from "@/lib/pos-menu-preload";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { getPosHardwareSnapshot } from "@/lib/pos-hardware";
 import { isPosSafeToReload, type PosSellBusyState } from "@/lib/pos-reload";
@@ -118,11 +119,12 @@ export default function PosPage() {
     try {
       const authUid = await ensurePosDeviceAuth();
       deviceIdRef.current = authUid;
+      startPosMenuPreload();
       const registered = await registerPosDevice(authUid);
       setDevice(registered);
       setLastHeartbeatAt(Date.now());
-      await seedPosMenuIfEmpty().catch(() => {
-        /* owner may seed from Settings; POS retries on sell view */
+      void seedPosMenuIfEmpty().catch(() => {
+        /* preload + sell view retry */
       });
       const cur = await getCurrentPosSession(authUid);
       setSession(cur);

@@ -3,6 +3,7 @@ import {
   collection,
   doc,
   getDocs,
+  getDocsFromCache,
   onSnapshot,
   orderBy,
   query,
@@ -12,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { getPosDb } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
+import { savePosMenuCache } from "./pos-menu-cache";
 import type { MenuCategory, MenuItem } from "./types";
 
 export const MENU_CATEGORIES_COL = "menuCategories";
@@ -78,6 +80,52 @@ export function subscribeMenuItems(
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );
+}
+
+/** Cache-first live menu — one subscription for POS sell screen. */
+export function subscribePosMenuBundle(
+  onData: (data: { categories: MenuCategory[]; items: MenuItem[]; fromCache: boolean }) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
+  let categories: MenuCategory[] = [];
+  let items: MenuItem[] = [];
+
+  function publish(fromCache: boolean) {
+    if (!categories.length && !items.length) return;
+    savePosMenuCache(categories, items);
+    onData({ categories, items, fromCache });
+  }
+
+  void (async () => {
+    try {
+      const [catSnap, itemSnap] = await Promise.all([
+        getDocsFromCache(query(categoriesCol(), orderBy("sortOrder", "asc"))),
+        getDocsFromCache(query(itemsCol(), orderBy("sortOrder", "asc"))),
+      ]);
+      categories = catSnap.docs.map((d) => mapCategory(d.id, d.data() as Record<string, unknown>));
+      items = itemSnap.docs.map((d) => mapItem(d.id, d.data() as Record<string, unknown>));
+      if (items.length) publish(true);
+    } catch {
+      // IndexedDB cache not warm yet — wait for onSnapshot
+    }
+  })();
+
+  const unsubCat = subscribeMenuCategories(
+    (list) => {
+      categories = list;
+      publish(false);
+    },
+    onError,
+  );
+  const unsubItems = subscribeMenuItems((list) => {
+    items = list;
+    publish(false);
+  }, onError);
+
+  return () => {
+    unsubCat();
+    unsubItems();
+  };
 }
 
 export async function listMenuCategories(): Promise<MenuCategory[]> {

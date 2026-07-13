@@ -30,6 +30,8 @@
 | `forceReloadAt` | เจ้าของสั่งรีเฟรชจาก Settings | รอตะกร้าว่างก่อน reload |
 | `PosUpdateWatcher` | poll `/version.json` + `forceAppUpdate` | อัปเดตโค้ดโดยไม่ต้องสั่งมือ |
 | Menu seed | สร้างเมนูตัวอย่างถ้าว่าง | ครั้งแรกที่เชื่อมต่อ |
+| Menu cache | localStorage + Firestore cache ก่อน server | v133 — โหลดทันที ไม่ค้าง |
+| Menu preload | เริ่มหลัง auth ก่อนเปิดกะ | v133 |
 
 ## การอัปเดตโค้ด — จะขาดช่วงไหม?
 

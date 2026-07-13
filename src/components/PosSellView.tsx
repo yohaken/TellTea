@@ -2,12 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QrCode, ShoppingCart, X } from "lucide-react";
-import {
-  seedPosMenuIfEmpty,
-  subscribeMenuCategories,
-  subscribeMenuItems,
-  toggleMenuItemSoldOut,
-} from "@/lib/pos-menu";
+import { getPosMenuSnapshot, retryPosMenuPreload, startPosMenuPreload, subscribePosMenuPreload } from "@/lib/pos-menu-preload";
+import { toggleMenuItemSoldOut } from "@/lib/pos-menu";
 import { completeCashSale, completePromptPaySale } from "@/lib/pos-sales";
 import { promptPayQrDataUrl } from "@/lib/pos-promptpay";
 import { printPosReceipt } from "@/lib/pos-receipt";
@@ -31,10 +27,12 @@ export function PosSellView({
   session: PosSession;
   onBusyChange?: (state: { cartCount: number; payOpen: boolean; saleBusy: boolean }) => void;
 }) {
-  const [categories, setCategories] = useState<MenuCategory[]>([]);
-  const [items, setItems] = useState<MenuItem[]>([]);
-  const [menuLoading, setMenuLoading] = useState(true);
-  const [menuError, setMenuError] = useState<string | null>(null);
+  const initialMenu = getPosMenuSnapshot();
+  const [categories, setCategories] = useState<MenuCategory[]>(initialMenu.categories);
+  const [items, setItems] = useState<MenuItem[]>(initialMenu.items);
+  const [menuLoading, setMenuLoading] = useState(!initialMenu.ready);
+  const [menuSyncing, setMenuSyncing] = useState(initialMenu.syncing);
+  const [menuError, setMenuError] = useState<string | null>(initialMenu.error);
   const [categoryId, setCategoryId] = useState("");
   const [cart, setCart] = useState<Record<string, CartLine>>({});
   const [payMode, setPayMode] = useState<PayMode>(null);
@@ -51,33 +49,24 @@ export function PosSellView({
   const holdItemRef = useRef<MenuItem | null>(null);
 
   useEffect(() => {
-    void seedPosMenuIfEmpty().catch((err) => {
-      setMenuError((err as Error).message || "โหลดเมนูไม่สำเร็จ");
-      setMenuLoading(false);
+    startPosMenuPreload();
+    const unsub = subscribePosMenuPreload((snap) => {
+      setCategories(snap.categories);
+      setItems(snap.items);
+      setMenuSyncing(snap.syncing);
+      setMenuError(snap.error);
+      setMenuLoading(!snap.ready);
     });
+    return unsub;
+  }, []);
 
-    const unsubCat = subscribeMenuCategories(
-      (list) => {
-        setCategories(list);
-        setMenuLoading(false);
-        setMenuError(null);
-      },
-      (err) => {
-        setMenuError(err.message);
-        setMenuLoading(false);
-      },
-    );
-    const unsubItems = subscribeMenuItems((list) => setItems(list));
+  useEffect(() => {
     const unsubSettings = subscribePosShopSettings((s) => {
       setShopName(s.shopName);
       setPromptPayId(s.promptPayId);
       setAutoPrintReceipt(s.autoPrintReceipt);
     });
-    return () => {
-      unsubCat();
-      unsubItems();
-      unsubSettings();
-    };
+    return unsubSettings;
   }, []);
 
   const activeCategories = useMemo(
@@ -315,6 +304,10 @@ export function PosSellView({
     return (
       <div className="pos-sell-empty">
         <p>กำลังโหลดเมนู...</p>
+        <p className="muted">ถ้าค้างนาน ตรวจ Wi‑Fi แล้วลองใหม่</p>
+        <button type="button" className="ghost-btn" onClick={() => retryPosMenuPreload()}>
+          ลองโหลดใหม่
+        </button>
       </div>
     );
   }
@@ -324,6 +317,9 @@ export function PosSellView({
       <div className="pos-sell-empty">
         <p className="error-text">โหลดเมนูไม่สำเร็จ</p>
         <p className="muted">{menuError}</p>
+        <button type="button" className="ghost-btn" onClick={() => retryPosMenuPreload()}>
+          ลองใหม่
+        </button>
       </div>
     );
   }
@@ -344,6 +340,7 @@ export function PosSellView({
           <strong>{labelOtShift(session.shift as "late" | "morning" | "evening")}</strong>
           <span className="muted pos-sell-top-meta">
             ขายแล้ว {session.saleCount} บิล · ฿{formatPlainNumber(session.totalSales)}
+            {menuSyncing ? " · อัปเดตเมนู..." : ""}
           </span>
         </div>
         {success ? <p className="ok-text pos-sell-flash">{success}</p> : null}

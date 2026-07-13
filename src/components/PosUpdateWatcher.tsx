@@ -8,12 +8,15 @@ import { getPosDb } from "@/lib/pos-firebase";
 import { isPosSafeToReload, POS_IDLE_BEFORE_RELOAD_MS, type PosSellBusyState } from "@/lib/pos-reload";
 
 const POLL_MS = 30 * 1000;
-const FORCE_POLL_MS = 5 * 1000;
-const RETRY_MS = 2 * 1000;
+const FORCE_POLL_MS = 15 * 1000;
+const RETRY_MS = 5 * 1000;
+const MIN_VISIBILITY_CHECK_MS = 60 * 1000;
+const MIN_RELOAD_GAP_MS = 45 * 1000;
+const RELOAD_BUILD_KEY = "telltea_pos_last_reload_build";
 
 /**
  * POS auto-update — polls /version.json and respects owner forceAppUpdate.
- * Force mode reloads immediately when the cart is idle.
+ * Throttled to avoid reload loops on Android (visibility / flaky network).
  */
 export function PosUpdateWatcher({
   enabled,
@@ -28,7 +31,10 @@ export function PosUpdateWatcher({
   const [serverBuild, setServerBuild] = useState<number | null>(null);
   const [waiting, setWaiting] = useState(false);
   const lastInputAt = useRef(0);
+  const lastVersionCheckAt = useRef(0);
+  const lastReloadAt = useRef(0);
   const forceModeRef = useRef(forceMode);
+  const reloadRequestedRef = useRef(false);
 
   const hasUpdate = serverBuild != null && serverBuild > CLIENT_BUILD;
   const safe = isPosSafeToReload(sellBusy);
@@ -52,9 +58,11 @@ export function PosUpdateWatcher({
     }
 
     function onVisible() {
-      if (document.visibilityState === "visible") {
-        void checkVersion();
-      }
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastVersionCheckAt.current < MIN_VISIBILITY_CHECK_MS) return;
+      lastVersionCheckAt.current = now;
+      void checkVersion();
     }
 
     document.addEventListener("input", markInput, true);
@@ -62,6 +70,7 @@ export function PosUpdateWatcher({
     document.addEventListener("pointerdown", markInput, true);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
+    lastVersionCheckAt.current = Date.now();
     void checkVersion();
 
     return () => {
@@ -95,8 +104,23 @@ export function PosUpdateWatcher({
   }, [checkVersion, enabled, forceMode]);
 
   const tryReload = useCallback(() => {
-    if (!hasUpdate) {
+    if (!hasUpdate || serverBuild == null) {
       setWaiting(false);
+      reloadRequestedRef.current = false;
+      return;
+    }
+
+    if (typeof sessionStorage !== "undefined") {
+      const lastBuild = Number(sessionStorage.getItem(RELOAD_BUILD_KEY) || 0);
+      if (lastBuild >= serverBuild) {
+        setWaiting(false);
+        reloadRequestedRef.current = false;
+        return;
+      }
+    }
+
+    const now = Date.now();
+    if (reloadRequestedRef.current && now - lastReloadAt.current < MIN_RELOAD_GAP_MS) {
       return;
     }
 
@@ -104,17 +128,25 @@ export function PosUpdateWatcher({
     const idleLongEnough =
       force || Date.now() - lastInputAt.current >= POS_IDLE_BEFORE_RELOAD_MS;
     if (safe && idleLongEnough) {
+      reloadRequestedRef.current = true;
+      lastReloadAt.current = now;
       setWaiting(false);
+      try {
+        sessionStorage.setItem(RELOAD_BUILD_KEY, String(serverBuild));
+      } catch {
+        // ignore
+      }
       onReload();
       return;
     }
 
     setWaiting(force);
-  }, [hasUpdate, onReload, safe]);
+  }, [hasUpdate, onReload, safe, serverBuild]);
 
   useEffect(() => {
     if (!enabled || !hasUpdate) {
       setWaiting(false);
+      reloadRequestedRef.current = false;
       return;
     }
 
