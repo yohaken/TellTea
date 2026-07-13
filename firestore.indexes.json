@@ -125,11 +125,6 @@
       ]
     },
     {
-      "collectionGroup": "menuOptionGroups",
-      "queryScope": "COLLECTION",
-      "fields": [{ "fieldPath": "sortOrder", "order": "ASCENDING" }]
-    },
-    {
       "collectionGroup": "menuItems",
       "queryScope": "COLLECTION",
       "fields": [
