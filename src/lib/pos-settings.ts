@@ -1,7 +1,5 @@
 import { doc, getDoc, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
-import { getDb } from "./firebase";
 import { getPosDb } from "./pos-firebase";
-import { mapFirestoreError } from "./firestore-errors";
 
 export type PosShopSettings = {
   shopName: string;
@@ -14,6 +12,18 @@ export type PosShopSettings = {
   receiptStaffName: string;
   /** ข้อความท้ายสลิป */
   receiptFooterNote: string;
+};
+
+export type SavePosShopSettingsResult = {
+  /** บันทึกบนเครื่องสำเร็จแล้ว — ใช้ได้ทันที */
+  savedLocal: true;
+  /** อัปโหลด Firebase สำเร็จในรอบนี้ (false = จะลองใหม่ทีหลัง) */
+  synced: boolean;
+};
+
+type StoredShopSettings = PosShopSettings & {
+  updatedAt: number;
+  syncPending?: boolean;
 };
 
 const DEFAULTS: PosShopSettings = {
@@ -29,8 +39,27 @@ const DEFAULTS: PosShopSettings = {
 
 const LOCAL_KEY = "telltea-pos-shop-settings";
 
-function metaPosRef(db: ReturnType<typeof getDb> | ReturnType<typeof getPosDb>) {
-  return doc(db, "meta", "pos");
+type SettingsListener = (settings: PosShopSettings) => void;
+const localListeners = new Set<SettingsListener>();
+
+let flushInFlight: Promise<boolean> | null = null;
+let onlineHookInstalled = false;
+
+function metaPosRef() {
+  return doc(getPosDb(), "meta", "pos");
+}
+
+function toPublic(stored: StoredShopSettings): PosShopSettings {
+  return {
+    shopName: stored.shopName,
+    shopNameTh: stored.shopNameTh,
+    shopAddress: stored.shopAddress,
+    shopPhone: stored.shopPhone,
+    promptPayId: stored.promptPayId,
+    autoPrintReceipt: stored.autoPrintReceipt,
+    receiptStaffName: stored.receiptStaffName,
+    receiptFooterNote: stored.receiptFooterNote,
+  };
 }
 
 function mapSettings(data: Record<string, unknown> | undefined): PosShopSettings {
@@ -53,63 +82,215 @@ function mapSettings(data: Record<string, unknown> | undefined): PosShopSettings
   };
 }
 
-function readLocalShopSettings(): PosShopSettings | null {
+function remoteUpdatedAt(data: Record<string, unknown> | undefined): number {
+  const v = data?.shopSettingsUpdatedAt ?? data?.updatedAt;
+  return typeof v === "number" && Number.isFinite(v) ? v : 0;
+}
+
+function readStored(): StoredShopSettings | null {
   if (typeof localStorage === "undefined") return null;
   try {
     const raw = localStorage.getItem(LOCAL_KEY);
     if (!raw) return null;
-    return mapSettings(JSON.parse(raw) as Record<string, unknown>);
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const settings = mapSettings(parsed);
+    const updatedAt =
+      typeof parsed.updatedAt === "number" && Number.isFinite(parsed.updatedAt)
+        ? parsed.updatedAt
+        : Date.now();
+    return {
+      ...settings,
+      updatedAt,
+      syncPending: parsed.syncPending === true,
+    };
   } catch {
     return null;
   }
 }
 
-function writeLocalShopSettings(settings: PosShopSettings) {
+function writeStored(stored: StoredShopSettings) {
   if (typeof localStorage === "undefined") return;
   try {
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(settings));
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(stored));
   } catch {
     /* quota */
   }
 }
 
+function notifyLocal(settings: PosShopSettings) {
+  for (const listener of localListeners) {
+    try {
+      listener(settings);
+    } catch {
+      /* ignore listener errors */
+    }
+  }
+}
+
+function ensureOnlineFlushHook() {
+  if (onlineHookInstalled || typeof window === "undefined") return;
+  onlineHookInstalled = true;
+  window.addEventListener("online", () => {
+    void flushPosShopSettingsUpload();
+  });
+}
+
+function remotePayload(settings: PosShopSettings, updatedAt: number): Record<string, unknown> {
+  return {
+    updatedAt,
+    shopSettingsUpdatedAt: updatedAt,
+    shopName: settings.shopName,
+    shopNameTh: settings.shopNameTh,
+    shopAddress: settings.shopAddress,
+    shopPhone: settings.shopPhone,
+    promptPayId: settings.promptPayId,
+    autoPrintReceipt: settings.autoPrintReceipt,
+    receiptStaffName: settings.receiptStaffName,
+    receiptFooterNote: settings.receiptFooterNote,
+  };
+}
+
+async function uploadStored(stored: StoredShopSettings): Promise<boolean> {
+  try {
+    await setDoc(metaPosRef(), remotePayload(toPublic(stored), stored.updatedAt), { merge: true });
+    const latest = readStored();
+    // ทับคิวใหม่ระหว่างอัปโหลด — อย่าเคลียร์ pending ของรุ่นที่ใหม่กว่า
+    if (latest && latest.updatedAt > stored.updatedAt) {
+      return false;
+    }
+    const next: StoredShopSettings = {
+      ...(latest ? toPublic(latest) : toPublic(stored)),
+      updatedAt: latest?.updatedAt ?? stored.updatedAt,
+      syncPending: false,
+    };
+    writeStored(next);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** อัปโหลดค่าที่ค้างส่งขึ้น Firebase (เรียกซ้ำได้) */
+export async function flushPosShopSettingsUpload(): Promise<boolean> {
+  ensureOnlineFlushHook();
+  const stored = readStored();
+  if (!stored?.syncPending) return true;
+  if (flushInFlight) return flushInFlight;
+
+  flushInFlight = uploadStored(stored).finally(() => {
+    flushInFlight = null;
+  });
+  const ok = await flushInFlight;
+  if (!ok) {
+    const again = readStored();
+    if (again?.syncPending) {
+      // ยังค้าง — ลองรอบสั้น ๆ อีกครั้งถ้าเครือข่ายกลับมา
+      return false;
+    }
+  }
+  return ok;
+}
+
 /** อ่านทันทีสำหรับ boot UI — local → defaults */
 export function getLocalPosShopSettings(): PosShopSettings {
-  return readLocalShopSettings() ?? { ...DEFAULTS };
+  const stored = readStored();
+  return stored ? toPublic(stored) : { ...DEFAULTS };
+}
+
+export function isPosShopSettingsSyncPending(): boolean {
+  return readStored()?.syncPending === true;
 }
 
 export function subscribePosShopSettings(
   onSettings: (settings: PosShopSettings) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
-  const local = readLocalShopSettings();
-  if (local) onSettings(local);
+  ensureOnlineFlushHook();
+  localListeners.add(onSettings);
+
+  const local = readStored();
+  if (local) onSettings(toPublic(local));
   else onSettings({ ...DEFAULTS });
 
-  return onSnapshot(
-    metaPosRef(getPosDb()),
+  void flushPosShopSettingsUpload();
+
+  const unsubSnap = onSnapshot(
+    metaPosRef(),
     (snap) => {
-      const next = mapSettings(snap.data() as Record<string, unknown> | undefined);
-      writeLocalShopSettings(next);
-      onSettings(next);
+      const data = snap.data() as Record<string, unknown> | undefined;
+      const remote = mapSettings(data);
+      const remoteAt = remoteUpdatedAt(data);
+      const stored = readStored();
+
+      // local-first: ถ้ามีคิวอัปโหลดและใหม่กว่า remote — อย่าทับด้วย Firebase เก่า
+      if (stored?.syncPending && stored.updatedAt >= remoteAt) {
+        void flushPosShopSettingsUpload();
+        onSettings(toPublic(stored));
+        return;
+      }
+
+      if (stored && !stored.syncPending && stored.updatedAt > remoteAt && remoteAt > 0) {
+        // local ใหม่กว่าแต่ไม่ได้มาร์ค pending (legacy) — เก็บ local + อัปโหลด
+        writeStored({ ...stored, syncPending: true });
+        void flushPosShopSettingsUpload();
+        onSettings(toPublic(stored));
+        return;
+      }
+
+      const next: StoredShopSettings = {
+        ...remote,
+        updatedAt: remoteAt || Date.now(),
+        syncPending: false,
+      };
+      writeStored(next);
+      onSettings(toPublic(next));
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );
+
+  return () => {
+    localListeners.delete(onSettings);
+    unsubSnap();
+  };
 }
 
 export async function getPosShopSettings(): Promise<PosShopSettings> {
-  const local = readLocalShopSettings();
+  const stored = readStored();
+  if (stored?.syncPending) {
+    void flushPosShopSettingsUpload();
+    return toPublic(stored);
+  }
   try {
-    const snap = await getDoc(metaPosRef(getPosDb()));
-    const next = mapSettings(snap.data() as Record<string, unknown> | undefined);
-    writeLocalShopSettings(next);
-    return next;
+    const snap = await getDoc(metaPosRef());
+    const data = snap.data() as Record<string, unknown> | undefined;
+    const remote = mapSettings(data);
+    const remoteAt = remoteUpdatedAt(data);
+    if (stored && stored.updatedAt > remoteAt) {
+      writeStored({ ...stored, syncPending: true });
+      void flushPosShopSettingsUpload();
+      return toPublic(stored);
+    }
+    const next: StoredShopSettings = {
+      ...remote,
+      updatedAt: remoteAt || Date.now(),
+      syncPending: false,
+    };
+    writeStored(next);
+    return toPublic(next);
   } catch {
-    return local ?? { ...DEFAULTS };
+    return stored ? toPublic(stored) : { ...DEFAULTS };
   }
 }
 
-export async function savePosShopSettings(patch: Partial<PosShopSettings>): Promise<void> {
+/**
+ * บันทึกตั้งค่ากิจการแบบ local-first:
+ * 1) เขียนเครื่องทันที → UI ใช้ได้
+ * 2) อัปโหลด Firebase เบื้องหลัง (ล้มเหลวไม่บล็อก — จะลองใหม่ตอน online)
+ */
+export async function savePosShopSettings(
+  patch: Partial<PosShopSettings>,
+): Promise<SavePosShopSettingsResult> {
+  ensureOnlineFlushHook();
   const current = getLocalPosShopSettings();
   const next: PosShopSettings = {
     shopName: patch.shopName != null ? patch.shopName.trim() || DEFAULTS.shopName : current.shopName,
@@ -128,22 +309,14 @@ export async function savePosShopSettings(patch: Partial<PosShopSettings>): Prom
         ? patch.receiptFooterNote.trim() || DEFAULTS.receiptFooterNote
         : current.receiptFooterNote,
   };
-  writeLocalShopSettings(next);
-
-  const remote: Record<string, unknown> = {
+  const stored: StoredShopSettings = {
+    ...next,
     updatedAt: Date.now(),
-    shopName: next.shopName,
-    shopNameTh: next.shopNameTh,
-    shopAddress: next.shopAddress,
-    shopPhone: next.shopPhone,
-    promptPayId: next.promptPayId,
-    autoPrintReceipt: next.autoPrintReceipt,
-    receiptStaffName: next.receiptStaffName,
-    receiptFooterNote: next.receiptFooterNote,
+    syncPending: true,
   };
-  try {
-    await setDoc(metaPosRef(getDb()), remote, { merge: true });
-  } catch (err) {
-    throw new Error(mapFirestoreError(err, "บันทึกตั้งค่า POS"));
-  }
+  writeStored(stored);
+  notifyLocal(next);
+
+  const synced = await flushPosShopSettingsUpload();
+  return { savedLocal: true, synced };
 }

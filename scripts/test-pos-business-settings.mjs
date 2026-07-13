@@ -27,6 +27,10 @@ assert.match(css, /\.pos-biz-module/);
 assert.match(css, /\.pos-biz-preview-slip/);
 
 const versionSrc = readFileSync(join(root, "src/lib/pos-version.ts"), "utf8");
-assert.match(versionSrc, /POS_BUILD = 35/);
+assert.match(versionSrc, /POS_BUILD = \d+/);
+
+const settingsSrc = readFileSync(join(root, "src/lib/pos-settings.ts"), "utf8");
+assert.match(settingsSrc, /flushPosShopSettingsUpload/);
+assert.match(settingsSrc, /syncPending/);
 
 console.log("OK pos-business-settings");

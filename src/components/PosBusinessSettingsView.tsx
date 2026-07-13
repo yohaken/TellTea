@@ -77,7 +77,7 @@ export function PosBusinessSettingsView() {
     setError(null);
     setSavedMsg(null);
     try {
-      await savePosShopSettings({
+      const result = await savePosShopSettings({
         shopName,
         shopNameTh,
         shopAddress,
@@ -85,7 +85,11 @@ export function PosBusinessSettingsView() {
         receiptStaffName,
         receiptFooterNote,
       });
-      setSavedMsg("บันทึกข้อมูลบนบิลแล้ว");
+      setSavedMsg(
+        result.synced
+          ? "บันทึกแล้ว · อัปขึ้น Firebase แล้ว"
+          : "บันทึกในเครื่องแล้ว · จะอัปขึ้น Firebase ทีหลัง",
+      );
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -99,8 +103,12 @@ export function PosBusinessSettingsView() {
     setError(null);
     setSavedMsg(null);
     try {
-      await savePosShopSettings({ promptPayId, autoPrintReceipt });
-      setSavedMsg("บันทึกชำระเงินแล้ว");
+      const result = await savePosShopSettings({ promptPayId, autoPrintReceipt });
+      setSavedMsg(
+        result.synced
+          ? "บันทึกแล้ว · อัปขึ้น Firebase แล้ว"
+          : "บันทึกในเครื่องแล้ว · จะอัปขึ้น Firebase ทีหลัง",
+      );
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -126,7 +134,9 @@ export function PosBusinessSettingsView() {
         {tab === "bill" ? (
           <div className="pos-biz-layout">
             <form className="pos-biz-form" onSubmit={(e) => void saveBill(e)}>
-              <p className="muted pos-biz-lead">ชื่อ · ที่อยู่ · โทร — แสดงหัวใบเสร็จและสรุปกะ</p>
+              <p className="muted pos-biz-lead">
+                ชื่อ · ที่อยู่ · โทร — แสดงหัวใบเสร็จและสรุปกะ · บันทึกในเครื่องก่อน แล้วค่อยอัป Firebase
+              </p>
               <div className="pos-biz-grid">
                 <label>
                   <span>ชื่อร้าน (EN)</span>
