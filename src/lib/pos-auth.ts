@@ -1,9 +1,10 @@
-import { signInAnonymously, signInWithCustomToken } from "firebase/auth";
+import { onAuthStateChanged, signInAnonymously, signInWithCustomToken, type User } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { getPosFirebaseAuth, getPosFirebaseFunctions } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
 
 const POS_DEVICE_ID_KEY = "telltea-pos-device-id";
+const AUTH_RESTORE_MS = 2_500;
 
 function getStoredDeviceId(): string | null {
   if (typeof localStorage === "undefined") return null;
@@ -17,18 +18,35 @@ function storeDeviceId(id: string) {
   }
 }
 
-async function isCurrentPosUser(): Promise<boolean> {
-  const auth = getPosFirebaseAuth();
-  const user = auth.currentUser;
-  if (!user?.uid) return false;
+async function userIsPosDevice(user: User): Promise<boolean> {
   try {
     const token = await user.getIdTokenResult();
     if (token.claims.posDevice === true) return true;
-    if (token.signInProvider === "anonymous") return true;
+    return token.signInProvider === "anonymous";
   } catch {
     return false;
   }
-  return false;
+}
+
+function waitForRestoredAuthUser(timeoutMs = AUTH_RESTORE_MS): Promise<User | null> {
+  const auth = getPosFirebaseAuth();
+  if (auth.currentUser) return Promise.resolve(auth.currentUser);
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (user: User | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      unsub();
+      resolve(user);
+    };
+
+    const timer = window.setTimeout(() => finish(auth.currentUser), timeoutMs);
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) finish(user);
+    });
+  });
 }
 
 async function signInPosWithCustomToken(): Promise<string> {
@@ -50,13 +68,22 @@ async function signInPosWithCustomToken(): Promise<string> {
   return cred.user.uid;
 }
 
+/** Kick IndexedDB auth restore as early as possible (POS layout). */
+export function warmPosAuth(): void {
+  void waitForRestoredAuthUser();
+}
+
 /** Dedicated POS tablets — auto sign-in, isolated from หลังร้าน Google login. */
 export async function ensurePosDeviceAuth(): Promise<string> {
   const auth = getPosFirebaseAuth();
 
-  if (await isCurrentPosUser()) {
-    await auth.currentUser!.getIdToken(true);
-    return auth.currentUser!.uid;
+  const restored = await waitForRestoredAuthUser();
+  if (restored && (await userIsPosDevice(restored))) {
+    return restored.uid;
+  }
+
+  if (auth.currentUser && (await userIsPosDevice(auth.currentUser))) {
+    return auth.currentUser.uid;
   }
 
   try {

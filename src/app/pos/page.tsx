@@ -14,6 +14,7 @@ import {
   heartbeatPosDevice,
   getPosConnectivity,
   registerPosDevice,
+  optimisticPosDevice,
   subscribePosDevice,
   type PosDevice,
 } from "@/lib/pos-devices";
@@ -106,8 +107,6 @@ export default function PosPage() {
       });
   }, []);
 
-const POS_BOOT_TIMEOUT_MS = 20_000;
-
   const boot = useCallback(async () => {
     if (!isFirebaseConfigured()) {
       setStatus("error");
@@ -118,34 +117,32 @@ const POS_BOOT_TIMEOUT_MS = 20_000;
     setStatus("connecting");
     setError(null);
 
-    let finished = false;
-    const timeout = window.setTimeout(() => {
-      if (finished) return;
-      finished = true;
-      setStatus("error");
-      setError("เชื่อมต่อนานเกินไป — ตรวจ Wi‑Fi แล้วกดลองใหม่");
-    }, POS_BOOT_TIMEOUT_MS);
-
     try {
       const authUid = await ensurePosDeviceAuth();
       deviceIdRef.current = authUid;
-      startPosMenuPreload();
-      const registered = await registerPosDevice(authUid);
-      setDevice(registered);
+
+      setDevice(optimisticPosDevice(authUid));
       setLastHeartbeatAt(Date.now());
+      setStatus("ready");
+
+      startPosMenuPreload();
+
+      void registerPosDevice(authUid)
+        .then((registered) => {
+          setDevice(registered);
+          setLastHeartbeatAt(Date.now());
+        })
+        .catch(() => {
+          /* heartbeat retries on interval */
+        });
+
+      void getCurrentPosSession(authUid).then(setSession);
       void seedPosMenuIfEmpty().catch(() => {
         /* preload + sell view retry */
       });
-      const cur = await getCurrentPosSession(authUid);
-      setSession(cur);
-      finished = true;
-      setStatus("ready");
     } catch (err) {
-      finished = true;
       setStatus("error");
       setError((err as Error).message || "เชื่อมต่อเครื่อง POS ไม่สำเร็จ");
-    } finally {
-      window.clearTimeout(timeout);
     }
   }, []);
 
@@ -288,8 +285,14 @@ const POS_BOOT_TIMEOUT_MS = 20_000;
   }, [sellBusy, flushPendingForceReload]);
 
   const connectivity = device
-    ? getPosConnectivity(device.lastSeenAt, lastHeartbeatAt, online)
-    : { deviceOnline: false, pill: "offline-signal" as const, label: "รอสัญญาณ" };
+    ? getPosConnectivity(
+        device.lastSeenAt,
+        lastHeartbeatAt,
+        online,
+        Date.now(),
+        status === "connecting",
+      )
+    : { deviceOnline: false, pill: "offline-signal" as const, label: "กำลังเชื่อม" };
   const hardware = getPosHardwareSnapshot(online);
 
   const queueCount = syncSnap.pendingCount + syncSnap.failedCount;
@@ -376,7 +379,7 @@ const POS_BOOT_TIMEOUT_MS = 20_000;
       {status === "boot" || status === "connecting" ? (
         <main className="pos-lite-main">
           <h1>กำลังเชื่อมต่อ...</h1>
-          <p className="muted">ลงทะเบียนเครื่องและส่งสัญญาณไปยัง TellTea</p>
+          <p className="muted">เปิดเครื่อง POS — ครั้งถัดไปจะเร็วขึ้น</p>
         </main>
       ) : null}
 
