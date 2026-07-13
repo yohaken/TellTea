@@ -50,6 +50,12 @@ export type OtEntry = {
   /** @deprecated ใช้ imageUrls — เก็บรูปแรกเพื่อ backward compat */
   imageUrl?: string;
   imageUrls?: string[];
+  checkIdOpen?: string;
+  checkIdClose?: string;
+  entryMode?: "single_batch" | "planned_then_closed" | "close_only";
+  shiftClosedAt?: number;
+  openSopSubmittedAt?: number;
+  closeSopSubmittedAt?: number;
   status: OtStatus;
   createdBy: string;
   createdAt: number;
@@ -73,6 +79,12 @@ export type OtEntryInput = {
   bonusRate: number;
   imageUrl?: string;
   imageUrls?: string[];
+  checkIdOpen?: string;
+  checkIdClose?: string;
+  entryMode?: OtEntry["entryMode"];
+  shiftClosedAt?: number;
+  openSopSubmittedAt?: number;
+  closeSopSubmittedAt?: number;
   createdBy: string;
 };
 
@@ -180,6 +192,14 @@ function mapOtEntryDoc(id: string, data: Record<string, unknown>): OtEntry {
     bonusRate: Number(data.bonusRate) || DEFAULT_OT_BONUS_RATE,
     imageUrl: imageUrls[0],
     imageUrls,
+    checkIdOpen: data.checkIdOpen ? String(data.checkIdOpen) : undefined,
+    checkIdClose: data.checkIdClose ? String(data.checkIdClose) : undefined,
+    entryMode: data.entryMode as OtEntry["entryMode"],
+    shiftClosedAt: data.shiftClosedAt != null ? Number(data.shiftClosedAt) : undefined,
+    openSopSubmittedAt:
+      data.openSopSubmittedAt != null ? Number(data.openSopSubmittedAt) : undefined,
+    closeSopSubmittedAt:
+      data.closeSopSubmittedAt != null ? Number(data.closeSopSubmittedAt) : undefined,
     status: normalizeOtStatus(data.status),
     createdBy: String(data.createdBy || ""),
     createdAt: Number(data.createdAt) || 0,
@@ -328,6 +348,12 @@ export async function addOtEntry(input: OtEntryInput): Promise<string> {
     bonusRate: Number(input.bonusRate) || DEFAULT_OT_BONUS_RATE,
     imageUrl: urls[0] || "",
     imageUrls: urls,
+    checkIdOpen: input.checkIdOpen || null,
+    checkIdClose: input.checkIdClose || null,
+    entryMode: input.entryMode || null,
+    shiftClosedAt: input.shiftClosedAt ?? null,
+    openSopSubmittedAt: input.openSopSubmittedAt ?? null,
+    closeSopSubmittedAt: input.closeSopSubmittedAt ?? null,
     status: "pending" as OtStatus,
     createdBy: input.createdBy,
     createdAt: now,
@@ -357,6 +383,12 @@ export async function updateOtEntry(
       | "bonusRate"
       | "imageUrl"
       | "imageUrls"
+      | "checkIdOpen"
+      | "checkIdClose"
+      | "entryMode"
+      | "shiftClosedAt"
+      | "openSopSubmittedAt"
+      | "closeSopSubmittedAt"
       | "status"
     >
   >,
@@ -396,6 +428,12 @@ export async function updateOtEntry(
     next.imageUrls = url ? [url] : [];
   }
   if (patch.status != null) next.status = patch.status;
+  if (patch.checkIdOpen != null) next.checkIdOpen = patch.checkIdOpen;
+  if (patch.checkIdClose != null) next.checkIdClose = patch.checkIdClose;
+  if (patch.entryMode != null) next.entryMode = patch.entryMode;
+  if (patch.shiftClosedAt != null) next.shiftClosedAt = patch.shiftClosedAt;
+  if (patch.openSopSubmittedAt != null) next.openSopSubmittedAt = patch.openSopSubmittedAt;
+  if (patch.closeSopSubmittedAt != null) next.closeSopSubmittedAt = patch.closeSopSubmittedAt;
   await updateDoc(ref, next);
 }
 

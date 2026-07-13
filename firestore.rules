@@ -292,16 +292,18 @@ service cloud.firestore {
 
     // SmartCheck SOP — บันทึกแนวตั้งต่อรายการ
     match /checklistItems/{id} {
-      allow read: if hasPerm('checklist');
+      allow read: if hasPerm('checklist') || hasPerm('otBonus');
       allow write: if isOwner();
     }
     match /checklistRecords/{id} {
-      allow read: if hasPerm('checklist');
-      allow create: if hasPerm('checklist')
+      allow read: if hasPerm('checklist') || hasPerm('otBonus');
+      allow create: if (hasPerm('checklist') || hasPerm('otBonus'))
         && request.resource.data.createdBy == actorId()
         && request.resource.data.checkId is string
         && request.resource.data.itemName is string
-        && request.resource.data.status in ['pass', 'fail'];
+        && request.resource.data.status in ['pass', 'fail']
+        && (!request.resource.data.keys().hasAny(['sessionKind'])
+          || request.resource.data.sessionKind in ['opening', 'closing', 'full']);
       allow delete: if isOwner();
       allow update: if false;
     }

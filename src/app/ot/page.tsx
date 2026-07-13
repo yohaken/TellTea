@@ -45,10 +45,35 @@ import {
   type OtSlotTarget,
 } from "@/lib/ot-grid";
 import type { StaffMember } from "@/lib/types";
+import { ShiftOwnerFlags, ShiftProgressSteps, ShiftTodayBanner } from "@/components/ShiftProgressSteps";
+import {
+  buildSopDrafts,
+  ShiftSopSection,
+  sopDraftsComplete,
+  type SopDraftItem,
+} from "@/components/ShiftSopSection";
+import {
+  listActiveChecklistItems,
+  subscribeChecklistRecords,
+  type ChecklistItem,
+  type ChecklistRecord,
+} from "@/lib/checklist";
+import { saveShiftClose } from "@/lib/shift-close";
+import {
+  computeLiveShiftProgress,
+  computeShiftProgress,
+  closingItemsFromCatalog,
+  getCurrentShiftId,
+  labelShiftSlotStatus,
+  openingItemsFromCatalog,
+  ownerQualityHints,
+  todayShiftBannerLabel,
+} from "@/lib/shift-session";
 import {
   formatDateShort,
   formatPlainNumber,
   parseDateInput,
+  startOfLocalDay,
   todayInputValue,
 } from "@/lib/utils";
 
@@ -88,6 +113,29 @@ function otFormulaText(entry: OtEntry, computed: ReturnType<typeof computeOtBonu
   );
 }
 
+function draftsFromCheckRecords(
+  items: ChecklistItem[],
+  records: ChecklistRecord[],
+  checkId?: string,
+): SopDraftItem[] {
+  if (!checkId) return buildSopDrafts(items);
+  const byItem = new Map(
+    records.filter((r) => r.checkId === checkId).map((r) => [r.itemId, r]),
+  );
+  return items.map((item) => {
+    const hit = byItem.get(item.id);
+    if (!hit) {
+      return { itemId: item.id, itemName: item.name, status: "pending" as const, remark: "" };
+    }
+    return {
+      itemId: item.id,
+      itemName: item.name,
+      status: hit.status,
+      remark: hit.remark || "",
+    };
+  });
+}
+
 function entryIncludesName(entry: OtEntry, name: string) {
   if (!name.trim()) return false;
   const needle = name.trim().toLowerCase();
@@ -117,11 +165,18 @@ function OtView() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<OtEntry | null>(null);
   const [slotDraft, setSlotDraft] = useState<{ date: number; shift: OtShiftId } | null>(null);
+  const [checkItems, setCheckItems] = useState<ChecklistItem[]>([]);
+  const [checkRecords, setCheckRecords] = useState<ChecklistRecord[]>([]);
 
   async function reloadCatalog() {
-    const [emps, settings] = await Promise.all([listActiveEmployees(), getOtSettings()]);
+    const [emps, settings, items] = await Promise.all([
+      listActiveEmployees(),
+      getOtSettings(),
+      listActiveChecklistItems(),
+    ]);
     setWorkers(emps);
     setBonusRate(settings.bonusRate);
+    setCheckItems(items);
   }
 
   useEffect(() => {
@@ -137,12 +192,41 @@ function OtView() {
       .catch((err) => setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ"))
       .finally(() => setLoading(false));
 
-    const unsub = subscribeOtEntries(
+    const unsubOt = subscribeOtEntries(
       (rows) => setEntries(rows),
       (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
     );
-    return unsub;
+    const unsubCheck = subscribeChecklistRecords(
+      (rows) => setCheckRecords(rows),
+      (err) => setError(err.message || "โหลด SOP ไม่สำเร็จ"),
+    );
+    return () => {
+      unsubOt();
+      unsubCheck();
+    };
   }, [staff]);
+
+  const openingItems = useMemo(() => openingItemsFromCatalog(checkItems), [checkItems]);
+  const closingItems = useMemo(() => closingItemsFromCatalog(checkItems), [checkItems]);
+
+  const todayShift = getCurrentShiftId();
+  const todayMs = startOfLocalDay();
+  const todayEntry = useMemo(
+    () => findOtEntryForSlot(entries, todayMs, todayShift),
+    [entries, todayMs, todayShift],
+  );
+  const todayProgress = useMemo(
+    () =>
+      computeShiftProgress({
+        entry: todayEntry,
+        records: checkRecords,
+        openingItems,
+        closingItems,
+        date: todayMs,
+        shift: todayShift,
+      }),
+    [todayEntry, checkRecords, openingItems, closingItems, todayMs, todayShift],
+  );
 
   useBodyScrollLock(formOpen);
 
@@ -183,14 +267,30 @@ function OtView() {
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading ? (
-        <OtTable
-          entries={entries}
-          staff={staff}
-          isOwner={isOwner}
-          onEditSlot={openSlot}
-          onEdit={openEdit}
-          onError={setError}
-        />
+        <>
+          <ShiftTodayBanner
+            shiftLabel={todayShiftBannerLabel(todayShift)}
+            progress={todayProgress}
+            onOpen={() =>
+              openSlot({
+                date: todayMs,
+                shift: todayShift,
+                entry: todayEntry,
+              })
+            }
+          />
+          <OtTable
+            entries={entries}
+            checkRecords={checkRecords}
+            openingItems={openingItems}
+            closingItems={closingItems}
+            staff={staff}
+            isOwner={isOwner}
+            onEditSlot={openSlot}
+            onEdit={openEdit}
+            onError={setError}
+          />
+        </>
       ) : null}
 
       {formOpen && !loading ? (
@@ -201,8 +301,12 @@ function OtView() {
               entry={editing}
               slotDraft={slotDraft}
               allEntries={entries}
+              checkRecords={checkRecords}
+              openingItems={openingItems}
+              closingItems={closingItems}
               workers={workers}
               staff={staff}
+              isOwner={isOwner}
               bonusRate={bonusRate}
               createdBy={actorId}
               onError={setError}
@@ -226,8 +330,12 @@ function OtEntryForm({
   entry,
   slotDraft,
   allEntries,
+  checkRecords,
+  openingItems,
+  closingItems,
   workers,
   staff,
+  isOwner,
   bonusRate,
   createdBy,
   onError,
@@ -237,8 +345,12 @@ function OtEntryForm({
   entry: OtEntry | null;
   slotDraft: { date: number; shift: OtShiftId } | null;
   allEntries: OtEntry[];
+  checkRecords: ChecklistRecord[];
+  openingItems: ChecklistItem[];
+  closingItems: ChecklistItem[];
   workers: Employee[];
   staff: StaffMember | null;
+  isOwner: boolean;
   bonusRate: number;
   createdBy: string;
   onError: (msg: string) => void;
@@ -277,9 +389,19 @@ function OtEntryForm({
   const [addReason, setAddReason] = useState(entry?.addReason || "");
   const [imageUrls, setImageUrls] = useState<string[]>(() => getOtImageUrls(entry));
   const [detailsOpen, setDetailsOpen] = useState(() =>
-    entry ? hasOtQuantities(entry) : false,
+    entry ? hasOtQuantities(entry) || isOtEntryPlanned(entry) : false,
+  );
+  const [openingDrafts, setOpeningDrafts] = useState<SopDraftItem[]>(() =>
+    draftsFromCheckRecords(openingItems, checkRecords, entry?.checkIdOpen),
+  );
+  const [closingDrafts, setClosingDrafts] = useState<SopDraftItem[]>(() =>
+    draftsFromCheckRecords(closingItems, checkRecords, entry?.checkIdClose),
   );
   const [busy, setBusy] = useState(false);
+
+  const dateMs = parseDateInput(date);
+  const slotEntry =
+    entry || findOtEntryForSlot(allEntries, dateMs, shift);
 
   const rate = entry?.bonusRate ?? bonusRate;
   const preview = useMemo(() => {
@@ -309,12 +431,45 @@ function OtEntryForm({
     entry,
   ]);
 
+  const liveProgress = useMemo(
+    () =>
+      computeLiveShiftProgress({
+        workersSet: selectedWorkers.length > 0,
+        openingItems,
+        closingItems,
+        openingDraftsComplete: sopDraftsComplete(openingDrafts),
+        closingDraftsComplete: sopDraftsComplete(closingDrafts),
+        otComplete: preview.summaryQty > 0,
+        quality: slotEntry ? computeShiftProgress({
+          entry: slotEntry,
+          records: checkRecords,
+          openingItems,
+          closingItems,
+          date: dateMs,
+          shift,
+        }).quality : null,
+      }),
+    [
+      selectedWorkers,
+      openingItems,
+      closingItems,
+      openingDrafts,
+      closingDrafts,
+      preview.summaryQty,
+      slotEntry,
+      checkRecords,
+      dateMs,
+      shift,
+    ],
+  );
+  const ownerHints = isOwner ? ownerQualityHints(liveProgress.quality) : [];
+
   const formTitle = locked
     ? "ดูรายการ (จ่ายแล้ว)"
     : detailsOpen
       ? entry && !plannedEntry
-        ? "แก้ไขยอดชง"
-        : "ปิดกะ — ใส่ยอด"
+        ? "แก้ไขปิดกะ"
+        : "ปิดกะ"
       : plannedEntry
         ? "แก้ไขแผนกะ"
         : "วางแผนกะ";
@@ -408,13 +563,30 @@ function OtEntryForm({
       onError("ยังไม่ใส่ยอด — กรอกเครื่องหรือรายการอื่นก่อนปิดกะ");
       return;
     }
+    if (liveProgress.missingLabels.length > 0) {
+      onError(`ยังไม่ครบ — เหลือ: ${liveProgress.missingLabels.join(" · ")}`);
+      return;
+    }
+    const inspector = chosen[0]!;
+    const hadPlannedBefore = !!(entry && isOtEntryPlanned(entry));
     setBusy(true);
     onError("");
     try {
-      await persist(buildPayload(chosen));
+      await saveShiftClose({
+        entry: slotEntry,
+        allEntries,
+        payload: { ...buildPayload(chosen), createdBy },
+        openingDrafts,
+        closingDrafts,
+        openingItemsCount: openingItems.length,
+        closingItemsCount: closingItems.length,
+        inspector: { id: inspector.id, name: inspector.name },
+        hadPlannedBefore,
+        findExistingForSlot: findOtEntryForSlot,
+      });
       onSaved();
     } catch (err) {
-      onError((err as Error).message || "บันทึกยอดไม่สำเร็จ");
+      onError((err as Error).message || "บันทึกปิดกะไม่สำเร็จ");
     } finally {
       setBusy(false);
     }
@@ -431,6 +603,9 @@ function OtEntryForm({
           <X size={18} />
         </button>
       </div>
+
+      {detailsOpen ? <ShiftProgressSteps progress={liveProgress} /> : null}
+      {ownerHints.length ? <ShiftOwnerFlags hints={ownerHints} /> : null}
 
       <div className="ot-form-body">
         {locked ? (
@@ -491,8 +666,29 @@ function OtEntryForm({
 
         {!locked && !detailsOpen ? (
           <p className="muted form-hint-inline ot-form-plan-hint">
-            วางแผนล่วงหน้าได้ — ใส่แค่ชื่อ · ยอดแก้วค่อยกรอกตอนปิดกะ
+            วางแผนล่วงหน้าได้ — ใส่แค่ชื่อ · หรือกดปิดกะเพื่อกรอกครบในครั้งเดียว
           </p>
+        ) : null}
+
+        {detailsOpen ? (
+          <>
+            <ShiftSopSection
+              title="เช็คเปิดกะ"
+              hint="กรอกตอนปิดกะได้ — ติ๊กให้ครบ"
+              drafts={openingDrafts}
+              disabled={locked}
+              onChange={setOpeningDrafts}
+              onError={onError}
+            />
+            <ShiftSopSection
+              title="เช็คปิดกะ"
+              hint="เช็คก่อนเลิกกะ"
+              drafts={closingDrafts}
+              disabled={locked}
+              onChange={setClosingDrafts}
+              onError={onError}
+            />
+          </>
         ) : null}
 
         {!locked && detailsOpen ? (
@@ -586,7 +782,7 @@ function OtEntryForm({
                   disabled={busy}
                   onClick={() => setDetailsOpen(true)}
                 >
-                  ใส่ยอดปิดกะ
+                  ปิดกะ — กรอกครบ
                 </button>
               </>
             ) : (
@@ -594,10 +790,14 @@ function OtEntryForm({
                 <button
                   type="button"
                   className="primary-btn"
-                  disabled={busy || !workers.length}
+                  disabled={busy || !workers.length || liveProgress.missingLabels.length > 0}
                   onClick={() => void onSaveClose()}
                 >
-                  {busy ? "กำลังบันทึก..." : "บันทึกยอด"}
+                  {busy
+                    ? "กำลังบันทึก..."
+                    : liveProgress.missingLabels.length
+                      ? `บันทึกปิดกะ — เหลือ ${liveProgress.missingLabels.length}`
+                      : "บันทึกปิดกะ"}
                 </button>
                 {plannedEntry || !entry ? (
                   <button
@@ -623,6 +823,9 @@ function OtEntryForm({
 
 function OtTable({
   entries,
+  checkRecords,
+  openingItems,
+  closingItems,
   staff,
   isOwner,
   onEditSlot,
@@ -630,6 +833,9 @@ function OtTable({
   onError,
 }: {
   entries: OtEntry[];
+  checkRecords: ChecklistRecord[];
+  openingItems: ChecklistItem[];
+  closingItems: ChecklistItem[];
   staff: StaffMember | null;
   isOwner: boolean;
   onEditSlot: (target: OtSlotTarget) => void;
@@ -766,6 +972,9 @@ function OtTable({
       {tableView === "sheet" ? (
         <OtSheetTable
           groups={dateGroups}
+          checkRecords={checkRecords}
+          openingItems={openingItems}
+          closingItems={closingItems}
           isOwner={isOwner}
           selected={selected}
           allVisibleSelected={allVisibleSelected}
@@ -814,6 +1023,9 @@ function OtTable({
 
 function OtSheetTable({
   groups,
+  checkRecords,
+  openingItems,
+  closingItems,
   isOwner,
   selected,
   allVisibleSelected,
@@ -825,6 +1037,9 @@ function OtSheetTable({
   onViewPhoto,
 }: {
   groups: OtDayGroup[];
+  checkRecords: ChecklistRecord[];
+  openingItems: ChecklistItem[];
+  closingItems: ChecklistItem[];
   isOwner: boolean;
   selected: Set<string>;
   allVisibleSelected: boolean;
@@ -897,6 +1112,16 @@ function OtSheetTable({
                 const row = slot.entry;
                 const isEmpty = !row;
                 const isPlanned = row ? isOtEntryPlanned(row) : false;
+                const slotProgress = computeShiftProgress({
+                  entry: row,
+                  records: checkRecords,
+                  openingItems,
+                  closingItems,
+                  date: group.date,
+                  shift: slot.shiftId,
+                });
+                const slotStatus = slotProgress.status;
+                const slotHints = isOwner ? ownerQualityHints(slotProgress.quality) : [];
                 const c = row ? computeOtBonus(row) : null;
                 const statusClass =
                   row?.status === "paid"
@@ -913,10 +1138,18 @@ function OtSheetTable({
                         ? futureDay
                           ? "ot-slot-empty ot-day-future row-out"
                           : "ot-slot-empty row-out"
-                        : isPlanned
+                        : slotStatus === "planned"
                           ? futureDay
                             ? "ot-slot-planned ot-day-future row-out"
                             : "ot-slot-planned row-out"
+                        : slotStatus === "partial"
+                          ? futureDay
+                            ? "ot-slot-partial ot-day-future row-out"
+                            : "ot-slot-partial row-out"
+                        : slotStatus === "complete"
+                          ? futureDay
+                            ? "ot-slot-complete ot-day-future row-out"
+                            : "ot-slot-complete row-out"
                         : isOtEntryLocked(row!)
                           ? "row-out prod-row-paid"
                           : futureDay
@@ -949,7 +1182,19 @@ function OtSheetTable({
                     ) : null}
                     <td className="ot-col-worker">
                       {w1}
-                      {isPlanned ? <span className="ot-planned-pill">วางแผน</span> : null}
+                      {!isEmpty ? (
+                        <span className={`ot-shift-pill is-${slotStatus}`}>
+                          {labelShiftSlotStatus(slotStatus)}
+                        </span>
+                      ) : null}
+                      {isPlanned && slotStatus === "planned" ? (
+                        <span className="ot-planned-pill">วางแผน</span>
+                      ) : null}
+                      {slotHints.length ? (
+                        <span className="ot-owner-hint-pill" title={slotHints.join(" · ")}>
+                          ⚠
+                        </span>
+                      ) : null}
                     </td>
                     <td className="ot-col-worker">{w2}</td>
                     <td className="ot-col-shift">
