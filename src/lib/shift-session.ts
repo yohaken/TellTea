@@ -244,7 +244,22 @@ export function ownerQualityHints(flags: ShiftQualityFlags | null): string[] {
 }
 
 export function todayShiftBannerLabel(shift: OtShiftId) {
-  return `กะ${labelOtShift(shift).split(" ")[0] || labelOtShift(shift)} วันนี้`;
+  const word = labelOtShift(shift).split(" ")[0] || labelOtShift(shift);
+  return `กะ${word}`;
+}
+
+/** ข้อความสั้นสำหรับแถบกะวันนี้ — ไม่ลิสต์ยาว */
+export function shiftBannerStatusShort(progress: ShiftProgress): string {
+  if (progress.status === "complete") return "ปิดกะครบแล้ว";
+  if (progress.status === "empty") return "ยังไม่ปิดกะ";
+  if (progress.status === "planned") return "วางแผนแล้ว — รอปิดกะ";
+  return `ค้าง ${progress.missingLabels.length} ข้อ`;
+}
+
+export function shiftCloseButtonLabel(progress: ShiftProgress): string {
+  if (progress.status === "complete") return "ดูรายการ";
+  if (progress.status === "empty") return "ปิดกะ";
+  return `ปิดกะ (${progress.missingLabels.length})`;
 }
 
 export function filterRecordsForShift(

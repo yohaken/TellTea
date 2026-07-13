@@ -1,12 +1,24 @@
 "use client";
 
+/**
+ * UI หน้าปิดกะ / SOP — หลักการแสดงผล (อ้างอิงเวลาแก้ layout)
+ * - อ่านได้ใน 1–2 วินาที ข้อความสั้น ไม่ลิสต์ยาว
+ * - เรียบง่าย ไม่การ์ดใหญ่ ไม่ซ้อนปุ่มกับข้อความ
+ * - มือถือก่อน: เรียงแนวตั้ง ปุ่มเต็มความกว้างด้านล่าง
+ * - รายละเอียดเต็มอยู่ในฟอร์มปิดกะ ไม่ยัดในหน้าตาราง
+ */
+
 import type { ShiftProgress } from "@/lib/shift-session";
+import {
+  shiftBannerStatusShort,
+  shiftCloseButtonLabel,
+} from "@/lib/shift-session";
 
 const STEPS = [
   { key: "workersSet", label: "พนักงาน" },
-  { key: "openSopComplete", label: "เช็คเปิดกะ" },
-  { key: "closeSopComplete", label: "เช็คปิดกะ" },
-  { key: "otComplete", label: "ยอดชง" },
+  { key: "openSopComplete", label: "เปิดกะ" },
+  { key: "closeSopComplete", label: "ปิดกะ" },
+  { key: "otComplete", label: "ยอด" },
 ] as const;
 
 export function ShiftProgressSteps({
@@ -16,34 +28,51 @@ export function ShiftProgressSteps({
   progress: ShiftProgress;
   compact?: boolean;
 }) {
-  return (
-    <div className={`shift-progress${compact ? " is-compact" : ""}`}>
-      <div className="shift-progress-head">
-        <span className="shift-progress-title">
-          ความคืบหน้า {progress.completedCount}/{progress.totalSteps}
-        </span>
+  if (compact) {
+    return (
+      <div className="shift-progress is-compact" aria-label="ความคืบหน้าปิดกะ">
+        <div className="shift-progress-chips" role="list">
+          {STEPS.map((step) => {
+            const done = progress[step.key];
+            return (
+              <span
+                key={step.key}
+                role="listitem"
+                className={`shift-chip${done ? " is-done" : ""}`}
+              >
+                {done ? "✓" : "○"} {step.label}
+              </span>
+            );
+          })}
+        </div>
         {progress.missingLabels.length ? (
-          <span className="shift-progress-missing muted">
-            เหลือ: {progress.missingLabels.join(" · ")}
-          </span>
+          <p className="shift-progress-hint muted">เหลือ {progress.missingLabels.length} ข้อ</p>
         ) : (
-          <span className="shift-progress-done">ครบแล้ว</span>
+          <p className="shift-progress-hint is-done">ครบแล้ว</p>
         )}
       </div>
-      <div className="shift-progress-steps" role="list">
+    );
+  }
+
+  return (
+    <div className="shift-progress">
+      <p className="shift-progress-title">
+        ความคืบหน้า {progress.completedCount}/{progress.totalSteps}
+        {progress.missingLabels.length ? (
+          <span className="muted"> · เหลือ {progress.missingLabels.length} ข้อ</span>
+        ) : null}
+      </p>
+      <div className="shift-progress-chips" role="list">
         {STEPS.map((step) => {
           const done = progress[step.key];
           return (
-            <div
+            <span
               key={step.key}
               role="listitem"
-              className={`shift-progress-step${done ? " is-done" : " is-pending"}`}
+              className={`shift-chip${done ? " is-done" : ""}`}
             >
-              <span className="shift-progress-dot" aria-hidden>
-                {done ? "✓" : "○"}
-              </span>
-              <span>{step.label}</span>
-            </div>
+              {done ? "✓" : "○"} {step.label}
+            </span>
           );
         })}
       </div>
@@ -60,29 +89,21 @@ export function ShiftTodayBanner({
   progress: ShiftProgress;
   onOpen: () => void;
 }) {
-  if (progress.status === "complete") {
-    return (
-      <div className="shift-today-banner is-complete">
-        <strong>{shiftLabel}</strong>
-        <span>ปิดกะครบแล้ว ✓</span>
-      </div>
-    );
-  }
+  const done = progress.status === "complete";
 
   return (
-    <div className="shift-today-banner is-pending">
-      <div>
-        <strong>{shiftLabel}</strong>
-        <span className="muted">
-          {progress.status === "empty"
-            ? "ยังไม่ปิดกะ"
-            : progress.status === "planned"
-              ? "วางแผนแล้ว — รอปิดกะ"
-              : `ค้าง ${progress.missingLabels.join(" · ")}`}
+    <div className={`shift-today-strip${done ? " is-complete" : ""}`}>
+      <div className="shift-today-text">
+        <span className="shift-today-title">
+          {shiftLabel}
+          <span className="shift-today-sub">วันนี้</span>
+        </span>
+        <span className={`shift-today-status${done ? " is-done" : ""}`}>
+          {shiftBannerStatusShort(progress)}
         </span>
       </div>
-      <button type="button" className="primary-btn shift-today-btn" onClick={onOpen}>
-        {progress.status === "empty" ? "ปิดกะ" : `ปิดกะ — เหลือ ${progress.missingLabels.length}`}
+      <button type="button" className="shift-today-action" onClick={onOpen}>
+        {shiftCloseButtonLabel(progress)}
       </button>
     </div>
   );
@@ -91,12 +112,8 @@ export function ShiftTodayBanner({
 export function ShiftOwnerFlags({ hints }: { hints: string[] }) {
   if (!hints.length) return null;
   return (
-    <div className="shift-owner-flags" aria-label="สัญญาณคุณภาพ (เจ้าของ)">
-      {hints.map((hint) => (
-        <span key={hint} className="shift-owner-flag">
-          ⚠ {hint}
-        </span>
-      ))}
-    </div>
+    <p className="shift-owner-line muted" aria-label="สัญญาณคุณภาพ (เจ้าของ)">
+      เจ้าของ: {hints.join(" · ")}
+    </p>
   );
 }

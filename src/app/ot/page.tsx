@@ -604,7 +604,7 @@ function OtEntryForm({
         </button>
       </div>
 
-      {detailsOpen ? <ShiftProgressSteps progress={liveProgress} /> : null}
+      {detailsOpen ? <ShiftProgressSteps progress={liveProgress} compact /> : null}
       {ownerHints.length ? <ShiftOwnerFlags hints={ownerHints} /> : null}
 
       <div className="ot-form-body">
@@ -796,7 +796,7 @@ function OtEntryForm({
                   {busy
                     ? "กำลังบันทึก..."
                     : liveProgress.missingLabels.length
-                      ? `บันทึกปิดกะ — เหลือ ${liveProgress.missingLabels.length}`
+                      ? `บันทึก (เหลือ ${liveProgress.missingLabels.length})`
                       : "บันทึกปิดกะ"}
                 </button>
                 {plannedEntry || !entry ? (
