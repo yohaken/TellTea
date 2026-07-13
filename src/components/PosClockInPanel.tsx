@@ -1,14 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getCurrentShiftId } from "@/lib/shift-session";
-import { labelOtShift, type OtShiftId } from "@/lib/ot";
-
-const SHIFT_WINDOW: Record<OtShiftId, string> = {
-  late: "00:18 – 07:00",
-  morning: "07:00 – 17:00",
-  evening: "17:00 – 00:18",
-};
 
 function formatLiveClock(now: Date) {
   return now.toLocaleTimeString("th-TH", {
@@ -28,7 +20,7 @@ function formatLiveDate(now: Date) {
   });
 }
 
-/** หน้าพร้อมขาย — นาฬิกาเดิน + สรุปกะที่จะเริ่มตามมาตรฐาน TellTea */
+/** หน้าพร้อมขาย — นาฬิกาจริง + เข้า/ออกงาน (ยังไม่ผูกกะหลังบ้าน) */
 export function PosClockInPanel({
   pairingCode,
   error,
@@ -52,10 +44,6 @@ export function PosClockInPanel({
     return () => window.clearInterval(id);
   }, []);
 
-  const shiftId = getCurrentShiftId(now);
-  const shiftLabel = labelOtShift(shiftId);
-  const shiftWindow = SHIFT_WINDOW[shiftId];
-
   return (
     <main className="pos-page-center pos-clock-in">
       <h1 className="pos-clock-in-title">พร้อมขาย</h1>
@@ -78,16 +66,6 @@ export function PosClockInPanel({
               </td>
             </tr>
             <tr>
-              <th scope="row">กะอ้างอิง</th>
-              <td>
-                <strong>{shiftLabel}</strong>
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">ช่วงมาตรฐาน</th>
-              <td>{shiftWindow}</td>
-            </tr>
-            <tr>
               <th scope="row">เริ่มรอบเมื่อ</th>
               <td>กดเข้างาน — บันทึกเวลาจริง</td>
             </tr>
@@ -100,7 +78,7 @@ export function PosClockInPanel({
       </section>
 
       <p className="muted pos-clock-in-hint">
-        กดเข้างานเมื่อเริ่มขาย — เวลานับเดินหลังเข้างาน · กะยืดหยุ่นข้ามเที่ยงคืนได้
+        กดเข้างานเมื่อเริ่มขาย — นับเวลาจริงจากตอนเข้างาน · ข้ามเที่ยงคืนได้ · ยังไม่ผูกกะหลังบ้าน
       </p>
 
       {!standalone && canInstall ? (
