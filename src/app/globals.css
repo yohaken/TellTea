@@ -9562,6 +9562,8 @@ body.modal-open .main-panel {
 
 .pos-shift-receipt-inline {
   margin-top: 0.75rem;
+  scroll-margin-bottom: 1.25rem;
+  scroll-margin-top: 0.5rem;
 }
 
 .pos-shift-sale-lines strong {
@@ -10313,26 +10315,30 @@ body.modal-open .main-panel {
   margin-left: 0.35rem;
 }
 
-.pos-shift-content {
-  max-width: 56rem;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex: 1;
-  overflow: hidden;
-  padding-top: 0.75rem;
-}
-
 .pos-main-body:has(.pos-shift-module) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0;
 }
 
-.pos-shift-module {
-  flex: 1;
+.pos-module.pos-shift-module {
+  flex: 1 1 auto;
   min-height: 0;
-  height: 100%;
+  max-height: 100%;
+  height: auto;
+  overflow: hidden;
+}
+
+.pos-shift-content {
+  max-width: 56rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  padding-top: 0.75rem;
 }
 
 .pos-shift-sticky-top {
@@ -10346,8 +10352,6 @@ body.modal-open .main-panel {
   background: #fff;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 0.65rem;
-  position: sticky;
-  top: 0;
   z-index: 5;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
 }
@@ -10396,8 +10400,6 @@ body.modal-open .main-panel {
   background: #fff;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 0.65rem;
-  position: sticky;
-  top: 0;
   z-index: 5;
 }
 
@@ -10483,10 +10485,14 @@ body.modal-open .main-panel {
 }
 
 .pos-shift-scroll {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
-  padding-bottom: 1rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding-bottom: 1.5rem;
 }
 
 .pos-shift-kpi-grid {
@@ -10742,8 +10748,27 @@ body.modal-open .main-panel {
   list-style: none;
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.pos-main-body:has(.pos-receipts-module) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.pos-module.pos-receipts-module {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  height: auto;
 }
 
 .pos-receipts-row {
