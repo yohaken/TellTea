@@ -6764,8 +6764,8 @@ body.modal-open .main-panel {
 
 .pos-pay-quick {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
   margin-bottom: 0.65rem;
 }
 
@@ -6829,6 +6829,12 @@ body.modal-open .main-panel {
   font-weight: 700;
   border-radius: 0.75rem;
   touch-action: manipulation;
+}
+
+.pos-sell-clock-hint {
+  font-size: 0.88rem;
+  max-width: 18rem;
+  margin-inline: auto;
 }
 
 .pos-confirm-modal {
@@ -8522,10 +8528,37 @@ body.modal-open .main-panel {
 }
 
 .pos-shift-sale-row {
+  display: block;
+  width: 100%;
+  text-align: left;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 0.5rem;
-  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
   background: #fff;
+  padding: 0.65rem 0.75rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pos-shift-sale-row.is-selected {
+  border-color: rgba(45, 127, 224, 0.45);
+  background: rgba(45, 127, 224, 0.06);
+  box-shadow: 0 0 0 1px rgba(45, 127, 224, 0.15);
+}
+
+.pos-shift-sale-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: #7a8699;
+}
+
+.pos-shift-receipt-inline {
+  margin-top: 0.75rem;
+}
+
+.pos-shift-sale-lines strong {
+  font-weight: 800;
+  color: #111;
 }
 
 .pos-shift-sale-head {
@@ -9118,41 +9151,76 @@ body.modal-open .main-panel {
 }
 
 .pos-receipt-paper-item-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem;
+  align-items: start;
+}
+
+.pos-receipt-paper-item-qty-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.35rem;
+  min-height: 2.35rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.45rem;
+  background: #1a1f24;
+  color: #fff;
+  font-weight: 800;
+  font-size: 1rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.pos-receipt-paper-item-main {
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
   align-items: flex-start;
+  min-width: 0;
 }
 
 .pos-receipt-paper-item-name {
-  font-weight: 700;
-  font-size: 0.9rem;
+  font-weight: 800;
+  font-size: 0.98rem;
   line-height: 1.35;
   word-break: break-word;
+  color: #111;
 }
 
 .pos-receipt-paper-item-qty {
-  font-weight: 700;
-  color: #555;
+  font-weight: 800;
+  color: #111;
 }
 
 .pos-receipt-paper-item-price {
   font-weight: 700;
   white-space: nowrap;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
+  color: #333;
+}
+
+.pos-receipt-paper-mod {
+  margin: 0.2rem 0 0 2.9rem;
+  padding-left: 0;
+  font-size: 0.82rem;
+  color: #777;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.pos-receipt-paper-wrap--compact .pos-receipt-paper {
+  max-width: 100%;
+}
+
+.pos-receipt-paper-wrap--compact .pos-receipt-paper-section h3 {
+  font-size: 0.88rem;
 }
 
 .pos-receipt-paper-item-price::before {
   content: "฿";
   font-weight: 600;
-}
-
-.pos-receipt-paper-mod {
-  margin: 0.15rem 0 0;
-  padding-left: 0.25rem;
-  font-size: 0.8rem;
-  color: #777;
-  line-height: 1.35;
 }
 
 .pos-receipt-paper-totals {

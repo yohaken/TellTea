@@ -10,10 +10,22 @@ import {
   type PosLocalReceipt,
 } from "@/lib/pos-local-receipts";
 import { listLocalSessionsForDevice, saveLocalClosedSession } from "@/lib/pos-local-sessions";
-import { closePosSession } from "@/lib/pos-session";
+import { closePosSession, formatPosSessionClock } from "@/lib/pos-session";
 import { runPosSyncFlush } from "@/lib/pos-sync";
-import { labelOtShift } from "@/lib/ot";
+import { PosReceiptPaper } from "@/components/PosReceiptPaper";
+import { printSaleDocuments } from "@/lib/pos-printer/router";
+import { localReceiptToPrintPayload } from "@/lib/pos-receipt-view";
+import { subscribePosShopSettings, type PosShopSettings } from "@/lib/pos-settings";
 import { formatPlainNumber } from "@/lib/utils";
+
+const DEFAULT_SHOP: PosShopSettings = {
+  shopName: "TELL TEA",
+  shopNameTh: "เทล ที",
+  shopAddress: "",
+  shopPhone: "",
+  promptPayId: "",
+  autoPrintReceipt: true,
+};
 
 function formatTs(ts: number) {
   return new Date(ts).toLocaleString("th-TH", {
@@ -133,10 +145,22 @@ function FinancialTable({
   );
 }
 
-function ReceiptRow({ receipt }: { receipt: PosLocalReceipt }) {
+function ReceiptRow({
+  receipt,
+  selected,
+  onSelect,
+}: {
+  receipt: PosLocalReceipt;
+  selected: boolean;
+  onSelect: () => void;
+}) {
   const itemCount = receipt.lines?.reduce((n, l) => n + l.qty, 0) ?? 0;
   return (
-    <div className={`pos-shift-sale-row ${receipt.voided ? "is-voided" : ""}`}>
+    <button
+      type="button"
+      className={`pos-shift-sale-row ${receipt.voided ? "is-voided" : ""} ${selected ? "is-selected" : ""}`}
+      onClick={onSelect}
+    >
       <div className="pos-shift-sale-head">
         <strong>#{receipt.billNo}</strong>
         <span>฿{formatPlainNumber(receipt.total)}</span>
@@ -149,22 +173,23 @@ function ReceiptRow({ receipt }: { receipt: PosLocalReceipt }) {
       </p>
       {receipt.lines?.length ? (
         <ul className="pos-shift-sale-lines">
-          {receipt.lines.slice(0, 4).map((line, i) => (
+          {receipt.lines.slice(0, 3).map((line, i) => (
             <li key={i}>
-              ×{line.qty} {line.name}
+              <strong>×{line.qty}</strong> {line.name}
             </li>
           ))}
-          {receipt.lines.length > 4 ? <li className="muted">… +{receipt.lines.length - 4} รายการ</li> : null}
+          {receipt.lines.length > 3 ? <li className="muted">… +{receipt.lines.length - 3} รายการ</li> : null}
         </ul>
       ) : (
         <p className="muted pos-shift-sale-preview">{receipt.linePreview}</p>
       )}
-    </div>
+      <span className="pos-shift-sale-hint">{selected ? "แตะซ้ำเพื่อปิดใบเสร็จ" : "แตะเพื่อดูใบเสร็จ"}</span>
+    </button>
   );
 }
 
 export function PosShiftView() {
-  const { session, device, selling, shift, syncSnap, setError } = usePosApp();
+  const { session, device, selling, syncSnap, setError } = usePosApp();
   const [closing, setClosing] = useState(false);
   const [tab, setTab] = useState<"current" | "history">("current");
   const [historyRange, setHistoryRange] = useState<"today" | "week">("week");
@@ -173,22 +198,48 @@ export function PosShiftView() {
   );
   const [sales, setSales] = useState<PosLocalReceipt[]>(() => listLocalReceiptsRecent(7));
   const [demoMsg, setDemoMsg] = useState<string | null>(null);
-
-  const shiftLabel = useMemo(() => labelOtShift(shift as "late" | "morning" | "evening"), [shift]);
+  const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
+  const [shop, setShop] = useState<PosShopSettings>(DEFAULT_SHOP);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   const sessionReceipts = useMemo(() => {
     if (!session) return [];
     return listLocalReceiptsForSession(session.id);
-  }, [session]);
+  }, [session, refreshTick]);
 
   const sessionSummary = useMemo(() => summarizeLocalReceipts(sessionReceipts), [sessionReceipts]);
 
   const pendingSync = syncSnap.pendingCount + syncSnap.failedCount;
 
+  const activeReceipts = tab === "current" ? sessionReceipts : sales;
+  const selectedReceipt = useMemo(
+    () => activeReceipts.find((r) => r.id === selectedReceiptId) || null,
+    [activeReceipts, selectedReceiptId],
+  );
+
+  useEffect(() => {
+    const unsub = subscribePosShopSettings(setShop);
+    return unsub;
+  }, []);
+
+  function toggleReceipt(receipt: PosLocalReceipt) {
+    setSelectedReceiptId((cur) => (cur === receipt.id ? null : receipt.id));
+  }
+
+  async function handlePrintReceipt(receipt: PosLocalReceipt) {
+    const payload = localReceiptToPrintPayload(receipt, shop);
+    await printSaleDocuments(payload, { receiptOnly: true });
+  }
+
   function refreshHistory() {
     if (device) setHistory(listLocalSessionsForDevice(device.id));
     setSales(listLocalReceiptsRecent(historyRange === "today" ? 1 : 7));
+    setRefreshTick((n) => n + 1);
   }
+
+  useEffect(() => {
+    setSelectedReceiptId(null);
+  }, [tab, historyRange]);
 
   useEffect(() => {
     seedDemoLocalReceiptsIfEmpty(session?.id);
@@ -212,13 +263,14 @@ export function PosShiftView() {
 
     const summary = sessionSummary;
     const zLines = [
-      `ปิดรอบ #${session.id.slice(-4).toUpperCase()} · ${shiftLabel}`,
+      `ออกงาน #${session.id.slice(-4).toUpperCase()}`,
+      `เข้า ${formatPosSessionClock(session.openedAt)}`,
       `บิล ${summary.count} · ยอด ฿${formatPlainNumber(summary.total)}`,
       `เงินสด ${summary.cashCount} ฿${formatPlainNumber(summary.cashTotal)}`,
       `PromptPay ${summary.promptpayCount} ฿${formatPlainNumber(summary.promptpayTotal)}`,
     ].join("\n");
 
-    if (!window.confirm(`ปิดรอบการขายกะนี้?\n\n${zLines}`)) return;
+    if (!window.confirm(`ออกงาน (ปิดรอบขาย)?\n\n${zLines}`)) return;
 
     setClosing(true);
     setError(null);
@@ -228,7 +280,7 @@ export function PosShiftView() {
         throw new Error(`ยังมีบิลค้างส่ง ${flush.pendingCount + flush.failedCount} รายการ`);
       }
 
-      const closed = await closePosSession(session.id);
+      const closed = await closePosSession(session.id, device.id);
       saveLocalClosedSession({
         ...closed,
         closedAt: closed.closedAt || Date.now(),
@@ -311,8 +363,8 @@ export function PosShiftView() {
                   accent="blue"
                 />
                 <KpiCard
-                  label="กะ"
-                  value={shiftLabel}
+                  label="เข้างาน"
+                  value={formatPosSessionClock(session.openedAt)}
                   sub={`#${session.id.slice(-4).toUpperCase()}`}
                   accent="neutral"
                 />
@@ -330,7 +382,7 @@ export function PosShiftView() {
 
               <dl className="pos-shift-session-meta">
                 <div>
-                  <dt>เปิดรอบ</dt>
+                  <dt>เข้างาน</dt>
                   <dd>{formatTs(session.openedAt)}</dd>
                 </div>
                 <div>
@@ -350,9 +402,23 @@ export function PosShiftView() {
                   <h3>บิลในรอบนี้ ({sessionReceipts.length})</h3>
                   <div className="pos-shift-sales-list">
                     {sessionReceipts.map((receipt) => (
-                      <ReceiptRow key={receipt.id} receipt={receipt} />
+                      <ReceiptRow
+                        key={receipt.id}
+                        receipt={receipt}
+                        selected={selectedReceiptId === receipt.id}
+                        onSelect={() => toggleReceipt(receipt)}
+                      />
                     ))}
                   </div>
+                  {selectedReceipt && tab === "current" ? (
+                    <div className="pos-shift-receipt-inline">
+                      <PosReceiptPaper
+                        receipt={selectedReceipt}
+                        compact
+                        onPrint={() => void handlePrintReceipt(selectedReceipt)}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -363,7 +429,7 @@ export function PosShiftView() {
                   disabled={closing || pendingSync > 0 || syncSnap.syncing}
                   onClick={() => void handleCloseShift()}
                 >
-                  {closing ? "กำลังปิด..." : pendingSync > 0 ? "รอซิงก์ก่อนปิดรอบ" : "ปิดรอบการขาย"}
+                  {closing ? "กำลังบันทึก..." : pendingSync > 0 ? "รอซิงก์ก่อนออกงาน" : "ออกงาน (ปิดรอบ)"}
                 </button>
               </div>
             </>
@@ -374,12 +440,12 @@ export function PosShiftView() {
                 ปิดเมื่อ {session.closedAt ? formatTs(session.closedAt) : "—"} · ยอด ฿
                 {formatPlainNumber(session.totalSales)}
               </p>
-              <p className="muted">เปิดรอบใหม่ที่ สั่งและชำระเงิน</p>
+              <p className="muted">กดเข้างานใหม่ที่ สั่งและชำระเงิน</p>
             </div>
           ) : (
             <div className="pos-module-empty">
-              <h2>ยังไม่ได้เปิดรอบขาย</h2>
-              <p className="muted">ไปที่ สั่งและชำระเงิน แล้วกดเปิดขายกะนี้</p>
+              <h2>ยังไม่ได้เข้างาน</h2>
+              <p className="muted">ไปที่ สั่งและชำระเงิน แล้วกดเข้างาน</p>
             </div>
           )
         ) : (
@@ -426,9 +492,23 @@ export function PosShiftView() {
                 <h3>รายการขาย ({sales.length})</h3>
                 <div className="pos-shift-sales-list">
                   {sales.map((receipt) => (
-                    <ReceiptRow key={receipt.id} receipt={receipt} />
+                    <ReceiptRow
+                      key={receipt.id}
+                      receipt={receipt}
+                      selected={selectedReceiptId === receipt.id}
+                      onSelect={() => toggleReceipt(receipt)}
+                    />
                   ))}
                 </div>
+                {selectedReceipt && tab === "history" ? (
+                  <div className="pos-shift-receipt-inline">
+                    <PosReceiptPaper
+                      receipt={selectedReceipt}
+                      compact
+                      onPrint={() => void handlePrintReceipt(selectedReceipt)}
+                    />
+                  </div>
+                ) : null}
               </div>
             ) : (
               <p className="muted pos-module-empty">ยังไม่มีบิล — กดโหลดข้อมูลทดสอบ</p>
@@ -442,7 +522,10 @@ export function PosShiftView() {
                     <li key={row.id} className="pos-shift-history-row">
                       <div className="pos-shift-history-head">
                         <strong>#{row.id.slice(-4).toUpperCase()}</strong>
-                        <span>{labelOtShift(row.shift as "late" | "morning" | "evening")}</span>
+                        <span>
+                          {formatPosSessionClock(row.openedAt)}
+                          {row.closedAt ? ` → ${formatPosSessionClock(row.closedAt)}` : ""}
+                        </span>
                       </div>
                       <p className="muted">{formatTs(row.closedAt)}</p>
                       <p>

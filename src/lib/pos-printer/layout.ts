@@ -2,6 +2,7 @@ import { getLayoutForPrinter } from "./profiles";
 import {
   buildUnifiedReceiptBody,
   escapeReceiptHtml,
+  receiptLineBaseName,
   sampleReceiptPayload,
   unifiedReceiptStyles,
 } from "./receipt-template";
@@ -16,12 +17,16 @@ function truncate(text: string, max: number): string {
   return `${text.slice(0, max - 1)}…`;
 }
 
-function formatLineOptions(line: import("../types").PosSaleLine, compact: boolean): string {
-  if (!line.options?.length) return "";
-  const parts = line.options.flatMap((g) =>
-    g.choices.map((c) => (compact ? c.name : `${g.groupName}: ${c.name}`)),
-  );
-  return parts.join(compact ? ", " : " · ");
+function formatLineOptions(line: import("../types").PosSaleLine, compact: boolean): string[] {
+  if (!line.options?.length) return [];
+  const tallies = new Map<string, number>();
+  for (const group of line.options) {
+    for (const choice of group.choices) {
+      const label = compact ? choice.name : `${group.groupName}: ${choice.name}`;
+      tallies.set(label, (tallies.get(label) ?? 0) + 1);
+    }
+  }
+  return [...tallies.entries()].map(([label, n]) => (n > 1 ? `${label} ×${n}` : label));
 }
 
 /** สลิปใบเสร็จรูปแบบเดียว — รวมแบบ FoodStory / ShopeeFood / LINE MAN */
@@ -66,18 +71,14 @@ export function buildKitchenTicketHtml(
 
   const lines = data.lines
     .map((l) => {
-      const opt = formatLineOptions(l, compact);
-      const name = truncate(l.name, layout.charsPerLine - 4);
-      const optRows = opt
-        ? opt
-            .split(compact ? ", " : " · ")
-            .map((part) => `<div>${escapeReceiptHtml(truncate(part, layout.charsPerLine))}</div>`)
-            .join("")
+      const optRows = formatLineOptions(l, compact);
+      const name = receiptLineBaseName(l);
+      const modsBlock = optRows.length
+        ? `<div class="mods">${optRows.map((part) => `<div>${escapeReceiptHtml(part)}</div>`).join("")}</div>`
         : "";
-      const modsBlock = optRows ? `<div class="mods">${optRows}</div>` : "";
       return `<div class="item">
         <div class="item-line">
-          <span class="qty">${l.qty}</span>
+          <span class="qty">×${l.qty}</span>
           <span class="name">${escapeReceiptHtml(name)}</span>
           <span class="price"></span>
         </div>

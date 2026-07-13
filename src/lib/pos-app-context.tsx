@@ -23,9 +23,10 @@ import {
 } from "@/lib/pos-devices";
 import { isPosStandaloneMode, type BeforeInstallPromptEvent } from "@/lib/pos-install";
 import {
+  clearStoredPosSessionId,
   getCurrentPosSession,
   openPosSession,
-  posSessionDocId,
+  storePosSessionId,
   subscribePosSession,
 } from "@/lib/pos-session";
 import { getCurrentShiftId } from "@/lib/shift-session";
@@ -237,8 +238,25 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
     const deviceId = deviceIdRef.current;
     if (!deviceId || status !== "ready") return;
 
-    const sessionId = posSessionDocId(deviceId);
-    return subscribePosSession(sessionId, setSession);
+    let unsub: (() => void) | undefined;
+    let cancelled = false;
+
+    void (async () => {
+      const current = await getCurrentPosSession(deviceId);
+      if (cancelled) return;
+      setSession(current);
+      if (!current) return;
+      storePosSessionId(deviceId, current.id);
+      unsub = subscribePosSession(current.id, (next) => {
+        setSession(next);
+        if (!next || next.status !== "open") clearStoredPosSessionId(deviceId);
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      unsub?.();
+    };
   }, [status]);
 
   async function installApp() {
@@ -259,9 +277,10 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const next = await openPosSession(deviceId, shift);
+      storePosSessionId(deviceId, next.id);
       setSession(next);
     } catch (err) {
-      setError((err as Error).message || "เปิดรอบขายไม่สำเร็จ");
+      setError((err as Error).message || "เข้างานไม่สำเร็จ");
     } finally {
       setOpening(false);
     }

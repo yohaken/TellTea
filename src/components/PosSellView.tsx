@@ -715,7 +715,7 @@ export function PosSellView({
                     ตรงพอดี
                     <span>฿{formatPlainNumber(total)}</span>
                   </button>
-                  {[100, 500, 1000].map((amt) => (
+                  {[20, 50, 100, 500, 1000].map((amt) => (
                     <button
                       key={amt}
                       type="button"

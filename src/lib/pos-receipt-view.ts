@@ -55,6 +55,17 @@ export function localReceiptToPrintPayload(
   };
 }
 
+export function receiptLineModifierLabels(line: PosLocalReceiptLine): string[] {
+  const tallies = new Map<string, number>();
+  for (const o of line.options) {
+    for (const name of o.choiceNames) {
+      const key = o.groupName ? `${o.groupName}: ${name}` : name;
+      tallies.set(key, (tallies.get(key) ?? 0) + 1);
+    }
+  }
+  return [...tallies.entries()].map(([label, n]) => (n > 1 ? `${label} ×${n}` : label));
+}
+
 export function receiptSubtotal(lines: PosLocalReceiptLine[]): number {
   return Math.round(lines.reduce((s, l) => s + l.unitPrice * l.qty, 0) * 100) / 100;
 }

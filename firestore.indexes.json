@@ -144,6 +144,14 @@
       "collectionGroup": "posSessions",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "deviceId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "posSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "date", "order": "ASCENDING" },
         { "fieldPath": "shift", "order": "ASCENDING" }
       ]

@@ -31,7 +31,12 @@ assert.match(typesSrc, /shopAddress/);
 assert.match(settingsSrc, /shopNameTh/);
 assert.match(settingsSrc, /shopPhone/);
 
-assert.match(readFileSync(join(root, "src/components/PosSellView.tsx"), "utf8"), /orderChannel: "dine_in"/);
+assert.match(templateSrc, /×\$\{line\.qty\}/);
+assert.match(templateSrc, /font-weight: 800/);
+assert.match(readFileSync(join(root, "src/components/PosReceiptPaper.tsx"), "utf8"), /pos-receipt-paper-item-qty-badge/);
+assert.match(readFileSync(join(root, "src/lib/pos-session.ts"), "utf8"), /findOpenPosSession/);
+assert.match(readFileSync(join(root, "src/components/PosShiftView.tsx"), "utf8"), /pos-shift-receipt-inline/);
+assert.match(readFileSync(join(root, "src/components/PosSellView.tsx"), "utf8"), /20, 50, 100/);
 assert.match(readFileSync(join(root, "src/components/PosPaymentSetup.tsx"), "utf8"), /ที่อยู่ \(บนสลิป\)/);
 
 console.log("OK pos-receipt-layout");

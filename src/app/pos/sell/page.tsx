@@ -3,7 +3,6 @@
 import { Download } from "lucide-react";
 import { PosSellView } from "@/components/PosSellView";
 import { usePosApp } from "@/lib/pos-app-context";
-import { labelOtShift } from "@/lib/ot";
 
 export default function PosSellPage() {
   const {
@@ -27,7 +26,8 @@ export default function PosSellPage() {
     return (
       <main className="pos-page-center">
         <h1>พร้อมขาย</h1>
-        <p className="muted">กะ {labelOtShift(shift)} · รหัส {device.pairingCode}</p>
+        <p className="muted">รหัสเครื่อง {device.pairingCode}</p>
+        <p className="muted pos-sell-clock-hint">กดเข้างานเมื่อเริ่มขาย — บันทึกเวลาเข้า-ออกจริง</p>
 
         {!standalone && canInstall ? (
           <button type="button" className="ghost-btn pos-lite-btn" onClick={() => void installApp()}>
@@ -44,7 +44,7 @@ export default function PosSellPage() {
           disabled={opening}
           onClick={() => void handleOpenShift()}
         >
-          {opening ? "กำลังเปิด..." : "เปิดขายกะนี้"}
+          {opening ? "กำลังบันทึก..." : "เข้างาน"}
         </button>
       </main>
     );

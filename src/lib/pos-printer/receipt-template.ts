@@ -72,14 +72,14 @@ function shopDisplayName(data: ReceiptPrintPayload): string {
 
 function lineModifiers(line: PosSaleLine, compact: boolean): string[] {
   if (!line.options?.length) return [];
-  const rows: string[] = [];
+  const tallies = new Map<string, number>();
   for (const group of line.options) {
     for (const choice of group.choices) {
       const label = compact ? choice.name : `${group.groupName}: ${choice.name}`;
-      rows.push(label);
+      tallies.set(label, (tallies.get(label) ?? 0) + 1);
     }
   }
-  return rows;
+  return [...tallies.entries()].map(([label, n]) => (n > 1 ? `${label} ×${n}` : label));
 }
 
 function itemQtyTotal(lines: PosSaleLine[]): number {
@@ -163,26 +163,49 @@ export function unifiedReceiptStyles(layout: PrinterKindProfile, cutMode: PosPri
       border-top: 3px double #111;
       margin: 6px 0;
     }
-    .item { margin: 6px 0; }
+    .item {
+      margin: 10px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #aaa;
+    }
+    .item:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
     .item-line {
       display: grid;
-      grid-template-columns: 1.4em minmax(0, 1fr) auto;
-      gap: 4px 6px;
+      grid-template-columns: 2.2em minmax(0, 1fr) auto;
+      gap: 6px 8px;
       align-items: start;
     }
-    .qty { font-weight: 600; }
+    .qty {
+      font-weight: 800;
+      font-size: ${layout.bodyFontPx + 3}px;
+      color: #000;
+      line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+    }
     .name {
+      font-weight: 800;
+      font-size: ${layout.bodyFontPx + 1}px;
+      color: #000;
       word-break: break-word;
       overflow-wrap: anywhere;
       white-space: normal;
       padding-right: 4px;
       line-height: 1.35;
     }
-    .price { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+    .price {
+      white-space: nowrap;
+      text-align: right;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
     .mods {
-      margin: 2px 0 0 1.6em;
+      margin: 4px 0 0 2.4em;
       font-size: ${layout.metaFontPx}px;
-      color: #333;
+      color: #666;
+      font-weight: 500;
     }
     .mods div {
       margin: 1px 0;
@@ -245,7 +268,7 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
       const title = receiptLineBaseName(line);
       return `<div class="item">
         <div class="item-line">
-          <span class="qty">${line.qty}</span>
+          <span class="qty">×${line.qty}</span>
           <span class="name">${escapeReceiptHtml(title)}</span>
           <span class="price">${formatMoney(lineTotal)}</span>
         </div>
