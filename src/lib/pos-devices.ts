@@ -10,7 +10,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { CLIENT_BUILD } from "./app-update";
-import { getDb } from "./firebase";
+import { getPosDb } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
 
 export const POS_DEVICES_COL = "posDevices";
@@ -32,11 +32,11 @@ export type PosDevice = {
 };
 
 function deviceRef(id: string) {
-  return doc(getDb(), POS_DEVICES_COL, id);
+  return doc(getPosDb(), POS_DEVICES_COL, id);
 }
 
 function devicesCol() {
-  return collection(getDb(), POS_DEVICES_COL);
+  return collection(getPosDb(), POS_DEVICES_COL);
 }
 
 export function posPairingCodeFromId(id: string): string {

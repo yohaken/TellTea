@@ -1,4 +1,4 @@
-import { doc, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
+import { doc, onSnapshot, setDoc, type Firestore, type Unsubscribe } from "firebase/firestore";
 import { getDb } from "./firebase";
 
 export type AppReleaseSettings = {
@@ -8,8 +8,8 @@ export type AppReleaseSettings = {
 
 const DEFAULT: AppReleaseSettings = { forceAppUpdate: false };
 
-function uiRef() {
-  return doc(getDb(), "meta", "ui");
+function uiRef(db: Firestore) {
+  return doc(db, "meta", "ui");
 }
 
 export function normalizeAppReleaseSettings(data?: Record<string, unknown> | null): AppReleaseSettings {
@@ -21,9 +21,10 @@ export function normalizeAppReleaseSettings(data?: Record<string, unknown> | nul
 export function subscribeAppReleaseSettings(
   onSettings: (settings: AppReleaseSettings) => void,
   onError?: (err: Error) => void,
+  db: Firestore = getDb(),
 ): Unsubscribe {
   return onSnapshot(
-    uiRef(),
+    uiRef(db),
     (snap) => {
       onSettings(snap.exists() ? normalizeAppReleaseSettings(snap.data()) : { ...DEFAULT });
     },
@@ -33,7 +34,7 @@ export function subscribeAppReleaseSettings(
 
 export async function saveForceAppUpdate(forceAppUpdate: boolean, updatedBy: string): Promise<void> {
   await setDoc(
-    uiRef(),
+    uiRef(getDb()),
     {
       forceAppUpdate,
       updatedAt: Date.now(),

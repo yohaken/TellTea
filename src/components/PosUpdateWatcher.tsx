@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { subscribeAppReleaseSettings } from "@/lib/app-release";
 import { CLIENT_BUILD, fetchServerBuild } from "@/lib/app-update";
+import { getPosDb } from "@/lib/pos-firebase";
 import { isPosSafeToReload, POS_IDLE_BEFORE_RELOAD_MS, type PosSellBusyState } from "@/lib/pos-reload";
 
 const POLL_MS = 2 * 60 * 1000;
@@ -59,9 +60,13 @@ export function PosUpdateWatcher({
 
   useEffect(() => {
     if (!enabled) return;
-    return subscribeAppReleaseSettings((settings) => {
-      setForceMode(settings.forceAppUpdate);
-    });
+    return subscribeAppReleaseSettings(
+      (settings) => {
+        setForceMode(settings.forceAppUpdate);
+      },
+      undefined,
+      getPosDb(),
+    );
   }, [enabled]);
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { doc, getDoc, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
 import { getCurrentShiftId } from "./shift-session";
-import { getDb } from "./firebase";
+import { getPosDb } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
 import type { PosSession } from "./types";
 import { startOfLocalDay } from "./utils";
@@ -13,7 +13,7 @@ export function posSessionDocId(deviceId: string, date = Date.now(), shift = get
 }
 
 function sessionRef(id: string) {
-  return doc(getDb(), POS_SESSIONS_COL, id);
+  return doc(getPosDb(), POS_SESSIONS_COL, id);
 }
 
 function mapSession(id: string, data: Record<string, unknown>): PosSession {

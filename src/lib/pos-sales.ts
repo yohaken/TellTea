@@ -4,7 +4,7 @@ import {
   increment,
   writeBatch,
 } from "firebase/firestore";
-import { getDb } from "./firebase";
+import { getPosDb } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
 import { posCreatedBy } from "./pos-menu";
 import { bumpPosSessionTotals } from "./pos-session";
@@ -14,7 +14,7 @@ import { startOfLocalDay } from "./utils";
 export const POS_SALES_COL = "posSales";
 
 function ledgerMetaRef() {
-  return doc(getDb(), "meta", "ledger");
+  return doc(getPosDb(), "meta", "ledger");
 }
 
 function saleDescription(lines: PosSaleLine[]): string {
@@ -51,7 +51,7 @@ export async function completeCashSale(input: {
   const createdBy = posCreatedBy(input.deviceId);
   const description = saleDescription(input.lines);
 
-  const db = getDb();
+  const db = getPosDb();
   const saleRef = doc(collection(db, POS_SALES_COL));
   const ledgerRef = doc(collection(db, "ledger"));
 

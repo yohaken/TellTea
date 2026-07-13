@@ -1,6 +1,6 @@
 import { signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
-import { getFirebaseAuth, getFirebaseFunctions } from "./firebase";
+import { getPosFirebaseAuth, getPosFirebaseFunctions } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
 
 const POS_DEVICE_ID_KEY = "telltea-pos-device-id";
@@ -18,7 +18,7 @@ function storeDeviceId(id: string) {
 }
 
 async function isCurrentPosUser(): Promise<boolean> {
-  const auth = getFirebaseAuth();
+  const auth = getPosFirebaseAuth();
   const user = auth.currentUser;
   if (!user?.uid) return false;
   try {
@@ -35,7 +35,7 @@ async function signInPosWithCustomToken(): Promise<string> {
   const posDeviceAuth = httpsCallable<
     { deviceId?: string },
     { token: string; deviceId: string }
-  >(getFirebaseFunctions(), "posDeviceAuth");
+  >(getPosFirebaseFunctions(), "posDeviceAuth");
 
   const storedId = getStoredDeviceId();
   const result = await posDeviceAuth(storedId ? { deviceId: storedId } : {});
@@ -45,20 +45,16 @@ async function signInPosWithCustomToken(): Promise<string> {
   }
 
   storeDeviceId(deviceId);
-  const cred = await signInWithCustomToken(getFirebaseAuth(), token);
+  const cred = await signInWithCustomToken(getPosFirebaseAuth(), token);
   return cred.user.uid;
 }
 
-/** Dedicated POS tablets — auto sign-in, no staff password. */
+/** Dedicated POS tablets — auto sign-in, isolated from หลังร้าน Google login. */
 export async function ensurePosDeviceAuth(): Promise<string> {
-  const auth = getFirebaseAuth();
+  const auth = getPosFirebaseAuth();
 
   if (await isCurrentPosUser()) {
     return auth.currentUser!.uid;
-  }
-
-  if (auth.currentUser) {
-    await auth.signOut();
   }
 
   try {
@@ -73,7 +69,7 @@ export async function ensurePosDeviceAuth(): Promise<string> {
         throw new Error(
           mapFirestoreError(
             primaryErr,
-            "เชื่อมต่อเครื่อง POS — รอ deploy Cloud Function สักครู่แล้วลองใหม่",
+            "เชื่อมต่อเครื่อง POS — รอ deploy สักครู่แล้วลองใหม่",
           ),
         );
       }

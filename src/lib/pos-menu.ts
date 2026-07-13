@@ -10,7 +10,7 @@ import {
   where,
   type Unsubscribe,
 } from "firebase/firestore";
-import { getDb } from "./firebase";
+import { getPosDb } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
 import type { MenuCategory, MenuItem } from "./types";
 
@@ -18,11 +18,11 @@ export const MENU_CATEGORIES_COL = "menuCategories";
 export const MENU_ITEMS_COL = "menuItems";
 
 function categoriesCol() {
-  return collection(getDb(), MENU_CATEGORIES_COL);
+  return collection(getPosDb(), MENU_CATEGORIES_COL);
 }
 
 function itemsCol() {
-  return collection(getDb(), MENU_ITEMS_COL);
+  return collection(getPosDb(), MENU_ITEMS_COL);
 }
 
 function mapCategory(id: string, data: Record<string, unknown>): MenuCategory {
@@ -115,7 +115,7 @@ export async function updateMenuCategory(
   if (patch.active != null) next.active = patch.active;
   if (patch.sortOrder != null) next.sortOrder = patch.sortOrder;
   try {
-    await updateDoc(doc(getDb(), MENU_CATEGORIES_COL, id), next);
+    await updateDoc(doc(getPosDb(), MENU_CATEGORIES_COL, id), next);
   } catch (err) {
     throw new Error(mapFirestoreError(err, "อัปเดตหมวดเมนู"));
   }
@@ -153,7 +153,7 @@ export async function updateMenuItem(
   if (patch.price != null) next.price = Math.max(0, Number(patch.price) || 0);
   if (patch.active != null) next.active = patch.active;
   try {
-    await updateDoc(doc(getDb(), MENU_ITEMS_COL, id), next);
+    await updateDoc(doc(getPosDb(), MENU_ITEMS_COL, id), next);
   } catch (err) {
     throw new Error(mapFirestoreError(err, "อัปเดตเมนู"));
   }
