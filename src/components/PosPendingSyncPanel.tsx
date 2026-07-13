@@ -8,6 +8,7 @@ import { retryOutboxEntry, runPosSyncFlush, voidPendingOutboxEntry } from "@/lib
 import type { OtShiftId } from "@/lib/ot";
 import { formatPlainNumber } from "@/lib/utils";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
+import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
@@ -32,6 +33,7 @@ export function PosPendingSyncPanel({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [flushing, setFlushing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [voidTarget, setVoidTarget] = useState<{ id: string; billNo: string } | null>(null);
 
   useBodyScrollLock(open);
 
@@ -62,12 +64,17 @@ export function PosPendingSyncPanel({
   }
 
   async function handleVoid(id: string, billNo: string) {
-    const ok = window.confirm(`ยกเลิกบิลค้าง ${billNo}?\nบิลนี้ยังไม่ขึ้นเซิร์ฟเวอร์ — จะลบออกจากคิวในเครื่อง`);
-    if (!ok) return;
+    setVoidTarget({ id, billNo });
+  }
+
+  async function confirmVoid() {
+    if (!voidTarget) return;
+    const { id } = voidTarget;
     setBusyId(id);
     setError(null);
     try {
       await voidPendingOutboxEntry(id);
+      setVoidTarget(null);
     } catch (err) {
       setError((err as Error).message || "ยกเลิกไม่สำเร็จ");
     } finally {
@@ -167,6 +174,17 @@ export function PosPendingSyncPanel({
           </button>
         </footer>
       </div>
+
+      <PosConfirmDialog
+        open={voidTarget !== null}
+        title={voidTarget ? `ยกเลิกบิลค้าง ${voidTarget.billNo}?` : ""}
+        message="บิลนี้ยังไม่ขึ้นเซิร์ฟเวอร์ — จะลบออกจากคิวในเครื่อง"
+        confirmLabel="ยกเลิกบิล"
+        destructive
+        busy={voidTarget !== null && busyId === voidTarget.id}
+        onCancel={() => setVoidTarget(null)}
+        onConfirm={() => void confirmVoid()}
+      />
     </div>
   );
 }

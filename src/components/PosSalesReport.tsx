@@ -15,6 +15,7 @@ import {
 } from "@/lib/pos-sales-report";
 import type { PosSale, PosSession } from "@/lib/types";
 import { formatPlainNumber, startOfLocalDay } from "@/lib/utils";
+import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
@@ -34,6 +35,8 @@ export function PosSalesReport({
   const [sessions, setSessions] = useState<PosSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [voidTarget, setVoidTarget] = useState<PosSale | null>(null);
+  const [voidReason, setVoidReason] = useState("");
 
   const isToday = dateMs === startOfLocalDay();
 
@@ -64,19 +67,20 @@ export function PosSalesReport({
   const summary = useMemo(() => summarizePosSalesDetailed(sales), [sales]);
   const reconcile = useMemo(() => reconcilePosSessions(sales, sessions), [sales, sessions]);
 
-  async function handleVoid(sale: PosSale) {
+  function openVoidDialog(sale: PosSale) {
     if (!actorId || sale.status === "voided") return;
-    const reason = window.prompt(
-      `ยกเลิกบิล ${sale.billNo} ฿${formatPlainNumber(sale.total)}\nเหตุผล (ไม่บังคับ):`,
-      "",
-    );
-    if (reason === null) return;
-    const ok = window.confirm(`ยืนยันยกเลิกบิล ${sale.billNo}?`);
-    if (!ok) return;
+    setVoidReason("");
+    setVoidTarget(sale);
+  }
+
+  async function confirmVoid() {
+    if (!actorId || !voidTarget) return;
+    const sale = voidTarget;
     setBusyId(sale.id);
     onError?.(null);
     try {
-      await voidPosSale(sale.id, actorId, reason);
+      await voidPosSale(sale.id, actorId, voidReason.trim() || undefined);
+      setVoidTarget(null);
     } catch (err) {
       onError?.((err as Error).message || "ยกเลิกบิลไม่สำเร็จ");
     } finally {
@@ -241,7 +245,7 @@ export function PosSalesReport({
                         type="button"
                         className="ghost-btn pos-sales-void-btn"
                         disabled={busy}
-                        onClick={() => void handleVoid(sale)}
+                        onClick={() => openVoidDialog(sale)}
                       >
                         <Ban size={14} aria-hidden />
                         ยกเลิก
@@ -256,6 +260,22 @@ export function PosSalesReport({
           </ul>
         ) : null}
       </section>
+
+      <PosConfirmDialog
+        open={voidTarget !== null}
+        title={voidTarget ? `ยกเลิกบิล ${voidTarget.billNo}?` : ""}
+        message={voidTarget ? `ยอด ฿${formatPlainNumber(voidTarget.total)}` : undefined}
+        variant="prompt"
+        promptLabel="เหตุผล"
+        promptPlaceholder="ไม่บังคับ"
+        promptValue={voidReason}
+        onPromptChange={setVoidReason}
+        confirmLabel="ยืนยันยกเลิก"
+        destructive
+        busy={voidTarget !== null && busyId === voidTarget.id}
+        onCancel={() => setVoidTarget(null)}
+        onConfirm={() => void confirmVoid()}
+      />
     </div>
   );
 }

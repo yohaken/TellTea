@@ -25,6 +25,7 @@ import {
 } from "@/lib/pos-menu-options";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
+import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 
 type Tab = "categories" | "groups" | "promotions";
 type Screen =
@@ -51,6 +52,9 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<
+    { kind: "item"; item: MenuItem } | { kind: "group"; group: MenuOptionGroup } | null
+  >(null);
 
   useEffect(() => {
     let alive = true;
@@ -406,11 +410,7 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
             optionGroups={optionGroups}
             onBack={() => setScreen({ kind: "list" })}
             onSaved={() => setScreen({ kind: "list" })}
-            onDelete={async () => {
-              if (!confirm(`ลบเมนู "${editItem.name}"?`)) return;
-              await deleteMenuItem(editItem.id);
-              setScreen({ kind: "list" });
-            }}
+            onDelete={() => setDeleteTarget({ kind: "item", item: editItem })}
           />
         </PosMenuModal>
       ) : null}
@@ -422,14 +422,43 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
             group={editGroup}
             onBack={() => setScreen({ kind: "list" })}
             onSaved={() => setScreen({ kind: "list" })}
-            onDelete={async () => {
-              if (!confirm(`ลบกลุ่ม "${editGroup.name}"?`)) return;
-              await deleteMenuOptionGroup(editGroup.id);
-              setScreen({ kind: "list" });
-            }}
+            onDelete={() => setDeleteTarget({ kind: "group", group: editGroup })}
           />
         </PosMenuModal>
       ) : null}
+
+      <PosConfirmDialog
+        open={deleteTarget !== null}
+        title={
+          deleteTarget?.kind === "item"
+            ? `ลบเมนู "${deleteTarget.item.name}"?`
+            : deleteTarget?.kind === "group"
+              ? `ลบกลุ่ม "${deleteTarget.group.name}"?`
+              : ""
+        }
+        message="รายการที่ลบแล้วกู้คืนไม่ได้"
+        confirmLabel="ลบ"
+        destructive
+        busy={busy}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          void (async () => {
+            setBusy(true);
+            try {
+              if (deleteTarget.kind === "item") {
+                await deleteMenuItem(deleteTarget.item.id);
+              } else {
+                await deleteMenuOptionGroup(deleteTarget.group.id);
+              }
+              setDeleteTarget(null);
+              setScreen({ kind: "list" });
+            } finally {
+              setBusy(false);
+            }
+          })();
+        }}
+      />
     </div>
   );
 }

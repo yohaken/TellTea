@@ -24,6 +24,8 @@ import { labelOtShift } from "@/lib/ot";
 import type { MenuCategory, MenuItem, MenuOptionGroup, PosSaleLine, PosSession } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
 import { PosOptionPickerModal } from "@/components/PosOptionPickerModal";
+import { PosConfirmDialog } from "@/components/PosConfirmDialog";
+import { PosPayOrderReview } from "@/components/PosPayOrderReview";
 
 type PayMode = "cash" | "promptpay" | null;
 
@@ -669,24 +671,18 @@ export function PosSellView({
       </aside>
 
       {confirmSoldOut ? (
-        <div className="pos-confirm-modal" role="dialog" aria-modal="true">
-          <div className="pos-confirm-card">
-            <h3>{confirmSoldOut.active ? "ปิดขายเมนูนี้?" : "เปิดขายอีกครั้ง?"}</h3>
-            <p>
-              {confirmSoldOut.active
-                ? `"${confirmSoldOut.name}" จะแสดงเป็นของหมด`
-                : `"${confirmSoldOut.name}" จะกลับมาขายได้`}
-            </p>
-            <div className="pos-confirm-actions">
-              <button type="button" className="ghost-btn" onClick={() => setConfirmSoldOut(null)}>
-                ยกเลิก
-              </button>
-              <button type="button" className="primary-btn" onClick={() => void confirmSoldOutToggle()}>
-                ยืนยัน
-              </button>
-            </div>
-          </div>
-        </div>
+        <PosConfirmDialog
+          open
+          title={confirmSoldOut.active ? "ปิดขายเมนูนี้?" : "เปิดขายอีกครั้ง?"}
+          message={
+            confirmSoldOut.active
+              ? `"${confirmSoldOut.name}" จะแสดงเป็นของหมด`
+              : `"${confirmSoldOut.name}" จะกลับมาขายได้`
+          }
+          confirmLabel="ยืนยัน"
+          onCancel={() => setConfirmSoldOut(null)}
+          onConfirm={() => void confirmSoldOutToggle()}
+        />
       ) : null}
 
       {picker ? (
@@ -705,71 +701,79 @@ export function PosSellView({
       {payOpen ? (
         <div className="pos-pay-modal" role="dialog" aria-modal="true">
           <div className="pos-pay-sheet">
-            <div className="pos-pay-head">
-              <h2>{payMode === "promptpay" ? "สแกนจ่าย PromptPay" : "รับเงินสด"}</h2>
-              <button type="button" className="ghost-btn" aria-label="ปิด" onClick={closePay}>
-                <X size={18} />
-              </button>
-            </div>
-            <p className="pos-pay-summary">
-              {cartCount} รายการ · {payMode === "promptpay" ? "สแกนจ่าย" : "ชำระเงินสด"}
-            </p>
-            <p className="pos-pay-total">
-              ยอดรวม <strong>฿{formatPlainNumber(total)}</strong>
-            </p>
-
-            {payMode === "cash" ? (
-              <>
-                <label className="pos-pay-field">
-                  <span>รับเงินมา</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="0"
-                    step="1"
-                    value={cashInput}
-                    autoFocus
-                    onChange={(e) => setCashInput(e.target.value)}
-                  />
-                </label>
-                <div className="pos-pay-quick" role="group" aria-label="จำนวนเงินด่วน">
-                  <button
-                    type="button"
-                    className="pos-pay-quick-btn pos-pay-quick-btn--exact"
-                    onClick={() => setCashInput(String(Math.ceil(total)))}
-                  >
-                    ตรงพอดี
-                    <span>฿{formatPlainNumber(total)}</span>
+            <div className="pos-pay-sheet-inner">
+              <div className="pos-pay-sheet-top">
+                <div className="pos-pay-head">
+                  <h2>{payMode === "promptpay" ? "สแกนจ่าย PromptPay" : "รับเงินสด"}</h2>
+                  <button type="button" className="ghost-btn" aria-label="ปิด" onClick={closePay}>
+                    <X size={18} />
                   </button>
-                  {[20, 50, 100, 500, 1000].map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      className="pos-pay-quick-btn"
-                      onClick={() => setCashInput(String(amt))}
-                    >
-                      ฿{amt}
-                    </button>
-                  ))}
                 </div>
-                <p className={`pos-pay-change ${cashNum >= total ? "ok-text" : "error-text"}`}>
-                  ทอน {cashNum >= total ? `฿${formatPlainNumber(change)}` : "— เงินไม่พอ"}
+                <p className="pos-pay-summary">
+                  {cartCount} รายการ · {payMode === "promptpay" ? "สแกนจ่าย" : "ชำระเงินสด"}
                 </p>
-              </>
-            ) : (
-              <>
-                {qrUrl ? (
-                  <div className="pos-pay-qr">
-                    <img src={qrUrl} alt={`PromptPay ฿${formatPlainNumber(total)}`} width={280} height={280} />
-                    <p className="muted">ให้ลูกค้าสแกนจ่าย แล้วกดยืนยันเมื่อได้เงินแล้ว</p>
-                  </div>
-                ) : (
-                  <p className="muted">กำลังสร้าง QR...</p>
-                )}
-              </>
-            )}
+              </div>
 
-            {error ? <p className="error-text">{error}</p> : null}
+              <div className="pos-pay-order-scroll">
+                <PosPayOrderReview lines={cartLines} total={total} />
+              </div>
+
+              <div className="pos-pay-sheet-body">
+                {payMode === "cash" ? (
+                  <>
+                    <label className="pos-pay-field">
+                      <span>รับเงินมา</span>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        step="1"
+                        value={cashInput}
+                        autoFocus
+                        onChange={(e) => setCashInput(e.target.value)}
+                      />
+                    </label>
+                    <div className="pos-pay-quick" role="group" aria-label="จำนวนเงินด่วน">
+                      <button
+                        type="button"
+                        className="pos-pay-quick-btn pos-pay-quick-btn--exact"
+                        onClick={() => setCashInput(String(Math.ceil(total)))}
+                      >
+                        ตรงพอดี
+                        <span>฿{formatPlainNumber(total)}</span>
+                      </button>
+                      {[20, 50, 100, 500, 1000].map((amt) => (
+                        <button
+                          key={amt}
+                          type="button"
+                          className="pos-pay-quick-btn"
+                          onClick={() => setCashInput(String(amt))}
+                        >
+                          ฿{amt}
+                        </button>
+                      ))}
+                    </div>
+                    <p className={`pos-pay-change ${cashNum >= total ? "ok-text" : "error-text"}`}>
+                      ทอน {cashNum >= total ? `฿${formatPlainNumber(change)}` : "— เงินไม่พอ"}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    {qrUrl ? (
+                      <div className="pos-pay-qr">
+                        <img src={qrUrl} alt={`PromptPay ฿${formatPlainNumber(total)}`} width={280} height={280} />
+                        <p className="muted">ให้ลูกค้าสแกนจ่าย แล้วกดยืนยันเมื่อได้เงินแล้ว</p>
+                      </div>
+                    ) : (
+                      <p className="muted">กำลังสร้าง QR...</p>
+                    )}
+                  </>
+                )}
+
+                {error ? <p className="error-text">{error}</p> : null}
+              </div>
+            </div>
+
             <div className="pos-pay-actions">
               <button type="button" className="pos-pay-cancel-btn" onClick={closePay}>
                 ยกเลิก

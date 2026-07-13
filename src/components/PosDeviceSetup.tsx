@@ -39,6 +39,7 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
   const [forcePosAutoUpdate, setForcePosAutoUpdate] = useState(false);
   const [releaseLoading, setReleaseLoading] = useState(true);
   const [releaseBusy, setReleaseBusy] = useState(false);
+  const [updateMsg, setUpdateMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = subscribeAppReleaseSettings(
@@ -132,7 +133,8 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
         actorId,
       );
       onError(null);
-      window.alert(`สั่งอัปเดต ${n} เครื่อง — รีเฟรชอัตโนมัติเมื่อตะกร้าว่าง (พนักงานไม่ต้องกด)`);
+      setUpdateMsg(`สั่งอัปเดต ${n} เครื่อง — รีเฟรชอัตโนมัติเมื่อตะกร้าว่าง (พนักงานไม่ต้องกด)`);
+      window.setTimeout(() => setUpdateMsg(null), 6000);
     } catch (err) {
       onError((err as Error).message || "สั่งอัปเดตทุกเครื่องไม่สำเร็จ");
     } finally {
@@ -239,6 +241,8 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
           อัปเดตเครื่องที่ค้าง ({staleCount})
         </button>
       ) : null}
+
+      {updateMsg ? <p className="ok-text settings-card-lead">{updateMsg}</p> : null}
 
       {!loading && devices.length > 0 ? (
         <ul className="pos-device-list">

@@ -13,6 +13,7 @@ import { localReceiptToPrintPayload } from "@/lib/pos-receipt-view";
 import { subscribePosShopSettings, type PosShopSettings } from "@/lib/pos-settings";
 import { usePosApp } from "@/lib/pos-app-context";
 import { formatPlainNumber, startOfLocalDay } from "@/lib/utils";
+import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 
 type ReceiptFilter = "all" | "pending" | "synced";
 
@@ -35,6 +36,8 @@ export function PosReceiptsView() {
   const [filter, setFilter] = useState<ReceiptFilter>("all");
   const [shop, setShop] = useState<PosShopSettings>(DEFAULT_SHOP);
   const [voidBusy, setVoidBusy] = useState(false);
+  const [voidTarget, setVoidTarget] = useState<PosLocalReceipt | null>(null);
+  const [voidReason, setVoidReason] = useState("");
   const [demoMsg, setDemoMsg] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
@@ -73,12 +76,17 @@ export function PosReceiptsView() {
     await printSaleDocuments(payload, { receiptOnly: true });
   }
 
-  async function handleVoid(receipt: PosLocalReceipt) {
-    const reason = window.prompt(`ทำลายบิล #${receipt.billNo}?\nใส่เหตุผล (ถ้ามี):`, "");
-    if (reason === null) return;
+  function openVoidDialog(receipt: PosLocalReceipt) {
+    setVoidReason("");
+    setVoidTarget(receipt);
+  }
+
+  async function confirmVoid() {
+    if (!voidTarget) return;
     setVoidBusy(true);
     try {
-      voidLocalReceipt(receipt.id, reason || undefined);
+      voidLocalReceipt(voidTarget.id, voidReason.trim() || undefined);
+      setVoidTarget(null);
       refresh();
     } finally {
       setVoidBusy(false);
@@ -174,13 +182,28 @@ export function PosReceiptsView() {
           <PosReceiptPaper
             receipt={selected}
             onPrint={() => void handlePrint(selected)}
-            onVoid={() => void handleVoid(selected)}
+            onVoid={() => openVoidDialog(selected)}
             voidBusy={voidBusy}
           />
         ) : (
           <p className="muted pos-module-empty">เลือกใบเสร็จจากรายการ</p>
         )}
       </div>
+
+      <PosConfirmDialog
+        open={voidTarget !== null}
+        title={voidTarget ? `ทำลายบิล #${voidTarget.billNo}?` : ""}
+        variant="prompt"
+        promptLabel="เหตุผล"
+        promptPlaceholder="ไม่บังคับ"
+        promptValue={voidReason}
+        onPromptChange={setVoidReason}
+        confirmLabel="ทำลายบิล"
+        destructive
+        busy={voidBusy}
+        onCancel={() => setVoidTarget(null)}
+        onConfirm={() => void confirmVoid()}
+      />
     </div>
   );
 }
