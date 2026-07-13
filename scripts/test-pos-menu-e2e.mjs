@@ -90,16 +90,23 @@ await page.getByRole("button", { name: "กลุ่มตัวเลือก"
 await page.waitForTimeout(500);
 const plusBtn = page.locator("header.pos-menu-admin-top button[title='เพิ่ม']");
 await plusBtn.click();
-await page.waitForTimeout(2000);
 
+await page.waitForFunction(
+  () => document.body.innerText.includes("แก้ไขกลุ่มตัวเลือก"),
+  { timeout: 15_000 },
+);
 const editorText = await page.locator("body").innerText();
 assert.ok(editorText.includes("แก้ไขกลุ่มตัวเลือก"), "กด + ต้องเปิด editor กลุ่มตัวเลือก");
 note("5. เพิ่มกลุ่มตัวเลือก → เปิด editor");
 
-const nameInput = page.locator('input').first();
+const nameInput = page.locator("form.pos-menu-editor-form input").first();
 await nameInput.fill("ท็อปปิ้ง e2e");
 await page.getByRole("button", { name: "บันทึก" }).click();
-await page.waitForTimeout(2500);
+
+await page.waitForFunction(
+  () => !document.body.innerText.includes("แก้ไขกลุ่มตัวเลือก"),
+  { timeout: 15_000 },
+);
 
 const afterSave = await page.locator("body").innerText();
 if (/Unsupported field value|permission/i.test(afterSave)) {
@@ -107,9 +114,7 @@ if (/Unsupported field value|permission/i.test(afterSave)) {
 }
 note("6. บันทึกกลุ่มตัวเลือก OK");
 
-await page.getByRole("button", { name: "กลับ" }).click();
-await page.waitForTimeout(1000);
-assert.ok((await page.locator("body").innerText()).includes("กลุ่มตัวเลือก"));
+assert.ok(afterSave.includes("กลุ่มตัวเลือก"), "หลังบันทึกต้องกลับรายการกลุ่ม");
 note("7. กลับรายการกลุ่ม OK");
 
 await page.getByRole("button", { name: "หมวดหมู่รายการ" }).click();
