@@ -44,7 +44,7 @@ export function PosSalesSetup({ onError }: { onError: (msg: string | null) => vo
   async function handleVoid(sale: PosSale) {
     if (!actorId || sale.status === "voided") return;
     const ok = window.confirm(
-      `ยกเลิกบิล ${sale.billNo} ฿${formatPlainNumber(sale.total)}?\nยอดจะหักออกจากบัญชีอัตโนมัติ`,
+      `ยกเลิกบิล ${sale.billNo} ฿${formatPlainNumber(sale.total)}?\nยอดขาย POS จะถูกหักออกจากรายงานวันนี้`,
     );
     if (!ok) return;
     setBusyId(sale.id);

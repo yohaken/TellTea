@@ -233,19 +233,7 @@ service cloud.firestore {
         && request.resource.data.createdBy == posActorId()
         && request.resource.data.status == 'completed'
         && request.resource.data.billNo is string
-        && request.resource.data.billNo.size() >= 5
-        && request.resource.data.ledgerEntryId is string;
-    }
-
-    function posLedgerCreate() {
-      return isPosDeviceAuth()
-        && request.resource.data.createdBy == posActorId()
-        && request.resource.data.type == 'pos'
-        && request.resource.data.amountIn > 0
-        && request.resource.data.amountOut == 0
-        && request.resource.data.description is string
-        && request.resource.data.date is number
-        && request.resource.data.posDeviceId == request.auth.uid;
+        && request.resource.data.billNo.size() >= 5;
     }
 
     function posSessionOpen() {
@@ -266,14 +254,6 @@ service cloud.firestore {
         && after.status == 'open'
         && after.saleCount >= before.saleCount
         && after.totalSales >= before.totalSales;
-    }
-
-    function posLedgerMetaWrite() {
-      let after = request.resource.data;
-      return isPosDeviceAuth()
-        && after.balance is number
-        && after.totalIn is number
-        && after.updatedAt is number;
     }
 
     function posMenuItemSoldOutToggle() {
@@ -370,8 +350,7 @@ service cloud.firestore {
         && (
           (request.resource.data.amountIn > 0 && request.resource.data.amountOut == 0 && hasPerm('transferIn'))
           || (request.resource.data.amountOut > 0 && request.resource.data.amountIn == 0)
-        ))
-        || posLedgerCreate();
+        ));
       allow update, delete: if hasPerm('ledger');
     }
 
@@ -526,13 +505,12 @@ service cloud.firestore {
 
     match /meta/{docId} {
       allow read: if isStaff()
-        || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'ledger'));
+        || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos'));
       allow write: if isOwner()
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
         || (hasPerm('alerts') && docId == 'lowBalanceAlert')
         || (hasPerm('ownerBooks') && docId == 'ownerBooks')
         || (isOwner() && docId == 'otSettings')
-        || (isPosDeviceAuth() && docId == 'ledger' && posLedgerMetaWrite())
         || (isPosDeviceAuth() && docId == 'pos' && posMetaBillWrite());
     }
 
@@ -571,7 +549,7 @@ service cloud.firestore {
     }
 
     match /posSales/{id} {
-      allow read: if isOwner() || hasPerm('ledger');
+      allow read: if isOwner();
       allow create: if isPosDeviceAuth() && posSaleCreate();
       allow update, delete: if isOwner();
     }

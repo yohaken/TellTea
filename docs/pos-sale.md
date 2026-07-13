@@ -9,8 +9,8 @@
   → signIn posDeviceAuth (custom token + claim posDevice)
   → httpsCallable posCompleteSale (asia-southeast1)
   → Admin SDK transaction:
-       อ่าน meta/pos + meta/ledger
-       เขียน posSales + ledger + meta/ledger + เลขบิล
+       อ่าน meta/pos
+       เขียน posSales + meta/pos + เลขบิล
   → อัปเดต posSessions (ยอดกะ)
 ```
 
@@ -24,7 +24,7 @@
 
 | สาเหตุ | อาการ | ป้องกัน |
 |--------|-------|---------|
-| **อ่านหลังเขียนใน transaction** | `บันทึกการขายไม่สำเร็จ` (internal) | อ่าน `meta/pos` + `meta/ledger` ก่อน `tx.set` ทั้งหมด · CI `test:pos-complete-sale` |
+| **อ่านหลังเขียนใน transaction** | `บันทึกการขายไม่สำเร็จ` (internal) | อ่าน `meta/pos` (+ mutation) ก่อน `tx.set` ทั้งหมด · CI `test:pos-complete-sale` |
 | Function ยังไม่ deploy | internal / not found | รอ GitHub Actions step Functions · ดู build บน POS |
 | Cold start / timeout | ช้าแล้ว error | ภูมิภาค `asia-southeast1` ใกล้ไทย |
 | Admin SDK กับ Firestore index | failed-precondition | ดู Cloud Logging |

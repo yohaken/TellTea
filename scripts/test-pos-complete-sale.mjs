@@ -22,4 +22,7 @@ assert.ok(firstWrite > -1, "transaction has writes");
 assert.ok(lastRead > -1, "transaction has reads");
 assert.ok(lastRead < firstWrite, "all tx.get before tx.set (incl. mutation)");
 
+assert.doesNotMatch(src, /collection\("ledger"\)/, "POS sale must not write ledger");
+assert.doesNotMatch(src, /meta\/ledger/, "POS sale must not touch meta/ledger");
+
 console.log("OK pos-complete-sale transaction ordering");

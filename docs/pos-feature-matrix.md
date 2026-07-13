@@ -169,7 +169,7 @@ Wongnai POS Android
 | T-A7 | พิมพ์ใบเสร็จ | W1.5 | APK bridge + printer | รอ Phase 2 |
 | T-A8 | ยกเลิกบิล | W2.5 | void + audit (owner) | รอ |
 | T-A9 | รายงานยอดขายวัน | W2.8 | `sales` → TellTea หลัก | รอ |
-| T-A10 | sync เข้าบัญชี | — | `ledger` amountIn อัตโนมัติ | รอ |
+| T-A10 | sync เข้าบัญชี | — | ~~ledger~~ **แยกแล้ว** — POS ไม่เขียน `ledger` | **ทำแล้ว** v131 |
 
 ### กลุ่ม B — ควรมี (หลัง MVP)
 
@@ -206,15 +206,30 @@ Wongnai POS Android
 |-------|---------|--------|
 | 0 | เชื่อมต่อเครื่อง + auto-update + heartbeat | **ทำแล้ว** v112–119 — ดู `docs/pos-connectivity.md` |
 | 0.5 | PWA standalone — ติดตั้งแอปเต็มจอ | **ทำแล้ว** v115 — `manifest-pos.webmanifest` |
-| 1 | เมนู + ตะกร้า + เงินสด + sync ledger | **ทำแล้ว** v116 |
+| 1 | เมนู + ตะกร้า + เงินสด + posSales (ไม่ผูก ledger) | **ทำแล้ว** v131 |
 | 1.5 | เลขบิล + void + รายงานยอดวัน + เสียง + แก้ตะกร้า | **ทำแล้ว** v124 |
 | 2 | พิมพ์ใบเสร็จ + สถานะฮาร์ดแวร์ | **ทำแล้ว** v125 |
 | 3 | PromptPay + ปิดเมนูของหมด | **ทำแล้ว** v125 |
 | 3.5 | บันทึกบิลผ่าน Cloud Function | **ทำแล้ว** v127–128 — ดู `docs/pos-sale.md` |
 | 4 | Offline outbox + sync + idempotency | **ทำแล้ว** v129 — ดู `docs/pos-sync.md` |
-| 4 | หักสต็อก + รายงาน | รอ |
+| 4.5 | แยก POS ออกจาก `ledger` (โดเมนขาย vs บัญชีพนักงาน) | **ทำแล้ว** v131 |
+| 5 | รายงานยอดขายจาก `posSales` + สรุปรายวัน | **ถัดไป** |
+| 6 | หักสต็อกจากบิล POS | รอ |
+| 7 | PnL รายได้จาก POS → `monthlyIncome` (ทางเลือก) | รอ |
 
 ---
+
+## แผนถัดไป (หลัง v131)
+
+| ลำดับ | งาน | เหตุผล |
+|-------|-----|--------|
+| 1 | **รายงานยอดขายวัน** — หน้า/แท็บสรุปจาก `posSales` + `posSessions` | T-A9 · เจ้าของเห็นยอดจริงโดยไม่พึ่ง ledger |
+| 2 | **`posDailySummary`** (optional) — aggregate รายวันเพื่อ query เร็ว | ลด read เมื่อบิลเยอะ |
+| 3 | **ปรับ void/history** — เหตุผลยกเลิก + audit log | T-A8 ครบวงจร |
+| 4 | **หักสต็อก** — ลด `stock` ตามเมนูในบิล | T-B8 |
+| 5 | **PnL bridge** — สรุปรายได้รายเดือนจาก POS → `monthlyIncome` (manual override ได้) | แทนการกรอกมือ |
+| 6 | **ทำความสะอาดข้อมูลเก่า** — รายการ `ledger` type `pos` / `pos_void` ที่ sync ก่อน v131 (ถ้าต้องการ) | one-time migration |
+
 
 ## บริบทร้าน TellTea (อ้างอิง)
 

@@ -17,15 +17,6 @@ function formatBillNo(dateMs, seq) {
   return `P${dd}${mm}-${String(seq).padStart(3, "0")}`;
 }
 
-function saleDescription(lines) {
-  const preview = lines
-    .slice(0, 2)
-    .map((l) => `${l.name}×${l.qty}`)
-    .join(", ");
-  const more = lines.length > 2 ? ` +${lines.length - 2}` : "";
-  return `ขายหน้าร้าน ${preview}${more}`;
-}
-
 function isPosCaller(auth) {
   if (!auth?.uid) return false;
   const token = auth.token || {};
@@ -99,10 +90,7 @@ async function completePosSaleAdmin(db, data, uid) {
   const date = startOfBangkokDay(now);
   const createdBy = `pos:${deviceId}`;
   const saleRef = db.collection("posSales").doc();
-  const ledgerRef = db.collection("ledger").doc();
-  const metaLedgerRef = db.doc("meta/ledger");
   const metaPosRef = db.doc("meta/pos");
-  const description = saleDescription(lines);
   const mutationRef = clientMutationId ? db.doc(`posSaleMutations/${clientMutationId}`) : null;
 
   const txResult = await db.runTransaction(async (tx) => {
@@ -114,18 +102,12 @@ async function completePosSaleAdmin(db, data, uid) {
     }
 
     const posSnap = await tx.get(metaPosRef);
-    const metaSnap = await tx.get(metaLedgerRef);
     const posData = posSnap.data() || {};
     let seq = 1;
     if (posData.billDate === date && typeof posData.billSeq === "number") {
       seq = posData.billSeq + 1;
     }
     const nextBillNo = formatBillNo(date, seq);
-
-    const meta = metaSnap.data() || {};
-    const balance = Number(meta.balance) || 0;
-    const totalIn = Number(meta.totalIn) || 0;
-    const totalOut = Number(meta.totalOut) || 0;
 
     tx.set(metaPosRef, { billDate: date, billSeq: seq, updatedAt: now }, { merge: true });
     tx.set(saleRef, {
@@ -140,35 +122,11 @@ async function completePosSaleAdmin(db, data, uid) {
       paymentMethod,
       cashReceived,
       change,
-      ledgerEntryId: ledgerRef.id,
       createdAt: now,
       createdBy,
       status: "completed",
       ...(clientMutationId ? { clientMutationId } : {}),
     });
-    tx.set(ledgerRef, {
-      date,
-      description,
-      amountIn: total,
-      amountOut: 0,
-      type: "pos",
-      createdBy,
-      createdAt: now,
-      updatedAt: now,
-      receiptUrl: "",
-      posSaleId: saleRef.id,
-      posDeviceId: deviceId,
-    });
-    tx.set(
-      metaLedgerRef,
-      {
-        balance: Math.round((balance + total) * 100) / 100,
-        totalIn: Math.round((totalIn + total) * 100) / 100,
-        totalOut,
-        updatedAt: now,
-      },
-      { merge: true },
-    );
     if (mutationRef) {
       tx.set(mutationRef, {
         saleId: saleRef.id,

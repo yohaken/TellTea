@@ -2,7 +2,6 @@ import {
   collection,
   doc,
   getDoc,
-  increment,
   onSnapshot,
   orderBy,
   query,
@@ -36,7 +35,7 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     paymentMethod: data.paymentMethod === "promptpay" ? "promptpay" : "cash",
     cashReceived: typeof data.cashReceived === "number" ? data.cashReceived : 0,
     change: typeof data.change === "number" ? data.change : 0,
-    ledgerEntryId: typeof data.ledgerEntryId === "string" ? data.ledgerEntryId : "",
+    ledgerEntryId: typeof data.ledgerEntryId === "string" ? data.ledgerEntryId : undefined,
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
     createdBy: typeof data.createdBy === "string" ? data.createdBy : "",
     status: data.status === "voided" ? "voided" : "completed",
@@ -79,20 +78,6 @@ export async function voidPosSale(
   if (sale.status === "voided") throw new Error("บิลนี้ยกเลิกแล้ว");
 
   const now = Date.now();
-  const voidLedgerRef = doc(collection(getDb(), "ledger"));
-  const voidLedgerPayload = {
-    date: sale.date,
-    description: `ยกเลิก POS ${sale.billNo}${reason ? ` — ${reason.trim()}` : ""}`,
-    amountIn: 0,
-    amountOut: sale.total,
-    type: "pos_void",
-    createdBy: actorId,
-    createdAt: now,
-    updatedAt: now,
-    receiptUrl: "",
-    posSaleId: sale.id,
-    posDeviceId: sale.deviceId,
-  };
 
   try {
     const batch = writeBatch(getDb());
@@ -101,18 +86,7 @@ export async function voidPosSale(
       voidedAt: now,
       voidedBy: actorId,
       voidReason: reason.trim(),
-      voidLedgerEntryId: voidLedgerRef.id,
     });
-    batch.set(voidLedgerRef, voidLedgerPayload);
-    batch.set(
-      doc(getDb(), "meta", "ledger"),
-      {
-        balance: increment(-sale.total),
-        totalOut: increment(sale.total),
-        updatedAt: now,
-      },
-      { merge: true },
-    );
     await batch.commit();
     await adjustPosSessionTotalsAdmin(sale.sessionId, -sale.total, -1);
   } catch (err) {

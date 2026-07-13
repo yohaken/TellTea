@@ -219,7 +219,7 @@ export type PosSale = {
   paymentMethod: PosSalePaymentMethod;
   cashReceived: number;
   change: number;
-  ledgerEntryId: string;
+  ledgerEntryId?: string;
   createdAt: number;
   createdBy: string;
   status: "completed" | "voided";

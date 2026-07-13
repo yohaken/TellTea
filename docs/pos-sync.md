@@ -26,7 +26,7 @@
      │ idempotency          │ PosSyncWatcher
      │ posSaleMutations/    │ flush ทุก 12s + เมื่อ online
      ▼                      ▼
- Firestore: posSales, ledger, meta/ledger, meta/pos
+ Firestore: posSales, meta/pos, posSessions
 ```
 
 | ชั้น | ไฟล์ | หน้าที่ |
