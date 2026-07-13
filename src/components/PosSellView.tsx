@@ -276,6 +276,7 @@ export function PosSellView({
     appendLocalReceipt({
       id: result.clientMutationId || result.billNo,
       billNo: result.billNo,
+      sessionId: session.id,
       total: result.total,
       paymentMethod,
       linePreview,

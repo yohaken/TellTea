@@ -256,6 +256,19 @@ service cloud.firestore {
         && after.totalSales >= before.totalSales;
     }
 
+    function posSessionClose() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return isPosDeviceAuth()
+        && before.deviceId == request.auth.uid
+        && after.deviceId == before.deviceId
+        && before.status == 'open'
+        && after.status == 'closed'
+        && after.closedAt is number
+        && after.saleCount == before.saleCount
+        && after.totalSales == before.totalSales;
+    }
+
     function posMenuItemSoldOutToggle() {
       let before = resource.data;
       let after = request.resource.data;
@@ -548,7 +561,7 @@ service cloud.firestore {
         ));
       allow list: if isOwner();
       allow create: if isPosDeviceAuth() && posSessionOpen();
-      allow update: if (isPosDeviceAuth() && posSessionSaleBump()) || isOwner();
+      allow update: if (isPosDeviceAuth() && (posSessionSaleBump() || posSessionClose())) || isOwner();
       allow delete: if isOwner();
     }
 

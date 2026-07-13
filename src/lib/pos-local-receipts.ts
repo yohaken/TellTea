@@ -4,6 +4,7 @@ import type { PosSalePaymentMethod } from "./types";
 export type PosLocalReceipt = {
   id: string;
   billNo: string;
+  sessionId?: string;
   total: number;
   paymentMethod: PosSalePaymentMethod;
   linePreview: string;
@@ -42,6 +43,26 @@ export function listLocalReceiptsForDay(dayStartMs: number): PosLocalReceipt[] {
   return readAll()
     .filter((r) => r.createdAt >= dayStartMs && r.createdAt < dayEnd)
     .sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export function listLocalReceiptsForSession(sessionId: string): PosLocalReceipt[] {
+  return readAll()
+    .filter((r) => r.sessionId === sessionId)
+    .sort((a, b) => a.createdAt - b.createdAt);
+}
+
+export function summarizeLocalReceipts(receipts: PosLocalReceipt[]) {
+  const cash = receipts.filter((r) => r.paymentMethod === "cash");
+  const pp = receipts.filter((r) => r.paymentMethod === "promptpay");
+  return {
+    count: receipts.length,
+    total: Math.round(receipts.reduce((s, r) => s + r.total, 0) * 100) / 100,
+    cashTotal: Math.round(cash.reduce((s, r) => s + r.total, 0) * 100) / 100,
+    cashCount: cash.length,
+    promptpayTotal: Math.round(pp.reduce((s, r) => s + r.total, 0) * 100) / 100,
+    promptpayCount: pp.length,
+    pendingCount: receipts.filter((r) => r.pending).length,
+  };
 }
 
 export function markLocalReceiptSynced(clientMutationId: string, billNo: string) {

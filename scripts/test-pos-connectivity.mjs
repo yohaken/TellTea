@@ -32,6 +32,7 @@ assert.match(readFileSync(join(root, "src/components/PosSyncWatcher.tsx"), "utf8
 assert.match(readFileSync(join(root, "src/lib/pos-outbox.ts"), "utf8"), /telltea-pos-sync/);
 assert.match(readFileSync(join(root, "functions/pos-complete-sale.js"), "utf8"), /clientMutationId/);
 assert.match(rulesSrc, /posDevice == true/);
+assert.match(rulesSrc, /posSessionClose/);
 assert.match(readFileSync(join(root, "functions/index.js"), "utf8"), /posDeviceAuth/);
 assert.match(readFileSync(join(root, "functions/index.js"), "utf8"), /posCompleteSale/);
 assert.match(readFileSync(join(root, "src/lib/pos-sales.ts"), "utf8"), /recordSaleInstant/);

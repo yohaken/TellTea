@@ -7879,6 +7879,38 @@ body.modal-open .main-panel {
   margin-top: 1.5rem;
 }
 
+.pos-shift-warn {
+  color: #c44;
+  font-weight: 600;
+}
+
+.pos-shift-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+  max-width: 32rem;
+}
+
+.pos-shift-history-row {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+.pos-shift-history-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.pos-shift-history-note {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
 .pos-receipts-list-pane {
   border-right: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;

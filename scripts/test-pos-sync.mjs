@@ -54,6 +54,7 @@ const syncSrc = await import("node:fs").then((fs) =>
 );
 assert.match(syncSrc, /syncing: boolean/);
 assert.match(syncSrc, /syncing: true/);
+assert.match(syncSrc, /markLocalReceiptSynced/);
 
 const watcherSrc = await import("node:fs").then((fs) =>
   fs.readFileSync(new URL("../src/components/PosSyncWatcher.tsx", import.meta.url), "utf8"),

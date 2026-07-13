@@ -1,4 +1,5 @@
 import { httpsCallable } from "firebase/functions";
+import { markLocalReceiptSynced } from "./pos-local-receipts";
 import { reportPosDeviceSyncStatus } from "./pos-devices";
 import { getPosFirebaseAuth, getPosFirebaseFunctions } from "./pos-firebase";
 import {
@@ -113,7 +114,8 @@ export async function flushPosOutbox(): Promise<{ synced: number; remaining: num
     if (outboxEntryStatus(entry) === "failed") continue;
 
     try {
-      await invokePosCompleteSale(entry.payload);
+      const data = await invokePosCompleteSale(entry.payload);
+      markLocalReceiptSynced(entry.id, data.billNo);
       await removeOutboxEntry(entry.id);
       synced += 1;
     } catch (err) {
