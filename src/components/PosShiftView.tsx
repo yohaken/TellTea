@@ -22,6 +22,7 @@ import {
   buildShiftReportHtml,
   openShiftReportPrint,
 } from "@/lib/pos-printer/shift-snapshot-template";
+import { loadPosMenuCache } from "@/lib/pos-menu-cache";
 import type { PosLocalSessionRecord } from "@/lib/pos-local-sessions";
 
 const DEFAULT_SHOP: PosShopSettings = getLocalPosShopSettings();
@@ -371,10 +372,12 @@ export function PosShiftView() {
     openedAt: number;
     closedAt?: number | null;
     summary: ReturnType<typeof summarizeLocalReceipts>;
+    receipts?: PosLocalReceipt[];
   }) {
     setPrintingReport(true);
     setPrintMsg(null);
     try {
+      const menu = loadPosMenuCache({ withImages: false });
       const payload = buildShiftReportPayload({
         kind: opts.kind,
         shop,
@@ -383,9 +386,19 @@ export function PosShiftView() {
         openedAt: opts.openedAt,
         closedAt: opts.closedAt,
         summary: opts.summary,
+        receipts: opts.receipts,
+        menu: menu
+          ? { items: menu.items, categories: menu.categories }
+          : undefined,
       });
       const ok = openShiftReportPrint(buildShiftReportHtml(payload));
-      setPrintMsg(ok ? "เปิดหน้าต่างพิมพ์สรุปกะแล้ว" : "เปิดหน้าต่างพิมพ์ไม่ได้ — อนุญาต popup");
+      setPrintMsg(
+        ok
+          ? opts.kind === "close"
+            ? "เปิดหน้าต่างพิมพ์รายงานยอดการขายแล้ว"
+            : "เปิดหน้าต่างพิมพ์สรุปกะแล้ว"
+          : "เปิดหน้าต่างพิมพ์ไม่ได้ — อนุญาต popup",
+      );
     } catch (err) {
       setPrintMsg((err as Error).message);
     } finally {
@@ -400,6 +413,7 @@ export function PosShiftView() {
       sessionId: session.id,
       openedAt: session.openedAt,
       summary: sessionSummary,
+      receipts: sessionReceipts,
     });
   }
 
@@ -424,6 +438,7 @@ export function PosShiftView() {
       openedAt: row.openedAt,
       closedAt: row.closedAt,
       summary,
+      receipts,
     });
   }
 
@@ -433,6 +448,7 @@ export function PosShiftView() {
       sessionId: `history-${historyRange}`,
       openedAt: sales[sales.length - 1]?.createdAt ?? Date.now(),
       summary: summarizeLocalReceipts(sales),
+      receipts: sales,
     });
   }
 
@@ -478,6 +494,7 @@ export function PosShiftView() {
     const closedSummary = sessionSummary;
     const closedOpenedAt = session.openedAt;
     const closedSessionId = session.id;
+    const closedReceipts = sessionReceipts;
 
     setClosing(true);
     setError(null);
@@ -494,6 +511,7 @@ export function PosShiftView() {
         openedAt: closedOpenedAt,
         closedAt: Date.now(),
         summary: closedSummary,
+        receipts: closedReceipts,
       });
     } catch (err) {
       setError((err as Error).message);

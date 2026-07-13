@@ -43,6 +43,11 @@ export function localReceiptToPrintPayload(
   staffId?: string,
 ): ReceiptPrintPayload {
   const lines = localReceiptLines(receipt).map(localReceiptLineToSaleLine);
+  const subtotal = receiptSubtotal(localReceiptLines(receipt));
+  const discountBaht =
+    receipt.discountBaht != null && receipt.discountBaht > 0
+      ? receipt.discountBaht
+      : undefined;
   return {
     kind: "receipt",
     shopName: shop.shopName,
@@ -51,6 +56,8 @@ export function localReceiptToPrintPayload(
     shopPhone: shop.shopPhone,
     billNo: receipt.billNo,
     lines,
+    subtotal,
+    discountBaht,
     total: receipt.total,
     paymentMethod: receipt.paymentMethod,
     cashReceived: receipt.cashReceived,

@@ -13,6 +13,7 @@
     "test:pos-sales-local-first": "node scripts/test-pos-sales-local-first.mjs",
     "test:pos-menu-cart": "node scripts/test-pos-menu-cart.mjs",
     "test:pos-shift-keypad": "node scripts/test-pos-shift-keypad.mjs",
+    "test:pos-shift-report": "node scripts/test-pos-shift-report.mjs",
     "test:pos-business-settings": "node scripts/test-pos-business-settings.mjs",
     "test:pos-clock-in": "node scripts/test-pos-clock-in.mjs",
     "test:pos-discount": "node scripts/test-pos-discount.mjs",

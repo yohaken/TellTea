@@ -400,6 +400,7 @@ export function PosSellView({
       paymentMethod,
       linePreview,
       lines: saleLinesToLocalReceiptLines(lines),
+      discountBaht: discountBaht > 0 ? discountBaht : undefined,
       cashReceived: paymentMethod === "cash" ? cashNum : undefined,
       change: paymentMethod === "cash" ? (result.change ?? 0) : undefined,
       createdAt: now,
