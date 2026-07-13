@@ -126,6 +126,52 @@ service cloud.firestore {
         && request.resource.data.status == 'unpaid';
     }
 
+    function isPosDeviceAuth() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    function posDeviceCreate() {
+      return isPosDeviceAuth()
+        && request.resource.data.authUid == request.auth.uid
+        && request.resource.data.registeredAt is number
+        && request.resource.data.lastSeenAt is number
+        && request.resource.data.appBuild is number
+        && request.resource.data.pairingCode is string
+        && request.resource.data.pairingCode.size() >= 4;
+    }
+
+    function posDeviceHeartbeat() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return isPosDeviceAuth()
+        && before.authUid == request.auth.uid
+        && after.authUid == before.authUid
+        && after.registeredAt == before.registeredAt
+        && after.pairingCode == before.pairingCode
+        && after.diff(before).affectedKeys().hasOnly([
+          'lastSeenAt',
+          'appBuild',
+          'userAgent',
+          'lastReloadAckAt',
+        ]);
+    }
+
+    function posDeviceOwnerPatch() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return after.authUid == before.authUid
+        && after.registeredAt == before.registeredAt
+        && after.pairingCode == before.pairingCode
+        && after.diff(before).affectedKeys().hasOnly([
+          'label',
+          'forceReloadAt',
+          'updatedAt',
+          'updatedBy',
+          'disabled',
+        ]);
+    }
+
     function staffEmployeeId() {
       return isStaff()
         && get(staffPath()).data.keys().hasAny(['employeeId'])
@@ -377,6 +423,19 @@ service cloud.firestore {
         && request.resource.data.endpoint is string
         && request.resource.data.keys.keys().hasAll(['p256dh', 'auth']);
       allow delete: if hasPerm('alerts') && hasEmail() && resource.data.email == authEmail();
+    }
+
+    match /posDevices/{deviceId} {
+      allow read: if isOwner() || (isPosDeviceAuth() && deviceId == request.auth.uid);
+      allow list: if isOwner();
+      allow create: if isPosDeviceAuth()
+        && deviceId == request.auth.uid
+        && posDeviceCreate();
+      allow update: if (isPosDeviceAuth()
+          && deviceId == request.auth.uid
+          && posDeviceHeartbeat())
+        || (isOwner() && posDeviceOwnerPatch());
+      allow delete: if isOwner();
     }
 
     match /loginTickets/{ticketId} {
