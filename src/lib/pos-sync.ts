@@ -9,6 +9,7 @@ import {
   removeOutboxEntry,
   resetOutboxForRetry,
 } from "./pos-outbox";
+import { flushPosShopSettingsUpload } from "./pos-settings";
 import type { PosOutboxBillView, PosOutboxEntry, PosSaleMutationPayload, PosSaleResult } from "./pos-sync-types";
 import {
   formatPendingBillNo,
@@ -191,6 +192,7 @@ export async function runPosSyncFlush(): Promise<PosSyncSnapshot> {
   emit();
   try {
     const result = await flushPosOutbox();
+    await flushPosShopSettingsUpload();
     await refreshPosSyncSnapshot();
     snapshot = {
       ...snapshot,

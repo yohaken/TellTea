@@ -15,6 +15,7 @@
     "test:pos-shift-keypad": "node scripts/test-pos-shift-keypad.mjs",
     "test:pos-shift-report": "node scripts/test-pos-shift-report.mjs",
     "test:pos-menu-item-labels": "node scripts/test-pos-menu-item-labels.mjs",
+    "test:pos-settings-local-first": "node scripts/test-pos-settings-local-first.mjs",
     "test:pos-business-settings": "node scripts/test-pos-business-settings.mjs",
     "test:pos-clock-in": "node scripts/test-pos-clock-in.mjs",
     "test:pos-discount": "node scripts/test-pos-discount.mjs",
