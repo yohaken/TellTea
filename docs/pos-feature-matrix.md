@@ -221,7 +221,17 @@ Wongnai POS Android
 - เจ้าของ remote — ดูสถานะ + อัปเดตบังคับจากระยะไกล
 - โปรแกรมขายเดิมยังใช้อยู่ — POS ใหม่ทดแทนทีหลัง
 - TellTea หลัก: https://telltea-shop.web.app
-- POS Lite: `/pos/` static เบา — **Phase 0 + 0.5 live** (heartbeat + PWA standalone)
+- POS Lite: `/pos/` static เบา — **Phase 0–1 live** (heartbeat + PWA + ขายเงินสด)
+
+### กฎ hosting — ห้ามทำให้หลังร้าน 404
+
+| ห้าม | เหตุผล |
+|------|--------|
+| สร้าง `public/pos.html` หรือ redirect `/pos` → `pos.html` ใน `firebase.json` | ชนกับ `out/pos/index.html` → loop หรือ 404 (แก้แล้ว v114) |
+| แก้ `firebase.json` `public: "out"` หรือ `trailingSlash` โดยไม่ทดสอบ | หลังร้าน `/ledger/`, `/settings/` ฯลฯ พึ่ง `out/<route>/index.html` |
+| ลบ route ใน `src/app/` โดยไม่ตั้งใจ | static export จะไม่มี `out/<route>/` |
+
+**ก่อน deploy ทุกครั้ง:** CI รัน `npm run smoke:hosting` ตรวจว่า route หลังร้าน + `/pos/` มี `index.html` และไม่มี `public/pos.html`
 
 ---
 

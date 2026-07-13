@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build && node scripts/write-version-json.mjs",
+    "smoke:hosting": "node scripts/smoke-hosting-export.mjs",
     "start": "next start",
     "lint": "eslint",
     "export": "next build"
