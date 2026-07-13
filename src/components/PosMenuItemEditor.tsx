@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowLeft, Camera, Trash2 } from "lucide-react";
 import { updateMenuItem } from "@/lib/pos-menu";
-import { uploadPosMenuItemImage } from "@/lib/pos-storage";
+import { processMenuItemImage } from "@/lib/pos-menu-image";
 import { PosSortableList } from "@/components/PosSortableList";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
@@ -62,7 +62,7 @@ export function PosMenuItemEditor({
     setUploading(true);
     setError(null);
     try {
-      const url = await uploadPosMenuItemImage(item.id, file);
+      const url = await processMenuItemImage(file);
       setImageUrl(url);
       await updateMenuItem(item.id, { imageUrl: url });
     } catch (err) {
@@ -142,7 +142,7 @@ export function PosMenuItemEditor({
               disabled={uploading}
               onClick={() => fileRef.current?.click()}
             >
-              {uploading ? "กำลังอัปโหลด..." : imageUrl ? "เปลี่ยนรูป" : "เพิ่มรูป"}
+              {uploading ? "กำลังบีบอัดรูป..." : imageUrl ? "เปลี่ยนรูป" : "เพิ่มรูป"}
             </button>
             {imageUrl ? (
               <button type="button" className="ghost-btn" onClick={() => void removeImage()}>

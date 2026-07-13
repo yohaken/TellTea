@@ -88,7 +88,3 @@ jobs:
 
       - name: Deploy Hosting + Firestore + Functions
         run: npx firebase-tools@latest deploy --only hosting:telltea,hosting:telltea-pos,firestore,functions --project mypeer-501909 --non-interactive --force
-
-      - name: Deploy Storage rules (optional until bucket enabled)
-        run: npx firebase-tools@latest deploy --only storage --project mypeer-501909 --non-interactive
-        continue-on-error: true

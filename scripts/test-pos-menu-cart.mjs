@@ -60,15 +60,16 @@ assert.match(adminSrc, /หมวดหมู่รายการ/);
 assert.match(adminSrc, /กลุ่มตัวเลือก/);
 assert.match(adminSrc, /PosSortableList/);
 
-const storageSrc = readFileSync(join(root, "src/lib/pos-storage.ts"), "utf8");
-assert.match(storageSrc, /pos-menu/);
-assert.match(storageSrc, /uploadBytes/);
+const imageSrc = readFileSync(join(root, "src/lib/pos-menu-image.ts"), "utf8");
+assert.match(imageSrc, /processMenuItemImage/);
+assert.match(imageSrc, /toDataURL/);
 
 const itemEditorSrc = readFileSync(join(root, "src/components/PosMenuItemEditor.tsx"), "utf8");
 assert.match(itemEditorSrc, /ราคาหน้าร้าน/);
-assert.match(itemEditorSrc, /uploadPosMenuItemImage/);
+assert.match(itemEditorSrc, /processMenuItemImage/);
 
-assert.match(readFileSync(join(root, "storage.rules"), "utf8"), /pos-menu/);
+const firebaseJson = readFileSync(join(root, "firebase.json"), "utf8");
+assert.doesNotMatch(firebaseJson, /"storage"/);
 
 function reorderById(ids, draggedId, targetId) {
   if (draggedId === targetId) return ids;
