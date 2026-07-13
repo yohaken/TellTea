@@ -25,6 +25,7 @@ export type PosOutboxEntry = {
 export type PosOutboxBillView = {
   id: string;
   billNo: string;
+  sessionId: string;
   total: number;
   paymentMethod: PosSalePaymentMethod;
   shift: string;

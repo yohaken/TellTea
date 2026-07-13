@@ -43,6 +43,7 @@ function mapOutboxViews(entries: Awaited<ReturnType<typeof listOutboxEntries>>):
   return entries.map((entry) => ({
     id: entry.id,
     billNo: formatPendingBillNo(entry.id),
+    sessionId: entry.payload.sessionId,
     total: saleTotalFromPayload(entry.payload),
     paymentMethod: entry.payload.paymentMethod,
     shift: entry.payload.shift,

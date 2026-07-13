@@ -9,6 +9,7 @@
     "test:pos-connectivity": "node scripts/test-pos-connectivity.mjs",
     "test:pos-complete-sale": "node scripts/test-pos-complete-sale.mjs",
     "test:pos-sync": "node scripts/test-pos-sync.mjs",
+    "test:pos-sales-local-first": "node scripts/test-pos-sales-local-first.mjs",
     "start": "next start",
     "lint": "eslint",
     "export": "next build"

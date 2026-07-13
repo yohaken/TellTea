@@ -45,7 +45,8 @@ const salesSrc = await import("node:fs").then((fs) =>
   fs.readFileSync(new URL("../src/lib/pos-sales.ts", import.meta.url), "utf8"),
 );
 assert.match(salesSrc, /enqueueSale/);
-assert.match(salesSrc, /isBrowserOnline/);
+assert.match(salesSrc, /runPosSyncFlush/);
+assert.doesNotMatch(salesSrc, /invokePosCompleteSale/);
 
 const syncSrc = await import("node:fs").then((fs) =>
   fs.readFileSync(new URL("../src/lib/pos-sync.ts", import.meta.url), "utf8"),

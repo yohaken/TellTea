@@ -1,10 +1,10 @@
-# POS Offline & Sync — สถาปัตยกรรม (Phase 4)
+# POS Offline & Sync — สถาปัตยกรรม (Phase 4 + Local-first)
 
-> อัปเดต 2026-07-13 · v129+
+> อัปเดต 2026-07-13 · v134
 
 ## เป้าหมาย
 
-ขายหน้าร้านได้แม้ **Wi‑Fi หลุดชั่วคราว** — บิลเก็บในเครื่องก่อน ส่งขึ้นเซิร์ฟเวอร์เมื่อกลับ online โดย **ไม่ซ้ำบิล** (idempotent)
+ขายหน้าร้านได้ทันที (**local-first**) — บันทึกลงเครื่องก่อน แสดงสำเร็จทันที ส่งขึ้นเซิร์ฟเวอร์เบื้องหลัง โดย **ไม่ซ้ำบิล** (idempotent)
 
 ---
 
@@ -17,15 +17,17 @@
                 │
         completeCashSale / completePromptPaySale
                 │
-     ┌──────────┴──────────┐
-     │ online?              │
-     ▼ yes                  ▼ no / retryable error
- posCompleteSale CF    IndexedDB outbox
- (asia-southeast1)      telltea-pos-sync
-     │                      │
-     │ idempotency          │ PosSyncWatcher
-     │ posSaleMutations/    │ flush ทุก 12s + เมื่อ online
-     ▼                      ▼
+                ▼ ทุกครั้ง (online/offline)
+         IndexedDB outbox + แสดงสำเร็จทันที
+         telltea-pos-sync · บิล รอส่ง-XXXXXX
+                │
+                │ runPosSyncFlush() (background)
+                │ PosSyncWatcher flush ทุก 12s + เมื่อ online
+                ▼
+         posCompleteSale CF (asia-southeast1)
+                │
+                │ idempotency posSaleMutations/
+                ▼
  Firestore: posSales, meta/pos, posSessions
 ```
 
@@ -34,19 +36,21 @@
 | Outbox | `src/lib/pos-outbox.ts` | คิวบิลรอส่ง (IndexedDB) |
 | Sync | `src/lib/pos-sync.ts` | flush → `posCompleteSale` |
 | Watcher | `src/components/PosSyncWatcher.tsx` | background sync |
-| Sale API | `src/lib/pos-sales.ts` | online ก่อน → queue ถ้าจำเป็น |
+| Sale API | `src/lib/pos-sales.ts` | **enqueue เสมอ** → flush เบื้องหลัง |
 | Server | `functions/pos-complete-sale.js` | transaction + idempotency |
+| Session UI | `PosSellView` + `computeSessionPendingOverlay` | ยอดกะ = Firestore + pending outbox |
 | Cache อ่าน | `src/lib/pos-firebase.ts` | Firestore `persistentLocalCache` เมนู |
 
 ---
 
 ## กฎธุรกิจ
 
-1. **กดขายสำเร็จบนเครื่องเสมอ** ถ้าเงินพอ / ตะกร้าไม่ว่าง — แม้ offline ได้บิล `รอส่ง-XXXXXX`
-2. **เลขบิลจริง** (`Pddmm-001`) ออกที่เซิร์ฟเวอร์ตอน sync เท่านั้น
-3. **`clientMutationId`** หนึ่งครั้ง = หนึ่งบิล — retry ไม่ซ้ำ (`posSaleMutations/{id}`)
-4. **ห้าม reload / อัปเดตแอป** ถ้ามีบิลค้าง (`pendingSyncCount > 0`)
-5. **PromptPay offline** — เก็บคิวได้ แต่ QR ต้องมีเน็ตตอนสร้าง; ยืนยันขาย offline = คิวรอส่ง
+1. **กดขายสำเร็จบนเครื่องทันที** — ไม่รอ Cloud Function; แสดง "บันทึกแล้ว"
+2. **เลขบิลจริง** (`Pddmm-001`) ออกที่เซิร์ฟเวอร์ตอน sync เท่านั้น — ก่อนหน้านั้น `รอส่ง-XXXXXX`
+3. **`clientMutationId`** หนึ่งครั้ง = หนึ่งบิล — retry / replay ไม่ซ้ำ (`posSaleMutations/{id}`)
+4. **ยอดกะบนจอ** = `posSessions` จาก Firestore **+** บิล pending ใน outbox ของกะนั้น (ไม่ bump กะฝั่ง client — ป้องกัน double-count)
+5. **ห้าม reload / อัปเดตแอป** ถ้ามีบิลค้าง (`pendingSyncCount > 0`)
+6. **PromptPay** — QR ต้องมีเน็ตตอนสร้าง; ยืนยันขาย = local-first เหมือนเงินสด
 
 ---
 
@@ -57,26 +61,29 @@
 | synced | ขึ้น Firestore แล้ว | เลขบิล `P1307-001` |
 | pending | อยู่ใน outbox | `รอส่ง-ABC123` + ป้าย **รอส่ง N** |
 | syncing | กำลัง flush ขึ้นเซิร์ฟเวอร์ | ป้าย **กำลังส่งข้อมูล** (แทน รอส่ง N ชั่วคราว) |
-| failed (ถาวร) | invalid-argument ฯลฯ | ค้างใน outbox + `lastError` (อนาคต: แจ้งเจ้าของ) |
+| failed (ถาวร) | invalid-argument ฯลฯ | ค้างใน outbox + `lastError` |
 
 ---
 
-## Error → พฤติกรรม
+## Error → พฤติกรรม (ตอน flush)
 
 | Error | ทำอะไร |
 |-------|--------|
-| `functions/unavailable`, network | ใส่ outbox + แสดงสำเร็จรอส่ง |
-| `functions/internal` | ใส่ outbox (retry) |
-| `functions/invalid-argument` | แสดง error ไม่ queue |
-| `functions/permission-denied` | แสดง error ไม่ queue |
+| `functions/unavailable`, network | retry ใน outbox |
+| `functions/internal` | retry ใน outbox |
+| `functions/invalid-argument` | mark failed ใน outbox |
+| `functions/permission-denied` | mark failed ใน outbox |
+
+การขายครั้งแรกไม่บล็อก UI — error จากเซิร์ฟเวอร์จัดการใน sync layer
 
 ---
 
-## งานถัดไป (ไม่บล็อก Phase 4)
+## งานถัดไป (ไม่บล็อก)
 
 - [x] UI รายการบิลค้าง + ปุ่ม "ส่งอีกครั้ง" (v132)
 - [x] แจ้งเตือนเจ้าของเมื่อค้าง > 5 นาที (`posDevices.syncStuckAt`)
 - [x] Void บิลที่ยัง pending (ยกเลิก local)
+- [x] Local-first sale + session overlay (v134)
 - [ ] Emulator e2e กับ Firebase Auth จริง
 
 ---
@@ -84,6 +91,7 @@
 ## ไฟล์ทดสอบ
 
 - `npm run test:pos-sync` — retry / bill label utils
+- `npm run test:pos-sales-local-first` — local-first + session overlay
 - `npm run test:pos-complete-sale` — ลำดับ read/write transaction
 - `npm run test:pos-connectivity` — wiring
 

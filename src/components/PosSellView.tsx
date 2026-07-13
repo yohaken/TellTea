@@ -9,6 +9,8 @@ import { promptPayQrDataUrl } from "@/lib/pos-promptpay";
 import { printPosReceipt } from "@/lib/pos-receipt";
 import { subscribePosShopSettings } from "@/lib/pos-settings";
 import { playPosSaleChime } from "@/lib/pos-sound";
+import { computeSessionPendingOverlay } from "@/lib/pos-sync-utils";
+import type { PosOutboxBillView } from "@/lib/pos-sync-types";
 import { labelOtShift } from "@/lib/ot";
 import type { MenuCategory, MenuItem, PosSaleLine, PosSession } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
@@ -21,10 +23,12 @@ const HOLD_MS = 550;
 export function PosSellView({
   deviceId,
   session,
+  pendingBills = [],
   onBusyChange,
 }: {
   deviceId: string;
   session: PosSession;
+  pendingBills?: PosOutboxBillView[];
   onBusyChange?: (state: { cartCount: number; payOpen: boolean; saleBusy: boolean }) => void;
 }) {
   const initialMenu = getPosMenuSnapshot();
@@ -88,6 +92,14 @@ export function PosSellView({
   useEffect(() => {
     onBusyChange?.({ cartCount, payOpen, saleBusy: busy });
   }, [busy, cartCount, onBusyChange, payOpen]);
+
+  const sessionDisplay = useMemo(() => {
+    const overlay = computeSessionPendingOverlay(session.id, pendingBills);
+    return {
+      saleCount: session.saleCount + overlay.extraSaleCount,
+      totalSales: Math.round((session.totalSales + overlay.extraTotalSales) * 100) / 100,
+    };
+  }, [pendingBills, session.id, session.saleCount, session.totalSales]);
 
   const total = cartLines.reduce((sum, l) => sum + l.item.price * l.qty, 0);
   const cashNum = Number(cashInput) || 0;
@@ -254,9 +266,8 @@ export function PosSellView({
       paymentMethod === "cash" && result.change != null
         ? ` · ทอน ฿${formatPlainNumber(result.change)}`
         : "";
-    const pendingText = result.pending ? " · รอส่งเมื่อมีเน็ต" : "";
     setSuccess(
-      `บิล ${result.billNo} · ฿${formatPlainNumber(result.total)}${changeText}${pendingText}`,
+      `บันทึกแล้ว · บิล ${result.billNo} · ฿${formatPlainNumber(result.total)}${changeText}`,
     );
     window.setTimeout(() => setSuccess(null), 2500);
   }
@@ -339,7 +350,7 @@ export function PosSellView({
         <div>
           <strong>{labelOtShift(session.shift as "late" | "morning" | "evening")}</strong>
           <span className="muted pos-sell-top-meta">
-            ขายแล้ว {session.saleCount} บิล · ฿{formatPlainNumber(session.totalSales)}
+            ขายแล้ว {sessionDisplay.saleCount} บิล · ฿{formatPlainNumber(sessionDisplay.totalSales)}
             {menuSyncing ? " · อัปเดตเมนู..." : ""}
           </span>
         </div>

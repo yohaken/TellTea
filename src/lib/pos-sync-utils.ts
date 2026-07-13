@@ -58,3 +58,22 @@ export function isRetryableSaleError(err: unknown): boolean {
 export function isBrowserOnline(): boolean {
   return typeof navigator === "undefined" ? true : navigator.onLine;
 }
+
+export type SessionPendingOverlayInput = {
+  sessionId: string;
+  total: number;
+  status: "pending" | "failed";
+};
+
+/** Pending outbox bills for one session — avoids double-counting once server syncs. */
+export function computeSessionPendingOverlay(
+  sessionId: string,
+  bills: SessionPendingOverlayInput[],
+): { extraSaleCount: number; extraTotalSales: number } {
+  const pending = bills.filter((b) => b.sessionId === sessionId && b.status === "pending");
+  const extraTotalSales = pending.reduce((sum, b) => sum + b.total, 0);
+  return {
+    extraSaleCount: pending.length,
+    extraTotalSales: Math.round(extraTotalSales * 100) / 100,
+  };
+}

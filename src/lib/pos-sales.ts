@@ -1,15 +1,9 @@
 import { getPosFirebaseAuth } from "./pos-firebase";
-import { mapFirestoreError } from "./firestore-errors";
 import { addOutboxEntry, getOutboxEntry } from "./pos-outbox";
-import { invokePosCompleteSale, mapCfResultToSaleResult, refreshPosSyncSnapshot } from "./pos-sync";
+import { refreshPosSyncSnapshot, runPosSyncFlush } from "./pos-sync";
 import type { PosSaleLine } from "./types";
 import type { PosSaleMutationPayload, PosSaleResult } from "./pos-sync-types";
-import {
-  createPosMutationId,
-  formatPendingBillNo,
-  isBrowserOnline,
-  isRetryableSaleError,
-} from "./pos-sync-utils";
+import { createPosMutationId, formatPendingBillNo } from "./pos-sync-utils";
 
 export const POS_SALES_COL = "posSales";
 
@@ -61,6 +55,7 @@ async function enqueueSale(payload: PosSaleMutationPayload, total: number, chang
     });
   }
   await refreshPosSyncSnapshot();
+  void runPosSyncFlush();
   return optimisticSaleResult(payload, total, change);
 }
 
@@ -84,30 +79,7 @@ async function completeSale(input: {
       ? Math.round((cashReceived - total) * 100) / 100
       : 0;
 
-  if (!isBrowserOnline()) {
-    return enqueueSale(payload, total, change);
-  }
-
-  try {
-    const data = await invokePosCompleteSale(payload);
-    return mapCfResultToSaleResult(data, false);
-  } catch (err) {
-    const code = (err as { code?: string })?.code;
-    const message = (err as Error)?.message || "";
-    if (code === "functions/permission-denied") {
-      throw new Error("บันทึกการขาย — ไม่ใช่เครื่อง POS ลองรีเฟรชหน้า");
-    }
-    if (code === "functions/invalid-argument") {
-      throw new Error(message || "ข้อมูลการขายไม่ถูกต้อง");
-    }
-    if (isRetryableSaleError(err)) {
-      return enqueueSale(payload, total, change);
-    }
-    if (code === "functions/unavailable") {
-      throw new Error("บันทึกการขาย — เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่");
-    }
-    throw new Error(message || mapFirestoreError(err, "บันทึกการขาย", "pos"));
-  }
+  return enqueueSale(payload, total, change);
 }
 
 export async function completeCashSale(input: {
