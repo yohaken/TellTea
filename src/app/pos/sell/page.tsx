@@ -53,6 +53,7 @@ export default function PosSellPage() {
   return (
     <PosSellView
       deviceId={device.id}
+      devicePairingCode={device.pairingCode}
       session={session}
       pendingBills={syncSnap.bills}
       onBusyChange={(state) => setSellBusy((prev) => ({ ...prev, ...state }))}

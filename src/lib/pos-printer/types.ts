@@ -40,9 +40,21 @@ export type PosPrinterSetup = {
 
 export type PrintJobKind = "receipt" | "kitchen_ticket" | "bar_ticket";
 
+/** ช่องทางออเดอร์ — ใช้สลิปรูปแบบเดียว ปรับหัวสลิปตามช่องทาง */
+export type ReceiptOrderChannel =
+  | "dine_in"
+  | "takeaway"
+  | "shopeefood"
+  | "lineman"
+  | "grab"
+  | "other";
+
 export type ReceiptPrintPayload = {
   kind: "receipt";
   shopName: string;
+  shopNameTh?: string;
+  shopAddress?: string;
+  shopPhone?: string;
   billNo: string;
   lines: PosSaleLine[];
   total: number;
@@ -50,6 +62,12 @@ export type ReceiptPrintPayload = {
   cashReceived?: number;
   change?: number;
   createdAt: number;
+  orderChannel?: ReceiptOrderChannel;
+  customerName?: string;
+  externalOrderId?: string;
+  staffName?: string;
+  staffId?: string;
+  orderNotes?: string;
 };
 
 export type KitchenTicketPrintPayload = {

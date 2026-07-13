@@ -54,6 +54,9 @@ jobs:
       - name: Verify POS menu + options wiring
         run: npm run test:pos-menu-cart
 
+      - name: Verify POS unified receipt layout
+        run: npm run test:pos-receipt-layout
+
       - name: Verify POS e2e (Playwright — nav, menu, sell + timing)
         run: |
           npx playwright install chromium

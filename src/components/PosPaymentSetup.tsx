@@ -6,7 +6,10 @@ import { getPosShopSettings, savePosShopSettings } from "@/lib/pos-settings";
 import { maskPromptPayId } from "@/lib/pos-promptpay";
 
 export function PosPaymentSetup({ onError }: { onError: (msg: string | null) => void }) {
-  const [shopName, setShopName] = useState("TellTea");
+  const [shopName, setShopName] = useState("TELL TEA");
+  const [shopNameTh, setShopNameTh] = useState("เทล ที");
+  const [shopAddress, setShopAddress] = useState("");
+  const [shopPhone, setShopPhone] = useState("");
   const [promptPayId, setPromptPayId] = useState("");
   const [autoPrintReceipt, setAutoPrintReceipt] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -16,6 +19,9 @@ export function PosPaymentSetup({ onError }: { onError: (msg: string | null) => 
     void getPosShopSettings()
       .then((s) => {
         setShopName(s.shopName);
+        setShopNameTh(s.shopNameTh);
+        setShopAddress(s.shopAddress);
+        setShopPhone(s.shopPhone);
         setPromptPayId(s.promptPayId);
         setAutoPrintReceipt(s.autoPrintReceipt);
       })
@@ -28,7 +34,14 @@ export function PosPaymentSetup({ onError }: { onError: (msg: string | null) => 
     setBusy(true);
     onError(null);
     try {
-      await savePosShopSettings({ shopName, promptPayId, autoPrintReceipt });
+      await savePosShopSettings({
+        shopName,
+        shopNameTh,
+        shopAddress,
+        shopPhone,
+        promptPayId,
+        autoPrintReceipt,
+      });
     } catch (err) {
       onError((err as Error).message);
     } finally {
@@ -43,7 +56,7 @@ export function PosPaymentSetup({ onError }: { onError: (msg: string | null) => 
         ชำระเงิน POS
       </h2>
       <p className="muted settings-card-lead">
-        ชื่อร้านบนใบเสร็จ · PromptPay สำหรับสแกนจ่ายบนแท็บเล็ต
+        ข้อมูลบนสลิปใบเสร็จรูปแบบเดียว · PromptPay สำหรับสแกนจ่ายบนแท็บเล็ต
         {promptPayId ? ` · ${maskPromptPayId(promptPayId)}` : ""}
       </p>
 
@@ -52,8 +65,30 @@ export function PosPaymentSetup({ onError }: { onError: (msg: string | null) => 
       {!loading ? (
         <form className="pos-menu-form" onSubmit={(e) => void onSave(e)}>
           <label>
-            <span>ชื่อร้าน (ใบเสร็จ)</span>
+            <span>ชื่อร้าน (อังกฤษ)</span>
             <input value={shopName} onChange={(e) => setShopName(e.target.value)} required />
+          </label>
+          <label>
+            <span>ชื่อร้าน (ไทย)</span>
+            <input value={shopNameTh} onChange={(e) => setShopNameTh(e.target.value)} placeholder="เทล ที" />
+          </label>
+          <label>
+            <span>ที่อยู่ (บนสลิป)</span>
+            <textarea
+              value={shopAddress}
+              onChange={(e) => setShopAddress(e.target.value)}
+              rows={2}
+              placeholder="ถ.… ต.… อ.… จ.…"
+            />
+          </label>
+          <label>
+            <span>โทรศัพท์</span>
+            <input
+              value={shopPhone}
+              onChange={(e) => setShopPhone(e.target.value)}
+              placeholder="08xxxxxxxx"
+              inputMode="tel"
+            />
           </label>
           <label>
             <span>เลข PromptPay</span>

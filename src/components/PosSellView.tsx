@@ -31,11 +31,13 @@ const HOLD_MS = 550;
 
 export function PosSellView({
   deviceId,
+  devicePairingCode,
   session,
   pendingBills = [],
   onBusyChange,
 }: {
   deviceId: string;
+  devicePairingCode?: string;
   session: PosSession;
   pendingBills?: PosOutboxBillView[];
   onBusyChange?: (state: { cartCount: number; payOpen: boolean; saleBusy: boolean }) => void;
@@ -54,7 +56,10 @@ export function PosSellView({
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [shopName, setShopName] = useState("TellTea");
+  const [shopName, setShopName] = useState("TELL TEA");
+  const [shopNameTh, setShopNameTh] = useState("เทล ที");
+  const [shopAddress, setShopAddress] = useState("");
+  const [shopPhone, setShopPhone] = useState("");
   const [promptPayId, setPromptPayId] = useState("");
   const [autoPrintReceipt, setAutoPrintReceipt] = useState(true);
   const [confirmSoldOut, setConfirmSoldOut] = useState<MenuItem | null>(null);
@@ -78,6 +83,9 @@ export function PosSellView({
   useEffect(() => {
     const unsubSettings = subscribePosShopSettings((s) => {
       setShopName(s.shopName);
+      setShopNameTh(s.shopNameTh);
+      setShopAddress(s.shopAddress);
+      setShopPhone(s.shopPhone);
       setPromptPayId(s.promptPayId);
       setAutoPrintReceipt(s.autoPrintReceipt);
     });
@@ -287,6 +295,9 @@ export function PosSellView({
       {
         kind: "receipt",
         shopName,
+        shopNameTh,
+        shopAddress,
+        shopPhone,
         billNo: result.billNo,
         lines,
         total: result.total,
@@ -294,6 +305,9 @@ export function PosSellView({
         cashReceived: paymentMethod === "cash" ? cashNum : 0,
         change: result.change ?? 0,
         createdAt: now,
+        orderChannel: "dine_in",
+        staffName: "TellTea POS",
+        staffId: devicePairingCode || deviceId.slice(-6).toUpperCase(),
       },
       { deviceId, printReceipt: autoPrintReceipt },
     );

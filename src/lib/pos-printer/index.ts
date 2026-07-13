@@ -13,6 +13,7 @@ export type {
   PrinterKind,
   PrinterRole,
   ReceiptPrintPayload,
+  ReceiptOrderChannel,
 } from "./types";
 
 export {
@@ -27,6 +28,7 @@ export {
 } from "./profiles";
 
 export { buildKitchenTicketHtml, buildReceiptHtml, buildTestPageHtml } from "./layout";
+export { RECEIPT_CHANNEL_LABELS, sampleReceiptPayload } from "./receipt-template";
 
 export {
   browserPrintJob,
