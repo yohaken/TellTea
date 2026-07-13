@@ -554,7 +554,8 @@ export function PosSellView({
           <span>เพิ่มบัตรสะสมคะแนน</span>
         </button>
 
-        <div className="pos-cart-lines">
+        <div className="pos-cart-scroll">
+          <div className="pos-cart-lines">
           {cartLines.length ? (
             cartLines.map((l, lineIndex) => {
               const mods = cartModifierLines(l.selections);
@@ -626,6 +627,7 @@ export function PosSellView({
           ) : (
             <p className="muted pos-cart-empty">แตะเมนูเพื่อเพิ่มรายการ</p>
           )}
+          </div>
         </div>
 
         <footer className="pos-cart-foot">

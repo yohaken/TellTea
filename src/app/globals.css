@@ -8223,8 +8223,12 @@ body.modal-open .main-panel {
   --pos-panel: #fff;
   display: grid;
   grid-template-columns: var(--pos-nav-w) 1fr;
-  min-height: 100dvh;
-  min-height: 100vh;
+  height: 100dvh;
+  height: 100vh;
+  max-height: 100dvh;
+  max-height: 100vh;
+  min-height: 0;
+  overflow: hidden;
   background: #eef0f4;
   color: #1a1f24;
 }
@@ -8322,6 +8326,7 @@ body.modal-open .main-panel {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .pos-main-header {
@@ -8361,6 +8366,23 @@ body.modal-open .main-panel {
 }
 
 .pos-main-body:has(.pos-sell-layout) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pos-sell-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--pos-cart-w);
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
   overflow: hidden;
 }
 
@@ -8371,17 +8393,6 @@ body.modal-open .main-panel {
   min-height: 60vh;
   text-align: center;
   padding: 1rem;
-}
-
-.pos-sell-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--pos-cart-w);
-  gap: 0.5rem;
-  width: 100%;
-  max-width: 100%;
-  overflow: hidden;
-  min-height: calc(100dvh - 4rem);
-  min-height: calc(100vh - 4rem);
 }
 
 .pos-sell-main {
@@ -8407,11 +8418,12 @@ body.modal-open .main-panel {
   border-radius: 0.65rem;
   border: 1px solid rgba(0, 0, 0, 0.06);
   min-height: 0;
-  height: 100%;
   max-height: 100%;
+  align-self: stretch;
 }
 
 .pos-cart-head {
+  flex-shrink: 0;
   padding: 0.85rem 1rem 0.65rem;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
@@ -8447,6 +8459,7 @@ body.modal-open .main-panel {
 }
 
 .pos-cart-member-bar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 0.55rem;
@@ -8462,8 +8475,16 @@ body.modal-open .main-panel {
   cursor: not-allowed;
 }
 
+.pos-cart-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .pos-cart-lines {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -10089,21 +10110,22 @@ body.modal-open .main-panel {
     max-width: 21rem;
     min-width: 21rem;
     max-height: 100%;
-    height: 100%;
+    min-height: 0;
   }
 }
 
 @media (max-width: 720px) {
   .pos-sell-layout {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr) minmax(13rem, 40vh);
   }
 
   .pos-sell-cart-panel {
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    max-height: 38vh;
+    max-height: 100%;
+    min-height: 0;
   }
 
   .pos-module--split {
