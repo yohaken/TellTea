@@ -524,7 +524,10 @@ service cloud.firestore {
     }
 
     match /posSessions/{sessionId} {
-      allow read: if isOwner() || (isPosDeviceAuth() && resource.data.deviceId == request.auth.uid);
+      allow read: if isOwner()
+        || (isPosDeviceAuth() && (
+          resource == null || resource.data.deviceId == request.auth.uid
+        ));
       allow list: if isOwner();
       allow create: if isPosDeviceAuth() && posSessionOpen();
       allow update: if (isPosDeviceAuth() && posSessionSaleBump()) || isOwner();

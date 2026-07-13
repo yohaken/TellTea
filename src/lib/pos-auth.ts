@@ -46,6 +46,7 @@ async function signInPosWithCustomToken(): Promise<string> {
 
   storeDeviceId(deviceId);
   const cred = await signInWithCustomToken(getPosFirebaseAuth(), token);
+  await cred.user.getIdToken(true);
   return cred.user.uid;
 }
 
@@ -54,6 +55,7 @@ export async function ensurePosDeviceAuth(): Promise<string> {
   const auth = getPosFirebaseAuth();
 
   if (await isCurrentPosUser()) {
+    await auth.currentUser!.getIdToken(true);
     return auth.currentUser!.uid;
   }
 
@@ -62,6 +64,7 @@ export async function ensurePosDeviceAuth(): Promise<string> {
   } catch (primaryErr) {
     try {
       const cred = await signInAnonymously(auth);
+      await cred.user.getIdToken(true);
       return cred.user.uid;
     } catch (fallbackErr) {
       const msg = (primaryErr as Error).message || "";
