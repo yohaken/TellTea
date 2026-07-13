@@ -7,13 +7,13 @@ import { CLIENT_BUILD, fetchServerBuild } from "@/lib/app-update";
 import { getPosDb } from "@/lib/pos-firebase";
 import { isPosSafeToReload, POS_IDLE_BEFORE_RELOAD_MS, type PosSellBusyState } from "@/lib/pos-reload";
 
-const POLL_MS = 2 * 60 * 1000;
-const FORCE_POLL_MS = 60 * 1000;
-const RETRY_MS = 15 * 1000;
+const POLL_MS = 30 * 1000;
+const FORCE_POLL_MS = 5 * 1000;
+const RETRY_MS = 2 * 1000;
 
 /**
  * POS auto-update — polls /version.json and respects owner forceAppUpdate.
- * Reload only when cart is empty and payment modal is closed.
+ * Force mode reloads immediately when the cart is idle.
  */
 export function PosUpdateWatcher({
   enabled,
@@ -28,9 +28,14 @@ export function PosUpdateWatcher({
   const [serverBuild, setServerBuild] = useState<number | null>(null);
   const [waiting, setWaiting] = useState(false);
   const lastInputAt = useRef(0);
+  const forceModeRef = useRef(forceMode);
 
   const hasUpdate = serverBuild != null && serverBuild > CLIENT_BUILD;
   const safe = isPosSafeToReload(sellBusy);
+
+  useEffect(() => {
+    forceModeRef.current = forceMode;
+  }, [forceMode]);
 
   const checkVersion = useCallback(async () => {
     const build = await fetchServerBuild();
@@ -46,15 +51,25 @@ export function PosUpdateWatcher({
       lastInputAt.current = Date.now();
     }
 
+    function onVisible() {
+      if (document.visibilityState === "visible") {
+        void checkVersion();
+      }
+    }
+
     document.addEventListener("input", markInput, true);
     document.addEventListener("change", markInput, true);
     document.addEventListener("pointerdown", markInput, true);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
     void checkVersion();
 
     return () => {
       document.removeEventListener("input", markInput, true);
       document.removeEventListener("change", markInput, true);
       document.removeEventListener("pointerdown", markInput, true);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
     };
   }, [checkVersion, enabled]);
 
@@ -63,11 +78,14 @@ export function PosUpdateWatcher({
     return subscribeAppReleaseSettings(
       (settings) => {
         setForceMode(settings.forceAppUpdate);
+        if (settings.forceAppUpdate) {
+          void checkVersion();
+        }
       },
       undefined,
       getPosDb(),
     );
-  }, [enabled]);
+  }, [checkVersion, enabled]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -82,14 +100,16 @@ export function PosUpdateWatcher({
       return;
     }
 
-    const idleLongEnough = Date.now() - lastInputAt.current >= POS_IDLE_BEFORE_RELOAD_MS;
+    const force = forceModeRef.current;
+    const idleLongEnough =
+      force || Date.now() - lastInputAt.current >= POS_IDLE_BEFORE_RELOAD_MS;
     if (safe && idleLongEnough) {
       setWaiting(false);
       onReload();
       return;
     }
 
-    setWaiting(true);
+    setWaiting(force);
   }, [hasUpdate, onReload, safe]);
 
   useEffect(() => {
@@ -98,12 +118,9 @@ export function PosUpdateWatcher({
       return;
     }
 
-    if (!forceMode) {
-      setWaiting(false);
-      return;
-    }
-
     tryReload();
+    if (!forceMode) return;
+
     const timer = setInterval(tryReload, RETRY_MS);
     return () => clearInterval(timer);
   }, [enabled, forceMode, hasUpdate, safe, tryReload]);

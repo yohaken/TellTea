@@ -3,6 +3,7 @@ const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const webpush = require("web-push");
 const { runSyncWithAdmin } = require("./task-weekly-sync");
+const { completePosSaleAdmin, isPosCaller } = require("./pos-complete-sale");
 
 initializeApp();
 
@@ -150,4 +151,21 @@ exports.posDeviceAuth = functions
 
     const token = await getAuth().createCustomToken(deviceId, { posDevice: true });
     return { token, deviceId };
+  });
+
+/** POS sale — Admin SDK (ไม่พึ่ง Firestore rules ฝั่ง client). */
+exports.posCompleteSale = functions
+  .region("asia-southeast1")
+  .https.onCall(async (data, context) => {
+    if (!isPosCaller(context.auth)) {
+      throw new functions.https.HttpsError("permission-denied", "ไม่ใช่เครื่อง POS");
+    }
+    const db = getFirestore();
+    try {
+      return await completePosSaleAdmin(db, data, context.auth.uid);
+    } catch (err) {
+      if (err instanceof functions.https.HttpsError) throw err;
+      console.error("posCompleteSale failed", err);
+      throw new functions.https.HttpsError("internal", "บันทึกการขายไม่สำเร็จ");
+    }
   });

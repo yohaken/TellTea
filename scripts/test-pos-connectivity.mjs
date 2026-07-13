@@ -23,6 +23,8 @@ assert.match(watcherSrc, /isPosSafeToReload/);
 assert.match(reloadSrc, /isPosSafeToReload/);
 assert.match(rulesSrc, /posDevice == true/);
 assert.match(readFileSync(join(root, "functions/index.js"), "utf8"), /posDeviceAuth/);
+assert.match(readFileSync(join(root, "functions/index.js"), "utf8"), /posCompleteSale/);
+assert.match(readFileSync(join(root, "src/lib/pos-sales.ts"), "utf8"), /posCompleteSale/);
 assert.match(readFileSync(join(root, "src/lib/pos-firebase.ts"), "utf8"), /telltea-pos/);
 assert.match(readFileSync(join(root, "src/lib/pos-auth.ts"), "utf8"), /getPosFirebaseAuth/);
 assert.match(deviceSrc, /requestPosDevicesReload/);

@@ -5,7 +5,7 @@ export type PosSellBusyState = {
   saleBusy: boolean;
 };
 
-export const POS_IDLE_BEFORE_RELOAD_MS = 30 * 1000;
+export const POS_IDLE_BEFORE_RELOAD_MS = 8 * 1000;
 
 export function isPosSafeToReload(state: PosSellBusyState): boolean {
   return state.cartCount === 0 && !state.payOpen && !state.saleBusy;
