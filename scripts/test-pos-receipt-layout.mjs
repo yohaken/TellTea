@@ -14,6 +14,7 @@ const settingsSrc = readFileSync(join(root, "src/lib/pos-settings.ts"), "utf8");
 
 assert.match(templateSrc, /buildUnifiedReceiptBody/);
 assert.match(templateSrc, /ยอดสุทธิ/);
+assert.match(templateSrc, /receiptLineBaseName/);
 assert.match(templateSrc, /ใบเสร็จ/);
 assert.match(templateSrc, /RECEIPT_CHANNEL_LABELS/);
 assert.match(templateSrc, /shopeefood/);

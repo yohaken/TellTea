@@ -1,5 +1,12 @@
 /** บันทึกใบเสร็จบนเครื่อง (POS อ่าน posSales จาก Firestore ไม่ได้) */
-import type { PosSalePaymentMethod } from "./types";
+import type { PosSaleLine, PosSalePaymentMethod } from "./types";
+
+export type PosLocalReceiptLine = {
+  name: string;
+  qty: number;
+  unitPrice: number;
+  options: { groupName: string; choiceNames: string[] }[];
+};
 
 export type PosLocalReceipt = {
   id: string;
@@ -8,6 +15,9 @@ export type PosLocalReceipt = {
   total: number;
   paymentMethod: PosSalePaymentMethod;
   linePreview: string;
+  lines?: PosLocalReceiptLine[];
+  cashReceived?: number;
+  change?: number;
   createdAt: number;
   pending: boolean;
 };
@@ -32,6 +42,22 @@ function writeAll(rows: PosLocalReceipt[]) {
   localStorage.setItem(KEY, JSON.stringify(rows.slice(-MAX)));
 }
 
+export function saleLinesToLocalReceiptLines(lines: PosSaleLine[]): PosLocalReceiptLine[] {
+  return lines.map((line) => {
+    const paren = line.name.indexOf(" (");
+    const baseName = paren > 0 ? line.name.slice(0, paren).trim() : line.name.trim();
+    return {
+      name: baseName,
+      qty: line.qty,
+      unitPrice: line.price,
+      options: (line.options || []).map((g) => ({
+        groupName: g.groupName,
+        choiceNames: g.choices.map((c) => c.name),
+      })),
+    };
+  });
+}
+
 export function appendLocalReceipt(row: PosLocalReceipt) {
   const all = readAll();
   all.push(row);
@@ -42,6 +68,13 @@ export function listLocalReceiptsForDay(dayStartMs: number): PosLocalReceipt[] {
   const dayEnd = dayStartMs + 86_400_000;
   return readAll()
     .filter((r) => r.createdAt >= dayStartMs && r.createdAt < dayEnd)
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export function listLocalReceiptsRecent(days = 7): PosLocalReceipt[] {
+  const cutoff = Date.now() - days * 86_400_000;
+  return readAll()
+    .filter((r) => r.createdAt >= cutoff)
     .sort((a, b) => b.createdAt - a.createdAt);
 }
 

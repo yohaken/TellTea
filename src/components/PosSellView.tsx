@@ -16,7 +16,7 @@ import { completeCashSale, completePromptPaySale } from "@/lib/pos-sales";
 import { promptPayQrDataUrl } from "@/lib/pos-promptpay";
 import { printOnSaleComplete } from "@/lib/pos-printer/router";
 import { subscribePosShopSettings } from "@/lib/pos-settings";
-import { appendLocalReceipt } from "@/lib/pos-local-receipts";
+import { appendLocalReceipt, saleLinesToLocalReceiptLines } from "@/lib/pos-local-receipts";
 import { playPosSaleChime } from "@/lib/pos-sound";
 import { computeSessionPendingOverlay } from "@/lib/pos-sync-utils";
 import type { PosOutboxBillView } from "@/lib/pos-sync-types";
@@ -297,6 +297,9 @@ export function PosSellView({
       total: result.total,
       paymentMethod,
       linePreview,
+      lines: saleLinesToLocalReceiptLines(lines),
+      cashReceived: paymentMethod === "cash" ? cashNum : undefined,
+      change: paymentMethod === "cash" ? (result.change ?? 0) : undefined,
       createdAt: now,
       pending: result.pending === true,
     });

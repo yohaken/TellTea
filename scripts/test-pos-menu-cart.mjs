@@ -166,4 +166,12 @@ assert.match(pickerSrc, /pos-option-sweet-row/);
 assert.match(pickerSrc, /pos-btn-orange/);
 assert.match(pickerSrc, /ตกลง/);
 
+const templateSrc = readFileSync(join(root, "src/lib/pos-printer/receipt-template.ts"), "utf8");
+assert.match(templateSrc, /receiptLineBaseName/);
+assert.doesNotMatch(templateSrc, /truncate\(line\.name/);
+
+const sortableSrc = readFileSync(join(root, "src/components/PosSortableList.tsx"), "utf8");
+assert.match(sortableSrc, /onPointerDown/);
+assert.match(readFileSync(join(root, "src/app/globals.css"), "utf8"), /pos-sortable-handle[\s\S]*touch-action: none/);
+
 console.log("OK pos-menu-cart");

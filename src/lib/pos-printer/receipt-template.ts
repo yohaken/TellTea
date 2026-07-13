@@ -32,6 +32,13 @@ function truncate(text: string, max: number): string {
   return `${text.slice(0, max - 1)}…`;
 }
 
+/** ชื่อเมนูหลัก — ตัดส่วนตัวเลือกที่ต่อท้ายในวงเล็บออก (แสดงใน mods แยก) */
+export function receiptLineBaseName(line: PosSaleLine): string {
+  const paren = line.name.indexOf(" (");
+  if (paren > 0) return line.name.slice(0, paren).trim();
+  return line.name.trim();
+}
+
 function formatMoney(amount: number): string {
   return formatPlainNumber(amount);
 }
@@ -159,19 +166,30 @@ export function unifiedReceiptStyles(layout: PrinterKindProfile, cutMode: PosPri
     .item { margin: 6px 0; }
     .item-line {
       display: grid;
-      grid-template-columns: 1.4em 1fr auto;
-      gap: 4px;
+      grid-template-columns: 1.4em minmax(0, 1fr) auto;
+      gap: 4px 6px;
       align-items: start;
     }
     .qty { font-weight: 600; }
-    .name { word-break: break-word; padding-right: 4px; }
+    .name {
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      white-space: normal;
+      padding-right: 4px;
+      line-height: 1.35;
+    }
     .price { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
     .mods {
       margin: 2px 0 0 1.6em;
       font-size: ${layout.metaFontPx}px;
       color: #333;
     }
-    .mods div { margin: 1px 0; }
+    .mods div {
+      margin: 1px 0;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
     .mods div::before { content: "· "; }
     .totals { font-size: ${layout.bodyFontPx}px; }
     .total-row {
@@ -220,14 +238,15 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
   const itemsHtml = data.lines
     .map((line) => {
       const mods = lineModifiers(line, compact)
-        .map((m) => `<div>${escapeReceiptHtml(truncate(m, layout.charsPerLine))}</div>`)
+        .map((m) => `<div>${escapeReceiptHtml(m)}</div>`)
         .join("");
       const modsBlock = mods ? `<div class="mods">${mods}</div>` : "";
       const lineTotal = Math.round(line.price * line.qty * 100) / 100;
+      const title = receiptLineBaseName(line);
       return `<div class="item">
         <div class="item-line">
           <span class="qty">${line.qty}</span>
-          <span class="name">${escapeReceiptHtml(truncate(line.name, layout.charsPerLine - 10))}</span>
+          <span class="name">${escapeReceiptHtml(title)}</span>
           <span class="price">${formatMoney(lineTotal)}</span>
         </div>
         ${modsBlock}

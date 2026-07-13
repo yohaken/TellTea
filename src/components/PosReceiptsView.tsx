@@ -1,10 +1,95 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { listLocalReceiptsForDay } from "@/lib/pos-local-receipts";
+import { listLocalReceiptsForDay, type PosLocalReceipt } from "@/lib/pos-local-receipts";
 import { formatPlainNumber, startOfLocalDay } from "@/lib/utils";
 
 type ReceiptFilter = "all" | "pending" | "synced";
+
+function ReceiptDetail({ receipt }: { receipt: PosLocalReceipt }) {
+  const lines = receipt.lines?.length
+    ? receipt.lines
+    : receipt.linePreview.split(",").map((part) => ({
+        name: part.trim(),
+        qty: 1,
+        unitPrice: receipt.total,
+        options: [],
+      }));
+
+  return (
+    <div className="pos-receipt-detail">
+      <header className="pos-receipt-detail-head">
+        <div>
+          <span className="pos-receipt-detail-bill">#{receipt.billNo}</span>
+          <span
+            className={`pos-receipt-detail-badge ${receipt.pending ? "is-pending" : "is-synced"}`}
+          >
+            {receipt.pending ? "รอส่ง" : "ส่งแล้ว"}
+          </span>
+        </div>
+        <p className="pos-receipt-detail-total">฿{formatPlainNumber(receipt.total)}</p>
+      </header>
+
+      <dl className="pos-receipt-detail-meta">
+        <div>
+          <dt>เวลา</dt>
+          <dd>
+            {new Date(receipt.createdAt).toLocaleString("th-TH", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })}
+          </dd>
+        </div>
+        <div>
+          <dt>ชำระ</dt>
+          <dd>{receipt.paymentMethod === "cash" ? "เงินสด" : "PromptPay"}</dd>
+        </div>
+        {receipt.paymentMethod === "cash" && receipt.cashReceived != null ? (
+          <>
+            <div>
+              <dt>รับเงิน</dt>
+              <dd>฿{formatPlainNumber(receipt.cashReceived)}</dd>
+            </div>
+            <div>
+              <dt>ทอน</dt>
+              <dd>฿{formatPlainNumber(receipt.change ?? 0)}</dd>
+            </div>
+          </>
+        ) : null}
+      </dl>
+
+      <section className="pos-receipt-detail-lines">
+        <h4>รายการ ({lines.length})</h4>
+        <ul>
+          {lines.map((line, idx) => (
+            <li key={`${receipt.id}-${idx}`} className="pos-receipt-detail-line">
+              <div className="pos-receipt-detail-line-head">
+                <span className="pos-receipt-detail-line-qty">×{line.qty}</span>
+                <span className="pos-receipt-detail-line-name">{line.name}</span>
+                <span className="pos-receipt-detail-line-price">
+                  ฿{formatPlainNumber(line.unitPrice * line.qty)}
+                </span>
+              </div>
+              {line.options.length ? (
+                <ul className="pos-receipt-detail-mods">
+                  {line.options.map((opt, oi) => (
+                    <li key={oi}>
+                      {opt.groupName}: {opt.choiceNames.join(", ")}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
 
 export function PosReceiptsView() {
   const dayStart = startOfLocalDay();
@@ -33,14 +118,15 @@ export function PosReceiptsView() {
   const pendingCount = rows.filter((r) => r.pending).length;
 
   return (
-    <div className="pos-module pos-module--split">
+    <div className="pos-module pos-module--split pos-receipts-module">
       <div className="pos-receipts-list-pane">
         <header className="pos-receipts-head">
           <h2>ประวัติใบเสร็จ</h2>
           <p className="muted">
             {new Date(dayStart).toLocaleDateString("th-TH", {
+              weekday: "short",
               day: "2-digit",
-              month: "2-digit",
+              month: "short",
               year: "numeric",
             })}
             {pendingCount > 0 ? ` · รอส่ง ${pendingCount}` : ""}
@@ -95,18 +181,7 @@ export function PosReceiptsView() {
       </div>
       <div className="pos-receipts-detail-pane">
         {selected ? (
-          <>
-            <h3>#{selected.billNo}</h3>
-            <p>
-              <strong>฿{formatPlainNumber(selected.total)}</strong>
-            </p>
-            <p className="muted">{selected.paymentMethod === "cash" ? "เงินสด" : "PromptPay"}</p>
-            <p>{selected.linePreview}</p>
-            <p className="muted">
-              {new Date(selected.createdAt).toLocaleString("th-TH")}
-              {selected.pending ? " · รอส่งเซิร์ฟเวอร์" : " · ส่งแล้ว"}
-            </p>
-          </>
+          <ReceiptDetail receipt={selected} />
         ) : (
           <p className="muted pos-module-empty">เลือกใบเสร็จจากรายการ</p>
         )}
