@@ -58,5 +58,28 @@ assert.match(sellSrc, /cartLineToSaleLine/);
 const adminSrc = readFileSync(join(root, "src/components/PosMenuAdmin.tsx"), "utf8");
 assert.match(adminSrc, /หมวดหมู่รายการ/);
 assert.match(adminSrc, /กลุ่มตัวเลือก/);
+assert.match(adminSrc, /PosSortableList/);
+
+const storageSrc = readFileSync(join(root, "src/lib/pos-storage.ts"), "utf8");
+assert.match(storageSrc, /pos-menu/);
+assert.match(storageSrc, /uploadBytes/);
+
+const itemEditorSrc = readFileSync(join(root, "src/components/PosMenuItemEditor.tsx"), "utf8");
+assert.match(itemEditorSrc, /ราคาหน้าร้าน/);
+assert.match(itemEditorSrc, /uploadPosMenuItemImage/);
+
+assert.match(readFileSync(join(root, "storage.rules"), "utf8"), /pos-menu/);
+
+function reorderById(ids, draggedId, targetId) {
+  if (draggedId === targetId) return ids;
+  const from = ids.indexOf(draggedId);
+  const to = ids.indexOf(targetId);
+  if (from < 0 || to < 0) return ids;
+  const next = [...ids];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+}
+assert.deepEqual(reorderById(["a", "b", "c"], "a", "c"), ["b", "c", "a"]);
 
 console.log("OK pos-menu-cart");

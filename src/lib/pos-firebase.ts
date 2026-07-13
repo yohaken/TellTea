@@ -37,7 +37,7 @@ let posAuth: Auth | undefined;
 let posDb: Firestore | undefined;
 let posFunctions: Functions | undefined;
 
-function getPosFirebaseApp(): FirebaseApp {
+export function getPosFirebaseApp(): FirebaseApp {
   if (!isFirebaseConfigured()) {
     throw new Error("Firebase ยังไม่ได้ตั้งค่า — ดู README");
   }

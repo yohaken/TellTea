@@ -7378,3 +7378,132 @@ body.modal-open .main-panel {
   padding: 0 0.5rem;
   margin: 0;
 }
+
+.pos-menu-sort-hint {
+  font-size: 0.78rem;
+  padding: 0.5rem 1rem 0;
+  margin: 0;
+}
+
+.pos-sortable-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  list-style: none;
+}
+
+.pos-sortable-row--over .pos-sortable-body {
+  outline: 2px dashed #2f6a4f;
+  outline-offset: 2px;
+}
+
+.pos-sortable-row--drag {
+  opacity: 0.55;
+}
+
+.pos-sortable-handle {
+  flex-shrink: 0;
+  padding: 0.65rem 0.25rem;
+  cursor: grab;
+  color: #888;
+  touch-action: none;
+}
+
+.pos-sortable-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.pos-menu-cat-list.pos-sortable-row,
+.pos-menu-cat-list > .pos-sortable-row {
+  background: #fff;
+  border-bottom: 1px solid #eee;
+}
+
+.pos-menu-cat-row-inner {
+  width: 100%;
+}
+
+.pos-menu-photo-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pos-menu-photo-preview {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 0.65rem;
+  border: 1px solid #ddd;
+}
+
+.pos-menu-photo-placeholder {
+  width: 120px;
+  height: 120px;
+  border-radius: 0.65rem;
+  border: 1px dashed #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
+  background: #fafafa;
+}
+
+.pos-menu-photo-input {
+  display: none;
+}
+
+.pos-menu-photo-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pos-menu-item-thumb {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 0.35rem;
+  flex-shrink: 0;
+}
+
+.pos-menu-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pos-menu-item-text {
+  flex: 1;
+}
+
+.pos-menu-option-rows .pos-sortable-body {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  width: 100%;
+}
+
+.pos-menu-option-rows .pos-sortable-body input[type="text"] {
+  flex: 1;
+}
+
+.pos-menu-option-rows .pos-sortable-body input[type="number"] {
+  width: 5rem;
+}
+
+.pos-menu-link-groups-sort .pos-sortable-body {
+  padding: 0.5rem 0.75rem;
+  background: #f8faf8;
+  border-radius: 0.4rem;
+}
+
+.pos-sell-item-img {
+  display: block;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 0.35rem 0.35rem 0 0;
+  margin: -0.5rem -0.5rem 0.25rem;
+  width: calc(100% + 1rem);
+}

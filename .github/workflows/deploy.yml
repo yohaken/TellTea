@@ -87,4 +87,4 @@ jobs:
             --project mypeer-501909 --non-interactive 2>/dev/null || true
 
       - name: Deploy Hosting + Firestore + Functions
-        run: npx firebase-tools@latest deploy --only hosting:telltea,hosting:telltea-pos,firestore,functions --project mypeer-501909 --non-interactive --force
+        run: npx firebase-tools@latest deploy --only hosting:telltea,hosting:telltea-pos,firestore,storage,functions --project mypeer-501909 --non-interactive --force

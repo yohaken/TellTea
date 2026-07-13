@@ -54,7 +54,7 @@ function mapItem(id: string, data: Record<string, unknown>): MenuItem {
     active: data.active !== false,
     visibleOnPos: data.visibleOnPos !== false,
     recommended: data.recommended === true,
-    imageUrl: typeof data.imageUrl === "string" ? data.imageUrl : undefined,
+    imageUrl: typeof data.imageUrl === "string" && data.imageUrl ? data.imageUrl : undefined,
     description: typeof data.description === "string" ? data.description : undefined,
     optionGroupIds: optionGroupIds?.length ? optionGroupIds : undefined,
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,

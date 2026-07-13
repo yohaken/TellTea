@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ArrowLeft, Camera, Trash2 } from "lucide-react";
 import { updateMenuItem } from "@/lib/pos-menu";
+import { uploadPosMenuItemImage } from "@/lib/pos-storage";
+import { PosSortableList } from "@/components/PosSortableList";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
 
@@ -26,12 +28,15 @@ export function PosMenuItemEditor({
   const [categoryId, setCategoryId] = useState(item.categoryId);
   const [price, setPrice] = useState(String(item.price));
   const [description, setDescription] = useState(item.description || "");
+  const [imageUrl, setImageUrl] = useState(item.imageUrl || "");
   const [recommended, setRecommended] = useState(item.recommended === true);
   const [visibleOnPos, setVisibleOnPos] = useState(item.visibleOnPos !== false);
   const [active, setActive] = useState(item.active);
   const [linkedGroupIds, setLinkedGroupIds] = useState<string[]>(item.optionGroupIds || []);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setName(item.name);
@@ -39,6 +44,7 @@ export function PosMenuItemEditor({
     setCategoryId(item.categoryId);
     setPrice(String(item.price));
     setDescription(item.description || "");
+    setImageUrl(item.imageUrl || "");
     setRecommended(item.recommended === true);
     setVisibleOnPos(item.visibleOnPos !== false);
     setActive(item.active);
@@ -49,6 +55,26 @@ export function PosMenuItemEditor({
     setLinkedGroupIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
+  }
+
+  async function onPickImage(file: File | null) {
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const url = await uploadPosMenuItemImage(item.id, file);
+      setImageUrl(url);
+      await updateMenuItem(item.id, { imageUrl: url });
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removeImage() {
+    setImageUrl("");
+    await updateMenuItem(item.id, { imageUrl: "" });
   }
 
   async function onSave(e: FormEvent) {
@@ -62,6 +88,7 @@ export function PosMenuItemEditor({
         categoryId,
         price: Number(price) || 0,
         description: description.trim() || undefined,
+        imageUrl: imageUrl.trim() || undefined,
         recommended,
         visibleOnPos,
         active,
@@ -75,6 +102,12 @@ export function PosMenuItemEditor({
     }
   }
 
+  const activeGroups = optionGroups.filter((g) => g.active);
+  const linkedGroups = linkedGroupIds
+    .map((id) => activeGroups.find((g) => g.id === id))
+    .filter((g): g is MenuOptionGroup => g != null);
+  const unlinkedGroups = activeGroups.filter((g) => !linkedGroupIds.includes(g.id));
+
   return (
     <div className="pos-menu-admin-screen">
       <header className="pos-menu-admin-head">
@@ -86,6 +119,39 @@ export function PosMenuItemEditor({
       </header>
 
       <form className="pos-menu-editor-form" onSubmit={(e) => void onSave(e)}>
+        <div className="pos-menu-photo-block">
+          {imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={imageUrl} alt="" className="pos-menu-photo-preview" />
+          ) : (
+            <div className="pos-menu-photo-placeholder">
+              <Camera size={28} aria-hidden />
+            </div>
+          )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="pos-menu-photo-input"
+            onChange={(e) => void onPickImage(e.target.files?.[0] || null)}
+          />
+          <div className="pos-menu-photo-actions">
+            <button
+              type="button"
+              className="ghost-btn"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+            >
+              {uploading ? "กำลังอัปโหลด..." : imageUrl ? "เปลี่ยนรูป" : "เพิ่มรูป"}
+            </button>
+            {imageUrl ? (
+              <button type="button" className="ghost-btn" onClick={() => void removeImage()}>
+                ลบรูป
+              </button>
+            ) : null}
+          </div>
+        </div>
+
         <label>
           <span>ชื่อเมนู (ภาษาไทย)</span>
           <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
@@ -105,7 +171,7 @@ export function PosMenuItemEditor({
           </select>
         </label>
         <label>
-          <span>ราคา (฿)</span>
+          <span>ราคาหน้าร้าน (฿)</span>
           <input
             type="number"
             min={0}
@@ -120,22 +186,38 @@ export function PosMenuItemEditor({
           <div className="pos-menu-options-head">
             <h2>กลุ่มตัวเลือก</h2>
           </div>
+          {linkedGroups.length > 1 ? (
+            <>
+              <p className="muted pos-menu-sort-hint">ลากเรียงลำดับที่แสดงตอนขาย</p>
+              <PosSortableList
+                ids={linkedGroupIds}
+                onReorder={setLinkedGroupIds}
+                className="pos-menu-link-groups-sort"
+                renderItem={(gid) => {
+                  const g = activeGroups.find((x) => x.id === gid);
+                  return g ? <span>{g.name}</span> : null;
+                }}
+              />
+            </>
+          ) : null}
           <ul className="pos-menu-link-groups">
-            {optionGroups
-              .filter((g) => g.active)
-              .map((g) => (
-                <li key={g.id}>
-                  <label className="pos-menu-toggle-row">
-                    <span>{g.name}</span>
-                    <input
-                      type="checkbox"
-                      checked={linkedGroupIds.includes(g.id)}
-                      onChange={() => toggleGroup(g.id)}
-                    />
-                  </label>
-                </li>
-              ))}
-            {!optionGroups.length ? (
+            {unlinkedGroups.map((g) => (
+              <li key={g.id}>
+                <label className="pos-menu-toggle-row">
+                  <span>{g.name}</span>
+                  <input type="checkbox" checked={false} onChange={() => toggleGroup(g.id)} />
+                </label>
+              </li>
+            ))}
+            {linkedGroups.map((g) => (
+              <li key={g.id}>
+                <label className="pos-menu-toggle-row">
+                  <span>{g.name}</span>
+                  <input type="checkbox" checked onChange={() => toggleGroup(g.id)} />
+                </label>
+              </li>
+            ))}
+            {!activeGroups.length ? (
               <li className="muted">ยังไม่มีกลุ่มตัวเลือก — สร้างจากแท็บกลุ่มตัวเลือก</li>
             ) : null}
           </ul>
@@ -175,10 +257,10 @@ export function PosMenuItemEditor({
         </button>
 
         <p className="muted pos-menu-price-hint">
-          ราคาปัจจุบัน ฿{formatPlainNumber(Number(price) || 0)}
+          ราคาหน้าร้าน ฿{formatPlainNumber(Number(price) || 0)}
         </p>
 
-        <button type="submit" className="primary-btn pos-menu-save-btn" disabled={busy}>
+        <button type="submit" className="primary-btn pos-menu-save-btn" disabled={busy || uploading}>
           {busy ? "กำลังบันทึก..." : "บันทึก"}
         </button>
       </form>
