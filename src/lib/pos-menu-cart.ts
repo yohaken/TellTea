@@ -32,13 +32,22 @@ export function optionGroupsForItem(
 ): MenuOptionGroup[] {
   const ids = item.optionGroupIds || [];
   const byId = new Map(allGroups.filter((g) => g.active).map((g) => [g.id, g]));
-  return ids
+  const linked = ids
     .map((id) => byId.get(id))
-    .filter((g): g is MenuOptionGroup => g != null)
-    .map((group) => ({
-      ...group,
-      options: sortChoicesForDisplay(group),
-    }));
+    .filter((g): g is MenuOptionGroup => g != null);
+
+  // ลำดับตามที่ผูกลากในเมนูรายการ — ถ้าไม่มี custom order ใน ids ใช้ sortOrder กลุ่ม
+  const ordered =
+    ids.length > 0
+      ? linked
+      : [...byId.values()].sort(
+          (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th"),
+        );
+
+  return ordered.map((group) => ({
+    ...group,
+    options: sortChoicesForDisplay(group),
+  }));
 }
 
 /** ความหวาน — เรียง 0% → มากสุด; กลุ่มอื่น — เรียงราคาต่ำ → สูง */

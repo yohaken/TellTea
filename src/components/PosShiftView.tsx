@@ -17,6 +17,12 @@ import { localReceiptToPrintPayload } from "@/lib/pos-receipt-view";
 import { getLocalPosShopSettings, subscribePosShopSettings, type PosShopSettings } from "@/lib/pos-settings";
 import { formatPlainNumber } from "@/lib/utils";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
+import { buildShiftReportPayload } from "@/lib/pos-shift-report";
+import {
+  buildShiftReportHtml,
+  openShiftReportPrint,
+} from "@/lib/pos-printer/shift-snapshot-template";
+import type { PosLocalSessionRecord } from "@/lib/pos-local-sessions";
 
 const DEFAULT_SHOP: PosShopSettings = getLocalPosShopSettings();
 
@@ -272,6 +278,8 @@ export function PosShiftView() {
   const [expandedReceiptId, setExpandedReceiptId] = useState<string | null>(null);
   const [shop, setShop] = useState<PosShopSettings>(DEFAULT_SHOP);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [printMsg, setPrintMsg] = useState<string | null>(null);
+  const [printingReport, setPrintingReport] = useState(false);
   const receiptPanelRef = useRef<HTMLDivElement | null>(null);
   const lastTapRef = useRef({ id: "", time: 0 });
 
@@ -335,6 +343,77 @@ export function PosShiftView() {
     await printSaleDocuments(payload, { receiptOnly: true });
   }
 
+  function printShiftReport(opts: {
+    kind: "snapshot" | "close";
+    sessionId: string;
+    openedAt: number;
+    closedAt?: number | null;
+    summary: ReturnType<typeof summarizeLocalReceipts>;
+  }) {
+    setPrintingReport(true);
+    setPrintMsg(null);
+    try {
+      const payload = buildShiftReportPayload({
+        kind: opts.kind,
+        shop,
+        deviceCode: device?.pairingCode || device?.id.slice(-6).toUpperCase() || "—",
+        sessionId: opts.sessionId,
+        openedAt: opts.openedAt,
+        closedAt: opts.closedAt,
+        summary: opts.summary,
+      });
+      const ok = openShiftReportPrint(buildShiftReportHtml(payload));
+      setPrintMsg(ok ? "เปิดหน้าต่างพิมพ์สรุปกะแล้ว" : "เปิดหน้าต่างพิมพ์ไม่ได้ — อนุญาต popup");
+    } catch (err) {
+      setPrintMsg((err as Error).message);
+    } finally {
+      setPrintingReport(false);
+    }
+  }
+
+  function handlePrintCurrentSnapshot() {
+    if (!session) return;
+    printShiftReport({
+      kind: "snapshot",
+      sessionId: session.id,
+      openedAt: session.openedAt,
+      summary: sessionSummary,
+    });
+  }
+
+  function handlePrintClosedSession(row: PosLocalSessionRecord) {
+    const receipts = listLocalReceiptsForSession(row.id);
+    const summary =
+      receipts.length > 0
+        ? summarizeLocalReceipts(receipts)
+        : {
+            count: row.saleCount,
+            total: row.totalSales,
+            cashCount: 0,
+            cashTotal: row.cashTotal ?? 0,
+            promptpayCount: 0,
+            promptpayTotal: row.promptpayTotal ?? 0,
+            pendingCount: 0,
+            voidedCount: 0,
+          };
+    printShiftReport({
+      kind: "close",
+      sessionId: row.id,
+      openedAt: row.openedAt,
+      closedAt: row.closedAt,
+      summary,
+    });
+  }
+
+  function handlePrintHistoryRange() {
+    printShiftReport({
+      kind: "snapshot",
+      sessionId: `history-${historyRange}`,
+      openedAt: sales[sales.length - 1]?.createdAt ?? Date.now(),
+      summary: summarizeLocalReceipts(sales),
+    });
+  }
+
   function refreshHistory() {
     if (device) setHistory(listLocalSessionsForDevice(device.id));
     setSales(listLocalReceiptsRecent(historyRange === "today" ? 1 : 7));
@@ -374,15 +453,26 @@ export function PosShiftView() {
   async function handleCloseShift() {
     if (!session || !device) return;
 
+    const closedSummary = sessionSummary;
+    const closedOpenedAt = session.openedAt;
+    const closedSessionId = session.id;
+
     setClosing(true);
     setError(null);
     try {
       await closeShiftFromApp({
-        cashTotal: sessionSummary.cashTotal,
-        promptpayTotal: sessionSummary.promptpayTotal,
+        cashTotal: closedSummary.cashTotal,
+        promptpayTotal: closedSummary.promptpayTotal,
       });
       refreshHistory();
       setCloseShiftDetail(null);
+      printShiftReport({
+        kind: "close",
+        sessionId: closedSessionId,
+        openedAt: closedOpenedAt,
+        closedAt: Date.now(),
+        summary: closedSummary,
+      });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -434,6 +524,7 @@ export function PosShiftView() {
 
       <div className="pos-module-content pos-shift-content">
         {demoMsg ? <p className="ok-text pos-shift-demo-msg">{demoMsg}</p> : null}
+        {printMsg ? <p className="ok-text pos-shift-demo-msg">{printMsg}</p> : null}
 
         {tab === "current" ? (
           selling && session ? (
@@ -446,7 +537,15 @@ export function PosShiftView() {
                   pendingSync={pendingSync}
                   saleCount={displaySummary.count || session.saleCount}
                 />
-                <div className="pos-shift-actions">
+                <div className="pos-shift-sticky-actions">
+                  <button
+                    type="button"
+                    className="pos-shift-snapshot-btn"
+                    disabled={printingReport}
+                    onClick={handlePrintCurrentSnapshot}
+                  >
+                    {printingReport ? "กำลังพิมพ์..." : "พิมพ์สรุปกลางรอบ"}
+                  </button>
                   <button
                     type="button"
                     className="pos-btn-orange pos-shift-close-btn"
@@ -540,6 +639,22 @@ export function PosShiftView() {
           )
         ) : (
           <>
+            <div className="pos-shift-history-sticky">
+              <p className="pos-shift-history-sticky-label">
+                สรุปรายการ{historyRange === "today" ? "วันนี้" : "7 วัน"} · {salesSummary.count} บิล · ฿
+                {formatPlainNumber(salesSummary.total)}
+              </p>
+              <button
+                type="button"
+                className="pos-shift-snapshot-btn"
+                disabled={printingReport || salesSummary.count === 0}
+                onClick={handlePrintHistoryRange}
+              >
+                {printingReport ? "กำลังพิมพ์..." : "พิมพ์สรุปช่วงนี้"}
+              </button>
+            </div>
+
+            <div className="pos-shift-scroll">
             <div className="pos-shift-kpi-grid">
               <KpiCard
                 label="ยอดขายทั้งหมด"
@@ -625,6 +740,14 @@ export function PosShiftView() {
                       <p className="muted">
                         สด ฿{formatPlainNumber(row.cashTotal)} · PP ฿{formatPlainNumber(row.promptpayTotal)}
                       </p>
+                      <button
+                        type="button"
+                        className="pos-shift-session-print-btn"
+                        disabled={printingReport}
+                        onClick={() => handlePrintClosedSession(row)}
+                      >
+                        พิมพ์สรุปกะนี้
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -634,6 +757,7 @@ export function PosShiftView() {
             <p className="muted pos-shift-history-note">
               รายงานเต็มที่ TellTea หลังร้าน → รายงานขาย POS
             </p>
+            </div>
           </>
         )}
       </div>
