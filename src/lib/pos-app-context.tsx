@@ -23,6 +23,7 @@ import {
 } from "@/lib/pos-devices";
 import { isPosStandaloneMode, type BeforeInstallPromptEvent } from "@/lib/pos-install";
 import {
+  applyRemotePosSessionUpdate,
   clearStoredPosSessionId,
   persistOpenPosSession,
   readLocalOpenPosSession,
@@ -248,15 +249,19 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
     if (!session?.id || session.status !== "open") return;
 
     storePosSessionId(deviceId, session.id);
-    return subscribePosSession(session.id, (next) => {
-      if (next?.status === "open" && next.deviceId === deviceId) {
-        writeLocalOpenPosSession(deviceId, next);
-        setSession(next);
+    return subscribePosSession(session.id, (remote) => {
+      const local = readLocalOpenPosSession(deviceId);
+      const merged = applyRemotePosSessionUpdate(deviceId, local, remote);
+      if (!remote && local?.id === session.id && local.status === "open") {
+        void persistOpenPosSession(local).catch(() => {});
+      }
+      if (merged?.status === "open") {
+        setSession(merged);
         return;
       }
-      writeLocalOpenPosSession(deviceId, null);
-      clearStoredPosSessionId(deviceId);
-      setSession(next);
+      if (merged?.status === "closed") {
+        setSession(merged);
+      }
     });
   }, [status, session?.id, session?.status]);
 
@@ -278,8 +283,8 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
     const next = startPosSessionLocal(deviceId, shift);
     storePosSessionId(deviceId, next.id);
     setSession(next);
-    void persistOpenPosSession(next).catch((err) => {
-      setError((err as Error).message || "ซิงก์รอบขายไม่สำเร็จ — ขายบนเครื่องได้ต่อ");
+    void persistOpenPosSession(next).catch(() => {
+      /* ขายบนเครื่องได้ต่อ — subscribe จะลองส่งอีกครั้ง */
     });
   }, [shift]);
 

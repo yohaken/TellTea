@@ -214,7 +214,9 @@ async function fetchRemoteOpenPosSession(deviceId: string): Promise<PosSession |
         writeLocalOpenPosSession(deviceId, stored);
         return stored;
       }
-      clearStoredPosSessionId(deviceId);
+      if (stored && stored.status !== "open") {
+        clearStoredPosSessionId(deviceId);
+      }
     } catch {
       /* offline */
     }
@@ -257,6 +259,26 @@ export async function reconcilePosSessionFromRemote(deviceId: string): Promise<P
     /* offline */
   }
   return readLocalOpenPosSession(deviceId);
+}
+
+/** นำอัปเดตจาก Firestore มารวมกับ session บนเครื่อง — ไม่ดีดออกเมื่อ doc ยังไม่ขึ้น */
+export function applyRemotePosSessionUpdate(
+  deviceId: string,
+  local: PosSession | null,
+  remote: PosSession | null,
+): PosSession | null {
+  if (!remote) {
+    return local?.status === "open" && local.deviceId === deviceId ? local : null;
+  }
+  if (remote.deviceId !== deviceId) return local;
+  if (remote.status === "closed") {
+    writeLocalOpenPosSession(deviceId, null);
+    clearStoredPosSessionId(deviceId);
+    return remote;
+  }
+  writeLocalOpenPosSession(deviceId, remote);
+  storePosSessionId(deviceId, remote.id);
+  return remote;
 }
 
 export function subscribePosSession(
