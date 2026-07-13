@@ -10,6 +10,7 @@ import {
   isPosDeviceOnline,
   posDeviceLabel,
   requestPosDeviceReload,
+  requestPosDevicesReload,
   savePosDeviceLabel,
   subscribePosDevices,
   type PosDevice,
@@ -97,7 +98,35 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
     }
   }
 
+  async function forceReloadStale() {
+    if (!actorId) return;
+    const staleOnline = devices.filter(
+      (d) => isPosDeviceOnline(d.lastSeenAt) && d.appBuild > 0 && d.appBuild < CLIENT_BUILD,
+    );
+    if (!staleOnline.length) {
+      onError("ไม่มีเครื่องออนไลน์ที่ค้างเวอร์ชัน");
+      return;
+    }
+    setBusyId("__all__");
+    onError(null);
+    try {
+      const n = await requestPosDevicesReload(
+        staleOnline.map((d) => d.id),
+        actorId,
+      );
+      onError(null);
+      window.alert(`สั่งอัปเดต ${n} เครื่อง — รีเฟรชเมื่อตะกร้าว่าง`);
+    } catch (err) {
+      onError((err as Error).message || "สั่งอัปเดตทุกเครื่องไม่สำเร็จ");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   const onlineCount = devices.filter((d) => isPosDeviceOnline(d.lastSeenAt)).length;
+  const staleCount = devices.filter(
+    (d) => isPosDeviceOnline(d.lastSeenAt) && d.appBuild > 0 && d.appBuild < CLIENT_BUILD,
+  ).length;
 
   return (
     <section className="settings-card">
@@ -142,7 +171,20 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
       {!loading && devices.length > 0 ? (
         <p className="muted settings-card-lead">
           ออนไลน์ {onlineCount}/{devices.length} เครื่อง · ออนไลน์ = เห็นสัญญาณภายใน 3 นาที
+          {staleCount > 0 ? ` · ค้างเวอร์ชัน ${staleCount} เครื่อง` : ""}
         </p>
+      ) : null}
+
+      {!loading && staleCount > 0 ? (
+        <button
+          type="button"
+          className="ghost-btn pos-device-reload-all"
+          disabled={busyId === "__all__"}
+          onClick={() => void forceReloadStale()}
+        >
+          <RefreshCw size={14} aria-hidden />
+          อัปเดตเครื่องที่ค้าง ({staleCount})
+        </button>
       ) : null}
 
       {!loading && devices.length > 0 ? (

@@ -489,7 +489,7 @@ service cloud.firestore {
     }
 
     match /meta/{docId} {
-      allow read: if isStaff();
+      allow read: if isStaff() || (isPosDeviceAuth() && docId == 'ui');
       allow write: if isOwner()
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
         || (hasPerm('alerts') && docId == 'lowBalanceAlert')

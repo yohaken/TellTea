@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Wifi, WifiOff } from "lucide-react";
 import { AppBrand } from "@/components/AppBrand";
+import { PosUpdateWatcher } from "@/components/PosUpdateWatcher";
 import { PosSellView } from "@/components/PosSellView";
 import { ensurePosDeviceAuth } from "@/lib/pos-auth";
 import {
@@ -26,6 +27,7 @@ import { labelOtShift } from "@/lib/ot";
 import { seedPosMenuIfEmpty } from "@/lib/pos-menu";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { appVersionLabel } from "@/lib/version";
+import { isPosSafeToReload, type PosSellBusyState } from "@/lib/pos-reload";
 import type { PosSession } from "@/lib/types";
 
 type PosStatus = "boot" | "connecting" | "ready" | "error";
@@ -41,12 +43,51 @@ export default function PosPage() {
   const [opening, setOpening] = useState(false);
   const [lastHeartbeatAt, setLastHeartbeatAt] = useState(0);
   const [heartbeatError, setHeartbeatError] = useState<string | null>(null);
+  const [sellBusy, setSellBusy] = useState<PosSellBusyState>({
+    cartCount: 0,
+    payOpen: false,
+    saleBusy: false,
+  });
   const installPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const deviceIdRef = useRef<string | null>(null);
   const reloadingRef = useRef(false);
+  const pendingForceReloadAtRef = useRef(0);
+  const sellBusyRef = useRef(sellBusy);
 
   const shift = getCurrentShiftId();
   const selling = session?.status === "open";
+
+  useEffect(() => {
+    sellBusyRef.current = sellBusy;
+  }, [sellBusy]);
+
+  useEffect(() => {
+    if (!selling) {
+      setSellBusy({ cartCount: 0, payOpen: false, saleBusy: false });
+    }
+  }, [selling]);
+
+  const performReload = useCallback(() => {
+    if (reloadingRef.current) return;
+    reloadingRef.current = true;
+    window.location.reload();
+  }, []);
+
+  const flushPendingForceReload = useCallback(() => {
+    const deviceId = deviceIdRef.current;
+    const forceReloadAt = pendingForceReloadAtRef.current;
+    if (!deviceId || !forceReloadAt || reloadingRef.current) return;
+    if (!isPosSafeToReload(sellBusyRef.current)) return;
+
+    reloadingRef.current = true;
+    void ackPosDeviceReload(deviceId, forceReloadAt)
+      .catch(() => {
+        reloadingRef.current = false;
+      })
+      .finally(() => {
+        window.location.reload();
+      });
+  }, []);
 
   const boot = useCallback(async () => {
     if (!isFirebaseConfigured()) {
@@ -191,6 +232,11 @@ export default function PosPage() {
           && next.forceReloadAt > next.lastReloadAckAt
           && !reloadingRef.current
         ) {
+          if (!isPosSafeToReload(sellBusyRef.current)) {
+            pendingForceReloadAtRef.current = next.forceReloadAt;
+            return;
+          }
+          pendingForceReloadAtRef.current = 0;
           reloadingRef.current = true;
           void ackPosDeviceReload(deviceId, next.forceReloadAt)
             .catch(() => {
@@ -205,12 +251,21 @@ export default function PosPage() {
     );
   }, [status]);
 
+  useEffect(() => {
+    flushPendingForceReload();
+  }, [sellBusy, flushPendingForceReload]);
+
   const connectivity = device
     ? getPosConnectivity(device.lastSeenAt, lastHeartbeatAt, online)
     : { deviceOnline: false, pill: "offline-signal" as const, label: "รอสัญญาณ" };
 
   return (
     <div className={`pos-lite ${standalone ? "pos-lite--standalone" : ""} ${selling ? "pos-lite--sell" : ""}`}>
+      <PosUpdateWatcher
+        enabled={status === "ready"}
+        sellBusy={sellBusy}
+        onReload={performReload}
+      />
       <header className="pos-lite-header">
         <AppBrand compact showLogo />
         <div className="pos-lite-header-end">
@@ -277,7 +332,11 @@ export default function PosPage() {
       ) : null}
 
       {status === "ready" && device && selling && session ? (
-        <PosSellView deviceId={device.id} session={session} />
+        <PosSellView
+          deviceId={device.id}
+          session={session}
+          onBusyChange={setSellBusy}
+        />
       ) : null}
     </div>
   );

@@ -204,7 +204,7 @@ Wongnai POS Android
 
 | Phase | ฟังก์ชัน | สถานะ |
 |-------|---------|--------|
-| 0 | เชื่อมต่อเครื่อง + auto-update + heartbeat | **ทำแล้ว** v112–114 — `/pos/` + ตั้งค่าเครื่อง POS |
+| 0 | เชื่อมต่อเครื่อง + auto-update + heartbeat | **ทำแล้ว** v112–119 — ดู `docs/pos-connectivity.md` |
 | 0.5 | PWA standalone — ติดตั้งแอปเต็มจอ | **ทำแล้ว** v115 — `manifest-pos.webmanifest` |
 | 1 | เมนู + ตะกร้า + เงินสด + sync ledger | **ทำแล้ว** v116 |
 | 2 | พิมพ์ใบเสร็จ + สถานะฮาร์ดแวร์ | รอ |
@@ -232,6 +232,8 @@ Wongnai POS Android
 | ลบ route ใน `src/app/` โดยไม่ตั้งใจ | static export จะไม่มี `out/<route>/` |
 
 **ก่อน deploy ทุกครั้ง:** CI รัน `npm run smoke:hosting` ตรวจว่า route หลังร้าน + `/pos/` มี `index.html` และไม่มี `public/pos.html`
+
+**ระบบเชื่อมต่อระยะยาว:** อ่าน `docs/pos-connectivity.md` — heartbeat, auto-update POS, reload ปลอดภัย
 
 ---
 

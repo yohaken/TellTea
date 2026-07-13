@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -191,6 +192,37 @@ export async function requestPosDeviceReload(
   } catch (err) {
     throw new Error(mapFirestoreError(err, "สั่งรีเฟรชเครื่อง POS"));
   }
+}
+
+/** Owner: signal every online device to reload when safe (e.g. after deploy). */
+export async function requestPosDevicesReload(
+  deviceIds: string[],
+  updatedBy: string,
+): Promise<number> {
+  const unique = [...new Set(deviceIds.filter(Boolean))];
+  if (!unique.length) return 0;
+  const now = Date.now();
+  await Promise.all(
+    unique.map((deviceId) =>
+      setDoc(
+        deviceRef(deviceId),
+        {
+          forceReloadAt: now,
+          updatedAt: now,
+          updatedBy,
+        },
+        { merge: true },
+      ).catch((err) => {
+        throw new Error(mapFirestoreError(err, "สั่งรีเฟรชเครื่อง POS"));
+      }),
+    ),
+  );
+  return unique.length;
+}
+
+export async function listPosDevices(): Promise<PosDevice[]> {
+  const snap = await getDocs(query(devicesCol(), orderBy("lastSeenAt", "desc")));
+  return snap.docs.map((d) => mapPosDeviceDoc(d.id, d.data() as Record<string, unknown>));
 }
 
 export function subscribePosDevices(

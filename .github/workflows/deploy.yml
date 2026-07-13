@@ -39,6 +39,9 @@ jobs:
       - name: Verify back-office + POS static routes (no 404)
         run: npm run smoke:hosting
 
+      - name: Verify POS connectivity wiring
+        run: npm run test:pos-connectivity
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:

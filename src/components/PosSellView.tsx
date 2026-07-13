@@ -13,9 +13,11 @@ type CartLine = { item: MenuItem; qty: number };
 export function PosSellView({
   deviceId,
   session,
+  onBusyChange,
 }: {
   deviceId: string;
   session: PosSession;
+  onBusyChange?: (state: { cartCount: number; payOpen: boolean; saleBusy: boolean }) => void;
 }) {
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -73,6 +75,11 @@ export function PosSellView({
   const visibleItems = items.filter((i) => i.categoryId === categoryId);
   const cartLines = Object.values(cart);
   const cartCount = cartLines.reduce((n, l) => n + l.qty, 0);
+
+  useEffect(() => {
+    onBusyChange?.({ cartCount, payOpen, saleBusy: busy });
+  }, [busy, cartCount, onBusyChange, payOpen]);
+
   const total = cartLines.reduce((sum, l) => sum + l.item.price * l.qty, 0);
   const cashNum = Number(cashInput) || 0;
   const change = cashNum >= total ? Math.round((cashNum - total) * 100) / 100 : 0;
