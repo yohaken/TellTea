@@ -17,11 +17,12 @@ function ok(msg) {
   console.log("OK", msg);
 }
 
-if (!fs.existsSync(path.join(OUT_POS, "pos", "index.html"))) {
-  fail("out-pos/pos/index.html missing");
+if (!fs.existsSync(path.join(OUT_POS, "pos", "menu", "index.html"))) {
+  fail("out-pos/pos/menu/index.html missing");
 } else {
-  ok("POS /pos/index.html");
+  ok("POS /pos/menu/");
 }
+
 
 if (!fs.existsSync(path.join(OUT_POS, "_next"))) {
   fail("out-pos/_next missing");

@@ -173,16 +173,62 @@ export type MenuCategory = {
   updatedAt: number;
 };
 
+/** ตัวเลือกย่อยในกลุ่ม (embedded ใน menuOptionGroups) */
+export type MenuOptionChoice = {
+  id: string;
+  name: string;
+  priceDelta: number;
+  priceDeltaMax?: number;
+  sortOrder: number;
+  active: boolean;
+};
+
+export type MenuOptionSelectionType = "single" | "multi" | "unlimited";
+
+/** POS — กลุ่มตัวเลือก (แชร์ข้ามเมนูได้) */
+export type MenuOptionGroup = {
+  id: string;
+  name: string;
+  required: boolean;
+  selectionType: MenuOptionSelectionType;
+  minSelect?: number;
+  maxSelect?: number;
+  options: MenuOptionChoice[];
+  sortOrder: number;
+  active: boolean;
+  createdAt: number;
+  updatedAt: number;
+};
+
 /** POS — รายการเมนู */
 export type MenuItem = {
   id: string;
   categoryId: string;
   name: string;
+  nameEn?: string;
   price: number;
   sortOrder: number;
   active: boolean;
+  visibleOnPos?: boolean;
+  recommended?: boolean;
+  imageUrl?: string;
+  description?: string;
+  /** ลำดับกลุ่มตัวเลือกตอนขาย */
+  optionGroupIds?: string[];
   createdAt: number;
   updatedAt: number;
+};
+
+export type PosSaleLineOptionChoice = {
+  optionId: string;
+  name: string;
+  priceDelta: number;
+};
+
+export type PosSaleLineOption = {
+  groupId: string;
+  groupName: string;
+  choices: PosSaleLineOptionChoice[];
 };
 
 export type PosSaleLine = {
@@ -190,6 +236,7 @@ export type PosSaleLine = {
   name: string;
   price: number;
   qty: number;
+  options?: PosSaleLineOption[];
 };
 
 /** POS — รอบขาย (เปิดกะขายบนเครื่อง) */

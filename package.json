@@ -11,6 +11,7 @@
     "test:pos-complete-sale": "node scripts/test-pos-complete-sale.mjs",
     "test:pos-sync": "node scripts/test-pos-sync.mjs",
     "test:pos-sales-local-first": "node scripts/test-pos-sales-local-first.mjs",
+    "test:pos-menu-cart": "node scripts/test-pos-menu-cart.mjs",
     "start": "next start",
     "lint": "eslint",
     "export": "next build"

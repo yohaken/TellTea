@@ -35,7 +35,31 @@ function parseLines(raw) {
     if (!name || !menuItemId || !Number.isFinite(price) || price < 0 || !Number.isFinite(qty) || qty <= 0) {
       return null;
     }
-    return { menuItemId, name, price, qty };
+    const out = { menuItemId, name, price, qty };
+    if (Array.isArray(line.options) && line.options.length > 0) {
+      const options = line.options
+        .map((grp) => {
+          if (!grp || typeof grp !== "object") return null;
+          const groupId = typeof grp.groupId === "string" ? grp.groupId : "";
+          const groupName = typeof grp.groupName === "string" ? grp.groupName : "";
+          if (!groupId || !groupName || !Array.isArray(grp.choices)) return null;
+          const choices = grp.choices
+            .map((c) => {
+              if (!c || typeof c !== "object") return null;
+              const optionId = typeof c.optionId === "string" ? c.optionId : "";
+              const cname = typeof c.name === "string" ? c.name : "";
+              const priceDelta = Number(c.priceDelta);
+              if (!optionId || !cname || !Number.isFinite(priceDelta) || priceDelta < 0) return null;
+              return { optionId, name: cname, priceDelta };
+            })
+            .filter(Boolean);
+          if (!choices.length) return null;
+          return { groupId, groupName, choices };
+        })
+        .filter(Boolean);
+      if (options.length) out.options = options;
+    }
+    return out;
   });
   return lines.every(Boolean) ? lines : null;
 }

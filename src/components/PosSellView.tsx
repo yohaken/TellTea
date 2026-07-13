@@ -4,6 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { QrCode, ShoppingCart, X } from "lucide-react";
 import { getPosMenuSnapshot, retryPosMenuPreload, startPosMenuPreload, subscribePosMenuPreload } from "@/lib/pos-menu-preload";
 import { toggleMenuItemSoldOut } from "@/lib/pos-menu";
+import {
+  buildCartKey,
+  cartLineToSaleLine,
+  itemNeedsOptions,
+  optionGroupsForItem,
+  type PosCartLine,
+  type PosCartSelection,
+} from "@/lib/pos-menu-cart";
 import { completeCashSale, completePromptPaySale } from "@/lib/pos-sales";
 import { promptPayQrDataUrl } from "@/lib/pos-promptpay";
 import { printPosReceipt } from "@/lib/pos-receipt";
@@ -12,10 +20,10 @@ import { playPosSaleChime } from "@/lib/pos-sound";
 import { computeSessionPendingOverlay } from "@/lib/pos-sync-utils";
 import type { PosOutboxBillView } from "@/lib/pos-sync-types";
 import { labelOtShift } from "@/lib/ot";
-import type { MenuCategory, MenuItem, PosSaleLine, PosSession } from "@/lib/types";
+import type { MenuCategory, MenuItem, MenuOptionGroup, PosSaleLine, PosSession } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
+import { PosOptionPickerModal } from "@/components/PosOptionPickerModal";
 
-type CartLine = { item: MenuItem; qty: number };
 type PayMode = "cash" | "promptpay" | null;
 
 const HOLD_MS = 550;
@@ -34,11 +42,12 @@ export function PosSellView({
   const initialMenu = getPosMenuSnapshot();
   const [categories, setCategories] = useState<MenuCategory[]>(initialMenu.categories);
   const [items, setItems] = useState<MenuItem[]>(initialMenu.items);
+  const [optionGroups, setOptionGroups] = useState<MenuOptionGroup[]>(initialMenu.optionGroups);
   const [menuLoading, setMenuLoading] = useState(!initialMenu.ready);
   const [menuSyncing, setMenuSyncing] = useState(initialMenu.syncing);
   const [menuError, setMenuError] = useState<string | null>(initialMenu.error);
   const [categoryId, setCategoryId] = useState("");
-  const [cart, setCart] = useState<Record<string, CartLine>>({});
+  const [cart, setCart] = useState<Record<string, PosCartLine>>({});
   const [payMode, setPayMode] = useState<PayMode>(null);
   const [cashInput, setCashInput] = useState("");
   const [qrUrl, setQrUrl] = useState<string | null>(null);
@@ -48,6 +57,7 @@ export function PosSellView({
   const [promptPayId, setPromptPayId] = useState("");
   const [autoPrintReceipt, setAutoPrintReceipt] = useState(true);
   const [confirmSoldOut, setConfirmSoldOut] = useState<MenuItem | null>(null);
+  const [pickerItem, setPickerItem] = useState<MenuItem | null>(null);
   const holdTimerRef = useRef<number | null>(null);
   const holdItemRef = useRef<MenuItem | null>(null);
 
@@ -56,6 +66,7 @@ export function PosSellView({
     const unsub = subscribePosMenuPreload((snap) => {
       setCategories(snap.categories);
       setItems(snap.items);
+      setOptionGroups(snap.optionGroups);
       setMenuSyncing(snap.syncing);
       setMenuError(snap.error);
       setMenuLoading(!snap.ready);
@@ -73,7 +84,12 @@ export function PosSellView({
   }, []);
 
   const activeCategories = useMemo(
-    () => categories.filter((c) => c.active && items.some((i) => i.categoryId === c.id)),
+    () =>
+      categories.filter(
+        (c) =>
+          c.active &&
+          items.some((i) => i.categoryId === c.id && i.active && i.visibleOnPos !== false),
+      ),
     [categories, items],
   );
 
@@ -83,7 +99,9 @@ export function PosSellView({
     }
   }, [activeCategories, categoryId]);
 
-  const visibleItems = items.filter((i) => i.categoryId === categoryId);
+  const visibleItems = items.filter(
+    (i) => i.categoryId === categoryId && i.active && i.visibleOnPos !== false,
+  );
   const cartLines = Object.values(cart);
   const cartCount = cartLines.reduce((n, l) => n + l.qty, 0);
   const payOpen = payMode !== null;
@@ -100,7 +118,7 @@ export function PosSellView({
     };
   }, [pendingBills, session.id, session.saleCount, session.totalSales]);
 
-  const total = cartLines.reduce((sum, l) => sum + l.item.price * l.qty, 0);
+  const total = cartLines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
   const cashNum = Number(cashInput) || 0;
   const change = cashNum >= total ? Math.round((cashNum - total) * 100) / 100 : 0;
 
@@ -112,16 +130,31 @@ export function PosSellView({
     holdItemRef.current = null;
   }
 
-  function addToCart(item: MenuItem) {
-    if (!item.active) return;
+  function addToCartDirect(item: MenuItem, selections: PosCartSelection[], unitPrice: number) {
+    const cartKey = buildCartKey(item.id, selections);
     setCart((prev) => {
-      const cur = prev[item.id];
+      const cur = prev[cartKey];
       return {
         ...prev,
-        [item.id]: { item, qty: (cur?.qty || 0) + 1 },
+        [cartKey]: {
+          cartKey,
+          item,
+          qty: (cur?.qty || 0) + 1,
+          unitPrice,
+          selections,
+        },
       };
     });
     setSuccess(null);
+  }
+
+  function tryAddItem(item: MenuItem) {
+    if (!item.active) return;
+    if (itemNeedsOptions(item, optionGroups)) {
+      setPickerItem(item);
+      return;
+    }
+    addToCartDirect(item, [], item.price);
   }
 
   function requestSoldOutToggle(item: MenuItem) {
@@ -139,9 +172,10 @@ export function PosSellView({
       await toggleMenuItemSoldOut(item.id, soldOut);
       if (soldOut) {
         setCart((prev) => {
-          if (!prev[item.id]) return prev;
           const next = { ...prev };
-          delete next[item.id];
+          for (const key of Object.keys(next)) {
+            if (next[key]?.item.id === item.id) delete next[key];
+          }
           return next;
         });
       }
@@ -164,36 +198,36 @@ export function PosSellView({
     if (holdTimerRef.current != null && item) {
       window.clearTimeout(holdTimerRef.current);
       holdTimerRef.current = null;
-      if (item.active) addToCart(item);
+      if (item.active) tryAddItem(item);
     }
     holdItemRef.current = null;
   }
 
-  function decFromCart(itemId: string) {
+  function decFromCart(cartKey: string) {
     setCart((prev) => {
-      const cur = prev[itemId];
+      const cur = prev[cartKey];
       if (!cur) return prev;
       if (cur.qty <= 1) {
         const next = { ...prev };
-        delete next[itemId];
+        delete next[cartKey];
         return next;
       }
-      return { ...prev, [itemId]: { ...cur, qty: cur.qty - 1 } };
+      return { ...prev, [cartKey]: { ...cur, qty: cur.qty - 1 } };
     });
   }
 
-  function incCart(itemId: string) {
+  function incCart(cartKey: string) {
     setCart((prev) => {
-      const cur = prev[itemId];
+      const cur = prev[cartKey];
       if (!cur) return prev;
-      return { ...prev, [itemId]: { ...cur, qty: cur.qty + 1 } };
+      return { ...prev, [cartKey]: { ...cur, qty: cur.qty + 1 } };
     });
   }
 
-  function clearLine(itemId: string) {
+  function clearLine(cartKey: string) {
     setCart((prev) => {
       const next = { ...prev };
-      delete next[itemId];
+      delete next[cartKey];
       return next;
     });
   }
@@ -232,12 +266,7 @@ export function PosSellView({
   }
 
   function saleLines(): PosSaleLine[] {
-    return cartLines.map((l) => ({
-      menuItemId: l.item.id,
-      name: l.item.name,
-      price: l.item.price,
-      qty: l.qty,
-    }));
+    return cartLines.map(cartLineToSaleLine);
   }
 
   function afterSaleSuccess(
@@ -332,7 +361,7 @@ export function PosSellView({
     return (
       <div className="pos-sell-empty">
         <p>ยังไม่มีเมนูขาย</p>
-        <p className="muted">เจ้าของตั้งเมนูที่ TellTea → ตั้งค่า → เมนู POS</p>
+        <p className="muted">เจ้าของตั้งเมนูที่ <a href="/pos/menu/">เมนู POS</a></p>
       </div>
     );
   }
@@ -368,19 +397,24 @@ export function PosSellView({
 
       <div className="pos-sell-grid">
         {visibleItems.map((item) => {
-          const qty = cart[item.id]?.qty || 0;
+          const qty = cartLines
+            .filter((l) => l.item.id === item.id)
+            .reduce((n, l) => n + l.qty, 0);
           const soldOut = !item.active;
           return (
             <button
               key={item.id}
               type="button"
-              className={`pos-sell-item ${soldOut ? "pos-sell-item--soldout" : ""}`}
+              className={`pos-sell-item ${soldOut ? "pos-sell-item--soldout" : ""} ${item.recommended ? "pos-sell-item--rec" : ""}`}
               onPointerDown={() => onItemPointerDown(item)}
               onPointerUp={onItemPointerUp}
               onPointerLeave={clearHoldTimer}
               onPointerCancel={clearHoldTimer}
             >
-              <span className="pos-sell-item-name">{item.name}</span>
+              <span className="pos-sell-item-name">
+                {item.recommended ? "★ " : ""}
+                {item.name}
+              </span>
               {soldOut ? (
                 <span className="pos-sell-item-soldout">ของหมด</span>
               ) : (
@@ -395,18 +429,20 @@ export function PosSellView({
       {cartCount > 0 ? (
         <div className="pos-sell-cart-preview">
           {cartLines.map((l) => (
-            <div key={l.item.id} className="pos-sell-cart-line">
+            <div key={l.cartKey} className="pos-sell-cart-line">
               <span>
-                {l.item.name} ×{l.qty}
+                {l.item.name}
+                {l.selections.length ? ` (${l.selections.flatMap((s) => s.choices.map((c) => c.name)).join(", ")})` : ""}{" "}
+                ×{l.qty} · ฿{formatPlainNumber(l.unitPrice)}
               </span>
               <div className="pos-sell-cart-line-actions">
-                <button type="button" className="ghost-btn" aria-label="ลด" onClick={() => decFromCart(l.item.id)}>
+                <button type="button" className="ghost-btn" aria-label="ลด" onClick={() => decFromCart(l.cartKey)}>
                   −
                 </button>
-                <button type="button" className="ghost-btn" aria-label="เพิ่ม" onClick={() => incCart(l.item.id)}>
+                <button type="button" className="ghost-btn" aria-label="เพิ่ม" onClick={() => incCart(l.cartKey)}>
                   +
                 </button>
-                <button type="button" className="ghost-btn" aria-label="ลบ" onClick={() => clearLine(l.item.id)}>
+                <button type="button" className="ghost-btn" aria-label="ลบ" onClick={() => clearLine(l.cartKey)}>
                   ×
                 </button>
               </div>
@@ -457,6 +493,19 @@ export function PosSellView({
             </div>
           </div>
         </div>
+      ) : null}
+
+      {pickerItem ? (
+        <PosOptionPickerModal
+          itemName={pickerItem.name}
+          basePrice={pickerItem.price}
+          groups={optionGroupsForItem(pickerItem, optionGroups)}
+          onCancel={() => setPickerItem(null)}
+          onConfirm={(selections, unitPrice) => {
+            addToCartDirect(pickerItem, selections, unitPrice);
+            setPickerItem(null);
+          }}
+        />
       ) : null}
 
       {payOpen ? (

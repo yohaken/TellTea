@@ -19,6 +19,13 @@
 
 - หลังร้าน: `telltea-shop.web.app` — `/version.json`
 - POS: `telltea-pos.web.app/pos/` — `/pos-version.json`
+- จัดการเมนู POS: `telltea-pos.web.app/pos/menu/`
+
+## เมนู POS (POS 3+)
+
+- `menuCategories`, `menuItems`, `menuOptionGroups`
+- หน้า `/pos/menu/` — หมวดหมู่ · กลุ่มตัวเลือก · แก้ไขเมนู
+- ตอนขาย — popup เลือกตัวเลือก · บันทึกใน `posSales.lines[].options`
 
 ## บันทึกขาย (local-first)
 

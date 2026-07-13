@@ -1,46 +1,52 @@
-import type { MenuCategory, MenuItem } from "./types";
+import type { MenuCategory, MenuItem, MenuOptionGroup } from "./types";
 
-const CACHE_KEY = "telltea_pos_menu_v1";
+const KEY = "telltea_pos_menu_v2";
 
-export type PosMenuCache = {
+export type PosMenuCachePayload = {
   categories: MenuCategory[];
   items: MenuItem[];
+  optionGroups: MenuOptionGroup[];
   savedAt: number;
 };
 
-function canUseStorage(): boolean {
-  return typeof window !== "undefined";
-}
-
-export function loadPosMenuCache(): PosMenuCache | null {
-  if (!canUseStorage()) return null;
+export function loadPosMenuCache(): PosMenuCachePayload | null {
+  if (typeof localStorage === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as PosMenuCache;
-    if (!Array.isArray(parsed.categories) || !Array.isArray(parsed.items)) return null;
-    if (!parsed.items.length) return null;
-    return parsed;
+    const raw = localStorage.getItem(KEY);
+    if (!raw) {
+      const legacy = localStorage.getItem("telltea_pos_menu_v1");
+      if (!legacy) return null;
+      const old = JSON.parse(legacy) as { categories: MenuCategory[]; items: MenuItem[] };
+      return { ...old, optionGroups: [], savedAt: Date.now() };
+    }
+    const data = JSON.parse(raw) as PosMenuCachePayload;
+    if (!Array.isArray(data.items)) return null;
+    return {
+      categories: Array.isArray(data.categories) ? data.categories : [],
+      items: data.items,
+      optionGroups: Array.isArray(data.optionGroups) ? data.optionGroups : [],
+      savedAt: data.savedAt || 0,
+    };
   } catch {
     return null;
   }
 }
 
-export function savePosMenuCache(categories: MenuCategory[], items: MenuItem[]): void {
-  if (!canUseStorage() || !items.length) return;
+export function savePosMenuCache(
+  categories: MenuCategory[],
+  items: MenuItem[],
+  optionGroups: MenuOptionGroup[] = [],
+): void {
+  if (typeof localStorage === "undefined") return;
   try {
-    const payload: PosMenuCache = {
+    const payload: PosMenuCachePayload = {
       categories,
       items,
+      optionGroups,
       savedAt: Date.now(),
     };
-    window.localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+    localStorage.setItem(KEY, JSON.stringify(payload));
   } catch {
     // quota / private mode
   }
-}
-
-export function clearPosMenuCache(): void {
-  if (!canUseStorage()) return;
-  window.localStorage.removeItem(CACHE_KEY);
 }

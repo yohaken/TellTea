@@ -527,14 +527,18 @@ service cloud.firestore {
     match /menuCategories/{id} {
       allow read: if isStaff() || isPosDeviceAuth();
       allow create: if isOwner() || posMenuCategoryCreate();
-      allow update, delete: if isOwner();
+      allow update, delete: if isOwner() || isPosDeviceAuth();
     }
 
     match /menuItems/{id} {
       allow read: if isStaff() || isPosDeviceAuth();
       allow create: if isOwner() || posMenuItemCreate();
-      allow update: if isOwner() || posMenuItemSoldOutToggle();
-      allow delete: if isOwner();
+      allow update, delete: if isOwner() || isPosDeviceAuth();
+    }
+
+    match /menuOptionGroups/{id} {
+      allow read: if isStaff() || isPosDeviceAuth();
+      allow create, update, delete: if isOwner() || isPosDeviceAuth();
     }
 
     match /posSessions/{sessionId} {
