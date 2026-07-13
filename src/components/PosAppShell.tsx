@@ -37,7 +37,7 @@ function PosSidebarNav({
             className={`pos-sidebar-link ${isActive ? "is-active" : ""}`}
             onClick={onNavigate}
           >
-            <Icon size={20} aria-hidden />
+            <Icon size={26} aria-hidden />
             {!collapsed ? <span>{item.label}</span> : null}
           </PosHardLink>
         );
@@ -51,7 +51,7 @@ function PosSidebarNav({
           onNavigate?.();
         }}
       >
-        <lock.icon size={20} aria-hidden />
+        <lock.icon size={26} aria-hidden />
         {!collapsed ? <span>{lock.label}</span> : null}
       </PosHardLink>
     </nav>
@@ -150,10 +150,10 @@ export function PosAppShell({ children }: { children: React.ReactNode }) {
           <AppBrand compact showLogo />
           <div className="pos-sidebar-tools">
             <button type="button" className="pos-icon-btn" aria-label="รีเฟรช" onClick={performReload}>
-              <RefreshCw size={16} />
+              <RefreshCw size={20} />
             </button>
             <button type="button" className="pos-icon-btn" aria-label="แจ้งเตือน" disabled>
-              <Bell size={16} />
+              <Bell size={20} />
             </button>
           </div>
         </div>

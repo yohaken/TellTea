@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { QrCode, ShoppingCart, X } from "lucide-react";
+import { PauseCircle, QrCode, Tag, UserRound, X } from "lucide-react";
 import { getPosMenuSnapshot, retryPosMenuPreload, startPosMenuPreload, subscribePosMenuPreload } from "@/lib/pos-menu-preload";
 import { toggleMenuItemSoldOut } from "@/lib/pos-menu";
 import {
@@ -28,6 +28,16 @@ import { PosOptionPickerModal } from "@/components/PosOptionPickerModal";
 type PayMode = "cash" | "promptpay" | null;
 
 const HOLD_MS = 550;
+
+function cartModifierLines(selections: PosCartSelection[]): string[] {
+  const lines: string[] = [];
+  for (const sel of selections) {
+    for (const choice of sel.choices) {
+      lines.push(choice.name);
+    }
+  }
+  return lines;
+}
 
 export function PosSellView({
   deviceId,
@@ -475,73 +485,91 @@ export function PosSellView({
 
       <aside className="pos-sell-cart-panel">
         <header className="pos-cart-head">
-          <div>
-            <strong className="pos-cart-bill-id">#{session.id.slice(-5).toUpperCase()}</strong>
-            <span className="muted">ทานที่ร้าน</span>
-          </div>
+          <p className="pos-cart-channel">ทานที่ร้าน</p>
+          <span className="pos-cart-bill-id">#{session.id.slice(-5).toUpperCase()}</span>
         </header>
 
-        <div className="pos-cart-member-bar muted">เพิ่มบัตรสะสมคะแนน</div>
+        <button type="button" className="pos-cart-member-bar" disabled title="เร็วๆ นี้">
+          <UserRound size={18} aria-hidden />
+          <span>เพิ่มบัตรสะสมคะแนน</span>
+        </button>
 
         <div className="pos-cart-lines">
           {cartLines.length ? (
-            cartLines.map((l) => (
-              <div key={l.cartKey} className="pos-sell-cart-line">
-                <div className="pos-cart-line-main">
-                  <strong>
-                    {l.item.name}
-                    {l.selections.length
-                      ? ` (${l.selections.flatMap((s) => s.choices.map((c) => c.name)).join(", ")})`
-                      : ""}
-                  </strong>
-                  <span className="muted">
-                    ×{l.qty} · ฿{formatPlainNumber(l.unitPrice * l.qty)}
-                  </span>
+            cartLines.map((l) => {
+              const mods = cartModifierLines(l.selections);
+              const lineTotal = l.unitPrice * l.qty;
+              return (
+                <div key={l.cartKey} className="pos-sell-cart-line">
+                  <div className="pos-cart-line-body">
+                    <div className="pos-cart-line-title">
+                      <strong className="pos-cart-line-name">{l.item.name}</strong>
+                      <span className="pos-cart-line-qty">×{l.qty}</span>
+                    </div>
+                    {mods.map((mod) => (
+                      <p key={`${l.cartKey}-${mod}`} className="pos-cart-line-mod">
+                        • {mod}
+                      </p>
+                    ))}
+                    <div className="pos-sell-cart-line-actions">
+                      <button type="button" className="ghost-btn" aria-label="ลด" onClick={() => decFromCart(l.cartKey)}>
+                        −
+                      </button>
+                      <button type="button" className="ghost-btn" aria-label="เพิ่ม" onClick={() => incCart(l.cartKey)}>
+                        +
+                      </button>
+                      <button type="button" className="ghost-btn" aria-label="ลบ" onClick={() => clearLine(l.cartKey)}>
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                  <div className="pos-cart-line-side">
+                    <span className="pos-cart-line-price">฿{formatPlainNumber(lineTotal)}</span>
+                  </div>
                 </div>
-                <div className="pos-sell-cart-line-actions">
-                  <button type="button" className="ghost-btn" aria-label="ลด" onClick={() => decFromCart(l.cartKey)}>
-                    −
-                  </button>
-                  <button type="button" className="ghost-btn" aria-label="เพิ่ม" onClick={() => incCart(l.cartKey)}>
-                    +
-                  </button>
-                  <button type="button" className="ghost-btn" aria-label="ลบ" onClick={() => clearLine(l.cartKey)}>
-                    ×
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <p className="muted pos-cart-empty">แตะเมนูเพื่อเพิ่มรายการ</p>
           )}
         </div>
 
         <footer className="pos-cart-foot">
-          <div className="pos-sell-bar-total">
-            <ShoppingCart size={18} aria-hidden />
-            <span>
-              {cartCount} รายการ · <strong>฿{formatPlainNumber(total)}</strong>
-            </span>
+          <div className="pos-cart-totals">
+            <div className="pos-cart-total-row">
+              <span className="pos-cart-total-label">{cartCount} รายการ</span>
+              <strong className="pos-cart-total-amount">฿{formatPlainNumber(total)}</strong>
+            </div>
           </div>
-          <div className="pos-sell-bar-actions">
-            <button type="button" className="ghost-btn pos-cart-promo-btn" disabled title="เร็วๆ นี้">
+          <div className="pos-cart-actions-secondary">
+            <button type="button" className="pos-cart-secondary-btn" disabled title="เร็วๆ นี้">
+              <PauseCircle size={18} aria-hidden />
+              ส่งค้างไว้
+            </button>
+            <button type="button" className="pos-cart-secondary-btn" disabled title="เร็วๆ นี้">
+              <Tag size={18} aria-hidden />
               โปรโมชั่น
             </button>
-            <button type="button" className="pos-btn-orange pos-sell-pay-btn pos-cart-pay-main" disabled={!cartCount} onClick={openCashPay}>
-              ชำระเงิน
-            </button>
           </div>
+          <button
+            type="button"
+            className="pos-btn-orange pos-cart-pay-hero"
+            disabled={!cartCount}
+            onClick={openCashPay}
+          >
+            ชำระเงิน {formatPlainNumber(total)} บาท
+          </button>
           <div className="pos-cart-pay-alt">
             <button
               type="button"
-              className="ghost-btn pos-sell-pay-btn pos-sell-pay-btn--qr"
+              className="pos-cart-alt-btn pos-sell-pay-btn--qr"
               disabled={!cartCount}
               onClick={() => void openPromptPayPay()}
             >
-              <QrCode size={16} aria-hidden />
+              <QrCode size={18} aria-hidden />
               PromptPay
             </button>
-            <button type="button" className="ghost-btn pos-sell-pay-btn" disabled={!cartCount} onClick={openCashPay}>
+            <button type="button" className="pos-cart-alt-btn" disabled={!cartCount} onClick={openCashPay}>
               เงินสด
             </button>
           </div>
