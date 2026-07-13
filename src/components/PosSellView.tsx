@@ -415,18 +415,15 @@ export function PosSellView({
   return (
     <div className="pos-sell-layout">
       <section className="pos-sell-main">
-        <div className="pos-sell-top">
-          <div>
-            <strong>{labelOtShift(session.shift as "late" | "morning" | "evening")}</strong>
-            <span className="muted pos-sell-top-meta">
-              ขายแล้ว {sessionDisplay.saleCount} บิล · ฿{formatPlainNumber(sessionDisplay.totalSales)}
-              {menuSyncing ? " · อัปเดตเมนู..." : ""}
-            </span>
-          </div>
-          {success ? <p className="ok-text pos-sell-flash">{success}</p> : null}
+        <div className="pos-sell-statusbar">
+          <span className="pos-sell-status-shift">{labelOtShift(session.shift as "late" | "morning" | "evening")}</span>
+          <span className="pos-sell-status-meta">
+            ขายแล้ว {sessionDisplay.saleCount} บิล · ฿{formatPlainNumber(sessionDisplay.totalSales)}
+            {menuSyncing ? " · อัปเดตเมนู..." : ""}
+          </span>
+          <span className="pos-sell-status-hint">กดค้างเมนู = ปิดขายชั่วคราว</span>
+          {success ? <span className="ok-text pos-sell-flash">{success}</span> : null}
         </div>
-
-        <p className="muted pos-sell-hint">กดค้างเมนู = ปิดขายชั่วคราว</p>
 
         <div className="pos-sell-cats" role="tablist">
           {activeCategories.map((cat) => (
@@ -459,14 +456,16 @@ export function PosSellView({
                 onPointerCancel={cancelHoldTimer}
                 onClick={() => onItemClick(item)}
               >
-                {item.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.imageUrl} alt="" className="pos-sell-item-img" />
-                ) : (
-                  <span className="pos-sell-item-placeholder" aria-hidden>
-                    ☕
-                  </span>
-                )}
+                <div className="pos-sell-item-media">
+                  {item.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.imageUrl} alt="" className="pos-sell-item-img" />
+                  ) : (
+                    <span className="pos-sell-item-placeholder" aria-hidden>
+                      ☕
+                    </span>
+                  )}
+                </div>
                 <span className="pos-sell-item-name">
                   {item.recommended ? "★ " : ""}
                   {item.name}

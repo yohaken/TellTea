@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ChevronDown, Pencil, Plus } from "lucide-react";
 import { PosHardLink } from "@/components/PosHardLink";
-import { ensurePosDeviceAuth } from "@/lib/pos-auth";
 import { PosMenuItemEditor } from "@/components/PosMenuItemEditor";
+import { PosMenuModal } from "@/components/PosMenuModal";
 import { PosOptionGroupEditor } from "@/components/PosOptionGroupEditor";
 import { PosSortableList } from "@/components/PosSortableList";
+import { ensurePosDeviceAuth } from "@/lib/pos-auth";
 import {
   addMenuCategory,
   addMenuItem,
@@ -31,9 +32,18 @@ type Screen =
   | { kind: "edit-item"; id: string }
   | { kind: "edit-group"; id: string };
 
+type QuickAdd =
+  | { kind: "category" }
+  | { kind: "item"; categoryId: string }
+  | { kind: "group" }
+  | null;
+
 export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
   const [tab, setTab] = useState<Tab>("categories");
   const [screen, setScreen] = useState<Screen>({ kind: "list" });
+  const [quickAdd, setQuickAdd] = useState<QuickAdd>(null);
+  const [quickName, setQuickName] = useState("");
+  const [quickPrice, setQuickPrice] = useState("45");
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
   const [optionGroups, setOptionGroups] = useState<MenuOptionGroup[]>([]);
@@ -94,44 +104,35 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
   const editGroup =
     screen.kind === "edit-group" ? optionGroups.find((g) => g.id === screen.id) : null;
 
-  if (editItem) {
-    return (
-      <PosMenuItemEditor
-        item={editItem}
-        categories={categories}
-        optionGroups={optionGroups}
-        onBack={() => setScreen({ kind: "list" })}
-        onSaved={() => setScreen({ kind: "list" })}
-        onDelete={async () => {
-          if (!confirm(`ลบเมนู "${editItem.name}"?`)) return;
-          await deleteMenuItem(editItem.id);
-          setScreen({ kind: "list" });
-        }}
-      />
-    );
+  function openQuickAdd(next: QuickAdd) {
+    setQuickName("");
+    setQuickPrice("45");
+    setQuickAdd(next);
   }
 
-  if (editGroup) {
-    return (
-      <PosOptionGroupEditor
-        group={editGroup}
-        onBack={() => setScreen({ kind: "list" })}
-        onSaved={() => setScreen({ kind: "list" })}
-        onDelete={async () => {
-          if (!confirm(`ลบกลุ่ม "${editGroup.name}"?`)) return;
-          await deleteMenuOptionGroup(editGroup.id);
-          setScreen({ kind: "list" });
-        }}
-      />
-    );
-  }
-
-  async function handleAddCategory() {
-    const name = window.prompt("ชื่อหมวดใหม่");
-    if (!name?.trim()) return;
+  async function submitQuickAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!quickAdd || !quickName.trim()) return;
     setBusy(true);
+    setError(null);
     try {
-      await addMenuCategory(name.trim());
+      if (quickAdd.kind === "category") {
+        await addMenuCategory(quickName.trim());
+      } else if (quickAdd.kind === "group") {
+        const id = await addMenuOptionGroup(quickName.trim());
+        setTab("groups");
+        setScreen({ kind: "edit-group", id });
+      } else {
+        const price = Number(quickPrice) || 0;
+        const id = await addMenuItem({
+          categoryId: quickAdd.categoryId,
+          name: quickName.trim(),
+          price,
+        });
+        setExpandedCat(quickAdd.categoryId);
+        setScreen({ kind: "edit-item", id });
+      }
+      setQuickAdd(null);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -139,55 +140,30 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
     }
   }
 
-  async function handleAddItem(categoryId: string) {
-    const name = window.prompt("ชื่อเมนูใหม่");
-    if (!name?.trim()) return;
-    const priceStr = window.prompt("ราคาหน้าร้าน (บาท)", "45");
-    const price = Number(priceStr) || 0;
-    setBusy(true);
-    try {
-      const id = await addMenuItem({ categoryId, name: name.trim(), price });
-      setScreen({ kind: "edit-item", id });
-      setExpandedCat(categoryId);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleAddGroup() {
-    const name = window.prompt("ชื่อกลุ่มตัวเลือก");
-    if (!name?.trim()) return;
-    setBusy(true);
-    try {
-      const id = await addMenuOptionGroup(name.trim());
-      setTab("groups");
-      setScreen({ kind: "edit-group", id });
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
+  const quickAddTitle =
+    quickAdd?.kind === "category"
+      ? "เพิ่มหมวด"
+      : quickAdd?.kind === "group"
+        ? "เพิ่มกลุ่มตัวเลือก"
+        : "เพิ่มเมนู";
 
   return (
     <div className={`pos-menu-admin ${embedded ? "pos-menu-admin--embedded" : ""}`}>
       {!embedded ? (
         <header className="pos-menu-admin-top">
           <PosHardLink href="/pos/sell/" className="ghost-btn pos-menu-back">
-            <ArrowLeft size={18} aria-hidden />
+            <ArrowLeft size={16} aria-hidden />
             ขาย
           </PosHardLink>
           <h1>เมนู</h1>
           <button
             type="button"
-            className="ghost-btn"
+            className="pos-menu-inline-btn"
             disabled={busy || !authReady}
-            onClick={() => void (tab === "categories" ? handleAddCategory() : handleAddGroup())}
+            onClick={() => openQuickAdd(tab === "groups" ? { kind: "group" } : { kind: "category" })}
             title="เพิ่ม"
           >
-            <Plus size={20} />
+            <Plus size={16} />
           </button>
         </header>
       ) : null}
@@ -210,23 +186,25 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
               กลุ่มตัวเลือก
             </button>
             <button type="button" className={tab === "promotions" ? "is-active" : ""} onClick={() => setTab("promotions")}>
-              โปรโมชั่น หน้าร้าน
+              โปรโมชั่น
             </button>
           </nav>
         ) : null}
 
         <div className="pos-menu-shell-main">
           {embedded ? (
-            <header className="pos-menu-admin-head">
+            <header className="pos-menu-admin-head pos-menu-admin-head--compact">
               <h1>{tab === "groups" ? "กลุ่มตัวเลือก" : tab === "promotions" ? "โปรโมชั่น" : "เมนูอาหาร"}</h1>
               <button
                 type="button"
-                className="primary-btn pos-menu-add-btn"
+                className="pos-menu-inline-btn pos-menu-inline-btn--primary"
                 disabled={busy || !authReady || tab === "promotions"}
-                onClick={() => void (tab === "groups" ? handleAddGroup() : handleAddCategory())}
+                onClick={() =>
+                  openQuickAdd(tab === "groups" ? { kind: "group" } : { kind: "category" })
+                }
               >
-                <Plus size={16} aria-hidden />
-                {tab === "groups" ? "เพิ่มกลุ่ม" : "เพิ่มเมนู"}
+                <Plus size={14} aria-hidden />
+                {tab === "groups" ? "กลุ่ม" : "หมวด"}
               </button>
             </header>
           ) : (
@@ -248,126 +226,210 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
             </div>
           )}
 
-      {error ? <p className="error-text pos-menu-admin-error">{error}</p> : null}
-      {!authReady && !error ? <p className="muted pos-menu-loading">กำลังเชื่อมต่อเมนู...</p> : null}
+          {error ? <p className="error-text pos-menu-admin-error">{error}</p> : null}
+          {!authReady && !error ? <p className="muted pos-menu-loading">กำลังเชื่อมต่อเมนู...</p> : null}
 
-      {authReady && tab === "promotions" ? (
-        <div className="pos-module-empty muted">
-          <p>โปรโมชั่นหน้าร้าน — กำลังพัฒนา</p>
-        </div>
-      ) : null}
+          {authReady && tab === "promotions" ? (
+            <div className="pos-module-empty muted">
+              <p>โปรโมชั่นหน้าร้าน — กำลังพัฒนา</p>
+            </div>
+          ) : null}
 
-      {authReady && tab === "categories" ? (
-        <>
-          <p className="muted pos-menu-sort-hint">ลาก ≡ เพื่อเรียงลำดับหมวดและเมนู</p>
-          {categories.length ? (
-            <PosSortableList
-              ids={categoryIds}
-              onReorder={(ids) => void reorderMenuCategories(ids)}
-              className="pos-menu-cat-list"
-              renderItem={(catId) => {
-                const cat = categories.find((c) => c.id === catId);
-                if (!cat) return null;
-                const catItems = itemsByCat.get(catId) || [];
-                const open = expandedCat === catId;
-                return (
-                  <div className="pos-menu-cat-row-inner">
-                    <button
-                      type="button"
-                      className="pos-menu-cat-head"
-                      onClick={() => setExpandedCat(open ? null : catId)}
-                    >
-                      <span>
-                        {cat.name} ({catItems.length})
-                      </span>
-                      <ChevronDown
-                        size={18}
-                        className={open ? "pos-menu-chevron-open" : ""}
-                        aria-hidden
-                      />
-                    </button>
-                    <div className="pos-menu-cat-actions">
-                      <button
-                        type="button"
-                        className="ghost-btn"
-                        onClick={() => void handleAddItem(catId)}
-                      >
-                        <Plus size={16} /> เมนู
-                      </button>
-                    </div>
-                    {open ? (
-                      catItems.length ? (
-                        <PosSortableList
-                          ids={catItems.map((i) => i.id)}
-                          onReorder={(ids) => void reorderMenuItemsInCategory(catId, ids)}
-                          className="pos-menu-item-list"
-                          renderItem={(itemId) => {
-                            const item = catItems.find((i) => i.id === itemId);
-                            if (!item) return null;
-                            return (
-                              <button
-                                type="button"
-                                className="pos-menu-item-row"
-                                onClick={() => setScreen({ kind: "edit-item", id: item.id })}
-                              >
-                                {item.imageUrl ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={item.imageUrl} alt="" className="pos-menu-item-thumb" />
-                                ) : null}
-                                <span className="pos-menu-item-text">
-                                  {item.recommended ? "★ " : ""}
-                                  {item.name}
-                                  {!item.active ? " (หมด)" : ""}
-                                </span>
-                                <span className="muted">฿{formatPlainNumber(item.price)}</span>
-                                <Pencil size={14} aria-hidden />
-                              </button>
-                            );
-                          }}
-                        />
-                      ) : (
-                        <p className="muted pos-menu-empty">ยังไม่มีเมนูในหมวดนี้</p>
-                      )
-                    ) : null}
-                  </div>
-                );
-              }}
-            />
-          ) : (
-            <p className="muted pos-menu-empty">เพิ่มหมวดแรกด้วยปุ่ม +</p>
-          )}
-        </>
-      ) : authReady && tab === "groups" ? (
-        <>
-          <p className="muted pos-menu-sort-hint">ลาก ≡ เพื่อเรียงลำดับกลุ่ม</p>
-          {optionGroups.length ? (
-            <PosSortableList
-              ids={groupIds}
-              onReorder={(ids) => void reorderMenuOptionGroups(ids)}
-              className="pos-menu-group-list"
-              renderItem={(groupId) => {
-                const group = optionGroups.find((g) => g.id === groupId);
-                if (!group) return null;
-                return (
-                  <button
-                    type="button"
-                    className="pos-menu-group-row"
-                    onClick={() => setScreen({ kind: "edit-group", id: group.id })}
-                  >
-                    <span>{group.name}</span>
-                    <span className="muted">{group.options.length} ตัวเลือก</span>
-                    <Pencil size={14} aria-hidden />
-                  </button>
-                );
-              }}
-            />
-          ) : (
-            <p className="muted pos-menu-empty">เพิ่มกลุ่มตัวเลือกด้วยปุ่ม +</p>
-          )}
-        </>
-      ) : null}
+          {authReady && tab === "categories" ? (
+            <>
+              <p className="muted pos-menu-sort-hint">ลาก ≡ เรียงลำดับ</p>
+              {categories.length ? (
+                <PosSortableList
+                  ids={categoryIds}
+                  onReorder={(ids) => void reorderMenuCategories(ids)}
+                  className="pos-menu-cat-list"
+                  renderItem={(catId) => {
+                    const cat = categories.find((c) => c.id === catId);
+                    if (!cat) return null;
+                    const catItems = itemsByCat.get(catId) || [];
+                    const open = expandedCat === catId;
+                    return (
+                      <div className="pos-menu-cat-row-inner">
+                        <div className="pos-menu-cat-head-row">
+                          <button
+                            type="button"
+                            className="pos-menu-cat-head"
+                            onClick={() => setExpandedCat(open ? null : catId)}
+                          >
+                            <span>
+                              {cat.name} <span className="muted">({catItems.length})</span>
+                            </span>
+                            <ChevronDown
+                              size={16}
+                              className={open ? "pos-menu-chevron-open" : ""}
+                              aria-hidden
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            className="pos-menu-inline-btn"
+                            onClick={() => openQuickAdd({ kind: "item", categoryId: catId })}
+                          >
+                            <Plus size={14} aria-hidden /> เมนู
+                          </button>
+                        </div>
+                        {open ? (
+                          catItems.length ? (
+                            <PosSortableList
+                              ids={catItems.map((i) => i.id)}
+                              onReorder={(ids) => void reorderMenuItemsInCategory(catId, ids)}
+                              className="pos-menu-item-list"
+                              renderItem={(itemId) => {
+                                const item = catItems.find((i) => i.id === itemId);
+                                if (!item) return null;
+                                return (
+                                  <div className="pos-menu-item-row">
+                                    {item.imageUrl ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img src={item.imageUrl} alt="" className="pos-menu-item-thumb" />
+                                    ) : null}
+                                    <button
+                                      type="button"
+                                      className="pos-menu-item-main"
+                                      onClick={() => setScreen({ kind: "edit-item", id: item.id })}
+                                    >
+                                      <span className="pos-menu-item-text">
+                                        {item.recommended ? "★ " : ""}
+                                        {item.name}
+                                        {!item.active ? " (หมด)" : ""}
+                                      </span>
+                                      <span className="muted">฿{formatPlainNumber(item.price)}</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="pos-menu-inline-btn"
+                                      aria-label="แก้ไข"
+                                      onClick={() => setScreen({ kind: "edit-item", id: item.id })}
+                                    >
+                                      <Pencil size={12} />
+                                    </button>
+                                  </div>
+                                );
+                              }}
+                            />
+                          ) : (
+                            <p className="muted pos-menu-empty">ยังไม่มีเมนูในหมวดนี้</p>
+                          )
+                        ) : null}
+                      </div>
+                    );
+                  }}
+                />
+              ) : (
+                <p className="muted pos-menu-empty">เพิ่มหมวดแรกด้วยปุ่ม +</p>
+              )}
+            </>
+          ) : authReady && tab === "groups" ? (
+            <>
+              <p className="muted pos-menu-sort-hint">ลาก ≡ เรียงลำดับ</p>
+              {optionGroups.length ? (
+                <PosSortableList
+                  ids={groupIds}
+                  onReorder={(ids) => void reorderMenuOptionGroups(ids)}
+                  className="pos-menu-group-list"
+                  renderItem={(groupId) => {
+                    const group = optionGroups.find((g) => g.id === groupId);
+                    if (!group) return null;
+                    return (
+                      <div className="pos-menu-group-row">
+                        <button
+                          type="button"
+                          className="pos-menu-group-main"
+                          onClick={() => setScreen({ kind: "edit-group", id: group.id })}
+                        >
+                          <span>{group.name}</span>
+                          <span className="muted">{group.options.length} ตัวเลือก</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="pos-menu-inline-btn"
+                          aria-label="แก้ไข"
+                          onClick={() => setScreen({ kind: "edit-group", id: group.id })}
+                        >
+                          <Pencil size={12} />
+                        </button>
+                      </div>
+                    );
+                  }}
+                />
+              ) : (
+                <p className="muted pos-menu-empty">เพิ่มกลุ่มตัวเลือกด้วยปุ่ม +</p>
+              )}
+            </>
+          ) : null}
         </div>
       </div>
+
+      {quickAdd ? (
+        <PosMenuModal title={quickAddTitle} onClose={() => setQuickAdd(null)}>
+          <form className="pos-menu-quick-form" onSubmit={(e) => void submitQuickAdd(e)}>
+            <label>
+              <span>ชื่อ</span>
+              <input value={quickName} onChange={(e) => setQuickName(e.target.value)} required autoFocus />
+            </label>
+            {quickAdd.kind === "item" ? (
+              <label>
+                <span>ราคา (฿)</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={quickPrice}
+                  onChange={(e) => setQuickPrice(e.target.value)}
+                  required
+                />
+              </label>
+            ) : null}
+            <div className="pos-menu-editor-actions">
+              <button type="button" className="ghost-btn pos-menu-btn-sm" onClick={() => setQuickAdd(null)}>
+                ยกเลิก
+              </button>
+              <button type="submit" className="primary-btn pos-menu-btn-sm" disabled={busy}>
+                {busy ? "กำลังเพิ่ม..." : "เพิ่ม"}
+              </button>
+            </div>
+          </form>
+        </PosMenuModal>
+      ) : null}
+
+      {editItem ? (
+        <PosMenuModal title="แก้ไขเมนู" onClose={() => setScreen({ kind: "list" })} wide>
+          <PosMenuItemEditor
+            modal
+            item={editItem}
+            categories={categories}
+            optionGroups={optionGroups}
+            onBack={() => setScreen({ kind: "list" })}
+            onSaved={() => setScreen({ kind: "list" })}
+            onDelete={async () => {
+              if (!confirm(`ลบเมนู "${editItem.name}"?`)) return;
+              await deleteMenuItem(editItem.id);
+              setScreen({ kind: "list" });
+            }}
+          />
+        </PosMenuModal>
+      ) : null}
+
+      {editGroup ? (
+        <PosMenuModal title="แก้ไขกลุ่มตัวเลือก" onClose={() => setScreen({ kind: "list" })} wide>
+          <PosOptionGroupEditor
+            modal
+            group={editGroup}
+            onBack={() => setScreen({ kind: "list" })}
+            onSaved={() => setScreen({ kind: "list" })}
+            onDelete={async () => {
+              if (!confirm(`ลบกลุ่ม "${editGroup.name}"?`)) return;
+              await deleteMenuOptionGroup(editGroup.id);
+              setScreen({ kind: "list" });
+            }}
+          />
+        </PosMenuModal>
+      ) : null}
     </div>
   );
 }

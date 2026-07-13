@@ -16,6 +16,7 @@ export function PosMenuItemEditor({
   onBack,
   onSaved,
   onDelete,
+  modal = false,
 }: {
   item: MenuItem;
   categories: MenuCategory[];
@@ -23,6 +24,7 @@ export function PosMenuItemEditor({
   onBack: () => void;
   onSaved: () => void;
   onDelete: () => void;
+  modal?: boolean;
 }) {
   const [name, setName] = useState(item.name);
   const [nameEn, setNameEn] = useState(item.nameEn || "");
@@ -119,14 +121,16 @@ export function PosMenuItemEditor({
   const unlinkedGroups = activeGroups.filter((g) => !linkedGroupIds.includes(g.id));
 
   return (
-    <div className="pos-menu-admin-screen">
-      <header className="pos-menu-admin-head">
-        <button type="button" className="ghost-btn pos-menu-back" onClick={onBack}>
-          <ArrowLeft size={18} aria-hidden />
-          กลับ
-        </button>
-        <h1>แก้ไขเมนู</h1>
-      </header>
+    <div className={modal ? "pos-menu-editor-modal" : "pos-menu-admin-screen"}>
+      {!modal ? (
+        <header className="pos-menu-admin-head">
+          <button type="button" className="ghost-btn pos-menu-back" onClick={onBack}>
+            <ArrowLeft size={18} aria-hidden />
+            กลับ
+          </button>
+          <h1>แก้ไขเมนู</h1>
+        </header>
+      ) : null}
 
       <form className="pos-menu-editor-form" onSubmit={(e) => void onSave(e)}>
         <div className="pos-menu-photo-block">
@@ -263,17 +267,24 @@ export function PosMenuItemEditor({
 
         {error ? <p className="error-text">{error}</p> : null}
 
-        <button type="button" className="ghost-btn pos-menu-delete-btn" onClick={() => void onDelete()}>
-          <Trash2 size={15} aria-hidden /> ลบเมนู
+        <button type="button" className="ghost-btn pos-menu-delete-btn pos-menu-btn-sm" onClick={() => void onDelete()}>
+          <Trash2 size={14} aria-hidden /> ลบเมนู
         </button>
 
         <p className="muted pos-menu-price-hint">
           ราคาหน้าร้าน ฿{formatPlainNumber(Number(price) || 0)}
         </p>
 
-        <button type="submit" className="primary-btn pos-menu-save-btn" disabled={busy || uploading}>
-          {busy ? "กำลังบันทึก..." : "บันทึก"}
-        </button>
+        <div className="pos-menu-editor-actions">
+          {modal ? (
+            <button type="button" className="ghost-btn pos-menu-btn-sm" onClick={onBack}>
+              ยกเลิก
+            </button>
+          ) : null}
+          <button type="submit" className="primary-btn pos-menu-save-btn pos-menu-btn-sm" disabled={busy || uploading}>
+            {busy ? "กำลังบันทึก..." : "บันทึก"}
+          </button>
+        </div>
       </form>
 
       {cropSource ? (

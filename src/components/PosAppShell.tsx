@@ -37,7 +37,7 @@ function PosSidebarNav({
             className={`pos-sidebar-link ${isActive ? "is-active" : ""}`}
             onClick={onNavigate}
           >
-            <Icon size={26} aria-hidden />
+            <Icon size={22} aria-hidden />
             {!collapsed ? <span>{item.label}</span> : null}
           </PosHardLink>
         );
@@ -51,7 +51,7 @@ function PosSidebarNav({
           onNavigate?.();
         }}
       >
-        <lock.icon size={26} aria-hidden />
+        <lock.icon size={22} aria-hidden />
         {!collapsed ? <span>{lock.label}</span> : null}
       </PosHardLink>
     </nav>

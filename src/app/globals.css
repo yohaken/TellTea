@@ -6410,6 +6410,33 @@ body.modal-open .main-panel {
   padding: 0 0.25rem 0.5rem;
 }
 
+.pos-sell-statusbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  padding: 0.2rem 0.35rem 0.35rem;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  margin-bottom: 0.25rem;
+  flex-shrink: 0;
+}
+
+.pos-sell-status-shift {
+  font-weight: 800;
+  color: #1a1f24;
+}
+
+.pos-sell-status-meta {
+  color: #5c6670;
+}
+
+.pos-sell-status-hint {
+  color: #8a939e;
+  margin-left: auto;
+}
+
 .pos-sell-top-meta {
   display: block;
   font-size: 0.78rem;
@@ -6427,10 +6454,11 @@ body.modal-open .main-panel {
   flex-wrap: wrap;
   gap: 0.35rem;
   overflow: visible;
-  padding-bottom: 0.45rem;
-  margin-bottom: 0.35rem;
-  max-height: 5.5rem;
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.25rem;
+  max-height: 9.5rem;
   overflow-y: auto;
+  flex-shrink: 0;
 }
 
 .pos-sell-cat {
@@ -6453,8 +6481,8 @@ body.modal-open .main-panel {
 
 .pos-sell-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
-  gap: 0.45rem;
+  grid-template-columns: repeat(auto-fill, minmax(6.75rem, 1fr));
+  gap: 0.4rem;
   align-content: start;
   overflow-y: auto;
   flex: 1;
@@ -6467,10 +6495,10 @@ body.modal-open .main-panel {
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  gap: 0.25rem;
-  min-height: 8.5rem;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
+  gap: 0.2rem;
+  min-height: 0;
+  padding: 0.35rem;
+  border-radius: 0.45rem;
   border: 1px solid rgba(28, 42, 31, 0.1);
   background: #fff;
   text-align: left;
@@ -6478,10 +6506,20 @@ body.modal-open .main-panel {
   overflow: hidden;
 }
 
+.pos-sell-item-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 0.35rem;
+  overflow: hidden;
+  background: #f0f2f5;
+  flex-shrink: 0;
+}
+
 .pos-sell-item-name {
   font-weight: 700;
-  font-size: 0.88rem;
-  line-height: 1.3;
+  font-size: 0.79rem;
+  line-height: 1.25;
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
@@ -6489,7 +6527,7 @@ body.modal-open .main-panel {
 }
 
 .pos-sell-item-price {
-  font-size: 0.82rem;
+  font-size: 0.74rem;
   color: rgba(28, 42, 31, 0.62);
 }
 
@@ -7707,16 +7745,16 @@ body.modal-open .main-panel {
 
 .pos-sell-item-img {
   display: block;
-  height: 52px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border-radius: 0.35rem 0.35rem 0 0;
-  margin: -0.5rem -0.5rem 0.25rem;
-  width: calc(100% + 1rem);
+  margin: 0;
+  border-radius: 0;
 }
 
 /* —— FoodStory-style POS shell —— */
 .pos-shell {
-  --pos-nav-w: 17.5rem;
+  --pos-nav-w: 15.75rem;
   --pos-cart-w: 24rem;
   --pos-nav-active: #2d7fe0;
   --pos-accent-orange: #e85d24;
@@ -7750,8 +7788,8 @@ body.modal-open .main-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.85rem 1rem;
+  gap: 0.4rem;
+  padding: 0.55rem 0.7rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -7764,13 +7802,13 @@ body.modal-open .main-panel {
   border: 0;
   background: transparent;
   color: inherit;
-  padding: 0.55rem;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
+  padding: 0.4rem;
+  min-width: 2.2rem;
+  min-height: 2.2rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0.45rem;
+  border-radius: 0.4rem;
   cursor: pointer;
 }
 
@@ -7781,8 +7819,8 @@ body.modal-open .main-panel {
 .pos-sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.65rem;
+  gap: 0.15rem;
+  padding: 0.45rem;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -7795,15 +7833,15 @@ body.modal-open .main-panel {
 .pos-sidebar-link {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  padding: 0.85rem 1rem;
-  min-height: 3.25rem;
-  border-radius: 0.5rem;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  min-height: 2.5rem;
+  border-radius: 0.45rem;
   color: #d5dbe3;
   text-decoration: none;
   font-weight: 600;
-  font-size: 1rem;
-  line-height: 1.25;
+  font-size: 0.9rem;
+  line-height: 1.2;
 }
 
 .pos-sidebar-link:hover {
@@ -8131,23 +8169,20 @@ body.modal-open .main-panel {
 .pos-sell-item-placeholder {
   display: grid;
   place-items: center;
-  height: 4.5rem;
-  font-size: 2rem;
+  width: 100%;
+  height: 100%;
+  font-size: 1.6rem;
   background: linear-gradient(145deg, #f0e8ff, #e8f4ff);
-  border-radius: 0.45rem 0.45rem 0 0;
-  margin: -0.5rem -0.5rem 0.35rem;
+  margin: 0;
+  border-radius: 0;
 }
 
 .pos-sell-grid {
-  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(7.65rem, 1fr));
 }
 
 .pos-sell-item {
-  min-height: 8.5rem;
-}
-
-.pos-sell-item-img {
-  height: 4.5rem;
+  padding: 0.35rem;
 }
 
 .pos-sell-cat.is-active {
@@ -8168,8 +8203,8 @@ body.modal-open .main-panel {
 }
 
 .pos-sell-cats {
-  max-height: 7rem;
-  gap: 0.45rem;
+  max-height: 10rem;
+  gap: 0.4rem;
 }
 
 .pos-btn-orange {
@@ -8480,23 +8515,229 @@ body.modal-open .main-panel {
 /* Menu admin — compact */
 .pos-menu-admin--embedded,
 .pos-menu-admin {
-  font-size: 0.88rem;
+  font-size: 0.82rem;
+}
+
+.pos-menu-admin-head--compact {
+  padding: 0.45rem 0.65rem;
+}
+
+.pos-menu-admin-head--compact h1 {
+  font-size: 1rem;
+}
+
+.pos-menu-cat-head-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .pos-menu-cat-head,
+.pos-menu-group-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.82rem;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
 .pos-menu-group-row {
-  padding: 0.5rem 0.65rem;
-  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.35rem;
+}
+
+.pos-menu-group-main {
+  padding: 0.35rem 0.45rem;
 }
 
 .pos-menu-item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.35rem;
+  font-size: 0.78rem;
+}
+
+.pos-menu-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  padding: 0.15rem 0;
+  cursor: pointer;
+}
+
+.pos-menu-inline-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  color: #3a424c;
+  border-radius: 0.35rem;
+  padding: 0.2rem 0.45rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 1.65rem;
+}
+
+.pos-menu-inline-btn--primary {
+  background: var(--pos-accent-orange, #e85d24);
+  border-color: var(--pos-accent-orange, #e85d24);
+  color: #fff;
+}
+
+.pos-menu-inline-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pos-menu-btn-sm {
+  min-height: 2rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.pos-menu-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.pos-menu-editor-modal .pos-menu-editor-form {
+  margin: 0;
+}
+
+.pos-menu-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 0.75rem;
+}
+
+.pos-menu-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+
+.pos-menu-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(24rem, 100%);
+  max-height: min(90dvh, 640px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 0.65rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.pos-menu-modal-panel.is-wide {
+  width: min(32rem, 100%);
+}
+
+.pos-menu-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+}
+
+.pos-menu-modal-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.pos-menu-modal-close {
+  border: 0;
+  background: transparent;
+  padding: 0.35rem;
+  border-radius: 0.35rem;
+  cursor: pointer;
+}
+
+.pos-menu-modal-body {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.75rem 0.85rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.pos-menu-quick-form {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.pos-menu-quick-form label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.82rem;
+}
+
+.pos-menu-quick-form input {
+  font: inherit;
   padding: 0.45rem 0.55rem;
-  font-size: 0.86rem;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 0.4rem;
+}
+
+.pos-menu-item-thumb {
+  width: 1.75rem;
+  height: 1.75rem;
+  object-fit: cover;
+  border-radius: 0.25rem;
+  flex-shrink: 0;
 }
 
 .pos-menu-item-text {
   word-break: break-word;
-  line-height: 1.25;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.pos-menu-cat-head,
+.pos-menu-group-row {
+  padding: 0.35rem 0.45rem;
+  font-size: 0.82rem;
+}
+
+.pos-menu-item-row {
+  padding: 0.25rem 0.35rem;
+  font-size: 0.78rem;
 }
 
 .pos-menu-editor-form label span,
@@ -9114,8 +9355,8 @@ body.modal-open .main-panel {
 .pos-menu-subnav {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.65rem;
+  gap: 0.1rem;
+  padding: 0.45rem;
   background: #f3f4f7;
   border-right: 1px solid rgba(0, 0, 0, 0.06);
 }
@@ -9124,11 +9365,14 @@ body.modal-open .main-panel {
   border: 0;
   background: transparent;
   text-align: left;
-  padding: 0.55rem 0.65rem;
-  border-radius: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.35rem;
   font: inherit;
   font-weight: 600;
+  font-size: 0.7rem;
+  line-height: 1.25;
   color: #4a5568;
+  min-height: 2rem;
 }
 
 .pos-menu-subnav button.is-active {
@@ -9142,8 +9386,9 @@ body.modal-open .main-panel {
 }
 
 .pos-menu-add-btn {
-  font-size: 0.88rem;
-  padding: 0.45rem 0.85rem;
+  font-size: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  min-height: 1.85rem;
 }
 
 .pos-lock-screen {
