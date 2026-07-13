@@ -106,7 +106,7 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
         เครื่อง POS
       </h2>
       <p className="muted settings-card-lead">
-        Phase 0 — แท็บเล็ตเปิดลิงก์ด้านล่างทิ้งไว้ · เวอร์ชันแอปหลัก {appVersionLabel()}
+        Phase 0.5 — ติดตั้งแอปบนหน้าจอหลัก (เต็มจอ) · เวอร์ชันแอปหลัก {appVersionLabel()}
       </p>
 
       <div className="pos-install-box">
@@ -123,9 +123,10 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
           </button>
         </div>
         <ol className="pos-install-steps">
-          <li>เปิดลิงก์บนแท็บเล็ตหน้าร้าน</li>
-          <li>ควรเห็น &quot;เครื่องพร้อม · รอเปิดขาย&quot;</li>
-          <li>เพิ่ม Shortcut บนหน้าจอ → เปิดทิ้งไว้ตลอด</li>
+          <li>เปิดลิงก์บนแท็บเล็ต Android (Chrome)</li>
+          <li>กด <strong>ติดตั้งแอปบนหน้าจอหลัก</strong> บนหน้า POS หรือเมนู ⋮ → ติดตั้งแอป</li>
+          <li>เปิดจากไอคอน <strong>TellTea POS</strong> — ควรเห็นป้าย &quot;เต็มจอ&quot;</li>
+          <li>ทิ้งเปิดไว้ตลอด — เจ้าของดูสถานะออนไลน์ที่นี่</li>
         </ol>
       </div>
 

@@ -33,6 +33,19 @@
         ]
       },
       {
+        "source": "/manifest-pos.webmanifest",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/manifest+json"
+          },
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
         "source": "/version.json",
         "headers": [
           {

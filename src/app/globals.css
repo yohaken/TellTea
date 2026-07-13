@@ -6153,9 +6153,29 @@ body.modal-open .main-panel {
   color: rgba(28, 42, 31, 0.62);
 }
 
+.pos-lite-install-hint {
+  margin-top: 0.35rem;
+  max-width: 22rem;
+}
+
+.pos-lite--standalone {
+  background: linear-gradient(165deg, #f0f8f2 0%, #eaf4ec 50%, #f5f1e8 100%);
+}
+
 .pos-lite-btn {
   margin-top: 0.5rem;
   min-width: 8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+@media (display-mode: standalone) {
+  .pos-lite {
+    padding-top: calc(0.35rem + var(--safe-top));
+    padding-bottom: calc(0.75rem + var(--safe-bottom));
+  }
 }
 
 .pos-device-list {

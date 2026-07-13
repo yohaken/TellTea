@@ -204,7 +204,8 @@ Wongnai POS Android
 
 | Phase | ฟังก์ชัน | สถานะ |
 |-------|---------|--------|
-| 0 | เชื่อมต่อเครื่อง + auto-update + heartbeat | **ทำแล้ว** v112 — `/pos/` + ตั้งค่าเครื่อง POS |
+| 0 | เชื่อมต่อเครื่อง + auto-update + heartbeat | **ทำแล้ว** v112–114 — `/pos/` + ตั้งค่าเครื่อง POS |
+| 0.5 | PWA standalone — ติดตั้งแอปเต็มจอ | **ทำแล้ว** v115 — `manifest-pos.webmanifest` |
 | 1 | เมนู + ตะกร้า + เงินสด + sync ledger | รอ |
 | 2 | พิมพ์ใบเสร็จ + สถานะฮาร์ดแวร์ | รอ |
 | 3 | PromptPay + ปิดเมนูของหมด | รอ |
@@ -220,7 +221,7 @@ Wongnai POS Android
 - เจ้าของ remote — ดูสถานะ + อัปเดตบังคับจากระยะไกล
 - โปรแกรมขายเดิมยังใช้อยู่ — POS ใหม่ทดแทนทีหลัง
 - TellTea หลัก: https://telltea-shop.web.app
-- POS Lite: `/pos/` static เบา — **Phase 0 live** (heartbeat + owner status)
+- POS Lite: `/pos/` static เบา — **Phase 0 + 0.5 live** (heartbeat + PWA standalone)
 
 ---
 

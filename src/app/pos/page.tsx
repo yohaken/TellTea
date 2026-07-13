@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Monitor, Wifi, WifiOff } from "lucide-react";
+import { Monitor, Wifi, WifiOff, Download } from "lucide-react";
 import { AppBrand } from "@/components/AppBrand";
 import { ensurePosDeviceAuth } from "@/lib/pos-auth";
 import {
@@ -15,7 +15,7 @@ import {
 } from "@/lib/pos-devices";
 import { CLIENT_BUILD } from "@/lib/app-update";
 import { isFirebaseConfigured } from "@/lib/firebase";
-import { POS_ENTRY_URL } from "@/lib/pos-url";
+import { isPosStandaloneMode, type BeforeInstallPromptEvent } from "@/lib/pos-install";
 import { appVersionLabel } from "@/lib/version";
 
 type PosStatus = "boot" | "connecting" | "ready" | "error";
@@ -25,6 +25,9 @@ export default function PosPage() {
   const [device, setDevice] = useState<PosDevice | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [online, setOnline] = useState(true);
+  const [standalone, setStandalone] = useState(false);
+  const [canInstall, setCanInstall] = useState(false);
+  const installPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const deviceIdRef = useRef<string | null>(null);
   const reloadingRef = useRef(false);
 
@@ -55,6 +58,29 @@ export default function PosPage() {
   }, [boot]);
 
   useEffect(() => {
+    setStandalone(isPosStandaloneMode());
+
+    function onInstallPrompt(e: Event) {
+      e.preventDefault();
+      installPromptRef.current = e as BeforeInstallPromptEvent;
+      setCanInstall(true);
+    }
+
+    function onInstalled() {
+      setCanInstall(false);
+      installPromptRef.current = null;
+      setStandalone(true);
+    }
+
+    window.addEventListener("beforeinstallprompt", onInstallPrompt);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onInstallPrompt);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  useEffect(() => {
     function syncOnline() {
       setOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
     }
@@ -66,6 +92,17 @@ export default function PosPage() {
       window.removeEventListener("offline", syncOnline);
     };
   }, []);
+
+  async function installApp() {
+    const prompt = installPromptRef.current;
+    if (!prompt) return;
+    await prompt.prompt();
+    const choice = await prompt.userChoice;
+    if (choice.outcome === "accepted") {
+      setCanInstall(false);
+      installPromptRef.current = null;
+    }
+  }
 
   useEffect(() => {
     const deviceId = deviceIdRef.current;
@@ -124,10 +161,10 @@ export default function PosPage() {
   const deviceOnline = device ? isPosDeviceOnline(device.lastSeenAt) : false;
 
   return (
-    <div className="pos-lite">
+    <div className={`pos-lite ${standalone ? "pos-lite--standalone" : ""}`}>
       <header className="pos-lite-header">
         <AppBrand compact showLogo />
-        <p className="pos-lite-phase">POS · Phase 0</p>
+        <p className="pos-lite-phase">{standalone ? "POS · แอป" : "POS · เบราว์เซอร์"}</p>
       </header>
 
       <main className="pos-lite-main">
@@ -162,8 +199,24 @@ export default function PosPage() {
                 {deviceOnline && online ? <Wifi size={14} aria-hidden /> : <WifiOff size={14} aria-hidden />}
                 {deviceOnline && online ? "ออนไลน์" : "ออฟไลน์"}
               </span>
+              {standalone ? (
+                <span className="pos-lite-pill pos-lite-pill--ok">เต็มจอ</span>
+              ) : null}
               <span className="pos-lite-pill">{appVersionLabel()}</span>
             </div>
+
+            {!standalone && canInstall ? (
+              <button type="button" className="primary-btn pos-lite-btn" onClick={() => void installApp()}>
+                <Download size={16} aria-hidden />
+                ติดตั้งแอปบนหน้าจอหลัก
+              </button>
+            ) : null}
+
+            {!standalone && !canInstall && status === "ready" ? (
+              <p className="pos-lite-hint pos-lite-install-hint">
+                ติดตั้ง: เมนู Chrome ⋮ → <strong>ติดตั้งแอป</strong> หรือ <strong>เพิ่มไปยังหน้าจอหลัก</strong>
+              </p>
+            ) : null}
 
             <dl className="pos-lite-meta">
               <div>
@@ -177,7 +230,9 @@ export default function PosPage() {
             </dl>
 
             <p className="pos-lite-hint">
-              ลิงก์ติดตั้ง: <strong>{POS_ENTRY_URL}</strong>
+              {standalone
+                ? "เปิดจากไอคอนหน้าจอหลักแล้ว — ทิ้งเปิดไว้ได้ตลอด"
+                : "แนะนำติดตั้งแอปก่อนใช้งานจริงที่หน้าร้าน"}
               <br />
               เจ้าของดูสถานะได้ที่ TellTea → ตั้งค่า → เครื่อง POS
             </p>

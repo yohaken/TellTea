@@ -1,0 +1,33 @@
+{
+  "id": "/pos/",
+  "name": "TellTea POS",
+  "short_name": "POS",
+  "description": "เครื่อง POS หน้าร้าน TellTea — เปิดจาก Shortcut บนหน้าจอหลัก",
+  "start_url": "/pos/",
+  "scope": "/pos/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4faf5",
+  "theme_color": "#2f6a4f",
+  "lang": "th",
+  "icons": [
+    {
+      "src": "/icons/pos-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/pos-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/pos-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
