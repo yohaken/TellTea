@@ -3847,16 +3847,20 @@ body.modal-open .main-panel {
 }
 
 .photo-preview-card {
-  width: min(100%, 22rem);
+  width: min(100%, 34rem);
 }
 
 .photo-preview-full {
   display: block;
   width: 100%;
-  max-height: min(70dvh, 28rem);
+  max-height: min(88dvh, 40rem);
   object-fit: contain;
   border-radius: 0.65rem;
   background: rgba(28, 42, 31, 0.06);
+}
+
+.modal-backdrop.photo-backdrop.is-image-fullview {
+  z-index: 55;
 }
 
 .check-danger-zone {
@@ -4431,6 +4435,26 @@ body.modal-open .main-panel {
   border-radius: 0.75rem;
   margin-top: 0.5rem;
   border: 1px solid var(--tea-line);
+}
+
+.receipt-preview-btn {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+  border-radius: 0.75rem;
+}
+
+.receipt-preview-btn .receipt-preview {
+  margin-top: 0;
+}
+
+.receipt-preview-btn:focus-visible {
+  outline: 2px solid rgba(45, 106, 79, 0.55);
+  outline-offset: 2px;
 }
 
 .suggest-list {

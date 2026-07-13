@@ -70,7 +70,7 @@ export function ImagePreviewModal({
   }
 
   return (
-    <div className="modal-backdrop photo-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop photo-backdrop is-image-fullview" role="presentation" onClick={onClose}>
       <div
         className="photo-action-card photo-preview-card"
         role="dialog"

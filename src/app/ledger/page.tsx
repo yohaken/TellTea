@@ -24,6 +24,7 @@ import {
   updateLedgerEntry,
 } from "@/lib/ledger";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
+import { ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { TypePicker } from "@/components/TypePicker";
 import { frequentTypes, guessTypeFromDescription, labelLedgerType } from "@/lib/ledger-labels";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
@@ -62,7 +63,8 @@ function LedgerView() {
   const [liveLimit, setLiveLimit] = useState(LEDGER_PAGE_SIZE);
   const [editing, setEditing] = useState<LedgerEntry | null>(null);
   const [adding, setAdding] = useState(false);
-  const [photoRowId, setPhotoRowId] = useState<string | null>(null);
+  const [photoUploadRowId, setPhotoUploadRowId] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<{ url: string; title: string } | null>(null);
   const photoEntryRef = useRef<LedgerEntry | null>(null);
   const photoCameraRef = useRef<HTMLInputElement>(null);
   const photoGalleryRef = useRef<HTMLInputElement>(null);
@@ -70,7 +72,7 @@ function LedgerView() {
   const balanceRef = useRef<number | null>(null);
   const hasRowsRef = useRef(false);
 
-  useBodyScrollLock(!!adding || !!editing || !!photoRowId);
+  useBodyScrollLock(!!adding || !!editing || !!photoUploadRowId || !!imagePreview);
 
   useLayoutEffect(() => {
     const cached = loadCachedLedger();
@@ -176,7 +178,7 @@ function LedgerView() {
     } catch (err) {
       setError((err as Error).message || "ใช้รูปไม่สำเร็จ");
     } finally {
-      setPhotoRowId(null);
+      setPhotoUploadRowId(null);
       photoEntryRef.current = null;
     }
   }
@@ -242,11 +244,15 @@ function LedgerView() {
                             type="button"
                             className={row.receiptUrl ? "photo-status has-photo" : "photo-status"}
                             onClick={() => {
+                              if (row.receiptUrl) {
+                                setImagePreview({ url: row.receiptUrl, title: row.description });
+                                return;
+                              }
                               photoEntryRef.current = row;
-                              setPhotoRowId(row.id);
+                              setPhotoUploadRowId(row.id);
                             }}
-                            title={row.receiptUrl ? "มีรูป — แตะเพื่อเปลี่ยน" : "เพิ่มรูป"}
-                            aria-label={row.receiptUrl ? "มีรูป" : "เพิ่มรูป"}
+                            title={row.receiptUrl ? "มีรูป — แตะดูภาพเต็ม" : "เพิ่มรูป"}
+                            aria-label={row.receiptUrl ? "ดูรูปเต็ม" : "เพิ่มรูป"}
                           >
                             {row.receiptUrl ? (
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -317,10 +323,18 @@ function LedgerView() {
         onChange={(e) => void handleRowPhotoFile(e.target.files?.[0] || null)}
       />
 
-      {photoRowId ? (
+      {imagePreview ? (
+        <ImagePreviewModal
+          url={imagePreview.url}
+          title={imagePreview.title}
+          onClose={() => setImagePreview(null)}
+        />
+      ) : null}
+
+      {photoUploadRowId ? (
         <div
           className="modal-backdrop photo-backdrop"
-          onClick={() => { setPhotoRowId(null); photoEntryRef.current = null; }}
+          onClick={() => { setPhotoUploadRowId(null); photoEntryRef.current = null; }}
         >
           <div className="photo-action-card" onClick={(e) => e.stopPropagation()}>
             <p style={{ margin: "0 0 0.75rem", fontWeight: 700, fontSize: "0.95rem" }}>
@@ -346,7 +360,7 @@ function LedgerView() {
               type="button"
               className="ghost-btn"
               style={{ width: "100%", marginTop: "0.5rem" }}
-              onClick={() => { setPhotoRowId(null); photoEntryRef.current = null; }}
+              onClick={() => { setPhotoUploadRowId(null); photoEntryRef.current = null; }}
             >
               ออก
             </button>
@@ -393,6 +407,7 @@ function AddOutModal({
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [fullPreviewUrl, setFullPreviewUrl] = useState<string | null>(null);
 
   const autoType = useMemo(() => guessTypeFromDescription(description), [description]);
   const resolvedType = typeMode === "auto" ? autoType : typeMode;
@@ -537,8 +552,15 @@ function AddOutModal({
               onChange={(e) => void handleReceiptFile(e.target.files?.[0] || null)}
             />
             {receiptPreview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={receiptPreview} alt="ตัวอย่างสลิป" className="receipt-preview" />
+              <button
+                type="button"
+                className="receipt-preview-btn"
+                onClick={() => setFullPreviewUrl(receiptPreview)}
+                aria-label="ดูรูปเต็ม"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={receiptPreview} alt="ตัวอย่างสลิป" className="receipt-preview" />
+              </button>
             ) : null}
           </div>
           <TypePicker
@@ -558,6 +580,9 @@ function AddOutModal({
             <span aria-hidden style={{ width: "2.6rem" }} />
           </div>
         </form>
+        {fullPreviewUrl ? (
+          <ImagePreviewModal url={fullPreviewUrl} title="สลิป / รูปถ่าย" onClose={() => setFullPreviewUrl(null)} />
+        ) : null}
       </div>
     </div>
   );
@@ -585,6 +610,7 @@ function EditEntryModal({
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [fullPreviewUrl, setFullPreviewUrl] = useState<string | null>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
@@ -786,11 +812,25 @@ function EditEntryModal({
               onChange={(e) => void handleReceiptFile(e.target.files?.[0] || null)}
             />
             {receiptPreview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={receiptPreview} alt="ตัวอย่างสลิป" className="receipt-preview" />
+              <button
+                type="button"
+                className="receipt-preview-btn"
+                onClick={() => setFullPreviewUrl(receiptPreview)}
+                aria-label="ดูรูปเต็ม"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={receiptPreview} alt="ตัวอย่างสลิป" className="receipt-preview" />
+              </button>
             ) : entry.receiptUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={entry.receiptUrl} alt="สลิปเดิม" className="receipt-preview" />
+              <button
+                type="button"
+                className="receipt-preview-btn"
+                onClick={() => setFullPreviewUrl(entry.receiptUrl!)}
+                aria-label="ดูรูปเต็ม"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={entry.receiptUrl} alt="สลิปเดิม" className="receipt-preview" />
+              </button>
             ) : null}
           </div>
 
@@ -813,6 +853,9 @@ function EditEntryModal({
             </button>
           </div>
         </form>
+        {fullPreviewUrl ? (
+          <ImagePreviewModal url={fullPreviewUrl} title="สลิป / รูปถ่าย" onClose={() => setFullPreviewUrl(null)} />
+        ) : null}
       </div>
     </div>
   );
