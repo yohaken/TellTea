@@ -20,7 +20,7 @@ import { appendLocalReceipt, saleLinesToLocalReceiptLines } from "@/lib/pos-loca
 import { playPosSaleChime } from "@/lib/pos-sound";
 import { computeSessionPendingOverlay } from "@/lib/pos-sync-utils";
 import type { PosOutboxBillView } from "@/lib/pos-sync-types";
-import { labelOtShift } from "@/lib/ot";
+import { formatPosElapsedHm, formatPosOpenedAtShort } from "@/lib/pos-session";
 import type { MenuCategory, MenuItem, MenuOptionGroup, PosSaleLine, PosSession } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
 import { PosOptionPickerModal } from "@/components/PosOptionPickerModal";
@@ -28,6 +28,19 @@ import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { PosPayOrderReview } from "@/components/PosPayOrderReview";
 import { PosCashKeypad, parseCashAmount } from "@/components/PosCashKeypad";
 import { PosLazyMenuImage } from "@/components/PosLazyMenuImage";
+
+function useSessionElapsedLabel(openedAt: number) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    setNow(Date.now());
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [openedAt]);
+  return {
+    started: formatPosOpenedAtShort(openedAt),
+    elapsed: formatPosElapsedHm(now - openedAt),
+  };
+}
 
 type PayMode = "cash" | "promptpay" | null;
 
@@ -92,6 +105,7 @@ export function PosSellView({
   } | null>(null);
   const holdTimerRef = useRef<number | null>(null);
   const longPressHandledRef = useRef(false);
+  const sessionElapsed = useSessionElapsedLabel(session.openedAt);
 
   useEffect(() => {
     startPosMenuPreload();
@@ -468,7 +482,9 @@ export function PosSellView({
     <div className="pos-sell-layout">
       <section className="pos-sell-main">
         <div className="pos-sell-statusbar">
-          <span className="pos-sell-status-shift">{labelOtShift(session.shift as "late" | "morning" | "evening")}</span>
+          <span className="pos-sell-status-shift" aria-live="polite">
+            เริ่ม {sessionElapsed.started} · ทำแล้ว {sessionElapsed.elapsed}
+          </span>
           <span className="pos-sell-status-meta">
             ขายแล้ว {sessionDisplay.saleCount} บิล · ฿{formatPlainNumber(sessionDisplay.totalSales)}
             {menuSyncing ? " · อัปเดตเมนู..." : ""}
