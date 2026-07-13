@@ -8,6 +8,7 @@ import { PosMenuModal } from "@/components/PosMenuModal";
 import { PosOptionGroupEditor } from "@/components/PosOptionGroupEditor";
 import { PosSortableList } from "@/components/PosSortableList";
 import { ensurePosDeviceAuth } from "@/lib/pos-auth";
+import { loadPosMenuCache } from "@/lib/pos-menu-cache";
 import {
   addMenuCategory,
   addMenuItem,
@@ -39,15 +40,25 @@ type QuickAdd =
   | { kind: "group" }
   | null;
 
+function initialMenuFromCache() {
+  const cached = loadPosMenuCache();
+  return {
+    categories: cached?.categories ?? [],
+    items: cached?.items ?? [],
+    optionGroups: cached?.optionGroups ?? [],
+  };
+}
+
 export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
+  const seeded = initialMenuFromCache();
   const [tab, setTab] = useState<Tab>("categories");
   const [screen, setScreen] = useState<Screen>({ kind: "list" });
   const [quickAdd, setQuickAdd] = useState<QuickAdd>(null);
   const [quickName, setQuickName] = useState("");
   const [quickPrice, setQuickPrice] = useState("45");
-  const [categories, setCategories] = useState<MenuCategory[]>([]);
-  const [items, setItems] = useState<MenuItem[]>([]);
-  const [optionGroups, setOptionGroups] = useState<MenuOptionGroup[]>([]);
+  const [categories, setCategories] = useState<MenuCategory[]>(seeded.categories);
+  const [items, setItems] = useState<MenuItem[]>(seeded.items);
+  const [optionGroups, setOptionGroups] = useState<MenuOptionGroup[]>(seeded.optionGroups);
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -231,7 +242,12 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
           )}
 
           {error ? <p className="error-text pos-menu-admin-error">{error}</p> : null}
-          {!authReady && !error ? <p className="muted pos-menu-loading">กำลังเชื่อมต่อเมนู...</p> : null}
+          {!authReady && !error && !items.length ? (
+            <p className="muted pos-menu-loading">กำลังเชื่อมต่อเมนู...</p>
+          ) : null}
+          {!authReady && items.length ? (
+            <p className="muted pos-menu-loading">แสดงจากแคช — กำลังเชื่อมเพื่อแก้ไข</p>
+          ) : null}
 
           {authReady && tab === "promotions" ? (
             <div className="pos-module-empty muted">

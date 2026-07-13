@@ -27,6 +27,8 @@ const DEFAULTS: PosShopSettings = {
   receiptFooterNote: "ขอบคุณที่อุดหนุน",
 };
 
+const LOCAL_KEY = "telltea-pos-shop-settings";
+
 function metaPosRef(db: ReturnType<typeof getDb> | ReturnType<typeof getPosDb>) {
   return doc(db, "meta", "pos");
 }
@@ -51,36 +53,96 @@ function mapSettings(data: Record<string, unknown> | undefined): PosShopSettings
   };
 }
 
+function readLocalShopSettings(): PosShopSettings | null {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if (!raw) return null;
+    return mapSettings(JSON.parse(raw) as Record<string, unknown>);
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalShopSettings(settings: PosShopSettings) {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(settings));
+  } catch {
+    /* quota */
+  }
+}
+
+/** อ่านทันทีสำหรับ boot UI — local → defaults */
+export function getLocalPosShopSettings(): PosShopSettings {
+  return readLocalShopSettings() ?? { ...DEFAULTS };
+}
+
 export function subscribePosShopSettings(
   onSettings: (settings: PosShopSettings) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
+  const local = readLocalShopSettings();
+  if (local) onSettings(local);
+  else onSettings({ ...DEFAULTS });
+
   return onSnapshot(
     metaPosRef(getPosDb()),
-    (snap) => onSettings(mapSettings(snap.data() as Record<string, unknown> | undefined)),
+    (snap) => {
+      const next = mapSettings(snap.data() as Record<string, unknown> | undefined);
+      writeLocalShopSettings(next);
+      onSettings(next);
+    },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );
 }
 
 export async function getPosShopSettings(): Promise<PosShopSettings> {
-  const snap = await getDoc(metaPosRef(getPosDb()));
-  return mapSettings(snap.data() as Record<string, unknown> | undefined);
+  const local = readLocalShopSettings();
+  try {
+    const snap = await getDoc(metaPosRef(getPosDb()));
+    const next = mapSettings(snap.data() as Record<string, unknown> | undefined);
+    writeLocalShopSettings(next);
+    return next;
+  } catch {
+    return local ?? { ...DEFAULTS };
+  }
 }
 
-export async function savePosShopSettings(
-  patch: Partial<PosShopSettings>,
-): Promise<void> {
-  const next: Record<string, unknown> = { updatedAt: Date.now() };
-  if (patch.shopName != null) next.shopName = patch.shopName.trim() || DEFAULTS.shopName;
-  if (patch.shopNameTh != null) next.shopNameTh = patch.shopNameTh.trim() || DEFAULTS.shopNameTh;
-  if (patch.shopAddress != null) next.shopAddress = patch.shopAddress.trim() || DEFAULTS.shopAddress;
-  if (patch.shopPhone != null) next.shopPhone = patch.shopPhone.trim() || DEFAULTS.shopPhone;
-  if (patch.promptPayId != null) next.promptPayId = patch.promptPayId.trim();
-  if (patch.autoPrintReceipt != null) next.autoPrintReceipt = patch.autoPrintReceipt;
-  if (patch.receiptStaffName != null) next.receiptStaffName = patch.receiptStaffName.trim() || DEFAULTS.receiptStaffName;
-  if (patch.receiptFooterNote != null) next.receiptFooterNote = patch.receiptFooterNote.trim() || DEFAULTS.receiptFooterNote;
+export async function savePosShopSettings(patch: Partial<PosShopSettings>): Promise<void> {
+  const current = getLocalPosShopSettings();
+  const next: PosShopSettings = {
+    shopName: patch.shopName != null ? patch.shopName.trim() || DEFAULTS.shopName : current.shopName,
+    shopNameTh: patch.shopNameTh != null ? patch.shopNameTh.trim() || DEFAULTS.shopNameTh : current.shopNameTh,
+    shopAddress:
+      patch.shopAddress != null ? patch.shopAddress.trim() || DEFAULTS.shopAddress : current.shopAddress,
+    shopPhone: patch.shopPhone != null ? patch.shopPhone.trim() || DEFAULTS.shopPhone : current.shopPhone,
+    promptPayId: patch.promptPayId != null ? patch.promptPayId.trim() : current.promptPayId,
+    autoPrintReceipt: patch.autoPrintReceipt != null ? patch.autoPrintReceipt : current.autoPrintReceipt,
+    receiptStaffName:
+      patch.receiptStaffName != null
+        ? patch.receiptStaffName.trim() || DEFAULTS.receiptStaffName
+        : current.receiptStaffName,
+    receiptFooterNote:
+      patch.receiptFooterNote != null
+        ? patch.receiptFooterNote.trim() || DEFAULTS.receiptFooterNote
+        : current.receiptFooterNote,
+  };
+  writeLocalShopSettings(next);
+
+  const remote: Record<string, unknown> = {
+    updatedAt: Date.now(),
+    shopName: next.shopName,
+    shopNameTh: next.shopNameTh,
+    shopAddress: next.shopAddress,
+    shopPhone: next.shopPhone,
+    promptPayId: next.promptPayId,
+    autoPrintReceipt: next.autoPrintReceipt,
+    receiptStaffName: next.receiptStaffName,
+    receiptFooterNote: next.receiptFooterNote,
+  };
   try {
-    await setDoc(metaPosRef(getDb()), next, { merge: true });
+    await setDoc(metaPosRef(getDb()), remote, { merge: true });
   } catch (err) {
     throw new Error(mapFirestoreError(err, "บันทึกตั้งค่า POS"));
   }

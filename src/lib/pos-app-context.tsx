@@ -10,7 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { ensurePosDeviceAuth, readCachedPosDeviceId } from "@/lib/pos-auth";
+import { ensureLocalPosDeviceId, ensurePosDeviceAuth } from "@/lib/pos-auth";
 import {
   POS_HEARTBEAT_MS,
   ackPosDeviceReload,
@@ -35,7 +35,6 @@ import {
 } from "@/lib/pos-session";
 import { saveLocalClosedSession } from "@/lib/pos-local-sessions";
 import { refreshPosSyncSnapshot, runPosSyncFlush } from "@/lib/pos-sync";
-import { settledWithTimeout } from "@/lib/pos-timeout";
 import { getCurrentShiftId } from "@/lib/shift-session";
 import { seedPosMenuIfEmpty } from "@/lib/pos-menu";
 import { startPosMenuPreload } from "@/lib/pos-menu-preload";
@@ -159,13 +158,9 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
     if (!isPosSafeToReload(sellBusyRef.current)) return;
 
     reloadingRef.current = true;
-    void ackPosDeviceReload(deviceId, forceReloadAt)
-      .catch(() => {
-        reloadingRef.current = false;
-      })
-      .finally(() => {
-        window.location.reload();
-      });
+    pendingForceReloadAtRef.current = 0;
+    void ackPosDeviceReload(deviceId, forceReloadAt).catch(() => {});
+    window.location.reload();
   }, []);
 
   const boot = useCallback(async () => {
@@ -177,7 +172,8 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
 
     setError(null);
 
-    const cachedDeviceId = readCachedPosDeviceId();
+    // เสมอ: มี device id บนเครื่อง → พร้อมใช้ทันที ไม่รอ Firebase
+    const localDeviceId = ensureLocalPosDeviceId();
 
     function applyReadyState(authUid: string) {
       deviceIdRef.current = authUid;
@@ -189,7 +185,7 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
       startPosMenuPreload();
     }
 
-    async function finishBackgroundAuth(optimistic = false) {
+    async function finishBackgroundAuth() {
       try {
         const authUid = await ensurePosDeviceAuth();
         deviceIdRef.current = authUid;
@@ -208,26 +204,13 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
         });
         void seedPosMenuIfEmpty().catch(() => {});
       } catch (err) {
-        const msg = (err as Error).message || "เชื่อมต่อเครื่อง POS ไม่สำเร็จ";
-        if (optimistic) {
-          setError(msg);
-        } else {
-          setStatus("error");
-          setError(msg);
-        }
+        // คง ready ไว้ — ขายบนเครื่องได้แม้ auth/sync ยังไม่สำเร็จ
+        setError((err as Error).message || "เชื่อมต่อคลาวด์ไม่สำเร็จ — ขายบนเครื่องได้");
       }
     }
 
-    // เครื่องที่เคยเข้าแล้ว — ขึ้นหน้าขายทันที ไม่รอ Firebase auth / Cloud Function
-    if (cachedDeviceId) {
-      applyReadyState(cachedDeviceId);
-      void finishBackgroundAuth(true);
-      return;
-    }
-
-    // เครื่องใหม่ — ต้องรอ auth ครั้งแรก (เรียก Cloud Function)
-    setStatus("connecting");
-    await finishBackgroundAuth();
+    applyReadyState(localDeviceId);
+    void finishBackgroundAuth();
   }, []);
 
   useEffect(() => {
@@ -323,16 +306,10 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
 
       setError(null);
 
-      // ลองส่งบิลค้างแบบมี timeout — ไม่ค้างปุ่ม "กำลังทำ..."
-      const flushSnap = await settledWithTimeout(runPosSyncFlush(), 8_000, null);
-      const snap = flushSnap || (await refreshPosSyncSnapshot());
-      if (snap.pendingCount + snap.failedCount > 0) {
-        throw new Error(
-          `ยังมีบิลค้างส่ง ${snap.pendingCount + snap.failedCount} รายการ — รอซิงก์หรือเปิดแผงบิลรอส่ง`,
-        );
-      }
+      const snap = await refreshPosSyncSnapshot();
+      const pending = snap.pendingCount + snap.failedCount;
 
-      // ปิดบนเครื่องทันที → UI กลับเข้างานได้เลย
+      // ปิดบนเครื่องทันที — ไม่รอ Firebase
       const closed = closePosSessionLocal(current.id, deviceId, {
         ...current,
         saleCount: current.saleCount,
@@ -346,9 +323,15 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
         promptpayTotal: totals?.promptpayTotal ?? 0,
       });
 
-      // sync เซิร์ฟเวอร์เงียบด้านหลัง
-      void persistClosedPosSession(closed);
-      void runPosSyncFlush();
+      // sync เงียบด้านหลัง: ส่งบิลค้างก่อน แล้วค่อยปิดรอบบนเซิร์ฟ
+      void (async () => {
+        await runPosSyncFlush();
+        await persistClosedPosSession(closed);
+      })();
+
+      if (pending > 0) {
+        setError(`ปิดรอบบนเครื่องแล้ว — กำลังส่งบิลค้าง ${pending} รายการเบื้องหลัง`);
+      }
     },
     [session],
   );
@@ -400,13 +383,8 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
           }
           pendingForceReloadAtRef.current = 0;
           reloadingRef.current = true;
-          void ackPosDeviceReload(deviceId, next.forceReloadAt)
-            .catch(() => {
-              reloadingRef.current = false;
-            })
-            .finally(() => {
-              window.location.reload();
-            });
+          void ackPosDeviceReload(deviceId, next.forceReloadAt).catch(() => {});
+          window.location.reload();
         }
       },
       (err) => setError(err.message),

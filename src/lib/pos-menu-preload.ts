@@ -62,7 +62,8 @@ export function startPosMenuPreload(): void {
   if (unsubscribe) return;
 
   if (!applyCache()) {
-    snapshot = { ...EMPTY, syncing: true };
+    // ไม่บล็อก UI — พร้อมขาย (เมนูว่าง) แล้วค่อยโหลดเงียบ
+    snapshot = { ...EMPTY, ready: true, syncing: true };
     emit();
   }
 
@@ -73,21 +74,20 @@ export function startPosMenuPreload(): void {
 
   if (timeoutId == null && typeof window !== "undefined") {
     timeoutId = window.setTimeout(() => {
-      if (!snapshot.ready && snapshot.items.length > 0) {
-        snapshot = { ...snapshot, ready: true };
+      if (snapshot.syncing) {
+        snapshot = { ...snapshot, ready: true, syncing: snapshot.items.length === 0 ? false : snapshot.syncing };
         emit();
       }
-    }, 8_000);
+    }, 4_000);
   }
 
   unsubscribe = subscribePosMenuBundle(
     ({ categories, items, optionGroups, fromCache }) => {
-      const hasMenu = items.length > 0;
       snapshot = {
         categories,
         items,
         optionGroups,
-        ready: hasMenu || snapshot.ready,
+        ready: true,
         fromCache: fromCache && snapshot.fromCache,
         syncing: false,
         error: null,
@@ -95,11 +95,12 @@ export function startPosMenuPreload(): void {
       emit();
     },
     (err) => {
-      if (snapshot.items.length) {
-        snapshot = { ...snapshot, syncing: false, error: err.message, ready: true };
-      } else {
-        snapshot = { ...snapshot, syncing: false, error: err.message, ready: false };
-      }
+      snapshot = {
+        ...snapshot,
+        syncing: false,
+        error: err.message,
+        ready: true,
+      };
       emit();
     },
   );
@@ -117,7 +118,7 @@ export function retryPosMenuPreload(): void {
   seedStarted = false;
   snapshot = { ...EMPTY };
   if (!applyCache()) {
-    snapshot = { ...EMPTY, syncing: true };
+    snapshot = { ...EMPTY, ready: true, syncing: true };
   }
   emit();
   startPosMenuPreload();

@@ -14,20 +14,11 @@ import { formatPosSessionClock } from "@/lib/pos-session";
 import { PosReceiptPaper } from "@/components/PosReceiptPaper";
 import { printSaleDocuments } from "@/lib/pos-printer/router";
 import { localReceiptToPrintPayload } from "@/lib/pos-receipt-view";
-import { subscribePosShopSettings, type PosShopSettings } from "@/lib/pos-settings";
+import { getLocalPosShopSettings, subscribePosShopSettings, type PosShopSettings } from "@/lib/pos-settings";
 import { formatPlainNumber } from "@/lib/utils";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 
-const DEFAULT_SHOP: PosShopSettings = {
-  shopName: "TELL TEA",
-  shopNameTh: "เทล ที",
-  shopAddress: "",
-  shopPhone: "",
-  promptPayId: "",
-  autoPrintReceipt: true,
-  receiptStaffName: "หน้าร้าน",
-  receiptFooterNote: "ขอบคุณที่อุดหนุน",
-};
+const DEFAULT_SHOP: PosShopSettings = getLocalPosShopSettings();
 
 function formatTs(ts: number) {
   return new Date(ts).toLocaleString("th-TH", {
@@ -293,16 +284,6 @@ export function PosShiftView() {
   function requestCloseShift() {
     if (!session || !selling || !device) return;
 
-    if (pendingSync > 0) {
-      setError(`ยังมีบิลค้างส่ง ${pendingSync} รายการ — รอซิงก์ก่อนปิดรอบ`);
-      return;
-    }
-
-    if (syncSnap.syncing) {
-      setError("กำลังส่งบิล — รอสักครู่แล้วลองใหม่");
-      return;
-    }
-
     const summary = sessionSummary;
     const zLines = [
       `ออกงาน #${session.id.slice(-4).toUpperCase()}`,
@@ -310,7 +291,10 @@ export function PosShiftView() {
       `บิล ${summary.count} · ยอด ฿${formatPlainNumber(summary.total)}`,
       `เงินสด ${summary.cashCount} ฿${formatPlainNumber(summary.cashTotal)}`,
       `PromptPay ${summary.promptpayCount} ฿${formatPlainNumber(summary.promptpayTotal)}`,
-    ].join("\n");
+      pendingSync > 0 ? `บิลค้างส่ง ${pendingSync} — จะซิงก์เบื้องหลัง` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     setCloseShiftDetail(zLines);
   }
@@ -466,10 +450,10 @@ export function PosShiftView() {
                 <button
                   type="button"
                   className="pos-btn-orange pos-shift-close-btn"
-                  disabled={closing || pendingSync > 0 || syncSnap.syncing}
+                  disabled={closing}
                   onClick={requestCloseShift}
                 >
-                  {closing ? "กำลังบันทึก..." : pendingSync > 0 ? "รอซิงก์ก่อนออกงาน" : "ออกงาน (ปิดรอบ)"}
+                  {closing ? "กำลังบันทึก..." : "ออกงาน (ปิดรอบ)"}
                 </button>
               </div>
             </>

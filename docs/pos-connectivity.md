@@ -35,15 +35,16 @@ URL เก่า `/pos/` บนหลังร้าน → redirect 301 ไป 
 | Menu seed | สร้างเมนูตัวอย่างถ้าว่าง | ครั้งแรกที่เชื่อมต่อ |
 | Menu cache | localStorage + Firestore cache ก่อน server | v133 — โหลดทันที ไม่ค้าง |
 | Menu preload | เริ่มหลัง auth ก่อนเปิดกะ | v133 |
-| **Fast boot (POS 28+)** | เครื่องที่เคยเข้าแล้ว → ขึ้น UI ทันทีจาก `telltea-pos-device-id` | auth + CF ทำงานเบื้องหลัง |
+| **Fast boot (POS 30+)** | ทุกเครื่องสร้าง/อ่าน device id ท้องถิ่น → UI พร้อมทันที; auth เงียบด้านหลัง | ไม่รอ CF แม้เครื่องใหม่ |
+| Shop settings cache | `telltea-pos-shop-settings` hydrate ก่อน snapshot | POS 30 |
 
 ### ทำไมบางเครื่องค้าง "กำลังเชื่อมต่อ..."
 
-| สาเหตุ | อาการ | แก้ (POS 28+) |
+| สาเหตุ | อาการ | แก้ (POS 30+) |
 |--------|--------|----------------|
-| Firebase Auth restore จาก IndexedDB ช้า | ค้าง 1–3 วิ ทั้งที่เคยเร็ว | ไม่บล็อก UI — ใช้ cached device id |
+| Firebase Auth restore จาก IndexedDB ช้า | ค้าง 1–3 วิ ทั้งที่เคยเร็ว | ไม่บล็อก UI — device id ท้องถิ่นทันที |
 | restore timeout แล้วเรียก `posDeviceAuth` CF | ค้าง 2–5 วิ (เน็ต / cold start) | ทำเบื้องหลังหลัง UI ขึ้นแล้ว |
-| เครื่องใหม่ครั้งแรก | ต้องรอ CF สร้าง device id | ปกติ — ครั้งถัดไปเร็ว |
+| เครื่องใหม่ครั้งแรก | เคยรอ CF สร้าง device id | **ไม่รอแล้ว** — mint id บนเครื่องก่อน |
 | `PosAuthWarmup` รอ useEffect | restore เริ่มช้า | เริ่มที่ module load + singleflight |
 
 ## การอัปเดตโค้ด — จะขาดช่วงไหม?

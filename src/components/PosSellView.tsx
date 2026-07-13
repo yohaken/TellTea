@@ -15,7 +15,7 @@ import {
 import { completeCashSale, completePromptPaySale } from "@/lib/pos-sales";
 import { promptPayQrDataUrl } from "@/lib/pos-promptpay";
 import { printOnSaleComplete } from "@/lib/pos-printer/router";
-import { subscribePosShopSettings } from "@/lib/pos-settings";
+import { getLocalPosShopSettings, subscribePosShopSettings } from "@/lib/pos-settings";
 import { appendLocalReceipt, saleLinesToLocalReceiptLines } from "@/lib/pos-local-receipts";
 import { playPosSaleChime } from "@/lib/pos-sound";
 import { computeSessionPendingOverlay } from "@/lib/pos-sync-utils";
@@ -73,14 +73,15 @@ export function PosSellView({
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [shopName, setShopName] = useState("TELL TEA");
-  const [shopNameTh, setShopNameTh] = useState("เทล ที");
-  const [shopAddress, setShopAddress] = useState("");
-  const [shopPhone, setShopPhone] = useState("");
-  const [promptPayId, setPromptPayId] = useState("");
-  const [autoPrintReceipt, setAutoPrintReceipt] = useState(true);
-  const [receiptStaffName, setReceiptStaffName] = useState("หน้าร้าน");
-  const [receiptFooterNote, setReceiptFooterNote] = useState("ขอบคุณที่อุดหนุน");
+  const initialShop = getLocalPosShopSettings();
+  const [shopName, setShopName] = useState(initialShop.shopName);
+  const [shopNameTh, setShopNameTh] = useState(initialShop.shopNameTh);
+  const [shopAddress, setShopAddress] = useState(initialShop.shopAddress);
+  const [shopPhone, setShopPhone] = useState(initialShop.shopPhone);
+  const [promptPayId, setPromptPayId] = useState(initialShop.promptPayId);
+  const [autoPrintReceipt, setAutoPrintReceipt] = useState(initialShop.autoPrintReceipt);
+  const [receiptStaffName, setReceiptStaffName] = useState(initialShop.receiptStaffName);
+  const [receiptFooterNote, setReceiptFooterNote] = useState(initialShop.receiptFooterNote);
   const [confirmSoldOut, setConfirmSoldOut] = useState<MenuItem | null>(null);
   const [picker, setPicker] = useState<{
     item: MenuItem;
@@ -447,23 +448,15 @@ export function PosSellView({
     );
   }
 
-  if (menuError) {
-    return (
-      <div className="pos-sell-empty">
-        <p className="error-text">โหลดเมนูไม่สำเร็จ</p>
-        <p className="muted">{menuError}</p>
-        <button type="button" className="ghost-btn" onClick={() => retryPosMenuPreload()}>
-          ลองใหม่
-        </button>
-      </div>
-    );
-  }
-
   if (!items.length) {
     return (
       <div className="pos-sell-empty">
-        <p>ยังไม่มีเมนูขาย</p>
+        <p>{menuSyncing ? "กำลังดึงเมนู..." : "ยังไม่มีเมนูขาย"}</p>
+        {menuError ? <p className="error-text">{menuError}</p> : null}
         <p className="muted">เจ้าของตั้งเมนูที่ <a href="/pos/menu/">เมนู POS</a></p>
+        <button type="button" className="ghost-btn" onClick={() => retryPosMenuPreload()}>
+          ลองโหลดใหม่
+        </button>
       </div>
     );
   }

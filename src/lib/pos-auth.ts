@@ -27,6 +27,18 @@ function storeDeviceId(id: string) {
   }
 }
 
+/** สร้าง/อ่าน device id บนเครื่องทันที — ไม่รอ Firebase */
+export function ensureLocalPosDeviceId(): string {
+  const existing = getStoredDeviceId();
+  if (existing) return existing;
+  const id =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `pos_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  storeDeviceId(id);
+  return id;
+}
+
 async function userIsPosDevice(user: User): Promise<boolean> {
   try {
     const token = await user.getIdTokenResult();
