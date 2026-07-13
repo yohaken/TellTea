@@ -10,7 +10,7 @@ function minsToMs(dayMs: number, mins: number) {
   return dayMs + mins * 60 * 1000;
 }
 
-/** ช่วงเวลาเปิดให้เช็ค SOP ต่อวัน×กะ (ครึ่งเปิด [start, end)) */
+/** ช่วงเวลากะต่อวัน×กะ (ครึ่งเปิด [start, end)) — ใช้กำหนดจังหวะกะ */
 export function checkShiftWindowMs(dateMs: number, shift: CheckShiftId) {
   const dayMs = startOfLocalDay(new Date(dateMs));
   const nextDayMs = dayMs + 86_400_000;
@@ -34,7 +34,8 @@ export function checkShiftWindowMs(dateMs: number, shift: CheckShiftId) {
   }
 }
 
-export function isCheckShiftOpen(
+/** อยู่ในช่วงเวลากะ ณ ขณะนี้ (ใช้เลือกกะปัจจุบันสำหรับปุ่ม + กรอก) */
+export function isWithinCheckShiftWindow(
   dateMs: number,
   shift: CheckShiftId,
   now: Date = new Date(),
@@ -44,11 +45,33 @@ export function isCheckShiftOpen(
   return t >= startMs && t < endMs;
 }
 
-/** กะที่เปิดเช็คได้ ณ เวลานี้ (มีได้ทีละ 1 ช่อง) */
+/**
+ * เริ่มเช็คได้หรือยัง — ห้ามเฉพาะล่วงหน้า (ก่อนเวลาเริ่มกะ)
+ * เช็คย้อนหลังได้เสมอหลังกะเริ่มแล้ว
+ */
+export function canStartCheck(
+  dateMs: number,
+  shift: CheckShiftId,
+  now: Date = new Date(),
+): boolean {
+  const { startMs } = checkShiftWindowMs(dateMs, shift);
+  return now.getTime() >= startMs;
+}
+
+/** @deprecated ใช้ canStartCheck หรือ isWithinCheckShiftWindow แทน */
+export function isCheckShiftOpen(
+  dateMs: number,
+  shift: CheckShiftId,
+  now: Date = new Date(),
+): boolean {
+  return canStartCheck(dateMs, shift, now);
+}
+
+/** กะที่กำลังอยู่ในเวลาเช็ค ณ ขณะนี้ */
 export function getActiveCheckSlot(now: Date = new Date()): {
   dateMs: number;
   shift: CheckShiftId;
-} | null {
+} {
   const dayMs = startOfLocalDay(now);
   const mins = now.getHours() * 60 + now.getMinutes();
 
@@ -73,18 +96,15 @@ function formatWindowTime(ms: number) {
   return `${hh}:${mi}`;
 }
 
-/** ข้อความเมื่อเช็คไม่ได้ — ว่างถ้าเปิดอยู่ */
+/** ข้อความเมื่อเช็คล่วงหน้าไม่ได้ — ว่างถ้าเริ่มเช็คได้แล้ว */
 export function checkShiftWindowMessage(
   dateMs: number,
   shift: CheckShiftId,
   now: Date = new Date(),
 ): string {
-  if (isCheckShiftOpen(dateMs, shift, now)) return "";
+  if (canStartCheck(dateMs, shift, now)) return "";
   const { startMs } = checkShiftWindowMs(dateMs, shift);
   const label = labelCheckShift(shift);
   const dateLabel = formatDateShort(dateMs);
-  if (now.getTime() < startMs) {
-    return `${dateLabel} · ${label} — ยังไม่ถึงเวลาเช็ค (เปิด ${formatWindowTime(startMs)})`;
-  }
-  return `${dateLabel} · ${label} — หมดเวลาเช็คกะนี้แล้ว`;
+  return `${dateLabel} · ${label} — ยังไม่ถึงเวลาเช็ค (เปิด ${formatWindowTime(startMs)})`;
 }

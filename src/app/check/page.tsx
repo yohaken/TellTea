@@ -27,8 +27,8 @@ import {
 } from "@/lib/check-history";
 import {
   checkShiftWindowMessage,
+  canStartCheck,
   getActiveCheckSlot,
-  isCheckShiftOpen,
 } from "@/lib/check-shift-window";
 import { isFutureLocalDay } from "@/lib/ot-grid";
 import { AuthGate } from "@/components/AuthGate";
@@ -153,7 +153,7 @@ function CheckView() {
   }
 
   function openFormForSlot(dateMs: number, shift: CheckShiftId) {
-    if (!isCheckShiftOpen(dateMs, shift)) {
+    if (!canStartCheck(dateMs, shift)) {
       setError(checkShiftWindowMessage(dateMs, shift));
       return;
     }
@@ -258,7 +258,7 @@ function CheckForm({
       return;
     }
     const dateMs = parseDateInput(date);
-    if (!isCheckShiftOpen(dateMs, shift)) {
+    if (!canStartCheck(dateMs, shift)) {
       onError(checkShiftWindowMessage(dateMs, shift));
       return;
     }
@@ -334,7 +334,7 @@ function CheckForm({
   async function onSubmit() {
     if (!inspector || !createdBy) return;
     const dateMs = parseDateInput(date);
-    if (!isCheckShiftOpen(dateMs, shift)) {
+    if (!canStartCheck(dateMs, shift)) {
       onError(checkShiftWindowMessage(dateMs, shift));
       return;
     }
@@ -412,7 +412,7 @@ function CheckForm({
 
   if (step === "setup") {
     const dateMs = parseDateInput(date);
-    const shiftOpen = isCheckShiftOpen(dateMs, shift);
+    const checkAllowed = canStartCheck(dateMs, shift);
     const windowMsg = checkShiftWindowMessage(dateMs, shift);
 
     return (
@@ -420,10 +420,10 @@ function CheckForm({
         <FormHead title="เริ่มตรวจ SOP" onClose={onClose} />
         <div className="form-card entry-form">
           <p className="muted check-hint">
-            เช็คได้เฉพาะช่วงเวลากะ (ดึก 0.3–7 · เช้า 7–17 · เย็น 17–0.3) — ไม่เช็คล่วงหน้ากะอื่น
+            ห้ามเช็คล่วงหน้าก่อนเวลาเริ่มกะ — เช็คย้อนหลังได้เสมอหลังกะเริ่มแล้ว
           </p>
 
-          {!shiftOpen && !existingSession ? (
+          {!checkAllowed && !existingSession ? (
             <div className="check-existing-banner">
               <span>{windowMsg}</span>
             </div>
@@ -491,13 +491,13 @@ function CheckForm({
               <button
                 type="button"
                 className="primary-btn"
-                disabled={!shiftOpen}
+                disabled={!checkAllowed}
                 onClick={startChecklist}
               >
-                {shiftOpen ? "เริ่มเช็คลิสต์" : "รอเวลาเช็คกะนี้"}
+                {checkAllowed ? "เริ่มเช็คลิสต์" : "รอเวลาเริ่มกะ"}
               </button>
             )}
-            {existingSession && shiftOpen ? (
+            {existingSession && checkAllowed ? (
               <button type="button" className="ghost-btn" onClick={startChecklist}>
                 เช็คซ้ำ (บันทึกชุดใหม่)
               </button>
@@ -830,7 +830,7 @@ function CheckSummary({
       </div>
 
       <p className="muted check-history-hint">
-        ตารางแสดงล่วงหน้า {CHECK_PLAN_AHEAD_DAYS} วัน (ดูแผน) — เช็คได้เฉพาะช่วงเวลากะ · แตะช่อง &quot;เช็ค&quot; เมื่อถึงเวลา
+        ตารางแสดงล่วงหน้า {CHECK_PLAN_AHEAD_DAYS} วัน — ห้ามเช็คก่อนเวลาเริ่มกะ · เช็คย้อนหลังได้ · แตะ &quot;เช็ค&quot; เมื่อถึงเวลา
       </p>
 
       {rows.length ? (
@@ -892,7 +892,7 @@ function CheckHistoryRow({
   const isToday = row.dateMs === todayMs;
   const isFuture = isFutureLocalDay(row.dateMs);
   const overdueShifts = row.shifts.filter(
-    (s) => !s.session && !isCheckShiftOpen(row.dateMs, s.shiftId),
+    (s) => !s.session && canStartCheck(row.dateMs, s.shiftId),
   ).length;
 
   const rowClass = row.dayFails > 0
@@ -947,8 +947,8 @@ function CheckHistoryCell({
 }) {
   const session = cell.session;
   if (!session) {
-    const open = isCheckShiftOpen(dateMs, cell.shiftId);
-    if (open) {
+    const allowed = canStartCheck(dateMs, cell.shiftId);
+    if (allowed) {
       return (
         <button
           type="button"
