@@ -2767,6 +2767,27 @@ body.modal-open .main-panel {
   cursor: default;
 }
 
+.check-history-cell.is-pending.is-tappable {
+  cursor: pointer;
+  background: rgba(28, 42, 31, 0.06);
+  border: 1px dashed rgba(28, 42, 31, 0.16);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.check-history-cell.is-pending.is-tappable:hover,
+.check-history-cell.is-pending.is-tappable:focus-visible {
+  background: rgba(59, 125, 79, 0.12);
+  border-color: rgba(59, 125, 79, 0.35);
+  outline: none;
+}
+
+.check-history-pending-label {
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: rgba(27, 67, 50, 0.62);
+  line-height: 1.2;
+}
+
 .check-history-cell.is-pass {
   background: rgba(183, 228, 192, 0.35);
   color: #1b4332;

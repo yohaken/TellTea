@@ -140,6 +140,11 @@ function CheckView() {
     setFormOpen(true);
   }
 
+  function openFormForSlot(dateMs: number, shift: CheckShiftId) {
+    setFormSeed({ date: dateMsToInput(dateMs), shift });
+    setFormOpen(true);
+  }
+
   function closeForm() {
     setFormOpen(false);
     setFormSeed({});
@@ -162,6 +167,7 @@ function CheckView() {
           records={records}
           isOwner={isOwner}
           onError={setError}
+          onStartCheck={openFormForSlot}
         />
       ) : null}
 
@@ -696,14 +702,20 @@ type HistoryDetail = {
   cell: CheckHistoryShiftCell;
 };
 
+function dateMsToInput(ms: number) {
+  return todayInputValue(new Date(ms));
+}
+
 function CheckSummary({
   records,
   isOwner,
   onError,
+  onStartCheck,
 }: {
   records: ChecklistRecord[];
   isOwner: boolean;
   onError: (msg: string) => void;
+  onStartCheck: (dateMs: number, shift: CheckShiftId) => void;
 }) {
   const [month, setMonth] = useState(checkMonthInputValue());
   const [filter, setFilter] = useState<HistoryFilter>("all");
@@ -776,7 +788,7 @@ function CheckSummary({
       </div>
 
       <p className="muted check-history-hint">
-        แต่ละวัน 3 กะ — พนักงานเข้ากะต้องตรวจ · แตะช่องดูรายละเอียด
+        แต่ละวัน 3 กะ — แตะช่องว่างเพื่อเริ่มเช็ค · แตะช่องที่เช็คแล้วดูรายละเอียด
       </p>
 
       {rows.length ? (
@@ -797,6 +809,7 @@ function CheckSummary({
                   key={row.dateMs}
                   row={row}
                   onOpen={(cell) => setDetail({ dateMs: row.dateMs, cell })}
+                  onStartCheck={(shiftId) => onStartCheck(row.dateMs, shiftId)}
                 />
               ))}
             </tbody>
@@ -806,7 +819,7 @@ function CheckSummary({
         <p className="empty">
           {filter === "issues"
             ? "ไม่พบวันที่มีปัญหาในเดือนนี้"
-            : "ยังไม่มีบันทึกในเดือนนี้ — กด + กรอก เมื่อเข้ากะ"}
+            : "ยังไม่มีบันทึกในเดือนนี้ — แตะช่องกะในตารางเพื่อเริ่มเช็ค"}
         </p>
       )}
 
@@ -827,9 +840,11 @@ function CheckSummary({
 function CheckHistoryRow({
   row,
   onOpen,
+  onStartCheck,
 }: {
   row: CheckHistoryDayRow;
   onOpen: (cell: CheckHistoryShiftCell) => void;
+  onStartCheck: (shiftId: CheckShiftId) => void;
 }) {
   const todayMs = parseDateInput(todayInputValue());
   const isToday = row.dateMs === todayMs;
@@ -846,7 +861,11 @@ function CheckHistoryRow({
       </td>
       {row.shifts.map((cell) => (
         <td key={cell.shiftId}>
-          <CheckHistoryCell cell={cell} onOpen={() => cell.session && onOpen(cell)} />
+          <CheckHistoryCell
+            cell={cell}
+            onOpen={() => cell.session && onOpen(cell)}
+            onStartCheck={() => onStartCheck(cell.shiftId)}
+          />
         </td>
       ))}
       <td className="col-out check-history-fail-total">
@@ -863,16 +882,24 @@ function CheckHistoryRow({
 function CheckHistoryCell({
   cell,
   onOpen,
+  onStartCheck,
 }: {
   cell: CheckHistoryShiftCell;
   onOpen: () => void;
+  onStartCheck: () => void;
 }) {
   const session = cell.session;
   if (!session) {
     return (
-      <span className="check-history-cell is-pending" title="ยังไม่เช็ค">
-        —
-      </span>
+      <button
+        type="button"
+        className="check-history-cell is-pending is-tappable"
+        onClick={onStartCheck}
+        title={`${cell.label} · แตะเพื่อเริ่มเช็ค`}
+        aria-label={`${cell.label} ยังไม่เช็ค — เริ่มเช็ค`}
+      >
+        <span className="check-history-pending-label">เช็ค</span>
+      </button>
     );
   }
 
