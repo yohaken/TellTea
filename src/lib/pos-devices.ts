@@ -29,6 +29,10 @@ export type PosDevice = {
   forceReloadAt: number;
   lastReloadAckAt: number;
   disabled: boolean;
+  syncPendingCount: number;
+  syncFailedCount: number;
+  syncStuckAt: number;
+  syncLastError: string;
 };
 
 function deviceRef(id: string) {
@@ -85,6 +89,10 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
     forceReloadAt: typeof data.forceReloadAt === "number" ? data.forceReloadAt : 0,
     lastReloadAckAt: typeof data.lastReloadAckAt === "number" ? data.lastReloadAckAt : 0,
     disabled: data.disabled === true,
+    syncPendingCount: typeof data.syncPendingCount === "number" ? data.syncPendingCount : 0,
+    syncFailedCount: typeof data.syncFailedCount === "number" ? data.syncFailedCount : 0,
+    syncStuckAt: typeof data.syncStuckAt === "number" ? data.syncStuckAt : 0,
+    syncLastError: typeof data.syncLastError === "string" ? data.syncLastError : "",
   };
 }
 
@@ -111,6 +119,10 @@ export async function registerPosDevice(authUid: string): Promise<PosDevice> {
     forceReloadAt: 0,
     lastReloadAckAt: 0,
     disabled: false,
+    syncPendingCount: 0,
+    syncFailedCount: 0,
+    syncStuckAt: 0,
+    syncLastError: "",
   };
 
   try {
@@ -138,6 +150,35 @@ export async function heartbeatPosDevice(authUid: string): Promise<void> {
     );
   } catch (err) {
     throw new Error(mapFirestoreError(err, "ส่งสัญญาณเครื่อง POS", "pos"));
+  }
+}
+
+export type PosDeviceSyncStatus = {
+  syncPendingCount: number;
+  syncFailedCount: number;
+  syncStuckAt: number;
+  syncLastError: string;
+};
+
+export async function reportPosDeviceSyncStatus(
+  authUid: string,
+  status: PosDeviceSyncStatus,
+): Promise<void> {
+  try {
+    await setDoc(
+      deviceRef(authUid),
+      {
+        authUid,
+        syncPendingCount: Math.max(0, status.syncPendingCount),
+        syncFailedCount: Math.max(0, status.syncFailedCount),
+        syncStuckAt: Math.max(0, status.syncStuckAt),
+        syncLastError: status.syncLastError || "",
+        updatedAt: Date.now(),
+      },
+      { merge: true },
+    );
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, "รายงานสถานะ sync POS", "pos"));
   }
 }
 

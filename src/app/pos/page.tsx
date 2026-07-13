@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Printer, Wifi, WifiOff } from "lucide-react";
 import { AppBrand } from "@/components/AppBrand";
 import { PosUpdateWatcher } from "@/components/PosUpdateWatcher";
+import { PosPendingSyncPanel } from "@/components/PosPendingSyncPanel";
 import { PosSyncWatcher } from "@/components/PosSyncWatcher";
 import { PosSellView } from "@/components/PosSellView";
 import { ensurePosDeviceAuth } from "@/lib/pos-auth";
@@ -29,6 +30,7 @@ import { seedPosMenuIfEmpty } from "@/lib/pos-menu";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { getPosHardwareSnapshot } from "@/lib/pos-hardware";
 import { isPosSafeToReload, type PosSellBusyState } from "@/lib/pos-reload";
+import type { PosSyncSnapshot } from "@/lib/pos-sync";
 import type { PosSession } from "@/lib/types";
 import { appVersionLabel } from "@/lib/version";
 
@@ -45,6 +47,16 @@ export default function PosPage() {
   const [opening, setOpening] = useState(false);
   const [lastHeartbeatAt, setLastHeartbeatAt] = useState(0);
   const [heartbeatError, setHeartbeatError] = useState<string | null>(null);
+  const [syncSnap, setSyncSnap] = useState<PosSyncSnapshot>({
+    pendingCount: 0,
+    failedCount: 0,
+    stuckCount: 0,
+    syncing: false,
+    lastFlushAt: 0,
+    lastSynced: 0,
+    bills: [],
+  });
+  const [syncPanelOpen, setSyncPanelOpen] = useState(false);
   const [sellBusy, setSellBusy] = useState<PosSellBusyState>({
     cartCount: 0,
     payOpen: false,
@@ -264,13 +276,25 @@ export default function PosPage() {
     : { deviceOnline: false, pill: "offline-signal" as const, label: "รอสัญญาณ" };
   const hardware = getPosHardwareSnapshot(online);
 
+  const queueCount = syncSnap.pendingCount + syncSnap.failedCount;
+
   return (
     <div className={`pos-lite ${standalone ? "pos-lite--standalone" : ""} ${selling ? "pos-lite--sell" : ""}`}>
       <PosSyncWatcher
         enabled={status === "ready"}
-        onSyncChange={({ pendingCount, syncing }) =>
-          setSellBusy((prev) => ({ ...prev, pendingSyncCount: pendingCount, syncing }))
-        }
+        onSyncChange={(snap) => {
+          setSyncSnap(snap);
+          setSellBusy((prev) => ({
+            ...prev,
+            pendingSyncCount: snap.pendingCount,
+            syncing: snap.syncing,
+          }));
+        }}
+      />
+      <PosPendingSyncPanel
+        open={syncPanelOpen}
+        snapshot={syncSnap}
+        onClose={() => setSyncPanelOpen(false)}
       />
       <PosUpdateWatcher
         enabled={status === "ready"}
@@ -301,13 +325,33 @@ export default function PosPage() {
             {connectivity.label}
           </span>
           {sellBusy.syncing ? (
-            <span className="pos-lite-pill pos-lite-pill--ok" title="กำลังส่งบิลที่ค้างไปยังเซิร์ฟเวอร์">
+            <button
+              type="button"
+              className="pos-lite-pill pos-lite-pill--ok pos-lite-pill-btn"
+              title="กำลังส่งบิลที่ค้างไปยังเซิร์ฟเวอร์"
+              onClick={() => setSyncPanelOpen(true)}
+            >
               กำลังส่งข้อมูล
-            </span>
-          ) : sellBusy.pendingSyncCount > 0 ? (
-            <span className="pos-lite-pill pos-lite-pill--warn" title="บิลรอส่งเมื่อมีเน็ต">
-              รอส่ง {sellBusy.pendingSyncCount}
-            </span>
+            </button>
+          ) : syncSnap.stuckCount > 0 ? (
+            <button
+              type="button"
+              className="pos-lite-pill pos-lite-pill--warn pos-lite-pill-btn"
+              title="บิลค้างนาน — แตะเพื่อดูรายการ"
+              onClick={() => setSyncPanelOpen(true)}
+            >
+              ค้างส่ง {syncSnap.stuckCount}
+            </button>
+          ) : queueCount > 0 ? (
+            <button
+              type="button"
+              className={`pos-lite-pill pos-lite-pill-btn ${syncSnap.failedCount > 0 ? "pos-lite-pill--warn" : "pos-lite-pill--warn"}`}
+              title="แตะเพื่อดูบิลรอส่ง"
+              onClick={() => setSyncPanelOpen(true)}
+            >
+              รอส่ง {queueCount}
+              {syncSnap.failedCount > 0 ? ` (${syncSnap.failedCount} ล้มเหลว)` : ""}
+            </button>
           ) : null}
           <p className="pos-lite-phase">{standalone ? "แอป" : "POS"} · {appVersionLabel()}</p>
         </div>

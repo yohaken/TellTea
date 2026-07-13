@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import type { PosSyncSnapshot } from "@/lib/pos-sync";
 import { refreshPosSyncSnapshot, runPosSyncFlush, subscribePosSync } from "@/lib/pos-sync";
 
 const FLUSH_MS = 12 * 1000;
@@ -11,13 +12,13 @@ export function PosSyncWatcher({
   onSyncChange,
 }: {
   enabled: boolean;
-  onSyncChange?: (snap: { pendingCount: number; syncing: boolean }) => void;
+  onSyncChange?: (snap: PosSyncSnapshot) => void;
 }) {
   useEffect(() => {
     if (!enabled) return;
 
     const unsub = subscribePosSync((snap) => {
-      onSyncChange?.({ pendingCount: snap.pendingCount, syncing: snap.syncing });
+      onSyncChange?.(snap);
     });
 
     void refreshPosSyncSnapshot().then((snap) => {

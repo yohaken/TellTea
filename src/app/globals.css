@@ -6779,3 +6779,209 @@ body.modal-open .main-panel {
   font-size: 0.75rem;
   color: rgba(28, 42, 31, 0.5);
 }
+
+.settings-card-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pos-sales-report-link {
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.pos-sales-report-page .pos-sales-report-date {
+  margin-bottom: 0.75rem;
+}
+
+.pos-sales-date-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.pos-sales-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 640px) {
+  .pos-sales-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.pos-sales-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.pos-sales-summary-card--total strong {
+  color: #1f5f3b;
+}
+
+.pos-sales-summary-card--void strong {
+  color: #9a4e12;
+}
+
+.pos-sales-summary-label {
+  font-size: 0.75rem;
+  color: rgba(28, 42, 31, 0.62);
+}
+
+.pos-sales-report-section {
+  margin-bottom: 1.25rem;
+}
+
+.pos-sales-report-section h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.45rem;
+}
+
+.pos-sales-shift-table .col-num {
+  text-align: right;
+}
+
+.pos-sales-reconcile-warn td {
+  background: rgba(196, 90, 26, 0.08);
+}
+
+.pos-lite-pill-btn {
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+.pos-sync-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(12, 18, 14, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.pos-sync-panel {
+  width: min(100%, 28rem);
+  max-height: min(88vh, 36rem);
+  overflow: auto;
+  background: #f6f3ec;
+  border-radius: 1rem;
+  border: 1px solid rgba(28, 42, 31, 0.12);
+  box-shadow: 0 18px 48px rgba(12, 18, 14, 0.18);
+  padding: 1rem;
+}
+
+.pos-sync-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.pos-sync-panel-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.pos-sync-panel-error {
+  margin: 0 0 0.75rem;
+}
+
+.pos-sync-panel-empty {
+  margin: 0.5rem 0 1rem;
+}
+
+.pos-sync-bill-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pos-sync-bill-row {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: space-between;
+  padding: 0.6rem 0.7rem;
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.pos-sync-bill-row--failed {
+  border-color: rgba(180, 48, 48, 0.25);
+  background: rgba(255, 240, 240, 0.75);
+}
+
+.pos-sync-bill-row--stuck {
+  border-color: rgba(196, 90, 26, 0.35);
+}
+
+.pos-sync-bill-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.pos-sync-bill-items {
+  font-size: 0.78rem;
+  color: rgba(28, 42, 31, 0.62);
+}
+
+.pos-sync-bill-error {
+  font-size: 0.76rem;
+  color: #a33030;
+}
+
+.pos-sync-bill-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.pos-sync-bill-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pos-sync-void-btn {
+  color: #a33030;
+}
+
+.pos-sync-panel-footer {
+  margin-top: 0.85rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pos-device-sync-alert {
+  margin: 0.35rem 0 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.55rem;
+  background: rgba(196, 90, 26, 0.12);
+  color: #8a3f0f;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}

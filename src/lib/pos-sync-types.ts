@@ -10,13 +10,30 @@ export type PosSaleMutationPayload = {
   cashReceived: number;
 };
 
+export type PosOutboxStatus = "pending" | "failed";
+
 export type PosOutboxEntry = {
   id: string;
   kind: "sale";
   createdAt: number;
   attempts: number;
+  status?: PosOutboxStatus;
   lastError?: string;
   payload: PosSaleMutationPayload;
+};
+
+export type PosOutboxBillView = {
+  id: string;
+  billNo: string;
+  total: number;
+  paymentMethod: PosSalePaymentMethod;
+  shift: string;
+  linePreview: string;
+  createdAt: number;
+  attempts: number;
+  status: PosOutboxStatus;
+  lastError?: string;
+  stuck: boolean;
 };
 
 export type PosSaleResult = {

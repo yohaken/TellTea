@@ -56,6 +56,7 @@ async function enqueueSale(payload: PosSaleMutationPayload, total: number, chang
       kind: "sale",
       createdAt: Date.now(),
       attempts: 0,
+      status: "pending",
       payload,
     });
   }

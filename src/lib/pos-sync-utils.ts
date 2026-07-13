@@ -1,5 +1,33 @@
 /** Shared sync helpers — safe to import from Node tests. */
 
+import type { PosOutboxEntry, PosSaleMutationPayload } from "./pos-sync-types";
+
+/** Alert owner when pending bills age past this (ms). */
+export const POS_SYNC_STUCK_MS = 5 * 60 * 1000;
+
+export function saleTotalFromPayload(payload: PosSaleMutationPayload): number {
+  const subtotal = payload.lines.reduce((sum, l) => sum + l.price * l.qty, 0);
+  return Math.round(subtotal * 100) / 100;
+}
+
+export function outboxEntryStatus(entry: PosOutboxEntry): "pending" | "failed" {
+  return entry.status === "failed" ? "failed" : "pending";
+}
+
+export function isOutboxEntryStuck(entry: PosOutboxEntry, now = Date.now()): boolean {
+  if (outboxEntryStatus(entry) === "failed") return false;
+  return now - entry.createdAt >= POS_SYNC_STUCK_MS || entry.attempts >= 5;
+}
+
+export function linePreviewFromPayload(payload: PosSaleMutationPayload): string {
+  const preview = payload.lines
+    .slice(0, 2)
+    .map((l) => `${l.name}×${l.qty}`)
+    .join(", ");
+  const more = payload.lines.length > 2 ? ` +${payload.lines.length - 2}` : "";
+  return preview + more;
+}
+
 export function createPosMutationId(deviceId: string): string {
   const tail =
     typeof crypto !== "undefined" && "randomUUID" in crypto

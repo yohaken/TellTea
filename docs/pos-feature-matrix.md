@@ -168,7 +168,7 @@ Wongnai POS Android
 | T-A6 | ปิดรอบ / ปิดกะ | W1.7, W2.7 | SOP + โบนัสชง | **ทำแล้ว** (TellTea หลัก `/ot/`) |
 | T-A7 | พิมพ์ใบเสร็จ | W1.5 | APK bridge + printer | รอ Phase 2 |
 | T-A8 | ยกเลิกบิล | W2.5 | void + audit (owner) | รอ |
-| T-A9 | รายงานยอดขายวัน | W2.8 | `sales` → TellTea หลัก | รอ |
+| T-A9 | รายงานยอดขายวัน | W2.8 | `/pos-sales/` สรุปรายวัน+กะ+ช่องทาง | **ทำแล้ว** v132 |
 | T-A10 | sync เข้าบัญชี | — | ~~ledger~~ **แยกแล้ว** — POS ไม่เขียน `ledger` | **ทำแล้ว** v131 |
 
 ### กลุ่ม B — ควรมี (หลัง MVP)
@@ -213,7 +213,8 @@ Wongnai POS Android
 | 3.5 | บันทึกบิลผ่าน Cloud Function | **ทำแล้ว** v127–128 — ดู `docs/pos-sale.md` |
 | 4 | Offline outbox + sync + idempotency | **ทำแล้ว** v129 — ดู `docs/pos-sync.md` |
 | 4.5 | แยก POS ออกจาก `ledger` (โดเมนขาย vs บัญชีพนักงาน) | **ทำแล้ว** v131 |
-| 5 | รายงานยอดขายจาก `posSales` + สรุปรายวัน | **ถัดไป** |
+| 5 | รายงานยอดขายจาก `posSales` + สรุปรายวัน | **ทำแล้ว** v132 |
+| 5.5 | Offline sync UI — รายการค้าง + ส่งอีกครั้ง + void local + แจ้งเจ้าของ | **ทำแล้ว** v132 |
 | 6 | หักสต็อกจากบิล POS | รอ |
 | 7 | PnL รายได้จาก POS → `monthlyIncome` (ทางเลือก) | รอ |
 

@@ -212,6 +212,20 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
                   {buildBehind ? " · รออัปเดต" : ""}
                 </p>
 
+                {device.syncStuckAt > 0 || device.syncFailedCount > 0 ? (
+                  <p className="pos-device-sync-alert">
+                    {device.syncStuckAt > 0
+                      ? `บิลค้างส่ง ${device.syncPendingCount} · ค้างนานตั้งแต่ ${formatLastSeen(device.syncStuckAt)}`
+                      : null}
+                    {device.syncFailedCount > 0
+                      ? ` · ส่งไม่สำเร็จ ${device.syncFailedCount} บิล`
+                      : null}
+                    {device.syncLastError ? ` — ${device.syncLastError}` : ""}
+                  </p>
+                ) : device.syncPendingCount > 0 ? (
+                  <p className="muted pos-device-meta">รอส่ง {device.syncPendingCount} บิล</p>
+                ) : null}
+
                 <label className="pos-device-label-field">
                   <span>ชื่อเครื่อง</span>
                   <input

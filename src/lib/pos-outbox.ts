@@ -65,6 +65,27 @@ export async function bumpOutboxAttempt(id: string, lastError: string): Promise<
   });
 }
 
+export async function markOutboxFailed(id: string, lastError: string): Promise<void> {
+  const entry = await getOutboxEntry(id);
+  if (!entry) return;
+  await addOutboxEntry({
+    ...entry,
+    status: "failed",
+    attempts: entry.attempts + 1,
+    lastError: lastError.slice(0, 240),
+  });
+}
+
+export async function resetOutboxForRetry(id: string): Promise<void> {
+  const entry = await getOutboxEntry(id);
+  if (!entry) return;
+  await addOutboxEntry({
+    ...entry,
+    status: "pending",
+    lastError: undefined,
+  });
+}
+
 export async function countOutboxEntries(): Promise<number> {
   const rows = await listOutboxEntries();
   return rows.length;

@@ -16,6 +16,7 @@ import {
   ClipboardList,
   Coffee,
   Download,
+  Receipt,
   Settings,
   UserCircle,
   Users,
@@ -157,6 +158,15 @@ function MoreView() {
             <div>
               <strong>โปรไฟล์</strong>
               <p>{personalProfileLabel(staff) || staff.displayName || "ดู/แก้ไขโปรไฟล์"}</p>
+            </div>
+          </Link>
+        ) : null}
+        {isOwner ? (
+          <Link href="/pos-sales/" className="more-card">
+            <Receipt size={22} />
+            <div>
+              <strong>ยอดขาย POS</strong>
+              <p>รายงานรายวัน · แยกกะ · เงินสด/PromptPay</p>
             </div>
           </Link>
         ) : null}

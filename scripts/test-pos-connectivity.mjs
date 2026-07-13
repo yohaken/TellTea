@@ -31,6 +31,8 @@ assert.match(readFileSync(join(root, "src/lib/pos-sales.ts"), "utf8"), /enqueueS
 const adminSrc = readFileSync(join(root, "src/lib/pos-sales-admin.ts"), "utf8");
 assert.doesNotMatch(adminSrc, /collection\(getDb\(\), "ledger"\)/);
 assert.doesNotMatch(readFileSync(join(root, "functions/pos-complete-sale.js"), "utf8"), /meta\/ledger/);
+assert.match(readFileSync(join(root, "src/app/pos-sales/page.tsx"), "utf8"), /PosSalesReportPage/);
+assert.match(readFileSync(join(root, "src/components/PosPendingSyncPanel.tsx"), "utf8"), /PosPendingSyncPanel/);
 assert.match(readFileSync(join(root, "src/lib/pos-firebase.ts"), "utf8"), /telltea-pos/);
 assert.match(readFileSync(join(root, "src/lib/pos-auth.ts"), "utf8"), /getPosFirebaseAuth/);
 assert.match(deviceSrc, /requestPosDevicesReload/);

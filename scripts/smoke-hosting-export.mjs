@@ -28,6 +28,7 @@ const BACK_OFFICE_ROUTES = [
   "pnl",
   "alerts",
   "export",
+  "pos-sales",
 ];
 
 /** Files that previously caused ERR_TOO_MANY_REDIRECTS on /pos/ */

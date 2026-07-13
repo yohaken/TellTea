@@ -59,4 +59,21 @@ const watcherSrc = await import("node:fs").then((fs) =>
 assert.match(watcherSrc, /onSyncChange/);
 assert.match(watcherSrc, /pendingCount > 0/);
 
+assert.match(syncSrc, /markOutboxFailed/);
+assert.match(syncSrc, /voidPendingOutboxEntry/);
+assert.match(syncSrc, /reportPosDeviceSyncStatus/);
+assert.match(outboxSrc, /markOutboxFailed/);
+
+const reportSrc = await import("node:fs").then((fs) =>
+  fs.readFileSync(new URL("../src/lib/pos-sales-report.ts", import.meta.url), "utf8"),
+);
+assert.match(reportSrc, /summarizePosSalesDetailed/);
+assert.match(reportSrc, /subscribePosSalesForDate/);
+
+const panelSrc = await import("node:fs").then((fs) =>
+  fs.readFileSync(new URL("../src/components/PosPendingSyncPanel.tsx", import.meta.url), "utf8"),
+);
+assert.match(panelSrc, /voidPendingOutboxEntry/);
+assert.match(panelSrc, /runPosSyncFlush/);
+
 console.log("OK pos-sync");

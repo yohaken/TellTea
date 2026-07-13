@@ -149,8 +149,8 @@ service cloud.firestore {
       let after = request.resource.data;
       let repairAuth = !before.keys().hasAll(['authUid']) || before.authUid == '';
       let allowedKeys = repairAuth
-        ? ['lastSeenAt', 'appBuild', 'userAgent', 'lastReloadAckAt', 'authUid']
-        : ['lastSeenAt', 'appBuild', 'userAgent', 'lastReloadAckAt'];
+        ? ['lastSeenAt', 'appBuild', 'userAgent', 'lastReloadAckAt', 'authUid', 'syncPendingCount', 'syncFailedCount', 'syncStuckAt', 'syncLastError', 'updatedAt']
+        : ['lastSeenAt', 'appBuild', 'userAgent', 'lastReloadAckAt', 'syncPendingCount', 'syncFailedCount', 'syncStuckAt', 'syncLastError', 'updatedAt'];
       return isPosDeviceAuth()
         && (repairAuth || before.authUid == request.auth.uid)
         && after.authUid == request.auth.uid

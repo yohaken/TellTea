@@ -141,6 +141,14 @@
       ]
     },
     {
+      "collectionGroup": "posSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "date", "order": "ASCENDING" },
+        { "fieldPath": "shift", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "posSales",
       "queryScope": "COLLECTION",
       "fields": [
