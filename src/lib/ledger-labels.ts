@@ -4,6 +4,7 @@ const TYPE_LABELS: Record<string, string> = {
   sga: "ค่าใช้จ่าย (sga)",
   asset: "สินทรัพย์ (asset)",
   อื่นๆ: "อื่นๆ",
+  pos: "ขายหน้าร้าน (POS)",
   โอนเข้า: "โอนเข้า",
   ยอดยกมา: "ยอดยกมา",
 };

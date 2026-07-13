@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Monitor, Wifi, WifiOff, Download } from "lucide-react";
+import { Download, Wifi, WifiOff } from "lucide-react";
 import { AppBrand } from "@/components/AppBrand";
+import { PosSellView } from "@/components/PosSellView";
 import { ensurePosDeviceAuth } from "@/lib/pos-auth";
 import {
   POS_HEARTBEAT_MS,
@@ -13,23 +14,36 @@ import {
   subscribePosDevice,
   type PosDevice,
 } from "@/lib/pos-devices";
-import { CLIENT_BUILD } from "@/lib/app-update";
-import { isFirebaseConfigured } from "@/lib/firebase";
 import { isPosStandaloneMode, type BeforeInstallPromptEvent } from "@/lib/pos-install";
+import {
+  getCurrentPosSession,
+  openPosSession,
+  posSessionDocId,
+  subscribePosSession,
+} from "@/lib/pos-session";
+import { getCurrentShiftId } from "@/lib/shift-session";
+import { labelOtShift } from "@/lib/ot";
+import { isFirebaseConfigured } from "@/lib/firebase";
 import { appVersionLabel } from "@/lib/version";
+import type { PosSession } from "@/lib/types";
 
 type PosStatus = "boot" | "connecting" | "ready" | "error";
 
 export default function PosPage() {
   const [status, setStatus] = useState<PosStatus>("boot");
   const [device, setDevice] = useState<PosDevice | null>(null);
+  const [session, setSession] = useState<PosSession | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [online, setOnline] = useState(true);
   const [standalone, setStandalone] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
+  const [opening, setOpening] = useState(false);
   const installPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const deviceIdRef = useRef<string | null>(null);
   const reloadingRef = useRef(false);
+
+  const shift = getCurrentShiftId();
+  const selling = session?.status === "open";
 
   const boot = useCallback(async () => {
     if (!isFirebaseConfigured()) {
@@ -46,6 +60,8 @@ export default function PosPage() {
       deviceIdRef.current = authUid;
       const registered = await registerPosDevice(authUid);
       setDevice(registered);
+      const cur = await getCurrentPosSession(authUid);
+      setSession(cur);
       setStatus("ready");
     } catch (err) {
       setStatus("error");
@@ -93,6 +109,14 @@ export default function PosPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const deviceId = deviceIdRef.current;
+    if (!deviceId || status !== "ready") return;
+
+    const sessionId = posSessionDocId(deviceId);
+    return subscribePosSession(sessionId, setSession);
+  }, [status]);
+
   async function installApp() {
     const prompt = installPromptRef.current;
     if (!prompt) return;
@@ -104,25 +128,36 @@ export default function PosPage() {
     }
   }
 
+  async function handleOpenShift() {
+    const deviceId = deviceIdRef.current;
+    if (!deviceId) return;
+    setOpening(true);
+    setError(null);
+    try {
+      const next = await openPosSession(deviceId, shift);
+      setSession(next);
+    } catch (err) {
+      setError((err as Error).message || "เปิดรอบขายไม่สำเร็จ");
+    } finally {
+      setOpening(false);
+    }
+  }
+
   useEffect(() => {
     const deviceId = deviceIdRef.current;
     if (!deviceId || status !== "ready") return;
 
     const heartbeat = () => {
       if (!navigator.onLine) return;
-      void heartbeatPosDevice(deviceId).catch(() => {
-        /* retry next tick */
-      });
+      void heartbeatPosDevice(deviceId).catch(() => {});
     };
 
     heartbeat();
     const timer = setInterval(heartbeat, POS_HEARTBEAT_MS);
-
     function onVisible() {
       if (document.visibilityState === "visible") heartbeat();
     }
     document.addEventListener("visibilitychange", onVisible);
-
     return () => {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
@@ -138,7 +173,6 @@ export default function PosPage() {
       (next) => {
         if (!next) return;
         setDevice(next);
-
         if (
           next.forceReloadAt > 0
           && next.forceReloadAt > next.lastReloadAckAt
@@ -161,84 +195,63 @@ export default function PosPage() {
   const deviceOnline = device ? isPosDeviceOnline(device.lastSeenAt) : false;
 
   return (
-    <div className={`pos-lite ${standalone ? "pos-lite--standalone" : ""}`}>
+    <div className={`pos-lite ${standalone ? "pos-lite--standalone" : ""} ${selling ? "pos-lite--sell" : ""}`}>
       <header className="pos-lite-header">
         <AppBrand compact showLogo />
-        <p className="pos-lite-phase">{standalone ? "POS · แอป" : "POS · เบราว์เซอร์"}</p>
+        <div className="pos-lite-header-end">
+          <span className={`pos-lite-pill ${deviceOnline && online ? "pos-lite-pill--ok" : "pos-lite-pill--warn"}`}>
+            {deviceOnline && online ? <Wifi size={12} aria-hidden /> : <WifiOff size={12} aria-hidden />}
+            {deviceOnline && online ? "ออน" : "ออฟ"}
+          </span>
+          <p className="pos-lite-phase">{standalone ? "แอป" : "POS"} · {appVersionLabel()}</p>
+        </div>
       </header>
 
-      <main className="pos-lite-main">
-        <div className="pos-lite-icon-wrap" aria-hidden>
-          <Monitor size={40} strokeWidth={1.5} />
-        </div>
+      {status === "boot" || status === "connecting" ? (
+        <main className="pos-lite-main">
+          <h1>กำลังเชื่อมต่อ...</h1>
+          <p className="muted">ลงทะเบียนเครื่องและส่งสัญญาณไปยัง TellTea</p>
+        </main>
+      ) : null}
 
-        {status === "boot" || status === "connecting" ? (
-          <>
-            <h1>กำลังเชื่อมต่อ...</h1>
-            <p className="muted">ลงทะเบียนเครื่องและส่งสัญญาณไปยัง TellTea</p>
-          </>
-        ) : null}
+      {status === "error" ? (
+        <main className="pos-lite-main">
+          <h1>เชื่อมต่อไม่สำเร็จ</h1>
+          <p className="error-text">{error}</p>
+          <button type="button" className="primary-btn pos-lite-btn" onClick={() => void boot()}>
+            ลองใหม่
+          </button>
+        </main>
+      ) : null}
 
-        {status === "error" ? (
-          <>
-            <h1>เชื่อมต่อไม่สำเร็จ</h1>
-            <p className="error-text">{error}</p>
-            <button type="button" className="primary-btn pos-lite-btn" onClick={() => void boot()}>
-              ลองใหม่
+      {status === "ready" && device && !selling ? (
+        <main className="pos-lite-main">
+          <h1>พร้อมขาย</h1>
+          <p className="muted">กะ {labelOtShift(shift)} · รหัส {device.pairingCode}</p>
+
+          {!standalone && canInstall ? (
+            <button type="button" className="ghost-btn pos-lite-btn" onClick={() => void installApp()}>
+              <Download size={16} aria-hidden />
+              ติดตั้งแอป
             </button>
-          </>
-        ) : null}
+          ) : null}
 
-        {status === "ready" && device ? (
-          <>
-            <h1>เครื่องพร้อม · รอเปิดขาย</h1>
-            <p className="muted">ยังไม่เปิดระบบขาย — เปิดหน้านี้ทิ้งไว้ได้ตลอด</p>
+          {error ? <p className="error-text">{error}</p> : null}
 
-            <div className="pos-lite-status-row">
-              <span className={`pos-lite-pill ${deviceOnline && online ? "pos-lite-pill--ok" : "pos-lite-pill--warn"}`}>
-                {deviceOnline && online ? <Wifi size={14} aria-hidden /> : <WifiOff size={14} aria-hidden />}
-                {deviceOnline && online ? "ออนไลน์" : "ออฟไลน์"}
-              </span>
-              {standalone ? (
-                <span className="pos-lite-pill pos-lite-pill--ok">เต็มจอ</span>
-              ) : null}
-              <span className="pos-lite-pill">{appVersionLabel()}</span>
-            </div>
+          <button
+            type="button"
+            className="primary-btn pos-open-shift-btn"
+            disabled={opening}
+            onClick={() => void handleOpenShift()}
+          >
+            {opening ? "กำลังเปิด..." : "เปิดขายกะนี้"}
+          </button>
+        </main>
+      ) : null}
 
-            {!standalone && canInstall ? (
-              <button type="button" className="primary-btn pos-lite-btn" onClick={() => void installApp()}>
-                <Download size={16} aria-hidden />
-                ติดตั้งแอปบนหน้าจอหลัก
-              </button>
-            ) : null}
-
-            {!standalone && !canInstall && status === "ready" ? (
-              <p className="pos-lite-hint pos-lite-install-hint">
-                ติดตั้ง: เมนู Chrome ⋮ → <strong>ติดตั้งแอป</strong> หรือ <strong>เพิ่มไปยังหน้าจอหลัก</strong>
-              </p>
-            ) : null}
-
-            <dl className="pos-lite-meta">
-              <div>
-                <dt>รหัสเครื่อง</dt>
-                <dd>{device.pairingCode}</dd>
-              </div>
-              <div>
-                <dt>Build</dt>
-                <dd>v{CLIENT_BUILD}</dd>
-              </div>
-            </dl>
-
-            <p className="pos-lite-hint">
-              {standalone
-                ? "เปิดจากไอคอนหน้าจอหลักแล้ว — ทิ้งเปิดไว้ได้ตลอด"
-                : "แนะนำติดตั้งแอปก่อนใช้งานจริงที่หน้าร้าน"}
-              <br />
-              เจ้าของดูสถานะได้ที่ TellTea → ตั้งค่า → เครื่อง POS
-            </p>
-          </>
-        ) : null}
-      </main>
+      {status === "ready" && device && selling && session ? (
+        <PosSellView deviceId={device.id} session={session} />
+      ) : null}
     </div>
   );
 }

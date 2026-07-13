@@ -6244,6 +6244,300 @@ body.modal-open .main-panel {
   gap: 0.45rem;
 }
 
+/* ── POS Phase 1 — sell UI ── */
+.pos-lite--sell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding-bottom: 0;
+}
+
+.pos-lite--sell .pos-lite-header {
+  margin-bottom: 0.35rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.pos-lite-header-end {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pos-open-shift-btn {
+  margin-top: 0.75rem;
+  min-width: 12rem;
+  font-size: 1.05rem;
+  padding: 0.75rem 1.25rem;
+}
+
+.pos-sell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-bottom: calc(4.5rem + var(--safe-bottom));
+}
+
+.pos-sell-empty {
+  flex: 1;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 0.35rem;
+  padding: 1rem;
+}
+
+.pos-sell-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0 0.25rem 0.5rem;
+}
+
+.pos-sell-top-meta {
+  display: block;
+  font-size: 0.78rem;
+  margin-top: 0.15rem;
+}
+
+.pos-sell-flash {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.pos-sell-cats {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding-bottom: 0.45rem;
+  margin-bottom: 0.35rem;
+}
+
+.pos-sell-cat {
+  flex: 0 0 auto;
+  border: 1px solid rgba(28, 42, 31, 0.12);
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.pos-sell-cat.is-active {
+  background: #2d6a4f;
+  border-color: #2d6a4f;
+  color: #fff;
+}
+
+.pos-sell-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 0.45rem;
+  align-content: start;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.pos-sell-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.2rem;
+  min-height: 4.5rem;
+  padding: 0.65rem 0.7rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  background: rgba(255, 255, 255, 0.82);
+  text-align: left;
+  font: inherit;
+}
+
+.pos-sell-item-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
+
+.pos-sell-item-price {
+  font-size: 0.82rem;
+  color: rgba(28, 42, 31, 0.62);
+}
+
+.pos-sell-item-qty {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.4rem;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: #2d6a4f;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+}
+
+.pos-sell-cart-preview {
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.55);
+  font-size: 0.82rem;
+  max-height: 5rem;
+  overflow-y: auto;
+}
+
+.pos-sell-cart-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+}
+
+.pos-sell-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem calc(0.65rem + var(--safe-bottom));
+  background: rgba(244, 250, 245, 0.96);
+  border-top: 1px solid rgba(28, 42, 31, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+.pos-sell-bar-total {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+}
+
+.pos-sell-pay-btn {
+  min-width: 7.5rem;
+  white-space: nowrap;
+}
+
+.pos-pay-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(12, 20, 14, 0.45);
+  display: grid;
+  place-items: end center;
+  padding: 0.75rem;
+  padding-bottom: calc(0.75rem + var(--safe-bottom));
+}
+
+.pos-pay-sheet {
+  width: min(100%, 22rem);
+  background: #fff;
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+.pos-pay-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.pos-pay-head h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.pos-pay-total {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.pos-pay-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.pos-pay-field input {
+  font-size: 1.35rem;
+  font-weight: 700;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.15);
+}
+
+.pos-pay-change {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.pos-menu-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+  padding: 0.65rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.pos-menu-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.pos-menu-form input,
+.pos-menu-form select {
+  font: inherit;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(28, 42, 31, 0.12);
+}
+
+.pos-menu-owner-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.pos-menu-owner-cat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.pos-menu-owner-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  padding: 0.25rem 0 0.25rem 0.5rem;
+}
+
 .pos-install-box {
   margin: 0.75rem 0 1rem;
   padding: 0.85rem;

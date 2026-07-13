@@ -162,3 +162,62 @@ export type StockCountSessionInput = {
   createdBy: string;
   lines: StockCountLine[];
 };
+
+/** POS — หมวดเมนูหน้าร้าน */
+export type MenuCategory = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  active: boolean;
+  createdAt: number;
+  updatedAt: number;
+};
+
+/** POS — รายการเมนู */
+export type MenuItem = {
+  id: string;
+  categoryId: string;
+  name: string;
+  price: number;
+  sortOrder: number;
+  active: boolean;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type PosSaleLine = {
+  menuItemId: string;
+  name: string;
+  price: number;
+  qty: number;
+};
+
+/** POS — รอบขาย (เปิดกะขายบนเครื่อง) */
+export type PosSession = {
+  id: string;
+  deviceId: string;
+  date: number;
+  shift: string;
+  openedAt: number;
+  status: "open" | "closed";
+  saleCount: number;
+  totalSales: number;
+};
+
+export type PosSale = {
+  id: string;
+  deviceId: string;
+  sessionId: string;
+  date: number;
+  shift: string;
+  lines: PosSaleLine[];
+  subtotal: number;
+  total: number;
+  paymentMethod: "cash";
+  cashReceived: number;
+  change: number;
+  ledgerEntryId: string;
+  createdAt: number;
+  createdBy: string;
+  status: "completed";
+};

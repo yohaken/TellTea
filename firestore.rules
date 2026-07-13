@@ -172,6 +172,64 @@ service cloud.firestore {
         ]);
     }
 
+    function posActorId() {
+      return 'pos:' + request.auth.uid;
+    }
+
+    function posSaleCreate() {
+      return isPosDeviceAuth()
+        && request.resource.data.deviceId == request.auth.uid
+        && request.resource.data.sessionId is string
+        && request.resource.data.date is number
+        && request.resource.data.shift is string
+        && request.resource.data.lines is list
+        && request.resource.data.lines.size() > 0
+        && request.resource.data.total is number
+        && request.resource.data.total > 0
+        && request.resource.data.paymentMethod == 'cash'
+        && request.resource.data.cashReceived is number
+        && request.resource.data.change is number
+        && request.resource.data.change >= 0
+        && request.resource.data.createdBy == posActorId()
+        && request.resource.data.status == 'completed'
+        && request.resource.data.ledgerEntryId is string;
+    }
+
+    function posLedgerCreate() {
+      return isPosDeviceAuth()
+        && request.resource.data.createdBy == posActorId()
+        && request.resource.data.type == 'pos'
+        && request.resource.data.amountIn > 0
+        && request.resource.data.amountOut == 0
+        && request.resource.data.description is string
+        && request.resource.data.date is number
+        && request.resource.data.posDeviceId == request.auth.uid;
+    }
+
+    function posSessionOpen() {
+      return isPosDeviceAuth()
+        && request.resource.data.deviceId == request.auth.uid
+        && request.resource.data.date is number
+        && request.resource.data.shift is string
+        && request.resource.data.status == 'open'
+        && request.resource.data.openedAt is number;
+    }
+
+    function posSessionSaleBump() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return isPosDeviceAuth()
+        && before.deviceId == request.auth.uid
+        && after.deviceId == before.deviceId
+        && after.status == 'open'
+        && after.saleCount >= before.saleCount
+        && after.totalSales >= before.totalSales;
+    }
+
+    function posLedgerMetaWrite() {
+      return isPosDeviceAuth();
+    }
+
     function staffEmployeeId() {
       return isStaff()
         && get(staffPath()).data.keys().hasAny(['employeeId'])
@@ -243,7 +301,7 @@ service cloud.firestore {
 
     match /ledger/{entryId} {
       allow read: if hasPerm('ledger');
-      allow create: if hasPerm('ledger')
+      allow create: if (hasPerm('ledger')
         && request.resource.data.createdBy == actorId()
         && request.resource.data.description is string
         && request.resource.data.amountIn is number
@@ -253,7 +311,8 @@ service cloud.firestore {
         && (
           (request.resource.data.amountIn > 0 && request.resource.data.amountOut == 0 && hasPerm('transferIn'))
           || (request.resource.data.amountOut > 0 && request.resource.data.amountIn == 0)
-        );
+        ))
+        || posLedgerCreate();
       allow update, delete: if hasPerm('ledger');
     }
 
@@ -412,7 +471,8 @@ service cloud.firestore {
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
         || (hasPerm('alerts') && docId == 'lowBalanceAlert')
         || (hasPerm('ownerBooks') && docId == 'ownerBooks')
-        || (isOwner() && docId == 'otSettings');
+        || (isOwner() && docId == 'otSettings')
+        || (isPosDeviceAuth() && docId == 'ledger' && posLedgerMetaWrite());
     }
 
     match /pushSubscriptions/{id} {
@@ -423,6 +483,30 @@ service cloud.firestore {
         && request.resource.data.endpoint is string
         && request.resource.data.keys.keys().hasAll(['p256dh', 'auth']);
       allow delete: if hasPerm('alerts') && hasEmail() && resource.data.email == authEmail();
+    }
+
+    match /menuCategories/{id} {
+      allow read: if isStaff() || isPosDeviceAuth();
+      allow write: if isOwner();
+    }
+
+    match /menuItems/{id} {
+      allow read: if isStaff() || isPosDeviceAuth();
+      allow write: if isOwner();
+    }
+
+    match /posSessions/{sessionId} {
+      allow read: if isOwner() || (isPosDeviceAuth() && resource.data.deviceId == request.auth.uid);
+      allow list: if isOwner();
+      allow create: if isPosDeviceAuth() && posSessionOpen();
+      allow update: if (isPosDeviceAuth() && posSessionSaleBump()) || isOwner();
+      allow delete: if isOwner();
+    }
+
+    match /posSales/{id} {
+      allow read: if isOwner() || hasPerm('ledger');
+      allow create: if isPosDeviceAuth() && posSaleCreate();
+      allow update, delete: if isOwner();
     }
 
     match /posDevices/{deviceId} {
