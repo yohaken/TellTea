@@ -237,6 +237,17 @@ assert.doesNotMatch(templateSrc, /truncate\(line\.name/);
 
 const sortableSrc = readFileSync(join(root, "src/components/PosSortableList.tsx"), "utf8");
 assert.match(sortableSrc, /onPointerDown/);
+assert.match(sortableSrc, /overIdRef/);
+assert.match(sortableSrc, /ChevronUp/);
+assert.match(sortableSrc, /moveBy/);
 assert.match(readFileSync(join(root, "src/app/globals.css"), "utf8"), /pos-sortable-handle[\s\S]*touch-action: none/);
+
+const shiftSrc = readFileSync(join(root, "src/components/PosShiftView.tsx"), "utf8");
+assert.match(shiftSrc, /pos-shift-sticky-top/);
+assert.match(shiftSrc, /useLiveElapsed/);
+assert.match(shiftSrc, /เวลานับเดิน/);
+assert.match(shiftSrc, /ออกงาน \(ปิดรอบ\)/);
+
+assert.match(sellSrc, /activeCategories[\s\S]*sortOrder/);
 
 console.log("OK pos-menu-cart");

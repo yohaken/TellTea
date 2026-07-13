@@ -34,6 +34,77 @@ function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
 }
 
+function formatElapsed(ms: number) {
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function useLiveElapsed(startedAt: number | null | undefined) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (startedAt == null) return;
+    setNow(Date.now());
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [startedAt]);
+  if (startedAt == null) return "—";
+  return formatElapsed(now - startedAt);
+}
+
+function ShiftStatusTable({
+  openedAt,
+  elapsed,
+  pairingCode,
+  pendingSync,
+  saleCount,
+}: {
+  openedAt: number;
+  elapsed: string;
+  pairingCode?: string;
+  pendingSync: number;
+  saleCount: number;
+}) {
+  return (
+    <table className="pos-shift-status-table">
+      <tbody>
+        <tr>
+          <th scope="row">สถานะรอบ</th>
+          <td>
+            <span className="pos-shift-status-pill">กำลังเปิด</span>
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">เริ่มรอบ</th>
+          <td>{formatTs(openedAt)}</td>
+        </tr>
+        <tr>
+          <th scope="row">เวลานับเดิน</th>
+          <td className="pos-shift-elapsed">{elapsed}</td>
+        </tr>
+        <tr>
+          <th scope="row">บิลในรอบ</th>
+          <td>{saleCount}</td>
+        </tr>
+        {pairingCode ? (
+          <tr>
+            <th scope="row">เครื่อง</th>
+            <td>{pairingCode}</td>
+          </tr>
+        ) : null}
+        {pendingSync > 0 ? (
+          <tr>
+            <th scope="row">ค้างส่ง</th>
+            <td className="pos-shift-warn">{pendingSync} บิล</td>
+          </tr>
+        ) : null}
+      </tbody>
+    </table>
+  );
+}
+
 function KpiCard({
   label,
   value,
@@ -187,6 +258,7 @@ function ReceiptRow({
 
 export function PosShiftView() {
   const { session, device, selling, syncSnap, setError, handleCloseShift: closeShiftFromApp } = usePosApp();
+  const elapsed = useLiveElapsed(selling && session ? session.openedAt : null);
   const [closing, setClosing] = useState(false);
   const [closeShiftDetail, setCloseShiftDetail] = useState<string | null>(null);
   const [tab, setTab] = useState<"current" | "history">("current");
@@ -366,95 +438,89 @@ export function PosShiftView() {
         {tab === "current" ? (
           selling && session ? (
             <>
-              <div className="pos-shift-kpi-grid">
-                <KpiCard
-                  label="ยอดขายทั้งหมด"
-                  value={`฿${formatPlainNumber(displaySummary.total || session.totalSales)}`}
-                  sub={`${displaySummary.count || session.saleCount} บิล`}
-                  accent="orange"
+              <div className="pos-shift-sticky-top">
+                <ShiftStatusTable
+                  openedAt={session.openedAt}
+                  elapsed={elapsed}
+                  pairingCode={device?.pairingCode}
+                  pendingSync={pendingSync}
+                  saleCount={displaySummary.count || session.saleCount}
                 />
-                <KpiCard
-                  label="เงินสด"
-                  value={`฿${formatPlainNumber(displaySummary.cashTotal)}`}
-                  sub={`${displaySummary.cashCount} บิล`}
-                  accent="green"
-                />
-                <KpiCard
-                  label="PromptPay"
-                  value={`฿${formatPlainNumber(displaySummary.promptpayTotal)}`}
-                  sub={`${displaySummary.promptpayCount} บิล`}
-                  accent="blue"
-                />
-                <KpiCard
-                  label="เข้างาน"
-                  value={formatPosSessionClock(session.openedAt)}
-                  sub={`#${session.id.slice(-4).toUpperCase()}`}
-                  accent="neutral"
-                />
+                <div className="pos-shift-actions">
+                  <button
+                    type="button"
+                    className="pos-btn-orange pos-shift-close-btn"
+                    disabled={closing}
+                    onClick={requestCloseShift}
+                  >
+                    {closing ? "กำลังบันทึก..." : "ออกงาน (ปิดรอบ)"}
+                  </button>
+                </div>
               </div>
 
-              <div className="pos-shift-report-grid">
-                <PaymentBreakdown
-                  cashCount={displaySummary.cashCount}
-                  cashTotal={displaySummary.cashTotal}
-                  ppCount={displaySummary.promptpayCount}
-                  ppTotal={displaySummary.promptpayTotal}
-                />
-                <FinancialTable summary={displaySummary} />
-              </div>
+              <div className="pos-shift-scroll">
+                <div className="pos-shift-kpi-grid">
+                  <KpiCard
+                    label="ยอดขายทั้งหมด"
+                    value={`฿${formatPlainNumber(displaySummary.total || session.totalSales)}`}
+                    sub={`${displaySummary.count || session.saleCount} บิล`}
+                    accent="orange"
+                  />
+                  <KpiCard
+                    label="เงินสด"
+                    value={`฿${formatPlainNumber(displaySummary.cashTotal)}`}
+                    sub={`${displaySummary.cashCount} บิล`}
+                    accent="green"
+                  />
+                  <KpiCard
+                    label="PromptPay"
+                    value={`฿${formatPlainNumber(displaySummary.promptpayTotal)}`}
+                    sub={`${displaySummary.promptpayCount} บิล`}
+                    accent="blue"
+                  />
+                  <KpiCard
+                    label="เข้างาน"
+                    value={formatPosSessionClock(session.openedAt)}
+                    sub={`#${session.id.slice(-4).toUpperCase()}`}
+                    accent="neutral"
+                  />
+                </div>
 
-              <dl className="pos-shift-session-meta">
-                <div>
-                  <dt>เข้างาน</dt>
-                  <dd>{formatTs(session.openedAt)}</dd>
+                <div className="pos-shift-report-grid">
+                  <PaymentBreakdown
+                    cashCount={displaySummary.cashCount}
+                    cashTotal={displaySummary.cashTotal}
+                    ppCount={displaySummary.promptpayCount}
+                    ppTotal={displaySummary.promptpayTotal}
+                  />
+                  <FinancialTable summary={displaySummary} />
                 </div>
-                <div>
-                  <dt>เครื่อง</dt>
-                  <dd>{device?.pairingCode}</dd>
-                </div>
-                {pendingSync > 0 ? (
-                  <div>
-                    <dt>ค้างส่ง</dt>
-                    <dd className="pos-shift-warn">{pendingSync} บิล</dd>
+
+                {sessionReceipts.length ? (
+                  <div className="pos-shift-sales-block">
+                    <h3>บิลในรอบนี้ ({sessionReceipts.length})</h3>
+                    <div className="pos-shift-sales-list">
+                      {sessionReceipts.map((receipt) => (
+                        <ReceiptRow
+                          key={receipt.id}
+                          receipt={receipt}
+                          selected={selectedReceiptId === receipt.id}
+                          expanded={expandedReceiptId === receipt.id}
+                          onTap={() => handleReceiptTap(receipt)}
+                        />
+                      ))}
+                    </div>
+                    {selectedReceipt && tab === "current" ? (
+                      <div className="pos-shift-receipt-inline" ref={receiptPanelRef}>
+                        <PosReceiptPaper
+                          receipt={selectedReceipt}
+                          compact
+                          onPrint={() => void handlePrintReceipt(selectedReceipt)}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
-              </dl>
-
-              {sessionReceipts.length ? (
-                <div className="pos-shift-sales-block">
-                  <h3>บิลในรอบนี้ ({sessionReceipts.length})</h3>
-                  <div className="pos-shift-sales-list">
-                    {sessionReceipts.map((receipt) => (
-                      <ReceiptRow
-                        key={receipt.id}
-                        receipt={receipt}
-                        selected={selectedReceiptId === receipt.id}
-                        expanded={expandedReceiptId === receipt.id}
-                        onTap={() => handleReceiptTap(receipt)}
-                      />
-                    ))}
-                  </div>
-                  {selectedReceipt && tab === "current" ? (
-                    <div className="pos-shift-receipt-inline" ref={receiptPanelRef}>
-                      <PosReceiptPaper
-                        receipt={selectedReceipt}
-                        compact
-                        onPrint={() => void handlePrintReceipt(selectedReceipt)}
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              <div className="pos-shift-actions">
-                <button
-                  type="button"
-                  className="pos-btn-orange pos-shift-close-btn"
-                  disabled={closing}
-                  onClick={requestCloseShift}
-                >
-                  {closing ? "กำลังบันทึก..." : "ออกงาน (ปิดรอบ)"}
-                </button>
               </div>
             </>
           ) : session?.status === "closed" ? (

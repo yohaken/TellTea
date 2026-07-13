@@ -258,16 +258,29 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
 
           {authReady && tab === "categories" ? (
             <>
-              <p className="muted pos-menu-sort-hint">ลาก ≡ เรียงลำดับ</p>
+              <p className="muted pos-menu-sort-hint">กด ↑↓ หรือลาก ≡ เพื่อเรียงลำดับ — ใช้บนแท็บเล็ตได้</p>
               {categories.length ? (
                 <PosSortableList
                   ids={categoryIds}
-                  onReorder={(ids) => void reorderMenuCategories(ids)}
+                  onReorder={(ids) => {
+                    setCategories((prev) => {
+                      const map = new Map(prev.map((c) => [c.id, c]));
+                      return ids
+                        .map((id, i) => {
+                          const row = map.get(id);
+                          return row ? { ...row, sortOrder: (i + 1) * 1000 } : null;
+                        })
+                        .filter((c): c is NonNullable<typeof c> => !!c);
+                    });
+                    void reorderMenuCategories(ids).catch((e) => setError((e as Error).message));
+                  }}
                   className="pos-menu-cat-list"
                   renderItem={(catId) => {
                     const cat = categories.find((c) => c.id === catId);
                     if (!cat) return null;
-                    const catItems = itemsByCat.get(catId) || [];
+                    const catItems = (itemsByCat.get(catId) || [])
+                      .slice()
+                      .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th"));
                     const open = expandedCat === catId;
                     return (
                       <div className="pos-menu-cat-row-inner">
@@ -298,7 +311,26 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
                           catItems.length ? (
                             <PosSortableList
                               ids={catItems.map((i) => i.id)}
-                              onReorder={(ids) => void reorderMenuItemsInCategory(catId, ids)}
+                              onReorder={(ids) => {
+                                setItems((prev) => {
+                                  const others = prev.filter((i) => i.categoryId !== catId);
+                                  const inCat = new Map(
+                                    prev.filter((i) => i.categoryId === catId).map((i) => [i.id, i]),
+                                  );
+                                  const reordered = ids
+                                    .map((id, i) => {
+                                      const row = inCat.get(id);
+                                      return row
+                                        ? { ...row, sortOrder: (i + 1) * 1000, categoryId: catId }
+                                        : null;
+                                    })
+                                    .filter((i): i is NonNullable<typeof i> => !!i);
+                                  return [...others, ...reordered];
+                                });
+                                void reorderMenuItemsInCategory(catId, ids).catch((e) =>
+                                  setError((e as Error).message),
+                                );
+                              }}
                               className="pos-menu-item-list"
                               renderItem={(itemId) => {
                                 const item = catItems.find((i) => i.id === itemId);
@@ -349,11 +381,22 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
             </>
           ) : authReady && tab === "groups" ? (
             <>
-              <p className="muted pos-menu-sort-hint">ลาก ≡ เรียงลำดับ</p>
+              <p className="muted pos-menu-sort-hint">กด ↑↓ หรือลาก ≡ เพื่อเรียงลำดับ — ใช้บนแท็บเล็ตได้</p>
               {optionGroups.length ? (
                 <PosSortableList
                   ids={groupIds}
-                  onReorder={(ids) => void reorderMenuOptionGroups(ids)}
+                  onReorder={(ids) => {
+                    setOptionGroups((prev) => {
+                      const map = new Map(prev.map((g) => [g.id, g]));
+                      return ids
+                        .map((id, i) => {
+                          const row = map.get(id);
+                          return row ? { ...row, sortOrder: (i + 1) * 1000 } : null;
+                        })
+                        .filter((g): g is NonNullable<typeof g> => !!g);
+                    });
+                    void reorderMenuOptionGroups(ids).catch((e) => setError((e as Error).message));
+                  }}
                   className="pos-menu-group-list"
                   renderItem={(groupId) => {
                     const group = optionGroups.find((g) => g.id === groupId);
