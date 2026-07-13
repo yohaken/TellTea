@@ -7,7 +7,7 @@ import {
   subscribePosShopSettings,
   type PosShopSettings,
 } from "@/lib/pos-settings";
-import { maskPromptPayId } from "@/lib/pos-promptpay";
+import { isValidPromptPayId, maskPromptPayId, normalizePromptPayId } from "@/lib/pos-promptpay";
 import { usePosApp } from "@/lib/pos-app-context";
 import { posVersionLabel } from "@/lib/pos-version";
 
@@ -103,11 +103,24 @@ export function PosBusinessSettingsView() {
     setError(null);
     setSavedMsg(null);
     try {
-      const result = await savePosShopSettings({ promptPayId, autoPrintReceipt });
+      const normalized = normalizePromptPayId(promptPayId);
+      if (normalized && !isValidPromptPayId(normalized)) {
+        setError("เลข PromptPay ไม่ถูกต้อง — ใช้เบอร์ 10 หลัก (0…) หรือเลขภาษี 13 หลัก");
+        return;
+      }
+      const result = await savePosShopSettings({
+        promptPayId: normalized,
+        autoPrintReceipt,
+      });
+      setPromptPayId(normalized);
       setSavedMsg(
         result.synced
-          ? "บันทึกแล้ว · อัปขึ้น Firebase แล้ว"
-          : "บันทึกในเครื่องแล้ว · จะอัปขึ้น Firebase ทีหลัง",
+          ? normalized
+            ? "PromptPay พร้อมใช้ · อัป Firebase แล้ว"
+            : "บันทึกแล้ว · อัปขึ้น Firebase แล้ว"
+          : normalized
+            ? "PromptPay พร้อมใช้ในเครื่อง · จะอัป Firebase ทีหลัง"
+            : "บันทึกในเครื่องแล้ว · จะอัปขึ้น Firebase ทีหลัง",
       );
     } catch (err) {
       setError((err as Error).message);
@@ -199,8 +212,10 @@ export function PosBusinessSettingsView() {
         ) : (
           <form className="pos-biz-form pos-biz-form--pay" onSubmit={(e) => void savePay(e)}>
             <p className="muted pos-biz-lead">
-              PromptPay สแกนจ่าย
-              {promptPayId ? ` · ${maskPromptPayId(promptPayId)}` : ""}
+              PromptPay พร้อมใช้แบบสแกน QR + พนักงานกดยืนยันเมื่อได้เงิน
+              {isValidPromptPayId(promptPayId)
+                ? ` · พร้อม (${maskPromptPayId(promptPayId)})`
+                : " · ตั้งเลขด้านล่างก่อนขาย"}
             </p>
             <div className="pos-biz-grid pos-biz-grid--pay">
               <label className="pos-biz-span2">
@@ -208,7 +223,7 @@ export function PosBusinessSettingsView() {
                 <input
                   value={promptPayId}
                   onChange={(e) => setPromptPayId(e.target.value)}
-                  placeholder="เบอร์ 08xxxxxxxx หรือเลขผู้เสียภาษี"
+                  placeholder="เบอร์ 08xxxxxxxx หรือเลขผู้เสียภาษี 13 หลัก"
                   inputMode="numeric"
                 />
               </label>

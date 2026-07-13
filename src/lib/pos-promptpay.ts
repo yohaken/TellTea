@@ -16,9 +16,19 @@ function tlv(id: string, value: string): string {
   return id + value.length.toString().padStart(2, "0") + value;
 }
 
+export function normalizePromptPayId(promptPayId: string): string {
+  return promptPayId.replace(/\D/g, "");
+}
+
+/** เบอร์มือถือ 10 หลัก (0…) หรือเลขผู้เสียภาษี 13 หลัก */
+export function isValidPromptPayId(promptPayId: string): boolean {
+  const digits = normalizePromptPayId(promptPayId);
+  return (digits.length === 10 && digits.startsWith("0")) || digits.length === 13;
+}
+
 /** EMV QR payload for Thailand PromptPay (phone 10 digits or tax ID 13 digits). */
 export function buildPromptPayPayload(promptPayId: string, amount: number): string {
-  const digits = promptPayId.replace(/\D/g, "");
+  const digits = normalizePromptPayId(promptPayId);
   let merchantInfo: string;
 
   if (digits.length === 10 && digits.startsWith("0")) {
@@ -54,7 +64,7 @@ export async function promptPayQrDataUrl(promptPayId: string, amount: number): P
 }
 
 export function maskPromptPayId(id: string): string {
-  const digits = id.replace(/\D/g, "");
+  const digits = normalizePromptPayId(id);
   if (digits.length === 10) {
     return `${digits.slice(0, 3)}-xxx-${digits.slice(-4)}`;
   }

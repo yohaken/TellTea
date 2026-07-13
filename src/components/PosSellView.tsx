@@ -366,7 +366,7 @@ export function PosSellView({
   async function openPromptPayPay() {
     if (!cartCount) return;
     if (!promptPayId.trim()) {
-      setError("ยังไม่ได้ตั้งเลข PromptPay — เจ้าของตั้งที่ TellTea → ตั้งค่า");
+      setError("ยังไม่ได้ตั้งเลข PromptPay — ไปเมนู ตั้งค่ากิจการ → ชำระเงิน");
       return;
     }
     setPayMode("promptpay");
