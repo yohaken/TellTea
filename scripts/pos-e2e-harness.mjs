@@ -20,6 +20,23 @@ export const POS_E2E_BUDGETS = {
 
 export const POS_E2E_URL = process.env.POS_E2E_URL || "https://telltea-pos.web.app/pos/sell/";
 
+/** เปิด sidebar บนมือถือ (ซ่อนอยู่นอกจอจนกว่าจะกดแฮมเบอร์เกอร์) */
+export async function openMobileNav(page) {
+  const btn = page.locator(".pos-mobile-menu-btn");
+  if (await btn.isVisible().catch(() => false)) {
+    await btn.click();
+    await page.locator(".pos-sidebar.is-open").waitFor({ state: "visible", timeout: 5_000 });
+  }
+}
+
+export function menuNavLink(page) {
+  return page.locator('a.pos-sidebar-link[href="/pos/menu/"]');
+}
+
+export function sellNavLink(page) {
+  return page.locator('a.pos-sidebar-link[href="/pos/sell/"]');
+}
+
 export function tabletDevice() {
   return devices[process.env.POS_E2E_DEVICE || "iPhone 13"];
 }
@@ -124,7 +141,8 @@ export async function launchPosE2e() {
 }
 
 export async function gotoPos(page, url = POS_E2E_URL) {
-  const res = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 90_000 });
+  const target = url.replace(/\/pos\/?$/, "/pos/sell/");
+  const res = await page.goto(target, { waitUntil: "domcontentloaded", timeout: 90_000 });
   assert.ok(res && res.status() < 400, `HTTP ${res?.status()}`);
 }
 

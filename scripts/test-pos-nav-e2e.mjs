@@ -8,6 +8,9 @@ import {
   finishReport,
   gotoPos,
   launchPosE2e,
+  menuNavLink,
+  openMobileNav,
+  sellNavLink,
   waitPosBoot,
   POS_E2E_URL,
 } from "./pos-e2e-harness.mjs";
@@ -19,9 +22,10 @@ report.attachPage(page);
 await report.timed("boot", "boot_ready", async () => {
   await gotoPos(page);
   await waitPosBoot(page);
+  await openMobileNav(page);
 });
 
-const menuLink = page.locator('a.pos-sidebar-link[href="/pos/menu/"]');
+const menuLink = menuNavLink(page);
 assert.equal(await menuLink.count(), 1);
 
 await report.timed("to_menu", "menu_nav", async () => {
@@ -44,9 +48,10 @@ await report.timed("menu_ready", "menu_auth", async () => {
 });
 
 await report.timed("roundtrip", "nav_roundtrip", async () => {
-  await page.locator('a.pos-sidebar-link[href="/pos/sell/"]').first().click();
+  await sellNavLink(page).first().click();
   await page.waitForURL(/\/pos\/sell\/?/, { timeout: 8_000, waitUntil: "domcontentloaded" });
   await waitPosBoot(page);
+  await openMobileNav(page);
   const href = await menuLink.getAttribute("href");
   assert.equal(href, "/pos/menu/");
   await Promise.all([

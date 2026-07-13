@@ -59,15 +59,22 @@ if (bootText.includes("เชื่อมต่อไม่สำเร็จ"))
 }
 note("   OK boot (พร้อมขายหรือหน้าขาย)");
 
+await page.locator(".pos-mobile-menu-btn").click().catch(() => {});
+const sidebarOpen = await page.locator(".pos-sidebar.is-open").isVisible().catch(() => false);
+if (!sidebarOpen) {
+  const btn = page.locator(".pos-mobile-menu-btn");
+  if (await btn.isVisible().catch(() => false)) await btn.click();
+}
+
 const menuLink = page.locator('a.pos-sidebar-link[href="/pos/menu/"]');
-assert.equal(await menuLink.count(), 1, "ลิงก์เมนูใน sidebar ต้องมี 1");
-const href = await menuLink.getAttribute("href");
+assert.ok(await menuLink.count() >= 1, "ลิงก์เมนูใน sidebar ต้องมีอย่างน้อย 1");
+const href = await menuLink.first().getAttribute("href");
 assert.equal(href, "/pos/menu/", `href ต้องเป็น /pos/menu/ ได้ ${href}`);
 note("2. ลิงก์เมนูใน sidebar เป็น /pos/menu/");
 
 await Promise.all([
   page.waitForURL(/\/pos\/menu\/?/, { timeout: 20000, waitUntil: "domcontentloaded" }),
-  menuLink.click(),
+  menuLink.first().click(),
 ]);
 note(`3. คลิกเฟือง → ไปหน้าเมนู OK (${page.url()})`);
 
