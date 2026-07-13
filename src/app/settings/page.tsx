@@ -7,6 +7,7 @@ import { AppUpdateSetup } from "@/components/AppUpdateSetup";
 import { MenuCatalogSetup } from "@/components/MenuCatalogSetup";
 import { PosSalesSetup } from "@/components/PosSalesSetup";
 import { PosPaymentSetup } from "@/components/PosPaymentSetup";
+import { PosPrinterSetup } from "@/components/PosPrinterSetup";
 import { PosDeviceSetup } from "@/components/PosDeviceSetup";
 import { AuthGate } from "@/components/AuthGate";
 import { ChecklistSetup } from "@/components/ChecklistSetup";
@@ -85,6 +86,7 @@ function SettingsView() {
           <PosDeviceSetup onError={setError} />
           <PosSalesSetup onError={setError} />
           <PosPaymentSetup onError={setError} />
+          <PosPrinterSetup onError={setError} />
           <MenuCatalogSetup onError={setError} />
           <NavMenuOrderSetup onError={setError} />
           <ProdCatalogSetup

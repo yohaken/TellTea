@@ -14,7 +14,7 @@ import {
 } from "@/lib/pos-menu-cart";
 import { completeCashSale, completePromptPaySale } from "@/lib/pos-sales";
 import { promptPayQrDataUrl } from "@/lib/pos-promptpay";
-import { printPosReceipt } from "@/lib/pos-receipt";
+import { printOnSaleComplete } from "@/lib/pos-printer/router";
 import { subscribePosShopSettings } from "@/lib/pos-settings";
 import { appendLocalReceipt } from "@/lib/pos-local-receipts";
 import { playPosSaleChime } from "@/lib/pos-sound";
@@ -282,8 +282,9 @@ export function PosSellView({
       createdAt: now,
       pending: result.pending === true,
     });
-    if (autoPrintReceipt) {
-      printPosReceipt({
+    void printOnSaleComplete(
+      {
+        kind: "receipt",
         shopName,
         billNo: result.billNo,
         lines,
@@ -292,8 +293,9 @@ export function PosSellView({
         cashReceived: paymentMethod === "cash" ? cashNum : 0,
         change: result.change ?? 0,
         createdAt: now,
-      });
-    }
+      },
+      { deviceId, printReceipt: autoPrintReceipt },
+    );
     setCart({});
     closePay();
     playPosSaleChime();

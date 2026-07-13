@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -32,6 +33,7 @@ import { seedPosMenuIfEmpty } from "@/lib/pos-menu";
 import { startPosMenuPreload } from "@/lib/pos-menu-preload";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { getPosHardwareSnapshot } from "@/lib/pos-hardware";
+import { subscribePosPrinterSetup } from "@/lib/pos-printer/storage";
 import { isPosSafeToReload, type PosSellBusyState } from "@/lib/pos-reload";
 import type { PosSyncSnapshot } from "@/lib/pos-sync";
 import type { PosSession } from "@/lib/types";
@@ -79,6 +81,7 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
   const [standalone, setStandalone] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
   const [opening, setOpening] = useState(false);
+  const [printerSetupTick, setPrinterSetupTick] = useState(0);
   const [lastHeartbeatAt, setLastHeartbeatAt] = useState(0);
   const [heartbeatError, setHeartbeatError] = useState<string | null>(null);
   const [syncSnap, setSyncSnap] = useState<PosSyncSnapshot>({
@@ -325,6 +328,10 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
   }, [status]);
 
   useEffect(() => {
+    return subscribePosPrinterSetup(() => setPrinterSetupTick((n) => n + 1));
+  }, []);
+
+  useEffect(() => {
     flushPendingForceReload();
   }, [sellBusy, flushPendingForceReload]);
 
@@ -337,7 +344,12 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
         status === "connecting",
       )
     : { deviceOnline: false, pill: "offline-signal" as const, label: "กำลังเชื่อม" };
-  const hardware = getPosHardwareSnapshot(online);
+  const hardware = useMemo(
+    () => getPosHardwareSnapshot(online),
+    // printerSetupTick refreshes label when Firestore/local printer config changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional tick
+    [online, printerSetupTick],
+  );
 
   const value: PosAppContextValue = {
     status,
