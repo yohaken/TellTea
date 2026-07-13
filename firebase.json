@@ -26,12 +26,12 @@
       "redirects": [
         {
           "source": "/pos",
-          "destination": "https://telltea-pos.web.app/",
+          "destination": "https://telltea-pos.web.app/pos/",
           "type": 301
         },
         {
           "source": "/pos/**",
-          "destination": "https://telltea-pos.web.app/:splat",
+          "destination": "https://telltea-pos.web.app/pos/:splat",
           "type": 301
         }
       ],
@@ -84,6 +84,13 @@
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "cleanUrls": true,
       "trailingSlash": true,
+      "redirects": [
+        {
+          "source": "/",
+          "destination": "/pos/",
+          "type": 302
+        }
+      ],
       "headers": [
         {
           "source": "**",

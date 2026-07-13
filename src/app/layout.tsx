@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Poppins, Sarabun } from "next/font/google";
-import { AppUpdateWatcher } from "@/components/AppUpdateWatcher";
-import { AuthProvider } from "@/lib/auth";
+import { AppRootProviders } from "@/components/AppRootProviders";
 import "./globals.css";
 
 const display = Poppins({
@@ -44,10 +43,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="th">
       <body className={`${display.variable} ${body.variable} antialiased`}>
-        <AuthProvider>
-          <AppUpdateWatcher />
-          {children}
-        </AuthProvider>
+        <AppRootProviders>{children}</AppRootProviders>
       </body>
     </html>
   );

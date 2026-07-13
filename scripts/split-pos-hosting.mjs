@@ -1,7 +1,6 @@
 /**
- * Split static export into back-office (out/) and standalone POS (out-pos/).
- * - out-pos/ serves at https://telltea-pos.web.app/
- * - out/ no longer contains /pos/ (main site redirects old URL)
+ * Split static export: back-office (out/) vs POS site (out-pos/) at /pos/ path.
+ * Next.js POS route must stay /pos/ — do not serve at root (breaks client router).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -12,13 +11,14 @@ const OUT_POS = path.join(ROOT, "out-pos");
 const POS_SRC = path.join(OUT, "pos", "index.html");
 const POS_MANIFEST_SRC = path.join(ROOT, "public", "manifest-pos.webmanifest");
 
-const POS_URL = "https://telltea-pos.web.app/";
+export const POS_PUBLIC_URL = "https://telltea-pos.web.app/pos/";
 
 function rmrf(dir) {
   if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
 }
 
 function copyFile(src, dest) {
+  if (!fs.existsSync(src)) return;
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(src, dest);
 }
@@ -42,20 +42,26 @@ if (!fs.existsSync(POS_SRC)) {
 rmrf(OUT_POS);
 fs.mkdirSync(OUT_POS, { recursive: true });
 
-copyFile(POS_SRC, path.join(OUT_POS, "index.html"));
+copyDir(path.join(OUT, "pos"), path.join(OUT_POS, "pos"));
 copyDir(path.join(OUT, "_next"), path.join(OUT_POS, "_next"));
-
-for (const file of ["version.json", "sw.js", "404.html"]) {
-  const src = path.join(OUT, file);
-  if (fs.existsSync(src)) copyFile(src, path.join(OUT_POS, file));
-}
-
 copyDir(path.join(OUT, "icons"), path.join(OUT_POS, "icons"));
 
+for (const file of [
+  "version.json",
+  "sw.js",
+  "404.html",
+  "favicon.ico",
+  "logo-mark.svg",
+  "logo-telltea.svg",
+  "hero-tea.svg",
+]) {
+  copyFile(path.join(OUT, file), path.join(OUT_POS, file));
+}
+
 const manifest = JSON.parse(fs.readFileSync(POS_MANIFEST_SRC, "utf8"));
-manifest.id = "/";
-manifest.start_url = "/";
-manifest.scope = "/";
+manifest.id = "/pos/";
+manifest.start_url = "/pos/";
+manifest.scope = "/pos/";
 fs.writeFileSync(
   path.join(OUT_POS, "manifest-pos.webmanifest"),
   `${JSON.stringify(manifest, null, 2)}\n`,
@@ -71,5 +77,5 @@ for (const file of ["manifest-pos.webmanifest"]) {
   if (fs.existsSync(p)) fs.rmSync(p);
 }
 
-console.log(`OK split-pos-hosting → out-pos/ (POS at ${POS_URL})`);
+console.log(`OK split-pos-hosting → out-pos/pos/ (${POS_PUBLIC_URL})`);
 console.log("OK removed out/pos/ from back-office export");

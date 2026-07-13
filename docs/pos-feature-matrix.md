@@ -240,7 +240,7 @@ Wongnai POS Android
 - เจ้าของ remote — ดูสถานะ + อัปเดตบังคับจากระยะไกล
 - โปรแกรมขายเดิมยังใช้อยู่ — POS ใหม่ทดแทนทีหลัง
 - TellTea หลัก: https://telltea-shop.web.app
-- POS แท็บเล็ต: **https://telltea-pos.web.app/** (แยก hosting v135+)
+- POS แท็บเล็ต: **https://telltea-pos.web.app/pos/** (แยก hosting v135+)
 - รายงานยอดขาย: `/pos-sales/` บนหลังร้าน (อ่านอย่างเดียว)
 
 ### กฎ hosting — ห้ามทำให้หลังร้าน 404

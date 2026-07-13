@@ -51,6 +51,12 @@ jobs:
       - name: Verify POS offline sync wiring
         run: npm run test:pos-sync
 
+      - name: Enable POS auth domains
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/enable-pos-auth-domains.mjs
+        continue-on-error: true
+
       - name: Enable anonymous sign-in (POS fallback)
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

@@ -106,6 +106,8 @@ export default function PosPage() {
       });
   }, []);
 
+const POS_BOOT_TIMEOUT_MS = 20_000;
+
   const boot = useCallback(async () => {
     if (!isFirebaseConfigured()) {
       setStatus("error");
@@ -115,6 +117,14 @@ export default function PosPage() {
 
     setStatus("connecting");
     setError(null);
+
+    let finished = false;
+    const timeout = window.setTimeout(() => {
+      if (finished) return;
+      finished = true;
+      setStatus("error");
+      setError("เชื่อมต่อนานเกินไป — ตรวจ Wi‑Fi แล้วกดลองใหม่");
+    }, POS_BOOT_TIMEOUT_MS);
 
     try {
       const authUid = await ensurePosDeviceAuth();
@@ -128,10 +138,14 @@ export default function PosPage() {
       });
       const cur = await getCurrentPosSession(authUid);
       setSession(cur);
+      finished = true;
       setStatus("ready");
     } catch (err) {
+      finished = true;
       setStatus("error");
       setError((err as Error).message || "เชื่อมต่อเครื่อง POS ไม่สำเร็จ");
+    } finally {
+      window.clearTimeout(timeout);
     }
   }, []);
 

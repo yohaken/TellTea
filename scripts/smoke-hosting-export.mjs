@@ -36,7 +36,7 @@ const FORBIDDEN_PUBLIC_FILES = [
   path.join(PUBLIC, "pos", "index.html"),
 ];
 
-const POS_REDIRECT_DEST = "https://telltea-pos.web.app/";
+const POS_REDIRECT_DEST = "https://telltea-pos.web.app/pos/";
 
 let failed = false;
 

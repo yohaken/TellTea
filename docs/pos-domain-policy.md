@@ -14,7 +14,7 @@
 | ระบบ | URL |
 |------|-----|
 | หลังร้าน TellTea | https://telltea-shop.web.app/ |
-| POS แท็บเล็ต | **https://telltea-pos.web.app/** |
+| POS แท็บเล็ต | **https://telltea-pos.web.app/pos/** |
 | รายงานยอดขาย (เจ้าของ) | https://telltea-shop.web.app/pos-sales/ |
 
 URL เก่า `telltea-shop.web.app/pos/` → redirect 301 ไป `telltea-pos.web.app`
