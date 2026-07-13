@@ -1,10 +1,10 @@
 {
-  "id": "/pos/",
+  "id": "/",
   "name": "TellTea POS",
   "short_name": "POS",
   "description": "เครื่อง POS หน้าร้าน TellTea — เปิดจาก Shortcut บนหน้าจอหลัก",
-  "start_url": "/pos/",
-  "scope": "/pos/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#f4faf5",

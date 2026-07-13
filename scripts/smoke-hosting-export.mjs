@@ -1,6 +1,6 @@
 /**
- * Post-build guard: POS work must not break TellTea back-office static routes.
- * Run after `npm run build` — fails deploy if exports are missing or /pos/ conflicts.
+ * Post-build guard: back-office static routes must exist; POS must NOT ship under /pos/.
+ * Run after `npm run build` (includes split-pos-hosting).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -31,11 +31,12 @@ const BACK_OFFICE_ROUTES = [
   "pos-sales",
 ];
 
-/** Files that previously caused ERR_TOO_MANY_REDIRECTS on /pos/ */
 const FORBIDDEN_PUBLIC_FILES = [
   path.join(PUBLIC, "pos.html"),
   path.join(PUBLIC, "pos", "index.html"),
 ];
+
+const POS_REDIRECT_DEST = "https://telltea-pos.web.app/";
 
 let failed = false;
 
@@ -70,38 +71,46 @@ for (const route of BACK_OFFICE_ROUTES) {
 }
 
 const posHtml = path.join(OUT, "pos", "index.html");
-if (!fs.existsSync(posHtml)) {
-  fail(`Missing POS export: /pos/ → ${posHtml}`);
+if (fs.existsSync(posHtml)) {
+  fail(`back-office must not ship /pos/ — found ${posHtml}`);
 } else {
-  ok("POS /pos/");
+  ok("back-office has no /pos/ route");
 }
 
 for (const file of FORBIDDEN_PUBLIC_FILES) {
   if (fs.existsSync(file)) {
     fail(
-      `Forbidden public file ${path.relative(ROOT, file)} — conflicts with out/pos/index.html and can 404 or redirect-loop /pos/`,
+      `Forbidden public file ${path.relative(ROOT, file)} — conflicts with POS hosting`,
     );
   }
 }
 
 try {
   const firebase = JSON.parse(fs.readFileSync(path.join(ROOT, "firebase.json"), "utf8"));
-  const redirects = firebase.hosting?.redirects ?? [];
+  const sites = Array.isArray(firebase.hosting) ? firebase.hosting : [firebase.hosting];
+  const main = sites.find((s) => s.target === "telltea");
+  const redirects = main?.redirects ?? [];
+  const posRedirect = redirects.find(
+    (r) => r.source === "/pos" && String(r.destination).startsWith(POS_REDIRECT_DEST),
+  );
+  if (!posRedirect) {
+    fail("firebase.json must 301 redirect /pos → telltea-pos.web.app");
+  } else {
+    ok("firebase.json /pos → telltea-pos redirect");
+  }
   for (const rule of redirects) {
-    const src = String(rule.source || "");
     const dest = String(rule.destination || "");
-    if (src.includes("pos") || dest.includes("pos.html")) {
-      fail(`firebase.json redirect may break /pos/: ${JSON.stringify(rule)}`);
+    if (dest.includes("pos.html")) {
+      fail(`firebase.json redirect may loop: ${JSON.stringify(rule)}`);
     }
   }
-  ok("firebase.json has no /pos redirect rules");
 } catch (err) {
   fail(`Could not read firebase.json: ${err instanceof Error ? err.message : String(err)}`);
 }
 
 if (failed) {
-  console.error("\nHosting smoke failed — back-office or POS routes at risk of 404.");
+  console.error("\nHosting smoke failed — back-office routes at risk.");
   process.exit(1);
 }
 
-console.log("\nHosting export OK — back-office + POS routes present, no pos.html conflict.");
+console.log("\nBack-office hosting export OK — no /pos/ route, redirect configured.");

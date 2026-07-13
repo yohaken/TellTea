@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/write-version-json.mjs",
+    "build": "next build && node scripts/write-version-json.mjs && node scripts/split-pos-hosting.mjs",
     "smoke:hosting": "node scripts/smoke-hosting-export.mjs",
+    "smoke:pos-hosting": "node scripts/smoke-pos-hosting.mjs",
     "test:pos-connectivity": "node scripts/test-pos-connectivity.mjs",
     "test:pos-complete-sale": "node scripts/test-pos-complete-sale.mjs",
     "test:pos-sync": "node scripts/test-pos-sync.mjs",

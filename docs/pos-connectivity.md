@@ -6,12 +6,15 @@
 
 | | หลังร้าน (TellTea) | POS หน้าร้าน |
 |--|-------------------|--------------|
-| URL | https://telltea-shop.web.app/login/ | https://telltea-shop.web.app/pos/ |
+| URL | https://telltea-shop.web.app/login/ | **https://telltea-pos.web.app/** |
 | Login | **Google** (เจ้าของ/พนักงาน) | **ไม่ต้อง** — ลงทะเบียนเครื่องอัตโนมัติ |
 | Firebase Auth | แอปหลัก (Google) | แอปแยก `telltea-pos` — **ไม่กระทบ session หลังร้าน** |
+| Hosting | `telltea-shop` | `telltea-pos` (โดเมนแยก v135+) |
 | ใช้บนเครื่องเดียวกัน | เปิด Chrome คนละแท็บได้ | แนะนำแท็บเล็ต POS แยก / ติดตั้งแอป POS |
 
-**สำคัญ:** เปิด `/pos/` บนมือถือที่ login หลังร้านอยู่ **ไม่ล็อกเอาต์** อีกต่อไป (v122+)
+URL เก่า `/pos/` บนหลังร้าน → redirect 301 ไป `telltea-pos.web.app`
+
+**สำคัญ:** เปิด POS บนมือถือที่ login หลังร้านอยู่ **ไม่ล็อกเอาต์** หลังร้าน (Auth แยกแอป)
 
 ## หลักการ
 
@@ -56,7 +59,7 @@
 
 ## Checklist เจ้าของ
 
-- [ ] เปิด `/pos/` บนแท็บเล็ต — **ไม่ต้อง login พนักงาน** (ระบบลงทะเบียนเครื่องอัตโนมัติ)
+- [ ] เปิด **https://telltea-pos.web.app/** บนแท็บเล็ต — **ไม่ต้อง login พนักงาน** (ระบบลงทะเบียนเครื่องอัตโนมัติ)
 - [ ] หลัง deploy ใหญ่: Settings → **บังคับอัปเดต** หรือกด **อัปเดตเครื่องที่ค้าง**
 - [ ] ดูออนไลน์ที่ Settings → เครื่อง POS (heartbeat 3 นาที)
 

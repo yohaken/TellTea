@@ -38,6 +38,9 @@ assert.match(readFileSync(join(root, "src/lib/pos-menu-cache.ts"), "utf8"), /tel
 assert.match(watcherSrc, /MIN_RELOAD_GAP_MS/);
 assert.match(watcherSrc, /MIN_VISIBILITY_CHECK_MS/);
 assert.match(readFileSync(join(root, "src/lib/pos-firebase.ts"), "utf8"), /telltea-pos/);
+assert.match(readFileSync(join(root, "src/lib/pos-url.ts"), "utf8"), /telltea-pos\.web\.app/);
+assert.match(readFileSync(join(root, "firebase.json"), "utf8"), /telltea-pos\.web\.app/);
+assert.doesNotMatch(readFileSync(join(root, "scripts/smoke-hosting-export.mjs"), "utf8"), /Missing POS export/);
 assert.match(readFileSync(join(root, "src/lib/pos-auth.ts"), "utf8"), /getPosFirebaseAuth/);
 assert.match(deviceSrc, /requestPosDevicesReload/);
 assert.match(setupSrc, /อัปเดตเครื่องที่ค้าง/);
