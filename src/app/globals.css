@@ -6533,13 +6533,18 @@ body.modal-open .main-panel {
   z-index: 40;
   background: rgba(12, 20, 14, 0.45);
   display: grid;
-  place-items: end center;
-  padding: 0.75rem;
-  padding-bottom: calc(0.75rem + var(--safe-bottom));
+  place-items: center;
+  padding: calc(0.75rem + var(--safe-top)) 0.75rem calc(0.75rem + var(--safe-bottom));
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .pos-pay-sheet {
   width: min(100%, 22rem);
+  max-height: min(88dvh, 36rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: #fff;
   border-radius: 1rem;
   padding: 1rem;
@@ -6582,6 +6587,47 @@ body.modal-open .main-panel {
   margin: 0 0 0.75rem;
   font-size: 1.05rem;
   font-weight: 700;
+}
+
+.pos-confirm-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgba(12, 20, 14, 0.45);
+  display: grid;
+  place-items: center;
+  padding: calc(0.75rem + var(--safe-top)) 0.75rem calc(0.75rem + var(--safe-bottom));
+}
+
+.pos-confirm-card {
+  width: min(100%, 20rem);
+  background: #f7f3e8;
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  text-align: center;
+}
+
+.pos-confirm-card h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.pos-confirm-card p {
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+}
+
+.pos-confirm-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.pos-confirm-actions .primary-btn,
+.pos-confirm-actions .ghost-btn {
+  flex: 1;
+  min-width: 0;
 }
 
 .pos-menu-form {

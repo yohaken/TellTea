@@ -525,7 +525,8 @@ service cloud.firestore {
     }
 
     match /meta/{docId} {
-      allow read: if isStaff() || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos'));
+      allow read: if isStaff()
+        || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'ledger'));
       allow write: if isOwner()
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
         || (hasPerm('alerts') && docId == 'lowBalanceAlert')

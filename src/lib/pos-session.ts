@@ -47,7 +47,7 @@ export async function openPosSession(deviceId: string, shift: OtShiftId = getCur
     await setDoc(sessionRef(id), payload, { merge: true });
     return mapSession(id, payload);
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "เปิดรอบขาย"));
+    throw new Error(mapFirestoreError(err, "เปิดรอบขาย", "pos"));
   }
 }
 

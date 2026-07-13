@@ -116,7 +116,7 @@ export async function registerPosDevice(authUid: string): Promise<PosDevice> {
   try {
     await setDoc(ref, payload, { merge: true });
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "ลงทะเบียนเครื่อง POS"));
+    throw new Error(mapFirestoreError(err, "ลงทะเบียนเครื่อง POS", "pos"));
   }
 
   return mapPosDeviceDoc(authUid, payload);
@@ -137,7 +137,7 @@ export async function heartbeatPosDevice(authUid: string): Promise<void> {
       { merge: true },
     );
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "ส่งสัญญาณเครื่อง POS"));
+    throw new Error(mapFirestoreError(err, "ส่งสัญญาณเครื่อง POS", "pos"));
   }
 }
 
@@ -151,7 +151,7 @@ export async function ackPosDeviceReload(authUid: string, forceReloadAt: number)
       { merge: true },
     );
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "ยืนยันรีเฟรชเครื่อง POS"));
+    throw new Error(mapFirestoreError(err, "ยืนยันรีเฟรชเครื่อง POS", "pos"));
   }
 }
 
@@ -171,7 +171,7 @@ export async function savePosDeviceLabel(
       { merge: true },
     );
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "บันทึกชื่อเครื่อง POS"));
+    throw new Error(mapFirestoreError(err, "บันทึกชื่อเครื่อง POS", "pos"));
   }
 }
 
@@ -190,7 +190,7 @@ export async function requestPosDeviceReload(
       { merge: true },
     );
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "สั่งรีเฟรชเครื่อง POS"));
+    throw new Error(mapFirestoreError(err, "สั่งรีเฟรชเครื่อง POS", "pos"));
   }
 }
 
@@ -213,7 +213,7 @@ export async function requestPosDevicesReload(
         },
         { merge: true },
       ).catch((err) => {
-        throw new Error(mapFirestoreError(err, "สั่งรีเฟรชเครื่อง POS"));
+        throw new Error(mapFirestoreError(err, "สั่งรีเฟรชเครื่อง POS", "pos"));
       }),
     ),
   );

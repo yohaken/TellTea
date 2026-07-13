@@ -152,7 +152,7 @@ export async function completeCashSale(input: {
     });
     return { ...result, change, total };
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "บันทึกการขาย"));
+    throw new Error(mapFirestoreError(err, "บันทึกการขาย", "pos"));
   }
 }
 
@@ -183,6 +183,6 @@ export async function completePromptPaySale(input: {
     });
     return { ...result, total };
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "บันทึกการขาย PromptPay"));
+    throw new Error(mapFirestoreError(err, "บันทึกการขาย PromptPay", "pos"));
   }
 }

@@ -46,6 +46,7 @@ export function PosSellView({
   const [shopName, setShopName] = useState("TellTea");
   const [promptPayId, setPromptPayId] = useState("");
   const [autoPrintReceipt, setAutoPrintReceipt] = useState(true);
+  const [confirmSoldOut, setConfirmSoldOut] = useState<MenuItem | null>(null);
   const holdTimerRef = useRef<number | null>(null);
   const holdItemRef = useRef<MenuItem | null>(null);
 
@@ -123,12 +124,16 @@ export function PosSellView({
     setSuccess(null);
   }
 
-  async function handleSoldOutToggle(item: MenuItem) {
+  function requestSoldOutToggle(item: MenuItem) {
+    setConfirmSoldOut(item);
+    setError(null);
+  }
+
+  async function confirmSoldOutToggle() {
+    const item = confirmSoldOut;
+    if (!item) return;
     const soldOut = item.active;
-    const ok = window.confirm(
-      soldOut ? `ปิดขาย "${item.name}" (ของหมด)?` : `เปิดขาย "${item.name}" อีกครั้ง?`,
-    );
-    if (!ok) return;
+    setConfirmSoldOut(null);
     setError(null);
     try {
       await toggleMenuItemSoldOut(item.id, soldOut);
@@ -150,7 +155,7 @@ export function PosSellView({
     holdItemRef.current = item;
     holdTimerRef.current = window.setTimeout(() => {
       holdTimerRef.current = null;
-      void handleSoldOutToggle(item);
+      void requestSoldOutToggle(item);
     }, HOLD_MS);
   }
 
@@ -428,6 +433,27 @@ export function PosSellView({
           </button>
         </div>
       </div>
+
+      {confirmSoldOut ? (
+        <div className="pos-confirm-modal" role="dialog" aria-modal="true">
+          <div className="pos-confirm-card">
+            <h3>{confirmSoldOut.active ? "ปิดขายเมนูนี้?" : "เปิดขายอีกครั้ง?"}</h3>
+            <p>
+              {confirmSoldOut.active
+                ? `"${confirmSoldOut.name}" จะแสดงเป็นของหมด`
+                : `"${confirmSoldOut.name}" จะกลับมาขายได้`}
+            </p>
+            <div className="pos-confirm-actions">
+              <button type="button" className="ghost-btn" onClick={() => setConfirmSoldOut(null)}>
+                ยกเลิก
+              </button>
+              <button type="button" className="primary-btn" onClick={() => void confirmSoldOutToggle()}>
+                ยืนยัน
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {payOpen ? (
         <div className="pos-pay-modal" role="dialog" aria-modal="true">

@@ -73,10 +73,11 @@ export async function ensurePosDeviceAuth(): Promise<string> {
           mapFirestoreError(
             primaryErr,
             "เชื่อมต่อเครื่อง POS — รอ deploy สักครู่แล้วลองใหม่",
+            "pos",
           ),
         );
       }
-      throw new Error(mapFirestoreError(fallbackErr, "เข้าสู่ระบบเครื่อง POS"));
+      throw new Error(mapFirestoreError(fallbackErr, "เข้าสู่ระบบเครื่อง POS", "pos"));
     }
   }
 }

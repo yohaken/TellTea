@@ -102,7 +102,7 @@ export async function addMenuCategory(name: string): Promise<string> {
     });
     return ref.id;
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "เพิ่มหมวดเมนู"));
+    throw new Error(mapFirestoreError(err, "เพิ่มหมวดเมนู", "pos"));
   }
 }
 
@@ -117,7 +117,7 @@ export async function updateMenuCategory(
   try {
     await updateDoc(doc(getPosDb(), MENU_CATEGORIES_COL, id), next);
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "อัปเดตหมวดเมนู"));
+    throw new Error(mapFirestoreError(err, "อัปเดตหมวดเมนู", "pos"));
   }
 }
 
@@ -139,7 +139,7 @@ export async function addMenuItem(input: {
     });
     return ref.id;
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "เพิ่มเมนู"));
+    throw new Error(mapFirestoreError(err, "เพิ่มเมนู", "pos"));
   }
 }
 
@@ -151,7 +151,7 @@ export async function toggleMenuItemSoldOut(id: string, soldOut: boolean): Promi
       updatedAt: Date.now(),
     });
   } catch (err) {
-    throw new Error(mapFirestoreError(err, soldOut ? "ปิดเมนูของหมด" : "เปิดเมนูขาย"));
+    throw new Error(mapFirestoreError(err, soldOut ? "ปิดเมนูของหมด" : "เปิดเมนูขาย", "pos"));
   }
 }
 
@@ -167,7 +167,7 @@ export async function updateMenuItem(
   try {
     await updateDoc(doc(getPosDb(), MENU_ITEMS_COL, id), next);
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "อัปเดตเมนู"));
+    throw new Error(mapFirestoreError(err, "อัปเดตเมนู", "pos"));
   }
 }
 
