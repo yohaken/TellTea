@@ -1,7 +1,6 @@
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   onSnapshot,
   orderBy,
@@ -62,7 +61,12 @@ export function getPosConnectivity(
   localHeartbeatAt: number,
   netOnline: boolean,
   now = Date.now(),
+  booting = false,
 ): { deviceOnline: boolean; pill: PosConnectivityPill; label: string } {
+  if (booting) {
+    return { deviceOnline: false, pill: "offline-signal", label: "กำลังเชื่อม" };
+  }
+
   const seenAt = Math.max(lastSeenAt, localHeartbeatAt);
   const deviceOnline = isPosDeviceOnline(seenAt, now);
 
@@ -97,21 +101,47 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
 }
 
 export async function registerPosDevice(authUid: string): Promise<PosDevice> {
-  const ref = deviceRef(authUid);
-  const snap = await getDoc(ref);
   const now = Date.now();
   const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const pairingCode = posPairingCodeFromId(authUid);
 
-  if (snap.exists()) {
-    const device = mapPosDeviceDoc(authUid, snap.data() as Record<string, unknown>);
-    await heartbeatPosDevice(authUid);
-    return { ...device, lastSeenAt: now, appBuild: CLIENT_BUILD, userAgent: ua };
+  const patch = {
+    authUid,
+    pairingCode,
+    lastSeenAt: now,
+    appBuild: CLIENT_BUILD,
+    userAgent: ua,
+  };
+
+  try {
+    await setDoc(deviceRef(authUid), patch, { merge: true });
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, "ลงทะเบียนเครื่อง POS", "pos"));
   }
 
-  const payload = {
+  return mapPosDeviceDoc(authUid, {
+    ...patch,
+    label: "",
+    registeredAt: now,
+    forceReloadAt: 0,
+    lastReloadAckAt: 0,
+    disabled: false,
+    syncPendingCount: 0,
+    syncFailedCount: 0,
+    syncStuckAt: 0,
+    syncLastError: "",
+  });
+}
+
+/** Instant UI while server round-trip runs in background. */
+export function optimisticPosDevice(authUid: string): PosDevice {
+  const now = Date.now();
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const pairingCode = posPairingCodeFromId(authUid);
+  return mapPosDeviceDoc(authUid, {
     authUid,
     label: "",
-    pairingCode: posPairingCodeFromId(authUid),
+    pairingCode,
     registeredAt: now,
     lastSeenAt: now,
     appBuild: CLIENT_BUILD,
@@ -123,15 +153,7 @@ export async function registerPosDevice(authUid: string): Promise<PosDevice> {
     syncFailedCount: 0,
     syncStuckAt: 0,
     syncLastError: "",
-  };
-
-  try {
-    await setDoc(ref, payload, { merge: true });
-  } catch (err) {
-    throw new Error(mapFirestoreError(err, "ลงทะเบียนเครื่อง POS", "pos"));
-  }
-
-  return mapPosDeviceDoc(authUid, payload);
+  });
 }
 
 export async function heartbeatPosDevice(authUid: string): Promise<void> {

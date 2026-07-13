@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { PosAuthWarmup } from "@/components/PosAuthWarmup";
 
 export const metadata: Metadata = {
   title: "TellTea POS",
@@ -31,5 +32,10 @@ export const viewport: Viewport = {
 };
 
 export default function PosLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <PosAuthWarmup />
+      {children}
+    </>
+  );
 }

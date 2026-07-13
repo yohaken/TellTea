@@ -14,7 +14,8 @@ const rulesSrc = readFileSync(join(root, "firestore.rules"), "utf8");
 const deviceSrc = readFileSync(join(root, "src/lib/pos-devices.ts"), "utf8");
 const setupSrc = readFileSync(join(root, "src/components/PosDeviceSetup.tsx"), "utf8");
 
-assert.match(pageSrc, /PosUpdateWatcher/);
+assert.match(pageSrc, /optimisticPosDevice/);
+assert.match(pageSrc, /setStatus\("ready"\)/);
 assert.match(pageSrc, /isPosSafeToReload/);
 assert.match(pageSrc, /pendingForceReloadAtRef/);
 assert.match(watcherSrc, /fetchServerBuild/);
@@ -41,7 +42,11 @@ assert.match(readFileSync(join(root, "src/lib/pos-firebase.ts"), "utf8"), /tellt
 assert.match(readFileSync(join(root, "src/lib/pos-url.ts"), "utf8"), /telltea-pos\.web\.app\/pos\//);
 assert.match(readFileSync(join(root, "firebase.json"), "utf8"), /telltea-pos\.web\.app/);
 assert.doesNotMatch(readFileSync(join(root, "scripts/smoke-hosting-export.mjs"), "utf8"), /Missing POS export/);
-assert.match(readFileSync(join(root, "src/lib/pos-auth.ts"), "utf8"), /getPosFirebaseAuth/);
+assert.match(readFileSync(join(root, "src/lib/pos-auth.ts"), "utf8"), /waitForRestoredAuthUser/);
+assert.match(readFileSync(join(root, "src/lib/pos-auth.ts"), "utf8"), /warmPosAuth/);
+assert.doesNotMatch(readFileSync(join(root, "src/app/pos/page.tsx"), "utf8"), /POS_BOOT_TIMEOUT/);
+assert.match(readFileSync(join(root, "src/lib/pos-devices.ts"), "utf8"), /optimisticPosDevice/);
+assert.match(readFileSync(join(root, "src/components/PosAuthWarmup.tsx"), "utf8"), /warmPosAuth/);
 assert.match(deviceSrc, /requestPosDevicesReload/);
 assert.match(setupSrc, /อัปเดตเครื่องที่ค้าง/);
 assert.ok(readFileSync(join(root, "docs/pos-connectivity.md"), "utf8").includes("Firestore = สายชีวิต"));
