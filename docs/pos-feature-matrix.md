@@ -211,6 +211,7 @@ Wongnai POS Android
 | 2 | พิมพ์ใบเสร็จ + สถานะฮาร์ดแวร์ | **ทำแล้ว** v125 |
 | 3 | PromptPay + ปิดเมนูของหมด | **ทำแล้ว** v125 |
 | 3.5 | บันทึกบิลผ่าน Cloud Function | **ทำแล้ว** v127–128 — ดู `docs/pos-sale.md` |
+| 4 | Offline outbox + sync + idempotency | **ทำแล้ว** v129 — ดู `docs/pos-sync.md` |
 | 4 | หักสต็อก + รายงาน | รอ |
 
 ---

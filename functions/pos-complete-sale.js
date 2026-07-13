@@ -49,11 +49,19 @@ function parseLines(raw) {
   return lines.every(Boolean) ? lines : null;
 }
 
+function parseMutationId(raw) {
+  const id = typeof raw === "string" ? raw.trim() : "";
+  if (id.length < 8 || id.length > 128) return "";
+  if (!/^[a-zA-Z0-9:_-]+$/.test(id)) return "";
+  return id;
+}
+
 /**
  * Server-side POS sale — Admin SDK bypasses client Firestore rules.
  */
 async function completePosSaleAdmin(db, data, uid) {
   const deviceId = uid;
+  const clientMutationId = parseMutationId(data?.clientMutationId);
   if (typeof data?.deviceId !== "string" || data.deviceId !== deviceId) {
     throw new HttpsError("invalid-argument", "deviceId ไม่ตรงกับเครื่อง");
   }
@@ -95,8 +103,16 @@ async function completePosSaleAdmin(db, data, uid) {
   const metaLedgerRef = db.doc("meta/ledger");
   const metaPosRef = db.doc("meta/pos");
   const description = saleDescription(lines);
+  const mutationRef = clientMutationId ? db.doc(`posSaleMutations/${clientMutationId}`) : null;
 
-  const billNo = await db.runTransaction(async (tx) => {
+  const txResult = await db.runTransaction(async (tx) => {
+    if (mutationRef) {
+      const mutSnap = await tx.get(mutationRef);
+      if (mutSnap.exists) {
+        return { replay: mutSnap.data() || {} };
+      }
+    }
+
     const posSnap = await tx.get(metaPosRef);
     const metaSnap = await tx.get(metaLedgerRef);
     const posData = posSnap.data() || {};
@@ -128,6 +144,7 @@ async function completePosSaleAdmin(db, data, uid) {
       createdAt: now,
       createdBy,
       status: "completed",
+      ...(clientMutationId ? { clientMutationId } : {}),
     });
     tx.set(ledgerRef, {
       date,
@@ -152,9 +169,32 @@ async function completePosSaleAdmin(db, data, uid) {
       },
       { merge: true },
     );
+    if (mutationRef) {
+      tx.set(mutationRef, {
+        saleId: saleRef.id,
+        billNo: nextBillNo,
+        change,
+        total,
+        deviceId,
+        createdAt: now,
+      });
+    }
 
-    return nextBillNo;
+    return { billNo: nextBillNo };
   });
+
+  if (txResult.replay) {
+    const m = txResult.replay;
+    return {
+      saleId: typeof m.saleId === "string" ? m.saleId : saleRef.id,
+      billNo: typeof m.billNo === "string" ? m.billNo : "—",
+      change: Number(m.change) || 0,
+      total: Number(m.total) || total,
+      replayed: true,
+    };
+  }
+
+  const billNo = txResult.billNo;
 
   const sessionRef = db.doc(`posSessions/${data.sessionId}`);
   await db.runTransaction(async (tx) => {

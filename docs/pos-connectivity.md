@@ -47,7 +47,7 @@
 
 | ช่องว่าง | เหตุผลที่ยังไม่ทำ |
 |---------|------------------|
-| คิวขาย offline | ซับซ้อน — ต้อง IndexedDB + sync ย้อนหลัง |
+| คิวขาย offline | IndexedDB outbox + `posCompleteSale` idempotent | **ทำแล้ว** v129 — ดู `docs/pos-sync.md` |
 | Service Worker cache bust POS | ใช้ poll version + reload แทน |
 | Auto-reload ทุกเครื่องหลัง deploy | ใช้ forceAppUpdate หรือปุ่มอัปเดตทุกเครื่องแทน |
 | T-B6 สถานะเครื่องพิมพ์/เน็ตละเอียด | Phase 2 ฮาร์ดแวร์ |

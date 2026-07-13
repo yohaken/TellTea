@@ -241,7 +241,7 @@ export function PosSellView({
   }
 
   function afterSaleSuccess(
-    result: { billNo: string; total: number; change?: number },
+    result: { billNo: string; total: number; change?: number; pending?: boolean },
     paymentMethod: "cash" | "promptpay",
     lines: PosSaleLine[],
   ) {
@@ -265,7 +265,10 @@ export function PosSellView({
       paymentMethod === "cash" && result.change != null
         ? ` · ทอน ฿${formatPlainNumber(result.change)}`
         : "";
-    setSuccess(`บิล ${result.billNo} · ฿${formatPlainNumber(result.total)}${changeText}`);
+    const pendingText = result.pending ? " · รอส่งเมื่อมีเน็ต" : "";
+    setSuccess(
+      `บิล ${result.billNo} · ฿${formatPlainNumber(result.total)}${changeText}${pendingText}`,
+    );
     window.setTimeout(() => setSuccess(null), 2500);
   }
 

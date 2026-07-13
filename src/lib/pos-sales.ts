@@ -1,40 +1,112 @@
-import { httpsCallable } from "firebase/functions";
-import { getPosFirebaseAuth, getPosFirebaseFunctions } from "./pos-firebase";
+import { getPosFirebaseAuth } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
-import type { PosSaleLine, PosSalePaymentMethod } from "./types";
+import { addOutboxEntry, getOutboxEntry } from "./pos-outbox";
+import { invokePosCompleteSale, mapCfResultToSaleResult, refreshPosSyncSnapshot } from "./pos-sync";
+import type { PosSaleLine } from "./types";
+import type { PosSaleMutationPayload, PosSaleResult } from "./pos-sync-types";
+import {
+  createPosMutationId,
+  formatPendingBillNo,
+  isBrowserOnline,
+  isRetryableSaleError,
+} from "./pos-sync-utils";
 
 export const POS_SALES_COL = "posSales";
 
-type SaleResult = { saleId: string; billNo: string; change: number; total: number };
-
-type PosCompleteSaleInput = {
+function buildMutationPayload(input: {
   deviceId: string;
   sessionId: string;
   shift: string;
   lines: PosSaleLine[];
-  paymentMethod: PosSalePaymentMethod;
+  paymentMethod: "cash" | "promptpay";
   cashReceived: number;
-};
-
-async function ensureFreshPosToken(): Promise<void> {
-  const user = getPosFirebaseAuth().currentUser;
-  if (user) await user.getIdToken(true);
+  clientMutationId: string;
+}): PosSaleMutationPayload {
+  return {
+    clientMutationId: input.clientMutationId,
+    deviceId: input.deviceId,
+    sessionId: input.sessionId,
+    shift: input.shift,
+    lines: input.lines,
+    paymentMethod: input.paymentMethod,
+    cashReceived: input.cashReceived,
+  };
 }
 
-async function callPosCompleteSale(input: PosCompleteSaleInput): Promise<SaleResult> {
-  await ensureFreshPosToken();
-  const authUid = getPosFirebaseAuth().currentUser?.uid;
-  const deviceId = authUid || input.deviceId;
-  const posCompleteSale = httpsCallable<PosCompleteSaleInput, SaleResult>(
-    getPosFirebaseFunctions(),
-    "posCompleteSale",
-  );
-  const result = await posCompleteSale({ ...input, deviceId });
-  const data = result.data;
-  if (!data?.saleId || !data?.billNo) {
-    throw new Error("บันทึกการขาย — ตอบกลับไม่สมบูรณ์");
+function optimisticSaleResult(
+  payload: PosSaleMutationPayload,
+  total: number,
+  change: number,
+): PosSaleResult {
+  return {
+    saleId: `local:${payload.clientMutationId}`,
+    billNo: formatPendingBillNo(payload.clientMutationId),
+    change,
+    total,
+    pending: true,
+    clientMutationId: payload.clientMutationId,
+  };
+}
+
+async function enqueueSale(payload: PosSaleMutationPayload, total: number, change: number): Promise<PosSaleResult> {
+  const existing = await getOutboxEntry(payload.clientMutationId);
+  if (!existing) {
+    await addOutboxEntry({
+      id: payload.clientMutationId,
+      kind: "sale",
+      createdAt: Date.now(),
+      attempts: 0,
+      payload,
+    });
   }
-  return data;
+  await refreshPosSyncSnapshot();
+  return optimisticSaleResult(payload, total, change);
+}
+
+async function completeSale(input: {
+  deviceId: string;
+  sessionId: string;
+  shift: string;
+  lines: PosSaleLine[];
+  paymentMethod: "cash" | "promptpay";
+  cashReceived: number;
+}): Promise<PosSaleResult> {
+  const authUid = getPosFirebaseAuth().currentUser?.uid || input.deviceId;
+  const clientMutationId = createPosMutationId(authUid);
+  const payload = buildMutationPayload({ ...input, deviceId: authUid, clientMutationId });
+
+  const subtotal = input.lines.reduce((sum, l) => sum + l.price * l.qty, 0);
+  const total = Math.round(subtotal * 100) / 100;
+  const cashReceived = Math.round(Number(input.cashReceived) * 100) / 100;
+  const change =
+    input.paymentMethod === "cash"
+      ? Math.round((cashReceived - total) * 100) / 100
+      : 0;
+
+  if (!isBrowserOnline()) {
+    return enqueueSale(payload, total, change);
+  }
+
+  try {
+    const data = await invokePosCompleteSale(payload);
+    return mapCfResultToSaleResult(data, false);
+  } catch (err) {
+    const code = (err as { code?: string })?.code;
+    const message = (err as Error)?.message || "";
+    if (code === "functions/permission-denied") {
+      throw new Error("บันทึกการขาย — ไม่ใช่เครื่อง POS ลองรีเฟรชหน้า");
+    }
+    if (code === "functions/invalid-argument") {
+      throw new Error(message || "ข้อมูลการขายไม่ถูกต้อง");
+    }
+    if (isRetryableSaleError(err)) {
+      return enqueueSale(payload, total, change);
+    }
+    if (code === "functions/unavailable") {
+      throw new Error("บันทึกการขาย — เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่");
+    }
+    throw new Error(message || mapFirestoreError(err, "บันทึกการขาย", "pos"));
+  }
 }
 
 export async function completeCashSale(input: {
@@ -43,7 +115,7 @@ export async function completeCashSale(input: {
   shift: string;
   lines: PosSaleLine[];
   cashReceived: number;
-}): Promise<SaleResult> {
+}): Promise<PosSaleResult> {
   if (!input.lines.length) {
     throw new Error("ตะกร้าว่าง — เลือกเมนูก่อน");
   }
@@ -56,32 +128,14 @@ export async function completeCashSale(input: {
     throw new Error("เงินที่รับน้อยกว่ายอดขาย");
   }
 
-  try {
-    return await callPosCompleteSale({
-      deviceId: input.deviceId,
-      sessionId: input.sessionId,
-      shift: input.shift,
-      lines: input.lines,
-      paymentMethod: "cash",
-      cashReceived,
-    });
-  } catch (err) {
-    const code = (err as { code?: string })?.code;
-    const message = (err as Error)?.message || "";
-    if (code === "functions/permission-denied") {
-      throw new Error("บันทึกการขาย — ไม่ใช่เครื่อง POS ลองรีเฟรชหน้า");
-    }
-    if (code === "functions/invalid-argument") {
-      throw new Error(message || "ข้อมูลการขายไม่ถูกต้อง");
-    }
-    if (code === "functions/unavailable") {
-      throw new Error("บันทึกการขาย — เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่");
-    }
-    if (code === "functions/internal" || code === "functions/deadline-exceeded") {
-      throw new Error(message || mapFirestoreError(err, "บันทึกการขาย", "pos"));
-    }
-    throw new Error(message || mapFirestoreError(err, "บันทึกการขาย", "pos"));
-  }
+  return completeSale({
+    deviceId: input.deviceId,
+    sessionId: input.sessionId,
+    shift: input.shift,
+    lines: input.lines,
+    paymentMethod: "cash",
+    cashReceived,
+  });
 }
 
 export async function completePromptPaySale(input: {
@@ -89,22 +143,17 @@ export async function completePromptPaySale(input: {
   sessionId: string;
   shift: string;
   lines: PosSaleLine[];
-}): Promise<{ saleId: string; billNo: string; total: number }> {
+}): Promise<PosSaleResult> {
   if (!input.lines.length) {
     throw new Error("ตะกร้าว่าง — เลือกเมนูก่อน");
   }
 
-  try {
-    const result = await callPosCompleteSale({
-      deviceId: input.deviceId,
-      sessionId: input.sessionId,
-      shift: input.shift,
-      lines: input.lines,
-      paymentMethod: "promptpay",
-      cashReceived: 0,
-    });
-    return { saleId: result.saleId, billNo: result.billNo, total: result.total };
-  } catch (err) {
-    throw new Error(mapFirestoreError(err, "บันทึกการขาย PromptPay", "pos"));
-  }
+  return completeSale({
+    deviceId: input.deviceId,
+    sessionId: input.sessionId,
+    shift: input.shift,
+    lines: input.lines,
+    paymentMethod: "promptpay",
+    cashReceived: 0,
+  });
 }

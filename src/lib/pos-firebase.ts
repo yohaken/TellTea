@@ -13,6 +13,8 @@ import {
 import {
   getFirestore,
   initializeFirestore,
+  persistentLocalCache,
+  persistentSingleTabManager,
   type Firestore,
 } from "firebase/firestore";
 import { getFunctions, type Functions } from "firebase/functions";
@@ -64,7 +66,11 @@ export function getPosDb(): Firestore {
   if (!posDb) {
     const app = getPosFirebaseApp();
     try {
-      posDb = initializeFirestore(app, {});
+      posDb = initializeFirestore(app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentSingleTabManager({}),
+        }),
+      });
     } catch {
       posDb = getFirestore(app);
     }

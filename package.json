@@ -8,6 +8,7 @@
     "smoke:hosting": "node scripts/smoke-hosting-export.mjs",
     "test:pos-connectivity": "node scripts/test-pos-connectivity.mjs",
     "test:pos-complete-sale": "node scripts/test-pos-complete-sale.mjs",
+    "test:pos-sync": "node scripts/test-pos-sync.mjs",
     "start": "next start",
     "lint": "eslint",
     "export": "next build"

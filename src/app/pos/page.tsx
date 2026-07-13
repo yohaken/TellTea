@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Printer, Wifi, WifiOff } from "lucide-react";
 import { AppBrand } from "@/components/AppBrand";
 import { PosUpdateWatcher } from "@/components/PosUpdateWatcher";
+import { PosSyncWatcher } from "@/components/PosSyncWatcher";
 import { PosSellView } from "@/components/PosSellView";
 import { ensurePosDeviceAuth } from "@/lib/pos-auth";
 import {
@@ -48,6 +49,7 @@ export default function PosPage() {
     cartCount: 0,
     payOpen: false,
     saleBusy: false,
+    pendingSyncCount: 0,
   });
   const installPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const deviceIdRef = useRef<string | null>(null);
@@ -64,7 +66,7 @@ export default function PosPage() {
 
   useEffect(() => {
     if (!selling) {
-      setSellBusy({ cartCount: 0, payOpen: false, saleBusy: false });
+      setSellBusy({ cartCount: 0, payOpen: false, saleBusy: false, pendingSyncCount: 0 });
     }
   }, [selling]);
 
@@ -263,6 +265,12 @@ export default function PosPage() {
 
   return (
     <div className={`pos-lite ${standalone ? "pos-lite--standalone" : ""} ${selling ? "pos-lite--sell" : ""}`}>
+      <PosSyncWatcher
+        enabled={status === "ready"}
+        onPendingChange={(pendingSyncCount) =>
+          setSellBusy((prev) => ({ ...prev, pendingSyncCount }))
+        }
+      />
       <PosUpdateWatcher
         enabled={status === "ready"}
         sellBusy={sellBusy}
@@ -291,6 +299,11 @@ export default function PosPage() {
             {connectivity.pill === "online" ? <Wifi size={12} aria-hidden /> : <WifiOff size={12} aria-hidden />}
             {connectivity.label}
           </span>
+          {sellBusy.pendingSyncCount > 0 ? (
+            <span className="pos-lite-pill pos-lite-pill--warn" title="บิลรอส่งเมื่อมีเน็ต">
+              รอส่ง {sellBusy.pendingSyncCount}
+            </span>
+          ) : null}
           <p className="pos-lite-phase">{standalone ? "แอป" : "POS"} · {appVersionLabel()}</p>
         </div>
       </header>
@@ -344,7 +357,7 @@ export default function PosPage() {
         <PosSellView
           deviceId={device.id}
           session={session}
-          onBusyChange={setSellBusy}
+          onBusyChange={(state) => setSellBusy((prev) => ({ ...prev, ...state }))}
         />
       ) : null}
     </div>

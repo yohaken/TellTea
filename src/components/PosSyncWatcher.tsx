@@ -1,0 +1,40 @@
+"use client";
+
+import { useEffect } from "react";
+import { refreshPosSyncSnapshot, runPosSyncFlush, subscribePosSync } from "@/lib/pos-sync";
+
+const FLUSH_MS = 12 * 1000;
+
+/** Background sync for offline sale outbox — flush when online. */
+export function PosSyncWatcher({
+  enabled,
+  onPendingChange,
+}: {
+  enabled: boolean;
+  onPendingChange?: (pendingCount: number) => void;
+}) {
+  useEffect(() => {
+    if (!enabled) return;
+
+    const unsub = subscribePosSync((snap) => {
+      onPendingChange?.(snap.pendingCount);
+    });
+
+    void refreshPosSyncSnapshot();
+
+    function onOnline() {
+      void runPosSyncFlush();
+    }
+
+    window.addEventListener("online", onOnline);
+    const timer = window.setInterval(() => void runPosSyncFlush(), FLUSH_MS);
+
+    return () => {
+      unsub();
+      window.removeEventListener("online", onOnline);
+      window.clearInterval(timer);
+    };
+  }, [enabled, onPendingChange]);
+
+  return null;
+}
