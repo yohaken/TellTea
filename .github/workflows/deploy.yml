@@ -54,12 +54,12 @@ jobs:
       - name: Verify POS menu + options wiring
         run: npm run test:pos-menu-cart
 
-      - name: Verify POS menu e2e (Playwright)
+      - name: Verify POS e2e (Playwright — nav, menu, sell + timing)
         run: |
           npx playwright install chromium
           npx --yes serve out-pos -l 8765 &
           sleep 3
-          POS_E2E_URL=http://127.0.0.1:8765/pos/ npm run test:pos-menu-e2e
+          POS_E2E_URL=http://127.0.0.1:8765/pos/ npm run test:pos-e2e-all
 
       - name: Enable POS auth domains
         env:
