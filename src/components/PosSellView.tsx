@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PauseCircle, QrCode, Tag, UserRound, X } from "lucide-react";
-import { getPosMenuSnapshot, retryPosMenuPreload, startPosMenuPreload, subscribePosMenuPreload } from "@/lib/pos-menu-preload";
-import { toggleMenuItemSoldOut } from "@/lib/pos-menu";
+import { getPosMenuSnapshot, publishLocalMenuOrder, retryPosMenuPreload, startPosMenuPreload, subscribePosMenuPreload } from "@/lib/pos-menu-preload";
+import { reorderMenuCategories, toggleMenuItemSoldOut } from "@/lib/pos-menu";
+import { applyActiveIdsOrder } from "@/lib/pos-drag-reorder";
 import {
   buildCartKey,
   cartLineToSaleLine,
@@ -28,6 +29,7 @@ import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { PosPayOrderReview } from "@/components/PosPayOrderReview";
 import { PosCashKeypad, parseCashAmount } from "@/components/PosCashKeypad";
 import { PosLazyMenuImage } from "@/components/PosLazyMenuImage";
+import { PosSellCategoryBar } from "@/components/PosSellCategoryBar";
 import { PosDiscountModal } from "@/components/PosDiscountModal";
 import {
   payableAfterDiscount,
@@ -319,6 +321,35 @@ export function PosSellView({
     tryAddItem(item);
   }
 
+  function commitCategoryReorder(orderedActiveIds: string[]) {
+    const nextCategories = applyActiveIdsOrder(categories, orderedActiveIds);
+    const before = categories
+      .slice()
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th"))
+      .map((c) => c.id)
+      .join("|");
+    const after = nextCategories
+      .slice()
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th"))
+      .map((c) => c.id)
+      .join("|");
+    if (before === after) return;
+
+    setCategories(nextCategories);
+    publishLocalMenuOrder({
+      categories: nextCategories,
+      items,
+      optionGroups,
+    });
+    const orderedIds = nextCategories
+      .slice()
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((c) => c.id);
+    void reorderMenuCategories(orderedIds).catch(() => {
+      /* คงลำดับในเครื่อง — ซิงก์รอบถัดไป */
+    });
+  }
+
   function decFromCart(cartKey: string) {
     setCart((prev) => {
       const cur = prev[cartKey];
@@ -514,23 +545,16 @@ export function PosSellView({
             ขายแล้ว {sessionDisplay.saleCount} บิล · ฿{formatPlainNumber(sessionDisplay.totalSales)}
             {menuSyncing ? " · อัปเดตเมนู..." : ""}
           </span>
-          <span className="pos-sell-status-hint">กดค้างเมนู = ปิดขายชั่วคราว</span>
+          <span className="pos-sell-status-hint">กดค้างหมวด = ลากเรียง · กดค้างเมนู = ของหมด</span>
           {success ? <span className="ok-text pos-sell-flash">{success}</span> : null}
         </div>
 
-        <div className="pos-sell-cats" role="tablist">
-          {activeCategories.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              role="tab"
-              className={`pos-sell-cat ${categoryId === cat.id ? "is-active" : ""}`}
-              onClick={() => setCategoryId(cat.id)}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
+        <PosSellCategoryBar
+          categories={activeCategories}
+          selectedId={categoryId}
+          onSelect={setCategoryId}
+          onReorder={commitCategoryReorder}
+        />
 
         <div
           className={`pos-sell-grid ${
