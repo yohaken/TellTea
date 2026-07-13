@@ -59,14 +59,20 @@
 | **promptpay-e2e** | QR ขึ้นใน 2s | ไม่ทดสอบสแกนจ่ายจริง |
 | **refresh-e2e** | F5 หน้าขาย → เมนูจาก cache | โหลดช้าโดยไม่มีเน็ต |
 
-### เฟส 3 — ความทนทาน
+### เฟส 3 — ความทนทาน (ทำแล้ว)
 
-| งาน | ทดสอบอะไร |
-|-----|-----------|
-| **offline-e2e** | offline ขาย → online → sync |
-| **stuck-bill-e2e** | บิลค้าง → panel → retry |
-| **multi-tap-e2e** | แตะเมนู 5 ครั้งติด → qty ถูก |
-| **production-smoke** | ทุก 30 นาทีบน live (แยก workflow) |
+| งาน | ทดสอบอะไร | สคริปต์ |
+|-----|-----------|--------|
+| **session-chaos** | Firestore null ไม่ดีดออก | `test-pos-session-chaos.mjs` |
+| **session-reload-e2e** | reload offline คง session | `test-pos-session-reload-e2e.mjs` |
+| **offline-e2e** | offline ขาย → online → sync | `test-pos-offline-e2e.mjs` |
+| **multi-tap-e2e** | แตะเมนู 5 ครั้ง → qty ถูก | `test-pos-multi-tap-e2e.mjs` |
+| **stuck-bill-e2e** | บล็อก CF → panel → ส่งอีกครั้ง | `test-pos-stuck-bill-e2e.mjs` |
+| **chaos-e2e** | รัน phase 3 e2e ทั้งชุด | `test-pos-chaos-e2e.mjs` |
+
+Harness: `scripts/pos-chaos-harness.mjs` (ตัดเน็ต, บล็อก Cloud Functions, panel sync)
+
+Manual QA (เครื่องจริง): `docs/pos-manual-qa-checklist.md`
 
 ### เฟส 4 — ไม่ทำอัตโนมัติ
 
@@ -102,5 +108,6 @@ npm run test:pos-e2e-all
 
 ## อัปเดตล่าสุด
 
-- สร้าง harness + sell/nav e2e + แผนนี้
-- CI: `npm run test:pos-e2e-all` หลัง build (แทน menu-only)
+- Phase 3 chaos: session-chaos, offline/multi-tap/stuck-bill/reload e2e + `pos-chaos-harness.mjs`
+- Manual QA checklist: `docs/pos-manual-qa-checklist.md`
+- CI: `npm run test:pos-e2e-all` หลัง build (phase 1 + 3; phase 3 e2e ล้มเป็น WARN)

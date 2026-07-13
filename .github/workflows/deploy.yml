@@ -57,7 +57,10 @@ jobs:
       - name: Verify POS unified receipt layout
         run: npm run test:pos-receipt-layout
 
-      - name: Verify POS e2e (Playwright — nav, menu, sell + timing)
+      - name: Verify POS session chaos logic
+        run: npm run test:pos-session-chaos
+
+      - name: Verify POS e2e (Playwright — phase 1 + 3 chaos)
         run: |
           npx playwright install chromium
           npx --yes serve out-pos -l 8765 &

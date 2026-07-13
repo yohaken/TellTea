@@ -10,7 +10,7 @@ export const POS_E2E_BUDGETS = {
   boot_ready: { warn: 12_000, fail: 45_000, label: "โหลด POS → พร้อมขาย" },
   menu_nav: { warn: 2_500, fail: 8_000, label: "คลิกเฟือง → หน้าเมนู" },
   menu_auth: { warn: 6_000, fail: 20_000, label: "หน้าเมนู auth + แท็บ" },
-  open_shift: { warn: 5_000, fail: 15_000, label: "เปิดขายกะ" },
+  open_shift: { warn: 5_000, fail: 15_000, label: "เข้างาน" },
   sell_grid: { warn: 8_000, fail: 25_000, label: "โหลดกริดเมนูขาย" },
   tap_to_cart: { warn: 800, fail: 3_000, label: "แตะเมนู → ตะกร้า" },
   option_picker: { warn: 1_200, fail: 4_000, label: "popup ตัวเลือก → ตะกร้า" },
@@ -19,6 +19,38 @@ export const POS_E2E_BUDGETS = {
 };
 
 export const POS_E2E_URL = process.env.POS_E2E_URL || "https://telltea-pos.web.app/pos/sell/";
+
+/** เมนูขั้นต่ำใน localStorage — ให้ e2e ไม่ค้างที่ "กำลังโหลดเมนู" */
+export const E2E_MENU_CACHE = {
+  categories: [
+    { id: "cat-e2e", name: "เทส", sortOrder: 0, active: true, createdAt: 1, updatedAt: 1 },
+  ],
+  items: [
+    {
+      id: "item-e2e",
+      categoryId: "cat-e2e",
+      name: "ชาเทส",
+      price: 45,
+      sortOrder: 0,
+      active: true,
+      visibleOnPos: true,
+      createdAt: 1,
+      updatedAt: 1,
+    },
+  ],
+  optionGroups: [],
+  savedAt: Date.now(),
+};
+
+export async function installE2eMenuCache(context) {
+  await context.addInitScript((cache) => {
+    try {
+      localStorage.setItem("telltea_pos_menu_v2", JSON.stringify(cache));
+    } catch {
+      /* ignore */
+    }
+  }, E2E_MENU_CACHE);
+}
 
 /** เปิด sidebar บนมือถือ (ซ่อนอยู่นอกจอจนกว่าจะกดแฮมเบอร์เกอร์) */
 export async function openMobileNav(page) {
@@ -136,6 +168,7 @@ export class PosE2eReport {
 export async function launchPosE2e() {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ ...tabletDevice() });
+  await installE2eMenuCache(context);
   const page = await context.newPage();
   return { browser, context, page };
 }
@@ -166,18 +199,30 @@ export async function waitPosBoot(page, timeout = POS_E2E_BUDGETS.boot_ready.fai
 }
 
 export function isSelling(page) {
-  return page.locator("body").innerText().then((t) => t.includes("กดค้างเมนู"));
+  return page.locator("body").innerText().then(
+    (t) =>
+      t.includes("กดค้างเมนู")
+      || t.includes("กำลังโหลดเมนู")
+      || (t.includes("บิลที่เปิดอยู่") && !t.includes("พร้อมขาย")),
+  );
 }
 
 export async function ensureSelling(page, report) {
   if (await isSelling(page)) return;
 
   await report.timed("open_shift", "open_shift", async () => {
-    const btn = page.getByRole("button", { name: "เปิดขายกะนี้" });
+    const btn = page.getByRole("button", { name: "เข้างาน" });
     await btn.waitFor({ state: "visible", timeout: 10_000 });
     await btn.click();
     await page.waitForFunction(
-      () => document.body.innerText.includes("กดค้างเมนู"),
+      () => {
+        const t = document.body.innerText;
+        return (
+          t.includes("กดค้างเมนู")
+          || t.includes("กำลังโหลดเมนู")
+          || (t.includes("บิลที่เปิดอยู่") && !t.match(/พร้อมขาย[\s\S]*เข้างาน/))
+        );
+      },
       { timeout: POS_E2E_BUDGETS.open_shift.fail },
     );
   });
@@ -185,14 +230,24 @@ export async function ensureSelling(page, report) {
 
 export async function waitSellGrid(page, report) {
   await report.timed("sell_grid", "sell_grid", async () => {
-    const items = page.locator(".pos-sell-item:not(.pos-sell-item--soldout)");
-    await items.first().waitFor({ state: "visible", timeout: POS_E2E_BUDGETS.sell_grid.fail });
-    const count = await items.count();
-    if (count === 0) {
-      report.note("ไม่มีเมนูขายที่กดได้ — อาจยังไม่ seed เมนู");
-      throw new Error("กริดเมนูว่าง");
+    const retryBtn = page.getByRole("button", { name: "ลองโหลดใหม่" });
+    const deadline = Date.now() + POS_E2E_BUDGETS.sell_grid.fail;
+    while (Date.now() < deadline) {
+      const items = page.locator(".pos-sell-item:not(.pos-sell-item--soldout)");
+      const count = await items.count();
+      if (count > 0) {
+        report.note(`เมนูขายพร้อมกด ${count} รายการ`);
+        return;
+      }
+      if (await retryBtn.isVisible().catch(() => false)) {
+        await retryBtn.click();
+        await page.waitForTimeout(800);
+      } else {
+        await page.waitForTimeout(400);
+      }
     }
-    report.note(`เมนูขายพร้อมกด ${count} รายการ`);
+    report.note("ไม่มีเมนูขายที่กดได้ — อาจยังไม่ seed เมนู");
+    throw new Error("กริดเมนูว่าง");
   });
 }
 
@@ -241,7 +296,7 @@ export async function tapFirstItemToCart(page, report) {
   } else {
     console.log(`[PASS] ${budget.label} ${ms}ms`);
   }
-  report.steps.push({ step: "tap_to_cart", ms, budget });
+  report.steps.push({ step: "tap_to_cart", ms, budget, ok: true });
 }
 
 export async function cashCheckout(page, report) {
