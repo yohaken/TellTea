@@ -16,6 +16,7 @@ import { completeCashSale, completePromptPaySale } from "@/lib/pos-sales";
 import { promptPayQrDataUrl } from "@/lib/pos-promptpay";
 import { printPosReceipt } from "@/lib/pos-receipt";
 import { subscribePosShopSettings } from "@/lib/pos-settings";
+import { appendLocalReceipt } from "@/lib/pos-local-receipts";
 import { playPosSaleChime } from "@/lib/pos-sound";
 import { computeSessionPendingOverlay } from "@/lib/pos-sync-utils";
 import type { PosOutboxBillView } from "@/lib/pos-sync-types";
@@ -266,11 +267,21 @@ export function PosSellView({
   }
 
   function afterSaleSuccess(
-    result: { billNo: string; total: number; change?: number; pending?: boolean },
+    result: { billNo: string; total: number; change?: number; pending?: boolean; clientMutationId?: string },
     paymentMethod: "cash" | "promptpay",
     lines: PosSaleLine[],
   ) {
     const now = Date.now();
+    const linePreview = lines.map((l) => `${l.name}×${l.qty}`).join(", ");
+    appendLocalReceipt({
+      id: result.clientMutationId || result.billNo,
+      billNo: result.billNo,
+      total: result.total,
+      paymentMethod,
+      linePreview,
+      createdAt: now,
+      pending: result.pending === true,
+    });
     if (autoPrintReceipt) {
       printPosReceipt({
         shopName,
@@ -363,117 +374,150 @@ export function PosSellView({
   }
 
   return (
-    <div className="pos-sell">
-      <div className="pos-sell-top">
-        <div>
-          <strong>{labelOtShift(session.shift as "late" | "morning" | "evening")}</strong>
-          <span className="muted pos-sell-top-meta">
-            ขายแล้ว {sessionDisplay.saleCount} บิล · ฿{formatPlainNumber(sessionDisplay.totalSales)}
-            {menuSyncing ? " · อัปเดตเมนู..." : ""}
-          </span>
+    <div className="pos-sell-layout">
+      <section className="pos-sell-main">
+        <div className="pos-sell-top">
+          <div>
+            <strong>{labelOtShift(session.shift as "late" | "morning" | "evening")}</strong>
+            <span className="muted pos-sell-top-meta">
+              ขายแล้ว {sessionDisplay.saleCount} บิล · ฿{formatPlainNumber(sessionDisplay.totalSales)}
+              {menuSyncing ? " · อัปเดตเมนู..." : ""}
+            </span>
+          </div>
+          {success ? <p className="ok-text pos-sell-flash">{success}</p> : null}
         </div>
-        {success ? <p className="ok-text pos-sell-flash">{success}</p> : null}
-      </div>
 
-      <p className="muted pos-sell-hint">กดค้างเมนูเพื่อปิดขาย (ของหมด)</p>
+        <p className="muted pos-sell-hint">กดค้างเมนูเพื่อปิดขาย (ของหมด)</p>
 
-      <div className="pos-sell-cats" role="tablist">
-        {activeCategories.map((cat) => (
-          <button
-            key={cat.id}
-            type="button"
-            role="tab"
-            className={`pos-sell-cat ${categoryId === cat.id ? "is-active" : ""}`}
-            onClick={() => setCategoryId(cat.id)}
-          >
-            {cat.name}
-          </button>
-        ))}
-      </div>
-
-      <div className="pos-sell-grid">
-        {visibleItems.map((item) => {
-          const qty = cartLines
-            .filter((l) => l.item.id === item.id)
-            .reduce((n, l) => n + l.qty, 0);
-          const soldOut = !item.active;
-          return (
+        <div className="pos-sell-cats" role="tablist">
+          {activeCategories.map((cat) => (
             <button
-              key={item.id}
+              key={cat.id}
               type="button"
-              className={`pos-sell-item ${soldOut ? "pos-sell-item--soldout" : ""} ${item.recommended ? "pos-sell-item--rec" : ""}`}
-              onPointerDown={() => onItemPointerDown(item)}
-              onPointerUp={cancelHoldTimer}
-              onPointerLeave={cancelHoldTimer}
-              onPointerCancel={cancelHoldTimer}
-              onClick={() => onItemClick(item)}
+              role="tab"
+              className={`pos-sell-cat ${categoryId === cat.id ? "is-active" : ""}`}
+              onClick={() => setCategoryId(cat.id)}
             >
-              {item.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.imageUrl} alt="" className="pos-sell-item-img" />
-              ) : null}
-              <span className="pos-sell-item-name">
-                {item.recommended ? "★ " : ""}
-                {item.name}
-              </span>
-              {soldOut ? (
-                <span className="pos-sell-item-soldout">ของหมด</span>
-              ) : (
-                <span className="pos-sell-item-price">฿{formatPlainNumber(item.price)}</span>
-              )}
-              {qty > 0 ? <span className="pos-sell-item-qty">×{qty}</span> : null}
+              {cat.name}
             </button>
-          );
-        })}
-      </div>
-
-      {cartCount > 0 ? (
-        <div className="pos-sell-cart-preview">
-          {cartLines.map((l) => (
-            <div key={l.cartKey} className="pos-sell-cart-line">
-              <span>
-                {l.item.name}
-                {l.selections.length ? ` (${l.selections.flatMap((s) => s.choices.map((c) => c.name)).join(", ")})` : ""}{" "}
-                ×{l.qty} · ฿{formatPlainNumber(l.unitPrice)}
-              </span>
-              <div className="pos-sell-cart-line-actions">
-                <button type="button" className="ghost-btn" aria-label="ลด" onClick={() => decFromCart(l.cartKey)}>
-                  −
-                </button>
-                <button type="button" className="ghost-btn" aria-label="เพิ่ม" onClick={() => incCart(l.cartKey)}>
-                  +
-                </button>
-                <button type="button" className="ghost-btn" aria-label="ลบ" onClick={() => clearLine(l.cartKey)}>
-                  ×
-                </button>
-              </div>
-            </div>
           ))}
         </div>
-      ) : null}
 
-      <div className="pos-sell-bar">
-        <div className="pos-sell-bar-total">
-          <ShoppingCart size={18} aria-hidden />
-          <span>
-            {cartCount} รายการ · <strong>฿{formatPlainNumber(total)}</strong>
-          </span>
+        <div className="pos-sell-grid">
+          {visibleItems.map((item) => {
+            const qty = cartLines
+              .filter((l) => l.item.id === item.id)
+              .reduce((n, l) => n + l.qty, 0);
+            const soldOut = !item.active;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`pos-sell-item ${soldOut ? "pos-sell-item--soldout" : ""} ${item.recommended ? "pos-sell-item--rec" : ""}`}
+                onPointerDown={() => onItemPointerDown(item)}
+                onPointerUp={cancelHoldTimer}
+                onPointerLeave={cancelHoldTimer}
+                onPointerCancel={cancelHoldTimer}
+                onClick={() => onItemClick(item)}
+              >
+                {item.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.imageUrl} alt="" className="pos-sell-item-img" />
+                ) : (
+                  <span className="pos-sell-item-placeholder" aria-hidden>
+                    ☕
+                  </span>
+                )}
+                <span className="pos-sell-item-name">
+                  {item.recommended ? "★ " : ""}
+                  {item.name}
+                </span>
+                {soldOut ? (
+                  <span className="pos-sell-item-soldout">ของหมด</span>
+                ) : (
+                  <span className="pos-sell-item-price">฿{formatPlainNumber(item.price)}</span>
+                )}
+                {qty > 0 ? <span className="pos-sell-item-qty">×{qty}</span> : null}
+              </button>
+            );
+          })}
         </div>
-        <div className="pos-sell-bar-actions">
-          <button type="button" className="primary-btn pos-sell-pay-btn" disabled={!cartCount} onClick={openCashPay}>
-            เงินสด
-          </button>
-          <button
-            type="button"
-            className="ghost-btn pos-sell-pay-btn pos-sell-pay-btn--qr"
-            disabled={!cartCount}
-            onClick={() => void openPromptPayPay()}
-          >
-            <QrCode size={16} aria-hidden />
-            PromptPay
-          </button>
+      </section>
+
+      <aside className="pos-sell-cart-panel">
+        <header className="pos-cart-head">
+          <div>
+            <strong className="pos-cart-bill-id">#{session.id.slice(-5).toUpperCase()}</strong>
+            <span className="muted">ทานที่ร้าน</span>
+          </div>
+        </header>
+
+        <div className="pos-cart-member-bar muted">เพิ่มบัตรสะสมคะแนน</div>
+
+        <div className="pos-cart-lines">
+          {cartLines.length ? (
+            cartLines.map((l) => (
+              <div key={l.cartKey} className="pos-sell-cart-line">
+                <div className="pos-cart-line-main">
+                  <strong>
+                    {l.item.name}
+                    {l.selections.length
+                      ? ` (${l.selections.flatMap((s) => s.choices.map((c) => c.name)).join(", ")})`
+                      : ""}
+                  </strong>
+                  <span className="muted">
+                    ×{l.qty} · ฿{formatPlainNumber(l.unitPrice * l.qty)}
+                  </span>
+                </div>
+                <div className="pos-sell-cart-line-actions">
+                  <button type="button" className="ghost-btn" aria-label="ลด" onClick={() => decFromCart(l.cartKey)}>
+                    −
+                  </button>
+                  <button type="button" className="ghost-btn" aria-label="เพิ่ม" onClick={() => incCart(l.cartKey)}>
+                    +
+                  </button>
+                  <button type="button" className="ghost-btn" aria-label="ลบ" onClick={() => clearLine(l.cartKey)}>
+                    ×
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="muted pos-cart-empty">แตะเมนูเพื่อเพิ่มรายการ</p>
+          )}
         </div>
-      </div>
+
+        <footer className="pos-cart-foot">
+          <div className="pos-sell-bar-total">
+            <ShoppingCart size={18} aria-hidden />
+            <span>
+              {cartCount} รายการ · <strong>฿{formatPlainNumber(total)}</strong>
+            </span>
+          </div>
+          <div className="pos-sell-bar-actions">
+            <button type="button" className="ghost-btn pos-cart-promo-btn" disabled title="เร็วๆ นี้">
+              โปรโมชั่น
+            </button>
+            <button type="button" className="primary-btn pos-sell-pay-btn pos-cart-pay-main" disabled={!cartCount} onClick={openCashPay}>
+              ชำระเงิน
+            </button>
+          </div>
+          <div className="pos-cart-pay-alt">
+            <button
+              type="button"
+              className="ghost-btn pos-sell-pay-btn pos-sell-pay-btn--qr"
+              disabled={!cartCount}
+              onClick={() => void openPromptPayPay()}
+            >
+              <QrCode size={16} aria-hidden />
+              PromptPay
+            </button>
+            <button type="button" className="ghost-btn pos-sell-pay-btn" disabled={!cartCount} onClick={openCashPay}>
+              เงินสด
+            </button>
+          </div>
+        </footer>
+      </aside>
 
       {confirmSoldOut ? (
         <div className="pos-confirm-modal" role="dialog" aria-modal="true">

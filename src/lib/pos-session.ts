@@ -23,6 +23,7 @@ function mapSession(id: string, data: Record<string, unknown>): PosSession {
     date: typeof data.date === "number" ? data.date : 0,
     shift: typeof data.shift === "string" ? data.shift : "",
     openedAt: typeof data.openedAt === "number" ? data.openedAt : 0,
+    closedAt: typeof data.closedAt === "number" ? data.closedAt : undefined,
     status: data.status === "closed" ? "closed" : "open",
     saleCount: typeof data.saleCount === "number" ? data.saleCount : 0,
     totalSales: typeof data.totalSales === "number" ? data.totalSales : 0,
@@ -96,4 +97,19 @@ export async function adjustPosSessionTotals(
     ) / 100,
   );
   await setDoc(sessionRef(sessionId), { saleCount, totalSales, updatedAt: Date.now() }, { merge: true });
+}
+
+export async function closePosSession(sessionId: string): Promise<PosSession> {
+  const snap = await getDoc(sessionRef(sessionId));
+  if (!snap.exists()) throw new Error("ไม่พบรอบการขาย");
+  const data = snap.data() as Record<string, unknown>;
+  const now = Date.now();
+  const payload = {
+    ...data,
+    status: "closed",
+    closedAt: now,
+    updatedAt: now,
+  };
+  await setDoc(sessionRef(sessionId), payload, { merge: true });
+  return mapSession(sessionId, payload);
 }

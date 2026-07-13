@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { PosAuthWarmup } from "@/components/PosAuthWarmup";
+import { PosClientLayout } from "@/components/PosClientLayout";
 
 export const metadata: Metadata = {
   title: "TellTea POS",
-  description: "เครื่อง POS หน้าร้าน — Phase 0 เชื่อมต่อและส่งสัญญาณ",
+  description: "เครื่อง POS หน้าร้าน — TellTea",
   manifest: "/manifest-pos.webmanifest",
   icons: {
     icon: [
@@ -28,14 +29,14 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#2f6a4f",
+  themeColor: "#2a3038",
 };
 
 export default function PosLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <PosAuthWarmup />
-      {children}
+      <PosClientLayout>{children}</PosClientLayout>
     </>
   );
 }

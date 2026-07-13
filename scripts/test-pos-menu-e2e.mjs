@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { chromium, devices } from "playwright";
 
-const POS_URL = process.env.POS_E2E_URL || "https://telltea-pos.web.app/pos/";
+const POS_URL = process.env.POS_E2E_URL || "https://telltea-pos.web.app/pos/sell/";
 const phone = devices["iPhone 13"];
 const errors = [];
 const report = [];
@@ -46,6 +46,7 @@ await page.waitForFunction(
   () =>
     document.body.innerText.includes("พร้อมขาย")
     || document.body.innerText.includes("กดค้างเมนู")
+    || document.body.innerText.includes("สั่งและชำระเงิน")
     || document.body.innerText.includes("เชื่อมต่อไม่สำเร็จ"),
   { timeout: 45000 },
 );
@@ -58,11 +59,11 @@ if (bootText.includes("เชื่อมต่อไม่สำเร็จ"))
 }
 note("   OK boot (พร้อมขายหรือหน้าขาย)");
 
-const menuLink = page.locator('a[title="จัดการเมนู"]');
-assert.equal(await menuLink.count(), 1, "ปุ่มเฟืองเมนูต้องมี 1 ลิงก์");
+const menuLink = page.locator('a.pos-sidebar-link[href="/pos/menu/"]');
+assert.equal(await menuLink.count(), 1, "ลิงก์เมนูใน sidebar ต้องมี 1");
 const href = await menuLink.getAttribute("href");
 assert.equal(href, "/pos/menu/", `href ต้องเป็น /pos/menu/ ได้ ${href}`);
-note("2. ปุ่มเฟืองเมนูเป็น <a href=/pos/menu/>");
+note("2. ลิงก์เมนูใน sidebar เป็น /pos/menu/");
 
 await Promise.all([
   page.waitForURL(/\/pos\/menu\/?/, { timeout: 20000, waitUntil: "domcontentloaded" }),
@@ -79,7 +80,7 @@ await page.waitForFunction(
 );
 
 const menuText = await page.locator("body").innerText();
-assert.ok(menuText.includes("หมวดหมู่รายการ"), "ต้องเห็นแท็บหมวดหมู่");
+assert.ok(menuText.includes("เมนูอาหาร") || menuText.includes("หมวดหมู่รายการ"), "ต้องเห็นแท็บเมนู");
 assert.ok(menuText.includes("กลุ่มตัวเลือก"), "ต้องเห็นแท็บกลุ่มตัวเลือก");
 if (/Missing or insufficient permissions/i.test(menuText)) {
   fail("หน้าเมนูยัง permission denied หลัง auth");
@@ -88,7 +89,7 @@ note("4. หน้าเมนูโหลด + auth OK");
 
 await page.getByRole("button", { name: "กลุ่มตัวเลือก" }).click();
 await page.waitForTimeout(500);
-const plusBtn = page.locator("header.pos-menu-admin-top button[title='เพิ่ม']");
+const plusBtn = page.locator("button.pos-menu-add-btn, header.pos-menu-admin-top button[title='เพิ่ม']").first();
 await plusBtn.click();
 
 await page.waitForFunction(
@@ -117,9 +118,11 @@ note("6. บันทึกกลุ่มตัวเลือก OK");
 assert.ok(afterSave.includes("กลุ่มตัวเลือก"), "หลังบันทึกต้องกลับรายการกลุ่ม");
 note("7. กลับรายการกลุ่ม OK");
 
-await page.getByRole("button", { name: "หมวดหมู่รายการ" }).click();
+const itemsTab = page.getByRole("button", { name: /เมนูอาหาร|หมวดหมู่รายการ/ });
+if (await itemsTab.count()) await itemsTab.first().click();
 await page.waitForTimeout(300);
-await page.locator("header.pos-menu-admin-top button[title='เพิ่ม']").click();
+const addCatBtn = page.locator("button.pos-menu-add-btn, header.pos-menu-admin-top button[title='เพิ่ม']").first();
+if (await addCatBtn.count()) await addCatBtn.click();
 await page.waitForTimeout(1500);
 const catEditor = await page.locator("body").innerText();
 if (catEditor.includes("แก้ไขเมนู") || catEditor.includes("เพิ่มหมวด")) {

@@ -18,7 +18,7 @@ export const POS_E2E_BUDGETS = {
   nav_roundtrip: { warn: 5_000, fail: 15_000, label: "ขาย ↔ เมนู ไปกลับ" },
 };
 
-export const POS_E2E_URL = process.env.POS_E2E_URL || "https://telltea-pos.web.app/pos/";
+export const POS_E2E_URL = process.env.POS_E2E_URL || "https://telltea-pos.web.app/pos/sell/";
 
 export function tabletDevice() {
   return devices[process.env.POS_E2E_DEVICE || "iPhone 13"];
@@ -135,6 +135,7 @@ export async function waitPosBoot(page, timeout = POS_E2E_BUDGETS.boot_ready.fai
       return (
         t.includes("พร้อมขาย")
         || t.includes("กดค้างเมนู")
+        || t.includes("สั่งและชำระเงิน")
         || t.includes("เชื่อมต่อไม่สำเร็จ")
       );
     },

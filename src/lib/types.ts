@@ -246,6 +246,7 @@ export type PosSession = {
   date: number;
   shift: string;
   openedAt: number;
+  closedAt?: number;
   status: "open" | "closed";
   saleCount: number;
   totalSales: number;

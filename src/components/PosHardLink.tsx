@@ -9,11 +9,13 @@ export function PosHardLink({
   className,
   title,
   children,
+  onClick,
 }: {
   href: string;
   className?: string;
   title?: string;
   children: ReactNode;
+  onClick?: () => void;
 } & Pick<AnchorHTMLAttributes<HTMLAnchorElement>, "aria-label">) {
   return (
     <a
@@ -25,6 +27,7 @@ export function PosHardLink({
           return;
         }
         e.preventDefault();
+        onClick?.();
         window.location.assign(href);
       }}
     >

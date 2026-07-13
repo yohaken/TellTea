@@ -25,13 +25,13 @@ import {
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
 
-type Tab = "categories" | "groups";
+type Tab = "categories" | "groups" | "promotions";
 type Screen =
   | { kind: "list" }
   | { kind: "edit-item"; id: string }
   | { kind: "edit-group"; id: string };
 
-export function PosMenuAdmin() {
+export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
   const [tab, setTab] = useState<Tab>("categories");
   const [screen, setScreen] = useState<Screen>({ kind: "list" });
   const [categories, setCategories] = useState<MenuCategory[]>([]);
@@ -172,43 +172,90 @@ export function PosMenuAdmin() {
   }
 
   return (
-    <div className="pos-menu-admin">
-      <header className="pos-menu-admin-top">
-        <PosHardLink href="/pos/" className="ghost-btn pos-menu-back">
-          <ArrowLeft size={18} aria-hidden />
-          ขาย
-        </PosHardLink>
-        <h1>เมนู</h1>
-        <button
-          type="button"
-          className="ghost-btn"
-          disabled={busy || !authReady}
-          onClick={() => void (tab === "categories" ? handleAddCategory() : handleAddGroup())}
-          title="เพิ่ม"
-        >
-          <Plus size={20} />
-        </button>
-      </header>
+    <div className={`pos-menu-admin ${embedded ? "pos-menu-admin--embedded" : ""}`}>
+      {!embedded ? (
+        <header className="pos-menu-admin-top">
+          <PosHardLink href="/pos/sell/" className="ghost-btn pos-menu-back">
+            <ArrowLeft size={18} aria-hidden />
+            ขาย
+          </PosHardLink>
+          <h1>เมนู</h1>
+          <button
+            type="button"
+            className="ghost-btn"
+            disabled={busy || !authReady}
+            onClick={() => void (tab === "categories" ? handleAddCategory() : handleAddGroup())}
+            title="เพิ่ม"
+          >
+            <Plus size={20} />
+          </button>
+        </header>
+      ) : null}
 
-      <div className="pos-menu-tabs">
-        <button
-          type="button"
-          className={tab === "categories" ? "is-active" : ""}
-          onClick={() => setTab("categories")}
-        >
-          หมวดหมู่รายการ
-        </button>
-        <button
-          type="button"
-          className={tab === "groups" ? "is-active" : ""}
-          onClick={() => setTab("groups")}
-        >
-          กลุ่มตัวเลือก
-        </button>
-      </div>
+      <div className="pos-menu-shell">
+        {embedded ? (
+          <nav className="pos-menu-subnav" aria-label="เมนูย่อย">
+            <button
+              type="button"
+              className={tab === "categories" ? "is-active" : ""}
+              onClick={() => setTab("categories")}
+            >
+              เมนูอาหาร
+            </button>
+            <button
+              type="button"
+              className={tab === "groups" ? "is-active" : ""}
+              onClick={() => setTab("groups")}
+            >
+              กลุ่มตัวเลือก
+            </button>
+            <button type="button" className={tab === "promotions" ? "is-active" : ""} onClick={() => setTab("promotions")}>
+              โปรโมชั่น หน้าร้าน
+            </button>
+          </nav>
+        ) : null}
+
+        <div className="pos-menu-shell-main">
+          {embedded ? (
+            <header className="pos-menu-admin-head">
+              <h1>{tab === "groups" ? "กลุ่มตัวเลือก" : tab === "promotions" ? "โปรโมชั่น" : "เมนูอาหาร"}</h1>
+              <button
+                type="button"
+                className="primary-btn pos-menu-add-btn"
+                disabled={busy || !authReady || tab === "promotions"}
+                onClick={() => void (tab === "groups" ? handleAddGroup() : handleAddCategory())}
+              >
+                <Plus size={16} aria-hidden />
+                {tab === "groups" ? "เพิ่มกลุ่ม" : "เพิ่มเมนู"}
+              </button>
+            </header>
+          ) : (
+            <div className="pos-menu-tabs">
+              <button
+                type="button"
+                className={tab === "categories" ? "is-active" : ""}
+                onClick={() => setTab("categories")}
+              >
+                หมวดหมู่รายการ
+              </button>
+              <button
+                type="button"
+                className={tab === "groups" ? "is-active" : ""}
+                onClick={() => setTab("groups")}
+              >
+                กลุ่มตัวเลือก
+              </button>
+            </div>
+          )}
 
       {error ? <p className="error-text pos-menu-admin-error">{error}</p> : null}
       {!authReady && !error ? <p className="muted pos-menu-loading">กำลังเชื่อมต่อเมนู...</p> : null}
+
+      {authReady && tab === "promotions" ? (
+        <div className="pos-module-empty muted">
+          <p>โปรโมชั่นหน้าร้าน — กำลังพัฒนา</p>
+        </div>
+      ) : null}
 
       {authReady && tab === "categories" ? (
         <>
@@ -290,7 +337,7 @@ export function PosMenuAdmin() {
             <p className="muted pos-menu-empty">เพิ่มหมวดแรกด้วยปุ่ม +</p>
           )}
         </>
-      ) : authReady ? (
+      ) : authReady && tab === "groups" ? (
         <>
           <p className="muted pos-menu-sort-hint">ลาก ≡ เพื่อเรียงลำดับกลุ่ม</p>
           {optionGroups.length ? (
@@ -319,6 +366,8 @@ export function PosMenuAdmin() {
           )}
         </>
       ) : null}
+        </div>
+      </div>
     </div>
   );
 }

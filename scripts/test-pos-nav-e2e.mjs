@@ -21,7 +21,7 @@ await report.timed("boot", "boot_ready", async () => {
   await waitPosBoot(page);
 });
 
-const menuLink = page.locator('a[title="จัดการเมนู"]');
+const menuLink = page.locator('a.pos-sidebar-link[href="/pos/menu/"]');
 assert.equal(await menuLink.count(), 1);
 
 await report.timed("to_menu", "menu_nav", async () => {
@@ -35,7 +35,7 @@ await report.timed("menu_ready", "menu_auth", async () => {
   await page.waitForFunction(
     () => {
       const t = document.body.innerText;
-      return t.includes("หมวดหมู่รายการ") && !t.includes("กำลังเชื่อมต่อเมนู...");
+      return (t.includes("เมนูอาหาร") || t.includes("หมวดหมู่รายการ")) && !t.includes("กำลังเชื่อมต่อเมนู...");
     },
     { timeout: 20_000 },
   );
@@ -44,8 +44,8 @@ await report.timed("menu_ready", "menu_auth", async () => {
 });
 
 await report.timed("roundtrip", "nav_roundtrip", async () => {
-  await page.locator('a[href="/pos/"]').first().click();
-  await page.waitForURL(/\/pos\/?$/, { timeout: 8_000, waitUntil: "domcontentloaded" });
+  await page.locator('a.pos-sidebar-link[href="/pos/sell/"]').first().click();
+  await page.waitForURL(/\/pos\/sell\/?/, { timeout: 8_000, waitUntil: "domcontentloaded" });
   await waitPosBoot(page);
   const href = await menuLink.getAttribute("href");
   assert.equal(href, "/pos/menu/");
