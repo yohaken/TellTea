@@ -123,7 +123,7 @@ service cloud.firestore {
       return request.resource.data.createdBy == actorId()
         && request.resource.data.shift is string
         && request.resource.data.machineCount is number
-        && request.resource.data.status == 'unpaid';
+        && request.resource.data.status in ['pending', 'unpaid'];
     }
 
     function isPosDeviceAuth() {
