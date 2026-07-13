@@ -26,6 +26,7 @@ import { formatPlainNumber } from "@/lib/utils";
 import { PosOptionPickerModal } from "@/components/PosOptionPickerModal";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { PosPayOrderReview } from "@/components/PosPayOrderReview";
+import { PosCashKeypad, parseCashAmount } from "@/components/PosCashKeypad";
 
 type PayMode = "cash" | "promptpay" | null;
 
@@ -160,8 +161,7 @@ export function PosSellView({
   }, [pendingBills, session.id, session.saleCount, session.totalSales]);
 
   const total = cartLines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
-  const cashNum = Number(cashInput) || 0;
-  const change = cashNum >= total ? Math.round((cashNum - total) * 100) / 100 : 0;
+  const cashNum = parseCashAmount(cashInput);
 
   function cancelHoldTimer() {
     if (holdTimerRef.current != null) {
@@ -320,7 +320,7 @@ export function PosSellView({
 
   function openCashPay() {
     if (!cartCount) return;
-    setCashInput(String(total));
+    setCashInput("");
     setPayMode("cash");
     setQrUrl(null);
     setError(null);
@@ -722,43 +722,7 @@ export function PosSellView({
 
               <div className="pos-pay-sheet-body">
                 {payMode === "cash" ? (
-                  <>
-                    <label className="pos-pay-field">
-                      <span>รับเงินมา</span>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        min="0"
-                        step="1"
-                        value={cashInput}
-                        autoFocus
-                        onChange={(e) => setCashInput(e.target.value)}
-                      />
-                    </label>
-                    <div className="pos-pay-quick" role="group" aria-label="จำนวนเงินด่วน">
-                      <button
-                        type="button"
-                        className="pos-pay-quick-btn pos-pay-quick-btn--exact"
-                        onClick={() => setCashInput(String(Math.ceil(total)))}
-                      >
-                        ตรงพอดี
-                        <span>฿{formatPlainNumber(total)}</span>
-                      </button>
-                      {[20, 50, 100, 500, 1000].map((amt) => (
-                        <button
-                          key={amt}
-                          type="button"
-                          className="pos-pay-quick-btn"
-                          onClick={() => setCashInput(String(amt))}
-                        >
-                          ฿{amt}
-                        </button>
-                      ))}
-                    </div>
-                    <p className={`pos-pay-change ${cashNum >= total ? "ok-text" : "error-text"}`}>
-                      ทอน {cashNum >= total ? `฿${formatPlainNumber(change)}` : "— เงินไม่พอ"}
-                    </p>
-                  </>
+                  <PosCashKeypad total={total} value={cashInput} onChange={setCashInput} />
                 ) : (
                   <>
                     {qrUrl ? (
