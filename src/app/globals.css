@@ -6462,6 +6462,11 @@ body.modal-open .main-panel {
   flex-shrink: 0;
 }
 
+.pos-sell-cats.is-reordering {
+  touch-action: none;
+  user-select: none;
+}
+
 .pos-sell-cat {
   flex: 0 0 auto;
   border: 1px solid rgba(28, 42, 31, 0.12);
@@ -6472,12 +6477,27 @@ body.modal-open .main-panel {
   font: inherit;
   font-weight: 700;
   font-size: 0.92rem;
+  touch-action: manipulation;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
 }
 
 .pos-sell-cat.is-active {
   background: #2d6a4f;
   border-color: #2d6a4f;
   color: #fff;
+}
+
+.pos-sell-cat.is-dragging {
+  opacity: 0.92;
+  transform: scale(1.06);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+  z-index: 2;
+  cursor: grabbing;
+  touch-action: none;
+}
+
+.pos-sell-cats.is-reordering .pos-sell-cat:not(.is-dragging) {
+  opacity: 0.88;
 }
 
 .pos-sell-grid {
