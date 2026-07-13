@@ -68,6 +68,7 @@ export type ReceiptPrintPayload = {
   staffName?: string;
   staffId?: string;
   orderNotes?: string;
+  receiptFooterNote?: string;
 };
 
 export type KitchenTicketPrintPayload = {

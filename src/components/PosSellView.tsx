@@ -76,6 +76,8 @@ export function PosSellView({
   const [shopPhone, setShopPhone] = useState("");
   const [promptPayId, setPromptPayId] = useState("");
   const [autoPrintReceipt, setAutoPrintReceipt] = useState(true);
+  const [receiptStaffName, setReceiptStaffName] = useState("หน้าร้าน");
+  const [receiptFooterNote, setReceiptFooterNote] = useState("ขอบคุณที่อุดหนุน");
   const [confirmSoldOut, setConfirmSoldOut] = useState<MenuItem | null>(null);
   const [picker, setPicker] = useState<{
     item: MenuItem;
@@ -107,6 +109,8 @@ export function PosSellView({
       setShopPhone(s.shopPhone);
       setPromptPayId(s.promptPayId);
       setAutoPrintReceipt(s.autoPrintReceipt);
+      setReceiptStaffName(s.receiptStaffName);
+      setReceiptFooterNote(s.receiptFooterNote);
     });
     return unsubSettings;
   }, []);
@@ -116,7 +120,7 @@ export function PosSellView({
       categories.filter(
         (c) =>
           c.active &&
-          items.some((i) => i.categoryId === c.id && i.active && i.visibleOnPos !== false),
+          items.some((i) => i.categoryId === c.id && i.visibleOnPos !== false),
       ),
     [categories, items],
   );
@@ -130,8 +134,11 @@ export function PosSellView({
   const visibleItems = useMemo(
     () =>
       items
-        .filter((i) => i.categoryId === categoryId && i.active && i.visibleOnPos !== false)
-        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th")),
+        .filter((i) => i.categoryId === categoryId && i.visibleOnPos !== false)
+        .sort((a, b) => {
+          if (a.active !== b.active) return a.active ? -1 : 1;
+          return a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th");
+        }),
     [items, categoryId],
   );
   const cartLines = Object.values(cart);
@@ -235,12 +242,14 @@ export function PosSellView({
   async function confirmSoldOutToggle() {
     const item = confirmSoldOut;
     if (!item) return;
-    const soldOut = item.active;
+    const markingSoldOut = item.active;
     setConfirmSoldOut(null);
     setError(null);
+    const nextActive = !markingSoldOut;
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, active: nextActive } : i)));
     try {
-      await toggleMenuItemSoldOut(item.id, soldOut);
-      if (soldOut) {
+      await toggleMenuItemSoldOut(item.id, markingSoldOut);
+      if (markingSoldOut) {
         setCart((prev) => {
           const next = { ...prev };
           for (const key of Object.keys(next)) {
@@ -250,6 +259,7 @@ export function PosSellView({
         });
       }
     } catch (err) {
+      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, active: item.active } : i)));
       setError((err as Error).message || "อัปเดตเมนูไม่สำเร็จ");
     }
   }
@@ -371,8 +381,9 @@ export function PosSellView({
         change: result.change ?? 0,
         createdAt: now,
         orderChannel: "dine_in",
-        staffName: "TellTea POS",
+        staffName: receiptStaffName,
         staffId: devicePairingCode || deviceId.slice(-6).toUpperCase(),
+        receiptFooterNote,
       },
       { deviceId, printReceipt: autoPrintReceipt },
     );

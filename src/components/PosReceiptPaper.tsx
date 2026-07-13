@@ -3,8 +3,11 @@
 import { Printer, Trash2 } from "lucide-react";
 import type { PosLocalReceipt } from "@/lib/pos-local-receipts";
 import {
+  receiptQtyEmphasized,
+  tallyLocalLineModifiers,
+} from "@/lib/pos-receipt-format";
+import {
   localReceiptLines,
-  receiptLineModifierLabels,
   receiptSubtotal,
 } from "@/lib/pos-receipt-view";
 import { formatPlainNumber } from "@/lib/utils";
@@ -105,12 +108,15 @@ export function PosReceiptPaper({
           <h3>รายการอาหาร</h3>
           <ul className="pos-receipt-paper-items">
             {lines.map((line, idx) => {
-              const mods = receiptLineModifierLabels(line);
+              const mods = tallyLocalLineModifiers(line);
               const lineTotal = line.unitPrice * line.qty;
+              const emphasizeQty = receiptQtyEmphasized(line.qty);
               return (
                 <li key={`${receipt.id}-${idx}`} className="pos-receipt-paper-item">
                   <div className="pos-receipt-paper-item-head">
-                    <span className="pos-receipt-paper-item-qty-badge">×{line.qty}</span>
+                    {emphasizeQty ? (
+                      <span className="pos-receipt-paper-item-qty-badge">×{line.qty}</span>
+                    ) : null}
                     <div className="pos-receipt-paper-item-main">
                       <span className="pos-receipt-paper-item-name">{line.name}</span>
                       <span className="pos-receipt-paper-item-price">
@@ -119,8 +125,11 @@ export function PosReceiptPaper({
                     </div>
                   </div>
                   {mods.map((mod) => (
-                    <p key={`${idx}-${mod}`} className="pos-receipt-paper-mod">
-                      · {mod}
+                    <p key={`${idx}-${mod.label}`} className="pos-receipt-paper-mod">
+                      · {mod.label}
+                      {mod.count > 1 ? (
+                        <strong className="pos-receipt-paper-mod-qty"> ×{mod.count}</strong>
+                      ) : null}
                     </p>
                   ))}
                 </li>

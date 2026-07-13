@@ -10,6 +10,10 @@ export type PosShopSettings = {
   shopPhone: string;
   promptPayId: string;
   autoPrintReceipt: boolean;
+  /** ชื่อพนักงานบนใบเสร็จ (ค่าเริ่มต้น) */
+  receiptStaffName: string;
+  /** ข้อความท้ายสลิป */
+  receiptFooterNote: string;
 };
 
 const DEFAULTS: PosShopSettings = {
@@ -19,6 +23,8 @@ const DEFAULTS: PosShopSettings = {
   shopPhone: "0884818817",
   promptPayId: "",
   autoPrintReceipt: true,
+  receiptStaffName: "หน้าร้าน",
+  receiptFooterNote: "ขอบคุณที่อุดหนุน",
 };
 
 function metaPosRef(db: ReturnType<typeof getDb> | ReturnType<typeof getPosDb>) {
@@ -34,6 +40,14 @@ function mapSettings(data: Record<string, unknown> | undefined): PosShopSettings
     shopPhone: typeof data?.shopPhone === "string" && data.shopPhone.trim() ? data.shopPhone.trim() : DEFAULTS.shopPhone,
     promptPayId: typeof data?.promptPayId === "string" ? data.promptPayId.trim() : "",
     autoPrintReceipt: data?.autoPrintReceipt !== false,
+    receiptStaffName:
+      typeof data?.receiptStaffName === "string" && data.receiptStaffName.trim()
+        ? data.receiptStaffName.trim()
+        : DEFAULTS.receiptStaffName,
+    receiptFooterNote:
+      typeof data?.receiptFooterNote === "string" && data.receiptFooterNote.trim()
+        ? data.receiptFooterNote.trim()
+        : DEFAULTS.receiptFooterNote,
   };
 }
 
@@ -63,6 +77,8 @@ export async function savePosShopSettings(
   if (patch.shopPhone != null) next.shopPhone = patch.shopPhone.trim() || DEFAULTS.shopPhone;
   if (patch.promptPayId != null) next.promptPayId = patch.promptPayId.trim();
   if (patch.autoPrintReceipt != null) next.autoPrintReceipt = patch.autoPrintReceipt;
+  if (patch.receiptStaffName != null) next.receiptStaffName = patch.receiptStaffName.trim() || DEFAULTS.receiptStaffName;
+  if (patch.receiptFooterNote != null) next.receiptFooterNote = patch.receiptFooterNote.trim() || DEFAULTS.receiptFooterNote;
   try {
     await setDoc(metaPosRef(getDb()), next, { merge: true });
   } catch (err) {

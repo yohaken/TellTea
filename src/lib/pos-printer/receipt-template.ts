@@ -1,5 +1,10 @@
 import { formatPlainNumber } from "../utils";
 import type { PosSaleLine } from "../types";
+import {
+  receiptQtyEmphasized,
+  tallySaleLineModifiers,
+  type ReceiptModifierTally,
+} from "../pos-receipt-format";
 import type { PrinterKindProfile } from "./profiles";
 import type { PosPrinterConfig, ReceiptOrderChannel, ReceiptPrintPayload } from "./types";
 
@@ -70,16 +75,21 @@ function shopDisplayName(data: ReceiptPrintPayload): string {
   return en;
 }
 
-function lineModifiers(line: PosSaleLine, compact: boolean): string[] {
-  if (!line.options?.length) return [];
-  const tallies = new Map<string, number>();
-  for (const group of line.options) {
-    for (const choice of group.choices) {
-      const label = compact ? choice.name : `${group.groupName}: ${choice.name}`;
-      tallies.set(label, (tallies.get(label) ?? 0) + 1);
-    }
+function lineModifiers(line: PosSaleLine, compact: boolean): ReceiptModifierTally[] {
+  return tallySaleLineModifiers(line, compact);
+}
+
+function renderModifierHtml(mod: ReceiptModifierTally): string {
+  const label = escapeReceiptHtml(mod.label);
+  if (mod.count > 1) {
+    return `<div class="mod-line"><span class="mod-bullet">•</span> <span class="mod-label">${label}</span> <strong class="mod-qty">×${mod.count}</strong></div>`;
   }
-  return [...tallies.entries()].map(([label, n]) => (n > 1 ? `${label} ×${n}` : label));
+  return `<div class="mod-line"><span class="mod-bullet">•</span> <span class="mod-label">${label}</span></div>`;
+}
+
+function renderItemQtyHtml(qty: number): string {
+  if (!receiptQtyEmphasized(qty)) return "";
+  return `<span class="qty-badge">×${qty}</span>`;
 }
 
 function itemQtyTotal(lines: PosSaleLine[]): number {
@@ -174,16 +184,30 @@ export function unifiedReceiptStyles(layout: PrinterKindProfile, cutMode: PosPri
     }
     .item-line {
       display: grid;
-      grid-template-columns: 1.85em minmax(0, 1fr) auto;
+      grid-template-columns: ${layout.paperWidthMm === 58 ? "1.85em" : "2em"} minmax(0, 1fr) auto;
       gap: 6px 8px;
       align-items: start;
     }
-    .qty {
+    .item-line--single {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .qty-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.65em;
+      min-height: 1.65em;
+      padding: 0.08em 0.28em;
+      border-radius: 0.32em;
+      background: #1a1f24;
+      color: #fff;
       font-weight: 800;
-      font-size: ${layout.bodyFontPx + 2}px;
-      color: #000;
-      line-height: 1.2;
+      font-size: ${layout.bodyFontPx + 1}px;
+      line-height: 1.1;
       font-variant-numeric: tabular-nums;
+    }
+    .qty-plain {
+      display: none;
     }
     .name {
       font-weight: 800;
@@ -202,18 +226,23 @@ export function unifiedReceiptStyles(layout: PrinterKindProfile, cutMode: PosPri
       font-variant-numeric: tabular-nums;
     }
     .mods {
-      margin: 4px 0 0 2.4em;
+      margin: 4px 0 0 0.35em;
       font-size: ${layout.metaFontPx}px;
-      color: #666;
+      color: #555;
       font-weight: 500;
     }
-    .mods div {
-      margin: 1px 0;
+    .mod-line {
+      margin: 2px 0;
       word-break: break-word;
       overflow-wrap: anywhere;
-      white-space: normal;
+      line-height: 1.35;
     }
-    .mods div::before { content: "· "; }
+    .mod-bullet { color: #888; }
+    .mod-qty {
+      font-weight: 800;
+      color: #000;
+      font-variant-numeric: tabular-nums;
+    }
     .totals { font-size: ${layout.bodyFontPx}px; }
     .total-row {
       display: flex;
@@ -261,14 +290,16 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
   const itemsHtml = data.lines
     .map((line) => {
       const mods = lineModifiers(line, compact)
-        .map((m) => `<div>${escapeReceiptHtml(m)}</div>`)
+        .map((m) => renderModifierHtml(m))
         .join("");
       const modsBlock = mods ? `<div class="mods">${mods}</div>` : "";
       const lineTotal = Math.round(line.price * line.qty * 100) / 100;
       const title = receiptLineBaseName(line);
+      const qtyBadge = renderItemQtyHtml(line.qty);
+      const lineClass = receiptQtyEmphasized(line.qty) ? "item-line" : "item-line item-line--single";
       return `<div class="item">
-        <div class="item-line">
-          <span class="qty">×${line.qty}</span>
+        <div class="${lineClass}">
+          ${qtyBadge}
           <span class="name">${escapeReceiptHtml(title)}</span>
           <span class="price">${formatMoney(lineTotal)}</span>
         </div>
@@ -304,6 +335,8 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
     ? `<div class="channel">${escapeReceiptHtml(channelLabel)}</div>`
     : "";
 
+  const footerNote = (data.receiptFooterNote || "ขอบคุณที่อุดหนุน").trim();
+
   return `
   <div class="receipt">
     ${channelBlock}
@@ -331,7 +364,7 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
       ${cashRows}
     </div>
     ${notesBlock}
-    <div class="footer">ขอบคุณที่อุดหนุน<br />TellTea POS</div>
+    <div class="footer">${escapeReceiptHtml(footerNote)}<br />TellTea POS</div>
   </div>`;
 }
 

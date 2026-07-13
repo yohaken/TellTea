@@ -31,8 +31,8 @@ assert.match(typesSrc, /shopAddress/);
 assert.match(settingsSrc, /shopNameTh/);
 assert.match(settingsSrc, /shopPhone/);
 
-assert.match(templateSrc, /×\$\{line\.qty\}/);
-assert.match(templateSrc, /font-weight: 800/);
+assert.match(templateSrc, /qty-badge/);
+assert.doesNotMatch(templateSrc, /<span class="qty">×\$\{line\.qty\}<\/span>/);
 assert.match(readFileSync(join(root, "src/components/PosReceiptPaper.tsx"), "utf8"), /pos-receipt-paper-item-qty-badge/);
 assert.match(readFileSync(join(root, "src/lib/pos-session.ts"), "utf8"), /startPosSessionLocal/);
 assert.match(readFileSync(join(root, "src/lib/pos-session.ts"), "utf8"), /readLocalOpenPosSession/);
@@ -41,8 +41,19 @@ assert.match(readFileSync(join(root, "src/lib/pos-app-context.tsx"), "utf8"), /a
 assert.match(readFileSync(join(root, "src/components/PosShiftView.tsx"), "utf8"), /pos-shift-receipt-inline/);
 assert.match(readFileSync(join(root, "src/components/PosOptionPickerModal.tsx"), "utf8"), /pos-option-picker-thumb/);
 assert.match(readFileSync(join(root, "src/components/PosSellView.tsx"), "utf8"), /pos-cart-line-tap/);
-assert.match(readFileSync(join(root, "src/components/PosSellView.tsx"), "utf8"), /pos-cart-head-count/);
+assert.match(templateSrc, /qty-badge/);
+assert.match(templateSrc, /mod-qty/);
+assert.match(templateSrc, /receiptQtyEmphasized/);
+assert.match(readFileSync(join(root, "src/lib/pos-receipt-format.ts"), "utf8"), /receiptQtyEmphasized/);
+assert.match(readFileSync(join(root, "src/components/PosShopInfoSetup.tsx"), "utf8"), /ข้อมูลร้านบนสลิป/);
+assert.match(readFileSync(join(root, "src/components/PosSellView.tsx"), "utf8"), /visibleOnPos !== false/);
+assert.doesNotMatch(
+  readFileSync(join(root, "src/components/PosSellView.tsx"), "utf8"),
+  /categoryId === categoryId && i\.active && i\.visibleOnPos/,
+);
 assert.match(readFileSync(join(root, "src/app/globals.css"), "utf8"), /repeat\(5, minmax\(0, 1fr\)\)/);
-assert.match(readFileSync(join(root, "src/components/PosPaymentSetup.tsx"), "utf8"), /ที่อยู่ \(บนสลิป\)/);
+assert.match(readFileSync(join(root, "src/components/PosSellView.tsx"), "utf8"), /pos-cart-head-count/);
+assert.match(readFileSync(join(root, "src/components/PosPaymentSetup.tsx"), "utf8"), /PromptPay/);
+assert.match(settingsSrc, /receiptStaffName/);
 
 console.log("OK pos-receipt-layout");

@@ -1,6 +1,8 @@
 import type { PosLocalReceipt, PosLocalReceiptLine } from "./pos-local-receipts";
+import { tallyLocalLineModifiers } from "./pos-receipt-format";
 import type { PosSaleLine } from "./types";
 import type { ReceiptPrintPayload } from "./pos-printer/types";
+import type { PosShopSettings } from "./pos-settings";
 
 export function localReceiptLines(receipt: PosLocalReceipt): PosLocalReceiptLine[] {
   if (receipt.lines?.length) return receipt.lines;
@@ -34,7 +36,11 @@ export function localReceiptLineToSaleLine(line: PosLocalReceiptLine): PosSaleLi
 
 export function localReceiptToPrintPayload(
   receipt: PosLocalReceipt,
-  shop: { shopName: string; shopNameTh: string; shopAddress: string; shopPhone: string },
+  shop: Pick<
+    PosShopSettings,
+    "shopName" | "shopNameTh" | "shopAddress" | "shopPhone" | "receiptStaffName" | "receiptFooterNote"
+  >,
+  staffId?: string,
 ): ReceiptPrintPayload {
   const lines = localReceiptLines(receipt).map(localReceiptLineToSaleLine);
   return {
@@ -51,19 +57,16 @@ export function localReceiptToPrintPayload(
     change: receipt.change,
     createdAt: receipt.createdAt,
     orderChannel: "dine_in",
-    staffName: "TellTea POS",
+    staffName: shop.receiptStaffName,
+    staffId: staffId || undefined,
+    receiptFooterNote: shop.receiptFooterNote,
   };
 }
 
 export function receiptLineModifierLabels(line: PosLocalReceiptLine): string[] {
-  const tallies = new Map<string, number>();
-  for (const o of line.options) {
-    for (const name of o.choiceNames) {
-      const key = o.groupName ? `${o.groupName}: ${name}` : name;
-      tallies.set(key, (tallies.get(key) ?? 0) + 1);
-    }
-  }
-  return [...tallies.entries()].map(([label, n]) => (n > 1 ? `${label} ×${n}` : label));
+  return tallyLocalLineModifiers(line).map((m) =>
+    m.count > 1 ? `${m.label} ×${m.count}` : m.label,
+  );
 }
 
 export function receiptSubtotal(lines: PosLocalReceiptLine[]): number {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePosApp } from "@/lib/pos-app-context";
 import { seedDemoLocalReceipts, seedDemoLocalReceiptsIfEmpty } from "@/lib/pos-demo-receipts";
 import {
@@ -25,6 +25,8 @@ const DEFAULT_SHOP: PosShopSettings = {
   shopPhone: "",
   promptPayId: "",
   autoPrintReceipt: true,
+  receiptStaffName: "หน้าร้าน",
+  receiptFooterNote: "ขอบคุณที่อุดหนุน",
 };
 
 function formatTs(ts: number) {
@@ -148,18 +150,20 @@ function FinancialTable({
 function ReceiptRow({
   receipt,
   selected,
-  onSelect,
+  expanded,
+  onTap,
 }: {
   receipt: PosLocalReceipt;
   selected: boolean;
-  onSelect: () => void;
+  expanded: boolean;
+  onTap: () => void;
 }) {
   const itemCount = receipt.lines?.reduce((n, l) => n + l.qty, 0) ?? 0;
   return (
     <button
       type="button"
-      className={`pos-shift-sale-row ${receipt.voided ? "is-voided" : ""} ${selected ? "is-selected" : ""}`}
-      onClick={onSelect}
+      className={`pos-shift-sale-row ${receipt.voided ? "is-voided" : ""} ${selected ? "is-selected" : ""} ${expanded ? "is-expanded" : ""}`}
+      onClick={onTap}
     >
       <div className="pos-shift-sale-head">
         <strong>#{receipt.billNo}</strong>
@@ -183,7 +187,9 @@ function ReceiptRow({
       ) : (
         <p className="muted pos-shift-sale-preview">{receipt.linePreview}</p>
       )}
-      <span className="pos-shift-sale-hint">{selected ? "แตะซ้ำเพื่อปิดใบเสร็จ" : "แตะเพื่อดูใบเสร็จ"}</span>
+      <span className="pos-shift-sale-hint">
+        {expanded ? "แตะอีกครั้งเพื่อปิดใบเสร็จ" : selected ? "แตะอีกครั้งเพื่อดูใบเสร็จ" : "แตะเพื่อเลือกบิล"}
+      </span>
     </button>
   );
 }
@@ -199,8 +205,11 @@ export function PosShiftView() {
   const [sales, setSales] = useState<PosLocalReceipt[]>(() => listLocalReceiptsRecent(7));
   const [demoMsg, setDemoMsg] = useState<string | null>(null);
   const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
+  const [expandedReceiptId, setExpandedReceiptId] = useState<string | null>(null);
   const [shop, setShop] = useState<PosShopSettings>(DEFAULT_SHOP);
   const [refreshTick, setRefreshTick] = useState(0);
+  const receiptPanelRef = useRef<HTMLDivElement | null>(null);
+  const lastTapRef = useRef({ id: "", time: 0 });
 
   const sessionReceipts = useMemo(() => {
     if (!session) return [];
@@ -213,8 +222,8 @@ export function PosShiftView() {
 
   const activeReceipts = tab === "current" ? sessionReceipts : sales;
   const selectedReceipt = useMemo(
-    () => activeReceipts.find((r) => r.id === selectedReceiptId) || null,
-    [activeReceipts, selectedReceiptId],
+    () => activeReceipts.find((r) => r.id === expandedReceiptId) || null,
+    [activeReceipts, expandedReceiptId],
   );
 
   useEffect(() => {
@@ -222,12 +231,43 @@ export function PosShiftView() {
     return unsub;
   }, []);
 
-  function toggleReceipt(receipt: PosLocalReceipt) {
-    setSelectedReceiptId((cur) => (cur === receipt.id ? null : receipt.id));
+  function handleReceiptTap(receipt: PosLocalReceipt) {
+    const now = Date.now();
+    const last = lastTapRef.current;
+    const isRepeat = last.id === receipt.id && now - last.time < 700;
+    lastTapRef.current = { id: receipt.id, time: now };
+
+    if (expandedReceiptId === receipt.id) {
+      setExpandedReceiptId(null);
+      setSelectedReceiptId(null);
+      return;
+    }
+
+    if (selectedReceiptId === receipt.id && isRepeat) {
+      setExpandedReceiptId(receipt.id);
+      window.setTimeout(() => {
+        receiptPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 80);
+      return;
+    }
+
+    setSelectedReceiptId(receipt.id);
+    if (isRepeat) {
+      setExpandedReceiptId(receipt.id);
+      window.setTimeout(() => {
+        receiptPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 80);
+    } else {
+      setExpandedReceiptId(null);
+    }
   }
 
   async function handlePrintReceipt(receipt: PosLocalReceipt) {
-    const payload = localReceiptToPrintPayload(receipt, shop);
+    const payload = localReceiptToPrintPayload(
+      receipt,
+      shop,
+      device?.pairingCode || device?.id.slice(-6).toUpperCase(),
+    );
     await printSaleDocuments(payload, { receiptOnly: true });
   }
 
@@ -239,6 +279,7 @@ export function PosShiftView() {
 
   useEffect(() => {
     setSelectedReceiptId(null);
+    setExpandedReceiptId(null);
   }, [tab, historyRange]);
 
   useEffect(() => {
@@ -406,12 +447,13 @@ export function PosShiftView() {
                         key={receipt.id}
                         receipt={receipt}
                         selected={selectedReceiptId === receipt.id}
-                        onSelect={() => toggleReceipt(receipt)}
+                        expanded={expandedReceiptId === receipt.id}
+                        onTap={() => handleReceiptTap(receipt)}
                       />
                     ))}
                   </div>
                   {selectedReceipt && tab === "current" ? (
-                    <div className="pos-shift-receipt-inline">
+                    <div className="pos-shift-receipt-inline" ref={receiptPanelRef}>
                       <PosReceiptPaper
                         receipt={selectedReceipt}
                         compact
@@ -496,12 +538,13 @@ export function PosShiftView() {
                       key={receipt.id}
                       receipt={receipt}
                       selected={selectedReceiptId === receipt.id}
-                      onSelect={() => toggleReceipt(receipt)}
+                      expanded={expandedReceiptId === receipt.id}
+                      onTap={() => handleReceiptTap(receipt)}
                     />
                   ))}
                 </div>
                 {selectedReceipt && tab === "history" ? (
-                  <div className="pos-shift-receipt-inline">
+                  <div className="pos-shift-receipt-inline" ref={receiptPanelRef}>
                     <PosReceiptPaper
                       receipt={selectedReceipt}
                       compact

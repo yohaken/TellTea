@@ -8708,6 +8708,67 @@ body.modal-open .main-panel {
   box-shadow: 0 0 0 1px rgba(45, 127, 224, 0.15);
 }
 
+.pos-shift-sale-row.is-expanded {
+  border-color: rgba(232, 119, 34, 0.55);
+  background: rgba(232, 119, 34, 0.07);
+}
+
+.pos-shop-info-card {
+  border: 1px solid rgba(45, 127, 224, 0.12);
+}
+
+.pos-shop-info-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pos-shop-info-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.pos-shop-info-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pos-shop-info-grid label {
+  display: grid;
+  gap: 0.28rem;
+  font-size: 0.88rem;
+}
+
+.pos-shop-info-grid label span {
+  color: #5a6578;
+  font-weight: 600;
+}
+
+.pos-shop-info-grid input,
+.pos-shop-info-grid textarea {
+  width: 100%;
+  font-size: 0.95rem;
+}
+
+.pos-shop-info-span2 {
+  grid-column: 1 / -1;
+}
+
+.pos-shop-info-save {
+  justify-self: start;
+  min-width: 10rem;
+}
+
+@media (max-width: 640px) {
+  .pos-shop-info-grid {
+    grid-template-columns: 1fr;
+  }
+  .pos-shop-info-span2 {
+    grid-column: auto;
+  }
+}
+
 .pos-shift-sale-hint {
   display: block;
   margin-top: 0.35rem;
@@ -9337,6 +9398,10 @@ body.modal-open .main-panel {
   align-items: start;
 }
 
+.pos-receipt-paper-item-head:not(:has(.pos-receipt-paper-item-qty-badge)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .pos-receipt-paper-item-main {
   display: flex;
   justify-content: space-between;
@@ -9366,12 +9431,18 @@ body.modal-open .main-panel {
 }
 
 .pos-receipt-paper-mod {
-  margin: 0.2rem 0 0 2.9rem;
+  margin: 0.2rem 0 0 0.65rem;
   padding-left: 0;
   font-size: 0.82rem;
   color: #777;
   font-weight: 500;
   line-height: 1.35;
+}
+
+.pos-receipt-paper-mod-qty {
+  font-weight: 800;
+  color: #111;
+  font-variant-numeric: tabular-nums;
 }
 
 .pos-receipt-paper-wrap--compact .pos-receipt-paper {

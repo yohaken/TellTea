@@ -23,6 +23,8 @@ const DEFAULT_SHOP: PosShopSettings = {
   shopPhone: "",
   promptPayId: "",
   autoPrintReceipt: true,
+  receiptStaffName: "หน้าร้าน",
+  receiptFooterNote: "ขอบคุณที่อุดหนุน",
 };
 
 export function PosReceiptsView() {
