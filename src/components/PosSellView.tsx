@@ -108,8 +108,12 @@ export function PosSellView({
     }
   }, [activeCategories, categoryId]);
 
-  const visibleItems = items.filter(
-    (i) => i.categoryId === categoryId && i.active && i.visibleOnPos !== false,
+  const visibleItems = useMemo(
+    () =>
+      items
+        .filter((i) => i.categoryId === categoryId && i.active && i.visibleOnPos !== false)
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th")),
+    [items, categoryId],
   );
   const cartLines = Object.values(cart);
   const cartCount = cartLines.reduce((n, l) => n + l.qty, 0);
@@ -138,7 +142,12 @@ export function PosSellView({
     }
   }
 
-  function addToCartDirect(item: MenuItem, selections: PosCartSelection[], unitPrice: number) {
+  function addToCartDirect(
+    item: MenuItem,
+    selections: PosCartSelection[],
+    unitPrice: number,
+    addQty = 1,
+  ) {
     const cartKey = buildCartKey(item.id, selections);
     setCart((prev) => {
       const cur = prev[cartKey];
@@ -147,7 +156,7 @@ export function PosSellView({
         [cartKey]: {
           cartKey,
           item,
-          qty: (cur?.qty || 0) + 1,
+          qty: (cur?.qty || 0) + addQty,
           unitPrice,
           selections,
         },
@@ -404,7 +413,7 @@ export function PosSellView({
           {success ? <p className="ok-text pos-sell-flash">{success}</p> : null}
         </div>
 
-        <p className="muted pos-sell-hint">กดค้างเมนูเพื่อปิดขาย (ของหมด)</p>
+        <p className="muted pos-sell-hint">กดค้างเมนู = ปิดขายชั่วคราว</p>
 
         <div className="pos-sell-cats" role="tablist">
           {activeCategories.map((cat) => (
@@ -515,7 +524,7 @@ export function PosSellView({
             <button type="button" className="ghost-btn pos-cart-promo-btn" disabled title="เร็วๆ นี้">
               โปรโมชั่น
             </button>
-            <button type="button" className="primary-btn pos-sell-pay-btn pos-cart-pay-main" disabled={!cartCount} onClick={openCashPay}>
+            <button type="button" className="pos-btn-orange pos-sell-pay-btn pos-cart-pay-main" disabled={!cartCount} onClick={openCashPay}>
               ชำระเงิน
             </button>
           </div>
@@ -563,8 +572,8 @@ export function PosSellView({
           basePrice={pickerItem.price}
           groups={optionGroupsForItem(pickerItem, optionGroups)}
           onCancel={() => setPickerItem(null)}
-          onConfirm={(selections, unitPrice) => {
-            addToCartDirect(pickerItem, selections, unitPrice);
+          onConfirm={(selections, unitPrice, qty) => {
+            addToCartDirect(pickerItem, selections, unitPrice, qty);
             setPickerItem(null);
           }}
         />
@@ -617,7 +626,7 @@ export function PosSellView({
             {error ? <p className="error-text">{error}</p> : null}
             <button
               type="button"
-              className="primary-btn pos-sell-pay-btn"
+              className="pos-btn-orange pos-sell-pay-btn"
               disabled={
                 (payMode === "cash" && cashNum < total) ||
                 (payMode === "promptpay" && !qrUrl)

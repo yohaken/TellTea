@@ -1,5 +1,6 @@
 import type {
   MenuItem,
+  MenuOptionChoice,
   MenuOptionGroup,
   PosSaleLine,
   PosSaleLineOption,
@@ -26,7 +27,50 @@ export function optionGroupsForItem(
 ): MenuOptionGroup[] {
   const ids = item.optionGroupIds || [];
   const byId = new Map(allGroups.filter((g) => g.active).map((g) => [g.id, g]));
-  return ids.map((id) => byId.get(id)).filter((g): g is MenuOptionGroup => g != null);
+  return ids
+    .map((id) => byId.get(id))
+    .filter((g): g is MenuOptionGroup => g != null)
+    .map((group) => ({
+      ...group,
+      options: sortChoicesForDisplay(group),
+    }));
+}
+
+/** ความหวาน — เรียง 0% → มากสุด; กลุ่มอื่น — เรียงราคาต่ำ → สูง */
+export function parseSweetnessPercent(name: string): number | null {
+  const trimmed = name.trim();
+  const match = trimmed.match(/(\d+)\s*%/);
+  if (match) return Number(match[1]);
+  if (/^(ไม่หวาน|ศูนย์|0\s*%|zero)/i.test(trimmed)) return 0;
+  return null;
+}
+
+export function isSweetnessGroup(group: MenuOptionGroup): boolean {
+  if (/ความหวาน|ระดับความหวาน|หวาน|sweet/i.test(group.name)) return true;
+  const active = group.options.filter((o) => o.active);
+  if (active.length < 2) return false;
+  const withPct = active.filter((o) => parseSweetnessPercent(o.name) != null);
+  return withPct.length >= Math.ceil(active.length * 0.6);
+}
+
+function choiceDisplayPrice(choice: MenuOptionChoice): number {
+  return Math.max(0, choice.priceDelta ?? 0);
+}
+
+export function sortChoicesForDisplay(group: MenuOptionGroup): MenuOptionChoice[] {
+  const active = group.options.filter((o) => o.active);
+  if (isSweetnessGroup(group)) {
+    return [...active].sort((a, b) => {
+      const pa = parseSweetnessPercent(a.name) ?? a.sortOrder;
+      const pb = parseSweetnessPercent(b.name) ?? b.sortOrder;
+      return pa - pb || a.sortOrder - b.sortOrder;
+    });
+  }
+  return [...active].sort((a, b) => {
+    const priceDiff = choiceDisplayPrice(a) - choiceDisplayPrice(b);
+    if (priceDiff !== 0) return priceDiff;
+    return a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th");
+  });
 }
 
 export function itemNeedsOptions(item: MenuItem, allGroups: MenuOptionGroup[]): boolean {

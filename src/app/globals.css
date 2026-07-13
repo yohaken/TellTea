@@ -7288,6 +7288,11 @@ body.modal-open .main-panel {
   justify-content: center;
 }
 
+.pos-modal-backdrop--center {
+  align-items: center;
+  padding: 1rem;
+}
+
 .pos-modal,
 .pos-option-picker {
   width: 100%;
@@ -7297,6 +7302,60 @@ body.modal-open .main-panel {
   border-radius: 1rem 1rem 0 0;
   display: flex;
   flex-direction: column;
+}
+
+.pos-option-picker--foodstory {
+  max-width: 36rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.pos-option-picker-head {
+  padding: 1rem 1rem 0.65rem;
+  border-bottom: 1px solid #eee;
+}
+
+.pos-option-picker-head h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+  text-align: center;
+}
+
+.pos-option-picker-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.pos-option-picker-price {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.pos-option-qty {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+}
+
+.pos-option-qty-btn {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid #ccc;
+  border-radius: 0.35rem;
+  background: #f5f6f8;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pos-option-picker-lead {
+  margin: 0 0 0.65rem;
+  font-weight: 700;
+  text-align: center;
+  color: #333;
 }
 
 .pos-modal-head,
@@ -7346,20 +7405,77 @@ body.modal-open .main-panel {
 
 .pos-option-choice-btn {
   width: 100%;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1.5rem 1fr auto;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.65rem 0.75rem;
-  margin-bottom: 0.35rem;
-  border: 1px solid #ddd;
-  border-radius: 0.5rem;
+  padding: 0.7rem 0.5rem;
+  margin-bottom: 0;
+  border: 0;
+  border-bottom: 1px solid #eee;
+  border-radius: 0;
   background: #fff;
   text-align: left;
 }
 
 .pos-option-choice-btn.is-selected {
-  border-color: #2f6a4f;
-  background: rgba(47, 106, 79, 0.08);
+  background: rgba(45, 127, 224, 0.06);
+}
+
+.pos-option-choice-btn.is-selected .pos-option-choice-name {
+  font-weight: 700;
+}
+
+.pos-option-choice-control {
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.pos-option-choice-price {
+  font-variant-numeric: tabular-nums;
+  color: #555;
+  white-space: nowrap;
+}
+
+.pos-option-sweet-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pos-option-sweet-btn {
+  flex: 1 1 auto;
+  min-width: 3.2rem;
+  border: 1px solid #ccc;
+  border-radius: 0.4rem;
+  background: #fff;
+  padding: 0.55rem 0.45rem;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.pos-option-sweet-btn.is-selected {
+  background: var(--pos-nav-active);
+  border-color: var(--pos-nav-active);
+  color: #fff;
+}
+
+.pos-option-picker-foot {
+  padding: 0.85rem 1rem 1rem;
+}
+
+.pos-option-cancel-btn {
+  flex: 0 0 38%;
+  background: #f0f1f3;
+  border-color: #ddd;
+}
+
+.pos-option-confirm-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
 }
 
 .pos-option-choice-name {
@@ -7557,6 +7673,11 @@ body.modal-open .main-panel {
 
 /* —— FoodStory-style POS shell —— */
 .pos-shell {
+  --pos-nav-active: #2d7fe0;
+  --pos-accent-orange: #e85d24;
+  --pos-accent-orange-dark: #cf4f18;
+  --pos-surface: #eef0f4;
+  --pos-panel: #fff;
   display: grid;
   grid-template-columns: var(--pos-nav-w, 13.5rem) 1fr;
   min-height: 100dvh;
@@ -7637,7 +7758,7 @@ body.modal-open .main-panel {
 }
 
 .pos-sidebar-link.is-active {
-  background: #2d7fe0;
+  background: var(--pos-nav-active);
   color: #fff;
 }
 
@@ -7802,8 +7923,39 @@ body.modal-open .main-panel {
 }
 
 .pos-sell-cat.is-active {
-  background: #6b4fd8;
-  border-color: #6b4fd8;
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #1a1f24;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.pos-sell-cat {
+  background: #dfe3ea;
+  border-color: transparent;
+  color: #4a5560;
+}
+
+.pos-btn-orange {
+  background: var(--pos-accent-orange);
+  border: 1px solid var(--pos-accent-orange);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.pos-btn-orange:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pos-btn-orange:not(:disabled):active {
+  background: var(--pos-accent-orange-dark);
+  border-color: var(--pos-accent-orange-dark);
+}
+
+.pos-sell-item-qty {
+  background: var(--pos-accent-orange);
 }
 
 .pos-module {

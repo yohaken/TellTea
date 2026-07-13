@@ -97,4 +97,73 @@ function reorderById(ids, draggedId, targetId) {
 }
 assert.deepEqual(reorderById(["a", "b", "c"], "a", "c"), ["b", "c", "a"]);
 
+function parseSweetnessPercent(name) {
+  const trimmed = name.trim();
+  const match = trimmed.match(/(\d+)\s*%/);
+  if (match) return Number(match[1]);
+  if (/^(ไม่หวาน|ศูนย์|0\s*%|zero)/i.test(trimmed)) return 0;
+  return null;
+}
+
+function isSweetnessGroup(group) {
+  if (/ความหวาน|ระดับความหวาน|หวาน|sweet/i.test(group.name)) return true;
+  const active = group.options.filter((o) => o.active);
+  if (active.length < 2) return false;
+  const withPct = active.filter((o) => parseSweetnessPercent(o.name) != null);
+  return withPct.length >= Math.ceil(active.length * 0.6);
+}
+
+function sortChoicesForDisplay(group) {
+  const active = group.options.filter((o) => o.active);
+  if (isSweetnessGroup(group)) {
+    return [...active].sort((a, b) => {
+      const pa = parseSweetnessPercent(a.name) ?? a.sortOrder;
+      const pb = parseSweetnessPercent(b.name) ?? b.sortOrder;
+      return pa - pb || a.sortOrder - b.sortOrder;
+    });
+  }
+  return [...active].sort((a, b) => {
+    const priceDiff = (a.priceDelta ?? 0) - (b.priceDelta ?? 0);
+    if (priceDiff !== 0) return priceDiff;
+    return a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th");
+  });
+}
+
+const sweetGroup = {
+  id: "sweet",
+  name: "ความหวาน",
+  options: [
+    { id: "s100", name: "100%", priceDelta: 0, sortOrder: 400, active: true },
+    { id: "s0", name: "0%", priceDelta: 0, sortOrder: 100, active: true },
+    { id: "s50", name: "50%", priceDelta: 0, sortOrder: 200, active: true },
+  ],
+};
+assert.deepEqual(
+  sortChoicesForDisplay(sweetGroup).map((o) => o.name),
+  ["0%", "50%", "100%"],
+);
+
+const toppingGroup = {
+  id: "top",
+  name: "ท็อปปิ้ง",
+  options: [
+    { id: "t2", name: "ไข่มุก", priceDelta: 10, sortOrder: 2, active: true },
+    { id: "t1", name: "ไม่รับ", priceDelta: 0, sortOrder: 1, active: true },
+    { id: "t3", name: "บุกบราวน์", priceDelta: 5, sortOrder: 3, active: true },
+  ],
+};
+assert.deepEqual(
+  sortChoicesForDisplay(toppingGroup).map((o) => o.name),
+  ["ไม่รับ", "บุกบราวน์", "ไข่มุก"],
+);
+
+const cartSrc = readFileSync(join(root, "src/lib/pos-menu-cart.ts"), "utf8");
+assert.match(cartSrc, /sortChoicesForDisplay/);
+assert.match(cartSrc, /parseSweetnessPercent/);
+
+const pickerSrc = readFileSync(join(root, "src/components/PosOptionPickerModal.tsx"), "utf8");
+assert.match(pickerSrc, /pos-option-sweet-row/);
+assert.match(pickerSrc, /pos-btn-orange/);
+assert.match(pickerSrc, /ตกลง/);
+
 console.log("OK pos-menu-cart");
