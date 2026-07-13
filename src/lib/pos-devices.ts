@@ -50,6 +50,26 @@ export function isPosDeviceOnline(lastSeenAt: number, now = Date.now()): boolean
   return lastSeenAt > 0 && now - lastSeenAt <= POS_ONLINE_MS;
 }
 
+export type PosConnectivityPill = "online" | "offline-net" | "offline-signal";
+
+export function getPosConnectivity(
+  lastSeenAt: number,
+  localHeartbeatAt: number,
+  netOnline: boolean,
+  now = Date.now(),
+): { deviceOnline: boolean; pill: PosConnectivityPill; label: string } {
+  const seenAt = Math.max(lastSeenAt, localHeartbeatAt);
+  const deviceOnline = isPosDeviceOnline(seenAt, now);
+
+  if (deviceOnline && netOnline) {
+    return { deviceOnline, pill: "online", label: "ออน" };
+  }
+  if (!netOnline) {
+    return { deviceOnline, pill: "offline-net", label: "เน็ตออฟ" };
+  }
+  return { deviceOnline, pill: "offline-signal", label: "รอสัญญาณ" };
+}
+
 function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
   return {
     id,

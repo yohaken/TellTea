@@ -9,7 +9,7 @@ import {
   POS_HEARTBEAT_MS,
   ackPosDeviceReload,
   heartbeatPosDevice,
-  isPosDeviceOnline,
+  getPosConnectivity,
   registerPosDevice,
   subscribePosDevice,
   type PosDevice,
@@ -38,6 +38,7 @@ export default function PosPage() {
   const [standalone, setStandalone] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
   const [opening, setOpening] = useState(false);
+  const [lastHeartbeatAt, setLastHeartbeatAt] = useState(0);
   const installPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const deviceIdRef = useRef<string | null>(null);
   const reloadingRef = useRef(false);
@@ -60,6 +61,7 @@ export default function PosPage() {
       deviceIdRef.current = authUid;
       const registered = await registerPosDevice(authUid);
       setDevice(registered);
+      setLastHeartbeatAt(Date.now());
       const cur = await getCurrentPosSession(authUid);
       setSession(cur);
       setStatus("ready");
@@ -148,8 +150,9 @@ export default function PosPage() {
     if (!deviceId || status !== "ready") return;
 
     const heartbeat = () => {
-      if (!navigator.onLine) return;
-      void heartbeatPosDevice(deviceId).catch(() => {});
+      void heartbeatPosDevice(deviceId)
+        .then(() => setLastHeartbeatAt(Date.now()))
+        .catch(() => {});
     };
 
     heartbeat();
@@ -192,16 +195,27 @@ export default function PosPage() {
     );
   }, [status]);
 
-  const deviceOnline = device ? isPosDeviceOnline(device.lastSeenAt) : false;
+  const connectivity = device
+    ? getPosConnectivity(device.lastSeenAt, lastHeartbeatAt, online)
+    : { deviceOnline: false, pill: "offline-signal" as const, label: "รอสัญญาณ" };
 
   return (
     <div className={`pos-lite ${standalone ? "pos-lite--standalone" : ""} ${selling ? "pos-lite--sell" : ""}`}>
       <header className="pos-lite-header">
         <AppBrand compact showLogo />
         <div className="pos-lite-header-end">
-          <span className={`pos-lite-pill ${deviceOnline && online ? "pos-lite-pill--ok" : "pos-lite-pill--warn"}`}>
-            {deviceOnline && online ? <Wifi size={12} aria-hidden /> : <WifiOff size={12} aria-hidden />}
-            {deviceOnline && online ? "ออน" : "ออฟ"}
+          <span
+            className={`pos-lite-pill ${connectivity.pill === "online" ? "pos-lite-pill--ok" : "pos-lite-pill--warn"}`}
+            title={
+              connectivity.pill === "online"
+                ? "เชื่อมต่อ TellTea ปกติ"
+                : connectivity.pill === "offline-net"
+                  ? "เครื่องไม่มีเน็ต — ตรวจ Wi‑Fi"
+                  : "ส่งสัญญาณไม่ถึงเซิร์ฟเวอร์ — ตรวจ Anonymous Auth หรือลองรีเฟรช"
+            }
+          >
+            {connectivity.pill === "online" ? <Wifi size={12} aria-hidden /> : <WifiOff size={12} aria-hidden />}
+            {connectivity.label}
           </span>
           <p className="pos-lite-phase">{standalone ? "แอป" : "POS"} · {appVersionLabel()}</p>
         </div>
