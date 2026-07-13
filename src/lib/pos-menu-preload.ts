@@ -34,17 +34,20 @@ function emit() {
   for (const fn of listeners) fn(snapshot);
 }
 
-function scheduleImageHydrate() {
+/** แนบรูปเข้า memory หลังเมนูข้อความขึ้นแล้ว — ไม่บล็อก boot */
+function scheduleImageHydrate(preferImages?: Record<string, string>) {
   if (typeof window === "undefined") return;
   if (imageHydrateId != null) {
-    if (typeof cancelIdleCallback === "function") cancelIdleCallback(imageHydrateId);
-    else window.clearTimeout(imageHydrateId);
+    window.clearTimeout(imageHydrateId);
     imageHydrateId = null;
   }
 
   const run = () => {
     imageHydrateId = null;
-    const images = loadPosMenuImages();
+    const images = {
+      ...loadPosMenuImages(),
+      ...(preferImages || {}),
+    };
     if (!Object.keys(images).length) return;
     const merged = mergeMenuItemImages(snapshot.items, images);
     const changed = merged.some((item, i) => item.imageUrl !== snapshot.items[i]?.imageUrl);
@@ -53,15 +56,11 @@ function scheduleImageHydrate() {
     emit();
   };
 
-  if (typeof requestIdleCallback === "function") {
-    imageHydrateId = requestIdleCallback(run, { timeout: 2000 });
-  } else {
-    imageHydrateId = window.setTimeout(run, 120);
-  }
+  // หลังเฟรมแรกของเมนูข้อความ — รูปมาเร็ว (ไม่รอ idle นาน)
+  imageHydrateId = window.setTimeout(run, 0);
 }
 
 function applyCache(): boolean {
-  // เบา: ไม่ merge รูปตอน boot — รูปตามทีหลัง
   const cached = loadPosMenuCache({ withImages: false });
   if (!cached?.items.length) return false;
   snapshot = {
@@ -116,11 +115,6 @@ export function startPosMenuPreload(): void {
 
   unsubscribe = subscribePosMenuBundle(
     ({ categories, items, optionGroups, fromCache }) => {
-      // จาก Firestore/cache — เก็บเมนูเบาทันที แล้วค่อย hydrate รูป
-      const lightItems = items.map((item) =>
-        item.imageUrl ? { ...item, imageUrl: undefined } : item,
-      );
-      // เก็บรูปที่มาพร้อม bundle ลง image cache
       const incoming: Record<string, string> = {};
       for (const item of items) {
         if (item.imageUrl) incoming[item.id] = item.imageUrl;
@@ -129,9 +123,10 @@ export function startPosMenuPreload(): void {
         savePosMenuImages({ ...loadPosMenuImages(), ...incoming });
       }
 
+      // หน่วยความจำ: เก็บรูปไว้โชว์ทันที — ดิสก์แคชยังเบา (savePosMenuCache แยกรูปแล้ว)
       snapshot = {
         categories,
-        items: lightItems,
+        items,
         optionGroups,
         ready: true,
         fromCache: fromCache && snapshot.fromCache,
@@ -139,7 +134,6 @@ export function startPosMenuPreload(): void {
         error: null,
       };
       emit();
-      scheduleImageHydrate();
     },
     (err) => {
       snapshot = {
@@ -163,8 +157,7 @@ export function retryPosMenuPreload(): void {
     timeoutId = null;
   }
   if (imageHydrateId != null) {
-    if (typeof cancelIdleCallback === "function") cancelIdleCallback(imageHydrateId);
-    else window.clearTimeout(imageHydrateId);
+    window.clearTimeout(imageHydrateId);
     imageHydrateId = null;
   }
   seedStarted = false;
