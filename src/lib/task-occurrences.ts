@@ -128,6 +128,41 @@ export async function completeTaskOccurrence(
   });
 }
 
+export async function deleteTaskOccurrences(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const batch = writeBatch(getDb());
+  for (const id of ids) {
+    batch.delete(doc(getDb(), "taskOccurrences", id));
+  }
+  await batch.commit();
+}
+
+export async function syncPendingOccurrencesFromTemplate(
+  template: Pick<TaskOccurrence, "templateId"> & {
+    title: string;
+    note: string;
+    checklist: TaskOccurrence["checklist"];
+    assigneeIds: string[];
+    assigneeNames: string[];
+  },
+  occurrenceIds: string[],
+): Promise<void> {
+  if (!occurrenceIds.length) return;
+  const batch = writeBatch(getDb());
+  const now = Date.now();
+  for (const id of occurrenceIds) {
+    batch.update(doc(getDb(), "taskOccurrences", id), {
+      title: template.title,
+      note: template.note,
+      checklist: template.checklist,
+      assigneeIds: template.assigneeIds,
+      assigneeNames: template.assigneeNames,
+      updatedAt: now,
+    });
+  }
+  await batch.commit();
+}
+
 /** @deprecated used only if direct create needed in tests */
 export async function createTaskOccurrenceDirect(data: Omit<TaskOccurrence, "id">) {
   await addDoc(occurrencesCol(), data);

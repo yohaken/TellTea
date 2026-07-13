@@ -1,11 +1,13 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   orderBy,
   query,
   updateDoc,
+  writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
@@ -82,4 +84,43 @@ export async function deactivateTaskTemplate(id: string): Promise<void> {
     active: false,
     updatedAt: Date.now(),
   });
+}
+
+export type TaskTemplatePatch = {
+  title: string;
+  note?: string;
+  weekday: number;
+  openDaysBefore?: number;
+  checklist: TaskChecklistItem[];
+  assigneeIds: string[];
+  assigneeNames: string[];
+};
+
+function validateTemplatePatch(input: TaskTemplatePatch) {
+  const title = input.title.trim();
+  if (!title) throw new Error("ต้องใส่ชื่องาน");
+  if (!input.assigneeIds.length) throw new Error("เลือกพนักงานอย่างน้อย 1 คน");
+  const checklist = input.checklist
+    .map((c) => ({ id: c.id, label: c.label.trim() }))
+    .filter((c) => c.label);
+  if (!checklist.length) throw new Error("ต้องมี checklist อย่างน้อย 1 ข้อ");
+  return { title, checklist };
+}
+
+export async function updateTaskTemplate(id: string, input: TaskTemplatePatch): Promise<void> {
+  const { title, checklist } = validateTemplatePatch(input);
+  await updateDoc(doc(getDb(), "taskTemplates", id), {
+    title,
+    note: (input.note || "").trim(),
+    weekday: input.weekday,
+    openDaysBefore: input.openDaysBefore ?? DEFAULT_OPEN_DAYS_BEFORE,
+    checklist,
+    assigneeIds: input.assigneeIds,
+    assigneeNames: input.assigneeNames,
+    updatedAt: Date.now(),
+  });
+}
+
+export async function deleteTaskTemplate(id: string): Promise<void> {
+  await deleteDoc(doc(getDb(), "taskTemplates", id));
 }

@@ -311,11 +311,11 @@ service cloud.firestore {
     }
 
     match /taskTemplates/{id} {
-      allow read, create, update, delete: if isOwnerEmail();
+      allow read, create, update, delete: if isOwner() || isOwnerEmail();
     }
 
     match /taskOccurrences/{id} {
-      allow read, create, update, delete: if isOwnerEmail();
+      allow read, create, update, delete: if isOwner() || isOwnerEmail();
     }
 
     match /bonusDeductionMonths/{monthKey} {

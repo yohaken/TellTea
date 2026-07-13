@@ -149,12 +149,12 @@ function MoreView() {
             </div>
           </Link>
         ))}
-        {isAppOwnerEmail(user?.email) ? (
+        {staff?.role === "owner" || isAppOwnerEmail(user?.email) ? (
           <Link href="/tasks/" className="more-card">
             <ClipboardList size={22} />
             <div>
               <strong>งานมอบหมาย</strong>
-              <p>มอบงาน checklist + รูปหลักฐาน (ทดลอง — เจ้าของเท่านั้น)</p>
+              <p>มอบงาน checklist + รูปหลักฐาน · เจ้าของแก้ไข/ลบได้</p>
             </div>
           </Link>
         ) : null}

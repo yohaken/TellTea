@@ -17,7 +17,9 @@ import {
   Circle,
   ImageIcon,
   ListTodo,
+  Pencil,
   Plus,
+  Trash2,
   X,
 } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
@@ -28,11 +30,13 @@ import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { isAppOwnerEmail } from "@/lib/firebase";
-import { completeTaskOccurrence, subscribeTaskOccurrences } from "@/lib/task-occurrences";
+import { completeTaskOccurrence, deleteTaskOccurrences, subscribeTaskOccurrences, syncPendingOccurrencesFromTemplate } from "@/lib/task-occurrences";
 import {
   createTaskTemplate,
   deactivateTaskTemplate,
+  deleteTaskTemplate,
   subscribeTaskTemplates,
+  updateTaskTemplate,
 } from "@/lib/task-templates";
 import { runTaskOccurrenceSync } from "@/lib/task-sync";
 import type { TaskChecklistItem, TaskOccurrence, TaskTemplate } from "@/lib/task-types";
@@ -74,7 +78,7 @@ export default function TasksPage() {
 function TasksView() {
   const { actorId, staff, user } = useAuth();
   const router = useRouter();
-  const previewOnly = isAppOwnerEmail(user?.email);
+  const canManageTasks = staff?.role === "owner" || isAppOwnerEmail(user?.email);
 
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [occurrences, setOccurrences] = useState<TaskOccurrence[]>([]);
@@ -84,15 +88,16 @@ function TasksView() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<OccurrenceTab>("thisWeek");
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
   const [submitOcc, setSubmitOcc] = useState<TaskOccurrence | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const syncedRef = useRef(false);
 
   useEffect(() => {
-    if (user && staff && !previewOnly) {
+    if (user && staff && !canManageTasks) {
       router.replace("/more/");
     }
-  }, [user, staff, previewOnly, router]);
+  }, [user, staff, canManageTasks, router]);
 
   const doSync = useCallback(async (tpls: TaskTemplate[], occs: TaskOccurrence[]) => {
     setSyncing(true);
@@ -106,7 +111,7 @@ function TasksView() {
   }, []);
 
   useEffect(() => {
-    if (!previewOnly) return;
+    if (!canManageTasks) return;
     setLoading(true);
     let tplReady = false;
     let occReady = false;
@@ -149,15 +154,15 @@ function TasksView() {
       unsubTpl();
       unsubOcc();
     };
-  }, [previewOnly]);
+  }, [canManageTasks]);
 
   useEffect(() => {
-    if (!previewOnly || loading || syncedRef.current) return;
+    if (!canManageTasks || loading || syncedRef.current) return;
     syncedRef.current = true;
     void doSync(templates.filter((t) => t.active), occurrences);
-  }, [previewOnly, loading, templates, occurrences, doSync]);
+  }, [canManageTasks, loading, templates, occurrences, doSync]);
 
-  useBodyScrollLock(createOpen || !!submitOcc || !!previewUrl);
+  useBodyScrollLock(createOpen || !!editingTemplate || !!submitOcc || !!previewUrl);
 
   const visible = useMemo(() => filterOccurrencesByTab(occurrences, tab), [occurrences, tab]);
   const activeTemplates = useMemo(() => templates.filter((t) => t.active), [templates]);
@@ -166,7 +171,7 @@ function TasksView() {
   const thisWeekCount = filterOccurrencesByTab(occurrences, "thisWeek").length;
   const missedCount = filterOccurrencesByTab(occurrences, "missed").length;
 
-  if (!previewOnly) return null;
+  if (!canManageTasks) return null;
 
   return (
     <div className="module-page tasks-page">
@@ -176,7 +181,7 @@ function TasksView() {
           งานมอบหมาย
         </h1>
         <p className="muted tasks-page-hint">
-          ประจำวันในสัปดาห์ · ส่งได้ทุกวัน · รอบใหม่ทุกสัปดาห์ (โหมดทดลอง)
+          ประจำวันในสัปดาห์ · ส่งได้ทุกวัน · เจ้าของแก้ไข/ปิด/ลบกติกาได้
         </p>
       </div>
 
@@ -194,10 +199,18 @@ function TasksView() {
                     {tpl.title} · ทุก{labelWeekday(tpl.weekday)}
                     <button
                       type="button"
+                      className="tasks-template-edit"
+                      aria-label="แก้ไขกติกา"
+                      onClick={() => setEditingTemplate(tpl)}
+                    >
+                      <Pencil size={11} />
+                    </button>
+                    <button
+                      type="button"
                       className="tasks-template-off"
                       aria-label="ปิดกติกา"
                       onClick={() => {
-                        if (!window.confirm(`ปิดกติกา "${tpl.title}"?`)) return;
+                        if (!window.confirm(`ปิดกติกา "${tpl.title}"? รอบใหม่จะไม่ถูกสร้าง`)) return;
                         void deactivateTaskTemplate(tpl.id).catch((err) =>
                           setError((err as Error).message || "ปิดกติกาไม่สำเร็จ"),
                         );
@@ -249,8 +262,10 @@ function TasksView() {
                 <OccurrenceCard
                   key={occ.id}
                   occ={occ}
+                  canManage={canManageTasks}
                   onSubmit={() => setSubmitOcc(occ)}
                   onViewPhoto={(url) => setPreviewUrl(url)}
+                  onError={setError}
                 />
               ))}
             </ul>
@@ -282,13 +297,28 @@ function TasksView() {
       ) : null}
 
       {createOpen ? (
-        <CreateTemplateModal
+        <TemplateFormModal
           employees={employees}
           actorId={actorId}
           onError={setError}
           onClose={() => setCreateOpen(false)}
           onSaved={async () => {
             setCreateOpen(false);
+            syncedRef.current = false;
+          }}
+        />
+      ) : null}
+
+      {editingTemplate ? (
+        <TemplateFormModal
+          template={editingTemplate}
+          employees={employees}
+          actorId={actorId}
+          occurrences={occurrences}
+          onError={setError}
+          onClose={() => setEditingTemplate(null)}
+          onSaved={async () => {
+            setEditingTemplate(null);
             syncedRef.current = false;
           }}
         />
@@ -320,17 +350,31 @@ function TasksView() {
 
 function OccurrenceCard({
   occ,
+  canManage,
   onSubmit,
   onViewPhoto,
+  onError,
 }: {
   occ: TaskOccurrence;
+  canManage: boolean;
   onSubmit: () => void;
   onViewPhoto: (url: string) => void;
+  onError: (msg: string) => void;
 }) {
   const soon = isOccurrenceOpenSoon(occ);
   const canSubmit = canSubmitOccurrence(occ);
   const done = occ.status === "completed";
   const missed = occ.status === "missed";
+  const canDelete = canManage && !done;
+
+  async function onDelete() {
+    if (!window.confirm(`ลบรอบงาน "${occ.title}" (${formatDateShort(occ.dueDate)})?`)) return;
+    try {
+      await deleteTaskOccurrences([occ.id]);
+    } catch (err) {
+      onError((err as Error).message || "ลบรอบงานไม่สำเร็จ");
+    }
+  }
 
   return (
     <li
@@ -399,34 +443,47 @@ function OccurrenceCard({
             <ImageIcon size={14} aria-hidden /> ดูรูปหลักฐาน
           </button>
         ) : null}
+        {canDelete ? (
+          <button type="button" className="ghost-btn tasks-delete-btn" onClick={() => void onDelete()}>
+            <Trash2 size={14} aria-hidden /> ลบรอบ
+          </button>
+        ) : null}
       </div>
     </li>
   );
 }
 
-function CreateTemplateModal({
+function TemplateFormModal({
+  template,
   employees,
   actorId,
+  occurrences = [],
   onError,
   onClose,
   onSaved,
 }: {
+  template?: TaskTemplate;
   employees: Employee[];
   actorId: string;
+  occurrences?: TaskOccurrence[];
   onError: (msg: string) => void;
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [title, setTitle] = useState("");
-  const [note, setNote] = useState("");
-  const [weekday, setWeekday] = useState(1);
-  const [selected, setSelected] = useState<string[]>([]);
-  const [checklist, setChecklist] = useState<TaskChecklistItem[]>([
-    { id: newChecklistItemId(), label: "" },
-  ]);
+  const isEdit = !!template;
+  const [title, setTitle] = useState(template?.title || "");
+  const [note, setNote] = useState(template?.note || "");
+  const [weekday, setWeekday] = useState(template?.weekday ?? 1);
+  const [selected, setSelected] = useState<string[]>(template?.assigneeIds || []);
+  const [checklist, setChecklist] = useState<TaskChecklistItem[]>(
+    template?.checklist.length
+      ? template.checklist.map((c) => ({ ...c }))
+      : [{ id: newChecklistItemId(), label: "" }],
+  );
   const [busy, setBusy] = useState(false);
 
   function applyPreset(preset: (typeof TASK_PRESETS)[number]) {
+    if (isEdit) return;
     setTitle(preset.title);
     setWeekday(preset.weekday);
     setChecklist(preset.checklist.map((label) => ({ id: newChecklistItemId(), label })));
@@ -451,21 +508,72 @@ function CreateTemplateModal({
       onError("ต้องมี checklist อย่างน้อย 1 ข้อ");
       return;
     }
+    const payload = {
+      title,
+      note,
+      weekday,
+      checklist: steps,
+      assigneeIds: chosen.map((w) => w.id),
+      assigneeNames: chosen.map((w) => w.name),
+    };
     setBusy(true);
     onError("");
     try {
-      await createTaskTemplate({
-        title,
-        note,
-        weekday,
-        checklist: steps,
-        assigneeIds: chosen.map((w) => w.id),
-        assigneeNames: chosen.map((w) => w.name),
-        createdBy: actorId,
-      });
+      if (isEdit && template) {
+        await updateTaskTemplate(template.id, payload);
+        const pendingIds = occurrences
+          .filter(
+            (o) =>
+              o.templateId === template.id &&
+              (o.status === "pending" || o.status === "missed"),
+          )
+          .map((o) => o.id);
+        if (pendingIds.length) {
+          await syncPendingOccurrencesFromTemplate(
+            {
+              templateId: template.id,
+              title: payload.title.trim(),
+              note: (payload.note || "").trim(),
+              checklist: steps,
+              assigneeIds: payload.assigneeIds,
+              assigneeNames: payload.assigneeNames,
+            },
+            pendingIds,
+          );
+        }
+      } else {
+        await createTaskTemplate({ ...payload, createdBy: actorId });
+      }
       onSaved();
     } catch (err) {
-      onError((err as Error).message || "สร้างกติกาไม่สำเร็จ");
+      onError((err as Error).message || (isEdit ? "แก้ไขกติกาไม่สำเร็จ" : "สร้างกติกาไม่สำเร็จ"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDeleteTemplate() {
+    if (!template) return;
+    const pendingIds = occurrences
+      .filter(
+        (o) =>
+          o.templateId === template.id &&
+          (o.status === "pending" || o.status === "missed"),
+      )
+      .map((o) => o.id);
+    const msg =
+      pendingIds.length > 0
+        ? `ลบกติกา "${template.title}" ถาวร?\nรอบที่ยังไม่ส่ง ${pendingIds.length} รายการจะถูกลบ\nประวัติที่ส่งแล้วยังอยู่`
+        : `ลบกติกา "${template.title}" ถาวร?`;
+    if (!window.confirm(msg)) return;
+    setBusy(true);
+    onError("");
+    try {
+      if (pendingIds.length) await deleteTaskOccurrences(pendingIds);
+      await deleteTaskTemplate(template.id);
+      onSaved();
+    } catch (err) {
+      onError((err as Error).message || "ลบกติกาไม่สำเร็จ");
     } finally {
       setBusy(false);
     }
@@ -476,22 +584,28 @@ function CreateTemplateModal({
       <div className="modal-card tasks-form-card" onClick={(e) => e.stopPropagation()}>
         <form className="form-card entry-form module-entry-form tasks-entry-form" onSubmit={(e) => void onSubmit(e)}>
           <div className="entry-toolbar module-form-head">
-            <h2 className="panel-title">มอบหมายงานประจำสัปดาห์</h2>
+            <h2 className="panel-title">{isEdit ? "แก้ไขกติกางาน" : "มอบหมายงานประจำสัปดาห์"}</h2>
             <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onClose}>
               <X size={18} />
             </button>
           </div>
 
-          <div className="tasks-presets">
-            <span className="field-label">แม่แบบด่วน</span>
-            <div className="suggest-list">
-              {TASK_PRESETS.map((p) => (
-                <button key={p.title} type="button" className="suggest-chip" onClick={() => applyPreset(p)}>
-                  {p.title}
-                </button>
-              ))}
+          {!isEdit ? (
+            <div className="tasks-presets">
+              <span className="field-label">แม่แบบด่วน</span>
+              <div className="suggest-list">
+                {TASK_PRESETS.map((p) => (
+                  <button key={p.title} type="button" className="suggest-chip" onClick={() => applyPreset(p)}>
+                    {p.title}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <p className="muted form-hint-inline">
+              แก้ไขมีผลกับรอบที่ยังไม่ส่ง · ประวัติที่ส่งแล้วไม่เปลี่ยน
+            </p>
+          )}
 
           <div className="field">
             <label htmlFor="task-title">ชื่องาน</label>
@@ -578,12 +692,22 @@ function CreateTemplateModal({
 
           <div className="entry-actions module-form-actions">
             <button type="submit" className="primary-btn" disabled={busy || !employees.length}>
-              {busy ? "กำลังบันทึก..." : "สร้างกติกา"}
+              {busy ? "กำลังบันทึก..." : isEdit ? "บันทึกการแก้ไข" : "สร้างกติกา"}
             </button>
             <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
               ออก
             </button>
           </div>
+          {isEdit ? (
+            <button
+              type="button"
+              className="ghost-btn tasks-delete-template-btn"
+              disabled={busy}
+              onClick={() => void onDeleteTemplate()}
+            >
+              <Trash2 size={14} aria-hidden /> ลบกติกาถาวร
+            </button>
+          ) : null}
         </form>
       </div>
     </div>
