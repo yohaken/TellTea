@@ -10312,6 +10312,11 @@ body.modal-open .main-panel {
   color: #1a1f24;
 }
 
+.pos-receipt-paper-total-row--discount {
+  color: #b42318;
+  font-weight: 700;
+}
+
 .pos-receipt-paper-actions {
   display: grid;
   gap: 0.5rem;

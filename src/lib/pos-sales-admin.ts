@@ -22,6 +22,15 @@ function salesCol() {
 }
 
 function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
+  const subtotal = typeof data.subtotal === "number" ? data.subtotal : 0;
+  const total = typeof data.total === "number" ? data.total : 0;
+  let discountBaht = 0;
+  if (typeof data.discountBaht === "number" && data.discountBaht > 0) {
+    discountBaht = Math.round(data.discountBaht * 100) / 100;
+  } else {
+    const inferred = Math.round((subtotal - total) * 100) / 100;
+    if (inferred > 0.004) discountBaht = inferred;
+  }
   return {
     id,
     billNo: typeof data.billNo === "string" ? data.billNo : "—",
@@ -30,8 +39,9 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     date: typeof data.date === "number" ? data.date : 0,
     shift: typeof data.shift === "string" ? data.shift : "",
     lines: Array.isArray(data.lines) ? (data.lines as PosSale["lines"]) : [],
-    subtotal: typeof data.subtotal === "number" ? data.subtotal : 0,
-    total: typeof data.total === "number" ? data.total : 0,
+    subtotal,
+    ...(discountBaht > 0 ? { discountBaht } : {}),
+    total,
     paymentMethod: data.paymentMethod === "promptpay" ? "promptpay" : "cash",
     cashReceived: typeof data.cashReceived === "number" ? data.cashReceived : 0,
     change: typeof data.change === "number" ? data.change : 0,

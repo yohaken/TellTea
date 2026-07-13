@@ -183,6 +183,23 @@ function FinancialTable({
     <div className="pos-shift-fin-table">
       <h3>สรุปยอด</h3>
       <dl>
+        {summary.discountTotal > 0 ? (
+          <>
+            <div>
+              <dt>ยอดก่อนลด</dt>
+              <dd>฿{formatPlainNumber(summary.grossTotal)}</dd>
+            </div>
+            <div>
+              <dt>ส่วนลด</dt>
+              <dd>
+                -฿{formatPlainNumber(summary.discountTotal)}
+                {summary.discountCount > 0 ? (
+                  <span className="muted"> · {summary.discountCount} บิล</span>
+                ) : null}
+              </dd>
+            </div>
+          </>
+        ) : null}
         <div>
           <dt>ยอดขายสุทธิ</dt>
           <dd>฿{formatPlainNumber(summary.total)}</dd>
@@ -242,6 +259,7 @@ function ReceiptRow({
         {formatTime(receipt.createdAt)}
         {itemCount > 0 ? ` · ${itemCount} รายการ` : ""}
         {receipt.paymentMethod === "cash" ? " · สด" : " · PP"}
+        {(receipt.discountBaht || 0) > 0 ? " · ส่วนลด" : ""}
         {receipt.voided ? " · ทำลาย" : receipt.pending ? " · รอส่ง" : ""}
       </p>
       {receipt.lines?.length ? (
@@ -425,6 +443,9 @@ export function PosShiftView() {
         : {
             count: row.saleCount,
             total: row.totalSales,
+            grossTotal: row.totalSales,
+            discountTotal: 0,
+            discountCount: 0,
             cashCount: 0,
             cashTotal: row.cashTotal ?? 0,
             promptpayCount: 0,

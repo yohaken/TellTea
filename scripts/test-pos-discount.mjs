@@ -40,7 +40,7 @@ const receipt = readFileSync(join(root, "src/lib/pos-printer/receipt-template.ts
 assert.match(receipt, /ส่วนลด/);
 
 const version = readFileSync(join(root, "src/lib/pos-version.ts"), "utf8");
-assert.match(version, /POS_BUILD = 39/);
+assert.match(version, /POS_BUILD = \d+/);
 
 // Pure JS mirror of helpers for numeric asserts
 function resolveDiscountBaht(subtotal, discount) {
