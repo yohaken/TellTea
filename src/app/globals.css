@@ -6482,12 +6482,25 @@ body.modal-open .main-panel {
 
 .pos-sell-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.35rem;
+  /* ค่าเริ่มกลาง: 4 คอลัมน์ — อ่านชื่อใต้รูปได้; กลุ่มเยอะใช้ .is-dense */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem;
   align-content: start;
   overflow-y: auto;
   flex: 1;
   min-height: 0;
+}
+
+.pos-sell-grid.is-sparse {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pos-sell-grid.is-mid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pos-sell-grid.is-dense {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .pos-sell-item {
@@ -6496,10 +6509,10 @@ body.modal-open .main-panel {
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  gap: 0.15rem;
+  gap: 0.28rem;
   min-height: 0;
-  padding: 0.28rem;
-  border-radius: 0.4rem;
+  padding: 0.35rem;
+  border-radius: 0.45rem;
   border: 1px solid rgba(28, 42, 31, 0.1);
   background: #fff;
   text-align: left;
@@ -6517,19 +6530,44 @@ body.modal-open .main-panel {
   flex-shrink: 0;
 }
 
+/* จองพื้นที่ชื่อ+ราคา — ห้ามให้ภาพกินจนชื่อหาย */
+.pos-sell-item-caption {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  width: 100%;
+  min-height: 2.85rem;
+  flex-shrink: 0;
+}
+
 .pos-sell-item-name {
   font-weight: 700;
-  font-size: 0.74rem;
-  line-height: 1.2;
+  font-size: 0.84rem;
+  line-height: 1.25;
+  color: #15202b;
   white-space: normal;
   word-break: break-word;
   overflow-wrap: anywhere;
   width: 100%;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.pos-sell-grid.is-dense .pos-sell-item-name {
+  font-size: 0.78rem;
+}
+
+.pos-sell-grid.is-sparse .pos-sell-item-name {
+  font-size: 0.92rem;
 }
 
 .pos-sell-item-price {
-  font-size: 0.7rem;
-  color: rgba(28, 42, 31, 0.62);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #3d4a55;
 }
 
 .pos-sell-item-qty {
@@ -9077,12 +9115,11 @@ body.modal-open .main-panel {
 }
 
 .pos-sell-grid {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.32rem;
+  gap: 0.4rem;
 }
 
 .pos-sell-item {
-  padding: 0.28rem;
+  padding: 0.35rem;
 }
 
 .pos-sell-cats {
@@ -10948,7 +10985,16 @@ body.modal-open .main-panel {
 }
 
 @media (max-width: 1100px) {
-  .pos-sell-layout .pos-sell-grid {
+  .pos-sell-layout .pos-sell-grid.is-sparse {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .pos-sell-layout .pos-sell-grid.is-mid,
+  .pos-sell-layout .pos-sell-grid:not(.is-sparse):not(.is-dense) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .pos-sell-layout .pos-sell-grid.is-dense {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
@@ -10958,13 +11004,22 @@ body.modal-open .main-panel {
     --pos-cart-w: 19.5rem;
   }
 
-  .pos-sell-layout .pos-sell-grid {
+  .pos-sell-layout .pos-sell-grid.is-sparse,
+  .pos-sell-layout .pos-sell-grid.is-mid,
+  .pos-sell-layout .pos-sell-grid:not(.is-sparse):not(.is-dense) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .pos-sell-layout .pos-sell-grid.is-dense {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 600px) {
-  .pos-sell-layout .pos-sell-grid {
+  .pos-sell-layout .pos-sell-grid.is-sparse,
+  .pos-sell-layout .pos-sell-grid.is-mid,
+  .pos-sell-layout .pos-sell-grid.is-dense,
+  .pos-sell-layout .pos-sell-grid:not(.is-sparse):not(.is-dense) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

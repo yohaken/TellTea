@@ -532,7 +532,15 @@ export function PosSellView({
           ))}
         </div>
 
-        <div className="pos-sell-grid">
+        <div
+          className={`pos-sell-grid ${
+            visibleItems.length <= 8
+              ? "is-sparse"
+              : visibleItems.length >= 21
+                ? "is-dense"
+                : "is-mid"
+          }`}
+        >
           {visibleItems.map((item) => {
             const qty = cartLines
               .filter((l) => l.item.id === item.id)
@@ -552,15 +560,17 @@ export function PosSellView({
                 <div className="pos-sell-item-media">
                   <PosLazyMenuImage url={item.imageUrl} className="pos-sell-item-img" />
                 </div>
-                <span className="pos-sell-item-name">
-                  {item.recommended ? "★ " : ""}
-                  {item.name}
+                <span className="pos-sell-item-caption">
+                  <span className="pos-sell-item-name">
+                    {item.recommended ? "★ " : ""}
+                    {item.name}
+                  </span>
+                  {soldOut ? (
+                    <span className="pos-sell-item-soldout">ของหมด</span>
+                  ) : (
+                    <span className="pos-sell-item-price">฿{formatPlainNumber(item.price)}</span>
+                  )}
                 </span>
-                {soldOut ? (
-                  <span className="pos-sell-item-soldout">ของหมด</span>
-                ) : (
-                  <span className="pos-sell-item-price">฿{formatPlainNumber(item.price)}</span>
-                )}
                 {qty > 0 ? <span className="pos-sell-item-qty">×{qty}</span> : null}
               </button>
             );
