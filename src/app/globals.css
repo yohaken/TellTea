@@ -5774,3 +5774,240 @@ body.modal-open .main-panel {
   flex: 1 1 100%;
   font-size: 0.68rem;
 }
+
+/* ── ปิดกะ: SOP + โบนัส ── */
+.shift-today-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: var(--tea-card);
+  box-shadow: 0 8px 24px rgba(28, 42, 31, 0.05);
+}
+
+.shift-today-banner strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+.shift-today-banner.is-complete {
+  border-color: rgba(45, 106, 79, 0.25);
+  background: rgba(183, 228, 192, 0.22);
+}
+
+.shift-today-banner.is-pending {
+  border-color: rgba(196, 90, 26, 0.2);
+  background: rgba(255, 243, 230, 0.45);
+}
+
+.shift-today-btn {
+  flex-shrink: 0;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.82rem;
+}
+
+.shift-progress {
+  margin-bottom: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--tea-line);
+}
+
+.shift-progress-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  align-items: baseline;
+  margin-bottom: 0.45rem;
+}
+
+.shift-progress-title {
+  font-weight: 700;
+  font-size: 0.86rem;
+}
+
+.shift-progress-missing {
+  font-size: 0.76rem;
+}
+
+.shift-progress-done {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--tea-leaf);
+}
+
+.shift-progress-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.shift-progress-step {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 0.55rem;
+  background: rgba(28, 42, 31, 0.03);
+}
+
+.shift-progress-step.is-done {
+  background: rgba(183, 228, 192, 0.35);
+  color: #1b4332;
+  font-weight: 600;
+}
+
+.shift-progress-step.is-pending {
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.shift-progress-dot {
+  width: 1.1rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+.shift-owner-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+
+.shift-owner-flag {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 235, 200, 0.8);
+  color: #8a4b12;
+  font-weight: 600;
+}
+
+.shift-sop-section {
+  margin-bottom: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--tea-line);
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.shift-sop-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.shift-sop-title {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.shift-sop-meta {
+  font-size: 0.72rem;
+}
+
+.shift-sop-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.shift-sop-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 0.5rem;
+  align-items: center;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--tea-line);
+}
+
+.shift-sop-row:last-child {
+  border-bottom: 0;
+}
+
+.shift-sop-row.is-pending {
+  background: rgba(255, 243, 230, 0.35);
+  border-radius: 0.45rem;
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
+}
+
+.shift-sop-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.shift-sop-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.shift-sop-remark {
+  grid-column: 1 / -1;
+  width: 100%;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--tea-line);
+}
+
+.suggest-chip.is-fail.is-active {
+  background: rgba(255, 220, 220, 0.85);
+  border-color: rgba(196, 45, 45, 0.35);
+  color: #8b1e1e;
+}
+
+.ot-table tr.ot-slot-partial td {
+  background: rgba(255, 243, 230, 0.28);
+}
+
+.ot-table tr.ot-slot-complete td {
+  background: rgba(183, 228, 192, 0.18);
+}
+
+.ot-shift-pill {
+  display: inline-block;
+  margin-left: 0.25rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.ot-shift-pill.is-empty {
+  background: rgba(28, 42, 31, 0.08);
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.ot-shift-pill.is-planned {
+  background: rgba(30, 90, 140, 0.12);
+  color: #1e5a8c;
+}
+
+.ot-shift-pill.is-partial {
+  background: rgba(196, 90, 26, 0.15);
+  color: #9a4e12;
+}
+
+.ot-shift-pill.is-complete {
+  background: rgba(45, 106, 79, 0.15);
+  color: #1b4332;
+}
+
+.ot-owner-hint-pill {
+  margin-left: 0.2rem;
+  font-size: 0.65rem;
+  opacity: 0.85;
+  cursor: help;
+}

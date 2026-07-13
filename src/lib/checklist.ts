@@ -17,6 +17,10 @@ import { getDb } from "./firebase";
 
 export type CheckShiftId = "late" | "morning" | "evening";
 
+export type ChecklistItemTiming = "opening" | "closing" | "during";
+
+export type CheckSessionKind = "opening" | "closing" | "full";
+
 export const CHECK_SHIFTS: { id: CheckShiftId; label: string }[] = [
   { id: "late", label: "ดึก 0.3–7" },
   { id: "morning", label: "เช้า 7–17" },
@@ -32,6 +36,8 @@ export type ChecklistItem = {
   groupLabel: string;
   sortOrder: number;
   active: boolean;
+  /** จังหวะเช็ค — เปิดกะ / ปิดกะ / ระหว่างกะ */
+  timing?: ChecklistItemTiming;
   createdAt: number;
   updatedAt: number;
 };
@@ -42,6 +48,7 @@ export type ChecklistRecord = {
   checkId: string;
   date: number;
   shift: CheckShiftId;
+  sessionKind?: CheckSessionKind;
   inspector: string;
   inspectorId: string;
   itemId: string;
@@ -58,6 +65,7 @@ export type ChecklistRecordInput = {
   checkId: string;
   date: number;
   shift: CheckShiftId;
+  sessionKind?: CheckSessionKind;
   inspector: string;
   inspectorId: string;
   itemId: string;
@@ -81,23 +89,47 @@ export type CheckSessionSummary = {
   failRecords: ChecklistRecord[];
 };
 
-export const DEFAULT_CHECKLIST_ITEMS: { name: string; groupLabel: string }[] = [
-  { name: "กลุ่มเบสนม", groupLabel: "วัตถุดิบหลัก" },
-  { name: "กลุ่มเบสชา", groupLabel: "วัตถุดิบหลัก" },
-  { name: "ครีมชีส", groupLabel: "วัตถุดิบหลัก" },
-  { name: "ขนมปัง", groupLabel: "วัตถุดิบหลัก" },
-  { name: "ไอศกรีม", groupLabel: "วัตถุดิบหลัก" },
-  { name: "นมสด", groupLabel: "วัตถุดิบหลัก" },
-  { name: "วัตถุดิบอื่น", groupLabel: "วัตถุดิบเสริม" },
-  { name: "น้ำเต้าหู้", groupLabel: "วัตถุดิบเสริม" },
-  { name: "น้ำมะพร้าว", groupLabel: "วัตถุดิบเสริม" },
-  { name: "ท็อปปิ้งในตู้เย็น", groupLabel: "วัตถุดิบเสริม" },
-  { name: "เครื่องไอศกรีม", groupLabel: "เครื่องจักร" },
-  { name: "แอร์ ความเย็น", groupLabel: "สภาพร้าน" },
-  { name: "กลิ่นภายในร้าน", groupLabel: "สภาพร้าน" },
-  { name: "เปิดปิดเมนูตัวเลือกให้ถูกต้องทุกแอพ", groupLabel: "ระบบ/แอพ" },
-  { name: "เครื่องกาแฟ ล้าง เช็ค ปรับปรุง", groupLabel: "เครื่องจักร" },
+export const DEFAULT_CHECKLIST_ITEMS: {
+  name: string;
+  groupLabel: string;
+  timing: ChecklistItemTiming;
+}[] = [
+  { name: "กลุ่มเบสนม", groupLabel: "วัตถุดิบหลัก", timing: "opening" },
+  { name: "กลุ่มเบสชา", groupLabel: "วัตถุดิบหลัก", timing: "opening" },
+  { name: "ครีมชีส", groupLabel: "วัตถุดิบหลัก", timing: "opening" },
+  { name: "ขนมปัง", groupLabel: "วัตถุดิบหลัก", timing: "opening" },
+  { name: "ไอศกรีม", groupLabel: "วัตถุดิบหลัก", timing: "opening" },
+  { name: "แอร์ ความเย็น", groupLabel: "สภาพร้าน", timing: "opening" },
+  { name: "เปิดปิดเมนูตัวเลือกให้ถูกต้องทุกแอพ", groupLabel: "ระบบ/แอพ", timing: "opening" },
+  { name: "นมสด", groupLabel: "วัตถุดิบหลัก", timing: "during" },
+  { name: "วัตถุดิบอื่น", groupLabel: "วัตถุดิบเสริม", timing: "during" },
+  { name: "น้ำเต้าหู้", groupLabel: "วัตถุดิบเสริม", timing: "during" },
+  { name: "น้ำมะพร้าว", groupLabel: "วัตถุดิบเสริม", timing: "during" },
+  { name: "ท็อปปิ้งในตู้เย็น", groupLabel: "วัตถุดิบเสริม", timing: "during" },
+  { name: "เครื่องไอศกรีม", groupLabel: "เครื่องจักร", timing: "closing" },
+  { name: "กลิ่นภายในร้าน", groupLabel: "สภาพร้าน", timing: "closing" },
+  { name: "เครื่องกาแฟ ล้าง เช็ค ปรับปรุง", groupLabel: "เครื่องจักร", timing: "closing" },
 ];
+
+const DEFAULT_TIMING_BY_NAME = new Map(
+  DEFAULT_CHECKLIST_ITEMS.map((i) => [i.name, i.timing]),
+);
+
+export function resolveItemTiming(item: Pick<ChecklistItem, "name" | "timing">): ChecklistItemTiming {
+  if (item.timing === "opening" || item.timing === "closing" || item.timing === "during") {
+    return item.timing;
+  }
+  return DEFAULT_TIMING_BY_NAME.get(item.name) || "during";
+}
+
+export function listItemsForTiming(
+  items: ChecklistItem[],
+  timing: ChecklistItemTiming,
+): ChecklistItem[] {
+  return items
+    .filter((i) => i.active && resolveItemTiming(i) === timing)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+}
 
 function itemsCol() {
   return collection(getDb(), "checklistItems");
@@ -144,6 +176,7 @@ export async function seedChecklistItemsIfEmpty(): Promise<boolean> {
     batch.set(ref, {
       name: item.name,
       groupLabel: item.groupLabel,
+      timing: item.timing,
       sortOrder: idx,
       active: true,
       createdAt: now,
@@ -281,6 +314,7 @@ export async function submitChecklistBatch(
       checkId: row.checkId,
       date: row.date,
       shift: row.shift,
+      sessionKind: row.sessionKind || "full",
       inspector: row.inspector,
       inspectorId: row.inspectorId,
       itemId: row.itemId,
