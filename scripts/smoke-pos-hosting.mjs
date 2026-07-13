@@ -23,6 +23,12 @@ if (!fs.existsSync(path.join(OUT_POS, "pos", "menu", "index.html"))) {
   ok("POS /pos/menu/");
 }
 
+if (!fs.existsSync(path.join(OUT_POS, "pos", "settings", "index.html"))) {
+  fail("out-pos/pos/settings/index.html missing");
+} else {
+  ok("POS /pos/settings/");
+}
+
 
 if (!fs.existsSync(path.join(OUT_POS, "_next"))) {
   fail("out-pos/_next missing");

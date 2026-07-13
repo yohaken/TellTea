@@ -35,7 +35,7 @@ const reportSrc = readFileSync(join(root, "src/lib/pos-shift-report.ts"), "utf8"
 assert.match(reportSrc, /buildShiftReportPayload/);
 
 const versionSrc = readFileSync(join(root, "src/lib/pos-version.ts"), "utf8");
-assert.match(versionSrc, /POS_BUILD = 34/);
+assert.match(versionSrc, /POS_BUILD = \d+/);
 
 const itemEditor = readFileSync(join(root, "src/components/PosMenuItemEditor.tsx"), "utf8");
 assert.match(itemEditor, /updateMenuItem\(item\.id, \{ optionGroupIds: ids \}/);

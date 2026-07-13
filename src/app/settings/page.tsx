@@ -86,6 +86,9 @@ function SettingsView() {
           <AppUpdateSetup onError={setError} />
           <PosDeviceSetup onError={setError} />
           <PosShopInfoSetup onError={setError} />
+          <p className="muted" style={{ margin: "-0.35rem 0 0.75rem", fontSize: "0.82rem" }}>
+            บนแท็บเล็ต POS แก้ได้เร็วที่เมนู &quot;ตั้งค่ากิจการ&quot;
+          </p>
           <PosSalesSetup onError={setError} />
           <PosPaymentSetup onError={setError} />
           <PosPrinterSetup onError={setError} />
