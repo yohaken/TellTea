@@ -411,6 +411,10 @@ export function PosSellView({
               onPointerLeave={clearHoldTimer}
               onPointerCancel={clearHoldTimer}
             >
+              {item.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.imageUrl} alt="" className="pos-sell-item-img" />
+              ) : null}
               <span className="pos-sell-item-name">
                 {item.recommended ? "★ " : ""}
                 {item.name}

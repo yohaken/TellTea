@@ -26,6 +26,7 @@
 - `menuCategories`, `menuItems`, `menuOptionGroups`
 - หน้า `/pos/menu/` — หมวดหมู่ · กลุ่มตัวเลือก · แก้ไขเมนู
 - ตอนขาย — popup เลือกตัวเลือก · บันทึกใน `posSales.lines[].options`
+- **POS 4** — อัปโหลดรูปเมนู (Firebase Storage `pos-menu/`) · ลากเรียงลำดับ · ราคาหน้าร้านช่องทางเดียว
 
 ## บันทึกขาย (local-first)
 

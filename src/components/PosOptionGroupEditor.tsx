@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { ArrowLeft, Plus, Trash2, X } from "lucide-react";
+import { PosSortableList } from "@/components/PosSortableList";
 import {
   createMenuOptionChoice,
   saveMenuOptionGroupFull,
@@ -152,28 +153,45 @@ export function PosOptionGroupEditor({
           </button>
         </div>
 
-        <ul className="pos-menu-option-rows">
-          {options.map((opt) => (
-            <li key={opt.id}>
-              <input
-                value={opt.name}
-                placeholder="ชื่อตัวเลือก"
-                onChange={(e) => updateOption(opt.id, { name: e.target.value })}
-              />
-              <input
-                type="number"
-                min={0}
-                step={0.01}
-                value={opt.priceDelta}
-                onChange={(e) => updateOption(opt.id, { priceDelta: Number(e.target.value) || 0 })}
-                title="ราคาเพิ่ม"
-              />
-              <button type="button" className="ghost-btn" onClick={() => removeOption(opt.id)} aria-label="ลบ">
-                <X size={16} />
-              </button>
-            </li>
-          ))}
-        </ul>
+        <p className="muted pos-menu-sort-hint">ลาก ≡ เพื่อเรียงลำดับตัวเลือก</p>
+
+        <PosSortableList
+          ids={options.map((o) => o.id)}
+          onReorder={(ids) => {
+            const byId = new Map(options.map((o) => [o.id, o]));
+            setOptions(ids.map((id) => byId.get(id)).filter((o): o is MenuOptionChoice => o != null));
+          }}
+          className="pos-menu-option-rows"
+          renderItem={(optId) => {
+            const opt = options.find((o) => o.id === optId);
+            if (!opt) return null;
+            return (
+              <>
+                <input
+                  value={opt.name}
+                  placeholder="ชื่อตัวเลือก"
+                  onChange={(e) => updateOption(opt.id, { name: e.target.value })}
+                />
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={opt.priceDelta}
+                  onChange={(e) => updateOption(opt.id, { priceDelta: Number(e.target.value) || 0 })}
+                  title="ราคาเพิ่ม"
+                />
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  onClick={() => removeOption(opt.id)}
+                  aria-label="ลบ"
+                >
+                  <X size={16} />
+                </button>
+              </>
+            );
+          }}
+        />
 
         {error ? <p className="error-text">{error}</p> : null}
 
