@@ -28,6 +28,12 @@ import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { PosPayOrderReview } from "@/components/PosPayOrderReview";
 import { PosCashKeypad, parseCashAmount } from "@/components/PosCashKeypad";
 import { PosLazyMenuImage } from "@/components/PosLazyMenuImage";
+import { PosDiscountModal } from "@/components/PosDiscountModal";
+import {
+  payableAfterDiscount,
+  resolveDiscountBaht,
+  type PosCartDiscount,
+} from "@/lib/pos-discount";
 
 function useSessionElapsedLabel(openedAt: number) {
   const [now, setNow] = useState(() => Date.now());
@@ -97,6 +103,8 @@ export function PosSellView({
   const [receiptStaffName, setReceiptStaffName] = useState(initialShop.receiptStaffName);
   const [receiptFooterNote, setReceiptFooterNote] = useState(initialShop.receiptFooterNote);
   const [confirmSoldOut, setConfirmSoldOut] = useState<MenuItem | null>(null);
+  const [cartDiscount, setCartDiscount] = useState<PosCartDiscount | null>(null);
+  const [discountOpen, setDiscountOpen] = useState(false);
   const [picker, setPicker] = useState<{
     item: MenuItem;
     editCartKey?: string;
@@ -178,8 +186,19 @@ export function PosSellView({
     };
   }, [pendingBills, session.id, session.saleCount, session.totalSales]);
 
-  const total = cartLines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
+  const subtotal = cartLines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
+  const discountBaht = resolveDiscountBaht(subtotal, cartDiscount);
+  const total = payableAfterDiscount(subtotal, cartDiscount);
   const cashNum = parseCashAmount(cashInput);
+
+  useEffect(() => {
+    if (cartCount === 0 && cartDiscount) setCartDiscount(null);
+  }, [cartCount, cartDiscount]);
+
+  useEffect(() => {
+    if (!cartDiscount) return;
+    if (resolveDiscountBaht(subtotal, cartDiscount) <= 0) setCartDiscount(null);
+  }, [subtotal, cartDiscount]);
 
   function cancelHoldTimer() {
     if (holdTimerRef.current != null) {
@@ -395,6 +414,8 @@ export function PosSellView({
         shopPhone,
         billNo: result.billNo,
         lines,
+        subtotal,
+        discountBaht: discountBaht > 0 ? discountBaht : undefined,
         total: result.total,
         paymentMethod,
         cashReceived: paymentMethod === "cash" ? cashNum : 0,
@@ -408,6 +429,7 @@ export function PosSellView({
       { deviceId, printReceipt: autoPrintReceipt },
     );
     setCart({});
+    setCartDiscount(null);
     closePay();
     playPosSaleChime();
     const changeText =
@@ -430,6 +452,7 @@ export function PosSellView({
         shift: session.shift,
         lines,
         cashReceived: cashNum,
+        discountBaht,
       });
       afterSaleSuccess(result, "cash", lines);
     } catch (err) {
@@ -446,6 +469,7 @@ export function PosSellView({
         sessionId: session.id,
         shift: session.shift,
         lines,
+        discountBaht,
       });
       afterSaleSuccess(result, "promptpay", lines);
     } catch (err) {
@@ -637,8 +661,22 @@ export function PosSellView({
 
         <footer className="pos-cart-foot">
           <div className="pos-cart-totals">
+            {discountBaht > 0 ? (
+              <>
+                <div className="pos-cart-total-row pos-cart-total-row--sub">
+                  <span className="pos-cart-total-label">รวม {cartCount} รายการ</span>
+                  <span className="pos-cart-total-sub">฿{formatPlainNumber(subtotal)}</span>
+                </div>
+                <div className="pos-cart-total-row pos-cart-total-row--sub">
+                  <span className="pos-cart-total-label">ส่วนลด</span>
+                  <span className="pos-cart-total-discount">-฿{formatPlainNumber(discountBaht)}</span>
+                </div>
+              </>
+            ) : null}
             <div className="pos-cart-total-row">
-              <span className="pos-cart-total-label">{cartCount} รายการ</span>
+              <span className="pos-cart-total-label">
+                {discountBaht > 0 ? "ยอดสุทธิ" : `${cartCount} รายการ`}
+              </span>
               <strong className="pos-cart-total-amount">฿{formatPlainNumber(total)}</strong>
             </div>
           </div>
@@ -647,9 +685,14 @@ export function PosSellView({
               <PauseCircle size={18} aria-hidden />
               ส่งค้างไว้
             </button>
-            <button type="button" className="pos-cart-secondary-btn" disabled title="เร็วๆ นี้">
+            <button
+              type="button"
+              className={`pos-cart-secondary-btn ${discountBaht > 0 ? "is-active" : ""}`}
+              disabled={!cartCount}
+              onClick={() => setDiscountOpen(true)}
+            >
               <Tag size={18} aria-hidden />
-              โปรโมชั่น
+              {discountBaht > 0 ? `ส่วนลด ฿${formatPlainNumber(discountBaht)}` : "ส่วนลด"}
             </button>
           </div>
           <button
@@ -705,6 +748,18 @@ export function PosSellView({
         />
       ) : null}
 
+      {discountOpen ? (
+        <PosDiscountModal
+          subtotal={subtotal}
+          initial={cartDiscount}
+          onCancel={() => setDiscountOpen(false)}
+          onApply={(next) => {
+            setCartDiscount(next);
+            setDiscountOpen(false);
+          }}
+        />
+      ) : null}
+
       {payOpen ? (
         <div className="pos-pay-modal" role="dialog" aria-modal="true">
           <div className="pos-pay-sheet">
@@ -722,7 +777,12 @@ export function PosSellView({
               </div>
 
               <div className="pos-pay-order-scroll">
-                <PosPayOrderReview lines={cartLines} total={total} />
+                <PosPayOrderReview
+                  lines={cartLines}
+                  total={total}
+                  subtotal={subtotal}
+                  discountBaht={discountBaht}
+                />
               </div>
 
               <div className="pos-pay-sheet-body">

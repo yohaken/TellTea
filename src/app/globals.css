@@ -6856,6 +6856,110 @@ body.modal-open .main-panel {
   background: #fff;
 }
 
+.pos-pay-order-discount {
+  margin: 0;
+  padding: 0.25rem 0.6rem 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.pos-discount-sheet {
+  width: min(100%, 24rem);
+  max-height: min(92dvh, 42rem);
+}
+
+.pos-discount-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-bottom: 0.5rem;
+}
+
+.pos-discount-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+}
+
+.pos-discount-mode button {
+  min-height: 2.55rem;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 0.5rem;
+  background: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pos-discount-mode button.is-active {
+  background: #1e2d3d;
+  border-color: #1e2d3d;
+  color: #fff;
+}
+
+.pos-discount-display {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.55rem;
+  background: #f0f4f8;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.pos-discount-display-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #5c6670;
+}
+
+.pos-discount-display-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.pos-discount-presets {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.pos-discount-preset {
+  min-height: 2.4rem;
+  border: 1px solid rgba(45, 127, 224, 0.28);
+  border-radius: 0.45rem;
+  background: rgba(45, 127, 224, 0.08);
+  color: #1c4f8f;
+  font: inherit;
+  font-weight: 800;
+  font-size: 0.88rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pos-discount-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.3rem;
+}
+
+.pos-discount-result {
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+@media (max-width: 420px) {
+  .pos-discount-presets {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 .pos-pay-order-list {
   list-style: none;
   margin: 0;
@@ -8863,6 +8967,27 @@ body.modal-open .main-panel {
 .pos-cart-total-amount {
   font-size: 1.15rem;
   font-weight: 800;
+}
+
+.pos-cart-total-row--sub {
+  margin-bottom: 0.15rem;
+}
+
+.pos-cart-total-sub {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #5c6670;
+}
+
+.pos-cart-total-discount {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #c62828;
+}
+
+.pos-cart-secondary-btn.is-active {
+  background: #fff4ee;
+  border-color: var(--pos-accent-orange);
 }
 
 .pos-cart-actions-secondary {

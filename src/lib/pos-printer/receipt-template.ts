@@ -354,7 +354,12 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
     <hr class="rule" />
     <div class="totals">
       <div class="total-row"><span>จำนวน:</span><span>${itemCount}</span></div>
-      <div class="total-row"><span>รวม:</span><span>${formatMoney(data.total)}</span></div>
+      <div class="total-row"><span>รวม:</span><span>${formatMoney(data.subtotal ?? data.total)}</span></div>
+      ${
+        data.discountBaht && data.discountBaht > 0
+          ? `<div class="total-row"><span>ส่วนลด</span><span>-${formatMoney(data.discountBaht)}</span></div>`
+          : ""
+      }
       <hr class="rule double" />
       <div class="total-row grand"><span>ยอดสุทธิ:</span><span>${formatMoney(data.total)}</span></div>
       <hr class="rule double" />

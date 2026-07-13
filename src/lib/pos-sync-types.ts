@@ -8,6 +8,8 @@ export type PosSaleMutationPayload = {
   lines: PosSaleLine[];
   paymentMethod: PosSalePaymentMethod;
   cashReceived: number;
+  /** ส่วนลดเป็นบาท (0 = ไม่ลด) */
+  discountBaht?: number;
 };
 
 export type PosOutboxStatus = "pending" | "failed";

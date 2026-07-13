@@ -93,9 +93,12 @@ async function completePosSaleAdmin(db, data, uid) {
   }
 
   const paymentMethod = data?.paymentMethod === "promptpay" ? "promptpay" : "cash";
-  const subtotal = lines.reduce((sum, l) => sum + l.price * l.qty, 0);
-  const total = Math.round(subtotal * 100) / 100;
-  if (total <= 0) {
+  const subtotal = Math.round(lines.reduce((sum, l) => sum + l.price * l.qty, 0) * 100) / 100;
+  let discountBaht = Math.round(Number(data?.discountBaht || 0) * 100) / 100;
+  if (!Number.isFinite(discountBaht) || discountBaht < 0) discountBaht = 0;
+  if (discountBaht > subtotal) discountBaht = subtotal;
+  const total = Math.round((subtotal - discountBaht) * 100) / 100;
+  if (total < 0) {
     throw new HttpsError("invalid-argument", "ยอดขายไม่ถูกต้อง");
   }
 
@@ -141,7 +144,8 @@ async function completePosSaleAdmin(db, data, uid) {
       date,
       shift: data.shift,
       lines,
-      subtotal: total,
+      subtotal,
+      discountBaht,
       total,
       paymentMethod,
       cashReceived,

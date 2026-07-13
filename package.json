@@ -15,6 +15,7 @@
     "test:pos-shift-keypad": "node scripts/test-pos-shift-keypad.mjs",
     "test:pos-business-settings": "node scripts/test-pos-business-settings.mjs",
     "test:pos-clock-in": "node scripts/test-pos-clock-in.mjs",
+    "test:pos-discount": "node scripts/test-pos-discount.mjs",
     "test:pos-receipt-layout": "node scripts/test-pos-receipt-layout.mjs",
     "test:pos-menu-e2e": "node scripts/test-pos-menu-e2e.mjs",
     "test:pos-nav-e2e": "node scripts/test-pos-nav-e2e.mjs",

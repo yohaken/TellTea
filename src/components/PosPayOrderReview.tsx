@@ -13,8 +13,19 @@ function modLines(selections: PosCartLine["selections"]): string[] {
   return [...tallies.entries()].map(([name, n]) => (n > 1 ? `${name} ×${n}` : name));
 }
 
-export function PosPayOrderReview({ lines, total }: { lines: PosCartLine[]; total: number }) {
+export function PosPayOrderReview({
+  lines,
+  total,
+  subtotal,
+  discountBaht,
+}: {
+  lines: PosCartLine[];
+  total: number;
+  subtotal?: number;
+  discountBaht?: number;
+}) {
   const count = lines.reduce((n, l) => n + l.qty, 0);
+  const showDiscount = discountBaht != null && discountBaht > 0;
 
   return (
     <section className="pos-pay-order-review" aria-label="สรุปออเดอร์">
@@ -22,6 +33,12 @@ export function PosPayOrderReview({ lines, total }: { lines: PosCartLine[]; tota
         <span>{count} รายการ</span>
         <strong>฿{formatPlainNumber(total)}</strong>
       </div>
+      {showDiscount ? (
+        <p className="pos-pay-order-discount muted">
+          รวม ฿{formatPlainNumber(subtotal ?? total + discountBaht)} · ส่วนลด -฿
+          {formatPlainNumber(discountBaht)}
+        </p>
+      ) : null}
       <ul className="pos-pay-order-list">
         {lines.map((l) => {
           const mods = modLines(l.selections);
