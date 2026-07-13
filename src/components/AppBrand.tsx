@@ -5,12 +5,16 @@ export function AppBrand({
   className,
   compact = false,
   showLogo = true,
+  versionLabel,
 }: {
   className?: string;
   compact?: boolean;
   /** แสดงไอคอนโลโก้ข้างชื่อ */
   showLogo?: boolean;
+  /** Override version line (e.g. POS build on tablet app) */
+  versionLabel?: string;
 }) {
+  const label = versionLabel ?? appVersionLabel();
   return (
     <div className={cn("brand-wrap", compact && "brand-wrap-compact", className)}>
       {showLogo ? (
@@ -24,8 +28,8 @@ export function AppBrand({
       ) : null}
       <p className={cn("brand", compact && "brand-compact")}>
         <span className="brand-name">Tell Tea</span>{" "}
-        <span className="brand-version" title={`build ${appVersionLabel()}`}>
-          {appVersionLabel()}
+        <span className="brand-version" title={`build ${label}`}>
+          {label}
         </span>
       </p>
     </div>

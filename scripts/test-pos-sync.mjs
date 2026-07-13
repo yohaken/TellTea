@@ -44,7 +44,8 @@ assert.match(outboxSrc, /telltea-pos-sync/);
 const salesSrc = await import("node:fs").then((fs) =>
   fs.readFileSync(new URL("../src/lib/pos-sales.ts", import.meta.url), "utf8"),
 );
-assert.match(salesSrc, /enqueueSale/);
+assert.match(salesSrc, /recordSaleInstant/);
+assert.match(salesSrc, /stagePendingSale/);
 assert.match(salesSrc, /runPosSyncFlush/);
 assert.doesNotMatch(salesSrc, /invokePosCompleteSale/);
 

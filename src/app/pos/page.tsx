@@ -321,7 +321,7 @@ export default function PosPage() {
         onReload={performReload}
       />
       <header className="pos-lite-header">
-        <AppBrand compact showLogo />
+        <AppBrand compact showLogo versionLabel={posVersionLabel()} />
         <div className="pos-lite-header-end">
           <span
             className={`pos-lite-pill ${hardware.printerReady ? "pos-lite-pill--ok" : "pos-lite-pill--warn"}`}
