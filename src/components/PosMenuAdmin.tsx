@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { ArrowLeft, ChevronDown, Pencil, Plus } from "lucide-react";
+import { PosHardLink } from "@/components/PosHardLink";
+import { ensurePosDeviceAuth } from "@/lib/pos-auth";
 import { PosMenuItemEditor } from "@/components/PosMenuItemEditor";
 import { PosOptionGroupEditor } from "@/components/PosOptionGroupEditor";
 import { PosSortableList } from "@/components/PosSortableList";
@@ -39,8 +40,24 @@ export function PosMenuAdmin() {
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
+    let alive = true;
+    void ensurePosDeviceAuth()
+      .then(() => {
+        if (alive) setAuthReady(true);
+      })
+      .catch((e) => {
+        if (alive) setError((e as Error).message);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!authReady) return;
     const u1 = subscribeMenuCategories(setCategories, (e) => setError(e.message));
     const u2 = subscribeMenuItems(setItems, (e) => setError(e.message));
     const u3 = subscribeMenuOptionGroups(setOptionGroups, (e) => setError(e.message));
@@ -49,7 +66,7 @@ export function PosMenuAdmin() {
       u2();
       u3();
     };
-  }, []);
+  }, [authReady]);
 
   const itemsByCat = useMemo(() => {
     const map = new Map<string, MenuItem[]>();
@@ -157,15 +174,15 @@ export function PosMenuAdmin() {
   return (
     <div className="pos-menu-admin">
       <header className="pos-menu-admin-top">
-        <Link href="/pos/" className="ghost-btn pos-menu-back">
+        <PosHardLink href="/pos/" className="ghost-btn pos-menu-back">
           <ArrowLeft size={18} aria-hidden />
           ขาย
-        </Link>
+        </PosHardLink>
         <h1>เมนู</h1>
         <button
           type="button"
           className="ghost-btn"
-          disabled={busy}
+          disabled={busy || !authReady}
           onClick={() => void (tab === "categories" ? handleAddCategory() : handleAddGroup())}
           title="เพิ่ม"
         >
@@ -191,8 +208,9 @@ export function PosMenuAdmin() {
       </div>
 
       {error ? <p className="error-text pos-menu-admin-error">{error}</p> : null}
+      {!authReady && !error ? <p className="muted pos-menu-loading">กำลังเชื่อมต่อเมนู...</p> : null}
 
-      {tab === "categories" ? (
+      {authReady && tab === "categories" ? (
         <>
           <p className="muted pos-menu-sort-hint">ลาก ≡ เพื่อเรียงลำดับหมวดและเมนู</p>
           {categories.length ? (
@@ -272,7 +290,7 @@ export function PosMenuAdmin() {
             <p className="muted pos-menu-empty">เพิ่มหมวดแรกด้วยปุ่ม +</p>
           )}
         </>
-      ) : (
+      ) : authReady ? (
         <>
           <p className="muted pos-menu-sort-hint">ลาก ≡ เพื่อเรียงลำดับกลุ่ม</p>
           {optionGroups.length ? (
@@ -300,7 +318,7 @@ export function PosMenuAdmin() {
             <p className="muted pos-menu-empty">เพิ่มกลุ่มตัวเลือกด้วยปุ่ม +</p>
           )}
         </>
-      )}
+      ) : null}
     </div>
   );
 }

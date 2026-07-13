@@ -7056,6 +7056,12 @@ body.modal-open .main-panel {
   font-weight: 600;
 }
 
+.pos-menu-loading {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  margin: 0;
+}
+
 .pos-menu-admin {
   min-height: 100dvh;
   background: #f4f7f4;

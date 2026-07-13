@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Printer, Settings, Wifi, WifiOff } from "lucide-react";
-import Link from "next/link";
+import { PosHardLink } from "@/components/PosHardLink";
 import { AppBrand } from "@/components/AppBrand";
 import { PosUpdateWatcher } from "@/components/PosUpdateWatcher";
 import { PosPendingSyncPanel } from "@/components/PosPendingSyncPanel";
@@ -325,10 +325,10 @@ export default function PosPage() {
         <AppBrand compact showLogo versionLabel={posVersionLabel()} />
         <div className="pos-lite-header-end">
           {status === "ready" ? (
-            <Link href="/pos/menu/" className="ghost-btn pos-menu-nav-btn" title="จัดการเมนู">
+            <PosHardLink href="/pos/menu/" className="ghost-btn pos-menu-nav-btn" title="จัดการเมนู">
               <Settings size={16} aria-hidden />
               <span className="pos-menu-nav-label">เมนู</span>
-            </Link>
+            </PosHardLink>
           ) : null}
           <span
             className={`pos-lite-pill ${hardware.printerReady ? "pos-lite-pill--ok" : "pos-lite-pill--warn"}`}

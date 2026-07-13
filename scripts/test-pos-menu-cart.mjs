@@ -80,6 +80,9 @@ assert.match(itemEditorSrc, /prepareMenuItemImage/);
 assert.match(itemEditorSrc, /PosMenuImageCropModal/);
 
 const firebaseJson = readFileSync(join(root, "firebase.json"), "utf8");
+assert.match(readFileSync(join(root, "src/components/PosHardLink.tsx"), "utf8"), /PosHardLink/);
+assert.match(readFileSync(join(root, "src/app/pos/page.tsx"), "utf8"), /PosHardLink/);
+assert.doesNotMatch(readFileSync(join(root, "src/app/pos/page.tsx"), "utf8"), /from "next\/link"/);
 assert.doesNotMatch(firebaseJson, /"storage"/);
 
 function reorderById(ids, draggedId, targetId) {
