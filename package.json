@@ -19,6 +19,7 @@
     "test:pos-e2e-all": "node scripts/test-pos-e2e-all.mjs",
     "test:pos-menu-catalog-sim": "node scripts/test-pos-menu-catalog-sim.mjs",
     "seed:pos-menu-catalog": "node scripts/seed-pos-menu-catalog.mjs",
+    "seed:pos-menu-images": "node scripts/seed-pos-menu-images.mjs",
     "verify:pos-menu-catalog": "node scripts/verify-pos-menu-catalog.mjs",
     "start": "next start",
     "lint": "eslint",
@@ -48,6 +49,7 @@
     "firebase-tools": "^15.23.0",
     "google-auth-library": "^10.9.0",
     "playwright": "^1.61.1",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
