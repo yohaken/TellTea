@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ShoppingCart, X } from "lucide-react";
-import { subscribeMenuCategories, subscribeMenuItems } from "@/lib/pos-menu";
+import { seedPosMenuIfEmpty, subscribeMenuCategories, subscribeMenuItems } from "@/lib/pos-menu";
 import { completeCashSale } from "@/lib/pos-sales";
 import { labelOtShift } from "@/lib/ot";
 import type { MenuCategory, MenuItem, PosSaleLine, PosSession } from "@/lib/types";
@@ -19,6 +19,8 @@ export function PosSellView({
 }) {
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
+  const [menuLoading, setMenuLoading] = useState(true);
+  const [menuError, setMenuError] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState("");
   const [cart, setCart] = useState<Record<string, CartLine>>({});
   const [payOpen, setPayOpen] = useState(false);
@@ -28,8 +30,29 @@ export function PosSellView({
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubCat = subscribeMenuCategories(setCategories);
-    const unsubItems = subscribeMenuItems((list) => setItems(list.filter((i) => i.active)), undefined, true);
+    void seedPosMenuIfEmpty().catch((err) => {
+      setMenuError((err as Error).message || "โหลดเมนูไม่สำเร็จ");
+      setMenuLoading(false);
+    });
+
+    const unsubCat = subscribeMenuCategories(
+      (list) => {
+        setCategories(list);
+        setMenuLoading(false);
+        setMenuError(null);
+      },
+      (err) => {
+        setMenuError(err.message);
+        setMenuLoading(false);
+      },
+    );
+    const unsubItems = subscribeMenuItems(
+      (list) => setItems(list.filter((i) => i.active)),
+      (err) => {
+        setMenuError(err.message);
+        setMenuLoading(false);
+      },
+    );
     return () => {
       unsubCat();
       unsubItems();
@@ -112,6 +135,23 @@ export function PosSellView({
     } finally {
       setBusy(false);
     }
+  }
+
+  if (menuLoading) {
+    return (
+      <div className="pos-sell-empty">
+        <p>กำลังโหลดเมนู...</p>
+      </div>
+    );
+  }
+
+  if (menuError) {
+    return (
+      <div className="pos-sell-empty">
+        <p className="error-text">โหลดเมนูไม่สำเร็จ</p>
+        <p className="muted">{menuError}</p>
+      </div>
+    );
   }
 
   if (!items.length) {

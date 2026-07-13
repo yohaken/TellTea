@@ -128,6 +128,7 @@ export async function heartbeatPosDevice(authUid: string): Promise<void> {
     await setDoc(
       deviceRef(authUid),
       {
+        authUid,
         lastSeenAt: now,
         appBuild: CLIENT_BUILD,
         userAgent: ua,

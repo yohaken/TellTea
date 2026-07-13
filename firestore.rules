@@ -144,17 +144,40 @@ service cloud.firestore {
     function posDeviceHeartbeat() {
       let before = resource.data;
       let after = request.resource.data;
+      let repairAuth = !before.keys().hasAll(['authUid']) || before.authUid == '';
+      let allowedKeys = repairAuth
+        ? ['lastSeenAt', 'appBuild', 'userAgent', 'lastReloadAckAt', 'authUid']
+        : ['lastSeenAt', 'appBuild', 'userAgent', 'lastReloadAckAt'];
       return isPosDeviceAuth()
-        && before.authUid == request.auth.uid
-        && after.authUid == before.authUid
-        && after.registeredAt == before.registeredAt
-        && after.pairingCode == before.pairingCode
-        && after.diff(before).affectedKeys().hasOnly([
-          'lastSeenAt',
-          'appBuild',
-          'userAgent',
-          'lastReloadAckAt',
-        ]);
+        && (repairAuth || before.authUid == request.auth.uid)
+        && after.authUid == request.auth.uid
+        && (!before.keys().hasAll(['registeredAt']) || after.registeredAt == before.registeredAt)
+        && (!before.keys().hasAll(['pairingCode']) || after.pairingCode == before.pairingCode)
+        && after.diff(before).affectedKeys().hasOnly(allowedKeys);
+    }
+
+    function posMenuCategoryCreate() {
+      return isPosDeviceAuth()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.sortOrder is number
+        && request.resource.data.active is bool
+        && request.resource.data.createdAt is number
+        && request.resource.data.updatedAt is number;
+    }
+
+    function posMenuItemCreate() {
+      return isPosDeviceAuth()
+        && request.resource.data.categoryId is string
+        && request.resource.data.categoryId.size() > 0
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.price is number
+        && request.resource.data.price >= 0
+        && request.resource.data.sortOrder is number
+        && request.resource.data.active is bool
+        && request.resource.data.createdAt is number
+        && request.resource.data.updatedAt is number;
     }
 
     function posDeviceOwnerPatch() {
@@ -487,12 +510,14 @@ service cloud.firestore {
 
     match /menuCategories/{id} {
       allow read: if isStaff() || isPosDeviceAuth();
-      allow write: if isOwner();
+      allow create: if isOwner() || posMenuCategoryCreate();
+      allow update, delete: if isOwner();
     }
 
     match /menuItems/{id} {
       allow read: if isStaff() || isPosDeviceAuth();
-      allow write: if isOwner();
+      allow create: if isOwner() || posMenuItemCreate();
+      allow update, delete: if isOwner();
     }
 
     match /posSessions/{sessionId} {

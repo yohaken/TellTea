@@ -23,6 +23,7 @@ import {
 } from "@/lib/pos-session";
 import { getCurrentShiftId } from "@/lib/shift-session";
 import { labelOtShift } from "@/lib/ot";
+import { seedPosMenuIfEmpty } from "@/lib/pos-menu";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { appVersionLabel } from "@/lib/version";
 import type { PosSession } from "@/lib/types";
@@ -39,6 +40,7 @@ export default function PosPage() {
   const [canInstall, setCanInstall] = useState(false);
   const [opening, setOpening] = useState(false);
   const [lastHeartbeatAt, setLastHeartbeatAt] = useState(0);
+  const [heartbeatError, setHeartbeatError] = useState<string | null>(null);
   const installPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const deviceIdRef = useRef<string | null>(null);
   const reloadingRef = useRef(false);
@@ -62,6 +64,9 @@ export default function PosPage() {
       const registered = await registerPosDevice(authUid);
       setDevice(registered);
       setLastHeartbeatAt(Date.now());
+      await seedPosMenuIfEmpty().catch(() => {
+        /* owner may seed from Settings; POS retries on sell view */
+      });
       const cur = await getCurrentPosSession(authUid);
       setSession(cur);
       setStatus("ready");
@@ -151,8 +156,13 @@ export default function PosPage() {
 
     const heartbeat = () => {
       void heartbeatPosDevice(deviceId)
-        .then(() => setLastHeartbeatAt(Date.now()))
-        .catch(() => {});
+        .then(() => {
+          setLastHeartbeatAt(Date.now());
+          setHeartbeatError(null);
+        })
+        .catch((err) => {
+          setHeartbeatError((err as Error).message || "ส่งสัญญาณไม่สำเร็จ");
+        });
     };
 
     heartbeat();
@@ -251,6 +261,9 @@ export default function PosPage() {
           ) : null}
 
           {error ? <p className="error-text">{error}</p> : null}
+          {heartbeatError && connectivity.pill !== "online" ? (
+            <p className="error-text pos-lite-heartbeat-hint">{heartbeatError}</p>
+          ) : null}
 
           <button
             type="button"
