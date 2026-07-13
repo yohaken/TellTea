@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PauseCircle, Pencil, QrCode, Tag, UserRound, X } from "lucide-react";
+import { PauseCircle, QrCode, Tag, UserRound, X } from "lucide-react";
 import { getPosMenuSnapshot, retryPosMenuPreload, startPosMenuPreload, subscribePosMenuPreload } from "@/lib/pos-menu-preload";
 import { toggleMenuItemSoldOut } from "@/lib/pos-menu";
 import {
@@ -527,7 +527,12 @@ export function PosSellView({
 
       <aside className="pos-sell-cart-panel">
         <header className="pos-cart-head">
-          <p className="pos-cart-channel">ทานที่ร้าน</p>
+          <div className="pos-cart-head-top">
+            <p className="pos-cart-channel">ทานที่ร้าน</p>
+            {cartCount > 0 ? (
+              <span className="pos-cart-head-count">{cartCount} รายการ</span>
+            ) : null}
+          </div>
           <span className="pos-cart-bill-id">#{session.id.slice(-5).toUpperCase()}</span>
         </header>
 
@@ -538,60 +543,69 @@ export function PosSellView({
 
         <div className="pos-cart-lines">
           {cartLines.length ? (
-            cartLines.map((l) => {
+            cartLines.map((l, lineIndex) => {
               const mods = cartModifierLines(l.selections);
               const lineTotal = l.unitPrice * l.qty;
+              const canEditLine = lineHasEditableOptions(l, optionGroups);
+              const showLineNo = cartLines.length > 1;
               return (
-                <div key={l.cartKey} className="pos-sell-cart-line">
-                  <div className="pos-cart-line-body">
-                    <div className="pos-cart-line-title">
-                      <strong className="pos-cart-line-name">{l.item.name}</strong>
-                      <span className="pos-cart-line-qty">×{l.qty}</span>
+                <div
+                  key={l.cartKey}
+                  className={`pos-sell-cart-line ${canEditLine ? "is-editable" : ""}`}
+                >
+                  {showLineNo ? (
+                    <span className="pos-cart-line-index" aria-hidden>
+                      {lineIndex + 1}
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={`pos-cart-line-tap ${showLineNo ? "" : "pos-cart-line-tap--full"}`}
+                    disabled={!canEditLine}
+                    onClick={() => canEditLine && openEditCartLine(l)}
+                    aria-label={canEditLine ? `แก้ไข ${l.item.name}` : undefined}
+                  >
+                    <div className="pos-cart-line-body">
+                      <div className="pos-cart-line-title">
+                        <strong className="pos-cart-line-name">{l.item.name}</strong>
+                        <span className="pos-cart-line-qty">×{l.qty}</span>
+                      </div>
+                      {mods.map((mod) => (
+                        <p key={`${l.cartKey}-${mod}`} className="pos-cart-line-mod">
+                          • {mod}
+                        </p>
+                      ))}
+                      {canEditLine ? <span className="pos-cart-line-edit-hint">แตะเพื่อแก้ไข</span> : null}
                     </div>
-                    {mods.map((mod) => (
-                      <p key={`${l.cartKey}-${mod}`} className="pos-cart-line-mod">
-                        • {mod}
-                      </p>
-                    ))}
-                    <div className="pos-sell-cart-line-actions">
-                      {lineHasEditableOptions(l, optionGroups) ? (
-                        <button
-                          type="button"
-                          className="pos-cart-touch-btn pos-cart-edit-btn"
-                          aria-label="แก้ไขตัวเลือก"
-                          onClick={() => openEditCartLine(l)}
-                        >
-                          <Pencil size={18} strokeWidth={2.5} aria-hidden />
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="pos-cart-touch-btn"
-                        aria-label="ลด"
-                        onClick={() => decFromCart(l.cartKey)}
-                      >
-                        −
-                      </button>
-                      <button
-                        type="button"
-                        className="pos-cart-touch-btn"
-                        aria-label="เพิ่ม"
-                        onClick={() => incCart(l.cartKey)}
-                      >
-                        +
-                      </button>
-                      <button
-                        type="button"
-                        className="pos-cart-touch-btn pos-cart-touch-btn--danger"
-                        aria-label="ลบ"
-                        onClick={() => clearLine(l.cartKey)}
-                      >
-                        ×
-                      </button>
+                    <div className="pos-cart-line-side">
+                      <span className="pos-cart-line-price">฿{formatPlainNumber(lineTotal)}</span>
                     </div>
-                  </div>
-                  <div className="pos-cart-line-side">
-                    <span className="pos-cart-line-price">฿{formatPlainNumber(lineTotal)}</span>
+                  </button>
+                  <div className={`pos-sell-cart-line-actions ${showLineNo ? "" : "pos-sell-cart-line-actions--full"}`}>
+                    <button
+                      type="button"
+                      className="pos-cart-touch-btn"
+                      aria-label="ลด"
+                      onClick={() => decFromCart(l.cartKey)}
+                    >
+                      −
+                    </button>
+                    <button
+                      type="button"
+                      className="pos-cart-touch-btn"
+                      aria-label="เพิ่ม"
+                      onClick={() => incCart(l.cartKey)}
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      className="pos-cart-touch-btn pos-cart-touch-btn--danger"
+                      aria-label="ลบ"
+                      onClick={() => clearLine(l.cartKey)}
+                    >
+                      ×
+                    </button>
                   </div>
                 </div>
               );
@@ -667,6 +681,7 @@ export function PosSellView({
       {picker ? (
         <PosOptionPickerModal
           itemName={picker.item.name}
+          imageUrl={picker.item.imageUrl}
           basePrice={picker.item.price}
           groups={optionGroupsForItem(picker.item, optionGroups)}
           initialSelections={picker.initialSelections}

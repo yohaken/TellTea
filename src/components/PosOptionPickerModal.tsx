@@ -28,6 +28,7 @@ function groupHint(group: MenuOptionGroup): string | null {
 
 export function PosOptionPickerModal({
   itemName,
+  imageUrl,
   basePrice,
   groups,
   initialSelections,
@@ -36,6 +37,7 @@ export function PosOptionPickerModal({
   onConfirm,
 }: {
   itemName: string;
+  imageUrl?: string | null;
   basePrice: number;
   groups: MenuOptionGroup[];
   initialSelections?: PosCartSelection[];
@@ -94,23 +96,33 @@ export function PosOptionPickerModal({
   return (
     <div className="pos-modal-backdrop pos-modal-backdrop--center" role="dialog" aria-modal="true">
       <div className="pos-modal pos-option-picker pos-option-picker--foodstory">
-        <header className="pos-option-picker-head">
-          <h2>{itemName}</h2>
-          <div className="pos-option-picker-meta">
-            <span className="pos-option-picker-price">฿{formatPlainNumber(basePrice)}</span>
-            <div className="pos-option-qty" aria-label="จำนวน">
-              <button
-                type="button"
-                className="pos-option-qty-btn"
-                disabled={qty <= 1}
-                onClick={() => setQty((n) => Math.max(1, n - 1))}
-              >
-                −
-              </button>
-              <span>{qty}</span>
-              <button type="button" className="pos-option-qty-btn" onClick={() => setQty((n) => n + 1)}>
-                +
-              </button>
+        <header className="pos-option-picker-hero">
+          <div className="pos-option-picker-thumb" aria-hidden>
+            {imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={imageUrl} alt="" className="pos-option-picker-thumb-img" />
+            ) : (
+              <span className="pos-option-picker-thumb-ph">☕</span>
+            )}
+          </div>
+          <div className="pos-option-picker-hero-text">
+            <h2>{itemName}</h2>
+            <div className="pos-option-picker-meta">
+              <span className="pos-option-picker-price">฿{formatPlainNumber(basePrice)}</span>
+              <div className="pos-option-qty" aria-label="จำนวน">
+                <button
+                  type="button"
+                  className="pos-option-qty-btn"
+                  disabled={qty <= 1}
+                  onClick={() => setQty((n) => Math.max(1, n - 1))}
+                >
+                  −
+                </button>
+                <span>{qty}</span>
+                <button type="button" className="pos-option-qty-btn" onClick={() => setQty((n) => n + 1)}>
+                  +
+                </button>
+              </div>
             </div>
           </div>
         </header>

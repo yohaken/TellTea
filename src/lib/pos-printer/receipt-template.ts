@@ -174,13 +174,13 @@ export function unifiedReceiptStyles(layout: PrinterKindProfile, cutMode: PosPri
     }
     .item-line {
       display: grid;
-      grid-template-columns: 2.2em minmax(0, 1fr) auto;
+      grid-template-columns: 1.85em minmax(0, 1fr) auto;
       gap: 6px 8px;
       align-items: start;
     }
     .qty {
       font-weight: 800;
-      font-size: ${layout.bodyFontPx + 3}px;
+      font-size: ${layout.bodyFontPx + 2}px;
       color: #000;
       line-height: 1.2;
       font-variant-numeric: tabular-nums;

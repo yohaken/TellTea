@@ -172,9 +172,8 @@ assert.match(cartSrc, /selectionKeyFromPickedCounts/);
 assert.match(cartSrc, /groupUsesQuantitySteppers/);
 assert.match(cartSrc, /validatePickedCounts/);
 
-assert.match(sellSrc, /openEditCartLine/);
-assert.match(sellSrc, /pos-pay-quick/);
-assert.match(sellSrc, /Pencil/);
+assert.match(sellSrc, /pos-cart-line-tap/);
+assert.match(sellSrc, /pos-cart-head-count/);
 
 function selectionKeyFromPickedCounts(counts) {
   const parts = [];
