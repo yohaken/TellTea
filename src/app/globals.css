@@ -1111,6 +1111,51 @@ body.modal-open .main-panel {
   font-size: 0.82rem;
 }
 
+.app-update-banner {
+  position: fixed;
+  left: 50%;
+  bottom: calc(4.65rem + var(--safe-bottom));
+  transform: translateX(-50%);
+  z-index: 20;
+  width: min(calc(100% - 1rem), calc(var(--shell-max) - 1rem));
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.9rem;
+  background: rgba(232, 245, 236, 0.96);
+  border: 1px solid rgba(47, 107, 79, 0.28);
+  box-shadow: var(--shadow);
+  color: rgba(28, 42, 31, 0.9);
+  backdrop-filter: blur(12px);
+}
+
+.app-update-banner-icon {
+  color: var(--tea-green, #2f6b4f);
+}
+
+.app-update-banner-copy {
+  display: grid;
+  gap: 0.15rem;
+  text-align: left;
+  font-size: 0.78rem;
+}
+
+.app-update-banner-copy strong {
+  font-size: 0.86rem;
+}
+
+.app-update-banner-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.app-update-banner-btn {
+  min-height: 2.35rem;
+  width: 100%;
+  font-size: 0.82rem;
+}
+
 .employee-roster-row {
   display: flex;
   flex-direction: column;

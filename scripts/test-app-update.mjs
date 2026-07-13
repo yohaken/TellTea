@@ -14,8 +14,11 @@ const rulesSrc = readFileSync(join(root, "firestore.rules"), "utf8");
 const firebaseJson = JSON.parse(readFileSync(join(root, "firebase.json"), "utf8"));
 
 assert.match(layoutSrc, /AppUpdateWatcher/);
-assert.match(watcherSrc, /isUserBusyForReload/);
-assert.match(updateSrc, /modal-open/);
+assert.match(watcherSrc, /อัปเดตเลย/);
+assert.match(watcherSrc, /ภายหลัง/);
+assert.match(watcherSrc, /applyUpdate/);
+assert.match(watcherSrc, /window\.location\.reload/);
+assert.doesNotMatch(watcherSrc, /pendingReload/);
 assert.match(updateSrc, /fetchServerBuild/);
 assert.equal((rulesSrc.match(/function staffEmployeeId/g) || []).length, 1);
 
@@ -29,7 +32,7 @@ assert.ok(headers.indexOf(staticRule) > headers.indexOf(catchAll), "static rule 
 if (existsSync(join(root, "out/version.json"))) {
   const version = JSON.parse(readFileSync(join(root, "out/version.json"), "utf8"));
   assert.equal(typeof version.build, "number");
-  assert.ok(version.build >= 105);
+  assert.ok(version.build >= 106);
 }
 
 console.log("OK app-update wiring");

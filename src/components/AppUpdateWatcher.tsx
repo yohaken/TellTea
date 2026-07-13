@@ -1,73 +1,70 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { RefreshCw } from "lucide-react";
 import { CLIENT_BUILD, fetchServerBuild, isUserBusyForReload } from "@/lib/app-update";
 
 const POLL_MS = 2 * 60 * 1000;
-const RETRY_MS = 30 * 1000;
-const IDLE_AFTER_INPUT_MS = 45 * 1000;
+const SNOOZE_MS = 30 * 60 * 1000;
+const SNOOZE_KEY = "telltea-update-snooze-until";
 
 /**
- * Silently reload when a newer build is on the server.
- * Defers while a form/modal is active so in-progress entries are not lost.
+ * Poll /version.json and show a banner when a newer build is live.
+ * User taps to reload when ready — no forced auto-refresh.
  */
 export function AppUpdateWatcher() {
+  const [serverBuild, setServerBuild] = useState<number | null>(null);
+  const [snoozedUntil, setSnoozedUntil] = useState(0);
+
+  const checkVersion = useCallback(async () => {
+    const build = await fetchServerBuild();
+    if (build != null && build > CLIENT_BUILD) {
+      setServerBuild(build);
+    }
+  }, []);
+
   useEffect(() => {
-    let pendingReload = false;
-    let lastInputAt = 0;
-    let retryTimer: ReturnType<typeof setTimeout> | undefined;
-
-    function clearRetry() {
-      if (retryTimer) {
-        clearTimeout(retryTimer);
-        retryTimer = undefined;
-      }
-    }
-
-    function scheduleRetry() {
-      clearRetry();
-      retryTimer = setTimeout(() => void tryReload(), RETRY_MS);
-    }
-
-    function tryReload() {
-      if (!pendingReload) return;
-
-      const idleLongEnough = Date.now() - lastInputAt >= IDLE_AFTER_INPUT_MS;
-      if (!isUserBusyForReload() && idleLongEnough) {
-        window.location.reload();
-        return;
-      }
-
-      scheduleRetry();
-    }
-
-    function markInput() {
-      lastInputAt = Date.now();
-    }
-
-    async function checkVersion() {
-      const serverBuild = await fetchServerBuild();
-      if (serverBuild == null || serverBuild <= CLIENT_BUILD) return;
-
-      pendingReload = true;
-      tryReload();
-    }
-
-    document.addEventListener("input", markInput, true);
-    document.addEventListener("change", markInput, true);
-    document.addEventListener("focusin", markInput, true);
+    const stored = Number(sessionStorage.getItem(SNOOZE_KEY) || "0");
+    if (stored > Date.now()) setSnoozedUntil(stored);
 
     void checkVersion();
     const pollTimer = setInterval(() => void checkVersion(), POLL_MS);
+    return () => clearInterval(pollTimer);
+  }, [checkVersion]);
 
-    return () => {
-      document.removeEventListener("input", markInput, true);
-      document.removeEventListener("change", markInput, true);
-      document.removeEventListener("focusin", markInput, true);
-      if (pollTimer) clearInterval(pollTimer);
-      clearRetry();
-    };
-  }, []);
+  function snooze() {
+    const until = Date.now() + SNOOZE_MS;
+    sessionStorage.setItem(SNOOZE_KEY, String(until));
+    setSnoozedUntil(until);
+  }
 
-  return null;
+  function applyUpdate() {
+    if (isUserBusyForReload()) {
+      const ok = window.confirm(
+        "กำลังกรอกข้อมูลอยู่ — อัปเดตตอนนี้จะรีเซ็ตหน้านี้\nต้องการอัปเดตเลยไหม?",
+      );
+      if (!ok) return;
+    }
+    window.location.reload();
+  }
+
+  if (serverBuild == null || Date.now() < snoozedUntil) return null;
+
+  return (
+    <div className="app-update-banner" role="status" aria-live="polite">
+      <RefreshCw size={18} aria-hidden className="app-update-banner-icon" />
+      <div className="app-update-banner-copy">
+        <strong>มีเวอร์ชันใหม่ v{serverBuild}</strong>
+        <span>คุณใช้ v{CLIENT_BUILD} — กดอัปเดตเมื่อพร้อม</span>
+      </div>
+      <div className="app-update-banner-actions">
+        <button type="button" className="primary-btn app-update-banner-btn" onClick={applyUpdate}>
+          อัปเดตเลย
+        </button>
+        <button type="button" className="ghost-btn app-update-banner-btn" onClick={snooze}>
+          ภายหลัง
+        </button>
+      </div>
+    </div>
+  );
 }
