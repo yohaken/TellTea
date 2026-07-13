@@ -8,22 +8,24 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const pageSrc = readFileSync(join(root, "src/app/pos/page.tsx"), "utf8");
+const appCtxSrc = readFileSync(join(root, "src/lib/pos-app-context.tsx"), "utf8");
 const watcherSrc = readFileSync(join(root, "src/components/PosUpdateWatcher.tsx"), "utf8");
 const reloadSrc = readFileSync(join(root, "src/lib/pos-reload.ts"), "utf8");
 const rulesSrc = readFileSync(join(root, "firestore.rules"), "utf8");
 const deviceSrc = readFileSync(join(root, "src/lib/pos-devices.ts"), "utf8");
 const setupSrc = readFileSync(join(root, "src/components/PosDeviceSetup.tsx"), "utf8");
 
-assert.match(pageSrc, /optimisticPosDevice/);
-assert.match(pageSrc, /setStatus\("ready"\)/);
-assert.match(pageSrc, /isPosSafeToReload/);
-assert.match(pageSrc, /pendingForceReloadAtRef/);
+assert.match(pageSrc, /\/pos\/sell\//);
+assert.match(appCtxSrc, /optimisticPosDevice/);
+assert.match(appCtxSrc, /setStatus\("ready"\)/);
+assert.match(appCtxSrc, /isPosSafeToReload/);
+assert.match(appCtxSrc, /pendingForceReloadAtRef/);
 assert.match(watcherSrc, /fetchPosServerBuild/);
 assert.match(watcherSrc, /POS_CLIENT_BUILD/);
 assert.match(readFileSync(join(root, "src/lib/pos-version.ts"), "utf8"), /POS_BUILD/);
-assert.match(readFileSync(join(root, "src/app/pos/page.tsx"), "utf8"), /posVersionLabel/);
-assert.doesNotMatch(readFileSync(join(root, "src/app/pos/page.tsx"), "utf8"), /appVersionLabel/);
-assert.match(watcherSrc, /forceAppUpdate/);
+assert.match(readFileSync(join(root, "src/components/PosAppShell.tsx"), "utf8"), /posVersionLabel/);
+assert.doesNotMatch(pageSrc, /appVersionLabel/);
+assert.match(watcherSrc, /forceAppUpdate|forcePosAutoUpdate/);
 assert.match(watcherSrc, /isPosSafeToReload/);
 assert.match(reloadSrc, /pendingSyncCount/);
 assert.match(readFileSync(join(root, "src/components/PosSyncWatcher.tsx"), "utf8"), /runPosSyncFlush/);
@@ -51,8 +53,12 @@ assert.match(readFileSync(join(root, "src/lib/pos-auth.ts"), "utf8"), /warmPosAu
 assert.doesNotMatch(readFileSync(join(root, "src/app/pos/page.tsx"), "utf8"), /POS_BOOT_TIMEOUT/);
 assert.match(readFileSync(join(root, "src/lib/pos-devices.ts"), "utf8"), /optimisticPosDevice/);
 assert.match(readFileSync(join(root, "src/components/PosAuthWarmup.tsx"), "utf8"), /warmPosAuth/);
-assert.match(deviceSrc, /requestPosDevicesReload/);
+assert.match(deviceSrc, /POS_BUILD/);
+assert.match(setupSrc, /POS_BUILD/);
+assert.match(setupSrc, /forcePosAutoUpdate/);
+assert.match(readFileSync(join(root, "src/lib/pos-device-telemetry.ts"), "utf8"), /collectPosDeviceTelemetry/);
 assert.match(setupSrc, /อัปเดตเครื่องที่ค้าง/);
+assert.match(deviceSrc, /requestPosDevicesReload/);
 assert.ok(readFileSync(join(root, "docs/pos-connectivity.md"), "utf8").includes("Firestore = สายชีวิต"));
 
 console.log("OK pos-connectivity wiring");
