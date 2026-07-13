@@ -16,7 +16,18 @@ export function PosHardLink({
   children: ReactNode;
 } & Pick<AnchorHTMLAttributes<HTMLAnchorElement>, "aria-label">) {
   return (
-    <a href={href} className={className} title={title}>
+    <a
+      href={href}
+      className={className}
+      title={title}
+      onClick={(e) => {
+        if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+          return;
+        }
+        e.preventDefault();
+        window.location.assign(href);
+      }}
+    >
       {children}
     </a>
   );
