@@ -1,16 +1,7 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
-import { useRouter } from "next/navigation";
-import {
-  BarChart3,
   CalendarClock,
   Camera,
   CheckCircle2,
@@ -30,7 +21,7 @@ import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { isAppOwnerEmail } from "@/lib/firebase";
-import { completeTaskOccurrence, deleteTaskOccurrences, subscribeTaskOccurrences, syncPendingOccurrencesFromTemplate } from "@/lib/task-occurrences";
+import { completeTaskOccurrence, deleteTaskOccurrences, subscribeTaskOccurrences, subscribeTaskOccurrencesForAssignee, syncPendingOccurrencesFromTemplate } from "@/lib/task-occurrences";
 import {
   createTaskTemplate,
   deactivateTaskTemplate,
@@ -42,7 +33,6 @@ import {
 import { runTaskOccurrenceSync } from "@/lib/task-sync";
 import type { TaskChecklistItem, TaskOccurrence, TaskTemplate } from "@/lib/task-types";
 import {
-  buildDisciplineReport,
   canSubmitOccurrence,
   filterOccurrencesByTab,
   isOccurrenceOpenSoon,
@@ -78,8 +68,8 @@ export default function TasksPage() {
 
 function TasksView() {
   const { actorId, staff, user } = useAuth();
-  const router = useRouter();
-  const canManageTasks = staff?.role === "owner" || isAppOwnerEmail(user?.email);
+  const isOwnerManager = staff?.role === "owner" || isAppOwnerEmail(user?.email);
+  const myEmployeeId = staff?.employeeId || "";
 
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [occurrences, setOccurrences] = useState<TaskOccurrence[]>([]);
@@ -94,12 +84,6 @@ function TasksView() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const syncedRef = useRef(false);
 
-  useEffect(() => {
-    if (user && staff && !canManageTasks) {
-      router.replace("/more/");
-    }
-  }, [user, staff, canManageTasks, router]);
-
   const doSync = useCallback(async (tpls: TaskTemplate[], occs: TaskOccurrence[]) => {
     setSyncing(true);
     try {
@@ -112,67 +96,91 @@ function TasksView() {
   }, []);
 
   useEffect(() => {
-    if (!canManageTasks) return;
-    setLoading(true);
-    let tplReady = false;
-    let occReady = false;
-    let empReady = false;
-    const finish = () => {
-      if (tplReady && occReady && empReady) setLoading(false);
-    };
+    if (!staff) return;
 
-    void listActiveEmployees()
-      .then(setEmployees)
-      .catch((err) => setError((err as Error).message || "โหลดรายชื่อไม่สำเร็จ"))
-      .finally(() => {
-        empReady = true;
-        finish();
-      });
+    if (isOwnerManager) {
+      setLoading(true);
+      let tplReady = false;
+      let occReady = false;
+      let empReady = false;
+      const finish = () => {
+        if (tplReady && occReady && empReady) setLoading(false);
+      };
 
-    const unsubTpl = subscribeTaskTemplates(
-      (rows) => {
-        setTemplates(rows);
-        if (!tplReady) {
-          tplReady = true;
+      void listActiveEmployees()
+        .then(setEmployees)
+        .catch((err) => setError((err as Error).message || "โหลดรายชื่อไม่สำเร็จ"))
+        .finally(() => {
+          empReady = true;
           finish();
-        }
-      },
-      (err) => setError(err.message || "โหลดกติกาไม่สำเร็จ"),
-    );
+        });
 
-    const unsubOcc = subscribeTaskOccurrences(
+      const unsubTpl = subscribeTaskTemplates(
+        (rows) => {
+          setTemplates(rows);
+          if (!tplReady) {
+            tplReady = true;
+            finish();
+          }
+        },
+        (err) => setError(err.message || "โหลดกติกาไม่สำเร็จ"),
+      );
+
+      const unsubOcc = subscribeTaskOccurrences(
+        (rows) => {
+          setOccurrences(rows);
+          if (!occReady) {
+            occReady = true;
+            finish();
+          }
+        },
+        (err) => setError(err.message || "โหลดรอบงานไม่สำเร็จ"),
+      );
+
+      return () => {
+        unsubTpl();
+        unsubOcc();
+      };
+    }
+
+    if (!myEmployeeId) {
+      setTemplates([]);
+      setOccurrences([]);
+      setEmployees([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const unsubOcc = subscribeTaskOccurrencesForAssignee(
+      myEmployeeId,
       (rows) => {
         setOccurrences(rows);
-        if (!occReady) {
-          occReady = true;
-          finish();
-        }
+        setLoading(false);
       },
-      (err) => setError(err.message || "โหลดรอบงานไม่สำเร็จ"),
+      (err) => {
+        setError(err.message || "โหลดงานของฉันไม่สำเร็จ");
+        setLoading(false);
+      },
     );
-
-    return () => {
-      unsubTpl();
-      unsubOcc();
-    };
-  }, [canManageTasks]);
+    return () => unsubOcc();
+  }, [staff, isOwnerManager, myEmployeeId]);
 
   useEffect(() => {
-    if (!canManageTasks || loading || syncedRef.current) return;
+    if (!isOwnerManager || loading || syncedRef.current) return;
     syncedRef.current = true;
     void doSync(templates.filter((t) => t.active), occurrences);
-  }, [canManageTasks, loading, templates, occurrences, doSync]);
+  }, [isOwnerManager, loading, templates, occurrences, doSync]);
 
   useBodyScrollLock(createOpen || !!editingTemplate || !!submitOcc || !!previewUrl);
 
   const visible = useMemo(() => filterOccurrencesByTab(occurrences, tab), [occurrences, tab]);
   const activeTemplates = useMemo(() => templates.filter((t) => t.active), [templates]);
-  const discipline = useMemo(() => buildDisciplineReport(occurrences), [occurrences]);
 
   const thisWeekCount = filterOccurrencesByTab(occurrences, "thisWeek").length;
   const missedCount = filterOccurrencesByTab(occurrences, "missed").length;
 
-  if (!canManageTasks) return null;
+  if (!staff) return null;
 
   return (
     <div className="module-page tasks-page">
@@ -182,16 +190,27 @@ function TasksView() {
           งานมอบหมาย
         </h1>
         <p className="muted tasks-page-hint">
-          ประจำวันในสัปดาห์ · ส่งได้ทุกวัน · เจ้าของแก้ไข/ปิด/ลบกติกาได้
+          {isOwnerManager
+            ? "ประจำวันในสัปดาห์ · ส่งได้ทุกวัน · เจ้าของแก้ไข/ปิด/ลบกติกาได้"
+            : "งานที่มอบให้คุณ · ส่ง checklist + รูปหลักฐานเมื่อครบ"}
         </p>
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
+      {!myEmployeeId && !isOwnerManager ? (
+        <p className="empty">
+          ยังไม่ได้ผูกชื่อในร้าน — ตั้งที่{" "}
+          <a href="/profile/" style={{ fontWeight: 700 }}>
+            โปรไฟล์พนักงาน
+          </a>
+        </p>
+      ) : null}
+
       {loading || syncing ? <p className="empty">{loading ? "กำลังโหลด..." : "กำลังอัปเดตรอบงาน..."}</p> : null}
 
-      {!loading ? (
+      {!loading && (myEmployeeId || isOwnerManager) ? (
         <>
-          {activeTemplates.length ? (
+          {isOwnerManager && activeTemplates.length ? (
             <div className="tasks-template-bar">
               <span className="field-label">กติกาที่เปิดอยู่</span>
               <div className="tasks-template-chips">
@@ -255,7 +274,9 @@ function TasksView() {
                 ? "ยังไม่มีงานที่ส่งแล้ว"
                 : tab === "missed"
                   ? "ไม่มีงานค้างหรือพลาด"
-                  : "ไม่มีรอบสัปดาห์นี้ — กด + มอบหมาย เพื่อสร้างกติกา"}
+                  : isOwnerManager
+                    ? "ไม่มีรอบสัปดาห์นี้ — กด + มอบหมาย เพื่อสร้างกติกา"
+                    : "ยังไม่มีงานมอบให้คุณในสัปดาห์นี้"}
             </p>
           ) : (
             <ul className="tasks-list">
@@ -263,7 +284,7 @@ function TasksView() {
                 <OccurrenceCard
                   key={occ.id}
                   occ={occ}
-                  canManage={canManageTasks}
+                  canManage={isOwnerManager}
                   onSubmit={() => setSubmitOcc(occ)}
                   onViewPhoto={(url) => setPreviewUrl(url)}
                   onError={setError}
@@ -271,29 +292,6 @@ function TasksView() {
               ))}
             </ul>
           )}
-
-          {discipline.length ? (
-            <section className="tasks-discipline">
-              <h2 className="tasks-discipline-title">
-                <BarChart3 size={16} aria-hidden /> รายงานวินัย (4 สัปดาห์ล่าสุด)
-              </h2>
-              <ul className="tasks-discipline-list">
-                {discipline.map((row) => {
-                  const done = row.onTime + row.late + row.backfill;
-                  const pct = row.total ? Math.round((done / row.total) * 100) : 0;
-                  return (
-                    <li key={row.assigneeId} className="tasks-discipline-row">
-                      <strong>{row.assigneeName}</strong>
-                      <span className="tasks-discipline-pct">{pct}% ส่งแล้ว</span>
-                      <span className="muted tasks-discipline-detail">
-                        ตรงเวลา {row.onTime} · ช้า {row.late} · ย้อนหลัง {row.backfill} · ไม่ส่ง {row.missed}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ) : null}
         </>
       ) : null}
 
@@ -339,12 +337,14 @@ function TasksView() {
         <ImagePreviewModal url={previewUrl} title="หลักฐานงาน" onClose={() => setPreviewUrl(null)} />
       ) : null}
 
-      <ModuleTabDock
-        ariaLabel="มอบหมายงาน"
-        formOpen={createOpen}
-        onAdd={() => setCreateOpen(true)}
-        addLabel="+ มอบหมาย"
-      />
+      {isOwnerManager ? (
+        <ModuleTabDock
+          ariaLabel="มอบหมายงาน"
+          formOpen={createOpen}
+          onAdd={() => setCreateOpen(true)}
+          addLabel="+ มอบหมาย"
+        />
+      ) : null}
     </div>
   );
 }

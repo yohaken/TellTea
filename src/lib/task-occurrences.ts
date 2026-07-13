@@ -6,6 +6,7 @@ import {
   orderBy,
   query,
   updateDoc,
+  where,
   writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
@@ -60,6 +61,26 @@ export function subscribeTaskOccurrences(
 ): Unsubscribe {
   return onSnapshot(
     query(occurrencesCol(), orderBy("dueDate", "desc"), orderBy("createdAt", "desc")),
+    (snap) => {
+      onRows(snap.docs.map((d) => mapOccurrence(d.id, d.data() as Record<string, unknown>)));
+    },
+    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
+  );
+}
+
+/** พนักงาน — เฉพาะรอบที่มอบให้ตนเอง */
+export function subscribeTaskOccurrencesForAssignee(
+  assigneeId: string,
+  onRows: (rows: TaskOccurrence[]) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    query(
+      occurrencesCol(),
+      where("assigneeIds", "array-contains", assigneeId),
+      orderBy("dueDate", "desc"),
+      orderBy("createdAt", "desc"),
+    ),
     (snap) => {
       onRows(snap.docs.map((d) => mapOccurrence(d.id, d.data() as Record<string, unknown>)));
     },

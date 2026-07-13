@@ -70,9 +70,8 @@ const fnSrc = readFileSync(join(root, "functions/index.js"), "utf8");
 
 assert.match(pageSrc, /subscribeTaskTemplates/);
 assert.match(pageSrc, /subscribeTaskOccurrences/);
+assert.match(pageSrc, /subscribeTaskOccurrencesForAssignee/);
 assert.match(pageSrc, /runTaskOccurrenceSync/);
-assert.match(pageSrc, /buildDisciplineReport/);
-assert.match(pageSrc, /isAppOwnerEmail/);
 assert.match(rulesSrc, /match \/taskTemplates\/\{id\}/);
 assert.match(rulesSrc, /match \/taskOccurrences\/\{id\}/);
 assert.match(fnSrc, /syncTaskOccurrencesDaily/);

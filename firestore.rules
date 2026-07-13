@@ -310,12 +310,53 @@ service cloud.firestore {
       allow read, create, update, delete: if isOwnerEmail();
     }
 
+    function staffEmployeeId() {
+      return isStaff()
+        && get(staffPath()).data.keys().hasAny(['employeeId'])
+        && get(staffPath()).data.employeeId is string
+        ? get(staffPath()).data.employeeId
+        : '';
+    }
+
+    function isTaskOccurrenceAssignee() {
+      return staffEmployeeId() != ''
+        && staffEmployeeId() in resource.data.assigneeIds;
+    }
+
+    function taskOccurrenceAssigneeComplete() {
+      let before = resource.data;
+      let after = request.resource.data;
+      return isTaskOccurrenceAssignee()
+        && after.templateId == before.templateId
+        && after.periodKey == before.periodKey
+        && after.title == before.title
+        && after.note == before.note
+        && after.checklist == before.checklist
+        && after.assigneeIds == before.assigneeIds
+        && after.assigneeNames == before.assigneeNames
+        && after.dueDate == before.dueDate
+        && after.openAt == before.openAt
+        && after.createdAt == before.createdAt
+        && after.diff(before).affectedKeys().hasOnly([
+          'checklistDone',
+          'proofImg',
+          'status',
+          'completedAt',
+          'completedBy',
+          'completedKind',
+          'wasMissedBeforeBackfill',
+          'updatedAt',
+        ]);
+    }
+
     match /taskTemplates/{id} {
       allow read, create, update, delete: if isOwner() || isOwnerEmail();
     }
 
     match /taskOccurrences/{id} {
-      allow read, create, update, delete: if isOwner() || isOwnerEmail();
+      allow read: if isOwner() || isOwnerEmail() || isTaskOccurrenceAssignee();
+      allow create, delete: if isOwner() || isOwnerEmail();
+      allow update: if isOwner() || isOwnerEmail() || taskOccurrenceAssigneeComplete();
     }
 
     match /bonusDeductionMonths/{monthKey} {

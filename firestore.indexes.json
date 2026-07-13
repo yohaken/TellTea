@@ -114,6 +114,15 @@
         { "fieldPath": "dueDate", "order": "DESCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "taskOccurrences",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assigneeIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "dueDate", "order": "DESCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ]
 }

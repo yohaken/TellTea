@@ -19,7 +19,6 @@ import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import { needsPersonalProfileSetup, needsProfileSetup, personalProfileLabel } from "@/lib/profile";
 import { can, hasAnyExtraPermission, type PermissionKey } from "@/lib/permissions";
-import { isAppOwnerEmail } from "@/lib/firebase";
 
 export default function MorePage() {
   return (
@@ -30,7 +29,7 @@ export default function MorePage() {
 }
 
 function MoreView() {
-  const { staff, user } = useAuth();
+  const { staff } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -149,12 +148,12 @@ function MoreView() {
             </div>
           </Link>
         ))}
-        {staff?.role === "owner" || isAppOwnerEmail(user?.email) ? (
+        {staff ? (
           <Link href="/tasks/" className="more-card">
             <ClipboardList size={22} />
             <div>
               <strong>งานมอบหมาย</strong>
-              <p>มอบงาน checklist + รูปหลักฐาน · เจ้าของแก้ไข/ลบได้</p>
+              <p>งานประจำสัปดาห์ — เห็นเฉพาะงานที่มอบให้คุณ</p>
             </div>
           </Link>
         ) : null}
