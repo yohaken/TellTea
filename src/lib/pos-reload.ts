@@ -4,6 +4,7 @@ export type PosSellBusyState = {
   payOpen: boolean;
   saleBusy: boolean;
   pendingSyncCount: number;
+  syncing: boolean;
 };
 
 export const POS_IDLE_BEFORE_RELOAD_MS = 8 * 1000;
@@ -13,6 +14,7 @@ export function isPosSafeToReload(state: PosSellBusyState): boolean {
     state.cartCount === 0 &&
     !state.payOpen &&
     !state.saleBusy &&
+    !state.syncing &&
     state.pendingSyncCount === 0
   );
 }

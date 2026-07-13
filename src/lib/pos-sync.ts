@@ -54,12 +54,13 @@ export async function flushPosOutbox(): Promise<{ synced: number; remaining: num
 
 export type PosSyncSnapshot = {
   pendingCount: number;
+  syncing: boolean;
   lastFlushAt: number;
   lastSynced: number;
 };
 
 const listeners = new Set<(snap: PosSyncSnapshot) => void>();
-let snapshot: PosSyncSnapshot = { pendingCount: 0, lastFlushAt: 0, lastSynced: 0 };
+let snapshot: PosSyncSnapshot = { pendingCount: 0, syncing: false, lastFlushAt: 0, lastSynced: 0 };
 let flushing = false;
 
 function emit() {
@@ -82,13 +83,20 @@ export async function refreshPosSyncSnapshot(): Promise<PosSyncSnapshot> {
 export async function runPosSyncFlush(): Promise<PosSyncSnapshot> {
   if (flushing) return snapshot;
   flushing = true;
+  snapshot = { ...snapshot, syncing: true };
+  emit();
   try {
     const result = await flushPosOutbox();
     snapshot = {
       pendingCount: result.remaining,
+      syncing: false,
       lastFlushAt: Date.now(),
       lastSynced: result.synced,
     };
+    emit();
+    return snapshot;
+  } catch {
+    snapshot = { ...snapshot, syncing: false };
     emit();
     return snapshot;
   } finally {

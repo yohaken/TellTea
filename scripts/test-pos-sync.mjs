@@ -47,4 +47,16 @@ const salesSrc = await import("node:fs").then((fs) =>
 assert.match(salesSrc, /enqueueSale/);
 assert.match(salesSrc, /isBrowserOnline/);
 
+const syncSrc = await import("node:fs").then((fs) =>
+  fs.readFileSync(new URL("../src/lib/pos-sync.ts", import.meta.url), "utf8"),
+);
+assert.match(syncSrc, /syncing: boolean/);
+assert.match(syncSrc, /syncing: true/);
+
+const watcherSrc = await import("node:fs").then((fs) =>
+  fs.readFileSync(new URL("../src/components/PosSyncWatcher.tsx", import.meta.url), "utf8"),
+);
+assert.match(watcherSrc, /onSyncChange/);
+assert.match(watcherSrc, /pendingCount > 0/);
+
 console.log("OK pos-sync");

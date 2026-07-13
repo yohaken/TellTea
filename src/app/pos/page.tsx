@@ -50,6 +50,7 @@ export default function PosPage() {
     payOpen: false,
     saleBusy: false,
     pendingSyncCount: 0,
+    syncing: false,
   });
   const installPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
   const deviceIdRef = useRef<string | null>(null);
@@ -66,7 +67,7 @@ export default function PosPage() {
 
   useEffect(() => {
     if (!selling) {
-      setSellBusy({ cartCount: 0, payOpen: false, saleBusy: false, pendingSyncCount: 0 });
+      setSellBusy({ cartCount: 0, payOpen: false, saleBusy: false, pendingSyncCount: 0, syncing: false });
     }
   }, [selling]);
 
@@ -267,8 +268,8 @@ export default function PosPage() {
     <div className={`pos-lite ${standalone ? "pos-lite--standalone" : ""} ${selling ? "pos-lite--sell" : ""}`}>
       <PosSyncWatcher
         enabled={status === "ready"}
-        onPendingChange={(pendingSyncCount) =>
-          setSellBusy((prev) => ({ ...prev, pendingSyncCount }))
+        onSyncChange={({ pendingCount, syncing }) =>
+          setSellBusy((prev) => ({ ...prev, pendingSyncCount: pendingCount, syncing }))
         }
       />
       <PosUpdateWatcher
@@ -299,7 +300,11 @@ export default function PosPage() {
             {connectivity.pill === "online" ? <Wifi size={12} aria-hidden /> : <WifiOff size={12} aria-hidden />}
             {connectivity.label}
           </span>
-          {sellBusy.pendingSyncCount > 0 ? (
+          {sellBusy.syncing ? (
+            <span className="pos-lite-pill pos-lite-pill--ok" title="กำลังส่งบิลที่ค้างไปยังเซิร์ฟเวอร์">
+              กำลังส่งข้อมูล
+            </span>
+          ) : sellBusy.pendingSyncCount > 0 ? (
             <span className="pos-lite-pill pos-lite-pill--warn" title="บิลรอส่งเมื่อมีเน็ต">
               รอส่ง {sellBusy.pendingSyncCount}
             </span>

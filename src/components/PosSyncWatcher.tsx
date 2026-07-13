@@ -8,19 +8,21 @@ const FLUSH_MS = 12 * 1000;
 /** Background sync for offline sale outbox — flush when online. */
 export function PosSyncWatcher({
   enabled,
-  onPendingChange,
+  onSyncChange,
 }: {
   enabled: boolean;
-  onPendingChange?: (pendingCount: number) => void;
+  onSyncChange?: (snap: { pendingCount: number; syncing: boolean }) => void;
 }) {
   useEffect(() => {
     if (!enabled) return;
 
     const unsub = subscribePosSync((snap) => {
-      onPendingChange?.(snap.pendingCount);
+      onSyncChange?.({ pendingCount: snap.pendingCount, syncing: snap.syncing });
     });
 
-    void refreshPosSyncSnapshot();
+    void refreshPosSyncSnapshot().then((snap) => {
+      if (snap.pendingCount > 0) void runPosSyncFlush();
+    });
 
     function onOnline() {
       void runPosSyncFlush();
@@ -34,7 +36,7 @@ export function PosSyncWatcher({
       window.removeEventListener("online", onOnline);
       window.clearInterval(timer);
     };
-  }, [enabled, onPendingChange]);
+  }, [enabled, onSyncChange]);
 
   return null;
 }
