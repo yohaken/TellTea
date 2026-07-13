@@ -7460,6 +7460,47 @@ body.modal-open .main-panel {
   gap: 0.5rem;
 }
 
+.pos-menu-photo-hint {
+  font-size: 0.75rem;
+  text-align: center;
+  margin: 0;
+}
+
+.pos-menu-crop-modal {
+  max-width: min(100vw - 1.5rem, 22rem);
+}
+
+.pos-menu-crop-frame {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  border: 2px solid #2d6a4f;
+  background: #111;
+  touch-action: none;
+  cursor: grab;
+}
+
+.pos-menu-crop-img {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+  user-select: none;
+}
+
+.pos-menu-crop-zoom {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.75rem 0 0;
+}
+
+.pos-menu-crop-zoom input[type="range"] {
+  flex: 1;
+}
+
 .pos-menu-item-thumb {
   width: 36px;
   height: 36px;

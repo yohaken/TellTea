@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDocs,
   onSnapshot,
@@ -34,7 +35,7 @@ function mapChoice(raw: unknown): MenuOptionChoice | null {
     id,
     name,
     priceDelta: typeof o.priceDelta === "number" ? o.priceDelta : 0,
-    priceDeltaMax: typeof o.priceDeltaMax === "number" ? o.priceDeltaMax : undefined,
+    ...(typeof o.priceDeltaMax === "number" ? { priceDeltaMax: o.priceDeltaMax } : {}),
     sortOrder: typeof o.sortOrder === "number" ? o.sortOrder : 0,
     active: o.active !== false,
   };
@@ -132,7 +133,9 @@ export async function updateMenuOptionGroup(
   if (patch.selectionType != null) next.selectionType = patch.selectionType;
   if (patch.minSelect != null) next.minSelect = patch.minSelect;
   if (patch.maxSelect != null) next.maxSelect = patch.maxSelect;
-  if (patch.options != null) next.options = patch.options;
+  if (patch.options != null) {
+    next.options = patch.options.map((o) => serializeMenuOptionChoice(o));
+  }
   if (patch.sortOrder != null) next.sortOrder = patch.sortOrder;
   if (patch.active != null) next.active = patch.active;
   try {
@@ -148,6 +151,18 @@ export async function deleteMenuOptionGroup(id: string): Promise<void> {
   } catch (err) {
     throw new Error(mapFirestoreError(err, "ลบกลุ่มตัวเลือก", "pos"));
   }
+}
+
+export function serializeMenuOptionChoice(o: MenuOptionChoice): Record<string, unknown> {
+  const row: Record<string, unknown> = {
+    id: o.id,
+    name: o.name.trim(),
+    priceDelta: Math.max(0, Number(o.priceDelta) || 0),
+    sortOrder: o.sortOrder,
+    active: o.active !== false,
+  };
+  if (typeof o.priceDeltaMax === "number") row.priceDeltaMax = o.priceDeltaMax;
+  return row;
 }
 
 export function createMenuOptionChoice(name: string, priceDelta = 0): MenuOptionChoice {
@@ -178,24 +193,35 @@ export type MenuOptionGroupInput = {
 export async function saveMenuOptionGroupFull(id: string, input: MenuOptionGroupInput): Promise<void> {
   const options = input.options
     .filter((o) => o.name.trim())
-    .map((o, i) => ({
-      ...o,
-      name: o.name.trim(),
-      priceDelta: Math.max(0, Number(o.priceDelta) || 0),
-      sortOrder: (i + 1) * 100,
-      active: o.active !== false,
-    }));
-  await updateMenuOptionGroup(id, {
-    name: input.name,
+    .map((o, i) =>
+      serializeMenuOptionChoice({
+        ...o,
+        name: o.name.trim(),
+        priceDelta: Math.max(0, Number(o.priceDelta) || 0),
+        sortOrder: (i + 1) * 100,
+        active: o.active !== false,
+      }),
+    );
+
+  const next: Record<string, unknown> = {
+    updatedAt: Date.now(),
+    name: input.name.trim(),
     required: input.required,
     selectionType: input.selectionType,
-    minSelect: input.selectionType === "multi" ? input.minSelect : undefined,
-    maxSelect:
-      input.selectionType === "multi"
-        ? input.maxSelect
-        : input.selectionType === "single"
-          ? 1
-          : undefined,
     options,
-  });
+  };
+
+  if (input.selectionType === "multi") {
+    next.minSelect = input.minSelect ?? 1;
+    next.maxSelect = input.maxSelect ?? options.length;
+  } else {
+    next.minSelect = deleteField();
+    next.maxSelect = input.selectionType === "single" ? 1 : deleteField();
+  }
+
+  try {
+    await updateDoc(doc(getPosDb(), MENU_OPTION_GROUPS_COL, id), next);
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, "อัปเดตกลุ่มตัวเลือก", "pos"));
+  }
 }

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowLeft, Camera, Trash2 } from "lucide-react";
 import { updateMenuItem } from "@/lib/pos-menu";
-import { processMenuItemImage } from "@/lib/pos-menu-image";
+import { prepareMenuItemImage, type MenuImageCropSource } from "@/lib/pos-menu-image";
+import { PosMenuImageCropModal } from "@/components/PosMenuImageCropModal";
 import { PosSortableList } from "@/components/PosSortableList";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
@@ -35,6 +36,7 @@ export function PosMenuItemEditor({
   const [linkedGroupIds, setLinkedGroupIds] = useState<string[]>(item.optionGroupIds || []);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [cropSource, setCropSource] = useState<MenuImageCropSource | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -57,14 +59,22 @@ export function PosMenuItemEditor({
     );
   }
 
+  async function applyImageUrl(url: string) {
+    setImageUrl(url);
+    await updateMenuItem(item.id, { imageUrl: url });
+  }
+
   async function onPickImage(file: File | null) {
     if (!file) return;
     setUploading(true);
     setError(null);
     try {
-      const url = await processMenuItemImage(file);
-      setImageUrl(url);
-      await updateMenuItem(item.id, { imageUrl: url });
+      const prep = await prepareMenuItemImage(file);
+      if (prep.mode === "done") {
+        await applyImageUrl(prep.dataUrl);
+      } else {
+        setCropSource(prep.source);
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -150,6 +160,7 @@ export function PosMenuItemEditor({
               </button>
             ) : null}
           </div>
+          <p className="muted pos-menu-photo-hint">รูปสี่เหลี่ยมจัตุรัส · บีบอัดอัตโนมัติ · ครอปเมื่อสัดส่วนไม่ตรง</p>
         </div>
 
         <label>
@@ -264,6 +275,17 @@ export function PosMenuItemEditor({
           {busy ? "กำลังบันทึก..." : "บันทึก"}
         </button>
       </form>
+
+      {cropSource ? (
+        <PosMenuImageCropModal
+          source={cropSource}
+          onCancel={() => setCropSource(null)}
+          onConfirm={(dataUrl) => {
+            setCropSource(null);
+            void applyImageUrl(dataUrl).catch((err) => setError((err as Error).message));
+          }}
+        />
+      ) : null}
     </div>
   );
 }

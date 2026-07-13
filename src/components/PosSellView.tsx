@@ -59,7 +59,7 @@ export function PosSellView({
   const [confirmSoldOut, setConfirmSoldOut] = useState<MenuItem | null>(null);
   const [pickerItem, setPickerItem] = useState<MenuItem | null>(null);
   const holdTimerRef = useRef<number | null>(null);
-  const holdItemRef = useRef<MenuItem | null>(null);
+  const longPressHandledRef = useRef(false);
 
   useEffect(() => {
     startPosMenuPreload();
@@ -122,12 +122,11 @@ export function PosSellView({
   const cashNum = Number(cashInput) || 0;
   const change = cashNum >= total ? Math.round((cashNum - total) * 100) / 100 : 0;
 
-  function clearHoldTimer() {
+  function cancelHoldTimer() {
     if (holdTimerRef.current != null) {
       window.clearTimeout(holdTimerRef.current);
       holdTimerRef.current = null;
     }
-    holdItemRef.current = null;
   }
 
   function addToCartDirect(item: MenuItem, selections: PosCartSelection[], unitPrice: number) {
@@ -185,22 +184,19 @@ export function PosSellView({
   }
 
   function onItemPointerDown(item: MenuItem) {
-    clearHoldTimer();
-    holdItemRef.current = item;
+    longPressHandledRef.current = false;
+    cancelHoldTimer();
     holdTimerRef.current = window.setTimeout(() => {
       holdTimerRef.current = null;
-      void requestSoldOutToggle(item);
+      longPressHandledRef.current = true;
+      requestSoldOutToggle(item);
     }, HOLD_MS);
   }
 
-  function onItemPointerUp() {
-    const item = holdItemRef.current;
-    if (holdTimerRef.current != null && item) {
-      window.clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-      if (item.active) tryAddItem(item);
-    }
-    holdItemRef.current = null;
+  function onItemClick(item: MenuItem) {
+    if (longPressHandledRef.current) return;
+    if (!item.active) return;
+    tryAddItem(item);
   }
 
   function decFromCart(cartKey: string) {
@@ -407,9 +403,10 @@ export function PosSellView({
               type="button"
               className={`pos-sell-item ${soldOut ? "pos-sell-item--soldout" : ""} ${item.recommended ? "pos-sell-item--rec" : ""}`}
               onPointerDown={() => onItemPointerDown(item)}
-              onPointerUp={onItemPointerUp}
-              onPointerLeave={clearHoldTimer}
-              onPointerCancel={clearHoldTimer}
+              onPointerUp={cancelHoldTimer}
+              onPointerLeave={cancelHoldTimer}
+              onPointerCancel={cancelHoldTimer}
+              onClick={() => onItemClick(item)}
             >
               {item.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element

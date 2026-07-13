@@ -54,6 +54,8 @@ assert.match(menuSrc, /menuOptionGroups/);
 const sellSrc = readFileSync(join(root, "src/components/PosSellView.tsx"), "utf8");
 assert.match(sellSrc, /PosOptionPickerModal/);
 assert.match(sellSrc, /cartLineToSaleLine/);
+assert.match(sellSrc, /onItemClick/);
+assert.match(sellSrc, /longPressHandledRef/);
 
 const adminSrc = readFileSync(join(root, "src/components/PosMenuAdmin.tsx"), "utf8");
 assert.match(adminSrc, /หมวดหมู่รายการ/);
@@ -61,12 +63,21 @@ assert.match(adminSrc, /กลุ่มตัวเลือก/);
 assert.match(adminSrc, /PosSortableList/);
 
 const imageSrc = readFileSync(join(root, "src/lib/pos-menu-image.ts"), "utf8");
-assert.match(imageSrc, /processMenuItemImage/);
-assert.match(imageSrc, /toDataURL/);
+assert.match(imageSrc, /prepareMenuItemImage/);
+assert.match(imageSrc, /renderSquareCoverCrop/);
+assert.match(imageSrc, /MENU_SQUARE_PX/);
+
+const cropModalSrc = readFileSync(join(root, "src/components/PosMenuImageCropModal.tsx"), "utf8");
+assert.match(cropModalSrc, /PosMenuImageCropModal/);
+
+const optionsSrc = readFileSync(join(root, "src/lib/pos-menu-options.ts"), "utf8");
+assert.match(optionsSrc, /serializeMenuOptionChoice/);
+assert.match(optionsSrc, /deleteField/);
 
 const itemEditorSrc = readFileSync(join(root, "src/components/PosMenuItemEditor.tsx"), "utf8");
 assert.match(itemEditorSrc, /ราคาหน้าร้าน/);
-assert.match(itemEditorSrc, /processMenuItemImage/);
+assert.match(itemEditorSrc, /prepareMenuItemImage/);
+assert.match(itemEditorSrc, /PosMenuImageCropModal/);
 
 const firebaseJson = readFileSync(join(root, "firebase.json"), "utf8");
 assert.doesNotMatch(firebaseJson, /"storage"/);
