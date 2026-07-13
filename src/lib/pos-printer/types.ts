@@ -58,6 +58,8 @@ export type ReceiptPrintPayload = {
   billNo: string;
   lines: PosSaleLine[];
   total: number;
+  subtotal?: number;
+  discountBaht?: number;
   paymentMethod: PosSalePaymentMethod;
   cashReceived?: number;
   change?: number;

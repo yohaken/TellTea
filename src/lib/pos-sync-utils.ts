@@ -7,7 +7,11 @@ export const POS_SYNC_STUCK_MS = 5 * 60 * 1000;
 
 export function saleTotalFromPayload(payload: PosSaleMutationPayload): number {
   const subtotal = payload.lines.reduce((sum, l) => sum + l.price * l.qty, 0);
-  return Math.round(subtotal * 100) / 100;
+  const discount = Math.min(
+    Math.max(0, Math.round(Number(payload.discountBaht || 0) * 100) / 100),
+    Math.round(subtotal * 100) / 100,
+  );
+  return Math.round((subtotal - discount) * 100) / 100;
 }
 
 export function outboxEntryStatus(entry: PosOutboxEntry): "pending" | "failed" {

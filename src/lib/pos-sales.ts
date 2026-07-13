@@ -15,7 +15,12 @@ function buildMutationPayload(input: {
   paymentMethod: "cash" | "promptpay";
   cashReceived: number;
   clientMutationId: string;
+  discountBaht?: number;
 }): PosSaleMutationPayload {
+  const discountBaht =
+    input.discountBaht != null && input.discountBaht > 0
+      ? Math.round(input.discountBaht * 100) / 100
+      : 0;
   return {
     clientMutationId: input.clientMutationId,
     deviceId: input.deviceId,
@@ -24,6 +29,7 @@ function buildMutationPayload(input: {
     lines: input.lines,
     paymentMethod: input.paymentMethod,
     cashReceived: input.cashReceived,
+    ...(discountBaht > 0 ? { discountBaht } : {}),
   };
 }
 
@@ -62,13 +68,18 @@ function recordSaleInstant(input: {
   lines: PosSaleLine[];
   paymentMethod: "cash" | "promptpay";
   cashReceived: number;
+  discountBaht?: number;
 }): PosSaleResult {
   const authUid = getPosFirebaseAuth().currentUser?.uid || input.deviceId;
   const clientMutationId = createPosMutationId(authUid);
   const payload = buildMutationPayload({ ...input, deviceId: authUid, clientMutationId });
 
   const subtotal = input.lines.reduce((sum, l) => sum + l.price * l.qty, 0);
-  const total = Math.round(subtotal * 100) / 100;
+  const discountBaht = Math.min(
+    Math.max(0, Math.round(Number(input.discountBaht || 0) * 100) / 100),
+    Math.round(subtotal * 100) / 100,
+  );
+  const total = Math.round((subtotal - discountBaht) * 100) / 100;
   const cashReceived = Math.round(Number(input.cashReceived) * 100) / 100;
   const change =
     input.paymentMethod === "cash"
@@ -96,13 +107,18 @@ export function completeCashSale(input: {
   shift: string;
   lines: PosSaleLine[];
   cashReceived: number;
+  discountBaht?: number;
 }): PosSaleResult {
   if (!input.lines.length) {
     throw new Error("ตะกร้าว่าง — เลือกเมนูก่อน");
   }
 
   const subtotal = input.lines.reduce((sum, l) => sum + l.price * l.qty, 0);
-  const total = Math.round(subtotal * 100) / 100;
+  const discountBaht = Math.min(
+    Math.max(0, Math.round(Number(input.discountBaht || 0) * 100) / 100),
+    Math.round(subtotal * 100) / 100,
+  );
+  const total = Math.round((subtotal - discountBaht) * 100) / 100;
   const cashReceived = Math.round(Number(input.cashReceived) * 100) / 100;
 
   if (cashReceived < total) {
@@ -116,6 +132,7 @@ export function completeCashSale(input: {
     lines: input.lines,
     paymentMethod: "cash",
     cashReceived,
+    discountBaht,
   });
 }
 
@@ -124,6 +141,7 @@ export function completePromptPaySale(input: {
   sessionId: string;
   shift: string;
   lines: PosSaleLine[];
+  discountBaht?: number;
 }): PosSaleResult {
   if (!input.lines.length) {
     throw new Error("ตะกร้าว่าง — เลือกเมนูก่อน");
@@ -136,5 +154,6 @@ export function completePromptPaySale(input: {
     lines: input.lines,
     paymentMethod: "promptpay",
     cashReceived: 0,
+    discountBaht: input.discountBaht,
   });
 }
