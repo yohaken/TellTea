@@ -1,5 +1,6 @@
 import { doc, getDoc, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
 import { getPosDb } from "./pos-firebase";
+import { normalizePromptPayId } from "./pos-promptpay";
 
 export type PosShopSettings = {
   shopName: string;
@@ -298,7 +299,8 @@ export async function savePosShopSettings(
     shopAddress:
       patch.shopAddress != null ? patch.shopAddress.trim() || DEFAULTS.shopAddress : current.shopAddress,
     shopPhone: patch.shopPhone != null ? patch.shopPhone.trim() || DEFAULTS.shopPhone : current.shopPhone,
-    promptPayId: patch.promptPayId != null ? patch.promptPayId.trim() : current.promptPayId,
+    promptPayId:
+      patch.promptPayId != null ? normalizePromptPayId(patch.promptPayId) : current.promptPayId,
     autoPrintReceipt: patch.autoPrintReceipt != null ? patch.autoPrintReceipt : current.autoPrintReceipt,
     receiptStaffName:
       patch.receiptStaffName != null

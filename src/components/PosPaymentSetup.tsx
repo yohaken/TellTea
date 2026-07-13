@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { QrCode } from "lucide-react";
 import { getPosShopSettings, savePosShopSettings } from "@/lib/pos-settings";
-import { maskPromptPayId } from "@/lib/pos-promptpay";
+import { isValidPromptPayId, maskPromptPayId, normalizePromptPayId } from "@/lib/pos-promptpay";
 
 export function PosPaymentSetup({ onError }: { onError: (msg: string | null) => void }) {
   const [promptPayId, setPromptPayId] = useState("");
@@ -26,7 +26,13 @@ export function PosPaymentSetup({ onError }: { onError: (msg: string | null) => 
     setBusy(true);
     onError(null);
     try {
-      await savePosShopSettings({ promptPayId, autoPrintReceipt });
+      const normalized = normalizePromptPayId(promptPayId);
+      if (normalized && !isValidPromptPayId(normalized)) {
+        onError("เลข PromptPay ไม่ถูกต้อง — ใช้เบอร์ 10 หลัก (0…) หรือเลขภาษี 13 หลัก");
+        return;
+      }
+      await savePosShopSettings({ promptPayId: normalized, autoPrintReceipt });
+      setPromptPayId(normalized);
     } catch (err) {
       onError((err as Error).message);
     } finally {
