@@ -48,6 +48,7 @@ await report.timed("menu_ready", "menu_auth", async () => {
 });
 
 await report.timed("roundtrip", "nav_roundtrip", async () => {
+  await openMobileNav(page);
   await sellNavLink(page).first().click();
   await page.waitForURL(/\/pos\/sell\/?/, { timeout: 8_000, waitUntil: "domcontentloaded" });
   await waitPosBoot(page);

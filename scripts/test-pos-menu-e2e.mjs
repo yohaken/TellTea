@@ -81,7 +81,7 @@ note(`3. คลิกเฟือง → ไปหน้าเมนู OK (${pa
 await page.waitForFunction(
   () => {
     const t = document.body.innerText;
-    return t.includes("หมวดหมู่รายการ") && !t.includes("กำลังเชื่อมต่อเมนู...");
+    return (t.includes("เมนูอาหาร") || t.includes("หมวดหมู่รายการ")) && !t.includes("กำลังเชื่อมต่อเมนู...");
   },
   { timeout: 30000 },
 );
@@ -96,7 +96,7 @@ note("4. หน้าเมนูโหลด + auth OK");
 
 await page.getByRole("button", { name: "กลุ่มตัวเลือก" }).click();
 await page.waitForTimeout(500);
-const plusBtn = page.locator("button.pos-menu-add-btn, header.pos-menu-admin-top button[title='เพิ่ม']").first();
+const plusBtn = page.locator("button.pos-menu-add-btn").first();
 await plusBtn.click();
 
 await page.waitForFunction(
@@ -128,7 +128,7 @@ note("7. กลับรายการกลุ่ม OK");
 const itemsTab = page.getByRole("button", { name: /เมนูอาหาร|หมวดหมู่รายการ/ });
 if (await itemsTab.count()) await itemsTab.first().click();
 await page.waitForTimeout(300);
-const addCatBtn = page.locator("button.pos-menu-add-btn, header.pos-menu-admin-top button[title='เพิ่ม']").first();
+const addCatBtn = page.locator("button.pos-menu-add-btn").first();
 if (await addCatBtn.count()) await addCatBtn.click();
 await page.waitForTimeout(1500);
 const catEditor = await page.locator("body").innerText();
