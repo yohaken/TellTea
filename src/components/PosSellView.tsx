@@ -122,11 +122,13 @@ export function PosSellView({
 
   const activeCategories = useMemo(
     () =>
-      categories.filter(
-        (c) =>
-          c.active &&
-          items.some((i) => i.categoryId === c.id && i.visibleOnPos !== false),
-      ),
+      categories
+        .filter(
+          (c) =>
+            c.active &&
+            items.some((i) => i.categoryId === c.id && i.visibleOnPos !== false),
+        )
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th")),
     [categories, items],
   );
 
