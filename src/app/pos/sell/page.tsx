@@ -11,7 +11,6 @@ export default function PosSellPage() {
     selling,
     shift,
     error,
-    opening,
     canInstall,
     standalone,
     handleOpenShift,
@@ -41,10 +40,9 @@ export default function PosSellPage() {
         <button
           type="button"
           className="primary-btn pos-open-shift-btn"
-          disabled={opening}
-          onClick={() => void handleOpenShift()}
+          onClick={handleOpenShift}
         >
-          {opening ? "กำลังบันทึก..." : "เข้างาน"}
+          เข้างาน
         </button>
       </main>
     );

@@ -24,10 +24,13 @@ import {
 import { isPosStandaloneMode, type BeforeInstallPromptEvent } from "@/lib/pos-install";
 import {
   clearStoredPosSessionId,
-  getCurrentPosSession,
-  openPosSession,
+  persistOpenPosSession,
+  readLocalOpenPosSession,
+  reconcilePosSessionFromRemote,
+  startPosSessionLocal,
   storePosSessionId,
   subscribePosSession,
+  writeLocalOpenPosSession,
 } from "@/lib/pos-session";
 import { getCurrentShiftId } from "@/lib/shift-session";
 import { seedPosMenuIfEmpty } from "@/lib/pos-menu";
@@ -64,7 +67,7 @@ type PosAppContextValue = {
   locked: boolean;
   setLocked: (v: boolean) => void;
   boot: () => Promise<void>;
-  handleOpenShift: () => Promise<void>;
+  handleOpenShift: () => void;
   installApp: () => Promise<void>;
   performReload: () => void;
 };
@@ -173,6 +176,9 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
       const authUid = await ensurePosDeviceAuth();
       deviceIdRef.current = authUid;
 
+      const localSession = readLocalOpenPosSession(authUid);
+      if (localSession) setSession(localSession);
+
       setDevice(optimisticPosDevice(authUid));
       setLastHeartbeatAt(Date.now());
       setStatus("ready");
@@ -186,7 +192,9 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
         })
         .catch(() => {});
 
-      void getCurrentPosSession(authUid).then(setSession);
+      void reconcilePosSessionFromRemote(authUid).then((merged) => {
+        if (merged) setSession(merged);
+      });
       void seedPosMenuIfEmpty().catch(() => {});
     } catch (err) {
       setStatus("error");
@@ -237,27 +245,20 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const deviceId = deviceIdRef.current;
     if (!deviceId || status !== "ready") return;
+    if (!session?.id || session.status !== "open") return;
 
-    let unsub: (() => void) | undefined;
-    let cancelled = false;
-
-    void (async () => {
-      const current = await getCurrentPosSession(deviceId);
-      if (cancelled) return;
-      setSession(current);
-      if (!current) return;
-      storePosSessionId(deviceId, current.id);
-      unsub = subscribePosSession(current.id, (next) => {
+    storePosSessionId(deviceId, session.id);
+    return subscribePosSession(session.id, (next) => {
+      if (next?.status === "open" && next.deviceId === deviceId) {
+        writeLocalOpenPosSession(deviceId, next);
         setSession(next);
-        if (!next || next.status !== "open") clearStoredPosSessionId(deviceId);
-      });
-    })();
-
-    return () => {
-      cancelled = true;
-      unsub?.();
-    };
-  }, [status]);
+        return;
+      }
+      writeLocalOpenPosSession(deviceId, null);
+      clearStoredPosSessionId(deviceId);
+      setSession(next);
+    });
+  }, [status, session?.id, session?.status]);
 
   async function installApp() {
     const prompt = installPromptRef.current;
@@ -270,20 +271,16 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const handleOpenShift = useCallback(async () => {
+  const handleOpenShift = useCallback(() => {
     const deviceId = deviceIdRef.current;
     if (!deviceId) return;
-    setOpening(true);
     setError(null);
-    try {
-      const next = await openPosSession(deviceId, shift);
-      storePosSessionId(deviceId, next.id);
-      setSession(next);
-    } catch (err) {
-      setError((err as Error).message || "เข้างานไม่สำเร็จ");
-    } finally {
-      setOpening(false);
-    }
+    const next = startPosSessionLocal(deviceId, shift);
+    storePosSessionId(deviceId, next.id);
+    setSession(next);
+    void persistOpenPosSession(next).catch((err) => {
+      setError((err as Error).message || "ซิงก์รอบขายไม่สำเร็จ — ขายบนเครื่องได้ต่อ");
+    });
   }, [shift]);
 
   useEffect(() => {

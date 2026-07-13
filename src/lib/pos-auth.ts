@@ -4,7 +4,7 @@ import { getPosFirebaseAuth, getPosFirebaseFunctions } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
 
 const POS_DEVICE_ID_KEY = "telltea-pos-device-id";
-const AUTH_RESTORE_MS = 2_500;
+const AUTH_RESTORE_MS = 1_200;
 
 function getStoredDeviceId(): string | null {
   if (typeof localStorage === "undefined") return null;
