@@ -206,6 +206,7 @@ export type PosSession = {
 
 export type PosSale = {
   id: string;
+  billNo: string;
   deviceId: string;
   sessionId: string;
   date: number;
@@ -219,5 +220,9 @@ export type PosSale = {
   ledgerEntryId: string;
   createdAt: number;
   createdBy: string;
-  status: "completed";
+  status: "completed" | "voided";
+  voidedAt?: number;
+  voidedBy?: string;
+  voidReason?: string;
+  voidLedgerEntryId?: string;
 };

@@ -77,10 +77,23 @@ export function subscribePosSession(
 }
 
 export async function bumpPosSessionTotals(sessionId: string, saleTotal: number): Promise<void> {
+  await adjustPosSessionTotals(sessionId, saleTotal, 1);
+}
+
+export async function adjustPosSessionTotals(
+  sessionId: string,
+  totalDelta: number,
+  countDelta: number,
+): Promise<void> {
   const snap = await getDoc(sessionRef(sessionId));
   if (!snap.exists()) return;
   const data = snap.data() as Record<string, unknown>;
-  const saleCount = (typeof data.saleCount === "number" ? data.saleCount : 0) + 1;
-  const totalSales = (typeof data.totalSales === "number" ? data.totalSales : 0) + saleTotal;
+  const saleCount = Math.max(0, (typeof data.saleCount === "number" ? data.saleCount : 0) + countDelta);
+  const totalSales = Math.max(
+    0,
+    Math.round(
+      ((typeof data.totalSales === "number" ? data.totalSales : 0) + totalDelta) * 100,
+    ) / 100,
+  );
   await setDoc(sessionRef(sessionId), { saleCount, totalSales, updatedAt: Date.now() }, { merge: true });
 }

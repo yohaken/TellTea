@@ -6433,6 +6433,17 @@ body.modal-open .main-panel {
   gap: 0.35rem;
 }
 
+.pos-sell-cart-line-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.pos-sell-cart-line-actions .ghost-btn {
+  min-width: 1.75rem;
+  padding: 0.15rem 0.35rem;
+}
+
 .pos-sell-bar {
   position: fixed;
   left: 0;
@@ -6609,4 +6620,61 @@ body.modal-open .main-panel {
   font-size: 0.82rem;
   line-height: 1.5;
   color: rgba(28, 42, 31, 0.72);
+}
+
+.pos-sales-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.pos-sales-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.pos-sales-row--void {
+  opacity: 0.65;
+}
+
+.pos-sales-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.pos-sales-row-items {
+  font-size: 0.78rem;
+  color: rgba(28, 42, 31, 0.62);
+}
+
+.pos-sales-row-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.pos-sales-void-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  color: #9a4e12;
+}
+
+.pos-sales-voided {
+  font-size: 0.75rem;
+  color: rgba(28, 42, 31, 0.5);
 }

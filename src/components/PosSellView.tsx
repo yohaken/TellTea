@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ShoppingCart, X } from "lucide-react";
 import { seedPosMenuIfEmpty, subscribeMenuCategories, subscribeMenuItems } from "@/lib/pos-menu";
 import { completeCashSale } from "@/lib/pos-sales";
+import { playPosSaleChime } from "@/lib/pos-sound";
 import { labelOtShift } from "@/lib/ot";
 import type { MenuCategory, MenuItem, PosSaleLine, PosSession } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
@@ -108,6 +109,22 @@ export function PosSellView({
     });
   }
 
+  function incCart(itemId: string) {
+    setCart((prev) => {
+      const cur = prev[itemId];
+      if (!cur) return prev;
+      return { ...prev, [itemId]: { ...cur, qty: cur.qty + 1 } };
+    });
+  }
+
+  function clearLine(itemId: string) {
+    setCart((prev) => {
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
+  }
+
   function openPay() {
     if (!cartCount) return;
     setCashInput(String(Math.ceil(total)));
@@ -135,7 +152,10 @@ export function PosSellView({
       setCart({});
       setPayOpen(false);
       setCashInput("");
-      setSuccess(`รับเงิน ฿${formatPlainNumber(result.total)} · ทอน ฿${formatPlainNumber(result.change)}`);
+      playPosSaleChime();
+      setSuccess(
+        `บิล ${result.billNo} · ฿${formatPlainNumber(result.total)} · ทอน ฿${formatPlainNumber(result.change)}`,
+      );
       window.setTimeout(() => setSuccess(null), 2500);
     } catch (err) {
       setError((err as Error).message || "ชำระเงินไม่สำเร็จ");
@@ -216,9 +236,17 @@ export function PosSellView({
               <span>
                 {l.item.name} ×{l.qty}
               </span>
-              <button type="button" className="ghost-btn" onClick={() => decFromCart(l.item.id)}>
-                −
-              </button>
+              <div className="pos-sell-cart-line-actions">
+                <button type="button" className="ghost-btn" aria-label="ลด" onClick={() => decFromCart(l.item.id)}>
+                  −
+                </button>
+                <button type="button" className="ghost-btn" aria-label="เพิ่ม" onClick={() => incCart(l.item.id)}>
+                  +
+                </button>
+                <button type="button" className="ghost-btn" aria-label="ลบ" onClick={() => clearLine(l.item.id)}>
+                  ×
+                </button>
+              </div>
             </div>
           ))}
         </div>

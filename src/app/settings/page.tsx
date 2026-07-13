@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Settings } from "lucide-react";
 import { AppUpdateSetup } from "@/components/AppUpdateSetup";
 import { MenuCatalogSetup } from "@/components/MenuCatalogSetup";
+import { PosSalesSetup } from "@/components/PosSalesSetup";
 import { PosDeviceSetup } from "@/components/PosDeviceSetup";
 import { AuthGate } from "@/components/AuthGate";
 import { ChecklistSetup } from "@/components/ChecklistSetup";
@@ -81,6 +82,7 @@ function SettingsView() {
         <div className="owner-settings-stack">
           <AppUpdateSetup onError={setError} />
           <PosDeviceSetup onError={setError} />
+          <PosSalesSetup onError={setError} />
           <MenuCatalogSetup onError={setError} />
           <NavMenuOrderSetup onError={setError} />
           <ProdCatalogSetup

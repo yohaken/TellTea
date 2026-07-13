@@ -198,6 +198,13 @@ service cloud.firestore {
         ]);
     }
 
+    function posMetaBillWrite() {
+      return request.resource.data.billDate is number
+        && request.resource.data.billSeq is number
+        && request.resource.data.billSeq >= 1
+        && request.resource.data.billSeq <= 9999;
+    }
+
     function posActorId() {
       return 'pos:' + request.auth.uid;
     }
@@ -218,6 +225,8 @@ service cloud.firestore {
         && request.resource.data.change >= 0
         && request.resource.data.createdBy == posActorId()
         && request.resource.data.status == 'completed'
+        && request.resource.data.billNo is string
+        && request.resource.data.billNo.size() >= 5
         && request.resource.data.ledgerEntryId is string;
     }
 
@@ -492,13 +501,14 @@ service cloud.firestore {
     }
 
     match /meta/{docId} {
-      allow read: if isStaff() || (isPosDeviceAuth() && docId == 'ui');
+      allow read: if isStaff() || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos'));
       allow write: if isOwner()
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
         || (hasPerm('alerts') && docId == 'lowBalanceAlert')
         || (hasPerm('ownerBooks') && docId == 'ownerBooks')
         || (isOwner() && docId == 'otSettings')
-        || (isPosDeviceAuth() && docId == 'ledger' && posLedgerMetaWrite());
+        || (isPosDeviceAuth() && docId == 'ledger' && posLedgerMetaWrite())
+        || (isPosDeviceAuth() && docId == 'pos' && posMetaBillWrite());
     }
 
     match /pushSubscriptions/{id} {

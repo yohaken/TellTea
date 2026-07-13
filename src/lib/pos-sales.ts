@@ -6,6 +6,7 @@ import {
 } from "firebase/firestore";
 import { getPosDb } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
+import { allocatePosBillNo } from "./pos-bill";
 import { posCreatedBy } from "./pos-menu";
 import { bumpPosSessionTotals } from "./pos-session";
 import type { PosSaleLine } from "./types";
@@ -32,7 +33,7 @@ export async function completeCashSale(input: {
   shift: string;
   lines: PosSaleLine[];
   cashReceived: number;
-}): Promise<{ saleId: string; change: number; total: number }> {
+}): Promise<{ saleId: string; billNo: string; change: number; total: number }> {
   if (!input.lines.length) {
     throw new Error("ตะกร้าว่าง — เลือกเมนูก่อน");
   }
@@ -50,12 +51,14 @@ export async function completeCashSale(input: {
   const date = startOfLocalDay();
   const createdBy = posCreatedBy(input.deviceId);
   const description = saleDescription(input.lines);
+  const billNo = await allocatePosBillNo();
 
   const db = getPosDb();
   const saleRef = doc(collection(db, POS_SALES_COL));
   const ledgerRef = doc(collection(db, "ledger"));
 
   const salePayload = {
+    billNo,
     deviceId: input.deviceId,
     sessionId: input.sessionId,
     date,
@@ -105,5 +108,5 @@ export async function completeCashSale(input: {
     throw new Error(mapFirestoreError(err, "บันทึกการขาย"));
   }
 
-  return { saleId: saleRef.id, change, total };
+  return { saleId: saleRef.id, billNo, change, total };
 }
