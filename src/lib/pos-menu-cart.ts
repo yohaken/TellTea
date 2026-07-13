@@ -36,7 +36,7 @@ export function optionGroupsForItem(
     .map((id) => byId.get(id))
     .filter((g): g is MenuOptionGroup => g != null);
 
-  // ลำดับตามที่ผูกลากในเมนูรายการ — ถ้าไม่มี custom order ใน ids ใช้ sortOrder กลุ่ม
+  // ลำดับตาม optionGroupIds ที่จัดด้วย ↑↓ ในเมนูรายการ — ว่างแล้วใช้ sortOrder กลุ่ม
   const ordered =
     ids.length > 0
       ? linked

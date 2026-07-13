@@ -203,7 +203,7 @@ export function PosMenuItemEditor({
           </div>
           {linkedGroups.length > 1 ? (
             <>
-              <p className="muted pos-menu-sort-hint">กด ↑↓ หรือลาก — ลำดับนี้ไปหน้าขาย (กลุ่มตัวเลือกตอนกดเมนู)</p>
+              <p className="muted pos-menu-sort-hint">กด ↑↓ เลื่อนลำดับกลุ่ม — ไปหน้าขายทันที</p>
               <PosSortableList
                 ids={linkedGroupIds}
                 onReorder={(ids) => {

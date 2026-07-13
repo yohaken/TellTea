@@ -157,7 +157,7 @@ export function PosOptionGroupEditor({
           </button>
         </div>
 
-        <p className="muted pos-menu-sort-hint">ลาก ≡ เพื่อเรียงลำดับตัวเลือก</p>
+        <p className="muted pos-menu-sort-hint">กด ↑↓ เลื่อนลำดับตัวเลือก</p>
 
         <PosSortableList
           ids={options.map((o) => o.id)}

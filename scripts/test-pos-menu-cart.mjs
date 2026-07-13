@@ -236,11 +236,26 @@ assert.match(templateSrc, /receiptLineBaseName/);
 assert.doesNotMatch(templateSrc, /truncate\(line\.name/);
 
 const sortableSrc = readFileSync(join(root, "src/components/PosSortableList.tsx"), "utf8");
-assert.match(sortableSrc, /onPointerDown/);
-assert.match(sortableSrc, /overIdRef/);
 assert.match(sortableSrc, /ChevronUp/);
+assert.match(sortableSrc, /ChevronDown/);
 assert.match(sortableSrc, /moveBy/);
-assert.match(readFileSync(join(root, "src/app/globals.css"), "utf8"), /pos-sortable-handle[\s\S]*touch-action: none/);
+assert.doesNotMatch(sortableSrc, /onPointerDown/);
+assert.doesNotMatch(sortableSrc, /GripVertical/);
+assert.doesNotMatch(sortableSrc, /draggable/);
+assert.match(readFileSync(join(root, "src/app/globals.css"), "utf8"), /pos-sortable-step[\s\S]*touch-action: manipulation/);
+assert.doesNotMatch(readFileSync(join(root, "src/app/globals.css"), "utf8"), /\.pos-sortable-handle\s*\{/);
+
+const adminSrcHints = readFileSync(join(root, "src/components/PosMenuAdmin.tsx"), "utf8");
+assert.match(adminSrcHints, /กด ↑↓/);
+assert.doesNotMatch(adminSrcHints, /ลาก ≡/);
+
+const itemEditorHints = readFileSync(join(root, "src/components/PosMenuItemEditor.tsx"), "utf8");
+assert.match(itemEditorHints, /กด ↑↓/);
+assert.doesNotMatch(itemEditorHints, /ลาก/);
+
+const groupEditorHints = readFileSync(join(root, "src/components/PosOptionGroupEditor.tsx"), "utf8");
+assert.match(groupEditorHints, /กด ↑↓/);
+assert.doesNotMatch(groupEditorHints, /ลาก ≡/);
 
 const shiftSrc = readFileSync(join(root, "src/components/PosShiftView.tsx"), "utf8");
 assert.match(shiftSrc, /pos-shift-sticky-top/);
