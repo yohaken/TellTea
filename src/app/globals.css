@@ -6426,6 +6426,7 @@ body.modal-open .main-panel {
 .pos-sell-status-shift {
   font-weight: 800;
   color: #1a1f24;
+  font-variant-numeric: tabular-nums;
 }
 
 .pos-sell-status-meta {

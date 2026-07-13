@@ -434,3 +434,20 @@ export function formatPosSessionClock(ts: number): string {
     minute: "2-digit",
   });
 }
+
+/** เวลาเริ่มรอบ — สั้นสำหรับแถบขาย */
+export function formatPosOpenedAtShort(ts: number): string {
+  return new Date(ts).toLocaleTimeString("th-TH", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+/** ระยะเวลาทำรอบ — ชม. นาที */
+export function formatPosElapsedHm(ms: number): string {
+  const totalMin = Math.max(0, Math.floor(ms / 60_000));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${h} ชม. ${m} นาที`;
+}
