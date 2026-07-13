@@ -96,10 +96,19 @@ export function PosSalesReport({
 
       <div className="pos-sales-summary-grid">
         <div className="pos-sales-summary-card pos-sales-summary-card--total">
-          <span className="pos-sales-summary-label">ยอดขายรวม</span>
+          <span className="pos-sales-summary-label">ยอดขายสุทธิ</span>
           <strong>฿{formatPlainNumber(summary.total)}</strong>
           <span className="muted">{summary.activeCount} บิล</span>
         </div>
+        {summary.discountTotal > 0 ? (
+          <div className="pos-sales-summary-card">
+            <span className="pos-sales-summary-label">ส่วนลด</span>
+            <strong>-฿{formatPlainNumber(summary.discountTotal)}</strong>
+            <span className="muted">
+              {summary.discountCount} บิล · ก่อนลด ฿{formatPlainNumber(summary.grossTotal)}
+            </span>
+          </div>
+        ) : null}
         <div className="pos-sales-summary-card">
           <span className="pos-sales-summary-label">เงินสด</span>
           <strong>฿{formatPlainNumber(summary.cashTotal)}</strong>
@@ -232,6 +241,9 @@ export function PosSalesReport({
                     <span className="muted">
                       {formatTime(sale.createdAt)} · {labelOtShift(sale.shift as "late" | "morning" | "evening")} ·{" "}
                       {sale.paymentMethod === "promptpay" ? "PromptPay" : "เงินสด"}
+                      {(sale.discountBaht || 0) > 0
+                        ? ` · ส่วนลด ฿${formatPlainNumber(sale.discountBaht || 0)}`
+                        : ""}
                     </span>
                     <span className="pos-sales-row-items">{preview}</span>
                     {sale.voidReason ? (

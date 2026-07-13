@@ -1,5 +1,6 @@
 import type { PosLocalReceipt, PosLocalReceiptLine } from "./pos-local-receipts";
 import { summarizeLocalReceipts } from "./pos-local-receipts";
+import { receiptDiscountBaht } from "./pos-receipt-view";
 import type { PosShopSettings } from "./pos-settings";
 import type { MenuCategory, MenuItem } from "./types";
 
@@ -146,7 +147,7 @@ function toBillRow(r: PosLocalReceipt): ShiftReportBillRow {
     createdAt: r.createdAt,
     paymentMethod: r.paymentMethod,
     total: round2(r.total),
-    discountBaht: round2(Math.max(0, r.discountBaht || 0)),
+    discountBaht: receiptDiscountBaht(r),
     voided: r.voided === true,
     pending: r.pending === true,
     lines,
@@ -193,16 +194,14 @@ export function buildShiftReportDetail(
     }
   }
 
-  const discountTotal = round2(
-    active.reduce((s, r) => s + Math.max(0, r.discountBaht || 0), 0),
-  );
-  const discountCount = active.filter((r) => (r.discountBaht || 0) > 0).length;
+  const discountTotal = round2(active.reduce((s, r) => s + receiptDiscountBaht(r), 0));
+  const discountCount = active.filter((r) => receiptDiscountBaht(r) > 0).length;
   const netSales = round2(active.reduce((s, r) => s + r.total, 0));
 
   // บิลเก่าไม่มี lines — ใช้ยอดสุทธิเป็น gross สำหรับส่วนที่ขาด
   const missingGross = active
     .filter((r) => !(r.lines && r.lines.length))
-    .reduce((s, r) => s + r.total + Math.max(0, r.discountBaht || 0), 0);
+    .reduce((s, r) => s + r.total + receiptDiscountBaht(r), 0);
   const grossSales =
     billsWithLines === active.length
       ? grossFromLines

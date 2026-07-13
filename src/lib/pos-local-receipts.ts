@@ -107,9 +107,27 @@ export function summarizeLocalReceipts(receipts: PosLocalReceipt[]) {
   const active = receipts.filter((r) => !r.voided);
   const cash = active.filter((r) => r.paymentMethod === "cash");
   const pp = active.filter((r) => r.paymentMethod === "promptpay");
+
+  const discOf = (r: PosLocalReceipt) => {
+    const stored = Math.max(0, Math.round(Number(r.discountBaht || 0) * 100) / 100);
+    if (stored > 0) return stored;
+    if (!r.lines?.length) return 0;
+    const sub =
+      Math.round(r.lines.reduce((s, l) => s + l.unitPrice * l.qty, 0) * 100) / 100;
+    const diff = Math.round((sub - r.total) * 100) / 100;
+    return diff > 0.004 ? diff : 0;
+  };
+
+  const discountTotal = Math.round(active.reduce((s, r) => s + discOf(r), 0) * 100) / 100;
+  const discountCount = active.filter((r) => discOf(r) > 0).length;
+  const netTotal = Math.round(active.reduce((s, r) => s + r.total, 0) * 100) / 100;
+  const grossTotal = Math.round((netTotal + discountTotal) * 100) / 100;
   return {
     count: active.length,
-    total: Math.round(active.reduce((s, r) => s + r.total, 0) * 100) / 100,
+    total: netTotal,
+    grossTotal,
+    discountTotal,
+    discountCount,
     cashTotal: Math.round(cash.reduce((s, r) => s + r.total, 0) * 100) / 100,
     cashCount: cash.length,
     promptpayTotal: Math.round(pp.reduce((s, r) => s + r.total, 0) * 100) / 100,

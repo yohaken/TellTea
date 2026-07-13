@@ -34,6 +34,9 @@ export type PosSalesDetailedSummary = {
   voidedCount: number;
   voidedTotal: number;
   total: number;
+  grossTotal: number;
+  discountTotal: number;
+  discountCount: number;
   cashTotal: number;
   cashCount: number;
   promptpayTotal: number;
@@ -50,7 +53,18 @@ export type PosSessionReconcileRow = {
   totalMatch: boolean;
 };
 
+function resolveSaleDiscountBaht(data: Record<string, unknown>, subtotal: number, total: number): number {
+  if (typeof data.discountBaht === "number" && data.discountBaht > 0) {
+    return Math.round(data.discountBaht * 100) / 100;
+  }
+  const inferred = Math.round((subtotal - total) * 100) / 100;
+  return inferred > 0.004 ? inferred : 0;
+}
+
 function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
+  const subtotal = typeof data.subtotal === "number" ? data.subtotal : 0;
+  const total = typeof data.total === "number" ? data.total : 0;
+  const discountBaht = resolveSaleDiscountBaht(data, subtotal, total);
   return {
     id,
     billNo: typeof data.billNo === "string" ? data.billNo : "—",
@@ -59,8 +73,9 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     date: typeof data.date === "number" ? data.date : 0,
     shift: typeof data.shift === "string" ? data.shift : "",
     lines: Array.isArray(data.lines) ? (data.lines as PosSale["lines"]) : [],
-    subtotal: typeof data.subtotal === "number" ? data.subtotal : 0,
-    total: typeof data.total === "number" ? data.total : 0,
+    subtotal,
+    ...(discountBaht > 0 ? { discountBaht } : {}),
+    total,
     paymentMethod: data.paymentMethod === "promptpay" ? "promptpay" : "cash",
     cashReceived: typeof data.cashReceived === "number" ? data.cashReceived : 0,
     change: typeof data.change === "number" ? data.change : 0,
@@ -131,11 +146,21 @@ export function summarizePosSalesDetailed(sales: PosSale[]): PosSalesDetailedSum
     .sort((a, b) => b.total - a.total || b.qty - a.qty)
     .slice(0, 8);
 
+  const discountTotal = Math.round(
+    active.reduce((sum, s) => sum + Math.max(0, s.discountBaht || 0), 0) * 100,
+  ) / 100;
+  const discountCount = active.filter((s) => (s.discountBaht || 0) > 0).length;
+  const netTotal = active.reduce((sum, s) => sum + s.total, 0);
+  const grossTotal = Math.round((netTotal + discountTotal) * 100) / 100;
+
   return {
     activeCount: active.length,
     voidedCount: voided.length,
     voidedTotal: voided.reduce((sum, s) => sum + s.total, 0),
-    total: active.reduce((sum, s) => sum + s.total, 0),
+    total: netTotal,
+    grossTotal,
+    discountTotal,
+    discountCount,
     cashTotal: cashSales.reduce((sum, s) => sum + s.total, 0),
     cashCount: cashSales.length,
     promptpayTotal: ppSales.reduce((sum, s) => sum + s.total, 0),

@@ -8,6 +8,7 @@ import {
 } from "@/lib/pos-receipt-format";
 import {
   localReceiptLines,
+  receiptDiscountBaht,
   receiptSubtotal,
 } from "@/lib/pos-receipt-view";
 import { formatPlainNumber } from "@/lib/utils";
@@ -37,6 +38,7 @@ export function PosReceiptPaper({
 }) {
   const lines = localReceiptLines(receipt);
   const subtotal = receiptSubtotal(lines);
+  const discountBaht = receiptDiscountBaht(receipt);
   const voided = receipt.voided === true;
   const showActions = Boolean(onPrint || onVoid);
 
@@ -143,6 +145,12 @@ export function PosReceiptPaper({
             <span>ราคาอาหารรวม</span>
             <span>{formatPlainNumber(subtotal)}</span>
           </div>
+          {discountBaht > 0 ? (
+            <div className="pos-receipt-paper-total-row pos-receipt-paper-total-row--discount">
+              <span>ส่วนลด</span>
+              <span>-{formatPlainNumber(discountBaht)}</span>
+            </div>
+          ) : null}
           <div className="pos-receipt-paper-total-row pos-receipt-paper-total-row--grand">
             <span>ยอดสุทธิ</span>
             <strong>{formatPlainNumber(receipt.total)}</strong>

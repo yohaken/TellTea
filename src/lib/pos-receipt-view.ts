@@ -44,10 +44,7 @@ export function localReceiptToPrintPayload(
 ): ReceiptPrintPayload {
   const lines = localReceiptLines(receipt).map(localReceiptLineToSaleLine);
   const subtotal = receiptSubtotal(localReceiptLines(receipt));
-  const discountBaht =
-    receipt.discountBaht != null && receipt.discountBaht > 0
-      ? receipt.discountBaht
-      : undefined;
+  const discountBaht = receiptDiscountBaht(receipt);
   return {
     kind: "receipt",
     shopName: shop.shopName,
@@ -57,7 +54,7 @@ export function localReceiptToPrintPayload(
     billNo: receipt.billNo,
     lines,
     subtotal,
-    discountBaht,
+    discountBaht: discountBaht > 0 ? discountBaht : undefined,
     total: receipt.total,
     paymentMethod: receipt.paymentMethod,
     cashReceived: receipt.cashReceived,
@@ -78,4 +75,15 @@ export function receiptLineModifierLabels(line: PosLocalReceiptLine): string[] {
 
 export function receiptSubtotal(lines: PosLocalReceiptLine[]): number {
   return Math.round(lines.reduce((s, l) => s + l.unitPrice * l.qty, 0) * 100) / 100;
+}
+
+/** ส่วนลดท้ายบิล — จากฟิลด์ หรืออนุมานจากยอดรายการ − ยอดสุทธิ (บิลเก่า) */
+export function receiptDiscountBaht(receipt: PosLocalReceipt): number {
+  const stored = Math.max(0, Math.round(Number(receipt.discountBaht || 0) * 100) / 100);
+  if (stored > 0) return stored;
+  const lines = localReceiptLines(receipt);
+  if (!lines.length) return 0;
+  const sub = receiptSubtotal(lines);
+  const diff = Math.round((sub - receipt.total) * 100) / 100;
+  return diff > 0.004 ? diff : 0;
 }

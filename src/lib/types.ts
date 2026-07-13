@@ -263,6 +263,8 @@ export type PosSale = {
   shift: string;
   lines: PosSaleLine[];
   subtotal: number;
+  /** ส่วนลดท้ายบิล (บาท) */
+  discountBaht?: number;
   total: number;
   paymentMethod: PosSalePaymentMethod;
   cashReceived: number;
