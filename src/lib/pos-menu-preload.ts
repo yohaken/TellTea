@@ -1,10 +1,11 @@
 import { loadPosMenuCache } from "./pos-menu-cache";
 import { seedPosMenuIfEmpty, subscribePosMenuBundle } from "./pos-menu";
-import type { MenuCategory, MenuItem } from "./types";
+import type { MenuCategory, MenuItem, MenuOptionGroup } from "./types";
 
 export type PosMenuSnapshot = {
   categories: MenuCategory[];
   items: MenuItem[];
+  optionGroups: MenuOptionGroup[];
   ready: boolean;
   fromCache: boolean;
   syncing: boolean;
@@ -14,6 +15,7 @@ export type PosMenuSnapshot = {
 const EMPTY: PosMenuSnapshot = {
   categories: [],
   items: [],
+  optionGroups: [],
   ready: false,
   fromCache: false,
   syncing: false,
@@ -36,6 +38,7 @@ function applyCache(): boolean {
   snapshot = {
     categories: cached.categories,
     items: cached.items,
+    optionGroups: cached.optionGroups,
     ready: true,
     fromCache: true,
     syncing: true,
@@ -55,7 +58,6 @@ export function subscribePosMenuPreload(listener: (snap: PosMenuSnapshot) => voi
   return () => listeners.delete(listener);
 }
 
-/** Start once — cache first, then Firestore cache, then live snapshots. */
 export function startPosMenuPreload(): void {
   if (unsubscribe) return;
 
@@ -66,9 +68,7 @@ export function startPosMenuPreload(): void {
 
   if (!seedStarted) {
     seedStarted = true;
-    void seedPosMenuIfEmpty().catch(() => {
-      /* owner may seed from Settings */
-    });
+    void seedPosMenuIfEmpty().catch(() => {});
   }
 
   if (timeoutId == null && typeof window !== "undefined") {
@@ -81,11 +81,12 @@ export function startPosMenuPreload(): void {
   }
 
   unsubscribe = subscribePosMenuBundle(
-    ({ categories, items, fromCache }) => {
+    ({ categories, items, optionGroups, fromCache }) => {
       const hasMenu = items.length > 0;
       snapshot = {
         categories,
         items,
+        optionGroups,
         ready: hasMenu || snapshot.ready,
         fromCache: fromCache && snapshot.fromCache,
         syncing: false,

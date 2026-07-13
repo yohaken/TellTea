@@ -51,6 +51,9 @@ jobs:
       - name: Verify POS offline sync wiring
         run: npm run test:pos-sync
 
+      - name: Verify POS menu + options wiring
+        run: npm run test:pos-menu-cart
+
       - name: Enable POS auth domains
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

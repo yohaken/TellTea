@@ -7042,3 +7042,339 @@ body.modal-open .main-panel {
   font-size: 0.8rem;
   line-height: 1.4;
 }
+
+/* POS menu admin + option picker */
+.pos-menu-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.55rem;
+}
+
+.pos-menu-nav-label {
+  font-weight: 600;
+}
+
+.pos-menu-admin {
+  min-height: 100dvh;
+  background: #f4f7f4;
+  padding-bottom: 2rem;
+}
+
+.pos-menu-admin-top,
+.pos-menu-admin-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  background: #fff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.pos-menu-admin-top h1,
+.pos-menu-admin-head h1 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.pos-menu-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pos-menu-tabs {
+  display: flex;
+  background: #fff;
+  border-bottom: 2px solid #eee;
+}
+
+.pos-menu-tabs button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 0.75rem 0.5rem;
+  font-weight: 600;
+  color: #666;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+
+.pos-menu-tabs button.is-active {
+  color: #c45a1a;
+  border-bottom-color: #c45a1a;
+}
+
+.pos-menu-admin-error {
+  margin: 0.5rem 0.85rem 0;
+}
+
+.pos-menu-cat-list,
+.pos-menu-group-list,
+.pos-menu-item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pos-menu-cat-row,
+.pos-menu-group-list > li {
+  background: #fff;
+  border-bottom: 1px solid #eee;
+}
+
+.pos-menu-cat-head,
+.pos-menu-group-row,
+.pos-menu-item-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.pos-menu-cat-head span:first-child,
+.pos-menu-group-row span:first-child,
+.pos-menu-item-row span:first-child {
+  flex: 1;
+}
+
+.pos-menu-cat-actions,
+.pos-menu-item-sort {
+  display: flex;
+  gap: 0.15rem;
+  padding: 0 0.75rem 0.5rem;
+}
+
+.pos-menu-item-list {
+  background: #fafcfa;
+  border-top: 1px solid #eee;
+}
+
+.pos-menu-item-list > li {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.pos-menu-item-row {
+  flex: 1;
+  padding: 0.65rem 0.85rem;
+}
+
+.pos-menu-chevron-open {
+  transform: rotate(180deg);
+}
+
+.pos-menu-empty {
+  padding: 1rem;
+  text-align: center;
+}
+
+.pos-menu-admin-screen {
+  min-height: 100dvh;
+  background: #f4f7f4;
+}
+
+.pos-menu-editor-form {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pos-menu-editor-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.pos-menu-editor-form input,
+.pos-menu-editor-form select,
+.pos-menu-editor-form textarea {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #ccc;
+  border-radius: 0.45rem;
+  font-size: 1rem;
+}
+
+.pos-menu-toggle-row {
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pos-menu-fieldset {
+  border: 1px solid #ddd;
+  border-radius: 0.5rem;
+  padding: 0.65rem;
+}
+
+.pos-menu-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.35rem 0;
+}
+
+.pos-menu-inline-nums input {
+  width: 3rem;
+  margin: 0 0.25rem;
+}
+
+.pos-menu-options-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pos-menu-options-head h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.pos-menu-option-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pos-menu-option-rows li {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.pos-menu-option-rows input[type="text"],
+.pos-menu-option-rows input:first-child {
+  flex: 1;
+}
+
+.pos-menu-option-rows input[type="number"] {
+  width: 5rem;
+}
+
+.pos-menu-delete-btn {
+  color: #a33030;
+  margin-top: 0.5rem;
+}
+
+.pos-menu-save-btn {
+  margin-top: 0.5rem;
+}
+
+.pos-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.pos-modal,
+.pos-option-picker {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90dvh;
+  background: #fff;
+  border-radius: 1rem 1rem 0 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-modal-head,
+.pos-modal-foot {
+  padding: 0.85rem 1rem;
+}
+
+.pos-modal-head h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1.05rem;
+}
+
+.pos-modal-foot {
+  display: flex;
+  gap: 0.5rem;
+  border-top: 1px solid #eee;
+}
+
+.pos-modal-foot .primary-btn {
+  flex: 1;
+}
+
+.pos-option-picker-body {
+  overflow: auto;
+  padding: 0 1rem 0.5rem;
+  flex: 1;
+}
+
+.pos-option-group-block {
+  margin-bottom: 0.85rem;
+}
+
+.pos-option-group-block h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+}
+
+.pos-option-req {
+  color: #c45a1a;
+}
+
+.pos-option-choice-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pos-option-choice-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.35rem;
+  border: 1px solid #ddd;
+  border-radius: 0.5rem;
+  background: #fff;
+  text-align: left;
+}
+
+.pos-option-choice-btn.is-selected {
+  border-color: #2f6a4f;
+  background: rgba(47, 106, 79, 0.08);
+}
+
+.pos-option-choice-name {
+  flex: 1;
+}
+
+.pos-option-choice-price {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.pos-option-picker-error {
+  padding: 0 1rem;
+}
+
+.pos-sell-item--rec {
+  border-color: rgba(196, 90, 26, 0.35);
+}
+
+.pos-sell-hint {
+  font-size: 0.75rem;
+  padding: 0 0.5rem;
+  margin: 0;
+}

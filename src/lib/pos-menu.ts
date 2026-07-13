@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDocs,
   getDocsFromCache,
@@ -14,7 +15,8 @@ import {
 import { getPosDb } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
 import { savePosMenuCache } from "./pos-menu-cache";
-import type { MenuCategory, MenuItem } from "./types";
+import { listMenuOptionGroups, subscribeMenuOptionGroups } from "./pos-menu-options";
+import type { MenuCategory, MenuItem, MenuOptionGroup } from "./types";
 
 export const MENU_CATEGORIES_COL = "menuCategories";
 export const MENU_ITEMS_COL = "menuItems";
@@ -39,13 +41,22 @@ function mapCategory(id: string, data: Record<string, unknown>): MenuCategory {
 }
 
 function mapItem(id: string, data: Record<string, unknown>): MenuItem {
+  const optionGroupIds = Array.isArray(data.optionGroupIds)
+    ? data.optionGroupIds.filter((x): x is string => typeof x === "string")
+    : undefined;
   return {
     id,
     categoryId: typeof data.categoryId === "string" ? data.categoryId : "",
     name: typeof data.name === "string" ? data.name : "",
+    nameEn: typeof data.nameEn === "string" ? data.nameEn : undefined,
     price: typeof data.price === "number" ? data.price : 0,
     sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 0,
     active: data.active !== false,
+    visibleOnPos: data.visibleOnPos !== false,
+    recommended: data.recommended === true,
+    imageUrl: typeof data.imageUrl === "string" ? data.imageUrl : undefined,
+    description: typeof data.description === "string" ? data.description : undefined,
+    optionGroupIds: optionGroupIds?.length ? optionGroupIds : undefined,
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
     updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
   };
@@ -82,18 +93,26 @@ export function subscribeMenuItems(
   );
 }
 
-/** Cache-first live menu — one subscription for POS sell screen. */
+export type PosMenuBundle = {
+  categories: MenuCategory[];
+  items: MenuItem[];
+  optionGroups: MenuOptionGroup[];
+  fromCache: boolean;
+};
+
+/** Cache-first live menu — categories, items, option groups. */
 export function subscribePosMenuBundle(
-  onData: (data: { categories: MenuCategory[]; items: MenuItem[]; fromCache: boolean }) => void,
+  onData: (data: PosMenuBundle) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
   let categories: MenuCategory[] = [];
   let items: MenuItem[] = [];
+  let optionGroups: MenuOptionGroup[] = [];
 
   function publish(fromCache: boolean) {
-    if (!categories.length && !items.length) return;
-    savePosMenuCache(categories, items);
-    onData({ categories, items, fromCache });
+    if (!categories.length && !items.length && !optionGroups.length) return;
+    savePosMenuCache(categories, items, optionGroups);
+    onData({ categories, items, optionGroups, fromCache });
   }
 
   void (async () => {
@@ -106,7 +125,7 @@ export function subscribePosMenuBundle(
       items = itemSnap.docs.map((d) => mapItem(d.id, d.data() as Record<string, unknown>));
       if (items.length) publish(true);
     } catch {
-      // IndexedDB cache not warm yet — wait for onSnapshot
+      // wait for onSnapshot
     }
   })();
 
@@ -121,10 +140,15 @@ export function subscribePosMenuBundle(
     items = list;
     publish(false);
   }, onError);
+  const unsubGroups = subscribeMenuOptionGroups((list) => {
+    optionGroups = list;
+    publish(false);
+  }, onError);
 
   return () => {
     unsubCat();
     unsubItems();
+    unsubGroups();
   };
 }
 
@@ -169,6 +193,22 @@ export async function updateMenuCategory(
   }
 }
 
+export async function deleteMenuCategory(id: string): Promise<void> {
+  try {
+    await deleteDoc(doc(getPosDb(), MENU_CATEGORIES_COL, id));
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, "ลบหมวดเมนู", "pos"));
+  }
+}
+
+export async function reorderMenuCategories(ids: string[]): Promise<void> {
+  await Promise.all(ids.map((id, i) => updateMenuCategory(id, { sortOrder: (i + 1) * 1000 })));
+}
+
+export async function reorderMenuItemsInCategory(categoryId: string, ids: string[]): Promise<void> {
+  await Promise.all(ids.map((id, i) => updateMenuItem(id, { sortOrder: (i + 1) * 1000, categoryId })));
+}
+
 export async function addMenuItem(input: {
   categoryId: string;
   name: string;
@@ -182,6 +222,8 @@ export async function addMenuItem(input: {
       price: Math.max(0, Number(input.price) || 0),
       sortOrder: now,
       active: true,
+      visibleOnPos: true,
+      recommended: false,
       createdAt: now,
       updatedAt: now,
     });
@@ -191,7 +233,6 @@ export async function addMenuItem(input: {
   }
 }
 
-/** POS quick 86 — toggle sold-out without changing price/name. */
 export async function toggleMenuItemSoldOut(id: string, soldOut: boolean): Promise<void> {
   try {
     await updateDoc(doc(getPosDb(), MENU_ITEMS_COL, id), {
@@ -203,19 +244,48 @@ export async function toggleMenuItemSoldOut(id: string, soldOut: boolean): Promi
   }
 }
 
-export async function updateMenuItem(
-  id: string,
-  patch: Partial<Pick<MenuItem, "categoryId" | "name" | "price" | "active">>,
-): Promise<void> {
+export type MenuItemPatch = Partial<
+  Pick<
+    MenuItem,
+    | "categoryId"
+    | "name"
+    | "nameEn"
+    | "price"
+    | "active"
+    | "visibleOnPos"
+    | "recommended"
+    | "imageUrl"
+    | "description"
+    | "optionGroupIds"
+    | "sortOrder"
+  >
+>;
+
+export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<void> {
   const next: Record<string, unknown> = { updatedAt: Date.now() };
   if (patch.categoryId != null) next.categoryId = patch.categoryId;
   if (patch.name != null) next.name = patch.name.trim();
+  if (patch.nameEn != null) next.nameEn = patch.nameEn.trim();
   if (patch.price != null) next.price = Math.max(0, Number(patch.price) || 0);
   if (patch.active != null) next.active = patch.active;
+  if (patch.visibleOnPos != null) next.visibleOnPos = patch.visibleOnPos;
+  if (patch.recommended != null) next.recommended = patch.recommended;
+  if (patch.imageUrl != null) next.imageUrl = patch.imageUrl.trim();
+  if (patch.description != null) next.description = patch.description.trim();
+  if (patch.optionGroupIds != null) next.optionGroupIds = patch.optionGroupIds;
+  if (patch.sortOrder != null) next.sortOrder = patch.sortOrder;
   try {
     await updateDoc(doc(getPosDb(), MENU_ITEMS_COL, id), next);
   } catch (err) {
     throw new Error(mapFirestoreError(err, "อัปเดตเมนู", "pos"));
+  }
+}
+
+export async function deleteMenuItem(id: string): Promise<void> {
+  try {
+    await deleteDoc(doc(getPosDb(), MENU_ITEMS_COL, id));
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, "ลบเมนู", "pos"));
   }
 }
 
@@ -254,4 +324,13 @@ export async function seedPosMenuIfEmpty(): Promise<{ seeded: boolean }> {
 
 export function posCreatedBy(deviceId: string): string {
   return `pos:${deviceId}`;
+}
+
+export async function loadFullPosMenu(): Promise<PosMenuBundle> {
+  const [categories, items, optionGroups] = await Promise.all([
+    listMenuCategories(),
+    listMenuItems(),
+    listMenuOptionGroups(),
+  ]);
+  return { categories, items, optionGroups, fromCache: false };
 }
