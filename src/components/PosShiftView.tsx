@@ -280,6 +280,7 @@ export function PosShiftView() {
   const [refreshTick, setRefreshTick] = useState(0);
   const [printMsg, setPrintMsg] = useState<string | null>(null);
   const [printingReport, setPrintingReport] = useState(false);
+  const shiftScrollRef = useRef<HTMLDivElement | null>(null);
   const receiptPanelRef = useRef<HTMLDivElement | null>(null);
   const lastTapRef = useRef({ id: "", time: 0 });
 
@@ -303,6 +304,31 @@ export function PosShiftView() {
     return unsub;
   }, []);
 
+  function scrollReceiptIntoView() {
+    window.setTimeout(() => {
+      const panel = receiptPanelRef.current;
+      const scroller = shiftScrollRef.current;
+      if (!panel) return;
+      if (scroller) {
+        const panelRect = panel.getBoundingClientRect();
+        const scrollerRect = scroller.getBoundingClientRect();
+        if (panelRect.bottom > scrollerRect.bottom - 8) {
+          scroller.scrollBy({
+            top: panelRect.bottom - scrollerRect.bottom + 20,
+            behavior: "smooth",
+          });
+        } else if (panelRect.top < scrollerRect.top + 8) {
+          scroller.scrollBy({
+            top: panelRect.top - scrollerRect.top - 20,
+            behavior: "smooth",
+          });
+        }
+        return;
+      }
+      panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 80);
+  }
+
   function handleReceiptTap(receipt: PosLocalReceipt) {
     const now = Date.now();
     const last = lastTapRef.current;
@@ -317,18 +343,14 @@ export function PosShiftView() {
 
     if (selectedReceiptId === receipt.id && isRepeat) {
       setExpandedReceiptId(receipt.id);
-      window.setTimeout(() => {
-        receiptPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }, 80);
+      scrollReceiptIntoView();
       return;
     }
 
     setSelectedReceiptId(receipt.id);
     if (isRepeat) {
       setExpandedReceiptId(receipt.id);
-      window.setTimeout(() => {
-        receiptPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }, 80);
+      scrollReceiptIntoView();
     } else {
       setExpandedReceiptId(null);
     }
@@ -557,7 +579,7 @@ export function PosShiftView() {
                 </div>
               </div>
 
-              <div className="pos-shift-scroll">
+              <div className="pos-shift-scroll" ref={shiftScrollRef}>
                 <div className="pos-shift-kpi-grid">
                   <KpiCard
                     label="ยอดขายทั้งหมด"
@@ -654,7 +676,7 @@ export function PosShiftView() {
               </button>
             </div>
 
-            <div className="pos-shift-scroll">
+            <div className="pos-shift-scroll" ref={shiftScrollRef}>
             <div className="pos-shift-kpi-grid">
               <KpiCard
                 label="ยอดขายทั้งหมด"
