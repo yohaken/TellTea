@@ -163,8 +163,74 @@ assert.match(cartSrc, /parseSweetnessPercent/);
 
 const pickerSrc = readFileSync(join(root, "src/components/PosOptionPickerModal.tsx"), "utf8");
 assert.match(pickerSrc, /pos-option-sweet-row/);
+assert.match(pickerSrc, /pos-option-stepper/);
+assert.match(pickerSrc, /pickedCounts/);
 assert.match(pickerSrc, /pos-btn-orange/);
 assert.match(pickerSrc, /ตกลง/);
+
+assert.match(cartSrc, /selectionKeyFromPickedCounts/);
+assert.match(cartSrc, /groupUsesQuantitySteppers/);
+assert.match(cartSrc, /validatePickedCounts/);
+
+assert.match(sellSrc, /openEditCartLine/);
+assert.match(sellSrc, /pos-pay-quick/);
+assert.match(sellSrc, /Pencil/);
+
+function selectionKeyFromPickedCounts(counts) {
+  const parts = [];
+  for (const [groupId, gc] of Object.entries(counts)) {
+    const segment = Object.entries(gc)
+      .filter(([, n]) => n > 0)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([id, n]) => `${id}×${n}`)
+      .join(",");
+    if (segment) parts.push(`${groupId}:${segment}`);
+  }
+  return parts.sort().join("|");
+}
+
+const unlimitedTopping = {
+  id: "top",
+  name: "ท็อปปิ้ง",
+  required: false,
+  selectionType: "unlimited",
+  options: [
+    { id: "t1", name: "ไข่มุก", priceDelta: 10, sortOrder: 1, active: true },
+    { id: "t2", name: "บุกน้ำผึ้ง", priceDelta: 5, sortOrder: 2, active: true },
+  ],
+};
+
+function validatePickedCounts(groups, counts) {
+  for (const group of groups) {
+    const gc = counts[group.id] || {};
+    const validIds = new Set(group.options.filter((o) => o.active).map((o) => o.id));
+    const total = Object.entries(gc)
+      .filter(([id, n]) => n > 0 && validIds.has(id))
+      .reduce((sum, [, n]) => sum + n, 0);
+    if (group.required && total === 0) return `เลือก "${group.name}" ก่อน`;
+    if (group.selectionType === "single" && total > 1) return `"${group.name}" เลือกได้ 1 อย่าง`;
+  }
+  return null;
+}
+
+assert.equal(validatePickedCounts([unlimitedTopping], { top: { t1: 2 } }), null);
+assert.equal(
+  selectionKeyFromPickedCounts({ top: { t1: 2, t2: 1 } }),
+  "top:t1×2,t2×1",
+);
+assert.equal(
+  computeUnitPrice(29, [
+    {
+      groupId: "top",
+      groupName: "ท็อปปิ้ง",
+      choices: [
+        { optionId: "t1", name: "ไข่มุก", priceDelta: 10 },
+        { optionId: "t1", name: "ไข่มุก", priceDelta: 10 },
+      ],
+    },
+  ]),
+  49,
+);
 
 const templateSrc = readFileSync(join(root, "src/lib/pos-printer/receipt-template.ts"), "utf8");
 assert.match(templateSrc, /receiptLineBaseName/);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PauseCircle, QrCode, Tag, UserRound, X } from "lucide-react";
+import { PauseCircle, Pencil, QrCode, Tag, UserRound, X } from "lucide-react";
 import { getPosMenuSnapshot, retryPosMenuPreload, startPosMenuPreload, subscribePosMenuPreload } from "@/lib/pos-menu-preload";
 import { toggleMenuItemSoldOut } from "@/lib/pos-menu";
 import {
@@ -30,13 +30,17 @@ type PayMode = "cash" | "promptpay" | null;
 const HOLD_MS = 550;
 
 function cartModifierLines(selections: PosCartSelection[]): string[] {
-  const lines: string[] = [];
+  const tallies = new Map<string, number>();
   for (const sel of selections) {
     for (const choice of sel.choices) {
-      lines.push(choice.name);
+      tallies.set(choice.name, (tallies.get(choice.name) ?? 0) + 1);
     }
   }
-  return lines;
+  return [...tallies.entries()].map(([name, n]) => (n > 1 ? `${name} ×${n}` : name));
+}
+
+function lineHasEditableOptions(line: PosCartLine, allGroups: MenuOptionGroup[]): boolean {
+  return itemNeedsOptions(line.item, allGroups) || line.selections.length > 0;
 }
 
 export function PosSellView({
@@ -73,7 +77,12 @@ export function PosSellView({
   const [promptPayId, setPromptPayId] = useState("");
   const [autoPrintReceipt, setAutoPrintReceipt] = useState(true);
   const [confirmSoldOut, setConfirmSoldOut] = useState<MenuItem | null>(null);
-  const [pickerItem, setPickerItem] = useState<MenuItem | null>(null);
+  const [picker, setPicker] = useState<{
+    item: MenuItem;
+    editCartKey?: string;
+    initialSelections?: PosCartSelection[];
+    initialQty?: number;
+  } | null>(null);
   const holdTimerRef = useRef<number | null>(null);
   const longPressHandledRef = useRef(false);
 
@@ -178,10 +187,44 @@ export function PosSellView({
   function tryAddItem(item: MenuItem) {
     if (!item.active) return;
     if (itemNeedsOptions(item, optionGroups)) {
-      setPickerItem(item);
+      setPicker({ item });
       return;
     }
     addToCartDirect(item, [], item.price);
+  }
+
+  function openEditCartLine(line: PosCartLine) {
+    setPicker({
+      item: line.item,
+      editCartKey: line.cartKey,
+      initialSelections: line.selections,
+      initialQty: line.qty,
+    });
+  }
+
+  function confirmPicker(selections: PosCartSelection[], unitPrice: number, qty: number) {
+    if (!picker) return;
+    const { item, editCartKey } = picker;
+    const cartKey = buildCartKey(item.id, selections);
+    setCart((prev) => {
+      const next = { ...prev };
+      if (editCartKey) {
+        delete next[editCartKey];
+        next[cartKey] = { cartKey, item, qty, unitPrice, selections };
+      } else {
+        const cur = next[cartKey];
+        next[cartKey] = {
+          cartKey,
+          item,
+          qty: (cur?.qty || 0) + qty,
+          unitPrice,
+          selections,
+        };
+      }
+      return next;
+    });
+    setPicker(null);
+    setSuccess(null);
   }
 
   function requestSoldOutToggle(item: MenuItem) {
@@ -511,13 +554,38 @@ export function PosSellView({
                       </p>
                     ))}
                     <div className="pos-sell-cart-line-actions">
-                      <button type="button" className="ghost-btn" aria-label="ลด" onClick={() => decFromCart(l.cartKey)}>
+                      {lineHasEditableOptions(l, optionGroups) ? (
+                        <button
+                          type="button"
+                          className="pos-cart-touch-btn pos-cart-edit-btn"
+                          aria-label="แก้ไขตัวเลือก"
+                          onClick={() => openEditCartLine(l)}
+                        >
+                          <Pencil size={18} strokeWidth={2.5} aria-hidden />
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="pos-cart-touch-btn"
+                        aria-label="ลด"
+                        onClick={() => decFromCart(l.cartKey)}
+                      >
                         −
                       </button>
-                      <button type="button" className="ghost-btn" aria-label="เพิ่ม" onClick={() => incCart(l.cartKey)}>
+                      <button
+                        type="button"
+                        className="pos-cart-touch-btn"
+                        aria-label="เพิ่ม"
+                        onClick={() => incCart(l.cartKey)}
+                      >
                         +
                       </button>
-                      <button type="button" className="ghost-btn" aria-label="ลบ" onClick={() => clearLine(l.cartKey)}>
+                      <button
+                        type="button"
+                        className="pos-cart-touch-btn pos-cart-touch-btn--danger"
+                        aria-label="ลบ"
+                        onClick={() => clearLine(l.cartKey)}
+                      >
                         ×
                       </button>
                     </div>
@@ -596,16 +664,15 @@ export function PosSellView({
         </div>
       ) : null}
 
-      {pickerItem ? (
+      {picker ? (
         <PosOptionPickerModal
-          itemName={pickerItem.name}
-          basePrice={pickerItem.price}
-          groups={optionGroupsForItem(pickerItem, optionGroups)}
-          onCancel={() => setPickerItem(null)}
-          onConfirm={(selections, unitPrice, qty) => {
-            addToCartDirect(pickerItem, selections, unitPrice, qty);
-            setPickerItem(null);
-          }}
+          itemName={picker.item.name}
+          basePrice={picker.item.price}
+          groups={optionGroupsForItem(picker.item, optionGroups)}
+          initialSelections={picker.initialSelections}
+          initialQty={picker.initialQty}
+          onCancel={() => setPicker(null)}
+          onConfirm={confirmPicker}
         />
       ) : null}
 
@@ -618,6 +685,9 @@ export function PosSellView({
                 <X size={18} />
               </button>
             </div>
+            <p className="pos-pay-summary">
+              {cartCount} รายการ · {payMode === "promptpay" ? "สแกนจ่าย" : "ชำระเงินสด"}
+            </p>
             <p className="pos-pay-total">
               ยอดรวม <strong>฿{formatPlainNumber(total)}</strong>
             </p>
@@ -636,6 +706,26 @@ export function PosSellView({
                     onChange={(e) => setCashInput(e.target.value)}
                   />
                 </label>
+                <div className="pos-pay-quick" role="group" aria-label="จำนวนเงินด่วน">
+                  <button
+                    type="button"
+                    className="pos-pay-quick-btn pos-pay-quick-btn--exact"
+                    onClick={() => setCashInput(String(Math.ceil(total)))}
+                  >
+                    ตรงพอดี
+                    <span>฿{formatPlainNumber(total)}</span>
+                  </button>
+                  {[100, 500, 1000].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      className="pos-pay-quick-btn"
+                      onClick={() => setCashInput(String(amt))}
+                    >
+                      ฿{amt}
+                    </button>
+                  ))}
+                </div>
                 <p className={`pos-pay-change ${cashNum >= total ? "ok-text" : "error-text"}`}>
                   ทอน {cashNum >= total ? `฿${formatPlainNumber(change)}` : "— เงินไม่พอ"}
                 </p>
@@ -654,17 +744,22 @@ export function PosSellView({
             )}
 
             {error ? <p className="error-text">{error}</p> : null}
-            <button
-              type="button"
-              className="pos-btn-orange pos-sell-pay-btn"
-              disabled={
-                (payMode === "cash" && cashNum < total) ||
-                (payMode === "promptpay" && !qrUrl)
-              }
-              onClick={() => (payMode === "cash" ? confirmCashPay() : confirmPromptPayPay())}
-            >
-              ยืนยันขาย
-            </button>
+            <div className="pos-pay-actions">
+              <button type="button" className="pos-pay-cancel-btn" onClick={closePay}>
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                className="pos-btn-orange pos-pay-confirm-btn"
+                disabled={
+                  (payMode === "cash" && cashNum < total) ||
+                  (payMode === "promptpay" && !qrUrl)
+                }
+                onClick={() => (payMode === "cash" ? confirmCashPay() : confirmPromptPayPay())}
+              >
+                ยืนยันขาย
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
