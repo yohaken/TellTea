@@ -86,10 +86,10 @@ import {
 
 type TableView = "sheet" | "cards";
 
-/** เช้า → เย็น → ดึก — ให้ตรงตาราง (บน→ล่าง) */
+/** เย็น → เช้า → ดึก — ให้ตรงตาราง (บน→ล่าง) */
 const SHIFT_ORDER: Record<OtShiftId, number> = {
-  morning: 0,
-  evening: 1,
+  evening: 0,
+  morning: 1,
   late: 2,
 };
 

@@ -22,10 +22,10 @@ export type ChecklistItemTiming = "opening" | "closing" | "during";
 
 export type CheckSessionKind = "opening" | "closing" | "full";
 
-/** ลำดับแสดงให้ตรงหน้าชง: เช้า → เย็น → ดึก */
+/** ลำดับแสดงให้ตรงหน้าชง: เย็น → เช้า → ดึก */
 export const CHECK_SHIFTS: { id: CheckShiftId; label: string }[] = [
-  { id: "morning", label: "เช้า 7–17" },
   { id: "evening", label: "เย็น 17–0.3" },
+  { id: "morning", label: "เช้า 7–17" },
   { id: "late", label: "ดึก 0.3–7" },
 ];
 
