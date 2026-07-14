@@ -169,8 +169,12 @@ export function filterCategoryRowsByMonths(
   rows: MonthCategoryRow[],
   months: string[],
 ): MonthCategoryRow[] {
-  const set = new Set(months);
-  return rows.filter((r) => set.has(r.month));
+  const byMonth = new Map(rows.map((r) => [r.month, r]));
+  // Pad missing months with zeros so every summary month is a row (average ÷ same n).
+  return months.map(
+    (month) =>
+      byMonth.get(month) || { month, asset: 0, cogs: 0, sga: 0, other: 0 },
+  );
 }
 
 export function filterPnlRowsByMonths(rows: PnlMonthRow[], months: string[]): PnlMonthRow[] {
@@ -197,7 +201,7 @@ export function sumCategoryRows(rows: MonthCategoryRow[]): CategoryTotals {
   );
 }
 
-/** ค่าเฉลี่ยรายเดือน (Σ ÷ จำนวนเดือน) */
+/** ค่าเฉลี่ยรายเดือน (Σ ÷ จำนวนแถวที่นำมาคำนวณ) */
 export function averageCategoryRows(rows: MonthCategoryRow[]): CategoryTotals | null {
   if (!rows.length) return null;
   const n = rows.length;
@@ -210,10 +214,19 @@ export function averageCategoryRows(rows: MonthCategoryRow[]): CategoryTotals | 
   };
 }
 
-function meanNullable(values: Array<number | null>): number | null {
-  const nums = values.filter((v): v is number => v != null && Number.isFinite(v));
-  if (!nums.length) return null;
-  return nums.reduce((a, b) => a + b, 0) / nums.length;
+/** เฉลี่ยเลขคณิต — ตัวส่วน = จำนวนแถวทั้งหมดที่นำมาคำนวณ (null นับเป็น 0 ในผลรวม) */
+function meanOverRowCount(values: Array<number | null>, rowCount: number): number | null {
+  if (!rowCount) return null;
+  let sum = 0;
+  let any = false;
+  for (const v of values) {
+    if (v != null && Number.isFinite(v)) {
+      sum += v;
+      any = true;
+    }
+  }
+  if (!any) return null;
+  return sum / rowCount;
 }
 
 /** รวมยอดเงิน + % ถ่วงรายได้ + ต่อวันจากยอดรวม/วันรวม */
@@ -260,10 +273,10 @@ export function summarizePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
 }
 
 /**
- * ค่าเฉลี่ยรายเดือนตามมาตรฐาน:
+ * ค่าเฉลี่ยรายเดือน — ตัวส่วนเสมอ = จำนวนแถวที่นำมาคำนวณ:
  * - ยอดเงิน = Σ/n
- * - /วัน = เฉลี่ยของค่า /วัน รายเดือน
- * - % = เฉลี่ยเลขคณิตของอัตรารายเดือน (ใช้คู่กับแถวรวมที่ถ่วงรายได้)
+ * - /วัน = เฉลี่ยของค่า /วัน รายเดือน (÷n)
+ * - % = เฉลี่ยเลขคณิตของอัตรารายเดือน (÷n; ค่าว่างนับเป็น 0)
  */
 export function averagePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
   if (!rows.length) return null;
@@ -281,21 +294,39 @@ export function averagePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
     income,
     incomePerDay: rows.reduce((s, r) => s + r.incomePerDay, 0) / n,
     cogs,
-    cogsPct: meanNullable(rows.map((r) => r.cogsPct)),
+    cogsPct: meanOverRowCount(
+      rows.map((r) => r.cogsPct),
+      n,
+    ),
     gross,
-    grossPct: meanNullable(rows.map((r) => r.grossPct)),
+    grossPct: meanOverRowCount(
+      rows.map((r) => r.grossPct),
+      n,
+    ),
     grossPerDay: rows.reduce((s, r) => s + r.grossPerDay, 0) / n,
     sga,
-    sgaPct: meanNullable(rows.map((r) => r.sgaPct)),
+    sgaPct: meanOverRowCount(
+      rows.map((r) => r.sgaPct),
+      n,
+    ),
     sgaPerDay: rows.reduce((s, r) => s + r.sgaPerDay, 0) / n,
     ebitda,
     net,
-    netPct: meanNullable(rows.map((r) => r.netPct)),
+    netPct: meanOverRowCount(
+      rows.map((r) => r.netPct),
+      n,
+    ),
     netPerDay: rows.reduce((s, r) => s + r.netPerDay, 0) / n,
     asset,
-    investOverNet: meanNullable(rows.map((r) => r.investOverNet)),
+    investOverNet: meanOverRowCount(
+      rows.map((r) => r.investOverNet),
+      n,
+    ),
     cashPlus,
-    cashOverIncome: meanNullable(rows.map((r) => r.cashOverIncome)),
+    cashOverIncome: meanOverRowCount(
+      rows.map((r) => r.cashOverIncome),
+      n,
+    ),
   };
 }
 
