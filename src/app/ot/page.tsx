@@ -41,7 +41,6 @@ import {
   buildOtGrid,
   findOtEntryForSlot,
   isFutureLocalDay,
-  resolveDateTapTarget,
   type OtDayGroup,
   type OtSlotTarget,
 } from "@/lib/ot-grid";
@@ -1260,13 +1259,7 @@ function OtSheetTable({
                     ) : null}
                     {idx === 0 ? (
                       <td className="col-sticky-left ot-col-date ot-date-cell" rowSpan={slotCount}>
-                        <button
-                          type="button"
-                          className="desc-link"
-                          onClick={() => onEditSlot(resolveDateTapTarget(group))}
-                        >
-                          {formatDateShort(group.date)}
-                        </button>
+                        {formatDateShort(group.date)}
                       </td>
                     ) : null}
                     <td className="ot-col-worker">
