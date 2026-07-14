@@ -243,6 +243,16 @@ export function ownerQualityHints(flags: ShiftQualityFlags | null): string[] {
   return hints;
 }
 
+/** ขั้นตอนผิดลำดับ — ควรสอนพนักงาน (ไม่รวมวางแผนก่อนปิดกะซึ่งโอเค) */
+export function hasOtProcessOrderIssue(flags: ShiftQualityFlags | null): boolean {
+  return !!(flags && (flags.singleBatch || flags.openSopBackfilled));
+}
+
+export function staffProcessOrderHint(flags: ShiftQualityFlags | null): string {
+  if (!hasOtProcessOrderIssue(flags)) return "";
+  return "ควรเช็ค SmartCheck / SOP ตามขั้นตอนก่อน (เปิดกะหรือระหว่างกะ) ไม่ใช่รอมาเช็คทีหลังตอนปิดกะ";
+}
+
 export function todayShiftBannerLabel(shift: OtShiftId) {
   const word = labelOtShift(shift).split(" ")[0] || labelOtShift(shift);
   return `กะ${word}`;

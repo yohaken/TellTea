@@ -2277,8 +2277,39 @@ body.modal-open .main-panel {
 
 .ot-table .ot-col-worker {
   min-width: 3.2rem;
-  max-width: 4.5rem;
+  max-width: 5.2rem;
   word-break: break-word;
+}
+
+.ot-worker-inline {
+  display: inline;
+  line-height: 1.25;
+}
+
+.ot-worker-inline .ot-worker-name {
+  margin-right: 0.1rem;
+}
+
+.ot-worker-inline .photo-status {
+  display: inline-flex;
+  vertical-align: middle;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-left: 0.12rem;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.ot-worker-inline .photo-status svg {
+  width: 0.78rem;
+  height: 0.78rem;
+}
+
+.ot-worker-inline .photo-status-count {
+  font-size: 0.45rem;
+  min-width: 0.7rem;
+  height: 0.7rem;
+  line-height: 0.7rem;
 }
 
 .ot-table .ot-col-shift {
@@ -2398,6 +2429,12 @@ body.modal-open .main-panel {
   background: rgba(232, 245, 236, 0.95);
   border-color: rgba(47, 107, 79, 0.28);
   color: rgba(28, 42, 31, 0.88);
+}
+
+.check-existing-banner--warn {
+  background: rgba(255, 243, 224, 0.95);
+  border-color: rgba(196, 90, 26, 0.35);
+  color: #7a3e0c;
 }
 
 .check-setup-actions {
