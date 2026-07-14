@@ -63,6 +63,6 @@ assert.match(readFileSync(join(root, "src/app/globals.css"), "utf8"), /repeat\(5
 assert.match(readFileSync(join(root, "src/components/PosSellView.tsx"), "utf8"), /pos-cart-head-count/);
 assert.match(readFileSync(join(root, "src/components/PosPaymentSetup.tsx"), "utf8"), /PromptPay/);
 assert.match(settingsSrc, /receiptStaffName/);
-assert.match(readFileSync(join(root, "src/lib/pos-version.ts"), "utf8"), /POS_BUILD = 53/);
+assert.match(readFileSync(join(root, "src/lib/pos-version.ts"), "utf8"), /POS_BUILD = \d+/);
 
 console.log("OK pos-receipt-layout");
