@@ -558,11 +558,7 @@ export function PosSellView({
 
         <div
           className={`pos-sell-grid ${
-            visibleItems.length <= 8
-              ? "is-sparse"
-              : visibleItems.length >= 21
-                ? "is-dense"
-                : "is-mid"
+            visibleItems.length <= 9 ? "is-sparse" : "is-mid"
           }`}
         >
           {visibleItems.map((item) => {
