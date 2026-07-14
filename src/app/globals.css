@@ -5488,6 +5488,11 @@ body.modal-open .main-panel {
   border-top: 2px solid rgba(45, 106, 79, 0.28);
 }
 
+.pnl-averages-row td {
+  font-weight: 700;
+  background: rgba(168, 212, 255, 0.22);
+}
+
 .pnl-totals-legend {
   margin: 0.45rem 0 0;
   text-align: left;

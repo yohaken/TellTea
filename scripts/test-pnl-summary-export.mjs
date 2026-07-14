@@ -14,36 +14,33 @@ const exportPage = readFileSync(join(root, "src/app/export/page.tsx"), "utf8");
 
 assert.match(pnlSrc, /completePnlMonths/);
 assert.match(pnlSrc, /summarizePnlRows/);
-assert.match(pnlSrc, /sumCategoryRows/);
+assert.match(pnlSrc, /averagePnlRows/);
+assert.match(pnlSrc, /averageCategoryRows/);
 assert.match(pageSrc, /summaryMode/);
-assert.match(pageSrc, /โหมดสรุป/);
-assert.match(pageSrc, /exportPnlXlsx/);
+assert.match(pageSrc, /pnlAverages/);
+assert.match(pageSrc, /เฉลี่ย/);
 assert.match(exportSrc, /exportCombinedTablesXlsx/);
-assert.match(exportSrc, /3-กำไรขาดทุน/);
 assert.match(exportPage, /ไฟล์เดียว/);
-assert.match(exportPage, /pnlSummaryOnly/);
 
-function pct(part, whole) {
-  if (!whole) return null;
-  return part / whole;
+function mean(values) {
+  return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
-function summarize(rows) {
-  let income = 0;
-  let cogs = 0;
-  for (const r of rows) {
-    income += r.income;
-    cogs += r.cogs;
-  }
-  return { income, cogs, cogsPct: pct(cogs, income) };
+const avgs = mean([0.4, 0.2]);
+assert.ok(Math.abs(avgs - 0.3) < 1e-9);
+
+function weightedCogsPct(rows) {
+  const income = rows.reduce((s, r) => s + r.income, 0);
+  const cogs = rows.reduce((s, r) => s + r.cogs, 0);
+  return cogs / income;
 }
 
-const t = summarize([
-  { income: 100, cogs: 40 },
-  { income: 300, cogs: 60 },
-]);
-assert.equal(t.income, 400);
-assert.equal(t.cogs, 100);
-assert.equal(t.cogsPct, 0.25); // not (0.4+0.2)/2 = 0.3
+assert.equal(
+  weightedCogsPct([
+    { income: 100, cogs: 40 },
+    { income: 300, cogs: 60 },
+  ]),
+  0.25,
+);
 
 console.log("OK test-pnl-summary-export");

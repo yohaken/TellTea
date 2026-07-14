@@ -3,7 +3,9 @@ import { labelLedgerType } from "./ledger-labels";
 import type { LedgerEntry } from "./types";
 import type { OwnerBookEntry } from "./owner-books";
 import {
+  averageCategoryRows,
   sumCategoryRows,
+  averagePnlRows,
   summarizePnlRows,
   type MonthCategoryRow,
   type PnlMonthRow,
@@ -55,6 +57,7 @@ function categorySheetRows(rows: MonthCategoryRow[], includeTotals: boolean) {
   }));
   if (includeTotals && rows.length) {
     const t = sumCategoryRows(rows);
+    const a = averageCategoryRows(rows);
     out.push({
       เดือน: "รวม",
       Asset: t.asset,
@@ -62,6 +65,15 @@ function categorySheetRows(rows: MonthCategoryRow[], includeTotals: boolean) {
       sga: t.sga,
       อื่นๆ: t.other,
     });
+    if (a) {
+      out.push({
+        เดือน: "เฉลี่ย",
+        Asset: a.asset,
+        cogs: a.cogs,
+        sga: a.sga,
+        อื่นๆ: a.other,
+      });
+    }
   }
   return out;
 }
@@ -92,7 +104,9 @@ function pnlSheetRows(rows: PnlMonthRow[], includeTotals: boolean) {
   const out = rows.map(mapRow);
   if (includeTotals) {
     const t = summarizePnlRows(rows);
+    const a = averagePnlRows(rows);
     if (t) out.push(mapRow(t));
+    if (a) out.push(mapRow(a));
   }
   return out;
 }

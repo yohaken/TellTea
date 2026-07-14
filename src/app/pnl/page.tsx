@@ -6,6 +6,8 @@ import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
+  averageCategoryRows,
+  averagePnlRows,
   completePnlMonths,
   filterCategoryRowsByMonths,
   filterPnlRowsByMonths,
@@ -50,6 +52,7 @@ function CategoryTable({
   showTotals: boolean;
 }) {
   const totals = showTotals && rows.length ? sumCategoryRows(rows) : null;
+  const averages = showTotals && rows.length ? averageCategoryRows(rows) : null;
 
   return (
     <div className={`pnl-block pnl-${tone}`}>
@@ -82,13 +85,19 @@ function CategoryTable({
               ))
             )}
           </tbody>
-          {totals ? (
+          {totals && averages ? (
             <tfoot>
               <tr className="pnl-totals-row">
                 <td className="col-date">รวม</td>
                 <td className="col-num">{fmt(totals.asset)}</td>
                 <td className="col-num">{fmt(totals.cogs)}</td>
                 <td className="col-num">{fmt(totals.sga)}</td>
+              </tr>
+              <tr className="pnl-averages-row">
+                <td className="col-date">เฉลี่ย</td>
+                <td className="col-num">{fmt(averages.asset)}</td>
+                <td className="col-num">{fmt(averages.cogs)}</td>
+                <td className="col-num">{fmt(averages.sga)}</td>
               </tr>
             </tfoot>
           ) : null}
@@ -169,6 +178,10 @@ function PnlView() {
 
   const pnlTotals = useMemo(
     () => (summaryMode ? summarizePnlRows(viewPnl) : null),
+    [summaryMode, viewPnl],
+  );
+  const pnlAverages = useMemo(
+    () => (summaryMode ? averagePnlRows(viewPnl) : null),
     [summaryMode, viewPnl],
   );
 
@@ -371,10 +384,10 @@ function PnlView() {
                     ))
                   )}
                 </tbody>
-                {pnlTotals ? (
+                {pnlTotals && pnlAverages ? (
                   <tfoot>
                     <tr className="pnl-totals-row">
-                      <td className="col-date">สรุป</td>
+                      <td className="col-date">รวม</td>
                       <td className="col-num">{fmt(pnlTotals.income)}</td>
                       <td className="col-num">{fmt(pnlTotals.incomePerDay)}</td>
                       <td className="col-num">{fmt(pnlTotals.cogs)}</td>
@@ -391,13 +404,31 @@ function PnlView() {
                       <td className="col-num">{fmtPct(pnlTotals.cashOverNet)}</td>
                       <td />
                     </tr>
+                    <tr className="pnl-averages-row">
+                      <td className="col-date">เฉลี่ย</td>
+                      <td className="col-num">{fmt(pnlAverages.income)}</td>
+                      <td className="col-num">{fmt(pnlAverages.incomePerDay)}</td>
+                      <td className="col-num">{fmt(pnlAverages.cogs)}</td>
+                      <td className="col-num">{fmtPct(pnlAverages.cogsPct)}</td>
+                      <td className="col-num">{fmt(pnlAverages.gross)}</td>
+                      <td className="col-num">{fmtPct(pnlAverages.grossPct)}</td>
+                      <td className="col-num">{fmt(pnlAverages.sga)}</td>
+                      <td className="col-num">{fmtPct(pnlAverages.sgaPct)}</td>
+                      <td className="col-num">{fmt(pnlAverages.net)}</td>
+                      <td className="col-num">{fmtPct(pnlAverages.netPct)}</td>
+                      <td className="col-num">{fmt(pnlAverages.asset)}</td>
+                      <td className="col-num">{fmtPct(pnlAverages.investOverNet)}</td>
+                      <td className="col-num">{fmt(pnlAverages.cashPlus)}</td>
+                      <td className="col-num">{fmtPct(pnlAverages.cashOverNet)}</td>
+                      <td />
+                    </tr>
                   </tfoot>
                 ) : null}
               </table>
             </div>
             {summaryMode ? (
               <p className="muted pnl-totals-legend">
-                สรุป = รวมยอดเงิน · % ถ่วงด้วยรายได้ · /วัน = รวมยอด ÷ รวมวัน · เงินสด/กำไร = Cash+ ÷ net
+                รวม = ยอดเงินรวม · % ถ่วงรายได้ · /วัน จากยอดรวม÷วันรวม · เฉลี่ย = ค่าเฉลี่ยรายเดือนของแต่ละคอลัมน์
               </p>
             ) : null}
           </section>

@@ -197,6 +197,25 @@ export function sumCategoryRows(rows: MonthCategoryRow[]): CategoryTotals {
   );
 }
 
+/** ค่าเฉลี่ยรายเดือน (Σ ÷ จำนวนเดือน) */
+export function averageCategoryRows(rows: MonthCategoryRow[]): CategoryTotals | null {
+  if (!rows.length) return null;
+  const n = rows.length;
+  const t = sumCategoryRows(rows);
+  return {
+    asset: t.asset / n,
+    cogs: t.cogs / n,
+    sga: t.sga / n,
+    other: t.other / n,
+  };
+}
+
+function meanNullable(values: Array<number | null>): number | null {
+  const nums = values.filter((v): v is number => v != null && Number.isFinite(v));
+  if (!nums.length) return null;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
 /** รวมยอดเงิน + % ถ่วงรายได้ + ต่อวันจากยอดรวม/วันรวม */
 export function summarizePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
   if (!rows.length) return null;
@@ -218,7 +237,7 @@ export function summarizePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
   const net = ebitda;
   const cashPlus = net - asset;
   return {
-    month: "สรุป",
+    month: "รวม",
     income,
     incomePerDay: income / days,
     cogs,
@@ -237,6 +256,46 @@ export function summarizePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
     investOverNet: pct(asset, net),
     cashPlus,
     cashOverNet: pct(cashPlus, net),
+  };
+}
+
+/**
+ * ค่าเฉลี่ยรายเดือนตามมาตรฐาน:
+ * - ยอดเงิน = Σ/n
+ * - /วัน = เฉลี่ยของค่า /วัน รายเดือน
+ * - % = เฉลี่ยเลขคณิตของอัตรารายเดือน (ใช้คู่กับแถวรวมที่ถ่วงรายได้)
+ */
+export function averagePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
+  if (!rows.length) return null;
+  const n = rows.length;
+  const income = rows.reduce((s, r) => s + r.income, 0) / n;
+  const cogs = rows.reduce((s, r) => s + r.cogs, 0) / n;
+  const sga = rows.reduce((s, r) => s + r.sga, 0) / n;
+  const asset = rows.reduce((s, r) => s + r.asset, 0) / n;
+  const gross = rows.reduce((s, r) => s + r.gross, 0) / n;
+  const ebitda = rows.reduce((s, r) => s + r.ebitda, 0) / n;
+  const net = rows.reduce((s, r) => s + r.net, 0) / n;
+  const cashPlus = rows.reduce((s, r) => s + r.cashPlus, 0) / n;
+  return {
+    month: "เฉลี่ย",
+    income,
+    incomePerDay: rows.reduce((s, r) => s + r.incomePerDay, 0) / n,
+    cogs,
+    cogsPct: meanNullable(rows.map((r) => r.cogsPct)),
+    gross,
+    grossPct: meanNullable(rows.map((r) => r.grossPct)),
+    grossPerDay: rows.reduce((s, r) => s + r.grossPerDay, 0) / n,
+    sga,
+    sgaPct: meanNullable(rows.map((r) => r.sgaPct)),
+    sgaPerDay: rows.reduce((s, r) => s + r.sgaPerDay, 0) / n,
+    ebitda,
+    net,
+    netPct: meanNullable(rows.map((r) => r.netPct)),
+    netPerDay: rows.reduce((s, r) => s + r.netPerDay, 0) / n,
+    asset,
+    investOverNet: meanNullable(rows.map((r) => r.investOverNet)),
+    cashPlus,
+    cashOverNet: meanNullable(rows.map((r) => r.cashOverNet)),
   };
 }
 
