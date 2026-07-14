@@ -1,4 +1,8 @@
 rules_version = '2';
+// Canonical Firestore rules for Firebase project mypeer-501909 (TellTea + shared apps).
+// Sibling sites (e.g. taxtag.web.app) MUST NOT deploy their own firestore.rules —
+// that wipes this file and locks the shop out. Hosting-only deploy for siblings.
+// See scripts/templates/SHARED_FIREBASE_CHECKLIST.md and scripts/assert-firestore-rules.mjs
 service cloud.firestore {
   match /databases/{database}/documents {
     function hasEmail() {
