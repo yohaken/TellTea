@@ -6502,8 +6502,8 @@ body.modal-open .main-panel {
 
 .pos-sell-grid {
   display: grid;
-  /* สูงสุด 4 คอลัมน์ — ชื่อใต้รูปอ่านได้แน่นอน */
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* บังคับ 5 คอลัมน์คงที่ */
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.4rem;
   align-content: start;
   align-items: start;
@@ -6517,13 +6517,10 @@ body.modal-open .main-panel {
   container-name: pos-sell-grid;
 }
 
-.pos-sell-grid.is-sparse {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
+.pos-sell-grid.is-sparse,
 .pos-sell-grid.is-mid,
 .pos-sell-grid.is-dense {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .pos-sell-item {
@@ -6542,7 +6539,7 @@ body.modal-open .main-panel {
   background: #fff;
   text-align: left;
   font: inherit;
-  /* กฎตายตัว: ห้ามตัดชื่อ/ราคา/รายละเอียด */
+  /* กฎตายตัว: ห้ามตัดชื่อ/ราคา */
   overflow: visible;
   align-self: start;
 }
@@ -6552,7 +6549,7 @@ body.modal-open .main-panel {
   width: 100%;
   aspect-ratio: 16 / 10;
   /* ย่อรูปให้อยู่อย่างน้อย ~5 แถวในพื้นที่ขาย; ที่เหลือเลื่อนลง */
-  max-height: min(5.5rem, calc((100cqh / 5) - 4.25rem));
+  max-height: min(5.5rem, calc((100cqh / 5) - 3.75rem));
   min-height: 3.1rem;
   border-radius: 0.35rem;
   overflow: hidden;
@@ -6560,7 +6557,7 @@ body.modal-open .main-panel {
   flex: 0 0 auto;
 }
 
-/* ชื่อ + ราคา + รายละเอียด — ต้องโชว์ครบ ตัดไม่ได้ */
+/* ชื่อ + ราคา — ต้องโชว์ครบ ตัดไม่ได้ */
 .pos-sell-item-caption {
   display: flex;
   flex-direction: column;
@@ -6572,7 +6569,7 @@ body.modal-open .main-panel {
 
 .pos-sell-item-name {
   font-weight: 700;
-  font-size: 0.84rem;
+  font-size: 0.92rem; /* +10% จาก 0.84 */
   line-height: 1.28;
   color: #15202b;
   white-space: normal;
@@ -6583,28 +6580,21 @@ body.modal-open .main-panel {
 }
 
 .pos-sell-grid.is-sparse .pos-sell-item-name {
-  font-size: 0.9rem;
+  font-size: 0.99rem;
 }
 
 .pos-sell-grid.is-dense .pos-sell-item-name {
-  font-size: 0.82rem;
+  font-size: 0.9rem;
 }
 
 .pos-sell-item-price {
-  font-size: 0.8rem;
+  font-size: 0.88rem; /* +10% จาก 0.8 */
   font-weight: 800;
   color: #3d4a55;
 }
 
 .pos-sell-item-desc {
-  font-size: 0.7rem;
-  line-height: 1.25;
-  font-weight: 500;
-  color: #5c6670;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  overflow: visible;
+  display: none;
 }
 
 .pos-sell-item-qty {
@@ -9016,9 +9006,9 @@ body.modal-open .main-panel {
 
 .pos-cart-foot {
   border-top: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 0.75rem;
+  padding: 0.55rem 0.75rem 0.65rem;
   display: grid;
-  gap: 0.55rem;
+  gap: 0.4rem;
   background: #fff;
   flex-shrink: 0;
   margin-top: auto;
@@ -9069,24 +9059,25 @@ body.modal-open .main-panel {
 .pos-cart-actions-secondary {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
+  gap: 0.3rem;
 }
 
 .pos-cart-secondary-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
-  min-height: 2.85rem;
-  padding: 0.55rem 0.65rem;
+  gap: 0.25rem;
+  min-height: 2rem; /* ~30% บางลงจาก 2.85rem */
+  padding: 0.28rem 0.5rem;
   border: 1.5px solid var(--pos-accent-orange);
-  border-radius: 0.5rem;
+  border-radius: 0.4rem;
   background: #fff;
   color: var(--pos-accent-orange);
   font: inherit;
   font-weight: 700;
-  font-size: 0.88rem;
+  font-size: 0.78rem;
   cursor: pointer;
+  line-height: 1.1;
 }
 
 .pos-cart-secondary-btn:disabled {
@@ -11032,7 +11023,7 @@ body.modal-open .main-panel {
   .pos-sell-layout .pos-sell-grid.is-mid,
   .pos-sell-layout .pos-sell-grid.is-dense,
   .pos-sell-layout .pos-sell-grid:not(.is-sparse):not(.is-dense) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
@@ -11045,7 +11036,7 @@ body.modal-open .main-panel {
   .pos-sell-layout .pos-sell-grid.is-mid,
   .pos-sell-layout .pos-sell-grid.is-dense,
   .pos-sell-layout .pos-sell-grid:not(.is-sparse):not(.is-dense) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
@@ -11054,11 +11045,11 @@ body.modal-open .main-panel {
   .pos-sell-layout .pos-sell-grid.is-mid,
   .pos-sell-layout .pos-sell-grid.is-dense,
   .pos-sell-layout .pos-sell-grid:not(.is-sparse):not(.is-dense) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .pos-sell-layout .pos-sell-item-media {
-    max-height: min(5rem, calc((100cqh / 5) - 4rem));
+    max-height: min(5rem, calc((100cqh / 5) - 3.5rem));
     min-height: 2.85rem;
   }
 }
