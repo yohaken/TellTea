@@ -6502,25 +6502,25 @@ body.modal-open .main-panel {
 
 .pos-sell-grid {
   display: grid;
-  /* ค่าเริ่มกลาง: 4 คอลัมน์ — อ่านชื่อใต้รูปได้; กลุ่มเยอะใช้ .is-dense */
+  /* สูงสุด 4 คอลัมน์ — ชื่อใต้รูปอ่านได้แน่นอน */
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.4rem;
+  gap: 0.5rem;
   align-content: start;
+  align-items: start;
+  grid-auto-rows: auto;
   overflow-y: auto;
   flex: 1;
   min-height: 0;
+  padding-bottom: 0.35rem;
 }
 
 .pos-sell-grid.is-sparse {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.pos-sell-grid.is-mid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
+.pos-sell-grid.is-mid,
 .pos-sell-grid.is-dense {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .pos-sell-item {
@@ -6529,41 +6529,48 @@ body.modal-open .main-panel {
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  gap: 0.28rem;
+  gap: 0.35rem;
+  width: 100%;
+  height: auto;
   min-height: 0;
-  padding: 0.35rem;
-  border-radius: 0.45rem;
+  padding: 0.4rem;
+  border-radius: 0.5rem;
   border: 1px solid rgba(28, 42, 31, 0.1);
   background: #fff;
   text-align: left;
   font: inherit;
-  overflow: hidden;
+  /* ห้ามตัดชื่อใต้รูป — ตัดเฉพาะพื้นที่รูป */
+  overflow: visible;
+  align-self: start;
 }
 
 .pos-sell-item-media {
   position: relative;
   width: 100%;
-  aspect-ratio: 1;
-  border-radius: 0.35rem;
+  /* รูปสั้นกว่าจัตุรัส — เหลือที่ชื่อ+ราคาเสมอ */
+  aspect-ratio: 4 / 3;
+  max-height: 8.5rem;
+  border-radius: 0.4rem;
   overflow: hidden;
   background: #f0f2f5;
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 
-/* จองพื้นที่ชื่อ+ราคา — ห้ามให้ภาพกินจนชื่อหาย */
+/* จองพื้นที่ชื่อ+ราคา — หัวใจ UI ตัดไม่ได้ */
 .pos-sell-item-caption {
   display: flex;
   flex-direction: column;
-  gap: 0.08rem;
+  gap: 0.12rem;
   width: 100%;
-  min-height: 2.85rem;
-  flex-shrink: 0;
+  min-height: 3.4rem;
+  flex: 0 0 auto;
+  overflow: visible;
 }
 
 .pos-sell-item-name {
   font-weight: 700;
-  font-size: 0.84rem;
-  line-height: 1.25;
+  font-size: 0.88rem;
+  line-height: 1.3;
   color: #15202b;
   white-space: normal;
   word-break: break-word;
@@ -6574,19 +6581,20 @@ body.modal-open .main-panel {
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
-}
-
-.pos-sell-grid.is-dense .pos-sell-item-name {
-  font-size: 0.78rem;
+  min-height: 2.35em;
 }
 
 .pos-sell-grid.is-sparse .pos-sell-item-name {
-  font-size: 0.92rem;
+  font-size: 0.95rem;
+}
+
+.pos-sell-grid.is-dense .pos-sell-item-name {
+  font-size: 0.86rem;
 }
 
 .pos-sell-item-price {
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 800;
   color: #3d4a55;
 }
 
@@ -11010,17 +11018,11 @@ body.modal-open .main-panel {
 }
 
 @media (max-width: 1100px) {
-  .pos-sell-layout .pos-sell-grid.is-sparse {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
+  .pos-sell-layout .pos-sell-grid.is-sparse,
   .pos-sell-layout .pos-sell-grid.is-mid,
+  .pos-sell-layout .pos-sell-grid.is-dense,
   .pos-sell-layout .pos-sell-grid:not(.is-sparse):not(.is-dense) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .pos-sell-layout .pos-sell-grid.is-dense {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -11031,12 +11033,9 @@ body.modal-open .main-panel {
 
   .pos-sell-layout .pos-sell-grid.is-sparse,
   .pos-sell-layout .pos-sell-grid.is-mid,
+  .pos-sell-layout .pos-sell-grid.is-dense,
   .pos-sell-layout .pos-sell-grid:not(.is-sparse):not(.is-dense) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .pos-sell-layout .pos-sell-grid.is-dense {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -11045,7 +11044,11 @@ body.modal-open .main-panel {
   .pos-sell-layout .pos-sell-grid.is-mid,
   .pos-sell-layout .pos-sell-grid.is-dense,
   .pos-sell-layout .pos-sell-grid:not(.is-sparse):not(.is-dense) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pos-sell-layout .pos-sell-item-media {
+    max-height: 7.25rem;
   }
 }
 
