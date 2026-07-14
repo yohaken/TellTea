@@ -99,7 +99,7 @@ function pnlSheetRows(rows: PnlMonthRow[], includeTotals: boolean) {
     Asset: r.asset,
     "invest/net%": pctCell(r.investOverNet),
     "เงินสด+": r.cashPlus,
-    "เงินสดต่อกำไร%": pctCell(r.cashOverNet),
+    "เงินสดต่อรายได้%": pctCell(r.cashOverIncome),
   });
   const out = rows.map(mapRow);
   if (includeTotals) {

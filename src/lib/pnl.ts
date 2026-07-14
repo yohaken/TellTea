@@ -44,8 +44,8 @@ export type PnlMonthRow = {
   asset: number;
   investOverNet: number | null;
   cashPlus: number;
-  /** เงินสด+ ต่อกำไรสุทธิ (Cash+ / net) */
-  cashOverNet: number | null;
+  /** เงินสด+ ต่อรายได้ (Cash+ / income) — กระแสเงินสดต่อรายได้จริง */
+  cashOverIncome: number | null;
 };
 
 function emptyCats(): Record<CategoryBucket, number> {
@@ -255,7 +255,7 @@ export function summarizePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
     asset,
     investOverNet: pct(asset, net),
     cashPlus,
-    cashOverNet: pct(cashPlus, net),
+    cashOverIncome: pct(cashPlus, income),
   };
 }
 
@@ -295,7 +295,7 @@ export function averagePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
     asset,
     investOverNet: meanNullable(rows.map((r) => r.investOverNet)),
     cashPlus,
-    cashOverNet: meanNullable(rows.map((r) => r.cashOverNet)),
+    cashOverIncome: meanNullable(rows.map((r) => r.cashOverIncome)),
   };
 }
 
@@ -330,7 +330,7 @@ export function buildPnlRows(
       asset,
       investOverNet: pct(asset, net),
       cashPlus,
-      cashOverNet: pct(cashPlus, net),
+      cashOverIncome: pct(cashPlus, income),
     };
   });
 }

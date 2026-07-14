@@ -325,7 +325,7 @@ function PnlView() {
                     <th className="col-num">Asset</th>
                     <th className="col-num">invest/net</th>
                     <th className="col-num">Cash+</th>
-                    <th className="col-num">เงินสด/กำไร</th>
+                    <th className="col-num">เงินสด/รายได้</th>
                     <th />
                   </tr>
                 </thead>
@@ -369,7 +369,7 @@ function PnlView() {
                         <td className="col-num">{fmt(row.asset)}</td>
                         <td className="col-num">{fmtPct(row.investOverNet)}</td>
                         <td className="col-num">{fmt(row.cashPlus)}</td>
-                        <td className="col-num">{fmtPct(row.cashOverNet)}</td>
+                        <td className="col-num">{fmtPct(row.cashOverIncome)}</td>
                         <td>
                           <button
                             type="button"
@@ -401,7 +401,7 @@ function PnlView() {
                       <td className="col-num">{fmt(pnlTotals.asset)}</td>
                       <td className="col-num">{fmtPct(pnlTotals.investOverNet)}</td>
                       <td className="col-num">{fmt(pnlTotals.cashPlus)}</td>
-                      <td className="col-num">{fmtPct(pnlTotals.cashOverNet)}</td>
+                      <td className="col-num">{fmtPct(pnlTotals.cashOverIncome)}</td>
                       <td />
                     </tr>
                     <tr className="pnl-averages-row">
@@ -419,7 +419,7 @@ function PnlView() {
                       <td className="col-num">{fmt(pnlAverages.asset)}</td>
                       <td className="col-num">{fmtPct(pnlAverages.investOverNet)}</td>
                       <td className="col-num">{fmt(pnlAverages.cashPlus)}</td>
-                      <td className="col-num">{fmtPct(pnlAverages.cashOverNet)}</td>
+                      <td className="col-num">{fmtPct(pnlAverages.cashOverIncome)}</td>
                       <td />
                     </tr>
                   </tfoot>
