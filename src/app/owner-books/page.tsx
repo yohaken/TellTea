@@ -41,6 +41,7 @@ import {
   todayInputValue,
 } from "@/lib/utils";
 import { filterOwnerBookRows } from "@/lib/smart-search";
+import { exportOwnerBooksXlsx } from "@/lib/xlsx-export";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 export default function OwnerBooksPage() {
@@ -70,6 +71,7 @@ function OwnerBooksView() {
   const [query, setQuery] = useState("");
   const [searchPool, setSearchPool] = useState<OwnerBookEntry[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [excludedIds, setExcludedIds] = useState<Set<string>>(() => new Set());
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const deferredQuery = useDeferredValue(query.trim());
@@ -175,6 +177,24 @@ function OwnerBooksView() {
 
   const showCalcSummary = !loading && filteredEntries.length > 0 && !searchLoading;
 
+  async function onExportTables() {
+    setExporting(true);
+    setError(null);
+    try {
+      let rows: OwnerBookEntry[];
+      if (deferredQuery) {
+        rows = filterOwnerBookRows(searchPool ?? entries, deferredQuery);
+      } else {
+        rows = await listOwnerBookEntries();
+      }
+      exportOwnerBooksXlsx(rows);
+    } catch (err) {
+      setError((err as Error).message || "ส่งออกไม่สำเร็จ");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const loadMore = useCallback(() => {
     if (deferredQuery) return;
     if (!hasMore || loadingMore || liveLimit >= OWNER_BOOKS_LIVE_MAX) return;
@@ -204,13 +224,21 @@ function OwnerBooksView() {
         <strong>{totalOut == null ? "…" : formatBaht(totalOut)}</strong>
       </div>
 
-      <div className="quick-actions">
+      <div className="btn-row pnl-toolbar">
         <button
           type="button"
           className="primary-btn action-out"
           onClick={() => setAdding(true)}
         >
           บันทึกเงินออก
+        </button>
+        <button
+          type="button"
+          className="primary-btn"
+          disabled={exporting || loading || (!entries.length && !searchPool?.length)}
+          onClick={() => void onExportTables()}
+        >
+          {exporting ? "กำลังส่งออก..." : "ส่งออกตาราง Excel"}
         </button>
       </div>
 
@@ -237,7 +265,9 @@ function OwnerBooksView() {
       </div>
       {deferredQuery ? (
         <p className="muted table-search-meta">
-          {searchLoading ? "กำลังค้นหาทั้งบัญชี…" : null}
+          {searchLoading
+            ? "กำลังค้นหาทั้งบัญชี…"
+            : `พบ ${filteredEntries.length} รายการ`}
         </p>
       ) : null}
 
