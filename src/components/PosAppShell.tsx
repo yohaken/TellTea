@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Bell, Menu, RefreshCw } from "lucide-react";
 import { AppBrand } from "@/components/AppBrand";
@@ -8,9 +9,9 @@ import { PosPendingSyncPanel } from "@/components/PosPendingSyncPanel";
 import { PosSyncWatcher } from "@/components/PosSyncWatcher";
 import { PosUpdateWatcher } from "@/components/PosUpdateWatcher";
 import { usePosApp } from "@/lib/pos-app-context";
+import { installChunkLoadRecovery } from "@/lib/chunk-load-recovery";
 import { POS_LOCK_HREF, POS_NAV_ITEMS, matchPosNav, posNavLockItem } from "@/lib/pos-nav";
 import { posVersionLabel } from "@/lib/pos-version";
-import { useState } from "react";
 
 function PosSidebarNav({
   collapsed,
@@ -113,6 +114,8 @@ export function PosAppShell({ children }: { children: React.ReactNode }) {
     performReload,
   } = usePosApp();
   const [mobileNav, setMobileNav] = useState(false);
+
+  useEffect(() => installChunkLoadRecovery(), []);
 
   if (status === "boot" || status === "connecting") {
     return (

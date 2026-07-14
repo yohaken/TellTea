@@ -2,21 +2,22 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
-import { subscribeAppReleaseSettings } from "@/lib/app-release";
+import { DEV_FORCE_IMMEDIATE_UPDATE, subscribeAppReleaseSettings } from "@/lib/app-release";
 import { POS_CLIENT_BUILD, fetchPosServerBuild } from "@/lib/pos-app-update";
 import { getPosDb } from "@/lib/pos-firebase";
 import { isPosSafeToReload, POS_IDLE_BEFORE_RELOAD_MS, type PosSellBusyState } from "@/lib/pos-reload";
 
 const POLL_MS = 30 * 1000;
-const FORCE_POLL_MS = 15 * 1000;
-const RETRY_MS = 5 * 1000;
-const MIN_VISIBILITY_CHECK_MS = 60 * 1000;
+const FORCE_POLL_MS = 12 * 1000;
+const RETRY_MS = 4 * 1000;
+const MIN_VISIBILITY_CHECK_MS = 30 * 1000;
 const MIN_RELOAD_GAP_MS = 45 * 1000;
 const RELOAD_BUILD_KEY = "telltea_pos_last_reload_build";
 
 /**
- * POS auto-update — polls /pos-version.json and respects owner forceAppUpdate.
- * Throttled to avoid reload loops on Android (visibility / flaky network).
+ * POS auto-update — polls /pos-version.json.
+ * ช่วงพัฒนา (DEV_FORCE_IMMEDIATE_UPDATE): อัปเดตเองทันทีเมื่อตะกร้าว่าง
+ * ระยะยาว: กันแท็บค้าง build เก่า + รอว่างก่อนรีโหลด
  */
 export function PosUpdateWatcher({
   enabled,
@@ -27,21 +28,34 @@ export function PosUpdateWatcher({
   sellBusy: PosSellBusyState;
   onReload: () => void;
 }) {
-  const [forceMode, setForceMode] = useState(false);
+  const [ownerForce, setOwnerForce] = useState(false);
   const [serverBuild, setServerBuild] = useState<number | null>(null);
   const [waiting, setWaiting] = useState(false);
   const lastInputAt = useRef(0);
   const lastVersionCheckAt = useRef(0);
   const lastReloadAt = useRef(0);
-  const forceModeRef = useRef(forceMode);
+  const forceModeRef = useRef(false);
   const reloadRequestedRef = useRef(false);
 
+  const forceMode = DEV_FORCE_IMMEDIATE_UPDATE || ownerForce;
   const hasUpdate = serverBuild != null && serverBuild > POS_CLIENT_BUILD;
   const safe = isPosSafeToReload(sellBusy);
 
   useEffect(() => {
     forceModeRef.current = forceMode;
   }, [forceMode]);
+
+  // ถ้าเคยพยายาม reload แต่ยังขึ้น build เก่า — ล้าง flag เพื่อลองใหม่
+  useEffect(() => {
+    try {
+      const last = Number(sessionStorage.getItem(RELOAD_BUILD_KEY) || 0);
+      if (last > POS_CLIENT_BUILD) {
+        sessionStorage.removeItem(RELOAD_BUILD_KEY);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const checkVersion = useCallback(async () => {
     const build = await fetchPosServerBuild();
@@ -86,8 +100,8 @@ export function PosUpdateWatcher({
     if (!enabled) return;
     return subscribeAppReleaseSettings(
       (settings) => {
-        setForceMode(settings.forceAppUpdate || settings.forcePosAutoUpdate);
-        if (settings.forceAppUpdate || settings.forcePosAutoUpdate) {
+        setOwnerForce(settings.forceAppUpdate || settings.forcePosAutoUpdate);
+        if (settings.forceAppUpdate || settings.forcePosAutoUpdate || DEV_FORCE_IMMEDIATE_UPDATE) {
           void checkVersion();
         }
       },
@@ -140,7 +154,7 @@ export function PosUpdateWatcher({
       return;
     }
 
-    setWaiting(force);
+    setWaiting(true);
   }, [hasUpdate, onReload, safe, serverBuild]);
 
   useEffect(() => {
@@ -151,8 +165,7 @@ export function PosUpdateWatcher({
     }
 
     tryReload();
-    if (!forceMode) return;
-
+    // Soft + force: วนเช็คเรื่อยๆ — กันแท็บค้าง build เก่าจน UI พัง
     const timer = setInterval(tryReload, RETRY_MS);
     return () => clearInterval(timer);
   }, [enabled, forceMode, hasUpdate, safe, tryReload]);

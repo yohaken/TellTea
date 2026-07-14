@@ -2,28 +2,29 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
-import { subscribeAppReleaseSettings } from "@/lib/app-release";
+import { DEV_FORCE_IMMEDIATE_UPDATE, subscribeAppReleaseSettings } from "@/lib/app-release";
 import { CLIENT_BUILD, fetchServerBuild, isUserBusyForReload } from "@/lib/app-update";
+import { hardReloadWithCacheBust } from "@/lib/hard-reload";
 
 const POLL_MS = 2 * 60 * 1000;
-const FORCE_POLL_MS = 60 * 1000;
-const RETRY_MS = 30 * 1000;
-const IDLE_AFTER_INPUT_MS = 45 * 1000;
+const FORCE_POLL_MS = 45 * 1000;
+const RETRY_MS = 15 * 1000;
+const IDLE_AFTER_INPUT_MS = 20 * 1000;
 const SNOOZE_MS = 30 * 60 * 1000;
 const SNOOZE_KEY = "telltea-update-snooze-until";
 
 /**
  * Poll /version.json for newer builds.
- * - Soft mode (default): banner + user taps to update
- * - Force mode (owner toggle): auto-reload when safe (defers during forms)
+ * ช่วงพัฒนา: DEV_FORCE_IMMEDIATE_UPDATE → รีโหลดอัตโนมัติเมื่อว่าง
  */
 export function AppUpdateWatcher() {
-  const [forceMode, setForceMode] = useState(false);
+  const [ownerForce, setOwnerForce] = useState(false);
   const [serverBuild, setServerBuild] = useState<number | null>(null);
   const [snoozedUntil, setSnoozedUntil] = useState(0);
   const [waitingToForce, setWaitingToForce] = useState(false);
   const lastInputAt = useRef(0);
 
+  const forceMode = DEV_FORCE_IMMEDIATE_UPDATE || ownerForce;
   const hasUpdate = serverBuild != null && serverBuild > CLIENT_BUILD;
 
   const checkVersion = useCallback(async () => {
@@ -56,7 +57,7 @@ export function AppUpdateWatcher() {
 
   useEffect(() => {
     return subscribeAppReleaseSettings((settings) => {
-      setForceMode(settings.forceAppUpdate);
+      setOwnerForce(settings.forceAppUpdate);
     });
   }, []);
 
@@ -75,10 +76,12 @@ export function AppUpdateWatcher() {
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
     function tryForceReload() {
-      const idleLongEnough = Date.now() - lastInputAt.current >= IDLE_AFTER_INPUT_MS;
+      const idleLongEnough =
+        DEV_FORCE_IMMEDIATE_UPDATE ||
+        Date.now() - lastInputAt.current >= IDLE_AFTER_INPUT_MS;
       if (!isUserBusyForReload() && idleLongEnough) {
         setWaitingToForce(false);
-        window.location.reload();
+        hardReloadWithCacheBust("app-update");
         return;
       }
 
@@ -106,7 +109,7 @@ export function AppUpdateWatcher() {
       );
       if (!ok) return;
     }
-    window.location.reload();
+    hardReloadWithCacheBust("app-update-manual");
   }
 
   if (!hasUpdate) return null;
@@ -119,7 +122,7 @@ export function AppUpdateWatcher() {
         <RefreshCw size={18} aria-hidden className="app-update-banner-icon" />
         <div className="app-update-banner-copy">
           <strong>กำลังอัปเดตเป็น v{serverBuild}</strong>
-          <span>เจ้าของเปิดโหมดบังคับ — รอให้บันทึก/กรอกเสร็จก่อนรีเฟรชอัตโนมัติ</span>
+          <span>โหมดพัฒนา — รอให้บันทึก/กรอกเสร็จก่อนรีเฟรชอัตโนมัติ</span>
         </div>
       </div>
     );

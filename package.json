@@ -21,6 +21,7 @@
     "test:pos-menu-order-promptpay": "node scripts/test-pos-menu-order-promptpay.mjs",
     "test:pos-category-order-sync": "node scripts/test-pos-category-order-sync.mjs",
     "test:pos-fixed-category-order": "node scripts/test-pos-fixed-category-order.mjs",
+    "test:pos-update-reload-stable": "node scripts/test-pos-update-reload-stable.mjs",
     "test:pos-sell-cat-drag": "node scripts/test-pos-sell-cat-drag.mjs",
     "test:pos-discount-everywhere": "node scripts/test-pos-discount-everywhere.mjs",
     "test:pos-business-settings": "node scripts/test-pos-business-settings.mjs",

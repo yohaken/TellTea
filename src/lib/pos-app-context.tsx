@@ -38,6 +38,7 @@ import { refreshPosSyncSnapshot, runPosSyncFlush } from "@/lib/pos-sync";
 import { getCurrentShiftId } from "@/lib/shift-session";
 import { seedPosMenuIfEmpty } from "@/lib/pos-menu";
 import { startPosMenuPreload } from "@/lib/pos-menu-preload";
+import { hardReloadWithCacheBust } from "@/lib/hard-reload";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { getPosHardwareSnapshot } from "@/lib/pos-hardware";
 import { subscribePosPrinterSetup } from "@/lib/pos-printer/storage";
@@ -148,7 +149,7 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
   const performReload = useCallback(() => {
     if (reloadingRef.current) return;
     reloadingRef.current = true;
-    window.location.reload();
+    hardReloadWithCacheBust("manual");
   }, []);
 
   const flushPendingForceReload = useCallback(() => {
@@ -160,7 +161,7 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
     reloadingRef.current = true;
     pendingForceReloadAtRef.current = 0;
     void ackPosDeviceReload(deviceId, forceReloadAt).catch(() => {});
-    window.location.reload();
+    hardReloadWithCacheBust("owner-force");
   }, []);
 
   const boot = useCallback(async () => {
@@ -384,7 +385,7 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
           pendingForceReloadAtRef.current = 0;
           reloadingRef.current = true;
           void ackPosDeviceReload(deviceId, next.forceReloadAt).catch(() => {});
-          window.location.reload();
+          hardReloadWithCacheBust("device-force");
         }
       },
       (err) => setError(err.message),
