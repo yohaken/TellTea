@@ -12,6 +12,7 @@ const POS_AUTHORIZED_DOMAINS = [
   "localhost",
   "telltea-shop.web.app",
   "telltea-pos.web.app",
+  "taxtag.web.app",
   "mypeer-501909.firebaseapp.com",
   "mypeer-501909.web.app",
 ];
