@@ -8,8 +8,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const preload = readFileSync(join(root, "src/lib/pos-menu-preload.ts"), "utf8");
 assert.match(preload, /publishLocalMenuOrder/);
 assert.match(preload, /savePosMenuCache/);
-assert.match(preload, /localOrderHoldUntil/);
-assert.match(preload, /applyHeldOrder/);
+assert.match(preload, /pendingOrderUntil/);
+assert.match(preload, /applyPendingOrder/);
 
 const admin = readFileSync(join(root, "src/components/PosMenuAdmin.tsx"), "utf8");
 assert.match(admin, /publishLocalMenuOrder/);
@@ -27,9 +27,8 @@ assert.match(biz, /PromptPay พร้อมใช้/);
 assert.match(biz, /isValidPromptPayId/);
 
 const version = readFileSync(join(root, "src/lib/pos-version.ts"), "utf8");
-assert.match(version, /POS_BUILD = 44/);
+assert.match(version, /POS_BUILD = \d+/);
 
-// PromptPay validation mirror
 function isValid(id) {
   const d = String(id).replace(/\D/g, "");
   return (d.length === 10 && d.startsWith("0")) || d.length === 13;

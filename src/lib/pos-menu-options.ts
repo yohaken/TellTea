@@ -66,14 +66,18 @@ function mapGroup(id: string, data: Record<string, unknown>): MenuOptionGroup {
 }
 
 export function subscribeMenuOptionGroups(
-  onData: (groups: MenuOptionGroup[]) => void,
+  onData: (groups: MenuOptionGroup[], fromCache?: boolean) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
   const q = query(groupsCol(), orderBy("sortOrder", "asc"));
   return onSnapshot(
     q,
+    { includeMetadataChanges: true },
     (snap) => {
-      onData(snap.docs.map((d) => mapGroup(d.id, d.data() as Record<string, unknown>)));
+      onData(
+        snap.docs.map((d) => mapGroup(d.id, d.data() as Record<string, unknown>)),
+        snap.metadata.fromCache,
+      );
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );
