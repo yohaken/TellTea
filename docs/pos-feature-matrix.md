@@ -206,6 +206,7 @@ Wongnai POS Android
 |-------|---------|--------|
 | 0 | เชื่อมต่อเครื่อง + auto-update + heartbeat | **ทำแล้ว** v112–119 — ดู `docs/pos-connectivity.md` |
 | 0.5 | PWA standalone — ติดตั้งแอปเต็มจอ | **ทำแล้ว** v115 — `manifest-pos.webmanifest` |
+| 0.6 | Native shell (Capacitor APK) | **เริ่มแล้ว** POS 55 — ดู `docs/pos-native-shell.md` |
 | 1 | เมนู + ตะกร้า + เงินสด + posSales (ไม่ผูก ledger) | **ทำแล้ว** v131 |
 | 1.5 | เลขบิล + void + รายงานยอดวัน + เสียง + แก้ตะกร้า | **ทำแล้ว** v124 |
 | 2 | พิมพ์ใบเสร็จ + สถานะฮาร์ดแวร์ | **ทำแล้ว** v125 |
