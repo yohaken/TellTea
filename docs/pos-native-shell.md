@@ -54,9 +54,13 @@ CAPACITOR_EMBED=1 npx cap sync android
 
 ## สิ่งที่ยังไม่ทำใน N0
 
-- โฟลเดอร์ `android/` ยังไม่ commit จาก cloud agent (ต้อง generate บนเครื่องที่มี Android SDK)
+- โฟลเดอร์ `android/` อยู่ใน repo แล้ว — สร้าง APK ด้วย Android Studio บนเครื่องคุณ
 - Silent print / customer display activity
 - เปลี่ยน `POS_BUILD` ทุกครั้งที่แก้แค่ docs — เว็บยังเป็นแหล่งฟีเจอร์หลัก
+
+## คู่มือลง APK บนแท็บเล็ตจริง
+
+ดู `docs/pos-native-install.md` — **ข้าม emulator** ใช้แท็บเล็ตจริง (USB Run หรือส่ง APK)
 
 ## ความสัมพันธ์กับเว็บ
 
