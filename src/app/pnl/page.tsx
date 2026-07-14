@@ -312,13 +312,14 @@ function PnlView() {
                     <th className="col-num">Asset</th>
                     <th className="col-num">invest/net</th>
                     <th className="col-num">Cash+</th>
+                    <th className="col-num">เงินสด/กำไร</th>
                     <th />
                   </tr>
                 </thead>
                 <tbody>
                   {viewPnl.length === 0 ? (
                     <tr>
-                      <td colSpan={15} className="empty">
+                      <td colSpan={16} className="empty">
                         {summaryMode
                           ? "ไม่มีเดือนที่มีรายได้ให้สรุป"
                           : "ยังไม่มีเดือนให้สรุป"}
@@ -355,6 +356,7 @@ function PnlView() {
                         <td className="col-num">{fmt(row.asset)}</td>
                         <td className="col-num">{fmtPct(row.investOverNet)}</td>
                         <td className="col-num">{fmt(row.cashPlus)}</td>
+                        <td className="col-num">{fmtPct(row.cashOverNet)}</td>
                         <td>
                           <button
                             type="button"
@@ -386,6 +388,7 @@ function PnlView() {
                       <td className="col-num">{fmt(pnlTotals.asset)}</td>
                       <td className="col-num">{fmtPct(pnlTotals.investOverNet)}</td>
                       <td className="col-num">{fmt(pnlTotals.cashPlus)}</td>
+                      <td className="col-num">{fmtPct(pnlTotals.cashOverNet)}</td>
                       <td />
                     </tr>
                   </tfoot>
@@ -394,7 +397,7 @@ function PnlView() {
             </div>
             {summaryMode ? (
               <p className="muted pnl-totals-legend">
-                สรุป = รวมยอดเงิน · % ถ่วงด้วยรายได้ · /วัน = รวมยอด ÷ รวมวันของเดือนที่นับ
+                สรุป = รวมยอดเงิน · % ถ่วงด้วยรายได้ · /วัน = รวมยอด ÷ รวมวัน · เงินสด/กำไร = Cash+ ÷ net
               </p>
             ) : null}
           </section>

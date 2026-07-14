@@ -44,6 +44,8 @@ export type PnlMonthRow = {
   asset: number;
   investOverNet: number | null;
   cashPlus: number;
+  /** เงินสด+ ต่อกำไรสุทธิ (Cash+ / net) */
+  cashOverNet: number | null;
 };
 
 function emptyCats(): Record<CategoryBucket, number> {
@@ -214,6 +216,7 @@ export function summarizePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
   const gross = income - cogs;
   const ebitda = gross - sga;
   const net = ebitda;
+  const cashPlus = net - asset;
   return {
     month: "สรุป",
     income,
@@ -232,7 +235,8 @@ export function summarizePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
     netPerDay: net / days,
     asset,
     investOverNet: pct(asset, net),
-    cashPlus: net - asset,
+    cashPlus,
+    cashOverNet: pct(cashPlus, net),
   };
 }
 
@@ -247,6 +251,7 @@ export function buildPnlRows(
     const gross = income - cogs;
     const ebitda = gross - sga;
     const net = ebitda;
+    const cashPlus = net - asset;
     return {
       month: row.month,
       income,
@@ -265,7 +270,8 @@ export function buildPnlRows(
       netPerDay: net / days,
       asset,
       investOverNet: pct(asset, net),
-      cashPlus: net - asset,
+      cashPlus,
+      cashOverNet: pct(cashPlus, net),
     };
   });
 }
