@@ -2,7 +2,13 @@ import * as XLSX from "xlsx";
 import { labelLedgerType } from "./ledger-labels";
 import type { LedgerEntry } from "./types";
 import type { OwnerBookEntry } from "./owner-books";
-import type { PnlReportData } from "./pnl";
+import {
+  sumCategoryRows,
+  summarizePnlRows,
+  type MonthCategoryRow,
+  type PnlMonthRow,
+  type PnlReportData,
+} from "./pnl";
 import { formatDateShort, formatDateTimeShort, entryUpdatedAt } from "./utils";
 
 function downloadWorkbook(wb: XLSX.WorkBook, filename: string) {
@@ -26,6 +32,70 @@ function stamp() {
   return `${y}${m}${day}`;
 }
 
+function appendSheet(
+  wb: XLSX.WorkBook,
+  name: string,
+  rows: Record<string, string | number>[],
+) {
+  const safe = name.slice(0, 31);
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.json_to_sheet(rows.length ? rows : [{ หมายเหตุ: "ไม่มีข้อมูล" }]),
+    safe,
+  );
+}
+
+function categorySheetRows(rows: MonthCategoryRow[], includeTotals: boolean) {
+  const out = rows.map((r) => ({
+    เดือน: r.month,
+    Asset: r.asset,
+    cogs: r.cogs,
+    sga: r.sga,
+    อื่นๆ: r.other,
+  }));
+  if (includeTotals && rows.length) {
+    const t = sumCategoryRows(rows);
+    out.push({
+      เดือน: "รวม",
+      Asset: t.asset,
+      cogs: t.cogs,
+      sga: t.sga,
+      อื่นๆ: t.other,
+    });
+  }
+  return out;
+}
+
+function pctCell(n: number | null) {
+  if (n == null || !Number.isFinite(n)) return "";
+  return Number((n * 100).toFixed(2));
+}
+
+function pnlSheetRows(rows: PnlMonthRow[], includeTotals: boolean) {
+  const mapRow = (r: PnlMonthRow) => ({
+    เดือน: r.month,
+    รายได้: r.income,
+    "รายได้/วัน": Number(r.incomePerDay.toFixed(2)),
+    COGS: r.cogs,
+    "COGS%": pctCell(r.cogsPct),
+    กำไรขั้นต้น: r.gross,
+    "กำไรขั้นต้น%": pctCell(r.grossPct),
+    SGA: r.sga,
+    "SGA%": pctCell(r.sgaPct),
+    สุทธิ: r.net,
+    "สุทธิ%": pctCell(r.netPct),
+    Asset: r.asset,
+    "invest/net%": pctCell(r.investOverNet),
+    "เงินสด+": r.cashPlus,
+  });
+  const out = rows.map(mapRow);
+  if (includeTotals) {
+    const t = summarizePnlRows(rows);
+    if (t) out.push(mapRow(t));
+  }
+  return out;
+}
+
 export function exportLedgerXlsx(entries: LedgerEntry[]) {
   const rows = entries.map((e) => ({
     วันที่: formatDateShort(e.date),
@@ -37,7 +107,7 @@ export function exportLedgerXlsx(entries: LedgerEntry[]) {
     สร้างโดย: e.createdBy || "",
   }));
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "บช.พนักงาน");
+  appendSheet(wb, "บช.พนักงาน", rows);
   downloadWorkbook(wb, `telltea-ledger-${stamp()}.xlsx`);
 }
 
@@ -52,52 +122,83 @@ export function exportOwnerBooksXlsx(entries: OwnerBookEntry[]) {
     สร้างโดย: e.createdBy || "",
   }));
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "บช.เจ้าของ");
+  appendSheet(wb, "บช.เจ้าของ", rows);
   downloadWorkbook(wb, `telltea-owner-books-${stamp()}.xlsx`);
 }
 
-export function exportPnlXlsx(report: PnlReportData) {
+export type ExportPnlOptions = {
+  summaryMode?: boolean;
+  includeTotals?: boolean;
+};
+
+/** ไฟล์เดียว · แยกแผ่นงานตามตาราง PNL ทั้งหมด */
+export function exportPnlXlsx(report: PnlReportData, options: ExportPnlOptions = {}) {
+  const includeTotals = options.includeTotals ?? false;
   const wb = XLSX.utils.book_new();
 
-  const pnlRows = report.pnl.map((r) => ({
-    เดือน: r.month,
-    รายได้: r.income,
-    COGS: r.cogs,
-    กำไรขั้นต้น: r.gross,
-    SGA: r.sga,
-    EBITDA: r.ebitda,
-    สุทธิ: r.net,
-    Asset: r.asset,
-    "เงินสด+": r.cashPlus,
-  }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pnlRows), "P&L");
+  appendSheet(wb, "1-บช.พนักงาน", categorySheetRows(report.staff, includeTotals));
+  appendSheet(wb, "1-บช.เจ้าของ", categorySheetRows(report.owner, includeTotals));
+  appendSheet(wb, "2-รวม", categorySheetRows(report.combined, includeTotals));
+  appendSheet(wb, "3-กำไรขาดทุน", pnlSheetRows(report.pnl, includeTotals));
 
-  const staffRows = report.staff.map((r) => ({
-    เดือน: r.month,
-    asset: r.asset,
-    cogs: r.cogs,
-    sga: r.sga,
-    other: r.other,
-  }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(staffRows), "แยก-พนักงาน");
+  const modeTag = options.summaryMode ? "summary" : "all";
+  downloadWorkbook(wb, `telltea-pnl-${modeTag}-${stamp()}.xlsx`);
+}
 
-  const ownerRows = report.owner.map((r) => ({
-    เดือน: r.month,
-    asset: r.asset,
-    cogs: r.cogs,
-    sga: r.sga,
-    other: r.other,
-  }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ownerRows), "แยก-เจ้าของ");
+export type CombinedExportInput = {
+  ledger?: LedgerEntry[];
+  ownerBooks?: OwnerBookEntry[];
+  pnl?: PnlReportData;
+};
 
-  const combinedRows = report.combined.map((r) => ({
-    เดือน: r.month,
-    asset: r.asset,
-    cogs: r.cogs,
-    sga: r.sga,
-    other: r.other,
-  }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(combinedRows), "รวม");
+/** ส่งออกทุกอย่างที่เลือกเป็นไฟล์เดียว แยกแผ่นงาน */
+export function exportCombinedTablesXlsx(input: CombinedExportInput) {
+  const wb = XLSX.utils.book_new();
+  let sheets = 0;
 
-  downloadWorkbook(wb, `telltea-pnl-${stamp()}.xlsx`);
+  if (input.ledger) {
+    appendSheet(
+      wb,
+      "บช.พนักงาน",
+      input.ledger.map((e) => ({
+        วันที่: formatDateShort(e.date),
+        รายการ: e.description,
+        เข้า: e.amountIn || "",
+        ออก: e.amountOut || "",
+        ประเภท: e.type ? labelLedgerType(e.type) : "",
+        แก้ไขล่าสุด: formatDateTimeShort(entryUpdatedAt(e)),
+        สร้างโดย: e.createdBy || "",
+      })),
+    );
+    sheets += 1;
+  }
+
+  if (input.ownerBooks) {
+    appendSheet(
+      wb,
+      "บช.เจ้าของ",
+      input.ownerBooks.map((e) => ({
+        วันที่: formatDateShort(e.date),
+        รายการ: e.description,
+        ออก: e.amountOut || "",
+        ประเภท: e.type ? labelLedgerType(e.type) : e.type || "",
+        note: e.note || "",
+        แก้ไขล่าสุด: formatDateTimeShort(entryUpdatedAt(e)),
+        สร้างโดย: e.createdBy || "",
+      })),
+    );
+    sheets += 1;
+  }
+
+  if (input.pnl) {
+    const report = input.pnl;
+    appendSheet(wb, "PNL-พนักงาน", categorySheetRows(report.staff, true));
+    appendSheet(wb, "PNL-เจ้าของ", categorySheetRows(report.owner, true));
+    appendSheet(wb, "PNL-รวม", categorySheetRows(report.combined, true));
+    appendSheet(wb, "PNL-กำไรขาดทุน", pnlSheetRows(report.pnl, true));
+    sheets += 4;
+  }
+
+  if (!sheets) throw new Error("ไม่มีข้อมูลให้ส่งออก");
+  downloadWorkbook(wb, `telltea-export-${stamp()}.xlsx`);
 }

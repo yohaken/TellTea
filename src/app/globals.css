@@ -5461,6 +5461,39 @@ body.modal-open .main-panel {
 }
 
 /* Owner monthly P&L report */
+.pnl-toolbar {
+  margin-bottom: 0.65rem;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.pnl-summary-toggle {
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--tea-line);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.72);
+  align-items: flex-start;
+}
+
+.pnl-summary-empty-hint {
+  margin: -0.35rem 0 0.75rem;
+  text-align: left;
+  font-size: 0.82rem;
+}
+
+.pnl-totals-row td {
+  font-weight: 800;
+  background: rgba(183, 228, 192, 0.28);
+  border-top: 2px solid rgba(45, 106, 79, 0.28);
+}
+
+.pnl-totals-legend {
+  margin: 0.45rem 0 0;
+  text-align: left;
+  font-size: 0.78rem;
+}
+
 .pnl-section {
   margin-bottom: 1.25rem;
 }

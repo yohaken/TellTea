@@ -148,6 +148,94 @@ function pct(part: number, whole: number): number | null {
   return part / whole;
 }
 
+export function monthHasIncome(
+  month: string,
+  incomeByMonth: Record<string, number>,
+): boolean {
+  return (Number(incomeByMonth[month]) || 0) > 0;
+}
+
+/** เดือนที่ครบสำหรับโหมดสรุป — มีรายได้ > 0 */
+export function completePnlMonths(
+  pnl: PnlMonthRow[],
+  incomeByMonth: Record<string, number>,
+): string[] {
+  return pnl.filter((r) => monthHasIncome(r.month, incomeByMonth)).map((r) => r.month);
+}
+
+export function filterCategoryRowsByMonths(
+  rows: MonthCategoryRow[],
+  months: string[],
+): MonthCategoryRow[] {
+  const set = new Set(months);
+  return rows.filter((r) => set.has(r.month));
+}
+
+export function filterPnlRowsByMonths(rows: PnlMonthRow[], months: string[]): PnlMonthRow[] {
+  const set = new Set(months);
+  return rows.filter((r) => set.has(r.month));
+}
+
+export type CategoryTotals = {
+  asset: number;
+  cogs: number;
+  sga: number;
+  other: number;
+};
+
+export function sumCategoryRows(rows: MonthCategoryRow[]): CategoryTotals {
+  return rows.reduce(
+    (acc, r) => ({
+      asset: acc.asset + r.asset,
+      cogs: acc.cogs + r.cogs,
+      sga: acc.sga + r.sga,
+      other: acc.other + r.other,
+    }),
+    { asset: 0, cogs: 0, sga: 0, other: 0 },
+  );
+}
+
+/** รวมยอดเงิน + % ถ่วงรายได้ + ต่อวันจากยอดรวม/วันรวม */
+export function summarizePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
+  if (!rows.length) return null;
+  let income = 0;
+  let cogs = 0;
+  let sga = 0;
+  let asset = 0;
+  let days = 0;
+  for (const r of rows) {
+    income += r.income;
+    cogs += r.cogs;
+    sga += r.sga;
+    asset += r.asset;
+    days += daysInMonthKey(r.month) || 0;
+  }
+  days = days || 1;
+  const gross = income - cogs;
+  const ebitda = gross - sga;
+  const net = ebitda;
+  return {
+    month: "สรุป",
+    income,
+    incomePerDay: income / days,
+    cogs,
+    cogsPct: pct(cogs, income),
+    gross,
+    grossPct: pct(gross, income),
+    grossPerDay: gross / days,
+    sga,
+    sgaPct: pct(sga, income),
+    sgaPerDay: sga / days,
+    ebitda,
+    net,
+    netPct: pct(net, income),
+    netPerDay: net / days,
+    asset,
+    investOverNet: pct(asset, net),
+    cashPlus: net - asset,
+  };
+}
+
 export function buildPnlRows(
   combined: CombinedMonthRow[],
   incomeByMonth: Record<string, number>,

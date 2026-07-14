@@ -7,13 +7,14 @@ import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { listLedgerEntries } from "@/lib/ledger";
 import { listOwnerBookEntries } from "@/lib/owner-books";
-import { loadPnlReport } from "@/lib/pnl";
-import { backfillOwnerNotesFromPatch } from "@/lib/owner-notes-backfill";
 import {
-  exportLedgerXlsx,
-  exportOwnerBooksXlsx,
-  exportPnlXlsx,
-} from "@/lib/xlsx-export";
+  completePnlMonths,
+  filterCategoryRowsByMonths,
+  filterPnlRowsByMonths,
+  loadPnlReport,
+} from "@/lib/pnl";
+import { backfillOwnerNotesFromPatch } from "@/lib/owner-notes-backfill";
+import { exportCombinedTablesXlsx } from "@/lib/xlsx-export";
 
 export default function ExportPage() {
   return (
@@ -29,6 +30,7 @@ function ExportView() {
   const [ledger, setLedger] = useState(true);
   const [ownerBooks, setOwnerBooks] = useState(true);
   const [pnl, setPnl] = useState(true);
+  const [pnlSummaryOnly, setPnlSummaryOnly] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,28 +48,41 @@ function ExportView() {
     }
     setBusy(true);
     setError(null);
-    setMessage(null);
+    setMessage("กำลังรวมตารางเป็นไฟล์เดียว...");
     try {
       const parts: string[] = [];
+      const payload: Parameters<typeof exportCombinedTablesXlsx>[0] = {};
+
       if (ledger) {
-        setMessage("กำลังส่งออกบช.พนักงาน...");
         const rows = await listLedgerEntries();
-        exportLedgerXlsx(rows);
+        payload.ledger = rows;
         parts.push(`พนักงาน ${rows.length}`);
       }
       if (ownerBooks) {
-        setMessage("กำลังส่งออกบช.เจ้าของ...");
         const rows = await listOwnerBookEntries();
-        exportOwnerBooksXlsx(rows);
+        payload.ownerBooks = rows;
         parts.push(`เจ้าของ ${rows.length}`);
       }
       if (pnl) {
-        setMessage("กำลังส่งออกรายงาน...");
         const report = await loadPnlReport();
-        exportPnlXlsx(report);
-        parts.push(`รายงาน ${report.pnl.length} เดือน`);
+        if (pnlSummaryOnly) {
+          const months = completePnlMonths(report.pnl, report.incomeByMonth);
+          payload.pnl = {
+            ...report,
+            staff: filterCategoryRowsByMonths(report.staff, months),
+            owner: filterCategoryRowsByMonths(report.owner, months),
+            combined: filterCategoryRowsByMonths(report.combined, months),
+            pnl: filterPnlRowsByMonths(report.pnl, months),
+          };
+          parts.push(`P&L สรุป ${months.length} เดือน`);
+        } else {
+          payload.pnl = report;
+          parts.push(`P&L ทั้งหมด ${report.pnl.length} เดือน`);
+        }
       }
-      setMessage(`ส่งออกแล้ว: ${parts.join(" · ")}`);
+
+      exportCombinedTablesXlsx(payload);
+      setMessage(`ส่งออกไฟล์เดียวแล้ว: ${parts.join(" · ")}`);
     } catch (err) {
       setError((err as Error).message || "ส่งออกไม่สำเร็จ");
     } finally {
@@ -97,7 +112,7 @@ function ExportView() {
     <div>
       <h1 className="panel-title">ส่งออก</h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        เลือกบช.หรือรายงาน แล้วโหลดเป็น Excel ลงเครื่อง
+        เลือกตาราง แล้วโหลดเป็น <strong>ไฟล์ Excel เดียว</strong> — แยกเป็นแผ่นงานตามตาราง
       </p>
       {error ? <p className="error-text">{error}</p> : null}
       {message ? <p className="muted">{message}</p> : null}
@@ -105,7 +120,7 @@ function ExportView() {
       <div className="form-card entry-form">
         <label className="check-row">
           <input type="checkbox" checked={ledger} onChange={(e) => setLedger(e.target.checked)} />
-          บช.พนักงาน (ledger)
+          บช.พนักงาน (ledger) → แผ่นงาน «บช.พนักงาน»
         </label>
         <label className="check-row">
           <input
@@ -113,16 +128,26 @@ function ExportView() {
             checked={ownerBooks}
             onChange={(e) => setOwnerBooks(e.target.checked)}
           />
-          บช.เจ้าของ (รวม note)
+          บช.เจ้าของ (รวม note) → แผ่นงาน «บช.เจ้าของ»
         </label>
         <label className="check-row">
           <input type="checkbox" checked={pnl} onChange={(e) => setPnl(e.target.checked)} />
-          รายงานสรุป P&amp;L / แยกหมวดรายเดือน
+          รายงานสรุป P&amp;L → 4 แผ่นงาน (พนักงาน / เจ้าของ / รวม / กำไรขาดทุน)
         </label>
+        {pnl ? (
+          <label className="check-row" style={{ marginLeft: "1.25rem" }}>
+            <input
+              type="checkbox"
+              checked={pnlSummaryOnly}
+              onChange={(e) => setPnlSummaryOnly(e.target.checked)}
+            />
+            โหมดสรุป P&amp;L — เฉพาะเดือนที่มีรายได้ (+ แถวรวมท้ายแผ่น)
+          </label>
+        ) : null}
 
         <div className="entry-actions" style={{ marginTop: "1rem" }}>
           <button type="button" className="primary-btn" disabled={busy} onClick={() => void onExport()}>
-            {busy ? "กำลังส่งออก..." : "ส่งออก Excel"}
+            {busy ? "กำลังส่งออก..." : "ส่งออก Excel (ไฟล์เดียว)"}
           </button>
           <span aria-hidden style={{ width: "2.6rem" }} />
           <span aria-hidden style={{ width: "2.6rem" }} />
