@@ -1,5 +1,5 @@
 /**
- * POS 54 — stable update path + immediate reload during development.
+ * POS update path + chunk recovery wiring (force auto-reload off in production).
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -9,8 +9,8 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD\s*=\s*54\b/);
-assert.match(read("src/lib/app-release.ts"), /DEV_FORCE_IMMEDIATE_UPDATE\s*=\s*true/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD\s*=\s*55\b/);
+assert.match(read("src/lib/app-release.ts"), /DEV_FORCE_IMMEDIATE_UPDATE\s*=\s*false/);
 assert.match(read("src/lib/hard-reload.ts"), /hardReloadWithCacheBust/);
 assert.match(read("src/lib/chunk-load-recovery.ts"), /ChunkLoadError/);
 assert.match(read("src/lib/chunk-load-recovery.ts"), /installChunkLoadRecovery/);
