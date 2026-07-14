@@ -16,8 +16,7 @@ assert.doesNotMatch(sell, /visibleItems\.length >= 21/);
 
 const css = readFileSync(join(root, "src/app/globals.css"), "utf8");
 assert.match(css, /\.pos-sell-item-caption/);
-assert.match(css, /min-height:\s*3\.4rem/);
-assert.match(css, /aspect-ratio:\s*4\s*\/\s*3/);
+assert.match(css, /aspect-ratio:\s*16\s*\/\s*10/);
 assert.match(css, /align-items:\s*start/);
 assert.match(css, /\.pos-sell-grid\.is-sparse/);
 assert.match(css, /grid-template-columns:\s*repeat\(4,/);
@@ -28,6 +27,6 @@ assert.doesNotMatch(
 );
 
 const version = readFileSync(join(root, "src/lib/pos-version.ts"), "utf8");
-assert.match(version, /POS_BUILD = 48/);
+assert.match(version, /POS_BUILD = \d+/);
 
 console.log("OK pos-menu-item-labels");

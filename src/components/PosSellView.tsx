@@ -590,6 +590,9 @@ export function PosSellView({
                   ) : (
                     <span className="pos-sell-item-price">฿{formatPlainNumber(item.price)}</span>
                   )}
+                  {item.description?.trim() ? (
+                    <span className="pos-sell-item-desc">{item.description.trim()}</span>
+                  ) : null}
                 </span>
                 {qty > 0 ? <span className="pos-sell-item-qty">×{qty}</span> : null}
               </button>
