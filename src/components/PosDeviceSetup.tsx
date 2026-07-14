@@ -207,7 +207,7 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
           </button>
         </div>
         <ol className="pos-install-steps">
-          <li>เปิดลิงก์บนแท็บเล็ต Android (Chrome)</li>
+          <li>เปิดลิงก์บนแท็บเล็ต Android (Chrome) หรือติดตั้ง APK Capacitor (ดู docs/pos-native-shell.md)</li>
           <li>กด <strong>ติดตั้งแอปบนหน้าจอหลัก</strong> บนหน้า POS หรือเมนู ⋮ → ติดตั้งแอป</li>
           <li>เปิดจากไอคอน <strong>TellTea POS</strong> — ควรเห็นป้าย &quot;เต็มจอ&quot;</li>
           <li>ทิ้งเปิดไว้ตลอด — เจ้าของดูสถานะออนไลน์ที่นี่</li>

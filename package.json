@@ -22,6 +22,10 @@
     "test:pos-category-order-sync": "node scripts/test-pos-category-order-sync.mjs",
     "test:pos-fixed-category-order": "node scripts/test-pos-fixed-category-order.mjs",
     "test:pos-update-reload-stable": "node scripts/test-pos-update-reload-stable.mjs",
+    "test:pos-native-shell": "node scripts/test-pos-native-shell.mjs",
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android",
+    "cap:sync:embed": "CAPACITOR_EMBED=1 npx cap sync android",
     "test:pos-sell-cat-drag": "node scripts/test-pos-sell-cat-drag.mjs",
     "test:pos-discount-everywhere": "node scripts/test-pos-discount-everywhere.mjs",
     "test:pos-business-settings": "node scripts/test-pos-business-settings.mjs",
@@ -47,6 +51,11 @@
     "export": "next build"
   },
   "dependencies": {
+    "@capacitor/android": "^7.6.7",
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/cli": "^7.6.7",
+    "@capacitor/core": "^7.6.7",
+    "@capacitor/status-bar": "^7.0.6",
     "clsx": "^2.1.1",
     "firebase": "^12.16.0",
     "lucide-react": "^1.24.0",

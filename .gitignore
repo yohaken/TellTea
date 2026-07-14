@@ -53,6 +53,16 @@ functions/node_modules/
 *.xlsx
 *.xls
 
+# android native (Capacitor) — keep project, ignore local/build noise
+android/.gradle/
+android/**/build/
+android/local.properties
+android/captures/
+android/.idea/
+*.apk
+*.aab
+
 # FoodStory menu image ZIP (import via scripts/seed-pos-menu-images.mjs)
 scripts/data/menu-images-import/
+
 
