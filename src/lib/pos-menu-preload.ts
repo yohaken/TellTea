@@ -1,6 +1,7 @@
 import { loadPosMenuCache, savePosMenuCache } from "./pos-menu-cache";
 import { loadPosMenuImages, mergeMenuItemImages, savePosMenuImages } from "./pos-menu-image-cache";
-import { seedPosMenuIfEmpty, subscribePosMenuBundle } from "./pos-menu";
+import { applyFixedCategorySortOrder } from "./pos-fixed-category-order";
+import { reorderMenuCategories, seedPosMenuIfEmpty, subscribePosMenuBundle } from "./pos-menu";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "./types";
 
 export type PosMenuSnapshot = {
@@ -39,6 +40,8 @@ let pendingOrderUntil = 0;
 let pendingCategories: MenuCategory[] | null = null;
 let pendingItems: MenuItem[] | null = null;
 let pendingGroups: MenuOptionGroup[] | null = null;
+/** เขียน sortOrder คงที่ขึ้น Firebase ครั้งเดียวต่อเซสชัน */
+let fixedOrderSyncStarted = false;
 
 function emit() {
   for (const fn of listeners) fn(snapshot);
@@ -187,7 +190,7 @@ function applyCache(): boolean {
   const cached = loadPosMenuCache({ withImages: false });
   if (!cached?.items.length) return false;
   snapshot = {
-    categories: cached.categories,
+    categories: applyFixedCategorySortOrder(cached.categories),
     items: cached.items,
     optionGroups: cached.optionGroups,
     ready: true,
@@ -212,21 +215,20 @@ export function subscribePosMenuPreload(listener: (snap: PosMenuSnapshot) => voi
 
 /**
  * Local-first: จัดเรียงในเครื่องทันทีให้หน้าขายเห็นก่อน
- * ค้างเป็น pending สั้นๆ จนโหลด Firebase ไล่ทัน — หลังจากนั้นยึดลำดับจากโหลดล่าสุด
- * ไม่ล็อกลำดับในแคชถาวรที่ทับข้อมูลใหม่
+ * จากนั้นบังคับลำดับหมวดคงที่ (ช่วงนี้) — น้ำเปล่าท้ายสุด
  */
 export function publishLocalMenuOrder(input: {
   categories: MenuCategory[];
   items: MenuItem[];
   optionGroups: MenuOptionGroup[];
 }): void {
-  pendingCategories = input.categories;
+  const categories = applyFixedCategorySortOrder(input.categories);
+  pendingCategories = categories;
   pendingItems = input.items;
   pendingGroups = input.optionGroups;
   pendingOrderUntil = Date.now() + PENDING_ORDER_MS;
 
-  // mirror ชั่วคราวเพื่อ boot รอบถัดไปถ้ายังออฟไลน์ — จะถูกทับด้วยโหลดล่าสุดเมื่อซิงก์สำเร็จ
-  savePosMenuCache(input.categories, input.items, input.optionGroups);
+  savePosMenuCache(categories, input.items, input.optionGroups);
 
   const images = loadPosMenuImages();
   const withImages = Object.keys(images).length
@@ -234,7 +236,7 @@ export function publishLocalMenuOrder(input: {
     : input.items;
 
   snapshot = {
-    categories: input.categories,
+    categories,
     items: withImages,
     optionGroups: input.optionGroups,
     ready: true,
@@ -243,6 +245,17 @@ export function publishLocalMenuOrder(input: {
     error: null,
   };
   emit();
+}
+
+function maybeSyncFixedOrderToFirebase(categories: MenuCategory[]): void {
+  if (fixedOrderSyncStarted || typeof window === "undefined") return;
+  if (!categories.length) return;
+  const desired = applyFixedCategorySortOrder(categories);
+  if (categoryOrderKey(categories) === categoryOrderKey(desired)) return;
+  fixedOrderSyncStarted = true;
+  void reorderMenuCategories(desired.map((c) => c.id)).catch(() => {
+    fixedOrderSyncStarted = false;
+  });
 }
 
 export function startPosMenuPreload(): void {
@@ -285,15 +298,19 @@ export function startPosMenuPreload(): void {
       releasePendingIfRemoteCaughtUp(categories, items, optionGroups);
 
       // มี pending ที่ยังไม่ทัน → จัดเรียงชั่วคราวบนข้อมูลสด
-      // ไม่มี pending → ใช้ลำดับจากโหลดล่าสุดเสมอ (ผู้ใช้ไม่ต้องจัดซ้ำ)
-      const next = applyPendingOrder(categories, items, optionGroups);
+      // จากนั้นบังคับลำดับหมวดคงที่เสมอ (local-first แล้วจัดอัตโนมัติ)
+      const pendingApplied = applyPendingOrder(categories, items, optionGroups);
+      const nextCategories = applyFixedCategorySortOrder(pendingApplied.categories);
+      const next = {
+        categories: nextCategories,
+        items: pendingApplied.items,
+        optionGroups: pendingApplied.optionGroups,
+      };
 
-      // Mirror แคชเฉพาะเมื่อ settled (ไม่มี pending) หรือยังถือ pending อยู่
-      // เพื่อไม่ให้ Firestore IDB เก่าเขียนทับลำดับที่เพิ่งจัดระหว่างซิงก์
-      if (hasActivePendingOrder()) {
-        savePosMenuCache(next.categories, next.items, next.optionGroups);
-      } else {
-        savePosMenuCache(categories, items, optionGroups);
+      savePosMenuCache(next.categories, next.items, next.optionGroups);
+
+      if (!fromCache) {
+        maybeSyncFixedOrderToFirebase(categories);
       }
 
       snapshot = {
@@ -334,6 +351,7 @@ export function retryPosMenuPreload(): void {
   }
   seedStarted = false;
   clearPendingOrder();
+  fixedOrderSyncStarted = false;
   snapshot = { ...EMPTY };
   if (!applyCache()) {
     snapshot = { ...EMPTY, ready: true, syncing: true };

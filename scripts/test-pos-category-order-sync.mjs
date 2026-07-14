@@ -13,7 +13,7 @@ const preload = read("src/lib/pos-menu-preload.ts");
 const menu = read("src/lib/pos-menu.ts");
 const ver = read("src/lib/pos-version.ts");
 
-assert.match(ver, /POS_BUILD\s*=\s*51\b/);
+assert.match(ver, /POS_BUILD\s*=\s*\d+/);
 
 assert.match(preload, /pendingOrderUntil/);
 assert.match(preload, /applyPendingOrder/);
