@@ -366,7 +366,6 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
                                       onClick={() => setScreen({ kind: "edit-item", id: item.id })}
                                     >
                                       <span className="pos-menu-item-text">
-                                        {item.recommended ? "★ " : ""}
                                         {item.name}
                                         {!item.active ? " (หมด)" : ""}
                                       </span>

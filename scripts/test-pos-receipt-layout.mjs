@@ -32,16 +32,24 @@ assert.match(settingsSrc, /shopNameTh/);
 assert.match(settingsSrc, /shopPhone/);
 
 assert.match(templateSrc, /qty-badge/);
+assert.match(templateSrc, /background:\s*transparent/);
 assert.doesNotMatch(templateSrc, /<span class="qty">×\$\{line\.qty\}<\/span>/);
 assert.match(readFileSync(join(root, "src/components/PosReceiptPaper.tsx"), "utf8"), /pos-receipt-paper-item-qty-badge/);
+assert.match(readFileSync(join(root, "src/app/globals.css"), "utf8"), /\.pos-receipt-paper-item-qty-badge[\s\S]*?background:\s*transparent/);
 assert.match(readFileSync(join(root, "src/lib/pos-session.ts"), "utf8"), /startPosSessionLocal/);
 assert.match(readFileSync(join(root, "src/lib/pos-session.ts"), "utf8"), /readLocalOpenPosSession/);
 assert.match(readFileSync(join(root, "src/lib/pos-session.ts"), "utf8"), /applyRemotePosSessionUpdate/);
 assert.match(readFileSync(join(root, "src/lib/pos-app-context.tsx"), "utf8"), /applyRemotePosSessionUpdate/);
 assert.match(readFileSync(join(root, "src/components/PosShiftView.tsx"), "utf8"), /pos-shift-receipt-inline/);
 assert.match(readFileSync(join(root, "src/components/PosOptionPickerModal.tsx"), "utf8"), /pos-option-picker-thumb/);
+assert.match(readFileSync(join(root, "src/components/PosOptionPickerModal.tsx"), "utf8"), /is-required/);
+assert.doesNotMatch(
+  readFileSync(join(root, "src/components/PosOptionPickerModal.tsx"), "utf8"),
+  /pos-option-req/,
+);
+assert.doesNotMatch(readFileSync(join(root, "src/components/PosSellView.tsx"), "utf8"), /★/);
+assert.match(readFileSync(join(root, "src/components/PosAppShell.tsx"), "utf8"), /pos-icon-btn--refresh/);
 assert.match(readFileSync(join(root, "src/components/PosSellView.tsx"), "utf8"), /pos-cart-line-tap/);
-assert.match(templateSrc, /qty-badge/);
 assert.match(templateSrc, /mod-qty/);
 assert.match(templateSrc, /receiptQtyEmphasized/);
 assert.match(readFileSync(join(root, "src/lib/pos-receipt-format.ts"), "utf8"), /receiptQtyEmphasized/);
@@ -55,5 +63,6 @@ assert.match(readFileSync(join(root, "src/app/globals.css"), "utf8"), /repeat\(5
 assert.match(readFileSync(join(root, "src/components/PosSellView.tsx"), "utf8"), /pos-cart-head-count/);
 assert.match(readFileSync(join(root, "src/components/PosPaymentSetup.tsx"), "utf8"), /PromptPay/);
 assert.match(settingsSrc, /receiptStaffName/);
+assert.match(readFileSync(join(root, "src/lib/pos-version.ts"), "utf8"), /POS_BUILD = 53/);
 
 console.log("OK pos-receipt-layout");

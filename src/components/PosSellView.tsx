@@ -582,7 +582,6 @@ export function PosSellView({
                 </div>
                 <span className="pos-sell-item-caption">
                   <span className="pos-sell-item-name">
-                    {item.recommended ? "★ " : ""}
                     {item.name}
                   </span>
                   {soldOut ? (
