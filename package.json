@@ -16,6 +16,7 @@
     "test:pos-shift-report": "node scripts/test-pos-shift-report.mjs",
     "test:pos-menu-item-labels": "node scripts/test-pos-menu-item-labels.mjs",
     "test:pos-sell-density-nav": "node scripts/test-pos-sell-density-nav.mjs",
+    "test:pos-sell-cart-density-50": "node scripts/test-pos-sell-cart-density-50.mjs",
     "test:pos-settings-local-first": "node scripts/test-pos-settings-local-first.mjs",
     "test:pos-menu-order-promptpay": "node scripts/test-pos-menu-order-promptpay.mjs",
     "test:pos-sell-cat-drag": "node scripts/test-pos-sell-cat-drag.mjs",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PauseCircle, QrCode, Tag, UserRound, X } from "lucide-react";
+import { PauseCircle, Tag, UserRound, X } from "lucide-react";
 import { getPosMenuSnapshot, publishLocalMenuOrder, retryPosMenuPreload, startPosMenuPreload, subscribePosMenuPreload } from "@/lib/pos-menu-preload";
 import { reorderMenuCategories, toggleMenuItemSoldOut } from "@/lib/pos-menu";
 import { applyActiveIdsOrder } from "@/lib/pos-drag-reorder";
@@ -590,9 +590,6 @@ export function PosSellView({
                   ) : (
                     <span className="pos-sell-item-price">฿{formatPlainNumber(item.price)}</span>
                   )}
-                  {item.description?.trim() ? (
-                    <span className="pos-sell-item-desc">{item.description.trim()}</span>
-                  ) : null}
                 </span>
                 {qty > 0 ? <span className="pos-sell-item-qty">×{qty}</span> : null}
               </button>
@@ -716,7 +713,7 @@ export function PosSellView({
           </div>
           <div className="pos-cart-actions-secondary">
             <button type="button" className="pos-cart-secondary-btn" disabled title="เร็วๆ นี้">
-              <PauseCircle size={18} aria-hidden />
+              <PauseCircle size={14} aria-hidden />
               ส่งค้างไว้
             </button>
             <button
@@ -725,7 +722,7 @@ export function PosSellView({
               disabled={!cartCount}
               onClick={() => setDiscountOpen(true)}
             >
-              <Tag size={18} aria-hidden />
+              <Tag size={14} aria-hidden />
               {discountBaht > 0 ? `ส่วนลด ฿${formatPlainNumber(discountBaht)}` : "ส่วนลด"}
             </button>
           </div>
@@ -737,20 +734,6 @@ export function PosSellView({
           >
             ชำระเงิน {formatPlainNumber(total)} บาท
           </button>
-          <div className="pos-cart-pay-alt">
-            <button
-              type="button"
-              className="pos-cart-alt-btn pos-sell-pay-btn--qr"
-              disabled={!cartCount}
-              onClick={() => void openPromptPayPay()}
-            >
-              <QrCode size={18} aria-hidden />
-              PromptPay
-            </button>
-            <button type="button" className="pos-cart-alt-btn" disabled={!cartCount} onClick={openCashPay}>
-              เงินสด
-            </button>
-          </div>
         </footer>
       </aside>
 
