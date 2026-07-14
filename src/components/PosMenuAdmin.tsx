@@ -10,6 +10,7 @@ import { PosSortableList } from "@/components/PosSortableList";
 import { ensurePosDeviceAuth } from "@/lib/pos-auth";
 import { loadPosMenuCache } from "@/lib/pos-menu-cache";
 import { publishLocalMenuOrder } from "@/lib/pos-menu-preload";
+import { applyFixedCategorySortOrder } from "@/lib/pos-fixed-category-order";
 import {
   addMenuCategory,
   addMenuItem,
@@ -45,7 +46,7 @@ type QuickAdd =
 function initialMenuFromCache() {
   const cached = loadPosMenuCache({ withImages: true });
   return {
-    categories: cached?.categories ?? [],
+    categories: applyFixedCategorySortOrder(cached?.categories ?? []),
     items: cached?.items ?? [],
     optionGroups: cached?.optionGroups ?? [],
   };
@@ -85,7 +86,10 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
 
   useEffect(() => {
     if (!authReady) return;
-    const u1 = subscribeMenuCategories(setCategories, (e) => setError(e.message));
+    const u1 = subscribeMenuCategories(
+      (list) => setCategories(applyFixedCategorySortOrder(list)),
+      (e) => setError(e.message),
+    );
     const u2 = subscribeMenuItems(setItems, (e) => setError(e.message));
     const u3 = subscribeMenuOptionGroups(setOptionGroups, (e) => setError(e.message));
     return () => {
@@ -260,7 +264,7 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
           {authReady && tab === "categories" ? (
             <>
               <p className="muted pos-menu-sort-hint">
-                กด ↑↓ โชว์หน้าขายทันที · ซิงก์ Firebase แล้วทุกเครื่องใช้ลำดับล่าสุดอัตโนมัติ
+                ลำดับหมวดตอนนี้ถูกล็อกตามที่กำหนด (น้ำเปล่าท้ายสุด) · ซิงก์ขึ้น Firebase อัตโนมัติ
               </p>
               {categories.length ? (
                 <PosSortableList
