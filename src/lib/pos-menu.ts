@@ -14,7 +14,6 @@ import {
 } from "firebase/firestore";
 import { getPosDb } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
-import { savePosMenuCache } from "./pos-menu-cache";
 import { listMenuOptionGroups, subscribeMenuOptionGroups } from "./pos-menu-options";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "./types";
 
@@ -63,21 +62,25 @@ function mapItem(id: string, data: Record<string, unknown>): MenuItem {
 }
 
 export function subscribeMenuCategories(
-  onData: (items: MenuCategory[]) => void,
+  onData: (items: MenuCategory[], fromCache?: boolean) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
   const q = query(categoriesCol(), orderBy("sortOrder", "asc"));
   return onSnapshot(
     q,
+    { includeMetadataChanges: true },
     (snap) => {
-      onData(snap.docs.map((d) => mapCategory(d.id, d.data() as Record<string, unknown>)));
+      onData(
+        snap.docs.map((d) => mapCategory(d.id, d.data() as Record<string, unknown>)),
+        snap.metadata.fromCache,
+      );
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );
 }
 
 export function subscribeMenuItems(
-  onData: (items: MenuItem[]) => void,
+  onData: (items: MenuItem[], fromCache?: boolean) => void,
   onError?: (err: Error) => void,
   activeOnly = false,
 ): Unsubscribe {
@@ -86,8 +89,12 @@ export function subscribeMenuItems(
     : query(itemsCol(), orderBy("sortOrder", "asc"));
   return onSnapshot(
     q,
+    { includeMetadataChanges: true },
     (snap) => {
-      onData(snap.docs.map((d) => mapItem(d.id, d.data() as Record<string, unknown>)));
+      onData(
+        snap.docs.map((d) => mapItem(d.id, d.data() as Record<string, unknown>)),
+        snap.metadata.fromCache,
+      );
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );
@@ -100,7 +107,11 @@ export type PosMenuBundle = {
   fromCache: boolean;
 };
 
-/** Cache-first live menu — categories, items, option groups. */
+/**
+ * Cache-first live menu — categories, items, option groups.
+ * ไม่เขียน localStorage ที่นี่: ให้ pos-menu-preload เป็นคน mirror แคช
+ * ตามนโยบาย local-first → ยึดลำดับจากโหลดล่าสุดเมื่อข้อมูลพร้อม
+ */
 export function subscribePosMenuBundle(
   onData: (data: PosMenuBundle) => void,
   onError?: (err: Error) => void,
@@ -108,11 +119,18 @@ export function subscribePosMenuBundle(
   let categories: MenuCategory[] = [];
   let items: MenuItem[] = [];
   let optionGroups: MenuOptionGroup[] = [];
+  let catsFromCache = true;
+  let itemsFromCache = true;
+  let groupsFromCache = true;
 
-  function publish(fromCache: boolean) {
+  function publish() {
     if (!categories.length && !items.length && !optionGroups.length) return;
-    savePosMenuCache(categories, items, optionGroups);
-    onData({ categories, items, optionGroups, fromCache });
+    onData({
+      categories,
+      items,
+      optionGroups,
+      fromCache: catsFromCache || itemsFromCache || groupsFromCache,
+    });
   }
 
   void (async () => {
@@ -123,26 +141,31 @@ export function subscribePosMenuBundle(
       ]);
       categories = catSnap.docs.map((d) => mapCategory(d.id, d.data() as Record<string, unknown>));
       items = itemSnap.docs.map((d) => mapItem(d.id, d.data() as Record<string, unknown>));
-      if (items.length) publish(true);
+      catsFromCache = true;
+      itemsFromCache = true;
+      if (items.length) publish();
     } catch {
       // wait for onSnapshot
     }
   })();
 
   const unsubCat = subscribeMenuCategories(
-    (list) => {
+    (list, fromCache) => {
       categories = list;
-      publish(false);
+      catsFromCache = fromCache !== false;
+      publish();
     },
     onError,
   );
-  const unsubItems = subscribeMenuItems((list) => {
+  const unsubItems = subscribeMenuItems((list, fromCache) => {
     items = list;
-    publish(false);
+    itemsFromCache = fromCache !== false;
+    publish();
   }, onError);
-  const unsubGroups = subscribeMenuOptionGroups((list) => {
+  const unsubGroups = subscribeMenuOptionGroups((list, fromCache) => {
     optionGroups = list;
-    publish(false);
+    groupsFromCache = fromCache !== false;
+    publish();
   }, onError);
 
   return () => {

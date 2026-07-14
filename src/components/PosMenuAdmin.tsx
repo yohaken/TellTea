@@ -260,7 +260,7 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
           {authReady && tab === "categories" ? (
             <>
               <p className="muted pos-menu-sort-hint">
-                กด ↑↓ ลำดับโชว์หน้าขายทันที · จำตำแหน่งขึ้น Firebase เงียบๆ
+                กด ↑↓ โชว์หน้าขายทันที · ซิงก์ Firebase แล้วทุกเครื่องใช้ลำดับล่าสุดอัตโนมัติ
               </p>
               {categories.length ? (
                 <PosSortableList

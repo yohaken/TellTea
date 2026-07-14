@@ -29,11 +29,16 @@ let unsubscribe: (() => void) | null = null;
 let seedStarted = false;
 let timeoutId: number | null = null;
 let imageHydrateId: number | null = null;
-/** กัน Firestore snapshot เก่าทับลำดับที่เพิ่งกด ↑↓ ในเครื่อง */
-let localOrderHoldUntil = 0;
-let localOrderCategories: MenuCategory[] | null = null;
-let localOrderItems: MenuItem[] | null = null;
-let localOrderGroups: MenuOptionGroup[] | null = null;
+
+/**
+ * Optimistic reorder ที่ผู้ใช้เพิ่งทำ — ค้างชั่วคราวจนกว่าโหลด Firebase จะไล่ทัน
+ * ไม่ใช่ “ไฟล์เบส” ถาวร: เมื่อไม่มี pending จะยึดลำดับจากโหลดล่าสุดเสมอ
+ */
+const PENDING_ORDER_MS = 12_000;
+let pendingOrderUntil = 0;
+let pendingCategories: MenuCategory[] | null = null;
+let pendingItems: MenuItem[] | null = null;
+let pendingGroups: MenuOptionGroup[] | null = null;
 
 function emit() {
   for (const fn of listeners) fn(snapshot);
@@ -43,11 +48,11 @@ function sortKeyList(ids: string[]): string {
   return ids.join("|");
 }
 
-function categoryOrderKey(rows: MenuCategory[]): string {
+export function categoryOrderKey(rows: MenuCategory[]): string {
   return sortKeyList([...rows].sort((a, b) => a.sortOrder - b.sortOrder).map((r) => r.id));
 }
 
-function itemOrderKey(rows: MenuItem[]): string {
+export function itemOrderKey(rows: MenuItem[]): string {
   return sortKeyList(
     [...rows]
       .sort(
@@ -60,19 +65,32 @@ function itemOrderKey(rows: MenuItem[]): string {
   );
 }
 
-function groupOrderKey(rows: MenuOptionGroup[]): string {
+export function groupOrderKey(rows: MenuOptionGroup[]): string {
   return sortKeyList([...rows].sort((a, b) => a.sortOrder - b.sortOrder).map((r) => r.id));
 }
 
-function applyHeldOrder(
+function clearPendingOrder() {
+  pendingOrderUntil = 0;
+  pendingCategories = null;
+  pendingItems = null;
+  pendingGroups = null;
+}
+
+function hasActivePendingOrder(): boolean {
+  return pendingOrderUntil > Date.now() && !!pendingCategories;
+}
+
+/**
+ * ระหว่างรอ Firebase ตามลำดับที่เพิ่งจัด — ทับ sortOrder จาก pending
+ * หมดเวลา / ไม่มี pending → คืนลำดับจากโหลดตามเดิม
+ */
+function applyPendingOrder(
   categories: MenuCategory[],
   items: MenuItem[],
   optionGroups: MenuOptionGroup[],
 ): { categories: MenuCategory[]; items: MenuItem[]; optionGroups: MenuOptionGroup[] } {
-  if (Date.now() >= localOrderHoldUntil) {
-    localOrderCategories = null;
-    localOrderItems = null;
-    localOrderGroups = null;
+  if (!hasActivePendingOrder()) {
+    clearPendingOrder();
     return { categories, items, optionGroups };
   }
 
@@ -80,9 +98,9 @@ function applyHeldOrder(
   let nextItems = items;
   let nextGroups = optionGroups;
 
-  if (localOrderCategories) {
+  if (pendingCategories) {
     const byId = new Map(categories.map((c) => [c.id, c]));
-    nextCats = localOrderCategories
+    nextCats = pendingCategories
       .map((held) => {
         const live = byId.get(held.id);
         return live ? { ...live, sortOrder: held.sortOrder } : null;
@@ -93,9 +111,9 @@ function applyHeldOrder(
     }
   }
 
-  if (localOrderItems) {
+  if (pendingItems) {
     const byId = new Map(items.map((i) => [i.id, i]));
-    nextItems = localOrderItems
+    nextItems = pendingItems
       .map((held) => {
         const live = byId.get(held.id);
         return live
@@ -108,9 +126,9 @@ function applyHeldOrder(
     }
   }
 
-  if (localOrderGroups) {
+  if (pendingGroups) {
     const byId = new Map(optionGroups.map((g) => [g.id, g]));
-    nextGroups = localOrderGroups
+    nextGroups = pendingGroups
       .map((held) => {
         const live = byId.get(held.id);
         return live ? { ...live, sortOrder: held.sortOrder } : null;
@@ -122,6 +140,22 @@ function applyHeldOrder(
   }
 
   return { categories: nextCats, items: nextItems, optionGroups: nextGroups };
+}
+
+/** ปล่อย pending เมื่อโหลด (ดิบ) ไล่ทันลำดับที่ผู้ใช้จัด — เทียบ incoming ไม่ใช่หลัง apply */
+function releasePendingIfRemoteCaughtUp(
+  categories: MenuCategory[],
+  items: MenuItem[],
+  optionGroups: MenuOptionGroup[],
+): void {
+  if (!hasActivePendingOrder() || !pendingCategories || !pendingItems || !pendingGroups) return;
+  if (
+    categoryOrderKey(categories) === categoryOrderKey(pendingCategories) &&
+    itemOrderKey(items) === itemOrderKey(pendingItems) &&
+    groupOrderKey(optionGroups) === groupOrderKey(pendingGroups)
+  ) {
+    clearPendingOrder();
+  }
 }
 
 /** แนบรูปเข้า memory หลังเมนูข้อความขึ้นแล้ว — ไม่บล็อก boot */
@@ -146,7 +180,6 @@ function scheduleImageHydrate(preferImages?: Record<string, string>) {
     emit();
   };
 
-  // หลังเฟรมแรกของเมนูข้อความ — รูปมาเร็ว (ไม่รอ idle นาน)
   imageHydrateId = window.setTimeout(run, 0);
 }
 
@@ -178,19 +211,21 @@ export function subscribePosMenuPreload(listener: (snap: PosMenuSnapshot) => voi
 }
 
 /**
- * บันทึกลำดับเมนูในเครื่องทันที → หน้าขายเห็นทันที
- * Firebase ยังอัปเดตเงียบๆ จาก caller (`void reorder…`)
+ * Local-first: จัดเรียงในเครื่องทันทีให้หน้าขายเห็นก่อน
+ * ค้างเป็น pending สั้นๆ จนโหลด Firebase ไล่ทัน — หลังจากนั้นยึดลำดับจากโหลดล่าสุด
+ * ไม่ล็อกลำดับในแคชถาวรที่ทับข้อมูลใหม่
  */
 export function publishLocalMenuOrder(input: {
   categories: MenuCategory[];
   items: MenuItem[];
   optionGroups: MenuOptionGroup[];
 }): void {
-  localOrderCategories = input.categories;
-  localOrderItems = input.items;
-  localOrderGroups = input.optionGroups;
-  localOrderHoldUntil = Date.now() + 12_000;
+  pendingCategories = input.categories;
+  pendingItems = input.items;
+  pendingGroups = input.optionGroups;
+  pendingOrderUntil = Date.now() + PENDING_ORDER_MS;
 
+  // mirror ชั่วคราวเพื่อ boot รอบถัดไปถ้ายังออฟไลน์ — จะถูกทับด้วยโหลดล่าสุดเมื่อซิงก์สำเร็จ
   savePosMenuCache(input.categories, input.items, input.optionGroups);
 
   const images = loadPosMenuImages();
@@ -204,7 +239,7 @@ export function publishLocalMenuOrder(input: {
     optionGroups: input.optionGroups,
     ready: true,
     fromCache: true,
-    syncing: false,
+    syncing: true,
     error: null,
   };
   emit();
@@ -246,32 +281,28 @@ export function startPosMenuPreload(): void {
         savePosMenuImages({ ...loadPosMenuImages(), ...incoming });
       }
 
-      const held = applyHeldOrder(categories, items, optionGroups);
+      // ถ้าโหลดดิบไล่ทัน pending → ปล่อย แล้วใช้ลำดับจากโหลด
+      releasePendingIfRemoteCaughtUp(categories, items, optionGroups);
 
-      // เมื่อ Firestore ไล่ทันลำดับในเครื่องแล้ว — ปล่อย hold
-      if (
-        localOrderHoldUntil > Date.now() &&
-        localOrderCategories &&
-        localOrderItems &&
-        localOrderGroups &&
-        categoryOrderKey(held.categories) === categoryOrderKey(localOrderCategories) &&
-        itemOrderKey(held.items) === itemOrderKey(localOrderItems) &&
-        groupOrderKey(held.optionGroups) === groupOrderKey(localOrderGroups)
-      ) {
-        localOrderHoldUntil = 0;
-        localOrderCategories = null;
-        localOrderItems = null;
-        localOrderGroups = null;
+      // มี pending ที่ยังไม่ทัน → จัดเรียงชั่วคราวบนข้อมูลสด
+      // ไม่มี pending → ใช้ลำดับจากโหลดล่าสุดเสมอ (ผู้ใช้ไม่ต้องจัดซ้ำ)
+      const next = applyPendingOrder(categories, items, optionGroups);
+
+      // Mirror แคชเฉพาะเมื่อ settled (ไม่มี pending) หรือยังถือ pending อยู่
+      // เพื่อไม่ให้ Firestore IDB เก่าเขียนทับลำดับที่เพิ่งจัดระหว่างซิงก์
+      if (hasActivePendingOrder()) {
+        savePosMenuCache(next.categories, next.items, next.optionGroups);
+      } else {
+        savePosMenuCache(categories, items, optionGroups);
       }
 
-      // หน่วยความจำ: เก็บรูปไว้โชว์ทันที — ดิสก์แคชยังเบา (savePosMenuCache แยกรูปแล้ว)
       snapshot = {
-        categories: held.categories,
-        items: held.items,
-        optionGroups: held.optionGroups,
+        categories: next.categories,
+        items: next.items,
+        optionGroups: next.optionGroups,
         ready: true,
-        fromCache: fromCache && snapshot.fromCache,
-        syncing: false,
+        fromCache,
+        syncing: hasActivePendingOrder() || fromCache,
         error: null,
       };
       emit();
@@ -302,10 +333,7 @@ export function retryPosMenuPreload(): void {
     imageHydrateId = null;
   }
   seedStarted = false;
-  localOrderHoldUntil = 0;
-  localOrderCategories = null;
-  localOrderItems = null;
-  localOrderGroups = null;
+  clearPendingOrder();
   snapshot = { ...EMPTY };
   if (!applyCache()) {
     snapshot = { ...EMPTY, ready: true, syncing: true };
