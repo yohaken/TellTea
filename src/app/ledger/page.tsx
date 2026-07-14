@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useDeferredValue,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -17,6 +18,7 @@ import {
   frequentDescriptions,
   LEDGER_LIVE_MAX,
   LEDGER_PAGE_SIZE,
+  listLedgerEntries,
   listRecentLedgerEntries,
   recomputeLedgerBalance,
   subscribeLedgerBalance,
@@ -34,12 +36,14 @@ import {
   saveImageToDevice,
 } from "@/lib/receipts";
 import type { LedgerEntry } from "@/lib/types";
+import { filterLedgerRows } from "@/lib/smart-search";
 import {
   formatDateShort,
   formatPlainNumber,
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
+import { exportLedgerXlsx } from "@/lib/xlsx-export";
 import { Trash2, X } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
@@ -65,12 +69,17 @@ function LedgerView() {
   const [adding, setAdding] = useState(false);
   const [photoUploadRowId, setPhotoUploadRowId] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<{ url: string; title: string } | null>(null);
+  const [query, setQuery] = useState("");
+  const [searchPool, setSearchPool] = useState<LedgerEntry[] | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const photoEntryRef = useRef<LedgerEntry | null>(null);
   const photoCameraRef = useRef<HTMLInputElement>(null);
   const photoGalleryRef = useRef<HTMLInputElement>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const balanceRef = useRef<number | null>(null);
   const hasRowsRef = useRef(false);
+  const deferredQuery = useDeferredValue(query.trim());
 
   useBodyScrollLock(!!adding || !!editing || !!photoUploadRowId || !!imagePreview);
 
@@ -161,11 +170,40 @@ function LedgerView() {
     return () => unsub();
   }, [liveLimit, persistSnapshot]);
 
+  useEffect(() => {
+    if (!deferredQuery) {
+      setSearchPool(null);
+      setSearchLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setSearchLoading(true);
+    void listLedgerEntries()
+      .then((rows) => {
+        if (!cancelled) setSearchPool(rows);
+      })
+      .catch((err) => {
+        if (!cancelled) setError((err as Error).message || "ค้นหาไม่สำเร็จ");
+      })
+      .finally(() => {
+        if (!cancelled) setSearchLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [deferredQuery]);
+
+  const filteredEntries = useMemo(() => {
+    const source = deferredQuery ? searchPool ?? entries : entries;
+    return filterLedgerRows(source, deferredQuery);
+  }, [entries, searchPool, deferredQuery]);
+
   const loadMore = useCallback(() => {
+    if (deferredQuery) return;
     if (!hasMore || loadingMore || liveLimit >= LEDGER_LIVE_MAX) return;
     setLoadingMore(true);
     setLiveLimit((n) => Math.min(n + LEDGER_PAGE_SIZE, LEDGER_LIVE_MAX));
-  }, [hasMore, loadingMore, liveLimit]);
+  }, [hasMore, loadingMore, liveLimit, deferredQuery]);
 
   async function handleRowPhotoFile(file: File | null) {
     if (!file || !photoEntryRef.current) return;
@@ -183,9 +221,27 @@ function LedgerView() {
     }
   }
 
+  async function onExportTables() {
+    setExporting(true);
+    setError(null);
+    try {
+      let rows: LedgerEntry[];
+      if (deferredQuery) {
+        rows = filterLedgerRows(searchPool ?? entries, deferredQuery);
+      } else {
+        rows = await listLedgerEntries();
+      }
+      exportLedgerXlsx(rows);
+    } catch (err) {
+      setError((err as Error).message || "ส่งออกไม่สำเร็จ");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   useEffect(() => {
     const node = sentinelRef.current;
-    if (!node || loading) return;
+    if (!node || loading || deferredQuery) return;
     const observer = new IntersectionObserver(
       (items) => {
         if (items.some((item) => item.isIntersecting)) {
@@ -196,7 +252,7 @@ function LedgerView() {
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [loadMore, loading, hasMore, entries.length]);
+  }, [loadMore, loading, hasMore, entries.length, deferredQuery]);
 
   return (
     <div className="ledger-page module-page">
@@ -208,11 +264,53 @@ function LedgerView() {
         <strong>{balance == null ? "…" : `฿${formatPlainNumber(balance)}`}</strong>
       </div>
 
+      <div className="btn-row pnl-toolbar">
+        <button
+          type="button"
+          className="primary-btn"
+          disabled={exporting || loading || (!entries.length && !searchPool?.length)}
+          onClick={() => void onExportTables()}
+        >
+          {exporting ? "กำลังส่งออก..." : "ส่งออกตาราง Excel"}
+        </button>
+      </div>
+
+      <div className="table-search">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="ค้นหา รายการ / ประเภท / ยอด / วันที่…"
+          autoComplete="off"
+          enterKeyHint="search"
+          aria-label="ค้นหาในตาราง"
+        />
+        {query.trim() ? (
+          <button
+            type="button"
+            className="ghost-btn table-search-clear"
+            onClick={() => setQuery("")}
+            aria-label="ล้างคำค้น"
+          >
+            ล้าง
+          </button>
+        ) : null}
+      </div>
+      {deferredQuery ? (
+        <p className="muted table-search-meta">
+          {searchLoading
+            ? "กำลังค้นหาทั้งบัญชี…"
+            : `พบ ${filteredEntries.length} รายการ`}
+        </p>
+      ) : null}
+
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading && entries.length === 0 ? (
         <p className="empty">ยังไม่มีรายการ — เริ่มจากบันทึกเงินออก</p>
+      ) : !loading && deferredQuery && !searchLoading && filteredEntries.length === 0 ? (
+        <p className="empty">ไม่พบรายการที่ตรงกับคำค้น</p>
       ) : !loading ? (
         <>
           <div className="sheet-wrap">
@@ -227,7 +325,7 @@ function LedgerView() {
                 </tr>
               </thead>
                 <tbody>
-                  {entries.map((row) => (
+                  {filteredEntries.map((row) => (
                     <tr key={row.id} className={row.amountIn > 0 ? "row-in" : "row-out"}>
                       <td className="col-date">{formatDateShort(row.date)}</td>
                       <td className="col-desc">
@@ -277,14 +375,18 @@ function LedgerView() {
                 </tbody>
               </table>
             </div>
-          <div ref={sentinelRef} className="load-more-sentinel" aria-hidden />
-          {loadingMore ? <p className="empty">กำลังโหลดเพิ่ม...</p> : null}
-          {!hasMore && entries.length > 0 ? (
-            <p className="empty muted-foot">
-              {liveLimit >= LEDGER_LIVE_MAX && entries.length >= LEDGER_LIVE_MAX
-                ? `แสดงล่าสุด ${entries.length} รายการ (อัปเดตอัตโนมัติ)`
-                : `ครบทุกรายการแล้ว (${entries.length})`}
-            </p>
+          {!deferredQuery ? (
+            <>
+              <div ref={sentinelRef} className="load-more-sentinel" aria-hidden />
+              {loadingMore ? <p className="empty">กำลังโหลดเพิ่ม...</p> : null}
+              {!hasMore && entries.length > 0 ? (
+                <p className="empty muted-foot">
+                  {liveLimit >= LEDGER_LIVE_MAX && entries.length >= LEDGER_LIVE_MAX
+                    ? `แสดงล่าสุด ${entries.length} รายการ (อัปเดตอัตโนมัติ)`
+                    : `ครบทุกรายการแล้ว (${entries.length})`}
+                </p>
+              ) : null}
+            </>
           ) : null}
         </>
       ) : null}
