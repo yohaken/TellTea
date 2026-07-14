@@ -34,7 +34,15 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           บัญชี <strong>{user?.email || user?.phoneNumber || "นี้"}</strong> ยังไม่อยู่ในรายชื่อพนักงาน
           ให้เจ้าของร้านเพิ่มอีเมลหรือเบอร์โทรในหน้าพนักงาน
         </p>
-        {error ? <p className="error-text">{error}</p> : null}
+        {error ? (
+          <p className="error-text">
+            {error}
+            <br />
+            <span className="muted" style={{ display: "inline-block", marginTop: "0.35rem" }}>
+              ลองออกจากระบบแล้วเข้าใหม่ — ถ้ายังไม่ได้ ให้เจ้าของเช็คว่าบัญชีนี้อยู่ในรายชื่อและเปิดสิทธิ์แล้ว
+            </span>
+          </p>
+        ) : null}
         <div className="btn-row">
           <button type="button" className="primary-btn" onClick={() => void signOut()}>
             ออกจากระบบ

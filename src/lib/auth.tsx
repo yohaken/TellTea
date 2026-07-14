@@ -125,8 +125,13 @@ async function resolveStaff(user: User): Promise<StaffMember | null> {
     member = await getStaffByPhone(user.phoneNumber);
   }
   if (!member) return null;
+  // ข้อมูลส่วนตัว (staffPersonal) ต้องไม่บล็อกการเข้าใช้ — อ่านไม่ได้ก็เข้าได้ก่อน
   if (member.role === "staff") {
-    return attachStaffPersonal(member);
+    try {
+      return await attachStaffPersonal(member);
+    } catch {
+      return member;
+    }
   }
   return member;
 }
@@ -263,6 +268,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const message = (err as Error)?.message || "";
         const permissionDenied =
           code === "permission-denied" || /insufficient permissions/i.test(message);
+        // อย่าเด้งออกถ้าแคชยังตรงบัญชีนี้ — โชว์ข้อผิดพลาดแล้วให้ใช้งานต่อได้
+        if (permissionDenied && cached?.id) {
+          setError(mapAuthError(err));
+          setStaff(cached);
+          setStatus("ready");
+          return;
+        }
         if (permissionDenied) {
           clearAppCaches();
           setError(mapAuthError(err));

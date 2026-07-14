@@ -12,9 +12,9 @@ const DEFAULT: AppReleaseSettings = { forceAppUpdate: false, forcePosAutoUpdate:
 
 /**
  * ช่วงพัฒนา: บังคับโหมดอัปเดตทันที (ว่างตะกร้า/ไม่ได้กรอกฟอร์ม)
- * ตั้งเป็น false เมื่อโปรดักชันนิ่งแล้วค่อยให้เจ้าของสลับจากหน้าตั้งค่า
+ * โปรดักชัน: ปิดไว้ — เจ้าของเปิดได้จากตั้งค่าเมื่อจะบังคับอัปเดต
  */
-export const DEV_FORCE_IMMEDIATE_UPDATE = true;
+export const DEV_FORCE_IMMEDIATE_UPDATE = false;
 
 function uiRef(db: Firestore) {
   return doc(db, "meta", "ui");
