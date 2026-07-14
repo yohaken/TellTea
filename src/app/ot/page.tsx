@@ -86,10 +86,11 @@ import {
 
 type TableView = "sheet" | "cards";
 
+/** เช้า → เย็น → ดึก — ให้ตรงตาราง (บน→ล่าง) */
 const SHIFT_ORDER: Record<OtShiftId, number> = {
-  late: 0,
-  morning: 1,
-  evening: 2,
+  morning: 0,
+  evening: 1,
+  late: 2,
 };
 
 function sortOtEntries(rows: OtEntry[]) {
@@ -97,7 +98,7 @@ function sortOtEntries(rows: OtEntry[]) {
     if (a.date !== b.date) return b.date - a.date;
     const sa = SHIFT_ORDER[a.shift] ?? 9;
     const sb = SHIFT_ORDER[b.shift] ?? 9;
-    if (sa !== sb) return sb - sa;
+    if (sa !== sb) return sa - sb;
     return b.createdAt - a.createdAt;
   });
 }

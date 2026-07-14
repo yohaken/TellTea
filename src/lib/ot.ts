@@ -22,10 +22,11 @@ export function normalizeOtStatus(raw: unknown): OtStatus {
 
 export type OtShiftId = "late" | "morning" | "evening";
 
+/** ลำดับแสดง: เช้า → เย็น → ดึก (ต่อเนื่องตามกะงาน · ไล่จากล่างขึ้นบนก็ต่อเนื่อง) */
 export const OT_SHIFTS: { id: OtShiftId; label: string }[] = [
-  { id: "late", label: "ดึก 0.3–7" },
   { id: "morning", label: "เช้า 7–17" },
   { id: "evening", label: "เย็น 17–0.3" },
+  { id: "late", label: "ดึก 0.3–7" },
 ];
 
 export const DEFAULT_OT_BONUS_RATE = 0.6;

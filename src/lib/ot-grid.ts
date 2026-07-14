@@ -6,8 +6,8 @@ import {
   type OtShiftId,
 } from "./ot";
 
-/** ลำดับแสดงในตาราง — ตามช่วงเวลาใน OT_SHIFTS (ดึก → เช้า → เย็น) */
-export const OT_SHIFT_DISPLAY_ORDER: OtShiftId[] = ["late", "morning", "evening"];
+/** ลำดับแสดงในตาราง — เช้า → เย็น → ดึก (กะงานต่อเนื่อง) */
+export const OT_SHIFT_DISPLAY_ORDER: OtShiftId[] = ["morning", "evening", "late"];
 
 /** วางแผนล่วงหน้าได้กี่วัน (นับจากวันนี้) */
 export const OT_PLAN_AHEAD_DAYS = 3;
@@ -72,9 +72,9 @@ export function findOtEntryForSlot(
   return indexEntriesBySlot(entries).get(`${localDayKey(dateMs)}|${shift}`) || null;
 }
 
-/** แตะวันที่ — แก้รายการแรกของวัน (เย็น→เช้า→ดึก เหมือนเดิม) หรือเปิดเพิ่มกะเช้า */
+/** แตะวันที่ — แก้กะล่าสุดของวัน (ดึก→เย็น→เช้า) หรือเปิดเพิ่มกะเช้า */
 export function resolveDateTapTarget(group: OtDayGroup): OtSlotTarget {
-  const tapOrder: OtShiftId[] = ["evening", "morning", "late"];
+  const tapOrder: OtShiftId[] = ["late", "evening", "morning"];
   for (const shiftId of tapOrder) {
     const slot = group.slots.find((s) => s.shiftId === shiftId);
     if (slot?.entry) {

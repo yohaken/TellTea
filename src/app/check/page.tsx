@@ -18,6 +18,7 @@ import {
   buildCheckHistoryGrid,
   checkMonthInputValue,
   CHECK_PLAN_AHEAD_DAYS,
+  CHECK_SHIFT_SHORT,
   computeCheckHistoryMonthStats,
   formatCheckTimeShort,
   inspectorShort,
@@ -839,9 +840,11 @@ function CheckSummary({
             <thead>
               <tr>
                 <th className="check-history-th-date">วันที่</th>
-                <th className="check-history-th-shift">ดึก</th>
-                <th className="check-history-th-shift">เช้า</th>
-                <th className="check-history-th-shift">เย็น</th>
+                {CHECK_SHIFTS.map((s) => (
+                  <th key={s.id} className="check-history-th-shift">
+                    {CHECK_SHIFT_SHORT[s.id]}
+                  </th>
+                ))}
                 <th className="check-history-th-fail col-out">ไม่ผ</th>
               </tr>
             </thead>
