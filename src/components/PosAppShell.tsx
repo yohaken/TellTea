@@ -149,8 +149,13 @@ export function PosAppShell({ children }: { children: React.ReactNode }) {
         <div className="pos-sidebar-brand">
           <AppBrand compact showLogo />
           <div className="pos-sidebar-tools">
-            <button type="button" className="pos-icon-btn" aria-label="รีเฟรช" onClick={performReload}>
-              <RefreshCw size={20} />
+            <button
+              type="button"
+              className="pos-icon-btn pos-icon-btn--refresh"
+              aria-label="รีเฟรช"
+              onClick={performReload}
+            >
+              <RefreshCw size={24} strokeWidth={2.5} />
             </button>
             <button type="button" className="pos-icon-btn" aria-label="แจ้งเตือน" disabled>
               <Bell size={20} />

@@ -135,10 +135,12 @@ export function PosOptionPickerModal({
             const hint = groupHint(group);
             const gc = pickedCounts[group.id] || {};
             return (
-              <section key={group.id} className={`pos-option-group-block ${sweet ? "is-sweetness" : ""}`}>
+              <section
+                key={group.id}
+                className={`pos-option-group-block ${sweet ? "is-sweetness" : ""} ${group.required ? "is-required" : ""}`}
+              >
                 <h3>
                   {group.name}
-                  {group.required ? <span className="pos-option-req"> *</span> : null}
                   {hint ? <span className="pos-option-group-hint">{hint}</span> : null}
                 </h3>
                 {sweet ? (

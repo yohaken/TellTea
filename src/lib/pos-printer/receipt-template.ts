@@ -192,18 +192,18 @@ export function unifiedReceiptStyles(layout: PrinterKindProfile, cutMode: PosPri
       grid-template-columns: minmax(0, 1fr) auto;
     }
     .qty-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 1.65em;
-      min-height: 1.65em;
-      padding: 0.08em 0.28em;
-      border-radius: 0.32em;
-      background: #1a1f24;
-      color: #fff;
+      display: inline-block;
+      min-width: 0;
+      min-height: 0;
+      padding: 0;
+      margin: 1px 0 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: #000;
       font-weight: 800;
-      font-size: ${layout.bodyFontPx + 1}px;
-      line-height: 1.1;
+      font-size: ${layout.bodyFontPx}px;
+      line-height: 1.2;
       font-variant-numeric: tabular-nums;
     }
     .qty-plain {
