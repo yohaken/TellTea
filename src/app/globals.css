@@ -2276,40 +2276,63 @@ body.modal-open .main-panel {
 }
 
 .ot-table .ot-col-worker {
-  min-width: 3.2rem;
-  max-width: 5.2rem;
+  min-width: 4.4rem;
+  max-width: 6.5rem;
+  vertical-align: middle;
+}
+
+.ot-worker-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.12rem;
+  line-height: 1.2;
+}
+
+.ot-worker-names {
+  font-size: 0.62rem;
+  font-weight: 600;
   word-break: break-word;
 }
 
-.ot-worker-inline {
-  display: inline;
-  line-height: 1.25;
-}
-
-.ot-worker-inline .ot-worker-name {
-  margin-right: 0.1rem;
-}
-
-.ot-worker-inline .photo-status {
+.ot-worker-meta {
   display: inline-flex;
-  vertical-align: middle;
+  align-items: center;
+  gap: 0.12rem;
+  min-height: 1.05rem;
+  flex-wrap: nowrap;
+}
+
+.ot-worker-meta .ot-shift-pill {
+  margin-left: 0;
+}
+
+.ot-worker-meta .photo-status {
+  display: inline-flex;
   width: 1.15rem;
   height: 1.15rem;
-  margin-left: 0.12rem;
   padding: 0;
   flex-shrink: 0;
 }
 
-.ot-worker-inline .photo-status svg {
+.ot-worker-meta .photo-status svg {
   width: 0.78rem;
   height: 0.78rem;
 }
 
-.ot-worker-inline .photo-status-count {
+.ot-worker-meta .photo-status-count {
   font-size: 0.45rem;
   min-width: 0.7rem;
   height: 0.7rem;
   line-height: 0.7rem;
+}
+
+.ot-card .ot-worker-cell {
+  margin: 0.2rem 0 0.35rem;
+}
+
+.ot-card .ot-worker-names {
+  font-size: 0.82rem;
 }
 
 .ot-table .ot-col-shift {

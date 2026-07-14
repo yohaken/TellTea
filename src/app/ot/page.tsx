@@ -66,7 +66,6 @@ import {
   computeShiftQuality,
   closingItemsFromCatalog,
   getCurrentShiftId,
-  labelShiftSlotStatus,
   openingItemsFromCatalog,
   ownerQualityHints,
   hasOtProcessOrderIssue,
@@ -1143,7 +1142,7 @@ function OtSheetTable({
     }
   }
 
-  const colCount = 21 + (isOwner ? 2 : 0);
+  const colCount = 19 + (isOwner ? 2 : 0);
   const slotCount = groups[0]?.slots.length || 3;
 
   return (
@@ -1165,8 +1164,7 @@ function OtSheetTable({
               </th>
             ) : null}
             <th className="ot-th-staff col-sticky-left ot-col-date">วันที่</th>
-            <th className="ot-th-staff ot-col-worker">พนักงาน-1</th>
-            <th className="ot-th-staff ot-col-worker">พนักงาน-2</th>
+            <th className="ot-th-staff ot-col-worker">พนักงาน</th>
             <th className="ot-th-staff ot-col-shift">รอบงาน</th>
             <th className="ot-th-machine col-out">เครื่อง</th>
             <th className="ot-th-prod col-out">อื่นๆ</th>
@@ -1213,8 +1211,13 @@ function OtSheetTable({
                   row?.status === "paid"
                     ? "is-paid"
                     : "is-pending";
-                const w1 = row?.workerNames[0] || "—";
-                const w2 = row?.workerNames[1] || "—";
+                const workerNames = (row?.workerNames || []).filter(Boolean);
+                const statusPill =
+                  slotStatus === "planned"
+                    ? "วางแผน"
+                    : slotStatus === "partial"
+                      ? "ค้าง"
+                      : null;
 
                 return (
                   <tr
@@ -1267,36 +1270,41 @@ function OtSheetTable({
                       </td>
                     ) : null}
                     <td className="ot-col-worker">
-                      <span className="ot-worker-inline">
-                        <span className="ot-worker-name">{w1}</span>
-                        {!isEmpty ? (
-                          <span className={`ot-shift-pill is-${slotStatus}`}>
-                            {labelShiftSlotStatus(slotStatus)}
-                          </span>
-                        ) : null}
-                        {isPlanned && slotStatus === "planned" ? (
-                          <span className="ot-planned-pill">วางแผน</span>
-                        ) : null}
-                        {processIssue ? (
-                          <span
-                            className="ot-owner-hint-pill"
-                            title={processHint || slotHints.join(" · ")}
-                          >
-                            ⚠
-                          </span>
-                        ) : null}
-                        {row ? (
-                          <EntryPhotoIndicator
-                            imageUrls={getOtImageUrls(row)}
-                            label={`${formatDateShort(group.date)} ${slot.shiftLabel}`}
-                            onView={(urls) =>
-                              onViewPhoto(urls, `${formatDateShort(group.date)} ${slot.shiftLabel}`)
-                            }
-                          />
-                        ) : null}
-                      </span>
+                      {isEmpty ? (
+                        <span className="muted">—</span>
+                      ) : (
+                        <div className="ot-worker-cell">
+                          <div className="ot-worker-names">
+                            {workerNames.length ? workerNames.join(" · ") : "—"}
+                          </div>
+                          <div className="ot-worker-meta">
+                            {statusPill ? (
+                              <span className={`ot-shift-pill is-${slotStatus}`}>
+                                {statusPill}
+                              </span>
+                            ) : null}
+                            {processIssue ? (
+                              <span
+                                className="ot-owner-hint-pill"
+                                title={processHint || slotHints.join(" · ")}
+                              >
+                                ⚠
+                              </span>
+                            ) : null}
+                            <EntryPhotoIndicator
+                              imageUrls={getOtImageUrls(row!)}
+                              label={`${formatDateShort(group.date)} ${slot.shiftLabel}`}
+                              onView={(urls) =>
+                                onViewPhoto(
+                                  urls,
+                                  `${formatDateShort(group.date)} ${slot.shiftLabel}`,
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
+                      )}
                     </td>
-                    <td className="ot-col-worker">{w2}</td>
                     <td className="ot-col-shift">
                       <button
                         type="button"
@@ -1504,9 +1512,11 @@ function OtCardList({
               </div>
             </header>
 
-            <p className="ot-card-workers">
-              <span className="ot-worker-inline">
-                <span className="ot-worker-name">{row.workerNames.join(", ")}</span>
+            <div className="ot-worker-cell">
+              <div className="ot-worker-names">
+                {(row.workerNames || []).filter(Boolean).join(" · ") || "—"}
+              </div>
+              <div className="ot-worker-meta">
                 {processHint ? (
                   <span className="ot-owner-hint-pill" title={processHint}>
                     ⚠
@@ -1519,8 +1529,8 @@ function OtCardList({
                     onViewPhoto(urls, `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`)
                   }
                 />
-              </span>
-            </p>
+              </div>
+            </div>
 
             <p className="ot-card-bonus" title={otFormulaText(row, c)}>
               โบนัส/คน <strong>฿{formatPlainNumber(c.bonusPerPerson)}</strong>
