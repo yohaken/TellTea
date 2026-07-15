@@ -513,6 +513,7 @@ service cloud.firestore {
         && after.diff(before).affectedKeys().hasOnly([
           'checklistDone',
           'proofImg',
+          'proofImgs',
           'status',
           'completedAt',
           'completedBy',

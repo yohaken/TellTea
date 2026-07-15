@@ -90,6 +90,10 @@ assert.match(taskLogic, /getTaskProofImgs/);
 assert.match(profileLib, /getIdCardPhotoUrls/);
 assert.match(readiness, /getIdCardPhotoUrls/);
 
+const rules = read("firestore.rules");
+assert.match(rules, /'proofImgs'/);
+assert.match(rules, /match \/evidencePhotos\/\{photoId\}/);
+
 // Edit ledger uses edit slot key
 assert.match(ledger, /storageSlotKey=\{`edit-\$\{entry\.id\}`\}/);
 
