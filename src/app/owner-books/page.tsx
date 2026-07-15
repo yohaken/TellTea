@@ -32,7 +32,6 @@ import {
   updateOwnerBookEntry,
   type OwnerBookEntry,
 } from "@/lib/owner-books";
-import { uploadAppPhoto } from "@/lib/photo-upload";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
   formatBaht,
@@ -458,7 +457,7 @@ function OwnerEntryModal({
   const [typeMode, setTypeMode] = useState(() => (entry?.type || "").trim() || "auto");
   const [note, setNote] = useState(entry?.note || "");
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getOwnerBookReceiptUrls(entry));
-  const [formPreview, setFormPreview] = useState<{ urls: string[]; index: number } | null>(null);
+  const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -625,18 +624,25 @@ function OwnerEntryModal({
             />
           </div>
 
+          {/* Same attach pattern as /ledger (owner account) — local compress → data URL, no Storage hang */}
           <PhotoAttachMultiField
+            label="สลิป / รูปถ่าย"
             values={receiptUrls}
             onChange={setReceiptUrls}
             onError={reportError}
-            label="สลิป / รูปถ่าย"
             max={OWNER_BOOKS_RECEIPT_MAX}
-            uploadFile={(file) =>
-              uploadAppPhoto(file, "owner-books", `${mode}-${entry?.id || createdBy || "new"}`)
-            }
-            hint={`ถ่ายหรือแนบได้หลายรูป (สูงสุด ${OWNER_BOOKS_RECEIPT_MAX} รูป) · กดรูปเพื่อดู`}
-            onPreview={(urls, index) => setFormPreview({ urls, index })}
+            hint={`ถ่ายหรือแนบได้หลายใบ · สูงสุด ${OWNER_BOOKS_RECEIPT_MAX} รูป`}
           />
+          {receiptUrls.length ? (
+            <button
+              type="button"
+              className="ghost-btn"
+              style={{ marginBottom: "0.55rem" }}
+              onClick={() => setPreviewUrls(receiptUrls)}
+            >
+              ดูรูปทั้งหมด ({receiptUrls.length})
+            </button>
+          ) : null}
 
           <div className="entry-actions">
             <button type="submit" className="primary-btn" disabled={busy}>
@@ -661,13 +667,8 @@ function OwnerEntryModal({
             )}
           </div>
         </form>
-        {formPreview ? (
-          <ImagePreviewModal
-            urls={formPreview.urls}
-            initialIndex={formPreview.index}
-            title="สลิป / รูปถ่าย"
-            onClose={() => setFormPreview(null)}
-          />
+        {previewUrls ? (
+          <ImagePreviewModal urls={previewUrls} title="สลิป / รูปถ่าย" onClose={() => setPreviewUrls(null)} />
         ) : null}
       </div>
     </div>

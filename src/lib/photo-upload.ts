@@ -10,9 +10,28 @@ function safeSegment(raw: string) {
   );
 }
 
+const STORAGE_UPLOAD_TIMEOUT_MS = 20_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 /**
  * Compress + upload one image for TellTea modules.
  * Prefers Firebase Storage (short https URL). Falls back to tight data URL.
+ * Storage attempts are time-boxed so mobile UI never sticks on 「กำลังอัปโหลด...」.
  */
 export async function uploadAppPhoto(
   file: File,
@@ -33,15 +52,23 @@ export async function uploadAppPhoto(
       const name = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}.jpg`;
       const path = `${folderSeg}/${safeSegment(slotKey)}/${name}`;
       const storageRef = ref(storage, path);
-      await uploadBytes(storageRef, compressed, {
-        contentType: "image/jpeg",
-        customMetadata: {
-          uploadedBy: auth.currentUser.uid,
-          slotKey: safeSegment(slotKey),
-          folder: folderSeg,
-        },
-      });
-      return await getDownloadURL(storageRef);
+      await withTimeout(
+        uploadBytes(storageRef, compressed, {
+          contentType: "image/jpeg",
+          customMetadata: {
+            uploadedBy: auth.currentUser.uid,
+            slotKey: safeSegment(slotKey),
+            folder: folderSeg,
+          },
+        }),
+        STORAGE_UPLOAD_TIMEOUT_MS,
+        "Storage uploadBytes",
+      );
+      return await withTimeout(
+        getDownloadURL(storageRef),
+        STORAGE_UPLOAD_TIMEOUT_MS,
+        "Storage getDownloadURL",
+      );
     } catch (err) {
       const msg = (err as Error)?.message || String(err);
       if (/เข้าสู่ระบบ/.test(msg)) throw err;

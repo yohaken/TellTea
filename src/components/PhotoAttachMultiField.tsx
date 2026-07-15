@@ -48,8 +48,21 @@ export function PhotoAttachMultiField({
   }
 
   async function encodeFile(file: File): Promise<string> {
-    if (uploadFile) return uploadFile(file);
-    return fileToReceiptDataUrl(file, perImageMaxChars);
+    const work = uploadFile ? uploadFile(file) : fileToReceiptDataUrl(file, perImageMaxChars);
+    // Never leave mobile UI stuck on 「กำลังอัปโหลด...」 if an uploader hangs.
+    return await new Promise<string>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("อัปโหลดใช้เวลานานเกินไป — ลองใหม่อีกครั้ง")), 45_000);
+      work.then(
+        (url) => {
+          clearTimeout(timer);
+          resolve(url);
+        },
+        (err) => {
+          clearTimeout(timer);
+          reject(err);
+        },
+      );
+    });
   }
 
   async function onFiles(fileList: FileList | null | undefined) {
