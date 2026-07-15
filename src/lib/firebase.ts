@@ -15,6 +15,7 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { getFunctions, type Functions } from "firebase/functions";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 /**
  * Keep authDomain on the Firebase default host.
@@ -39,10 +40,15 @@ export function isFirebaseConfigured() {
   );
 }
 
+export function isFirebaseStorageConfigured() {
+  return isFirebaseConfigured() && Boolean(PROJECT_DEFAULTS.storageBucket?.trim());
+}
+
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let db: Firestore | undefined;
 let functions: Functions | undefined;
+let storage: FirebaseStorage | undefined;
 
 export function getFirebaseApp() {
   if (!isFirebaseConfigured()) {
@@ -90,6 +96,16 @@ export function getFirebaseFunctions() {
     functions = getFunctions(getFirebaseApp(), "asia-southeast1");
   }
   return functions;
+}
+
+export function getFirebaseStorage() {
+  if (!isFirebaseStorageConfigured()) {
+    throw new Error("Firebase Storage ยังไม่ได้ตั้งค่า");
+  }
+  if (!storage) {
+    storage = getStorage(getFirebaseApp());
+  }
+  return storage;
 }
 
 export const OWNER_EMAIL = (process.env.NEXT_PUBLIC_OWNER_EMAIL || "yohaken@gmail.com")

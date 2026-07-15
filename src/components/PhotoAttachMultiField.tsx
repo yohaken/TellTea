@@ -15,6 +15,8 @@ export function PhotoAttachMultiField({
   /** Total chars of final URL list that must not be exceeded (caller-defined budget) */
   maxTotalChars,
   measureTotalChars,
+  /** Custom uploader (e.g. Firebase Storage) — receives each File, returns URL string */
+  uploadFile,
   hint,
   allowCamera = true,
   readOnly = false,
@@ -28,6 +30,7 @@ export function PhotoAttachMultiField({
   perImageMaxChars?: number;
   maxTotalChars?: number;
   measureTotalChars?: (urls: string[]) => number;
+  uploadFile?: (file: File) => Promise<string>;
   /** คำอธิบายสั้นใต้ป้าย — ค่าว่างใช้ข้อความมาตรฐาน */
   hint?: string;
   allowCamera?: boolean;
@@ -42,6 +45,11 @@ export function PhotoAttachMultiField({
     return measureTotalChars
       ? measureTotalChars(urls)
       : urls.reduce((n, u) => n + (u?.length || 0), 0);
+  }
+
+  async function encodeFile(file: File): Promise<string> {
+    if (uploadFile) return uploadFile(file);
+    return fileToReceiptDataUrl(file, perImageMaxChars);
   }
 
   async function onFiles(fileList: FileList | null | undefined) {
@@ -60,8 +68,8 @@ export function PhotoAttachMultiField({
     try {
       for (const file of batch) {
         try {
-          const dataUrl = await fileToReceiptDataUrl(file, perImageMaxChars);
-          const next = [...values, ...added, dataUrl];
+          const url = await encodeFile(file);
+          const next = [...values, ...added, url];
           if (maxTotalChars != null && totalChars(next) > maxTotalChars) {
             lastErr =
               added.length || values.length
@@ -69,7 +77,7 @@ export function PhotoAttachMultiField({
                 : "รูปนี้ใหญ่เกินไปสำหรับบันทึก — ลองถ่ายใกล้ขึ้นหรือเลือกรูปอื่น";
             break;
           }
-          added.push(dataUrl);
+          added.push(url);
         } catch (err) {
           lastErr = (err as Error).message || "อัปโหลดรูปไม่สำเร็จ";
           // Keep photos that already succeeded in this batch.
@@ -102,12 +110,15 @@ export function PhotoAttachMultiField({
         ? `${values.length} รูป`
         : "ยังไม่มีรูป"
       : allowCamera
-        ? `ถ่ายหรือแนบได้หลายรูป · สูงสุด ${max} รูป`
-        : `แนบได้หลายรูป · สูงสุด ${max} รูป`);
+        ? `ถ่ายหรือแนบได้หลายรูป (สูงสุด ${max} รูป)`
+        : `แนบได้หลายรูป (สูงสุด ${max} รูป)`);
 
   return (
     <div className="field photo-attach-field photo-attach-multi">
-      <span className="field-label">{label}</span>
+      <span className="field-label">
+        {label}
+        {!label.includes("สูงสุด") ? ` (สูงสุด ${max} รูป)` : ""}
+      </span>
       <p className="muted form-hint-inline">{hintText}</p>
       {!readOnly ? (
         <div className="receipt-actions">

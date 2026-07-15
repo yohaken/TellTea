@@ -3798,6 +3798,13 @@ body.modal-open .main-panel {
   text-align: center;
 }
 
+.photo-status-count.is-wide,
+.photo-status.has-photo[data-count="10"] .photo-status-count,
+.photo-status.has-photo .photo-status-count {
+  min-width: 1rem;
+  padding: 0 0.2rem;
+}
+
 .photo-preview-nav {
   display: flex;
   align-items: center;

@@ -11,7 +11,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const otSrc = readFileSync(join(root, "src/lib/ot.ts"), "utf8");
 const pageSrc = readFileSync(join(root, "src/app/ot/page.tsx"), "utf8");
 
-assert.match(otSrc, /OT_IMAGE_MAX\s*=\s*3/);
+assert.match(otSrc, /OT_IMAGE_MAX\s*=\s*10/);
 assert.match(otSrc, /isOtEntryClosed/);
 assert.match(otSrc, /assertOtImageUrlsFit/);
 assert.match(pageSrc, /amendClosed/);
@@ -20,7 +20,7 @@ assert.match(pageSrc, /saveBlockedReason/);
 assert.match(pageSrc, /canSaveClose/);
 assert.match(pageSrc, /updateOtEntry\(entry\.id, payload\)/);
 
-const OT_IMAGE_MAX = 3;
+const OT_IMAGE_MAX = 10;
 const OT_IMAGE_PAYLOAD_BUDGET = 720_000;
 const FIRESTORE_DOC_LIMIT = 1_048_576;
 
@@ -35,9 +35,12 @@ function assertOtImageUrlsFit(urls) {
     .map((u) => u.trim())
     .filter(Boolean)
     .slice(0, OT_IMAGE_MAX);
-  const chars = otImagePayloadChars(capped);
-  if (chars > OT_IMAGE_PAYLOAD_BUDGET) {
-    throw new Error(`รูปใหญ่รวมกันเกินไป (${capped.length} รูป)`);
+  const dataOnly = capped.filter((u) => u.trim().toLowerCase().startsWith("data:"));
+  if (dataOnly.length) {
+    const chars = otImagePayloadChars(dataOnly);
+    if (chars > OT_IMAGE_PAYLOAD_BUDGET) {
+      throw new Error(`รูปใหญ่รวมกันเกินไป (${dataOnly.length} รูป)`);
+    }
   }
   return capped;
 }

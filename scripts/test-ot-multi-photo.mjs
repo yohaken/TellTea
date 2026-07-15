@@ -13,7 +13,7 @@ const multiSrc = readFileSync(join(root, "src/components/PhotoAttachMultiField.t
 const cellSrc = readFileSync(join(root, "src/components/EntryPhotoCell.tsx"), "utf8");
 const receiptsSrc = readFileSync(join(root, "src/lib/receipts.ts"), "utf8");
 
-assert.match(otSrc, /OT_IMAGE_MAX\s*=\s*3/);
+assert.match(otSrc, /OT_IMAGE_MAX\s*=\s*10/);
 assert.match(otSrc, /OT_IMAGE_PAYLOAD_BUDGET\s*=\s*720_000/);
 assert.match(otSrc, /assertOtImageUrlsFit/);
 assert.match(otSrc, /getOtImageUrls/);
@@ -56,13 +56,16 @@ function otImagePayloadChars(urls) {
   return cleaned.reduce((n, u) => n + u.length, 0) + cleaned[0].length;
 }
 
-function assertOtImageUrlsFit(urls, max = 3, budget = 720_000) {
+function assertOtImageUrlsFit(urls, max = 10, budget = 720_000) {
   const capped = urls
     .map((u) => u.trim())
     .filter(Boolean)
     .slice(0, max);
-  const chars = otImagePayloadChars(capped);
-  if (chars > budget) throw new Error("budget");
+  const dataOnly = capped.filter((u) => u.trim().toLowerCase().startsWith("data:"));
+  if (dataOnly.length) {
+    const chars = otImagePayloadChars(dataOnly);
+    if (chars > budget) throw new Error("budget");
+  }
   return capped;
 }
 
@@ -76,6 +79,11 @@ assert.deepEqual(getOtImageUrls(null), []);
 assert.equal(otImagePayloadChars(["abc"]), 6);
 assert.equal(otImagePayloadChars(["aa", "bb"]), 6);
 assert.deepEqual(assertOtImageUrlsFit(["x", "y"]), ["x", "y"]);
-assert.throws(() => assertOtImageUrlsFit(["a".repeat(400_000), "b".repeat(400_000)]));
+assert.throws(() =>
+  assertOtImageUrlsFit([
+    "data:image/jpeg;base64," + "a".repeat(400_000),
+    "data:image/jpeg;base64," + "b".repeat(400_000),
+  ]),
+);
 
 console.log("OK test-ot-multi-photo");

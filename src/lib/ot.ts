@@ -194,15 +194,15 @@ export function getOtImageUrls(entry?: Pick<OtEntry, "imageUrl" | "imageUrls"> |
 }
 
 /**
- * Max product photos per OT shift entry.
- * Kept low because photos are stored as data URLs inside the Firestore doc (1 MiB limit),
- * and legacy `imageUrl` duplicates the first image.
+ * Max product photos per OT shift close.
+ * Photos upload to Firebase Storage (https URLs in Firestore) so 10 fits safely.
+ * Legacy data-URL rows still constrained by OT_IMAGE_PAYLOAD_BUDGET.
  */
-export const OT_IMAGE_MAX = 3;
+export const OT_IMAGE_MAX = 10;
 
 /**
- * Safe budget for `imageUrl` + `imageUrls` string payload (chars),
- * leaving headroom for quantities / SOP ids / workers in the same doc.
+ * Safe budget for legacy data-URL payloads only (`imageUrl` + `imageUrls`).
+ * Remote https URLs are tiny and skip this budget.
  */
 export const OT_IMAGE_PAYLOAD_BUDGET = 720_000;
 
@@ -213,16 +213,23 @@ export function otImagePayloadChars(urls: string[]): number {
   return cleaned.reduce((n, u) => n + u.length, 0) + cleaned[0]!.length;
 }
 
+function isDataUrlPhoto(url: string) {
+  return url.trim().toLowerCase().startsWith("data:");
+}
+
 export function assertOtImageUrlsFit(urls: string[]): string[] {
   const capped = urls
     .map((u) => u.trim())
     .filter(Boolean)
     .slice(0, OT_IMAGE_MAX);
-  const chars = otImagePayloadChars(capped);
-  if (chars > OT_IMAGE_PAYLOAD_BUDGET) {
-    throw new Error(
-      `รูปใหญ่รวมกันเกินไป (${capped.length} รูป) — ลบบางรูปหรือถ่ายใกล้ขึ้นแล้วลองใหม่`,
-    );
+  const dataOnly = capped.filter(isDataUrlPhoto);
+  if (dataOnly.length) {
+    const chars = otImagePayloadChars(dataOnly);
+    if (chars > OT_IMAGE_PAYLOAD_BUDGET) {
+      throw new Error(
+        `รูปใหญ่รวมกันเกินไป (${dataOnly.length} รูปแบบเก่า) — ลบบางรูปหรือถ่ายใหม่แล้วลองอีกครั้ง`,
+      );
+    }
   }
   return capped;
 }

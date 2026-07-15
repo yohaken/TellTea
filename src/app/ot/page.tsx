@@ -43,6 +43,7 @@ import {
   type OtStatus,
 } from "@/lib/ot";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
+import { uploadOtProductPhoto } from "@/lib/ot-photos";
 import {
   buildOtGrid,
   findOtEntryForSlot,
@@ -987,19 +988,26 @@ function OtEntryForm({
             values={imageUrls}
             onChange={setImageUrls}
             onError={reportError}
-            label="รูปสินค้า (แนบได้หลายรูป)"
+            label="รูปสินค้า"
             max={OT_IMAGE_MAX}
-            perImageMaxChars={Math.floor(OT_IMAGE_PAYLOAD_BUDGET / (OT_IMAGE_MAX + 1))}
+            uploadFile={(file) =>
+              uploadOtProductPhoto(
+                file,
+                `${date}_${shift}_${createdBy || entry?.id || "new"}`,
+              )
+            }
             maxTotalChars={OT_IMAGE_PAYLOAD_BUDGET}
-            measureTotalChars={otImagePayloadChars}
+            measureTotalChars={(urls) =>
+              otImagePayloadChars(urls.filter((u) => u.trim().toLowerCase().startsWith("data:")))
+            }
             hint={
               locked
                 ? imageUrls.length
                   ? `${imageUrls.length} รูป · กดรูปเพื่อดู`
                   : "ยังไม่มีรูป"
                 : amendClosed
-                  ? `แก้รูปได้ · สูงสุด ${OT_IMAGE_MAX} รูป · กด «บันทึกการแก้ไข» เพื่อเซฟ`
-                  : `ถ่ายหรือแนบได้หลายรูป · สูงสุด ${OT_IMAGE_MAX} รูป · ต้องกดบันทึกหลังติ๊กเช็คครบ`
+                  ? `ถ่ายหรือแนบได้หลายรูป (สูงสุด ${OT_IMAGE_MAX} รูป) · กด «บันทึกการแก้ไข» เพื่อเซฟ`
+                  : `ถ่ายหรือแนบได้หลายรูป (สูงสุด ${OT_IMAGE_MAX} รูป) · ต้องกดบันทึกหลังติ๊กเช็คครบ`
             }
             readOnly={locked}
             onPreview={(urls, index) => setFormPreview({ urls, index })}

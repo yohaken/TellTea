@@ -35,8 +35,9 @@ export function EntryPhotoIndicator({
         type="button"
         className="photo-status has-photo"
         onClick={() => onView?.(urls, 0)}
-        title={urls.length > 1 ? `มี ${urls.length} รูป — แตะดู` : "มีรูป — แตะดู"}
+        title={`มี ${urls.length} รูป — แตะดู`}
         aria-label={`มีรูป ${urls.length} รูป ${label}`}
+        data-count={urls.length}
       >
         <ImageIcon size={14} aria-hidden strokeWidth={2.25} />
         <span className="photo-status-count">{urls.length}</span>
