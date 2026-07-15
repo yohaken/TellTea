@@ -12,6 +12,8 @@ export function PhotoAttachMultiField({
   max = 8,
   hint,
   allowCamera = true,
+  readOnly = false,
+  onPreview,
 }: {
   values: string[];
   onChange: (urls: string[]) => void;
@@ -21,12 +23,15 @@ export function PhotoAttachMultiField({
   /** คำอธิบายสั้นใต้ป้าย — ค่าว่างใช้ข้อความมาตรฐาน */
   hint?: string;
   allowCamera?: boolean;
+  readOnly?: boolean;
+  onPreview?: (urls: string[], index: number) => void;
 }) {
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
   async function onFiles(fileList: FileList | null | undefined) {
+    if (readOnly) return;
     if (!fileList?.length) return;
     const files = [...fileList];
     const room = max - values.length;
@@ -53,71 +58,87 @@ export function PhotoAttachMultiField({
   }
 
   function removeAt(idx: number) {
+    if (readOnly) return;
     onChange(values.filter((_, i) => i !== idx));
   }
 
   const full = values.length >= max;
   const hintText =
     hint ??
-    (allowCamera
-      ? `ถ่ายหรือแนบได้หลายรูป · สูงสุด ${max} รูป`
-      : `แนบได้หลายรูป · สูงสุด ${max} รูป`);
+    (readOnly
+      ? values.length
+        ? `${values.length} รูป`
+        : "ยังไม่มีรูป"
+      : allowCamera
+        ? `ถ่ายหรือแนบได้หลายรูป · สูงสุด ${max} รูป`
+        : `แนบได้หลายรูป · สูงสุด ${max} รูป`);
 
   return (
     <div className="field photo-attach-field photo-attach-multi">
       <span className="field-label">{label}</span>
       <p className="muted form-hint-inline">{hintText}</p>
-      <div className="receipt-actions">
-        {allowCamera ? (
+      {!readOnly ? (
+        <div className="receipt-actions">
+          {allowCamera ? (
+            <button
+              type="button"
+              className="primary-btn"
+              disabled={busy || full}
+              onClick={() => cameraRef.current?.click()}
+            >
+              {busy ? (
+                "กำลังอัปโหลด..."
+              ) : (
+                <>
+                  <Camera size={16} aria-hidden /> ถ่ายรูป
+                </>
+              )}
+            </button>
+          ) : null}
           <button
             type="button"
-            className="primary-btn"
+            className={allowCamera ? "ghost-btn" : "primary-btn"}
             disabled={busy || full}
-            onClick={() => cameraRef.current?.click()}
+            onClick={() => galleryRef.current?.click()}
           >
-            {busy ? (
+            {busy && !allowCamera ? (
               "กำลังอัปโหลด..."
             ) : (
               <>
-                <Camera size={16} aria-hidden /> ถ่ายรูป
+                <Plus size={16} aria-hidden /> แนบรูป
               </>
             )}
           </button>
-        ) : null}
-        <button
-          type="button"
-          className={allowCamera ? "ghost-btn" : "primary-btn"}
-          disabled={busy || full}
-          onClick={() => galleryRef.current?.click()}
-        >
-          {busy && !allowCamera ? (
-            "กำลังอัปโหลด..."
-          ) : (
-            <>
-              <Plus size={16} aria-hidden /> แนบรูป
-            </>
-          )}
-        </button>
-      </div>
+        </div>
+      ) : null}
       {values.length ? (
         <ul className="photo-attach-multi-grid">
           {values.map((url, idx) => (
             <li key={`${idx}-${url.slice(0, 24)}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt="" className="photo-attach-preview" />
               <button
                 type="button"
-                className="ghost-btn photo-attach-multi-remove"
-                aria-label={`ลบรูปที่ ${idx + 1}`}
-                onClick={() => removeAt(idx)}
+                className="photo-attach-preview-btn"
+                onClick={() => onPreview?.(values, idx)}
+                aria-label={`ดูรูปที่ ${idx + 1}`}
               >
-                <X size={14} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="" className="photo-attach-preview" />
               </button>
+              {!readOnly ? (
+                <button
+                  type="button"
+                  className="ghost-btn photo-attach-multi-remove"
+                  aria-label={`ลบรูปที่ ${idx + 1}`}
+                  onClick={() => removeAt(idx)}
+                >
+                  <X size={14} />
+                </button>
+              ) : null}
             </li>
           ))}
         </ul>
       ) : null}
-      {allowCamera ? (
+      {!readOnly && allowCamera ? (
         <input
           ref={cameraRef}
           type="file"
@@ -127,14 +148,16 @@ export function PhotoAttachMultiField({
           onChange={(e) => void onFiles(e.target.files)}
         />
       ) : null}
-      <input
-        ref={galleryRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="sr-only"
-        onChange={(e) => void onFiles(e.target.files)}
-      />
+      {!readOnly ? (
+        <input
+          ref={galleryRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="sr-only"
+          onChange={(e) => void onFiles(e.target.files)}
+        />
+      ) : null}
     </div>
   );
 }

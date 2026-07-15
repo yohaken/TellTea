@@ -9,6 +9,7 @@
     "smoke:pos-hosting": "node scripts/smoke-pos-hosting.mjs",
     "test:firestore-rules": "node scripts/assert-firestore-rules.mjs",
     "test:ledger-multi-photo": "node scripts/test-ledger-multi-photo.mjs",
+    "test:ot-multi-photo": "node scripts/test-ot-multi-photo.mjs",
     "test:pos-connectivity": "node scripts/test-pos-connectivity.mjs",
     "test:pos-complete-sale": "node scripts/test-pos-complete-sale.mjs",
     "test:pos-sync": "node scripts/test-pos-sync.mjs",

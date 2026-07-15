@@ -1762,6 +1762,22 @@ body.modal-open .main-panel {
   max-height: 4.5rem;
 }
 
+.photo-attach-preview-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+  border-radius: 0.55rem;
+  overflow: hidden;
+}
+
+.photo-attach-preview-btn:focus-visible {
+  outline: 2px solid var(--tea-leaf);
+  outline-offset: 2px;
+}
+
 .photo-attach-multi-remove {
   position: absolute;
   top: 0.15rem;

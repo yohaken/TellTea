@@ -20,6 +20,7 @@ import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import {
   OT_SHIFTS,
+  OT_IMAGE_MAX,
   addOtEntry,
   bulkUpdateOtEntryStatus,
   computeOtBonus,
@@ -397,9 +398,12 @@ function OtEntryForm({
   const [addQty, setAddQty] = useState(entry ? String(entry.addQty || "") : "");
   const [addReason, setAddReason] = useState(entry?.addReason || "");
   const [imageUrls, setImageUrls] = useState<string[]>(() => getOtImageUrls(entry));
-  const [detailsOpen, setDetailsOpen] = useState(() =>
-    entry ? hasOtQuantities(entry) || isOtEntryPlanned(entry) : false,
-  );
+  const [formPreview, setFormPreview] = useState<{ urls: string[]; index: number } | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(() => {
+    if (!entry) return false;
+    if (isOtEntryLocked(entry)) return true;
+    return hasOtQuantities(entry) || isOtEntryPlanned(entry);
+  });
   const [openingDrafts, setOpeningDrafts] = useState<SopDraftItem[]>(() =>
     draftsFromCheckRecords(openingItems, checkRecords, entry?.checkIdOpen),
   );
@@ -571,7 +575,7 @@ function OtEntryForm({
             deductReason: "",
             addQty: 0,
             addReason: "",
-            imageUrls: [],
+            // Keep any photos already attached (e.g. user opened ปิดกะ then กลับแผน).
           }
         : base;
       await persist(payload);
@@ -818,13 +822,77 @@ function OtEntryForm({
                 <input id="ot-add-reason" value={addReason} onChange={(e) => setAddReason(e.target.value)} placeholder="ไม่ปิดฝา" />
               </div>
             </div>
-            <PhotoAttachMultiField
-              values={imageUrls}
-              onChange={setImageUrls}
-              onError={onError}
-              label="รูปสินค้า (แนบได้หลายรูป)"
-            />
           </div>
+        ) : null}
+
+        {locked && detailsOpen ? (
+          <div className="ot-form-details ot-form-details-readonly">
+            <dl className="ot-card-grid">
+              <div className="ot-card-stat">
+                <dt>เครื่อง</dt>
+                <dd>{formatPlainNumber(Number(machineCount) || 0)}</dd>
+              </div>
+              <div className="ot-card-stat">
+                <dt>อื่นๆ</dt>
+                <dd>{formatPlainNumber(Number(otherCups) || 0)}</dd>
+              </div>
+              <div className="ot-card-stat">
+                <dt>โคน</dt>
+                <dd>{formatPlainNumber(Number(iceCreamCones) || 0)}</dd>
+              </div>
+              <div className="ot-card-stat">
+                <dt>ขนมปัง</dt>
+                <dd>{formatPlainNumber(Number(breadSlices) || 0)}</dd>
+              </div>
+              <div className="ot-card-stat">
+                <dt>เคลม</dt>
+                <dd>{formatPlainNumber(Number(claimCups) || 0)}</dd>
+              </div>
+              <div className="ot-card-stat">
+                <dt>ลด</dt>
+                <dd>{formatPlainNumber(Number(deductQty) || 0)}</dd>
+              </div>
+              <div className="ot-card-stat">
+                <dt>เพิ่ม</dt>
+                <dd>{formatPlainNumber(Number(addQty) || 0)}</dd>
+              </div>
+            </dl>
+            {deductReason || addReason ? (
+              <p className="muted form-hint-inline">
+                {deductReason ? `ลด: ${deductReason}` : ""}
+                {deductReason && addReason ? " · " : ""}
+                {addReason ? `เพิ่ม: ${addReason}` : ""}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {detailsOpen || imageUrls.length > 0 ? (
+          <PhotoAttachMultiField
+            values={imageUrls}
+            onChange={setImageUrls}
+            onError={onError}
+            label="รูปสินค้า (แนบได้หลายรูป)"
+            max={OT_IMAGE_MAX}
+            hint={
+              locked
+                ? imageUrls.length
+                  ? `${imageUrls.length} รูป · กดรูปเพื่อดู`
+                  : "ยังไม่มีรูป"
+                : `ถ่ายหรือแนบได้หลายรูป · สูงสุด ${OT_IMAGE_MAX} รูป · กดรูปเพื่อดู`
+            }
+            readOnly={locked}
+            onPreview={(urls, index) => setFormPreview({ urls, index })}
+          />
+        ) : null}
+
+        {formPreview ? (
+          <ImagePreviewModal
+            urls={formPreview.urls}
+            initialIndex={formPreview.index}
+            title="รูปสินค้า"
+            onClose={() => setFormPreview(null)}
+          />
         ) : null}
 
         {detailsOpen && preview.summaryQty > 0 ? (
@@ -1293,6 +1361,16 @@ function OtSheetTable({
                                   `${formatDateShort(group.date)} ${slot.shiftLabel}`,
                                 )
                               }
+                              onAdd={
+                                row && !isOtEntryLocked(row)
+                                  ? () =>
+                                      onEditSlot({
+                                        date: group.date,
+                                        shift: slot.shiftId,
+                                        entry: row,
+                                      })
+                                  : undefined
+                              }
                             />
                           </div>
                         </div>
@@ -1521,6 +1599,7 @@ function OtCardList({
                   onView={(urls) =>
                     onViewPhoto(urls, `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`)
                   }
+                  onAdd={!isOtEntryLocked(row) ? () => onEdit(row) : undefined}
                 />
               </div>
             </div>

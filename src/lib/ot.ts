@@ -162,12 +162,16 @@ export function isOtEntryPlanned(
 
 export function getOtImageUrls(entry?: Pick<OtEntry, "imageUrl" | "imageUrls"> | null): string[] {
   if (!entry) return [];
-  if (Array.isArray(entry.imageUrls)) {
-    return entry.imageUrls.map(String).filter((u) => u.trim());
+  if (Array.isArray(entry.imageUrls) && entry.imageUrls.length) {
+    const urls = entry.imageUrls.map(String).filter((u) => u.trim());
+    if (urls.length) return urls;
   }
   if (entry.imageUrl?.trim()) return [entry.imageUrl.trim()];
   return [];
 }
+
+/** Max product photos per OT shift entry */
+export const OT_IMAGE_MAX = 8;
 
 function mapOtEntryDoc(id: string, data: Record<string, unknown>): OtEntry {
   const imageUrls = Array.isArray(data.imageUrls)
@@ -313,12 +317,7 @@ export function subscribeOtEntries(
   return onSnapshot(
     query(entriesCol(), orderBy("date", "desc"), orderBy("createdAt", "desc")),
     (snap) => {
-      onRows(
-        snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<OtEntry, "id">),
-        })),
-      );
+      onRows(snap.docs.map((d) => mapOtEntryDoc(d.id, d.data() as Record<string, unknown>)));
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );
@@ -329,9 +328,13 @@ export async function addOtEntry(input: OtEntryInput): Promise<string> {
   const now = Date.now();
   const imageUrls = (input.imageUrls || [])
     .map((u) => u.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .slice(0, OT_IMAGE_MAX);
   const legacyUrl = (input.imageUrl || "").trim();
-  const urls = imageUrls.length ? imageUrls : legacyUrl ? [legacyUrl] : [];
+  const urls = (imageUrls.length ? imageUrls : legacyUrl ? [legacyUrl] : []).slice(
+    0,
+    OT_IMAGE_MAX,
+  );
   const ref = await addDoc(entriesCol(), {
     date: input.date,
     shift: input.shift,
@@ -420,7 +423,10 @@ export async function updateOtEntry(
   if (patch.addReason != null) next.addReason = patch.addReason.trim();
   if (patch.bonusRate != null) next.bonusRate = Number(patch.bonusRate) || DEFAULT_OT_BONUS_RATE;
   if (patch.imageUrls != null) {
-    const urls = patch.imageUrls.map((u) => u.trim()).filter(Boolean);
+    const urls = patch.imageUrls
+      .map((u) => u.trim())
+      .filter(Boolean)
+      .slice(0, OT_IMAGE_MAX);
     next.imageUrls = urls;
     next.imageUrl = urls[0] || "";
   } else if (patch.imageUrl != null) {

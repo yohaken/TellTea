@@ -5,22 +5,28 @@ import { ChevronLeft, ChevronRight, ImageIcon, ImageOff } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 function resolvePhotoUrls(imageUrl?: string, imageUrls?: string[]) {
-  if (imageUrls?.length) return imageUrls.filter(Boolean);
+  if (Array.isArray(imageUrls) && imageUrls.length) {
+    const urls = imageUrls.map(String).filter((u) => u.trim());
+    if (urls.length) return urls;
+  }
   if (imageUrl?.trim()) return [imageUrl.trim()];
   return [];
 }
 
-/** แสดงสถานะรูปในตาราง — มีรูปกดดูได้, ไม่มีรูปแสดงไอคอนจาง */
+/** แสดงสถานะรูปในตาราง — มีรูปกดดูได้, ไม่มีรูปแสดงไอคอนจาง / กด + เพื่อเพิ่ม */
 export function EntryPhotoIndicator({
   imageUrl,
   imageUrls,
   label,
   onView,
+  onAdd,
 }: {
   imageUrl?: string;
   imageUrls?: string[];
   label: string;
-  onView?: (urls: string[]) => void;
+  onView?: (urls: string[], index?: number) => void;
+  /** เมื่อยังไม่มีรูป — แสดงปุ่ม + เพื่อเปิดฟอร์มเพิ่มรูป */
+  onAdd?: () => void;
 }) {
   const urls = resolvePhotoUrls(imageUrl, imageUrls);
   if (urls.length) {
@@ -28,12 +34,28 @@ export function EntryPhotoIndicator({
       <button
         type="button"
         className="photo-status has-photo"
-        onClick={() => onView?.(urls)}
+        onClick={() => onView?.(urls, 0)}
         title={urls.length > 1 ? `มี ${urls.length} รูป — แตะดู` : "มีรูป — แตะดู"}
         aria-label={`มีรูป ${urls.length} รูป ${label}`}
       >
         <ImageIcon size={14} aria-hidden strokeWidth={2.25} />
-        {urls.length > 1 ? <span className="photo-status-count">{urls.length}</span> : null}
+        <span className="photo-status-count">{urls.length}</span>
+      </button>
+    );
+  }
+
+  if (onAdd) {
+    return (
+      <button
+        type="button"
+        className="photo-status"
+        onClick={onAdd}
+        title="เพิ่มรูป"
+        aria-label={`เพิ่มรูป ${label}`}
+      >
+        <span className="photo-status-plus" aria-hidden>
+          +
+        </span>
       </button>
     );
   }
@@ -49,15 +71,18 @@ export function ImagePreviewModal({
   url,
   urls,
   title,
+  initialIndex = 0,
   onClose,
 }: {
   url?: string;
   urls?: string[];
   title?: string;
+  initialIndex?: number;
   onClose: () => void;
 }) {
   const list = urls?.length ? urls : url ? [url] : [];
-  const [idx, setIdx] = useState(0);
+  const start = Math.min(Math.max(0, initialIndex), Math.max(0, list.length - 1));
+  const [idx, setIdx] = useState(start);
   const current = list[idx] || "";
   useBodyScrollLock(true);
 
@@ -91,7 +116,9 @@ export function ImagePreviewModal({
             <button type="button" className="ghost-btn" onClick={prev} aria-label="รูปก่อนหน้า">
               <ChevronLeft size={18} />
             </button>
-            <span className="muted">{idx + 1} / {list.length}</span>
+            <span className="muted">
+              {idx + 1} / {list.length}
+            </span>
             <button type="button" className="ghost-btn" onClick={next} aria-label="รูปถัดไป">
               <ChevronRight size={18} />
             </button>
