@@ -160,6 +160,29 @@ export function isOtEntryPlanned(
   return !hasOtQuantities(entry);
 }
 
+/** Already closed shift (has quantities) — amend photos/qty without re-running full close gates. */
+export function isOtEntryClosed(
+  entry:
+    | Pick<
+        OtEntry,
+        | "workerNames"
+        | "machineCount"
+        | "otherCups"
+        | "iceCreamCones"
+        | "breadSlices"
+        | "claimCups"
+        | "deductQty"
+        | "addQty"
+        | "bonusRate"
+        | "shiftClosedAt"
+      >
+    | null
+    | undefined,
+) {
+  if (!entry) return false;
+  return hasOtQuantities(entry) || !!entry.shiftClosedAt;
+}
+
 export function getOtImageUrls(entry?: Pick<OtEntry, "imageUrl" | "imageUrls"> | null): string[] {
   if (!entry) return [];
   if (Array.isArray(entry.imageUrls) && entry.imageUrls.length) {

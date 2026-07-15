@@ -32,6 +32,7 @@ import {
   hasOtQuantities,
   isOtEntryLocked,
   isOtEntryPlanned,
+  isOtEntryClosed,
   labelOtShift,
   labelOtStatus,
   otImagePayloadChars,
@@ -374,6 +375,8 @@ function OtEntryForm({
   const slotFixed = !!slotDraft || !!entry;
   const locked = entry ? isOtEntryLocked(entry) : false;
   const plannedEntry = entry ? isOtEntryPlanned(entry) : false;
+  /** แก้รายการที่ปิดกะไปแล้ว — อนุญาตแก้ยอด/รูปโดยไม่บังคับ SmartCheck + ติ๊ก SOP ใหม่ */
+  const amendClosed = !!(entry && !locked && isOtEntryClosed(entry) && !plannedEntry);
 
   const [date, setDate] = useState(
     entry
@@ -437,6 +440,26 @@ function OtEntryForm({
     );
     return unsub;
   }, [slotDateMs, shift]);
+
+  // When checklist records arrive later, hydrate SOP drafts from saved checkIds
+  // so editing a closed shift doesn't look "incomplete" and block photo save.
+  useEffect(() => {
+    if (!entry) return;
+    if (entry.checkIdOpen) {
+      setOpeningDrafts((prev) => {
+        if (sopDraftsComplete(prev)) return prev;
+        const next = draftsFromCheckRecords(openingItems, checkRecords, entry.checkIdOpen);
+        return sopDraftsComplete(next) ? next : prev;
+      });
+    }
+    if (entry.checkIdClose) {
+      setClosingDrafts((prev) => {
+        if (sopDraftsComplete(prev)) return prev;
+        const next = draftsFromCheckRecords(closingItems, checkRecords, entry.checkIdClose);
+        return sopDraftsComplete(next) ? next : prev;
+      });
+    }
+  }, [entry, checkRecords, openingItems, closingItems]);
 
   const dateMs = parseDateInput(date);
   const slotEntry =
@@ -619,16 +642,36 @@ function OtEntryForm({
       reportError("เลือกพนักงานอย่างน้อย 1 คน");
       return;
     }
-    if (!checkSession) {
-      reportError("ยังไม่เช็ค SmartCheck กะนี้ — ไปหน้าเช็คก่อนปิดกะ");
-      return;
-    }
     if (preview.summaryQty === 0) {
       reportError("ยังไม่ใส่ยอด — กรอกเครื่องหรือรายการอื่นก่อนปิดกะ");
       return;
     }
+
+    // Amend already-closed shift: update qty + photos only (no SmartCheck / SOP rewrite).
+    if (amendClosed && entry) {
+      setBusy(true);
+      setFormError("");
+      onError("");
+      try {
+        const payload = buildPayload(chosen);
+        await updateOtEntry(entry.id, payload);
+        onSaved();
+      } catch (err) {
+        reportError(friendlyFirestoreWriteError(err, "บันทึกรูป/ยอดไม่สำเร็จ"));
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
+    if (!checkSession) {
+      reportError("ยังไม่เช็ค SmartCheck กะนี้ — ไปหน้าเช็คก่อนปิดกะ");
+      return;
+    }
     if (liveProgress.missingLabels.length > 0) {
-      reportError(`ยังไม่ครบ — เหลือ: ${liveProgress.missingLabels.join(" · ")}`);
+      reportError(
+        `ยังไม่ครบ — เหลือ: ${liveProgress.missingLabels.join(" · ")} (รูปที่แนบยังไม่ถูกบันทึกจนกว่าจะติ๊กครบแล้วกดบันทึก)`,
+      );
       return;
     }
     const conflict = existingSlotConflict();
@@ -667,6 +710,37 @@ function OtEntryForm({
     }
   }
 
+  const saveBlockedReason = useMemo(() => {
+    if (locked || !detailsOpen) return "";
+    if (!workers.length) return "ยังไม่มีรายชื่อพนักงาน";
+    if (!selectedWorkers.length) return "เลือกพนักงานอย่างน้อย 1 คน";
+    if (preview.summaryQty === 0) return "กรอกยอดเครื่องหรือรายการอื่นก่อนบันทึก";
+    if (amendClosed) return "";
+    if (checkLoading) return "กำลังตรวจสอบ SmartCheck...";
+    if (!checkSession) return "ยังไม่เช็ค SmartCheck กะนี้ — ไปหน้าเช็คก่อน (รูปที่แนบยังไม่ถูกบันทึก)";
+    if (liveProgress.missingLabels.length) {
+      return `ยังไม่ครบ: ${liveProgress.missingLabels.join(" · ")} — ติ๊กผ่าน/ไม่ผ่านให้ครบก่อนบันทึก (รูปที่แนบไว้รออยู่)`;
+    }
+    return "";
+  }, [
+    locked,
+    detailsOpen,
+    workers.length,
+    selectedWorkers.length,
+    preview.summaryQty,
+    amendClosed,
+    checkLoading,
+    checkSession,
+    liveProgress.missingLabels,
+  ]);
+
+  const canSaveClose =
+    !busy &&
+    !!workers.length &&
+    selectedWorkers.length > 0 &&
+    preview.summaryQty > 0 &&
+    (amendClosed || (!checkLoading && !!checkSession && liveProgress.missingLabels.length === 0));
+
   return (
     <form
       className={`form-card entry-form module-entry-form ot-entry-form${detailsOpen ? " is-ot-close" : ""}`}
@@ -680,6 +754,9 @@ function OtEntryForm({
       </div>
 
       {formError ? <p className="error-text ot-form-error">{formError}</p> : null}
+      {!formError && saveBlockedReason ? (
+        <p className="error-text ot-form-error">{saveBlockedReason}</p>
+      ) : null}
 
       {detailsOpen ? <ShiftProgressSteps progress={liveProgress} compact /> : null}
       {ownerHints.length ? <ShiftOwnerFlags hints={ownerHints} /> : null}
@@ -768,7 +845,7 @@ function OtEntryForm({
           </>
         ) : null}
 
-        {!locked && detailsOpen ? (
+        {!locked && detailsOpen && !amendClosed ? (
           <>
             {checkLoading ? (
               <p className="muted form-hint-inline">กำลังตรวจสอบ SmartCheck...</p>
@@ -906,7 +983,7 @@ function OtEntryForm({
         ) : null}
 
         {detailsOpen || imageUrls.length > 0 ? (
-          <PhotoAttachMultiField
+            <PhotoAttachMultiField
             values={imageUrls}
             onChange={setImageUrls}
             onError={reportError}
@@ -920,7 +997,9 @@ function OtEntryForm({
                 ? imageUrls.length
                   ? `${imageUrls.length} รูป · กดรูปเพื่อดู`
                   : "ยังไม่มีรูป"
-                : `ถ่ายหรือแนบได้หลายรูป · สูงสุด ${OT_IMAGE_MAX} รูป · กดรูปเพื่อดู`
+                : amendClosed
+                  ? `แก้รูปได้ · สูงสุด ${OT_IMAGE_MAX} รูป · กด «บันทึกการแก้ไข» เพื่อเซฟ`
+                  : `ถ่ายหรือแนบได้หลายรูป · สูงสุด ${OT_IMAGE_MAX} รูป · ต้องกดบันทึกหลังติ๊กเช็คครบ`
             }
             readOnly={locked}
             onPreview={(urls, index) => setFormPreview({ urls, index })}
@@ -976,20 +1055,16 @@ function OtEntryForm({
                 <button
                   type="button"
                   className="primary-btn"
-                  disabled={
-                    busy ||
-                    !workers.length ||
-                    checkLoading ||
-                    !checkSession ||
-                    liveProgress.missingLabels.length > 0
-                  }
+                  disabled={!canSaveClose}
                   onClick={() => void onSaveClose()}
                 >
                   {busy
                     ? "กำลังบันทึก..."
-                    : liveProgress.missingLabels.length
-                      ? `บันทึก (เหลือ ${liveProgress.missingLabels.length})`
-                      : "บันทึกปิดกะ"}
+                    : amendClosed
+                      ? "บันทึกการแก้ไข"
+                      : liveProgress.missingLabels.length
+                        ? `บันทึก (เหลือ ${liveProgress.missingLabels.length})`
+                        : "บันทึกปิดกะ"}
                 </button>
                 {plannedEntry || !entry ? (
                   <button
