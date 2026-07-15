@@ -30,11 +30,15 @@ import {
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
+import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
 import { TypePicker } from "@/components/TypePicker";
 import { frequentTypes, guessTypeFromDescription, labelLedgerType } from "@/lib/ledger-labels";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
 import { saveImageToDevice } from "@/lib/receipts";
-import { uploadEvidencePhotos } from "@/lib/photo-upload";
+import {
+  type PhotoUploadProgress,
+  uploadEvidencePhotos,
+} from "@/lib/photo-upload";
 import type { LedgerEntry } from "@/lib/types";
 import { filterLedgerRows } from "@/lib/smart-search";
 import {
@@ -68,6 +72,7 @@ function LedgerView() {
   const [editing, setEditing] = useState<LedgerEntry | null>(null);
   const [adding, setAdding] = useState(false);
   const [photoUploadRowId, setPhotoUploadRowId] = useState<string | null>(null);
+  const [rowUploadProgress, setRowUploadProgress] = useState<PhotoUploadProgress | null>(null);
   const [imagePreview, setImagePreview] = useState<{ urls: string[]; title: string } | null>(null);
   const [query, setQuery] = useState("");
   const [searchPool, setSearchPool] = useState<LedgerEntry[] | null>(null);
@@ -76,12 +81,15 @@ function LedgerView() {
   const photoEntryRef = useRef<LedgerEntry | null>(null);
   const photoCameraRef = useRef<HTMLInputElement>(null);
   const photoGalleryRef = useRef<HTMLInputElement>(null);
+  const rowUploadCancelRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const balanceRef = useRef<number | null>(null);
   const hasRowsRef = useRef(false);
   const deferredQuery = useDeferredValue(query.trim());
 
-  useBodyScrollLock(!!adding || !!editing || !!photoUploadRowId || !!imagePreview);
+  useBodyScrollLock(
+    !!adding || !!editing || !!photoUploadRowId || !!imagePreview || !!rowUploadProgress,
+  );
 
   useLayoutEffect(() => {
     const cached = loadCachedLedger();
@@ -205,27 +213,45 @@ function LedgerView() {
     setLiveLimit((n) => Math.min(n + LEDGER_PAGE_SIZE, LEDGER_LIVE_MAX));
   }, [hasMore, loadingMore, liveLimit, deferredQuery]);
 
-  async function handleRowPhotoFile(file: File | null) {
-    if (!file || !photoEntryRef.current) return;
+  async function handleRowPhotoFiles(fileList: FileList | File[] | null) {
+    const files = fileList ? [...fileList].filter(Boolean) : [];
+    if (!files.length || !photoEntryRef.current) return;
     const row = photoEntryRef.current;
-    try {
-      const existing = getLedgerReceiptUrls(row);
-      if (existing.length >= LEDGER_RECEIPT_MAX) {
-        setError(`แนบได้สูงสุด ${LEDGER_RECEIPT_MAX} รูป — เปิดแก้ไขเพื่อลบรูปเก่า`);
-        return;
-      }
-      const [url] = await uploadEvidencePhotos([file], {
-        folder: "ledger-receipts",
-        slotKey: `row-${row.id}`,
-      });
-      if (!url) throw new Error("อัปโหลดรูปไม่สำเร็จ");
-      await updateLedgerEntry(row.id, { receiptUrls: [...existing, url] });
-      saveImageToDevice(file).catch(() => {});
-    } catch (err) {
-      setError((err as Error).message || "ใช้รูปไม่สำเร็จ");
-    } finally {
+    const existing = getLedgerReceiptUrls(row);
+    const room = LEDGER_RECEIPT_MAX - existing.length;
+    if (room <= 0) {
+      setError(`แนบได้สูงสุด ${LEDGER_RECEIPT_MAX} รูป — เปิดแก้ไขเพื่อลบรูปเก่า`);
       setPhotoUploadRowId(null);
       photoEntryRef.current = null;
+      return;
+    }
+    const batch = files.slice(0, room);
+    if (files.length > room) {
+      setError(`แนบได้สูงสุด ${LEDGER_RECEIPT_MAX} รูป — รับเฉพาะ ${room} รูปแรก`);
+    } else {
+      setError(null);
+    }
+    setPhotoUploadRowId(null);
+    rowUploadCancelRef.current = false;
+    try {
+      const urls = await uploadEvidencePhotos(batch, {
+        folder: "ledger-receipts",
+        slotKey: `row-${row.id}`,
+        cancelRef: rowUploadCancelRef,
+        onProgress: setRowUploadProgress,
+      });
+      if (!urls.length) throw new Error("อัปโหลดรูปไม่สำเร็จ");
+      await updateLedgerEntry(row.id, { receiptUrls: [...existing, ...urls] });
+      await Promise.allSettled(batch.map((f) => saveImageToDevice(f)));
+    } catch (err) {
+      if (!rowUploadCancelRef.current) {
+        setError((err as Error).message || "ใช้รูปไม่สำเร็จ");
+      }
+    } finally {
+      setRowUploadProgress(null);
+      photoEntryRef.current = null;
+      if (photoCameraRef.current) photoCameraRef.current.value = "";
+      if (photoGalleryRef.current) photoGalleryRef.current.value = "";
     }
   }
 
@@ -422,7 +448,9 @@ function LedgerView() {
         accept="image/*"
         capture="environment"
         className="sr-only"
-        onChange={(e) => void handleRowPhotoFile(e.target.files?.[0] || null)}
+        onChange={(e) => {
+          void handleRowPhotoFiles(e.target.files);
+        }}
       />
       <input
         ref={photoGalleryRef}
@@ -431,11 +459,7 @@ function LedgerView() {
         multiple
         className="sr-only"
         onChange={(e) => {
-          const files = e.target.files;
-          if (!files?.length) return;
-          // แนบทีละรูปจากรายการ — รูปแรกทันที (เพิ่มต่อจากแก้ไข)
-          void handleRowPhotoFile(files[0] || null);
-          e.target.value = "";
+          void handleRowPhotoFiles(e.target.files);
         }}
       />
 
@@ -447,6 +471,15 @@ function LedgerView() {
         />
       ) : null}
 
+      {rowUploadProgress ? (
+        <PhotoUploadProgressModal
+          progress={rowUploadProgress}
+          onCancel={() => {
+            rowUploadCancelRef.current = true;
+          }}
+        />
+      ) : null}
+
       {photoUploadRowId ? (
         <div
           className="modal-backdrop photo-backdrop"
@@ -454,10 +487,10 @@ function LedgerView() {
         >
           <div className="photo-action-card" onClick={(e) => e.stopPropagation()}>
             <p style={{ margin: "0 0 0.75rem", fontWeight: 700, fontSize: "0.95rem" }}>
-              เพิ่มรูป
+              เพิ่มรูปหลักฐาน
             </p>
             <p className="muted" style={{ margin: "0 0 0.75rem", fontSize: "0.82rem", textAlign: "left" }}>
-              อยากแนบหลายรูป — เปิดรายการแล้วใช้ «ถ่ายรูป / แนบรูป» ในหน้าแก้ไข
+              ถ่ายหรือแนบได้หลายรูป · สูงสุด {LEDGER_RECEIPT_MAX} รูปต่อรายการ
             </p>
             <div className="receipt-actions">
               <button

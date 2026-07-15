@@ -20,7 +20,6 @@ const profile = read("src/app/profile/page.tsx");
 const personal = read("src/components/PersonalProfileModal.tsx");
 const staffInfo = read("src/components/StaffPersonalInfoModal.tsx");
 const multi = read("src/components/PhotoAttachMultiField.tsx");
-const single = read("src/components/PhotoAttachField.tsx");
 const evidence = read("src/lib/evidence-photos.ts");
 const photoUpload = read("src/lib/photo-upload.ts");
 const checklistLib = read("src/lib/checklist.ts");
@@ -31,8 +30,6 @@ const profileLib = read("src/lib/profile.ts");
 const readiness = read("src/lib/staff-readiness.ts");
 
 assert.match(multi, /uploadEvidencePhotos/);
-assert.match(single, /uploadEvidencePhotos/);
-assert.match(single, /storageFolder/);
 assert.match(evidence, /EVIDENCE_PHOTO_PREFIX\s*=\s*"evp:"/);
 assert.match(photoUpload, /saveEvidencePhotoDoc/);
 
@@ -40,6 +37,8 @@ assert.match(ownerBooks, /PhotoAttachMultiField/);
 assert.match(ownerBooks, /storageFolder="owner-books"/);
 assert.match(ledger, /storageFolder="ledger-receipts"/);
 assert.match(ledger, /uploadEvidencePhotos/);
+assert.match(ledger, /handleRowPhotoFiles/);
+assert.doesNotMatch(ledger, /อยากแนบหลายรูป — เปิดรายการ/);
 assert.match(transferIn, /PhotoAttachMultiField/);
 assert.match(transferIn, /storageFolder="ledger-receipts"/);
 assert.match(ot, /PhotoAttachMultiField/);

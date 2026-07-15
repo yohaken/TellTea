@@ -1,5 +1,5 @@
 /**
- * Browser UX: PhotoAttachField evidence mode progress leaves 0% and yields evp: ref.
+ * Browser UX: evidence upload progress leaves 0% and yields evp: ref.
  */
 import assert from "node:assert/strict";
 import { writeFileSync, mkdirSync } from "node:fs";

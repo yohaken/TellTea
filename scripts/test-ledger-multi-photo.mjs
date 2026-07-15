@@ -18,7 +18,11 @@ assert.match(pageSrc, /PhotoAttachMultiField/);
 assert.match(pageSrc, /LEDGER_RECEIPT_MAX/);
 assert.match(pageSrc, /storageFolder="ledger-receipts"/);
 assert.match(pageSrc, /uploadEvidencePhotos/);
+assert.match(pageSrc, /handleRowPhotoFiles/);
+assert.match(pageSrc, /PhotoUploadProgressModal/);
 assert.match(pageSrc, /EntryPhotoIndicator/);
+assert.doesNotMatch(pageSrc, /อยากแนบหลายรูป — เปิดรายการ/);
+assert.doesNotMatch(pageSrc, /handleRowPhotoFile\(/);
 assert.match(multiSrc, /allowCamera/);
 assert.match(multiSrc, /capture="environment"/);
 
