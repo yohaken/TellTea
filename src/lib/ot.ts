@@ -170,8 +170,39 @@ export function getOtImageUrls(entry?: Pick<OtEntry, "imageUrl" | "imageUrls"> |
   return [];
 }
 
-/** Max product photos per OT shift entry */
-export const OT_IMAGE_MAX = 8;
+/**
+ * Max product photos per OT shift entry.
+ * Kept low because photos are stored as data URLs inside the Firestore doc (1 MiB limit),
+ * and legacy `imageUrl` duplicates the first image.
+ */
+export const OT_IMAGE_MAX = 3;
+
+/**
+ * Safe budget for `imageUrl` + `imageUrls` string payload (chars),
+ * leaving headroom for quantities / SOP ids / workers in the same doc.
+ */
+export const OT_IMAGE_PAYLOAD_BUDGET = 720_000;
+
+/** Chars written for photos (accounts for legacy imageUrl duplicating the first URL). */
+export function otImagePayloadChars(urls: string[]): number {
+  const cleaned = urls.map((u) => u.trim()).filter(Boolean);
+  if (!cleaned.length) return 0;
+  return cleaned.reduce((n, u) => n + u.length, 0) + cleaned[0]!.length;
+}
+
+export function assertOtImageUrlsFit(urls: string[]): string[] {
+  const capped = urls
+    .map((u) => u.trim())
+    .filter(Boolean)
+    .slice(0, OT_IMAGE_MAX);
+  const chars = otImagePayloadChars(capped);
+  if (chars > OT_IMAGE_PAYLOAD_BUDGET) {
+    throw new Error(
+      `รูปใหญ่รวมกันเกินไป (${capped.length} รูป) — ลบบางรูปหรือถ่ายใกล้ขึ้นแล้วลองใหม่`,
+    );
+  }
+  return capped;
+}
 
 function mapOtEntryDoc(id: string, data: Record<string, unknown>): OtEntry {
   const imageUrls = Array.isArray(data.imageUrls)
@@ -326,14 +357,10 @@ export function subscribeOtEntries(
 export async function addOtEntry(input: OtEntryInput): Promise<string> {
   if (!input.shift) throw new Error("เลือกรอบงาน");
   const now = Date.now();
-  const imageUrls = (input.imageUrls || [])
-    .map((u) => u.trim())
-    .filter(Boolean)
-    .slice(0, OT_IMAGE_MAX);
+  const imageUrls = (input.imageUrls || []).map((u) => u.trim()).filter(Boolean);
   const legacyUrl = (input.imageUrl || "").trim();
-  const urls = (imageUrls.length ? imageUrls : legacyUrl ? [legacyUrl] : []).slice(
-    0,
-    OT_IMAGE_MAX,
+  const urls = assertOtImageUrlsFit(
+    imageUrls.length ? imageUrls : legacyUrl ? [legacyUrl] : [],
   );
   const ref = await addDoc(entriesCol(), {
     date: input.date,
@@ -423,16 +450,13 @@ export async function updateOtEntry(
   if (patch.addReason != null) next.addReason = patch.addReason.trim();
   if (patch.bonusRate != null) next.bonusRate = Number(patch.bonusRate) || DEFAULT_OT_BONUS_RATE;
   if (patch.imageUrls != null) {
-    const urls = patch.imageUrls
-      .map((u) => u.trim())
-      .filter(Boolean)
-      .slice(0, OT_IMAGE_MAX);
+    const urls = assertOtImageUrlsFit(patch.imageUrls);
     next.imageUrls = urls;
     next.imageUrl = urls[0] || "";
   } else if (patch.imageUrl != null) {
-    const url = patch.imageUrl.trim();
-    next.imageUrl = url;
-    next.imageUrls = url ? [url] : [];
+    const urls = assertOtImageUrlsFit(patch.imageUrl.trim() ? [patch.imageUrl.trim()] : []);
+    next.imageUrl = urls[0] || "";
+    next.imageUrls = urls;
   }
   if (patch.status != null) next.status = patch.status;
   if (patch.checkIdOpen != null) next.checkIdOpen = patch.checkIdOpen;

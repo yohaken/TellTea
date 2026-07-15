@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Camera, Plus, X } from "lucide-react";
-import { compressImageForUpload, fileToReceiptDataUrl } from "@/lib/receipts";
+import { fileToReceiptDataUrl } from "@/lib/receipts";
 
 export function PhotoAttachMultiField({
   values,
@@ -10,6 +10,11 @@ export function PhotoAttachMultiField({
   onError,
   label = "แนบรูป",
   max = 8,
+  /** Soft per-image target; lower when packing several into one Firestore doc */
+  perImageMaxChars,
+  /** Total chars of final URL list that must not be exceeded (caller-defined budget) */
+  maxTotalChars,
+  measureTotalChars,
   hint,
   allowCamera = true,
   readOnly = false,
@@ -20,6 +25,9 @@ export function PhotoAttachMultiField({
   onError?: (msg: string) => void;
   label?: string;
   max?: number;
+  perImageMaxChars?: number;
+  maxTotalChars?: number;
+  measureTotalChars?: (urls: string[]) => number;
   /** คำอธิบายสั้นใต้ป้าย — ค่าว่างใช้ข้อความมาตรฐาน */
   hint?: string;
   allowCamera?: boolean;
@@ -29,6 +37,12 @@ export function PhotoAttachMultiField({
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+
+  function totalChars(urls: string[]) {
+    return measureTotalChars
+      ? measureTotalChars(urls)
+      : urls.reduce((n, u) => n + (u?.length || 0), 0);
+  }
 
   async function onFiles(fileList: FileList | null | undefined) {
     if (readOnly) return;
@@ -41,13 +55,31 @@ export function PhotoAttachMultiField({
     }
     const batch = files.slice(0, room);
     setBusy(true);
+    const added: string[] = [];
+    let lastErr = "";
     try {
-      const added: string[] = [];
       for (const file of batch) {
-        const compressed = await compressImageForUpload(file);
-        added.push(await fileToReceiptDataUrl(compressed));
+        try {
+          const dataUrl = await fileToReceiptDataUrl(file, perImageMaxChars);
+          const next = [...values, ...added, dataUrl];
+          if (maxTotalChars != null && totalChars(next) > maxTotalChars) {
+            lastErr =
+              added.length || values.length
+                ? `แนบได้เท่านี้แล้ว — รูปถัดไปจะทำให้เอกสารใหญ่เกินลิมิต (ตอนนี้ ${values.length + added.length} รูป)`
+                : "รูปนี้ใหญ่เกินไปสำหรับบันทึก — ลองถ่ายใกล้ขึ้นหรือเลือกรูปอื่น";
+            break;
+          }
+          added.push(dataUrl);
+        } catch (err) {
+          lastErr = (err as Error).message || "อัปโหลดรูปไม่สำเร็จ";
+          // Keep photos that already succeeded in this batch.
+          if (!added.length && !values.length) throw err;
+          break;
+        }
       }
-      onChange([...values, ...added]);
+      if (added.length) onChange([...values, ...added]);
+      if (lastErr) onError?.(lastErr);
+      else if (!added.length) onError?.("อัปโหลดรูปไม่สำเร็จ");
     } catch (err) {
       onError?.((err as Error).message || "อัปโหลดรูปไม่สำเร็จ");
     } finally {

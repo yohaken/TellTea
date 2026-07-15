@@ -21,7 +21,9 @@ import { can } from "@/lib/permissions";
 import {
   OT_SHIFTS,
   OT_IMAGE_MAX,
+  OT_IMAGE_PAYLOAD_BUDGET,
   addOtEntry,
+  assertOtImageUrlsFit,
   bulkUpdateOtEntryStatus,
   computeOtBonus,
   deleteOtEntry,
@@ -32,12 +34,14 @@ import {
   isOtEntryPlanned,
   labelOtShift,
   labelOtStatus,
+  otImagePayloadChars,
   subscribeOtEntries,
   updateOtEntry,
   type OtEntry,
   type OtShiftId,
   type OtStatus,
 } from "@/lib/ot";
+import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
   buildOtGrid,
   findOtEntryForSlot,
@@ -399,6 +403,7 @@ function OtEntryForm({
   const [addReason, setAddReason] = useState(entry?.addReason || "");
   const [imageUrls, setImageUrls] = useState<string[]>(() => getOtImageUrls(entry));
   const [formPreview, setFormPreview] = useState<{ urls: string[]; index: number } | null>(null);
+  const [formError, setFormError] = useState("");
   const [detailsOpen, setDetailsOpen] = useState(() => {
     if (!entry) return false;
     if (isOtEntryLocked(entry)) return true;
@@ -518,6 +523,11 @@ function OtEntryForm({
     });
   }
 
+  function reportError(msg: string) {
+    setFormError(msg);
+    onError(msg);
+  }
+
   function buildPayload(chosen: Employee[]) {
     return {
       date: parseDateInput(date),
@@ -534,8 +544,14 @@ function OtEntryForm({
       addQty: Number(addQty) || 0,
       addReason,
       bonusRate: rate,
-      imageUrls,
+      imageUrls: assertOtImageUrlsFit(imageUrls),
     };
+  }
+
+  /** Empty dock-add form must not silently overwrite an existing shift row. */
+  function existingSlotConflict(): OtEntry | null {
+    if (entry) return null;
+    return findOtEntryForSlot(allEntries, parseDateInput(date), shift);
   }
 
   async function persist(payload: ReturnType<typeof buildPayload>) {
@@ -545,20 +561,29 @@ function OtEntryForm({
     }
     const existing = findOtEntryForSlot(allEntries, payload.date, payload.shift);
     if (existing) {
-      await updateOtEntry(existing.id, payload);
-    } else {
-      await addOtEntry({ ...payload, createdBy });
+      throw new Error("กะนี้มีรายการแล้ว — แตะช่องในตารางเพื่อแก้ไข อย่าสร้างทับ");
     }
+    await addOtEntry({ ...payload, createdBy });
   }
 
   async function onSavePlan() {
     if (locked || !createdBy) return;
     const chosen = workers.filter((w) => selectedWorkers.includes(w.id));
     if (!chosen.length) {
-      onError("เลือกพนักงานอย่างน้อย 1 คน");
+      reportError("เลือกพนักงานอย่างน้อย 1 คน");
+      return;
+    }
+    const conflict = existingSlotConflict();
+    if (conflict) {
+      reportError(
+        isOtEntryLocked(conflict)
+          ? "กะนี้จ่ายแล้ว — เปิดจากตารางเพื่อดู"
+          : "กะนี้มีรายการแล้ว — แตะช่องในตารางเพื่อแก้ไข อย่าสร้างทับ",
+      );
       return;
     }
     setBusy(true);
+    setFormError("");
     onError("");
     try {
       const base = buildPayload(chosen);
@@ -581,7 +606,7 @@ function OtEntryForm({
       await persist(payload);
       onSaved();
     } catch (err) {
-      onError((err as Error).message || "บันทึกแผนไม่สำเร็จ");
+      reportError(friendlyFirestoreWriteError(err, "บันทึกแผนไม่สำเร็จ"));
     } finally {
       setBusy(false);
     }
@@ -591,28 +616,39 @@ function OtEntryForm({
     if (locked || !createdBy) return;
     const chosen = workers.filter((w) => selectedWorkers.includes(w.id));
     if (!chosen.length) {
-      onError("เลือกพนักงานอย่างน้อย 1 คน");
+      reportError("เลือกพนักงานอย่างน้อย 1 คน");
       return;
     }
     if (!checkSession) {
-      onError("ยังไม่เช็ค SmartCheck กะนี้ — ไปหน้าเช็คก่อนปิดกะ");
+      reportError("ยังไม่เช็ค SmartCheck กะนี้ — ไปหน้าเช็คก่อนปิดกะ");
       return;
     }
     if (preview.summaryQty === 0) {
-      onError("ยังไม่ใส่ยอด — กรอกเครื่องหรือรายการอื่นก่อนปิดกะ");
+      reportError("ยังไม่ใส่ยอด — กรอกเครื่องหรือรายการอื่นก่อนปิดกะ");
       return;
     }
     if (liveProgress.missingLabels.length > 0) {
-      onError(`ยังไม่ครบ — เหลือ: ${liveProgress.missingLabels.join(" · ")}`);
+      reportError(`ยังไม่ครบ — เหลือ: ${liveProgress.missingLabels.join(" · ")}`);
+      return;
+    }
+    const conflict = existingSlotConflict();
+    if (conflict) {
+      reportError(
+        isOtEntryLocked(conflict)
+          ? "กะนี้จ่ายแล้ว — เปิดจากตารางเพื่อดู"
+          : "กะนี้มีรายการแล้ว — แตะช่องในตารางเพื่อแก้ไข อย่าสร้างทับ",
+      );
       return;
     }
     const inspector = chosen[0]!;
     const hadPlannedBefore = !!(entry && isOtEntryPlanned(entry));
     setBusy(true);
+    setFormError("");
     onError("");
     try {
+      assertOtImageUrlsFit(imageUrls);
       await saveShiftClose({
-        entry: slotEntry,
+        entry,
         allEntries,
         payload: { ...buildPayload(chosen), createdBy },
         openingDrafts,
@@ -625,7 +661,7 @@ function OtEntryForm({
       });
       onSaved();
     } catch (err) {
-      onError((err as Error).message || "บันทึกปิดกะไม่สำเร็จ");
+      reportError(friendlyFirestoreWriteError(err, "บันทึกปิดกะไม่สำเร็จ"));
     } finally {
       setBusy(false);
     }
@@ -642,6 +678,8 @@ function OtEntryForm({
           <X size={18} />
         </button>
       </div>
+
+      {formError ? <p className="error-text ot-form-error">{formError}</p> : null}
 
       {detailsOpen ? <ShiftProgressSteps progress={liveProgress} compact /> : null}
       {ownerHints.length ? <ShiftOwnerFlags hints={ownerHints} /> : null}
@@ -717,7 +755,7 @@ function OtEntryForm({
               drafts={openingDrafts}
               disabled={locked}
               onChange={setOpeningDrafts}
-              onError={onError}
+              onError={reportError}
             />
             <ShiftSopSection
               title="เช็คปิดกะ"
@@ -725,7 +763,7 @@ function OtEntryForm({
               drafts={closingDrafts}
               disabled={locked}
               onChange={setClosingDrafts}
-              onError={onError}
+              onError={reportError}
             />
           </>
         ) : null}
@@ -871,9 +909,12 @@ function OtEntryForm({
           <PhotoAttachMultiField
             values={imageUrls}
             onChange={setImageUrls}
-            onError={onError}
+            onError={reportError}
             label="รูปสินค้า (แนบได้หลายรูป)"
             max={OT_IMAGE_MAX}
+            perImageMaxChars={Math.floor(OT_IMAGE_PAYLOAD_BUDGET / (OT_IMAGE_MAX + 1))}
+            maxTotalChars={OT_IMAGE_PAYLOAD_BUDGET}
+            measureTotalChars={otImagePayloadChars}
             hint={
               locked
                 ? imageUrls.length

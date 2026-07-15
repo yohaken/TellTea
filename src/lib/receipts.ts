@@ -68,25 +68,51 @@ export async function compressImageForUpload(
   });
 }
 
+/** Soft per-image target when packing multiple data URLs into one Firestore doc. */
+export const RECEIPT_DATA_URL_SOFT_MAX = 700_000;
+/** Absolute per-image ceiling (still under Firestore 1 MiB when alone). */
+export const RECEIPT_DATA_URL_HARD_MAX = 900_000;
+
 /**
  * เก็บสลิปเป็น data URL ใน Firestore (ไม่พึ่ง Firebase Storage ที่ยังไม่ได้เปิดในโปรเจค)
  * จำกัดขนาดเพื่อไม่เกินลิมิตเอกสาร
+ * @param maxChars soft target length for this image (kept under hard max)
  */
-export async function fileToReceiptDataUrl(file: File): Promise<string> {
+export async function fileToReceiptDataUrl(
+  file: File,
+  maxChars: number = RECEIPT_DATA_URL_SOFT_MAX,
+): Promise<string> {
+  const soft = Math.min(Math.max(80_000, maxChars), RECEIPT_DATA_URL_HARD_MAX);
   let current = await compressImageForUpload(file, 1280, 0.72);
   let dataUrl = await readAsDataUrl(current);
   let quality = 0.65;
   let edge = 1100;
-  while (dataUrl.length > 700_000 && quality > 0.35) {
+  while (dataUrl.length > soft && quality > 0.28) {
     current = await compressImageForUpload(file, edge, quality);
     dataUrl = await readAsDataUrl(current);
-    quality -= 0.1;
-    edge -= 150;
+    quality -= 0.08;
+    edge = Math.max(480, edge - 120);
   }
-  if (dataUrl.length > 900_000) {
+  if (dataUrl.length > RECEIPT_DATA_URL_HARD_MAX) {
     throw new Error("รูปใหญ่เกินไป — ลองถ่ายใหม่ให้ชัดและใกล้ขึ้น");
   }
   return dataUrl;
+}
+
+/** อ่านข้อความ error จาก Firestore/เซิร์ฟเวอร์ให้เป็นภาษาไทยที่ใช้ได้จริง */
+export function friendlyFirestoreWriteError(err: unknown, fallback: string): string {
+  const raw =
+    err && typeof err === "object" && "message" in err
+      ? String((err as { message?: unknown }).message || "")
+      : String(err || "");
+  if (
+    /exceeds|too (large|big)|maximum size|1\s*MiB|1048576|INVALID_ARGUMENT|longer than|ResourceExhausted|payload/i.test(
+      raw,
+    )
+  ) {
+    return "บันทึกไม่สำเร็จ — รูปใหญ่เกินไปหรือแนบหลายรูปเกินลิมิต ลองลบเหลือ 1–2 รูปแล้วบันทึกใหม่";
+  }
+  return raw.trim() || fallback;
 }
 
 function readAsDataUrl(file: Blob): Promise<string> {
