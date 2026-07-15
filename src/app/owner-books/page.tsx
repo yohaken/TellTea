@@ -12,6 +12,8 @@ import {
 import { useRouter } from "next/navigation";
 import { Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
+import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { TypePicker } from "@/components/TypePicker";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -20,19 +22,18 @@ import {
   addOwnerBookEntry,
   deleteOwnerBookEntry,
   frequentOwnerDescriptions,
+  getOwnerBookReceiptUrls,
   listOwnerBookEntries,
   OWNER_BOOKS_LIVE_MAX,
   OWNER_BOOKS_PAGE_SIZE,
+  OWNER_BOOKS_RECEIPT_MAX,
   subscribeOwnerBooksPage,
   subscribeOwnerBooksTotalOut,
   updateOwnerBookEntry,
   type OwnerBookEntry,
 } from "@/lib/owner-books";
-import {
-  compressImageForUpload,
-  fileToReceiptDataUrl,
-  saveImageToDevice,
-} from "@/lib/receipts";
+import { uploadAppPhoto } from "@/lib/photo-upload";
+import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
   formatBaht,
   formatDateShort,
@@ -68,6 +69,9 @@ function OwnerBooksView() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [editing, setEditing] = useState<OwnerBookEntry | null>(null);
   const [adding, setAdding] = useState(false);
+  const [imagePreview, setImagePreview] = useState<{ urls: string[]; title: string } | null>(
+    null,
+  );
   const [query, setQuery] = useState("");
   const [searchPool, setSearchPool] = useState<OwnerBookEntry[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -76,7 +80,7 @@ function OwnerBooksView() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const deferredQuery = useDeferredValue(query.trim());
 
-  useBodyScrollLock(adding || !!editing);
+  useBodyScrollLock(adding || !!editing || !!imagePreview);
 
   useEffect(() => {
     if (staff && !can(staff, "ownerBooks")) {
@@ -337,14 +341,37 @@ function OwnerBooksView() {
                     </td>
                     <td className="col-date">{formatDateShort(row.date)}</td>
                     <td className="col-desc">
-                      <button
-                        type="button"
-                        className="desc-link"
-                        title="แตะเพื่อแก้ไข"
-                        onClick={() => setEditing(row)}
-                      >
-                        {row.description}
-                      </button>
+                      <div className="desc-with-photo">
+                        <button
+                          type="button"
+                          className="desc-link"
+                          title="แตะเพื่อแก้ไข"
+                          onClick={() => setEditing(row)}
+                        >
+                          {row.description}
+                        </button>
+                        {getOwnerBookReceiptUrls(row).length ? (
+                          <EntryPhotoIndicator
+                            imageUrls={getOwnerBookReceiptUrls(row)}
+                            label={row.description}
+                            onView={(urls) =>
+                              setImagePreview({ urls, title: row.description })
+                            }
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            className="photo-status"
+                            onClick={() => setEditing(row)}
+                            title="เพิ่มรูป"
+                            aria-label="เพิ่มรูป"
+                          >
+                            <span className="photo-status-plus" aria-hidden>
+                              +
+                            </span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="col-out">
                       {row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}
@@ -398,6 +425,14 @@ function OwnerBooksView() {
           onError={setError}
         />
       ) : null}
+
+      {imagePreview ? (
+        <ImagePreviewModal
+          urls={imagePreview.urls}
+          title={imagePreview.title}
+          onClose={() => setImagePreview(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -422,14 +457,12 @@ function OwnerEntryModal({
   const [amount, setAmount] = useState(entry ? String(entry.amountOut) : "");
   const [typeMode, setTypeMode] = useState(() => (entry?.type || "").trim() || "auto");
   const [note, setNote] = useState(entry?.note || "");
+  const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getOwnerBookReceiptUrls(entry));
+  const [formPreview, setFormPreview] = useState<{ urls: string[]; index: number } | null>(null);
+  const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
-  const galleryRef = useRef<HTMLInputElement>(null);
 
   const autoType = useMemo(() => guessTypeFromDescription(description), [description]);
   const resolvedType = typeMode === "auto" ? autoType : typeMode;
@@ -452,39 +485,18 @@ function OwnerEntryModal({
       });
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
-    };
-  }, [receiptPreview]);
-
-  async function handleReceiptFile(file: File | null) {
-    if (!file) return;
-    setNotice(null);
-    try {
-      const how = await saveImageToDevice(file);
-      setNotice(
-        how === "shared"
-          ? "เปิดเมนูแชร์แล้ว — เลือกบันทึกรูปลงเครื่องได้"
-          : "บันทึกรูปลงเครื่องแล้ว",
-      );
-      const compressed = await compressImageForUpload(file);
-      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
-      setReceiptFile(compressed);
-      setReceiptPreview(URL.createObjectURL(compressed));
-    } catch (err) {
-      onError((err as Error).message || "ใช้รูปไม่สำเร็จ");
-    }
+  function reportError(msg: string) {
+    setFormError(msg);
+    onError(msg);
   }
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
+    setFormError("");
+    onError("");
     try {
-      let receiptUrl = entry?.receiptUrl || "";
-      if (receiptFile) {
-        receiptUrl = await fileToReceiptDataUrl(receiptFile);
-      }
+      const urls = receiptUrls.filter(Boolean).slice(0, OWNER_BOOKS_RECEIPT_MAX);
       if (mode === "add") {
         await addOwnerBookEntry({
           date: parseDateInput(date),
@@ -492,7 +504,7 @@ function OwnerEntryModal({
           amountOut: Number(amount),
           type: resolvedType,
           createdBy,
-          receiptUrl,
+          receiptUrls: urls,
           note,
         });
       } else if (entry) {
@@ -501,13 +513,13 @@ function OwnerEntryModal({
           description,
           amountOut: Number(amount),
           type: resolvedType,
-          receiptUrl,
+          receiptUrls: urls,
           note,
         });
       }
       onSaved();
     } catch (err) {
-      onError((err as Error).message || "บันทึกไม่สำเร็จ");
+      reportError(friendlyFirestoreWriteError(err, "บันทึกไม่สำเร็จ"));
     } finally {
       setBusy(false);
     }
@@ -521,7 +533,7 @@ function OwnerEntryModal({
       await deleteOwnerBookEntry(entry.id);
       onSaved();
     } catch (err) {
-      onError((err as Error).message || "ลบไม่สำเร็จ");
+      reportError(friendlyFirestoreWriteError(err, "ลบไม่สำเร็จ"));
     } finally {
       setBusy(false);
     }
@@ -547,7 +559,7 @@ function OwnerEntryModal({
             <X size={18} />
           </button>
         </div>
-        {notice ? <p className="muted" style={{ margin: "0 0 0.55rem" }}>{notice}</p> : null}
+        {formError ? <p className="error-text ot-form-error">{formError}</p> : null}
         <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
           <div className="field">
             <label htmlFor="ob-date">วันที่</label>
@@ -613,47 +625,18 @@ function OwnerEntryModal({
             />
           </div>
 
-          <div className="field">
-            <span className="field-label">สลิป / รูปถ่าย</span>
-            <div className="receipt-actions">
-              <button
-                type="button"
-                className="primary-btn"
-                onClick={() => cameraRef.current?.click()}
-              >
-                ถ่ายรูป
-              </button>
-              <button
-                type="button"
-                className="ghost-btn"
-                onClick={() => galleryRef.current?.click()}
-              >
-                แนบรูป
-              </button>
-            </div>
-            <input
-              ref={cameraRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="sr-only"
-              onChange={(e) => void handleReceiptFile(e.target.files?.[0] || null)}
-            />
-            <input
-              ref={galleryRef}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(e) => void handleReceiptFile(e.target.files?.[0] || null)}
-            />
-            {receiptPreview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={receiptPreview} alt="ตัวอย่างสลิป" className="receipt-preview" />
-            ) : entry?.receiptUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={entry.receiptUrl} alt="สลิปเดิม" className="receipt-preview" />
-            ) : null}
-          </div>
+          <PhotoAttachMultiField
+            values={receiptUrls}
+            onChange={setReceiptUrls}
+            onError={reportError}
+            label="สลิป / รูปถ่าย"
+            max={OWNER_BOOKS_RECEIPT_MAX}
+            uploadFile={(file) =>
+              uploadAppPhoto(file, "owner-books", `${mode}-${entry?.id || createdBy || "new"}`)
+            }
+            hint={`ถ่ายหรือแนบได้หลายรูป (สูงสุด ${OWNER_BOOKS_RECEIPT_MAX} รูป) · กดรูปเพื่อดู`}
+            onPreview={(urls, index) => setFormPreview({ urls, index })}
+          />
 
           <div className="entry-actions">
             <button type="submit" className="primary-btn" disabled={busy}>
@@ -678,6 +661,14 @@ function OwnerEntryModal({
             )}
           </div>
         </form>
+        {formPreview ? (
+          <ImagePreviewModal
+            urls={formPreview.urls}
+            initialIndex={formPreview.index}
+            title="สลิป / รูปถ่าย"
+            onClose={() => setFormPreview(null)}
+          />
+        ) : null}
       </div>
     </div>
   );

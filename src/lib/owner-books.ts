@@ -23,6 +23,8 @@ import type { ImportOwnerBookRow } from "./xlsx-import";
 
 export const OWNER_BOOKS_PAGE_SIZE = 60;
 export const OWNER_BOOKS_LIVE_MAX = 480;
+/** Max slip photos per owner-books row */
+export const OWNER_BOOKS_RECEIPT_MAX = 6;
 
 /** Owner books row — out-only + optional note. */
 export type OwnerBookEntry = LedgerEntry & {
@@ -36,6 +38,7 @@ export type OwnerBookEntryInput = {
   type: string;
   createdBy: string;
   receiptUrl?: string;
+  receiptUrls?: string[];
   note?: string;
 };
 
@@ -44,9 +47,39 @@ export type OwnerBooksPage = {
   hasMore: boolean;
 };
 
+/** Normalize receiptUrls with legacy receiptUrl fallback. */
+export function getOwnerBookReceiptUrls(
+  entry?: Pick<OwnerBookEntry, "receiptUrl" | "receiptUrls"> | null,
+): string[] {
+  if (!entry) return [];
+  if (Array.isArray(entry.receiptUrls) && entry.receiptUrls.length) {
+    const urls = entry.receiptUrls.map(String).filter((u) => u.trim());
+    if (urls.length) return urls.slice(0, OWNER_BOOKS_RECEIPT_MAX);
+  }
+  const legacy = (entry.receiptUrl || "").trim();
+  return legacy ? [legacy] : [];
+}
+
+function normalizeReceiptFields(input: {
+  receiptUrl?: string;
+  receiptUrls?: string[];
+}): { receiptUrl: string; receiptUrls: string[] } {
+  const fromList = (input.receiptUrls || []).map((u) => u.trim()).filter(Boolean);
+  const legacy = (input.receiptUrl || "").trim();
+  const urls = (fromList.length ? fromList : legacy ? [legacy] : []).slice(
+    0,
+    OWNER_BOOKS_RECEIPT_MAX,
+  );
+  return { receiptUrl: urls[0] || "", receiptUrls: urls };
+}
+
 function mapEntry(d: QueryDocumentSnapshot): OwnerBookEntry {
   const data = d.data() as Omit<OwnerBookEntry, "id">;
   const createdAt = Number(data.createdAt) || 0;
+  const { receiptUrl, receiptUrls } = normalizeReceiptFields({
+    receiptUrl: data.receiptUrl,
+    receiptUrls: data.receiptUrls,
+  });
   return {
     id: d.id,
     ...data,
@@ -55,6 +88,8 @@ function mapEntry(d: QueryDocumentSnapshot): OwnerBookEntry {
     createdAt,
     updatedAt: Number(data.updatedAt) || createdAt,
     note: typeof data.note === "string" ? data.note : "",
+    receiptUrl,
+    receiptUrls,
   };
 }
 
@@ -158,6 +193,10 @@ async function applyOwnerOutDelta(deltaOut: number): Promise<void> {
 
 export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<string> {
   const now = Date.now();
+  const { receiptUrl, receiptUrls } = normalizeReceiptFields({
+    receiptUrl: input.receiptUrl,
+    receiptUrls: input.receiptUrls,
+  });
   const payload = {
     date: input.date,
     description: input.description.trim(),
@@ -167,7 +206,8 @@ export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<str
     createdBy: input.createdBy,
     createdAt: now,
     updatedAt: now,
-    receiptUrl: input.receiptUrl || "",
+    receiptUrl,
+    receiptUrls,
     note: (input.note || "").trim(),
   };
   validateOwnerPayload(payload);
@@ -179,7 +219,10 @@ export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<str
 export async function updateOwnerBookEntry(
   id: string,
   patch: Partial<
-    Pick<OwnerBookEntry, "date" | "description" | "amountOut" | "type" | "receiptUrl" | "note">
+    Pick<
+      OwnerBookEntry,
+      "date" | "description" | "amountOut" | "type" | "receiptUrl" | "receiptUrls" | "note"
+    >
   >,
 ): Promise<void> {
   const entryRef = doc(getDb(), "ownerBooks", id);
@@ -188,12 +231,19 @@ export async function updateOwnerBookEntry(
   const prev = prevSnap.data() as OwnerBookEntry;
   const prevOut = Number(prev.amountOut) || 0;
 
-  const next: Record<string, string | number> = { updatedAt: Date.now() };
+  const next: Record<string, string | number | string[]> = { updatedAt: Date.now() };
   if (patch.date != null) next.date = patch.date;
   if (patch.description != null) next.description = patch.description.trim();
   if (patch.amountOut != null) next.amountOut = Number(patch.amountOut);
   if (patch.type != null) next.type = patch.type.trim();
-  if (patch.receiptUrl != null) next.receiptUrl = patch.receiptUrl;
+  if (patch.receiptUrls != null || patch.receiptUrl != null) {
+    const { receiptUrl, receiptUrls } = normalizeReceiptFields({
+      receiptUrl: patch.receiptUrl,
+      receiptUrls: patch.receiptUrls,
+    });
+    next.receiptUrl = receiptUrl;
+    next.receiptUrls = receiptUrls;
+  }
   if (patch.note != null) next.note = patch.note.trim();
 
   const nextOut = patch.amountOut != null ? Number(patch.amountOut) : prevOut;
@@ -228,6 +278,7 @@ export async function importOwnerBookEntries(
         createdAt: row.createdAt,
         updatedAt: row.createdAt,
         receiptUrl: "",
+        receiptUrls: [],
         note: row.note || "",
       });
     }
