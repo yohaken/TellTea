@@ -131,7 +131,7 @@ exports.finalizeEvidenceUpload = functions
  */
 exports.uploadEvidencePhoto = functions
   .region("asia-southeast1")
-  .runWith({ memory: "1024MB", timeoutSeconds: 120 })
+  .runWith({ memory: "1GB", timeoutSeconds: 120 })
   .https.onCall(async (data, context) => {
     assertSignedIn(context);
 
@@ -190,9 +190,22 @@ exports.uploadEvidencePhoto = functions
       },
     });
 
-    const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(
-      objectPath,
-    )}?alt=media&token=${token}`;
+    // Prefer long-lived signed read URL — works even before Firebase Storage
+    // "Get Started" is clicked (GCS bucket alone is enough for Admin uploads).
+    let downloadUrl = "";
+    try {
+      const [signed] = await file.getSignedUrl({
+        version: "v4",
+        action: "read",
+        expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
+      });
+      downloadUrl = signed;
+    } catch (signErr) {
+      console.warn("signed read URL failed, using firebase media token URL", signErr?.message || signErr);
+      downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(
+        objectPath,
+      )}?alt=media&token=${token}`;
+    }
 
     return { downloadUrl, path: objectPath, token, size: buffer.length };
   });
