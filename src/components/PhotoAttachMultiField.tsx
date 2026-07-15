@@ -9,7 +9,7 @@ import {
   friendlyStorageUploadError,
 } from "@/lib/photo-upload";
 import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
-import type { UploadTask } from "firebase/storage";
+import { resolveEvidencePhotoSrc } from "@/lib/evidence-photos";
 
 export function PhotoAttachMultiField({
   values,
@@ -55,9 +55,10 @@ export function PhotoAttachMultiField({
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const cancelRef = useRef(false);
-  const activeTaskRef = useRef<UploadTask | null>(null);
+  const activeTaskRef = useRef<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<PhotoUploadProgress | null>(null);
+  const [thumbSrc, setThumbSrc] = useState<Record<string, string>>({});
   const [online, setOnline] = useState(
     typeof navigator === "undefined" ? true : navigator.onLine,
   );
@@ -78,6 +79,26 @@ export function PhotoAttachMultiField({
       window.removeEventListener("offline", onOffline);
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const next: Record<string, string> = { ...thumbSrc };
+      for (const url of values) {
+        if (next[url]) continue;
+        try {
+          next[url] = await resolveEvidencePhotoSrc(url);
+        } catch {
+          next[url] = "";
+        }
+      }
+      if (!cancelled) setThumbSrc(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resolve only when values identity changes
+  }, [values.join("|")]);
 
   function totalChars(urls: string[]) {
     return measureTotalChars
@@ -108,7 +129,8 @@ export function PhotoAttachMultiField({
   function requestCancel() {
     cancelRef.current = true;
     try {
-      activeTaskRef.current?.cancel();
+      const task = activeTaskRef.current as { cancel?: () => void } | null;
+      task?.cancel?.();
     } catch {
       /* ignore */
     }
@@ -255,7 +277,7 @@ export function PhotoAttachMultiField({
                 aria-label={`ดูรูปที่ ${idx + 1}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt="" className="photo-attach-preview" />
+                <img src={thumbSrc[url] || ""} alt="" className="photo-attach-preview" />
               </button>
               {!readOnly ? (
                 <button

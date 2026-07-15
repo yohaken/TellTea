@@ -2,13 +2,6 @@
 
 import type { PhotoUploadProgress } from "@/lib/photo-upload";
 
-function formatBytes(n: number) {
-  if (!n || n < 0) return "—";
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 export function PhotoUploadProgressModal({
   progress,
   onCancel,
@@ -36,7 +29,7 @@ export function PhotoUploadProgressModal({
         <h2 className="panel-title">อัปโหลดรูปหลักฐาน</h2>
         <p className="photo-upload-conn" data-online={progress.online ? "1" : "0"}>
           การเชื่อมต่อ:{" "}
-          <strong>{progress.online ? "ออนไลน์ — เชื่อมคลังรูปแล้ว" : "ออฟไลน์ — รอเครือข่าย"}</strong>
+          <strong>{progress.online ? "ออนไลน์ — เชื่อมฐานข้อมูลแล้ว" : "ออฟไลน์ — รอเครือข่าย"}</strong>
         </p>
         <p className="muted photo-upload-msg">{progress.message}</p>
         {progress.fileCount > 0 ? (
@@ -53,12 +46,12 @@ export function PhotoUploadProgressModal({
         </div>
         <p className="photo-upload-pct">
           รวม {progress.overallPercent}%
-          {progress.phase === "uploading"
-            ? ` · ไฟล์นี้ ${progress.percent}% (${formatBytes(progress.bytesTransferred)} / ${formatBytes(progress.totalBytes)})`
+          {progress.phase === "uploading" || progress.phase === "preparing"
+            ? ` · ไฟล์นี้ ${progress.percent}%`
             : null}
         </p>
         <p className="muted form-hint-inline">
-          กรุณารอจนครบ — ระบบอัปโหลดไฟล์จริงไปคลังรูป (ไม่ย่อคุณภาพเพื่อหลักฐานภาษี)
+          กรุณารอจนครบ — บันทึกทีละรูปเข้าฐานข้อมูล (ไม่ค้างที่คลัง Storage)
         </p>
         {canCancel && onCancel ? (
           <div className="entry-actions" style={{ marginTop: "0.75rem" }}>

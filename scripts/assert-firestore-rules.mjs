@@ -31,6 +31,7 @@ const REQUIRED_MATCHES = [
   "staffPhones",
   "ledger",
   "ownerBooks",
+  "evidencePhotos",
   "monthlyIncome",
   "stock",
   "employees",

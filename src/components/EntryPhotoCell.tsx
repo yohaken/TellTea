@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, ImageIcon, ImageOff } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
+import { resolveEvidencePhotoSrc, resolveEvidencePhotoSrcList } from "@/lib/evidence-photos";
 
 function resolvePhotoUrls(imageUrl?: string, imageUrls?: string[]) {
   if (Array.isArray(imageUrls) && imageUrls.length) {
@@ -84,8 +85,31 @@ export function ImagePreviewModal({
   const list = urls?.length ? urls : url ? [url] : [];
   const start = Math.min(Math.max(0, initialIndex), Math.max(0, list.length - 1));
   const [idx, setIdx] = useState(start);
-  const current = list[idx] || "";
+  const [resolved, setResolved] = useState<string[]>(list);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const current = resolved[idx] || "";
   useBodyScrollLock(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    void resolveEvidencePhotoSrcList(list)
+      .then((srcs) => {
+        if (cancelled) return;
+        setResolved(srcs);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError((err as Error).message || "โหลดรูปไม่สำเร็จ");
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [list.join("|")]);
 
   function prev() {
     setIdx((i) => (i <= 0 ? list.length - 1 : i - 1));
@@ -110,8 +134,12 @@ export function ImagePreviewModal({
             {list.length > 1 ? ` (${idx + 1}/${list.length})` : ""}
           </p>
         ) : null}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={current} alt="" className="photo-preview-full" />
+        {loading ? <p className="muted">กำลังโหลดรูป…</p> : null}
+        {error ? <p className="error-text">{error}</p> : null}
+        {!loading && !error && current ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={current} alt="" className="photo-preview-full" />
+        ) : null}
         {list.length > 1 ? (
           <div className="photo-preview-nav">
             <button type="button" className="ghost-btn" onClick={prev} aria-label="รูปก่อนหน้า">

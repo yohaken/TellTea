@@ -498,7 +498,7 @@ function OwnerEntryModal({
       const urls = receiptUrls.filter(Boolean).slice(0, OWNER_BOOKS_RECEIPT_MAX);
       if (urls.some((u) => u.startsWith("data:"))) {
         throw new Error(
-          "รูปยังไม่อยู่ในคลัง — ลบแล้วแนบใหม่เพื่ออัปโหลดไปฐานข้อมูล (หลักฐานภาษี)",
+          "รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่เพื่อบันทึกเข้าคลังหลักฐาน",
         );
       }
       if (mode === "add") {
@@ -638,7 +638,7 @@ function OwnerEntryModal({
             max={OWNER_BOOKS_RECEIPT_MAX}
             storageFolder="owner-books"
             storageSlotKey={`${mode}-${entry?.id || createdBy || "new"}`}
-            hint={`อัปโหลดไฟล์จริงไปคลังรูป (คงคุณภาพหลักฐานภาษี) · สูงสุด ${OWNER_BOOKS_RECEIPT_MAX} รูป`}
+            hint={`บันทึกไฟล์หลักฐานเข้าฐานข้อมูล (ทีละรูป คุณภาพสูง) · สูงสุด ${OWNER_BOOKS_RECEIPT_MAX} รูป`}
           />
           {receiptUrls.length ? (
             <button

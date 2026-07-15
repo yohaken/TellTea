@@ -375,6 +375,23 @@ service cloud.firestore {
       allow read, write: if hasPerm('ownerBooks');
     }
 
+    /** One tax-evidence photo per doc — keeps ownerBooks/ledger rows small. */
+    match /evidencePhotos/{photoId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll([
+          'dataUrl', 'contentType', 'fileName', 'folder', 'slotKey', 'createdBy', 'createdAt'
+        ])
+        && request.resource.data.dataUrl is string
+        && request.resource.data.dataUrl.size() < 950000
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt is number
+        && request.resource.data.folder is string
+        && request.resource.data.slotKey is string;
+      allow update: if false;
+      allow delete: if isOwner() || resource.data.createdBy == request.auth.uid;
+    }
+
     match /monthlyIncome/{monthId} {
       allow read, write: if hasPerm('pnl');
     }

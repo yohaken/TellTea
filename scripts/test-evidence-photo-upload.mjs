@@ -1,5 +1,5 @@
 /**
- * Unit checks for evidence photo prep (keep quality / no needless downscale).
+ * Evidence photo path uses Firestore docs + progress, not hanging Storage CF.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -8,15 +8,13 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const src = readFileSync(join(root, "src/lib/photo-upload.ts"), "utf8");
+const evidence = readFileSync(join(root, "src/lib/evidence-photos.ts"), "utf8");
 
-assert.match(src, /export async function prepareEvidencePhoto/);
-assert.match(src, /export async function uploadEvidencePhotos/);
-assert.match(src, /uploadBytesResumable/);
-assert.match(src, /EVIDENCE_JPEG_QUALITY\s*=\s*0\.92/);
-assert.match(src, /EVIDENCE_MAX_EDGE\s*=\s*4096/);
+assert.match(src, /saveEvidencePhotoDoc/);
 assert.match(src, /keepAsIs/);
-assert.match(src, /keep tax-evidence detail|คงคุณภาพ|Keeps original bytes/);
-assert.match(src, /No data-URL fallback/);
-assert.match(src, /uploadViaCloudFunctionBytes/);
+assert.match(src, /No Storage hang|one Firestore doc per photo|evp:/);
+assert.match(evidence, /export async function saveEvidencePhotoDoc/);
+assert.match(evidence, /export async function resolveEvidencePhotoSrc/);
+assert.doesNotMatch(src, /uploadViaCloudFunctionBytes/);
 
 console.log("OK test-evidence-photo-upload");
