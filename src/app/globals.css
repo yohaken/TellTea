@@ -3876,6 +3876,93 @@ body.modal-open .main-panel {
   margin-top: 0.45rem;
 }
 
+.photo-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.photo-preview-title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.92rem;
+  text-align: left;
+  flex: 1;
+}
+
+.photo-preview-stage {
+  position: relative;
+  min-height: min(52dvh, 22rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.photo-preview-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  background: rgba(247, 243, 232, 0.82);
+  border-radius: 0.65rem;
+}
+
+.photo-preview-spinner {
+  color: var(--accent, #2f6b4f);
+  animation: photo-preview-spin 0.85s linear infinite;
+}
+
+@keyframes photo-preview-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.photo-preview-error {
+  margin: 0.5rem 0;
+  text-align: center;
+}
+
+.photo-preview-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.photo-preview-actions .primary-btn,
+.photo-preview-actions .ghost-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.photo-preview-save-msg {
+  margin: 0.35rem 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.photo-preview-swipe-hint {
+  font-size: 0.75rem;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .photo-preview-swipe-hint {
+    display: none;
+  }
+}
+
 .photo-status-plus {
   display: inline-flex;
   align-items: center;
@@ -4014,6 +4101,7 @@ body.modal-open .main-panel {
   object-fit: contain;
   border-radius: 0.65rem;
   background: rgba(28, 42, 31, 0.06);
+  transition: opacity 0.15s ease;
 }
 
 .modal-backdrop.photo-backdrop.is-image-fullview {

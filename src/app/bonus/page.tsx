@@ -151,7 +151,7 @@ function BonusView() {
         />
         <span className="bonus-toolbar-meta muted">
           {report
-            ? `${thaiMonthYearLabel(report.year, report.month)} · ${report.employeeCount} คน`
+            ? `${thaiMonthYearLabel(report.year, report.month)} · หารขาย ${report.employeeCount} คน`
             : "…"}
         </span>
       </div>
@@ -241,7 +241,8 @@ function BonusView() {
 
       {report ? (
         <p className="muted bonus-footnote">
-          ขาย = pool รวม ÷ จำนวนคน · ผลิต/ชง จากยอดจริง · เจ้าของกรอกจำนวนหักทั้งร้านสิ้นเดือน · เรท% ถาวร
+          ขาย = pool รวม ÷ คนที่ลงทะเบียนทำงานในเดือน (ผลิตหรือชง) — มีชื่ออย่างเดียวไม่หาร · ผลิต/ชง
+          จากยอดจริง · เจ้าของกรอกจำนวนหักทั้งร้านสิ้นเดือน · เรท% ถาวร
         </p>
       ) : null}
 

@@ -9,6 +9,7 @@ import {
   friendlyStorageUploadError,
 } from "@/lib/photo-upload";
 import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
+import { ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { resolveEvidencePhotoSrc } from "@/lib/evidence-photos";
 
 export function PhotoAttachMultiField({
@@ -59,11 +60,22 @@ export function PhotoAttachMultiField({
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<PhotoUploadProgress | null>(null);
   const [thumbSrc, setThumbSrc] = useState<Record<string, string>>({});
+  const [localPreview, setLocalPreview] = useState<{ urls: string[]; index: number } | null>(
+    null,
+  );
   const [online, setOnline] = useState(
     typeof navigator === "undefined" ? true : navigator.onLine,
   );
 
   const evidenceMode = Boolean(storageFolder?.trim());
+
+  function openPreview(urls: string[], index: number) {
+    if (onPreview) {
+      onPreview(urls, index);
+      return;
+    }
+    setLocalPreview({ urls, index });
+  }
 
   useEffect(() => {
     function onOnline() {
@@ -273,7 +285,7 @@ export function PhotoAttachMultiField({
               <button
                 type="button"
                 className="photo-attach-preview-btn"
-                onClick={() => onPreview?.(values, idx)}
+                onClick={() => openPreview(values, idx)}
                 aria-label={`ดูรูปที่ ${idx + 1}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -315,6 +327,14 @@ export function PhotoAttachMultiField({
       ) : null}
       {progress ? (
         <PhotoUploadProgressModal progress={progress} onCancel={requestCancel} />
+      ) : null}
+      {localPreview ? (
+        <ImagePreviewModal
+          urls={localPreview.urls}
+          initialIndex={localPreview.index}
+          title={label}
+          onClose={() => setLocalPreview(null)}
+        />
       ) : null}
     </div>
   );

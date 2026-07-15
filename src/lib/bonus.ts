@@ -7,7 +7,10 @@ import { computeProdBonus, prodEntryCountsTowardBonus, type ProdEntry } from "./
 export type WorkerMonthBonus = {
   workerId: string;
   workerName: string;
-  /** ส่วนแบ่ง pool ขายเบเกอรี่ (เท่ากันทุกคน) */
+  /**
+   * ส่วนแบ่ง pool ขายเบเกอรี่ —
+   * หารเฉพาะคนที่ลงทะเบียนทำงานในเดือนนั้น (ผลิตหรือชง) ไม่ใช่แค่มีชื่อในรายชื่อ
+   */
   salesShare: number;
   /** โบนัสผลิตเบเกอรี่ */
   prodBonus: number;
@@ -17,11 +20,14 @@ export type WorkerMonthBonus = {
   deductPct: number;
   deductAmount: number;
   remaining: number;
+  /** true เมื่อเคยลงทะเบียนงานผลิต/ชงในเดือนนี้ → ได้หารโบนัสขาย */
+  workedThisMonth: boolean;
 };
 
 export type MonthBonusReport = {
   year: number;
   month: number;
+  /** จำนวนคนที่หารโบนัสขาย (เคยทำงานในเดือน) */
   employeeCount: number;
   totalSalesPool: number;
   shopDeductPct: number;
@@ -91,19 +97,21 @@ export function computeMonthBonus(
     prodMonth.reduce((sum, row) => sum + computeProdBonus(row).salesBonus, 0),
   );
 
-  const employeeCount = Math.max(1, active.length);
-  const salesShareEach = round2(totalSalesPool / employeeCount);
-
   const deductionLines = buildBonusDeductionLines(monthCounts, deductionRules);
   const shopDeductPct = computeShopDeductPct(monthCounts, deductionRules);
 
   const byName = new Map<
     string,
-    { workerId: string; otMain: number; prodBonus: number }
+    { workerId: string; otMain: number; prodBonus: number; workedThisMonth: boolean }
   >();
 
   for (const emp of active) {
-    byName.set(emp.name, { workerId: emp.id, otMain: 0, prodBonus: 0 });
+    byName.set(emp.name, {
+      workerId: emp.id,
+      otMain: 0,
+      prodBonus: 0,
+      workedThisMonth: false,
+    });
   }
 
   function ensureWorker(name: string) {
@@ -113,6 +121,7 @@ export function computeMonthBonus(
         workerId: active.find((e) => namesMatch(e.name, canonical))?.id || canonical,
         otMain: 0,
         prodBonus: 0,
+        workedThisMonth: false,
       });
     }
     return canonical;
@@ -124,6 +133,7 @@ export function computeMonthBonus(
       const name = ensureWorker(rawName);
       const slot = byName.get(name)!;
       slot.otMain = round2(slot.otMain + c.bonusPerPerson);
+      slot.workedThisMonth = true;
     }
   }
 
@@ -133,24 +143,32 @@ export function computeMonthBonus(
       const name = ensureWorker(rawName);
       const slot = byName.get(name)!;
       slot.prodBonus = round2(slot.prodBonus + c.bonusPerPerson);
+      slot.workedThisMonth = true;
     }
   }
 
+  const salesSharePeople = [...byName.values()].filter((s) => s.workedThisMonth).length;
+  const employeeCount = salesSharePeople;
+  const salesShareEach =
+    salesSharePeople > 0 ? round2(totalSalesPool / salesSharePeople) : 0;
+
   const rows: WorkerMonthBonus[] = [...byName.entries()]
     .map(([workerName, slot]) => {
-      const total = round2(salesShareEach + slot.prodBonus + slot.otMain);
+      const salesShare = slot.workedThisMonth ? salesShareEach : 0;
+      const total = round2(salesShare + slot.prodBonus + slot.otMain);
       const deductAmount = round2(total * (shopDeductPct / 100));
       const remaining = round2(Math.max(0, total - deductAmount));
       return {
         workerId: slot.workerId,
         workerName,
-        salesShare: salesShareEach,
+        salesShare,
         prodBonus: slot.prodBonus,
         otMain: slot.otMain,
         total,
         deductPct: shopDeductPct,
         deductAmount,
         remaining,
+        workedThisMonth: slot.workedThisMonth,
       };
     })
     .sort((a, b) => b.remaining - a.remaining || a.workerName.localeCompare(b.workerName, "th"));
