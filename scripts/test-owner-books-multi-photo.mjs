@@ -31,7 +31,7 @@ assert.match(progressSrc, /อัปโหลดรูปหลักฐาน/)
 assert.match(progressSrc, /การเชื่อมต่อ/);
 assert.match(photoUploadSrc, /uploadEvidencePhotos/);
 assert.match(photoUploadSrc, /prepareEvidencePhoto/);
-assert.match(photoUploadSrc, /uploadBytesResumable/);
+assert.match(photoUploadSrc, /uploadViaCloudFunctionBytes/);
 assert.match(photoUploadSrc, /EVIDENCE_MAX_BYTES\s*=\s*10\s*\*\s*1024\s*\*\s*1024/);
 assert.match(storageRules, /12\s*\*\s*1024\s*\*\s*1024/);
 assert.match(storageRules, /owner-books/);

@@ -4,8 +4,13 @@ const { getFirestore } = require("firebase-admin/firestore");
 const webpush = require("web-push");
 const { runSyncWithAdmin } = require("./task-weekly-sync");
 const { completePosSaleAdmin, isPosCaller } = require("./pos-complete-sale");
+const evidenceUpload = require("./evidence-upload");
 
 initializeApp();
+
+exports.createEvidenceUpload = evidenceUpload.createEvidenceUpload;
+exports.finalizeEvidenceUpload = evidenceUpload.finalizeEvidenceUpload;
+exports.uploadEvidencePhoto = evidenceUpload.uploadEvidencePhoto;
 
 const VAPID_PUBLIC =
   process.env.VAPID_PUBLIC_KEY ||

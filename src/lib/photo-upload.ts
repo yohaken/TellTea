@@ -4,7 +4,13 @@ import {
   getDownloadURL,
   type UploadTask,
 } from "firebase/storage";
-import { getFirebaseAuth, getFirebaseStorage, isFirebaseStorageConfigured } from "./firebase";
+import { httpsCallable } from "firebase/functions";
+import {
+  getFirebaseAuth,
+  getFirebaseFunctions,
+  getFirebaseStorage,
+  isFirebaseStorageConfigured,
+} from "./firebase";
 import { compressImageForUpload, fileToReceiptDataUrl } from "./receipts";
 
 function safeSegment(raw: string) {
@@ -15,7 +21,7 @@ function safeSegment(raw: string) {
   );
 }
 
-/** Soft ceiling for evidence files (must stay under Storage rules). */
+/** Soft ceiling for evidence files (must stay under Storage rules / CF). */
 export const EVIDENCE_MAX_BYTES = 10 * 1024 * 1024;
 /** Only shrink if over size — keep tax-evidence detail. */
 export const EVIDENCE_MAX_EDGE = 4096;
@@ -36,9 +42,7 @@ export type PhotoUploadProgress = {
   fileName: string;
   bytesTransferred: number;
   totalBytes: number;
-  /** 0–100 for current file */
   percent: number;
-  /** Overall batch percent */
   overallPercent: number;
   online: boolean;
   message: string;
@@ -50,6 +54,22 @@ export type UploadEvidenceOptions = {
   onProgress?: (p: PhotoUploadProgress) => void;
   cancelRef?: { current: boolean };
   getCancelTask?: (task: UploadTask | null) => void;
+};
+
+type CreateEvidenceUploadResult = {
+  uploadUrl: string;
+  path: string;
+  token: string;
+  contentType: string;
+  bucket: string;
+  expiresInSec: number;
+};
+
+type FinalizeEvidenceUploadResult = {
+  downloadUrl: string;
+  path: string;
+  token: string;
+  size: number;
 };
 
 function onlineNow() {
@@ -67,9 +87,8 @@ function emit(
 }
 
 /**
- * Prepare a tax-evidence photo for Storage.
+ * Prepare a tax-evidence photo for upload.
  * Keeps original bytes when already a reasonable image under the size cap.
- * Does NOT downscale unless the file exceeds Storage limits.
  */
 export async function prepareEvidencePhoto(file: File): Promise<File> {
   if (!file.type.startsWith("image/") && file.type !== "") {
@@ -86,7 +105,6 @@ export async function prepareEvidencePhoto(file: File): Promise<File> {
 
   if (keepAsIs) return file;
 
-  // HEIC / unknown / oversized — re-encode at high quality; shrink only if still over cap.
   let edge = EVIDENCE_MAX_EDGE;
   let quality = EVIDENCE_JPEG_QUALITY;
   let out = await compressImageForUpload(file, edge, quality);
@@ -104,6 +122,129 @@ export async function prepareEvidencePhoto(file: File): Promise<File> {
     );
   }
   return out;
+}
+
+function putWithProgress(
+  uploadUrl: string,
+  body: Blob,
+  contentType: string,
+  onBytes: (transferred: number, total: number) => void,
+  cancelRef?: { current: boolean },
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", uploadUrl, true);
+    xhr.setRequestHeader("Content-Type", contentType);
+    xhr.upload.onprogress = (ev) => {
+      if (cancelRef?.current) {
+        xhr.abort();
+        return;
+      }
+      if (ev.lengthComputable) onBytes(ev.loaded, ev.total);
+      else onBytes(ev.loaded, body.size || 1);
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`อัปโหลดคลังรูปไม่สำเร็จ (HTTP ${xhr.status})`));
+    };
+    xhr.onerror = () => reject(new Error("เครือข่ายหลุดขณะอัปโหลดคลังรูป"));
+    xhr.onabort = () => reject(new Error("ยกเลิกการอัปโหลดแล้ว"));
+    xhr.send(body);
+  });
+}
+
+/** Preferred path: Cloud Function signed URL → GCS PUT → finalize download token. */
+async function uploadViaSignedUrl(
+  prepared: File,
+  folder: string,
+  slotKey: string,
+  fileName: string,
+  onBytes: (transferred: number, total: number) => void,
+  cancelRef?: { current: boolean },
+): Promise<string> {
+  const functions = getFirebaseFunctions();
+  const create = httpsCallable<
+    { folder: string; slotKey: string; contentType: string; fileName: string },
+    CreateEvidenceUploadResult
+  >(functions, "createEvidenceUpload");
+  const finalize = httpsCallable<
+    { path: string; token: string },
+    FinalizeEvidenceUploadResult
+  >(functions, "finalizeEvidenceUpload");
+
+  const contentType = prepared.type || "image/jpeg";
+  const created = await create({
+    folder,
+    slotKey,
+    contentType,
+    fileName,
+  });
+  const payload = created.data;
+  if (!payload?.uploadUrl || !payload.path || !payload.token) {
+    throw new Error("เซิร์ฟเวอร์ไม่ได้ส่งลิงก์อัปโหลด");
+  }
+
+  await putWithProgress(
+    payload.uploadUrl,
+    prepared,
+    payload.contentType || contentType,
+    onBytes,
+    cancelRef,
+  );
+
+  const done = await finalize({ path: payload.path, token: payload.token });
+  if (!done.data?.downloadUrl) {
+    throw new Error("เซิร์ฟเวอร์ไม่ได้ส่งลิงก์ดูรูป");
+  }
+  return done.data.downloadUrl;
+}
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+/** Reliable Admin path: send bytes through Cloud Function (no client Storage rules). */
+async function uploadViaCloudFunctionBytes(
+  prepared: File,
+  folder: string,
+  slotKey: string,
+  fileName: string,
+  onBytes: (transferred: number, total: number) => void,
+): Promise<string> {
+  const functions = getFirebaseFunctions();
+  const upload = httpsCallable<
+    {
+      folder: string;
+      slotKey: string;
+      contentType: string;
+      fileName: string;
+      base64: string;
+    },
+    { downloadUrl: string; path: string; token: string; size: number }
+  >(functions, "uploadEvidencePhoto");
+
+  onBytes(0, prepared.size || 1);
+  const base64 = await blobToBase64(prepared);
+  onBytes(Math.round((prepared.size || 1) * 0.35), prepared.size || 1);
+  const result = await upload({
+    folder,
+    slotKey,
+    contentType: prepared.type || "image/jpeg",
+    fileName,
+    base64,
+  });
+  onBytes(prepared.size || 1, prepared.size || 1);
+  if (!result.data?.downloadUrl) {
+    throw new Error("เซิร์ฟเวอร์ไม่ได้ส่งลิงก์ดูรูป");
+  }
+  return result.data.downloadUrl;
 }
 
 function uploadOneResumable(
@@ -147,17 +288,14 @@ function uploadOneResumable(
 }
 
 /**
- * Canonical evidence upload — real Firebase Storage, short https URLs for Firestore.
- * Use for tax slips / multi-photo modules. No data-URL fallback.
+ * Canonical evidence upload — real files to Storage via Cloud Function (preferred)
+ * or client SDK. Short https URLs for Firestore. No data-URL fallback.
  */
 export async function uploadEvidencePhotos(
   files: File[],
   options: UploadEvidenceOptions,
 ): Promise<string[]> {
   if (!files.length) return [];
-  if (!isFirebaseStorageConfigured()) {
-    throw new Error("คลังรูป (Firebase Storage) ยังไม่ได้ตั้งค่า — ติดต่อเจ้าของระบบ");
-  }
   const auth = getFirebaseAuth();
   if (!auth.currentUser) {
     throw new Error("ยังไม่ได้เข้าสู่ระบบ — เข้าสู่ระบบก่อนแนบรูป");
@@ -188,7 +326,7 @@ export async function uploadEvidencePhotos(
       percent: 0,
       overallPercent: Math.round((i / total) * 100),
       message: onlineNow()
-        ? "กำลังตรวจสอบการเชื่อมต่อคลังรูป…"
+        ? "กำลังเชื่อมต่อเซิร์ฟเวอร์อัปโหลด…"
         : "ออฟไลน์ — รอเครือข่าย",
     });
 
@@ -209,10 +347,22 @@ export async function uploadEvidencePhotos(
     });
 
     const prepared = await prepareEvidencePhoto(file);
-    const ext =
-      prepared.type === "image/png" ? "png" : prepared.type === "image/webp" ? "webp" : "jpg";
-    const name = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}_${safeSegment(fileName).slice(0, 24)}.${ext}`;
-    const path = `${folderSeg}/${slotSeg}/${name}`;
+
+    const onBytes = (transferred: number, totalBytes: number) => {
+      const pct = Math.min(100, Math.round((transferred / Math.max(1, totalBytes)) * 100));
+      const overall = Math.round(((i + transferred / Math.max(1, totalBytes)) / total) * 100);
+      emit(options.onProgress, {
+        phase: "uploading",
+        fileIndex: i,
+        fileCount: total,
+        fileName,
+        bytesTransferred: transferred,
+        totalBytes,
+        percent: pct,
+        overallPercent: overall,
+        message: `กำลังอัปโหลดไปคลังรูป (${i + 1}/${total}) ${pct}%`,
+      });
+    };
 
     emit(options.onProgress, {
       phase: "uploading",
@@ -227,34 +377,50 @@ export async function uploadEvidencePhotos(
     });
 
     try {
-      const url = await uploadOneResumable(
-        prepared,
-        path,
-        {
-          uploadedBy: auth.currentUser.uid,
-          slotKey: slotSeg,
-          folder: folderSeg,
-          originalName: fileName.slice(0, 120),
-          evidence: "1",
-        },
-        (transferred, totalBytes) => {
-          const pct = Math.min(100, Math.round((transferred / Math.max(1, totalBytes)) * 100));
-          const overall = Math.round(((i + transferred / Math.max(1, totalBytes)) / total) * 100);
-          emit(options.onProgress, {
-            phase: "uploading",
-            fileIndex: i,
-            fileCount: total,
+      let url = "";
+      // 1) Direct CF Admin upload — most reliable (bypass client Storage rules)
+      try {
+        url = await uploadViaCloudFunctionBytes(
+          prepared,
+          folderSeg,
+          slotSeg,
+          fileName,
+          onBytes,
+        );
+      } catch (cfDirectErr) {
+        console.warn("CF direct upload failed, trying signed URL:", cfDirectErr);
+        // 2) Signed URL + XHR progress
+        try {
+          url = await uploadViaSignedUrl(
+            prepared,
+            folderSeg,
+            slotSeg,
             fileName,
-            bytesTransferred: transferred,
-            totalBytes,
-            percent: pct,
-            overallPercent: overall,
-            message: `กำลังอัปโหลดไปคลังรูป (${i + 1}/${total}) ${pct}%`,
-          });
-        },
-        options.cancelRef,
-        options.getCancelTask,
-      );
+            onBytes,
+            options.cancelRef,
+          );
+        } catch (signedErr) {
+          console.warn("CF signed URL failed, trying client Storage:", signedErr);
+          if (!isFirebaseStorageConfigured()) throw signedErr;
+          // 3) Client SDK last resort
+          const name = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}.jpg`;
+          const path = `${folderSeg}/${slotSeg}/${name}`;
+          url = await uploadOneResumable(
+            prepared,
+            path,
+            {
+              uploadedBy: auth.currentUser.uid,
+              slotKey: slotSeg,
+              folder: folderSeg,
+              originalName: fileName.slice(0, 120),
+              evidence: "1",
+            },
+            onBytes,
+            options.cancelRef,
+            options.getCancelTask,
+          );
+        }
+      }
 
       emit(options.onProgress, {
         phase: "finalizing",
@@ -310,19 +476,25 @@ export function friendlyStorageUploadError(err: unknown): string {
       ? String((err as { code?: unknown }).code || "")
       : "";
 
-  if (/storage\/unauthorized|permission/i.test(code + raw)) {
+  if (/functions\/not-found|NOT_FOUND/i.test(code + raw)) {
+    return "ยังไม่มีฟังก์ชันอัปโหลดบนเซิร์ฟเวอร์ — รอ Deploy แล้วลองใหม่";
+  }
+  if (/unauthenticated|ยังไม่ได้เข้าสู่ระบบ/i.test(code + raw)) {
+    return "ยังไม่ได้เข้าสู่ระบบ — เข้าสู่ระบบก่อนแนบรูป";
+  }
+  if (/permission-denied|permission/i.test(code + raw)) {
     return "ไม่มีสิทธิ์อัปโหลดคลังรูป — เข้าสู่ระบบใหม่แล้วลองอีกครั้ง";
   }
-  if (/storage\/canceled|cancelled|ยกเลิก/i.test(code + raw)) {
+  if (/storage\/canceled|cancelled|ยกเลิก|abort/i.test(code + raw)) {
     return "ยกเลิกการอัปโหลดแล้ว";
   }
-  if (/storage\/retry-limit|network|offline|Failed to fetch|timeout/i.test(code + raw)) {
+  if (/storage\/retry-limit|network|offline|Failed to fetch|timeout|หลุด/i.test(code + raw)) {
     return "เครือข่ายไม่เสถียรขณะอัปโหลด — รอสักครู่แล้วลองใหม่";
   }
   if (/storage\/quota|exceeded/i.test(code + raw)) {
     return "คลังรูปเต็มโควต้า — ติดต่อเจ้าของระบบ";
   }
-  if (/เข้าสู่ระบบ|คลังรูป|ออฟไลน์|อินเทอร์เน็ต|ใหญ่เกิน/.test(raw)) {
+  if (/เข้าสู่ระบบ|คลังรูป|ออฟไลน์|อินเทอร์เน็ต|ใหญ่เกิน|เซิร์ฟเวอร์|HTTP/.test(raw)) {
     return raw;
   }
   return raw.trim() || "อัปโหลดรูปไปคลังไม่สำเร็จ";
@@ -332,10 +504,7 @@ export function isRemotePhotoUrl(url: string) {
   return /^https?:\/\//i.test(url.trim());
 }
 
-/**
- * Legacy helper (OT etc.): Storage uploadBytesResumable with tight data-URL fallback.
- * Prefer uploadEvidencePhotos for new modules (tax / multi-slip).
- */
+/** Legacy helper (OT): Storage with tight data-URL fallback. */
 export async function uploadAppPhoto(
   file: File,
   folder: string,

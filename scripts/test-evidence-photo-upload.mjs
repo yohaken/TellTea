@@ -15,7 +15,8 @@ assert.match(src, /uploadBytesResumable/);
 assert.match(src, /EVIDENCE_JPEG_QUALITY\s*=\s*0\.92/);
 assert.match(src, /EVIDENCE_MAX_EDGE\s*=\s*4096/);
 assert.match(src, /keepAsIs/);
-assert.match(src, /Does NOT downscale/);
+assert.match(src, /keep tax-evidence detail|คงคุณภาพ|Keeps original bytes/);
 assert.match(src, /No data-URL fallback/);
+assert.match(src, /uploadViaCloudFunctionBytes/);
 
 console.log("OK test-evidence-photo-upload");
