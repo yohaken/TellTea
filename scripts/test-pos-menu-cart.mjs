@@ -83,7 +83,8 @@ const firebaseJson = readFileSync(join(root, "firebase.json"), "utf8");
 assert.match(readFileSync(join(root, "src/components/PosHardLink.tsx"), "utf8"), /location\.assign/);
 assert.match(readFileSync(join(root, "src/components/PosAppShell.tsx"), "utf8"), /PosHardLink/);
 assert.match(readFileSync(join(root, "src/app/pos/sell/page.tsx"), "utf8"), /PosSellView/);
-assert.doesNotMatch(firebaseJson, /"storage"/);
+// Storage rules are allowed (OT photos) — must not be confused with hosting public dirs.
+assert.match(firebaseJson, /"storage"\s*:\s*\{\s*"rules"\s*:\s*"storage\.rules"/);
 
 function reorderById(ids, draggedId, targetId) {
   if (draggedId === targetId) return ids;
