@@ -47,8 +47,10 @@ export type LedgerEntry = {
   createdAt: number;
   /** เวลาแก้ไขล่าสุด (ms) — แถวเก่าอาจไม่มี ใช้ createdAt แทนตอนแสดง */
   updatedAt?: number;
-  /** URL สลิป/รูปใบเสร็จ (ถ้ามี) */
+  /** URL สลิป/รูปใบเสร็จ (รูปแรก — backward compat) */
   receiptUrl?: string;
+  /** สลิปหลายรูป — ถ้าว่างใช้ receiptUrl */
+  receiptUrls?: string[];
 };
 
 export type LedgerEntryInput = {
@@ -59,6 +61,7 @@ export type LedgerEntryInput = {
   type: string;
   createdBy: string;
   receiptUrl?: string;
+  receiptUrls?: string[];
 };
 
 /** Perpetual inventory — วัตถุดิบร้าน (Products) */

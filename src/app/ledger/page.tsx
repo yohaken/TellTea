@@ -16,8 +16,10 @@ import {
   addLedgerEntry,
   deleteLedgerEntry,
   frequentDescriptions,
+  getLedgerReceiptUrls,
   LEDGER_LIVE_MAX,
   LEDGER_PAGE_SIZE,
+  LEDGER_RECEIPT_MAX,
   listLedgerEntries,
   listRecentLedgerEntries,
   recomputeLedgerBalance,
@@ -26,7 +28,8 @@ import {
   updateLedgerEntry,
 } from "@/lib/ledger";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
-import { ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { TypePicker } from "@/components/TypePicker";
 import { frequentTypes, guessTypeFromDescription, labelLedgerType } from "@/lib/ledger-labels";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
@@ -68,7 +71,7 @@ function LedgerView() {
   const [editing, setEditing] = useState<LedgerEntry | null>(null);
   const [adding, setAdding] = useState(false);
   const [photoUploadRowId, setPhotoUploadRowId] = useState<string | null>(null);
-  const [imagePreview, setImagePreview] = useState<{ url: string; title: string } | null>(null);
+  const [imagePreview, setImagePreview] = useState<{ urls: string[]; title: string } | null>(null);
   const [query, setQuery] = useState("");
   const [searchPool, setSearchPool] = useState<LedgerEntry[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -209,9 +212,14 @@ function LedgerView() {
     if (!file || !photoEntryRef.current) return;
     const row = photoEntryRef.current;
     try {
+      const existing = getLedgerReceiptUrls(row);
+      if (existing.length >= LEDGER_RECEIPT_MAX) {
+        setError(`แนบได้สูงสุด ${LEDGER_RECEIPT_MAX} รูป — เปิดแก้ไขเพื่อลบรูปเก่า`);
+        return;
+      }
       const compressed = await compressImageForUpload(file);
-      const receiptUrl = await fileToReceiptDataUrl(compressed);
-      await updateLedgerEntry(row.id, { receiptUrl });
+      const url = await fileToReceiptDataUrl(compressed);
+      await updateLedgerEntry(row.id, { receiptUrls: [...existing, url] });
       saveImageToDevice(file).catch(() => {});
     } catch (err) {
       setError((err as Error).message || "ใช้รูปไม่สำเร็จ");
@@ -338,29 +346,28 @@ function LedgerView() {
                           >
                             {row.description}
                           </button>
-                          <button
-                            type="button"
-                            className={row.receiptUrl ? "photo-status has-photo" : "photo-status"}
-                            onClick={() => {
-                              if (row.receiptUrl) {
-                                setImagePreview({ url: row.receiptUrl, title: row.description });
-                                return;
+                          {getLedgerReceiptUrls(row).length ? (
+                            <EntryPhotoIndicator
+                              imageUrls={getLedgerReceiptUrls(row)}
+                              label={row.description}
+                              onView={(urls) =>
+                                setImagePreview({ urls, title: row.description })
                               }
-                              photoEntryRef.current = row;
-                              setPhotoUploadRowId(row.id);
-                            }}
-                            title={row.receiptUrl ? "มีรูป — แตะดูภาพเต็ม" : "เพิ่มรูป"}
-                            aria-label={row.receiptUrl ? "ดูรูปเต็ม" : "เพิ่มรูป"}
-                          >
-                            {row.receiptUrl ? (
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.1a2 2 0 0 0 1.5-.7l2.3-2.3a2 2 0 0 1 1.4-.6H16a2 2 0 0 1 1.4.6l2.3 2.3a2 2 0 0 0 1.5.7H21a2 2 0 0 1 2 2z"/>
-                                <circle cx="12" cy="13" r="3"/>
-                              </svg>
-                            ) : (
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              className="photo-status"
+                              onClick={() => {
+                                photoEntryRef.current = row;
+                                setPhotoUploadRowId(row.id);
+                              }}
+                              title="เพิ่มรูป"
+                              aria-label="เพิ่มรูป"
+                            >
                               <span className="photo-status-plus" aria-hidden>+</span>
-                            )}
-                          </button>
+                            </button>
+                          )}
                         </div>
                       </td>
                       <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>
@@ -421,13 +428,20 @@ function LedgerView() {
         ref={photoGalleryRef}
         type="file"
         accept="image/*"
+        multiple
         className="sr-only"
-        onChange={(e) => void handleRowPhotoFile(e.target.files?.[0] || null)}
+        onChange={(e) => {
+          const files = e.target.files;
+          if (!files?.length) return;
+          // แนบทีละรูปจากรายการ — รูปแรกทันที (เพิ่มต่อจากแก้ไข)
+          void handleRowPhotoFile(files[0] || null);
+          e.target.value = "";
+        }}
       />
 
       {imagePreview ? (
         <ImagePreviewModal
-          url={imagePreview.url}
+          urls={imagePreview.urls}
           title={imagePreview.title}
           onClose={() => setImagePreview(null)}
         />
@@ -441,6 +455,9 @@ function LedgerView() {
           <div className="photo-action-card" onClick={(e) => e.stopPropagation()}>
             <p style={{ margin: "0 0 0.75rem", fontWeight: 700, fontSize: "0.95rem" }}>
               เพิ่มรูป
+            </p>
+            <p className="muted" style={{ margin: "0 0 0.75rem", fontSize: "0.82rem", textAlign: "left" }}>
+              อยากแนบหลายรูป — เปิดรายการแล้วใช้ «ถ่ายรูป / แนบรูป» ในหน้าแก้ไข
             </p>
             <div className="receipt-actions">
               <button
@@ -497,19 +514,15 @@ function AddOutModal({
   onSaved: () => void;
   onError: (msg: string) => void;
 }) {
-  const cameraRef = useRef<HTMLInputElement>(null);
-  const galleryRef = useRef<HTMLInputElement>(null);
   const [date, setDate] = useState(todayInputValue());
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [typeMode, setTypeMode] = useState("auto");
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
-  const [fullPreviewUrl, setFullPreviewUrl] = useState<string | null>(null);
+  const [receiptUrls, setReceiptUrls] = useState<string[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
 
   const autoType = useMemo(() => guessTypeFromDescription(description), [description]);
   const resolvedType = typeMode === "auto" ? autoType : typeMode;
@@ -532,37 +545,10 @@ function AddOutModal({
       });
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
-    };
-  }, [receiptPreview]);
-
-  async function handleReceiptFile(file: File | null) {
-    if (!file) return;
-    setNotice(null);
-    try {
-      const how = await saveImageToDevice(file);
-      setNotice(
-        how === "shared"
-          ? "เปิดเมนูแชร์แล้ว — เลือกบันทึกรูปลงเครื่องได้"
-          : "บันทึกรูปลงเครื่องแล้ว",
-      );
-      const compressed = await compressImageForUpload(file);
-      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
-      setReceiptFile(compressed);
-      setReceiptPreview(URL.createObjectURL(compressed));
-    } catch (err) {
-      onError((err as Error).message || "ใช้รูปไม่สำเร็จ");
-    }
-  }
-
   async function onSave(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
-      let receiptUrl = "";
-      if (receiptFile) receiptUrl = await fileToReceiptDataUrl(receiptFile);
       await addLedgerEntry({
         date: parseDateInput(date),
         description,
@@ -570,7 +556,7 @@ function AddOutModal({
         amountOut: Number(amount),
         type: resolvedType,
         createdBy,
-        receiptUrl,
+        receiptUrls,
       });
       onSaved();
     } catch (err) {
@@ -589,7 +575,6 @@ function AddOutModal({
             <X size={18} />
           </button>
         </div>
-        {notice ? <p className="muted" style={{ margin: "0 0 0.55rem" }}>{notice}</p> : null}
         <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
           <div className="field">
             <label htmlFor="add-out-date">วันที่</label>
@@ -628,43 +613,24 @@ function AddOutModal({
               required
             />
           </div>
-          <div className="field">
-            <span className="field-label">สลิป / รูปถ่าย</span>
-            <div className="receipt-actions">
-              <button type="button" className="primary-btn" onClick={() => cameraRef.current?.click()}>
-                ถ่ายรูป
-              </button>
-              <button type="button" className="ghost-btn" onClick={() => galleryRef.current?.click()}>
-                แนบรูป
-              </button>
-            </div>
-            <input
-              ref={cameraRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="sr-only"
-              onChange={(e) => void handleReceiptFile(e.target.files?.[0] || null)}
-            />
-            <input
-              ref={galleryRef}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(e) => void handleReceiptFile(e.target.files?.[0] || null)}
-            />
-            {receiptPreview ? (
-              <button
-                type="button"
-                className="receipt-preview-btn"
-                onClick={() => setFullPreviewUrl(receiptPreview)}
-                aria-label="ดูรูปเต็ม"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={receiptPreview} alt="ตัวอย่างสลิป" className="receipt-preview" />
-              </button>
-            ) : null}
-          </div>
+          <PhotoAttachMultiField
+            label="สลิป / รูปถ่าย"
+            values={receiptUrls}
+            onChange={setReceiptUrls}
+            onError={onError}
+            max={LEDGER_RECEIPT_MAX}
+            hint={`ถ่ายหรือแนบได้หลายใบ · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
+          />
+          {receiptUrls.length ? (
+            <button
+              type="button"
+              className="ghost-btn"
+              style={{ marginBottom: "0.55rem" }}
+              onClick={() => setPreviewUrls(receiptUrls)}
+            >
+              ดูรูปทั้งหมด ({receiptUrls.length})
+            </button>
+          ) : null}
           <TypePicker
             id="add-out-type"
             value={typeMode}
@@ -682,8 +648,8 @@ function AddOutModal({
             <span aria-hidden style={{ width: "2.6rem" }} />
           </div>
         </form>
-        {fullPreviewUrl ? (
-          <ImagePreviewModal url={fullPreviewUrl} title="สลิป / รูปถ่าย" onClose={() => setFullPreviewUrl(null)} />
+        {previewUrls ? (
+          <ImagePreviewModal urls={previewUrls} title="สลิป / รูปถ่าย" onClose={() => setPreviewUrls(null)} />
         ) : null}
       </div>
     </div>
@@ -707,14 +673,10 @@ function EditEntryModal({
   const [amount, setAmount] = useState(String(isIn ? entry.amountIn : entry.amountOut));
   const [typeMode, setTypeMode] = useState(() => (entry.type || "").trim() || "auto");
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
-  const [fullPreviewUrl, setFullPreviewUrl] = useState<string | null>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
-  const galleryRef = useRef<HTMLInputElement>(null);
+  const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getLedgerReceiptUrls(entry));
+  const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
 
   const autoType = useMemo(() => guessTypeFromDescription(description), [description]);
   const resolvedType = typeMode === "auto" ? autoType : typeMode;
@@ -737,47 +699,18 @@ function EditEntryModal({
       });
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
-    };
-  }, [receiptPreview]);
-
-  async function handleReceiptFile(file: File | null) {
-    if (!file) return;
-    setNotice(null);
-    try {
-      const how = await saveImageToDevice(file);
-      setNotice(
-        how === "shared"
-          ? "เปิดเมนูแชร์แล้ว — เลือกบันทึกรูปลงเครื่องได้"
-          : "บันทึกรูปลงเครื่องแล้ว",
-      );
-      const compressed = await compressImageForUpload(file);
-      if (receiptPreview) URL.revokeObjectURL(receiptPreview);
-      setReceiptFile(compressed);
-      setReceiptPreview(URL.createObjectURL(compressed));
-    } catch (err) {
-      onError((err as Error).message || "ใช้รูปไม่สำเร็จ");
-    }
-  }
-
   async function onSave(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
       const value = Number(amount);
-      let receiptUrl = entry.receiptUrl || "";
-      if (receiptFile) {
-        receiptUrl = await fileToReceiptDataUrl(receiptFile);
-      }
       await updateLedgerEntry(entry.id, {
         date: parseDateInput(date),
         description,
         amountIn: isIn ? value : 0,
         amountOut: isIn ? 0 : value,
         type: isIn ? entry.type || "โอนเข้า" : resolvedType,
-        receiptUrl,
+        receiptUrls,
       });
       onSaved();
     } catch (err) {
@@ -820,7 +753,6 @@ function EditEntryModal({
             <X size={18} />
           </button>
         </div>
-        {notice ? <p className="muted" style={{ margin: "0 0 0.55rem" }}>{notice}</p> : null}
         <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
           <div className="field">
             <label htmlFor="edit-date">วันที่</label>
@@ -880,61 +812,24 @@ function EditEntryModal({
             />
           ) : null}
 
-          <div className="field">
-            <span className="field-label">สลิป / รูปถ่าย</span>
-            <div className="receipt-actions">
-              <button
-                type="button"
-                className="primary-btn"
-                onClick={() => cameraRef.current?.click()}
-              >
-                ถ่ายรูป
-              </button>
-              <button
-                type="button"
-                className="ghost-btn"
-                onClick={() => galleryRef.current?.click()}
-              >
-                แนบรูป
-              </button>
-            </div>
-            <input
-              ref={cameraRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="sr-only"
-              onChange={(e) => void handleReceiptFile(e.target.files?.[0] || null)}
-            />
-            <input
-              ref={galleryRef}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(e) => void handleReceiptFile(e.target.files?.[0] || null)}
-            />
-            {receiptPreview ? (
-              <button
-                type="button"
-                className="receipt-preview-btn"
-                onClick={() => setFullPreviewUrl(receiptPreview)}
-                aria-label="ดูรูปเต็ม"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={receiptPreview} alt="ตัวอย่างสลิป" className="receipt-preview" />
-              </button>
-            ) : entry.receiptUrl ? (
-              <button
-                type="button"
-                className="receipt-preview-btn"
-                onClick={() => setFullPreviewUrl(entry.receiptUrl!)}
-                aria-label="ดูรูปเต็ม"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={entry.receiptUrl} alt="สลิปเดิม" className="receipt-preview" />
-              </button>
-            ) : null}
-          </div>
+          <PhotoAttachMultiField
+            label="สลิป / รูปถ่าย"
+            values={receiptUrls}
+            onChange={setReceiptUrls}
+            onError={onError}
+            max={LEDGER_RECEIPT_MAX}
+            hint={`ถ่ายหรือแนบได้หลายใบ · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
+          />
+          {receiptUrls.length ? (
+            <button
+              type="button"
+              className="ghost-btn"
+              style={{ marginBottom: "0.55rem" }}
+              onClick={() => setPreviewUrls(receiptUrls)}
+            >
+              ดูรูปทั้งหมด ({receiptUrls.length})
+            </button>
+          ) : null}
 
           <div className="entry-actions">
             <button type="submit" className="primary-btn" disabled={busy}>
@@ -955,8 +850,8 @@ function EditEntryModal({
             </button>
           </div>
         </form>
-        {fullPreviewUrl ? (
-          <ImagePreviewModal url={fullPreviewUrl} title="สลิป / รูปถ่าย" onClose={() => setFullPreviewUrl(null)} />
+        {previewUrls ? (
+          <ImagePreviewModal urls={previewUrls} title="สลิป / รูปถ่าย" onClose={() => setPreviewUrls(null)} />
         ) : null}
       </div>
     </div>

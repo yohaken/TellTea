@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Camera, Plus, X } from "lucide-react";
 import { compressImageForUpload, fileToReceiptDataUrl } from "@/lib/receipts";
 
 export function PhotoAttachMultiField({
@@ -10,14 +10,20 @@ export function PhotoAttachMultiField({
   onError,
   label = "แนบรูป",
   max = 8,
+  hint,
+  allowCamera = true,
 }: {
   values: string[];
   onChange: (urls: string[]) => void;
   onError?: (msg: string) => void;
   label?: string;
   max?: number;
+  /** คำอธิบายสั้นใต้ป้าย — ค่าว่างใช้ข้อความมาตรฐาน */
+  hint?: string;
+  allowCamera?: boolean;
 }) {
   const galleryRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
   async function onFiles(fileList: FileList | null | undefined) {
@@ -42,6 +48,7 @@ export function PhotoAttachMultiField({
     } finally {
       setBusy(false);
       if (galleryRef.current) galleryRef.current.value = "";
+      if (cameraRef.current) cameraRef.current.value = "";
     }
   }
 
@@ -49,18 +56,43 @@ export function PhotoAttachMultiField({
     onChange(values.filter((_, i) => i !== idx));
   }
 
+  const full = values.length >= max;
+  const hintText =
+    hint ??
+    (allowCamera
+      ? `ถ่ายหรือแนบได้หลายรูป · สูงสุด ${max} รูป`
+      : `แนบได้หลายรูป · สูงสุด ${max} รูป`);
+
   return (
     <div className="field photo-attach-field photo-attach-multi">
       <span className="field-label">{label}</span>
-      <p className="muted form-hint-inline">แนบได้หลายรูป (สินค้าหลายอย่าง) · สูงสุด {max} รูป</p>
+      <p className="muted form-hint-inline">{hintText}</p>
       <div className="receipt-actions">
+        {allowCamera ? (
+          <button
+            type="button"
+            className="primary-btn"
+            disabled={busy || full}
+            onClick={() => cameraRef.current?.click()}
+          >
+            {busy ? (
+              "กำลังอัปโหลด..."
+            ) : (
+              <>
+                <Camera size={16} aria-hidden /> ถ่ายรูป
+              </>
+            )}
+          </button>
+        ) : null}
         <button
           type="button"
-          className="primary-btn"
-          disabled={busy || values.length >= max}
+          className={allowCamera ? "ghost-btn" : "primary-btn"}
+          disabled={busy || full}
           onClick={() => galleryRef.current?.click()}
         >
-          {busy ? "กำลังอัปโหลด..." : (
+          {busy && !allowCamera ? (
+            "กำลังอัปโหลด..."
+          ) : (
             <>
               <Plus size={16} aria-hidden /> แนบรูป
             </>
@@ -84,6 +116,16 @@ export function PhotoAttachMultiField({
             </li>
           ))}
         </ul>
+      ) : null}
+      {allowCamera ? (
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="sr-only"
+          onChange={(e) => void onFiles(e.target.files)}
+        />
       ) : null}
       <input
         ref={galleryRef}

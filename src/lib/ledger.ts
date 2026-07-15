@@ -30,6 +30,8 @@ import type { ImportLedgerRow } from "./xlsx-import";
 export const LEDGER_PAGE_SIZE = 60;
 /** Cap live window so mobile stays light; scroll still grows up to this. */
 export const LEDGER_LIVE_MAX = 480;
+/** Max slip photos per ledger row */
+export const LEDGER_RECEIPT_MAX = 6;
 
 export type LedgerPage = {
   entries: LedgerEntry[];
@@ -38,9 +40,36 @@ export type LedgerPage = {
   fromCache: boolean;
 };
 
+/** Normalize receiptUrls with legacy receiptUrl fallback. */
+export function getLedgerReceiptUrls(
+  entry?: Pick<LedgerEntry, "receiptUrl" | "receiptUrls"> | null,
+): string[] {
+  if (!entry) return [];
+  if (Array.isArray(entry.receiptUrls)) {
+    return entry.receiptUrls.map(String).filter((u) => u.trim());
+  }
+  const legacy = (entry.receiptUrl || "").trim();
+  return legacy ? [legacy] : [];
+}
+
+function normalizeReceiptFields(input: {
+  receiptUrl?: string;
+  receiptUrls?: string[];
+}): { receiptUrl: string; receiptUrls: string[] } {
+  const fromList = (input.receiptUrls || []).map((u) => u.trim()).filter(Boolean);
+  const legacy = (input.receiptUrl || "").trim();
+  const urls = fromList.length ? fromList : legacy ? [legacy] : [];
+  const capped = urls.slice(0, LEDGER_RECEIPT_MAX);
+  return { receiptUrl: capped[0] || "", receiptUrls: capped };
+}
+
 function mapEntry(d: QueryDocumentSnapshot): LedgerEntry {
   const data = d.data() as Omit<LedgerEntry, "id">;
   const createdAt = Number(data.createdAt) || 0;
+  const { receiptUrl, receiptUrls } = normalizeReceiptFields({
+    receiptUrl: data.receiptUrl,
+    receiptUrls: data.receiptUrls,
+  });
   return {
     id: d.id,
     ...data,
@@ -48,6 +77,8 @@ function mapEntry(d: QueryDocumentSnapshot): LedgerEntry {
     amountOut: Number(data.amountOut) || 0,
     createdAt,
     updatedAt: Number(data.updatedAt) || createdAt,
+    receiptUrl,
+    receiptUrls,
   };
 }
 
@@ -289,6 +320,7 @@ function validateLedgerPayload(payload: {
 
 export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
   const now = Date.now();
+  const { receiptUrl, receiptUrls } = normalizeReceiptFields(input);
   const payload = {
     date: input.date,
     description: input.description.trim(),
@@ -298,7 +330,8 @@ export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
     createdBy: input.createdBy,
     createdAt: now,
     updatedAt: now,
-    receiptUrl: input.receiptUrl || "",
+    receiptUrl,
+    receiptUrls,
   };
   validateLedgerPayload(payload);
   const ref = await addDoc(collection(getDb(), "ledger"), payload);
@@ -309,7 +342,10 @@ export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
 export async function updateLedgerEntry(
   id: string,
   patch: Partial<
-    Pick<LedgerEntry, "date" | "description" | "amountIn" | "amountOut" | "type" | "receiptUrl">
+    Pick<
+      LedgerEntry,
+      "date" | "description" | "amountIn" | "amountOut" | "type" | "receiptUrl" | "receiptUrls"
+    >
   >,
 ): Promise<void> {
   const entryRef = doc(getDb(), "ledger", id);
@@ -319,13 +355,23 @@ export async function updateLedgerEntry(
   const prevIn = Number(prev.amountIn) || 0;
   const prevOut = Number(prev.amountOut) || 0;
 
-  const next: Record<string, string | number> = { updatedAt: Date.now() };
+  const next: Record<string, string | number | string[]> = { updatedAt: Date.now() };
   if (patch.date != null) next.date = patch.date;
   if (patch.description != null) next.description = patch.description.trim();
   if (patch.amountIn != null) next.amountIn = Number(patch.amountIn);
   if (patch.amountOut != null) next.amountOut = Number(patch.amountOut);
   if (patch.type != null) next.type = patch.type;
-  if (patch.receiptUrl != null) next.receiptUrl = patch.receiptUrl;
+  if (patch.receiptUrls != null || patch.receiptUrl != null) {
+    const normalized =
+      patch.receiptUrls != null
+        ? normalizeReceiptFields({ receiptUrls: patch.receiptUrls })
+        : normalizeReceiptFields({
+            receiptUrl: patch.receiptUrl,
+            receiptUrls: prev.receiptUrls,
+          });
+    next.receiptUrl = normalized.receiptUrl;
+    next.receiptUrls = normalized.receiptUrls;
+  }
 
   const nextIn = next.amountIn != null ? Number(next.amountIn) : prevIn;
   const nextOut = next.amountOut != null ? Number(next.amountOut) : prevOut;
