@@ -14,6 +14,7 @@
     "test:ot-photo-save-amend": "node scripts/test-ot-photo-save-amend.mjs",
     "test:ot-10-photos": "node scripts/test-ot-10-photos.mjs",
     "test:ot-10-photos-ui": "node scripts/test-ot-10-photos-ui.mjs",
+    "ensure:storage-bucket": "node scripts/ensure-storage-bucket.mjs",
     "test:pos-connectivity": "node scripts/test-pos-connectivity.mjs",
     "test:pos-complete-sale": "node scripts/test-pos-complete-sale.mjs",
     "test:pos-sync": "node scripts/test-pos-sync.mjs",

@@ -102,5 +102,10 @@ jobs:
           npx firebase-tools@latest hosting:sites:create telltea-pos \
             --project mypeer-501909 --non-interactive 2>/dev/null || true
 
+      - name: Ensure Firebase Storage bucket
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/ensure-storage-bucket.mjs
+
       - name: Deploy Hosting + Firestore + Storage + Functions
         run: npx firebase-tools@latest deploy --only hosting:telltea,hosting:telltea-pos,firestore,storage,functions --project mypeer-501909 --non-interactive --force
