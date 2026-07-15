@@ -1,5 +1,6 @@
 rules_version = '2';
 // Firebase Storage — TellTea app photos (mypeer-501909)
+// Evidence photos (tax slips) may be up to ~10MB; rule ceiling 12MB.
 service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() {
@@ -7,27 +8,26 @@ service firebase.storage {
         && (request.auth.token.email != null || request.auth.token.phone_number != null);
     }
 
+    function evidenceImageOk() {
+      return request.resource.size < 12 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
     match /ot-photos/{allPaths=**} {
       allow read: if signedIn();
-      allow write: if signedIn()
-        && request.resource.size < 2 * 1024 * 1024
-        && request.resource.contentType.matches('image/.*');
+      allow write: if signedIn() && evidenceImageOk();
       allow delete: if signedIn();
     }
 
     match /owner-books/{allPaths=**} {
       allow read: if signedIn();
-      allow write: if signedIn()
-        && request.resource.size < 2 * 1024 * 1024
-        && request.resource.contentType.matches('image/.*');
+      allow write: if signedIn() && evidenceImageOk();
       allow delete: if signedIn();
     }
 
     match /ledger-receipts/{allPaths=**} {
       allow read: if signedIn();
-      allow write: if signedIn()
-        && request.resource.size < 2 * 1024 * 1024
-        && request.resource.contentType.matches('image/.*');
+      allow write: if signedIn() && evidenceImageOk();
       allow delete: if signedIn();
     }
   }

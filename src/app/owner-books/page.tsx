@@ -496,6 +496,11 @@ function OwnerEntryModal({
     onError("");
     try {
       const urls = receiptUrls.filter(Boolean).slice(0, OWNER_BOOKS_RECEIPT_MAX);
+      if (urls.some((u) => u.startsWith("data:"))) {
+        throw new Error(
+          "รูปยังไม่อยู่ในคลัง — ลบแล้วแนบใหม่เพื่ออัปโหลดไปฐานข้อมูล (หลักฐานภาษี)",
+        );
+      }
       if (mode === "add") {
         await addOwnerBookEntry({
           date: parseDateInput(date),
@@ -624,14 +629,16 @@ function OwnerEntryModal({
             />
           </div>
 
-          {/* Same attach pattern as /ledger (owner account) — local compress → data URL, no Storage hang */}
+          {/* Canonical evidence upload prototype → Firebase Storage + progress popup */}
           <PhotoAttachMultiField
             label="สลิป / รูปถ่าย"
             values={receiptUrls}
             onChange={setReceiptUrls}
             onError={reportError}
             max={OWNER_BOOKS_RECEIPT_MAX}
-            hint={`ถ่ายหรือแนบได้หลายใบ · สูงสุด ${OWNER_BOOKS_RECEIPT_MAX} รูป`}
+            storageFolder="owner-books"
+            storageSlotKey={`${mode}-${entry?.id || createdBy || "new"}`}
+            hint={`อัปโหลดไฟล์จริงไปคลังรูป (คงคุณภาพหลักฐานภาษี) · สูงสุด ${OWNER_BOOKS_RECEIPT_MAX} รูป`}
           />
           {receiptUrls.length ? (
             <button

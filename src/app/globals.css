@@ -1806,6 +1806,69 @@ body.modal-open .main-panel {
   gap: 0.3rem;
 }
 
+.photo-attach-conn-chip {
+  margin: 0.2rem 0 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.72);
+}
+
+.photo-attach-conn-chip[data-online="0"] {
+  color: #b42318;
+}
+
+.photo-upload-progress-backdrop {
+  z-index: 80;
+}
+
+.photo-upload-progress-card {
+  max-width: 22rem;
+  width: calc(100% - 1.5rem);
+  padding: 1rem 1.05rem 1.1rem;
+}
+
+.photo-upload-conn {
+  margin: 0.35rem 0 0.25rem;
+  font-size: 0.84rem;
+}
+
+.photo-upload-conn[data-online="0"] {
+  color: #b42318;
+}
+
+.photo-upload-msg {
+  margin: 0.2rem 0 0.45rem;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.photo-upload-file {
+  margin: 0 0 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.photo-upload-bar-wrap {
+  height: 0.55rem;
+  border-radius: 999px;
+  background: rgba(28, 42, 31, 0.1);
+  overflow: hidden;
+}
+
+.photo-upload-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--tea-leaf, #2f6b4f);
+  transition: width 0.2s ease;
+}
+
+.photo-upload-pct {
+  margin: 0.4rem 0 0.25rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 .ot-toolbar-slim {
   display: flex;
   flex-wrap: wrap;
