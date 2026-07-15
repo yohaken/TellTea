@@ -813,7 +813,14 @@ function SubmitOccurrenceModal({
             })}
           </ul>
 
-          <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} label="รูปหลักฐาน (บังคับ)" />
+          <PhotoAttachField
+            value={imageUrl}
+            onChange={setImageUrl}
+            onError={onError}
+            label="รูปหลักฐาน (บังคับ)"
+            storageFolder="tasks"
+            storageSlotKey="proof"
+          />
 
           <div className="entry-actions module-form-actions">
             <button type="submit" className="primary-btn" disabled={busy || !allDone || !imageUrl}>

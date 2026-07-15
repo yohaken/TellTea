@@ -33,11 +33,8 @@ import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { TypePicker } from "@/components/TypePicker";
 import { frequentTypes, guessTypeFromDescription, labelLedgerType } from "@/lib/ledger-labels";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
-import {
-  compressImageForUpload,
-  fileToReceiptDataUrl,
-  saveImageToDevice,
-} from "@/lib/receipts";
+import { saveImageToDevice } from "@/lib/receipts";
+import { uploadEvidencePhotos } from "@/lib/photo-upload";
 import type { LedgerEntry } from "@/lib/types";
 import { filterLedgerRows } from "@/lib/smart-search";
 import {
@@ -217,8 +214,11 @@ function LedgerView() {
         setError(`แนบได้สูงสุด ${LEDGER_RECEIPT_MAX} รูป — เปิดแก้ไขเพื่อลบรูปเก่า`);
         return;
       }
-      const compressed = await compressImageForUpload(file);
-      const url = await fileToReceiptDataUrl(compressed);
+      const [url] = await uploadEvidencePhotos([file], {
+        folder: "ledger-receipts",
+        slotKey: `row-${row.id}`,
+      });
+      if (!url) throw new Error("อัปโหลดรูปไม่สำเร็จ");
       await updateLedgerEntry(row.id, { receiptUrls: [...existing, url] });
       saveImageToDevice(file).catch(() => {});
     } catch (err) {
@@ -619,7 +619,9 @@ function AddOutModal({
             onChange={setReceiptUrls}
             onError={onError}
             max={LEDGER_RECEIPT_MAX}
-            hint={`ถ่ายหรือแนบได้หลายใบ · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
+            storageFolder="ledger-receipts"
+            storageSlotKey={`add-${createdBy || "new"}`}
+            hint={`บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
           />
           {receiptUrls.length ? (
             <button
@@ -818,7 +820,9 @@ function EditEntryModal({
             onChange={setReceiptUrls}
             onError={onError}
             max={LEDGER_RECEIPT_MAX}
-            hint={`ถ่ายหรือแนบได้หลายใบ · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
+            storageFolder="ledger-receipts"
+            storageSlotKey={`edit-${entry.id}`}
+            hint={`บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
           />
           {receiptUrls.length ? (
             <button

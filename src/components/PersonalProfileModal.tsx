@@ -133,6 +133,8 @@ export function PersonalProfileModal() {
             value={idCardPhotoUrl}
             onChange={setIdCardPhotoUrl}
             onError={setError}
+            storageFolder="staff-id"
+            storageSlotKey="id-card"
           />
           <p className="muted form-hint-inline">
             ถ่ายด้วยกล้องหรือแนบจากคลังรูปได้

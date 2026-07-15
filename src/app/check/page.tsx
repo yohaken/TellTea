@@ -729,6 +729,8 @@ function FailModal({
           onError={onError}
           label="รูปหลักฐาน (ถ้ามี)"
           galleryOnly
+          storageFolder="checklist"
+          storageSlotKey="fail-evidence"
         />
         <button type="button" className="primary-btn action-out" onClick={onSave}>
           บันทึก &quot;ไม่ผ่าน&quot;

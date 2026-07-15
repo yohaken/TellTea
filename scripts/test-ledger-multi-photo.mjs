@@ -16,6 +16,8 @@ assert.match(ledgerSrc, /getLedgerReceiptUrls/);
 assert.match(ledgerSrc, /receiptUrls/);
 assert.match(pageSrc, /PhotoAttachMultiField/);
 assert.match(pageSrc, /LEDGER_RECEIPT_MAX/);
+assert.match(pageSrc, /storageFolder="ledger-receipts"/);
+assert.match(pageSrc, /uploadEvidencePhotos/);
 assert.match(pageSrc, /EntryPhotoIndicator/);
 assert.match(multiSrc, /allowCamera/);
 assert.match(multiSrc, /capture="environment"/);

@@ -195,7 +195,7 @@ export function getOtImageUrls(entry?: Pick<OtEntry, "imageUrl" | "imageUrls"> |
 
 /**
  * Max product photos per OT shift close.
- * Photos upload to Firebase Storage (https URLs in Firestore) so 10 fits safely.
+ * Photos save as evidencePhotos docs (`evp:`) so 10 fits safely on the OT row.
  * Legacy data-URL rows still constrained by OT_IMAGE_PAYLOAD_BUDGET.
  */
 export const OT_IMAGE_MAX = 10;

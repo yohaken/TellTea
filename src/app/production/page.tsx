@@ -370,7 +370,14 @@ function ProdEntryForm({
       </div>
 
       {!locked ? (
-        <PhotoAttachField value={imageUrl} onChange={setImageUrl} onError={onError} label="แนบรูป" />
+        <PhotoAttachField
+          value={imageUrl}
+          onChange={setImageUrl}
+          onError={onError}
+          label="แนบรูป"
+          storageFolder="production"
+          storageSlotKey={entry?.id || "new"}
+        />
       ) : null}
 
       {locked ? (

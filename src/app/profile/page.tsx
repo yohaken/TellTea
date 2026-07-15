@@ -210,6 +210,8 @@ function ProfileView() {
               value={idCardPhotoUrl}
               onChange={setIdCardPhotoUrl}
               onError={setError}
+              storageFolder="staff-id"
+              storageSlotKey="id-card"
             />
             <PersonalDataConsentField
               checked={consent}

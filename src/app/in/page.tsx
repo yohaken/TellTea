@@ -139,6 +139,8 @@ function TransferInView() {
             onError={setError}
             label="สลิป / รูปถ่าย (ถ้ามี)"
             galleryOnly
+            storageFolder="ledger-receipts"
+            storageSlotKey="transfer-in"
           />
           <div className="module-form-actions">
             <button type="submit" className="primary-btn action-in" disabled={busy}>

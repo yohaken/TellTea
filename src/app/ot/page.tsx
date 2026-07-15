@@ -21,7 +21,6 @@ import { can } from "@/lib/permissions";
 import {
   OT_SHIFTS,
   OT_IMAGE_MAX,
-  OT_IMAGE_PAYLOAD_BUDGET,
   addOtEntry,
   assertOtImageUrlsFit,
   bulkUpdateOtEntryStatus,
@@ -35,7 +34,6 @@ import {
   isOtEntryClosed,
   labelOtShift,
   labelOtStatus,
-  otImagePayloadChars,
   subscribeOtEntries,
   updateOtEntry,
   type OtEntry,
@@ -43,7 +41,6 @@ import {
   type OtStatus,
 } from "@/lib/ot";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
-import { uploadOtProductPhoto } from "@/lib/ot-photos";
 import {
   buildOtGrid,
   findOtEntryForSlot,
@@ -990,24 +987,16 @@ function OtEntryForm({
             onError={reportError}
             label="รูปสินค้า"
             max={OT_IMAGE_MAX}
-            uploadFile={(file) =>
-              uploadOtProductPhoto(
-                file,
-                `${date}_${shift}_${createdBy || entry?.id || "new"}`,
-              )
-            }
-            maxTotalChars={OT_IMAGE_PAYLOAD_BUDGET}
-            measureTotalChars={(urls) =>
-              otImagePayloadChars(urls.filter((u) => u.trim().toLowerCase().startsWith("data:")))
-            }
+            storageFolder="ot-photos"
+            storageSlotKey={`${date}_${shift}_${createdBy || entry?.id || "new"}`}
             hint={
               locked
                 ? imageUrls.length
                   ? `${imageUrls.length} รูป · กดรูปเพื่อดู`
                   : "ยังไม่มีรูป"
                 : amendClosed
-                  ? `ถ่ายหรือแนบได้หลายรูป (สูงสุด ${OT_IMAGE_MAX} รูป) · กด «บันทึกการแก้ไข» เพื่อเซฟ`
-                  : `ถ่ายหรือแนบได้หลายรูป (สูงสุด ${OT_IMAGE_MAX} รูป) · ต้องกดบันทึกหลังติ๊กเช็คครบ`
+                  ? `บันทึกหลักฐานเข้าฐานข้อมูล (สูงสุด ${OT_IMAGE_MAX} รูป) · กด «บันทึกการแก้ไข» เพื่อเซฟ`
+                  : `บันทึกหลักฐานเข้าฐานข้อมูล (สูงสุด ${OT_IMAGE_MAX} รูป) · ต้องกดบันทึกหลังติ๊กเช็คครบ`
             }
             readOnly={locked}
             onPreview={(urls, index) => setFormPreview({ urls, index })}
