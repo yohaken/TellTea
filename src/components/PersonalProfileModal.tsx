@@ -3,13 +3,17 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { IdCard } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { PhotoAttachField } from "@/components/PhotoAttachField";
+import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PersonalDataConsentField } from "@/components/PersonalDataConsentField";
 import { useAuth } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { needsPersonalProfileSetup } from "@/lib/profile";
 import { updateStaffProfile } from "@/lib/staff";
-import { saveStaffPersonal } from "@/lib/staff-personal";
+import {
+  getIdCardPhotoUrls,
+  saveStaffPersonal,
+  STAFF_ID_CARD_MAX,
+} from "@/lib/staff-personal";
 import { saveCachedStaff } from "@/lib/cache";
 
 /** Modal reel — กรอกข้อมูลส่วนตัวครั้งแรก ปิดไม่ได้จนกว่าจะบันทึกครบ */
@@ -24,7 +28,7 @@ export function PersonalProfileModal() {
 
   const [legalFirstName, setLegalFirstName] = useState("");
   const [legalLastName, setLegalLastName] = useState("");
-  const [idCardPhotoUrl, setIdCardPhotoUrl] = useState("");
+  const [idCardPhotoUrls, setIdCardPhotoUrls] = useState<string[]>([]);
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +39,7 @@ export function PersonalProfileModal() {
     if (!staff) return;
     setLegalFirstName(staff.personal?.legalFirstName || "");
     setLegalLastName(staff.personal?.legalLastName || "");
-    setIdCardPhotoUrl(staff.personal?.idCardPhotoUrl || "");
+    setIdCardPhotoUrls(getIdCardPhotoUrls(staff.personal));
     setConsent(!!staff.personal?.personalDataConsentAt);
   }, [staff]);
 
@@ -48,8 +52,13 @@ export function PersonalProfileModal() {
       setError("ใส่ชื่อจริงและนามสกุล");
       return;
     }
-    if (!idCardPhotoUrl.trim()) {
+    const urls = idCardPhotoUrls.filter(Boolean).slice(0, STAFF_ID_CARD_MAX);
+    if (!urls.length) {
       setError("ถ่ายหรือแนบรูปบัตรประชาชน");
+      return;
+    }
+    if (urls.some((u) => u.startsWith("data:"))) {
+      setError("รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่เพื่อบันทึกเข้าคลังหลักฐาน");
       return;
     }
     if (!consent) {
@@ -62,7 +71,7 @@ export function PersonalProfileModal() {
       const personal = await saveStaffPersonal(staff.id, {
         legalFirstName: legalFirstName.trim(),
         legalLastName: legalLastName.trim(),
-        idCardPhotoUrl,
+        idCardPhotoUrls: urls,
         personalDataConsentAt: Date.now(),
       });
       const updated = await updateStaffProfile(staff.id, {
@@ -128,13 +137,15 @@ export function PersonalProfileModal() {
               required
             />
           </div>
-          <PhotoAttachField
+          <PhotoAttachMultiField
             label="รูปบัตรประชาชน"
-            value={idCardPhotoUrl}
-            onChange={setIdCardPhotoUrl}
+            values={idCardPhotoUrls}
+            onChange={setIdCardPhotoUrls}
             onError={setError}
+            max={STAFF_ID_CARD_MAX}
             storageFolder="staff-id"
             storageSlotKey="id-card"
+            hint={`หน้า/หลังบัตรได้ · สูงสุด ${STAFF_ID_CARD_MAX} รูป`}
           />
           <p className="muted form-hint-inline">
             ถ่ายด้วยกล้องหรือแนบจากคลังรูปได้

@@ -4,10 +4,11 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
-import { PhotoAttachField } from "@/components/PhotoAttachField";
+import { ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { addLedgerEntry } from "@/lib/ledger";
+import { addLedgerEntry, LEDGER_RECEIPT_MAX } from "@/lib/ledger";
 import { parseDateInput, todayInputValue } from "@/lib/utils";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
@@ -25,7 +26,8 @@ function TransferInView() {
   const [date, setDate] = useState(todayInputValue());
   const [description, setDescription] = useState("โอนเข้า");
   const [amount, setAmount] = useState("");
-  const [receiptUrl, setReceiptUrl] = useState("");
+  const [receiptUrls, setReceiptUrls] = useState<string[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,6 +55,10 @@ function TransferInView() {
     setBusy(true);
     setError(null);
     try {
+      const urls = receiptUrls.filter(Boolean).slice(0, LEDGER_RECEIPT_MAX);
+      if (urls.some((u) => u.startsWith("data:"))) {
+        throw new Error("รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่เพื่อบันทึกเข้าคลังหลักฐาน");
+      }
       await addLedgerEntry({
         date: parseDateInput(date),
         description,
@@ -60,7 +66,7 @@ function TransferInView() {
         amountOut: 0,
         type: "โอนเข้า",
         createdBy: actorId,
-        receiptUrl,
+        receiptUrls: urls,
       });
       close();
     } catch (err) {
@@ -96,7 +102,7 @@ function TransferInView() {
           </button>
         </div>
         <p className="muted form-hint-inline transfer-in-hint">
-          เติมเงินเข้าบัญชีร้าน — แนบสลิปได้ถ้ามี
+          เติมเงินเข้าบัญชีร้าน — แนบสลิปได้หลายใบถ้ามี
         </p>
         {error ? <p className="error-text transfer-in-error">{error}</p> : null}
         <form className="form-card module-entry-form transfer-in-form" onSubmit={(e) => void onSubmit(e)}>
@@ -133,15 +139,27 @@ function TransferInView() {
               required
             />
           </div>
-          <PhotoAttachField
-            value={receiptUrl}
-            onChange={setReceiptUrl}
-            onError={setError}
+          <PhotoAttachMultiField
             label="สลิป / รูปถ่าย (ถ้ามี)"
-            galleryOnly
+            values={receiptUrls}
+            onChange={setReceiptUrls}
+            onError={setError}
+            max={LEDGER_RECEIPT_MAX}
             storageFolder="ledger-receipts"
             storageSlotKey="transfer-in"
+            hint={`บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
+            allowCamera={false}
           />
+          {receiptUrls.length ? (
+            <button
+              type="button"
+              className="ghost-btn"
+              style={{ marginBottom: "0.55rem" }}
+              onClick={() => setPreviewUrls(receiptUrls)}
+            >
+              ดูรูปทั้งหมด ({receiptUrls.length})
+            </button>
+          ) : null}
           <div className="module-form-actions">
             <button type="submit" className="primary-btn action-in" disabled={busy}>
               {busy ? "กำลังบันทึก..." : "บันทึกโอนเข้า"}
@@ -151,6 +169,13 @@ function TransferInView() {
             </button>
           </div>
         </form>
+        {previewUrls ? (
+          <ImagePreviewModal
+            urls={previewUrls}
+            title="สลิป / รูปถ่าย"
+            onClose={() => setPreviewUrls(null)}
+          />
+        ) : null}
       </div>
     </div>
   );

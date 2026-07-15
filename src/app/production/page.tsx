@@ -12,7 +12,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { BulkStatusToolbar } from "@/components/BulkStatusToolbar";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
-import { PhotoAttachField } from "@/components/PhotoAttachField";
+import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { isInMonth, monthInputValue, parseMonthInput } from "@/lib/bonus";
@@ -22,11 +22,13 @@ import {
   bulkUpdateProdEntryStatus,
   computeProdBonus,
   deleteProdEntry,
+  getProdImageUrls,
   isProdEntryLocked,
   labelProdStatus,
   normalizeProdStatus,
   listProdProducts,
   listProdWorkers,
+  PROD_IMAGE_MAX,
   resolveProdEntryRates,
   seedProdCatalogIfEmpty,
   subscribeProdEntries,
@@ -190,7 +192,7 @@ function ProdEntryForm({
   const [qty, setQty] = useState(entry ? String(entry.qtyProduced) : "");
   const [waste, setWaste] = useState(entry ? String(entry.qtyWaste || 0) : "");
   const [note, setNote] = useState(entry?.note || "");
-  const [imageUrl, setImageUrl] = useState(entry?.imageUrl || "");
+  const [imageUrls, setImageUrls] = useState<string[]>(() => getProdImageUrls(entry));
   const [busy, setBusy] = useState(false);
 
   const product = products.find((p) => p.id === productId) || null;
@@ -231,6 +233,12 @@ function ProdEntryForm({
     }
     setBusy(true);
     try {
+      const urls = imageUrls.filter(Boolean).slice(0, PROD_IMAGE_MAX);
+      if (urls.some((u) => u.startsWith("data:"))) {
+        onError("รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่เพื่อบันทึกเข้าคลังหลักฐาน");
+        setBusy(false);
+        return;
+      }
       const resolved = resolveProdEntryRates(entry, productId, prod ?? null);
       const payload = {
         date: parseDateInput(date),
@@ -243,7 +251,8 @@ function ProdEntryForm({
         qtyProduced: Number(qty),
         qtyWaste: Number(waste) || 0,
         note,
-        imageUrl,
+        imageUrls: urls,
+        imageUrl: urls[0] || "",
       };
       if (entry) {
         await updateProdEntry(entry.id, payload);
@@ -370,13 +379,15 @@ function ProdEntryForm({
       </div>
 
       {!locked ? (
-        <PhotoAttachField
-          value={imageUrl}
-          onChange={setImageUrl}
+        <PhotoAttachMultiField
+          values={imageUrls}
+          onChange={setImageUrls}
           onError={onError}
           label="แนบรูป"
+          max={PROD_IMAGE_MAX}
           storageFolder="production"
           storageSlotKey={entry?.id || "new"}
+          hint={`บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${PROD_IMAGE_MAX} รูป`}
         />
       ) : null}
 
@@ -417,7 +428,7 @@ function ProdTable({
   onEdit: (row: ProdEntry) => void;
   onError: (msg: string | null) => void;
 }) {
-  const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
+  const [preview, setPreview] = useState<{ urls: string[]; title: string } | null>(null);
   const [month, setMonth] = useState(monthInputValue());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -591,8 +602,9 @@ function ProdTable({
                         </button>
                         <EntryPhotoIndicator
                           imageUrl={row.imageUrl}
+                          imageUrls={row.imageUrls}
                           label={row.productName}
-                          onView={(urls) => setPreview({ url: urls[0] || "", title: row.productName })}
+                          onView={(urls) => setPreview({ urls, title: row.productName })}
                         />
                       </div>
                     </td>
@@ -650,7 +662,7 @@ function ProdTable({
         </div>
       )}
       {preview ? (
-        <ImagePreviewModal url={preview.url} title={preview.title} onClose={() => setPreview(null)} />
+        <ImagePreviewModal urls={preview.urls} title={preview.title} onClose={() => setPreview(null)} />
       ) : null}
     </>
   );

@@ -29,7 +29,9 @@ export type StaffMember = {
 export type StaffPersonalData = {
   legalFirstName?: string;
   legalLastName?: string;
+  /** @deprecated ใช้ idCardPhotoUrls */
   idCardPhotoUrl?: string;
+  idCardPhotoUrls?: string[];
   personalDataConsentAt?: number;
   updatedAt?: number;
 };

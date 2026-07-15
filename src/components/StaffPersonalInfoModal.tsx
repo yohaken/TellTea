@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { personalProfileLabel } from "@/lib/profile";
-import { getStaffPersonal } from "@/lib/staff-personal";
+import { getIdCardPhotoUrls, getStaffPersonal } from "@/lib/staff-personal";
 import type { StaffMember, StaffPersonalData } from "@/lib/types";
 import { staffAccountLabel } from "@/lib/utils";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
@@ -18,53 +19,65 @@ export function StaffPersonalInfoModal({
 }) {
   useBodyScrollLock(true);
   const legalName = personalProfileLabel({ ...member, personal: personal || undefined });
+  const idCardUrls = getIdCardPhotoUrls(personal);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   return (
-    <div className="modal-backdrop profile-modal-backdrop" role="presentation" onClick={onClose}>
-      <div
-        className="modal-card profile-modal-card staff-personal-info-card"
-        role="dialog"
-        aria-modal="true"
-        aria-label="ข้อมูลส่วนตัวพนักงาน"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="panel-title">ข้อมูลส่วนตัวพนักงาน</h2>
-        <p className="muted" style={{ textAlign: "left", margin: "0 0 0.75rem" }}>
-          บัญชี: <strong>{staffAccountLabel(member)}</strong>
-        </p>
-        {legalName ? (
+    <>
+      <div className="modal-backdrop profile-modal-backdrop" role="presentation" onClick={onClose}>
+        <div
+          className="modal-card profile-modal-card staff-personal-info-card"
+          role="dialog"
+          aria-modal="true"
+          aria-label="ข้อมูลส่วนตัวพนักงาน"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h2 className="panel-title">ข้อมูลส่วนตัวพนักงาน</h2>
           <p className="muted" style={{ textAlign: "left", margin: "0 0 0.75rem" }}>
-            ชื่อ-นามสกุล: <strong>{legalName}</strong>
+            บัญชี: <strong>{staffAccountLabel(member)}</strong>
           </p>
-        ) : (
-          <p className="muted" style={{ textAlign: "left" }}>ยังไม่กรอกข้อมูลส่วนตัว</p>
-        )}
-        {personal?.idCardPhotoUrl ? (
-          <div className="staff-id-preview-wrap">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={personal.idCardPhotoUrl}
-              alt="บัตรประชาชน"
-              className="staff-id-preview"
-            />
-          </div>
-        ) : (
-          <p className="muted">ยังไม่มีรูปบัตรประชาชน</p>
-        )}
-        {personal?.personalDataConsentAt ? (
-          <p className="muted form-hint-inline" style={{ marginTop: "0.65rem" }}>
-            ยินยอมเก็บข้อมูลเมื่อ{" "}
-            {new Date(personal.personalDataConsentAt).toLocaleString("th-TH", {
-              dateStyle: "short",
-              timeStyle: "short",
-            })}
-          </p>
-        ) : null}
-        <button type="button" className="primary-btn" style={{ marginTop: "0.75rem" }} onClick={onClose}>
-          ปิด
-        </button>
+          {legalName ? (
+            <p className="muted" style={{ textAlign: "left", margin: "0 0 0.75rem" }}>
+              ชื่อ-นามสกุล: <strong>{legalName}</strong>
+            </p>
+          ) : (
+            <p className="muted" style={{ textAlign: "left" }}>ยังไม่กรอกข้อมูลส่วนตัว</p>
+          )}
+          {idCardUrls.length ? (
+            <div className="staff-id-preview-wrap">
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => setPreviewOpen(true)}
+              >
+                ดูรูปบัตร ({idCardUrls.length})
+              </button>
+            </div>
+          ) : (
+            <p className="muted">ยังไม่มีรูปบัตรประชาชน</p>
+          )}
+          {personal?.personalDataConsentAt ? (
+            <p className="muted form-hint-inline" style={{ marginTop: "0.65rem" }}>
+              ยินยอมเก็บข้อมูลเมื่อ{" "}
+              {new Date(personal.personalDataConsentAt).toLocaleString("th-TH", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })}
+            </p>
+          ) : null}
+          <button type="button" className="primary-btn" style={{ marginTop: "0.75rem" }} onClick={onClose}>
+            ปิด
+          </button>
+        </div>
       </div>
-    </div>
+      {previewOpen ? (
+        <ImagePreviewModal
+          urls={idCardUrls}
+          title="บัตรประชาชน"
+          onClose={() => setPreviewOpen(false)}
+        />
+      ) : null}
+    </>
   );
 }
 

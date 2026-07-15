@@ -57,7 +57,9 @@ export type ChecklistRecord = {
   itemName: string;
   status: CheckStatus;
   remark: string;
+  /** @deprecated ใช้ imageUrls */
   imageUrl: string;
+  imageUrls?: string[];
   submittedAt: number;
   createdBy: string;
   createdAt: number;
@@ -75,9 +77,23 @@ export type ChecklistRecordInput = {
   status: CheckStatus;
   remark?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   submittedAt: number;
   createdBy: string;
 };
+
+export const CHECK_IMAGE_MAX = 6;
+
+export function getChecklistImageUrls(
+  row?: Pick<ChecklistRecord, "imageUrl" | "imageUrls"> | null,
+): string[] {
+  if (!row) return [];
+  if (Array.isArray(row.imageUrls) && row.imageUrls.length) {
+    return row.imageUrls.map(String).filter((u) => u.trim()).slice(0, CHECK_IMAGE_MAX);
+  }
+  const legacy = (row.imageUrl || "").trim();
+  return legacy ? [legacy] : [];
+}
 
 export type CheckSessionSummary = {
   checkId: string;
@@ -162,9 +178,16 @@ export function normalizeCheckDateMs(ms: number) {
 }
 
 function mapCheckRecordDoc(id: string, data: Record<string, unknown>): ChecklistRecord {
+  const imageUrls = Array.isArray(data.imageUrls)
+    ? (data.imageUrls as string[]).map(String).filter((u) => u.trim())
+    : data.imageUrl
+      ? [String(data.imageUrl)]
+      : [];
   return {
     id,
-    ...(data as Omit<ChecklistRecord, "id">),
+    ...(data as Omit<ChecklistRecord, "id" | "imageUrl" | "imageUrls">),
+    imageUrl: imageUrls[0] || String(data.imageUrl || ""),
+    imageUrls,
   };
 }
 
@@ -357,7 +380,11 @@ export async function submitChecklistBatch(
       itemName: row.itemName,
       status: row.status,
       remark: (row.remark || "").trim(),
-      imageUrl: row.imageUrl || "",
+      imageUrl: (row.imageUrls?.[0] || row.imageUrl || "").trim(),
+      imageUrls: (row.imageUrls || (row.imageUrl ? [row.imageUrl] : []))
+        .map((u) => u.trim())
+        .filter(Boolean)
+        .slice(0, CHECK_IMAGE_MAX),
       submittedAt: row.submittedAt,
       createdBy: row.createdBy,
       createdAt: Date.now(),

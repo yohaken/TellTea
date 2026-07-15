@@ -59,6 +59,7 @@ export type ProdEntry = {
   qtyWaste: number;
   note: string;
   imageUrl?: string;
+  imageUrls?: string[];
   status: ProdStatus;
   createdBy: string;
   createdAt: number;
@@ -77,8 +78,22 @@ export type ProdEntryInput = {
   qtyWaste: number;
   note?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   createdBy: string;
 };
+
+export const PROD_IMAGE_MAX = 6;
+
+export function getProdImageUrls(
+  entry?: Pick<{ imageUrl?: string; imageUrls?: string[] }, "imageUrl" | "imageUrls"> | null,
+): string[] {
+  if (!entry) return [];
+  if (Array.isArray(entry.imageUrls) && entry.imageUrls.length) {
+    return entry.imageUrls.map(String).filter((u) => u.trim()).slice(0, PROD_IMAGE_MAX);
+  }
+  const legacy = (entry.imageUrl || "").trim();
+  return legacy ? [legacy] : [];
+}
 
 export type ProdComputed = {
   salesBonus: number;
@@ -135,6 +150,11 @@ export function resolveProdEntryRates(
 }
 
 function mapProdEntryDoc(id: string, data: Record<string, unknown>): ProdEntry {
+  const imageUrls = Array.isArray(data.imageUrls)
+    ? (data.imageUrls as string[]).map(String).filter((u) => u.trim())
+    : data.imageUrl
+      ? [String(data.imageUrl)]
+      : [];
   return {
     id,
     date: Number(data.date) || 0,
@@ -147,7 +167,8 @@ function mapProdEntryDoc(id: string, data: Record<string, unknown>): ProdEntry {
     qtyProduced: Number(data.qtyProduced) || 0,
     qtyWaste: Number(data.qtyWaste) || 0,
     note: String(data.note || ""),
-    imageUrl: data.imageUrl ? String(data.imageUrl) : undefined,
+    imageUrl: imageUrls[0] || (data.imageUrl ? String(data.imageUrl) : undefined),
+    imageUrls,
     status: normalizeProdStatus(data.status),
     createdBy: String(data.createdBy || ""),
     createdAt: Number(data.createdAt) || 0,
@@ -281,7 +302,11 @@ export async function addProdEntry(input: ProdEntryInput): Promise<string> {
     qtyProduced: Number(input.qtyProduced) || 0,
     qtyWaste: Number(input.qtyWaste) || 0,
     note: (input.note || "").trim(),
-    imageUrl: (input.imageUrl || "").trim(),
+    imageUrl: (input.imageUrls?.[0] || input.imageUrl || "").trim(),
+    imageUrls: (input.imageUrls || (input.imageUrl ? [input.imageUrl] : []))
+      .map((u) => u.trim())
+      .filter(Boolean)
+      .slice(0, PROD_IMAGE_MAX),
     status: "unpaid" as ProdStatus,
     createdBy: input.createdBy,
     createdAt: now,
@@ -306,6 +331,7 @@ export async function updateProdEntry(
       | "qtyWaste"
       | "note"
       | "imageUrl"
+      | "imageUrls"
       | "status"
     >
   >,
@@ -335,7 +361,14 @@ export async function updateProdEntry(
   }
   if (patch.qtyWaste != null) next.qtyWaste = Number(patch.qtyWaste) || 0;
   if (patch.note != null) next.note = patch.note.trim();
-  if (patch.imageUrl != null) next.imageUrl = patch.imageUrl.trim();
+  if (patch.imageUrls != null || patch.imageUrl != null) {
+    const urls = (patch.imageUrls || (patch.imageUrl ? [patch.imageUrl] : []))
+      .map((u) => u.trim())
+      .filter(Boolean)
+      .slice(0, PROD_IMAGE_MAX);
+    next.imageUrl = urls[0] || "";
+    next.imageUrls = urls;
+  }
   if (patch.status != null) next.status = normalizeProdStatus(patch.status);
   await updateDoc(ref, next);
 }

@@ -13,7 +13,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { PhotoAttachField } from "@/components/PhotoAttachField";
+import { ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import {
   buildCheckHistoryGrid,
   checkMonthInputValue,
@@ -39,8 +40,10 @@ import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import {
+  CHECK_IMAGE_MAX,
   CHECK_SHIFTS,
   deleteCheckSession,
+  getChecklistImageUrls,
   getSessionForShift,
   labelCheckShift,
   listActiveChecklistItems,
@@ -69,7 +72,7 @@ type DraftItem = {
   groupLabel: string;
   status: DraftStatus;
   remark: string;
-  imageUrl: string;
+  imageUrls: string[];
 };
 
 export default function CheckPage() {
@@ -238,11 +241,16 @@ function CheckForm({
   const [inspectorId, setInspectorId] = useState("");
   const [drafts, setDrafts] = useState<DraftItem[]>([]);
   const [existingSession, setExistingSession] = useState<CheckSessionSummary | null>(null);
-  const [failModal, setFailModal] = useState<{ index: number; remark: string; preview: string } | null>(null);
+  const [failModal, setFailModal] = useState<{
+    index: number;
+    remark: string;
+    previews: string[];
+  } | null>(null);
   const [passConfirm, setPassConfirm] = useState<{ index: number; itemName: string } | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<{ urls: string[]; title: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useBodyScrollLock(!!failModal || !!passConfirm);
+  useBodyScrollLock(!!failModal || !!passConfirm || !!photoPreview);
 
   const inspector = employees.find((e) => e.id === inspectorId);
 
@@ -274,7 +282,7 @@ function CheckForm({
         groupLabel: item.groupLabel,
         status: "pending" as DraftStatus,
         remark: "",
-        imageUrl: "",
+        imageUrls: [],
       })),
     );
     setStep("list");
@@ -300,7 +308,7 @@ function CheckForm({
     if (!passConfirm) return;
     setDrafts((prev) =>
       prev.map((d, i) =>
-        i === passConfirm.index ? { ...d, status: "pass", remark: "", imageUrl: "" } : d,
+        i === passConfirm.index ? { ...d, status: "pass", remark: "", imageUrls: [] } : d,
       ),
     );
     setPassConfirm(null);
@@ -311,21 +319,26 @@ function CheckForm({
     setFailModal({
       index,
       remark: item.remark,
-      preview: item.imageUrl,
+      previews: [...item.imageUrls],
     });
   }
 
-  function saveFailModal(imageUrl: string) {
+  function saveFailModal(imageUrls: string[]) {
     if (!failModal) return;
     const remark = failModal.remark.trim();
     if (!remark) {
       onError("กรุณาระบุปัญหา (Remark) เมื่อไม่ผ่าน");
       return;
     }
+    const urls = imageUrls.filter(Boolean).slice(0, CHECK_IMAGE_MAX);
+    if (urls.some((u) => u.startsWith("data:"))) {
+      onError("รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่เพื่อบันทึกเข้าคลังหลักฐาน");
+      return;
+    }
     setDrafts((prev) =>
       prev.map((d, i) =>
         i === failModal.index
-          ? { ...d, status: "fail", remark, imageUrl }
+          ? { ...d, status: "fail", remark, imageUrls: urls }
           : d,
       ),
     );
@@ -366,7 +379,8 @@ function CheckForm({
           itemName: d.itemName,
           status: d.status as CheckStatus,
           remark: d.remark,
-          imageUrl: d.imageUrl,
+          imageUrls: d.imageUrls,
+          imageUrl: d.imageUrls[0] || "",
           submittedAt,
           createdBy,
         })),
@@ -571,9 +585,20 @@ function CheckForm({
                 {draft.status === "fail" ? (
                   <div className="check-fail-detail">
                     <p className="check-fail-remark">{draft.remark}</p>
-                    {draft.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={draft.imageUrl} alt="หลักฐาน" className="check-fail-thumb" />
+                    {draft.imageUrls.length ? (
+                      <button
+                        type="button"
+                        className="ghost-btn"
+                        style={{ fontSize: "0.72rem" }}
+                        onClick={() =>
+                          setPhotoPreview({
+                            urls: draft.imageUrls,
+                            title: draft.itemName,
+                          })
+                        }
+                      >
+                        ดูรูปหลักฐาน ({draft.imageUrls.length})
+                      </button>
                     ) : null}
                     <button
                       type="button"
@@ -609,12 +634,12 @@ function CheckForm({
         <FailModal
           itemName={drafts[failModal.index]?.itemName || ""}
           remark={failModal.remark}
-          preview={failModal.preview}
+          previews={failModal.previews}
           onRemarkChange={(remark) => setFailModal((m) => (m ? { ...m, remark } : null))}
-          onPreviewChange={(preview) => setFailModal((m) => (m ? { ...m, preview } : null))}
+          onPreviewsChange={(previews) => setFailModal((m) => (m ? { ...m, previews } : null))}
           onError={onError}
           onCancel={() => setFailModal(null)}
-          onSave={() => saveFailModal(failModal.preview)}
+          onSave={() => saveFailModal(failModal.previews)}
         />
       ) : null}
 
@@ -623,6 +648,14 @@ function CheckForm({
           itemName={passConfirm.itemName}
           onCancel={() => setPassConfirm(null)}
           onConfirm={confirmPass}
+        />
+      ) : null}
+
+      {photoPreview ? (
+        <ImagePreviewModal
+          urls={photoPreview.urls}
+          title={photoPreview.title}
+          onClose={() => setPhotoPreview(null)}
         />
       ) : null}
     </>
@@ -678,18 +711,18 @@ function PassConfirmModal({
 function FailModal({
   itemName,
   remark,
-  preview,
+  previews,
   onRemarkChange,
-  onPreviewChange,
+  onPreviewsChange,
   onError,
   onCancel,
   onSave,
 }: {
   itemName: string;
   remark: string;
-  preview: string;
+  previews: string[];
   onRemarkChange: (v: string) => void;
-  onPreviewChange: (url: string) => void;
+  onPreviewsChange: (urls: string[]) => void;
   onError: (msg: string) => void;
   onCancel: () => void;
   onSave: () => void;
@@ -723,14 +756,16 @@ function FailModal({
             required
           />
         </div>
-        <PhotoAttachField
-          value={preview}
-          onChange={onPreviewChange}
+        <PhotoAttachMultiField
+          values={previews}
+          onChange={onPreviewsChange}
           onError={onError}
           label="รูปหลักฐาน (ถ้ามี)"
-          galleryOnly
+          max={CHECK_IMAGE_MAX}
+          allowCamera={false}
           storageFolder="checklist"
           storageSlotKey="fail-evidence"
+          hint={`บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${CHECK_IMAGE_MAX} รูป`}
         />
         <button type="button" className="primary-btn action-out" onClick={onSave}>
           บันทึก &quot;ไม่ผ่าน&quot;
@@ -1012,54 +1047,73 @@ function CheckShiftDetailModal({
   onDelete: () => void;
 }) {
   const session = cell.session!;
+  const [photoPreview, setPhotoPreview] = useState<{ urls: string[]; title: string } | null>(null);
 
   return (
-    <div className="modal-backdrop edit-modal is-module-form" onClick={onClose}>
-      <div className="modal-card check-detail-card" onClick={(e) => e.stopPropagation()}>
-        <div className="check-modal-head">
-          <div>
-            <h2 className="panel-title" style={{ fontSize: "1rem", margin: 0 }}>
-              {formatDateShort(dateMs)} · {cell.label}
-            </h2>
-            <p className="muted check-detail-sub">
-              {session.inspector} · {formatDateTimeShort(session.submittedAt)} ·{" "}
-              {session.failed ? `${session.failed} ไม่ผ่าน` : "ผ่านครบ"}
-            </p>
+    <>
+      <div className="modal-backdrop edit-modal is-module-form" onClick={onClose}>
+        <div className="modal-card check-detail-card" onClick={(e) => e.stopPropagation()}>
+          <div className="check-modal-head">
+            <div>
+              <h2 className="panel-title" style={{ fontSize: "1rem", margin: 0 }}>
+                {formatDateShort(dateMs)} · {cell.label}
+              </h2>
+              <p className="muted check-detail-sub">
+                {session.inspector} · {formatDateTimeShort(session.submittedAt)} ·{" "}
+                {session.failed ? `${session.failed} ไม่ผ่าน` : "ผ่านครบ"}
+              </p>
+            </div>
+            <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" onClick={onClose}>
+              <X size={18} />
+            </button>
           </div>
-          <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
 
-        <div className="check-detail-grid">
-          {records.map((row) => (
-            <article
-              key={row.id}
-              className={row.status === "fail" ? "check-detail-item is-fail" : "check-detail-item is-pass"}
-            >
-              <span className="check-detail-item-name">{row.itemName}</span>
-              <span className={row.status === "fail" ? "check-cell-fail" : "check-cell-pass"}>
-                {row.status === "pass" ? "ผ่าน" : "ไม่ผ่าน"}
-              </span>
-              {row.status === "fail" ? (
-                <>
-                  <p className="check-detail-remark">{row.remark || "—"}</p>
-                  {row.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={row.imageUrl} alt="หลักฐาน" className="check-detail-photo" />
+          <div className="check-detail-grid">
+            {records.map((row) => {
+              const imgs = getChecklistImageUrls(row);
+              return (
+                <article
+                  key={row.id}
+                  className={row.status === "fail" ? "check-detail-item is-fail" : "check-detail-item is-pass"}
+                >
+                  <span className="check-detail-item-name">{row.itemName}</span>
+                  <span className={row.status === "fail" ? "check-cell-fail" : "check-cell-pass"}>
+                    {row.status === "pass" ? "ผ่าน" : "ไม่ผ่าน"}
+                  </span>
+                  {row.status === "fail" ? (
+                    <>
+                      <p className="check-detail-remark">{row.remark || "—"}</p>
+                      {imgs.length ? (
+                        <button
+                          type="button"
+                          className="ghost-btn"
+                          style={{ fontSize: "0.72rem" }}
+                          onClick={() => setPhotoPreview({ urls: imgs, title: row.itemName })}
+                        >
+                          ดูรูปหลักฐาน ({imgs.length})
+                        </button>
+                      ) : null}
+                    </>
                   ) : null}
-                </>
-              ) : null}
-            </article>
-          ))}
-        </div>
+                </article>
+              );
+            })}
+          </div>
 
-        {isOwner ? (
-          <button type="button" className="ghost-btn check-detail-delete" onClick={onDelete}>
-            <Trash2 size={14} aria-hidden /> ลบชุดตรวจนี้
-          </button>
-        ) : null}
+          {isOwner ? (
+            <button type="button" className="ghost-btn check-detail-delete" onClick={onDelete}>
+              <Trash2 size={14} aria-hidden /> ลบชุดตรวจนี้
+            </button>
+          ) : null}
+        </div>
       </div>
-    </div>
+      {photoPreview ? (
+        <ImagePreviewModal
+          urls={photoPreview.urls}
+          title={photoPreview.title}
+          onClose={() => setPhotoPreview(null)}
+        />
+      ) : null}
+    </>
   );
 }

@@ -46,6 +46,11 @@ function mapOccurrence(id: string, data: Record<string, unknown>): TaskOccurrenc
     status: (data.status as TaskOccurrenceStatus) || "pending",
     checklistDone,
     proofImg: data.proofImg ? String(data.proofImg) : undefined,
+    proofImgs: Array.isArray(data.proofImgs)
+      ? (data.proofImgs as string[]).map(String).filter((u) => u.trim())
+      : data.proofImg
+        ? [String(data.proofImg)]
+        : [],
     completedAt: data.completedAt != null ? Number(data.completedAt) : undefined,
     completedBy: data.completedBy ? String(data.completedBy) : undefined,
     completedKind: data.completedKind as TaskOccurrence["completedKind"],
@@ -130,16 +135,22 @@ export async function completeTaskOccurrence(
   occ: TaskOccurrence,
   patch: {
     checklistDone: string[];
-    proofImg: string;
+    proofImg?: string;
+    proofImgs?: string[];
     completedBy: string;
   },
 ): Promise<void> {
   const now = Date.now();
   const wasMissed = occ.status === "missed";
   const completedKind = computeCompletedKind(occ.dueDate, now, wasMissed);
+  const proofImgs = (patch.proofImgs || (patch.proofImg ? [patch.proofImg] : []))
+    .map((u) => u.trim())
+    .filter(Boolean)
+    .slice(0, 6);
   await updateDoc(doc(getDb(), "taskOccurrences", occ.id), {
     checklistDone: patch.checklistDone,
-    proofImg: patch.proofImg.trim(),
+    proofImg: proofImgs[0] || "",
+    proofImgs,
     status: "completed",
     completedAt: now,
     completedBy: patch.completedBy,

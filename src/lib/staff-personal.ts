@@ -2,6 +2,8 @@ import { deleteField, doc, getDoc, setDoc, updateDoc, collection, getDocs } from
 import { getDb } from "./firebase";
 import type { StaffPersonalData } from "./types";
 
+export type { StaffPersonalData };
+
 function staffPersonalRef(staffId: string) {
   return doc(getDb(), "staffPersonal", staffId);
 }
@@ -26,8 +28,22 @@ export type StaffPersonalPatch = {
   legalFirstName?: string | null;
   legalLastName?: string | null;
   idCardPhotoUrl?: string | null;
+  idCardPhotoUrls?: string[] | null;
   personalDataConsentAt?: number | null;
 };
+
+export const STAFF_ID_CARD_MAX = 3;
+
+export function getIdCardPhotoUrls(
+  personal?: Pick<StaffPersonalData, "idCardPhotoUrl" | "idCardPhotoUrls"> | null,
+): string[] {
+  if (!personal) return [];
+  if (Array.isArray(personal.idCardPhotoUrls) && personal.idCardPhotoUrls.length) {
+    return personal.idCardPhotoUrls.map(String).filter((u) => u.trim()).slice(0, STAFF_ID_CARD_MAX);
+  }
+  const legacy = (personal.idCardPhotoUrl || "").trim();
+  return legacy ? [legacy] : [];
+}
 
 export async function saveStaffPersonal(
   staffId: string,
@@ -46,11 +62,16 @@ export async function saveStaffPersonal(
         ? patch.legalLastName.trim()
         : deleteField();
   }
-  if (patch.idCardPhotoUrl !== undefined) {
-    next.idCardPhotoUrl =
-      patch.idCardPhotoUrl && patch.idCardPhotoUrl.trim()
-        ? patch.idCardPhotoUrl.trim()
-        : deleteField();
+  if (patch.idCardPhotoUrls != null || patch.idCardPhotoUrl !== undefined) {
+    const urls = (
+      patch.idCardPhotoUrls ||
+      (patch.idCardPhotoUrl ? [patch.idCardPhotoUrl] : [])
+    )
+      .map((u) => String(u || "").trim())
+      .filter(Boolean)
+      .slice(0, STAFF_ID_CARD_MAX);
+    next.idCardPhotoUrl = urls[0] || deleteField();
+    next.idCardPhotoUrls = urls.length ? urls : deleteField();
   }
   if (patch.personalDataConsentAt !== undefined) {
     next.personalDataConsentAt =

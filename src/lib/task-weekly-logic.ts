@@ -257,12 +257,33 @@ export function newChecklistItemId() {
 export function validateTaskCompleteInput(input: {
   checklist: TaskChecklistItem[];
   checkedIds: string[];
-  proofImg: string;
+  proofImg?: string;
+  proofImgs?: string[];
 }): string | null {
-  if (!input.proofImg.trim()) return "แนบรูปหลักฐานก่อนส่งงาน";
+  const proofs = [
+    ...(input.proofImgs || []),
+    ...(input.proofImg ? [input.proofImg] : []),
+  ]
+    .map((u) => u.trim())
+    .filter(Boolean);
+  if (!proofs.length) return "แนบรูปหลักฐานก่อนส่งงาน";
   const set = new Set(input.checkedIds);
   if (!input.checklist.every((item) => set.has(item.id))) {
     return "ติ๊ก checklist ให้ครบทุกข้อก่อนส่ง";
   }
   return null;
+}
+
+export const TASK_PROOF_MAX = 6;
+
+export function getTaskProofImgs(occ?: {
+  proofImg?: string;
+  proofImgs?: string[];
+} | null): string[] {
+  if (!occ) return [];
+  if (Array.isArray(occ.proofImgs) && occ.proofImgs.length) {
+    return occ.proofImgs.map(String).filter((u) => u.trim()).slice(0, TASK_PROOF_MAX);
+  }
+  const legacy = (occ.proofImg || "").trim();
+  return legacy ? [legacy] : [];
 }

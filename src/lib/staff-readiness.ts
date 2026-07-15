@@ -1,4 +1,5 @@
 import type { Employee } from "./employees";
+import { getIdCardPhotoUrls } from "./staff-personal";
 import type { StaffMember, StaffPersonalData } from "./types";
 import { staffAccountLabel } from "./utils";
 
@@ -39,7 +40,7 @@ function assessPersonal(
   return {
     legalFirstName: !!p?.legalFirstName?.trim() || !!member.personalProfileComplete,
     legalLastName: !!p?.legalLastName?.trim() || !!member.personalProfileComplete,
-    idCard: !!p?.idCardPhotoUrl?.trim() || !!member.personalProfileComplete,
+    idCard: getIdCardPhotoUrls(p).length > 0 || !!member.personalProfileComplete,
     pdpa: !!p?.personalDataConsentAt || !!member.personalProfileComplete,
   };
 }

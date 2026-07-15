@@ -16,7 +16,7 @@ import {
 import { AuthGate } from "@/components/AuthGate";
 import { ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
-import { PhotoAttachField } from "@/components/PhotoAttachField";
+import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
@@ -35,10 +35,12 @@ import type { TaskChecklistItem, TaskOccurrence, TaskTemplate } from "@/lib/task
 import {
   canSubmitOccurrence,
   filterOccurrencesByTab,
+  getTaskProofImgs,
   isOccurrenceOpenSoon,
   labelCompletedKind,
   labelWeekday,
   newChecklistItemId,
+  TASK_PROOF_MAX,
   validateTaskCompleteInput,
   WEEKDAY_LABELS,
   type OccurrenceTab,
@@ -81,7 +83,7 @@ function TasksView() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
   const [submitOcc, setSubmitOcc] = useState<TaskOccurrence | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
   const syncedRef = useRef(false);
 
   const doSync = useCallback(async (tpls: TaskTemplate[], occs: TaskOccurrence[]) => {
@@ -172,7 +174,7 @@ function TasksView() {
     void doSync(templates.filter((t) => t.active), occurrences);
   }, [isOwnerManager, loading, templates, occurrences, doSync]);
 
-  useBodyScrollLock(createOpen || !!editingTemplate || !!submitOcc || !!previewUrl);
+  useBodyScrollLock(createOpen || !!editingTemplate || !!submitOcc || !!previewUrls);
 
   const visible = useMemo(() => filterOccurrencesByTab(occurrences, tab), [occurrences, tab]);
   const activeTemplates = useMemo(() => templates.filter((t) => t.active), [templates]);
@@ -286,7 +288,7 @@ function TasksView() {
                   occ={occ}
                   canManage={isOwnerManager}
                   onSubmit={() => setSubmitOcc(occ)}
-                  onViewPhoto={(url) => setPreviewUrl(url)}
+                  onViewPhoto={(urls) => setPreviewUrls(urls)}
                   onError={setError}
                 />
               ))}
@@ -333,8 +335,8 @@ function TasksView() {
         />
       ) : null}
 
-      {previewUrl ? (
-        <ImagePreviewModal url={previewUrl} title="หลักฐานงาน" onClose={() => setPreviewUrl(null)} />
+      {previewUrls ? (
+        <ImagePreviewModal urls={previewUrls} title="หลักฐานงาน" onClose={() => setPreviewUrls(null)} />
       ) : null}
 
       {isOwnerManager ? (
@@ -359,7 +361,7 @@ function OccurrenceCard({
   occ: TaskOccurrence;
   canManage: boolean;
   onSubmit: () => void;
-  onViewPhoto: (url: string) => void;
+  onViewPhoto: (urls: string[]) => void;
   onError: (msg: string) => void;
 }) {
   const soon = isOccurrenceOpenSoon(occ);
@@ -367,6 +369,7 @@ function OccurrenceCard({
   const done = occ.status === "completed";
   const missed = occ.status === "missed";
   const canDelete = canManage && !done;
+  const proofImgs = getTaskProofImgs(occ);
 
   async function onDelete() {
     if (!window.confirm(`ลบรอบงาน "${occ.title}" (${formatDateShort(occ.dueDate)})?`)) return;
@@ -436,13 +439,14 @@ function OccurrenceCard({
         {soon ? (
           <p className="muted tasks-future-hint">เปิดส่ง {formatDateShort(occ.openAt)}</p>
         ) : null}
-        {done && occ.proofImg ? (
+        {done && proofImgs.length ? (
           <button
             type="button"
             className="ghost-btn tasks-proof-btn"
-            onClick={() => onViewPhoto(occ.proofImg!)}
+            onClick={() => onViewPhoto(proofImgs)}
           >
             <ImageIcon size={14} aria-hidden /> ดูรูปหลักฐาน
+            {proofImgs.length > 1 ? ` (${proofImgs.length})` : ""}
           </button>
         ) : null}
         {canDelete ? (
@@ -736,7 +740,7 @@ function SubmitOccurrenceModal({
   onSaved: () => void;
 }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
   function toggleItem(id: string) {
@@ -752,10 +756,15 @@ function SubmitOccurrenceModal({
     e.preventDefault();
     if (!actorId) return;
     const checkedIds = [...checked];
+    const urls = imageUrls.filter(Boolean).slice(0, TASK_PROOF_MAX);
+    if (urls.some((u) => u.startsWith("data:"))) {
+      onError("รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่เพื่อบันทึกเข้าคลังหลักฐาน");
+      return;
+    }
     const validation = validateTaskCompleteInput({
       checklist: occ.checklist,
       checkedIds,
-      proofImg: imageUrl,
+      proofImgs: urls,
     });
     if (validation) {
       onError(validation);
@@ -766,7 +775,8 @@ function SubmitOccurrenceModal({
     try {
       await completeTaskOccurrence(occ, {
         checklistDone: checkedIds,
-        proofImg: imageUrl,
+        proofImgs: urls,
+        proofImg: urls[0] || "",
         completedBy: actorId,
       });
       onSaved();
@@ -813,17 +823,19 @@ function SubmitOccurrenceModal({
             })}
           </ul>
 
-          <PhotoAttachField
-            value={imageUrl}
-            onChange={setImageUrl}
+          <PhotoAttachMultiField
+            values={imageUrls}
+            onChange={setImageUrls}
             onError={onError}
             label="รูปหลักฐาน (บังคับ)"
+            max={TASK_PROOF_MAX}
             storageFolder="tasks"
             storageSlotKey="proof"
+            hint={`บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${TASK_PROOF_MAX} รูป`}
           />
 
           <div className="entry-actions module-form-actions">
-            <button type="submit" className="primary-btn" disabled={busy || !allDone || !imageUrl}>
+            <button type="submit" className="primary-btn" disabled={busy || !allDone || !imageUrls.length}>
               {busy ? "กำลังส่ง..." : "ส่งงาน"}
             </button>
             <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>

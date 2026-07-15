@@ -36,6 +36,8 @@ export type TaskOccurrence = {
   status: TaskOccurrenceStatus;
   checklistDone: string[];
   proofImg?: string;
+  /** รูปหลักฐานหลายรูป — ถ้าว่างใช้ proofImg */
+  proofImgs?: string[];
   completedAt?: number;
   completedBy?: string;
   completedKind?: "on_time" | "late" | "backfill";

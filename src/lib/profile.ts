@@ -1,4 +1,5 @@
 import type { StaffMember } from "./types";
+import { getIdCardPhotoUrls } from "./staff-personal";
 
 const SNOOZE_MS = 24 * 60 * 60 * 1000;
 
@@ -7,7 +8,7 @@ export function needsPersonalProfileSetup(staff: StaffMember | null | undefined)
   if (!staff || staff.role === "owner") return false;
   if (staff.personalProfileComplete) return false;
   const p = staff.personal;
-  if (p?.legalFirstName && p?.legalLastName && p?.idCardPhotoUrl) return false;
+  if (p?.legalFirstName && p?.legalLastName && getIdCardPhotoUrls(p).length) return false;
   return true;
 }
 

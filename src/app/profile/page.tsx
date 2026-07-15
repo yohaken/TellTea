@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { IdCard, UserCircle } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
-import { PhotoAttachField } from "@/components/PhotoAttachField";
+import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PersonalDataConsentField } from "@/components/PersonalDataConsentField";
 import { useAuth } from "@/lib/auth";
 import {
@@ -14,7 +14,11 @@ import {
 } from "@/lib/employees";
 import { needsPersonalProfileSetup, needsRosterLink } from "@/lib/profile";
 import { updateStaffProfile, attachStaffPersonal } from "@/lib/staff";
-import { saveStaffPersonal } from "@/lib/staff-personal";
+import {
+  getIdCardPhotoUrls,
+  saveStaffPersonal,
+  STAFF_ID_CARD_MAX,
+} from "@/lib/staff-personal";
 import { saveCachedStaff } from "@/lib/cache";
 import { formatPhoneDisplay, staffAccountLabel } from "@/lib/utils";
 
@@ -33,7 +37,9 @@ function ProfileView() {
   const [employeeId, setEmployeeId] = useState(staff?.employeeId || "");
   const [legalFirstName, setLegalFirstName] = useState(staff?.personal?.legalFirstName || "");
   const [legalLastName, setLegalLastName] = useState(staff?.personal?.legalLastName || "");
-  const [idCardPhotoUrl, setIdCardPhotoUrl] = useState(staff?.personal?.idCardPhotoUrl || "");
+  const [idCardPhotoUrls, setIdCardPhotoUrls] = useState<string[]>(() =>
+    getIdCardPhotoUrls(staff?.personal),
+  );
   const [consent, setConsent] = useState(!!staff?.personal?.personalDataConsentAt);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -50,7 +56,7 @@ function ProfileView() {
     if (!staff) return;
     setLegalFirstName(staff.personal?.legalFirstName || "");
     setLegalLastName(staff.personal?.legalLastName || "");
-    setIdCardPhotoUrl(staff.personal?.idCardPhotoUrl || "");
+    setIdCardPhotoUrls(getIdCardPhotoUrls(staff.personal));
     setConsent(!!staff.personal?.personalDataConsentAt);
     setEmployeeId(staff.employeeId || "");
   }, [staff]);
@@ -81,8 +87,13 @@ function ProfileView() {
       setError("ใส่ชื่อจริงและนามสกุล");
       return;
     }
-    if (!idCardPhotoUrl.trim()) {
+    const urls = idCardPhotoUrls.filter(Boolean).slice(0, STAFF_ID_CARD_MAX);
+    if (!urls.length) {
       setError("ถ่ายหรือแนบรูปบัตรประชาชน");
+      return;
+    }
+    if (urls.some((u) => u.startsWith("data:"))) {
+      setError("รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่เพื่อบันทึกเข้าคลังหลักฐาน");
       return;
     }
     if (!consent && !staff.personal?.personalDataConsentAt) {
@@ -95,7 +106,7 @@ function ProfileView() {
       const personal = await saveStaffPersonal(staff.id, {
         legalFirstName: legalFirstName.trim(),
         legalLastName: legalLastName.trim(),
-        idCardPhotoUrl,
+        idCardPhotoUrls: urls,
         personalDataConsentAt: staff.personal?.personalDataConsentAt || Date.now(),
       });
       const updated = await updateStaffProfile(staff.id, {
@@ -205,13 +216,15 @@ function ProfileView() {
                 required
               />
             </div>
-            <PhotoAttachField
+            <PhotoAttachMultiField
               label="รูปบัตรประชาชน"
-              value={idCardPhotoUrl}
-              onChange={setIdCardPhotoUrl}
+              values={idCardPhotoUrls}
+              onChange={setIdCardPhotoUrls}
               onError={setError}
+              max={STAFF_ID_CARD_MAX}
               storageFolder="staff-id"
               storageSlotKey="id-card"
+              hint={`หน้า/หลังบัตรได้ · สูงสุด ${STAFF_ID_CARD_MAX} รูป`}
             />
             <PersonalDataConsentField
               checked={consent}
