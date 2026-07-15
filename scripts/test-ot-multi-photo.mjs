@@ -14,7 +14,7 @@ const cellSrc = readFileSync(join(root, "src/components/EntryPhotoCell.tsx"), "u
 const receiptsSrc = readFileSync(join(root, "src/lib/receipts.ts"), "utf8");
 
 assert.match(otSrc, /OT_IMAGE_MAX\s*=\s*10/);
-assert.match(otSrc, /OT_IMAGE_PAYLOAD_BUDGET\s*=\s*720_000/);
+assert.match(otSrc, /OT_IMAGE_PAYLOAD_BUDGET\s*=\s*650_000/);
 assert.match(otSrc, /assertOtImageUrlsFit/);
 assert.match(otSrc, /getOtImageUrls/);
 assert.match(otSrc, /imageUrls/);

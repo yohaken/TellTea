@@ -21,7 +21,7 @@ assert.match(pageSrc, /canSaveClose/);
 assert.match(pageSrc, /updateOtEntry\(entry\.id, payload\)/);
 
 const OT_IMAGE_MAX = 10;
-const OT_IMAGE_PAYLOAD_BUDGET = 720_000;
+const OT_IMAGE_PAYLOAD_BUDGET = 650_000;
 const FIRESTORE_DOC_LIMIT = 1_048_576;
 
 function otImagePayloadChars(urls) {

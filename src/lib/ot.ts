@@ -204,7 +204,7 @@ export const OT_IMAGE_MAX = 10;
  * Safe budget for legacy data-URL payloads only (`imageUrl` + `imageUrls`).
  * Remote https URLs are tiny and skip this budget.
  */
-export const OT_IMAGE_PAYLOAD_BUDGET = 720_000;
+export const OT_IMAGE_PAYLOAD_BUDGET = 650_000;
 
 /** Chars written for photos (accounts for legacy imageUrl duplicating the first URL). */
 export function otImagePayloadChars(urls: string[]): number {

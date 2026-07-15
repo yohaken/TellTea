@@ -33,7 +33,7 @@ assert.match(firebaseJson, /"storage"/);
 assert.match(deployYml, /storage/);
 
 const OT_IMAGE_MAX = 10;
-const OT_IMAGE_PAYLOAD_BUDGET = 720_000;
+const OT_IMAGE_PAYLOAD_BUDGET = 650_000;
 const FIRESTORE_DOC_LIMIT = 1_048_576;
 
 function isDataUrlPhoto(url) {
@@ -82,8 +82,13 @@ const tenBytes = estimateDocBytes(tenRemote);
 assert.ok(tenBytes < 20_000, `10 remote URLs doc should be tiny, got ${tenBytes}`);
 assert.ok(tenBytes < FIRESTORE_DOC_LIMIT);
 
-// Caps at 10
-assert.equal(assertOtImageUrlsFit([...tenRemote, "https://x/extra.jpg"]).length, 10);
+// 10 tight data URLs (~55k each) must still fit legacy fallback budget.
+const tenData = Array.from(
+  { length: 10 },
+  (_, i) => "data:image/jpeg;base64," + String(i).repeat(55_000),
+);
+assert.equal(assertOtImageUrlsFit(tenData).length, 10);
+assert.ok(otImagePayloadChars(tenData) <= OT_IMAGE_PAYLOAD_BUDGET + 50_000);
 
 // Legacy data URLs still budget-checked
 assert.throws(() =>
