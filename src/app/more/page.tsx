@@ -113,7 +113,7 @@ function MoreView() {
     {
       href: "/export/",
       title: "ส่งออก",
-      desc: "ดาวน์โหลดบช. / รายงานเป็น Excel",
+      desc: "Excel บัญชีพนักงาน / บช.เจ้าของ / P&L — เฉพาะเจ้าของ",
       icon: Download,
       perm: "exportData",
     },

@@ -47,8 +47,7 @@ import {
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
-import { exportLedgerXlsx } from "@/lib/xlsx-export";
-import { Trash2, X } from "lucide-react";
+import { Camera, Trash2, X } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 export default function LedgerPage() {
@@ -77,7 +76,6 @@ function LedgerView() {
   const [query, setQuery] = useState("");
   const [searchPool, setSearchPool] = useState<LedgerEntry[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const photoEntryRef = useRef<LedgerEntry | null>(null);
   const photoCameraRef = useRef<HTMLInputElement>(null);
   const photoGalleryRef = useRef<HTMLInputElement>(null);
@@ -255,24 +253,6 @@ function LedgerView() {
     }
   }
 
-  async function onExportTables() {
-    setExporting(true);
-    setError(null);
-    try {
-      let rows: LedgerEntry[];
-      if (deferredQuery) {
-        rows = filterLedgerRows(searchPool ?? entries, deferredQuery);
-      } else {
-        rows = await listLedgerEntries();
-      }
-      exportLedgerXlsx(rows);
-    } catch (err) {
-      setError((err as Error).message || "ส่งออกไม่สำเร็จ");
-    } finally {
-      setExporting(false);
-    }
-  }
-
   useEffect(() => {
     const node = sentinelRef.current;
     if (!node || loading || deferredQuery) return;
@@ -298,16 +278,16 @@ function LedgerView() {
         <strong>{balance == null ? "…" : `฿${formatPlainNumber(balance)}`}</strong>
       </div>
 
-      <div className="btn-row pnl-toolbar">
-        <button
-          type="button"
-          className="primary-btn"
-          disabled={exporting || loading || (!entries.length && !searchPool?.length)}
-          onClick={() => void onExportTables()}
-        >
-          {exporting ? "กำลังส่งออก..." : "ส่งออกตาราง Excel"}
-        </button>
-      </div>
+      <aside className="ledger-photo-tip" role="note" aria-label="คำแนะนำถ่ายหลักฐาน">
+        <Camera size={18} aria-hidden className="ledger-photo-tip-icon" />
+        <div className="ledger-photo-tip-body">
+          <p className="ledger-photo-tip-title">ถ่ายหลักฐานให้คมชัด</p>
+          <p className="ledger-photo-tip-text">
+            โดยเฉพาะใบเสร็จ / เอกสารซื้อ — ตัวหนังสืออ่านได้ แสงพอ ไม่เบลอ
+            รูปไม่ชัดอาจตรวจบัญชีไม่ได้
+          </p>
+        </div>
+      </aside>
 
       <div className="table-search">
         <input
