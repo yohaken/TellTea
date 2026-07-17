@@ -76,7 +76,7 @@ export async function ensureOtRateScheduleHistory(opts?: {
   const current = await getRateSchedule();
   const newRate = opts?.newRate ?? OT_NEW_RATE;
 
-  let entries = current.entries.filter((e) => {
+  const entries = current.entries.filter((e) => {
     if (e.kind !== "ot") return true;
     if (e.effectiveFrom >= cutoverMs) return true;
     return ratesClose(e.rate, legacyRate);
