@@ -144,6 +144,66 @@ const rateLib = readFileSync(join(root, "src/lib/rate-schedule.ts"), "utf8");
 assert.match(rateLib, /bakeryProd/);
 assert.match(rateLib, /resolveBakeryProdRateForNewEntry/);
 assert.match(rateLib, /รายการเก่าต้องใช้ entry\.bonusRate/);
+assert.match(rateLib, /rateScheduleDocForFirestore/);
+assert.match(rateLib, /Firestore rejects/);
+
+// Firestore payload must never include undefined optional keys
+function rateScheduleDocForFirestore(doc) {
+  return {
+    updatedAt: Number(doc.updatedAt) || Date.now(),
+    entries: (doc.entries || []).map((row) => {
+      const out = {
+        id: String(row.id || ""),
+        kind: row.kind,
+        effectiveFrom: Number(row.effectiveFrom) || 0,
+        rate: Number(row.rate) || 0,
+        createdAt: Number(row.createdAt) || 0,
+        createdBy: String(row.createdBy || ""),
+      };
+      if (row.productId) out.productId = String(row.productId);
+      if (row.productName) out.productName = String(row.productName);
+      if (row.note) out.note = String(row.note);
+      return out;
+    }),
+  };
+}
+
+const firestorePayload = rateScheduleDocForFirestore({
+  updatedAt: 1,
+  entries: [
+    {
+      id: "a",
+      kind: "ot",
+      effectiveFrom: day(2026, 7, 17),
+      rate: 0.7,
+      createdAt: 1,
+      createdBy: "owner",
+      productId: undefined,
+      productName: undefined,
+      note: undefined,
+    },
+    {
+      id: "b",
+      kind: "bakeryProd",
+      productId: "p1",
+      productName: "ครัวซองต์",
+      effectiveFrom: day(2026, 7, 17),
+      rate: 4,
+      createdAt: 2,
+      createdBy: "owner",
+      note: "",
+    },
+  ],
+});
+assert.equal("productId" in firestorePayload.entries[0], false);
+assert.equal("note" in firestorePayload.entries[0], false);
+assert.equal(firestorePayload.entries[1].productId, "p1");
+assert.equal("note" in firestorePayload.entries[1], false);
+for (const row of firestorePayload.entries) {
+  for (const [k, v] of Object.entries(row)) {
+    assert.notEqual(v, undefined, `field ${k} must not be undefined`);
+  }
+}
 
 const prodLib = readFileSync(join(root, "src/lib/production.ts"), "utf8");
 assert.match(prodLib, /resolveBakeryProdRateForNewEntry/);

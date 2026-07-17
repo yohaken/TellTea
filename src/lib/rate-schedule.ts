@@ -52,6 +52,33 @@ function isRateKind(v: unknown): v is RateKind {
   return v === "ot" || v === "bakerySales" || v === "bakeryProd";
 }
 
+/**
+ * Firestore rejects `undefined` field values — omit optional keys instead.
+ * (Updating a rate again on the same day often has empty note / no productId.)
+ */
+export function rateScheduleDocForFirestore(doc: RateScheduleDoc): {
+  entries: Record<string, string | number>[];
+  updatedAt: number;
+} {
+  return {
+    updatedAt: Number(doc.updatedAt) || Date.now(),
+    entries: (doc.entries || []).map((row) => {
+      const out: Record<string, string | number> = {
+        id: String(row.id || ""),
+        kind: row.kind,
+        effectiveFrom: Number(row.effectiveFrom) || 0,
+        rate: Number(row.rate) || 0,
+        createdAt: Number(row.createdAt) || 0,
+        createdBy: String(row.createdBy || ""),
+      };
+      if (row.productId) out.productId = String(row.productId);
+      if (row.productName) out.productName = String(row.productName);
+      if (row.note) out.note = String(row.note);
+      return out;
+    }),
+  };
+}
+
 export function normalizeRateSchedule(
   data: Partial<RateScheduleDoc> | undefined,
 ): RateScheduleDoc {
@@ -63,22 +90,22 @@ export function normalizeRateSchedule(
     const rate = Number(row.rate);
     if (!Number.isFinite(effectiveFrom) || !Number.isFinite(rate)) continue;
     const productId =
-      row.kind === "bakeryProd" ? String(row.productId || "").trim() : undefined;
+      row.kind === "bakeryProd" ? String(row.productId || "").trim() : "";
     if (row.kind === "bakeryProd" && !productId) continue;
-    entries.push({
+    const next: RateScheduleEntry = {
       id: String(row.id || newEntryId()),
       kind: row.kind,
-      productId,
-      productName:
-        row.kind === "bakeryProd" && row.productName
-          ? String(row.productName).slice(0, 80)
-          : undefined,
       effectiveFrom,
       rate,
-      note: row.note ? String(row.note).slice(0, 200) : undefined,
       createdAt: Number(row.createdAt) || 0,
       createdBy: String(row.createdBy || ""),
-    });
+    };
+    if (productId) next.productId = productId;
+    if (row.kind === "bakeryProd" && row.productName) {
+      next.productName = String(row.productName).slice(0, 80);
+    }
+    if (row.note) next.note = String(row.note).slice(0, 200);
+    entries.push(next);
   }
   entries.sort((a, b) => {
     if (a.kind !== b.kind) return a.kind.localeCompare(b.kind);
@@ -222,17 +249,20 @@ export async function addRateScheduleEntry(input: RateScheduleAddInput): Promise
   const nextEntry: RateScheduleEntry = {
     id: newEntryId(),
     kind: input.kind,
-    productId,
-    productName:
-      input.kind === "bakeryProd"
-        ? String(input.productName || "").trim().slice(0, 80) || undefined
-        : undefined,
     effectiveFrom,
     rate,
-    note: input.note?.trim() || undefined,
     createdAt: Date.now(),
     createdBy: input.createdBy,
   };
+  if (productId) nextEntry.productId = productId;
+  const productName =
+    input.kind === "bakeryProd"
+      ? String(input.productName || "").trim().slice(0, 80)
+      : "";
+  if (productName) nextEntry.productName = productName;
+  const note = input.note?.trim() || "";
+  if (note) nextEntry.note = note;
+
   const next: RateScheduleDoc = {
     entries: normalizeRateSchedule({
       entries: [...current.entries, nextEntry],
@@ -241,7 +271,7 @@ export async function addRateScheduleEntry(input: RateScheduleAddInput): Promise
     updatedAt: Date.now(),
   };
 
-  await setDoc(scheduleRef(), next, { merge: false });
+  await setDoc(scheduleRef(), rateScheduleDocForFirestore(next), { merge: false });
 
   if (input.kind === "ot") {
     const todayMs = parseDateInput(todayInputValue());
@@ -273,7 +303,7 @@ export async function deleteRateScheduleEntry(entryId: string): Promise<RateSche
     entries: nextEntries,
     updatedAt: Date.now(),
   };
-  await setDoc(scheduleRef(), next, { merge: false });
+  await setDoc(scheduleRef(), rateScheduleDocForFirestore(next), { merge: false });
 
   const todayMs = parseDateInput(todayInputValue());
   const activeOt = resolveRateForDate(next.entries, "ot", todayMs);
