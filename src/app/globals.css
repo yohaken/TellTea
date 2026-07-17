@@ -4771,6 +4771,12 @@ body.modal-open .main-panel {
   margin-bottom: 0.25rem;
 }
 
+.modal-backdrop.edit-modal.is-ot-form .ot-form-rate-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.68rem;
+}
+
 .modal-backdrop.edit-modal.is-ot-form .ot-form-details {
   margin-top: 0.15rem;
 }

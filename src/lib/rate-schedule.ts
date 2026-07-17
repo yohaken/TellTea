@@ -52,6 +52,17 @@ function isRateKind(v: unknown): v is RateKind {
   return v === "ot" || v === "bakerySales" || v === "bakeryProd";
 }
 
+/** Local calendar day before `ms` (midnight). */
+export function dayBeforeLocal(ms: number): number {
+  const d = new Date(Number(ms) || 0);
+  d.setDate(d.getDate() - 1);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+/** Far-past anchor so backfilled rows before the first explicit rate still resolve. */
+const RATE_HISTORY_ANCHOR_INPUT = "2020-01-01";
+
 /**
  * Firestore rejects `undefined` field values — omit optional keys instead.
  * (Updating a rate again on the same day often has empty note / no productId.)
@@ -228,6 +239,8 @@ async function syncBakeryProdCatalog(
 
 /**
  * เพิ่มช่วงเรทใหม่ — ไม่แก้แถวชง/ผลิตที่มีอยู่แล้ว
+ * ถ้ายังไม่มีเรทครอบวันก่อนวันเริ่มใช้ → เก็บเรทเดิมไว้เป็นประวัติย้อนหลัง
+ *   (กันบันทึกย้อนหลังไปโดนเรทใหม่เพราะ fallback ตั้งค่าที่ sync แล้ว)
  * ถ้า kind=ot และวันเริ่ม ≤ วันนี้ → sync meta/otSettings
  * ถ้า kind=bakeryProd และวันเริ่ม ≤ วันนี้ → sync prodProducts.prodRate ของสินค้านั้น
  */
@@ -246,6 +259,43 @@ export async function addRateScheduleEntry(input: RateScheduleAddInput): Promise
   }
 
   const current = await getRateSchedule();
+  const priorMs = dayBeforeLocal(effectiveFrom);
+  const coversPrior = resolveRateForDate(current.entries, input.kind, priorMs, {
+    productId,
+  });
+
+  const seeded: RateScheduleEntry[] = [];
+  if (!coversPrior) {
+    let priorRate: number | null = null;
+    if (input.kind === "ot") {
+      const settings = await getOtSettings();
+      priorRate = Number(settings.bonusRate);
+    } else if (input.kind === "bakeryProd" && productId) {
+      const { listProdProducts } = await import("./production");
+      const products = await listProdProducts();
+      const product = products.find((p) => p.id === productId);
+      if (product) priorRate = Number(product.prodRate);
+    }
+    if (priorRate != null && Number.isFinite(priorRate) && priorRate !== rate) {
+      const seed: RateScheduleEntry = {
+        id: newEntryId(),
+        kind: input.kind,
+        effectiveFrom: parseDateInput(RATE_HISTORY_ANCHOR_INPUT),
+        rate: priorRate,
+        note: "เรทเดิมก่อนปรับ (กันบันทึกย้อนหลัง)",
+        createdAt: Date.now(),
+        createdBy: input.createdBy,
+      };
+      if (productId) seed.productId = productId;
+      const productName =
+        input.kind === "bakeryProd"
+          ? String(input.productName || "").trim().slice(0, 80)
+          : "";
+      if (productName) seed.productName = productName;
+      seeded.push(seed);
+    }
+  }
+
   const nextEntry: RateScheduleEntry = {
     id: newEntryId(),
     kind: input.kind,
@@ -265,7 +315,7 @@ export async function addRateScheduleEntry(input: RateScheduleAddInput): Promise
 
   const next: RateScheduleDoc = {
     entries: normalizeRateSchedule({
-      entries: [...current.entries, nextEntry],
+      entries: [...current.entries, ...seeded, nextEntry],
       updatedAt: Date.now(),
     }).entries,
     updatedAt: Date.now(),
@@ -322,8 +372,9 @@ export async function deleteRateScheduleEntry(entryId: string): Promise<RateSche
 }
 
 /**
- * เรทชงสำหรับรายการใหม่ ณ วันที่ — จากตารางช่วงเวลา แล้วค่อย fallback ตั้งค่าเดิม
- * รายการเก่าต้องใช้ entry.bonusRate ที่ติดแถวอยู่แล้วเท่านั้น
+ * เรทชงสำหรับรายการใหม่ / แผนกะ ณ วันในตาราง (ไม่ใช่วันที่กดบันทึก)
+ * — หาจากตารางเรทตาม dateMs ของกะ
+ * — รายการที่ปิดกะแล้วต้องใช้ entry.bonusRate ที่ติดแถวอยู่แล้วเท่านั้น
  */
 export function resolveOtBonusRateForNewEntry(
   dateMs: number,

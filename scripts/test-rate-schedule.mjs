@@ -68,6 +68,16 @@ function resolveProdEntryRates(entry, productId, product, opts = {}) {
 
 const day = (y, m, d) => new Date(y, m - 1, d).getTime();
 
+function dayBeforeLocal(ms) {
+  const d = new Date(Number(ms) || 0);
+  d.setDate(d.getDate() - 1);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+assert.equal(dayBeforeLocal(day(2026, 7, 17)), day(2026, 7, 16));
+assert.equal(dayBeforeLocal(day(2026, 3, 1)), day(2026, 2, 28));
+
 const schedule = [
   { id: "1", kind: "ot", effectiveFrom: day(2026, 1, 1), rate: 0.5, createdAt: 1 },
   { id: "2", kind: "ot", effectiveFrom: day(2026, 6, 1), rate: 0.7, createdAt: 2 },
@@ -104,6 +114,9 @@ const schedule = [
 assert.equal(resolveOtBonusRateForNewEntry(day(2025, 12, 1), schedule, 0.6), 0.6);
 assert.equal(resolveOtBonusRateForNewEntry(day(2026, 2, 15), schedule, 0.6), 0.5);
 assert.equal(resolveOtBonusRateForNewEntry(day(2026, 6, 1), schedule, 0.6), 0.7);
+// Backfill after rate change — must use rate for shift date, not "today" settings (0.99)
+assert.equal(resolveOtBonusRateForNewEntry(day(2026, 5, 20), schedule, 0.99), 0.5);
+assert.equal(resolveOtBonusRateForNewEntry(day(2026, 7, 10), schedule, 0.99), 0.7);
 
 assert.equal(resolveBakerySalesRateForNewEntry(day(2026, 2, 1), schedule, 0.9), 0.9);
 assert.equal(resolveBakerySalesRateForNewEntry(day(2026, 3, 1), schedule, 0.9), 1.2);
@@ -137,15 +150,19 @@ assert.equal(fresh.prodRate, 4.0);
 
 // Source guards
 const otPage = readFileSync(join(root, "src/app/ot/page.tsx"), "utf8");
-assert.match(otPage, /entry != null/);
-assert.match(otPage, /resolveOtBonusRateForNewEntry/);
+assert.match(otPage, /rateLocked/);
+assert.match(otPage, /resolveOtBonusRateForNewEntry\(dateMs/);
+assert.match(otPage, /ตามวันในตาราง/);
+assert.match(otPage, /isOtEntryClosed\(entry\)/);
 
 const rateLib = readFileSync(join(root, "src/lib/rate-schedule.ts"), "utf8");
 assert.match(rateLib, /bakeryProd/);
 assert.match(rateLib, /resolveBakeryProdRateForNewEntry/);
-assert.match(rateLib, /รายการเก่าต้องใช้ entry\.bonusRate/);
+assert.match(rateLib, /วันในตาราง/);
 assert.match(rateLib, /rateScheduleDocForFirestore/);
 assert.match(rateLib, /Firestore rejects/);
+assert.match(rateLib, /กันบันทึกย้อนหลัง/);
+assert.match(rateLib, /RATE_HISTORY_ANCHOR|2020-01-01/);
 
 // Firestore payload must never include undefined optional keys
 function rateScheduleDocForFirestore(doc) {

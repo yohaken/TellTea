@@ -477,11 +477,16 @@ function OtEntryForm({
   const slotEntry =
     entry || findOtEntryForSlot(allEntries, dateMs, shift);
 
-  /** แถวเดิมใช้ bonusRate ที่ติดอยู่แล้วเท่านั้น — ตารางเรทมีผลแค่รายการใหม่ */
-  const rate =
-    entry != null
-      ? Number(entry.bonusRate) || 0
-      : resolveOtBonusRateForNewEntry(dateMs, rateSchedule, bonusRate);
+  /**
+   * เรทตามวันในตารางกะ — ไม่ใช่วันที่กดบันทึก
+   * ปิดกะแล้ว / แก้ยอดภายหลัง: ใช้ bonusRate ที่ติดแถวแล้วเท่านั้น
+   * สร้างใหม่หรือยังเป็นแผนกะ: resolve จากตารางเรทตาม date ของฟอร์ม
+   */
+  const rateLocked =
+    !!entry && isOtEntryClosed(entry) && !isOtEntryPlanned(entry);
+  const rate = rateLocked
+    ? Number(entry.bonusRate) || 0
+    : resolveOtBonusRateForNewEntry(dateMs, rateSchedule, bonusRate);
   const preview = useMemo(() => {
     const names = workers.filter((w) => selectedWorkers.includes(w.id)).map((w) => w.name);
     return computeOtBonus({
@@ -794,6 +799,9 @@ function OtEntryForm({
         {slotFixed ? (
           <p className="ot-form-slot-bar">
             {formatDateShort(parseDateInput(date))} · {labelOtShift(shift)}
+            {" · "}
+            เรท {formatPlainNumber(rate)}
+            {rateLocked ? " (ติดแถวแล้ว)" : " (ตามวันในตาราง)"}
           </p>
         ) : (
           <div className="stock-form-grid ot-form-date-row">
@@ -811,6 +819,9 @@ function OtEntryForm({
                 ))}
               </select>
             </div>
+            <p className="muted form-hint-inline ot-form-rate-hint">
+              เรทที่ใช้ {formatPlainNumber(rate)} บาท/หน่วย — ตามวันที่ข้างบน ไม่ใช่วันที่กดบันทึก
+            </p>
           </div>
         )}
 
