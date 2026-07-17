@@ -19,6 +19,8 @@ assert.match(viewer, /pinchStart/);
 assert.match(viewer, /SWIPE_PX/);
 assert.match(viewer, /resolveEvidencePhotoSrcList/);
 assert.match(viewer, /กำลังโหลดรูปคุณภาพสูง/);
+assert.match(viewer, /onDownloadAll/);
+assert.match(viewer, /บันทึกทุกรูป/);
 assert.match(css, /\.photo-fs-root\b/);
 assert.match(css, /\.photo-fs-img\b/);
 assert.match(css, /touch-action:\s*none/);

@@ -64,9 +64,10 @@ assert.equal(sample.rows.find((r) => r.workerName === "แก้ม").workedThis
 const preview = readFileSync(join(root, "src/components/EntryPhotoCell.tsx"), "utf8");
 assert.match(preview, /photo-preview-spinner|photo-fs-loading/);
 assert.match(preview, /onPointerDown|onTouchStart/);
-assert.match(preview, /บันทึกลงเครื่อง/);
+assert.match(preview, /บันทึกรูปนี้|บันทึกลงเครื่อง|บันทึกทุกรูป/);
 assert.match(preview, /saveImageToDevice/);
 assert.match(preview, /photo-fs-root/);
+assert.match(preview, /onDownloadAll/);
 
 const multi = readFileSync(join(root, "src/components/PhotoAttachMultiField.tsx"), "utf8");
 assert.match(multi, /ImagePreviewModal/);

@@ -4059,7 +4059,9 @@ body.modal-open .main-panel {
 
 .photo-fs-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
+  gap: 0.45rem;
 }
 
 .photo-fs-download {
@@ -4075,6 +4077,11 @@ body.modal-open .main-panel {
   align-items: center;
   gap: 0.35rem;
   cursor: pointer;
+}
+
+.photo-fs-download.is-all {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
 }
 
 .photo-fs-download:disabled {

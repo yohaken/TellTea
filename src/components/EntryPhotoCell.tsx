@@ -116,6 +116,7 @@ export function ImagePreviewModal({
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
+  const saveCancelRef = useRef(false);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const pointers = useRef<Map<number, Pt>>(new Map());
@@ -316,28 +317,96 @@ export function ImagePreviewModal({
     }
   }
 
+  useEffect(() => {
+    saveCancelRef.current = false;
+    return () => {
+      saveCancelRef.current = true;
+    };
+  }, []);
+
+  async function srcToFile(src: string, index: number): Promise<File> {
+    const res = await fetch(src);
+    if (!res.ok) throw new Error(`ดาวน์โหลดรูปที่ ${index + 1} ไม่สำเร็จ`);
+    const blob = await res.blob();
+    const ext = (blob.type || "").includes("png")
+      ? "png"
+      : (blob.type || "").includes("webp")
+        ? "webp"
+        : "jpg";
+    return new File([blob], `telltea-photo-${index + 1}-${Date.now()}.${ext}`, {
+      type: blob.type || "image/jpeg",
+    });
+  }
+
   async function onDownload() {
     if (!current || saving) return;
     setSaving(true);
     setSaveMsg("");
     try {
-      const res = await fetch(current);
-      if (!res.ok) throw new Error("ดาวน์โหลดรูปไม่สำเร็จ");
-      const blob = await res.blob();
-      const ext = (blob.type || "").includes("png")
-        ? "png"
-        : (blob.type || "").includes("webp")
-          ? "webp"
-          : "jpg";
-      const file = new File([blob], `telltea-photo-${Date.now()}.${ext}`, {
-        type: blob.type || "image/jpeg",
-      });
+      const file = await srcToFile(current, idx);
+      if (saveCancelRef.current) return;
       const mode = await saveImageToDevice(file);
+      if (saveCancelRef.current) return;
       setSaveMsg(mode === "shared" ? "แชร์/บันทึกแล้ว" : "บันทึกลงเครื่องแล้ว");
     } catch (err) {
-      setSaveMsg((err as Error).message || "บันทึกรูปไม่สำเร็จ");
+      if (!saveCancelRef.current) {
+        setSaveMsg((err as Error).message || "บันทึกรูปไม่สำเร็จ");
+      }
     } finally {
-      setSaving(false);
+      if (!saveCancelRef.current) setSaving(false);
+    }
+  }
+
+  async function onDownloadAll() {
+    const srcs = resolved.map(String).filter((u) => u.trim());
+    if (srcs.length < 2 || saving) return;
+    setSaving(true);
+    setSaveMsg(`กำลังเตรียม ${srcs.length} รูป…`);
+    try {
+      const files: File[] = [];
+      for (let i = 0; i < srcs.length; i++) {
+        if (saveCancelRef.current) return;
+        setSaveMsg(`กำลังโหลดรูป ${i + 1}/${srcs.length}…`);
+        files.push(await srcToFile(srcs[i]!, i));
+      }
+      if (saveCancelRef.current) return;
+
+      const canShareMany =
+        typeof navigator !== "undefined" &&
+        typeof navigator.share === "function" &&
+        (!navigator.canShare || navigator.canShare({ files }));
+
+      if (canShareMany) {
+        try {
+          await navigator.share({
+            files,
+            title: title || "รูปหลักฐาน TellTea",
+          });
+          if (!saveCancelRef.current) setSaveMsg(`แชร์/บันทึกแล้วทั้ง ${files.length} รูป`);
+          return;
+        } catch (err) {
+          if ((err as Error)?.name === "AbortError") {
+            if (!saveCancelRef.current) setSaveMsg("ยกเลิกการบันทึก");
+            return;
+          }
+          // fall through to sequential download
+        }
+      }
+
+      for (let i = 0; i < files.length; i++) {
+        if (saveCancelRef.current) return;
+        setSaveMsg(`กำลังบันทึก ${i + 1}/${files.length}…`);
+        await saveImageToDevice(files[i]!);
+      }
+      if (!saveCancelRef.current) {
+        setSaveMsg(`บันทึกลงเครื่องแล้วทั้ง ${files.length} รูป`);
+      }
+    } catch (err) {
+      if (!saveCancelRef.current) {
+        setSaveMsg((err as Error).message || "บันทึกทุกรูปไม่สำเร็จ");
+      }
+    } finally {
+      if (!saveCancelRef.current) setSaving(false);
     }
   }
 
@@ -423,8 +492,19 @@ export function ImagePreviewModal({
             onClick={() => void onDownload()}
           >
             <Download size={16} aria-hidden />
-            {saving ? "กำลังบันทึก..." : "บันทึกลงเครื่อง"}
+            {saving ? "กำลังบันทึก..." : "บันทึกรูปนี้"}
           </button>
+          {resolved.filter(Boolean).length > 1 ? (
+            <button
+              type="button"
+              className="photo-fs-download is-all"
+              disabled={loading || saving || resolving}
+              onClick={() => void onDownloadAll()}
+            >
+              <Download size={16} aria-hidden />
+              {saving ? "กำลังบันทึก..." : `บันทึกทุกรูป (${resolved.filter(Boolean).length})`}
+            </button>
+          ) : null}
         </div>
         {saveMsg ? <p className="photo-fs-save-msg">{saveMsg}</p> : null}
       </div>
