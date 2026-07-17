@@ -3743,6 +3743,15 @@ body.modal-open .main-panel {
   min-width: 16rem;
 }
 
+.bonus-rate-section-row td {
+  background: rgba(149, 213, 178, 0.28);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: left;
+  padding-top: 0.4rem;
+  padding-bottom: 0.35rem;
+}
+
 .bonus-rate-schedule-hint {
   margin: 0.35rem 0.45rem 0;
   font-size: 0.65rem;

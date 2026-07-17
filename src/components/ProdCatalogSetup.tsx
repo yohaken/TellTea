@@ -44,7 +44,9 @@ export function ProdCatalogSetup({
     <section className="owner-settings-section">
       <h2 className="owner-settings-title">ผลิต / โบนัสเบเกอรี่</h2>
       <p className="muted owner-settings-hint">
-        เรทขาย / เรทผลิต ต่อสินค้า · โบนัส/คน = ผลิต × เรทผลิต ÷ จำนวนคน · พนักงานอยู่ที่{" "}
+        เพิ่มสินค้า + เรทเริ่มต้นที่นี่ · ปรับเรทตามวันได้ที่{" "}
+        <a href="/bonus/" style={{ fontWeight: 700 }}>สรุปโบนัส → ตารางเรท</a>
+        {" "}· โบนัส/คน = ผลิต × เรทผลิต ÷ จำนวนคน · พนักงานอยู่ที่{" "}
         <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
       </p>
 

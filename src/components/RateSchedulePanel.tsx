@@ -1,31 +1,39 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import {
   RATE_KIND_LABELS,
   addRateScheduleEntry,
   deleteRateScheduleEntry,
   listRateHistory,
+  rateHistoryLabel,
   resolveRateForDate,
   subscribeRateSchedule,
   type RateKind,
   type RateScheduleEntry,
 } from "@/lib/rate-schedule";
+import { listProdProducts, type ProdProduct } from "@/lib/production";
 import { formatDateShort, formatPlainNumber, todayInputValue } from "@/lib/utils";
 
-const KINDS: RateKind[] = ["ot", "bakerySales"];
-
-const SHORT_LABELS: Record<RateKind, string> = {
-  ot: "เรทชง",
-  bakerySales: "เรทขายเบเกอรี่",
+type EditTarget = {
+  kind: RateKind;
+  productId?: string;
+  productName?: string;
+  currentRate: number | null;
+  label: string;
 };
 
 type CurrentRow = {
+  key: string;
   kind: RateKind;
+  productId?: string;
+  productName?: string;
+  label: string;
   rate: number | null;
   since: number | null;
   fromSchedule: boolean;
+  section?: "shop" | "prod";
 };
 
 export function RateSchedulePanel({
@@ -41,15 +49,20 @@ export function RateSchedulePanel({
   onError: (msg: string) => void;
 }) {
   const [entries, setEntries] = useState<RateScheduleEntry[]>([]);
+  const [products, setProducts] = useState<ProdProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
-  const [editKind, setEditKind] = useState<RateKind | null>(null);
+  const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useBodyScrollLock(!!editKind);
+  useBodyScrollLock(!!editTarget);
 
   useEffect(() => {
     setLoading(true);
+    void listProdProducts()
+      .then(setProducts)
+      .catch((err) => onError((err as Error).message || "โหลดสินค้าไม่สำเร็จ"));
+
     return subscribeRateSchedule(
       (doc) => {
         setEntries(doc.entries);
@@ -64,29 +77,57 @@ export function RateSchedulePanel({
 
   const history = useMemo(() => listRateHistory(entries), [entries]);
 
+  const activeProducts = useMemo(
+    () => products.filter((p) => p.active !== false).sort((a, b) => a.name.localeCompare(b.name, "th")),
+    [products],
+  );
+
   const currentRows = useMemo((): CurrentRow[] => {
     const todayMs = Date.now();
-    return KINDS.map((kind) => {
-      const hit = resolveRateForDate(entries, kind, todayMs);
-      if (hit) {
+    const shop: CurrentRow[] = [
+      (() => {
+        const hit = resolveRateForDate(entries, "ot", todayMs);
         return {
-          kind,
-          rate: hit.rate,
-          since: hit.effectiveFrom,
-          fromSchedule: true,
+          key: "ot",
+          kind: "ot" as const,
+          label: "เรทชง",
+          rate: hit ? hit.rate : otSettingsFallback,
+          since: hit?.effectiveFrom ?? null,
+          fromSchedule: !!hit,
+          section: "shop" as const,
         };
-      }
-      if (kind === "ot") {
+      })(),
+      (() => {
+        const hit = resolveRateForDate(entries, "bakerySales", todayMs);
         return {
-          kind,
-          rate: otSettingsFallback,
-          since: null,
-          fromSchedule: false,
+          key: "bakerySales",
+          kind: "bakerySales" as const,
+          label: "เรทขายเบเกอรี่",
+          rate: hit ? hit.rate : null,
+          since: hit?.effectiveFrom ?? null,
+          fromSchedule: !!hit,
+          section: "shop" as const,
         };
-      }
-      return { kind, rate: null, since: null, fromSchedule: false };
+      })(),
+    ];
+
+    const prodRows: CurrentRow[] = activeProducts.map((p) => {
+      const hit = resolveRateForDate(entries, "bakeryProd", todayMs, { productId: p.id });
+      return {
+        key: `bakeryProd:${p.id}`,
+        kind: "bakeryProd" as const,
+        productId: p.id,
+        productName: p.name,
+        label: `ผลิต · ${p.name}`,
+        rate: hit ? hit.rate : Number(p.prodRate) || 0,
+        since: hit?.effectiveFrom ?? null,
+        fromSchedule: !!hit,
+        section: "prod" as const,
+      };
     });
-  }, [entries, otSettingsFallback]);
+
+    return [...shop, ...prodRows];
+  }, [entries, otSettingsFallback, activeProducts]);
 
   async function onDelete(id: string) {
     if (!isOwner) return;
@@ -99,6 +140,17 @@ export function RateSchedulePanel({
     } finally {
       setDeletingId(null);
     }
+  }
+
+  function openEdit(row: CurrentRow) {
+    if (!isOwner) return;
+    setEditTarget({
+      kind: row.kind,
+      productId: row.productId,
+      productName: row.productName,
+      currentRate: row.rate,
+      label: row.label,
+    });
   }
 
   return (
@@ -120,7 +172,9 @@ export function RateSchedulePanel({
               </tr>
             </thead>
             <tbody>
-              {currentRows.map((row) => {
+              {currentRows.map((row, idx) => {
+                const prev = currentRows[idx - 1];
+                const showProdHead = row.section === "prod" && prev?.section !== "prod";
                 const rateLabel =
                   row.rate == null ? "—" : formatPlainNumber(row.rate);
                 const sinceLabel =
@@ -128,37 +182,44 @@ export function RateSchedulePanel({
                     ? formatDateShort(row.since)
                     : "—";
                 return (
-                  <tr key={row.kind}>
-                    <td>{SHORT_LABELS[row.kind]}</td>
-                    <td className="col-out">
-                      {isOwner ? (
-                        <button
-                          type="button"
-                          className="bonus-edit-cell"
-                          onClick={() => setEditKind(row.kind)}
-                          title="แตะเพื่อตั้งเรทช่วงใหม่"
-                        >
-                          {rateLabel}
-                        </button>
-                      ) : (
-                        rateLabel
-                      )}
-                    </td>
-                    <td>
-                      {isOwner ? (
-                        <button
-                          type="button"
-                          className="bonus-edit-cell"
-                          onClick={() => setEditKind(row.kind)}
-                          title="แตะเพื่อตั้งวันเริ่มใช้"
-                        >
-                          {sinceLabel}
-                        </button>
-                      ) : (
-                        sinceLabel
-                      )}
-                    </td>
-                  </tr>
+                  <Fragment key={row.key}>
+                    {showProdHead ? (
+                      <tr className="bonus-rate-section-row">
+                        <td colSpan={3}>เรทผลิต (แยกสินค้า)</td>
+                      </tr>
+                    ) : null}
+                    <tr>
+                      <td>{row.label}</td>
+                      <td className="col-out">
+                        {isOwner ? (
+                          <button
+                            type="button"
+                            className="bonus-edit-cell"
+                            onClick={() => openEdit(row)}
+                            title="แตะเพื่อตั้งเรทช่วงใหม่"
+                          >
+                            {rateLabel}
+                          </button>
+                        ) : (
+                          rateLabel
+                        )}
+                      </td>
+                      <td>
+                        {isOwner ? (
+                          <button
+                            type="button"
+                            className="bonus-edit-cell"
+                            onClick={() => openEdit(row)}
+                            title="แตะเพื่อตั้งวันเริ่มใช้"
+                          >
+                            {sinceLabel}
+                          </button>
+                        ) : (
+                          sinceLabel
+                        )}
+                      </td>
+                    </tr>
+                  </Fragment>
                 );
               })}
             </tbody>
@@ -168,6 +229,11 @@ export function RateSchedulePanel({
               ? "แตะเรทหรือวันเริ่มใช้เพื่อตั้งช่วงใหม่ · แถวชง/ผลิตเก่าไม่เปลี่ยนเรท"
               : "เรทที่ใช้ตอนนี้ · แถวชง/ผลิตที่บันทึกแล้วไม่เปลี่ยนตามตารางนี้"}
           </p>
+          {!activeProducts.length ? (
+            <p className="muted bonus-rate-empty">
+              ยังไม่มีสินค้าผลิต — เพิ่มที่หน้าตั้งค่าก่อน แล้วกลับมาตั้งเรทได้
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -201,7 +267,7 @@ export function RateSchedulePanel({
               <tbody>
                 {history.map((row) => (
                   <tr key={row.id}>
-                    <td>{SHORT_LABELS[row.kind]}</td>
+                    <td>{rateHistoryLabel(row)}</td>
                     <td>{formatDateShort(row.effectiveFrom)}</td>
                     <td className="col-out">{formatPlainNumber(row.rate)}</td>
                     <td className="muted">{row.note || "—"}</td>
@@ -231,12 +297,11 @@ export function RateSchedulePanel({
         )
       ) : null}
 
-      {editKind && isOwner ? (
+      {editTarget && isOwner ? (
         <RateScheduleEditModal
-          kind={editKind}
-          currentRate={currentRows.find((r) => r.kind === editKind)?.rate ?? null}
+          target={editTarget}
           actorId={actorId}
-          onClose={() => setEditKind(null)}
+          onClose={() => setEditTarget(null)}
           onError={onError}
         />
       ) : null}
@@ -245,21 +310,19 @@ export function RateSchedulePanel({
 }
 
 function RateScheduleEditModal({
-  kind,
-  currentRate,
+  target,
   actorId,
   onClose,
   onError,
 }: {
-  kind: RateKind;
-  currentRate: number | null;
+  target: EditTarget;
   actorId: string;
   onClose: () => void;
   onError: (msg: string) => void;
 }) {
   const [effectiveFrom, setEffectiveFrom] = useState(todayInputValue());
   const [rate, setRate] = useState(
-    currentRate != null ? String(currentRate) : "",
+    target.currentRate != null ? String(target.currentRate) : "",
   );
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -270,7 +333,9 @@ function RateScheduleEditModal({
     setBusy(true);
     try {
       await addRateScheduleEntry({
-        kind,
+        kind: target.kind,
+        productId: target.productId,
+        productName: target.productName,
         effectiveFromInput: effectiveFrom,
         rate: Number(rate),
         note: note.trim() || undefined,
@@ -284,6 +349,11 @@ function RateScheduleEditModal({
     }
   }
 
+  const title =
+    target.kind === "bakeryProd"
+      ? `ตั้งเรทผลิต — ${target.productName || "สินค้า"}`
+      : `ตั้งเรท — ${RATE_KIND_LABELS[target.kind]}`;
+
   return (
     <div className="modal-backdrop edit-modal is-module-form" onClick={onClose}>
       <form
@@ -292,7 +362,7 @@ function RateScheduleEditModal({
         onSubmit={(e) => void onSubmit(e)}
       >
         <h2 className="panel-title" style={{ fontSize: "1rem", marginBottom: "0.65rem" }}>
-          ตั้งเรท — {RATE_KIND_LABELS[kind]}
+          {title}
         </h2>
 
         <div className="field">
