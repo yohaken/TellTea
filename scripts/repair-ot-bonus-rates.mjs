@@ -133,9 +133,71 @@ async function main() {
     },
     { merge: false },
   );
-  console.log("schedule ot rows:", entries.filter((e) => e.kind === "ot").length, "newRate=", newRate);
+  const otSched = entries.filter((e) => e.kind === "ot").sort((a, b) => a.effectiveFrom - b.effectiveFrom);
+  console.log("schedule ot rows:", otSched.length, "newRate=", newRate);
+  for (const row of otSched) {
+    console.log(
+      "  schedule",
+      new Date(row.effectiveFrom).toLocaleDateString("th-TH"),
+      "rate=",
+      row.rate,
+      row.note || "",
+    );
+  }
 
   const otSnap = await db.collection("otEntries").get();
+
+  function summarize(label, docs, scheduleEntries) {
+    let beforeOk = 0;
+    let beforeBad = 0;
+    let afterOk = 0;
+    let afterBad = 0;
+    const badSamples = [];
+    for (const d of docs) {
+      const data = d.data();
+      const dateMs = Number(data.date) || 0;
+      const currentRate = Number(data.bonusRate) || 0;
+      const hit = resolveOt(scheduleEntries, dateMs);
+      const correct = hit ? Number(hit.rate) : LEGACY_RATE;
+      const ok = ratesClose(currentRate, correct);
+      if (dateMs < cutoverMs) {
+        if (ok) beforeOk += 1;
+        else {
+          beforeBad += 1;
+          if (badSamples.length < 8) {
+            badSamples.push({
+              id: d.id,
+              date: new Date(dateMs).toLocaleDateString("th-TH"),
+              rate: currentRate,
+              expect: correct,
+            });
+          }
+        }
+      } else if (ok) afterOk += 1;
+      else {
+        afterBad += 1;
+        if (badSamples.length < 8) {
+          badSamples.push({
+            id: d.id,
+            date: new Date(dateMs).toLocaleDateString("th-TH"),
+            rate: currentRate,
+            expect: correct,
+          });
+        }
+      }
+    }
+    console.log(`=== ${label} ===`);
+    console.log(
+      `before ${CUTOVER}: ok=${beforeOk} bad=${beforeBad} | from ${CUTOVER}: ok=${afterOk} bad=${afterBad} | total=${docs.length}`,
+    );
+    for (const s of badSamples) {
+      console.log("  BAD", s.id, s.date, "rate=", s.rate, "expect=", s.expect);
+    }
+    return { beforeOk, beforeBad, afterOk, afterBad };
+  }
+
+  summarize("BEFORE repair", otSnap.docs, entries);
+
   let updated = 0;
   let batch = db.batch();
   let ops = 0;
@@ -161,6 +223,15 @@ async function main() {
   if (ops) await batch.commit();
 
   console.log(`Done. scanned=${otSnap.size} updated=${updated}`);
+
+  const afterSnap = await db.collection("otEntries").get();
+  const summary = summarize("AFTER repair", afterSnap.docs, entries);
+  if (summary.beforeBad > 0 || summary.afterBad > 0) {
+    throw new Error(
+      `VERIFY FAIL: still have bad rates beforeBad=${summary.beforeBad} afterBad=${summary.afterBad}`,
+    );
+  }
+  console.log("VERIFY OK: all otEntries match schedule by shift date (0.6 before 17 Jul)");
 }
 
 main().catch((err) => {

@@ -89,6 +89,11 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
+      - name: Verify + repair OT brew rates by shift date
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/repair-ot-bonus-rates.mjs
+
       - name: Install Cloud Functions deps
         run: npm ci
         working-directory: functions
