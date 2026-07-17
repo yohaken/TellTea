@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import {
   RATE_KIND_LABELS,
   addRateScheduleEntry,
@@ -14,6 +15,18 @@ import {
 import { formatDateShort, formatPlainNumber, todayInputValue } from "@/lib/utils";
 
 const KINDS: RateKind[] = ["ot", "bakerySales"];
+
+const SHORT_LABELS: Record<RateKind, string> = {
+  ot: "เรทชง",
+  bakerySales: "เรทขายเบเกอรี่",
+};
+
+type CurrentRow = {
+  kind: RateKind;
+  rate: number | null;
+  since: number | null;
+  fromSchedule: boolean;
+};
 
 export function RateSchedulePanel({
   isOwner,
@@ -29,12 +42,11 @@ export function RateSchedulePanel({
 }) {
   const [entries, setEntries] = useState<RateScheduleEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [kind, setKind] = useState<RateKind>("ot");
-  const [effectiveFrom, setEffectiveFrom] = useState(todayInputValue());
-  const [rate, setRate] = useState("");
-  const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [editKind, setEditKind] = useState<RateKind | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useBodyScrollLock(!!editKind);
 
   useEffect(() => {
     setLoading(true);
@@ -52,44 +64,29 @@ export function RateSchedulePanel({
 
   const history = useMemo(() => listRateHistory(entries), [entries]);
 
-  const currentByKind = useMemo(() => {
+  const currentRows = useMemo((): CurrentRow[] => {
     const todayMs = Date.now();
-    const out: Record<RateKind, { rate: number; since: number | null; fromSchedule: boolean }> = {
-      ot: { rate: otSettingsFallback, since: null, fromSchedule: false },
-      bakerySales: { rate: 0, since: null, fromSchedule: false },
-    };
-    for (const k of KINDS) {
-      const hit = resolveRateForDate(entries, k, todayMs);
+    return KINDS.map((kind) => {
+      const hit = resolveRateForDate(entries, kind, todayMs);
       if (hit) {
-        out[k] = { rate: hit.rate, since: hit.effectiveFrom, fromSchedule: true };
-      } else if (k === "ot") {
-        out.ot = { rate: otSettingsFallback, since: null, fromSchedule: false };
+        return {
+          kind,
+          rate: hit.rate,
+          since: hit.effectiveFrom,
+          fromSchedule: true,
+        };
       }
-    }
-    return out;
+      if (kind === "ot") {
+        return {
+          kind,
+          rate: otSettingsFallback,
+          since: null,
+          fromSchedule: false,
+        };
+      }
+      return { kind, rate: null, since: null, fromSchedule: false };
+    });
   }, [entries, otSettingsFallback]);
-
-  async function onAdd(e: FormEvent) {
-    e.preventDefault();
-    if (!isOwner || !actorId) return;
-    setBusy(true);
-    try {
-      await addRateScheduleEntry({
-        kind,
-        effectiveFromInput: effectiveFrom,
-        rate: Number(rate),
-        note: note.trim() || undefined,
-        createdBy: actorId,
-      });
-      setRate("");
-      setNote("");
-      setEffectiveFrom(todayInputValue());
-    } catch (err) {
-      onError((err as Error).message || "บันทึกเรทไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function onDelete(id: string) {
     if (!isOwner) return;
@@ -107,138 +104,247 @@ export function RateSchedulePanel({
   return (
     <section className="bonus-rate-schedule">
       <header className="bonus-rate-schedule-head">
-        <h2 className="bonus-rate-schedule-title">ตารางเรทตามวัน</h2>
-        <p className="muted bonus-rate-schedule-hint">
-          เรทใหม่ใช้กับรายการที่บันทึกหลังวันเริ่มใช้เท่านั้น — แถวชง/ผลิตที่มีเรทติดอยู่แล้วไม่ถูกแก้
-        </p>
+        <h2 className="bonus-rate-schedule-title">ตารางเรท</h2>
       </header>
-
-      <div className="bonus-rate-current">
-        {KINDS.map((k) => {
-          const cur = currentByKind[k];
-          return (
-            <div key={k} className="bonus-rate-current-item">
-              <span className="bonus-rate-current-label">{RATE_KIND_LABELS[k]}</span>
-              <strong className="bonus-rate-current-val">
-                {formatPlainNumber(cur.rate)}
-              </strong>
-              <span className="muted bonus-rate-current-since">
-                {cur.fromSchedule && cur.since != null
-                  ? `ตั้งแต่ ${formatDateShort(cur.since)}`
-                  : k === "ot"
-                    ? "จากตั้งค่า (ยังไม่มีในตาราง)"
-                    : "ใช้เรทสินค้า (ยังไม่มีในตาราง)"}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {isOwner ? (
-        <form className="bonus-rate-add-form" onSubmit={(e) => void onAdd(e)}>
-          <div className="field">
-            <label htmlFor="rate-kind">ชนิด</label>
-            <select
-              id="rate-kind"
-              className="ot-slim-input"
-              value={kind}
-              onChange={(e) => setKind(e.target.value as RateKind)}
-            >
-              {KINDS.map((k) => (
-                <option key={k} value={k}>
-                  {RATE_KIND_LABELS[k]}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="rate-from">วันเริ่มใช้</label>
-            <input
-              id="rate-from"
-              type="date"
-              className="ot-slim-input"
-              value={effectiveFrom}
-              onChange={(e) => setEffectiveFrom(e.target.value)}
-              required
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="rate-value">เรท (บาท)</label>
-            <input
-              id="rate-value"
-              type="number"
-              min="0"
-              step="any"
-              inputMode="decimal"
-              className="ot-slim-input"
-              value={rate}
-              onChange={(e) => setRate(e.target.value)}
-              placeholder="เช่น 0.6"
-              required
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="rate-note">หมายเหตุ (ถ้ามี)</label>
-            <input
-              id="rate-note"
-              type="text"
-              className="ot-slim-input"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              maxLength={200}
-              placeholder="เช่น ปรับปี 2026"
-            />
-          </div>
-          <button type="submit" className="primary-btn" disabled={busy || !actorId}>
-            {busy ? "กำลังบันทึก..." : "เพิ่มช่วงเรท"}
-          </button>
-        </form>
-      ) : null}
 
       {loading ? <p className="empty">กำลังโหลดตารางเรท...</p> : null}
 
-      {!loading && !history.length ? (
-        <p className="muted bonus-rate-empty">ยังไม่มีประวัติเรท — เจ้าของเพิ่มวันเริ่มใช้ด้านบนได้</p>
-      ) : null}
-
-      {!loading && history.length ? (
-        <div className="sheet-wrap bonus-rate-history-wrap">
-          <table className="sheet-table bonus-rate-history-table">
+      {!loading ? (
+        <div className="sheet-wrap bonus-rate-current-wrap">
+          <table className="sheet-table bonus-rate-current-table">
             <thead>
               <tr>
-                <th>ชนิด</th>
-                <th>เริ่มใช้</th>
+                <th>รายการ</th>
                 <th className="col-out">เรท</th>
-                <th>หมายเหตุ</th>
-                {isOwner ? <th className="col-out" /> : null}
+                <th>เริ่มใช้</th>
               </tr>
             </thead>
             <tbody>
-              {history.map((row) => (
-                <tr key={row.id}>
-                  <td>{RATE_KIND_LABELS[row.kind]}</td>
-                  <td>{formatDateShort(row.effectiveFrom)}</td>
-                  <td className="col-out">{formatPlainNumber(row.rate)}</td>
-                  <td className="muted">{row.note || "—"}</td>
-                  {isOwner ? (
+              {currentRows.map((row) => {
+                const rateLabel =
+                  row.rate == null ? "—" : formatPlainNumber(row.rate);
+                const sinceLabel =
+                  row.fromSchedule && row.since != null
+                    ? formatDateShort(row.since)
+                    : "—";
+                return (
+                  <tr key={row.kind}>
+                    <td>{SHORT_LABELS[row.kind]}</td>
                     <td className="col-out">
-                      <button
-                        type="button"
-                        className="ghost-btn bonus-rate-del"
-                        disabled={deletingId === row.id}
-                        onClick={() => void onDelete(row.id)}
-                        title="ลบช่วงนี้"
-                      >
-                        ลบ
-                      </button>
+                      {isOwner ? (
+                        <button
+                          type="button"
+                          className="bonus-edit-cell"
+                          onClick={() => setEditKind(row.kind)}
+                          title="แตะเพื่อตั้งเรทช่วงใหม่"
+                        >
+                          {rateLabel}
+                        </button>
+                      ) : (
+                        rateLabel
+                      )}
                     </td>
-                  ) : null}
-                </tr>
-              ))}
+                    <td>
+                      {isOwner ? (
+                        <button
+                          type="button"
+                          className="bonus-edit-cell"
+                          onClick={() => setEditKind(row.kind)}
+                          title="แตะเพื่อตั้งวันเริ่มใช้"
+                        >
+                          {sinceLabel}
+                        </button>
+                      ) : (
+                        sinceLabel
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+          <p className="muted bonus-rate-schedule-hint">
+            {isOwner
+              ? "แตะเรทหรือวันเริ่มใช้เพื่อตั้งช่วงใหม่ · แถวชง/ผลิตเก่าไม่เปลี่ยนเรท"
+              : "เรทที่ใช้ตอนนี้ · แถวชง/ผลิตที่บันทึกแล้วไม่เปลี่ยนตามตารางนี้"}
+          </p>
         </div>
       ) : null}
+
+      {!loading ? (
+        <button
+          type="button"
+          className="ghost-btn bonus-rate-history-toggle"
+          onClick={() => setShowHistory((v) => !v)}
+        >
+          {showHistory
+            ? "ซ่อนประวัติเรท"
+            : history.length
+              ? `ดูประวัติเรท (${history.length})`
+              : "ดูประวัติเรท"}
+        </button>
+      ) : null}
+
+      {!loading && showHistory ? (
+        history.length ? (
+          <div className="sheet-wrap bonus-rate-history-wrap">
+            <table className="sheet-table bonus-rate-history-table">
+              <thead>
+                <tr>
+                  <th>ชนิด</th>
+                  <th>เริ่มใช้</th>
+                  <th className="col-out">เรท</th>
+                  <th>หมายเหตุ</th>
+                  {isOwner ? <th className="col-out" /> : null}
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((row) => (
+                  <tr key={row.id}>
+                    <td>{SHORT_LABELS[row.kind]}</td>
+                    <td>{formatDateShort(row.effectiveFrom)}</td>
+                    <td className="col-out">{formatPlainNumber(row.rate)}</td>
+                    <td className="muted">{row.note || "—"}</td>
+                    {isOwner ? (
+                      <td className="col-out">
+                        <button
+                          type="button"
+                          className="ghost-btn bonus-rate-del"
+                          disabled={deletingId === row.id}
+                          onClick={() => void onDelete(row.id)}
+                          title="ลบช่วงนี้"
+                        >
+                          ลบ
+                        </button>
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="muted bonus-rate-empty">
+            ยังไม่มีประวัติเรท
+            {isOwner ? " — แตะเรทในตารางเพื่อตั้งช่วงแรก" : ""}
+          </p>
+        )
+      ) : null}
+
+      {editKind && isOwner ? (
+        <RateScheduleEditModal
+          kind={editKind}
+          currentRate={currentRows.find((r) => r.kind === editKind)?.rate ?? null}
+          actorId={actorId}
+          onClose={() => setEditKind(null)}
+          onError={onError}
+        />
+      ) : null}
     </section>
+  );
+}
+
+function RateScheduleEditModal({
+  kind,
+  currentRate,
+  actorId,
+  onClose,
+  onError,
+}: {
+  kind: RateKind;
+  currentRate: number | null;
+  actorId: string;
+  onClose: () => void;
+  onError: (msg: string) => void;
+}) {
+  const [effectiveFrom, setEffectiveFrom] = useState(todayInputValue());
+  const [rate, setRate] = useState(
+    currentRate != null ? String(currentRate) : "",
+  );
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!actorId) return;
+    setBusy(true);
+    try {
+      await addRateScheduleEntry({
+        kind,
+        effectiveFromInput: effectiveFrom,
+        rate: Number(rate),
+        note: note.trim() || undefined,
+        createdBy: actorId,
+      });
+      onClose();
+    } catch (err) {
+      onError((err as Error).message || "บันทึกเรทไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop edit-modal is-module-form" onClick={onClose}>
+      <form
+        className="modal-card module-form-card"
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={(e) => void onSubmit(e)}
+      >
+        <h2 className="panel-title" style={{ fontSize: "1rem", marginBottom: "0.65rem" }}>
+          ตั้งเรท — {RATE_KIND_LABELS[kind]}
+        </h2>
+
+        <div className="field">
+          <label htmlFor="rate-edit-value">เรท (บาทต่อหน่วย)</label>
+          <input
+            id="rate-edit-value"
+            type="number"
+            min="0"
+            step="any"
+            inputMode="decimal"
+            value={rate}
+            onChange={(e) => setRate(e.target.value)}
+            required
+            autoFocus
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="rate-edit-from">วันเริ่มใช้</label>
+          <input
+            id="rate-edit-from"
+            type="date"
+            value={effectiveFrom}
+            onChange={(e) => setEffectiveFrom(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="rate-edit-note">หมายเหตุ (ถ้ามี)</label>
+          <input
+            id="rate-edit-note"
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={200}
+            placeholder="เช่น ปรับปี 2026"
+          />
+          <p className="muted form-hint-inline">
+            ใช้กับรายการใหม่หลังวันเริ่มใช้ — แถวเก่าในตารางไม่เปลี่ยน
+          </p>
+        </div>
+
+        <div className="module-form-actions">
+          <button type="button" className="ghost-btn" onClick={onClose} disabled={busy}>
+            ยกเลิก
+          </button>
+          <button type="submit" className="primary-btn" disabled={busy || !actorId}>
+            {busy ? "กำลังบันทึก..." : "บันทึก"}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

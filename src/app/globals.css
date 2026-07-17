@@ -3726,7 +3726,7 @@ body.modal-open .main-panel {
 }
 
 .bonus-rate-schedule-head {
-  margin-bottom: 0.55rem;
+  margin-bottom: 0.4rem;
 }
 
 .bonus-rate-schedule-title {
@@ -3735,78 +3735,33 @@ body.modal-open .main-panel {
   font-weight: 700;
 }
 
+.bonus-rate-current-wrap {
+  margin-top: 0.15rem;
+}
+
+.bonus-rate-current-table {
+  min-width: 16rem;
+}
+
 .bonus-rate-schedule-hint {
-  margin: 0.25rem 0 0;
-  font-size: 0.68rem;
+  margin: 0.35rem 0.45rem 0;
+  font-size: 0.65rem;
+  text-align: left;
   line-height: 1.35;
 }
 
-.bonus-rate-current {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
-  margin-bottom: 0.65rem;
-}
-
-@media (max-width: 520px) {
-  .bonus-rate-current {
-    grid-template-columns: 1fr;
-  }
-}
-
-.bonus-rate-current-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.4rem 0.5rem;
-  background: rgba(216, 243, 220, 0.35);
-  border-radius: 0.35rem;
-}
-
-.bonus-rate-current-label {
-  font-size: 0.65rem;
-  color: rgba(28, 42, 31, 0.7);
-}
-
-.bonus-rate-current-val {
-  font-size: 1.05rem;
-  font-weight: 800;
-}
-
-.bonus-rate-current-since {
-  font-size: 0.62rem;
-}
-
-.bonus-rate-add-form {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.45rem 0.55rem;
-  margin-bottom: 0.65rem;
-  align-items: end;
-}
-
-.bonus-rate-add-form .field {
-  margin: 0;
-}
-
-.bonus-rate-add-form .primary-btn {
-  grid-column: 1 / -1;
-  justify-self: start;
-}
-
-@media (max-width: 520px) {
-  .bonus-rate-add-form {
-    grid-template-columns: 1fr;
-  }
+.bonus-rate-history-toggle {
+  margin-top: 0.55rem;
+  font-size: 0.72rem;
 }
 
 .bonus-rate-empty {
-  margin: 0.35rem 0;
+  margin: 0.35rem 0.45rem;
   font-size: 0.68rem;
 }
 
 .bonus-rate-history-wrap {
-  margin-top: 0.25rem;
+  margin-top: 0.35rem;
 }
 
 .bonus-rate-history-table {

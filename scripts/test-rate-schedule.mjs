@@ -116,4 +116,11 @@ assert.match(prodLib, /ห้ามเปลี่ยนจากตาราง
 const bonusPage = readFileSync(join(root, "src/app/bonus/page.tsx"), "utf8");
 assert.match(bonusPage, /RateSchedulePanel/);
 
+const panel = readFileSync(join(root, "src/components/RateSchedulePanel.tsx"), "utf8");
+assert.match(panel, /isOwner \?/);
+assert.match(panel, /bonus-rate-current-table/);
+assert.match(panel, /ดูประวัติเรท/);
+assert.match(panel, /RateScheduleEditModal/);
+assert.doesNotMatch(panel, /bonus-rate-add-form/);
+
 console.log("OK test-rate-schedule");
