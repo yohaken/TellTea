@@ -38,6 +38,7 @@ import {
   type ProdStatus,
   type ProdWorker,
 } from "@/lib/production";
+import { subscribeRateSchedule, type RateScheduleEntry } from "@/lib/rate-schedule";
 import {
   formatDateShort,
   formatPlainNumber,
@@ -64,6 +65,7 @@ function ProductionView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<ProdEntry | null>(null);
+  const [rateSchedule, setRateSchedule] = useState<RateScheduleEntry[]>([]);
 
   async function reloadCatalog() {
     const [p, w] = await Promise.all([listProdProducts(), listProdWorkers()]);
@@ -94,7 +96,14 @@ function ProductionView() {
       (rows) => setEntries(rows),
       (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
     );
-    return unsub;
+    const unsubSchedule = subscribeRateSchedule(
+      (doc) => setRateSchedule(doc.entries),
+      (err) => setError(err.message),
+    );
+    return () => {
+      unsub();
+      unsubSchedule();
+    };
   }, [staff, isOwner]);
 
   useBodyScrollLock(formOpen);
@@ -148,6 +157,7 @@ function ProductionView() {
               entry={editing}
               products={activeProducts}
               workers={activeWorkers}
+              rateSchedule={rateSchedule}
               createdBy={actorId}
               onError={setError}
               onSaved={closeForm}
@@ -170,6 +180,7 @@ function ProdEntryForm({
   entry,
   products,
   workers,
+  rateSchedule,
   createdBy,
   onError,
   onSaved,
@@ -178,6 +189,7 @@ function ProdEntryForm({
   entry: ProdEntry | null;
   products: ProdProduct[];
   workers: ProdWorker[];
+  rateSchedule: RateScheduleEntry[];
   createdBy: string;
   onError: (msg: string) => void;
   onSaved: () => void;
@@ -196,7 +208,11 @@ function ProdEntryForm({
   const [busy, setBusy] = useState(false);
 
   const product = products.find((p) => p.id === productId) || null;
-  const rates = resolveProdEntryRates(entry, productId, product);
+  const dateMs = parseDateInput(date);
+  const rates = resolveProdEntryRates(entry, productId, product, {
+    bakerySalesSchedule: rateSchedule,
+    dateMs,
+  });
 
   const preview = useMemo(() => {
     const names = workers.filter((w) => selectedWorkers.includes(w.id)).map((w) => w.name);
@@ -239,9 +255,13 @@ function ProdEntryForm({
         setBusy(false);
         return;
       }
-      const resolved = resolveProdEntryRates(entry, productId, prod ?? null);
+      const entryDateMs = parseDateInput(date);
+      const resolved = resolveProdEntryRates(entry, productId, prod ?? null, {
+        bakerySalesSchedule: rateSchedule,
+        dateMs: entryDateMs,
+      });
       const payload = {
-        date: parseDateInput(date),
+        date: entryDateMs,
         workerIds: chosen.map((w) => w.id),
         workerNames: chosen.map((w) => w.name),
         productId: prod?.id || entry!.productId,

@@ -23,9 +23,10 @@ import {
   thaiMonthYearLabel,
   type MonthBonusReport,
 } from "@/lib/bonus";
+import { RateSchedulePanel } from "@/components/RateSchedulePanel";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
-import { subscribeOtEntries, type OtEntry } from "@/lib/ot";
+import { getOtSettings, subscribeOtEntries, type OtEntry } from "@/lib/ot";
 import { subscribeProdEntries, type ProdEntry } from "@/lib/production";
 import { formatPlainNumber } from "@/lib/utils";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
@@ -51,7 +52,7 @@ export default function BonusPage() {
 }
 
 function BonusView() {
-  const { staff } = useAuth();
+  const { actorId, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const [month, setMonth] = useState(monthInputValue());
@@ -60,6 +61,7 @@ function BonusView() {
   const [deductionSettings, setDeductionSettings] = useState<BonusDeductionSettings | null>(null);
   const [deductionMonth, setDeductionMonth] = useState<BonusDeductionMonthDoc | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [otSettingsRate, setOtSettingsRate] = useState(0.6);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(isOwner);
@@ -77,8 +79,11 @@ function BonusView() {
   useEffect(() => {
     if (!canView) return;
     setLoading(true);
-    void listActiveEmployees()
-      .then(setEmployees)
+    void Promise.all([listActiveEmployees(), getOtSettings()])
+      .then(([emps, otSettings]) => {
+        setEmployees(emps);
+        setOtSettingsRate(otSettings.bonusRate);
+      })
       .catch((err) => setError((err as Error).message || "โหลดพนักงานไม่สำเร็จ"))
       .finally(() => setLoading(false));
 
@@ -177,6 +182,13 @@ function BonusView() {
           />
         </>
       ) : null}
+
+      <RateSchedulePanel
+        isOwner={isOwner}
+        actorId={actorId}
+        otSettingsFallback={otSettingsRate}
+        onError={setError}
+      />
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading || !report ? <p className="empty">กำลังโหลด...</p> : null}

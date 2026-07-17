@@ -30,7 +30,7 @@ export default function SettingsPage() {
 }
 
 function SettingsView() {
-  const { staff } = useAuth();
+  const { actorId, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const [products, setProducts] = useState<ProdProduct[]>([]);
@@ -101,6 +101,7 @@ function SettingsView() {
           />
           <OtBonusRateSetup
             bonusRate={bonusRate}
+            createdBy={actorId}
             onReload={() => void reload().catch((err) => setError((err as Error).message))}
             onError={setError}
           />

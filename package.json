@@ -8,6 +8,7 @@
     "smoke:hosting": "node scripts/smoke-hosting-export.mjs",
     "smoke:pos-hosting": "node scripts/smoke-pos-hosting.mjs",
     "test:firestore-rules": "node scripts/assert-firestore-rules.mjs",
+    "test:rate-schedule": "node scripts/test-rate-schedule.mjs",
     "test:ledger-multi-photo": "node scripts/test-ledger-multi-photo.mjs",
     "test:ot-multi-photo": "node scripts/test-ot-multi-photo.mjs",
     "test:ot-photo-budget": "node scripts/test-ot-photo-budget.mjs",

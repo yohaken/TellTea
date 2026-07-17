@@ -19,6 +19,7 @@ import {
   updateEmployee,
   type Employee,
 } from "./employees";
+import { resolveBakerySalesRateForNewEntry, type RateScheduleEntry } from "./rate-schedule";
 
 export type ProdStatus = "unpaid" | "paid";
 
@@ -125,27 +126,39 @@ export function isProdEntryLocked(entry: Pick<ProdEntry, "status">) {
   return entry.status === "paid";
 }
 
-/** เรทจากแถวเดิม — เปลี่ยนเฉพาะเมื่อเลือกสินค้าใหม่ */
+/**
+ * เรทจากแถวเดิม — แถวที่มี salesRate/prodRate ติดอยู่แล้วห้ามเปลี่ยนจากตารางเรท
+ * รายการใหม่ (หรือเปลี่ยนสินค้า) ใช้ตาราง bakerySales ถ้ามี ไม่งั้นใช้เรทสินค้า
+ */
 export function resolveProdEntryRates(
   entry: ProdEntry | null,
   productId: string,
   product: Pick<ProdProduct, "salesRate" | "prodRate"> | null,
+  opts?: {
+    bakerySalesSchedule?: RateScheduleEntry[];
+    dateMs?: number;
+  },
 ): { salesRate: number; prodRate: number } {
+  const catalogSales = Number(product?.salesRate) || 0;
+  const catalogProd = Number(product?.prodRate) || 0;
+  const schedule = opts?.bakerySalesSchedule || [];
+  const dateMs = opts?.dateMs ?? (entry?.date || Date.now());
+
   if (!entry) {
     return {
-      salesRate: Number(product?.salesRate) || 0,
-      prodRate: Number(product?.prodRate) || 0,
+      salesRate: resolveBakerySalesRateForNewEntry(dateMs, schedule, catalogSales),
+      prodRate: catalogProd,
     };
   }
   if (productId !== entry.productId) {
     return {
-      salesRate: Number(product?.salesRate) || 0,
-      prodRate: Number(product?.prodRate) || 0,
+      salesRate: resolveBakerySalesRateForNewEntry(dateMs, schedule, catalogSales),
+      prodRate: catalogProd,
     };
   }
   return {
-    salesRate: entry.salesRate,
-    prodRate: entry.prodRate,
+    salesRate: Number.isFinite(Number(entry.salesRate)) ? Number(entry.salesRate) : catalogSales,
+    prodRate: Number.isFinite(Number(entry.prodRate)) ? Number(entry.prodRate) : catalogProd,
   };
 }
 

@@ -40,6 +40,11 @@ import {
   type OtShiftId,
   type OtStatus,
 } from "@/lib/ot";
+import {
+  resolveOtBonusRateForNewEntry,
+  subscribeRateSchedule,
+  type RateScheduleEntry,
+} from "@/lib/rate-schedule";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
   buildOtGrid,
@@ -174,6 +179,7 @@ function OtView() {
   const [entries, setEntries] = useState<OtEntry[]>([]);
   const [workers, setWorkers] = useState<Employee[]>([]);
   const [bonusRate, setBonusRate] = useState(0.6);
+  const [rateSchedule, setRateSchedule] = useState<RateScheduleEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<OtEntry | null>(null);
@@ -205,6 +211,10 @@ function OtView() {
       .catch((err) => setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ"))
       .finally(() => setLoading(false));
 
+    const unsubSchedule = subscribeRateSchedule(
+      (doc) => setRateSchedule(doc.entries),
+      (err) => setError(err.message),
+    );
     const unsubOt = subscribeOtEntries(
       (rows) => setEntries(rows),
       (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
@@ -214,6 +224,7 @@ function OtView() {
       (err) => setError(err.message || "โหลด SOP ไม่สำเร็จ"),
     );
     return () => {
+      unsubSchedule();
       unsubOt();
       unsubCheck();
     };
@@ -321,6 +332,7 @@ function OtView() {
               staff={staff}
               isOwner={isOwner}
               bonusRate={bonusRate}
+              rateSchedule={rateSchedule}
               createdBy={actorId}
               onError={setError}
               onSaved={closeForm}
@@ -350,6 +362,7 @@ function OtEntryForm({
   staff,
   isOwner,
   bonusRate,
+  rateSchedule,
   createdBy,
   onError,
   onSaved,
@@ -365,6 +378,7 @@ function OtEntryForm({
   staff: StaffMember | null;
   isOwner: boolean;
   bonusRate: number;
+  rateSchedule: RateScheduleEntry[];
   createdBy: string;
   onError: (msg: string) => void;
   onSaved: () => void;
@@ -463,7 +477,11 @@ function OtEntryForm({
   const slotEntry =
     entry || findOtEntryForSlot(allEntries, dateMs, shift);
 
-  const rate = entry?.bonusRate ?? bonusRate;
+  /** แถวเดิมใช้ bonusRate ที่ติดอยู่แล้วเท่านั้น — ตารางเรทมีผลแค่รายการใหม่ */
+  const rate =
+    entry != null
+      ? Number(entry.bonusRate) || 0
+      : resolveOtBonusRateForNewEntry(dateMs, rateSchedule, bonusRate);
   const preview = useMemo(() => {
     const names = workers.filter((w) => selectedWorkers.includes(w.id)).map((w) => w.name);
     return computeOtBonus({
