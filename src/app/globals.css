@@ -3586,7 +3586,10 @@ body.modal-open .main-panel {
 }
 
 .bonus-deduct-wrap {
+  margin-top: 0.85rem;
   margin-bottom: 0.55rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.12);
 }
 
 .bonus-deduct-table {
