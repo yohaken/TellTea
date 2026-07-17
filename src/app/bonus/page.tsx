@@ -161,37 +161,21 @@ function BonusView() {
         </span>
       </div>
 
-      {report ? (
-        <>
-          <div className="bonus-summary-bar">
-            <div className="bonus-summary-pool">
-              <span className="bonus-summary-label">โบนัสขายเบเกอรี่ รวม</span>
-              <strong className="bonus-summary-pool-amt">฿{fmt(report.totalSalesPool)}</strong>
-            </div>
-            <div className="bonus-summary-total">
-              <span className="bonus-summary-label">คงเหลือรวม</span>
-              <strong>฿{fmt(report.totalRemaining)}</strong>
-            </div>
-          </div>
-
-          <BonusDeductionSummaryTable
-            report={report}
-            isOwner={isOwner}
-            onEditRate={(rule) => setEditTarget({ kind: "rate", rule })}
-            onEditQty={(rule, qty) => setEditTarget({ kind: "qty", rule, qty })}
-          />
-        </>
-      ) : null}
-
-      <RateSchedulePanel
-        isOwner={isOwner}
-        actorId={actorId}
-        otSettingsFallback={otSettingsRate}
-        onError={setError}
-      />
-
       {error ? <p className="error-text">{error}</p> : null}
       {loading || !report ? <p className="empty">กำลังโหลด...</p> : null}
+
+      {report ? (
+        <div className="bonus-summary-bar">
+          <div className="bonus-summary-pool">
+            <span className="bonus-summary-label">โบนัสขายเบเกอรี่ รวม</span>
+            <strong className="bonus-summary-pool-amt">฿{fmt(report.totalSalesPool)}</strong>
+          </div>
+          <div className="bonus-summary-total">
+            <span className="bonus-summary-label">คงเหลือรวม</span>
+            <strong>฿{fmt(report.totalRemaining)}</strong>
+          </div>
+        </div>
+      ) : null}
 
       {!loading && report && myRow ? (
         <section className="bonus-my-card">
@@ -237,7 +221,7 @@ function BonusView() {
         </p>
       ) : null}
 
-      {!isOwner ? (
+      {!isOwner && report ? (
         <button
           type="button"
           className="ghost-btn bonus-toggle-all"
@@ -257,6 +241,22 @@ function BonusView() {
           จากยอดจริง · เจ้าของกรอกจำนวนหักทั้งร้านสิ้นเดือน · เรท% ถาวร
         </p>
       ) : null}
+
+      {report ? (
+        <BonusDeductionSummaryTable
+          report={report}
+          isOwner={isOwner}
+          onEditRate={(rule) => setEditTarget({ kind: "rate", rule })}
+          onEditQty={(rule, qty) => setEditTarget({ kind: "qty", rule, qty })}
+        />
+      ) : null}
+
+      <RateSchedulePanel
+        isOwner={isOwner}
+        actorId={actorId}
+        otSettingsFallback={otSettingsRate}
+        onError={setError}
+      />
 
       {editTarget ? (
         <BonusEditModal
