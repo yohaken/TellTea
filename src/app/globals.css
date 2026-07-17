@@ -3918,6 +3918,183 @@ body.modal-open .main-panel {
   margin-top: 0.45rem;
 }
 
+/* Fullscreen evidence viewer — pinch zoom + swipe */
+.photo-fs-root {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  background: #0b100e;
+  color: #f4f7f5;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+.photo-fs-chrome {
+  position: relative;
+  z-index: 3;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.28));
+}
+
+.photo-fs-top {
+  justify-content: space-between;
+  padding-top: max(0.55rem, env(safe-area-inset-top));
+  padding-bottom: 0.45rem;
+}
+
+.photo-fs-bottom {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+  padding-top: 0.55rem;
+  padding-bottom: max(0.7rem, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0.28));
+}
+
+.photo-fs-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.photo-fs-icon-btn {
+  appearance: none;
+  border: 0;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.photo-fs-icon-btn:active {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.photo-fs-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.photo-fs-img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  transform-origin: center center;
+  will-change: transform;
+  transition: opacity 0.12s ease;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.photo-fs-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  background: rgba(11, 16, 14, 0.72);
+  font-size: 0.88rem;
+  color: rgba(244, 247, 245, 0.85);
+}
+
+.photo-fs-error {
+  margin: 1rem;
+  text-align: center;
+  color: #ffb4b4;
+  font-size: 0.9rem;
+}
+
+.photo-fs-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.photo-fs-nav-label {
+  font-size: 0.85rem;
+  color: rgba(244, 247, 245, 0.88);
+}
+
+.photo-fs-hint,
+.photo-fs-hint-solo {
+  font-size: 0.72rem;
+  color: rgba(244, 247, 245, 0.55);
+  text-align: center;
+  margin: 0;
+}
+
+.photo-fs-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.photo-fs-download {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.65rem 1.1rem;
+  background: #2f6b4f;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.88rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.photo-fs-download:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.photo-fs-save-msg {
+  margin: 0;
+  text-align: center;
+  font-size: 0.78rem;
+  color: rgba(244, 247, 245, 0.7);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .photo-fs-hint {
+    display: none;
+  }
+}
+
 .photo-preview-head {
   display: flex;
   align-items: center;
@@ -4148,6 +4325,7 @@ body.modal-open .main-panel {
 
 .modal-backdrop.photo-backdrop.is-image-fullview {
   z-index: 55;
+  /* Legacy card viewer superseded by .photo-fs-root — keep for any residual markup */
 }
 
 .check-danger-zone {

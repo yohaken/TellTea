@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type TouchEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { ChevronLeft, ChevronRight, Download, ImageIcon, ImageOff, Loader2, X } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { resolveEvidencePhotoSrcList } from "@/lib/evidence-photos";
@@ -70,6 +70,27 @@ export function EntryPhotoIndicator({
   );
 }
 
+const MIN_SCALE = 1;
+const MAX_SCALE = 5;
+const DOUBLE_TAP_MS = 280;
+const SWIPE_PX = 56;
+
+type Pt = { x: number; y: number };
+
+function dist(a: Pt, b: Pt) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.hypot(dx, dy);
+}
+
+function mid(a: Pt, b: Pt): Pt {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+/**
+ * ดูรูปเต็มจอ · คุณภาพสูงสุด · ซูม/ย่อด้วยนิ้ว · ปัดซ้าย-ขวาเปลี่ยนรูป (เมื่อยังไม่ซูม)
+ * ใช้ร่วมทุกโมดูลที่แตะดูหลักฐาน
+ */
 export function ImagePreviewModal({
   url,
   urls,
@@ -92,10 +113,27 @@ export function ImagePreviewModal({
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
-  const touchStartX = useRef<number | null>(null);
+  const [scale, setScale] = useState(1);
+  const [tx, setTx] = useState(0);
+  const [ty, setTy] = useState(0);
+
+  const stageRef = useRef<HTMLDivElement>(null);
+  const pointers = useRef<Map<number, Pt>>(new Map());
+  const pinchStart = useRef<{ dist: number; scale: number; mid: Pt; tx: number; ty: number } | null>(
+    null,
+  );
+  const panStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  const lastTap = useRef<{ t: number; x: number; y: number } | null>(null);
+  const transformRef = useRef({ scale: 1, tx: 0, ty: 0 });
+
   const current = resolved[idx] || "";
   const loading = resolving || (!!current && imgLoading && !error);
   useBodyScrollLock(true);
+
+  useEffect(() => {
+    transformRef.current = { scale, tx, ty };
+  }, [scale, tx, ty]);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,7 +161,35 @@ export function ImagePreviewModal({
   useEffect(() => {
     setImgLoading(true);
     setSaveMsg("");
+    setScale(1);
+    setTx(0);
+    setTy(0);
+    transformRef.current = { scale: 1, tx: 0, ty: 0 };
+    pointers.current.clear();
+    pinchStart.current = null;
+    panStart.current = null;
+    swipeStart.current = null;
   }, [idx, current]);
+
+  function clampPan(nextScale: number, nextTx: number, nextTy: number) {
+    const stage = stageRef.current;
+    if (!stage || nextScale <= 1) return { tx: 0, ty: 0 };
+    const maxX = (stage.clientWidth * (nextScale - 1)) / 2;
+    const maxY = (stage.clientHeight * (nextScale - 1)) / 2;
+    return {
+      tx: Math.min(maxX, Math.max(-maxX, nextTx)),
+      ty: Math.min(maxY, Math.max(-maxY, nextTy)),
+    };
+  }
+
+  function applyTransform(nextScale: number, nextTx: number, nextTy: number) {
+    const s = Math.min(MAX_SCALE, Math.max(MIN_SCALE, nextScale));
+    const pan = clampPan(s, nextTx, nextTy);
+    setScale(s);
+    setTx(pan.tx);
+    setTy(pan.ty);
+    transformRef.current = { scale: s, tx: pan.tx, ty: pan.ty };
+  }
 
   function prev() {
     if (list.length <= 1) return;
@@ -135,20 +201,119 @@ export function ImagePreviewModal({
     setIdx((i) => (i >= list.length - 1 ? 0 : i + 1));
   }
 
-  function onTouchStart(e: TouchEvent) {
-    touchStartX.current = e.changedTouches[0]?.clientX ?? null;
+  function onPointerDown(e: ReactPointerEvent) {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointers.current.size === 2) {
+      const pts = [...pointers.current.values()];
+      const a = pts[0]!;
+      const b = pts[1]!;
+      const { scale: s, tx: curTx, ty: curTy } = transformRef.current;
+      pinchStart.current = {
+        dist: Math.max(1, dist(a, b)),
+        scale: s,
+        mid: mid(a, b),
+        tx: curTx,
+        ty: curTy,
+      };
+      panStart.current = null;
+      swipeStart.current = null;
+      return;
+    }
+
+    if (pointers.current.size === 1) {
+      const { scale: s, tx: curTx, ty: curTy } = transformRef.current;
+      if (s > 1.02) {
+        panStart.current = { x: e.clientX, y: e.clientY, tx: curTx, ty: curTy };
+        swipeStart.current = null;
+      } else {
+        panStart.current = null;
+        swipeStart.current = { x: e.clientX, y: e.clientY };
+      }
+    }
   }
 
-  function onTouchEnd(e: TouchEvent) {
-    const startX = touchStartX.current;
-    touchStartX.current = null;
-    if (startX == null || list.length <= 1) return;
-    const endX = e.changedTouches[0]?.clientX;
-    if (endX == null) return;
-    const dx = endX - startX;
-    if (Math.abs(dx) < 48) return;
-    if (dx < 0) next();
-    else prev();
+  function onPointerMove(e: ReactPointerEvent) {
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (pointers.current.size >= 2 && pinchStart.current) {
+      const pts = [...pointers.current.values()];
+      const a = pts[0]!;
+      const b = pts[1]!;
+      const d = Math.max(1, dist(a, b));
+      const start = pinchStart.current;
+      const nextScale = start.scale * (d / start.dist);
+      const m = mid(a, b);
+      const dx = m.x - start.mid.x;
+      const dy = m.y - start.mid.y;
+      applyTransform(nextScale, start.tx + dx, start.ty + dy);
+      return;
+    }
+
+    if (pointers.current.size === 1 && panStart.current && transformRef.current.scale > 1.02) {
+      const p = panStart.current;
+      applyTransform(
+        transformRef.current.scale,
+        p.tx + (e.clientX - p.x),
+        p.ty + (e.clientY - p.y),
+      );
+    }
+  }
+
+  function endPointer(e: ReactPointerEvent) {
+    pointers.current.delete(e.pointerId);
+
+    if (pointers.current.size < 2) pinchStart.current = null;
+
+    if (pointers.current.size === 1) {
+      const remaining = [...pointers.current.entries()][0];
+      if (remaining) {
+        const [, pt] = remaining;
+        const { scale: s, tx: curTx, ty: curTy } = transformRef.current;
+        if (s > 1.02) {
+          panStart.current = { x: pt.x, y: pt.y, tx: curTx, ty: curTy };
+          swipeStart.current = null;
+        }
+      }
+      return;
+    }
+
+    if (pointers.current.size === 0) {
+      const swipe = swipeStart.current;
+      panStart.current = null;
+      swipeStart.current = null;
+
+      // double-tap zoom
+      const now = Date.now();
+      const prevTap = lastTap.current;
+      if (
+        prevTap &&
+        now - prevTap.t < DOUBLE_TAP_MS &&
+        Math.hypot(e.clientX - prevTap.x, e.clientY - prevTap.y) < 36
+      ) {
+        lastTap.current = null;
+        if (transformRef.current.scale > 1.05) {
+          applyTransform(1, 0, 0);
+        } else {
+          applyTransform(2.5, 0, 0);
+        }
+        return;
+      }
+      lastTap.current = { t: now, x: e.clientX, y: e.clientY };
+
+      // swipe change photo only when not zoomed
+      if (swipe && transformRef.current.scale <= 1.02 && list.length > 1) {
+        const dx = e.clientX - swipe.x;
+        const dy = e.clientY - swipe.y;
+        if (Math.abs(dx) >= SWIPE_PX && Math.abs(dx) > Math.abs(dy) * 1.2) {
+          if (dx < 0) next();
+          else prev();
+        }
+      }
+    }
   }
 
   async function onDownload() {
@@ -177,83 +342,91 @@ export function ImagePreviewModal({
   }
 
   return (
-    <div className="modal-backdrop photo-backdrop is-image-fullview" role="presentation" onClick={onClose}>
+    <div
+      className="photo-fs-root"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title || "ดูรูปเต็มจอ"}
+    >
+      <div className="photo-fs-chrome photo-fs-top">
+        <p className="photo-fs-title">
+          {title || "ดูรูป"}
+          {list.length > 1 ? ` · ${idx + 1}/${list.length}` : ""}
+        </p>
+        <button type="button" className="photo-fs-icon-btn" aria-label="ปิด" onClick={onClose}>
+          <X size={22} />
+        </button>
+      </div>
+
       <div
-        className="photo-action-card photo-preview-card"
-        role="dialog"
-        aria-modal="true"
-        aria-label={title || "ดูรูป"}
-        onClick={(e) => e.stopPropagation()}
+        ref={stageRef}
+        className="photo-fs-stage"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endPointer}
+        onPointerCancel={endPointer}
+        onDoubleClick={(e) => {
+          e.preventDefault();
+          if (transformRef.current.scale > 1.05) applyTransform(1, 0, 0);
+          else applyTransform(2.5, 0, 0);
+        }}
       >
-        <div className="photo-preview-head">
-          <p className="photo-preview-title">
-            {title || "ดูรูป"}
-            {list.length > 1 ? ` (${idx + 1}/${list.length})` : ""}
-          </p>
-          <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
-
-        <div
-          className="photo-preview-stage"
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-        >
-          {loading ? (
-            <div className="photo-preview-loading" aria-busy="true" aria-live="polite">
-              <Loader2 className="photo-preview-spinner" size={36} aria-hidden />
-              <p className="muted">กำลังโหลดรูป…</p>
-            </div>
-          ) : null}
-          {error ? <p className="error-text photo-preview-error">{error}</p> : null}
-          {!resolving && !error && current ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={current}
-              alt=""
-              className="photo-preview-full"
-              style={{ opacity: imgLoading ? 0 : 1 }}
-              onLoad={() => setImgLoading(false)}
-              onError={() => {
-                setImgLoading(false);
-                setError("แสดงรูปไม่สำเร็จ");
-              }}
-              draggable={false}
-            />
-          ) : null}
-        </div>
-
-        {list.length > 1 ? (
-          <div className="photo-preview-nav">
-            <button type="button" className="ghost-btn" onClick={prev} aria-label="รูปก่อนหน้า">
-              <ChevronLeft size={18} />
-            </button>
-            <span className="muted">
-              {idx + 1} / {list.length}
-              <span className="photo-preview-swipe-hint"> · ปัดซ้าย/ขวา</span>
-            </span>
-            <button type="button" className="ghost-btn" onClick={next} aria-label="รูปถัดไป">
-              <ChevronRight size={18} />
-            </button>
+        {loading ? (
+          <div className="photo-fs-loading" aria-busy="true" aria-live="polite">
+            <Loader2 className="photo-preview-spinner" size={40} aria-hidden />
+            <p>กำลังโหลดรูปคุณภาพสูง…</p>
           </div>
         ) : null}
+        {error ? <p className="photo-fs-error">{error}</p> : null}
+        {!resolving && !error && current ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={current}
+            alt=""
+            className="photo-fs-img"
+            style={{
+              opacity: imgLoading ? 0 : 1,
+              transform: `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`,
+            }}
+            onLoad={() => setImgLoading(false)}
+            onError={() => {
+              setImgLoading(false);
+              setError("แสดงรูปไม่สำเร็จ");
+            }}
+            draggable={false}
+          />
+        ) : null}
+      </div>
 
-        <div className="photo-preview-actions">
+      <div className="photo-fs-chrome photo-fs-bottom">
+        {list.length > 1 ? (
+          <div className="photo-fs-nav">
+            <button type="button" className="photo-fs-icon-btn" onClick={prev} aria-label="รูปก่อนหน้า">
+              <ChevronLeft size={22} />
+            </button>
+            <span className="photo-fs-nav-label">
+              {idx + 1} / {list.length}
+              <span className="photo-fs-hint"> · ปัดเมื่อไม่ซูม · บีบซูม</span>
+            </span>
+            <button type="button" className="photo-fs-icon-btn" onClick={next} aria-label="รูปถัดไป">
+              <ChevronRight size={22} />
+            </button>
+          </div>
+        ) : (
+          <p className="photo-fs-hint-solo">แตะสองครั้งหรือบีบนิ้วเพื่อซูม</p>
+        )}
+        <div className="photo-fs-actions">
           <button
             type="button"
-            className="primary-btn"
+            className="photo-fs-download"
             disabled={!current || loading || saving}
             onClick={() => void onDownload()}
           >
             <Download size={16} aria-hidden />
             {saving ? "กำลังบันทึก..." : "บันทึกลงเครื่อง"}
           </button>
-          <button type="button" className="ghost-btn" onClick={onClose}>
-            ปิด
-          </button>
         </div>
-        {saveMsg ? <p className="muted photo-preview-save-msg">{saveMsg}</p> : null}
+        {saveMsg ? <p className="photo-fs-save-msg">{saveMsg}</p> : null}
       </div>
     </div>
   );

@@ -62,10 +62,11 @@ assert.equal(sample.rows.find((r) => r.workerName === "เมย์").salesShare
 assert.equal(sample.rows.find((r) => r.workerName === "แก้ม").workedThisMonth, true);
 
 const preview = readFileSync(join(root, "src/components/EntryPhotoCell.tsx"), "utf8");
-assert.match(preview, /photo-preview-spinner/);
-assert.match(preview, /onTouchStart/);
+assert.match(preview, /photo-preview-spinner|photo-fs-loading/);
+assert.match(preview, /onPointerDown|onTouchStart/);
 assert.match(preview, /บันทึกลงเครื่อง/);
 assert.match(preview, /saveImageToDevice/);
+assert.match(preview, /photo-fs-root/);
 
 const multi = readFileSync(join(root, "src/components/PhotoAttachMultiField.tsx"), "utf8");
 assert.match(multi, /ImagePreviewModal/);
