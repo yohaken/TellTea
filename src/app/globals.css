@@ -3762,6 +3762,19 @@ body.modal-open .main-panel {
   line-height: 1.35;
 }
 
+.bonus-rate-repair-row {
+  margin: 0.45rem 0.45rem 0;
+}
+
+.bonus-rate-repair-btn {
+  font-size: 0.72rem;
+}
+
+.bonus-rate-repair-note {
+  margin: 0.25rem 0 0;
+  font-size: 0.65rem;
+}
+
 .bonus-rate-history-toggle {
   margin-top: 0.55rem;
   font-size: 0.72rem;

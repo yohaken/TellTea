@@ -392,6 +392,9 @@ export async function addOtEntry(input: OtEntryInput): Promise<string> {
   const urls = assertOtImageUrlsFit(
     imageUrls.length ? imageUrls : legacyUrl ? [legacyUrl] : [],
   );
+  // เรทติดจากวันในตารางกะเท่านั้น — ไม่เชื่อค่าที่ฟอร์มส่งมา (กันบันทึกย้อนหลังโดนเรทใหม่)
+  const { stampOtBonusRateForShiftDate } = await import("./ot-rate-repair");
+  const bonusRate = await stampOtBonusRateForShiftDate(input.date);
   const ref = await addDoc(entriesCol(), {
     date: input.date,
     shift: input.shift,
@@ -406,7 +409,7 @@ export async function addOtEntry(input: OtEntryInput): Promise<string> {
     deductReason: (input.deductReason || "").trim(),
     addQty: Number(input.addQty) || 0,
     addReason: (input.addReason || "").trim(),
-    bonusRate: Number(input.bonusRate) || DEFAULT_OT_BONUS_RATE,
+    bonusRate,
     imageUrl: urls[0] || "",
     imageUrls: urls,
     checkIdOpen: input.checkIdOpen || null,
@@ -478,7 +481,12 @@ export async function updateOtEntry(
   if (patch.deductReason != null) next.deductReason = patch.deductReason.trim();
   if (patch.addQty != null) next.addQty = Number(patch.addQty) || 0;
   if (patch.addReason != null) next.addReason = patch.addReason.trim();
-  if (patch.bonusRate != null) next.bonusRate = Number(patch.bonusRate) || DEFAULT_OT_BONUS_RATE;
+  // ไม่จ่ายแล้ว: ติดเรทใหม่จากวันในตารางเสมอ — ไม่ใช้ patch.bonusRate จากฟอร์ม
+  if (!isOtEntryLocked(current)) {
+    const { stampOtBonusRateForShiftDate } = await import("./ot-rate-repair");
+    const dateMs = patch.date != null ? Number(patch.date) : current.date;
+    next.bonusRate = await stampOtBonusRateForShiftDate(dateMs);
+  }
   if (patch.imageUrls != null) {
     const urls = assertOtImageUrlsFit(patch.imageUrls);
     next.imageUrls = urls;

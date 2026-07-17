@@ -155,6 +155,20 @@ assert.match(otPage, /resolveOtBonusRateForNewEntry\(dateMs/);
 assert.match(otPage, /ตามวันในตาราง/);
 assert.match(otPage, /isOtEntryClosed\(entry\)/);
 
+const otLib = readFileSync(join(root, "src/lib/ot.ts"), "utf8");
+assert.match(otLib, /stampOtBonusRateForShiftDate/);
+assert.match(otLib, /ไม่เชื่อค่าที่ฟอร์มส่งมา|วันในตารางกะเท่านั้น/);
+assert.doesNotMatch(
+  otLib,
+  /bonusRate: Number\(input\.bonusRate\) \|\| DEFAULT_OT_BONUS_RATE/,
+);
+
+const repairLib = readFileSync(join(root, "src/lib/ot-rate-repair.ts"), "utf8");
+assert.match(repairLib, /OT_RATE_CUTOVER_INPUT/);
+assert.match(repairLib, /repairOtBonusRatesFromSchedule/);
+assert.match(repairLib, /ensureOtRateScheduleHistory/);
+assert.match(repairLib, /0\.6/);
+
 const rateLib = readFileSync(join(root, "src/lib/rate-schedule.ts"), "utf8");
 assert.match(rateLib, /bakeryProd/);
 assert.match(rateLib, /resolveBakeryProdRateForNewEntry/);
@@ -163,6 +177,14 @@ assert.match(rateLib, /rateScheduleDocForFirestore/);
 assert.match(rateLib, /Firestore rejects/);
 assert.match(rateLib, /กันบันทึกย้อนหลัง/);
 assert.match(rateLib, /RATE_HISTORY_ANCHOR|2020-01-01/);
+
+const panel = readFileSync(join(root, "src/components/RateSchedulePanel.tsx"), "utf8");
+assert.match(panel, /repairOtBonusRatesFromSchedule/);
+assert.match(panel, /ซ่อมเรทชงตามวันในตาราง/);
+assert.match(panel, /isOwner \?/);
+assert.match(panel, /bakeryProd/);
+assert.match(panel, /เรทผลิต \(แยกสินค้า\)/);
+assert.match(panel, /listProdProducts/);
 
 // Firestore payload must never include undefined optional keys
 function rateScheduleDocForFirestore(doc) {
@@ -228,11 +250,5 @@ assert.match(prodLib, /ห้ามเปลี่ยนจากตาราง
 
 const bonusPage = readFileSync(join(root, "src/app/bonus/page.tsx"), "utf8");
 assert.match(bonusPage, /RateSchedulePanel/);
-
-const panel = readFileSync(join(root, "src/components/RateSchedulePanel.tsx"), "utf8");
-assert.match(panel, /isOwner \?/);
-assert.match(panel, /bakeryProd/);
-assert.match(panel, /เรทผลิต \(แยกสินค้า\)/);
-assert.match(panel, /listProdProducts/);
 
 console.log("OK test-rate-schedule");

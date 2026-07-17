@@ -14,6 +14,10 @@ import {
   type RateScheduleEntry,
 } from "@/lib/rate-schedule";
 import { listProdProducts, type ProdProduct } from "@/lib/production";
+import {
+  repairOtBonusRatesFromSchedule,
+  type OtRateRepairReport,
+} from "@/lib/ot-rate-repair";
 import { formatDateShort, formatPlainNumber, todayInputValue } from "@/lib/utils";
 
 type EditTarget = {
@@ -54,6 +58,8 @@ export function RateSchedulePanel({
   const [showHistory, setShowHistory] = useState(false);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [repairBusy, setRepairBusy] = useState(false);
+  const [repairReport, setRepairReport] = useState<OtRateRepairReport | null>(null);
 
   useBodyScrollLock(!!editTarget);
 
@@ -74,6 +80,38 @@ export function RateSchedulePanel({
       },
     );
   }, [onError]);
+
+  /** Owner: one-shot repair so pre-17 Jul rows stop using 1 บาท */
+  useEffect(() => {
+    if (!isOwner || !actorId) return;
+    let cancelled = false;
+    const key = "telltea-ot-rate-repair-2026-07-17";
+    try {
+      if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(key)) return;
+    } catch {
+      /* ignore */
+    }
+    setRepairBusy(true);
+    void repairOtBonusRatesFromSchedule({ createdBy: actorId })
+      .then((report) => {
+        if (cancelled) return;
+        setRepairReport(report);
+        try {
+          sessionStorage.setItem(key, "1");
+        } catch {
+          /* ignore */
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) onError((err as Error).message || "ซ่อมเรทชงไม่สำเร็จ");
+      })
+      .finally(() => {
+        if (!cancelled) setRepairBusy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOwner, actorId, onError]);
 
   const history = useMemo(() => listRateHistory(entries), [entries]);
 
@@ -153,6 +191,19 @@ export function RateSchedulePanel({
     });
   }
 
+  async function onRepairOtRates() {
+    if (!isOwner || !actorId) return;
+    setRepairBusy(true);
+    try {
+      const report = await repairOtBonusRatesFromSchedule({ createdBy: actorId });
+      setRepairReport(report);
+    } catch (err) {
+      onError((err as Error).message || "ซ่อมเรทชงไม่สำเร็จ");
+    } finally {
+      setRepairBusy(false);
+    }
+  }
+
   return (
     <section className="bonus-rate-schedule">
       <header className="bonus-rate-schedule-head">
@@ -226,9 +277,29 @@ export function RateSchedulePanel({
           </table>
           <p className="muted bonus-rate-schedule-hint">
             {isOwner
-              ? "แตะเรทหรือวันเริ่มใช้เพื่อตั้งช่วงใหม่ · แถวชง/ผลิตเก่าไม่เปลี่ยนเรท"
-              : "เรทที่ใช้ตอนนี้ · แถวชง/ผลิตที่บันทึกแล้วไม่เปลี่ยนตามตารางนี้"}
+              ? "เรทชงติดตามวันในตารางกะตอนบันทึก · ก่อน 17 ก.ค. = 0.6 · ตั้งแต่ 17 ก.ค. = เรทใหม่"
+              : "เรทที่ใช้ตอนนี้ · แถวชงยึดเรทตามวันในตาราง ไม่ใช่วันที่กดบันทึก"}
           </p>
+          {isOwner ? (
+            <div className="bonus-rate-repair-row">
+              <button
+                type="button"
+                className="ghost-btn bonus-rate-repair-btn"
+                disabled={repairBusy}
+                onClick={() => void onRepairOtRates()}
+              >
+                {repairBusy ? "กำลังซ่อมเรทชง..." : "ซ่อมเรทชงตามวันในตาราง"}
+              </button>
+              {repairReport ? (
+                <p className="muted bonus-rate-repair-note">
+                  ซ่อมแล้ว {repairReport.updated}/{repairReport.scanned} แถว
+                  {repairReport.updated
+                    ? " — แถวก่อน 17 ก.ค. ที่ติด 1 บาทถูกปรับเป็น 0.6"
+                    : " — ไม่มีแถวที่ต้องแก้"}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           {!activeProducts.length ? (
             <p className="muted bonus-rate-empty">
               ยังไม่มีสินค้าผลิต — เพิ่มที่หน้าตั้งค่าก่อน แล้วกลับมาตั้งเรทได้
