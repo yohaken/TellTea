@@ -112,6 +112,8 @@ export function ImagePreviewModal({
   const [resolved, setResolved] = useState<string[]>(list);
   const [resolving, setResolving] = useState(true);
   const [imgLoading, setImgLoading] = useState(true);
+  /** bump เพื่อ remount <img> ถ้าโหลดค้าง (เช่น Safari พลาด onLoad จากแคช) */
+  const [imgEpoch, setImgEpoch] = useState(0);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
@@ -123,6 +125,7 @@ export function ImagePreviewModal({
   const saveCancelRef = useRef(false);
 
   const stageRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
   const pointers = useRef<Map<number, Pt>>(new Map());
   const pinchStart = useRef<{ dist: number; scale: number; mid: Pt; tx: number; ty: number } | null>(
     null,
@@ -132,10 +135,29 @@ export function ImagePreviewModal({
   const lastTap = useRef<{ t: number; x: number; y: number } | null>(null);
   const transformRef = useRef({ scale: 1, tx: 0, ty: 0 });
   const dismissYRef = useRef(0);
+  const imgLoadingRef = useRef(true);
 
   const current = resolved[idx] || "";
   const loading = resolving || (!!current && imgLoading && !error);
   useBodyScrollLock(true);
+
+  function markImgReady() {
+    imgLoadingRef.current = false;
+    setImgLoading(false);
+  }
+
+  function markImgPending() {
+    imgLoadingRef.current = true;
+    setImgLoading(true);
+  }
+
+  /** Safari/Mac: รูปจากแคชมัก complete ก่อน onLoad ถูกผูก — ต้องเช็คเอง */
+  function syncImgReadyFromEl(el: HTMLImageElement | null) {
+    if (!el) return;
+    if (el.complete && el.naturalWidth > 0) {
+      markImgReady();
+    }
+  }
 
   useEffect(() => {
     transformRef.current = { scale, tx, ty };
@@ -150,18 +172,24 @@ export function ImagePreviewModal({
     setResolving(true);
     setError("");
     setSaveMsg("");
+    markImgPending();
     void resolveEvidencePhotoSrcList(list)
       .then((srcs) => {
         if (cancelled) return;
         setResolved(srcs);
         setResolving(false);
-        setImgLoading(true);
+        markImgPending();
+        // ให้รอบ paint ถัดไปเช็ค complete (กรณี data:/https แคชแล้ว)
+        requestAnimationFrame(() => {
+          if (cancelled) return;
+          syncImgReadyFromEl(imgRef.current);
+        });
       })
       .catch((err) => {
         if (cancelled) return;
         setError((err as Error).message || "โหลดรูปไม่สำเร็จ");
         setResolving(false);
-        setImgLoading(false);
+        markImgReady();
       });
     return () => {
       cancelled = true;
@@ -169,7 +197,7 @@ export function ImagePreviewModal({
   }, [list.join("|")]);
 
   useEffect(() => {
-    setImgLoading(true);
+    markImgPending();
     setSaveMsg("");
     setScale(1);
     setTx(0);
@@ -181,7 +209,41 @@ export function ImagePreviewModal({
     pinchStart.current = null;
     panStart.current = null;
     swipeStart.current = null;
-  }, [idx, current]);
+    // หลังเปลี่ยนรูป/src — เช็คแคชทันที + อีกครั้งหลัง paint
+    const a = requestAnimationFrame(() => syncImgReadyFromEl(imgRef.current));
+    const b = window.setTimeout(() => syncImgReadyFromEl(imgRef.current), 0);
+    return () => {
+      cancelAnimationFrame(a);
+      window.clearTimeout(b);
+    };
+  }, [idx, current, imgEpoch]);
+
+  const loadRetryRef = useRef(0);
+
+  /** ถ้าสปินเนอร์ค้าง — รีเฟรชตัวเอง: เช็ค complete / remount img / โชว์รูปที่มีอยู่ */
+  useEffect(() => {
+    if (!loading || !current || error) {
+      loadRetryRef.current = 0;
+      return;
+    }
+    const t = window.setTimeout(() => {
+      const el = imgRef.current;
+      if (el?.complete && el.naturalWidth > 0) {
+        markImgReady();
+        return;
+      }
+      if (loadRetryRef.current < 2) {
+        loadRetryRef.current += 1;
+        setImgEpoch((n) => n + 1);
+        return;
+      }
+      // สุดท้าย: ถ้ามี src แล้วให้โชว์ แม้พลาด onLoad (กันหมุนค้างบน Mac)
+      if (el?.getAttribute("src")) {
+        markImgReady();
+      }
+    }, 1400);
+    return () => window.clearTimeout(t);
+  }, [loading, current, error, imgEpoch]);
 
   function clampPan(nextScale: number, nextTx: number, nextTy: number) {
     const stage = stageRef.current;
@@ -495,9 +557,14 @@ export function ImagePreviewModal({
           </div>
         ) : null}
         {error ? <p className="photo-fs-error">{error}</p> : null}
-        {!resolving && !error && current ? (
+        {!error && current && !current.startsWith("evp:") ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            key={`${current}|${imgEpoch}`}
+            ref={(el) => {
+              imgRef.current = el;
+              syncImgReadyFromEl(el);
+            }}
             src={current}
             alt=""
             className="photo-fs-img"
@@ -505,9 +572,12 @@ export function ImagePreviewModal({
               opacity: imgLoading ? 0 : dismissOpacity,
               transform: `translate3d(${tx}px, ${ty + dismissY}px, 0) scale(${scale})`,
             }}
-            onLoad={() => setImgLoading(false)}
+            onLoad={(e) => {
+              syncImgReadyFromEl(e.currentTarget);
+              markImgReady();
+            }}
             onError={() => {
-              setImgLoading(false);
+              markImgReady();
               setError("แสดงรูปไม่สำเร็จ");
             }}
             draggable={false}
