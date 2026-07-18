@@ -74,6 +74,8 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 5;
 const DOUBLE_TAP_MS = 280;
 const SWIPE_PX = 56;
+/** ปัดลงเกินนี้ (เมื่อยังไม่ซูม) → ปิดเหมือนปุ่ม X */
+const DISMISS_DY = 96;
 
 type Pt = { x: number; y: number };
 
@@ -116,6 +118,8 @@ export function ImagePreviewModal({
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
+  /** เลื่อนลงชั่วคราวตอนปัดเพื่อปิด (ยังไม่ซูม) */
+  const [dismissY, setDismissY] = useState(0);
   const saveCancelRef = useRef(false);
 
   const stageRef = useRef<HTMLDivElement>(null);
@@ -127,6 +131,7 @@ export function ImagePreviewModal({
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const lastTap = useRef<{ t: number; x: number; y: number } | null>(null);
   const transformRef = useRef({ scale: 1, tx: 0, ty: 0 });
+  const dismissYRef = useRef(0);
 
   const current = resolved[idx] || "";
   const loading = resolving || (!!current && imgLoading && !error);
@@ -135,6 +140,10 @@ export function ImagePreviewModal({
   useEffect(() => {
     transformRef.current = { scale, tx, ty };
   }, [scale, tx, ty]);
+
+  useEffect(() => {
+    dismissYRef.current = dismissY;
+  }, [dismissY]);
 
   useEffect(() => {
     let cancelled = false;
@@ -165,6 +174,8 @@ export function ImagePreviewModal({
     setScale(1);
     setTx(0);
     setTy(0);
+    setDismissY(0);
+    dismissYRef.current = 0;
     transformRef.current = { scale: 1, tx: 0, ty: 0 };
     pointers.current.clear();
     pinchStart.current = null;
@@ -261,6 +272,25 @@ export function ImagePreviewModal({
         p.tx + (e.clientX - p.x),
         p.ty + (e.clientY - p.y),
       );
+      return;
+    }
+
+    // ปัดลงเมื่อยังไม่ซูม — เลื่อนตามนิ้วเพื่อบอกว่ากำลังจะปิด
+    if (
+      pointers.current.size === 1 &&
+      swipeStart.current &&
+      transformRef.current.scale <= 1.02
+    ) {
+      const dy = e.clientY - swipeStart.current.y;
+      const dx = e.clientX - swipeStart.current.x;
+      if (dy > 0 && Math.abs(dy) >= Math.abs(dx)) {
+        const nextY = Math.min(220, dy);
+        dismissYRef.current = nextY;
+        setDismissY(nextY);
+      } else if (dismissYRef.current !== 0) {
+        dismissYRef.current = 0;
+        setDismissY(0);
+      }
     }
   }
 
@@ -305,15 +335,30 @@ export function ImagePreviewModal({
       }
       lastTap.current = { t: now, x: e.clientX, y: e.clientY };
 
-      // swipe change photo only when not zoomed
-      if (swipe && transformRef.current.scale <= 1.02 && list.length > 1) {
+      // swipe when not zoomed: down → close · left/right → change photo
+      if (swipe && transformRef.current.scale <= 1.02) {
         const dx = e.clientX - swipe.x;
         const dy = e.clientY - swipe.y;
-        if (Math.abs(dx) >= SWIPE_PX && Math.abs(dx) > Math.abs(dy) * 1.2) {
+        if (dy >= DISMISS_DY && dy > Math.abs(dx) * 1.15) {
+          setDismissY(0);
+          dismissYRef.current = 0;
+          onClose();
+          return;
+        }
+        if (
+          list.length > 1 &&
+          Math.abs(dx) >= SWIPE_PX &&
+          Math.abs(dx) > Math.abs(dy) * 1.2
+        ) {
+          setDismissY(0);
+          dismissYRef.current = 0;
           if (dx < 0) next();
           else prev();
+          return;
         }
       }
+      setDismissY(0);
+      dismissYRef.current = 0;
     }
   }
 
@@ -410,12 +455,15 @@ export function ImagePreviewModal({
     }
   }
 
+  const dismissOpacity = dismissY > 0 ? Math.max(0.35, 1 - dismissY / 280) : 1;
+
   return (
     <div
       className="photo-fs-root"
       role="dialog"
       aria-modal="true"
       aria-label={title || "ดูรูปเต็มจอ"}
+      style={dismissY > 0 ? { background: `rgba(0, 0, 0, ${0.92 * dismissOpacity})` } : undefined}
     >
       <div className="photo-fs-chrome photo-fs-top">
         <p className="photo-fs-title">
@@ -454,8 +502,8 @@ export function ImagePreviewModal({
             alt=""
             className="photo-fs-img"
             style={{
-              opacity: imgLoading ? 0 : 1,
-              transform: `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`,
+              opacity: imgLoading ? 0 : dismissOpacity,
+              transform: `translate3d(${tx}px, ${ty + dismissY}px, 0) scale(${scale})`,
             }}
             onLoad={() => setImgLoading(false)}
             onError={() => {
@@ -475,14 +523,14 @@ export function ImagePreviewModal({
             </button>
             <span className="photo-fs-nav-label">
               {idx + 1} / {list.length}
-              <span className="photo-fs-hint"> · ปัดเมื่อไม่ซูม · บีบซูม</span>
+              <span className="photo-fs-hint"> · ปัดซ้ายขวา · ปัดลงปิด · บีบซูม</span>
             </span>
             <button type="button" className="photo-fs-icon-btn" onClick={next} aria-label="รูปถัดไป">
               <ChevronRight size={22} />
             </button>
           </div>
         ) : (
-          <p className="photo-fs-hint-solo">แตะสองครั้งหรือบีบนิ้วเพื่อซูม</p>
+          <p className="photo-fs-hint-solo">ปัดลงเพื่อปิด · แตะสองครั้งหรือบีบนิ้วเพื่อซูม</p>
         )}
         <div className="photo-fs-actions">
           <button
