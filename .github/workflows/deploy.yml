@@ -41,6 +41,25 @@ jobs:
       - name: Build static export
         run: npm run build
 
+      - name: Setup Java (Android APK)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build TellTea POS debug APK
+        run: |
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Publish APK to POS hosting download path
+        run: node scripts/publish-pos-apk.mjs
+
       - name: Verify back-office static routes
         run: npm run smoke:hosting
 

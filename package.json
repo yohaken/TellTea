@@ -36,6 +36,8 @@
     "test:pos-update-reload-stable": "node scripts/test-pos-update-reload-stable.mjs",
     "test:pos-native-shell": "node scripts/test-pos-native-shell.mjs",
     "test:pos-native-update-foundation": "node scripts/test-pos-native-update-foundation.mjs",
+    "test:pos-apk-download": "node scripts/test-pos-apk-download.mjs",
+    "publish:pos-apk": "node scripts/publish-pos-apk.mjs",
     "cap:sync": "npx cap sync android",
     "cap:open": "npx cap open android",
     "cap:sync:embed": "CAPACITOR_EMBED=1 npx cap sync android",

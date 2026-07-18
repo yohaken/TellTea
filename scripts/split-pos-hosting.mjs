@@ -59,6 +59,11 @@ for (const file of [
   copyFile(path.join(OUT, file), path.join(OUT_POS, file));
 }
 
+/** หน้าดาวน์โหลด APK คงที่ — https://telltea-pos.web.app/install/ */
+copyDir(path.join(OUT, "install"), path.join(OUT_POS, "install"));
+copyDir(path.join(ROOT, "public", "install"), path.join(OUT_POS, "install"));
+copyDir(path.join(ROOT, "public", "downloads"), path.join(OUT_POS, "downloads"));
+
 const manifest = JSON.parse(fs.readFileSync(POS_MANIFEST_SRC, "utf8"));
 manifest.id = "/pos/";
 manifest.start_url = "/pos/";

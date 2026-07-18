@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TellTea POS — ดาวน์โหลดติดตั้ง</title>
+    <link rel="icon" href="/logo-mark.svg" />
+    <style>
+      :root {
+        --bg0: #1a2e24;
+        --bg1: #0f1a14;
+        --ink: #f3f6f2;
+        --muted: rgba(243, 246, 242, 0.72);
+        --accent: #c4a35a;
+        --btn: #2f6b4f;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        font-family: "Sarabun", "Noto Sans Thai", system-ui, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(120% 80% at 10% 0%, rgba(196, 163, 90, 0.18), transparent 55%),
+          linear-gradient(165deg, var(--bg0), var(--bg1) 70%);
+        display: grid;
+        place-items: center;
+        padding: 1.5rem;
+      }
+      main {
+        width: min(26rem, 100%);
+        text-align: center;
+      }
+      .mark {
+        width: 4.5rem;
+        height: 4.5rem;
+        margin: 0 auto 1rem;
+        display: block;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(1.75rem, 6vw, 2.35rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.15;
+      }
+      p {
+        margin: 0.75rem 0 0;
+        font-size: 1.05rem;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 1.6rem;
+        min-height: 3.1rem;
+        padding: 0.85rem 1.4rem;
+        border-radius: 12px;
+        background: var(--btn);
+        color: #fff;
+        font-size: 1.1rem;
+        font-weight: 700;
+        text-decoration: none;
+        width: 100%;
+      }
+      .cta:active {
+        transform: scale(0.98);
+      }
+      .hint {
+        margin-top: 1.1rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+        text-align: left;
+      }
+      .hint ol {
+        margin: 0.4rem 0 0;
+        padding-left: 1.2rem;
+      }
+      .hint li + li {
+        margin-top: 0.35rem;
+      }
+      code {
+        color: var(--accent);
+        font-size: 0.85em;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img class="mark" src="/logo-mark.svg" alt="" width="72" height="72" />
+      <h1>TellTea POS</h1>
+      <p>ดาวน์โหลดไฟล์ติดตั้งสำหรับแท็บเล็ต Android ของร้าน</p>
+      <a class="cta" href="/downloads/telltea-pos.apk" download="telltea-pos.apk">
+        ดาวน์โหลดไฟล์ติดตั้ง
+      </a>
+      <div class="hint">
+        <ol>
+          <li>เปิดลิงก์นี้ด้วย <strong>Chrome</strong> บนแท็บเล็ต</li>
+          <li>กดดาวน์โหลด → อนุญาตติดตั้งจากแหล่งนี้ถ้าถาม</li>
+          <li>เปิดไฟล์ <code>telltea-pos.apk</code> → ติดตั้ง → เปิดไอคอน TellTea POS</li>
+        </ol>
+      </div>
+    </main>
+  </body>
+</html>

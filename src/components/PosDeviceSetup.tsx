@@ -5,7 +5,7 @@ import { Monitor, RefreshCw, ExternalLink, Copy, Check } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { saveForcePosAutoUpdate, subscribeAppReleaseSettings } from "@/lib/app-release";
 import { POS_BUILD, posVersionLabel } from "@/lib/pos-version";
-import { POS_ENTRY_URL } from "@/lib/pos-url";
+import { POS_APK_DOWNLOAD_URL, POS_APK_INSTALL_PAGE_URL, POS_ENTRY_URL } from "@/lib/pos-url";
 import {
   savePosNativeRelease,
   subscribePosNativeReleaseAdmin,
@@ -49,6 +49,7 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
   const [busyId, setBusyId] = useState<string | null>(null);
   const [draftLabels, setDraftLabels] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
+  const [copiedApk, setCopiedApk] = useState(false);
   const [forcePosAutoUpdate, setForcePosAutoUpdate] = useState(false);
   const [releaseLoading, setReleaseLoading] = useState(true);
   const [releaseBusy, setReleaseBusy] = useState(false);
@@ -81,7 +82,7 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
         setNativeRelease(release);
         if (!nativeReleaseHydrated.current) {
           setDraftShellBuild(release.latestShellBuild ? String(release.latestShellBuild) : "");
-          setDraftApkUrl(release.apkUrl || "");
+          setDraftApkUrl(release.apkUrl || POS_APK_DOWNLOAD_URL);
           setDraftNotes(release.notes || "");
           nativeReleaseHydrated.current = true;
         }
@@ -138,6 +139,17 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
       await navigator.clipboard.writeText(POS_ENTRY_URL);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      onError("คัดลอกลิงก์ไม่ได้ — คัดลอกด้วยมือจากกล่องด้านล่าง");
+    }
+  }
+
+  async function copyApkInstallUrl() {
+    onError(null);
+    try {
+      await navigator.clipboard.writeText(POS_APK_INSTALL_PAGE_URL);
+      setCopiedApk(true);
+      window.setTimeout(() => setCopiedApk(false), 2000);
     } catch {
       onError("คัดลอกลิงก์ไม่ได้ — คัดลอกด้วยมือจากกล่องด้านล่าง");
     }
@@ -332,24 +344,43 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
       ) : null}
 
       <div className="pos-install-box">
-        <p className="pos-install-label">ลิงก์ติดตั้งแท็บเล็ต (ใช้ URL นี้เท่านั้น)</p>
+        <p className="pos-install-label">ลิงก์ดาวน์โหลดแอป (APK) — เปิดบน Chrome แท็บเล็ต</p>
+        <code className="pos-install-url">{POS_APK_INSTALL_PAGE_URL}</code>
+        <div className="pos-device-actions">
+          <a
+            href={POS_APK_INSTALL_PAGE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="primary-btn pos-install-btn"
+          >
+            <ExternalLink size={15} aria-hidden />
+            เปิดหน้าดาวน์โหลด
+          </a>
+          <button type="button" className="ghost-btn" onClick={() => void copyApkInstallUrl()}>
+            {copiedApk ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
+            {copiedApk ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+          </button>
+        </div>
+        <ol className="pos-install-steps">
+          <li>บนแท็บเล็ตเปิด Chrome → ใส่ลิงก์ด้านบน (หรือสแกน QR ที่คุณสร้างเอง)</li>
+          <li>กด <strong>ดาวน์โหลดไฟล์ติดตั้ง</strong> → อนุญาตติดตั้ง → เปิดไอคอน TellTea POS</li>
+          <li>ไฟล์ตรง: <code>{POS_APK_DOWNLOAD_URL}</code></li>
+        </ol>
+      </div>
+
+      <div className="pos-install-box">
+        <p className="pos-install-label">ลิงก์เว็บ POS (สำรอง / ยังไม่ลง APK)</p>
         <code className="pos-install-url">{POS_ENTRY_URL}</code>
         <div className="pos-device-actions">
-          <a href={POS_ENTRY_URL} target="_blank" rel="noopener noreferrer" className="primary-btn pos-install-btn">
+          <a href={POS_ENTRY_URL} target="_blank" rel="noopener noreferrer" className="ghost-btn pos-install-btn">
             <ExternalLink size={15} aria-hidden />
             ทดสอบเปิดหน้า POS
           </a>
           <button type="button" className="ghost-btn" onClick={() => void copyPosUrl()}>
             {copied ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
-            {copied ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+            {copied ? "คัดลอกแล้ว" : "คัดลอกลิงก์เว็บ"}
           </button>
         </div>
-        <ol className="pos-install-steps">
-          <li>เปิดลิงก์บนแท็บเล็ต Android (Chrome) หรือติดตั้ง APK Capacitor (ดู docs/pos-native-shell.md)</li>
-          <li>กด <strong>ติดตั้งแอปบนหน้าจอหลัก</strong> บนหน้า POS หรือเมนู ⋮ → ติดตั้งแอป</li>
-          <li>เปิดจากไอคอน <strong>TellTea POS</strong> — ควรเห็นป้าย &quot;เต็มจอ&quot;</li>
-          <li>ทิ้งเปิดไว้ตลอด — เจ้าของดูสถานะออนไลน์ที่นี่</li>
-        </ol>
       </div>
 
       {loading ? <p className="empty">กำลังโหลด...</p> : null}

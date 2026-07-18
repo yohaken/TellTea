@@ -78,6 +78,31 @@ if (!urlSrc.includes("telltea-pos.web.app/pos/")) {
   ok("pos-url.ts → telltea-pos.web.app/pos/");
 }
 
+if (!urlSrc.includes("telltea-pos.web.app/install/")) {
+  fail("pos-url.ts must include POS APK install page URL");
+} else {
+  ok("pos-url.ts → install page");
+}
+
+if (!fs.existsSync(path.join(OUT_POS, "install", "index.html"))) {
+  fail("out-pos/install/index.html missing — APK download page");
+} else {
+  ok("POS /install/ download page");
+}
+
+const apkPath = path.join(OUT_POS, "downloads", "telltea-pos.apk");
+if (process.env.CI === "true" || process.env.REQUIRE_POS_APK === "1") {
+  if (!fs.existsSync(apkPath)) {
+    fail("out-pos/downloads/telltea-pos.apk missing — run publish-pos-apk after assembleDebug");
+  } else {
+    ok(`POS APK download (${fs.statSync(apkPath).size} bytes)`);
+  }
+} else if (fs.existsSync(apkPath)) {
+  ok(`POS APK download present (${fs.statSync(apkPath).size} bytes)`);
+} else {
+  ok("POS APK optional locally (CI publishes telltea-pos.apk)");
+}
+
 const layoutSrc = fs.readFileSync(path.join(ROOT, "src/components/AppRootProviders.tsx"), "utf8");
 if (!layoutSrc.includes('pathname.startsWith("/pos/")')) {
   fail("AppRootProviders must skip auth on /pos routes");

@@ -1,6 +1,6 @@
 # TellTea POS — Native shell (Android / Capacitor)
 
-> สถานะ: โครง APK + พื้นฐานรายงานอัปเดตเข้าหลังบ้าน (POS 56) · 2026-07-18
+> สถานะ: โครง APK + ลิงก์ดาวน์โหลดคงที่ + รายงานอัปเดตเข้าหลังบ้าน (POS 57) · 2026-07-18
 
 ## ทำไมต้องมี
 
@@ -72,7 +72,10 @@ CAPACITOR_EMBED=1 npx cap sync android
 
 ## คู่มือลง APK บนแท็บเล็ตจริง
 
-ดู `docs/pos-native-install.md` — **ข้าม emulator** ใช้แท็บเล็ตจริง (USB Run หรือส่ง APK)
+ดู `docs/pos-native-install.md`
+
+**ลิงก์ดาวน์โหลดคงที่ (หลัง deploy):** https://telltea-pos.web.app/install/  
+ไฟล์: https://telltea-pos.web.app/downloads/telltea-pos.apk
 
 ## ความสัมพันธ์กับเว็บ
 
@@ -82,3 +85,4 @@ CAPACITOR_EMBED=1 npx cap sync android
 | Fullscreen, พิมพ์เงียบ, จอลูกค้า revive, boot | Capacitor Android |
 | อัปเดตรหัสธุรกิจช่วงพัฒนา | Firebase Hosting + hard reload (POS 54+) |
 | ปล่อย/ติดตามอัปเดต APK | ตั้งค่าหลังบ้าน + `meta/posNativeRelease` (POS 56+) |
+| ลิงก์ดาวน์โหลด APK คงที่ | https://telltea-pos.web.app/install/ (POS 57+) |
