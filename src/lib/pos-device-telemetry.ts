@@ -1,5 +1,7 @@
 import { getPrinterReadiness } from "./pos-printer/router";
 import { isPosStandaloneMode } from "./pos-install";
+import { getPosNativeShellInfo } from "./pos-native";
+import type { PosShellKind } from "./pos-native-version";
 
 export type PosDeviceTelemetry = {
   deviceHint: string;
@@ -8,6 +10,8 @@ export type PosDeviceTelemetry = {
   standalone: boolean;
   screenSize: string;
   platform: string;
+  shellKind: PosShellKind;
+  nativeShellBuild: number;
 };
 
 /** แยกรุ่นเครื่องจาก user-agent — ใช้ดูจากหลังบ้านแทนการถ่ายรูปหน้าจอ */
@@ -41,6 +45,7 @@ export function parseDeviceHint(userAgent: string): string {
 export function collectPosDeviceTelemetry(): PosDeviceTelemetry {
   const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
   const readiness = getPrinterReadiness();
+  const shell = getPosNativeShellInfo();
   const screenSize =
     typeof window !== "undefined"
       ? `${window.screen.width}×${window.screen.height}@${window.devicePixelRatio || 1}x`
@@ -50,8 +55,15 @@ export function collectPosDeviceTelemetry(): PosDeviceTelemetry {
     deviceHint: parseDeviceHint(ua),
     printerLabel: readiness.label,
     printerReady: readiness.receiptReady,
-    standalone: isPosStandaloneMode(),
+    standalone: isPosStandaloneMode() || shell.shellKind === "native",
     screenSize,
-    platform: typeof navigator !== "undefined" ? navigator.platform || "" : "",
+    platform:
+      shell.platform !== "web"
+        ? shell.platform
+        : typeof navigator !== "undefined"
+          ? navigator.platform || ""
+          : "",
+    shellKind: shell.shellKind,
+    nativeShellBuild: shell.nativeShellBuild,
   };
 }

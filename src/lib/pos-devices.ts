@@ -12,6 +12,7 @@ import { POS_BUILD } from "./pos-version";
 import { collectPosDeviceTelemetry, type PosDeviceTelemetry } from "./pos-device-telemetry";
 import { getPosDb } from "./pos-firebase";
 import { mapFirestoreError } from "./firestore-errors";
+import type { PosNativeUpdateStatus, PosShellKind } from "./pos-native-version";
 
 export const POS_DEVICES_COL = "posDevices";
 export const POS_HEARTBEAT_MS = 60 * 1000;
@@ -40,6 +41,14 @@ export type PosDevice = {
   screenSize: string;
   platform: string;
   telemetryAt: number;
+  /** native | pwa | browser */
+  shellKind: PosShellKind | "";
+  /** เลข APK Capacitor — 0 ถ้าไม่ใช่ native */
+  nativeShellBuild: number;
+  updateStatus: PosNativeUpdateStatus | "";
+  updateTargetBuild: number;
+  updateError: string;
+  updateCheckedAt: number;
 };
 
 function deviceRef(id: string) {
@@ -88,6 +97,18 @@ export function getPosConnectivity(
 }
 
 function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
+  const shellKindRaw = typeof data.shellKind === "string" ? data.shellKind : "";
+  const shellKind =
+    shellKindRaw === "native" || shellKindRaw === "pwa" || shellKindRaw === "browser"
+      ? shellKindRaw
+      : "";
+  const updateStatusRaw = typeof data.updateStatus === "string" ? data.updateStatus : "";
+  const updateStatus = (
+    ["idle", "available", "downloading", "installing", "ready", "failed"] as const
+  ).includes(updateStatusRaw as PosNativeUpdateStatus)
+    ? (updateStatusRaw as PosNativeUpdateStatus)
+    : "";
+
   return {
     id,
     authUid: typeof data.authUid === "string" ? data.authUid : id,
@@ -112,6 +133,12 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
     screenSize: typeof data.screenSize === "string" ? data.screenSize : "",
     platform: typeof data.platform === "string" ? data.platform : "",
     telemetryAt: typeof data.telemetryAt === "number" ? data.telemetryAt : 0,
+    shellKind,
+    nativeShellBuild: typeof data.nativeShellBuild === "number" ? data.nativeShellBuild : 0,
+    updateStatus,
+    updateTargetBuild: typeof data.updateTargetBuild === "number" ? data.updateTargetBuild : 0,
+    updateError: typeof data.updateError === "string" ? data.updateError : "",
+    updateCheckedAt: typeof data.updateCheckedAt === "number" ? data.updateCheckedAt : 0,
   };
 }
 
@@ -124,6 +151,8 @@ function telemetryPatch(telemetry?: PosDeviceTelemetry): Record<string, unknown>
     standalone: t.standalone,
     screenSize: t.screenSize,
     platform: t.platform,
+    shellKind: t.shellKind,
+    nativeShellBuild: t.nativeShellBuild,
     telemetryAt: Date.now(),
   };
 }
@@ -232,6 +261,33 @@ export async function reportPosDeviceSyncStatus(
     );
   } catch (err) {
     throw new Error(mapFirestoreError(err, "รายงานสถานะ sync POS", "pos"));
+  }
+}
+
+
+export async function reportPosDeviceNativeUpdate(
+  authUid: string,
+  status: {
+    updateStatus: PosNativeUpdateStatus;
+    updateTargetBuild?: number;
+    updateError?: string;
+  },
+): Promise<void> {
+  try {
+    await setDoc(
+      deviceRef(authUid),
+      {
+        authUid,
+        updateStatus: status.updateStatus,
+        updateTargetBuild: Math.max(0, status.updateTargetBuild ?? 0),
+        updateError: status.updateError || "",
+        updateCheckedAt: Date.now(),
+        ...telemetryPatch(),
+      },
+      { merge: true },
+    );
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, "รายงานสถานะอัปเดต APK", "pos"));
   }
 }
 

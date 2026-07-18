@@ -8,6 +8,7 @@ import { PosHardLink } from "@/components/PosHardLink";
 import { PosPendingSyncPanel } from "@/components/PosPendingSyncPanel";
 import { PosSyncWatcher } from "@/components/PosSyncWatcher";
 import { PosUpdateWatcher } from "@/components/PosUpdateWatcher";
+import { PosNativeUpdateWatcher } from "@/components/PosNativeUpdateWatcher";
 import { usePosApp } from "@/lib/pos-app-context";
 import { installChunkLoadRecovery } from "@/lib/chunk-load-recovery";
 import { POS_LOCK_HREF, POS_NAV_ITEMS, matchPosNav, posNavLockItem } from "@/lib/pos-nav";
@@ -104,6 +105,7 @@ function PosTopStatus() {
 export function PosAppShell({ children }: { children: React.ReactNode }) {
   const {
     status,
+    device,
     standalone,
     syncSnap,
     syncPanelOpen,
@@ -147,6 +149,7 @@ export function PosAppShell({ children }: { children: React.ReactNode }) {
         onClose={() => setSyncPanelOpen(false)}
       />
       <PosUpdateWatcher enabled={status === "ready"} sellBusy={sellBusy} onReload={performReload} />
+      <PosNativeUpdateWatcher enabled={status === "ready"} deviceId={device?.id ?? null} />
 
       <aside className={`pos-sidebar ${mobileNav ? "is-open" : ""}`}>
         <div className="pos-sidebar-brand">

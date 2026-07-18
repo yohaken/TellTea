@@ -35,6 +35,7 @@
     "test:pos-fixed-category-order": "node scripts/test-pos-fixed-category-order.mjs",
     "test:pos-update-reload-stable": "node scripts/test-pos-update-reload-stable.mjs",
     "test:pos-native-shell": "node scripts/test-pos-native-shell.mjs",
+    "test:pos-native-update-foundation": "node scripts/test-pos-native-update-foundation.mjs",
     "cap:sync": "npx cap sync android",
     "cap:open": "npx cap open android",
     "cap:sync:embed": "CAPACITOR_EMBED=1 npx cap sync android",

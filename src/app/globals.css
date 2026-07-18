@@ -11762,3 +11762,17 @@ body.modal-open .main-panel {
 .pos-device-auto-update {
   margin-bottom: 0.85rem;
 }
+
+.pos-native-release-box {
+  margin: 0.85rem 0 1rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--tea-line, rgba(28, 42, 31, 0.12));
+  border-radius: 10px;
+  background: rgba(47, 107, 79, 0.04);
+}
+
+.pos-native-release-fields {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.55rem 0 0.65rem;
+}

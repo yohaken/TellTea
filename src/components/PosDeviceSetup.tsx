@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Monitor, RefreshCw, ExternalLink, Copy, Check } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { saveForcePosAutoUpdate, subscribeAppReleaseSettings } from "@/lib/app-release";
 import { POS_BUILD, posVersionLabel } from "@/lib/pos-version";
 import { POS_ENTRY_URL } from "@/lib/pos-url";
+import {
+  savePosNativeRelease,
+  subscribePosNativeReleaseAdmin,
+  type PosNativeRelease,
+} from "@/lib/pos-native-release";
+import { POS_NATIVE_UPDATE_STATUS_LABEL } from "@/lib/pos-native-version";
 import {
   isPosDeviceOnline,
   posDeviceLabel,
@@ -29,6 +35,13 @@ function formatLastSeen(ts: number): string {
   });
 }
 
+function shellKindLabel(kind: PosDevice["shellKind"]): string {
+  if (kind === "native") return "APK";
+  if (kind === "pwa") return "PWA";
+  if (kind === "browser") return "เบราว์เซอร์";
+  return "";
+}
+
 export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => void }) {
   const { actorId } = useAuth();
   const [devices, setDevices] = useState<PosDevice[]>([]);
@@ -40,6 +53,13 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
   const [releaseLoading, setReleaseLoading] = useState(true);
   const [releaseBusy, setReleaseBusy] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
+  const [nativeRelease, setNativeRelease] = useState<PosNativeRelease | null>(null);
+  const [nativeReleaseLoading, setNativeReleaseLoading] = useState(true);
+  const [nativeReleaseBusy, setNativeReleaseBusy] = useState(false);
+  const [draftShellBuild, setDraftShellBuild] = useState("");
+  const [draftApkUrl, setDraftApkUrl] = useState("");
+  const [draftNotes, setDraftNotes] = useState("");
+  const nativeReleaseHydrated = useRef(false);
 
   useEffect(() => {
     const unsub = subscribeAppReleaseSettings(
@@ -50,6 +70,26 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
       (err) => {
         onError(err.message || "โหลดตั้งค่าอัปเดต POS ไม่สำเร็จ");
         setReleaseLoading(false);
+      },
+    );
+    return unsub;
+  }, [onError]);
+
+  useEffect(() => {
+    const unsub = subscribePosNativeReleaseAdmin(
+      (release) => {
+        setNativeRelease(release);
+        if (!nativeReleaseHydrated.current) {
+          setDraftShellBuild(release.latestShellBuild ? String(release.latestShellBuild) : "");
+          setDraftApkUrl(release.apkUrl || "");
+          setDraftNotes(release.notes || "");
+          nativeReleaseHydrated.current = true;
+        }
+        setNativeReleaseLoading(false);
+      },
+      (err) => {
+        onError(err.message || "โหลดตั้งค่าปล่อย APK ไม่สำเร็จ");
+        setNativeReleaseLoading(false);
       },
     );
     return unsub;
@@ -157,9 +197,50 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
     }
   }
 
+  async function saveNativeRelease() {
+    if (!actorId) return;
+    const build = Math.floor(Number(draftShellBuild));
+    if (!Number.isFinite(build) || build < 0) {
+      onError("เลข APK ต้องเป็นจำนวนเต็ม ≥ 0");
+      return;
+    }
+    const apkUrl = draftApkUrl.trim();
+    if (build > 0 && !apkUrl) {
+      onError("ใส่ลิงก์ไฟล์ .apk ด้วยเมื่อปล่อยเวอร์ชันใหม่");
+      return;
+    }
+    setNativeReleaseBusy(true);
+    onError(null);
+    try {
+      await savePosNativeRelease(
+        { latestShellBuild: build, apkUrl, notes: draftNotes },
+        actorId,
+      );
+      setUpdateMsg(
+        build > 0
+          ? `ปล่อย APK ${build} แล้ว — เครื่อง native จะรายงานสถานะอัปเดตที่รายการด้านล่าง`
+          : "ล้างปล่อย APK แล้ว",
+      );
+      window.setTimeout(() => setUpdateMsg(null), 6000);
+    } catch (err) {
+      onError((err as Error).message || "บันทึกปล่อย APK ไม่สำเร็จ");
+    } finally {
+      setNativeReleaseBusy(false);
+    }
+  }
+
   const onlineCount = devices.filter((d) => isPosDeviceOnline(d.lastSeenAt)).length;
   const staleCount = devices.filter(
     (d) => isPosDeviceOnline(d.lastSeenAt) && d.appBuild > 0 && d.appBuild < POS_BUILD,
+  ).length;
+  const nativeUpdateCount = devices.filter(
+    (d) =>
+      isPosDeviceOnline(d.lastSeenAt) &&
+      d.shellKind === "native" &&
+      (d.updateStatus === "available" ||
+        d.updateStatus === "downloading" ||
+        d.updateStatus === "installing" ||
+        d.updateStatus === "failed"),
   ).length;
 
   return (
@@ -190,6 +271,63 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
               </span>
             </span>
           </label>
+        </div>
+      ) : null}
+
+      {!nativeReleaseLoading ? (
+        <div className="pos-native-release-box">
+          <p className="pos-install-label">ปล่อยอัปเดต APK (เครื่อง native)</p>
+          <p className="muted settings-card-lead" style={{ marginTop: 0 }}>
+            ตั้งเลขเปลือก + ลิงก์ไฟล์ .apk — แท็บเล็ตที่เปิดจาก APK จะรายงานสถานะที่รายการเครื่อง
+            (ติดตั้งอัตโนมัติในแอปยังเป็นเฟสถัดไป · ตอนนี้เห็นว่าเครื่องไหนค้างเวอร์ชัน)
+            {nativeRelease?.updatedAt
+              ? ` · ปล่อยล่าสุด ${formatLastSeen(nativeRelease.updatedAt)}`
+              : ""}
+          </p>
+          <div className="pos-native-release-fields">
+            <label className="pos-device-label-field">
+              <span>เลข APK ล่าสุด</span>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={draftShellBuild}
+                disabled={nativeReleaseBusy}
+                placeholder="เช่น 1"
+                onChange={(e) => setDraftShellBuild(e.target.value)}
+              />
+            </label>
+            <label className="pos-device-label-field">
+              <span>ลิงก์ไฟล์ .apk</span>
+              <input
+                type="url"
+                value={draftApkUrl}
+                disabled={nativeReleaseBusy}
+                placeholder="https://…/app-release.apk"
+                onChange={(e) => setDraftApkUrl(e.target.value)}
+              />
+            </label>
+            <label className="pos-device-label-field">
+              <span>หมายเหตุ (ไม่บังคับ)</span>
+              <input
+                type="text"
+                value={draftNotes}
+                disabled={nativeReleaseBusy}
+                placeholder="เช่น แก้พิมพ์เงียบ"
+                onChange={(e) => setDraftNotes(e.target.value)}
+              />
+            </label>
+          </div>
+          <div className="pos-device-actions">
+            <button
+              type="button"
+              className="primary-btn"
+              disabled={nativeReleaseBusy}
+              onClick={() => void saveNativeRelease()}
+            >
+              บันทึกปล่อย APK
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -226,7 +364,8 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
       {!loading && devices.length > 0 ? (
         <p className="muted settings-card-lead">
           ออนไลน์ {onlineCount}/{devices.length} เครื่อง · ออนไลน์ = เห็นสัญญาณภายใน 3 นาที
-          {staleCount > 0 ? ` · ค้างเวอร์ชัน ${staleCount} เครื่อง` : ""}
+          {staleCount > 0 ? ` · ค้างเว็บ ${staleCount} เครื่อง` : ""}
+          {nativeUpdateCount > 0 ? ` · รอ/ติดอัปเดต APK ${nativeUpdateCount} เครื่อง` : ""}
         </p>
       ) : null}
 
@@ -266,14 +405,40 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
                 <p className="muted pos-device-meta">
                   เห็นล่าสุด {formatLastSeen(device.lastSeenAt)}
                   {device.appBuild ? ` · POS ${device.appBuild}` : ""}
-                  {buildBehind ? " · รออัปเดต" : ""}
+                  {buildBehind ? " · รออัปเดตเว็บ" : ""}
                 </p>
+
+                {device.shellKind || device.nativeShellBuild > 0 || device.updateStatus ? (
+                  <p
+                    className={`muted pos-device-meta ${
+                      device.updateStatus === "failed" || device.updateStatus === "available"
+                        ? "pos-device-sync-alert"
+                        : ""
+                    }`}
+                  >
+                    {shellKindLabel(device.shellKind)
+                      ? `โหมด ${shellKindLabel(device.shellKind)}`
+                      : "โหมด —"}
+                    {device.nativeShellBuild > 0 ? ` · APK ${device.nativeShellBuild}` : ""}
+                    {device.updateStatus
+                      ? ` · ${POS_NATIVE_UPDATE_STATUS_LABEL[device.updateStatus] || device.updateStatus}`
+                      : ""}
+                    {device.updateStatus === "available" && device.updateTargetBuild > 0
+                      ? ` → ${device.updateTargetBuild}`
+                      : ""}
+                    {device.updateError ? ` — ${device.updateError}` : ""}
+                  </p>
+                ) : null}
 
                 {device.deviceHint ? (
                   <p className="muted pos-device-meta">
                     รุ่น {device.deviceHint}
                     {device.screenSize ? ` · จอ ${device.screenSize}` : ""}
-                    {device.standalone ? " · เต็มจอ" : " · ในเบราว์เซอร์"}
+                    {device.shellKind === "native"
+                      ? " · APK"
+                      : device.standalone
+                        ? " · เต็มจอ"
+                        : " · ในเบราว์เซอร์"}
                   </p>
                 ) : null}
 

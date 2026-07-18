@@ -152,9 +152,18 @@ service cloud.firestore {
       let before = resource.data;
       let after = request.resource.data;
       let repairAuth = !before.keys().hasAll(['authUid']) || before.authUid == '';
+      let telemetryKeys = [
+        'deviceHint', 'printerLabel', 'printerReady', 'standalone', 'screenSize', 'platform', 'telemetryAt',
+        'shellKind', 'nativeShellBuild',
+        'updateStatus', 'updateTargetBuild', 'updateError', 'updateCheckedAt',
+      ];
+      let baseKeys = [
+        'lastSeenAt', 'appBuild', 'userAgent', 'lastReloadAckAt',
+        'syncPendingCount', 'syncFailedCount', 'syncStuckAt', 'syncLastError', 'updatedAt',
+      ];
       let allowedKeys = repairAuth
-        ? ['lastSeenAt', 'appBuild', 'userAgent', 'lastReloadAckAt', 'authUid', 'syncPendingCount', 'syncFailedCount', 'syncStuckAt', 'syncLastError', 'updatedAt']
-        : ['lastSeenAt', 'appBuild', 'userAgent', 'lastReloadAckAt', 'syncPendingCount', 'syncFailedCount', 'syncStuckAt', 'syncLastError', 'updatedAt'];
+        ? baseKeys.concat(telemetryKeys).concat(['authUid'])
+        : baseKeys.concat(telemetryKeys);
       return isPosDeviceAuth()
         && (repairAuth || before.authUid == request.auth.uid)
         && after.authUid == request.auth.uid
@@ -540,7 +549,7 @@ service cloud.firestore {
 
     match /meta/{docId} {
       allow read: if isStaff()
-        || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos'));
+        || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease'));
       allow write: if isOwner()
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
         || (hasPerm('alerts') && docId == 'lowBalanceAlert')
