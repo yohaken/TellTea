@@ -435,7 +435,7 @@ function CheckForm({
         <FormHead title="เริ่มตรวจ SOP" onClose={onClose} />
         <div className="form-card entry-form">
           <p className="muted check-hint">
-            ห้ามเช็คล่วงหน้าก่อนเวลาเริ่มกะ — เช็คย้อนหลังได้เสมอหลังกะเริ่มแล้ว
+            วันนี้และย้อนหลัง — เปิดเช็คได้ทุกกะของวันนั้น · วันล่วงหน้ายังเปิดไม่ได้
           </p>
 
           {!checkAllowed && !existingSession ? (
@@ -509,7 +509,7 @@ function CheckForm({
                 disabled={!checkAllowed}
                 onClick={startChecklist}
               >
-                {checkAllowed ? "เริ่มเช็คลิสต์" : "รอเวลาเริ่มกะ"}
+                {checkAllowed ? "เริ่มเช็คลิสต์" : "วันล่วงหน้า"}
               </button>
             )}
             {existingSession && checkAllowed ? (
@@ -868,7 +868,7 @@ function CheckSummary({
       </div>
 
       <p className="muted check-history-hint">
-        ตารางแสดงล่วงหน้า {CHECK_PLAN_AHEAD_DAYS} วัน — ห้ามเช็คก่อนเวลาเริ่มกะ · เช็คย้อนหลังได้ · แตะ &quot;เช็ค&quot; เมื่อถึงเวลา
+        ตารางแสดงล่วงหน้า {CHECK_PLAN_AHEAD_DAYS} วัน — วันนี้/ย้อนหลังแตะ &quot;เช็ค&quot; ได้ทุกกะ · วันล่วงหน้ายังเปิดไม่ได้
       </p>
 
       {rows.length ? (

@@ -46,16 +46,18 @@ export function isWithinCheckShiftWindow(
 }
 
 /**
- * เริ่มเช็คได้หรือยัง — ห้ามเฉพาะล่วงหน้า (ก่อนเวลาเริ่มกะ)
- * เช็คย้อนหลังได้เสมอหลังกะเริ่มแล้ว
+ * เริ่มเช็คได้หรือยัง
+ * — วันนี้และย้อนหลัง: เปิดได้ทุกกะของวันนั้น (ไม่ต้องรอเวลาเริ่มกะ)
+ * — วันล่วงหน้า: ยังห้าม
  */
 export function canStartCheck(
   dateMs: number,
-  shift: CheckShiftId,
+  _shift: CheckShiftId,
   now: Date = new Date(),
 ): boolean {
-  const { startMs } = checkShiftWindowMs(dateMs, shift);
-  return now.getTime() >= startMs;
+  const dayMs = startOfLocalDay(new Date(dateMs));
+  const todayMs = startOfLocalDay(now);
+  return dayMs <= todayMs;
 }
 
 /** @deprecated ใช้ canStartCheck หรือ isWithinCheckShiftWindow แทน */
@@ -89,22 +91,14 @@ export function getActiveCheckSlot(now: Date = new Date()): {
   return { dateMs: startOfLocalDay(prev), shift: "evening" };
 }
 
-function formatWindowTime(ms: number) {
-  const d = new Date(ms);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mi}`;
-}
-
-/** ข้อความเมื่อเช็คล่วงหน้าไม่ได้ — ว่างถ้าเริ่มเช็คได้แล้ว */
+/** ข้อความเมื่อเช็ควันล่วงหน้าไม่ได้ — ว่างถ้าเริ่มเช็คได้แล้ว */
 export function checkShiftWindowMessage(
   dateMs: number,
   shift: CheckShiftId,
   now: Date = new Date(),
 ): string {
   if (canStartCheck(dateMs, shift, now)) return "";
-  const { startMs } = checkShiftWindowMs(dateMs, shift);
   const label = labelCheckShift(shift);
   const dateLabel = formatDateShort(dateMs);
-  return `${dateLabel} · ${label} — ยังไม่ถึงเวลาเช็ค (เปิด ${formatWindowTime(startMs)})`;
+  return `${dateLabel} · ${label} — ยังเป็นวันล่วงหน้า เปิดเช็คได้เมื่อถึงวันนั้น`;
 }
