@@ -41,17 +41,23 @@ jobs:
       - name: Build static export
         run: npm run build
 
-      - name: Setup Java (Android APK)
+      - name: Verify install page is in POS export (before APK)
+        run: |
+          test -f out-pos/install/index.html
+          grep -q 'telltea-pos.apk' out-pos/install/index.html
+
+      - name: Setup Java 21 (Capacitor requires source release 21)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Build TellTea POS debug APK
         run: |
+          java -version
           npx cap sync android
           cd android
           chmod +x gradlew
@@ -64,7 +70,7 @@ jobs:
         run: npm run smoke:hosting
 
       - name: Verify standalone POS hosting export
-        run: npm run smoke:pos-hosting
+        run: REQUIRE_POS_APK=1 npm run smoke:pos-hosting
 
       - name: Verify POS connectivity wiring
         run: npm run test:pos-connectivity
@@ -146,3 +152,6 @@ jobs:
             code=$?
           fi
           exit $code
+
+      - name: Verify live install page + APK download
+        run: node scripts/smoke-pos-install-live.mjs

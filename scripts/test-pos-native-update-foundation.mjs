@@ -1,5 +1,5 @@
 /**
- * POS 57 — Native update foundation (release doc + device status + settings UI).
+ * POS 58 — Native update foundation (release doc + device status + settings UI).
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD\s*=\s*57\b/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD\s*=\s*58\b/);
 assert.match(read("src/lib/pos-native-version.ts"), /POS_NATIVE_SHELL_BUILD\s*=\s*1\b/);
 assert.match(read("src/lib/pos-native-version.ts"), /PosNativeUpdateStatus/);
 assert.match(read("src/lib/pos-native-release.ts"), /posNativeRelease/);
