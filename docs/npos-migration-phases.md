@@ -57,11 +57,14 @@
 | **N6.1–N6.5** | เมนู→ตะกร้า→ชำระ→พิมพ์→รอบ | โคลน UX เว็บ + CF HTTP + outbox | บิลซิงก์ + ops | ✅ รอบนี้ (1.8.0) |
 | **N6.6** | parity เว็บขาย | รูปเมนู · ตัวเลือก · ส่วนลด · QR · ของหมด · พิมพ์ซ้ำ · Z ปิดรอบ | ops + บิล | ✅ (1.9.0) |
 | **N6.6+P1** | keypad · QR ออฟไลน์ · Z ละเอียด | ZXing · cash keypad · shift counters | เช็คลิสต์ P1 | ✅ (1.9.1) |
-| **N6.6+P2** | void · X-report · เรียงหมวด | local void · snapshot print · reorder CF | เช็คลิสต์ P2 | ✅ รอบนี้ (1.9.2) |
-| **N7** | ปิดเว็บขายหน้าร้าน | ตัด `/pos/sell` เป็นหลัก | — | ร้านใช้ nPos เป็นหลัก · **ยังไม่ทำ** จนกว่านำร่องเครื่องจริง |
+| **N6.6+P2** | void · X-report · เรียงหมวด | local void · snapshot print · reorder CF | เช็คลิสต์ P2 | ✅ (1.9.2) |
+| **P3** | LAN · พักบิล · outbox · สรุปรอบจอ | TCP 9100 · HoldCart · pending badge | นำร่อง | ✅ รอบนี้ (1.10.0) |
+| **P4** | นำร่องเครื่องจริง | สคริปต์ 15 นาที | คนเทส | พรุ่งนี้ |
+| **N7** | ปิดเว็บขายหน้าร้าน | ตัด `/pos/sell` เป็นหลัก | — | **ยังไม่ทำ** จนกว่า P4–P5 ผ่าน |
 
 แผนละเอียด N6 (เปิดมาเจออะไร · ตั้งค่าอยู่ไหน · เฟสย่อย): [npos-n6-plan.md](./npos-n6-plan.md)  
-เช็คลิสต์เทียบ `/pos/menu` + `/pos/sell`: [npos-parity-checklist.md](./npos-parity-checklist.md)
+เช็คลิสต์เทียบ `/pos/menu` + `/pos/sell`: [npos-parity-checklist.md](./npos-parity-checklist.md)  
+แผนเฟสเต็ม + นำร่องพรุ่งนี้: [npos-pilot-roadmap.md](./npos-pilot-roadmap.md) · [npos-pilot-day-checklist.md](./npos-pilot-day-checklist.md)
 
 ## Ops log (ข้ามเฟส · ตั้งแต่ 1.6.0)
 

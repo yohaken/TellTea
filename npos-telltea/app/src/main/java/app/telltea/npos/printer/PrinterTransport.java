@@ -51,6 +51,8 @@ public final class PrinterTransport {
                     try {
                         if (endpoint.kind == PrinterEndpoint.Kind.USB) {
                             result = sendUsb(app, endpoint, payload);
+                        } else if (endpoint.kind == PrinterEndpoint.Kind.NETWORK) {
+                            result = sendTcp(endpoint, payload);
                         } else {
                             result = sendBluetooth(app, endpoint, payload);
                         }
@@ -163,6 +165,27 @@ public final class PrinterTransport {
             return false;
         }
         return Boolean.TRUE.equals(granted.get());
+    }
+
+    private static Result sendTcp(PrinterEndpoint endpoint, byte[] payload) throws Exception {
+        String host = PrinterEndpoint.networkHost(endpoint.id);
+        int port = PrinterEndpoint.networkPort(endpoint.id);
+        if (host.isEmpty()) return new Result(false, "ไม่มี IP ปริ้นเตอร์ LAN");
+        java.net.Socket socket = new java.net.Socket();
+        try {
+            socket.connect(new java.net.InetSocketAddress(host, port), 5_000);
+            socket.setSoTimeout(8_000);
+            OutputStream out = socket.getOutputStream();
+            out.write(payload);
+            out.flush();
+            return new Result(true, "LAN ส่งแล้ว " + payload.length + " bytes → " + host + ":" + port);
+        } finally {
+            try {
+                socket.close();
+            } catch (Exception ignored) {
+                /* ignore */
+            }
+        }
     }
 
     private static Result sendBluetooth(Context context, PrinterEndpoint endpoint, byte[] payload)

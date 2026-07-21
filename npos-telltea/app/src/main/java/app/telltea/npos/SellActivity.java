@@ -32,6 +32,7 @@ import java.util.Map;
 import app.telltea.npos.diagnose.CustomerAmountPresentation;
 import app.telltea.npos.diagnose.DisplayProbe;
 import app.telltea.npos.diagnose.OpsLogger;
+import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.ImageLoader;
 import app.telltea.npos.sell.MenuModels;
 import app.telltea.npos.sell.MenuRepository;
@@ -52,6 +53,9 @@ public class SellActivity extends Activity {
   private TextView sellSyncStatus;
   private TextView sellTitle;
   private TextView discountLabel;
+  private TextView shiftSummary;
+  private Button flushSyncButton;
+  private Button restoreHoldButton;
 
   private MenuRepository menuRepo;
   private SaleSync saleSync;
@@ -78,6 +82,9 @@ public class SellActivity extends Activity {
     sellSyncStatus = findViewById(R.id.sellSyncStatus);
     sellTitle = findViewById(R.id.sellTitle);
     discountLabel = findViewById(R.id.discountLabel);
+    shiftSummary = findViewById(R.id.shiftSummary);
+    flushSyncButton = findViewById(R.id.flushSyncButton);
+    restoreHoldButton = findViewById(R.id.restoreHoldButton);
 
     menuRepo = new MenuRepository();
     saleSync = new SaleSync();
@@ -85,6 +92,9 @@ public class SellActivity extends Activity {
     findViewById(R.id.payCashButton).setOnClickListener(v -> startPay("cash"));
     findViewById(R.id.payPromptButton).setOnClickListener(v -> startPay("promptpay"));
     findViewById(R.id.discountButton).setOnClickListener(v -> showDiscountDialog());
+    findViewById(R.id.holdBillButton).setOnClickListener(v -> holdBill());
+    restoreHoldButton.setOnClickListener(v -> restoreHold());
+    flushSyncButton.setOnClickListener(v -> flushPendingNow());
     findViewById(R.id.refreshMenuButton).setOnClickListener(v -> reloadMenu());
     findViewById(R.id.xReportButton).setOnClickListener(v -> printXReport());
     findViewById(R.id.receiptsButton)
@@ -97,6 +107,104 @@ public class SellActivity extends Activity {
     menuRepo.loadShop(this, s -> runOnUiThread(() -> shop = s));
     reloadMenu();
     saleSync.flushPending(this);
+    updateShiftSummary();
+    updateHoldRestoreButton();
+    updatePendingBadge();
+  }
+
+  private void holdBill() {
+    if (cart.isEmpty()) {
+      Toast.makeText(this, R.string.cart_empty, Toast.LENGTH_SHORT).show();
+      return;
+    }
+    try {
+      HoldCart.save(this, cart, discountBaht);
+      cart.clear();
+      discountBaht = 0;
+      renderCart();
+      updateHoldRestoreButton();
+      Toast.makeText(this, R.string.hold_saved, Toast.LENGTH_SHORT).show();
+      OpsLogger.info(this, "sale", "พักบิล", "");
+    } catch (Exception e) {
+      Toast.makeText(this, R.string.hold_fail, Toast.LENGTH_SHORT).show();
+    }
+  }
+
+  private void restoreHold() {
+    if (!HoldCart.hasHold(this)) {
+      Toast.makeText(this, R.string.hold_empty, Toast.LENGTH_SHORT).show();
+      return;
+    }
+    if (!cart.isEmpty()) {
+      new AlertDialog.Builder(this)
+          .setTitle(R.string.hold_restore_title)
+          .setMessage(R.string.hold_restore_replace)
+          .setPositiveButton(
+              android.R.string.ok,
+              (d, w) -> {
+                cart.clear();
+                doRestoreHold();
+              })
+          .setNegativeButton(android.R.string.cancel, null)
+          .show();
+      return;
+    }
+    doRestoreHold();
+  }
+
+  private void doRestoreHold() {
+    try {
+      HoldCart.Held held = HoldCart.restore(this);
+      if (held == null || held.lines.isEmpty()) {
+        Toast.makeText(this, R.string.hold_empty, Toast.LENGTH_SHORT).show();
+        updateHoldRestoreButton();
+        return;
+      }
+      cart.addAll(held.lines);
+      discountBaht = held.discountBaht;
+      renderCart();
+      updateHoldRestoreButton();
+      Toast.makeText(this, R.string.hold_restored, Toast.LENGTH_SHORT).show();
+    } catch (Exception e) {
+      Toast.makeText(this, R.string.hold_fail, Toast.LENGTH_SHORT).show();
+    }
+  }
+
+  private void updateHoldRestoreButton() {
+    if (restoreHoldButton == null) return;
+    restoreHoldButton.setEnabled(HoldCart.hasHold(this));
+  }
+
+  private void flushPendingNow() {
+    sellSyncStatus.setText(R.string.sell_flushing);
+    saleSync.flushPending(this);
+    flushSyncButton.postDelayed(this::updatePendingBadge, 1200);
+  }
+
+  private void updatePendingBadge() {
+    int n = saleSync.pendingCount(this);
+    if (flushSyncButton != null) {
+      if (n > 0) {
+        flushSyncButton.setVisibility(View.VISIBLE);
+        flushSyncButton.setText(getString(R.string.btn_flush_sync_n, n));
+      } else {
+        flushSyncButton.setVisibility(View.GONE);
+      }
+    }
+    if (n > 0 && sellSyncStatus != null) {
+      sellSyncStatus.setText(getString(R.string.sell_pending_n, n));
+    }
+  }
+
+  private void updateShiftSummary() {
+    if (shiftSummary == null) return;
+    shiftSummary.setText(
+        getString(
+            R.string.shift_summary_fmt,
+            ShiftPrefs.saleCount(this),
+            ShiftPrefs.cashTotal(this),
+            ShiftPrefs.promptpayTotal(this),
+            ShiftPrefs.voidedCount(this)));
   }
 
   private void reloadMenu() {
@@ -132,6 +240,15 @@ public class SellActivity extends Activity {
       if (c.id.equals(id)) return true;
     }
     return false;
+  }
+
+  @Override
+  protected void onResume() {
+    super.onResume();
+    updateShiftSummary();
+    updateHoldRestoreButton();
+    updatePendingBadge();
+    if (saleSync != null) saleSync.flushPending(this);
   }
 
   @Override
@@ -975,35 +1092,38 @@ public class SellActivity extends Activity {
         autoPrint,
         new SaleSync.SaleCallback() {
           @Override
-          public void onLocalSaved(String localId, double total) {
-            runOnUiThread(
-                () -> {
-                  cart.clear();
-                  discountBaht = 0;
-                  renderCart();
-                  sellSyncStatus.setText(R.string.sell_saved_local);
-                  Toast.makeText(
-                          SellActivity.this,
-                          getString(R.string.sell_saved_toast, total),
-                          Toast.LENGTH_SHORT)
-                      .show();
-                });
-          }
+                    public void onLocalSaved(String localId, double total) {
+                      runOnUiThread(
+                          () -> {
+                            cart.clear();
+                            discountBaht = 0;
+                            renderCart();
+                            updateShiftSummary();
+                            updatePendingBadge();
+                            sellSyncStatus.setText(R.string.sell_saved_local);
+                            Toast.makeText(
+                                    SellActivity.this,
+                                    getString(R.string.sell_saved_toast, total),
+                                    Toast.LENGTH_SHORT)
+                                .show();
+                          });
+                    }
 
-          @Override
-          public void onSynced(String billNo, double change, double total) {
-            runOnUiThread(
-                () -> {
-                  sellSyncStatus.setText(getString(R.string.sell_synced, billNo));
-                  if (change > 0) {
-                    Toast.makeText(
-                            SellActivity.this,
-                            getString(R.string.sell_change, change),
-                            Toast.LENGTH_LONG)
-                        .show();
-                  }
-                });
-          }
+                    @Override
+                    public void onSynced(String billNo, double change, double total) {
+                      runOnUiThread(
+                          () -> {
+                            sellSyncStatus.setText(getString(R.string.sell_synced, billNo));
+                            updatePendingBadge();
+                            if (change > 0) {
+                              Toast.makeText(
+                                      SellActivity.this,
+                                      getString(R.string.sell_change, change),
+                                      Toast.LENGTH_LONG)
+                                  .show();
+                            }
+                          });
+                    }
 
           @Override
           public void onError(String humanMessage) {

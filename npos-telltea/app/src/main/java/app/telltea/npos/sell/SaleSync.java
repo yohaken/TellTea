@@ -213,6 +213,14 @@ public final class SaleSync {
         return out;
     }
 
+    public int pendingCount(Context context) {
+        try {
+            return readQueue(context.getApplicationContext()).length();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     /** Reprint a stored local receipt (N6.6 parity with web PosReceiptsView). */
     public void reprintReceipt(Context context, JSONObject receiptRow, Runnable onDone) {
         Context app = context.getApplicationContext();
