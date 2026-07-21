@@ -26,6 +26,7 @@ public class MainActivity extends Activity {
     private TextView bannerView;
     private Button updateButton;
     private Button diagnoseButton;
+    private Button installPageButton;
 
     private UpdateChecker checker;
     private UpdateDownloader downloader;
@@ -45,6 +46,7 @@ public class MainActivity extends Activity {
         bannerView = findViewById(R.id.banner);
         updateButton = findViewById(R.id.updateButton);
         diagnoseButton = findViewById(R.id.diagnoseButton);
+        installPageButton = findViewById(R.id.installPageButton);
 
         readLocalVersion();
         versionView.setText(getString(R.string.version_label, localVersionName, localVersionCode));
@@ -55,6 +57,15 @@ public class MainActivity extends Activity {
         updateButton.setOnClickListener(v -> onUpdateButtonClicked());
         diagnoseButton.setOnClickListener(
                 v -> startActivity(new Intent(this, DiagnoseActivity.class)));
+        installPageButton.setOnClickListener(v -> openInstallPage());
+    }
+
+    private void openInstallPage() {
+        String url =
+                BuildConfig.INSTALL_PAGE_URL == null || BuildConfig.INSTALL_PAGE_URL.isEmpty()
+                        ? "https://telltea-pos.web.app/install/"
+                        : BuildConfig.INSTALL_PAGE_URL;
+        ApkInstaller.openInstallPage(this, url);
     }
 
     @Override
@@ -209,8 +220,9 @@ public class MainActivity extends Activity {
         } catch (Exception e) {
             busy = false;
             updateButton.setEnabled(true);
-            setStatus(getString(
-                    R.string.status_error, e.getMessage() == null ? "install" : e.getMessage()));
+            String msg = e.getMessage() == null ? "install" : e.getMessage();
+            setStatus(getString(R.string.status_error, msg));
+            statusView.append("\n" + getString(R.string.status_signature_hint));
         }
     }
 

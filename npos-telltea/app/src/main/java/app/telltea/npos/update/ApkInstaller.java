@@ -30,6 +30,16 @@ public final class ApkInstaller {
         context.startActivity(intent);
     }
 
+    public static void openInstallPage(Context context, String url) {
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(intent);
+    }
+
+    /**
+     * Write the APK into a PackageInstaller session, close write streams, then commit.
+     * Committing while the session write stream is still open causes "Files still open".
+     */
     public static void install(Context context, File apkFile) throws Exception {
         PackageInstaller installer = context.getPackageManager().getPackageInstaller();
         PackageInstaller.SessionParams params =
@@ -40,15 +50,18 @@ public final class ApkInstaller {
         params.setAppPackageName(context.getPackageName());
 
         int sessionId = installer.createSession(params);
-        try (PackageInstaller.Session session = installer.openSession(sessionId);
-                InputStream in = new FileInputStream(apkFile);
-                OutputStream out = session.openWrite("npos-update", 0, apkFile.length())) {
-            byte[] buf = new byte[64 * 1024];
-            int n;
-            while ((n = in.read(buf)) >= 0) {
-                out.write(buf, 0, n);
+        PackageInstaller.Session session = installer.openSession(sessionId);
+        try {
+            try (InputStream in = new FileInputStream(apkFile);
+                    OutputStream out = session.openWrite("npos-update", 0, apkFile.length())) {
+                byte[] buf = new byte[64 * 1024];
+                int n;
+                while ((n = in.read(buf)) >= 0) {
+                    out.write(buf, 0, n);
+                }
+                session.fsync(out);
             }
-            session.fsync(out);
+
             Intent callback = new Intent(context, InstallResultReceiver.class);
             callback.setAction(InstallResultReceiver.ACTION);
             int flags = PendingIntent.FLAG_UPDATE_CURRENT;
@@ -58,6 +71,19 @@ public final class ApkInstaller {
             PendingIntent pending =
                     PendingIntent.getBroadcast(context, sessionId, callback, flags);
             session.commit(pending.getIntentSender());
+        } catch (Exception e) {
+            try {
+                session.abandon();
+            } catch (Exception ignored) {
+                /* best effort */
+            }
+            throw e;
+        } finally {
+            try {
+                session.close();
+            } catch (Exception ignored) {
+                /* already closed after commit on some devices */
+            }
         }
     }
 }
