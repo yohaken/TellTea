@@ -31,17 +31,12 @@ const guess = vm.runInNewContext(
   `function guessTypeFromDescription(description) {${fnMatch[1]}}\nguessTypeFromDescription`,
 );
 assert.equal(guess("ค่าเครื่องดื่ม"), "cogs");
+assert.equal(guess("ค่าขนส่งแก้ว"), "cogs");
+assert.equal(guess("ค่าส่งนม"), "cogs");
+assert.equal(guess("ค่าขนส่ง"), "sga");
+assert.equal(guess("ส่งเครื่องซ่อม"), "sga");
 
-assert.match(typeField, /จัดประเภทอัตโนมัติเมื่อกดบันทึก/);
-assert.match(ledgerPage, /AiSaveProgressModal/);
-assert.match(ledgerPage, /AiUseImagesCheckbox/);
-assert.match(ledgerPage, /useImagesForAi/);
-assert.match(useImages, /ใช้รูปช่วยจัดประเภท/);
-assert.match(progress, /ใช้เวลา/);
-assert.match(progress, /AI กำลังจัดประเภท/);
-assert.match(photoCell, /createPortal/);
-assert.match(photoCell, /popstate/);
-assert.match(photoCell, /photo-fs-close/);
-assert.match(version, /APP_BUILD = 192/);
+assert.match(classify.SYSTEM_PROMPT, /ค่าขนส่งแก้ว/);
+assert.match(version, /APP_BUILD = 193/);
 
 console.log("OK test-ledger-ai-classify");

@@ -41,6 +41,32 @@ export function guessTypeFromDescription(description: string): string {
     return "cogs";
   }
 
+  // ค่าขนส่งวัตถุดิบ/บรรจุภัณฑ์ → cogs (ก่อนกฎ "ขนส่ง" ทั่วไปที่เป็น sga)
+  const freightMaterialHints = [
+    "แก้ว",
+    "หลอด",
+    "ฝา",
+    "น้ำแข็ง",
+    "น้ำตาล",
+    "ชานม",
+    "ชา",
+    "กาแฟ",
+    "แป้ง",
+    "วัตถุดิบ",
+    "บรรจุภัณฑ์",
+    "แพ็กเกจ",
+    "package",
+  ];
+  const isFreight =
+    text.includes("ขนส่ง") || text.includes("ค่าส่ง") || text.includes("ค่ารถส่ง") || text.includes("ค่าจัดส่ง");
+  if (isFreight && freightMaterialHints.some((h) => text.includes(h))) {
+    return "cogs";
+  }
+  // ซื้อ/สั่ง แก้ว หลอด ฯลฯ โดยตรง
+  if (["แก้ว", "หลอด", "ฝา", "น้ำแข็ง"].some((h) => text.includes(h))) {
+    return "cogs";
+  }
+
   const assetHints = ["ซื้อเครื่อง", "เครื่องใหม่", "ตู้เย็น", "ตู้แช่", "แอร์ใหม่", "อุปกรณ์ถาวร", "สินทรัพย์"];
   if (assetHints.some((h) => text.includes(h))) return "asset";
 
