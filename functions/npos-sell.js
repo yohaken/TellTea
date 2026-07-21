@@ -118,9 +118,17 @@ exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(a
           optionGroupIds: Array.isArray(x.optionGroupIds)
             ? x.optionGroupIds.filter((id) => typeof id === "string").slice(0, 12)
             : [],
+          // data:image/... from PosMenuItemEditor — may be large; keep under soft cap per item
+          imageUrl: (() => {
+            const u = typeof x.imageUrl === "string" ? x.imageUrl.trim() : "";
+            if (!u) return "";
+            if (u.length > 180000) return "";
+            return u.slice(0, 180000);
+          })(),
         };
       })
-      .filter((i) => i.active && i.visibleOnPos)
+      // Include sold-out (active:false) so nPos can show “ของหมด” like web sell grid.
+      .filter((i) => i.visibleOnPos)
       .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
 
     res.status(200).json({
@@ -133,6 +141,41 @@ exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(a
   } catch (err) {
     console.error("nposMenuSnapshot", err);
     res.status(500).json({ ok: false, error: "menu_failed" });
+  }
+});
+
+/** Toggle sold-out (active flag) — same semantics as web toggleMenuItemSoldOut. */
+exports.nposToggleSoldOut = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  const installId = requireInstallId(body);
+  const itemId = asString(body?.itemId, 80);
+  if (!installId || !itemId) {
+    res.status(400).json({ ok: false, error: "installId_and_itemId_required" });
+    return;
+  }
+  const soldOut = body.soldOut === true;
+  try {
+    const db = getFirestore();
+    const ref = db.doc(`menuItems/${itemId}`);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      res.status(404).json({ ok: false, error: "item_not_found" });
+      return;
+    }
+    await ref.set({ active: !soldOut, updatedAt: Date.now(), soldOutBy: installId }, { merge: true });
+    res.status(200).json({ ok: true, itemId, active: !soldOut, soldOut });
+  } catch (err) {
+    console.error("nposToggleSoldOut", err);
+    res.status(500).json({ ok: false, error: "toggle_failed" });
   }
 });
 

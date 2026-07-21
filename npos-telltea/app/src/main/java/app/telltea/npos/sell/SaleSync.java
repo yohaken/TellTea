@@ -217,6 +217,85 @@ public final class SaleSync {
         return out;
     }
 
+    /** Reprint a stored local receipt (N6.6 parity with web PosReceiptsView). */
+    public void reprintReceipt(Context context, JSONObject receiptRow, Runnable onDone) {
+        Context app = context.getApplicationContext();
+        executor.execute(
+                () -> {
+                    try {
+                        String billNo = receiptRow.optString("billNo", "—");
+                        double total = receiptRow.optDouble("total", 0);
+                        String pay = receiptRow.optString("paymentMethod", "");
+                        JSONObject payload = new JSONObject();
+                        payload.put("lines", receiptRow.optJSONArray("lines"));
+                        payload.put("paymentMethod", pay);
+                        payload.put("localTotal", total);
+                        maybePrintAndKick(app, payload, billNo, total, pay);
+                        OpsLogger.info(app, "printer", "พิมพ์ใบเสร็จซ้ำ", billNo);
+                    } catch (Exception e) {
+                        OpsLogger.error(
+                                app,
+                                "printer",
+                                "พิมพ์ซ้ำไม่สำเร็จ",
+                                e.getMessage() == null ? "" : e.getMessage());
+                    }
+                    if (onDone != null) onDone.run();
+                });
+    }
+
+    /** Z-report style shift summary before/on close (clone web PosShiftView). */
+    public void printShiftReport(Context context, Runnable onDone) {
+        Context app = context.getApplicationContext();
+        executor.execute(
+                () -> {
+                    try {
+                        PrinterEndpoint ep = PrinterPrefs.savedOrNull(app);
+                        if (ep == null) {
+                            OpsLogger.warn(app, "printer", "ข้ามพิมพ์ปิดรอบ — ยังไม่เลือกปริ้นเตอร์", "");
+                        } else {
+                            double cash = ShiftPrefs.cashTotal(app);
+                            double pp = ShiftPrefs.promptpayTotal(app);
+                            String body =
+                                    "ปิดรอบ / Z-REPORT\n"
+                                            + "รอบ "
+                                            + ShiftPrefs.shift(app)
+                                            + "\n"
+                                            + "session "
+                                            + ShiftPrefs.sessionId(app)
+                                            + "\n"
+                                            + "----------------\n"
+                                            + "เงินสด "
+                                            + String.format(java.util.Locale.US, "%.0f", cash)
+                                            + "\n"
+                                            + "PromptPay "
+                                            + String.format(java.util.Locale.US, "%.0f", pp)
+                                            + "\n"
+                                            + "รวม "
+                                            + String.format(java.util.Locale.US, "%.0f", cash + pp)
+                                            + "\n";
+                            transport.send(
+                                    app,
+                                    ep,
+                                    EscPos.saleReceipt(body),
+                                    result ->
+                                            OpsLogger.result(
+                                                    app,
+                                                    "printer",
+                                                    result.ok ? "พิมพ์ปิดรอบแล้ว" : "พิมพ์ปิดรอบไม่สำเร็จ",
+                                                    result.message,
+                                                    result.ok));
+                        }
+                    } catch (Exception e) {
+                        OpsLogger.warn(
+                                app,
+                                "printer",
+                                "พิมพ์ปิดรอบพลาด",
+                                e.getMessage() == null ? "" : e.getMessage());
+                    }
+                    if (onDone != null) onDone.run();
+                });
+    }
+
     public void shutdown() {
         transport.shutdown();
         executor.shutdownNow();

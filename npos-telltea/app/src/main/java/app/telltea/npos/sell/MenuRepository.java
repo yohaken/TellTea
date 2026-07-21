@@ -23,6 +23,8 @@ public final class MenuRepository {
             "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposMenuSnapshot";
     public static final String SHOP_URL =
             "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposShopSettings";
+    public static final String TOGGLE_SOLD_URL =
+            "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposToggleSoldOut";
 
     private static final String PREFS = "npos_menu";
     private static final String KEY_MENU = "menuJson";
@@ -110,6 +112,42 @@ public final class MenuRepository {
                         } catch (Exception ignored) {
                             /* ignore */
                         }
+                    }
+                });
+    }
+
+    public interface ToggleCallback {
+        void onDone(boolean ok, boolean active, String error);
+    }
+
+    /** soldOut=true → active=false (ของหมด). */
+    public void toggleSoldOut(Context context, String itemId, boolean soldOut, ToggleCallback cb) {
+        Context app = context.getApplicationContext();
+        executor.execute(
+                () -> {
+                    try {
+                        JSONObject body = new JSONObject();
+                        body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
+                        body.put("itemId", itemId);
+                        body.put("soldOut", soldOut);
+                        JSONObject res = postJson(TOGGLE_SOLD_URL, body);
+                        boolean ok = res.optBoolean("ok", false);
+                        if (ok) {
+                            OpsLogger.info(
+                                    app,
+                                    "menu",
+                                    soldOut ? "ตั้งของหมด" : "เปิดขายอีกครั้ง",
+                                    itemId);
+                            if (cb != null) cb.onDone(true, res.optBoolean("active", !soldOut), null);
+                        } else {
+                            String err = res.optString("error", "toggle_failed");
+                            OpsLogger.warn(app, "menu", "ตั้งของหมดไม่สำเร็จ", err);
+                            if (cb != null) cb.onDone(false, !soldOut, err);
+                        }
+                    } catch (Exception e) {
+                        String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+                        OpsLogger.warn(app, "menu", "ตั้งของหมดไม่สำเร็จ", msg);
+                        if (cb != null) cb.onDone(false, !soldOut, msg);
                     }
                 });
     }
