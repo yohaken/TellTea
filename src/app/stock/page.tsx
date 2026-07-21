@@ -6,11 +6,11 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Boxes, Settings, X } from "lucide-react";
+import { Boxes, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
+import { StockCatalogSetup } from "@/components/StockCatalogSetup";
 import { useAuth } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
@@ -42,6 +42,8 @@ type DraftLine = {
   qty: string;
 };
 
+type StockOwnerView = "history" | "catalog";
+
 export default function StockPage() {
   return (
     <AuthGate>
@@ -55,6 +57,7 @@ function StockView() {
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const canUseStock = can(staff, "stock");
+  const [ownerView, setOwnerView] = useState<StockOwnerView>("history");
   const [formOpen, setFormOpen] = useState(false);
   const [items, setItems] = useState<StockItem[]>([]);
   const [sessions, setSessions] = useState<StockCountSession[]>([]);
@@ -94,6 +97,9 @@ function StockView() {
 
   if (!canUseStock) return null;
 
+  const showCatalog = isOwner && ownerView === "catalog";
+  const showHistory = !showCatalog;
+
   return (
     <div className="module-page stock-module">
       <div className="module-page-head">
@@ -101,48 +107,81 @@ function StockView() {
           <Boxes size={18} aria-hidden />
           คลังวัตถุดิบ
         </h1>
-        <p className="muted stock-subtitle">นับสต๊อกคงเหลือ — วันที่ 1 · 10 · 20 ของเดือน</p>
+        <p className="muted stock-subtitle">
+          {showCatalog
+            ? "จัดการรายการ — ตั้งชื่อ · เพิ่ม/ลด · ลบ (เจ้าของ)"
+            : "นับสต๊อกคงเหลือ — วันที่ 1 · 10 · 20 ของเดือน"}
+        </p>
         {isOwner ? (
-          <p className="stock-settings-link">
-            <Link href="/settings/">
-              <Settings size={13} aria-hidden /> จัดการรายการสินค้า →
-            </Link>
-          </p>
+          <div className="stock-owner-tabs" role="tablist" aria-label="มุมมองคลังเจ้าของ">
+            <button
+              type="button"
+              role="tab"
+              className={ownerView === "history" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+              aria-selected={ownerView === "history"}
+              onClick={() => {
+                setOwnerView("history");
+                setFormOpen(false);
+              }}
+            >
+              ประวัตินับ
+            </button>
+            <button
+              type="button"
+              role="tab"
+              className={ownerView === "catalog" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+              aria-selected={ownerView === "catalog"}
+              onClick={() => {
+                setOwnerView("catalog");
+                setFormOpen(false);
+              }}
+            >
+              รายการวัตถุดิบ
+              {items.length ? ` (${items.length})` : ""}
+            </button>
+          </div>
         ) : null}
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading ? (
+      {!loading && showCatalog ? <StockCatalogSetup onError={setError} /> : null}
+
+      {!loading && showHistory ? (
         <StockHistoryView
           items={items}
           sessions={sessions}
           isOwner={isOwner}
           onError={setError}
+          onOpenCatalog={isOwner ? () => setOwnerView("catalog") : undefined}
         />
       ) : null}
 
-      {formOpen && !loading ? (
+      {formOpen && !loading && showHistory ? (
         <div className="modal-backdrop edit-modal is-module-form is-stock-form" onClick={() => setFormOpen(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <StockCountForm
               items={items}
               employees={employees}
               createdBy={actorId}
+              isOwner={isOwner}
               onError={setError}
               onClose={() => setFormOpen(false)}
+              onOpenCatalog={isOwner ? () => setOwnerView("catalog") : undefined}
             />
           </div>
         </div>
       ) : null}
 
-      <ModuleTabDock
-        ariaLabel="มุมมองคลัง"
-        formOpen={formOpen}
-        onAdd={() => setFormOpen(true)}
-        addLabel="+ นับสต็อก"
-      />
+      {showHistory ? (
+        <ModuleTabDock
+          ariaLabel="มุมมองคลัง"
+          formOpen={formOpen}
+          onAdd={() => setFormOpen(true)}
+          addLabel="+ นับสต็อก"
+        />
+      ) : null}
     </div>
   );
 }
@@ -152,11 +191,13 @@ function StockHistoryView({
   sessions,
   isOwner,
   onError,
+  onOpenCatalog,
 }: {
   items: StockItem[];
   sessions: StockCountSession[];
   isOwner: boolean;
   onError: (msg: string | null) => void;
+  onOpenCatalog?: () => void;
 }) {
   const [filter, setFilter] = useState<"all" | "missing">("all");
   const [detail, setDetail] = useState<StockHistoryTimelineRow | null>(null);
@@ -188,7 +229,14 @@ function StockHistoryView({
   if (items.length === 0) {
     return (
       <p className="empty">
-        ยังไม่มีรายการสินค้า — {isOwner ? "ไปที่ ตั้งค่า → คลังวัตถุดิบ เพื่อเพิ่มรายการ" : "รอเจ้าของตั้งค่ารายการ"}
+        ยังไม่มีรายการสินค้า —{" "}
+        {isOwner && onOpenCatalog ? (
+          <button type="button" className="linkish-btn" onClick={onOpenCatalog}>
+            ไปเพิ่มที่แท็บรายการวัตถุดิบ
+          </button>
+        ) : (
+          "รอเจ้าของตั้งค่ารายการ"
+        )}
       </p>
     );
   }
@@ -251,7 +299,7 @@ function StockHistoryView({
         <p className="empty">
           {filter === "missing"
             ? "ครบทุกรอบในช่วงนี้แล้ว"
-            : "ยังไม่มีประวัติ — กด + นับสต็อก หรือนำเข้า CSV ที่ ตั้งค่า"}
+            : "ยังไม่มีประวัติ — กด + นับสต็อก หรือนำเข้า CSV ที่แท็บรายการวัตถุดิบ"}
         </p>
       )}
 
@@ -387,14 +435,18 @@ function StockCountForm({
   items,
   employees,
   createdBy,
+  isOwner,
   onError,
   onClose,
+  onOpenCatalog,
 }: {
   items: StockItem[];
   employees: Employee[];
   createdBy: string;
+  isOwner: boolean;
   onError: (msg: string | null) => void;
   onClose: () => void;
+  onOpenCatalog?: () => void;
 }) {
   const now = new Date();
   const defaultRound = nearestRound(now.getDate());
@@ -483,8 +535,26 @@ function StockCountForm({
   if (items.length === 0) {
     return (
       <div className="check-form">
-        <p className="empty">ยังไม่มีรายการสินค้า — ตั้งค่าที่ ตั้งค่าโมดูล ก่อน</p>
-        <button type="button" className="ghost-btn" onClick={onClose}>ปิด</button>
+        <p className="empty">
+          ยังไม่มีรายการสินค้า —{" "}
+          {isOwner && onOpenCatalog ? (
+            <button
+              type="button"
+              className="linkish-btn"
+              onClick={() => {
+                onClose();
+                onOpenCatalog();
+              }}
+            >
+              ไปเพิ่มที่แท็บรายการวัตถุดิบ
+            </button>
+          ) : (
+            "รอเจ้าของตั้งค่ารายการ"
+          )}
+        </p>
+        <button type="button" className="ghost-btn" onClick={onClose}>
+          ปิด
+        </button>
       </div>
     );
   }

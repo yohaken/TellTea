@@ -13,6 +13,7 @@
     "test:ledger-multi-photo": "node scripts/test-ledger-multi-photo.mjs",
     "test:ledger-ai-classify": "node scripts/test-ledger-ai-classify.mjs",
     "test:brand-logo-perf": "node scripts/test-brand-logo-perf.mjs",
+    "test:stock-catalog-owner": "node scripts/test-stock-catalog-owner.mjs",
     "test:ot-multi-photo": "node scripts/test-ot-multi-photo.mjs",
     "test:ot-photo-budget": "node scripts/test-ot-photo-budget.mjs",
     "test:ot-photo-save-amend": "node scripts/test-ot-photo-save-amend.mjs",

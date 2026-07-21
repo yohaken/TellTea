@@ -3318,6 +3318,111 @@ body.modal-open .main-panel {
   text-decoration: none;
 }
 
+.stock-owner-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+}
+
+.stock-owner-tab {
+  appearance: none;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(28, 42, 31, 0.72);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.stock-owner-tab.is-active {
+  background: rgba(47, 107, 79, 0.14);
+  border-color: rgba(47, 107, 79, 0.35);
+  color: var(--tea-leaf);
+}
+
+.stock-catalog-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-bottom: 1.25rem;
+}
+
+.stock-catalog-lead {
+  margin: 0;
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.stock-qty-stepper {
+  display: grid;
+  grid-template-columns: 2.4rem minmax(0, 1fr) 2.4rem;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.15rem 0 0.55rem;
+  padding: 0.35rem;
+  border-radius: 0.75rem;
+  background: rgba(28, 42, 31, 0.04);
+  border: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.stock-qty-btn {
+  appearance: none;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: #fff;
+  color: var(--tea-ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.stock-qty-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stock-qty-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.stock-qty-value strong {
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.stock-qty-value .muted {
+  font-size: 0.72rem;
+}
+
+.stock-setup-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.linkish-btn {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--tea-leaf);
+  font-weight: 650;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .stock-history-wrap {
   margin-top: 0.15rem;
   overflow-x: auto;
