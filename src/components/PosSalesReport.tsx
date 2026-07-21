@@ -325,7 +325,8 @@ export function PosSalesReportPage() {
         POS
       </h1>
       <p className="muted" style={{ marginBottom: "0.75rem" }}>
-        รายงานยอดขายและจัดการเครื่อง / สลิป / เมนู — เฉพาะเจ้าของ
+        รายงานยอดขายและเปิด-ปิดเมนูหน้าร้าน — เฉพาะเจ้าของ
+        (ตั้งค่าเครื่อง/สลิปบนแท็บเล็ต POS เว็บยังใช้ได้จนกว่าจะโยก native ครบ)
       </p>
 
       <div className="stock-owner-tabs" role="tablist" aria-label="หมวด POS">

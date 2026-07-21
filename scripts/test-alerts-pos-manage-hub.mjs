@@ -1,5 +1,5 @@
 /**
- * Alerts page + font-size UI removed; POS settings live under pos-sales manage tab.
+ * Alerts removed; POS manage tab is menu-only (native-first). Web POS admin stays on tablet.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -16,14 +16,13 @@ const settings = read("src/app/settings/page.tsx");
 const posSales = read("src/app/pos-sales/page.tsx");
 const report = read("src/components/PosSalesReport.tsx");
 const manage = read("src/components/PosManagePanel.tsx");
-const shopPay = read("src/components/PosShopPaySetup.tsx");
 const shell = read("src/components/AppShell.tsx");
 const perms = read("src/lib/permissions.ts");
 const settingsLib = read("src/lib/settings.ts");
 const rules = read("firestore.rules");
 const smoke = read("scripts/smoke-hosting-export.mjs");
 
-assert.match(version, /APP_BUILD = 204/);
+assert.match(version, /APP_BUILD = 205/);
 
 assert.match(alerts, /router\.replace\("\/more\/"\)/);
 assert.doesNotMatch(more, /href: "\/alerts\/"/);
@@ -44,12 +43,8 @@ assert.match(posSales, /Suspense/);
 assert.match(report, /จัดการ Pos/);
 assert.match(report, /PosManagePanel/);
 assert.match(report, /tab=manage/);
-assert.match(manage, /PosDeviceSetup/);
-assert.match(manage, /PosOpsNotesSetup/);
-assert.match(manage, /PosShopPaySetup/);
-assert.match(manage, /PosPrinterSetup/);
 assert.match(manage, /MenuCatalogSetup/);
-assert.match(shopPay, /บันทึกร้านและชำระเงิน/);
-assert.match(more, /จัดการ Pos/);
+assert.doesNotMatch(manage, /PosDeviceSetup|PosOpsNotesSetup|PosShopPaySetup|PosPrinterSetup/);
+assert.match(more, /เปิด-ปิดเมนู/);
 
 console.log("OK test-alerts-pos-manage-hub");

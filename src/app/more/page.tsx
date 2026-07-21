@@ -150,7 +150,7 @@ function MoreView() {
             <Receipt size={22} />
             <div>
               <strong>POS</strong>
-              <p>รายงานยอดขาย · จัดการ Pos (เครื่อง / สลิป / เมนู)</p>
+              <p>รายงานยอดขาย · จัดการ Pos (เปิด-ปิดเมนู)</p>
             </div>
           </Link>
         ) : null}

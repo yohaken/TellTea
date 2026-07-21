@@ -51,7 +51,7 @@ function SettingsView() {
       </h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
         SmartCheck · โปรไฟล์กิจการ (AI) · ลำดับเมนู · อัปเดตแอป — เฉพาะเจ้าของ
-        (ตั้งค่า POS อยู่ที่ POS → จัดการ Pos · คลังอยู่หน้า คลัง · สินค้าผลิตอยู่หน้า ผลิต · เรทโบนัสอยู่หน้า สรุปโบนัส)
+        (ตั้งค่า POS เมนูอยู่ที่ POS → จัดการ Pos · คลังอยู่หน้า คลัง · สินค้าผลิตอยู่หน้า ผลิต · เรทโบนัสอยู่หน้า สรุปโบนัส)
       </p>
 
       {error ? <p className="error-text">{error}</p> : null}

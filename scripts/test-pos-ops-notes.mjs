@@ -19,7 +19,7 @@ assert.match(read("src/components/PosOpsNotesSetup.tsx"), /ไม่ต้อง
 assert.match(read("src/components/PosOpsNotesView.tsx"), /subscribePosOpsNotes/);
 assert.match(read("src/app/pos/ops/page.tsx"), /PosOpsNotesView/);
 assert.match(read("src/app/pos-sales/page.tsx"), /PosSalesReportPage/);
-assert.match(read("src/components/PosManagePanel.tsx"), /PosOpsNotesSetup/);
+assert.doesNotMatch(read("src/components/PosManagePanel.tsx"), /PosOpsNotesSetup/);
 assert.match(read("src/components/PosDeviceSetup.tsx"), /ไม่ต้องรู้รหัสอีเมลร้าน/);
 assert.doesNotMatch(read("src/app/settings/page.tsx"), /PosOpsNotesSetup/);
 assert.doesNotMatch(read("src/app/settings/page.tsx"), /PosDeviceSetup/);
