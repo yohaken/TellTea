@@ -16,7 +16,7 @@ type Props = {
 
 /**
  * อัปโหลดโลโก้ร้าน (PNG โปร่งใสแนะนำ)
- * พรีวิวบนพื้นดำ + บันทึกทันทีเพื่อแทนโลโก้เดิมทั่วแอป
+ * พรีวิวบนพื้นอ่อนแบบแอป + บันทึกทันทีเพื่อแทนโลโก้เดิมทั่วแอป
  */
 export function BusinessLogoField({ value, onChange, onError, disabled }: Props) {
   const { actorId } = useAuth();
@@ -85,11 +85,11 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
       <div className="business-logo-field-head">
         <span className="business-logo-field-label">โลโก้ร้าน</span>
         <span className="business-logo-field-hint">
-          PNG โปร่งใสแนะนำ · พรีวิวบนพื้นดำ · แทนโลโก้เดิมทันทีหลังอัปโหลด
+          PNG โปร่งใสแนะนำ · แสดงเต็มใบบนพื้นอ่อน · แทนโลโก้เดิมทันทีหลังอัปโหลด
         </span>
       </div>
 
-      <div className="business-logo-stage" aria-label="พรีวิวโลโก้บนพื้นดำ">
+      <div className="business-logo-stage" aria-label="พรีวิวโลโก้">
         {previewSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={previewSrc} alt="โลโก้ร้าน" className="business-logo-preview" />

@@ -37,7 +37,7 @@ assert.match(profileLib, /logoUrl/);
 assert.match(setup, /โปรไฟล์กิจการ/);
 assert.match(setup, /BusinessLogoField/);
 assert.match(settingsPage, /BusinessProfileSetup/);
-assert.match(version, /APP_BUILD = 198/);
+assert.match(version, /APP_BUILD = 199/);
 
 const logoField = readFileSync(join(root, "src/components/BusinessLogoField.tsx"), "utf8");
 const receipts = readFileSync(join(root, "src/lib/receipts.ts"), "utf8");
