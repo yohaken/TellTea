@@ -388,7 +388,8 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
         </div>
         <ol className="pos-install-steps">
           <li>บนแท็บเล็ตเปิด Chrome → ใส่ลิงก์ด้านบน (หรือสแกน QR ที่คุณสร้างเอง)</li>
-          <li>กด <strong>ดาวน์โหลดไฟล์ติดตั้ง</strong> → อนุญาตติดตั้ง → เปิดไอคอน TellTea POS</li>
+          <li>กด <strong>ดาวน์โหลดไฟล์ติดตั้ง</strong> → อนุญาตติดตั้ง → เปิดไอคอน <strong>nPos-telltea</strong></li>
+          <li>ควรเห็นข้อความ <strong>Hello World</strong></li>
           <li>ไฟล์ตรง: <code>{POS_APK_DOWNLOAD_URL}</code></li>
         </ol>
       </div>

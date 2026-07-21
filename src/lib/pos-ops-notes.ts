@@ -32,8 +32,8 @@ export function defaultPosOpsNoteItems(now = Date.now()): PosOpsNoteItem[] {
   return [
     {
       id: "apk-install",
-      title: "ดาวน์โหลดแอป TellTea POS",
-      body: "เปิดด้วย Chrome บนแท็บเล็ต → กดดาวน์โหลด → ติดตั้ง",
+      title: "ดาวน์โหลดแอป nPos-telltea",
+      body: "เปิดด้วย Chrome บนแท็บเล็ต → กดดาวน์โหลด → ติดตั้ง → เห็น Hello World",
       url: POS_APK_INSTALL_PAGE_URL,
       sortOrder: 0,
       updatedAt: now,
