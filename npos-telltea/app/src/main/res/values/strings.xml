@@ -52,6 +52,12 @@
     <string name="btn_reprint">พิมพ์ซ้ำ</string>
     <string name="pay_cash_title">รับเงินสด</string>
     <string name="pay_cash_msg">ยอด %.0f บาท — กรอกเงินที่รับ</string>
+    <string name="pay_cash_due">ยอดชำระ ฿%.0f</string>
+    <string name="pay_cash_received_label">รับเงินมา</string>
+    <string name="pay_cash_change_ok">ทอน ฿%.0f</string>
+    <string name="pay_cash_change_short">ทอน — เงินไม่พอ</string>
+    <string name="pay_cash_exact">ตรงพอดี ฿%.0f</string>
+    <string name="pay_cash_clear">ล้าง</string>
     <string name="pay_cash_short">เงินที่รับน้อยกว่ายอด</string>
     <string name="pay_pp_title">PromptPay</string>
     <string name="pay_pp_msg">โอนเข้า %1$s\nยอด %2$.0f บาท\nเมื่อลูกค้าโอนแล้วกดยืนยัน</string>

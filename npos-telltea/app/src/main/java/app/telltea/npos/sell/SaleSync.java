@@ -152,11 +152,7 @@ public final class SaleSync {
 
                         pushQueue(app, payload);
                         rememberReceipt(app, payload, "รอส่ง");
-                        if ("cash".equals(paymentMethod)) {
-                            ShiftPrefs.addCash(app, total);
-                        } else {
-                            ShiftPrefs.addPromptPay(app, total);
-                        }
+                        ShiftPrefs.recordSale(app, paymentMethod, total, discountBaht);
                         if (callback != null) callback.onLocalSaved(mutationId, total);
 
                         try {
@@ -255,6 +251,10 @@ public final class SaleSync {
                         } else {
                             double cash = ShiftPrefs.cashTotal(app);
                             double pp = ShiftPrefs.promptpayTotal(app);
+                            double discount = ShiftPrefs.discountTotal(app);
+                            int sales = ShiftPrefs.saleCount(app);
+                            int cashBills = ShiftPrefs.cashBillCount(app);
+                            int ppBills = ShiftPrefs.promptpayBillCount(app);
                             String body =
                                     "ปิดรอบ / Z-REPORT\n"
                                             + "รอบ "
@@ -264,13 +264,24 @@ public final class SaleSync {
                                             + ShiftPrefs.sessionId(app)
                                             + "\n"
                                             + "----------------\n"
+                                            + "บิลทั้งหมด "
+                                            + sales
+                                            + "\n"
                                             + "เงินสด "
+                                            + cashBills
+                                            + " บิล · "
                                             + String.format(java.util.Locale.US, "%.0f", cash)
                                             + "\n"
                                             + "PromptPay "
+                                            + ppBills
+                                            + " บิล · "
                                             + String.format(java.util.Locale.US, "%.0f", pp)
                                             + "\n"
-                                            + "รวม "
+                                            + "ส่วนลดรวม "
+                                            + String.format(java.util.Locale.US, "%.0f", discount)
+                                            + "\n"
+                                            + "----------------\n"
+                                            + "รวมยอดขาย "
                                             + String.format(java.util.Locale.US, "%.0f", cash + pp)
                                             + "\n";
                             transport.send(

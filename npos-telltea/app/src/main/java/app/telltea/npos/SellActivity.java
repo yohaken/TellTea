@@ -36,6 +36,7 @@ import app.telltea.npos.sell.ImageLoader;
 import app.telltea.npos.sell.MenuModels;
 import app.telltea.npos.sell.MenuRepository;
 import app.telltea.npos.sell.PromptPayPayload;
+import app.telltea.npos.sell.QrBitmaps;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shift.ShiftPrefs;
 
@@ -660,32 +661,165 @@ public class SellActivity extends Activity {
     }
     double total = cartTotal();
     if ("cash".equals(method)) {
-      EditText input = new EditText(this);
-      input.setInputType(InputType.TYPE_CLASS_NUMBER);
-      input.setText(String.format(Locale.US, "%.0f", total));
-      new AlertDialog.Builder(this)
-          .setTitle(R.string.pay_cash_title)
-          .setMessage(getString(R.string.pay_cash_msg, total))
-          .setView(input)
-          .setPositiveButton(
-              R.string.btn_confirm_sale,
-              (d, w) -> {
-                double received;
-                try {
-                  received = Double.parseDouble(input.getText().toString().trim());
-                } catch (Exception e) {
-                  received = total;
-                }
-                if (received < total) {
-                  Toast.makeText(this, R.string.pay_cash_short, Toast.LENGTH_LONG).show();
-                  return;
-                }
-                commitSale("cash", received);
-              })
-          .setNegativeButton(android.R.string.cancel, null)
-          .show();
+      showCashKeypad(total);
     } else {
       showPromptPayDialog(total);
+    }
+  }
+
+  /** Clone web PosCashKeypad: exact · bills · digits · change. */
+  private void showCashKeypad(double total) {
+    final String[] valueHolder = {String.format(Locale.US, "%.0f", Math.ceil(total))};
+
+    LinearLayout root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    root.setPadding(28, 20, 28, 8);
+
+    TextView due = new TextView(this);
+    due.setText(getString(R.string.pay_cash_due, total));
+    due.setTextColor(0xFF1A2E24);
+    due.setTextSize(15);
+    root.addView(due);
+
+    TextView receivedLabel = new TextView(this);
+    receivedLabel.setText(R.string.pay_cash_received_label);
+    receivedLabel.setTextColor(0xFF666666);
+    receivedLabel.setPadding(0, 12, 0, 0);
+    root.addView(receivedLabel);
+
+    TextView amountView = new TextView(this);
+    amountView.setTextSize(28);
+    amountView.setTypeface(Typeface.DEFAULT_BOLD);
+    amountView.setTextColor(0xFF1A2E24);
+    root.addView(amountView);
+
+    TextView changeView = new TextView(this);
+    changeView.setTextSize(14);
+    changeView.setPadding(0, 4, 0, 12);
+    root.addView(changeView);
+
+    Runnable refresh =
+        () -> {
+          double received = parseCashAmount(valueHolder[0]);
+          boolean enough = received >= total;
+          amountView.setText(
+              valueHolder[0].isEmpty()
+                  ? "—"
+                  : String.format(Locale.getDefault(), "฿%.0f", received));
+          if (enough) {
+            changeView.setText(
+                getString(R.string.pay_cash_change_ok, Math.max(0, received - total)));
+            changeView.setTextColor(0xFF1B6B3A);
+          } else {
+            changeView.setText(R.string.pay_cash_change_short);
+            changeView.setTextColor(0xFFB00020);
+          }
+        };
+    refresh.run();
+
+    Button exact = new Button(this);
+    exact.setAllCaps(false);
+    exact.setText(getString(R.string.pay_cash_exact, total));
+    exact.setOnClickListener(
+        v -> {
+          valueHolder[0] = String.format(Locale.US, "%.0f", Math.ceil(total));
+          refresh.run();
+        });
+    root.addView(exact);
+
+    LinearLayout bills = new LinearLayout(this);
+    bills.setOrientation(LinearLayout.HORIZONTAL);
+    int[] billAmts = {20, 50, 100, 500, 1000};
+    for (int amt : billAmts) {
+      Button b = new Button(this);
+      b.setAllCaps(false);
+      b.setText("+" + amt);
+      b.setTextSize(12);
+      final int add = amt;
+      b.setOnClickListener(
+          v -> {
+            double next = parseCashAmount(valueHolder[0]) + add;
+            valueHolder[0] = String.format(Locale.US, "%.0f", next);
+            refresh.run();
+          });
+      bills.addView(
+          b,
+          new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+    }
+    Button clear = new Button(this);
+    clear.setAllCaps(false);
+    clear.setText(R.string.pay_cash_clear);
+    clear.setTextSize(12);
+    clear.setOnClickListener(
+        v -> {
+          valueHolder[0] = "";
+          refresh.run();
+        });
+    bills.addView(
+        clear, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+    root.addView(bills);
+
+    LinearLayout pad = new LinearLayout(this);
+    pad.setOrientation(LinearLayout.VERTICAL);
+    String[][] rows = {
+      {"7", "8", "9"},
+      {"4", "5", "6"},
+      {"1", "2", "3"},
+      {"0", "⌫"}
+    };
+    for (String[] row : rows) {
+      LinearLayout line = new LinearLayout(this);
+      line.setOrientation(LinearLayout.HORIZONTAL);
+      for (String key : row) {
+        Button b = new Button(this);
+        b.setText(key);
+        b.setAllCaps(false);
+        float weight = "0".equals(key) ? 2f : 1f;
+        b.setOnClickListener(
+            v -> {
+              if ("⌫".equals(key)) {
+                if (!valueHolder[0].isEmpty()) {
+                  valueHolder[0] = valueHolder[0].substring(0, valueHolder[0].length() - 1);
+                }
+              } else {
+                valueHolder[0] = valueHolder[0] + key;
+              }
+              refresh.run();
+            });
+        line.addView(
+            b,
+            new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, weight));
+      }
+      pad.addView(line);
+    }
+    root.addView(pad);
+
+    ScrollView scroll = new ScrollView(this);
+    scroll.addView(root);
+
+    new AlertDialog.Builder(this)
+        .setTitle(R.string.pay_cash_title)
+        .setView(scroll)
+        .setPositiveButton(
+            R.string.btn_confirm_sale,
+            (d, w) -> {
+              double received = parseCashAmount(valueHolder[0]);
+              if (received < total) {
+                Toast.makeText(this, R.string.pay_cash_short, Toast.LENGTH_LONG).show();
+                return;
+              }
+              commitSale("cash", received);
+            })
+        .setNegativeButton(android.R.string.cancel, null)
+        .show();
+  }
+
+  private static double parseCashAmount(String raw) {
+    if (raw == null || raw.trim().isEmpty()) return 0;
+    try {
+      return Double.parseDouble(raw.replaceAll("[^\\d.]", ""));
+    } catch (Exception e) {
+      return 0;
     }
   }
 
@@ -706,7 +840,6 @@ public class SellActivity extends Activity {
       root.addView(msg);
       try {
         String emv = PromptPayPayload.build(pp, total);
-        String qrUrl = PromptPayPayload.qrImageUrl(emv);
         ImageView qr = new ImageView(this);
         int size =
             (int)
@@ -716,8 +849,15 @@ public class SellActivity extends Activity {
         lp.topMargin = 16;
         qr.setLayoutParams(lp);
         qr.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        qr.setBackgroundColor(0xFFFFFFFF);
+        android.graphics.Bitmap bmp = QrBitmaps.encode(emv, size);
+        if (bmp != null) {
+          qr.setImageBitmap(bmp);
+        } else {
+          // Fallback online QR only if local encode fails
+          ImageLoader.bind(qr, PromptPayPayload.qrImageUrl(emv), 0xFFFFFFFF);
+        }
         root.addView(qr);
-        ImageLoader.bind(qr, qrUrl, 0xFFFFFFFF);
       } catch (Exception e) {
         TextView err = new TextView(this);
         err.setText(R.string.pay_pp_qr_fail);
