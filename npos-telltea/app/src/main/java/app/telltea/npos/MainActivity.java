@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,11 +18,11 @@ import app.telltea.npos.diagnose.AutoHealth;
 import app.telltea.npos.diagnose.DeviceHeartbeat;
 import app.telltea.npos.diagnose.DeviceIdentity;
 import app.telltea.npos.diagnose.OpsLogger;
+import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shift.ShiftPrefs;
 
 /**
- * N6.0 home: clock-in or empty sell shell.
- * Background: heartbeat + auto diagnose (no staff taps).
+ * N6 home: clock-in → SellActivity. Background heartbeat + auto diagnose.
  */
 public class MainActivity extends Activity {
     private View clockInPanel;
@@ -33,15 +32,14 @@ public class MainActivity extends Activity {
     private TextView heartbeatStatus;
     private TextView clockInTime;
     private TextView clockInDate;
-    private TextView sellStatusStrip;
-    private TextView sellDeviceCode;
 
     private DeviceHeartbeat heartbeat;
     private AutoHealth autoHealth;
+    private SaleSync saleSync;
     private final Handler clockHandler = new Handler(Looper.getMainLooper());
-    private boolean onlineOk;
     private int localVersionCode = 1;
     private String localVersionName = "1.0";
+    private boolean openingShift;
 
     private final Runnable clockTick =
             new Runnable() {
@@ -64,17 +62,15 @@ public class MainActivity extends Activity {
         heartbeatStatus = findViewById(R.id.heartbeatStatus);
         clockInTime = findViewById(R.id.clockInTime);
         clockInDate = findViewById(R.id.clockInDate);
-        sellStatusStrip = findViewById(R.id.sellStatusStrip);
-        sellDeviceCode = findViewById(R.id.sellDeviceCode);
 
         readLocalVersion();
         versionView.setText(getString(R.string.version_label, localVersionName, localVersionCode));
-        String code = DeviceIdentity.pairingCode(this);
-        deviceIdView.setText(getString(R.string.device_code_label, code));
-        sellDeviceCode.setText(code);
+        deviceIdView.setText(
+                getString(R.string.device_code_label, DeviceIdentity.pairingCode(this)));
 
         heartbeat = new DeviceHeartbeat();
         autoHealth = new AutoHealth();
+        saleSync = new SaleSync();
 
         findViewById(R.id.openShiftButton).setOnClickListener(v -> openShift());
         findViewById(R.id.closeShiftButton).setOnClickListener(v -> closeShift());
@@ -83,19 +79,30 @@ public class MainActivity extends Activity {
         findViewById(R.id.settingsButtonClock).setOnClickListener(openSettings);
         findViewById(R.id.settingsButtonSell).setOnClickListener(openSettings);
 
-        renderMode();
+        // Redirect stub sell panel into real sell screen.
+        findViewById(R.id.sellPanel).setOnClickListener(v -> openSellIfNeeded());
+
         OpsLogger.info(this, "app", "เปิดแอป", "vc=" + localVersionCode);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        renderMode();
+        if (ShiftPrefs.isOpen(this)) {
+            clockInPanel.setVisibility(View.GONE);
+            sellPanel.setVisibility(View.VISIBLE);
+            TextView strip = findViewById(R.id.sellStatusStrip);
+            if (strip != null) strip.setText(R.string.sell_status_online);
+        } else {
+            clockInPanel.setVisibility(View.VISIBLE);
+            sellPanel.setVisibility(View.GONE);
+        }
         updateClockLabels();
         clockHandler.removeCallbacks(clockTick);
         clockHandler.post(clockTick);
         sendHeartbeat(false);
         autoHealth.maybeRun(this, false, null);
+        saleSync.flushPending(this);
     }
 
     @Override
@@ -109,29 +116,42 @@ public class MainActivity extends Activity {
         clockHandler.removeCallbacks(clockTick);
         if (heartbeat != null) heartbeat.shutdown();
         if (autoHealth != null) autoHealth.shutdown();
+        if (saleSync != null) saleSync.shutdown();
         OpsLogger.flushNow(this);
         super.onDestroy();
     }
 
-    private void renderMode() {
-        boolean open = ShiftPrefs.isOpen(this);
-        clockInPanel.setVisibility(open ? View.GONE : View.VISIBLE);
-        sellPanel.setVisibility(open ? View.VISIBLE : View.GONE);
-        refreshSellStrip();
+    private void openSellIfNeeded() {
+        if (ShiftPrefs.isOpen(this)) {
+            startActivity(new Intent(this, SellActivity.class));
+        }
     }
 
     private void openShift() {
-        ShiftPrefs.open(this);
-        OpsLogger.info(this, "shift", "เข้างาน", "local open");
-        renderMode();
-        Toast.makeText(this, R.string.shift_opened, Toast.LENGTH_SHORT).show();
+        if (openingShift) return;
+        openingShift = true;
+        heartbeatStatus.setText(R.string.shift_opening);
+        saleSync.openSession(
+                this,
+                () ->
+                        runOnUiThread(
+                                () -> {
+                                    openingShift = false;
+                                    Toast.makeText(this, R.string.shift_opened, Toast.LENGTH_SHORT).show();
+                                    startActivity(new Intent(this, SellActivity.class));
+                                }));
     }
 
     private void closeShift() {
-        ShiftPrefs.close(this);
-        OpsLogger.info(this, "shift", "ออกงาน", "local close");
-        renderMode();
-        Toast.makeText(this, R.string.shift_closed, Toast.LENGTH_SHORT).show();
+        saleSync.closeSession(
+                this,
+                () ->
+                        runOnUiThread(
+                                () -> {
+                                    Toast.makeText(this, R.string.shift_closed, Toast.LENGTH_SHORT).show();
+                                    clockInPanel.setVisibility(View.VISIBLE);
+                                    sellPanel.setVisibility(View.GONE);
+                                }));
     }
 
     private void updateClockLabels() {
@@ -142,19 +162,8 @@ public class MainActivity extends Activity {
                 new SimpleDateFormat("EEEE d MMM yyyy", new Locale("th", "TH")).format(now));
     }
 
-    private void refreshSellStrip() {
-        if (sellStatusStrip == null) return;
-        if (onlineOk) {
-            sellStatusStrip.setText(R.string.sell_status_online);
-        } else {
-            sellStatusStrip.setText(R.string.sell_status_waiting);
-        }
-    }
-
     private void sendHeartbeat(boolean force) {
-        if (heartbeatStatus != null) {
-            heartbeatStatus.setText(R.string.heartbeat_sending);
-        }
+        if (heartbeatStatus != null) heartbeatStatus.setText(R.string.heartbeat_sending);
         heartbeat.heartbeat(
                 this,
                 force,
@@ -163,18 +172,13 @@ public class MainActivity extends Activity {
                     public void onSuccess(String pairingCode, long lastSeenAt) {
                         runOnUiThread(
                                 () -> {
-                                    onlineOk = true;
                                     if (deviceIdView != null) {
                                         deviceIdView.setText(
                                                 getString(R.string.device_code_label, pairingCode));
                                     }
-                                    if (sellDeviceCode != null) {
-                                        sellDeviceCode.setText(pairingCode);
-                                    }
                                     if (heartbeatStatus != null) {
                                         heartbeatStatus.setText(R.string.heartbeat_ok);
                                     }
-                                    refreshSellStrip();
                                 });
                     }
 
@@ -182,18 +186,16 @@ public class MainActivity extends Activity {
                     public void onError(Exception error) {
                         runOnUiThread(
                                 () -> {
-                                    onlineOk = false;
-                                    String msg =
+                                    if (heartbeatStatus != null) {
+                                        heartbeatStatus.setText(R.string.heartbeat_fail_human);
+                                    }
+                                    OpsLogger.error(
+                                            MainActivity.this,
+                                            "heartbeat",
+                                            "ส่งสัญญาณไม่สำเร็จ",
                                             error.getMessage() == null
                                                     ? error.getClass().getSimpleName()
-                                                    : error.getMessage();
-                                    if (heartbeatStatus != null) {
-                                        heartbeatStatus.setText(
-                                                getString(R.string.heartbeat_fail_human));
-                                    }
-                                    refreshSellStrip();
-                                    OpsLogger.error(
-                                            MainActivity.this, "heartbeat", "ส่งสัญญาณไม่สำเร็จ", msg);
+                                                    : error.getMessage());
                                 });
                     }
                 });
