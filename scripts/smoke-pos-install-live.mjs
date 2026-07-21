@@ -3,7 +3,7 @@
  * Fail the job if either URL is still 404.
  */
 const INSTALL = process.env.POS_INSTALL_URL || "https://telltea-pos.web.app/install/";
-const APK = process.env.POS_APK_URL || "https://telltea-pos.web.app/downloads/telltea-pos.apk";
+const APK = process.env.POS_APK_URL || "https://telltea-pos.web.app/downloads/nPos-telltea.apk";
 const ATTEMPTS = Number(process.env.POS_LIVE_SMOKE_ATTEMPTS || 8);
 const DELAY_MS = Number(process.env.POS_LIVE_SMOKE_DELAY_MS || 5000);
 
@@ -29,8 +29,8 @@ async function fetchOk(url, { expectBinary = false } = {}) {
     return buf.length;
   }
   const text = await res.text();
-  if (!/TellTea POS/i.test(text) || !/telltea-pos\.apk/i.test(text)) {
-    throw new Error(`${url} → page missing TellTea POS download markup`);
+  if (!/nPos-telltea/i.test(text) || !/nPos-telltea\.apk/i.test(text)) {
+    throw new Error(`${url} → page missing nPos-telltea download markup`);
   }
   if (/This page could not be found/i.test(text)) {
     throw new Error(`${url} → still Next.js 404`);

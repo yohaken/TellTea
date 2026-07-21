@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TellTea POS — ดาวน์โหลดติดตั้ง</title>
+    <title>nPos-telltea — ดาวน์โหลดติดตั้ง</title>
     <link rel="icon" href="/logo-mark.svg" />
     <style>
       :root {
@@ -70,23 +70,6 @@
       .cta:active {
         transform: scale(0.98);
       }
-      .qr-wrap {
-        margin: 1.35rem auto 0;
-        width: min(14rem, 70vw);
-        padding: 0.75rem;
-        background: #fff;
-        border-radius: 14px;
-      }
-      .qr-wrap img {
-        display: block;
-        width: 100%;
-        height: auto;
-      }
-      .qr-caption {
-        margin-top: 0.55rem;
-        font-size: 0.88rem;
-        color: var(--muted);
-      }
       .hint {
         margin-top: 1.1rem;
         font-size: 0.9rem;
@@ -110,25 +93,17 @@
   <body>
     <main>
       <img class="mark" src="/logo-mark.svg" alt="" width="72" height="72" />
-      <h1>TellTea POS</h1>
-      <p>ดาวน์โหลดแอป Android (ฝังในเครื่อง — ไม่เปิดผ่านเว็บ Chrome)</p>
-      <a class="cta" href="/downloads/telltea-pos.apk" download="telltea-pos.apk">
+      <h1>nPos-telltea</h1>
+      <p>แอปทดสอบง่ายๆ — เปิดแล้วเห็นข้อความ Hello World</p>
+      <a class="cta" href="/downloads/nPos-telltea.apk" download="nPos-telltea.apk">
         ดาวน์โหลดไฟล์ติดตั้ง
       </a>
-      <div class="qr-wrap">
-        <img
-          src="/install/qr-pos-install.png"
-          alt="QR Code ไปหน้าดาวน์โหลด TellTea POS"
-          width="396"
-          height="396"
-        />
-      </div>
-      <p class="qr-caption">สแกนด้วยมือถือ/แท็บเล็ต → เปิดหน้าดาวน์โหลด</p>
       <div class="hint">
         <ol>
-          <li>สแกน QR หรือเปิดลิงก์ด้วย <strong>Chrome</strong> บนแท็บเล็ต แค่เพื่อดาวน์โหลดไฟล์</li>
-          <li>กดดาวน์โหลด → อนุญาตติดตั้ง → เปิดไอคอน <strong>TellTea POS</strong> (ไม่ใช้ Chrome ขาย)</li>
-          <li>แอปนี้ฝังหน้า POS ใน APK แล้ว — ไม่ดึงหน้าเว็บจาก Hosting ตอนเปิดใช้</li>
+          <li>เปิดลิงก์นี้ด้วย <strong>Chrome</strong> บนแท็บเล็ต/เอมูเลเตอร์</li>
+          <li>กดดาวน์โหลด → อนุญาตติดตั้ง → เปิดไอคอน <strong>nPos-telltea</strong></li>
+          <li>ควรเห็นข้อความ <strong>Hello World</strong></li>
+          <li>ไฟล์ตรง: <code>/downloads/nPos-telltea.apk</code></li>
         </ol>
       </div>
     </main>

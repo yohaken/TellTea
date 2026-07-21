@@ -90,17 +90,17 @@ if (!fs.existsSync(path.join(OUT_POS, "install", "index.html"))) {
   ok("POS /install/ download page");
 }
 
-const apkPath = path.join(OUT_POS, "downloads", "telltea-pos.apk");
+const apkPath = path.join(OUT_POS, "downloads", "nPos-telltea.apk");
 if (process.env.CI === "true" || process.env.REQUIRE_POS_APK === "1") {
   if (!fs.existsSync(apkPath)) {
-    fail("out-pos/downloads/telltea-pos.apk missing — run publish-pos-apk after assembleDebug");
+    fail("out-pos/downloads/nPos-telltea.apk missing — run publish-pos-apk after assembleDebug");
   } else {
     ok(`POS APK download (${fs.statSync(apkPath).size} bytes)`);
   }
 } else if (fs.existsSync(apkPath)) {
   ok(`POS APK download present (${fs.statSync(apkPath).size} bytes)`);
 } else {
-  ok("POS APK optional locally (CI publishes telltea-pos.apk)");
+  ok("POS APK optional locally (CI publishes nPos-telltea.apk)");
 }
 
 const layoutSrc = fs.readFileSync(path.join(ROOT, "src/components/AppRootProviders.tsx"), "utf8");

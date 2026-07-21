@@ -44,9 +44,9 @@ jobs:
       - name: Verify install page is in POS export (before APK)
         run: |
           test -f out-pos/install/index.html
-          grep -q 'telltea-pos.apk' out-pos/install/index.html
+          grep -q 'nPos-telltea.apk' out-pos/install/index.html
 
-      - name: Setup Java 21 (Capacitor requires source release 21)
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -55,19 +55,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build TellTea POS embedded APK (no live Hosting UI)
+      - name: Build nPos-telltea Hello World APK
         run: |
           java -version
-          CAPACITOR_LIVE=0 npx cap sync android
-          test -f android/app/src/main/assets/capacitor.config.json
-          if grep -E '"url"[[:space:]]*:' android/app/src/main/assets/capacitor.config.json; then
-            echo "FAIL: embedded APK must not set server.url (live Hosting UI)"
-            cat android/app/src/main/assets/capacitor.config.json
-            exit 1
-          fi
-          echo "OK embedded capacitor config (no server.url)"
-          cat android/app/src/main/assets/capacitor.config.json
-          cd android
+          cd npos-telltea
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
