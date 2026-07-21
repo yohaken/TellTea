@@ -94,9 +94,9 @@ export function MenuCatalogSetup({ onError }: { onError: (msg: string | null) =>
 
   return (
     <section className="settings-card">
-      <h2 className="settings-card-title">เมนู POS หน้าร้าน</h2>
+      <h2 className="settings-card-title">เมนูหน้าร้าน</h2>
       <p className="muted settings-card-lead">
-        จัดการหมวดและรายการที่แสดงบนเครื่อง POS — พนักงานกดขายจากเมนูนี้
+        เพิ่ม/เปิด-ปิดเมนูด่วนจากมือถือ · จัดเรียงหมวด/ตัวเลือก/โปรเต็มรูปแบบทำบนแท็บเล็ต (เมนู)
       </p>
 
       {loading ? <p className="empty">กำลังโหลด...</p> : null}

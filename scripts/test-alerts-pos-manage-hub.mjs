@@ -1,0 +1,55 @@
+/**
+ * Alerts page + font-size UI removed; POS settings live under pos-sales manage tab.
+ */
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const read = (p) => readFileSync(join(root, p), "utf8");
+
+const version = read("src/lib/version.ts");
+const more = read("src/app/more/page.tsx");
+const alerts = read("src/app/alerts/page.tsx");
+const settings = read("src/app/settings/page.tsx");
+const posSales = read("src/app/pos-sales/page.tsx");
+const report = read("src/components/PosSalesReport.tsx");
+const manage = read("src/components/PosManagePanel.tsx");
+const shopPay = read("src/components/PosShopPaySetup.tsx");
+const shell = read("src/components/AppShell.tsx");
+const perms = read("src/lib/permissions.ts");
+const settingsLib = read("src/lib/settings.ts");
+const rules = read("firestore.rules");
+const smoke = read("scripts/smoke-hosting-export.mjs");
+
+assert.match(version, /APP_BUILD = 204/);
+
+assert.match(alerts, /router\.replace\("\/more\/"\)/);
+assert.doesNotMatch(more, /href: "\/alerts\/"/);
+assert.doesNotMatch(perms, /"alerts"/);
+assert.doesNotMatch(settingsLib, /balanceFontSize|actionBtnScale|saveAlertSettings/);
+assert.doesNotMatch(shell, /UiSettingsProvider/);
+assert.match(shell, /"\/pos-sales"/);
+assert.doesNotMatch(shell, /"\/alerts"/);
+assert.match(rules, /pushSubscriptions[\s\S]*allow read: if isOwner\(\)/);
+assert.doesNotMatch(rules, /hasPerm\('alerts'\)/);
+assert.doesNotMatch(smoke, /"alerts"/);
+
+assert.doesNotMatch(settings, /PosDeviceSetup|PosShopPaySetup|PosPrinterSetup|MenuCatalogSetup|PosSalesSetup/);
+assert.match(settings, /BusinessProfileSetup/);
+assert.match(settings, /ChecklistSetup/);
+
+assert.match(posSales, /Suspense/);
+assert.match(report, /จัดการ Pos/);
+assert.match(report, /PosManagePanel/);
+assert.match(report, /tab=manage/);
+assert.match(manage, /PosDeviceSetup/);
+assert.match(manage, /PosOpsNotesSetup/);
+assert.match(manage, /PosShopPaySetup/);
+assert.match(manage, /PosPrinterSetup/);
+assert.match(manage, /MenuCatalogSetup/);
+assert.match(shopPay, /บันทึกร้านและชำระเงิน/);
+assert.match(more, /จัดการ Pos/);
+
+console.log("OK test-alerts-pos-manage-hub");

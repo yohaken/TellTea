@@ -7,7 +7,7 @@
 1. **POS = ระบบขายหน้าร้านแยกต่างหาก** — ข้อมูล `posSales`, `posSessions`, `posDevices`, `meta/pos`
 2. **หลังร้าน = บริหารร้าน** — `ledger`, `stock`, OT, PnL, ฯลฯ
 3. **ไม่ sync ข้อมูลข้ามโดเมน** — POS ไม่เขียน ledger / stock / monthlyIncome
-4. **หน้าต่างอ่านอย่างเดียว** — `/pos-sales/` ในหลังร้าน อ่าน `posSales` เท่านั้น
+4. **หน้าต่างเจ้าของ** — `/pos-sales/` รายงานยอดขาย + แท็บ **จัดการ Pos** (เครื่อง / สลิป / เมนู)
 
 ## URL แยก (v135+)
 
@@ -15,7 +15,7 @@
 |------|-----|
 | หลังร้าน TellTea | https://telltea-shop.web.app/ |
 | POS แท็บเล็ต | **https://telltea-pos.web.app/pos/** |
-| รายงานยอดขาย (เจ้าของ) | https://telltea-shop.web.app/pos-sales/ |
+| รายงาน + จัดการ Pos (เจ้าของ) | https://telltea-shop.web.app/pos-sales/ |
 
 URL เก่า `telltea-shop.web.app/pos/` → redirect 301 ไป `telltea-pos.web.app`
 
@@ -38,7 +38,7 @@ Build: `npm run build` → `split-pos-hosting.mjs` แยก output อัตโ
 ## สิ่งที่ยังร่วมกัน (ไม่ใช่การเชื่อมข้อมูล)
 
 - Firebase project เดียว (`mypeer-501909`)
-- เจ้าของตั้งเมนู POS จาก `/settings/` (แคตตาล็อกของ POS)
+- เจ้าของตั้งเมนู / เครื่อง / สลิปจาก `/pos-sales/?tab=manage` (จัดการ Pos) · แท็บเล็ตแก้สลิปได้ที่ `/pos/settings/`
 - Cloud Functions: `posCompleteSale`, `posDeviceAuth`
 
 ดูเพิ่ม: `docs/pos-sync.md`, `docs/pos-connectivity.md`

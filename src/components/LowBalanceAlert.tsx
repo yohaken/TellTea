@@ -111,11 +111,6 @@ export function LowBalanceAlert() {
             ปิดไว้ก่อน
           </button>
         </div>
-        {isOwner ? (
-          <p className="muted" style={{ marginTop: "0.75rem", fontSize: "0.8rem", textAlign: "left" }}>
-            ตั้งเกณฑ์ได้ที่เมนู อื่นๆ → แจ้งเตือนยอดต่ำ
-          </p>
-        ) : null}
       </div>
     </div>
   );

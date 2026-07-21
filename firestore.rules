@@ -560,20 +560,20 @@ service cloud.firestore {
         || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes'));
       allow write: if isOwner()
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
-        || (hasPerm('alerts') && docId == 'lowBalanceAlert')
+        || (isOwner() && docId == 'lowBalanceAlert')
         || (hasPerm('ownerBooks') && docId == 'ownerBooks')
         || (isOwner() && docId == 'otSettings')
         || (isPosDeviceAuth() && docId == 'pos' && posMetaBillWrite());
     }
 
     match /pushSubscriptions/{id} {
-      allow read: if hasPerm('alerts');
-      allow create, update: if hasPerm('alerts')
+      allow read: if isOwner();
+      allow create, update: if isOwner()
         && hasEmail()
         && request.resource.data.email == authEmail()
         && request.resource.data.endpoint is string
         && request.resource.data.keys.keys().hasAll(['p256dh', 'auth']);
-      allow delete: if hasPerm('alerts') && hasEmail() && resource.data.email == authEmail();
+      allow delete: if isOwner() && hasEmail() && resource.data.email == authEmail();
     }
 
     match /menuCategories/{id} {

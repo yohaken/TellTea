@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Bell,
   BookMarked,
   BookOpen,
   Boxes,
@@ -96,13 +95,6 @@ function MoreView() {
       perm: "ownerBooks",
     },
     {
-      href: "/alerts/",
-      title: "แจ้งเตือนยอดต่ำ",
-      desc: "ตั้งเกณฑ์ + แจ้งถึงมือถือเมื่อเงินใกล้หมด",
-      icon: Bell,
-      perm: "alerts",
-    },
-    {
       href: "/export/",
       title: "ส่งออก",
       desc: "Excel บัญชีพนักงาน / บช.เจ้าของ / P&L — เฉพาะเจ้าของ",
@@ -157,8 +149,8 @@ function MoreView() {
           <Link href="/pos-sales/" className="more-card">
             <Receipt size={22} />
             <div>
-              <strong>ยอดขาย POS</strong>
-              <p>รายงานรายวัน · แยกกะ · เงินสด/PromptPay</p>
+              <strong>POS</strong>
+              <p>รายงานยอดขาย · จัดการ Pos (เครื่อง / สลิป / เมนู)</p>
             </div>
           </Link>
         ) : null}
@@ -167,7 +159,7 @@ function MoreView() {
             <Settings size={22} />
             <div>
               <strong>ตั้งค่าโมดูล</strong>
-              <p>SmartCheck · โปรไฟล์ · POS — สินค้าผลิตอยู่หน้าผลิต</p>
+              <p>SmartCheck · โปรไฟล์ AI · ลำดับเมนู · อัปเดตแอป — สินค้าผลิตอยู่หน้าผลิต</p>
             </div>
           </Link>
         ) : null}

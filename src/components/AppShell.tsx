@@ -19,7 +19,6 @@ import { AppBrand } from "@/components/AppBrand";
 import { LowBalanceAlert } from "@/components/LowBalanceAlert";
 import { PersonalProfileModal } from "@/components/PersonalProfileModal";
 import { ProfilePromptBanner } from "@/components/ProfilePromptBanner";
-import { UiSettingsProvider } from "@/components/UiSettingsProvider";
 import {
   DEFAULT_NAV_ORDER,
   DEFAULT_DOCK_TAB_MAX,
@@ -40,7 +39,7 @@ const MORE_PREFIXES = [
   "/bonus",
   "/pnl",
   "/owner-books",
-  "/alerts",
+  "/pos-sales",
   "/in",
   "/export",
   "/staff",
@@ -145,8 +144,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <LowBalanceAlert />
 
         <PersonalProfileModal />
-
-        <UiSettingsProvider />
 
         <nav
           className={cn(

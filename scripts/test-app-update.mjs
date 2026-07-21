@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const layoutSrc = readFileSync(join(root, "src/app/layout.tsx"), "utf8");
+const layoutSrc = readFileSync(join(root, "src/components/AppRootProviders.tsx"), "utf8");
 const watcherSrc = readFileSync(join(root, "src/components/AppUpdateWatcher.tsx"), "utf8");
 const setupSrc = readFileSync(join(root, "src/components/AppUpdateSetup.tsx"), "utf8");
 const releaseSrc = readFileSync(join(root, "src/lib/app-release.ts"), "utf8");

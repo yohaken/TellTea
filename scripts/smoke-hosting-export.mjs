@@ -26,7 +26,6 @@ const BACK_OFFICE_ROUTES = [
   "profile",
   "owner-books",
   "pnl",
-  "alerts",
   "export",
   "pos-sales",
 ];

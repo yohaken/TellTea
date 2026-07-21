@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Ban, ChevronLeft, ChevronRight, Receipt } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Ban, ChevronLeft, ChevronRight, MonitorSmartphone, Receipt } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { labelOtShift } from "@/lib/ot";
 import { voidPosSale } from "@/lib/pos-sales-admin";
@@ -16,6 +17,9 @@ import {
 import type { PosSale, PosSession } from "@/lib/types";
 import { formatPlainNumber, startOfLocalDay } from "@/lib/utils";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
+import { PosManagePanel } from "@/components/PosManagePanel";
+
+type PosSalesHubTab = "report" | "manage";
 
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
@@ -293,9 +297,18 @@ export function PosSalesReport({
 }
 
 export function PosSalesReportPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const tab: PosSalesHubTab = tabParam === "manage" ? "manage" : "report";
   const [dateMs, setDateMs] = useState(() => startOfLocalDay());
   const [error, setError] = useState<string | null>(null);
   const today = startOfLocalDay();
+
+  function setTab(next: PosSalesHubTab) {
+    setError(null);
+    router.replace(next === "manage" ? "/pos-sales/?tab=manage" : "/pos-sales/", { scroll: false });
+  }
 
   function shiftDate(delta: number) {
     const next = new Date(dateMs);
@@ -309,35 +322,64 @@ export function PosSalesReportPage() {
     <div className="module-page pos-sales-report-page">
       <h1 className="panel-title" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
         <Receipt size={20} aria-hidden />
-        รายงานยอดขาย POS
+        POS
       </h1>
-      <p className="muted" style={{ marginBottom: "1rem" }}>
-        สรุปจากบิลจริงในระบบ — แยกจากบัญชีพนักงาน
+      <p className="muted" style={{ marginBottom: "0.75rem" }}>
+        รายงานยอดขายและจัดการเครื่อง / สลิป / เมนู — เฉพาะเจ้าของ
       </p>
 
-      <div className="pos-sales-date-nav">
-        <button type="button" className="ghost-btn" aria-label="วันก่อนหน้า" onClick={() => shiftDate(-1)}>
-          <ChevronLeft size={18} aria-hidden />
-        </button>
-        <strong>{formatPosReportDate(dateMs)}</strong>
+      <div className="stock-owner-tabs" role="tablist" aria-label="หมวด POS">
         <button
           type="button"
-          className="ghost-btn"
-          aria-label="วันถัดไป"
-          disabled={dateMs >= today}
-          onClick={() => shiftDate(1)}
+          role="tab"
+          aria-selected={tab === "report"}
+          className={tab === "report" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+          onClick={() => setTab("report")}
         >
-          <ChevronRight size={18} aria-hidden />
+          <Receipt size={15} aria-hidden />
+          รายงานยอดขาย
         </button>
-        {dateMs !== today ? (
-          <button type="button" className="ghost-btn" onClick={() => setDateMs(today)}>
-            วันนี้
-          </button>
-        ) : null}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "manage"}
+          className={tab === "manage" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+          onClick={() => setTab("manage")}
+        >
+          <MonitorSmartphone size={15} aria-hidden />
+          จัดการ Pos
+        </button>
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
-      <PosSalesReport dateMs={dateMs} onError={setError} />
+
+      {tab === "manage" ? (
+        <PosManagePanel onError={setError} />
+      ) : (
+        <>
+          <div className="pos-sales-date-nav">
+            <button type="button" className="ghost-btn" aria-label="วันก่อนหน้า" onClick={() => shiftDate(-1)}>
+              <ChevronLeft size={18} aria-hidden />
+            </button>
+            <strong>{formatPosReportDate(dateMs)}</strong>
+            <button
+              type="button"
+              className="ghost-btn"
+              aria-label="วันถัดไป"
+              disabled={dateMs >= today}
+              onClick={() => shiftDate(1)}
+            >
+              <ChevronRight size={18} aria-hidden />
+            </button>
+            {dateMs !== today ? (
+              <button type="button" className="ghost-btn" onClick={() => setDateMs(today)}>
+                วันนี้
+              </button>
+            ) : null}
+          </div>
+          <PosSalesReport dateMs={dateMs} onError={setError} />
+        </>
+      )}
     </div>
   );
 }

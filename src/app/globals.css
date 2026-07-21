@@ -6181,6 +6181,26 @@ body.modal-open .main-panel {
   gap: 1.25rem;
 }
 
+.pos-manage-lead {
+  margin: 0.15rem 0 0;
+  text-align: left;
+  font-size: 0.86rem;
+}
+
+.settings-subhead {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.85rem 0 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--tea-leaf);
+}
+
+.settings-subhead:first-of-type {
+  margin-top: 0;
+}
+
 .business-profile-form {
   display: flex;
   flex-direction: column;

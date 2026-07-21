@@ -10,7 +10,6 @@ export const PERMISSION_KEYS = [
   "bonus",
   "ownerBooks",
   "pnl",
-  "alerts",
   "transferIn",
   "exportData",
   "staffManage",
@@ -30,7 +29,6 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   bonus: "สรุปโบนัสเดือน",
   ownerBooks: "บช.เจ้าของ",
   pnl: "สรุปรายเดือน",
-  alerts: "แจ้งเตือนยอดต่ำ",
   transferIn: "โอนเข้า",
   exportData: "ส่งออกข้อมูล",
   staffManage: "จัดการพนักงาน",
@@ -46,7 +44,7 @@ export const PERMISSION_GROUPS: { title: string; hint?: string; keys: Permission
   {
     title: "อื่นๆ — เครื่องมือเพิ่ม",
     hint: "แสดงแท็บ อื่นๆ เมื่อเปิดอย่างน้อย 1 สิทธิในกลุ่มนี้",
-    keys: ["ownerBooks", "pnl", "alerts", "transferIn", "exportData", "staffManage", "assignTasks"],
+    keys: ["ownerBooks", "pnl", "transferIn", "exportData", "staffManage", "assignTasks"],
   },
 ];
 
@@ -60,7 +58,6 @@ export const DEFAULT_STAFF_PERMISSIONS: StaffPermissions = {
   bonus: true,
   ownerBooks: false,
   pnl: false,
-  alerts: false,
   transferIn: false,
   exportData: false,
   staffManage: false,
@@ -76,7 +73,6 @@ export const OWNER_PERMISSIONS: StaffPermissions = {
   bonus: true,
   ownerBooks: true,
   pnl: true,
-  alerts: true,
   transferIn: true,
   exportData: true,
   staffManage: true,
@@ -87,7 +83,12 @@ export function normalizePermissions(
   role: StaffRole = "staff",
 ): StaffPermissions {
   if (role === "owner") return { ...OWNER_PERMISSIONS };
-  return { ...DEFAULT_STAFF_PERMISSIONS, ...(input || {}) };
+  const base = { ...DEFAULT_STAFF_PERMISSIONS };
+  if (!input) return base;
+  for (const key of PERMISSION_KEYS) {
+    if (typeof input[key] === "boolean") base[key] = input[key]!;
+  }
+  return base;
 }
 
 export function resolvePermissions(member: StaffMember | null | undefined): StaffPermissions {
@@ -107,7 +108,6 @@ export function hasAnyExtraPermission(member: StaffMember | null | undefined): b
   return (
     p.ownerBooks ||
     p.pnl ||
-    p.alerts ||
     p.transferIn ||
     p.exportData ||
     p.staffManage
