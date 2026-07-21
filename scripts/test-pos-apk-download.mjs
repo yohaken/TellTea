@@ -23,8 +23,15 @@ assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/MainActivity.
 assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/MainActivity.java"), /btn_check_update|onUpdateButtonClicked/);
 assert.match(read("npos-telltea/app/src/main/res/values/strings.xml"), /nPos-telltea/);
 assert.match(read("npos-telltea/app/src/main/res/values/strings.xml"), /version_label/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+2/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+3/);
 assert.match(read("npos-telltea/app/build.gradle"), /UPDATE_MANIFEST_URL/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/MainActivity.java"), /DiagnoseActivity/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/DiagnoseActivity.java"), /DisplayProbe/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/DiagnoseActivity.java"), /HardwareProbe/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/NumberPresentation.java"), /Presentation/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/DisplayProbe.java"), /DisplayManager/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/HardwareProbe.java"), /UsbManager/);
+assert.match(read("npos-telltea/app/src/main/res/values/strings.xml"), /btn_diagnose/);
 assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/update/UpdateChecker.java"), /latest\.json|MANIFEST|manifestUrl/);
 assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/update/ApkInstaller.java"), /PackageInstaller/);
 assert.match(read("scripts/publish-pos-apk.mjs"), /versionCode/);
