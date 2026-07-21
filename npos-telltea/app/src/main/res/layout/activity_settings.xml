@@ -28,10 +28,19 @@
             android:textSize="13sp" />
 
         <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="@string/settings_section_device"
+            android:textColor="#1A2E24"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
             android:id="@+id/settingsVersion"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="8dp"
             android:textColor="#1A2E24"
             android:textSize="15sp"
             android:textStyle="bold" />
@@ -74,78 +83,6 @@
             android:layout_marginTop="8dp"
             android:minHeight="48dp"
             android:text="@string/btn_open_install_page"
-            android:textAllCaps="false" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:text="@string/settings_section_hardware"
-            android:textColor="#1A2E24"
-            android:textSize="17sp"
-            android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/diagnoseButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="52dp"
-            android:text="@string/btn_diagnose"
-            android:textAllCaps="false"
-            android:textSize="16sp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:text="@string/settings_section_customer"
-            android:textColor="#1A2E24"
-            android:textSize="17sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="@string/customer_test_hint"
-            android:textColor="#666666"
-            android:textSize="13sp" />
-
-        <TextView
-            android:id="@+id/customerStatus"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/customer_test_idle"
-            android:textColor="#555555"
-            android:textSize="14sp" />
-
-        <Button
-            android:id="@+id/customerAmount1Button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="48dp"
-            android:text="@string/btn_customer_amount_1"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/customerAmount2Button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="48dp"
-            android:text="@string/btn_customer_amount_2"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/customerCloseButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="48dp"
-            android:text="@string/btn_customer_close"
             android:textAllCaps="false" />
 
         <TextView
@@ -208,6 +145,77 @@
             android:layout_marginTop="8dp"
             android:minHeight="48dp"
             android:text="@string/btn_drawer_kick"
+            android:textAllCaps="false" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="@string/settings_section_tech"
+            android:textColor="#1A2E24"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/settings_tech_hint"
+            android:textColor="#666666"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/diagnoseButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/btn_diagnose"
+            android:textAllCaps="false" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/settings_section_customer"
+            android:textColor="#1A2E24"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/customerStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/customer_test_idle"
+            android:textColor="#555555"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/customerAmount1Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="44dp"
+            android:text="@string/btn_customer_amount_1"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/customerAmount2Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="44dp"
+            android:text="@string/btn_customer_amount_2"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/customerCloseButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="44dp"
+            android:text="@string/btn_customer_close"
             android:textAllCaps="false" />
     </LinearLayout>
 </ScrollView>

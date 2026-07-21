@@ -6309,6 +6309,78 @@ body.modal-open .main-panel {
   color: #666;
 }
 
+.npos-ops-table-wrap {
+  overflow-x: auto;
+  margin: 0;
+  border: 1px solid rgba(26, 46, 36, 0.1);
+  border-radius: 0.35rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.npos-ops-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  table-layout: fixed;
+}
+
+.npos-ops-table th,
+.npos-ops-table td {
+  padding: 0.22rem 0.35rem;
+  border-bottom: 1px solid rgba(26, 46, 36, 0.07);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.npos-ops-table th {
+  font-weight: 700;
+  color: #4a5c52;
+  background: rgba(26, 46, 36, 0.04);
+  position: sticky;
+  top: 0;
+}
+
+.npos-ops-time {
+  width: 5.6rem;
+  color: #666;
+  font-variant-numeric: tabular-nums;
+}
+
+.npos-ops-lvl {
+  width: 1.2rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.npos-ops-cat {
+  width: 4.2rem;
+  color: #3d5248;
+}
+
+.npos-ops-msg {
+  white-space: nowrap;
+}
+
+.npos-ops-dev {
+  width: 3.4rem;
+  color: #888;
+  font-family: ui-monospace, monospace;
+  font-size: 0.68rem;
+}
+
+.npos-ops-row--error .npos-ops-lvl,
+.npos-ops-row--error .npos-ops-msg {
+  color: #a32020;
+}
+
+.npos-ops-row--warn .npos-ops-lvl {
+  color: #9a6b00;
+}
+
 .settings-subhead {
   display: flex;
   align-items: center;
