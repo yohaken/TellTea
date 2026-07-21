@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Monitor, RefreshCw, ExternalLink, Copy, Check } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { saveForcePosAutoUpdate, subscribeAppReleaseSettings } from "@/lib/app-release";
 import { POS_BUILD, posVersionLabel } from "@/lib/pos-version";
 import { POS_APK_DOWNLOAD_URL, POS_APK_INSTALL_PAGE_URL, POS_ENTRY_URL } from "@/lib/pos-url";
 import {
@@ -50,9 +49,6 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
   const [draftLabels, setDraftLabels] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
   const [copiedApk, setCopiedApk] = useState(false);
-  const [forcePosAutoUpdate, setForcePosAutoUpdate] = useState(false);
-  const [releaseLoading, setReleaseLoading] = useState(true);
-  const [releaseBusy, setReleaseBusy] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
   const [nativeRelease, setNativeRelease] = useState<PosNativeRelease | null>(null);
   const [nativeReleaseLoading, setNativeReleaseLoading] = useState(true);
@@ -61,20 +57,6 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
   const [draftApkUrl, setDraftApkUrl] = useState("");
   const [draftNotes, setDraftNotes] = useState("");
   const nativeReleaseHydrated = useRef(false);
-
-  useEffect(() => {
-    const unsub = subscribeAppReleaseSettings(
-      (settings) => {
-        setForcePosAutoUpdate(settings.forcePosAutoUpdate);
-        setReleaseLoading(false);
-      },
-      (err) => {
-        onError(err.message || "โหลดตั้งค่าอัปเดต POS ไม่สำเร็จ");
-        setReleaseLoading(false);
-      },
-    );
-    return unsub;
-  }, [onError]);
 
   useEffect(() => {
     const unsub = subscribePosNativeReleaseAdmin(
@@ -194,21 +176,6 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
     }
   }
 
-  async function togglePosAutoUpdate() {
-    if (!actorId) return;
-    const next = !forcePosAutoUpdate;
-    setReleaseBusy(true);
-    onError(null);
-    try {
-      await saveForcePosAutoUpdate(next, actorId);
-      setForcePosAutoUpdate(next);
-    } catch (err) {
-      onError((err as Error).message || "บันทึกตั้งค่าอัปเดต POS ไม่สำเร็จ");
-    } finally {
-      setReleaseBusy(false);
-    }
-  }
-
   async function saveNativeRelease() {
     if (!actorId) return;
     const build = Math.floor(Number(draftShellBuild));
@@ -263,29 +230,8 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
       </h2>
       <p className="muted settings-card-lead">
         ตัวตนเครื่อง POS (ไม่ใช่บัญชี Google) · {posVersionLabel()} · รายงานทุก 60 วินาที
-        — พนักงานไม่ต้องรู้รหัสอีเมลร้าน · ส่งลิงก์อัปเดตได้ที่การ์ด «ลิงก์ / โน้ตหน้าร้าน»
+        — โหมดอัปเดตอยู่กลุ่ม «อัปเดต» · ส่งลิงก์ให้หน้าร้านได้ที่การ์ด «ลิงก์ / โน้ตหน้าร้าน»
       </p>
-
-      {!releaseLoading ? (
-        <div className="app-release-toggle pos-device-auto-update">
-          <label className="app-release-toggle-row">
-            <input
-              type="checkbox"
-              checked={forcePosAutoUpdate}
-              disabled={releaseBusy}
-              onChange={() => void togglePosAutoUpdate()}
-            />
-            <span className="app-release-toggle-copy">
-              <strong>POS อัปเดตเองเมื่อว่าง</strong>
-              <span>
-                {forcePosAutoUpdate
-                  ? "เปิดอยู่ — แท็บเล็ตรีเฟรชเองเมื่อไม่มีลูกค้าจ่าย (ไม่กระทบแท็บหลังบ้าน)"
-                  : "ช่วงพัฒนารีโหลดอัตโนมัติอยู่แล้วในโค้ด · เปิดตัวเลือกนี้เพื่อบังคับถาวรผ่าน Firestore"}
-              </span>
-            </span>
-          </label>
-        </div>
-      ) : null}
 
       {!nativeReleaseLoading ? (
         <div className="pos-native-release-box">

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Settings } from "lucide-react";
 import { AppUpdateSetup } from "@/components/AppUpdateSetup";
 import { BusinessProfileSetup } from "@/components/BusinessProfileSetup";
 import { MenuCatalogSetup } from "@/components/MenuCatalogSetup";
-import { PosSalesSetup } from "@/components/PosSalesSetup";
+import { PosAutoPrintSetup } from "@/components/PosAutoPrintSetup";
 import { PosPaymentSetup } from "@/components/PosPaymentSetup";
 import { PosShopInfoSetup } from "@/components/PosShopInfoSetup";
 import { PosPrinterSetup } from "@/components/PosPrinterSetup";
@@ -28,6 +28,26 @@ export default function SettingsPage() {
     <AuthGate>
       <SettingsView />
     </AuthGate>
+  );
+}
+
+function SettingsGroup({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="settings-group">
+      <header className="settings-group-head">
+        <h2 className="settings-group-title">{title}</h2>
+        <p className="muted settings-group-hint">{hint}</p>
+      </header>
+      <div className="settings-group-body">{children}</div>
+    </section>
   );
 }
 
@@ -77,7 +97,7 @@ function SettingsView() {
         ตั้งค่าโมดูล
       </h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        จัดการค่าเริ่มต้นของผลิต · ชง · SmartCheck · คลัง · โปรไฟล์กิจการ (AI) · ลำดับเมนู — เฉพาะเจ้าของ
+        จัดกลุ่มตามงาน: ร้าน · อัปเดต · POS · โมดูล — เฉพาะเจ้าของ · รายงานยอดขายอยู่ที่เมนูอื่น ๆ
       </p>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -85,35 +105,46 @@ function SettingsView() {
 
       {!loading ? (
         <div className="owner-settings-stack">
-          <BusinessProfileSetup onError={setError} />
-          <AppUpdateSetup onError={setError} />
-          <PosDeviceSetup onError={setError} />
-          <PosOpsNotesSetup onError={setError} />
-          <PosShopInfoSetup onError={setError} />
-          <p className="muted" style={{ margin: "-0.35rem 0 0.75rem", fontSize: "0.82rem" }}>
-            บนแท็บเล็ต POS แก้ได้เร็วที่เมนู &quot;ตั้งค่ากิจการ&quot;
-          </p>
-          <PosSalesSetup onError={setError} />
-          <PosPaymentSetup onError={setError} />
-          <PosPrinterSetup onError={setError} />
-          <MenuCatalogSetup onError={setError} />
-          <NavMenuOrderSetup onError={setError} />
-          <ProdCatalogSetup
-            products={products}
-            onReload={() => void reload().catch((err) => setError((err as Error).message))}
-            onError={setError}
-          />
-          <OtBonusRateSetup
-            bonusRate={bonusRate}
-            createdBy={actorId}
-            onReload={() => void reload().catch((err) => setError((err as Error).message))}
-            onError={setError}
-          />
-          <ChecklistSetup
-            onReload={() => void reloadChecklist().catch((err) => setError((err as Error).message))}
-            onError={setError}
-          />
-          <StockCatalogSetup onError={setError} />
+          <SettingsGroup title="ร้าน & AI" hint="โลโก้ · โปรไฟล์ให้ AI อ่านบัญชี · ชื่อที่อยู่บนสลิป">
+            <BusinessProfileSetup onError={setError} />
+            <PosShopInfoSetup onError={setError} />
+            <p className="muted settings-group-note">
+              บนแท็บเล็ต POS แก้ชื่อร้าน/PromptPay ได้เร็วที่เมนู &quot;ตั้งค่ากิจการ&quot;
+            </p>
+          </SettingsGroup>
+
+          <SettingsGroup title="อัปเดต" hint="วิธีแจ้งเมื่อมีเวอร์ชันใหม่ — โหมดเดียวแทนสวิตช์แยก">
+            <AppUpdateSetup onError={setError} />
+          </SettingsGroup>
+
+          <SettingsGroup title="POS" hint="ชำระเงิน · พิมพ์หลังขาย · เครื่องพิมพ์ · เมนูขาย · อุปกรณ์">
+            <PosPaymentSetup onError={setError} />
+            <PosAutoPrintSetup onError={setError} />
+            <PosPrinterSetup onError={setError} />
+            <MenuCatalogSetup onError={setError} />
+            <PosDeviceSetup onError={setError} />
+            <PosOpsNotesSetup onError={setError} />
+          </SettingsGroup>
+
+          <SettingsGroup title="โมดูลงาน" hint="แถบเมนู · ผลิต · ชง · SmartCheck · คลัง">
+            <NavMenuOrderSetup onError={setError} />
+            <ProdCatalogSetup
+              products={products}
+              onReload={() => void reload().catch((err) => setError((err as Error).message))}
+              onError={setError}
+            />
+            <OtBonusRateSetup
+              bonusRate={bonusRate}
+              createdBy={actorId}
+              onReload={() => void reload().catch((err) => setError((err as Error).message))}
+              onError={setError}
+            />
+            <ChecklistSetup
+              onReload={() => void reloadChecklist().catch((err) => setError((err as Error).message))}
+              onError={setError}
+            />
+            <StockCatalogSetup onError={setError} />
+          </SettingsGroup>
         </div>
       ) : null}
     </div>

@@ -4,18 +4,41 @@ import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { CLIENT_BUILD } from "@/lib/app-update";
-import { saveForceAppUpdate, subscribeAppReleaseSettings } from "@/lib/app-release";
+import {
+  appUpdateModeFromSettings,
+  saveAppUpdateMode,
+  subscribeAppReleaseSettings,
+  type AppUpdateMode,
+} from "@/lib/app-release";
+
+const MODE_OPTIONS: { value: AppUpdateMode; title: string; hint: string }[] = [
+  {
+    value: "soft",
+    title: "แจ้งแบนเนอร์",
+    hint: "มีเวอร์ชันใหม่แล้วให้กดอัปเดตเอง — เหมาะใช้งานจริง",
+  },
+  {
+    value: "force_all",
+    title: "บังคับทุกเครื่อง",
+    hint: "หลังบ้าน + POS รีเฟรชอัตโนมัติเมื่อว่าง — เหมาะช่วงปล่อยอัปเดตด่วน",
+  },
+  {
+    value: "force_pos",
+    title: "บังคับเฉพาะ POS",
+    hint: "แท็บเล็ตรีเฟรชเมื่อตะกร้าว่าง — ไม่กระทบแท็บหลังบ้าน",
+  },
+];
 
 export function AppUpdateSetup({ onError }: { onError: (msg: string | null) => void }) {
   const { actorId } = useAuth();
-  const [forceAppUpdate, setForceAppUpdate] = useState(false);
+  const [mode, setMode] = useState<AppUpdateMode>("soft");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeAppReleaseSettings(
       (settings) => {
-        setForceAppUpdate(settings.forceAppUpdate);
+        setMode(appUpdateModeFromSettings(settings));
         setLoading(false);
       },
       (err) => {
@@ -26,14 +49,13 @@ export function AppUpdateSetup({ onError }: { onError: (msg: string | null) => v
     return unsub;
   }, [onError]);
 
-  async function toggle() {
-    if (!actorId) return;
-    const next = !forceAppUpdate;
+  async function selectMode(next: AppUpdateMode) {
+    if (!actorId || next === mode) return;
     setBusy(true);
     onError(null);
     try {
-      await saveForceAppUpdate(next, actorId);
-      setForceAppUpdate(next);
+      await saveAppUpdateMode(next, actorId);
+      setMode(next);
     } catch (err) {
       onError((err as Error).message || "บันทึกตั้งค่าอัปเดตไม่สำเร็จ");
     } finally {
@@ -45,32 +67,32 @@ export function AppUpdateSetup({ onError }: { onError: (msg: string | null) => v
     <section className="settings-card">
       <h2 className="settings-card-title" style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
         <RefreshCw size={18} aria-hidden />
-        อัปเดตแอป
+        โหมดอัปเดต
       </h2>
       <p className="muted settings-card-lead">
-        เวอร์ชันปัจจุบันบนเครื่องนี้: <strong>v{CLIENT_BUILD}</strong>
+        เวอร์ชันบนเครื่องนี้: <strong>v{CLIENT_BUILD}</strong> — เลือกวิธีแจ้งเมื่อมี build ใหม่
       </p>
 
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading ? (
-        <div className="app-release-toggle">
-          <label className="app-release-toggle-row">
-            <input
-              type="checkbox"
-              checked={forceAppUpdate}
-              disabled={busy}
-              onChange={() => void toggle()}
-            />
-            <span className="app-release-toggle-copy">
-              <strong>บังคับอัปเดตทันที</strong>
-              <span>
-                {forceAppUpdate
-                  ? "เปิดอยู่ — พนักงานทุกคนจะรีเฟรชอัตโนมัติเมื่อมีเวอร์ชันใหม่ (เหมาะช่วงพัฒนา)"
-                  : "ปิดอยู่ — แจ้งแบนเนอร์ให้กดอัปเดตเองเมื่อพร้อม (เหมาะใช้งานจริง)"}
+        <div className="settings-mode-list" role="radiogroup" aria-label="โหมดอัปเดต">
+          {MODE_OPTIONS.map((opt) => (
+            <label key={opt.value} className={`settings-mode-option${mode === opt.value ? " is-active" : ""}`}>
+              <input
+                type="radio"
+                name="app-update-mode"
+                value={opt.value}
+                checked={mode === opt.value}
+                disabled={busy}
+                onChange={() => void selectMode(opt.value)}
+              />
+              <span className="settings-mode-copy">
+                <strong>{opt.title}</strong>
+                <span>{opt.hint}</span>
               </span>
-            </span>
-          </label>
+            </label>
+          ))}
         </div>
       ) : null}
     </section>

@@ -7,6 +7,11 @@ import {
   subscribePosShopSettings,
   type PosShopSettings,
 } from "@/lib/pos-settings";
+import {
+  getPosPrinterSetup,
+  savePosPrinterSetup,
+  subscribePosPrinterSetup,
+} from "@/lib/pos-printer";
 import { isValidPromptPayId, maskPromptPayId, normalizePromptPayId } from "@/lib/pos-promptpay";
 import { usePosApp } from "@/lib/pos-app-context";
 import { posVersionLabel } from "@/lib/pos-version";
@@ -41,6 +46,8 @@ export function PosBusinessSettingsView() {
   const [receiptFooterNote, setReceiptFooterNote] = useState("");
   const [promptPayId, setPromptPayId] = useState("");
   const [autoPrintReceipt, setAutoPrintReceipt] = useState(true);
+  const [autoPrintKitchen, setAutoPrintKitchen] = useState(false);
+  const [autoPrintBar, setAutoPrintBar] = useState(false);
   const [busy, setBusy] = useState(false);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
@@ -59,6 +66,21 @@ export function PosBusinessSettingsView() {
     applySettings(getLocalPosShopSettings());
     return subscribePosShopSettings(applySettings);
   }, [applySettings]);
+
+  useEffect(() => {
+    void getPosPrinterSetup()
+      .then((setup) => {
+        setAutoPrintKitchen(setup.autoPrintKitchen);
+        setAutoPrintBar(setup.autoPrintBar);
+      })
+      .catch(() => {
+        /* keep defaults */
+      });
+    return subscribePosPrinterSetup((setup) => {
+      setAutoPrintKitchen(setup.autoPrintKitchen);
+      setAutoPrintBar(setup.autoPrintBar);
+    });
+  }, []);
 
   const draftPreview: PosShopSettings = {
     shopName,
@@ -108,19 +130,25 @@ export function PosBusinessSettingsView() {
         setError("เลข PromptPay ไม่ถูกต้อง — ใช้เบอร์ 10 หลัก (0…) หรือเลขภาษี 13 หลัก");
         return;
       }
-      const result = await savePosShopSettings({
-        promptPayId: normalized,
-        autoPrintReceipt,
-      });
+      const [result] = await Promise.all([
+        savePosShopSettings({
+          promptPayId: normalized,
+          autoPrintReceipt,
+        }),
+        savePosPrinterSetup({
+          autoPrintKitchen,
+          autoPrintBar,
+        }),
+      ]);
       setPromptPayId(normalized);
       setSavedMsg(
         result.synced
           ? normalized
-            ? "PromptPay พร้อมใช้ · อัป Firebase แล้ว"
+            ? "PromptPay + พิมพ์หลังขาย · อัป Firebase แล้ว"
             : "บันทึกแล้ว · อัปขึ้น Firebase แล้ว"
           : normalized
             ? "PromptPay พร้อมใช้ในเครื่อง · จะอัป Firebase ทีหลัง"
-            : "บันทึกในเครื่องแล้ว · จะอัปขึ้น Firebase ทีหลัง",
+            : "บันทึกในเครื่องแล้ว · จะอัป Firebase ทีหลัง",
       );
     } catch (err) {
       setError((err as Error).message);
@@ -212,7 +240,7 @@ export function PosBusinessSettingsView() {
         ) : (
           <form className="pos-biz-form pos-biz-form--pay" onSubmit={(e) => void savePay(e)}>
             <p className="muted pos-biz-lead">
-              PromptPay พร้อมใช้แบบสแกน QR + พนักงานกดยืนยันเมื่อได้เงิน
+              PromptPay พร้อมใช้แบบสแกน QR + พิมพ์หลังขาย
               {isValidPromptPayId(promptPayId)
                 ? ` · พร้อม (${maskPromptPayId(promptPayId)})`
                 : " · ตั้งเลขด้านล่างก่อนขาย"}
@@ -233,7 +261,23 @@ export function PosBusinessSettingsView() {
                   checked={autoPrintReceipt}
                   onChange={(e) => setAutoPrintReceipt(e.target.checked)}
                 />
-                <span>พิมพ์ใบเสร็จอัตโนมัติหลังขาย</span>
+                <span>พิมพ์ใบเสร็จลูกค้าหลังขาย</span>
+              </label>
+              <label className="pos-biz-check pos-biz-span2">
+                <input
+                  type="checkbox"
+                  checked={autoPrintKitchen}
+                  onChange={(e) => setAutoPrintKitchen(e.target.checked)}
+                />
+                <span>พิมพ์ใบสั่งครัวหลังขาย</span>
+              </label>
+              <label className="pos-biz-check pos-biz-span2">
+                <input
+                  type="checkbox"
+                  checked={autoPrintBar}
+                  onChange={(e) => setAutoPrintBar(e.target.checked)}
+                />
+                <span>พิมพ์ใบสั่งบาร์น้ำหลังขาย</span>
               </label>
             </div>
             <button type="submit" className="pos-btn-orange pos-biz-save" disabled={busy}>

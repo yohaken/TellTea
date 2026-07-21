@@ -175,7 +175,7 @@ function MoreView() {
             <Settings size={22} />
             <div>
               <strong>ตั้งค่าโมดูล</strong>
-              <p>ผลิต · ชง · SmartCheck — สินค้า เรท และรายการเช็ค</p>
+              <p>ร้าน · อัปเดต · POS · ผลิต · ชง · คลัง</p>
             </div>
           </Link>
         ) : null}

@@ -7,7 +7,6 @@ import { isValidPromptPayId, maskPromptPayId, normalizePromptPayId } from "@/lib
 
 export function PosPaymentSetup({ onError }: { onError: (msg: string | null) => void }) {
   const [promptPayId, setPromptPayId] = useState("");
-  const [autoPrintReceipt, setAutoPrintReceipt] = useState(true);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
@@ -15,7 +14,6 @@ export function PosPaymentSetup({ onError }: { onError: (msg: string | null) => 
     void getPosShopSettings()
       .then((s) => {
         setPromptPayId(s.promptPayId);
-        setAutoPrintReceipt(s.autoPrintReceipt);
       })
       .catch((err) => onError((err as Error).message))
       .finally(() => setLoading(false));
@@ -31,7 +29,7 @@ export function PosPaymentSetup({ onError }: { onError: (msg: string | null) => 
         onError("เลข PromptPay ไม่ถูกต้อง — ใช้เบอร์ 10 หลัก (0…) หรือเลขภาษี 13 หลัก");
         return;
       }
-      await savePosShopSettings({ promptPayId: normalized, autoPrintReceipt });
+      await savePosShopSettings({ promptPayId: normalized });
       setPromptPayId(normalized);
     } catch (err) {
       onError((err as Error).message);
@@ -49,7 +47,7 @@ export function PosPaymentSetup({ onError }: { onError: (msg: string | null) => 
       <p className="muted settings-card-lead">
         PromptPay สำหรับสแกนจ่ายบนแท็บเล็ต
         {promptPayId ? ` · ${maskPromptPayId(promptPayId)}` : ""}
-        {" · "}ข้อมูลร้านบนสลิปอยู่ที่การ์ด &quot;ข้อมูลร้านบนสลิป&quot;
+        {" · "}พิมพ์หลังขายอยู่การ์ดถัดไป
       </p>
 
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
@@ -64,14 +62,6 @@ export function PosPaymentSetup({ onError }: { onError: (msg: string | null) => 
               placeholder="เบอร์ 08xxxxxxxx หรือเลขผู้เสียภาษี"
               inputMode="numeric"
             />
-          </label>
-          <label className="pos-settings-check">
-            <input
-              type="checkbox"
-              checked={autoPrintReceipt}
-              onChange={(e) => setAutoPrintReceipt(e.target.checked)}
-            />
-            <span>พิมพ์ใบเสร็จอัตโนมัติหลังขายสำเร็จ</span>
           </label>
           <button type="submit" className="primary-btn" disabled={busy}>
             {busy ? "กำลังบันทึก..." : "บันทึก"}

@@ -63,7 +63,10 @@ export function PosPrinterSetup({ onError }: { onError: (msg: string | null) => 
     setBusy(true);
     onError(null);
     try {
-      await savePosPrinterSetup(setup);
+      await savePosPrinterSetup({
+        printers: setup.printers,
+        deviceReceiptPrinter: setup.deviceReceiptPrinter,
+      });
     } catch (err) {
       onError((err as Error).message);
     } finally {
@@ -236,28 +239,9 @@ export function PosPrinterSetup({ onError }: { onError: (msg: string | null) => 
             })}
           </div>
 
-          <fieldset className="pos-printer-auto">
-            <legend>พิมพ์อัตโนมัติหลังขาย</legend>
-            <label className="pos-settings-check">
-              <input
-                type="checkbox"
-                checked={setup.autoPrintKitchen}
-                onChange={(e) => setSetup((s) => ({ ...s, autoPrintKitchen: e.target.checked }))}
-              />
-              <span>ส่งใบสั่งไปครัว (Desktop 80mm)</span>
-            </label>
-            <label className="pos-settings-check">
-              <input
-                type="checkbox"
-                checked={setup.autoPrintBar}
-                onChange={(e) => setSetup((s) => ({ ...s, autoPrintBar: e.target.checked }))}
-              />
-              <span>ส่งใบสั่งไปบาร์น้ำ (Desktop 80mm)</span>
-            </label>
-            <p className="muted" style={{ fontSize: "0.85rem", margin: "0.35rem 0 0" }}>
-              ใบเสร็จลูกค้าตั้งที่ &quot;ชำระเงิน POS&quot; ด้านล่าง
-            </p>
-          </fieldset>
+          <p className="muted" style={{ fontSize: "0.85rem", margin: "0.15rem 0 0" }}>
+            เปิด/ปิดพิมพ์หลังขายอยู่การ์ด &quot;พิมพ์หลังขาย&quot;
+          </p>
 
           <button type="submit" className="primary-btn" disabled={busy}>
             {busy ? "กำลังบันทึก..." : "บันทึกเครื่องพิมพ์"}
