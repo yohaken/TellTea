@@ -6,10 +6,8 @@ import { Settings } from "lucide-react";
 import { AppUpdateSetup } from "@/components/AppUpdateSetup";
 import { BusinessProfileSetup } from "@/components/BusinessProfileSetup";
 import { AuthGate } from "@/components/AuthGate";
-import { ChecklistSetup } from "@/components/ChecklistSetup";
 import { NavMenuOrderSetup } from "@/components/NavMenuOrderSetup";
 import { useAuth } from "@/lib/auth";
-import { seedChecklistItemsIfEmpty } from "@/lib/checklist";
 
 export default function SettingsPage() {
   return (
@@ -25,10 +23,6 @@ function SettingsView() {
   const isOwner = staff?.role === "owner";
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  async function reloadChecklist() {
-    await seedChecklistItemsIfEmpty();
-  }
 
   useEffect(() => {
     if (staff && !isOwner) {
@@ -50,8 +44,9 @@ function SettingsView() {
         ตั้งค่าโมดูล
       </h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        SmartCheck · โปรไฟล์กิจการ (AI) · ลำดับเมนู · อัปเดตแอป — เฉพาะเจ้าของ
-        (ตั้งค่า POS เมนูอยู่ที่ POS → จัดการ Pos · คลังอยู่หน้า คลัง · สินค้าผลิตอยู่หน้า ผลิต · เรทโบนัสอยู่หน้า สรุปโบนัส)
+        โปรไฟล์กิจการ · เมนูหลัก · อัปเดตแอป — เฉพาะเจ้าของ · แตะหัวข้อเพื่อพับ/ขยาย
+        (SmartCheck อยู่หน้าเช็ค → รายการ SOP · POS เมนูอยู่ที่ POS → จัดการ Pos · คลังอยู่หน้า คลัง ·
+        สินค้าผลิตอยู่หน้า ผลิต · เรทโบนัสอยู่หน้า สรุปโบนัส)
       </p>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -60,12 +55,8 @@ function SettingsView() {
       {!loading ? (
         <div className="owner-settings-stack">
           <BusinessProfileSetup onError={setError} />
-          <AppUpdateSetup onError={setError} />
           <NavMenuOrderSetup onError={setError} />
-          <ChecklistSetup
-            onReload={() => void reloadChecklist().catch((err) => setError((err as Error).message))}
-            onError={setError}
-          />
+          <AppUpdateSetup onError={setError} />
         </div>
       ) : null}
     </div>

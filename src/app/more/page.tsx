@@ -159,7 +159,7 @@ function MoreView() {
             <Settings size={22} />
             <div>
               <strong>ตั้งค่าโมดูล</strong>
-              <p>SmartCheck · โปรไฟล์ AI · ลำดับเมนู · อัปเดตแอป — สินค้าผลิตอยู่หน้าผลิต</p>
+              <p>โปรไฟล์ AI · เมนูหลัก · อัปเดตแอป — SmartCheck อยู่หน้าเช็ค · สินค้าผลิตอยู่หน้าผลิต</p>
             </div>
           </Link>
         ) : null}

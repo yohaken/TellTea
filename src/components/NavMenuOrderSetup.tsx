@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, LayoutList, RotateCcw } from "lucide-react";
+import { SettingsFold } from "@/components/SettingsFold";
 import { useAuth } from "@/lib/auth";
 import {
   DEFAULT_DOCK_TAB_KEYS,
@@ -100,16 +101,21 @@ export function NavMenuOrderSetup({ onError }: { onError: (msg: string | null) =
   const moreKeys = NAV_MODULE_KEYS.filter((k) => !ui.dockTabKeys.includes(k));
 
   return (
-    <section className="owner-settings-section">
-      <h2 className="owner-settings-title">
-        <LayoutList size={16} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} />{" "}
-        เมนูหลัก (แถบล่าง)
-      </h2>
-      <p className="muted owner-settings-hint">
-        กำหนดจำนวนปุ่มและเลือกโมดูลบนแถบล่าง — ที่ไม่ได้เลือกจะไปหน้า <strong>อื่นๆ</strong> อัตโนมัติ
-        (ยังไม่รวมปุ่ม อื่นๆ) พนักงานเห็นเฉพาะตามสิทธิ์
-      </p>
-
+    <SettingsFold
+      title={
+        <>
+          <LayoutList size={16} aria-hidden />
+          เมนูหลัก (แถบล่าง)
+        </>
+      }
+      hint={
+        <>
+          กำหนดจำนวนปุ่มและเลือกโมดูลบนแถบล่าง — ที่ไม่ได้เลือกจะไปหน้า <strong>อื่นๆ</strong> อัตโนมัติ
+          (ยังไม่รวมปุ่ม อื่นๆ) พนักงานเห็นเฉพาะตามสิทธิ์
+        </>
+      }
+      defaultOpen={false}
+    >
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading ? (
@@ -200,6 +206,6 @@ export function NavMenuOrderSetup({ onError }: { onError: (msg: string | null) =
           </button>
         </>
       ) : null}
-    </section>
+    </SettingsFold>
   );
 }

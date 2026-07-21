@@ -102,9 +102,9 @@ export function ChecklistSetup({
 
   return (
     <section className="owner-settings-section">
-      <h2 className="owner-settings-title">SmartCheck SOP</h2>
+      <h2 className="owner-settings-title">รายการ SOP</h2>
       <p className="muted owner-settings-hint">
-        ปรับแต่งรายการตรวจ — พนักงานจะเห็นรายการที่เปิดใช้งานเท่านั้น
+        ปรับแต่งรายการตรวจ — พนักงานจะเห็นรายการที่เปิดใช้งานเท่านั้น (เจ้าของเท่านั้น)
       </p>
 
       <form className="form-card entry-form" onSubmit={(e) => void onAdd(e)}>

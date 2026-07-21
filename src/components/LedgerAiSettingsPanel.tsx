@@ -137,7 +137,7 @@ export function LedgerAiSettingsPanel({ actorId }: Props) {
         <form className="ledger-ai-settings-body" onSubmit={(e) => void onSave(e)}>
           <p className="muted ledger-ai-settings-hint">
             พนักงานเห็นเฉพาะผล AI — แก้ประเภทได้เฉพาะคุณ · คีย์เก็บฝั่งเซิร์ฟเวอร์
-            · บริบทร้านแก้ได้ที่ อื่นๆ → ตั้งค่าโมดูล → โปรไฟล์กิจการ
+            · บริบทร้านแก้ได้ที่ อื่นๆ → ตั้งค่าโมดูล → โปรไฟล์กิจการ (พับหัวข้อ)
           </p>
 
           <label className="ledger-ai-check">

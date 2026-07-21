@@ -34,6 +34,7 @@ import {
 } from "@/lib/check-shift-window";
 import { isFutureLocalDay } from "@/lib/ot-grid";
 import { AuthGate } from "@/components/AuthGate";
+import { ChecklistSetup } from "@/components/ChecklistSetup";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { useAuth } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
@@ -66,6 +67,8 @@ import {
 
 type DraftStatus = CheckStatus | "pending";
 
+type OwnerView = "history" | "setup";
+
 type DraftItem = {
   itemId: string;
   itemName: string;
@@ -90,6 +93,9 @@ function CheckView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isOwner = staff?.role === "owner";
+  const [ownerView, setOwnerView] = useState<OwnerView>(() =>
+    searchParams.get("tab") === "setup" ? "setup" : "history",
+  );
   const [formOpen, setFormOpen] = useState(false);
   const [formSeed, setFormSeed] = useState<{ date?: string; shift?: CheckShiftId }>({});
   const [items, setItems] = useState<ChecklistItem[]>([]);
@@ -134,10 +140,15 @@ function CheckView() {
   }, [staff, isOwner]);
 
   useEffect(() => {
+    if (!isOwner && ownerView === "setup") setOwnerView("history");
+  }, [isOwner, ownerView]);
+
+  useEffect(() => {
     const date = searchParams.get("date");
     const shift = searchParams.get("shift");
     if (!date || !shift) return;
     if (shift !== "late" && shift !== "morning" && shift !== "evening") return;
+    setOwnerView("history");
     setFormSeed({ date, shift });
     setFormOpen(true);
   }, [searchParams]);
@@ -145,6 +156,9 @@ function CheckView() {
   useBodyScrollLock(formOpen);
 
   if (!can(staff, "checklist")) return null;
+
+  const showSetup = isOwner && ownerView === "setup";
+  const showHistory = !showSetup;
 
   function openForm() {
     const active = getActiveCheckSlot();
@@ -178,12 +192,50 @@ function CheckView() {
           <ClipboardCheck size={18} aria-hidden />
           SmartCheck SOP
         </h1>
+        {isOwner ? (
+          <div className="stock-owner-tabs" role="tablist" aria-label="มุมมองเช็คเจ้าของ">
+            <button
+              type="button"
+              role="tab"
+              className={ownerView === "history" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+              aria-selected={ownerView === "history"}
+              onClick={() => {
+                setOwnerView("history");
+                setFormOpen(false);
+                router.replace("/check/", { scroll: false });
+              }}
+            >
+              ประวัติเช็ค
+            </button>
+            <button
+              type="button"
+              role="tab"
+              className={ownerView === "setup" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+              aria-selected={ownerView === "setup"}
+              onClick={() => {
+                setOwnerView("setup");
+                setFormOpen(false);
+                router.replace("/check/?tab=setup", { scroll: false });
+              }}
+            >
+              รายการ SOP
+              {items.length ? ` (${items.length})` : ""}
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading ? (
+      {!loading && showSetup ? (
+        <ChecklistSetup
+          onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
+          onError={setError}
+        />
+      ) : null}
+
+      {!loading && showHistory ? (
         <CheckSummary
           records={records}
           isOwner={isOwner}
@@ -192,7 +244,7 @@ function CheckView() {
         />
       ) : null}
 
-      {formOpen && !loading ? (
+      {formOpen && !loading && showHistory ? (
         <div className="modal-backdrop edit-modal is-module-form is-check-form" onClick={closeForm}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <CheckForm
@@ -209,11 +261,13 @@ function CheckView() {
         </div>
       ) : null}
 
-      <ModuleTabDock
-        ariaLabel="มุมมอง SmartCheck"
-        formOpen={formOpen}
-        onAdd={openForm}
-      />
+      {showHistory ? (
+        <ModuleTabDock
+          ariaLabel="มุมมอง SmartCheck"
+          formOpen={formOpen}
+          onAdd={openForm}
+        />
+      ) : null}
     </div>
   );
 }
@@ -272,7 +326,7 @@ function CheckForm({
       return;
     }
     if (!items.length) {
-      onError("ยังไม่มีรายการตรวจ — ให้เจ้าของตั้งค่าที่ อื่นๆ → ตั้งค่าโมดูล");
+      onError("ยังไม่มีรายการตรวจ — ให้เจ้าของตั้งค่าที่ เช็ค → รายการ SOP");
       return;
     }
     setDrafts(

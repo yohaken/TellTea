@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
+import { SettingsFold } from "@/components/SettingsFold";
 import { useAuth } from "@/lib/auth";
 import { CLIENT_BUILD } from "@/lib/app-update";
 import { saveForceAppUpdate, subscribeAppReleaseSettings } from "@/lib/app-release";
@@ -42,15 +43,20 @@ export function AppUpdateSetup({ onError }: { onError: (msg: string | null) => v
   }
 
   return (
-    <section className="settings-card">
-      <h2 className="settings-card-title" style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-        <RefreshCw size={18} aria-hidden />
-        อัปเดตแอป
-      </h2>
-      <p className="muted settings-card-lead">
-        เวอร์ชันปัจจุบันบนเครื่องนี้: <strong>v{CLIENT_BUILD}</strong>
-      </p>
-
+    <SettingsFold
+      title={
+        <>
+          <RefreshCw size={18} aria-hidden />
+          อัปเดตแอป
+        </>
+      }
+      hint={
+        <>
+          เวอร์ชันปัจจุบันบนเครื่องนี้: <strong>v{CLIENT_BUILD}</strong>
+        </>
+      }
+      defaultOpen={false}
+    >
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading ? (
@@ -73,6 +79,6 @@ export function AppUpdateSetup({ onError }: { onError: (msg: string | null) => v
           </label>
         </div>
       ) : null}
-    </section>
+    </SettingsFold>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Building2 } from "lucide-react";
 import { BusinessLogoField } from "@/components/BusinessLogoField";
+import { SettingsFold } from "@/components/SettingsFold";
 import { useAuth } from "@/lib/auth";
 import { loadBrandLogo } from "@/lib/brand-logo";
 import {
@@ -82,15 +83,17 @@ export function BusinessProfileSetup({ onError }: Props) {
   }
 
   return (
-    <section className="settings-card business-profile-card">
-      <h2 className="settings-card-title">
-        <Building2 size={18} aria-hidden />
-        โปรไฟล์กิจการ (ให้ AI อ่าน)
-      </h2>
-      <p className="muted settings-card-lead">
-        บริบทร้านสำหรับจัดประเภทบัญชีอัตโนมัติ — ไม่ใช่ข้อมูลสลิป POS
-      </p>
-
+    <SettingsFold
+      title={
+        <>
+          <Building2 size={18} aria-hidden />
+          โปรไฟล์กิจการ (ให้ AI อ่าน)
+        </>
+      }
+      hint="บริบทร้านสำหรับจัดประเภทบัญชีอัตโนมัติ — ไม่ใช่ข้อมูลสลิป POS"
+      defaultOpen={false}
+      className="business-profile-card"
+    >
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading ? (
@@ -184,6 +187,6 @@ export function BusinessProfileSetup({ onError }: Props) {
           {msg ? <p className="ledger-ai-settings-msg">{msg}</p> : null}
         </form>
       ) : null}
-    </section>
+    </SettingsFold>
   );
 }

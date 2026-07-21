@@ -22,7 +22,7 @@ const settingsLib = read("src/lib/settings.ts");
 const rules = read("firestore.rules");
 const smoke = read("scripts/smoke-hosting-export.mjs");
 
-assert.match(version, /APP_BUILD = 205/);
+assert.match(version, /APP_BUILD = 206/);
 
 assert.match(alerts, /router\.replace\("\/more\/"\)/);
 assert.doesNotMatch(more, /href: "\/alerts\/"/);
@@ -37,7 +37,7 @@ assert.doesNotMatch(smoke, /"alerts"/);
 
 assert.doesNotMatch(settings, /PosDeviceSetup|PosShopPaySetup|PosPrinterSetup|MenuCatalogSetup|PosSalesSetup/);
 assert.match(settings, /BusinessProfileSetup/);
-assert.match(settings, /ChecklistSetup/);
+assert.doesNotMatch(settings, /ChecklistSetup/);
 
 assert.match(posSales, /Suspense/);
 assert.match(report, /จัดการ Pos/);
