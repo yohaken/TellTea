@@ -157,8 +157,5 @@ jobs:
       - name: Verify live install page + APK download
         run: node scripts/smoke-pos-install-live.mjs
 
-      - name: Send owner test popup to online POS tablets
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: node scripts/ping-pos-devices.mjs
-        continue-on-error: true
+      # one-shot channel proof was useful once; keep dedicated ping workflow instead
+      # (avoids failing/noise on every deploy when tablets are idle)
