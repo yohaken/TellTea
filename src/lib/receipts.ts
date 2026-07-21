@@ -99,8 +99,8 @@ export async function fileToReceiptDataUrl(
   return dataUrl;
 }
 
-/** Soft target for brand logos (PNG with alpha stays under one Firestore doc). */
-export const LOGO_DATA_URL_SOFT_MAX = 500_000;
+/** Soft target for brand logos (PNG with alpha) — keep tiny for AppShell. */
+export const LOGO_DATA_URL_SOFT_MAX = 80_000;
 
 function isPngFile(file: File) {
   const type = (file.type || "").toLowerCase();
@@ -146,13 +146,14 @@ export async function fileToLogoDataUrl(
   const soft = Math.min(Math.max(40_000, maxChars), RECEIPT_DATA_URL_HARD_MAX);
 
   if (isPngFile(file)) {
-    let dataUrl = await readAsDataUrl(file);
+    // Always start from a modest edge — full-res PNGs freeze the UI when cached/fetched.
+    let edge = 320;
+    let dataUrl = await resizeToPngDataUrl(file, edge);
     if (dataUrl.length <= soft) return dataUrl;
-    let edge = 1024;
-    while (edge >= 256) {
+    while (edge >= 96) {
+      edge = Math.round(edge * 0.75);
       dataUrl = await resizeToPngDataUrl(file, edge);
       if (dataUrl.length <= soft) return dataUrl;
-      edge = Math.round(edge * 0.75);
     }
     throw new Error("โลโก้ PNG ใหญ่เกินไป — ลดขนาดไฟล์แล้วลองใหม่");
   }

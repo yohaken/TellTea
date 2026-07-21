@@ -3,11 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Trash2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { saveBusinessLogo } from "@/lib/business-profile";
-import { isEvidencePhotoRef, resolveEvidencePhotoSrc } from "@/lib/evidence-photos";
+import {
+  getBrandLogoMemory,
+  loadBrandLogo,
+  saveBrandLogo,
+} from "@/lib/brand-logo";
 import { fileToLogoDataUrl, friendlyFirestoreWriteError } from "@/lib/receipts";
 
 type Props = {
+  /** "brandLogo" when set — bytes live in meta/brandLogo */
   value: string;
   onChange: (logoUrl: string) => void;
   onError?: (msg: string) => void;
@@ -16,38 +20,32 @@ type Props = {
 
 /**
  * อัปโหลดโลโก้ร้าน (PNG โปร่งใสแนะนำ)
- * พรีวิวบนพื้นดำ + บันทึกทันทีเพื่อแทนโลโก้เดิมทั่วแอป
+ * พรีวิวบนพื้นดำ · บันทึกที่ meta/brandLogo (แยกจากโปรไฟล์ข้อความ)
  */
 export function BusinessLogoField({ value, onChange, onError, disabled }: Props) {
   const { actorId } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
-  const [previewSrc, setPreviewSrc] = useState("");
+  const [previewSrc, setPreviewSrc] = useState(() => getBrandLogoMemory());
 
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
-      const raw = value.trim();
-      if (!raw) {
-        if (!cancelled) setPreviewSrc("");
-        return;
+    void loadBrandLogo().then((src) => {
+      if (!cancelled) {
+        setPreviewSrc(src);
+        onChange(src ? "brandLogo" : "");
       }
-      try {
-        const src = isEvidencePhotoRef(raw) ? await resolveEvidencePhotoSrc(raw) : raw;
-        if (!cancelled) setPreviewSrc(src);
-      } catch {
-        if (!cancelled) setPreviewSrc(raw.startsWith("data:") ? raw : "");
-      }
-    })();
+    });
     return () => {
       cancelled = true;
     };
-  }, [value]);
+    // intentionally once on mount — parent keeps pointer only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  async function persist(next: string) {
-    onChange(next);
-    await saveBusinessLogo(next, actorId || "owner");
-  }
+  useEffect(() => {
+    if (!value) setPreviewSrc("");
+  }, [value]);
 
   async function onPick(fileList: FileList | null) {
     const file = fileList?.[0];
@@ -55,10 +53,10 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
     setBusy(true);
     onError?.("");
     try {
-      // เก็บเป็น data URL บน meta/businessProfile — อ่านได้แม้ยังไม่ล็อกอิน (หน้า login)
       const dataUrl = await fileToLogoDataUrl(file);
-      setPreviewSrc(dataUrl);
-      await persist(dataUrl);
+      const saved = await saveBrandLogo(dataUrl, actorId || "owner");
+      setPreviewSrc(saved);
+      onChange(saved ? "brandLogo" : "");
     } catch (err) {
       onError?.(friendlyFirestoreWriteError(err, "อัปโหลดโลโก้ไม่สำเร็จ"));
     } finally {
@@ -71,8 +69,9 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
     setBusy(true);
     onError?.("");
     try {
+      await saveBrandLogo("", actorId || "owner");
       setPreviewSrc("");
-      await persist("");
+      onChange("");
     } catch (err) {
       onError?.(friendlyFirestoreWriteError(err, "ลบโลโก้ไม่สำเร็จ"));
     } finally {
@@ -116,7 +115,7 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
           <ImagePlus size={16} aria-hidden />
           {busy ? "กำลังอัปโหลด…" : previewSrc ? "เปลี่ยนโลโก้" : "อัปโหลดโลโก้"}
         </button>
-        {value ? (
+        {previewSrc ? (
           <button
             type="button"
             className="ghost-btn"

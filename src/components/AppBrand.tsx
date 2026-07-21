@@ -3,27 +3,12 @@
 import { useEffect, useState } from "react";
 import {
   BRAND_LOGO_CHANGED_EVENT,
-  getBusinessProfile,
-  peekCachedBrandLogo,
-  cacheBrandLogo,
-} from "@/lib/business-profile";
-import { isEvidencePhotoRef, resolveEvidencePhotoSrc } from "@/lib/evidence-photos";
+  getBrandLogoMemory,
+  loadBrandLogo,
+  purgeLegacyBrandLogoStorage,
+} from "@/lib/brand-logo";
 import { appVersionLabel } from "@/lib/version";
 import { cn } from "@/lib/utils";
-
-async function resolveBrandLogoSrc(raw: string): Promise<string> {
-  const url = String(raw || "").trim();
-  if (!url) return "";
-  if (url.startsWith("data:") || /^https?:\/\//i.test(url)) return url;
-  if (isEvidencePhotoRef(url)) {
-    try {
-      return await resolveEvidencePhotoSrc(url);
-    } catch {
-      return "";
-    }
-  }
-  return url;
-}
 
 export function AppBrand({
   className,
@@ -39,38 +24,20 @@ export function AppBrand({
   versionLabel?: string;
 }) {
   const label = versionLabel ?? appVersionLabel();
-  const [customLogoSrc, setCustomLogoSrc] = useState<string>(() => peekCachedBrandLogo());
+  const [customLogoSrc, setCustomLogoSrc] = useState<string>(() => getBrandLogoMemory());
 
   useEffect(() => {
     if (!showLogo) return;
     let cancelled = false;
+    purgeLegacyBrandLogoStorage();
 
-    async function applyRaw(raw: string) {
-      const src = await resolveBrandLogoSrc(raw);
-      if (cancelled) return;
-      setCustomLogoSrc(src);
-      if (src.startsWith("data:") || /^https?:\/\//i.test(src)) {
-        cacheBrandLogo(src);
-      }
-    }
-
-    void (async () => {
-      const cached = peekCachedBrandLogo();
-      if (cached && !cancelled) {
-        await applyRaw(cached);
-      }
-      try {
-        const profile = await getBusinessProfile();
-        const url = (profile.logoUrl || "").trim();
-        if (!cancelled) await applyRaw(url);
-      } catch {
-        /* keep cache / empty → fallback SVG */
-      }
-    })();
+    void loadBrandLogo().then((src) => {
+      if (!cancelled) setCustomLogoSrc(src);
+    });
 
     function onBrandLogo(ev: Event) {
-      const detail = String((ev as CustomEvent).detail ?? "").trim();
-      void applyRaw(detail);
+      const detail = String((ev as CustomEvent).detail ?? "");
+      if (!cancelled) setCustomLogoSrc(detail);
     }
     window.addEventListener(BRAND_LOGO_CHANGED_EVENT, onBrandLogo);
     return () => {

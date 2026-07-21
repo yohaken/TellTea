@@ -7,7 +7,8 @@ import { getDb } from "./firebase";
 
 /**
  * โปรไฟล์กิจการ — ให้ AI จัดประเภทบัญชีอ่านบริบท
- * เก็บที่ meta/businessProfile (ไม่มี secret — staff อ่านได้)
+ * เก็บที่ meta/businessProfile (ไม่มี secret — อ่านสาธารณะได้สำหรับข้อความ)
+ * โลโก้อยู่แยกที่ meta/brandLogo — ห้ามฝัง data URL ในเอกสารนี้
  */
 export type BusinessProfile = {
   /** เช่น ร้านชานมไข่มุก + เบเกอรี่ */
@@ -27,8 +28,8 @@ export type BusinessProfile = {
   /** หมายเหตุเพิ่มให้ AI */
   aiNotes: string;
   /**
-   * โลโก้ร้าน — มักเป็น PNG โปร่งใส
-   * ค่าเป็น `evp:{id}` หรือ https/data URL
+   * สถานะโลโก้แบบเบา — "brandLogo" เมื่อมีรูปที่ meta/brandLogo
+   * (รุ่นเก่าอาจเป็น data:/evp: — ระบบจะ migrate ออก)
    */
   logoUrl: string;
   updatedAt: number;
@@ -56,51 +57,18 @@ export const DEFAULT_BUSINESS_PROFILE: BusinessProfile = {
   updatedBy: "",
 };
 
-/** localStorage + event — ให้ AppBrand แทนโลโก้เดิมทันทีหลังอัปโหลด */
-export const BRAND_LOGO_STORAGE_KEY = "telltea-brand-logo-v1";
-export const BRAND_LOGO_CHANGED_EVENT = "telltea-brand-logo";
-
 function profileRef() {
   return doc(getDb(), "meta", "businessProfile");
 }
 
-export function peekCachedBrandLogo(): string {
-  if (typeof window === "undefined") return "";
-  try {
-    return String(window.localStorage.getItem(BRAND_LOGO_STORAGE_KEY) || "").trim();
-  } catch {
-    return "";
-  }
-}
-
-export function cacheBrandLogo(logoUrl: string) {
-  if (typeof window === "undefined") return;
-  const next = String(logoUrl || "").trim();
-  try {
-    if (next) window.localStorage.setItem(BRAND_LOGO_STORAGE_KEY, next);
-    else window.localStorage.removeItem(BRAND_LOGO_STORAGE_KEY);
-  } catch {
-    /* quota / private mode */
-  }
-  window.dispatchEvent(new CustomEvent(BRAND_LOGO_CHANGED_EVENT, { detail: next }));
-}
-
-/** บันทึกโลโก้ทันที (data URL / evp) — แทนโลโก้เดิมทั่วแอปโดยไม่ต้องรอเซฟฟอร์มทั้งใบ */
-export async function saveBusinessLogo(logoUrl: string, updatedBy: string): Promise<void> {
-  const next = String(logoUrl || "").trim();
-  await setDoc(
-    profileRef(),
-    {
-      logoUrl: next,
-      updatedAt: Date.now(),
-      updatedBy,
-    },
-    { merge: true },
-  );
-  cacheBrandLogo(next);
-}
-
 function mapProfile(data: Partial<BusinessProfile> | undefined): BusinessProfile {
+  const rawLogo = String(data?.logoUrl || "").trim();
+  // Never keep fat payloads in the mapped text profile used by settings forms.
+  const logoUrl =
+    rawLogo.startsWith("data:") || rawLogo.startsWith("evp:")
+      ? "brandLogo"
+      : rawLogo.slice(0, 64);
+
   return {
     businessType: String(data?.businessType ?? DEFAULT_BUSINESS_PROFILE.businessType).trim(),
     productsServices: String(
@@ -112,7 +80,7 @@ function mapProfile(data: Partial<BusinessProfile> | undefined): BusinessProfile
     openHours: String(data?.openHours ?? DEFAULT_BUSINESS_PROFILE.openHours).trim(),
     costStructure: String(data?.costStructure ?? DEFAULT_BUSINESS_PROFILE.costStructure).trim(),
     aiNotes: String(data?.aiNotes ?? DEFAULT_BUSINESS_PROFILE.aiNotes).trim(),
-    logoUrl: String(data?.logoUrl || "").trim(),
+    logoUrl,
     updatedAt: Number(data?.updatedAt) || 0,
     updatedBy: String(data?.updatedBy || ""),
   };
@@ -141,7 +109,13 @@ export async function saveBusinessProfile(
   patch: Omit<BusinessProfile, "updatedAt" | "updatedBy">,
   updatedBy: string,
 ): Promise<void> {
-  const logoUrl = String(patch.logoUrl || "").trim();
+  // Never write image bytes into businessProfile.
+  const logoPointer = String(patch.logoUrl || "").trim();
+  const logoUrl =
+    logoPointer.startsWith("data:") || logoPointer.length > 64
+      ? "brandLogo"
+      : logoPointer;
+
   await setDoc(
     profileRef(),
     {
@@ -159,7 +133,6 @@ export async function saveBusinessProfile(
     },
     { merge: true },
   );
-  cacheBrandLogo(logoUrl);
 }
 
 /** แปลงโปรไฟล์เป็นข้อความให้โมเดล AI อ่าน */

@@ -548,9 +548,10 @@ service cloud.firestore {
     }
 
     match /meta/{docId} {
-      // businessProfile.logoUrl is shown on login before auth — public read OK (no secrets)
+      // brandLogo + businessProfile text are public (no secrets) so login can show the mark
       // aiSettings holds Gemini API key — owner-only read
       allow read: if docId == 'businessProfile'
+        || docId == 'brandLogo'
         || (docId == 'aiSettings' && isOwner())
         || (docId != 'aiSettings' && isStaff())
         || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes'));

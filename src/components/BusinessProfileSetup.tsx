@@ -4,16 +4,14 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Building2 } from "lucide-react";
 import { BusinessLogoField } from "@/components/BusinessLogoField";
 import { useAuth } from "@/lib/auth";
+import { loadBrandLogo } from "@/lib/brand-logo";
 import {
   DEFAULT_BUSINESS_PROFILE,
-  cacheBrandLogo,
   ensureBusinessProfileSeeded,
   getBusinessProfile,
-  saveBusinessLogo,
   saveBusinessProfile,
   type BusinessProfile,
 } from "@/lib/business-profile";
-import { isEvidencePhotoRef, resolveEvidencePhotoSrc } from "@/lib/evidence-photos";
 
 type Props = {
   onError: (msg: string | null) => void;
@@ -31,23 +29,10 @@ export function BusinessProfileSetup({ onError }: Props) {
     let cancelled = false;
     void (async () => {
       try {
+        // Migrate fat legacy logos off businessProfile (if any) without blocking the form.
+        void loadBrandLogo();
         const seeded = await ensureBusinessProfileSeeded(actorId || "owner");
-        let next = seeded;
-        // โลโก้รุ่นเก่าเป็น evp: — แปลงเป็น data URL ให้อ่านได้บนหน้า login
-        if (isEvidencePhotoRef(seeded.logoUrl)) {
-          try {
-            const dataUrl = await resolveEvidencePhotoSrc(seeded.logoUrl);
-            if (dataUrl.startsWith("data:")) {
-              await saveBusinessLogo(dataUrl, actorId || "owner");
-              next = { ...seeded, logoUrl: dataUrl };
-            }
-          } catch {
-            /* keep evp until re-upload */
-          }
-        } else if (seeded.logoUrl) {
-          cacheBrandLogo(seeded.logoUrl);
-        }
-        if (!cancelled) setProfile(next);
+        if (!cancelled) setProfile(seeded);
       } catch {
         try {
           const p = await getBusinessProfile();
@@ -80,7 +65,7 @@ export function BusinessProfileSetup({ onError }: Props) {
           openHours: profile.openHours,
           costStructure: profile.costStructure,
           aiNotes: profile.aiNotes,
-          logoUrl: profile.logoUrl,
+          logoUrl: profile.logoUrl === "brandLogo" || profile.logoUrl ? "brandLogo" : "",
         },
         actorId || "owner",
       );
