@@ -26,14 +26,44 @@
     <string name="heartbeat_fail">ส่งสัญญาณไม่สำเร็จ: %1$s</string>
     <string name="heartbeat_fail_human">เน็ตหลุดชั่วคราว — ร้านจะเห็นอัตโนมัติ</string>
 
+    <string name="shift_opening">กำลังเปิดรอบ…</string>
+    <string name="sell_title">สั่งและชำระเงิน</string>
+    <string name="sell_title_demo">สั่งและชำระ (เมนูเดโม)</string>
+    <string name="sell_loading_menu">กำลังโหลดเมนู…</string>
+    <string name="sell_menu_ready">เมนูพร้อม</string>
+    <string name="sell_menu_demo">ใช้เมนูเดโม — ยังดึงเมนูร้านไม่ได้</string>
+    <string name="sell_menu_empty">ไม่มีเมนูในหมวดนี้</string>
+    <string name="cart_title">ตะกร้า</string>
+    <string name="cart_total_zero">รวม ฿0</string>
+    <string name="cart_total_fmt">รวม ฿%.0f</string>
+    <string name="cart_empty">เลือกเมนูก่อนชำระ</string>
+    <string name="btn_pay_cash">ชำระเงินสด</string>
+    <string name="btn_pay_promptpay">ชำระ PromptPay</string>
+    <string name="btn_receipts">ใบเสร็จ</string>
+    <string name="btn_confirm_sale">ยืนยันขาย</string>
+    <string name="pay_cash_title">รับเงินสด</string>
+    <string name="pay_cash_msg">ยอด %.0f บาท — กรอกเงินที่รับ</string>
+    <string name="pay_cash_short">เงินที่รับน้อยกว่ายอด</string>
+    <string name="pay_pp_title">PromptPay</string>
+    <string name="pay_pp_msg">โอนเข้า %1$s\nยอด %2$.0f บาท\nเมื่อลูกค้าโอนแล้วกดยืนยัน</string>
+    <string name="pay_pp_no_id">ยังไม่มีเลข PromptPay ในตั้งค่าร้าน\nยอด %.0f บาท — กดยืนยันเมื่อรับเงินแล้ว</string>
+    <string name="sell_saving">กำลังบันทึกบิล…</string>
+    <string name="sell_saved_local">บันทึกในเครื่องแล้ว</string>
+    <string name="sell_saved_toast">ขายแล้ว ฿%.0f</string>
+    <string name="sell_synced">ซิงก์แล้ว · %1$s</string>
+    <string name="sell_change">ทอน ฿%.0f</string>
+    <string name="sell_closing_shift">กำลังปิดรอบ…</string>
+    <string name="receipts_title">ประวัติใบเสร็จ</string>
+    <string name="receipts_empty">ยังไม่มีใบเสร็จในเครื่อง</string>
+
     <string name="clock_in_title">พร้อมขาย</string>
     <string name="clock_in_hint">กดเข้างานเมื่อเริ่มขาย · ระบบสแกนเครื่องส่งหลังร้านให้อัตโนมัติ</string>
     <string name="btn_open_shift">เข้างาน</string>
     <string name="btn_close_shift">ออกงาน</string>
     <string name="shift_opened">เข้างานแล้ว</string>
     <string name="shift_closed">ออกงานแล้ว</string>
-    <string name="sell_shell_title">หน้าร้านพร้อม</string>
-    <string name="sell_shell_hint">เมนูและตะกร้าจะมาในรอบถัดไป · ตอนนี้ใช้เข้างาน/ตั้งค่า/ปริ้นเทสได้</string>
+    <string name="sell_shell_title">กำลังขาย</string>
+    <string name="sell_shell_hint">แตะที่นี่เพื่อกลับหน้าเมนู/ตะกร้า · หรือออกงานด้านล่าง</string>
     <string name="sell_status_online">ออนไลน์ · พร้อมขาย</string>
     <string name="sell_status_waiting">รอสัญญาณร้าน…</string>
 

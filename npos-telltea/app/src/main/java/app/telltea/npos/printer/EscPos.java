@@ -30,6 +30,21 @@ public final class EscPos {
         return concat(parts);
     }
 
+    /** Simple sale receipt body (ASCII/TIS-620). */
+    public static byte[] saleReceipt(String body) {
+        List<byte[]> parts = new ArrayList<>();
+        parts.add(new byte[] {0x1B, 0x40});
+        parts.add(new byte[] {0x1B, 0x61, 0x01});
+        parts.add(text("TellTea\n"));
+        parts.add(new byte[] {0x1B, 0x61, 0x00});
+        parts.add(text("----------------\n"));
+        parts.add(text(body == null ? "" : body));
+        if (body == null || !body.endsWith("\n")) parts.add(text("\n"));
+        parts.add(text("----------------\n\n\n"));
+        parts.add(new byte[] {0x1D, 0x56, 0x00});
+        return concat(parts);
+    }
+
     private static String safe(String s) {
         if (s == null || s.trim().isEmpty()) return "-";
         String t = s.trim();

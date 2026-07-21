@@ -9,11 +9,11 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 212/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+9/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.7\.0"/);
-assert.match(read("docs/npos-migration-phases.md"), /N4.*✅|✅ รอบนี้ \(1\.7\.0\)/);
-assert.match(read("docs/npos-migration-phases.md"), /N5.*✅|✅ รอบนี้ \(1\.7\.0\)/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 213/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+10/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.8\.0"/);
+assert.match(read("docs/npos-migration-phases.md"), /N4.*✅|✅ รอบนี้ \(1\.8\.0\)/);
+assert.match(read("docs/npos-migration-phases.md"), /N5.*✅|✅ รอบนี้ \(1\.8\.0\)/);
 assert.match(read("docs/npos-migration-phases.md"), /ทำไม POS web|แผนโคนราก/);
 
 assert.match(read("functions/npos-ops-log.js"), /reportNposOpsLog/);

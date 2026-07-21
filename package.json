@@ -49,6 +49,7 @@
     "test:npos-n3-settings": "node scripts/test-npos-n3-settings.mjs",
     "test:npos-n4-n5-ops-log": "node scripts/test-npos-n4-n5-ops-log.mjs",
     "test:npos-n6-0-shell": "node scripts/test-npos-n6-0-shell.mjs",
+    "test:npos-n6-sell": "node scripts/test-npos-n6-sell.mjs",
     "test:pos-apk-download": "node scripts/test-pos-apk-download.mjs",
     "test:pos-ops-notes": "node scripts/test-pos-ops-notes.mjs",
     "test:pos-owner-ping": "node scripts/test-pos-owner-ping.mjs",
