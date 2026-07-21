@@ -13,6 +13,7 @@ type Props = {
   aiSource: LedgerTypeSource;
   aiStatus: "idle" | "loading" | "ready" | "error";
   aiError: string | null;
+  usedImages?: number;
   /** เจ้าของล็อกแก้ประเภทเอง */
   ownerLocked: boolean;
   typeMode: string;
@@ -30,6 +31,7 @@ export function LedgerTypeField({
   aiSource,
   aiStatus,
   aiError,
+  usedImages = 0,
   ownerLocked,
   typeMode,
   onTypeModeChange,
@@ -44,7 +46,9 @@ export function LedgerTypeField({
       : aiStatus === "error"
         ? "ใช้ค่าสำรองจากชื่อรายการ"
         : aiSource === "ai"
-          ? "จัดประเภทบัญชีโดย AI"
+          ? usedImages > 0
+            ? `จัดประเภทบัญชีโดย AI · ใช้รูป ${usedImages}`
+            : "จัดประเภทบัญชีโดย AI"
           : aiSource === "owner"
             ? "กำหนดโดยเจ้าของ"
             : aiSource === "legacy"
@@ -66,6 +70,9 @@ export function LedgerTypeField({
               : labelLedgerType(displayType || "cogs")}
           </p>
           {aiReason ? <p className="ledger-type-ai-reason">{aiReason}</p> : null}
+          {aiStatus === "ready" && aiSource === "ai" && usedImages === 0 ? (
+            <p className="ledger-type-ai-hint">แนบรูปสินค้า/ใบเสร็จช่วยให้จัดประเภทแม่นขึ้นเมื่อชื่อสั้น</p>
+          ) : null}
           {aiError ? (
             <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.75rem" }}>
               {aiError}
@@ -86,6 +93,9 @@ export function LedgerTypeField({
         <p className="ledger-type-ai-value">{labelLedgerType(displayType || "cogs")}</p>
         {aiReason && !ownerLocked ? (
           <p className="ledger-type-ai-reason">{aiReason}</p>
+        ) : null}
+        {!ownerLocked && aiStatus === "ready" && aiSource === "ai" && usedImages === 0 ? (
+          <p className="ledger-type-ai-hint">แนบรูปสินค้า/ใบเสร็จช่วยให้จัดประเภทแม่นขึ้นเมื่อชื่อสั้น</p>
         ) : null}
         {ownerLocked ? (
           <button type="button" className="ghost-btn ledger-type-reset-ai" onClick={onResetToAi}>

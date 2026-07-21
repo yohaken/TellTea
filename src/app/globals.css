@@ -1568,6 +1568,13 @@ body.modal-open .main-panel {
   color: rgba(28, 42, 31, 0.62);
 }
 
+.ledger-type-ai-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: rgba(47, 107, 79, 0.85);
+}
+
 .ledger-type-reset-ai {
   margin-top: 0.45rem;
   font-size: 0.8rem;

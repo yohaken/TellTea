@@ -13,6 +13,7 @@ export type LedgerAiClassifyState = {
   source: LedgerTypeSource;
   status: "idle" | "loading" | "ready" | "error";
   error: string | null;
+  usedImages: number;
 };
 
 const INITIAL: LedgerAiClassifyState = {
@@ -21,10 +22,13 @@ const INITIAL: LedgerAiClassifyState = {
   source: "heuristic",
   status: "idle",
   error: null,
+  usedImages: 0,
 };
 
 type Options = {
   description: string;
+  /** URL รูปหลักฐาน — ส่งให้ AI เมื่อชื่อกำกวม */
+  imageUrls?: string[];
   /** เมื่อ true จะไม่เรียก AI (เช่น เจ้าของล็อกประเภทเอง) */
   locked: boolean;
   /** ค่าเริ่มจากรายการเดิม */
@@ -33,12 +37,17 @@ type Options = {
   enabled?: boolean;
 };
 
+function imageKey(urls: string[] | undefined) {
+  return (urls || []).map((u) => u.trim()).filter(Boolean).slice(0, 2).join("|");
+}
+
 /**
- * Debounced AI classify จากชื่อรายการปัจจุบัน
+ * Debounced AI classify จากชื่อรายการ (+ รูปถ้ามี)
  * — ถ้า locked จะไม่รีรัน AI (คงค่าที่เจ้าของเลือก)
  */
 export function useLedgerAiClassify({
   description,
+  imageUrls,
   locked,
   initial,
   debounceMs = 650,
@@ -52,12 +61,14 @@ export function useLedgerAiClassify({
         source: initial.source || "owner",
         status: "ready",
         error: null,
+        usedImages: 0,
       };
     }
     return { ...INITIAL };
   });
   const reqId = useRef(0);
   const [tick, setTick] = useState(0);
+  const imagesFingerprint = imageKey(imageUrls);
 
   useEffect(() => {
     if (locked || !enabled) return;
@@ -73,7 +84,10 @@ export function useLedgerAiClassify({
     const timer = window.setTimeout(() => {
       void (async () => {
         try {
-          const result = await classifyLedgerTypeWithAi(text);
+          const urls = imagesFingerprint
+            ? imagesFingerprint.split("|").filter(Boolean)
+            : [];
+          const result = await classifyLedgerTypeWithAi(text, { imageUrls: urls });
           if (reqId.current !== id) return;
           setState({
             type: result.type,
@@ -81,6 +95,7 @@ export function useLedgerAiClassify({
             source: "ai",
             status: "ready",
             error: null,
+            usedImages: result.usedImages,
           });
         } catch (err) {
           if (reqId.current !== id) return;
@@ -91,13 +106,14 @@ export function useLedgerAiClassify({
             source: "heuristic",
             status: "error",
             error: (err as Error).message || "AI ไม่พร้อม",
+            usedImages: 0,
           });
         }
       })();
     }, debounceMs);
 
     return () => window.clearTimeout(timer);
-  }, [description, locked, enabled, debounceMs, tick]);
+  }, [description, imagesFingerprint, locked, enabled, debounceMs, tick]);
 
   return {
     ...state,

@@ -10,6 +10,7 @@ export type ClassifyLedgerTypeResult = {
   reason: string;
   model: string;
   source: "ai";
+  usedImages: number;
 };
 
 const ALLOWED = new Set(["cogs", "sga", "asset", "อื่นๆ"]);
@@ -38,19 +39,21 @@ export function resolveStoredTypeSource(raw: string | undefined | null): LedgerT
 /** Client → Cloud Function (API key stays on server). */
 export async function classifyLedgerTypeWithAi(
   description: string,
-  opts?: { model?: string },
+  opts?: { model?: string; imageUrls?: string[] },
 ): Promise<ClassifyLedgerTypeResult> {
   const text = description.trim();
   if (!text) {
     throw new Error("ต้องใส่ชื่อรายการ");
   }
+  const imageUrls = (opts?.imageUrls || []).map((u) => u.trim()).filter(Boolean).slice(0, 2);
   const fn = httpsCallable<
-    { description: string; model?: string },
+    { description: string; model?: string; imageUrls?: string[] },
     ClassifyLedgerTypeResult
   >(getFirebaseFunctions(), "classifyLedgerType");
   const result = await fn({
     description: text,
     ...(opts?.model ? { model: opts.model } : {}),
+    ...(imageUrls.length ? { imageUrls } : {}),
   });
   const data = result.data;
   const type = normalizeLedgerOutType(data?.type || "");
@@ -62,6 +65,7 @@ export async function classifyLedgerTypeWithAi(
     reason: String(data?.reason || "").trim(),
     model: String(data?.model || ""),
     source: "ai",
+    usedImages: Number(data?.usedImages) || 0,
   };
 }
 
@@ -124,7 +128,9 @@ export async function reclassifyLedgerMonthWithAi(
     }
 
     try {
-      const result = await classifyLedgerTypeWithAi(row.description);
+      const result = await classifyLedgerTypeWithAi(row.description, {
+        imageUrls: Array.isArray(row.receiptUrls) ? row.receiptUrls : undefined,
+      });
       const prevType = normalizeLedgerOutType(row.type || "");
       if (
         prevType === result.type &&

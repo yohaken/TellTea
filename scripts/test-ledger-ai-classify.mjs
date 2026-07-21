@@ -58,11 +58,16 @@ assert.match(ledgerPage, /LedgerAiSettingsPanel/);
 assert.match(ledgerPage, /resolveStoredTypeSource/);
 assert.match(typeField, /จัดประเภทบัญชีโดย AI/);
 assert.match(typeField, /ประเภทเดิมในระบบ/);
+assert.match(typeField, /ใช้รูป/);
 assert.match(aiPanel, /จัดประเภทใหม่ด้วย AI — ก\.ค\./);
 assert.match(ledgerAi, /reclassifyLedgerMonthWithAi/);
+assert.match(ledgerAi, /imageUrls/);
 assert.match(ledgerAi, /legacy/);
+assert.match(classify.SYSTEM_PROMPT, /รูป/);
+assert.equal(classify.isAllowedImageUrl("https://firebasestorage.googleapis.com/v0/b/x/o/y"), true);
+assert.equal(classify.isAllowedImageUrl("https://evil.example/a.png"), false);
 assert.match(rules, /aiSettings/);
-assert.match(version, /APP_BUILD = 189/);
+assert.match(version, /APP_BUILD = 190/);
 
 // Live Gemini smoke — key from env (or skip)
 const key = String(process.env.GEMINI_API_KEY || "").trim();

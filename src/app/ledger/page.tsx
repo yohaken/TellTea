@@ -550,6 +550,7 @@ function AddOutModal({
 
   const ai = useLedgerAiClassify({
     description,
+    imageUrls: receiptUrls,
     locked: isOwner && ownerLocked,
   });
 
@@ -664,7 +665,7 @@ function AddOutModal({
             max={LEDGER_RECEIPT_MAX}
             storageFolder="ledger-receipts"
             storageSlotKey={`add-${createdBy || "new"}`}
-            hint={`บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
+            hint={`แนบรูปสินค้า/ใบเสร็จ — AI ใช้ช่วยจัดประเภทเมื่อชื่อสั้น · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
           />
           {receiptUrls.length ? (
             <button
@@ -684,6 +685,7 @@ function AddOutModal({
             aiSource={ai.source}
             aiStatus={ai.status}
             aiError={ai.error}
+            usedImages={ai.usedImages}
             ownerLocked={ownerLocked}
             typeMode={typeMode}
             frequent={typeFreq}
@@ -749,6 +751,7 @@ function EditEntryModal({
 
   const ai = useLedgerAiClassify({
     description,
+    imageUrls: receiptUrls,
     locked: isIn || (isOwner && ownerLocked) || !descTouched,
     enabled: !isIn,
     initial:
@@ -918,6 +921,36 @@ function EditEntryModal({
             />
           </div>
 
+          <PhotoAttachMultiField
+            label="สลิป / รูปถ่าย"
+            values={receiptUrls}
+            onChange={(urls) => {
+              setReceiptUrls(urls);
+              if (!isIn && (!isOwner || !ownerLocked)) {
+                setDescTouched(true);
+              }
+            }}
+            onError={onError}
+            max={LEDGER_RECEIPT_MAX}
+            storageFolder="ledger-receipts"
+            storageSlotKey={`edit-${entry.id}`}
+            hint={
+              isIn
+                ? `บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`
+                : `แนบรูปสินค้า/ใบเสร็จ — AI ใช้ช่วยจัดประเภทเมื่อชื่อสั้น · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`
+            }
+          />
+          {receiptUrls.length ? (
+            <button
+              type="button"
+              className="ghost-btn"
+              style={{ marginBottom: "0.55rem" }}
+              onClick={() => setPreviewUrls(receiptUrls)}
+            >
+              ดูรูปทั้งหมด ({receiptUrls.length})
+            </button>
+          ) : null}
+
           {!isIn ? (
             <LedgerTypeField
               id="edit-type"
@@ -927,6 +960,7 @@ function EditEntryModal({
               aiSource={ai.source}
               aiStatus={ai.status}
               aiError={ai.error}
+              usedImages={ai.usedImages}
               ownerLocked={ownerLocked}
               typeMode={typeMode}
               frequent={typeFreq}
@@ -941,27 +975,6 @@ function EditEntryModal({
                 ai.refresh();
               }}
             />
-          ) : null}
-
-          <PhotoAttachMultiField
-            label="สลิป / รูปถ่าย"
-            values={receiptUrls}
-            onChange={setReceiptUrls}
-            onError={onError}
-            max={LEDGER_RECEIPT_MAX}
-            storageFolder="ledger-receipts"
-            storageSlotKey={`edit-${entry.id}`}
-            hint={`บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
-          />
-          {receiptUrls.length ? (
-            <button
-              type="button"
-              className="ghost-btn"
-              style={{ marginBottom: "0.55rem" }}
-              onClick={() => setPreviewUrls(receiptUrls)}
-            >
-              ดูรูปทั้งหมด ({receiptUrls.length})
-            </button>
           ) : null}
 
           <div className="entry-actions">
