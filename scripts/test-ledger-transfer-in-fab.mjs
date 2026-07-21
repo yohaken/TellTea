@@ -18,7 +18,7 @@ const push = read("src/lib/push.ts");
 const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 214/);
+assert.match(version, /APP_BUILD = 215/);
 assert.match(ledger, /TransferInModal/);
 assert.match(ledger, /ledger-transfer-in-fab/);
 assert.match(ledger, /isOwner/);

@@ -82,6 +82,7 @@ public class SettingsActivity extends Activity {
 
         updateButton.setOnClickListener(v -> onUpdateButtonClicked());
         findViewById(R.id.installPageButton).setOnClickListener(v -> openInstallPage());
+        findViewById(R.id.openMenuAdminButton).setOnClickListener(v -> openMenuAdminPage());
         findViewById(R.id.diagnoseButton)
                 .setOnClickListener(v -> startActivity(new Intent(this, DiagnoseActivity.class)));
         findViewById(R.id.customerAmount1Button)
@@ -120,6 +121,10 @@ public class SettingsActivity extends Activity {
                         ? "https://telltea-pos.web.app/install/"
                         : BuildConfig.INSTALL_PAGE_URL;
         ApkInstaller.openInstallPage(this, url);
+    }
+
+    private void openMenuAdminPage() {
+        ApkInstaller.openInstallPage(this, "https://telltea-pos.web.app/pos/menu/");
     }
 
     private void showCustomerAmount(int baht) {

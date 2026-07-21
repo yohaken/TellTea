@@ -39,6 +39,12 @@
     <string name="cart_empty">เลือกเมนูก่อนชำระ</string>
     <string name="btn_pay_cash">ชำระเงินสด</string>
     <string name="btn_pay_promptpay">ชำระ PromptPay</string>
+    <string name="btn_refresh_menu">รีเฟรช</string>
+    <string name="btn_open_menu_admin">เปิดจัดการเมนู (เว็บ)</string>
+    <string name="menu_admin_hint">ตั้งชื่อ/ราคา/รูป/ตัวเลือกบนเว็บ — แอปนี้ใช้ขายหน้าร้าน</string>
+    <string name="menu_recommended_fmt">★ %1$s</string>
+    <string name="option_min">เลือก «%1$s» อย่างน้อย %2$d</string>
+    <string name="option_max">«%1$s» เลือกได้สูงสุด %2$d</string>
     <string name="btn_discount">ส่วนลด</string>
     <string name="btn_add_to_cart">ใส่ตะกร้า</string>
     <string name="btn_receipts">ใบเสร็จ</string>

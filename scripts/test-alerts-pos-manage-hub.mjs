@@ -22,7 +22,7 @@ const settingsLib = read("src/lib/settings.ts");
 const rules = read("firestore.rules");
 const smoke = read("scripts/smoke-hosting-export.mjs");
 
-assert.match(version, /APP_BUILD = 214/);
+assert.match(version, /APP_BUILD = 215/);
 
 assert.match(alerts, /router\.replace\("\/more\/"\)/);
 assert.doesNotMatch(more, /href: "\/alerts\/"/);

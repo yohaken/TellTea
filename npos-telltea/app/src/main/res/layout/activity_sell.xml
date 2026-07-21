@@ -23,6 +23,16 @@
             android:textSize="16sp"
             android:textStyle="bold" />
 
+        <Button
+            android:id="@+id/refreshMenuButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:minHeight="40dp"
+            android:text="@string/btn_refresh_menu"
+            android:textAllCaps="false"
+            android:textSize="12sp" />
+
         <TextView
             android:id="@+id/sellSyncStatus"
             android:layout_width="wrap_content"

@@ -99,6 +99,8 @@ exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(a
         name: asString(x.name, 80) || d.id,
         required: x.required === true,
         selectionType: asString(x.selectionType, 20) || "single",
+        minSelect: typeof x.minSelect === "number" ? x.minSelect : undefined,
+        maxSelect: typeof x.maxSelect === "number" ? x.maxSelect : undefined,
         options,
         active: x.active !== false,
       };
@@ -115,6 +117,7 @@ exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(a
           sortOrder: typeof x.sortOrder === "number" ? x.sortOrder : 0,
           active: x.active !== false,
           visibleOnPos: x.visibleOnPos !== false,
+          recommended: x.recommended === true,
           optionGroupIds: Array.isArray(x.optionGroupIds)
             ? x.optionGroupIds.filter((id) => typeof id === "string").slice(0, 12)
             : [],

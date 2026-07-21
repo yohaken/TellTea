@@ -84,6 +84,7 @@ public class SellActivity extends Activity {
     findViewById(R.id.payCashButton).setOnClickListener(v -> startPay("cash"));
     findViewById(R.id.payPromptButton).setOnClickListener(v -> startPay("promptpay"));
     findViewById(R.id.discountButton).setOnClickListener(v -> showDiscountDialog());
+    findViewById(R.id.refreshMenuButton).setOnClickListener(v -> reloadMenu());
     findViewById(R.id.receiptsButton)
         .setOnClickListener(v -> startActivity(new Intent(this, ReceiptsActivity.class)));
     findViewById(R.id.sellSettingsButton)
@@ -92,6 +93,12 @@ public class SellActivity extends Activity {
 
     sellSyncStatus.setText(R.string.sell_loading_menu);
     menuRepo.loadShop(this, s -> runOnUiThread(() -> shop = s));
+    reloadMenu();
+    saleSync.flushPending(this);
+  }
+
+  private void reloadMenu() {
+    sellSyncStatus.setText(R.string.sell_loading_menu);
     menuRepo.loadMenu(
         this,
         true,
@@ -106,14 +113,23 @@ public class SellActivity extends Activity {
                     sellTitle.setText(R.string.sell_title);
                     sellSyncStatus.setText(R.string.sell_menu_ready);
                   }
-                  if (!bundle.categories.isEmpty()) {
+                  if (!bundle.categories.isEmpty()
+                      && (selectedCategoryId.isEmpty()
+                          || !categoryExists(selectedCategoryId))) {
                     selectedCategoryId = bundle.categories.get(0).id;
                   }
                   renderCategories();
                   renderMenu();
                   renderCart();
                 }));
-    saleSync.flushPending(this);
+  }
+
+  private boolean categoryExists(String id) {
+    if (menu == null) return false;
+    for (MenuModels.Category c : menu.categories) {
+      if (c.id.equals(id)) return true;
+    }
+    return false;
   }
 
   @Override
@@ -184,7 +200,11 @@ public class SellActivity extends Activity {
       textCol.setLayoutParams(
           new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
       TextView name = new TextView(this);
-      name.setText(item.name);
+      if (item.recommended) {
+        name.setText(getString(R.string.menu_recommended_fmt, item.name));
+      } else {
+        name.setText(item.name);
+      }
       name.setTextSize(15);
       name.setTextColor(0xFF1A2E24);
       name.setTypeface(Typeface.DEFAULT_BOLD);
@@ -282,7 +302,8 @@ public class SellActivity extends Activity {
                 it.price,
                 it.optionGroupIds,
                 it.imageUrl,
-                active));
+                active,
+                it.recommended));
       } else {
         next.add(it);
       }
@@ -315,7 +336,17 @@ public class SellActivity extends Activity {
     for (MenuModels.OptionGroup group : groups) {
       TextView header = new TextView(this);
       String req = group.required ? " *" : "";
-      header.setText(group.name + req);
+      String lim = "";
+      if (!group.isSingle()) {
+        int min = group.effectiveMin();
+        int max = group.effectiveMax();
+        if (max == Integer.MAX_VALUE) {
+          lim = min > 0 ? " (อย่างน้อย " + min + ")" : " (ไม่จำกัด)";
+        } else {
+          lim = " (" + min + "–" + max + ")";
+        }
+      }
+      header.setText(group.name + req + lim);
       header.setTextColor(0xFF1A2E24);
       header.setTypeface(Typeface.DEFAULT_BOLD);
       header.setPadding(0, 12, 0, 6);
@@ -340,7 +371,7 @@ public class SellActivity extends Activity {
           rb.setText(label);
           rb.setTag(opt);
           rg.addView(rb);
-          if (first && group.required) {
+          if (first && group.effectiveMin() > 0) {
             rb.setChecked(true);
             first = false;
           }
@@ -349,6 +380,7 @@ public class SellActivity extends Activity {
         singleGroups.put(group.id, rg);
       } else {
         List<CheckBox> boxes = new ArrayList<>();
+        final MenuModels.OptionGroup gRef = group;
         for (MenuModels.Option opt : group.options) {
           CheckBox cb = new CheckBox(this);
           String label = opt.name;
@@ -362,6 +394,20 @@ public class SellActivity extends Activity {
           }
           cb.setText(label);
           cb.setTag(opt);
+          cb.setOnCheckedChangeListener(
+              (buttonView, isChecked) -> {
+                if (!isChecked) return;
+                int selected = 0;
+                for (CheckBox b : boxes) if (b.isChecked()) selected++;
+                if (selected > gRef.effectiveMax()) {
+                  buttonView.setChecked(false);
+                  Toast.makeText(
+                          SellActivity.this,
+                          getString(R.string.option_max, gRef.name, gRef.effectiveMax()),
+                          Toast.LENGTH_SHORT)
+                      .show();
+                }
+              });
           root.addView(cb);
           boxes.add(cb);
         }
@@ -399,8 +445,21 @@ public class SellActivity extends Activity {
                       }
                     }
                   }
-                  if (group.required && chosen.isEmpty()) {
-                    Toast.makeText(this, getString(R.string.option_required, group.name), Toast.LENGTH_LONG)
+                  int min = group.effectiveMin();
+                  int max = group.effectiveMax();
+                  if (chosen.size() < min) {
+                    Toast.makeText(
+                            this,
+                            getString(R.string.option_min, group.name, min),
+                            Toast.LENGTH_LONG)
+                        .show();
+                    return;
+                  }
+                  if (chosen.size() > max) {
+                    Toast.makeText(
+                            this,
+                            getString(R.string.option_max, group.name, max),
+                            Toast.LENGTH_LONG)
                         .show();
                     return;
                   }

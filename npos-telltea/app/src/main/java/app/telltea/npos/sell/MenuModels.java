@@ -37,20 +37,43 @@ public final class MenuModels {
     public final boolean required;
     /** single | multi | unlimited — same as web POS. */
     public final String selectionType;
+    public final int minSelect;
+    public final int maxSelect;
     public final List<Option> options;
 
     public OptionGroup(
-        String id, String name, boolean required, String selectionType, List<Option> options) {
+        String id,
+        String name,
+        boolean required,
+        String selectionType,
+        int minSelect,
+        int maxSelect,
+        List<Option> options) {
       this.id = id;
       this.name = name;
       this.required = required;
       this.selectionType =
           selectionType == null || selectionType.isEmpty() ? "single" : selectionType;
+      this.minSelect = minSelect;
+      this.maxSelect = maxSelect;
       this.options = options;
     }
 
     public boolean isSingle() {
       return !"multi".equals(selectionType) && !"unlimited".equals(selectionType);
+    }
+
+    public int effectiveMin() {
+      if (isSingle()) return required ? 1 : 0;
+      if (minSelect > 0) return minSelect;
+      return required ? 1 : 0;
+    }
+
+    public int effectiveMax() {
+      if (isSingle()) return 1;
+      if ("unlimited".equals(selectionType)) return Integer.MAX_VALUE;
+      if (maxSelect > 0) return maxSelect;
+      return Math.max(1, options == null ? 1 : options.size());
     }
   }
 
@@ -63,6 +86,7 @@ public final class MenuModels {
     public final String imageUrl;
     /** false = sold out (ของหมด) — still shown on sell grid like web. */
     public final boolean active;
+    public final boolean recommended;
 
     public Item(
         String id,
@@ -71,7 +95,8 @@ public final class MenuModels {
         double price,
         List<String> optionGroupIds,
         String imageUrl,
-        boolean active) {
+        boolean active,
+        boolean recommended) {
       this.id = id;
       this.categoryId = categoryId;
       this.name = name;
@@ -79,6 +104,7 @@ public final class MenuModels {
       this.optionGroupIds = optionGroupIds;
       this.imageUrl = imageUrl == null ? "" : imageUrl;
       this.active = active;
+      this.recommended = recommended;
     }
 
     public boolean hasOptions() {
@@ -137,14 +163,14 @@ public final class MenuModels {
     sweetOpts.add(new Option("s50", "หวาน 50%", 0));
     sweetOpts.add(new Option("s100", "หวานปกติ", 0));
     List<OptionGroup> groups = new ArrayList<>();
-    groups.add(new OptionGroup("demo-sweet", "ความหวาน", true, "single", sweetOpts));
+    groups.add(new OptionGroup("demo-sweet", "ความหวาน", true, "single", 1, 1, sweetOpts));
     List<String> teaGroups = new ArrayList<>();
     teaGroups.add("demo-sweet");
     List<Item> items = new ArrayList<>();
-    items.add(new Item("demo-tea", "demo-hot", "ชาเย็น", 45, teaGroups, "", true));
-    items.add(new Item("demo-coffee", "demo-hot", "กาแฟเย็น", 50, teaGroups, "", true));
-    items.add(new Item("demo-water", "demo-hot", "น้ำเปล่า", 10, new ArrayList<>(), "", true));
-    items.add(new Item("demo-toast", "demo-food", "ขนมปังปิ้ง", 35, new ArrayList<>(), "", true));
+    items.add(new Item("demo-tea", "demo-hot", "ชาเย็น", 45, teaGroups, "", true, true));
+    items.add(new Item("demo-coffee", "demo-hot", "กาแฟเย็น", 50, teaGroups, "", true, false));
+    items.add(new Item("demo-water", "demo-hot", "น้ำเปล่า", 10, new ArrayList<>(), "", true, false));
+    items.add(new Item("demo-toast", "demo-food", "ขนมปังปิ้ง", 35, new ArrayList<>(), "", true, false));
     return new Bundle(cats, items, groups, true, System.currentTimeMillis());
   }
 
@@ -175,7 +201,8 @@ public final class MenuModels {
                 o.optDouble("price", 0),
                 gids,
                 o.optString("imageUrl", ""),
-                o.optBoolean("active", true)));
+                o.optBoolean("active", true),
+                o.optBoolean("recommended", false)));
       }
     }
     List<OptionGroup> groups = new ArrayList<>();
@@ -193,13 +220,11 @@ public final class MenuModels {
                     op.optString("id"), op.optString("name"), op.optDouble("priceDelta", 0)));
           }
         }
-        groups.add(
-            new OptionGroup(
-                o.optString("id"),
-                o.optString("name"),
-                o.optBoolean("required", false),
-                o.optString("selectionType", "single"),
-                opts));
+        String sel = o.optString("selectionType", "single");
+        boolean required = o.optBoolean("required", false);
+        int min = o.has("minSelect") ? o.optInt("minSelect", 0) : 0;
+        int max = o.has("maxSelect") ? o.optInt("maxSelect", 0) : 0;
+        groups.add(new OptionGroup(o.optString("id"), o.optString("name"), required, sel, min, max, opts));
       }
     }
     boolean demo = cats.isEmpty() || items.isEmpty();
