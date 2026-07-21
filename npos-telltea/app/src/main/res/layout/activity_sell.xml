@@ -13,6 +13,16 @@
         android:orientation="horizontal"
         android:padding="12dp">
 
+        <Button
+            android:id="@+id/backButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:minHeight="40dp"
+            android:text="@string/btn_back"
+            android:textAllCaps="false"
+            android:textSize="12sp" />
+
         <TextView
             android:id="@+id/sellTitle"
             android:layout_width="0dp"

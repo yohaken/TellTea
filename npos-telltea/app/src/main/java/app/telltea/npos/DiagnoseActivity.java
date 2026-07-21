@@ -46,6 +46,7 @@ public class DiagnoseActivity extends Activity {
         reportButton = findViewById(R.id.reportButton);
         reporter = new DiagnoseReporter();
 
+        findViewById(R.id.backButton).setOnClickListener(v -> finish());
         findViewById(R.id.refreshButton).setOnClickListener(v -> refreshAll(true));
         reportButton.setOnClickListener(v -> sendReport());
         refreshAll(true);

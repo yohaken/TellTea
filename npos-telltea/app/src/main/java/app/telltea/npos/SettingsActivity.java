@@ -81,6 +81,7 @@ public class SettingsActivity extends Activity {
         downloader = new UpdateDownloader();
         printerTransport = new PrinterTransport();
 
+        findViewById(R.id.backButton).setOnClickListener(v -> finish());
         updateButton.setOnClickListener(v -> onUpdateButtonClicked());
         findViewById(R.id.installPageButton).setOnClickListener(v -> openInstallPage());
         findViewById(R.id.openMenuAdminButton).setOnClickListener(v -> openMenuAdminPage());

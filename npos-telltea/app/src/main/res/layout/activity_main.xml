@@ -97,7 +97,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:minHeight="48dp"
-                android:text="@string/btn_settings"
+                android:text="@string/btn_settings_device"
                 android:textAllCaps="false" />
 
             <TextView
@@ -111,7 +111,7 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Sell shell (shift open) — menu comes in N6.1 -->
+    <!-- Hub after clock-in — clone web POS_NAV_ITEMS -->
     <LinearLayout
         android:id="@+id/sellPanel"
         android:layout_width="match_parent"
@@ -135,9 +135,10 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/sell_status_online"
+                android:text="@string/hub_title"
                 android:textColor="#F3F6F2"
-                android:textSize="13sp" />
+                android:textSize="15sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/sellDeviceCode"
@@ -148,31 +149,27 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <LinearLayout
+        <TextView
+            android:id="@+id/hubShiftStrip"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#243B32"
+            android:padding="10dp"
+            android:textColor="#D7E3DC"
+            android:textSize="12sp" />
+
+        <ScrollView
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:padding="24dp">
+            android:layout_weight="1">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/sell_shell_title"
-                android:textColor="#1A2E24"
-                android:textSize="22sp"
-                android:textStyle="bold" />
-
-            <TextView
+            <LinearLayout
+                android:id="@+id/hubNavList"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:gravity="center"
-                android:text="@string/sell_shell_hint"
-                android:textColor="#555555"
-                android:textSize="15sp" />
-        </LinearLayout>
+                android:orientation="vertical"
+                android:padding="12dp" />
+        </ScrollView>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -198,7 +195,7 @@
                 android:layout_marginStart="6dp"
                 android:layout_weight="1"
                 android:minHeight="48dp"
-                android:text="@string/btn_settings"
+                android:text="@string/btn_settings_device"
                 android:textAllCaps="false" />
         </LinearLayout>
     </LinearLayout>

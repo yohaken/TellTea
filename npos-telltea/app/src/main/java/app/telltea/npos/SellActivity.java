@@ -89,6 +89,7 @@ public class SellActivity extends Activity {
     menuRepo = new MenuRepository();
     saleSync = new SaleSync();
 
+    findViewById(R.id.backButton).setOnClickListener(v -> finish());
     findViewById(R.id.payCashButton).setOnClickListener(v -> startPay("cash"));
     findViewById(R.id.payPromptButton).setOnClickListener(v -> startPay("promptpay"));
     findViewById(R.id.discountButton).setOnClickListener(v -> showDiscountDialog());

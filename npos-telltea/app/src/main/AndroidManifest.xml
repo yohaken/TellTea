@@ -38,6 +38,11 @@
             android:label="@string/sell_title" />
 
         <activity
+            android:name=".ShiftActivity"
+            android:exported="false"
+            android:label="@string/nav_shift" />
+
+        <activity
             android:name=".ReceiptsActivity"
             android:exported="false"
             android:label="@string/receipts_title" />
