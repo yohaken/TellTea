@@ -175,7 +175,7 @@ function MoreView() {
             <Settings size={22} />
             <div>
               <strong>ตั้งค่าโมดูล</strong>
-              <p>ผลิต · ชง · SmartCheck · โปรไฟล์กิจการ — คลังอยู่แท็บคลัง</p>
+              <p>ผลิต · SmartCheck · โปรไฟล์กิจการ — เรทโบนัสอยู่สรุปโบนัส</p>
             </div>
           </Link>
         ) : null}

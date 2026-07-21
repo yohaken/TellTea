@@ -15,11 +15,9 @@ import { PosOpsNotesSetup } from "@/components/PosOpsNotesSetup";
 import { AuthGate } from "@/components/AuthGate";
 import { ChecklistSetup } from "@/components/ChecklistSetup";
 import { NavMenuOrderSetup } from "@/components/NavMenuOrderSetup";
-import { OtBonusRateSetup } from "@/components/OtBonusRateSetup";
 import { ProdCatalogSetup } from "@/components/ProdCatalogSetup";
 import { useAuth } from "@/lib/auth";
 import { seedChecklistItemsIfEmpty } from "@/lib/checklist";
-import { getOtSettings } from "@/lib/ot";
 import { listProdProducts, seedProdCatalogIfEmpty, type ProdProduct } from "@/lib/production";
 
 export default function SettingsPage() {
@@ -31,18 +29,15 @@ export default function SettingsPage() {
 }
 
 function SettingsView() {
-  const { actorId, staff } = useAuth();
+  const { staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const [products, setProducts] = useState<ProdProduct[]>([]);
-  const [bonusRate, setBonusRate] = useState(0.6);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   async function reload() {
-    const [p, ot] = await Promise.all([listProdProducts(), getOtSettings()]);
-    setProducts(p);
-    setBonusRate(ot.bonusRate);
+    setProducts(await listProdProducts());
   }
 
   async function reloadChecklist() {
@@ -76,8 +71,8 @@ function SettingsView() {
         ตั้งค่าโมดูล
       </h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        จัดการค่าเริ่มต้นของผลิต · ชง · SmartCheck · โปรไฟล์กิจการ (AI) · ลำดับเมนู — เฉพาะเจ้าของ
-        (รายการวัตถุดิบอยู่ในหน้า คลัง)
+        จัดการค่าเริ่มต้นของผลิต · SmartCheck · โปรไฟล์กิจการ (AI) · ลำดับเมนู — เฉพาะเจ้าของ
+        (รายการวัตถุดิบอยู่หน้า คลัง · เรทโบนัสชงอยู่หน้า สรุปโบนัส)
       </p>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -100,12 +95,6 @@ function SettingsView() {
           <NavMenuOrderSetup onError={setError} />
           <ProdCatalogSetup
             products={products}
-            onReload={() => void reload().catch((err) => setError((err as Error).message))}
-            onError={setError}
-          />
-          <OtBonusRateSetup
-            bonusRate={bonusRate}
-            createdBy={actorId}
             onReload={() => void reload().catch((err) => setError((err as Error).message))}
             onError={setError}
           />

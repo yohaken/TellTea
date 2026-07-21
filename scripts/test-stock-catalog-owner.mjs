@@ -15,13 +15,13 @@ const settings = read("src/app/settings/page.tsx");
 const catalog = read("src/components/StockCatalogSetup.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 200/);
+assert.match(version, /APP_BUILD = 201/);
 assert.match(stockPage, /StockCatalogSetup/);
 assert.match(stockPage, /รายการวัตถุดิบ/);
 assert.match(stockPage, /stock-owner-tabs/);
 assert.match(stockPage, /ownerView === "catalog"/);
 assert.doesNotMatch(settings, /StockCatalogSetup/);
-assert.match(settings, /รายการวัตถุดิบอยู่ในหน้า คลัง/);
+assert.match(settings, /รายการวัตถุดิบอยู่หน้า คลัง/);
 assert.match(catalog, /adjustStockQty/);
 assert.match(catalog, /stock-qty-stepper/);
 assert.match(catalog, /ลบ「/);
