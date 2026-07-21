@@ -11,6 +11,7 @@ import {
 import { POS_BUILD } from "./pos-version";
 import { collectPosDeviceTelemetry, type PosDeviceTelemetry } from "./pos-device-telemetry";
 import { getPosDb } from "./pos-firebase";
+import { getDb } from "./firebase";
 import { mapFirestoreError } from "./firestore-errors";
 import type { PosNativeUpdateStatus, PosShellKind } from "./pos-native-version";
 
@@ -437,6 +438,25 @@ export function subscribePosDevices(
       onDevices(devices);
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
+  );
+}
+
+/** Owner back-office — read with main Auth (Google), not POS tablet auth. */
+export function subscribePosDevicesAdmin(
+  onDevices: (devices: PosDevice[]) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
+  const q = query(collection(getDb(), POS_DEVICES_COL), orderBy("lastSeenAt", "desc"));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const devices = snap.docs.map((d) => mapPosDeviceDoc(d.id, d.data() as Record<string, unknown>));
+      onDevices(devices);
+    },
+    (err) =>
+      onError?.(
+        err instanceof Error ? err : new Error(mapFirestoreError(err, "อ่านรายการเครื่อง POS", "pos")),
+      ),
   );
 }
 

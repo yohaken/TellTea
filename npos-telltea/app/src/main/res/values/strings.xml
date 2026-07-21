@@ -18,6 +18,11 @@
     <string name="banner_update">มีเวอร์ชันใหม่ — กดอัปเดตเลย</string>
     <string name="status_signature_hint">ถ้าติดตั้งทับไม่ได้: ถอนแอปนี้ครั้งหนึ่ง แล้วกดลิงก์ด้านล่าง</string>
     <string name="install_page_hint">หน้าติดตั้ง: telltea-pos.web.app/install/</string>
+    <string name="device_code_label">รหัสเครื่อง %1$s</string>
+    <string name="heartbeat_idle">ยังไม่ได้ส่งสัญญาณ</string>
+    <string name="heartbeat_sending">กำลังลงทะเบียนเครื่อง…</string>
+    <string name="heartbeat_ok">ออนไลน์ · ส่งสัญญาณแล้ว</string>
+    <string name="heartbeat_fail">ส่งสัญญาณไม่สำเร็จ: %1$s</string>
 
     <string name="diagnose_title">ตรวจเครื่อง</string>
     <string name="diagnose_displays_title">จอที่เชื่อมอยู่</string>

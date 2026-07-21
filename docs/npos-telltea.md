@@ -26,6 +26,7 @@
 - กด “แสดงเลขบนจอ N” เพื่อส่งภาพทดสอบไปจอนั้น (`Presentation`)
 - สแกน USB ที่เสียบอยู่, Bluetooth ที่ paired, Wi‑Fi/IP ของเครื่อง
 - กด **ส่งผลกลับหลังร้าน** → Cloud Function `reportNposDiagnose` → หมวดพับใน POS จัดการ
+- เปิดแอปแล้วส่ง heartbeat → `posDevices` (รหัสเครื่อง + ออนไลน์ในหลังร้าน)
 - เฟสย้ายเว็บ→native: [npos-migration-phases.md](./npos-migration-phases.md)
 
 ## สร้าง / ปล่อยเวอร์ชันใหม่

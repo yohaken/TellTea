@@ -14,6 +14,7 @@ exports.finalizeEvidenceUpload = evidenceUpload.finalizeEvidenceUpload;
 exports.uploadEvidencePhoto = evidenceUpload.uploadEvidencePhoto;
 exports.classifyLedgerType = classifyLedger.classifyLedgerType;
 exports.reportNposDiagnose = require("./npos-diagnose").reportNposDiagnose;
+exports.nposDeviceHeartbeat = require("./npos-heartbeat").nposDeviceHeartbeat;
 
 const VAPID_PUBLIC =
   process.env.VAPID_PUBLIC_KEY ||

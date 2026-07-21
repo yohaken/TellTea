@@ -44,6 +44,7 @@
     "test:pos-update-reload-stable": "node scripts/test-pos-update-reload-stable.mjs",
     "test:pos-native-shell": "node scripts/test-pos-native-shell.mjs",
     "test:pos-native-update-foundation": "node scripts/test-pos-native-update-foundation.mjs",
+    "test:npos-n2-identity": "node scripts/test-npos-n2-identity.mjs",
     "test:npos-diagnose": "node scripts/test-npos-diagnose.mjs",
     "test:pos-apk-download": "node scripts/test-pos-apk-download.mjs",
     "test:pos-ops-notes": "node scripts/test-pos-ops-notes.mjs",
