@@ -181,9 +181,9 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
       await requestPosDeviceOwnerPing(
         deviceId,
         actorId,
-        "ทดสอบจากหลังบ้าน — ถ้าเห็นข้อความนี้ ช่องทางอัปเดตทำงานแล้ว",
+        "ถ้าเห็นข้อความนี้ ให้ทักบอกพี่ หรือถ่ายรูปหน้าจอนี้ส่งมา — แปลว่าระบบอัปเดตจากร้านทำงานแล้ว",
       );
-      setUpdateMsg("ส่งทดสอบแล้ว — ดูที่หน้าจอ POS ควรขึ้นป๊อปทันที (ไม่รีโหลด)");
+      setUpdateMsg("ส่งแล้ว — หน้าจอ POS ควรเด้งป๊อปใหญ่ทันที ให้พนักงานทัก/ถ่ายรูปมา");
       window.setTimeout(() => setUpdateMsg(null), 7000);
     } catch (err) {
       onError((err as Error).message || "ส่งทดสอบไม่สำเร็จ");

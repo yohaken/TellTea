@@ -364,7 +364,7 @@ export async function requestPosDeviceOwnerPing(
         ownerPingAt: Date.now(),
         ownerPingMessage:
           (message || "").trim() ||
-          "ทดสอบจากหลังบ้าน — เครื่องนี้เชื่อมต่อแล้ว",
+          "ถ้าเห็นข้อความนี้ ให้ทักบอกพี่ หรือถ่ายรูปหน้าจอนี้ส่งมา — แปลว่าระบบอัปเดตจากร้านทำงานแล้ว",
         updatedAt: Date.now(),
         updatedBy,
       },

@@ -12269,3 +12269,68 @@ body.modal-open .main-panel {
   min-height: 2rem;
   padding: 0.25rem 0.4rem;
 }
+
+.pos-remote-ping-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(10, 16, 14, 0.62);
+}
+
+.pos-remote-ping-modal-card {
+  position: relative;
+  width: min(26rem, 100%);
+  padding: 1.25rem 1.15rem 1.1rem;
+  border-radius: 16px;
+  background: #fff;
+  color: #1c2a1f;
+  text-align: center;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+}
+
+.pos-remote-ping-modal-icon {
+  width: 3.2rem;
+  height: 3.2rem;
+  margin: 0 auto 0.65rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(47, 107, 79, 0.12);
+  color: #2f6b4f;
+}
+
+.pos-remote-ping-modal-card h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.pos-remote-ping-modal-body {
+  margin: 0.65rem 0 0;
+  font-size: 1.02rem;
+  line-height: 1.45;
+  color: rgba(28, 42, 31, 0.92);
+}
+
+.pos-remote-ping-modal-hint {
+  margin: 0.75rem 0 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  color: rgba(28, 42, 31, 0.7);
+}
+
+.pos-remote-ping-modal-card .primary-btn {
+  width: 100%;
+}
+
+.pos-remote-ping-modal-x {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.4rem;
+}

@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD\s*=\s*60\b/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD\s*=\s*61\b/);
 assert.match(read("src/lib/pos-native-version.ts"), /POS_NATIVE_SHELL_BUILD\s*=\s*1\b/);
 assert.match(read("src/lib/pos-native-version.ts"), /PosNativeUpdateStatus/);
 assert.match(read("src/lib/pos-native-release.ts"), /posNativeRelease/);
