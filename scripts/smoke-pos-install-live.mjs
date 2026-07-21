@@ -56,4 +56,16 @@ async function waitFor(label, fn) {
 
 await waitFor("install page", () => fetchOk(INSTALL));
 await waitFor("APK file", () => fetchOk(APK, { expectBinary: true }));
+
+const MANIFEST = process.env.POS_MANIFEST_URL || "https://telltea-pos.web.app/downloads/latest.json";
+await waitFor("update manifest", async () => {
+  const res = await fetch(MANIFEST, { redirect: "follow", cache: "no-store" });
+  if (!res.ok) throw new Error(`${MANIFEST} → HTTP ${res.status}`);
+  const data = await res.json();
+  if (!data.versionCode || !data.versionName || !data.apkUrl) {
+    throw new Error(`${MANIFEST} → missing versionCode/versionName/apkUrl`);
+  }
+  return `v${data.versionName} (${data.versionCode})`;
+});
+
 console.log("\nLive POS install URLs OK");

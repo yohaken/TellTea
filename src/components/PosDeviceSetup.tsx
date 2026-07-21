@@ -315,8 +315,8 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
         <div className="pos-native-release-box">
           <p className="pos-install-label">ปล่อยอัปเดต APK (เครื่อง native)</p>
           <p className="muted settings-card-lead" style={{ marginTop: 0 }}>
-            ตั้งเลขเปลือก + ลิงก์ไฟล์ .apk — แท็บเล็ตที่เปิดจาก APK จะรายงานสถานะที่รายการเครื่อง
-            (ติดตั้งอัตโนมัติในแอปยังเป็นเฟสถัดไป · ตอนนี้เห็นว่าเครื่องไหนค้างเวอร์ชัน)
+            ตั้งเลขเปลือกให้ตรง versionCode ของ APK + ลิงก์ไฟล์ .apk — แอป nPos-telltea
+            เช็คอัปเดตจาก latest.json เอง และมีปุ่มอัปเดตในแอป
             {nativeRelease?.updatedAt
               ? ` · ปล่อยล่าสุด ${formatLastSeen(nativeRelease.updatedAt)}`
               : ""}
@@ -389,8 +389,9 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
         <ol className="pos-install-steps">
           <li>บนแท็บเล็ตเปิด Chrome → ใส่ลิงก์ด้านบน (หรือสแกน QR ที่คุณสร้างเอง)</li>
           <li>กด <strong>ดาวน์โหลดไฟล์ติดตั้ง</strong> → อนุญาตติดตั้ง → เปิดไอคอน <strong>nPos-telltea</strong></li>
-          <li>ควรเห็นข้อความ <strong>Hello World</strong></li>
+          <li>ควรเห็นข้อความ <strong>Hello World</strong> + เลขเวอร์ชัน และปุ่มเช็คอัปเดต</li>
           <li>ไฟล์ตรง: <code>{POS_APK_DOWNLOAD_URL}</code></li>
+          <li>แมนิเฟสต์อัปเดต: <code>https://telltea-pos.web.app/downloads/latest.json</code></li>
         </ol>
       </div>
 
