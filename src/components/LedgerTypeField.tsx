@@ -19,7 +19,6 @@ type Props = {
   aiSource: LedgerTypeSource;
   aiStatus: "idle" | "loading" | "ready" | "error";
   aiError: string | null;
-  usedImages?: number;
   ownerLocked: boolean;
   typeMode: string;
   onTypeModeChange: (value: string) => void;
@@ -38,7 +37,6 @@ export function LedgerTypeField({
   aiSource,
   aiStatus,
   aiError,
-  usedImages = 0,
   ownerLocked,
   typeMode,
   onTypeModeChange,
@@ -67,7 +65,7 @@ export function LedgerTypeField({
             <p className="ledger-type-ai-reason">ไม่ต้องเลือกเอง — ระบบจัดให้ตอนบันทึก</p>
           )}
           <p className="ledger-type-ai-hint">
-            พนักงานรอหน้าต่างสถานะสั้นๆ ตอนกดบันทึก · ติ๊กใช้รูปเฉพาะเมื่อชื่อกำกวม
+            พนักงานรอหน้าต่างสถานะสั้นๆ ตอนกดบันทึก — จัดจากชื่อรายการ + โปรไฟล์กิจการ
           </p>
         </div>
       </div>
@@ -80,9 +78,7 @@ export function LedgerTypeField({
       : aiStatus === "error"
         ? "ใช้ค่าสำรองจากชื่อรายการ"
         : aiSource === "ai"
-          ? usedImages > 0
-            ? `จัดประเภทบัญชีโดย AI · ใช้รูป ${usedImages}`
-            : "จัดประเภทบัญชีโดย AI"
+          ? "จัดประเภทบัญชีโดย AI"
           : aiSource === "owner"
             ? "กำหนดโดยเจ้าของ"
             : aiSource === "legacy"

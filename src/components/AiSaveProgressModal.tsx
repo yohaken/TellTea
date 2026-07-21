@@ -16,13 +16,11 @@ const STAGE_LABEL: Record<AiSaveStage, string> = {
 
 type Props = {
   stage: AiSaveStage;
-  /** ใช้รูปช่วยจัดประเภทในรอบนี้หรือไม่ */
-  withImages?: boolean;
   detail?: string;
 };
 
 /** ป๊อบอัพรอ AI ตอนกดบันทึก — สถานะจริง + นาฬิกาเดิน ไม่ใช่นับถอยหลังปลอม */
-export function AiSaveProgressModal({ stage, withImages = false, detail }: Props) {
+export function AiSaveProgressModal({ stage, detail }: Props) {
   const [mounted, setMounted] = useState(false);
   const [elapsedSec, setElapsedSec] = useState(0);
   useBodyScrollLock(true);
@@ -53,9 +51,6 @@ export function AiSaveProgressModal({ stage, withImages = false, detail }: Props
           <Loader2 size={36} className="photo-preview-spinner" />
         </div>
         <p className="ai-save-progress-stage">{STAGE_LABEL[stage]}</p>
-        {withImages && stage === "classifying" ? (
-          <p className="ai-save-progress-detail">รวมรูปหลักฐานที่ติ๊กไว้</p>
-        ) : null}
         {detail ? <p className="ai-save-progress-detail">{detail}</p> : null}
         <ol className="ai-save-progress-steps">
           {steps.map((s, i) => (

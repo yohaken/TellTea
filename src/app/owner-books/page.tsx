@@ -12,12 +12,19 @@ import {
 import { useRouter } from "next/navigation";
 import { Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
+import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
-import { TypePicker } from "@/components/TypePicker";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { frequentTypes, guessTypeFromDescription } from "@/lib/ledger-labels";
+import {
+  classifyLedgerTypeHeuristic,
+  classifyLedgerTypeWithAi,
+  resolveStoredTypeSource,
+  type LedgerTypeSource,
+} from "@/lib/ledger-ai";
+import { frequentTypes } from "@/lib/ledger-labels";
 import {
   addOwnerBookEntry,
   deleteOwnerBookEntry,
@@ -451,20 +458,34 @@ function OwnerEntryModal({
   onSaved: () => void;
   onError: (msg: string) => void;
 }) {
+  const initialSource = resolveStoredTypeSource(entry?.typeSource);
+  const wasOwnerType = initialSource === "owner";
   const [date, setDate] = useState(entry ? toDateInput(entry.date) : todayInputValue());
   const [description, setDescription] = useState(entry?.description || "");
   const [amount, setAmount] = useState(entry ? String(entry.amountOut) : "");
-  const [typeMode, setTypeMode] = useState(() => (entry?.type || "").trim() || "auto");
+  const [typeMode, setTypeMode] = useState(() =>
+    wasOwnerType || initialSource === "legacy"
+      ? (entry?.type || "").trim() || "auto"
+      : "auto",
+  );
+  const [ownerLocked, setOwnerLocked] = useState(wasOwnerType);
   const [note, setNote] = useState(entry?.note || "");
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getOwnerBookReceiptUrls(entry));
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [saveStage, setSaveStage] = useState<AiSaveStage | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
-
-  const autoType = useMemo(() => guessTypeFromDescription(description), [description]);
-  const resolvedType = typeMode === "auto" ? autoType : typeMode;
+  const [previewType, setPreviewType] = useState(entry?.type || "");
+  const [previewReason, setPreviewReason] = useState(entry?.typeAiReason || "");
+  const [previewSource, setPreviewSource] = useState<LedgerTypeSource>(
+    entry ? initialSource : "heuristic",
+  );
+  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">(
+    entry?.type ? "ready" : "idle",
+  );
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const filteredSuggestions = useMemo(() => {
     const q = description.trim().toLowerCase();
@@ -489,6 +510,32 @@ function OwnerEntryModal({
     onError(msg);
   }
 
+  async function runOwnerPreview() {
+    const text = description.trim();
+    if (!text) {
+      reportError("ใส่ชื่อรายการก่อนจัดประเภท");
+      return;
+    }
+    setOwnerLocked(false);
+    setTypeMode("auto");
+    setPreviewStatus("loading");
+    setPreviewError(null);
+    try {
+      const result = await classifyLedgerTypeWithAi(text);
+      setPreviewType(result.type);
+      setPreviewReason(result.reason);
+      setPreviewSource("ai");
+      setPreviewStatus("ready");
+    } catch (err) {
+      const fallback = classifyLedgerTypeHeuristic(text);
+      setPreviewType(fallback.type);
+      setPreviewReason(fallback.reason);
+      setPreviewSource("heuristic");
+      setPreviewStatus("error");
+      setPreviewError((err as Error).message || "AI ไม่พร้อม");
+    }
+  }
+
   async function onSave(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -501,12 +548,41 @@ function OwnerEntryModal({
           "รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่เพื่อบันทึกเข้าคลังหลักฐาน",
         );
       }
+
+      let type = previewType || "cogs";
+      let typeSource: LedgerTypeSource = previewSource;
+      let typeAiReason = previewReason;
+
+      if (ownerLocked && typeMode !== "auto") {
+        type = typeMode;
+        typeSource = "owner";
+        typeAiReason = "";
+      } else {
+        setSaveStage("sending");
+        await new Promise((r) => setTimeout(r, 30));
+        setSaveStage("classifying");
+        try {
+          const result = await classifyLedgerTypeWithAi(description);
+          type = result.type;
+          typeSource = "ai";
+          typeAiReason = result.reason;
+        } catch {
+          const fallback = classifyLedgerTypeHeuristic(description);
+          type = fallback.type;
+          typeSource = "heuristic";
+          typeAiReason = fallback.reason;
+        }
+        setSaveStage("saving");
+      }
+
       if (mode === "add") {
         await addOwnerBookEntry({
           date: parseDateInput(date),
           description,
           amountOut: Number(amount),
-          type: resolvedType,
+          type,
+          typeSource,
+          typeAiReason,
           createdBy,
           receiptUrls: urls,
           note,
@@ -516,7 +592,9 @@ function OwnerEntryModal({
           date: parseDateInput(date),
           description,
           amountOut: Number(amount),
-          type: resolvedType,
+          type,
+          typeSource,
+          typeAiReason,
           receiptUrls: urls,
           note,
         });
@@ -526,6 +604,7 @@ function OwnerEntryModal({
       reportError(friendlyFirestoreWriteError(err, "บันทึกไม่สำเร็จ"));
     } finally {
       setBusy(false);
+      setSaveStage(null);
     }
   }
 
@@ -612,24 +691,7 @@ function OwnerEntryModal({
               required
             />
           </div>
-          <TypePicker
-            id="ob-type"
-            value={typeMode}
-            onChange={setTypeMode}
-            frequent={typeFreq}
-            autoHint={autoType}
-          />
-          <div className="field">
-            <label htmlFor="ob-note">note</label>
-            <input
-              id="ob-note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              autoComplete="off"
-            />
-          </div>
 
-          {/* Canonical evidence upload prototype → Firebase Storage + progress popup */}
           <PhotoAttachMultiField
             label="สลิป / รูปถ่าย"
             values={receiptUrls}
@@ -638,7 +700,7 @@ function OwnerEntryModal({
             max={OWNER_BOOKS_RECEIPT_MAX}
             storageFolder="owner-books"
             storageSlotKey={`${mode}-${entry?.id || createdBy || "new"}`}
-            hint={`บันทึกไฟล์หลักฐานเข้าฐานข้อมูล (ทีละรูป คุณภาพสูง) · สูงสุด ${OWNER_BOOKS_RECEIPT_MAX} รูป`}
+            hint={`บันทึกไฟล์หลักฐานเข้าฐานข้อมูล · สูงสุด ${OWNER_BOOKS_RECEIPT_MAX} รูป`}
           />
           {receiptUrls.length ? (
             <button
@@ -650,6 +712,36 @@ function OwnerEntryModal({
               ดูรูปทั้งหมด ({receiptUrls.length})
             </button>
           ) : null}
+
+          <LedgerTypeField
+            id="ob-type"
+            isOwner
+            mode="live"
+            displayType={previewType}
+            aiType={previewType || "cogs"}
+            aiReason={previewReason}
+            aiSource={previewSource}
+            aiStatus={previewStatus}
+            aiError={previewError}
+            ownerLocked={ownerLocked}
+            typeMode={typeMode}
+            frequent={typeFreq}
+            onTypeModeChange={(value) => {
+              setTypeMode(value);
+              setOwnerLocked(value !== "auto");
+            }}
+            onReclassify={() => void runOwnerPreview()}
+          />
+
+          <div className="field">
+            <label htmlFor="ob-note">note</label>
+            <input
+              id="ob-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
 
           <div className="entry-actions">
             <button type="submit" className="primary-btn" disabled={busy}>
@@ -678,6 +770,9 @@ function OwnerEntryModal({
           <ImagePreviewModal urls={previewUrls} title="สลิป / รูปถ่าย" onClose={() => setPreviewUrls(null)} />
         ) : null}
       </div>
+      {saveStage ? (
+        <AiSaveProgressModal stage={saveStage} detail={description.trim()} />
+      ) : null}
     </div>
   );
 }

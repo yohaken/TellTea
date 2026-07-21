@@ -1,8 +1,8 @@
 /**
- * Ledger AI + business profile wiring smoke.
+ * Ledger AI + business profile + owner-books wiring smoke.
  */
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,6 +17,11 @@ const profileLib = readFileSync(join(root, "src/lib/business-profile.ts"), "utf8
 const setup = readFileSync(join(root, "src/components/BusinessProfileSetup.tsx"), "utf8");
 const settingsPage = readFileSync(join(root, "src/app/settings/page.tsx"), "utf8");
 const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
+const ledgerPage = readFileSync(join(root, "src/app/ledger/page.tsx"), "utf8");
+const ownerBooksPage = readFileSync(join(root, "src/app/owner-books/page.tsx"), "utf8");
+const ownerBooksLib = readFileSync(join(root, "src/lib/owner-books.ts"), "utf8");
+const typeField = readFileSync(join(root, "src/components/LedgerTypeField.tsx"), "utf8");
+const progressModal = readFileSync(join(root, "src/components/AiSaveProgressModal.tsx"), "utf8");
 
 assert.equal(guessFromLabels("ค่าขนส่งแก้ว"), "cogs");
 assert.match(classify.SYSTEM_PROMPT, /ค่าไฟ/);
@@ -30,7 +35,23 @@ assert.match(profileLib, /formatBusinessProfileForAi/);
 assert.match(profileLib, /DEFAULT_BUSINESS_PROFILE/);
 assert.match(setup, /โปรไฟล์กิจการ/);
 assert.match(settingsPage, /BusinessProfileSetup/);
-assert.match(version, /APP_BUILD = 194/);
+assert.match(version, /APP_BUILD = 195/);
+
+// Staff ledger: no opt-in photo AI checkbox
+assert.doesNotMatch(ledgerPage, /AiUseImagesCheckbox|useImagesForAi|ใช้รูปช่วยจัดประเภท/);
+assert.match(ledgerPage, /classifyLedgerTypeWithAi\(description\)/);
+assert.match(ledgerPage, /AiSaveProgressModal/);
+assert.match(typeField, /โปรไฟล์กิจการ/);
+assert.doesNotMatch(progressModal, /withImages|รวมรูปหลักฐานที่ติ๊กไว้/);
+assert.equal(existsSync(join(root, "src/components/AiUseImagesCheckbox.tsx")), false);
+assert.equal(existsSync(join(root, "src/hooks/use-ledger-ai-classify.ts")), false);
+
+// Owner books: same CF + save-time AI (text only)
+assert.match(ownerBooksPage, /classifyLedgerTypeWithAi/);
+assert.match(ownerBooksPage, /AiSaveProgressModal/);
+assert.match(ownerBooksPage, /LedgerTypeField/);
+assert.match(ownerBooksLib, /typeSource/);
+assert.match(ownerBooksLib, /typeAiReason/);
 
 function guessFromLabels(description) {
   const fnMatch = labels.match(

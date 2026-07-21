@@ -34,7 +34,6 @@ import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal"
 import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
-import { AiUseImagesCheckbox } from "@/components/AiUseImagesCheckbox";
 import { frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
 import {
   classifyLedgerTypeHeuristic,
@@ -550,7 +549,6 @@ function AddOutModal({
   const [ownerLocked, setOwnerLocked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [saveStage, setSaveStage] = useState<AiSaveStage | null>(null);
-  const [useImagesForAi, setUseImagesForAi] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [receiptUrls, setReceiptUrls] = useState<string[]>([]);
@@ -558,7 +556,6 @@ function AddOutModal({
   const [previewType, setPreviewType] = useState("");
   const [previewReason, setPreviewReason] = useState("");
   const [previewSource, setPreviewSource] = useState<LedgerTypeSource>("heuristic");
-  const [previewUsedImages, setPreviewUsedImages] = useState(0);
   const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [previewError, setPreviewError] = useState<string | null>(null);
 
@@ -580,10 +577,6 @@ function AddOutModal({
       });
   }, []);
 
-  useEffect(() => {
-    if (!receiptUrls.length && useImagesForAi) setUseImagesForAi(false);
-  }, [receiptUrls.length, useImagesForAi]);
-
   async function runOwnerPreview() {
     const text = description.trim();
     if (!text) {
@@ -595,20 +588,16 @@ function AddOutModal({
     setPreviewStatus("loading");
     setPreviewError(null);
     try {
-      const result = await classifyLedgerTypeWithAi(text, {
-        imageUrls: useImagesForAi ? receiptUrls : undefined,
-      });
+      const result = await classifyLedgerTypeWithAi(text);
       setPreviewType(result.type);
       setPreviewReason(result.reason);
       setPreviewSource("ai");
-      setPreviewUsedImages(result.usedImages);
       setPreviewStatus("ready");
     } catch (err) {
       const fallback = classifyLedgerTypeHeuristic(text);
       setPreviewType(fallback.type);
       setPreviewReason(fallback.reason);
       setPreviewSource("heuristic");
-      setPreviewUsedImages(0);
       setPreviewStatus("error");
       setPreviewError((err as Error).message || "AI ไม่พร้อม");
     }
@@ -626,7 +615,6 @@ function AddOutModal({
       let type = previewType || "cogs";
       let typeSource: LedgerTypeSource = previewSource;
       let typeAiReason = previewReason;
-      let usedImages = 0;
 
       if (isOwner && ownerLocked && typeMode !== "auto") {
         type = typeMode;
@@ -637,13 +625,10 @@ function AddOutModal({
         await new Promise((r) => setTimeout(r, 30));
         setSaveStage("classifying");
         try {
-          const result = await classifyLedgerTypeWithAi(description, {
-            imageUrls: useImagesForAi ? receiptUrls : undefined,
-          });
+          const result = await classifyLedgerTypeWithAi(description);
           type = result.type;
           typeSource = "ai";
           typeAiReason = result.reason;
-          usedImages = result.usedImages;
         } catch {
           const fallback = classifyLedgerTypeHeuristic(description);
           type = fallback.type;
@@ -660,7 +645,7 @@ function AddOutModal({
         amountOut: Number(amount),
         type,
         typeSource,
-        typeAiReason: typeAiReason || (usedImages ? `ใช้รูป ${usedImages}` : ""),
+        typeAiReason,
         createdBy,
         receiptUrls,
       });
@@ -729,7 +714,7 @@ function AddOutModal({
             max={LEDGER_RECEIPT_MAX}
             storageFolder="ledger-receipts"
             storageSlotKey={`add-${createdBy || "new"}`}
-            hint={`แนบหลักฐานได้ · ส่งให้ AI เฉพาะเมื่อติ๊กด้านล่าง · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
+            hint={`แนบหลักฐานใบเสร็จ/สินค้า · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
           />
           {receiptUrls.length ? (
             <button
@@ -741,12 +726,6 @@ function AddOutModal({
               ดูรูปทั้งหมด ({receiptUrls.length})
             </button>
           ) : null}
-          <AiUseImagesCheckbox
-            hasImages={receiptUrls.length > 0}
-            checked={useImagesForAi}
-            onChange={setUseImagesForAi}
-            disabled={busy}
-          />
           <LedgerTypeField
             id="add-out-type"
             isOwner={isOwner}
@@ -757,7 +736,6 @@ function AddOutModal({
             aiSource={previewSource}
             aiStatus={previewStatus}
             aiError={previewError}
-            usedImages={previewUsedImages}
             ownerLocked={ownerLocked}
             typeMode={typeMode}
             frequent={typeFreq}
@@ -782,7 +760,7 @@ function AddOutModal({
         ) : null}
       </div>
       {saveStage ? (
-        <AiSaveProgressModal stage={saveStage} withImages={useImagesForAi} detail={description.trim()} />
+        <AiSaveProgressModal stage={saveStage} detail={description.trim()} />
       ) : null}
     </div>
   );
@@ -816,7 +794,6 @@ function EditEntryModal({
   const [forceReclassify, setForceReclassify] = useState(false);
   const [busy, setBusy] = useState(false);
   const [saveStage, setSaveStage] = useState<AiSaveStage | null>(null);
-  const [useImagesForAi, setUseImagesForAi] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getLedgerReceiptUrls(entry));
@@ -824,7 +801,6 @@ function EditEntryModal({
   const [previewType, setPreviewType] = useState(entry.type || "");
   const [previewReason, setPreviewReason] = useState(entry.typeAiReason || "");
   const [previewSource, setPreviewSource] = useState<LedgerTypeSource>(initialSource);
-  const [previewUsedImages, setPreviewUsedImages] = useState(0);
   const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">("ready");
   const [previewError, setPreviewError] = useState<string | null>(null);
 
@@ -852,10 +828,6 @@ function EditEntryModal({
       });
   }, []);
 
-  useEffect(() => {
-    if (!receiptUrls.length && useImagesForAi) setUseImagesForAi(false);
-  }, [receiptUrls.length, useImagesForAi]);
-
   async function runOwnerPreview() {
     const text = description.trim();
     if (!text) {
@@ -868,20 +840,16 @@ function EditEntryModal({
     setPreviewStatus("loading");
     setPreviewError(null);
     try {
-      const result = await classifyLedgerTypeWithAi(text, {
-        imageUrls: useImagesForAi ? receiptUrls : undefined,
-      });
+      const result = await classifyLedgerTypeWithAi(text);
       setPreviewType(result.type);
       setPreviewReason(result.reason);
       setPreviewSource("ai");
-      setPreviewUsedImages(result.usedImages);
       setPreviewStatus("ready");
     } catch (err) {
       const fallback = classifyLedgerTypeHeuristic(text);
       setPreviewType(fallback.type);
       setPreviewReason(fallback.reason);
       setPreviewSource("heuristic");
-      setPreviewUsedImages(0);
       setPreviewStatus("error");
       setPreviewError((err as Error).message || "AI ไม่พร้อม");
     }
@@ -907,9 +875,7 @@ function EditEntryModal({
           await new Promise((r) => setTimeout(r, 30));
           setSaveStage("classifying");
           try {
-            const result = await classifyLedgerTypeWithAi(description, {
-              imageUrls: useImagesForAi ? receiptUrls : undefined,
-            });
+            const result = await classifyLedgerTypeWithAi(description);
             type = result.type;
             typeSource = "ai";
             typeAiReason = result.reason;
@@ -1049,7 +1015,7 @@ function EditEntryModal({
             hint={
               isIn
                 ? `บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`
-                : `แนบหลักฐานได้ · ส่งให้ AI เฉพาะเมื่อติ๊กด้านล่าง · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`
+                : `แนบหลักฐานใบเสร็จ/สินค้า · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`
             }
           />
           {receiptUrls.length ? (
@@ -1065,12 +1031,6 @@ function EditEntryModal({
 
           {!isIn ? (
             <>
-              <AiUseImagesCheckbox
-                hasImages={receiptUrls.length > 0}
-                checked={useImagesForAi}
-                onChange={setUseImagesForAi}
-                disabled={busy}
-              />
               <LedgerTypeField
                 id="edit-type"
                 isOwner={isOwner}
@@ -1081,8 +1041,7 @@ function EditEntryModal({
                 aiSource={previewSource}
                 aiStatus={previewStatus}
                 aiError={previewError}
-                usedImages={previewUsedImages}
-                ownerLocked={ownerLocked}
+                    ownerLocked={ownerLocked}
                 typeMode={typeMode}
                 frequent={typeFreq}
                 onTypeModeChange={(value) => {
@@ -1134,7 +1093,7 @@ function EditEntryModal({
         ) : null}
       </div>
       {saveStage ? (
-        <AiSaveProgressModal stage={saveStage} withImages={useImagesForAi} detail={description.trim()} />
+        <AiSaveProgressModal stage={saveStage} detail={description.trim()} />
       ) : null}
     </div>
   );

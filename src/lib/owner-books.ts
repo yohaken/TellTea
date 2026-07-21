@@ -36,6 +36,8 @@ export type OwnerBookEntryInput = {
   description: string;
   amountOut: number;
   type: string;
+  typeSource?: string;
+  typeAiReason?: string;
   createdBy: string;
   receiptUrl?: string;
   receiptUrls?: string[];
@@ -203,6 +205,8 @@ export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<str
     amountIn: 0,
     amountOut: Number(input.amountOut) || 0,
     type: (input.type || "").trim(),
+    typeSource: (input.typeSource || "").trim(),
+    typeAiReason: (input.typeAiReason || "").trim(),
     createdBy: input.createdBy,
     createdAt: now,
     updatedAt: now,
@@ -221,7 +225,15 @@ export async function updateOwnerBookEntry(
   patch: Partial<
     Pick<
       OwnerBookEntry,
-      "date" | "description" | "amountOut" | "type" | "receiptUrl" | "receiptUrls" | "note"
+      | "date"
+      | "description"
+      | "amountOut"
+      | "type"
+      | "typeSource"
+      | "typeAiReason"
+      | "receiptUrl"
+      | "receiptUrls"
+      | "note"
     >
   >,
 ): Promise<void> {
@@ -236,6 +248,8 @@ export async function updateOwnerBookEntry(
   if (patch.description != null) next.description = patch.description.trim();
   if (patch.amountOut != null) next.amountOut = Number(patch.amountOut);
   if (patch.type != null) next.type = patch.type.trim();
+  if (patch.typeSource != null) next.typeSource = String(patch.typeSource).trim();
+  if (patch.typeAiReason != null) next.typeAiReason = String(patch.typeAiReason).trim();
   if (patch.receiptUrls != null || patch.receiptUrl != null) {
     const { receiptUrl, receiptUrls } = normalizeReceiptFields({
       receiptUrl: patch.receiptUrl,
