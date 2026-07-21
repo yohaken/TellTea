@@ -2,7 +2,7 @@
  * POS 58 — Stable APK download link on telltea-pos hosting.
  */
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -15,6 +15,8 @@ assert.match(read("src/lib/pos-url.ts"), /telltea-pos\.web\.app\/install\//);
 assert.match(read("src/lib/pos-url.ts"), /telltea-pos\.web\.app\/downloads\/telltea-pos\.apk/);
 assert.match(read("public/install/index.html"), /TellTea POS/);
 assert.match(read("public/install/index.html"), /\/downloads\/telltea-pos\.apk/);
+assert.match(read("public/install/index.html"), /qr-pos-install\.png/);
+assert.ok(existsSync(join(root, "public/install/qr-pos-install.png")));
 assert.match(read("scripts/publish-pos-apk.mjs"), /telltea-pos\.apk/);
 assert.match(read("scripts/split-pos-hosting.mjs"), /install/);
 assert.match(read("firebase.json"), /application\/vnd\.android\.package-archive/);

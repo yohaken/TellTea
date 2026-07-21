@@ -70,6 +70,23 @@
       .cta:active {
         transform: scale(0.98);
       }
+      .qr-wrap {
+        margin: 1.35rem auto 0;
+        width: min(14rem, 70vw);
+        padding: 0.75rem;
+        background: #fff;
+        border-radius: 14px;
+      }
+      .qr-wrap img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .qr-caption {
+        margin-top: 0.55rem;
+        font-size: 0.88rem;
+        color: var(--muted);
+      }
       .hint {
         margin-top: 1.1rem;
         font-size: 0.9rem;
@@ -98,9 +115,18 @@
       <a class="cta" href="/downloads/telltea-pos.apk" download="telltea-pos.apk">
         ดาวน์โหลดไฟล์ติดตั้ง
       </a>
+      <div class="qr-wrap">
+        <img
+          src="/install/qr-pos-install.png"
+          alt="QR Code ไปหน้าดาวน์โหลด TellTea POS"
+          width="396"
+          height="396"
+        />
+      </div>
+      <p class="qr-caption">สแกนด้วยมือถือ/แท็บเล็ต → เปิดหน้าดาวน์โหลด</p>
       <div class="hint">
         <ol>
-          <li>เปิดลิงก์นี้ด้วย <strong>Chrome</strong> บนแท็บเล็ต</li>
+          <li>สแกน QR หรือเปิดลิงก์ด้วย <strong>Chrome</strong> บนแท็บเล็ต</li>
           <li>กดดาวน์โหลด → อนุญาตติดตั้งจากแหล่งนี้ถ้าถาม</li>
           <li>เปิดไฟล์ <code>telltea-pos.apk</code> → ติดตั้ง → เปิดไอคอน TellTea POS</li>
         </ol>
