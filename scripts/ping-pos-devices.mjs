@@ -42,7 +42,17 @@ async function main() {
   }
 
   if (!online.length) {
-    console.log("FAIL: ไม่มีเครื่อง POS ออนไลน์ตอนนี้ (สัญญาณภายใน 3 นาที)");
+    console.log("FAIL: ไม่มีเครื่อง POS ออนไลน์ตอนนี้");
+    console.log(`เกณฑ์ออนไลน์ = สัญญาณภายใน ${Math.round(ONLINE_MS / 60000)} นาที`);
+    console.log("รายการเครื่องทั้งหมด:");
+    for (const doc of snap.docs) {
+      const data = doc.data() || {};
+      const lastSeenAt = typeof data.lastSeenAt === "number" ? data.lastSeenAt : 0;
+      const ageMin = lastSeenAt ? ((now - lastSeenAt) / 60000).toFixed(1) : "never";
+      console.log(
+        `- ${doc.id} code=${data.pairingCode || "-"} label=${data.label || "-"} appBuild=${data.appBuild || 0} lastSeenAgeMin=${ageMin}`,
+      );
+    }
     process.exit(2);
   }
 
