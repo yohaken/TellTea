@@ -1,6 +1,7 @@
 package app.telltea.npos;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.os.Bundle;
 import android.view.View;
@@ -24,6 +25,7 @@ public class MainActivity extends Activity {
     private TextView statusView;
     private TextView bannerView;
     private Button updateButton;
+    private Button diagnoseButton;
 
     private UpdateChecker checker;
     private UpdateDownloader downloader;
@@ -42,6 +44,7 @@ public class MainActivity extends Activity {
         statusView = findViewById(R.id.status);
         bannerView = findViewById(R.id.banner);
         updateButton = findViewById(R.id.updateButton);
+        diagnoseButton = findViewById(R.id.diagnoseButton);
 
         readLocalVersion();
         versionView.setText(getString(R.string.version_label, localVersionName, localVersionCode));
@@ -50,6 +53,8 @@ public class MainActivity extends Activity {
         downloader = new UpdateDownloader();
 
         updateButton.setOnClickListener(v -> onUpdateButtonClicked());
+        diagnoseButton.setOnClickListener(
+                v -> startActivity(new Intent(this, DiagnoseActivity.class)));
     }
 
     @Override
