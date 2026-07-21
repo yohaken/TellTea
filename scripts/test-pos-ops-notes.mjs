@@ -1,0 +1,25 @@
+/**
+ * POS 59 — Owner → POS ops notes/links channel (no shared store email password).
+ */
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const read = (p) => readFileSync(join(root, p), "utf8");
+
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD\s*=\s*59\b/);
+assert.match(read("src/lib/pos-ops-notes.ts"), /posOpsNotes/);
+assert.match(read("src/lib/pos-ops-notes.ts"), /defaultPosOpsNoteItems/);
+assert.match(read("src/lib/pos-ops-notes.ts"), /POS_APK_INSTALL_PAGE_URL/);
+assert.match(read("src/lib/pos-nav.ts"), /\/pos\/ops\//);
+assert.match(read("src/lib/pos-nav.ts"), /ลิงก์จากร้าน/);
+assert.match(read("src/components/PosOpsNotesSetup.tsx"), /ไม่ต้องแชร์รหัสอีเมลร้าน/);
+assert.match(read("src/components/PosOpsNotesView.tsx"), /subscribePosOpsNotes/);
+assert.match(read("src/app/pos/ops/page.tsx"), /PosOpsNotesView/);
+assert.match(read("src/app/settings/page.tsx"), /PosOpsNotesSetup/);
+assert.match(read("firestore.rules"), /posOpsNotes/);
+assert.match(read("src/components/PosDeviceSetup.tsx"), /ไม่ต้องรู้รหัสอีเมลร้าน/);
+
+console.log("test-pos-ops-notes: ok");

@@ -4,6 +4,7 @@ import {
   CreditCard,
   FileText,
   LayoutGrid,
+  Link2,
   LogOut,
   Package,
   Receipt,
@@ -20,6 +21,7 @@ export type PosNavId =
   | "inventory"
   | "shift"
   | "menu"
+  | "ops"
   | "settings";
 
 export type PosNavItem = {
@@ -39,6 +41,7 @@ export const POS_NAV_ITEMS: PosNavItem[] = [
   { id: "inventory", href: "/pos/inventory/", label: "สินค้าคงคลัง", icon: Package },
   { id: "shift", href: "/pos/shift/", label: "รอบการขาย", icon: Timer },
   { id: "menu", href: "/pos/menu/", label: "เมนูและโปรโมชั่น", icon: BookOpen },
+  { id: "ops", href: "/pos/ops/", label: "ลิงก์จากร้าน", icon: Link2 },
   { id: "settings", href: "/pos/settings/", label: "ตั้งค่ากิจการ", icon: Settings2 },
 ];
 
@@ -57,6 +60,7 @@ export function matchPosNav(pathname: string): PosNavId | null {
   if (p.endsWith("/pos/inventory")) return "inventory";
   if (p.endsWith("/pos/shift")) return "shift";
   if (p.endsWith("/pos/menu")) return "menu";
+  if (p.endsWith("/pos/ops")) return "ops";
   if (p.endsWith("/pos/settings")) return "settings";
   if (p === "/pos") return "sell";
   return null;

@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD\s*=\s*58\b/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD\s*=\s*59\b/);
 assert.match(read("src/lib/pos-url.ts"), /POS_APK_INSTALL_PAGE_URL/);
 assert.match(read("src/lib/pos-url.ts"), /telltea-pos\.web\.app\/install\//);
 assert.match(read("src/lib/pos-url.ts"), /telltea-pos\.web\.app\/downloads\/telltea-pos\.apk/);

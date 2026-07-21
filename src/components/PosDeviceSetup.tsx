@@ -262,7 +262,8 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
         เครื่อง POS
       </h2>
       <p className="muted settings-card-lead">
-        Phase 0.5 — ติดตั้งแอปบนหน้าจอหลัก (เต็มจอ) · {posVersionLabel()} · รายงานรุ่นเครื่องอัตโนมัติทุก 60 วินาที
+        ตัวตนเครื่อง POS (ไม่ใช่บัญชี Google) · {posVersionLabel()} · รายงานทุก 60 วินาที
+        — พนักงานไม่ต้องรู้รหัสอีเมลร้าน · ส่งลิงก์อัปเดตได้ที่การ์ด «ลิงก์ / โน้ตหน้าร้าน»
       </p>
 
       {!releaseLoading ? (

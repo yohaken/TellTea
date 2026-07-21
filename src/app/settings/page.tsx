@@ -11,6 +11,7 @@ import { PosPaymentSetup } from "@/components/PosPaymentSetup";
 import { PosShopInfoSetup } from "@/components/PosShopInfoSetup";
 import { PosPrinterSetup } from "@/components/PosPrinterSetup";
 import { PosDeviceSetup } from "@/components/PosDeviceSetup";
+import { PosOpsNotesSetup } from "@/components/PosOpsNotesSetup";
 import { AuthGate } from "@/components/AuthGate";
 import { ChecklistSetup } from "@/components/ChecklistSetup";
 import { NavMenuOrderSetup } from "@/components/NavMenuOrderSetup";
@@ -87,6 +88,7 @@ function SettingsView() {
           <BusinessProfileSetup onError={setError} />
           <AppUpdateSetup onError={setError} />
           <PosDeviceSetup onError={setError} />
+          <PosOpsNotesSetup onError={setError} />
           <PosShopInfoSetup onError={setError} />
           <p className="muted" style={{ margin: "-0.35rem 0 0.75rem", fontSize: "0.82rem" }}>
             บนแท็บเล็ต POS แก้ได้เร็วที่เมนู &quot;ตั้งค่ากิจการ&quot;

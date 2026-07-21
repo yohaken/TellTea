@@ -551,7 +551,7 @@ service cloud.firestore {
       // aiSettings holds Gemini API key — owner-only read
       allow read: if (docId == 'aiSettings' && isOwner())
         || (docId != 'aiSettings' && isStaff())
-        || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease'));
+        || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes'));
       allow write: if isOwner()
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
         || (hasPerm('alerts') && docId == 'lowBalanceAlert')
