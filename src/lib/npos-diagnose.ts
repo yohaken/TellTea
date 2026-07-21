@@ -84,8 +84,9 @@ export function subscribeNposDiagnoseReports(
         snap.docs.map((d) => mapNposDiagnoseReport(d.id, d.data() as Record<string, unknown>)),
       );
     },
-    (err) =>
+    (err) => {
       onError?.(err instanceof Error ? err : new Error(String(err)));
+    },
   );
 }
 
