@@ -2,6 +2,11 @@ plugins {
     id "com.android.application"
 }
 
+def nposStoreFile = rootProject.file("keystore/npos-telltea.jks")
+def nposStorePassword = "telltea-npos-update"
+def nposKeyAlias = "npos"
+def nposKeyPassword = "telltea-npos-update"
+
 android {
     namespace "app.telltea.npos"
     compileSdk 35
@@ -11,10 +16,22 @@ android {
         minSdk 23
         targetSdk 35
         // Bump BOTH when shipping an APK users should receive as an update.
-        versionCode 3
-        versionName "1.2.0"
+        versionCode 4
+        versionName "1.2.1"
         buildConfigField "String", "UPDATE_MANIFEST_URL", "\"https://telltea-pos.web.app/downloads/latest.json\""
         buildConfigField "String", "DEFAULT_APK_URL", "\"https://telltea-pos.web.app/downloads/nPos-telltea.apk\""
+        buildConfigField "String", "INSTALL_PAGE_URL", "\"https://telltea-pos.web.app/install/\""
+    }
+
+    signingConfigs {
+        npos {
+            if (nposStoreFile.exists()) {
+                storeFile nposStoreFile
+                storePassword nposStorePassword
+                keyAlias nposKeyAlias
+                keyPassword nposKeyPassword
+            }
+        }
     }
 
     buildFeatures {
@@ -24,9 +41,16 @@ android {
     buildTypes {
         release {
             minifyEnabled false
+            if (nposStoreFile.exists()) {
+                signingConfig signingConfigs.npos
+            }
         }
         debug {
             minifyEnabled false
+            // Same cert as release so CI APKs can update over each other.
+            if (nposStoreFile.exists()) {
+                signingConfig signingConfigs.npos
+            }
         }
     }
 

@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInstaller;
+import android.net.Uri;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -11,6 +12,7 @@ import android.widget.Toast;
 public final class InstallResultReceiver extends BroadcastReceiver {
     public static final String ACTION = "app.telltea.npos.UPDATE_INSTALL_RESULT";
     private static final String TAG = "nPosUpdate";
+    private static final String INSTALL_PAGE = "https://telltea-pos.web.app/install/";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -36,11 +38,16 @@ public final class InstallResultReceiver extends BroadcastReceiver {
                 break;
             default:
                 Log.w(TAG, "install failed status=" + status + " msg=" + message);
-                Toast.makeText(
-                                context,
-                                "อัปเดตล้มเหลว" + (message == null || message.isEmpty() ? "" : ": " + message),
-                                Toast.LENGTH_LONG)
-                        .show();
+                String tip =
+                        "ติดตั้งทับไม่ได้ — ถอนแอปนี้ครั้งหนึ่ง แล้วเปิดหน้าติดตั้ง";
+                Toast.makeText(context, tip, Toast.LENGTH_LONG).show();
+                try {
+                    Intent web = new Intent(Intent.ACTION_VIEW, Uri.parse(INSTALL_PAGE));
+                    web.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    context.startActivity(web);
+                } catch (Exception ignored) {
+                    /* no browser */
+                }
                 break;
         }
     }
