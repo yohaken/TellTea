@@ -4,8 +4,8 @@
  */
 const INSTALL = process.env.POS_INSTALL_URL || "https://telltea-pos.web.app/install/";
 const APK = process.env.POS_APK_URL || "https://telltea-pos.web.app/downloads/nPos-telltea.apk";
-const ATTEMPTS = Number(process.env.POS_LIVE_SMOKE_ATTEMPTS || 8);
-const DELAY_MS = Number(process.env.POS_LIVE_SMOKE_DELAY_MS || 5000);
+const ATTEMPTS = Number(process.env.POS_LIVE_SMOKE_ATTEMPTS || 12);
+const DELAY_MS = Number(process.env.POS_LIVE_SMOKE_DELAY_MS || 8000);
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
