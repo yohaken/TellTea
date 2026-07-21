@@ -55,10 +55,18 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build TellTea POS debug APK
+      - name: Build TellTea POS embedded APK (no live Hosting UI)
         run: |
           java -version
-          npx cap sync android
+          CAPACITOR_LIVE=0 npx cap sync android
+          test -f android/app/src/main/assets/capacitor.config.json
+          if grep -E '"url"[[:space:]]*:' android/app/src/main/assets/capacitor.config.json; then
+            echo "FAIL: embedded APK must not set server.url (live Hosting UI)"
+            cat android/app/src/main/assets/capacitor.config.json
+            exit 1
+          fi
+          echo "OK embedded capacitor config (no server.url)"
+          cat android/app/src/main/assets/capacitor.config.json
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon

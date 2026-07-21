@@ -2,7 +2,7 @@
  * เวอร์ชันเปลือก Native (APK Capacitor) — แยกจาก POS_BUILD ของเว็บใน WebView
  * Bump เมื่อ ship APK ใหม่เท่านั้น
  */
-export const POS_NATIVE_SHELL_BUILD = 1;
+export const POS_NATIVE_SHELL_BUILD = 2;
 
 export type PosShellKind = "native" | "pwa" | "browser";
 

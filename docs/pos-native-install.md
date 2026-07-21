@@ -41,14 +41,12 @@
 
 หลัง merge เข้า `main` แล้ว GitHub Actions จะ:
 
-1. บิลด์เว็บ + sync Capacitor
-2. สร้าง debug APK
-3. วางไฟล์ที่ `out-pos/downloads/telltea-pos.apk`
+1. บิลด์เว็บ → `out-pos/pos`
+2. `cap sync` แบบ **ฝังใน APK** (ไม่มี `server.url` ไป Hosting)
+3. สร้าง debug APK → วางที่ `out-pos/downloads/telltea-pos.apk`
 4. Deploy Hosting `telltea-pos`
 
-ดังนั้นหลัง deploy สำเร็จ ลิงก์ด้านบนใช้งานได้ทันที
-
-อัปเดตแอปเปลือกครั้งถัดไป: deploy ใหม่ → ไฟล์ที่ลิงก์เดิมถูกทับ (URL ไม่เปลี่ยน)
+อัปเดตเปลือกครั้งถัดไป: ต้องบิลด์ APK ใหม่ + พนักงานโหลดไฟล์ทับ (ยังไม่ติดตั้งอัตโนมัติในแอป)
 
 ---
 
