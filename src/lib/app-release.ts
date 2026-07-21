@@ -8,6 +8,9 @@ export type AppReleaseSettings = {
   forcePosAutoUpdate: boolean;
 };
 
+/** โหมดอัปเดตในหน้าตั้งค่า — map ลงสองฟลาก Firestore เดิม */
+export type AppUpdateMode = "soft" | "force_all" | "force_pos";
+
 const DEFAULT: AppReleaseSettings = { forceAppUpdate: false, forcePosAutoUpdate: false };
 
 /**
@@ -27,6 +30,19 @@ export function normalizeAppReleaseSettings(data?: Record<string, unknown> | nul
   };
 }
 
+/** force_all มีลำดับสูงกว่า — POS รับผ่าน forceAppUpdate อยู่แล้ว */
+export function appUpdateModeFromSettings(settings: AppReleaseSettings): AppUpdateMode {
+  if (settings.forceAppUpdate) return "force_all";
+  if (settings.forcePosAutoUpdate) return "force_pos";
+  return "soft";
+}
+
+export function settingsFromAppUpdateMode(mode: AppUpdateMode): AppReleaseSettings {
+  if (mode === "force_all") return { forceAppUpdate: true, forcePosAutoUpdate: false };
+  if (mode === "force_pos") return { forceAppUpdate: false, forcePosAutoUpdate: true };
+  return { forceAppUpdate: false, forcePosAutoUpdate: false };
+}
+
 export function subscribeAppReleaseSettings(
   onSettings: (settings: AppReleaseSettings) => void,
   onError?: (err: Error) => void,
@@ -41,11 +57,12 @@ export function subscribeAppReleaseSettings(
   );
 }
 
-export async function saveForceAppUpdate(forceAppUpdate: boolean, updatedBy: string): Promise<void> {
+export async function saveAppUpdateMode(mode: AppUpdateMode, updatedBy: string): Promise<void> {
+  const next = settingsFromAppUpdateMode(mode);
   await setDoc(
     uiRef(getDb()),
     {
-      forceAppUpdate,
+      ...next,
       updatedAt: Date.now(),
       updatedBy,
     },
@@ -53,11 +70,29 @@ export async function saveForceAppUpdate(forceAppUpdate: boolean, updatedBy: str
   );
 }
 
+/** @deprecated ใช้ saveAppUpdateMode — คงฟลากอีกตัวไว้ */
+export async function saveForceAppUpdate(forceAppUpdate: boolean, updatedBy: string): Promise<void> {
+  await setDoc(
+    uiRef(getDb()),
+    {
+      forceAppUpdate,
+      // เปิดบังคับทุกเครื่องแล้วไม่ต้องเปิด POS แยก
+      ...(forceAppUpdate ? { forcePosAutoUpdate: false } : {}),
+      updatedAt: Date.now(),
+      updatedBy,
+    },
+    { merge: true },
+  );
+}
+
+/** @deprecated ใช้ saveAppUpdateMode — คงฟลากอีกตัวไว้ */
 export async function saveForcePosAutoUpdate(forcePosAutoUpdate: boolean, updatedBy: string): Promise<void> {
   await setDoc(
     uiRef(getDb()),
     {
       forcePosAutoUpdate,
+      // เปิดเฉพาะ POS ต้องปิดบังคับทุกเครื่อง
+      ...(forcePosAutoUpdate ? { forceAppUpdate: false } : {}),
       updatedAt: Date.now(),
       updatedBy,
     },

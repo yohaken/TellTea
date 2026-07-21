@@ -6032,7 +6032,88 @@ body.modal-open .main-panel {
 .owner-settings-stack {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.75rem;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.settings-group-head {
+  text-align: left;
+  padding: 0 0.15rem;
+}
+
+.settings-group-title {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  color: rgba(28, 42, 31, 0.92);
+}
+
+.settings-group-hint {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.settings-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.settings-group-note {
+  margin: -0.25rem 0 0;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.settings-mode-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.settings-mode-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.65rem;
+  align-items: start;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(28, 42, 31, 0.12);
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.settings-mode-option.is-active {
+  border-color: rgba(47, 107, 79, 0.45);
+  background: rgba(47, 107, 79, 0.08);
+}
+
+.settings-mode-option input {
+  margin-top: 0.2rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--tea-green, #2f6b4f);
+}
+
+.settings-mode-copy {
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.78rem;
+  color: rgba(28, 42, 31, 0.72);
+}
+
+.settings-mode-copy strong {
+  font-size: 0.88rem;
+  color: rgba(28, 42, 31, 0.92);
 }
 
 .business-profile-form {
