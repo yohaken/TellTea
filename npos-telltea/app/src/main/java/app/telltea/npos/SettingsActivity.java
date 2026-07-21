@@ -153,7 +153,7 @@ public class SettingsActivity extends Activity {
             Toast.makeText(this, customerStatus.getText(), Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-            customerStatus.setText(getString(R.string.customer_test_fail, msg));
+            customerStatus.setText(R.string.customer_test_fail);
             OpsLogger.error(this, "display", "การแสดงบนจอไม่สำเร็จ", msg);
             Toast.makeText(this, customerStatus.getText(), Toast.LENGTH_LONG).show();
         }
@@ -285,8 +285,7 @@ public class SettingsActivity extends Activity {
                                                 true);
                                     } else {
                                         PrinterPrefs.markNotReady(this);
-                                        printerStatus.setText(
-                                                getString(R.string.printer_fail, result.message));
+                                        printerStatus.setText(R.string.printer_fail);
                                         OpsLogger.error(
                                                 this,
                                                 "printer",
@@ -330,8 +329,7 @@ public class SettingsActivity extends Activity {
                                                 ep.displayLine() + " · " + result.message,
                                                 true);
                                     } else {
-                                        printerStatus.setText(
-                                                getString(R.string.drawer_fail, result.message));
+                                        printerStatus.setText(R.string.drawer_fail);
                                         OpsLogger.error(
                                                 this,
                                                 "drawer",

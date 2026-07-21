@@ -13,26 +13,39 @@
     <string name="status_error">เช็คอัปเดตไม่สำเร็จ: %1$s</string>
     <string name="btn_check_update">เช็คอัปเดต</string>
     <string name="btn_install_update">อัปเดตเลย</string>
-    <string name="btn_diagnose">ตรวจจอ / ฮาร์ดแวร์</string>
+    <string name="btn_diagnose">ตรวจจอ / ฮาร์ดแวร์ (มือ)</string>
     <string name="btn_open_install_page">เปิดหน้าติดตั้ง (ลิงก์)</string>
     <string name="btn_settings">ตั้งค่า</string>
     <string name="banner_update">มีเวอร์ชันใหม่ — กดอัปเดตเลย</string>
     <string name="status_signature_hint">ถ้าติดตั้งทับไม่ได้: ถอนแอปนี้ครั้งหนึ่ง แล้วกดลิงก์ด้านล่าง</string>
     <string name="install_page_hint">หน้าติดตั้ง: telltea-pos.web.app/install/</string>
-    <string name="home_hint">อัปเดต · ตรวจเครื่อง · จอลูกค้า อยู่ในตั้งค่า</string>
     <string name="device_code_label">รหัสเครื่อง %1$s</string>
-    <string name="heartbeat_idle">ยังไม่ได้ส่งสัญญาณ</string>
-    <string name="heartbeat_sending">กำลังลงทะเบียนเครื่อง…</string>
-    <string name="heartbeat_ok">ออนไลน์ · ส่งสัญญาณแล้ว</string>
+    <string name="heartbeat_idle">กำลังเชื่อม…</string>
+    <string name="heartbeat_sending">กำลังเชื่อมร้าน…</string>
+    <string name="heartbeat_ok">ออนไลน์</string>
     <string name="heartbeat_fail">ส่งสัญญาณไม่สำเร็จ: %1$s</string>
+    <string name="heartbeat_fail_human">เน็ตหลุดชั่วคราว — ร้านจะเห็นอัตโนมัติ</string>
+
+    <string name="clock_in_title">พร้อมขาย</string>
+    <string name="clock_in_hint">กดเข้างานเมื่อเริ่มขาย · ระบบสแกนเครื่องส่งหลังร้านให้อัตโนมัติ</string>
+    <string name="btn_open_shift">เข้างาน</string>
+    <string name="btn_close_shift">ออกงาน</string>
+    <string name="shift_opened">เข้างานแล้ว</string>
+    <string name="shift_closed">ออกงานแล้ว</string>
+    <string name="sell_shell_title">หน้าร้านพร้อม</string>
+    <string name="sell_shell_hint">เมนูและตะกร้าจะมาในรอบถัดไป · ตอนนี้ใช้เข้างาน/ตั้งค่า/ปริ้นเทสได้</string>
+    <string name="sell_status_online">ออนไลน์ · พร้อมขาย</string>
+    <string name="sell_status_waiting">รอสัญญาณร้าน…</string>
 
     <string name="settings_title">ตั้งค่า</string>
-    <string name="settings_hint">อัปเดต · ตรวจเครื่อง · จอลูกค้า · ปริ้น/ลิ้นชัก</string>
-    <string name="settings_section_hardware">ตรวจเครื่อง</string>
-    <string name="settings_section_customer">จอลูกค้า (N3)</string>
-    <string name="settings_section_printer">ปริ้นเตอร์ / ลิ้นชัก (N4–N5)</string>
+    <string name="settings_hint">อัปเดตและปริ้นเตอร์สำหรับหน้าร้าน · ส่วนเทคนิคอยู่ด้านล่าง</string>
+    <string name="settings_section_device">เครื่องนี้</string>
+    <string name="settings_section_printer">ปริ้นเตอร์ / ลิ้นชัก</string>
+    <string name="settings_section_tech">เทคนิค (ไม่ต้องใช้ทุกวัน)</string>
+    <string name="settings_tech_hint">ระบบสแกนส่งหลังร้านอัตโนมัติแล้ว — กดด้านล่างเฉพาะตอนติดตั้ง/แก้ปัญหา</string>
+    <string name="settings_section_customer">เทสจอลูกค้า</string>
 
-    <string name="printer_hint">สแกน USB หรือ Bluetooth ที่จับคู่ไว้ แล้วพิมพ์ทดสอบ / เปิดลิ้นชักผ่านปริ้นเตอร์</string>
+    <string name="printer_hint">สแกน USB หรือ Bluetooth ที่จับคู่ไว้ แล้วพิมพ์ทดสอบ / เปิดลิ้นชัก</string>
     <string name="printer_idle">ยังไม่ได้สแกนปริ้นเตอร์</string>
     <string name="printer_none">ยังไม่พบปริ้นเตอร์ — เสียบ USB หรือจับคู่ Bluetooth แล้วสแกน</string>
     <string name="printer_saved_offline">เคยใช้ได้: %1$s (ตอนนี้ไม่เห็นในรายการ)</string>
@@ -40,23 +53,23 @@
     <string name="printer_scan_done">พบปริ้นเตอร์/ปลายทาง %1$d รายการ</string>
     <string name="printer_sending">กำลังส่งพิมพ์ทดสอบผ่าน %1$s…</string>
     <string name="printer_ok">พิมพ์ทดสอบแล้ว · %1$s</string>
-    <string name="printer_fail">พิมพ์ไม่สำเร็จ: %1$s</string>
+    <string name="printer_fail">พิมพ์ไม่สำเร็จ — ร้านจะเห็นในไทม์ไลน์</string>
     <string name="drawer_sending">กำลังสั่งเปิดลิ้นชักผ่าน %1$s…</string>
     <string name="drawer_ok">สั่งเปิดลิ้นชักแล้ว · %1$s</string>
-    <string name="drawer_fail">เปิดลิ้นชักไม่สำเร็จ: %1$s</string>
+    <string name="drawer_fail">เปิดลิ้นชักไม่สำเร็จ — ร้านจะเห็นในไทม์ไลน์</string>
     <string name="btn_printer_scan">สแกนปริ้นเตอร์</string>
     <string name="btn_printer_next">เลือกตัวถัดไป</string>
     <string name="btn_printer_test">พิมพ์หน้าทดสอบ</string>
     <string name="btn_drawer_kick">เปิดลิ้นชัก (เทส)</string>
 
     <string name="customer_caption">ยอดชำระ</string>
-    <string name="customer_test_hint">ส่งยอดทดสอบไปจอเพิ่ม (จอ 2) — ถ้ามีจอเดียวจะโชว์บนจอหลักชั่วคราว</string>
+    <string name="customer_test_hint">ส่งยอดทดสอบไปจอเพิ่ม (จอ 2)</string>
     <string name="customer_test_idle">ยังไม่ได้ส่งยอดไปจอลูกค้า</string>
     <string name="customer_test_no_display">ไม่พบจอสำหรับแสดง</string>
     <string name="customer_test_on_primary">เทสบนจอหลัก (จอ %1$d) — ยังไม่มีจอ 2</string>
     <string name="customer_test_on_secondary">จอลูกค้า · จอ %1$d</string>
     <string name="customer_test_showing">แสดง %1$s บนจอ %2$d</string>
-    <string name="customer_test_fail">แสดงจอลูกค้าไม่สำเร็จ: %1$s</string>
+    <string name="customer_test_fail">แสดงจอลูกค้าไม่สำเร็จ — ร้านจะเห็นในไทม์ไลน์</string>
     <string name="btn_customer_amount_1">ส่งยอดทดสอบ ฿120</string>
     <string name="btn_customer_amount_2">ส่งยอดทดสอบ ฿350</string>
     <string name="btn_customer_close">ปิดจอลูกค้า</string>
@@ -78,5 +91,5 @@
     <string name="diagnose_bt_need_permission">ต้องอนุญาต Bluetooth ก่อนจึงจะเห็นเครื่องที่จับคู่ไว้</string>
     <string name="diagnose_showing">กำลังแสดงเลข %1$d บนจอนั้น</string>
     <string name="diagnose_show_failed">แสดงบนจอไม่สำเร็จ: %1$s</string>
-    <string name="diagnose_hint">สแกนจอ/อุปกรณ์ แล้วส่งผลกลับหลังร้าน — ผล error จะเข้าไทม์ไลน์ ops ด้วย</string>
+    <string name="diagnose_hint">ปกติระบบสแกนอัตโนมัติแล้ว — หน้านี้สำหรับติดตั้ง/ไล่ปัญหา</string>
 </resources>
