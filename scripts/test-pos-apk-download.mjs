@@ -23,7 +23,7 @@ assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/MainActivity.
 assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/MainActivity.java"), /btn_check_update|onUpdateButtonClicked/);
 assert.match(read("npos-telltea/app/src/main/res/values/strings.xml"), /nPos-telltea/);
 assert.match(read("npos-telltea/app/src/main/res/values/strings.xml"), /version_label/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+5/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+6/);
 assert.match(read("npos-telltea/app/build.gradle"), /signingConfigs/);
 assert.match(read("npos-telltea/app/build.gradle"), /npos-telltea\.jks/);
 assert.match(read("npos-telltea/app/build.gradle"), /INSTALL_PAGE_URL/);

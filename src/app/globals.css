@@ -6282,6 +6282,33 @@ body.modal-open .main-panel {
   line-height: 1.4;
 }
 
+.npos-device-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.npos-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.4rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.npos-pill--on {
+  background: rgba(47, 107, 79, 0.16);
+  color: #1a5c3a;
+}
+
+.npos-pill--off {
+  background: rgba(0, 0, 0, 0.08);
+  color: #666;
+}
+
 .settings-subhead {
   display: flex;
   align-items: center;

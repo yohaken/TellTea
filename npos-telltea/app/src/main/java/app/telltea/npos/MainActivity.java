@@ -8,6 +8,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import app.telltea.npos.diagnose.DeviceHeartbeat;
+import app.telltea.npos.diagnose.DeviceIdentity;
 import app.telltea.npos.update.ApkInstaller;
 import app.telltea.npos.update.UpdateChecker;
 import app.telltea.npos.update.UpdateConfig;
@@ -17,11 +19,12 @@ import app.telltea.npos.update.UpdateManifest;
 import java.io.File;
 
 /**
- * nPos-telltea home screen + update channel UI.
- * Auto-checks on launch/resume; manual check via button.
+ * nPos-telltea home screen + update channel + device heartbeat (N2).
  */
 public class MainActivity extends Activity {
     private TextView versionView;
+    private TextView deviceIdView;
+    private TextView heartbeatStatus;
     private TextView statusView;
     private TextView bannerView;
     private Button updateButton;
@@ -30,6 +33,7 @@ public class MainActivity extends Activity {
 
     private UpdateChecker checker;
     private UpdateDownloader downloader;
+    private DeviceHeartbeat heartbeat;
     private UpdateManifest pendingManifest;
     private boolean busy;
     private long lastAutoCheckAt;
@@ -42,6 +46,8 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
         versionView = findViewById(R.id.version);
+        deviceIdView = findViewById(R.id.deviceIdView);
+        heartbeatStatus = findViewById(R.id.heartbeatStatus);
         statusView = findViewById(R.id.status);
         bannerView = findViewById(R.id.banner);
         updateButton = findViewById(R.id.updateButton);
@@ -50,9 +56,12 @@ public class MainActivity extends Activity {
 
         readLocalVersion();
         versionView.setText(getString(R.string.version_label, localVersionName, localVersionCode));
+        deviceIdView.setText(
+                getString(R.string.device_code_label, DeviceIdentity.pairingCode(this)));
 
         checker = new UpdateChecker();
         downloader = new UpdateDownloader();
+        heartbeat = new DeviceHeartbeat();
 
         updateButton.setOnClickListener(v -> onUpdateButtonClicked());
         diagnoseButton.setOnClickListener(
@@ -72,13 +81,42 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         maybeAutoCheck();
+        sendHeartbeat(false);
     }
 
     @Override
     protected void onDestroy() {
         if (checker != null) checker.shutdown();
         if (downloader != null) downloader.shutdown();
+        if (heartbeat != null) heartbeat.shutdown();
         super.onDestroy();
+    }
+
+    private void sendHeartbeat(boolean force) {
+        heartbeatStatus.setText(R.string.heartbeat_sending);
+        heartbeat.heartbeat(
+                this,
+                force,
+                new DeviceHeartbeat.Callback() {
+                    @Override
+                    public void onSuccess(String pairingCode, long lastSeenAt) {
+                        runOnUiThread(() -> {
+                            deviceIdView.setText(getString(R.string.device_code_label, pairingCode));
+                            heartbeatStatus.setText(R.string.heartbeat_ok);
+                        });
+                    }
+
+                    @Override
+                    public void onError(Exception error) {
+                        runOnUiThread(() -> {
+                            String msg =
+                                    error.getMessage() == null
+                                            ? error.getClass().getSimpleName()
+                                            : error.getMessage();
+                            heartbeatStatus.setText(getString(R.string.heartbeat_fail, msg));
+                        });
+                    }
+                });
     }
 
     private void readLocalVersion() {
