@@ -11,6 +11,7 @@ import { ChefHat, Lock, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { BulkStatusToolbar } from "@/components/BulkStatusToolbar";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
+import { ProdCatalogSetup } from "@/components/ProdCatalogSetup";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
@@ -46,6 +47,8 @@ import {
   todayInputValue,
 } from "@/lib/utils";
 
+type ProdOwnerView = "log" | "catalog";
+
 export default function ProductionPage() {
   return (
     <AuthGate>
@@ -58,6 +61,7 @@ function ProductionView() {
   const { actorId, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
+  const [ownerView, setOwnerView] = useState<ProdOwnerView>("log");
   const [formOpen, setFormOpen] = useState(false);
   const [entries, setEntries] = useState<ProdEntry[]>([]);
   const [products, setProducts] = useState<ProdProduct[]>([]);
@@ -112,6 +116,8 @@ function ProductionView() {
 
   const activeProducts = products.filter((p) => p.active);
   const activeWorkers = workers.filter((w) => w.active);
+  const showCatalog = isOwner && ownerView === "catalog";
+  const showLog = !showCatalog;
 
   function openAdd() {
     setEditing(null);
@@ -135,12 +141,54 @@ function ProductionView() {
           <ChefHat size={18} aria-hidden />
           ผลิต / โบนัส
         </h1>
+        <p className="muted stock-subtitle">
+          {showCatalog
+            ? "จัดการสินค้า + เรทเริ่มต้น (เจ้าของ)"
+            : "บันทึกยอดผลิตประจำวัน"}
+        </p>
+        {isOwner ? (
+          <div className="stock-owner-tabs" role="tablist" aria-label="มุมมองผลิตเจ้าของ">
+            <button
+              type="button"
+              role="tab"
+              className={ownerView === "log" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+              aria-selected={ownerView === "log"}
+              onClick={() => {
+                setOwnerView("log");
+                setFormOpen(false);
+              }}
+            >
+              บันทึกผลิต
+            </button>
+            <button
+              type="button"
+              role="tab"
+              className={ownerView === "catalog" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+              aria-selected={ownerView === "catalog"}
+              onClick={() => {
+                setOwnerView("catalog");
+                setFormOpen(false);
+              }}
+            >
+              สินค้า / เรท
+              {products.length ? ` (${products.length})` : ""}
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading ? (
+      {!loading && showCatalog ? (
+        <ProdCatalogSetup
+          products={products}
+          onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
+          onError={setError}
+        />
+      ) : null}
+
+      {!loading && showLog ? (
         <ProdTable
           entries={entries}
           isOwner={isOwner}
@@ -149,7 +197,7 @@ function ProductionView() {
         />
       ) : null}
 
-      {formOpen && !loading ? (
+      {formOpen && !loading && showLog ? (
         <div className="modal-backdrop edit-modal is-module-form" onClick={closeForm}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <ProdEntryForm
@@ -159,19 +207,30 @@ function ProductionView() {
               workers={activeWorkers}
               rateSchedule={rateSchedule}
               createdBy={actorId}
+              isOwner={isOwner}
               onError={setError}
               onSaved={closeForm}
               onCancelEdit={closeForm}
+              onOpenCatalog={
+                isOwner
+                  ? () => {
+                      setOwnerView("catalog");
+                      setFormOpen(false);
+                    }
+                  : undefined
+              }
             />
           </div>
         </div>
       ) : null}
 
-      <ModuleTabDock
-        ariaLabel="มุมมองผลิต"
-        formOpen={formOpen}
-        onAdd={openAdd}
-      />
+      {showLog ? (
+        <ModuleTabDock
+          ariaLabel="มุมมองผลิต"
+          formOpen={formOpen}
+          onAdd={openAdd}
+        />
+      ) : null}
     </div>
   );
 }
@@ -182,18 +241,22 @@ function ProdEntryForm({
   workers,
   rateSchedule,
   createdBy,
+  isOwner,
   onError,
   onSaved,
   onCancelEdit,
+  onOpenCatalog,
 }: {
   entry: ProdEntry | null;
   products: ProdProduct[];
   workers: ProdWorker[];
   rateSchedule: RateScheduleEntry[];
   createdBy: string;
+  isOwner: boolean;
   onError: (msg: string) => void;
   onSaved: () => void;
   onCancelEdit: () => void;
+  onOpenCatalog?: () => void;
 }) {
   const locked = entry ? isProdEntryLocked(entry) : false;
   const [date, setDate] = useState(entry ? todayInputValue(new Date(entry.date)) : todayInputValue());
@@ -304,8 +367,14 @@ function ProdEntryForm({
 
       {!products.length || !workers.length ? (
         <p className="muted form-hint-inline">
-          ยังไม่มีสินค้าหรือรายชื่อพนักงาน — เจ้าของตั้งค่าที่{" "}
-          <a href="/settings/" style={{ fontWeight: 700 }}>ตั้งค่าโมดูล</a>
+          ยังไม่มีสินค้าหรือรายชื่อพนักงาน —{" "}
+          {isOwner && onOpenCatalog && !products.length ? (
+            <button type="button" className="linkish-btn" onClick={onOpenCatalog}>
+              ไปเพิ่มที่แท็บสินค้า / เรท
+            </button>
+          ) : (
+            "รอเจ้าของตั้งค่าที่หน้าผลิต → สินค้า / เรท · พนักงานอยู่ศูนย์รวมพนักงาน"
+          )}
         </p>
       ) : null}
 

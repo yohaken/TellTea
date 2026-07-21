@@ -15,6 +15,7 @@
     "test:brand-logo-perf": "node scripts/test-brand-logo-perf.mjs",
     "test:stock-catalog-owner": "node scripts/test-stock-catalog-owner.mjs",
     "test:ot-rate-settings-dedupe": "node scripts/test-ot-rate-settings-dedupe.mjs",
+    "test:prod-catalog-owner": "node scripts/test-prod-catalog-owner.mjs",
     "test:ot-multi-photo": "node scripts/test-ot-multi-photo.mjs",
     "test:ot-photo-budget": "node scripts/test-ot-photo-budget.mjs",
     "test:ot-photo-save-amend": "node scripts/test-ot-photo-save-amend.mjs",

@@ -8,6 +8,10 @@ import {
 } from "@/lib/production";
 import { formatPlainNumber } from "@/lib/utils";
 
+/**
+ * แคตตาล็อกสินค้าผลิต + เรทเริ่มต้น — เจ้าของเท่านั้น
+ * อยู่หน้าผลิต · ปรับเรทตามวันที่สรุปโบนัส
+ */
 export function ProdCatalogSetup({
   products,
   onReload,
@@ -41,35 +45,65 @@ export function ProdCatalogSetup({
   }
 
   return (
-    <section className="owner-settings-section">
-      <h2 className="owner-settings-title">ผลิต / โบนัสเบเกอรี่</h2>
-      <p className="muted owner-settings-hint">
-        เพิ่มสินค้า + เรทเริ่มต้นที่นี่ · ปรับเรทตามวันได้ที่{" "}
-        <a href="/bonus/" style={{ fontWeight: 700 }}>สรุปโบนัส → ตารางเรท</a>
-        {" "}· โบนัส/คน = ผลิต × เรทผลิต ÷ จำนวนคน · พนักงานอยู่ที่{" "}
-        <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
+    <section className="prod-catalog-panel">
+      <p className="muted prod-catalog-lead">
+        เพิ่มสินค้า + เรทเริ่มต้น · ปรับเรทตามวันได้ที่{" "}
+        <a href="/bonus/" style={{ fontWeight: 700 }}>
+          สรุปโบนัส → ตารางเรท
+        </a>
+        {" "}· โบนัส/คน = ผลิต × เรทผลิต ÷ จำนวนคน
       </p>
 
       <form className="form-card entry-form" onSubmit={(e) => void addProduct(e)}>
-        <h3 className="panel-title" style={{ fontSize: "1rem" }}>สินค้า + เรท</h3>
+        <h3 className="panel-title" style={{ fontSize: "1rem" }}>
+          สินค้า + เรท
+        </h3>
         <div className="field">
           <label htmlFor="setup-pname">ชื่อสินค้า</label>
-          <input id="setup-pname" value={pName} onChange={(e) => setPName(e.target.value)} required />
+          <input
+            id="setup-pname"
+            value={pName}
+            onChange={(e) => setPName(e.target.value)}
+            placeholder="เช่น วาฟเฟิล"
+            required
+          />
         </div>
         <div className="stock-form-grid">
           <div className="field">
             <label htmlFor="setup-sales">เรทขาย</label>
-            <input id="setup-sales" type="number" step="0.01" min="0" value={salesRate} onChange={(e) => setSalesRate(e.target.value)} />
+            <input
+              id="setup-sales"
+              type="number"
+              step="0.01"
+              min="0"
+              value={salesRate}
+              onChange={(e) => setSalesRate(e.target.value)}
+            />
           </div>
           <div className="field">
             <label htmlFor="setup-prod">เรทผลิต</label>
-            <input id="setup-prod" type="number" step="0.01" min="0" value={prodRate} onChange={(e) => setProdRate(e.target.value)} />
+            <input
+              id="setup-prod"
+              type="number"
+              step="0.01"
+              min="0"
+              value={prodRate}
+              onChange={(e) => setProdRate(e.target.value)}
+            />
           </div>
         </div>
-        <button type="submit" className="primary-btn" disabled={busy}>เพิ่มสินค้า</button>
+        <button type="submit" className="primary-btn" disabled={busy}>
+          {busy ? "กำลังเพิ่ม..." : "เพิ่มสินค้า"}
+        </button>
       </form>
 
       <div className="list-card" style={{ marginTop: "0.75rem" }}>
+        <h3 className="panel-title" style={{ fontSize: "0.95rem" }}>
+          รายการสินค้า ({products.length})
+        </h3>
+        {products.length === 0 ? (
+          <p className="empty">ยังไม่มีสินค้า — เพิ่มด้านบน</p>
+        ) : null}
         {products.map((p) => (
           <div key={p.id} className="list-row" style={{ flexWrap: "wrap", gap: "0.45rem" }}>
             <div style={{ flex: 1, minWidth: "8rem" }}>
@@ -85,7 +119,7 @@ export function ProdCatalogSetup({
               onClick={() =>
                 void updateProdProduct(p.id, { active: !p.active })
                   .then(onReload)
-                  .catch((err) => onError(err.message || "อัปเดตไม่สำเร็จ"))
+                  .catch((err) => onError((err as Error).message || "อัปเดตไม่สำเร็จ"))
               }
             >
               {p.active ? "ปิด" : "เปิด"}

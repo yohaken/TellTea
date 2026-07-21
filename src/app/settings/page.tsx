@@ -15,10 +15,8 @@ import { PosOpsNotesSetup } from "@/components/PosOpsNotesSetup";
 import { AuthGate } from "@/components/AuthGate";
 import { ChecklistSetup } from "@/components/ChecklistSetup";
 import { NavMenuOrderSetup } from "@/components/NavMenuOrderSetup";
-import { ProdCatalogSetup } from "@/components/ProdCatalogSetup";
 import { useAuth } from "@/lib/auth";
 import { seedChecklistItemsIfEmpty } from "@/lib/checklist";
-import { listProdProducts, seedProdCatalogIfEmpty, type ProdProduct } from "@/lib/production";
 
 export default function SettingsPage() {
   return (
@@ -32,13 +30,8 @@ function SettingsView() {
   const { staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
-  const [products, setProducts] = useState<ProdProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  async function reload() {
-    setProducts(await listProdProducts());
-  }
 
   async function reloadChecklist() {
     await seedChecklistItemsIfEmpty();
@@ -52,14 +45,7 @@ function SettingsView() {
 
   useEffect(() => {
     if (!isOwner) return;
-    setLoading(true);
-    void reload()
-      .then(async () => {
-        const seeded = await seedProdCatalogIfEmpty();
-        if (seeded.products || seeded.workers) await reload();
-      })
-      .catch((err) => setError((err as Error).message || "โหลดตั้งค่าไม่สำเร็จ"))
-      .finally(() => setLoading(false));
+    setLoading(false);
   }, [isOwner]);
 
   if (!isOwner) return null;
@@ -71,8 +57,8 @@ function SettingsView() {
         ตั้งค่าโมดูล
       </h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        จัดการค่าเริ่มต้นของผลิต · SmartCheck · โปรไฟล์กิจการ (AI) · ลำดับเมนู — เฉพาะเจ้าของ
-        (รายการวัตถุดิบอยู่หน้า คลัง · เรทโบนัสชงอยู่หน้า สรุปโบนัส)
+        SmartCheck · โปรไฟล์กิจการ (AI) · ลำดับเมนู · POS — เฉพาะเจ้าของ
+        (คลังอยู่หน้า คลัง · สินค้าผลิตอยู่หน้า ผลิต · เรทโบนัสอยู่หน้า สรุปโบนัส)
       </p>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -93,11 +79,6 @@ function SettingsView() {
           <PosPrinterSetup onError={setError} />
           <MenuCatalogSetup onError={setError} />
           <NavMenuOrderSetup onError={setError} />
-          <ProdCatalogSetup
-            products={products}
-            onReload={() => void reload().catch((err) => setError((err as Error).message))}
-            onError={setError}
-          />
           <ChecklistSetup
             onReload={() => void reloadChecklist().catch((err) => setError((err as Error).message))}
             onError={setError}

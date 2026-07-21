@@ -302,7 +302,7 @@ export function RateSchedulePanel({
           ) : null}
           {!activeProducts.length ? (
             <p className="muted bonus-rate-empty">
-              ยังไม่มีสินค้าผลิต — เพิ่มที่หน้าตั้งค่าก่อน แล้วกลับมาตั้งเรทได้
+              ยังไม่มีสินค้าผลิต — เพิ่มที่หน้า ผลิต → สินค้า / เรท แล้วกลับมาตั้งเรทได้
             </p>
           ) : null}
         </div>
