@@ -57,7 +57,7 @@ async function main() {
   let targets = all.filter((d) => d.lastSeenAt > 0 && now - d.lastSeenAt <= ONLINE_MS);
   let mode = "online";
   if (!targets.length && FORCE && all.length) {
-    targets = all.slice(0, 3);
+    targets = all.slice(0, Math.min(all.length, 10));
     mode = "force-latest";
   }
 
