@@ -95,6 +95,6 @@ export function subscribeNposOpsLogs(
     (snap) => {
       onData(snap.docs.map((d) => mapDoc(d.id, d.data() as Record<string, unknown>)));
     },
-    (err) => onError(new Error(mapFirestoreError(err, "โหลดไทม์ไลน์ nPos", "npos"))),
+    (err) => onError(new Error(mapFirestoreError(err, "โหลดไทม์ไลน์ nPos", "pos"))),
   );
 }
