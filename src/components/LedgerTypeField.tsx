@@ -3,7 +3,7 @@
 import { TypePicker } from "@/components/TypePicker";
 import { labelLedgerType } from "@/lib/ledger-labels";
 import type { LedgerTypeSource } from "@/lib/ledger-ai";
-import { Sparkles } from "lucide-react";
+import { RefreshCw, Sparkles } from "lucide-react";
 
 type Props = {
   isOwner: boolean;
@@ -18,7 +18,8 @@ type Props = {
   ownerLocked: boolean;
   typeMode: string;
   onTypeModeChange: (value: string) => void;
-  onResetToAi: () => void;
+  /** บังคับให้ AI จัดใหม่จากชื่อ (+ รูป) แม้มีประเภทอยู่แล้ว */
+  onReclassify: () => void;
   frequent?: string[];
   id?: string;
 };
@@ -35,11 +36,15 @@ export function LedgerTypeField({
   ownerLocked,
   typeMode,
   onTypeModeChange,
-  onResetToAi,
+  onReclassify,
   frequent = [],
   id = "ledger-type",
 }: Props) {
   const displayType = ownerLocked && typeMode !== "auto" ? typeMode : aiType;
+  const hasType = Boolean(String(displayType || "").trim());
+  const busy = aiStatus === "loading";
+  const showReclassify = hasType && aiStatus !== "idle";
+
   const statusLabel =
     aiStatus === "loading"
       ? "กำลังจัดประเภท…"
@@ -54,6 +59,18 @@ export function LedgerTypeField({
             : aiSource === "legacy"
               ? "ประเภทเดิมในระบบ (ยังไม่ผ่าน AI)"
               : "จัดจากชื่อรายการ";
+
+  const reclassifyBtn = showReclassify ? (
+    <button
+      type="button"
+      className="ghost-btn ledger-type-reset-ai"
+      disabled={busy}
+      onClick={onReclassify}
+    >
+      <RefreshCw size={14} aria-hidden />
+      {busy ? "กำลังจัดใหม่…" : "จัดประเภทใหม่ด้วย AI"}
+    </button>
+  ) : null;
 
   if (!isOwner) {
     return (
@@ -71,13 +88,16 @@ export function LedgerTypeField({
           </p>
           {aiReason ? <p className="ledger-type-ai-reason">{aiReason}</p> : null}
           {aiStatus === "ready" && aiSource === "ai" && usedImages === 0 ? (
-            <p className="ledger-type-ai-hint">แนบรูปสินค้า/ใบเสร็จช่วยให้จัดประเภทแม่นขึ้นเมื่อชื่อสั้น</p>
+            <p className="ledger-type-ai-hint">
+              แนบรูปสินค้า/ใบเสร็จช่วยให้จัดประเภทแม่นขึ้นเมื่อชื่อสั้น
+            </p>
           ) : null}
           {aiError ? (
             <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.75rem" }}>
               {aiError}
             </p>
           ) : null}
+          {reclassifyBtn}
         </div>
       </div>
     );
@@ -95,17 +115,11 @@ export function LedgerTypeField({
           <p className="ledger-type-ai-reason">{aiReason}</p>
         ) : null}
         {!ownerLocked && aiStatus === "ready" && aiSource === "ai" && usedImages === 0 ? (
-          <p className="ledger-type-ai-hint">แนบรูปสินค้า/ใบเสร็จช่วยให้จัดประเภทแม่นขึ้นเมื่อชื่อสั้น</p>
+          <p className="ledger-type-ai-hint">
+            แนบรูปสินค้า/ใบเสร็จช่วยให้จัดประเภทแม่นขึ้นเมื่อชื่อสั้น
+          </p>
         ) : null}
-        {ownerLocked ? (
-          <button type="button" className="ghost-btn ledger-type-reset-ai" onClick={onResetToAi}>
-            ให้ AI จัดใหม่จากชื่อรายการ
-          </button>
-        ) : aiSource === "legacy" ? (
-          <button type="button" className="ghost-btn ledger-type-reset-ai" onClick={onResetToAi}>
-            ให้ AI จัดใหม่จากชื่อรายการ
-          </button>
-        ) : null}
+        {reclassifyBtn}
       </div>
       <TypePicker
         id={id}

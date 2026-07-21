@@ -693,7 +693,7 @@ function AddOutModal({
               setTypeMode(value);
               setOwnerLocked(value !== "auto");
             }}
-            onResetToAi={() => {
+            onReclassify={() => {
               setOwnerLocked(false);
               setTypeMode("auto");
               ai.refresh();
@@ -968,7 +968,7 @@ function EditEntryModal({
                 setTypeMode(value);
                 setOwnerLocked(value !== "auto");
               }}
-              onResetToAi={() => {
+              onReclassify={() => {
                 setOwnerLocked(false);
                 setTypeMode("auto");
                 setDescTouched(true);

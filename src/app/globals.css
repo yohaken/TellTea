@@ -1578,6 +1578,9 @@ body.modal-open .main-panel {
 .ledger-type-reset-ai {
   margin-top: 0.45rem;
   font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .quick-actions {
