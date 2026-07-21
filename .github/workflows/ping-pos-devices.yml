@@ -30,4 +30,5 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           POS_ONLINE_MS: "900000"
+          POS_PING_FORCE: "1"
         run: node scripts/ping-pos-devices.mjs
