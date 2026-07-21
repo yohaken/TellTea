@@ -13,13 +13,13 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.List;
 
+import app.telltea.npos.diagnose.DiagnoseReporter;
 import app.telltea.npos.diagnose.DisplayProbe;
 import app.telltea.npos.diagnose.HardwareProbe;
 import app.telltea.npos.diagnose.NumberPresentation;
 
 /**
- * Hardware + multi-display diagnostics.
- * Shows numbered screens and lists USB / Bluetooth / network endpoints.
+ * Hardware + multi-display diagnostics + report to back-office.
  */
 public class DiagnoseActivity extends Activity {
     private static final int REQ_BT = 4401;
@@ -27,7 +27,12 @@ public class DiagnoseActivity extends Activity {
     private LinearLayout displayList;
     private TextView hardwareList;
     private TextView diagnoseStatus;
+    private Button reportButton;
     private final List<NumberPresentation> openPresentations = new ArrayList<>();
+    private List<DisplayProbe.DisplayInfo> lastDisplays = new ArrayList<>();
+    private List<HardwareProbe.Item> lastHardware = new ArrayList<>();
+    private DiagnoseReporter reporter;
+    private boolean reporting;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,35 +42,84 @@ public class DiagnoseActivity extends Activity {
         displayList = findViewById(R.id.displayList);
         hardwareList = findViewById(R.id.hardwareList);
         diagnoseStatus = findViewById(R.id.diagnoseStatus);
+        reportButton = findViewById(R.id.reportButton);
+        reporter = new DiagnoseReporter();
 
         findViewById(R.id.refreshButton).setOnClickListener(v -> refreshAll(true));
+        reportButton.setOnClickListener(v -> sendReport());
         refreshAll(true);
     }
 
     @Override
     protected void onDestroy() {
         dismissPresentations();
+        if (reporter != null) reporter.shutdown();
         super.onDestroy();
     }
 
     private void refreshAll(boolean requestBtIfNeeded) {
-        renderDisplays();
+        lastDisplays = DisplayProbe.listDisplays(this);
+        renderDisplays(lastDisplays);
         HardwareProbe.Result hw = HardwareProbe.scan(this);
+        lastHardware = hw.items;
         renderHardware(hw);
         if (requestBtIfNeeded && hw.bluetoothPermissionNeeded) {
             requestBluetoothPermission();
         }
         diagnoseStatus.setText(
                 "พบจอ "
-                        + displayList.getChildCount()
+                        + lastDisplays.size()
                         + " จอ · รายการเชื่อมต่อ "
-                        + hw.items.size()
+                        + lastHardware.size()
                         + " รายการ");
     }
 
-    private void renderDisplays() {
+    private void sendReport() {
+        if (reporting) return;
+        reporting = true;
+        reportButton.setEnabled(false);
+        diagnoseStatus.setText(R.string.diagnose_reporting);
+        reporter.report(
+                this,
+                lastDisplays,
+                lastHardware,
+                new DiagnoseReporter.Callback() {
+                    @Override
+                    public void onSuccess(String summary) {
+                        runOnUiThread(() -> {
+                            reporting = false;
+                            reportButton.setEnabled(true);
+                            diagnoseStatus.setText(getString(R.string.diagnose_report_ok, summary));
+                            Toast.makeText(
+                                            DiagnoseActivity.this,
+                                            getString(R.string.diagnose_report_ok, summary),
+                                            Toast.LENGTH_LONG)
+                                    .show();
+                        });
+                    }
+
+                    @Override
+                    public void onError(Exception error) {
+                        runOnUiThread(() -> {
+                            reporting = false;
+                            reportButton.setEnabled(true);
+                            String msg =
+                                    error.getMessage() == null
+                                            ? error.getClass().getSimpleName()
+                                            : error.getMessage();
+                            diagnoseStatus.setText(getString(R.string.diagnose_report_fail, msg));
+                            Toast.makeText(
+                                            DiagnoseActivity.this,
+                                            getString(R.string.diagnose_report_fail, msg),
+                                            Toast.LENGTH_LONG)
+                                    .show();
+                        });
+                    }
+                });
+    }
+
+    private void renderDisplays(List<DisplayProbe.DisplayInfo> displays) {
         displayList.removeAllViews();
-        List<DisplayProbe.DisplayInfo> displays = DisplayProbe.listDisplays(this);
         if (displays.isEmpty()) {
             TextView empty = new TextView(this);
             empty.setText(R.string.diagnose_no_displays);
@@ -138,9 +192,9 @@ public class DiagnoseActivity extends Activity {
                     info.primary
                             ? getString(R.string.diagnose_display_primary)
                             : getString(R.string.diagnose_display_secondary);
-            // Presentation on the default display can look odd; still useful for numbering proof.
             NumberPresentation presentation =
-                    new NumberPresentation(this, info.display, info.number, "จอ " + info.number + " · " + label);
+                    new NumberPresentation(
+                            this, info.display, info.number, "จอ " + info.number + " · " + label);
             presentation.setOnDismissListener(d -> openPresentations.remove(presentation));
             presentation.show();
             openPresentations.add(presentation);

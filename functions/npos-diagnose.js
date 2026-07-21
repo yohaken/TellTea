@@ -1,0 +1,106 @@
+/**
+ * Receive nPos-telltea diagnose snapshots from tablets (no Firebase Auth SDK required).
+ * Admin SDK write → collection nposDiagnose/{installId}
+ */
+const functions = require("firebase-functions/v1");
+const { getFirestore } = require("firebase-admin/firestore");
+
+const COL = "nposDiagnose";
+const MAX_DISPLAYS = 8;
+const MAX_HARDWARE = 40;
+
+function cors(res) {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type");
+}
+
+function asString(v, max = 200) {
+  if (typeof v !== "string") return "";
+  return v.trim().slice(0, max);
+}
+
+function mapDisplays(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .slice(0, MAX_DISPLAYS)
+    .map((d, i) => ({
+      number: Number.isFinite(d?.number) ? Math.floor(d.number) : i + 1,
+      displayId: Number.isFinite(d?.displayId) ? Math.floor(d.displayId) : -1,
+      primary: !!d?.primary,
+      name: asString(d?.name, 80) || `display-${i + 1}`,
+    }));
+}
+
+function mapHardware(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, MAX_HARDWARE).map((h) => ({
+    category: asString(h?.category, 40) || "อื่น",
+    title: asString(h?.title, 120) || "—",
+    detail: asString(h?.detail, 240),
+  }));
+}
+
+exports.reportNposDiagnose = functions
+  .region("asia-southeast1")
+  .https.onRequest(async (req, res) => {
+    cors(res);
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+    if (req.method !== "POST") {
+      res.status(405).json({ ok: false, error: "POST only" });
+      return;
+    }
+
+    let body = req.body;
+    if (typeof body === "string") {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        res.status(400).json({ ok: false, error: "invalid JSON" });
+        return;
+      }
+    }
+    if (!body || typeof body !== "object") {
+      res.status(400).json({ ok: false, error: "missing body" });
+      return;
+    }
+
+    const installId = asString(body.installId, 64);
+    if (!installId || !/^[a-zA-Z0-9_-]+$/.test(installId) || installId.length < 8) {
+      res.status(400).json({ ok: false, error: "invalid installId" });
+      return;
+    }
+
+    const versionCode = Number.isFinite(body.versionCode) ? Math.floor(body.versionCode) : 0;
+    const versionName = asString(body.versionName, 32) || "0";
+    const displays = mapDisplays(body.displays);
+    const hardware = mapHardware(body.hardware);
+    const summary =
+      asString(body.summary, 160) ||
+      `จอ ${displays.length} · เชื่อมต่อ ${hardware.length}`;
+    const reportedAt = Date.now();
+
+    const doc = {
+      installId,
+      reportedAt,
+      versionCode,
+      versionName,
+      summary,
+      displays,
+      hardware,
+      source: "npos-telltea",
+      updatedAt: reportedAt,
+    };
+
+    try {
+      const db = getFirestore();
+      await db.collection(COL).doc(installId).set(doc, { merge: true });
+      res.status(200).json({ ok: true, installId, reportedAt, summary });
+    } catch (err) {
+      console.error("reportNposDiagnose failed", err);
+      res.status(500).json({ ok: false, error: "write failed" });
+    }
+  });

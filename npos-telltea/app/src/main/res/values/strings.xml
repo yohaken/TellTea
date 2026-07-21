@@ -23,6 +23,10 @@
     <string name="diagnose_displays_title">จอที่เชื่อมอยู่</string>
     <string name="diagnose_hardware_title">ตัวเชื่อมต่อ</string>
     <string name="diagnose_refresh">สแกนใหม่</string>
+    <string name="diagnose_report">ส่งผลกลับหลังร้าน</string>
+    <string name="diagnose_reporting">กำลังส่งผลตรวจเครื่อง…</string>
+    <string name="diagnose_report_ok">ส่งแล้ว: %1$s</string>
+    <string name="diagnose_report_fail">ส่งไม่สำเร็จ: %1$s</string>
     <string name="diagnose_show_on_display">แสดงเลขบนจอ %1$d</string>
     <string name="diagnose_display_row">จอ %1$d · %2$s</string>
     <string name="diagnose_display_primary">จอหลัก (พนักงาน)</string>

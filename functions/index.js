@@ -13,6 +13,7 @@ exports.createEvidenceUpload = evidenceUpload.createEvidenceUpload;
 exports.finalizeEvidenceUpload = evidenceUpload.finalizeEvidenceUpload;
 exports.uploadEvidencePhoto = evidenceUpload.uploadEvidencePhoto;
 exports.classifyLedgerType = classifyLedger.classifyLedgerType;
+exports.reportNposDiagnose = require("./npos-diagnose").reportNposDiagnose;
 
 const VAPID_PUBLIC =
   process.env.VAPID_PUBLIC_KEY ||

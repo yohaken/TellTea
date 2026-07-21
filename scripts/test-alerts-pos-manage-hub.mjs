@@ -22,7 +22,7 @@ const settingsLib = read("src/lib/settings.ts");
 const rules = read("firestore.rules");
 const smoke = read("scripts/smoke-hosting-export.mjs");
 
-assert.match(version, /APP_BUILD = 207/);
+assert.match(version, /APP_BUILD = 208/);
 
 assert.match(alerts, /router\.replace\("\/more\/"\)/);
 assert.doesNotMatch(more, /href: "\/alerts\/"/);
@@ -48,7 +48,8 @@ assert.doesNotMatch(manage, /PosDeviceSetup/);
 assert.doesNotMatch(manage, /PosOpsNotesSetup/);
 assert.doesNotMatch(manage, /PosShopPaySetup/);
 assert.doesNotMatch(manage, /PosPrinterSetup/);
-assert.match(manage, /ยังไม่มีรายการจัดการ/);
+assert.match(manage, /NposDiagnosePanel/);
+assert.doesNotMatch(manage, /ยังไม่มีรายการจัดการ/);
 assert.match(more, /รายงานยอดขาย POS/);
 
 console.log("OK test-alerts-pos-manage-hub");

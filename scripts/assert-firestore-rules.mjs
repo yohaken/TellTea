@@ -42,6 +42,7 @@ const REQUIRED_MATCHES = [
   "loginTickets",
   "posSales",
   "posDevices",
+  "nposDiagnose",
   "menuItems",
 ];
 
