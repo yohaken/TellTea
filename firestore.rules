@@ -616,6 +616,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /nposOpsLog/{installId} {
+      // Compact device timeline — Admin SDK write only (reportNposOpsLog).
+      allow read: if isOwner() || isOwnerEmail();
+      allow write: if false;
+    }
+
     match /posDevices/{deviceId} {
       allow read: if isOwner() || (isPosDeviceAuth() && deviceId == request.auth.uid);
       allow list: if isOwner();

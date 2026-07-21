@@ -36,6 +36,17 @@
 - ตั้งค่า → ส่งยอดทดสอบ ฿120 / ฿350 ไปจอเพิ่ม (จอ 2) ด้วย `Presentation`
 - ถ้ายังมีจอเดียว จะโชว์บนจอหลักชั่วคราวเพื่อเทส layout
 
+## ปริ้นเตอร์ / ลิ้นชัก (N4–N5 / 1.6.0)
+
+- ตั้งค่า → สแกน USB (bulk OUT) หรือ Bluetooth ที่ paired → พิมพ์หน้าทดสอบ ESC/POS
+- ปุ่ม **เปิดลิ้นชัก** ส่ง `ESC p` ผ่านปริ้นเตอร์เดียวกัน
+- สำเร็จแล้ว heartbeat ส่ง `printerReady` / `printerLabel` กลับ `posDevices`
+
+## Ops log ไทม์ไลน์
+
+- error / ผลฮาร์ดแวร์สั้นๆ → Cloud Function `reportNposOpsLog` → `nposOpsLog/{installId}`
+- หลังร้าน: **จัดการ Pos → ไทม์ไลน์ nPos** (อ่านเพื่อแก้ APK รอบถัดไป โดยไม่ต้องถามศัพท์เทคนิคจากร้าน)
+
 ## สร้าง / ปล่อยเวอร์ชันใหม่
 
 1. บัมพ์ใน `npos-telltea/app/build.gradle`:

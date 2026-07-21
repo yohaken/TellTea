@@ -6,6 +6,8 @@ import android.os.Build;
 import android.util.DisplayMetrics;
 import android.view.WindowManager;
 
+import app.telltea.npos.printer.PrinterPrefs;
+
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -116,6 +118,8 @@ public final class DeviceHeartbeat {
         body.put("deviceHint", hint.trim());
         body.put("screenSize", screen);
         body.put("stableKey", DeviceIdentity.stableKey(context));
+        body.put("printerReady", PrinterPrefs.isReady(context));
+        body.put("printerLabel", PrinterPrefs.label(context));
         return body;
     }
 
