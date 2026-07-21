@@ -27,9 +27,27 @@
     <string name="heartbeat_fail">ส่งสัญญาณไม่สำเร็จ: %1$s</string>
 
     <string name="settings_title">ตั้งค่า</string>
-    <string name="settings_hint">อัปเดตแอป ตรวจฮาร์ดแวร์ และเทสจอหน้าร้าน</string>
+    <string name="settings_hint">อัปเดต · ตรวจเครื่อง · จอลูกค้า · ปริ้น/ลิ้นชัก</string>
     <string name="settings_section_hardware">ตรวจเครื่อง</string>
     <string name="settings_section_customer">จอลูกค้า (N3)</string>
+    <string name="settings_section_printer">ปริ้นเตอร์ / ลิ้นชัก (N4–N5)</string>
+
+    <string name="printer_hint">สแกน USB หรือ Bluetooth ที่จับคู่ไว้ แล้วพิมพ์ทดสอบ / เปิดลิ้นชักผ่านปริ้นเตอร์</string>
+    <string name="printer_idle">ยังไม่ได้สแกนปริ้นเตอร์</string>
+    <string name="printer_none">ยังไม่พบปริ้นเตอร์ — เสียบ USB หรือจับคู่ Bluetooth แล้วสแกน</string>
+    <string name="printer_saved_offline">เคยใช้ได้: %1$s (ตอนนี้ไม่เห็นในรายการ)</string>
+    <string name="printer_selected">เลือก %1$d/%2$d · %3$s</string>
+    <string name="printer_scan_done">พบปริ้นเตอร์/ปลายทาง %1$d รายการ</string>
+    <string name="printer_sending">กำลังส่งพิมพ์ทดสอบผ่าน %1$s…</string>
+    <string name="printer_ok">พิมพ์ทดสอบแล้ว · %1$s</string>
+    <string name="printer_fail">พิมพ์ไม่สำเร็จ: %1$s</string>
+    <string name="drawer_sending">กำลังสั่งเปิดลิ้นชักผ่าน %1$s…</string>
+    <string name="drawer_ok">สั่งเปิดลิ้นชักแล้ว · %1$s</string>
+    <string name="drawer_fail">เปิดลิ้นชักไม่สำเร็จ: %1$s</string>
+    <string name="btn_printer_scan">สแกนปริ้นเตอร์</string>
+    <string name="btn_printer_next">เลือกตัวถัดไป</string>
+    <string name="btn_printer_test">พิมพ์หน้าทดสอบ</string>
+    <string name="btn_drawer_kick">เปิดลิ้นชัก (เทส)</string>
 
     <string name="customer_caption">ยอดชำระ</string>
     <string name="customer_test_hint">ส่งยอดทดสอบไปจอเพิ่ม (จอ 2) — ถ้ามีจอเดียวจะโชว์บนจอหลักชั่วคราว</string>
@@ -60,5 +78,5 @@
     <string name="diagnose_bt_need_permission">ต้องอนุญาต Bluetooth ก่อนจึงจะเห็นเครื่องที่จับคู่ไว้</string>
     <string name="diagnose_showing">กำลังแสดงเลข %1$d บนจอนั้น</string>
     <string name="diagnose_show_failed">แสดงบนจอไม่สำเร็จ: %1$s</string>
-    <string name="diagnose_hint">รอบนี้ตรวจและระบุจอ/อุปกรณ์เท่านั้น ยังไม่สั่งพิมพ์หรือเปิดลิ้นชัก</string>
+    <string name="diagnose_hint">สแกนจอ/อุปกรณ์ แล้วส่งผลกลับหลังร้าน — ผล error จะเข้าไทม์ไลน์ ops ด้วย</string>
 </resources>

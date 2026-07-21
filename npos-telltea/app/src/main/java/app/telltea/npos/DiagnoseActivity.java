@@ -17,6 +17,7 @@ import app.telltea.npos.diagnose.DiagnoseReporter;
 import app.telltea.npos.diagnose.DisplayProbe;
 import app.telltea.npos.diagnose.HardwareProbe;
 import app.telltea.npos.diagnose.NumberPresentation;
+import app.telltea.npos.diagnose.OpsLogger;
 
 /**
  * Hardware + multi-display diagnostics + report to back-office.
@@ -90,6 +91,11 @@ public class DiagnoseActivity extends Activity {
                             reporting = false;
                             reportButton.setEnabled(true);
                             diagnoseStatus.setText(getString(R.string.diagnose_report_ok, summary));
+                            OpsLogger.info(
+                                    DiagnoseActivity.this,
+                                    "hardware",
+                                    "ส่งผลตรวจเครื่องแล้ว",
+                                    summary);
                             Toast.makeText(
                                             DiagnoseActivity.this,
                                             getString(R.string.diagnose_report_ok, summary),
@@ -108,6 +114,8 @@ public class DiagnoseActivity extends Activity {
                                             ? error.getClass().getSimpleName()
                                             : error.getMessage();
                             diagnoseStatus.setText(getString(R.string.diagnose_report_fail, msg));
+                            OpsLogger.error(
+                                    DiagnoseActivity.this, "hardware", "ส่งผลตรวจเครื่องไม่สำเร็จ", msg);
                             Toast.makeText(
                                             DiagnoseActivity.this,
                                             getString(R.string.diagnose_report_fail, msg),
@@ -199,11 +207,18 @@ public class DiagnoseActivity extends Activity {
             presentation.show();
             openPresentations.add(presentation);
             diagnoseStatus.setText(getString(R.string.diagnose_showing, info.number));
+            OpsLogger.result(
+                    this,
+                    "display",
+                    "แสดงเลขบนจอ " + info.number,
+                    "id=" + info.display.getDisplayId() + " · " + label,
+                    true);
             Toast.makeText(this, getString(R.string.diagnose_showing, info.number), Toast.LENGTH_SHORT)
                     .show();
         } catch (Exception e) {
             String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
             diagnoseStatus.setText(getString(R.string.diagnose_show_failed, msg));
+            OpsLogger.error(this, "display", "การแสดงบนจอไม่สำเร็จ", "จอ " + info.number + " · " + msg);
             Toast.makeText(this, getString(R.string.diagnose_show_failed, msg), Toast.LENGTH_LONG).show();
         }
     }

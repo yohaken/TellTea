@@ -86,6 +86,12 @@ exports.nposDeviceHeartbeat = functions
     if (stableKey) {
       patch.stableKey = stableKey;
     }
+    if (Object.prototype.hasOwnProperty.call(body, "printerReady")) {
+      patch.printerReady = body.printerReady === true;
+    }
+    if (Object.prototype.hasOwnProperty.call(body, "printerLabel")) {
+      patch.printerLabel = asString(body.printerLabel, 80);
+    }
 
     try {
       const db = getFirestore();

@@ -9,6 +9,7 @@ import android.widget.TextView;
 
 import app.telltea.npos.diagnose.DeviceHeartbeat;
 import app.telltea.npos.diagnose.DeviceIdentity;
+import app.telltea.npos.diagnose.OpsLogger;
 
 /**
  * nPos-telltea home — brand, device code, heartbeat.
@@ -78,6 +79,7 @@ public class MainActivity extends Activity {
                                             ? error.getClass().getSimpleName()
                                             : error.getMessage();
                             heartbeatStatus.setText(getString(R.string.heartbeat_fail, msg));
+                            OpsLogger.error(MainActivity.this, "heartbeat", "ส่งสัญญาณไม่สำเร็จ", msg);
                         });
                     }
                 });
