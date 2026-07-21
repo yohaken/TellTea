@@ -84,6 +84,28 @@ textarea {
   height: 1.85rem;
 }
 
+/** พื้นดำรองรับโลโก้ PNG โปร่งใสจากโปรไฟล์กิจการ */
+.brand-logo-dark-pad {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0.28rem 0.45rem;
+  border-radius: 0.55rem;
+  background: linear-gradient(160deg, #16191f 0%, #08090b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.brand-logo-dark-pad-compact {
+  padding: 0.18rem 0.32rem;
+  border-radius: 0.42rem;
+}
+
+.brand-logo-custom {
+  object-fit: contain;
+  max-width: 7.5rem;
+}
+
 .brand {
   font-family: var(--font-display), "Poppins", sans-serif;
   font-size: clamp(2rem, 8vw, 2.6rem);
@@ -6002,6 +6024,77 @@ body.modal-open .main-panel {
   flex-direction: column;
   gap: 0.65rem;
   text-align: left;
+}
+
+.business-logo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.2rem;
+}
+
+.business-logo-field-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.business-logo-field-label {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: rgba(28, 42, 31, 0.78);
+}
+
+.business-logo-field-hint {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: rgba(28, 42, 31, 0.52);
+}
+
+/** พื้นดำสำหรับโลโก้ PNG โปร่งใส — เห็นขอบและเงาชัด */
+.business-logo-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 9.5rem;
+  padding: 1.35rem 1.1rem;
+  border-radius: 0.85rem;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.05), transparent 55%),
+    linear-gradient(160deg, #14171c 0%, #0a0b0d 55%, #050607 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.business-logo-preview {
+  display: block;
+  max-width: min(100%, 16rem);
+  max-height: 7.2rem;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.business-logo-empty {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.42);
+  text-align: center;
+  max-width: 14rem;
+  line-height: 1.4;
+}
+
+.business-logo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.business-logo-actions .ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .business-profile-form label {

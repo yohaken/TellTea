@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { Building2 } from "lucide-react";
+import { BusinessLogoField } from "@/components/BusinessLogoField";
 import { useAuth } from "@/lib/auth";
 import {
   DEFAULT_BUSINESS_PROFILE,
@@ -61,6 +62,7 @@ export function BusinessProfileSetup({ onError }: Props) {
           openHours: profile.openHours,
           costStructure: profile.costStructure,
           aiNotes: profile.aiNotes,
+          logoUrl: profile.logoUrl,
         },
         actorId || "owner",
       );
@@ -90,6 +92,13 @@ export function BusinessProfileSetup({ onError }: Props) {
 
       {!loading ? (
         <form className="business-profile-form" onSubmit={(e) => void onSave(e)}>
+          <BusinessLogoField
+            value={profile.logoUrl}
+            onChange={(logoUrl) => patch("logoUrl", logoUrl)}
+            onError={(m) => onError(m || null)}
+            disabled={busy}
+          />
+
           <label>
             <span>ประเภทกิจการ</span>
             <input
@@ -159,7 +168,12 @@ export function BusinessProfileSetup({ onError }: Props) {
               type="button"
               className="ghost-btn"
               disabled={busy}
-              onClick={() => setProfile({ ...DEFAULT_BUSINESS_PROFILE })}
+              onClick={() =>
+                setProfile((prev) => ({
+                  ...DEFAULT_BUSINESS_PROFILE,
+                  logoUrl: prev.logoUrl,
+                }))
+              }
             >
               คืนค่าเริ่มต้น TellTea
             </button>

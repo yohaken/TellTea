@@ -99,6 +99,67 @@ export async function fileToReceiptDataUrl(
   return dataUrl;
 }
 
+/** Soft target for brand logos (PNG with alpha stays under one Firestore doc). */
+export const LOGO_DATA_URL_SOFT_MAX = 500_000;
+
+function isPngFile(file: File) {
+  const type = (file.type || "").toLowerCase();
+  if (type === "image/png") return true;
+  return /\.png$/i.test(file.name || "");
+}
+
+/** Resize keeping PNG alpha — used for transparent brand marks. */
+async function resizeToPngDataUrl(file: File, maxEdge: number): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * scale));
+  const h = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    bitmap.close();
+    throw new Error("ไม่สามารถย่อโลโก้ได้");
+  }
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close();
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/png"),
+  );
+  if (!blob) throw new Error("ไม่สามารถเข้ารหัสโลโก้ PNG ได้");
+  return readAsDataUrl(blob);
+}
+
+/**
+ * โลโก้แบรนด์ — เก็บ PNG โปร่งใสไว้ (ไม่แปลงเป็น JPEG)
+ * ไฟล์อื่น fallback เป็น JPEG แบบสลิป
+ */
+export async function fileToLogoDataUrl(
+  file: File,
+  maxChars: number = LOGO_DATA_URL_SOFT_MAX,
+): Promise<string> {
+  if (!file.type.startsWith("image/") && file.type !== "") {
+    throw new Error("ไฟล์ต้องเป็นรูปภาพ");
+  }
+  const soft = Math.min(Math.max(40_000, maxChars), RECEIPT_DATA_URL_HARD_MAX);
+
+  if (isPngFile(file)) {
+    let dataUrl = await readAsDataUrl(file);
+    if (dataUrl.length <= soft) return dataUrl;
+    let edge = 1024;
+    while (edge >= 256) {
+      dataUrl = await resizeToPngDataUrl(file, edge);
+      if (dataUrl.length <= soft) return dataUrl;
+      edge = Math.round(edge * 0.75);
+    }
+    throw new Error("โลโก้ PNG ใหญ่เกินไป — ลดขนาดไฟล์แล้วลองใหม่");
+  }
+
+  return fileToReceiptDataUrl(file, soft);
+}
+
 /** อ่านข้อความ error จาก Firestore/เซิร์ฟเวอร์ให้เป็นภาษาไทยที่ใช้ได้จริง */
 export function friendlyFirestoreWriteError(err: unknown, fallback: string): string {
   const raw =

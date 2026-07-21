@@ -1,6 +1,6 @@
 import { addDoc, collection, doc, getDoc } from "firebase/firestore";
 import { getDb, getFirebaseAuth } from "./firebase";
-import { fileToReceiptDataUrl } from "./receipts";
+import { fileToLogoDataUrl, fileToReceiptDataUrl } from "./receipts";
 
 /** Short refs stored on ledger/owner-books rows — full bytes live in evidencePhotos/{id}. */
 export const EVIDENCE_PHOTO_PREFIX = "evp:";
@@ -45,6 +45,8 @@ export async function saveEvidencePhotoDoc(
     folder: string;
     slotKey: string;
     onProgress?: (percent: number, message: string) => void;
+    /** logo = keep PNG alpha (brand mark); receipt = JPEG compress */
+    encode?: "receipt" | "logo";
   },
 ): Promise<string> {
   const auth = getFirebaseAuth();
@@ -52,15 +54,26 @@ export async function saveEvidencePhotoDoc(
     throw new Error("ยังไม่ได้เข้าสู่ระบบ — เข้าสู่ระบบก่อนแนบรูป");
   }
 
-  options.onProgress?.(5, "กำลังเตรียมไฟล์หลักฐาน…");
+  const encode = options.encode || "receipt";
+  options.onProgress?.(5, encode === "logo" ? "กำลังเตรียมโลโก้…" : "กำลังเตรียมไฟล์หลักฐาน…");
   // Keep quality high; only shrink if over soft Firestore-doc budget.
-  const dataUrl = await fileToReceiptDataUrl(file, EVIDENCE_PHOTO_SOFT_CHARS);
+  // Logo path preserves PNG transparency instead of flattening to JPEG.
+  const dataUrl =
+    encode === "logo"
+      ? await fileToLogoDataUrl(file)
+      : await fileToReceiptDataUrl(file, EVIDENCE_PHOTO_SOFT_CHARS);
   options.onProgress?.(55, "กำลังบันทึกลงฐานข้อมูล…");
 
+  const isPng = dataUrl.startsWith("data:image/png");
   const payload: EvidencePhotoDoc = {
     dataUrl,
-    contentType: file.type || "image/jpeg",
-    fileName: (file.name || "slip.jpg").slice(0, 120),
+    contentType:
+      encode === "logo"
+        ? isPng
+          ? "image/png"
+          : file.type || "image/png"
+        : file.type || "image/jpeg",
+    fileName: (file.name || (encode === "logo" ? "logo.png" : "slip.jpg")).slice(0, 120),
     folder: options.folder,
     slotKey: options.slotKey,
     createdBy: auth.currentUser.uid,

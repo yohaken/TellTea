@@ -26,6 +26,11 @@ export type BusinessProfile = {
   costStructure: string;
   /** หมายเหตุเพิ่มให้ AI */
   aiNotes: string;
+  /**
+   * โลโก้ร้าน — มักเป็น PNG โปร่งใส
+   * ค่าเป็น `evp:{id}` หรือ https/data URL
+   */
+  logoUrl: string;
   updatedAt: number;
   updatedBy: string;
 };
@@ -46,6 +51,7 @@ export const DEFAULT_BUSINESS_PROFILE: BusinessProfile = {
     "โดยภาพรวมต้นทุนวัตถุดิบ (cogs) ประมาณ 40% ของโครงสร้างต้นทุน · ส่วนที่เหลือเป็นค่าแรงพนักงานและค่าใช้จ่ายอื่น (sga)",
   aiNotes:
     "แยกให้ชัด: ค่าไฟ = sga เสมอ · ค่าน้ำ/ระบบกรองที่เกี่ยวกับน้ำดื่มผลิต = พิจารณาเป็น cogs เมื่อเป็นต้นทุนผลิต · พนักงาน = sga · อย่าสับสนคำว่าเครื่องในเครื่องดื่มกับเครื่องจักร",
+  logoUrl: "",
   updatedAt: 0,
   updatedBy: "",
 };
@@ -66,6 +72,7 @@ function mapProfile(data: Partial<BusinessProfile> | undefined): BusinessProfile
     openHours: String(data?.openHours ?? DEFAULT_BUSINESS_PROFILE.openHours).trim(),
     costStructure: String(data?.costStructure ?? DEFAULT_BUSINESS_PROFILE.costStructure).trim(),
     aiNotes: String(data?.aiNotes ?? DEFAULT_BUSINESS_PROFILE.aiNotes).trim(),
+    logoUrl: String(data?.logoUrl || "").trim(),
     updatedAt: Number(data?.updatedAt) || 0,
     updatedBy: String(data?.updatedBy || ""),
   };
@@ -105,6 +112,7 @@ export async function saveBusinessProfile(
       openHours: String(patch.openHours || "").trim(),
       costStructure: String(patch.costStructure || "").trim(),
       aiNotes: String(patch.aiNotes || "").trim(),
+      logoUrl: String(patch.logoUrl || "").trim(),
       updatedAt: Date.now(),
       updatedBy,
     },
