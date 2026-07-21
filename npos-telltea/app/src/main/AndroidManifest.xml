@@ -32,6 +32,11 @@
         </activity>
 
         <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:label="@string/settings_title" />
+
+        <activity
             android:name=".DiagnoseActivity"
             android:exported="false"
             android:label="@string/diagnose_title" />

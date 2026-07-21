@@ -54,6 +54,8 @@ export type PosDevice = {
   ownerPingAt: number;
   ownerPingMessage: string;
   lastOwnerPingAckAt: number;
+  /** ANDROID_ID (or empty) — used to hide reinstall ghosts for the same tablet. */
+  stableKey: string;
 };
 
 function deviceRef(id: string) {
@@ -147,6 +149,7 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
     ownerPingAt: typeof data.ownerPingAt === "number" ? data.ownerPingAt : 0,
     ownerPingMessage: typeof data.ownerPingMessage === "string" ? data.ownerPingMessage : "",
     lastOwnerPingAckAt: typeof data.lastOwnerPingAckAt === "number" ? data.lastOwnerPingAckAt : 0,
+    stableKey: typeof data.stableKey === "string" ? data.stableKey : "",
   };
 }
 

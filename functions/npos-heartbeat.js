@@ -1,6 +1,10 @@
 /**
  * nPos device heartbeat — Admin upsert into posDevices/{installId}
  * so back-office can see native tablets online without Firebase Auth SDK on device.
+ *
+ * Dedupes by stableKey (ANDROID_ID): when the same physical device reinstalls /
+ * gets a new installId, older sibling docs are marked disabled so the admin list
+ * does not look like many machines from one emulator.
  */
 const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
@@ -59,6 +63,7 @@ exports.nposDeviceHeartbeat = functions
     const versionName = asString(body.versionName, 32) || "0";
     const deviceHint = asString(body.deviceHint, 80);
     const screenSize = asString(body.screenSize, 40);
+    const stableKey = asString(body.stableKey, 120);
     const now = Date.now();
     const pairingCode = pairingCodeFromId(installId);
 
@@ -76,7 +81,11 @@ exports.nposDeviceHeartbeat = functions
       screenSize,
       telemetryAt: now,
       updatedAt: now,
+      disabled: false,
     };
+    if (stableKey) {
+      patch.stableKey = stableKey;
+    }
 
     try {
       const db = getFirestore();
@@ -86,7 +95,6 @@ exports.nposDeviceHeartbeat = functions
         Object.assign(patch, {
           label: "",
           registeredAt: now,
-          disabled: false,
           forceReloadAt: 0,
           lastReloadAckAt: 0,
           syncPendingCount: 0,
@@ -105,13 +113,38 @@ exports.nposDeviceHeartbeat = functions
         });
       }
       await ref.set(patch, { merge: true });
+
+      // Mark older docs with same stableKey as disabled (reinstall / wipe ghosts).
+      let staleMarked = 0;
+      if (stableKey) {
+        const siblings = await db.collection(COL).where("stableKey", "==", stableKey).limit(25).get();
+        const batch = db.batch();
+        siblings.forEach((doc) => {
+          if (doc.id === installId) return;
+          batch.set(
+            doc.ref,
+            {
+              disabled: true,
+              lastSeenAt: typeof doc.get("lastSeenAt") === "number" ? doc.get("lastSeenAt") : 0,
+              updatedAt: now,
+              supersededBy: installId,
+            },
+            { merge: true },
+          );
+          staleMarked += 1;
+        });
+        if (staleMarked > 0) await batch.commit();
+      }
+
       res.status(200).json({
         ok: true,
         installId,
+        stableKey: stableKey || null,
         pairingCode,
         lastSeenAt: now,
         versionCode,
         versionName,
+        staleMarked,
       });
     } catch (err) {
       console.error("nposDeviceHeartbeat failed", err);

@@ -46,6 +46,7 @@
     "test:pos-native-update-foundation": "node scripts/test-pos-native-update-foundation.mjs",
     "test:npos-n2-identity": "node scripts/test-npos-n2-identity.mjs",
     "test:npos-diagnose": "node scripts/test-npos-diagnose.mjs",
+    "test:npos-n3-settings": "node scripts/test-npos-n3-settings.mjs",
     "test:pos-apk-download": "node scripts/test-pos-apk-download.mjs",
     "test:pos-ops-notes": "node scripts/test-pos-ops-notes.mjs",
     "test:pos-owner-ping": "node scripts/test-pos-owner-ping.mjs",
