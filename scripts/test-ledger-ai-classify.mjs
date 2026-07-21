@@ -37,23 +37,32 @@ assert.match(profileLib, /logoUrl/);
 assert.match(setup, /โปรไฟล์กิจการ/);
 assert.match(setup, /BusinessLogoField/);
 assert.match(settingsPage, /BusinessProfileSetup/);
-assert.match(version, /APP_BUILD = 196/);
+assert.match(version, /APP_BUILD = 197/);
 
 const logoField = readFileSync(join(root, "src/components/BusinessLogoField.tsx"), "utf8");
 const receipts = readFileSync(join(root, "src/lib/receipts.ts"), "utf8");
 const evidence = readFileSync(join(root, "src/lib/evidence-photos.ts"), "utf8");
 const appBrand = readFileSync(join(root, "src/components/AppBrand.tsx"), "utf8");
 const css = readFileSync(join(root, "src/app/globals.css"), "utf8");
+const rules = readFileSync(join(root, "firestore.rules"), "utf8");
 
 assert.match(logoField, /business-logo-stage/);
-assert.match(logoField, /encode:\s*"logo"/);
-assert.match(logoField, /brand-logo/);
+assert.match(logoField, /saveBusinessLogo/);
+assert.match(logoField, /fileToLogoDataUrl/);
 assert.match(receipts, /fileToLogoDataUrl/);
 assert.match(receipts, /image\/png/);
 assert.match(evidence, /encode\?:\s*"receipt"\s*\|\s*"logo"/);
 assert.match(appBrand, /brand-logo-dark-pad/);
+assert.match(appBrand, /BRAND_LOGO_CHANGED_EVENT/);
+assert.match(appBrand, /peekCachedBrandLogo/);
+assert.match(appBrand, /useCustom \?/);
+assert.match(appBrand, /\/logo-telltea\.svg/);
 assert.match(css, /\.business-logo-stage/);
 assert.match(css, /\.brand-logo-dark-pad/);
+assert.match(css, /\.hero-brand \.brand-logo-dark-pad/);
+assert.match(rules, /docId == 'businessProfile'/);
+assert.match(profileLib, /saveBusinessLogo/);
+assert.match(profileLib, /BRAND_LOGO_CHANGED_EVENT/);
 
 // Staff ledger: no opt-in photo AI checkbox
 assert.doesNotMatch(ledgerPage, /AiUseImagesCheckbox|useImagesForAi|ใช้รูปช่วยจัดประเภท/);

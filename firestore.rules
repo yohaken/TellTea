@@ -548,8 +548,10 @@ service cloud.firestore {
     }
 
     match /meta/{docId} {
+      // businessProfile.logoUrl is shown on login before auth — public read OK (no secrets)
       // aiSettings holds Gemini API key — owner-only read
-      allow read: if (docId == 'aiSettings' && isOwner())
+      allow read: if docId == 'businessProfile'
+        || (docId == 'aiSettings' && isOwner())
         || (docId != 'aiSettings' && isStaff())
         || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes'));
       allow write: if isOwner()

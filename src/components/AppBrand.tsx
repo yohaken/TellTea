@@ -1,10 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  BRAND_LOGO_CHANGED_EVENT,
+  getBusinessProfile,
+  peekCachedBrandLogo,
+  cacheBrandLogo,
+} from "@/lib/business-profile";
+import { isEvidencePhotoRef, resolveEvidencePhotoSrc } from "@/lib/evidence-photos";
 import { appVersionLabel } from "@/lib/version";
 import { cn } from "@/lib/utils";
-import { getBusinessProfile } from "@/lib/business-profile";
-import { resolveEvidencePhotoSrc } from "@/lib/evidence-photos";
+
+async function resolveBrandLogoSrc(raw: string): Promise<string> {
+  const url = String(raw || "").trim();
+  if (!url) return "";
+  if (url.startsWith("data:") || /^https?:\/\//i.test(url)) return url;
+  if (isEvidencePhotoRef(url)) {
+    try {
+      return await resolveEvidencePhotoSrc(url);
+    } catch {
+      return "";
+    }
+  }
+  return url;
+}
 
 export function AppBrand({
   className,
@@ -20,27 +39,43 @@ export function AppBrand({
   versionLabel?: string;
 }) {
   const label = versionLabel ?? appVersionLabel();
-  const [customLogoSrc, setCustomLogoSrc] = useState<string | null>(null);
+  const [customLogoSrc, setCustomLogoSrc] = useState<string>(() => peekCachedBrandLogo());
 
   useEffect(() => {
     if (!showLogo) return;
     let cancelled = false;
+
+    async function applyRaw(raw: string) {
+      const src = await resolveBrandLogoSrc(raw);
+      if (cancelled) return;
+      setCustomLogoSrc(src);
+      if (src.startsWith("data:") || /^https?:\/\//i.test(src)) {
+        cacheBrandLogo(src);
+      }
+    }
+
     void (async () => {
+      const cached = peekCachedBrandLogo();
+      if (cached && !cancelled) {
+        await applyRaw(cached);
+      }
       try {
         const profile = await getBusinessProfile();
         const url = (profile.logoUrl || "").trim();
-        if (!url) {
-          if (!cancelled) setCustomLogoSrc(null);
-          return;
-        }
-        const src = await resolveEvidencePhotoSrc(url);
-        if (!cancelled) setCustomLogoSrc(src || null);
+        if (!cancelled) await applyRaw(url);
       } catch {
-        if (!cancelled) setCustomLogoSrc(null);
+        /* keep cache / empty → fallback SVG */
       }
     })();
+
+    function onBrandLogo(ev: Event) {
+      const detail = String((ev as CustomEvent).detail ?? "").trim();
+      void applyRaw(detail);
+    }
+    window.addEventListener(BRAND_LOGO_CHANGED_EVENT, onBrandLogo);
     return () => {
       cancelled = true;
+      window.removeEventListener(BRAND_LOGO_CHANGED_EVENT, onBrandLogo);
     };
   }, [showLogo]);
 
@@ -56,7 +91,7 @@ export function AppBrand({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={customLogoSrc!}
+              src={customLogoSrc}
               alt=""
               className={cn("brand-logo brand-logo-custom", compact && "brand-logo-compact")}
             />

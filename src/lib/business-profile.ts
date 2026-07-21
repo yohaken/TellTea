@@ -56,8 +56,48 @@ export const DEFAULT_BUSINESS_PROFILE: BusinessProfile = {
   updatedBy: "",
 };
 
+/** localStorage + event — ให้ AppBrand แทนโลโก้เดิมทันทีหลังอัปโหลด */
+export const BRAND_LOGO_STORAGE_KEY = "telltea-brand-logo-v1";
+export const BRAND_LOGO_CHANGED_EVENT = "telltea-brand-logo";
+
 function profileRef() {
   return doc(getDb(), "meta", "businessProfile");
+}
+
+export function peekCachedBrandLogo(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return String(window.localStorage.getItem(BRAND_LOGO_STORAGE_KEY) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+export function cacheBrandLogo(logoUrl: string) {
+  if (typeof window === "undefined") return;
+  const next = String(logoUrl || "").trim();
+  try {
+    if (next) window.localStorage.setItem(BRAND_LOGO_STORAGE_KEY, next);
+    else window.localStorage.removeItem(BRAND_LOGO_STORAGE_KEY);
+  } catch {
+    /* quota / private mode */
+  }
+  window.dispatchEvent(new CustomEvent(BRAND_LOGO_CHANGED_EVENT, { detail: next }));
+}
+
+/** บันทึกโลโก้ทันที (data URL / evp) — แทนโลโก้เดิมทั่วแอปโดยไม่ต้องรอเซฟฟอร์มทั้งใบ */
+export async function saveBusinessLogo(logoUrl: string, updatedBy: string): Promise<void> {
+  const next = String(logoUrl || "").trim();
+  await setDoc(
+    profileRef(),
+    {
+      logoUrl: next,
+      updatedAt: Date.now(),
+      updatedBy,
+    },
+    { merge: true },
+  );
+  cacheBrandLogo(next);
 }
 
 function mapProfile(data: Partial<BusinessProfile> | undefined): BusinessProfile {
@@ -101,6 +141,7 @@ export async function saveBusinessProfile(
   patch: Omit<BusinessProfile, "updatedAt" | "updatedBy">,
   updatedBy: string,
 ): Promise<void> {
+  const logoUrl = String(patch.logoUrl || "").trim();
   await setDoc(
     profileRef(),
     {
@@ -112,12 +153,13 @@ export async function saveBusinessProfile(
       openHours: String(patch.openHours || "").trim(),
       costStructure: String(patch.costStructure || "").trim(),
       aiNotes: String(patch.aiNotes || "").trim(),
-      logoUrl: String(patch.logoUrl || "").trim(),
+      logoUrl,
       updatedAt: Date.now(),
       updatedBy,
     },
     { merge: true },
   );
+  cacheBrandLogo(logoUrl);
 }
 
 /** แปลงโปรไฟล์เป็นข้อความให้โมเดล AI อ่าน */

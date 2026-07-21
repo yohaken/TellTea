@@ -6,11 +6,14 @@ import { BusinessLogoField } from "@/components/BusinessLogoField";
 import { useAuth } from "@/lib/auth";
 import {
   DEFAULT_BUSINESS_PROFILE,
+  cacheBrandLogo,
   ensureBusinessProfileSeeded,
   getBusinessProfile,
+  saveBusinessLogo,
   saveBusinessProfile,
   type BusinessProfile,
 } from "@/lib/business-profile";
+import { isEvidencePhotoRef, resolveEvidencePhotoSrc } from "@/lib/evidence-photos";
 
 type Props = {
   onError: (msg: string | null) => void;
@@ -29,7 +32,22 @@ export function BusinessProfileSetup({ onError }: Props) {
     void (async () => {
       try {
         const seeded = await ensureBusinessProfileSeeded(actorId || "owner");
-        if (!cancelled) setProfile(seeded);
+        let next = seeded;
+        // โลโก้รุ่นเก่าเป็น evp: — แปลงเป็น data URL ให้อ่านได้บนหน้า login
+        if (isEvidencePhotoRef(seeded.logoUrl)) {
+          try {
+            const dataUrl = await resolveEvidencePhotoSrc(seeded.logoUrl);
+            if (dataUrl.startsWith("data:")) {
+              await saveBusinessLogo(dataUrl, actorId || "owner");
+              next = { ...seeded, logoUrl: dataUrl };
+            }
+          } catch {
+            /* keep evp until re-upload */
+          }
+        } else if (seeded.logoUrl) {
+          cacheBrandLogo(seeded.logoUrl);
+        }
+        if (!cancelled) setProfile(next);
       } catch {
         try {
           const p = await getBusinessProfile();

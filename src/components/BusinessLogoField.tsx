@@ -2,11 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Trash2 } from "lucide-react";
-import {
-  resolveEvidencePhotoSrc,
-  saveEvidencePhotoDoc,
-} from "@/lib/evidence-photos";
-import { friendlyFirestoreWriteError } from "@/lib/receipts";
+import { useAuth } from "@/lib/auth";
+import { saveBusinessLogo } from "@/lib/business-profile";
+import { isEvidencePhotoRef, resolveEvidencePhotoSrc } from "@/lib/evidence-photos";
+import { fileToLogoDataUrl, friendlyFirestoreWriteError } from "@/lib/receipts";
 
 type Props = {
   value: string;
@@ -17,9 +16,10 @@ type Props = {
 
 /**
  * อัปโหลดโลโก้ร้าน (PNG โปร่งใสแนะนำ)
- * พรีวิวบนพื้นดำเพื่อให้เห็นขอบและเงาโปร่งใสชัด
+ * พรีวิวบนพื้นดำ + บันทึกทันทีเพื่อแทนโลโก้เดิมทั่วแอป
  */
 export function BusinessLogoField({ value, onChange, onError, disabled }: Props) {
+  const { actorId } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [previewSrc, setPreviewSrc] = useState("");
@@ -27,15 +27,16 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      if (!value.trim()) {
+      const raw = value.trim();
+      if (!raw) {
         if (!cancelled) setPreviewSrc("");
         return;
       }
       try {
-        const src = await resolveEvidencePhotoSrc(value);
+        const src = isEvidencePhotoRef(raw) ? await resolveEvidencePhotoSrc(raw) : raw;
         if (!cancelled) setPreviewSrc(src);
       } catch {
-        if (!cancelled) setPreviewSrc("");
+        if (!cancelled) setPreviewSrc(raw.startsWith("data:") ? raw : "");
       }
     })();
     return () => {
@@ -43,18 +44,21 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
     };
   }, [value]);
 
+  async function persist(next: string) {
+    onChange(next);
+    await saveBusinessLogo(next, actorId || "owner");
+  }
+
   async function onPick(fileList: FileList | null) {
     const file = fileList?.[0];
     if (!file) return;
     setBusy(true);
     onError?.("");
     try {
-      const ref = await saveEvidencePhotoDoc(file, {
-        folder: "brand-logo",
-        slotKey: "primary",
-        encode: "logo",
-      });
-      onChange(ref);
+      // เก็บเป็น data URL บน meta/businessProfile — อ่านได้แม้ยังไม่ล็อกอิน (หน้า login)
+      const dataUrl = await fileToLogoDataUrl(file);
+      setPreviewSrc(dataUrl);
+      await persist(dataUrl);
     } catch (err) {
       onError?.(friendlyFirestoreWriteError(err, "อัปโหลดโลโก้ไม่สำเร็จ"));
     } finally {
@@ -63,11 +67,26 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
     }
   }
 
+  async function onClear() {
+    setBusy(true);
+    onError?.("");
+    try {
+      setPreviewSrc("");
+      await persist("");
+    } catch (err) {
+      onError?.(friendlyFirestoreWriteError(err, "ลบโลโก้ไม่สำเร็จ"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="business-logo-field">
       <div className="business-logo-field-head">
         <span className="business-logo-field-label">โลโก้ร้าน</span>
-        <span className="business-logo-field-hint">PNG โปร่งใสแนะนำ · พรีวิวบนพื้นดำ</span>
+        <span className="business-logo-field-hint">
+          PNG โปร่งใสแนะนำ · พรีวิวบนพื้นดำ · แทนโลโก้เดิมทันทีหลังอัปโหลด
+        </span>
       </div>
 
       <div className="business-logo-stage" aria-label="พรีวิวโลโก้บนพื้นดำ">
@@ -75,7 +94,7 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
           // eslint-disable-next-line @next/next/no-img-element
           <img src={previewSrc} alt="โลโก้ร้าน" className="business-logo-preview" />
         ) : (
-          <p className="business-logo-empty">ยังไม่มีโลโก้ — อัปโหลด PNG เพื่อดูบนพื้นดำ</p>
+          <p className="business-logo-empty">ยังไม่มีโลโก้ — อัปโหลด PNG เพื่อแทนโลโก้เดิมทั่วแอป</p>
         )}
       </div>
 
@@ -102,7 +121,7 @@ export function BusinessLogoField({ value, onChange, onError, disabled }: Props)
             type="button"
             className="ghost-btn"
             disabled={disabled || busy}
-            onClick={() => onChange("")}
+            onClick={() => void onClear()}
           >
             <Trash2 size={16} aria-hidden />
             ลบโลโก้

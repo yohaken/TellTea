@@ -365,6 +365,22 @@ body.modal-open .main-panel {
   filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.22));
 }
 
+.hero-brand .brand-logo-dark-pad {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.9rem;
+  background: linear-gradient(160deg, #16191f 0%, #08090b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hero-brand .brand-logo-dark-pad .brand-logo {
+  height: clamp(4.5rem, 22vw, 6.5rem);
+  max-width: min(78vw, 18rem);
+  filter: none;
+}
+
 .hero-brand .brand {
   display: none;
 }
