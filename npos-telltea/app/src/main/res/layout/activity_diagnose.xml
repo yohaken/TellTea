@@ -36,6 +36,15 @@
             android:text="@string/diagnose_refresh"
             android:textAllCaps="false" />
 
+        <Button
+            android:id="@+id/reportButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="48dp"
+            android:text="@string/diagnose_report"
+            android:textAllCaps="false" />
+
         <TextView
             android:id="@+id/diagnoseStatus"
             android:layout_width="match_parent"
