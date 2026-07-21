@@ -1,4 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">nPos-telltea</string>
+    <string name="hello_world">Hello World</string>
+    <string name="version_label">เวอร์ชัน %1$s (%2$d)</string>
+    <string name="status_ready">พร้อมใช้งาน</string>
+    <string name="status_checking">กำลังเช็คอัปเดต…</string>
+    <string name="status_up_to_date">ล่าสุดแล้ว</string>
+    <string name="status_available">มีเวอร์ชันใหม่ %1$s (%2$d)</string>
+    <string name="status_downloading">กำลังดาวน์โหลดอัปเดต… %1$d%%</string>
+    <string name="status_installing">กำลังเปิดตัวติดตั้ง…</string>
+    <string name="status_allow_install">อนุญาตติดตั้งแอปนี้ก่อน แล้วกดอัปเดตอีกครั้ง</string>
+    <string name="status_error">เช็คอัปเดตไม่สำเร็จ: %1$s</string>
+    <string name="btn_check_update">เช็คอัปเดต</string>
+    <string name="btn_install_update">อัปเดตเลย</string>
+    <string name="banner_update">มีเวอร์ชันใหม่ — กดอัปเดตเลย</string>
 </resources>

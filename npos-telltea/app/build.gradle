@@ -10,8 +10,15 @@ android {
         applicationId "app.telltea.npos"
         minSdk 23
         targetSdk 35
-        versionCode 1
-        versionName "1.0"
+        // Bump BOTH when shipping an APK users should receive as an update.
+        versionCode 2
+        versionName "1.1.0"
+        buildConfigField "String", "UPDATE_MANIFEST_URL", "\"https://telltea-pos.web.app/downloads/latest.json\""
+        buildConfigField "String", "DEFAULT_APK_URL", "\"https://telltea-pos.web.app/downloads/nPos-telltea.apk\""
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     buildTypes {
