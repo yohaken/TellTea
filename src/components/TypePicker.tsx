@@ -79,7 +79,7 @@ export function TypePicker({
                   setQuery("");
                 }}
               >
-                {key === "auto" ? "อัตโนมัติ" : labelLedgerType(key)}
+                {key === "auto" ? "ให้ AI จัด" : labelLedgerType(key)}
               </button>
             );
           })}

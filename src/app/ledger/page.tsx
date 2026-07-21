@@ -31,8 +31,11 @@ import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
-import { TypePicker } from "@/components/TypePicker";
-import { frequentTypes, guessTypeFromDescription, labelLedgerType } from "@/lib/ledger-labels";
+import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
+import { LedgerTypeField } from "@/components/LedgerTypeField";
+import { frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
+import { useLedgerAiClassify } from "@/hooks/use-ledger-ai-classify";
+import type { LedgerTypeSource } from "@/lib/ledger-ai";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
 import { saveImageToDevice } from "@/lib/receipts";
 import {
@@ -59,7 +62,8 @@ export default function LedgerPage() {
 }
 
 function LedgerView() {
-  const { actorId } = useAuth();
+  const { actorId, staff } = useAuth();
+  const isOwner = staff?.role === "owner";
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -278,6 +282,8 @@ function LedgerView() {
         <strong>{balance == null ? "…" : `฿${formatPlainNumber(balance)}`}</strong>
       </div>
 
+      {isOwner && actorId ? <LedgerAiSettingsPanel actorId={actorId} /> : null}
+
       <aside className="ledger-photo-tip" role="note" aria-label="คำแนะนำถ่ายหลักฐาน">
         <Camera size={18} aria-hidden className="ledger-photo-tip-icon" />
         <div className="ledger-photo-tip-body">
@@ -407,6 +413,7 @@ function LedgerView() {
       {editing ? (
         <EditEntryModal
           entry={editing}
+          isOwner={isOwner}
           onClose={() => setEditing(null)}
           onSaved={() => setEditing(null)}
           onError={setError}
@@ -416,6 +423,7 @@ function LedgerView() {
       {adding && actorId ? (
         <AddOutModal
           createdBy={actorId}
+          isOwner={isOwner}
           onClose={() => setAdding(false)}
           onSaved={() => setAdding(false)}
           onError={setError}
@@ -518,11 +526,13 @@ function toDateInput(ms: number) {
 
 function AddOutModal({
   createdBy,
+  isOwner,
   onClose,
   onSaved,
   onError,
 }: {
   createdBy: string;
+  isOwner: boolean;
   onClose: () => void;
   onSaved: () => void;
   onError: (msg: string) => void;
@@ -531,14 +541,24 @@ function AddOutModal({
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [typeMode, setTypeMode] = useState("auto");
+  const [ownerLocked, setOwnerLocked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [receiptUrls, setReceiptUrls] = useState<string[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
 
-  const autoType = useMemo(() => guessTypeFromDescription(description), [description]);
-  const resolvedType = typeMode === "auto" ? autoType : typeMode;
+  const ai = useLedgerAiClassify({
+    description,
+    locked: isOwner && ownerLocked,
+  });
+
+  const resolvedType =
+    isOwner && ownerLocked && typeMode !== "auto" ? typeMode : ai.type;
+  const resolvedSource: LedgerTypeSource =
+    isOwner && ownerLocked && typeMode !== "auto" ? "owner" : ai.source;
+  const resolvedReason =
+    resolvedSource === "owner" ? "" : ai.reason;
 
   const filteredSuggestions = useMemo(() => {
     const q = description.trim().toLowerCase();
@@ -560,6 +580,14 @@ function AddOutModal({
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
+    if (!description.trim()) {
+      onError("ต้องใส่รายการ");
+      return;
+    }
+    if (ai.status === "loading" && !(isOwner && ownerLocked)) {
+      onError("รอ AI จัดประเภทสักครู่");
+      return;
+    }
     setBusy(true);
     try {
       await addLedgerEntry({
@@ -568,6 +596,8 @@ function AddOutModal({
         amountIn: 0,
         amountOut: Number(amount),
         type: resolvedType,
+        typeSource: resolvedSource,
+        typeAiReason: resolvedReason,
         createdBy,
         receiptUrls,
       });
@@ -646,12 +676,26 @@ function AddOutModal({
               ดูรูปทั้งหมด ({receiptUrls.length})
             </button>
           ) : null}
-          <TypePicker
+          <LedgerTypeField
             id="add-out-type"
-            value={typeMode}
-            onChange={setTypeMode}
+            isOwner={isOwner}
+            aiType={ai.type}
+            aiReason={ai.reason}
+            aiSource={ai.source}
+            aiStatus={ai.status}
+            aiError={ai.error}
+            ownerLocked={ownerLocked}
+            typeMode={typeMode}
             frequent={typeFreq}
-            autoHint={autoType}
+            onTypeModeChange={(value) => {
+              setTypeMode(value);
+              setOwnerLocked(value !== "auto");
+            }}
+            onResetToAi={() => {
+              setOwnerLocked(false);
+              setTypeMode("auto");
+              ai.refresh();
+            }}
           />
           <div className="entry-actions">
             <button type="submit" className="primary-btn action-out" disabled={busy}>
@@ -673,28 +717,54 @@ function AddOutModal({
 
 function EditEntryModal({
   entry,
+  isOwner,
   onClose,
   onSaved,
   onError,
 }: {
   entry: LedgerEntry;
+  isOwner: boolean;
   onClose: () => void;
   onSaved: () => void;
   onError: (msg: string) => void;
 }) {
   const isIn = entry.amountIn > 0;
+  const initialSource = (entry.typeSource || "").trim() as LedgerTypeSource | "";
+  const wasOwnerType = initialSource === "owner";
   const [date, setDate] = useState(toDateInput(entry.date));
   const [description, setDescription] = useState(entry.description);
   const [amount, setAmount] = useState(String(isIn ? entry.amountIn : entry.amountOut));
-  const [typeMode, setTypeMode] = useState(() => (entry.type || "").trim() || "auto");
+  const [typeMode, setTypeMode] = useState(() =>
+    wasOwnerType ? (entry.type || "").trim() || "auto" : "auto",
+  );
+  const [ownerLocked, setOwnerLocked] = useState(wasOwnerType);
+  const [descTouched, setDescTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getLedgerReceiptUrls(entry));
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
 
-  const autoType = useMemo(() => guessTypeFromDescription(description), [description]);
-  const resolvedType = typeMode === "auto" ? autoType : typeMode;
+  const ai = useLedgerAiClassify({
+    description,
+    locked: isIn || (isOwner && ownerLocked) || !descTouched,
+    enabled: !isIn,
+    initial:
+      !isIn && entry.type
+        ? {
+            type: entry.type,
+            reason: entry.typeAiReason || "",
+            source: (initialSource as LedgerTypeSource) || "ai",
+          }
+        : undefined,
+  });
+
+  const resolvedType =
+    isOwner && ownerLocked && typeMode !== "auto" ? typeMode : ai.type;
+  const resolvedSource: LedgerTypeSource =
+    isOwner && ownerLocked && typeMode !== "auto" ? "owner" : ai.source;
+  const resolvedReason =
+    resolvedSource === "owner" ? "" : ai.reason;
 
   const filteredSuggestions = useMemo(() => {
     const q = description.trim().toLowerCase();
@@ -716,6 +786,10 @@ function EditEntryModal({
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
+    if (!isIn && ai.status === "loading" && !(isOwner && ownerLocked)) {
+      onError("รอ AI จัดประเภทสักครู่");
+      return;
+    }
     setBusy(true);
     try {
       const value = Number(amount);
@@ -725,6 +799,8 @@ function EditEntryModal({
         amountIn: isIn ? value : 0,
         amountOut: isIn ? 0 : value,
         type: isIn ? entry.type || "โอนเข้า" : resolvedType,
+        typeSource: isIn ? entry.typeSource || "" : resolvedSource,
+        typeAiReason: isIn ? entry.typeAiReason || "" : resolvedReason,
         receiptUrls,
       });
       onSaved();
@@ -784,7 +860,15 @@ function EditEntryModal({
             <input
               id="edit-desc"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setDescTouched(true);
+                // พนักงานแก้ชื่อ → AI จัดใหม่เสมอ · เจ้าของที่ล็อกประเภทไว้คงค่าเดิม
+                if (!isOwner || !ownerLocked) {
+                  setOwnerLocked(false);
+                  setTypeMode("auto");
+                }
+              }}
               autoComplete="off"
               required
             />
@@ -795,7 +879,14 @@ function EditEntryModal({
                     key={item}
                     type="button"
                     className="suggest-chip"
-                    onClick={() => setDescription(item)}
+                    onClick={() => {
+                      setDescription(item);
+                      setDescTouched(true);
+                      if (!isOwner || !ownerLocked) {
+                        setOwnerLocked(false);
+                        setTypeMode("auto");
+                      }
+                    }}
                   >
                     {item}
                   </button>
@@ -818,12 +909,27 @@ function EditEntryModal({
           </div>
 
           {!isIn ? (
-            <TypePicker
+            <LedgerTypeField
               id="edit-type"
-              value={typeMode}
-              onChange={setTypeMode}
+              isOwner={isOwner}
+              aiType={ai.type}
+              aiReason={ai.reason}
+              aiSource={ai.source}
+              aiStatus={ai.status}
+              aiError={ai.error}
+              ownerLocked={ownerLocked}
+              typeMode={typeMode}
               frequent={typeFreq}
-              autoHint={autoType}
+              onTypeModeChange={(value) => {
+                setTypeMode(value);
+                setOwnerLocked(value !== "auto");
+              }}
+              onResetToAi={() => {
+                setOwnerLocked(false);
+                setTypeMode("auto");
+                setDescTouched(true);
+                ai.refresh();
+              }}
             />
           ) : null}
 

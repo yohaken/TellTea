@@ -5,12 +5,14 @@ const webpush = require("web-push");
 const { runSyncWithAdmin } = require("./task-weekly-sync");
 const { completePosSaleAdmin, isPosCaller } = require("./pos-complete-sale");
 const evidenceUpload = require("./evidence-upload");
+const classifyLedger = require("./classify-ledger");
 
 initializeApp();
 
 exports.createEvidenceUpload = evidenceUpload.createEvidenceUpload;
 exports.finalizeEvidenceUpload = evidenceUpload.finalizeEvidenceUpload;
 exports.uploadEvidencePhoto = evidenceUpload.uploadEvidencePhoto;
+exports.classifyLedgerType = classifyLedger.classifyLedgerType;
 
 const VAPID_PUBLIC =
   process.env.VAPID_PUBLIC_KEY ||

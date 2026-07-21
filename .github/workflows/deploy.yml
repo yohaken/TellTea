@@ -125,10 +125,11 @@ jobs:
 
       - name: Write Functions env
         run: |
-          printf 'VAPID_PUBLIC_KEY=%s\nVAPID_PRIVATE_KEY=%s\nTELLTEA_STORAGE_BUCKET=%s\n' \
+          printf 'VAPID_PUBLIC_KEY=%s\nVAPID_PRIVATE_KEY=%s\nTELLTEA_STORAGE_BUCKET=%s\nGEMINI_API_KEY=%s\n' \
             "${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}" \
             "${{ secrets.VAPID_PRIVATE_KEY }}" \
-            "mypeer-501909.firebasestorage.app" > functions/.env
+            "mypeer-501909.firebasestorage.app" \
+            "${{ secrets.GEMINI_API_KEY }}" > functions/.env
 
       - name: Ensure POS hosting site exists
         run: |

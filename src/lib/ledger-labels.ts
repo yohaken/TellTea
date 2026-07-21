@@ -11,7 +11,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export const BASE_TYPE_OPTIONS = [
-  { value: "auto", label: TYPE_LABELS.auto },
+  { value: "auto", label: "ให้ AI จัดประเภท" },
   { value: "cogs", label: TYPE_LABELS.cogs },
   { value: "sga", label: TYPE_LABELS.sga },
   { value: "asset", label: TYPE_LABELS.asset },
@@ -36,7 +36,7 @@ export function guessTypeFromDescription(description: string): string {
   if (text.includes("ยกมา")) return "ยอดยกมา";
   if (text.includes("โอนเข้า")) return "โอนเข้า";
 
-  const assetHints = ["เครื่อง", "ตู้", "แอร์", "อุปกรณ์ถาวร", "สินทรัพย์"];
+  const assetHints = ["ซื้อเครื่อง", "เครื่องใหม่", "ตู้เย็น", "ตู้แช่", "แอร์ใหม่", "อุปกรณ์ถาวร", "สินทรัพย์"];
   if (assetHints.some((h) => text.includes(h))) return "asset";
 
   const sgaHints = [
@@ -53,8 +53,13 @@ export function guessTypeFromDescription(description: string): string {
     "ไม้กวาด",
     "แปรง",
     "ค่าเช่า",
+    "ซ่อม",
+    "ส่งเครื่อง",
   ];
   if (sgaHints.some((h) => text.includes(h))) return "sga";
+
+  // คำว่า "เครื่อง" เดี่ยวๆ มักเป็น asset — แต่ถ้ามีซ่อม/ส่ง ถูกจับด้านบนแล้ว
+  if (text.includes("เครื่อง") || text.includes("ตู้") || text.includes("แอร์")) return "asset";
 
   // ของใช้ทำเครื่องดื่ม / สั่งซื้อวัตถุดิบ → cogs
   return "cogs";

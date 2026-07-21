@@ -45,6 +45,10 @@ export type LedgerEntry = {
   amountIn: number;
   amountOut: number;
   type: string;
+  /** ai | owner | heuristic — แหล่งที่มาของประเภท */
+  typeSource?: string;
+  /** เหตุผลสั้นๆ จาก AI */
+  typeAiReason?: string;
   createdBy: string;
   createdAt: number;
   /** เวลาแก้ไขล่าสุด (ms) — แถวเก่าอาจไม่มี ใช้ createdAt แทนตอนแสดง */
@@ -61,6 +65,8 @@ export type LedgerEntryInput = {
   amountIn: number;
   amountOut: number;
   type: string;
+  typeSource?: string;
+  typeAiReason?: string;
   createdBy: string;
   receiptUrl?: string;
   receiptUrls?: string[];

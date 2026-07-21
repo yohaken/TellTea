@@ -1462,6 +1462,114 @@ body.modal-open .main-panel {
   text-align: left;
 }
 
+.ledger-ai-settings {
+  margin: 0 0 0.75rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(47, 107, 79, 0.18);
+  background: linear-gradient(135deg, rgba(47, 107, 79, 0.08), rgba(255, 255, 255, 0.7));
+  overflow: hidden;
+}
+
+.ledger-ai-settings-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  border: 0;
+  background: transparent;
+  color: rgba(28, 42, 31, 0.88);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.ledger-ai-settings-toggle-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.ledger-ai-settings-body {
+  padding: 0 0.85rem 0.85rem;
+  border-top: 1px solid rgba(47, 107, 79, 0.12);
+}
+
+.ledger-ai-settings-hint {
+  margin: 0.65rem 0 0.55rem;
+  font-size: 0.78rem;
+  text-align: left;
+}
+
+.ledger-ai-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  text-align: left;
+}
+
+.ledger-ai-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.ledger-ai-settings-msg {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: #2f6b4f;
+  text-align: left;
+}
+
+.ledger-type-ai-field,
+.ledger-type-owner-wrap {
+  margin-bottom: 0.55rem;
+}
+
+.ledger-type-ai-card {
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.75rem;
+  background: rgba(47, 107, 79, 0.08);
+  border: 1px solid rgba(47, 107, 79, 0.14);
+  text-align: left;
+}
+
+.ledger-type-ai-card.is-owner {
+  margin-bottom: 0.55rem;
+}
+
+.ledger-type-ai-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: rgba(28, 42, 31, 0.62);
+}
+
+.ledger-type-ai-value {
+  margin: 0.3rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.92);
+}
+
+.ledger-type-ai-reason {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: rgba(28, 42, 31, 0.62);
+}
+
+.ledger-type-reset-ai {
+  margin-top: 0.45rem;
+  font-size: 0.8rem;
+}
+
 .quick-actions {
   display: grid;
   grid-template-columns: 1fr;

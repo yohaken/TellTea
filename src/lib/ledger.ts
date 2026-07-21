@@ -327,6 +327,8 @@ export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
     amountIn: Number(input.amountIn) || 0,
     amountOut: Number(input.amountOut) || 0,
     type: (input.type || "").trim(),
+    typeSource: (input.typeSource || "").trim(),
+    typeAiReason: (input.typeAiReason || "").trim(),
     createdBy: input.createdBy,
     createdAt: now,
     updatedAt: now,
@@ -344,7 +346,15 @@ export async function updateLedgerEntry(
   patch: Partial<
     Pick<
       LedgerEntry,
-      "date" | "description" | "amountIn" | "amountOut" | "type" | "receiptUrl" | "receiptUrls"
+      | "date"
+      | "description"
+      | "amountIn"
+      | "amountOut"
+      | "type"
+      | "typeSource"
+      | "typeAiReason"
+      | "receiptUrl"
+      | "receiptUrls"
     >
   >,
 ): Promise<void> {
@@ -361,6 +371,8 @@ export async function updateLedgerEntry(
   if (patch.amountIn != null) next.amountIn = Number(patch.amountIn);
   if (patch.amountOut != null) next.amountOut = Number(patch.amountOut);
   if (patch.type != null) next.type = patch.type;
+  if (patch.typeSource != null) next.typeSource = patch.typeSource;
+  if (patch.typeAiReason != null) next.typeAiReason = patch.typeAiReason;
   if (patch.receiptUrls != null || patch.receiptUrl != null) {
     const normalized =
       patch.receiptUrls != null

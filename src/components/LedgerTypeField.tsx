@@ -1,0 +1,104 @@
+"use client";
+
+import { TypePicker } from "@/components/TypePicker";
+import { labelLedgerType } from "@/lib/ledger-labels";
+import type { LedgerTypeSource } from "@/lib/ledger-ai";
+import { Sparkles } from "lucide-react";
+
+type Props = {
+  isOwner: boolean;
+  /** พนักงาน/โหมด AI — ค่าจาก hook */
+  aiType: string;
+  aiReason: string;
+  aiSource: LedgerTypeSource;
+  aiStatus: "idle" | "loading" | "ready" | "error";
+  aiError: string | null;
+  /** เจ้าของล็อกแก้ประเภทเอง */
+  ownerLocked: boolean;
+  typeMode: string;
+  onTypeModeChange: (value: string) => void;
+  onResetToAi: () => void;
+  frequent?: string[];
+  id?: string;
+};
+
+/** พนักงาน: แสดงผล AI อย่างเดียว · เจ้าของ: แก้ประเภทได้ */
+export function LedgerTypeField({
+  isOwner,
+  aiType,
+  aiReason,
+  aiSource,
+  aiStatus,
+  aiError,
+  ownerLocked,
+  typeMode,
+  onTypeModeChange,
+  onResetToAi,
+  frequent = [],
+  id = "ledger-type",
+}: Props) {
+  const displayType = ownerLocked && typeMode !== "auto" ? typeMode : aiType;
+  const statusLabel =
+    aiStatus === "loading"
+      ? "กำลังจัดประเภท…"
+      : aiStatus === "error"
+        ? "ใช้ค่าสำรองจากชื่อรายการ"
+        : aiSource === "ai"
+          ? "จัดประเภทบัญชีโดย AI"
+          : aiSource === "owner"
+            ? "กำหนดโดยเจ้าของ"
+            : "จัดจากชื่อรายการ";
+
+  if (!isOwner) {
+    return (
+      <div className="field ledger-type-ai-field" aria-live="polite">
+        <label>ประเภทบัญชี</label>
+        <div className="ledger-type-ai-card">
+          <div className="ledger-type-ai-head">
+            <Sparkles size={14} aria-hidden />
+            <span>{statusLabel}</span>
+          </div>
+          <p className="ledger-type-ai-value">
+            {aiStatus === "idle" && !displayType
+              ? "พิมพ์ชื่อรายการแล้วระบบจะจัดให้"
+              : labelLedgerType(displayType || "cogs")}
+          </p>
+          {aiReason ? <p className="ledger-type-ai-reason">{aiReason}</p> : null}
+          {aiError ? (
+            <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.75rem" }}>
+              {aiError}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ledger-type-owner-wrap">
+      <div className="ledger-type-ai-card is-owner">
+        <div className="ledger-type-ai-head">
+          <Sparkles size={14} aria-hidden />
+          <span>{ownerLocked ? "คุณแก้ประเภทเองแล้ว" : statusLabel}</span>
+        </div>
+        <p className="ledger-type-ai-value">{labelLedgerType(displayType || "cogs")}</p>
+        {aiReason && !ownerLocked ? (
+          <p className="ledger-type-ai-reason">{aiReason}</p>
+        ) : null}
+        {ownerLocked ? (
+          <button type="button" className="ghost-btn ledger-type-reset-ai" onClick={onResetToAi}>
+            ให้ AI จัดใหม่จากชื่อรายการ
+          </button>
+        ) : null}
+      </div>
+      <TypePicker
+        id={id}
+        label="แก้ประเภท (เจ้าของเท่านั้น)"
+        value={typeMode}
+        onChange={onTypeModeChange}
+        frequent={frequent}
+        autoHint={aiType}
+      />
+    </div>
+  );
+}
