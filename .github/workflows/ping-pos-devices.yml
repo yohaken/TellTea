@@ -2,6 +2,11 @@ name: Ping online POS devices (owner test popup)
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/ping-pos-devices.mjs"
+      - ".github/workflows/ping-pos-devices.yml"
 
 jobs:
   ping:
@@ -24,4 +29,5 @@ jobs:
       - name: Send owner ping popup to online POS tablets
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          POS_ONLINE_MS: "900000"
         run: node scripts/ping-pos-devices.mjs

@@ -8,7 +8,7 @@ import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
 const PROJECT = process.env.FIREBASE_PROJECT_ID || "mypeer-501909";
-const ONLINE_MS = 3 * 60 * 1000;
+const ONLINE_MS = Number(process.env.POS_ONLINE_MS || 15 * 60 * 1000);
 const MESSAGE =
   process.env.POS_PING_MESSAGE ||
   "ถ้าเห็นข้อความนี้ ให้ทักบอกพี่ หรือถ่ายรูปหน้าจอนี้ส่งมา — แปลว่าระบบอัปเดตจากร้านทำงานแล้ว";
