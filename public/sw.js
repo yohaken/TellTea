@@ -32,14 +32,14 @@ self.addEventListener("push", (event) => {
       body: payload.body,
       tag: "telltea-low-balance",
       renotify: true,
-      data: { url: payload.url || "https://telltea-shop.web.app/in/" },
+      data: { url: payload.url || "https://telltea-shop.web.app/ledger/?transferIn=1" },
     }),
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || "https://telltea-shop.web.app/in/";
+  const url = event.notification.data?.url || "https://telltea-shop.web.app/ledger/?transferIn=1";
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {

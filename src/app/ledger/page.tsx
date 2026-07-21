@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Suspense,
   useCallback,
   useDeferredValue,
   useEffect,
@@ -10,6 +11,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import {
@@ -28,6 +30,7 @@ import {
   updateLedgerEntry,
 } from "@/lib/ledger";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
+import { TransferInModal } from "@/components/TransferInModal";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
@@ -55,19 +58,29 @@ import {
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
-import { Camera, Trash2, X } from "lucide-react";
+import { Camera, ArrowDownLeft, Trash2, X } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 export default function LedgerPage() {
   return (
     <AuthGate>
-      <LedgerView />
+      <Suspense
+        fallback={
+          <div className="center-screen">
+            <p className="muted">กำลังโหลดบัญชี...</p>
+          </div>
+        }
+      >
+        <LedgerView />
+      </Suspense>
     </AuthGate>
   );
 }
 
 function LedgerView() {
   const { actorId, staff } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const isOwner = staff?.role === "owner";
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
@@ -79,6 +92,7 @@ function LedgerView() {
   const [liveLimit, setLiveLimit] = useState(LEDGER_PAGE_SIZE);
   const [editing, setEditing] = useState<LedgerEntry | null>(null);
   const [adding, setAdding] = useState(false);
+  const [transferInOpen, setTransferInOpen] = useState(false);
   const [photoUploadRowId, setPhotoUploadRowId] = useState<string | null>(null);
   const [rowUploadProgress, setRowUploadProgress] = useState<PhotoUploadProgress | null>(null);
   const [imagePreview, setImagePreview] = useState<{ urls: string[]; title: string } | null>(null);
@@ -95,8 +109,22 @@ function LedgerView() {
   const deferredQuery = useDeferredValue(query.trim());
 
   useBodyScrollLock(
-    !!adding || !!editing || !!photoUploadRowId || !!imagePreview || !!rowUploadProgress,
+    !!adding ||
+      !!transferInOpen ||
+      !!editing ||
+      !!photoUploadRowId ||
+      !!imagePreview ||
+      !!rowUploadProgress,
   );
+
+  useEffect(() => {
+    if (!isOwner) return;
+    if (searchParams.get("transferIn") === "1") {
+      setTransferInOpen(true);
+      setAdding(false);
+      router.replace("/ledger/", { scroll: false });
+    }
+  }, [isOwner, searchParams, router]);
 
   useLayoutEffect(() => {
     const cached = loadCachedLedger();
@@ -435,6 +463,15 @@ function LedgerView() {
         />
       ) : null}
 
+      {transferInOpen && isOwner && actorId ? (
+        <TransferInModal
+          createdBy={actorId}
+          onClose={() => setTransferInOpen(false)}
+          onSaved={() => setTransferInOpen(false)}
+          onError={setError}
+        />
+      ) : null}
+
       <input
         ref={photoCameraRef}
         type="file"
@@ -516,10 +553,29 @@ function LedgerView() {
       <ModuleTabDock
         ariaLabel="บันทึกรายการ"
         formOpen={adding}
-        onAdd={() => setAdding(true)}
+        onAdd={() => {
+          setTransferInOpen(false);
+          setAdding(true);
+        }}
         addLabel="บันทึกเงินออก"
         variant="glass-out"
       />
+
+      {isOwner ? (
+        <button
+          type="button"
+          className="ledger-transfer-in-fab"
+          aria-label="โอนเข้า"
+          title="โอนเข้า"
+          onClick={() => {
+            setAdding(false);
+            setTransferInOpen(true);
+          }}
+        >
+          <ArrowDownLeft size={16} aria-hidden />
+          <span>เข้า</span>
+        </button>
+      ) : null}
     </div>
   );
 }

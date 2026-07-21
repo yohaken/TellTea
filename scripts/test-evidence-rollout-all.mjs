@@ -11,7 +11,7 @@ const read = (rel) => readFileSync(join(root, rel), "utf8");
 
 const ownerBooks = read("src/app/owner-books/page.tsx");
 const ledger = read("src/app/ledger/page.tsx");
-const transferIn = read("src/app/in/page.tsx");
+const transferIn = read("src/components/TransferInModal.tsx");
 const ot = read("src/app/ot/page.tsx");
 const check = read("src/app/check/page.tsx");
 const tasks = read("src/app/tasks/page.tsx");

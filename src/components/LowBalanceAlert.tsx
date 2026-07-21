@@ -96,7 +96,7 @@ export function LowBalanceAlert() {
         </p>
         <div className="btn-row">
           {isOwner ? (
-            <Link href="/in/" className="primary-btn" onClick={() => setOpen(false)}>
+            <Link href="/ledger/?transferIn=1" className="primary-btn" onClick={() => setOpen(false)}>
               โอนเข้า
             </Link>
           ) : null}

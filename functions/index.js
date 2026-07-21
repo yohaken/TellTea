@@ -115,7 +115,7 @@ exports.onLedgerBalanceWritten = functions
     const result = await sendToOwnerSubscriptions({
       title: "TellTea — เงินคงเหลือต่ำ",
       body: `คงเหลือ ${formatBaht(balance)} (ต่ำกว่า ${formatBaht(thresholdSafe)}) — แตะเพื่อโอนเข้า`,
-      url: "https://telltea-shop.web.app/in/",
+      url: "https://telltea-shop.web.app/ledger/?transferIn=1",
     });
 
     await alertRef.set(

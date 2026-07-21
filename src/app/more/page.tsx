@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowDownLeft,
   Bell,
   BookMarked,
   BookOpen,
@@ -102,13 +101,6 @@ function MoreView() {
       desc: "ตั้งเกณฑ์ + แจ้งถึงมือถือเมื่อเงินใกล้หมด",
       icon: Bell,
       perm: "alerts",
-    },
-    {
-      href: "/in/",
-      title: "โอนเข้า",
-      desc: "เติมเงินเข้าบัญชีร้าน",
-      icon: ArrowDownLeft,
-      perm: "transferIn",
     },
     {
       href: "/export/",

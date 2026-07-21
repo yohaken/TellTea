@@ -100,7 +100,7 @@ export async function showLocalLowBalanceNotification(balanceLabel: string, thre
     body,
     tag: "telltea-low-balance",
     renotify: true,
-    data: { url: "https://telltea-shop.web.app/in/" },
+    data: { url: "https://telltea-shop.web.app/ledger/?transferIn=1" },
   } as NotificationOptions;
 
   if (reg?.showNotification) {

@@ -1994,6 +1994,34 @@ body.modal-open .main-panel {
   letter-spacing: 0.01em;
 }
 
+/** ปุ่มโอนเข้าเล็ก — เจ้าของเท่านั้น · มุมขวาล่างเหนือ dock */
+.ledger-transfer-in-fab {
+  position: fixed;
+  right: max(0.85rem, calc((100vw - var(--shell-max)) / 2 + 0.85rem));
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 3.35rem);
+  z-index: 12;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-height: 2.15rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(47, 107, 79, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--tea-leaf);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 6px 18px rgba(28, 42, 31, 0.12);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.ledger-transfer-in-fab:active {
+  transform: scale(0.97);
+}
+
 .module-tab.is-table {
   color: #1d4e89;
 }
