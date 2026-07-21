@@ -219,15 +219,19 @@ public final class SaleSync {
         executor.execute(
                 () -> {
                     try {
-                        String billNo = receiptRow.optString("billNo", "—");
-                        double total = receiptRow.optDouble("total", 0);
-                        String pay = receiptRow.optString("paymentMethod", "");
-                        JSONObject payload = new JSONObject();
-                        payload.put("lines", receiptRow.optJSONArray("lines"));
-                        payload.put("paymentMethod", pay);
-                        payload.put("localTotal", total);
-                        maybePrintAndKick(app, payload, billNo, total, pay);
-                        OpsLogger.info(app, "printer", "พิมพ์ใบเสร็จซ้ำ", billNo);
+                        if (receiptRow.optBoolean("voided", false)) {
+                            OpsLogger.warn(app, "printer", "ข้ามพิมพ์ — บิลถูกทำลายแล้ว", receiptRow.optString("billNo"));
+                        } else {
+                            String billNo = receiptRow.optString("billNo", "—");
+                            double total = receiptRow.optDouble("total", 0);
+                            String pay = receiptRow.optString("paymentMethod", "");
+                            JSONObject payload = new JSONObject();
+                            payload.put("lines", receiptRow.optJSONArray("lines"));
+                            payload.put("paymentMethod", pay);
+                            payload.put("localTotal", total);
+                            maybePrintAndKick(app, payload, billNo, total, pay);
+                            OpsLogger.info(app, "printer", "พิมพ์ใบเสร็จซ้ำ", billNo);
+                        }
                     } catch (Exception e) {
                         OpsLogger.error(
                                 app,
@@ -239,15 +243,49 @@ public final class SaleSync {
                 });
     }
 
-    /** Z-report style shift summary before/on close (clone web PosShiftView). */
-    public void printShiftReport(Context context, Runnable onDone) {
+    /** Local void — same as web tablet PosReceiptsView (does not touch Firestore). */
+    public void voidReceipt(Context context, JSONObject receiptRow, String reason, Runnable onDone) {
         Context app = context.getApplicationContext();
+        executor.execute(
+                () -> {
+                    try {
+                        if (receiptRow.optBoolean("voided", false)) {
+                            if (onDone != null) onDone.run();
+                            return;
+                        }
+                        String mutationId = receiptRow.optString("mutationId", "");
+                        markReceiptVoided(app, mutationId, reason == null || reason.isEmpty() ? "ทำลายบิล" : reason);
+                        ShiftPrefs.unrecordSale(
+                                app,
+                                receiptRow.optString("paymentMethod", ""),
+                                receiptRow.optDouble("total", 0),
+                                receiptRow.optDouble("discountBaht", 0));
+                        OpsLogger.info(
+                                app,
+                                "sale",
+                                "ทำลายบิล",
+                                receiptRow.optString("billNo", mutationId));
+                    } catch (Exception e) {
+                        OpsLogger.error(
+                                app,
+                                "sale",
+                                "ทำลายบิลไม่สำเร็จ",
+                                e.getMessage() == null ? "" : e.getMessage());
+                    }
+                    if (onDone != null) onDone.run();
+                });
+    }
+
+    /** kind: "snapshot" (X) or "close" (Z). Snapshot does not close the session. */
+    public void printShiftReport(Context context, String kind, Runnable onDone) {
+        Context app = context.getApplicationContext();
+        final String reportKind = "close".equals(kind) ? "close" : "snapshot";
         executor.execute(
                 () -> {
                     try {
                         PrinterEndpoint ep = PrinterPrefs.savedOrNull(app);
                         if (ep == null) {
-                            OpsLogger.warn(app, "printer", "ข้ามพิมพ์ปิดรอบ — ยังไม่เลือกปริ้นเตอร์", "");
+                            OpsLogger.warn(app, "printer", "ข้ามพิมพ์สรุปรอบ — ยังไม่เลือกปริ้นเตอร์", reportKind);
                         } else {
                             double cash = ShiftPrefs.cashTotal(app);
                             double pp = ShiftPrefs.promptpayTotal(app);
@@ -255,8 +293,18 @@ public final class SaleSync {
                             int sales = ShiftPrefs.saleCount(app);
                             int cashBills = ShiftPrefs.cashBillCount(app);
                             int ppBills = ShiftPrefs.promptpayBillCount(app);
+                            int voided = ShiftPrefs.voidedCount(app);
+                            String title =
+                                    "close".equals(reportKind)
+                                            ? "ปิดรอบ / Z-REPORT"
+                                            : "Snapshot กลางรอบ / X-REPORT";
+                            String footer =
+                                    "close".equals(reportKind)
+                                            ? "ปิดรอบเรียบร้อย\n"
+                                            : "*** ไม่ใช่การปิดรอบ ***\n";
                             String body =
-                                    "ปิดรอบ / Z-REPORT\n"
+                                    title
+                                            + "\n"
                                             + "รอบ "
                                             + ShiftPrefs.shift(app)
                                             + "\n"
@@ -264,8 +312,11 @@ public final class SaleSync {
                                             + ShiftPrefs.sessionId(app)
                                             + "\n"
                                             + "----------------\n"
-                                            + "บิลทั้งหมด "
+                                            + "บิลขาย "
                                             + sales
+                                            + "\n"
+                                            + "ทำลายบิล "
+                                            + voided
                                             + "\n"
                                             + "เงินสด "
                                             + cashBills
@@ -283,7 +334,8 @@ public final class SaleSync {
                                             + "----------------\n"
                                             + "รวมยอดขาย "
                                             + String.format(java.util.Locale.US, "%.0f", cash + pp)
-                                            + "\n";
+                                            + "\n"
+                                            + footer;
                             transport.send(
                                     app,
                                     ep,
@@ -292,7 +344,11 @@ public final class SaleSync {
                                             OpsLogger.result(
                                                     app,
                                                     "printer",
-                                                    result.ok ? "พิมพ์ปิดรอบแล้ว" : "พิมพ์ปิดรอบไม่สำเร็จ",
+                                                    result.ok
+                                                            ? ("close".equals(reportKind)
+                                                                    ? "พิมพ์ปิดรอบแล้ว"
+                                                                    : "พิมพ์สรุปกลางรอบแล้ว")
+                                                            : "พิมพ์สรุปรอบไม่สำเร็จ",
                                                     result.message,
                                                     result.ok));
                         }
@@ -300,11 +356,16 @@ public final class SaleSync {
                         OpsLogger.warn(
                                 app,
                                 "printer",
-                                "พิมพ์ปิดรอบพลาด",
+                                "พิมพ์สรุปรอบพลาด",
                                 e.getMessage() == null ? "" : e.getMessage());
                     }
                     if (onDone != null) onDone.run();
                 });
+    }
+
+    /** @deprecated use printShiftReport(context, kind, onDone) */
+    public void printShiftReport(Context context, Runnable onDone) {
+        printShiftReport(context, "close", onDone);
     }
 
     public void shutdown() {
@@ -434,13 +495,34 @@ public final class SaleSync {
         row.put("mutationId", payload.optString("clientMutationId"));
         row.put("billNo", billNo);
         row.put("total", payload.optDouble("localTotal"));
+        row.put("discountBaht", payload.optDouble("discountBaht", 0));
         row.put("paymentMethod", payload.optString("paymentMethod"));
+        row.put("sessionId", payload.optString("sessionId", ""));
         row.put("lines", payload.optJSONArray("lines"));
+        row.put("voided", false);
         arr.put(row);
         while (arr.length() > 60) {
             JSONArray trimmed = new JSONArray();
             for (int i = 1; i < arr.length(); i++) trimmed.put(arr.get(i));
             arr = trimmed;
+        }
+        app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_RECEIPTS, arr.toString())
+                .apply();
+    }
+
+    private static void markReceiptVoided(Context app, String mutationId, String reason) throws Exception {
+        JSONArray arr =
+                new JSONArray(
+                        app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_RECEIPTS, "[]"));
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject o = arr.getJSONObject(i);
+            if (mutationId.equals(o.optString("mutationId"))) {
+                o.put("voided", true);
+                o.put("voidedAt", System.currentTimeMillis());
+                o.put("voidReason", reason);
+            }
         }
         app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .edit()

@@ -23,6 +23,7 @@ exports.nposSessionOpen = nposSell.nposSessionOpen;
 exports.nposSessionClose = nposSell.nposSessionClose;
 exports.nposCompleteSale = nposSell.nposCompleteSale;
 exports.nposToggleSoldOut = nposSell.nposToggleSoldOut;
+exports.nposReorderCategories = nposSell.nposReorderCategories;
 
 const VAPID_PUBLIC =
   process.env.VAPID_PUBLIC_KEY ||

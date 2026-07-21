@@ -351,3 +351,47 @@ exports.nposCompleteSale = functions.region("asia-southeast1").https.onRequest(a
     });
   }
 });
+
+/** Reorder menu categories — same sortOrder scheme as web reorderMenuCategories. */
+exports.nposReorderCategories = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  const installId = requireInstallId(body);
+  const ids = Array.isArray(body?.categoryIds) ? body.categoryIds : [];
+  if (!installId || ids.length === 0) {
+    res.status(400).json({ ok: false, error: "installId_and_categoryIds_required" });
+    return;
+  }
+  try {
+    const db = getFirestore();
+    const batch = db.batch();
+    let n = 0;
+    for (let i = 0; i < ids.length && i < 80; i++) {
+      const id = asString(ids[i], 80);
+      if (!id) continue;
+      batch.set(
+        db.doc(`menuCategories/${id}`),
+        { sortOrder: (i + 1) * 1000, updatedAt: Date.now(), reorderedBy: installId },
+        { merge: true },
+      );
+      n += 1;
+    }
+    if (n === 0) {
+      res.status(400).json({ ok: false, error: "no_valid_ids" });
+      return;
+    }
+    await batch.commit();
+    res.status(200).json({ ok: true, count: n });
+  } catch (err) {
+    console.error("nposReorderCategories", err);
+    res.status(500).json({ ok: false, error: "reorder_failed" });
+  }
+});

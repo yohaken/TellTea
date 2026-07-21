@@ -86,6 +86,7 @@ public class SellActivity extends Activity {
     findViewById(R.id.payPromptButton).setOnClickListener(v -> startPay("promptpay"));
     findViewById(R.id.discountButton).setOnClickListener(v -> showDiscountDialog());
     findViewById(R.id.refreshMenuButton).setOnClickListener(v -> reloadMenu());
+    findViewById(R.id.xReportButton).setOnClickListener(v -> printXReport());
     findViewById(R.id.receiptsButton)
         .setOnClickListener(v -> startActivity(new Intent(this, ReceiptsActivity.class)));
     findViewById(R.id.sellSettingsButton)
@@ -145,6 +146,7 @@ public class SellActivity extends Activity {
     sellSyncStatus.setText(R.string.sell_closing_shift);
     saleSync.printShiftReport(
         this,
+        "close",
         () ->
             saleSync.closeSession(
                 this,
@@ -156,19 +158,103 @@ public class SellActivity extends Activity {
                         })));
   }
 
+  private void printXReport() {
+    sellSyncStatus.setText(R.string.sell_printing_x);
+    saleSync.printShiftReport(
+        this,
+        "snapshot",
+        () ->
+            runOnUiThread(
+                () -> {
+                  sellSyncStatus.setText(R.string.sell_x_printed);
+                  Toast.makeText(this, R.string.sell_x_printed, Toast.LENGTH_SHORT).show();
+                }));
+  }
+
   private void renderCategories() {
     categoryBar.removeAllViews();
     if (menu == null) return;
-    for (MenuModels.Category cat : menu.categories) {
+    applySavedCategoryOrder();
+    for (int i = 0; i < menu.categories.size(); i++) {
+      final int idx = i;
+      MenuModels.Category cat = menu.categories.get(i);
       Button b = new Button(this);
       b.setText(cat.name);
       b.setAllCaps(false);
+      if (cat.id.equals(selectedCategoryId)) {
+        b.setBackgroundColor(0xFFC4A35A);
+      }
       b.setOnClickListener(
           v -> {
             selectedCategoryId = cat.id;
+            renderCategories();
             renderMenu();
           });
+      b.setOnLongClickListener(
+          v -> {
+            moveCategory(idx, idx == 0 ? 1 : -1);
+            return true;
+          });
       categoryBar.addView(b);
+    }
+  }
+
+  /** Long-press: move left (or right if already first) — clone web sell category reorder. */
+  private void moveCategory(int from, int delta) {
+    if (menu == null) return;
+    int to = from + delta;
+    if (to < 0 || to >= menu.categories.size()) return;
+    List<MenuModels.Category> next = new ArrayList<>(menu.categories);
+    MenuModels.Category moved = next.remove(from);
+    next.add(to, moved);
+    menu =
+        new MenuModels.Bundle(
+            next, menu.items, menu.optionGroups, menu.demo, menu.fetchedAt);
+    saveCategoryOrder();
+    menuRepo.reorderCategories(this, next);
+    renderCategories();
+    Toast.makeText(this, R.string.category_reordered, Toast.LENGTH_SHORT).show();
+  }
+
+  private void applySavedCategoryOrder() {
+    if (menu == null || menu.categories.size() < 2) return;
+    String raw =
+        getSharedPreferences("npos_menu", MODE_PRIVATE).getString("categoryOrder", null);
+    if (raw == null || raw.isEmpty()) return;
+    try {
+      JSONArray ids = new JSONArray(raw);
+      List<MenuModels.Category> ordered = new ArrayList<>();
+      java.util.HashSet<String> seen = new java.util.HashSet<>();
+      for (int i = 0; i < ids.length(); i++) {
+        String id = ids.optString(i);
+        for (MenuModels.Category c : menu.categories) {
+          if (c.id.equals(id) && seen.add(c.id)) ordered.add(c);
+        }
+      }
+      for (MenuModels.Category c : menu.categories) {
+        if (seen.add(c.id)) ordered.add(c);
+      }
+      if (ordered.size() == menu.categories.size()) {
+        menu =
+            new MenuModels.Bundle(
+                ordered, menu.items, menu.optionGroups, menu.demo, menu.fetchedAt);
+      }
+    } catch (Exception ignored) {
+      /* ignore */
+    }
+  }
+
+  private void saveCategoryOrder() {
+    if (menu == null) return;
+    try {
+      JSONArray ids = new JSONArray();
+      for (MenuModels.Category c : menu.categories) ids.put(c.id);
+      getSharedPreferences("npos_menu", MODE_PRIVATE)
+          .edit()
+          .putString("categoryOrder", ids.toString())
+          .apply();
+    } catch (Exception ignored) {
+      /* ignore */
     }
   }
 

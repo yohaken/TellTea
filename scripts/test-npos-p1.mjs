@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 216/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+12/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.9\.1"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 217/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+13/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.9\.2"/);
 assert.match(read("npos-telltea/app/build.gradle"), /zxing:core/);
 
 assert.ok(existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/sell/QrBitmaps.java")));
@@ -26,7 +26,7 @@ assert.match(shift, /recordSale/);
 assert.match(shift, /discountTotal/);
 assert.match(shift, /saleCount/);
 
-assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/sell/SaleSync.java"), /บิลทั้งหมด/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/sell/SaleSync.java"), /บิลขาย/);
 assert.match(read("docs/npos-parity-checklist.md"), /P1 — ทำแล้ว/);
 
 console.log("OK test-npos-p1");
