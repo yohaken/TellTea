@@ -156,6 +156,7 @@ service cloud.firestore {
         'deviceHint', 'printerLabel', 'printerReady', 'standalone', 'screenSize', 'platform', 'telemetryAt',
         'shellKind', 'nativeShellBuild',
         'updateStatus', 'updateTargetBuild', 'updateError', 'updateCheckedAt',
+        'lastOwnerPingAckAt',
       ];
       let baseKeys = [
         'lastSeenAt', 'appBuild', 'userAgent', 'lastReloadAckAt',
@@ -205,6 +206,8 @@ service cloud.firestore {
         && after.diff(before).affectedKeys().hasOnly([
           'label',
           'forceReloadAt',
+          'ownerPingAt',
+          'ownerPingMessage',
           'updatedAt',
           'updatedBy',
           'disabled',

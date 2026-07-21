@@ -12220,3 +12220,52 @@ body.modal-open .main-panel {
   gap: 0.75rem;
   justify-items: start;
 }
+
+.pos-remote-cmd {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.45rem 0.65rem 0;
+}
+
+.pos-remote-cmd-ping,
+.pos-remote-cmd-reload {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.55rem;
+  align-items: start;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.pos-remote-cmd-ping {
+  background: #1f4d38;
+  color: #f3f6f2;
+}
+
+.pos-remote-cmd-reload {
+  grid-template-columns: auto 1fr;
+  background: #fff6e5;
+  color: #5c4300;
+  border: 1px solid rgba(196, 163, 90, 0.45);
+}
+
+.pos-remote-cmd-copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.pos-remote-cmd-copy strong {
+  font-size: 0.92rem;
+}
+
+.pos-remote-cmd-dismiss {
+  color: inherit;
+  border-color: rgba(255, 255, 255, 0.25);
+  min-height: 2rem;
+  padding: 0.25rem 0.4rem;
+}

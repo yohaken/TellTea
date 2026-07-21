@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD\s*=\s*59\b/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD\s*=\s*60\b/);
 assert.match(read("src/lib/pos-ops-notes.ts"), /posOpsNotes/);
 assert.match(read("src/lib/pos-ops-notes.ts"), /defaultPosOpsNoteItems/);
 assert.match(read("src/lib/pos-ops-notes.ts"), /POS_APK_INSTALL_PAGE_URL/);

@@ -9,6 +9,7 @@ import { PosPendingSyncPanel } from "@/components/PosPendingSyncPanel";
 import { PosSyncWatcher } from "@/components/PosSyncWatcher";
 import { PosUpdateWatcher } from "@/components/PosUpdateWatcher";
 import { PosNativeUpdateWatcher } from "@/components/PosNativeUpdateWatcher";
+import { PosRemoteCommandBanner } from "@/components/PosRemoteCommandBanner";
 import { usePosApp } from "@/lib/pos-app-context";
 import { installChunkLoadRecovery } from "@/lib/chunk-load-recovery";
 import { POS_LOCK_HREF, POS_NAV_ITEMS, matchPosNav, posNavLockItem } from "@/lib/pos-nav";
@@ -132,6 +133,11 @@ export function PosAppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={`pos-shell ${standalone ? "pos-lite--standalone" : ""}`}>
+      <PosRemoteCommandBanner
+        enabled={status === "ready"}
+        deviceId={device?.id ?? null}
+        sellBusy={sellBusy}
+      />
       <PosSyncWatcher
         enabled={status === "ready"}
         onSyncChange={(snap) => {

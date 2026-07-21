@@ -49,6 +49,10 @@ export type PosDevice = {
   updateTargetBuild: number;
   updateError: string;
   updateCheckedAt: number;
+  /** เจ้าของสั่งทดสอบส่งข้อความมาเครื่อง */
+  ownerPingAt: number;
+  ownerPingMessage: string;
+  lastOwnerPingAckAt: number;
 };
 
 function deviceRef(id: string) {
@@ -139,6 +143,9 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
     updateTargetBuild: typeof data.updateTargetBuild === "number" ? data.updateTargetBuild : 0,
     updateError: typeof data.updateError === "string" ? data.updateError : "",
     updateCheckedAt: typeof data.updateCheckedAt === "number" ? data.updateCheckedAt : 0,
+    ownerPingAt: typeof data.ownerPingAt === "number" ? data.ownerPingAt : 0,
+    ownerPingMessage: typeof data.ownerPingMessage === "string" ? data.ownerPingMessage : "",
+    lastOwnerPingAckAt: typeof data.lastOwnerPingAckAt === "number" ? data.lastOwnerPingAckAt : 0,
   };
 }
 
@@ -341,6 +348,49 @@ export async function requestPosDeviceReload(
     );
   } catch (err) {
     throw new Error(mapFirestoreError(err, "สั่งรีเฟรชเครื่อง POS", "pos"));
+  }
+}
+
+/** เจ้าของทดสอบช่องทาง: เครื่องแสดงป๊อปทันที โดยไม่รีโหลด (ปลอดภัยตอนขาย) */
+export async function requestPosDeviceOwnerPing(
+  deviceId: string,
+  updatedBy: string,
+  message?: string,
+): Promise<void> {
+  try {
+    await setDoc(
+      deviceRef(deviceId),
+      {
+        ownerPingAt: Date.now(),
+        ownerPingMessage:
+          (message || "").trim() ||
+          "ทดสอบจากหลังบ้าน — เครื่องนี้เชื่อมต่อแล้ว",
+        updatedAt: Date.now(),
+        updatedBy,
+      },
+      { merge: true },
+    );
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, "ทดสอบส่งไปเครื่อง POS", "pos"));
+  }
+}
+
+export async function ackPosDeviceOwnerPing(
+  authUid: string,
+  ownerPingAt: number,
+): Promise<void> {
+  try {
+    await setDoc(
+      deviceRef(authUid),
+      {
+        authUid,
+        lastOwnerPingAckAt: ownerPingAt,
+        updatedAt: Date.now(),
+      },
+      { merge: true },
+    );
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, "ยืนยันรับข้อความจากร้าน", "pos"));
   }
 }
 

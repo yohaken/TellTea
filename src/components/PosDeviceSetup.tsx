@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Monitor, RefreshCw, ExternalLink, Copy, Check } from "lucide-react";
+import { Monitor, RefreshCw, ExternalLink, Copy, Check, Bell } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { saveForcePosAutoUpdate, subscribeAppReleaseSettings } from "@/lib/app-release";
 import { POS_BUILD, posVersionLabel } from "@/lib/pos-version";
@@ -15,6 +15,7 @@ import { POS_NATIVE_UPDATE_STATUS_LABEL } from "@/lib/pos-native-version";
 import {
   isPosDeviceOnline,
   posDeviceLabel,
+  requestPosDeviceOwnerPing,
   requestPosDeviceReload,
   requestPosDevicesReload,
   savePosDeviceLabel,
@@ -161,8 +162,31 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
     onError(null);
     try {
       await requestPosDeviceReload(deviceId, actorId);
+      setUpdateMsg(
+        "สั่งรีเฟรชแล้ว — ถ้ากำลังขาย เครื่องจะขึ้นแถบรอ แล้วรีโหลดเองเมื่อตะกร้าว่าง",
+      );
+      window.setTimeout(() => setUpdateMsg(null), 7000);
     } catch (err) {
       onError((err as Error).message || "สั่งรีเฟรชไม่สำเร็จ");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function testPing(deviceId: string) {
+    if (!actorId) return;
+    setBusyId(deviceId);
+    onError(null);
+    try {
+      await requestPosDeviceOwnerPing(
+        deviceId,
+        actorId,
+        "ทดสอบจากหลังบ้าน — ถ้าเห็นข้อความนี้ ช่องทางอัปเดตทำงานแล้ว",
+      );
+      setUpdateMsg("ส่งทดสอบแล้ว — ดูที่หน้าจอ POS ควรขึ้นป๊อปทันที (ไม่รีโหลด)");
+      window.setTimeout(() => setUpdateMsg(null), 7000);
+    } catch (err) {
+      onError((err as Error).message || "ส่งทดสอบไม่สำเร็จ");
     } finally {
       setBusyId(null);
     }
@@ -494,6 +518,15 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
                   <p className="muted pos-device-meta">รอส่ง {device.syncPendingCount} บิล</p>
                 ) : null}
 
+                {device.lastOwnerPingAckAt > 0 ? (
+                  <p className="muted pos-device-meta">
+                    ตอบทดสอบล่าสุด {formatLastSeen(device.lastOwnerPingAckAt)}
+                    {device.ownerPingAt > 0 && device.lastOwnerPingAckAt >= device.ownerPingAt
+                      ? " · ช่องทางโอเค"
+                      : ""}
+                  </p>
+                ) : null}
+
                 <label className="pos-device-label-field">
                   <span>ชื่อเครื่อง</span>
                   <input
@@ -518,10 +551,28 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
                   </button>
                   <button
                     type="button"
+                    className="primary-btn"
+                    disabled={busy || !online}
+                    onClick={() => void testPing(device.id)}
+                    title={
+                      online
+                        ? "ส่งข้อความทดสอบไปจอ POS ทันที — ไม่รีโหลด ไม่กวนขาย"
+                        : "เครื่องออฟไลน์"
+                    }
+                  >
+                    <Bell size={14} aria-hidden />
+                    ทดสอบส่งไปเครื่อง
+                  </button>
+                  <button
+                    type="button"
                     className="ghost-btn"
                     disabled={busy || !online}
                     onClick={() => void forceReload(device.id)}
-                    title={online ? "รีเฟรชหน้า POS บนแท็บเล็ต" : "เครื่องออฟไลน์ — รีเฟรชไม่ได้"}
+                    title={
+                      online
+                        ? "รีเฟรชหน้า POS — รอตะกร้าว่างถ้ากำลังขาย"
+                        : "เครื่องออฟไลน์ — รีเฟรชไม่ได้"
+                    }
                   >
                     <RefreshCw size={14} aria-hidden />
                     รีเฟรชเครื่อง

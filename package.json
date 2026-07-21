@@ -40,6 +40,7 @@
     "test:pos-native-update-foundation": "node scripts/test-pos-native-update-foundation.mjs",
     "test:pos-apk-download": "node scripts/test-pos-apk-download.mjs",
     "test:pos-ops-notes": "node scripts/test-pos-ops-notes.mjs",
+    "test:pos-owner-ping": "node scripts/test-pos-owner-ping.mjs",
     "smoke:pos-install-live": "node scripts/smoke-pos-install-live.mjs",
     "publish:pos-apk": "node scripts/publish-pos-apk.mjs",
     "cap:sync": "npx cap sync android",
