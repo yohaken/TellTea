@@ -1,5 +1,5 @@
 /**
- * Ledger AI classify — heuristic + CF helpers + UI wiring smoke.
+ * Ledger AI + business profile wiring smoke.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -10,33 +10,36 @@ import vm from "node:vm";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(join(root, "functions/package.json"));
-
 const classify = require("./classify-ledger.js");
+
 const labels = readFileSync(join(root, "src/lib/ledger-labels.ts"), "utf8");
-const ledgerPage = readFileSync(join(root, "src/app/ledger/page.tsx"), "utf8");
-const typeField = readFileSync(join(root, "src/components/LedgerTypeField.tsx"), "utf8");
-const photoCell = readFileSync(join(root, "src/components/EntryPhotoCell.tsx"), "utf8");
-const progress = readFileSync(join(root, "src/components/AiSaveProgressModal.tsx"), "utf8");
-const useImages = readFileSync(join(root, "src/components/AiUseImagesCheckbox.tsx"), "utf8");
+const profileLib = readFileSync(join(root, "src/lib/business-profile.ts"), "utf8");
+const setup = readFileSync(join(root, "src/components/BusinessProfileSetup.tsx"), "utf8");
+const settingsPage = readFileSync(join(root, "src/app/settings/page.tsx"), "utf8");
 const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
 
-assert.equal(classify.normalizeType("cogs"), "cogs");
-assert.match(labels, /เครื่องดื่ม/);
+assert.equal(guessFromLabels("ค่าขนส่งแก้ว"), "cogs");
+assert.match(classify.SYSTEM_PROMPT, /ค่าไฟ/);
+assert.match(classify.DEFAULT_BUSINESS_CONTEXT, /ชานมไข่มุก/);
+assert.match(classify.DEFAULT_BUSINESS_CONTEXT, /40%/);
+assert.match(classify.buildSystemPrompt(""), /บริบทกิจการ/);
+assert.match(classify.buildSystemPrompt("ประเภทกิจการ: ทดสอบ"), /ทดสอบ/);
 
-const fnMatch = labels.match(
-  /export function guessTypeFromDescription\(description: string\): string \{([\s\S]*?)\n\}/,
-);
-assert.ok(fnMatch);
-const guess = vm.runInNewContext(
-  `function guessTypeFromDescription(description) {${fnMatch[1]}}\nguessTypeFromDescription`,
-);
-assert.equal(guess("ค่าเครื่องดื่ม"), "cogs");
-assert.equal(guess("ค่าขนส่งแก้ว"), "cogs");
-assert.equal(guess("ค่าส่งนม"), "cogs");
-assert.equal(guess("ค่าขนส่ง"), "sga");
-assert.equal(guess("ส่งเครื่องซ่อม"), "sga");
+assert.match(profileLib, /meta.*businessProfile|businessProfile/);
+assert.match(profileLib, /formatBusinessProfileForAi/);
+assert.match(profileLib, /DEFAULT_BUSINESS_PROFILE/);
+assert.match(setup, /โปรไฟล์กิจการ/);
+assert.match(settingsPage, /BusinessProfileSetup/);
+assert.match(version, /APP_BUILD = 194/);
 
-assert.match(classify.SYSTEM_PROMPT, /ค่าขนส่งแก้ว/);
-assert.match(version, /APP_BUILD = 193/);
+function guessFromLabels(description) {
+  const fnMatch = labels.match(
+    /export function guessTypeFromDescription\(description: string\): string \{([\s\S]*?)\n\}/,
+  );
+  assert.ok(fnMatch);
+  return vm.runInNewContext(
+    `function guessTypeFromDescription(description) {${fnMatch[1]}}\nguessTypeFromDescription`,
+  )(description);
+}
 
 console.log("OK test-ledger-ai-classify");

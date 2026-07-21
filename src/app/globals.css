@@ -5997,6 +5997,42 @@ body.modal-open .main-panel {
   gap: 1.25rem;
 }
 
+.business-profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  text-align: left;
+}
+
+.business-profile-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: rgba(28, 42, 31, 0.78);
+}
+
+.business-profile-form input,
+.business-profile-form textarea {
+  font: inherit;
+  font-weight: 400;
+  font-size: 0.88rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: rgba(255, 255, 255, 0.85);
+  color: rgba(28, 42, 31, 0.92);
+  resize: vertical;
+}
+
+.business-profile-form .settings-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+}
+
 .owner-settings-section {
   padding: 1rem;
   border-radius: 1rem;

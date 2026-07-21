@@ -14,6 +14,17 @@ const MAX_IMAGE_BYTES = 3.5 * 1024 * 1024;
 /** Bootstrap only via env / owner AI settings — never commit keys. */
 const BOOTSTRAP_GEMINI_API_KEY = "";
 
+/** ค่าเริ่มต้นโปรไฟล์ TellTea — ใช้เมื่อยังไม่มี meta/businessProfile */
+const DEFAULT_BUSINESS_CONTEXT = `บริบทกิจการ (โปรไฟล์ร้าน — ใช้ประกอบการจัดประเภท):
+- ประเภทกิจการ: ร้านชานมไข่มุก (bubble tea) ที่ทำเบเกอรี่ควบคู่
+- สินค้า/บริการ: เครื่องดื่มชานมไข่มุก / เครื่องดื่มที่เกี่ยวข้อง · เบเกอรี่ที่ร้านผลิตเอง · เปิดบริการลูกค้าหน้าร้าน
+- ควรเป็นต้นทุน (cogs): วัตถุดิบเครื่องดื่มและบรรจุภัณฑ์: แก้ว หลอด ถุง ฝา · วัตถุดิบเบเกอรี่: แป้ง มันสำปะหลัง กล้วย และของเกี่ยวข้อง · น้ำดิบ/ค่าน้ำที่ผ่านระบบกรองเป็นน้ำดื่มสำหรับผลิต · ค่าขนส่ง/ค่าส่งวัตถุดิบและบรรจุภัณฑ์ (เช่น ค่าขนส่งแก้ว)
+- ควรเป็นค่าใช้จ่าย (sga): ค่าแรง/โบนัสพนักงาน (หัวใจหลักของร้าน) · ค่าไฟ (รวมแอร์และเครื่องใช้ไฟฟ้า — แยกเป็นค่าใช้จ่ายเสมอ แม้มีเครื่องทำน้ำแข็ง) · ค่าเช่า ค่าเน็ต ค่าน้ำประปาส่วนที่ไม่ใช่ต้นทุนผลิตโดยตรง · ค่าซ่อมบำรุง ทำความสะอาด ค่าขนส่งทั่วไปที่ไม่เกี่ยวกับวัตถุดิบ
+- ควรเป็นสินทรัพย์ (asset): เครื่องจักรและอุปกรณ์ถาวรที่เกี่ยวเนื่องกับการชง/ผลิต/เบเกอรี่ · ระบบกรองน้ำ (ทุนหลักด้านน้ำดื่ม) · ตู้ แอร์ อุปกรณ์ใช้งานหลายปี — ไม่รวมค่าซ่อม
+- ชั่วโมงเปิด: เปิดตลอด 24 ชั่วโมง
+- โครงสร้างต้นทุน: โดยภาพรวมต้นทุนวัตถุดิบ (cogs) ประมาณ 40% ของโครงสร้างต้นทุน · ส่วนที่เหลือเป็นค่าแรงพนักงานและค่าใช้จ่ายอื่น (sga)
+- หมายเหตุเพิ่ม: แยกให้ชัด: ค่าไฟ = sga เสมอ · ค่าน้ำ/ระบบกรองที่เกี่ยวกับน้ำดื่มผลิต = พิจารณาเป็น cogs เมื่อเป็นต้นทุนผลิต · พนักงาน = sga · อย่าสับสนคำว่าเครื่องในเครื่องดื่มกับเครื่องจักร`;
+
 const SYSTEM_PROMPT = `คุณเป็นผู้ช่วยจัดประเภทบัญชีสำหรับร้านเครื่องดื่ม/เบเกอรี่ในไทย
 เลือกประเภทเงินออกได้เพียงค่าใดค่าหนึ่ง:
 - cogs = ต้นทุนขาย (วัตถุดิบ ส่วนผสม แพ็กเกจที่ขายไปกับสินค้า ของใช้ทำเครื่องดื่ม อาหารสด รวมค่าขนส่ง/ค่าส่งของวัตถุดิบและบรรจุภัณฑ์)
@@ -28,11 +39,36 @@ const SYSTEM_PROMPT = `คุณเป็นผู้ช่วยจัดปร
 - ซื้อนม ชา น้ำตาล แก้ว หลอด ฝา น้ำแข็ง → cogs
 - ค่าขนส่ง/ค่าส่ง/ค่ารถ ที่ตามด้วยวัตถุดิบหรือบรรจุภัณฑ์ (เช่น ค่าขนส่งแก้ว ค่าส่งนม ค่าขนส่งวัตถุดิบ) → cogs ไม่ใช่ sga เพราะเป็นต้นทุนนำเข้าของใช้ทำสินค้า
 - ค่าขนส่งทั่วไป / ค่าส่งของลูกค้า / ค่ารถที่ไม่ระบุว่าเป็นวัตถุดิบ → sga
+- ค่าไฟ / ค่าแอร์ → sga เสมอ แม้ร้านมีเครื่องทำน้ำแข็งหรือใช้น้ำกรองผลิต
 - ค่าแรง พนักงาน โบนัส → sga
 - ชื่อสั้นกำกวม (เช่น "มัน" "ถุง" "กล่อง") — ถ้ามีรูปใบเสร็จ/สินค้า ให้ดูรูปเป็นหลัก: วัตถุดิบอาหาร/ของสด/แก้วหลอด → cogs, อุปกรณ์ถาวร → asset, ค่าบริการ/ซ่อม → sga
 
+ใช้บริบทกิจการด้านล่างเป็นหลักเมื่อชื่อรายการกำกวม
+
 ตอบเป็น JSON เท่านั้น ในรูป:
 {"type":"cogs|sga|asset|อื่นๆ","reason":"เหตุผลสั้นๆ ภาษาไทยไม่เกิน 40 ตัวอักษร"}`;
+
+function formatBusinessProfile(data) {
+  if (!data || typeof data !== "object") return "";
+  const pick = (k) => String(data[k] || "").trim();
+  const lines = [
+    "บริบทกิจการ (โปรไฟล์ร้าน — ใช้ประกอบการจัดประเภท):",
+    `- ประเภทกิจการ: ${pick("businessType") || "-"}`,
+    `- สินค้า/บริการ: ${pick("productsServices") || "-"}`,
+    `- ควรเป็นต้นทุน (cogs): ${pick("cogsExamples") || "-"}`,
+    `- ควรเป็นค่าใช้จ่าย (sga): ${pick("sgaExamples") || "-"}`,
+    `- ควรเป็นสินทรัพย์ (asset): ${pick("assetExamples") || "-"}`,
+    `- ชั่วโมงเปิด: ${pick("openHours") || "-"}`,
+    `- โครงสร้างต้นทุน: ${pick("costStructure") || "-"}`,
+  ];
+  if (pick("aiNotes")) lines.push(`- หมายเหตุเพิ่ม: ${pick("aiNotes")}`);
+  return lines.join("\n");
+}
+
+function buildSystemPrompt(businessContext) {
+  const ctx = String(businessContext || "").trim() || DEFAULT_BUSINESS_CONTEXT;
+  return `${SYSTEM_PROMPT}\n\n${ctx}`;
+}
 
 function normalizeType(raw) {
   const t = String(raw || "")
@@ -123,7 +159,16 @@ async function loadAiSettings(db) {
   return { enabled, model, apiKey };
 }
 
-async function callGemini({ apiKey, model, description, imageUrls }) {
+async function loadBusinessContext(db) {
+  const snap = await db.doc("meta/businessProfile").get();
+  if (!snap.exists()) return DEFAULT_BUSINESS_CONTEXT;
+  const formatted = formatBusinessProfile(snap.data());
+  return formatted.includes("ประเภทกิจการ: -") && formatted.includes("สินค้า/บริการ: -")
+    ? DEFAULT_BUSINESS_CONTEXT
+    : formatted || DEFAULT_BUSINESS_CONTEXT;
+}
+
+async function callGemini({ apiKey, model, description, imageUrls, businessContext }) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
     model,
   )}:generateContent?key=${encodeURIComponent(apiKey)}`;
@@ -158,7 +203,7 @@ async function callGemini({ apiKey, model, description, imageUrls }) {
         },
       ],
       systemInstruction: {
-        parts: [{ text: SYSTEM_PROMPT }],
+        parts: [{ text: buildSystemPrompt(businessContext) }],
       },
       generationConfig: {
         temperature: 0.1,
@@ -227,6 +272,7 @@ exports.classifyLedgerType = functions
 
     const modelOverride = String(data?.model || "").trim();
     const model = modelOverride || settings.model;
+    const businessContext = await loadBusinessContext(db);
 
     try {
       const result = await callGemini({
@@ -234,6 +280,7 @@ exports.classifyLedgerType = functions
         model,
         description,
         imageUrls,
+        businessContext,
       });
       return {
         type: result.type,
@@ -257,4 +304,7 @@ exports.extractJsonObject = extractJsonObject;
 exports.isAllowedImageUrl = isAllowedImageUrl;
 exports.DEFAULT_MODEL = DEFAULT_MODEL;
 exports.SYSTEM_PROMPT = SYSTEM_PROMPT;
+exports.DEFAULT_BUSINESS_CONTEXT = DEFAULT_BUSINESS_CONTEXT;
+exports.buildSystemPrompt = buildSystemPrompt;
+exports.formatBusinessProfile = formatBusinessProfile;
 exports.MAX_IMAGES = MAX_IMAGES;

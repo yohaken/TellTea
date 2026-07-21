@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Settings } from "lucide-react";
 import { AppUpdateSetup } from "@/components/AppUpdateSetup";
+import { BusinessProfileSetup } from "@/components/BusinessProfileSetup";
 import { MenuCatalogSetup } from "@/components/MenuCatalogSetup";
 import { PosSalesSetup } from "@/components/PosSalesSetup";
 import { PosPaymentSetup } from "@/components/PosPaymentSetup";
@@ -75,7 +76,7 @@ function SettingsView() {
         ตั้งค่าโมดูล
       </h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        จัดการค่าเริ่มต้นของผลิต · ชง · SmartCheck · คลัง · ลำดับเมนู — เฉพาะเจ้าของ
+        จัดการค่าเริ่มต้นของผลิต · ชง · SmartCheck · คลัง · โปรไฟล์กิจการ (AI) · ลำดับเมนู — เฉพาะเจ้าของ
       </p>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -83,6 +84,7 @@ function SettingsView() {
 
       {!loading ? (
         <div className="owner-settings-stack">
+          <BusinessProfileSetup onError={setError} />
           <AppUpdateSetup onError={setError} />
           <PosDeviceSetup onError={setError} />
           <PosShopInfoSetup onError={setError} />
