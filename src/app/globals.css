@@ -1519,11 +1519,14 @@ body.modal-open .main-panel {
   margin-top: 0.35rem;
 }
 
-.ledger-ai-settings-msg {
-  margin: 0.5rem 0 0;
-  font-size: 0.8rem;
-  color: #2f6b4f;
-  text-align: left;
+.ledger-ai-backfill {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed rgba(47, 107, 79, 0.2);
+}
+
+.ledger-ai-backfill .ghost-btn {
+  width: 100%;
 }
 
 .ledger-type-ai-field,

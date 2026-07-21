@@ -36,6 +36,11 @@ export function guessTypeFromDescription(description: string): string {
   if (text.includes("ยกมา")) return "ยอดยกมา";
   if (text.includes("โอนเข้า")) return "โอนเข้า";
 
+  // เครื่องดื่ม ≠ เครื่องจักร — ต้องเช็คก่อนคำว่า "เครื่อง"
+  if (text.includes("เครื่องดื่ม") || text.includes("วัตถุดิบ") || text.includes("นม")) {
+    return "cogs";
+  }
+
   const assetHints = ["ซื้อเครื่อง", "เครื่องใหม่", "ตู้เย็น", "ตู้แช่", "แอร์ใหม่", "อุปกรณ์ถาวร", "สินทรัพย์"];
   if (assetHints.some((h) => text.includes(h))) return "asset";
 
@@ -58,8 +63,11 @@ export function guessTypeFromDescription(description: string): string {
   ];
   if (sgaHints.some((h) => text.includes(h))) return "sga";
 
-  // คำว่า "เครื่อง" เดี่ยวๆ มักเป็น asset — แต่ถ้ามีซ่อม/ส่ง ถูกจับด้านบนแล้ว
-  if (text.includes("เครื่อง") || text.includes("ตู้") || text.includes("แอร์")) return "asset";
+  // คำว่า "เครื่อง"/"ตู้"/"แอร์" ที่ไม่ใช่เครื่องดื่ม — มักเป็น asset
+  const stripped = text.replace(/เครื่องดื่ม/g, "");
+  if (stripped.includes("เครื่อง") || stripped.includes("ตู้") || stripped.includes("แอร์")) {
+    return "asset";
+  }
 
   // ของใช้ทำเครื่องดื่ม / สั่งซื้อวัตถุดิบ → cogs
   return "cogs";

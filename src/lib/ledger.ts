@@ -18,6 +18,7 @@ import {
   startAfter,
   sum,
   updateDoc,
+  where,
   writeBatch,
   type QueryDocumentSnapshot,
   type Query,
@@ -294,6 +295,28 @@ export async function listRecentLedgerEntries(max = 200): Promise<LedgerEntry[]>
       orderBy("date", "desc"),
       orderBy("createdAt", "desc"),
       limit(max),
+    ),
+  );
+  return snap.docs.map(mapEntry);
+}
+
+/**
+ * รายการในช่วงเดือนปฏิทินท้องถิ่น (year/month แบบ 1–12)
+ * เช่น ก.ค. 2026 → listLedgerEntriesInMonth(2026, 7)
+ */
+export async function listLedgerEntriesInMonth(
+  year: number,
+  month: number,
+): Promise<LedgerEntry[]> {
+  const start = new Date(year, month - 1, 1).getTime();
+  const end = new Date(year, month, 1).getTime();
+  const snap = await getDocs(
+    query(
+      collection(getDb(), "ledger"),
+      where("date", ">=", start),
+      where("date", "<", end),
+      orderBy("date", "asc"),
+      orderBy("createdAt", "asc"),
     ),
   );
   return snap.docs.map(mapEntry);

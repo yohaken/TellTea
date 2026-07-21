@@ -35,7 +35,7 @@ import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
 import { useLedgerAiClassify } from "@/hooks/use-ledger-ai-classify";
-import type { LedgerTypeSource } from "@/lib/ledger-ai";
+import { resolveStoredTypeSource, type LedgerTypeSource } from "@/lib/ledger-ai";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
 import { saveImageToDevice } from "@/lib/receipts";
 import {
@@ -729,13 +729,15 @@ function EditEntryModal({
   onError: (msg: string) => void;
 }) {
   const isIn = entry.amountIn > 0;
-  const initialSource = (entry.typeSource || "").trim() as LedgerTypeSource | "";
+  const initialSource = resolveStoredTypeSource(entry.typeSource);
   const wasOwnerType = initialSource === "owner";
   const [date, setDate] = useState(toDateInput(entry.date));
   const [description, setDescription] = useState(entry.description);
   const [amount, setAmount] = useState(String(isIn ? entry.amountIn : entry.amountOut));
   const [typeMode, setTypeMode] = useState(() =>
-    wasOwnerType ? (entry.type || "").trim() || "auto" : "auto",
+    wasOwnerType || initialSource === "legacy"
+      ? (entry.type || "").trim() || "auto"
+      : "auto",
   );
   const [ownerLocked, setOwnerLocked] = useState(wasOwnerType);
   const [descTouched, setDescTouched] = useState(false);
@@ -754,17 +756,25 @@ function EditEntryModal({
         ? {
             type: entry.type,
             reason: entry.typeAiReason || "",
-            source: (initialSource as LedgerTypeSource) || "ai",
+            source: initialSource,
           }
         : undefined,
   });
 
   const resolvedType =
-    isOwner && ownerLocked && typeMode !== "auto" ? typeMode : ai.type;
+    isOwner && ownerLocked && typeMode !== "auto"
+      ? typeMode
+      : !descTouched && initialSource === "legacy" && typeMode !== "auto"
+        ? typeMode
+        : ai.type;
   const resolvedSource: LedgerTypeSource =
-    isOwner && ownerLocked && typeMode !== "auto" ? "owner" : ai.source;
+    isOwner && ownerLocked && typeMode !== "auto"
+      ? "owner"
+      : !descTouched && initialSource === "legacy" && ai.source !== "ai"
+        ? "legacy"
+        : ai.source;
   const resolvedReason =
-    resolvedSource === "owner" ? "" : ai.reason;
+    resolvedSource === "owner" || resolvedSource === "legacy" ? entry.typeAiReason || "" : ai.reason;
 
   const filteredSuggestions = useMemo(() => {
     const q = description.trim().toLowerCase();

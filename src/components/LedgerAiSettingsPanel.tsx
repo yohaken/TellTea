@@ -9,8 +9,13 @@ import {
   saveLedgerAiSettings,
   type LedgerAiSettings,
 } from "@/lib/ai-settings";
-import { classifyLedgerTypeWithAi } from "@/lib/ledger-ai";
+import { classifyLedgerTypeWithAi, reclassifyLedgerMonthWithAi } from "@/lib/ledger-ai";
+import type { ReclassifyMonthProgress } from "@/lib/ledger-ai";
 import { ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+
+/** เดือนที่เปิดให้จัดประเภทย้อนหลังด้วย AI (ตามที่เจ้าของขอ) */
+const BACKFILL_YEAR = 2026;
+const BACKFILL_MONTH = 7;
 
 type Props = {
   actorId: string;
@@ -25,6 +30,8 @@ export function LedgerAiSettingsPanel({ actorId }: Props) {
   const [apiKeyDraft, setApiKeyDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillProgress, setBackfillProgress] = useState<ReclassifyMonthProgress | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -77,12 +84,37 @@ export function LedgerAiSettingsPanel({ actorId }: Props) {
     setMsg(null);
     setErr(null);
     try {
-      const result = await classifyLedgerTypeWithAi("ส่งเครื่องซ่อม");
+      const result = await classifyLedgerTypeWithAi("ค่าเครื่องดื่ม");
       setMsg(`ทดสอบ OK → ${result.type}${result.reason ? ` (${result.reason})` : ""}`);
     } catch (e) {
       setErr((e as Error).message || "ทดสอบไม่สำเร็จ");
     } finally {
       setTesting(false);
+    }
+  }
+
+  async function onBackfillJuly() {
+    const ok = window.confirm(
+      `จัดประเภทเงินออกใหม่ด้วย AI ทั้งเดือน ก.ค. ${BACKFILL_YEAR}?\n\n` +
+        "ข้ามรายการที่คุณล็อกประเภทเองไว้ · อาจใช้เวลาสักครู่",
+    );
+    if (!ok) return;
+    setBackfilling(true);
+    setMsg(null);
+    setErr(null);
+    setBackfillProgress(null);
+    try {
+      const result = await reclassifyLedgerMonthWithAi(BACKFILL_YEAR, BACKFILL_MONTH, {
+        onProgress: setBackfillProgress,
+      });
+      setMsg(
+        `ก.ค. ${BACKFILL_YEAR} เสร็จ — อัปเดต ${result.updated} · เหมือนเดิม ${result.unchanged} · ` +
+          `ข้ามเจ้าของ ${result.skippedOwner} · ล้มเหลว ${result.failed}`,
+      );
+    } catch (e) {
+      setErr((e as Error).message || "จัดประเภทย้อนหลังไม่สำเร็จ");
+    } finally {
+      setBackfilling(false);
     }
   }
 
@@ -153,17 +185,39 @@ export function LedgerAiSettingsPanel({ actorId }: Props) {
           </div>
 
           <div className="ledger-ai-settings-actions">
-            <button type="submit" className="primary-btn" disabled={busy || !loaded}>
+            <button type="submit" className="primary-btn" disabled={busy || !loaded || backfilling}>
               {busy ? "กำลังบันทึก..." : "บันทึก"}
             </button>
             <button
               type="button"
               className="ghost-btn"
-              disabled={testing || !loaded}
+              disabled={testing || !loaded || backfilling}
               onClick={() => void onTest()}
             >
               {testing ? "กำลังทดสอบ..." : "ทดสอบ AI"}
             </button>
+          </div>
+
+          <div className="ledger-ai-backfill">
+            <p className="muted ledger-ai-settings-hint">
+              รายการเก่าก่อนมี AI อาจติดประเภทผิด (เช่น 「ค่าเครื่องดื่ม」→ สินทรัพย์ จากกฎคำว่า「เครื่อง」)
+              — จัดใหม่เฉพาะ ก.ค. {BACKFILL_YEAR}
+            </p>
+            <button
+              type="button"
+              className="ghost-btn"
+              disabled={!loaded || backfilling || testing || busy}
+              onClick={() => void onBackfillJuly()}
+            >
+              {backfilling
+                ? `กำลังจัด ก.ค.… ${backfillProgress ? `${backfillProgress.done}/${backfillProgress.total}` : ""}`
+                : `จัดประเภทใหม่ด้วย AI — ก.ค. ${BACKFILL_YEAR}`}
+            </button>
+            {backfilling && backfillProgress?.currentDescription ? (
+              <p className="muted" style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", textAlign: "left" }}>
+                {backfillProgress.currentDescription}
+              </p>
+            ) : null}
           </div>
 
           {msg ? <p className="ledger-ai-settings-msg">{msg}</p> : null}

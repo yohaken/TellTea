@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import vm from "node:vm";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(join(root, "functions/package.json"));
@@ -15,6 +16,7 @@ const labels = readFileSync(join(root, "src/lib/ledger-labels.ts"), "utf8");
 const ledgerPage = readFileSync(join(root, "src/app/ledger/page.tsx"), "utf8");
 const typeField = readFileSync(join(root, "src/components/LedgerTypeField.tsx"), "utf8");
 const aiPanel = readFileSync(join(root, "src/components/LedgerAiSettingsPanel.tsx"), "utf8");
+const ledgerAi = readFileSync(join(root, "src/lib/ledger-ai.ts"), "utf8");
 const rules = readFileSync(join(root, "firestore.rules"), "utf8");
 const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
 
@@ -33,19 +35,34 @@ assert.equal(
   "cogs",
 );
 
-// Heuristic: ส่งเครื่องซ่อม must not be asset
+// Heuristic: ส่งเครื่องซ่อม / เครื่องดื่ม
 assert.match(labels, /ส่งเครื่อง/);
 assert.match(labels, /ซ่อม/);
+assert.match(labels, /เครื่องดื่ม/);
+assert.match(classify.SYSTEM_PROMPT, /เครื่องดื่ม/);
+
+// Extract + eval guessTypeFromDescription body for smoke
+const fnMatch = labels.match(
+  /export function guessTypeFromDescription\(description: string\): string \{([\s\S]*?)\n\}/,
+);
+assert.ok(fnMatch, "guessTypeFromDescription missing");
+const guess = vm.runInNewContext(
+  `function guessTypeFromDescription(description) {${fnMatch[1]}}\nguessTypeFromDescription`,
+);
+assert.equal(guess("ค่าเครื่องดื่ม"), "cogs");
+assert.equal(guess("ส่งเครื่องซ่อม"), "sga");
+assert.equal(guess("ซื้อเครื่องชงกาแฟ"), "asset");
 
 // UI wiring
 assert.match(ledgerPage, /LedgerAiSettingsPanel/);
-assert.match(ledgerPage, /LedgerTypeField/);
-assert.match(ledgerPage, /useLedgerAiClassify/);
-assert.match(ledgerPage, /typeSource/);
+assert.match(ledgerPage, /resolveStoredTypeSource/);
 assert.match(typeField, /จัดประเภทบัญชีโดย AI/);
-assert.match(aiPanel, /ตั้งค่า AI จัดประเภทบัญชี/);
+assert.match(typeField, /ประเภทเดิมในระบบ/);
+assert.match(aiPanel, /จัดประเภทใหม่ด้วย AI — ก\.ค\./);
+assert.match(ledgerAi, /reclassifyLedgerMonthWithAi/);
+assert.match(ledgerAi, /legacy/);
 assert.match(rules, /aiSettings/);
-assert.match(version, /APP_BUILD = 188/);
+assert.match(version, /APP_BUILD = 189/);
 
 // Live Gemini smoke — key from env (or skip)
 const key = String(process.env.GEMINI_API_KEY || "").trim();
@@ -81,6 +98,9 @@ async function liveClassify(description) {
 
 const repairType = await liveClassify("ส่งเครื่องซ่อม");
 assert.equal(repairType, "sga", `expected sga for ส่งเครื่องซ่อม, got ${repairType}`);
+
+const drinkType = await liveClassify("ค่าเครื่องดื่ม");
+assert.equal(drinkType, "cogs", `expected cogs for ค่าเครื่องดื่ม, got ${drinkType}`);
 
 const milkType = await liveClassify("นมสดแม็คโคร");
 assert.ok(["cogs", "sga"].includes(milkType), `milk got ${milkType}`);

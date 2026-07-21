@@ -47,7 +47,9 @@ export function LedgerTypeField({
           ? "จัดประเภทบัญชีโดย AI"
           : aiSource === "owner"
             ? "กำหนดโดยเจ้าของ"
-            : "จัดจากชื่อรายการ";
+            : aiSource === "legacy"
+              ? "ประเภทเดิมในระบบ (ยังไม่ผ่าน AI)"
+              : "จัดจากชื่อรายการ";
 
   if (!isOwner) {
     return (
@@ -86,6 +88,10 @@ export function LedgerTypeField({
           <p className="ledger-type-ai-reason">{aiReason}</p>
         ) : null}
         {ownerLocked ? (
+          <button type="button" className="ghost-btn ledger-type-reset-ai" onClick={onResetToAi}>
+            ให้ AI จัดใหม่จากชื่อรายการ
+          </button>
+        ) : aiSource === "legacy" ? (
           <button type="button" className="ghost-btn ledger-type-reset-ai" onClick={onResetToAi}>
             ให้ AI จัดใหม่จากชื่อรายการ
           </button>
