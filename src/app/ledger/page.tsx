@@ -33,9 +33,15 @@ import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
 import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
+import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
+import { AiUseImagesCheckbox } from "@/components/AiUseImagesCheckbox";
 import { frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
-import { useLedgerAiClassify } from "@/hooks/use-ledger-ai-classify";
-import { resolveStoredTypeSource, type LedgerTypeSource } from "@/lib/ledger-ai";
+import {
+  classifyLedgerTypeHeuristic,
+  classifyLedgerTypeWithAi,
+  resolveStoredTypeSource,
+  type LedgerTypeSource,
+} from "@/lib/ledger-ai";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
 import { saveImageToDevice } from "@/lib/receipts";
 import {
@@ -543,23 +549,18 @@ function AddOutModal({
   const [typeMode, setTypeMode] = useState("auto");
   const [ownerLocked, setOwnerLocked] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [saveStage, setSaveStage] = useState<AiSaveStage | null>(null);
+  const [useImagesForAi, setUseImagesForAi] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [receiptUrls, setReceiptUrls] = useState<string[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
-
-  const ai = useLedgerAiClassify({
-    description,
-    imageUrls: receiptUrls,
-    locked: isOwner && ownerLocked,
-  });
-
-  const resolvedType =
-    isOwner && ownerLocked && typeMode !== "auto" ? typeMode : ai.type;
-  const resolvedSource: LedgerTypeSource =
-    isOwner && ownerLocked && typeMode !== "auto" ? "owner" : ai.source;
-  const resolvedReason =
-    resolvedSource === "owner" ? "" : ai.reason;
+  const [previewType, setPreviewType] = useState("");
+  const [previewReason, setPreviewReason] = useState("");
+  const [previewSource, setPreviewSource] = useState<LedgerTypeSource>("heuristic");
+  const [previewUsedImages, setPreviewUsedImages] = useState(0);
+  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const filteredSuggestions = useMemo(() => {
     const q = description.trim().toLowerCase();
@@ -579,34 +580,97 @@ function AddOutModal({
       });
   }, []);
 
+  useEffect(() => {
+    if (!receiptUrls.length && useImagesForAi) setUseImagesForAi(false);
+  }, [receiptUrls.length, useImagesForAi]);
+
+  async function runOwnerPreview() {
+    const text = description.trim();
+    if (!text) {
+      onError("ใส่ชื่อรายการก่อนจัดประเภท");
+      return;
+    }
+    setOwnerLocked(false);
+    setTypeMode("auto");
+    setPreviewStatus("loading");
+    setPreviewError(null);
+    try {
+      const result = await classifyLedgerTypeWithAi(text, {
+        imageUrls: useImagesForAi ? receiptUrls : undefined,
+      });
+      setPreviewType(result.type);
+      setPreviewReason(result.reason);
+      setPreviewSource("ai");
+      setPreviewUsedImages(result.usedImages);
+      setPreviewStatus("ready");
+    } catch (err) {
+      const fallback = classifyLedgerTypeHeuristic(text);
+      setPreviewType(fallback.type);
+      setPreviewReason(fallback.reason);
+      setPreviewSource("heuristic");
+      setPreviewUsedImages(0);
+      setPreviewStatus("error");
+      setPreviewError((err as Error).message || "AI ไม่พร้อม");
+    }
+  }
+
   async function onSave(e: FormEvent) {
     e.preventDefault();
     if (!description.trim()) {
       onError("ต้องใส่รายการ");
       return;
     }
-    if (ai.status === "loading" && !(isOwner && ownerLocked)) {
-      onError("รอ AI จัดประเภทสักครู่");
-      return;
-    }
     setBusy(true);
+    setSaveStage("sending");
     try {
+      let type = previewType || "cogs";
+      let typeSource: LedgerTypeSource = previewSource;
+      let typeAiReason = previewReason;
+      let usedImages = 0;
+
+      if (isOwner && ownerLocked && typeMode !== "auto") {
+        type = typeMode;
+        typeSource = "owner";
+        typeAiReason = "";
+      } else {
+        setSaveStage("sending");
+        await new Promise((r) => setTimeout(r, 30));
+        setSaveStage("classifying");
+        try {
+          const result = await classifyLedgerTypeWithAi(description, {
+            imageUrls: useImagesForAi ? receiptUrls : undefined,
+          });
+          type = result.type;
+          typeSource = "ai";
+          typeAiReason = result.reason;
+          usedImages = result.usedImages;
+        } catch {
+          const fallback = classifyLedgerTypeHeuristic(description);
+          type = fallback.type;
+          typeSource = "heuristic";
+          typeAiReason = fallback.reason;
+        }
+      }
+
+      setSaveStage("saving");
       await addLedgerEntry({
         date: parseDateInput(date),
         description,
         amountIn: 0,
         amountOut: Number(amount),
-        type: resolvedType,
-        typeSource: resolvedSource,
-        typeAiReason: resolvedReason,
+        type,
+        typeSource,
+        typeAiReason: typeAiReason || (usedImages ? `ใช้รูป ${usedImages}` : ""),
         createdBy,
         receiptUrls,
       });
+      setSaveStage("done");
       onSaved();
     } catch (err) {
       onError((err as Error).message || "บันทึกไม่สำเร็จ");
     } finally {
       setBusy(false);
+      setSaveStage(null);
     }
   }
 
@@ -665,7 +729,7 @@ function AddOutModal({
             max={LEDGER_RECEIPT_MAX}
             storageFolder="ledger-receipts"
             storageSlotKey={`add-${createdBy || "new"}`}
-            hint={`แนบรูปสินค้า/ใบเสร็จ — AI ใช้ช่วยจัดประเภทเมื่อชื่อสั้น · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
+            hint={`แนบหลักฐานได้ · ส่งให้ AI เฉพาะเมื่อติ๊กด้านล่าง · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
           />
           {receiptUrls.length ? (
             <button
@@ -677,15 +741,23 @@ function AddOutModal({
               ดูรูปทั้งหมด ({receiptUrls.length})
             </button>
           ) : null}
+          <AiUseImagesCheckbox
+            hasImages={receiptUrls.length > 0}
+            checked={useImagesForAi}
+            onChange={setUseImagesForAi}
+            disabled={busy}
+          />
           <LedgerTypeField
             id="add-out-type"
             isOwner={isOwner}
-            aiType={ai.type}
-            aiReason={ai.reason}
-            aiSource={ai.source}
-            aiStatus={ai.status}
-            aiError={ai.error}
-            usedImages={ai.usedImages}
+            mode={isOwner ? "live" : "deferred"}
+            displayType={isOwner ? previewType : ""}
+            aiType={previewType || "cogs"}
+            aiReason={previewReason}
+            aiSource={previewSource}
+            aiStatus={previewStatus}
+            aiError={previewError}
+            usedImages={previewUsedImages}
             ownerLocked={ownerLocked}
             typeMode={typeMode}
             frequent={typeFreq}
@@ -693,11 +765,7 @@ function AddOutModal({
               setTypeMode(value);
               setOwnerLocked(value !== "auto");
             }}
-            onReclassify={() => {
-              setOwnerLocked(false);
-              setTypeMode("auto");
-              ai.refresh();
-            }}
+            onReclassify={() => void runOwnerPreview()}
           />
           <div className="entry-actions">
             <button type="submit" className="primary-btn action-out" disabled={busy}>
@@ -713,6 +781,9 @@ function AddOutModal({
           <ImagePreviewModal urls={previewUrls} title="สลิป / รูปถ่าย" onClose={() => setPreviewUrls(null)} />
         ) : null}
       </div>
+      {saveStage ? (
+        <AiSaveProgressModal stage={saveStage} withImages={useImagesForAi} detail={description.trim()} />
+      ) : null}
     </div>
   );
 }
@@ -742,42 +813,26 @@ function EditEntryModal({
       : "auto",
   );
   const [ownerLocked, setOwnerLocked] = useState(wasOwnerType);
-  const [descTouched, setDescTouched] = useState(false);
+  const [forceReclassify, setForceReclassify] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [saveStage, setSaveStage] = useState<AiSaveStage | null>(null);
+  const [useImagesForAi, setUseImagesForAi] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getLedgerReceiptUrls(entry));
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
+  const [previewType, setPreviewType] = useState(entry.type || "");
+  const [previewReason, setPreviewReason] = useState(entry.typeAiReason || "");
+  const [previewSource, setPreviewSource] = useState<LedgerTypeSource>(initialSource);
+  const [previewUsedImages, setPreviewUsedImages] = useState(0);
+  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">("ready");
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
-  const ai = useLedgerAiClassify({
-    description,
-    imageUrls: receiptUrls,
-    locked: isIn || (isOwner && ownerLocked) || !descTouched,
-    enabled: !isIn,
-    initial:
-      !isIn && entry.type
-        ? {
-            type: entry.type,
-            reason: entry.typeAiReason || "",
-            source: initialSource,
-          }
-        : undefined,
-  });
-
-  const resolvedType =
-    isOwner && ownerLocked && typeMode !== "auto"
-      ? typeMode
-      : !descTouched && initialSource === "legacy" && typeMode !== "auto"
-        ? typeMode
-        : ai.type;
-  const resolvedSource: LedgerTypeSource =
-    isOwner && ownerLocked && typeMode !== "auto"
-      ? "owner"
-      : !descTouched && initialSource === "legacy" && ai.source !== "ai"
-        ? "legacy"
-        : ai.source;
-  const resolvedReason =
-    resolvedSource === "owner" || resolvedSource === "legacy" ? entry.typeAiReason || "" : ai.reason;
+  const descChanged = description.trim() !== (entry.description || "").trim();
+  const shouldClassifyOnSave =
+    !isIn &&
+    !(isOwner && ownerLocked && typeMode !== "auto") &&
+    (forceReclassify || descChanged || !entry.typeSource || initialSource === "legacy");
 
   const filteredSuggestions = useMemo(() => {
     const q = description.trim().toLowerCase();
@@ -797,23 +852,85 @@ function EditEntryModal({
       });
   }, []);
 
-  async function onSave(e: FormEvent) {
-    e.preventDefault();
-    if (!isIn && ai.status === "loading" && !(isOwner && ownerLocked)) {
-      onError("รอ AI จัดประเภทสักครู่");
+  useEffect(() => {
+    if (!receiptUrls.length && useImagesForAi) setUseImagesForAi(false);
+  }, [receiptUrls.length, useImagesForAi]);
+
+  async function runOwnerPreview() {
+    const text = description.trim();
+    if (!text) {
+      onError("ใส่ชื่อรายการก่อนจัดประเภท");
       return;
     }
+    setOwnerLocked(false);
+    setTypeMode("auto");
+    setForceReclassify(true);
+    setPreviewStatus("loading");
+    setPreviewError(null);
+    try {
+      const result = await classifyLedgerTypeWithAi(text, {
+        imageUrls: useImagesForAi ? receiptUrls : undefined,
+      });
+      setPreviewType(result.type);
+      setPreviewReason(result.reason);
+      setPreviewSource("ai");
+      setPreviewUsedImages(result.usedImages);
+      setPreviewStatus("ready");
+    } catch (err) {
+      const fallback = classifyLedgerTypeHeuristic(text);
+      setPreviewType(fallback.type);
+      setPreviewReason(fallback.reason);
+      setPreviewSource("heuristic");
+      setPreviewUsedImages(0);
+      setPreviewStatus("error");
+      setPreviewError((err as Error).message || "AI ไม่พร้อม");
+    }
+  }
+
+  async function onSave(e: FormEvent) {
+    e.preventDefault();
     setBusy(true);
     try {
       const value = Number(amount);
+      let type = isIn ? entry.type || "โอนเข้า" : previewType || entry.type || "cogs";
+      let typeSource = isIn ? entry.typeSource || "" : previewSource;
+      let typeAiReason = isIn ? entry.typeAiReason || "" : previewReason;
+
+      if (!isIn) {
+        if (isOwner && ownerLocked && typeMode !== "auto") {
+          type = typeMode;
+          typeSource = "owner";
+          typeAiReason = "";
+        } else if (shouldClassifyOnSave) {
+          setSaveStage("sending");
+          // yield so UI paints "sending" before classify
+          await new Promise((r) => setTimeout(r, 30));
+          setSaveStage("classifying");
+          try {
+            const result = await classifyLedgerTypeWithAi(description, {
+              imageUrls: useImagesForAi ? receiptUrls : undefined,
+            });
+            type = result.type;
+            typeSource = "ai";
+            typeAiReason = result.reason;
+          } catch {
+            const fallback = classifyLedgerTypeHeuristic(description);
+            type = fallback.type;
+            typeSource = "heuristic";
+            typeAiReason = fallback.reason;
+          }
+          setSaveStage("saving");
+        }
+      }
+
       await updateLedgerEntry(entry.id, {
         date: parseDateInput(date),
         description,
         amountIn: isIn ? value : 0,
         amountOut: isIn ? 0 : value,
-        type: isIn ? entry.type || "โอนเข้า" : resolvedType,
-        typeSource: isIn ? entry.typeSource || "" : resolvedSource,
-        typeAiReason: isIn ? entry.typeAiReason || "" : resolvedReason,
+        type,
+        typeSource,
+        typeAiReason,
         receiptUrls,
       });
       onSaved();
@@ -821,6 +938,7 @@ function EditEntryModal({
       onError((err as Error).message || "บันทึกไม่สำเร็จ");
     } finally {
       setBusy(false);
+      setSaveStage(null);
     }
   }
 
@@ -875,11 +993,10 @@ function EditEntryModal({
               value={description}
               onChange={(e) => {
                 setDescription(e.target.value);
-                setDescTouched(true);
-                // พนักงานแก้ชื่อ → AI จัดใหม่เสมอ · เจ้าของที่ล็อกประเภทไว้คงค่าเดิม
                 if (!isOwner || !ownerLocked) {
                   setOwnerLocked(false);
                   setTypeMode("auto");
+                  setForceReclassify(true);
                 }
               }}
               autoComplete="off"
@@ -894,10 +1011,10 @@ function EditEntryModal({
                     className="suggest-chip"
                     onClick={() => {
                       setDescription(item);
-                      setDescTouched(true);
                       if (!isOwner || !ownerLocked) {
                         setOwnerLocked(false);
                         setTypeMode("auto");
+                        setForceReclassify(true);
                       }
                     }}
                   >
@@ -924,12 +1041,7 @@ function EditEntryModal({
           <PhotoAttachMultiField
             label="สลิป / รูปถ่าย"
             values={receiptUrls}
-            onChange={(urls) => {
-              setReceiptUrls(urls);
-              if (!isIn && (!isOwner || !ownerLocked)) {
-                setDescTouched(true);
-              }
-            }}
+            onChange={setReceiptUrls}
             onError={onError}
             max={LEDGER_RECEIPT_MAX}
             storageFolder="ledger-receipts"
@@ -937,7 +1049,7 @@ function EditEntryModal({
             hint={
               isIn
                 ? `บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`
-                : `แนบรูปสินค้า/ใบเสร็จ — AI ใช้ช่วยจัดประเภทเมื่อชื่อสั้น · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`
+                : `แนบหลักฐานได้ · ส่งให้ AI เฉพาะเมื่อติ๊กด้านล่าง · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`
             }
           />
           {receiptUrls.length ? (
@@ -952,29 +1064,50 @@ function EditEntryModal({
           ) : null}
 
           {!isIn ? (
-            <LedgerTypeField
-              id="edit-type"
-              isOwner={isOwner}
-              aiType={ai.type}
-              aiReason={ai.reason}
-              aiSource={ai.source}
-              aiStatus={ai.status}
-              aiError={ai.error}
-              usedImages={ai.usedImages}
-              ownerLocked={ownerLocked}
-              typeMode={typeMode}
-              frequent={typeFreq}
-              onTypeModeChange={(value) => {
-                setTypeMode(value);
-                setOwnerLocked(value !== "auto");
-              }}
-              onReclassify={() => {
-                setOwnerLocked(false);
-                setTypeMode("auto");
-                setDescTouched(true);
-                ai.refresh();
-              }}
-            />
+            <>
+              <AiUseImagesCheckbox
+                hasImages={receiptUrls.length > 0}
+                checked={useImagesForAi}
+                onChange={setUseImagesForAi}
+                disabled={busy}
+              />
+              <LedgerTypeField
+                id="edit-type"
+                isOwner={isOwner}
+                mode={isOwner ? "live" : "deferred"}
+                displayType={previewType || entry.type}
+                aiType={previewType || entry.type || "cogs"}
+                aiReason={previewReason}
+                aiSource={previewSource}
+                aiStatus={previewStatus}
+                aiError={previewError}
+                usedImages={previewUsedImages}
+                ownerLocked={ownerLocked}
+                typeMode={typeMode}
+                frequent={typeFreq}
+                onTypeModeChange={(value) => {
+                  setTypeMode(value);
+                  setOwnerLocked(value !== "auto");
+                }}
+                onReclassify={() => void runOwnerPreview()}
+              />
+              {!isOwner ? (
+                <label className="ledger-ai-use-images">
+                  <input
+                    type="checkbox"
+                    checked={forceReclassify || descChanged}
+                    onChange={(e) => setForceReclassify(e.target.checked)}
+                    disabled={busy || descChanged}
+                  />
+                  <span>
+                    จัดประเภทใหม่ด้วย AI เมื่อบันทึก
+                    {descChanged ? (
+                      <span className="ledger-ai-use-images-hint"> — เปิดอัตโนมัติเพราะแก้ชื่อรายการ</span>
+                    ) : null}
+                  </span>
+                </label>
+              ) : null}
+            </>
           ) : null}
 
           <div className="entry-actions">
@@ -1000,6 +1133,9 @@ function EditEntryModal({
           <ImagePreviewModal urls={previewUrls} title="สลิป / รูปถ่าย" onClose={() => setPreviewUrls(null)} />
         ) : null}
       </div>
+      {saveStage ? (
+        <AiSaveProgressModal stage={saveStage} withImages={useImagesForAi} detail={description.trim()} />
+      ) : null}
     </div>
   );
 }

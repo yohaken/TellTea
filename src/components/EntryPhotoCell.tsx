@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Download, ImageIcon, ImageOff, Loader2, X } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { resolveEvidencePhotoSrcList } from "@/lib/evidence-photos";
@@ -140,6 +141,47 @@ export function ImagePreviewModal({
   const current = resolved[idx] || "";
   const loading = resolving || (!!current && imgLoading && !error);
   useBodyScrollLock(true);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  /** ปุ่มย้อนกลับ / gesture กลับของมือถือ → ปิดแค่ตัวดูรูป ไม่หลุดฟอร์ม */
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    const token = `photo-fs:${Date.now()}`;
+    window.history.pushState({ photoFs: token }, "");
+    let closedByPop = false;
+    const onPop = () => {
+      closedByPop = true;
+      onCloseRef.current();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      if (
+        !closedByPop &&
+        window.history.state &&
+        (window.history.state as { photoFs?: string }).photoFs === token
+      ) {
+        window.history.back();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onCloseRef.current();
+      }
+    }
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
 
   function markImgReady() {
     imgLoadingRef.current = false;
@@ -519,7 +561,7 @@ export function ImagePreviewModal({
 
   const dismissOpacity = dismissY > 0 ? Math.max(0.35, 1 - dismissY / 280) : 1;
 
-  return (
+  const viewer = (
     <div
       className="photo-fs-root"
       role="dialog"
@@ -532,8 +574,17 @@ export function ImagePreviewModal({
           {title || "ดูรูป"}
           {list.length > 1 ? ` · ${idx + 1}/${list.length}` : ""}
         </p>
-        <button type="button" className="photo-fs-icon-btn" aria-label="ปิด" onClick={onClose}>
-          <X size={22} />
+        <button
+          type="button"
+          className="photo-fs-icon-btn photo-fs-close-btn"
+          aria-label="ปิด"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onClose();
+          }}
+        >
+          <X size={26} strokeWidth={2.4} />
         </button>
       </div>
 
@@ -600,7 +651,7 @@ export function ImagePreviewModal({
             </button>
           </div>
         ) : (
-          <p className="photo-fs-hint-solo">ปัดลงเพื่อปิด · แตะสองครั้งหรือบีบนิ้วเพื่อซูม</p>
+          <p className="photo-fs-hint-solo">ปัดลง / กากบาท / ย้อนกลับ เพื่อปิด · แตะสองครั้งหรือบีบนิ้วเพื่อซูม</p>
         )}
         <div className="photo-fs-actions">
           <button
@@ -623,11 +674,22 @@ export function ImagePreviewModal({
               {saving ? "กำลังบันทึก..." : `บันทึกทุกรูป (${resolved.filter(Boolean).length})`}
             </button>
           ) : null}
+          <button
+            type="button"
+            className="photo-fs-download photo-fs-close-wide"
+            onClick={onClose}
+          >
+            <X size={16} aria-hidden />
+            ปิด
+          </button>
         </div>
         {saveMsg ? <p className="photo-fs-save-msg">{saveMsg}</p> : null}
       </div>
     </div>
   );
+
+  if (!mounted || typeof document === "undefined") return null;
+  return createPortal(viewer, document.body);
 }
 
 /** @deprecated Use EntryPhotoIndicator — kept for OT column with view/add */

@@ -7,26 +7,32 @@ import { RefreshCw, Sparkles } from "lucide-react";
 
 type Props = {
   isOwner: boolean;
-  /** พนักงาน/โหมด AI — ค่าจาก hook */
+  /**
+   * deferred = พนักงาน — จัดตอนกดบันทึก ไม่รัน AI ตอนพิมพ์
+   * live = เจ้าของพรีวิว / จัดใหม่ก่อนบันทึก
+   */
+  mode?: "deferred" | "live";
+  /** ประเภทที่มีอยู่แล้ว (แก้ไข) หรือพรีวิวล่าสุด */
+  displayType?: string;
   aiType: string;
   aiReason: string;
   aiSource: LedgerTypeSource;
   aiStatus: "idle" | "loading" | "ready" | "error";
   aiError: string | null;
   usedImages?: number;
-  /** เจ้าของล็อกแก้ประเภทเอง */
   ownerLocked: boolean;
   typeMode: string;
   onTypeModeChange: (value: string) => void;
-  /** บังคับให้ AI จัดใหม่จากชื่อ (+ รูป) แม้มีประเภทอยู่แล้ว */
   onReclassify: () => void;
   frequent?: string[];
   id?: string;
 };
 
-/** พนักงาน: แสดงผล AI อย่างเดียว · เจ้าของ: แก้ประเภทได้ */
+/** พนักงาน: จัดตอนบันทึก · เจ้าของ: แก้ประเภท / จัดใหม่ล่วงหน้าได้ */
 export function LedgerTypeField({
   isOwner,
+  mode = isOwner ? "live" : "deferred",
+  displayType,
   aiType,
   aiReason,
   aiSource,
@@ -40,10 +46,33 @@ export function LedgerTypeField({
   frequent = [],
   id = "ledger-type",
 }: Props) {
-  const displayType = ownerLocked && typeMode !== "auto" ? typeMode : aiType;
-  const hasType = Boolean(String(displayType || "").trim());
+  const shown =
+    displayType ||
+    (ownerLocked && typeMode !== "auto" ? typeMode : aiType) ||
+    "";
   const busy = aiStatus === "loading";
-  const showReclassify = hasType && aiStatus !== "idle";
+
+  if (!isOwner || mode === "deferred") {
+    return (
+      <div className="field ledger-type-ai-field" aria-live="polite">
+        <label>ประเภทบัญชี</label>
+        <div className="ledger-type-ai-card">
+          <div className="ledger-type-ai-head">
+            <Sparkles size={14} aria-hidden />
+            <span>จัดประเภทอัตโนมัติเมื่อกดบันทึก</span>
+          </div>
+          {shown ? (
+            <p className="ledger-type-ai-value">{labelLedgerType(shown)}</p>
+          ) : (
+            <p className="ledger-type-ai-reason">ไม่ต้องเลือกเอง — ระบบจัดให้ตอนบันทึก</p>
+          )}
+          <p className="ledger-type-ai-hint">
+            พนักงานรอหน้าต่างสถานะสั้นๆ ตอนกดบันทึก · ติ๊กใช้รูปเฉพาะเมื่อชื่อกำกวม
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const statusLabel =
     aiStatus === "loading"
@@ -58,50 +87,7 @@ export function LedgerTypeField({
             ? "กำหนดโดยเจ้าของ"
             : aiSource === "legacy"
               ? "ประเภทเดิมในระบบ (ยังไม่ผ่าน AI)"
-              : "จัดจากชื่อรายการ";
-
-  const reclassifyBtn = showReclassify ? (
-    <button
-      type="button"
-      className="ghost-btn ledger-type-reset-ai"
-      disabled={busy}
-      onClick={onReclassify}
-    >
-      <RefreshCw size={14} aria-hidden />
-      {busy ? "กำลังจัดใหม่…" : "จัดประเภทใหม่ด้วย AI"}
-    </button>
-  ) : null;
-
-  if (!isOwner) {
-    return (
-      <div className="field ledger-type-ai-field" aria-live="polite">
-        <label>ประเภทบัญชี</label>
-        <div className="ledger-type-ai-card">
-          <div className="ledger-type-ai-head">
-            <Sparkles size={14} aria-hidden />
-            <span>{statusLabel}</span>
-          </div>
-          <p className="ledger-type-ai-value">
-            {aiStatus === "idle" && !displayType
-              ? "พิมพ์ชื่อรายการแล้วระบบจะจัดให้"
-              : labelLedgerType(displayType || "cogs")}
-          </p>
-          {aiReason ? <p className="ledger-type-ai-reason">{aiReason}</p> : null}
-          {aiStatus === "ready" && aiSource === "ai" && usedImages === 0 ? (
-            <p className="ledger-type-ai-hint">
-              แนบรูปสินค้า/ใบเสร็จช่วยให้จัดประเภทแม่นขึ้นเมื่อชื่อสั้น
-            </p>
-          ) : null}
-          {aiError ? (
-            <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.75rem" }}>
-              {aiError}
-            </p>
-          ) : null}
-          {reclassifyBtn}
-        </div>
-      </div>
-    );
-  }
+              : "จัดจากชื่อรายการ / ตอนบันทึก";
 
   return (
     <div className="ledger-type-owner-wrap">
@@ -110,16 +96,31 @@ export function LedgerTypeField({
           <Sparkles size={14} aria-hidden />
           <span>{ownerLocked ? "คุณแก้ประเภทเองแล้ว" : statusLabel}</span>
         </div>
-        <p className="ledger-type-ai-value">{labelLedgerType(displayType || "cogs")}</p>
+        <p className="ledger-type-ai-value">
+          {labelLedgerType(shown || aiType || "cogs")}
+        </p>
         {aiReason && !ownerLocked ? (
           <p className="ledger-type-ai-reason">{aiReason}</p>
         ) : null}
-        {!ownerLocked && aiStatus === "ready" && aiSource === "ai" && usedImages === 0 ? (
-          <p className="ledger-type-ai-hint">
-            แนบรูปสินค้า/ใบเสร็จช่วยให้จัดประเภทแม่นขึ้นเมื่อชื่อสั้น
+        {aiError ? (
+          <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.75rem" }}>
+            {aiError}
           </p>
         ) : null}
-        {reclassifyBtn}
+        <button
+          type="button"
+          className="ghost-btn ledger-type-reset-ai"
+          disabled={busy}
+          onClick={onReclassify}
+        >
+          <RefreshCw size={14} aria-hidden />
+          {busy ? "กำลังจัดใหม่…" : "จัดประเภทใหม่ด้วย AI (พรีวิว)"}
+        </button>
+        {!ownerLocked ? (
+          <p className="ledger-type-ai-hint">
+            ถ้าไม่ล็อกประเภทเอง ระบบจะจัดอีกครั้งตอนกดบันทึก
+          </p>
+        ) : null}
       </div>
       <TypePicker
         id={id}

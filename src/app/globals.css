@@ -1575,6 +1575,104 @@ body.modal-open .main-panel {
   color: rgba(47, 107, 79, 0.85);
 }
 
+.ledger-ai-use-images {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0 0 0.65rem;
+  font-size: 0.86rem;
+  text-align: left;
+  color: rgba(28, 42, 31, 0.88);
+}
+
+.ledger-ai-use-images input {
+  margin-top: 0.15rem;
+}
+
+.ledger-ai-use-images-hint {
+  display: inline;
+  font-size: 0.76rem;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.ai-save-progress-root {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(12, 18, 16, 0.55);
+}
+
+.ai-save-progress-card {
+  width: min(100%, 20rem);
+  padding: 1.1rem 1rem 1rem;
+  border-radius: 1rem;
+  background: #f7f3e8;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+  text-align: center;
+}
+
+.ai-save-progress-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.65rem;
+  color: rgba(28, 42, 31, 0.9);
+}
+
+.ai-save-progress-spinner {
+  display: grid;
+  place-items: center;
+  margin: 0.35rem 0 0.55rem;
+  color: #2f6b4f;
+}
+
+.ai-save-progress-stage {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.92);
+}
+
+.ai-save-progress-detail {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: rgba(28, 42, 31, 0.62);
+  word-break: break-word;
+}
+
+.ai-save-progress-steps {
+  list-style: none;
+  margin: 0.85rem 0 0;
+  padding: 0;
+  text-align: left;
+  font-size: 0.78rem;
+}
+
+.ai-save-progress-steps li {
+  padding: 0.28rem 0.45rem;
+  border-radius: 0.45rem;
+  color: rgba(28, 42, 31, 0.45);
+}
+
+.ai-save-progress-steps li.is-done {
+  color: #2f6b4f;
+}
+
+.ai-save-progress-steps li.is-active {
+  background: rgba(47, 107, 79, 0.12);
+  color: rgba(28, 42, 31, 0.92);
+  font-weight: 650;
+}
+
+.ai-save-progress-elapsed {
+  margin: 0.75rem 0 0;
+  font-size: 0.78rem;
+  color: rgba(28, 42, 31, 0.55);
+}
+
 .ledger-type-reset-ai {
   margin-top: 0.45rem;
   font-size: 0.8rem;
@@ -4123,7 +4221,7 @@ body.modal-open .main-panel {
 .photo-fs-root {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 200;
   display: flex;
   flex-direction: column;
   background: #0b100e;
@@ -4187,6 +4285,17 @@ body.modal-open .main-panel {
 
 .photo-fs-icon-btn:active {
   background: rgba(255, 255, 255, 0.22);
+}
+
+.photo-fs-close-btn {
+  width: 2.75rem;
+  height: 2.75rem;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.photo-fs-close-wide {
+  background: rgba(255, 255, 255, 0.22) !important;
 }
 
 .photo-fs-stage {

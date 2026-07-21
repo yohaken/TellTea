@@ -128,9 +128,7 @@ export async function reclassifyLedgerMonthWithAi(
     }
 
     try {
-      const result = await classifyLedgerTypeWithAi(row.description, {
-        imageUrls: Array.isArray(row.receiptUrls) ? row.receiptUrls : undefined,
-      });
+      const result = await classifyLedgerTypeWithAi(row.description);
       const prevType = normalizeLedgerOutType(row.type || "");
       if (
         prevType === result.type &&
