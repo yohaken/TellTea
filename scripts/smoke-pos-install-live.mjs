@@ -32,6 +32,9 @@ async function fetchOk(url, { expectBinary = false } = {}) {
   if (!/nPos-telltea/i.test(text) || !/nPos-telltea\.apk/i.test(text)) {
     throw new Error(`${url} → page missing nPos-telltea download markup`);
   }
+  if (!/เวอร์ชันที่จะติดตั้ง|latest\.json|versionValue/i.test(text)) {
+    throw new Error(`${url} → page missing version-before-download markup`);
+  }
   if (/This page could not be found/i.test(text)) {
     throw new Error(`${url} → still Next.js 404`);
   }
