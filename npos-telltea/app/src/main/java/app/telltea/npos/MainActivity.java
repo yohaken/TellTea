@@ -4,39 +4,23 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
 import app.telltea.npos.diagnose.DeviceHeartbeat;
 import app.telltea.npos.diagnose.DeviceIdentity;
-import app.telltea.npos.update.ApkInstaller;
-import app.telltea.npos.update.UpdateChecker;
-import app.telltea.npos.update.UpdateConfig;
-import app.telltea.npos.update.UpdateDownloader;
-import app.telltea.npos.update.UpdateManifest;
-
-import java.io.File;
 
 /**
- * nPos-telltea home screen + update channel + device heartbeat (N2).
+ * nPos-telltea home — brand, device code, heartbeat.
+ * Ops tools (update / diagnose / customer display) live in Settings.
  */
 public class MainActivity extends Activity {
     private TextView versionView;
     private TextView deviceIdView;
     private TextView heartbeatStatus;
-    private TextView statusView;
-    private TextView bannerView;
-    private Button updateButton;
-    private Button diagnoseButton;
-    private Button installPageButton;
+    private Button settingsButton;
 
-    private UpdateChecker checker;
-    private UpdateDownloader downloader;
     private DeviceHeartbeat heartbeat;
-    private UpdateManifest pendingManifest;
-    private boolean busy;
-    private long lastAutoCheckAt;
     private int localVersionCode = 1;
     private String localVersionName = "1.0";
 
@@ -48,46 +32,26 @@ public class MainActivity extends Activity {
         versionView = findViewById(R.id.version);
         deviceIdView = findViewById(R.id.deviceIdView);
         heartbeatStatus = findViewById(R.id.heartbeatStatus);
-        statusView = findViewById(R.id.status);
-        bannerView = findViewById(R.id.banner);
-        updateButton = findViewById(R.id.updateButton);
-        diagnoseButton = findViewById(R.id.diagnoseButton);
-        installPageButton = findViewById(R.id.installPageButton);
+        settingsButton = findViewById(R.id.settingsButton);
 
         readLocalVersion();
         versionView.setText(getString(R.string.version_label, localVersionName, localVersionCode));
         deviceIdView.setText(
                 getString(R.string.device_code_label, DeviceIdentity.pairingCode(this)));
 
-        checker = new UpdateChecker();
-        downloader = new UpdateDownloader();
         heartbeat = new DeviceHeartbeat();
-
-        updateButton.setOnClickListener(v -> onUpdateButtonClicked());
-        diagnoseButton.setOnClickListener(
-                v -> startActivity(new Intent(this, DiagnoseActivity.class)));
-        installPageButton.setOnClickListener(v -> openInstallPage());
-    }
-
-    private void openInstallPage() {
-        String url =
-                BuildConfig.INSTALL_PAGE_URL == null || BuildConfig.INSTALL_PAGE_URL.isEmpty()
-                        ? "https://telltea-pos.web.app/install/"
-                        : BuildConfig.INSTALL_PAGE_URL;
-        ApkInstaller.openInstallPage(this, url);
+        settingsButton.setOnClickListener(
+                v -> startActivity(new Intent(this, SettingsActivity.class)));
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        maybeAutoCheck();
         sendHeartbeat(false);
     }
 
     @Override
     protected void onDestroy() {
-        if (checker != null) checker.shutdown();
-        if (downloader != null) downloader.shutdown();
         if (heartbeat != null) heartbeat.shutdown();
         super.onDestroy();
     }
@@ -132,139 +96,5 @@ public class MainActivity extends Activity {
             localVersionCode = BuildConfig.VERSION_CODE;
             localVersionName = BuildConfig.VERSION_NAME;
         }
-    }
-
-    private void maybeAutoCheck() {
-        long now = System.currentTimeMillis();
-        if (busy) return;
-        if (now - lastAutoCheckAt < UpdateConfig.AUTO_CHECK_MIN_INTERVAL_MS) return;
-        lastAutoCheckAt = now;
-        startCheck(false);
-    }
-
-    private void onUpdateButtonClicked() {
-        if (busy) return;
-        if (pendingManifest != null && pendingManifest.isNewerThan(localVersionCode)) {
-            startDownloadAndInstall(pendingManifest);
-        } else {
-            startCheck(true);
-        }
-    }
-
-    private void startCheck(boolean manual) {
-        busy = true;
-        setStatus(getString(R.string.status_checking));
-        updateButton.setEnabled(false);
-        String manifestUrl =
-                BuildConfig.UPDATE_MANIFEST_URL == null || BuildConfig.UPDATE_MANIFEST_URL.isEmpty()
-                        ? UpdateConfig.MANIFEST_URL
-                        : BuildConfig.UPDATE_MANIFEST_URL;
-
-        checker.check(
-                manifestUrl,
-                new UpdateChecker.Callback() {
-                    @Override
-                    public void onResult(UpdateManifest manifest) {
-                        runOnUiThread(() -> applyManifest(manifest, manual));
-                    }
-
-                    @Override
-                    public void onError(Exception error) {
-                        runOnUiThread(() -> {
-                            busy = false;
-                            updateButton.setEnabled(true);
-                            pendingManifest = null;
-                            bannerView.setVisibility(View.GONE);
-                            updateButton.setText(R.string.btn_check_update);
-                            setStatus(getString(
-                                    R.string.status_error,
-                                    error.getMessage() == null ? "network" : error.getMessage()));
-                        });
-                    }
-                });
-    }
-
-    private void applyManifest(UpdateManifest manifest, boolean manual) {
-        busy = false;
-        updateButton.setEnabled(true);
-        if (manifest.isNewerThan(localVersionCode)) {
-            pendingManifest = manifest;
-            bannerView.setVisibility(View.VISIBLE);
-            updateButton.setText(R.string.btn_install_update);
-            setStatus(getString(
-                    R.string.status_available, manifest.versionName, manifest.versionCode));
-            if (manual) {
-                // Manual check found an update — keep user in control; they tap again to install.
-            }
-        } else {
-            pendingManifest = null;
-            bannerView.setVisibility(View.GONE);
-            updateButton.setText(R.string.btn_check_update);
-            setStatus(getString(R.string.status_up_to_date));
-        }
-    }
-
-    private void startDownloadAndInstall(UpdateManifest manifest) {
-        if (!ApkInstaller.canInstallPackages(this)) {
-            setStatus(getString(R.string.status_allow_install));
-            ApkInstaller.openUnknownSourcesSettings(this);
-            return;
-        }
-
-        busy = true;
-        updateButton.setEnabled(false);
-        setStatus(getString(R.string.status_downloading, 0));
-
-        String apkUrl = manifest.apkUrl;
-        if (apkUrl == null || apkUrl.isEmpty()) {
-            apkUrl = BuildConfig.DEFAULT_APK_URL;
-        }
-
-        downloader.download(
-                this,
-                apkUrl,
-                new UpdateDownloader.Callback() {
-                    @Override
-                    public void onProgress(int percent) {
-                        runOnUiThread(
-                                () -> setStatus(getString(R.string.status_downloading, percent)));
-                    }
-
-                    @Override
-                    public void onComplete(File apkFile) {
-                        runOnUiThread(() -> commitInstall(apkFile));
-                    }
-
-                    @Override
-                    public void onError(Exception error) {
-                        runOnUiThread(() -> {
-                            busy = false;
-                            updateButton.setEnabled(true);
-                            setStatus(getString(
-                                    R.string.status_error,
-                                    error.getMessage() == null ? "download" : error.getMessage()));
-                        });
-                    }
-                });
-    }
-
-    private void commitInstall(File apkFile) {
-        setStatus(getString(R.string.status_installing));
-        try {
-            ApkInstaller.install(this, apkFile);
-            // Installer UI / reboot into new version takes over; re-enable just in case user cancels.
-            busy = false;
-            updateButton.setEnabled(true);
-        } catch (Exception e) {
-            busy = false;
-            updateButton.setEnabled(true);
-            String msg = e.getMessage() == null ? "install" : e.getMessage();
-            setStatus(getString(R.string.status_error, msg));
-            statusView.append("\n" + getString(R.string.status_signature_hint));
-        }
-    }
-
-    private void setStatus(String text) {
-        statusView.setText(text);
     }
 }

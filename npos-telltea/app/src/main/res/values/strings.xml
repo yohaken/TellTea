@@ -15,14 +15,33 @@
     <string name="btn_install_update">อัปเดตเลย</string>
     <string name="btn_diagnose">ตรวจจอ / ฮาร์ดแวร์</string>
     <string name="btn_open_install_page">เปิดหน้าติดตั้ง (ลิงก์)</string>
+    <string name="btn_settings">ตั้งค่า</string>
     <string name="banner_update">มีเวอร์ชันใหม่ — กดอัปเดตเลย</string>
     <string name="status_signature_hint">ถ้าติดตั้งทับไม่ได้: ถอนแอปนี้ครั้งหนึ่ง แล้วกดลิงก์ด้านล่าง</string>
     <string name="install_page_hint">หน้าติดตั้ง: telltea-pos.web.app/install/</string>
+    <string name="home_hint">อัปเดต · ตรวจเครื่อง · จอลูกค้า อยู่ในตั้งค่า</string>
     <string name="device_code_label">รหัสเครื่อง %1$s</string>
     <string name="heartbeat_idle">ยังไม่ได้ส่งสัญญาณ</string>
     <string name="heartbeat_sending">กำลังลงทะเบียนเครื่อง…</string>
     <string name="heartbeat_ok">ออนไลน์ · ส่งสัญญาณแล้ว</string>
     <string name="heartbeat_fail">ส่งสัญญาณไม่สำเร็จ: %1$s</string>
+
+    <string name="settings_title">ตั้งค่า</string>
+    <string name="settings_hint">อัปเดตแอป ตรวจฮาร์ดแวร์ และเทสจอหน้าร้าน</string>
+    <string name="settings_section_hardware">ตรวจเครื่อง</string>
+    <string name="settings_section_customer">จอลูกค้า (N3)</string>
+
+    <string name="customer_caption">ยอดชำระ</string>
+    <string name="customer_test_hint">ส่งยอดทดสอบไปจอเพิ่ม (จอ 2) — ถ้ามีจอเดียวจะโชว์บนจอหลักชั่วคราว</string>
+    <string name="customer_test_idle">ยังไม่ได้ส่งยอดไปจอลูกค้า</string>
+    <string name="customer_test_no_display">ไม่พบจอสำหรับแสดง</string>
+    <string name="customer_test_on_primary">เทสบนจอหลัก (จอ %1$d) — ยังไม่มีจอ 2</string>
+    <string name="customer_test_on_secondary">จอลูกค้า · จอ %1$d</string>
+    <string name="customer_test_showing">แสดง %1$s บนจอ %2$d</string>
+    <string name="customer_test_fail">แสดงจอลูกค้าไม่สำเร็จ: %1$s</string>
+    <string name="btn_customer_amount_1">ส่งยอดทดสอบ ฿120</string>
+    <string name="btn_customer_amount_2">ส่งยอดทดสอบ ฿350</string>
+    <string name="btn_customer_close">ปิดจอลูกค้า</string>
 
     <string name="diagnose_title">ตรวจเครื่อง</string>
     <string name="diagnose_displays_title">จอที่เชื่อมอยู่</string>

@@ -115,6 +115,7 @@ public final class DeviceHeartbeat {
         body.put("versionName", versionName);
         body.put("deviceHint", hint.trim());
         body.put("screenSize", screen);
+        body.put("stableKey", DeviceIdentity.stableKey(context));
         return body;
     }
 

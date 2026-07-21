@@ -15,6 +15,32 @@ function isNposDevice(d: PosDevice): boolean {
   return (d.userAgent || "").startsWith("nPos-telltea/");
 }
 
+/**
+ * One physical tablet can leave ghost docs after wipe/reinstall (new installId).
+ * Keep the newest per stableKey; drop disabled + offline ghosts when an online twin exists.
+ */
+function dedupeNposDevices(devices: PosDevice[], now: number): PosDevice[] {
+  const active = devices.filter((d) => !d.disabled);
+  const byKey = new Map<string, PosDevice>();
+
+  for (const d of active) {
+    const key = d.stableKey ? `sk:${d.stableKey}` : `id:${d.id}`;
+    const prev = byKey.get(key);
+    if (!prev || d.lastSeenAt > prev.lastSeenAt) {
+      byKey.set(key, d);
+    }
+  }
+
+  const unique = [...byKey.values()];
+  const hasOnline = unique.some((d) => isPosDeviceOnline(d.lastSeenAt, now));
+  if (!hasOnline) return unique.sort((a, b) => b.lastSeenAt - a.lastSeenAt);
+
+  // Fold title is "ออนไลน์" — prefer live rows; hide stale offline leftovers from older installs.
+  return unique
+    .filter((d) => isPosDeviceOnline(d.lastSeenAt, now))
+    .sort((a, b) => b.lastSeenAt - a.lastSeenAt);
+}
+
 function formatSeen(ts: number): string {
   if (!ts) return "—";
   try {
@@ -49,10 +75,9 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     );
   }, [onError]);
 
-  const onlineCount = useMemo(
-    () => devices.filter((d) => isPosDeviceOnline(d.lastSeenAt, now)).length,
-    [devices, now],
-  );
+  const visible = useMemo(() => dedupeNposDevices(devices, now), [devices, now]);
+  const onlineCount = visible.length;
+  const hiddenGhosts = Math.max(0, devices.filter((d) => !d.disabled).length - visible.length);
 
   return (
     <SettingsFold
@@ -65,8 +90,10 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
       hint={
         loading
           ? "กำลังโหลดรายการเครื่อง…"
-          : devices.length
-            ? `${onlineCount}/${devices.length} ออนไลน์ · จากแอป native`
+          : visible.length
+            ? `${onlineCount} ออนไลน์ · จากแอป native${
+                hiddenGhosts ? ` · ซ่อนซ้ำ/ออฟ ${hiddenGhosts}` : ""
+              }`
             : "ยังไม่มีเครื่อง — เปิดแอป nPos แล้วจะลงทะเบียนเอง"
       }
       defaultOpen={false}
@@ -74,11 +101,11 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     >
       {loading ? (
         <p className="muted">กำลังโหลด…</p>
-      ) : devices.length === 0 ? (
-        <p className="muted">ยังไม่มีเครื่อง native ในระบบ</p>
+      ) : visible.length === 0 ? (
+        <p className="muted">ยังไม่มีเครื่อง native ออนไลน์</p>
       ) : (
         <ul className="npos-diagnose-list">
-          {devices.map((d) => {
+          {visible.map((d) => {
             const online = isPosDeviceOnline(d.lastSeenAt, now);
             return (
               <li key={d.id} className="npos-diagnose-card">
