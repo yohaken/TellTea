@@ -7,7 +7,7 @@
 1. **POS = ระบบขายหน้าร้านแยกต่างหาก** — ข้อมูล `posSales`, `posSessions`, `posDevices`, `meta/pos`
 2. **หลังร้าน = บริหารร้าน** — `ledger`, `stock`, OT, PnL, ฯลฯ
 3. **ไม่ sync ข้อมูลข้ามโดเมน** — POS ไม่เขียน ledger / stock / monthlyIncome
-4. **หน้าต่างเจ้าของ** — `/pos-sales/` รายงานยอดขาย + แท็บ **จัดการ Pos** (เปิด-ปิดเมนูเท่านั้น)
+4. **หน้าต่างเจ้าของ** — `/pos-sales/` รายงานยอดขาย (+ แท็บ **จัดการ Pos** ว่างไว้ชั่วคราว)
 
 ## URL แยก (v135+)
 
@@ -38,7 +38,7 @@ Build: `npm run build` → `split-pos-hosting.mjs` แยก output อัตโ
 ## สิ่งที่ยังร่วมกัน (ไม่ใช่การเชื่อมข้อมูล)
 
 - Firebase project เดียว (`mypeer-501909`)
-- เจ้าของเปิด-ปิดเมนูจาก `/pos-sales/?tab=manage` · สลิป/ชำระเงินบนแท็บเล็ต `/pos/settings/` จนกว่าจะโยก native ครบ (เว็บ POS ยังไม่ลบ)
+- แท็บ `/pos-sales/?tab=manage` ว่างไว้ชั่วคราว · สลิป/ชำระเงินบนแท็บเล็ต `/pos/settings/` จนกว่าจะโยก native ครบ (เว็บ POS ยังไม่ลบ)
 - Cloud Functions: `posCompleteSale`, `posDeviceAuth`
 
 ดูเพิ่ม: `docs/pos-sync.md`, `docs/pos-connectivity.md`

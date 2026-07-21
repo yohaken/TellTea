@@ -1,5 +1,5 @@
 /**
- * Alerts removed; POS manage tab is menu-only (native-first). Web POS admin stays on tablet.
+ * Alerts removed; POS manage tab is empty (placeholder). Web POS admin stays on tablet.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -22,7 +22,7 @@ const settingsLib = read("src/lib/settings.ts");
 const rules = read("firestore.rules");
 const smoke = read("scripts/smoke-hosting-export.mjs");
 
-assert.match(version, /APP_BUILD = 206/);
+assert.match(version, /APP_BUILD = 207/);
 
 assert.match(alerts, /router\.replace\("\/more\/"\)/);
 assert.doesNotMatch(more, /href: "\/alerts\/"/);
@@ -43,8 +43,12 @@ assert.match(posSales, /Suspense/);
 assert.match(report, /จัดการ Pos/);
 assert.match(report, /PosManagePanel/);
 assert.match(report, /tab=manage/);
-assert.match(manage, /MenuCatalogSetup/);
-assert.doesNotMatch(manage, /PosDeviceSetup|PosOpsNotesSetup|PosShopPaySetup|PosPrinterSetup/);
-assert.match(more, /เปิด-ปิดเมนู/);
+assert.doesNotMatch(manage, /MenuCatalogSetup/);
+assert.doesNotMatch(manage, /PosDeviceSetup/);
+assert.doesNotMatch(manage, /PosOpsNotesSetup/);
+assert.doesNotMatch(manage, /PosShopPaySetup/);
+assert.doesNotMatch(manage, /PosPrinterSetup/);
+assert.match(manage, /ยังไม่มีรายการจัดการ/);
+assert.match(more, /รายงานยอดขาย POS/);
 
 console.log("OK test-alerts-pos-manage-hub");

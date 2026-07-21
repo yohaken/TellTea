@@ -1,21 +1,15 @@
 "use client";
 
-import { UtensilsCrossed } from "lucide-react";
-import { MenuCatalogSetup } from "@/components/MenuCatalogSetup";
-
 /**
- * หมวดจัดการ Pos — เหลือแค่เมนูเปิด/ปิด (native เป็นหลัก)
- * ไม่โชว์อุปกรณ์เว็บ / ลิงก์ร้าน / สลิป / เครื่องพิมพ์ ที่ผูก POS เว็บแอพเดิม
- * (โค้ดเว็บ POS ยังอยู่บน telltea-pos จนกว่าจะโยก native ครบ)
+ * หมวดจัดการ Pos — ว่างไว้ชั่วคราว
+ * (เคยมีเมนู/เครื่องเว็บ — ย้ายไป native แล้ว · เว็บ POS จริงยังไม่ลบ)
  */
-export function PosManagePanel({ onError }: { onError: (msg: string | null) => void }) {
+export function PosManagePanel(_props: { onError: (msg: string | null) => void }) {
   return (
     <div className="owner-settings-stack pos-manage-stack">
-      <p className="muted pos-manage-lead">
-        <UtensilsCrossed size={16} aria-hidden style={{ verticalAlign: "-0.2em", marginRight: "0.3rem" }} />
-        เปิด-ปิดเมนูหน้าร้าน · เพิ่มหมวด/รายการด่วน — ใช้ร่วมกับแอป native
+      <p className="muted pos-manage-lead empty" style={{ textAlign: "left", marginTop: "0.5rem" }}>
+        ยังไม่มีรายการจัดการในหน้านี้
       </p>
-      <MenuCatalogSetup onError={onError} />
     </div>
   );
 }
