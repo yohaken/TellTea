@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import {
@@ -11,19 +11,8 @@ import {
   subscribeStockItems,
   updateStockItem,
 } from "@/lib/stock";
-import {
-  importStockCsvText,
-  parseStockCsv,
-  previewStockImportLabel,
-} from "@/lib/stock-import";
 import type { StockItem } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
-
-function monthInputValue(date = new Date()) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
-}
 
 /**
  * รายการวัตถุดิบ — เจ้าของเท่านั้น
@@ -41,10 +30,6 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
   const [barcode, setBarcode] = useState("");
   const [busy, setBusy] = useState(false);
   const [qtyBusyId, setQtyBusyId] = useState<string | null>(null);
-  const [importMonth, setImportMonth] = useState(monthInputValue());
-  const [importPreview, setImportPreview] = useState<string | null>(null);
-  const [importBusy, setImportBusy] = useState(false);
-  const csvTextRef = useRef("");
 
   useEffect(() => {
     if (!userEmail) return;
@@ -55,49 +40,6 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
     );
     return unsub;
   }, [userEmail, onError]);
-
-  async function onPickCsv(file: File) {
-    const text = await file.text();
-    const [y, m] = importMonth.split("-").map(Number);
-    const preview = parseStockCsv(text, y, m);
-    if (!preview.products.length) {
-      onError(
-        preview.skipped.length
-          ? `อ่านไฟล์ไม่ได้ — ข้าม ${preview.skipped.length} แถว`
-          : "ไม่พบรายการในไฟล์",
-      );
-      setImportPreview(null);
-      return;
-    }
-    onError(null);
-    setImportPreview(previewStockImportLabel(preview));
-    csvTextRef.current = text;
-  }
-
-  async function onImportCsv() {
-    const text = csvTextRef.current;
-    if (!text || !userEmail) {
-      onError("เลือกไฟล์ CSV ก่อน");
-      return;
-    }
-    if (!window.confirm("นำเข้าข้อมูลจาก CSV? (อัปเดตรายการที่ชื่อตรงกัน · ไม่ลบของเดิม)")) return;
-    setImportBusy(true);
-    onError(null);
-    try {
-      const [y, m] = importMonth.split("-").map(Number);
-      const result = await importStockCsvText(text, userEmail, y, m);
-      setImportPreview(
-        `นำเข้าแล้ว — สร้าง ${result.productsCreated} · อัปเดต ${result.productsUpdated}` +
-          (result.sessions ? ` · ${result.sessions} รอบนับ` : "") +
-          (result.movements ? ` · ประวัติ ${result.movements}` : "") +
-          (result.parseSkipped ? ` · ข้าม ${result.parseSkipped} แถว` : ""),
-      );
-    } catch (err) {
-      onError((err as Error).message || "นำเข้าไม่สำเร็จ");
-    } finally {
-      setImportBusy(false);
-    }
-  }
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
@@ -171,45 +113,6 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
         จัดการรายการวัตถุดิบ — ตั้งชื่อ · เพิ่ม/ลดคงเหลือ · ลบ · เฉพาะเจ้าของ
       </p>
 
-      <div className="form-card entry-form check-import-card">
-        <h3 className="panel-title" style={{ fontSize: "1rem" }}>
-          นำเข้า CSV สต๊อก
-        </h3>
-        <p className="muted check-hint">
-          ไฟล์ TELL TEA - สต๊อกสินค้า.csv — รายการ + ประวัติรอบนับ (1·10·20)
-        </p>
-        <div className="check-import-row">
-          <input
-            type="month"
-            className="ot-slim-input"
-            value={importMonth}
-            onChange={(e) => setImportMonth(e.target.value)}
-            aria-label="เดือนอ้างอิงสำหรับคอลัมน์วันที่"
-          />
-          <label className="check-import-file">
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              className="check-file-input"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void onPickCsv(f).catch((err) => onError((err as Error).message));
-              }}
-            />
-            เลือก CSV
-          </label>
-          <button
-            type="button"
-            className="primary-btn"
-            disabled={importBusy || !importPreview}
-            onClick={() => void onImportCsv()}
-          >
-            {importBusy ? "กำลังนำเข้า..." : "นำเข้า"}
-          </button>
-        </div>
-        {importPreview ? <p className="muted check-import-preview">{importPreview}</p> : null}
-      </div>
-
       <form className="form-card entry-form" onSubmit={(e) => void onCreate(e)}>
         <h3 className="panel-title" style={{ fontSize: "1rem" }}>
           เพิ่มวัตถุดิบ
@@ -277,9 +180,7 @@ export function StockCatalogSetup({ onError }: { onError: (msg: string | null) =
         <h3 className="panel-title" style={{ fontSize: "0.95rem" }}>
           รายการวัตถุดิบ ({items.length})
         </h3>
-        {items.length === 0 ? (
-          <p className="empty">ยังไม่มีรายการ — เพิ่มด้านบนหรือนำเข้า CSV</p>
-        ) : null}
+        {items.length === 0 ? <p className="empty">ยังไม่มีรายการ — เพิ่มด้านบน</p> : null}
         {items.map((item) => {
           const qtyBusy = qtyBusyId === item.id;
           return (
