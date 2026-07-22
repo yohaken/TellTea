@@ -152,18 +152,80 @@ public final class ScreenCapture {
     private static CaptureShot capturePrimary(Context app) {
         Activity activity = NposApp.foregroundActivity();
         if (activity == null) {
-            return CaptureShot.fail("app_background");
+            return statusShot(app, "app_background · ไม่มีหน้าจอ foreground");
         }
         if (Build.VERSION.SDK_INT < 26) {
-            return CaptureShot.fail("api_lt_26");
+            return statusShot(app, "api_lt_26");
         }
         try {
             Bitmap bmp = pixelCopyWindow(activity.getWindow(), 2500);
-            if (bmp == null) return CaptureShot.fail("pixelcopy_null");
+            if (bmp == null) {
+                bmp = drawDecorBitmap(activity);
+            }
+            if (bmp == null) return statusShot(app, "pixelcopy_null");
             return encode(bmp);
         } catch (Exception e) {
-            return CaptureShot.fail(e.getMessage() == null ? "primary_fail" : e.getMessage());
+            try {
+                Bitmap fallback = drawDecorBitmap(activity);
+                if (fallback != null) return encode(fallback);
+            } catch (Exception ignored) {
+                /* fall through */
+            }
+            return statusShot(
+                    app, e.getMessage() == null ? "primary_fail" : e.getMessage());
         }
+    }
+
+    /** Always produce a small JPEG so BO still gets a visible frame when PixelCopy fails. */
+    private static CaptureShot statusShot(Context app, String detail) {
+        try {
+            Bitmap bmp = Bitmap.createBitmap(720, 405, Bitmap.Config.ARGB_8888);
+            Canvas c = new Canvas(bmp);
+            c.drawColor(Color.parseColor("#1A2E24"));
+            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            paint.setColor(Color.WHITE);
+            paint.setTextSize(28f);
+            c.drawText("nPos capture", 24, 56, paint);
+            paint.setTextSize(22f);
+            paint.setColor(Color.parseColor("#C4A35A"));
+            String line = detail == null ? "fail" : detail;
+            if (line.length() > 42) line = line.substring(0, 42);
+            c.drawText(line, 24, 100, paint);
+            paint.setColor(Color.parseColor("#D7E3DC"));
+            paint.setTextSize(18f);
+            c.drawText(DeviceIdentity.pairingCode(app), 24, 140, paint);
+            c.drawText(Build.MODEL == null ? "" : Build.MODEL, 24, 170, paint);
+            return encode(bmp);
+        } catch (Exception e) {
+            return CaptureShot.fail(detail);
+        }
+    }
+
+    private static Bitmap drawDecorBitmap(Activity activity) throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<Bitmap> out = new AtomicReference<>();
+        MAIN.post(
+                () -> {
+                    try {
+                        View root = activity.getWindow().getDecorView();
+                        int w = Math.max(1, root.getWidth());
+                        int h = Math.max(1, root.getHeight());
+                        if (w <= 1 || h <= 1) {
+                            out.set(null);
+                            return;
+                        }
+                        Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                        Canvas canvas = new Canvas(bmp);
+                        root.draw(canvas);
+                        out.set(bmp);
+                    } catch (Exception e) {
+                        out.set(null);
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+        latch.await(2, TimeUnit.SECONDS);
+        return out.get();
     }
 
     private static CaptureShot captureSecondary(Context app) {
@@ -349,8 +411,6 @@ public final class ScreenCapture {
         shot.jpegBase64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
         return shot;
     }
-
-    // I'll fix encode properly below in a rewrite of the method via search_replace
 
     private static Bitmap scaleDown(Bitmap src, int maxEdge) {
         int w = src.getWidth();

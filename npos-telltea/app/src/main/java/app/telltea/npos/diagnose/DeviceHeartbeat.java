@@ -90,8 +90,8 @@ public final class DeviceHeartbeat {
             long requestAt = capture.optLong("requestAt", 0L);
             boolean due = capture.optBoolean("due", false);
             long lastAck = CapturePrefs.lastAckRequestAt(app);
+            // Do NOT ack before upload succeeds — retry on next heartbeat if capture fails.
             if (requestAt > 0 && requestAt > lastAck) {
-                CapturePrefs.setLastAckRequestAt(app, requestAt);
                 ScreenCapture.requestCapture(app, requestAt, "manual");
                 return;
             }

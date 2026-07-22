@@ -23,6 +23,8 @@ import {
   type PosDevice,
 } from "@/lib/pos-devices";
 import { useAuth } from "@/lib/auth";
+import { NposCaptureGallery } from "@/components/NposCaptureGallery";
+import { subscribeNposDiagnoseReports } from "@/lib/npos-diagnose";
 
 function isNposDevice(d: PosDevice): boolean {
   if (d.shellKind === "native") return true;
@@ -30,6 +32,7 @@ function isNposDevice(d: PosDevice): boolean {
 }
 
 type Row = PosDevice & { deviceClass: NposDeviceClass; sortAt: number };
+type CaptureUrls = { primaryUrl: string; secondaryUrl: string; at: number };
 
 /**
  * Ghosts = disabled siblings from reinstall (not BO-blocked).
@@ -82,6 +85,7 @@ function DeviceCard({
   d,
   now,
   busy,
+  capture,
   onBlock,
   onUnblock,
   onCapture,
@@ -90,6 +94,7 @@ function DeviceCard({
   d: Row;
   now: number;
   busy: boolean;
+  capture?: CaptureUrls;
   onBlock: () => void;
   onUnblock: () => void;
   onCapture: () => void;
@@ -126,6 +131,20 @@ function DeviceCard({
             : "ยังไม่รายงาน — อัปเดต APK แล้วเปิดแอป"}
       </p>
       <p className="muted npos-diagnose-id">เห็นล่าสุด {formatSeen(d.lastSeenAt)}</p>
+      <NposCaptureGallery
+        primaryUrl={capture?.primaryUrl}
+        secondaryUrl={capture?.secondaryUrl}
+        caption={
+          capture?.at
+            ? `แตะรูปเพื่อดูเต็มจอ · ${formatSeen(capture.at)}`
+            : undefined
+        }
+        emptyHint={
+          capturePending
+            ? "รอเครื่องแคปและอัปโหลด (~1 นาที)…"
+            : "ยังไม่มีภาพ — กด «สั่งแคปจอ» แล้วรอเครื่องออนไลน์"
+        }
+      />
       <div className="npos-device-actions">
         <button type="button" className="npos-device-btn" disabled={busy || !online} onClick={onCapture}>
           สั่งแคปจอ
@@ -162,6 +181,7 @@ function ClassSection({
   rows,
   now,
   busyId,
+  captures,
   onBlock,
   onUnblock,
   onCapture,
@@ -171,6 +191,7 @@ function ClassSection({
   rows: Row[];
   now: number;
   busyId: string | null;
+  captures: Record<string, CaptureUrls>;
   onBlock: (d: Row) => void;
   onUnblock: (d: Row) => void;
   onCapture: (d: Row) => void;
@@ -190,6 +211,7 @@ function ClassSection({
             d={d}
             now={now}
             busy={busyId === d.id}
+            capture={captures[d.id]}
             onBlock={() => onBlock(d)}
             onUnblock={() => onUnblock(d)}
             onCapture={() => onCapture(d)}
@@ -204,6 +226,7 @@ function ClassSection({
 export function NposDevicesPanel({ onError }: { onError: (msg: string | null) => void }) {
   const { actorId } = useAuth();
   const [devices, setDevices] = useState<PosDevice[]>([]);
+  const [captures, setCaptures] = useState<Record<string, CaptureUrls>>({});
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => Date.now());
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -227,6 +250,21 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
       },
     );
   }, [onError]);
+
+  useEffect(() => {
+    return subscribeNposDiagnoseReports((reports) => {
+      const next: Record<string, CaptureUrls> = {};
+      for (const r of reports) {
+        if (!r.latestPrimaryUrl && !r.latestSecondaryUrl) continue;
+        next[r.installId] = {
+          primaryUrl: r.latestPrimaryUrl || "",
+          secondaryUrl: r.latestSecondaryUrl || "",
+          at: r.latestCaptureAt || 0,
+        };
+      }
+      setCaptures(next);
+    });
+  }, []);
 
   const buckets = useMemo(() => prepareNposDevices(devices, now), [devices, now]);
   const total =
@@ -329,6 +367,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             rows={buckets.shop}
             now={now}
             busyId={busyId}
+            captures={captures}
             onBlock={block}
             onUnblock={unblock}
             onCapture={capture}
@@ -339,6 +378,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             rows={buckets.dev}
             now={now}
             busyId={busyId}
+            captures={captures}
             onBlock={block}
             onUnblock={unblock}
             onCapture={capture}
@@ -349,6 +389,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             rows={buckets.blocked}
             now={now}
             busyId={busyId}
+            captures={captures}
             onBlock={block}
             onUnblock={unblock}
             onCapture={capture}

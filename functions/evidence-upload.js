@@ -1,13 +1,10 @@
 const crypto = require("crypto");
-const { getStorage } = require("firebase-admin/storage");
 const functions = require("firebase-functions/v1");
-
-const DEFAULT_BUCKET = "mypeer-501909.firebasestorage.app";
+const { resolveStorageBucket } = require("./storage-bucket");
 
 function evidenceBucket() {
-  const preferred = process.env.TELLTEA_STORAGE_BUCKET || DEFAULT_BUCKET;
-  const storage = getStorage();
-  return storage.bucket(preferred);
+  // Prefer resolved existing bucket (appspot fallback) over hardcoded missing name.
+  return resolveStorageBucket();
 }
 
 function safeSegment(raw, max = 48) {
@@ -60,8 +57,8 @@ exports.createEvidenceUpload = functions
       .randomBytes(4)
       .toString("hex")}_${originalName}.${ext}`;
 
-    const bucket = evidenceBucket();
-    const bucketName = bucket.name || DEFAULT_BUCKET;
+    const bucket = await evidenceBucket();
+    const bucketName = bucket.name;
     const file = bucket.file(objectPath);
 
     const [uploadUrl] = await file.getSignedUrl({
@@ -99,7 +96,7 @@ exports.finalizeEvidenceUpload = functions
     }
 
     const token = String(data?.token || crypto.randomUUID());
-    const bucket = evidenceBucket();
+    const bucket = await evidenceBucket();
     const file = bucket.file(objectPath);
     const [exists] = await file.exists();
     if (!exists) {
@@ -117,7 +114,7 @@ exports.finalizeEvidenceUpload = functions
       },
     });
 
-    const bucketName = bucket.name || DEFAULT_BUCKET;
+    const bucketName = bucket.name;
     const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(
       objectPath,
     )}?alt=media&token=${token}`;
@@ -172,8 +169,8 @@ exports.uploadEvidencePhoto = functions
       .randomBytes(4)
       .toString("hex")}_${originalName}.${ext}`;
 
-    const bucket = evidenceBucket();
-    const bucketName = bucket.name || DEFAULT_BUCKET;
+    const bucket = await evidenceBucket();
+    const bucketName = bucket.name;
     const file = bucket.file(objectPath);
     await file.save(buffer, {
       resumable: false,

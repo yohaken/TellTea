@@ -26,7 +26,7 @@ assert.match(pageSrc, /BULK_TYPE_OPTIONS/);
 assert.match(pageSrc, /bulk-check-col/);
 assert.match(pageSrc, /เลือกที่แสดง/);
 assert.match(cssSrc, /is-bulk-selected/);
-assert.match(versionSrc, /APP_BUILD\s*=\s*225/);
+assert.match(versionSrc, /APP_BUILD\s*=\s*227/);
 
 console.log("OK static test-owner-books-bulk-retype");
 

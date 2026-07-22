@@ -122,24 +122,33 @@ jobs:
         run: npm ci
         working-directory: functions
 
+      - name: Ensure Firebase Storage bucket
+        id: ensure_bucket
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          OUT=$(node scripts/ensure-storage-bucket.mjs)
+          echo "$OUT"
+          NAME=$(echo "$OUT" | sed -n 's/^TELLTEA_STORAGE_BUCKET=//p' | tail -1)
+          if [ -z "$NAME" ]; then
+            NAME="mypeer-501909.appspot.com"
+          fi
+          echo "RESOLVED_STORAGE_BUCKET=$NAME" >> "$GITHUB_ENV"
+
       - name: Write Functions env
         run: |
+          BUCKET="${RESOLVED_STORAGE_BUCKET:-mypeer-501909.appspot.com}"
           printf 'VAPID_PUBLIC_KEY=%s\nVAPID_PRIVATE_KEY=%s\nTELLTEA_STORAGE_BUCKET=%s\nGEMINI_API_KEY=%s\n' \
             "${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}" \
             "${{ secrets.VAPID_PRIVATE_KEY }}" \
-            "mypeer-501909.firebasestorage.app" \
+            "$BUCKET" \
             "${{ secrets.GEMINI_API_KEY }}" > functions/.env
+          echo "Wrote functions/.env TELLTEA_STORAGE_BUCKET=$BUCKET"
 
       - name: Ensure POS hosting site exists
         run: |
           npx firebase-tools@latest hosting:sites:create telltea-pos \
             --project mypeer-501909 --non-interactive 2>/dev/null || true
-
-      - name: Ensure Firebase Storage bucket
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: node scripts/ensure-storage-bucket.mjs
-        continue-on-error: true
 
       - name: Deploy Hosting + Firestore + Storage + Functions
         run: |

@@ -15,8 +15,9 @@ const location = process.env.FIREBASE_STORAGE_LOCATION || "asia-southeast1";
 
 const candidates = [
   process.env.TELLTEA_OT_STORAGE_BUCKET || "",
-  `${project}.firebasestorage.app`,
+  // Classic Firebase default usually already exists in older projects.
   `${project}.appspot.com`,
+  `${project}.firebasestorage.app`,
   `${project}-telltea-ot`,
 ].filter(Boolean);
 
