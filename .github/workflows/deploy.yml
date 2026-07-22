@@ -160,7 +160,13 @@ jobs:
             npx firebase-tools@latest deploy --only hosting:telltea,hosting:telltea-pos,firestore,functions --project mypeer-501909 --non-interactive --force
             code=$?
           fi
-          exit $code
+          # Always re-release POS hosting so APK/latest.json ship even if a CF update warned.
+          npx firebase-tools@latest deploy --only hosting:telltea-pos --project mypeer-501909 --non-interactive --force
+          host=$?
+          if [ "$host" -ne 0 ]; then
+            exit "$host"
+          fi
+          exit "$code"
 
       - name: Verify live install page + APK download
         run: node scripts/smoke-pos-install-live.mjs

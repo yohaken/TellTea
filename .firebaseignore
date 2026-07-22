@@ -1,0 +1,8 @@
+# Used by Firebase Hosting (takes precedence over .gitignore for deploys).
+# Keep APK under out-pos/downloads/ deployable — *.apk in .gitignore must not block it.
+**/node_modules/**
+.firebase/**
+firebase-debug.log
+firebase-debug.*.log
+functions/.env
+**/.DS_Store

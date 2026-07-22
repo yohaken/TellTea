@@ -59,8 +59,12 @@ android/**/build/
 android/local.properties
 android/captures/
 android/.idea/
+# Build artifacts — but Hosting must still ship out-pos/downloads/*.apk
+# (Firebase uses .firebaseignore; keep *.apk ignored in git only.)
 *.apk
+!/out-pos/downloads/*.apk
 *.aab
+!/out-pos/downloads/*.aab
 
 # FoodStory menu image ZIP (import via scripts/seed-pos-menu-images.mjs)
 scripts/data/menu-images-import/

@@ -1,7 +1,9 @@
 /**
  * After Firebase Hosting deploy — prove install page + APK are publicly reachable.
- * Fail the job if either URL is still 404.
+ * Fail the job if either URL is still 404 / version lagging behind build.gradle.
  */
+import { readFileSync } from "node:fs";
+
 const INSTALL = process.env.POS_INSTALL_URL || "https://telltea-pos.web.app/install/";
 const APK = process.env.POS_APK_URL || "https://telltea-pos.web.app/downloads/nPos-telltea.apk";
 const ATTEMPTS = Number(process.env.POS_LIVE_SMOKE_ATTEMPTS || 12);
@@ -61,12 +63,29 @@ await waitFor("install page", () => fetchOk(INSTALL));
 await waitFor("APK file", () => fetchOk(APK, { expectBinary: true }));
 
 const MANIFEST = process.env.POS_MANIFEST_URL || "https://telltea-pos.web.app/downloads/latest.json";
+const EXPECTED = (() => {
+  try {
+    const gradle = readFileSync(new URL("../npos-telltea/app/build.gradle", import.meta.url), "utf8");
+    return {
+      versionCode: Number((gradle.match(/versionCode\s+(\d+)/) || [])[1] || 0),
+      versionName: (gradle.match(/versionName\s+"([^"]+)"/) || [])[1] || "",
+    };
+  } catch {
+    return { versionCode: 0, versionName: "" };
+  }
+})();
+
 await waitFor("update manifest", async () => {
   const res = await fetch(MANIFEST, { redirect: "follow", cache: "no-store" });
   if (!res.ok) throw new Error(`${MANIFEST} → HTTP ${res.status}`);
   const data = await res.json();
   if (!data.versionCode || !data.versionName || !data.apkUrl) {
     throw new Error(`${MANIFEST} → missing versionCode/versionName/apkUrl`);
+  }
+  if (EXPECTED.versionCode && Number(data.versionCode) < EXPECTED.versionCode) {
+    throw new Error(
+      `${MANIFEST} → live v${data.versionName} (${data.versionCode}) older than build v${EXPECTED.versionName} (${EXPECTED.versionCode})`,
+    );
   }
   return `v${data.versionName} (${data.versionCode})`;
 });
