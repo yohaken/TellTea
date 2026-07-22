@@ -17,6 +17,7 @@
     "test:ot-rate-settings-dedupe": "node scripts/test-ot-rate-settings-dedupe.mjs",
     "test:prod-catalog-owner": "node scripts/test-prod-catalog-owner.mjs",
     "test:boh-menu-mgmt": "node scripts/test-boh-menu-mgmt.mjs",
+    "test:boh-menu-p3-p5": "node scripts/test-boh-menu-p3-p5.mjs",
     "test:ledger-transfer-in-fab": "node scripts/test-ledger-transfer-in-fab.mjs",
     "test:alerts-pos-manage-hub": "node scripts/test-alerts-pos-manage-hub.mjs",
     "test:check-sop-settings-fold": "node scripts/test-check-sop-settings-fold.mjs",

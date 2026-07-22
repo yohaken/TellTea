@@ -10,10 +10,12 @@
 | P0 แผน | ✅ |
 | P1 โครง อื่นๆ + `/menu/` | ✅ |
 | P2 CRUD parity | ✅ |
-| P3 UX ขั้นสูง | ⬜ รอบถัดไป |
-| P4 ราคา 2 ช่องทาง | ✅ schema+UI+snapshot (sell channel ภายหลัง) |
-| P5 Cutover `/pos/menu/` | ✅ soft banner |
+| P3 UX ขั้นสูง | ✅ |
+| P4 ราคา 2 ช่องทาง + ช่องทางขาย | ✅ |
+| P5 Cutover `/pos/menu/` | ✅ stub |
 | P6 นำเข้าภายนอก | ⬜ |
+
+เช็คลิสเทสรอบ P3–P5: `docs/boh-menu-p3-p5-test-checklist.md`
 
 ---
 
@@ -51,10 +53,10 @@
 
 ## P3 — UX ขั้นสูง (รอบถัดไป)
 
-- [ ] Duplicate เมนู / กลุ่ม
-- [ ] ค้นหา · กรองตามหมวด
-- [ ] Soft-delete / archive
-- [ ] คำอธิบายช่วยเหลือสั้นๆ
+- [x] Duplicate เมนู / กลุ่ม
+- [x] ค้นหา · กรองตามหมวด
+- [x] Soft-delete / archive (+ กู้คืน / ลบถาวร)
+- [ ] คำอธิบายช่วยเหลือสั้นๆ (ยังไม่ทำ)
 
 ---
 
@@ -68,16 +70,16 @@
 - [x] `nposMenuSnapshot` ส่งฟิลด์ใหม่
 - [x] nPos `MenuModels` รับฟิลด์ + `priceForChannel`
 - [x] fallback: ไม่มีฟิลด์เดลิเวอรี่ → ใช้ราคาหน้าร้าน
-- [ ] sell channel เลือกชุดราคาบน counter (ยังไม่บังคับ)
+- [x] sell channel เลือกชุดราคาบน counter (เว็บ + nPos)
 
 ---
 
 ## P5 — Cutover
 
-- [x] Banner บน `/pos/menu/`: แนะนำจัดการที่หลังร้าน
+- [x] Banner บน `/pos/menu/` (ก่อนตัด)
 - [x] ลิงก์ไป `https://telltea-shop.web.app/menu/`
-- [ ] (ภายหลัง) ตัด nav / ทางเข้าเมนูแอดมินบน POS
-- [ ] (ภายหลัง) อัปเดต `pos-versioning.md` เต็มรูปแบบ
+- [x] ตัด CRUD — `/pos/menu/` เป็น stub ย้ายไปหลังร้าน
+- [x] อัปเดต `pos-versioning.md` / e2e stub
 
 ---
 

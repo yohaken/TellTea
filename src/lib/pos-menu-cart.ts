@@ -6,6 +6,9 @@ import type {
   PosSaleLineOption,
   PosSaleLineOptionChoice,
 } from "./types";
+import type { MenuPriceChannel } from "./pos-menu-db";
+import { resolveOptionPriceDelta } from "./pos-menu-options";
+import { resolveMenuItemPrice } from "./pos-menu";
 
 export type PosCartSelection = {
   groupId: string;
@@ -29,6 +32,7 @@ export type PosCartLine = {
 export function optionGroupsForItem(
   item: MenuItem,
   allGroups: MenuOptionGroup[],
+  channel: MenuPriceChannel = "store",
 ): MenuOptionGroup[] {
   const ids = item.optionGroupIds || [];
   const byId = new Map(allGroups.filter((g) => g.active).map((g) => [g.id, g]));
@@ -46,7 +50,7 @@ export function optionGroupsForItem(
 
   return ordered.map((group) => ({
     ...group,
-    options: sortChoicesForDisplay(group),
+    options: sortChoicesForDisplay(group, channel),
   }));
 }
 
@@ -67,11 +71,14 @@ export function isSweetnessGroup(group: MenuOptionGroup): boolean {
   return withPct.length >= Math.ceil(active.length * 0.6);
 }
 
-function choiceDisplayPrice(choice: MenuOptionChoice): number {
-  return Math.max(0, choice.priceDelta ?? 0);
+function choiceDisplayPrice(choice: MenuOptionChoice, channel: MenuPriceChannel = "store"): number {
+  return resolveOptionPriceDelta(choice, channel);
 }
 
-export function sortChoicesForDisplay(group: MenuOptionGroup): MenuOptionChoice[] {
+export function sortChoicesForDisplay(
+  group: MenuOptionGroup,
+  channel: MenuPriceChannel = "store",
+): MenuOptionChoice[] {
   const active = group.options.filter((o) => o.active);
   if (isSweetnessGroup(group)) {
     return [...active].sort((a, b) => {
@@ -81,7 +88,7 @@ export function sortChoicesForDisplay(group: MenuOptionGroup): MenuOptionChoice[
     });
   }
   return [...active].sort((a, b) => {
-    const priceDiff = choiceDisplayPrice(a) - choiceDisplayPrice(b);
+    const priceDiff = choiceDisplayPrice(a, channel) - choiceDisplayPrice(b, channel);
     if (priceDiff !== 0) return priceDiff;
     return a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th");
   });
@@ -256,6 +263,7 @@ export function selectionsFromPicked(
 export function selectionsFromCounts(
   groups: MenuOptionGroup[],
   counts: PickedCounts,
+  channel: MenuPriceChannel = "store",
 ): PosCartSelection[] {
   const out: PosCartSelection[] = [];
   for (const group of groups) {
@@ -266,13 +274,32 @@ export function selectionsFromCounts(
       if (n <= 0) continue;
       const opt = group.options.find((o) => o.id === id && o.active);
       if (!opt) continue;
+      const priceDelta = resolveOptionPriceDelta(opt, channel);
       for (let i = 0; i < n; i += 1) {
-        choices.push({ optionId: opt.id, name: opt.name, priceDelta: opt.priceDelta });
+        choices.push({ optionId: opt.id, name: opt.name, priceDelta });
       }
     }
     if (choices.length) out.push({ groupId: group.id, groupName: group.name, choices });
   }
   return out;
+}
+
+/** คำนวณราคาหน่วยตามช่องทาง + ตัวเลือกที่เลือกไว้ */
+export function computeLineUnitPrice(
+  item: Pick<MenuItem, "price" | "deliveryPrice">,
+  selections: PosCartSelection[],
+  channel: MenuPriceChannel = "store",
+): number {
+  return computeUnitPrice(resolveMenuItemPrice(item, channel), selections);
+}
+
+/** สร้าง selections ใหม่ด้วยราคาตามช่องทาง (จากตัวเลือกในกลุ่มเต็ม) */
+export function repriceSelections(
+  groups: MenuOptionGroup[],
+  selections: PosCartSelection[],
+  channel: MenuPriceChannel,
+): PosCartSelection[] {
+  return selectionsFromCounts(groups, selectionsToCounts(selections), channel);
 }
 
 export function cartLineToSaleLine(line: PosCartLine): PosSaleLine {

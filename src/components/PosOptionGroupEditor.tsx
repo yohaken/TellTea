@@ -218,7 +218,7 @@ export function PosOptionGroupEditor({
         {error ? <p className="error-text">{error}</p> : null}
 
         <button type="button" className="ghost-btn pos-menu-delete-btn pos-menu-btn-sm" onClick={() => void onDelete()}>
-          <Trash2 size={14} aria-hidden /> ลบกลุ่ม
+          <Trash2 size={14} aria-hidden /> เก็บเข้าคลัง
         </button>
 
         <div className="pos-menu-editor-actions">

@@ -72,6 +72,8 @@ public class SellActivity extends Activity {
   private String selectedCategoryId = "";
   private final List<MenuModels.CartLine> cart = new ArrayList<>();
   private double discountBaht = 0;
+  private boolean deliveryChannel = false;
+  private TextView priceChannelToggle;
   private CustomerDisplayController customerDisplay;
   private UpdatePromptController updatePrompt;
   private UiScale uiScale;
@@ -90,6 +92,7 @@ public class SellActivity extends Activity {
     menuGrid = findViewById(R.id.menuGrid);
     cartList = findViewById(R.id.cartList);
     cartTotalView = findViewById(R.id.cartTotal);
+    priceChannelToggle = findViewById(R.id.priceChannelToggle);
     sellSyncStatus = findViewById(R.id.sellSyncStatus);
     sellTitle = findViewById(R.id.sellTitle);
     discountLabel = findViewById(R.id.discountLabel);
@@ -115,6 +118,10 @@ public class SellActivity extends Activity {
     View clearCart = findViewById(R.id.clearCartButton);
     if (clearCart != null) {
       clearCart.setOnClickListener(v -> confirmClearCart());
+    }
+    if (priceChannelToggle != null) {
+      priceChannelToggle.setOnClickListener(v -> togglePriceChannel());
+      updatePriceChannelLabel();
     }
     findViewById(R.id.holdBillButton).setOnClickListener(v -> holdBill());
     restoreHoldButton.setOnClickListener(v -> restoreHold());
@@ -736,7 +743,7 @@ public class SellActivity extends Activity {
         price.setText(R.string.menu_sold_out);
         price.setTextColor(0xFFB00020);
       } else {
-        price.setText(String.format(Locale.getDefault(), "฿%.0f", item.price));
+        price.setText(String.format(Locale.getDefault(), "฿%.0f", itemPrice(item)));
         price.setTextColor(0xFF3D4A55);
       }
       price.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.priceSp);
@@ -783,10 +790,97 @@ public class SellActivity extends Activity {
     return n;
   }
 
+  private double itemPrice(MenuModels.Item item) {
+    return item.priceForChannel(deliveryChannel);
+  }
+
+  private double optionDelta(MenuModels.Option opt) {
+    return opt.priceDeltaForChannel(deliveryChannel);
+  }
+
+  private void updatePriceChannelLabel() {
+    if (priceChannelToggle == null) return;
+    priceChannelToggle.setText(
+        deliveryChannel ? R.string.price_channel_delivery : R.string.price_channel_store);
+  }
+
+  private void togglePriceChannel() {
+    deliveryChannel = !deliveryChannel;
+    updatePriceChannelLabel();
+    repriceCartForChannel();
+    if (menu != null) renderMenu();
+    renderCart();
+  }
+
+  private MenuModels.Item findMenuItem(String id) {
+    if (menu == null || id == null) return null;
+    for (MenuModels.Item it : menu.items) {
+      if (id.equals(it.id)) return it;
+    }
+    return null;
+  }
+
+  private MenuModels.Option findMenuOption(String optionId) {
+    if (menu == null || optionId == null) return null;
+    for (MenuModels.OptionGroup g : menu.optionGroups) {
+      if (g.options == null) continue;
+      for (MenuModels.Option o : g.options) {
+        if (optionId.equals(o.id)) return o;
+      }
+    }
+    return null;
+  }
+
+  private void repriceCartForChannel() {
+    if (cart.isEmpty()) return;
+    List<MenuModels.CartLine> next = new ArrayList<>();
+    for (MenuModels.CartLine line : cart) {
+      MenuModels.Item item = findMenuItem(line.menuItemId);
+      double unit = item != null ? itemPrice(item) : line.unitPrice;
+      JSONArray newOpts = line.optionsJson != null ? line.optionsJson : new JSONArray();
+      try {
+        if (line.optionsJson != null) {
+          newOpts = new JSONArray();
+          for (int i = 0; i < line.optionsJson.length(); i++) {
+            JSONObject g = line.optionsJson.getJSONObject(i);
+            JSONArray choices = g.optJSONArray("choices");
+            JSONArray newChoices = new JSONArray();
+            if (choices != null) {
+              for (int j = 0; j < choices.length(); j++) {
+                JSONObject c = choices.getJSONObject(j);
+                String oid = c.optString("optionId");
+                MenuModels.Option opt = findMenuOption(oid);
+                double delta =
+                    opt != null ? optionDelta(opt) : c.optDouble("priceDelta", 0);
+                JSONObject nc = new JSONObject();
+                nc.put("optionId", oid);
+                nc.put("name", c.optString("name"));
+                nc.put("priceDelta", delta);
+                newChoices.put(nc);
+                unit += delta;
+              }
+            }
+            JSONObject ng = new JSONObject();
+            ng.put("groupId", g.optString("groupId"));
+            ng.put("groupName", g.optString("groupName"));
+            ng.put("choices", newChoices);
+            newOpts.put(ng);
+          }
+        }
+      } catch (Exception ignored) {
+        // keep prior optionsJson
+      }
+      next.add(
+          new MenuModels.CartLine(line.menuItemId, line.name, unit, line.qty, newOpts));
+    }
+    cart.clear();
+    cart.addAll(next);
+  }
+
   private void onTapItem(MenuModels.Item item) {
     if (!item.active) return;
     if (!item.hasOptions()) {
-      addItemWithOptions(item, new JSONArray(), item.price);
+      addItemWithOptions(item, new JSONArray(), itemPrice(item));
       return;
     }
     showOptionPicker(item);
@@ -875,10 +969,10 @@ public class SellActivity extends Activity {
         MenuModels.CartLine old = cart.get(replaceIndex);
         cart.set(
             replaceIndex,
-            new MenuModels.CartLine(item.id, item.name, item.price, Math.max(1, old.qty), new JSONArray()));
+            new MenuModels.CartLine(item.id, item.name, itemPrice(item), Math.max(1, old.qty), new JSONArray()));
         renderCart();
       } else {
-        addItemWithOptions(item, new JSONArray(), item.price, 1);
+        addItemWithOptions(item, new JSONArray(), itemPrice(item), 1);
       }
       return;
     }
@@ -899,7 +993,7 @@ public class SellActivity extends Activity {
 
     heroName.setText(item.name);
     heroName.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.titleSp);
-    heroPrice.setText(String.format(Locale.getDefault(), "฿%.0f", item.price));
+    heroPrice.setText(String.format(Locale.getDefault(), "฿%.0f", itemPrice(item)));
     if (item.imageUrl != null && !item.imageUrl.isEmpty()) {
       ImageLoader.bind(heroImage, item.imageUrl, 0xFFF0F2F5);
     }
@@ -937,13 +1031,13 @@ public class SellActivity extends Activity {
 
     refreshTotalRef[0] =
         () -> {
-          double unit = item.price;
+          double unit = itemPrice(item);
           for (MenuModels.OptionGroup group : groups) {
             Map<String, Integer> gc = counts.get(group.id);
             if (gc == null) continue;
             for (MenuModels.Option opt : group.options) {
               int n = gc.getOrDefault(opt.id, 0);
-              if (n > 0) unit += opt.priceDelta * n;
+              if (n > 0) unit += optionDelta(opt) * n;
             }
           }
           double total = unit * qty[0];
@@ -1042,8 +1136,8 @@ public class SellActivity extends Activity {
                     String.format(
                         Locale.getDefault(),
                         "%s%.0f",
-                        opt.priceDelta > 0 ? "+" : "+",
-                        Math.max(0, opt.priceDelta)));
+                        optionDelta(opt) > 0 ? "+" : "+",
+                        Math.max(0, optionDelta(opt))));
                 price.setTextColor(0xFF555555);
                 price.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.captionSp);
                 price.setPadding(uiScale.dp(6), 0, uiScale.dp(8), 0);
@@ -1154,7 +1248,7 @@ public class SellActivity extends Activity {
                 TextView price = new TextView(this);
                 price.setText(
                     String.format(
-                        Locale.getDefault(), "+%.0f", Math.max(0, opt.priceDelta)));
+                        Locale.getDefault(), "+%.0f", Math.max(0, optionDelta(opt))));
                 price.setTextColor(0xFF555555);
                 price.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.captionSp);
 
@@ -1219,7 +1313,7 @@ public class SellActivity extends Activity {
           try {
             errView.setVisibility(View.GONE);
             JSONArray optionsJson = new JSONArray();
-            double unit = item.price;
+            double unit = itemPrice(item);
             for (MenuModels.OptionGroup group : groups) {
               Map<String, Integer> gc = counts.get(group.id);
               int totalUnits = 0;
@@ -1249,9 +1343,9 @@ public class SellActivity extends Activity {
                   JSONObject c = new JSONObject();
                   c.put("optionId", opt.id);
                   c.put("name", opt.name);
-                  c.put("priceDelta", opt.priceDelta);
+                  c.put("priceDelta", optionDelta(opt));
                   choices.put(c);
-                  unit += opt.priceDelta;
+                  unit += optionDelta(opt);
                 }
               }
               g.put("choices", choices);

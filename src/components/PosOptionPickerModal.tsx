@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import type { MenuOptionGroup } from "@/lib/types";
+import type { MenuPriceChannel } from "@/lib/pos-menu-db";
+import { resolveOptionPriceDelta } from "@/lib/pos-menu-options";
 import {
   computeUnitPrice,
   groupMaxUnits,
@@ -32,6 +34,7 @@ export function PosOptionPickerModal({
   imageUrl,
   basePrice,
   groups,
+  channel = "store",
   initialSelections,
   initialQty = 1,
   onCancel,
@@ -41,6 +44,7 @@ export function PosOptionPickerModal({
   imageUrl?: string | null;
   basePrice: number;
   groups: MenuOptionGroup[];
+  channel?: MenuPriceChannel;
   initialSelections?: PosCartSelection[];
   initialQty?: number;
   onCancel: () => void;
@@ -52,7 +56,10 @@ export function PosOptionPickerModal({
   const [qty, setQty] = useState(initialQty);
   const [error, setError] = useState<string | null>(null);
 
-  const selections = useMemo(() => selectionsFromCounts(groups, pickedCounts), [groups, pickedCounts]);
+  const selections = useMemo(
+    () => selectionsFromCounts(groups, pickedCounts, channel),
+    [groups, pickedCounts, channel],
+  );
   const unitPrice = computeUnitPrice(basePrice, selections);
   const lineTotal = Math.round(unitPrice * qty * 100) / 100;
 
@@ -164,9 +171,10 @@ export function PosOptionPickerModal({
                   <ul className="pos-option-choice-list pos-option-choice-list--stepper">
                     {group.options.map((opt) => {
                       const count = gc[opt.id] || 0;
+                      const delta = resolveOptionPriceDelta(opt, channel);
                       const price =
-                        opt.priceDelta > 0 || (opt.priceDeltaMax != null && opt.priceDeltaMax > 0)
-                          ? `+${formatPlainNumber(opt.priceDelta)}`
+                        delta > 0 || (opt.priceDeltaMax != null && opt.priceDeltaMax > 0)
+                          ? `+${formatPlainNumber(delta)}`
                           : "+0";
                       return (
                         <li key={opt.id}>
@@ -202,9 +210,10 @@ export function PosOptionPickerModal({
                   <ul className="pos-option-choice-list">
                     {group.options.map((opt) => {
                       const selected = (gc[opt.id] || 0) > 0;
+                      const delta = resolveOptionPriceDelta(opt, channel);
                       const price =
-                        opt.priceDelta > 0 || (opt.priceDeltaMax != null && opt.priceDeltaMax > 0)
-                          ? `+${formatPlainNumber(opt.priceDelta)}`
+                        delta > 0 || (opt.priceDeltaMax != null && opt.priceDeltaMax > 0)
+                          ? `+${formatPlainNumber(delta)}`
                           : "+0";
                       return (
                         <li key={opt.id}>

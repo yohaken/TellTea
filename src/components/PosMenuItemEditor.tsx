@@ -290,7 +290,7 @@ export function PosMenuItemEditor({
         {error ? <p className="error-text">{error}</p> : null}
 
         <button type="button" className="ghost-btn pos-menu-delete-btn pos-menu-btn-sm" onClick={() => void onDelete()}>
-          <Trash2 size={14} aria-hidden /> ลบเมนู
+          <Trash2 size={14} aria-hidden /> เก็บเข้าคลัง
         </button>
 
         <p className="muted pos-menu-price-hint">

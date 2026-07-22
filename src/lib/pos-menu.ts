@@ -346,6 +346,38 @@ export async function deleteMenuItem(id: string): Promise<void> {
   }
 }
 
+/** ซ่อนจากหน้าขาย — คง doc ไว้ (กู้คืนได้) */
+export async function archiveMenuItem(id: string): Promise<void> {
+  await updateMenuItem(id, { active: false, visibleOnPos: false });
+}
+
+export async function restoreMenuItem(id: string): Promise<void> {
+  await updateMenuItem(id, { active: true, visibleOnPos: true });
+}
+
+/** สำเนาเมนู — ชื่อ + (สำเนา) · คงราคา/ตัวเลือก/รูป */
+export async function duplicateMenuItem(item: MenuItem): Promise<string> {
+  const id = await addMenuItem({
+    categoryId: item.categoryId,
+    name: `${item.name.trim()} (สำเนา)`,
+    price: item.price,
+    ...(typeof item.deliveryPrice === "number" ? { deliveryPrice: item.deliveryPrice } : {}),
+  });
+  await updateMenuItem(id, {
+    nameEn: item.nameEn,
+    description: item.description,
+    imageUrl: item.imageUrl || "",
+    recommended: item.recommended === true,
+    visibleOnPos: item.visibleOnPos !== false,
+    active: item.active !== false,
+    optionGroupIds: item.optionGroupIds ? [...item.optionGroupIds] : [],
+    ...(typeof item.deliveryPrice === "number"
+      ? { deliveryPrice: item.deliveryPrice }
+      : { deliveryPrice: null }),
+  });
+  return id;
+}
+
 const DEFAULT_CATEGORIES = ["ชา", "กาแฟ", "อื่นๆ"] as const;
 
 const DEFAULT_ITEMS: { category: string; name: string; price: number }[] = [

@@ -156,6 +156,21 @@
                         android:textStyle="bold" />
 
                     <TextView
+                        android:id="@+id/priceChannelToggle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/npos_touch_ghost"
+                        android:gravity="center"
+                        android:minHeight="36dp"
+                        android:paddingTop="6dp"
+                        android:paddingBottom="6dp"
+                        android:text="@string/price_channel_store"
+                        android:textColor="#1E2D3D"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <TextView
                         android:id="@+id/clearCartButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

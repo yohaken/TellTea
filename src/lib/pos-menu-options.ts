@@ -172,6 +172,32 @@ export async function deleteMenuOptionGroup(id: string): Promise<void> {
   }
 }
 
+export async function archiveMenuOptionGroup(id: string): Promise<void> {
+  await updateMenuOptionGroup(id, { active: false });
+}
+
+export async function restoreMenuOptionGroup(id: string): Promise<void> {
+  await updateMenuOptionGroup(id, { active: true });
+}
+
+/** สำเนากลุ่มตัวเลือก — ตัวเลือกใหม่ id · คงกฎและราคา */
+export async function duplicateMenuOptionGroup(group: MenuOptionGroup): Promise<string> {
+  const id = await addMenuOptionGroup(`${group.name.trim()} (สำเนา)`);
+  const options = group.options.map((o) => {
+    const next = createMenuOptionChoice(o.name, o.priceDelta, o.deliveryPriceDelta);
+    return { ...next, active: o.active !== false };
+  });
+  await saveMenuOptionGroupFull(id, {
+    name: `${group.name.trim()} (สำเนา)`,
+    required: group.required,
+    selectionType: group.selectionType,
+    minSelect: group.minSelect,
+    maxSelect: group.maxSelect,
+    options,
+  });
+  return id;
+}
+
 export function serializeMenuOptionChoice(o: MenuOptionChoice): Record<string, unknown> {
   const row: Record<string, unknown> = {
     id: o.id,

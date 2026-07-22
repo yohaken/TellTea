@@ -51,6 +51,8 @@
     <string name="sell_menu_demo">ใช้เมนูเดโม — ยังดึงเมนูร้านไม่ได้</string>
     <string name="sell_menu_empty">ไม่มีเมนูในหมวดนี้</string>
     <string name="cart_title">ตะกร้า</string>
+    <string name="price_channel_store">ราคา: หน้าร้าน · แตะเปลี่ยนเป็นส่ง</string>
+    <string name="price_channel_delivery">ราคา: ส่ง · แตะเปลี่ยนเป็นหน้าร้าน</string>
     <string name="btn_clear_cart">ล้างตะกร้า</string>
     <string name="clear_cart_title">ล้างตะกร้า?</string>
     <string name="clear_cart_msg">ลบทุกรายการในตะกร้า</string>

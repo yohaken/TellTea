@@ -1,6 +1,6 @@
 /**
  * POS menu e2e — counter nav must not expose menu admin;
- * deep-link /pos/menu/ still loads for owner/ops who know the URL.
+ * deep-link /pos/menu/ shows cutover stub (manage on BOH).
  */
 import assert from "node:assert/strict";
 import {
@@ -34,22 +34,23 @@ await report.timed("to_menu", "menu_nav", async () => {
   await page.waitForURL(/\/pos\/menu\/?/, { timeout: 8_000 });
 });
 
-await report.timed("menu_auth", "menu_auth", async () => {
+await report.timed("menu_stub", "menu_cutover_stub", async () => {
   await page.waitForFunction(
     () => {
       const t = document.body.innerText;
-      return (t.includes("เมนูอาหาร") || t.includes("หมวดหมู่รายการ")) && !t.includes("กำลังเชื่อมต่อเมนู...");
+      return t.includes("จัดการเมนูย้ายไปหลังร้านแล้ว") || t.includes("อื่นๆ → เมนู");
     },
-    { timeout: 30_000 },
+    { timeout: 20_000 },
   );
   const menuText = await page.locator("body").innerText();
-  assert.ok(menuText.includes("กลุ่มตัวเลือก"), "ต้องเห็นแท็บกลุ่มตัวเลือก");
-  if (/Missing or insufficient permissions/i.test(menuText)) {
-    throw new Error("permission denied บนหน้าเมนู");
-  }
+  assert.ok(
+    menuText.includes("telltea-shop") || menuText.includes("เปิดจัดการเมนูหลังร้าน"),
+    "ต้องมีลิงก์หลังร้าน",
+  );
+  assert.ok(!menuText.includes("กลุ่มตัวเลือก") || menuText.includes("ย้ายไปหลังร้าน"), "ไม่ใช่ CRUD เต็ม");
 });
 
-report.note("deep-link /pos/menu/ โหลด + auth OK (ไม่ผ่านแถบเคาน์เตอร์)");
+report.note("deep-link /pos/menu/ = stub cutover (ไม่ใช่ PosMenuAdmin)");
 
 await browser.close();
 finishReport(report);
