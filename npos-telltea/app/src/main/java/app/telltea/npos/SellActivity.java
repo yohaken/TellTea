@@ -38,6 +38,7 @@ import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.ImageLoader;
 import app.telltea.npos.sell.MenuModels;
 import app.telltea.npos.sell.MenuRepository;
+import app.telltea.npos.sell.OptionPickerLogic;
 import app.telltea.npos.sell.PromptPayPayload;
 import app.telltea.npos.sell.QrBitmaps;
 import app.telltea.npos.sell.SaleSync;
@@ -846,146 +847,305 @@ public class SellActivity extends Activity {
       return;
     }
 
+    if (uiScale == null) uiScale = UiScale.from(this);
     View sheet = getLayoutInflater().inflate(R.layout.dialog_option_picker, null, false);
     ImageView heroImage = sheet.findViewById(R.id.optionHeroImage);
     TextView heroName = sheet.findViewById(R.id.optionHeroName);
     TextView heroPrice = sheet.findViewById(R.id.optionHeroPrice);
     TextView qtyValue = sheet.findViewById(R.id.optionQtyValue);
-    Button qtyMinus = sheet.findViewById(R.id.optionQtyMinus);
-    Button qtyPlus = sheet.findViewById(R.id.optionQtyPlus);
+    View qtyMinus = sheet.findViewById(R.id.optionQtyMinus);
+    View qtyPlus = sheet.findViewById(R.id.optionQtyPlus);
     LinearLayout groupsRoot = sheet.findViewById(R.id.optionGroupsRoot);
+    ScrollView groupsScroll = sheet.findViewById(R.id.optionGroupsScroll);
     TextView errView = sheet.findViewById(R.id.optionPickerError);
-    TextView lineTotal = sheet.findViewById(R.id.optionLineTotal);
-    Button cancelBtn = sheet.findViewById(R.id.optionCancel);
-    Button confirmBtn = sheet.findViewById(R.id.optionConfirm);
+    TextView confirmBtn = sheet.findViewById(R.id.optionConfirm);
+    View cancelBtn = sheet.findViewById(R.id.optionCancel);
 
     heroName.setText(item.name);
+    heroName.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.titleSp);
     heroPrice.setText(String.format(Locale.getDefault(), "฿%.0f", item.price));
     if (item.imageUrl != null && !item.imageUrl.isEmpty()) {
-      ImageLoader.bind(heroImage, item.imageUrl, 0xFF2A3C4E);
+      ImageLoader.bind(heroImage, item.imageUrl, 0xFFF0F2F5);
     }
 
+    // groupId → optionId → count (web PickedCounts)
+    final Map<String, Map<String, Integer>> counts = new HashMap<>();
+    // single/sweetness selected option id
+    final Map<String, String> singlePick = new HashMap<>();
     final int[] qty = {1};
-    Map<String, RadioGroup> singleGroups = new HashMap<>();
-    Map<String, List<CheckBox>> multiGroups = new HashMap<>();
 
-    Runnable refreshTotal =
+    // Preselect required singles / sweetness
+    for (MenuModels.OptionGroup group : groups) {
+      List<MenuModels.Option> opts = OptionPickerLogic.sortForDisplay(group);
+      if (opts.isEmpty()) continue;
+      if (OptionPickerLogic.isSweetnessGroup(group) || group.isSingle()) {
+        if (group.effectiveMin() > 0) {
+          singlePick.put(group.id, opts.get(0).id);
+          Map<String, Integer> gc = new HashMap<>();
+          gc.put(opts.get(0).id, 1);
+          counts.put(group.id, gc);
+        }
+      }
+    }
+
+    final Runnable[] rebuildRef = new Runnable[1];
+    final Runnable[] refreshTotalRef = new Runnable[1];
+
+    refreshTotalRef[0] =
         () -> {
           double unit = item.price;
           for (MenuModels.OptionGroup group : groups) {
-            if (group.isSingle()) {
-              RadioGroup rg = singleGroups.get(group.id);
-              int checked = rg == null ? -1 : rg.getCheckedRadioButtonId();
-              if (checked != -1) {
-                RadioButton rb = rg.findViewById(checked);
-                if (rb != null && rb.getTag() instanceof MenuModels.Option) {
-                  unit += ((MenuModels.Option) rb.getTag()).priceDelta;
-                }
-              }
-            } else {
-              List<CheckBox> boxes = multiGroups.get(group.id);
-              if (boxes != null) {
-                for (CheckBox cb : boxes) {
-                  if (cb.isChecked() && cb.getTag() instanceof MenuModels.Option) {
-                    unit += ((MenuModels.Option) cb.getTag()).priceDelta;
-                  }
-                }
-              }
+            Map<String, Integer> gc = counts.get(group.id);
+            if (gc == null) continue;
+            for (MenuModels.Option opt : group.options) {
+              int n = gc.getOrDefault(opt.id, 0);
+              if (n > 0) unit += opt.priceDelta * n;
             }
           }
           double total = unit * qty[0];
-          lineTotal.setText(String.format(Locale.getDefault(), "รวม ฿%.0f", total));
+          confirmBtn.setText(String.format(Locale.getDefault(), getString(R.string.option_confirm_fmt), total));
         };
 
-    for (MenuModels.OptionGroup group : groups) {
-      TextView header = new TextView(this);
-      String req = group.required ? " *" : "";
-      String lim = "";
-      if (!group.isSingle()) {
-        int min = group.effectiveMin();
-        int max = group.effectiveMax();
-        if (max == Integer.MAX_VALUE) {
-          lim = min > 0 ? " (อย่างน้อย " + min + ")" : " (เลือกได้หลายอย่าง)";
-        } else {
-          lim = " (" + min + "–" + max + ")";
-        }
-      } else {
-        lim = " (เลือก 1)";
-      }
-      header.setText(group.name + req + lim);
-      header.setTextColor(0xFF1E2D3D);
-      header.setTypeface(Typeface.DEFAULT_BOLD);
-      header.setPadding(0, 16, 0, 8);
-      groupsRoot.addView(header);
+    rebuildRef[0] =
+        () -> {
+          groupsRoot.removeAllViews();
+          if (groups.size() > 1) {
+            TextView lead = new TextView(this);
+            lead.setText("เลือกตัวเลือก");
+            lead.setTextColor(0xFF333333);
+            lead.setTypeface(Typeface.DEFAULT_BOLD);
+            lead.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.bodySp);
+            lead.setGravity(Gravity.CENTER);
+            lead.setPadding(0, 0, 0, uiScale.dp(8));
+            groupsRoot.addView(lead);
+          }
+          for (MenuModels.OptionGroup group : groups) {
+            List<MenuModels.Option> opts = OptionPickerLogic.sortForDisplay(group);
+            TextView header = new TextView(this);
+            String hint = OptionPickerLogic.groupHint(group);
+            header.setText(group.name + (hint.isEmpty() ? "" : "\n" + hint));
+            header.setTextColor(group.required ? 0xFF111827 : 0xFF4B5563);
+            header.setTypeface(Typeface.DEFAULT_BOLD);
+            header.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.captionSp);
+            header.setPadding(0, uiScale.dp(6), 0, uiScale.dp(4));
+            groupsRoot.addView(header);
 
-      if (group.isSingle()) {
-        RadioGroup rg = new RadioGroup(this);
-        rg.setOrientation(RadioGroup.VERTICAL);
-        boolean first = true;
-        for (MenuModels.Option opt : group.options) {
-          RadioButton rb = new RadioButton(this);
-          rb.setId(View.generateViewId());
-          String label = opt.name;
-          if (opt.priceDelta != 0) {
-            label +=
-                String.format(
-                    Locale.getDefault(),
-                    " (%s%.0f)",
-                    opt.priceDelta > 0 ? "+" : "",
-                    opt.priceDelta);
-          }
-          rb.setText(label);
-          rb.setTextColor(0xFF1E2D3D);
-          rb.setTag(opt);
-          rg.addView(rb);
-          if (first && group.effectiveMin() > 0) {
-            rb.setChecked(true);
-            first = false;
-          }
-        }
-        rg.setOnCheckedChangeListener((g, id) -> refreshTotal.run());
-        groupsRoot.addView(rg);
-        singleGroups.put(group.id, rg);
-      } else {
-        List<CheckBox> boxes = new ArrayList<>();
-        final MenuModels.OptionGroup gRef = group;
-        for (MenuModels.Option opt : group.options) {
-          CheckBox cb = new CheckBox(this);
-          String label = opt.name;
-          if (opt.priceDelta != 0) {
-            label +=
-                String.format(
-                    Locale.getDefault(),
-                    " (%s%.0f)",
-                    opt.priceDelta > 0 ? "+" : "",
-                    opt.priceDelta);
-          }
-          cb.setText(label);
-          cb.setTextColor(0xFF1E2D3D);
-          cb.setTag(opt);
-          cb.setOnCheckedChangeListener(
-              (buttonView, isChecked) -> {
-                if (isChecked) {
-                  int selected = 0;
-                  for (CheckBox b : boxes) if (b.isChecked()) selected++;
-                  if (selected > gRef.effectiveMax()) {
-                    buttonView.setChecked(false);
-                    Toast.makeText(
-                            SellActivity.this,
-                            getString(R.string.option_max, gRef.name, gRef.effectiveMax()),
-                            Toast.LENGTH_SHORT)
-                        .show();
-                    return;
-                  }
+            if (OptionPickerLogic.isSweetnessGroup(group)) {
+              // Chip row — wrap, no scroll emphasis
+              LinearLayout wrap = new LinearLayout(this);
+              wrap.setOrientation(LinearLayout.VERTICAL);
+              LinearLayout row = new LinearLayout(this);
+              row.setOrientation(LinearLayout.HORIZONTAL);
+              wrap.addView(row);
+              int used = 0;
+              int maxRow = Math.max(3, Math.min(5, opts.size()));
+              String selected = singlePick.get(group.id);
+              for (MenuModels.Option opt : opts) {
+                if (used > 0 && used % maxRow == 0) {
+                  row = new LinearLayout(this);
+                  row.setOrientation(LinearLayout.HORIZONTAL);
+                  wrap.addView(row);
                 }
-                refreshTotal.run();
-              });
-          groupsRoot.addView(cb);
-          boxes.add(cb);
-        }
-        multiGroups.put(group.id, boxes);
-      }
-    }
+                TextView chip = new TextView(this);
+                chip.setText(opt.name);
+                chip.setGravity(Gravity.CENTER);
+                chip.setMinHeight(uiScale.touchMinPx);
+                chip.setPadding(uiScale.dp(10), uiScale.dp(8), uiScale.dp(10), uiScale.dp(8));
+                chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.captionSp);
+                chip.setTypeface(Typeface.DEFAULT_BOLD);
+                LinearLayout.LayoutParams clp =
+                    new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                clp.setMargins(uiScale.dp(3), uiScale.dp(3), uiScale.dp(3), uiScale.dp(3));
+                chip.setLayoutParams(clp);
+                boolean on = selected != null && selected.equals(opt.id);
+                chip.setBackgroundResource(on ? R.drawable.npos_nav_active : R.drawable.npos_touch_ghost);
+                chip.setTextColor(on ? 0xFFFFFFFF : 0xFF1E2D3D);
+                chip.setOnClickListener(
+                    v -> {
+                      singlePick.put(group.id, opt.id);
+                      Map<String, Integer> gc = new HashMap<>();
+                      gc.put(opt.id, 1);
+                      counts.put(group.id, gc);
+                      rebuildRef[0].run();
+                      refreshTotalRef[0].run();
+                    });
+                row.addView(chip);
+                used++;
+              }
+              groupsRoot.addView(wrap);
+            } else if (OptionPickerLogic.usesQuantitySteppers(group)) {
+              Map<String, Integer> gc = counts.getOrDefault(group.id, new HashMap<>());
+              for (MenuModels.Option opt : opts) {
+                int count = gc.getOrDefault(opt.id, 0);
+                LinearLayout row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setMinimumHeight(uiScale.touchMinPx);
+                row.setPadding(uiScale.dp(4), uiScale.dp(4), uiScale.dp(4), uiScale.dp(4));
+                if (count > 0) row.setBackgroundColor(0x0F2D7FE0);
+
+                TextView name = new TextView(this);
+                name.setText(opt.name);
+                name.setTextColor(0xFF15202B);
+                name.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.bodySp);
+                name.setTypeface(count > 0 ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+                LinearLayout.LayoutParams nlp =
+                    new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                name.setLayoutParams(nlp);
+
+                TextView price = new TextView(this);
+                price.setText(
+                    String.format(
+                        Locale.getDefault(),
+                        "%s%.0f",
+                        opt.priceDelta > 0 ? "+" : "+",
+                        Math.max(0, opt.priceDelta)));
+                price.setTextColor(0xFF555555);
+                price.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.captionSp);
+                price.setPadding(uiScale.dp(6), 0, uiScale.dp(8), 0);
+
+                TextView minus = new TextView(this);
+                minus.setText("−");
+                minus.setGravity(Gravity.CENTER);
+                minus.setMinWidth(uiScale.touchMinPx);
+                minus.setMinHeight(uiScale.touchMinPx);
+                minus.setBackgroundResource(R.drawable.npos_touch_ghost);
+                minus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+                minus.setEnabled(count > 0);
+                minus.setAlpha(count > 0 ? 1f : 0.35f);
+
+                TextView countTv = new TextView(this);
+                countTv.setText(String.valueOf(count));
+                countTv.setGravity(Gravity.CENTER);
+                countTv.setMinWidth(uiScale.dp(28));
+                countTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.bodySp);
+                countTv.setTypeface(Typeface.DEFAULT_BOLD);
+
+                TextView plus = new TextView(this);
+                plus.setText("+");
+                plus.setGravity(Gravity.CENTER);
+                plus.setMinWidth(uiScale.touchMinPx);
+                plus.setMinHeight(uiScale.touchMinPx);
+                plus.setBackgroundResource(R.drawable.npos_touch_primary);
+                plus.setTextColor(0xFFFFFFFF);
+                plus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+
+                final MenuModels.OptionGroup gRef = group;
+                final MenuModels.Option oRef = opt;
+                minus.setOnClickListener(
+                    v -> {
+                      Map<String, Integer> bucket =
+                          counts.containsKey(gRef.id)
+                              ? new HashMap<>(counts.get(gRef.id))
+                              : new HashMap<>();
+                      int cur = bucket.getOrDefault(oRef.id, 0);
+                      if (cur <= 0) return;
+                      cur -= 1;
+                      if (cur <= 0) bucket.remove(oRef.id);
+                      else bucket.put(oRef.id, cur);
+                      if (bucket.isEmpty()) counts.remove(gRef.id);
+                      else counts.put(gRef.id, bucket);
+                      rebuildRef[0].run();
+                      refreshTotalRef[0].run();
+                    });
+                plus.setOnClickListener(
+                    v -> {
+                      Map<String, Integer> bucket =
+                          counts.containsKey(gRef.id)
+                              ? new HashMap<>(counts.get(gRef.id))
+                              : new HashMap<>();
+                      int cur = bucket.getOrDefault(oRef.id, 0);
+                      if (cur >= OptionPickerLogic.MAX_UNITS_PER_CHOICE) return;
+                      int total = 0;
+                      for (int n : bucket.values()) total += n;
+                      int max = gRef.effectiveMax();
+                      if (max < Integer.MAX_VALUE && total + 1 > max) {
+                        Toast.makeText(
+                                this,
+                                getString(R.string.option_max, gRef.name, max),
+                                Toast.LENGTH_SHORT)
+                            .show();
+                        return;
+                      }
+                      bucket.put(oRef.id, cur + 1);
+                      counts.put(gRef.id, bucket);
+                      rebuildRef[0].run();
+                      refreshTotalRef[0].run();
+                    });
+
+                row.addView(name);
+                row.addView(price);
+                row.addView(minus);
+                row.addView(countTv);
+                row.addView(plus);
+                groupsRoot.addView(row);
+              }
+            } else {
+              // Single choice list — big tap rows (○ / ●)
+              String selected = singlePick.get(group.id);
+              for (MenuModels.Option opt : opts) {
+                boolean on = selected != null && selected.equals(opt.id);
+                LinearLayout row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setMinimumHeight(uiScale.touchMinPx);
+                row.setPadding(uiScale.dp(6), uiScale.dp(8), uiScale.dp(6), uiScale.dp(8));
+                if (on) row.setBackgroundColor(0x0F2D7FE0);
+
+                TextView mark = new TextView(this);
+                mark.setText(on ? "●" : "○");
+                mark.setTextColor(on ? 0xFF2D7FE0 : 0xFF666666);
+                mark.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+                mark.setPadding(0, 0, uiScale.dp(10), 0);
+
+                TextView name = new TextView(this);
+                name.setText(opt.name);
+                name.setTextColor(0xFF15202B);
+                name.setTypeface(on ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+                name.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.bodySp);
+                LinearLayout.LayoutParams nlp =
+                    new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                name.setLayoutParams(nlp);
+
+                TextView price = new TextView(this);
+                price.setText(
+                    String.format(
+                        Locale.getDefault(), "+%.0f", Math.max(0, opt.priceDelta)));
+                price.setTextColor(0xFF555555);
+                price.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.captionSp);
+
+                final MenuModels.OptionGroup gRef = group;
+                final MenuModels.Option oRef = opt;
+                View.OnClickListener pick =
+                    v -> {
+                      singlePick.put(gRef.id, oRef.id);
+                      Map<String, Integer> gc = new HashMap<>();
+                      gc.put(oRef.id, 1);
+                      counts.put(gRef.id, gc);
+                      rebuildRef[0].run();
+                      refreshTotalRef[0].run();
+                    };
+                row.setOnClickListener(pick);
+                row.addView(mark);
+                row.addView(name);
+                row.addView(price);
+                groupsRoot.addView(row);
+              }
+            }
+          }
+          // Cap scroll height so footer stays visible (tablet-first: prefer see CTA)
+          if (groupsScroll != null) {
+            int maxH = (int) (getResources().getDisplayMetrics().heightPixels * 0.42f);
+            groupsScroll.post(
+                () -> {
+                  if (groupsRoot.getHeight() > maxH) {
+                    android.view.ViewGroup.LayoutParams lp = groupsScroll.getLayoutParams();
+                    lp.height = maxH;
+                    groupsScroll.setLayoutParams(lp);
+                  }
+                });
+          }
+        };
 
     qtyValue.setText("1");
     qtyMinus.setOnClickListener(
@@ -993,16 +1153,18 @@ public class SellActivity extends Activity {
           if (qty[0] <= 1) return;
           qty[0] -= 1;
           qtyValue.setText(String.valueOf(qty[0]));
-          refreshTotal.run();
+          refreshTotalRef[0].run();
         });
     qtyPlus.setOnClickListener(
         v -> {
           if (qty[0] >= 99) return;
           qty[0] += 1;
           qtyValue.setText(String.valueOf(qty[0]));
-          refreshTotal.run();
+          refreshTotalRef[0].run();
         });
-    refreshTotal.run();
+
+    rebuildRef[0].run();
+    refreshTotalRef[0].run();
 
     AlertDialog dialog =
         new AlertDialog.Builder(this).setView(sheet).setCancelable(true).create();
@@ -1014,50 +1176,38 @@ public class SellActivity extends Activity {
             JSONArray optionsJson = new JSONArray();
             double unit = item.price;
             for (MenuModels.OptionGroup group : groups) {
-              List<MenuModels.Option> chosen = new ArrayList<>();
-              if (group.isSingle()) {
-                RadioGroup rg = singleGroups.get(group.id);
-                int checked = rg == null ? -1 : rg.getCheckedRadioButtonId();
-                if (checked != -1) {
-                  RadioButton rb = rg.findViewById(checked);
-                  if (rb != null && rb.getTag() instanceof MenuModels.Option) {
-                    chosen.add((MenuModels.Option) rb.getTag());
-                  }
-                }
-              } else {
-                List<CheckBox> boxes = multiGroups.get(group.id);
-                if (boxes != null) {
-                  for (CheckBox cb : boxes) {
-                    if (cb.isChecked() && cb.getTag() instanceof MenuModels.Option) {
-                      chosen.add((MenuModels.Option) cb.getTag());
-                    }
-                  }
-                }
+              Map<String, Integer> gc = counts.get(group.id);
+              int totalUnits = 0;
+              if (gc != null) {
+                for (int n : gc.values()) totalUnits += n;
               }
               int min = group.effectiveMin();
               int max = group.effectiveMax();
-              if (chosen.size() < min) {
+              if (totalUnits < min) {
                 errView.setVisibility(View.VISIBLE);
                 errView.setText(getString(R.string.option_min, group.name, min));
                 return;
               }
-              if (chosen.size() > max) {
+              if (max < Integer.MAX_VALUE && totalUnits > max) {
                 errView.setVisibility(View.VISIBLE);
                 errView.setText(getString(R.string.option_max, group.name, max));
                 return;
               }
-              if (chosen.isEmpty()) continue;
+              if (totalUnits == 0) continue;
               JSONObject g = new JSONObject();
               g.put("groupId", group.id);
               g.put("groupName", group.name);
               JSONArray choices = new JSONArray();
-              for (MenuModels.Option opt : chosen) {
-                JSONObject c = new JSONObject();
-                c.put("optionId", opt.id);
-                c.put("name", opt.name);
-                c.put("priceDelta", opt.priceDelta);
-                choices.put(c);
-                unit += opt.priceDelta;
+              for (MenuModels.Option opt : OptionPickerLogic.sortForDisplay(group)) {
+                int n = gc == null ? 0 : gc.getOrDefault(opt.id, 0);
+                for (int i = 0; i < n; i++) {
+                  JSONObject c = new JSONObject();
+                  c.put("optionId", opt.id);
+                  c.put("name", opt.name);
+                  c.put("priceDelta", opt.priceDelta);
+                  choices.put(c);
+                  unit += opt.priceDelta;
+                }
               }
               g.put("choices", choices);
               optionsJson.put(g);
@@ -1070,11 +1220,13 @@ public class SellActivity extends Activity {
         });
     dialog.show();
     if (dialog.getWindow() != null) {
+      int w = Math.min(
+          (int) (getResources().getDisplayMetrics().widthPixels * 0.62f),
+          uiScale.dp(560));
+      w = Math.max(w, uiScale.dp(420));
       dialog
           .getWindow()
-          .setLayout(
-              (int) (getResources().getDisplayMetrics().widthPixels * 0.72),
-              android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+          .setLayout(w, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
     }
   }
 

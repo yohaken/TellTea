@@ -1,7 +1,7 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **1.14.8** Smart UI scale · เมนูเลื่อนลง · ปุ่มจ่ายใหญ่ · เวอร์ชันมุมบาร์  
-ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-smart-ui-scale-checklist.md](./npos-smart-ui-scale-checklist.md) · [npos-web-parity-shot-checklist.md](./npos-web-parity-shot-checklist.md)
+อัปเดต: **1.14.9** qty-per-option เฟรมเว็บ · N7 ตัดออก · Room = local DB  
+ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md) · [npos-smart-ui-scale-checklist.md](./npos-smart-ui-scale-checklist.md)
 
 ## ทำแล้ว
 - [x] แคปจอ media-proxy — รูปจริงใน BO (**1.14.2**)
@@ -13,6 +13,7 @@
 - [x] **L1** อุ่นแคชเมนูตอนเปิดแอป · ขาย paint จากเครื่องก่อน
 - [x] **P1–P8** แคปจอลูกค้าจริง · สไลด์ 5 วิ · แถบซ้าย PosShell · option hero · popup อัปเดตซ้ายบน + กลับขายอัตโนมัติ (**1.14.7**)
 - [x] **Smart UI** `UiScale` · กริดเลื่อนลง · FIT_CENTER · ปุ่มจ่ายใหญ่ · เวอร์ชันมุมขวาบน · เข้างานทัชสั้น (**1.14.8**)
+- [x] **qty-per-option** ชิปหวาน · steppers multi · เฟรมใกล้เว็บ (**1.14.9**)
 - [x] จิ้มเมนู → จ่าย → ใบเสร็จ → รีเซ็ต · ลิ้นชักตอนสด
 
 ## คิวถัดไป (เฟสก่อนหน้าที่ยังไม่ทำ)
@@ -20,15 +21,19 @@
 |-----|--------|--------|----------|
 | **S3 / P4** | คนเทสหน้าร้านจริง | ⬜ | ต้องคนที่เคาน์เตอร์ |
 | **P5** | feedback จากนำร่อง | ⬜ | รอ P4 |
-| **N7** | ตัดเว็บขาย | ⬜ | หลัง P4–P5 |
-| **W6** | สื่อโปรโมจากหลังร้านบนจอ Idle | ⬜ | ยังไม่เริ่ม |
+| **W6** | สื่อโปรโมจากหลังร้านบนจอ Idle | ⬜ | คู่ขนาน · ยังไม่เริ่ม |
+| **Room / SQLite** | Local DB บนเครื่อง (BO = Firebase) | ⬜ | เมื่อคิวโต · L1 แคชพอใช้แล้ว |
+
+## ตัดออกตามนโยบาย
+- **N7 ตัดเว็บขาย** — ไม่ทำ (ไม่มีสต๊อกดัน)
 
 ## นอกสcope
 - ทานที่ร้าน / รับกลับ · สลิปครัว / KDS · PromptPay auto cut-off · โน้ตบิล  
 
 ## คู่ขนานได้
-- [ ] Local DB first / Room แทน SharedPreferences เมื่อคิวโต
+- [ ] Local DB first / Room บนเครื่อง เมื่อคิวโต (หลังร้านยัง Firebase)
 - [ ] สื่อโปรโมจากหลังร้านบนจอลูกค้า (W6)
+- [x] qty-per-option ละเอียดเท่าเว็บ (1.14.9)
 
 ```bash
 node scripts/check-npos-shop.mjs

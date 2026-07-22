@@ -72,6 +72,8 @@
     <string name="option_max">«%1$s» เลือกได้สูงสุด %2$d</string>
     <string name="btn_discount">ส่วนลด</string>
     <string name="btn_add_to_cart">ใส่ตะกร้า</string>
+    <string name="btn_option_confirm">ตกลง</string>
+    <string name="option_confirm_fmt">ตกลง · ฿%.0f</string>
     <string name="btn_receipts">ใบเสร็จ</string>
     <string name="btn_x_report">สรุปกลางรอบ</string>
     <string name="btn_confirm_sale">ยืนยันขาย</string>
