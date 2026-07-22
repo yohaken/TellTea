@@ -151,10 +151,6 @@ async function loadOrRefreshRank(db, opts = {}) {
   };
 }
 
-function applyBestsellersOrder(categories, items, rank) {
-  return require("./pos-menu-rank-core").applyBestsellersOrder(categories, items, rank);
-}
-
 exports.recomputePosMenuRank = recomputePosMenuRank;
 exports.loadOrRefreshRank = loadOrRefreshRank;
 exports.applyBestsellersOrder = applyBestsellersOrder;
