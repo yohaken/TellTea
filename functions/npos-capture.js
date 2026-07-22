@@ -209,7 +209,7 @@ exports.reportNposScreenCapture = functions
             installId,
             stableKey,
             customerDisplay,
-            displays: displays.length ? displays : undefined,
+            ...(displays.length ? { displays } : {}),
             latestCaptureAt: capturedAt,
             latestCaptureId: shotId,
             latestPrimaryUrl: doc.primary.url || "",
