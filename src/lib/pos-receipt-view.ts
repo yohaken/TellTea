@@ -60,7 +60,6 @@ export function localReceiptToPrintPayload(
     cashReceived: receipt.cashReceived,
     change: receipt.change,
     createdAt: receipt.createdAt,
-    orderChannel: "dine_in",
     staffName: shop.receiptStaffName,
     staffId: staffId || undefined,
     receiptFooterNote: shop.receiptFooterNote,

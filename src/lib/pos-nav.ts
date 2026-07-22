@@ -1,7 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
-  CreditCard,
   FileText,
   LayoutGrid,
   Link2,
@@ -35,7 +34,7 @@ export type PosNavItem = {
 
 export const POS_NAV_ITEMS: PosNavItem[] = [
   { id: "sell", href: "/pos/sell/", label: "สั่งและชำระเงิน", icon: ShoppingBag },
-  { id: "members", href: "/pos/members/", label: "บัตรสมาชิก", icon: CreditCard },
+  // members / coupon — hidden until real CRM (F3)
   { id: "open-bills", href: "/pos/open-bills/", label: "บิลที่เปิดอยู่", icon: FileText, requiresSelling: true },
   { id: "receipts", href: "/pos/receipts/", label: "ประวัติใบเสร็จ", icon: Receipt },
   { id: "inventory", href: "/pos/inventory/", label: "สินค้าคงคลัง", icon: Package },

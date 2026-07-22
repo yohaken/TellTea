@@ -75,13 +75,7 @@ public final class PosShellNav {
         R.string.nav_sell,
         ACTIVE_SELL.equals(activeId),
         () -> openNative(activity, SellActivity.class, activeId));
-    addLink(
-        activity,
-        nav,
-        ui,
-        R.string.nav_members,
-        false,
-        () -> openWeb(activity, "https://telltea-pos.web.app/pos/members/", true));
+    // members hidden until real CRM (F3)
     addLink(
         activity,
         nav,

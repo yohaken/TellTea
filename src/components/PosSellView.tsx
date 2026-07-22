@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PauseCircle, Tag, UserRound, X } from "lucide-react";
+import { Tag, X } from "lucide-react";
 import { getPosMenuSnapshot, publishLocalMenuOrder, retryPosMenuPreload, startPosMenuPreload, subscribePosMenuPreload } from "@/lib/pos-menu-preload";
 import { reorderMenuCategories, toggleMenuItemSoldOut } from "@/lib/pos-menu";
 import { applyActiveIdsOrder } from "@/lib/pos-drag-reorder";
@@ -117,6 +117,7 @@ export function PosSellView({
   const [confirmSoldOut, setConfirmSoldOut] = useState<MenuItem | null>(null);
   const [cartDiscount, setCartDiscount] = useState<PosCartDiscount | null>(null);
   const [discountOpen, setDiscountOpen] = useState(false);
+  const [confirmClearCart, setConfirmClearCart] = useState(false);
   const [picker, setPicker] = useState<{
     item: MenuItem;
     editCartKey?: string;
@@ -471,7 +472,6 @@ export function PosSellView({
         cashReceived: paymentMethod === "cash" ? cashNum : 0,
         change: result.change ?? 0,
         createdAt: now,
-        orderChannel: "dine_in",
         staffName: receiptStaffName,
         staffId: devicePairingCode || deviceId.slice(-6).toUpperCase(),
         receiptFooterNote,
@@ -622,18 +622,13 @@ export function PosSellView({
       <aside className="pos-sell-cart-panel">
         <header className="pos-cart-head">
           <div className="pos-cart-head-top">
-            <p className="pos-cart-channel">ทานที่ร้าน</p>
+            <p className="pos-cart-head-title">ตะกร้า</p>
             {cartCount > 0 ? (
               <span className="pos-cart-head-count">{cartCount} รายการ</span>
             ) : null}
           </div>
           <span className="pos-cart-bill-id">#{session.id.slice(-5).toUpperCase()}</span>
         </header>
-
-        <button type="button" className="pos-cart-member-bar" disabled title="เร็วๆ นี้">
-          <UserRound size={18} aria-hidden />
-          <span>เพิ่มบัตรสะสมคะแนน</span>
-        </button>
 
         <div className="pos-cart-scroll">
           <div className="pos-cart-lines">
@@ -733,9 +728,14 @@ export function PosSellView({
             </div>
           </div>
           <div className="pos-cart-actions-secondary">
-            <button type="button" className="pos-cart-secondary-btn" disabled title="เร็วๆ นี้">
-              <PauseCircle size={14} aria-hidden />
-              ส่งค้างไว้
+            <button
+              type="button"
+              className="pos-cart-secondary-btn"
+              disabled={!cartCount}
+              onClick={() => setConfirmClearCart(true)}
+            >
+              <X size={14} aria-hidden />
+              ล้างตะกร้า
             </button>
             <button
               type="button"
@@ -747,16 +747,41 @@ export function PosSellView({
               {discountBaht > 0 ? `ส่วนลด ฿${formatPlainNumber(discountBaht)}` : "ส่วนลด"}
             </button>
           </div>
-          <button
-            type="button"
-            className="pos-btn-orange pos-cart-pay-hero"
-            disabled={!cartCount}
-            onClick={openCashPay}
-          >
-            ชำระเงิน {formatPlainNumber(total)} บาท
-          </button>
+          <div className="pos-cart-pay-alt">
+            <button
+              type="button"
+              className="pos-btn-orange pos-cart-pay-main"
+              disabled={!cartCount}
+              onClick={openCashPay}
+            >
+              เงินสด · {formatPlainNumber(total)}
+            </button>
+            <button
+              type="button"
+              className="pos-cart-alt-btn"
+              disabled={!cartCount}
+              onClick={() => void openPromptPayPay()}
+            >
+              PromptPay
+            </button>
+          </div>
         </footer>
       </aside>
+
+      {confirmClearCart ? (
+        <PosConfirmDialog
+          open
+          title="ล้างตะกร้า?"
+          message="ลบทุกรายการในตะกร้า — กดยืนยันถ้าสั่งผิดทั้งบิล"
+          confirmLabel="ล้างตะกร้า"
+          onCancel={() => setConfirmClearCart(false)}
+          onConfirm={() => {
+            setCart({});
+            setCartDiscount(null);
+            setConfirmClearCart(false);
+          }}
+        />
+      ) : null}
 
       {confirmSoldOut ? (
         <PosConfirmDialog
