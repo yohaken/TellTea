@@ -18,7 +18,7 @@ const receipts = read("src/lib/receipts.ts");
 const rules = read("firestore.rules");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 221/);
+assert.match(version, /APP_BUILD = 222/);
 assert.match(brand, /BRAND_LOGO_MAX_CHARS = 80_000/);
 assert.match(brand, /meta", "brandLogo"/);
 assert.match(brand, /purgeLegacyBrandLogoStorage/);

@@ -3,8 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>nPos-telltea — ดาวน์โหลดติดตั้ง</title>
+    <title>TellTea nPos — ดาวน์โหลดติดตั้ง</title>
+    <meta
+      name="description"
+      content="ดาวน์โหลดแอปหน้าร้าน TellTea nPos สำหรับแท็บเล็ต Android — เข้างาน ขาย ชำระ พิมพ์ใบเสร็จ"
+    />
     <link rel="icon" href="/logo-mark.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
       :root {
         --bg0: #1a2e24;
@@ -13,6 +23,7 @@
         --muted: rgba(243, 246, 242, 0.72);
         --accent: #c4a35a;
         --btn: #2f6b4f;
+        --btn-ink: #fff;
       }
       * {
         box-sizing: border-box;
@@ -20,7 +31,7 @@
       body {
         margin: 0;
         min-height: 100dvh;
-        font-family: "Sarabun", "Noto Sans Thai", system-ui, sans-serif;
+        font-family: "Sarabun", "Noto Sans Thai", sans-serif;
         color: var(--ink);
         background:
           radial-gradient(120% 80% at 10% 0%, rgba(196, 163, 90, 0.18), transparent 55%),
@@ -36,18 +47,26 @@
       .mark {
         width: 4.5rem;
         height: 4.5rem;
-        margin: 0 auto 1rem;
+        margin: 0 auto 0.85rem;
         display: block;
       }
-      h1 {
+      .brand {
         margin: 0;
-        font-size: clamp(1.75rem, 6vw, 2.35rem);
+        font-size: 0.95rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      h1 {
+        margin: 0.25rem 0 0;
+        font-size: clamp(1.85rem, 6.5vw, 2.45rem);
         font-weight: 700;
         letter-spacing: -0.02em;
-        line-height: 1.15;
+        line-height: 1.12;
       }
-      p {
-        margin: 0.75rem 0 0;
+      .lead {
+        margin: 0.7rem 0 0;
         font-size: 1.05rem;
         color: var(--muted);
         line-height: 1.45;
@@ -81,12 +100,12 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        margin-top: 1.35rem;
+        margin-top: 1.15rem;
         min-height: 3.1rem;
         padding: 0.85rem 1.4rem;
         border-radius: 12px;
         background: var(--btn);
-        color: #fff;
+        color: var(--btn-ink);
         font-size: 1.1rem;
         font-weight: 700;
         text-decoration: none;
@@ -99,31 +118,128 @@
         opacity: 0.55;
         pointer-events: none;
       }
+      .qr-block {
+        margin-top: 1.35rem;
+        padding: 1rem 1rem 0.85rem;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(243, 246, 242, 0.12);
+      }
+      .qr-block img {
+        width: min(11.5rem, 70vw);
+        height: auto;
+        margin: 0 auto;
+        display: block;
+        border-radius: 8px;
+        background: #fff;
+        padding: 0.45rem;
+      }
+      .qr-caption {
+        margin: 0.65rem 0 0;
+        font-size: 0.9rem;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      .share-link {
+        margin: 0.55rem 0 0;
+        font-size: 0.82rem;
+        color: var(--accent);
+        word-break: break-all;
+      }
+      .share-link a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .copy-row {
+        margin-top: 0.65rem;
+        display: flex;
+        gap: 0.5rem;
+      }
+      .copy-btn {
+        flex: 1;
+        min-height: 2.5rem;
+        border: 1px solid rgba(243, 246, 242, 0.22);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--ink);
+        font: inherit;
+        font-size: 0.92rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .copy-btn:active {
+        transform: scale(0.98);
+      }
       .hint {
-        margin-top: 1.1rem;
+        margin-top: 1.15rem;
         font-size: 0.9rem;
         color: var(--muted);
         text-align: left;
       }
+      .hint strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
       .hint ol {
-        margin: 0.4rem 0 0;
+        margin: 0.45rem 0 0;
         padding-left: 1.2rem;
       }
       .hint li + li {
-        margin-top: 0.35rem;
+        margin-top: 0.4rem;
+      }
+      .features {
+        margin: 0.85rem 0 0;
+        padding: 0;
+        list-style: none;
+        text-align: left;
+        font-size: 0.92rem;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      .features li {
+        position: relative;
+        padding-left: 1rem;
+      }
+      .features li + li {
+        margin-top: 0.3rem;
+      }
+      .features li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0.55em;
+        width: 0.35rem;
+        height: 0.35rem;
+        border-radius: 50%;
+        background: var(--accent);
       }
       code {
         color: var(--accent);
         font-size: 0.85em;
         word-break: break-all;
       }
+      .foot {
+        margin-top: 1.25rem;
+        font-size: 0.8rem;
+        color: rgba(243, 246, 242, 0.5);
+      }
     </style>
   </head>
   <body>
     <main>
       <img class="mark" src="/logo-mark.svg" alt="" width="72" height="72" />
-      <h1>nPos-telltea</h1>
-      <p>ดูเวอร์ชันด้านล่างก่อนดาวน์โหลดเสมอ — ถ้าติดตั้งทับไม่ได้ ให้ถอนแอปเดิมครั้งหนึ่งแล้วลงใหม่</p>
+      <p class="brand">TellTea</p>
+      <h1>nPos</h1>
+      <p class="lead">
+        แอปหน้าร้านสำหรับแท็บเล็ต Android — เข้างาน ขาย ชำระเงิน พิมพ์ใบเสร็จ
+        แทนเว็บ POS บนเครื่องขาย
+      </p>
+
+      <ul class="features" aria-label="ความสามารถหลัก">
+        <li>เมนูหน้าร้าน · ตะกร้า · เงินสด / PromptPay</li>
+        <li>พิมพ์ใบเสร็จ · ลิ้นชัก · จอลูกค้า (ถ้ามี)</li>
+        <li>อัปเดตในแอปเมื่อมีเวอร์ชันใหม่</li>
+      </ul>
 
       <div class="version-box" aria-live="polite">
         <p class="version-label">เวอร์ชันที่จะติดตั้ง</p>
@@ -141,25 +257,74 @@
         ดาวน์โหลดไฟล์ติดตั้ง
       </a>
 
+      <div class="qr-block">
+        <img
+          src="/install/qr-pos-install.png"
+          width="528"
+          height="528"
+          alt="QR เปิดหน้าติดตั้ง nPos"
+        />
+        <p class="qr-caption">สแกนด้วยกล้องมือถือ/แท็บเล็ต แล้วเปิดลิงก์ใน Chrome</p>
+        <p class="share-link">
+          <a id="shareUrl" href="https://telltea-pos.web.app/install/"
+            >https://telltea-pos.web.app/install/</a
+          >
+        </p>
+        <div class="copy-row">
+          <button type="button" class="copy-btn" id="copyLinkBtn">คัดลอกลิงก์ส่งพนักงาน</button>
+        </div>
+      </div>
+
       <div class="hint">
         <ol>
           <li>เช็คเลขเวอร์ชันด้านบนก่อนกดดาวน์โหลดทุกครั้ง</li>
-          <li>เปิดด้วย <strong>Chrome</strong> บนแท็บเล็ต/เอมูเลเตอร์ → กดดาวน์โหลด → อนุญาตติดตั้ง</li>
-          <li>ถ้าขึ้นติดตั้งไม่ได้: <strong>ถอน nPos-telltea เดิม</strong> แล้วกลับมากดดาวน์โหลดอีกครั้ง (ทำครั้งเดียว)</li>
-          <li>เปิดไอคอน <strong>nPos-telltea</strong> แล้วเทียบเลขเวอร์ชันในแอป</li>
-          <li>แมนิเฟสต์: <code>/downloads/latest.json</code></li>
+          <li>
+            เปิดด้วย <strong>Chrome</strong> บนแท็บเล็ต → กดดาวน์โหลด → อนุญาตติดตั้งจากแหล่งนี้
+          </li>
+          <li>
+            ถ้าติดตั้งทับไม่ได้: <strong>ถอน nPos-telltea เดิม</strong> แล้วกลับมากดดาวน์โหลดอีกครั้ง
+          </li>
+          <li>
+            เปิดไอคอน <strong>nPos-telltea</strong> → เข้างาน → จะเห็นเมนูหน้าร้าน (ขาย / รอบ /
+            ประวัติ / ตั้งค่า)
+          </li>
+          <li>
+            ในแอปมีปุ่มอัปเดตเอง — ไม่ต้องสแกน QR ทุกครั้งเมื่อมีเวอร์ชันใหม่
+          </li>
         </ol>
       </div>
+
+      <p class="foot">TellTea · หน้าร้าน native · แมนิเฟสต์ <code>/downloads/latest.json</code></p>
     </main>
     <script>
       (function () {
+        var INSTALL_URL = "https://telltea-pos.web.app/install/";
         var versionValue = document.getElementById("versionValue");
         var versionMeta = document.getElementById("versionMeta");
         var downloadBtn = document.getElementById("downloadBtn");
+        var copyBtn = document.getElementById("copyLinkBtn");
 
         function enableDownload(href) {
           downloadBtn.href = href || "/downloads/nPos-telltea.apk";
           downloadBtn.setAttribute("aria-disabled", "false");
+        }
+
+        if (copyBtn) {
+          copyBtn.addEventListener("click", function () {
+            var done = function () {
+              copyBtn.textContent = "คัดลอกแล้ว";
+              setTimeout(function () {
+                copyBtn.textContent = "คัดลอกลิงก์ส่งพนักงาน";
+              }, 1600);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(INSTALL_URL).then(done).catch(function () {
+                window.prompt("คัดลอกลิงก์นี้", INSTALL_URL);
+              });
+            } else {
+              window.prompt("คัดลอกลิงก์นี้", INSTALL_URL);
+            }
+          });
         }
 
         fetch("/downloads/latest.json?t=" + Date.now(), { cache: "no-store" })
@@ -191,5 +356,5 @@
       })();
     </script>
   </body>
-<!-- install-version-banner:v1 -->
+  <!-- install-version-banner:v2-npos-sell -->
 </html>
