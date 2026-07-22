@@ -1,6 +1,6 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **1.14.18** ตัดช่องทางเคาน์เตอร์ + แก้ e2e nav/menu ให้ deploy ผ่าน  
+อัปเดต: **1.14.19** ตัดช่องทางเคาน์เตอร์ + แก้ e2e nav/menu ให้ deploy ผ่าน  
 ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-blind-shift-close-checklist.md](./npos-blind-shift-close-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md) · [npos-bestseller-rank-checklist.md](./npos-bestseller-rank-checklist.md) · [npos-sell-flow-polish-checklist.md](./npos-sell-flow-polish-checklist.md) · [npos-receipt-parity-checklist.md](./npos-receipt-parity-checklist.md) · [npos-z-report-form-checklist.md](./npos-z-report-form-checklist.md) · [npos-bo-shift-readonly-checklist.md](./npos-bo-shift-readonly-checklist.md) · [npos-cut-bo-entry-checklist.md](./npos-cut-bo-entry-checklist.md)
 
 ## ทำแล้ว
@@ -20,13 +20,13 @@
 - [x] **Receipt R1–R4** ฟอร์มใบเสร็จเว็บ → native ESC/POS · พิมพ์ออฟไลน์ได้ (**1.14.13**)
 - [x] **Z1–Z3** สลิปปิดกะ หัวร้าน · เปิด/ปิด · ช่องเซ็น · ไม่มี Delivery (**1.14.14**)
 - [x] **S1–S3** เว็บกะดูอย่างเดียว · การ์ดรอบหลังบ้าน · เปิดกะยืนยันทอน · ผู้ส่ง/ผู้รับ (**1.14.15**)
-- [x] **Cut C1–C4** ตัดช่องทางเคาน์เตอร์ → หลังร้าน/เว็บ BO (**1.14.18**)
+- [x] **Cut C1–C4** ตัดช่องทางเคาน์เตอร์ → หลังร้าน/เว็บ BO (**1.14.19**)
 - [x] จิ้มเมนู → จ่าย → ใบเสร็จ → รีเซ็ต · ลิ้นชักตอนสด
 
 ## คิวถัดไป (เฟสก่อนหน้าที่ยังไม่ทำ)
 | เฟส | โฟกัส | สถานะ | ทำไมค้าง |
 |-----|--------|--------|----------|
-| **Cut C1–C5** | ตัดทางเข้าหลังร้านจากเคาน์เตอร์ | ✅ C1–C4 | **1.14.18** · ค้างคนเทส C5 |
+| **Cut C1–C5** | ตัดทางเข้าหลังร้านจากเคาน์เตอร์ | ✅ C1–C4 | **1.14.19** · ค้างคนเทส C5 |
 | **S1–S4** | หลังบ้านดูกะ · ไม่ปิดกะจากเว็บ · การ์ดรอบ | ✅ S1–S3 | **1.14.15** · ค้างคนเทส S4 |
 | **Z1–Z4** | สลิป Z/X ปิดกะครบพิธีเคาน์เตอร์ | ✅ Z1–Z3 | **1.14.14** · ค้างคนเทส Z4 |
 | **Receipt R1–R5** | ใบเสร็จ native = ฟอร์มเว็บ · ESC/POS | ✅ R1–R4 | **1.14.13** · ค้างคนเทส R5 |
@@ -45,7 +45,7 @@
 - ทานที่ร้าน / รับกลับ / Delivery · สลิปครัว / KDS · PromptPay auto cut-off · โน้ตบิล · คูปอง/สมาชิก · บัตร/โอน · ปิดกะจากเว็บ  
 
 ## คู่ขนานได้
-- [x] **Cut C1–C4** ตัดช่องทางเคาน์เตอร์ → หลังร้าน (**1.14.18**)
+- [x] **Cut C1–C4** ตัดช่องทางเคาน์เตอร์ → หลังร้าน (**1.14.19**)
 - [x] **S1–S3** หลังบ้านดูกะอย่างเดียว + เปิดกะยืนยันทอน (**1.14.15**)
 - [x] **Z1–Z3** สลิป Z/X ปิดกะครบพิธี (**1.14.14**)
 - [x] **Receipt R1–R4** ฟอร์มใบเสร็จเว็บ → native ESC/POS (**1.14.13**)
