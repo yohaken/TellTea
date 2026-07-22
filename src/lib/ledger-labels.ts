@@ -1,3 +1,5 @@
+/** Shared display + canonical keys for ledger / owner-books / PnL. */
+
 const TYPE_LABELS: Record<string, string> = {
   auto: "อัตโนมัติจากชื่อรายการ",
   cogs: "ต้นทุน (cogs)",
@@ -10,6 +12,34 @@ const TYPE_LABELS: Record<string, string> = {
   ยอดยกมา: "ยอดยกมา",
 };
 
+/** Reverse map: common display / Excel aliases → stored key */
+const TYPE_ALIASES: Record<string, string> = {
+  cogs: "cogs",
+  cosg: "cogs",
+  cost: "cogs",
+  costs: "cogs",
+  "ต้นทุน": "cogs",
+  "ต้นทุน (cogs)": "cogs",
+  sga: "sga",
+  expense: "sga",
+  expenses: "sga",
+  opex: "sga",
+  "ค่าใช้จ่าย": "sga",
+  "ค่าใช้จ่าย (sga)": "sga",
+  asset: "asset",
+  assets: "asset",
+  capex: "asset",
+  "สินทรัพย์": "asset",
+  "สินทรัพย์ (asset)": "asset",
+  other: "อื่นๆ",
+  others: "อื่นๆ",
+  อื่นๆ: "อื่นๆ",
+  โอนเข้า: "โอนเข้า",
+  ยอดยกมา: "ยอดยกมา",
+  pos: "pos",
+  pos_void: "pos_void",
+};
+
 export const BASE_TYPE_OPTIONS = [
   { value: "auto", label: "ให้ AI จัดประเภท" },
   { value: "cogs", label: TYPE_LABELS.cogs },
@@ -18,14 +48,28 @@ export const BASE_TYPE_OPTIONS = [
   { value: "อื่นๆ", label: TYPE_LABELS["อื่นๆ"] },
 ] as const;
 
+/**
+ * Map any stored / display / Excel alias to the canonical key used in Firestore.
+ * Unknown strings are returned trimmed as-is (freeform history).
+ */
+export function canonicalLedgerType(raw: string | undefined | null): string {
+  const t = String(raw || "").trim();
+  if (!t) return "";
+  const lower = t.toLowerCase();
+  if (TYPE_ALIASES[t]) return TYPE_ALIASES[t]!;
+  if (TYPE_ALIASES[lower]) return TYPE_ALIASES[lower]!;
+  // Display label with different spacing/case
+  for (const [key, label] of Object.entries(TYPE_LABELS)) {
+    if (key === "auto") continue;
+    if (label === t || label.toLowerCase() === lower) return key;
+  }
+  return t;
+}
+
 export function labelLedgerType(type: string) {
   if (!type) return "";
-  const key = type.trim();
-  const lower = key.toLowerCase();
-  if (lower === "asset" || lower === "assets") return TYPE_LABELS.asset;
-  if (lower === "cogs" || lower === "cosg") return TYPE_LABELS.cogs;
-  if (lower === "sga") return TYPE_LABELS.sga;
-  return TYPE_LABELS[key] || TYPE_LABELS[lower] || key;
+  const key = canonicalLedgerType(type);
+  return TYPE_LABELS[key] || key;
 }
 
 /** เดาหมวดจากชื่อรายการ — พนักงานไม่ต้องเลือกเอง */
@@ -108,7 +152,7 @@ export function frequentTypes(
   for (const e of entries) {
     const raw = (e.type || "").trim();
     if (!raw) continue;
-    const key = raw.toLowerCase() === "asset" ? "asset" : raw.toLowerCase() === "cogs" ? "cogs" : raw.toLowerCase() === "sga" ? "sga" : raw;
+    const key = canonicalLedgerType(raw) || raw;
     map.set(key, (map.get(key) || 0) + 1);
   }
   return [...map.entries()]

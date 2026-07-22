@@ -19,6 +19,7 @@
     "test:ledger-transfer-in-fab": "node scripts/test-ledger-transfer-in-fab.mjs",
     "test:alerts-pos-manage-hub": "node scripts/test-alerts-pos-manage-hub.mjs",
     "test:check-sop-settings-fold": "node scripts/test-check-sop-settings-fold.mjs",
+    "test:ledger-type-labels-unify": "node scripts/test-ledger-type-labels-unify.mjs",
     "test:ot-multi-photo": "node scripts/test-ot-multi-photo.mjs",
     "test:ot-photo-budget": "node scripts/test-ot-photo-budget.mjs",
     "test:ot-photo-save-amend": "node scripts/test-ot-photo-save-amend.mjs",

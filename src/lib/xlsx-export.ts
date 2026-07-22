@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { labelLedgerType } from "./ledger-labels";
+import { categoryLabel } from "./categories";
 import type { LedgerEntry } from "./types";
 import type { OwnerBookEntry } from "./owner-books";
 import {
@@ -48,30 +49,34 @@ function appendSheet(
 }
 
 function categorySheetRows(rows: MonthCategoryRow[], includeTotals: boolean) {
+  const colAsset = categoryLabel("asset");
+  const colCogs = categoryLabel("cogs");
+  const colSga = categoryLabel("sga");
+  const colOther = categoryLabel("other");
   const out = rows.map((r) => ({
     เดือน: r.month,
-    Asset: r.asset,
-    cogs: r.cogs,
-    sga: r.sga,
-    อื่นๆ: r.other,
+    [colAsset]: r.asset,
+    [colCogs]: r.cogs,
+    [colSga]: r.sga,
+    [colOther]: r.other,
   }));
   if (includeTotals && rows.length) {
     const t = sumCategoryRows(rows);
     const a = averageCategoryRows(rows);
     out.push({
       เดือน: "รวม",
-      Asset: t.asset,
-      cogs: t.cogs,
-      sga: t.sga,
-      อื่นๆ: t.other,
+      [colAsset]: t.asset,
+      [colCogs]: t.cogs,
+      [colSga]: t.sga,
+      [colOther]: t.other,
     });
     if (a) {
       out.push({
         เดือน: "เฉลี่ย",
-        Asset: a.asset,
-        cogs: a.cogs,
-        sga: a.sga,
-        อื่นๆ: a.other,
+        [colAsset]: a.asset,
+        [colCogs]: a.cogs,
+        [colSga]: a.sga,
+        [colOther]: a.other,
       });
     }
   }
@@ -84,19 +89,22 @@ function pctCell(n: number | null) {
 }
 
 function pnlSheetRows(rows: PnlMonthRow[], includeTotals: boolean) {
+  const colCogs = categoryLabel("cogs");
+  const colSga = categoryLabel("sga");
+  const colAsset = categoryLabel("asset");
   const mapRow = (r: PnlMonthRow) => ({
     เดือน: r.month,
     รายได้: r.income,
     "รายได้/วัน": Number(r.incomePerDay.toFixed(2)),
-    COGS: r.cogs,
-    "COGS%": pctCell(r.cogsPct),
+    [colCogs]: r.cogs,
+    [`${colCogs}%`]: pctCell(r.cogsPct),
     กำไรขั้นต้น: r.gross,
     "กำไรขั้นต้น%": pctCell(r.grossPct),
-    SGA: r.sga,
-    "SGA%": pctCell(r.sgaPct),
+    [colSga]: r.sga,
+    [`${colSga}%`]: pctCell(r.sgaPct),
     สุทธิ: r.net,
     "สุทธิ%": pctCell(r.netPct),
-    Asset: r.asset,
+    [colAsset]: r.asset,
     "invest/net%": pctCell(r.investOverNet),
     "เงินสด+": r.cashPlus,
     "เงินสดต่อรายได้%": pctCell(r.cashOverIncome),

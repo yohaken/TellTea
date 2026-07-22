@@ -24,7 +24,7 @@ import {
   resolveStoredTypeSource,
   type LedgerTypeSource,
 } from "@/lib/ledger-ai";
-import { frequentTypes } from "@/lib/ledger-labels";
+import { frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
 import {
   addOwnerBookEntry,
   deleteOwnerBookEntry,
@@ -384,7 +384,7 @@ function OwnerBooksView() {
                     </td>
                     <td className="col-act">
                       <span className="muted" style={{ fontSize: "0.72rem" }}>
-                        {row.type || "—"}
+                        {row.type ? labelLedgerType(row.type) : "—"}
                       </span>
                     </td>
                     <td className="col-note" title={row.note || ""}>

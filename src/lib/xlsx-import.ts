@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx";
 import type { LedgerEntryInput } from "./types";
 import { parseDateInput } from "./utils";
-import { labelLedgerType } from "./ledger-labels";
+import { canonicalLedgerType, labelLedgerType } from "./ledger-labels";
 
 export type ImportLedgerRow = LedgerEntryInput & {
   createdAt: number;
@@ -104,6 +104,8 @@ export function parseLedgerWorkbook(
     let type = colType != null ? String(row[colType] ?? "").trim() : "";
     if (!type && amountIn > 0) {
       type = description.includes("ยกมา") ? "ยอดยกมา" : "โอนเข้า";
+    } else if (type) {
+      type = canonicalLedgerType(type) || type;
     }
 
     parsed.push({
@@ -191,6 +193,7 @@ export function parseOwnerBooksWorkbook(
       const raw = row[typeColFallback];
       if (typeof raw === "string") type = raw.trim();
     }
+    if (type) type = canonicalLedgerType(type) || type;
 
     const note = colNote != null ? String(row[colNote] ?? "").trim() : "";
 
