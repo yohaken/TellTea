@@ -1,8 +1,8 @@
 /**
- * Alerts removed; POS manage tab is empty (placeholder). Web POS admin stays on tablet.
+ * Alerts removed; POS manage tab = nPos panels only (no FoodStory BO sync UI).
  */
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,8 +21,9 @@ const perms = read("src/lib/permissions.ts");
 const settingsLib = read("src/lib/settings.ts");
 const rules = read("firestore.rules");
 const smoke = read("scripts/smoke-hosting-export.mjs");
+const indexFn = read("functions/index.js");
 
-assert.match(version, /APP_BUILD = 243/);
+assert.match(version, /APP_BUILD = 244/);
 
 assert.match(alerts, /router\.replace\("\/more\/"\)/);
 assert.doesNotMatch(more, /href: "\/alerts\/"/);
@@ -32,7 +33,6 @@ assert.doesNotMatch(shell, /UiSettingsProvider/);
 assert.match(shell, /"\/pos-sales"/);
 assert.doesNotMatch(shell, /"\/alerts"/);
 assert.match(rules, /pushSubscriptions[\s\S]*allow read: if isOwner\(\)/);
-assert.match(rules, /foodstoryAuth/);
 assert.doesNotMatch(rules, /hasPerm\('alerts'\)/);
 assert.doesNotMatch(smoke, /"alerts"/);
 
@@ -49,21 +49,15 @@ assert.doesNotMatch(manage, /PosDeviceSetup/);
 assert.doesNotMatch(manage, /PosOpsNotesSetup/);
 assert.doesNotMatch(manage, /PosShopPaySetup/);
 assert.doesNotMatch(manage, /PosPrinterSetup/);
-assert.match(manage, /FoodstoryMenuSyncPanel/);
+assert.doesNotMatch(manage, /FoodstoryMenuSyncPanel/);
 assert.match(manage, /NposDevicesPanel/);
 assert.match(manage, /NposDiagnosePanel/);
 assert.doesNotMatch(manage, /ยังไม่มีรายการจัดการ/);
 assert.match(more, /รายงานยอดขาย POS/);
 
-const syncFn = read("functions/foodstory-menu-sync.js");
-const syncLib = read("src/lib/foodstory-menu-sync.ts");
-const syncPanel = read("src/components/FoodstoryMenuSyncPanel.tsx");
-const indexFn = read("functions/index.js");
-assert.match(indexFn, /foodstoryMenuSync/);
-assert.match(syncFn, /action === "sync"/);
-assert.match(syncFn, /save_auth/);
-assert.match(syncLib, /runFoodstoryMenuSync/);
-assert.match(syncPanel, /ซิงก์เมนูตอนนี้/);
-assert.match(syncPanel, /บันทึกเซสชัน/);
+assert.doesNotMatch(indexFn, /foodstoryMenuSync/);
+assert.equal(existsSync(join(root, "functions/foodstory-menu-sync.js")), false);
+assert.equal(existsSync(join(root, "src/components/FoodstoryMenuSyncPanel.tsx")), false);
+assert.equal(existsSync(join(root, "src/lib/foodstory-menu-sync.ts")), false);
 
 console.log("OK test-alerts-pos-manage-hub");

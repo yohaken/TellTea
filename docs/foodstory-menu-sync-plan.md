@@ -126,12 +126,10 @@ npm run foodstory:menu-apply -- --apply
 7. ตัวเลือกครบ: สร้าง/อัปเดต `menuOptionGroups` ให้ขายจริงได้
 8. คง `recommended` / `visibleOnPos` เดิมตอนอัปเดต
 
-ผลลัพธ์: `/pos/menu/` + หน้าขายเว็บตรง FS (บวกรายการมือ) · Native รับต่อผ่าน `nposMenuSnapshot`  
+ผลลัพธ์: `/pos/menu/` + หน้าขายเว็บตรง FS (บวกรายการมือ) · Native รับต่อผ่าน `nposMenuSnapshot`
 
-**UI หลังร้าน:** รายงานยอดขาย POS → แท็บ **จัดการ Pos** → พับ **ระบบซิงก์เมนู (FoodStory)**  
-- บันทึกเซสชัน (`idKey` + `branchId`) ครั้งแรก  
-- ปุ่ม **ดูแผน (dry-run)** / **ซิงก์เมนูตอนนี้** → CF `foodstoryMenuSync`  
-- รอบถัดไปกดซิงก์อย่างเดียว (จนกว่า token หมดอายุ — ถ้าหมดค่อยรีเฟรช idKey จาก Chrome อีกครั้ง)
+**หลังร้าน:** ถอดแผงซิงก์ออกแล้ว (2026-07-22) — ไม่มีปุ่มในจัดการ Pos  
+ซิงก์รอบถัดไปใช้เครื่องมือบนเครื่องเอง (`foodstory:menu-capture` / `foodstory:menu-apply` หรือระบบที่สร้างเอง) ไม่ผ่าน UI หลังร้าน
 
 ### Phase 2 — ไหลไป Native (ของเดิม)
 

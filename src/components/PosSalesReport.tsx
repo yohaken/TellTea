@@ -326,7 +326,7 @@ export function PosSalesReportPage() {
       </h1>
       <p className="muted" style={{ marginBottom: "0.75rem" }}>
         รายงานยอดขาย POS — เฉพาะเจ้าของ
-        (แท็บจัดการ Pos: ซิงก์เมนู FoodStory · เครื่อง nPos · ไทม์ไลน์)
+        (แท็บจัดการ Pos: เครื่อง nPos · ไทม์ไลน์)
       </p>
 
       <div className="stock-owner-tabs" role="tablist" aria-label="หมวด POS">

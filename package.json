@@ -86,7 +86,6 @@
     "foodstory:menu-login": "node scripts/foodstory-menu-login.mjs",
     "foodstory:menu-capture": "node scripts/foodstory-menu-capture.mjs",
     "foodstory:menu-apply": "node scripts/foodstory-menu-apply.mjs",
-    "foodstory:auth-hint": "node scripts/foodstory-push-auth-hint.mjs",
     "test:foodstory-menu-capture": "node scripts/test-foodstory-menu-capture.mjs",
     "test:foodstory-menu-apply": "node scripts/test-foodstory-menu-apply.mjs",
     "start": "next start",

@@ -28,7 +28,6 @@ exports.nposCompleteSale = nposSell.nposCompleteSale;
 exports.nposVoidSale = nposSell.nposVoidSale;
 exports.nposToggleSoldOut = nposSell.nposToggleSoldOut;
 exports.nposReorderCategories = nposSell.nposReorderCategories;
-exports.foodstoryMenuSync = require("./foodstory-menu-sync").foodstoryMenuSync;
 const posMenuRank = require("./pos-menu-rank");
 exports.posRecomputeMenuRank = posMenuRank.posRecomputeMenuRank;
 exports.posMenuRankDaily = posMenuRank.posMenuRankDaily;

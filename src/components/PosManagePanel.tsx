@@ -4,10 +4,9 @@ import { NposDiagnosePanel } from "@/components/NposDiagnosePanel";
 import { NposDevicesPanel } from "@/components/NposDevicesPanel";
 import { NposOpsLogPanel } from "@/components/NposOpsLogPanel";
 import { NposCaptureTimelinePanel } from "@/components/NposCaptureTimelinePanel";
-import { FoodstoryMenuSyncPanel } from "@/components/FoodstoryMenuSyncPanel";
 
 /**
- * หมวดจัดการ Pos — ซิงก์เมนู + เครื่องออนไลน์ + ตรวจเครื่อง + ไทม์ไลน์ ops / แคป
+ * หมวดจัดการ Pos — เครื่องออนไลน์ + ตรวจเครื่อง + ไทม์ไลน์ ops / แคป
  */
 export function PosManagePanel({ onError }: { onError: (msg: string | null) => void }) {
   return (
@@ -18,7 +17,6 @@ export function PosManagePanel({ onError }: { onError: (msg: string | null) => v
         หมายเหตุ: ตอนเทส emulator อาจเหลือเอกสารเก่าหลาย installId — แผงด้านล่างพับเป็นเครื่องจริงเครื่องเดียว
         (แสดงเฉพาะรายงาน/เวอร์ชันล่าสุด)
       </p>
-      <FoodstoryMenuSyncPanel onError={onError} />
       <NposDevicesPanel onError={onError} />
       <NposCaptureTimelinePanel onError={onError} />
       <NposOpsLogPanel onError={onError} />
