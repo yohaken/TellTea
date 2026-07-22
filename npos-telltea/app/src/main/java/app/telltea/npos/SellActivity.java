@@ -1522,14 +1522,6 @@ public class SellActivity extends Activity {
     }
   }
 
-  private MenuModels.Item findMenuItem(String id) {
-    if (menu == null || id == null) return null;
-    for (MenuModels.Item it : menu.items) {
-      if (id.equals(it.id)) return it;
-    }
-    return null;
-  }
-
   private void editCartLineOptions(int index) {
     if (index < 0 || index >= cart.size()) return;
     MenuModels.CartLine line = cart.get(index);
