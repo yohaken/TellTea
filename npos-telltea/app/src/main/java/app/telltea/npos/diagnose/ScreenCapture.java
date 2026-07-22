@@ -120,18 +120,46 @@ public final class ScreenCapture {
             body.put("secondary", s);
         }
 
-        postJson(body);
+        JSONObject res = postJson(body);
         CapturePrefs.setLastCaptureAt(app, System.currentTimeMillis());
         if (requestAt > 0) CapturePrefs.setLastAckRequestAt(app, requestAt);
-        OpsLogger.info(
-                app,
-                "display",
-                "ส่งแคปจอแล้ว",
-                reason
-                        + " · หลัก="
-                        + (primary != null && primary.ok)
-                        + " · สอง="
-                        + (secondary != null && secondary.ok));
+        boolean hasImages = res != null && res.optBoolean("hasImages", false);
+        String shotId = res != null ? res.optString("shotId", "") : "";
+        String urlHint =
+                res != null && res.optString("primaryUrl", "").length() > 8
+                        ? "url=yes"
+                        : "url=no";
+        if (hasImages) {
+            OpsLogger.info(
+                    app,
+                    "display",
+                    "ส่งแคปจอแล้ว",
+                    reason
+                            + " · shot="
+                            + shotId
+                            + " · "
+                            + urlHint
+                            + " · หลัก="
+                            + (primary != null && primary.ok)
+                            + " · สอง="
+                            + (secondary != null && secondary.ok));
+        } else {
+            OpsLogger.warn(
+                    app,
+                    "display",
+                    "แคปจอไม่มีรูปบนเซิร์ฟเวอร์",
+                    reason
+                            + " · shot="
+                            + shotId
+                            + " · หลัก="
+                            + (primary != null && primary.ok)
+                            + " · สอง="
+                            + (secondary != null && secondary.ok)
+                            + " · "
+                            + (primary != null ? primary.detail : "")
+                            + " · "
+                            + (secondary != null ? secondary.detail : ""));
+        }
     }
 
     private static JSONObject displayToJson(DisplayProbe.DisplayInfo d) throws Exception {
@@ -423,7 +451,7 @@ public final class ScreenCapture {
         return Bitmap.createScaledBitmap(src, nw, nh, true);
     }
 
-    private static void postJson(JSONObject body) throws Exception {
+    private static JSONObject postJson(JSONObject body) throws Exception {
         HttpURLConnection conn = null;
         try {
             conn = (HttpURLConnection) new URL(REPORT_URL).openConnection();
@@ -442,6 +470,12 @@ public final class ScreenCapture {
             String raw = readAll(stream);
             if (code < 200 || code >= 300) {
                 throw new IllegalStateException("HTTP " + code + (raw.isEmpty() ? "" : ": " + raw));
+            }
+            if (raw == null || raw.isEmpty()) return new JSONObject();
+            try {
+                return new JSONObject(raw);
+            } catch (Exception parseErr) {
+                return new JSONObject();
             }
         } finally {
             if (conn != null) conn.disconnect();

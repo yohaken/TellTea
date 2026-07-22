@@ -131,7 +131,9 @@ export function subscribeNposDiagnoseReports(
   onReports: (reports: NposDiagnoseReport[]) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
-  const q = query(collection(getDb(), NPOS_DIAGNOSE_COL), orderBy("reportedAt", "desc"));
+  // updatedAt is set by both diagnose reports and capture uploads — reportedAt-only
+  // queries omit capture-only docs (missing reportedAt) so BO gallery stayed empty.
+  const q = query(collection(getDb(), NPOS_DIAGNOSE_COL), orderBy("updatedAt", "desc"));
   return onSnapshot(
     q,
     (snap) => {

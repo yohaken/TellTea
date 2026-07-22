@@ -56,7 +56,7 @@ function OpsTable({ rows }: { rows: FlatRow[] }) {
             <th>เวลา</th>
             <th>L</th>
             <th>cat</th>
-            <th>ข้อความ</th>
+            <th>ข้อความ / รายละเอียด</th>
             <th>เครื่อง</th>
           </tr>
         </thead>
@@ -81,7 +81,14 @@ function OpsTable({ rows }: { rows: FlatRow[] }) {
                 <td className="npos-ops-time">{shortTime(ev.at)}</td>
                 <td className="npos-ops-lvl">{levelMark(ev.level)}</td>
                 <td className="npos-ops-cat">{ev.cat}</td>
-                <td className="npos-ops-msg">{ev.msg}</td>
+                <td className="npos-ops-msg">
+                  <div>{ev.msg}</div>
+                  {ev.detail ? (
+                    <div className="npos-ops-detail muted" title={ev.detail}>
+                      {ev.detail}
+                    </div>
+                  ) : null}
+                </td>
                 <td className="npos-ops-dev" title={row.groupKey}>
                   {shortStableKey(row.stableKey, row.installId)}
                 </td>

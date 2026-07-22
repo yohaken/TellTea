@@ -74,6 +74,7 @@ async function saveJpeg(installId, role, jpegBase64) {
     resumable: false,
     metadata: {
       contentType: "image/jpeg",
+      cacheControl: "public,max-age=31536000",
       metadata: {
         firebaseStorageDownloadTokens: token,
         installId,
@@ -82,10 +83,26 @@ async function saveJpeg(installId, role, jpegBase64) {
       },
     },
   });
-  // Token URL works without signBlob IAM and loads in mobile browsers.
-  const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(
-    objectPath,
-  )}?alt=media&token=${token}`;
+  // Prefer long-lived signed read URL (same as evidence-upload). Token URLs often
+  // look valid in Firestore but fail in <img> when Firebase Storage tokens / UBLA
+  // are not wired — BO then shows empty thumbs while "มี URL".
+  let downloadUrl = "";
+  try {
+    const [signed] = await file.getSignedUrl({
+      version: "v4",
+      action: "read",
+      expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
+    });
+    downloadUrl = signed;
+  } catch (signErr) {
+    console.warn(
+      "npos-capture signed URL failed, falling back to media token",
+      signErr?.message || signErr,
+    );
+    downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(
+      objectPath,
+    )}?alt=media&token=${token}`;
+  }
   return { downloadUrl, path: objectPath, bytes: buffer.length, bucket: bucket.name };
 }
 
@@ -201,6 +218,9 @@ exports.reportNposScreenCapture = functions
 
       await db.collection("nposScreenShots").doc(shotId).set(doc, { merge: true });
 
+      // Keep updatedAt fresh so BO orderBy("updatedAt") includes capture-only docs
+      // (orderBy reportedAt previously hid docs that never ran full diagnose).
+      const diagnoseAt = Date.now();
       await db
         .collection("nposDiagnose")
         .doc(installId)
@@ -215,7 +235,7 @@ exports.reportNposScreenCapture = functions
             latestPrimaryUrl: doc.primary.url || "",
             latestSecondaryUrl: doc.secondary.url || "",
             latestCaptureReason: reason,
-            updatedAt: Date.now(),
+            updatedAt: diagnoseAt,
           },
           { merge: true },
         );

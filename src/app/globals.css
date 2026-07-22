@@ -6386,10 +6386,55 @@ body.modal-open .main-panel {
   background: rgba(0, 0, 0, 0.04);
 }
 
+.npos-capture-thumb-fail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 0.35rem;
+  border: 1px dashed rgba(176, 0, 32, 0.35);
+  background: rgba(176, 0, 32, 0.06);
+  color: #8a1c1c;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.4rem;
+  box-sizing: border-box;
+}
+
+.npos-capture-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.npos-capture-timeline-item {
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid rgba(26, 46, 36, 0.08);
+}
+
+.npos-capture-timeline-meta {
+  margin: 0 0 0.25rem;
+  font-size: 0.82rem;
+}
+
 .npos-capture-empty,
 .npos-capture-caption {
   margin: 0.25rem 0 0.5rem;
   font-size: 0.78rem;
+}
+
+.npos-ops-detail {
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 400;
+  line-height: 1.35;
+  word-break: break-word;
+  max-width: 28rem;
 }
 
 .npos-pill {

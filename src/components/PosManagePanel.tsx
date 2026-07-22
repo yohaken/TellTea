@@ -3,9 +3,10 @@
 import { NposDiagnosePanel } from "@/components/NposDiagnosePanel";
 import { NposDevicesPanel } from "@/components/NposDevicesPanel";
 import { NposOpsLogPanel } from "@/components/NposOpsLogPanel";
+import { NposCaptureTimelinePanel } from "@/components/NposCaptureTimelinePanel";
 
 /**
- * หมวดจัดการ Pos — เครื่องออนไลน์ + ตรวจเครื่อง + ไทม์ไลน์ ops
+ * หมวดจัดการ Pos — เครื่องออนไลน์ + ตรวจเครื่อง + ไทม์ไลน์ ops / แคป
  */
 export function PosManagePanel({ onError }: { onError: (msg: string | null) => void }) {
   return (
@@ -17,6 +18,7 @@ export function PosManagePanel({ onError }: { onError: (msg: string | null) => v
         (แสดงเฉพาะรายงาน/เวอร์ชันล่าสุด)
       </p>
       <NposDevicesPanel onError={onError} />
+      <NposCaptureTimelinePanel onError={onError} />
       <NposOpsLogPanel onError={onError} />
       <NposDiagnosePanel onError={onError} />
     </div>

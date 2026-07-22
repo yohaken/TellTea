@@ -110,6 +110,9 @@ export type PosDevice = {
   /** Native runtime + install grants reported by tablet. */
   permissionsOk: boolean;
   permissionsStatus: string;
+  /** Latest capture download URLs (from reportNposScreenCapture). */
+  latestPrimaryUrl: string;
+  latestSecondaryUrl: string;
 };
 
 function deviceRef(id: string) {
@@ -215,6 +218,9 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
       typeof data.captureIntervalMinutes === "number" ? data.captureIntervalMinutes : 0,
     permissionsOk: data.permissionsOk === true,
     permissionsStatus: typeof data.permissionsStatus === "string" ? data.permissionsStatus : "",
+    latestPrimaryUrl: typeof data.latestPrimaryUrl === "string" ? data.latestPrimaryUrl : "",
+    latestSecondaryUrl:
+      typeof data.latestSecondaryUrl === "string" ? data.latestSecondaryUrl : "",
   };
 }
 

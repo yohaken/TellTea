@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 228/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+21/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.13\.0"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 229/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+22/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.13\.1"/);
 assert.match(read("docs/npos-capture-checklist.md"), /สั่งแคปจอ/);
 assert.match(read("docs/npos-pilot-gate-faq.md"), /แคปจอ/);
 
@@ -89,5 +89,24 @@ assert.match(read("src/components/NposDevicesPanel.tsx"), /NposCaptureGallery/);
 assert.match(read("src/components/NposDiagnosePanel.tsx"), /NposCaptureGallery/);
 assert.match(read("docs/npos-remaining-checklist.md"), /Local DB first|โคลนผัง/);
 assert.match(read(".github/workflows/deploy.yml"), /RESOLVED_STORAGE_BUCKET|ensure-storage-bucket/);
+
+assert.match(read("functions/npos-capture.js"), /getSignedUrl/);
+assert.match(read("functions/npos-capture.js"), /signed URL failed|falling back to media token/);
+assert.match(read("src/lib/npos-diagnose.ts"), /orderBy\("updatedAt"/);
+assert.match(read("src/lib/pos-devices.ts"), /latestPrimaryUrl/);
+assert.match(read("src/components/NposDevicesPanel.tsx"), /capturesForUi|latestPrimaryUrl/);
+assert.match(read("src/components/NposCaptureGallery.tsx"), /onError/);
+assert.match(read("src/components/NposCaptureTimelinePanel.tsx"), /ไทม์ไลน์แคปจอ/);
+assert.match(read("src/components/PosManagePanel.tsx"), /NposCaptureTimelinePanel/);
+assert.match(read("src/lib/npos-screen-shots.ts"), /nposScreenShots/);
+assert.match(read("src/components/NposOpsLogPanel.tsx"), /npos-ops-detail/);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/ScreenCapture.java"),
+  /hasImages/,
+);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/ScreenCapture.java"),
+  /แคปจอไม่มีรูปบนเซิร์ฟเวอร์/,
+);
 
 console.log("OK test-npos-capture");

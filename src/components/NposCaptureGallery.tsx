@@ -20,6 +20,7 @@ export function NposCaptureGallery({
     [primaryUrl, secondaryUrl],
   );
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [failed, setFailed] = useState<Record<number, boolean>>({});
 
   if (!urls.length) {
     return <p className="muted npos-capture-empty">{emptyHint}</p>;
@@ -41,8 +42,26 @@ export function NposCaptureGallery({
             className="npos-capture-thumb-btn"
             onClick={() => setPreviewIndex(i)}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt={labels[i] || `แคป ${i + 1}`} />
+            {failed[i] ? (
+              <span className="npos-capture-thumb-fail" role="img" aria-label="โหลดรูปไม่สำเร็จ">
+                โหลดรูปไม่สำเร็จ
+              </span>
+            ) : (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={url}
+                alt={labels[i] || `แคป ${i + 1}`}
+                onError={() => setFailed((prev) => ({ ...prev, [i]: true }))}
+                onLoad={() =>
+                  setFailed((prev) => {
+                    if (!prev[i]) return prev;
+                    const next = { ...prev };
+                    delete next[i];
+                    return next;
+                  })
+                }
+              />
+            )}
             <span>{labels[i] || `รูป ${i + 1}`}</span>
           </button>
         ))}

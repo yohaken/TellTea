@@ -266,6 +266,29 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     });
   }, []);
 
+  /** Prefer diagnose URLs; fall back to posDevices fields written by CF. */
+  const capturesForUi = useMemo(() => {
+    const next: Record<string, CaptureUrls> = {};
+    for (const d of devices) {
+      const fromDiag = captures[d.id];
+      const primaryUrl = (fromDiag?.primaryUrl || d.latestPrimaryUrl || "").trim();
+      const secondaryUrl = (fromDiag?.secondaryUrl || d.latestSecondaryUrl || "").trim();
+      if (!primaryUrl && !secondaryUrl) continue;
+      next[d.id] = {
+        primaryUrl,
+        secondaryUrl,
+        at: Math.max(fromDiag?.at || 0, d.lastCaptureAt || 0),
+      };
+    }
+    // Keep diagnose-only installs (no matching device row yet).
+    for (const [id, cap] of Object.entries(captures)) {
+      if (next[id]) continue;
+      if (!cap.primaryUrl && !cap.secondaryUrl) continue;
+      next[id] = cap;
+    }
+    return next;
+  }, [captures, devices]);
+
   const buckets = useMemo(() => prepareNposDevices(devices, now), [devices, now]);
   const total =
     buckets.shop.length + buckets.dev.length + buckets.blocked.length;
@@ -367,7 +390,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             rows={buckets.shop}
             now={now}
             busyId={busyId}
-            captures={captures}
+            captures={capturesForUi}
             onBlock={block}
             onUnblock={unblock}
             onCapture={capture}
@@ -378,7 +401,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             rows={buckets.dev}
             now={now}
             busyId={busyId}
-            captures={captures}
+            captures={capturesForUi}
             onBlock={block}
             onUnblock={unblock}
             onCapture={capture}
@@ -389,7 +412,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             rows={buckets.blocked}
             now={now}
             busyId={busyId}
-            captures={captures}
+            captures={capturesForUi}
             onBlock={block}
             onUnblock={unblock}
             onCapture={capture}
