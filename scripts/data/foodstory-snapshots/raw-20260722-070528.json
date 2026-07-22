@@ -1,0 +1,114 @@
+{
+  "meta": {
+    "capturedAt": "2026-07-22T00:00:00.000Z",
+    "branchId": "1113381",
+    "companyId": "demo-co"
+  },
+  "categories": [
+    {
+      "category_id": 10,
+      "category_name": "ชา",
+      "sort_order": 1000,
+      "active": 1
+    },
+    {
+      "category_id": 20,
+      "category_name": "กาแฟ",
+      "sort_order": 2000,
+      "active": 1
+    }
+  ],
+  "menus": [
+    {
+      "menu_id": 101,
+      "menu_name": "ชาเย็น",
+      "category_id": 10,
+      "category_name": "ชา",
+      "price": 45,
+      "image_key": "restaurant/demo/cha-yen.png",
+      "active": 1,
+      "sort_order": 100
+    },
+    {
+      "menu_id": 102,
+      "menu_name": "ลาเต้",
+      "category_id": 20,
+      "category_name": "กาแฟ",
+      "price": 55,
+      "active": 1,
+      "sort_order": 200
+    }
+  ],
+  "options": [
+    {
+      "option_id": 501,
+      "option_name": "ระดับหวาน",
+      "require_flag": 1,
+      "min_choice": 1,
+      "max_choice": 1,
+      "active": 1
+    },
+    {
+      "option_id": 502,
+      "option_name": "ท็อปปิ้ง",
+      "require_flag": 0,
+      "min_choice": 0,
+      "max_choice": 3,
+      "active": 1
+    }
+  ],
+  "choices": [
+    {
+      "choice_id": 901,
+      "option_id": 501,
+      "choice_name": "หวานปกติ",
+      "price": 0,
+      "sort_order": 100
+    },
+    {
+      "choice_id": 902,
+      "option_id": 501,
+      "choice_name": "หวานน้อย",
+      "price": 0,
+      "sort_order": 200
+    },
+    {
+      "choice_id": 911,
+      "option_id": 502,
+      "choice_name": "ไข่มุก",
+      "price": 10,
+      "sort_order": 100
+    },
+    {
+      "choice_id": 912,
+      "option_id": 502,
+      "choice_name": "พุทธา",
+      "price": 15,
+      "sort_order": 200
+    }
+  ],
+  "menuDetails": {
+    "101": {
+      "menu_id": 101,
+      "option_list": [
+        {
+          "option_id": 501,
+          "choose_flag": 1
+        },
+        {
+          "option_id": 502,
+          "choose_flag": 1
+        }
+      ]
+    },
+    "102": {
+      "menu_id": 102,
+      "option_list": [
+        {
+          "option_id": 501,
+          "choose_flag": 1
+        }
+      ]
+    }
+  }
+}

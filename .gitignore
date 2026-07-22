@@ -34,6 +34,8 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+scripts/data/foodstory-auth/storage.json
+scripts/data/foodstory-auth/session.json
 
 # vercel
 .vercel

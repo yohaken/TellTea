@@ -83,6 +83,9 @@
     "seed:pos-menu-catalog": "node scripts/seed-pos-menu-catalog.mjs",
     "seed:pos-menu-images": "node scripts/seed-pos-menu-images.mjs",
     "verify:pos-menu-catalog": "node scripts/verify-pos-menu-catalog.mjs",
+    "foodstory:menu-login": "node scripts/foodstory-menu-login.mjs",
+    "foodstory:menu-capture": "node scripts/foodstory-menu-capture.mjs",
+    "test:foodstory-menu-capture": "node scripts/test-foodstory-menu-capture.mjs",
     "start": "next start",
     "lint": "eslint",
     "export": "next build"

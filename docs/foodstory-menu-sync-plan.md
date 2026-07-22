@@ -69,12 +69,30 @@ FoodStory (แหล่งต้นทางช่วงเปลี่ยนผ
 
 ## เฟสงาน
 
-### Phase 0 — ตัวดึงข้อมูลผ่านเบราว์เซอร์
+### Phase 0 — ตัวดึงข้อมูลผ่านเบราว์เซอร์ / เซสชัน ✅ (โครงพร้อม)
 
-- สคริปต์/เครื่องมือควบคุมเบราว์เซอร์ที่ล็อกอินแล้วที่ `manage.foodstory.co/th/menu`
-- ดึงโครงสร้าง: หมวด · รายการ · ราคา · กลุ่มตัวเลือก/ท็อปปิ้ง · รูป (ถ้าเข้าถึงได้)
-- บันทึกเป็น snapshot กลาง (JSON) ก่อนเขียนลง Firestore — ตรวจ dry-run ได้
-- **หมายเหตุ:** ใช้กับบัญชีร้านของเราเองช่วงย้ายระบบ · โครงต้องทนเมื่อ UI FoodStory เปลี่ยน (selector เปราะ)
+สถานะ: **เครื่องมือพร้อม** · รอเซสชันร้านจริงเพื่อรัน capture ครั้งแรก
+
+| ชิ้น | ไฟล์ / คำสั่ง |
+|------|----------------|
+| Login เก็บ storage | `npm run foodstory:menu-login -- --headed` |
+| Capture → snapshot | `npm run foodstory:menu-capture` |
+| เทสนormalizer | `npm run test:foodstory-menu-capture` |
+| Auth (gitignored) | `scripts/data/foodstory-auth/session.json` |
+| ผลลัพธ์ | `scripts/data/foodstory-snapshots/snapshot-latest.json` |
+
+**วิธีที่ได้ผลตอนนี้ (Cloudflare บล็อก headless):**
+
+1. เปิด `https://manage.foodstory.co/th/menu` ในเบราว์เซอร์ที่ล็อกอินแล้ว  
+2. DevTools → Console: `copy({ idKey: localStorage.idKey, branchId: localStorage.branch_id })`  
+3. วางลง `scripts/data/foodstory-auth/session.json` (ดู `session.example.json`)  
+4. `npm run foodstory:menu-capture`
+
+ตัว capture เรียก API ที่ SPA ใช้จริง (`fs-api.foodstory.co/v1/master/branch/{id}/…`) ด้วย header `access-token: idKey`  
+ได้หมวด · เมนู · กลุ่มตัวเลือก · ตัวเลือก/ท็อปปิ้ง · ลิงก์เมนู↔ตัวเลือก · รูป (`images.foodstory.co`)  
+เขียน **raw + snapshot** อย่างเดียว — **ยังไม่ลง Firestore** (Phase 1)
+
+หมายเหตุ: โหมด Playwright headless ใน cloud มักโดน Cloudflare ที่ `owner.foodstory.co/login` — ใช้เซสชันจากเบราว์เซอร์จริงเป็นหลัก
 
 ### Phase 1 — ปุ่มหลังร้าน “ระบบซิงก์” + เขียนเข้า POS Web
 
