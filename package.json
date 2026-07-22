@@ -27,6 +27,7 @@
     "test:ot-10-photos-ui": "node scripts/test-ot-10-photos-ui.mjs",
     "test:owner-books-multi-photo": "node scripts/test-owner-books-multi-photo.mjs",
     "test:owner-books-multi-photo-ui": "node scripts/test-owner-books-multi-photo-ui.mjs",
+    "test:owner-books-bulk-retype": "node scripts/test-owner-books-bulk-retype.mjs",
     "ensure:storage-bucket": "node scripts/ensure-storage-bucket.mjs",
     "test:pos-connectivity": "node scripts/test-pos-connectivity.mjs",
     "test:pos-complete-sale": "node scripts/test-pos-complete-sale.mjs",

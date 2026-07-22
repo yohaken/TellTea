@@ -24,9 +24,10 @@ import {
   resolveStoredTypeSource,
   type LedgerTypeSource,
 } from "@/lib/ledger-ai";
-import { frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
+import { BASE_TYPE_OPTIONS, frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
 import {
   addOwnerBookEntry,
+  bulkUpdateOwnerBookTypes,
   deleteOwnerBookEntry,
   frequentOwnerDescriptions,
   getOwnerBookReceiptUrls,
@@ -51,6 +52,7 @@ import { filterOwnerBookRows } from "@/lib/smart-search";
 import { exportOwnerBooksXlsx } from "@/lib/xlsx-export";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
+const BULK_TYPE_OPTIONS = BASE_TYPE_OPTIONS.filter((o) => o.value !== "auto");
 export default function OwnerBooksPage() {
   return (
     <AuthGate>
@@ -83,6 +85,8 @@ function OwnerBooksView() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [excludedIds, setExcludedIds] = useState<Set<string>>(() => new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const deferredQuery = useDeferredValue(query.trim());
 
@@ -152,7 +156,13 @@ function OwnerBooksView() {
 
   useEffect(() => {
     setExcludedIds(new Set());
+    setSelectedIds(new Set());
   }, [deferredQuery]);
+
+  const visibleIds = useMemo(() => filteredEntries.map((r) => r.id), [filteredEntries]);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+  const someVisibleSelected = visibleIds.some((id) => selectedIds.has(id));
 
   const calcSummary = useMemo(() => {
     let includedCount = 0;
@@ -183,6 +193,49 @@ function OwnerBooksView() {
 
   function clearExcluded() {
     setExcludedIds(new Set());
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible() {
+    setSelectedIds((prev) => {
+      if (visibleIds.length === 0) return prev;
+      const allOn = visibleIds.every((id) => prev.has(id));
+      if (allOn) {
+        const next = new Set(prev);
+        for (const id of visibleIds) next.delete(id);
+        return next;
+      }
+      const next = new Set(prev);
+      for (const id of visibleIds) next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelected() {
+    setSelectedIds(new Set());
+  }
+
+  async function onBulkRetype(type: string) {
+    const ids = Array.from(selectedIds);
+    if (!ids.length || bulkBusy) return;
+    setBulkBusy(true);
+    setError(null);
+    try {
+      await bulkUpdateOwnerBookTypes(ids, type);
+      setSelectedIds(new Set());
+    } catch (err) {
+      setError(friendlyFirestoreWriteError(err, "จัดประเภทกลุ่มไม่สำเร็จ"));
+    } finally {
+      setBulkBusy(false);
+    }
   }
 
   const showCalcSummary = !loading && filteredEntries.length > 0 && !searchLoading;
@@ -314,6 +367,47 @@ function OwnerBooksView() {
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
+      {!loading && filteredEntries.length > 0 ? (
+        <div className="bulk-status-toolbar" role="group" aria-label="จัดประเภทหลายรายการ">
+          <button
+            type="button"
+            className="ghost-btn bulk-status-chip"
+            disabled={bulkBusy || !visibleIds.length}
+            onClick={toggleSelectAllVisible}
+          >
+            {allVisibleSelected ? "ยกเลิกที่แสดง" : `เลือกที่แสดง (${visibleIds.length})`}
+          </button>
+          {selectedIds.size > 0 ? (
+            <div className="bulk-status-actions" role="group" aria-label="ตั้งประเภทกลุ่ม">
+              <span className="bulk-status-count">เลือก {selectedIds.size} รายการ</span>
+              {BULK_TYPE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className="ghost-btn bulk-status-btn"
+                  disabled={bulkBusy}
+                  onClick={() => void onBulkRetype(opt.value)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="ghost-btn bulk-status-clear"
+                disabled={bulkBusy}
+                onClick={clearSelected}
+              >
+                ยกเลิก
+              </button>
+            </div>
+          ) : (
+            <p className="muted bulk-status-hint">
+              ติ๊กเลือกด้านหน้าหลายแถว → กดปุ่มประเภทเพื่อจัดใหม่พร้อมกัน
+            </p>
+          )}
+        </div>
+      ) : null}
+
       {!loading && entries.length === 0 ? (
         <p className="empty">ยังไม่มีรายการ — กดบันทึกเงินออกเพื่อเริ่ม</p>
       ) : !loading ? (
@@ -322,7 +416,18 @@ function OwnerBooksView() {
             <table className="sheet-table">
               <thead>
                 <tr>
-                  <th className="col-exclude" aria-label="ไม่รวม" />
+                  <th className="bulk-check-col" aria-label="เลือก">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected;
+                      }}
+                      onChange={toggleSelectAllVisible}
+                      aria-label="เลือกทั้งหมดที่แสดง"
+                    />
+                  </th>
+                  <th className="col-exclude" aria-label="ไม่รวม" title="ไม่รวมในยอด" />
                   <th className="col-date">วันที่</th>
                   <th className="col-desc">รายการ</th>
                   <th className="col-out">ออก</th>
@@ -333,8 +438,26 @@ function OwnerBooksView() {
               <tbody>
                 {filteredEntries.map((row) => {
                   const excluded = excludedIds.has(row.id);
+                  const selected = selectedIds.has(row.id);
                   return (
-                  <tr key={row.id} className={excluded ? "row-out is-excluded" : "row-out"}>
+                  <tr
+                    key={row.id}
+                    className={[
+                      "row-out",
+                      excluded ? "is-excluded" : "",
+                      selected ? "is-bulk-selected" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    <td className="bulk-check-col">
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => toggleSelected(row.id)}
+                        aria-label={`เลือก ${row.description}`}
+                      />
+                    </td>
                     <td className="col-exclude">
                       <label className="owner-exclude-check" title="ไม่รวมในยอด">
                         <input
