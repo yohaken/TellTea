@@ -18,6 +18,7 @@
     "test:prod-catalog-owner": "node scripts/test-prod-catalog-owner.mjs",
     "test:boh-menu-mgmt": "node scripts/test-boh-menu-mgmt.mjs",
     "test:boh-menu-p3-p5": "node scripts/test-boh-menu-p3-p5.mjs",
+    "test:boh-menu-q1-q4": "node scripts/test-boh-menu-q1-q4.mjs",
     "test:ledger-transfer-in-fab": "node scripts/test-ledger-transfer-in-fab.mjs",
     "test:alerts-pos-manage-hub": "node scripts/test-alerts-pos-manage-hub.mjs",
     "test:check-sop-settings-fold": "node scripts/test-check-sop-settings-fold.mjs",

@@ -28,7 +28,7 @@ function MenuCatalogGate() {
   return (
     <div className="menu-boh-page">
       <p className="muted menu-boh-lead">
-        แหล่งหลักของเมนูร้าน — ค้นหา · สำเนา · เก็บเข้าคลัง · ราคาหน้าร้าน/เดลิเวอรี่ แล้วไปขึ้นหน้าขายเอง
+        แหล่งหลักของเมนูร้าน — ราคาหน้าร้าน/เดลิเวอรี่ · รหัสเมนู · ผูกตัวเลือก · ตั้งราคาเป็นชุด · ไม่มีนำเข้า CSV
       </p>
       <PosMenuAdmin embedded authMode="owner" />
     </div>
