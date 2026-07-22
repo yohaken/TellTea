@@ -15,6 +15,7 @@ import {
 import {
   isPosDeviceOnline,
   posDeviceLabel,
+  clearNposDeviceCaptures,
   requestNposScreenCapture,
   setNposCaptureInterval,
   setNposDeviceBlocked,
@@ -95,6 +96,7 @@ function DeviceCard({
   onBlock,
   onUnblock,
   onCapture,
+  onClearCaptures,
   onInterval,
 }: {
   d: Row;
@@ -104,12 +106,14 @@ function DeviceCard({
   onBlock: () => void;
   onUnblock: () => void;
   onCapture: () => void;
+  onClearCaptures: () => void;
   onInterval: (mins: number) => void;
 }) {
   const online = isPosDeviceOnline(d.lastSeenAt, now);
   const machine = shortStableKey(d.stableKey, d.id);
   const capturePending =
     d.captureRequestAt > 0 && d.captureRequestAt > (d.lastCaptureAckAt || 0);
+  const hasCapture = !!(capture?.primaryUrl || capture?.secondaryUrl);
   return (
     <li className="npos-diagnose-card">
       <div className="npos-device-row">
@@ -142,7 +146,7 @@ function DeviceCard({
         secondaryUrl={capture?.secondaryUrl}
         caption={
           capture?.at
-            ? `แตะรูปเพื่อดูเต็มจอ · ${formatSeen(capture.at)}`
+            ? `แตะรูปเพื่อดูเต็มความละเอียด · ${formatSeen(capture.at)}`
             : undefined
         }
         emptyHint={
@@ -154,6 +158,14 @@ function DeviceCard({
       <div className="npos-device-actions">
         <button type="button" className="npos-device-btn" disabled={busy || !online} onClick={onCapture}>
           สั่งแคปจอ
+        </button>
+        <button
+          type="button"
+          className="npos-device-btn npos-device-btn--danger"
+          disabled={busy || !hasCapture}
+          onClick={onClearCaptures}
+        >
+          ล้างภาพแคป
         </button>
         <label className="npos-capture-interval">
           ทุก
@@ -191,6 +203,7 @@ function ClassSection({
   onBlock,
   onUnblock,
   onCapture,
+  onClearCaptures,
   onInterval,
 }: {
   cls: NposDeviceClass;
@@ -201,6 +214,7 @@ function ClassSection({
   onBlock: (d: Row) => void;
   onUnblock: (d: Row) => void;
   onCapture: (d: Row) => void;
+  onClearCaptures: (d: Row) => void;
   onInterval: (d: Row, mins: number) => void;
 }) {
   if (rows.length === 0) return null;
@@ -221,6 +235,7 @@ function ClassSection({
             onBlock={() => onBlock(d)}
             onUnblock={() => onUnblock(d)}
             onCapture={() => onCapture(d)}
+            onClearCaptures={() => onClearCaptures(d)}
             onInterval={(mins) => onInterval(d, mins)}
           />
         ))}
@@ -387,6 +402,35 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     }
   }
 
+  async function clearCaptures(d: Row) {
+    if (!actorId) {
+      onError("ต้องเข้าสู่ระบบเจ้าของก่อนล้างภาพแคป");
+      return;
+    }
+    if (
+      !window.confirm(
+        `ล้างภาพแคปทั้งหมดของเครื่อง ${posDeviceLabel(d)}?\nลบจากที่เก็บและไทม์ไลน์ — กู้คืนไม่ได้`,
+      )
+    ) {
+      return;
+    }
+    setBusyId(d.id);
+    try {
+      const n = await clearNposDeviceCaptures(d.id, actorId);
+      setCaptures((prev) => {
+        const next = { ...prev };
+        delete next[d.id];
+        return next;
+      });
+      onError(null);
+      window.alert(n > 0 ? `ลบแล้ว ${n} ชุด` : "ไม่มีภาพให้ลบ");
+    } catch (err) {
+      onError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <SettingsFold
       title={
@@ -422,6 +466,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             onBlock={block}
             onUnblock={unblock}
             onCapture={capture}
+            onClearCaptures={clearCaptures}
             onInterval={setIntervalMins}
           />
           <ClassSection
@@ -433,6 +478,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             onBlock={block}
             onUnblock={unblock}
             onCapture={capture}
+            onClearCaptures={clearCaptures}
             onInterval={setIntervalMins}
           />
           <ClassSection
@@ -444,6 +490,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             onBlock={block}
             onUnblock={unblock}
             onCapture={capture}
+            onClearCaptures={clearCaptures}
             onInterval={setIntervalMins}
           />
         </>

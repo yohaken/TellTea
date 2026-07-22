@@ -16,19 +16,30 @@ import { getDb, getFirebaseFunctions } from "./firebase";
 import { mapFirestoreError } from "./firestore-errors";
 import type { PosNativeUpdateStatus, PosShellKind } from "./pos-native-version";
 
-type OwnerDeviceAction = "capture" | "capture_interval" | "block" | "unblock";
+type OwnerDeviceAction =
+  | "capture"
+  | "capture_interval"
+  | "block"
+  | "unblock"
+  | "clear_captures"
+  | "clear_captures_all";
 
 async function callNposOwnerDeviceCommand(
   action: OwnerDeviceAction,
   deviceId: string,
   extra?: Record<string, unknown>,
-): Promise<void> {
+): Promise<{ ok: boolean; deleted?: number }> {
   const fn = httpsCallable<
-    { action: OwnerDeviceAction; deviceId: string } & Record<string, unknown>,
-    { ok: boolean }
+    { action: OwnerDeviceAction; deviceId?: string } & Record<string, unknown>,
+    { ok: boolean; deleted?: number }
   >(getFirebaseFunctions(), "nposOwnerDeviceCommand");
   try {
-    await fn({ action, deviceId, ...(extra || {}) });
+    const payload =
+      action === "clear_captures_all"
+        ? { action, ...(extra || {}) }
+        : { action, deviceId, ...(extra || {}) };
+    const res = await fn(payload);
+    return res.data || { ok: true };
   } catch (err) {
     const code = String((err as { code?: string })?.code || "");
     const msg = String((err as Error)?.message || err);
@@ -40,9 +51,11 @@ async function callNposOwnerDeviceCommand(
             ? "สั่งแคปจอ nPos"
             : action === "capture_interval"
               ? "ตั้งช่วงแคปจอ nPos"
-              : action === "block"
-                ? "บล็อกเครื่อง nPos"
-                : "ปลดบล็อกเครื่อง nPos",
+              : action === "clear_captures" || action === "clear_captures_all"
+                ? "ล้างภาพแคป nPos"
+                : action === "block"
+                  ? "บล็อกเครื่อง nPos"
+                  : "ปลดบล็อกเครื่อง nPos",
           "staff",
         ),
       );
@@ -453,6 +466,21 @@ export async function setNposCaptureInterval(
   await callNposOwnerDeviceCommand("capture_interval", deviceId, {
     intervalMinutes: mins,
   });
+}
+
+/** Owner: delete all capture images for one device (Storage + Firestore). */
+export async function clearNposDeviceCaptures(
+  deviceId: string,
+  _updatedBy: string,
+): Promise<number> {
+  const res = await callNposOwnerDeviceCommand("clear_captures", deviceId);
+  return typeof res.deleted === "number" ? res.deleted : 0;
+}
+
+/** Owner: delete every nPos capture in the shop. */
+export async function clearAllNposCaptures(_updatedBy: string): Promise<number> {
+  const res = await callNposOwnerDeviceCommand("clear_captures_all", "");
+  return typeof res.deleted === "number" ? res.deleted : 0;
 }
 
 export async function requestPosDeviceReload(

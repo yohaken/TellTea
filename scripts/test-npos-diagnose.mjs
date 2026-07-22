@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 234/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 235/);
 assert.match(read("docs/npos-migration-phases.md"), /N1/);
 assert.match(read("docs/npos-migration-phases.md"), /nposDiagnose/);
 assert.match(read("functions/npos-diagnose.js"), /reportNposDiagnose/);
@@ -21,7 +21,7 @@ assert.match(read("src/components/NposDiagnosePanel.tsx"), /SettingsFold/);
 assert.match(read("src/components/NposDiagnosePanel.tsx"), /ตรวจเครื่อง \(nPos\)/);
 assert.match(read("src/components/PosManagePanel.tsx"), /NposDiagnosePanel/);
 assert.doesNotMatch(read("src/components/PosManagePanel.tsx"), /ยังไม่มีรายการจัดการ/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+27/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+28/);
 assert.match(
   read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/DiagnoseReporter.java"),
   /reportNposDiagnose/,

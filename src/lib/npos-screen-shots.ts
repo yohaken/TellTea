@@ -41,16 +41,19 @@ function mapShot(id: string, data?: Record<string, unknown> | null): NposScreenS
   };
 }
 
+/** Server keeps ≤50 per install; BO timeline defaults to 50 newest. */
+export const NPOS_CAPTURE_MAX_KEEP = 50;
+
 /** Recent capture docs for BO timeline (newest first). */
 export function subscribeNposScreenShots(
   onData: (shots: NposScreenShot[]) => void,
   onError?: (err: Error) => void,
-  max = 40,
+  max = NPOS_CAPTURE_MAX_KEEP,
 ): Unsubscribe {
   const q = query(
     collection(getDb(), NPOS_SCREEN_SHOTS_COL),
     orderBy("capturedAt", "desc"),
-    limit(Math.max(1, Math.min(80, max))),
+    limit(Math.max(1, Math.min(NPOS_CAPTURE_MAX_KEEP, max))),
   );
   return onSnapshot(
     q,

@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 234/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+27/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.4"/);
-assert.match(read("docs/npos-capture-checklist.md"), /สั่งแคปจอ/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 235/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+28/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.5"/);
+assert.match(read("docs/npos-capture-checklist.md"), /สั่งแคปจอ|C1|C4|50/);
 assert.match(read("docs/npos-pilot-gate-faq.md"), /แคปจอ/);
 
 const probe = read(
@@ -114,5 +114,29 @@ assert.match(
   /แคปจอไม่มีรูปบนเซิร์ฟเวอร์/,
 );
 assert.ok(existsSync(join(root, "scripts/smoke-npos-capture-image.mjs")));
+
+/* C1–C4: clear-all, full-res display, retain ≤50, Android full-res capture */
+assert.ok(existsSync(join(root, "functions/npos-capture-prune.js")));
+assert.match(read("functions/npos-capture-prune.js"), /MAX_SHOTS_PER_INSTALL\s*=\s*50/);
+assert.match(read("functions/npos-capture-prune.js"), /clearAllNposShots|clearNposShotsForInstall/);
+assert.match(read("functions/npos-capture.js"), /pruneNposShotsForInstall/);
+assert.match(read("functions/npos-capture.js"), /MAX_B64\s*=\s*6_000_000|6000000/);
+assert.match(read("functions/npos-owner-device.js"), /clear_captures/);
+assert.match(read("functions/npos-owner-device.js"), /clear_captures_all/);
+assert.match(read("src/lib/pos-devices.ts"), /clearNposDeviceCaptures|clearAllNposCaptures/);
+assert.match(read("src/lib/npos-screen-shots.ts"), /NPOS_CAPTURE_MAX_KEEP\s*=\s*50/);
+assert.match(read("src/components/NposDevicesPanel.tsx"), /ล้างภาพแคป|clearNposDeviceCaptures/);
+assert.match(read("src/components/NposCaptureTimelinePanel.tsx"), /ล้างรูปเคลียร์ทั้งหมด|clearAllNposCaptures/);
+assert.match(read("src/app/globals.css"), /object-fit:\s*contain/);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/ScreenCapture.java"),
+  /MAX_EDGE\s*=\s*1920/,
+);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/ScreenCapture.java"),
+  /JPEG_QUALITY\s*=\s*88/,
+);
+assert.match(read("docs/npos-shop-work-checklist.md"), /C1|C4|P4/);
+assert.match(read("docs/npos-remaining-checklist.md"), /C1|C4|P4/);
 
 console.log("OK test-npos-capture");

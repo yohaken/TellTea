@@ -4,6 +4,10 @@
  */
 const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
+const {
+  clearNposShotsForInstall,
+  clearAllNposShots,
+} = require("./npos-capture-prune");
 
 const COL = "posDevices";
 const OWNER_EMAIL = String(process.env.TELLTEA_OWNER_EMAIL || "yohaken@gmail.com")
@@ -54,13 +58,21 @@ async function assertOwner(context) {
 
 exports.nposOwnerDeviceCommand = functions
   .region("asia-southeast1")
+  .runWith({ memory: "512MB", timeoutSeconds: 120 })
   .https.onCall(async (data, context) => {
     const { actorId } = await assertOwner(context);
+    const action = asString(data?.action, 32).toLowerCase();
+
+    // Shop-wide clear — no deviceId required.
+    if (action === "clear_captures_all") {
+      const result = await clearAllNposShots();
+      return { ok: true, action, actorId, at: Date.now(), ...result };
+    }
+
     const deviceId = asString(data?.deviceId, 64);
     if (!deviceId || deviceId.length < 8 || !/^[a-zA-Z0-9_-]+$/.test(deviceId)) {
       throw new functions.https.HttpsError("invalid-argument", "deviceId ไม่ถูกต้อง");
     }
-    const action = asString(data?.action, 32).toLowerCase();
     const db = getFirestore();
     const ref = db.collection(COL).doc(deviceId);
     const snap = await ref.get();
@@ -69,6 +81,12 @@ exports.nposOwnerDeviceCommand = functions
     }
 
     const now = Date.now();
+
+    if (action === "clear_captures") {
+      const result = await clearNposShotsForInstall(deviceId);
+      return { ok: true, deviceId, action, actorId, at: now, ...result };
+    }
+
     let patch = { updatedAt: now, updatedBy: actorId };
 
     if (action === "capture") {

@@ -45,8 +45,11 @@ public final class ScreenCapture {
     public static final String REPORT_URL =
             "https://asia-southeast1-mypeer-501909.cloudfunctions.net/reportNposScreenCapture";
 
-    private static final int MAX_EDGE = 720;
-    private static final int JPEG_QUALITY = 55;
+    /** Native-ish capture: keep up to 1920 on the long edge (was 720). */
+    private static final int MAX_EDGE = 1920;
+    private static final int JPEG_QUALITY = 88;
+    /** Soft cap so POST stays under CF MAX_B64 (~6MB per role). */
+    private static final int MAX_JPEG_BYTES = 3_500_000;
     private static final Object LOCK = new Object();
     private static final ExecutorService EXEC = Executors.newSingleThreadExecutor();
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -427,9 +430,7 @@ public final class ScreenCapture {
         }
         int w = scaled.getWidth();
         int h = scaled.getHeight();
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, bos);
-        byte[] bytes = bos.toByteArray();
+        byte[] bytes = compressJpegUnder(scaled, JPEG_QUALITY, MAX_JPEG_BYTES);
         scaled.recycle();
         CaptureShot shot = new CaptureShot();
         shot.ok = true;
@@ -438,6 +439,20 @@ public final class ScreenCapture {
         shot.height = h;
         shot.jpegBase64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
         return shot;
+    }
+
+    /** Prefer high quality; step down only if the frame is still huge. */
+    private static byte[] compressJpegUnder(Bitmap bmp, int startQuality, int maxBytes) {
+        int q = Math.min(95, Math.max(50, startQuality));
+        byte[] best = null;
+        while (q >= 50) {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            bmp.compress(Bitmap.CompressFormat.JPEG, q, bos);
+            best = bos.toByteArray();
+            if (best.length <= maxBytes) return best;
+            q -= 8;
+        }
+        return best == null ? new byte[0] : best;
     }
 
     private static Bitmap scaleDown(Bitmap src, int maxEdge) {
@@ -456,7 +471,7 @@ public final class ScreenCapture {
         try {
             conn = (HttpURLConnection) new URL(REPORT_URL).openConnection();
             conn.setConnectTimeout(20_000);
-            conn.setReadTimeout(45_000);
+            conn.setReadTimeout(90_000);
             conn.setRequestMethod("POST");
             conn.setDoOutput(true);
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");

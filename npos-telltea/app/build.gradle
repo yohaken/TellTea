@@ -16,8 +16,8 @@ android {
         minSdk 23
         targetSdk 35
         // Bump BOTH when shipping an APK users should receive as an update.
-        versionCode 27
-        versionName "1.14.4"
+        versionCode 28
+        versionName "1.14.5"
         buildConfigField "String", "UPDATE_MANIFEST_URL", "\"https://telltea-pos.web.app/downloads/latest.json\""
         buildConfigField "String", "DEFAULT_APK_URL", "\"https://telltea-pos.web.app/downloads/nPos-telltea.apk\""
         buildConfigField "String", "INSTALL_PAGE_URL", "\"https://telltea-pos.web.app/install/\""

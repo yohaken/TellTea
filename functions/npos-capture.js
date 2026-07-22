@@ -8,8 +8,14 @@ const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
 const { resolveStorageBucket } = require("./storage-bucket");
 const { captureMediaUrl } = require("./npos-capture-media");
+const {
+  MAX_SHOTS_PER_INSTALL,
+  pruneNposShotsForInstall,
+} = require("./npos-capture-prune");
 
-const MAX_B64 = 2_500_000; // ~1.8MB binary after decode
+/** Full-res tablet frames (≈1920 edge @ JPEG ~88) — base64 is ~4/3 of binary. */
+const MAX_B64 = 6_000_000;
+const MAX_BYTES = 4_500_000;
 
 function cors(res) {
   res.set("Access-Control-Allow-Origin", "*");
@@ -62,7 +68,7 @@ async function saveJpeg(installId, role, jpegBase64) {
   } catch {
     throw new Error(`${role}_bad_base64`);
   }
-  if (!buffer.length || buffer.length > 1_800_000) {
+  if (!buffer.length || buffer.length > MAX_BYTES) {
     throw new Error(`${role}_bad_size`);
   }
   const token = crypto.randomUUID();
@@ -232,6 +238,15 @@ exports.reportNposScreenCapture = functions
 
       await db.collection("nposScreenShots").doc(shotId).set(doc, { merge: true });
 
+      // Keep newest N only — drop oldest excess (Storage + docs).
+      let pruned = 0;
+      try {
+        const prune = await pruneNposShotsForInstall(installId, MAX_SHOTS_PER_INSTALL);
+        pruned = Number(prune?.pruned) || 0;
+      } catch (pruneErr) {
+        console.warn("npos-capture prune failed", installId, pruneErr?.message || pruneErr);
+      }
+
       // Keep updatedAt fresh so BO orderBy("updatedAt") includes capture-only docs
       // (orderBy reportedAt previously hid docs that never ran full diagnose).
       const diagnoseAt = Date.now();
@@ -277,6 +292,8 @@ exports.reportNposScreenCapture = functions
         secondaryUrl: doc.secondary.url || null,
         capturedAt,
         hasImages: !!(doc.primary.url || doc.secondary.url),
+        pruned,
+        maxShots: MAX_SHOTS_PER_INSTALL,
       });
     } catch (err) {
       console.error("reportNposScreenCapture failed", err);
