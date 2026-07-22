@@ -71,6 +71,7 @@ function mapItem(id: string, data: Record<string, unknown>): MenuItem {
     imageUrl: typeof data.imageUrl === "string" && data.imageUrl ? data.imageUrl : undefined,
     description: typeof data.description === "string" ? data.description : undefined,
     optionGroupIds: optionGroupIds?.length ? optionGroupIds : undefined,
+    ...(typeof data.code === "string" && data.code.trim() ? { code: data.code.trim() } : {}),
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
     updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
   };
@@ -240,6 +241,14 @@ export async function deleteMenuCategory(id: string): Promise<void> {
   }
 }
 
+export async function archiveMenuCategory(id: string): Promise<void> {
+  await updateMenuCategory(id, { active: false });
+}
+
+export async function restoreMenuCategory(id: string): Promise<void> {
+  await updateMenuCategory(id, { active: true });
+}
+
 export async function reorderMenuCategories(ids: string[]): Promise<void> {
   await Promise.all(ids.map((id, i) => updateMenuCategory(id, { sortOrder: (i + 1) * 1000 })));
 }
@@ -304,12 +313,15 @@ export type MenuItemPatch = Partial<
       | "description"
       | "optionGroupIds"
       | "sortOrder"
+      | "code"
     >,
     never
   >
 > & {
   /** null = ลบฟิลด์เดลิเวอรี่ (ใช้ราคาหน้าร้าน) */
   deliveryPrice?: number | null;
+  /** null / ว่าง = ลบรหัสเมนู */
+  code?: string | null;
 };
 
 export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<void> {
@@ -331,6 +343,9 @@ export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<
   if (patch.description != null) next.description = patch.description.trim();
   if (patch.optionGroupIds != null) next.optionGroupIds = patch.optionGroupIds;
   if (patch.sortOrder != null) next.sortOrder = patch.sortOrder;
+  if (patch.code !== undefined) {
+    next.code = patch.code == null || !String(patch.code).trim() ? deleteField() : String(patch.code).trim();
+  }
   try {
     await updateDoc(doc(getMenuDb(), MENU_ITEMS_COL, id), next);
   } catch (err) {

@@ -161,6 +161,14 @@ export function PosOptionGroupEditor({
           กด ↑↓ เลื่อนลำดับ · คอลัมน์ราคา: หน้าร้าน · เดลิเวอรี่ (ว่าง = ใช้หน้าร้าน)
         </p>
 
+        <div className="pos-menu-option-colhead" aria-hidden>
+          <span className="pos-menu-option-colhead-name">ตัวเลือก</span>
+          <span>หน้าร้าน</span>
+          <span>เดลิเวอรี่</span>
+          <span>ขาย</span>
+          <span />
+        </div>
+
         <PosSortableList
           ids={options.map((o) => o.id)}
           onReorder={(ids) => {
@@ -202,6 +210,14 @@ export function PosOptionGroupEditor({
                   aria-label="ราคาเพิ่มเดลิเวอรี่"
                   placeholder="ส่ง"
                 />
+                <label className="pos-menu-option-active" title="พร้อมขาย">
+                  <input
+                    type="checkbox"
+                    checked={opt.active !== false}
+                    onChange={(e) => updateOption(opt.id, { active: e.target.checked })}
+                    aria-label="พร้อมขาย"
+                  />
+                </label>
                 <button
                   type="button"
                   className="ghost-btn"

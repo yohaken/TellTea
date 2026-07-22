@@ -16,7 +16,7 @@ const ratePanel = read("src/components/RateSchedulePanel.tsx");
 const more = read("src/app/more/page.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 256/);
+assert.match(version, /APP_BUILD = 257/);
 assert.doesNotMatch(settings, /ProdCatalogSetup|listProdProducts|seedProdCatalog/);
 assert.match(settings, /สินค้าผลิตอยู่หน้า ผลิต/);
 assert.match(production, /ProdCatalogSetup/);

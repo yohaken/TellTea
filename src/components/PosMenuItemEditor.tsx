@@ -28,6 +28,7 @@ export function PosMenuItemEditor({
 }) {
   const [name, setName] = useState(item.name);
   const [nameEn, setNameEn] = useState(item.nameEn || "");
+  const [code, setCode] = useState(item.code || "");
   const [categoryId, setCategoryId] = useState(item.categoryId);
   const [price, setPrice] = useState(String(item.price));
   const [deliveryPrice, setDeliveryPrice] = useState(
@@ -48,6 +49,7 @@ export function PosMenuItemEditor({
   useEffect(() => {
     setName(item.name);
     setNameEn(item.nameEn || "");
+    setCode(item.code || "");
     setCategoryId(item.categoryId);
     setPrice(String(item.price));
     setDeliveryPrice(typeof item.deliveryPrice === "number" ? String(item.deliveryPrice) : "");
@@ -101,6 +103,7 @@ export function PosMenuItemEditor({
       await updateMenuItem(item.id, {
         name,
         nameEn: nameEn.trim() || undefined,
+        code: code.trim() || null,
         categoryId,
         price: Number(price) || 0,
         deliveryPrice:
@@ -182,6 +185,15 @@ export function PosMenuItemEditor({
           <input value={nameEn} onChange={(e) => setNameEn(e.target.value)} maxLength={100} />
         </label>
         <label>
+          <span>รหัสเมนู</span>
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            maxLength={40}
+            placeholder="เช่น KO-01"
+          />
+        </label>
+        <label>
           <span>หมวดหมู่</span>
           <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
             {categories.map((c) => (
@@ -191,32 +203,40 @@ export function PosMenuItemEditor({
             ))}
           </select>
         </label>
-        <label>
-          <span>ราคาหน้าร้าน (฿)</span>
-          <input
-            type="number"
-            min={0}
-            step={0.01}
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            required
-          />
-        </label>
-        <label>
-          <span>ราคาเดลิเวอรี่ (฿)</span>
-          <input
-            type="number"
-            min={0}
-            step={0.01}
-            value={deliveryPrice}
-            onChange={(e) => setDeliveryPrice(e.target.value)}
-            placeholder="ว่าง = ใช้ราคาหน้าร้าน"
-          />
-        </label>
+        <div className="pos-menu-price-row">
+          <label>
+            <span>ราคาหน้าร้าน (฿)</span>
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            <span>ราคาเดลิเวอรี่ (฿)</span>
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              value={deliveryPrice}
+              onChange={(e) => setDeliveryPrice(e.target.value)}
+              placeholder="ว่าง = ใช้หน้าร้าน"
+            />
+          </label>
+        </div>
+        <p className="muted pos-menu-price-dual-hint">
+          ช่องทางส่งบนหน้าขายจะใช้ราคาเดลิเวอรี่ · ว่างไว้ = เท่ากับหน้าร้าน
+        </p>
 
         <div className="pos-menu-field-block">
           <div className="pos-menu-options-head">
             <h2>กลุ่มตัวเลือก</h2>
+            <span className="muted pos-menu-link-count">
+              ผูกแล้ว {linkedGroupIds.length} กลุ่ม
+            </span>
           </div>
           {linkedGroups.length > 1 ? (
             <>
