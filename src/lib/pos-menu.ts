@@ -313,7 +313,6 @@ export type MenuItemPatch = Partial<
       | "description"
       | "optionGroupIds"
       | "sortOrder"
-      | "code"
     >,
     never
   >
