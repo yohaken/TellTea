@@ -10,14 +10,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 251/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 71/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+42/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.19"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 252/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 72/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+43/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.20"/);
 
 assert.ok(existsSync(join(root, "docs/npos-receipt-parity-checklist.md")));
 const doc = read("docs/npos-receipt-parity-checklist.md");
-assert.match(doc, /1.14.19/);
+assert.match(doc, /1.14.20/);
 assert.match(doc, /ReceiptFormBuilder/);
 assert.match(doc, /documentReceipt/);
 assert.match(doc, /ไม่พิมพ์ badge|ไม่มี.*badge/);
@@ -84,6 +84,6 @@ for (const label of sharedLabels) {
 
 const remaining = read("docs/npos-remaining-checklist.md");
 assert.match(remaining, /npos-receipt-parity-checklist/);
-assert.match(remaining, /1.14.19/);
+assert.match(remaining, /1.14.20/);
 
 console.log("OK test-npos-receipt-parity");

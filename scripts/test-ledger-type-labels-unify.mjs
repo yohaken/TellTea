@@ -18,7 +18,7 @@ const xlsxImport = read("src/lib/xlsx-import.ts");
 const ai = read("src/lib/ledger-ai.ts");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 251/);
+assert.match(version, /APP_BUILD = 252/);
 assert.match(labels, /canonicalLedgerType/);
 assert.match(labels, /ต้นทุน \(cogs\)/);
 assert.match(labels, /ค่าใช้จ่าย \(sga\)/);
