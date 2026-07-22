@@ -62,6 +62,14 @@ function resolveCredentials() {
   const fromRaw = argValue("--from-raw");
   if (fromRaw) return { mode: "raw", rawPath: resolve(fromRaw) };
 
+  const cdp =
+    argValue("--cdp") ||
+    process.env.FOODSTORY_CDP_URL ||
+    (hasFlag("--attach-chrome") ? "http://127.0.0.1:9222" : null);
+  if (cdp) {
+    return { mode: "cdp", cdpUrl: cdp };
+  }
+
   const idKey =
     process.env.FOODSTORY_ID_KEY ||
     process.env.FS_ID_KEY ||
@@ -97,6 +105,75 @@ function resolveCredentials() {
   return { mode: "missing" };
 }
 
+async function readSessionFromPage(page) {
+  return page.evaluate(() => {
+    const idKey = localStorage.getItem("idKey") || localStorage.getItem("access_token");
+    const branchId = localStorage.getItem("branch_id");
+    const companyId = localStorage.getItem("company_id");
+    let userInfo = null;
+    try {
+      userInfo = JSON.parse(localStorage.getItem("userInfo") || "null");
+    } catch {
+      userInfo = null;
+    }
+    return {
+      idKey,
+      branchId,
+      companyId,
+      url: location.href,
+      userInfo,
+    };
+  });
+}
+
+/**
+ * เกาะ Chrome ที่เปิดอยู่แล้ว (ต้องเปิดด้วย --remote-debugging-port=9222)
+ * หาแท็บ manage.foodstory.co ที่ล็อกอินแล้ว แล้วอ่าน idKey/branchId
+ */
+async function readSessionFromCdp(cdpUrl) {
+  console.log("เกาะ Chrome ผ่าน CDP…", cdpUrl);
+  let browser;
+  try {
+    browser = await chromium.connectOverCDP(cdpUrl);
+  } catch (err) {
+    throw new Error(
+      `เชื่อม CDP ไม่ได้ที่ ${cdpUrl}: ${err.message}\n` +
+        "เปิด Chrome บนเครื่องคุณด้วย:\n" +
+        '  /Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222 --user-data-dir="$HOME/chrome-fs-debug"\n' +
+        "แล้วเปิด https://manage.foodstory.co/th/menu ให้ล็อกอินค้างไว้",
+    );
+  }
+
+  try {
+    const contexts = browser.contexts();
+    const pages = contexts.flatMap((c) => c.pages());
+    let page =
+      pages.find((p) => /manage\.foodstory\.co/i.test(p.url())) ||
+      pages.find((p) => /foodstory\.co/i.test(p.url())) ||
+      null;
+
+    if (!page) {
+      // สร้างแท็บใหม่ใน context ที่มีอยู่ (ใช้คุกกี้เดิม)
+      const ctx = contexts[0] || (await browser.newContext());
+      page = await ctx.newPage();
+      await page.goto(FS_MANAGE_MENU_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+      await page.waitForTimeout(3000);
+    } else if (!/\/th\/menu/i.test(page.url())) {
+      await page.goto(FS_MANAGE_MENU_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
+      await page.waitForTimeout(2000);
+    }
+
+    const session = await readSessionFromPage(page);
+    session.cdpUrl = cdpUrl;
+    session.pageUrl = page.url();
+    return session;
+  } finally {
+    // อย่า browser.close() — จะปิด Chrome ของผู้ใช้
+    await browser.close().catch(() => {});
+    // connectOverCDP().close() disconnects only; documenting for clarity
+  }
+}
+
 async function readSessionFromStorage(storagePath, { headed = false } = {}) {
   const browser = await chromium.launch({
     headless: !headed,
@@ -112,24 +189,7 @@ async function readSessionFromStorage(storagePath, { headed = false } = {}) {
     const page = await context.newPage();
     await page.goto(FS_MANAGE_MENU_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
     await page.waitForTimeout(4000);
-    const session = await page.evaluate(() => {
-      const idKey = localStorage.getItem("idKey") || localStorage.getItem("access_token");
-      const branchId = localStorage.getItem("branch_id");
-      const companyId = localStorage.getItem("company_id");
-      let userInfo = null;
-      try {
-        userInfo = JSON.parse(localStorage.getItem("userInfo") || "null");
-      } catch {
-        userInfo = null;
-      }
-      return {
-        idKey,
-        branchId,
-        companyId,
-        url: location.href,
-        userInfo,
-      };
-    });
+    const session = await readSessionFromPage(page);
     await context.close();
     return session;
   } finally {
@@ -185,20 +245,16 @@ async function main() {
     console.error(`ยังไม่มีเซสชัน FoodStory
 
 ใช้แบบใดแบบหนึ่ง:
-  A) จากเบราว์เซอร์ที่ล็อกอินแล้ว (แนะนำตอนนี้):
-     DevTools → Console:
-       copy({ idKey: localStorage.idKey, branchId: localStorage.branch_id })
-     แล้ว:
-       mkdir -p scripts/data/foodstory-auth
-       # วาง JSON ลง scripts/data/foodstory-auth/session.json
+  A) เกาะ Chrome ที่เปิดเมนูค้างไว้ (แนะนำ — รันบนเครื่องเดียวกับ Chrome):
+       # เปิด Chrome ด้วย remote debugging ก่อน แล้วเปิดหน้าเมนูค้างไว้
+       npm run foodstory:menu-capture -- --attach-chrome
+
+  B) วาง session จาก localStorage ลง scripts/data/foodstory-auth/session.json
        npm run foodstory:menu-capture
 
-  B) env:
-       FOODSTORY_ID_KEY=... FOODSTORY_BRANCH_ID=... npm run foodstory:menu-capture
+  C) env FOODSTORY_ID_KEY + FOODSTORY_BRANCH_ID
 
-  C) Playwright storage (เครื่องที่ผ่าน Cloudflare ได้):
-       npm run foodstory:menu-login -- --headed
-       npm run foodstory:menu-capture -- --storage scripts/data/foodstory-auth/storage.json
+หมายเหตุ: Cloud agent คุม Chrome บนเครื่องคุณไม่ได้ — ต้องรันคำสั่งบนเครื่องที่เปิด manage.foodstory.co
 `);
     process.exit(2);
   }
@@ -230,18 +286,23 @@ async function main() {
     let branchId = creds.branchId;
     let companyId = creds.companyId || null;
 
-    if (creds.mode === "browser-storage") {
-      console.log("อ่านเซสชันจาก Playwright storage…", creds.storagePath);
-      const session = await readSessionFromStorage(creds.storagePath, {
-        headed: hasFlag("--headed"),
-      });
+    if (creds.mode === "cdp" || creds.mode === "browser-storage") {
+      let session;
+      if (creds.mode === "cdp") {
+        session = await readSessionFromCdp(creds.cdpUrl);
+      } else {
+        console.log("อ่านเซสชันจาก Playwright storage…", creds.storagePath);
+        session = await readSessionFromStorage(creds.storagePath, {
+          headed: hasFlag("--headed"),
+        });
+      }
       idKey = session.idKey;
       branchId = session.branchId;
       companyId = session.companyId;
-      metaExtra.browserUrl = session.url;
+      metaExtra.browserUrl = session.pageUrl || session.url;
       if (!idKey || !branchId) {
         throw new Error(
-          `storage มีอยู่แต่ไม่มี idKey/branchId (url=${session.url}). ล็อกอินใหม่ด้วย foodstory:menu-login`,
+          `อ่าน Chrome ได้แต่ไม่มี idKey/branchId (url=${session.pageUrl || session.url}). ต้องล็อกอินหน้าเมนูค้างไว้`,
         );
       }
       writeFileSync(
