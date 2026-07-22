@@ -135,6 +135,10 @@
     <string name="clock_in_title">พร้อมขาย</string>
     <string name="clock_in_hint">กดเข้างานเมื่อเริ่มขาย · ระบบสแกนเครื่องส่งหลังร้านให้อัตโนมัติ</string>
     <string name="btn_open_shift">เข้างาน</string>
+    <string name="btn_grant_all_perms">อนุญาตสิทธิ์ทั้งหมด</string>
+    <string name="perm_gate_hint">กดครั้งเดียว — Bluetooth · แจ้งเตือน · ติดตั้งอัปเดต · แบตเตอรี่\nพนักงานไม่ต้องเข้าตั้งค่าเอง</string>
+    <string name="perm_all_ok">สิทธิ์ครบแล้ว</string>
+    <string name="perm_continue_settings">เปิดหน้าตั้งค่าที่เหลือ…</string>
     <string name="btn_close_shift">ออกงาน</string>
     <string name="shift_opened">เข้างานแล้ว</string>
     <string name="shift_closed">ออกงานแล้ว</string>

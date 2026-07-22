@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 223/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+18/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.12\.0"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 224/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+19/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.12\.1"/);
 assert.match(read("docs/npos-capture-checklist.md"), /สั่งแคปจอ/);
 assert.match(read("docs/npos-pilot-gate-faq.md"), /แคปจอ/);
 
@@ -62,5 +62,20 @@ assert.match(read("src/components/NposDevicesPanel.tsx"), /สั่งแคป
 assert.match(read("src/components/NposDevicesPanel.tsx"), /captureIntervalMinutes|ทุก/);
 assert.match(read("src/components/NposDiagnosePanel.tsx"), /npos-capture-thumbs|latestPrimaryUrl/);
 assert.match(read("src/app/globals.css"), /npos-capture-thumbs/);
+
+
+assert.match(read("functions/index.js"), /nposOwnerDeviceCommand/);
+assert.match(read("functions/npos-owner-device.js"), /nposOwnerDeviceCommand/);
+assert.match(read("functions/npos-owner-device.js"), /assertOwner/);
+assert.match(read("src/lib/pos-devices.ts"), /nposOwnerDeviceCommand/);
+assert.match(read("src/lib/pos-devices.ts"), /callNposOwnerDeviceCommand/);
+assert.match(read("firestore.rules"), /isOwnerEmail\(\)\) && posDeviceOwnerPatch/);
+assert.match(read("firestore.rules"), /allow list: if isOwner\(\) \|\| isOwnerEmail\(\)/);
+assert.ok(existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/diagnose/PermissionBootstrap.java")));
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/PermissionBootstrap.java"), /grantAll/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/MainActivity.java"), /PermissionBootstrap/);
+assert.match(read("npos-telltea/app/src/main/AndroidManifest.xml"), /POST_NOTIFICATIONS/);
+assert.match(read("npos-telltea/app/src/main/res/values/strings.xml"), /btn_grant_all_perms/);
+assert.match(read("functions/npos-heartbeat.js"), /permissionsOk|permissionsStatus/);
 
 console.log("OK test-npos-capture");

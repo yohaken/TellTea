@@ -142,6 +142,12 @@ exports.nposDeviceHeartbeat = functions
       if (Object.prototype.hasOwnProperty.call(body, "customerDisplay")) {
         patch.customerDisplay = asString(body.customerDisplay, 24) || "unknown";
       }
+      if (Object.prototype.hasOwnProperty.call(body, "permissionsOk")) {
+        patch.permissionsOk = body.permissionsOk === true;
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "permissionsStatus")) {
+        patch.permissionsStatus = asString(body.permissionsStatus, 120);
+      }
 
       if (!snap.exists) {
         Object.assign(patch, {

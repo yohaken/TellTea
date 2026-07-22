@@ -8,13 +8,51 @@ import {
   setDoc,
   type Unsubscribe,
 } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 import { POS_BUILD } from "./pos-version";
 import { collectPosDeviceTelemetry, type PosDeviceTelemetry } from "./pos-device-telemetry";
 import { getPosDb } from "./pos-firebase";
-import { getDb } from "./firebase";
+import { getDb, getFirebaseFunctions } from "./firebase";
 import { mapFirestoreError } from "./firestore-errors";
 import type { PosNativeUpdateStatus, PosShellKind } from "./pos-native-version";
 
+type OwnerDeviceAction = "capture" | "capture_interval" | "block" | "unblock";
+
+async function callNposOwnerDeviceCommand(
+  action: OwnerDeviceAction,
+  deviceId: string,
+  extra?: Record<string, unknown>,
+): Promise<void> {
+  const fn = httpsCallable<
+    { action: OwnerDeviceAction; deviceId: string } & Record<string, unknown>,
+    { ok: boolean }
+  >(getFirebaseFunctions(), "nposOwnerDeviceCommand");
+  try {
+    await fn({ action, deviceId, ...(extra || {}) });
+  } catch (err) {
+    const code = String((err as { code?: string })?.code || "");
+    const msg = String((err as Error)?.message || err);
+    if (code.includes("permission-denied") || /permission|สิทธิ์/i.test(msg)) {
+      throw new Error(
+        mapFirestoreError(
+          { code: "permission-denied", message: msg },
+          action === "capture"
+            ? "สั่งแคปจอ nPos"
+            : action === "capture_interval"
+              ? "ตั้งช่วงแคปจอ nPos"
+              : action === "block"
+                ? "บล็อกเครื่อง nPos"
+                : "ปลดบล็อกเครื่อง nPos",
+          "staff",
+        ),
+      );
+    }
+    if (code.includes("not-found") || /ไม่พบเครื่อง/i.test(msg)) {
+      throw new Error("ไม่พบเครื่องนี้ในระบบ — รอเครื่องส่งสัญญาณอีกครั้ง");
+    }
+    throw new Error(msg || "สั่งงานเครื่อง nPos ไม่สำเร็จ");
+  }
+}
 export const POS_DEVICES_COL = "posDevices";
 export const POS_HEARTBEAT_MS = 60 * 1000;
 export const POS_ONLINE_MS = 3 * 60 * 1000;
@@ -69,6 +107,9 @@ export type PosDevice = {
   lastCaptureAt: number;
   /** 0 = off; else minutes between automatic captures while app is open. */
   captureIntervalMinutes: number;
+  /** Native runtime + install grants reported by tablet. */
+  permissionsOk: boolean;
+  permissionsStatus: string;
 };
 
 function deviceRef(id: string) {
@@ -172,6 +213,8 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
     lastCaptureAt: typeof data.lastCaptureAt === "number" ? data.lastCaptureAt : 0,
     captureIntervalMinutes:
       typeof data.captureIntervalMinutes === "number" ? data.captureIntervalMinutes : 0,
+    permissionsOk: data.permissionsOk === true,
+    permissionsStatus: typeof data.permissionsStatus === "string" ? data.permissionsStatus : "",
   };
 }
 
@@ -372,80 +415,38 @@ export async function savePosDeviceLabel(
 /**
  * Owner: hide accidental / stray installs from shop view.
  * Blocked survives native heartbeat (CF preserves deviceClass=blocked).
+ * Goes through Admin CF so BO never hits client rule friction.
  */
 export async function setNposDeviceBlocked(
   deviceId: string,
   blocked: boolean,
-  updatedBy: string,
+  _updatedBy: string,
   opts?: { isEmulator?: boolean },
 ): Promise<void> {
-  const restoreClass = opts?.isEmulator === true ? "dev" : "shop";
-  try {
-    await setDoc(
-      deviceRef(deviceId),
-      blocked
-        ? {
-            blocked: true,
-            disabled: true,
-            deviceClass: "blocked",
-            updatedAt: Date.now(),
-            updatedBy,
-          }
-        : {
-            blocked: false,
-            disabled: false,
-            deviceClass: restoreClass,
-            updatedAt: Date.now(),
-            updatedBy,
-          },
-      { merge: true },
-    );
-  } catch (err) {
-    throw new Error(mapFirestoreError(err, blocked ? "บล็อกเครื่อง nPos" : "ปลดบล็อกเครื่อง nPos", "pos"));
-  }
+  await callNposOwnerDeviceCommand(blocked ? "block" : "unblock", deviceId, {
+    isEmulator: opts?.isEmulator === true,
+  });
 }
 
 /** Owner: ask tablet to capture primary + secondary screens on next heartbeat. */
 export async function requestNposScreenCapture(
   deviceId: string,
-  updatedBy: string,
+  _updatedBy: string,
 ): Promise<void> {
-  try {
-    await setDoc(
-      deviceRef(deviceId),
-      {
-        captureRequestAt: Date.now(),
-        updatedAt: Date.now(),
-        updatedBy,
-      },
-      { merge: true },
-    );
-  } catch (err) {
-    throw new Error(mapFirestoreError(err, "สั่งแคปจอ nPos", "pos"));
-  }
+  await callNposOwnerDeviceCommand("capture", deviceId);
 }
 
 /** Owner: 0 = off, else capture every N minutes while app is open. */
 export async function setNposCaptureInterval(
   deviceId: string,
   intervalMinutes: number,
-  updatedBy: string,
+  _updatedBy: string,
 ): Promise<void> {
   const allowed = new Set([0, 5, 10, 30]);
   const mins = allowed.has(intervalMinutes) ? intervalMinutes : 0;
-  try {
-    await setDoc(
-      deviceRef(deviceId),
-      {
-        captureIntervalMinutes: mins,
-        updatedAt: Date.now(),
-        updatedBy,
-      },
-      { merge: true },
-    );
-  } catch (err) {
-    throw new Error(mapFirestoreError(err, "ตั้งช่วงแคปจอ nPos", "pos"));
-  }
+  await callNposOwnerDeviceCommand("capture_interval", deviceId, {
+    intervalMinutes: mins,
+  });
 }
 
 export async function requestPosDeviceReload(

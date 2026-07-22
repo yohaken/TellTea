@@ -633,16 +633,17 @@ service cloud.firestore {
     }
 
     match /posDevices/{deviceId} {
-      allow read: if isOwner() || (isPosDeviceAuth() && deviceId == request.auth.uid);
-      allow list: if isOwner();
+      allow read: if isOwner() || isOwnerEmail()
+        || (isPosDeviceAuth() && deviceId == request.auth.uid);
+      allow list: if isOwner() || isOwnerEmail();
       allow create: if isPosDeviceAuth()
         && deviceId == request.auth.uid
         && posDeviceCreate();
       allow update: if (isPosDeviceAuth()
           && deviceId == request.auth.uid
           && posDeviceHeartbeat())
-        || (isOwner() && posDeviceOwnerPatch());
-      allow delete: if isOwner();
+        || ((isOwner() || isOwnerEmail()) && posDeviceOwnerPatch());
+      allow delete: if isOwner() || isOwnerEmail();
     }
 
     match /loginTickets/{ticketId} {
