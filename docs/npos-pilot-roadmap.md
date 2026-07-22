@@ -18,7 +18,7 @@ P2        void local · X-report · เรียงหมวด                 
 P3        LAN :9100 · พักบิล · outbox badge · สรุปรอบบนจอ     ✅ รอบนี้ 1.10.0
 P4        นำร่องเครื่องจริง 1–2 วัน (feedback)                 ← พรุ่งนี้
 P5        แก้บั๊กจาก P4 + polish จาก feedback
-P6        void เซิร์ฟเวอร์ + pending panel เต็ม
+P6        void เซิร์ฟเวอร์ + pending panel เต็ม          ✅ W4–W5 (1.14.4)
 P7        (ถ้าจำเป็น) จัดการเมนูบางส่วนบนแท็บเล็ต
 P8 / N7   ตัด `/pos/sell` เว็บ เป็นหลัก — หลัง P4–P5 ผ่าน
 ```

@@ -199,4 +199,98 @@ async function completePosSaleAdmin(db, data, uid) {
   return { saleId: saleRef.id, billNo, change, total };
 }
 
-module.exports = { completePosSaleAdmin, isPosCaller };
+/**
+ * Void a completed POS sale by clientMutationId and/or saleId.
+ * Idempotent when already voided. Adjusts open-session totals once.
+ */
+async function voidPosSaleAdmin(db, data, deviceId) {
+  const clientMutationId = parseMutationId(data?.clientMutationId);
+  let saleId = typeof data?.saleId === "string" ? data.saleId.trim() : "";
+  const reason =
+    typeof data?.reason === "string" ? data.reason.trim().slice(0, 200) : "ทำลายบิล";
+
+  if (!clientMutationId && !saleId) {
+    throw new HttpsError("invalid-argument", "ต้องระบุ clientMutationId หรือ saleId");
+  }
+
+  if (!saleId && clientMutationId) {
+    const mutSnap = await db.doc(`posSaleMutations/${clientMutationId}`).get();
+    if (!mutSnap.exists) {
+      throw new HttpsError("not-found", "ไม่พบบิลนี้บนเซิร์ฟเวอร์");
+    }
+    const mut = mutSnap.data() || {};
+    if (typeof mut.deviceId === "string" && mut.deviceId && mut.deviceId !== deviceId) {
+      throw new HttpsError("permission-denied", "บิลนี้ไม่ใช่ของเครื่องนี้");
+    }
+    saleId = typeof mut.saleId === "string" ? mut.saleId : "";
+  }
+  if (!saleId) {
+    throw new HttpsError("not-found", "ไม่พบบิลนี้บนเซิร์ฟเวอร์");
+  }
+
+  const saleRef = db.collection("posSales").doc(saleId);
+  const now = Date.now();
+
+  const outcome = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(saleRef);
+    if (!snap.exists) {
+      throw new HttpsError("not-found", "ไม่พบบิลนี้");
+    }
+    const sale = snap.data() || {};
+    if (sale.deviceId && sale.deviceId !== deviceId) {
+      throw new HttpsError("permission-denied", "บิลนี้ไม่ใช่ของเครื่องนี้");
+    }
+    if (clientMutationId && sale.clientMutationId && sale.clientMutationId !== clientMutationId) {
+      throw new HttpsError("invalid-argument", "clientMutationId ไม่ตรงบิล");
+    }
+    if (sale.status === "voided") {
+      return {
+        alreadyVoided: true,
+        saleId,
+        billNo: typeof sale.billNo === "string" ? sale.billNo : "—",
+        total: Number(sale.total) || 0,
+        sessionId: typeof sale.sessionId === "string" ? sale.sessionId : "",
+      };
+    }
+
+    tx.update(saleRef, {
+      status: "voided",
+      voidedAt: now,
+      voidedBy: `pos:${deviceId}`,
+      voidReason: reason,
+    });
+
+    return {
+      alreadyVoided: false,
+      saleId,
+      billNo: typeof sale.billNo === "string" ? sale.billNo : "—",
+      total: Number(sale.total) || 0,
+      sessionId: typeof sale.sessionId === "string" ? sale.sessionId : "",
+    };
+  });
+
+  if (!outcome.alreadyVoided && outcome.sessionId) {
+    const sessionRef = db.doc(`posSessions/${outcome.sessionId}`);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(sessionRef);
+      if (!snap.exists) return;
+      const session = snap.data() || {};
+      if (session.deviceId && session.deviceId !== deviceId) return;
+      const saleCount = Math.max(0, (Number(session.saleCount) || 0) - 1);
+      const totalSales = Math.max(
+        0,
+        Math.round(((Number(session.totalSales) || 0) - (Number(outcome.total) || 0)) * 100) / 100,
+      );
+      tx.set(sessionRef, { saleCount, totalSales, updatedAt: now }, { merge: true });
+    });
+  }
+
+  return {
+    saleId: outcome.saleId,
+    billNo: outcome.billNo,
+    total: outcome.total,
+    alreadyVoided: !!outcome.alreadyVoided,
+  };
+}
+
+module.exports = { completePosSaleAdmin, voidPosSaleAdmin, isPosCaller };

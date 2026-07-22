@@ -1,6 +1,6 @@
-# nPos — เช็คลิสต์งานร้าน + ระบบตรวจ (W1–W3)
+# nPos — เช็คลิสต์งานร้าน + ระบบตรวจ (W1–W5)
 
-อัปเดต: **1.14.3** · `APP_BUILD` 233  
+อัปเดต: **1.14.4** · `APP_BUILD` 234  
 สcope: หน้าร้านขาเร็ว · ไม่แยกนั่ง/กลับ · ไม่มีครัว/KDS
 
 ## เฟสที่รันรอบนี้
@@ -10,6 +10,8 @@
 | **W1** | ระบบเช็คงานอัตโนมัติ `check-npos-shop` (แคป/ผัง/จอลูกค้า/สcope) | ✅ |
 | **W2** | โชว์ option ใต้บรรทัดตะกร้า + จอลูกค้า + ใบเสร็จสั้น | ✅ |
 | **W3** | Layout พนักงานซ้าย~65 / ขวา~35 (weight ไม่ล็อก 344dp) | ✅ |
+| **W4** | Outbox ชัดขึ้น — status/attempts/lastError · แผงคิว · ยกเลิกบิลรอส่ง | ✅ |
+| **W5** | `nposVoidSale` + Android ทำลายบิลขึ้นเซิร์ฟเวอร์ (คิว void ออฟไลน์) | ✅ |
 
 ## ระบบเช็คงาน
 
@@ -25,6 +27,8 @@ SKIP_CAPTURE_SMOKE=1 node scripts/check-npos-shop.mjs
 
 รายงานเขียนที่ `/opt/cursor/artifacts/npos-shop-check/report.json` (ถ้ามี path)
 
+ขั้นใน harness: master-sell · sell-layout · customer-display · capture · shop-phases-w · **outbox-w4** · **void-w5** · (optional capture-smoke)
+
 ## มือร้าน (หลังอัปเดต APK)
 
 | # | ผ่านเมื่อ |
@@ -34,7 +38,10 @@ SKIP_CAPTURE_SMOKE=1 node scripts/check-npos-shop.mjs
 | 3 | ใบเสร็จมีบรรทัด option |
 | 4 | จอพนักงาน: เมนูกว้าง / ตะกร้า ~1/3 ไม่บีบจนอ่านไม่ได้ |
 | 5 | แคปจอหลังร้านเห็นรูปจริง (ไม่ช่องว่าง) |
+| 6 | ปิดเน็ต → ขาย 1 บิล → ป้ายคิวโชว์ · กดแล้วเห็นสถานะ/ลองใหม่/ยกเลิก |
+| 7 | ทำลายบิลที่ซิงก์แล้ว → ในหลังร้านสถานะ voided (เมื่อมีเน็ต) |
 
 ## คิวถัดไป (ยังไม่ทำรอบนี้)
 - S3 / P4 เทสหน้าร้านคนจริง → ตัดเว็บขาย  
-- Local DB outbox ชัดขึ้น (คู่ขนาน)  
+- สื่อโปรโมจากหลังร้านบนจอลูกค้า (W6)  
+- Local DB / Room แทน SharedPreferences (ถ้าคิวโต)  

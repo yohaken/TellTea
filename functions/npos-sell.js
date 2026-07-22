@@ -4,7 +4,7 @@
  */
 const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
-const { completePosSaleAdmin } = require("./pos-complete-sale");
+const { completePosSaleAdmin, voidPosSaleAdmin } = require("./pos-complete-sale");
 
 function cors(res) {
   res.set("Access-Control-Allow-Origin", "*");
@@ -349,6 +349,46 @@ exports.nposCompleteSale = functions.region("asia-southeast1").https.onRequest(a
       ok: false,
       error: message,
     });
+  }
+});
+
+/** Void a synced sale — Admin SDK, installId auth (mirrors BO voidPosSale). */
+exports.nposVoidSale = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  const installId = requireInstallId(body);
+  if (!installId) {
+    res.status(400).json({ ok: false, error: "invalid installId" });
+    return;
+  }
+  try {
+    const db = getFirestore();
+    const result = await voidPosSaleAdmin(
+      db,
+      {
+        clientMutationId: body.clientMutationId,
+        saleId: body.saleId,
+        reason: body.reason,
+      },
+      installId,
+    );
+    res.status(200).json({ ok: true, ...result });
+  } catch (err) {
+    const fnCode = typeof err?.code === "string" ? err.code : "";
+    let http = 400;
+    if (fnCode === "not-found") http = 404;
+    else if (fnCode === "permission-denied") http = 403;
+    const message = err?.message || String(err);
+    console.error("nposVoidSale", message);
+    res.status(http).json({ ok: false, error: message, code: fnCode || undefined });
   }
 });
 

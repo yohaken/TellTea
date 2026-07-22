@@ -25,6 +25,7 @@ exports.nposShopSettings = nposSell.nposShopSettings;
 exports.nposSessionOpen = nposSell.nposSessionOpen;
 exports.nposSessionClose = nposSell.nposSessionClose;
 exports.nposCompleteSale = nposSell.nposCompleteSale;
+exports.nposVoidSale = nposSell.nposVoidSale;
 exports.nposToggleSoldOut = nposSell.nposToggleSoldOut;
 exports.nposReorderCategories = nposSell.nposReorderCategories;
 

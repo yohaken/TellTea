@@ -20,10 +20,16 @@ import app.telltea.npos.printer.PrinterPrefs;
 import app.telltea.npos.printer.PrinterTransport;
 import app.telltea.npos.shift.ShiftPrefs;
 
-/** Local-first sale outbox + flush to nposCompleteSale + optional print/drawer. */
+/**
+ * Local-first sale outbox + flush to nposCompleteSale + optional print/drawer.
+ * W4: queue rows carry status / attempts / lastError; void drops unsynced rows.
+ * W5: synced voids call nposVoidSale (with offline void queue).
+ */
 public final class SaleSync {
     public static final String SALE_URL =
             "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposCompleteSale";
+    public static final String VOID_URL =
+            "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposVoidSale";
     public static final String OPEN_URL =
             "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposSessionOpen";
     public static final String CLOSE_URL =
@@ -31,6 +37,7 @@ public final class SaleSync {
 
     private static final String PREFS = "npos_outbox";
     private static final String KEY_QUEUE = "queue";
+    private static final String KEY_VOID_QUEUE = "voidQueue";
     private static final String KEY_RECEIPTS = "receipts";
 
     public interface SaleCallback {
@@ -149,6 +156,7 @@ public final class SaleSync {
                         payload.put("discountBaht", discountBaht);
                         payload.put("localTotal", total);
                         payload.put("createdAt", System.currentTimeMillis());
+                        ensureOutboxMeta(payload);
 
                         pushQueue(app, payload);
                         rememberReceipt(app, payload, "รอส่ง");
@@ -158,13 +166,12 @@ public final class SaleSync {
                         try {
                             flushOne(app, payload, shop, autoPrint, paymentMethod, callback);
                         } catch (Exception syncErr) {
-                            OpsLogger.warn(
-                                    app,
-                                    "sync",
-                                    "ซิงก์บิลค้างในคิว",
+                            String msg =
                                     syncErr.getMessage() == null
                                             ? syncErr.getClass().getSimpleName()
-                                            : syncErr.getMessage());
+                                            : syncErr.getMessage();
+                            markQueueAttempt(app, mutationId, msg, isPermanentSaleError(msg));
+                            OpsLogger.warn(app, "sync", "ซิงก์บิลค้างในคิว", msg);
                             if (callback != null) {
                                 callback.onError("บันทึกในเครื่องแล้ว — รอซิงก์เมื่อมีเน็ต");
                             }
@@ -189,12 +196,116 @@ public final class SaleSync {
                     try {
                         JSONArray q = readQueue(app);
                         for (int i = 0; i < q.length(); i++) {
-                            flushOne(app, q.getJSONObject(i), null, false, null, null);
+                            JSONObject row = q.getJSONObject(i);
+                            ensureOutboxMeta(row);
+                            if ("failed".equals(row.optString("status"))) continue;
+                            try {
+                                flushOne(app, row, null, false, null, null);
+                            } catch (Exception syncErr) {
+                                String msg =
+                                        syncErr.getMessage() == null
+                                                ? syncErr.getClass().getSimpleName()
+                                                : syncErr.getMessage();
+                                markQueueAttempt(
+                                        app,
+                                        row.optString("clientMutationId"),
+                                        msg,
+                                        isPermanentSaleError(msg));
+                            }
                         }
+                        flushVoidQueue(app);
                     } catch (Exception e) {
                         OpsLogger.warn(app, "sync", "flush pending พลาด", e.getMessage() == null ? "" : e.getMessage());
                     }
                 });
+    }
+
+    /** Retry one pending/failed outbox row (clears failed → pending). */
+    public void retryPending(Context context, String mutationId, Runnable done) {
+        Context app = context.getApplicationContext();
+        executor.execute(
+                () -> {
+                    try {
+                        JSONObject row = findQueueRow(app, mutationId);
+                        if (row != null) {
+                            row.put("status", "pending");
+                            row.put("lastError", "");
+                            writeQueueRow(app, row);
+                            flushOne(app, row, null, false, null, null);
+                        }
+                    } catch (Exception e) {
+                        try {
+                            markQueueAttempt(
+                                    app,
+                                    mutationId,
+                                    e.getMessage() == null ? "retry_failed" : e.getMessage(),
+                                    isPermanentSaleError(e.getMessage() == null ? "" : e.getMessage()));
+                        } catch (Exception ignored) {
+                            /* ignore */
+                        }
+                        OpsLogger.warn(
+                                app,
+                                "sync",
+                                "retry บิลค้างพลาด",
+                                e.getMessage() == null ? "" : e.getMessage());
+                    }
+                    if (done != null) done.run();
+                });
+    }
+
+    /**
+     * Cancel a still-local outbox bill: drop queue row, void local receipt, unrecord shift.
+     * Does not call the server (sale never synced).
+     */
+    public void cancelPending(Context context, String mutationId, Runnable done) {
+        Context app = context.getApplicationContext();
+        executor.execute(
+                () -> {
+                    try {
+                        JSONObject row = findQueueRow(app, mutationId);
+                        if (row != null) {
+                            removeFromQueue(app, mutationId);
+                            markReceiptVoided(app, mutationId, "ยกเลิกบิลรอส่ง");
+                            ShiftPrefs.unrecordSale(
+                                    app,
+                                    row.optString("paymentMethod", ""),
+                                    row.optDouble("localTotal", 0),
+                                    row.optDouble("discountBaht", 0));
+                            OpsLogger.info(app, "sync", "ยกเลิกบิลรอส่ง", mutationId);
+                        }
+                    } catch (Exception e) {
+                        OpsLogger.error(
+                                app,
+                                "sync",
+                                "ยกเลิกบิลรอส่งไม่สำเร็จ",
+                                e.getMessage() == null ? "" : e.getMessage());
+                    }
+                    if (done != null) done.run();
+                });
+    }
+
+    /** Snapshot of outbox rows for pending UI (newest last). */
+    public List<JSONObject> listPending(Context context) {
+        List<JSONObject> out = new ArrayList<>();
+        try {
+            JSONArray q = readQueue(context.getApplicationContext());
+            for (int i = 0; i < q.length(); i++) {
+                JSONObject row = q.getJSONObject(i);
+                ensureOutboxMeta(row);
+                out.add(row);
+            }
+        } catch (Exception ignored) {
+            /* empty */
+        }
+        return out;
+    }
+
+    public int failedCount(Context context) {
+        int n = 0;
+        for (JSONObject row : listPending(context)) {
+            if ("failed".equals(row.optString("status"))) n++;
+        }
+        return n;
     }
 
     public List<JSONObject> recentReceipts(Context context) {
@@ -251,7 +362,9 @@ public final class SaleSync {
                 });
     }
 
-    /** Local void — same as web tablet PosReceiptsView (does not touch Firestore). */
+    /**
+     * Local void + drop unsynced outbox row; if already synced, call nposVoidSale (or queue void).
+     */
     public void voidReceipt(Context context, JSONObject receiptRow, String reason, Runnable onDone) {
         Context app = context.getApplicationContext();
         executor.execute(
@@ -262,7 +375,13 @@ public final class SaleSync {
                             return;
                         }
                         String mutationId = receiptRow.optString("mutationId", "");
-                        markReceiptVoided(app, mutationId, reason == null || reason.isEmpty() ? "ทำลายบิล" : reason);
+                        String voidReason =
+                                reason == null || reason.isEmpty() ? "ทำลายบิล" : reason;
+                        boolean wasPending = findQueueRow(app, mutationId) != null;
+                        if (wasPending) {
+                            removeFromQueue(app, mutationId);
+                        }
+                        markReceiptVoided(app, mutationId, voidReason);
                         ShiftPrefs.unrecordSale(
                                 app,
                                 receiptRow.optString("paymentMethod", ""),
@@ -273,6 +392,13 @@ public final class SaleSync {
                                 "sale",
                                 "ทำลายบิล",
                                 receiptRow.optString("billNo", mutationId));
+                        if (!wasPending && !mutationId.isEmpty()) {
+                            tryServerVoid(
+                                    app,
+                                    mutationId,
+                                    receiptRow.optString("saleId", ""),
+                                    voidReason);
+                        }
                     } catch (Exception e) {
                         OpsLogger.error(
                                 app,
@@ -389,15 +515,17 @@ public final class SaleSync {
             String paymentMethod,
             SaleCallback callback)
             throws Exception {
-        JSONObject res = MenuRepository.postJson(SALE_URL, payload);
+        JSONObject saleBody = saleBodyFromOutbox(payload);
+        JSONObject res = MenuRepository.postJson(SALE_URL, saleBody);
         if (!res.optBoolean("ok", false)) {
             throw new IllegalStateException(res.optString("error", "sale_failed"));
         }
         String billNo = res.optString("billNo", "—");
+        String saleId = res.optString("saleId", "");
         double change = res.optDouble("change", 0);
         double total = res.optDouble("total", payload.optDouble("localTotal", 0));
         removeFromQueue(app, payload.optString("clientMutationId"));
-        updateReceiptBill(app, payload.optString("clientMutationId"), billNo);
+        updateReceiptBill(app, payload.optString("clientMutationId"), billNo, saleId);
         OpsLogger.info(app, "sync", "ซิงก์บิลแล้ว", billNo + " · " + total);
         if (callback != null) callback.onSynced(billNo, change, total);
 
@@ -407,6 +535,74 @@ public final class SaleSync {
             maybePrintAndKick(app, payload, billNo, total, paymentMethod == null
                     ? payload.optString("paymentMethod")
                     : paymentMethod);
+        }
+    }
+
+    private void tryServerVoid(Context app, String mutationId, String saleId, String reason)
+            throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
+        body.put("clientMutationId", mutationId);
+        if (saleId != null && !saleId.isEmpty()) body.put("saleId", saleId);
+        body.put("reason", reason);
+        try {
+            JSONObject res = MenuRepository.postJson(VOID_URL, body);
+            if (res.optBoolean("ok", false)) {
+                OpsLogger.info(
+                        app,
+                        "sale",
+                        "ทำลายบิลบนเซิร์ฟเวอร์แล้ว",
+                        res.optString("billNo", mutationId));
+                return;
+            }
+            String err = res.optString("error", "void_failed");
+            // Sale never reached server — local-only void is enough.
+            if (err.contains("ไม่พบ") || "not-found".equals(res.optString("code"))) {
+                OpsLogger.info(app, "sale", "ทำลายบิล — ไม่มีบนเซิร์ฟเวอร์", mutationId);
+                return;
+            }
+            pushVoidQueue(app, body);
+            OpsLogger.warn(app, "sale", "คิวทำลายบิลรอซิงก์", err);
+        } catch (Exception e) {
+            pushVoidQueue(app, body);
+            OpsLogger.warn(
+                    app,
+                    "sale",
+                    "คิวทำลายบิลรอซิงก์",
+                    e.getMessage() == null ? "" : e.getMessage());
+        }
+    }
+
+    private void flushVoidQueue(Context app) {
+        try {
+            JSONArray q = readVoidQueue(app);
+            if (q.length() == 0) return;
+            JSONArray remain = new JSONArray();
+            for (int i = 0; i < q.length(); i++) {
+                JSONObject body = q.getJSONObject(i);
+                try {
+                    JSONObject res = MenuRepository.postJson(VOID_URL, body);
+                    if (res.optBoolean("ok", false)
+                            || res.optString("error", "").contains("ไม่พบ")
+                            || "not-found".equals(res.optString("code"))) {
+                        OpsLogger.info(
+                                app,
+                                "sale",
+                                "ซิงก์ทำลายบิลแล้ว",
+                                res.optString("billNo", body.optString("clientMutationId")));
+                    } else {
+                        remain.put(body);
+                    }
+                } catch (Exception e) {
+                    remain.put(body);
+                }
+            }
+            app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                    .edit()
+                    .putString(KEY_VOID_QUEUE, remain.toString())
+                    .apply();
+        } catch (Exception e) {
+            OpsLogger.warn(app, "sale", "flush void queue พลาด", e.getMessage() == null ? "" : e.getMessage());
         }
     }
 
@@ -498,6 +694,7 @@ public final class SaleSync {
     }
 
     private static void pushQueue(Context app, JSONObject payload) throws Exception {
+        ensureOutboxMeta(payload);
         JSONArray q = readQueue(app);
         q.put(payload);
         app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -509,6 +706,25 @@ public final class SaleSync {
     private static JSONArray readQueue(Context app) throws Exception {
         String raw = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_QUEUE, "[]");
         return new JSONArray(raw);
+    }
+
+    private static JSONArray readVoidQueue(Context app) throws Exception {
+        String raw =
+                app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_VOID_QUEUE, "[]");
+        return new JSONArray(raw);
+    }
+
+    private static void pushVoidQueue(Context app, JSONObject body) throws Exception {
+        JSONArray q = readVoidQueue(app);
+        String mid = body.optString("clientMutationId");
+        for (int i = 0; i < q.length(); i++) {
+            if (mid.equals(q.getJSONObject(i).optString("clientMutationId"))) return;
+        }
+        q.put(body);
+        app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_VOID_QUEUE, q.toString())
+                .apply();
     }
 
     private static void removeFromQueue(Context app, String mutationId) throws Exception {
@@ -524,6 +740,85 @@ public final class SaleSync {
                 .apply();
     }
 
+    private static JSONObject findQueueRow(Context app, String mutationId) throws Exception {
+        if (mutationId == null || mutationId.isEmpty()) return null;
+        JSONArray q = readQueue(app);
+        for (int i = 0; i < q.length(); i++) {
+            JSONObject o = q.getJSONObject(i);
+            if (mutationId.equals(o.optString("clientMutationId"))) {
+                ensureOutboxMeta(o);
+                return o;
+            }
+        }
+        return null;
+    }
+
+    private static void writeQueueRow(Context app, JSONObject row) throws Exception {
+        String mutationId = row.optString("clientMutationId");
+        JSONArray q = readQueue(app);
+        JSONArray next = new JSONArray();
+        boolean replaced = false;
+        for (int i = 0; i < q.length(); i++) {
+            JSONObject o = q.getJSONObject(i);
+            if (mutationId.equals(o.optString("clientMutationId"))) {
+                next.put(row);
+                replaced = true;
+            } else {
+                next.put(o);
+            }
+        }
+        if (!replaced) next.put(row);
+        app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_QUEUE, next.toString())
+                .apply();
+    }
+
+    private static void markQueueAttempt(
+            Context app, String mutationId, String error, boolean permanent) throws Exception {
+        JSONObject row = findQueueRow(app, mutationId);
+        if (row == null) return;
+        int attempts = row.optInt("attempts", 0) + 1;
+        row.put("attempts", attempts);
+        row.put("lastError", error == null ? "" : error);
+        row.put("status", permanent ? "failed" : "pending");
+        row.put("lastAttemptAt", System.currentTimeMillis());
+        writeQueueRow(app, row);
+    }
+
+    static void ensureOutboxMeta(JSONObject payload) throws Exception {
+        if (!payload.has("status") || payload.optString("status").isEmpty()) {
+            payload.put("status", "pending");
+        }
+        if (!payload.has("attempts")) payload.put("attempts", 0);
+        if (!payload.has("lastError")) payload.put("lastError", "");
+        if (!payload.has("createdAt")) payload.put("createdAt", System.currentTimeMillis());
+    }
+
+    /** Permanent CF / validation errors — keep in queue as failed, skip auto-flush. */
+    static boolean isPermanentSaleError(String message) {
+        if (message == null || message.isEmpty()) return false;
+        String m = message.toLowerCase(java.util.Locale.US);
+        if (m.contains("invalid-argument")) return true;
+        if (m.contains("permission-denied")) return true;
+        if (m.contains("deviceid")) return true;
+        if (message.contains("ตะกร้าว่าง")) return true;
+        if (message.contains("ไม่ถูกต้อง")) return true;
+        if (message.contains("น้อยกว่ายอดขาย")) return true;
+        return false;
+    }
+
+    /** Strip outbox meta before POST to nposCompleteSale. */
+    static JSONObject saleBodyFromOutbox(JSONObject payload) throws Exception {
+        JSONObject body = new JSONObject(payload.toString());
+        body.remove("status");
+        body.remove("attempts");
+        body.remove("lastError");
+        body.remove("lastAttemptAt");
+        body.remove("localTotal");
+        return body;
+    }
+
     private static void rememberReceipt(Context app, JSONObject payload, String billNo) throws Exception {
         JSONArray arr =
                 new JSONArray(
@@ -532,6 +827,7 @@ public final class SaleSync {
         row.put("at", System.currentTimeMillis());
         row.put("mutationId", payload.optString("clientMutationId"));
         row.put("billNo", billNo);
+        row.put("saleId", "");
         row.put("total", payload.optDouble("localTotal"));
         row.put("discountBaht", payload.optDouble("discountBaht", 0));
         row.put("paymentMethod", payload.optString("paymentMethod"));
@@ -568,7 +864,8 @@ public final class SaleSync {
                 .apply();
     }
 
-    private static void updateReceiptBill(Context app, String mutationId, String billNo) throws Exception {
+    private static void updateReceiptBill(
+            Context app, String mutationId, String billNo, String saleId) throws Exception {
         JSONArray arr =
                 new JSONArray(
                         app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_RECEIPTS, "[]"));
@@ -576,6 +873,7 @@ public final class SaleSync {
             JSONObject o = arr.getJSONObject(i);
             if (mutationId.equals(o.optString("mutationId"))) {
                 o.put("billNo", billNo);
+                if (saleId != null && !saleId.isEmpty()) o.put("saleId", saleId);
             }
         }
         app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

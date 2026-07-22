@@ -190,23 +190,127 @@ public class SellActivity extends Activity {
   }
 
   private void flushPendingNow() {
-    sellSyncStatus.setText(R.string.sell_flushing);
-    saleSync.flushPending(this);
-    flushSyncButton.postDelayed(this::updatePendingBadge, 1200);
+    showPendingOutboxDialog();
+  }
+
+  /** W4: pending/failed outbox list — sync all, retry one, cancel local. */
+  private void showPendingOutboxDialog() {
+    List<JSONObject> rows = saleSync.listPending(this);
+    if (rows.isEmpty()) {
+      Toast.makeText(this, R.string.outbox_empty, Toast.LENGTH_SHORT).show();
+      updatePendingBadge();
+      return;
+    }
+    ScrollView scroll = new ScrollView(this);
+    LinearLayout root = new LinearLayout(this);
+    root.setOrientation(LinearLayout.VERTICAL);
+    int pad = (int) (12 * getResources().getDisplayMetrics().density);
+    root.setPadding(pad, pad, pad, pad);
+    for (JSONObject row : rows) {
+      String mid = row.optString("clientMutationId", "");
+      String status = row.optString("status", "pending");
+      double total = row.optDouble("localTotal", 0);
+      String err = row.optString("lastError", "");
+      int attempts = row.optInt("attempts", 0);
+      String shortId =
+          mid.length() > 6 ? mid.substring(mid.length() - 6).toUpperCase(Locale.US) : mid;
+      TextView line = new TextView(this);
+      line.setText(
+          getString(
+              R.string.outbox_row_fmt,
+              shortId,
+              total,
+              "failed".equals(status) ? "ล้มเหลว" : "รอส่ง",
+              attempts,
+              err.isEmpty() ? "—" : err));
+      line.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+      line.setPadding(0, pad / 2, 0, pad / 2);
+      root.addView(line);
+
+      LinearLayout actions = new LinearLayout(this);
+      actions.setOrientation(LinearLayout.HORIZONTAL);
+      Button retry = new Button(this);
+      retry.setText(R.string.outbox_retry_one);
+      retry.setOnClickListener(
+          v -> {
+            sellSyncStatus.setText(R.string.sell_flushing);
+            saleSync.retryPending(
+                this,
+                mid,
+                () ->
+                    runOnUiThread(
+                        () -> {
+                          updatePendingBadge();
+                          Toast.makeText(this, R.string.outbox_retry_done, Toast.LENGTH_SHORT)
+                              .show();
+                        }));
+          });
+      Button cancel = new Button(this);
+      cancel.setText(R.string.outbox_cancel_one);
+      cancel.setOnClickListener(
+          v ->
+              new AlertDialog.Builder(this)
+                  .setTitle(R.string.outbox_cancel_title)
+                  .setMessage(R.string.outbox_cancel_msg)
+                  .setPositiveButton(
+                      android.R.string.ok,
+                      (d, w) ->
+                          saleSync.cancelPending(
+                              this,
+                              mid,
+                              () ->
+                                  runOnUiThread(
+                                      () -> {
+                                        updatePendingBadge();
+                                        updateShiftSummary();
+                                        Toast.makeText(
+                                                this,
+                                                R.string.outbox_cancel_done,
+                                                Toast.LENGTH_SHORT)
+                                            .show();
+                                      })))
+                  .setNegativeButton(android.R.string.cancel, null)
+                  .show());
+      actions.addView(retry);
+      actions.addView(cancel);
+      root.addView(actions);
+    }
+    scroll.addView(root);
+    new AlertDialog.Builder(this)
+        .setTitle(getString(R.string.outbox_title_n, rows.size()))
+        .setView(scroll)
+        .setPositiveButton(
+            R.string.outbox_sync_all,
+            (d, w) -> {
+              sellSyncStatus.setText(R.string.sell_flushing);
+              saleSync.flushPending(this);
+              flushSyncButton.postDelayed(this::updatePendingBadge, 1200);
+            })
+        .setNegativeButton(android.R.string.cancel, null)
+        .show();
   }
 
   private void updatePendingBadge() {
     int n = saleSync.pendingCount(this);
+    int failed = saleSync.failedCount(this);
     if (flushSyncButton != null) {
       if (n > 0) {
         flushSyncButton.setVisibility(View.VISIBLE);
-        flushSyncButton.setText(getString(R.string.btn_flush_sync_n, n));
+        if (failed > 0) {
+          flushSyncButton.setText(getString(R.string.btn_flush_sync_failed_n, n, failed));
+        } else {
+          flushSyncButton.setText(getString(R.string.btn_flush_sync_n, n));
+        }
       } else {
         flushSyncButton.setVisibility(View.GONE);
       }
     }
     if (n > 0 && sellSyncStatus != null) {
-      sellSyncStatus.setText(getString(R.string.sell_pending_n, n));
+      if (failed > 0) {
+        sellSyncStatus.setText(getString(R.string.sell_pending_failed_n, n, failed));
+      } else {
+        sellSyncStatus.setText(getString(R.string.sell_pending_n, n));
+      }
     }
   }
 
