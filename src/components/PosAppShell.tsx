@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Bell, Menu, RefreshCw } from "lucide-react";
 import { AppBrand } from "@/components/AppBrand";
@@ -13,6 +13,7 @@ import { PosRemoteCommandBanner } from "@/components/PosRemoteCommandBanner";
 import { usePosApp } from "@/lib/pos-app-context";
 import { installChunkLoadRecovery } from "@/lib/chunk-load-recovery";
 import { POS_LOCK_HREF, POS_NAV_ITEMS, matchPosNav, posNavLockItem } from "@/lib/pos-nav";
+import type { PosSyncSnapshot } from "@/lib/pos-sync";
 import { posVersionLabel } from "@/lib/pos-version";
 
 function PosSidebarNav({
@@ -118,6 +119,23 @@ export function PosAppShell({ children }: { children: React.ReactNode }) {
   } = usePosApp();
   const [mobileNav, setMobileNav] = useState(false);
 
+  const onSyncChange = useCallback(
+    (snap: PosSyncSnapshot) => {
+      setSyncSnap(snap);
+      setSellBusy((prev) => {
+        if (prev.pendingSyncCount === snap.pendingCount && prev.syncing === snap.syncing) {
+          return prev;
+        }
+        return {
+          ...prev,
+          pendingSyncCount: snap.pendingCount,
+          syncing: snap.syncing,
+        };
+      });
+    },
+    [setSellBusy, setSyncSnap],
+  );
+
   useEffect(() => installChunkLoadRecovery(), []);
 
   if (status === "boot" || status === "connecting") {
@@ -138,17 +156,7 @@ export function PosAppShell({ children }: { children: React.ReactNode }) {
         deviceId={device?.id ?? null}
         sellBusy={sellBusy}
       />
-      <PosSyncWatcher
-        enabled={status === "ready"}
-        onSyncChange={(snap) => {
-          setSyncSnap(snap);
-          setSellBusy((prev) => ({
-            ...prev,
-            pendingSyncCount: snap.pendingCount,
-            syncing: snap.syncing,
-          }));
-        }}
-      />
+      <PosSyncWatcher enabled={status === "ready"} onSyncChange={onSyncChange} />
       <PosPendingSyncPanel
         open={syncPanelOpen}
         snapshot={syncSnap}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { PosSellView } from "@/components/PosSellView";
 import { PosClockInPanel } from "@/components/PosClockInPanel";
 import { usePosApp } from "@/lib/pos-app-context";
@@ -17,6 +18,13 @@ export default function PosSellPage() {
     syncSnap,
     setSellBusy,
   } = usePosApp();
+
+  const onBusyChange = useCallback(
+    (state: { cartCount: number; payOpen: boolean; saleBusy: boolean }) => {
+      setSellBusy((prev) => ({ ...prev, ...state }));
+    },
+    [setSellBusy],
+  );
 
   if (!device) return null;
 
@@ -39,7 +47,7 @@ export default function PosSellPage() {
       devicePairingCode={device.pairingCode}
       session={session}
       pendingBills={syncSnap.bills}
-      onBusyChange={(state) => setSellBusy((prev) => ({ ...prev, ...state }))}
+      onBusyChange={onBusyChange}
     />
   );
 }
