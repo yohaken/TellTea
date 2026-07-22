@@ -23,6 +23,7 @@ const steps = [
   { name: "option-qty-parity", cmd: ["node", "scripts/test-npos-option-qty-parity.mjs"] },
   { name: "blind-shift-close", cmd: ["node", "scripts/test-npos-blind-shift-close.mjs"] },
   { name: "z-report-form", cmd: ["node", "scripts/test-npos-z-report-form.mjs"] },
+  { name: "bo-shift-readonly", cmd: ["node", "scripts/test-npos-bo-shift-readonly.mjs"] },
   { name: "bestseller-rank", cmd: ["node", "scripts/test-npos-bestseller-rank.mjs"] },
   { name: "sell-flow-polish", cmd: ["node", "scripts/test-npos-sell-flow-polish.mjs"] },
   { name: "receipt-parity", cmd: ["node", "scripts/test-npos-receipt-parity.mjs"] },

@@ -254,6 +254,7 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
     );
     const shift = asString(body.shift, 20) || shiftFromHour(bangkokHour);
     const sessionId = asString(body.sessionId, 80) || `${installId}_${now}`;
+    const openingCash = Number(body.openingCash);
     await db.doc(`posSessions/${sessionId}`).set(
       {
         deviceId: installId,
@@ -263,6 +264,7 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
         status: "open",
         saleCount: 0,
         totalSales: 0,
+        openingCash: Number.isFinite(openingCash) && openingCash >= 0 ? openingCash : 0,
         updatedAt: now,
         source: "npos-telltea",
       },

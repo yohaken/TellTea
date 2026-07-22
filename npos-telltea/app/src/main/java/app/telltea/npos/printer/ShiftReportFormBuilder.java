@@ -124,10 +124,10 @@ public final class ShiftReportFormBuilder {
       sb.append(rule(width)).append('\n');
       sb.append(center("ปิดรอบเรียบร้อย", width)).append('\n');
       sb.append('\n');
-      sb.append("ลงชื่อพนักงานส่งกะ").append('\n');
+      sb.append("ลงชื่อผู้ส่งกะ").append('\n');
       sb.append(signLine(width)).append('\n');
       sb.append('\n');
-      sb.append("ลงชื่อผู้จัดการ/เจ้าของ").append('\n');
+      sb.append("ลงชื่อผู้รับกะ").append('\n');
       sb.append(signLine(width)).append('\n');
     } else {
       sb.append(rule(width)).append('\n');

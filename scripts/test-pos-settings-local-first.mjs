@@ -25,6 +25,6 @@ const sync = readFileSync(join(root, "src/lib/pos-sync.ts"), "utf8");
 assert.match(sync, /flushPosShopSettingsUpload/);
 
 const version = readFileSync(join(root, "src/lib/pos-version.ts"), "utf8");
-assert.match(version, /POS_BUILD = 66/);
+assert.match(version, /POS_BUILD = 67/);
 
 console.log("OK pos-settings-local-first");

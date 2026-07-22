@@ -16,7 +16,6 @@ import { printSaleDocuments } from "@/lib/pos-printer/router";
 import { localReceiptToPrintPayload } from "@/lib/pos-receipt-view";
 import { getLocalPosShopSettings, subscribePosShopSettings, type PosShopSettings } from "@/lib/pos-settings";
 import { formatPlainNumber } from "@/lib/utils";
-import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { buildShiftReportPayload } from "@/lib/pos-shift-report";
 import {
   buildShiftReportHtml,
@@ -282,10 +281,8 @@ function ReceiptRow({
 }
 
 export function PosShiftView() {
-  const { session, device, selling, syncSnap, setError, handleCloseShift: closeShiftFromApp } = usePosApp();
+  const { session, device, selling, syncSnap } = usePosApp();
   const elapsed = useLiveElapsed(selling && session ? session.openedAt : null);
-  const [closing, setClosing] = useState(false);
-  const [closeShiftDetail, setCloseShiftDetail] = useState<string | null>(null);
   const [tab, setTab] = useState<"current" | "history">("current");
   const [historyRange, setHistoryRange] = useState<"today" | "week">("week");
   const [history, setHistory] = useState(() =>
@@ -491,56 +488,6 @@ export function PosShiftView() {
     return () => window.clearInterval(t);
   }, [device, session?.status, session?.id, historyRange]);
 
-  function requestCloseShift() {
-    if (!session || !selling || !device) return;
-
-    const summary = sessionSummary;
-    const zLines = [
-      `ออกงาน #${session.id.slice(-4).toUpperCase()}`,
-      `เข้า ${formatPosSessionClock(session.openedAt)}`,
-      `บิล ${summary.count} · ยอด ฿${formatPlainNumber(summary.total)}`,
-      `เงินสด ${summary.cashCount} ฿${formatPlainNumber(summary.cashTotal)}`,
-      `PromptPay ${summary.promptpayCount} ฿${formatPlainNumber(summary.promptpayTotal)}`,
-      pendingSync > 0 ? `บิลค้างส่ง ${pendingSync} — จะซิงก์เบื้องหลัง` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    setCloseShiftDetail(zLines);
-  }
-
-  async function handleCloseShift() {
-    if (!session || !device) return;
-
-    const closedSummary = sessionSummary;
-    const closedOpenedAt = session.openedAt;
-    const closedSessionId = session.id;
-    const closedReceipts = sessionReceipts;
-
-    setClosing(true);
-    setError(null);
-    try {
-      await closeShiftFromApp({
-        cashTotal: closedSummary.cashTotal,
-        promptpayTotal: closedSummary.promptpayTotal,
-      });
-      refreshHistory();
-      setCloseShiftDetail(null);
-      printShiftReport({
-        kind: "close",
-        sessionId: closedSessionId,
-        openedAt: closedOpenedAt,
-        closedAt: Date.now(),
-        summary: closedSummary,
-        receipts: closedReceipts,
-      });
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setClosing(false);
-    }
-  }
-
   const salesSummary = useMemo(() => summarizeLocalReceipts(sales), [sales]);
 
   const displaySummary = tab === "current" && sessionSummary.count > 0 ? sessionSummary : salesSummary;
@@ -599,6 +546,9 @@ export function PosShiftView() {
                   saleCount={displaySummary.count || session.saleCount}
                 />
                 <div className="pos-shift-sticky-actions">
+                  <p className="muted pos-shift-bo-note">
+                    ปิดกะทำบนแอป nPos เท่านั้น · หน้านี้ดูยอด/บิล (หลังบ้าน)
+                  </p>
                   <button
                     type="button"
                     className="pos-shift-snapshot-btn"
@@ -606,14 +556,6 @@ export function PosShiftView() {
                     onClick={handlePrintCurrentSnapshot}
                   >
                     {printingReport ? "กำลังพิมพ์..." : "พิมพ์สรุปกลางรอบ"}
-                  </button>
-                  <button
-                    type="button"
-                    className="pos-btn-orange pos-shift-close-btn"
-                    disabled={closing}
-                    onClick={requestCloseShift}
-                  >
-                    {closing ? "กำลังบันทึก..." : "ออกงาน (ปิดรอบ)"}
                   </button>
                 </div>
               </div>
@@ -822,17 +764,6 @@ export function PosShiftView() {
           </>
         )}
       </div>
-
-      <PosConfirmDialog
-        open={closeShiftDetail !== null}
-        title="ออกงาน (ปิดรอบขาย)?"
-        detail={closeShiftDetail ?? undefined}
-        confirmLabel="ออกงาน"
-        destructive
-        busy={closing}
-        onCancel={() => !closing && setCloseShiftDetail(null)}
-        onConfirm={() => void handleCloseShift()}
-      />
     </div>
   );
 }

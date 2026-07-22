@@ -64,6 +64,7 @@ public final class SaleSync {
                         JSONObject body = new JSONObject();
                         body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
                         body.put("sessionId", sessionId);
+                        body.put("openingCash", ShiftPrefs.nextOpeningCash(app));
                         JSONObject res = MenuRepository.postJson(OPEN_URL, body);
                         if (res.optBoolean("ok", false)) {
                             ShiftPrefs.open(app, sessionId, res.optString("shift", "morning"), openedAt);
