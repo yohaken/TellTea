@@ -1,7 +1,7 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **1.14.10** ปิดกะ blind · qty-option · N7 ตัดออก · Room = local DB  
-ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-blind-shift-close-checklist.md](./npos-blind-shift-close-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md)
+อัปเดต: **1.14.10** ปิดกะ blind · คิวถัดไปจัดลำดับขายดี  
+ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-blind-shift-close-checklist.md](./npos-blind-shift-close-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md) · [npos-bestseller-rank-checklist.md](./npos-bestseller-rank-checklist.md)
 
 ## ทำแล้ว
 - [x] แคปจอ media-proxy — รูปจริงใน BO (**1.14.2**)
@@ -20,6 +20,7 @@
 ## คิวถัดไป (เฟสก่อนหน้าที่ยังไม่ทำ)
 | เฟส | โฟกัส | สถานะ | ทำไมค้าง |
 |-----|--------|--------|----------|
+| **R0–R5** | จัดลำดับขายดี · โหมด fix / bestsellers | ⬜ R0 วางแล้ว | ดู [npos-bestseller-rank-checklist.md](./npos-bestseller-rank-checklist.md) |
 | **S3 / P4** | คนเทสหน้าร้านจริง | ⬜ | ต้องคนที่เคาน์เตอร์ |
 | **P5** | feedback จากนำร่อง | ⬜ | รอ P4 |
 | **W6** | สื่อโปรโมจากหลังร้านบนจอ Idle | ⬜ | คู่ขนาน · ยังไม่เริ่ม |
@@ -33,6 +34,7 @@
 - ทานที่ร้าน / รับกลับ · สลิปครัว / KDS · PromptPay auto cut-off · โน้ตบิล  
 
 ## คู่ขนานได้
+- [ ] **R1–R5** เก็บขายดี 7→14 วัน · หลังร้านมีโหมด fix / กลุ่มขายดี · POS auto ([เช็คลิสต์](./npos-bestseller-rank-checklist.md))
 - [ ] Local DB first / Room บนเครื่อง เมื่อคิวโต (หลังร้านยัง Firebase)
 - [ ] สื่อโปรโมจากหลังร้านบนจอลูกค้า (W6)
 - [x] qty-per-option ละเอียดเท่าเว็บ (1.14.9)
