@@ -34,7 +34,7 @@ Build: `npm run build` → `split-pos-hosting.mjs` แยก output อัตโ
 - หัก `stock` จากบิล POS (ยกเลิก Phase 6 แบบเดิม)
 - ดึง `posSales` → `monthlyIncome` อัตโนมัติ (ยกเลิก Phase 7)
 - ใส่ `/pos/` กลับเข้า hosting หลังร้าน
-- **เปิดลิงก์จากเคาน์เตอร์ (nPos / เว็บ `/pos/*`) เข้าหลังร้าน** (`telltea-shop`, `/stock/`, `/pos-sales/`) — ตัดขาดแล้ว (**1.14.17**)
+- **เปิดลิงก์จากเคาน์เตอร์ (nPos / เว็บ `/pos/*`) เข้าหลังร้าน** (`telltea-shop`, `/stock/`, `/pos-sales/`) — ตัดขาดแล้ว (**1.14.18**)
 
 ## สิ่งที่ยังร่วมกัน (ไม่ใช่การเชื่อมข้อมูล)
 
