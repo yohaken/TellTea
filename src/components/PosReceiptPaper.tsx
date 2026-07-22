@@ -68,10 +68,6 @@ export function PosReceiptPaper({
               </div>
             ) : null}
             <div>
-              <dt>ประเภท</dt>
-              <dd>ทานที่ร้าน</dd>
-            </div>
-            <div>
               <dt>ชำระโดย</dt>
               <dd>{receipt.paymentMethod === "cash" ? "เงินสด" : "PromptPay"}</dd>
             </div>

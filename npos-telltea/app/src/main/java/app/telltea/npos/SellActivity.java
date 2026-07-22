@@ -112,6 +112,10 @@ public class SellActivity extends Activity {
     findViewById(R.id.payCashButton).setOnClickListener(v -> startPay("cash"));
     findViewById(R.id.payPromptButton).setOnClickListener(v -> startPay("promptpay"));
     findViewById(R.id.discountButton).setOnClickListener(v -> showDiscountDialog());
+    View clearCart = findViewById(R.id.clearCartButton);
+    if (clearCart != null) {
+      clearCart.setOnClickListener(v -> confirmClearCart());
+    }
     findViewById(R.id.holdBillButton).setOnClickListener(v -> holdBill());
     restoreHoldButton.setOnClickListener(v -> restoreHold());
     flushSyncButton.setOnClickListener(v -> flushPendingNow());
@@ -205,6 +209,25 @@ public class SellActivity extends Activity {
     } catch (Exception e) {
       OpsLogger.warn(this, "update", "พักบิลก่อนอัปเดตไม่สำเร็จ", e.getMessage());
     }
+  }
+
+  private void confirmClearCart() {
+    if (cart.isEmpty()) {
+      Toast.makeText(this, R.string.cart_empty, Toast.LENGTH_SHORT).show();
+      return;
+    }
+    new AlertDialog.Builder(this)
+        .setTitle(R.string.clear_cart_title)
+        .setMessage(R.string.clear_cart_msg)
+        .setPositiveButton(
+            R.string.btn_clear_cart,
+            (d, w) -> {
+              cart.clear();
+              discountBaht = 0;
+              renderCart();
+            })
+        .setNegativeButton(android.R.string.cancel, null)
+        .show();
   }
 
   private void holdBill() {
@@ -844,13 +867,25 @@ public class SellActivity extends Activity {
   }
 
   private void showOptionPicker(MenuModels.Item item) {
+    showOptionPicker(item, -1);
+  }
+
+  private void showOptionPicker(MenuModels.Item item, int replaceIndex) {
     List<MenuModels.OptionGroup> groups = new ArrayList<>();
     for (String gid : item.optionGroupIds) {
       MenuModels.OptionGroup g = findGroup(gid);
       if (g != null && !g.options.isEmpty()) groups.add(g);
     }
     if (groups.isEmpty()) {
-      addItemWithOptions(item, new JSONArray(), item.price, 1);
+      if (replaceIndex >= 0 && replaceIndex < cart.size()) {
+        MenuModels.CartLine old = cart.get(replaceIndex);
+        cart.set(
+            replaceIndex,
+            new MenuModels.CartLine(item.id, item.name, item.price, Math.max(1, old.qty), new JSONArray()));
+        renderCart();
+      } else {
+        addItemWithOptions(item, new JSONArray(), item.price, 1);
+      }
       return;
     }
 
@@ -881,10 +916,18 @@ public class SellActivity extends Activity {
     final Map<String, String> singlePick = new HashMap<>();
     final int[] qty = {1};
 
-    // Preselect required singles / sweetness
+    // Prefill from cart line when editing
+    if (replaceIndex >= 0 && replaceIndex < cart.size()) {
+      MenuModels.CartLine existing = cart.get(replaceIndex);
+      qty[0] = Math.max(1, existing.qty);
+      seedOptionCountsFromJson(existing.optionsJson, groups, counts, singlePick);
+    }
+
+    // Preselect required singles / sweetness when empty
     for (MenuModels.OptionGroup group : groups) {
       List<MenuModels.Option> opts = OptionPickerLogic.sortForDisplay(group);
       if (opts.isEmpty()) continue;
+      if (counts.containsKey(group.id)) continue;
       if (OptionPickerLogic.isSweetnessGroup(group) || group.isSingle()) {
         if (group.effectiveMin() > 0) {
           singlePick.put(group.id, opts.get(0).id);
@@ -1154,7 +1197,7 @@ public class SellActivity extends Activity {
           }
         };
 
-    qtyValue.setText("1");
+    qtyValue.setText(String.valueOf(qty[0]));
     qtyMinus.setOnClickListener(
         v -> {
           if (qty[0] <= 1) return;
@@ -1176,6 +1219,7 @@ public class SellActivity extends Activity {
     AlertDialog dialog =
         new AlertDialog.Builder(this).setView(sheet).setCancelable(true).create();
     cancelBtn.setOnClickListener(v -> dialog.dismiss());
+    final int replaceAt = replaceIndex;
     confirmBtn.setOnClickListener(
         v -> {
           try {
@@ -1219,7 +1263,14 @@ public class SellActivity extends Activity {
               g.put("choices", choices);
               optionsJson.put(g);
             }
-            addItemWithOptions(item, optionsJson, unit, qty[0]);
+            if (replaceAt >= 0 && replaceAt < cart.size()) {
+              cart.set(
+                  replaceAt,
+                  new MenuModels.CartLine(item.id, item.name, unit, qty[0], optionsJson));
+              renderCart();
+            } else {
+              addItemWithOptions(item, optionsJson, unit, qty[0]);
+            }
             dialog.dismiss();
           } catch (Exception e) {
             Toast.makeText(this, R.string.option_pick_fail, Toast.LENGTH_SHORT).show();
@@ -1234,6 +1285,46 @@ public class SellActivity extends Activity {
       dialog
           .getWindow()
           .setLayout(w, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+    }
+  }
+
+  /** Prefill option picker maps from a cart line's optionsJson. */
+  private static void seedOptionCountsFromJson(
+      JSONArray optionsJson,
+      List<MenuModels.OptionGroup> groups,
+      Map<String, Map<String, Integer>> counts,
+      Map<String, String> singlePick) {
+    if (optionsJson == null || optionsJson.length() == 0) return;
+    try {
+      for (int i = 0; i < optionsJson.length(); i++) {
+        JSONObject g = optionsJson.optJSONObject(i);
+        if (g == null) continue;
+        String groupId = g.optString("groupId", "");
+        JSONArray choices = g.optJSONArray("choices");
+        if (groupId.isEmpty() || choices == null) continue;
+        Map<String, Integer> bucket = new HashMap<>();
+        String lastId = "";
+        for (int j = 0; j < choices.length(); j++) {
+          JSONObject c = choices.optJSONObject(j);
+          if (c == null) continue;
+          String oid = c.optString("optionId", "");
+          if (oid.isEmpty()) continue;
+          bucket.put(oid, bucket.getOrDefault(oid, 0) + 1);
+          lastId = oid;
+        }
+        if (!bucket.isEmpty()) {
+          counts.put(groupId, bucket);
+          for (MenuModels.OptionGroup group : groups) {
+            if (group.id.equals(groupId)
+                && (group.isSingle() || OptionPickerLogic.isSweetnessGroup(group))
+                && !lastId.isEmpty()) {
+              singlePick.put(groupId, lastId);
+            }
+          }
+        }
+      }
+    } catch (Exception ignored) {
+      /* keep empty picks */
     }
   }
 
@@ -1282,6 +1373,13 @@ public class SellActivity extends Activity {
               Locale.getDefault(), "%s x%d · ฿%.0f", line.name, line.qty, line.lineTotal()));
       label.setTextColor(0xFF222222);
       label.setTypeface(Typeface.DEFAULT_BOLD);
+      MenuModels.Item menuItem = findMenuItem(line.menuItemId);
+      boolean canEdit =
+          menuItem != null && menuItem.hasOptions() && line.optionsJson != null
+              && line.optionsJson.length() > 0;
+      if (canEdit || (menuItem != null && menuItem.hasOptions())) {
+        label.setOnClickListener(v -> editCartLineOptions(idx));
+      }
       Button plus = new Button(this);
       plus.setText("+");
       plus.setOnClickListener(
@@ -1297,9 +1395,17 @@ public class SellActivity extends Activity {
             if (line.qty <= 0) cart.remove(idx);
             renderCart();
           });
+      Button remove = new Button(this);
+      remove.setText("×");
+      remove.setOnClickListener(
+          v -> {
+            cart.remove(idx);
+            renderCart();
+          });
       row.addView(label);
       row.addView(minus);
       row.addView(plus);
+      row.addView(remove);
       block.addView(row);
 
       String opts = line.optionsSummary();
@@ -1309,6 +1415,9 @@ public class SellActivity extends Activity {
         optView.setTextColor(0xFF666666);
         optView.setTextSize(12);
         optView.setPadding(4, 0, 4, 0);
+        if (menuItem != null && menuItem.hasOptions()) {
+          optView.setOnClickListener(v -> editCartLineOptions(idx));
+        }
         block.addView(optView);
       }
       cartList.addView(block);
@@ -1323,6 +1432,25 @@ public class SellActivity extends Activity {
         discountLabel.setVisibility(View.GONE);
       }
     }
+  }
+
+  private MenuModels.Item findMenuItem(String id) {
+    if (menu == null || id == null) return null;
+    for (MenuModels.Item it : menu.items) {
+      if (id.equals(it.id)) return it;
+    }
+    return null;
+  }
+
+  private void editCartLineOptions(int index) {
+    if (index < 0 || index >= cart.size()) return;
+    MenuModels.CartLine line = cart.get(index);
+    MenuModels.Item item = findMenuItem(line.menuItemId);
+    if (item == null || !item.hasOptions()) {
+      Toast.makeText(this, R.string.cart_empty, Toast.LENGTH_SHORT).show();
+      return;
+    }
+    showOptionPicker(item, index);
   }
 
   private void syncCustomerDisplay() {

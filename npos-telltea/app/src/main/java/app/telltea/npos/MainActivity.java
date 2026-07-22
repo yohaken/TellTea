@@ -212,9 +212,8 @@ public class MainActivity extends Activity {
   private void buildHubNav() {
     if (hubNavList == null) return;
     hubNavList.removeAllViews();
-    // Same order/labels as src/lib/pos-nav.ts POS_NAV_ITEMS
+    // Same order/labels as src/lib/pos-nav.ts POS_NAV_ITEMS (members hidden F3)
     addHubNative(R.string.nav_sell, () -> startActivity(new Intent(this, SellActivity.class)));
-    addHubWeb(R.string.nav_members, "https://telltea-pos.web.app/pos/members/", true);
     addHubNative(
         R.string.nav_open_bills,
         () -> {

@@ -58,6 +58,11 @@
     <string name="sell_menu_demo">ใช้เมนูเดโม — ยังดึงเมนูร้านไม่ได้</string>
     <string name="sell_menu_empty">ไม่มีเมนูในหมวดนี้</string>
     <string name="cart_title">ตะกร้า</string>
+    <string name="btn_clear_cart">ล้างตะกร้า</string>
+    <string name="clear_cart_title">ล้างตะกร้า?</string>
+    <string name="clear_cart_msg">ลบทุกรายการในตะกร้า</string>
+    <string name="cart_edit_options_hint">แตะชื่อเพื่อแก้ตัวเลือก</string>
+    <string name="btn_remove_line">ลบ</string>
     <string name="cart_total_zero">รวม ฿0</string>
     <string name="cart_total_fmt">รวม ฿%.0f</string>
     <string name="cart_empty">เลือกเมนูก่อนชำระ</string>

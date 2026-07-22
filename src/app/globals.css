@@ -10476,6 +10476,14 @@ body.modal-open .main-panel {
   line-height: 1.25;
 }
 
+.pos-cart-head-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #1e2d3d;
+  line-height: 1.25;
+}
+
 .pos-cart-bill-id {
   display: block;
   margin-top: 0.2rem;

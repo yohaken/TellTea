@@ -104,17 +104,6 @@ export function PosReceiptsView() {
             })}
             {pendingCount > 0 ? ` · รอส่ง ${pendingCount}` : ""}
           </p>
-          <div className="pos-receipts-channel-tabs">
-            <button type="button" className="is-active">
-              ทานที่ร้าน
-            </button>
-            <button type="button" disabled title="เร็วๆ นี้">
-              สั่งกลับบ้าน
-            </button>
-            <button type="button" disabled title="เร็วๆ นี้">
-              เดลิเวอรี่
-            </button>
-          </div>
           <div className="pos-receipts-filters">
             <button type="button" className={filter === "all" ? "is-active" : ""} onClick={() => setFilter("all")}>
               ทั้งหมด ({rows.length})
@@ -150,13 +139,13 @@ export function PosReceiptsView() {
                 >
                   <span className="pos-receipts-row-id">#{r.billNo}</span>
                   <span className="pos-receipts-row-total">฿{formatPlainNumber(r.total)}</span>
-                  <span className="muted pos-receipts-row-sub">ทานที่ร้าน</span>
                   <span className="muted pos-receipts-row-time">
                     {new Date(r.createdAt).toLocaleTimeString("th-TH", {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
                     {r.voided ? " · ทำลายแล้ว" : r.pending ? " · รอส่ง" : ""}
+                    {` · ${r.paymentMethod === "cash" ? "สด" : "PromptPay"}`}
                   </span>
                 </button>
               </li>

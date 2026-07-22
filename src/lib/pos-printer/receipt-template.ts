@@ -276,9 +276,7 @@ export function unifiedReceiptStyles(layout: PrinterKindProfile, cutMode: PosPri
 
 export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: PrinterKindProfile): string {
   const compact = layout.paperWidthMm === 58;
-  const channel = data.orderChannel || "dine_in";
-  const channelLabel = RECEIPT_CHANNEL_LABELS[channel];
-  const showChannelBadge = channel !== "dine_in";
+  // Front-counter only — never print dine-in / takeaway / delivery channel badge.
 
   const shopName = shopDisplayName(data);
   const shopAddress = (data.shopAddress || DEFAULT_SHOP.shopAddress).trim();
@@ -314,7 +312,6 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
     data.staffId ? metaRow("ID", data.staffId) : "",
     metaRow("วันที่", formatReceiptDate(data.createdAt)),
     metaRow("เวลา", formatReceiptTime(data.createdAt)),
-    metaRow("ประเภท", channelLabel),
   ].join("");
 
   const cashRows =
@@ -331,15 +328,10 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
     ? `<div class="customer">${escapeReceiptHtml(data.customerName.trim())}</div>`
     : "";
 
-  const channelBlock = showChannelBadge
-    ? `<div class="channel">${escapeReceiptHtml(channelLabel)}</div>`
-    : "";
-
   const footerNote = (data.receiptFooterNote || "ขอบคุณที่อุดหนุน").trim();
 
   return `
   <div class="receipt">
-    ${channelBlock}
     <div class="bill-no">${escapeReceiptHtml(billDisplay)}</div>
     ${customerBlock}
     <div class="shop-block">
