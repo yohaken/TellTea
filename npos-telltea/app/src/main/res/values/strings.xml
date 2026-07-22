@@ -54,6 +54,7 @@
     <string name="btn_pay_cash">ชำระเงินสด</string>
     <string name="btn_pay_promptpay">ชำระ PromptPay</string>
     <string name="btn_refresh_menu">รีเฟรช</string>
+    <string name="category_reordered">เรียงหมวดแล้ว</string>
     <string name="btn_open_menu_admin">เปิดจัดการเมนู (เว็บ)</string>
     <string name="menu_admin_hint">ตั้งชื่อ/ราคา/รูป/ตัวเลือกบนเว็บ — แอปนี้ใช้ขายหน้าร้าน</string>
     <string name="menu_recommended_fmt">★ %1$s</string>
