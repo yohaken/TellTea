@@ -85,7 +85,9 @@
     "verify:pos-menu-catalog": "node scripts/verify-pos-menu-catalog.mjs",
     "foodstory:menu-login": "node scripts/foodstory-menu-login.mjs",
     "foodstory:menu-capture": "node scripts/foodstory-menu-capture.mjs",
+    "foodstory:menu-apply": "node scripts/foodstory-menu-apply.mjs",
     "test:foodstory-menu-capture": "node scripts/test-foodstory-menu-capture.mjs",
+    "test:foodstory-menu-apply": "node scripts/test-foodstory-menu-apply.mjs",
     "start": "next start",
     "lint": "eslint",
     "export": "next build"

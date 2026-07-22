@@ -97,28 +97,32 @@ FoodStory (แหล่งต้นทางช่วงเปลี่ยนผ
 
 หมายเหตุ: โหมด Playwright headless ใน cloud มักโดน Cloudflare ที่ `owner.foodstory.co/login` — ใช้เซสชันจากเบราว์เซอร์จริงเป็นหลัก
 
-### Phase 1 — ปุ่มหลังร้าน “ระบบซิงก์” + เขียนเข้า POS Web
+### Phase 1 — ปุ่มหลังร้าน “ระบบซิงก์” + เขียนเข้า POS Web ✅ (สคริปต์ apply พร้อม)
 
-หลังร้าน (POS จัดการ):
+สถานะ: **สคริปต์ apply พร้อม** · รอ local รันกับ `snapshot-latest.json` จริง (189 รายการ)
 
+```bash
+# ดูแผนก่อน (ไม่เขียน)
+npm run foodstory:menu-apply -- --dry-run
+
+# เขียนเข้า Firestore (ทับของ foodstory · ลบที่หาย · ลบ orphan เก่าที่ไม่ใช่ manual)
+npm run foodstory:menu-apply -- --apply
 ```
-POS → ระบบซิงก์
-  · ปุ่ม “ซิงก์เมนูจาก FoodStory”
-  · สถานะล่าสุด (เวลา / สำเร็จ / ผิดพลาด / จำนวนรายการ)
-  · ประวัติรอบสั้นๆ
-  · โหมด dry-run (ดู diff ก่อนเขียน) — แนะนำมีตั้งแต่ต้น
-```
 
-กฎเขียน Firestore:
+กฎที่ล็อกแล้ว:
 
 1. map ด้วย `externalSource: "foodstory"` + `externalId`
 2. มีแล้ว → อัปเดตชื่อ/ราคา/หมวด/optionGroupIds จาก snapshot
 3. ไม่มี → สร้างใหม่
 4. `source: manual` → ไม่ยุ่ง
 5. รายการที่หายจาก FS → **ลบ** จาก POS (เฉพาะที่มาจาก FS)
-6. ตัวเลือกครบ: สร้าง/อัปเดต `menuOptionGroups` ให้ขายจริงได้ (required, selectionType, min/max, priceDelta)
+6. orphan เก่า (ไม่มี externalId / ไม่ใช่ manual) → ลบด้วย (ใส่ `--keep-orphans` ถ้าอยากเก็บ)
+7. ตัวเลือกครบ: สร้าง/อัปเดต `menuOptionGroups` ให้ขายจริงได้
+8. คง `recommended` / `visibleOnPos` เดิมตอนอัปเดต
 
-ผลลัพธ์: กดครั้งเดียว → `/pos/menu/` + หน้าขายเว็บตรง FS (บวกรายการมือ)
+ผลลัพธ์: `/pos/menu/` + หน้าขายเว็บตรง FS (บวกรายการมือ) · Native รับต่อผ่าน `nposMenuSnapshot`
+
+UI หลังร้าน “POS → ระบบซิงก์” ยังเป็นขั้นถัดไป (ตอนนี้ใช้คำสั่งก่อน)
 
 ### Phase 2 — ไหลไป Native (ของเดิม)
 

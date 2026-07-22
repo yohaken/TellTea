@@ -182,6 +182,10 @@ export type MenuCategory = {
   active: boolean;
   createdAt: number;
   updatedAt: number;
+  /** foodstory | manual */
+  source?: string;
+  externalSource?: string;
+  externalId?: string;
 };
 
 /** ตัวเลือกย่อยในกลุ่ม (embedded ใน menuOptionGroups) */
@@ -192,6 +196,7 @@ export type MenuOptionChoice = {
   priceDeltaMax?: number;
   sortOrder: number;
   active: boolean;
+  externalId?: string;
 };
 
 export type MenuOptionSelectionType = "single" | "multi" | "unlimited";
@@ -209,6 +214,9 @@ export type MenuOptionGroup = {
   active: boolean;
   createdAt: number;
   updatedAt: number;
+  source?: string;
+  externalSource?: string;
+  externalId?: string;
 };
 
 /** POS — รายการเมนู */
@@ -228,6 +236,11 @@ export type MenuItem = {
   optionGroupIds?: string[];
   createdAt: number;
   updatedAt: number;
+  source?: string;
+  externalSource?: string;
+  externalId?: string;
+  code?: string;
+  imageKey?: string;
 };
 
 export type PosSaleLineOptionChoice = {
