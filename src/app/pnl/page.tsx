@@ -20,6 +20,7 @@ import {
   type PnlReportData,
 } from "@/lib/pnl";
 import { exportPnlXlsx } from "@/lib/xlsx-export";
+import { categoryLabel } from "@/lib/categories";
 import { formatPlainNumber } from "@/lib/utils";
 
 export default function PnlPage() {
@@ -62,9 +63,9 @@ function CategoryTable({
           <thead>
             <tr>
               <th>เดือน</th>
-              <th className="col-num">Asset</th>
-              <th className="col-num">cogs</th>
-              <th className="col-num">sga</th>
+              <th className="col-num">{categoryLabel("asset")}</th>
+              <th className="col-num">{categoryLabel("cogs")}</th>
+              <th className="col-num">{categoryLabel("sga")}</th>
             </tr>
           </thead>
           <tbody>
@@ -312,17 +313,17 @@ function PnlView() {
                 <thead>
                   <tr>
                     <th>เดือน</th>
-                    <th className="col-num">income</th>
+                    <th className="col-num">รายได้</th>
                     <th className="col-num">/วัน</th>
-                    <th className="col-num">cogs</th>
-                    <th className="col-num">cogs%</th>
-                    <th className="col-num">gross</th>
-                    <th className="col-num">%gross</th>
-                    <th className="col-num">sga</th>
-                    <th className="col-num">sga%</th>
-                    <th className="col-num">net</th>
-                    <th className="col-num">%net</th>
-                    <th className="col-num">Asset</th>
+                    <th className="col-num">{categoryLabel("cogs")}</th>
+                    <th className="col-num">%</th>
+                    <th className="col-num">กำไรขั้นต้น</th>
+                    <th className="col-num">%</th>
+                    <th className="col-num">{categoryLabel("sga")}</th>
+                    <th className="col-num">%</th>
+                    <th className="col-num">สุทธิ</th>
+                    <th className="col-num">%</th>
+                    <th className="col-num">{categoryLabel("asset")}</th>
                     <th className="col-num">invest/net</th>
                     <th className="col-num">Cash+</th>
                     <th className="col-num">เงินสด/รายได้</th>

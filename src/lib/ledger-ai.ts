@@ -1,6 +1,6 @@
 import { httpsCallable } from "firebase/functions";
 import { getFirebaseFunctions } from "./firebase";
-import { guessTypeFromDescription } from "./ledger-labels";
+import { guessTypeFromDescription, canonicalLedgerType } from "./ledger-labels";
 import { listLedgerEntriesInMonth, updateLedgerEntry } from "./ledger";
 
 export type LedgerTypeSource = "ai" | "owner" | "heuristic" | "legacy";
@@ -16,14 +16,9 @@ export type ClassifyLedgerTypeResult = {
 const ALLOWED = new Set(["cogs", "sga", "asset", "อื่นๆ"]);
 
 export function normalizeLedgerOutType(raw: string): string {
-  const t = String(raw || "").trim();
-  const lower = t.toLowerCase();
-  if (lower === "cosg") return "cogs";
-  if (lower === "assets") return "asset";
-  if (lower === "other" || lower === "others") return "อื่นๆ";
-  if (ALLOWED.has(lower)) return lower;
-  if (t === "อื่นๆ") return "อื่นๆ";
-  return t || "cogs";
+  const key = canonicalLedgerType(raw);
+  if (ALLOWED.has(key)) return key;
+  return key || "cogs";
 }
 
 /** Map stored typeSource — แถวเก่ไม่มี field = legacy (อย่าติดป้าย AI) */
