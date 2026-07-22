@@ -1,226 +1,292 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Customer display: standby | selecting | payment | success -->
+<!-- Two-pane customer display; orientation/weights applied in code (auto-resize). -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/customerRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#0F1A14">
 
-    <!-- 1) Standby -->
     <LinearLayout
-        android:id="@+id/panelStandby"
+        android:id="@+id/customerSplit"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="32dp"
-        android:visibility="visible">
+        android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/standbyBrand"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="@string/app_name"
-            android:textColor="#C4A35A"
-            android:textSize="36sp"
-            android:textStyle="bold" />
+        <!-- Main 60-70%: media / promo / QR payment overlay -->
+        <FrameLayout
+            android:id="@+id/paneMedia"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="65"
+            android:background="#142019">
 
-        <TextView
-            android:id="@+id/standbyTagline"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:gravity="center"
-            android:text="@string/customer_standby_welcome"
-            android:textColor="#A8B5AE"
-            android:textSize="20sp" />
-
-        <TextView
-            android:id="@+id/standbyPromoLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="36dp"
-            android:text="@string/customer_standby_recommend_label"
-            android:textColor="#7A8A82"
-            android:textSize="14sp" />
-
-        <TextView
-            android:id="@+id/standbyPromo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center"
-            android:textColor="#F3F6F2"
-            android:textSize="28sp"
-            android:textStyle="bold" />
-
-        <ImageView
-            android:id="@+id/standbyPromoImage"
-            android:layout_width="220dp"
-            android:layout_height="138dp"
-            android:layout_marginTop="18dp"
-            android:background="#1A2A22"
-            android:contentDescription="@string/customer_standby_recommend_label"
-            android:scaleType="centerCrop"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/standbyFooter"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:gravity="center"
-            android:textColor="#5C6B64"
-            android:textSize="15sp" />
-    </LinearLayout>
-
-    <!-- 2) Selecting -->
-    <LinearLayout
-        android:id="@+id/panelSelecting"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="24dp"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/selectTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/customer_select_title"
-            android:textColor="#C4A35A"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_marginTop="12dp"
-            android:layout_weight="1"
-            android:fillViewport="true">
+            <ImageView
+                android:id="@+id/mediaImage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/customer_standby_recommend_label"
+                android:scaleType="centerCrop"
+                android:background="#1A2A22" />
 
             <LinearLayout
-                android:id="@+id/selectLines"
+                android:id="@+id/mediaCaptionBar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical" />
-        </ScrollView>
+                android:layout_gravity="bottom"
+                android:background="#CC0F1A14"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-        <TextView
-            android:id="@+id/selectDiscount"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="end"
-            android:textColor="#E85D24"
-            android:textSize="16sp"
-            android:visibility="gone" />
+                <TextView
+                    android:id="@+id/mediaLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/customer_standby_recommend_label"
+                    android:textColor="#C4A35A"
+                    android:textSize="13sp" />
 
-        <TextView
-            android:id="@+id/selectTotal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="end"
-            android:paddingTop="6dp"
-            android:textColor="#F3F6F2"
-            android:textSize="40sp"
-            android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/mediaTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="#F3F6F2"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Payment overlay on main pane (QR or cash) -->
+            <LinearLayout
+                android:id="@+id/mediaPayOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#F00F1A14"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/payTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/customer_pay_title"
+                    android:textColor="#C4A35A"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/payTotal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textColor="#F3F6F2"
+                    android:textSize="44sp"
+                    android:textStyle="bold" />
+
+                <ImageView
+                    android:id="@+id/payQr"
+                    android:layout_width="240dp"
+                    android:layout_height="240dp"
+                    android:layout_marginTop="14dp"
+                    android:background="#FFFFFF"
+                    android:contentDescription="@string/customer_pay_qr_hint"
+                    android:padding="10dp"
+                    android:scaleType="fitCenter"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/payHint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center"
+                    android:textColor="#A8B5AE"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/payCashDetail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:textColor="#F3F6F2"
+                    android:textSize="20sp"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Side 30-40%: welcome (idle) or order receipt -->
+        <LinearLayout
+            android:id="@+id/paneReceipt"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="35"
+            android:background="#0B1410"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <LinearLayout
+                android:id="@+id/receiptIdle"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:visibility="visible">
+
+                <TextView
+                    android:id="@+id/receiptBrand"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="@string/app_name"
+                    android:textColor="#C4A35A"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/receiptWelcome"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center"
+                    android:text="@string/customer_standby_welcome"
+                    android:textColor="#A8B5AE"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/receiptFooter"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:gravity="center"
+                    android:textColor="#5C6B64"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/receiptOrder"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/receiptOrderTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/customer_select_title"
+                    android:textColor="#C4A35A"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_weight="1"
+                    android:fillViewport="true">
+
+                    <LinearLayout
+                        android:id="@+id/receiptLines"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </ScrollView>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp"
+                    android:background="#33443C" />
+
+                <TextView
+                    android:id="@+id/receiptSubtotal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="end"
+                    android:textColor="#A8B5AE"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/receiptDiscount"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="end"
+                    android:textColor="#E85D24"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/receiptTotal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="end"
+                    android:paddingTop="4dp"
+                    android:textColor="#F3F6F2"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 
-    <!-- 3) Payment -->
+    <!-- Success full-bleed overlay -->
     <LinearLayout
-        android:id="@+id/panelPayment"
+        android:id="@+id/panelSuccess"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center_horizontal"
+        android:background="#F00F1A14"
+        android:gravity="center"
         android:orientation="vertical"
         android:padding="28dp"
         android:visibility="gone">
 
         <TextView
-            android:id="@+id/payTitle"
+            android:id="@+id/successCheck"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/customer_pay_title"
-            android:textColor="#C4A35A"
-            android:textSize="22sp"
+            android:text="✓"
+            android:textColor="#3DDC84"
+            android:textSize="72sp"
             android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/payTotal"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:textColor="#F3F6F2"
-            android:textSize="56sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/payHint"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center"
-            android:textColor="#A8B5AE"
-            android:textSize="18sp" />
-
-        <ImageView
-            android:id="@+id/payQr"
-            android:layout_width="240dp"
-            android:layout_height="240dp"
-            android:layout_marginTop="16dp"
-            android:background="#FFFFFF"
-            android:contentDescription="@string/customer_pay_qr_hint"
-            android:padding="10dp"
-            android:scaleType="fitCenter"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/payCashDetail"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:gravity="center"
-            android:textColor="#F3F6F2"
-            android:textSize="22sp"
-            android:visibility="gone" />
-    </LinearLayout>
-
-    <!-- 4) Success -->
-    <LinearLayout
-        android:id="@+id/panelSuccess"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="32dp"
-        android:visibility="gone">
 
         <TextView
             android:id="@+id/successTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:text="@string/customer_success_title"
-            android:textColor="#C4A35A"
-            android:textSize="32sp"
+            android:text="@string/customer_success_paid"
+            android:textColor="#F3F6F2"
+            android:textSize="30sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/successAmount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:textColor="#F3F6F2"
-            android:textSize="48sp"
+            android:layout_marginTop="12dp"
+            android:textColor="#C4A35A"
+            android:textSize="40sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/successChange"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:textColor="#8FCB9B"
+            android:textSize="22sp"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/successMessage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="16dp"
             android:gravity="center"
             android:textColor="#A8B5AE"
-            android:textSize="20sp" />
+            android:textSize="18sp" />
     </LinearLayout>
 </FrameLayout>

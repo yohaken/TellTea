@@ -1,6 +1,6 @@
 # nPos — เศษงานประสานเฟส (หลังแก้แคปจอ)
 
-อัปเดต: **1.14.0** · จอลูกค้า 4 โหมด (สแตนด์บาย · เลือกรายการ · ชำระ · สำเร็จ)
+อัปเดต: **1.14.1** · จอลูกค้าสองพาเนล + auto-resize (portrait/landscape)
 
 ## ทำแล้วรอบนี้
 - [x] แก้ `reportNposScreenCapture` อัปโหลด bucket ที่มีจริง
@@ -25,11 +25,11 @@
 - [ ] mutation นอกบิล (ของหมด) ทำ local ก่อนซิงก์
 
 ### D — จอลูกค้า
-- [x] 4 โหมด Presentation (1.14.0) — ดู [npos-customer-display-checklist.md](./npos-customer-display-checklist.md)
+- [x] 4 โหมด + สองพาเนล media/receipt + auto-resize (1.14.1)
 - [x] D2 สถานะสั้นบนหน้าขาย + heartbeat `customerDisplay`
-- [ ] D3 layout แยก portrait/landscape ละเอียด
+- [x] D3 พื้นฐาน: portrait ซ้อน · landscape ซ้าย/ขวา (`CustomerDisplayMetrics`)
 - [ ] D4 คู่ขนาน POS เดิม (อย่าแย่งจอ 2)
-- [ ] สื่อโปรโมชัน/วิดีโอจากหลังร้าน (ตอนนี้ใช้เมนูแนะนำ + ชื่อร้าน)
+- [ ] สื่อโปรโมชัน/วิดีโอจากหลังร้าน (ตอนนี้สไลด์เมนูแนะนำ)
 
 ### E — นำร่อง
 - [ ] P4 คนเทสเครื่องจริง

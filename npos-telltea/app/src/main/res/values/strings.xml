@@ -191,7 +191,10 @@
     <string name="customer_pay_qr_hint">สแกน QR เพื่อชำระ</string>
     <string name="customer_pay_qr_missing">รอสร้าง QR…</string>
     <string name="customer_success_title">ขอบคุณค่ะ</string>
-    <string name="customer_success_default">ชำระเงินสำเร็จ</string>
+    <string name="customer_success_paid">ชำระเงินสำเร็จ</string>
+    <string name="customer_success_change_fmt">เงินทอน ฿%.0f</string>
+    <string name="customer_success_default">ขอบคุณที่อุดหนุน</string>
+    <string name="customer_receipt_subtotal_fmt">Subtotal ฿%.0f</string>
     <string name="customer_test_hint">ส่งยอดทดสอบไปจอเพิ่ม (จอ 2)</string>
     <string name="customer_test_idle">ยังไม่ได้ส่งยอดไปจอลูกค้า</string>
     <string name="customer_test_no_display">ไม่พบจอสำหรับแสดง</string>

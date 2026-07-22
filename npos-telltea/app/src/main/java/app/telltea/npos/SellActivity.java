@@ -873,9 +873,12 @@ public class SellActivity extends Activity {
     }
     List<CustomerDisplayPresentation.Line> lines = new ArrayList<>();
     for (MenuModels.CartLine line : cart) {
-      lines.add(new CustomerDisplayPresentation.Line(line.name, line.qty, line.lineTotal()));
+      lines.add(
+          new CustomerDisplayPresentation.Line(
+              line.name, line.qty, line.unitPrice, line.lineTotal()));
     }
-    customerDisplay.showSelecting(lines, discountBaht, cartTotal());
+    double sub = cartSubtotal();
+    customerDisplay.showSelecting(lines, sub, discountBaht, Math.max(0, sub - discountBaht));
   }
 
   private double cartSubtotal() {
@@ -1181,6 +1184,8 @@ public class SellActivity extends Activity {
     sellSyncStatus.setText(R.string.sell_saving);
     List<MenuModels.CartLine> snapshot = new ArrayList<>(cart);
     double disc = discountBaht;
+    final double changeForCustomer =
+        "cash".equals(method) ? Math.max(0, cashReceived - cartTotal()) : 0;
     boolean autoPrint = shop == null || shop.optBoolean("autoPrintReceipt", true);
     saleSync.enqueueSale(
         this,
@@ -1202,7 +1207,8 @@ public class SellActivity extends Activity {
                                         "receiptFooterNote",
                                         getString(R.string.customer_success_default));
                             if (customerDisplay != null) {
-                              customerDisplay.showSuccessThenStandby(thanks, total);
+                              customerDisplay.showSuccessThenStandby(
+                                  thanks, total, changeForCustomer);
                             }
                             cart.clear();
                             discountBaht = 0;

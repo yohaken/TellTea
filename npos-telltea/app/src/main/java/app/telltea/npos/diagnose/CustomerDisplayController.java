@@ -12,12 +12,12 @@ import app.telltea.npos.R;
 import app.telltea.npos.sell.MenuModels;
 
 /**
- * Owns secondary-display Presentation for sell: standby / cart / pay / success.
- * Keeps one Presentation and updates panels (smooth realtime).
+ * Secondary-display controller: two-pane layout + auto-resize metrics.
+ * Idle media slideshow continues during Ordering (upsell); QR overlays media on Payment.
  */
 public final class CustomerDisplayController {
     public static final long SUCCESS_HOLD_MS = 3500L;
-    private static final long STANDBY_ROTATE_MS = 4500L;
+    private static final long PROMO_ROTATE_MS = 4500L;
 
     public static final class PromoItem {
         public final String name;
@@ -40,6 +40,11 @@ public final class CustomerDisplayController {
     private Runnable successTask;
     private boolean loggedReady;
 
+    private List<CustomerDisplayPresentation.Line> lastLines = new ArrayList<>();
+    private double lastSubtotal;
+    private double lastDiscount;
+    private double lastTotal;
+
     public void bind(Activity activity) {
         host = activity;
     }
@@ -55,6 +60,15 @@ public final class CustomerDisplayController {
             for (MenuModels.Item it : items) {
                 if (it == null || !it.recommended || !it.active) continue;
                 promos.add(new PromoItem(it.name, it.imageUrl));
+            }
+            // Fallback: top active items if none marked recommended.
+            if (promos.isEmpty()) {
+                int n = 0;
+                for (MenuModels.Item it : items) {
+                    if (it == null || !it.active) continue;
+                    promos.add(new PromoItem(it.name, it.imageUrl));
+                    if (++n >= 6) break;
+                }
             }
         }
         promoIndex = 0;
@@ -75,37 +89,46 @@ public final class CustomerDisplayController {
     public void showStandby() {
         cancelSuccess();
         if (!ensurePresentation()) return;
-        stopRotate();
-        applyStandbyFrame();
+        applyIdleOrPromoFrame(true);
         startRotate();
     }
 
-    public void showSelecting(List<CustomerDisplayPresentation.Line> lines, double discount, double total) {
+    public void showSelecting(
+            List<CustomerDisplayPresentation.Line> lines,
+            double subtotal,
+            double discount,
+            double total) {
         cancelSuccess();
-        stopRotate();
         if (!ensurePresentation()) return;
-        presentation.showSelecting(lines, discount, total);
+        rememberCart(lines, subtotal, discount, total);
+        presentation.showSelecting(lastLines, lastSubtotal, lastDiscount, lastTotal);
+        // Keep upsell media rotating while ordering.
+        applyIdleOrPromoFrame(false);
+        startRotate();
     }
 
     public void showPaymentCash(double total, double received, double change, boolean enough) {
         cancelSuccess();
         stopRotate();
         if (!ensurePresentation()) return;
-        presentation.showPaymentCash(total, received, change, enough);
+        lastTotal = total;
+        presentation.showPaymentCash(
+                lastLines, lastSubtotal, lastDiscount, lastTotal, received, change, enough);
     }
 
     public void showPaymentQr(double total, Bitmap qr) {
         cancelSuccess();
         stopRotate();
         if (!ensurePresentation()) return;
-        presentation.showPaymentQr(total, qr);
+        lastTotal = total;
+        presentation.showPaymentQr(lastLines, lastSubtotal, lastDiscount, lastTotal, qr);
     }
 
-    public void showSuccessThenStandby(String message, double total) {
+    public void showSuccessThenStandby(String message, double total, double change) {
         stopRotate();
         cancelSuccess();
         if (!ensurePresentation()) return;
-        presentation.showSuccess(message, total);
+        presentation.showSuccess(message, total, change);
         successTask =
                 () -> {
                     successTask = null;
@@ -128,6 +151,17 @@ public final class CustomerDisplayController {
         host = null;
     }
 
+    private void rememberCart(
+            List<CustomerDisplayPresentation.Line> lines,
+            double subtotal,
+            double discount,
+            double total) {
+        lastLines = lines == null ? new ArrayList<>() : new ArrayList<>(lines);
+        lastSubtotal = subtotal;
+        lastDiscount = discount;
+        lastTotal = total;
+    }
+
     private boolean ensurePresentation() {
         Activity activity = host;
         if (activity == null || activity.isFinishing()) return false;
@@ -139,13 +173,12 @@ public final class CustomerDisplayController {
                 presentation.show();
                 if (!loggedReady) {
                     loggedReady = true;
+                    CustomerDisplayMetrics m = presentation.getMetrics();
                     OpsLogger.info(
                             activity,
                             "display",
                             "จอลูกค้าพร้อม",
-                            secondary.sizeLabel()
-                                    + " · "
-                                    + secondary.orientation
+                            (m != null ? m.debugLabel() : secondary.sizeLabel())
                                     + " · จอ "
                                     + secondary.number);
                 }
@@ -162,14 +195,15 @@ public final class CustomerDisplayController {
         }
     }
 
-    private void applyStandbyFrame() {
+    private void applyIdleOrPromoFrame(boolean fullIdle) {
         if (presentation == null) return;
         String promoText;
         String imageUrl = "";
         if (promos.isEmpty()) {
-            promoText = host != null
-                    ? host.getString(R.string.customer_standby_promo_fallback)
-                    : "";
+            promoText =
+                    host != null
+                            ? host.getString(R.string.customer_standby_promo_fallback)
+                            : "";
         } else {
             if (promoIndex < 0 || promoIndex >= promos.size()) promoIndex = 0;
             PromoItem p = promos.get(promoIndex);
@@ -178,7 +212,11 @@ public final class CustomerDisplayController {
         }
         String tagline =
                 host != null ? host.getString(R.string.customer_standby_welcome) : "";
-        presentation.showStandby(shopName, tagline, promoText, imageUrl, footerNote);
+        if (fullIdle) {
+            presentation.showStandby(shopName, tagline, promoText, imageUrl, footerNote);
+        } else {
+            presentation.updatePromo(promoText, imageUrl);
+        }
     }
 
     private void startRotate() {
@@ -188,17 +226,18 @@ public final class CustomerDisplayController {
                 new Runnable() {
                     @Override
                     public void run() {
-                        if (presentation == null
-                                || presentation.getMode()
-                                        != CustomerDisplayPresentation.Mode.STANDBY) {
+                        if (presentation == null) return;
+                        CustomerDisplayPresentation.Mode m = presentation.getMode();
+                        if (m != CustomerDisplayPresentation.Mode.STANDBY
+                                && m != CustomerDisplayPresentation.Mode.SELECTING) {
                             return;
                         }
                         promoIndex = (promoIndex + 1) % promos.size();
-                        applyStandbyFrame();
-                        main.postDelayed(this, STANDBY_ROTATE_MS);
+                        applyIdleOrPromoFrame(m == CustomerDisplayPresentation.Mode.STANDBY);
+                        main.postDelayed(this, PROMO_ROTATE_MS);
                     }
                 };
-        main.postDelayed(rotateTask, STANDBY_ROTATE_MS);
+        main.postDelayed(rotateTask, PROMO_ROTATE_MS);
     }
 
     private void stopRotate() {
