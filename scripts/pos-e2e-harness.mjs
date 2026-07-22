@@ -54,10 +54,12 @@ export async function installE2eMenuCache(context) {
 
 /** เปิด sidebar บนมือถือ (ซ่อนอยู่นอกจอจนกว่าจะกดแฮมเบอร์เกอร์) */
 export async function openMobileNav(page) {
+  const openSidebar = page.locator(".pos-sidebar.is-open");
+  if (await openSidebar.isVisible().catch(() => false)) return;
   const btn = page.locator(".pos-mobile-menu-btn");
   if (await btn.isVisible().catch(() => false)) {
-    await btn.click();
-    await page.locator(".pos-sidebar.is-open").waitFor({ state: "visible", timeout: 5_000 });
+    await btn.click({ force: true });
+    await openSidebar.waitFor({ state: "visible", timeout: 5_000 });
   }
 }
 
