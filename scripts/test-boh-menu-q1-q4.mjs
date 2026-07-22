@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 260/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 261/);
 
 const admin = read("src/components/PosMenuAdmin.tsx");
 const itemEditor = read("src/components/PosMenuItemEditor.tsx");

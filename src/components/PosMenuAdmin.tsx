@@ -123,6 +123,8 @@ export function PosMenuAdmin({
   const [linkSelected, setLinkSelected] = useState<Set<string>>(new Set());
   const [linkSearch, setLinkSearch] = useState("");
   const [linkBusy, setLinkBusy] = useState(false);
+  /** เมนูที่เพิ่งสร้าง — เปิด editor ทันทีแม้ snapshot ยังไม่มา */
+  const [freshItemId, setFreshItemId] = useState<string | null>(null);
 
   useEffect(() => {
     setMenuDbMode(authMode);
@@ -295,6 +297,7 @@ export function PosMenuAdmin({
   const editItem = screen.kind === "edit-item" ? items.find((i) => i.id === screen.id) : null;
   const editGroup =
     screen.kind === "edit-group" ? optionGroups.find((g) => g.id === screen.id) : null;
+  const editingFreshItem = Boolean(editItem && freshItemId && editItem.id === freshItemId);
 
   function openQuickAdd(next: QuickAdd) {
     setQuickName("");
@@ -318,14 +321,30 @@ export function PosMenuAdmin({
       } else {
         const price = Number(quickPrice) || 0;
         const deliveryRaw = quickDeliveryPrice.trim();
+        const deliveryPrice =
+          deliveryRaw !== "" ? Math.max(0, Number(deliveryRaw) || 0) : undefined;
         const id = await addMenuItem({
           categoryId: quickAdd.categoryId,
           name: quickName.trim(),
           price,
-          ...(deliveryRaw !== ""
-            ? { deliveryPrice: Math.max(0, Number(deliveryRaw) || 0) }
-            : {}),
+          ...(typeof deliveryPrice === "number" ? { deliveryPrice } : {}),
         });
+        const now = Date.now();
+        const optimistic: MenuItem = {
+          id,
+          categoryId: quickAdd.categoryId,
+          name: quickName.trim(),
+          price,
+          ...(typeof deliveryPrice === "number" ? { deliveryPrice } : {}),
+          sortOrder: now,
+          active: true,
+          visibleOnPos: true,
+          recommended: false,
+          createdAt: now,
+          updatedAt: now,
+        };
+        setItems((prev) => (prev.some((i) => i.id === id) ? prev : [...prev, optimistic]));
+        setFreshItemId(id);
         setExpandedCat(quickAdd.categoryId);
         setScreen({ kind: "edit-item", id });
       }
@@ -917,28 +936,33 @@ export function PosMenuAdmin({
             </label>
             {quickAdd.kind === "item" ? (
               <>
-                <label>
-                  <span>ราคาหน้าร้าน (฿)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={quickPrice}
-                    onChange={(e) => setQuickPrice(e.target.value)}
-                    required
-                  />
-                </label>
-                <label>
-                  <span>ราคาเดลิเวอรี่ (฿) — ว่าง = ใช้หน้าร้าน</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={quickDeliveryPrice}
-                    onChange={(e) => setQuickDeliveryPrice(e.target.value)}
-                    placeholder={quickPrice}
-                  />
-                </label>
+                <div className="pos-menu-price-row">
+                  <label>
+                    <span>ราคาหน้าร้าน (฿)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={quickPrice}
+                      onChange={(e) => setQuickPrice(e.target.value)}
+                      required
+                    />
+                  </label>
+                  <label>
+                    <span>ราคาเดลิเวอรี่ (฿)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={quickDeliveryPrice}
+                      onChange={(e) => setQuickDeliveryPrice(e.target.value)}
+                      placeholder="ว่าง = ใช้หน้าร้าน"
+                    />
+                  </label>
+                </div>
+                <p className="muted pos-menu-quick-hint">
+                  หลังกดเพิ่ม จะเปิดตั้งค่ารูป · รายละเอียด · ช่องทางขาย · กลุ่มตัวเลือกทันที
+                </p>
               </>
             ) : null}
             <div className="pos-menu-editor-actions">
@@ -946,22 +970,41 @@ export function PosMenuAdmin({
                 ยกเลิก
               </button>
               <button type="submit" className="primary-btn pos-menu-btn-sm" disabled={busy}>
-                {busy ? "กำลังเพิ่ม..." : "เพิ่ม"}
+                {busy ? "กำลังเพิ่ม..." : quickAdd.kind === "item" ? "เพิ่มแล้วตั้งค่าต่อ" : "เพิ่ม"}
               </button>
             </div>
           </form>
         </PosMenuModal>
       ) : null}
 
+      {screen.kind === "edit-item" && !editItem ? (
+        <PosMenuModal title="ตั้งค่าเมนูใหม่" onClose={() => setScreen({ kind: "list" })} wide>
+          <p className="muted pos-menu-edit-loading">กำลังโหลดเมนูที่เพิ่งสร้าง...</p>
+        </PosMenuModal>
+      ) : null}
+
       {editItem ? (
-        <PosMenuModal title="แก้ไขเมนู" onClose={() => setScreen({ kind: "list" })} wide>
+        <PosMenuModal
+          title={editingFreshItem ? "ตั้งค่าเมนูใหม่" : "แก้ไขเมนู"}
+          onClose={() => {
+            setFreshItemId(null);
+            setScreen({ kind: "list" });
+          }}
+          wide
+        >
           <PosMenuItemEditor
             modal
             item={editItem}
             categories={categories}
             optionGroups={optionGroups}
-            onBack={() => setScreen({ kind: "list" })}
-            onSaved={() => setScreen({ kind: "list" })}
+            onBack={() => {
+              setFreshItemId(null);
+              setScreen({ kind: "list" });
+            }}
+            onSaved={() => {
+              setFreshItemId(null);
+              setScreen({ kind: "list" });
+            }}
             onDelete={() => setDeleteTarget({ kind: "item", item: editItem, mode: "archive" })}
           />
         </PosMenuModal>

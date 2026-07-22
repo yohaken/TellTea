@@ -20,6 +20,8 @@
     "test:boh-menu-p3-p5": "node scripts/test-boh-menu-p3-p5.mjs",
     "test:boh-menu-q1-q4": "node scripts/test-boh-menu-q1-q4.mjs",
     "test:boh-menu-editor-frame": "node scripts/test-boh-menu-editor-frame.mjs",
+    "test:boh-menu-add-flow": "node scripts/test-boh-menu-add-flow.mjs",
+    "test:boh-menu-add-e2e": "node scripts/test-boh-menu-add-e2e.mjs",
     "test:web-pos-retired": "node scripts/test-web-pos-retired.mjs",
     "test:ledger-transfer-in-fab": "node scripts/test-ledger-transfer-in-fab.mjs",
     "test:alerts-pos-manage-hub": "node scripts/test-alerts-pos-manage-hub.mjs",

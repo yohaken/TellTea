@@ -12250,6 +12250,13 @@ body.modal-open .main-panel {
   border-radius: 0.4rem;
 }
 
+.pos-menu-quick-hint,
+.pos-menu-edit-loading {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
 .pos-menu-item-thumb {
   width: 1.75rem;
   height: 1.75rem;
