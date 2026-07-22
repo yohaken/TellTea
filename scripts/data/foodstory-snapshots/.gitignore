@@ -1,6 +1,5 @@
-# FoodStory auth / capture artifacts (do not commit secrets)
-scripts/data/foodstory-auth/
-scripts/data/foodstory-snapshots/raw-*.json
-scripts/data/foodstory-snapshots/snapshot-*.json
-scripts/data/foodstory-snapshots/raw-latest.json
-scripts/data/foodstory-snapshots/snapshot-latest.json
+# generated capture output (keep fixture-raw.json)
+raw-*.json
+snapshot-*.json
+raw-latest.json
+snapshot-latest.json
