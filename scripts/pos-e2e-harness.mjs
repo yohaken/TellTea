@@ -8,14 +8,14 @@ import { chromium, devices } from "playwright";
 /** ms — เป้าหม้าร้าน (warn) / ขีดล้ม CI (fail). ปรับด้วย env POS_E2E_STRICT=1 ให้เข้มขึ้น */
 export const POS_E2E_BUDGETS = {
   boot_ready: { warn: 12_000, fail: 45_000, label: "โหลด POS → พร้อมขาย" },
-  menu_nav: { warn: 2_500, fail: 8_000, label: "คลิกเฟือง → หน้าเมนู" },
-  menu_auth: { warn: 6_000, fail: 20_000, label: "หน้าเมนู auth + แท็บ" },
+  menu_nav: { warn: 2_500, fail: 8_000, label: "คลิกแถบ → หน้าเป้าหมาย" },
+  menu_auth: { warn: 6_000, fail: 20_000, label: "หน้าเมนู auth + แท็บ (deep link)" },
   open_shift: { warn: 5_000, fail: 15_000, label: "เข้างาน" },
   sell_grid: { warn: 8_000, fail: 25_000, label: "โหลดกริดเมนูขาย" },
   tap_to_cart: { warn: 800, fail: 3_000, label: "แตะเมนู → ตะกร้า" },
   option_picker: { warn: 1_200, fail: 4_000, label: "popup ตัวเลือก → ตะกร้า" },
   cash_checkout: { warn: 2_000, fail: 8_000, label: "เงินสด → ยืนยันขาย" },
-  nav_roundtrip: { warn: 5_000, fail: 15_000, label: "ขาย ↔ เมนู ไปกลับ" },
+  nav_roundtrip: { warn: 5_000, fail: 15_000, label: "ขาย ↔ กะ/ตั้งค่า ไปกลับ" },
 };
 
 export const POS_E2E_URL = process.env.POS_E2E_URL || "https://telltea-pos.web.app/pos/sell/";
@@ -67,6 +67,29 @@ export function menuNavLink(page) {
 
 export function sellNavLink(page) {
   return page.locator('a.pos-sidebar-link[href="/pos/sell/"]');
+}
+
+export function shiftNavLink(page) {
+  return page.locator('a.pos-sidebar-link[href="/pos/shift/"]');
+}
+
+export function settingsNavLink(page) {
+  return page.locator('a.pos-sidebar-link[href="/pos/settings/"]');
+}
+
+/** Counter must not expose BO/admin entry points in the sidebar. */
+export async function assertCounterNavCut(page) {
+  assert.equal(await menuNavLink(page).count(), 0, "เมนูแอดมินต้องไม่อยู่ในแถบเคาน์เตอร์");
+  assert.equal(
+    await page.locator('a.pos-sidebar-link[href="/pos/inventory/"]').count(),
+    0,
+    "สต็อกต้องไม่อยู่ในแถบเคาน์เตอร์",
+  );
+  assert.equal(
+    await page.locator('a.pos-sidebar-link[href="/pos/ops/"]').count(),
+    0,
+    "ลิงก์จากร้านต้องไม่อยู่ในแถบเคาน์เตอร์",
+  );
 }
 
 export function tabletDevice() {

@@ -1,15 +1,17 @@
 /**
- * POS menu UX e2e — โหลดหน้าเมนู + auth (ขั้น editor แยกทดสอบมือ)
+ * POS menu e2e — counter nav must not expose menu admin;
+ * deep-link /pos/menu/ still loads for owner/ops who know the URL.
  */
 import assert from "node:assert/strict";
 import {
+  assertCounterNavCut,
   finishReport,
   gotoPos,
   launchPosE2e,
-  menuNavLink,
   openMobileNav,
   PosE2eReport,
   waitPosBoot,
+  POS_E2E_URL,
 } from "./pos-e2e-harness.mjs";
 
 const report = new PosE2eReport("pos-menu-e2e");
@@ -22,14 +24,14 @@ await report.timed("boot", "boot_ready", async () => {
   await openMobileNav(page);
 });
 
-const menuLink = menuNavLink(page);
-assert.ok((await menuLink.count()) >= 1, "ลิงก์เมนูใน sidebar ต้องมี");
+await assertCounterNavCut(page);
+report.note("เมนูแอดมินไม่อยู่ในแถบเคาน์เตอร์");
+
+const menuUrl = POS_E2E_URL.replace(/\/pos\/.*$/, "/pos/menu/");
 
 await report.timed("to_menu", "menu_nav", async () => {
-  await Promise.all([
-    page.waitForURL(/\/pos\/menu\/?/, { timeout: 20_000, waitUntil: "domcontentloaded" }),
-    menuLink.first().click(),
-  ]);
+  await page.goto(menuUrl, { waitUntil: "domcontentloaded", timeout: 20_000 });
+  await page.waitForURL(/\/pos\/menu\/?/, { timeout: 8_000 });
 });
 
 await report.timed("menu_auth", "menu_auth", async () => {
@@ -47,7 +49,7 @@ await report.timed("menu_auth", "menu_auth", async () => {
   }
 });
 
-report.note("หน้าเมนูโหลด + auth OK");
+report.note("deep-link /pos/menu/ โหลด + auth OK (ไม่ผ่านแถบเคาน์เตอร์)");
 
 await browser.close();
 finishReport(report);
