@@ -164,6 +164,10 @@
     <string name="clock_in_title">พร้อมขาย</string>
     <string name="clock_in_hint">กดเข้างานเมื่อเริ่มขาย · ระบบสแกนเครื่องส่งหลังร้านให้อัตโนมัติ</string>
     <string name="btn_open_shift">เข้างาน</string>
+    <string name="open_shift_float_title">เงินทอนเริ่มกะ</string>
+    <string name="open_shift_float_hint">นับเงินทอนในลิ้นชักแล้วกรอก · ค่าเริ่มจากกะก่อน (ทอนค้าง) แก้ได้</string>
+    <string name="open_shift_float_hint_field">เงินทอนเริ่มต้น (บาท)</string>
+    <string name="open_shift_float_confirm">เข้างาน</string>
     <string name="btn_grant_all_perms">อนุญาตสิทธิ์ทั้งหมด</string>
     <string name="perm_gate_hint">กดครั้งเดียว — Bluetooth · แจ้งเตือน · ติดตั้งอัปเดต · แบตเตอรี่\nพนักงานไม่ต้องเข้าตั้งค่าเอง</string>
     <string name="perm_all_ok">สิทธิ์ครบแล้ว</string>

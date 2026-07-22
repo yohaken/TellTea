@@ -10,9 +10,11 @@ import { voidPosSale } from "@/lib/pos-sales-admin";
 import {
   formatPosReportDate,
   reconcilePosSessions,
+  salesForSession,
   subscribePosSalesForDate,
   subscribePosSessionsForDate,
   summarizePosSalesDetailed,
+  voidedForSession,
 } from "@/lib/pos-sales-report";
 import type { PosSale, PosSession } from "@/lib/types";
 import { formatPlainNumber, startOfLocalDay } from "@/lib/utils";
@@ -23,6 +25,94 @@ type PosSalesHubTab = "report" | "manage";
 
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatTs(ts: number): string {
+  return new Date(ts).toLocaleString("th-TH", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function SessionShiftCard({
+  session,
+  sales,
+  selected,
+  onSelect,
+}: {
+  session: PosSession;
+  sales: PosSale[];
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const active = salesForSession(sales, session.id);
+  const voided = voidedForSession(sales, session.id);
+  const cash = active.filter((s) => s.paymentMethod === "cash");
+  const pp = active.filter((s) => s.paymentMethod === "promptpay");
+  const salesTotal = active.reduce((sum, s) => sum + s.total, 0);
+  const discount = active.reduce((sum, s) => sum + Math.max(0, s.discountBaht || 0), 0);
+  const open = session.status === "open";
+  const counted = session.closingCashCounted;
+  const expected = session.expectedCash;
+  const diff = session.cashDifference;
+  const label = session.discrepancyLabel;
+
+  return (
+    <button
+      type="button"
+      className={`pos-session-card ${open ? "pos-session-card--open" : ""} ${selected ? "is-selected" : ""}`}
+      onClick={onSelect}
+    >
+      <div className="pos-session-card-head">
+        <strong>
+          {labelOtShift(session.shift as "late" | "morning" | "evening")} ·{" "}
+          {open ? "กำลังเปิด" : "ปิดแล้ว"}
+        </strong>
+        <span className="muted">#{session.id.slice(-6).toUpperCase()}</span>
+      </div>
+      <p className="muted pos-session-card-time">
+        เปิด {formatTs(session.openedAt)}
+        {session.closedAt ? ` · ปิด ${formatTs(session.closedAt)}` : " · รันอยู่"}
+      </p>
+      <div className="pos-session-card-kpis">
+        <span>
+          ยอด ฿{formatPlainNumber(salesTotal || session.totalSales)}
+        </span>
+        <span>{active.length || session.saleCount} บิล</span>
+        <span>สด ฿{formatPlainNumber(session.cashTotal ?? cash.reduce((a, s) => a + s.total, 0))}</span>
+        <span>
+          QR ฿{formatPlainNumber(session.promptpayTotal ?? pp.reduce((a, s) => a + s.total, 0))}
+        </span>
+      </div>
+      {typeof session.openingCash === "number" ? (
+        <p className="muted">เงินทอนเริ่ม ฿{formatPlainNumber(session.openingCash)}</p>
+      ) : null}
+      {!open && typeof counted === "number" ? (
+        <p className="pos-session-card-diff">
+          นับได้ ฿{formatPlainNumber(counted)}
+          {typeof expected === "number" ? ` · ควรมี ฿${formatPlainNumber(expected)}` : ""}
+          {typeof diff === "number"
+            ? ` · ${label || "ส่วนต่าง"} ฿${formatPlainNumber(diff)}`
+            : ""}
+        </p>
+      ) : null}
+      {(discount > 0 || voided.length > 0 || (session.voidedCount || 0) > 0) && (
+        <p className="muted">
+          {discount > 0 ? `ส่วนลด ฿${formatPlainNumber(discount)}` : ""}
+          {discount > 0 && (voided.length > 0 || (session.voidedCount || 0) > 0) ? " · " : ""}
+          {voided.length > 0 || (session.voidedCount || 0) > 0
+            ? `void ${voided.length || session.voidedCount}`
+            : ""}
+        </p>
+      )}
+      {session.discrepancyNote ? (
+        <p className="muted">เหตุผล: {session.discrepancyNote}</p>
+      ) : null}
+      <span className="pos-session-card-hint">{selected ? "แสดงบิลรอบนี้ด้านล่าง" : "แตะเพื่อดูบิลในรอบ"}</span>
+    </button>
+  );
 }
 
 export function PosSalesReport({
@@ -41,6 +131,7 @@ export function PosSalesReport({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [voidTarget, setVoidTarget] = useState<PosSale | null>(null);
   const [voidReason, setVoidReason] = useState("");
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   const isToday = dateMs === startOfLocalDay();
 
@@ -70,6 +161,18 @@ export function PosSalesReport({
 
   const summary = useMemo(() => summarizePosSalesDetailed(sales), [sales]);
   const reconcile = useMemo(() => reconcilePosSessions(sales, sessions), [sales, sessions]);
+  const sortedSessions = useMemo(
+    () => [...sessions].sort((a, b) => b.openedAt - a.openedAt),
+    [sessions],
+  );
+  const filteredSales = useMemo(() => {
+    if (!selectedSessionId) return sales;
+    return sales.filter((s) => s.sessionId === selectedSessionId);
+  }, [sales, selectedSessionId]);
+
+  useEffect(() => {
+    setSelectedSessionId(null);
+  }, [dateMs]);
 
   function openVoidDialog(sale: PosSale) {
     if (!actorId || sale.status === "voided") return;
@@ -186,52 +289,56 @@ export function PosSalesReport({
         </section>
       ) : null}
 
-      {reconcile.length > 0 ? (
+      {sortedSessions.length > 0 ? (
         <section className="pos-sales-report-section">
-          <h3>รอบขาย (posSessions)</h3>
-          <div className="sheet-wrap">
-            <table className="sheet-table">
-              <thead>
-                <tr>
-                  <th>กะ</th>
-                  <th>สถานะ</th>
-                  <th className="col-num">บิล (session)</th>
-                  <th className="col-num">บิล (sales)</th>
-                  <th className="col-num">ยอด (session)</th>
-                  <th className="col-num">ยอด (sales)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reconcile.map((row) => (
-                  <tr
-                    key={row.session.id}
-                    className={
-                      !row.countMatch || !row.totalMatch ? "pos-sales-reconcile-warn" : undefined
-                    }
-                  >
-                    <td>{labelOtShift(row.session.shift as "late" | "morning" | "evening")}</td>
-                    <td>{row.session.status === "open" ? "เปิด" : "ปิด"}</td>
-                    <td className="col-num">{row.session.saleCount}</td>
-                    <td className="col-num">{row.salesCount}</td>
-                    <td className="col-num">{formatPlainNumber(row.session.totalSales)}</td>
-                    <td className="col-num">{formatPlainNumber(row.salesTotal)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <h3>การ์ดรอบขาย (ดูอย่างเดียว · ปิดกะทำบน nPos)</h3>
+          <p className="muted pos-session-cards-hint">
+            ยอดรันระหว่างกะ + หลังปิดกะ (เงินทอน / นับได้ / Over-Short) จาก sync
+          </p>
+          <div className="pos-session-cards">
+            {sortedSessions.map((session) => (
+              <SessionShiftCard
+                key={session.id}
+                session={session}
+                sales={sales}
+                selected={selectedSessionId === session.id}
+                onSelect={() =>
+                  setSelectedSessionId((cur) => (cur === session.id ? null : session.id))
+                }
+              />
+            ))}
           </div>
+          {reconcile.some((r) => !r.countMatch || !r.totalMatch) ? (
+            <p className="muted pos-sales-reconcile-warn-note">
+              มีรอบที่ตัวเลข session กับบิลไม่ตรง — ดูการ์ด + รายบิลด้านล่าง
+            </p>
+          ) : null}
         </section>
       ) : null}
 
       <section className="pos-sales-report-section">
-        <h3>รายการบิล{isToday ? " วันนี้" : ""}</h3>
+        <h3>
+          รายการบิล{isToday ? " วันนี้" : ""}
+          {selectedSessionId
+            ? ` · รอบ #${selectedSessionId.slice(-6).toUpperCase()}`
+            : ""}
+        </h3>
+        {selectedSessionId ? (
+          <button
+            type="button"
+            className="ghost-btn"
+            onClick={() => setSelectedSessionId(null)}
+          >
+            แสดงทุกบิลวันนี้
+          </button>
+        ) : null}
         {loading ? <p className="empty">กำลังโหลด...</p> : null}
-        {!loading && sales.length === 0 ? (
+        {!loading && filteredSales.length === 0 ? (
           <p className="muted">ยังไม่มีบิล — ขายที่แท็บเล็ต POS</p>
         ) : null}
-        {!loading && sales.length > 0 ? (
+        {!loading && filteredSales.length > 0 ? (
           <ul className="pos-sales-list">
-            {sales.map((sale) => {
+            {filteredSales.map((sale) => {
               const voided = sale.status === "voided";
               const busy = busyId === sale.id;
               const preview = sale.lines

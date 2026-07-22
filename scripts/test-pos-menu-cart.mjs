@@ -262,7 +262,8 @@ const shiftSrc = readFileSync(join(root, "src/components/PosShiftView.tsx"), "ut
 assert.match(shiftSrc, /pos-shift-sticky-top/);
 assert.match(shiftSrc, /useLiveElapsed/);
 assert.match(shiftSrc, /เวลานับเดิน/);
-assert.match(shiftSrc, /ออกงาน \(ปิดรอบ\)/);
+assert.match(shiftSrc, /ปิดกะทำบนแอป nPos|pos-shift-bo-note/);
+assert.doesNotMatch(shiftSrc, /ออกงาน \(ปิดรอบ\)/);
 
 assert.match(sellSrc, /activeCategories[\s\S]*sortOrder/);
 

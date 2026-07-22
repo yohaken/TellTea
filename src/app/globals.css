@@ -9243,6 +9243,83 @@ body.modal-open .main-panel {
   margin: 0 0 0.45rem;
 }
 
+.pos-session-cards-hint {
+  margin: 0 0 0.65rem;
+  font-size: 0.85rem;
+}
+
+.pos-session-cards {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  margin-bottom: 0.75rem;
+}
+
+.pos-session-card {
+  text-align: left;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.pos-session-card--open {
+  border-color: rgba(196, 90, 26, 0.45);
+  background: rgba(196, 90, 26, 0.04);
+}
+
+.pos-session-card.is-selected {
+  outline: 2px solid rgba(196, 90, 26, 0.55);
+}
+
+.pos-session-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.pos-session-card-time {
+  margin: 0.25rem 0 0.45rem;
+  font-size: 0.8rem;
+}
+
+.pos-session-card-kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 0.35rem;
+}
+
+.pos-session-card-diff {
+  margin: 0.2rem 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.pos-session-card-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.pos-sales-reconcile-warn-note {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+}
+
+.pos-shift-bo-note {
+  margin: 0 0 0.45rem;
+  font-size: 0.82rem;
+  max-width: 18rem;
+}
+
 .pos-sales-shift-table .col-num {
   text-align: right;
 }

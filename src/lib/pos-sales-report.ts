@@ -92,6 +92,10 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
 }
 
 function mapSession(id: string, data: Record<string, unknown>): PosSession {
+  const num = (key: string) =>
+    typeof data[key] === "number" ? (data[key] as number) : undefined;
+  const str = (key: string) =>
+    typeof data[key] === "string" ? (data[key] as string) : undefined;
   return {
     id,
     deviceId: typeof data.deviceId === "string" ? data.deviceId : "",
@@ -102,7 +106,28 @@ function mapSession(id: string, data: Record<string, unknown>): PosSession {
     status: data.status === "closed" ? "closed" : "open",
     saleCount: typeof data.saleCount === "number" ? data.saleCount : 0,
     totalSales: typeof data.totalSales === "number" ? data.totalSales : 0,
+    openingCash: num("openingCash"),
+    cashTotal: num("cashTotal"),
+    promptpayTotal: num("promptpayTotal"),
+    closingCashCounted: num("closingCashCounted"),
+    expectedCash: num("expectedCash"),
+    cashDifference: num("cashDifference"),
+    leaveFloat: num("leaveFloat"),
+    discountTotal: num("discountTotal"),
+    voidedCount: num("voidedCount"),
+    discrepancyNote: str("discrepancyNote"),
+    discrepancyLabel: str("discrepancyLabel"),
+    source: str("source"),
   };
+}
+
+/** บิลในรอบ (active) — ใช้กับการ์ดหลังบ้าน */
+export function salesForSession(sales: PosSale[], sessionId: string): PosSale[] {
+  return sales.filter((s) => s.sessionId === sessionId && s.status === "completed");
+}
+
+export function voidedForSession(sales: PosSale[], sessionId: string): PosSale[] {
+  return sales.filter((s) => s.sessionId === sessionId && s.status === "voided");
 }
 
 export function summarizePosSalesDetailed(sales: PosSale[]): PosSalesDetailedSummary {

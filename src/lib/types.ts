@@ -274,6 +274,19 @@ export type PosSession = {
   status: "open" | "closed";
   saleCount: number;
   totalSales: number;
+  /** จาก nPos blind close / open (optional — เว็บเก่าอาจไม่มี) */
+  openingCash?: number;
+  cashTotal?: number;
+  promptpayTotal?: number;
+  closingCashCounted?: number;
+  expectedCash?: number;
+  cashDifference?: number;
+  leaveFloat?: number;
+  discountTotal?: number;
+  voidedCount?: number;
+  discrepancyNote?: string;
+  discrepancyLabel?: string;
+  source?: string;
 };
 
 export type PosSalePaymentMethod = "cash" | "promptpay";

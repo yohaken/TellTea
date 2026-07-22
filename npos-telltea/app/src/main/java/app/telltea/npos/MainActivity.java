@@ -27,6 +27,7 @@ import app.telltea.npos.sell.MenuWarmup;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shell.PosShellNav;
 import app.telltea.npos.shift.BlindCloseFlow;
+import app.telltea.npos.shift.OpenShiftFlow;
 import app.telltea.npos.shift.ShiftPrefs;
 import app.telltea.npos.ui.UiScale;
 import app.telltea.npos.update.ApkInstaller;
@@ -328,27 +329,25 @@ public class MainActivity extends Activity {
   private void openShift() {
     if (openingShift) return;
     openingShift = true;
-    heartbeatStatus.setText(R.string.shift_opening);
-    saleSync.openSession(
+    OpenShiftFlow.start(
         this,
-        () ->
-            runOnUiThread(
-                () -> {
-                  openingShift = false;
-                  Toast.makeText(this, R.string.shift_opened, Toast.LENGTH_SHORT).show();
-                  // Stay on hub — user picks สั่งและชำระเงิน (like web shell)
-                  clockInPanel.setVisibility(View.GONE);
-                  sellPanel.setVisibility(View.VISIBLE);
-                  if (hubShiftStrip != null) {
-                    hubShiftStrip.setText(
-                        getString(
-                            R.string.shift_summary_fmt,
-                            ShiftPrefs.saleCount(this),
-                            ShiftPrefs.cashTotal(this),
-                            ShiftPrefs.promptpayTotal(this),
-                            ShiftPrefs.voidedCount(this)));
-                  }
-                }));
+        saleSync,
+        () -> {
+          openingShift = false;
+          // Stay on hub — user picks สั่งและชำระเงิน (like web shell)
+          clockInPanel.setVisibility(View.GONE);
+          sellPanel.setVisibility(View.VISIBLE);
+          if (hubShiftStrip != null) {
+            hubShiftStrip.setText(
+                getString(
+                    R.string.shift_summary_fmt,
+                    ShiftPrefs.saleCount(this),
+                    ShiftPrefs.cashTotal(this),
+                    ShiftPrefs.promptpayTotal(this),
+                    ShiftPrefs.voidedCount(this)));
+          }
+        },
+        () -> openingShift = false);
   }
 
   private void closeShift() {
