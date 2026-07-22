@@ -26,6 +26,7 @@
     "test:boh-menu-walk-code": "node scripts/test-boh-menu-walk-code.mjs",
     "test:menu-list-thumb-no-fullscreen": "node scripts/test-menu-list-thumb-no-fullscreen.mjs",
     "test:menu-price-placeholder-nbsp": "node scripts/test-menu-price-placeholder-nbsp.mjs",
+    "test:boh-menu-qa-ux": "node scripts/test-boh-menu-qa-ux.mjs",
     "test:web-pos-retired": "node scripts/test-web-pos-retired.mjs",
     "test:ledger-transfer-in-fab": "node scripts/test-ledger-transfer-in-fab.mjs",
     "test:alerts-pos-manage-hub": "node scripts/test-alerts-pos-manage-hub.mjs",

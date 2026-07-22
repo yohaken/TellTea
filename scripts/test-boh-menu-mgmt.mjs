@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 const version = read("src/lib/version.ts");
-assert.match(version, /APP_BUILD = 265/);
+assert.match(version, /APP_BUILD = 266/);
 
 const more = read("src/app/more/page.tsx");
 assert.match(more, /href="\/menu\/"/);

@@ -9670,6 +9670,7 @@ body.modal-open .main-panel {
 }
 
 .pos-menu-switch-row {
+  display: flex;
   flex-direction: row !important;
   align-items: center;
   justify-content: space-between;
@@ -12262,6 +12263,24 @@ body.modal-open .main-panel {
 .pos-menu-link-group-sub {
   font-size: 0.72rem;
   line-height: 1.35;
+}
+
+.pos-menu-link-group-toggle {
+  flex-shrink: 0;
+  border: 1px solid #c5d0c8;
+  background: #fff;
+  color: #2d4a3a;
+  border-radius: 0.4rem;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.pos-menu-link-group-toggle.is-on {
+  background: #e7f4ef;
+  border-color: #2d8f7b;
+  color: #1f6b5c;
 }
 
 .pos-menu-inline-btn {

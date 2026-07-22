@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ChevronDown, Copy, Link2, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { PosHardLink } from "@/components/PosHardLink";
 import { PosMenuItemEditor } from "@/components/PosMenuItemEditor";
@@ -18,6 +18,7 @@ import {
   addMenuItem,
   archiveMenuCategory,
   archiveMenuItem,
+  deleteMenuCategory,
   deleteMenuItem,
   duplicateMenuItem,
   reorderMenuCategories,
@@ -51,7 +52,7 @@ type VisibilityFilter = "active" | "archived" | "all";
 type DeleteTarget =
   | { kind: "item"; item: MenuItem; mode: "archive" | "hard" }
   | { kind: "group"; group: MenuOptionGroup; mode: "archive" | "hard" }
-  | { kind: "category"; category: MenuCategory; mode: "archive" };
+  | { kind: "category"; category: MenuCategory; mode: "archive" | "hard" };
 
 type Tab = "categories" | "groups" | "prices" | "promotions";
 type Screen =
@@ -127,7 +128,13 @@ export function PosMenuAdmin({
   const [linkBusy, setLinkBusy] = useState(false);
   /** เมนูที่เพิ่งสร้าง — เปิด editor ทันทีแม้ snapshot ยังไม่มา */
   const [freshItemId, setFreshItemId] = useState<string | null>(null);
+  const freshItemIdRef = useRef<string | null>(null);
+  const freshCategoryIdRef = useRef<string | null>(null);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+
+  useEffect(() => {
+    freshItemIdRef.current = freshItemId;
+  }, [freshItemId]);
 
   useEffect(() => {
     setMenuDbMode(authMode);
@@ -158,7 +165,18 @@ export function PosMenuAdmin({
       (list) => setCategories(applyFixedCategorySortOrder(list)),
       (e) => setError(e.message),
     );
-    const u2 = subscribeMenuItems(setItems, (e) => setError(e.message));
+    const u2 = subscribeMenuItems(
+      (list) => {
+        setItems((prev) => {
+          const fid = freshItemIdRef.current;
+          if (!fid) return list;
+          if (list.some((i) => i.id === fid)) return list;
+          const optimistic = prev.find((i) => i.id === fid);
+          return optimistic ? [...list, optimistic] : list;
+        });
+      },
+      (e) => setError(e.message),
+    );
     const u3 = subscribeMenuOptionGroups(setOptionGroups, (e) => setError(e.message));
     return () => {
       u1();
@@ -344,6 +362,7 @@ export function PosMenuAdmin({
         };
         setItems((prev) => (prev.some((i) => i.id === id) ? prev : [...prev, optimistic]));
         setFreshItemId(id);
+        freshCategoryIdRef.current = quickAdd.categoryId;
         setExpandedCat(quickAdd.categoryId);
         setScreen({ kind: "edit-item", id });
       }
@@ -623,19 +642,50 @@ export function PosMenuAdmin({
                             <Pencil size={12} />
                           </button>
                           {isCategoryArchived(cat) ? (
-                            <button
-                              type="button"
-                              className="pos-menu-inline-btn"
-                              aria-label="กู้คืนหมวด"
-                              disabled={busy}
-                              onClick={() => {
-                                void restoreMenuCategory(cat.id).catch((err) =>
-                                  setError((err as Error).message),
-                                );
-                              }}
-                            >
-                              <RotateCcw size={12} />
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                className="pos-menu-inline-btn"
+                                aria-label="กู้คืนหมวด"
+                                disabled={busy}
+                                onClick={() => {
+                                  void (async () => {
+                                    setBusy(true);
+                                    setError(null);
+                                    setCategories((prev) =>
+                                      prev.map((c) =>
+                                        c.id === cat.id ? { ...c, active: true } : c,
+                                      ),
+                                    );
+                                    try {
+                                      await restoreMenuCategory(cat.id);
+                                    } catch (err) {
+                                      setError((err as Error).message);
+                                      setCategories((prev) =>
+                                        prev.map((c) =>
+                                          c.id === cat.id ? { ...c, active: false } : c,
+                                        ),
+                                      );
+                                    } finally {
+                                      setBusy(false);
+                                    }
+                                  })();
+                                }}
+                              >
+                                <RotateCcw size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                className="pos-menu-inline-btn"
+                                aria-label="ลบหมวดถาวร"
+                                disabled={busy}
+                                onClick={() =>
+                                  setDeleteTarget({ kind: "category", category: cat, mode: "hard" })
+                                }
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </>
                           ) : (
                             <button
                               type="button"
@@ -1043,6 +1093,7 @@ export function PosMenuAdmin({
           title={editingFreshItem ? "ตั้งค่าเมนูใหม่" : "แก้ไขเมนู"}
           onClose={() => {
             setFreshItemId(null);
+            freshCategoryIdRef.current = null;
             setScreen({ kind: "list" });
           }}
           wide
@@ -1052,12 +1103,17 @@ export function PosMenuAdmin({
             item={editItem}
             categories={categories}
             optionGroups={optionGroups}
+            preferredCategoryId={
+              editingFreshItem ? freshCategoryIdRef.current || editItem.categoryId : null
+            }
             onBack={() => {
               setFreshItemId(null);
+              freshCategoryIdRef.current = null;
               setScreen({ kind: "list" });
             }}
             onSaved={() => {
               setFreshItemId(null);
+              freshCategoryIdRef.current = null;
               setScreen({ kind: "list" });
             }}
             onDelete={() => setDeleteTarget({ kind: "item", item: editItem, mode: "archive" })}
@@ -1196,14 +1252,18 @@ export function PosMenuAdmin({
                 ? `ลบถาวรกลุ่ม "${deleteTarget.group.name}"?`
                 : `เก็บกลุ่ม "${deleteTarget.group.name}"?`
               : deleteTarget?.kind === "category"
-                ? `เก็บหมวด "${deleteTarget.category.name}"?`
+                ? deleteTarget.mode === "hard"
+                  ? `ลบหมวดถาวร "${deleteTarget.category.name}"?`
+                  : `เก็บหมวด "${deleteTarget.category.name}"?`
                 : ""
         }
         message={
           deleteTarget?.mode === "hard"
-            ? "รายการที่ลบแล้วกู้คืนไม่ได้"
+            ? deleteTarget.kind === "category"
+              ? "ลบหมวดถาวร — เมนูในหมวดยังอยู่ (เปลี่ยนหมวดเองถ้าต้องการ) · กู้คืนไม่ได้"
+              : "รายการที่ลบแล้วกู้คืนไม่ได้"
             : deleteTarget?.kind === "category"
-              ? "จะซ่อนหมวดจากลิสต์ใช้งาน — เมนูในหมวดยังอยู่ · กู้คืนได้จากตัวกรอง «เก็บแล้ว»"
+              ? "จะซ่อนหมวดจากลิสต์ใช้งานทันที — เมนูในหมวดยังอยู่ · กู้คืนได้จากตัวกรอง «เก็บแล้ว»"
               : "จะซ่อนจากหน้าขาย — กู้คืนได้จากตัวกรอง «เก็บแล้ว»"
         }
         confirmLabel={deleteTarget?.mode === "hard" ? "ลบถาวร" : "เก็บเข้าคลัง"}
@@ -1221,13 +1281,27 @@ export function PosMenuAdmin({
               } else if (deleteTarget.kind === "group") {
                 if (deleteTarget.mode === "hard") await deleteMenuOptionGroup(deleteTarget.group.id);
                 else await archiveMenuOptionGroup(deleteTarget.group.id);
+              } else if (deleteTarget.mode === "hard") {
+                await deleteMenuCategory(deleteTarget.category.id);
+                setCategories((prev) => prev.filter((c) => c.id !== deleteTarget.category.id));
               } else {
-                await archiveMenuCategory(deleteTarget.category.id);
+                const catId = deleteTarget.category.id;
+                setCategories((prev) =>
+                  prev.map((c) => (c.id === catId ? { ...c, active: false } : c)),
+                );
+                await archiveMenuCategory(catId);
               }
               setDeleteTarget(null);
               setScreen({ kind: "list" });
             } catch (err) {
               setError((err as Error).message);
+              if (deleteTarget.kind === "category" && deleteTarget.mode === "archive") {
+                setCategories((prev) =>
+                  prev.map((c) =>
+                    c.id === deleteTarget.category.id ? { ...c, active: true } : c,
+                  ),
+                );
+              }
             } finally {
               setBusy(false);
             }

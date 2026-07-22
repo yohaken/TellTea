@@ -31,6 +31,15 @@ export function PosMenuOptionPriceTable({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const dirtyCount = Object.keys(draft).length;
+
+  function discardDraft() {
+    if (!dirtyCount) return;
+    if (!window.confirm(`ทิ้งร่างราคาที่แก้ไว้ ${dirtyCount} ช่อง?`)) return;
+    setDraft({});
+    setOk(null);
+    setError(null);
+  }
 
   const rows: Row[] = useMemo(() => {
     const out: Row[] = [];
@@ -120,7 +129,7 @@ export function PosMenuOptionPriceTable({
     <div className="pos-menu-price-table-wrap">
       <p className="muted pos-menu-sort-hint">
         ตั้งราคาเพิ่มของตัวเลือก · หน้าร้าน | เดลิเวอรี่ · คอลัมน์เดลิเวอรี่ว่างหรือ placeholder «ส่ง» =
-        ใช้ราคาหน้าร้าน · ไม่มี CSV
+        ใช้ราคาหน้าร้าน · ใส่ 0 ถ้าต้องการส่วนเพิ่มเดลิเป็นศูนย์จริง · ไม่มี CSV
       </p>
       <div className="pos-menu-toolbar">
         <input
@@ -131,10 +140,20 @@ export function PosMenuOptionPriceTable({
           onChange={(e) => setQuery(e.target.value)}
           aria-label="ค้นหาตัวเลือก"
         />
+        {dirtyCount ? (
+          <button
+            type="button"
+            className="ghost-btn pos-menu-btn-sm"
+            disabled={busy}
+            onClick={discardDraft}
+          >
+            ทิ้งร่าง
+          </button>
+        ) : null}
         <button
           type="button"
           className="primary-btn pos-menu-btn-sm"
-          disabled={busy || !Object.keys(draft).length}
+          disabled={busy || !dirtyCount}
           onClick={() => void saveAll()}
         >
           {busy ? "กำลังบันทึก..." : "บันทึกราคา"}

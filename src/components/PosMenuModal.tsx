@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 export function PosMenuModal({
   title,
@@ -14,6 +14,17 @@ export function PosMenuModal({
   children: ReactNode;
   wide?: boolean;
 }) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
     <div className="pos-menu-modal" role="dialog" aria-modal="true" aria-label={title}>
       <button type="button" className="pos-menu-modal-backdrop" aria-label="ปิด" onClick={onClose} />

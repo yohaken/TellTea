@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { updateMenuItem } from "@/lib/pos-menu";
 import type { MenuImageCropSource } from "@/lib/pos-menu-image";
@@ -11,6 +11,24 @@ import type { MenuCategory, MenuItem, MenuOptionGroup } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
 import { selectionTypeLabel } from "@/lib/pos-menu-option-summary";
 
+function hydrateEditorState(item: MenuItem) {
+  return {
+    name: item.name,
+    nameEn: item.nameEn || "",
+    code: item.code || "",
+    categoryId: item.categoryId,
+    price: String(item.price),
+    deliveryPrice: typeof item.deliveryPrice === "number" ? String(item.deliveryPrice) : "",
+    description: item.description || "",
+    imageUrl: item.imageUrl || "",
+    recommended: item.recommended === true,
+    visibleOnPos: item.visibleOnPos !== false,
+    /** Treat missing active as on — never coerce undefined → off (shows as หมด). */
+    active: item.active !== false,
+    linkedGroupIds: item.optionGroupIds || [],
+  };
+}
+
 export function PosMenuItemEditor({
   item,
   categories,
@@ -19,6 +37,8 @@ export function PosMenuItemEditor({
   onSaved,
   onDelete,
   modal = false,
+  /** Prefer this category when opening a freshly created item (avoids select jumping to first/bakery). */
+  preferredCategoryId,
 }: {
   item: MenuItem;
   categories: MenuCategory[];
@@ -27,40 +47,60 @@ export function PosMenuItemEditor({
   onSaved: () => void;
   onDelete: () => void;
   modal?: boolean;
+  preferredCategoryId?: string | null;
 }) {
-  const [name, setName] = useState(item.name);
-  const [nameEn, setNameEn] = useState(item.nameEn || "");
-  const [code, setCode] = useState(item.code || "");
-  const [categoryId, setCategoryId] = useState(item.categoryId);
-  const [price, setPrice] = useState(String(item.price));
-  const [deliveryPrice, setDeliveryPrice] = useState(
-    typeof item.deliveryPrice === "number" ? String(item.deliveryPrice) : "",
+  const initial = hydrateEditorState(item);
+  const [name, setName] = useState(initial.name);
+  const [nameEn, setNameEn] = useState(initial.nameEn);
+  const [code, setCode] = useState(initial.code);
+  const [categoryId, setCategoryId] = useState(
+    preferredCategoryId || initial.categoryId,
   );
-  const [description, setDescription] = useState(item.description || "");
-  const [imageUrl, setImageUrl] = useState(item.imageUrl || "");
-  const [recommended, setRecommended] = useState(item.recommended === true);
-  const [visibleOnPos, setVisibleOnPos] = useState(item.visibleOnPos !== false);
-  const [active, setActive] = useState(item.active);
-  const [linkedGroupIds, setLinkedGroupIds] = useState<string[]>(item.optionGroupIds || []);
+  const [price, setPrice] = useState(initial.price);
+  const [deliveryPrice, setDeliveryPrice] = useState(initial.deliveryPrice);
+  const [description, setDescription] = useState(initial.description);
+  const [imageUrl, setImageUrl] = useState(initial.imageUrl);
+  const [recommended, setRecommended] = useState(initial.recommended);
+  const [visibleOnPos, setVisibleOnPos] = useState(initial.visibleOnPos);
+  const [active, setActive] = useState(initial.active);
+  const [linkedGroupIds, setLinkedGroupIds] = useState<string[]>(initial.linkedGroupIds);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [cropSource, setCropSource] = useState<MenuImageCropSource | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Only re-hydrate when switching to another menu — snapshot churn must not wipe local edits
+  // (category jump / พร้อมขาย flipping off while linking groups).
   useEffect(() => {
-    setName(item.name);
-    setNameEn(item.nameEn || "");
-    setCode(item.code || "");
-    setCategoryId(item.categoryId);
-    setPrice(String(item.price));
-    setDeliveryPrice(typeof item.deliveryPrice === "number" ? String(item.deliveryPrice) : "");
-    setDescription(item.description || "");
-    setImageUrl(item.imageUrl || "");
-    setRecommended(item.recommended === true);
-    setVisibleOnPos(item.visibleOnPos !== false);
-    setActive(item.active);
-    setLinkedGroupIds(item.optionGroupIds || []);
-  }, [item]);
+    const next = hydrateEditorState(item);
+    setName(next.name);
+    setNameEn(next.nameEn);
+    setCode(next.code);
+    setCategoryId(preferredCategoryId || next.categoryId);
+    setPrice(next.price);
+    setDeliveryPrice(next.deliveryPrice);
+    setDescription(next.description);
+    setImageUrl(next.imageUrl);
+    setRecommended(next.recommended);
+    setVisibleOnPos(next.visibleOnPos);
+    setActive(next.active);
+    setLinkedGroupIds(next.linkedGroupIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: item.id only
+  }, [item.id, preferredCategoryId]);
+
+  const categoryOptions = useMemo(() => {
+    const activeCats = categories.filter((c) => c.active !== false);
+    const list = activeCats.length ? activeCats : categories;
+    const byId = new Map(categories.map((c) => [c.id, c]));
+    const current = byId.get(categoryId);
+    const ordered = [...list].sort(
+      (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th"),
+    );
+    if (current && !ordered.some((c) => c.id === current.id)) {
+      return [current, ...ordered];
+    }
+    return ordered;
+  }, [categories, categoryId]);
 
   function toggleGroup(id: string) {
     setLinkedGroupIds((prev) =>
@@ -106,7 +146,7 @@ export function PosMenuItemEditor({
     }
   }
 
-  const activeGroups = optionGroups.filter((g) => g.active);
+  const activeGroups = optionGroups.filter((g) => g.active !== false);
   const linkedGroups = linkedGroupIds
     .map((id) => activeGroups.find((g) => g.id === id))
     .filter((g): g is MenuOptionGroup => g != null);
@@ -173,10 +213,15 @@ export function PosMenuItemEditor({
               <div className="pos-menu-editor-meta-row">
                 <label>
                   <span>หมวดหมู่</span>
-                  <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
-                    {categories.map((c) => (
+                  <select
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    required
+                  >
+                    {categoryOptions.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
+                        {c.active === false ? " (เก็บแล้ว)" : ""}
                       </option>
                     ))}
                   </select>
@@ -192,7 +237,7 @@ export function PosMenuItemEditor({
                 </label>
               </div>
 
-              <label className="pos-menu-switch-row">
+              <div className="pos-menu-switch-row">
                 <span>
                   <strong>พร้อมขาย</strong>
                   <span className="muted"> เปิดขายบนเคาน์เตอร์ (ไม่ใช่ของหมด)</span>
@@ -204,9 +249,9 @@ export function PosMenuItemEditor({
                   onChange={(e) => setActive(e.target.checked)}
                   aria-label="พร้อมขาย"
                 />
-              </label>
+              </div>
 
-              <label className="pos-menu-switch-row">
+              <div className="pos-menu-switch-row">
                 <span>
                   <strong>แสดงบนหน้าจอขาย</strong>
                   <span className="muted"> ซ่อนจากกริดขายได้โดยไม่เก็บเข้าคลัง</span>
@@ -218,7 +263,7 @@ export function PosMenuItemEditor({
                   onChange={(e) => setVisibleOnPos(e.target.checked)}
                   aria-label="แสดงเมนูบนหน้าจอขาย"
                 />
-              </label>
+              </div>
 
               <label>
                 <span>รายละเอียดเมนู</span>
@@ -235,7 +280,8 @@ export function PosMenuItemEditor({
             <section className="pos-menu-editor-card" aria-label="ช่องทางในการขาย">
               <h2 className="pos-menu-editor-card-title">ช่องทางในการขาย</h2>
               <p className="muted pos-menu-price-dual-hint">
-                ตั้งราคาแยกหน้าร้านกับเดลิเวอรี่ · ว่างเดลิเวอรี่ = ใช้ราคาหน้าร้าน
+                ตั้งราคาแยกหน้าร้านกับเดลิเวอรี่ · ว่าง = ใช้หน้าร้าน · placeholder «ส่ง» · ใส่ 0
+                ถ้าต้องการราคาเดลิเป็นศูนย์จริง
               </p>
               <div className="pos-menu-channel-table" role="table" aria-label="ราคาตามช่องทาง">
                 <div className="pos-menu-channel-head" role="row">
@@ -275,7 +321,8 @@ export function PosMenuItemEditor({
                       step={0.01}
                       value={deliveryPrice}
                       onChange={(e) => setDeliveryPrice(e.target.value)}
-                      placeholder="ว่าง = ใช้หน้าร้าน"
+                      placeholder="ส่ง"
+                      title="ว่าง = ใช้ราคาหน้าร้าน"
                       aria-label="ราคาเดลิเวอรี่"
                     />
                   </label>
@@ -322,7 +369,7 @@ export function PosMenuItemEditor({
                   const activeChoices = (g.options || []).filter((o) => o.active !== false);
                   return (
                     <li key={g.id}>
-                      <label className="pos-menu-toggle-row pos-menu-link-group-row">
+                      <div className="pos-menu-toggle-row pos-menu-link-group-row">
                         <span className="pos-menu-link-group-meta">
                           <span className="pos-menu-link-group-name">{g.name}</span>
                           <span className="muted pos-menu-link-group-sub">
@@ -337,8 +384,20 @@ export function PosMenuItemEditor({
                               : ""}
                           </span>
                         </span>
-                        <input type="checkbox" checked={false} onChange={() => toggleGroup(g.id)} />
-                      </label>
+                        <button
+                          type="button"
+                          className="pos-menu-link-group-toggle"
+                          aria-pressed={false}
+                          aria-label={`ผูกกลุ่ม ${g.name}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleGroup(g.id);
+                          }}
+                        >
+                          ผูก
+                        </button>
+                      </div>
                     </li>
                   );
                 })}
@@ -346,7 +405,7 @@ export function PosMenuItemEditor({
                   const activeChoices = (g.options || []).filter((o) => o.active !== false);
                   return (
                     <li key={g.id}>
-                      <label className="pos-menu-toggle-row pos-menu-link-group-row">
+                      <div className="pos-menu-toggle-row pos-menu-link-group-row">
                         <span className="pos-menu-link-group-meta">
                           <span className="pos-menu-link-group-name">
                             {g.name}
@@ -364,8 +423,20 @@ export function PosMenuItemEditor({
                               : ""}
                           </span>
                         </span>
-                        <input type="checkbox" checked onChange={() => toggleGroup(g.id)} />
-                      </label>
+                        <button
+                          type="button"
+                          className="pos-menu-link-group-toggle is-on"
+                          aria-pressed={true}
+                          aria-label={`ถอดกลุ่ม ${g.name}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleGroup(g.id);
+                          }}
+                        >
+                          ผูกแล้ว
+                        </button>
+                      </div>
                     </li>
                   );
                 })}
