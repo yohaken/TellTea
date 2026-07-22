@@ -6,9 +6,8 @@
 const crypto = require("crypto");
 const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
-const { getStorage } = require("firebase-admin/storage");
+const { resolveStorageBucket } = require("./storage-bucket");
 
-const DEFAULT_BUCKET = "mypeer-501909.firebasestorage.app";
 const MAX_B64 = 2_500_000; // ~1.8MB binary after decode
 
 function cors(res) {
@@ -69,7 +68,7 @@ async function saveJpeg(installId, role, jpegBase64) {
   const objectPath = `npos-screenshots/${installId}/${Date.now()}_${role}_${crypto
     .randomBytes(3)
     .toString("hex")}.jpg`;
-  const bucket = getStorage().bucket(process.env.TELLTEA_STORAGE_BUCKET || DEFAULT_BUCKET);
+  const bucket = await resolveStorageBucket();
   const file = bucket.file(objectPath);
   await file.save(buffer, {
     resumable: false,
@@ -83,20 +82,11 @@ async function saveJpeg(installId, role, jpegBase64) {
       },
     },
   });
-  let downloadUrl = "";
-  try {
-    const [signed] = await file.getSignedUrl({
-      version: "v4",
-      action: "read",
-      expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
-    });
-    downloadUrl = signed;
-  } catch {
-    downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(
-      objectPath,
-    )}?alt=media&token=${token}`;
-  }
-  return { downloadUrl, path: objectPath, bytes: buffer.length };
+  // Token URL works without signBlob IAM and loads in mobile browsers.
+  const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(
+    objectPath,
+  )}?alt=media&token=${token}`;
+  return { downloadUrl, path: objectPath, bytes: buffer.length, bucket: bucket.name };
 }
 
 exports.reportNposScreenCapture = functions
@@ -163,6 +153,17 @@ exports.reportNposScreenCapture = functions
         secondaryShot = await saveJpeg(installId, "secondary", secondaryMeta.jpegBase64);
       }
 
+      if (!primaryShot && !secondaryShot) {
+        // Still record failure metadata so BO can see why (ops already logs on device).
+        const detail = [
+          primaryMeta.ok === true ? "primary_upload_empty" : asString(primaryMeta.detail, 40) || "primary_fail",
+          secondaryMeta.ok === true
+            ? "secondary_upload_empty"
+            : asString(secondaryMeta.detail, 40) || "secondary_fail",
+        ].join(" · ");
+        console.warn("reportNposScreenCapture no images", installId, detail);
+      }
+
       const db = getFirestore();
       const shotId = `${installId}_${capturedAt}`;
       const doc = {
@@ -177,7 +178,7 @@ exports.reportNposScreenCapture = functions
         customerDisplay,
         displays,
         primary: {
-          ok: primaryMeta.ok === true,
+          ok: primaryMeta.ok === true && !!primaryShot,
           detail: asString(primaryMeta.detail, 80),
           width: Number.isFinite(primaryMeta.width) ? Math.floor(primaryMeta.width) : 0,
           height: Number.isFinite(primaryMeta.height) ? Math.floor(primaryMeta.height) : 0,
@@ -186,7 +187,7 @@ exports.reportNposScreenCapture = functions
           bytes: primaryShot?.bytes || 0,
         },
         secondary: {
-          ok: secondaryMeta.ok === true,
+          ok: secondaryMeta.ok === true && !!secondaryShot,
           detail: asString(secondaryMeta.detail, 80),
           width: Number.isFinite(secondaryMeta.width) ? Math.floor(secondaryMeta.width) : 0,
           height: Number.isFinite(secondaryMeta.height) ? Math.floor(secondaryMeta.height) : 0,
@@ -227,6 +228,8 @@ exports.reportNposScreenCapture = functions
             lastCaptureAckAt: requestAt,
             lastCaptureAt: capturedAt,
             customerDisplay,
+            latestPrimaryUrl: doc.primary.url || "",
+            latestSecondaryUrl: doc.secondary.url || "",
             updatedAt: Date.now(),
           },
           { merge: true },
@@ -239,6 +242,7 @@ exports.reportNposScreenCapture = functions
         primaryUrl: doc.primary.url || null,
         secondaryUrl: doc.secondary.url || null,
         capturedAt,
+        hasImages: !!(doc.primary.url || doc.secondary.url),
       });
     } catch (err) {
       console.error("reportNposScreenCapture failed", err);

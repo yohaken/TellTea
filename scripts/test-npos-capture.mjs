@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 224/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+19/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.12\.1"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 227/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+20/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.12\.2"/);
 assert.match(read("docs/npos-capture-checklist.md"), /สั่งแคปจอ/);
 assert.match(read("docs/npos-pilot-gate-faq.md"), /แคปจอ/);
 
@@ -77,5 +77,17 @@ assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/MainActivity.
 assert.match(read("npos-telltea/app/src/main/AndroidManifest.xml"), /POST_NOTIFICATIONS/);
 assert.match(read("npos-telltea/app/src/main/res/values/strings.xml"), /btn_grant_all_perms/);
 assert.match(read("functions/npos-heartbeat.js"), /permissionsOk|permissionsStatus/);
+
+
+assert.match(read("functions/storage-bucket.js"), /resolveStorageBucket/);
+assert.match(read("functions/npos-capture.js"), /resolveStorageBucket/);
+assert.match(read("functions/npos-capture.js"), /appspot|resolveStorageBucket/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/DeviceHeartbeat.java"), /Do NOT ack|requestCapture/);
+assert.doesNotMatch(read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/DeviceHeartbeat.java"), /setLastAckRequestAt\(app, requestAt\);\s*\n\s*ScreenCapture/);
+assert.match(read("src/components/NposCaptureGallery.tsx"), /ImagePreviewModal/);
+assert.match(read("src/components/NposDevicesPanel.tsx"), /NposCaptureGallery/);
+assert.match(read("src/components/NposDiagnosePanel.tsx"), /NposCaptureGallery/);
+assert.match(read("docs/npos-remaining-checklist.md"), /Local DB first|โคลนผัง/);
+assert.match(read(".github/workflows/deploy.yml"), /RESOLVED_STORAGE_BUCKET|ensure-storage-bucket/);
 
 console.log("OK test-npos-capture");

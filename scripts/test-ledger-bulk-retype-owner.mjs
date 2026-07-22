@@ -25,6 +25,6 @@ assert.match(pageSrc, /bulk-check-col/);
 assert.match(pageSrc, /เจ้าของเท่านั้น/);
 assert.match(pageSrc, /if \(!isOwner\) return;/);
 
-assert.match(versionSrc, /APP_BUILD\s*=\s*226/);
+assert.match(versionSrc, /APP_BUILD\s*=\s*227/);
 
 console.log("OK test-ledger-bulk-retype-owner");

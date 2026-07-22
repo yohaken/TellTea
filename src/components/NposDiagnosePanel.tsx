@@ -16,6 +16,7 @@ import {
   subscribeNposDiagnoseReports,
   type NposDiagnoseReport,
 } from "@/lib/npos-diagnose";
+import { NposCaptureGallery } from "@/components/NposCaptureGallery";
 
 type Row = NposDiagnoseReport & {
   deviceClass: NposDeviceClass;
@@ -62,35 +63,18 @@ function ReportCard({ r }: { r: Row }) {
           </ul>
         )}
 
-        {(r.latestPrimaryUrl || r.latestSecondaryUrl) && (
-          <>
-            <h4 className="npos-diagnose-sub">
-              แคปจอล่าสุด{" "}
-              <span className="muted">
-                {r.latestCaptureAt ? formatDiagnoseAt(r.latestCaptureAt) : ""}
-                {r.latestCaptureReason ? ` · ${r.latestCaptureReason}` : ""}
-              </span>
-            </h4>
-            <div className="npos-capture-thumbs">
-              {r.latestPrimaryUrl ? (
-                <a href={r.latestPrimaryUrl} target="_blank" rel="noopener noreferrer">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={r.latestPrimaryUrl} alt="แคปจอหลัก" />
-                  <span>จอหลัก</span>
-                </a>
-              ) : null}
-              {r.latestSecondaryUrl ? (
-                <a href={r.latestSecondaryUrl} target="_blank" rel="noopener noreferrer">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={r.latestSecondaryUrl} alt="แคปจอลูกค้า" />
-                  <span>จอลูกค้า</span>
-                </a>
-              ) : (
-                <p className="muted">ยังไม่มีภาพจอลูกค้า (อาจมีจอเดียว)</p>
-              )}
-            </div>
-          </>
-        )}
+        <h4 className="npos-diagnose-sub">
+          แคปจอล่าสุด{" "}
+          <span className="muted">
+            {r.latestCaptureAt ? formatDiagnoseAt(r.latestCaptureAt) : ""}
+            {r.latestCaptureReason ? ` · ${r.latestCaptureReason}` : ""}
+          </span>
+        </h4>
+        <NposCaptureGallery
+          primaryUrl={r.latestPrimaryUrl}
+          secondaryUrl={r.latestSecondaryUrl}
+          emptyHint="ยังไม่มีภาพ — สั่งแคปจาก «เครื่อง nPos» แล้วรอสัญญาณ ~1 นาที · แตะรูปเพื่อซูม"
+        />
 
         <h4 className="npos-diagnose-sub">ตัวเชื่อมต่อ</h4>
         {r.hardware.length === 0 ? (

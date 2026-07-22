@@ -22,8 +22,8 @@ public final class NposApp extends Application {
 
                     @Override
                     public void onActivityPaused(Activity activity) {
-                        Activity cur = currentActivity.get();
-                        if (cur == activity) currentActivity = new WeakReference<>(null);
+                        // Keep last activity for PixelCopy while briefly paused
+                        // (heartbeat capture can race with UI pause).
                     }
 
                     @Override

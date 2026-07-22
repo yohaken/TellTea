@@ -6359,7 +6359,8 @@ body.modal-open .main-panel {
   margin: 0.35rem 0 0.6rem;
 }
 
-.npos-capture-thumbs a {
+.npos-capture-thumbs a,
+.npos-capture-thumb-btn {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -6368,6 +6369,12 @@ body.modal-open .main-panel {
   color: #2a4036;
   font-size: 0.75rem;
   font-weight: 600;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
 }
 
 .npos-capture-thumbs img {
@@ -6377,6 +6384,12 @@ body.modal-open .main-panel {
   border-radius: 0.35rem;
   border: 1px solid rgba(26, 46, 36, 0.14);
   background: rgba(0, 0, 0, 0.04);
+}
+
+.npos-capture-empty,
+.npos-capture-caption {
+  margin: 0.25rem 0 0.5rem;
+  font-size: 0.78rem;
 }
 
 .npos-pill {
