@@ -36,6 +36,7 @@ export type NposDiagnoseReport = {
   isEmulator: boolean;
   deviceClass: NposDeviceClass;
   blocked: boolean;
+  disabled: boolean;
   reportedAt: number;
   versionCode: number;
   versionName: string;
@@ -101,6 +102,7 @@ export function mapNposDiagnoseReport(
     isEmulator,
     deviceClass,
     blocked,
+    disabled: data?.disabled === true && !blocked,
     reportedAt: typeof data?.reportedAt === "number" ? data.reportedAt : 0,
     versionCode: typeof data?.versionCode === "number" ? data.versionCode : 0,
     versionName: typeof data?.versionName === "string" ? data.versionName : "",

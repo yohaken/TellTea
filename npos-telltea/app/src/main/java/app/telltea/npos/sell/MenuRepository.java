@@ -54,7 +54,11 @@ public final class MenuRepository {
                     try {
                         JSONObject body = new JSONObject();
                         body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
-                        JSONObject res = postJson(MENU_URL, body);
+                        // Warm cache → short network budget so UI never feels blocked.
+                        JSONObject res =
+                                cached != null
+                                        ? postJson(MENU_URL, body, 4_000, 8_000)
+                                        : postJson(MENU_URL, body);
                         if (res.optBoolean("ok", false)) {
                             String nextRaw = res.toString();
                             String prevRaw =
@@ -100,7 +104,10 @@ public final class MenuRepository {
                     JSONObject cached = readCachedShop(app);
                     if (cached != null) callback.onReady(cached);
                     try {
-                        JSONObject res = postJson(SHOP_URL, new JSONObject());
+                        JSONObject res =
+                                cached != null
+                                        ? postJson(SHOP_URL, new JSONObject(), 4_000, 8_000)
+                                        : postJson(SHOP_URL, new JSONObject());
                         if (res.optBoolean("ok", false)) {
                             app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                                     .edit()
@@ -220,10 +227,16 @@ public final class MenuRepository {
     }
 
     static JSONObject postJson(String url, JSONObject body) throws Exception {
+        return postJson(url, body, 15_000, 20_000);
+    }
+
+    /** Faster timeouts when refreshing over a warm local cache. */
+    static JSONObject postJson(String url, JSONObject body, int connectMs, int readMs)
+            throws Exception {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         try {
-            conn.setConnectTimeout(15_000);
-            conn.setReadTimeout(20_000);
+            conn.setConnectTimeout(Math.max(2_000, connectMs));
+            conn.setReadTimeout(Math.max(3_000, readMs));
             conn.setRequestMethod("POST");
             conn.setDoOutput(true);
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");

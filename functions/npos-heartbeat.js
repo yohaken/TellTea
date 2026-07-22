@@ -199,6 +199,7 @@ exports.nposDeviceHeartbeat = functions
       if (stableKey) {
         const siblings = await db.collection(COL).where("stableKey", "==", stableKey).limit(25).get();
         const batch = db.batch();
+        let batchOps = 0;
         siblings.forEach((doc) => {
           if (doc.id === installId) return;
           const siblingClass = doc.get("deviceClass");
@@ -216,9 +217,20 @@ exports.nposDeviceHeartbeat = functions
             },
             { merge: true },
           );
+          batch.set(
+            db.collection("nposDiagnose").doc(doc.id),
+            {
+              disabled: true,
+              supersededBy: installId,
+              stableKey,
+              updatedAt: now,
+            },
+            { merge: true },
+          );
           staleMarked += 1;
+          batchOps += 2;
         });
-        if (staleMarked > 0) await batch.commit();
+        if (batchOps > 0) await batch.commit();
       }
 
       res.status(200).json({

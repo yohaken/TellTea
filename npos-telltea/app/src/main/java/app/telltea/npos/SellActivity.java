@@ -326,6 +326,7 @@ public class SellActivity extends Activity {
   }
 
   private void reloadMenu(boolean forceNetwork) {
+    // Local-first: only show blocking "loading" when we have nothing on disk yet.
     if (menu == null) {
       sellSyncStatus.setText(R.string.sell_loading_menu);
     } else if (forceNetwork) {
@@ -337,13 +338,17 @@ public class SellActivity extends Activity {
         bundle ->
             runOnUiThread(
                 () -> {
+                  boolean firstPaint = menu == null;
                   menu = bundle;
                   if (bundle.demo) {
                     sellTitle.setText(R.string.sell_title_demo);
                     sellSyncStatus.setText(R.string.sell_menu_demo);
                   } else {
                     sellTitle.setText(R.string.sell_title);
-                    sellSyncStatus.setText(R.string.sell_menu_ready);
+                    sellSyncStatus.setText(
+                        firstPaint && !forceNetwork
+                            ? R.string.sell_menu_cached
+                            : R.string.sell_menu_ready);
                   }
                   if (!bundle.categories.isEmpty()
                       && (selectedCategoryId.isEmpty()

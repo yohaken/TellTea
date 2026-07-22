@@ -44,7 +44,8 @@
     <string name="sell_title">สั่งและชำระเงิน</string>
     <string name="sell_title_demo">สั่งและชำระ (เมนูเดโม)</string>
     <string name="sell_loading_menu">กำลังโหลดเมนู…</string>
-    <string name="sell_menu_ready">เมนูพร้อม</string>
+    <string name="sell_menu_ready">เมนูพร้อม (เครื่องก่อน · ซิงก์พื้นหลัง)</string>
+    <string name="sell_menu_cached">เมนูจากแคชเครื่อง</string>
     <string name="sell_menu_syncing">กำลังซิงก์เมนู…</string>
     <string name="sell_menu_demo">ใช้เมนูเดโม — ยังดึงเมนูร้านไม่ได้</string>
     <string name="sell_menu_empty">ไม่มีเมนูในหมวดนี้</string>

@@ -18,11 +18,12 @@ import java.util.Date;
 import java.util.Locale;
 
 import app.telltea.npos.diagnose.AutoHealth;
-import app.telltea.npos.diagnose.DeviceHeartbeat;
 import app.telltea.npos.diagnose.DeviceIdentity;
+import app.telltea.npos.diagnose.ForegroundHeartbeat;
 import app.telltea.npos.diagnose.OpsLogger;
 import app.telltea.npos.diagnose.PermissionBootstrap;
 import app.telltea.npos.sell.HoldCart;
+import app.telltea.npos.sell.MenuWarmup;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shift.ShiftPrefs;
 import app.telltea.npos.update.ApkInstaller;
@@ -41,7 +42,6 @@ public class MainActivity extends Activity {
   private TextView hubShiftStrip;
   private LinearLayout hubNavList;
 
-  private DeviceHeartbeat heartbeat;
   private AutoHealth autoHealth;
   private SaleSync saleSync;
   private final Handler clockHandler = new Handler(Looper.getMainLooper());
@@ -77,9 +77,22 @@ public class MainActivity extends Activity {
     versionView.setText(getString(R.string.version_label, localVersionName, localVersionCode));
     deviceIdView.setText(getString(R.string.device_code_label, DeviceIdentity.pairingCode(this)));
 
-    heartbeat = new DeviceHeartbeat();
     autoHealth = new AutoHealth();
     saleSync = new SaleSync();
+    MenuWarmup.warm(this);
+    ForegroundHeartbeat.setStatusListener(
+        (pairing, seenAt, error) -> {
+          if (deviceIdView != null && pairing != null && !pairing.isEmpty()) {
+            deviceIdView.setText(getString(R.string.device_code_label, pairing));
+          }
+          if (heartbeatStatus == null) return;
+          if (error != null && !error.isEmpty()) {
+            heartbeatStatus.setText(R.string.heartbeat_fail_human);
+            OpsLogger.error(MainActivity.this, "heartbeat", "ส่งสัญญาณไม่สำเร็จ", error);
+          } else {
+            heartbeatStatus.setText(R.string.heartbeat_ok);
+          }
+        });
 
     findViewById(R.id.openShiftButton).setOnClickListener(v -> openShift());
     findViewById(R.id.closeShiftButton).setOnClickListener(v -> closeShift());
@@ -230,7 +243,7 @@ public class MainActivity extends Activity {
     updateClockLabels();
     clockHandler.removeCallbacks(clockTick);
     clockHandler.post(clockTick);
-    sendHeartbeat(false);
+    ForegroundHeartbeat.forceNow(this);
     autoHealth.maybeRun(this, false, null);
     saleSync.flushPending(this);
   }
@@ -244,7 +257,7 @@ public class MainActivity extends Activity {
   @Override
   protected void onDestroy() {
     clockHandler.removeCallbacks(clockTick);
-    if (heartbeat != null) heartbeat.shutdown();
+    ForegroundHeartbeat.setStatusListener(null);
     if (autoHealth != null) autoHealth.shutdown();
     if (saleSync != null) saleSync.shutdown();
     OpsLogger.flushNow(this);
@@ -299,44 +312,6 @@ public class MainActivity extends Activity {
     clockInTime.setText(new SimpleDateFormat("HH:mm", Locale.getDefault()).format(now));
     clockInDate.setText(
         new SimpleDateFormat("EEEE d MMM yyyy", new Locale("th", "TH")).format(now));
-  }
-
-  private void sendHeartbeat(boolean force) {
-    if (heartbeatStatus != null) heartbeatStatus.setText(R.string.heartbeat_sending);
-    heartbeat.heartbeat(
-        this,
-        force,
-        new DeviceHeartbeat.Callback() {
-          @Override
-          public void onSuccess(String pairingCode, long lastSeenAt) {
-            runOnUiThread(
-                () -> {
-                  if (deviceIdView != null) {
-                    deviceIdView.setText(getString(R.string.device_code_label, pairingCode));
-                  }
-                  if (heartbeatStatus != null) {
-                    heartbeatStatus.setText(R.string.heartbeat_ok);
-                  }
-                });
-          }
-
-          @Override
-          public void onError(Exception error) {
-            runOnUiThread(
-                () -> {
-                  if (heartbeatStatus != null) {
-                    heartbeatStatus.setText(R.string.heartbeat_fail_human);
-                  }
-                  OpsLogger.error(
-                      MainActivity.this,
-                      "heartbeat",
-                      "ส่งสัญญาณไม่สำเร็จ",
-                      error.getMessage() == null
-                          ? error.getClass().getSimpleName()
-                          : error.getMessage());
-                });
-          }
-        });
   }
 
   private void readLocalVersion() {

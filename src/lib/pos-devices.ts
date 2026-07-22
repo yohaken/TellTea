@@ -68,7 +68,7 @@ async function callNposOwnerDeviceCommand(
 }
 export const POS_DEVICES_COL = "posDevices";
 export const POS_HEARTBEAT_MS = 60 * 1000;
-export const POS_ONLINE_MS = 3 * 60 * 1000;
+export const POS_ONLINE_MS = 5 * 60 * 1000;
 
 export type PosDevice = {
   id: string;

@@ -6,7 +6,10 @@ import android.os.Bundle;
 
 import java.lang.ref.WeakReference;
 
-/** Tracks the foreground activity for PixelCopy screen capture. */
+import app.telltea.npos.diagnose.ForegroundHeartbeat;
+import app.telltea.npos.sell.MenuWarmup;
+
+/** Tracks the foreground activity for PixelCopy + keeps heartbeat alive while UI is open. */
 public final class NposApp extends Application {
     private static WeakReference<Activity> currentActivity = new WeakReference<>(null);
 
@@ -18,10 +21,13 @@ public final class NposApp extends Application {
                     @Override
                     public void onActivityResumed(Activity activity) {
                         currentActivity = new WeakReference<>(activity);
+                        ForegroundHeartbeat.onActivityResumed(activity);
+                        MenuWarmup.warm(activity);
                     }
 
                     @Override
                     public void onActivityPaused(Activity activity) {
+                        ForegroundHeartbeat.onActivityPaused();
                         // Keep last activity for PixelCopy while briefly paused
                         // (heartbeat capture can race with UI pause).
                     }

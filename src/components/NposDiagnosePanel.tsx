@@ -8,6 +8,8 @@ import {
   foldByDeviceClass,
   nposDeviceClassLabel,
   nposGroupKey,
+  preferOnlineRows,
+  resolveNposDeviceClass,
   shortStableKey,
   type NposDeviceClass,
 } from "@/lib/npos-device-class";
@@ -16,6 +18,12 @@ import {
   subscribeNposDiagnoseReports,
   type NposDiagnoseReport,
 } from "@/lib/npos-diagnose";
+import {
+  isPosDeviceOnline,
+  subscribePosDevicesAdmin,
+  withResolvedStableKey,
+  type PosDevice,
+} from "@/lib/pos-devices";
 import { NposCaptureGallery } from "@/components/NposCaptureGallery";
 import { resolveNposCaptureDisplayUrl } from "@/lib/npos-capture-media";
 
@@ -23,7 +31,45 @@ type Row = NposDiagnoseReport & {
   deviceClass: NposDeviceClass;
   sortAt: number;
   priorVersions: number;
+  online: boolean;
 };
+
+function isNposDevice(d: PosDevice): boolean {
+  if (d.shellKind === "native") return true;
+  return (d.userAgent || "").startsWith("nPos-telltea/");
+}
+
+/** Live install ids after ghost filter + stableKey dedupe (same as เครื่อง nPos). */
+function liveDeviceIds(devices: PosDevice[], now: number): {
+  ids: Set<string>;
+  groupKeys: Set<string>;
+  onlineIds: Set<string>;
+} {
+  const rows = devices.filter(isNposDevice).map((d) => {
+    const resolved = withResolvedStableKey(d);
+    return {
+      ...resolved,
+      deviceClass: resolveNposDeviceClass({
+        ...resolved,
+        isEmulator:
+          resolved.isEmulator === true ||
+          /sdk|emulator|generic|goldfish|ranchu/i.test(resolved.deviceHint || ""),
+      }),
+      sortAt: resolved.lastSeenAt || 0,
+    };
+  });
+  const live = rows.filter((d) => d.deviceClass === "blocked" || !d.disabled);
+  const deduped = preferOnlineRows(dedupeByStableKey(live), (d) =>
+    isPosDeviceOnline(d.lastSeenAt, now),
+  );
+  return {
+    ids: new Set(deduped.map((d) => d.id)),
+    groupKeys: new Set(deduped.map((d) => nposGroupKey(d.stableKey, d.id))),
+    onlineIds: new Set(
+      deduped.filter((d) => isPosDeviceOnline(d.lastSeenAt, now)).map((d) => d.id),
+    ),
+  };
+}
 
 function ReportCard({ r }: { r: Row }) {
   return (
@@ -31,6 +77,9 @@ function ReportCard({ r }: { r: Row }) {
       <details>
         <summary>
           <strong>{r.summary || "รายงานล่าสุด"}</strong>
+          <span className={r.online ? "npos-pill npos-pill--on" : "npos-pill npos-pill--off"}>
+            {r.online ? "ออน" : "ออฟ"}
+          </span>
           <span className="muted">
             {" "}
             · v{r.versionName || "?"} ({r.versionCode || "?"}) ·{" "}
@@ -39,8 +88,7 @@ function ReportCard({ r }: { r: Row }) {
         </summary>
         <p className="muted npos-diagnose-id">
           เครื่อง {shortStableKey(r.stableKey, r.installId)}
-          {r.isEmulator ? " · emulator" : ""} · จอลูกค้า {r.customerDisplay || "—"} · installId:{" "}
-          {r.installId}
+          {r.isEmulator ? " · emulator" : ""} · จอลูกค้า {r.customerDisplay || "—"}
           {r.priorVersions > 0
             ? ` · ซ่อนรายงานเก่า ${r.priorVersions} เวอร์ชัน (install ซ้ำตอนเทส)`
             : ""}
@@ -105,11 +153,18 @@ function ReportCard({ r }: { r: Row }) {
 
 export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) => void }) {
   const [reports, setReports] = useState<NposDiagnoseReport[]>([]);
+  const [devices, setDevices] = useState<PosDevice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 15_000);
+    return () => window.clearInterval(t);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
-    return subscribeNposDiagnoseReports(
+    const unsubDiag = subscribeNposDiagnoseReports(
       (next) => {
         setReports(next);
         setLoading(false);
@@ -120,16 +175,34 @@ export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) =
         onError(err.message);
       },
     );
+    const unsubDev = subscribePosDevicesAdmin(
+      (all) => setDevices(all.filter(isNposDevice)),
+      () => {
+        /* devices optional for diagnose list */
+      },
+    );
+    return () => {
+      unsubDiag();
+      unsubDev();
+    };
   }, [onError]);
 
   const { buckets, hidden } = useMemo(() => {
-    const rows = reports.map((r) => ({
+    const live = liveDeviceIds(devices, now);
+    const active = reports.filter((r) => !r.disabled || r.blocked);
+    const rows = active.map((r) => ({
       ...r,
       sortAt: Math.max(r.reportedAt || 0, r.latestCaptureAt || 0),
     }));
-    const kept = dedupeByStableKey(rows);
-    const hiddenCount = Math.max(0, reports.length - kept.length);
 
+    let kept = dedupeByStableKey(rows, { liveInstallIds: live.ids });
+
+    // Align with device list: one card per live machine key when devices known.
+    if (live.groupKeys.size > 0) {
+      kept = kept.filter((r) => live.groupKeys.has(nposGroupKey(r.stableKey, r.installId)));
+    }
+
+    const hiddenCount = Math.max(0, reports.length - kept.length);
     const orphanRawCount = reports.filter((r) =>
       nposGroupKey(r.stableKey, r.installId).startsWith("orphan:"),
     ).length;
@@ -151,14 +224,18 @@ export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) =
       ) {
         prior += orphanRawCount;
       }
-      return { ...r, priorVersions: prior };
+      return {
+        ...r,
+        priorVersions: prior,
+        online: live.onlineIds.has(r.installId) || live.onlineIds.has(r.id),
+      };
     });
 
     return {
       buckets: foldByDeviceClass(enriched),
       hidden: hiddenCount,
     };
-  }, [reports]);
+  }, [reports, devices, now]);
 
   const total =
     buckets.shop.length + buckets.dev.length + buckets.blocked.length;
@@ -175,7 +252,7 @@ export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) =
         loading
           ? "กำลังโหลดรายงานจากแท็บเล็ต…"
           : total
-            ? `${total} เครื่อง · สเปกจอ + แคปล่าสุด${
+            ? `${total} เครื่อง · สเปกจอ + แคปล่าสุด · ยึด id เครื่อง${
                 hidden ? ` · ซ่อนซ้ำ/เก่า ${hidden}` : ""
               }`
             : "ยังไม่มีรายงาน — เปิดแอปแล้วระบบสแกนอัตโนมัติ"

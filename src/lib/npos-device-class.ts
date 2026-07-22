@@ -85,15 +85,34 @@ export function foldByDeviceClass<T extends { deviceClass: NposDeviceClass; sort
  * UUID orphans (no recoverable key) collapse to a single newest row —
  * and drop entirely when any keyed machine exists (same emulator left
  * wipe/reinstall ghosts during early testing).
+ *
+ * When `opts.liveInstallIds` is set (from posDevices after ghost filter),
+ * prefer the live install's report for that machine so diagnose matches
+ * the single online device card.
  */
 export function dedupeByStableKey<T extends { stableKey: string; id: string; sortAt: number }>(
   rows: T[],
+  opts?: { liveInstallIds?: Set<string> },
 ): T[] {
+  const live = opts?.liveInstallIds;
   const byKey = new Map<string, T>();
   for (const row of rows) {
     const key = nposGroupKey(row.stableKey, row.id);
     const prev = byKey.get(key);
-    if (!prev || row.sortAt > prev.sortAt) byKey.set(key, row);
+    if (!prev) {
+      byKey.set(key, row);
+      continue;
+    }
+    if (live && live.size > 0) {
+      const prevLive = live.has(prev.id);
+      const rowLive = live.has(row.id);
+      if (rowLive && !prevLive) {
+        byKey.set(key, row);
+        continue;
+      }
+      if (!rowLive && prevLive) continue;
+    }
+    if (row.sortAt > prev.sortAt) byKey.set(key, row);
   }
 
   const keyed: T[] = [];

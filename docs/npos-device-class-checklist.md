@@ -1,19 +1,24 @@
 # nPos — deviceClass (shop / dev / blocked)
 
-เป้าหมาย: สาขาเดียว · เครื่องหน้าร้านน้อย · emulator ค้างเป็นเครื่องพัฒนา — ไม่ให้รายการหลังร้านรก
+เป้าหมาย: สาขาเดียว · **1 เครื่องจริง = 1 การ์ด** ยึด `stableKey` (ANDROID_ID) · emulator = พัฒนา
 
-อัปเดต: **nPos 1.11.1 (17)** · `APP_BUILD` 221
+อัปเดต: **nPos 1.14.6 (29)** · `APP_BUILD` 236
 
 ## ทำไมหลังร้านดูเหมือนหลายเครื่อง (วิเคราะห์)
 
 สาเหตุหลักตอนเทส **emulator เครื่องเดียว** แต่เห็นหลายแถว/หลายเวอร์ชัน:
 
-1. **Firestore เก็บตาม `installId`** — ทุกครั้งที่ติดตั้ง APK ใหม่ในช่วงแรก (ยังไม่ยึด `ANDROID_ID`) สร้าง doc ใหม่ใน `posDevices` / `nposDiagnose` / `nposOpsLog`
-2. **ตรวจเครื่องบน production** เคย list ทุก doc เป็น “เครื่อง” แยก → โผล่ v1.3, v1.4, v1.8… เหมือนหลายเครื่อง
-3. **doc เก่าไม่มี `stableKey`** — พับซ้ำไม่ได้จนกว่าจะกู้จาก `installId` รูป `npos`+ANDROID_ID
-4. **UUID orphan** จาก wipe ช่วงแรก — ผูกกลับเครื่องเดิมไม่ได้ ต้องซ่อนเมื่อมีเครื่องที่มี stableKey แล้ว
+1. **Firestore เก็บตาม `installId`** — ติดตั้ง APK ใหม่ช่วงแรกสร้าง doc ใหม่
+2. **ตรวจเครื่อง** เคย list ทุก doc เป็น “เครื่อง” แยก
+3. **doc เก่าไม่มี `stableKey`** — พับไม่ได้จนกว่ากู้จาก `npos`+ANDROID_ID
+4. **UUID orphan** จาก wipe — ซ่อนเมื่อมีเครื่องที่มี stableKey แล้ว
+5. **Heartbeat หยุดตอนเข้าหน้าขาย** → BO ขึ้นออฟทั้งที่เปิดอยู่ (แก้ 1.14.6)
 
-แก้ (1.11.1): กู้ `stableKey` จาก installId · พับเหลือรายงานล่าสุดต่อเครื่อง · ซ่อน orphan/ออฟเมื่อมีเครื่องออน · hint บอกจำนวนที่ซ่อน
+แก้ล่าสุด (1.14.6):
+- ตรวจเครื่องพับตาม `stableKey` + จับคู่เครื่องที่ยัง live ใน `posDevices`
+- heartbeat ทำเครื่อง sibling เป็น `disabled` ทั้ง `posDevices` และ `nposDiagnose`
+- `ForegroundHeartbeat` ส่งสัญญาณทุก ~50s ขณะแอปอยู่ foreground (รวมหน้าขาย)
+- หน้าต่างออนไลน์ BO = 5 นาที
 
 ---
 
@@ -21,41 +26,34 @@
 
 ### 1) ส่งแฟล็กจากแอป
 - [x] `stableKey` (ANDROID_ID) บน heartbeat / ops / diagnose
-- [x] `isEmulator` heuristic (AVD / Genymotion / sdk)
-- [x] `deviceClass` ค่าเริ่มต้น: emulator → `dev` · เครื่องจริง → `shop`
-- [x] แอปไม่ส่ง `blocked` เอง
+- [x] `isEmulator` · `deviceClass` (emulator → dev)
+- [x] `ForegroundHeartbeat` ตลอด foreground
 
-### 2) Cloud Functions เก็บ + เคารพบล็อก
-- [x] `nposDeviceHeartbeat` เขียน `stableKey` · `isEmulator` · `deviceClass`
-- [x] heartbeat **ไม่ปลด** `deviceClass=blocked` / `blocked=true`
-- [x] sibling เดิมที่ `stableKey` เดียวกันยังมาร์ก `disabled` (ghost)
-- [x] `reportNposOpsLog` / `reportNposDiagnose` เก็บแฟล็กเดียวกัน
+### 2) Cloud Functions
+- [x] heartbeat เขียน `stableKey` · ไม่ปลด blocked
+- [x] sibling เดิม → `disabled` + diagnose `supersededBy`
 
-### 3) หลังร้านพับ + กลุ่ม + ปุ่มบล็อก
-- [x] แผงเครื่อง: พับ **เครื่องหน้าร้าน / เครื่องพัฒนา / บล็อก**
-- [x] dedupe ตาม `stableKey` (ซ่อน ghost reinstall)
-- [x] ปุ่ม **บล็อก** / **ปลดบล็อก** (`setNposDeviceBlocked`)
-- [x] ไทม์ไลน์ ops + diagnose พับตามคลาส · คอลัมน์เครื่องใช้ `stableKey`
+### 3) หลังร้าน
+- [x] แผงเครื่อง / ตรวจเครื่อง พับตาม stableKey
+- [x] ตรวจเครื่องโชว์ออน/ออฟตาม heartbeat จริง
+- [x] ปุ่มบล็อก / ปลดบล็อก
 
-### นอกขอบเขต (ตั้งใจไม่ทำรอบนี้)
-- [ ] multi-branch / หลายร้าน
-- [ ] workflow claim เครื่องหนัก
-- [ ] collection `posMachines` แยก
-- [ ] ล็อกไฟล์บนเครื่อง
+### Local-first (L1 · คู่ขนาน)
+- [x] อุ่นแคชเมนูตอนเปิดแอป (`MenuWarmup`)
+- [x] หน้าขาย paint จากแคชก่อน · ซิงก์พื้นหลัง timeout สั้น
+- [ ] Room/SQLite แทน SharedPreferences เมื่อคิวโต (ยังไม่จำเป็น)
 
-## ตรวจ (สคริปต์)
+## ตรวจ
 
 ```bash
 node scripts/test-npos-device-class.mjs
+SKIP_CAPTURE_SMOKE=1 node scripts/check-npos-shop.mjs
 ```
 
-## ตรวจมือหลัง deploy CF + APK
+## มือหลัง deploy APK 1.14.6
 
-| # | ขั้นตอน | ผ่านเมื่อ |
-|---|---------|-----------|
-| 1 | เปิด emulator → heartbeat | หลังร้านอยู่กลุ่ม **เครื่องพัฒนา** |
-| 2 | เปิดแท็บเล็ตจริง → heartbeat | อยู่กลุ่ม **เครื่องหน้าร้าน** |
-| 3 | กดบล็อกเครื่องหลุด | ย้ายไป **บล็อก** · heartbeat รอบถัดไปยังบล็อกอยู่ |
-| 4 | ปลดบล็อก | กลับ shop/dev ตาม `isEmulator` |
-| 5 | wipe/reinstall emulator เดิม | ไม่โผล่เป็นหลายเครื่อง (stableKey เดิม) |
-| 6 | ops log / diagnose | พับคลาสเดียวกัน · คอลัมน์เครื่องสั้นจาก stableKey |
+| # | ผ่านเมื่อ |
+|---|-----------|
+| 1 | เปิด emu → เข้าหน้าขายค้างไว้ ≥3 นาที → หลังร้านยัง **ออน** |
+| 2 | ตรวจเครื่อง / เครื่อง nPos เห็น **1 การ์ด** ต่อ emu |
+| 3 | เปิดขายครั้งถัดไปเมนูขึ้นจากแคชเร็ว (ไม่รอเครือข่ายก่อน) |

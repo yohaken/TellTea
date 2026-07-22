@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 235/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+28/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.5"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 236/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+29/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.6"/);
 assert.match(read("docs/npos-device-class-checklist.md"), /deviceClass/);
 assert.match(read("docs/npos-parity-checklist.md"), /deviceClass|เครื่องหน้าร้าน/);
 
@@ -84,19 +84,30 @@ assert.match(read("src/components/NposOpsLogPanel.tsx"), /foldByDeviceClass/);
 assert.match(read("src/components/NposOpsLogPanel.tsx"), /shortStableKey/);
 assert.match(read("src/components/NposDiagnosePanel.tsx"), /foldByDeviceClass/);
 assert.match(read("src/components/NposDiagnosePanel.tsx"), /dedupeByStableKey/);
+assert.match(read("src/components/NposDiagnosePanel.tsx"), /liveInstallIds|liveDeviceIds|subscribePosDevicesAdmin/);
+assert.match(read("src/components/NposDiagnosePanel.tsx"), /npos-pill--on|ออน/);
+assert.match(read("src/lib/npos-diagnose.ts"), /disabled/);
+assert.match(read("functions/npos-heartbeat.js"), /nposDiagnose.*supersededBy|supersededBy[\s\S]*nposDiagnose/);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/ForegroundHeartbeat.java"),
+  /INTERVAL_MS|onActivityResumed/,
+);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/NposApp.java"), /ForegroundHeartbeat/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/sell/MenuWarmup.java"), /MenuWarmup|warm/);
+assert.match(read("src/lib/pos-devices.ts"), /POS_ONLINE_MS\s*=\s*5\s*\*\s*60/);
+assert.match(read("src/lib/npos-device-class.ts"), /liveInstallIds/);
+assert.match(read("src/lib/npos-device-class.ts"), /resolveStableKey/);
+assert.match(read("src/lib/npos-device-class.ts"), /preferOnlineRows/);
 assert.match(read("src/lib/npos-ops-log.ts"), /stableKey/);
 assert.match(read("src/lib/npos-diagnose.ts"), /deviceClass/);
 assert.match(read("src/app/globals.css"), /npos-class-section/);
 assert.match(read("src/app/globals.css"), /npos-device-btn/);
-
-assert.match(read("docs/npos-device-class-checklist.md"), /ทำไมหลังร้านดูเหมือนหลายเครื่อง/);
-assert.match(read("src/lib/npos-device-class.ts"), /resolveStableKey/);
-assert.match(read("src/lib/npos-device-class.ts"), /preferOnlineRows/);
 assert.match(read("src/components/NposDiagnosePanel.tsx"), /สเปกจอ \+ แคปล่าสุด/);
 assert.match(read("src/components/NposDevicesPanel.tsx"), /preferOnlineRows|withResolvedStableKey/);
 assert.match(read("functions/npos-heartbeat.js"), /inferStableKey/);
 assert.match(read("functions/npos-diagnose.js"), /inferStableKey/);
 assert.match(read("functions/npos-ops-log.js"), /inferStableKey/);
+assert.match(read("docs/npos-device-class-checklist.md"), /ทำไมหลังร้านดูเหมือนหลายเครื่อง/);
 
 // --- pure fold logic (mirrors src/lib/npos-device-class.ts) ---
 function resolveNposDeviceClass(input) {
