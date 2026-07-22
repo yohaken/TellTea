@@ -1,16 +1,17 @@
 # nPos-telltea
 
-แอป Android ทดสอบ / พัฒนาต่อ — เปิดแล้วแสดงข้อความ **Hello World** พร้อมโครงอัปเดตในแอป
+แอป Android หน้าร้าน TellTea — เข้างาน · ขาย · ชำระ · พิมพ์ · อัปเดตในแอป
 
-## ลิงก์ดาวน์โหลด
+## ลิงก์ดาวน์โหลด (ส่งพนักงาน)
 
 | | URL |
 |---|---|
-| หน้าติดตั้ง | https://telltea-pos.web.app/install/ |
+| หน้าติดตั้ง + QR | https://telltea-pos.web.app/install/ |
 | ไฟล์ APK | https://telltea-pos.web.app/downloads/nPos-telltea.apk |
 | แมนิเฟสต์อัปเดต | https://telltea-pos.web.app/downloads/latest.json |
+| QR ภาพ | https://telltea-pos.web.app/install/qr-pos-install.png |
 
-ลิงก์เดียวกันแสดงในหลังร้าน (ตั้งค่าเครื่อง POS)
+ลิงก์/QR เดียวกันอยู่ในหลังร้าน → ตั้งค่าเครื่อง POS
 
 ## เวอร์ชันในแอป
 
