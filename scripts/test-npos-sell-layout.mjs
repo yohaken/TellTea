@@ -9,18 +9,20 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 232/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+25/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.2"/);
-assert.match(read("docs/npos-sell-layout-checklist.md"), /กริด|local-first|344/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 233/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+26/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.3"/);
+assert.match(read("docs/npos-sell-layout-checklist.md"), /กริด|local-first|65|35|344/);
 
 const layout = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
 assert.match(layout, /menuGrid/);
 assert.match(layout, /columnCount="5"/);
-assert.match(layout, /344dp/);
+assert.match(layout, /layout_weight="65"/);
+assert.match(layout, /layout_weight="35"/);
 assert.match(layout, /#E85D24/);
 assert.match(layout, /categoryBar/);
 assert.doesNotMatch(layout, /menuList/);
+assert.doesNotMatch(layout, /android:layout_width="344dp"/);
 
 const sell = read("npos-telltea/app/src/main/java/app/telltea/npos/SellActivity.java");
 assert.match(sell, /GridLayout menuGrid/);

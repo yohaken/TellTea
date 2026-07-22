@@ -152,6 +152,31 @@ public final class MenuModels {
     public double lineTotal() {
       return unitPrice * qty;
     }
+
+    /** Short option/topping text for cart, customer display, receipt. */
+    public String optionsSummary() {
+      if (optionsJson == null || optionsJson.length() == 0) return "";
+      StringBuilder sb = new StringBuilder();
+      try {
+        for (int i = 0; i < optionsJson.length(); i++) {
+          JSONObject g = optionsJson.optJSONObject(i);
+          if (g == null) continue;
+          JSONArray choices = g.optJSONArray("choices");
+          if (choices == null) continue;
+          for (int j = 0; j < choices.length(); j++) {
+            JSONObject c = choices.optJSONObject(j);
+            if (c == null) continue;
+            String n = c.optString("name", "").trim();
+            if (n.isEmpty()) continue;
+            if (sb.length() > 0) sb.append(" · ");
+            sb.append(n);
+          }
+        }
+      } catch (Exception ignored) {
+        return "";
+      }
+      return sb.toString();
+    }
   }
 
   public static Bundle demoBundle() {

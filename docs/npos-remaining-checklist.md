@@ -1,39 +1,32 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **1.14.2** แคปจอ media-proxy (รูปจริงใน BO) · ขายหน้าร้านอย่างเดียว · ดู [npos-master-sell-phases.md](./npos-master-sell-phases.md)
+อัปเดต: **1.14.3** W1–W3 เช็คงาน + option ในตะกร้า + layout 65/35  
+ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · สcope [npos-master-sell-phases.md](./npos-master-sell-phases.md)
 
-## ทำแล้ว (พอใช้เปิดขาย)
-- [x] แคปจอ + lightbox + signed URL
-- [x] โคลนผังหน้าขาย + local-first เมนู/รูป
-- [x] จอลูกค้าสองพาเนล + 4 โหมด + auto-resize (**1.14.1**)
-- [x] แคปจอ: `nposCaptureMedia` proxy — BO เห็นรูปจริงไม่ใช่ช่องว่าง (**1.14.2**)
-- [x] จิ้มเมนู → ตะกร้า → QR/เงินสด → ใบเสร็จ → รีเซ็ต
-- [x] ลิ้นชักตอนขายสด
+## ทำแล้ว
+- [x] แคปจอ media-proxy — รูปจริงใน BO (**1.14.2**)
+- [x] จอลูกค้าสองพาเนล + 4 โหมด
+- [x] โคลนผังขาย + local-first เมนู/รูป
+- [x] **W1** ระบบเช็คงาน `check-npos-shop.mjs`
+- [x] **W2** option ใต้ตะกร้า / จอลูกค้า / ใบเสร็จ
+- [x] **W3** layout พนักงาน weight 65/35
+- [x] จิ้มเมนู → จ่าย → ใบเสร็จ → รีเซ็ต · ลิ้นชักตอนสด
 
-## คิวสั้น — S1 → S3
+## คิวถัดไป
 | เฟส | โฟกัส | สถานะ |
 |-----|--------|--------|
-| **S1** | เทสวนบิลเร็วบนเครื่องจริง · จอลูกค้าไม่ชน | ⬜ |
-| **S2** | เก็บเล็กน้อยเมื่อมี pain (option ในตะกร้า / ใบเสร็จอ่านง่าย) | ⬜ ถ้าจำเป็น |
-| **S3** | นำร่อง → ตัดเว็บขาย | ⬜ |
+| **S3 / P4** | คนเทสหน้าร้านจริง | ⬜ |
+| **P5–P6** | feedback · void เซิร์ฟเวอร์ | ⬜ |
+| **N7** | ตัดเว็บขาย | ⬜ |
 
-## นอกสcope (ไม่ทำ)
-- ทานที่ร้าน / รับกลับ  
-- สลิปครัว / KDS  
-- PromptPay auto cut-off  
-- โน้ตบิล / ช่องทางนอกหน้าร้าน  
+## นอกสcope
+- ทานที่ร้าน / รับกลับ · สลิปครัว / KDS · PromptPay auto cut-off · โน้ตบิล  
 
-## คู่ขนานได้ (ไม่บล็อกขาย)
+## คู่ขนานได้
 - [ ] Local DB first (outbox ชัดขึ้น)
 - [ ] สื่อโปรโมจากหลังร้านบนจอลูกค้า
 
-## นำร่อง
-- [ ] P4 คนเทสเครื่องจริง
-- [ ] P5 แก้จาก feedback
-- [ ] P6 void เซิร์ฟเวอร์
-- [ ] N7 ตัดเว็บขาย
-
 ```bash
-node scripts/test-npos-master-sell-phases.mjs
-node scripts/test-npos-capture.mjs
+node scripts/check-npos-shop.mjs
+# หรือเร็ว: SKIP_CAPTURE_SMOKE=1 node scripts/check-npos-shop.mjs
 ```

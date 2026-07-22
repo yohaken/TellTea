@@ -71,11 +71,11 @@
         android:orientation="horizontal"
         android:padding="6dp">
 
-        <!-- Left: categories + menu grid (web .pos-sell-main) -->
+        <!-- Left ~65%: categories + menu grid -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1"
+            android:layout_weight="65"
             android:orientation="vertical">
 
             <HorizontalScrollView
@@ -109,11 +109,12 @@
             </ScrollView>
         </LinearLayout>
 
-        <!-- Right: fixed-ish cart (~web pos-cart-w 21.5rem) -->
+        <!-- Right ~35%: cart + totals + pay -->
         <LinearLayout
-            android:layout_width="344dp"
+            android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_marginStart="6dp"
+            android:layout_weight="35"
             android:background="#FFFFFF"
             android:elevation="2dp"
             android:orientation="vertical"

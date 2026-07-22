@@ -21,11 +21,11 @@ assert.doesNotMatch(plan, /### M6 — Print/);
 assert.doesNotMatch(plan, /สลับ \*\*ทานที่ร้าน/);
 
 const remaining = read("docs/npos-remaining-checklist.md");
-assert.match(remaining, /npos-master-sell-phases/);
+assert.match(remaining, /npos-master-sell-phases|npos-shop-work-checklist/);
 assert.match(remaining, /นอกสcope|ไม่ทำ/);
 assert.match(remaining, /สลิปครัว|KDS/);
-assert.match(remaining, /\*\*S1\*\*|S1/);
-assert.match(remaining, /1\.14\.2|สองพาเนล|auto-resize/);
+assert.match(remaining, /W1|W2|W3|S3/);
+assert.match(remaining, /1\.14\./);
 assert.match(remaining, /Local DB first|local-first|โคลนผัง/);
 
 console.log("OK test-npos-master-sell-phases");

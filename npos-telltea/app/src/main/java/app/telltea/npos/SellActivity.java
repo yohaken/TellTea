@@ -822,6 +822,10 @@ public class SellActivity extends Activity {
     for (int i = 0; i < cart.size(); i++) {
       final int idx = i;
       MenuModels.CartLine line = cart.get(i);
+      LinearLayout block = new LinearLayout(this);
+      block.setOrientation(LinearLayout.VERTICAL);
+      block.setPadding(0, 4, 0, 8);
+
       LinearLayout row = new LinearLayout(this);
       row.setOrientation(LinearLayout.HORIZONTAL);
       TextView label = new TextView(this);
@@ -831,6 +835,7 @@ public class SellActivity extends Activity {
           String.format(
               Locale.getDefault(), "%s x%d · ฿%.0f", line.name, line.qty, line.lineTotal()));
       label.setTextColor(0xFF222222);
+      label.setTypeface(Typeface.DEFAULT_BOLD);
       Button plus = new Button(this);
       plus.setText("+");
       plus.setOnClickListener(
@@ -849,7 +854,18 @@ public class SellActivity extends Activity {
       row.addView(label);
       row.addView(minus);
       row.addView(plus);
-      cartList.addView(row);
+      block.addView(row);
+
+      String opts = line.optionsSummary();
+      if (!opts.isEmpty()) {
+        TextView optView = new TextView(this);
+        optView.setText(opts);
+        optView.setTextColor(0xFF666666);
+        optView.setTextSize(12);
+        optView.setPadding(4, 0, 4, 0);
+        block.addView(optView);
+      }
+      cartList.addView(block);
     }
     double total = cartTotal();
     cartTotalView.setText(getString(R.string.cart_total_fmt, total));
@@ -875,7 +891,7 @@ public class SellActivity extends Activity {
     for (MenuModels.CartLine line : cart) {
       lines.add(
           new CustomerDisplayPresentation.Line(
-              line.name, line.qty, line.unitPrice, line.lineTotal()));
+              line.name, line.qty, line.unitPrice, line.lineTotal(), line.optionsSummary()));
     }
     double sub = cartSubtotal();
     customerDisplay.showSelecting(lines, sub, discountBaht, Math.max(0, sub - discountBaht));

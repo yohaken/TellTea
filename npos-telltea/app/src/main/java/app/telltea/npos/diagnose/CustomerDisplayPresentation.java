@@ -36,17 +36,24 @@ public final class CustomerDisplayPresentation extends Presentation {
         public final int qty;
         public final double unitPrice;
         public final double lineTotal;
+        /** Option/topping summary (may be empty). */
+        public final String detail;
 
-        public Line(String name, int qty, double unitPrice, double lineTotal) {
+        public Line(String name, int qty, double unitPrice, double lineTotal, String detail) {
             this.name = name == null ? "" : name;
             this.qty = qty;
             this.unitPrice = unitPrice;
             this.lineTotal = lineTotal;
+            this.detail = detail == null ? "" : detail;
+        }
+
+        public Line(String name, int qty, double unitPrice, double lineTotal) {
+            this(name, qty, unitPrice, lineTotal, "");
         }
 
         /** Backward-compatible ctor (unit inferred). */
         public Line(String name, int qty, double lineTotal) {
-            this(name, qty, qty > 0 ? lineTotal / qty : lineTotal, lineTotal);
+            this(name, qty, qty > 0 ? lineTotal / qty : lineTotal, lineTotal, "");
         }
     }
 
@@ -312,6 +319,13 @@ public final class CustomerDisplayPresentation extends Presentation {
 
                 row.addView(name);
                 row.addView(meta);
+                if (line.detail != null && !line.detail.trim().isEmpty()) {
+                    TextView detail = new TextView(getContext());
+                    detail.setText(line.detail.trim());
+                    detail.setTextColor(0xFF7A8A82);
+                    detail.setTextSize(TypedValue.COMPLEX_UNIT_SP, metrics.bodySp * 0.85f);
+                    row.addView(detail);
+                }
                 receiptLines.addView(row);
             }
         }

@@ -435,6 +435,10 @@ public final class SaleSync {
                         .append(" x")
                         .append(l.optInt("qty"))
                         .append("\n");
+                String optLine = formatOptionsForReceipt(l.opt("options"));
+                if (!optLine.isEmpty()) {
+                    text.append("  ").append(optLine).append("\n");
+                }
             }
         } catch (Exception ignored) {
             /* ignore */
@@ -465,6 +469,32 @@ public final class SaleSync {
                         OpsLogger.error(app, "printer", "พิมพ์ใบเสร็จไม่สำเร็จ", result.message);
                     }
                 });
+    }
+
+    /** Flatten option choices for a short kitchen-readable receipt line. */
+    static String formatOptionsForReceipt(Object optionsRaw) {
+        if (!(optionsRaw instanceof JSONArray)) return "";
+        JSONArray groups = (JSONArray) optionsRaw;
+        StringBuilder sb = new StringBuilder();
+        try {
+            for (int i = 0; i < groups.length(); i++) {
+                JSONObject g = groups.optJSONObject(i);
+                if (g == null) continue;
+                JSONArray choices = g.optJSONArray("choices");
+                if (choices == null) continue;
+                for (int j = 0; j < choices.length(); j++) {
+                    JSONObject c = choices.optJSONObject(j);
+                    if (c == null) continue;
+                    String n = c.optString("name", "").trim();
+                    if (n.isEmpty()) continue;
+                    if (sb.length() > 0) sb.append(" · ");
+                    sb.append(n);
+                }
+            }
+        } catch (Exception ignored) {
+            return "";
+        }
+        return sb.toString();
     }
 
     private static void pushQueue(Context app, JSONObject payload) throws Exception {
