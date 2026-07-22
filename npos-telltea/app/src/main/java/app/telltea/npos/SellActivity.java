@@ -31,8 +31,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import app.telltea.npos.diagnose.CustomerAmountPresentation;
-import app.telltea.npos.diagnose.DisplayProbe;
+import app.telltea.npos.diagnose.CustomerDisplayController;
+import app.telltea.npos.diagnose.CustomerDisplayPresentation;
 import app.telltea.npos.diagnose.OpsLogger;
 import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.ImageLoader;
@@ -66,7 +66,7 @@ public class SellActivity extends Activity {
   private String selectedCategoryId = "";
   private final List<MenuModels.CartLine> cart = new ArrayList<>();
   private double discountBaht = 0;
-  private CustomerAmountPresentation customerPresentation;
+  private CustomerDisplayController customerDisplay;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -90,6 +90,8 @@ public class SellActivity extends Activity {
 
     menuRepo = new MenuRepository();
     saleSync = new SaleSync();
+    customerDisplay = new CustomerDisplayController();
+    customerDisplay.bind(this);
 
     findViewById(R.id.backButton).setOnClickListener(v -> finish());
     findViewById(R.id.payCashButton).setOnClickListener(v -> startPay("cash"));
@@ -107,12 +109,21 @@ public class SellActivity extends Activity {
     findViewById(R.id.sellCloseShiftButton).setOnClickListener(v -> closeShift());
 
     sellSyncStatus.setText(R.string.sell_loading_menu);
-    menuRepo.loadShop(this, s -> runOnUiThread(() -> shop = s));
+    menuRepo.loadShop(
+        this,
+        s ->
+            runOnUiThread(
+                () -> {
+                  shop = s;
+                  applyShopToCustomerDisplay();
+                  syncCustomerDisplay();
+                }));
     reloadMenu(false);
     saleSync.flushPending(this);
     updateShiftSummary();
     updateHoldRestoreButton();
     updatePendingBadge();
+    syncCustomerDisplay();
   }
 
   private void holdBill() {
@@ -239,6 +250,10 @@ public class SellActivity extends Activity {
                   renderMenu();
                   renderCart();
                   prefetchMenuImages();
+                  if (customerDisplay != null && menu != null) {
+                    customerDisplay.setRecommended(menu.items);
+                    if (cart.isEmpty()) customerDisplay.showStandby();
+                  }
                 }));
   }
 
@@ -266,14 +281,28 @@ public class SellActivity extends Activity {
     updateHoldRestoreButton();
     updatePendingBadge();
     if (saleSync != null) saleSync.flushPending(this);
+    if (customerDisplay != null && sellSyncStatus != null && cart.isEmpty()) {
+      sellSyncStatus.setText(customerDisplay.statusLabel(this));
+      syncCustomerDisplay();
+    }
   }
 
   @Override
   protected void onDestroy() {
-    dismissCustomer();
+    if (customerDisplay != null) {
+      customerDisplay.release();
+      customerDisplay = null;
+    }
     if (menuRepo != null) menuRepo.shutdown();
     if (saleSync != null) saleSync.shutdown();
     super.onDestroy();
+  }
+
+  private void applyShopToCustomerDisplay() {
+    if (customerDisplay == null || shop == null) return;
+    customerDisplay.setShop(
+        shop.optString("shopName", "TellTea"),
+        shop.optString("receiptFooterNote", getString(R.string.customer_success_default)));
   }
 
   private void closeShift() {
@@ -783,6 +812,12 @@ public class SellActivity extends Activity {
   }
 
   private void renderCart() {
+    renderCartViewsOnly();
+    syncCustomerDisplay();
+  }
+
+  /** Update cashier cart UI without touching customer Presentation (e.g. during SUCCESS). */
+  private void renderCartViewsOnly() {
     cartList.removeAllViews();
     for (int i = 0; i < cart.size(); i++) {
       final int idx = i;
@@ -816,8 +851,7 @@ public class SellActivity extends Activity {
       row.addView(plus);
       cartList.addView(row);
     }
-    double sub = cartSubtotal();
-    double total = Math.max(0, sub - discountBaht);
+    double total = cartTotal();
     cartTotalView.setText(getString(R.string.cart_total_fmt, total));
     if (discountLabel != null) {
       if (discountBaht > 0) {
@@ -827,7 +861,21 @@ public class SellActivity extends Activity {
         discountLabel.setVisibility(View.GONE);
       }
     }
-    pushCustomerDisplay(total);
+  }
+
+  private void syncCustomerDisplay() {
+    if (customerDisplay == null) return;
+    applyShopToCustomerDisplay();
+    if (menu != null) customerDisplay.setRecommended(menu.items);
+    if (cart.isEmpty()) {
+      customerDisplay.showStandby();
+      return;
+    }
+    List<CustomerDisplayPresentation.Line> lines = new ArrayList<>();
+    for (MenuModels.CartLine line : cart) {
+      lines.add(new CustomerDisplayPresentation.Line(line.name, line.qty, line.lineTotal()));
+    }
+    customerDisplay.showSelecting(lines, discountBaht, cartTotal());
   }
 
   private double cartSubtotal() {
@@ -896,43 +944,6 @@ public class SellActivity extends Activity {
         .show();
   }
 
-  private void pushCustomerDisplay(double total) {
-    try {
-      List<DisplayProbe.DisplayInfo> displays = DisplayProbe.listDisplays(this);
-      DisplayProbe.DisplayInfo target = null;
-      for (DisplayProbe.DisplayInfo d : displays) {
-        if (!d.primary) {
-          target = d;
-          break;
-        }
-      }
-      if (target == null) return;
-      dismissCustomer();
-      String amount = String.format(Locale.US, "฿%,.0f", total);
-      customerPresentation =
-          new CustomerAmountPresentation(
-              this, target.display, amount, getString(R.string.customer_caption));
-      customerPresentation.show();
-    } catch (Exception e) {
-      OpsLogger.warn(
-          this,
-          "display",
-          "อัปเดตจอลูกค้าไม่สำเร็จ",
-          e.getMessage() == null ? "" : e.getMessage());
-    }
-  }
-
-  private void dismissCustomer() {
-    if (customerPresentation != null) {
-      try {
-        customerPresentation.dismiss();
-      } catch (Exception ignored) {
-        /* ignore */
-      }
-      customerPresentation = null;
-    }
-  }
-
   private void startPay(String method) {
     if (cart.isEmpty()) {
       Toast.makeText(this, R.string.cart_empty, Toast.LENGTH_SHORT).show();
@@ -981,17 +992,20 @@ public class SellActivity extends Activity {
         () -> {
           double received = parseCashAmount(valueHolder[0]);
           boolean enough = received >= total;
+          double change = Math.max(0, received - total);
           amountView.setText(
               valueHolder[0].isEmpty()
                   ? "—"
                   : String.format(Locale.getDefault(), "฿%.0f", received));
           if (enough) {
-            changeView.setText(
-                getString(R.string.pay_cash_change_ok, Math.max(0, received - total)));
+            changeView.setText(getString(R.string.pay_cash_change_ok, change));
             changeView.setTextColor(0xFF1B6B3A);
           } else {
             changeView.setText(R.string.pay_cash_change_short);
             changeView.setTextColor(0xFFB00020);
+          }
+          if (customerDisplay != null) {
+            customerDisplay.showPaymentCash(total, received, change, enough);
           }
         };
     refresh.run();
@@ -1076,21 +1090,26 @@ public class SellActivity extends Activity {
     ScrollView scroll = new ScrollView(this);
     scroll.addView(root);
 
-    new AlertDialog.Builder(this)
-        .setTitle(R.string.pay_cash_title)
-        .setView(scroll)
-        .setPositiveButton(
-            R.string.btn_confirm_sale,
-            (d, w) -> {
-              double received = parseCashAmount(valueHolder[0]);
-              if (received < total) {
-                Toast.makeText(this, R.string.pay_cash_short, Toast.LENGTH_LONG).show();
-                return;
-              }
-              commitSale("cash", received);
-            })
-        .setNegativeButton(android.R.string.cancel, null)
-        .show();
+    AlertDialog dialog =
+        new AlertDialog.Builder(this)
+            .setTitle(R.string.pay_cash_title)
+            .setView(scroll)
+            .setPositiveButton(
+                R.string.btn_confirm_sale,
+                (d, w) -> {
+                  double received = parseCashAmount(valueHolder[0]);
+                  if (received < total) {
+                    Toast.makeText(this, R.string.pay_cash_short, Toast.LENGTH_LONG).show();
+                    syncCustomerDisplay();
+                    return;
+                  }
+                  commitSale("cash", received);
+                })
+            .setNegativeButton(
+                android.R.string.cancel, (d, w) -> syncCustomerDisplay())
+            .setOnCancelListener(d -> syncCustomerDisplay())
+            .create();
+    dialog.show();
   }
 
   private static double parseCashAmount(String raw) {
@@ -1111,9 +1130,11 @@ public class SellActivity extends Activity {
 
     TextView msg = new TextView(this);
     msg.setGravity(Gravity.CENTER);
+    android.graphics.Bitmap customerQr = null;
     if (pp.isEmpty() || !PromptPayPayload.isValid(pp)) {
       msg.setText(getString(R.string.pay_pp_no_id, total));
       root.addView(msg);
+      if (customerDisplay != null) customerDisplay.showPaymentQr(total, null);
     } else {
       msg.setText(getString(R.string.pay_pp_msg, pp, total));
       root.addView(msg);
@@ -1132,6 +1153,7 @@ public class SellActivity extends Activity {
         android.graphics.Bitmap bmp = QrBitmaps.encode(emv, size);
         if (bmp != null) {
           qr.setImageBitmap(bmp);
+          customerQr = bmp;
         } else {
           // Fallback online QR only if local encode fails
           ImageLoader.bind(qr, PromptPayPayload.qrImageUrl(emv), 0xFFFFFFFF);
@@ -1143,13 +1165,15 @@ public class SellActivity extends Activity {
         err.setTextColor(0xFFB00020);
         root.addView(err);
       }
+      if (customerDisplay != null) customerDisplay.showPaymentQr(total, customerQr);
     }
 
     new AlertDialog.Builder(this)
         .setTitle(R.string.pay_pp_title)
         .setView(root)
         .setPositiveButton(R.string.btn_confirm_sale, (d, w) -> commitSale("promptpay", 0))
-        .setNegativeButton(android.R.string.cancel, null)
+        .setNegativeButton(android.R.string.cancel, (d, w) -> syncCustomerDisplay())
+        .setOnCancelListener(d -> syncCustomerDisplay())
         .show();
   }
 
@@ -1171,9 +1195,18 @@ public class SellActivity extends Activity {
                     public void onLocalSaved(String localId, double total) {
                       runOnUiThread(
                           () -> {
+                            String thanks =
+                                shop == null
+                                    ? getString(R.string.customer_success_default)
+                                    : shop.optString(
+                                        "receiptFooterNote",
+                                        getString(R.string.customer_success_default));
+                            if (customerDisplay != null) {
+                              customerDisplay.showSuccessThenStandby(thanks, total);
+                            }
                             cart.clear();
                             discountBaht = 0;
-                            renderCart();
+                            renderCartViewsOnly();
                             updateShiftSummary();
                             updatePendingBadge();
                             sellSyncStatus.setText(R.string.sell_saved_local);

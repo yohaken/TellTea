@@ -1,6 +1,6 @@
 # nPos — เศษงานประสานเฟส (หลังแก้แคปจอ)
 
-อัปเดต: **1.13.1** · แก้แคปดูมี URL แต่รูปไม่ขึ้น (signed URL + ไทม์ไลน์แคป/ops detail)
+อัปเดต: **1.14.0** · จอลูกค้า 4 โหมด (สแตนด์บาย · เลือกรายการ · ชำระ · สำเร็จ)
 
 ## ทำแล้วรอบนี้
 - [x] แก้ `reportNposScreenCapture` อัปโหลด bucket ที่มีจริง
@@ -25,9 +25,11 @@
 - [ ] mutation นอกบิล (ของหมด) ทำ local ก่อนซิงก์
 
 ### D — จอลูกค้า
-- [ ] D2 สถานะสั้นบนเครื่อง + posDevices
-- [ ] D3 layout ตาม orientation
-- [ ] D4 คู่ขนาน POS เดิม
+- [x] 4 โหมด Presentation (1.14.0) — ดู [npos-customer-display-checklist.md](./npos-customer-display-checklist.md)
+- [x] D2 สถานะสั้นบนหน้าขาย + heartbeat `customerDisplay`
+- [ ] D3 layout แยก portrait/landscape ละเอียด
+- [ ] D4 คู่ขนาน POS เดิม (อย่าแย่งจอ 2)
+- [ ] สื่อโปรโมชัน/วิดีโอจากหลังร้าน (ตอนนี้ใช้เมนูแนะนำ + ชื่อร้าน)
 
 ### E — นำร่อง
 - [ ] P4 คนเทสเครื่องจริง

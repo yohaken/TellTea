@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 229/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+22/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.13\.1"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 230/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+23/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.0"/);
 assert.match(read("docs/npos-sell-layout-checklist.md"), /กริด|local-first|344/);
 
 const layout = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
@@ -46,6 +46,6 @@ assert.match(images, /prefetch/);
 assert.match(images, /writeDisk|readDisk/);
 
 assert.ok(existsSync(join(root, "docs/npos-remaining-checklist.md")));
-assert.match(read("docs/npos-remaining-checklist.md"), /1\.13\./);
+assert.match(read("docs/npos-remaining-checklist.md"), /1\.14\./);
 
 console.log("OK test-npos-sell-layout");
