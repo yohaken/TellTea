@@ -2,7 +2,15 @@ import { loadPosMenuCache, savePosMenuCache } from "./pos-menu-cache";
 import { loadPosMenuImages, mergeMenuItemImages, savePosMenuImages } from "./pos-menu-image-cache";
 import { applyFixedCategorySortOrder } from "./pos-fixed-category-order";
 import { reorderMenuCategories, seedPosMenuIfEmpty, subscribePosMenuBundle } from "./pos-menu";
+import { getLocalPosShopSettings } from "./pos-settings";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "./types";
+
+/** fix mode → fixed name order; bestsellers → keep incoming (rank applied at sell view / snapshot). */
+function arrangeCategoriesForMode(categories: MenuCategory[]): MenuCategory[] {
+  const mode = getLocalPosShopSettings().menuArrangeMode;
+  if (mode === "bestsellers") return categories;
+  return applyFixedCategorySortOrder(categories);
+}
 
 export type PosMenuSnapshot = {
   categories: MenuCategory[];
@@ -190,7 +198,7 @@ function applyCache(): boolean {
   const cached = loadPosMenuCache({ withImages: false });
   if (!cached?.items.length) return false;
   snapshot = {
-    categories: applyFixedCategorySortOrder(cached.categories),
+    categories: arrangeCategoriesForMode(cached.categories),
     items: cached.items,
     optionGroups: cached.optionGroups,
     ready: true,
@@ -222,7 +230,7 @@ export function publishLocalMenuOrder(input: {
   items: MenuItem[];
   optionGroups: MenuOptionGroup[];
 }): void {
-  const categories = applyFixedCategorySortOrder(input.categories);
+  const categories = arrangeCategoriesForMode(input.categories);
   pendingCategories = categories;
   pendingItems = input.items;
   pendingGroups = input.optionGroups;
@@ -248,6 +256,7 @@ export function publishLocalMenuOrder(input: {
 }
 
 function maybeSyncFixedOrderToFirebase(categories: MenuCategory[]): void {
+  if (getLocalPosShopSettings().menuArrangeMode === "bestsellers") return;
   if (fixedOrderSyncStarted || typeof window === "undefined") return;
   if (!categories.length) return;
   const desired = applyFixedCategorySortOrder(categories);
@@ -300,7 +309,7 @@ export function startPosMenuPreload(): void {
       // มี pending ที่ยังไม่ทัน → จัดเรียงชั่วคราวบนข้อมูลสด
       // จากนั้นบังคับลำดับหมวดคงที่เสมอ (local-first แล้วจัดอัตโนมัติ)
       const pendingApplied = applyPendingOrder(categories, items, optionGroups);
-      const nextCategories = applyFixedCategorySortOrder(pendingApplied.categories);
+      const nextCategories = arrangeCategoriesForMode(pendingApplied.categories);
       const next = {
         categories: nextCategories,
         items: pendingApplied.items,

@@ -516,7 +516,9 @@ public class SellActivity extends Activity {
   private void renderCategories() {
     categoryBar.removeAllViews();
     if (menu == null) return;
-    applySavedCategoryOrder();
+    if (!menu.isBestsellers()) {
+      applySavedCategoryOrder();
+    }
     float density = getResources().getDisplayMetrics().density;
     int padH = Math.round(12 * density);
     int padV = Math.round(8 * density);
@@ -550,6 +552,7 @@ public class SellActivity extends Activity {
           });
       b.setOnLongClickListener(
           v -> {
+            if (menu != null && menu.isBestsellers()) return true;
             moveCategory(idx, idx == 0 ? 1 : -1);
             return true;
           });
@@ -559,7 +562,7 @@ public class SellActivity extends Activity {
 
   /** Long-press: move left (or right if already first) — clone web sell category reorder. */
   private void moveCategory(int from, int delta) {
-    if (menu == null) return;
+    if (menu == null || menu.isBestsellers()) return;
     int to = from + delta;
     if (to < 0 || to >= menu.categories.size()) return;
     List<MenuModels.Category> next = new ArrayList<>(menu.categories);
@@ -567,7 +570,12 @@ public class SellActivity extends Activity {
     next.add(to, moved);
     menu =
         new MenuModels.Bundle(
-            next, menu.items, menu.optionGroups, menu.demo, menu.fetchedAt);
+            next,
+            menu.items,
+            menu.optionGroups,
+            menu.demo,
+            menu.fetchedAt,
+            menu.menuArrangeMode);
     saveCategoryOrder();
     menuRepo.reorderCategories(this, next);
     renderCategories();
@@ -595,7 +603,12 @@ public class SellActivity extends Activity {
       if (ordered.size() == menu.categories.size()) {
         menu =
             new MenuModels.Bundle(
-                ordered, menu.items, menu.optionGroups, menu.demo, menu.fetchedAt);
+                ordered,
+                menu.items,
+                menu.optionGroups,
+                menu.demo,
+                menu.fetchedAt,
+                menu.menuArrangeMode);
       }
     } catch (Exception ignored) {
       /* ignore */
@@ -822,7 +835,12 @@ public class SellActivity extends Activity {
     }
     menu =
         new MenuModels.Bundle(
-            menu.categories, next, menu.optionGroups, menu.demo, menu.fetchedAt);
+            menu.categories,
+            next,
+            menu.optionGroups,
+            menu.demo,
+            menu.fetchedAt,
+            menu.menuArrangeMode);
   }
 
   private void showOptionPicker(MenuModels.Item item) {

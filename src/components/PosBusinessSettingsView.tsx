@@ -11,7 +11,7 @@ import { isValidPromptPayId, maskPromptPayId, normalizePromptPayId } from "@/lib
 import { usePosApp } from "@/lib/pos-app-context";
 import { posVersionLabel } from "@/lib/pos-version";
 
-type Tab = "bill" | "pay";
+type Tab = "bill" | "pay" | "menu";
 
 function BillPreview({ shop }: { shop: PosShopSettings }) {
   return (
@@ -41,6 +41,8 @@ export function PosBusinessSettingsView() {
   const [receiptFooterNote, setReceiptFooterNote] = useState("");
   const [promptPayId, setPromptPayId] = useState("");
   const [autoPrintReceipt, setAutoPrintReceipt] = useState(true);
+  const [menuArrangeMode, setMenuArrangeMode] = useState<"fix" | "bestsellers">("fix");
+  const [bestsellerWindowDays, setBestsellerWindowDays] = useState(7);
   const [busy, setBusy] = useState(false);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
@@ -53,6 +55,8 @@ export function PosBusinessSettingsView() {
     setReceiptFooterNote(s.receiptFooterNote);
     setPromptPayId(s.promptPayId);
     setAutoPrintReceipt(s.autoPrintReceipt);
+    setMenuArrangeMode(s.menuArrangeMode);
+    setBestsellerWindowDays(s.bestsellerWindowDays);
   }, []);
 
   useEffect(() => {
@@ -69,6 +73,8 @@ export function PosBusinessSettingsView() {
     autoPrintReceipt,
     receiptStaffName,
     receiptFooterNote,
+    menuArrangeMode,
+    bestsellerWindowDays,
   };
 
   async function saveBill(e: FormEvent) {
@@ -120,7 +126,31 @@ export function PosBusinessSettingsView() {
             : "บันทึกแล้ว · อัปขึ้น Firebase แล้ว"
           : normalized
             ? "PromptPay พร้อมใช้ในเครื่อง · จะอัป Firebase ทีหลัง"
-            : "บันทึกในเครื่องแล้ว · จะอัปขึ้น Firebase ทีหลัง",
+            : "บันทึกในเครื่องแล้ว · จะอัป Firebase ทีหลัง",
+      );
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveMenu(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    setSavedMsg(null);
+    try {
+      const result = await savePosShopSettings({
+        menuArrangeMode,
+        bestsellerWindowDays,
+      });
+      setSavedMsg(
+        result.synced
+          ? menuArrangeMode === "bestsellers"
+            ? "ใช้กลุ่มขายดีแล้ว · อัป Firebase แล้ว — หน้า POS จะเรียงตอนรีเฟรชเมนู"
+            : "ใช้ลำดับคงที่แล้ว · อัป Firebase แล้ว"
+          : "บันทึกในเครื่องแล้ว · จะอัป Firebase ทีหลัง",
       );
     } catch (err) {
       setError((err as Error).message);
@@ -137,6 +167,9 @@ export function PosBusinessSettingsView() {
         </button>
         <button type="button" className={tab === "pay" ? "is-active" : ""} onClick={() => setTab("pay")}>
           ชำระเงิน
+        </button>
+        <button type="button" className={tab === "menu" ? "is-active" : ""} onClick={() => setTab("menu")}>
+          จัดเมนู
         </button>
         <span className="pos-biz-version muted">{posVersionLabel()}</span>
       </div>
@@ -209,7 +242,7 @@ export function PosBusinessSettingsView() {
             </form>
             <BillPreview shop={draftPreview} />
           </div>
-        ) : (
+        ) : tab === "pay" ? (
           <form className="pos-biz-form pos-biz-form--pay" onSubmit={(e) => void savePay(e)}>
             <p className="muted pos-biz-lead">
               PromptPay พร้อมใช้แบบสแกน QR + พนักงานกดยืนยันเมื่อได้เงิน
@@ -238,6 +271,51 @@ export function PosBusinessSettingsView() {
             </div>
             <button type="submit" className="pos-btn-orange pos-biz-save" disabled={busy}>
               {busy ? "กำลังบันทึก..." : "บันทึกชำระเงิน"}
+            </button>
+          </form>
+        ) : (
+          <form className="pos-biz-form pos-biz-form--menu" onSubmit={(e) => void saveMenu(e)}>
+            <p className="muted pos-biz-lead">
+              เลือกรูปการจัดเรียงหน้า POS · กลุ่มขายดีใช้ยอดจริงจากบิล (ไม่ใช่ธงแนะนำ) · เลื่อนตำแหน่งตอนรีเฟรชเมนู/เปิดกะ
+              ไม่เลื่อนกลางบิล
+            </p>
+            <fieldset className="pos-biz-arrange">
+              <legend>รูปการจัดเรียง</legend>
+              <label className="pos-biz-check">
+                <input
+                  type="radio"
+                  name="menuArrangeMode"
+                  checked={menuArrangeMode === "fix"}
+                  onChange={() => setMenuArrangeMode("fix")}
+                />
+                <span>
+                  <strong>แบบ fix</strong> — ลำดับคงที่ / ลากมือตามเดิม
+                </span>
+              </label>
+              <label className="pos-biz-check">
+                <input
+                  type="radio"
+                  name="menuArrangeMode"
+                  checked={menuArrangeMode === "bestsellers"}
+                  onChange={() => setMenuArrangeMode("bestsellers")}
+                />
+                <span>
+                  <strong>แบบกลุ่มขายดี</strong> — หมวดขายดีขึ้นหน้า · เมนูขายดีขึ้นบน (อัตโนมัติ)
+                </span>
+              </label>
+            </fieldset>
+            <label>
+              <span>หน้าต่างสถิติ (วัน)</span>
+              <select
+                value={bestsellerWindowDays}
+                onChange={(e) => setBestsellerWindowDays(Number(e.target.value) || 7)}
+              >
+                <option value={7}>7 วัน (ช่วงแรก)</option>
+                <option value={14}>14 วัน</option>
+              </select>
+            </label>
+            <button type="submit" className="pos-btn-orange pos-biz-save" disabled={busy}>
+              {busy ? "กำลังบันทึก..." : "บันทึกการจัดเมนู"}
             </button>
           </form>
         )}

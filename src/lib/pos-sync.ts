@@ -4,11 +4,13 @@ import { reportPosDeviceSyncStatus } from "./pos-devices";
 import { getPosFirebaseAuth, getPosFirebaseFunctions } from "./pos-firebase";
 import {
   bumpOutboxAttempt,
+  getOutboxEntry,
   listOutboxEntries,
   markOutboxFailed,
   removeOutboxEntry,
   resetOutboxForRetry,
 } from "./pos-outbox";
+import { reverseBestsellerSaleLines } from "./pos-bestseller-local";
 import { flushPosShopSettingsUpload } from "./pos-settings";
 import type { PosOutboxBillView, PosOutboxEntry, PosSaleMutationPayload, PosSaleResult } from "./pos-sync-types";
 import {
@@ -219,6 +221,10 @@ export async function retryOutboxEntry(id: string): Promise<void> {
 }
 
 export async function voidPendingOutboxEntry(id: string): Promise<void> {
+  const entry = await getOutboxEntry(id);
+  if (entry?.payload?.lines?.length) {
+    reverseBestsellerSaleLines(entry.payload.lines);
+  }
   await removeOutboxEntry(id);
   await refreshPosSyncSnapshot();
 }

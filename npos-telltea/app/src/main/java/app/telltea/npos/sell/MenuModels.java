@@ -118,6 +118,8 @@ public final class MenuModels {
     public final List<OptionGroup> optionGroups;
     public final boolean demo;
     public final long fetchedAt;
+    /** fix | bestsellers */
+    public final String menuArrangeMode;
 
     public Bundle(
         List<Category> categories,
@@ -125,11 +127,27 @@ public final class MenuModels {
         List<OptionGroup> optionGroups,
         boolean demo,
         long fetchedAt) {
+      this(categories, items, optionGroups, demo, fetchedAt, "fix");
+    }
+
+    public Bundle(
+        List<Category> categories,
+        List<Item> items,
+        List<OptionGroup> optionGroups,
+        boolean demo,
+        long fetchedAt,
+        String menuArrangeMode) {
       this.categories = categories;
       this.items = items;
       this.optionGroups = optionGroups;
       this.demo = demo;
       this.fetchedAt = fetchedAt;
+      this.menuArrangeMode =
+          "bestsellers".equals(menuArrangeMode) ? "bestsellers" : "fix";
+    }
+
+    public boolean isBestsellers() {
+      return "bestsellers".equals(menuArrangeMode);
     }
   }
 
@@ -254,7 +272,9 @@ public final class MenuModels {
     }
     boolean demo = cats.isEmpty() || items.isEmpty();
     if (demo) return demoBundle();
+    String mode = root.optString("menuArrangeMode", "fix");
+    // Snapshot already ordered for bestsellers; keep mode for UI gating.
     return new Bundle(
-        cats, items, groups, false, root.optLong("fetchedAt", System.currentTimeMillis()));
+        cats, items, groups, false, root.optLong("fetchedAt", System.currentTimeMillis()), mode);
   }
 }

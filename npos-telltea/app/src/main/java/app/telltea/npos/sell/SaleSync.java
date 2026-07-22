@@ -191,6 +191,7 @@ public final class SaleSync {
                         pushQueue(app, payload);
                         rememberReceipt(app, payload, "รอส่ง");
                         ShiftPrefs.recordSale(app, paymentMethod, total, discountBaht);
+                        BestsellerPrefs.recordLines(app, lineArr);
                         if (callback != null) callback.onLocalSaved(mutationId, total);
 
                         try {
@@ -301,6 +302,7 @@ public final class SaleSync {
                                     row.optString("paymentMethod", ""),
                                     row.optDouble("localTotal", 0),
                                     row.optDouble("discountBaht", 0));
+                            BestsellerPrefs.reverseLines(app, row.optJSONArray("lines"));
                             OpsLogger.info(app, "sync", "ยกเลิกบิลรอส่ง", mutationId);
                         }
                     } catch (Exception e) {
@@ -417,6 +419,7 @@ public final class SaleSync {
                                 receiptRow.optString("paymentMethod", ""),
                                 receiptRow.optDouble("total", 0),
                                 receiptRow.optDouble("discountBaht", 0));
+                        BestsellerPrefs.reverseLines(app, receiptRow.optJSONArray("lines"));
                         OpsLogger.info(
                                 app,
                                 "sale",
