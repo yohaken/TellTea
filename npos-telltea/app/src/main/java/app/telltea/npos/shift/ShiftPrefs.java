@@ -3,6 +3,10 @@ package app.telltea.npos.shift;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import java.util.Locale;
+
+import app.telltea.npos.R;
+
 /** Local shift/session state for nPos sell. */
 public final class ShiftPrefs {
   private static final String PREFS = "npos_shift";
@@ -42,12 +46,29 @@ public final class ShiftPrefs {
         .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         .edit()
         .putLong(KEY_NEXT_OPENING, Double.doubleToRawLongBits(Math.max(0, amount)))
-        .apply();
+        .commit();
   }
 
   /** Expected drawer cash = opening float + cash sales this shift. */
   public static double expectedCash(Context context) {
     return openingCash(context) + cashTotal(context);
+  }
+
+  /**
+   * Hub / sell strip — money args as strings so Resources.getString never hits
+   * IllegalFormatConversionException on %.0f (seen as process death after open shift).
+   */
+  public static String summaryLine(Context context) {
+    return context.getString(
+        R.string.shift_summary_fmt,
+        saleCount(context),
+        moneyPlain(cashTotal(context)),
+        moneyPlain(promptpayTotal(context)),
+        voidedCount(context));
+  }
+
+  public static String moneyPlain(double amount) {
+    return String.format(Locale.US, "%.0f", Math.max(0, amount));
   }
 
   public static long openedAt(Context context) {
@@ -94,19 +115,23 @@ public final class ShiftPrefs {
   }
 
   public static void open(Context context) {
-    open(context, "", "morning", System.currentTimeMillis());
+    open(context, "", "morning", System.currentTimeMillis(), nextOpeningCash(context));
   }
 
   public static void open(Context context, String sessionId, String shift, long openedAt) {
+    open(context, sessionId, shift, openedAt, nextOpeningCash(context));
+  }
+
+  public static void open(
+      Context context, String sessionId, String shift, long openedAt, double openingCash) {
     SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-    double opening = nextOpeningCash(context);
     prefs
         .edit()
         .putBoolean(KEY_OPEN, true)
         .putLong(KEY_OPENED_AT, openedAt)
         .putString(KEY_SESSION, sessionId == null ? "" : sessionId)
         .putString(KEY_SHIFT, shift == null ? "morning" : shift)
-        .putLong(KEY_OPENING_CASH, Double.doubleToRawLongBits(opening))
+        .putLong(KEY_OPENING_CASH, Double.doubleToRawLongBits(Math.max(0, openingCash)))
         .putLong(KEY_NEXT_OPENING, Double.doubleToRawLongBits(0))
         .putLong(KEY_CASH, Double.doubleToRawLongBits(0))
         .putLong(KEY_PP, Double.doubleToRawLongBits(0))
@@ -115,7 +140,7 @@ public final class ShiftPrefs {
         .putInt(KEY_PP_BILLS, 0)
         .putLong(KEY_DISCOUNT, Double.doubleToRawLongBits(0))
         .putInt(KEY_VOIDED, 0)
-        .apply();
+        .commit();
   }
 
   public static void addCash(Context context, double amount) {
@@ -173,6 +198,10 @@ public final class ShiftPrefs {
   }
 
   public static void close(Context context) {
-    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_OPEN, false).apply();
+    context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean(KEY_OPEN, false)
+        .commit();
   }
 }

@@ -89,6 +89,9 @@ function SessionShiftCard({
       {typeof session.openingCash === "number" ? (
         <p className="muted">เงินทอนเริ่ม ฿{formatPlainNumber(session.openingCash)}</p>
       ) : null}
+      {!open && typeof session.leaveFloat === "number" ? (
+        <p className="muted">ทอนรอบถัดไป ฿{formatPlainNumber(session.leaveFloat)}</p>
+      ) : null}
       {!open && typeof counted === "number" ? (
         <p className="pos-session-card-diff">
           นับได้ ฿{formatPlainNumber(counted)}
