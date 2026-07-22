@@ -23,6 +23,7 @@
     "test:boh-menu-add-flow": "node scripts/test-boh-menu-add-flow.mjs",
     "test:boh-menu-add-e2e": "node scripts/test-boh-menu-add-e2e.mjs",
     "test:menu-image-options-smart": "node scripts/test-menu-image-options-smart.mjs",
+    "test:boh-menu-walk-code": "node scripts/test-boh-menu-walk-code.mjs",
     "test:web-pos-retired": "node scripts/test-web-pos-retired.mjs",
     "test:ledger-transfer-in-fab": "node scripts/test-ledger-transfer-in-fab.mjs",
     "test:alerts-pos-manage-hub": "node scripts/test-alerts-pos-manage-hub.mjs",
