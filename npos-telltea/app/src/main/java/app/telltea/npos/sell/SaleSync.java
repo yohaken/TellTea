@@ -19,6 +19,7 @@ import app.telltea.npos.printer.PrinterEndpoint;
 import app.telltea.npos.printer.PrinterPrefs;
 import app.telltea.npos.printer.PrinterTransport;
 import app.telltea.npos.printer.ReceiptFormBuilder;
+import app.telltea.npos.printer.ShiftReportFormBuilder;
 import app.telltea.npos.shift.BlindCloseReport;
 import app.telltea.npos.shift.ShiftPrefs;
 
@@ -500,6 +501,7 @@ public final class SaleSync {
                         if (ep == null) {
                             OpsLogger.warn(app, "printer", "ข้ามพิมพ์สรุปรอบ — ยังไม่เลือกปริ้นเตอร์", reportKind);
                         } else {
+                            JSONObject shop = loadShopJson(app);
                             double cash = ShiftPrefs.cashTotal(app);
                             double pp = ShiftPrefs.promptpayTotal(app);
                             double discount = ShiftPrefs.discountTotal(app);
@@ -508,91 +510,50 @@ public final class SaleSync {
                             int cashBills = ShiftPrefs.cashBillCount(app);
                             int ppBills = ShiftPrefs.promptpayBillCount(app);
                             int voided = ShiftPrefs.voidedCount(app);
-                            String title =
-                                    "close".equals(reportKind)
-                                            ? "ปิดรอบ / Z-REPORT"
-                                            : "Snapshot กลางรอบ / X-REPORT";
-                            String footer =
-                                    "close".equals(reportKind)
-                                            ? "ปิดรอบเรียบร้อย\n"
-                                            : "*** ไม่ใช่การปิดรอบ ***\n";
-                            StringBuilder sb = new StringBuilder();
-                            sb.append(title)
-                                    .append("\n")
-                                    .append("รอบ ")
-                                    .append(ShiftPrefs.shift(app))
-                                    .append("\n")
-                                    .append("session ")
-                                    .append(ShiftPrefs.sessionId(app))
-                                    .append("\n")
-                                    .append("----------------\n")
-                                    .append("บิลขาย ")
-                                    .append(sales)
-                                    .append("\n")
-                                    .append("ทำลายบิล ")
-                                    .append(voided)
-                                    .append("\n")
-                                    .append("เงินสด ")
-                                    .append(cashBills)
-                                    .append(" บิล · ")
-                                    .append(String.format(java.util.Locale.US, "%.0f", cash))
-                                    .append("\n")
-                                    .append("PromptPay ")
-                                    .append(ppBills)
-                                    .append(" บิล · ")
-                                    .append(String.format(java.util.Locale.US, "%.0f", pp))
-                                    .append("\n")
-                                    .append("ส่วนลดรวม ")
-                                    .append(String.format(java.util.Locale.US, "%.0f", discount))
-                                    .append("\n")
-                                    .append("----------------\n")
-                                    .append("รวมยอดขาย ")
-                                    .append(String.format(java.util.Locale.US, "%.0f", cash + pp))
-                                    .append("\n");
+                            long openedAt = ShiftPrefs.openedAt(app);
+                            long now = System.currentTimeMillis();
+
+                            Double counted = null;
+                            Double expected = null;
+                            Double diff = null;
+                            String label = null;
+                            double leaveFloat = 0;
+                            String note = "";
                             if ("close".equals(reportKind)) {
-                                double expected =
-                                        report != null ? report.expectedCash : opening + cash;
-                                double counted = report != null ? report.countedCash : expected;
-                                double diff = report != null ? report.cashDifference : 0;
-                                String label =
-                                        report != null ? report.discrepancyLabel() : "ตรง";
-                                sb.append("----------------\n")
-                                        .append("เงินทอนเริ่ม ")
-                                        .append(String.format(java.util.Locale.US, "%.0f", opening))
-                                        .append("\n")
-                                        .append("ควรมีในลิ้นชัก ")
-                                        .append(String.format(java.util.Locale.US, "%.0f", expected))
-                                        .append("\n")
-                                        .append("นับได้ ")
-                                        .append(String.format(java.util.Locale.US, "%.0f", counted))
-                                        .append("\n")
-                                        .append("ส่วนต่าง ")
-                                        .append(label)
-                                        .append(" ")
-                                        .append(String.format(java.util.Locale.US, "%.0f", diff))
-                                        .append("\n");
-                                if (report != null && report.leaveFloat > 0) {
-                                    sb.append("เงินทอนค้างรอบถัดไป ")
-                                            .append(
-                                                    String.format(
-                                                            java.util.Locale.US,
-                                                            "%.0f",
-                                                            report.leaveFloat))
-                                            .append("\n");
-                                }
-                                if (report != null
-                                        && report.discrepancyNote != null
-                                        && !report.discrepancyNote.isEmpty()) {
-                                    sb.append("เหตุผล ")
-                                            .append(report.discrepancyNote)
-                                            .append("\n");
-                                }
+                                expected = report != null ? report.expectedCash : opening + cash;
+                                counted = report != null ? report.countedCash : expected;
+                                diff = report != null ? report.cashDifference : 0;
+                                label = report != null ? report.discrepancyLabel() : "ตรง";
+                                leaveFloat = report != null ? report.leaveFloat : 0;
+                                note = report != null ? report.discrepancyNote : "";
                             }
-                            sb.append(footer);
+
+                            String body =
+                                    ShiftReportFormBuilder.build(
+                                            shop,
+                                            reportKind,
+                                            ShiftPrefs.shift(app),
+                                            ShiftPrefs.sessionId(app),
+                                            openedAt,
+                                            now,
+                                            sales,
+                                            voided,
+                                            cashBills,
+                                            cash,
+                                            ppBills,
+                                            pp,
+                                            discount,
+                                            opening,
+                                            counted,
+                                            expected,
+                                            diff,
+                                            label,
+                                            leaveFloat,
+                                            note);
                             transport.send(
                                     app,
                                     ep,
-                                    EscPos.saleReceipt(sb.toString()),
+                                    EscPos.documentReceipt(body),
                                     result ->
                                             OpsLogger.result(
                                                     app,
