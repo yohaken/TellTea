@@ -72,13 +72,7 @@ public class ShiftActivity extends Activity {
   }
 
   private void refreshSummary() {
-    summaryView.setText(
-        getString(
-            R.string.shift_summary_fmt,
-            ShiftPrefs.saleCount(this),
-            ShiftPrefs.cashTotal(this),
-            ShiftPrefs.promptpayTotal(this),
-            ShiftPrefs.voidedCount(this)));
+    summaryView.setText(ShiftPrefs.summaryLine(this));
   }
 
   private void closeShift() {

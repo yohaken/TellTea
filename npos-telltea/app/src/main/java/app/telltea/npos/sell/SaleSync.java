@@ -55,7 +55,12 @@ public final class SaleSync {
     private final PrinterTransport transport = new PrinterTransport();
 
     public void openSession(Context context, Runnable done) {
+        openSession(context, ShiftPrefs.nextOpeningCash(context), done);
+    }
+
+    public void openSession(Context context, double openingCash, Runnable done) {
         Context app = context.getApplicationContext();
+        final double opening = Math.max(0, openingCash);
         executor.execute(
                 () -> {
                     try {
@@ -64,19 +69,20 @@ public final class SaleSync {
                         JSONObject body = new JSONObject();
                         body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
                         body.put("sessionId", sessionId);
-                        body.put("openingCash", ShiftPrefs.nextOpeningCash(app));
+                        body.put("openingCash", opening);
                         JSONObject res = MenuRepository.postJson(OPEN_URL, body);
                         if (res.optBoolean("ok", false)) {
-                            ShiftPrefs.open(app, sessionId, res.optString("shift", "morning"), openedAt);
-                            OpsLogger.info(app, "shift", "เปิดรอบแล้ว", sessionId);
+                            ShiftPrefs.open(
+                                    app, sessionId, res.optString("shift", "morning"), openedAt, opening);
+                            OpsLogger.info(app, "shift", "เปิดรอบแล้ว", sessionId + " float=" + opening);
                         } else {
-                            ShiftPrefs.open(app, sessionId, "morning", openedAt);
+                            ShiftPrefs.open(app, sessionId, "morning", openedAt, opening);
                             OpsLogger.warn(app, "shift", "เปิดรอบออฟไลน์", res.optString("error"));
                         }
                     } catch (Exception e) {
                         long openedAt = System.currentTimeMillis();
                         String sessionId = DeviceIdentity.getOrCreateInstallId(app) + "_" + openedAt;
-                        ShiftPrefs.open(app, sessionId, "morning", openedAt);
+                        ShiftPrefs.open(app, sessionId, "morning", openedAt, opening);
                         OpsLogger.warn(
                                 app,
                                 "shift",

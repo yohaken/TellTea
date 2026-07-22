@@ -11,12 +11,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import app.telltea.npos.R;
+import app.telltea.npos.diagnose.OpsLogger;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.ui.UiScale;
 
 /**
- * Confirm opening float before openSession — seeds ShiftPrefs.nextOpeningCash
- * then opens (used as openingCash for the new shift).
+ * Confirm opening float before openSession — passes amount explicitly (no prefs race).
  */
 public final class OpenShiftFlow {
   public interface Done {
@@ -65,27 +65,47 @@ public final class OpenShiftFlow {
     field.setBackgroundResource(R.drawable.npos_touch_ghost);
     field.setPadding(ui.dp(12), ui.dp(10), ui.dp(12), ui.dp(10));
     double seed = ShiftPrefs.nextOpeningCash(activity);
-    field.setText(String.format(java.util.Locale.US, "%.0f", seed));
+    field.setText(ShiftPrefs.moneyPlain(seed));
     field.setHint(R.string.open_shift_float_hint_field);
+    field.selectAll();
     box.addView(field);
 
     new AlertDialog.Builder(activity)
         .setTitle(R.string.open_shift_float_title)
         .setView(box)
+        .setCancelable(true)
         .setPositiveButton(
             R.string.open_shift_float_confirm,
             (d, w) -> {
               double amount = parseMoney(field.getText() == null ? "" : field.getText().toString());
-              ShiftPrefs.setNextOpeningCash(activity, Math.max(0, amount));
+              amount = Math.max(0, amount);
               Toast.makeText(activity, R.string.shift_opening, Toast.LENGTH_SHORT).show();
               saleSync.openSession(
                   activity,
+                  amount,
                   () ->
                       activity.runOnUiThread(
                           () -> {
-                            Toast.makeText(activity, R.string.shift_opened, Toast.LENGTH_SHORT)
-                                .show();
-                            if (done != null) done.onOpened();
+                            if (activity.isFinishing()) return;
+                            try {
+                              Toast.makeText(activity, R.string.shift_opened, Toast.LENGTH_SHORT)
+                                  .show();
+                              if (done != null) done.onOpened();
+                            } catch (Exception e) {
+                              OpsLogger.error(
+                                  activity,
+                                  "shift",
+                                  "เปิดกะ UI ล้ม",
+                                  e.getMessage() == null ? "" : e.getMessage());
+                              // Shift already open in prefs — still notify hub.
+                              if (done != null) {
+                                try {
+                                  done.onOpened();
+                                } catch (Exception ignored) {
+                                  /* hub update best-effort */
+                                }
+                              }
+                            }
                           }));
             })
         .setNegativeButton(

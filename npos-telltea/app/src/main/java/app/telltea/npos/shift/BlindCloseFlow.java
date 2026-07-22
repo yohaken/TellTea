@@ -93,6 +93,8 @@ public final class BlindCloseFlow {
     // Keep blind: do not compute or hint expected/diff until revealSummary.
     double opening = ShiftPrefs.openingCash(activity);
     double cashSales = ShiftPrefs.cashTotal(activity);
+    // Seed leave float from this shift's opening (Wongnai: leave float for next shift).
+    double leaveSeed = Math.min(opening, Math.max(0, counted));
 
     LinearLayout box = new LinearLayout(activity);
     box.setOrientation(LinearLayout.VERTICAL);
@@ -106,8 +108,9 @@ public final class BlindCloseFlow {
     box.addView(floatLabel);
 
     EditText leave = moneyField(activity, ui);
-    leave.setHint("0");
-    leave.setText("0");
+    leave.setHint(ShiftPrefs.moneyPlain(leaveSeed));
+    leave.setText(ShiftPrefs.moneyPlain(leaveSeed));
+    leave.selectAll();
     box.addView(leave);
 
     TextView noteLabel = new TextView(activity);
@@ -129,6 +132,13 @@ public final class BlindCloseFlow {
         .setPositiveButton(
             R.string.blind_close_next,
             (d, w) -> {
+              double leaveAmt = parseMoney(leave.getText().toString());
+              if (leaveAmt > counted + 0.009) {
+                Toast.makeText(activity, R.string.blind_close_leave_too_high, Toast.LENGTH_LONG)
+                    .show();
+                askNoteAndFloat(activity, saleSync, done, counted);
+                return;
+              }
               BlindCloseReport report =
                   new BlindCloseReport(
                       opening,
@@ -140,7 +150,7 @@ public final class BlindCloseFlow {
                       ShiftPrefs.voidedCount(activity),
                       ShiftPrefs.discountTotal(activity),
                       counted,
-                      parseMoney(leave.getText().toString()),
+                      leaveAmt,
                       note.getText() == null ? "" : note.getText().toString());
               revealSummary(activity, saleSync, done, report);
             })

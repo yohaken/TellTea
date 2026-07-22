@@ -265,13 +265,7 @@ public class MainActivity extends Activity {
       clockInPanel.setVisibility(View.GONE);
       sellPanel.setVisibility(View.VISIBLE);
       if (hubShiftStrip != null) {
-        hubShiftStrip.setText(
-            getString(
-                R.string.shift_summary_fmt,
-                ShiftPrefs.saleCount(this),
-                ShiftPrefs.cashTotal(this),
-                ShiftPrefs.promptpayTotal(this),
-                ShiftPrefs.voidedCount(this)));
+        hubShiftStrip.setText(ShiftPrefs.summaryLine(this));
       }
       maybeResumeSellAfterUpdate();
     } else {
@@ -312,17 +306,16 @@ public class MainActivity extends Activity {
         saleSync,
         () -> {
           openingShift = false;
-          // Stay on hub — user picks สั่งและชำระเงิน (like web shell)
-          clockInPanel.setVisibility(View.GONE);
-          sellPanel.setVisibility(View.VISIBLE);
-          if (hubShiftStrip != null) {
-            hubShiftStrip.setText(
-                getString(
-                    R.string.shift_summary_fmt,
-                    ShiftPrefs.saleCount(this),
-                    ShiftPrefs.cashTotal(this),
-                    ShiftPrefs.promptpayTotal(this),
-                    ShiftPrefs.voidedCount(this)));
+          try {
+            // Stay on hub — user picks สั่งและชำระเงิน (like web shell)
+            if (clockInPanel != null) clockInPanel.setVisibility(View.GONE);
+            if (sellPanel != null) sellPanel.setVisibility(View.VISIBLE);
+            if (hubShiftStrip != null) {
+              hubShiftStrip.setText(ShiftPrefs.summaryLine(this));
+            }
+          } catch (Exception e) {
+            OpsLogger.error(
+                this, "shift", "เปิดกะอัปเดต UI", e.getMessage() == null ? "" : e.getMessage());
           }
         },
         () -> openingShift = false);

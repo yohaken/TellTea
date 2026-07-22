@@ -420,13 +420,7 @@ public class SellActivity extends Activity {
 
   private void updateShiftSummary() {
     if (shiftSummary == null) return;
-    shiftSummary.setText(
-        getString(
-            R.string.shift_summary_fmt,
-            ShiftPrefs.saleCount(this),
-            ShiftPrefs.cashTotal(this),
-            ShiftPrefs.promptpayTotal(this),
-            ShiftPrefs.voidedCount(this)));
+    shiftSummary.setText(ShiftPrefs.summaryLine(this));
   }
 
   private void reloadMenu(boolean forceNetwork) {

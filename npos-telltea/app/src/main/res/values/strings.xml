@@ -109,7 +109,7 @@
     <string name="hold_restore_replace">ตะกร้าปัจจุบันจะถูกแทนที่</string>
     <string name="sell_flushing">กำลังซิงก์บิลค้าง…</string>
     <string name="sell_pending_n">รอซิงก์ %1$d บิล</string>
-    <string name="shift_summary_fmt">รอบนี้ · ขาย %1$d · เงินสด ฿%2$.0f · PP ฿%3$.0f · ทำลาย %4$d</string>
+    <string name="shift_summary_fmt">รอบนี้ · ขาย %1$d · เงินสด ฿%2$s · PP ฿%3$s · ทำลาย %4$d</string>
     <string name="printer_lan_title">ปริ้นเตอร์ LAN (Wi‑Fi)</string>
     <string name="printer_lan_host_hint">IP เช่น 192.168.1.50</string>
     <string name="printer_lan_port_hint">พอร์ต (ปกติ 9100)</string>
@@ -172,6 +172,7 @@
     <string name="blind_close_next">ถัดไป</string>
     <string name="blind_close_extra_title">เงินทอนรอบถัดไป</string>
     <string name="blind_close_leave_float">เหลือเงินทอนในลิ้นชักให้กะถัดไป</string>
+    <string name="blind_close_leave_too_high">เงินทอนค้างต้องไม่เกินเงินที่นับได้ในลิ้นชัก</string>
     <string name="blind_close_note_needed">ยอดไม่ตรง — ระบุเหตุผลสั้นๆ (ถ้ามี)</string>
     <string name="blind_close_note_optional">หมายเหตุปิดกะ (ถ้ามี · ยังไม่โชว์ยอดระบบ)</string>
     <string name="blind_close_note_hint">เช่น นับผิด / ทอนเกิน / อื่นๆ</string>
