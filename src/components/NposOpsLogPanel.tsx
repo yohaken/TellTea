@@ -151,7 +151,7 @@ export function NposOpsLogPanel({ onError }: { onError: (msg: string | null) => 
         loading
           ? "กำลังโหลด…"
           : flatCount
-            ? `${flatCount} แถว${errorCount ? ` · E${errorCount}` : ""} · พับตามหน้าร้าน/พัฒนา/บล็อก`
+            ? `${flatCount} แถว${errorCount ? ` · E${errorCount}` : ""} · คอลัมน์เครื่อง = stableKey (ซ้ำ install ไม่แยกเครื่อง)`
             : "ยังไม่มี log"
       }
       defaultOpen={false}

@@ -162,6 +162,17 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
   };
 }
 
+/** Fill stableKey from installId when older docs omitted it (npos + ANDROID_ID). */
+export function withResolvedStableKey(device: PosDevice): PosDevice {
+  if (device.stableKey && device.stableKey.length >= 8) return device;
+  const compact = device.id.replace(/-/g, "").toLowerCase();
+  const m = /^npos([a-f0-9]+)$/.exec(compact);
+  if (!m) return device;
+  const hex = m[1];
+  if (hex.length < 8 || hex.length > 20) return device;
+  return { ...device, stableKey: hex };
+}
+
 function telemetryPatch(telemetry?: PosDeviceTelemetry): Record<string, unknown> {
   const t = telemetry ?? collectPosDeviceTelemetry();
   return {

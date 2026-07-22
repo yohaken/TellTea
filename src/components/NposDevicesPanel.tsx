@@ -7,6 +7,7 @@ import {
   dedupeByStableKey,
   foldByDeviceClass,
   nposDeviceClassLabel,
+  preferOnlineRows,
   resolveNposDeviceClass,
   shortStableKey,
   type NposDeviceClass,
@@ -16,6 +17,7 @@ import {
   posDeviceLabel,
   setNposDeviceBlocked,
   subscribePosDevicesAdmin,
+  withResolvedStableKey,
   type PosDevice,
 } from "@/lib/pos-devices";
 import { useAuth } from "@/lib/auth";
@@ -29,23 +31,38 @@ type Row = PosDevice & { deviceClass: NposDeviceClass; sortAt: number };
 
 /**
  * Ghosts = disabled siblings from reinstall (not BO-blocked).
- * Keep newest per stableKey; fold into shop / dev / blocked.
+ * Keep newest per physical machine (stableKey / recovered from installId);
+ * hide UUID wipe orphans when a keyed machine exists; prefer online.
  */
-function prepareNposDevices(devices: PosDevice[]): {
+function prepareNposDevices(
+  devices: PosDevice[],
+  now: number,
+): {
   shop: Row[];
   dev: Row[];
   blocked: Row[];
   ghostCount: number;
 } {
-  const rows: Row[] = devices.map((d) => ({
-    ...d,
-    deviceClass: resolveNposDeviceClass(d),
-    sortAt: d.lastSeenAt || 0,
-  }));
+  const rows: Row[] = devices.map((d) => {
+    const resolved = withResolvedStableKey(d);
+    return {
+      ...resolved,
+      deviceClass: resolveNposDeviceClass({
+        ...resolved,
+        // Old docs without isEmulator often came from AVD testing — treat SDK hints as dev.
+        isEmulator:
+          resolved.isEmulator === true ||
+          /sdk|emulator|generic|goldfish|ranchu/i.test(resolved.deviceHint || ""),
+      }),
+      sortAt: resolved.lastSeenAt || 0,
+    };
+  });
 
   const ghosts = rows.filter((d) => d.disabled && d.deviceClass !== "blocked");
   const live = rows.filter((d) => d.deviceClass === "blocked" || !d.disabled);
-  const deduped = dedupeByStableKey(live);
+  const deduped = preferOnlineRows(dedupeByStableKey(live), (d) =>
+    isPosDeviceOnline(d.lastSeenAt, now),
+  );
   const buckets = foldByDeviceClass(deduped);
   return { ...buckets, ghostCount: ghosts.length };
 }
@@ -168,10 +185,11 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     );
   }, [onError]);
 
-  const buckets = useMemo(() => prepareNposDevices(devices), [devices]);
+  const buckets = useMemo(() => prepareNposDevices(devices, now), [devices, now]);
   const total =
     buckets.shop.length + buckets.dev.length + buckets.blocked.length;
   const onlineShop = buckets.shop.filter((d) => isPosDeviceOnline(d.lastSeenAt, now)).length;
+  const onlineDev = buckets.dev.filter((d) => isPosDeviceOnline(d.lastSeenAt, now)).length;
 
   async function block(d: Row) {
     if (!actorId) {
@@ -217,7 +235,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
         loading
           ? "กำลังโหลดรายการเครื่อง…"
           : total
-            ? `${onlineShop} หน้าร้านออน · พัฒนา ${buckets.dev.length} · บล็อก ${buckets.blocked.length}${
+            ? `ออน ${onlineShop + onlineDev} · หน้าร้าน ${buckets.shop.length} · พัฒนา ${buckets.dev.length} · บล็อก ${buckets.blocked.length}${
                 buckets.ghostCount ? ` · ซ่อนซ้ำ ${buckets.ghostCount}` : ""
               }`
             : "ยังไม่มีเครื่อง — เปิดแอป nPos แล้วจะลงทะเบียนเอง"

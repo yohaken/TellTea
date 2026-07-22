@@ -7,6 +7,7 @@ import {
   dedupeByStableKey,
   foldByDeviceClass,
   nposDeviceClassLabel,
+  nposGroupKey,
   shortStableKey,
   type NposDeviceClass,
 } from "@/lib/npos-device-class";
@@ -16,14 +17,18 @@ import {
   type NposDiagnoseReport,
 } from "@/lib/npos-diagnose";
 
-type Row = NposDiagnoseReport & { deviceClass: NposDeviceClass; sortAt: number };
+type Row = NposDiagnoseReport & {
+  deviceClass: NposDeviceClass;
+  sortAt: number;
+  priorVersions: number;
+};
 
 function ReportCard({ r }: { r: Row }) {
   return (
     <li className="npos-diagnose-card">
       <details>
         <summary>
-          <strong>{r.summary || "รายงาน"}</strong>
+          <strong>{r.summary || "รายงานล่าสุด"}</strong>
           <span className="muted">
             {" "}
             · v{r.versionName || "?"} ({r.versionCode || "?"}) ·{" "}
@@ -33,6 +38,9 @@ function ReportCard({ r }: { r: Row }) {
         <p className="muted npos-diagnose-id">
           เครื่อง {shortStableKey(r.stableKey, r.installId)}
           {r.isEmulator ? " · emulator" : ""} · installId: {r.installId}
+          {r.priorVersions > 0
+            ? ` · ซ่อนรายงานเก่า ${r.priorVersions} เวอร์ชัน (install ซ้ำตอนเทส)`
+            : ""}
         </p>
         <h4 className="npos-diagnose-sub">จอ</h4>
         {r.displays.length === 0 ? (
@@ -84,12 +92,43 @@ export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) =
     );
   }, [onError]);
 
-  const buckets = useMemo(() => {
-    const rows: Row[] = reports.map((r) => ({
+  const { buckets, hidden } = useMemo(() => {
+    const rows = reports.map((r) => ({
       ...r,
       sortAt: r.reportedAt || 0,
     }));
-    return foldByDeviceClass(dedupeByStableKey(rows));
+    const kept = dedupeByStableKey(rows);
+    const hiddenCount = Math.max(0, reports.length - kept.length);
+
+    const orphanRawCount = reports.filter((r) =>
+      nposGroupKey(r.stableKey, r.installId).startsWith("orphan:"),
+    ).length;
+    const keyedKept = kept.filter(
+      (r) => !nposGroupKey(r.stableKey, r.installId).startsWith("orphan:"),
+    );
+
+    const enriched: Row[] = kept.map((r) => {
+      const group = nposGroupKey(r.stableKey, r.installId);
+      let prior = reports.filter(
+        (x) => x.id !== r.id && nposGroupKey(x.stableKey, x.installId) === group,
+      ).length;
+      if (group.startsWith("orphan:") && keyedKept.length === 0) {
+        prior = Math.max(0, orphanRawCount - 1);
+      } else if (
+        !group.startsWith("orphan:") &&
+        keyedKept.length > 0 &&
+        r.id === keyedKept.sort((a, b) => b.sortAt - a.sortAt)[0]?.id
+      ) {
+        // UUID wipe ghosts dropped when a keyed machine exists.
+        prior += orphanRawCount;
+      }
+      return { ...r, priorVersions: prior };
+    });
+
+    return {
+      buckets: foldByDeviceClass(enriched),
+      hidden: hiddenCount,
+    };
   }, [reports]);
 
   const total =
@@ -107,7 +146,9 @@ export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) =
         loading
           ? "กำลังโหลดรายงานจากแท็บเล็ต…"
           : total
-            ? `${total} เครื่อง · พับหน้าร้าน/พัฒนา/บล็อก · กลุ่มตาม stableKey`
+            ? `${total} เครื่อง · แสดงเฉพาะรายงานล่าสุดต่อเครื่อง${
+                hidden ? ` · ซ่อนซ้ำ/เก่า ${hidden}` : ""
+              }`
             : "ยังไม่มีรายงาน — เปิดแอป → ตรวจจอ/ฮาร์ดแวร์ → ส่งผลกลับ"
       }
       defaultOpen={false}

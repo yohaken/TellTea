@@ -7,7 +7,11 @@ import {
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 import { mapFirestoreError } from "./firestore-errors";
-import { resolveNposDeviceClass, type NposDeviceClass } from "./npos-device-class";
+import {
+  resolveNposDeviceClass,
+  resolveStableKey,
+  type NposDeviceClass,
+} from "./npos-device-class";
 
 export const NPOS_OPS_LOG_COL = "nposOpsLog";
 
@@ -74,11 +78,16 @@ function mapDoc(id: string, data: Record<string, unknown>): NposOpsLogDoc {
     isEmulator,
     blocked,
   });
+  const installId = typeof data.installId === "string" ? data.installId : id;
+  const stableKey = resolveStableKey(
+    typeof data.stableKey === "string" ? data.stableKey : "",
+    installId,
+  );
 
   return {
     id,
-    installId: typeof data.installId === "string" ? data.installId : id,
-    stableKey: typeof data.stableKey === "string" ? data.stableKey : "",
+    installId,
+    stableKey,
     isEmulator,
     deviceClass,
     blocked,

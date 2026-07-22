@@ -20,6 +20,19 @@ function asString(v, max = 200) {
   return v.trim().slice(0, max);
 }
 
+function inferStableKey(rawKey, installId) {
+  const sk = asString(rawKey, 120).toLowerCase();
+  if (sk.length >= 8) return sk;
+  const compact = String(installId || "")
+    .replace(/-/g, "")
+    .toLowerCase();
+  const m = /^npos([a-f0-9]+)$/.exec(compact);
+  if (!m) return "";
+  const hex = m[1];
+  if (hex.length >= 8 && hex.length <= 20) return hex;
+  return "";
+}
+
 function mapDisplays(raw) {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -76,7 +89,7 @@ exports.reportNposDiagnose = functions
 
     const versionCode = Number.isFinite(body.versionCode) ? Math.floor(body.versionCode) : 0;
     const versionName = asString(body.versionName, 32) || "0";
-    const stableKey = asString(body.stableKey, 120);
+    const stableKey = inferStableKey(body.stableKey, installId);
     const isEmulator = body.isEmulator === true;
     const classRaw = asString(body.deviceClass, 16).toLowerCase();
     const deviceClass =

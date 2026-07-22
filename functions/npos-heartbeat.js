@@ -43,6 +43,20 @@ function clientDeviceClass(body) {
   return "shop";
 }
 
+/** Recover ANDROID_ID from installId `npos` + hex (≤20) when client omitted stableKey. */
+function inferStableKey(rawKey, installId) {
+  const sk = asString(rawKey, 120).toLowerCase();
+  if (sk.length >= 8) return sk;
+  const compact = String(installId || "")
+    .replace(/-/g, "")
+    .toLowerCase();
+  const m = /^npos([a-f0-9]+)$/.exec(compact);
+  if (!m) return "";
+  const hex = m[1];
+  if (hex.length >= 8 && hex.length <= 20) return hex;
+  return "";
+}
+
 exports.nposDeviceHeartbeat = functions
   .region("asia-southeast1")
   .https.onRequest(async (req, res) => {
@@ -80,8 +94,10 @@ exports.nposDeviceHeartbeat = functions
     const versionName = asString(body.versionName, 32) || "0";
     const deviceHint = asString(body.deviceHint, 80);
     const screenSize = asString(body.screenSize, 40);
-    const stableKey = asString(body.stableKey, 120);
-    const isEmulator = body.isEmulator === true;
+    const stableKey = inferStableKey(body.stableKey, installId);
+    const isEmulator =
+      body.isEmulator === true ||
+      /sdk|emulator|generic|goldfish|ranchu/i.test(deviceHint);
     const now = Date.now();
     const pairingCode = pairingCodeFromId(installId);
 

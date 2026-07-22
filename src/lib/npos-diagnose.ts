@@ -6,7 +6,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
-import { resolveNposDeviceClass, type NposDeviceClass } from "./npos-device-class";
+import { resolveNposDeviceClass, resolveStableKey, type NposDeviceClass } from "./npos-device-class";
 
 export const NPOS_DIAGNOSE_COL = "nposDiagnose";
 
@@ -71,10 +71,15 @@ export function mapNposDiagnoseReport(
     isEmulator,
     blocked,
   });
+  const installId = typeof data?.installId === "string" ? data.installId : id;
+  const stableKey = resolveStableKey(
+    typeof data?.stableKey === "string" ? data.stableKey : "",
+    installId,
+  );
   return {
     id,
-    installId: typeof data?.installId === "string" ? data.installId : id,
-    stableKey: typeof data?.stableKey === "string" ? data.stableKey : "",
+    installId,
+    stableKey,
     isEmulator,
     deviceClass,
     blocked,
