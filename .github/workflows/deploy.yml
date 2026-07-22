@@ -118,12 +118,6 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: node scripts/repair-ot-bonus-rates.mjs
 
-      - name: Repair owner-books ft.. asset → sga
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          APPLY: "1"
-        run: node scripts/repair-owner-ft-to-sga.mjs
-
       - name: Install Cloud Functions deps
         run: npm ci
         working-directory: functions
