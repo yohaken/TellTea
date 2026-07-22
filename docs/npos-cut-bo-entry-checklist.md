@@ -1,6 +1,6 @@
 # nPos — ตัดช่องทางเข้าหลังร้าน / เว็บ BO จากเคาน์เตอร์
 
-อัปเดต: **1.14.16** · `APP_BUILD` 248 · `POS_BUILD` 68 · `versionCode` 39  
+อัปเดต: **1.14.17** · `APP_BUILD` 249 · `POS_BUILD` 69 · `versionCode` 40  
 
 ## ทิศทางที่ล็อก
 | ฝั่ง | ทำ | ไม่ทำ |
@@ -34,6 +34,7 @@
 ### C4 เอกสาร / เกต
 - [x] เช็คลิสต์นี้ + `test-npos-cut-bo-entry.mjs`
 - [x] ผูกใน `check-npos-shop.mjs`
+- [x] `pos-nav-e2e` / `pos-menu-e2e` ไม่พึ่งลิงก์เมนูในแถบเคาน์เตอร์
 
 ### C5 คนเทส (ค้าง)
 - [ ] บน nPos ไม่มีปุ่มเปิด Chrome ไป telltea-shop / stock / pos-sales

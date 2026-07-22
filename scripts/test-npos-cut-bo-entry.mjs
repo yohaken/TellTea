@@ -9,14 +9,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 248/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 68/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+39/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.16"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 249/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 69/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+40/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.17"/);
 
 assert.ok(existsSync(join(root, "docs/npos-cut-bo-entry-checklist.md")));
 const doc = read("docs/npos-cut-bo-entry-checklist.md");
-assert.match(doc, /1\.14\.16/);
+assert.match(doc, /1\.14\.17/);
 assert.match(doc, /ตัดช่องทาง|cut/);
 
 const nav = read("src/lib/pos-nav.ts");
@@ -71,5 +71,16 @@ assert.match(remaining, /npos-cut-bo-entry-checklist/);
 
 const check = read("scripts/check-npos-shop.mjs");
 assert.match(check, /cut-bo-entry/);
+
+const navE2e = read("scripts/test-pos-nav-e2e.mjs");
+assert.match(navE2e, /assertCounterNavCut/);
+assert.doesNotMatch(navE2e, /menuNavLink\(page\)\.click|href", "\/pos\/menu\//);
+
+const menuE2e = read("scripts/test-pos-menu-e2e.mjs");
+assert.match(menuE2e, /assertCounterNavCut/);
+assert.match(menuE2e, /\/pos\/menu\//);
+
+const harness = read("scripts/pos-e2e-harness.mjs");
+assert.match(harness, /assertCounterNavCut/);
 
 console.log("OK test-npos-cut-bo-entry");
