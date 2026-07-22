@@ -16,6 +16,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import {
   addLedgerEntry,
+  bulkUpdateLedgerTypes,
   deleteLedgerEntry,
   frequentDescriptions,
   getLedgerReceiptUrls,
@@ -37,7 +38,7 @@ import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal"
 import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
-import { frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
+import { BASE_TYPE_OPTIONS, frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
 import {
   classifyLedgerTypeHeuristic,
   classifyLedgerTypeWithAi,
@@ -45,7 +46,7 @@ import {
   type LedgerTypeSource,
 } from "@/lib/ledger-ai";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
-import { saveImageToDevice } from "@/lib/receipts";
+import { friendlyFirestoreWriteError, saveImageToDevice } from "@/lib/receipts";
 import {
   type PhotoUploadProgress,
   uploadEvidencePhotos,
@@ -60,6 +61,8 @@ import {
 } from "@/lib/utils";
 import { Camera, ArrowDownLeft, Trash2, X } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
+
+const BULK_TYPE_OPTIONS = BASE_TYPE_OPTIONS.filter((o) => o.value !== "auto");
 
 export default function LedgerPage() {
   return (
@@ -99,6 +102,8 @@ function LedgerView() {
   const [query, setQuery] = useState("");
   const [searchPool, setSearchPool] = useState<LedgerEntry[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   const photoEntryRef = useRef<LedgerEntry | null>(null);
   const photoCameraRef = useRef<HTMLInputElement>(null);
   const photoGalleryRef = useRef<HTMLInputElement>(null);
@@ -241,6 +246,65 @@ function LedgerView() {
     return filterLedgerRows(source, deferredQuery);
   }, [entries, searchPool, deferredQuery]);
 
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [deferredQuery]);
+
+  useEffect(() => {
+    if (!isOwner) setSelectedIds(new Set());
+  }, [isOwner]);
+
+  const visibleIds = useMemo(() => filteredEntries.map((r) => r.id), [filteredEntries]);
+  const allVisibleSelected =
+    isOwner && visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+  const someVisibleSelected = isOwner && visibleIds.some((id) => selectedIds.has(id));
+
+  function toggleSelected(id: string) {
+    if (!isOwner) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible() {
+    if (!isOwner) return;
+    setSelectedIds((prev) => {
+      if (visibleIds.length === 0) return prev;
+      const allOn = visibleIds.every((id) => prev.has(id));
+      if (allOn) {
+        const next = new Set(prev);
+        for (const id of visibleIds) next.delete(id);
+        return next;
+      }
+      const next = new Set(prev);
+      for (const id of visibleIds) next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelected() {
+    setSelectedIds(new Set());
+  }
+
+  async function onBulkRetype(type: string) {
+    if (!isOwner) return;
+    const ids = Array.from(selectedIds);
+    if (!ids.length || bulkBusy) return;
+    setBulkBusy(true);
+    setError(null);
+    try {
+      await bulkUpdateLedgerTypes(ids, type);
+      setSelectedIds(new Set());
+    } catch (err) {
+      setError(friendlyFirestoreWriteError(err, "จัดประเภทกลุ่มไม่สำเร็จ"));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   const loadMore = useCallback(() => {
     if (deferredQuery) return;
     if (!hasMore || loadingMore || liveLimit >= LEDGER_LIVE_MAX) return;
@@ -360,6 +424,47 @@ function LedgerView() {
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
+      {isOwner && !loading && filteredEntries.length > 0 ? (
+        <div className="bulk-status-toolbar" role="group" aria-label="จัดประเภทหลายรายการ">
+          <button
+            type="button"
+            className="ghost-btn bulk-status-chip"
+            disabled={bulkBusy || !visibleIds.length}
+            onClick={toggleSelectAllVisible}
+          >
+            {allVisibleSelected ? "ยกเลิกที่แสดง" : `เลือกที่แสดง (${visibleIds.length})`}
+          </button>
+          {selectedIds.size > 0 ? (
+            <div className="bulk-status-actions" role="group" aria-label="ตั้งประเภทกลุ่ม">
+              <span className="bulk-status-count">เลือก {selectedIds.size} รายการ</span>
+              {BULK_TYPE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  className="ghost-btn bulk-status-btn"
+                  disabled={bulkBusy}
+                  onClick={() => void onBulkRetype(opt.value)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="ghost-btn bulk-status-clear"
+                disabled={bulkBusy}
+                onClick={clearSelected}
+              >
+                ยกเลิก
+              </button>
+            </div>
+          ) : (
+            <p className="muted bulk-status-hint">
+              ติ๊กเลือกด้านหน้าหลายแถว → กดปุ่มประเภทเพื่อจัดใหม่พร้อมกัน (เจ้าของเท่านั้น)
+            </p>
+          )}
+        </div>
+      ) : null}
+
       {!loading && entries.length === 0 ? (
         <p className="empty">ยังไม่มีรายการ — เริ่มจากบันทึกเงินออก</p>
       ) : !loading && deferredQuery && !searchLoading && filteredEntries.length === 0 ? (
@@ -370,6 +475,19 @@ function LedgerView() {
             <table className="sheet-table">
               <thead>
                 <tr>
+                  {isOwner ? (
+                    <th className="bulk-check-col" aria-label="เลือก">
+                      <input
+                        type="checkbox"
+                        checked={allVisibleSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected;
+                        }}
+                        onChange={toggleSelectAllVisible}
+                        aria-label="เลือกทั้งหมดที่แสดง"
+                      />
+                    </th>
+                  ) : null}
                   <th className="col-date">วันที่</th>
                   <th className="col-desc">รายการ</th>
                   <th className="col-in">เข้า</th>
@@ -378,8 +496,28 @@ function LedgerView() {
                 </tr>
               </thead>
                 <tbody>
-                  {filteredEntries.map((row) => (
-                    <tr key={row.id} className={row.amountIn > 0 ? "row-in" : "row-out"}>
+                  {filteredEntries.map((row) => {
+                    const selected = isOwner && selectedIds.has(row.id);
+                    return (
+                    <tr
+                      key={row.id}
+                      className={[
+                        row.amountIn > 0 ? "row-in" : "row-out",
+                        selected ? "is-bulk-selected" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
+                      {isOwner ? (
+                        <td className="bulk-check-col">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() => toggleSelected(row.id)}
+                            aria-label={`เลือก ${row.description}`}
+                          />
+                        </td>
+                      ) : null}
                       <td className="col-date">{formatDateShort(row.date)}</td>
                       <td className="col-desc">
                         <div className="desc-with-photo">
@@ -423,7 +561,8 @@ function LedgerView() {
                         </span>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

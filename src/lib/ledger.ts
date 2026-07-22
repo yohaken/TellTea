@@ -422,6 +422,40 @@ export async function updateLedgerEntry(
   await applyBalanceDelta(nextIn - prevIn, nextOut - prevOut);
 }
 
+/** Bulk upsert type on many ledger rows (owner-driven reclassify). */
+export async function bulkUpdateLedgerTypes(ids: string[], type: string): Promise<number> {
+  const nextType = String(type || "").trim();
+  if (!nextType) throw new Error("เลือกประเภทก่อน");
+  if (!ids.length) return 0;
+
+  const db = getDb();
+  let batch = writeBatch(db);
+  let ops = 0;
+  let count = 0;
+  const now = Date.now();
+
+  async function flush() {
+    if (ops === 0) return;
+    await batch.commit();
+    batch = writeBatch(db);
+    ops = 0;
+  }
+
+  for (const id of ids) {
+    batch.update(doc(db, "ledger", id), {
+      type: nextType,
+      typeSource: "owner",
+      typeAiReason: "",
+      updatedAt: now,
+    });
+    ops += 1;
+    count += 1;
+    if (ops >= 400) await flush();
+  }
+  await flush();
+  return count;
+}
+
 export async function importLedgerEntries(
   rows: ImportLedgerRow[],
   onProgress?: (done: number, total: number) => void,
