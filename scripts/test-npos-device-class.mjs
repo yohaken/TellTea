@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 222/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+17/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.11\.1"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 223/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+18/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.12\.0"/);
 assert.match(read("docs/npos-device-class-checklist.md"), /deviceClass/);
 assert.match(read("docs/npos-parity-checklist.md"), /deviceClass|เครื่องหน้าร้าน/);
 
@@ -92,7 +92,7 @@ assert.match(read("src/app/globals.css"), /npos-device-btn/);
 assert.match(read("docs/npos-device-class-checklist.md"), /ทำไมหลังร้านดูเหมือนหลายเครื่อง/);
 assert.match(read("src/lib/npos-device-class.ts"), /resolveStableKey/);
 assert.match(read("src/lib/npos-device-class.ts"), /preferOnlineRows/);
-assert.match(read("src/components/NposDiagnosePanel.tsx"), /แสดงเฉพาะรายงานล่าสุดต่อเครื่อง/);
+assert.match(read("src/components/NposDiagnosePanel.tsx"), /สเปกจอ \+ แคปล่าสุด/);
 assert.match(read("src/components/NposDevicesPanel.tsx"), /preferOnlineRows|withResolvedStableKey/);
 assert.match(read("functions/npos-heartbeat.js"), /inferStableKey/);
 assert.match(read("functions/npos-diagnose.js"), /inferStableKey/);

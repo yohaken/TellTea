@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 222/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 223/);
 assert.match(read("docs/npos-migration-phases.md"), /N3.*✅|✅ รอบนี้ \(1\.8\.0\)/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+17/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.11\.1"/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+18/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.12\.0"/);
 
 assert.match(
   read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/DeviceIdentity.java"),

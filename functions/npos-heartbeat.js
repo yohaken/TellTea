@@ -139,6 +139,9 @@ exports.nposDeviceHeartbeat = functions
       if (Object.prototype.hasOwnProperty.call(body, "printerLabel")) {
         patch.printerLabel = asString(body.printerLabel, 80);
       }
+      if (Object.prototype.hasOwnProperty.call(body, "customerDisplay")) {
+        patch.customerDisplay = asString(body.customerDisplay, 24) || "unknown";
+      }
 
       if (!snap.exists) {
         Object.assign(patch, {
@@ -159,9 +162,30 @@ exports.nposDeviceHeartbeat = functions
           ownerPingAt: 0,
           ownerPingMessage: "",
           lastOwnerPingAckAt: 0,
+          captureRequestAt: 0,
+          lastCaptureAckAt: 0,
+          lastCaptureAt: 0,
+          captureIntervalMinutes: 0,
+          customerDisplay: "unknown",
         });
       }
       await ref.set(patch, { merge: true });
+
+      // Re-read after merge for capture command fields (owner may have set them).
+      const afterSnap = await ref.get();
+      const after = afterSnap.exists ? afterSnap.data() || {} : {};
+      const captureRequestAt =
+        typeof after.captureRequestAt === "number" ? after.captureRequestAt : 0;
+      const lastCaptureAckAt =
+        typeof after.lastCaptureAckAt === "number" ? after.lastCaptureAckAt : 0;
+      const lastCaptureAt = typeof after.lastCaptureAt === "number" ? after.lastCaptureAt : 0;
+      const captureIntervalMinutes = Number.isFinite(after.captureIntervalMinutes)
+        ? Math.max(0, Math.floor(after.captureIntervalMinutes))
+        : 0;
+      const pendingManual = captureRequestAt > 0 && captureRequestAt > lastCaptureAckAt;
+      const intervalDue =
+        captureIntervalMinutes > 0 &&
+        (lastCaptureAt <= 0 || now - lastCaptureAt >= captureIntervalMinutes * 60 * 1000);
 
       // Mark older docs with same stableKey as disabled (reinstall / wipe ghosts).
       // Do not overwrite deviceClass=blocked on siblings.
@@ -202,6 +226,11 @@ exports.nposDeviceHeartbeat = functions
         versionCode,
         versionName,
         staleMarked,
+        capture: {
+          requestAt: captureRequestAt,
+          intervalMinutes: captureIntervalMinutes,
+          due: pendingManual || intervalDue,
+        },
       });
     } catch (err) {
       console.error("nposDeviceHeartbeat failed", err);

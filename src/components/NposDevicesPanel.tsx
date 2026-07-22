@@ -15,6 +15,8 @@ import {
 import {
   isPosDeviceOnline,
   posDeviceLabel,
+  requestNposScreenCapture,
+  setNposCaptureInterval,
   setNposDeviceBlocked,
   subscribePosDevicesAdmin,
   withResolvedStableKey,
@@ -82,15 +84,21 @@ function DeviceCard({
   busy,
   onBlock,
   onUnblock,
+  onCapture,
+  onInterval,
 }: {
   d: Row;
   now: number;
   busy: boolean;
   onBlock: () => void;
   onUnblock: () => void;
+  onCapture: () => void;
+  onInterval: (mins: number) => void;
 }) {
   const online = isPosDeviceOnline(d.lastSeenAt, now);
   const machine = shortStableKey(d.stableKey, d.id);
+  const capturePending =
+    d.captureRequestAt > 0 && d.captureRequestAt > (d.lastCaptureAckAt || 0);
   return (
     <li className="npos-diagnose-card">
       <div className="npos-device-row">
@@ -104,8 +112,29 @@ function DeviceCard({
         {d.deviceHint || "android"}
         {d.isEmulator ? " · emulator" : ""}
       </p>
+      <p className="muted npos-diagnose-id">
+        จอลูกค้า {d.customerDisplay || "—"} · แคปล่าสุด{" "}
+        {d.lastCaptureAt ? formatSeen(d.lastCaptureAt) : "ยังไม่มี"}
+        {capturePending ? " · รอแคป…" : ""}
+      </p>
       <p className="muted npos-diagnose-id">เห็นล่าสุด {formatSeen(d.lastSeenAt)}</p>
       <div className="npos-device-actions">
+        <button type="button" className="npos-device-btn" disabled={busy || !online} onClick={onCapture}>
+          สั่งแคปจอ
+        </button>
+        <label className="npos-capture-interval">
+          ทุก
+          <select
+            value={String(d.captureIntervalMinutes || 0)}
+            disabled={busy}
+            onChange={(e) => onInterval(Number(e.target.value))}
+          >
+            <option value="0">ปิด</option>
+            <option value="5">5 นาที</option>
+            <option value="10">10 นาที</option>
+            <option value="30">30 นาที</option>
+          </select>
+        </label>
         {d.deviceClass === "blocked" ? (
           <button type="button" className="npos-device-btn" disabled={busy} onClick={onUnblock}>
             ปลดบล็อก
@@ -127,6 +156,8 @@ function ClassSection({
   busyId,
   onBlock,
   onUnblock,
+  onCapture,
+  onInterval,
 }: {
   cls: NposDeviceClass;
   rows: Row[];
@@ -134,6 +165,8 @@ function ClassSection({
   busyId: string | null;
   onBlock: (d: Row) => void;
   onUnblock: (d: Row) => void;
+  onCapture: (d: Row) => void;
+  onInterval: (d: Row, mins: number) => void;
 }) {
   if (rows.length === 0) return null;
   return (
@@ -151,6 +184,8 @@ function ClassSection({
             busy={busyId === d.id}
             onBlock={() => onBlock(d)}
             onUnblock={() => onUnblock(d)}
+            onCapture={() => onCapture(d)}
+            onInterval={(mins) => onInterval(d, mins)}
           />
         ))}
       </ul>
@@ -223,6 +258,38 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     }
   }
 
+  async function capture(d: Row) {
+    if (!actorId) {
+      onError("ต้องเข้าสู่ระบบเจ้าของก่อนสั่งแคปจอ");
+      return;
+    }
+    setBusyId(d.id);
+    try {
+      await requestNposScreenCapture(d.id, actorId);
+      onError(null);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function setIntervalMins(d: Row, mins: number) {
+    if (!actorId) {
+      onError("ต้องเข้าสู่ระบบเจ้าของก่อนตั้งช่วงแคป");
+      return;
+    }
+    setBusyId(d.id);
+    try {
+      await setNposCaptureInterval(d.id, mins, actorId);
+      onError(null);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <SettingsFold
       title={
@@ -256,6 +323,8 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             busyId={busyId}
             onBlock={block}
             onUnblock={unblock}
+            onCapture={capture}
+            onInterval={setIntervalMins}
           />
           <ClassSection
             cls="dev"
@@ -264,6 +333,8 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             busyId={busyId}
             onBlock={block}
             onUnblock={unblock}
+            onCapture={capture}
+            onInterval={setIntervalMins}
           />
           <ClassSection
             cls="blocked"
@@ -272,6 +343,8 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             busyId={busyId}
             onBlock={block}
             onUnblock={unblock}
+            onCapture={capture}
+            onInterval={setIntervalMins}
           />
         </>
       )}

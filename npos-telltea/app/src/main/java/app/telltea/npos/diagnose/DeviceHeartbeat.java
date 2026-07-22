@@ -44,10 +44,11 @@ public final class DeviceHeartbeat {
             }
             return;
         }
+        Context app = context.getApplicationContext();
         executor.execute(() -> {
             HttpURLConnection conn = null;
             try {
-                JSONObject body = buildBody(context);
+                JSONObject body = buildBody(app);
                 conn = (HttpURLConnection) new URL(HEARTBEAT_URL).openConnection();
                 conn.setConnectTimeout(12_000);
                 conn.setReadTimeout(15_000);
@@ -67,9 +68,10 @@ public final class DeviceHeartbeat {
                 }
                 JSONObject res = new JSONObject(raw.isEmpty() ? "{}" : raw);
                 String pairing =
-                        res.optString("pairingCode", DeviceIdentity.pairingCode(context));
+                        res.optString("pairingCode", DeviceIdentity.pairingCode(app));
                 long seen = res.optLong("lastSeenAt", System.currentTimeMillis());
                 lastSentAt.set(seen);
+                handleCaptureCommand(app, res);
                 if (callback != null) callback.onSuccess(pairing, seen);
             } catch (Exception e) {
                 if (callback != null) callback.onError(e);
@@ -77,6 +79,36 @@ public final class DeviceHeartbeat {
                 if (conn != null) conn.disconnect();
             }
         });
+    }
+
+    private static void handleCaptureCommand(Context app, JSONObject res) {
+        try {
+            JSONObject capture = res.optJSONObject("capture");
+            if (capture == null) return;
+            int interval = capture.optInt("intervalMinutes", 0);
+            CapturePrefs.setIntervalMinutes(app, interval);
+            long requestAt = capture.optLong("requestAt", 0L);
+            boolean due = capture.optBoolean("due", false);
+            long lastAck = CapturePrefs.lastAckRequestAt(app);
+            if (requestAt > 0 && requestAt > lastAck) {
+                CapturePrefs.setLastAckRequestAt(app, requestAt);
+                ScreenCapture.requestCapture(app, requestAt, "manual");
+                return;
+            }
+            if (due && interval > 0) {
+                long now = System.currentTimeMillis();
+                long last = CapturePrefs.lastCaptureAt(app);
+                if (last <= 0 || now - last >= interval * 60_000L - 5_000L) {
+                    ScreenCapture.requestCapture(app, now, "interval");
+                }
+            }
+        } catch (Exception e) {
+            OpsLogger.warn(
+                    app,
+                    "display",
+                    "อ่านคำสั่งแคปไม่สำเร็จ",
+                    e.getMessage() == null ? "" : e.getMessage());
+        }
     }
 
     public void shutdown() {
@@ -120,6 +152,7 @@ public final class DeviceHeartbeat {
         body.put("stableKey", DeviceIdentity.stableKey(context));
         body.put("isEmulator", DeviceIdentity.isEmulator());
         body.put("deviceClass", DeviceIdentity.deviceClass());
+        body.put("customerDisplay", DisplayProbe.customerDisplayStatus(context));
         body.put("printerReady", PrinterPrefs.isReady(context));
         body.put("printerLabel", PrinterPrefs.label(context));
         return body;

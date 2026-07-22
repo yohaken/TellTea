@@ -37,12 +37,14 @@ function ReportCard({ r }: { r: Row }) {
         </summary>
         <p className="muted npos-diagnose-id">
           เครื่อง {shortStableKey(r.stableKey, r.installId)}
-          {r.isEmulator ? " · emulator" : ""} · installId: {r.installId}
+          {r.isEmulator ? " · emulator" : ""} · จอลูกค้า {r.customerDisplay || "—"} · installId:{" "}
+          {r.installId}
           {r.priorVersions > 0
             ? ` · ซ่อนรายงานเก่า ${r.priorVersions} เวอร์ชัน (install ซ้ำตอนเทส)`
             : ""}
         </p>
-        <h4 className="npos-diagnose-sub">จอ</h4>
+
+        <h4 className="npos-diagnose-sub">จอ (สเปก)</h4>
         {r.displays.length === 0 ? (
           <p className="muted">ไม่พบจอในรายงาน</p>
         ) : (
@@ -50,11 +52,46 @@ function ReportCard({ r }: { r: Row }) {
             {r.displays.map((d) => (
               <li key={`${r.id}-d-${d.number}-${d.displayId}`}>
                 จอ {d.number}: {d.name}
-                {d.primary ? " · หลัก" : " · เพิ่ม"} (id={d.displayId})
+                {d.primary ? " · หลัก" : " · ลูกค้า"} ·{" "}
+                {d.widthPx && d.heightPx ? `${d.widthPx}×${d.heightPx}` : "ขนาด?"} ·{" "}
+                {d.orientation || "?"}
+                {d.densityDpi ? ` · ${d.densityDpi}dpi` : ""}
+                {d.rotation ? ` · หมุน ${d.rotation}°` : ""}
               </li>
             ))}
           </ul>
         )}
+
+        {(r.latestPrimaryUrl || r.latestSecondaryUrl) && (
+          <>
+            <h4 className="npos-diagnose-sub">
+              แคปจอล่าสุด{" "}
+              <span className="muted">
+                {r.latestCaptureAt ? formatDiagnoseAt(r.latestCaptureAt) : ""}
+                {r.latestCaptureReason ? ` · ${r.latestCaptureReason}` : ""}
+              </span>
+            </h4>
+            <div className="npos-capture-thumbs">
+              {r.latestPrimaryUrl ? (
+                <a href={r.latestPrimaryUrl} target="_blank" rel="noopener noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={r.latestPrimaryUrl} alt="แคปจอหลัก" />
+                  <span>จอหลัก</span>
+                </a>
+              ) : null}
+              {r.latestSecondaryUrl ? (
+                <a href={r.latestSecondaryUrl} target="_blank" rel="noopener noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={r.latestSecondaryUrl} alt="แคปจอลูกค้า" />
+                  <span>จอลูกค้า</span>
+                </a>
+              ) : (
+                <p className="muted">ยังไม่มีภาพจอลูกค้า (อาจมีจอเดียว)</p>
+              )}
+            </div>
+          </>
+        )}
+
         <h4 className="npos-diagnose-sub">ตัวเชื่อมต่อ</h4>
         {r.hardware.length === 0 ? (
           <p className="muted">ไม่พบอุปกรณ์ในรายงาน</p>
@@ -95,7 +132,7 @@ export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) =
   const { buckets, hidden } = useMemo(() => {
     const rows = reports.map((r) => ({
       ...r,
-      sortAt: r.reportedAt || 0,
+      sortAt: Math.max(r.reportedAt || 0, r.latestCaptureAt || 0),
     }));
     const kept = dedupeByStableKey(rows);
     const hiddenCount = Math.max(0, reports.length - kept.length);
@@ -119,7 +156,6 @@ export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) =
         keyedKept.length > 0 &&
         r.id === keyedKept.sort((a, b) => b.sortAt - a.sortAt)[0]?.id
       ) {
-        // UUID wipe ghosts dropped when a keyed machine exists.
         prior += orphanRawCount;
       }
       return { ...r, priorVersions: prior };
@@ -146,10 +182,10 @@ export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) =
         loading
           ? "กำลังโหลดรายงานจากแท็บเล็ต…"
           : total
-            ? `${total} เครื่อง · แสดงเฉพาะรายงานล่าสุดต่อเครื่อง${
+            ? `${total} เครื่อง · สเปกจอ + แคปล่าสุด${
                 hidden ? ` · ซ่อนซ้ำ/เก่า ${hidden}` : ""
               }`
-            : "ยังไม่มีรายงาน — เปิดแอป → ตรวจจอ/ฮาร์ดแวร์ → ส่งผลกลับ"
+            : "ยังไม่มีรายงาน — เปิดแอปแล้วระบบสแกนอัตโนมัติ"
       }
       defaultOpen={false}
       className="npos-diagnose-fold"

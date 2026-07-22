@@ -42,6 +42,12 @@ function mapDisplays(raw) {
       displayId: Number.isFinite(d?.displayId) ? Math.floor(d.displayId) : -1,
       primary: !!d?.primary,
       name: asString(d?.name, 80) || `display-${i + 1}`,
+      widthPx: Number.isFinite(d?.widthPx) ? Math.floor(d.widthPx) : 0,
+      heightPx: Number.isFinite(d?.heightPx) ? Math.floor(d.heightPx) : 0,
+      densityDpi: Number.isFinite(d?.densityDpi) ? Math.floor(d.densityDpi) : 0,
+      refreshHz: Number.isFinite(d?.refreshHz) ? Number(d.refreshHz) : 0,
+      rotation: Number.isFinite(d?.rotation) ? Math.floor(d.rotation) : 0,
+      orientation: asString(d?.orientation, 16) || "unknown",
     }));
 }
 
@@ -112,6 +118,10 @@ exports.reportNposDiagnose = functions
       const prevBlocked =
         snap.exists && (snap.get("deviceClass") === "blocked" || snap.get("blocked") === true);
 
+      const customerDisplay =
+        asString(body.customerDisplay, 24) ||
+        (displays.some((d) => !d.primary) ? "ok" : "missing");
+
       const doc = {
         installId,
         stableKey: stableKey || (snap.exists ? snap.get("stableKey") || "" : ""),
@@ -122,6 +132,7 @@ exports.reportNposDiagnose = functions
         versionCode,
         versionName,
         summary,
+        customerDisplay,
         displays,
         hardware,
         source: "npos-telltea",

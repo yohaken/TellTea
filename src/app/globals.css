@@ -6331,6 +6331,50 @@ body.modal-open .main-panel {
   background: rgba(26, 46, 36, 0.06);
 }
 
+.npos-capture-interval {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: #3d5248;
+}
+
+.npos-capture-interval select {
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.3rem;
+  border: 1px solid rgba(26, 46, 36, 0.22);
+  background: #fff;
+}
+
+.npos-capture-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin: 0.35rem 0 0.6rem;
+}
+
+.npos-capture-thumbs a {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: min(11rem, 46%);
+  text-decoration: none;
+  color: #2a4036;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.npos-capture-thumbs img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(26, 46, 36, 0.14);
+  background: rgba(0, 0, 0, 0.04);
+}
+
 .npos-pill {
   display: inline-flex;
   align-items: center;

@@ -44,6 +44,7 @@ const REQUIRED_MATCHES = [
   "posDevices",
   "nposDiagnose",
   "nposOpsLog",
+  "nposScreenShots",
   "menuItems",
 ];
 
