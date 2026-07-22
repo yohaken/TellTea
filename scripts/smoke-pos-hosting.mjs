@@ -72,10 +72,10 @@ if (!fs.existsSync(path.join(OUT_POS, "pos-version.json"))) {
 }
 
 const urlSrc = fs.readFileSync(path.join(ROOT, "src/lib/pos-url.ts"), "utf8");
-if (!urlSrc.includes("telltea-pos.web.app/pos/")) {
-  fail("pos-url.ts must point to telltea-pos.web.app/pos/");
+if (!urlSrc.includes('POS_ENTRY_URL = "https://telltea-pos.web.app/install/"')) {
+  fail("pos-url.ts POS_ENTRY_URL must point to telltea-pos.web.app/install/");
 } else {
-  ok("pos-url.ts → telltea-pos.web.app/pos/");
+  ok("pos-url.ts → install (web counter retired)");
 }
 
 if (!urlSrc.includes("telltea-pos.web.app/install/")) {
@@ -83,6 +83,14 @@ if (!urlSrc.includes("telltea-pos.web.app/install/")) {
 } else {
   ok("pos-url.ts → install page");
 }
+
+for (const route of ["sell", "open-bills", "receipts", "shift", "settings"]) {
+  const htmlPath = path.join(OUT_POS, "pos", route, "index.html");
+  if (!fs.existsSync(htmlPath)) {
+    fail(`out-pos/pos/${route}/index.html missing (retired stub)`);
+  }
+}
+ok("POS /pos/* retired stubs present");
 
 if (!fs.existsSync(path.join(OUT_POS, "install", "index.html"))) {
   fail("out-pos/install/index.html missing — APK download page");
