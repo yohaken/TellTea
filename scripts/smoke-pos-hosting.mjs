@@ -84,13 +84,15 @@ if (!urlSrc.includes("telltea-pos.web.app/install/")) {
   ok("pos-url.ts → install page");
 }
 
+let stubsOk = true;
 for (const route of ["sell", "open-bills", "receipts", "shift", "settings"]) {
   const htmlPath = path.join(OUT_POS, "pos", route, "index.html");
   if (!fs.existsSync(htmlPath)) {
     fail(`out-pos/pos/${route}/index.html missing (retired stub)`);
+    stubsOk = false;
   }
 }
-ok("POS /pos/* retired stubs present");
+if (stubsOk) ok("POS /pos/* retired stubs present");
 
 if (!fs.existsSync(path.join(OUT_POS, "install", "index.html"))) {
   fail("out-pos/install/index.html missing — APK download page");
