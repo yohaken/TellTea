@@ -10,23 +10,14 @@ import {
 } from "@/lib/pos-local-receipts";
 import { printSaleDocuments } from "@/lib/pos-printer/router";
 import { localReceiptToPrintPayload } from "@/lib/pos-receipt-view";
-import { subscribePosShopSettings, type PosShopSettings } from "@/lib/pos-settings";
+import { getLocalPosShopSettings, subscribePosShopSettings, type PosShopSettings } from "@/lib/pos-settings";
 import { usePosApp } from "@/lib/pos-app-context";
 import { formatPlainNumber, startOfLocalDay } from "@/lib/utils";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 
 type ReceiptFilter = "all" | "pending" | "synced";
 
-const DEFAULT_SHOP: PosShopSettings = {
-  shopName: "TELL TEA",
-  shopNameTh: "เทล ที",
-  shopAddress: "",
-  shopPhone: "",
-  promptPayId: "",
-  autoPrintReceipt: true,
-  receiptStaffName: "หน้าร้าน",
-  receiptFooterNote: "ขอบคุณที่อุดหนุน",
-};
+const DEFAULT_SHOP: PosShopSettings = getLocalPosShopSettings();
 
 export function PosReceiptsView() {
   const dayStart = startOfLocalDay();

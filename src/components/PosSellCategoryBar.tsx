@@ -93,7 +93,6 @@ export function PosSellCategoryBar({
 
   function endDrag() {
     clearHoldTimer();
-    const dragId = draggingIdRef.current;
     const ordered = displayIdsRef.current;
     const baseline = categoriesRef.current.map((c) => c.id);
     const changed = movedWhileDragRef.current && ordered.join("|") !== baseline.join("|");
