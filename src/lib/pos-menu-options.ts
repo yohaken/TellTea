@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { getMenuDb, menuErrorHint, type MenuPriceChannel } from "./pos-menu-db";
 import { mapFirestoreError } from "./firestore-errors";
+import { sanitizeMenuLabel } from "./pos-menu-text";
 import type { MenuOptionChoice, MenuOptionGroup, MenuOptionSelectionType } from "./types";
 
 export const MENU_OPTION_GROUPS_COL = "menuOptionGroups";
@@ -40,7 +41,7 @@ function mapChoice(raw: unknown): MenuOptionChoice | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   const id = typeof o.id === "string" ? o.id : "";
-  const name = typeof o.name === "string" ? o.name : "";
+  const name = typeof o.name === "string" ? sanitizeMenuLabel(o.name) : "";
   if (!id || !name) return null;
   return {
     id,
@@ -63,7 +64,7 @@ function mapGroup(id: string, data: Record<string, unknown>): MenuOptionGroup {
     .sort((a, b) => a.sortOrder - b.sortOrder);
   return {
     id,
-    name: typeof data.name === "string" ? data.name : "",
+    name: typeof data.name === "string" ? sanitizeMenuLabel(data.name) : "",
     required: data.required === true,
     selectionType:
       data.selectionType === "multi" || data.selectionType === "unlimited"
@@ -106,7 +107,7 @@ export async function addMenuOptionGroup(name: string): Promise<string> {
   const now = Date.now();
   try {
     const ref = await addDoc(groupsCol(), {
-      name: name.trim(),
+      name: sanitizeMenuLabel(name),
       required: false,
       selectionType: "single",
       options: [
@@ -147,7 +148,7 @@ export async function updateMenuOptionGroup(
   >,
 ): Promise<void> {
   const next: Record<string, unknown> = { updatedAt: Date.now() };
-  if (patch.name != null) next.name = patch.name.trim();
+  if (patch.name != null) next.name = sanitizeMenuLabel(patch.name);
   if (patch.required != null) next.required = patch.required;
   if (patch.selectionType != null) next.selectionType = patch.selectionType;
   if (patch.minSelect != null) next.minSelect = patch.minSelect;
@@ -201,7 +202,7 @@ export async function duplicateMenuOptionGroup(group: MenuOptionGroup): Promise<
 export function serializeMenuOptionChoice(o: MenuOptionChoice): Record<string, unknown> {
   const row: Record<string, unknown> = {
     id: o.id,
-    name: o.name.trim(),
+    name: sanitizeMenuLabel(o.name),
     priceDelta: Math.max(0, Number(o.priceDelta) || 0),
     sortOrder: o.sortOrder,
     active: o.active !== false,
@@ -220,7 +221,7 @@ export function createMenuOptionChoice(
 ): MenuOptionChoice {
   return {
     id: newChoiceId(),
-    name: name.trim(),
+    name: sanitizeMenuLabel(name),
     priceDelta: Math.max(0, priceDelta),
     ...(typeof deliveryPriceDelta === "number"
       ? { deliveryPriceDelta: Math.max(0, deliveryPriceDelta) }

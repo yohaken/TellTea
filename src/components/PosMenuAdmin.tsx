@@ -43,6 +43,7 @@ import { formatPlainNumber } from "@/lib/utils";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { PosLazyMenuImage } from "@/components/PosLazyMenuImage";
 import { summarizeMenuItemOptions } from "@/lib/pos-menu-option-summary";
+import { menuTextIncludes } from "@/lib/pos-menu-text";
 
 const BOH_MENU_URL = "https://telltea-shop.web.app/menu/";
 
@@ -167,7 +168,7 @@ export function PosMenuAdmin({
   }, [authReady]);
 
   const itemsByCat = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim();
     const map = new Map<string, MenuItem[]>();
     for (const item of items) {
       const archived = isItemArchived(item);
@@ -176,9 +177,9 @@ export function PosMenuAdmin({
       if (filterCategoryId && item.categoryId !== filterCategoryId) continue;
       if (
         q &&
-        !item.name.toLowerCase().includes(q) &&
-        !(item.nameEn || "").toLowerCase().includes(q) &&
-        !(item.code || "").toLowerCase().includes(q)
+        !menuTextIncludes(item.name, q) &&
+        !menuTextIncludes(item.nameEn || "", q) &&
+        !menuTextIncludes(item.code || "", q)
       ) {
         continue;
       }
@@ -193,7 +194,7 @@ export function PosMenuAdmin({
   }, [items, searchQuery, filterCategoryId, visibilityFilter]);
 
   const visibleCategoryIds = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim();
     const base = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
     let filtered = filterCategoryId ? base.filter((c) => c.id === filterCategoryId) : base;
     filtered = filtered.filter((c) => {
@@ -204,8 +205,7 @@ export function PosMenuAdmin({
     });
     if (q) {
       filtered = filtered.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) || (itemsByCat.get(c.id) || []).length > 0,
+        (c) => menuTextIncludes(c.name, q) || (itemsByCat.get(c.id) || []).length > 0,
       );
     }
     return filtered.map((c) => c.id);
@@ -221,15 +221,15 @@ export function PosMenuAdmin({
   }, [items]);
 
   const visibleGroups = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim();
     return [...optionGroups]
       .filter((g) => {
         const archived = isGroupArchived(g);
         if (visibilityFilter === "active" && archived) return false;
         if (visibilityFilter === "archived" && !archived) return false;
         if (q) {
-          const inName = g.name.toLowerCase().includes(q);
-          const inChoice = g.options.some((o) => o.name.toLowerCase().includes(q));
+          const inName = menuTextIncludes(g.name, q);
+          const inChoice = g.options.some((o) => menuTextIncludes(o.name, q));
           if (!inName && !inChoice) return false;
         }
         return true;
@@ -248,15 +248,12 @@ export function PosMenuAdmin({
     : null;
 
   const linkCandidates = useMemo(() => {
-    const q = linkSearch.trim().toLowerCase();
+    const q = linkSearch.trim();
     return items
       .filter((i) => !isItemArchived(i))
       .filter((i) => {
         if (!q) return true;
-        return (
-          i.name.toLowerCase().includes(q) ||
-          (i.code || "").toLowerCase().includes(q)
-        );
+        return menuTextIncludes(i.name, q) || menuTextIncludes(i.code || "", q);
       })
       .sort((a, b) => a.name.localeCompare(b.name, "th"));
   }, [items, linkSearch]);

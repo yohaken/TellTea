@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { saveMenuOptionGroupFull } from "@/lib/pos-menu-options";
+import { menuTextIncludes } from "@/lib/pos-menu-text";
 import type { MenuOptionChoice, MenuOptionGroup } from "@/lib/types";
-import { formatPlainNumber } from "@/lib/utils";
 
 type Row = {
   groupId: string;
@@ -39,12 +39,9 @@ export function PosMenuOptionPriceTable({
         out.push({ groupId: g.id, groupName: g.name, choice: c });
       }
     }
-    const q = query.trim().toLowerCase();
-    if (!q) return out;
+    if (!query.trim()) return out;
     return out.filter(
-      (r) =>
-        r.choice.name.toLowerCase().includes(q) ||
-        r.groupName.toLowerCase().includes(q),
+      (r) => menuTextIncludes(r.choice.name, query) || menuTextIncludes(r.groupName, query),
     );
   }, [activeGroups, query]);
 
@@ -122,7 +119,8 @@ export function PosMenuOptionPriceTable({
   return (
     <div className="pos-menu-price-table-wrap">
       <p className="muted pos-menu-sort-hint">
-        ตั้งราคาเพิ่มของตัวเลือก · หน้าร้าน | เดลิเวอรี่ (ว่าง = ใช้หน้าร้าน) · ไม่มี CSV
+        ตั้งราคาเพิ่มของตัวเลือก · หน้าร้าน | เดลิเวอรี่ · คอลัมน์เดลิเวอรี่ว่างหรือ placeholder «ส่ง» =
+        ใช้ราคาหน้าร้าน · ไม่มี CSV
       </p>
       <div className="pos-menu-toolbar">
         <input
@@ -183,7 +181,8 @@ export function PosMenuOptionPriceTable({
                       min={0}
                       step={0.01}
                       value={d.delivery}
-                      placeholder={formatPlainNumber(Number(d.store) || 0)}
+                      placeholder="ส่ง"
+                      title="ว่าง = ใช้ราคาหน้าร้าน"
                       onChange={(e) => setCell(r, "delivery", e.target.value)}
                       aria-label={`เดลิเวอรี่ ${r.choice.name}`}
                     />

@@ -16,6 +16,7 @@ import {
 import { getMenuDb, menuErrorHint, type MenuPriceChannel } from "./pos-menu-db";
 import { mapFirestoreError } from "./firestore-errors";
 import { listMenuOptionGroups, subscribeMenuOptionGroups } from "./pos-menu-options";
+import { sanitizeMenuLabel } from "./pos-menu-text";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "./types";
 
 export const MENU_CATEGORIES_COL = "menuCategories";
@@ -45,7 +46,7 @@ function itemsCol() {
 function mapCategory(id: string, data: Record<string, unknown>): MenuCategory {
   return {
     id,
-    name: typeof data.name === "string" ? data.name : "",
+    name: typeof data.name === "string" ? sanitizeMenuLabel(data.name) : "",
     sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 0,
     active: data.active !== false,
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
@@ -60,8 +61,8 @@ function mapItem(id: string, data: Record<string, unknown>): MenuItem {
   return {
     id,
     categoryId: typeof data.categoryId === "string" ? data.categoryId : "",
-    name: typeof data.name === "string" ? data.name : "",
-    nameEn: typeof data.nameEn === "string" ? data.nameEn : undefined,
+    name: typeof data.name === "string" ? sanitizeMenuLabel(data.name) : "",
+    nameEn: typeof data.nameEn === "string" ? sanitizeMenuLabel(data.nameEn) || undefined : undefined,
     price: typeof data.price === "number" ? data.price : 0,
     ...(typeof data.deliveryPrice === "number" ? { deliveryPrice: data.deliveryPrice } : {}),
     sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 0,
@@ -205,7 +206,7 @@ export async function addMenuCategory(name: string): Promise<string> {
   const now = Date.now();
   try {
     const ref = await addDoc(categoriesCol(), {
-      name: name.trim(),
+      name: sanitizeMenuLabel(name),
       sortOrder: now,
       active: true,
       createdAt: now,
@@ -223,7 +224,7 @@ export async function updateMenuCategory(
   patch: Partial<Pick<MenuCategory, "name" | "active" | "sortOrder">>,
 ): Promise<void> {
   const next: Record<string, unknown> = { updatedAt: Date.now() };
-  if (patch.name != null) next.name = patch.name.trim();
+  if (patch.name != null) next.name = sanitizeMenuLabel(patch.name);
   if (patch.active != null) next.active = patch.active;
   if (patch.sortOrder != null) next.sortOrder = patch.sortOrder;
   try {
@@ -267,7 +268,7 @@ export async function addMenuItem(input: {
   try {
     const row: Record<string, unknown> = {
       categoryId: input.categoryId,
-      name: input.name.trim(),
+      name: sanitizeMenuLabel(input.name),
       price: Math.max(0, Number(input.price) || 0),
       sortOrder: now,
       active: true,
@@ -326,8 +327,8 @@ export type MenuItemPatch = Partial<
 export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<void> {
   const next: Record<string, unknown> = { updatedAt: Date.now() };
   if (patch.categoryId != null) next.categoryId = patch.categoryId;
-  if (patch.name != null) next.name = patch.name.trim();
-  if (patch.nameEn != null) next.nameEn = patch.nameEn.trim();
+  if (patch.name != null) next.name = sanitizeMenuLabel(patch.name);
+  if (patch.nameEn != null) next.nameEn = sanitizeMenuLabel(patch.nameEn);
   if (patch.price != null) next.price = Math.max(0, Number(patch.price) || 0);
   if (patch.deliveryPrice !== undefined) {
     next.deliveryPrice =
@@ -373,7 +374,7 @@ export async function restoreMenuItem(id: string): Promise<void> {
 export async function duplicateMenuItem(item: MenuItem): Promise<string> {
   const id = await addMenuItem({
     categoryId: item.categoryId,
-    name: `${item.name.trim()} (สำเนา)`,
+    name: `${sanitizeMenuLabel(item.name)} (สำเนา)`,
     price: item.price,
     ...(typeof item.deliveryPrice === "number" ? { deliveryPrice: item.deliveryPrice } : {}),
   });

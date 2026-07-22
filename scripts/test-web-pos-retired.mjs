@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 264/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 265/);
 assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 76/);
 
 const retired = read("src/components/PosWebRetired.tsx");
