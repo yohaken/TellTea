@@ -79,6 +79,13 @@ export type ShiftReportPayload = {
   staffName?: string;
   summary: ShiftReportSummary;
   detail?: ShiftReportDetail;
+  /** Blind-close / session float — filled when known (native sync or local session). */
+  openingCash?: number;
+  closingCashCounted?: number;
+  expectedCash?: number;
+  cashDifference?: number;
+  leaveFloat?: number;
+  discrepancyLabel?: string;
 };
 
 function round2(n: number) {
@@ -252,6 +259,12 @@ export function buildShiftReportPayload(input: {
   summary: ShiftReportSummary;
   receipts?: PosLocalReceipt[];
   menu?: { items?: MenuItem[]; categories?: MenuCategory[] };
+  openingCash?: number;
+  closingCashCounted?: number;
+  expectedCash?: number;
+  cashDifference?: number;
+  leaveFloat?: number;
+  discrepancyLabel?: string;
 }): ShiftReportPayload {
   const detail =
     input.receipts && input.receipts.length > 0
@@ -278,5 +291,11 @@ export function buildShiftReportPayload(input: {
     staffName: input.shop.receiptStaffName,
     summary,
     detail,
+    openingCash: input.openingCash,
+    closingCashCounted: input.closingCashCounted,
+    expectedCash: input.expectedCash,
+    cashDifference: input.cashDifference,
+    leaveFloat: input.leaveFloat,
+    discrepancyLabel: input.discrepancyLabel,
   };
 }

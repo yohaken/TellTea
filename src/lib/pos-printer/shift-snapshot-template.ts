@@ -111,22 +111,52 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
   </table>`
       : "";
 
-  const orderTypeBlock = d
-    ? `<hr class="rule" />
-  <div class="sec">ยอดขายตามประเภทออเดอร์</div>
-  <div class="row"><span>ทานที่ร้าน</span><span>${d.dineInCount} · ${money(d.dineInTotal)}</span></div>`
-    : "";
+  const orderTypeBlock = ""; // ตัด — เคาน์เตอร์ไม่มี order-type (dine-in / delivery)
 
-  const cashRoundBlock = `<hr class="rule" />
+  const cashRoundBlock = (() => {
+    const opening =
+      typeof data.openingCash === "number" && Number.isFinite(data.openingCash)
+        ? data.openingCash
+        : null;
+    const counted =
+      typeof data.closingCashCounted === "number" && Number.isFinite(data.closingCashCounted)
+        ? data.closingCashCounted
+        : null;
+    const expected =
+      typeof data.expectedCash === "number" && Number.isFinite(data.expectedCash)
+        ? data.expectedCash
+        : opening != null
+          ? opening + s.cashTotal
+          : s.cashTotal;
+    const diff =
+      typeof data.cashDifference === "number" && Number.isFinite(data.cashDifference)
+        ? data.cashDifference
+        : counted != null
+          ? counted - expected
+          : null;
+    const leave =
+      typeof data.leaveFloat === "number" && Number.isFinite(data.leaveFloat) ? data.leaveFloat : null;
+    const label = data.discrepancyLabel || "";
+    const openingLabel = opening != null ? money(opening) : "—";
+    const countedLabel = counted != null ? money(counted) : "—";
+    const diffLabel =
+      diff == null ? "—" : `${label ? `${escapeReceiptHtml(label)} ` : ""}${money(diff)}`;
+    const expectedNote =
+      opening != null
+        ? ""
+        : `<div class="muted tiny">*ยังไม่รวมเงินทอนเริ่มต้น (จะเพิ่มตอนเปิดกะ)</div>`;
+    return `<hr class="rule" />
   <div class="sec">รอบการขาย (เงินสด)</div>
-  <div class="row"><span>เงินสดเริ่มต้น</span><span>—</span></div>
+  <div class="row"><span>เงินสดเริ่มต้น</span><span>${openingLabel}</span></div>
   <div class="row"><span>ยอดขายเงินสด</span><span>${money(s.cashTotal)}</span></div>
   <div class="row"><span>คืนเงิน</span><span>${money(0)}</span></div>
   <div class="row"><span>เงินเข้า/เงินออก</span><span>${money(0)}</span></div>
-  <div class="row"><span>ควรมีในลิ้นชัก*</span><span>${money(s.cashTotal)}</span></div>
-  <div class="row"><span>นับจริงในลิ้นชัก</span><span>—</span></div>
-  <div class="row"><span>ส่วนต่าง</span><span>—</span></div>
-  <div class="muted tiny">*ยังไม่รวมเงินทอนเริ่มต้น (จะเพิ่มตอนเปิดกะ)</div>`;
+  <div class="row"><span>ควรมีในลิ้นชัก${opening != null ? "" : "*"}</span><span>${money(expected)}</span></div>
+  <div class="row"><span>นับจริงในลิ้นชัก</span><span>${countedLabel}</span></div>
+  <div class="row"><span>ส่วนต่าง</span><span>${diffLabel}</span></div>
+  ${leave != null ? `<div class="row"><span>ทอนรอบถัดไป</span><span>${money(leave)}</span></div>` : ""}
+  ${expectedNote}`;
+  })();
 
   const voidBlock = d
     ? `<hr class="rule" />
@@ -232,6 +262,9 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
     }
     .opt { font-size: 10px; color: #444; margin-left: 2px; }
     .footer { margin-top: 10px; font-weight: 800; letter-spacing: 0.02em; }
+    .sign { margin-top: 14px; }
+    .sign p { margin: 8px 0 2px; font-weight: 700; }
+    .sign-line { border-bottom: 1px solid #111; height: 28px; margin: 0 8px 10px; }
   </style>
 </head>
 <body>
@@ -280,6 +313,16 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
   ${itemBlock}
   ${billsBlock}
   <div class="center footer">${escapeReceiptHtml(footer)}</div>
+  ${
+    data.kind === "close"
+      ? `<div class="sign">
+  <p>ลงชื่อผู้ส่งกะ</p>
+  <div class="sign-line"></div>
+  <p>ลงชื่อผู้รับกะ</p>
+  <div class="sign-line"></div>
+</div>`
+      : ""
+  }
   <script>window.onload=function(){window.print();setTimeout(function(){window.close();},300);};</script>
 </body>
 </html>`;

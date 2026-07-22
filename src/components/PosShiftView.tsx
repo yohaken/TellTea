@@ -388,6 +388,12 @@ export function PosShiftView() {
     closedAt?: number | null;
     summary: ReturnType<typeof summarizeLocalReceipts>;
     receipts?: PosLocalReceipt[];
+    openingCash?: number;
+    closingCashCounted?: number;
+    expectedCash?: number;
+    cashDifference?: number;
+    leaveFloat?: number;
+    discrepancyLabel?: string;
   }) {
     setPrintingReport(true);
     setPrintMsg(null);
@@ -405,6 +411,12 @@ export function PosShiftView() {
         menu: menu
           ? { items: menu.items, categories: menu.categories }
           : undefined,
+        openingCash: opts.openingCash,
+        closingCashCounted: opts.closingCashCounted,
+        expectedCash: opts.expectedCash,
+        cashDifference: opts.cashDifference,
+        leaveFloat: opts.leaveFloat,
+        discrepancyLabel: opts.discrepancyLabel,
       });
       const ok = openShiftReportPrint(buildShiftReportHtml(payload));
       setPrintMsg(
@@ -429,6 +441,7 @@ export function PosShiftView() {
       openedAt: session.openedAt,
       summary: sessionSummary,
       receipts: sessionReceipts,
+      openingCash: session.openingCash,
     });
   }
 
@@ -457,6 +470,12 @@ export function PosShiftView() {
       closedAt: row.closedAt,
       summary,
       receipts,
+      openingCash: row.openingCash,
+      closingCashCounted: row.closingCashCounted,
+      expectedCash: row.expectedCash,
+      cashDifference: row.cashDifference,
+      leaveFloat: row.leaveFloat,
+      discrepancyLabel: row.discrepancyLabel,
     });
   }
 

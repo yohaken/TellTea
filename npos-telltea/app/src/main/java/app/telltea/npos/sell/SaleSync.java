@@ -556,7 +556,11 @@ public final class SaleSync {
                                             diff,
                                             label,
                                             leaveFloat,
-                                            note);
+                                            note,
+                                            DeviceIdentity.pairingCode(app),
+                                            listPending(app).size(),
+                                            loadSessionReceipts(app, ShiftPrefs.sessionId(app)),
+                                            ShiftReportFormBuilder.COLS_80);
                             transport.send(
                                     app,
                                     ep,
@@ -1052,5 +1056,26 @@ public final class SaleSync {
                 .edit()
                 .putString(KEY_RECEIPTS, arr.toString())
                 .apply();
+    }
+
+    /** Receipts for current (or given) session — used by Z/X web-parity bill form. */
+    static JSONArray loadSessionReceipts(Context app, String sessionId) {
+        try {
+            JSONArray all =
+                    new JSONArray(
+                            app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                                    .getString(KEY_RECEIPTS, "[]"));
+            if (sessionId == null || sessionId.isEmpty()) return all;
+            JSONArray out = new JSONArray();
+            for (int i = 0; i < all.length(); i++) {
+                JSONObject o = all.optJSONObject(i);
+                if (o == null) continue;
+                String sid = o.optString("sessionId", "");
+                if (sid.isEmpty() || sessionId.equals(sid)) out.put(o);
+            }
+            return out;
+        } catch (Exception e) {
+            return new JSONArray();
+        }
     }
 }
