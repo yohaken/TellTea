@@ -79,4 +79,4 @@
 - [x] `node scripts/test-boh-menu-q1-q4.mjs`
 - [x] `npm run test:boh-menu-mgmt` / `test:boh-menu-p3-p5`
 - [x] ไม่มี CSV ใน UI เมนู
-- [ ] merge `main` + deploy · `/menu/` ใช้ได้
+- [x] merge `main` + deploy · `/menu/` ใช้ได้
