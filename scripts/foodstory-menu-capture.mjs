@@ -138,9 +138,8 @@ async function readSessionFromCdp(cdpUrl) {
   } catch (err) {
     throw new Error(
       `เชื่อม CDP ไม่ได้ที่ ${cdpUrl}: ${err.message}\n` +
-        "เปิด Chrome บนเครื่องคุณด้วย:\n" +
-        '  /Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port=9222 --user-data-dir="$HOME/chrome-fs-debug"\n' +
-        "แล้วเปิด https://manage.foodstory.co/th/menu ให้ล็อกอินค้างไว้",
+        "เปิด Chrome บนเครื่องคุณด้วย remote debugging แล้วเปิดหน้าเมนูค้างไว้\n" +
+        "(Cloud agent เชื่อม Chrome เครื่องคุณไม่ได้ — ต้องรันบนเครื่องเดียวกับ Chrome)",
     );
   }
 
@@ -153,12 +152,15 @@ async function readSessionFromCdp(cdpUrl) {
       null;
 
     if (!page) {
-      // สร้างแท็บใหม่ใน context ที่มีอยู่ (ใช้คุกกี้เดิม)
-      const ctx = contexts[0] || (await browser.newContext());
+      const ctx = contexts[0];
+      if (!ctx) {
+        throw new Error("CDP เชื่อมได้แต่ไม่มีหน้าต่าง Chrome — เปิดแท็บ manage.foodstory.co/th/menu ค้างไว้");
+      }
       page = await ctx.newPage();
       await page.goto(FS_MANAGE_MENU_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
       await page.waitForTimeout(3000);
     } else if (!/\/th\/menu/i.test(page.url())) {
+      await page.bringToFront().catch(() => {});
       await page.goto(FS_MANAGE_MENU_URL, { waitUntil: "domcontentloaded", timeout: 60000 });
       await page.waitForTimeout(2000);
     }
@@ -168,9 +170,7 @@ async function readSessionFromCdp(cdpUrl) {
     session.pageUrl = page.url();
     return session;
   } finally {
-    // อย่า browser.close() — จะปิด Chrome ของผู้ใช้
-    await browser.close().catch(() => {});
-    // connectOverCDP().close() disconnects only; documenting for clarity
+    // ห้าม browser.close() — จะปิด Chrome ของผู้ใช้; แค่ตัดการเชื่อมต่อเมื่อโพรเซสจบ
   }
 }
 
