@@ -99,6 +99,8 @@ exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(a
         name: asString(x.name, 80) || d.id,
         required: x.required === true,
         selectionType: asString(x.selectionType, 20) || "single",
+        minSelect: typeof x.minSelect === "number" ? x.minSelect : undefined,
+        maxSelect: typeof x.maxSelect === "number" ? x.maxSelect : undefined,
         options,
         active: x.active !== false,
       };
@@ -115,12 +117,21 @@ exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(a
           sortOrder: typeof x.sortOrder === "number" ? x.sortOrder : 0,
           active: x.active !== false,
           visibleOnPos: x.visibleOnPos !== false,
+          recommended: x.recommended === true,
           optionGroupIds: Array.isArray(x.optionGroupIds)
             ? x.optionGroupIds.filter((id) => typeof id === "string").slice(0, 12)
             : [],
+          // data:image/... from PosMenuItemEditor — may be large; keep under soft cap per item
+          imageUrl: (() => {
+            const u = typeof x.imageUrl === "string" ? x.imageUrl.trim() : "";
+            if (!u) return "";
+            if (u.length > 180000) return "";
+            return u.slice(0, 180000);
+          })(),
         };
       })
-      .filter((i) => i.active && i.visibleOnPos)
+      // Include sold-out (active:false) so nPos can show “ของหมด” like web sell grid.
+      .filter((i) => i.visibleOnPos)
       .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
 
     res.status(200).json({
@@ -133,6 +144,41 @@ exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(a
   } catch (err) {
     console.error("nposMenuSnapshot", err);
     res.status(500).json({ ok: false, error: "menu_failed" });
+  }
+});
+
+/** Toggle sold-out (active flag) — same semantics as web toggleMenuItemSoldOut. */
+exports.nposToggleSoldOut = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  const installId = requireInstallId(body);
+  const itemId = asString(body?.itemId, 80);
+  if (!installId || !itemId) {
+    res.status(400).json({ ok: false, error: "installId_and_itemId_required" });
+    return;
+  }
+  const soldOut = body.soldOut === true;
+  try {
+    const db = getFirestore();
+    const ref = db.doc(`menuItems/${itemId}`);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      res.status(404).json({ ok: false, error: "item_not_found" });
+      return;
+    }
+    await ref.set({ active: !soldOut, updatedAt: Date.now(), soldOutBy: installId }, { merge: true });
+    res.status(200).json({ ok: true, itemId, active: !soldOut, soldOut });
+  } catch (err) {
+    console.error("nposToggleSoldOut", err);
+    res.status(500).json({ ok: false, error: "toggle_failed" });
   }
 });
 
@@ -303,5 +349,49 @@ exports.nposCompleteSale = functions.region("asia-southeast1").https.onRequest(a
       ok: false,
       error: message,
     });
+  }
+});
+
+/** Reorder menu categories — same sortOrder scheme as web reorderMenuCategories. */
+exports.nposReorderCategories = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
+  cors(res);
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "POST only" });
+    return;
+  }
+  const body = parseBody(req);
+  const installId = requireInstallId(body);
+  const ids = Array.isArray(body?.categoryIds) ? body.categoryIds : [];
+  if (!installId || ids.length === 0) {
+    res.status(400).json({ ok: false, error: "installId_and_categoryIds_required" });
+    return;
+  }
+  try {
+    const db = getFirestore();
+    const batch = db.batch();
+    let n = 0;
+    for (let i = 0; i < ids.length && i < 80; i++) {
+      const id = asString(ids[i], 80);
+      if (!id) continue;
+      batch.set(
+        db.doc(`menuCategories/${id}`),
+        { sortOrder: (i + 1) * 1000, updatedAt: Date.now(), reorderedBy: installId },
+        { merge: true },
+      );
+      n += 1;
+    }
+    if (n === 0) {
+      res.status(400).json({ ok: false, error: "no_valid_ids" });
+      return;
+    }
+    await batch.commit();
+    res.status(200).json({ ok: true, count: n });
+  } catch (err) {
+    console.error("nposReorderCategories", err);
+    res.status(500).json({ ok: false, error: "reorder_failed" });
   }
 });

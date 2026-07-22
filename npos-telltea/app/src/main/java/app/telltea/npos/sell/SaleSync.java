@@ -152,11 +152,7 @@ public final class SaleSync {
 
                         pushQueue(app, payload);
                         rememberReceipt(app, payload, "รอส่ง");
-                        if ("cash".equals(paymentMethod)) {
-                            ShiftPrefs.addCash(app, total);
-                        } else {
-                            ShiftPrefs.addPromptPay(app, total);
-                        }
+                        ShiftPrefs.recordSale(app, paymentMethod, total, discountBaht);
                         if (callback != null) callback.onLocalSaved(mutationId, total);
 
                         try {
@@ -215,6 +211,169 @@ public final class SaleSync {
             /* empty */
         }
         return out;
+    }
+
+    public int pendingCount(Context context) {
+        try {
+            return readQueue(context.getApplicationContext()).length();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /** Reprint a stored local receipt (N6.6 parity with web PosReceiptsView). */
+    public void reprintReceipt(Context context, JSONObject receiptRow, Runnable onDone) {
+        Context app = context.getApplicationContext();
+        executor.execute(
+                () -> {
+                    try {
+                        if (receiptRow.optBoolean("voided", false)) {
+                            OpsLogger.warn(app, "printer", "ข้ามพิมพ์ — บิลถูกทำลายแล้ว", receiptRow.optString("billNo"));
+                        } else {
+                            String billNo = receiptRow.optString("billNo", "—");
+                            double total = receiptRow.optDouble("total", 0);
+                            String pay = receiptRow.optString("paymentMethod", "");
+                            JSONObject payload = new JSONObject();
+                            payload.put("lines", receiptRow.optJSONArray("lines"));
+                            payload.put("paymentMethod", pay);
+                            payload.put("localTotal", total);
+                            maybePrintAndKick(app, payload, billNo, total, pay);
+                            OpsLogger.info(app, "printer", "พิมพ์ใบเสร็จซ้ำ", billNo);
+                        }
+                    } catch (Exception e) {
+                        OpsLogger.error(
+                                app,
+                                "printer",
+                                "พิมพ์ซ้ำไม่สำเร็จ",
+                                e.getMessage() == null ? "" : e.getMessage());
+                    }
+                    if (onDone != null) onDone.run();
+                });
+    }
+
+    /** Local void — same as web tablet PosReceiptsView (does not touch Firestore). */
+    public void voidReceipt(Context context, JSONObject receiptRow, String reason, Runnable onDone) {
+        Context app = context.getApplicationContext();
+        executor.execute(
+                () -> {
+                    try {
+                        if (receiptRow.optBoolean("voided", false)) {
+                            if (onDone != null) onDone.run();
+                            return;
+                        }
+                        String mutationId = receiptRow.optString("mutationId", "");
+                        markReceiptVoided(app, mutationId, reason == null || reason.isEmpty() ? "ทำลายบิล" : reason);
+                        ShiftPrefs.unrecordSale(
+                                app,
+                                receiptRow.optString("paymentMethod", ""),
+                                receiptRow.optDouble("total", 0),
+                                receiptRow.optDouble("discountBaht", 0));
+                        OpsLogger.info(
+                                app,
+                                "sale",
+                                "ทำลายบิล",
+                                receiptRow.optString("billNo", mutationId));
+                    } catch (Exception e) {
+                        OpsLogger.error(
+                                app,
+                                "sale",
+                                "ทำลายบิลไม่สำเร็จ",
+                                e.getMessage() == null ? "" : e.getMessage());
+                    }
+                    if (onDone != null) onDone.run();
+                });
+    }
+
+    /** kind: "snapshot" (X) or "close" (Z). Snapshot does not close the session. */
+    public void printShiftReport(Context context, String kind, Runnable onDone) {
+        Context app = context.getApplicationContext();
+        final String reportKind = "close".equals(kind) ? "close" : "snapshot";
+        executor.execute(
+                () -> {
+                    try {
+                        PrinterEndpoint ep = PrinterPrefs.savedOrNull(app);
+                        if (ep == null) {
+                            OpsLogger.warn(app, "printer", "ข้ามพิมพ์สรุปรอบ — ยังไม่เลือกปริ้นเตอร์", reportKind);
+                        } else {
+                            double cash = ShiftPrefs.cashTotal(app);
+                            double pp = ShiftPrefs.promptpayTotal(app);
+                            double discount = ShiftPrefs.discountTotal(app);
+                            int sales = ShiftPrefs.saleCount(app);
+                            int cashBills = ShiftPrefs.cashBillCount(app);
+                            int ppBills = ShiftPrefs.promptpayBillCount(app);
+                            int voided = ShiftPrefs.voidedCount(app);
+                            String title =
+                                    "close".equals(reportKind)
+                                            ? "ปิดรอบ / Z-REPORT"
+                                            : "Snapshot กลางรอบ / X-REPORT";
+                            String footer =
+                                    "close".equals(reportKind)
+                                            ? "ปิดรอบเรียบร้อย\n"
+                                            : "*** ไม่ใช่การปิดรอบ ***\n";
+                            String body =
+                                    title
+                                            + "\n"
+                                            + "รอบ "
+                                            + ShiftPrefs.shift(app)
+                                            + "\n"
+                                            + "session "
+                                            + ShiftPrefs.sessionId(app)
+                                            + "\n"
+                                            + "----------------\n"
+                                            + "บิลขาย "
+                                            + sales
+                                            + "\n"
+                                            + "ทำลายบิล "
+                                            + voided
+                                            + "\n"
+                                            + "เงินสด "
+                                            + cashBills
+                                            + " บิล · "
+                                            + String.format(java.util.Locale.US, "%.0f", cash)
+                                            + "\n"
+                                            + "PromptPay "
+                                            + ppBills
+                                            + " บิล · "
+                                            + String.format(java.util.Locale.US, "%.0f", pp)
+                                            + "\n"
+                                            + "ส่วนลดรวม "
+                                            + String.format(java.util.Locale.US, "%.0f", discount)
+                                            + "\n"
+                                            + "----------------\n"
+                                            + "รวมยอดขาย "
+                                            + String.format(java.util.Locale.US, "%.0f", cash + pp)
+                                            + "\n"
+                                            + footer;
+                            transport.send(
+                                    app,
+                                    ep,
+                                    EscPos.saleReceipt(body),
+                                    result ->
+                                            OpsLogger.result(
+                                                    app,
+                                                    "printer",
+                                                    result.ok
+                                                            ? ("close".equals(reportKind)
+                                                                    ? "พิมพ์ปิดรอบแล้ว"
+                                                                    : "พิมพ์สรุปกลางรอบแล้ว")
+                                                            : "พิมพ์สรุปรอบไม่สำเร็จ",
+                                                    result.message,
+                                                    result.ok));
+                        }
+                    } catch (Exception e) {
+                        OpsLogger.warn(
+                                app,
+                                "printer",
+                                "พิมพ์สรุปรอบพลาด",
+                                e.getMessage() == null ? "" : e.getMessage());
+                    }
+                    if (onDone != null) onDone.run();
+                });
+    }
+
+    /** @deprecated use printShiftReport(context, kind, onDone) */
+    public void printShiftReport(Context context, Runnable onDone) {
+        printShiftReport(context, "close", onDone);
     }
 
     public void shutdown() {
@@ -344,13 +503,34 @@ public final class SaleSync {
         row.put("mutationId", payload.optString("clientMutationId"));
         row.put("billNo", billNo);
         row.put("total", payload.optDouble("localTotal"));
+        row.put("discountBaht", payload.optDouble("discountBaht", 0));
         row.put("paymentMethod", payload.optString("paymentMethod"));
+        row.put("sessionId", payload.optString("sessionId", ""));
         row.put("lines", payload.optJSONArray("lines"));
+        row.put("voided", false);
         arr.put(row);
         while (arr.length() > 60) {
             JSONArray trimmed = new JSONArray();
             for (int i = 1; i < arr.length(); i++) trimmed.put(arr.get(i));
             arr = trimmed;
+        }
+        app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_RECEIPTS, arr.toString())
+                .apply();
+    }
+
+    private static void markReceiptVoided(Context app, String mutationId, String reason) throws Exception {
+        JSONArray arr =
+                new JSONArray(
+                        app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_RECEIPTS, "[]"));
+        for (int i = 0; i < arr.length(); i++) {
+            JSONObject o = arr.getJSONObject(i);
+            if (mutationId.equals(o.optString("mutationId"))) {
+                o.put("voided", true);
+                o.put("voidedAt", System.currentTimeMillis());
+                o.put("voidReason", reason);
+            }
         }
         app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .edit()

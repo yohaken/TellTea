@@ -32,8 +32,8 @@ export function defaultPosOpsNoteItems(now = Date.now()): PosOpsNoteItem[] {
   return [
     {
       id: "apk-install",
-      title: "ดาวน์โหลดแอป nPos-telltea",
-      body: "เปิดด้วย Chrome บนแท็บเล็ต → กดดาวน์โหลด → ติดตั้ง → เห็น Hello World",
+      title: "ดาวน์โหลดแอป nPos (หน้าร้าน)",
+      body: "เปิดด้วย Chrome บนแท็บเล็ต → เช็คเวอร์ชัน → ดาวน์โหลด → ติดตั้ง → เข้างานแล้วขายได้",
       url: POS_APK_INSTALL_PAGE_URL,
       sortOrder: 0,
       updatedAt: now,

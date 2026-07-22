@@ -12,6 +12,9 @@ export function PosManagePanel({ onError }: { onError: (msg: string | null) => v
     <div className="owner-settings-stack pos-manage-stack">
       <p className="muted pos-manage-lead">
         รายงานจากแอป nPos-telltea — เทสทีละเฟสก่อนย้ายขายหน้าร้านเต็มรูปแบบ · error/ฮาร์ดแวร์เข้าไทม์ไลน์อัตโนมัติ
+        <br />
+        หมายเหตุ: ตอนเทส emulator อาจเหลือเอกสารเก่าหลาย installId — แผงด้านล่างพับเป็นเครื่องจริงเครื่องเดียว
+        (แสดงเฉพาะรายงาน/เวอร์ชันล่าสุด)
       </p>
       <NposDevicesPanel onError={onError} />
       <NposOpsLogPanel onError={onError} />

@@ -23,6 +23,10 @@ public final class MenuRepository {
             "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposMenuSnapshot";
     public static final String SHOP_URL =
             "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposShopSettings";
+    public static final String TOGGLE_SOLD_URL =
+            "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposToggleSoldOut";
+    public static final String REORDER_CAT_URL =
+            "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposReorderCategories";
 
     private static final String PREFS = "npos_menu";
     private static final String KEY_MENU = "menuJson";
@@ -110,6 +114,70 @@ public final class MenuRepository {
                         } catch (Exception ignored) {
                             /* ignore */
                         }
+                    }
+                });
+    }
+
+    public interface ToggleCallback {
+        void onDone(boolean ok, boolean active, String error);
+    }
+
+    /** soldOut=true → active=false (ของหมด). */
+    public void toggleSoldOut(Context context, String itemId, boolean soldOut, ToggleCallback cb) {
+        Context app = context.getApplicationContext();
+        executor.execute(
+                () -> {
+                    try {
+                        JSONObject body = new JSONObject();
+                        body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
+                        body.put("itemId", itemId);
+                        body.put("soldOut", soldOut);
+                        JSONObject res = postJson(TOGGLE_SOLD_URL, body);
+                        boolean ok = res.optBoolean("ok", false);
+                        if (ok) {
+                            OpsLogger.info(
+                                    app,
+                                    "menu",
+                                    soldOut ? "ตั้งของหมด" : "เปิดขายอีกครั้ง",
+                                    itemId);
+                            if (cb != null) cb.onDone(true, res.optBoolean("active", !soldOut), null);
+                        } else {
+                            String err = res.optString("error", "toggle_failed");
+                            OpsLogger.warn(app, "menu", "ตั้งของหมดไม่สำเร็จ", err);
+                            if (cb != null) cb.onDone(false, !soldOut, err);
+                        }
+                    } catch (Exception e) {
+                        String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+                        OpsLogger.warn(app, "menu", "ตั้งของหมดไม่สำเร็จ", msg);
+                        if (cb != null) cb.onDone(false, !soldOut, msg);
+                    }
+                });
+    }
+
+    /** Persist category order to Firestore (best-effort). Local order already applied. */
+    public void reorderCategories(Context context, java.util.List<MenuModels.Category> categories) {
+        if (categories == null || categories.isEmpty()) return;
+        Context app = context.getApplicationContext();
+        executor.execute(
+                () -> {
+                    try {
+                        org.json.JSONArray ids = new org.json.JSONArray();
+                        for (MenuModels.Category c : categories) ids.put(c.id);
+                        JSONObject body = new JSONObject();
+                        body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
+                        body.put("categoryIds", ids);
+                        JSONObject res = postJson(REORDER_CAT_URL, body);
+                        if (res.optBoolean("ok", false)) {
+                            OpsLogger.info(app, "menu", "เรียงหมวดแล้ว", "n=" + ids.length());
+                        } else {
+                            OpsLogger.warn(app, "menu", "เรียงหมวดเซิร์ฟเวอร์ไม่สำเร็จ", res.optString("error"));
+                        }
+                    } catch (Exception e) {
+                        OpsLogger.warn(
+                                app,
+                                "menu",
+                                "เรียงหมวดออฟไลน์ — เก็บในเครื่องแล้ว",
+                                e.getMessage() == null ? "" : e.getMessage());
                     }
                 });
     }

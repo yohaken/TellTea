@@ -208,9 +208,13 @@ service cloud.firestore {
           'forceReloadAt',
           'ownerPingAt',
           'ownerPingMessage',
+          'captureRequestAt',
+          'captureIntervalMinutes',
           'updatedAt',
           'updatedBy',
           'disabled',
+          'blocked',
+          'deviceClass',
         ]);
     }
 
@@ -618,6 +622,12 @@ service cloud.firestore {
 
     match /nposOpsLog/{installId} {
       // Compact device timeline — Admin SDK write only (reportNposOpsLog).
+      allow read: if isOwner() || isOwnerEmail();
+      allow write: if false;
+    }
+
+    match /nposScreenShots/{shotId} {
+      // Screen captures — Admin SDK write only (reportNposScreenCapture).
       allow read: if isOwner() || isOwnerEmail();
       allow write: if false;
     }

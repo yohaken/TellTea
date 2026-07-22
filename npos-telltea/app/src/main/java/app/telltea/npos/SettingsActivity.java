@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -80,8 +81,10 @@ public class SettingsActivity extends Activity {
         downloader = new UpdateDownloader();
         printerTransport = new PrinterTransport();
 
+        findViewById(R.id.backButton).setOnClickListener(v -> finish());
         updateButton.setOnClickListener(v -> onUpdateButtonClicked());
         findViewById(R.id.installPageButton).setOnClickListener(v -> openInstallPage());
+        findViewById(R.id.openMenuAdminButton).setOnClickListener(v -> openMenuAdminPage());
         findViewById(R.id.diagnoseButton)
                 .setOnClickListener(v -> startActivity(new Intent(this, DiagnoseActivity.class)));
         findViewById(R.id.customerAmount1Button)
@@ -93,9 +96,36 @@ public class SettingsActivity extends Activity {
         findViewById(R.id.printerNextButton).setOnClickListener(v -> selectNextPrinter());
         printerTestButton.setOnClickListener(v -> runPrinterTest());
         drawerKickButton.setOnClickListener(v -> runDrawerKick());
+        findViewById(R.id.printerLanAddButton).setOnClickListener(v -> addLanPrinter());
 
         restorePrinterSelection();
         OpsLogger.info(this, "app", "เปิดตั้งค่า", "vc=" + localVersionCode);
+    }
+
+    private void addLanPrinter() {
+        EditText hostView = findViewById(R.id.printerLanHost);
+        EditText portView = findViewById(R.id.printerLanPort);
+        String host = hostView.getText() == null ? "" : hostView.getText().toString().trim();
+        int port = 9100;
+        try {
+            port = Integer.parseInt(portView.getText().toString().trim());
+        } catch (Exception ignored) {
+            port = 9100;
+        }
+        if (host.isEmpty()) {
+            Toast.makeText(this, R.string.printer_lan_need_host, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        PrinterEndpoint lan = PrinterEndpoint.network(host, port);
+        for (int i = printerEndpoints.size() - 1; i >= 0; i--) {
+            if (lan.id.equals(printerEndpoints.get(i).id)) printerEndpoints.remove(i);
+        }
+        printerEndpoints.add(0, lan);
+        printerIndex = 0;
+        PrinterPrefs.saveSuccess(this, lan);
+        renderPrinterStatus();
+        Toast.makeText(this, getString(R.string.printer_lan_added, lan.label), Toast.LENGTH_SHORT).show();
+        OpsLogger.info(this, "printer", "เพิ่มปริ้น LAN", lan.id);
     }
 
     @Override
@@ -120,6 +150,10 @@ public class SettingsActivity extends Activity {
                         ? "https://telltea-pos.web.app/install/"
                         : BuildConfig.INSTALL_PAGE_URL;
         ApkInstaller.openInstallPage(this, url);
+    }
+
+    private void openMenuAdminPage() {
+        ApkInstaller.openInstallPage(this, "https://telltea-pos.web.app/pos/menu/");
     }
 
     private void showCustomerAmount(int baht) {
@@ -186,11 +220,17 @@ public class SettingsActivity extends Activity {
         scanPrinters(false);
         PrinterEndpoint saved = PrinterPrefs.savedOrNull(this);
         if (saved != null) {
+            boolean found = false;
             for (int i = 0; i < printerEndpoints.size(); i++) {
                 if (saved.id.equals(printerEndpoints.get(i).id)) {
                     printerIndex = i;
+                    found = true;
                     break;
                 }
+            }
+            if (!found && saved.kind == PrinterEndpoint.Kind.NETWORK) {
+                printerEndpoints.add(0, saved);
+                printerIndex = 0;
             }
         }
         renderPrinterStatus();
@@ -200,7 +240,19 @@ public class SettingsActivity extends Activity {
         if (requestBt && needsBtPermission()) {
             requestPermissions(new String[] {Manifest.permission.BLUETOOTH_CONNECT}, REQ_BT);
         }
+        PrinterEndpoint keepLan = null;
+        for (PrinterEndpoint ep : printerEndpoints) {
+            if (ep.kind == PrinterEndpoint.Kind.NETWORK) {
+                keepLan = ep;
+                break;
+            }
+        }
+        if (keepLan == null) {
+            PrinterEndpoint saved = PrinterPrefs.savedOrNull(this);
+            if (saved != null && saved.kind == PrinterEndpoint.Kind.NETWORK) keepLan = saved;
+        }
         printerEndpoints.clear();
+        if (keepLan != null) printerEndpoints.add(keepLan);
         printerEndpoints.addAll(PrinterEndpoint.discover(this));
         if (printerIndex >= printerEndpoints.size()) printerIndex = 0;
         renderPrinterStatus();

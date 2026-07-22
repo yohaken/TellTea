@@ -98,6 +98,12 @@ public final class DiagnoseReporter {
                 o.put("displayId", d.display.getDisplayId());
                 o.put("primary", d.primary);
                 o.put("name", d.name);
+                o.put("widthPx", d.widthPx);
+                o.put("heightPx", d.heightPx);
+                o.put("densityDpi", d.densityDpi);
+                o.put("refreshHz", d.refreshHz);
+                o.put("rotation", d.rotation);
+                o.put("orientation", d.orientation);
                 displayArr.put(o);
             }
         }
@@ -114,16 +120,19 @@ public final class DiagnoseReporter {
         }
 
         String summary =
-                "จอ "
-                        + displayArr.length()
+                DisplayProbe.summarize(displays)
                         + " · เชื่อมต่อ "
                         + hardwareArr.length();
 
         JSONObject body = new JSONObject();
         body.put("installId", DeviceIdentity.getOrCreateInstallId(context));
+        body.put("stableKey", DeviceIdentity.stableKey(context));
+        body.put("isEmulator", DeviceIdentity.isEmulator());
+        body.put("deviceClass", DeviceIdentity.deviceClass());
         body.put("versionCode", versionCode);
         body.put("versionName", versionName);
         body.put("summary", summary);
+        body.put("customerDisplay", DisplayProbe.customerDisplayStatus(context));
         body.put("displays", displayArr);
         body.put("hardware", hardwareArr);
         body.put("source", "npos-telltea");

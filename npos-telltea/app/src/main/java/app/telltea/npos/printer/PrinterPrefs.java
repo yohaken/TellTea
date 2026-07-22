@@ -49,6 +49,7 @@ public final class PrinterPrefs {
                 context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_KIND, "");
         if ("BLUETOOTH".equals(raw)) return PrinterEndpoint.Kind.BLUETOOTH;
         if ("USB".equals(raw)) return PrinterEndpoint.Kind.USB;
+        if ("NETWORK".equals(raw)) return PrinterEndpoint.Kind.NETWORK;
         return null;
     }
 

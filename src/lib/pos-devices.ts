@@ -56,6 +56,19 @@ export type PosDevice = {
   lastOwnerPingAckAt: number;
   /** ANDROID_ID (or empty) — used to hide reinstall ghosts for the same tablet. */
   stableKey: string;
+  /** Emulator / AVD heuristic from native client. */
+  isEmulator: boolean;
+  /** shop | dev | blocked — BO folds + hide accidental installs. */
+  deviceClass: string;
+  /** Explicit BO block flag (survives heartbeat). */
+  blocked: boolean;
+  /** ok | missing | unknown — customer / secondary display. */
+  customerDisplay: string;
+  captureRequestAt: number;
+  lastCaptureAckAt: number;
+  lastCaptureAt: number;
+  /** 0 = off; else minutes between automatic captures while app is open. */
+  captureIntervalMinutes: number;
 };
 
 function deviceRef(id: string) {
@@ -150,7 +163,27 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
     ownerPingMessage: typeof data.ownerPingMessage === "string" ? data.ownerPingMessage : "",
     lastOwnerPingAckAt: typeof data.lastOwnerPingAckAt === "number" ? data.lastOwnerPingAckAt : 0,
     stableKey: typeof data.stableKey === "string" ? data.stableKey : "",
+    isEmulator: data.isEmulator === true,
+    deviceClass: typeof data.deviceClass === "string" ? data.deviceClass : "",
+    blocked: data.blocked === true || data.deviceClass === "blocked",
+    customerDisplay: typeof data.customerDisplay === "string" ? data.customerDisplay : "",
+    captureRequestAt: typeof data.captureRequestAt === "number" ? data.captureRequestAt : 0,
+    lastCaptureAckAt: typeof data.lastCaptureAckAt === "number" ? data.lastCaptureAckAt : 0,
+    lastCaptureAt: typeof data.lastCaptureAt === "number" ? data.lastCaptureAt : 0,
+    captureIntervalMinutes:
+      typeof data.captureIntervalMinutes === "number" ? data.captureIntervalMinutes : 0,
   };
+}
+
+/** Fill stableKey from installId when older docs omitted it (npos + ANDROID_ID). */
+export function withResolvedStableKey(device: PosDevice): PosDevice {
+  if (device.stableKey && device.stableKey.length >= 8) return device;
+  const compact = device.id.replace(/-/g, "").toLowerCase();
+  const m = /^npos([a-f0-9]+)$/.exec(compact);
+  if (!m) return device;
+  const hex = m[1];
+  if (hex.length < 8 || hex.length > 20) return device;
+  return { ...device, stableKey: hex };
 }
 
 function telemetryPatch(telemetry?: PosDeviceTelemetry): Record<string, unknown> {
@@ -333,6 +366,85 @@ export async function savePosDeviceLabel(
     );
   } catch (err) {
     throw new Error(mapFirestoreError(err, "บันทึกชื่อเครื่อง POS", "pos"));
+  }
+}
+
+/**
+ * Owner: hide accidental / stray installs from shop view.
+ * Blocked survives native heartbeat (CF preserves deviceClass=blocked).
+ */
+export async function setNposDeviceBlocked(
+  deviceId: string,
+  blocked: boolean,
+  updatedBy: string,
+  opts?: { isEmulator?: boolean },
+): Promise<void> {
+  const restoreClass = opts?.isEmulator === true ? "dev" : "shop";
+  try {
+    await setDoc(
+      deviceRef(deviceId),
+      blocked
+        ? {
+            blocked: true,
+            disabled: true,
+            deviceClass: "blocked",
+            updatedAt: Date.now(),
+            updatedBy,
+          }
+        : {
+            blocked: false,
+            disabled: false,
+            deviceClass: restoreClass,
+            updatedAt: Date.now(),
+            updatedBy,
+          },
+      { merge: true },
+    );
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, blocked ? "บล็อกเครื่อง nPos" : "ปลดบล็อกเครื่อง nPos", "pos"));
+  }
+}
+
+/** Owner: ask tablet to capture primary + secondary screens on next heartbeat. */
+export async function requestNposScreenCapture(
+  deviceId: string,
+  updatedBy: string,
+): Promise<void> {
+  try {
+    await setDoc(
+      deviceRef(deviceId),
+      {
+        captureRequestAt: Date.now(),
+        updatedAt: Date.now(),
+        updatedBy,
+      },
+      { merge: true },
+    );
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, "สั่งแคปจอ nPos", "pos"));
+  }
+}
+
+/** Owner: 0 = off, else capture every N minutes while app is open. */
+export async function setNposCaptureInterval(
+  deviceId: string,
+  intervalMinutes: number,
+  updatedBy: string,
+): Promise<void> {
+  const allowed = new Set([0, 5, 10, 30]);
+  const mins = allowed.has(intervalMinutes) ? intervalMinutes : 0;
+  try {
+    await setDoc(
+      deviceRef(deviceId),
+      {
+        captureIntervalMinutes: mins,
+        updatedAt: Date.now(),
+        updatedBy,
+      },
+      { merge: true },
+    );
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, "ตั้งช่วงแคปจอ nPos", "pos"));
   }
 }
 

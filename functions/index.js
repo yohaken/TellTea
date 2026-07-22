@@ -16,12 +16,15 @@ exports.classifyLedgerType = classifyLedger.classifyLedgerType;
 exports.reportNposDiagnose = require("./npos-diagnose").reportNposDiagnose;
 exports.nposDeviceHeartbeat = require("./npos-heartbeat").nposDeviceHeartbeat;
 exports.reportNposOpsLog = require("./npos-ops-log").reportNposOpsLog;
+exports.reportNposScreenCapture = require("./npos-capture").reportNposScreenCapture;
 const nposSell = require("./npos-sell");
 exports.nposMenuSnapshot = nposSell.nposMenuSnapshot;
 exports.nposShopSettings = nposSell.nposShopSettings;
 exports.nposSessionOpen = nposSell.nposSessionOpen;
 exports.nposSessionClose = nposSell.nposSessionClose;
 exports.nposCompleteSale = nposSell.nposCompleteSale;
+exports.nposToggleSoldOut = nposSell.nposToggleSoldOut;
+exports.nposReorderCategories = nposSell.nposReorderCategories;
 
 const VAPID_PUBLIC =
   process.env.VAPID_PUBLIC_KEY ||

@@ -369,29 +369,43 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
       ) : null}
 
       <div className="pos-install-box">
-        <p className="pos-install-label">ลิงก์ดาวน์โหลดแอป (APK) — เปิดบน Chrome แท็บเล็ต</p>
+        <p className="pos-install-label">ส่งให้พนักงานติดตั้ง nPos (ลิงก์ + QR)</p>
         <code className="pos-install-url">{POS_APK_INSTALL_PAGE_URL}</code>
-        <div className="pos-device-actions">
-          <a
-            href={POS_APK_INSTALL_PAGE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="primary-btn pos-install-btn"
-          >
-            <ExternalLink size={15} aria-hidden />
-            เปิดหน้าดาวน์โหลด
-          </a>
-          <button type="button" className="ghost-btn" onClick={() => void copyApkInstallUrl()}>
-            {copiedApk ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
-            {copiedApk ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
-          </button>
+        <div className="pos-install-qr-row">
+          <img
+            className="pos-install-qr"
+            src="/install/qr-pos-install.png"
+            width={160}
+            height={160}
+            alt="QR หน้าติดตั้ง nPos"
+          />
+          <div>
+            <p className="muted settings-card-lead" style={{ marginTop: 0 }}>
+              ส่งลิงก์ในไลน์/แชท หรือให้พนักงานสแกน QR ด้วยแท็บเล็ต → เปิด Chrome → ดาวน์โหลด APK
+            </p>
+            <div className="pos-device-actions">
+              <a
+                href={POS_APK_INSTALL_PAGE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="primary-btn pos-install-btn"
+              >
+                <ExternalLink size={15} aria-hidden />
+                เปิดหน้าดาวน์โหลด
+              </a>
+              <button type="button" className="ghost-btn" onClick={() => void copyApkInstallUrl()}>
+                {copiedApk ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
+                {copiedApk ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
+              </button>
+            </div>
+          </div>
         </div>
         <ol className="pos-install-steps">
-          <li>บนแท็บเล็ตเปิด Chrome → ใส่ลิงก์ด้านบน (หรือสแกน QR ที่คุณสร้างเอง)</li>
-          <li>กด <strong>ดาวน์โหลดไฟล์ติดตั้ง</strong> → อนุญาตติดตั้ง → เปิดไอคอน <strong>nPos-telltea</strong></li>
-          <li>ควรเห็นข้อความ <strong>Hello World</strong> + เลขเวอร์ชัน และปุ่มเช็คอัปเดต</li>
+          <li>แท็บเล็ตเปิด Chrome → สแกน QR / เปิดลิงก์ด้านบน</li>
+          <li>เช็คเลขเวอร์ชันบนหน้า → กดดาวน์โหลด → อนุญาตติดตั้ง → เปิด <strong>nPos-telltea</strong></li>
+          <li>เข้างานแล้วจะเห็นเมนูหน้าร้าน (ขาย · รอบ · ประวัติ · ตั้งค่า)</li>
+          <li>อัปเดตรอบถัดไปทำในแอปได้ (ตั้งค่า → อัปเดต) ไม่ต้องสแกนใหม่ทุกครั้ง</li>
           <li>ไฟล์ตรง: <code>{POS_APK_DOWNLOAD_URL}</code></li>
-          <li>แมนิเฟสต์อัปเดต: <code>https://telltea-pos.web.app/downloads/latest.json</code></li>
         </ol>
       </div>
 

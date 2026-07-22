@@ -13,6 +13,16 @@
         android:orientation="horizontal"
         android:padding="12dp">
 
+        <Button
+            android:id="@+id/backButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:minHeight="40dp"
+            android:text="@string/btn_back"
+            android:textAllCaps="false"
+            android:textSize="12sp" />
+
         <TextView
             android:id="@+id/sellTitle"
             android:layout_width="0dp"
@@ -23,6 +33,16 @@
             android:textSize="16sp"
             android:textStyle="bold" />
 
+        <Button
+            android:id="@+id/refreshMenuButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:minHeight="40dp"
+            android:text="@string/btn_refresh_menu"
+            android:textAllCaps="false"
+            android:textSize="12sp" />
+
         <TextView
             android:id="@+id/sellSyncStatus"
             android:layout_width="wrap_content"
@@ -30,6 +50,18 @@
             android:textColor="#C4A35A"
             android:textSize="12sp" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/shiftSummary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#243B32"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:textColor="#D7E3DC"
+        android:textSize="12sp" />
 
     <HorizontalScrollView
         android:layout_width="match_parent"
@@ -101,6 +133,60 @@
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
+            <TextView
+                android:id="@+id/discountLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#8A6A2F"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/discountButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:minHeight="40dp"
+                android:text="@string/btn_discount"
+                android:textAllCaps="false" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/holdBillButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:minHeight="40dp"
+                    android:text="@string/btn_hold_bill"
+                    android:textAllCaps="false" />
+
+                <Button
+                    android:id="@+id/restoreHoldButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:minHeight="40dp"
+                    android:text="@string/btn_restore_hold"
+                    android:textAllCaps="false" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/flushSyncButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:minHeight="36dp"
+                android:text="@string/btn_flush_sync"
+                android:textAllCaps="false"
+                android:visibility="gone" />
+
             <Button
                 android:id="@+id/payCashButton"
                 android:layout_width="match_parent"
@@ -134,6 +220,16 @@
             android:layout_marginEnd="4dp"
             android:layout_weight="1"
             android:text="@string/btn_receipts"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/xReportButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:layout_weight="1"
+            android:text="@string/btn_x_report"
             android:textAllCaps="false" />
 
         <Button

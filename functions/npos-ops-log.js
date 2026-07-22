@@ -23,6 +23,19 @@ function asString(v, max = 200) {
   return v.trim().slice(0, max);
 }
 
+function inferStableKey(rawKey, installId) {
+  const sk = asString(rawKey, 120).toLowerCase();
+  if (sk.length >= 8) return sk;
+  const compact = String(installId || "")
+    .replace(/-/g, "")
+    .toLowerCase();
+  const m = /^npos([a-f0-9]+)$/.exec(compact);
+  if (!m) return "";
+  const hex = m[1];
+  if (hex.length >= 8 && hex.length <= 20) return hex;
+  return "";
+}
+
 function normalizeLevel(v) {
   const s = asString(v, 16).toLowerCase();
   if (s === "error" || s === "warn" || s === "info") return s;
@@ -85,6 +98,15 @@ exports.reportNposOpsLog = functions
 
     const versionCode = Number.isFinite(body.versionCode) ? Math.floor(body.versionCode) : 0;
     const versionName = asString(body.versionName, 32) || "0";
+    const stableKey = inferStableKey(body.stableKey, installId);
+    const isEmulator = body.isEmulator === true;
+    const classRaw = asString(body.deviceClass, 16).toLowerCase();
+    const deviceClass =
+      classRaw === "shop" || classRaw === "dev" || classRaw === "blocked"
+        ? classRaw
+        : isEmulator
+          ? "dev"
+          : "shop";
     const now = Date.now();
 
     try {
@@ -93,6 +115,8 @@ exports.reportNposOpsLog = functions
       await db.runTransaction(async (tx) => {
         const snap = await tx.get(ref);
         const prev = snap.exists && Array.isArray(snap.get("events")) ? snap.get("events") : [];
+        const prevBlocked =
+          snap.exists && (snap.get("deviceClass") === "blocked" || snap.get("blocked") === true);
         const tagged = incoming.map((e) => ({
           ...e,
           vc: versionCode,
@@ -103,6 +127,10 @@ exports.reportNposOpsLog = functions
           ref,
           {
             installId,
+            stableKey: stableKey || (snap.exists ? snap.get("stableKey") || "" : ""),
+            isEmulator,
+            deviceClass: prevBlocked ? "blocked" : deviceClass,
+            blocked: prevBlocked ? true : false,
             updatedAt: now,
             versionCode,
             versionName,
@@ -120,6 +148,8 @@ exports.reportNposOpsLog = functions
       res.status(200).json({
         ok: true,
         installId,
+        stableKey: stableKey || null,
+        deviceClass: deviceClass,
         accepted: incoming.length,
         updatedAt: now,
       });

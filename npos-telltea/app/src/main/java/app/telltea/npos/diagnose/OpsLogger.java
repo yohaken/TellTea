@@ -111,6 +111,9 @@ public final class OpsLogger {
         try {
             JSONObject body = new JSONObject();
             body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
+            body.put("stableKey", DeviceIdentity.stableKey(app));
+            body.put("isEmulator", DeviceIdentity.isEmulator());
+            body.put("deviceClass", DeviceIdentity.deviceClass());
             body.put("versionCode", readVersionCode(app));
             body.put("versionName", readVersionName(app));
             JSONArray events = new JSONArray();

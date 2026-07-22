@@ -15,6 +15,7 @@
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <application
+        android:name=".NposApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -36,6 +37,11 @@
             android:name=".SellActivity"
             android:exported="false"
             android:label="@string/sell_title" />
+
+        <activity
+            android:name=".ShiftActivity"
+            android:exported="false"
+            android:label="@string/nav_shift" />
 
         <activity
             android:name=".ReceiptsActivity"
