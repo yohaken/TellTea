@@ -23,7 +23,7 @@ const rules = read("firestore.rules");
 const smoke = read("scripts/smoke-hosting-export.mjs");
 const indexFn = read("functions/index.js");
 
-assert.match(version, /APP_BUILD = 266/);
+assert.match(version, /APP_BUILD = 267/);
 
 assert.match(alerts, /router\.replace\("\/more\/"\)/);
 assert.doesNotMatch(more, /href: "\/alerts\/"/);

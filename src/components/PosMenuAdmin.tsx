@@ -5,6 +5,7 @@ import { ArrowLeft, ChevronDown, Copy, Link2, Pencil, Plus, RotateCcw, Trash2 } 
 import { PosHardLink } from "@/components/PosHardLink";
 import { PosMenuItemEditor } from "@/components/PosMenuItemEditor";
 import { PosMenuModal } from "@/components/PosMenuModal";
+import { PosMenuItemPriceTable } from "@/components/PosMenuItemPriceTable";
 import { PosMenuOptionPriceTable } from "@/components/PosMenuOptionPriceTable";
 import { PosOptionGroupEditor } from "@/components/PosOptionGroupEditor";
 import { PosSortableList } from "@/components/PosSortableList";
@@ -55,6 +56,7 @@ type DeleteTarget =
   | { kind: "category"; category: MenuCategory; mode: "archive" | "hard" };
 
 type Tab = "categories" | "groups" | "prices" | "promotions";
+type PriceScope = "items" | "options";
 type Screen =
   | { kind: "list" }
   | { kind: "edit-item"; id: string }
@@ -104,6 +106,7 @@ export function PosMenuAdmin({
     ? { categories: [] as MenuCategory[], items: [] as MenuItem[], optionGroups: [] as MenuOptionGroup[] }
     : initialMenuFromCache();
   const [tab, setTab] = useState<Tab>("categories");
+  const [priceScope, setPriceScope] = useState<PriceScope>("items");
   const [screen, setScreen] = useState<Screen>({ kind: "list" });
   const [quickAdd, setQuickAdd] = useState<QuickAdd>(null);
   const [quickName, setQuickName] = useState("");
@@ -449,7 +452,7 @@ export function PosMenuAdmin({
                 {tab === "groups"
                   ? "กลุ่มตัวเลือก"
                   : tab === "prices"
-                    ? "ตั้งราคาตัวเลือก"
+                    ? "ตั้งราคา"
                     : tab === "promotions"
                       ? "โปรโมชั่น"
                       : "เมนูอาหาร"}
@@ -554,7 +557,33 @@ export function PosMenuAdmin({
           ) : null}
 
           {authReady && tab === "prices" ? (
-            <PosMenuOptionPriceTable optionGroups={optionGroups} />
+            <div className="pos-menu-price-hub">
+              <div className="pos-menu-price-scope" role="tablist" aria-label="ชนิดราคา">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={priceScope === "items"}
+                  className={priceScope === "items" ? "is-active" : ""}
+                  onClick={() => setPriceScope("items")}
+                >
+                  เมนู
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={priceScope === "options"}
+                  className={priceScope === "options" ? "is-active" : ""}
+                  onClick={() => setPriceScope("options")}
+                >
+                  ตัวเลือก
+                </button>
+              </div>
+              {priceScope === "items" ? (
+                <PosMenuItemPriceTable items={items} categories={categories} />
+              ) : (
+                <PosMenuOptionPriceTable optionGroups={optionGroups} />
+              )}
+            </div>
           ) : null}
 
           {authReady && tab === "promotions" ? (

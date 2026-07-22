@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 266/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 267/);
 
 const priceTable = read("src/components/PosMenuOptionPriceTable.tsx");
 const groupEditor = read("src/components/PosOptionGroupEditor.tsx");
