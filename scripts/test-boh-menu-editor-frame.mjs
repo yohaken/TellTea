@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 261/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 262/);
 
 const editor = read("src/components/PosMenuItemEditor.tsx");
 const photo = read("src/components/PosMenuPhotoModule.tsx");

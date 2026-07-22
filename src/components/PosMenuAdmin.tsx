@@ -42,6 +42,7 @@ import type { MenuCategory, MenuItem, MenuOptionGroup } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { PosLazyMenuImage } from "@/components/PosLazyMenuImage";
+import { summarizeMenuItemOptions } from "@/lib/pos-menu-option-summary";
 
 const BOH_MENU_URL = "https://telltea-shop.web.app/menu/";
 
@@ -125,6 +126,7 @@ export function PosMenuAdmin({
   const [linkBusy, setLinkBusy] = useState(false);
   /** เมนูที่เพิ่งสร้าง — เปิด editor ทันทีแม้ snapshot ยังไม่มา */
   const [freshItemId, setFreshItemId] = useState<string | null>(null);
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 
   useEffect(() => {
     setMenuDbMode(authMode);
@@ -683,100 +685,162 @@ export function PosMenuAdmin({
                               renderItem={(itemId) => {
                                 const item = catItems.find((i) => i.id === itemId);
                                 if (!item) return null;
+                                const optSummary = summarizeMenuItemOptions(item, optionGroups);
+                                const optionsOpen = expandedItemId === item.id;
                                 return (
-                                  <div className="pos-menu-item-row">
-                                    <PosLazyMenuImage
-                                      url={item.imageUrl}
-                                      className="pos-menu-item-thumb"
-                                      placeholderClassName="pos-menu-item-thumb-ph"
-                                      placeholder=""
-                                    />
-                                    <button
-                                      type="button"
-                                      className="pos-menu-item-main"
-                                      onClick={() => setScreen({ kind: "edit-item", id: item.id })}
-                                    >
-                                      <span className="pos-menu-item-text">
-                                        {item.name}
-                                        {isItemArchived(item)
-                                          ? " (เก็บแล้ว)"
-                                          : !item.active
-                                            ? " (หมด)"
-                                            : ""}
-                                      </span>
-                                      <span className="muted">
-                                        ฿{formatPlainNumber(item.price)}
-                                        {" · ส่ง ฿"}
-                                        {formatPlainNumber(
-                                          typeof item.deliveryPrice === "number"
-                                            ? item.deliveryPrice
-                                            : item.price,
-                                        )}
-                                        {item.code ? ` · ${item.code}` : ""}
-                                      </span>
-                                    </button>
-                                    {!isItemArchived(item) ? (
+                                  <div
+                                    className={`pos-menu-item-block${optionsOpen ? " is-options-open" : ""}`}
+                                  >
+                                    <div className="pos-menu-item-row">
+                                      <PosLazyMenuImage
+                                        url={item.imageUrl}
+                                        className="pos-menu-item-thumb"
+                                        placeholderClassName="pos-menu-item-thumb-ph"
+                                        placeholder=""
+                                      />
                                       <button
                                         type="button"
-                                        className="pos-menu-inline-btn"
-                                        aria-label="สำเนา"
-                                        disabled={busy}
-                                        onClick={() => {
-                                          void (async () => {
-                                            setBusy(true);
-                                            setError(null);
-                                            try {
-                                              const id = await duplicateMenuItem(item);
-                                              setExpandedCat(item.categoryId);
-                                              setScreen({ kind: "edit-item", id });
-                                            } catch (err) {
-                                              setError((err as Error).message);
-                                            } finally {
-                                              setBusy(false);
-                                            }
-                                          })();
-                                        }}
-                                      >
-                                        <Copy size={12} />
-                                      </button>
-                                    ) : null}
-                                    {isItemArchived(item) ? (
-                                      <>
-                                        <button
-                                          type="button"
-                                          className="pos-menu-inline-btn"
-                                          aria-label="กู้คืน"
-                                          disabled={busy}
-                                          onClick={() => {
-                                            void restoreMenuItem(item.id).catch((err) =>
-                                              setError((err as Error).message),
-                                            );
-                                          }}
-                                        >
-                                          <RotateCcw size={12} />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          className="pos-menu-inline-btn"
-                                          aria-label="ลบถาวร"
-                                          disabled={busy}
-                                          onClick={() =>
-                                            setDeleteTarget({ kind: "item", item, mode: "hard" })
-                                          }
-                                        >
-                                          <Trash2 size={12} />
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        className="pos-menu-inline-btn"
-                                        aria-label="แก้ไข"
+                                        className="pos-menu-item-main"
                                         onClick={() => setScreen({ kind: "edit-item", id: item.id })}
                                       >
-                                        <Pencil size={12} />
+                                        <span className="pos-menu-item-text">
+                                          {item.name}
+                                          {isItemArchived(item)
+                                            ? " (เก็บแล้ว)"
+                                            : !item.active
+                                              ? " (หมด)"
+                                              : ""}
+                                        </span>
+                                        <span className="muted">
+                                          ฿{formatPlainNumber(item.price)}
+                                          {" · ส่ง ฿"}
+                                          {formatPlainNumber(
+                                            typeof item.deliveryPrice === "number"
+                                              ? item.deliveryPrice
+                                              : item.price,
+                                          )}
+                                          {item.code ? ` · ${item.code}` : ""}
+                                        </span>
+                                        {optSummary ? (
+                                          <span className="pos-menu-item-opts-line muted">
+                                            {optSummary.line}
+                                          </span>
+                                        ) : (
+                                          <span className="pos-menu-item-opts-line muted pos-menu-item-opts-none">
+                                            ยังไม่ผูกตัวเลือก
+                                          </span>
+                                        )}
                                       </button>
-                                    )}
+                                      {optSummary ? (
+                                        <button
+                                          type="button"
+                                          className="pos-menu-inline-btn pos-menu-item-opts-toggle"
+                                          aria-expanded={optionsOpen}
+                                          aria-label={
+                                            optionsOpen ? "ซ่อนตัวเลือก" : "ดูตัวเลือกของเมนู"
+                                          }
+                                          onClick={() =>
+                                            setExpandedItemId(optionsOpen ? null : item.id)
+                                          }
+                                        >
+                                          <ChevronDown
+                                            size={14}
+                                            className={optionsOpen ? "pos-menu-chevron-open" : ""}
+                                            aria-hidden
+                                          />
+                                        </button>
+                                      ) : null}
+                                      {!isItemArchived(item) ? (
+                                        <button
+                                          type="button"
+                                          className="pos-menu-inline-btn"
+                                          aria-label="สำเนา"
+                                          disabled={busy}
+                                          onClick={() => {
+                                            void (async () => {
+                                              setBusy(true);
+                                              setError(null);
+                                              try {
+                                                const id = await duplicateMenuItem(item);
+                                                setExpandedCat(item.categoryId);
+                                                setFreshItemId(id);
+                                                setScreen({ kind: "edit-item", id });
+                                              } catch (err) {
+                                                setError((err as Error).message);
+                                              } finally {
+                                                setBusy(false);
+                                              }
+                                            })();
+                                          }}
+                                        >
+                                          <Copy size={12} />
+                                        </button>
+                                      ) : null}
+                                      {isItemArchived(item) ? (
+                                        <>
+                                          <button
+                                            type="button"
+                                            className="pos-menu-inline-btn"
+                                            aria-label="กู้คืน"
+                                            disabled={busy}
+                                            onClick={() => {
+                                              void restoreMenuItem(item.id).catch((err) =>
+                                                setError((err as Error).message),
+                                              );
+                                            }}
+                                          >
+                                            <RotateCcw size={12} />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className="pos-menu-inline-btn"
+                                            aria-label="ลบถาวร"
+                                            disabled={busy}
+                                            onClick={() =>
+                                              setDeleteTarget({ kind: "item", item, mode: "hard" })
+                                            }
+                                          >
+                                            <Trash2 size={12} />
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          className="pos-menu-inline-btn"
+                                          aria-label="แก้ไข"
+                                          onClick={() =>
+                                            setScreen({ kind: "edit-item", id: item.id })
+                                          }
+                                        >
+                                          <Pencil size={12} />
+                                        </button>
+                                      )}
+                                    </div>
+                                    {optionsOpen && optSummary ? (
+                                      <div
+                                        className="pos-menu-item-opts-panel"
+                                        aria-label={`ตัวเลือกของ ${item.name}`}
+                                      >
+                                        {optSummary.groups.map((g) => (
+                                          <div key={g.id} className="pos-menu-item-opts-group">
+                                            <div className="pos-menu-item-opts-group-head">
+                                              <strong>{g.name}</strong>
+                                              {g.required ? (
+                                                <span className="pos-menu-badge pos-menu-badge--req">
+                                                  จำเป็น
+                                                </span>
+                                              ) : null}
+                                              <span className="muted">{g.choiceCount} ตัวเลือก</span>
+                                            </div>
+                                            <p className="pos-menu-item-opts-choices muted">
+                                              {g.choiceNames.length
+                                                ? g.choiceNames.join(" · ")
+                                                : "ยังไม่มีตัวเลือกในกลุ่ม"}
+                                            </p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : null}
                                   </div>
                                 );
                               }}

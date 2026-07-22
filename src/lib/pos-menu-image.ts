@@ -1,6 +1,12 @@
+import { compressImageForUpload } from "@/lib/receipts";
+
 export const MENU_SQUARE_PX = 480;
 export const MENU_JPEG_QUALITY = 0.82;
+/** Soft working size after auto-downscale (crop / encode input). */
 export const MENU_MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
+/** Absolute reject — phone photos can be 8–15MB; we auto-shrink those. */
+export const MENU_MAX_RAW_UPLOAD_BYTES = 25 * 1024 * 1024;
+export const MENU_PREPROCESS_MAX_EDGE = 2048;
 export const MENU_MAX_DATA_URL_CHARS = 900_000;
 const SQUARE_TOLERANCE = 0.04;
 
@@ -36,11 +42,52 @@ function clamp(n: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, n));
 }
 
+/**
+ * Auto-shrink large phone photos before crop/encode.
+ * Reuses canvas compress from receipts — no extra npm dependency.
+ */
+export async function preprocessMenuUpload(file: File): Promise<File> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("เลือกไฟล์รูปภาพ (JPG, PNG, WebP)");
+  }
+  if (file.size > MENU_MAX_RAW_UPLOAD_BYTES) {
+    throw new Error("ไฟล์ใหญ่เกิน 25MB — เลือกรูปอื่นหรือย่อก่อน");
+  }
+
+  let needsShrink = file.size > MENU_MAX_UPLOAD_BYTES;
+  if (!needsShrink) {
+    try {
+      const bitmap = await createImageBitmap(file);
+      needsShrink = Math.max(bitmap.width, bitmap.height) > MENU_PREPROCESS_MAX_EDGE;
+      bitmap.close();
+    } catch {
+      needsShrink = file.size > 800_000;
+    }
+  }
+  if (!needsShrink) return file;
+
+  let edge = MENU_PREPROCESS_MAX_EDGE;
+  let quality = 0.88;
+  let current = await compressImageForUpload(file, edge, quality);
+  let guard = 0;
+  while (current.size > MENU_MAX_UPLOAD_BYTES && guard < 8) {
+    quality = Math.max(0.5, quality - 0.08);
+    edge = Math.max(640, Math.round(edge * 0.78));
+    current = await compressImageForUpload(file, edge, quality);
+    guard += 1;
+  }
+  if (current.size > MENU_MAX_UPLOAD_BYTES * 2) {
+    throw new Error("บีบอัดแล้วยังใหญ่เกินไป — ลองเลือกรูปที่ชัดและใกล้ขึ้น");
+  }
+  return current;
+}
+
 /** Draw square cover-crop; focal is normalized center (0–1) in source image. */
 export function renderSquareCoverCrop(
   img: HTMLImageElement,
   focal: SquareCropFocal,
   scaleMul: SquareCropScale = 1,
+  jpegQuality = MENU_JPEG_QUALITY,
 ): string {
   const scale =
     Math.max(MENU_SQUARE_PX / img.width, MENU_SQUARE_PX / img.height) * Math.max(1, scaleMul);
@@ -57,22 +104,21 @@ export function renderSquareCoverCrop(
   if (!ctx) throw new Error("แปลงรูปไม่สำเร็จ");
   ctx.drawImage(img, sx, sy, cropSideSrc, cropSideSrc, 0, 0, MENU_SQUARE_PX, MENU_SQUARE_PX);
 
-  const dataUrl = canvas.toDataURL("image/jpeg", MENU_JPEG_QUALITY);
+  let quality = jpegQuality;
+  let dataUrl = canvas.toDataURL("image/jpeg", quality);
+  while (dataUrl.length > MENU_MAX_DATA_URL_CHARS && quality > 0.45) {
+    quality -= 0.08;
+    dataUrl = canvas.toDataURL("image/jpeg", quality);
+  }
   if (dataUrl.length > MENU_MAX_DATA_URL_CHARS) {
-    throw new Error("รูปยังใหญ่เกินไป — ลดความละเอียดแล้วลองใหม่");
+    throw new Error("รูปยังใหญ่เกินไปหลังบีบอัด — ลองเลือกรูปอื่น");
   }
   return dataUrl;
 }
 
 export async function prepareMenuItemImage(file: File): Promise<PreparedMenuImage> {
-  if (!file.type.startsWith("image/")) {
-    throw new Error("เลือกไฟล์รูปภาพ (JPG, PNG, WebP)");
-  }
-  if (file.size > MENU_MAX_UPLOAD_BYTES) {
-    throw new Error("รูปใหญ่เกิน 2MB — ลดขนาดแล้วลองใหม่");
-  }
-
-  const objectUrl = URL.createObjectURL(file);
+  const ready = await preprocessMenuUpload(file);
+  const objectUrl = URL.createObjectURL(ready);
   try {
     const img = await loadImageFromUrl(objectUrl);
     if (isNearlySquare(img.width, img.height)) {

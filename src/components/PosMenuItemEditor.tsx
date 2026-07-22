@@ -9,6 +9,7 @@ import { PosMenuPhotoModule } from "@/components/PosMenuPhotoModule";
 import { PosSortableList } from "@/components/PosSortableList";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
+import { selectionTypeLabel } from "@/lib/pos-menu-option-summary";
 
 export function PosMenuItemEditor({
   item,
@@ -317,22 +318,57 @@ export function PosMenuItemEditor({
                 </>
               ) : null}
               <ul className="pos-menu-link-groups">
-                {unlinkedGroups.map((g) => (
-                  <li key={g.id}>
-                    <label className="pos-menu-toggle-row">
-                      <span>{g.name}</span>
-                      <input type="checkbox" checked={false} onChange={() => toggleGroup(g.id)} />
-                    </label>
-                  </li>
-                ))}
-                {linkedGroups.map((g) => (
-                  <li key={g.id}>
-                    <label className="pos-menu-toggle-row">
-                      <span>{g.name}</span>
-                      <input type="checkbox" checked onChange={() => toggleGroup(g.id)} />
-                    </label>
-                  </li>
-                ))}
+                {unlinkedGroups.map((g) => {
+                  const activeChoices = (g.options || []).filter((o) => o.active !== false);
+                  return (
+                    <li key={g.id}>
+                      <label className="pos-menu-toggle-row pos-menu-link-group-row">
+                        <span className="pos-menu-link-group-meta">
+                          <span className="pos-menu-link-group-name">{g.name}</span>
+                          <span className="muted pos-menu-link-group-sub">
+                            {activeChoices.length} ตัวเลือก
+                            {g.required ? " · จำเป็น" : ""}
+                            {` · ${selectionTypeLabel(g.selectionType)}`}
+                            {activeChoices.length
+                              ? ` · ${activeChoices
+                                  .slice(0, 3)
+                                  .map((o) => o.name)
+                                  .join(", ")}${activeChoices.length > 3 ? "…" : ""}`
+                              : ""}
+                          </span>
+                        </span>
+                        <input type="checkbox" checked={false} onChange={() => toggleGroup(g.id)} />
+                      </label>
+                    </li>
+                  );
+                })}
+                {linkedGroups.map((g) => {
+                  const activeChoices = (g.options || []).filter((o) => o.active !== false);
+                  return (
+                    <li key={g.id}>
+                      <label className="pos-menu-toggle-row pos-menu-link-group-row">
+                        <span className="pos-menu-link-group-meta">
+                          <span className="pos-menu-link-group-name">
+                            {g.name}
+                            {g.required ? (
+                              <span className="pos-menu-badge pos-menu-badge--req">จำเป็น</span>
+                            ) : null}
+                          </span>
+                          <span className="muted pos-menu-link-group-sub">
+                            {activeChoices.length} ตัวเลือก · {selectionTypeLabel(g.selectionType)}
+                            {activeChoices.length
+                              ? ` · ${activeChoices
+                                  .slice(0, 4)
+                                  .map((o) => o.name)
+                                  .join(", ")}${activeChoices.length > 4 ? "…" : ""}`
+                              : ""}
+                          </span>
+                        </span>
+                        <input type="checkbox" checked onChange={() => toggleGroup(g.id)} />
+                      </label>
+                    </li>
+                  );
+                })}
                 {!activeGroups.length ? (
                   <li className="muted">ยังไม่มีกลุ่มตัวเลือก — สร้างจากแท็บกลุ่มตัวเลือก</li>
                 ) : null}

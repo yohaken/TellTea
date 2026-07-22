@@ -3,7 +3,6 @@
 import { useCallback, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { Camera, ImagePlus, Loader2, ThumbsUp, Trash2 } from "lucide-react";
 import {
-  MENU_MAX_UPLOAD_BYTES,
   MENU_SQUARE_PX,
   prepareMenuItemImage,
   type MenuImageCropSource,
@@ -155,7 +154,7 @@ export function PosMenuPhotoModule({
               {uploading ? "กำลังบีบอัดรูป..." : "วางรูป / คลิกเลือก"}
             </span>
             <span className="pos-menu-photo-sub">
-              JPG · PNG · WebP · ไม่เกิน {formatBytes(MENU_MAX_UPLOAD_BYTES)}
+              JPG · PNG · WebP · ใหญ่เกินจะบีบอัดให้อัตโนมัติ
             </span>
           </div>
         )}
@@ -216,6 +215,7 @@ export function PosMenuPhotoModule({
 
       <p className="muted pos-menu-photo-hint">
         สี่เหลี่ยมจัตุรัสอัตโนมัติ · ครอปเมื่อสัดส่วนไม่ตรง · บีบอัด JPEG {MENU_SQUARE_PX}px
+        {` · รับไฟล์ใหญ่ได้ (ย่อเองก่อนครอป)`}
         {lastMeta ? ` · ${lastMeta}` : ""}
       </p>
     </div>

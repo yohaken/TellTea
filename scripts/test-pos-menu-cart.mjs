@@ -66,6 +66,8 @@ const imageSrc = readFileSync(join(root, "src/lib/pos-menu-image.ts"), "utf8");
 assert.match(imageSrc, /prepareMenuItemImage/);
 assert.match(imageSrc, /renderSquareCoverCrop/);
 assert.match(imageSrc, /MENU_SQUARE_PX/);
+assert.match(imageSrc, /preprocessMenuUpload/);
+assert.match(imageSrc, /compressImageForUpload/);
 
 const cropModalSrc = readFileSync(join(root, "src/components/PosMenuImageCropModal.tsx"), "utf8");
 assert.match(cropModalSrc, /PosMenuImageCropModal/);
