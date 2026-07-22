@@ -544,7 +544,7 @@ export function PosSellView({
       <div className="pos-sell-empty">
         <p>{menuSyncing ? "กำลังดึงเมนู..." : "ยังไม่มีเมนูขาย"}</p>
         {menuError ? <p className="error-text">{menuError}</p> : null}
-        <p className="muted">เจ้าของตั้งเมนูที่ <a href="/pos/menu/">เมนู POS</a></p>
+        <p className="muted">เมนูจัดการที่หลังบ้านเท่านั้น · เคาน์เตอร์ไม่เปิดลิงก์ออก</p>
         <button type="button" className="ghost-btn" onClick={() => retryPosMenuPreload()}>
           ลองโหลดใหม่
         </button>

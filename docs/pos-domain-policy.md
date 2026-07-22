@@ -34,11 +34,12 @@ Build: `npm run build` → `split-pos-hosting.mjs` แยก output อัตโ
 - หัก `stock` จากบิล POS (ยกเลิก Phase 6 แบบเดิม)
 - ดึง `posSales` → `monthlyIncome` อัตโนมัติ (ยกเลิก Phase 7)
 - ใส่ `/pos/` กลับเข้า hosting หลังร้าน
+- **เปิดลิงก์จากเคาน์เตอร์ (nPos / เว็บ `/pos/*`) เข้าหลังร้าน** (`telltea-shop`, `/stock/`, `/pos-sales/`) — ตัดขาดแล้ว (**1.14.16**)
 
 ## สิ่งที่ยังร่วมกัน (ไม่ใช่การเชื่อมข้อมูล)
 
 - Firebase project เดียว (`mypeer-501909`)
-- แท็บ `/pos-sales/?tab=manage` ว่างไว้ชั่วคราว · สลิป/ชำระเงินบนแท็บเล็ต `/pos/settings/` จนกว่าจะโยก native ครบ (เว็บ POS ยังไม่ลบ)
-- Cloud Functions: `posCompleteSale`, `posDeviceAuth`
+- แท็บ `/pos-sales/?tab=manage` สำหรับเจ้าของบนหลังร้านเท่านั้น · พนักงานเคาน์เตอร์ใช้ native / เว็บขายอย่างเดียว
+- Cloud Functions: `nposCompleteSale`, `nposSessionOpen/Close`, `posDeviceAuth` (ซิงก์ข้อมูล ไม่ใช่ UI)
 
 ดูเพิ่ม: `docs/pos-sync.md`, `docs/pos-connectivity.md`

@@ -126,13 +126,16 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:minHeight="48dp"
+            android:visibility="gone"
             android:text="@string/btn_open_menu_admin"
             android:textAllCaps="false" />
 
         <TextView
+            android:id="@+id/openMenuAdminHint"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
+            android:visibility="gone"
             android:text="@string/menu_admin_hint"
             android:textColor="#666666"
             android:textSize="12sp" />

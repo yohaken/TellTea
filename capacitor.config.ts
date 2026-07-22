@@ -32,8 +32,6 @@ const config: CapacitorConfig = {
           cleartext: false,
           allowNavigation: [
             "telltea-pos.web.app",
-            "telltea-shop.web.app",
-            "*.web.app",
             "*.googleapis.com",
             "*.firebaseio.com",
             "*.cloudfunctions.net",
@@ -49,8 +47,6 @@ const config: CapacitorConfig = {
           cleartext: false,
           allowNavigation: [
             "telltea-pos.web.app",
-            "telltea-shop.web.app",
-            "*.web.app",
             "*.googleapis.com",
             "*.firebaseio.com",
             "*.cloudfunctions.net",

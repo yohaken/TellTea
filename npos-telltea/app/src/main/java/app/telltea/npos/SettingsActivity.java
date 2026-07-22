@@ -87,7 +87,13 @@ public class SettingsActivity extends Activity {
         findViewById(R.id.grantPermsSettingsButton)
                 .setOnClickListener(v -> PermissionBootstrap.grantAll(this));
         findViewById(R.id.installPageButton).setOnClickListener(v -> openInstallPage());
-        findViewById(R.id.openMenuAdminButton).setOnClickListener(v -> openMenuAdminPage());
+        View menuAdmin = findViewById(R.id.openMenuAdminButton);
+        if (menuAdmin != null) {
+            // Cut: counter must not open web menu admin / BO.
+            menuAdmin.setVisibility(View.GONE);
+        }
+        View menuAdminHint = findViewById(R.id.openMenuAdminHint);
+        if (menuAdminHint != null) menuAdminHint.setVisibility(View.GONE);
         findViewById(R.id.diagnoseButton)
                 .setOnClickListener(v -> startActivity(new Intent(this, DiagnoseActivity.class)));
         findViewById(R.id.customerAmount1Button)
@@ -194,10 +200,6 @@ public class SettingsActivity extends Activity {
                         ? "https://telltea-pos.web.app/install/"
                         : BuildConfig.INSTALL_PAGE_URL;
         ApkInstaller.openInstallPage(this, url);
-    }
-
-    private void openMenuAdminPage() {
-        ApkInstaller.openInstallPage(this, "https://telltea-pos.web.app/pos/menu/");
     }
 
     private void showCustomerAmount(int baht) {

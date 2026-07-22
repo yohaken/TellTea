@@ -30,7 +30,25 @@ public final class ApkInstaller {
         context.startActivity(intent);
     }
 
+    /** Only telltea-pos install/download pages — never shop/BO hosts. */
+    public static boolean isAllowedInstallUrl(String url) {
+        if (url == null || url.isEmpty()) return false;
+        try {
+            Uri u = Uri.parse(url);
+            String host = u.getHost();
+            if (host == null || !"telltea-pos.web.app".equalsIgnoreCase(host)) return false;
+            String path = u.getPath();
+            if (path == null) return false;
+            return path.startsWith("/install") || path.startsWith("/downloads");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public static void openInstallPage(Context context, String url) {
+        if (!isAllowedInstallUrl(url)) {
+            return;
+        }
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         context.startActivity(intent);
