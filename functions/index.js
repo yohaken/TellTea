@@ -28,6 +28,7 @@ exports.nposCompleteSale = nposSell.nposCompleteSale;
 exports.nposVoidSale = nposSell.nposVoidSale;
 exports.nposToggleSoldOut = nposSell.nposToggleSoldOut;
 exports.nposReorderCategories = nposSell.nposReorderCategories;
+exports.foodstoryMenuSync = require("./foodstory-menu-sync").foodstoryMenuSync;
 
 const VAPID_PUBLIC =
   process.env.VAPID_PUBLIC_KEY ||

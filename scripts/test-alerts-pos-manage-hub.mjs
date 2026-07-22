@@ -22,7 +22,7 @@ const settingsLib = read("src/lib/settings.ts");
 const rules = read("firestore.rules");
 const smoke = read("scripts/smoke-hosting-export.mjs");
 
-assert.match(version, /APP_BUILD = 237/);
+assert.match(version, /APP_BUILD = 238/);
 
 assert.match(alerts, /router\.replace\("\/more\/"\)/);
 assert.doesNotMatch(more, /href: "\/alerts\/"/);
@@ -32,6 +32,7 @@ assert.doesNotMatch(shell, /UiSettingsProvider/);
 assert.match(shell, /"\/pos-sales"/);
 assert.doesNotMatch(shell, /"\/alerts"/);
 assert.match(rules, /pushSubscriptions[\s\S]*allow read: if isOwner\(\)/);
+assert.match(rules, /foodstoryAuth/);
 assert.doesNotMatch(rules, /hasPerm\('alerts'\)/);
 assert.doesNotMatch(smoke, /"alerts"/);
 
@@ -48,9 +49,21 @@ assert.doesNotMatch(manage, /PosDeviceSetup/);
 assert.doesNotMatch(manage, /PosOpsNotesSetup/);
 assert.doesNotMatch(manage, /PosShopPaySetup/);
 assert.doesNotMatch(manage, /PosPrinterSetup/);
+assert.match(manage, /FoodstoryMenuSyncPanel/);
 assert.match(manage, /NposDevicesPanel/);
 assert.match(manage, /NposDiagnosePanel/);
 assert.doesNotMatch(manage, /ยังไม่มีรายการจัดการ/);
 assert.match(more, /รายงานยอดขาย POS/);
+
+const syncFn = read("functions/foodstory-menu-sync.js");
+const syncLib = read("src/lib/foodstory-menu-sync.ts");
+const syncPanel = read("src/components/FoodstoryMenuSyncPanel.tsx");
+const indexFn = read("functions/index.js");
+assert.match(indexFn, /foodstoryMenuSync/);
+assert.match(syncFn, /action === "sync"/);
+assert.match(syncFn, /save_auth/);
+assert.match(syncLib, /runFoodstoryMenuSync/);
+assert.match(syncPanel, /ซิงก์เมนูตอนนี้/);
+assert.match(syncPanel, /บันทึกเซสชัน/);
 
 console.log("OK test-alerts-pos-manage-hub");

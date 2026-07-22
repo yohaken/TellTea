@@ -560,7 +560,8 @@ service cloud.firestore {
       allow read: if docId == 'businessProfile'
         || docId == 'brandLogo'
         || (docId == 'aiSettings' && isOwner())
-        || (docId != 'aiSettings' && isStaff())
+        || (docId == 'foodstoryAuth' && isOwner())
+        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && isStaff())
         || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes'));
       allow write: if isOwner()
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
