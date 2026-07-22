@@ -25,6 +25,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { NposCaptureGallery } from "@/components/NposCaptureGallery";
 import { subscribeNposDiagnoseReports } from "@/lib/npos-diagnose";
+import { resolveNposCaptureDisplayUrl } from "@/lib/npos-capture-media";
 
 function isNposDevice(d: PosDevice): boolean {
   if (d.shellKind === "native") return true;
@@ -32,7 +33,12 @@ function isNposDevice(d: PosDevice): boolean {
 }
 
 type Row = PosDevice & { deviceClass: NposDeviceClass; sortAt: number };
-type CaptureUrls = { primaryUrl: string; secondaryUrl: string; at: number };
+type CaptureUrls = {
+  primaryUrl: string;
+  secondaryUrl: string;
+  at: number;
+  shotId?: string;
+};
 
 /**
  * Ghosts = disabled siblings from reinstall (not BO-blocked).
@@ -255,32 +261,54 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     return subscribeNposDiagnoseReports((reports) => {
       const next: Record<string, CaptureUrls> = {};
       for (const r of reports) {
-        if (!r.latestPrimaryUrl && !r.latestSecondaryUrl) continue;
+        const shotId = r.latestCaptureId || "";
+        const primaryUrl = resolveNposCaptureDisplayUrl({
+          shotId,
+          role: "primary",
+          storedUrl: r.latestPrimaryUrl,
+        });
+        const secondaryUrl = resolveNposCaptureDisplayUrl({
+          shotId,
+          role: "secondary",
+          storedUrl: r.latestSecondaryUrl,
+        });
+        if (!primaryUrl && !secondaryUrl && !r.latestCaptureAt) continue;
+        if (!primaryUrl && !secondaryUrl) continue;
         next[r.installId] = {
-          primaryUrl: r.latestPrimaryUrl || "",
-          secondaryUrl: r.latestSecondaryUrl || "",
+          primaryUrl,
+          secondaryUrl,
           at: r.latestCaptureAt || 0,
+          shotId,
         };
       }
       setCaptures(next);
     });
   }, []);
 
-  /** Prefer diagnose URLs; fall back to posDevices fields written by CF. */
+  /** Prefer diagnose + media proxy; fall back to posDevices fields. */
   const capturesForUi = useMemo(() => {
     const next: Record<string, CaptureUrls> = {};
     for (const d of devices) {
       const fromDiag = captures[d.id];
-      const primaryUrl = (fromDiag?.primaryUrl || d.latestPrimaryUrl || "").trim();
-      const secondaryUrl = (fromDiag?.secondaryUrl || d.latestSecondaryUrl || "").trim();
+      const shotId = fromDiag?.shotId || "";
+      const primaryUrl = resolveNposCaptureDisplayUrl({
+        shotId,
+        role: "primary",
+        storedUrl: fromDiag?.primaryUrl || d.latestPrimaryUrl,
+      });
+      const secondaryUrl = resolveNposCaptureDisplayUrl({
+        shotId,
+        role: "secondary",
+        storedUrl: fromDiag?.secondaryUrl || d.latestSecondaryUrl,
+      });
       if (!primaryUrl && !secondaryUrl) continue;
       next[d.id] = {
         primaryUrl,
         secondaryUrl,
         at: Math.max(fromDiag?.at || 0, d.lastCaptureAt || 0),
+        shotId,
       };
     }
-    // Keep diagnose-only installs (no matching device row yet).
     for (const [id, cap] of Object.entries(captures)) {
       if (next[id]) continue;
       if (!cap.primaryUrl && !cap.secondaryUrl) continue;

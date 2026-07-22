@@ -17,6 +17,7 @@ import {
   type NposDiagnoseReport,
 } from "@/lib/npos-diagnose";
 import { NposCaptureGallery } from "@/components/NposCaptureGallery";
+import { resolveNposCaptureDisplayUrl } from "@/lib/npos-capture-media";
 
 type Row = NposDiagnoseReport & {
   deviceClass: NposDeviceClass;
@@ -71,8 +72,16 @@ function ReportCard({ r }: { r: Row }) {
           </span>
         </h4>
         <NposCaptureGallery
-          primaryUrl={r.latestPrimaryUrl}
-          secondaryUrl={r.latestSecondaryUrl}
+          primaryUrl={resolveNposCaptureDisplayUrl({
+            shotId: r.latestCaptureId,
+            role: "primary",
+            storedUrl: r.latestPrimaryUrl,
+          })}
+          secondaryUrl={resolveNposCaptureDisplayUrl({
+            shotId: r.latestCaptureId,
+            role: "secondary",
+            storedUrl: r.latestSecondaryUrl,
+          })}
           emptyHint="ยังไม่มีภาพ — สั่งแคปจาก «เครื่อง nPos» แล้วรอสัญญาณ ~1 นาที · แตะรูปเพื่อซูม"
         />
 

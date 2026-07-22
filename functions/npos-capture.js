@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
 const { resolveStorageBucket } = require("./storage-bucket");
+const { captureMediaUrl } = require("./npos-capture-media");
 
 const MAX_B64 = 2_500_000; // ~1.8MB binary after decode
 
@@ -83,27 +84,31 @@ async function saveJpeg(installId, role, jpegBase64) {
       },
     },
   });
-  // Prefer long-lived signed read URL (same as evidence-upload). Token URLs often
-  // look valid in Firestore but fail in <img> when Firebase Storage tokens / UBLA
-  // are not wired — BO then shows empty thumbs while "มี URL".
-  let downloadUrl = "";
+  // Do NOT return Firebase media-token URLs for this project: the OT/GCS bucket
+  // answers HTTP 412 (service account / bucket not Firebase-linked). Signed URLs
+  // also often fail in CF without signBlob. Caller rewrites to nposCaptureMedia
+  // proxy (Admin stream) after shotId is known — that is what BO <img> can load.
+  let signedUrl = "";
   try {
     const [signed] = await file.getSignedUrl({
       version: "v4",
       action: "read",
       expires: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000,
     });
-    downloadUrl = signed;
+    signedUrl = signed;
   } catch (signErr) {
     console.warn(
-      "npos-capture signed URL failed, falling back to media token",
+      "npos-capture signed URL unavailable (will use media proxy)",
       signErr?.message || signErr,
     );
-    downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(
-      objectPath,
-    )}?alt=media&token=${token}`;
   }
-  return { downloadUrl, path: objectPath, bytes: buffer.length, bucket: bucket.name };
+  return {
+    downloadUrl: signedUrl,
+    path: objectPath,
+    bytes: buffer.length,
+    bucket: bucket.name,
+    token,
+  };
 }
 
 exports.reportNposScreenCapture = functions
@@ -183,6 +188,13 @@ exports.reportNposScreenCapture = functions
 
       const db = getFirestore();
       const shotId = `${installId}_${capturedAt}`;
+      // Prefer proxy URLs so BO always gets a loadable <img> (token URLs 412 here).
+      const primaryUrl = primaryShot
+        ? captureMediaUrl(shotId, "primary") || primaryShot.downloadUrl || ""
+        : "";
+      const secondaryUrl = secondaryShot
+        ? captureMediaUrl(shotId, "secondary") || secondaryShot.downloadUrl || ""
+        : "";
       const doc = {
         id: shotId,
         installId,
@@ -199,18 +211,20 @@ exports.reportNposScreenCapture = functions
           detail: asString(primaryMeta.detail, 80),
           width: Number.isFinite(primaryMeta.width) ? Math.floor(primaryMeta.width) : 0,
           height: Number.isFinite(primaryMeta.height) ? Math.floor(primaryMeta.height) : 0,
-          url: primaryShot?.downloadUrl || "",
+          url: primaryUrl,
           path: primaryShot?.path || "",
           bytes: primaryShot?.bytes || 0,
+          bucket: primaryShot?.bucket || "",
         },
         secondary: {
           ok: secondaryMeta.ok === true && !!secondaryShot,
           detail: asString(secondaryMeta.detail, 80),
           width: Number.isFinite(secondaryMeta.width) ? Math.floor(secondaryMeta.width) : 0,
           height: Number.isFinite(secondaryMeta.height) ? Math.floor(secondaryMeta.height) : 0,
-          url: secondaryShot?.downloadUrl || "",
+          url: secondaryUrl,
           path: secondaryShot?.path || "",
           bytes: secondaryShot?.bytes || 0,
+          bucket: secondaryShot?.bucket || "",
         },
         source: "npos-telltea",
         updatedAt: Date.now(),

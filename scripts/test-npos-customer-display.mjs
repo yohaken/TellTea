@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 231/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+24/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.1"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 232/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+25/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.2"/);
 assert.match(read("docs/npos-customer-display-checklist.md"), /Auto-resize|สองพาเนล|65%/);
 
 assert.ok(
@@ -85,6 +85,6 @@ assert.match(strings, /customer_success_paid/);
 assert.match(strings, /customer_success_change_fmt/);
 assert.match(strings, /customer_receipt_subtotal_fmt/);
 
-assert.match(read("docs/npos-remaining-checklist.md"), /1\.14\.1|สองพาเนล|auto-resize/);
+assert.match(read("docs/npos-remaining-checklist.md"), /1\.14\.2|สองพาเนล|auto-resize/);
 
 console.log("OK test-npos-customer-display");

@@ -10,6 +10,7 @@ import {
   type NposScreenShot,
 } from "@/lib/npos-screen-shots";
 import { shortStableKey } from "@/lib/npos-device-class";
+import { resolveNposCaptureDisplayUrl } from "@/lib/npos-capture-media";
 
 /** Capture history timeline with thumbs (nposScreenShots). */
 export function NposCaptureTimelinePanel({
@@ -77,8 +78,16 @@ export function NposCaptureTimelinePanel({
                 </span>
               </p>
               <NposCaptureGallery
-                primaryUrl={s.primaryUrl}
-                secondaryUrl={s.secondaryUrl}
+                primaryUrl={resolveNposCaptureDisplayUrl({
+                  shotId: s.id,
+                  role: "primary",
+                  storedUrl: s.primaryUrl,
+                })}
+                secondaryUrl={resolveNposCaptureDisplayUrl({
+                  shotId: s.id,
+                  role: "secondary",
+                  storedUrl: s.secondaryUrl,
+                })}
                 emptyHint="อัปโหลดแล้วแต่ไม่มี URL รูป (ลองสั่งแคปใหม่หลังอัปเดตเซิร์ฟเวอร์)"
               />
             </li>

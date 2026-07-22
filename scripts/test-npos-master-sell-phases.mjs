@@ -25,7 +25,7 @@ assert.match(remaining, /npos-master-sell-phases/);
 assert.match(remaining, /นอกสcope|ไม่ทำ/);
 assert.match(remaining, /สลิปครัว|KDS/);
 assert.match(remaining, /\*\*S1\*\*|S1/);
-assert.match(remaining, /1\.14\.1|สองพาเนล|auto-resize/);
+assert.match(remaining, /1\.14\.2|สองพาเนล|auto-resize/);
 assert.match(remaining, /Local DB first|local-first|โคลนผัง/);
 
 console.log("OK test-npos-master-sell-phases");

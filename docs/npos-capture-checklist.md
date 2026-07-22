@@ -1,41 +1,33 @@
-# nPos — D1 สเปกจอ + C1 แคปจอหลังร้าน
+# nPos — แคปจอหลังร้าน (รูปจริงในมุมมองผู้ใช้)
 
-เป้า: สั่งแคปแล้ว **มีรูปจริง** ในหลังร้าน · ดูบนมือถือได้ทันที
+เป้า: สั่งแคปจอแล้ว **เห็นรูปจริง** ในหลังร้าน — ไม่ใช่ช่องว่างที่มีแต่ URL
 
-อัปเดต: **1.13.1** · `APP_BUILD` 229
+อัปเดต: **1.14.2** · `APP_BUILD` 232
 
-## สาเหตุที่เคยล้ม
-1. CF อัปโหลดไป bucket `*.firebasestorage.app` ที่ไม่มีจริง → HTTP 500
-2. **URL token ใน Firestore ดูมีรูป แต่ `<img>` โหลดไม่ได้** (UBLA / token ไม่ผูก) → ใช้ signed URL แบบ evidence
-3. แผงเครื่องอ่าน URL แค่จาก `nposDiagnose` + `orderBy(reportedAt)` → เอกสารแคปอย่างเดียวหายจาก query
+## ตรวจสด (2026-07-22)
+ยิง JPEG ทดสอบขึ้น `reportNposScreenCapture` → ได้ URL แบบ Firebase token  
+เปิดในเบราว์เซอร์ได้ **HTTP 412** (JSON error เรื่อง Storage service account)  
+→ ผู้ใช้เห็นเหมือนมีรูป แต่ภาพว่าง
 
-## เช็คลิสต์
+**แก้:** `nposCaptureMedia` proxy (Admin อ่าน GCS แล้ว stream เป็น `image/jpeg`)  
+BO ใช้ `resolveNposCaptureDisplayUrl(shotId)` เสมอ
 
-### อัปโหลด / CF
-- [x] `resolveStorageBucket` ลอง appspot + firebasestorage.app
-- [x] deploy เขียน env จาก bucket ที่ ensure เจอจริง
-- [x] **signed read URL** (fallback token) ใน `reportNposScreenCapture`
-- [x] เขียน URL ลงทั้ง `nposDiagnose` + `posDevices` + `nposScreenShots`
+ตรวจอัตโนมัติหลัง deploy:
+```bash
+node scripts/smoke-npos-capture-image.mjs
+```
+ผ่านเมื่อ: URL เป็น media-proxy · HTTP 200 · JPEG magic · variance ไม่ใช่ภาพว่าง
 
-### นาทีฟ
-- [x] ack คำสั่งหลังอัปโหลดสำเร็จเท่านั้น
-- [x] PixelCopy + fallback วาดจอ / ภาพสถานะ
-- [x] อ่าน `hasImages` จาก CF → ops «ส่งแคปจอแล้ว» หรือ warn «ไม่มีรูปบนเซิร์ฟเวอร์»
+## เช็คลิสต์โค้ด
+- [x] อัปโหลด GCS ผ่าน `resolveStorageBucket`
+- [x] เก็บ path ใน `nposScreenShots`
+- [x] **URL ที่ BO ใช้ = `nposCaptureMedia?id=&role=`**
+- [x] แผงเครื่อง / ตรวจเครื่อง / ไทม์ไลน์แคป ใช้ proxy จาก `latestCaptureId` / shot id
+- [x] thumb `onError` → «โหลดรูปไม่สำเร็จ»
 
-### หลังร้านดูรูป / ไทม์ไลน์
-- [x] แผง **เครื่อง nPos** — diagnose URL หรือ fallback `posDevices.latest*Url`
-- [x] แผง **ตรวจเครื่อง** — `orderBy(updatedAt)` รวมเอกสารแคป
-- [x] **ไทม์ไลน์แคปจอ** (`nposScreenShots`) + รูปย่อ
-- [x] ไทม์ไลน์ ops แสดง **รายละเอียด** ใต้ข้อความ
-- [x] thumb `onError` → «โหลดรูปไม่สำเร็จ» (ไม่เงียบ)
-
-### มือหลัง deploy
-| # | ขั้นตอน | ผ่านเมื่อ |
-|---|---------|-----------|
-| 1 | อัปเดต APK 1.13.1 (หรือรอ CF/web ก่อนก็ได้ — URL ใหม่จากเซิร์ฟเวอร์) | เวอร์ชันตรง |
-| 2 | เปิดแอปค้างไว้ | ออนไลน์ |
-| 3 | หลังร้าน → สั่งแคปจอ | ไม่ขึ้นสิทธิ์ไม่พอ |
-| 4 | รอ ≤1 นาที · แผงเครื่อง + ไทม์ไลน์แคป | **เห็นรูปจริง** · แตะซูมได้ |
-| 5 | ไทม์ไลน์ ops | «ส่งแคปจอแล้ว» + รายละเอียด `shot=` / `url=yes` |
-
-ดูเศษงานเฟสถัดไป: [npos-remaining-checklist.md](./npos-remaining-checklist.md)
+## มือหลัง deploy
+| # | ผ่านเมื่อ |
+|---|-----------|
+| 1 | `smoke-npos-capture-image` OK |
+| 2 | หลังร้านสั่งแคป → เห็นจอแอปจริง (ปุ่ม/เมนู) ไม่ใช่พื้นว่าง |
+| 3 | แตะซูมได้ |

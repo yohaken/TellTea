@@ -1,11 +1,12 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **ขายหน้าร้านอย่างเดียว** · ไม่แยกนั่ง/ซื้อกลับ · ไม่มีสลิปครัว/KDS · ดู [npos-master-sell-phases.md](./npos-master-sell-phases.md)
+อัปเดต: **1.14.2** แคปจอ media-proxy (รูปจริงใน BO) · ขายหน้าร้านอย่างเดียว · ดู [npos-master-sell-phases.md](./npos-master-sell-phases.md)
 
 ## ทำแล้ว (พอใช้เปิดขาย)
 - [x] แคปจอ + lightbox + signed URL
 - [x] โคลนผังหน้าขาย + local-first เมนู/รูป
 - [x] จอลูกค้าสองพาเนล + 4 โหมด + auto-resize (**1.14.1**)
+- [x] แคปจอ: `nposCaptureMedia` proxy — BO เห็นรูปจริงไม่ใช่ช่องว่าง (**1.14.2**)
 - [x] จิ้มเมนู → ตะกร้า → QR/เงินสด → ใบเสร็จ → รีเซ็ต
 - [x] ลิ้นชักตอนขายสด
 
