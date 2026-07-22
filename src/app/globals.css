@@ -9608,6 +9608,196 @@ body.modal-open .main-panel {
   gap: 0.75rem;
 }
 
+.pos-menu-editor-form--frame {
+  padding: 0.75rem 0.85rem 1rem;
+  gap: 1rem;
+}
+
+.pos-menu-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(11rem, 13.5rem) minmax(0, 1fr);
+  gap: 1rem 1.15rem;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .pos-menu-editor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pos-menu-editor-media {
+  position: sticky;
+  top: 0.25rem;
+}
+
+.pos-menu-editor-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.pos-menu-editor-card {
+  background: #fff;
+  border: 1px solid #e4e8e4;
+  border-radius: 0.75rem;
+  padding: 0.85rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.pos-menu-editor-card-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1f2a24;
+}
+
+.pos-menu-editor-name-row,
+.pos-menu-editor-meta-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+@media (max-width: 520px) {
+  .pos-menu-editor-name-row,
+  .pos-menu-editor-meta-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pos-menu-switch-row {
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.5rem;
+  background: #f6f8f6;
+}
+
+.pos-menu-switch-row input[type="checkbox"] {
+  width: 2.4rem;
+  height: 1.35rem;
+  appearance: none;
+  border-radius: 999px;
+  background: #c5ccc7;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: 0;
+  transition: background 0.15s ease;
+}
+
+.pos-menu-switch-row input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  transition: transform 0.15s ease;
+}
+
+.pos-menu-switch-row input[type="checkbox"]:checked {
+  background: #2d8f7b;
+}
+
+.pos-menu-switch-row input[type="checkbox"]:checked::after {
+  transform: translateX(1.05rem);
+}
+
+.pos-menu-channel-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border: 1px solid #e6ebe6;
+  border-radius: 0.55rem;
+  overflow: hidden;
+}
+
+.pos-menu-channel-head,
+.pos-menu-channel-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.85fr;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.45rem 0.55rem;
+}
+
+.pos-menu-channel-head {
+  background: #f3f6f3;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #4a5a50;
+  text-transform: none;
+}
+
+.pos-menu-channel-row {
+  border-top: 1px solid #eef1ee;
+  background: #fff;
+}
+
+.pos-menu-channel-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.pos-menu-channel-price {
+  margin: 0;
+}
+
+.pos-menu-channel-price input {
+  width: 100%;
+}
+
+.pos-menu-channel-effective {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1f2a24;
+  text-align: right;
+}
+
+.pos-menu-price-row--sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pos-menu-editor-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid #e8ece8;
+}
+
+.pos-menu-editor-footer .pos-menu-delete-btn {
+  margin-top: 0;
+}
+
+.pos-menu-editor-footer .pos-menu-price-hint {
+  flex: 1;
+  min-width: 10rem;
+}
+
+.pos-menu-editor-footer .pos-menu-editor-actions {
+  margin-left: auto;
+}
+
 .pos-menu-editor-form label {
   display: flex;
   flex-direction: column;
@@ -10094,6 +10284,180 @@ body.modal-open .main-panel {
   width: 100%;
 }
 
+.pos-menu-photo-module {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.pos-menu-photo-drop {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 13.5rem;
+  margin: 0 auto;
+  border-radius: 0.85rem;
+  border: 1.5px dashed #c5cec8;
+  background:
+    linear-gradient(160deg, #f7faf7 0%, #eef3ef 55%, #e6ece7 100%);
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.pos-menu-photo-drop:hover,
+.pos-menu-photo-drop:focus-visible {
+  border-color: #2d8f7b;
+  box-shadow: 0 0 0 3px rgba(45, 143, 123, 0.15);
+  outline: none;
+}
+
+.pos-menu-photo-drop.is-dragover {
+  border-color: #2d8f7b;
+  border-style: solid;
+  box-shadow: 0 0 0 4px rgba(45, 143, 123, 0.2);
+  transform: scale(1.01);
+}
+
+.pos-menu-photo-drop.has-image {
+  border-style: solid;
+  border-color: #d5ddd7;
+  background: #111;
+}
+
+.pos-menu-photo-drop.is-busy {
+  pointer-events: none;
+}
+
+.pos-menu-photo-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pos-menu-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.75rem;
+  color: #6a7a70;
+  text-align: center;
+}
+
+.pos-menu-photo-cta {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #2a3a32;
+}
+
+.pos-menu-photo-sub {
+  font-size: 0.7rem;
+  color: #7a8a80;
+  line-height: 1.3;
+}
+
+.pos-menu-photo-spin {
+  animation: pos-menu-photo-spin 0.8s linear infinite;
+}
+
+@keyframes pos-menu-photo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pos-menu-photo-busy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  background: rgba(15, 25, 20, 0.55);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.pos-menu-photo-overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  gap: 0.35rem;
+  justify-content: center;
+  padding: 0.45rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.pos-menu-photo-drop:hover .pos-menu-photo-overlay,
+.pos-menu-photo-drop:focus-within .pos-menu-photo-overlay {
+  opacity: 1;
+}
+
+.pos-menu-photo-overlay-btn {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 0 !important;
+  font-size: 0.72rem !important;
+  padding: 0.3rem 0.5rem !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pos-menu-photo-input {
+  display: none;
+}
+
+.pos-menu-photo-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+}
+
+.pos-menu-photo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid #d0d8d2;
+  background: #fff;
+  color: #5a6a60;
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.pos-menu-photo-badge.is-on {
+  background: #e8f6f1;
+  border-color: #2d8f7b;
+  color: #1a6b5a;
+}
+
+.pos-menu-photo-hint {
+  font-size: 0.72rem;
+  text-align: center;
+  margin: 0;
+  line-height: 1.35;
+}
+
+/* Legacy photo block hooks (kept for older screens) */
 .pos-menu-photo-block {
   display: flex;
   flex-direction: column;
@@ -10101,39 +10465,9 @@ body.modal-open .main-panel {
   gap: 0.5rem;
 }
 
-.pos-menu-photo-preview {
-  width: 120px;
-  height: 120px;
-  object-fit: cover;
-  border-radius: 0.65rem;
-  border: 1px solid #ddd;
-}
-
-.pos-menu-photo-placeholder {
-  width: 120px;
-  height: 120px;
-  border-radius: 0.65rem;
-  border: 1px dashed #ccc;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #aaa;
-  background: #fafafa;
-}
-
-.pos-menu-photo-input {
-  display: none;
-}
-
 .pos-menu-photo-actions {
   display: flex;
   gap: 0.5rem;
-}
-
-.pos-menu-photo-hint {
-  font-size: 0.75rem;
-  text-align: center;
-  margin: 0;
 }
 
 .pos-menu-crop-modal {
@@ -11863,7 +12197,8 @@ body.modal-open .main-panel {
 }
 
 .pos-menu-modal-panel.is-wide {
-  width: min(32rem, 100%);
+  width: min(44rem, 100%);
+  max-height: min(92dvh, 760px);
 }
 
 .pos-menu-modal-head {

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, Camera, Trash2 } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { updateMenuItem } from "@/lib/pos-menu";
-import { prepareMenuItemImage, type MenuImageCropSource } from "@/lib/pos-menu-image";
+import type { MenuImageCropSource } from "@/lib/pos-menu-image";
 import { PosMenuImageCropModal } from "@/components/PosMenuImageCropModal";
+import { PosMenuPhotoModule } from "@/components/PosMenuPhotoModule";
 import { PosSortableList } from "@/components/PosSortableList";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
@@ -44,7 +45,6 @@ export function PosMenuItemEditor({
   const [uploading, setUploading] = useState(false);
   const [cropSource, setCropSource] = useState<MenuImageCropSource | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setName(item.name);
@@ -70,24 +70,6 @@ export function PosMenuItemEditor({
   async function applyImageUrl(url: string) {
     setImageUrl(url);
     await updateMenuItem(item.id, { imageUrl: url });
-  }
-
-  async function onPickImage(file: File | null) {
-    if (!file) return;
-    setUploading(true);
-    setError(null);
-    try {
-      const prep = await prepareMenuItemImage(file);
-      if (prep.mode === "done") {
-        await applyImageUrl(prep.dataUrl);
-      } else {
-        setCropSource(prep.source);
-      }
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setUploading(false);
-    }
   }
 
   async function removeImage() {
@@ -128,6 +110,8 @@ export function PosMenuItemEditor({
     .map((id) => activeGroups.find((g) => g.id === id))
     .filter((g): g is MenuOptionGroup => g != null);
   const unlinkedGroups = activeGroups.filter((g) => !linkedGroupIds.includes(g.id));
+  const deliveryEffective =
+    deliveryPrice.trim() === "" ? Number(price) || 0 : Number(deliveryPrice) || 0;
 
   return (
     <div className={modal ? "pos-menu-editor-modal" : "pos-menu-admin-screen"}>
@@ -141,194 +125,254 @@ export function PosMenuItemEditor({
         </header>
       ) : null}
 
-      <form className="pos-menu-editor-form" onSubmit={(e) => void onSave(e)}>
-        <div className="pos-menu-photo-block">
-          {imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageUrl} alt="" className="pos-menu-photo-preview" />
-          ) : (
-            <div className="pos-menu-photo-placeholder">
-              <Camera size={28} aria-hidden />
-            </div>
-          )}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="pos-menu-photo-input"
-            onChange={(e) => void onPickImage(e.target.files?.[0] || null)}
-          />
-          <div className="pos-menu-photo-actions">
-            <button
-              type="button"
-              className="ghost-btn"
-              disabled={uploading}
-              onClick={() => fileRef.current?.click()}
-            >
-              {uploading ? "กำลังบีบอัดรูป..." : imageUrl ? "เปลี่ยนรูป" : "เพิ่มรูป"}
-            </button>
-            {imageUrl ? (
-              <button type="button" className="ghost-btn" onClick={() => void removeImage()}>
-                ลบรูป
-              </button>
-            ) : null}
-          </div>
-          <p className="muted pos-menu-photo-hint">รูปสี่เหลี่ยมจัตุรัส · บีบอัดอัตโนมัติ · ครอปเมื่อสัดส่วนไม่ตรง</p>
-        </div>
-
-        <label>
-          <span>ชื่อเมนู (ภาษาไทย)</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
-        </label>
-        <label>
-          <span>ชื่อเมนู (ภาษาอังกฤษ)</span>
-          <input value={nameEn} onChange={(e) => setNameEn(e.target.value)} maxLength={100} />
-        </label>
-        <label>
-          <span>รหัสเมนู</span>
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            maxLength={40}
-            placeholder="เช่น KO-01"
-          />
-        </label>
-        <label>
-          <span>หมวดหมู่</span>
-          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="pos-menu-price-row">
-          <label>
-            <span>ราคาหน้าร้าน (฿)</span>
-            <input
-              type="number"
-              min={0}
-              step={0.01}
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              required
+      <form className="pos-menu-editor-form pos-menu-editor-form--frame" onSubmit={(e) => void onSave(e)}>
+        <div className="pos-menu-editor-grid">
+          <aside className="pos-menu-editor-media" aria-label="รูปและแท็ก">
+            <PosMenuPhotoModule
+              imageUrl={imageUrl}
+              recommended={recommended}
+              onRecommendedChange={setRecommended}
+              uploading={uploading}
+              setUploading={setUploading}
+              onImageReady={applyImageUrl}
+              onRequestCrop={setCropSource}
+              onRemove={removeImage}
+              onError={(msg) => setError(msg || null)}
             />
-          </label>
-          <label>
-            <span>ราคาเดลิเวอรี่ (฿)</span>
-            <input
-              type="number"
-              min={0}
-              step={0.01}
-              value={deliveryPrice}
-              onChange={(e) => setDeliveryPrice(e.target.value)}
-              placeholder="ว่าง = ใช้หน้าร้าน"
-            />
-          </label>
-        </div>
-        <p className="muted pos-menu-price-dual-hint">
-          ช่องทางส่งบนหน้าขายจะใช้ราคาเดลิเวอรี่ · ว่างไว้ = เท่ากับหน้าร้าน
-        </p>
+          </aside>
 
-        <div className="pos-menu-field-block">
-          <div className="pos-menu-options-head">
-            <h2>กลุ่มตัวเลือก</h2>
-            <span className="muted pos-menu-link-count">
-              ผูกแล้ว {linkedGroupIds.length} กลุ่ม
-            </span>
+          <div className="pos-menu-editor-fields">
+            <section className="pos-menu-editor-card" aria-label="รายละเอียด">
+              <h2 className="pos-menu-editor-card-title">รายละเอียด</h2>
+
+              <div className="pos-menu-editor-name-row">
+                <label>
+                  <span>
+                    ชื่อ <abbr title="จำเป็น">*</abbr>
+                  </span>
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    maxLength={100}
+                    placeholder="ชื่อเมนูภาษาไทย"
+                  />
+                </label>
+                <label>
+                  <span>ชื่อ 2</span>
+                  <input
+                    value={nameEn}
+                    onChange={(e) => setNameEn(e.target.value)}
+                    maxLength={100}
+                    placeholder="English name"
+                  />
+                </label>
+              </div>
+
+              <div className="pos-menu-editor-meta-row">
+                <label>
+                  <span>หมวดหมู่</span>
+                  <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>รหัสเมนู</span>
+                  <input
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    maxLength={40}
+                    placeholder="เช่น KO-01"
+                  />
+                </label>
+              </div>
+
+              <label className="pos-menu-switch-row">
+                <span>
+                  <strong>พร้อมขาย</strong>
+                  <span className="muted"> เปิดขายบนเคาน์เตอร์ (ไม่ใช่ของหมด)</span>
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={active}
+                  onChange={(e) => setActive(e.target.checked)}
+                  aria-label="พร้อมขาย"
+                />
+              </label>
+
+              <label className="pos-menu-switch-row">
+                <span>
+                  <strong>แสดงบนหน้าจอขาย</strong>
+                  <span className="muted"> ซ่อนจากกริดขายได้โดยไม่เก็บเข้าคลัง</span>
+                </span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  checked={visibleOnPos}
+                  onChange={(e) => setVisibleOnPos(e.target.checked)}
+                  aria-label="แสดงเมนูบนหน้าจอขาย"
+                />
+              </label>
+
+              <label>
+                <span>รายละเอียดเมนู</span>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="ส่วนประกอบ · ระดับความหวาน · หมายเหตุให้พนักงาน"
+                />
+              </label>
+            </section>
+
+            <section className="pos-menu-editor-card" aria-label="ช่องทางในการขาย">
+              <h2 className="pos-menu-editor-card-title">ช่องทางในการขาย</h2>
+              <p className="muted pos-menu-price-dual-hint">
+                ตั้งราคาแยกหน้าร้านกับเดลิเวอรี่ · ว่างเดลิเวอรี่ = ใช้ราคาหน้าร้าน
+              </p>
+              <div className="pos-menu-channel-table" role="table" aria-label="ราคาตามช่องทาง">
+                <div className="pos-menu-channel-head" role="row">
+                  <span role="columnheader">ช่องทาง</span>
+                  <span role="columnheader">ราคาในร้าน</span>
+                  <span role="columnheader">ราคาขายจริง</span>
+                </div>
+                <div className="pos-menu-channel-row" role="row">
+                  <span className="pos-menu-channel-name" role="cell">
+                    หน้าร้าน (nPos)
+                  </span>
+                  <label className="pos-menu-channel-price" role="cell">
+                    <span className="sr-only">ราคาหน้าร้าน</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      required
+                      aria-label="ราคาหน้าร้าน"
+                    />
+                  </label>
+                  <span className="pos-menu-channel-effective" role="cell">
+                    ฿{formatPlainNumber(Number(price) || 0)}
+                  </span>
+                </div>
+                <div className="pos-menu-channel-row" role="row">
+                  <span className="pos-menu-channel-name" role="cell">
+                    เดลิเวอรี่
+                  </span>
+                  <label className="pos-menu-channel-price" role="cell">
+                    <span className="sr-only">ราคาเดลิเวอรี่</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={deliveryPrice}
+                      onChange={(e) => setDeliveryPrice(e.target.value)}
+                      placeholder="ว่าง = ใช้หน้าร้าน"
+                      aria-label="ราคาเดลิเวอรี่"
+                    />
+                  </label>
+                  <span className="pos-menu-channel-effective" role="cell">
+                    ฿{formatPlainNumber(deliveryEffective)}
+                  </span>
+                </div>
+              </div>
+              {/* Keep dual-price class hook for existing tests */}
+              <div className="pos-menu-price-row pos-menu-price-row--sr" aria-hidden="true">
+                <span>ราคาหน้าร้าน</span>
+                <span>ราคาเดลิเวอรี่</span>
+              </div>
+            </section>
+
+            <section className="pos-menu-editor-card pos-menu-field-block" aria-label="กลุ่มตัวเลือก">
+              <div className="pos-menu-options-head">
+                <h2 className="pos-menu-editor-card-title">กลุ่มตัวเลือก</h2>
+                <span className="muted pos-menu-link-count">
+                  ผูกแล้ว {linkedGroupIds.length} กลุ่ม
+                </span>
+              </div>
+              {linkedGroups.length > 1 ? (
+                <>
+                  <p className="muted pos-menu-sort-hint">กด ↑↓ เลื่อนลำดับกลุ่ม — ไปหน้าขายทันที</p>
+                  <PosSortableList
+                    ids={linkedGroupIds}
+                    onReorder={(ids) => {
+                      setLinkedGroupIds(ids);
+                      void updateMenuItem(item.id, { optionGroupIds: ids }).catch((err) =>
+                        setError((err as Error).message),
+                      );
+                    }}
+                    className="pos-menu-link-groups-sort"
+                    renderItem={(gid) => {
+                      const g = activeGroups.find((x) => x.id === gid);
+                      return g ? <span>{g.name}</span> : null;
+                    }}
+                  />
+                </>
+              ) : null}
+              <ul className="pos-menu-link-groups">
+                {unlinkedGroups.map((g) => (
+                  <li key={g.id}>
+                    <label className="pos-menu-toggle-row">
+                      <span>{g.name}</span>
+                      <input type="checkbox" checked={false} onChange={() => toggleGroup(g.id)} />
+                    </label>
+                  </li>
+                ))}
+                {linkedGroups.map((g) => (
+                  <li key={g.id}>
+                    <label className="pos-menu-toggle-row">
+                      <span>{g.name}</span>
+                      <input type="checkbox" checked onChange={() => toggleGroup(g.id)} />
+                    </label>
+                  </li>
+                ))}
+                {!activeGroups.length ? (
+                  <li className="muted">ยังไม่มีกลุ่มตัวเลือก — สร้างจากแท็บกลุ่มตัวเลือก</li>
+                ) : null}
+              </ul>
+            </section>
           </div>
-          {linkedGroups.length > 1 ? (
-            <>
-              <p className="muted pos-menu-sort-hint">กด ↑↓ เลื่อนลำดับกลุ่ม — ไปหน้าขายทันที</p>
-              <PosSortableList
-                ids={linkedGroupIds}
-                onReorder={(ids) => {
-                  setLinkedGroupIds(ids);
-                  void updateMenuItem(item.id, { optionGroupIds: ids }).catch((err) =>
-                    setError((err as Error).message),
-                  );
-                }}
-                className="pos-menu-link-groups-sort"
-                renderItem={(gid) => {
-                  const g = activeGroups.find((x) => x.id === gid);
-                  return g ? <span>{g.name}</span> : null;
-                }}
-              />
-            </>
-          ) : null}
-          <ul className="pos-menu-link-groups">
-            {unlinkedGroups.map((g) => (
-              <li key={g.id}>
-                <label className="pos-menu-toggle-row">
-                  <span>{g.name}</span>
-                  <input type="checkbox" checked={false} onChange={() => toggleGroup(g.id)} />
-                </label>
-              </li>
-            ))}
-            {linkedGroups.map((g) => (
-              <li key={g.id}>
-                <label className="pos-menu-toggle-row">
-                  <span>{g.name}</span>
-                  <input type="checkbox" checked onChange={() => toggleGroup(g.id)} />
-                </label>
-              </li>
-            ))}
-            {!activeGroups.length ? (
-              <li className="muted">ยังไม่มีกลุ่มตัวเลือก — สร้างจากแท็บกลุ่มตัวเลือก</li>
-            ) : null}
-          </ul>
         </div>
-
-        <label className="pos-menu-toggle-row">
-          <span>เมนูแนะนำ</span>
-          <input type="checkbox" checked={recommended} onChange={(e) => setRecommended(e.target.checked)} />
-        </label>
-        <label className="pos-menu-toggle-row">
-          <span>แสดงเมนูบนหน้าจอขาย</span>
-          <input
-            type="checkbox"
-            checked={visibleOnPos}
-            onChange={(e) => setVisibleOnPos(e.target.checked)}
-          />
-        </label>
-        <label className="pos-menu-toggle-row">
-          <span>เปิดขาย (ไม่ใช่ของหมด)</span>
-          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
-        </label>
-
-        <label>
-          <span>คำอธิบายเมนู</span>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            maxLength={500}
-          />
-        </label>
 
         {error ? <p className="error-text">{error}</p> : null}
 
-        <button type="button" className="ghost-btn pos-menu-delete-btn pos-menu-btn-sm" onClick={() => void onDelete()}>
-          <Trash2 size={14} aria-hidden /> เก็บเข้าคลัง
-        </button>
-
-        <p className="muted pos-menu-price-hint">
-          หน้าร้าน ฿{formatPlainNumber(Number(price) || 0)}
-          {deliveryPrice.trim() !== ""
-            ? ` · เดลิเวอรี่ ฿${formatPlainNumber(Number(deliveryPrice) || 0)}`
-            : " · เดลิเวอรี่ = หน้าร้าน"}
-        </p>
-
-        <div className="pos-menu-editor-actions">
-          {modal ? (
-            <button type="button" className="ghost-btn pos-menu-btn-sm" onClick={onBack}>
-              ยกเลิก
-            </button>
-          ) : null}
-          <button type="submit" className="primary-btn pos-menu-save-btn pos-menu-btn-sm" disabled={busy || uploading}>
-            {busy ? "กำลังบันทึก..." : "บันทึก"}
+        <div className="pos-menu-editor-footer">
+          <button
+            type="button"
+            className="ghost-btn pos-menu-delete-btn pos-menu-btn-sm"
+            onClick={() => void onDelete()}
+          >
+            <Trash2 size={14} aria-hidden /> เก็บเข้าคลัง
           </button>
+
+          <p className="muted pos-menu-price-hint">
+            หน้าร้าน ฿{formatPlainNumber(Number(price) || 0)}
+            {deliveryPrice.trim() !== ""
+              ? ` · เดลิเวอรี่ ฿${formatPlainNumber(Number(deliveryPrice) || 0)}`
+              : " · เดลิเวอรี่ = หน้าร้าน"}
+          </p>
+
+          <div className="pos-menu-editor-actions">
+            {modal ? (
+              <button type="button" className="ghost-btn pos-menu-btn-sm" onClick={onBack}>
+                ยกเลิก
+              </button>
+            ) : null}
+            <button
+              type="submit"
+              className="primary-btn pos-menu-save-btn pos-menu-btn-sm"
+              disabled={busy || uploading}
+            >
+              {busy ? "กำลังบันทึก..." : "บันทึก"}
+            </button>
+          </div>
         </div>
       </form>
 

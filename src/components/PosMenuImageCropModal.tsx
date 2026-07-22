@@ -81,7 +81,9 @@ export function PosMenuImageCropModal({
       <div className="pos-modal pos-menu-crop-modal">
         <header className="pos-modal-head">
           <h2>ครอปรูปเมนู</h2>
-          <p className="muted">ลากเพื่อจัดตำแหน่ง · รูปจะเป็นสี่เหลี่ยมจัตุรัส {MENU_SQUARE_PX}px</p>
+          <p className="muted">
+            จัดกรอบสี่เหลี่ยมจัตุรัส {MENU_SQUARE_PX}px · ซูมแล้วเลื่อนตำแหน่ง · บีบอัด JPEG อัตโนมัติ
+          </p>
         </header>
 
         <div

@@ -76,8 +76,12 @@ assert.match(optionsSrc, /deleteField/);
 
 const itemEditorSrc = readFileSync(join(root, "src/components/PosMenuItemEditor.tsx"), "utf8");
 assert.match(itemEditorSrc, /ราคาหน้าร้าน/);
-assert.match(itemEditorSrc, /prepareMenuItemImage/);
+assert.match(itemEditorSrc, /PosMenuPhotoModule/);
 assert.match(itemEditorSrc, /PosMenuImageCropModal/);
+assert.match(
+  readFileSync(join(root, "src/components/PosMenuPhotoModule.tsx"), "utf8"),
+  /prepareMenuItemImage/,
+);
 
 const firebaseJson = readFileSync(join(root, "firebase.json"), "utf8");
 assert.match(readFileSync(join(root, "src/components/PosHardLink.tsx"), "utf8"), /location\.assign/);
