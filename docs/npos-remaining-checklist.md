@@ -1,7 +1,7 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **1.14.12** ไหลขาย · ตัดทานที่ร้าน · PromptPay เว็บ  
-ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-blind-shift-close-checklist.md](./npos-blind-shift-close-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md) · [npos-bestseller-rank-checklist.md](./npos-bestseller-rank-checklist.md) · [npos-sell-flow-polish-checklist.md](./npos-sell-flow-polish-checklist.md)
+อัปเดต: **1.14.13** ใบเสร็จ native พาริตี้เว็บ · ESC/POS  
+ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-blind-shift-close-checklist.md](./npos-blind-shift-close-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md) · [npos-bestseller-rank-checklist.md](./npos-bestseller-rank-checklist.md) · [npos-sell-flow-polish-checklist.md](./npos-sell-flow-polish-checklist.md) · [npos-receipt-parity-checklist.md](./npos-receipt-parity-checklist.md)
 
 ## ทำแล้ว
 - [x] แคปจอ media-proxy — รูปจริงใน BO (**1.14.2**)
@@ -17,11 +17,13 @@
 - [x] **B1–B4** ปิดกะ blind · Over/Short · เงินทอนรอบถัดไป · Z พิมพ์+ซิงก์ (**1.14.10**)
 - [x] **R0–R4** จัดลำดับขายดี · โหมด fix / bestsellers · ตาราง `posMenuRank` (**1.14.11**)
 - [x] **F0–F4** ไหลขาย · ตัดทานที่ร้าน · ล้างตะกร้า · PromptPay เว็บ (**1.14.12**)
+- [x] **Receipt R1–R4** ฟอร์มใบเสร็จเว็บ → native ESC/POS · พิมพ์ออฟไลน์ได้ (**1.14.13**)
 - [x] จิ้มเมนู → จ่าย → ใบเสร็จ → รีเซ็ต · ลิ้นชักตอนสด
 
 ## คิวถัดไป (เฟสก่อนหน้าที่ยังไม่ทำ)
 | เฟส | โฟกัส | สถานะ | ทำไมค้าง |
 |-----|--------|--------|----------|
+| **Receipt R1–R5** | ใบเสร็จ native = ฟอร์มเว็บ · ESC/POS | ✅ R1–R4 | **1.14.13** · ค้างคนเทส R5 |
 | **F0–F5** | ไหลขายพนักงาน · ตัดทานที่ร้าน · ล้างตะกร้า · PromptPay เว็บ | ✅ F0–F4 | **1.14.12** · ค้างคนเทส F5 |
 | **R0–R5** | จัดลำดับขายดี · โหมด fix / bestsellers | ✅ R0–R4 | **1.14.11** · ค้างคนเทส R5 |
 | **S3 / P4** | คนเทสหน้าร้านจริง | ⬜ | ต้องคนที่เคาน์เตอร์ |
@@ -37,6 +39,7 @@
 - ทานที่ร้าน / รับกลับ / Delivery · สลิปครัว / KDS · PromptPay auto cut-off · โน้ตบิล · คูปอง/สมาชิก · บัตร/โอน  
 
 ## คู่ขนานได้
+- [x] **Receipt R1–R4** ฟอร์มใบเสร็จเว็บ → native ESC/POS (**1.14.13**)
 - [x] **F0–F4** ไหลขายพนักงาน — ตัดทานที่ร้าน · ล้างตะกร้า · PromptPay เว็บ (**1.14.12**)
 - [x] **R1–R4** เก็บขายดี 7→14 วัน · หลังร้านโหมด fix / กลุ่มขายดี · POS auto (**1.14.11**)
 - [ ] Local DB first / Room บนเครื่อง เมื่อคิวโต (หลังร้านยัง Firebase)

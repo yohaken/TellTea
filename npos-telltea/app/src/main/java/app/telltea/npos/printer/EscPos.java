@@ -30,7 +30,10 @@ public final class EscPos {
         return concat(parts);
     }
 
-    /** Simple sale receipt body (ASCII/TIS-620). */
+    /**
+     * Legacy wrapper for Z/X reports — centered TellTea brand then body.
+     * Customer receipts should use {@link #documentReceipt(String)} (full form in body).
+     */
     public static byte[] saleReceipt(String body) {
         List<byte[]> parts = new ArrayList<>();
         parts.add(new byte[] {0x1B, 0x40});
@@ -42,6 +45,21 @@ public final class EscPos {
         if (body == null || !body.endsWith("\n")) parts.add(text("\n"));
         parts.add(text("----------------\n\n\n"));
         parts.add(new byte[] {0x1D, 0x56, 0x00});
+        return concat(parts);
+    }
+
+    /**
+     * Full customer receipt document — body already includes shop/bill/totals
+     * (see {@link ReceiptFormBuilder}). No extra brand header.
+     */
+    public static byte[] documentReceipt(String body) {
+        List<byte[]> parts = new ArrayList<>();
+        parts.add(new byte[] {0x1B, 0x40}); // init
+        parts.add(new byte[] {0x1B, 0x61, 0x00}); // left (builder centers with spaces)
+        parts.add(text(body == null ? "" : body));
+        if (body == null || !body.endsWith("\n")) parts.add(text("\n"));
+        parts.add(text("\n\n"));
+        parts.add(new byte[] {0x1D, 0x56, 0x00}); // full cut
         return concat(parts);
     }
 
