@@ -25,8 +25,11 @@ import app.telltea.npos.diagnose.PermissionBootstrap;
 import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.MenuWarmup;
 import app.telltea.npos.sell.SaleSync;
+import app.telltea.npos.shell.PosShellNav;
 import app.telltea.npos.shift.ShiftPrefs;
 import app.telltea.npos.update.ApkInstaller;
+import app.telltea.npos.update.ResumePrefs;
+import app.telltea.npos.update.UpdatePromptController;
 
 /**
  * Clock-in + POS hub (clone web POS_NAV_ITEMS). Sell is one tile — not the only screen.
@@ -44,10 +47,12 @@ public class MainActivity extends Activity {
 
   private AutoHealth autoHealth;
   private SaleSync saleSync;
+  private UpdatePromptController updatePrompt;
   private final Handler clockHandler = new Handler(Looper.getMainLooper());
   private int localVersionCode = 1;
   private String localVersionName = "1.0";
   private boolean openingShift;
+  private boolean resumeSellHandled;
 
   private final Runnable clockTick =
       new Runnable() {
@@ -103,12 +108,32 @@ public class MainActivity extends Activity {
     findViewById(R.id.settingsButtonSell).setOnClickListener(openSettings);
 
     buildHubNav();
+    PosShellNav.bind(
+        this,
+        PosShellNav.ACTIVE_HUB,
+        () -> {
+          MenuWarmup.warm(this);
+          Toast.makeText(this, R.string.btn_refresh_menu, Toast.LENGTH_SHORT).show();
+        });
+    updatePrompt = new UpdatePromptController(this);
     refreshPermissionGate();
     // First open: auto-prompt so staff do not hunt Settings.
     if (!PermissionBootstrap.wasPrompted(this) && !PermissionBootstrap.allCriticalGranted(this)) {
       PermissionBootstrap.grantAll(this);
     }
     OpsLogger.info(this, "app", "เปิดแอป", "vc=" + localVersionCode);
+    maybeResumeSellAfterUpdate();
+  }
+
+  private void maybeResumeSellAfterUpdate() {
+    if (resumeSellHandled) return;
+    boolean want =
+        getIntent() != null && getIntent().getBooleanExtra("resume_sell", false)
+            || ResumePrefs.consumeResumeSellAfterUpdate(this);
+    if (!want) return;
+    if (!ShiftPrefs.isOpen(this)) return;
+    resumeSellHandled = true;
+    startActivity(new Intent(this, SellActivity.class));
   }
 
   private void refreshPermissionGate() {
@@ -235,6 +260,7 @@ public class MainActivity extends Activity {
                 ShiftPrefs.promptpayTotal(this),
                 ShiftPrefs.voidedCount(this)));
       }
+      maybeResumeSellAfterUpdate();
     } else {
       clockInPanel.setVisibility(View.VISIBLE);
       sellPanel.setVisibility(View.GONE);
@@ -246,6 +272,7 @@ public class MainActivity extends Activity {
     ForegroundHeartbeat.forceNow(this);
     autoHealth.maybeRun(this, false, null);
     saleSync.flushPending(this);
+    if (updatePrompt != null) updatePrompt.onResume();
   }
 
   @Override

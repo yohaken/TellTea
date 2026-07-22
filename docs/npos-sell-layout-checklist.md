@@ -8,13 +8,15 @@
 
 ## เช็คลิสต์
 
-### Layout (โคลน PosSellView)
-- [x] หมวดอยู่ในคอลัมน์ซ้าย (ไม่เต็มความกว้างจอ)
+### Layout (โคลน PosSellView + PosAppShell)
+- [x] แถบซ้าย `.pos-sidebar` สี `#2A3038` · active `#2D7FE0` (1.14.7)
+- [x] หมวดอยู่ในคอลัมน์ซ้ายของโซนขาย (ไม่เต็มความกว้างจอ)
 - [x] เมนูเป็นกริด 5 คอลัมน์ · รูป 16:10 · ป้ายจำนวนส้ม
 - [x] ซ้าย weight 65 / ขวา weight 35 (แทน 344dp คงที่)
 - [x] ปุ่มชำระเงินสดส้ม · PromptPay รอง
 - [x] ชิปหมวด active `#1E2D3D`
 - [x] โชว์ option ใต้บรรทัดตะกร้า (W2)
+- [x] Option picker hero แบบเว็บ (รูป · qty · ปุ่มส้ม)
 
 ### Local-first + sync เบื้องหลัง
 - [x] `MenuRepository.loadMenu` ส่งแคช prefs ทันที แล้วซิงก์ CF

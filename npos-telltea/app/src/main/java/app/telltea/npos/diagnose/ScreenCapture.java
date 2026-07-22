@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Capture primary activity window + secondary Presentation probe frames,
+ * Capture primary activity window + live customer Presentation (fallback probe),
  * then POST JPEG base64 to reportNposScreenCapture.
  */
 public final class ScreenCapture {
@@ -268,14 +268,35 @@ public final class ScreenCapture {
             return CaptureShot.fail("api_lt_26");
         }
         try {
+            // Prefer live customer UI (full detail) — never overwrite with probe if showing.
+            Bitmap live = captureLiveCustomerOrNull();
+            if (live != null) {
+                CaptureShot shot = encode(live);
+                shot.detail = "live_customer";
+                return shot;
+            }
             Context ui = NposApp.foregroundActivity();
             if (ui == null) ui = app;
             Bitmap bmp = showProbeAndCopy(ui, sec.display, sec);
             if (bmp == null) return CaptureShot.fail("secondary_copy_null");
-            return encode(bmp);
+            CaptureShot shot = encode(bmp);
+            shot.detail = "probe_fallback";
+            return shot;
         } catch (Exception e) {
             return CaptureShot.fail(e.getMessage() == null ? "secondary_fail" : e.getMessage());
         }
+    }
+
+    private static Bitmap captureLiveCustomerOrNull() throws Exception {
+        CustomerDisplayPresentation live = CustomerDisplayController.activePresentationOrNull();
+        if (live == null) return null;
+        Window window = live.getWindow();
+        if (window == null) return null;
+        Bitmap bmp = pixelCopyWindow(window, 2500);
+        if (bmp == null) {
+            bmp = drawViewBitmap(live);
+        }
+        return bmp;
     }
 
     private static Bitmap showProbeAndCopy(

@@ -34,7 +34,19 @@ public final class InstallResultReceiver extends BroadcastReceiver {
                 break;
             }
             case PackageInstaller.STATUS_SUCCESS:
-                Toast.makeText(context, "อัปเดตสำเร็จ", Toast.LENGTH_LONG).show();
+                Toast.makeText(context, "อัปเดตสำเร็จ — กลับหน้าร้าน", Toast.LENGTH_LONG).show();
+                try {
+                    ResumePrefs.markResumeSellAfterUpdate(context);
+                    Intent relaunch = new Intent(context, app.telltea.npos.MainActivity.class);
+                    relaunch.addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK
+                                    | Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    relaunch.putExtra("resume_sell", true);
+                    context.startActivity(relaunch);
+                } catch (Exception e) {
+                    Log.w(TAG, "relaunch after update failed", e);
+                }
                 break;
             default:
                 Log.w(TAG, "install failed status=" + status + " msg=" + message);

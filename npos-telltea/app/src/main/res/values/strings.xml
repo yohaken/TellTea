@@ -31,6 +31,13 @@
     <string name="nav_shop_settings">ตั้งค่ากิจการ</string>
     <string name="btn_settings">ตั้งค่า</string>
     <string name="banner_update">มีเวอร์ชันใหม่ — กดอัปเดตเลย</string>
+    <string name="update_popup_title">มีเวอร์ชันใหม่</string>
+    <string name="update_popup_body">อัปเดตเป็น %1$s (%2$d) — กดแล้วติดตั้งทันที · กลับหน้าร้านอัตโนมัติ</string>
+    <string name="update_popup_later">ไว้ก่อน</string>
+    <string name="nav_lock_pin">กลับหน้าหลัก</string>
+    <string name="nav_web_stub_hint">เปิดบนเว็บ POS</string>
+    <string name="nav_web_open_fail">เปิดลิงก์ไม่สำเร็จ</string>
+    <string name="hub_rail_hint">ใช้แถบซ้ายเลือกเมนูหน้าร้าน — เหมือนเว็บ POS</string>
     <string name="status_signature_hint">ถ้าติดตั้งทับไม่ได้: ถอนแอปนี้ครั้งหนึ่ง แล้วกดลิงก์ด้านล่าง</string>
     <string name="install_page_hint">หน้าติดตั้ง: telltea-pos.web.app/install/</string>
     <string name="device_code_label">รหัสเครื่อง %1$s</string>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Clone web .pos-sidebar (#2a3038, active #2d7fe0, ~11rem) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/posSidebar"
+    android:layout_width="176dp"
+    android:layout_height="match_parent"
+    android:background="#2A3038"
+    android:orientation="vertical"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="10dp"
+        android:paddingRight="8dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/sidebarBrand"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="TellTea"
+            android:textColor="#F4F6F8"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/sidebarRefreshBtn"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="#E85D24"
+            android:gravity="center"
+            android:text="↻"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#22FFFFFF" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:id="@+id/sidebarNav"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="6dp" />
+    </ScrollView>
+
+    <TextView
+        android:id="@+id/sidebarLock"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="6dp"
+        android:layout_marginRight="6dp"
+        android:layout_marginBottom="4dp"
+        android:gravity="center_vertical"
+        android:minHeight="40dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:text="@string/nav_lock_pin"
+        android:textColor="#F0A060"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+</LinearLayout>

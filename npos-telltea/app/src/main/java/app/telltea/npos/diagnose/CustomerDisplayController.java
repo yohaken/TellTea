@@ -17,7 +17,11 @@ import app.telltea.npos.sell.MenuModels;
  */
 public final class CustomerDisplayController {
     public static final long SUCCESS_HOLD_MS = 3500L;
-    private static final long PROMO_ROTATE_MS = 4500L;
+    /** Idle/ordering promo slideshow — web-feel pacing (~5s). */
+    public static final long PROMO_ROTATE_MS = 5000L;
+
+    /** Live secondary Presentation for diagnose capture (not the probe stub). */
+    private static volatile CustomerDisplayPresentation activePresentation;
 
     public static final class PromoItem {
         public final String name;
@@ -141,6 +145,7 @@ public final class CustomerDisplayController {
         cancelSuccess();
         stopRotate();
         if (presentation != null) {
+            if (activePresentation == presentation) activePresentation = null;
             try {
                 presentation.dismiss();
             } catch (Exception ignored) {
@@ -149,6 +154,13 @@ public final class CustomerDisplayController {
             presentation = null;
         }
         host = null;
+    }
+
+    /** Window of the live customer UI, if showing — used by ScreenCapture. */
+    public static CustomerDisplayPresentation activePresentationOrNull() {
+        CustomerDisplayPresentation p = activePresentation;
+        if (p == null || !p.isShowing()) return null;
+        return p;
     }
 
     private void rememberCart(
@@ -171,6 +183,7 @@ public final class CustomerDisplayController {
             if (presentation == null || !presentation.isShowing()) {
                 presentation = new CustomerDisplayPresentation(activity, secondary.display);
                 presentation.show();
+                activePresentation = presentation;
                 if (!loggedReady) {
                     loggedReady = true;
                     CustomerDisplayMetrics m = presentation.getMetrics();
@@ -182,6 +195,8 @@ public final class CustomerDisplayController {
                                     + " · จอ "
                                     + secondary.number);
                 }
+            } else {
+                activePresentation = presentation;
             }
             return true;
         } catch (Exception e) {

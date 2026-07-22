@@ -1,7 +1,7 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **1.14.6** D1 เครื่องเดียว/ออนไลน์ + L1 local-first แคช  
-ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-device-class-checklist.md](./npos-device-class-checklist.md)
+อัปเดต: **1.14.7** P1–P8 แคปจอลูกค้าจริง · โปรโม 5 วิ · แถบซ้ายเว็บ · popup อัปเดต  
+ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-web-parity-shot-checklist.md](./npos-web-parity-shot-checklist.md)
 
 ## ทำแล้ว
 - [x] แคปจอ media-proxy — รูปจริงใน BO (**1.14.2**)
@@ -11,6 +11,7 @@
 - [x] **C1–C4** ล้างรูป · แสดงเต็มละเอียด · เก็บ ≤50 · POS แคปเต็มละเอียด
 - [x] **D1** ตรวจเครื่องพับตาม stableKey · heartbeat ตอนขาย · ออนไลน์ 5 นาที
 - [x] **L1** อุ่นแคชเมนูตอนเปิดแอป · ขาย paint จากเครื่องก่อน
+- [x] **P1–P8** แคปจอลูกค้าจริง · สไลด์ 5 วิ · แถบซ้าย PosShell · option hero · popup อัปเดตซ้ายบน + กลับขายอัตโนมัติ (**1.14.7**)
 - [x] จิ้มเมนู → จ่าย → ใบเสร็จ → รีเซ็ต · ลิ้นชักตอนสด
 
 ## คิวถัดไป (เฟสก่อนหน้าที่ยังไม่ทำ)

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Top-left update popup — visible on sell/hub without opening Settings -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/updatePopup"
+    android:layout_width="280dp"
+    android:layout_height="wrap_content"
+    android:layout_gravity="top|start"
+    android:layout_marginStart="188dp"
+    android:layout_marginTop="12dp"
+    android:background="#FFFFFFFF"
+    android:elevation="10dp"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:visibility="gone">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/update_popup_title"
+        android:textColor="#1E2D3D"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/updatePopupBody"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textColor="#5A6570"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/updatePopupProgress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="#E85D24"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/updatePopupLater"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:backgroundTint="#EEF0F4"
+            android:minHeight="40dp"
+            android:text="@string/update_popup_later"
+            android:textAllCaps="false"
+            android:textColor="#1E2D3D"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/updatePopupGo"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:backgroundTint="#2D7FE0"
+            android:minHeight="40dp"
+            android:text="@string/btn_install_update"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</LinearLayout>

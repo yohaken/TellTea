@@ -41,7 +41,10 @@ import app.telltea.npos.sell.MenuRepository;
 import app.telltea.npos.sell.PromptPayPayload;
 import app.telltea.npos.sell.QrBitmaps;
 import app.telltea.npos.sell.SaleSync;
+import app.telltea.npos.shell.PosShellNav;
 import app.telltea.npos.shift.ShiftPrefs;
+import app.telltea.npos.update.ResumePrefs;
+import app.telltea.npos.update.UpdatePromptController;
 
 /**
  * Sell screen — clone web PosSellView: categories, menu images, options, cart, discount,
@@ -67,6 +70,7 @@ public class SellActivity extends Activity {
   private final List<MenuModels.CartLine> cart = new ArrayList<>();
   private double discountBaht = 0;
   private CustomerDisplayController customerDisplay;
+  private UpdatePromptController updatePrompt;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -93,7 +97,12 @@ public class SellActivity extends Activity {
     customerDisplay = new CustomerDisplayController();
     customerDisplay.bind(this);
 
-    findViewById(R.id.backButton).setOnClickListener(v -> finish());
+    PosShellNav.bind(this, PosShellNav.ACTIVE_SELL, () -> reloadMenu(true));
+    updatePrompt = new UpdatePromptController(this);
+    updatePrompt.setBeforeInstall(this::persistWorkBeforeUpdate);
+
+    View back = findViewById(R.id.backButton);
+    if (back != null) back.setOnClickListener(v -> finish());
     findViewById(R.id.payCashButton).setOnClickListener(v -> startPay("cash"));
     findViewById(R.id.payPromptButton).setOnClickListener(v -> startPay("promptpay"));
     findViewById(R.id.discountButton).setOnClickListener(v -> showDiscountDialog());
@@ -102,11 +111,16 @@ public class SellActivity extends Activity {
     flushSyncButton.setOnClickListener(v -> flushPendingNow());
     findViewById(R.id.refreshMenuButton).setOnClickListener(v -> reloadMenu(true));
     findViewById(R.id.xReportButton).setOnClickListener(v -> printXReport());
-    findViewById(R.id.receiptsButton)
-        .setOnClickListener(v -> startActivity(new Intent(this, ReceiptsActivity.class)));
-    findViewById(R.id.sellSettingsButton)
-        .setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
-    findViewById(R.id.sellCloseShiftButton).setOnClickListener(v -> closeShift());
+    View receipts = findViewById(R.id.receiptsButton);
+    if (receipts != null) {
+      receipts.setOnClickListener(v -> startActivity(new Intent(this, ReceiptsActivity.class)));
+    }
+    View sellSettings = findViewById(R.id.sellSettingsButton);
+    if (sellSettings != null) {
+      sellSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
+    }
+    View closeShift = findViewById(R.id.sellCloseShiftButton);
+    if (closeShift != null) closeShift.setOnClickListener(v -> closeShift());
 
     sellSyncStatus.setText(R.string.sell_loading_menu);
     menuRepo.loadShop(
@@ -124,6 +138,21 @@ public class SellActivity extends Activity {
     updateHoldRestoreButton();
     updatePendingBadge();
     syncCustomerDisplay();
+    if (ResumePrefs.consumeRestoreHoldAfterUpdate(this) && HoldCart.hasHold(this) && cart.isEmpty()) {
+      doRestoreHold();
+    }
+  }
+
+  private void persistWorkBeforeUpdate() {
+    try {
+      if (!cart.isEmpty()) {
+        HoldCart.save(this, cart, discountBaht);
+        ResumePrefs.markRestoreHoldAfterUpdate(this);
+        OpsLogger.info(this, "update", "พักบิลก่อนอัปเดต", cart.size() + " รายการ");
+      }
+    } catch (Exception e) {
+      OpsLogger.warn(this, "update", "พักบิลก่อนอัปเดตไม่สำเร็จ", e.getMessage());
+    }
   }
 
   private void holdBill() {
@@ -386,6 +415,7 @@ public class SellActivity extends Activity {
   @Override
   protected void onResume() {
     super.onResume();
+    if (updatePrompt != null) updatePrompt.onResume();
     updateShiftSummary();
     updateHoldRestoreButton();
     updatePendingBadge();
@@ -738,18 +768,60 @@ public class SellActivity extends Activity {
       if (g != null && !g.options.isEmpty()) groups.add(g);
     }
     if (groups.isEmpty()) {
-      addItemWithOptions(item, new JSONArray(), item.price);
+      addItemWithOptions(item, new JSONArray(), item.price, 1);
       return;
     }
 
-    ScrollView scroll = new ScrollView(this);
-    LinearLayout root = new LinearLayout(this);
-    root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(32, 24, 32, 8);
-    scroll.addView(root);
+    View sheet = getLayoutInflater().inflate(R.layout.dialog_option_picker, null, false);
+    ImageView heroImage = sheet.findViewById(R.id.optionHeroImage);
+    TextView heroName = sheet.findViewById(R.id.optionHeroName);
+    TextView heroPrice = sheet.findViewById(R.id.optionHeroPrice);
+    TextView qtyValue = sheet.findViewById(R.id.optionQtyValue);
+    Button qtyMinus = sheet.findViewById(R.id.optionQtyMinus);
+    Button qtyPlus = sheet.findViewById(R.id.optionQtyPlus);
+    LinearLayout groupsRoot = sheet.findViewById(R.id.optionGroupsRoot);
+    TextView errView = sheet.findViewById(R.id.optionPickerError);
+    TextView lineTotal = sheet.findViewById(R.id.optionLineTotal);
+    Button cancelBtn = sheet.findViewById(R.id.optionCancel);
+    Button confirmBtn = sheet.findViewById(R.id.optionConfirm);
 
+    heroName.setText(item.name);
+    heroPrice.setText(String.format(Locale.getDefault(), "฿%.0f", item.price));
+    if (item.imageUrl != null && !item.imageUrl.isEmpty()) {
+      ImageLoader.bind(heroImage, item.imageUrl, 0xFF2A3C4E);
+    }
+
+    final int[] qty = {1};
     Map<String, RadioGroup> singleGroups = new HashMap<>();
     Map<String, List<CheckBox>> multiGroups = new HashMap<>();
+
+    Runnable refreshTotal =
+        () -> {
+          double unit = item.price;
+          for (MenuModels.OptionGroup group : groups) {
+            if (group.isSingle()) {
+              RadioGroup rg = singleGroups.get(group.id);
+              int checked = rg == null ? -1 : rg.getCheckedRadioButtonId();
+              if (checked != -1) {
+                RadioButton rb = rg.findViewById(checked);
+                if (rb != null && rb.getTag() instanceof MenuModels.Option) {
+                  unit += ((MenuModels.Option) rb.getTag()).priceDelta;
+                }
+              }
+            } else {
+              List<CheckBox> boxes = multiGroups.get(group.id);
+              if (boxes != null) {
+                for (CheckBox cb : boxes) {
+                  if (cb.isChecked() && cb.getTag() instanceof MenuModels.Option) {
+                    unit += ((MenuModels.Option) cb.getTag()).priceDelta;
+                  }
+                }
+              }
+            }
+          }
+          double total = unit * qty[0];
+          lineTotal.setText(String.format(Locale.getDefault(), "รวม ฿%.0f", total));
+        };
 
     for (MenuModels.OptionGroup group : groups) {
       TextView header = new TextView(this);
@@ -759,16 +831,18 @@ public class SellActivity extends Activity {
         int min = group.effectiveMin();
         int max = group.effectiveMax();
         if (max == Integer.MAX_VALUE) {
-          lim = min > 0 ? " (อย่างน้อย " + min + ")" : " (ไม่จำกัด)";
+          lim = min > 0 ? " (อย่างน้อย " + min + ")" : " (เลือกได้หลายอย่าง)";
         } else {
           lim = " (" + min + "–" + max + ")";
         }
+      } else {
+        lim = " (เลือก 1)";
       }
       header.setText(group.name + req + lim);
-      header.setTextColor(0xFF1A2E24);
+      header.setTextColor(0xFF1E2D3D);
       header.setTypeface(Typeface.DEFAULT_BOLD);
-      header.setPadding(0, 12, 0, 6);
-      root.addView(header);
+      header.setPadding(0, 16, 0, 8);
+      groupsRoot.addView(header);
 
       if (group.isSingle()) {
         RadioGroup rg = new RadioGroup(this);
@@ -787,6 +861,7 @@ public class SellActivity extends Activity {
                     opt.priceDelta);
           }
           rb.setText(label);
+          rb.setTextColor(0xFF1E2D3D);
           rb.setTag(opt);
           rg.addView(rb);
           if (first && group.effectiveMin() > 0) {
@@ -794,7 +869,8 @@ public class SellActivity extends Activity {
             first = false;
           }
         }
-        root.addView(rg);
+        rg.setOnCheckedChangeListener((g, id) -> refreshTotal.run());
+        groupsRoot.addView(rg);
         singleGroups.put(group.id, rg);
       } else {
         List<CheckBox> boxes = new ArrayList<>();
@@ -811,105 +887,133 @@ public class SellActivity extends Activity {
                     opt.priceDelta);
           }
           cb.setText(label);
+          cb.setTextColor(0xFF1E2D3D);
           cb.setTag(opt);
           cb.setOnCheckedChangeListener(
               (buttonView, isChecked) -> {
-                if (!isChecked) return;
-                int selected = 0;
-                for (CheckBox b : boxes) if (b.isChecked()) selected++;
-                if (selected > gRef.effectiveMax()) {
-                  buttonView.setChecked(false);
-                  Toast.makeText(
-                          SellActivity.this,
-                          getString(R.string.option_max, gRef.name, gRef.effectiveMax()),
-                          Toast.LENGTH_SHORT)
-                      .show();
+                if (isChecked) {
+                  int selected = 0;
+                  for (CheckBox b : boxes) if (b.isChecked()) selected++;
+                  if (selected > gRef.effectiveMax()) {
+                    buttonView.setChecked(false);
+                    Toast.makeText(
+                            SellActivity.this,
+                            getString(R.string.option_max, gRef.name, gRef.effectiveMax()),
+                            Toast.LENGTH_SHORT)
+                        .show();
+                    return;
+                  }
                 }
+                refreshTotal.run();
               });
-          root.addView(cb);
+          groupsRoot.addView(cb);
           boxes.add(cb);
         }
         multiGroups.put(group.id, boxes);
       }
     }
 
-    new AlertDialog.Builder(this)
-        .setTitle(item.name)
-        .setView(scroll)
-        .setPositiveButton(
-            R.string.btn_add_to_cart,
-            (d, w) -> {
-              try {
-                JSONArray optionsJson = new JSONArray();
-                double unit = item.price;
-                for (MenuModels.OptionGroup group : groups) {
-                  List<MenuModels.Option> chosen = new ArrayList<>();
-                  if (group.isSingle()) {
-                    RadioGroup rg = singleGroups.get(group.id);
-                    int checked = rg == null ? -1 : rg.getCheckedRadioButtonId();
-                    if (checked != -1) {
-                      RadioButton rb = rg.findViewById(checked);
-                      if (rb != null && rb.getTag() instanceof MenuModels.Option) {
-                        chosen.add((MenuModels.Option) rb.getTag());
-                      }
-                    }
-                  } else {
-                    List<CheckBox> boxes = multiGroups.get(group.id);
-                    if (boxes != null) {
-                      for (CheckBox cb : boxes) {
-                        if (cb.isChecked() && cb.getTag() instanceof MenuModels.Option) {
-                          chosen.add((MenuModels.Option) cb.getTag());
-                        }
-                      }
-                    }
+    qtyValue.setText("1");
+    qtyMinus.setOnClickListener(
+        v -> {
+          if (qty[0] <= 1) return;
+          qty[0] -= 1;
+          qtyValue.setText(String.valueOf(qty[0]));
+          refreshTotal.run();
+        });
+    qtyPlus.setOnClickListener(
+        v -> {
+          if (qty[0] >= 99) return;
+          qty[0] += 1;
+          qtyValue.setText(String.valueOf(qty[0]));
+          refreshTotal.run();
+        });
+    refreshTotal.run();
+
+    AlertDialog dialog =
+        new AlertDialog.Builder(this).setView(sheet).setCancelable(true).create();
+    cancelBtn.setOnClickListener(v -> dialog.dismiss());
+    confirmBtn.setOnClickListener(
+        v -> {
+          try {
+            errView.setVisibility(View.GONE);
+            JSONArray optionsJson = new JSONArray();
+            double unit = item.price;
+            for (MenuModels.OptionGroup group : groups) {
+              List<MenuModels.Option> chosen = new ArrayList<>();
+              if (group.isSingle()) {
+                RadioGroup rg = singleGroups.get(group.id);
+                int checked = rg == null ? -1 : rg.getCheckedRadioButtonId();
+                if (checked != -1) {
+                  RadioButton rb = rg.findViewById(checked);
+                  if (rb != null && rb.getTag() instanceof MenuModels.Option) {
+                    chosen.add((MenuModels.Option) rb.getTag());
                   }
-                  int min = group.effectiveMin();
-                  int max = group.effectiveMax();
-                  if (chosen.size() < min) {
-                    Toast.makeText(
-                            this,
-                            getString(R.string.option_min, group.name, min),
-                            Toast.LENGTH_LONG)
-                        .show();
-                    return;
-                  }
-                  if (chosen.size() > max) {
-                    Toast.makeText(
-                            this,
-                            getString(R.string.option_max, group.name, max),
-                            Toast.LENGTH_LONG)
-                        .show();
-                    return;
-                  }
-                  if (chosen.isEmpty()) continue;
-                  JSONObject g = new JSONObject();
-                  g.put("groupId", group.id);
-                  g.put("groupName", group.name);
-                  JSONArray choices = new JSONArray();
-                  for (MenuModels.Option opt : chosen) {
-                    JSONObject c = new JSONObject();
-                    c.put("optionId", opt.id);
-                    c.put("name", opt.name);
-                    c.put("priceDelta", opt.priceDelta);
-                    choices.put(c);
-                    unit += opt.priceDelta;
-                  }
-                  g.put("choices", choices);
-                  optionsJson.put(g);
                 }
-                addItemWithOptions(item, optionsJson, unit);
-              } catch (Exception e) {
-                Toast.makeText(this, R.string.option_pick_fail, Toast.LENGTH_SHORT).show();
+              } else {
+                List<CheckBox> boxes = multiGroups.get(group.id);
+                if (boxes != null) {
+                  for (CheckBox cb : boxes) {
+                    if (cb.isChecked() && cb.getTag() instanceof MenuModels.Option) {
+                      chosen.add((MenuModels.Option) cb.getTag());
+                    }
+                  }
+                }
               }
-            })
-        .setNegativeButton(android.R.string.cancel, null)
-        .show();
+              int min = group.effectiveMin();
+              int max = group.effectiveMax();
+              if (chosen.size() < min) {
+                errView.setVisibility(View.VISIBLE);
+                errView.setText(getString(R.string.option_min, group.name, min));
+                return;
+              }
+              if (chosen.size() > max) {
+                errView.setVisibility(View.VISIBLE);
+                errView.setText(getString(R.string.option_max, group.name, max));
+                return;
+              }
+              if (chosen.isEmpty()) continue;
+              JSONObject g = new JSONObject();
+              g.put("groupId", group.id);
+              g.put("groupName", group.name);
+              JSONArray choices = new JSONArray();
+              for (MenuModels.Option opt : chosen) {
+                JSONObject c = new JSONObject();
+                c.put("optionId", opt.id);
+                c.put("name", opt.name);
+                c.put("priceDelta", opt.priceDelta);
+                choices.put(c);
+                unit += opt.priceDelta;
+              }
+              g.put("choices", choices);
+              optionsJson.put(g);
+            }
+            addItemWithOptions(item, optionsJson, unit, qty[0]);
+            dialog.dismiss();
+          } catch (Exception e) {
+            Toast.makeText(this, R.string.option_pick_fail, Toast.LENGTH_SHORT).show();
+          }
+        });
+    dialog.show();
+    if (dialog.getWindow() != null) {
+      dialog
+          .getWindow()
+          .setLayout(
+              (int) (getResources().getDisplayMetrics().widthPixels * 0.72),
+              android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+    }
   }
 
   private void addItemWithOptions(MenuModels.Item item, JSONArray optionsJson, double unit) {
-    cart.add(new MenuModels.CartLine(item.id, item.name, unit, 1, optionsJson));
+    addItemWithOptions(item, optionsJson, unit, 1);
+  }
+
+  private void addItemWithOptions(
+      MenuModels.Item item, JSONArray optionsJson, double unit, int qty) {
+    int q = Math.max(1, qty);
+    cart.add(new MenuModels.CartLine(item.id, item.name, unit, q, optionsJson));
     renderCart();
-    OpsLogger.info(this, "sale", "เพิ่มเมนู", item.name);
+    OpsLogger.info(this, "sale", "เพิ่มเมนู", item.name + " ×" + q);
   }
 
   private MenuModels.OptionGroup findGroup(String id) {

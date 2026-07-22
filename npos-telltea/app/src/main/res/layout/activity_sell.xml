@@ -1,285 +1,279 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Clone web PosSellView: left menu (cats+grid) | right fixed cart -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Web PosAppShell: left sidebar + sell body (PosSellView 65/35) + update popup -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7F8FC"
-    android:orientation="vertical">
+    android:background="#EEF0F4">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="#1E2D3D"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="10dp">
+        android:layout_height="match_parent"
+        android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/backButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:minHeight="40dp"
-            android:text="@string/btn_back"
-            android:textAllCaps="false"
-            android:textSize="12sp" />
+        <include layout="@layout/include_pos_sidebar" />
 
-        <TextView
-            android:id="@+id/sellTitle"
+        <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:text="@string/sell_title"
-            android:textColor="#F7F8FC"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/refreshMenuButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:minHeight="40dp"
-            android:text="@string/btn_refresh_menu"
-            android:textAllCaps="false"
-            android:textSize="12sp" />
-
-        <TextView
-            android:id="@+id/sellSyncStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="#F0C9A0"
-            android:textSize="12sp" />
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/shiftSummary"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="#2A3C4E"
-        android:paddingLeft="12dp"
-        android:paddingRight="12dp"
-        android:paddingTop="6dp"
-        android:paddingBottom="6dp"
-        android:textColor="#D7E0EA"
-        android:textSize="12sp" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="horizontal"
-        android:padding="6dp">
-
-        <!-- Left ~65%: categories + menu grid -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="65"
             android:orientation="vertical">
-
-            <HorizontalScrollView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:scrollbars="none">
-
-                <LinearLayout
-                    android:id="@+id/categoryBar"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingBottom="6dp"
-                    android:paddingTop="2dp" />
-            </HorizontalScrollView>
-
-            <ScrollView
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:fillViewport="true">
-
-                <GridLayout
-                    android:id="@+id/menuGrid"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:alignmentMode="alignBounds"
-                    android:columnCount="5"
-                    android:padding="2dp"
-                    android:useDefaultMargins="false" />
-            </ScrollView>
-        </LinearLayout>
-
-        <!-- Right ~35%: cart + totals + pay -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_marginStart="6dp"
-            android:layout_weight="35"
-            android:background="#FFFFFF"
-            android:elevation="2dp"
-            android:orientation="vertical"
-            android:padding="10dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/cart_title"
-                android:textColor="#1E2D3D"
-                android:textSize="15sp"
-                android:textStyle="bold" />
-
-            <ScrollView
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1">
-
-                <LinearLayout
-                    android:id="@+id/cartList"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
-            </ScrollView>
-
-            <TextView
-                android:id="@+id/cartTotal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text="@string/cart_total_zero"
-                android:textColor="#1E2D3D"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/discountLabel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="#E85D24"
-                android:textSize="13sp"
-                android:visibility="gone" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:orientation="horizontal">
+                android:background="#1E2D3D"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="10dp">
 
-                <Button
-                    android:id="@+id/discountButton"
+                <TextView
+                    android:id="@+id/sellTitle"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="4dp"
                     android:layout_weight="1"
-                    android:backgroundTint="#FFFFFF"
-                    android:minHeight="40dp"
-                    android:text="@string/btn_discount"
-                    android:textAllCaps="false"
-                    android:textColor="#E85D24" />
+                    android:text="@string/sell_title"
+                    android:textColor="#F7F8FC"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
                 <Button
-                    android:id="@+id/holdBillButton"
-                    android:layout_width="0dp"
+                    android:id="@+id/refreshMenuButton"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="2dp"
-                    android:layout_marginEnd="2dp"
-                    android:layout_weight="1"
-                    android:backgroundTint="#FFFFFF"
+                    android:layout_marginEnd="8dp"
                     android:minHeight="40dp"
-                    android:text="@string/btn_hold_bill"
+                    android:text="@string/btn_refresh_menu"
                     android:textAllCaps="false"
-                    android:textColor="#E85D24" />
+                    android:textSize="12sp" />
 
-                <Button
-                    android:id="@+id/restoreHoldButton"
-                    android:layout_width="0dp"
+                <TextView
+                    android:id="@+id/sellSyncStatus"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:backgroundTint="#FFFFFF"
-                    android:minHeight="40dp"
-                    android:text="@string/btn_restore_hold"
-                    android:textAllCaps="false"
-                    android:textColor="#E85D24" />
+                    android:textColor="#F0C9A0"
+                    android:textSize="12sp" />
             </LinearLayout>
 
-            <Button
-                android:id="@+id/flushSyncButton"
+            <TextView
+                android:id="@+id/shiftSummary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:minHeight="36dp"
-                android:text="@string/btn_flush_sync"
-                android:textAllCaps="false"
-                android:visibility="gone" />
+                android:background="#2A3C4E"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:textColor="#D7E0EA"
+                android:textSize="12sp" />
 
-            <Button
-                android:id="@+id/payCashButton"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:backgroundTint="#E85D24"
-                android:minHeight="52dp"
-                android:text="@string/btn_pay_cash"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal"
+                android:padding="6dp">
 
-            <Button
-                android:id="@+id/payPromptButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:backgroundTint="#FFFFFF"
-                android:minHeight="44dp"
-                android:text="@string/btn_pay_promptpay"
-                android:textAllCaps="false"
-                android:textColor="#E85D24" />
+                <!-- Left ~65%: categories + menu grid -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="65"
+                    android:orientation="vertical">
+
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:scrollbars="none">
+
+                        <LinearLayout
+                            android:id="@+id/categoryBar"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingBottom="6dp"
+                            android:paddingTop="2dp" />
+                    </HorizontalScrollView>
+
+                    <ScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:fillViewport="true">
+
+                        <GridLayout
+                            android:id="@+id/menuGrid"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:alignmentMode="alignBounds"
+                            android:columnCount="5"
+                            android:padding="2dp"
+                            android:useDefaultMargins="false" />
+                    </ScrollView>
+                </LinearLayout>
+
+                <!-- Right ~35%: cart + totals + pay -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="35"
+                    android:background="#FFFFFF"
+                    android:elevation="2dp"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/cart_title"
+                        android:textColor="#1E2D3D"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <ScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1">
+
+                        <LinearLayout
+                            android:id="@+id/cartList"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical" />
+                    </ScrollView>
+
+                    <TextView
+                        android:id="@+id/cartTotal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/cart_total_zero"
+                        android:textColor="#1E2D3D"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/discountLabel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="#E85D24"
+                        android:textSize="13sp"
+                        android:visibility="gone" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:orientation="horizontal">
+
+                        <Button
+                            android:id="@+id/discountButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="4dp"
+                            android:layout_weight="1"
+                            android:backgroundTint="#FFFFFF"
+                            android:minHeight="40dp"
+                            android:text="@string/btn_discount"
+                            android:textAllCaps="false"
+                            android:textColor="#E85D24" />
+
+                        <Button
+                            android:id="@+id/holdBillButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="2dp"
+                            android:layout_marginEnd="2dp"
+                            android:layout_weight="1"
+                            android:backgroundTint="#FFFFFF"
+                            android:minHeight="40dp"
+                            android:text="@string/btn_hold_bill"
+                            android:textAllCaps="false"
+                            android:textColor="#E85D24" />
+
+                        <Button
+                            android:id="@+id/restoreHoldButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:layout_weight="1"
+                            android:backgroundTint="#FFFFFF"
+                            android:minHeight="40dp"
+                            android:text="@string/btn_restore_hold"
+                            android:textAllCaps="false"
+                            android:textColor="#E85D24" />
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/flushSyncButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:minHeight="36dp"
+                        android:text="@string/btn_flush_sync"
+                        android:textAllCaps="false"
+                        android:visibility="gone" />
+
+                    <Button
+                        android:id="@+id/payCashButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:backgroundTint="#E85D24"
+                        android:minHeight="52dp"
+                        android:text="@string/btn_pay_cash"
+                        android:textAllCaps="false"
+                        android:textColor="#FFFFFF"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/payPromptButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:backgroundTint="#FFFFFF"
+                        android:minHeight="44dp"
+                        android:text="@string/btn_pay_promptpay"
+                        android:textAllCaps="false"
+                        android:textColor="#E85D24" />
+
+                    <Button
+                        android:id="@+id/xReportButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:backgroundTint="#EEF0F4"
+                        android:minHeight="40dp"
+                        android:text="@string/btn_x_report"
+                        android:textAllCaps="false"
+                        android:textColor="#1E2D3D" />
+
+                    <!-- Kept for code wiring; nav moved to left rail -->
+                    <Button
+                        android:id="@+id/backButton"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:visibility="gone" />
+                    <Button
+                        android:id="@+id/receiptsButton"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:visibility="gone" />
+                    <Button
+                        android:id="@+id/sellSettingsButton"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:visibility="gone" />
+                    <Button
+                        android:id="@+id/sellCloseShiftButton"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp">
-
-        <Button
-            android:id="@+id/receiptsButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="4dp"
-            android:layout_weight="1"
-            android:text="@string/btn_receipts"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/xReportButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
-            android:layout_weight="1"
-            android:text="@string/btn_x_report"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/sellSettingsButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
-            android:layout_weight="1"
-            android:text="@string/btn_settings"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/sellCloseShiftButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_weight="1"
-            android:text="@string/btn_close_shift"
-            android:textAllCaps="false" />
-    </LinearLayout>
-</LinearLayout>
+    <include layout="@layout/include_update_popup" />
+</FrameLayout>

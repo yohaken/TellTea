@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 236/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+29/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.6"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 237/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+30/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.7"/);
 assert.match(read("docs/npos-capture-checklist.md"), /สั่งแคปจอ|C1|C4|50/);
 assert.match(read("docs/npos-pilot-gate-faq.md"), /แคปจอ/);
 
@@ -112,6 +112,10 @@ assert.match(
 assert.match(
   read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/ScreenCapture.java"),
   /แคปจอไม่มีรูปบนเซิร์ฟเวอร์/,
+);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/ScreenCapture.java"),
+  /live_customer|captureLiveCustomerOrNull/,
 );
 assert.ok(existsSync(join(root, "scripts/smoke-npos-capture-image.mjs")));
 
