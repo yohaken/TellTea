@@ -19,7 +19,7 @@ const profile = read("src/components/BusinessProfileSetup.tsx");
 const update = read("src/components/AppUpdateSetup.tsx");
 const catalog = read("src/components/ChecklistSetup.tsx");
 
-assert.match(version, /APP_BUILD = 262/);
+assert.match(version, /APP_BUILD = 263/);
 assert.doesNotMatch(settings, /ChecklistSetup/);
 assert.match(settings, /BusinessProfileSetup/);
 assert.match(settings, /NavMenuOrderSetup/);

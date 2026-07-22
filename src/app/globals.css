@@ -12110,7 +12110,7 @@ body.modal-open .main-panel {
   flex-direction: column;
   align-items: stretch;
   justify-content: center;
-  gap: 0.1rem;
+  gap: 0.12rem;
   border: 0;
   background: transparent;
   font: inherit;
@@ -12122,6 +12122,30 @@ body.modal-open .main-panel {
 .pos-menu-item-main .pos-menu-item-text {
   font-weight: 650;
   color: #1f2a24;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pos-menu-item-price-line {
+  font-size: 0.78rem;
+}
+
+.pos-menu-item-opt-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 11rem;
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  background: #eef4f0;
+  color: #3a5a48;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pos-menu-item-opts-line {

@@ -14,6 +14,8 @@ export type MenuItemOptionSummary = {
     choiceCount: number;
   }>;
   line: string;
+  /** Compact chip for list rows */
+  chip: string;
 };
 
 /** Resolve linked option groups for browse/list — smart one-line + expand detail. */
@@ -47,6 +49,8 @@ export function summarizeMenuItemOptions(
   const short = groupLabels.slice(0, 3).join(", ");
   const more = groupLabels.length > 3 ? ` +${groupLabels.length - 3}` : "";
   const line = `${groups.length} กลุ่ม · ${choiceCount} ตัวเลือก · ${short}${more}`;
+  /** List row chip — short, not a full sentence */
+  const chip = groups.length === 1 ? `ตัวเลือก · ${groups[0].name}` : `ตัวเลือก · ${groups.length} กลุ่ม`;
 
   return {
     groupCount: groups.length,
@@ -54,6 +58,7 @@ export function summarizeMenuItemOptions(
     groupLabels,
     groups,
     line,
+    chip,
   };
 }
 

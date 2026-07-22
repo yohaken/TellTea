@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 262/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 263/);
 
 const image = read("src/lib/pos-menu-image.ts");
 const photo = read("src/components/PosMenuPhotoModule.tsx");
@@ -35,15 +35,18 @@ assert.match(summary, /export function summarizeMenuItemOptions/);
 assert.match(summary, /groupLabels/);
 assert.match(summary, /choiceNames/);
 assert.match(admin, /summarizeMenuItemOptions/);
-assert.match(admin, /pos-menu-item-opts-line/);
+assert.match(admin, /pos-menu-item-opt-chip/);
+assert.match(admin, /optSummary\.chip/);
 assert.match(admin, /pos-menu-item-opts-panel/);
 assert.match(admin, /ดูตัวเลือกของเมนู/);
 assert.match(admin, /expandedItemId/);
-assert.match(admin, /ยังไม่ผูกตัวเลือก/);
+assert.doesNotMatch(admin, /ยังไม่ผูกตัวเลือก/);
+assert.match(summary, /chip:/);
 assert.match(editor, /pos-menu-link-group-sub/);
 assert.match(editor, /selectionTypeLabel/);
 assert.match(editor, /ตัวเลือก/);
 assert.match(css, /\.pos-menu-item-opts-panel/);
+assert.match(css, /\.pos-menu-item-opt-chip/);
 assert.match(css, /\.pos-menu-link-group-meta/);
 
 // —— Pure summary logic (mirror of helper) ——
@@ -74,6 +77,7 @@ function summarizeMenuItemOptions(item, optionGroups) {
     choiceCount,
     groups,
     line: `${groups.length} กลุ่ม · ${choiceCount} ตัวเลือก · ${short}${more}`,
+    chip: groups.length === 1 ? `ตัวเลือก · ${groups[0].name}` : `ตัวเลือก · ${groups.length} กลุ่ม`,
   };
 }
 
@@ -105,6 +109,7 @@ assert.equal(s.choiceCount, 3);
 assert.match(s.line, /2 กลุ่ม/);
 assert.match(s.line, /3 ตัวเลือก/);
 assert.match(s.line, /ความหวาน/);
+assert.equal(s.chip, "ตัวเลือก · 2 กลุ่ม");
 assert.equal(s.groups[0].choiceNames.length, 2);
 
 console.log("ok: menu-image-options-smart");

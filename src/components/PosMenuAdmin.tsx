@@ -710,8 +710,11 @@ export function PosMenuAdmin({
                                             : !item.active
                                               ? " (หมด)"
                                               : ""}
+                                          {optSummary ? (
+                                            <span className="pos-menu-item-opt-chip">{optSummary.chip}</span>
+                                          ) : null}
                                         </span>
-                                        <span className="muted">
+                                        <span className="muted pos-menu-item-price-line">
                                           ฿{formatPlainNumber(item.price)}
                                           {" · ส่ง ฿"}
                                           {formatPlainNumber(
@@ -721,15 +724,6 @@ export function PosMenuAdmin({
                                           )}
                                           {item.code ? ` · ${item.code}` : ""}
                                         </span>
-                                        {optSummary ? (
-                                          <span className="pos-menu-item-opts-line muted">
-                                            {optSummary.line}
-                                          </span>
-                                        ) : (
-                                          <span className="pos-menu-item-opts-line muted pos-menu-item-opts-none">
-                                            ยังไม่ผูกตัวเลือก
-                                          </span>
-                                        )}
                                       </button>
                                       {optSummary ? (
                                         <button
