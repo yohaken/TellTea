@@ -3,3 +3,4 @@ raw-*.json
 snapshot-*.json
 raw-latest.json
 snapshot-latest.json
+apply-plan-*.json
