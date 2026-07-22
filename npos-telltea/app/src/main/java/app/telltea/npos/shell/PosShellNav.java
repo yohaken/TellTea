@@ -3,7 +3,6 @@ package app.telltea.npos.shell;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Typeface;
-import android.net.Uri;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -101,37 +100,9 @@ public final class PosShellNav {
         activity,
         nav,
         ui,
-        R.string.nav_inventory,
-        false,
-        () -> openWeb(activity, "https://telltea-pos.web.app/pos/inventory/", false));
-    addLink(
-        activity,
-        nav,
-        ui,
         R.string.nav_shift,
         ACTIVE_SHIFT.equals(activeId),
         () -> openNative(activity, ShiftActivity.class, activeId));
-    addLink(
-        activity,
-        nav,
-        ui,
-        R.string.nav_menu,
-        false,
-        () -> openWeb(activity, "https://telltea-pos.web.app/pos/menu/", false));
-    addLink(
-        activity,
-        nav,
-        ui,
-        R.string.nav_ops,
-        false,
-        () -> openWeb(activity, "https://telltea-pos.web.app/pos/ops/", false));
-    addLink(
-        activity,
-        nav,
-        ui,
-        R.string.nav_shop_settings,
-        false,
-        () -> openWeb(activity, "https://telltea-pos.web.app/pos/settings/", false));
     addLink(
         activity,
         nav,
@@ -171,18 +142,6 @@ public final class PosShellNav {
       if (!SellActivity.class.equals(cls)) {
         activity.finish();
       }
-    }
-  }
-
-  private static void openWeb(Activity activity, String url, boolean stubNote) {
-    try {
-      Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-      activity.startActivity(i);
-      if (stubNote) {
-        Toast.makeText(activity, R.string.nav_web_stub_hint, Toast.LENGTH_SHORT).show();
-      }
-    } catch (Exception e) {
-      Toast.makeText(activity, R.string.nav_web_open_fail, Toast.LENGTH_SHORT).show();
     }
   }
 

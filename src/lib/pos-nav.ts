@@ -1,11 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  BookOpen,
   FileText,
   LayoutGrid,
-  Link2,
   LogOut,
-  Package,
   Receipt,
   Settings2,
   ShoppingBag,
@@ -32,16 +29,19 @@ export type PosNavItem = {
   requiresSelling?: boolean;
 };
 
+/**
+ * POS counter nav — cut from shop BO and from menu/ops/inventory admin.
+ * Device settings stay on telltea-pos host only (printer / identity).
+ * Routes for inventory/ops/menu may still exist as stubs or owner URLs.
+ */
 export const POS_NAV_ITEMS: PosNavItem[] = [
   { id: "sell", href: "/pos/sell/", label: "สั่งและชำระเงิน", icon: ShoppingBag },
   // members / coupon — hidden until real CRM (F3)
   { id: "open-bills", href: "/pos/open-bills/", label: "บิลที่เปิดอยู่", icon: FileText, requiresSelling: true },
   { id: "receipts", href: "/pos/receipts/", label: "ประวัติใบเสร็จ", icon: Receipt },
-  { id: "inventory", href: "/pos/inventory/", label: "สินค้าคงคลัง", icon: Package },
+  // inventory · ops · menu — cut (BO / admin). No counter entry.
   { id: "shift", href: "/pos/shift/", label: "รอบการขาย", icon: Timer },
-  { id: "menu", href: "/pos/menu/", label: "เมนูและโปรโมชั่น", icon: BookOpen },
-  { id: "ops", href: "/pos/ops/", label: "ลิงก์จากร้าน", icon: Link2 },
-  { id: "settings", href: "/pos/settings/", label: "ตั้งค่ากิจการ", icon: Settings2 },
+  { id: "settings", href: "/pos/settings/", label: "ตั้งค่าเครื่อง", icon: Settings2 },
 ];
 
 export const POS_LOCK_HREF = "/pos/lock/";

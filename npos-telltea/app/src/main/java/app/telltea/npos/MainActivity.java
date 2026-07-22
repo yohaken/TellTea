@@ -3,7 +3,6 @@ package app.telltea.npos;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -30,7 +29,6 @@ import app.telltea.npos.shift.BlindCloseFlow;
 import app.telltea.npos.shift.OpenShiftFlow;
 import app.telltea.npos.shift.ShiftPrefs;
 import app.telltea.npos.ui.UiScale;
-import app.telltea.npos.update.ApkInstaller;
 import app.telltea.npos.update.ResumePrefs;
 import app.telltea.npos.update.UpdatePromptController;
 
@@ -226,24 +224,13 @@ public class MainActivity extends Activity {
           }
         });
     addHubNative(R.string.nav_receipts, () -> startActivity(new Intent(this, ReceiptsActivity.class)));
-    addHubWeb(R.string.nav_inventory, "https://telltea-pos.web.app/pos/inventory/", false);
     addHubNative(R.string.nav_shift, () -> startActivity(new Intent(this, ShiftActivity.class)));
-    addHubWeb(R.string.nav_menu, "https://telltea-pos.web.app/pos/menu/", false);
-    addHubWeb(R.string.nav_ops, "https://telltea-pos.web.app/pos/ops/", false);
-    addHubWeb(R.string.nav_shop_settings, "https://telltea-pos.web.app/pos/settings/", false);
     addHubNative(R.string.btn_settings_device, () -> startActivity(new Intent(this, SettingsActivity.class)));
   }
 
   private void addHubNative(int labelRes, Runnable action) {
     Button b = hubButton(getString(labelRes), false);
     b.setOnClickListener(v -> action.run());
-    hubNavList.addView(b);
-  }
-
-  private void addHubWeb(int labelRes, String url, boolean stubNote) {
-    String label = getString(labelRes) + (stubNote ? " · เว็บ" : " · เว็บ");
-    Button b = hubButton(label, true);
-    b.setOnClickListener(v -> openWeb(url));
     hubNavList.addView(b);
   }
 
@@ -265,15 +252,6 @@ public class MainActivity extends Activity {
 
   private int dp(int v) {
     return Math.round(v * getResources().getDisplayMetrics().density);
-  }
-
-  private void openWeb(String url) {
-    try {
-      ApkInstaller.openInstallPage(this, url);
-      OpsLogger.info(this, "app", "เปิดเมนูเว็บ", url);
-    } catch (Exception e) {
-      startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-    }
   }
 
   @Override

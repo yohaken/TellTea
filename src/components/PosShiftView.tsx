@@ -757,9 +757,9 @@ export function PosShiftView() {
               </>
             ) : null}
 
-            <p className="muted pos-shift-history-note">
-              รายงานเต็มที่ TellTea หลังร้าน → รายงานขาย POS
-            </p>
+              <p className="muted pos-shift-history-note">
+                ดูรายงานรอบเต็มที่หลังบ้าน (เจ้าของ) — เคาน์เตอร์ไม่เปิดลิงก์ออก
+              </p>
             </div>
           </>
         )}

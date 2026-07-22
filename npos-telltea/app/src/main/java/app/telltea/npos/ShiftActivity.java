@@ -2,7 +2,6 @@ package app.telltea.npos;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -12,7 +11,6 @@ import android.widget.Toast;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shift.BlindCloseFlow;
 import app.telltea.npos.shift.ShiftPrefs;
-import app.telltea.npos.update.ApkInstaller;
 
 /**
  * Native shift screen — clone web /pos/shift/ essentials: summary, X-report, close.
@@ -69,12 +67,6 @@ public class ShiftActivity extends Activity {
     z.setOnClickListener(v -> closeShift());
     root.addView(z);
 
-    Button web = new Button(this);
-    web.setAllCaps(false);
-    web.setText(R.string.btn_open_web_shift);
-    web.setOnClickListener(v -> openWeb("https://telltea-pos.web.app/pos/shift/"));
-    root.addView(web);
-
     setContentView(root);
     refreshSummary();
   }
@@ -99,14 +91,6 @@ public class ShiftActivity extends Activity {
           startActivity(i);
           finish();
         });
-  }
-
-  private void openWeb(String url) {
-    try {
-      ApkInstaller.openInstallPage(this, url);
-    } catch (Exception e) {
-      startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-    }
   }
 
   @Override
