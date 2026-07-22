@@ -1,20 +1,31 @@
 /**
- * Owner books: reclassify descriptions matching "ft.." from asset → sga.
+ * Owner books: reclassify "ft…" freight-like rows from asset → sga.
  *
- *   FIREBASE_SERVICE_ACCOUNT='{...}' node scripts/repair-owner-ft-to-sga.mjs
+ * Match (case-insensitive):
+ *   - description contains "ft.." or "ft."
+ *   - OR description starts with "ft" / "ft " / "ft-" / "ft/"
+ * Only rows currently typed as asset/assets are updated.
+ *
  *   APPLY=1 FIREBASE_SERVICE_ACCOUNT='{...}' node scripts/repair-owner-ft-to-sga.mjs
- *
- * Default is dry-run (list only). Set APPLY=1 to write.
  */
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
 const PROJECT = process.env.FIREBASE_PROJECT_ID || "mypeer-501909";
 const APPLY = process.env.APPLY === "1" || process.env.APPLY === "true";
-/** Matches user query: descriptions containing "ft.." (case-insensitive). */
-const FT_RE = /ft\.\./i;
 const FROM_TYPES = new Set(["asset", "assets"]);
 const TO_TYPE = "sga";
+
+/** Broader than literal "ft.." — covers ft. / FT- / freight codes users search as ft */
+function isFtDescription(description) {
+  const d = String(description || "").trim();
+  if (!d) return false;
+  if (/ft\.\./i.test(d)) return true;
+  if (/ft\./i.test(d)) return true;
+  if (/^ft([\s\-_/]|$)/i.test(d)) return true;
+  if (/\bft[\s\-_/]/i.test(d)) return true;
+  return false;
+}
 
 function loadCredentials() {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_KEY;
@@ -49,51 +60,56 @@ function formatDate(ms) {
 async function main() {
   const db = getAdminDb();
   const snap = await db.collection("ownerBooks").get();
-  const matches = [];
+
+  const byType = new Map();
+  const assetRows = [];
+  const ftRows = [];
+
   for (const doc of snap.docs) {
     const data = doc.data() || {};
     const description = String(data.description || "");
-    if (!FT_RE.test(description)) continue;
-    const type = canonicalType(data.type);
-    matches.push({
+    const typeKey = canonicalType(data.type);
+    byType.set(typeKey || "(empty)", (byType.get(typeKey || "(empty)") || 0) + 1);
+
+    const row = {
       id: doc.id,
       description,
       type: data.type || "",
-      typeKey: type,
+      typeKey,
       amountOut: Number(data.amountOut) || 0,
       date: data.date,
-    });
+    };
+
+    if (FROM_TYPES.has(typeKey)) assetRows.push(row);
+    if (isFtDescription(description)) ftRows.push(row);
   }
 
-  matches.sort((a, b) => Number(a.date || 0) - Number(b.date || 0));
+  assetRows.sort((a, b) => Number(a.date || 0) - Number(b.date || 0));
+  ftRows.sort((a, b) => Number(a.date || 0) - Number(b.date || 0));
 
-  const toFix = matches.filter((m) => FROM_TYPES.has(m.typeKey));
-  const alreadySga = matches.filter((m) => m.typeKey === "sga");
-  const other = matches.filter((m) => !FROM_TYPES.has(m.typeKey) && m.typeKey !== "sga");
+  const toFix = ftRows.filter((m) => FROM_TYPES.has(m.typeKey));
 
   console.log(`ownerBooks total docs: ${snap.size}`);
-  console.log(`description matches /ft\\.\\./i: ${matches.length}`);
-  console.log(`  currently asset → will move to sga: ${toFix.length}`);
-  console.log(`  already sga: ${alreadySga.length}`);
-  console.log(`  other types: ${other.length}`);
+  console.log("type counts:", Object.fromEntries([...byType.entries()].sort((a, b) => b[1] - a[1])));
+  console.log(`asset rows: ${assetRows.length}`);
+  console.log(`ft-like description rows: ${ftRows.length}`);
+  console.log(`ft-like + asset (to fix): ${toFix.length}`);
   console.log(`mode: ${APPLY ? "APPLY" : "DRY-RUN"}`);
-  console.log("---");
-
-  for (const m of matches) {
-    const flag = FROM_TYPES.has(m.typeKey)
-      ? "FIX"
-      : m.typeKey === "sga"
-        ? "ok"
-        : "skip";
+  console.log("--- ft-like rows ---");
+  for (const m of ftRows) {
+    const flag = FROM_TYPES.has(m.typeKey) ? "FIX" : m.typeKey === "sga" ? "ok" : "skip";
     console.log(
       `[${flag}] ${formatDate(m.date)} | ${m.type || "(empty)"} | ${m.amountOut} | ${m.description} | ${m.id}`,
     );
   }
 
-  if (toFix.length !== 17 && matches.length !== 17) {
-    console.warn(
-      `\nNOTE: expected ~17 ft.. rows; found ${matches.length} matches (${toFix.length} asset). Continuing with what we found.`,
-    );
+  if (!ftRows.length) {
+    console.log("--- sample asset descriptions (first 40) ---");
+    for (const m of assetRows.slice(0, 40)) {
+      console.log(
+        `${formatDate(m.date)} | ${m.amountOut} | ${m.description}`,
+      );
+    }
   }
 
   if (!APPLY) {
