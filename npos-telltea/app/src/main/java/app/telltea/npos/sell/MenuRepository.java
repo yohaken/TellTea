@@ -47,7 +47,8 @@ public final class MenuRepository {
         executor.execute(
                 () -> {
                     MenuModels.Bundle cached = readCachedMenu(app);
-                    if (cached != null && !forceNetwork) {
+                    // Local-first: always paint from disk cache immediately when present.
+                    if (cached != null) {
                         callback.onReady(cached);
                     }
                     try {
@@ -55,16 +56,27 @@ public final class MenuRepository {
                         body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
                         JSONObject res = postJson(MENU_URL, body);
                         if (res.optBoolean("ok", false)) {
+                            String nextRaw = res.toString();
+                            String prevRaw =
+                                    app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                                            .getString(KEY_MENU, null);
                             app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                                     .edit()
-                                    .putString(KEY_MENU, res.toString())
+                                    .putString(KEY_MENU, nextRaw)
+                                    .putLong("menuSavedAt", System.currentTimeMillis())
                                     .apply();
-                            callback.onReady(MenuModels.fromJson(res));
+                            // Smooth: skip UI churn when snapshot unchanged.
+                            if (prevRaw == null || !prevRaw.equals(nextRaw) || forceNetwork) {
+                                callback.onReady(MenuModels.fromJson(res));
+                            }
                             OpsLogger.info(
                                     app,
                                     "menu",
-                                    "โหลดเมนูแล้ว",
-                                    "items=" + res.optJSONArray("items").length());
+                                    "ซิงก์เมนูแล้ว",
+                                    "items="
+                                            + (res.optJSONArray("items") == null
+                                                    ? 0
+                                                    : res.optJSONArray("items").length()));
                             return;
                         }
                         throw new IllegalStateException(res.optString("error", "menu_failed"));
@@ -74,8 +86,9 @@ public final class MenuRepository {
                                 "menu",
                                 "โหลดเมนูไม่สำเร็จ — ใช้แคช/เดโม",
                                 e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
-                        if (cached != null) callback.onReady(cached);
-                        else callback.onReady(MenuModels.demoBundle());
+                        if (cached == null) {
+                            callback.onReady(MenuModels.demoBundle());
+                        }
                     }
                 });
     }

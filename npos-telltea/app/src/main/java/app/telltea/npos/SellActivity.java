@@ -12,6 +12,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
@@ -47,7 +49,7 @@ import app.telltea.npos.shift.ShiftPrefs;
  */
 public class SellActivity extends Activity {
   private LinearLayout categoryBar;
-  private LinearLayout menuList;
+  private GridLayout menuGrid;
   private LinearLayout cartList;
   private TextView cartTotalView;
   private TextView sellSyncStatus;
@@ -76,7 +78,7 @@ public class SellActivity extends Activity {
     setContentView(R.layout.activity_sell);
 
     categoryBar = findViewById(R.id.categoryBar);
-    menuList = findViewById(R.id.menuList);
+    menuGrid = findViewById(R.id.menuGrid);
     cartList = findViewById(R.id.cartList);
     cartTotalView = findViewById(R.id.cartTotal);
     sellSyncStatus = findViewById(R.id.sellSyncStatus);
@@ -96,7 +98,7 @@ public class SellActivity extends Activity {
     findViewById(R.id.holdBillButton).setOnClickListener(v -> holdBill());
     restoreHoldButton.setOnClickListener(v -> restoreHold());
     flushSyncButton.setOnClickListener(v -> flushPendingNow());
-    findViewById(R.id.refreshMenuButton).setOnClickListener(v -> reloadMenu());
+    findViewById(R.id.refreshMenuButton).setOnClickListener(v -> reloadMenu(true));
     findViewById(R.id.xReportButton).setOnClickListener(v -> printXReport());
     findViewById(R.id.receiptsButton)
         .setOnClickListener(v -> startActivity(new Intent(this, ReceiptsActivity.class)));
@@ -106,7 +108,7 @@ public class SellActivity extends Activity {
 
     sellSyncStatus.setText(R.string.sell_loading_menu);
     menuRepo.loadShop(this, s -> runOnUiThread(() -> shop = s));
-    reloadMenu();
+    reloadMenu(false);
     saleSync.flushPending(this);
     updateShiftSummary();
     updateHoldRestoreButton();
@@ -208,11 +210,15 @@ public class SellActivity extends Activity {
             ShiftPrefs.voidedCount(this)));
   }
 
-  private void reloadMenu() {
-    sellSyncStatus.setText(R.string.sell_loading_menu);
+  private void reloadMenu(boolean forceNetwork) {
+    if (menu == null) {
+      sellSyncStatus.setText(R.string.sell_loading_menu);
+    } else if (forceNetwork) {
+      sellSyncStatus.setText(R.string.sell_menu_syncing);
+    }
     menuRepo.loadMenu(
         this,
-        true,
+        forceNetwork,
         bundle ->
             runOnUiThread(
                 () -> {
@@ -232,7 +238,17 @@ public class SellActivity extends Activity {
                   renderCategories();
                   renderMenu();
                   renderCart();
+                  prefetchMenuImages();
                 }));
+  }
+
+  private void prefetchMenuImages() {
+    if (menu == null) return;
+    java.util.ArrayList<String> urls = new java.util.ArrayList<>();
+    for (MenuModels.Item item : menu.items) {
+      if (item.imageUrl != null && !item.imageUrl.isEmpty()) urls.add(item.imageUrl);
+    }
+    ImageLoader.prefetch(this, urls);
   }
 
   private boolean categoryExists(String id) {
@@ -293,14 +309,30 @@ public class SellActivity extends Activity {
     categoryBar.removeAllViews();
     if (menu == null) return;
     applySavedCategoryOrder();
+    float density = getResources().getDisplayMetrics().density;
+    int padH = Math.round(12 * density);
+    int padV = Math.round(8 * density);
+    int gap = Math.round(6 * density);
     for (int i = 0; i < menu.categories.size(); i++) {
       final int idx = i;
       MenuModels.Category cat = menu.categories.get(i);
       Button b = new Button(this);
       b.setText(cat.name);
       b.setAllCaps(false);
-      if (cat.id.equals(selectedCategoryId)) {
-        b.setBackgroundColor(0xFFC4A35A);
+      b.setMinHeight(Math.round(40 * density));
+      b.setPadding(padH, padV, padH, padV);
+      LinearLayout.LayoutParams lp =
+          new LinearLayout.LayoutParams(
+              LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+      lp.setMargins(0, 0, gap, 0);
+      b.setLayoutParams(lp);
+      boolean active = cat.id.equals(selectedCategoryId);
+      if (active) {
+        b.setBackgroundColor(0xFF1E2D3D);
+        b.setTextColor(0xFFFFFFFF);
+      } else {
+        b.setBackgroundColor(0xFFFFFFFF);
+        b.setTextColor(0xFF1E2D3D);
       }
       b.setOnClickListener(
           v -> {
@@ -377,42 +409,73 @@ public class SellActivity extends Activity {
   }
 
   private void renderMenu() {
-    menuList.removeAllViews();
+    if (menuGrid == null) return;
+    menuGrid.removeAllViews();
     if (menu == null) return;
-    int thumbPx =
-        (int)
-            TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP, 56, getResources().getDisplayMetrics());
+    float density = getResources().getDisplayMetrics().density;
+    int gap = Math.round(4 * density);
+    int colCount = Math.max(1, menuGrid.getColumnCount());
+    int screenW = getResources().getDisplayMetrics().widthPixels;
+    int cartW = Math.round(344 * density);
+    int leftW = Math.max(200, screenW - cartW - Math.round(24 * density));
+    int cellW = Math.max(72, (leftW - gap * (colCount + 1)) / colCount);
+    int mediaH = Math.round(cellW * 10f / 16f);
+
+    int shown = 0;
     for (MenuModels.Item item : menu.items) {
       if (!selectedCategoryId.isEmpty() && !selectedCategoryId.equals(item.categoryId)) continue;
 
-      LinearLayout row = new LinearLayout(this);
-      row.setOrientation(LinearLayout.HORIZONTAL);
-      row.setGravity(Gravity.CENTER_VERTICAL);
-      row.setPadding(8, 8, 8, 8);
-      row.setBackgroundColor(item.active ? 0xFFFFFFFF : 0xFFE8E8E8);
+      LinearLayout cell = new LinearLayout(this);
+      cell.setOrientation(LinearLayout.VERTICAL);
+      cell.setBackgroundColor(item.active ? 0xFFFFFFFF : 0xFFE8E8E8);
+      cell.setPadding(gap, gap, gap, gap);
+      GridLayout.LayoutParams glp = new GridLayout.LayoutParams();
+      glp.width = cellW;
+      glp.height = GridLayout.LayoutParams.WRAP_CONTENT;
+      glp.setMargins(gap / 2, gap / 2, gap / 2, gap / 2);
+      cell.setLayoutParams(glp);
 
+      FrameLayout media = new FrameLayout(this);
+      media.setLayoutParams(new LinearLayout.LayoutParams(cellW - gap, mediaH));
       ImageView img = new ImageView(this);
-      LinearLayout.LayoutParams imgLp = new LinearLayout.LayoutParams(thumbPx, thumbPx);
-      imgLp.setMargins(0, 0, 12, 0);
-      img.setLayoutParams(imgLp);
+      img.setLayoutParams(
+          new FrameLayout.LayoutParams(
+              FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
       img.setScaleType(ImageView.ScaleType.CENTER_CROP);
       ImageLoader.bind(img, item.imageUrl, 0xFFD9E2DC);
-      row.addView(img);
+      media.addView(img);
 
-      LinearLayout textCol = new LinearLayout(this);
-      textCol.setOrientation(LinearLayout.VERTICAL);
-      textCol.setLayoutParams(
-          new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+      int qty = cartQtyForItem(item.id);
+      if (qty > 0) {
+        TextView badge = new TextView(this);
+        badge.setText(String.valueOf(qty));
+        badge.setTextColor(0xFFFFFFFF);
+        badge.setTextSize(12);
+        badge.setTypeface(Typeface.DEFAULT_BOLD);
+        badge.setBackgroundColor(0xFFE85D24);
+        badge.setPadding(Math.round(8 * density), Math.round(2 * density), Math.round(8 * density), Math.round(2 * density));
+        FrameLayout.LayoutParams blp =
+            new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+        blp.gravity = Gravity.TOP | Gravity.END;
+        blp.setMargins(0, Math.round(4 * density), Math.round(4 * density), 0);
+        badge.setLayoutParams(blp);
+        media.addView(badge);
+      }
+      cell.addView(media);
+
       TextView name = new TextView(this);
       if (item.recommended) {
         name.setText(getString(R.string.menu_recommended_fmt, item.name));
       } else {
         name.setText(item.name);
       }
-      name.setTextSize(15);
-      name.setTextColor(0xFF1A2E24);
+      name.setTextSize(12);
+      name.setTextColor(0xFF1E2D3D);
       name.setTypeface(Typeface.DEFAULT_BOLD);
+      name.setMaxLines(2);
+      cell.addView(name);
+
       TextView price = new TextView(this);
       if (!item.active) {
         price.setText(R.string.menu_sold_out);
@@ -421,29 +484,41 @@ public class SellActivity extends Activity {
         price.setText(String.format(Locale.getDefault(), "฿%.0f", item.price));
         price.setTextColor(0xFF555555);
       }
-      textCol.addView(name);
-      textCol.addView(price);
-      row.addView(textCol);
+      price.setTextSize(11);
+      cell.addView(price);
 
       if (item.active) {
-        row.setOnClickListener(v -> onTapItem(item));
+        cell.setOnClickListener(v -> onTapItem(item));
       } else {
-        row.setOnClickListener(
+        cell.setOnClickListener(
             v -> Toast.makeText(this, R.string.menu_sold_out, Toast.LENGTH_SHORT).show());
       }
-      row.setOnLongClickListener(
+      cell.setOnLongClickListener(
           v -> {
             confirmToggleSoldOut(item);
             return true;
           });
-      menuList.addView(row);
+      menuGrid.addView(cell);
+      shown++;
     }
-    if (menuList.getChildCount() == 0) {
+    if (shown == 0) {
       TextView empty = new TextView(this);
       empty.setText(R.string.sell_menu_empty);
       empty.setTextColor(0xFF666666);
-      menuList.addView(empty);
+      GridLayout.LayoutParams elp = new GridLayout.LayoutParams();
+      elp.columnSpec = GridLayout.spec(0, colCount);
+      elp.width = leftW;
+      empty.setLayoutParams(elp);
+      menuGrid.addView(empty);
     }
+  }
+
+  private int cartQtyForItem(String itemId) {
+    int n = 0;
+    for (MenuModels.CartLine line : cart) {
+      if (itemId != null && itemId.equals(line.menuItemId)) n += line.qty;
+    }
+    return n;
   }
 
   private void onTapItem(MenuModels.Item item) {
