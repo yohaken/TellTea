@@ -19,6 +19,7 @@
     <string name="hub_title">เมนูหน้าร้าน</string>
     <string name="hub_open_bills_hint">มีบิลค้าง — เปิดหน้าขายแล้วกด «ดึงบิลค้าง»</string>
     <string name="btn_settings_device">ตั้งค่าเครื่อง</string>
+    <string name="btn_settings_short">ตั้งค่า</string>
     <string name="btn_open_web_shift">เปิดรอบการขาย (เว็บ)</string>
     <string name="nav_sell">สั่งและชำระเงิน</string>
     <string name="nav_members">บัตรสมาชิก</string>

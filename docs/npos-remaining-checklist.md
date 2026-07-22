@@ -1,7 +1,7 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **1.14.7** P1–P8 แคปจอลูกค้าจริง · โปรโม 5 วิ · แถบซ้ายเว็บ · popup อัปเดต  
-ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-web-parity-shot-checklist.md](./npos-web-parity-shot-checklist.md)
+อัปเดต: **1.14.8** Smart UI scale · เมนูเลื่อนลง · ปุ่มจ่ายใหญ่ · เวอร์ชันมุมบาร์  
+ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-smart-ui-scale-checklist.md](./npos-smart-ui-scale-checklist.md) · [npos-web-parity-shot-checklist.md](./npos-web-parity-shot-checklist.md)
 
 ## ทำแล้ว
 - [x] แคปจอ media-proxy — รูปจริงใน BO (**1.14.2**)
@@ -12,6 +12,7 @@
 - [x] **D1** ตรวจเครื่องพับตาม stableKey · heartbeat ตอนขาย · ออนไลน์ 5 นาที
 - [x] **L1** อุ่นแคชเมนูตอนเปิดแอป · ขาย paint จากเครื่องก่อน
 - [x] **P1–P8** แคปจอลูกค้าจริง · สไลด์ 5 วิ · แถบซ้าย PosShell · option hero · popup อัปเดตซ้ายบน + กลับขายอัตโนมัติ (**1.14.7**)
+- [x] **Smart UI** `UiScale` · กริดเลื่อนลง · FIT_CENTER · ปุ่มจ่ายใหญ่ · เวอร์ชันมุมขวาบน · เข้างานทัชสั้น (**1.14.8**)
 - [x] จิ้มเมนู → จ่าย → ใบเสร็จ → รีเซ็ต · ลิ้นชักตอนสด
 
 ## คิวถัดไป (เฟสก่อนหน้าที่ยังไม่ทำ)

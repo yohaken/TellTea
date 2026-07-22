@@ -5,7 +5,7 @@
     android:layout_width="280dp"
     android:layout_height="wrap_content"
     android:layout_gravity="top|start"
-    android:layout_marginStart="188dp"
+    android:layout_marginStart="12dp"
     android:layout_marginTop="12dp"
     android:background="#FFFFFFFF"
     android:elevation="10dp"
@@ -44,29 +44,34 @@
         android:layout_marginTop="10dp"
         android:orientation="horizontal">
 
-        <Button
+        <TextView
             android:id="@+id/updatePopupLater"
             android:layout_width="0dp"
-            android:layout_height="40dp"
+            android:layout_height="wrap_content"
             android:layout_marginEnd="6dp"
             android:layout_weight="1"
-            android:backgroundTint="#EEF0F4"
-            android:minHeight="40dp"
+            android:background="@drawable/npos_touch_ghost"
+            android:gravity="center"
+            android:minHeight="44dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
             android:text="@string/update_popup_later"
-            android:textAllCaps="false"
             android:textColor="#1E2D3D"
-            android:textSize="12sp" />
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
-        <Button
+        <TextView
             android:id="@+id/updatePopupGo"
             android:layout_width="0dp"
-            android:layout_height="40dp"
+            android:layout_height="wrap_content"
             android:layout_marginStart="6dp"
             android:layout_weight="1"
-            android:backgroundTint="#2D7FE0"
-            android:minHeight="40dp"
+            android:background="@drawable/npos_nav_active"
+            android:gravity="center"
+            android:minHeight="44dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
             android:text="@string/btn_install_update"
-            android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="12sp"
             android:textStyle="bold" />

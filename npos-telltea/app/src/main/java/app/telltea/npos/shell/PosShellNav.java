@@ -7,6 +7,7 @@ import android.net.Uri;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -18,9 +19,10 @@ import app.telltea.npos.SellActivity;
 import app.telltea.npos.SettingsActivity;
 import app.telltea.npos.ShiftActivity;
 import app.telltea.npos.sell.HoldCart;
+import app.telltea.npos.ui.UiScale;
 
 /**
- * Left rail matching web PosAppShell / POS_NAV_ITEMS (colors + order).
+ * Left rail matching web PosAppShell / POS_NAV_ITEMS — width + type from {@link UiScale}.
  */
 public final class PosShellNav {
   public static final String ACTIVE_SELL = "sell";
@@ -36,27 +38,54 @@ public final class PosShellNav {
   private PosShellNav() {}
 
   public static void bind(Activity activity, String activeId, RefreshHook refreshHook) {
+    UiScale ui = UiScale.from(activity);
+    View sidebar = activity.findViewById(R.id.posSidebar);
+    if (sidebar != null) {
+      ViewGroup.LayoutParams lp = sidebar.getLayoutParams();
+      if (lp != null) {
+        lp.width = ui.navWidthPx;
+        sidebar.setLayoutParams(lp);
+      }
+    }
+    TextView brand = activity.findViewById(R.id.sidebarBrand);
+    if (brand != null) {
+      brand.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.brandSp);
+    }
+    View refreshBtn = activity.findViewById(R.id.sidebarRefreshBtn);
+    if (refreshBtn != null) {
+      int s = Math.max(ui.dp(32), Math.round(36 * ui.density * ui.scale));
+      ViewGroup.LayoutParams rlp = refreshBtn.getLayoutParams();
+      if (rlp != null) {
+        rlp.width = s;
+        rlp.height = s;
+        refreshBtn.setLayoutParams(rlp);
+      }
+    }
+
     LinearLayout nav = activity.findViewById(R.id.sidebarNav);
     View refresh = activity.findViewById(R.id.sidebarRefreshBtn);
-    View lock = activity.findViewById(R.id.sidebarLock);
+    TextView lock = activity.findViewById(R.id.sidebarLock);
     if (nav == null) return;
     nav.removeAllViews();
 
     addLink(
         activity,
         nav,
+        ui,
         R.string.nav_sell,
         ACTIVE_SELL.equals(activeId),
         () -> openNative(activity, SellActivity.class, activeId));
     addLink(
         activity,
         nav,
+        ui,
         R.string.nav_members,
         false,
         () -> openWeb(activity, "https://telltea-pos.web.app/pos/members/", true));
     addLink(
         activity,
         nav,
+        ui,
         R.string.nav_open_bills,
         false,
         () -> {
@@ -70,42 +99,49 @@ public final class PosShellNav {
     addLink(
         activity,
         nav,
+        ui,
         R.string.nav_receipts,
         ACTIVE_RECEIPTS.equals(activeId),
         () -> openNative(activity, ReceiptsActivity.class, activeId));
     addLink(
         activity,
         nav,
+        ui,
         R.string.nav_inventory,
         false,
         () -> openWeb(activity, "https://telltea-pos.web.app/pos/inventory/", false));
     addLink(
         activity,
         nav,
+        ui,
         R.string.nav_shift,
         ACTIVE_SHIFT.equals(activeId),
         () -> openNative(activity, ShiftActivity.class, activeId));
     addLink(
         activity,
         nav,
+        ui,
         R.string.nav_menu,
         false,
         () -> openWeb(activity, "https://telltea-pos.web.app/pos/menu/", false));
     addLink(
         activity,
         nav,
+        ui,
         R.string.nav_ops,
         false,
         () -> openWeb(activity, "https://telltea-pos.web.app/pos/ops/", false));
     addLink(
         activity,
         nav,
+        ui,
         R.string.nav_shop_settings,
         false,
         () -> openWeb(activity, "https://telltea-pos.web.app/pos/settings/", false));
     addLink(
         activity,
         nav,
+        ui,
         R.string.btn_settings_device,
         ACTIVE_SETTINGS.equals(activeId),
         () -> openNative(activity, SettingsActivity.class, activeId));
@@ -118,6 +154,8 @@ public final class PosShellNav {
           });
     }
     if (lock != null) {
+      lock.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.navSp);
+      lock.setMinHeight(ui.touchMinPx);
       lock.setOnClickListener(
           v -> {
             Intent i = new Intent(activity, MainActivity.class);
@@ -131,16 +169,12 @@ public final class PosShellNav {
   private static void openNative(Activity activity, Class<?> cls, String activeId) {
     if (cls.isInstance(activity)) return;
     Intent i = new Intent(activity, cls);
-    // Keep sell under the stack when hopping rails so back feels like web.
     if (SellActivity.class.equals(cls)) {
       i.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
     }
     activity.startActivity(i);
-    if (activity instanceof SellActivity && !SellActivity.class.equals(cls)) {
-      // leave sell open underneath
-    } else if (!(activity instanceof MainActivity) && !cls.equals(activity.getClass())) {
-      // receipts/shift/settings replace each other
-      if (!SellActivity.class.equals(activity.getClass())) {
+    if (!(activity instanceof MainActivity) && !SellActivity.class.equals(activity.getClass())) {
+      if (!SellActivity.class.equals(cls)) {
         activity.finish();
       }
     }
@@ -159,31 +193,34 @@ public final class PosShellNav {
   }
 
   private static void addLink(
-      Activity activity, LinearLayout nav, int labelRes, boolean active, Runnable action) {
+      Activity activity,
+      LinearLayout nav,
+      UiScale ui,
+      int labelRes,
+      boolean active,
+      Runnable action) {
     TextView row = new TextView(activity);
     row.setText(labelRes);
-    row.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+    row.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.navSp);
     row.setTypeface(Typeface.DEFAULT_BOLD);
     row.setGravity(Gravity.CENTER_VERTICAL);
-    row.setPadding(dp(activity, 10), dp(activity, 10), dp(activity, 10), dp(activity, 10));
+    int padH = ui.dp(10);
+    int padV = Math.max(ui.dp(8), Math.round(ui.touchMinPx * 0.22f));
+    row.setPadding(padH, padV, padH, padV);
+    row.setMinHeight(ui.touchMinPx);
     LinearLayout.LayoutParams lp =
         new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-    lp.bottomMargin = dp(activity, 2);
+    lp.bottomMargin = ui.dp(2);
     row.setLayoutParams(lp);
     if (active) {
-      row.setBackgroundColor(0xFF2D7FE0);
+      row.setBackgroundResource(R.drawable.npos_nav_active);
       row.setTextColor(0xFFFFFFFF);
     } else {
-      row.setBackgroundColor(0x00000000);
+      row.setBackgroundResource(R.drawable.npos_nav_idle);
       row.setTextColor(0xFFD5DBE3);
     }
     row.setOnClickListener(v -> action.run());
     nav.addView(row);
-  }
-
-  private static int dp(Activity activity, int v) {
-    float d = activity.getResources().getDisplayMetrics().density;
-    return Math.round(v * d);
   }
 }

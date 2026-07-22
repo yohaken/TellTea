@@ -43,6 +43,7 @@ import app.telltea.npos.sell.QrBitmaps;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shell.PosShellNav;
 import app.telltea.npos.shift.ShiftPrefs;
+import app.telltea.npos.ui.UiScale;
 import app.telltea.npos.update.ResumePrefs;
 import app.telltea.npos.update.UpdatePromptController;
 
@@ -71,6 +72,7 @@ public class SellActivity extends Activity {
   private double discountBaht = 0;
   private CustomerDisplayController customerDisplay;
   private UpdatePromptController updatePrompt;
+  private UiScale uiScale;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -80,6 +82,7 @@ public class SellActivity extends Activity {
       return;
     }
     setContentView(R.layout.activity_sell);
+    uiScale = UiScale.from(this);
 
     categoryBar = findViewById(R.id.categoryBar);
     menuGrid = findViewById(R.id.menuGrid);
@@ -100,6 +103,7 @@ public class SellActivity extends Activity {
     PosShellNav.bind(this, PosShellNav.ACTIVE_SELL, () -> reloadMenu(true));
     updatePrompt = new UpdatePromptController(this);
     updatePrompt.setBeforeInstall(this::persistWorkBeforeUpdate);
+    applySmartChrome();
 
     View back = findViewById(R.id.backButton);
     if (back != null) back.setOnClickListener(v -> finish());
@@ -141,6 +145,52 @@ public class SellActivity extends Activity {
     if (ResumePrefs.consumeRestoreHoldAfterUpdate(this) && HoldCart.hasHold(this) && cart.isEmpty()) {
       doRestoreHold();
     }
+  }
+
+  private void applySmartChrome() {
+    if (uiScale == null) uiScale = UiScale.from(this);
+    TextView version = findViewById(R.id.sellVersion);
+    if (version != null) {
+      version.setText(getString(R.string.version_label, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE));
+      version.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(11f, uiScale.captionSp));
+    }
+    if (sellTitle != null) {
+      sellTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.titleSp);
+    }
+    View payCash = findViewById(R.id.payCashButton);
+    View payPp = findViewById(R.id.payPromptButton);
+    View xReport = findViewById(R.id.xReportButton);
+    if (payCash != null) {
+      payCash.setMinimumHeight(uiScale.payPrimaryMinPx);
+      if (payCash instanceof TextView) {
+        ((TextView) payCash).setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.titleSp + 1f);
+      }
+    }
+    if (payPp != null) {
+      payPp.setMinimumHeight(uiScale.paySecondaryMinPx);
+      if (payPp instanceof TextView) {
+        ((TextView) payPp).setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.bodySp + 1f);
+      }
+    }
+    if (xReport != null) {
+      xReport.setMinimumHeight(uiScale.touchMinPx);
+    }
+    styleSoftCartAction(findViewById(R.id.discountButton));
+    styleSoftCartAction(findViewById(R.id.holdBillButton));
+    styleSoftCartAction(findViewById(R.id.restoreHoldButton));
+    if (menuGrid != null) {
+      menuGrid.setColumnCount(uiScale.menuCols);
+    }
+  }
+
+  private void styleSoftCartAction(View v) {
+    if (!(v instanceof Button)) return;
+    Button b = (Button) v;
+    b.setBackgroundResource(R.drawable.npos_touch_secondary);
+    b.setTextColor(0xFFE85D24);
+    b.setAllCaps(false);
+    b.setMinHeight(uiScale.touchMinPx);
+    b.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.captionSp);
   }
 
   private void persistWorkBeforeUpdate() {
@@ -578,18 +628,27 @@ public class SellActivity extends Activity {
 
   private void renderMenu() {
     if (menuGrid == null) return;
+    if (uiScale == null) uiScale = UiScale.from(this);
+    // Wait until grid has real width so tiles never overflow horizontally.
+    if (menuGrid.getWidth() <= 0) {
+      menuGrid.post(this::renderMenu);
+      return;
+    }
     menuGrid.removeAllViews();
     if (menu == null) return;
-    float density = getResources().getDisplayMetrics().density;
-    int gap = Math.round(4 * density);
-    int colCount = Math.max(1, menuGrid.getColumnCount());
-    int screenW = getResources().getDisplayMetrics().widthPixels;
-    int cartW = Math.round(344 * density);
-    int leftW = Math.max(200, screenW - cartW - Math.round(24 * density));
-    int cellW = Math.max(72, (leftW - gap * (colCount + 1)) / colCount);
-    int mediaH = Math.round(cellW * 10f / 16f);
+
+    int gap = uiScale.gapPx;
+    int colCount = Math.max(3, Math.min(5, uiScale.menuCols));
+    menuGrid.setColumnCount(colCount);
+    int avail = menuGrid.getWidth();
+    int cellW = Math.max(uiScale.dp(72), (avail - gap * (colCount + 1)) / colCount);
+    // 16:10 media, capped like web max-height so ~5 rows fit → scroll down only.
+    int mediaH = Math.min(uiScale.menuMediaMaxPx, Math.round(cellW * 10f / 16f));
+    mediaH = Math.max(uiScale.dp(44), mediaH);
 
     int shown = 0;
+    int col = 0;
+    int row = 0;
     for (MenuModels.Item item : menu.items) {
       if (!selectedCategoryId.isEmpty() && !selectedCategoryId.equals(item.categoryId)) continue;
 
@@ -598,19 +657,26 @@ public class SellActivity extends Activity {
       cell.setBackgroundColor(item.active ? 0xFFFFFFFF : 0xFFE8E8E8);
       cell.setPadding(gap, gap, gap, gap);
       GridLayout.LayoutParams glp = new GridLayout.LayoutParams();
-      glp.width = cellW;
+      glp.width = 0;
       glp.height = GridLayout.LayoutParams.WRAP_CONTENT;
+      glp.columnSpec = GridLayout.spec(col, 1f);
+      glp.rowSpec = GridLayout.spec(row);
       glp.setMargins(gap / 2, gap / 2, gap / 2, gap / 2);
+      glp.setGravity(Gravity.FILL_HORIZONTAL | Gravity.TOP);
       cell.setLayoutParams(glp);
 
       FrameLayout media = new FrameLayout(this);
-      media.setLayoutParams(new LinearLayout.LayoutParams(cellW - gap, mediaH));
+      LinearLayout.LayoutParams mlp =
+          new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, mediaH);
+      media.setLayoutParams(mlp);
+      media.setBackgroundColor(0xFFF0F2F5);
       ImageView img = new ImageView(this);
       img.setLayoutParams(
           new FrameLayout.LayoutParams(
               FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-      img.setScaleType(ImageView.ScaleType.CENTER_CROP);
-      ImageLoader.bind(img, item.imageUrl, 0xFFD9E2DC);
+      // Full dish visible (may letterbox) — not crop-heavy “hero” crop.
+      img.setScaleType(ImageView.ScaleType.FIT_CENTER);
+      ImageLoader.bind(img, item.imageUrl, 0xFFF0F2F5);
       media.addView(img);
 
       int qty = cartQtyForItem(item.id);
@@ -618,15 +684,15 @@ public class SellActivity extends Activity {
         TextView badge = new TextView(this);
         badge.setText(String.valueOf(qty));
         badge.setTextColor(0xFFFFFFFF);
-        badge.setTextSize(12);
+        badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(11f, uiScale.captionSp));
         badge.setTypeface(Typeface.DEFAULT_BOLD);
         badge.setBackgroundColor(0xFFE85D24);
-        badge.setPadding(Math.round(8 * density), Math.round(2 * density), Math.round(8 * density), Math.round(2 * density));
+        badge.setPadding(uiScale.dp(8), uiScale.dp(2), uiScale.dp(8), uiScale.dp(2));
         FrameLayout.LayoutParams blp =
             new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
         blp.gravity = Gravity.TOP | Gravity.END;
-        blp.setMargins(0, Math.round(4 * density), Math.round(4 * density), 0);
+        blp.setMargins(0, uiScale.dp(4), uiScale.dp(4), 0);
         badge.setLayoutParams(blp);
         media.addView(badge);
       }
@@ -638,10 +704,11 @@ public class SellActivity extends Activity {
       } else {
         name.setText(item.name);
       }
-      name.setTextSize(12);
-      name.setTextColor(0xFF1E2D3D);
+      name.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.captionSp + 0.5f);
+      name.setTextColor(0xFF15202B);
       name.setTypeface(Typeface.DEFAULT_BOLD);
       name.setMaxLines(2);
+      name.setEllipsize(null);
       cell.addView(name);
 
       TextView price = new TextView(this);
@@ -650,11 +717,13 @@ public class SellActivity extends Activity {
         price.setTextColor(0xFFB00020);
       } else {
         price.setText(String.format(Locale.getDefault(), "฿%.0f", item.price));
-        price.setTextColor(0xFF555555);
+        price.setTextColor(0xFF3D4A55);
       }
-      price.setTextSize(11);
+      price.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.priceSp);
+      price.setTypeface(Typeface.DEFAULT_BOLD);
       cell.addView(price);
 
+      cell.setMinimumHeight(uiScale.touchMinPx);
       if (item.active) {
         cell.setOnClickListener(v -> onTapItem(item));
       } else {
@@ -668,6 +737,11 @@ public class SellActivity extends Activity {
           });
       menuGrid.addView(cell);
       shown++;
+      col++;
+      if (col >= colCount) {
+        col = 0;
+        row++;
+      }
     }
     if (shown == 0) {
       TextView empty = new TextView(this);
@@ -675,7 +749,7 @@ public class SellActivity extends Activity {
       empty.setTextColor(0xFF666666);
       GridLayout.LayoutParams elp = new GridLayout.LayoutParams();
       elp.columnSpec = GridLayout.spec(0, colCount);
-      elp.width = leftW;
+      elp.width = avail;
       empty.setLayoutParams(elp);
       menuGrid.addView(empty);
     }
