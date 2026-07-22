@@ -76,6 +76,15 @@ exports.reportNposDiagnose = functions
 
     const versionCode = Number.isFinite(body.versionCode) ? Math.floor(body.versionCode) : 0;
     const versionName = asString(body.versionName, 32) || "0";
+    const stableKey = asString(body.stableKey, 120);
+    const isEmulator = body.isEmulator === true;
+    const classRaw = asString(body.deviceClass, 16).toLowerCase();
+    const deviceClass =
+      classRaw === "shop" || classRaw === "dev" || classRaw === "blocked"
+        ? classRaw
+        : isEmulator
+          ? "dev"
+          : "shop";
     const displays = mapDisplays(body.displays);
     const hardware = mapHardware(body.hardware);
     const summary =
@@ -83,22 +92,38 @@ exports.reportNposDiagnose = functions
       `จอ ${displays.length} · เชื่อมต่อ ${hardware.length}`;
     const reportedAt = Date.now();
 
-    const doc = {
-      installId,
-      reportedAt,
-      versionCode,
-      versionName,
-      summary,
-      displays,
-      hardware,
-      source: "npos-telltea",
-      updatedAt: reportedAt,
-    };
-
     try {
       const db = getFirestore();
-      await db.collection(COL).doc(installId).set(doc, { merge: true });
-      res.status(200).json({ ok: true, installId, reportedAt, summary });
+      const ref = db.collection(COL).doc(installId);
+      const snap = await ref.get();
+      const prevBlocked =
+        snap.exists && (snap.get("deviceClass") === "blocked" || snap.get("blocked") === true);
+
+      const doc = {
+        installId,
+        stableKey: stableKey || (snap.exists ? snap.get("stableKey") || "" : ""),
+        isEmulator,
+        deviceClass: prevBlocked ? "blocked" : deviceClass,
+        blocked: prevBlocked ? true : false,
+        reportedAt,
+        versionCode,
+        versionName,
+        summary,
+        displays,
+        hardware,
+        source: "npos-telltea",
+        updatedAt: reportedAt,
+      };
+
+      await ref.set(doc, { merge: true });
+      res.status(200).json({
+        ok: true,
+        installId,
+        stableKey: stableKey || null,
+        deviceClass: doc.deviceClass,
+        reportedAt,
+        summary,
+      });
     } catch (err) {
       console.error("reportNposDiagnose failed", err);
       res.status(500).json({ ok: false, error: "write failed" });

@@ -118,6 +118,8 @@ public final class DeviceHeartbeat {
         body.put("deviceHint", hint.trim());
         body.put("screenSize", screen);
         body.put("stableKey", DeviceIdentity.stableKey(context));
+        body.put("isEmulator", DeviceIdentity.isEmulator());
+        body.put("deviceClass", DeviceIdentity.deviceClass());
         body.put("printerReady", PrinterPrefs.isReady(context));
         body.put("printerLabel", PrinterPrefs.label(context));
         return body;

@@ -6289,6 +6289,48 @@ body.modal-open .main-panel {
   gap: 0.5rem;
 }
 
+.npos-class-section {
+  margin: 0.65rem 0 0.85rem;
+}
+
+.npos-class-section:first-child {
+  margin-top: 0;
+}
+
+.npos-class-head {
+  margin: 0 0 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #2a4036;
+}
+
+.npos-device-actions {
+  margin-top: 0.35rem;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.npos-device-btn {
+  appearance: none;
+  border: 1px solid rgba(26, 46, 36, 0.22);
+  background: rgba(255, 255, 255, 0.7);
+  color: #2a4036;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.3rem;
+  cursor: pointer;
+}
+
+.npos-device-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.npos-device-btn:hover:not(:disabled) {
+  background: rgba(26, 46, 36, 0.06);
+}
+
 .npos-pill {
   display: inline-flex;
   align-items: center;

@@ -85,6 +85,15 @@ exports.reportNposOpsLog = functions
 
     const versionCode = Number.isFinite(body.versionCode) ? Math.floor(body.versionCode) : 0;
     const versionName = asString(body.versionName, 32) || "0";
+    const stableKey = asString(body.stableKey, 120);
+    const isEmulator = body.isEmulator === true;
+    const classRaw = asString(body.deviceClass, 16).toLowerCase();
+    const deviceClass =
+      classRaw === "shop" || classRaw === "dev" || classRaw === "blocked"
+        ? classRaw
+        : isEmulator
+          ? "dev"
+          : "shop";
     const now = Date.now();
 
     try {
@@ -93,6 +102,8 @@ exports.reportNposOpsLog = functions
       await db.runTransaction(async (tx) => {
         const snap = await tx.get(ref);
         const prev = snap.exists && Array.isArray(snap.get("events")) ? snap.get("events") : [];
+        const prevBlocked =
+          snap.exists && (snap.get("deviceClass") === "blocked" || snap.get("blocked") === true);
         const tagged = incoming.map((e) => ({
           ...e,
           vc: versionCode,
@@ -103,6 +114,10 @@ exports.reportNposOpsLog = functions
           ref,
           {
             installId,
+            stableKey: stableKey || (snap.exists ? snap.get("stableKey") || "" : ""),
+            isEmulator,
+            deviceClass: prevBlocked ? "blocked" : deviceClass,
+            blocked: prevBlocked ? true : false,
             updatedAt: now,
             versionCode,
             versionName,
@@ -120,6 +135,8 @@ exports.reportNposOpsLog = functions
       res.status(200).json({
         ok: true,
         installId,
+        stableKey: stableKey || null,
+        deviceClass: deviceClass,
         accepted: incoming.length,
         updatedAt: now,
       });

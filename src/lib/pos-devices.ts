@@ -56,6 +56,12 @@ export type PosDevice = {
   lastOwnerPingAckAt: number;
   /** ANDROID_ID (or empty) — used to hide reinstall ghosts for the same tablet. */
   stableKey: string;
+  /** Emulator / AVD heuristic from native client. */
+  isEmulator: boolean;
+  /** shop | dev | blocked — BO folds + hide accidental installs. */
+  deviceClass: string;
+  /** Explicit BO block flag (survives heartbeat). */
+  blocked: boolean;
 };
 
 function deviceRef(id: string) {
@@ -150,6 +156,9 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
     ownerPingMessage: typeof data.ownerPingMessage === "string" ? data.ownerPingMessage : "",
     lastOwnerPingAckAt: typeof data.lastOwnerPingAckAt === "number" ? data.lastOwnerPingAckAt : 0,
     stableKey: typeof data.stableKey === "string" ? data.stableKey : "",
+    isEmulator: data.isEmulator === true,
+    deviceClass: typeof data.deviceClass === "string" ? data.deviceClass : "",
+    blocked: data.blocked === true || data.deviceClass === "blocked",
   };
 }
 
@@ -333,6 +342,42 @@ export async function savePosDeviceLabel(
     );
   } catch (err) {
     throw new Error(mapFirestoreError(err, "บันทึกชื่อเครื่อง POS", "pos"));
+  }
+}
+
+/**
+ * Owner: hide accidental / stray installs from shop view.
+ * Blocked survives native heartbeat (CF preserves deviceClass=blocked).
+ */
+export async function setNposDeviceBlocked(
+  deviceId: string,
+  blocked: boolean,
+  updatedBy: string,
+  opts?: { isEmulator?: boolean },
+): Promise<void> {
+  const restoreClass = opts?.isEmulator === true ? "dev" : "shop";
+  try {
+    await setDoc(
+      deviceRef(deviceId),
+      blocked
+        ? {
+            blocked: true,
+            disabled: true,
+            deviceClass: "blocked",
+            updatedAt: Date.now(),
+            updatedBy,
+          }
+        : {
+            blocked: false,
+            disabled: false,
+            deviceClass: restoreClass,
+            updatedAt: Date.now(),
+            updatedBy,
+          },
+      { merge: true },
+    );
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, blocked ? "บล็อกเครื่อง nPos" : "ปลดบล็อกเครื่อง nPos", "pos"));
   }
 }
 

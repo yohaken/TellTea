@@ -88,9 +88,14 @@ Diagnose snapshot ยังอยู่ที่ `nposDiagnose/{installId}`
 
 `ANDROID_ID` + `stableKey` · CF มาร์ก sibling `disabled` · หลังร้านซ่อนซ้ำ/ออฟ
 
+## จัดกลุ่มเครื่อง (1.11.0)
+
+`deviceClass`: **shop** (แท็บเล็ตจริง) · **dev** (emulator) · **blocked** (เจ้าของซ่อน)
+หลังร้านพับสามกลุ่ม + ปุ่มบล็อก · ดู [npos-device-class-checklist.md](./npos-device-class-checklist.md)
+
 ## หลังร้าน
 
-- **เครื่อง nPos (ออนไลน์)**
+- **เครื่อง nPos** (พับหน้าร้าน / พัฒนา / บล็อก)
 - **ไทม์ไลน์ nPos (ops log)**
 - **ตรวจเครื่อง (nPos)**
 

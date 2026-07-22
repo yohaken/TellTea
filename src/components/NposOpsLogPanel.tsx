@@ -4,6 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { ScrollText } from "lucide-react";
 import { SettingsFold } from "@/components/SettingsFold";
 import {
+  foldByDeviceClass,
+  nposDeviceClassLabel,
+  nposGroupKey,
+  shortStableKey,
+  type NposDeviceClass,
+} from "@/lib/npos-device-class";
+import {
   subscribeNposOpsLogs,
   type NposOpsEvent,
   type NposOpsLogDoc,
@@ -29,6 +36,64 @@ function levelMark(level: string): string {
   return "I";
 }
 
+type FlatRow = {
+  key: string;
+  installId: string;
+  stableKey: string;
+  deviceClass: NposDeviceClass;
+  groupKey: string;
+  sortAt: number;
+  ev: NposOpsEvent;
+};
+
+function OpsTable({ rows }: { rows: FlatRow[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="npos-ops-table-wrap">
+      <table className="npos-ops-table">
+        <thead>
+          <tr>
+            <th>เวลา</th>
+            <th>L</th>
+            <th>cat</th>
+            <th>ข้อความ</th>
+            <th>เครื่อง</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const ev = row.ev;
+            const tip = [ev.detail, ev.vn ? `v${ev.vn}` : "", ev.vc ? `(${ev.vc})` : ""]
+              .filter(Boolean)
+              .join(" · ");
+            return (
+              <tr
+                key={row.key}
+                className={
+                  ev.level === "error"
+                    ? "npos-ops-row npos-ops-row--error"
+                    : ev.level === "warn"
+                      ? "npos-ops-row npos-ops-row--warn"
+                      : "npos-ops-row"
+                }
+                title={tip || undefined}
+              >
+                <td className="npos-ops-time">{shortTime(ev.at)}</td>
+                <td className="npos-ops-lvl">{levelMark(ev.level)}</td>
+                <td className="npos-ops-cat">{ev.cat}</td>
+                <td className="npos-ops-msg">{ev.msg}</td>
+                <td className="npos-ops-dev" title={row.groupKey}>
+                  {shortStableKey(row.stableKey, row.installId)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function NposOpsLogPanel({ onError }: { onError: (msg: string | null) => void }) {
   const [docs, setDocs] = useState<NposOpsLogDoc[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,18 +113,31 @@ export function NposOpsLogPanel({ onError }: { onError: (msg: string | null) => 
     );
   }, [onError]);
 
-  const flat = useMemo(() => {
-    const rows: { key: string; installId: string; ev: NposOpsEvent }[] = [];
+  const buckets = useMemo(() => {
+    const rows: FlatRow[] = [];
     for (const d of docs) {
       for (const ev of d.events.slice(0, 40)) {
-        rows.push({ key: `${d.id}-${ev.at}-${ev.msg}`, installId: d.installId, ev });
+        rows.push({
+          key: `${d.id}-${ev.at}-${ev.msg}`,
+          installId: d.installId,
+          stableKey: d.stableKey,
+          deviceClass: d.deviceClass,
+          groupKey: nposGroupKey(d.stableKey, d.installId),
+          sortAt: ev.at,
+          ev,
+        });
       }
     }
-    rows.sort((a, b) => b.ev.at - a.ev.at);
-    return rows.slice(0, 100);
+    rows.sort((a, b) => b.sortAt - a.sortAt);
+    const capped = rows.slice(0, 120);
+    return foldByDeviceClass(capped);
   }, [docs]);
 
-  const errorCount = flat.filter((r) => r.ev.level === "error").length;
+  const flatCount =
+    buckets.shop.length + buckets.dev.length + buckets.blocked.length;
+  const errorCount = [...buckets.shop, ...buckets.dev, ...buckets.blocked].filter(
+    (r) => r.ev.level === "error",
+  ).length;
 
   return (
     <SettingsFold
@@ -72,8 +150,8 @@ export function NposOpsLogPanel({ onError }: { onError: (msg: string | null) => 
       hint={
         loading
           ? "กำลังโหลด…"
-          : flat.length
-            ? `${flat.length} แถว${errorCount ? ` · E${errorCount}` : ""}`
+          : flatCount
+            ? `${flatCount} แถว${errorCount ? ` · E${errorCount}` : ""} · พับตามหน้าร้าน/พัฒนา/บล็อก`
             : "ยังไม่มี log"
       }
       defaultOpen={false}
@@ -81,49 +159,24 @@ export function NposOpsLogPanel({ onError }: { onError: (msg: string | null) => 
     >
       {loading ? (
         <p className="muted">กำลังโหลด…</p>
-      ) : flat.length === 0 ? (
+      ) : flatCount === 0 ? (
         <p className="muted">ยังไม่มีเหตุการณ์</p>
       ) : (
-        <div className="npos-ops-table-wrap">
-          <table className="npos-ops-table">
-            <thead>
-              <tr>
-                <th>เวลา</th>
-                <th>L</th>
-                <th>cat</th>
-                <th>ข้อความ</th>
-                <th>เครื่อง</th>
-              </tr>
-            </thead>
-            <tbody>
-              {flat.map((row) => {
-                const ev = row.ev;
-                const tip = [ev.detail, ev.vn ? `v${ev.vn}` : "", ev.vc ? `(${ev.vc})` : ""]
-                  .filter(Boolean)
-                  .join(" · ");
-                return (
-                  <tr
-                    key={row.key}
-                    className={
-                      ev.level === "error"
-                        ? "npos-ops-row npos-ops-row--error"
-                        : ev.level === "warn"
-                          ? "npos-ops-row npos-ops-row--warn"
-                          : "npos-ops-row"
-                    }
-                    title={tip || undefined}
-                  >
-                    <td className="npos-ops-time">{shortTime(ev.at)}</td>
-                    <td className="npos-ops-lvl">{levelMark(ev.level)}</td>
-                    <td className="npos-ops-cat">{ev.cat}</td>
-                    <td className="npos-ops-msg">{ev.msg}</td>
-                    <td className="npos-ops-dev">{row.installId.slice(-6)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {(["shop", "dev", "blocked"] as const).map((cls) => {
+            const rows = buckets[cls];
+            if (!rows.length) return null;
+            return (
+              <section key={cls} className="npos-class-section">
+                <h4 className="npos-class-head">
+                  {nposDeviceClassLabel(cls)}{" "}
+                  <span className="muted">({rows.length})</span>
+                </h4>
+                <OpsTable rows={rows} />
+              </section>
+            );
+          })}
+        </>
       )}
     </SettingsFold>
   );

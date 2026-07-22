@@ -5,7 +5,7 @@
 
 สถานะสัญลักษณ์: `[x]` มี · `[~]` มีบางส่วน · `[ ]` ยังไม่มี · `[W]` ตั้งใจให้คงบนเว็บ (หลังร้าน)
 
-อัปเดตล่าสุด: **1.10.1** — Hub เมนูครบเว็บ + ปุ่มกลับ
+อัปเดตล่าสุด: **1.11.0** — Hub เมนูครบเว็บ + deviceClass shop/dev/blocked
 
 ---
 
@@ -13,7 +13,7 @@
 
 เว็บ POS มีแถบนำทาง (`pos-nav.ts`) หลายหน้า — nPos รอบก่อนโฟกัสแค่ **หน้าขาย** เลยดูเหมือนเมนูหาย
 
-| เมนูเว็บ | ตอนนี้ใน nPos 1.10.1 |
+| เมนูเว็บ | ตอนนี้ใน nPos 1.11.0 |
 |----------|----------------------|
 | สั่งและชำระเงิน | Hub → native ขาย |
 | บัตรสมาชิก | Hub → เปิดเว็บ (stub เดิม) |
@@ -91,6 +91,7 @@
 | C02 | heartbeat + stableKey | ✅ |
 | C03 | ops log / diagnose อัตโนมัติ | ✅ |
 | C04 | ตั้งค่าปริ้นเตอร์ USB/BT | ✅ |
+| C05 | deviceClass shop/dev/blocked + ปุ่มบล็อก | ✅ 1.11.0 · [npos-device-class-checklist.md](./npos-device-class-checklist.md) |
 
 ---
 
@@ -121,6 +122,13 @@
 - [x] ป้ายคิวซิงก์ + ปุ่มซิงก์บิลค้าง
 - [x] สรุปรอบสั้นบนจอขาย
 - [x] เอกสารนำร่อง: `npos-pilot-roadmap.md` · `npos-pilot-day-checklist.md`
+
+### Device class — ทำแล้ว (1.11.0)
+- [x] ส่ง `stableKey` · `isEmulator` · `deviceClass` จาก heartbeat/ops/diagnose
+- [x] CF เก็บแฟล็ก · heartbeat ไม่ปลดบล็อก
+- [x] หลังร้านพับ หน้าร้าน / พัฒนา / บล็อก · กลุ่มตาม stableKey
+- [x] ปุ่มบล็อก / ปลดบล็อก
+- [x] สคริปต์ `node scripts/test-npos-device-class.mjs`
 
 ### P4 — พรุ่งนี้ (คน)
 - [ ] รันสคริปต์ 15 นาทีบนเครื่องจริง

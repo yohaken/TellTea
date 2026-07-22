@@ -5,6 +5,10 @@
  * Dedupes by stableKey (ANDROID_ID): when the same physical device reinstalls /
  * gets a new installId, older sibling docs are marked disabled so the admin list
  * does not look like many machines from one emulator.
+ *
+ * deviceClass: shop | dev | blocked
+ * - client sends shop/dev (emulator → dev)
+ * - BO can set blocked; heartbeat must not clear that
  */
 const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
@@ -24,6 +28,19 @@ function asString(v, max = 200) {
 
 function pairingCodeFromId(id) {
   return String(id).replace(/-/g, "").slice(-6).toUpperCase();
+}
+
+function normalizeDeviceClass(v) {
+  const s = asString(v, 16).toLowerCase();
+  if (s === "shop" || s === "dev" || s === "blocked") return s;
+  return "";
+}
+
+function clientDeviceClass(body) {
+  const explicit = normalizeDeviceClass(body.deviceClass);
+  if (explicit === "shop" || explicit === "dev") return explicit;
+  if (body.isEmulator === true) return "dev";
+  return "shop";
 }
 
 exports.nposDeviceHeartbeat = functions
@@ -64,39 +81,49 @@ exports.nposDeviceHeartbeat = functions
     const deviceHint = asString(body.deviceHint, 80);
     const screenSize = asString(body.screenSize, 40);
     const stableKey = asString(body.stableKey, 120);
+    const isEmulator = body.isEmulator === true;
     const now = Date.now();
     const pairingCode = pairingCodeFromId(installId);
-
-    const patch = {
-      authUid: installId,
-      pairingCode,
-      lastSeenAt: now,
-      appBuild: versionCode,
-      userAgent: `nPos-telltea/${versionName}`,
-      shellKind: "native",
-      nativeShellBuild: versionCode,
-      platform: "android",
-      standalone: true,
-      deviceHint: deviceHint || "nPos-telltea",
-      screenSize,
-      telemetryAt: now,
-      updatedAt: now,
-      disabled: false,
-    };
-    if (stableKey) {
-      patch.stableKey = stableKey;
-    }
-    if (Object.prototype.hasOwnProperty.call(body, "printerReady")) {
-      patch.printerReady = body.printerReady === true;
-    }
-    if (Object.prototype.hasOwnProperty.call(body, "printerLabel")) {
-      patch.printerLabel = asString(body.printerLabel, 80);
-    }
 
     try {
       const db = getFirestore();
       const ref = db.collection(COL).doc(installId);
       const snap = await ref.get();
+      const prev = snap.exists ? snap.data() || {} : {};
+      const wasBlocked =
+        prev.deviceClass === "blocked" || prev.blocked === true;
+      const deviceClass = wasBlocked ? "blocked" : clientDeviceClass(body);
+
+      const patch = {
+        authUid: installId,
+        pairingCode,
+        lastSeenAt: now,
+        appBuild: versionCode,
+        userAgent: `nPos-telltea/${versionName}`,
+        shellKind: "native",
+        nativeShellBuild: versionCode,
+        platform: "android",
+        standalone: true,
+        deviceHint: deviceHint || "nPos-telltea",
+        screenSize,
+        telemetryAt: now,
+        updatedAt: now,
+        isEmulator,
+        deviceClass,
+        // Heartbeat must not un-block a manually blocked install.
+        disabled: wasBlocked ? true : false,
+        blocked: wasBlocked ? true : false,
+      };
+      if (stableKey) {
+        patch.stableKey = stableKey;
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "printerReady")) {
+        patch.printerReady = body.printerReady === true;
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "printerLabel")) {
+        patch.printerLabel = asString(body.printerLabel, 80);
+      }
+
       if (!snap.exists) {
         Object.assign(patch, {
           label: "",
@@ -121,12 +148,15 @@ exports.nposDeviceHeartbeat = functions
       await ref.set(patch, { merge: true });
 
       // Mark older docs with same stableKey as disabled (reinstall / wipe ghosts).
+      // Do not overwrite deviceClass=blocked on siblings.
       let staleMarked = 0;
       if (stableKey) {
         const siblings = await db.collection(COL).where("stableKey", "==", stableKey).limit(25).get();
         const batch = db.batch();
         siblings.forEach((doc) => {
           if (doc.id === installId) return;
+          const siblingClass = doc.get("deviceClass");
+          const siblingBlocked = siblingClass === "blocked" || doc.get("blocked") === true;
           batch.set(
             doc.ref,
             {
@@ -134,6 +164,9 @@ exports.nposDeviceHeartbeat = functions
               lastSeenAt: typeof doc.get("lastSeenAt") === "number" ? doc.get("lastSeenAt") : 0,
               updatedAt: now,
               supersededBy: installId,
+              ...(siblingBlocked
+                ? { deviceClass: "blocked", blocked: true }
+                : {}),
             },
             { merge: true },
           );
@@ -146,6 +179,8 @@ exports.nposDeviceHeartbeat = functions
         ok: true,
         installId,
         stableKey: stableKey || null,
+        isEmulator,
+        deviceClass,
         pairingCode,
         lastSeenAt: now,
         versionCode,

@@ -6,6 +6,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
+import { resolveNposDeviceClass, type NposDeviceClass } from "./npos-device-class";
 
 export const NPOS_DIAGNOSE_COL = "nposDiagnose";
 
@@ -25,6 +26,10 @@ export type NposHardwareItem = {
 export type NposDiagnoseReport = {
   id: string;
   installId: string;
+  stableKey: string;
+  isEmulator: boolean;
+  deviceClass: NposDeviceClass;
+  blocked: boolean;
   reportedAt: number;
   versionCode: number;
   versionName: string;
@@ -59,9 +64,20 @@ export function mapNposDiagnoseReport(
 ): NposDiagnoseReport {
   const displaysRaw = Array.isArray(data?.displays) ? data!.displays : [];
   const hardwareRaw = Array.isArray(data?.hardware) ? data!.hardware : [];
+  const isEmulator = data?.isEmulator === true;
+  const blocked = data?.blocked === true || data?.deviceClass === "blocked";
+  const deviceClass = resolveNposDeviceClass({
+    deviceClass: typeof data?.deviceClass === "string" ? data.deviceClass : "",
+    isEmulator,
+    blocked,
+  });
   return {
     id,
     installId: typeof data?.installId === "string" ? data.installId : id,
+    stableKey: typeof data?.stableKey === "string" ? data.stableKey : "",
+    isEmulator,
+    deviceClass,
+    blocked,
     reportedAt: typeof data?.reportedAt === "number" ? data.reportedAt : 0,
     versionCode: typeof data?.versionCode === "number" ? data.versionCode : 0,
     versionName: typeof data?.versionName === "string" ? data.versionName : "",

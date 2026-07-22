@@ -121,6 +121,9 @@ public final class DiagnoseReporter {
 
         JSONObject body = new JSONObject();
         body.put("installId", DeviceIdentity.getOrCreateInstallId(context));
+        body.put("stableKey", DeviceIdentity.stableKey(context));
+        body.put("isEmulator", DeviceIdentity.isEmulator());
+        body.put("deviceClass", DeviceIdentity.deviceClass());
         body.put("versionCode", versionCode);
         body.put("versionName", versionName);
         body.put("summary", summary);
