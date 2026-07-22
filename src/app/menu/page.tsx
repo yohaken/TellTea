@@ -28,7 +28,7 @@ function MenuCatalogGate() {
   return (
     <div className="menu-boh-page">
       <p className="muted menu-boh-lead">
-        แหล่งหลักของเมนูร้าน — สร้าง ลบ ปรับแต่งแล้วไปขึ้นหน้าขาย POS เอง
+        แหล่งหลักของเมนูร้าน — ค้นหา · สำเนา · เก็บเข้าคลัง · ราคาหน้าร้าน/เดลิเวอรี่ แล้วไปขึ้นหน้าขายเอง
       </p>
       <PosMenuAdmin embedded authMode="owner" />
     </div>
