@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDocs,
   getDocsFromCache,
@@ -12,7 +13,7 @@ import {
   where,
   type Unsubscribe,
 } from "firebase/firestore";
-import { getPosDb } from "./pos-firebase";
+import { getMenuDb, menuErrorHint, type MenuPriceChannel } from "./pos-menu-db";
 import { mapFirestoreError } from "./firestore-errors";
 import { listMenuOptionGroups, subscribeMenuOptionGroups } from "./pos-menu-options";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "./types";
@@ -20,12 +21,25 @@ import type { MenuCategory, MenuItem, MenuOptionGroup } from "./types";
 export const MENU_CATEGORIES_COL = "menuCategories";
 export const MENU_ITEMS_COL = "menuItems";
 
+export type { MenuPriceChannel };
+
+/** ราคาเมนูตามช่องทาง — ไม่มี deliveryPrice → ใช้ price */
+export function resolveMenuItemPrice(
+  item: Pick<MenuItem, "price" | "deliveryPrice">,
+  channel: MenuPriceChannel = "store",
+): number {
+  if (channel === "delivery" && typeof item.deliveryPrice === "number") {
+    return Math.max(0, item.deliveryPrice);
+  }
+  return Math.max(0, item.price);
+}
+
 function categoriesCol() {
-  return collection(getPosDb(), MENU_CATEGORIES_COL);
+  return collection(getMenuDb(), MENU_CATEGORIES_COL);
 }
 
 function itemsCol() {
-  return collection(getPosDb(), MENU_ITEMS_COL);
+  return collection(getMenuDb(), MENU_ITEMS_COL);
 }
 
 function mapCategory(id: string, data: Record<string, unknown>): MenuCategory {
@@ -49,6 +63,7 @@ function mapItem(id: string, data: Record<string, unknown>): MenuItem {
     name: typeof data.name === "string" ? data.name : "",
     nameEn: typeof data.nameEn === "string" ? data.nameEn : undefined,
     price: typeof data.price === "number" ? data.price : 0,
+    ...(typeof data.deliveryPrice === "number" ? { deliveryPrice: data.deliveryPrice } : {}),
     sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 0,
     active: data.active !== false,
     visibleOnPos: data.visibleOnPos !== false,
@@ -194,10 +209,11 @@ export async function addMenuCategory(name: string): Promise<string> {
       active: true,
       createdAt: now,
       updatedAt: now,
+      source: "manual",
     });
     return ref.id;
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "เพิ่มหมวดเมนู", "pos"));
+    throw new Error(mapFirestoreError(err, "เพิ่มหมวดเมนู", menuErrorHint()));
   }
 }
 
@@ -210,17 +226,17 @@ export async function updateMenuCategory(
   if (patch.active != null) next.active = patch.active;
   if (patch.sortOrder != null) next.sortOrder = patch.sortOrder;
   try {
-    await updateDoc(doc(getPosDb(), MENU_CATEGORIES_COL, id), next);
+    await updateDoc(doc(getMenuDb(), MENU_CATEGORIES_COL, id), next);
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "อัปเดตหมวดเมนู", "pos"));
+    throw new Error(mapFirestoreError(err, "อัปเดตหมวดเมนู", menuErrorHint()));
   }
 }
 
 export async function deleteMenuCategory(id: string): Promise<void> {
   try {
-    await deleteDoc(doc(getPosDb(), MENU_CATEGORIES_COL, id));
+    await deleteDoc(doc(getMenuDb(), MENU_CATEGORIES_COL, id));
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "ลบหมวดเมนู", "pos"));
+    throw new Error(mapFirestoreError(err, "ลบหมวดเมนู", menuErrorHint()));
   }
 }
 
@@ -236,10 +252,11 @@ export async function addMenuItem(input: {
   categoryId: string;
   name: string;
   price: number;
+  deliveryPrice?: number;
 }): Promise<string> {
   const now = Date.now();
   try {
-    const ref = await addDoc(itemsCol(), {
+    const row: Record<string, unknown> = {
       categoryId: input.categoryId,
       name: input.name.trim(),
       price: Math.max(0, Number(input.price) || 0),
@@ -247,42 +264,53 @@ export async function addMenuItem(input: {
       active: true,
       visibleOnPos: true,
       recommended: false,
+      source: "manual",
       createdAt: now,
       updatedAt: now,
-    });
+    };
+    if (typeof input.deliveryPrice === "number") {
+      row.deliveryPrice = Math.max(0, input.deliveryPrice);
+    }
+    const ref = await addDoc(itemsCol(), row);
     return ref.id;
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "เพิ่มเมนู", "pos"));
+    throw new Error(mapFirestoreError(err, "เพิ่มเมนู", menuErrorHint()));
   }
 }
 
 export async function toggleMenuItemSoldOut(id: string, soldOut: boolean): Promise<void> {
   try {
-    await updateDoc(doc(getPosDb(), MENU_ITEMS_COL, id), {
+    await updateDoc(doc(getMenuDb(), MENU_ITEMS_COL, id), {
       active: !soldOut,
       updatedAt: Date.now(),
     });
   } catch (err) {
-    throw new Error(mapFirestoreError(err, soldOut ? "ปิดเมนูของหมด" : "เปิดเมนูขาย", "pos"));
+    throw new Error(mapFirestoreError(err, soldOut ? "ปิดเมนูของหมด" : "เปิดเมนูขาย", menuErrorHint()));
   }
 }
 
 export type MenuItemPatch = Partial<
-  Pick<
-    MenuItem,
-    | "categoryId"
-    | "name"
-    | "nameEn"
-    | "price"
-    | "active"
-    | "visibleOnPos"
-    | "recommended"
-    | "imageUrl"
-    | "description"
-    | "optionGroupIds"
-    | "sortOrder"
+  Omit<
+    Pick<
+      MenuItem,
+      | "categoryId"
+      | "name"
+      | "nameEn"
+      | "price"
+      | "active"
+      | "visibleOnPos"
+      | "recommended"
+      | "imageUrl"
+      | "description"
+      | "optionGroupIds"
+      | "sortOrder"
+    >,
+    never
   >
->;
+> & {
+  /** null = ลบฟิลด์เดลิเวอรี่ (ใช้ราคาหน้าร้าน) */
+  deliveryPrice?: number | null;
+};
 
 export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<void> {
   const next: Record<string, unknown> = { updatedAt: Date.now() };
@@ -290,6 +318,12 @@ export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<
   if (patch.name != null) next.name = patch.name.trim();
   if (patch.nameEn != null) next.nameEn = patch.nameEn.trim();
   if (patch.price != null) next.price = Math.max(0, Number(patch.price) || 0);
+  if (patch.deliveryPrice !== undefined) {
+    next.deliveryPrice =
+      patch.deliveryPrice == null
+        ? deleteField()
+        : Math.max(0, Number(patch.deliveryPrice) || 0);
+  }
   if (patch.active != null) next.active = patch.active;
   if (patch.visibleOnPos != null) next.visibleOnPos = patch.visibleOnPos;
   if (patch.recommended != null) next.recommended = patch.recommended;
@@ -298,17 +332,17 @@ export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<
   if (patch.optionGroupIds != null) next.optionGroupIds = patch.optionGroupIds;
   if (patch.sortOrder != null) next.sortOrder = patch.sortOrder;
   try {
-    await updateDoc(doc(getPosDb(), MENU_ITEMS_COL, id), next);
+    await updateDoc(doc(getMenuDb(), MENU_ITEMS_COL, id), next);
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "อัปเดตเมนู", "pos"));
+    throw new Error(mapFirestoreError(err, "อัปเดตเมนู", menuErrorHint()));
   }
 }
 
 export async function deleteMenuItem(id: string): Promise<void> {
   try {
-    await deleteDoc(doc(getPosDb(), MENU_ITEMS_COL, id));
+    await deleteDoc(doc(getMenuDb(), MENU_ITEMS_COL, id));
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "ลบเมนู", "pos"));
+    throw new Error(mapFirestoreError(err, "ลบเมนู", menuErrorHint()));
   }
 }
 

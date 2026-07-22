@@ -30,6 +30,9 @@ export function PosMenuItemEditor({
   const [nameEn, setNameEn] = useState(item.nameEn || "");
   const [categoryId, setCategoryId] = useState(item.categoryId);
   const [price, setPrice] = useState(String(item.price));
+  const [deliveryPrice, setDeliveryPrice] = useState(
+    typeof item.deliveryPrice === "number" ? String(item.deliveryPrice) : "",
+  );
   const [description, setDescription] = useState(item.description || "");
   const [imageUrl, setImageUrl] = useState(item.imageUrl || "");
   const [recommended, setRecommended] = useState(item.recommended === true);
@@ -47,6 +50,7 @@ export function PosMenuItemEditor({
     setNameEn(item.nameEn || "");
     setCategoryId(item.categoryId);
     setPrice(String(item.price));
+    setDeliveryPrice(typeof item.deliveryPrice === "number" ? String(item.deliveryPrice) : "");
     setDescription(item.description || "");
     setImageUrl(item.imageUrl || "");
     setRecommended(item.recommended === true);
@@ -99,6 +103,8 @@ export function PosMenuItemEditor({
         nameEn: nameEn.trim() || undefined,
         categoryId,
         price: Number(price) || 0,
+        deliveryPrice:
+          deliveryPrice.trim() === "" ? null : Math.max(0, Number(deliveryPrice) || 0),
         description: description.trim() || undefined,
         imageUrl: imageUrl.trim() || undefined,
         recommended,
@@ -196,6 +202,17 @@ export function PosMenuItemEditor({
             required
           />
         </label>
+        <label>
+          <span>ราคาเดลิเวอรี่ (฿)</span>
+          <input
+            type="number"
+            min={0}
+            step={0.01}
+            value={deliveryPrice}
+            onChange={(e) => setDeliveryPrice(e.target.value)}
+            placeholder="ว่าง = ใช้ราคาหน้าร้าน"
+          />
+        </label>
 
         <div className="pos-menu-field-block">
           <div className="pos-menu-options-head">
@@ -277,7 +294,10 @@ export function PosMenuItemEditor({
         </button>
 
         <p className="muted pos-menu-price-hint">
-          ราคาหน้าร้าน ฿{formatPlainNumber(Number(price) || 0)}
+          หน้าร้าน ฿{formatPlainNumber(Number(price) || 0)}
+          {deliveryPrice.trim() !== ""
+            ? ` · เดลิเวอรี่ ฿${formatPlainNumber(Number(deliveryPrice) || 0)}`
+            : " · เดลิเวอรี่ = หน้าร้าน"}
         </p>
 
         <div className="pos-menu-editor-actions">

@@ -192,7 +192,10 @@ export type MenuCategory = {
 export type MenuOptionChoice = {
   id: string;
   name: string;
+  /** ราคาเพิ่มหน้าร้าน */
   priceDelta: number;
+  /** ราคาเพิ่มช่องทางเดลิเวอรี่ — ไม่มี = ใช้ priceDelta */
+  deliveryPriceDelta?: number;
   priceDeltaMax?: number;
   sortOrder: number;
   active: boolean;
@@ -225,7 +228,10 @@ export type MenuItem = {
   categoryId: string;
   name: string;
   nameEn?: string;
+  /** ราคาหน้าร้าน */
   price: number;
+  /** ราคาช่องทางเดลิเวอรี่ — ไม่มี = ใช้ price */
+  deliveryPrice?: number;
   sortOrder: number;
   active: boolean;
   visibleOnPos?: boolean;

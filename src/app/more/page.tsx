@@ -18,6 +18,7 @@ import {
   Settings,
   UserCircle,
   Users,
+  UtensilsCrossed,
 } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
@@ -142,6 +143,15 @@ function MoreView() {
             <div>
               <strong>โปรไฟล์</strong>
               <p>{personalProfileLabel(staff) || staff.displayName || "ดู/แก้ไขโปรไฟล์"}</p>
+            </div>
+          </Link>
+        ) : null}
+        {isOwner ? (
+          <Link href="/menu/" className="more-card">
+            <UtensilsCrossed size={22} />
+            <div>
+              <strong>เมนู</strong>
+              <p>สร้าง · ลบ · ปรับแต่งเมนูและตัวเลือก — เชื่อมไป POS อัตโนมัติ</p>
             </div>
           </Link>
         ) : null}

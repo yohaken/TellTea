@@ -91,6 +91,9 @@ exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(a
               id: asString(o.id, 64),
               name: asString(o.name, 80),
               priceDelta: Number(o.priceDelta) || 0,
+              ...(typeof o.deliveryPriceDelta === "number"
+                ? { deliveryPriceDelta: Number(o.deliveryPriceDelta) || 0 }
+                : {}),
               sortOrder: typeof o.sortOrder === "number" ? o.sortOrder : 0,
               active: true,
             }))
@@ -116,6 +119,7 @@ exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(a
           categoryId: asString(x.categoryId, 64),
           name: asString(x.name, 120) || d.id,
           price: Number(x.price) || 0,
+          ...(typeof x.deliveryPrice === "number" ? { deliveryPrice: Number(x.deliveryPrice) || 0 } : {}),
           sortOrder: typeof x.sortOrder === "number" ? x.sortOrder : 0,
           active: x.active !== false,
           visibleOnPos: x.visibleOnPos !== false,

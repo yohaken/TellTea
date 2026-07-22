@@ -10201,7 +10201,35 @@ body.modal-open .main-panel {
 }
 
 .pos-menu-option-rows .pos-sortable-body input[type="number"] {
-  width: 5rem;
+  width: 4.25rem;
+  flex-shrink: 0;
+}
+
+.pos-menu-boh-banner {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  background: #f5f7f4;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 0.85rem;
+}
+
+.pos-menu-boh-banner a {
+  color: #2f5d3a;
+  font-weight: 600;
+}
+
+.menu-boh-page {
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+.menu-boh-lead {
+  margin: 0 0 0.75rem;
+  text-align: left;
+}
+
+.pos-menu-admin--boh.pos-menu-admin--embedded {
+  min-height: calc(100dvh - 8rem);
 }
 
 .pos-menu-link-groups-sort .pos-sortable-body {

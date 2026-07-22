@@ -8,6 +8,7 @@ import { PosMenuModal } from "@/components/PosMenuModal";
 import { PosOptionGroupEditor } from "@/components/PosOptionGroupEditor";
 import { PosSortableList } from "@/components/PosSortableList";
 import { ensurePosDeviceAuth } from "@/lib/pos-auth";
+import { setMenuDbMode, type MenuDbMode } from "@/lib/pos-menu-db";
 import { loadPosMenuCache } from "@/lib/pos-menu-cache";
 import { publishLocalMenuOrder } from "@/lib/pos-menu-preload";
 import { applyFixedCategorySortOrder } from "@/lib/pos-fixed-category-order";
@@ -31,6 +32,8 @@ import { formatPlainNumber } from "@/lib/utils";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { PosLazyMenuImage } from "@/components/PosLazyMenuImage";
 
+const BOH_MENU_URL = "https://telltea-shop.web.app/menu/";
+
 type Tab = "categories" | "groups" | "promotions";
 type Screen =
   | { kind: "list" }
@@ -52,13 +55,24 @@ function initialMenuFromCache() {
   };
 }
 
-export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
-  const seeded = initialMenuFromCache();
+export function PosMenuAdmin({
+  embedded = false,
+  authMode = "pos",
+}: {
+  embedded?: boolean;
+  /** owner = หลังร้าน (Google) · pos = แท็บเล็ต (device auth) */
+  authMode?: MenuDbMode;
+}) {
+  const isBoh = authMode === "owner";
+  const seeded = isBoh
+    ? { categories: [] as MenuCategory[], items: [] as MenuItem[], optionGroups: [] as MenuOptionGroup[] }
+    : initialMenuFromCache();
   const [tab, setTab] = useState<Tab>("categories");
   const [screen, setScreen] = useState<Screen>({ kind: "list" });
   const [quickAdd, setQuickAdd] = useState<QuickAdd>(null);
   const [quickName, setQuickName] = useState("");
   const [quickPrice, setQuickPrice] = useState("45");
+  const [quickDeliveryPrice, setQuickDeliveryPrice] = useState("");
   const [categories, setCategories] = useState<MenuCategory[]>(seeded.categories);
   const [items, setItems] = useState<MenuItem[]>(seeded.items);
   const [optionGroups, setOptionGroups] = useState<MenuOptionGroup[]>(seeded.optionGroups);
@@ -71,7 +85,15 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
   >(null);
 
   useEffect(() => {
+    setMenuDbMode(authMode);
     let alive = true;
+    if (authMode === "owner") {
+      setAuthReady(true);
+      return () => {
+        alive = false;
+        setMenuDbMode("pos");
+      };
+    }
     void ensurePosDeviceAuth()
       .then(() => {
         if (alive) setAuthReady(true);
@@ -81,8 +103,9 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
       });
     return () => {
       alive = false;
+      setMenuDbMode("pos");
     };
-  }, []);
+  }, [authMode]);
 
   useEffect(() => {
     if (!authReady) return;
@@ -128,6 +151,7 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
   function openQuickAdd(next: QuickAdd) {
     setQuickName("");
     setQuickPrice("45");
+    setQuickDeliveryPrice("");
     setQuickAdd(next);
   }
 
@@ -145,10 +169,14 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
         setScreen({ kind: "edit-group", id });
       } else {
         const price = Number(quickPrice) || 0;
+        const deliveryRaw = quickDeliveryPrice.trim();
         const id = await addMenuItem({
           categoryId: quickAdd.categoryId,
           name: quickName.trim(),
           price,
+          ...(deliveryRaw !== ""
+            ? { deliveryPrice: Math.max(0, Number(deliveryRaw) || 0) }
+            : {}),
         });
         setExpandedCat(quickAdd.categoryId);
         setScreen({ kind: "edit-item", id });
@@ -169,7 +197,17 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
         : "เพิ่มเมนู";
 
   return (
-    <div className={`pos-menu-admin ${embedded ? "pos-menu-admin--embedded" : ""}`}>
+    <div
+      className={`pos-menu-admin ${embedded ? "pos-menu-admin--embedded" : ""}${isBoh ? " pos-menu-admin--boh" : ""}`}
+    >
+      {!isBoh ? (
+        <p className="pos-menu-boh-banner muted" role="status">
+          แนะนำจัดการเมนูที่หลังร้าน —{" "}
+          <a href={BOH_MENU_URL} target="_blank" rel="noopener noreferrer">
+            อื่นๆ → เมนู
+          </a>
+        </p>
+      ) : null}
       {!embedded ? (
         <header className="pos-menu-admin-top">
           <PosHardLink href="/pos/sell/" className="ghost-btn pos-menu-back">
@@ -369,7 +407,12 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
                                         {item.name}
                                         {!item.active ? " (หมด)" : ""}
                                       </span>
-                                      <span className="muted">฿{formatPlainNumber(item.price)}</span>
+                                      <span className="muted">
+                                        ฿{formatPlainNumber(item.price)}
+                                        {typeof item.deliveryPrice === "number"
+                                          ? ` · ส่ง ฿${formatPlainNumber(item.deliveryPrice)}`
+                                          : ""}
+                                      </span>
                                     </button>
                                     <button
                                       type="button"
@@ -463,17 +506,30 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
               <input value={quickName} onChange={(e) => setQuickName(e.target.value)} required autoFocus />
             </label>
             {quickAdd.kind === "item" ? (
-              <label>
-                <span>ราคา (฿)</span>
-                <input
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={quickPrice}
-                  onChange={(e) => setQuickPrice(e.target.value)}
-                  required
-                />
-              </label>
+              <>
+                <label>
+                  <span>ราคาหน้าร้าน (฿)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={quickPrice}
+                    onChange={(e) => setQuickPrice(e.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  <span>ราคาเดลิเวอรี่ (฿) — ว่าง = ใช้หน้าร้าน</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={quickDeliveryPrice}
+                    onChange={(e) => setQuickDeliveryPrice(e.target.value)}
+                    placeholder={quickPrice}
+                  />
+                </label>
+              </>
             ) : null}
             <div className="pos-menu-editor-actions">
               <button type="button" className="ghost-btn pos-menu-btn-sm" onClick={() => setQuickAdd(null)}>
