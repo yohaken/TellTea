@@ -117,6 +117,14 @@ function DeviceCard({
         {d.lastCaptureAt ? formatSeen(d.lastCaptureAt) : "ยังไม่มี"}
         {capturePending ? " · รอแคป…" : ""}
       </p>
+      <p className="muted npos-diagnose-id">
+        สิทธิ์เครื่อง{" "}
+        {d.permissionsStatus
+          ? d.permissionsStatus
+          : d.permissionsOk
+            ? "สิทธิ์ครบ"
+            : "ยังไม่รายงาน — อัปเดต APK แล้วเปิดแอป"}
+      </p>
       <p className="muted npos-diagnose-id">เห็นล่าสุด {formatSeen(d.lastSeenAt)}</p>
       <div className="npos-device-actions">
         <button type="button" className="npos-device-btn" disabled={busy || !online} onClick={onCapture}>

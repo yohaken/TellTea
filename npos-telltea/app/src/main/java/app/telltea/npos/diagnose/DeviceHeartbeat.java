@@ -155,6 +155,8 @@ public final class DeviceHeartbeat {
         body.put("customerDisplay", DisplayProbe.customerDisplayStatus(context));
         body.put("printerReady", PrinterPrefs.isReady(context));
         body.put("printerLabel", PrinterPrefs.label(context));
+        body.put("permissionsOk", PermissionBootstrap.allCriticalGranted(context));
+        body.put("permissionsStatus", PermissionBootstrap.statusLine(context));
         return body;
     }
 

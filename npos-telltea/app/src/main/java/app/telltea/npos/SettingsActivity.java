@@ -21,6 +21,7 @@ import java.util.Locale;
 import app.telltea.npos.diagnose.CustomerAmountPresentation;
 import app.telltea.npos.diagnose.DisplayProbe;
 import app.telltea.npos.diagnose.OpsLogger;
+import app.telltea.npos.diagnose.PermissionBootstrap;
 import app.telltea.npos.printer.EscPos;
 import app.telltea.npos.printer.PrinterEndpoint;
 import app.telltea.npos.printer.PrinterPrefs;
@@ -83,6 +84,8 @@ public class SettingsActivity extends Activity {
 
         findViewById(R.id.backButton).setOnClickListener(v -> finish());
         updateButton.setOnClickListener(v -> onUpdateButtonClicked());
+        findViewById(R.id.grantPermsSettingsButton)
+                .setOnClickListener(v -> PermissionBootstrap.grantAll(this));
         findViewById(R.id.installPageButton).setOnClickListener(v -> openInstallPage());
         findViewById(R.id.openMenuAdminButton).setOnClickListener(v -> openMenuAdminPage());
         findViewById(R.id.diagnoseButton)
@@ -99,7 +102,54 @@ public class SettingsActivity extends Activity {
         findViewById(R.id.printerLanAddButton).setOnClickListener(v -> addLanPrinter());
 
         restorePrinterSelection();
+        refreshPermissionStatus();
         OpsLogger.info(this, "app", "เปิดตั้งค่า", "vc=" + localVersionCode);
+    }
+
+    private void refreshPermissionStatus() {
+        TextView v = findViewById(R.id.permStatusSettings);
+        if (v == null) return;
+        boolean ok = PermissionBootstrap.allCriticalGranted(this);
+        v.setText(
+                ok
+                        ? getString(R.string.perm_all_ok)
+                        : PermissionBootstrap.statusLine(this)
+                                + "\n"
+                                + getString(R.string.perm_gate_hint));
+        v.setTextColor(ok ? 0xFF2E6B4E : 0xFF8A4B12);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(
+            int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PermissionBootstrap.REQ_RUNTIME) {
+            PermissionBootstrap.continueSystemSettings(this);
+            refreshPermissionStatus();
+        } else if (requestCode == REQ_BT) {
+            scanPrinters(false);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == PermissionBootstrap.REQ_INSTALL
+                || requestCode == PermissionBootstrap.REQ_BATTERY) {
+            if (requestCode == PermissionBootstrap.REQ_INSTALL
+                    && PermissionBootstrap.canInstallPackages(this)
+                    && !PermissionBootstrap.isBatteryUnrestricted(this)) {
+                PermissionBootstrap.openBatteryExemption(this);
+            }
+            refreshPermissionStatus();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refreshPermissionStatus();
+        maybeAutoCheck();
     }
 
     private void addLanPrinter() {
@@ -126,12 +176,6 @@ public class SettingsActivity extends Activity {
         renderPrinterStatus();
         Toast.makeText(this, getString(R.string.printer_lan_added, lan.label), Toast.LENGTH_SHORT).show();
         OpsLogger.info(this, "printer", "เพิ่มปริ้น LAN", lan.id);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        maybeAutoCheck();
     }
 
     @Override
@@ -404,15 +448,6 @@ public class SettingsActivity extends Activity {
         return Build.VERSION.SDK_INT >= 31
                 && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
                         != PackageManager.PERMISSION_GRANTED;
-    }
-
-    @Override
-    public void onRequestPermissionsResult(
-            int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQ_BT) {
-            scanPrinters(false);
-        }
     }
 
     private void readLocalVersion() {

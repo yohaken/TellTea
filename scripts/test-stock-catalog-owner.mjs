@@ -15,7 +15,7 @@ const settings = read("src/app/settings/page.tsx");
 const catalog = read("src/components/StockCatalogSetup.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 223/);
+assert.match(version, /APP_BUILD = 224/);
 assert.match(stockPage, /StockCatalogSetup/);
 assert.match(stockPage, /รายการวัตถุดิบ/);
 assert.match(stockPage, /stock-owner-tabs/);

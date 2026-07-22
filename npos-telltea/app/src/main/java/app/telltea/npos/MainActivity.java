@@ -21,6 +21,7 @@ import app.telltea.npos.diagnose.AutoHealth;
 import app.telltea.npos.diagnose.DeviceHeartbeat;
 import app.telltea.npos.diagnose.DeviceIdentity;
 import app.telltea.npos.diagnose.OpsLogger;
+import app.telltea.npos.diagnose.PermissionBootstrap;
 import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shift.ShiftPrefs;
@@ -82,13 +83,57 @@ public class MainActivity extends Activity {
 
     findViewById(R.id.openShiftButton).setOnClickListener(v -> openShift());
     findViewById(R.id.closeShiftButton).setOnClickListener(v -> closeShift());
+    findViewById(R.id.grantPermsButton).setOnClickListener(v -> PermissionBootstrap.grantAll(this));
     View.OnClickListener openSettings =
         v -> startActivity(new Intent(this, SettingsActivity.class));
     findViewById(R.id.settingsButtonClock).setOnClickListener(openSettings);
     findViewById(R.id.settingsButtonSell).setOnClickListener(openSettings);
 
     buildHubNav();
+    refreshPermissionGate();
+    // First open: auto-prompt so staff do not hunt Settings.
+    if (!PermissionBootstrap.wasPrompted(this) && !PermissionBootstrap.allCriticalGranted(this)) {
+      PermissionBootstrap.grantAll(this);
+    }
     OpsLogger.info(this, "app", "เปิดแอป", "vc=" + localVersionCode);
+  }
+
+  private void refreshPermissionGate() {
+    View grantBtn = findViewById(R.id.grantPermsButton);
+    TextView status = findViewById(R.id.permStatusView);
+    if (grantBtn == null || status == null) return;
+    boolean ok = PermissionBootstrap.allCriticalGranted(this);
+    String line = PermissionBootstrap.statusLine(this);
+    status.setText(ok ? getString(R.string.perm_all_ok) : line + "\n" + getString(R.string.perm_gate_hint));
+    status.setVisibility(View.VISIBLE);
+    status.setTextColor(ok ? 0xFF2E6B4E : 0xFF8A4B12);
+    grantBtn.setVisibility(ok ? View.GONE : View.VISIBLE);
+  }
+
+  @Override
+  public void onRequestPermissionsResult(
+      int requestCode, String[] permissions, int[] grantResults) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    if (requestCode == PermissionBootstrap.REQ_RUNTIME) {
+      PermissionBootstrap.continueSystemSettings(this);
+      refreshPermissionGate();
+      OpsLogger.info(this, "app", "ขอสิทธิ์รันไทม์", PermissionBootstrap.statusLine(this));
+    }
+  }
+
+  @Override
+  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+    if (requestCode == PermissionBootstrap.REQ_INSTALL
+        || requestCode == PermissionBootstrap.REQ_BATTERY) {
+      if (requestCode == PermissionBootstrap.REQ_INSTALL
+          && PermissionBootstrap.canInstallPackages(this)
+          && !PermissionBootstrap.isBatteryUnrestricted(this)) {
+        PermissionBootstrap.openBatteryExemption(this);
+      }
+      refreshPermissionGate();
+      OpsLogger.info(this, "app", "ตั้งค่าสิทธิ์ระบบ", PermissionBootstrap.statusLine(this));
+    }
   }
 
   private void buildHubNav() {
@@ -181,6 +226,7 @@ public class MainActivity extends Activity {
       clockInPanel.setVisibility(View.VISIBLE);
       sellPanel.setVisibility(View.GONE);
     }
+    refreshPermissionGate();
     updateClockLabels();
     clockHandler.removeCallbacks(clockTick);
     clockHandler.post(clockTick);

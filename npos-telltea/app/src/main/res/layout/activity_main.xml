@@ -81,6 +81,27 @@
                 android:textColor="#888888"
                 android:textSize="13sp" />
 
+            <TextView
+                android:id="@+id/permStatusView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center"
+                android:textColor="#8A4B12"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/grantPermsButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:minHeight="56dp"
+                android:text="@string/btn_grant_all_perms"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                android:visibility="gone" />
+
             <Button
                 android:id="@+id/openShiftButton"
                 android:layout_width="match_parent"
