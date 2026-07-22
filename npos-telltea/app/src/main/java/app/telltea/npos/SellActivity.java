@@ -43,6 +43,7 @@ import app.telltea.npos.sell.PromptPayPayload;
 import app.telltea.npos.sell.QrBitmaps;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shell.PosShellNav;
+import app.telltea.npos.shift.BlindCloseFlow;
 import app.telltea.npos.shift.ShiftPrefs;
 import app.telltea.npos.ui.UiScale;
 import app.telltea.npos.update.ResumePrefs;
@@ -496,19 +497,7 @@ public class SellActivity extends Activity {
   }
 
   private void closeShift() {
-    sellSyncStatus.setText(R.string.sell_closing_shift);
-    saleSync.printShiftReport(
-        this,
-        "close",
-        () ->
-            saleSync.closeSession(
-                this,
-                () ->
-                    runOnUiThread(
-                        () -> {
-                          Toast.makeText(this, R.string.shift_closed, Toast.LENGTH_SHORT).show();
-                          finish();
-                        })));
+    BlindCloseFlow.start(this, saleSync, this::finish);
   }
 
   private void printXReport() {

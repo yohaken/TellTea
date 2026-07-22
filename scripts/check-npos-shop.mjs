@@ -21,6 +21,7 @@ const steps = [
   { name: "web-parity-shot", cmd: ["node", "scripts/test-npos-web-parity-shot.mjs"] },
   { name: "smart-ui-scale", cmd: ["node", "scripts/test-npos-smart-ui-scale.mjs"] },
   { name: "option-qty-parity", cmd: ["node", "scripts/test-npos-option-qty-parity.mjs"] },
+  { name: "blind-shift-close", cmd: ["node", "scripts/test-npos-blind-shift-close.mjs"] },
   { name: "shop-phases-w", cmd: ["node", "scripts/test-npos-shop-phases.mjs"] },
   { name: "outbox-w4", cmd: ["node", "scripts/test-npos-outbox.mjs"] },
   { name: "void-w5", cmd: ["node", "scripts/test-npos-void-server.mjs"] },

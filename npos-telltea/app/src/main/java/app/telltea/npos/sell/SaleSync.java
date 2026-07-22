@@ -18,6 +18,7 @@ import app.telltea.npos.printer.EscPos;
 import app.telltea.npos.printer.PrinterEndpoint;
 import app.telltea.npos.printer.PrinterPrefs;
 import app.telltea.npos.printer.PrinterTransport;
+import app.telltea.npos.shift.BlindCloseReport;
 import app.telltea.npos.shift.ShiftPrefs;
 
 /**
@@ -84,6 +85,10 @@ public final class SaleSync {
     }
 
     public void closeSession(Context context, Runnable done) {
+        closeSession(context, null, done);
+    }
+
+    public void closeSession(Context context, BlindCloseReport report, Runnable done) {
         Context app = context.getApplicationContext();
         executor.execute(
                 () -> {
@@ -93,13 +98,35 @@ public final class SaleSync {
                         body.put("sessionId", ShiftPrefs.sessionId(app));
                         body.put("cashTotal", ShiftPrefs.cashTotal(app));
                         body.put("promptpayTotal", ShiftPrefs.promptpayTotal(app));
+                        body.put("openingCash", ShiftPrefs.openingCash(app));
+                        body.put("discountTotal", ShiftPrefs.discountTotal(app));
+                        body.put("voidedCount", ShiftPrefs.voidedCount(app));
+                        body.put("saleCount", ShiftPrefs.saleCount(app));
+                        if (report != null) {
+                            body.put("closingCashCounted", report.countedCash);
+                            body.put("expectedCash", report.expectedCash);
+                            body.put("cashDifference", report.cashDifference);
+                            body.put("leaveFloat", report.leaveFloat);
+                            body.put("discrepancyNote", report.discrepancyNote);
+                            body.put("discrepancyLabel", report.discrepancyLabel());
+                        }
                         JSONObject res = MenuRepository.postJson(CLOSE_URL, body);
                         if (res.optBoolean("ok", false)) {
                             OpsLogger.info(
                                     app,
                                     "shift",
                                     "ปิดรอบแล้ว",
-                                    "sales=" + res.optInt("saleCount") + " total=" + res.optDouble("totalSales"));
+                                    "sales="
+                                            + res.optInt("saleCount")
+                                            + " total="
+                                            + res.optDouble("totalSales")
+                                            + (report != null
+                                                    ? " diff="
+                                                            + String.format(
+                                                                    java.util.Locale.US,
+                                                                    "%.0f",
+                                                                    report.cashDifference)
+                                                    : ""));
                         } else {
                             OpsLogger.warn(app, "shift", "ปิดรอบเซิร์ฟเวอร์ไม่สำเร็จ", res.optString("error"));
                         }
@@ -109,6 +136,9 @@ public final class SaleSync {
                                 "shift",
                                 "ปิดรอบออฟไลน์",
                                 e.getMessage() == null ? "" : e.getMessage());
+                    }
+                    if (report != null) {
+                        ShiftPrefs.setNextOpeningCash(app, report.leaveFloat);
                     }
                     ShiftPrefs.close(app);
                     if (done != null) done.run();
@@ -412,6 +442,11 @@ public final class SaleSync {
 
     /** kind: "snapshot" (X) or "close" (Z). Snapshot does not close the session. */
     public void printShiftReport(Context context, String kind, Runnable onDone) {
+        printShiftReport(context, kind, null, onDone);
+    }
+
+    public void printShiftReport(
+            Context context, String kind, BlindCloseReport report, Runnable onDone) {
         Context app = context.getApplicationContext();
         final String reportKind = "close".equals(kind) ? "close" : "snapshot";
         executor.execute(
@@ -424,6 +459,7 @@ public final class SaleSync {
                             double cash = ShiftPrefs.cashTotal(app);
                             double pp = ShiftPrefs.promptpayTotal(app);
                             double discount = ShiftPrefs.discountTotal(app);
+                            double opening = ShiftPrefs.openingCash(app);
                             int sales = ShiftPrefs.saleCount(app);
                             int cashBills = ShiftPrefs.cashBillCount(app);
                             int ppBills = ShiftPrefs.promptpayBillCount(app);
@@ -436,44 +472,83 @@ public final class SaleSync {
                                     "close".equals(reportKind)
                                             ? "ปิดรอบเรียบร้อย\n"
                                             : "*** ไม่ใช่การปิดรอบ ***\n";
-                            String body =
-                                    title
-                                            + "\n"
-                                            + "รอบ "
-                                            + ShiftPrefs.shift(app)
-                                            + "\n"
-                                            + "session "
-                                            + ShiftPrefs.sessionId(app)
-                                            + "\n"
-                                            + "----------------\n"
-                                            + "บิลขาย "
-                                            + sales
-                                            + "\n"
-                                            + "ทำลายบิล "
-                                            + voided
-                                            + "\n"
-                                            + "เงินสด "
-                                            + cashBills
-                                            + " บิล · "
-                                            + String.format(java.util.Locale.US, "%.0f", cash)
-                                            + "\n"
-                                            + "PromptPay "
-                                            + ppBills
-                                            + " บิล · "
-                                            + String.format(java.util.Locale.US, "%.0f", pp)
-                                            + "\n"
-                                            + "ส่วนลดรวม "
-                                            + String.format(java.util.Locale.US, "%.0f", discount)
-                                            + "\n"
-                                            + "----------------\n"
-                                            + "รวมยอดขาย "
-                                            + String.format(java.util.Locale.US, "%.0f", cash + pp)
-                                            + "\n"
-                                            + footer;
+                            StringBuilder sb = new StringBuilder();
+                            sb.append(title)
+                                    .append("\n")
+                                    .append("รอบ ")
+                                    .append(ShiftPrefs.shift(app))
+                                    .append("\n")
+                                    .append("session ")
+                                    .append(ShiftPrefs.sessionId(app))
+                                    .append("\n")
+                                    .append("----------------\n")
+                                    .append("บิลขาย ")
+                                    .append(sales)
+                                    .append("\n")
+                                    .append("ทำลายบิล ")
+                                    .append(voided)
+                                    .append("\n")
+                                    .append("เงินสด ")
+                                    .append(cashBills)
+                                    .append(" บิล · ")
+                                    .append(String.format(java.util.Locale.US, "%.0f", cash))
+                                    .append("\n")
+                                    .append("PromptPay ")
+                                    .append(ppBills)
+                                    .append(" บิล · ")
+                                    .append(String.format(java.util.Locale.US, "%.0f", pp))
+                                    .append("\n")
+                                    .append("ส่วนลดรวม ")
+                                    .append(String.format(java.util.Locale.US, "%.0f", discount))
+                                    .append("\n")
+                                    .append("----------------\n")
+                                    .append("รวมยอดขาย ")
+                                    .append(String.format(java.util.Locale.US, "%.0f", cash + pp))
+                                    .append("\n");
+                            if ("close".equals(reportKind)) {
+                                double expected =
+                                        report != null ? report.expectedCash : opening + cash;
+                                double counted = report != null ? report.countedCash : expected;
+                                double diff = report != null ? report.cashDifference : 0;
+                                String label =
+                                        report != null ? report.discrepancyLabel() : "ตรง";
+                                sb.append("----------------\n")
+                                        .append("เงินทอนเริ่ม ")
+                                        .append(String.format(java.util.Locale.US, "%.0f", opening))
+                                        .append("\n")
+                                        .append("ควรมีในลิ้นชัก ")
+                                        .append(String.format(java.util.Locale.US, "%.0f", expected))
+                                        .append("\n")
+                                        .append("นับได้ ")
+                                        .append(String.format(java.util.Locale.US, "%.0f", counted))
+                                        .append("\n")
+                                        .append("ส่วนต่าง ")
+                                        .append(label)
+                                        .append(" ")
+                                        .append(String.format(java.util.Locale.US, "%.0f", diff))
+                                        .append("\n");
+                                if (report != null && report.leaveFloat > 0) {
+                                    sb.append("เงินทอนค้างรอบถัดไป ")
+                                            .append(
+                                                    String.format(
+                                                            java.util.Locale.US,
+                                                            "%.0f",
+                                                            report.leaveFloat))
+                                            .append("\n");
+                                }
+                                if (report != null
+                                        && report.discrepancyNote != null
+                                        && !report.discrepancyNote.isEmpty()) {
+                                    sb.append("เหตุผล ")
+                                            .append(report.discrepancyNote)
+                                            .append("\n");
+                                }
+                            }
+                            sb.append(footer);
                             transport.send(
                                     app,
                                     ep,
-                                    EscPos.saleReceipt(body),
+                                    EscPos.saleReceipt(sb.toString()),
                                     result ->
                                             OpsLogger.result(
                                                     app,

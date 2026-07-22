@@ -1,7 +1,7 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **1.14.9** qty-per-option เฟรมเว็บ · N7 ตัดออก · Room = local DB  
-ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md) · [npos-smart-ui-scale-checklist.md](./npos-smart-ui-scale-checklist.md)
+อัปเดต: **1.14.10** ปิดกะ blind · qty-option · N7 ตัดออก · Room = local DB  
+ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-blind-shift-close-checklist.md](./npos-blind-shift-close-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md)
 
 ## ทำแล้ว
 - [x] แคปจอ media-proxy — รูปจริงใน BO (**1.14.2**)
@@ -14,6 +14,7 @@
 - [x] **P1–P8** แคปจอลูกค้าจริง · สไลด์ 5 วิ · แถบซ้าย PosShell · option hero · popup อัปเดตซ้ายบน + กลับขายอัตโนมัติ (**1.14.7**)
 - [x] **Smart UI** `UiScale` · กริดเลื่อนลง · FIT_CENTER · ปุ่มจ่ายใหญ่ · เวอร์ชันมุมขวาบน · เข้างานทัชสั้น (**1.14.8**)
 - [x] **qty-per-option** ชิปหวาน · steppers multi · เฟรมใกล้เว็บ (**1.14.9**)
+- [x] **B1–B4** ปิดกะ blind · Over/Short · เงินทอนรอบถัดไป · Z พิมพ์+ซิงก์ (**1.14.10**)
 - [x] จิ้มเมนู → จ่าย → ใบเสร็จ → รีเซ็ต · ลิ้นชักตอนสด
 
 ## คิวถัดไป (เฟสก่อนหน้าที่ยังไม่ทำ)
@@ -23,6 +24,7 @@
 | **P5** | feedback จากนำร่อง | ⬜ | รอ P4 |
 | **W6** | สื่อโปรโมจากหลังร้านบนจอ Idle | ⬜ | คู่ขนาน · ยังไม่เริ่ม |
 | **Room / SQLite** | Local DB บนเครื่อง (BO = Firebase) | ⬜ | เมื่อคิวโต · L1 แคชพอใช้แล้ว |
+| **B1–B4** | ปิดกะ blind (Wongnai-style) | ✅ | **1.14.10** |
 
 ## ตัดออกตามนโยบาย
 - **N7 ตัดเว็บขาย** — ไม่ทำ (ไม่มีสต๊อกดัน)

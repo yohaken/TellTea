@@ -26,6 +26,7 @@ import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.MenuWarmup;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shell.PosShellNav;
+import app.telltea.npos.shift.BlindCloseFlow;
 import app.telltea.npos.shift.ShiftPrefs;
 import app.telltea.npos.ui.UiScale;
 import app.telltea.npos.update.ApkInstaller;
@@ -352,19 +353,13 @@ public class MainActivity extends Activity {
   }
 
   private void closeShift() {
-    saleSync.printShiftReport(
+    BlindCloseFlow.start(
         this,
-        "close",
-        () ->
-            saleSync.closeSession(
-                this,
-                () ->
-                    runOnUiThread(
-                        () -> {
-                          Toast.makeText(this, R.string.shift_closed, Toast.LENGTH_SHORT).show();
-                          clockInPanel.setVisibility(View.VISIBLE);
-                          sellPanel.setVisibility(View.GONE);
-                        })));
+        saleSync,
+        () -> {
+          clockInPanel.setVisibility(View.VISIBLE);
+          sellPanel.setVisibility(View.GONE);
+        });
   }
 
   private void updateClockLabels() {
