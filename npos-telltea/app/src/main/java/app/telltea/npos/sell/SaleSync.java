@@ -18,6 +18,7 @@ import app.telltea.npos.printer.EscPos;
 import app.telltea.npos.printer.PrinterEndpoint;
 import app.telltea.npos.printer.PrinterPrefs;
 import app.telltea.npos.printer.PrinterTransport;
+import app.telltea.npos.printer.ReceiptFormBuilder;
 import app.telltea.npos.shift.BlindCloseReport;
 import app.telltea.npos.shift.ShiftPrefs;
 
@@ -184,8 +185,15 @@ public final class SaleSync {
                         payload.put("paymentMethod", paymentMethod);
                         payload.put("cashReceived", "cash".equals(paymentMethod) ? cashReceived : 0);
                         payload.put("discountBaht", discountBaht);
+                        payload.put("subtotal", subtotal);
                         payload.put("localTotal", total);
                         payload.put("createdAt", System.currentTimeMillis());
+                        if (shop != null) {
+                            String staff = shop.optString("receiptStaffName", "").trim();
+                            if (!staff.isEmpty()) payload.put("staffName", staff);
+                            String footer = shop.optString("receiptFooterNote", "").trim();
+                            if (!footer.isEmpty()) payload.put("receiptFooterNote", footer);
+                        }
                         ensureOutboxMeta(payload);
 
                         pushQueue(app, payload);
@@ -194,8 +202,11 @@ public final class SaleSync {
                         BestsellerPrefs.recordLines(app, lineArr);
                         if (callback != null) callback.onLocalSaved(mutationId, total);
 
+                        boolean print = autoPrint;
+                        if (shop != null) print = shop.optBoolean("autoPrintReceipt", true);
+
                         try {
-                            flushOne(app, payload, shop, autoPrint, paymentMethod, callback);
+                            flushOne(app, payload, shop, print, paymentMethod, callback);
                         } catch (Exception syncErr) {
                             String msg =
                                     syncErr.getMessage() == null
@@ -203,6 +214,22 @@ public final class SaleSync {
                                             : syncErr.getMessage();
                             markQueueAttempt(app, mutationId, msg, isPermanentSaleError(msg));
                             OpsLogger.warn(app, "sync", "ซิงก์บิลค้างในคิว", msg);
+                            // Offline / sync fail — still give customer paper (provisional #).
+                            if (print && !isReceiptPrinted(app, mutationId)) {
+                                maybePrintAndKick(
+                                        app,
+                                        shop,
+                                        payload,
+                                        provisionalBillNo(mutationId),
+                                        total,
+                                        paymentMethod);
+                                markReceiptPrinted(app, mutationId);
+                                try {
+                                    payload.put("receiptPrinted", true);
+                                } catch (Exception ignored) {
+                                    /* ignore */
+                                }
+                            }
                             if (callback != null) {
                                 callback.onError("บันทึกในเครื่องแล้ว — รอซิงก์เมื่อมีเน็ต");
                             }
@@ -231,7 +258,8 @@ public final class SaleSync {
                             ensureOutboxMeta(row);
                             if ("failed".equals(row.optString("status"))) continue;
                             try {
-                                flushOne(app, row, null, false, null, null);
+                                // Print once if never printed (e.g. was offline at sale time).
+                                flushOne(app, row, null, true, null, null);
                             } catch (Exception syncErr) {
                                 String msg =
                                         syncErr.getMessage() == null
@@ -262,7 +290,8 @@ public final class SaleSync {
                             row.put("status", "pending");
                             row.put("lastError", "");
                             writeQueueRow(app, row);
-                            flushOne(app, row, null, false, null, null);
+                            // Retry sync — print only if never printed.
+                            flushOne(app, row, null, true, null, null);
                         }
                     } catch (Exception e) {
                         try {
@@ -380,7 +409,19 @@ public final class SaleSync {
                             payload.put("lines", receiptRow.optJSONArray("lines"));
                             payload.put("paymentMethod", pay);
                             payload.put("localTotal", total);
-                            maybePrintAndKick(app, payload, billNo, total, pay);
+                            payload.put("discountBaht", receiptRow.optDouble("discountBaht", 0));
+                            payload.put("subtotal", receiptRow.optDouble("subtotal", 0));
+                            payload.put("cashReceived", receiptRow.optDouble("cashReceived", 0));
+                            payload.put("change", receiptRow.optDouble("change", 0));
+                            payload.put(
+                                    "createdAt",
+                                    receiptRow.optLong("at", System.currentTimeMillis()));
+                            payload.put("staffName", receiptRow.optString("staffName", ""));
+                            payload.put(
+                                    "receiptFooterNote",
+                                    receiptRow.optString("receiptFooterNote", ""));
+                            JSONObject shop = loadShopJson(app);
+                            maybePrintAndKick(app, shop, payload, billNo, total, pay);
                             OpsLogger.info(app, "printer", "พิมพ์ใบเสร็จซ้ำ", billNo);
                         }
                     } catch (Exception e) {
@@ -603,16 +644,39 @@ public final class SaleSync {
         double change = res.optDouble("change", 0);
         double total = res.optDouble("total", payload.optDouble("localTotal", 0));
         removeFromQueue(app, payload.optString("clientMutationId"));
-        updateReceiptBill(app, payload.optString("clientMutationId"), billNo, saleId);
+        updateReceiptBill(app, payload.optString("clientMutationId"), billNo, saleId, change);
         OpsLogger.info(app, "sync", "ซิงก์บิลแล้ว", billNo + " · " + total);
         if (callback != null) callback.onSynced(billNo, change, total);
 
+        // Avoid double paper when we already printed (e.g. offline provisional).
+        if (payload.optBoolean("receiptPrinted", false)
+                || isReceiptPrinted(app, payload.optString("clientMutationId"))) {
+            return;
+        }
+        JSONObject shopJson = shop != null ? shop : loadShopJson(app);
         boolean print = autoPrint;
-        if (shop != null) print = shop.optBoolean("autoPrintReceipt", true);
+        if (shopJson != null && shopJson.has("autoPrintReceipt")) {
+            print = print && shopJson.optBoolean("autoPrintReceipt", true);
+        }
         if (print) {
-            maybePrintAndKick(app, payload, billNo, total, paymentMethod == null
-                    ? payload.optString("paymentMethod")
-                    : paymentMethod);
+            try {
+                payload.put("change", change);
+            } catch (Exception ignored) {
+                /* ignore */
+            }
+            maybePrintAndKick(
+                    app,
+                    shopJson,
+                    payload,
+                    billNo,
+                    total,
+                    paymentMethod == null ? payload.optString("paymentMethod") : paymentMethod);
+            markReceiptPrinted(app, payload.optString("clientMutationId"));
+            try {
+                payload.put("receiptPrinted", true);
+            } catch (Exception ignored) {
+                /* ignore */
+            }
         }
     }
 
@@ -685,40 +749,28 @@ public final class SaleSync {
     }
 
     private void maybePrintAndKick(
-            Context app, JSONObject payload, String billNo, double total, String paymentMethod) {
+            Context app,
+            JSONObject shop,
+            JSONObject payload,
+            String billNo,
+            double total,
+            String paymentMethod) {
         PrinterEndpoint ep = PrinterPrefs.savedOrNull(app);
         if (ep == null) {
             OpsLogger.warn(app, "printer", "ข้ามพิมพ์ — ยังไม่เลือกปริ้นเตอร์", billNo);
             return;
         }
-        String shopName = "TellTea";
-        try {
-            String raw = app.getSharedPreferences("npos_menu", Context.MODE_PRIVATE).getString("shopJson", null);
-            if (raw != null) shopName = new JSONObject(raw).optString("shopName", shopName);
-        } catch (Exception ignored) {
-            /* ignore */
-        }
-        StringBuilder text = new StringBuilder();
-        text.append(shopName).append("\n");
-        text.append("บิล ").append(billNo).append("\n");
-        try {
-            JSONArray lines = payload.getJSONArray("lines");
-            for (int i = 0; i < lines.length(); i++) {
-                JSONObject l = lines.getJSONObject(i);
-                text.append(l.optString("name"))
-                        .append(" x")
-                        .append(l.optInt("qty"))
-                        .append("\n");
-                String optLine = formatOptionsForReceipt(l.opt("options"));
-                if (!optLine.isEmpty()) {
-                    text.append("  ").append(optLine).append("\n");
-                }
+        JSONObject shopJson = shop != null ? shop : loadShopJson(app);
+        if (payload != null && "cash".equals(paymentMethod) && !payload.has("change")) {
+            try {
+                double cash = payload.optDouble("cashReceived", 0);
+                payload.put("change", Math.max(0, cash - total));
+            } catch (Exception ignored) {
+                /* ignore */
             }
-        } catch (Exception ignored) {
-            /* ignore */
         }
-        text.append("รวม ").append(String.format(java.util.Locale.US, "%.0f", total)).append("\n");
-        byte[] receipt = EscPos.saleReceipt(text.toString());
+        String body = ReceiptFormBuilder.build(shopJson, payload, billNo, total);
+        byte[] receipt = EscPos.documentReceipt(body);
         transport.send(
                 app,
                 ep,
@@ -743,6 +795,26 @@ public final class SaleSync {
                         OpsLogger.error(app, "printer", "พิมพ์ใบเสร็จไม่สำเร็จ", result.message);
                     }
                 });
+    }
+
+    static JSONObject loadShopJson(Context app) {
+        try {
+            String raw =
+                    app.getSharedPreferences("npos_menu", Context.MODE_PRIVATE)
+                            .getString("shopJson", null);
+            if (raw != null && !raw.isEmpty()) return new JSONObject(raw);
+        } catch (Exception ignored) {
+            /* ignore */
+        }
+        return new JSONObject();
+    }
+
+    /** Short local bill label before server assigns billNo (customer paper on offline). */
+    static String provisionalBillNo(String mutationId) {
+        if (mutationId == null || mutationId.length() < 6) return "LOCAL";
+        String tail = mutationId.replace("npos_", "");
+        if (tail.length() > 6) tail = tail.substring(tail.length() - 6);
+        return "L-" + tail.toUpperCase(java.util.Locale.US);
     }
 
     /** Flatten option choices for a short kitchen-readable receipt line. */
@@ -894,6 +966,10 @@ public final class SaleSync {
         body.remove("lastError");
         body.remove("lastAttemptAt");
         body.remove("localTotal");
+        body.remove("subtotal");
+        body.remove("receiptPrinted");
+        body.remove("receiptFooterNote");
+        body.remove("staffName");
         return body;
     }
 
@@ -908,10 +984,16 @@ public final class SaleSync {
         row.put("saleId", "");
         row.put("total", payload.optDouble("localTotal"));
         row.put("discountBaht", payload.optDouble("discountBaht", 0));
+        row.put("subtotal", payload.optDouble("subtotal", 0));
+        row.put("cashReceived", payload.optDouble("cashReceived", 0));
+        row.put("change", payload.optDouble("change", 0));
         row.put("paymentMethod", payload.optString("paymentMethod"));
         row.put("sessionId", payload.optString("sessionId", ""));
+        row.put("staffName", payload.optString("staffName", ""));
+        row.put("receiptFooterNote", payload.optString("receiptFooterNote", ""));
         row.put("lines", payload.optJSONArray("lines"));
         row.put("voided", false);
+        row.put("printed", false);
         arr.put(row);
         while (arr.length() > 60) {
             JSONArray trimmed = new JSONArray();
@@ -922,6 +1004,48 @@ public final class SaleSync {
                 .edit()
                 .putString(KEY_RECEIPTS, arr.toString())
                 .apply();
+    }
+
+    private static void markReceiptPrinted(Context app, String mutationId) {
+        if (mutationId == null || mutationId.isEmpty()) return;
+        try {
+            JSONArray arr =
+                    new JSONArray(
+                            app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                                    .getString(KEY_RECEIPTS, "[]"));
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject o = arr.getJSONObject(i);
+                if (mutationId.equals(o.optString("mutationId"))) {
+                    o.put("printed", true);
+                    o.put("printedAt", System.currentTimeMillis());
+                }
+            }
+            app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                    .edit()
+                    .putString(KEY_RECEIPTS, arr.toString())
+                    .apply();
+        } catch (Exception ignored) {
+            /* ignore */
+        }
+    }
+
+    private static boolean isReceiptPrinted(Context app, String mutationId) {
+        if (mutationId == null || mutationId.isEmpty()) return false;
+        try {
+            JSONArray arr =
+                    new JSONArray(
+                            app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                                    .getString(KEY_RECEIPTS, "[]"));
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject o = arr.getJSONObject(i);
+                if (mutationId.equals(o.optString("mutationId"))) {
+                    return o.optBoolean("printed", false);
+                }
+            }
+        } catch (Exception ignored) {
+            /* ignore */
+        }
+        return false;
     }
 
     private static void markReceiptVoided(Context app, String mutationId, String reason) throws Exception {
@@ -943,7 +1067,8 @@ public final class SaleSync {
     }
 
     private static void updateReceiptBill(
-            Context app, String mutationId, String billNo, String saleId) throws Exception {
+            Context app, String mutationId, String billNo, String saleId, double change)
+            throws Exception {
         JSONArray arr =
                 new JSONArray(
                         app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_RECEIPTS, "[]"));
@@ -951,6 +1076,7 @@ public final class SaleSync {
             JSONObject o = arr.getJSONObject(i);
             if (mutationId.equals(o.optString("mutationId"))) {
                 o.put("billNo", billNo);
+                o.put("change", change);
                 if (saleId != null && !saleId.isEmpty()) o.put("saleId", saleId);
             }
         }

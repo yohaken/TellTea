@@ -24,6 +24,7 @@ const steps = [
   { name: "blind-shift-close", cmd: ["node", "scripts/test-npos-blind-shift-close.mjs"] },
   { name: "bestseller-rank", cmd: ["node", "scripts/test-npos-bestseller-rank.mjs"] },
   { name: "sell-flow-polish", cmd: ["node", "scripts/test-npos-sell-flow-polish.mjs"] },
+  { name: "receipt-parity", cmd: ["node", "scripts/test-npos-receipt-parity.mjs"] },
   { name: "shop-phases-w", cmd: ["node", "scripts/test-npos-shop-phases.mjs"] },
   { name: "outbox-w4", cmd: ["node", "scripts/test-npos-outbox.mjs"] },
   { name: "void-w5", cmd: ["node", "scripts/test-npos-void-server.mjs"] },
