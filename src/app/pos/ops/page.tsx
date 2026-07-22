@@ -1,7 +1,7 @@
 "use client";
 
-import { PosOpsNotesView } from "@/components/PosOpsNotesView";
+import { PosWebRetired } from "@/components/PosWebRetired";
 
-export default function PosOpsNotesPage() {
-  return <PosOpsNotesView />;
+export default function PosOpsRetiredPage() {
+  return <PosWebRetired />;
 }

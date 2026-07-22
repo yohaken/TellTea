@@ -1,7 +1,7 @@
 "use client";
 
-import { PosMembersView } from "@/components/PosMembersView";
+import { PosWebRetired } from "@/components/PosWebRetired";
 
-export default function PosMembersPage() {
-  return <PosMembersView />;
+export default function PosMembersRetiredPage() {
+  return <PosWebRetired />;
 }

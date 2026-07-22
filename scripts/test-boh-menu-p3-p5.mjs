@@ -9,8 +9,8 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 258/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 75/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 259/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 76/);
 
 // P3 — search / duplicate / archive
 const admin = read("src/components/PosMenuAdmin.tsx");
@@ -83,15 +83,14 @@ assert.match(nposSell, /togglePriceChannel/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionCode 46/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionName "1\.14\.23"/);
 
-// P5 — cut POS menu admin
+// P5 — cut POS menu admin (+ web counter retired)
 const posMenuPage = read("src/app/pos/menu/page.tsx");
 assert.doesNotMatch(posMenuPage, /PosMenuAdmin/);
-assert.match(posMenuPage, /จัดการเมนูย้ายไปหลังร้านแล้ว/);
-assert.match(posMenuPage, /telltea-shop\.web\.app\/menu\//);
-assert.match(posMenuPage, /\/pos\/sell\//);
+assert.match(posMenuPage, /PosWebRetired/);
+assert.match(read("src/components/PosWebRetired.tsx"), /telltea-shop\.web\.app\/menu\//);
 
 const e2e = read("scripts/test-pos-menu-e2e.mjs");
-assert.match(e2e, /ย้ายไปหลังร้าน|จัดการเมนูย้าย/);
+assert.match(e2e, /เลิกใช้|nPos|หลังร้าน/);
 assert.doesNotMatch(e2e, /ต้องเห็นแท็บกลุ่มตัวเลือก/);
 
 const checklist = read("docs/boh-menu-p3-p5-test-checklist.md");

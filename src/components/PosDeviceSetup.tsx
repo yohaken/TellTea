@@ -5,7 +5,7 @@ import { Monitor, RefreshCw, ExternalLink, Copy, Check, Bell } from "lucide-reac
 import { useAuth } from "@/lib/auth";
 import { saveForcePosAutoUpdate, subscribeAppReleaseSettings } from "@/lib/app-release";
 import { POS_BUILD, posVersionLabel } from "@/lib/pos-version";
-import { POS_APK_DOWNLOAD_URL, POS_APK_INSTALL_PAGE_URL, POS_ENTRY_URL } from "@/lib/pos-url";
+import { POS_APK_DOWNLOAD_URL, POS_APK_INSTALL_PAGE_URL } from "@/lib/pos-url";
 import {
   savePosNativeRelease,
   subscribePosNativeReleaseAdmin,
@@ -137,7 +137,7 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
   async function copyPosUrl() {
     onError(null);
     try {
-      await navigator.clipboard.writeText(POS_ENTRY_URL);
+      await navigator.clipboard.writeText(POS_APK_INSTALL_PAGE_URL);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -410,16 +410,21 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
       </div>
 
       <div className="pos-install-box">
-        <p className="pos-install-label">ลิงก์เว็บ POS (สำรอง / ยังไม่ลง APK)</p>
-        <code className="pos-install-url">{POS_ENTRY_URL}</code>
+        <p className="pos-install-label">ติดตั้ง nPos (เคาน์เตอร์) · ไม่ใช้เว็บขายแล้ว</p>
+        <code className="pos-install-url">{POS_APK_INSTALL_PAGE_URL}</code>
         <div className="pos-device-actions">
-          <a href={POS_ENTRY_URL} target="_blank" rel="noopener noreferrer" className="ghost-btn pos-install-btn">
+          <a
+            href={POS_APK_INSTALL_PAGE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ghost-btn pos-install-btn"
+          >
             <ExternalLink size={15} aria-hidden />
-            ทดสอบเปิดหน้า POS
+            เปิดหน้าติดตั้ง nPos
           </a>
           <button type="button" className="ghost-btn" onClick={() => void copyPosUrl()}>
             {copied ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
-            {copied ? "คัดลอกแล้ว" : "คัดลอกลิงก์เว็บ"}
+            {copied ? "คัดลอกแล้ว" : "คัดลอกลิงก์ติดตั้ง"}
           </button>
         </div>
       </div>
@@ -428,8 +433,7 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
 
       {!loading && devices.length === 0 ? (
         <p className="muted settings-card-lead">
-          ยังไม่มีเครื่องลงทะเบียน — กด <strong>ทดสอบเปิดหน้า POS</strong> ด้านบนก่อน
-          แล้วกลับมาดูรายการเครื่องที่นี่
+          ยังไม่มีเครื่องลงทะเบียน — ติดตั้ง nPos บนแท็บเล็ตแล้วเข้างาน แล้วกลับมาดูรายการที่นี่
         </p>
       ) : null}
 

@@ -435,8 +435,8 @@ export function PosSalesReportPage() {
         POS
       </h1>
       <p className="muted" style={{ marginBottom: "0.75rem" }}>
-        รายงานยอดขาย POS — เฉพาะเจ้าของ
-        (แท็บจัดการ Pos: เครื่อง nPos · ไทม์ไลน์)
+        รายงานยอดขาย POS — เฉพาะเจ้าของ · ขายหน้าร้านใช้แอป nPos
+        (แท็บจัดการ: ตั้งค่าร้าน · เครื่อง nPos · ไทม์ไลน์)
       </p>
 
       <div className="stock-owner-tabs" role="tablist" aria-label="หมวด POS">

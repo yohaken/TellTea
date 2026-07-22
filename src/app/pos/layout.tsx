@@ -1,42 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { PosAuthWarmup } from "@/components/PosAuthWarmup";
-import { PosClientLayout } from "@/components/PosClientLayout";
 
 export const metadata: Metadata = {
-  title: "TellTea POS",
-  description: "เครื่อง POS หน้าร้าน — TellTea",
-  manifest: "/manifest-pos.webmanifest",
-  icons: {
-    icon: [
-      { url: "/icons/pos-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/pos-512.png", sizes: "512x512", type: "image/png" },
-    ],
-    apple: "/icons/pos-192.png",
-  },
-  appleWebApp: {
-    capable: true,
-    title: "TellTea POS",
-    statusBarStyle: "black-translucent",
-  },
-  formatDetection: {
-    telephone: false,
-  },
+  title: "TellTea POS — ย้ายไป nPos แล้ว",
+  description: "เว็บ POS เลิกใช้แล้ว — ขายบนแอป nPos-telltea",
+  robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  viewportFit: "cover",
   themeColor: "#2a3038",
 };
 
+/** ไม่ boot device auth / clock-in — หน้า retired อย่างเดียว */
 export default function PosLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      <PosAuthWarmup />
-      <PosClientLayout>{children}</PosClientLayout>
-    </>
-  );
+  return <div className="pos-web-retired-shell">{children}</div>;
 }

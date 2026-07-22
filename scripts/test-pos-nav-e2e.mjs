@@ -1,19 +1,13 @@
 /**
- * POS navigation e2e — counter nav must not expose BO/admin entry.
+ * POS navigation e2e — web counter retired; stubs point to nPos.
  * Run: npm run test:pos-nav-e2e
  */
 import assert from "node:assert/strict";
 import {
   PosE2eReport,
-  assertCounterNavCut,
   finishReport,
   gotoPos,
   launchPosE2e,
-  openMobileNav,
-  sellNavLink,
-  settingsNavLink,
-  shiftNavLink,
-  waitPosBoot,
   POS_E2E_URL,
 } from "./pos-e2e-harness.mjs";
 
@@ -23,40 +17,43 @@ report.attachPage(page);
 
 const base = POS_E2E_URL.replace(/\/pos\/.*$/, "");
 
-async function visit(path, { boot = false } = {}) {
+async function assertRetired(path) {
   const res = await page.goto(`${base}${path}`, {
     waitUntil: "domcontentloaded",
     timeout: 20_000,
   });
   assert.ok(res && res.status() < 400, `HTTP ${res?.status()} for ${path}`);
-  assert.match(page.url(), new RegExp(`${path.replace(/\//g, "\\/").replace(/\\\/$/, "")}\\/?`));
-  if (boot) await waitPosBoot(page);
-  await openMobileNav(page);
-  await assertCounterNavCut(page);
+  await page.waitForFunction(
+    () => /เลิกใช้|nPos/i.test(document.body.innerText),
+    { timeout: 10_000 },
+  );
+  const t = await page.locator("body").innerText();
+  assert.match(t, /nPos|ติดตั้ง/);
+  assert.match(t, /pos-sales|รายงาน|หลังร้าน/i);
 }
 
 await report.timed("boot", "boot_ready", async () => {
   await gotoPos(page);
-  await waitPosBoot(page);
-  await openMobileNav(page);
+  await page.waitForFunction(() => /เลิกใช้|nPos/i.test(document.body.innerText), {
+    timeout: 15_000,
+  });
 });
 
-await assertCounterNavCut(page);
-assert.ok((await sellNavLink(page).count()) >= 1);
-assert.ok((await shiftNavLink(page).count()) >= 1);
-assert.ok((await settingsNavLink(page).count()) >= 1);
-assert.ok((await sellNavLink(page).filter({ visible: true }).count()) >= 1);
+report.note("เว็บ /pos/sell เป็น stub แล้ว");
 
-await report.timed("to_shift", "menu_nav", async () => {
-  await visit("/pos/shift/");
-});
-
-await report.timed("roundtrip", "nav_roundtrip", async () => {
-  await visit("/pos/settings/");
-  await visit("/pos/sell/", { boot: true });
-});
-
-report.note("แถบเคาน์เตอร์ไม่มีเมนู/สต็อก/ops · ขาย/กะ/ตั้งค่า OK");
+for (const path of [
+  "/pos/",
+  "/pos/sell/",
+  "/pos/open-bills/",
+  "/pos/receipts/",
+  "/pos/shift/",
+  "/pos/settings/",
+  "/pos/menu/",
+]) {
+  await report.timed(`visit_${path}`, "menu_nav", async () => {
+    await assertRetired(path);
+  });
+}
 
 await browser.close();
 finishReport(report);

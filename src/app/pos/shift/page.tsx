@@ -1,7 +1,7 @@
 "use client";
 
-import { PosShiftView } from "@/components/PosShiftView";
+import { PosWebRetired } from "@/components/PosWebRetired";
 
-export default function PosShiftPage() {
-  return <PosShiftView />;
+export default function PosShiftRetiredPage() {
+  return <PosWebRetired title="กะเว็บเลิกใช้แล้ว" />;
 }

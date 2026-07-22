@@ -1,7 +1,7 @@
 "use client";
 
-import { PosInventoryView } from "@/components/PosInventoryView";
+import { PosWebRetired } from "@/components/PosWebRetired";
 
-export default function PosInventoryPage() {
-  return <PosInventoryView />;
+export default function PosInventoryRetiredPage() {
+  return <PosWebRetired />;
 }

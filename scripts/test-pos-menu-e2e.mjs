@@ -1,16 +1,12 @@
 /**
- * POS menu e2e — counter nav must not expose menu admin;
- * deep-link /pos/menu/ shows cutover stub (manage on BOH).
+ * POS menu e2e — /pos/menu/ is retired stub (manage on BOH / nPos).
  */
 import assert from "node:assert/strict";
 import {
-  assertCounterNavCut,
   finishReport,
   gotoPos,
   launchPosE2e,
-  openMobileNav,
   PosE2eReport,
-  waitPosBoot,
   POS_E2E_URL,
 } from "./pos-e2e-harness.mjs";
 
@@ -20,12 +16,10 @@ report.attachPage(page);
 
 await report.timed("boot", "boot_ready", async () => {
   await gotoPos(page);
-  await waitPosBoot(page);
-  await openMobileNav(page);
+  await page.waitForFunction(() => /เลิกใช้|nPos/i.test(document.body.innerText), {
+    timeout: 15_000,
+  });
 });
-
-await assertCounterNavCut(page);
-report.note("เมนูแอดมินไม่อยู่ในแถบเคาน์เตอร์");
 
 const menuUrl = POS_E2E_URL.replace(/\/pos\/.*$/, "/pos/menu/");
 
@@ -34,23 +28,17 @@ await report.timed("to_menu", "menu_nav", async () => {
   await page.waitForURL(/\/pos\/menu\/?/, { timeout: 8_000 });
 });
 
-await report.timed("menu_stub", "menu_cutover_stub", async () => {
+await report.timed("menu_stub", "menu_auth", async () => {
   await page.waitForFunction(
-    () => {
-      const t = document.body.innerText;
-      return t.includes("จัดการเมนูย้ายไปหลังร้านแล้ว") || t.includes("อื่นๆ → เมนู");
-    },
-    { timeout: 20_000 },
+    () => /เลิกใช้|จัดการเมนู|nPos|หลังร้าน/i.test(document.body.innerText),
+    { timeout: 10_000 },
   );
-  const menuText = await page.locator("body").innerText();
-  assert.ok(
-    menuText.includes("telltea-shop") || menuText.includes("เปิดจัดการเมนูหลังร้าน"),
-    "ต้องมีลิงก์หลังร้าน",
-  );
-  assert.ok(!menuText.includes("กลุ่มตัวเลือก") || menuText.includes("ย้ายไปหลังร้าน"), "ไม่ใช่ CRUD เต็ม");
+  const t = await page.locator("body").innerText();
+  assert.match(t, /เมนู|nPos|หลังร้าน/);
+  assert.doesNotMatch(t, /PosMenuAdmin|กลุ่มตัวเลือก/);
 });
 
-report.note("deep-link /pos/menu/ = stub cutover (ไม่ใช่ PosMenuAdmin)");
+report.note("เมนูเว็บเป็น stub — จัดการที่หลังร้าน / ขายบน nPos");
 
 await browser.close();
 finishReport(report);

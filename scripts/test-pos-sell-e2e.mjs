@@ -1,17 +1,12 @@
 /**
- * POS sell flow e2e — เปิดกะ → แตะเมนู → เงินสด → วัดความเร็ว
- * Run: npm run test:pos-sell-e2e
+ * POS sell e2e — web sell retired; assert stub (non-blocking in CI suite).
  */
+import assert from "node:assert/strict";
 import {
   PosE2eReport,
-  cashCheckout,
-  ensureSelling,
   finishReport,
   gotoPos,
   launchPosE2e,
-  tapFirstItemToCart,
-  waitPosBoot,
-  waitSellGrid,
   POS_E2E_URL,
 } from "./pos-e2e-harness.mjs";
 
@@ -22,15 +17,15 @@ report.attachPage(page);
 console.log(`โหลด ${POS_E2E_URL}`);
 await report.timed("boot", "boot_ready", async () => {
   await gotoPos(page);
-  await waitPosBoot(page);
+  await page.waitForFunction(() => /เลิกใช้|nPos/i.test(document.body.innerText), {
+    timeout: 20_000,
+  });
 });
 
-await ensureSelling(page, report);
-await waitSellGrid(page, report);
-await tapFirstItemToCart(page, report);
-await cashCheckout(page, report);
-
-report.note("ขายเงินสดสำเร็จ — ตะกร้าควรว่างหลังยืนยัน");
+const t = await page.locator("body").innerText();
+assert.match(t, /เลิกใช้|nPos/);
+assert.match(t, /install|ติดตั้ง/i);
+report.note("หน้าขายเว็บเลิกใช้แล้ว — ขายบน nPos");
 
 await browser.close();
 finishReport(report);

@@ -12,6 +12,7 @@ export {
   gotoPos,
   installE2eMenuCache,
   isSelling,
+  isWebPosRetired,
   launchPosE2e,
   tapFirstItemToCart,
   waitPosBoot,

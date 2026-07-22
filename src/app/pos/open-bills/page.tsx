@@ -1,7 +1,7 @@
 "use client";
 
-import { PosOpenBillsView } from "@/components/PosOpenBillsView";
+import { PosWebRetired } from "@/components/PosWebRetired";
 
-export default function PosOpenBillsPage() {
-  return <PosOpenBillsView />;
+export default function PosOpenBillsRetiredPage() {
+  return <PosWebRetired title="บิลค้างเว็บเลิกใช้แล้ว" />;
 }

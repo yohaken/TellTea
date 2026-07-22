@@ -1,4 +1,5 @@
 import { doc, getDoc, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
+import { getDb } from "./firebase";
 import { getPosDb } from "./pos-firebase";
 import { normalizePromptPayId } from "./pos-promptpay";
 import {
@@ -6,6 +7,18 @@ import {
   normalizeWindowDays,
   type MenuArrangeMode,
 } from "./pos-bestseller-rank";
+
+/** owner = หลังร้าน Google · pos = แท็บเล็ต (anonymous / device) */
+export type PosSettingsDbMode = "pos" | "owner";
+let settingsDbMode: PosSettingsDbMode = "pos";
+
+export function setPosSettingsDbMode(mode: PosSettingsDbMode): void {
+  settingsDbMode = mode;
+}
+
+function settingsDb() {
+  return settingsDbMode === "owner" ? getDb() : getPosDb();
+}
 
 export type PosShopSettings = {
   shopName: string;
@@ -58,7 +71,7 @@ let flushInFlight: Promise<boolean> | null = null;
 let onlineHookInstalled = false;
 
 function metaPosRef() {
-  return doc(getPosDb(), "meta", "pos");
+  return doc(settingsDb(), "meta", "pos");
 }
 
 function toPublic(stored: StoredShopSettings): PosShopSettings {

@@ -1,45 +1,40 @@
 # นโยบายโดเมน POS — แยกจากหลังร้าน TellTea
 
-> อัปเดต 2026-07-13 · v135
+> อัปเดต 2026-07-22 · ตัดเว็บเคาน์เตอร์ · ใช้ nPos
 
 ## หลักการ
 
-1. **POS = ระบบขายหน้าร้านแยกต่างหาก** — ข้อมูล `posSales`, `posSessions`, `posDevices`, `meta/pos`
-2. **หลังร้าน = บริหารร้าน** — `ledger`, `stock`, OT, PnL, ฯลฯ
+1. **POS ขายหน้าร้าน = แอป nPos-telltea** — ไม่ใช้เว็บ `/pos/sell` อีก
+2. **หลังร้าน = บริหารร้าน** — `ledger`, `stock`, OT, PnL, เมนู, รายงาน POS
 3. **ไม่ sync ข้อมูลข้ามโดเมน** — POS ไม่เขียน ledger / stock / monthlyIncome
-4. **หน้าต่างเจ้าของ** — `/pos-sales/` รายงานยอดขาย (+ แท็บ **จัดการ Pos** ว่างไว้ชั่วคราว)
+4. **หน้าต่างเจ้าของ** — `/pos-sales/` รายงานยอดขาย + แท็บจัดการ (เครื่อง nPos · ตั้งค่าร้าน)
 
-## URL แยก (v135+)
+## URL
 
 | ระบบ | URL |
 |------|-----|
 | หลังร้าน TellTea | https://telltea-shop.web.app/ |
-| POS แท็บเล็ต | **https://telltea-pos.web.app/pos/** |
-| รายงาน + จัดการ Pos (เจ้าของ) | https://telltea-shop.web.app/pos-sales/ |
+| รายงาน + ตั้งค่า + จัดการ nPos (เจ้าของ) | https://telltea-shop.web.app/pos-sales/ |
+| ติดตั้ง / อัปเดต APK | **https://telltea-pos.web.app/install/** |
+| เว็บ `/pos/*` เคาน์เตอร์ | **เลิกใช้** — หน้า stub ชี้ไป nPos |
 
-URL เก่า `telltea-shop.web.app/pos/` → redirect 301 ไป `telltea-pos.web.app`
+URL เก่า `telltea-shop.web.app/pos/` → redirect ไป `telltea-pos.web.app/pos/...` (stub)
 
-## Hosting แยก
+## Hosting
 
 | Firebase site | โฟลเดอร์ | เนื้อหา |
 |---------------|----------|---------|
-| `telltea-shop` | `out/` | หลังร้านเท่านั้น (ไม่มี `/pos/`) |
-| `telltea-pos` | `out-pos/` | POS standalone ที่ root `/` |
+| `telltea-shop` | `out/` | หลังร้าน |
+| `telltea-pos` | `out-pos/` | `/install/` · `/downloads/` · stub `/pos/*` |
 
-Build: `npm run build` → `split-pos-hosting.mjs` แยก output อัตโนมัติ
+**ห้ามลบไซต์ telltea-pos ทั้งก้อน** — ยังโฮสต์ APK / หน้าติดตั้ง
 
 ## สิ่งที่ห้ามทำ
 
 - เขียน `ledger` จาก POS
-- หัก `stock` จากบิล POS (ยกเลิก Phase 6 แบบเดิม)
-- ดึง `posSales` → `monthlyIncome` อัตโนมัติ (ยกเลิก Phase 7)
-- ใส่ `/pos/` กลับเข้า hosting หลังร้าน
-- **เปิดลิงก์จากเคาน์เตอร์ (nPos / เว็บ `/pos/*`) เข้าหลังร้าน** (`telltea-shop`, `/stock/`, `/pos-sales/`) — ตัดขาดแล้ว (**1.14.20**)
+- หัก `stock` จากบิล POS
+- ดึง `posSales` → `monthlyIncome` อัตโนมัติ
+- เปิดลิงก์จากเคาน์เตอร์ (nPos) เข้าหลังร้าน
+- กลับไปขายบนเว็บ `/pos/sell`
 
-## สิ่งที่ยังร่วมกัน (ไม่ใช่การเชื่อมข้อมูล)
-
-- Firebase project เดียว (`mypeer-501909`)
-- แท็บ `/pos-sales/?tab=manage` สำหรับเจ้าของบนหลังร้านเท่านั้น · พนักงานเคาน์เตอร์ใช้ native / เว็บขายอย่างเดียว
-- Cloud Functions: `nposCompleteSale`, `nposSessionOpen/Close`, `posDeviceAuth` (ซิงก์ข้อมูล ไม่ใช่ UI)
-
-ดูเพิ่ม: `docs/pos-sync.md`, `docs/pos-connectivity.md`
+ดูเพิ่ม: `docs/pos-sync.md`, `docs/npos-telltea.md`

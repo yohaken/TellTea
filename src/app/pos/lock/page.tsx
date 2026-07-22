@@ -1,14 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { usePosApp } from "@/lib/pos-app-context";
+import { PosWebRetired } from "@/components/PosWebRetired";
 
-export default function PosLockPage() {
-  const { setLocked } = usePosApp();
-
-  useEffect(() => {
-    setLocked(true);
-  }, [setLocked]);
-
-  return null;
+export default function PosLockRetiredPage() {
+  return <PosWebRetired />;
 }

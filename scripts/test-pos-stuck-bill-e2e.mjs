@@ -10,6 +10,7 @@ import {
   ensureSelling,
   finishReport,
   gotoPos,
+  isWebPosRetired,
   launchPosE2e,
   openSyncPanel,
   tapFirstItemToCart,
@@ -30,6 +31,13 @@ await report.timed("boot", "boot_ready", async () => {
   await gotoPos(page);
   await waitPosBoot(page);
 });
+
+if (await isWebPosRetired(page)) {
+  report.note("เว็บ POS เลิกใช้แล้ว — stuck bill อยู่บน nPos เท่านั้น");
+  await browser.close();
+  finishReport(report);
+  process.exit(0);
+}
 
 await blockPosCloudFunctions(context);
 report.note("บล็อก Cloud Functions ก่อนเข้างาน");

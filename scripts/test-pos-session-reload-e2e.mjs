@@ -9,6 +9,7 @@ import {
   finishReport,
   gotoPos,
   isSelling,
+  isWebPosRetired,
   launchPosE2e,
   setNetworkOffline,
   waitPosBoot,
@@ -37,6 +38,13 @@ await report.timed("boot", "boot_ready", async () => {
   await gotoPos(page);
   await waitPosBoot(page);
 });
+
+if (await isWebPosRetired(page)) {
+  report.note("เว็บ POS เลิกใช้แล้ว — session reload อยู่บน nPos เท่านั้น");
+  await browser.close();
+  finishReport(report);
+  process.exit(0);
+}
 
 await ensureSelling(page, report);
 const sessionBefore = await readOpenSessionFromPage(page);

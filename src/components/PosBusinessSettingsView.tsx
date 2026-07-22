@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   getLocalPosShopSettings,
   savePosShopSettings,
+  setPosSettingsDbMode,
   subscribePosShopSettings,
   type PosShopSettings,
 } from "@/lib/pos-settings";
 import { isValidPromptPayId, maskPromptPayId, normalizePromptPayId } from "@/lib/pos-promptpay";
-import { usePosApp } from "@/lib/pos-app-context";
 import { posVersionLabel } from "@/lib/pos-version";
 
 type Tab = "bill" | "pay" | "menu";
@@ -30,8 +30,14 @@ function BillPreview({ shop }: { shop: PosShopSettings }) {
   );
 }
 
-export function PosBusinessSettingsView() {
-  const { setError } = usePosApp();
+export function PosBusinessSettingsView({
+  embedded = false,
+}: {
+  /** ฝังในหลังร้าน /pos-sales/ — ใช้ Google owner auth */
+  embedded?: boolean;
+}) {
+  const [localError, setLocalError] = useState<string | null>(null);
+  const setError = setLocalError;
   const [tab, setTab] = useState<Tab>("bill");
   const [shopName, setShopName] = useState("");
   const [shopNameTh, setShopNameTh] = useState("");
@@ -60,9 +66,14 @@ export function PosBusinessSettingsView() {
   }, []);
 
   useEffect(() => {
+    if (embedded) setPosSettingsDbMode("owner");
     applySettings(getLocalPosShopSettings());
-    return subscribePosShopSettings(applySettings);
-  }, [applySettings]);
+    const unsub = subscribePosShopSettings(applySettings, (err) => setError(err.message));
+    return () => {
+      unsub();
+      if (embedded) setPosSettingsDbMode("pos");
+    };
+  }, [applySettings, embedded]);
 
   const draftPreview: PosShopSettings = {
     shopName,
@@ -160,7 +171,7 @@ export function PosBusinessSettingsView() {
   }
 
   return (
-    <div className="pos-module pos-biz-module">
+    <div className={`pos-module pos-biz-module${embedded ? " pos-biz-module--embedded" : ""}`}>
       <div className="pos-module-subnav pos-biz-subnav">
         <button type="button" className={tab === "bill" ? "is-active" : ""} onClick={() => setTab("bill")}>
           บนบิล
@@ -175,6 +186,7 @@ export function PosBusinessSettingsView() {
       </div>
 
       <div className="pos-module-content pos-biz-content">
+        {localError ? <p className="error-text">{localError}</p> : null}
         {savedMsg ? <p className="ok-text pos-biz-saved">{savedMsg}</p> : null}
 
         {tab === "bill" ? (

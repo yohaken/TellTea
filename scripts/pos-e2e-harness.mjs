@@ -204,6 +204,11 @@ export async function gotoPos(page, url = POS_E2E_URL) {
   assert.ok(res && res.status() < 400, `HTTP ${res?.status()}`);
 }
 
+export async function isWebPosRetired(page) {
+  const t = await page.locator("body").innerText();
+  return /เลิกใช้เว็บ POS|เว็บ POS เลิกใช้|หน้าขายเว็บเลิกใช้|ตัดขายเคาน์เตอร์บนเว็บ|ติดตั้ง \/ อัปเดต nPos/i.test(t);
+}
+
 export async function waitPosBoot(page, timeout = POS_E2E_BUDGETS.boot_ready.fail) {
   await page.waitForFunction(
     () => {
@@ -213,6 +218,8 @@ export async function waitPosBoot(page, timeout = POS_E2E_BUDGETS.boot_ready.fai
         || t.includes("กดค้างเมนู")
         || t.includes("สั่งและชำระเงิน")
         || t.includes("เชื่อมต่อไม่สำเร็จ")
+        || t.includes("เลิกใช้")
+        || t.includes("nPos")
       );
     },
     { timeout },
