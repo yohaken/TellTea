@@ -1,7 +1,7 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **1.14.11** จัดลำดับขายดี · ปิดกะ blind  
-ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-blind-shift-close-checklist.md](./npos-blind-shift-close-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md) · [npos-bestseller-rank-checklist.md](./npos-bestseller-rank-checklist.md)
+อัปเดต: **1.14.11** · คิวถัดไปไหลขายพนักงาน (ตัดทานที่ร้าน)  
+ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-blind-shift-close-checklist.md](./npos-blind-shift-close-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md) · [npos-bestseller-rank-checklist.md](./npos-bestseller-rank-checklist.md) · [npos-sell-flow-polish-checklist.md](./npos-sell-flow-polish-checklist.md)
 
 ## ทำแล้ว
 - [x] แคปจอ media-proxy — รูปจริงใน BO (**1.14.2**)
@@ -21,6 +21,7 @@
 ## คิวถัดไป (เฟสก่อนหน้าที่ยังไม่ทำ)
 | เฟส | โฟกัส | สถานะ | ทำไมค้าง |
 |-----|--------|--------|----------|
+| **F0–F5** | ไหลขายพนักงาน · ตัดทานที่ร้าน · ล้างตะกร้า · PromptPay เว็บ | ⬜ | ดู [npos-sell-flow-polish-checklist.md](./npos-sell-flow-polish-checklist.md) |
 | **R0–R5** | จัดลำดับขายดี · โหมด fix / bestsellers | ✅ R0–R4 | **1.14.11** · ค้างคนเทส R5 |
 | **S3 / P4** | คนเทสหน้าร้านจริง | ⬜ | ต้องคนที่เคาน์เตอร์ |
 | **P5** | feedback จากนำร่อง | ⬜ | รอ P4 |
@@ -32,9 +33,10 @@
 - **N7 ตัดเว็บขาย** — ไม่ทำ (ไม่มีสต๊อกดัน)
 
 ## นอกสcope
-- ทานที่ร้าน / รับกลับ · สลิปครัว / KDS · PromptPay auto cut-off · โน้ตบิล  
+- ทานที่ร้าน / รับกลับ / Delivery · สลิปครัว / KDS · PromptPay auto cut-off · โน้ตบิล · คูปอง/สมาชิก · บัตร/โอน  
 
 ## คู่ขนานได้
+- [ ] **F0–F5** ไหลขายพนักงาน — ตัดทานที่ร้าน · ล้างตะกร้า · PromptPay เว็บ ([เช็คลิสต์](./npos-sell-flow-polish-checklist.md))
 - [x] **R1–R4** เก็บขายดี 7→14 วัน · หลังร้านโหมด fix / กลุ่มขายดี · POS auto (**1.14.11**)
 - [ ] Local DB first / Room บนเครื่อง เมื่อคิวโต (หลังร้านยัง Firebase)
 - [ ] สื่อโปรโมจากหลังร้านบนจอลูกค้า (W6)
