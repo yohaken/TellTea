@@ -24,9 +24,11 @@
 ## เมนู POS (POS 3+)
 
 - `menuCategories`, `menuItems`, `menuOptionGroups`
-- หน้า `/pos/menu/` — หมวดหมู่ · กลุ่มตัวเลือก · แก้ไขเมนู
+- **แหล่งหลัก (APP 255+):** หลังร้าน `telltea-shop` → อื่นๆ → เมนู (`/menu/`) · `authMode=owner`
+- หน้า `/pos/menu/` — **ตัดแล้ว (POS 75 / APP 256)** · stub ชี้ไปหลังร้าน · ไม่มี CRUD
 - ตอนขาย — popup เลือกตัวเลือก · บันทึกใน `posSales.lines[].options`
-- **POS 4** — อัปโหลดรูปเมนู (Firebase Storage `pos-menu/`) · ลากเรียงลำดับ · ราคาหน้าร้านช่องทางเดียว
+- **ราคา:** `price` / `priceDelta` (หน้าร้าน) + `deliveryPrice` / `deliveryPriceDelta` (เดลิเวอรี่)
+- **ช่องทางขาย:** สวิตช์ หน้าร้าน/ส่ง บน `/pos/sell/` และ nPos ตะกร้า
 
 ## บันทึกขาย (local-first)
 

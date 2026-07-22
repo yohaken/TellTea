@@ -23,11 +23,23 @@ public final class MenuModels {
     public final String id;
     public final String name;
     public final double priceDelta;
+    /** Delivery channel addon; NaN = use priceDelta. */
+    public final double deliveryPriceDelta;
 
     public Option(String id, String name, double priceDelta) {
+      this(id, name, priceDelta, Double.NaN);
+    }
+
+    public Option(String id, String name, double priceDelta, double deliveryPriceDelta) {
       this.id = id;
       this.name = name;
       this.priceDelta = priceDelta;
+      this.deliveryPriceDelta = deliveryPriceDelta;
+    }
+
+    public double priceDeltaForChannel(boolean delivery) {
+      if (delivery && !Double.isNaN(deliveryPriceDelta)) return deliveryPriceDelta;
+      return priceDelta;
     }
   }
 
@@ -82,6 +94,8 @@ public final class MenuModels {
     public final String categoryId;
     public final String name;
     public final double price;
+    /** Delivery channel price; NaN = use price. */
+    public final double deliveryPrice;
     public final List<String> optionGroupIds;
     public final String imageUrl;
     /** false = sold out (ของหมด) — still shown on sell grid like web. */
@@ -97,14 +111,33 @@ public final class MenuModels {
         String imageUrl,
         boolean active,
         boolean recommended) {
+      this(id, categoryId, name, price, Double.NaN, optionGroupIds, imageUrl, active, recommended);
+    }
+
+    public Item(
+        String id,
+        String categoryId,
+        String name,
+        double price,
+        double deliveryPrice,
+        List<String> optionGroupIds,
+        String imageUrl,
+        boolean active,
+        boolean recommended) {
       this.id = id;
       this.categoryId = categoryId;
       this.name = name;
       this.price = price;
+      this.deliveryPrice = deliveryPrice;
       this.optionGroupIds = optionGroupIds;
       this.imageUrl = imageUrl == null ? "" : imageUrl;
       this.active = active;
       this.recommended = recommended;
+    }
+
+    public double priceForChannel(boolean delivery) {
+      if (delivery && !Double.isNaN(deliveryPrice)) return deliveryPrice;
+      return price;
     }
 
     public boolean hasOptions() {
@@ -242,6 +275,7 @@ public final class MenuModels {
                 o.optString("categoryId"),
                 o.optString("name"),
                 o.optDouble("price", 0),
+                o.has("deliveryPrice") ? o.optDouble("deliveryPrice", 0) : Double.NaN,
                 gids,
                 o.optString("imageUrl", ""),
                 o.optBoolean("active", true),
@@ -260,7 +294,12 @@ public final class MenuModels {
             JSONObject op = oa.getJSONObject(j);
             opts.add(
                 new Option(
-                    op.optString("id"), op.optString("name"), op.optDouble("priceDelta", 0)));
+                    op.optString("id"),
+                    op.optString("name"),
+                    op.optDouble("priceDelta", 0),
+                    op.has("deliveryPriceDelta")
+                        ? op.optDouble("deliveryPriceDelta", 0)
+                        : Double.NaN));
           }
         }
         String sel = o.optString("selectionType", "single");

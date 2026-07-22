@@ -1,6 +1,6 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **1.14.22** สลิปปิดกะโคลนฟอร์มเว็บเฟรมต่อเฟรม  
+อัปเดต: **1.14.23** สลิปปิดกะโคลนฟอร์มเว็บเฟรมต่อเฟรม  
 ดู [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-blind-shift-close-checklist.md](./npos-blind-shift-close-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md) · [npos-bestseller-rank-checklist.md](./npos-bestseller-rank-checklist.md) · [npos-sell-flow-polish-checklist.md](./npos-sell-flow-polish-checklist.md) · [npos-receipt-parity-checklist.md](./npos-receipt-parity-checklist.md) · [npos-z-report-form-checklist.md](./npos-z-report-form-checklist.md) · [npos-z-web-form-parity-checklist.md](./npos-z-web-form-parity-checklist.md) · [npos-bo-shift-readonly-checklist.md](./npos-bo-shift-readonly-checklist.md) · [npos-cut-bo-entry-checklist.md](./npos-cut-bo-entry-checklist.md) · [npos-float-shift-p0-checklist.md](./npos-float-shift-p0-checklist.md)
 
 ## ทำแล้ว
@@ -22,13 +22,13 @@
 - [x] **S1–S3** เว็บกะดูอย่างเดียว · การ์ดรอบหลังบ้าน · เปิดกะยืนยันทอน · ผู้ส่ง/ผู้รับ (**1.14.15**)
 - [x] **Cut C1–C4** ตัดช่องทางเคาน์เตอร์ → หลังร้าน/เว็บ BO (**1.14.20**)
 - [x] **Float P0** แก้เด้งเข้างาน + seed leave float + การ์ดทอนรอบถัดไป (**1.14.21**)
-- [x] **Z web form** สลิปปิดกะโคลนฟอร์มเว็บเฟรมต่อเฟรม (**1.14.22**)
+- [x] **Z web form** สลิปปิดกะโคลนฟอร์มเว็บเฟรมต่อเฟรม (**1.14.23**)
 - [x] จิ้มเมนู → จ่าย → ใบเสร็จ → รีเซ็ต · ลิ้นชักตอนสด
 
 ## คิวถัดไป (เฟสก่อนหน้าที่ยังไม่ทำ)
 | เฟส | โฟกัส | สถานะ | ทำไมค้าง |
 |-----|--------|--------|----------|
-| **Z web form** | สลิป Z = ฟอร์มเว็บ | ✅ | **1.14.22** |
+| **Z web form** | สลิป Z = ฟอร์มเว็บ | ✅ | **1.14.23** |
 | **Float P0** | เด้งเข้างาน · leave float · การ์ด BO | ✅ | **1.14.21** |
 | **Cut C1–C5** | ตัดทางเข้าหลังร้านจากเคาน์เตอร์ | ✅ C1–C4 | **1.14.20** · ค้างคนเทส C5 |
 | **S1–S4** | หลังบ้านดูกะ · ไม่ปิดกะจากเว็บ · การ์ดรอบ | ✅ S1–S3 | **1.14.15** · ค้างคนเทส S4 |
@@ -49,7 +49,7 @@
 - ทานที่ร้าน / รับกลับ / Delivery · สลิปครัว / KDS · PromptPay auto cut-off · โน้ตบิล · คูปอง/สมาชิก · บัตร/โอน · ปิดกะจากเว็บ  
 
 ## คู่ขนานได้
-- [x] **Z web form** สลิปปิดกะ = ฟอร์มเว็บ (**1.14.22**)
+- [x] **Z web form** สลิปปิดกะ = ฟอร์มเว็บ (**1.14.23**)
 - [x] **Float P0** แก้เด้งเข้างาน + leave float (**1.14.21**)
 - [x] **Cut C1–C4** ตัดช่องทางเคาน์เตอร์ → หลังร้าน (**1.14.20**)
 - [x] **S1–S3** หลังบ้านดูกะอย่างเดียว + เปิดกะยืนยันทอน (**1.14.15**)

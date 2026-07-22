@@ -40,6 +40,7 @@ const MORE_PREFIXES = [
   "/pnl",
   "/owner-books",
   "/pos-sales",
+  "/menu",
   "/in",
   "/export",
   "/staff",

@@ -1,35 +1,49 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ChevronDown, Pencil, Plus } from "lucide-react";
+import { ArrowLeft, ChevronDown, Copy, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { PosHardLink } from "@/components/PosHardLink";
 import { PosMenuItemEditor } from "@/components/PosMenuItemEditor";
 import { PosMenuModal } from "@/components/PosMenuModal";
 import { PosOptionGroupEditor } from "@/components/PosOptionGroupEditor";
 import { PosSortableList } from "@/components/PosSortableList";
 import { ensurePosDeviceAuth } from "@/lib/pos-auth";
+import { setMenuDbMode, type MenuDbMode } from "@/lib/pos-menu-db";
 import { loadPosMenuCache } from "@/lib/pos-menu-cache";
 import { publishLocalMenuOrder } from "@/lib/pos-menu-preload";
 import { applyFixedCategorySortOrder } from "@/lib/pos-fixed-category-order";
 import {
   addMenuCategory,
   addMenuItem,
+  archiveMenuItem,
   deleteMenuItem,
+  duplicateMenuItem,
   reorderMenuCategories,
   reorderMenuItemsInCategory,
+  restoreMenuItem,
   subscribeMenuCategories,
   subscribeMenuItems,
 } from "@/lib/pos-menu";
 import {
   addMenuOptionGroup,
+  archiveMenuOptionGroup,
   deleteMenuOptionGroup,
+  duplicateMenuOptionGroup,
   reorderMenuOptionGroups,
+  restoreMenuOptionGroup,
   subscribeMenuOptionGroups,
 } from "@/lib/pos-menu-options";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { PosLazyMenuImage } from "@/components/PosLazyMenuImage";
+
+const BOH_MENU_URL = "https://telltea-shop.web.app/menu/";
+
+type VisibilityFilter = "active" | "archived" | "all";
+type DeleteTarget =
+  | { kind: "item"; item: MenuItem; mode: "archive" | "hard" }
+  | { kind: "group"; group: MenuOptionGroup; mode: "archive" | "hard" };
 
 type Tab = "categories" | "groups" | "promotions";
 type Screen =
@@ -43,6 +57,14 @@ type QuickAdd =
   | { kind: "group" }
   | null;
 
+function isItemArchived(item: MenuItem): boolean {
+  return item.active === false && item.visibleOnPos === false;
+}
+
+function isGroupArchived(group: MenuOptionGroup): boolean {
+  return group.active === false;
+}
+
 function initialMenuFromCache() {
   const cached = loadPosMenuCache({ withImages: true });
   return {
@@ -52,13 +74,24 @@ function initialMenuFromCache() {
   };
 }
 
-export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
-  const seeded = initialMenuFromCache();
+export function PosMenuAdmin({
+  embedded = false,
+  authMode = "pos",
+}: {
+  embedded?: boolean;
+  /** owner = หลังร้าน (Google) · pos = แท็บเล็ต (device auth) */
+  authMode?: MenuDbMode;
+}) {
+  const isBoh = authMode === "owner";
+  const seeded = isBoh
+    ? { categories: [] as MenuCategory[], items: [] as MenuItem[], optionGroups: [] as MenuOptionGroup[] }
+    : initialMenuFromCache();
   const [tab, setTab] = useState<Tab>("categories");
   const [screen, setScreen] = useState<Screen>({ kind: "list" });
   const [quickAdd, setQuickAdd] = useState<QuickAdd>(null);
   const [quickName, setQuickName] = useState("");
   const [quickPrice, setQuickPrice] = useState("45");
+  const [quickDeliveryPrice, setQuickDeliveryPrice] = useState("");
   const [categories, setCategories] = useState<MenuCategory[]>(seeded.categories);
   const [items, setItems] = useState<MenuItem[]>(seeded.items);
   const [optionGroups, setOptionGroups] = useState<MenuOptionGroup[]>(seeded.optionGroups);
@@ -66,12 +99,21 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [authReady, setAuthReady] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<
-    { kind: "item"; item: MenuItem } | { kind: "group"; group: MenuOptionGroup } | null
-  >(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterCategoryId, setFilterCategoryId] = useState("");
+  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>("active");
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   useEffect(() => {
+    setMenuDbMode(authMode);
     let alive = true;
+    if (authMode === "owner") {
+      setAuthReady(true);
+      return () => {
+        alive = false;
+        setMenuDbMode("pos");
+      };
+    }
     void ensurePosDeviceAuth()
       .then(() => {
         if (alive) setAuthReady(true);
@@ -81,8 +123,9 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
       });
     return () => {
       alive = false;
+      setMenuDbMode("pos");
     };
-  }, []);
+  }, [authMode]);
 
   useEffect(() => {
     if (!authReady) return;
@@ -100,8 +143,20 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
   }, [authReady]);
 
   const itemsByCat = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     const map = new Map<string, MenuItem[]>();
     for (const item of items) {
+      const archived = isItemArchived(item);
+      if (visibilityFilter === "active" && archived) continue;
+      if (visibilityFilter === "archived" && !archived) continue;
+      if (filterCategoryId && item.categoryId !== filterCategoryId) continue;
+      if (
+        q &&
+        !item.name.toLowerCase().includes(q) &&
+        !(item.nameEn || "").toLowerCase().includes(q)
+      ) {
+        continue;
+      }
       const list = map.get(item.categoryId) || [];
       list.push(item);
       map.set(item.categoryId, list);
@@ -110,16 +165,38 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
       list.sort((a, b) => a.sortOrder - b.sortOrder);
     }
     return map;
-  }, [items]);
+  }, [items, searchQuery, filterCategoryId, visibilityFilter]);
+
+  const visibleCategoryIds = useMemo(() => {
+    const base = [...categories].sort((a, b) => a.sortOrder - b.sortOrder);
+    const filtered = filterCategoryId ? base.filter((c) => c.id === filterCategoryId) : base;
+    if (searchQuery.trim() || visibilityFilter !== "active") {
+      return filtered.filter((c) => (itemsByCat.get(c.id) || []).length > 0).map((c) => c.id);
+    }
+    return filtered.map((c) => c.id);
+  }, [categories, filterCategoryId, searchQuery, visibilityFilter, itemsByCat]);
+
+  const visibleGroups = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return [...optionGroups]
+      .filter((g) => {
+        const archived = isGroupArchived(g);
+        if (visibilityFilter === "active" && archived) return false;
+        if (visibilityFilter === "archived" && !archived) return false;
+        if (q && !g.name.toLowerCase().includes(q)) return false;
+        return true;
+      })
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [optionGroups, searchQuery, visibilityFilter]);
 
   const categoryIds = useMemo(
-    () => [...categories].sort((a, b) => a.sortOrder - b.sortOrder).map((c) => c.id),
-    [categories],
+    () =>
+      searchQuery.trim() || filterCategoryId || visibilityFilter !== "active"
+        ? visibleCategoryIds
+        : [...categories].sort((a, b) => a.sortOrder - b.sortOrder).map((c) => c.id),
+    [categories, visibleCategoryIds, searchQuery, filterCategoryId, visibilityFilter],
   );
-  const groupIds = useMemo(
-    () => [...optionGroups].sort((a, b) => a.sortOrder - b.sortOrder).map((g) => g.id),
-    [optionGroups],
-  );
+  const groupIds = useMemo(() => visibleGroups.map((g) => g.id), [visibleGroups]);
 
   const editItem = screen.kind === "edit-item" ? items.find((i) => i.id === screen.id) : null;
   const editGroup =
@@ -128,6 +205,7 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
   function openQuickAdd(next: QuickAdd) {
     setQuickName("");
     setQuickPrice("45");
+    setQuickDeliveryPrice("");
     setQuickAdd(next);
   }
 
@@ -145,10 +223,14 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
         setScreen({ kind: "edit-group", id });
       } else {
         const price = Number(quickPrice) || 0;
+        const deliveryRaw = quickDeliveryPrice.trim();
         const id = await addMenuItem({
           categoryId: quickAdd.categoryId,
           name: quickName.trim(),
           price,
+          ...(deliveryRaw !== ""
+            ? { deliveryPrice: Math.max(0, Number(deliveryRaw) || 0) }
+            : {}),
         });
         setExpandedCat(quickAdd.categoryId);
         setScreen({ kind: "edit-item", id });
@@ -169,7 +251,17 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
         : "เพิ่มเมนู";
 
   return (
-    <div className={`pos-menu-admin ${embedded ? "pos-menu-admin--embedded" : ""}`}>
+    <div
+      className={`pos-menu-admin ${embedded ? "pos-menu-admin--embedded" : ""}${isBoh ? " pos-menu-admin--boh" : ""}`}
+    >
+      {!isBoh ? (
+        <p className="pos-menu-boh-banner muted" role="status">
+          แนะนำจัดการเมนูที่หลังร้าน —{" "}
+          <a href={BOH_MENU_URL} target="_blank" rel="noopener noreferrer">
+            อื่นๆ → เมนู
+          </a>
+        </p>
+      ) : null}
       {!embedded ? (
         <header className="pos-menu-admin-top">
           <PosHardLink href="/pos/sell/" className="ghost-btn pos-menu-back">
@@ -253,6 +345,52 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
           ) : null}
           {!authReady && items.length ? (
             <p className="muted pos-menu-loading">แสดงจากแคช — กำลังเชื่อมเพื่อแก้ไข</p>
+          ) : null}
+
+          {authReady && tab !== "promotions" ? (
+            <div className="pos-menu-toolbar">
+              <input
+                type="search"
+                className="pos-menu-search"
+                placeholder={tab === "groups" ? "ค้นหากลุ่มตัวเลือก..." : "ค้นหาเมนู..."}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="ค้นหา"
+              />
+              {tab === "categories" ? (
+                <select
+                  className="pos-menu-filter-cat"
+                  value={filterCategoryId}
+                  onChange={(e) => setFilterCategoryId(e.target.value)}
+                  aria-label="กรองหมวด"
+                >
+                  <option value="">ทุกหมวด</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+              <div className="pos-menu-vis-filter" role="group" aria-label="สถานะ">
+                {(
+                  [
+                    ["active", "ใช้งาน"],
+                    ["archived", "เก็บแล้ว"],
+                    ["all", "ทั้งหมด"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={visibilityFilter === id ? "is-active" : ""}
+                    onClick={() => setVisibilityFilter(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           ) : null}
 
           {authReady && tab === "promotions" ? (
@@ -367,18 +505,81 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
                                     >
                                       <span className="pos-menu-item-text">
                                         {item.name}
-                                        {!item.active ? " (หมด)" : ""}
+                                        {isItemArchived(item)
+                                          ? " (เก็บแล้ว)"
+                                          : !item.active
+                                            ? " (หมด)"
+                                            : ""}
                                       </span>
-                                      <span className="muted">฿{formatPlainNumber(item.price)}</span>
+                                      <span className="muted">
+                                        ฿{formatPlainNumber(item.price)}
+                                        {typeof item.deliveryPrice === "number"
+                                          ? ` · ส่ง ฿${formatPlainNumber(item.deliveryPrice)}`
+                                          : ""}
+                                      </span>
                                     </button>
-                                    <button
-                                      type="button"
-                                      className="pos-menu-inline-btn"
-                                      aria-label="แก้ไข"
-                                      onClick={() => setScreen({ kind: "edit-item", id: item.id })}
-                                    >
-                                      <Pencil size={12} />
-                                    </button>
+                                    {!isItemArchived(item) ? (
+                                      <button
+                                        type="button"
+                                        className="pos-menu-inline-btn"
+                                        aria-label="สำเนา"
+                                        disabled={busy}
+                                        onClick={() => {
+                                          void (async () => {
+                                            setBusy(true);
+                                            setError(null);
+                                            try {
+                                              const id = await duplicateMenuItem(item);
+                                              setExpandedCat(item.categoryId);
+                                              setScreen({ kind: "edit-item", id });
+                                            } catch (err) {
+                                              setError((err as Error).message);
+                                            } finally {
+                                              setBusy(false);
+                                            }
+                                          })();
+                                        }}
+                                      >
+                                        <Copy size={12} />
+                                      </button>
+                                    ) : null}
+                                    {isItemArchived(item) ? (
+                                      <>
+                                        <button
+                                          type="button"
+                                          className="pos-menu-inline-btn"
+                                          aria-label="กู้คืน"
+                                          disabled={busy}
+                                          onClick={() => {
+                                            void restoreMenuItem(item.id).catch((err) =>
+                                              setError((err as Error).message),
+                                            );
+                                          }}
+                                        >
+                                          <RotateCcw size={12} />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="pos-menu-inline-btn"
+                                          aria-label="ลบถาวร"
+                                          disabled={busy}
+                                          onClick={() =>
+                                            setDeleteTarget({ kind: "item", item, mode: "hard" })
+                                          }
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="pos-menu-inline-btn"
+                                        aria-label="แก้ไข"
+                                        onClick={() => setScreen({ kind: "edit-item", id: item.id })}
+                                      >
+                                        <Pencil size={12} />
+                                      </button>
+                                    )}
                                   </div>
                                 );
                               }}
@@ -423,8 +624,9 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
                   }}
                   className="pos-menu-group-list"
                   renderItem={(groupId) => {
-                    const group = optionGroups.find((g) => g.id === groupId);
+                    const group = visibleGroups.find((g) => g.id === groupId);
                     if (!group) return null;
+                    const archived = isGroupArchived(group);
                     return (
                       <div className="pos-menu-group-row">
                         <button
@@ -432,17 +634,73 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
                           className="pos-menu-group-main"
                           onClick={() => setScreen({ kind: "edit-group", id: group.id })}
                         >
-                          <span>{group.name}</span>
+                          <span>
+                            {group.name}
+                            {archived ? " (เก็บแล้ว)" : ""}
+                          </span>
                           <span className="muted">{group.options.length} ตัวเลือก</span>
                         </button>
-                        <button
-                          type="button"
-                          className="pos-menu-inline-btn"
-                          aria-label="แก้ไข"
-                          onClick={() => setScreen({ kind: "edit-group", id: group.id })}
-                        >
-                          <Pencil size={12} />
-                        </button>
+                        {!archived ? (
+                          <button
+                            type="button"
+                            className="pos-menu-inline-btn"
+                            aria-label="สำเนา"
+                            disabled={busy}
+                            onClick={() => {
+                              void (async () => {
+                                setBusy(true);
+                                setError(null);
+                                try {
+                                  const id = await duplicateMenuOptionGroup(group);
+                                  setScreen({ kind: "edit-group", id });
+                                } catch (err) {
+                                  setError((err as Error).message);
+                                } finally {
+                                  setBusy(false);
+                                }
+                              })();
+                            }}
+                          >
+                            <Copy size={12} />
+                          </button>
+                        ) : null}
+                        {archived ? (
+                          <>
+                            <button
+                              type="button"
+                              className="pos-menu-inline-btn"
+                              aria-label="กู้คืน"
+                              disabled={busy}
+                              onClick={() => {
+                                void restoreMenuOptionGroup(group.id).catch((err) =>
+                                  setError((err as Error).message),
+                                );
+                              }}
+                            >
+                              <RotateCcw size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              className="pos-menu-inline-btn"
+                              aria-label="ลบถาวร"
+                              disabled={busy}
+                              onClick={() =>
+                                setDeleteTarget({ kind: "group", group, mode: "hard" })
+                              }
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            className="pos-menu-inline-btn"
+                            aria-label="แก้ไข"
+                            onClick={() => setScreen({ kind: "edit-group", id: group.id })}
+                          >
+                            <Pencil size={12} />
+                          </button>
+                        )}
                       </div>
                     );
                   }}
@@ -463,17 +721,30 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
               <input value={quickName} onChange={(e) => setQuickName(e.target.value)} required autoFocus />
             </label>
             {quickAdd.kind === "item" ? (
-              <label>
-                <span>ราคา (฿)</span>
-                <input
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={quickPrice}
-                  onChange={(e) => setQuickPrice(e.target.value)}
-                  required
-                />
-              </label>
+              <>
+                <label>
+                  <span>ราคาหน้าร้าน (฿)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={quickPrice}
+                    onChange={(e) => setQuickPrice(e.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  <span>ราคาเดลิเวอรี่ (฿) — ว่าง = ใช้หน้าร้าน</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={quickDeliveryPrice}
+                    onChange={(e) => setQuickDeliveryPrice(e.target.value)}
+                    placeholder={quickPrice}
+                  />
+                </label>
+              </>
             ) : null}
             <div className="pos-menu-editor-actions">
               <button type="button" className="ghost-btn pos-menu-btn-sm" onClick={() => setQuickAdd(null)}>
@@ -496,7 +767,7 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
             optionGroups={optionGroups}
             onBack={() => setScreen({ kind: "list" })}
             onSaved={() => setScreen({ kind: "list" })}
-            onDelete={() => setDeleteTarget({ kind: "item", item: editItem })}
+            onDelete={() => setDeleteTarget({ kind: "item", item: editItem, mode: "archive" })}
           />
         </PosMenuModal>
       ) : null}
@@ -508,7 +779,7 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
             group={editGroup}
             onBack={() => setScreen({ kind: "list" })}
             onSaved={() => setScreen({ kind: "list" })}
-            onDelete={() => setDeleteTarget({ kind: "group", group: editGroup })}
+            onDelete={() => setDeleteTarget({ kind: "group", group: editGroup, mode: "archive" })}
           />
         </PosMenuModal>
       ) : null}
@@ -517,13 +788,21 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
         open={deleteTarget !== null}
         title={
           deleteTarget?.kind === "item"
-            ? `ลบเมนู "${deleteTarget.item.name}"?`
+            ? deleteTarget.mode === "hard"
+              ? `ลบถาวร "${deleteTarget.item.name}"?`
+              : `เก็บเมนู "${deleteTarget.item.name}"?`
             : deleteTarget?.kind === "group"
-              ? `ลบกลุ่ม "${deleteTarget.group.name}"?`
+              ? deleteTarget.mode === "hard"
+                ? `ลบถาวรกลุ่ม "${deleteTarget.group.name}"?`
+                : `เก็บกลุ่ม "${deleteTarget.group.name}"?`
               : ""
         }
-        message="รายการที่ลบแล้วกู้คืนไม่ได้"
-        confirmLabel="ลบ"
+        message={
+          deleteTarget?.mode === "hard"
+            ? "รายการที่ลบแล้วกู้คืนไม่ได้"
+            : "จะซ่อนจากหน้าขาย — กู้คืนได้จากตัวกรอง «เก็บแล้ว»"
+        }
+        confirmLabel={deleteTarget?.mode === "hard" ? "ลบถาวร" : "เก็บเข้าคลัง"}
         destructive
         busy={busy}
         onCancel={() => setDeleteTarget(null)}
@@ -533,12 +812,17 @@ export function PosMenuAdmin({ embedded = false }: { embedded?: boolean }) {
             setBusy(true);
             try {
               if (deleteTarget.kind === "item") {
-                await deleteMenuItem(deleteTarget.item.id);
-              } else {
+                if (deleteTarget.mode === "hard") await deleteMenuItem(deleteTarget.item.id);
+                else await archiveMenuItem(deleteTarget.item.id);
+              } else if (deleteTarget.mode === "hard") {
                 await deleteMenuOptionGroup(deleteTarget.group.id);
+              } else {
+                await archiveMenuOptionGroup(deleteTarget.group.id);
               }
               setDeleteTarget(null);
               setScreen({ kind: "list" });
+            } catch (err) {
+              setError((err as Error).message);
             } finally {
               setBusy(false);
             }

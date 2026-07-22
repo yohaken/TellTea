@@ -157,7 +157,9 @@ export function PosOptionGroupEditor({
           </button>
         </div>
 
-        <p className="muted pos-menu-sort-hint">กด ↑↓ เลื่อนลำดับตัวเลือก</p>
+        <p className="muted pos-menu-sort-hint">
+          กด ↑↓ เลื่อนลำดับ · คอลัมน์ราคา: หน้าร้าน · เดลิเวอรี่ (ว่าง = ใช้หน้าร้าน)
+        </p>
 
         <PosSortableList
           ids={options.map((o) => o.id)}
@@ -182,7 +184,23 @@ export function PosOptionGroupEditor({
                   step={0.01}
                   value={opt.priceDelta}
                   onChange={(e) => updateOption(opt.id, { priceDelta: Number(e.target.value) || 0 })}
-                  title="ราคาเพิ่ม"
+                  title="ราคาเพิ่มหน้าร้าน"
+                  aria-label="ราคาเพิ่มหน้าร้าน"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={typeof opt.deliveryPriceDelta === "number" ? opt.deliveryPriceDelta : ""}
+                  onChange={(e) => {
+                    const raw = e.target.value.trim();
+                    updateOption(opt.id, {
+                      deliveryPriceDelta: raw === "" ? undefined : Number(raw) || 0,
+                    });
+                  }}
+                  title="ราคาเพิ่มเดลิเวอรี่"
+                  aria-label="ราคาเพิ่มเดลิเวอรี่"
+                  placeholder="ส่ง"
                 />
                 <button
                   type="button"
@@ -200,7 +218,7 @@ export function PosOptionGroupEditor({
         {error ? <p className="error-text">{error}</p> : null}
 
         <button type="button" className="ghost-btn pos-menu-delete-btn pos-menu-btn-sm" onClick={() => void onDelete()}>
-          <Trash2 size={14} aria-hidden /> ลบกลุ่ม
+          <Trash2 size={14} aria-hidden /> เก็บเข้าคลัง
         </button>
 
         <div className="pos-menu-editor-actions">

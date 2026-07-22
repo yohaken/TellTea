@@ -11,18 +11,29 @@ import {
   updateDoc,
   type Unsubscribe,
 } from "firebase/firestore";
-import { getPosDb } from "./pos-firebase";
+import { getMenuDb, menuErrorHint, type MenuPriceChannel } from "./pos-menu-db";
 import { mapFirestoreError } from "./firestore-errors";
 import type { MenuOptionChoice, MenuOptionGroup, MenuOptionSelectionType } from "./types";
 
 export const MENU_OPTION_GROUPS_COL = "menuOptionGroups";
 
 function groupsCol() {
-  return collection(getPosDb(), MENU_OPTION_GROUPS_COL);
+  return collection(getMenuDb(), MENU_OPTION_GROUPS_COL);
 }
 
 function newChoiceId() {
   return `opt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** ราคาเพิ่มตัวเลือกตามช่องทาง — ไม่มี deliveryPriceDelta → ใช้ priceDelta */
+export function resolveOptionPriceDelta(
+  choice: Pick<MenuOptionChoice, "priceDelta" | "deliveryPriceDelta">,
+  channel: MenuPriceChannel = "store",
+): number {
+  if (channel === "delivery" && typeof choice.deliveryPriceDelta === "number") {
+    return Math.max(0, choice.deliveryPriceDelta);
+  }
+  return Math.max(0, choice.priceDelta);
 }
 
 function mapChoice(raw: unknown): MenuOptionChoice | null {
@@ -35,6 +46,9 @@ function mapChoice(raw: unknown): MenuOptionChoice | null {
     id,
     name,
     priceDelta: typeof o.priceDelta === "number" ? o.priceDelta : 0,
+    ...(typeof o.deliveryPriceDelta === "number"
+      ? { deliveryPriceDelta: o.deliveryPriceDelta }
+      : {}),
     ...(typeof o.priceDeltaMax === "number" ? { priceDeltaMax: o.priceDeltaMax } : {}),
     sortOrder: typeof o.sortOrder === "number" ? o.sortOrder : 0,
     active: o.active !== false,
@@ -106,12 +120,13 @@ export async function addMenuOptionGroup(name: string): Promise<string> {
       ],
       sortOrder: now,
       active: true,
+      source: "manual",
       createdAt: now,
       updatedAt: now,
     });
     return ref.id;
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "เพิ่มกลุ่มตัวเลือก", "pos"));
+    throw new Error(mapFirestoreError(err, "เพิ่มกลุ่มตัวเลือก", menuErrorHint()));
   }
 }
 
@@ -143,18 +158,44 @@ export async function updateMenuOptionGroup(
   if (patch.sortOrder != null) next.sortOrder = patch.sortOrder;
   if (patch.active != null) next.active = patch.active;
   try {
-    await updateDoc(doc(getPosDb(), MENU_OPTION_GROUPS_COL, id), next);
+    await updateDoc(doc(getMenuDb(), MENU_OPTION_GROUPS_COL, id), next);
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "อัปเดตกลุ่มตัวเลือก", "pos"));
+    throw new Error(mapFirestoreError(err, "อัปเดตกลุ่มตัวเลือก", menuErrorHint()));
   }
 }
 
 export async function deleteMenuOptionGroup(id: string): Promise<void> {
   try {
-    await deleteDoc(doc(getPosDb(), MENU_OPTION_GROUPS_COL, id));
+    await deleteDoc(doc(getMenuDb(), MENU_OPTION_GROUPS_COL, id));
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "ลบกลุ่มตัวเลือก", "pos"));
+    throw new Error(mapFirestoreError(err, "ลบกลุ่มตัวเลือก", menuErrorHint()));
   }
+}
+
+export async function archiveMenuOptionGroup(id: string): Promise<void> {
+  await updateMenuOptionGroup(id, { active: false });
+}
+
+export async function restoreMenuOptionGroup(id: string): Promise<void> {
+  await updateMenuOptionGroup(id, { active: true });
+}
+
+/** สำเนากลุ่มตัวเลือก — ตัวเลือกใหม่ id · คงกฎและราคา */
+export async function duplicateMenuOptionGroup(group: MenuOptionGroup): Promise<string> {
+  const id = await addMenuOptionGroup(`${group.name.trim()} (สำเนา)`);
+  const options = group.options.map((o) => {
+    const next = createMenuOptionChoice(o.name, o.priceDelta, o.deliveryPriceDelta);
+    return { ...next, active: o.active !== false };
+  });
+  await saveMenuOptionGroupFull(id, {
+    name: `${group.name.trim()} (สำเนา)`,
+    required: group.required,
+    selectionType: group.selectionType,
+    minSelect: group.minSelect,
+    maxSelect: group.maxSelect,
+    options,
+  });
+  return id;
 }
 
 export function serializeMenuOptionChoice(o: MenuOptionChoice): Record<string, unknown> {
@@ -165,15 +206,25 @@ export function serializeMenuOptionChoice(o: MenuOptionChoice): Record<string, u
     sortOrder: o.sortOrder,
     active: o.active !== false,
   };
+  if (typeof o.deliveryPriceDelta === "number") {
+    row.deliveryPriceDelta = Math.max(0, o.deliveryPriceDelta);
+  }
   if (typeof o.priceDeltaMax === "number") row.priceDeltaMax = o.priceDeltaMax;
   return row;
 }
 
-export function createMenuOptionChoice(name: string, priceDelta = 0): MenuOptionChoice {
+export function createMenuOptionChoice(
+  name: string,
+  priceDelta = 0,
+  deliveryPriceDelta?: number,
+): MenuOptionChoice {
   return {
     id: newChoiceId(),
     name: name.trim(),
     priceDelta: Math.max(0, priceDelta),
+    ...(typeof deliveryPriceDelta === "number"
+      ? { deliveryPriceDelta: Math.max(0, deliveryPriceDelta) }
+      : {}),
     sortOrder: Date.now(),
     active: true,
   };
@@ -224,8 +275,8 @@ export async function saveMenuOptionGroupFull(id: string, input: MenuOptionGroup
   }
 
   try {
-    await updateDoc(doc(getPosDb(), MENU_OPTION_GROUPS_COL, id), next);
+    await updateDoc(doc(getMenuDb(), MENU_OPTION_GROUPS_COL, id), next);
   } catch (err) {
-    throw new Error(mapFirestoreError(err, "อัปเดตกลุ่มตัวเลือก", "pos"));
+    throw new Error(mapFirestoreError(err, "อัปเดตกลุ่มตัวเลือก", menuErrorHint()));
   }
 }
