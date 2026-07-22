@@ -17,6 +17,14 @@ import { completeCashSale, completePromptPaySale } from "@/lib/pos-sales";
 import { promptPayQrDataUrl } from "@/lib/pos-promptpay";
 import { printOnSaleComplete } from "@/lib/pos-printer/router";
 import { getLocalPosShopSettings, subscribePosShopSettings } from "@/lib/pos-settings";
+import {
+  buildRankMaps,
+  sortCategoriesByRank,
+  sortItemsByRank,
+  type MenuArrangeMode,
+  type PosMenuRankTable,
+} from "@/lib/pos-bestseller-rank";
+import { getCachedPosMenuRank, subscribePosMenuRank } from "@/lib/pos-menu-rank-store";
 import { appendLocalReceipt, saleLinesToLocalReceiptLines } from "@/lib/pos-local-receipts";
 import { playPosSaleChime } from "@/lib/pos-sound";
 import { computeSessionPendingOverlay } from "@/lib/pos-sync-utils";
@@ -104,6 +112,8 @@ export function PosSellView({
   const [autoPrintReceipt, setAutoPrintReceipt] = useState(initialShop.autoPrintReceipt);
   const [receiptStaffName, setReceiptStaffName] = useState(initialShop.receiptStaffName);
   const [receiptFooterNote, setReceiptFooterNote] = useState(initialShop.receiptFooterNote);
+  const [menuArrangeMode, setMenuArrangeMode] = useState<MenuArrangeMode>(initialShop.menuArrangeMode);
+  const [menuRank, setMenuRank] = useState<PosMenuRankTable | null>(() => getCachedPosMenuRank());
   const [confirmSoldOut, setConfirmSoldOut] = useState<MenuItem | null>(null);
   const [cartDiscount, setCartDiscount] = useState<PosCartDiscount | null>(null);
   const [discountOpen, setDiscountOpen] = useState(false);
@@ -140,21 +150,28 @@ export function PosSellView({
       setAutoPrintReceipt(s.autoPrintReceipt);
       setReceiptStaffName(s.receiptStaffName);
       setReceiptFooterNote(s.receiptFooterNote);
+      setMenuArrangeMode(s.menuArrangeMode);
     });
     return unsubSettings;
   }, []);
 
-  const activeCategories = useMemo(
-    () =>
-      categories
-        .filter(
-          (c) =>
-            c.active &&
-            items.some((i) => i.categoryId === c.id && i.visibleOnPos !== false),
-        )
-        .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th")),
-    [categories, items],
-  );
+  useEffect(() => subscribePosMenuRank(setMenuRank), []);
+
+  const rankMaps = useMemo(() => buildRankMaps(menuRank), [menuRank]);
+
+  const activeCategories = useMemo(() => {
+    const filtered = categories.filter(
+      (c) =>
+        c.active &&
+        items.some((i) => i.categoryId === c.id && i.visibleOnPos !== false),
+    );
+    if (menuArrangeMode === "bestsellers") {
+      return sortCategoriesByRank(filtered, rankMaps.categoryRank);
+    }
+    return [...filtered].sort(
+      (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th"),
+    );
+  }, [categories, items, menuArrangeMode, rankMaps.categoryRank]);
 
   useEffect(() => {
     if (!categoryId && activeCategories.length) {
@@ -162,16 +179,16 @@ export function PosSellView({
     }
   }, [activeCategories, categoryId]);
 
-  const visibleItems = useMemo(
-    () =>
-      items
-        .filter((i) => i.categoryId === categoryId && i.visibleOnPos !== false)
-        .sort((a, b) => {
-          if (a.active !== b.active) return a.active ? -1 : 1;
-          return a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th");
-        }),
-    [items, categoryId],
-  );
+  const visibleItems = useMemo(() => {
+    const filtered = items.filter((i) => i.categoryId === categoryId && i.visibleOnPos !== false);
+    if (menuArrangeMode === "bestsellers") {
+      return sortItemsByRank(filtered, rankMaps.itemRank);
+    }
+    return [...filtered].sort((a, b) => {
+      if (a.active !== b.active) return a.active ? -1 : 1;
+      return a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th");
+    });
+  }, [items, categoryId, menuArrangeMode, rankMaps.itemRank]);
   const cartLines = Object.values(cart);
   const cartCount = cartLines.reduce((n, l) => n + l.qty, 0);
   const payOpen = payMode !== null;
@@ -322,6 +339,7 @@ export function PosSellView({
   }
 
   function commitCategoryReorder(orderedActiveIds: string[]) {
+    if (menuArrangeMode === "bestsellers") return;
     const nextCategories = applyActiveIdsOrder(categories, orderedActiveIds);
     const before = categories
       .slice()
@@ -545,7 +563,11 @@ export function PosSellView({
             ขายแล้ว {sessionDisplay.saleCount} บิล · ฿{formatPlainNumber(sessionDisplay.totalSales)}
             {menuSyncing ? " · อัปเดตเมนู..." : ""}
           </span>
-          <span className="pos-sell-status-hint">กดค้างหมวด = ลากเรียง · กดค้างเมนู = ของหมด</span>
+          <span className="pos-sell-status-hint">
+            {menuArrangeMode === "bestsellers"
+              ? "จัดตามขายดีจริง · กดค้างเมนู = ของหมด"
+              : "กดค้างหมวด = ลากเรียง · กดค้างเมนู = ของหมด"}
+          </span>
           {success ? <span className="ok-text pos-sell-flash">{success}</span> : null}
         </div>
 
@@ -553,7 +575,7 @@ export function PosSellView({
           categories={activeCategories}
           selectedId={categoryId}
           onSelect={setCategoryId}
-          onReorder={commitCategoryReorder}
+          onReorder={menuArrangeMode === "bestsellers" ? undefined : commitCategoryReorder}
         />
 
         <div

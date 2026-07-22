@@ -61,13 +61,15 @@ exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(a
   }
   try {
     const db = getFirestore();
-    const [catsSnap, itemsSnap, groupsSnap] = await Promise.all([
+    const menuRank = require("./pos-menu-rank");
+    const [catsSnap, itemsSnap, groupsSnap, rankPack] = await Promise.all([
       db.collection("menuCategories").get(),
       db.collection("menuItems").get(),
       db.collection("menuOptionGroups").get(),
+      menuRank.loadOrRefreshRank(db),
     ]);
 
-    const categories = catsSnap.docs
+    let categories = catsSnap.docs
       .map((d) => {
         const x = d.data() || {};
         return {
@@ -106,7 +108,7 @@ exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(a
       };
     });
 
-    const items = itemsSnap.docs
+    let items = itemsSnap.docs
       .map((d) => {
         const x = d.data() || {};
         return {
@@ -134,9 +136,20 @@ exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(a
       .filter((i) => i.visibleOnPos)
       .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
 
+    const menuArrangeMode = rankPack.menuArrangeMode || "fix";
+    const rank = rankPack.rank || { windowDays: 7, computedAt: 0, categories: [], items: [] };
+    if (menuArrangeMode === "bestsellers") {
+      const ordered = menuRank.applyBestsellersOrder(categories, items, rank);
+      categories = ordered.categories;
+      items = ordered.items;
+    }
+
     res.status(200).json({
       ok: true,
       fetchedAt: Date.now(),
+      menuArrangeMode,
+      windowDays: rankPack.windowDays || rank.windowDays || 7,
+      rank,
       categories,
       items,
       optionGroups: optionGroups.filter((g) => g.active),
@@ -200,6 +213,11 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
       promptPayId: asString(x.promptPayId, 32),
       autoPrintReceipt: x.autoPrintReceipt !== false,
       receiptFooterNote: asString(x.receiptFooterNote, 160),
+      menuArrangeMode: x.menuArrangeMode === "bestsellers" ? "bestsellers" : "fix",
+      bestsellerWindowDays:
+        typeof x.bestsellerWindowDays === "number" && x.bestsellerWindowDays >= 7
+          ? Math.min(14, Math.round(x.bestsellerWindowDays))
+          : 7,
       updatedAt: typeof x.shopSettingsUpdatedAt === "number" ? x.shopSettingsUpdatedAt : Date.now(),
     });
   } catch (err) {
@@ -295,6 +313,16 @@ exports.nposSessionClose = functions.region("asia-southeast1").https.onRequest(a
         updatedAt: now,
         cashTotal: Number(body.cashTotal) || 0,
         promptpayTotal: Number(body.promptpayTotal) || 0,
+        openingCash: Number(body.openingCash) || 0,
+        closingCashCounted: Number(body.closingCashCounted) || 0,
+        expectedCash: Number(body.expectedCash) || 0,
+        cashDifference: Number(body.cashDifference) || 0,
+        leaveFloat: Number(body.leaveFloat) || 0,
+        discountTotal: Number(body.discountTotal) || 0,
+        voidedCount: Number(body.voidedCount) || 0,
+        saleCountLocal: Number(body.saleCount) || 0,
+        discrepancyNote: String(body.discrepancyNote || "").slice(0, 240),
+        discrepancyLabel: String(body.discrepancyLabel || "").slice(0, 40),
       },
       { merge: true },
     );

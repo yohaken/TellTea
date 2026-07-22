@@ -5,8 +5,10 @@ import android.content.pm.PackageInfo;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.TypedValue;
 import android.view.View;
-import android.widget.Button;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -15,6 +17,7 @@ import java.io.File;
 import app.telltea.npos.BuildConfig;
 import app.telltea.npos.R;
 import app.telltea.npos.diagnose.OpsLogger;
+import app.telltea.npos.ui.UiScale;
 
 /**
  * Top-left update popup on sell/hub — check → one-tap install → resume sell after restart.
@@ -29,8 +32,8 @@ public final class UpdatePromptController {
   private final View popup;
   private final TextView body;
   private final TextView progress;
-  private final Button goBtn;
-  private final Button laterBtn;
+  private final TextView goBtn;
+  private final TextView laterBtn;
   private final UpdateChecker checker = new UpdateChecker();
   private final UpdateDownloader downloader = new UpdateDownloader();
   private final Handler main = new Handler(Looper.getMainLooper());
@@ -48,6 +51,7 @@ public final class UpdatePromptController {
     goBtn = activity.findViewById(R.id.updatePopupGo);
     laterBtn = activity.findViewById(R.id.updatePopupLater);
     readLocalVersion();
+    positionPopup();
     if (goBtn != null) goBtn.setOnClickListener(v -> onGo());
     if (laterBtn != null) {
       laterBtn.setOnClickListener(
@@ -55,6 +59,23 @@ public final class UpdatePromptController {
             ResumePrefs.dismissPopupFor(activity, 30 * 60_000L);
             hide();
           });
+    }
+  }
+
+  private void positionPopup() {
+    if (popup == null) return;
+    UiScale ui = UiScale.from(activity);
+    ViewGroup.LayoutParams lp = popup.getLayoutParams();
+    if (lp instanceof FrameLayout.LayoutParams) {
+      FrameLayout.LayoutParams flp = (FrameLayout.LayoutParams) lp;
+      View sidebar = activity.findViewById(R.id.posSidebar);
+      int start = ui.dp(12);
+      if (sidebar != null && sidebar.getVisibility() == View.VISIBLE) {
+        start = ui.navWidthPx + ui.dp(12);
+      }
+      flp.setMarginStart(start);
+      flp.topMargin = ui.dp(12);
+      popup.setLayoutParams(flp);
     }
   }
 

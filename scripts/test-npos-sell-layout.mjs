@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 238/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+30/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.7"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 242/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+34/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.11"/);
 assert.match(read("docs/npos-sell-layout-checklist.md"), /กริด|local-first|65|35|344/);
 
 const layout = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
@@ -34,6 +34,7 @@ assert.match(sell, /0xFFE85D24|E85D24/);
 assert.match(sell, /0xFF1E2D3D/);
 assert.match(sell, /cartQtyForItem/);
 assert.match(sell, /PosShellNav|dialog_option_picker/);
+assert.match(sell, /UiScale|FIT_CENTER/);
 
 const menuRepo = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/sell/MenuRepository.java",

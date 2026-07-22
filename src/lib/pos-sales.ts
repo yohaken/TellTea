@@ -1,6 +1,7 @@
 import { getPosFirebaseAuth } from "./pos-firebase";
 import { addOutboxEntry } from "./pos-outbox";
 import { refreshPosSyncSnapshot, runPosSyncFlush, stagePendingSale } from "./pos-sync";
+import { recordBestsellerSaleLines } from "./pos-bestseller-local";
 import type { PosSaleLine } from "./types";
 import type { PosOutboxEntry, PosSaleMutationPayload, PosSaleResult } from "./pos-sync-types";
 import { createPosMutationId, formatPendingBillNo } from "./pos-sync-utils";
@@ -96,6 +97,7 @@ function recordSaleInstant(input: {
   };
 
   stagePendingSale(entry);
+  recordBestsellerSaleLines(input.lines);
   persistSaleInBackground(entry);
 
   return optimisticSaleResult(payload, total, change);

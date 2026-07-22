@@ -26,7 +26,9 @@ import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.MenuWarmup;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shell.PosShellNav;
+import app.telltea.npos.shift.BlindCloseFlow;
 import app.telltea.npos.shift.ShiftPrefs;
+import app.telltea.npos.ui.UiScale;
 import app.telltea.npos.update.ApkInstaller;
 import app.telltea.npos.update.ResumePrefs;
 import app.telltea.npos.update.UpdatePromptController;
@@ -80,11 +82,16 @@ public class MainActivity extends Activity {
 
     readLocalVersion();
     versionView.setText(getString(R.string.version_label, localVersionName, localVersionCode));
+    TextView hubVersion = findViewById(R.id.hubVersion);
+    if (hubVersion != null) {
+      hubVersion.setText(getString(R.string.version_label, localVersionName, localVersionCode));
+    }
     deviceIdView.setText(getString(R.string.device_code_label, DeviceIdentity.pairingCode(this)));
 
     autoHealth = new AutoHealth();
     saleSync = new SaleSync();
     MenuWarmup.warm(this);
+    applyClockInTouchChrome();
     ForegroundHeartbeat.setStatusListener(
         (pairing, seenAt, error) -> {
           if (deviceIdView != null && pairing != null && !pairing.isEmpty()) {
@@ -134,6 +141,34 @@ public class MainActivity extends Activity {
     if (!ShiftPrefs.isOpen(this)) return;
     resumeSellHandled = true;
     startActivity(new Intent(this, SellActivity.class));
+  }
+
+  private void applyClockInTouchChrome() {
+    UiScale ui = UiScale.from(this);
+    View open = findViewById(R.id.openShiftButton);
+    View settings = findViewById(R.id.settingsButtonClock);
+    View grant = findViewById(R.id.grantPermsButton);
+    View close = findViewById(R.id.closeShiftButton);
+    View settingsSell = findViewById(R.id.settingsButtonSell);
+    if (open != null) {
+      open.setMinimumHeight(ui.payPrimaryMinPx);
+      if (open instanceof TextView) {
+        ((TextView) open).setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, ui.titleSp + 3f);
+      }
+    }
+    if (settings != null) {
+      settings.setMinimumHeight(ui.paySecondaryMinPx);
+      if (settings instanceof TextView) {
+        ((TextView) settings).setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, ui.bodySp);
+      }
+    }
+    if (grant != null) grant.setMinimumHeight(ui.touchMinPx);
+    if (close != null) close.setMinimumHeight(ui.touchMinPx);
+    if (settingsSell != null) settingsSell.setMinimumHeight(ui.touchMinPx);
+    TextView hubVersion = findViewById(R.id.hubVersion);
+    if (hubVersion != null) {
+      hubVersion.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, Math.max(11f, ui.captionSp));
+    }
   }
 
   private void refreshPermissionGate() {
@@ -318,19 +353,13 @@ public class MainActivity extends Activity {
   }
 
   private void closeShift() {
-    saleSync.printShiftReport(
+    BlindCloseFlow.start(
         this,
-        "close",
-        () ->
-            saleSync.closeSession(
-                this,
-                () ->
-                    runOnUiThread(
-                        () -> {
-                          Toast.makeText(this, R.string.shift_closed, Toast.LENGTH_SHORT).show();
-                          clockInPanel.setVisibility(View.VISIBLE);
-                          sellPanel.setVisibility(View.GONE);
-                        })));
+        saleSync,
+        () -> {
+          clockInPanel.setVisibility(View.VISIBLE);
+          sellPanel.setVisibility(View.GONE);
+        });
   }
 
   private void updateClockLabels() {

@@ -24,7 +24,10 @@
                 android:background="#1E2D3D"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="10dp">
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
 
                 <TextView
                     android:id="@+id/sellTitle"
@@ -36,15 +39,34 @@
                     android:textSize="16sp"
                     android:textStyle="bold" />
 
-                <Button
+                <TextView
+                    android:id="@+id/sellVersion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="10dp"
+                    android:background="#2A3C4E"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:textColor="#F0C9A0"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
                     android:id="@+id/refreshMenuButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="8dp"
+                    android:background="@drawable/npos_touch_ghost"
+                    android:gravity="center"
                     android:minHeight="40dp"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp"
                     android:text="@string/btn_refresh_menu"
-                    android:textAllCaps="false"
-                    android:textSize="12sp" />
+                    android:textColor="#1E2D3D"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/sellSyncStatus"
@@ -95,10 +117,13 @@
                     </HorizontalScrollView>
 
                     <ScrollView
+                        android:id="@+id/menuScroll"
                         android:layout_width="match_parent"
                         android:layout_height="0dp"
                         android:layout_weight="1"
-                        android:fillViewport="true">
+                        android:fillViewport="true"
+                        android:overScrollMode="never"
+                        android:scrollbars="vertical">
 
                         <GridLayout
                             android:id="@+id/menuGrid"
@@ -214,40 +239,50 @@
                         android:textAllCaps="false"
                         android:visibility="gone" />
 
-                    <Button
+                    <TextView
                         android:id="@+id/payCashButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:backgroundTint="#E85D24"
-                        android:minHeight="52dp"
+                        android:background="@drawable/npos_touch_primary"
+                        android:gravity="center"
+                        android:minHeight="64dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp"
                         android:text="@string/btn_pay_cash"
-                        android:textAllCaps="false"
                         android:textColor="#FFFFFF"
-                        android:textSize="16sp"
+                        android:textSize="17sp"
                         android:textStyle="bold" />
 
-                    <Button
+                    <TextView
                         android:id="@+id/payPromptButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:backgroundTint="#FFFFFF"
-                        android:minHeight="44dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/npos_touch_secondary"
+                        android:gravity="center"
+                        android:minHeight="52dp"
+                        android:paddingTop="12dp"
+                        android:paddingBottom="12dp"
                         android:text="@string/btn_pay_promptpay"
-                        android:textAllCaps="false"
-                        android:textColor="#E85D24" />
+                        android:textColor="#E85D24"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
 
-                    <Button
+                    <TextView
                         android:id="@+id/xReportButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:backgroundTint="#EEF0F4"
-                        android:minHeight="40dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/npos_touch_ghost"
+                        android:gravity="center"
+                        android:minHeight="44dp"
+                        android:paddingTop="10dp"
+                        android:paddingBottom="10dp"
                         android:text="@string/btn_x_report"
-                        android:textAllCaps="false"
-                        android:textColor="#1E2D3D" />
+                        android:textColor="#1E2D3D"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
 
                     <!-- Kept for code wiring; nav moved to left rail -->
                     <Button

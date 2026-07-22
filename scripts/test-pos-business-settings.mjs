@@ -17,6 +17,8 @@ assert.match(viewSrc, /ที่อยู่บนบิล/);
 assert.match(viewSrc, /ตัวอย่างบนบิล/);
 assert.match(viewSrc, /บันทึกบนบิล/);
 assert.match(viewSrc, /PromptPay/);
+assert.match(viewSrc, /จัดเมนู/);
+assert.match(viewSrc, /bestsellers|กลุ่มขายดี/);
 assert.match(viewSrc, /pos-biz-layout/);
 
 const pageSrc = readFileSync(join(root, "src/app/pos/settings/page.tsx"), "utf8");

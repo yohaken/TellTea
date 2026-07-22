@@ -11108,6 +11108,39 @@ body.modal-open .main-panel {
   accent-color: #e85d24;
 }
 
+.pos-biz-arrange {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.pos-biz-arrange legend {
+  padding: 0 0.35rem;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.pos-biz-form--menu label > span {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.pos-biz-form--menu select {
+  width: 100%;
+  max-width: 16rem;
+  min-height: 2.4rem;
+  margin-bottom: 1rem;
+  border-radius: 0.45rem;
+  border: 1px solid #d1d5db;
+  padding: 0.4rem 0.6rem;
+}
+
 .pos-biz-save {
   align-self: start;
   min-width: 9.5rem;

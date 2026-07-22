@@ -10,6 +10,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import app.telltea.npos.sell.SaleSync;
+import app.telltea.npos.shift.BlindCloseFlow;
 import app.telltea.npos.shift.ShiftPrefs;
 import app.telltea.npos.update.ApkInstaller;
 
@@ -89,21 +90,15 @@ public class ShiftActivity extends Activity {
   }
 
   private void closeShift() {
-    saleSync.printShiftReport(
+    BlindCloseFlow.start(
         this,
-        "close",
-        () ->
-            saleSync.closeSession(
-                this,
-                () ->
-                    runOnUiThread(
-                        () -> {
-                          Toast.makeText(this, R.string.shift_closed, Toast.LENGTH_SHORT).show();
-                          Intent i = new Intent(this, MainActivity.class);
-                          i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                          startActivity(i);
-                          finish();
-                        })));
+        saleSync,
+        () -> {
+          Intent i = new Intent(this, MainActivity.class);
+          i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+          startActivity(i);
+          finish();
+        });
   }
 
   private void openWeb(String url) {

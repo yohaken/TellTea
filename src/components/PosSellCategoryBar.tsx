@@ -20,7 +20,7 @@ export function PosSellCategoryBar({
   categories: Cat[];
   selectedId: string;
   onSelect: (id: string) => void;
-  onReorder: (orderedIds: string[]) => void;
+  onReorder?: (orderedIds: string[]) => void;
 }) {
   const [displayIds, setDisplayIds] = useState(() => categories.map((c) => c.id));
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -93,7 +93,6 @@ export function PosSellCategoryBar({
 
   function endDrag() {
     clearHoldTimer();
-    const dragId = draggingIdRef.current;
     const ordered = displayIdsRef.current;
     const baseline = categoriesRef.current.map((c) => c.id);
     const changed = movedWhileDragRef.current && ordered.join("|") !== baseline.join("|");
@@ -103,7 +102,7 @@ export function PosSellCategoryBar({
     pointerIdRef.current = null;
     startPosRef.current = null;
 
-    if (changed) onReorder(ordered);
+    if (changed && onReorder) onReorder(ordered);
 
     // ปล่อยคลิกปลอมหลังลาก
     window.setTimeout(() => {
@@ -113,6 +112,7 @@ export function PosSellCategoryBar({
 
   function onPointerDown(e: ReactPointerEvent<HTMLButtonElement>, id: string) {
     if (e.button !== 0) return;
+    if (!onReorder) return;
     clearHoldTimer();
     suppressClickRef.current = false;
     movedWhileDragRef.current = false;

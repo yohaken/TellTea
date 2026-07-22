@@ -1,6 +1,11 @@
 import { doc, getDoc, onSnapshot, setDoc, type Unsubscribe } from "firebase/firestore";
 import { getPosDb } from "./pos-firebase";
 import { normalizePromptPayId } from "./pos-promptpay";
+import {
+  normalizeMenuArrangeMode,
+  normalizeWindowDays,
+  type MenuArrangeMode,
+} from "./pos-bestseller-rank";
 
 export type PosShopSettings = {
   shopName: string;
@@ -13,6 +18,10 @@ export type PosShopSettings = {
   receiptStaffName: string;
   /** ข้อความท้ายสลิป */
   receiptFooterNote: string;
+  /** ลำดับเมนูหน้า POS: fix = คงที่/มือ · bestsellers = กลุ่มขายดีจริง */
+  menuArrangeMode: MenuArrangeMode;
+  /** หน้าต่างสถิติขายดี (วัน) — 7 ช่วงแรก · ขยายได้ถึง 14 */
+  bestsellerWindowDays: number;
 };
 
 export type SavePosShopSettingsResult = {
@@ -36,6 +45,8 @@ const DEFAULTS: PosShopSettings = {
   autoPrintReceipt: true,
   receiptStaffName: "หน้าร้าน",
   receiptFooterNote: "ขอบคุณที่อุดหนุน",
+  menuArrangeMode: "fix",
+  bestsellerWindowDays: 7,
 };
 
 const LOCAL_KEY = "telltea-pos-shop-settings";
@@ -60,6 +71,8 @@ function toPublic(stored: StoredShopSettings): PosShopSettings {
     autoPrintReceipt: stored.autoPrintReceipt,
     receiptStaffName: stored.receiptStaffName,
     receiptFooterNote: stored.receiptFooterNote,
+    menuArrangeMode: stored.menuArrangeMode,
+    bestsellerWindowDays: stored.bestsellerWindowDays,
   };
 }
 
@@ -80,6 +93,8 @@ function mapSettings(data: Record<string, unknown> | undefined): PosShopSettings
       typeof data?.receiptFooterNote === "string" && data.receiptFooterNote.trim()
         ? data.receiptFooterNote.trim()
         : DEFAULTS.receiptFooterNote,
+    menuArrangeMode: normalizeMenuArrangeMode(data?.menuArrangeMode),
+    bestsellerWindowDays: normalizeWindowDays(data?.bestsellerWindowDays),
   };
 }
 
@@ -148,6 +163,8 @@ function remotePayload(settings: PosShopSettings, updatedAt: number): Record<str
     autoPrintReceipt: settings.autoPrintReceipt,
     receiptStaffName: settings.receiptStaffName,
     receiptFooterNote: settings.receiptFooterNote,
+    menuArrangeMode: settings.menuArrangeMode,
+    bestsellerWindowDays: settings.bestsellerWindowDays,
   };
 }
 
@@ -310,6 +327,14 @@ export async function savePosShopSettings(
       patch.receiptFooterNote != null
         ? patch.receiptFooterNote.trim() || DEFAULTS.receiptFooterNote
         : current.receiptFooterNote,
+    menuArrangeMode:
+      patch.menuArrangeMode != null
+        ? normalizeMenuArrangeMode(patch.menuArrangeMode)
+        : current.menuArrangeMode,
+    bestsellerWindowDays:
+      patch.bestsellerWindowDays != null
+        ? normalizeWindowDays(patch.bestsellerWindowDays)
+        : current.bestsellerWindowDays,
   };
   const stored: StoredShopSettings = {
     ...next,

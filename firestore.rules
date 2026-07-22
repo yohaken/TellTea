@@ -562,7 +562,7 @@ service cloud.firestore {
         || (docId == 'aiSettings' && isOwner())
         || (docId == 'foodstoryAuth' && isOwner())
         || (docId != 'aiSettings' && docId != 'foodstoryAuth' && isStaff())
-        || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes'));
+        || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes' || docId == 'posMenuRank'));
       allow write: if isOwner()
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
         || (isOwner() && docId == 'lowBalanceAlert')

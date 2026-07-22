@@ -1,5 +1,6 @@
 /** บันทึกใบเสร็จบนเครื่อง (POS อ่าน posSales จาก Firestore ไม่ได้) */
 import type { PosSaleLine, PosSalePaymentMethod } from "./types";
+import { reverseBestsellerSaleLines } from "./pos-bestseller-local";
 
 export type PosLocalReceiptLine = {
   name: string;
@@ -141,8 +142,14 @@ export function voidLocalReceipt(id: string, reason?: string): boolean {
   const all = readAll();
   const idx = all.findIndex((r) => r.id === id);
   if (idx < 0 || all[idx]!.voided) return false;
+  const prev = all[idx]!;
+  if (prev.lines?.length) {
+    reverseBestsellerSaleLines(
+      prev.lines.map((l) => ({ menuItemId: l.menuItemId, qty: l.qty })),
+    );
+  }
   all[idx] = {
-    ...all[idx]!,
+    ...prev,
     voided: true,
     voidedAt: Date.now(),
     voidReason: reason?.trim() || "ทำลายบิล",

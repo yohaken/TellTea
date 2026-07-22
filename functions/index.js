@@ -29,7 +29,9 @@ exports.nposVoidSale = nposSell.nposVoidSale;
 exports.nposToggleSoldOut = nposSell.nposToggleSoldOut;
 exports.nposReorderCategories = nposSell.nposReorderCategories;
 exports.foodstoryMenuSync = require("./foodstory-menu-sync").foodstoryMenuSync;
-
+const posMenuRank = require("./pos-menu-rank");
+exports.posRecomputeMenuRank = posMenuRank.posRecomputeMenuRank;
+exports.posMenuRankDaily = posMenuRank.posMenuRankDaily;
 const VAPID_PUBLIC =
   process.env.VAPID_PUBLIC_KEY ||
   "BI74S6JyDs61V0eqRuS9iy6XdhER9wtA-EXhLfWiEFZSeg2VBBQM1dnPnFsyVY2AQzcKF7gHZm-Eifpsc7cF0Zg";

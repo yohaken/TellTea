@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 238/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+30/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.7"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 242/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+34/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.11"/);
 assert.match(read("docs/npos-web-parity-shot-checklist.md"), /P1|P7|5 วิ|แถบซ้าย/);
 
 const capture = read(
@@ -62,9 +62,9 @@ assert.match(sidebar, /176dp/);
 const shell = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/shell/PosShellNav.java",
 );
-assert.match(shell, /0xFF2D7FE0|2D7FE0/);
+assert.match(shell, /npos_nav_active|2D7FE0|0xFF2D7FE0/);
 assert.match(shell, /nav_sell/);
-assert.match(shell, /POS_NAV|pos-nav|ACTIVE_SELL/);
+assert.match(shell, /POS_NAV|pos-nav|ACTIVE_SELL|UiScale/);
 
 const sell = read("npos-telltea/app/src/main/java/app/telltea/npos/SellActivity.java");
 assert.match(sell, /PosShellNav/);

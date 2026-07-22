@@ -17,11 +17,37 @@ public final class ShiftPrefs {
   private static final String KEY_PP_BILLS = "ppBills";
   private static final String KEY_DISCOUNT = "discountTotal";
   private static final String KEY_VOIDED = "voidedCount";
+  private static final String KEY_OPENING_CASH = "openingCash";
+  private static final String KEY_NEXT_OPENING = "nextOpeningCash";
 
   private ShiftPrefs() {}
 
   public static boolean isOpen(Context context) {
     return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_OPEN, false);
+  }
+
+  public static double openingCash(Context context) {
+    return Double.longBitsToDouble(
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong(KEY_OPENING_CASH, 0L));
+  }
+
+  /** Seed for the next open — set at close (leave float). */
+  public static double nextOpeningCash(Context context) {
+    return Double.longBitsToDouble(
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong(KEY_NEXT_OPENING, 0L));
+  }
+
+  public static void setNextOpeningCash(Context context, double amount) {
+    context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .putLong(KEY_NEXT_OPENING, Double.doubleToRawLongBits(Math.max(0, amount)))
+        .apply();
+  }
+
+  /** Expected drawer cash = opening float + cash sales this shift. */
+  public static double expectedCash(Context context) {
+    return openingCash(context) + cashTotal(context);
   }
 
   public static long openedAt(Context context) {
@@ -72,13 +98,16 @@ public final class ShiftPrefs {
   }
 
   public static void open(Context context, String sessionId, String shift, long openedAt) {
-    context
-        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    double opening = nextOpeningCash(context);
+    prefs
         .edit()
         .putBoolean(KEY_OPEN, true)
         .putLong(KEY_OPENED_AT, openedAt)
         .putString(KEY_SESSION, sessionId == null ? "" : sessionId)
         .putString(KEY_SHIFT, shift == null ? "morning" : shift)
+        .putLong(KEY_OPENING_CASH, Double.doubleToRawLongBits(opening))
+        .putLong(KEY_NEXT_OPENING, Double.doubleToRawLongBits(0))
         .putLong(KEY_CASH, Double.doubleToRawLongBits(0))
         .putLong(KEY_PP, Double.doubleToRawLongBits(0))
         .putInt(KEY_SALE_COUNT, 0)
