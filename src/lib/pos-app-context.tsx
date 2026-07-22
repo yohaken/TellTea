@@ -37,7 +37,7 @@ import { saveLocalClosedSession } from "@/lib/pos-local-sessions";
 import { refreshPosSyncSnapshot, runPosSyncFlush } from "@/lib/pos-sync";
 import { getCurrentShiftId } from "@/lib/shift-session";
 import { seedPosMenuIfEmpty } from "@/lib/pos-menu";
-import { startPosMenuPreload } from "@/lib/pos-menu-preload";
+import { resubscribePosMenuAfterAuth, startPosMenuPreload } from "@/lib/pos-menu-preload";
 import { hardReloadWithCacheBust } from "@/lib/hard-reload";
 import { isFirebaseConfigured } from "@/lib/firebase";
 import { getPosHardwareSnapshot } from "@/lib/pos-hardware";
@@ -192,6 +192,9 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
         deviceIdRef.current = authUid;
         setDevice(optimisticPosDevice(authUid));
         setLastHeartbeatAt(Date.now());
+
+        // เมนูอาจ subscribe ก่อน auth → permission-denied แล้ว listener ตาย
+        resubscribePosMenuAfterAuth();
 
         void registerPosDevice(authUid)
           .then((registered) => {

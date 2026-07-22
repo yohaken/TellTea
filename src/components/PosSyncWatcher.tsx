@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { PosSyncSnapshot } from "@/lib/pos-sync";
 import { refreshPosSyncSnapshot, runPosSyncFlush, subscribePosSync } from "@/lib/pos-sync";
 
@@ -14,11 +14,14 @@ export function PosSyncWatcher({
   enabled: boolean;
   onSyncChange?: (snap: PosSyncSnapshot) => void;
 }) {
+  const onSyncChangeRef = useRef(onSyncChange);
+  onSyncChangeRef.current = onSyncChange;
+
   useEffect(() => {
     if (!enabled) return;
 
     const unsub = subscribePosSync((snap) => {
-      onSyncChange?.(snap);
+      onSyncChangeRef.current?.(snap);
     });
 
     void refreshPosSyncSnapshot().then((snap) => {
@@ -37,7 +40,7 @@ export function PosSyncWatcher({
       window.removeEventListener("online", onOnline);
       window.clearInterval(timer);
     };
-  }, [enabled, onSyncChange]);
+  }, [enabled]);
 
   return null;
 }

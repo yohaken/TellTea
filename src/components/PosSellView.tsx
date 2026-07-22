@@ -130,6 +130,7 @@ export function PosSellView({
   } | null>(null);
   const holdTimerRef = useRef<number | null>(null);
   const longPressHandledRef = useRef(false);
+  const lastBusyRef = useRef<{ cartCount: number; payOpen: boolean } | null>(null);
   const sessionElapsed = useSessionElapsedLabel(session.openedAt);
 
   useEffect(() => {
@@ -199,6 +200,9 @@ export function PosSellView({
   const payOpen = payMode !== null;
 
   useEffect(() => {
+    const prev = lastBusyRef.current;
+    if (prev && prev.cartCount === cartCount && prev.payOpen === payOpen) return;
+    lastBusyRef.current = { cartCount, payOpen };
     onBusyChange?.({ cartCount, payOpen, saleBusy: false });
   }, [cartCount, onBusyChange, payOpen]);
 

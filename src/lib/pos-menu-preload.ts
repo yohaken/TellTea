@@ -361,10 +361,31 @@ export function retryPosMenuPreload(): void {
   seedStarted = false;
   clearPendingOrder();
   fixedOrderSyncStarted = false;
+  authResubscribed = false;
   snapshot = { ...EMPTY };
   if (!applyCache()) {
     snapshot = { ...EMPTY, ready: true, syncing: true };
   }
   emit();
+  startPosMenuPreload();
+}
+
+/**
+ * หลัง ensurePosDeviceAuth สำเร็จ — เปิด listener ใหม่โดยไม่รีเซ็ตแคช/ลำดับ
+ * (กันกรณี subscribe แรกโดน permission-denied ก่อน auth)
+ */
+let authResubscribed = false;
+export function resubscribePosMenuAfterAuth(): void {
+  if (typeof window === "undefined") return;
+  if (authResubscribed) return;
+  authResubscribed = true;
+  if (unsubscribe) {
+    unsubscribe();
+    unsubscribe = null;
+  }
+  if (timeoutId != null) {
+    window.clearTimeout(timeoutId);
+    timeoutId = null;
+  }
   startPosMenuPreload();
 }
