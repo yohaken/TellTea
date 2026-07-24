@@ -33,6 +33,7 @@ import {
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { TransferInModal } from "@/components/TransferInModal";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
 import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
@@ -55,9 +56,7 @@ import type { LedgerEntry } from "@/lib/types";
 import { filterLedgerRows } from "@/lib/smart-search";
 import {
   formatDateShort,
-  formatDateTimeShort,
   formatPlainNumber,
-  entryUpdatedAt,
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
@@ -100,7 +99,11 @@ function LedgerView() {
   const [transferInOpen, setTransferInOpen] = useState(false);
   const [photoUploadRowId, setPhotoUploadRowId] = useState<string | null>(null);
   const [rowUploadProgress, setRowUploadProgress] = useState<PhotoUploadProgress | null>(null);
-  const [imagePreview, setImagePreview] = useState<{ urls: string[]; title: string } | null>(null);
+  const [imagePreview, setImagePreview] = useState<{
+    urls: string[];
+    title: string;
+    entryDateMs?: number;
+  } | null>(null);
   const [query, setQuery] = useState("");
   const [searchPool, setSearchPool] = useState<LedgerEntry[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -536,7 +539,11 @@ function LedgerView() {
                               imageUrls={getLedgerReceiptUrls(row)}
                               label={row.description}
                               onView={(urls) =>
-                                setImagePreview({ urls, title: row.description })
+                                setImagePreview({
+                                  urls,
+                                  title: row.description,
+                                  entryDateMs: row.date,
+                                })
                               }
                             />
                           ) : (
@@ -638,6 +645,8 @@ function LedgerView() {
         <ImagePreviewModal
           urls={imagePreview.urls}
           title={imagePreview.title}
+          entryDateMs={imagePreview.entryDateMs}
+          showCaptureMeta={isOwner}
           onClose={() => setImagePreview(null)}
         />
       ) : null}
@@ -904,14 +913,14 @@ function AddOutModal({
             />
           </div>
           <PhotoAttachMultiField
-            label="สลิป / รูปถ่าย"
+            label="รูป"
             values={receiptUrls}
             onChange={setReceiptUrls}
             onError={onError}
             max={LEDGER_RECEIPT_MAX}
             storageFolder="ledger-receipts"
             storageSlotKey={`add-${createdBy || "new"}`}
-            hint={`แนบหลักฐานใบเสร็จ/สินค้า · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`}
+            hint=""
           />
           {receiptUrls.length ? (
             <button
@@ -920,7 +929,7 @@ function AddOutModal({
               style={{ marginBottom: "0.55rem" }}
               onClick={() => setPreviewUrls(receiptUrls)}
             >
-              ดูรูปทั้งหมด ({receiptUrls.length})
+              ดูรูป ({receiptUrls.length})
             </button>
           ) : null}
           <LedgerTypeField
@@ -953,7 +962,13 @@ function AddOutModal({
           </div>
         </form>
         {previewUrls ? (
-          <ImagePreviewModal urls={previewUrls} title="สลิป / รูปถ่าย" onClose={() => setPreviewUrls(null)} />
+          <ImagePreviewModal
+            urls={previewUrls}
+            title="รูป"
+            entryDateMs={parseDateInput(date)}
+            showCaptureMeta={isOwner}
+            onClose={() => setPreviewUrls(null)}
+          />
         ) : null}
       </div>
       {saveStage ? (
@@ -1138,17 +1153,11 @@ function EditEntryModal({
             <X size={18} />
           </button>
         </div>
-        <p className="entry-detail-meta muted" aria-live="polite">
-          <span>
-            วันที่รายการ <strong>{formatDateShort(entry.date)}</strong>
-          </span>
-          <span aria-hidden className="entry-detail-meta-sep">
-            ·
-          </span>
-          <span>
-            อัปเดต <strong>{formatDateTimeShort(entryUpdatedAt(entry))}</strong>
-          </span>
-        </p>
+        <EntryTimestampsMeta
+          entryDate={entry.date}
+          createdAt={entry.createdAt}
+          updatedAt={entry.updatedAt}
+        />
         <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
           <div className="field">
             <label htmlFor="edit-date">วันที่</label>
@@ -1213,18 +1222,14 @@ function EditEntryModal({
           </div>
 
           <PhotoAttachMultiField
-            label="สลิป / รูปถ่าย"
+            label="รูป"
             values={receiptUrls}
             onChange={setReceiptUrls}
             onError={onError}
             max={LEDGER_RECEIPT_MAX}
             storageFolder="ledger-receipts"
             storageSlotKey={`edit-${entry.id}`}
-            hint={
-              isIn
-                ? `บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`
-                : `แนบหลักฐานใบเสร็จ/สินค้า · สูงสุด ${LEDGER_RECEIPT_MAX} รูป`
-            }
+            hint=""
           />
           {receiptUrls.length ? (
             <button
@@ -1233,7 +1238,7 @@ function EditEntryModal({
               style={{ marginBottom: "0.55rem" }}
               onClick={() => setPreviewUrls(receiptUrls)}
             >
-              ดูรูปทั้งหมด ({receiptUrls.length})
+              ดูรูป ({receiptUrls.length})
             </button>
           ) : null}
 
@@ -1297,7 +1302,13 @@ function EditEntryModal({
           </div>
         </form>
         {previewUrls ? (
-          <ImagePreviewModal urls={previewUrls} title="สลิป / รูปถ่าย" onClose={() => setPreviewUrls(null)} />
+          <ImagePreviewModal
+            urls={previewUrls}
+            title="รูป"
+            entryDateMs={parseDateInput(date)}
+            showCaptureMeta={isOwner}
+            onClose={() => setPreviewUrls(null)}
+          />
         ) : null}
       </div>
       {saveStage ? (

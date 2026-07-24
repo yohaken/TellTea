@@ -18,14 +18,12 @@ const deployYml = readFileSync(join(root, ".github/workflows/deploy.yml"), "utf8
 
 assert.match(otSrc, /OT_IMAGE_MAX\s*=\s*10/);
 assert.match(otSrc, /assertOtImageUrlsFit/);
-assert.match(photosSrc, /uploadOtProductPhoto/);
-assert.match(photosSrc, /OT_PHOTO_STORAGE_PREFIX/);
-assert.match(photosSrc, /uploadBytes/);
-assert.match(pageSrc, /uploadOtProductPhoto/);
+assert.match(photosSrc, /uploadOtProductPhoto|OT_PHOTO_STORAGE_PREFIX/);
+assert.match(pageSrc, /storageFolder="ot-photos"/);
 assert.match(pageSrc, /OT_IMAGE_MAX/);
-assert.match(pageSrc, /สูงสุด \$\{OT_IMAGE_MAX\} รูป/);
-assert.match(multiSrc, /uploadFile/);
-assert.match(multiSrc, /สูงสุด \$\{max\} รูป/);
+assert.match(pageSrc, /PhotoAttachMultiField/);
+assert.match(multiSrc, /uploadFile|uploadEvidencePhotos/);
+assert.match(multiSrc, /สูงสุด \$\{max\}/);
 assert.match(cellSrc, /photo-status-count/);
 assert.match(cellSrc, /data-count/);
 assert.match(storageRules, /ot-photos/);

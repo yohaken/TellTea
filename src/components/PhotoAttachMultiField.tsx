@@ -47,7 +47,7 @@ export function PhotoAttachMultiField({
   uploadFile?: (file: File) => Promise<string>;
   storageFolder?: string;
   storageSlotKey?: string;
-  /** คำอธิบายสั้นใต้ป้าย — ค่าว่างใช้ข้อความมาตรฐาน */
+  /** คำอธิบายสั้นใต้ป้าย — ไม่ส่ง = ค่าเริ่มสั้น · ส่ง "" = ซ่อน */
   hint?: string;
   allowCamera?: boolean;
   readOnly?: boolean;
@@ -221,27 +221,22 @@ export function PhotoAttachMultiField({
 
   const full = values.length >= max;
   const hintText =
-    hint ??
-    (readOnly
-      ? values.length
-        ? `${values.length} รูป`
-        : "ยังไม่มีรูป"
-      : evidenceMode
-        ? `อัปโหลดไฟล์จริงไปคลังรูป (คงคุณภาพหลักฐาน) · สูงสุด ${max} รูป`
-        : allowCamera
-          ? `ถ่ายหรือแนบได้หลายรูป (สูงสุด ${max} รูป)`
-          : `แนบได้หลายรูป (สูงสุด ${max} รูป)`);
+    hint === ""
+      ? ""
+      : hint ??
+        (readOnly
+          ? values.length
+            ? `${values.length}/${max}`
+            : ""
+          : `สูงสุด ${max}`);
 
   return (
     <div className="field photo-attach-field photo-attach-multi">
-      <span className="field-label">
-        {label}
-        {!label.includes("สูงสุด") ? ` (สูงสุด ${max} รูป)` : ""}
-      </span>
-      <p className="muted form-hint-inline">{hintText}</p>
-      {evidenceMode ? (
-        <p className="photo-attach-conn-chip" data-online={online ? "1" : "0"}>
-          {online ? "พร้อมอัปโหลด (ออนไลน์)" : "ออฟไลน์ — เชื่อมเน็ตก่อนแนบรูป"}
+      <span className="field-label">{label}</span>
+      {hintText ? <p className="muted form-hint-inline">{hintText}</p> : null}
+      {evidenceMode && !online ? (
+        <p className="photo-attach-conn-chip" data-online="0">
+          ออฟไลน์ — เชื่อมเน็ตก่อนแนบรูป
         </p>
       ) : null}
       {!readOnly ? (
@@ -254,10 +249,10 @@ export function PhotoAttachMultiField({
               onClick={() => cameraRef.current?.click()}
             >
               {busy ? (
-                "กำลังอัปโหลด..."
+                "…"
               ) : (
                 <>
-                  <Camera size={16} aria-hidden /> ถ่ายรูป
+                  <Camera size={16} aria-hidden /> ถ่าย
                 </>
               )}
             </button>
@@ -269,10 +264,10 @@ export function PhotoAttachMultiField({
             onClick={() => galleryRef.current?.click()}
           >
             {busy && !allowCamera ? (
-              "กำลังอัปโหลด..."
+              "…"
             ) : (
               <>
-                <Plus size={16} aria-hidden /> แนบรูป
+                <Plus size={16} aria-hidden /> แนบ
               </>
             )}
           </button>

@@ -4,7 +4,14 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Download, ImageIcon, ImageOff, Loader2, X } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
-import { resolveEvidencePhotoSrcList } from "@/lib/evidence-photos";
+import {
+  getEvidencePhotoMeta,
+  isEvidencePhotoRef,
+  resolveEvidencePhotoSrcList,
+  type EvidencePhotoMeta,
+} from "@/lib/evidence-photos";
+import { photoDateMismatchHint } from "@/lib/image-capture-meta";
+import { formatDateTimeShort } from "@/lib/utils";
 import { saveImageToDevice } from "@/lib/receipts";
 
 function resolvePhotoUrls(imageUrl?: string, imageUrls?: string[]) {
@@ -100,12 +107,18 @@ export function ImagePreviewModal({
   title,
   initialIndex = 0,
   onClose,
+  /** When set (owner), show capture/upload times for evidence photos */
+  showCaptureMeta = false,
+  /** Business date of parent entry — used for mismatch hint */
+  entryDateMs,
 }: {
   url?: string;
   urls?: string[];
   title?: string;
   initialIndex?: number;
   onClose: () => void;
+  showCaptureMeta?: boolean;
+  entryDateMs?: number;
 }) {
   const list = urls?.length ? urls : url ? [url] : [];
   const start = Math.min(Math.max(0, initialIndex), Math.max(0, list.length - 1));
@@ -123,6 +136,7 @@ export function ImagePreviewModal({
   const [ty, setTy] = useState(0);
   /** เลื่อนลงชั่วคราวตอนปัดเพื่อปิด (ยังไม่ซูม) */
   const [dismissY, setDismissY] = useState(0);
+  const [captureMeta, setCaptureMeta] = useState<EvidencePhotoMeta | null>(null);
   const saveCancelRef = useRef(false);
 
   const stageRef = useRef<HTMLDivElement>(null);
@@ -237,6 +251,25 @@ export function ImagePreviewModal({
       cancelled = true;
     };
   }, [list.join("|")]);
+
+  useEffect(() => {
+    if (!showCaptureMeta) {
+      setCaptureMeta(null);
+      return;
+    }
+    const refUrl = list[idx] || "";
+    if (!isEvidencePhotoRef(refUrl)) {
+      setCaptureMeta(null);
+      return;
+    }
+    let cancelled = false;
+    void getEvidencePhotoMeta(refUrl).then((meta) => {
+      if (!cancelled) setCaptureMeta(meta);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [showCaptureMeta, idx, list.join("|")]);
 
   useEffect(() => {
     markImgPending();
@@ -560,6 +593,13 @@ export function ImagePreviewModal({
   }
 
   const dismissOpacity = dismissY > 0 ? Math.max(0.35, 1 - dismissY / 280) : 1;
+  const mismatchHint =
+    showCaptureMeta && captureMeta
+      ? photoDateMismatchHint(entryDateMs, {
+          capturedAt: captureMeta.capturedAt,
+          uploadedAt: captureMeta.uploadedAt,
+        })
+      : "";
 
   const viewer = (
     <div
@@ -587,6 +627,31 @@ export function ImagePreviewModal({
           <X size={26} strokeWidth={2.4} />
         </button>
       </div>
+      {showCaptureMeta && captureMeta ? (
+        <p className="photo-fs-capture-meta" aria-live="polite">
+          {captureMeta.capturedAt ? (
+            <span>
+              ถ่าย{" "}
+              <strong>
+                {formatDateTimeShort(captureMeta.capturedAt)}
+                {captureMeta.captureSource === "file" ? "*" : ""}
+              </strong>
+            </span>
+          ) : (
+            <span>ถ่าย —</span>
+          )}
+          <span aria-hidden> · </span>
+          <span>
+            อัปโหลด <strong>{formatDateTimeShort(captureMeta.uploadedAt)}</strong>
+          </span>
+          {mismatchHint ? (
+            <>
+              <span aria-hidden> · </span>
+              <span className="photo-fs-capture-warn">{mismatchHint}</span>
+            </>
+          ) : null}
+        </p>
+      ) : null}
 
       <div
         ref={stageRef}
@@ -644,14 +709,13 @@ export function ImagePreviewModal({
             </button>
             <span className="photo-fs-nav-label">
               {idx + 1} / {list.length}
-              <span className="photo-fs-hint"> · ปัดซ้ายขวา · ปัดลงปิด · บีบซูม</span>
             </span>
             <button type="button" className="photo-fs-icon-btn" onClick={next} aria-label="รูปถัดไป">
               <ChevronRight size={22} />
             </button>
           </div>
         ) : (
-          <p className="photo-fs-hint-solo">ปัดลง / กากบาท / ย้อนกลับ เพื่อปิด · แตะสองครั้งหรือบีบนิ้วเพื่อซูม</p>
+          <p className="photo-fs-hint-solo">ปัดลงหรือกากบาทเพื่อปิด</p>
         )}
         <div className="photo-fs-actions">
           <button

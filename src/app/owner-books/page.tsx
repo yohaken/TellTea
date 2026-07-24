@@ -14,6 +14,7 @@ import { Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useAuth } from "@/lib/auth";
@@ -77,9 +78,11 @@ function OwnerBooksView() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [editing, setEditing] = useState<OwnerBookEntry | null>(null);
   const [adding, setAdding] = useState(false);
-  const [imagePreview, setImagePreview] = useState<{ urls: string[]; title: string } | null>(
-    null,
-  );
+  const [imagePreview, setImagePreview] = useState<{
+    urls: string[];
+    title: string;
+    entryDateMs?: number;
+  } | null>(null);
   const [query, setQuery] = useState("");
   const [searchPool, setSearchPool] = useState<OwnerBookEntry[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -484,7 +487,11 @@ function OwnerBooksView() {
                             imageUrls={getOwnerBookReceiptUrls(row)}
                             label={row.description}
                             onView={(urls) =>
-                              setImagePreview({ urls, title: row.description })
+                              setImagePreview({
+                                urls,
+                                title: row.description,
+                                entryDateMs: row.date,
+                              })
                             }
                           />
                         ) : (
@@ -559,6 +566,8 @@ function OwnerBooksView() {
         <ImagePreviewModal
           urls={imagePreview.urls}
           title={imagePreview.title}
+          entryDateMs={imagePreview.entryDateMs}
+          showCaptureMeta
           onClose={() => setImagePreview(null)}
         />
       ) : null}
@@ -765,6 +774,13 @@ function OwnerEntryModal({
             <X size={18} />
           </button>
         </div>
+        {entry ? (
+          <EntryTimestampsMeta
+            entryDate={entry.date}
+            createdAt={entry.createdAt}
+            updatedAt={entry.updatedAt}
+          />
+        ) : null}
         {formError ? <p className="error-text ot-form-error">{formError}</p> : null}
         <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
           <div className="field">
@@ -816,14 +832,14 @@ function OwnerEntryModal({
           </div>
 
           <PhotoAttachMultiField
-            label="สลิป / รูปถ่าย"
+            label="รูป"
             values={receiptUrls}
             onChange={setReceiptUrls}
             onError={reportError}
             max={OWNER_BOOKS_RECEIPT_MAX}
             storageFolder="owner-books"
             storageSlotKey={`${mode}-${entry?.id || createdBy || "new"}`}
-            hint={`บันทึกไฟล์หลักฐานเข้าฐานข้อมูล · สูงสุด ${OWNER_BOOKS_RECEIPT_MAX} รูป`}
+            hint=""
           />
           {receiptUrls.length ? (
             <button
@@ -832,7 +848,7 @@ function OwnerEntryModal({
               style={{ marginBottom: "0.55rem" }}
               onClick={() => setPreviewUrls(receiptUrls)}
             >
-              ดูรูปทั้งหมด ({receiptUrls.length})
+              ดูรูป ({receiptUrls.length})
             </button>
           ) : null}
 
@@ -890,7 +906,13 @@ function OwnerEntryModal({
           </div>
         </form>
         {previewUrls ? (
-          <ImagePreviewModal urls={previewUrls} title="สลิป / รูปถ่าย" onClose={() => setPreviewUrls(null)} />
+          <ImagePreviewModal
+            urls={previewUrls}
+            title="รูป"
+            entryDateMs={entry?.date ?? parseDateInput(date)}
+            showCaptureMeta
+            onClose={() => setPreviewUrls(null)}
+          />
         ) : null}
       </div>
       {saveStage ? (

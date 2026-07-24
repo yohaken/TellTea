@@ -13,6 +13,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { BulkStatusToolbar } from "@/components/BulkStatusToolbar";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
@@ -773,6 +774,13 @@ function OtEntryForm({
           <X size={18} />
         </button>
       </div>
+      {entry ? (
+        <EntryTimestampsMeta
+          entryDate={entry.date}
+          createdAt={entry.createdAt}
+          updatedAt={entry.updatedAt}
+        />
+      ) : null}
 
       {formError ? <p className="error-text ot-form-error">{formError}</p> : null}
       {!formError && saveBlockedReason ? (
@@ -1014,18 +1022,16 @@ function OtEntryForm({
             values={imageUrls}
             onChange={setImageUrls}
             onError={reportError}
-            label="รูปสินค้า"
+            label="รูป"
             max={OT_IMAGE_MAX}
             storageFolder="ot-photos"
             storageSlotKey={`${date}_${shift}_${createdBy || entry?.id || "new"}`}
             hint={
               locked
-                ? imageUrls.length
-                  ? `${imageUrls.length} รูป · กดรูปเพื่อดู`
-                  : "ยังไม่มีรูป"
+                ? ""
                 : amendClosed
-                  ? `บันทึกหลักฐานเข้าฐานข้อมูล (สูงสุด ${OT_IMAGE_MAX} รูป) · กด «บันทึกการแก้ไข» เพื่อเซฟ`
-                  : `บันทึกหลักฐานเข้าฐานข้อมูล (สูงสุด ${OT_IMAGE_MAX} รูป) · ต้องกดบันทึกหลังติ๊กเช็คครบ`
+                  ? "กดบันทึกหลังแนบ"
+                  : "กดบันทึกหลังติ๊กเช็คครบ"
             }
             readOnly={locked}
             onPreview={(urls, index) => setFormPreview({ urls, index })}
@@ -1037,6 +1043,8 @@ function OtEntryForm({
             urls={formPreview.urls}
             initialIndex={formPreview.index}
             title="รูปสินค้า"
+            entryDateMs={entry?.date ?? parseDateInput(date)}
+            showCaptureMeta={isOwner}
             onClose={() => setFormPreview(null)}
           />
         ) : null}
@@ -1138,7 +1146,11 @@ function OtTable({
   const [tableView, setTableView] = useState<TableView>("sheet");
   const [statusFilter, setStatusFilter] = useState<OtStatus | "all">("all");
   const [mineOnly, setMineOnly] = useState(false);
-  const [preview, setPreview] = useState<{ urls: string[]; title: string } | null>(null);
+  const [preview, setPreview] = useState<{
+    urls: string[];
+    title: string;
+    entryDateMs?: number;
+  } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
 
@@ -1285,7 +1297,7 @@ function OtTable({
           }
           onEditSlot={onEditSlot}
           onError={onError}
-          onViewPhoto={(urls, title) => setPreview({ urls, title })}
+          onViewPhoto={(urls, title, entryDateMs) => setPreview({ urls, title, entryDateMs })}
         />
       ) : !filtered.length ? (
         <p className="empty">{entries.length ? "ไม่มีรายการตามตัวกรอง" : "ยังไม่มีรายการชง — แตะช่องว่างในตารางเพื่อเริ่ม"}</p>
@@ -1304,11 +1316,17 @@ function OtTable({
           }
           onEdit={onEdit}
           onError={onError}
-          onViewPhoto={(urls, title) => setPreview({ urls, title })}
+          onViewPhoto={(urls, title, entryDateMs) => setPreview({ urls, title, entryDateMs })}
         />
       )}
       {preview ? (
-        <ImagePreviewModal urls={preview.urls} title={preview.title} onClose={() => setPreview(null)} />
+        <ImagePreviewModal
+          urls={preview.urls}
+          title={preview.title}
+          entryDateMs={preview.entryDateMs}
+          showCaptureMeta={isOwner}
+          onClose={() => setPreview(null)}
+        />
       ) : null}
     </div>
   );
@@ -1341,7 +1359,7 @@ function OtSheetTable({
   onToggleAllVisible: () => void;
   onEditSlot: (target: OtSlotTarget) => void;
   onError: (msg: string) => void;
-  onViewPhoto: (urls: string[], title: string) => void;
+  onViewPhoto: (urls: string[], title: string, entryDateMs?: number) => void;
 }) {
   async function setStatus(row: OtEntry, status: OtStatus) {
     try {
@@ -1501,6 +1519,7 @@ function OtSheetTable({
                                 onViewPhoto(
                                   urls,
                                   `${formatDateShort(group.date)} ${slot.shiftLabel}`,
+                                  group.date,
                                 )
                               }
                               onAdd={
@@ -1636,7 +1655,7 @@ function OtCardList({
   onToggleRow: (id: string) => void;
   onEdit: (row: OtEntry) => void;
   onError: (msg: string) => void;
-  onViewPhoto: (urls: string[], title: string) => void;
+  onViewPhoto: (urls: string[], title: string, entryDateMs?: number) => void;
 }) {
   async function setStatus(row: OtEntry, status: OtStatus) {
     try {
@@ -1739,7 +1758,11 @@ function OtCardList({
                   imageUrls={getOtImageUrls(row)}
                   label={`${formatDateShort(row.date)} ${labelOtShift(row.shift)}`}
                   onView={(urls) =>
-                    onViewPhoto(urls, `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`)
+                    onViewPhoto(
+                      urls,
+                      `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`,
+                      row.date,
+                    )
                   }
                   onAdd={!isOtEntryLocked(row) ? () => onEdit(row) : undefined}
                 />

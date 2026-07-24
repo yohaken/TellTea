@@ -8,15 +8,14 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const pageSrc = readFileSync(join(root, "src/app/ledger/page.tsx"), "utf8");
+const metaSrc = readFileSync(join(root, "src/components/EntryTimestampsMeta.tsx"), "utf8");
 const cssSrc = readFileSync(join(root, "src/app/globals.css"), "utf8");
 const versionSrc = readFileSync(join(root, "src/lib/version.ts"), "utf8");
 
-assert.match(pageSrc, /formatDateTimeShort/);
-assert.match(pageSrc, /entryUpdatedAt/);
-assert.match(pageSrc, /วันที่รายการ/);
-assert.match(pageSrc, /อัปเดต/);
-assert.match(pageSrc, /entry-detail-meta/);
+assert.match(pageSrc, /EntryTimestampsMeta/);
+assert.match(metaSrc, /วันที่รายการ/);
+assert.match(metaSrc, /อัปเดต/);
 assert.match(cssSrc, /\.entry-detail-meta\b/);
-assert.match(versionSrc, /APP_BUILD\s*=\s*268/);
+assert.match(versionSrc, /APP_BUILD\s*=\s*269/);
 
 console.log("OK test-ledger-entry-timestamps");

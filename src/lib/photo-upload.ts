@@ -152,7 +152,7 @@ export async function uploadEvidencePhotos(
       totalBytes: file.size || 1,
       percent: 0,
       overallPercent: Math.round((i / total) * 100),
-      message: "กำลังเชื่อมต่อฐานข้อมูล…",
+      message: "กำลังเชื่อมต่อ…",
     });
 
     emit(options.onProgress, {
@@ -164,7 +164,7 @@ export async function uploadEvidencePhotos(
       totalBytes: file.size || 1,
       percent: 8,
       overallPercent: Math.round(((i + 0.08) / total) * 100),
-      message: `กำลังเตรียมไฟล์หลักฐาน (${i + 1}/${total})…`,
+      message: `เตรียมรูป (${i + 1}/${total})`,
     });
 
     try {
@@ -200,7 +200,7 @@ export async function uploadEvidencePhotos(
         totalBytes: file.size || 1,
         percent: 100,
         overallPercent: Math.round(((i + 1) / total) * 100),
-        message: `บันทึกรูปหลักฐานแล้ว (${i + 1}/${total})`,
+        message: `บันทึกแล้ว (${i + 1}/${total})`,
       });
       urls.push(refKey);
     } catch (err) {

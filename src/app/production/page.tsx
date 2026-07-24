@@ -13,6 +13,7 @@ import { BulkStatusToolbar } from "@/components/BulkStatusToolbar";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { ProdCatalogSetup } from "@/components/ProdCatalogSetup";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
@@ -358,6 +359,13 @@ function ProdEntryForm({
           <X size={18} />
         </button>
       </div>
+      {entry ? (
+        <EntryTimestampsMeta
+          entryDate={entry.date}
+          createdAt={entry.createdAt}
+          updatedAt={entry.updatedAt}
+        />
+      ) : null}
 
       {locked ? (
         <p className="muted form-hint-inline prod-locked-hint">
@@ -467,16 +475,17 @@ function ProdEntryForm({
         />
       </div>
 
-      {!locked ? (
+      {imageUrls.length || !locked ? (
         <PhotoAttachMultiField
           values={imageUrls}
           onChange={setImageUrls}
           onError={onError}
-          label="แนบรูป"
+          label="รูป"
           max={PROD_IMAGE_MAX}
           storageFolder="production"
           storageSlotKey={entry?.id || "new"}
-          hint={`บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${PROD_IMAGE_MAX} รูป`}
+          hint=""
+          readOnly={locked}
         />
       ) : null}
 
@@ -517,7 +526,11 @@ function ProdTable({
   onEdit: (row: ProdEntry) => void;
   onError: (msg: string | null) => void;
 }) {
-  const [preview, setPreview] = useState<{ urls: string[]; title: string } | null>(null);
+  const [preview, setPreview] = useState<{
+    urls: string[];
+    title: string;
+    entryDateMs?: number;
+  } | null>(null);
   const [month, setMonth] = useState(monthInputValue());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -693,7 +706,9 @@ function ProdTable({
                           imageUrl={row.imageUrl}
                           imageUrls={row.imageUrls}
                           label={row.productName}
-                          onView={(urls) => setPreview({ urls, title: row.productName })}
+                          onView={(urls) =>
+                            setPreview({ urls, title: row.productName, entryDateMs: row.date })
+                          }
                         />
                       </div>
                     </td>
@@ -751,7 +766,13 @@ function ProdTable({
         </div>
       )}
       {preview ? (
-        <ImagePreviewModal urls={preview.urls} title={preview.title} onClose={() => setPreview(null)} />
+        <ImagePreviewModal
+          urls={preview.urls}
+          title={preview.title}
+          entryDateMs={preview.entryDateMs}
+          showCaptureMeta={isOwner}
+          onClose={() => setPreview(null)}
+        />
       ) : null}
     </>
   );
