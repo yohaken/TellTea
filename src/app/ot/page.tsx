@@ -1027,7 +1027,7 @@ function OtEntryForm({
             values={imageUrls}
             onChange={setImageUrls}
             onError={reportError}
-            label="รูป"
+            label="ถ่ายรูป"
             max={OT_IMAGE_MAX}
             storageFolder="ot-photos"
             storageSlotKey={`${date}_${shift}_${createdBy || entry?.id || "new"}`}
@@ -1035,9 +1035,12 @@ function OtEntryForm({
               locked
                 ? ""
                 : amendClosed
-                  ? "กดบันทึกหลังแนบ"
-                  : "กดบันทึกหลังติ๊กเช็คครบ"
+                  ? "ถ่ายสดเท่านั้น · กดบันทึกหลังถ่าย"
+                  : "ถ่ายสดเท่านั้น · กดบันทึกหลังติ๊กเช็คครบ"
             }
+            allowCamera
+            allowGallery={false}
+            requireLiveCapture
             readOnly={locked}
             onPreview={(urls, index) => setFormPreview({ urls, index })}
           />

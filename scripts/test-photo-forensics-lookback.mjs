@@ -69,7 +69,7 @@ assert.doesNotMatch(
   /filtered\.map/,
 );
 assert.match(checklist, /10 วัน/);
-assert.match(version, /APP_BUILD\s*=\s*272/);
+assert.match(version, /APP_BUILD\s*=\s*273/);
 
 console.log("OK test-photo-forensics-lookback", {
   windowStart: startDay.toISOString().slice(0, 10),
