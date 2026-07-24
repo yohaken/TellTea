@@ -5,6 +5,9 @@ import {
 } from "./evidence-photos";
 import { photoDateMismatchHint } from "./image-capture-meta";
 
+/** Default owner retrospective window (inclusive of today). */
+export const PHOTO_FORENSICS_LOOKBACK_DAYS = 10;
+
 export type PhotoForensicsRowInput = {
   entryId: string;
   entryDate: number;
@@ -31,25 +34,58 @@ export type PhotoForensicsReport = {
   scannedEntries: number;
   scannedPhotos: number;
   photosWithCaptureMeta: number;
+  /** Inclusive lookback window used for this scan */
+  lookbackDays: number;
+  windowStart: number;
+  windowEnd: number;
 };
 
 function emptyFlags(): PhotoForensicsEntryFlags {
   return { dateMismatch: false, duplicateHash: false, hints: [] };
 }
 
+/** Local midnight of (today − (days−1)) so a 10-day window includes today. */
+export function lookbackWindowStartMs(
+  days: number = PHOTO_FORENSICS_LOOKBACK_DAYS,
+  now: number = Date.now(),
+): number {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  const n = Math.max(1, Math.floor(days));
+  d.setDate(d.getDate() - (n - 1));
+  return d.getTime();
+}
+
+export function filterRowsByLookback(
+  rows: PhotoForensicsRowInput[],
+  days: number = PHOTO_FORENSICS_LOOKBACK_DAYS,
+  now: number = Date.now(),
+): PhotoForensicsRowInput[] {
+  const start = lookbackWindowStartMs(days, now);
+  return rows.filter((r) => Number(r.entryDate) >= start);
+}
+
 /**
  * Scan evidence photos attached to rows (on-demand, owner).
  * Only `evp:` refs with stored meta can flag capture-date / hash duplicates.
  * Legacy https/data URLs are skipped (no meta).
+ * Upload-day mismatch still works for older evidencePhotos (createdAt always existed).
  */
 export async function scanPhotoForensics(
   rows: PhotoForensicsRowInput[],
+  options?: { lookbackDays?: number; now?: number },
 ): Promise<PhotoForensicsReport> {
+  const lookbackDays = options?.lookbackDays ?? PHOTO_FORENSICS_LOOKBACK_DAYS;
+  const now = options?.now ?? Date.now();
+  const windowStart = lookbackWindowStartMs(lookbackDays, now);
+  const windowEnd = now;
+  const scoped = filterRowsByLookback(rows, lookbackDays, now);
+
   const byEntryId: Record<string, PhotoForensicsEntryFlags> = {};
   const dateMismatch: PhotoForensicsReport["dateMismatch"] = [];
   const allRefs: string[] = [];
 
-  for (const row of rows) {
+  for (const row of scoped) {
     byEntryId[row.entryId] = emptyFlags();
     for (const u of row.imageUrls) {
       if (isEvidencePhotoRef(u)) allRefs.push(u);
@@ -59,11 +95,10 @@ export async function scanPhotoForensics(
   const metaByUrl = await getEvidencePhotoMetaMany(allRefs);
   let photosWithCaptureMeta = 0;
 
-  /** hash → entryIds that use it */
   const hashEntries = new Map<string, Set<string>>();
   const hashLabels = new Map<string, Set<string>>();
 
-  for (const row of rows) {
+  for (const row of scoped) {
     const flags = byEntryId[row.entryId]!;
     const hints = new Set<string>();
 
@@ -130,9 +165,12 @@ export async function scanPhotoForensics(
     byEntryId,
     dateMismatch,
     duplicates,
-    scannedEntries: rows.length,
+    scannedEntries: scoped.length,
     scannedPhotos: allRefs.length,
     photosWithCaptureMeta,
+    lookbackDays,
+    windowStart,
+    windowEnd,
   };
 }
 

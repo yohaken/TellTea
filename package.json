@@ -37,6 +37,7 @@
     "test:ledger-entry-timestamps": "node scripts/test-ledger-entry-timestamps.mjs",
     "test:photo-forensics-meta": "node scripts/test-photo-forensics-meta.mjs",
     "test:photo-forensics-report": "node scripts/test-photo-forensics-report.mjs",
+    "test:photo-forensics-lookback": "node scripts/test-photo-forensics-lookback.mjs",
     "test:ot-multi-photo": "node scripts/test-ot-multi-photo.mjs",
     "test:ot-photo-budget": "node scripts/test-ot-photo-budget.mjs",
     "test:ot-photo-save-amend": "node scripts/test-ot-photo-save-amend.mjs",

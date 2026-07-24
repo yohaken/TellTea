@@ -1203,18 +1203,18 @@ function OtTable({
 
   const forensicsRows = useMemo(
     () =>
-      filtered.map((row) => ({
+      entries.map((row) => ({
         entryId: row.id,
         entryDate: row.date,
         label: `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`,
         imageUrls: getOtImageUrls(row),
       })),
-    [filtered],
+    [entries],
   );
 
   useEffect(() => {
     setPhotoReport(null);
-  }, [statusFilter, mineOnly, tableView]);
+  }, [statusFilter, mineOnly, tableView, entries.length]);
 
   async function onBulkStatus(status: OtStatus) {
     const ids = [...selected];

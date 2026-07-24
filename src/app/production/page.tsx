@@ -551,18 +551,18 @@ function ProdTable({
 
   const forensicsRows = useMemo(
     () =>
-      filtered.map((row) => ({
+      entries.map((row) => ({
         entryId: row.id,
         entryDate: row.date,
         label: `${formatDateShort(row.date)} ${row.productName}`,
         imageUrls: getProdImageUrls(row),
       })),
-    [filtered],
+    [entries],
   );
 
   useEffect(() => {
     setPhotoReport(null);
-  }, [month]);
+  }, [month, entries.length]);
 
   const unpaidIds = useMemo(
     () => filtered.filter((r) => normalizeProdStatus(r.status) === "unpaid").map((r) => r.id),
