@@ -34,6 +34,7 @@
     "test:check-sop-settings-fold": "node scripts/test-check-sop-settings-fold.mjs",
     "test:ledger-type-labels-unify": "node scripts/test-ledger-type-labels-unify.mjs",
     "test:ledger-bulk-retype-owner": "node scripts/test-ledger-bulk-retype-owner.mjs",
+    "test:ledger-entry-timestamps": "node scripts/test-ledger-entry-timestamps.mjs",
     "test:ot-multi-photo": "node scripts/test-ot-multi-photo.mjs",
     "test:ot-photo-budget": "node scripts/test-ot-photo-budget.mjs",
     "test:ot-photo-save-amend": "node scripts/test-ot-photo-save-amend.mjs",

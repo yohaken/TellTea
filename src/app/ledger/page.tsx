@@ -55,7 +55,9 @@ import type { LedgerEntry } from "@/lib/types";
 import { filterLedgerRows } from "@/lib/smart-search";
 import {
   formatDateShort,
+  formatDateTimeShort,
   formatPlainNumber,
+  entryUpdatedAt,
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
@@ -1136,6 +1138,17 @@ function EditEntryModal({
             <X size={18} />
           </button>
         </div>
+        <p className="entry-detail-meta muted" aria-live="polite">
+          <span>
+            วันที่รายการ <strong>{formatDateShort(entry.date)}</strong>
+          </span>
+          <span aria-hidden className="entry-detail-meta-sep">
+            ·
+          </span>
+          <span>
+            อัปเดต <strong>{formatDateTimeShort(entryUpdatedAt(entry))}</strong>
+          </span>
+        </p>
         <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
           <div className="field">
             <label htmlFor="edit-date">วันที่</label>

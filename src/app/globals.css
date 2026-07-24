@@ -4960,6 +4960,25 @@ body.modal-open .main-panel {
   backdrop-filter: none;
 }
 
+.entry-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.4rem;
+  margin: -0.15rem 0 0.55rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.entry-detail-meta strong {
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.78);
+}
+
+.entry-detail-meta-sep {
+  opacity: 0.45;
+}
+
 .modal-backdrop.edit-modal .form-card.entry-form {
   background: transparent;
   box-shadow: none;
