@@ -40,6 +40,6 @@ assert.match(ot, /showCaptureMeta=\{isOwner\}/);
 assert.match(owner, /EntryTimestampsMeta/);
 assert.match(ledger, /EntryTimestampsMeta/);
 assert.match(checklist, /Phase 2/);
-assert.match(version, /APP_BUILD\s*=\s*271/);
+assert.match(version, /APP_BUILD\s*=\s*272/);
 
 console.log("OK test-photo-forensics-meta");

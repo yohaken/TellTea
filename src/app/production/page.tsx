@@ -485,11 +485,14 @@ function ProdEntryForm({
           values={imageUrls}
           onChange={setImageUrls}
           onError={onError}
-          label="รูป"
+          label="ถ่ายรูป"
           max={PROD_IMAGE_MAX}
           storageFolder="production"
           storageSlotKey={entry?.id || "new"}
-          hint=""
+          hint="ถ่ายสดจากกล้องเท่านั้น — ห้ามแนบจากแกลเลอรี"
+          allowCamera
+          allowGallery={false}
+          requireLiveCapture
           readOnly={locked}
         />
       ) : null}

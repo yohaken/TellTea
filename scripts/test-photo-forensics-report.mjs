@@ -19,6 +19,6 @@ assert.match(read("src/app/production/page.tsx"), /PhotoForensicsPanel/);
 assert.match(read("src/app/ot/page.tsx"), /PhotoForensicsPanel/);
 assert.match(read("src/app/globals.css"), /photo-forensics-panel/);
 assert.match(read("docs/photo-forensics-checklist.md"), /Phase 4/);
-assert.match(read("src/lib/version.ts"), /APP_BUILD\s*=\s*271/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD\s*=\s*272/);
 
 console.log("OK test-photo-forensics-report");

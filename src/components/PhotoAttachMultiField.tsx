@@ -33,6 +33,13 @@ export function PhotoAttachMultiField({
   storageSlotKey,
   hint,
   allowCamera = true,
+  /** When false, hide gallery attach (camera only) */
+  allowGallery = true,
+  /**
+   * Soft guard: reject files with lastModified older than a few minutes
+   * (desktop often ignores capture= and still opens a picker).
+   */
+  requireLiveCapture = false,
   readOnly = false,
   onPreview,
 }: {
@@ -50,6 +57,8 @@ export function PhotoAttachMultiField({
   /** คำอธิบายสั้นใต้ป้าย — ไม่ส่ง = ค่าเริ่มสั้น · ส่ง "" = ซ่อน */
   hint?: string;
   allowCamera?: boolean;
+  allowGallery?: boolean;
+  requireLiveCapture?: boolean;
   readOnly?: boolean;
   onPreview?: (urls: string[], index: number) => void;
 }) {
@@ -151,7 +160,25 @@ export function PhotoAttachMultiField({
   async function onFiles(fileList: FileList | null | undefined) {
     if (readOnly) return;
     if (!fileList?.length) return;
-    const files = [...fileList];
+    let files = [...fileList];
+    if (requireLiveCapture) {
+      const maxAgeMs = 5 * 60 * 1000;
+      const now = Date.now();
+      const fresh = files.filter((f) => {
+        const m = Number(f.lastModified) || 0;
+        return m > 0 && now - m <= maxAgeMs;
+      });
+      if (!fresh.length) {
+        onError?.("ต้องถ่ายสดจากกล้อง — ห้ามเลือกรูปเก่าจากแกลเลอรี");
+        if (galleryRef.current) galleryRef.current.value = "";
+        if (cameraRef.current) cameraRef.current.value = "";
+        return;
+      }
+      if (fresh.length < files.length) {
+        onError?.("ข้ามรูปเก่าแล้ว — ใช้เฉพาะรูปที่ถ่ายสด");
+      }
+      files = fresh;
+    }
     const room = max - values.length;
     if (room <= 0) {
       onError?.(`แนบได้สูงสุด ${max} รูป`);
@@ -220,6 +247,7 @@ export function PhotoAttachMultiField({
   }
 
   const full = values.length >= max;
+  const cameraOnly = allowCamera && !allowGallery;
   const hintText =
     hint === ""
       ? ""
@@ -228,7 +256,9 @@ export function PhotoAttachMultiField({
           ? values.length
             ? `${values.length}/${max}`
             : ""
-          : `สูงสุด ${max}`);
+          : cameraOnly
+            ? "ถ่ายสดเท่านั้น"
+            : `สูงสุด ${max}`);
 
   return (
     <div className="field photo-attach-field photo-attach-multi">
@@ -257,20 +287,22 @@ export function PhotoAttachMultiField({
               )}
             </button>
           ) : null}
-          <button
-            type="button"
-            className={allowCamera ? "ghost-btn" : "primary-btn"}
-            disabled={busy || full || (evidenceMode && !online)}
-            onClick={() => galleryRef.current?.click()}
-          >
-            {busy && !allowCamera ? (
-              "…"
-            ) : (
-              <>
-                <Plus size={16} aria-hidden /> แนบ
-              </>
-            )}
-          </button>
+          {allowGallery ? (
+            <button
+              type="button"
+              className={allowCamera ? "ghost-btn" : "primary-btn"}
+              disabled={busy || full || (evidenceMode && !online)}
+              onClick={() => galleryRef.current?.click()}
+            >
+              {busy && !allowCamera ? (
+                "…"
+              ) : (
+                <>
+                  <Plus size={16} aria-hidden /> แนบ
+                </>
+              )}
+            </button>
+          ) : null}
         </div>
       ) : null}
       {values.length ? (
@@ -310,7 +342,7 @@ export function PhotoAttachMultiField({
           onChange={(e) => void onFiles(e.target.files)}
         />
       ) : null}
-      {!readOnly ? (
+      {!readOnly && allowGallery ? (
         <input
           ref={galleryRef}
           type="file"
