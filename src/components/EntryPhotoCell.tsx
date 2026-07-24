@@ -30,6 +30,8 @@ export function EntryPhotoIndicator({
   label,
   onView,
   onAdd,
+  flagged,
+  flagTitle,
 }: {
   imageUrl?: string;
   imageUrls?: string[];
@@ -37,15 +39,18 @@ export function EntryPhotoIndicator({
   onView?: (urls: string[], index?: number) => void;
   /** เมื่อยังไม่มีรูป — แสดงปุ่ม + เพื่อเปิดฟอร์มเพิ่มรูป */
   onAdd?: () => void;
+  /** Owner forensics: tint + warn title */
+  flagged?: boolean;
+  flagTitle?: string;
 }) {
   const urls = resolvePhotoUrls(imageUrl, imageUrls);
   if (urls.length) {
     return (
       <button
         type="button"
-        className="photo-status has-photo"
+        className={flagged ? "photo-status has-photo is-flagged" : "photo-status has-photo"}
         onClick={() => onView?.(urls, 0)}
-        title={`มี ${urls.length} รูป — แตะดู`}
+        title={flagTitle || `มี ${urls.length} รูป — แตะดู`}
         aria-label={`มีรูป ${urls.length} รูป ${label}`}
         data-count={urls.length}
       >

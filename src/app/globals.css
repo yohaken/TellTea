@@ -4374,6 +4374,70 @@ body.modal-open .main-panel {
   position: relative;
 }
 
+.photo-status.has-photo.is-flagged {
+  color: #9a3412;
+  background: rgba(254, 215, 170, 0.55);
+}
+
+.photo-status.has-photo.is-flagged .photo-status-count {
+  background: #c2410c;
+}
+
+.sheet-table tr.is-photo-flag td {
+  background: rgba(254, 215, 170, 0.22);
+}
+
+.ot-card.is-photo-flag {
+  box-shadow: inset 0 0 0 1px rgba(194, 65, 12, 0.35);
+  background: rgba(254, 215, 170, 0.18);
+}
+
+.photo-forensics-panel {
+  margin: 0.35rem 0 0.55rem;
+}
+
+.photo-forensics-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.photo-forensics-hint {
+  font-size: 0.62rem;
+}
+
+.photo-forensics-body {
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.55rem;
+  background: rgba(247, 243, 232, 0.85);
+  border: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.photo-forensics-summary {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+}
+
+.photo-forensics-list {
+  margin: 0.2rem 0 0;
+  padding: 0 0 0 1rem;
+  font-size: 0.72rem;
+}
+
+.photo-forensics-list li {
+  margin: 0.15rem 0;
+}
+
+.photo-forensics-tag {
+  display: inline-block;
+  margin-right: 0.25rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #9a3412;
+}
+
 .photo-status-count {
   position: absolute;
   top: -0.2rem;

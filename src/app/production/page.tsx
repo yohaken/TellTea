@@ -15,10 +15,15 @@ import { ProdCatalogSetup } from "@/components/ProdCatalogSetup";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
+import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { isInMonth, monthInputValue, parseMonthInput } from "@/lib/bonus";
 import { can } from "@/lib/permissions";
+import {
+  entryHasPhotoFlag,
+  type PhotoForensicsReport,
+} from "@/lib/photo-forensics-scan";
 import {
   addProdEntry,
   bulkUpdateProdEntryStatus,
@@ -534,6 +539,7 @@ function ProdTable({
   const [month, setMonth] = useState(monthInputValue());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [photoReport, setPhotoReport] = useState<PhotoForensicsReport | null>(null);
 
   useBodyScrollLock(!!preview);
 
@@ -542,6 +548,21 @@ function ProdTable({
     () => (isOwner ? entries.filter((row) => isInMonth(row.date, year, monthIdx)) : entries),
     [entries, isOwner, year, monthIdx],
   );
+
+  const forensicsRows = useMemo(
+    () =>
+      filtered.map((row) => ({
+        entryId: row.id,
+        entryDate: row.date,
+        label: `${formatDateShort(row.date)} ${row.productName}`,
+        imageUrls: getProdImageUrls(row),
+      })),
+    [filtered],
+  );
+
+  useEffect(() => {
+    setPhotoReport(null);
+  }, [month]);
 
   const unpaidIds = useMemo(
     () => filtered.filter((r) => normalizeProdStatus(r.status) === "unpaid").map((r) => r.id),
@@ -634,6 +655,17 @@ function ProdTable({
         />
       ) : null}
 
+      {isOwner ? (
+        <PhotoForensicsPanel
+          rows={forensicsRows}
+          onReport={setPhotoReport}
+          onPickEntry={(id) => {
+            const row = filtered.find((r) => r.id === id);
+            if (row) onEdit(row);
+          }}
+        />
+      ) : null}
+
       {!filtered.length && isOwner ? (
         <p className="empty">ไม่มีรายการในเดือนนี้</p>
       ) : (
@@ -678,8 +710,18 @@ function ProdTable({
               {(isOwner ? filtered : entries).map((row) => {
                 const c = computeProdBonus(row);
                 const locked = isProdEntryLocked(row);
+                const photoFlagged = isOwner && entryHasPhotoFlag(photoReport, row.id);
+                const flagHints = photoReport?.byEntryId[row.id]?.hints || [];
                 return (
-                  <tr key={row.id} className={locked ? "row-out prod-row-paid" : "row-out"}>
+                  <tr
+                    key={row.id}
+                    className={[
+                      locked ? "row-out prod-row-paid" : "row-out",
+                      photoFlagged ? "is-photo-flag" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
                     {isOwner ? (
                       <td className="col-act bulk-check-col">
                         <input
@@ -706,6 +748,8 @@ function ProdTable({
                           imageUrl={row.imageUrl}
                           imageUrls={row.imageUrls}
                           label={row.productName}
+                          flagged={photoFlagged}
+                          flagTitle={flagHints.join(" · ") || undefined}
                           onView={(urls) =>
                             setPreview({ urls, title: row.productName, entryDateMs: row.date })
                           }

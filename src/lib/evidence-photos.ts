@@ -145,6 +145,21 @@ export async function getEvidencePhotoMeta(url: string): Promise<EvidencePhotoMe
   return meta;
 }
 
+/** Batch meta fetch (dedupes refs; uses cache). */
+export async function getEvidencePhotoMetaMany(
+  urls: string[],
+): Promise<Map<string, EvidencePhotoMeta>> {
+  const out = new Map<string, EvidencePhotoMeta>();
+  const unique = [...new Set(urls.map((u) => String(u || "").trim()).filter(Boolean))];
+  await Promise.all(
+    unique.map(async (url) => {
+      const meta = await getEvidencePhotoMeta(url);
+      if (meta) out.set(url, meta);
+    }),
+  );
+  return out;
+}
+
 /** Resolve an `evp:` ref (or pass-through https/data URL) to an img-displayable src. */
 export async function resolveEvidencePhotoSrc(url: string): Promise<string> {
   const raw = String(url || "").trim();

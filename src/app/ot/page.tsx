@@ -15,10 +15,15 @@ import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
+import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
+import {
+  entryHasPhotoFlag,
+  type PhotoForensicsReport,
+} from "@/lib/photo-forensics-scan";
 import {
   OT_SHIFTS,
   OT_IMAGE_MAX,
@@ -1153,6 +1158,7 @@ function OtTable({
   } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [photoReport, setPhotoReport] = useState<PhotoForensicsReport | null>(null);
 
   useBodyScrollLock(!!preview);
 
@@ -1194,6 +1200,21 @@ function OtTable({
   const visibleIds = useMemo(() => filtered.map((r) => r.id), [filtered]);
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
   const someSelected = selected.size > 0;
+
+  const forensicsRows = useMemo(
+    () =>
+      filtered.map((row) => ({
+        entryId: row.id,
+        entryDate: row.date,
+        label: `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`,
+        imageUrls: getOtImageUrls(row),
+      })),
+    [filtered],
+  );
+
+  useEffect(() => {
+    setPhotoReport(null);
+  }, [statusFilter, mineOnly, tableView]);
 
   async function onBulkStatus(status: OtStatus) {
     const ids = [...selected];
@@ -1274,6 +1295,17 @@ function OtTable({
         />
       ) : null}
 
+      {isOwner ? (
+        <PhotoForensicsPanel
+          rows={forensicsRows}
+          onReport={setPhotoReport}
+          onPickEntry={(id) => {
+            const row = filtered.find((r) => r.id === id);
+            if (row) onEdit(row);
+          }}
+        />
+      ) : null}
+
       {tableView === "sheet" ? (
         <OtSheetTable
           groups={dateGroups}
@@ -1281,6 +1313,7 @@ function OtTable({
           openingItems={openingItems}
           closingItems={closingItems}
           isOwner={isOwner}
+          photoReport={photoReport}
           selected={selected}
           allVisibleSelected={allVisibleSelected}
           someSelected={someSelected}
@@ -1305,6 +1338,7 @@ function OtTable({
         <OtCardList
           entries={sortOtEntries(filtered)}
           isOwner={isOwner}
+          photoReport={photoReport}
           selected={selected}
           onToggleRow={(id) =>
             setSelected((prev) => {
@@ -1338,6 +1372,7 @@ function OtSheetTable({
   openingItems,
   closingItems,
   isOwner,
+  photoReport,
   selected,
   allVisibleSelected,
   someSelected,
@@ -1352,6 +1387,7 @@ function OtSheetTable({
   openingItems: ChecklistItem[];
   closingItems: ChecklistItem[];
   isOwner: boolean;
+  photoReport: PhotoForensicsReport | null;
   selected: Set<string>;
   allVisibleSelected: boolean;
   someSelected: boolean;
@@ -1445,33 +1481,36 @@ function OtSheetTable({
                     : slotStatus === "partial"
                       ? "ค้าง"
                       : null;
+                const photoFlagged =
+                  isOwner && !!row && entryHasPhotoFlag(photoReport, row.id);
+                const photoFlagHints = row ? photoReport?.byEntryId[row.id]?.hints || [] : [];
 
-                return (
-                  <tr
-                    key={`${group.date}-${slot.shiftId}`}
-                    className={
-                      isEmpty
+                const rowClass = isEmpty
+                  ? futureDay
+                    ? "ot-slot-empty ot-day-future row-out"
+                    : "ot-slot-empty row-out"
+                  : slotStatus === "planned"
+                    ? futureDay
+                      ? "ot-slot-planned ot-day-future row-out"
+                      : "ot-slot-planned row-out"
+                    : slotStatus === "partial"
+                      ? futureDay
+                        ? "ot-slot-partial ot-day-future row-out"
+                        : "ot-slot-partial row-out"
+                      : slotStatus === "complete"
                         ? futureDay
-                          ? "ot-slot-empty ot-day-future row-out"
-                          : "ot-slot-empty row-out"
-                        : slotStatus === "planned"
-                          ? futureDay
-                            ? "ot-slot-planned ot-day-future row-out"
-                            : "ot-slot-planned row-out"
-                        : slotStatus === "partial"
-                          ? futureDay
-                            ? "ot-slot-partial ot-day-future row-out"
-                            : "ot-slot-partial row-out"
-                        : slotStatus === "complete"
-                          ? futureDay
-                            ? "ot-slot-complete ot-day-future row-out"
-                            : "ot-slot-complete row-out"
+                          ? "ot-slot-complete ot-day-future row-out"
+                          : "ot-slot-complete row-out"
                         : isOtEntryLocked(row!)
                           ? "row-out prod-row-paid"
                           : futureDay
                             ? "ot-day-future row-out"
-                            : "row-out"
-                    }
+                            : "row-out";
+
+                return (
+                  <tr
+                    key={`${group.date}-${slot.shiftId}`}
+                    className={photoFlagged ? `${rowClass} is-photo-flag` : rowClass}
                   >
                     {isOwner ? (
                       <td className="col-act bulk-check-col">
@@ -1515,6 +1554,8 @@ function OtSheetTable({
                             <EntryPhotoIndicator
                               imageUrls={getOtImageUrls(row!)}
                               label={`${formatDateShort(group.date)} ${slot.shiftLabel}`}
+                              flagged={photoFlagged}
+                              flagTitle={photoFlagHints.join(" · ") || undefined}
                               onView={(urls) =>
                                 onViewPhoto(
                                   urls,
@@ -1643,6 +1684,7 @@ function OtSheetTable({
 function OtCardList({
   entries,
   isOwner,
+  photoReport,
   selected,
   onToggleRow,
   onEdit,
@@ -1651,6 +1693,7 @@ function OtCardList({
 }: {
   entries: OtEntry[];
   isOwner: boolean;
+  photoReport: PhotoForensicsReport | null;
   selected: Set<string>;
   onToggleRow: (id: string) => void;
   onEdit: (row: OtEntry) => void;
@@ -1693,7 +1736,15 @@ function OtCardList({
         ];
 
         return (
-          <article key={row.id} className={isOtEntryLocked(row) ? "ot-card prod-row-paid" : "ot-card"}>
+          <article
+            key={row.id}
+            className={[
+              isOtEntryLocked(row) ? "ot-card prod-row-paid" : "ot-card",
+              isOwner && entryHasPhotoFlag(photoReport, row.id) ? "is-photo-flag" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
             <header className="ot-card-head">
               <div className="ot-card-meta">
                 {isOwner ? (
@@ -1757,6 +1808,8 @@ function OtCardList({
                 <EntryPhotoIndicator
                   imageUrls={getOtImageUrls(row)}
                   label={`${formatDateShort(row.date)} ${labelOtShift(row.shift)}`}
+                  flagged={isOwner && entryHasPhotoFlag(photoReport, row.id)}
+                  flagTitle={photoReport?.byEntryId[row.id]?.hints?.join(" · ") || undefined}
                   onView={(urls) =>
                     onViewPhoto(
                       urls,

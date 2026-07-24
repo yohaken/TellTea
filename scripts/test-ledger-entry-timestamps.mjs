@@ -16,6 +16,6 @@ assert.match(pageSrc, /EntryTimestampsMeta/);
 assert.match(metaSrc, /วันที่รายการ/);
 assert.match(metaSrc, /อัปเดต/);
 assert.match(cssSrc, /\.entry-detail-meta\b/);
-assert.match(versionSrc, /APP_BUILD\s*=\s*269/);
+assert.match(versionSrc, /APP_BUILD\s*=\s*270/);
 
 console.log("OK test-ledger-entry-timestamps");
