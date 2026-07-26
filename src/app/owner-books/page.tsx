@@ -41,6 +41,7 @@ import {
   updateOwnerBookEntry,
   type OwnerBookEntry,
 } from "@/lib/owner-books";
+import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
   formatBaht,
@@ -618,6 +619,20 @@ function OwnerEntryModal({
     entry?.type ? "ready" : "idle",
   );
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [extractStatus, setExtractStatus] = useState<"idle" | "loading" | "ready" | "error">(
+    "idle",
+  );
+  const [extractError, setExtractError] = useState<string | null>(null);
+  const lastExtractKeyRef = useRef("");
+  const extractBusyRef = useRef(false);
+  const descriptionRef = useRef(description);
+  const amountRef = useRef(amount);
+  const noteRef = useRef(note);
+  const ownerLockedRef = useRef(ownerLocked);
+  descriptionRef.current = description;
+  amountRef.current = amount;
+  noteRef.current = note;
+  ownerLockedRef.current = ownerLocked;
 
   const filteredSuggestions = useMemo(() => {
     const q = description.trim().toLowerCase();
@@ -666,6 +681,57 @@ function OwnerEntryModal({
       setPreviewStatus("error");
       setPreviewError((err as Error).message || "AI ไม่พร้อม");
     }
+  }
+
+  async function runExtractFromPhotos(urls: string[]) {
+    const refs = urls.map((u) => String(u || "").trim()).filter(Boolean).slice(0, 2);
+    if (!refs.length) return;
+    const key = refs.join("|");
+    if (key === lastExtractKeyRef.current || extractBusyRef.current) return;
+    extractBusyRef.current = true;
+    setExtractStatus("loading");
+    setExtractError(null);
+    try {
+      const result = await extractOwnerBookFromReceipt(refs);
+      lastExtractKeyRef.current = key;
+      if (result.date) setDate(result.date);
+      if (result.description) {
+        if (mode === "add" || !descriptionRef.current.trim()) {
+          setDescription(result.description);
+        }
+      }
+      if (result.amountOut != null) {
+        if (mode === "add" || !amountRef.current.trim()) {
+          setAmount(String(result.amountOut));
+        }
+      }
+      if (result.note) {
+        if (mode === "add" || !noteRef.current.trim()) {
+          setNote(result.note);
+        }
+      }
+      if (!ownerLockedRef.current && result.type) {
+        setTypeMode("auto");
+        setPreviewType(result.type);
+        setPreviewReason(result.reason || "อ่านจากรูปใบเสร็จ");
+        setPreviewSource("ai");
+        setPreviewStatus("ready");
+        setPreviewError(null);
+      }
+      setExtractStatus("ready");
+    } catch (err) {
+      setExtractStatus("error");
+      setExtractError((err as Error).message || "อ่านใบเสร็จไม่สำเร็จ");
+    } finally {
+      extractBusyRef.current = false;
+    }
+  }
+
+  function onReceiptUrlsChange(next: string[]) {
+    const prev = receiptUrls;
+    setReceiptUrls(next);
+    const added = next.some((u) => !prev.includes(u));
+    if (added) void runExtractFromPhotos(next);
   }
 
   async function onSave(e: FormEvent) {
@@ -783,6 +849,48 @@ function OwnerEntryModal({
         ) : null}
         {formError ? <p className="error-text ot-form-error">{formError}</p> : null}
         <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
+          <PhotoAttachMultiField
+            label="รูปใบเสร็จ"
+            values={receiptUrls}
+            onChange={onReceiptUrlsChange}
+            onError={reportError}
+            max={OWNER_BOOKS_RECEIPT_MAX}
+            storageFolder="owner-books"
+            storageSlotKey={`${mode}-${entry?.id || createdBy || "new"}`}
+            hint="ถ่ายหรือแนบ — AI ใส่วันที่ รายการ และยอดให้อัตโนมัติ"
+          />
+          {extractStatus === "loading" ? (
+            <p className="muted form-hint-inline">AI กำลังอ่านใบเสร็จ…</p>
+          ) : null}
+          {extractStatus === "ready" ? (
+            <p className="muted form-hint-inline">อ่านจากรูปแล้ว — ตรวจก่อนบันทึกได้</p>
+          ) : null}
+          {extractStatus === "error" && extractError ? (
+            <p className="error-text ot-form-error">{extractError}</p>
+          ) : null}
+          {receiptUrls.length ? (
+            <div className="entry-actions" style={{ marginBottom: "0.55rem" }}>
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => setPreviewUrls(receiptUrls)}
+              >
+                ดูรูป ({receiptUrls.length})
+              </button>
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={extractStatus === "loading" || busy}
+                onClick={() => {
+                  lastExtractKeyRef.current = "";
+                  void runExtractFromPhotos(receiptUrls);
+                }}
+              >
+                {extractStatus === "loading" ? "กำลังอ่าน…" : "อ่านจากรูปอีกครั้ง"}
+              </button>
+            </div>
+          ) : null}
+
           <div className="field">
             <label htmlFor="ob-date">วันที่</label>
             <input
@@ -830,27 +938,6 @@ function OwnerEntryModal({
               required
             />
           </div>
-
-          <PhotoAttachMultiField
-            label="รูป"
-            values={receiptUrls}
-            onChange={setReceiptUrls}
-            onError={reportError}
-            max={OWNER_BOOKS_RECEIPT_MAX}
-            storageFolder="owner-books"
-            storageSlotKey={`${mode}-${entry?.id || createdBy || "new"}`}
-            hint=""
-          />
-          {receiptUrls.length ? (
-            <button
-              type="button"
-              className="ghost-btn"
-              style={{ marginBottom: "0.55rem" }}
-              onClick={() => setPreviewUrls(receiptUrls)}
-            >
-              ดูรูป ({receiptUrls.length})
-            </button>
-          ) : null}
 
           <LedgerTypeField
             id="ob-type"
