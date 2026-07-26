@@ -16,6 +16,7 @@ import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgre
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
+import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -290,36 +291,27 @@ function OwnerBooksView() {
   if (!can(staff, "ownerBooks")) return null;
 
   return (
-    <div>
-      <div className="balance-bar">
-        <span>รวมออก · บช.เจ้าของ</span>
+    <div className="owner-books-page module-page">
+      <div className="balance-bar owner-books-balance">
+        <span>รวมออก</span>
         <strong>{totalOut == null ? "…" : formatBaht(totalOut)}</strong>
-      </div>
-
-      <div className="btn-row pnl-toolbar">
         <button
           type="button"
-          className="primary-btn action-out"
-          onClick={() => setAdding(true)}
-        >
-          บันทึกเงินออก
-        </button>
-        <button
-          type="button"
-          className="primary-btn"
+          className="owner-books-export-link"
           disabled={exporting || loading || (!entries.length && !searchPool?.length)}
           onClick={() => void onExportTables()}
+          title="ส่งออก Excel (ใช้ไม่บ่อย)"
         >
-          {exporting ? "กำลังส่งออก..." : "ส่งออกตาราง Excel"}
+          {exporting ? "…" : "Excel"}
         </button>
       </div>
 
-      <div className="table-search">
+      <div className="table-search owner-books-search">
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="ค้นหา รายการ / ประเภท / note / ยอด / วันที่…"
+          placeholder="ค้นหา…"
           autoComplete="off"
           enterKeyHint="search"
           aria-label="ค้นหาในตาราง"
@@ -347,29 +339,21 @@ function OwnerBooksView() {
         <div className="owner-calc-summary" aria-live="polite">
           <p className="owner-calc-line">
             <span>
-              {deferredQuery ? "ผลค้นหา" : "รายการที่แสดง"}
-              {" · "}
-              นับ {calcSummary.includedCount} รายการ
-              {!deferredQuery && hasMore ? " (โหลดเพิ่มได้)" : null}
+              นับ {calcSummary.includedCount}
+              {!deferredQuery && hasMore ? "+" : ""}
+              {calcSummary.excludedCount > 0
+                ? ` · ไม่นับ ${calcSummary.excludedCount}`
+                : ""}
             </span>
             <strong>{formatBaht(calcSummary.includedSum)}</strong>
           </p>
-          {calcSummary.excludedCount > 0 ? (
-            <p className="owner-calc-line owner-calc-excluded muted">
-              <span>
-                ไม่นับ {calcSummary.excludedCount} รายการ (−{formatBaht(calcSummary.excludedSum)})
-              </span>
-            </p>
-          ) : null}
-          <div className="owner-calc-actions">
-            {excludedIds.size > 0 ? (
+          {excludedIds.size > 0 ? (
+            <div className="owner-calc-actions">
               <button type="button" className="ghost-btn owner-calc-clear" onClick={clearExcluded}>
                 ล้างการไม่รวม
               </button>
-            ) : (
-              <span className="owner-calc-hint muted">ติ๊ก «ไม่รวม» เพื่อหักออกจากยอดชั่วคราว</span>
-            )}
-          </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -410,9 +394,7 @@ function OwnerBooksView() {
               </button>
             </div>
           ) : (
-            <p className="muted bulk-status-hint">
-              ติ๊กเลือกด้านหน้าหลายแถว → กดปุ่มประเภทเพื่อจัดใหม่พร้อมกัน
-            </p>
+            <p className="muted bulk-status-hint">ติ๊กหลายแถว แล้วกดประเภท</p>
           )}
         </div>
       ) : null}
@@ -578,6 +560,14 @@ function OwnerBooksView() {
           onClose={() => setImagePreview(null)}
         />
       ) : null}
+
+      <ModuleTabDock
+        ariaLabel="บันทึกเงินออก"
+        formOpen={adding}
+        onAdd={() => setAdding(true)}
+        addLabel="บันทึกเงินออก"
+        variant="glass-out"
+      />
     </div>
   );
 }

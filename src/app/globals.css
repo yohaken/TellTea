@@ -1862,6 +1862,95 @@ body.modal-open .main-panel {
   text-decoration-color: rgba(28, 42, 31, 0.35);
 }
 
+/* Owner-books page chrome — compact, export de-emphasized */
+.owner-books-balance {
+  margin-bottom: 0.35rem;
+  padding: 0.28rem 0.45rem;
+  gap: 0.45rem;
+}
+
+.owner-books-balance > span {
+  font-size: 0.68rem;
+}
+
+.owner-books-balance strong {
+  font-size: 0.92rem;
+  margin-left: auto;
+}
+
+.owner-books-export-link {
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  padding: 0.1rem 0.2rem;
+  margin: 0;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.38);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.owner-books-export-link:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.owner-books-export-link:not(:disabled):active {
+  color: rgba(28, 42, 31, 0.62);
+}
+
+.owner-books-page .owner-books-search {
+  margin-bottom: 0.3rem;
+}
+
+.owner-books-page .owner-books-search input[type="search"] {
+  min-height: 2rem;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.84rem;
+  border-radius: 0.65rem;
+}
+
+.owner-books-page .owner-books-search .table-search-clear {
+  min-height: 2rem;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.owner-books-page .table-search-meta {
+  margin-bottom: 0.35rem;
+  font-size: 0.72rem;
+}
+
+.owner-books-page .owner-calc-summary {
+  margin-bottom: 0.35rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.65rem;
+}
+
+.owner-books-page .owner-calc-line {
+  font-size: 0.76rem;
+}
+
+.owner-books-page .owner-calc-line strong {
+  font-size: 0.9rem;
+}
+
+.owner-books-page .owner-calc-actions {
+  margin-top: 0.2rem;
+}
+
+.owner-books-page .bulk-status-toolbar {
+  margin-bottom: 0.35rem;
+}
+
+.owner-books-page .bulk-status-hint {
+  font-size: 0.7rem;
+  margin: 0.2rem 0 0;
+}
+
 /* Owner-books table: readable on narrow phones */
 .owner-books-table.sheet-table {
   font-size: 0.84rem;
