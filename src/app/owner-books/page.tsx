@@ -25,7 +25,12 @@ import {
   resolveStoredTypeSource,
   type LedgerTypeSource,
 } from "@/lib/ledger-ai";
-import { BASE_TYPE_OPTIONS, frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
+import {
+  BASE_TYPE_OPTIONS,
+  frequentTypes,
+  labelLedgerType,
+  shortLabelLedgerType,
+} from "@/lib/ledger-labels";
 import {
   addOwnerBookEntry,
   bulkUpdateOwnerBookTypes,
@@ -416,8 +421,8 @@ function OwnerBooksView() {
         <p className="empty">ยังไม่มีรายการ — กดบันทึกเงินออกเพื่อเริ่ม</p>
       ) : !loading ? (
         <>
-          <div className="sheet-wrap">
-            <table className="sheet-table">
+          <div className="sheet-wrap owner-books-sheet">
+            <table className="sheet-table owner-books-table">
               <thead>
                 <tr>
                   <th className="bulk-check-col" aria-label="เลือก">
@@ -435,7 +440,7 @@ function OwnerBooksView() {
                   <th className="col-date">วันที่</th>
                   <th className="col-desc">รายการ</th>
                   <th className="col-out">ออก</th>
-                  <th className="col-act">ประเภท</th>
+                  <th className="col-type">ประเภท</th>
                   <th className="col-note">note</th>
                 </tr>
               </thead>
@@ -478,7 +483,7 @@ function OwnerBooksView() {
                         <button
                           type="button"
                           className="desc-link"
-                          title="แตะเพื่อแก้ไข"
+                          title={row.description || "แตะเพื่อแก้ไข"}
                           onClick={() => setEditing(row)}
                         >
                           {row.description}
@@ -513,10 +518,11 @@ function OwnerBooksView() {
                     <td className="col-out">
                       {row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}
                     </td>
-                    <td className="col-act">
-                      <span className="muted" style={{ fontSize: "0.72rem" }}>
-                        {row.type ? labelLedgerType(row.type) : "—"}
-                      </span>
+                    <td
+                      className="col-type"
+                      title={row.type ? labelLedgerType(row.type) : ""}
+                    >
+                      {row.type ? shortLabelLedgerType(row.type) : "—"}
                     </td>
                     <td className="col-note" title={row.note || ""}>
                       {row.note || ""}

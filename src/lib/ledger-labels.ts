@@ -72,6 +72,24 @@ export function labelLedgerType(type: string) {
   return TYPE_LABELS[key] || key;
 }
 
+/** ป้ายสั้นในตารางแคบ (มือถือ) — ไม่ใส่คำอังกฤษในวงเล็บ */
+const TYPE_LABELS_SHORT: Record<string, string> = {
+  cogs: "ต้นทุน",
+  sga: "คชจ.",
+  asset: "สินทรัพย์",
+  อื่นๆ: "อื่นๆ",
+  pos: "POS",
+  pos_void: "ยกเลิก",
+  โอนเข้า: "โอนเข้า",
+  ยอดยกมา: "ยกมา",
+};
+
+export function shortLabelLedgerType(type: string) {
+  if (!type) return "";
+  const key = canonicalLedgerType(type);
+  return TYPE_LABELS_SHORT[key] || labelLedgerType(type);
+}
+
 /** เดาหมวดจากชื่อรายการ — พนักงานไม่ต้องเลือกเอง */
 export function guessTypeFromDescription(description: string): string {
   const text = description.trim().toLowerCase();
