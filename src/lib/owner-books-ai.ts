@@ -38,10 +38,7 @@ export async function extractOwnerBookFromReceipt(
   if (!ALLOWED.has(type)) {
     throw new Error("AI ตอบประเภทไม่ถูกต้อง");
   }
-  const amountOut =
-    data?.amountOut == null || data.amountOut === ("" as unknown)
-      ? NaN
-      : Number(data.amountOut);
+  const amountOut = Number(data?.amountOut);
   return {
     date: String(data?.date || "").trim(),
     description: String(data?.description || "").trim(),
