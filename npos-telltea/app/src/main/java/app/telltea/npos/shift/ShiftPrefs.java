@@ -67,6 +67,31 @@ public final class ShiftPrefs {
         voidedCount(context));
   }
 
+  /**
+   * Live duty strip: clock-in time + elapsed H:MM:SS (updates every second from UI).
+   */
+  public static String dutyLine(Context context) {
+    if (!isOpen(context)) {
+      return context.getString(R.string.shift_duty_closed);
+    }
+    long opened = openedAt(context);
+    if (opened <= 0L) {
+      return summaryLine(context);
+    }
+    java.text.SimpleDateFormat clock =
+        new java.text.SimpleDateFormat("HH:mm", Locale.getDefault());
+    String inAt = clock.format(new java.util.Date(opened));
+    long elapsedSec = Math.max(0L, (System.currentTimeMillis() - opened) / 1000L);
+    long h = elapsedSec / 3600L;
+    long m = (elapsedSec % 3600L) / 60L;
+    long s = elapsedSec % 60L;
+    String elapsed =
+        h > 0
+            ? String.format(Locale.getDefault(), "%d:%02d:%02d", h, m, s)
+            : String.format(Locale.getDefault(), "%02d:%02d", m, s);
+    return context.getString(R.string.shift_duty_fmt, inAt, elapsed) + " · " + summaryLine(context);
+  }
+
   public static String moneyPlain(double amount) {
     return String.format(Locale.US, "%.0f", Math.max(0, amount));
   }

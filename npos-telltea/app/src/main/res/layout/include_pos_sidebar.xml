@@ -19,6 +19,15 @@
         android:paddingTop="4dp"
         android:paddingBottom="8dp">
 
+        <ImageView
+            android:id="@+id/sidebarBrandLogo"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginEnd="8dp"
+            android:contentDescription="@string/app_name"
+            android:scaleType="fitCenter"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/sidebarBrand"
             android:layout_width="0dp"

@@ -298,7 +298,8 @@
                         android:text="@string/btn_pay_promptpay"
                         android:textColor="#E85D24"
                         android:textSize="15sp"
-                        android:textStyle="bold" />
+                        android:textStyle="bold"
+                        android:visibility="gone" />
 
                     <TextView
                         android:id="@+id/xReportButton"

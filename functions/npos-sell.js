@@ -224,6 +224,15 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
     const db = getFirestore();
     const snap = await db.doc("meta/pos").get();
     const x = snap.exists ? snap.data() || {} : {};
+    let brandLogo = "";
+    try {
+      const logoSnap = await db.doc("meta/brandLogo").get();
+      const raw = logoSnap.exists ? String((logoSnap.data() || {}).dataUrl || "").trim() : "";
+      // Cap payload so tablets stay snappy (logo is already shrunk in BO).
+      if (raw && raw.length <= 120000) brandLogo = raw;
+    } catch (_) {
+      /* optional */
+    }
     res.status(200).json({
       ok: true,
       shopName: asString(x.shopName, 120) || "TellTea",
@@ -234,6 +243,7 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
       autoPrintReceipt: x.autoPrintReceipt !== false,
       receiptStaffName: asString(x.receiptStaffName, 80) || "หน้าร้าน",
       receiptFooterNote: asString(x.receiptFooterNote, 160),
+      brandLogo,
       menuArrangeMode: x.menuArrangeMode === "bestsellers" ? "bestsellers" : "fix",
       bestsellerWindowDays:
         typeof x.bestsellerWindowDays === "number" && x.bestsellerWindowDays >= 7

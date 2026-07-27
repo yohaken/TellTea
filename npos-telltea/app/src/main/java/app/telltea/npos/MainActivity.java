@@ -67,6 +67,17 @@ public class MainActivity extends Activity {
         }
       };
 
+  private final Runnable dutyTick =
+      new Runnable() {
+        @Override
+        public void run() {
+          if (hubShiftStrip != null && ShiftPrefs.isOpen(MainActivity.this)) {
+            hubShiftStrip.setText(ShiftPrefs.dutyLine(MainActivity.this));
+            clockHandler.postDelayed(this, 1000L);
+          }
+        }
+      };
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -129,6 +140,37 @@ public class MainActivity extends Activity {
           MenuWarmup.warm(this);
           Toast.makeText(this, R.string.btn_refresh_menu, Toast.LENGTH_SHORT).show();
         });
+    new app.telltea.npos.sell.MenuRepository()
+        .loadShop(
+            this,
+            shop ->
+                runOnUiThread(
+                    () -> {
+                      PosShellNav.applyBrandLogo(this, shop);
+                      try {
+                        String logo = shop.optString("brandLogo", "");
+                        if (!logo.isEmpty()) {
+                          app.telltea.npos.sell.ImageLoader.decodeAsync(
+                              this,
+                              logo,
+                              bmp -> {
+                                if (bmp == null || isFinishing()) return;
+                                try {
+                                  String label =
+                                      shop.optString(
+                                          "shopName",
+                                          shop.optString("shopNameTh", getString(R.string.app_name)));
+                                  setTaskDescription(
+                                      new android.app.ActivityManager.TaskDescription(label, bmp));
+                                } catch (Exception ignored) {
+                                  /* OEM */
+                                }
+                              });
+                        }
+                      } catch (Exception ignored) {
+                        /* shop shape */
+                      }
+                    }));
     updatePrompt = new UpdatePromptController(this);
     refreshPermissionGate();
     refreshStoreClaimGate();
@@ -145,19 +187,25 @@ public class MainActivity extends Activity {
     View input = findViewById(R.id.storeClaimInput);
     View btn = findViewById(R.id.storeClaimButton);
     View open = findViewById(R.id.openShiftButton);
-    boolean needClaim =
-        StoreClaimPrefs.isRequired(this)
-            && !StoreClaimPrefs.isClaimed(this)
-            && !StoreClaimPrefs.isBlocked(this);
+    boolean required = StoreClaimPrefs.isRequired(this);
+    boolean claimed = StoreClaimPrefs.isClaimed(this);
+    boolean deviceBlocked = StoreClaimPrefs.isBlocked(this);
+    boolean rejectDev = StoreClaimPrefs.rejectDev(this);
+    boolean emulator = DeviceIdentity.isEmulator();
+    boolean needClaim = required && !claimed && !deviceBlocked;
     boolean blocked = StoreClaimPrefs.blocksWrites(this) && !needClaim;
-    int claimVis = needClaim ? View.VISIBLE : View.GONE;
     if (hint != null) {
-      hint.setVisibility(blocked || needClaim ? View.VISIBLE : View.GONE);
+      boolean showHint = blocked || needClaim || (!required && emulator);
+      hint.setVisibility(showHint ? View.VISIBLE : View.GONE);
       if (hint instanceof TextView) {
-        if (blocked) {
+        if (blocked && rejectDev && emulator) {
+          ((TextView) hint).setText(R.string.store_claim_emulator_blocked);
+        } else if (blocked) {
           ((TextView) hint).setText(R.string.store_claim_blocked);
-        } else {
+        } else if (needClaim) {
           ((TextView) hint).setText(R.string.store_claim_hint);
+        } else if (!required) {
+          ((TextView) hint).setText(R.string.store_claim_not_configured);
         }
       }
     }
@@ -358,7 +406,7 @@ public class MainActivity extends Activity {
       clockInPanel.setVisibility(View.GONE);
       sellPanel.setVisibility(View.VISIBLE);
       if (hubShiftStrip != null) {
-        hubShiftStrip.setText(ShiftPrefs.summaryLine(this));
+        hubShiftStrip.setText(ShiftPrefs.dutyLine(this));
       }
       maybeResumeSellAfterUpdate();
     } else {
@@ -369,7 +417,11 @@ public class MainActivity extends Activity {
     refreshStoreClaimGate();
     updateClockLabels();
     clockHandler.removeCallbacks(clockTick);
+    clockHandler.removeCallbacks(dutyTick);
     clockHandler.post(clockTick);
+    if (ShiftPrefs.isOpen(this)) {
+      clockHandler.post(dutyTick);
+    }
     ForegroundHeartbeat.forceNow(this);
     autoHealth.maybeRun(this, false, null);
     saleSync.flushPending(this);
@@ -379,12 +431,14 @@ public class MainActivity extends Activity {
   @Override
   protected void onPause() {
     clockHandler.removeCallbacks(clockTick);
+    clockHandler.removeCallbacks(dutyTick);
     super.onPause();
   }
 
   @Override
   protected void onDestroy() {
     clockHandler.removeCallbacks(clockTick);
+    clockHandler.removeCallbacks(dutyTick);
     ForegroundHeartbeat.setStatusListener(null);
     if (autoHealth != null) autoHealth.shutdown();
     if (saleSync != null) saleSync.shutdown();
@@ -410,7 +464,7 @@ public class MainActivity extends Activity {
             if (clockInPanel != null) clockInPanel.setVisibility(View.GONE);
             if (sellPanel != null) sellPanel.setVisibility(View.VISIBLE);
             if (hubShiftStrip != null) {
-              hubShiftStrip.setText(ShiftPrefs.summaryLine(this));
+              hubShiftStrip.setText(ShiftPrefs.dutyLine(this));
             }
           } catch (Exception e) {
             OpsLogger.error(

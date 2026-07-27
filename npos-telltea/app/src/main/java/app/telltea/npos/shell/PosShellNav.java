@@ -7,9 +7,12 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import org.json.JSONObject;
 
 import app.telltea.npos.MainActivity;
 import app.telltea.npos.R;
@@ -18,6 +21,7 @@ import app.telltea.npos.SellActivity;
 import app.telltea.npos.SettingsActivity;
 import app.telltea.npos.ShiftActivity;
 import app.telltea.npos.sell.HoldCart;
+import app.telltea.npos.sell.ImageLoader;
 import app.telltea.npos.ui.UiScale;
 
 /**
@@ -175,5 +179,34 @@ public final class PosShellNav {
     }
     row.setOnClickListener(v -> action.run());
     nav.addView(row);
+  }
+
+  /** Show back-office brand logo in the left rail when shop settings include it. */
+  public static void applyBrandLogo(Activity activity, JSONObject shop) {
+    if (activity == null) return;
+    ImageView logo = activity.findViewById(R.id.sidebarBrandLogo);
+    TextView brand = activity.findViewById(R.id.sidebarBrand);
+    String logoSrc = shop != null ? shop.optString("brandLogo", "").trim() : "";
+    String shopName =
+        shop != null
+            ? firstNonEmpty(shop.optString("shopName", ""), shop.optString("shopNameTh", ""))
+            : "";
+    if (brand != null && !shopName.isEmpty()) {
+      brand.setText(shopName);
+    }
+    if (logo == null) return;
+    if (logoSrc.isEmpty()) {
+      logo.setVisibility(View.GONE);
+      logo.setImageDrawable(null);
+      return;
+    }
+    logo.setVisibility(View.VISIBLE);
+    ImageLoader.bind(logo, logoSrc, 0xFF3A424A);
+  }
+
+  private static String firstNonEmpty(String a, String b) {
+    if (a != null && !a.trim().isEmpty()) return a.trim();
+    if (b != null && !b.trim().isEmpty()) return b.trim();
+    return "";
   }
 }

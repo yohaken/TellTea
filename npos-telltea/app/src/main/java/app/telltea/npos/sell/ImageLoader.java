@@ -61,6 +61,33 @@ public final class ImageLoader {
                 });
     }
 
+    public interface BitmapCallback {
+        void onReady(Bitmap bitmap);
+    }
+
+    /** Decode logo/data URL off main thread (for task description / branding). */
+    public static void decodeAsync(Context context, String url, BitmapCallback callback) {
+        if (callback == null) return;
+        if (url == null || url.trim().isEmpty()) {
+            callback.onReady(null);
+            return;
+        }
+        Context app = context.getApplicationContext();
+        final String key = cacheKey(url);
+        Bitmap cached = CACHE.get(key);
+        if (cached != null && !cached.isRecycled()) {
+            callback.onReady(cached);
+            return;
+        }
+        EXEC.execute(
+                () -> {
+                    Bitmap bm = load(app, url, key);
+                    if (bm != null) CACHE.put(key, bm);
+                    android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+                    h.post(() -> callback.onReady(bm));
+                });
+    }
+
     /** Warm disk+memory cache for visible menu URLs (non-blocking). */
     public static void prefetch(Context context, Collection<String> urls) {
         if (context == null || urls == null || urls.isEmpty()) return;
