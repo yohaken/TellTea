@@ -277,10 +277,14 @@ export function buildShiftReportPayload(input: {
       ? summarizeLocalReceipts(input.receipts)
       : input.summary;
 
+  // Paper brand = our shop (never competitor POS brands like Wongnai).
+  const shopName = (input.shop.shopName || "").trim() || "TELL TEA";
+  const shopNameTh = (input.shop.shopNameTh || "").trim() || "เทล ที";
+
   return {
     kind: input.kind,
-    shopName: input.shop.shopName,
-    shopNameTh: input.shop.shopNameTh,
+    shopName,
+    shopNameTh,
     shopAddress: input.shop.shopAddress,
     shopPhone: input.shop.shopPhone,
     deviceCode: input.deviceCode,

@@ -29,6 +29,9 @@ function payLabel(method: "cash" | "promptpay") {
 
 /** ใบพิมพ์สรุปกะ — Snapshot / รายงานปิดรอบ (แยกหมวด + รายบิล) */
 export function buildShiftReportHtml(data: ShiftReportPayload): string {
+  // Header = shop identity only (layout may mirror other POS UX; never their brand).
+  const shopName = (data.shopName || "").trim() || "TELL TEA";
+  const shopNameTh = (data.shopNameTh || "").trim() || "เทล ที";
   const title =
     data.kind === "snapshot" ? "Snapshot ระหว่างรอบการขาย" : "รายงานยอดการขาย";
   const footer =
@@ -268,8 +271,8 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
   </style>
 </head>
 <body>
-  <div class="center shop">${escapeReceiptHtml(data.shopName)}</div>
-  ${data.shopNameTh ? `<div class="center muted">${escapeReceiptHtml(data.shopNameTh)}</div>` : ""}
+  <div class="center shop">${escapeReceiptHtml(shopName)}</div>
+  ${shopNameTh ? `<div class="center muted">${escapeReceiptHtml(shopNameTh)}</div>` : ""}
   ${data.shopAddress ? `<div class="center muted">${escapeReceiptHtml(data.shopAddress)}</div>` : ""}
   ${data.shopPhone ? `<div class="center muted">${escapeReceiptHtml(data.shopPhone)}</div>` : ""}
   <hr class="rule" />

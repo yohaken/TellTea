@@ -17,10 +17,14 @@ import java.util.Map;
  *
  * Front-counter only: no dine-in / delivery channel block.
  * Z adds real blind-close cash drawer numbers + handwritten signature lines.
+ *
+ * Header brand = shop settings (default TELL TEA). UX structure may resemble
+ * other POS shift slips; never print third-party POS brands on paper.
  */
 public final class ShiftReportFormBuilder {
   public static final int COLS_80 = 42;
 
+  /** Our shop fallback when settings are empty — not a third-party POS brand. */
   private static final String DEFAULT_SHOP_EN = "TELL TEA";
   private static final String DEFAULT_SHOP_TH = "เทล ที";
   private static final String DEFAULT_ADDRESS =

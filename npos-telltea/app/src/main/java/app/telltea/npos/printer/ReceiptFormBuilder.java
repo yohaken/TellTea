@@ -14,6 +14,10 @@ import java.util.Map;
  * (src/lib/pos-printer/receipt-template.ts) field order + labels.
  *
  * Front-counter only — never prints order-channel / service-type badge.
+ *
+ * Brand on paper = shop settings ({@code shopName} / {@code shopNameTh}).
+ * Defaults are our shop (TELL TEA). Layout may follow common counter UX;
+ * never print third-party POS brands or a product-system footer.
  */
 public final class ReceiptFormBuilder {
   /** Typical 58mm printable columns (TIS-620 / monospace). */
@@ -21,6 +25,7 @@ public final class ReceiptFormBuilder {
   /** Typical 80mm printable columns. */
   public static final int COLS_80 = 42;
 
+  /** Our shop fallback when settings are empty — not a third-party POS brand. */
   private static final String DEFAULT_SHOP_EN = "TELL TEA";
   private static final String DEFAULT_SHOP_TH = "เทล ที";
   private static final String DEFAULT_ADDRESS =
