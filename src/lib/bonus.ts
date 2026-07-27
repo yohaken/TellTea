@@ -3,6 +3,10 @@ import type { BonusDeductionLine, BonusDeductionMonthCounts, BonusDeductionRule 
 import { buildBonusDeductionLines, computeShopDeductPct } from "./bonus-deductions";
 import { computeOtBonus, type OtEntry } from "./ot";
 import { computeProdBonus, prodEntryCountsTowardBonus, type ProdEntry } from "./production";
+import {
+  resolveBakerySalesRateForNewEntry,
+  type RateScheduleEntry,
+} from "./rate-schedule";
 
 export type WorkerMonthBonus = {
   workerId: string;
@@ -29,6 +33,9 @@ export type MonthBonusReport = {
   month: number;
   /** จำนวนคนที่หารโบนัสขาย (เคยทำงานในเดือน) */
   employeeCount: number;
+  /** ผลผลิตรวม (ชิ้น) ที่นับเข้าโบนัสขาย */
+  totalProdQty: number;
+  /** กองโบนัสขาย = Σ(จำนวนผลิต × เรทขายตามวันจากตารางเรท) */
   totalSalesPool: number;
   shopDeductPct: number;
   deductionLines: BonusDeductionLine[];
@@ -77,6 +84,26 @@ function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
 
+/** กองโบนัสขายจากจำนวนผลิต × เรทขายตามวัน (ตารางเรท) — ไม่ใช้ salesRate ที่ติดแถวผลิต */
+export function computeBakerySalesPool(
+  prodEntries: Pick<ProdEntry, "date" | "qtyProduced">[],
+  bakerySalesSchedule: RateScheduleEntry[] = [],
+): { totalProdQty: number; totalSalesPool: number } {
+  let totalProdQty = 0;
+  let totalSalesPool = 0;
+  for (const row of prodEntries) {
+    const qty = Number(row.qtyProduced) || 0;
+    if (qty <= 0) continue;
+    totalProdQty += qty;
+    const rate = resolveBakerySalesRateForNewEntry(row.date, bakerySalesSchedule);
+    totalSalesPool += qty * rate;
+  }
+  return {
+    totalProdQty: round2(totalProdQty),
+    totalSalesPool: round2(totalSalesPool),
+  };
+}
+
 export function computeMonthBonus(
   otEntries: OtEntry[],
   prodEntries: ProdEntry[],
@@ -85,6 +112,7 @@ export function computeMonthBonus(
   month: number,
   deductionRules: BonusDeductionRule[],
   monthCounts: BonusDeductionMonthCounts,
+  bakerySalesSchedule: RateScheduleEntry[] = [],
 ): MonthBonusReport {
   const active = employees.filter((e) => e.active);
 
@@ -93,8 +121,9 @@ export function computeMonthBonus(
     (e) => isInMonth(e.date, year, month) && prodEntryCountsTowardBonus(e),
   );
 
-  const totalSalesPool = round2(
-    prodMonth.reduce((sum, row) => sum + computeProdBonus(row).salesBonus, 0),
+  const { totalProdQty, totalSalesPool } = computeBakerySalesPool(
+    prodMonth,
+    bakerySalesSchedule,
   );
 
   const deductionLines = buildBonusDeductionLines(monthCounts, deductionRules);
@@ -180,6 +209,7 @@ export function computeMonthBonus(
     year,
     month,
     employeeCount,
+    totalProdQty,
     totalSalesPool,
     shopDeductPct,
     deductionLines,

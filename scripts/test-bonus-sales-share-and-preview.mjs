@@ -13,11 +13,53 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const bonusSrc = readFileSync(join(root, "src/lib/bonus.ts"), "utf8");
 assert.match(bonusSrc, /workedThisMonth/);
 assert.match(bonusSrc, /salesSharePeople/);
+assert.match(bonusSrc, /computeBakerySalesPool/);
+assert.match(bonusSrc, /totalProdQty/);
+assert.match(bonusSrc, /resolveBakerySalesRateForNewEntry/);
 assert.doesNotMatch(bonusSrc, /Math\.max\(1,\s*active\.length\)/);
+assert.doesNotMatch(bonusSrc, /computeProdBonus\(row\)\.salesBonus/);
+
+const prodPage = readFileSync(join(root, "src/app/production/page.tsx"), "utf8");
+assert.doesNotMatch(prodPage, />เรทขาย</);
+assert.doesNotMatch(prodPage, />โบนัสขาย</);
+assert.match(prodPage, />โบนัสผลิต</);
+
+const bonusPage = readFileSync(join(root, "src/app/bonus/page.tsx"), "utf8");
+assert.match(bonusPage, /totalProdQty/);
+assert.match(bonusPage, /เรทขายตามวัน/);
+assert.match(bonusPage, /subscribeRateSchedule/);
 
 // Logic mirror — keep in sync with computeMonthBonus sales eligibility
 function round2(n) {
   return Math.round(n * 100) / 100;
+}
+
+function resolveBakerySalesRateForNewEntry(dateMs, schedule) {
+  let best = null;
+  for (const row of schedule) {
+    if (row.kind !== "bakerySales") continue;
+    if (row.effectiveFrom > dateMs) continue;
+    if (
+      !best ||
+      row.effectiveFrom > best.effectiveFrom ||
+      (row.effectiveFrom === best.effectiveFrom && row.createdAt > best.createdAt)
+    ) {
+      best = row;
+    }
+  }
+  return best ? best.rate : 0.6;
+}
+
+function computeBakerySalesPool(prodEntries, schedule) {
+  let totalProdQty = 0;
+  let totalSalesPool = 0;
+  for (const row of prodEntries) {
+    const qty = Number(row.qtyProduced) || 0;
+    if (qty <= 0) continue;
+    totalProdQty += qty;
+    totalSalesPool += qty * resolveBakerySalesRateForNewEntry(row.date, schedule);
+  }
+  return { totalProdQty: round2(totalProdQty), totalSalesPool: round2(totalSalesPool) };
 }
 
 function computeSalesShares({ activeNames, otWorkers, prodWorkers, totalSalesPool }) {
@@ -60,6 +102,17 @@ assert.equal(sample.salesShareEach, 92.5);
 assert.equal(sample.rows.find((r) => r.workerName === "X1").salesShare, 0);
 assert.equal(sample.rows.find((r) => r.workerName === "เมย์").salesShare, 92.5);
 assert.equal(sample.rows.find((r) => r.workerName === "แก้ม").workedThisMonth, true);
+
+const day = (y, m, d) => new Date(y, m - 1, d).getTime();
+const pool = computeBakerySalesPool(
+  [
+    { date: day(2026, 7, 1), qtyProduced: 100 },
+    { date: day(2026, 7, 10), qtyProduced: 40 },
+  ],
+  [{ id: "1", kind: "bakerySales", effectiveFrom: day(2026, 7, 1), rate: 0.25, createdAt: 1 }],
+);
+assert.equal(pool.totalProdQty, 140);
+assert.equal(pool.totalSalesPool, 35);
 
 const preview = readFileSync(join(root, "src/components/EntryPhotoCell.tsx"), "utf8");
 assert.match(preview, /photo-preview-spinner|photo-fs-loading/);

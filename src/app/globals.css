@@ -4154,6 +4154,11 @@ body.modal-open .main-panel {
   font-variant-numeric: tabular-nums;
 }
 
+.bonus-summary-pool-meta {
+  font-size: 0.68rem;
+  line-height: 1.3;
+}
+
 .bonus-summary-bar strong {
   font-family: inherit;
   font-size: 0.88rem;

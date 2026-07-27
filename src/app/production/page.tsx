@@ -295,11 +295,11 @@ function ProdEntryForm({
     const names = workers.filter((w) => selectedWorkers.includes(w.id)).map((w) => w.name);
     return computeProdBonus({
       qtyProduced: Number(qty) || 0,
-      salesRate: rates.salesRate,
+      salesRate: 0,
       prodRate: rates.prodRate,
       workerNames: names.length ? names : entry?.workerNames || [],
     });
-  }, [qty, rates, selectedWorkers, workers, entry]);
+  }, [qty, rates.prodRate, selectedWorkers, workers, entry]);
 
   function toggleWorker(id: string) {
     if (locked) return;
@@ -343,7 +343,8 @@ function ProdEntryForm({
         workerNames: chosen.map((w) => w.name),
         productId: prod?.id || entry!.productId,
         productName: prod?.name || entry!.productName,
-        salesRate: resolved.salesRate,
+        // โบนัสขายคิดที่หน้าสรุปโบนัสจากจำนวน × ตารางเรท — ไม่ติดเรทขายที่แถวผลิต
+        salesRate: 0,
         prodRate: resolved.prodRate,
         qtyProduced: Number(qty),
         qtyWaste: Number(waste) || 0,
@@ -507,12 +508,12 @@ function ProdEntryForm({
 
       {locked ? (
         <p className="muted form-hint-inline">
-          เรทขาย {formatPlainNumber(entry!.salesRate)} · เรทผลิต {formatPlainNumber(entry!.prodRate)} · โบนัส/คน{" "}
+          เรทผลิต {formatPlainNumber(entry!.prodRate)} · โบนัสผลิต/คน{" "}
           {formatPlainNumber(preview.bonusPerPerson)} บาท
         </p>
       ) : Number(qty) > 0 && selectedWorkers.length > 0 ? (
         <p className="muted form-hint-inline">
-          โบนัส/คน ≈ {formatPlainNumber(preview.bonusPerPerson)} บาท
+          โบนัสผลิต/คน ≈ {formatPlainNumber(preview.bonusPerPerson)} บาท
           {entry ? ` · เรทผลิต ${formatPlainNumber(rates.prodRate)} (ติดกับแถวนี้)` : ""}
         </p>
       ) : null}
@@ -705,10 +706,8 @@ function ProdTable({
                 <th className="col-note">หมายเหตุ</th>
                 {isOwner ? (
                   <>
-                    <th className="col-out">เรทขาย</th>
-                    <th className="col-out">โบนัสขาย</th>
                     <th className="col-out">เรทผลิต</th>
-                    <th className="col-out">โบนัสรวม</th>
+                    <th className="col-out">โบนัสผลิต</th>
                     <th className="col-act">คน</th>
                   </>
                 ) : null}
@@ -772,8 +771,6 @@ function ProdTable({
                     <td className="col-note" title={row.note || ""}>{row.note || ""}</td>
                     {isOwner ? (
                       <>
-                        <td className="col-out">{formatPlainNumber(row.salesRate)}</td>
-                        <td className="col-out">{formatPlainNumber(c.salesBonus)}</td>
                         <td className="col-out">{formatPlainNumber(row.prodRate)}</td>
                         <td className="col-out">{formatPlainNumber(c.prodBonus)}</td>
                         <td className="col-act">{c.workerCount}</td>

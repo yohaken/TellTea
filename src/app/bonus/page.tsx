@@ -28,6 +28,7 @@ import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import { getOtSettings, subscribeOtEntries, type OtEntry } from "@/lib/ot";
 import { subscribeProdEntries, type ProdEntry } from "@/lib/production";
+import { subscribeRateSchedule, type RateScheduleEntry } from "@/lib/rate-schedule";
 import { formatPlainNumber } from "@/lib/utils";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
@@ -62,6 +63,7 @@ function BonusView() {
   const [deductionMonth, setDeductionMonth] = useState<BonusDeductionMonthDoc | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [otSettingsRate, setOtSettingsRate] = useState(0.6);
+  const [rateSchedule, setRateSchedule] = useState<RateScheduleEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(isOwner);
@@ -99,10 +101,15 @@ function BonusView() {
       (settings) => setDeductionSettings(settings),
       (err) => setError(err.message),
     );
+    const unsubSchedule = subscribeRateSchedule(
+      (doc) => setRateSchedule(doc.entries),
+      (err) => setError(err.message),
+    );
     return () => {
       unsubOt();
       unsubProd();
       unsubSettings();
+      unsubSchedule();
     };
   }, [staff, canView]);
 
@@ -127,8 +134,18 @@ function BonusView() {
       monthIdx,
       deductionSettings.rules,
       deductionMonth.counts,
+      rateSchedule,
     );
-  }, [otEntries, prodEntries, employees, deductionSettings, deductionMonth, year, monthIdx]);
+  }, [
+    otEntries,
+    prodEntries,
+    employees,
+    deductionSettings,
+    deductionMonth,
+    year,
+    monthIdx,
+    rateSchedule,
+  ]);
 
   const myRow = useMemo(
     () => (report ? pickMyBonusRow(report, employees, staff?.displayName) : null),
@@ -169,6 +186,9 @@ function BonusView() {
           <div className="bonus-summary-pool">
             <span className="bonus-summary-label">โบนัสขายเบเกอรี่ รวม</span>
             <strong className="bonus-summary-pool-amt">฿{fmt(report.totalSalesPool)}</strong>
+            <span className="muted bonus-summary-pool-meta">
+              จากผลิต {fmt(report.totalProdQty)} ชิ้น × เรทขายตามวัน (ตารางเรท)
+            </span>
           </div>
           <div className="bonus-summary-total">
             <span className="bonus-summary-label">คงเหลือรวม</span>
@@ -237,8 +257,9 @@ function BonusView() {
 
       {report ? (
         <p className="muted bonus-footnote">
-          ขาย = pool รวม ÷ คนที่ลงทะเบียนทำงานในเดือน (ผลิตหรือชง) — มีชื่ออย่างเดียวไม่หาร · ผลิต/ชง
-          จากยอดจริง · เจ้าของกรอกจำนวนหักทั้งร้านสิ้นเดือน · เรท% ถาวร
+          ขาย = จำนวนผลิต × เรทขายจากตารางเรท (ตามวันผลิต) แล้วหารคนที่ลงทะเบียนทำงานในเดือน
+          (ผลิตหรือชง) — มีชื่ออย่างเดียวไม่หาร · ผลิต/ชง จากยอดจริง · เจ้าของกรอกจำนวนหักทั้งร้านสิ้นเดือน ·
+          เรท% ถาวร
         </p>
       ) : null}
 
