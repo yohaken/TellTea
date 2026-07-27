@@ -153,16 +153,14 @@
                         android:id="@+id/priceChannelToggle"
                         style="@style/Npos.Btn.Ghost"
                         android:layout_marginTop="4dp"
-                        android:maxWidth="999dp"
-                        android:text="@string/price_channel_store" />
+                                                android:text="@string/price_channel_store" />
 
                     <TextView
                         android:id="@+id/clearCartButton"
                         style="@style/Npos.Btn.Ghost"
                         android:layout_marginTop="4dp"
                         android:layout_marginBottom="4dp"
-                        android:maxWidth="999dp"
-                        android:text="@string/btn_clear_cart"
+                                                android:text="@string/btn_clear_cart"
                         android:textColor="@color/npos_orange" />
 
                     <ScrollView
@@ -200,36 +198,28 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
+                        android:gravity="center"
                         android:orientation="horizontal">
 
                         <TextView
                             android:id="@+id/discountButton"
                             style="@style/Npos.Btn.Chip"
-                            android:layout_width="0dp"
                             android:layout_marginEnd="4dp"
-                            android:layout_weight="1"
-                            android:maxWidth="999dp"
                             android:text="@string/btn_discount"
                             android:textColor="@color/npos_orange" />
 
                         <TextView
                             android:id="@+id/holdBillButton"
                             style="@style/Npos.Btn.Chip"
-                            android:layout_width="0dp"
                             android:layout_marginStart="2dp"
                             android:layout_marginEnd="2dp"
-                            android:layout_weight="1"
-                            android:maxWidth="999dp"
                             android:text="@string/btn_hold_bill"
                             android:textColor="@color/npos_orange" />
 
                         <TextView
                             android:id="@+id/restoreHoldButton"
                             style="@style/Npos.Btn.Chip"
-                            android:layout_width="0dp"
                             android:layout_marginStart="4dp"
-                            android:layout_weight="1"
-                            android:maxWidth="999dp"
                             android:text="@string/btn_restore_hold"
                             android:textColor="@color/npos_orange" />
                     </LinearLayout>
@@ -238,7 +228,6 @@
                         android:id="@+id/flushSyncButton"
                         style="@style/Npos.Btn.Ghost"
                         android:layout_marginTop="4dp"
-                        android:maxWidth="999dp"
                         android:text="@string/btn_flush_sync"
                         android:visibility="gone" />
 
@@ -246,7 +235,6 @@
                         android:id="@+id/payCashButton"
                         style="@style/Npos.Btn.Primary"
                         android:layout_marginTop="8dp"
-                        android:maxWidth="999dp"
                         android:text="@string/btn_pay_cash"
                         android:textSize="16sp" />
 
@@ -254,7 +242,6 @@
                         android:id="@+id/payPromptButton"
                         style="@style/Npos.Btn.Secondary"
                         android:layout_marginTop="8dp"
-                        android:maxWidth="999dp"
                         android:text="@string/btn_pay_promptpay"
                         android:visibility="gone" />
 
@@ -262,7 +249,6 @@
                         android:id="@+id/xReportButton"
                         style="@style/Npos.Btn.Ghost"
                         android:layout_marginTop="8dp"
-                        android:maxWidth="999dp"
                         android:text="@string/btn_x_report" />
 
                     <!-- Kept for code wiring; nav moved to left rail -->

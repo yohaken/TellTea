@@ -192,6 +192,11 @@ public final class NposUi {
     }
     btn.setPadding(padH, padV, padH, padV);
     btn.setAllCaps(false);
+    try {
+      btn.setMaxWidth(context.getResources().getDimensionPixelSize(R.dimen.npos_btn_max_w));
+    } catch (RuntimeException ignored) {
+      btn.setMaxWidth(dp(context, 280));
+    }
     if (Build.VERSION.SDK_INT >= 21) {
       btn.setBackgroundTintList(null);
     }
@@ -201,6 +206,16 @@ public final class NposUi {
     LinearLayout.LayoutParams lp =
         new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    lp.bottomMargin = dp(context, bottomMarginDp);
+    return lp;
+  }
+
+  /** Compact CTA — wrap content, centered, capped width (mockup). */
+  public static LinearLayout.LayoutParams cta(Context context, int bottomMarginDp) {
+    LinearLayout.LayoutParams lp =
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    lp.gravity = Gravity.CENTER_HORIZONTAL;
     lp.bottomMargin = dp(context, bottomMarginDp);
     return lp;
   }

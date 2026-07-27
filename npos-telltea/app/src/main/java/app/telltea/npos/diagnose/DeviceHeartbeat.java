@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class DeviceHeartbeat {
     public static final String HEARTBEAT_URL =
             "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposDeviceHeartbeat";
-    public static final long MIN_INTERVAL_MS = 55_000L;
+    public static final long MIN_INTERVAL_MS = 12_000L;
 
     public interface Callback {
         void onSuccess(String pairingCode, long lastSeenAt);

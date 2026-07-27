@@ -36,6 +36,7 @@ import java.util.Map;
 import app.telltea.npos.diagnose.CustomerDisplayController;
 import app.telltea.npos.diagnose.CustomerDisplayPresentation;
 import app.telltea.npos.diagnose.OpsLogger;
+import app.telltea.npos.diagnose.ForegroundHeartbeat;
 import app.telltea.npos.diagnose.StoreClaimPrefs;
 import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.ImageLoader;
@@ -529,9 +530,14 @@ public class SellActivity extends Activity {
     super.onResume();
     if (StoreClaimPrefs.blocksWrites(this) && StoreClaimPrefs.isRequired(this)) {
       Toast.makeText(this, StoreClaimPrefs.blockReason(this), Toast.LENGTH_LONG).show();
+      Intent hub = new Intent(this, MainActivity.class);
+      hub.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+      startActivity(hub);
       finish();
       return;
     }
+    // Faster kick detection while selling (heartbeat may have been throttled).
+    ForegroundHeartbeat.forceNow(this);
     if (updatePrompt != null) updatePrompt.onResume();
     // Refresh shop name/address from server so BO edits show on next bill.
     if (menuRepo != null) {

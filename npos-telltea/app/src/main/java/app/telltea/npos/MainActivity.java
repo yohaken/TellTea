@@ -40,6 +40,7 @@ import app.telltea.npos.update.UpdatePromptController;
  * Clock-in + POS hub (clone web POS_NAV_ITEMS). Sell is one tile — not the only screen.
  */
 public class MainActivity extends Activity {
+  private final StoreClaimPrefs.KickListener lostSeatListener = this::onLostSeat;
   private View clockInPanel;
   private View sellPanel;
   private TextView versionView;
@@ -200,7 +201,7 @@ public class MainActivity extends Activity {
     }
     refreshPermissionGate();
     refreshStoreClaimGate();
-    StoreClaimPrefs.setKickListener(this::onLostSeat);
+    StoreClaimPrefs.addKickListener(lostSeatListener);
     // First open: auto-prompt so staff do not hunt Settings.
     if (!PermissionBootstrap.wasPrompted(this) && !PermissionBootstrap.allCriticalGranted(this)) {
       PermissionBootstrap.grantAll(this);
@@ -315,16 +316,11 @@ public class MainActivity extends Activity {
   private void onLostSeat() {
     runOnUiThread(
         () -> {
-          int toastRes =
-              StoreClaimPrefs.wasCodeChanged(this)
-                  ? R.string.store_claim_code_changed
-                  : R.string.store_claim_kicked;
-          Toast.makeText(this, toastRes, Toast.LENGTH_LONG).show();
-          // Keep server session open — only drop local open so UI returns to claim.
+          // NposApp already toasts + CLEAR_TOP; refresh hub chrome when we are visible / become top.
           if (ShiftPrefs.isOpen(this)) {
             ShiftPrefs.clearLocalOpen(this);
           }
-          clockInPanel.setVisibility(View.VISIBLE);
+          if (clockInPanel != null) clockInPanel.setVisibility(View.VISIBLE);
           if (sellPanel != null) sellPanel.setVisibility(View.GONE);
           refreshStoreClaimGate();
           pollClaimUpdateChip();
@@ -488,7 +484,7 @@ public class MainActivity extends Activity {
 
   private void addHubNative(int labelRes, Runnable action) {
     TextView b = NposUi.secondary(this, getString(labelRes));
-    b.setLayoutParams(NposUi.matchWidth(this, 8));
+    b.setLayoutParams(NposUi.cta(this, 8));
     b.setOnClickListener(v -> action.run());
     hubNavList.addView(b);
   }
@@ -550,7 +546,7 @@ public class MainActivity extends Activity {
 
   @Override
   protected void onDestroy() {
-    StoreClaimPrefs.setKickListener(null);
+    StoreClaimPrefs.removeKickListener(lostSeatListener);
     clockHandler.removeCallbacks(clockTick);
     clockHandler.removeCallbacks(dutyTick);
     clockHandler.removeCallbacks(claimPollTick);

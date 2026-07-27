@@ -10,7 +10,7 @@ import android.os.Looper;
  * lastSeenAt stale so BO showed offline during active selling.
  */
 public final class ForegroundHeartbeat {
-    public static final long INTERVAL_MS = 50_000L;
+    public static final long INTERVAL_MS = 15_000L;
 
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final DeviceHeartbeat HEARTBEAT = new DeviceHeartbeat();

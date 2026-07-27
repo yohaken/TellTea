@@ -49,14 +49,15 @@
         <item name="android:lineSpacingMultiplier">1.2</item>
     </style>
 
-    <!-- Touch controls — TextView-based, friendly proportions. -->
+    <!-- Touch controls — TextView-based, compact (not full-bleed bars). -->
     <style name="Npos.Btn" parent="Npos">
-        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:gravity">center</item>
         <item name="android:fontFamily">@font/prompt_semibold</item>
         <item name="android:textSize">@dimen/npos_text_btn</item>
         <item name="android:maxWidth">@dimen/npos_btn_max_w</item>
+        <item name="android:minWidth">120dp</item>
         <item name="android:layout_gravity">center_horizontal</item>
         <item name="android:paddingLeft">18dp</item>
         <item name="android:paddingRight">18dp</item>

@@ -3,6 +3,8 @@ package app.telltea.npos.diagnose;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import java.util.concurrent.CopyOnWriteArrayList;
+
 /**
  * Local cache of store-claim / exclusive-seat status from heartbeat / claim CF.
  */
@@ -31,12 +33,36 @@ public final class StoreClaimPrefs {
     void onKickedOrLostSeat();
   }
 
-  private static volatile KickListener kickListener;
+  private static final CopyOnWriteArrayList<KickListener> kickListeners =
+      new CopyOnWriteArrayList<>();
 
   private StoreClaimPrefs() {}
 
+  /** Register a kick/lost-seat handler (safe to call from multiple activities). */
+  public static void addKickListener(KickListener listener) {
+    if (listener != null && !kickListeners.contains(listener)) {
+      kickListeners.add(listener);
+    }
+  }
+
+  public static void removeKickListener(KickListener listener) {
+    if (listener != null) kickListeners.remove(listener);
+  }
+
+  /** @deprecated prefer {@link #addKickListener} / {@link #removeKickListener} */
   public static void setKickListener(KickListener listener) {
-    kickListener = listener;
+    kickListeners.clear();
+    if (listener != null) kickListeners.add(listener);
+  }
+
+  private static void notifyKickListeners() {
+    for (KickListener l : kickListeners) {
+      try {
+        l.onKickedOrLostSeat();
+      } catch (RuntimeException ignored) {
+        /* one bad listener must not block others */
+      }
+    }
   }
 
   private static SharedPreferences prefs(Context context) {
@@ -123,8 +149,7 @@ public final class StoreClaimPrefs {
         (hashChanged && wasHeld)
             || (wasHeld && required && (effectiveKicked || !effectiveHeld));
     if (lost) {
-      KickListener l = kickListener;
-      if (l != null) l.onKickedOrLostSeat();
+      notifyKickListeners();
     }
   }
 
@@ -160,8 +185,7 @@ public final class StoreClaimPrefs {
     }
     ed.apply();
     if (hashChanged && wasHeld) {
-      KickListener l = kickListener;
-      if (l != null) l.onKickedOrLostSeat();
+      notifyKickListeners();
     }
   }
 

@@ -9,13 +9,13 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 292/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 87/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+57/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.34"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 293/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 88/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+58/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.35"/);
 
 assert.ok(existsSync(join(root, "docs/npos-friendly-ui-checklist.md")));
-assert.match(read("docs/npos-friendly-ui-checklist.md"), /NposUi|1\.14\.34/);
+assert.match(read("docs/npos-friendly-ui-checklist.md"), /NposUi|1\.14\.35/);
 assert.match(read("docs/npos-friendly-ui-checklist.md"), /ห้าม|ต้อง/);
 assert.ok(existsSync(join(root, ".cursor/rules/npos-friendly-ui.mdc")));
 assert.match(read(".cursor/rules/npos-friendly-ui.mdc"), /NposUi|Prompt/);
@@ -116,5 +116,12 @@ assert.match(
   read("npos-telltea/app/src/main/java/app/telltea/npos/shell/PosShellNav.java"),
   /NposFonts/,
 );
+
+
+assert.match(read("npos-telltea/app/src/main/res/values/styles.xml"), /layout_width">wrap_content/);
+assert.match(read("npos-telltea/app/src/main/res/values/dimens.xml"), /npos_btn_max_w">280dp/);
+assert.doesNotMatch(read("npos-telltea/app/src/main/res/layout/activity_sell.xml"), /maxWidth="999dp"/);
+assert.doesNotMatch(read("npos-telltea/app/src/main/res/layout/activity_main.xml"), /maxWidth="999dp"/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/ui/NposUi.java"), /static LinearLayout\.LayoutParams cta/);
 
 console.log("OK test-npos-friendly-ui");

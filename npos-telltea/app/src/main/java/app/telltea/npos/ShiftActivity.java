@@ -34,7 +34,7 @@ public class ShiftActivity extends Activity {
     root.addView(summaryView);
 
     TextView x = NposUi.secondary(this, getString(R.string.btn_x_report));
-    x.setLayoutParams(NposUi.matchWidth(this, 10));
+    x.setLayoutParams(NposUi.cta(this, 10));
     x.setOnClickListener(
         v -> {
           Toast.makeText(this, R.string.sell_printing_x, Toast.LENGTH_SHORT).show();
@@ -48,7 +48,7 @@ public class ShiftActivity extends Activity {
     root.addView(x);
 
     TextView z = NposUi.primary(this, getString(R.string.btn_close_shift));
-    z.setLayoutParams(NposUi.matchWidth(this, 0));
+    z.setLayoutParams(NposUi.cta(this, 0));
     z.setOnClickListener(v -> closeShift());
     root.addView(z);
 

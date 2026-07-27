@@ -5,7 +5,7 @@
     <dimen name="npos_btn_secondary_h">44dp</dimen>
     <dimen name="npos_btn_ghost_h">40dp</dimen>
     <dimen name="npos_btn_chip_h">40dp</dimen>
-    <dimen name="npos_btn_max_w">340dp</dimen>
+    <dimen name="npos_btn_max_w">280dp</dimen>
     <dimen name="npos_radius">14dp</dimen>
     <dimen name="npos_radius_sm">12dp</dimen>
     <dimen name="npos_space_section">22dp</dimen>

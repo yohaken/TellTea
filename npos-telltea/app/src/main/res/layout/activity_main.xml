@@ -270,25 +270,20 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="#FFFFFF"
+                android:gravity="center"
                 android:orientation="horizontal"
                 android:padding="10dp">
 
                 <TextView
                     android:id="@+id/closeShiftButton"
                     style="@style/Npos.Btn.Ghost"
-                    android:layout_width="0dp"
                     android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    android:maxWidth="999dp"
                     android:text="@string/btn_close_shift" />
 
                 <TextView
                     android:id="@+id/settingsButtonSell"
                     style="@style/Npos.Btn.Secondary"
-                    android:layout_width="0dp"
                     android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:maxWidth="999dp"
                     android:text="@string/btn_settings_short" />
             </LinearLayout>
         </LinearLayout>

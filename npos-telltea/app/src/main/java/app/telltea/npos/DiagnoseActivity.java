@@ -150,7 +150,7 @@ public class DiagnoseActivity extends Activity {
             TextView meta = NposUi.caption(this, role + " · id=" + info.display.getDisplayId());
 
             TextView show = NposUi.chipPrimary(this, getString(R.string.diagnose_show_on_display, info.number));
-            show.setLayoutParams(NposUi.matchWidth(this, 0));
+            show.setLayoutParams(NposUi.wrap(this, 0, 0));
             show.setOnClickListener(v -> showNumberOnDisplay(info));
 
             row.addView(title);
