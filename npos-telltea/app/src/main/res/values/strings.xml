@@ -42,6 +42,7 @@
     <string name="store_claim_ok">เคลมเครื่องแล้ว — พร้อมเปิดกะ</string>
     <string name="store_claim_blocked">เครื่องนี้ยังไม่เคลมหรือถูกบล็อก — ส่งบิลไม่ได้</string>
     <string name="store_claim_kicked">ถูกถอนสิทธิ์จากหลังบ้าน — กรอกรหัสร้านใหม่</string>
+    <string name="store_claim_code_changed">รหัสร้านเปลี่ยน — กรอกรหัสใหม่</string>
     <string name="store_claim_seat_taken">มีเครื่องอื่นใช้อยู่ — ให้หลังบ้านเตะเครื่องนั้นก่อน</string>
     <string name="heartbeat_idle">กำลังเชื่อม…</string>
     <string name="heartbeat_sending">กำลังเชื่อมร้าน…</string>

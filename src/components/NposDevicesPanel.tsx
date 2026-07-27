@@ -16,6 +16,7 @@ import {
   isPosDeviceOnline,
   posDeviceLabel,
   clearNposDeviceCaptures,
+  clearNposExclusiveSeat,
   getNposStoreClaimStatus,
   requestNposScreenCapture,
   setNposCaptureInterval,
@@ -478,6 +479,31 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     setBusyId(d.id);
     try {
       await setNposDeviceStoreClaimed(d.id, false, { isEmulator: d.isEmulator });
+      const s = await getNposStoreClaimStatus();
+      setActiveSeatId(s.activeSeatInstallId || "");
+      onError(null);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function clearAllSeats() {
+    if (!actorId) {
+      onError("ต้องเข้าสู่ระบบเจ้าของก่อนเคลียร์ seat");
+      return;
+    }
+    if (
+      !window.confirm(
+        "เคลียร์ seat + เตะทุกเครื่อง? แท็บเล็ตจะเด้งใส่รหัสใหม่ (กะไม่ปิด)",
+      )
+    ) {
+      return;
+    }
+    setBusyId("__clear_seat__");
+    try {
+      await clearNposExclusiveSeat();
       setActiveSeatId("");
       onError(null);
     } catch (err) {
@@ -531,10 +557,29 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
       ) : (
         <>
           <div className="npos-seat-slim" style={{ marginBottom: "0.75rem", overflowX: "auto" }}>
-            <p className="muted" style={{ marginBottom: "0.5rem" }}>
-              เตะเครื่อง ≠ บังคับปิดกะ · กะบนเซิร์ฟเวอร์อยู่ต่อให้เครื่องใหม่ resume ·
-              ถ้าเข้าไม่ได้เพราะ seat ถูกจอง — กด <strong>เตะ</strong> หรือ «เคลียร์ seat» ที่แผงรหัสร้าน
-            </p>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "0.5rem",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: "0.5rem",
+              }}
+            >
+              <p className="muted" style={{ margin: 0 }}>
+                ตารางเครื่อง · กด <strong>เตะ</strong> เพื่อเคลียร์สิทธิ์ (กะไม่ปิด)
+                {activeSeatId ? ` · seat ${activeSeatId.slice(-6).toUpperCase()}` : " · seat ว่าง"}
+              </p>
+              <button
+                type="button"
+                className="npos-device-btn"
+                disabled={busyId === "__clear_seat__"}
+                onClick={() => void clearAllSeats()}
+              >
+                เคลียร์ seat ทั้งหมด
+              </button>
+            </div>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
               <thead>
                 <tr style={{ textAlign: "left", borderBottom: "1px solid #ddd" }}>
@@ -557,7 +602,13 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                   else if (d.storeClaimed) status = "เคลม";
                   const canKick = d.storeClaimed || activeSeatId === d.id;
                   return (
-                    <tr key={`slim-${d.id}`} style={{ borderBottom: "1px solid #eee" }}>
+                    <tr
+                      key={`slim-${d.id}`}
+                      style={{
+                        borderBottom: "1px solid #eee",
+                        background: isSeat ? "#fff8f0" : undefined,
+                      }}
+                    >
                       <td style={{ padding: "0.35rem" }}>
                         {posDeviceLabel(d)}
                         <span className="muted"> · {d.pairingCode}</span>
@@ -567,11 +618,12 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                       <td style={{ padding: "0.35rem" }}>
                         {d.nativeShellBuild || d.appBuild || "—"}
                       </td>
-                      <td style={{ padding: "0.35rem" }}>
+                      <td style={{ padding: "0.35rem", whiteSpace: "nowrap" }}>
                         {canKick ? (
                           <button
                             type="button"
-                            className="npos-device-btn"
+                            className="primary-btn"
+                            style={{ padding: "0.35rem 0.75rem", fontSize: "0.85rem" }}
                             disabled={busyId === d.id}
                             onClick={() => void revokeClaim(d)}
                           >

@@ -236,7 +236,11 @@ public class MainActivity extends Activity {
         if (blocked && rejectDev && emulator) {
           ((TextView) hint).setText(R.string.store_claim_emulator_blocked);
         } else if (kicked) {
-          ((TextView) hint).setText(R.string.store_claim_kicked);
+          ((TextView) hint)
+              .setText(
+                  StoreClaimPrefs.wasCodeChanged(this)
+                      ? R.string.store_claim_code_changed
+                      : R.string.store_claim_kicked);
         } else if (seatTaken) {
           ((TextView) hint).setText(R.string.store_claim_seat_taken);
         } else if (blocked) {
@@ -310,7 +314,11 @@ public class MainActivity extends Activity {
   private void onLostSeat() {
     runOnUiThread(
         () -> {
-          Toast.makeText(this, R.string.store_claim_kicked, Toast.LENGTH_LONG).show();
+          int toastRes =
+              StoreClaimPrefs.wasCodeChanged(this)
+                  ? R.string.store_claim_code_changed
+                  : R.string.store_claim_kicked;
+          Toast.makeText(this, toastRes, Toast.LENGTH_LONG).show();
           // Keep server session open — only drop local open so UI returns to claim.
           if (ShiftPrefs.isOpen(this)) {
             ShiftPrefs.clearLocalOpen(this);

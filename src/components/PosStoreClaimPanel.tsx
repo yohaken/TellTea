@@ -61,7 +61,9 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
       const res = await setNposStoreClaimCode(code, { rejectDev });
       setCode("");
       setHint(
-        `ตั้งรหัสแล้ว (${res.codeHint}) · เปิดเกตแล้ว — ไปแท็บเล็ตกรอกรหัสนี้ที่หน้าเข้างาน`,
+        hasCode
+          ? `เปลี่ยนรหัสแล้ว (${res.codeHint}) · เตะ ${res.revokedCount} เครื่อง — แท็บเล็ตใส่รหัสใหม่`
+          : `ตั้งรหัสแล้ว (${res.codeHint}) · เปิดเกตแล้ว — ไปแท็บเล็ตกรอกรหัสนี้ที่หน้าเข้างาน`,
       );
       await refresh();
     } catch (err) {

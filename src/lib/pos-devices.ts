@@ -508,12 +508,15 @@ export async function getNposStoreClaimStatus(): Promise<{
 export async function setNposStoreClaimCode(
   storeCode: string,
   opts?: { rejectDev?: boolean },
-): Promise<{ codeHint: string }> {
+): Promise<{ codeHint: string; revokedCount: number }> {
   const res = await callNposOwnerDeviceCommand("set_store_code", undefined, {
     storeCode,
     rejectDev: opts?.rejectDev !== false,
   });
-  return { codeHint: res.codeHint || "••••" };
+  return {
+    codeHint: res.codeHint || "••••",
+    revokedCount: typeof res.revokedCount === "number" ? res.revokedCount : 0,
+  };
 }
 
 export async function clearNposStoreClaimCode(): Promise<void> {
