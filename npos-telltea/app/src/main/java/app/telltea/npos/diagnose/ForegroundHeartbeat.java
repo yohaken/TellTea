@@ -8,9 +8,13 @@ import android.os.Looper;
  * Keeps nPos visible as online in BO while any activity is in the foreground.
  * MainActivity alone used to heartbeat only on hub resume — SellActivity left
  * lastSeenAt stale so BO showed offline during active selling.
+ *
+ * <p>Tick always {@code force=true} so kick/revoke from BO applies within one interval
+ * (throttle must not fake success without {@code applyFromServer}).
  */
 public final class ForegroundHeartbeat {
-    public static final long INTERVAL_MS = 10_000L;
+    /** Next BO/server seat check — keep short so kick is felt at the counter. */
+    public static final long INTERVAL_MS = 5_000L;
 
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final DeviceHeartbeat HEARTBEAT = new DeviceHeartbeat();
@@ -19,6 +23,9 @@ public final class ForegroundHeartbeat {
     private static volatile String lastPairing = "";
     private static volatile long lastSeenAt;
     private static volatile String lastError = "";
+    /** Wall-clock when the next tick is due (for staff countdown chip). */
+    private static volatile long nextCheckAtMs;
+    private static volatile long lastNetworkAtMs;
 
     public interface StatusListener {
         void onStatus(String pairingCode, long seenAt, String errorOrEmpty);
@@ -31,8 +38,9 @@ public final class ForegroundHeartbeat {
                 @Override
                 public void run() {
                     if (resumed <= 0 || app == null) return;
-                    HEARTBEAT.heartbeat(app, false, statusCallback);
-                    MAIN.postDelayed(this, INTERVAL_MS);
+                    // Always force: never skip applyFromServer (kick/hash).
+                    HEARTBEAT.heartbeat(app, true, statusCallback);
+                    scheduleNext();
                 }
             };
 
@@ -42,6 +50,7 @@ public final class ForegroundHeartbeat {
                 public void onSuccess(String pairingCode, long seenAt) {
                     lastPairing = pairingCode == null ? "" : pairingCode;
                     lastSeenAt = seenAt;
+                    lastNetworkAtMs = System.currentTimeMillis();
                     lastError = "";
                     notifyListener();
                 }
@@ -70,7 +79,7 @@ public final class ForegroundHeartbeat {
         if (resumed == 1) {
             MAIN.removeCallbacks(TICK);
             HEARTBEAT.heartbeat(app, true, statusCallback);
-            MAIN.postDelayed(TICK, INTERVAL_MS);
+            scheduleNext();
         }
     }
 
@@ -79,6 +88,7 @@ public final class ForegroundHeartbeat {
         if (resumed <= 0) {
             resumed = 0;
             MAIN.removeCallbacks(TICK);
+            nextCheckAtMs = 0;
         }
     }
 
@@ -86,6 +96,10 @@ public final class ForegroundHeartbeat {
         if (context != null) app = context.getApplicationContext();
         if (app == null) return;
         HEARTBEAT.heartbeat(app, true, statusCallback);
+        if (resumed > 0) {
+            MAIN.removeCallbacks(TICK);
+            scheduleNext();
+        }
     }
 
     public static String lastPairingCode() {
@@ -94,6 +108,28 @@ public final class ForegroundHeartbeat {
 
     public static long lastSeenAt() {
         return lastSeenAt;
+    }
+
+    public static long nextCheckAtMs() {
+        return nextCheckAtMs;
+    }
+
+    public static long lastNetworkAtMs() {
+        return lastNetworkAtMs;
+    }
+
+    /** Seconds until next forced BO check (0 = due / in flight). */
+    public static int secondsUntilNextCheck() {
+        long next = nextCheckAtMs;
+        if (next <= 0) return 0;
+        long left = next - System.currentTimeMillis();
+        if (left <= 0) return 0;
+        return (int) Math.ceil(left / 1000.0);
+    }
+
+    private static void scheduleNext() {
+        nextCheckAtMs = System.currentTimeMillis() + INTERVAL_MS;
+        MAIN.postDelayed(TICK, INTERVAL_MS);
     }
 
     private static void notifyListener() {

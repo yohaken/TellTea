@@ -35,6 +35,8 @@ public final class UiScale {
   public final int touchMinPx;
   public final int payPrimaryMinPx;
   public final int paySecondaryMinPx;
+  /** Tall keys for POS number pads only (cash / float / claim) — pre-shrink ~56–64dp. */
+  public final int padKeyMinPx;
   public final int menuMediaMaxPx;
   public final int menuCols;
   public final int gapPx;
@@ -56,6 +58,7 @@ public final class UiScale {
       int touchMinPx,
       int payPrimaryMinPx,
       int paySecondaryMinPx,
+      int padKeyMinPx,
       int menuMediaMaxPx,
       int menuCols,
       int gapPx,
@@ -75,6 +78,7 @@ public final class UiScale {
     this.touchMinPx = touchMinPx;
     this.payPrimaryMinPx = payPrimaryMinPx;
     this.paySecondaryMinPx = paySecondaryMinPx;
+    this.padKeyMinPx = padKeyMinPx;
     this.menuMediaMaxPx = menuMediaMaxPx;
     this.menuCols = menuCols;
     this.gapPx = gapPx;
@@ -104,6 +108,8 @@ public final class UiScale {
     // Friendly CTA — compact vs old 64dp bars; still ≥52dp primary.
     int payPrimaryMinPx = Math.max(dp(density, 52), Math.round(52 * density * scale));
     int paySecondaryMinPx = Math.max(dp(density, 44), Math.round(44 * density * scale));
+    // Number pad only — restore pre-shrink tall keys (not all chips).
+    int padKeyMinPx = Math.max(dp(density, 56), Math.round(64 * density * scale));
     // Web media max-height ~5.5rem — shrink tiles so ~5 rows fit, scroll vertically.
     int menuMediaMaxPx = Math.max(dp(density, 48), Math.round(5.2f * 16f * density * scale));
 
@@ -129,6 +135,7 @@ public final class UiScale {
         touchMinPx,
         payPrimaryMinPx,
         paySecondaryMinPx,
+        padKeyMinPx,
         menuMediaMaxPx,
         menuCols,
         gapPx,

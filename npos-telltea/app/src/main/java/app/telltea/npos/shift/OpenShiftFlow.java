@@ -2,10 +2,8 @@ package app.telltea.npos.shift;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.text.InputType;
 import android.util.TypedValue;
 import android.view.Gravity;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -14,11 +12,12 @@ import app.telltea.npos.R;
 import app.telltea.npos.diagnose.OpsLogger;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.ui.NposFonts;
+import app.telltea.npos.ui.NposNumberPad;
 import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.ui.UiScale;
 
 /**
- * Confirm opening float before openSession — passes amount explicitly (no prefs race).
+ * Confirm opening float before openSession — POS number pad (no system keyboard).
  */
 public final class OpenShiftFlow {
   public interface Done {
@@ -56,17 +55,35 @@ public final class OpenShiftFlow {
     hint.setPadding(0, 0, 0, ui.dp(10));
     box.addView(hint);
 
-    EditText field = NposUi.field(activity);
-    field.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-    field.setMinHeight(ui.paySecondaryMinPx);
-    field.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.titleSp + 1f);
-    field.setGravity(Gravity.CENTER);
-    field.setTypeface(NposFonts.semibold(activity));
     double seed = ShiftPrefs.nextOpeningCash(activity);
-    field.setText(ShiftPrefs.moneyPlain(seed));
-    field.setHint(R.string.open_shift_float_hint_field);
-    field.selectAll();
-    box.addView(field);
+    final String[] valueHolder = {ShiftPrefs.moneyPlain(seed)};
+
+    TextView amount = NposUi.title(activity, formatBaht(valueHolder[0]));
+    amount.setGravity(Gravity.CENTER);
+    amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.titleSp + 8f);
+    amount.setTypeface(NposFonts.semibold(activity));
+    amount.setMinHeight(ui.payPrimaryMinPx);
+    amount.setPadding(0, ui.dp(8), 0, ui.dp(12));
+    box.addView(amount);
+
+    Runnable refresh = () -> amount.setText(formatBaht(valueHolder[0]));
+
+    box.addView(
+        NposNumberPad.attach(
+            activity,
+            new NposNumberPad.Listener() {
+              @Override
+              public void onDigit(String digit) {
+                NposNumberPad.applyKey(valueHolder, digit, false, 9);
+                refresh.run();
+              }
+
+              @Override
+              public void onBackspace() {
+                NposNumberPad.applyKey(valueHolder, null, true, 9);
+                refresh.run();
+              }
+            }));
 
     new AlertDialog.Builder(activity)
         .setTitle(R.string.open_shift_float_title)
@@ -75,12 +92,12 @@ public final class OpenShiftFlow {
         .setPositiveButton(
             R.string.open_shift_float_confirm,
             (d, w) -> {
-              double amount = parseMoney(field.getText() == null ? "" : field.getText().toString());
-              amount = Math.max(0, amount);
+              double amountVal = parseMoney(valueHolder[0]);
+              amountVal = Math.max(0, amountVal);
               Toast.makeText(activity, R.string.shift_opening, Toast.LENGTH_SHORT).show();
               saleSync.openSession(
                   activity,
-                  amount,
+                  amountVal,
                   () ->
                       activity.runOnUiThread(
                           () -> {
@@ -131,6 +148,12 @@ public final class OpenShiftFlow {
               if (onCancel != null) onCancel.run();
             })
         .show();
+  }
+
+  private static String formatBaht(String raw) {
+    double v = parseMoney(raw);
+    if (raw == null || raw.trim().isEmpty()) return "฿0";
+    return String.format(java.util.Locale.getDefault(), "฿%.0f", v);
   }
 
   private static double parseMoney(String raw) {

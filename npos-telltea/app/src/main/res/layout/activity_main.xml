@@ -119,12 +119,25 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="10dp"
+                android:cursorVisible="false"
+                android:focusable="false"
+                android:focusableInTouchMode="false"
                 android:gravity="center"
                 android:hint="@string/store_claim_input_hint"
-                android:inputType="textCapCharacters"
+                android:inputType="number"
                 android:maxLength="16"
                 android:maxWidth="@dimen/npos_btn_max_w"
-                android:textSize="17sp"
+                android:textSize="22sp"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/storeClaimPad"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:maxWidth="360dp"
+                android:orientation="vertical"
                 android:visibility="gone" />
 
             <TextView

@@ -1,6 +1,6 @@
 # nPos — เตะในตาราง · เปลี่ยนรหัสแล้วเด้งล็อกใหม่
 
-อัปเดต: **1.14.36** · อ้างอิงหลัง `1.14.31` (local-first claim)  
+อัปเดต: **1.14.37** · อ้างอิงหลัง `1.14.31` (local-first claim)  
 เป้าหมาย: หลังบ้านเตะจากตารางได้ชัด · เปลี่ยนรหัสร้านแล้วแท็บเล็ตถูกเตะอัตโนมัติ · อัป hash ในเครื่อง · ต้องใส่รหัสใหม่
 
 อ้างอิง: `NposDevicesPanel` · `PosStoreClaimPanel` · `nposOwnerDeviceCommand` · `StoreClaimPrefs` / heartbeat · `NposApp` kick bounce
@@ -48,9 +48,9 @@
 - [x] K3.1 heartbeat ส่ง `storeClaimCodeHash` + `storeClaimUpdatedAt` (มีแล้วบางส่วน)
 - [x] K3.2 ถ้า hash ในเครื่อง **ต่างจาก** เซิร์ฟเวอร์ → อัป cache hash ทันที
 - [x] K3.3 ถ้าเคยถือ seat / claimed อยู่ตอน hash เปลี่ยน → `clearClaim` + เด้งหน้าใส่รหัส (toast: รหัสร้านเปลี่ยน)
-- [x] K3.4 ถ้า `kicked` / `code_changed` จาก heartbeat → เหมือนถูกเตะ (**NposApp** ปิดหน้าขาย/ตั้งค่า/กะ แล้ว CLEAR_TOP กลับหน้าใส่รหัส · heartbeat ~10s)
+- [x] K3.4 ถ้า `kicked` / `code_changed` จาก heartbeat → เหมือนถูกเตะ (**NposApp** ปิดหน้าขาย/ตั้งค่า/กะ แล้ว CLEAR_TOP กลับหน้าใส่รหัส · heartbeat **force ~5s** + ชิป `BO Ns` มุมขวาบน)
 - [x] K3.5 local-first เคลมด้วย hash เก่าไม่ได้หลังอัปแล้ว
-- [ ] K3.6 Gate + คนเทส: เปลี่ยนรหัสบนมือถือ → แท็บเล็ตเด้งใส่รหัสโดยไม่ต้องรีสตาร์ทแอป (รอ heartbeat ≤ ~15 วิ หรือ force)
+- [ ] K3.6 Gate + คนเทส: เปลี่ยนรหัสบนมือถือ → แท็บเล็ตเด้งใส่รหัสโดยไม่ต้องรีสตาร์ทแอป (รอ heartbeat ≤ ~5 วิ · ดูชิป BO)
 
 **จบ K3 เมื่อ:** เปลี่ยนรหัสแล้วเครื่องที่ล็อกอยู่เด้งใส่รหัสใหม่ + ใช้รหัสใหม่เข้าได้
 

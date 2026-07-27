@@ -25,7 +25,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class DeviceHeartbeat {
     public static final String HEARTBEAT_URL =
             "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposDeviceHeartbeat";
-    public static final long MIN_INTERVAL_MS = 8_000L;
+    /** Soft throttle for non-forced callers only — never fake success (kick would lag). */
+    public static final long MIN_INTERVAL_MS = 4_000L;
 
     public interface Callback {
         void onSuccess(String pairingCode, long lastSeenAt);
@@ -39,9 +40,7 @@ public final class DeviceHeartbeat {
     public void heartbeat(Context context, boolean force, Callback callback) {
         long now = System.currentTimeMillis();
         if (!force && now - lastSentAt.get() < MIN_INTERVAL_MS) {
-            if (callback != null) {
-                callback.onSuccess(DeviceIdentity.pairingCode(context), lastSentAt.get());
-            }
+            // Do not call onSuccess — that used to skip applyFromServer and delay kicks ~1m.
             return;
         }
         Context app = context.getApplicationContext();

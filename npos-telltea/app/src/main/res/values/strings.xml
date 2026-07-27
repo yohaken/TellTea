@@ -52,6 +52,8 @@
     <string name="heartbeat_ok">ออนไลน์</string>
     <string name="heartbeat_fail">ส่งสัญญาณไม่สำเร็จ: %1$s</string>
     <string name="heartbeat_fail_human">เน็ตหลุดชั่วคราว — ร้านจะเห็นอัตโนมัติ</string>
+    <string name="server_check_chip">BO %1$ds</string>
+    <string name="server_check_now">BO …</string>
 
     <string name="shift_opening">กำลังเปิดรอบ…</string>
     <string name="sell_title">สั่งและชำระเงิน</string>

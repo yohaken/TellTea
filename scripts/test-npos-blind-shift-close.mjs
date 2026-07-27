@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 294/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+59/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.36"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 295/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+60/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.37"/);
 assert.match(read("docs/npos-blind-shift-close-checklist.md"), /Blind|Over|Short|B1/);
 
 assert.ok(
@@ -29,6 +29,7 @@ const flow = read(
 assert.match(flow, /askCountedCash|blind_close_count/);
 assert.match(flow, /revealSummary|discrepancyLabel/);
 assert.match(flow, /leaveFloat|listPending/);
+assert.match(flow, /NposNumberPad/);
 
 const prefs = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/shift/ShiftPrefs.java",

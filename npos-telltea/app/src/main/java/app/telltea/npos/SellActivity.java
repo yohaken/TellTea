@@ -48,6 +48,7 @@ import app.telltea.npos.shell.PosShellNav;
 import app.telltea.npos.shift.BlindCloseFlow;
 import app.telltea.npos.shift.ShiftPrefs;
 import app.telltea.npos.ui.NposFonts;
+import app.telltea.npos.ui.NposNumberPad;
 import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.ui.UiScale;
 import app.telltea.npos.update.ResumePrefs;
@@ -64,6 +65,7 @@ public class SellActivity extends Activity {
   private TextView cartTotalView;
   private TextView sellSyncStatus;
   private TextView sellTitle;
+  private TextView sellServerCheckChip;
   private TextView discountLabel;
   private TextView shiftSummary;
   private TextView flushSyncButton;
@@ -87,6 +89,7 @@ public class SellActivity extends Activity {
         @Override
         public void run() {
           updateShiftSummary();
+          updateServerCheckChip();
           dutyHandler.postDelayed(this, 1000L);
         }
       };
@@ -109,6 +112,7 @@ public class SellActivity extends Activity {
     priceChannelToggle = findViewById(R.id.priceChannelToggle);
     sellSyncStatus = findViewById(R.id.sellSyncStatus);
     sellTitle = findViewById(R.id.sellTitle);
+    sellServerCheckChip = findViewById(R.id.sellServerCheckChip);
     discountLabel = findViewById(R.id.discountLabel);
     shiftSummary = findViewById(R.id.shiftSummary);
     flushSyncButton = findViewById(R.id.flushSyncButton);
@@ -546,6 +550,7 @@ public class SellActivity extends Activity {
     }
     // Faster kick detection while selling (heartbeat may have been throttled).
     ForegroundHeartbeat.forceNow(this);
+    updateServerCheckChip();
     if (updatePrompt != null) updatePrompt.onResume();
     // Refresh shop name/address from server so BO edits show on next bill.
     if (menuRepo != null) {
@@ -598,6 +603,16 @@ public class SellActivity extends Activity {
         shop.optString("receiptFooterNote", getString(R.string.customer_success_default)));
   }
 
+  private void updateServerCheckChip() {
+    if (sellServerCheckChip == null) return;
+    int sec = ForegroundHeartbeat.secondsUntilNextCheck();
+    if (sec <= 0) {
+      sellServerCheckChip.setText(R.string.server_check_now);
+    } else {
+      sellServerCheckChip.setText(getString(R.string.server_check_chip, sec));
+    }
+  }
+
   private void closeShift() {
     BlindCloseFlow.start(this, saleSync, this::finish);
   }
@@ -622,16 +637,19 @@ public class SellActivity extends Activity {
       applySavedCategoryOrder();
     }
     float density = getResources().getDisplayMetrics().density;
-    int padH = Math.round(12 * density);
-    int padV = Math.round(8 * density);
-    int gap = Math.round(6 * density);
+    int padH = Math.round(14 * density);
+    int padV = Math.round(10 * density);
+    int gap = Math.round(8 * density);
+    int catMin = Math.max(Math.round(48 * density), uiScale != null ? uiScale.touchMinPx : 0);
     for (int i = 0; i < menu.categories.size(); i++) {
       final int idx = i;
       MenuModels.Category cat = menu.categories.get(i);
       TextView b = NposUi.chip(this, "");
       b.setText(cat.name);
       b.setAllCaps(false);
-      b.setMinHeight(Math.round(40 * density));
+      b.setMinHeight(catMin);
+      b.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale != null ? uiScale.bodySp : 14f);
+      b.setTypeface(NposFonts.semibold(this));
       b.setPadding(padH, padV, padH, padV);
       LinearLayout.LayoutParams lp =
           new LinearLayout.LayoutParams(
@@ -644,6 +662,7 @@ public class SellActivity extends Activity {
       } else {
         NposUi.applyBtn(b, NposUi.Btn.CHIP);
       }
+      b.setMinHeight(catMin);
       b.setPadding(padH, padV, padH, padV);
       b.setOnClickListener(
           v -> {
@@ -758,7 +777,8 @@ public class SellActivity extends Activity {
 
       LinearLayout cell = new LinearLayout(this);
       cell.setOrientation(LinearLayout.VERTICAL);
-      cell.setBackgroundColor(item.active ? 0xFFFFFFFF : 0xFFE8E8E8);
+      cell.setBackgroundResource(
+          item.active ? R.drawable.npos_card_surface : R.drawable.npos_touch_ghost);
       cell.setPadding(gap, gap, gap, gap);
       GridLayout.LayoutParams glp = new GridLayout.LayoutParams();
       glp.width = 0;
@@ -1809,39 +1829,24 @@ public class SellActivity extends Activity {
         clear, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
     root.addView(bills);
 
-    LinearLayout pad = new LinearLayout(this);
-    pad.setOrientation(LinearLayout.VERTICAL);
-    String[][] rows = {
-      {"7", "8", "9"},
-      {"4", "5", "6"},
-      {"1", "2", "3"},
-      {"0", "⌫"}
-    };
-    for (String[] row : rows) {
-      LinearLayout line = new LinearLayout(this);
-      line.setOrientation(LinearLayout.HORIZONTAL);
-      for (String key : row) {
-        TextView b = NposUi.chip(this, "");
-        b.setText(key);
-        b.setAllCaps(false);
-        float weight = "0".equals(key) ? 2f : 1f;
-        b.setOnClickListener(
-            v -> {
-              if ("⌫".equals(key)) {
+    LinearLayout pad =
+        NposNumberPad.attach(
+            this,
+            new NposNumberPad.Listener() {
+              @Override
+              public void onDigit(String digit) {
+                valueHolder[0] = valueHolder[0] + digit;
+                refresh.run();
+              }
+
+              @Override
+              public void onBackspace() {
                 if (!valueHolder[0].isEmpty()) {
                   valueHolder[0] = valueHolder[0].substring(0, valueHolder[0].length() - 1);
                 }
-              } else {
-                valueHolder[0] = valueHolder[0] + key;
+                refresh.run();
               }
-              refresh.run();
             });
-        line.addView(
-            b,
-            new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, weight));
-      }
-      pad.addView(line);
-    }
     root.addView(pad);
 
     ScrollView scroll = new ScrollView(this);

@@ -9,14 +9,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 294/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 89/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+59/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.36"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 295/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 90/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+60/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.37"/);
 
 assert.ok(existsSync(join(root, "docs/npos-kick-reclaim-checklist.md")));
 const doc = read("docs/npos-kick-reclaim-checklist.md");
-assert.match(doc, /1\.14\.36/);
+assert.match(doc, /1\.14\.37/);
 assert.match(doc, /\[x\] K1\.2/);
 assert.match(doc, /\[x\] K2\.1/);
 assert.match(doc, /\[x\] K3\.3/);
@@ -60,7 +60,7 @@ assert.match(strings, /รหัสร้านเปลี่ยน/);
 
 const remaining = read("docs/npos-remaining-checklist.md");
 assert.match(remaining, /npos-kick-reclaim-checklist/);
-assert.match(remaining, /1\.14\.36/);
+assert.match(remaining, /1\.14\.37/);
 
 
 const app = read("npos-telltea/app/src/main/java/app/telltea/npos/NposApp.java");
@@ -86,15 +86,39 @@ assert.match(
 
 assert.match(
   read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/ForegroundHeartbeat.java"),
-  /INTERVAL_MS = 10_000/,
+  /INTERVAL_MS = 5_000/,
+);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/ForegroundHeartbeat.java"),
+  /secondsUntilNextCheck|nextCheckAtMs/,
 );
 assert.match(
   read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/DeviceHeartbeat.java"),
-  /MIN_INTERVAL_MS = 8_000/,
+  /MIN_INTERVAL_MS = 4_000/,
+);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/DeviceHeartbeat.java"),
+  /Do not call onSuccess|skip applyFromServer/,
 );
 assert.match(
   read("npos-telltea/app/src/main/java/app/telltea/npos/SellActivity.java"),
-  /ForegroundHeartbeat\.forceNow/,
+  /sellServerCheckChip|server_check_chip|ForegroundHeartbeat\.forceNow/,
+);
+assert.match(
+  read("npos-telltea/app/src/main/res/layout/activity_sell.xml"),
+  /sellServerCheckChip/,
+);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/ui/NposNumberPad.java"),
+  /padKeyMinPx|onBackspace/,
+);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/shift/OpenShiftFlow.java"),
+  /NposNumberPad/,
+);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/MainActivity.java"),
+  /storeClaimPad|NposNumberPad/,
 );
 
 console.log("OK test-npos-kick-reclaim");

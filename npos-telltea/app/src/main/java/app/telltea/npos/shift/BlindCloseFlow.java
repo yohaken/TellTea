@@ -19,6 +19,7 @@ import org.json.JSONObject;
 import app.telltea.npos.R;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.ui.NposFonts;
+import app.telltea.npos.ui.NposNumberPad;
 import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.ui.UiScale;
 
@@ -69,17 +70,21 @@ public final class BlindCloseFlow {
     hint.setPadding(0, 0, 0, ui.dp(10));
     box.addView(hint);
 
-    EditText count = moneyField(activity, ui);
-    count.setHint(R.string.blind_close_count_hint_field);
-    box.addView(count);
+    final String[] valueHolder = {""};
+    TextView amount = moneyDisplay(activity, ui, "฿0");
+    box.addView(amount);
+    box.addView(moneyPad(activity, valueHolder, amount));
+
+    ScrollView scroll = new ScrollView(activity);
+    scroll.addView(box);
 
     new AlertDialog.Builder(activity)
         .setTitle(R.string.blind_close_count_title)
-        .setView(box)
+        .setView(scroll)
         .setPositiveButton(
             R.string.blind_close_next,
             (d, w) -> {
-              double counted = parseMoney(count.getText().toString());
+              double counted = parseMoney(valueHolder[0]);
               askNoteAndFloat(activity, saleSync, done, counted);
             })
         .setNegativeButton(android.R.string.cancel, null)
@@ -103,11 +108,10 @@ public final class BlindCloseFlow {
     TextView floatLabel = NposUi.caption(activity, activity.getString(R.string.blind_close_leave_float));
     box.addView(floatLabel);
 
-    EditText leave = moneyField(activity, ui);
-    leave.setHint(ShiftPrefs.moneyPlain(leaveSeed));
-    leave.setText(ShiftPrefs.moneyPlain(leaveSeed));
-    leave.selectAll();
-    box.addView(leave);
+    final String[] leaveHolder = {ShiftPrefs.moneyPlain(leaveSeed)};
+    TextView leaveAmount = moneyDisplay(activity, ui, formatBaht(leaveHolder[0]));
+    box.addView(leaveAmount);
+    box.addView(moneyPad(activity, leaveHolder, leaveAmount));
 
     TextView noteLabel = NposUi.caption(activity, activity.getString(R.string.blind_close_note_optional));
     noteLabel.setPadding(0, ui.dp(10), 0, ui.dp(4));
@@ -119,13 +123,16 @@ public final class BlindCloseFlow {
     note.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
     box.addView(note);
 
+    ScrollView scroll = new ScrollView(activity);
+    scroll.addView(box);
+
     new AlertDialog.Builder(activity)
         .setTitle(R.string.blind_close_extra_title)
-        .setView(box)
+        .setView(scroll)
         .setPositiveButton(
             R.string.blind_close_next,
             (d, w) -> {
-              double leaveAmt = parseMoney(leave.getText().toString());
+              double leaveAmt = parseMoney(leaveHolder[0]);
               if (leaveAmt > counted + 0.009) {
                 Toast.makeText(activity, R.string.blind_close_leave_too_high, Toast.LENGTH_LONG)
                     .show();
@@ -208,14 +215,38 @@ public final class BlindCloseFlow {
         .show();
   }
 
-  private static EditText moneyField(Activity activity, UiScale ui) {
-    EditText ed = NposUi.field(activity);
-    ed.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-    ed.setMinHeight(ui.paySecondaryMinPx);
-    ed.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.titleSp + 1f);
-    ed.setGravity(Gravity.CENTER);
-    ed.setTypeface(NposFonts.semibold(activity));
-    return ed;
+  private static TextView moneyDisplay(Activity activity, UiScale ui, CharSequence seed) {
+    TextView amount = NposUi.title(activity, seed);
+    amount.setGravity(Gravity.CENTER);
+    amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.titleSp + 8f);
+    amount.setTypeface(NposFonts.semibold(activity));
+    amount.setMinHeight(ui.payPrimaryMinPx);
+    amount.setPadding(0, ui.dp(8), 0, ui.dp(12));
+    return amount;
+  }
+
+  private static LinearLayout moneyPad(
+      Activity activity, String[] valueHolder, TextView amountView) {
+    return NposNumberPad.attach(
+        activity,
+        new NposNumberPad.Listener() {
+          @Override
+          public void onDigit(String digit) {
+            NposNumberPad.applyKey(valueHolder, digit, false, 9);
+            amountView.setText(formatBaht(valueHolder[0]));
+          }
+
+          @Override
+          public void onBackspace() {
+            NposNumberPad.applyKey(valueHolder, null, true, 9);
+            amountView.setText(formatBaht(valueHolder[0]));
+          }
+        });
+  }
+
+  private static String formatBaht(String raw) {
+    if (raw == null || raw.trim().isEmpty()) return "฿0";
+    return String.format(Locale.getDefault(), "฿%.0f", parseMoney(raw));
   }
 
   private static double parseMoney(String raw) {

@@ -30,6 +30,7 @@ import app.telltea.npos.shell.PosShellNav;
 import app.telltea.npos.shift.BlindCloseFlow;
 import app.telltea.npos.shift.OpenShiftFlow;
 import app.telltea.npos.shift.ShiftPrefs;
+import app.telltea.npos.ui.NposNumberPad;
 import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.ui.UiScale;
 import app.telltea.npos.update.ResumePrefs;
@@ -51,6 +52,8 @@ public class MainActivity extends Activity {
   private TextView clockInDate;
   private TextView hubShiftStrip;
   private LinearLayout hubNavList;
+  private LinearLayout storeClaimPadHost;
+  private boolean claimPadBound;
 
   private AutoHealth autoHealth;
   private SaleSync saleSync;
@@ -94,7 +97,7 @@ public class MainActivity extends Activity {
             pollClaimUpdateChip();
             if (updatePrompt != null) updatePrompt.forceCheck();
           }
-          clockHandler.postDelayed(this, 45_000L);
+          clockHandler.postDelayed(this, 15_000L);
         }
       };
 
@@ -113,6 +116,7 @@ public class MainActivity extends Activity {
     clockInDate = findViewById(R.id.clockInDate);
     hubShiftStrip = findViewById(R.id.hubShiftStrip);
     hubNavList = findViewById(R.id.hubNavList);
+    storeClaimPadHost = findViewById(R.id.storeClaimPad);
 
     readLocalVersion();
     versionView.setText(getString(R.string.version_label, localVersionName, localVersionCode));
@@ -279,6 +283,10 @@ public class MainActivity extends Activity {
         }
       }
     }
+    if (storeClaimPadHost != null) {
+      storeClaimPadHost.setVisibility(needClaim && !deviceBlocked ? View.VISIBLE : View.GONE);
+      ensureClaimPadBound();
+    }
     View clearRemembered = findViewById(R.id.clearRememberedCodeButton);
     if (clearRemembered != null) {
       boolean showClear =
@@ -299,6 +307,38 @@ public class MainActivity extends Activity {
       open.setEnabled(!StoreClaimPrefs.blocksWrites(this));
       open.setAlpha(StoreClaimPrefs.blocksWrites(this) ? 0.45f : 1f);
     }
+  }
+
+  private void ensureClaimPadBound() {
+    if (claimPadBound || storeClaimPadHost == null) return;
+    claimPadBound = true;
+    storeClaimPadHost.removeAllViews();
+    EditText input = findViewById(R.id.storeClaimInput);
+    storeClaimPadHost.addView(
+        NposNumberPad.attach(
+            this,
+            new NposNumberPad.Listener() {
+              @Override
+              public void onDigit(String digit) {
+                if (input == null) return;
+                String cur = input.getText() == null ? "" : input.getText().toString();
+                if (cur.length() >= 16) return;
+                // Digits only — claim codes are numeric on counter.
+                if (digit == null || !digit.matches("\\d")) return;
+                input.setText(cur + digit);
+                input.setSelection(input.getText().length());
+              }
+
+              @Override
+              public void onBackspace() {
+                if (input == null || input.getText() == null) return;
+                String cur = input.getText().toString();
+                if (cur.isEmpty()) return;
+                input.setText(cur.substring(0, cur.length() - 1));
+                input.setSelection(input.getText().length());
+              }
+            },
+            false));
   }
 
   private void updateClaimVersionChipText() {
@@ -569,7 +609,7 @@ public class MainActivity extends Activity {
     }
     if (isClaimGateVisible()) {
       pollClaimUpdateChip();
-      clockHandler.postDelayed(claimPollTick, 30_000L);
+      clockHandler.postDelayed(claimPollTick, 15_000L);
     }
     ForegroundHeartbeat.forceNow(this);
     StoreClaimClient.syncPendingClaim(this);
