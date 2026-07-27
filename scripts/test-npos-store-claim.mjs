@@ -9,13 +9,13 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 295/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 90/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+60/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.37"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 296/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 91/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+61/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.38"/);
 
 assert.ok(existsSync(join(root, "docs/npos-store-claim-checklist.md")));
-assert.match(read("docs/npos-store-claim-checklist.md"), /1.14.37/);
+assert.match(read("docs/npos-store-claim-checklist.md"), /1.14.38/);
 
 const settings = read("src/lib/pos-settings.ts");
 assert.match(settings, /shopSettingsUpdatedAt/);
@@ -59,15 +59,25 @@ assert.match(manage, /PosBusinessSettingsView/);
 const panel = read("src/components/PosStoreClaimPanel.tsx");
 assert.match(panel, /setNposStoreClaimCode/);
 assert.match(panel, /รหัสร้าน/);
+assert.match(panel, /currentCode|storeClaimCode/);
 
 const devices = read("src/lib/pos-devices.ts");
 assert.match(devices, /storeClaimed/);
 assert.match(devices, /grant_claim/);
 assert.match(devices, /setNposStoreClaimCode/);
+assert.match(devices, /storeClaimCode/);
 
 const devicesUi = read("src/components/NposDevicesPanel.tsx");
 assert.match(devicesUi, /อนุญาตเคลม|grantClaim/);
 assert.match(devicesUi, /ถอนเคลม|revokeClaim/);
+assert.match(devicesUi, /ยอดรอบ|subscribePosSessionsForDate|openRoundBar/);
+
+assert.match(owner, /META_POS_CLAIM_SECRET|posStoreClaimSecret|storeClaimCode/);
+assert.match(gate, /META_POS_CLAIM_SECRET/);
+assert.match(rules, /posStoreClaimSecret/);
+
+assert.ok(existsSync(join(root, "docs/npos-bo-sales-retention-plan.md")));
+assert.match(read("docs/npos-bo-sales-retention-plan.md"), /posSales|posSessions|P1/);
 
 const prefs = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/diagnose/StoreClaimPrefs.java",

@@ -10,6 +10,7 @@ const {
 } = require("./npos-capture-prune");
 const {
   META_POS,
+  META_POS_CLAIM_SECRET,
   hashStoreCode,
   isValidStoreCodeShape,
   loadStoreClaimPolicy,
@@ -105,6 +106,16 @@ exports.nposOwnerDeviceCommand = functions
         },
         { merge: true },
       );
+      // Owner-only secret doc — full code for BO recall (not on meta/pos).
+      batch.set(
+        db.doc(META_POS_CLAIM_SECRET),
+        {
+          storeClaimCode: code,
+          updatedAt: now,
+          updatedBy: actorId,
+        },
+        { merge: true },
+      );
       claimed.forEach((docSnap) => {
         batch.set(
           docSnap.ref,
@@ -132,24 +143,42 @@ exports.nposOwnerDeviceCommand = functions
 
     if (action === "clear_store_code") {
       const now = Date.now();
-      await getFirestore()
-        .doc(META_POS)
-        .set(
-          {
-            storeClaimCodeHash: "",
-            storeClaimRequired: false,
-            storeClaimUpdatedAt: now,
-            storeClaimUpdatedBy: actorId,
-            activeSeatInstallId: "",
-            seatClaimedAt: 0,
-          },
-          { merge: true },
-        );
+      const db = getFirestore();
+      const batch = db.batch();
+      batch.set(
+        db.doc(META_POS),
+        {
+          storeClaimCodeHash: "",
+          storeClaimRequired: false,
+          storeClaimUpdatedAt: now,
+          storeClaimUpdatedBy: actorId,
+          activeSeatInstallId: "",
+          seatClaimedAt: 0,
+        },
+        { merge: true },
+      );
+      batch.set(
+        db.doc(META_POS_CLAIM_SECRET),
+        {
+          storeClaimCode: "",
+          updatedAt: now,
+          updatedBy: actorId,
+        },
+        { merge: true },
+      );
+      await batch.commit();
       return { ok: true, action, actorId, at: now, storeClaimRequired: false };
     }
 
     if (action === "get_store_claim") {
-      const policy = await loadStoreClaimPolicy(getFirestore());
+      const db = getFirestore();
+      const policy = await loadStoreClaimPolicy(db);
+      const secretSnap = await db.doc(META_POS_CLAIM_SECRET).get();
+      const secret = secretSnap.exists ? secretSnap.data() || {} : {};
+      const storeClaimCode =
+        typeof secret.storeClaimCode === "string"
+          ? String(secret.storeClaimCode).trim().toUpperCase()
+          : "";
       return {
         ok: true,
         action,
@@ -159,6 +188,8 @@ exports.nposOwnerDeviceCommand = functions
         hasCode: policy.hash.length >= 32,
         seatMode: policy.seatMode,
         activeSeatInstallId: policy.activeSeatInstallId || "",
+        // Full code for owner BO only (CF assertOwner). Empty if set before this field existed.
+        storeClaimCode: storeClaimCode.length >= 4 ? storeClaimCode : "",
       };
     }
 

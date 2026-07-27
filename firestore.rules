@@ -574,11 +574,13 @@ service cloud.firestore {
     match /meta/{docId} {
       // brandLogo + businessProfile text are public (no secrets) so login can show the mark
       // aiSettings holds Gemini API key — owner-only read
+      // posStoreClaimSecret = full shop claim code — owner-only (never staff / POS)
       allow read: if docId == 'businessProfile'
         || docId == 'brandLogo'
         || (docId == 'aiSettings' && isOwner())
         || (docId == 'foodstoryAuth' && isOwner())
-        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && isStaff())
+        || (docId == 'posStoreClaimSecret' && isOwner())
+        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && isStaff())
         || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes' || docId == 'posMenuRank'));
       allow write: if isOwner()
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))

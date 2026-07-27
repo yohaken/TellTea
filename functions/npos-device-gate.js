@@ -9,6 +9,8 @@
 const crypto = require("crypto");
 
 const META_POS = "meta/pos";
+/** Owner-only plaintext shop code — never on meta/pos (staff/POS can read that). */
+const META_POS_CLAIM_SECRET = "meta/posStoreClaimSecret";
 const DEVICES = "posDevices";
 const HASH_PREFIX = "telltea-store-claim:v1:";
 
@@ -235,6 +237,7 @@ async function claimStatusForHeartbeat(db, installId, deviceData) {
 
 module.exports = {
   META_POS,
+  META_POS_CLAIM_SECRET,
   DEVICES,
   normalizeStoreCode,
   hashStoreCode,

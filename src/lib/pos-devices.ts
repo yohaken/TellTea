@@ -492,6 +492,8 @@ export async function getNposStoreClaimStatus(): Promise<{
   storeClaimUpdatedAt: number;
   seatMode: "exclusive" | "multi";
   activeSeatInstallId: string;
+  /** Full shop code for owner BO recall (empty if set before this field). */
+  storeClaimCode: string;
 }> {
   const res = await callNposOwnerDeviceCommand("get_store_claim");
   return {
@@ -502,6 +504,8 @@ export async function getNposStoreClaimStatus(): Promise<{
     seatMode: res.seatMode === "multi" ? "multi" : "exclusive",
     activeSeatInstallId:
       typeof res.activeSeatInstallId === "string" ? res.activeSeatInstallId : "",
+    storeClaimCode:
+      typeof res.storeClaimCode === "string" ? res.storeClaimCode.trim().toUpperCase() : "",
   };
 }
 

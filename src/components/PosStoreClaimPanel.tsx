@@ -26,6 +26,7 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
   const [seatMode, setSeatMode] = useState<"exclusive" | "multi">("exclusive");
   const [code, setCode] = useState("");
   const [hint, setHint] = useState<string | null>(null);
+  const [currentCode, setCurrentCode] = useState("");
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -37,6 +38,7 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
       setUpdatedAt(s.storeClaimUpdatedAt);
       setActiveSeatId(s.activeSeatInstallId || "");
       setSeatMode(s.seatMode || "exclusive");
+      setCurrentCode(s.storeClaimCode || "");
       onError(null);
     } catch (err) {
       onError(err instanceof Error ? err.message : String(err));
@@ -166,6 +168,38 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
         <p className="muted" style={{ marginBottom: "0.5rem" }}>
           Seat ปัจจุบัน: {activeSeatId ? activeSeatId.slice(-8).toUpperCase() : "— ว่าง —"}
         </p>
+      ) : null}
+      {hasCode ? (
+        <div
+          style={{
+            marginBottom: "0.75rem",
+            padding: "0.75rem 0.85rem",
+            borderRadius: 10,
+            background: "#1A2E24",
+            color: "#F7F7F5",
+          }}
+        >
+          <div style={{ fontSize: "0.75rem", opacity: 0.75, marginBottom: "0.25rem" }}>
+            รหัสร้านที่ใช้อยู่ (เจ้าของเท่านั้น)
+          </div>
+          {currentCode ? (
+            <div
+              style={{
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                fontSize: "1.45rem",
+                fontWeight: 700,
+                letterSpacing: "0.12em",
+              }}
+            >
+              {currentCode}
+            </div>
+          ) : (
+            <p style={{ margin: 0, fontSize: "0.9rem", opacity: 0.9 }}>
+              มีรหัสบนเซิร์ฟเวอร์แล้ว แต่ยังไม่เก็บตัวเต็ม — กด{" "}
+              <strong>เปลี่ยนรหัส + เปิดเกต</strong> อีกครั้งเพื่อให้หลังบ้านจำรหัสเต็ม
+            </p>
+          )}
+        </div>
       ) : null}
       {updatedAt > 0 ? (
         <p className="muted" style={{ marginBottom: "0.5rem" }}>

@@ -26,6 +26,15 @@ public final class ForegroundHeartbeat {
     /** Wall-clock when the next tick is due (for staff countdown chip). */
     private static volatile long nextCheckAtMs;
     private static volatile long lastNetworkAtMs;
+    private static volatile boolean inFlight;
+
+    /** Link health for the sell chrome status dot. */
+    public enum LinkStatus {
+        OK,
+        CHECKING,
+        WARN,
+        FAIL
+    }
 
     public interface StatusListener {
         void onStatus(String pairingCode, long seenAt, String errorOrEmpty);
@@ -38,6 +47,7 @@ public final class ForegroundHeartbeat {
                 @Override
                 public void run() {
                     if (resumed <= 0 || app == null) return;
+                    inFlight = true;
                     // Always force: never skip applyFromServer (kick/hash).
                     HEARTBEAT.heartbeat(app, true, statusCallback);
                     scheduleNext();
@@ -52,6 +62,7 @@ public final class ForegroundHeartbeat {
                     lastSeenAt = seenAt;
                     lastNetworkAtMs = System.currentTimeMillis();
                     lastError = "";
+                    inFlight = false;
                     notifyListener();
                 }
 
@@ -61,6 +72,7 @@ public final class ForegroundHeartbeat {
                             error == null || error.getMessage() == null
                                     ? "heartbeat_fail"
                                     : error.getMessage();
+                    inFlight = false;
                     notifyListener();
                 }
             };
@@ -78,6 +90,7 @@ public final class ForegroundHeartbeat {
         resumed += 1;
         if (resumed == 1) {
             MAIN.removeCallbacks(TICK);
+            inFlight = true;
             HEARTBEAT.heartbeat(app, true, statusCallback);
             scheduleNext();
         }
@@ -95,6 +108,7 @@ public final class ForegroundHeartbeat {
     public static void forceNow(Context context) {
         if (context != null) app = context.getApplicationContext();
         if (app == null) return;
+        inFlight = true;
         HEARTBEAT.heartbeat(app, true, statusCallback);
         if (resumed > 0) {
             MAIN.removeCallbacks(TICK);
@@ -108,6 +122,10 @@ public final class ForegroundHeartbeat {
 
     public static long lastSeenAt() {
         return lastSeenAt;
+    }
+
+    public static String lastError() {
+        return lastError == null ? "" : lastError;
     }
 
     public static long nextCheckAtMs() {
@@ -125,6 +143,19 @@ public final class ForegroundHeartbeat {
         long left = next - System.currentTimeMillis();
         if (left <= 0) return 0;
         return (int) Math.ceil(left / 1000.0);
+    }
+
+    /**
+     * Green = linked recently · yellow = checking / soft stale · red = last check failed.
+     */
+    public static LinkStatus linkStatus() {
+        String err = lastError();
+        if (!err.isEmpty()) return LinkStatus.FAIL;
+        if (inFlight || lastNetworkAtMs <= 0) return LinkStatus.CHECKING;
+        long age = System.currentTimeMillis() - lastNetworkAtMs;
+        if (age > 25_000L) return LinkStatus.WARN;
+        if (age > INTERVAL_MS * 2) return LinkStatus.CHECKING;
+        return LinkStatus.OK;
     }
 
     private static void scheduleNext() {

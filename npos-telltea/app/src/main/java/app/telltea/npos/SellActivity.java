@@ -9,6 +9,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -606,11 +609,29 @@ public class SellActivity extends Activity {
   private void updateServerCheckChip() {
     if (sellServerCheckChip == null) return;
     int sec = ForegroundHeartbeat.secondsUntilNextCheck();
-    if (sec <= 0) {
-      sellServerCheckChip.setText(R.string.server_check_now);
-    } else {
-      sellServerCheckChip.setText(getString(R.string.server_check_chip, sec));
+    ForegroundHeartbeat.LinkStatus link = ForegroundHeartbeat.linkStatus();
+    int dotColor;
+    switch (link) {
+      case FAIL:
+        dotColor = 0xFFFF6B6B;
+        break;
+      case WARN:
+      case CHECKING:
+        dotColor = 0xFFFFD166;
+        break;
+      case OK:
+      default:
+        dotColor = 0xFF4ADE80;
+        break;
     }
+    String label =
+        sec <= 0
+            ? getString(R.string.server_check_now)
+            : getString(R.string.server_check_chip, sec);
+    // "● BO 4s" — small status orb + tech countdown for counter staff.
+    SpannableString ss = new SpannableString("● " + label);
+    ss.setSpan(new ForegroundColorSpan(dotColor), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    sellServerCheckChip.setText(ss);
   }
 
   private void closeShift() {

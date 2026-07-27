@@ -30,6 +30,10 @@ import { useAuth } from "@/lib/auth";
 import { NposCaptureGallery } from "@/components/NposCaptureGallery";
 import { subscribeNposDiagnoseReports } from "@/lib/npos-diagnose";
 import { resolveNposCaptureDisplayUrl } from "@/lib/npos-capture-media";
+import { shiftDayMs, subscribePosSessionsForDate } from "@/lib/pos-sales-report";
+import { labelOtShift, type OtShiftId } from "@/lib/ot";
+import type { PosSession } from "@/lib/types";
+import { formatPlainNumber } from "@/lib/utils";
 
 function isNposDevice(d: PosDevice): boolean {
   if (d.shellKind === "native") return true;
@@ -282,6 +286,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
   const [now, setNow] = useState(() => Date.now());
   const [busyId, setBusyId] = useState<string | null>(null);
   const [activeSeatId, setActiveSeatId] = useState("");
+  const [todaySessions, setTodaySessions] = useState<PosSession[]>([]);
 
   useEffect(() => {
     const t = window.setInterval(() => setNow(Date.now()), 15_000);
@@ -293,6 +298,39 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
       .then((s) => setActiveSeatId(s.activeSeatInstallId || ""))
       .catch(() => setActiveSeatId(""));
   }, [devices]);
+
+  useEffect(() => {
+    const day = shiftDayMs(0);
+    return subscribePosSessionsForDate(
+      day,
+      (sessions) => setTodaySessions(sessions),
+      () => setTodaySessions([]),
+    );
+  }, []);
+
+  /** Newest open session per device; else newest closed today. */
+  const sessionByDevice = useMemo(() => {
+    const map = new Map<string, PosSession>();
+    const sorted = [...todaySessions].sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0));
+    for (const s of sorted) {
+      if (!s.deviceId) continue;
+      const prev = map.get(s.deviceId);
+      if (!prev) {
+        map.set(s.deviceId, s);
+        continue;
+      }
+      if (prev.status !== "open" && s.status === "open") {
+        map.set(s.deviceId, s);
+      }
+    }
+    return map;
+  }, [todaySessions]);
+
+  const openRoundBar = useMemo(() => {
+    return todaySessions
+      .filter((s) => s.status === "open")
+      .sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0));
+  }, [todaySessions]);
 
   useEffect(() => {
     setLoading(true);
@@ -580,11 +618,51 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                 เคลียร์ seat ทั้งหมด
               </button>
             </div>
+            {openRoundBar.length > 0 ? (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "0.5rem",
+                  marginBottom: "0.65rem",
+                }}
+              >
+                {openRoundBar.map((s) => {
+                  const dev = devices.find((d) => d.id === s.deviceId);
+                  const who = dev ? posDeviceLabel(dev) : s.deviceId.slice(-6).toUpperCase() || "—";
+                  const shift =
+                    s.shift === "late" || s.shift === "morning" || s.shift === "evening"
+                      ? labelOtShift(s.shift as OtShiftId)
+                      : s.shift || "รอบ";
+                  return (
+                    <div
+                      key={s.id}
+                      style={{
+                        padding: "0.4rem 0.65rem",
+                        borderRadius: 8,
+                        background: "#fff4e8",
+                        border: "1px solid #f0c9a0",
+                        fontSize: "0.82rem",
+                      }}
+                    >
+                      <strong>{shift}</strong> · {who} · เปิดอยู่ · {s.saleCount} บิล · ฿
+                      {formatPlainNumber(s.totalSales)}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="muted" style={{ marginBottom: "0.5rem", fontSize: "0.82rem" }}>
+                วันนี้ยังไม่มีรอบเปิดบนเซิร์ฟเวอร์
+              </p>
+            )}
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
               <thead>
                 <tr style={{ textAlign: "left", borderBottom: "1px solid #ddd" }}>
                   <th style={{ padding: "0.35rem" }}>เครื่อง</th>
                   <th style={{ padding: "0.35rem" }}>สถานะ</th>
+                  <th style={{ padding: "0.35rem" }}>รอบ</th>
+                  <th style={{ padding: "0.35rem" }}>ยอดรอบ</th>
                   <th style={{ padding: "0.35rem" }}>เชื่อม</th>
                   <th style={{ padding: "0.35rem" }}>เวอร์ชัน</th>
                   <th style={{ padding: "0.35rem" }}>แอ็กชัน</th>
@@ -601,6 +679,20 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                   else if (isSeat && !online) status = "หลุดเน็ต · seat";
                   else if (d.storeClaimed) status = "เคลม";
                   const canKick = d.storeClaimed || activeSeatId === d.id;
+                  const sess = sessionByDevice.get(d.id);
+                  const shiftLabel = sess
+                    ? sess.shift === "late" ||
+                      sess.shift === "morning" ||
+                      sess.shift === "evening"
+                      ? labelOtShift(sess.shift as OtShiftId)
+                      : sess.shift || "—"
+                    : "—";
+                  const roundCell = sess
+                    ? `${shiftLabel}${sess.status === "open" ? " · เปิด" : " · ปิด"}`
+                    : "—";
+                  const salesCell = sess
+                    ? `${sess.saleCount} บิล · ฿${formatPlainNumber(sess.totalSales)}`
+                    : "—";
                   return (
                     <tr
                       key={`slim-${d.id}`}
@@ -614,6 +706,8 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                         <span className="muted"> · {d.pairingCode}</span>
                       </td>
                       <td style={{ padding: "0.35rem" }}>{status}</td>
+                      <td style={{ padding: "0.35rem" }}>{roundCell}</td>
+                      <td style={{ padding: "0.35rem" }}>{salesCell}</td>
                       <td style={{ padding: "0.35rem" }}>{online ? "ออน" : "หลุด"}</td>
                       <td style={{ padding: "0.35rem" }}>
                         {d.nativeShellBuild || d.appBuild || "—"}
@@ -645,7 +739,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                 })}
                 {[...buckets.shop, ...buckets.dev].length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="muted" style={{ padding: "0.5rem" }}>
+                    <td colSpan={7} className="muted" style={{ padding: "0.5rem" }}>
                       ยังไม่มีเครื่อง
                     </td>
                   </tr>
