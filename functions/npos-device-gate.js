@@ -227,6 +227,9 @@ async function claimStatusForHeartbeat(db, installId, deviceData) {
     seatHeldByMe,
     seatTaken,
     kicked,
+    // Hash only — tablets verify code local-first then sync seat in background.
+    storeClaimCodeHash: policy.required ? policy.hash : "",
+    storeClaimUpdatedAt: policy.updatedAt || 0,
   };
 }
 

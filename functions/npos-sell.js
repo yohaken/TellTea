@@ -253,6 +253,12 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
         typeof x.storeClaimCodeHash === "string" &&
         x.storeClaimCodeHash.length >= 32 &&
         x.storeClaimRequired !== false,
+      storeClaimCodeHash:
+        typeof x.storeClaimCodeHash === "string" && x.storeClaimCodeHash.length >= 32
+          ? x.storeClaimCodeHash
+          : "",
+      storeClaimUpdatedAt:
+        typeof x.storeClaimUpdatedAt === "number" ? x.storeClaimUpdatedAt : 0,
       updatedAt: typeof x.shopSettingsUpdatedAt === "number" ? x.shopSettingsUpdatedAt : 0,
     });
   } catch (err) {

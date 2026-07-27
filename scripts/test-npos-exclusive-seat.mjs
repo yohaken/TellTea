@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 288/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 83/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+53/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.30"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 289/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 84/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+54/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.31"/);
 
 assert.ok(existsSync(join(root, "docs/npos-exclusive-seat-checklist.md")));
 const doc = read("docs/npos-exclusive-seat-checklist.md");
@@ -52,6 +52,13 @@ const prefs = read(
 );
 assert.match(prefs, /seatHeldByMe|KEY_SEAT_HELD/);
 assert.match(prefs, /clearClaim|onKickedOrLostSeat/);
+assert.match(prefs, /codeHash|KEY_CODE_HASH|cacheCodeHash/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/StoreClaimCrypto.java"), /telltea-store-claim:v1:/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/StoreClaimClient.java"), /matchesCachedHash|local-first|Local-first/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/sell/SaleSync.java"), /Local-first|local-first/);
+assert.match(read("functions/npos-device-gate.js"), /storeClaimCodeHash/);
+assert.match(read("functions/npos-heartbeat.js"), /storeClaimCodeHash/);
+
 
 const shiftPrefs = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/shift/ShiftPrefs.java",

@@ -75,70 +75,80 @@ public final class SaleSync {
                             if (done != null) done.run();
                             return;
                         }
+                        // Local-first: unlock UI immediately, reconcile with server in background.
                         long openedAt = System.currentTimeMillis();
                         String sessionId = DeviceIdentity.getOrCreateInstallId(app) + "_" + openedAt;
-                        JSONObject body = new JSONObject();
-                        body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
-                        body.put("sessionId", sessionId);
-                        body.put("openingCash", opening);
-                        JSONObject res = MenuRepository.postJson(OPEN_URL, body);
-                        if (res.optBoolean("ok", false)) {
-                            String sid = res.optString("sessionId", sessionId);
-                            String shiftName = res.optString("shift", "morning");
-                            long serverOpened = res.optLong("openedAt", openedAt);
-                            if (res.optBoolean("resumed", false)) {
-                                double cash = res.optDouble("cashTotal", 0);
-                                double pp = res.optDouble("promptpayTotal", 0);
-                                double totalSales = res.optDouble("totalSales", 0);
-                                if (cash <= 0 && pp <= 0 && totalSales > 0) {
-                                    cash = totalSales;
+                        ShiftPrefs.open(app, sessionId, "morning", openedAt, opening);
+                        OpsLogger.info(app, "shift", "เปิดรอบ local-first", sessionId);
+                        if (done != null) done.run();
+
+                        try {
+                            JSONObject body = new JSONObject();
+                            body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
+                            body.put("sessionId", sessionId);
+                            body.put("openingCash", opening);
+                            JSONObject res = MenuRepository.postJson(OPEN_URL, body, 4_000, 6_000);
+                            if (res.optBoolean("ok", false)) {
+                                String sid = res.optString("sessionId", sessionId);
+                                String shiftName = res.optString("shift", "morning");
+                                long serverOpened = res.optLong("openedAt", openedAt);
+                                if (res.optBoolean("resumed", false)) {
+                                    double cash = res.optDouble("cashTotal", 0);
+                                    double pp = res.optDouble("promptpayTotal", 0);
+                                    double totalSales = res.optDouble("totalSales", 0);
+                                    if (cash <= 0 && pp <= 0 && totalSales > 0) {
+                                        cash = totalSales;
+                                    }
+                                    ShiftPrefs.resume(
+                                            app,
+                                            sid,
+                                            shiftName,
+                                            serverOpened,
+                                            res.optDouble("openingCash", opening),
+                                            cash,
+                                            pp,
+                                            res.optInt("saleCount", 0),
+                                            res.optInt("voidedCount", 0),
+                                            res.optDouble("discountTotal", 0));
+                                    OpsLogger.info(app, "shift", "ต่อรอบเดิมหลังสลับเครื่อง", sid);
+                                } else if (!sid.equals(sessionId)) {
+                                    ShiftPrefs.open(app, sid, shiftName, serverOpened, opening);
+                                    OpsLogger.info(app, "shift", "เปิดรอบเซิร์ฟเวอร์", sid);
+                                } else {
+                                    OpsLogger.info(app, "shift", "ซิงก์รอบแล้ว", sid);
                                 }
-                                ShiftPrefs.resume(
+                            } else if (isDeviceGateError(res)) {
+                                ShiftPrefs.clearLocalOpen(app);
+                                OpsLogger.warn(
                                         app,
-                                        sid,
-                                        shiftName,
-                                        serverOpened,
-                                        res.optDouble("openingCash", opening),
-                                        cash,
-                                        pp,
-                                        res.optInt("saleCount", 0),
-                                        res.optInt("voidedCount", 0),
-                                        res.optDouble("discountTotal", 0));
-                                OpsLogger.info(app, "shift", "ต่อรอบเดิมหลังสลับเครื่อง", sid);
-                            } else {
-                                ShiftPrefs.open(app, sid, shiftName, serverOpened, opening);
-                                OpsLogger.info(app, "shift", "เปิดรอบแล้ว", sid + " float=" + opening);
+                                        "shift",
+                                        "เปิดรอบถูกบล็อก",
+                                        res.optString("error", res.optString("code")));
                             }
-                        } else if (isDeviceGateError(res)) {
-                            OpsLogger.warn(
-                                    app,
-                                    "shift",
-                                    "เปิดรอบถูกบล็อก",
-                                    res.optString("error", res.optString("code")));
-                        } else {
-                            ShiftPrefs.open(app, sessionId, "morning", openedAt, opening);
-                            OpsLogger.warn(app, "shift", "เปิดรอบออฟไลน์", res.optString("error"));
+                        } catch (Exception net) {
+                            if (isDeviceGateException(net)) {
+                                ShiftPrefs.clearLocalOpen(app);
+                                OpsLogger.warn(
+                                        app,
+                                        "shift",
+                                        "เปิดรอบถูกบล็อก",
+                                        net.getMessage() == null ? "" : net.getMessage());
+                            } else {
+                                OpsLogger.warn(
+                                        app,
+                                        "shift",
+                                        "เปิดรอบออฟไลน์ — ใช้ local",
+                                        net.getMessage() == null ? "" : net.getMessage());
+                            }
                         }
                     } catch (Exception e) {
-                        if (isDeviceGateException(e) || StoreClaimPrefs.blocksWrites(app)) {
-                            OpsLogger.warn(
-                                    app,
-                                    "shift",
-                                    "เปิดรอบถูกบล็อก",
-                                    e.getMessage() == null ? "" : e.getMessage());
-                        } else {
-                            long openedAt = System.currentTimeMillis();
-                            String sessionId =
-                                    DeviceIdentity.getOrCreateInstallId(app) + "_" + openedAt;
-                            ShiftPrefs.open(app, sessionId, "morning", openedAt, opening);
-                            OpsLogger.warn(
-                                    app,
-                                    "shift",
-                                    "เปิดรอบออฟไลน์",
-                                    e.getMessage() == null ? "" : e.getMessage());
-                        }
+                        OpsLogger.warn(
+                                app,
+                                "shift",
+                                "เปิดรอบล้ม",
+                                e.getMessage() == null ? "" : e.getMessage());
+                        if (done != null) done.run();
                     }
-                    if (done != null) done.run();
                 });
     }
 

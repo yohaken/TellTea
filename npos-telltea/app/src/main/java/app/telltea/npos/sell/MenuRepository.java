@@ -17,6 +17,7 @@ import java.util.concurrent.Executors;
 
 import app.telltea.npos.diagnose.DeviceIdentity;
 import app.telltea.npos.diagnose.OpsLogger;
+import app.telltea.npos.diagnose.StoreClaimPrefs;
 
 public final class MenuRepository {
     public static final String MENU_URL =
@@ -113,6 +114,11 @@ public final class MenuRepository {
                                     .edit()
                                     .putString(KEY_SHOP, res.toString())
                                     .apply();
+                            String hash = res.optString("storeClaimCodeHash", "");
+                            if (hash.length() >= 32) {
+                                StoreClaimPrefs.cacheCodeHash(
+                                        app, hash, res.optLong("storeClaimUpdatedAt", 0L));
+                            }
                             callback.onReady(res);
                             return;
                         }

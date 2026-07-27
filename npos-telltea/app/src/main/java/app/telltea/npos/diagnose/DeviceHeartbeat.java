@@ -50,8 +50,8 @@ public final class DeviceHeartbeat {
             try {
                 JSONObject body = buildBody(app);
                 conn = (HttpURLConnection) new URL(HEARTBEAT_URL).openConnection();
-                conn.setConnectTimeout(12_000);
-                conn.setReadTimeout(15_000);
+                conn.setConnectTimeout(6_000);
+                conn.setReadTimeout(8_000);
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true);
                 conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
@@ -79,7 +79,9 @@ public final class DeviceHeartbeat {
                         res.optBoolean("storeClaimRejectDev", true),
                         res.optBoolean("seatHeldByMe", res.optBoolean("storeClaimed", false)),
                         res.optBoolean("seatTaken", false),
-                        res.optBoolean("kicked", false));
+                        res.optBoolean("kicked", false),
+                        res.optString("storeClaimCodeHash", ""),
+                        res.optLong("storeClaimUpdatedAt", 0L));
                 handleCaptureCommand(app, res);
                 if (callback != null) callback.onSuccess(pairing, seen);
             } catch (Exception e) {

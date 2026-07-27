@@ -538,6 +538,7 @@ public class MainActivity extends Activity {
       clockHandler.postDelayed(claimPollTick, 45_000L);
     }
     ForegroundHeartbeat.forceNow(this);
+    StoreClaimClient.syncPendingClaim(this);
     autoHealth.maybeRun(this, false, null);
     saleSync.flushPending(this);
     if (updatePrompt != null) updatePrompt.onResume();

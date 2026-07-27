@@ -16,6 +16,10 @@ public final class StoreClaimPrefs {
   private static final String KEY_SEAT_TAKEN = "seatTaken";
   private static final String KEY_KICKED = "kicked";
   private static final String KEY_UPDATED = "updatedAt";
+  private static final String KEY_CODE_HASH = "codeHash";
+  private static final String KEY_HASH_AT = "codeHashAt";
+  private static final String KEY_PENDING_SYNC = "claimPendingSync";
+  private static final String KEY_PENDING_CODE = "claimPendingCode";
 
   public interface KickListener {
     void onKickedOrLostSeat();
@@ -42,18 +46,42 @@ public final class StoreClaimPrefs {
       boolean seatHeldByMe,
       boolean seatTaken,
       boolean kicked) {
+    applyFromServer(context, required, claimed, blocked, rejectDev, seatHeldByMe, seatTaken, kicked, null, 0);
+  }
+
+  public static void applyFromServer(
+      Context context,
+      boolean required,
+      boolean claimed,
+      boolean blocked,
+      boolean rejectDev,
+      boolean seatHeldByMe,
+      boolean seatTaken,
+      boolean kicked,
+      String codeHash,
+      long hashUpdatedAt) {
     boolean wasHeld = isSeatHeld(context) || isClaimed(context);
-    prefs(context)
-        .edit()
-        .putBoolean(KEY_REQUIRED, required)
-        .putBoolean(KEY_CLAIMED, claimed)
-        .putBoolean(KEY_BLOCKED, blocked)
-        .putBoolean(KEY_REJECT_DEV, rejectDev)
-        .putBoolean(KEY_SEAT_HELD, seatHeldByMe)
-        .putBoolean(KEY_SEAT_TAKEN, seatTaken)
-        .putBoolean(KEY_KICKED, kicked)
-        .putLong(KEY_UPDATED, System.currentTimeMillis())
-        .apply();
+    SharedPreferences.Editor ed =
+        prefs(context)
+            .edit()
+            .putBoolean(KEY_REQUIRED, required)
+            .putBoolean(KEY_CLAIMED, claimed)
+            .putBoolean(KEY_BLOCKED, blocked)
+            .putBoolean(KEY_REJECT_DEV, rejectDev)
+            .putBoolean(KEY_SEAT_HELD, seatHeldByMe)
+            .putBoolean(KEY_SEAT_TAKEN, seatTaken)
+            .putBoolean(KEY_KICKED, kicked)
+            .putLong(KEY_UPDATED, System.currentTimeMillis());
+    if (codeHash != null && codeHash.length() >= 32) {
+      ed.putString(KEY_CODE_HASH, codeHash.trim().toLowerCase());
+      if (hashUpdatedAt > 0) ed.putLong(KEY_HASH_AT, hashUpdatedAt);
+    } else if (!required) {
+      ed.remove(KEY_CODE_HASH);
+    }
+    if (seatHeldByMe) {
+      ed.putBoolean(KEY_PENDING_SYNC, false);
+    }
+    ed.apply();
     boolean lost = wasHeld && required && (kicked || !seatHeldByMe);
     if (lost) {
       KickListener l = kickListener;
@@ -68,19 +96,69 @@ public final class StoreClaimPrefs {
       boolean claimed,
       boolean blocked,
       boolean rejectDev) {
-    applyFromServer(context, required, claimed, blocked, rejectDev, claimed, false, false);
+    applyFromServer(context, required, claimed, blocked, rejectDev, claimed, false, false, null, 0);
+  }
+
+  public static void cacheCodeHash(Context context, String codeHash, long updatedAt) {
+    if (codeHash == null || codeHash.length() < 32) return;
+    prefs(context)
+        .edit()
+        .putString(KEY_CODE_HASH, codeHash.trim().toLowerCase())
+        .putLong(KEY_HASH_AT, updatedAt > 0 ? updatedAt : System.currentTimeMillis())
+        .apply();
+  }
+
+  public static String cachedCodeHash(Context context) {
+    return prefs(context).getString(KEY_CODE_HASH, "");
+  }
+
+  public static boolean hasCachedCodeHash(Context context) {
+    String h = cachedCodeHash(context);
+    return h != null && h.length() >= 32;
   }
 
   public static void markClaimed(Context context) {
+    markClaimed(context, false);
+  }
+
+  /** Local-first claim — pendingSync=true until server seat assign confirms. */
+  public static void markClaimed(Context context, boolean pendingSync) {
+    markClaimed(context, pendingSync, null);
+  }
+
+  public static void markClaimed(Context context, boolean pendingSync, String pendingCode) {
+    SharedPreferences.Editor ed =
+        prefs(context)
+            .edit()
+            .putBoolean(KEY_CLAIMED, true)
+            .putBoolean(KEY_REQUIRED, true)
+            .putBoolean(KEY_SEAT_HELD, true)
+            .putBoolean(KEY_SEAT_TAKEN, false)
+            .putBoolean(KEY_KICKED, false)
+            .putBoolean(KEY_PENDING_SYNC, pendingSync)
+            .putLong(KEY_UPDATED, System.currentTimeMillis());
+    if (pendingSync && pendingCode != null && !pendingCode.isEmpty()) {
+      ed.putString(KEY_PENDING_CODE, pendingCode);
+    } else {
+      ed.remove(KEY_PENDING_CODE);
+    }
+    ed.apply();
+  }
+
+  public static String pendingClaimCode(Context context) {
+    return prefs(context).getString(KEY_PENDING_CODE, "");
+  }
+
+  public static void markClaimSynced(Context context) {
     prefs(context)
         .edit()
-        .putBoolean(KEY_CLAIMED, true)
-        .putBoolean(KEY_REQUIRED, true)
-        .putBoolean(KEY_SEAT_HELD, true)
-        .putBoolean(KEY_SEAT_TAKEN, false)
-        .putBoolean(KEY_KICKED, false)
-        .putLong(KEY_UPDATED, System.currentTimeMillis())
+        .putBoolean(KEY_PENDING_SYNC, false)
+        .remove(KEY_PENDING_CODE)
         .apply();
+  }
+
+  public static boolean isClaimPendingSync(Context context) {
+    return prefs(context).getBoolean(KEY_PENDING_SYNC, false);
   }
 
   public static void clearClaim(Context context) {
@@ -89,6 +167,8 @@ public final class StoreClaimPrefs {
         .putBoolean(KEY_CLAIMED, false)
         .putBoolean(KEY_SEAT_HELD, false)
         .putBoolean(KEY_KICKED, true)
+        .putBoolean(KEY_PENDING_SYNC, false)
+        .remove(KEY_PENDING_CODE)
         .putLong(KEY_UPDATED, System.currentTimeMillis())
         .apply();
   }

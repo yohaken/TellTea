@@ -257,6 +257,8 @@ exports.nposDeviceHeartbeat = functions
         seatHeldByMe: claim.seatHeldByMe === true,
         seatTaken: claim.seatTaken === true,
         kicked: claim.kicked === true,
+        storeClaimCodeHash: claim.storeClaimCodeHash || "",
+        storeClaimUpdatedAt: claim.storeClaimUpdatedAt || 0,
         capture: {
           requestAt: captureRequestAt,
           intervalMinutes: captureIntervalMinutes,
