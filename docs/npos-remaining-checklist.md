@@ -1,7 +1,7 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **1.14.33** + แผน **Exclusive seat S1–S4** · friction F0–F5  
-ดู [npos-kick-reclaim-checklist.md](./npos-kick-reclaim-checklist.md) · [npos-exclusive-seat-checklist.md](./npos-exclusive-seat-checklist.md) · [npos-counter-ux-batch-checklist.md](./npos-counter-ux-batch-checklist.md) · [npos-ops-friction-phases.md](./npos-ops-friction-phases.md) · [npos-doc-drawer-polish-checklist.md](./npos-doc-drawer-polish-checklist.md) · [npos-store-claim-checklist.md](./npos-store-claim-checklist.md) · [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-blind-shift-close-checklist.md](./npos-blind-shift-close-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md) · [npos-bestseller-rank-checklist.md](./npos-bestseller-rank-checklist.md) · [npos-sell-flow-polish-checklist.md](./npos-sell-flow-polish-checklist.md) · [npos-receipt-parity-checklist.md](./npos-receipt-parity-checklist.md) · [npos-z-report-form-checklist.md](./npos-z-report-form-checklist.md) · [npos-z-web-form-parity-checklist.md](./npos-z-web-form-parity-checklist.md) · [npos-bo-shift-readonly-checklist.md](./npos-bo-shift-readonly-checklist.md) · [npos-cut-bo-entry-checklist.md](./npos-cut-bo-entry-checklist.md) · [npos-float-shift-p0-checklist.md](./npos-float-shift-p0-checklist.md)
+อัปเดต: **1.14.34** + แผน **Exclusive seat S1–S4** · friction F0–F5  
+ดู [npos-friendly-ui-checklist.md](./npos-friendly-ui-checklist.md) · [npos-kick-reclaim-checklist.md](./npos-kick-reclaim-checklist.md) · [npos-exclusive-seat-checklist.md](./npos-exclusive-seat-checklist.md) · [npos-counter-ux-batch-checklist.md](./npos-counter-ux-batch-checklist.md) · [npos-ops-friction-phases.md](./npos-ops-friction-phases.md) · [npos-doc-drawer-polish-checklist.md](./npos-doc-drawer-polish-checklist.md) · [npos-store-claim-checklist.md](./npos-store-claim-checklist.md) · [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-blind-shift-close-checklist.md](./npos-blind-shift-close-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md) · [npos-bestseller-rank-checklist.md](./npos-bestseller-rank-checklist.md) · [npos-sell-flow-polish-checklist.md](./npos-sell-flow-polish-checklist.md) · [npos-receipt-parity-checklist.md](./npos-receipt-parity-checklist.md) · [npos-z-report-form-checklist.md](./npos-z-report-form-checklist.md) · [npos-z-web-form-parity-checklist.md](./npos-z-web-form-parity-checklist.md) · [npos-bo-shift-readonly-checklist.md](./npos-bo-shift-readonly-checklist.md) · [npos-cut-bo-entry-checklist.md](./npos-cut-bo-entry-checklist.md) · [npos-float-shift-p0-checklist.md](./npos-float-shift-p0-checklist.md)
 
 ## ทำแล้ว
 - [x] แคปจอ media-proxy — รูปจริงใน BO (**1.14.2**)
@@ -24,15 +24,15 @@
 - [x] **Float P0** แก้เด้งเข้างาน + seed leave float + การ์ดทอนรอบถัดไป (**1.14.21**)
 - [x] **Z web form** สลิปปิดกะโคลนฟอร์มเว็บเฟรมต่อเฟรม (**1.14.23**)
 - [x] **Store claim** รหัสร้าน · เคลมเครื่อง · บล็อกเขียนขาย · จำที่อยู่ (**1.14.24**)
-- [x] **Doc + drawer** เอกสารร้าน (ชื่อร้านเรา · ไม่ลอกแบรนด์คู่แข่ง) · CashDrawerPolicy (**1.14.33**)
+- [x] **Doc + drawer** เอกสารร้าน (ชื่อร้านเรา · ไม่ลอกแบรนด์คู่แข่ง) · CashDrawerPolicy (**1.14.34**)
 - [x] จิ้มเมนู → จ่าย → ใบเสร็จ → รีเซ็ต · ลิ้นชักตอนสด
 
 ## คิวถัดไป (เฟสก่อนหน้าที่ยังไม่ทำ)
 | เฟส | โฟกัส | สถานะ | ทำไมค้าง |
 |-----|--------|--------|----------|
-| **Shop settings persist** | ชื่อ/ที่อยู่หลังบ้าน → Firebase → ใบเสร็จ | ✅ | **1.14.33** · แก้ local ทับ cloud + reload native |
+| **Shop settings persist** | ชื่อ/ที่อยู่หลังบ้าน → Firebase → ใบเสร็จ | ✅ | **1.14.34** · แก้ local ทับ cloud + reload native |
 | **Friction F0–F5** | เคลม UX · ลิ้นชัก≠พิมพ์ · กะออฟไลน์ · tip | ⬜ แผน | ดู `npos-ops-friction-phases.md` · รองจาก seat |
-| **Doc + drawer** | เอกสารร้าน · ลิ้นชัก policy · ติดตั้งฮาร์ด | ✅ | **1.14.33** · ค้างคนเทสเคาน์เตอร์ |
+| **Doc + drawer** | เอกสารร้าน · ลิ้นชัก policy · ติดตั้งฮาร์ด | ✅ | **1.14.34** · ค้างคนเทสเคาน์เตอร์ |
 | **Store claim** | รหัสร้าน · บล็อกเครื่องไม่มีรหัส (multi) | ✅ | **1.14.24** · ต่อด้วย exclusive seat |
 | **Z web form** | สลิป Z = ฟอร์มเว็บ | ✅ | **1.14.23** |
 | **Float P0** | เด้งเข้างาน · leave float · การ์ด BO | ✅ | **1.14.21** |
@@ -56,11 +56,12 @@
 
 ## คู่ขนานได้
 - [x] **Friendly UI type** ฟอนต์ Prompt + ปุ่ม/ตัวอักษรเป็นมิตร (**1.14.33**)
-- [x] **Kick-reclaim K1–K3** ปุ่มเตะในตาราง · เปลี่ยนรหัส = เตะทุกเครื่อง · client อัป hash + เด้งใส่รหัส (**1.14.33**) — ค้างคนเทส
-- [x] **Exclusive seat S1–S4** เครื่องเดียว + ตาราง slim + เตะ + resume กะ + ด่านอัปเดต (**1.14.33**) — ค้างคนเทส
+- [x] **Friendly UI sweep** NposUi ทั้งแอป + นโยบายฝังงานใหม่ · แถบซ้าย/จอลูกค้า/option (**1.14.34**)
+- [x] **Kick-reclaim K1–K3** ปุ่มเตะในตาราง · เปลี่ยนรหัส = เตะทุกเครื่อง · client อัป hash + เด้งใส่รหัส (**1.14.34**) — ค้างคนเทส
+- [x] **Exclusive seat S1–S4** เครื่องเดียว + ตาราง slim + เตะ + resume กะ + ด่านอัปเดต (**1.14.34**) — ค้างคนเทส
 - [ ] **Friction F0–F5** คนเทส + เคลม UX + ลิ้นชัก≠พิมพ์ + กะออฟไลน์ — `npos-ops-friction-phases.md`
-- [x] **Counter UX batch** แบดจ์จำนวน · นาฬิกากะ · ซ่อน QR · โลโก้ (**1.14.33**)
-- [x] **Doc + drawer** เอกสารร้าน + ลิ้นชัก policy (**1.14.33**)
+- [x] **Counter UX batch** แบดจ์จำนวน · นาฬิกากะ · ซ่อน QR · โลโก้ (**1.14.34**)
+- [x] **Doc + drawer** เอกสารร้าน + ลิ้นชัก policy (**1.14.34**)
 - [x] **Store claim** รหัสร้าน · เคลมเครื่อง · บล็อกเขียน (**1.14.24**)
 - [x] **Z web form** สลิปปิดกะ = ฟอร์มเว็บ (**1.14.23**)
 - [x] **Float P0** แก้เด้งเข้างาน + leave float (**1.14.21**)

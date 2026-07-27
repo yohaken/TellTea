@@ -1,5 +1,5 @@
 /**
- * Gate: friendly Prompt type + compact buttons (settings / clock-in / sell).
+ * Gate: friendly Prompt + NposUi across counter surfaces (mandatory for new UI).
  */
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
@@ -9,13 +9,16 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 291/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 86/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+56/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.33"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 292/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 87/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+57/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.34"/);
 
 assert.ok(existsSync(join(root, "docs/npos-friendly-ui-checklist.md")));
-assert.match(read("docs/npos-friendly-ui-checklist.md"), /Prompt|1\.14\.33/);
+assert.match(read("docs/npos-friendly-ui-checklist.md"), /NposUi|1\.14\.34/);
+assert.match(read("docs/npos-friendly-ui-checklist.md"), /ห้าม|ต้อง/);
+assert.ok(existsSync(join(root, ".cursor/rules/npos-friendly-ui.mdc")));
+assert.match(read(".cursor/rules/npos-friendly-ui.mdc"), /NposUi|Prompt/);
 
 assert.ok(existsSync(join(root, "npos-telltea/app/src/main/res/font/prompt_regular.ttf")));
 assert.ok(existsSync(join(root, "npos-telltea/app/src/main/res/font/prompt_semibold.ttf")));
@@ -27,11 +30,17 @@ assert.match(read("npos-telltea/app/src/main/res/values/styles.xml"), /name="Npo
 assert.match(read("npos-telltea/app/src/main/res/values/styles.xml"), /Npos\.Btn\.Primary/);
 assert.match(read("npos-telltea/app/src/main/res/values/styles.xml"), /prompt_semibold|prompt_bold/);
 assert.match(read("npos-telltea/app/src/main/res/values/colors.xml"), /npos_orange/);
+assert.match(read("npos-telltea/app/src/main/res/values/colors.xml"), /npos_chrome/);
 
 const fonts = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/ui/NposFonts.java",
 );
 assert.match(fonts, /applyActivity|prompt_regular|assets\/fonts/);
+
+const nposUi = read("npos-telltea/app/src/main/java/app/telltea/npos/ui/NposUi.java");
+assert.match(nposUi, /enum Btn/);
+assert.match(nposUi, /primary\(|chip\(|field\(|headerBar\(/);
+assert.doesNotMatch(nposUi, /new Button\(/);
 
 const ui = read("npos-telltea/app/src/main/java/app/telltea/npos/ui/UiScale.java");
 assert.match(ui, /52 \* density \* scale/);
@@ -57,6 +66,51 @@ assert.match(main, /prompt_bold|npos_text_brand/);
 
 const sell = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
 assert.match(sell, /payCashButton[\s\S]*Npos\.Btn\.Primary/);
+assert.match(sell, /Npos\.Btn\.Chip/);
+assert.match(sell, /npos_chrome/);
+assert.doesNotMatch(sell, /<Button\b/);
+
+const sellJava = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/SellActivity.java",
+);
+assert.match(sellJava, /NposUi\.(primary|chip|ghost|secondary)/);
+assert.doesNotMatch(sellJava, /new Button\(/);
+assert.doesNotMatch(sellJava, /Typeface\.DEFAULT/);
+assert.doesNotMatch(sellJava, /0xFF2D7FE0|2D7FE0/);
+
+const picker = read("npos-telltea/app/src/main/res/layout/dialog_option_picker.xml");
+assert.match(picker, /prompt_semibold|Npos\.Btn/);
+assert.match(picker, /npos_ink|npos_surface/);
+assert.doesNotMatch(picker, /minHeight="52dp"/);
+
+const sidebar = read("npos-telltea/app/src/main/res/layout/include_pos_sidebar.xml");
+assert.match(sidebar, /npos_chrome|prompt_bold/);
+
+assert.match(
+  read("npos-telltea/app/src/main/res/drawable/npos_nav_active.xml"),
+  /npos_orange/,
+);
+
+const diagnose = read("npos-telltea/app/src/main/res/layout/activity_diagnose.xml");
+assert.match(diagnose, /prompt_|Npos\.Btn/);
+assert.doesNotMatch(diagnose, /<Button\b/);
+
+const receipts = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/ReceiptsActivity.java",
+);
+assert.match(receipts, /NposUi/);
+assert.doesNotMatch(receipts, /new Button\(/);
+
+const shift = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/ShiftActivity.java",
+);
+assert.match(shift, /NposUi/);
+assert.doesNotMatch(shift, /new Button\(/);
+
+const customer = read(
+  "npos-telltea/app/src/main/res/layout/presentation_customer.xml",
+);
+assert.match(customer, /prompt_bold|prompt_semibold/);
 
 assert.match(
   read("npos-telltea/app/src/main/java/app/telltea/npos/shell/PosShellNav.java"),

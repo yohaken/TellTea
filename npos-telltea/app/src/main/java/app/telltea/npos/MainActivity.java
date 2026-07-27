@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -31,6 +30,7 @@ import app.telltea.npos.shell.PosShellNav;
 import app.telltea.npos.shift.BlindCloseFlow;
 import app.telltea.npos.shift.OpenShiftFlow;
 import app.telltea.npos.shift.ShiftPrefs;
+import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.ui.UiScale;
 import app.telltea.npos.update.ResumePrefs;
 import app.telltea.npos.update.UpdateManifest;
@@ -487,25 +487,10 @@ public class MainActivity extends Activity {
   }
 
   private void addHubNative(int labelRes, Runnable action) {
-    Button b = hubButton(getString(labelRes), false);
+    TextView b = NposUi.secondary(this, getString(labelRes));
+    b.setLayoutParams(NposUi.matchWidth(this, 8));
     b.setOnClickListener(v -> action.run());
     hubNavList.addView(b);
-  }
-
-  private Button hubButton(String label, boolean secondary) {
-    Button b = new Button(this);
-    b.setAllCaps(false);
-    b.setText(label);
-    b.setMinHeight(dp(52));
-    LinearLayout.LayoutParams lp =
-        new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-    lp.bottomMargin = dp(8);
-    b.setLayoutParams(lp);
-    if (secondary) {
-      b.setTextColor(0xFF1A2E24);
-    }
-    return b;
   }
 
   private int dp(int v) {

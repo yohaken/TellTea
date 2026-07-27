@@ -11,4 +11,10 @@
     <color name="npos_ghost">#F4F6F8</color>
     <color name="npos_ok">#2E6B4E</color>
     <color name="npos_border">#E5E7EB</color>
+    <!-- Shell chrome (sell header / sidebar) -->
+    <color name="npos_chrome">#1A2E24</color>
+    <color name="npos_chrome_soft">#243B32</color>
+    <color name="npos_chrome_text">#F7F8FC</color>
+    <color name="npos_chrome_muted">#D7E0EA</color>
+    <color name="npos_gold">#C4A35A</color>
 </resources>

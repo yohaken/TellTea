@@ -5,7 +5,6 @@ import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -13,7 +12,6 @@ import android.text.InputType;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -48,6 +46,8 @@ import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shell.PosShellNav;
 import app.telltea.npos.shift.BlindCloseFlow;
 import app.telltea.npos.shift.ShiftPrefs;
+import app.telltea.npos.ui.NposFonts;
+import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.ui.UiScale;
 import app.telltea.npos.update.ResumePrefs;
 import app.telltea.npos.update.UpdatePromptController;
@@ -65,8 +65,8 @@ public class SellActivity extends Activity {
   private TextView sellTitle;
   private TextView discountLabel;
   private TextView shiftSummary;
-  private Button flushSyncButton;
-  private Button restoreHoldButton;
+  private TextView flushSyncButton;
+  private TextView restoreHoldButton;
 
   private MenuRepository menuRepo;
   private SaleSync saleSync;
@@ -236,14 +236,11 @@ public class SellActivity extends Activity {
   }
 
   private void styleSoftCartAction(View v) {
-    if (!(v instanceof Button)) return;
-    Button b = (Button) v;
-    b.setBackgroundResource(R.drawable.npos_touch_secondary);
-    b.setTextColor(0xFFE85D24);
-    b.setAllCaps(false);
-    b.setMinHeight(uiScale.touchMinPx);
-    b.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.captionSp);
+    if (!(v instanceof TextView)) return;
+    NposUi.applyBtn((TextView) v, NposUi.Btn.CHIP);
+    ((TextView) v).setTextColor(NposUi.color(this, R.color.npos_orange));
   }
+
 
   private void persistWorkBeforeUpdate() {
     try {
@@ -379,7 +376,7 @@ public class SellActivity extends Activity {
 
       LinearLayout actions = new LinearLayout(this);
       actions.setOrientation(LinearLayout.HORIZONTAL);
-      Button retry = new Button(this);
+      TextView retry = NposUi.secondary(this, getString(R.string.btn_flush_sync));
       retry.setText(R.string.outbox_retry_one);
       retry.setOnClickListener(
           v -> {
@@ -395,7 +392,7 @@ public class SellActivity extends Activity {
                               .show();
                         }));
           });
-      Button cancel = new Button(this);
+      TextView cancel = NposUi.ghost(this, getString(android.R.string.cancel));
       cancel.setText(R.string.outbox_cancel_one);
       cancel.setOnClickListener(
           v ->
@@ -617,7 +614,7 @@ public class SellActivity extends Activity {
     for (int i = 0; i < menu.categories.size(); i++) {
       final int idx = i;
       MenuModels.Category cat = menu.categories.get(i);
-      Button b = new Button(this);
+      TextView b = NposUi.chip(this, "");
       b.setText(cat.name);
       b.setAllCaps(false);
       b.setMinHeight(Math.round(40 * density));
@@ -629,12 +626,11 @@ public class SellActivity extends Activity {
       b.setLayoutParams(lp);
       boolean active = cat.id.equals(selectedCategoryId);
       if (active) {
-        b.setBackgroundColor(0xFF1E2D3D);
-        b.setTextColor(0xFFFFFFFF);
+        NposUi.applyBtn(b, NposUi.Btn.CHIP_PRIMARY);
       } else {
-        b.setBackgroundColor(0xFFFFFFFF);
-        b.setTextColor(0xFF1E2D3D);
+        NposUi.applyBtn(b, NposUi.Btn.CHIP);
       }
+      b.setPadding(padH, padV, padH, padV);
       b.setOnClickListener(
           v -> {
             selectedCategoryId = cat.id;
@@ -779,7 +775,7 @@ public class SellActivity extends Activity {
         badge.setText(String.valueOf(qty));
         badge.setTextColor(0xFFFFFFFF);
         badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(11f, uiScale.captionSp));
-        badge.setTypeface(Typeface.DEFAULT_BOLD);
+        badge.setTypeface(NposFonts.semibold(this));
         badge.setGravity(Gravity.CENTER);
         int badgeSize = uiScale.dp(22);
         badge.setBackgroundResource(R.drawable.npos_menu_qty_badge);
@@ -800,8 +796,8 @@ public class SellActivity extends Activity {
         name.setText(item.name);
       }
       name.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.captionSp + 0.5f);
-      name.setTextColor(0xFF15202B);
-      name.setTypeface(Typeface.DEFAULT_BOLD);
+      name.setTextColor(NposUi.color(this, R.color.npos_ink));
+      name.setTypeface(NposFonts.semibold(this));
       name.setMaxLines(2);
       name.setEllipsize(null);
       cell.addView(name);
@@ -815,7 +811,7 @@ public class SellActivity extends Activity {
         price.setTextColor(0xFF3D4A55);
       }
       price.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.priceSp);
-      price.setTypeface(Typeface.DEFAULT_BOLD);
+      price.setTypeface(NposFonts.semibold(this));
       cell.addView(price);
 
       cell.setMinimumHeight(uiScale.touchMinPx);
@@ -1119,7 +1115,7 @@ public class SellActivity extends Activity {
             TextView lead = new TextView(this);
             lead.setText("เลือกตัวเลือก");
             lead.setTextColor(0xFF333333);
-            lead.setTypeface(Typeface.DEFAULT_BOLD);
+            lead.setTypeface(NposFonts.semibold(this));
             lead.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.bodySp);
             lead.setGravity(Gravity.CENTER);
             lead.setPadding(0, 0, 0, uiScale.dp(8));
@@ -1131,7 +1127,7 @@ public class SellActivity extends Activity {
             String hint = OptionPickerLogic.groupHint(group);
             header.setText(group.name + (hint.isEmpty() ? "" : "\n" + hint));
             header.setTextColor(group.required ? 0xFF111827 : 0xFF4B5563);
-            header.setTypeface(Typeface.DEFAULT_BOLD);
+            header.setTypeface(NposFonts.semibold(this));
             header.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.captionSp);
             header.setPadding(0, uiScale.dp(6), 0, uiScale.dp(4));
             groupsRoot.addView(header);
@@ -1158,14 +1154,14 @@ public class SellActivity extends Activity {
                 chip.setMinHeight(uiScale.touchMinPx);
                 chip.setPadding(uiScale.dp(10), uiScale.dp(8), uiScale.dp(10), uiScale.dp(8));
                 chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.captionSp);
-                chip.setTypeface(Typeface.DEFAULT_BOLD);
+                chip.setTypeface(NposFonts.semibold(this));
                 LinearLayout.LayoutParams clp =
                     new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
                 clp.setMargins(uiScale.dp(3), uiScale.dp(3), uiScale.dp(3), uiScale.dp(3));
                 chip.setLayoutParams(clp);
                 boolean on = selected != null && selected.equals(opt.id);
                 chip.setBackgroundResource(on ? R.drawable.npos_nav_active : R.drawable.npos_touch_ghost);
-                chip.setTextColor(on ? 0xFFFFFFFF : 0xFF1E2D3D);
+                chip.setTextColor(on ? 0xFFFFFFFF : NposUi.color(this, R.color.npos_ink));
                 chip.setOnClickListener(
                     v -> {
                       singlePick.put(group.id, opt.id);
@@ -1188,13 +1184,13 @@ public class SellActivity extends Activity {
                 row.setGravity(Gravity.CENTER_VERTICAL);
                 row.setMinimumHeight(uiScale.touchMinPx);
                 row.setPadding(uiScale.dp(4), uiScale.dp(4), uiScale.dp(4), uiScale.dp(4));
-                if (count > 0) row.setBackgroundColor(0x0F2D7FE0);
+                if (count > 0) row.setBackgroundColor(0x1AE85D24);
 
                 TextView name = new TextView(this);
                 name.setText(opt.name);
-                name.setTextColor(0xFF15202B);
+                name.setTextColor(NposUi.color(this, R.color.npos_ink));
                 name.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.bodySp);
-                name.setTypeface(count > 0 ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+                name.setTypeface(count > 0 ? NposFonts.semibold(this) : NposFonts.regular(this));
                 LinearLayout.LayoutParams nlp =
                     new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
                 name.setLayoutParams(nlp);
@@ -1225,7 +1221,7 @@ public class SellActivity extends Activity {
                 countTv.setGravity(Gravity.CENTER);
                 countTv.setMinWidth(uiScale.dp(28));
                 countTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.bodySp);
-                countTv.setTypeface(Typeface.DEFAULT_BOLD);
+                countTv.setTypeface(NposFonts.semibold(this));
 
                 TextView plus = new TextView(this);
                 plus.setText("+");
@@ -1296,18 +1292,18 @@ public class SellActivity extends Activity {
                 row.setGravity(Gravity.CENTER_VERTICAL);
                 row.setMinimumHeight(uiScale.touchMinPx);
                 row.setPadding(uiScale.dp(6), uiScale.dp(8), uiScale.dp(6), uiScale.dp(8));
-                if (on) row.setBackgroundColor(0x0F2D7FE0);
+                if (on) row.setBackgroundColor(0x1AE85D24);
 
                 TextView mark = new TextView(this);
                 mark.setText(on ? "●" : "○");
-                mark.setTextColor(on ? 0xFF2D7FE0 : 0xFF666666);
+                mark.setTextColor(on ? NposUi.color(this, R.color.npos_orange) : 0xFF666666);
                 mark.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
                 mark.setPadding(0, 0, uiScale.dp(10), 0);
 
                 TextView name = new TextView(this);
                 name.setText(opt.name);
-                name.setTextColor(0xFF15202B);
-                name.setTypeface(on ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+                name.setTextColor(NposUi.color(this, R.color.npos_ink));
+                name.setTypeface(on ? NposFonts.semibold(this) : NposFonts.regular(this));
                 name.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.bodySp);
                 LinearLayout.LayoutParams nlp =
                     new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
@@ -1529,7 +1525,7 @@ public class SellActivity extends Activity {
           String.format(
               Locale.getDefault(), "%s x%d · ฿%.0f", line.name, line.qty, line.lineTotal()));
       label.setTextColor(0xFF222222);
-      label.setTypeface(Typeface.DEFAULT_BOLD);
+      label.setTypeface(NposFonts.semibold(this));
       MenuModels.Item menuItem = findMenuItem(line.menuItemId);
       boolean canEdit =
           menuItem != null && menuItem.hasOptions() && line.optionsJson != null
@@ -1537,14 +1533,14 @@ public class SellActivity extends Activity {
       if (canEdit || (menuItem != null && menuItem.hasOptions())) {
         label.setOnClickListener(v -> editCartLineOptions(idx));
       }
-      Button plus = new Button(this);
+      TextView plus = NposUi.chip(this, "+");
       plus.setText("+");
       plus.setOnClickListener(
           v -> {
             line.qty += 1;
             renderCart();
           });
-      Button minus = new Button(this);
+      TextView minus = NposUi.chip(this, "−");
       minus.setText("−");
       minus.setOnClickListener(
           v -> {
@@ -1552,7 +1548,7 @@ public class SellActivity extends Activity {
             if (line.qty <= 0) cart.remove(idx);
             renderCart();
           });
-      Button remove = new Button(this);
+      TextView remove = NposUi.chip(this, getString(R.string.btn_remove_line));
       remove.setText("×");
       remove.setOnClickListener(
           v -> {
@@ -1651,7 +1647,7 @@ public class SellActivity extends Activity {
     double sub = cartSubtotal();
     int[] pcts = {5, 10, 20};
     for (int pct : pcts) {
-      Button b = new Button(this);
+      TextView b = NposUi.chip(this, "");
       b.setText(pct + "%");
       b.setAllCaps(false);
       final int p = pct;
@@ -1726,7 +1722,7 @@ public class SellActivity extends Activity {
 
     TextView amountView = new TextView(this);
     amountView.setTextSize(28);
-    amountView.setTypeface(Typeface.DEFAULT_BOLD);
+    amountView.setTypeface(NposFonts.semibold(this));
     amountView.setTextColor(0xFF1A2E24);
     root.addView(amountView);
 
@@ -1757,7 +1753,7 @@ public class SellActivity extends Activity {
         };
     refresh.run();
 
-    Button exact = new Button(this);
+    TextView exact = NposUi.chipPrimary(this, "");
     exact.setAllCaps(false);
     exact.setText(getString(R.string.pay_cash_exact, total));
     exact.setOnClickListener(
@@ -1771,7 +1767,7 @@ public class SellActivity extends Activity {
     bills.setOrientation(LinearLayout.HORIZONTAL);
     int[] billAmts = {20, 50, 100, 500, 1000};
     for (int amt : billAmts) {
-      Button b = new Button(this);
+      TextView b = NposUi.chip(this, "");
       b.setAllCaps(false);
       b.setText("+" + amt);
       b.setTextSize(12);
@@ -1786,7 +1782,7 @@ public class SellActivity extends Activity {
           b,
           new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
     }
-    Button clear = new Button(this);
+    TextView clear = NposUi.ghost(this, "");
     clear.setAllCaps(false);
     clear.setText(R.string.pay_cash_clear);
     clear.setTextSize(12);
@@ -1811,7 +1807,7 @@ public class SellActivity extends Activity {
       LinearLayout line = new LinearLayout(this);
       line.setOrientation(LinearLayout.HORIZONTAL);
       for (String key : row) {
-        Button b = new Button(this);
+        TextView b = NposUi.chip(this, "");
         b.setText(key);
         b.setAllCaps(false);
         float weight = "0".equals(key) ? 2f : 1f;

@@ -42,7 +42,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/customer_standby_recommend_label"
-                    android:textColor="#C4A35A"
+                    android:fontFamily="@font/prompt_medium"
+                    android:textColor="@color/npos_gold"
                     android:textSize="13sp" />
 
                 <TextView
@@ -50,9 +51,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
+                    android:fontFamily="@font/prompt_bold"
                     android:textColor="#F3F6F2"
-                    android:textSize="24sp"
-                    android:textStyle="bold" />
+                    android:textSize="24sp" />
             </LinearLayout>
 
             <!-- Payment overlay on main pane (QR or cash) -->
@@ -71,18 +72,18 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/customer_pay_title"
-                    android:textColor="#C4A35A"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
+                    android:fontFamily="@font/prompt_semibold"
+                    android:textColor="@color/npos_gold"
+                    android:textSize="20sp" />
 
                 <TextView
                     android:id="@+id/payTotal"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
+                    android:fontFamily="@font/prompt_bold"
                     android:textColor="#F3F6F2"
-                    android:textSize="44sp"
-                    android:textStyle="bold" />
+                    android:textSize="44sp" />
 
                 <ImageView
                     android:id="@+id/payQr"
@@ -101,6 +102,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:gravity="center"
+                    android:fontFamily="@font/prompt_regular"
                     android:textColor="#A8B5AE"
                     android:textSize="16sp" />
 
@@ -110,6 +112,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:gravity="center"
+                    android:fontFamily="@font/prompt_semibold"
                     android:textColor="#F3F6F2"
                     android:textSize="20sp"
                     android:visibility="gone" />
@@ -140,9 +143,9 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:text="@string/app_name"
-                    android:textColor="#C4A35A"
-                    android:textSize="28sp"
-                    android:textStyle="bold" />
+                    android:fontFamily="@font/prompt_bold"
+                    android:textColor="@color/npos_gold"
+                    android:textSize="28sp" />
 
                 <TextView
                     android:id="@+id/receiptWelcome"
@@ -151,6 +154,7 @@
                     android:layout_marginTop="12dp"
                     android:gravity="center"
                     android:text="@string/customer_standby_welcome"
+                    android:fontFamily="@font/prompt_regular"
                     android:textColor="#A8B5AE"
                     android:textSize="18sp" />
 
@@ -160,6 +164,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:gravity="center"
+                    android:fontFamily="@font/prompt_regular"
                     android:textColor="#5C6B64"
                     android:textSize="14sp" />
             </LinearLayout>
@@ -176,9 +181,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/customer_select_title"
-                    android:textColor="#C4A35A"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:fontFamily="@font/prompt_semibold"
+                    android:textColor="@color/npos_gold"
+                    android:textSize="18sp" />
 
                 <ScrollView
                     android:layout_width="match_parent"
@@ -206,6 +211,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="end"
+                    android:fontFamily="@font/prompt_regular"
                     android:textColor="#A8B5AE"
                     android:textSize="14sp" />
 
@@ -214,7 +220,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="end"
-                    android:textColor="#E85D24"
+                    android:fontFamily="@font/prompt_medium"
+                    android:textColor="@color/npos_orange"
                     android:textSize="14sp"
                     android:visibility="gone" />
 
@@ -224,9 +231,9 @@
                     android:layout_height="wrap_content"
                     android:gravity="end"
                     android:paddingTop="4dp"
+                    android:fontFamily="@font/prompt_bold"
                     android:textColor="#F3F6F2"
-                    android:textSize="28sp"
-                    android:textStyle="bold" />
+                    android:textSize="28sp" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>
@@ -247,9 +254,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="✓"
+            android:fontFamily="@font/prompt_bold"
             android:textColor="#3DDC84"
-            android:textSize="72sp"
-            android:textStyle="bold" />
+            android:textSize="72sp" />
 
         <TextView
             android:id="@+id/successTitle"
@@ -257,18 +264,18 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:text="@string/customer_success_paid"
+            android:fontFamily="@font/prompt_bold"
             android:textColor="#F3F6F2"
-            android:textSize="30sp"
-            android:textStyle="bold" />
+            android:textSize="30sp" />
 
         <TextView
             android:id="@+id/successAmount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:textColor="#C4A35A"
-            android:textSize="40sp"
-            android:textStyle="bold" />
+            android:fontFamily="@font/prompt_bold"
+            android:textColor="@color/npos_gold"
+            android:textSize="40sp" />
 
         <TextView
             android:id="@+id/successChange"
@@ -276,6 +283,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:gravity="center"
+            android:fontFamily="@font/prompt_semibold"
             android:textColor="#8FCB9B"
             android:textSize="22sp"
             android:visibility="gone" />
@@ -286,6 +294,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:gravity="center"
+            android:fontFamily="@font/prompt_regular"
             android:textColor="#A8B5AE"
             android:textSize="18sp" />
     </LinearLayout>

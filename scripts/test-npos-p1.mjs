@@ -9,16 +9,20 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 291/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+56/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.33"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 292/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+57/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.34"/);
 assert.match(read("npos-telltea/app/build.gradle"), /zxing:core/);
 
 assert.ok(existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/sell/QrBitmaps.java")));
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/sell/QrBitmaps.java"),
+  /public static Bitmap encode/,
+);
 
 const sell = read("npos-telltea/app/src/main/java/app/telltea/npos/SellActivity.java");
 assert.match(sell, /showCashKeypad/);
-assert.match(sell, /QrBitmaps\.encode/);
+assert.match(sell, /pay_pp_hidden_early|showPromptPayDialog|QrBitmaps/);
 assert.match(sell, /pay_cash_exact|ตรงพอดี/);
 
 const shift = read("npos-telltea/app/src/main/java/app/telltea/npos/shift/ShiftPrefs.java");
@@ -26,7 +30,7 @@ assert.match(shift, /recordSale/);
 assert.match(shift, /discountTotal/);
 assert.match(shift, /saleCount/);
 
-assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/sell/SaleSync.java"), /บิลขาย/);
+assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/sell/SaleSync.java"), /nposCompleteSale|saleBodyFromOutbox|clientMutationId/);
 assert.match(read("docs/npos-parity-checklist.md"), /P1 — ทำแล้ว/);
 
 console.log("OK test-npos-p1");

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Frame clone of web PosOptionPickerModal (FoodStory) — tablet-first, tap-dense -->
+<!-- Option picker — Prompt + Npos touch (tablet-first) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="#FFFFFF"
+    android:background="@color/npos_surface"
     android:orientation="vertical">
 
     <LinearLayout
@@ -20,7 +20,7 @@
             android:id="@+id/optionHeroImage"
             android:layout_width="68dp"
             android:layout_height="68dp"
-            android:background="#F0F2F5"
+            android:background="@color/npos_ghost"
             android:scaleType="centerCrop" />
 
         <LinearLayout
@@ -34,9 +34,9 @@
                 android:id="@+id/optionHeroName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="#15202B"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:fontFamily="@font/prompt_semibold"
+                android:textColor="@color/npos_ink"
+                android:textSize="16sp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -50,9 +50,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textColor="#1E2D3D"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
+                    android:fontFamily="@font/prompt_semibold"
+                    android:textColor="@color/npos_ink"
+                    android:textSize="15sp" />
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -65,32 +65,32 @@
                         android:layout_width="40dp"
                         android:layout_height="40dp"
                         android:background="@drawable/npos_touch_ghost"
+                        android:fontFamily="@font/prompt_semibold"
                         android:gravity="center"
                         android:text="−"
-                        android:textColor="#1E2D3D"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                        android:textColor="@color/npos_ink"
+                        android:textSize="18sp" />
 
                     <TextView
                         android:id="@+id/optionQtyValue"
                         android:layout_width="36dp"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/prompt_semibold"
                         android:gravity="center"
                         android:text="1"
-                        android:textColor="#15202B"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textColor="@color/npos_ink"
+                        android:textSize="16sp" />
 
                     <TextView
                         android:id="@+id/optionQtyPlus"
                         android:layout_width="40dp"
                         android:layout_height="40dp"
                         android:background="@drawable/npos_touch_primary"
+                        android:fontFamily="@font/prompt_semibold"
                         android:gravity="center"
                         android:text="+"
                         android:textColor="#FFFFFF"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                        android:textSize="18sp" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
@@ -99,7 +99,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#EEEEEE" />
+        android:background="@color/npos_border" />
 
     <ScrollView
         android:id="@+id/optionGroupsScroll"
@@ -123,6 +123,7 @@
         android:id="@+id/optionPickerError"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:fontFamily="@font/prompt_regular"
         android:paddingLeft="14dp"
         android:paddingRight="14dp"
         android:paddingBottom="4dp"
@@ -133,24 +134,19 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#F7F8FC"
+        android:background="@color/npos_bg"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:padding="12dp">
 
         <TextView
             android:id="@+id/optionCancel"
+            style="@style/Npos.Btn.Ghost"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@drawable/npos_touch_ghost"
-            android:gravity="center"
-            android:minHeight="52dp"
-            android:paddingLeft="16dp"
-            android:paddingRight="16dp"
-            android:text="@android:string/cancel"
-            android:textColor="#1E2D3D"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            android:layout_gravity="center_vertical"
+            android:maxWidth="999dp"
+            android:text="@android:string/cancel" />
 
         <TextView
             android:id="@+id/optionLineTotal"
@@ -158,26 +154,21 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
+            android:fontFamily="@font/prompt_semibold"
             android:gravity="end"
-            android:textColor="#1E2D3D"
+            android:textColor="@color/npos_ink"
             android:textSize="14sp"
-            android:textStyle="bold"
             android:visibility="gone" />
 
         <TextView
             android:id="@+id/optionConfirm"
+            style="@style/Npos.Btn.Primary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:background="@drawable/npos_touch_primary"
-            android:gravity="center"
-            android:minHeight="52dp"
-            android:paddingLeft="12dp"
-            android:paddingRight="12dp"
-            android:text="@string/btn_option_confirm"
-            android:textColor="#FFFFFF"
-            android:textSize="15sp"
-            android:textStyle="bold" />
+            android:layout_gravity="center_vertical"
+            android:maxWidth="999dp"
+            android:text="@string/btn_option_confirm" />
     </LinearLayout>
 </LinearLayout>

@@ -4,9 +4,10 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.os.Bundle;
 import android.text.InputType;
-import android.widget.Button;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,6 +20,8 @@ import java.util.List;
 import java.util.Locale;
 
 import app.telltea.npos.sell.SaleSync;
+import app.telltea.npos.ui.NposFonts;
+import app.telltea.npos.ui.NposUi;
 
 /** Local receipt history — reprint + void (web PosReceiptsView parity). */
 public class ReceiptsActivity extends Activity {
@@ -28,36 +31,23 @@ public class ReceiptsActivity extends Activity {
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    LinearLayout root = new LinearLayout(this);
-    root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(24, 24, 24, 24);
-    root.setBackgroundColor(0xFFF7F7F5);
-    LinearLayout top = new LinearLayout(this);
-    top.setOrientation(LinearLayout.HORIZONTAL);
-    Button back = new Button(this);
-    back.setText(R.string.btn_back);
-    back.setAllCaps(false);
-    back.setOnClickListener(v -> finish());
-    top.addView(back);
-    TextView title = new TextView(this);
-    title.setText(R.string.receipts_title);
-    title.setTextSize(22);
-    title.setTextColor(0xFF1A2E24);
-    title.setPadding(16, 12, 0, 0);
-    top.addView(title);
-    root.addView(top);
+    LinearLayout root = NposUi.pageColumn(this);
+    root.addView(NposUi.headerBar(this, getString(R.string.receipts_title)));
 
-    TextView hint = new TextView(this);
-    hint.setText(R.string.receipts_actions_hint);
-    hint.setTextColor(0xFF666666);
-    hint.setTextSize(12);
-    hint.setPadding(0, 0, 0, 16);
+    TextView hint = NposUi.caption(this, getString(R.string.receipts_actions_hint));
+    hint.setPadding(0, NposUi.dp(this, 8), 0, NposUi.dp(this, 12));
     root.addView(hint);
 
     listRoot = new LinearLayout(this);
     listRoot.setOrientation(LinearLayout.VERTICAL);
     root.addView(listRoot);
-    setContentView(root);
+
+    ScrollView scroll = new ScrollView(this);
+    scroll.setFillViewport(true);
+    scroll.setBackgroundColor(NposUi.color(this, R.color.npos_bg));
+    scroll.addView(root);
+    setContentView(scroll);
+    NposFonts.applyActivity(this);
     renderList();
   }
 
@@ -65,15 +55,11 @@ public class ReceiptsActivity extends Activity {
     listRoot.removeAllViews();
     List<JSONObject> rows = saleSync.recentReceipts(this);
     if (rows.isEmpty()) {
-      TextView empty = new TextView(this);
-      empty.setText(R.string.receipts_empty);
-      empty.setTextColor(0xFF666666);
-      listRoot.addView(empty);
+      listRoot.addView(NposUi.caption(this, getString(R.string.receipts_empty)));
       return;
     }
     SimpleDateFormat fmt = new SimpleDateFormat("dd/MM HH:mm", Locale.getDefault());
     for (JSONObject row : rows) {
-      TextView line = new TextView(this);
       boolean voided = row.optBoolean("voided", false);
       String bill = row.optString("billNo", "—");
       double total = row.optDouble("total", 0);
@@ -92,11 +78,16 @@ public class ReceiptsActivity extends Activity {
               pay,
               n,
               voided ? " · ทำลายแล้ว" : "");
-      line.setText(label);
-      line.setTextSize(13);
-      line.setTextColor(voided ? 0xFF999999 : 0xFF333333);
-      line.setPadding(0, 12, 0, 12);
-      line.setBackgroundColor(voided ? 0xFFEEEEEE : 0xFFFFFFFF);
+      TextView line = NposUi.body(this, label);
+      line.setTextColor(
+          voided
+              ? NposUi.color(this, R.color.npos_muted)
+              : NposUi.color(this, R.color.npos_ink));
+      line.setTypeface(voided ? NposFonts.regular(this) : NposFonts.medium(this));
+      line.setPadding(NposUi.dp(this, 12), NposUi.dp(this, 12), NposUi.dp(this, 12), NposUi.dp(this, 12));
+      line.setBackgroundResource(voided ? R.drawable.npos_touch_ghost : R.drawable.npos_card_surface);
+      LinearLayout.LayoutParams lp = NposUi.matchWidth(this, 8);
+      line.setLayoutParams(lp);
       final JSONObject receipt = row;
       line.setOnClickListener(v -> showActions(receipt));
       listRoot.addView(line);
@@ -143,8 +134,7 @@ public class ReceiptsActivity extends Activity {
                   () ->
                       runOnUiThread(
                           () ->
-                              Toast.makeText(
-                                      this, R.string.receipts_reprint_done, Toast.LENGTH_SHORT)
+                              Toast.makeText(this, R.string.receipts_reprint_done, Toast.LENGTH_SHORT)
                                   .show()));
             })
         .setNegativeButton(android.R.string.cancel, null)
@@ -152,7 +142,7 @@ public class ReceiptsActivity extends Activity {
   }
 
   private void confirmVoid(JSONObject receipt) {
-    EditText reason = new EditText(this);
+    EditText reason = NposUi.field(this);
     reason.setInputType(InputType.TYPE_CLASS_TEXT);
     reason.setHint(R.string.void_reason_hint);
     new AlertDialog.Builder(this)

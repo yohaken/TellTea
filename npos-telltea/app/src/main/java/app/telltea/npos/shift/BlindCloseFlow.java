@@ -18,6 +18,8 @@ import org.json.JSONObject;
 
 import app.telltea.npos.R;
 import app.telltea.npos.sell.SaleSync;
+import app.telltea.npos.ui.NposFonts;
+import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.ui.UiScale;
 
 /**
@@ -63,10 +65,7 @@ public final class BlindCloseFlow {
     int pad = ui.dp(16);
     box.setPadding(pad, pad, pad, pad);
 
-    TextView hint = new TextView(activity);
-    hint.setText(R.string.blind_close_count_hint);
-    hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.bodySp);
-    hint.setTextColor(0xFF4B5563);
+    TextView hint = NposUi.caption(activity, activity.getString(R.string.blind_close_count_hint));
     hint.setPadding(0, 0, 0, ui.dp(10));
     box.addView(hint);
 
@@ -101,10 +100,7 @@ public final class BlindCloseFlow {
     int pad = ui.dp(16);
     box.setPadding(pad, pad, pad, pad);
 
-    TextView floatLabel = new TextView(activity);
-    floatLabel.setText(R.string.blind_close_leave_float);
-    floatLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.captionSp);
-    floatLabel.setTextColor(0xFF4B5563);
+    TextView floatLabel = NposUi.caption(activity, activity.getString(R.string.blind_close_leave_float));
     box.addView(floatLabel);
 
     EditText leave = moneyField(activity, ui);
@@ -113,14 +109,11 @@ public final class BlindCloseFlow {
     leave.selectAll();
     box.addView(leave);
 
-    TextView noteLabel = new TextView(activity);
-    noteLabel.setText(R.string.blind_close_note_optional);
-    noteLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.captionSp);
-    noteLabel.setTextColor(0xFF4B5563);
+    TextView noteLabel = NposUi.caption(activity, activity.getString(R.string.blind_close_note_optional));
     noteLabel.setPadding(0, ui.dp(10), 0, ui.dp(4));
     box.addView(noteLabel);
 
-    EditText note = new EditText(activity);
+    EditText note = NposUi.field(activity);
     note.setHint(R.string.blind_close_note_hint);
     note.setMinHeight(ui.touchMinPx);
     note.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
@@ -162,9 +155,10 @@ public final class BlindCloseFlow {
       Activity activity, SaleSync saleSync, Done done, BlindCloseReport report) {
     UiScale ui = UiScale.from(activity);
     ScrollView scroll = new ScrollView(activity);
-    TextView body = new TextView(activity);
+    TextView body = NposUi.body(activity, "");
+    body.setTextColor(NposUi.color(activity, R.color.npos_ink));
+    body.setTypeface(NposFonts.regular(activity));
     body.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.bodySp);
-    body.setTextColor(0xFF15202B);
     body.setPadding(ui.dp(16), ui.dp(12), ui.dp(16), ui.dp(12));
     body.setText(
         String.format(
@@ -215,13 +209,12 @@ public final class BlindCloseFlow {
   }
 
   private static EditText moneyField(Activity activity, UiScale ui) {
-    EditText ed = new EditText(activity);
+    EditText ed = NposUi.field(activity);
     ed.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
     ed.setMinHeight(ui.paySecondaryMinPx);
-    ed.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.titleSp + 2f);
+    ed.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.titleSp + 1f);
     ed.setGravity(Gravity.CENTER);
-    ed.setBackgroundResource(R.drawable.npos_touch_ghost);
-    ed.setPadding(ui.dp(12), ui.dp(10), ui.dp(12), ui.dp(10));
+    ed.setTypeface(NposFonts.semibold(activity));
     return ed;
   }
 

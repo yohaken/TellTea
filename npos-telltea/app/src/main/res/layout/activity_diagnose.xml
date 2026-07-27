@@ -2,8 +2,8 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:background="#F7F7F5">
+    android:background="@color/npos_bg"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -17,67 +17,61 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <Button
+            <TextView
                 android:id="@+id/backButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="40dp"
-                android:text="@string/btn_back"
-                android:textAllCaps="false" />
+                style="@style/Npos.Btn.Back"
+                android:text="@string/btn_back" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:layout_weight="1"
+                android:fontFamily="@font/prompt_semibold"
                 android:text="@string/diagnose_title"
-                android:textColor="#1A2E24"
-                android:textSize="24sp"
-                android:textStyle="bold" />
+                android:textColor="@color/npos_ink"
+                android:textSize="@dimen/npos_text_title" />
         </LinearLayout>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="@string/diagnose_hint"
-            android:textColor="#666666"
-            android:textSize="13sp" />
-
-        <Button
-            android:id="@+id/refreshButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:minHeight="48dp"
-            android:text="@string/diagnose_refresh"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/reportButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:minHeight="48dp"
-            android:text="@string/diagnose_report"
-            android:textAllCaps="false" />
+            android:fontFamily="@font/prompt_regular"
+            android:lineSpacingMultiplier="1.25"
+            android:text="@string/diagnose_hint"
+            android:textColor="@color/npos_muted"
+            android:textSize="@dimen/npos_text_caption" />
+
+        <TextView
+            android:id="@+id/refreshButton"
+            style="@style/Npos.Btn.Secondary"
+            android:layout_marginTop="14dp"
+            android:text="@string/diagnose_refresh" />
+
+        <TextView
+            android:id="@+id/reportButton"
+            style="@style/Npos.Btn.Ghost"
+            android:layout_marginTop="8dp"
+            android:text="@string/diagnose_report" />
 
         <TextView
             android:id="@+id/diagnoseStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:textColor="#555555"
-            android:textSize="14sp" />
+            android:fontFamily="@font/prompt_regular"
+            android:textColor="@color/npos_muted"
+            android:textSize="@dimen/npos_text_body" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="@dimen/npos_space_section"
+            android:fontFamily="@font/prompt_semibold"
             android:text="@string/diagnose_displays_title"
-            android:textColor="#1A2E24"
-            android:textSize="17sp"
-            android:textStyle="bold" />
+            android:textColor="@color/npos_ink"
+            android:textSize="@dimen/npos_text_section" />
 
         <LinearLayout
             android:id="@+id/displayList"
@@ -89,19 +83,20 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
+            android:layout_marginTop="@dimen/npos_space_section"
+            android:fontFamily="@font/prompt_semibold"
             android:text="@string/diagnose_hardware_title"
-            android:textColor="#1A2E24"
-            android:textSize="17sp"
-            android:textStyle="bold" />
+            android:textColor="@color/npos_ink"
+            android:textSize="@dimen/npos_text_section" />
 
         <TextView
             android:id="@+id/hardwareList"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:fontFamily="@font/prompt_regular"
             android:lineSpacingExtra="4dp"
-            android:textColor="#222222"
-            android:textSize="14sp" />
+            android:textColor="@color/npos_ink"
+            android:textSize="@dimen/npos_text_body" />
     </LinearLayout>
 </ScrollView>

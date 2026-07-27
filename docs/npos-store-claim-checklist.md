@@ -1,6 +1,6 @@
 # nPos — รหัสร้าน · เคลมเครื่อง · บล็อกเขียนขาย
 
-อัปเดต: **1.14.33** · `APP_BUILD` 289 · `POS_BUILD` 84 · `versionCode` 54  
+อัปเดต: **1.14.34** · `APP_BUILD` 289 · `POS_BUILD` 84 · `versionCode` 54  
 
 เป้าหมายทดลองหน้าร้านจริง: เครื่องที่ไม่มีรหัสร้าน / ยังไม่เคลม **ส่งบิล·เปิดกะ·ปิดกะไม่ได้**  
 ตั้งชื่อ/ที่อยู่จากหลังบ้านแล้ว **จำใน Firebase จริง** (ไม่ถูกบิลทับ)
@@ -16,7 +16,7 @@
 - [x] A2 `shopSettingsUpdatedAt` เท่านั้นเป็นนาฬิกาซิงก์หัวบิล — **ไม่**ใช้ `updatedAt` จากบิล
 - [x] A3 บันทึก owner → `meta/pos` merge สำเร็จ · nPos อ่านผ่าน `nposShopSettings`
 - [x] A4 native ดึง `shopName` / `shopNameTh` / ที่อยู่ / โทร สำหรับใบเสร็จ
-- [x] A5 owner save ต้อง sync Firebase (ไม่เงียบ) · cloud ใหม่กว่าชนะ localStorage · native reload ตั้งค่าร้านตอน onResume · ใบเสร็จไม่ hardcode ที่อยู่ถ้าค่าว่าง (**1.14.33**)
+- [x] A5 owner save ต้อง sync Firebase (ไม่เงียบ) · cloud ใหม่กว่าชนะ localStorage · native reload ตั้งค่าร้านตอน onResume · ใบเสร็จไม่ hardcode ที่อยู่ถ้าค่าว่าง (**1.14.34**)
 
 ### B — รหัสร้านคงที่ (half-login)
 - [x] B1 เจ้าของตั้ง/เปลี่ยนรหัสร้านในแท็บจัดการ (เก็บ **hash** ใน `meta/pos` — ไม่ส่งรหัสจริงให้เครื่อง)

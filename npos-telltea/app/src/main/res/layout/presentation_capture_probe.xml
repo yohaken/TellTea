@@ -12,9 +12,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="TellTea nPos"
-        android:textColor="#C4A35A"
-        android:textSize="28sp"
-        android:textStyle="bold" />
+        android:fontFamily="@font/prompt_bold"
+        android:textColor="@color/npos_gold"
+        android:textSize="28sp" />
 
     <TextView
         android:id="@+id/captureProbeBody"
@@ -22,6 +22,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:gravity="center"
+        android:fontFamily="@font/prompt_regular"
         android:textColor="#F3F6F2"
         android:textSize="18sp" />
 
@@ -31,6 +32,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:gravity="center"
+        android:fontFamily="@font/prompt_regular"
         android:textColor="#A8B5AD"
         android:textSize="14sp" />
 </LinearLayout>

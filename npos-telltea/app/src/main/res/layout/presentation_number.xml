@@ -15,15 +15,16 @@
             android:id="@+id/presentationNumber"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#C4A35A"
-            android:textSize="120sp"
-            android:textStyle="bold" />
+            android:fontFamily="@font/prompt_bold"
+            android:textColor="@color/npos_gold"
+            android:textSize="120sp" />
 
         <TextView
             android:id="@+id/presentationLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:fontFamily="@font/prompt_regular"
             android:textColor="#F3F6F2"
             android:textSize="22sp" />
     </LinearLayout>

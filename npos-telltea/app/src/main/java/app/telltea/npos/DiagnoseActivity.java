@@ -5,7 +5,6 @@ import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -18,6 +17,8 @@ import app.telltea.npos.diagnose.DisplayProbe;
 import app.telltea.npos.diagnose.HardwareProbe;
 import app.telltea.npos.diagnose.NumberPresentation;
 import app.telltea.npos.diagnose.OpsLogger;
+import app.telltea.npos.ui.NposFonts;
+import app.telltea.npos.ui.NposUi;
 
 /**
  * Hardware + multi-display diagnostics + report to back-office.
@@ -28,7 +29,7 @@ public class DiagnoseActivity extends Activity {
     private LinearLayout displayList;
     private TextView hardwareList;
     private TextView diagnoseStatus;
-    private Button reportButton;
+    private TextView reportButton;
     private final List<NumberPresentation> openPresentations = new ArrayList<>();
     private List<DisplayProbe.DisplayInfo> lastDisplays = new ArrayList<>();
     private List<HardwareProbe.Item> lastHardware = new ArrayList<>();
@@ -131,10 +132,7 @@ public class DiagnoseActivity extends Activity {
     private void renderDisplays(List<DisplayProbe.DisplayInfo> displays) {
         displayList.removeAllViews();
         if (displays.isEmpty()) {
-            TextView empty = new TextView(this);
-            empty.setText(R.string.diagnose_no_displays);
-            empty.setTextColor(0xFF666666);
-            displayList.addView(empty);
+            displayList.addView(NposUi.caption(this, getString(R.string.diagnose_no_displays)));
             return;
         }
 
@@ -147,20 +145,12 @@ public class DiagnoseActivity extends Activity {
                     info.primary
                             ? getString(R.string.diagnose_display_primary)
                             : getString(R.string.diagnose_display_secondary);
-            TextView title = new TextView(this);
-            title.setText(getString(R.string.diagnose_display_row, info.number, info.name));
-            title.setTextColor(0xFF1A2E24);
-            title.setTextSize(16f);
-            title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
+            TextView title = NposUi.section(this, getString(R.string.diagnose_display_row, info.number, info.name));
 
-            TextView meta = new TextView(this);
-            meta.setText(role + " · id=" + info.display.getDisplayId());
-            meta.setTextColor(0xFF666666);
-            meta.setTextSize(13f);
+            TextView meta = NposUi.caption(this, role + " · id=" + info.display.getDisplayId());
 
-            Button show = new Button(this);
-            show.setText(getString(R.string.diagnose_show_on_display, info.number));
-            show.setAllCaps(false);
+            TextView show = NposUi.chipPrimary(this, getString(R.string.diagnose_show_on_display, info.number));
+            show.setLayoutParams(NposUi.matchWidth(this, 0));
             show.setOnClickListener(v -> showNumberOnDisplay(info));
 
             row.addView(title);

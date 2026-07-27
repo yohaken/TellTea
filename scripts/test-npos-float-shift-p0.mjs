@@ -9,13 +9,13 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 291/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 86/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+56/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.33"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 292/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 87/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+57/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.34"/);
 
 assert.ok(existsSync(join(root, "docs/npos-float-shift-p0-checklist.md")));
-assert.match(read("docs/npos-float-shift-p0-checklist.md"), /1.14.33/);
+assert.match(read("docs/npos-float-shift-p0-checklist.md"), /1.14.34/);
 
 const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
 assert.match(strings, /shift_summary_fmt.*%2\$s.*%3\$s/);

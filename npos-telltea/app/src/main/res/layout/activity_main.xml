@@ -43,16 +43,17 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="28dp"
-                android:textColor="#1A2E24"
-                android:textSize="36sp"
-                android:textStyle="bold" />
+                android:fontFamily="@font/prompt_bold"
+                android:textColor="@color/npos_ink"
+                android:textSize="36sp" />
 
             <TextView
                 android:id="@+id/clockInDate"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:textColor="#666666"
+                android:fontFamily="@font/prompt_regular"
+                android:textColor="@color/npos_muted"
                 android:textSize="15sp" />
 
             <TextView
@@ -60,10 +61,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
+                android:fontFamily="@font/prompt_semibold"
                 android:gravity="center"
-                android:textColor="#1A2E24"
-                android:textSize="15sp"
-                android:textStyle="bold" />
+                android:textColor="@color/npos_ink"
+                android:textSize="15sp" />
 
             <TextView
                 android:id="@+id/heartbeatStatus"

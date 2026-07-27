@@ -13,6 +13,8 @@ import android.widget.Toast;
 import app.telltea.npos.R;
 import app.telltea.npos.diagnose.OpsLogger;
 import app.telltea.npos.sell.SaleSync;
+import app.telltea.npos.ui.NposFonts;
+import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.ui.UiScale;
 
 /**
@@ -50,20 +52,16 @@ public final class OpenShiftFlow {
     int pad = ui.dp(16);
     box.setPadding(pad, pad, pad, pad);
 
-    TextView hint = new TextView(activity);
-    hint.setText(R.string.open_shift_float_hint);
-    hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.bodySp);
-    hint.setTextColor(0xFF4B5563);
+    TextView hint = NposUi.caption(activity, activity.getString(R.string.open_shift_float_hint));
     hint.setPadding(0, 0, 0, ui.dp(10));
     box.addView(hint);
 
-    EditText field = new EditText(activity);
+    EditText field = NposUi.field(activity);
     field.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
     field.setMinHeight(ui.paySecondaryMinPx);
-    field.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.titleSp + 2f);
+    field.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.titleSp + 1f);
     field.setGravity(Gravity.CENTER);
-    field.setBackgroundResource(R.drawable.npos_touch_ghost);
-    field.setPadding(ui.dp(12), ui.dp(10), ui.dp(12), ui.dp(10));
+    field.setTypeface(NposFonts.semibold(activity));
     double seed = ShiftPrefs.nextOpeningCash(activity);
     field.setText(ShiftPrefs.moneyPlain(seed));
     field.setHint(R.string.open_shift_float_hint_field);
