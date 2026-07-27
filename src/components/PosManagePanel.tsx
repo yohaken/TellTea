@@ -14,9 +14,8 @@ export function PosManagePanel({ onError }: { onError: (msg: string | null) => v
   return (
     <div className="owner-settings-stack pos-manage-stack">
       <p className="muted pos-manage-lead">
-        ตั้งค่าร้าน (หัวบิล · PromptPay · เรียงเมนู) + รหัสร้านสำหรับเคลมเครื่อง nPos
-        <br />
-        รายงานจากแอป nPos-telltea · เครื่องออนไลน์ · ไทม์ไลน์ ops / แคป
+        1) ตั้งชื่อ/ที่อยู่ → กด <strong>บันทึกขึ้น Firebase</strong> · 2) ตั้งรหัสร้าน → เปิดเกต ·
+        3) แท็บเล็ตกรอกรหัส · ถ้าติด seat กด <strong>เตะ / เคลียร์ seat</strong>
       </p>
       <section className="pos-manage-settings" aria-label="ตั้งค่าร้าน POS">
         <h2 className="panel-title" style={{ fontSize: "1rem", marginBottom: "0.5rem" }}>

@@ -61,8 +61,18 @@ public final class StoreClaimClient {
             }
             String err = res.optString("error", "claim_failed");
             String errCode = res.optString("code", "");
-            if ("seat_taken".equals(errCode) && (err == null || err.isEmpty())) {
-              err = "มีเครื่องอื่นใช้อยู่ — ให้หลังบ้านเตะเครื่องนั้นก่อน";
+            if ("seat_taken".equals(errCode)) {
+              err = "มีเครื่องอื่นใช้อยู่ — หลังบ้านกดเตะ / เคลียร์ seat ก่อน";
+            } else if ("claim_not_configured".equals(errCode)) {
+              err = "ยังไม่ได้ตั้งรหัสร้านหลังบ้าน — ไป /pos-sales/?tab=manage ตั้งรหัสก่อน";
+            } else if ("bad_code".equals(errCode)) {
+              err = "รหัสร้านไม่ตรง";
+            } else if ("device_unknown".equals(errCode)) {
+              err = "ยังไม่พบเครื่อง — รอสักครู่แล้วลองใหม่";
+            } else if ("device_dev_rejected".equals(errCode)) {
+              err = "เครื่องจำลองถูกปิดกั้น — ปิด reject-dev หลังบ้าน หรือใช้แท็บเล็ตจริง";
+            } else if ("device_blocked".equals(errCode)) {
+              err = "เครื่องนี้ถูกบล็อกจากหลังบ้าน";
             }
             if (callback != null) callback.onError(err);
           } catch (Exception e) {

@@ -162,6 +162,45 @@ exports.nposOwnerDeviceCommand = functions
       };
     }
 
+    // Clear exclusive seat + revoke every claimed tablet — fresh login.
+    if (action === "clear_seat") {
+      const now = Date.now();
+      const db = getFirestore();
+      const claimed = await db.collection(COL).where("storeClaimed", "==", true).get();
+      const batch = db.batch();
+      batch.set(
+        db.doc(META_POS),
+        {
+          activeSeatInstallId: "",
+          seatClaimedAt: 0,
+          updatedAt: now,
+        },
+        { merge: true },
+      );
+      claimed.forEach((docSnap) => {
+        batch.set(
+          docSnap.ref,
+          {
+            storeClaimed: false,
+            storeClaimRevokedAt: now,
+            storeClaimMethod: "revoked",
+            storeClaimRevokeReason: "kicked",
+            updatedAt: now,
+          },
+          { merge: true },
+        );
+      });
+      await batch.commit();
+      return {
+        ok: true,
+        action,
+        actorId,
+        at: now,
+        activeSeatInstallId: "",
+        revokedCount: claimed.size,
+      };
+    }
+
     const deviceId = asString(data?.deviceId, 64);
     if (!deviceId || deviceId.length < 8 || !/^[a-zA-Z0-9_-]+$/.test(deviceId)) {
       throw new functions.https.HttpsError("invalid-argument", "deviceId ไม่ถูกต้อง");

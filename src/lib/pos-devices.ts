@@ -26,12 +26,14 @@ type OwnerDeviceAction =
   | "set_store_code"
   | "clear_store_code"
   | "get_store_claim"
+  | "clear_seat"
   | "grant_claim"
   | "revoke_claim";
 
 type OwnerDeviceCommandResult = {
   ok: boolean;
   deleted?: number;
+  revokedCount?: number;
   storeClaimRequired?: boolean;
   hasCode?: boolean;
   codeHint?: string;
@@ -55,7 +57,8 @@ async function callNposOwnerDeviceCommand(
       action === "clear_captures_all" ||
       action === "set_store_code" ||
       action === "clear_store_code" ||
-      action === "get_store_claim";
+      action === "get_store_claim" ||
+      action === "clear_seat";
     const payload = shopWide
       ? { action, ...(extra || {}) }
       : { action, deviceId, ...(extra || {}) };
@@ -515,6 +518,12 @@ export async function setNposStoreClaimCode(
 
 export async function clearNposStoreClaimCode(): Promise<void> {
   await callNposOwnerDeviceCommand("clear_store_code");
+}
+
+/** Kick every claimed tablet + clear exclusive seat so a new login can start. */
+export async function clearNposExclusiveSeat(): Promise<{ revokedCount: number }> {
+  const res = await callNposOwnerDeviceCommand("clear_seat");
+  return { revokedCount: typeof res.revokedCount === "number" ? res.revokedCount : 0 };
 }
 
 export async function setNposDeviceStoreClaimed(

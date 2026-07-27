@@ -215,7 +215,8 @@ export function PosBusinessSettingsView({
           <div className="pos-biz-layout">
             <form className="pos-biz-form" onSubmit={(e) => void saveBill(e)}>
               <p className="muted pos-biz-lead">
-                ชื่อ · ที่อยู่ · โทร — แสดงหัวใบเสร็จและสรุปกะ · บันทึกในเครื่องก่อน แล้วค่อยอัป Firebase
+                ชื่อ · ที่อยู่ · โทร — แสดงหัวใบเสร็จ · <strong>ต้องกดปุ่มบันทึกด้านล่าง</strong>{" "}
+                ถึงจะขึ้น Firebase (แก้แล้วไม่กดบันทึก = แท็บเล็ตยังเป็นค่าเก่า)
               </p>
               <div className="pos-biz-grid">
                 <label>
@@ -270,8 +271,8 @@ export function PosBusinessSettingsView({
                   />
                 </label>
               </div>
-              <button type="submit" className="pos-btn-orange pos-biz-save" disabled={busy}>
-                {busy ? "กำลังบันทึก..." : "บันทึกบนบิล"}
+              <button type="submit" className="primary-btn pos-biz-save" disabled={busy}>
+                {busy ? "กำลังบันทึกขึ้น Firebase..." : "บันทึกชื่อ·ที่อยู่ขึ้น Firebase"}
               </button>
             </form>
             <BillPreview shop={draftPreview} />

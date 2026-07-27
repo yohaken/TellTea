@@ -521,7 +521,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
               }`
             : "ยังไม่มีเครื่อง — เปิดแอป nPos แล้วจะลงทะเบียนเอง"
       }
-      defaultOpen={false}
+      defaultOpen
       className="npos-devices-fold"
     >
       {loading ? (
@@ -532,7 +532,8 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
         <>
           <div className="npos-seat-slim" style={{ marginBottom: "0.75rem", overflowX: "auto" }}>
             <p className="muted" style={{ marginBottom: "0.5rem" }}>
-              เตะเครื่อง ≠ บังคับปิดกะ · กะบนเซิร์ฟเวอร์อยู่ต่อให้เครื่องใหม่ resume
+              เตะเครื่อง ≠ บังคับปิดกะ · กะบนเซิร์ฟเวอร์อยู่ต่อให้เครื่องใหม่ resume ·
+              ถ้าเข้าไม่ได้เพราะ seat ถูกจอง — กด <strong>เตะ</strong> หรือ «เคลียร์ seat» ที่แผงรหัสร้าน
             </p>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
               <thead>
@@ -554,6 +555,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                   else if (isSeat && online) status = "ออนไลน์ · seat";
                   else if (isSeat && !online) status = "หลุดเน็ต · seat";
                   else if (d.storeClaimed) status = "เคลม";
+                  const canKick = d.storeClaimed || activeSeatId === d.id;
                   return (
                     <tr key={`slim-${d.id}`} style={{ borderBottom: "1px solid #eee" }}>
                       <td style={{ padding: "0.35rem" }}>
@@ -566,7 +568,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                         {d.nativeShellBuild || d.appBuild || "—"}
                       </td>
                       <td style={{ padding: "0.35rem" }}>
-                        {d.storeClaimed ? (
+                        {canKick ? (
                           <button
                             type="button"
                             className="npos-device-btn"

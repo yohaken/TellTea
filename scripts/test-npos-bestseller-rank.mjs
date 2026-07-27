@@ -11,10 +11,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 const require = createRequire(import.meta.url);
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 287/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+52/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.29"/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 82/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 288/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+53/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.30"/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 83/);
 
 assert.ok(existsSync(join(root, "docs/npos-bestseller-rank-checklist.md")));
 const doc = read("docs/npos-bestseller-rank-checklist.md");

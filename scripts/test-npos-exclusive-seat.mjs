@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 287/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 82/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+52/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.29"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 288/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 83/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+53/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.30"/);
 
 assert.ok(existsSync(join(root, "docs/npos-exclusive-seat-checklist.md")));
 const doc = read("docs/npos-exclusive-seat-checklist.md");
@@ -35,6 +35,7 @@ const owner = read("functions/npos-owner-device.js");
 assert.match(owner, /storeClaimRevokeReason/);
 assert.match(owner, /kicked/);
 assert.match(owner, /activeSeatInstallId/);
+assert.match(owner, /clear_seat/);
 assert.doesNotMatch(owner, /nposSessionClose|sessionClose/);
 
 const hb = read("functions/npos-heartbeat.js");
@@ -90,7 +91,9 @@ assert.match(panel, /เตะเครื่อง ≠ บังคับปิ
 
 const claimPanel = read("src/components/PosStoreClaimPanel.tsx");
 assert.match(claimPanel, /activeSeatId|เครื่องเดียว/);
-assert.match(claimPanel, /เตะเครื่อง.*บังคับปิดกะ|≠ บังคับปิดกะ/);
+assert.match(claimPanel, /เตะเครื่อง.*บังคับปิดกะ|≠ บังคับปิดกะ|เคลียร์ seat/);
+assert.match(claimPanel, /เคลียร์ seat/);
+assert.match(read("src/lib/pos-devices.ts"), /clearNposExclusiveSeat|clear_seat/);
 
 const devices = read("src/lib/pos-devices.ts");
 assert.match(devices, /seatMode\?:/);

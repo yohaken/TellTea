@@ -1,6 +1,6 @@
 # nPos — counter UX batch (1.14.28)
 
-อัปเดต: **1.14.29** · `APP_BUILD` 287 · `POS_BUILD` 82 · `versionCode` 52
+อัปเดต: **1.14.30** · `APP_BUILD` 288 · `POS_BUILD` 83 · `versionCode` 53
 
 ## ทำแล้ว
 - [x] แบดจ์จำนวนบนการ์ดเมนู (วงกลมมุมขวาบน) · รีเฟรชตอนแก้ตะกร้า

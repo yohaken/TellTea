@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { KeyRound } from "lucide-react";
 import { SettingsFold } from "@/components/SettingsFold";
 import {
+  clearNposExclusiveSeat,
   clearNposStoreClaimCode,
   getNposStoreClaimStatus,
   setNposStoreClaimCode,
@@ -59,7 +60,9 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
     try {
       const res = await setNposStoreClaimCode(code, { rejectDev });
       setCode("");
-      setHint(`ตั้งแล้ว · รหัสขึ้นต้น/ท้าย ${res.codeHint}`);
+      setHint(
+        `ตั้งรหัสแล้ว (${res.codeHint}) · เปิดเกตแล้ว — ไปแท็บเล็ตกรอกรหัสนี้ที่หน้าเข้างาน`,
+      );
       await refresh();
     } catch (err) {
       onError(err instanceof Error ? err.message : String(err));
@@ -88,6 +91,35 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
     }
   }
 
+  async function onClearSeat() {
+    if (!actorId) {
+      onError("ต้องเข้าสู่ระบบเจ้าของก่อน");
+      return;
+    }
+    if (
+      !window.confirm(
+        "เคลียร์สิทธิ์ทุกเครื่อง + ว่าง seat? แท็บเล็ตจะเด้งไปใส่รหัสใหม่ (กะไม่ปิด)",
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setHint(null);
+    try {
+      const res = await clearNposExclusiveSeat();
+      setActiveSeatId("");
+      setHint(
+        `เคลียร์แล้ว · เตะ ${res.revokedCount} เครื่อง — กรอกรหัสบนแท็บเล็ตใหม่ได้เลย`,
+      );
+      await refresh();
+      onError(null);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <SettingsFold
       title={
@@ -101,18 +133,32 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
           ? "กำลังโหลด…"
           : required && hasCode
             ? `เกตเปิด · โหมดเครื่องเดียว${activeSeatId ? ` · seat ${activeSeatId.slice(-6).toUpperCase()}` : " · ว่าง"}${rejectDev ? " · บล็อกจำลอง" : ""}`
-            : "ยังไม่ตั้งรหัส — ตั้งก่อนทดลองหน้าร้าน"
+            : "ยังไม่ตั้งรหัส — แท็บเล็ตเข้าไม่ได้จนกว่าจะตั้งด้านล่าง"
       }
       defaultOpen
       className="npos-store-claim-fold"
     >
+      {!loading && !hasCode ? (
+        <p
+          className="error-text"
+          style={{
+            marginBottom: "0.75rem",
+            padding: "0.65rem 0.75rem",
+            borderRadius: 8,
+            background: "#fff4e8",
+            border: "1px solid #f0c9a0",
+          }}
+        >
+          ยังไม่ได้ตั้งรหัสร้านบน Firebase — แท็บเล็ตใส่รหัสแล้วเข้าไม่ได้จนกว่าจะกด{" "}
+          <strong>ตั้งรหัส + เปิดเกต</strong> ด้านล่าง
+        </p>
+      ) : null}
       <p className="muted" style={{ marginBottom: "0.75rem" }}>
         รหัสลับ 1:1 กับหลังบ้าน · <strong>เครื่องเดียวถือสิทธิ์ขาย</strong> ·
         เปลี่ยนรหัส = เตะทุกเครื่องให้ใส่รหัสใหม่
       </p>
       <p className="muted" style={{ marginBottom: "0.75rem" }}>
-        ปุ่ม <strong>เตะเครื่อง</strong> ≠ บังคับปิดกะ — กะบนเซิร์ฟเวอร์อยู่ต่อ
-        ให้เครื่องใหม่เคลมแล้วเปิดกะเพื่อต่อรอบเดิม
+        ปุ่ม <strong>เตะ / เคลียร์ seat</strong> ≠ บังคับปิดกะ — กะบนเซิร์ฟเวอร์อยู่ต่อ
       </p>
       {seatMode === "exclusive" && required ? (
         <p className="muted" style={{ marginBottom: "0.5rem" }}>
@@ -137,18 +183,29 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
             disabled={busy}
           />
         </label>
-        <label className="field checkbox-field" style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+        <label
+          className="field checkbox-field"
+          style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
+        >
           <input
             type="checkbox"
             checked={rejectDev}
             onChange={(e) => setRejectDev(e.target.checked)}
             disabled={busy}
           />
-          <span>ปิดกั้นเครื่องจำลอง / พัฒนา (แนะนำตอนทดลองจริง)</span>
+          <span>ปิดกั้นเครื่องจำลอง / พัฒนา (ถอดติ๊กถ้าเทสบน emulator)</span>
         </label>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.75rem" }}>
           <button type="submit" className="primary-btn" disabled={busy || code.trim().length < 4}>
             {hasCode ? "เปลี่ยนรหัส + เปิดเกต" : "ตั้งรหัส + เปิดเกต"}
+          </button>
+          <button
+            type="button"
+            className="ghost-btn"
+            disabled={busy || (!hasCode && !activeSeatId)}
+            onClick={() => void onClearSeat()}
+          >
+            เคลียร์ seat / เริ่มใส่รหัสใหม่
           </button>
           {hasCode ? (
             <button type="button" className="ghost-btn" disabled={busy} onClick={() => void onClear()}>
@@ -157,7 +214,11 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
           ) : null}
         </div>
       </form>
-      {hint ? <p className="muted" style={{ marginTop: "0.75rem" }}>{hint}</p> : null}
+      {hint ? (
+        <p className="ok-text" style={{ marginTop: "0.75rem" }}>
+          {hint}
+        </p>
+      ) : null}
     </SettingsFold>
   );
 }
