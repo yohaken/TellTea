@@ -7298,6 +7298,127 @@ body.modal-open .main-panel {
   gap: 0.55rem;
 }
 
+/* Compact overview table — keep full text, wrap instead of hide */
+.tasks-sheet {
+  margin-bottom: 0.35rem;
+}
+
+.tasks-table.sheet-table {
+  font-size: 0.78rem;
+  min-width: 36rem;
+}
+
+.tasks-table.sheet-table th,
+.tasks-table.sheet-table td {
+  padding: 0.32rem 0.35rem;
+  vertical-align: top;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.tasks-table.sheet-table th {
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.tasks-col-title {
+  min-width: 5.5rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.92);
+}
+
+.tasks-title-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--tea-leaf);
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: rgba(47, 107, 79, 0.35);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.tasks-title-text {
+  font-weight: 700;
+}
+
+.tasks-col-due {
+  width: 4.2rem;
+  white-space: nowrap;
+}
+
+.tasks-due-main {
+  display: block;
+  font-weight: 600;
+}
+
+.tasks-due-sub {
+  display: block;
+  font-size: 0.66rem;
+  color: rgba(28, 42, 31, 0.58);
+}
+
+.tasks-col-who {
+  min-width: 4.2rem;
+}
+
+.tasks-col-check {
+  min-width: 7rem;
+  font-size: 0.72rem;
+  color: rgba(28, 42, 31, 0.82);
+}
+
+.tasks-col-note {
+  min-width: 4rem;
+  font-size: 0.72rem;
+  color: rgba(28, 42, 31, 0.7);
+}
+
+.tasks-col-status {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.tasks-col-act {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.tasks-act-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.2rem;
+  min-width: 5.2rem;
+}
+
+.tasks-table .tasks-submit-btn,
+.tasks-table .tasks-proof-btn,
+.tasks-table .tasks-delete-btn {
+  width: 100%;
+  justify-content: center;
+  min-height: 1.85rem;
+  padding: 0.22rem 0.4rem;
+  font-size: 0.7rem;
+}
+
+.tasks-row.is-overdue td {
+  background: rgba(255, 245, 245, 0.72);
+}
+
+.tasks-row.is-future td {
+  opacity: 0.88;
+}
+
+.tasks-row.is-done td {
+  background: rgba(248, 252, 249, 0.72);
+}
+
 .tasks-card {
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(255, 255, 255, 0.95);

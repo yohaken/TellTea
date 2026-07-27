@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
-  CalendarClock,
   Camera,
   CheckCircle2,
   Circle,
@@ -33,6 +32,7 @@ import {
 import { runTaskOccurrenceSync } from "@/lib/task-sync";
 import type { TaskChecklistItem, TaskOccurrence, TaskTemplate } from "@/lib/task-types";
 import {
+  bangkokCalendarParts,
   canSubmitOccurrence,
   filterOccurrencesByTab,
   getTaskProofImgs,
@@ -193,8 +193,8 @@ function TasksView() {
         </h1>
         <p className="muted tasks-page-hint">
           {isOwnerManager
-            ? "ประจำวันในสัปดาห์ · ส่งได้ทุกวัน · เจ้าของแก้ไข/ปิด/ลบกติกาได้"
-            : "งานที่มอบให้คุณ · ส่ง checklist + รูปหลักฐานเมื่อครบ"}
+            ? "ตารางภาพรวม · ส่งได้ทุกวัน · เจ้าของแก้ไข/ปิด/ลบกติกาได้"
+            : "งานที่มอบให้คุณ · แตะชื่องานหรือปุ่มส่งเมื่อครบ checklist + รูป"}
         </p>
       </div>
 
@@ -281,18 +281,13 @@ function TasksView() {
                     : "ยังไม่มีงานมอบให้คุณในสัปดาห์นี้"}
             </p>
           ) : (
-            <ul className="tasks-list">
-              {visible.map((occ) => (
-                <OccurrenceCard
-                  key={occ.id}
-                  occ={occ}
-                  canManage={isOwnerManager}
-                  onSubmit={() => setSubmitOcc(occ)}
-                  onViewPhoto={(urls) => setPreviewUrls(urls)}
-                  onError={setError}
-                />
-              ))}
-            </ul>
+            <OccurrencesTable
+              rows={visible}
+              canManage={isOwnerManager}
+              onSubmit={(occ) => setSubmitOcc(occ)}
+              onViewPhoto={(urls) => setPreviewUrls(urls)}
+              onError={setError}
+            />
           )}
         </>
       ) : null}
@@ -351,27 +346,34 @@ function TasksView() {
   );
 }
 
-function OccurrenceCard({
-  occ,
+function statusLabel(occ: TaskOccurrence) {
+  if (occ.status === "completed") return labelCompletedKind(occ.completedKind || "on_time");
+  if (occ.status === "missed") return "พลาด";
+  if (isOccurrenceOpenSoon(occ)) return "ยังไม่เปิดส่ง";
+  return "ค้างส่ง";
+}
+
+function statusClass(occ: TaskOccurrence) {
+  if (occ.status === "completed") return "is-done";
+  if (occ.status === "missed") return "is-overdue";
+  if (isOccurrenceOpenSoon(occ)) return "is-future";
+  return "is-pending";
+}
+
+function OccurrencesTable({
+  rows,
   canManage,
   onSubmit,
   onViewPhoto,
   onError,
 }: {
-  occ: TaskOccurrence;
+  rows: TaskOccurrence[];
   canManage: boolean;
-  onSubmit: () => void;
+  onSubmit: (occ: TaskOccurrence) => void;
   onViewPhoto: (urls: string[]) => void;
   onError: (msg: string) => void;
 }) {
-  const soon = isOccurrenceOpenSoon(occ);
-  const canSubmit = canSubmitOccurrence(occ);
-  const done = occ.status === "completed";
-  const missed = occ.status === "missed";
-  const canDelete = canManage && !done;
-  const proofImgs = getTaskProofImgs(occ);
-
-  async function onDelete() {
+  async function onDelete(occ: TaskOccurrence) {
     if (!window.confirm(`ลบรอบงาน "${occ.title}" (${formatDateShort(occ.dueDate)})?`)) return;
     try {
       await dismissTaskPeriod(occ.templateId, occ.periodKey);
@@ -382,80 +384,114 @@ function OccurrenceCard({
   }
 
   return (
-    <li
-      className={
-        done
-          ? "tasks-card is-done"
-          : missed
-            ? "tasks-card is-overdue"
-            : soon
-              ? "tasks-card is-future"
-              : "tasks-card"
-      }
-    >
-      <div className="tasks-card-head">
-        <div>
-          <h2 className="tasks-card-title">{occ.title}</h2>
-          <p className="tasks-card-meta">
-            <CalendarClock size={12} aria-hidden />             รอบ {formatDateShort(occ.dueDate)} · ทุก{labelWeekday(new Date(occ.dueDate).getDay())}
-          </p>
-          <p className="tasks-card-workers">{occ.assigneeNames.join(", ")}</p>
-        </div>
-        <span
-          className={`tasks-status-pill ${
-            done ? "is-done" : missed ? "is-overdue" : soon ? "is-future" : "is-pending"
-          }`}
-        >
-          {done
-            ? labelCompletedKind(occ.completedKind || "on_time")
-            : missed
-              ? "พลาด"
-              : soon
-                ? "ยังไม่เปิดส่ง"
-                : "ค้างส่ง"}
-        </span>
-      </div>
+    <div className="sheet-wrap tasks-sheet">
+      <table className="sheet-table tasks-table">
+        <thead>
+          <tr>
+            <th className="tasks-col-title">งาน</th>
+            <th className="tasks-col-due">รอบ</th>
+            <th className="tasks-col-who">มอบให้</th>
+            <th className="tasks-col-check">checklist</th>
+            <th className="tasks-col-note">note</th>
+            <th className="tasks-col-status">สถานะ</th>
+            <th className="tasks-col-act">ทำ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((occ) => {
+            const soon = isOccurrenceOpenSoon(occ);
+            const canSubmit = canSubmitOccurrence(occ);
+            const done = occ.status === "completed";
+            const missed = occ.status === "missed";
+            const canDelete = canManage && !done;
+            const proofImgs = getTaskProofImgs(occ);
+            const weekday = labelWeekday(bangkokCalendarParts(occ.dueDate).weekday);
+            const checkText = occ.checklist
+              .map((item) => {
+                const checked = done ? occ.checklistDone.includes(item.id) : false;
+                return `${checked ? "✓" : "○"} ${item.label}`;
+              })
+              .join(" · ");
 
-      {occ.note ? <p className="tasks-card-note">{occ.note}</p> : null}
-
-      <ul className="tasks-check-preview">
-        {occ.checklist.map((item) => {
-          const checked = done ? occ.checklistDone.includes(item.id) : false;
-          return (
-            <li key={item.id} className={checked ? "is-checked" : ""}>
-              {checked ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-              <span>{item.label}</span>
-            </li>
-          );
-        })}
-      </ul>
-
-      <div className="tasks-card-actions">
-        {canSubmit ? (
-          <button type="button" className="primary-btn tasks-submit-btn" onClick={onSubmit}>
-            <Camera size={16} aria-hidden /> {missed ? "ส่งย้อนหลัง" : "ส่งงาน"}
-          </button>
-        ) : null}
-        {soon ? (
-          <p className="muted tasks-future-hint">เปิดส่ง {formatDateShort(occ.openAt)}</p>
-        ) : null}
-        {done && proofImgs.length ? (
-          <button
-            type="button"
-            className="ghost-btn tasks-proof-btn"
-            onClick={() => onViewPhoto(proofImgs)}
-          >
-            <ImageIcon size={14} aria-hidden /> ดูรูปหลักฐาน
-            {proofImgs.length > 1 ? ` (${proofImgs.length})` : ""}
-          </button>
-        ) : null}
-        {canDelete ? (
-          <button type="button" className="ghost-btn tasks-delete-btn" onClick={() => void onDelete()}>
-            <Trash2 size={14} aria-hidden /> ลบรอบ
-          </button>
-        ) : null}
-      </div>
-    </li>
+            return (
+              <tr
+                key={occ.id}
+                className={[
+                  "tasks-row",
+                  done ? "is-done" : "",
+                  missed ? "is-overdue" : "",
+                  soon ? "is-future" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <td className="tasks-col-title">
+                  {canSubmit ? (
+                    <button
+                      type="button"
+                      className="tasks-title-link"
+                      onClick={() => onSubmit(occ)}
+                      title="แตะเพื่อส่งงาน"
+                    >
+                      {occ.title}
+                    </button>
+                  ) : (
+                    <strong className="tasks-title-text">{occ.title}</strong>
+                  )}
+                </td>
+                <td className="tasks-col-due">
+                  <span className="tasks-due-main">{formatDateShort(occ.dueDate)}</span>
+                  <span className="tasks-due-sub">ทุก{weekday}</span>
+                  {soon ? (
+                    <span className="tasks-due-sub">เปิด {formatDateShort(occ.openAt)}</span>
+                  ) : null}
+                </td>
+                <td className="tasks-col-who">{occ.assigneeNames.join(", ") || "—"}</td>
+                <td className="tasks-col-check" title={checkText}>
+                  {checkText || "—"}
+                </td>
+                <td className="tasks-col-note">{occ.note || "—"}</td>
+                <td className="tasks-col-status">
+                  <span className={`tasks-status-pill ${statusClass(occ)}`}>{statusLabel(occ)}</span>
+                </td>
+                <td className="tasks-col-act">
+                  <div className="tasks-act-stack">
+                    {canSubmit ? (
+                      <button
+                        type="button"
+                        className="primary-btn tasks-submit-btn"
+                        onClick={() => onSubmit(occ)}
+                      >
+                        <Camera size={14} aria-hidden /> {missed ? "ส่งย้อนหลัง" : "ส่งงาน"}
+                      </button>
+                    ) : null}
+                    {done && proofImgs.length ? (
+                      <button
+                        type="button"
+                        className="ghost-btn tasks-proof-btn"
+                        onClick={() => onViewPhoto(proofImgs)}
+                      >
+                        <ImageIcon size={13} aria-hidden /> รูป
+                        {proofImgs.length > 1 ? ` (${proofImgs.length})` : ""}
+                      </button>
+                    ) : null}
+                    {canDelete ? (
+                      <button
+                        type="button"
+                        className="ghost-btn tasks-delete-btn"
+                        onClick={() => void onDelete(occ)}
+                      >
+                        <Trash2 size={13} aria-hidden /> ลบ
+                      </button>
+                    ) : null}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
