@@ -1,6 +1,6 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **1.14.25** เอกสารร้าน + ลิ้นชัก · (ก่อนหน้า 1.14.24 เคลมเครื่อง)  
+อัปเดต: **1.14.26** เอกสารร้าน + ลิ้นชัก · (ก่อนหน้า 1.14.24 เคลมเครื่อง)  
 ดู [npos-doc-drawer-polish-checklist.md](./npos-doc-drawer-polish-checklist.md) · [npos-store-claim-checklist.md](./npos-store-claim-checklist.md) · [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-blind-shift-close-checklist.md](./npos-blind-shift-close-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md) · [npos-bestseller-rank-checklist.md](./npos-bestseller-rank-checklist.md) · [npos-sell-flow-polish-checklist.md](./npos-sell-flow-polish-checklist.md) · [npos-receipt-parity-checklist.md](./npos-receipt-parity-checklist.md) · [npos-z-report-form-checklist.md](./npos-z-report-form-checklist.md) · [npos-z-web-form-parity-checklist.md](./npos-z-web-form-parity-checklist.md) · [npos-bo-shift-readonly-checklist.md](./npos-bo-shift-readonly-checklist.md) · [npos-cut-bo-entry-checklist.md](./npos-cut-bo-entry-checklist.md) · [npos-float-shift-p0-checklist.md](./npos-float-shift-p0-checklist.md)
 
 ## ทำแล้ว
@@ -24,13 +24,13 @@
 - [x] **Float P0** แก้เด้งเข้างาน + seed leave float + การ์ดทอนรอบถัดไป (**1.14.21**)
 - [x] **Z web form** สลิปปิดกะโคลนฟอร์มเว็บเฟรมต่อเฟรม (**1.14.23**)
 - [x] **Store claim** รหัสร้าน · เคลมเครื่อง · บล็อกเขียนขาย · จำที่อยู่ (**1.14.24**)
-- [x] **Doc + drawer** เอกสารร้าน (ไม่มี TellTea) · CashDrawerPolicy · เช็กลิสต์ฮาร์ด (**1.14.25**)
+- [x] **Doc + drawer** เอกสารร้าน (ชื่อร้านเรา · ไม่ลอกแบรนด์คู่แข่ง) · CashDrawerPolicy (**1.14.26**)
 - [x] จิ้มเมนู → จ่าย → ใบเสร็จ → รีเซ็ต · ลิ้นชักตอนสด
 
 ## คิวถัดไป (เฟสก่อนหน้าที่ยังไม่ทำ)
 | เฟส | โฟกัส | สถานะ | ทำไมค้าง |
 |-----|--------|--------|----------|
-| **Doc + drawer** | เอกสารร้าน · ลิ้นชัก policy · ติดตั้งฮาร์ด | ✅ | **1.14.25** · ค้างคนเทสเคาน์เตอร์ |
+| **Doc + drawer** | เอกสารร้าน · ลิ้นชัก policy · ติดตั้งฮาร์ด | ✅ | **1.14.26** · ค้างคนเทสเคาน์เตอร์ |
 | **Store claim** | รหัสร้าน · บล็อกเครื่องไม่มีรหัส | ✅ | **1.14.24** |
 | **Z web form** | สลิป Z = ฟอร์มเว็บ | ✅ | **1.14.23** |
 | **Float P0** | เด้งเข้างาน · leave float · การ์ด BO | ✅ | **1.14.21** |
@@ -53,7 +53,7 @@
 - ทานที่ร้าน / รับกลับ / Delivery · สลิปครัว / KDS · PromptPay auto cut-off · โน้ตบิล · คูปอง/สมาชิก · บัตร/โอน · ปิดกะจากเว็บ  
 
 ## คู่ขนานได้
-- [x] **Doc + drawer** เอกสารร้าน + ลิ้นชัก policy (**1.14.25**)
+- [x] **Doc + drawer** เอกสารร้าน + ลิ้นชัก policy (**1.14.26**)
 - [x] **Store claim** รหัสร้าน · เคลมเครื่อง · บล็อกเขียน (**1.14.24**)
 - [x] **Z web form** สลิปปิดกะ = ฟอร์มเว็บ (**1.14.23**)
 - [x] **Float P0** แก้เด้งเข้างาน + leave float (**1.14.21**)
