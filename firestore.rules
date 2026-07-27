@@ -229,6 +229,21 @@ service cloud.firestore {
       return 'pos:' + request.auth.uid;
     }
 
+    function posDeviceClaimOk() {
+      return exists(/databases/$(database)/documents/posDevices/$(request.auth.uid))
+        && get(/databases/$(database)/documents/posDevices/$(request.auth.uid)).data.storeClaimed == true
+        && get(/databases/$(database)/documents/posDevices/$(request.auth.uid)).data.blocked != true
+        && get(/databases/$(database)/documents/posDevices/$(request.auth.uid)).data.deviceClass != 'blocked';
+    }
+
+    function storeClaimGateOn() {
+      return exists(/databases/$(database)/documents/meta/pos)
+        && get(/databases/$(database)/documents/meta/pos).data.keys().hasAll(['storeClaimCodeHash'])
+        && get(/databases/$(database)/documents/meta/pos).data.storeClaimCodeHash is string
+        && get(/databases/$(database)/documents/meta/pos).data.storeClaimCodeHash.size() >= 32
+        && get(/databases/$(database)/documents/meta/pos).data.storeClaimRequired != false;
+    }
+
     function posSaleCreate() {
       return isPosDeviceAuth()
         && request.resource.data.deviceId == request.auth.uid
@@ -253,7 +268,8 @@ service cloud.firestore {
         && request.resource.data.createdBy == posActorId()
         && request.resource.data.status == 'completed'
         && request.resource.data.billNo is string
-        && request.resource.data.billNo.size() >= 5;
+        && request.resource.data.billNo.size() >= 5
+        && (!storeClaimGateOn() || posDeviceClaimOk());
     }
 
     function posSessionOpen() {
@@ -262,7 +278,8 @@ service cloud.firestore {
         && request.resource.data.date is number
         && request.resource.data.shift is string
         && request.resource.data.status == 'open'
-        && request.resource.data.openedAt is number;
+        && request.resource.data.openedAt is number
+        && (!storeClaimGateOn() || posDeviceClaimOk());
     }
 
     function posSessionSaleBump() {

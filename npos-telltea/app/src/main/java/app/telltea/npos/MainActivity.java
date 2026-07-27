@@ -8,6 +8,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -21,6 +22,8 @@ import app.telltea.npos.diagnose.DeviceIdentity;
 import app.telltea.npos.diagnose.ForegroundHeartbeat;
 import app.telltea.npos.diagnose.OpsLogger;
 import app.telltea.npos.diagnose.PermissionBootstrap;
+import app.telltea.npos.diagnose.StoreClaimClient;
+import app.telltea.npos.diagnose.StoreClaimPrefs;
 import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.MenuWarmup;
 import app.telltea.npos.sell.SaleSync;
@@ -103,11 +106,16 @@ public class MainActivity extends Activity {
           } else {
             heartbeatStatus.setText(R.string.heartbeat_ok);
           }
+          refreshStoreClaimGate();
         });
 
     findViewById(R.id.openShiftButton).setOnClickListener(v -> openShift());
     findViewById(R.id.closeShiftButton).setOnClickListener(v -> closeShift());
     findViewById(R.id.grantPermsButton).setOnClickListener(v -> PermissionBootstrap.grantAll(this));
+    View claimBtn = findViewById(R.id.storeClaimButton);
+    if (claimBtn != null) {
+      claimBtn.setOnClickListener(v -> submitStoreClaim());
+    }
     View.OnClickListener openSettings =
         v -> startActivity(new Intent(this, SettingsActivity.class));
     findViewById(R.id.settingsButtonClock).setOnClickListener(openSettings);
@@ -123,12 +131,97 @@ public class MainActivity extends Activity {
         });
     updatePrompt = new UpdatePromptController(this);
     refreshPermissionGate();
+    refreshStoreClaimGate();
     // First open: auto-prompt so staff do not hunt Settings.
     if (!PermissionBootstrap.wasPrompted(this) && !PermissionBootstrap.allCriticalGranted(this)) {
       PermissionBootstrap.grantAll(this);
     }
     OpsLogger.info(this, "app", "เปิดแอป", "vc=" + localVersionCode);
     maybeResumeSellAfterUpdate();
+  }
+
+  private void refreshStoreClaimGate() {
+    View hint = findViewById(R.id.storeClaimHint);
+    View input = findViewById(R.id.storeClaimInput);
+    View btn = findViewById(R.id.storeClaimButton);
+    View open = findViewById(R.id.openShiftButton);
+    boolean needClaim =
+        StoreClaimPrefs.isRequired(this)
+            && !StoreClaimPrefs.isClaimed(this)
+            && !StoreClaimPrefs.isBlocked(this);
+    boolean blocked = StoreClaimPrefs.blocksWrites(this) && !needClaim;
+    int claimVis = needClaim ? View.VISIBLE : View.GONE;
+    if (hint != null) {
+      hint.setVisibility(blocked || needClaim ? View.VISIBLE : View.GONE);
+      if (hint instanceof TextView) {
+        if (blocked) {
+          ((TextView) hint).setText(R.string.store_claim_blocked);
+        } else {
+          ((TextView) hint).setText(R.string.store_claim_hint);
+        }
+      }
+    }
+    if (input != null) input.setVisibility(needClaim && !blocked ? View.VISIBLE : View.GONE);
+    if (btn != null) btn.setVisibility(needClaim && !blocked ? View.VISIBLE : View.GONE);
+    if (open != null) {
+      open.setEnabled(!blocked && !needClaim);
+      open.setAlpha(blocked || needClaim ? 0.45f : 1f);
+    }
+  }
+
+  private void submitStoreClaim() {
+    EditText input = findViewById(R.id.storeClaimInput);
+    View btn = findViewById(R.id.storeClaimButton);
+    String code = input == null || input.getText() == null ? "" : input.getText().toString();
+    if (code.trim().length() < 4) {
+      Toast.makeText(this, R.string.store_claim_input_hint, Toast.LENGTH_SHORT).show();
+      return;
+    }
+    if (btn != null) {
+      btn.setEnabled(false);
+      if (btn instanceof TextView) ((TextView) btn).setText(R.string.store_claim_busy);
+    }
+    StoreClaimClient.claim(
+        this,
+        code,
+        new StoreClaimClient.Callback() {
+          @Override
+          public void onSuccess() {
+            runOnUiThread(
+                () -> {
+                  Toast.makeText(MainActivity.this, R.string.store_claim_ok, Toast.LENGTH_LONG)
+                      .show();
+                  if (btn != null) {
+                    btn.setEnabled(true);
+                    if (btn instanceof TextView) {
+                      ((TextView) btn).setText(R.string.store_claim_btn);
+                    }
+                  }
+                  refreshStoreClaimGate();
+                });
+          }
+
+          @Override
+          public void onError(String message) {
+            runOnUiThread(
+                () -> {
+                  Toast.makeText(
+                          MainActivity.this,
+                          message == null || message.isEmpty()
+                              ? getString(R.string.store_claim_blocked)
+                              : message,
+                          Toast.LENGTH_LONG)
+                      .show();
+                  if (btn != null) {
+                    btn.setEnabled(true);
+                    if (btn instanceof TextView) {
+                      ((TextView) btn).setText(R.string.store_claim_btn);
+                    }
+                  }
+                  refreshStoreClaimGate();
+                });
+          }
+        });
   }
 
   private void maybeResumeSellAfterUpdate() {
@@ -273,6 +366,7 @@ public class MainActivity extends Activity {
       sellPanel.setVisibility(View.GONE);
     }
     refreshPermissionGate();
+    refreshStoreClaimGate();
     updateClockLabels();
     clockHandler.removeCallbacks(clockTick);
     clockHandler.post(clockTick);
@@ -300,6 +394,11 @@ public class MainActivity extends Activity {
 
   private void openShift() {
     if (openingShift) return;
+    if (StoreClaimPrefs.blocksWrites(this)) {
+      Toast.makeText(this, StoreClaimPrefs.blockReason(this), Toast.LENGTH_LONG).show();
+      refreshStoreClaimGate();
+      return;
+    }
     openingShift = true;
     OpenShiftFlow.start(
         this,

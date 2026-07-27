@@ -88,6 +88,15 @@ public final class OpenShiftFlow {
                           () -> {
                             if (activity.isFinishing()) return;
                             try {
+                              if (!ShiftPrefs.isOpen(activity)) {
+                                Toast.makeText(
+                                        activity,
+                                        R.string.store_claim_blocked,
+                                        Toast.LENGTH_LONG)
+                                    .show();
+                                if (onCancel != null) onCancel.run();
+                                return;
+                              }
                               Toast.makeText(activity, R.string.shift_opened, Toast.LENGTH_SHORT)
                                   .show();
                               if (done != null) done.onOpened();
@@ -97,13 +106,14 @@ public final class OpenShiftFlow {
                                   "shift",
                                   "เปิดกะ UI ล้ม",
                                   e.getMessage() == null ? "" : e.getMessage());
-                              // Shift already open in prefs — still notify hub.
-                              if (done != null) {
+                              if (ShiftPrefs.isOpen(activity) && done != null) {
                                 try {
                                   done.onOpened();
                                 } catch (Exception ignored) {
                                   /* hub update best-effort */
                                 }
+                              } else if (onCancel != null) {
+                                onCancel.run();
                               }
                             }
                           }));

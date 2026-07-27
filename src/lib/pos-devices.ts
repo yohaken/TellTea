@@ -22,22 +22,41 @@ type OwnerDeviceAction =
   | "block"
   | "unblock"
   | "clear_captures"
-  | "clear_captures_all";
+  | "clear_captures_all"
+  | "set_store_code"
+  | "clear_store_code"
+  | "get_store_claim"
+  | "grant_claim"
+  | "revoke_claim";
+
+type OwnerDeviceCommandResult = {
+  ok: boolean;
+  deleted?: number;
+  storeClaimRequired?: boolean;
+  hasCode?: boolean;
+  codeHint?: string;
+  storeClaimRejectDev?: boolean;
+  storeClaimUpdatedAt?: number;
+};
 
 async function callNposOwnerDeviceCommand(
   action: OwnerDeviceAction,
-  deviceId: string,
+  deviceId?: string,
   extra?: Record<string, unknown>,
-): Promise<{ ok: boolean; deleted?: number }> {
+): Promise<OwnerDeviceCommandResult> {
   const fn = httpsCallable<
     { action: OwnerDeviceAction; deviceId?: string } & Record<string, unknown>,
-    { ok: boolean; deleted?: number }
+    OwnerDeviceCommandResult
   >(getFirebaseFunctions(), "nposOwnerDeviceCommand");
   try {
-    const payload =
-      action === "clear_captures_all"
-        ? { action, ...(extra || {}) }
-        : { action, deviceId, ...(extra || {}) };
+    const shopWide =
+      action === "clear_captures_all" ||
+      action === "set_store_code" ||
+      action === "clear_store_code" ||
+      action === "get_store_claim";
+    const payload = shopWide
+      ? { action, ...(extra || {}) }
+      : { action, deviceId, ...(extra || {}) };
     const res = await fn(payload);
     return res.data || { ok: true };
   } catch (err) {
@@ -55,7 +74,11 @@ async function callNposOwnerDeviceCommand(
                 ? "ล้างภาพแคป nPos"
                 : action === "block"
                   ? "บล็อกเครื่อง nPos"
-                  : "ปลดบล็อกเครื่อง nPos",
+                  : action === "set_store_code" || action === "clear_store_code"
+                    ? "ตั้งรหัสร้าน"
+                    : action === "grant_claim" || action === "revoke_claim"
+                      ? "จัดการเคลมเครื่อง"
+                      : "ปลดบล็อกเครื่อง nPos",
           "staff",
         ),
       );
@@ -113,6 +136,10 @@ export type PosDevice = {
   deviceClass: string;
   /** Explicit BO block flag (survives heartbeat). */
   blocked: boolean;
+  /** Half-login: entered store code or owner grant. */
+  storeClaimed: boolean;
+  storeClaimedAt: number;
+  storeClaimMethod: string;
   /** ok | missing | unknown — customer / secondary display. */
   customerDisplay: string;
   captureRequestAt: number;
@@ -223,6 +250,9 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
     isEmulator: data.isEmulator === true,
     deviceClass: typeof data.deviceClass === "string" ? data.deviceClass : "",
     blocked: data.blocked === true || data.deviceClass === "blocked",
+    storeClaimed: data.storeClaimed === true,
+    storeClaimedAt: typeof data.storeClaimedAt === "number" ? data.storeClaimedAt : 0,
+    storeClaimMethod: typeof data.storeClaimMethod === "string" ? data.storeClaimMethod : "",
     customerDisplay: typeof data.customerDisplay === "string" ? data.customerDisplay : "",
     captureRequestAt: typeof data.captureRequestAt === "number" ? data.captureRequestAt : 0,
     lastCaptureAckAt: typeof data.lastCaptureAckAt === "number" ? data.lastCaptureAckAt : 0,
@@ -443,6 +473,46 @@ export async function setNposDeviceBlocked(
   opts?: { isEmulator?: boolean },
 ): Promise<void> {
   await callNposOwnerDeviceCommand(blocked ? "block" : "unblock", deviceId, {
+    isEmulator: opts?.isEmulator === true,
+  });
+}
+
+export async function getNposStoreClaimStatus(): Promise<{
+  storeClaimRequired: boolean;
+  hasCode: boolean;
+  storeClaimRejectDev: boolean;
+  storeClaimUpdatedAt: number;
+}> {
+  const res = await callNposOwnerDeviceCommand("get_store_claim");
+  return {
+    storeClaimRequired: res.storeClaimRequired === true,
+    hasCode: res.hasCode === true,
+    storeClaimRejectDev: res.storeClaimRejectDev !== false,
+    storeClaimUpdatedAt: typeof res.storeClaimUpdatedAt === "number" ? res.storeClaimUpdatedAt : 0,
+  };
+}
+
+export async function setNposStoreClaimCode(
+  storeCode: string,
+  opts?: { rejectDev?: boolean },
+): Promise<{ codeHint: string }> {
+  const res = await callNposOwnerDeviceCommand("set_store_code", undefined, {
+    storeCode,
+    rejectDev: opts?.rejectDev !== false,
+  });
+  return { codeHint: res.codeHint || "••••" };
+}
+
+export async function clearNposStoreClaimCode(): Promise<void> {
+  await callNposOwnerDeviceCommand("clear_store_code");
+}
+
+export async function setNposDeviceStoreClaimed(
+  deviceId: string,
+  claimed: boolean,
+  opts?: { isEmulator?: boolean },
+): Promise<void> {
+  await callNposOwnerDeviceCommand(claimed ? "grant_claim" : "revoke_claim", deviceId, {
     isEmulator: opts?.isEmulator === true,
   });
 }

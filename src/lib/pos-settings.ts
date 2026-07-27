@@ -111,8 +111,12 @@ function mapSettings(data: Record<string, unknown> | undefined): PosShopSettings
   };
 }
 
+/**
+ * Only shopSettingsUpdatedAt — never fall back to meta/pos.updatedAt.
+ * Bill counter bumps updatedAt and used to wipe local/BO shop edits.
+ */
 function remoteUpdatedAt(data: Record<string, unknown> | undefined): number {
-  const v = data?.shopSettingsUpdatedAt ?? data?.updatedAt;
+  const v = data?.shopSettingsUpdatedAt;
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
 }
 
@@ -166,7 +170,7 @@ function ensureOnlineFlushHook() {
 
 function remotePayload(settings: PosShopSettings, updatedAt: number): Record<string, unknown> {
   return {
-    updatedAt,
+    // Do not touch generic updatedAt — reserved for bill seq / other writers.
     shopSettingsUpdatedAt: updatedAt,
     shopName: settings.shopName,
     shopNameTh: settings.shopNameTh,
@@ -253,17 +257,22 @@ export function subscribePosShopSettings(
       const remoteAt = remoteUpdatedAt(data);
       const stored = readStored();
 
-      // local-first: ถ้ามีคิวอัปโหลดและใหม่กว่า remote — อย่าทับด้วย Firebase เก่า
-      if (stored?.syncPending && stored.updatedAt >= remoteAt) {
+      // local-first: คิวอัปโหลดค้าง — หรือ remote ยังไม่มี shopSettingsUpdatedAt
+      if (stored?.syncPending && (remoteAt === 0 || stored.updatedAt >= remoteAt)) {
         void flushPosShopSettingsUpload();
         onSettings(toPublic(stored));
         return;
       }
 
       if (stored && !stored.syncPending && stored.updatedAt > remoteAt && remoteAt > 0) {
-        // local ใหม่กว่าแต่ไม่ได้มาร์ค pending (legacy) — เก็บ local + อัปโหลด
         writeStored({ ...stored, syncPending: true });
         void flushPosShopSettingsUpload();
+        onSettings(toPublic(stored));
+        return;
+      }
+
+      // ไม่มีนาฬิกาหัวบิลบนคลาวด์ — อย่าทับค่าในเครื่องด้วย defaults ว่าง
+      if (remoteAt === 0 && stored) {
         onSettings(toPublic(stored));
         return;
       }

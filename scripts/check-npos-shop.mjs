@@ -34,6 +34,7 @@ const steps = [
   { name: "outbox-w4", cmd: ["node", "scripts/test-npos-outbox.mjs"] },
   { name: "void-w5", cmd: ["node", "scripts/test-npos-void-server.mjs"] },
   { name: "device-class-d1", cmd: ["node", "scripts/test-npos-device-class.mjs"] },
+  { name: "store-claim", cmd: ["node", "scripts/test-npos-store-claim.mjs"] },
 ];
 
 if (process.env.SKIP_CAPTURE_SMOKE !== "1") {

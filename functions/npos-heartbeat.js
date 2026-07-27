@@ -12,6 +12,7 @@
  */
 const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
+const { claimStatusForHeartbeat } = require("./npos-device-gate");
 
 const COL = "posDevices";
 
@@ -173,13 +174,16 @@ exports.nposDeviceHeartbeat = functions
           lastCaptureAt: 0,
           captureIntervalMinutes: 0,
           customerDisplay: "unknown",
+          storeClaimed: false,
         });
       }
+      // Heartbeat must never grant or clear storeClaimed / owner claim fields.
       await ref.set(patch, { merge: true });
 
       // Re-read after merge for capture command fields (owner may have set them).
       const afterSnap = await ref.get();
       const after = afterSnap.exists ? afterSnap.data() || {} : {};
+      const claim = await claimStatusForHeartbeat(db, installId, after);
       const captureRequestAt =
         typeof after.captureRequestAt === "number" ? after.captureRequestAt : 0;
       const lastCaptureAckAt =
@@ -244,6 +248,10 @@ exports.nposDeviceHeartbeat = functions
         versionCode,
         versionName,
         staleMarked,
+        storeClaimRequired: claim.storeClaimRequired,
+        storeClaimed: claim.storeClaimed,
+        storeClaimRejectDev: claim.storeClaimRejectDev,
+        deviceBlocked: claim.deviceBlocked,
         capture: {
           requestAt: captureRequestAt,
           intervalMinutes: captureIntervalMinutes,

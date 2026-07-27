@@ -8,6 +8,13 @@ const {
   clearNposShotsForInstall,
   clearAllNposShots,
 } = require("./npos-capture-prune");
+const {
+  META_POS,
+  hashStoreCode,
+  isValidStoreCodeShape,
+  loadStoreClaimPolicy,
+  normalizeStoreCode,
+} = require("./npos-device-gate");
 
 const COL = "posDevices";
 const OWNER_EMAIL = String(process.env.TELLTEA_OWNER_EMAIL || "yohaken@gmail.com")
@@ -69,6 +76,67 @@ exports.nposOwnerDeviceCommand = functions
       return { ok: true, action, actorId, at: Date.now(), ...result };
     }
 
+    // Store claim code — shop-wide, no deviceId.
+    if (action === "set_store_code") {
+      const code = normalizeStoreCode(data?.storeCode);
+      if (!isValidStoreCodeShape(code)) {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "รหัสร้านต้องเป็น A–Z / 0–9 ความยาว 4–16 ตัว",
+        );
+      }
+      const hash = hashStoreCode(code);
+      const now = Date.now();
+      await getFirestore()
+        .doc(META_POS)
+        .set(
+          {
+            storeClaimCodeHash: hash,
+            storeClaimRequired: true,
+            storeClaimRejectDev: data?.rejectDev === false ? false : true,
+            storeClaimUpdatedAt: now,
+            storeClaimUpdatedBy: actorId,
+          },
+          { merge: true },
+        );
+      return {
+        ok: true,
+        action,
+        actorId,
+        at: now,
+        storeClaimRequired: true,
+        codeHint: code.slice(0, 2) + "••" + code.slice(-2),
+      };
+    }
+
+    if (action === "clear_store_code") {
+      const now = Date.now();
+      await getFirestore()
+        .doc(META_POS)
+        .set(
+          {
+            storeClaimCodeHash: "",
+            storeClaimRequired: false,
+            storeClaimUpdatedAt: now,
+            storeClaimUpdatedBy: actorId,
+          },
+          { merge: true },
+        );
+      return { ok: true, action, actorId, at: now, storeClaimRequired: false };
+    }
+
+    if (action === "get_store_claim") {
+      const policy = await loadStoreClaimPolicy(getFirestore());
+      return {
+        ok: true,
+        action,
+        storeClaimRequired: policy.required,
+        storeClaimRejectDev: policy.rejectDev,
+        storeClaimUpdatedAt: policy.updatedAt,
+        hasCode: policy.hash.length >= 32,
+      };
+    }
+
     const deviceId = asString(data?.deviceId, 64);
     if (!deviceId || deviceId.length < 8 || !/^[a-zA-Z0-9_-]+$/.test(deviceId)) {
       throw new functions.https.HttpsError("invalid-argument", "deviceId ไม่ถูกต้อง");
@@ -102,6 +170,7 @@ exports.nposOwnerDeviceCommand = functions
         blocked: true,
         disabled: true,
         deviceClass: "blocked",
+        storeClaimed: false,
       };
     } else if (action === "unblock") {
       const isEmulator = data?.isEmulator === true || snap.get("isEmulator") === true;
@@ -110,6 +179,24 @@ exports.nposOwnerDeviceCommand = functions
         blocked: false,
         disabled: false,
         deviceClass: isEmulator ? "dev" : "shop",
+      };
+    } else if (action === "grant_claim") {
+      patch = {
+        ...patch,
+        storeClaimed: true,
+        storeClaimedAt: now,
+        storeClaimMethod: "owner",
+        blocked: false,
+        disabled: false,
+        deviceClass:
+          snap.get("isEmulator") === true || data?.isEmulator === true ? "dev" : "shop",
+      };
+    } else if (action === "revoke_claim") {
+      patch = {
+        ...patch,
+        storeClaimed: false,
+        storeClaimRevokedAt: now,
+        storeClaimMethod: "revoked",
       };
     } else {
       throw new functions.https.HttpsError("invalid-argument", "action ไม่รู้จัก");

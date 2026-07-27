@@ -5,15 +5,16 @@ import { NposDevicesPanel } from "@/components/NposDevicesPanel";
 import { NposOpsLogPanel } from "@/components/NposOpsLogPanel";
 import { NposCaptureTimelinePanel } from "@/components/NposCaptureTimelinePanel";
 import { PosBusinessSettingsView } from "@/components/PosBusinessSettingsView";
+import { PosStoreClaimPanel } from "@/components/PosStoreClaimPanel";
 
 /**
- * หมวดจัดการ Pos — ตั้งค่าร้าน + เครื่องออนไลน์ + ตรวจเครื่อง + ไทม์ไลน์
+ * หมวดจัดการ Pos — ตั้งค่าร้าน + รหัสเคลม + เครื่อง + ตรวจเครื่อง + ไทม์ไลน์
  */
 export function PosManagePanel({ onError }: { onError: (msg: string | null) => void }) {
   return (
     <div className="owner-settings-stack pos-manage-stack">
       <p className="muted pos-manage-lead">
-        ตั้งค่าร้าน (หัวบิล · PromptPay · เรียงเมนู) อยู่ที่นี่แล้ว — เว็บ POS เคาน์เตอร์เลิกใช้
+        ตั้งค่าร้าน (หัวบิล · PromptPay · เรียงเมนู) + รหัสร้านสำหรับเคลมเครื่อง nPos
         <br />
         รายงานจากแอป nPos-telltea · เครื่องออนไลน์ · ไทม์ไลน์ ops / แคป
       </p>
@@ -23,6 +24,7 @@ export function PosManagePanel({ onError }: { onError: (msg: string | null) => v
         </h2>
         <PosBusinessSettingsView embedded />
       </section>
+      <PosStoreClaimPanel onError={onError} />
       <NposDevicesPanel onError={onError} />
       <NposCaptureTimelinePanel onError={onError} />
       <NposOpsLogPanel onError={onError} />

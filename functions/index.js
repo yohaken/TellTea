@@ -21,6 +21,7 @@ exports.reportNposOpsLog = require("./npos-ops-log").reportNposOpsLog;
 exports.reportNposScreenCapture = require("./npos-capture").reportNposScreenCapture;
 exports.nposCaptureMedia = require("./npos-capture-media").nposCaptureMedia;
 exports.nposOwnerDeviceCommand = require("./npos-owner-device").nposOwnerDeviceCommand;
+exports.nposClaimDevice = require("./npos-claim-device").nposClaimDevice;
 const nposSell = require("./npos-sell");
 exports.nposMenuSnapshot = nposSell.nposMenuSnapshot;
 exports.nposShopSettings = nposSell.nposShopSettings;
