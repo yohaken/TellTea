@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import {
+  DEFAULT_BAKERY_SALES_RATE,
   RATE_KIND_LABELS,
   addRateScheduleEntry,
   deleteRateScheduleEntry,
@@ -141,7 +142,7 @@ export function RateSchedulePanel({
           key: "bakerySales",
           kind: "bakerySales" as const,
           label: "เรทขายเบเกอรี่",
-          rate: hit ? hit.rate : null,
+          rate: hit ? hit.rate : DEFAULT_BAKERY_SALES_RATE,
           since: hit?.effectiveFrom ?? null,
           fromSchedule: !!hit,
           section: "shop" as const,
@@ -208,6 +209,9 @@ export function RateSchedulePanel({
     <section className="bonus-rate-schedule">
       <header className="bonus-rate-schedule-head">
         <h2 className="bonus-rate-schedule-title">ตารางเรท</h2>
+        <p className="muted bonus-rate-schedule-hint">
+          เรทขายเบเกอรี่ตั้งที่นี่ที่เดียว · ผลิตใหม่จะติดเรทตามวันเริ่มใช้
+        </p>
       </header>
 
       {loading ? <p className="empty">กำลังโหลดตารางเรท...</p> : null}

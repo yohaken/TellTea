@@ -6,25 +6,32 @@ import {
   updateProdProduct,
   type ProdProduct,
 } from "@/lib/production";
+import { DEFAULT_BAKERY_SALES_RATE } from "@/lib/rate-schedule";
 import { formatPlainNumber } from "@/lib/utils";
 
 /**
- * แคตตาล็อกสินค้าผลิต + เรทเริ่มต้น — เจ้าของเท่านั้น
- * อยู่หน้าผลิต · ปรับเรทตามวันที่สรุปโบนัส
+ * แคตตาล็อกสินค้าผลิต + เรทผลิตเริ่มต้น — เจ้าของเท่านั้น
+ * เรทขายทั้งร้านตั้งที่สรุปโบนัส → ตารางเรท เท่านั้น
  */
 export function ProdCatalogSetup({
   products,
+  shopSalesRate,
   onReload,
   onError,
 }: {
   products: ProdProduct[];
+  /** เรทขายปัจจุบันจากตารางเรท (แหล่งเดียว) */
+  shopSalesRate?: number;
   onReload: () => void;
   onError: (msg: string) => void;
 }) {
   const [pName, setPName] = useState("");
-  const [salesRate, setSalesRate] = useState("0.60");
   const [prodRate, setProdRate] = useState("1.25");
   const [busy, setBusy] = useState(false);
+  const salesRate =
+    shopSalesRate != null && Number.isFinite(shopSalesRate)
+      ? shopSalesRate
+      : DEFAULT_BAKERY_SALES_RATE;
 
   async function addProduct(e: FormEvent) {
     e.preventDefault();
@@ -32,7 +39,7 @@ export function ProdCatalogSetup({
     try {
       await addProdProduct({
         name: pName,
-        salesRate: Number(salesRate),
+        salesRate,
         prodRate: Number(prodRate),
       });
       setPName("");
@@ -47,16 +54,16 @@ export function ProdCatalogSetup({
   return (
     <section className="prod-catalog-panel">
       <p className="muted prod-catalog-lead">
-        เพิ่มสินค้า + เรทเริ่มต้น · ปรับเรทตามวันได้ที่{" "}
+        เพิ่มสินค้า + เรทผลิต · เรทขายทั้งร้านตั้งที่{" "}
         <a href="/bonus/" style={{ fontWeight: 700 }}>
           สรุปโบนัส → ตารางเรท
         </a>
-        {" "}· โบนัส/คน = ผลิต × เรทผลิต ÷ จำนวนคน
+        {" "}เท่านั้น · โบนัส/คน = ผลิต × เรทผลิต ÷ จำนวนคน
       </p>
 
       <form className="form-card entry-form" onSubmit={(e) => void addProduct(e)}>
         <h3 className="panel-title" style={{ fontSize: "1rem" }}>
-          สินค้า + เรท
+          สินค้า + เรทผลิต
         </h3>
         <div className="field">
           <label htmlFor="setup-pname">ชื่อสินค้า</label>
@@ -68,29 +75,19 @@ export function ProdCatalogSetup({
             required
           />
         </div>
-        <div className="stock-form-grid">
-          <div className="field">
-            <label htmlFor="setup-sales">เรทขาย</label>
-            <input
-              id="setup-sales"
-              type="number"
-              step="0.01"
-              min="0"
-              value={salesRate}
-              onChange={(e) => setSalesRate(e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="setup-prod">เรทผลิต</label>
-            <input
-              id="setup-prod"
-              type="number"
-              step="0.01"
-              min="0"
-              value={prodRate}
-              onChange={(e) => setProdRate(e.target.value)}
-            />
-          </div>
+        <p className="muted form-hint-inline">
+          เรทขายทั้งร้านตอนนี้ {formatPlainNumber(salesRate)} บาท/หน่วย (จากตารางเรท)
+        </p>
+        <div className="field">
+          <label htmlFor="setup-prod">เรทผลิต</label>
+          <input
+            id="setup-prod"
+            type="number"
+            step="0.01"
+            min="0"
+            value={prodRate}
+            onChange={(e) => setProdRate(e.target.value)}
+          />
         </div>
         <button type="submit" className="primary-btn" disabled={busy}>
           {busy ? "กำลังเพิ่ม..." : "เพิ่มสินค้า"}
@@ -109,7 +106,7 @@ export function ProdCatalogSetup({
             <div style={{ flex: 1, minWidth: "8rem" }}>
               <strong>{p.name}</strong>
               <div className="muted" style={{ fontSize: "0.78rem" }}>
-                ขาย {formatPlainNumber(p.salesRate)} · ผลิต {formatPlainNumber(p.prodRate)}
+                ผลิต {formatPlainNumber(p.prodRate)}
                 {!p.active ? " · ปิดใช้" : ""}
               </div>
             </div>

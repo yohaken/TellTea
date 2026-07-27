@@ -12,6 +12,9 @@ import { parseDateInput, todayInputValue } from "./utils";
 /** ชนิดเรทที่กำหนดเป็นช่วงเวลาได้ */
 export type RateKind = "ot" | "bakerySales" | "bakeryProd";
 
+/** เรทขายเบเกอรี่ทั้งร้าน — แหล่งเดียวที่แก้ได้คือตารางเรท (bakerySales) */
+export const DEFAULT_BAKERY_SALES_RATE = 0.6;
+
 export const RATE_KIND_LABELS: Record<RateKind, string> = {
   ot: "เรทชง (บาท/หน่วย)",
   bakerySales: "เรทขายเบเกอรี่ (บาท/หน่วย)",
@@ -237,11 +240,27 @@ async function syncBakeryProdCatalog(
   await updateProdProduct(productId, { prodRate: active.rate });
 }
 
+/** กระจายเรทขายทั้งร้านลงแคตตาล็อก (มิเรอร์ — ไม่ใช่แหล่งแก้) */
+async function syncBakerySalesCatalog(entries: RateScheduleEntry[]): Promise<void> {
+  const todayMs = parseDateInput(todayInputValue());
+  const active = resolveRateForDate(entries, "bakerySales", todayMs);
+  const rate = active ? active.rate : DEFAULT_BAKERY_SALES_RATE;
+  const { listProdProducts, updateProdProduct } = await import("./production");
+  const products = await listProdProducts();
+  await Promise.all(
+    products.map(async (p) => {
+      if (Number(p.salesRate) === rate) return;
+      await updateProdProduct(p.id, { salesRate: rate });
+    }),
+  );
+}
+
 /**
  * เพิ่มช่วงเรทใหม่ — ไม่แก้แถวชง/ผลิตที่มีอยู่แล้ว
  * ถ้ายังไม่มีเรทครอบวันก่อนวันเริ่มใช้ → เก็บเรทเดิมไว้เป็นประวัติย้อนหลัง
  *   (กันบันทึกย้อนหลังไปโดนเรทใหม่เพราะ fallback ตั้งค่าที่ sync แล้ว)
  * ถ้า kind=ot และวันเริ่ม ≤ วันนี้ → sync meta/otSettings
+ * ถ้า kind=bakerySales และวันเริ่ม ≤ วันนี้ → sync prodProducts.salesRate ทั้งแคตตาล็อก
  * ถ้า kind=bakeryProd และวันเริ่ม ≤ วันนี้ → sync prodProducts.prodRate ของสินค้านั้น
  */
 export async function addRateScheduleEntry(input: RateScheduleAddInput): Promise<RateScheduleDoc> {
@@ -270,6 +289,11 @@ export async function addRateScheduleEntry(input: RateScheduleAddInput): Promise
     if (input.kind === "ot") {
       const settings = await getOtSettings();
       priorRate = Number(settings.bonusRate);
+    } else if (input.kind === "bakerySales") {
+      const { listProdProducts } = await import("./production");
+      const products = await listProdProducts();
+      const mirrored = products.find((p) => Number.isFinite(Number(p.salesRate)));
+      priorRate = mirrored ? Number(mirrored.salesRate) : DEFAULT_BAKERY_SALES_RATE;
     } else if (input.kind === "bakeryProd" && productId) {
       const { listProdProducts } = await import("./production");
       const products = await listProdProducts();
@@ -331,6 +355,14 @@ export async function addRateScheduleEntry(input: RateScheduleAddInput): Promise
     }
   }
 
+  if (input.kind === "bakerySales") {
+    const todayMs = parseDateInput(todayInputValue());
+    const active = resolveRateForDate(next.entries, "bakerySales", todayMs);
+    if (active) {
+      await syncBakerySalesCatalog(next.entries);
+    }
+  }
+
   if (input.kind === "bakeryProd" && productId) {
     const todayMs = parseDateInput(todayInputValue());
     const active = resolveRateForDate(next.entries, "bakeryProd", todayMs, { productId });
@@ -368,6 +400,10 @@ export async function deleteRateScheduleEntry(entryId: string): Promise<RateSche
     await syncBakeryProdCatalog(next.entries, removed.productId);
   }
 
+  if (removed?.kind === "bakerySales") {
+    await syncBakerySalesCatalog(next.entries);
+  }
+
   return normalizeRateSchedule(next);
 }
 
@@ -388,17 +424,18 @@ export function resolveOtBonusRateForNewEntry(
 }
 
 /**
- * เรทขายเบเกอรี่สำหรับรายการผลิตใหม่ — มีในตารางใช้ตามวัน ไม่มีใช้เรทสินค้า
+ * เรทขายเบเกอรี่สำหรับรายการผลิตใหม่ — แหล่งเดียว: ตาราง bakerySales
+ * ไม่มีในตาราง → DEFAULT_BAKERY_SALES_RATE
  * รายการเก่าต้องใช้ entry.salesRate ที่ติดแถวอยู่แล้วเท่านั้น
  */
 export function resolveBakerySalesRateForNewEntry(
   dateMs: number,
   schedule: RateScheduleEntry[],
-  productSalesRate: number,
+  _unusedCatalogFallback?: number,
 ): number {
   const hit = resolveRateForDate(schedule, "bakerySales", dateMs);
   if (hit) return hit.rate;
-  return Number(productSalesRate) || 0;
+  return DEFAULT_BAKERY_SALES_RATE;
 }
 
 /**

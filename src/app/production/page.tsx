@@ -45,7 +45,11 @@ import {
   type ProdStatus,
   type ProdWorker,
 } from "@/lib/production";
-import { subscribeRateSchedule, type RateScheduleEntry } from "@/lib/rate-schedule";
+import {
+  resolveRateForDate,
+  subscribeRateSchedule,
+  type RateScheduleEntry,
+} from "@/lib/rate-schedule";
 import {
   formatDateShort,
   formatPlainNumber,
@@ -189,6 +193,10 @@ function ProductionView() {
       {!loading && showCatalog ? (
         <ProdCatalogSetup
           products={products}
+          shopSalesRate={
+            resolveRateForDate(rateSchedule, "bakerySales", Date.now())?.rate ??
+            undefined
+          }
           onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
           onError={setError}
         />

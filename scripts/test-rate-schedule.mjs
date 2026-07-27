@@ -36,10 +36,10 @@ function resolveOtBonusRateForNewEntry(dateMs, schedule, settingsFallback) {
   return Number.isFinite(fb) && fb >= 0 ? fb : 0.6;
 }
 
-function resolveBakerySalesRateForNewEntry(dateMs, schedule, productSalesRate) {
+function resolveBakerySalesRateForNewEntry(dateMs, schedule, _unused) {
   const hit = resolveRateForDate(schedule, "bakerySales", dateMs);
   if (hit) return hit.rate;
-  return Number(productSalesRate) || 0;
+  return 0.6;
 }
 
 function resolveBakeryProdRateForNewEntry(dateMs, schedule, productId, catalogProdRate) {
@@ -56,7 +56,7 @@ function resolveProdEntryRates(entry, productId, product, opts = {}) {
 
   if (!entry || productId !== entry.productId) {
     return {
-      salesRate: resolveBakerySalesRateForNewEntry(dateMs, schedule, catalogSales),
+      salesRate: resolveBakerySalesRateForNewEntry(dateMs, schedule),
       prodRate: resolveBakeryProdRateForNewEntry(dateMs, schedule, productId, catalogProd),
     };
   }
@@ -118,7 +118,7 @@ assert.equal(resolveOtBonusRateForNewEntry(day(2026, 6, 1), schedule, 0.6), 0.7)
 assert.equal(resolveOtBonusRateForNewEntry(day(2026, 5, 20), schedule, 0.99), 0.5);
 assert.equal(resolveOtBonusRateForNewEntry(day(2026, 7, 10), schedule, 0.99), 0.7);
 
-assert.equal(resolveBakerySalesRateForNewEntry(day(2026, 2, 1), schedule, 0.9), 0.9);
+assert.equal(resolveBakerySalesRateForNewEntry(day(2026, 2, 1), schedule, 0.9), 0.6);
 assert.equal(resolveBakerySalesRateForNewEntry(day(2026, 3, 1), schedule, 0.9), 1.2);
 
 assert.equal(resolveBakeryProdRateForNewEntry(day(2026, 3, 1), schedule, "p1", 1.25), 1.25);

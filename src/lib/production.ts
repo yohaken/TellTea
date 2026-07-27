@@ -133,7 +133,7 @@ export function isProdEntryLocked(entry: Pick<ProdEntry, "status">) {
 /**
  * เรทจากแถวเดิม — แถวที่มี salesRate/prodRate ติดอยู่แล้วห้ามเปลี่ยนจากตารางเรท
  * รายการใหม่ (หรือเปลี่ยนสินค้า):
- *   salesRate ← ตาราง bakerySales (ทั้งร้าน) ไม่งั้นเรทสินค้า
+ *   salesRate ← ตาราง bakerySales ทั้งร้านเท่านั้น (ไม่มี → DEFAULT)
  *   prodRate  ← ตาราง bakeryProd (ต่อสินค้า) ไม่งั้นเรทสินค้า
  */
 export function resolveProdEntryRates(
@@ -152,7 +152,7 @@ export function resolveProdEntryRates(
 
   if (!entry || productId !== entry.productId) {
     return {
-      salesRate: resolveBakerySalesRateForNewEntry(dateMs, schedule, catalogSales),
+      salesRate: resolveBakerySalesRateForNewEntry(dateMs, schedule),
       prodRate: resolveBakeryProdRateForNewEntry(dateMs, schedule, productId, catalogProd),
     };
   }
