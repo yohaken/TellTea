@@ -9,14 +9,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 293/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 88/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+58/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.35"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 294/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 89/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+59/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.36"/);
 
 assert.ok(existsSync(join(root, "docs/npos-cut-bo-entry-checklist.md")));
 const doc = read("docs/npos-cut-bo-entry-checklist.md");
-assert.match(doc, /1.14.35/);
+assert.match(doc, /1.14.36/);
 assert.match(doc, /ตัดช่องทาง|cut/);
 
 const nav = read("src/lib/pos-nav.ts");

@@ -135,6 +135,13 @@
                 android:visibility="gone" />
 
             <TextView
+                android:id="@+id/clearRememberedCodeButton"
+                style="@style/Npos.Btn.Ghost"
+                android:layout_marginTop="6dp"
+                android:text="@string/store_claim_clear_remembered"
+                android:visibility="gone" />
+
+            <TextView
                 android:id="@+id/claimVersionChip"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

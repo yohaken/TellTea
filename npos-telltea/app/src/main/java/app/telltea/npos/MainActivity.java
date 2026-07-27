@@ -40,6 +40,7 @@ import app.telltea.npos.update.UpdatePromptController;
  * Clock-in + POS hub (clone web POS_NAV_ITEMS). Sell is one tile — not the only screen.
  */
 public class MainActivity extends Activity {
+  public static final String EXTRA_SHOW_CLAIM_GATE = "show_claim_gate";
   private final StoreClaimPrefs.KickListener lostSeatListener = this::onLostSeat;
   private View clockInPanel;
   private View sellPanel;
@@ -146,6 +147,17 @@ public class MainActivity extends Activity {
     View claimBtn = findViewById(R.id.storeClaimButton);
     if (claimBtn != null) {
       claimBtn.setOnClickListener(v -> submitStoreClaim());
+    }
+    View clearRemembered = findViewById(R.id.clearRememberedCodeButton);
+    if (clearRemembered != null) {
+      clearRemembered.setOnClickListener(
+          v -> {
+            StoreClaimPrefs.clearRememberedStoreCode(this);
+            EditText input = findViewById(R.id.storeClaimInput);
+            if (input != null) input.setText("");
+            Toast.makeText(this, R.string.store_claim_code_cleared, Toast.LENGTH_SHORT).show();
+            refreshStoreClaimGate();
+          });
     }
     View.OnClickListener openSettings =
         v -> startActivity(new Intent(this, SettingsActivity.class));
@@ -254,7 +266,25 @@ public class MainActivity extends Activity {
         }
       }
     }
-    if (input != null) input.setVisibility(needClaim && !deviceBlocked ? View.VISIBLE : View.GONE);
+    if (input != null) {
+      input.setVisibility(needClaim && !deviceBlocked ? View.VISIBLE : View.GONE);
+      if (needClaim && !deviceBlocked && input instanceof EditText) {
+        EditText ed = (EditText) input;
+        if (ed.getText() == null || ed.getText().toString().trim().isEmpty()) {
+          String remembered = StoreClaimPrefs.rememberedStoreCode(this);
+          if (remembered != null && !remembered.isEmpty()) {
+            ed.setText(remembered);
+            ed.setSelection(ed.getText().length());
+          }
+        }
+      }
+    }
+    View clearRemembered = findViewById(R.id.clearRememberedCodeButton);
+    if (clearRemembered != null) {
+      boolean showClear =
+          needClaim && !deviceBlocked && StoreClaimPrefs.hasRememberedStoreCode(this);
+      clearRemembered.setVisibility(showClear ? View.VISIBLE : View.GONE);
+    }
     if (btn != null) btn.setVisibility(needClaim && !deviceBlocked ? View.VISIBLE : View.GONE);
     if (versionChip != null) {
       versionChip.setVisibility(needClaim ? View.VISIBLE : View.GONE);
@@ -494,13 +524,25 @@ public class MainActivity extends Activity {
   }
 
   @Override
+  protected void onNewIntent(Intent intent) {
+    super.onNewIntent(intent);
+    setIntent(intent);
+  }
+
+  @Override
   protected void onResume() {
     super.onResume();
     TextView deviceCode = findViewById(R.id.sellDeviceCode);
     if (deviceCode != null) {
       deviceCode.setText(DeviceIdentity.pairingCode(this));
     }
-    boolean canSell = ShiftPrefs.isOpen(this) && !StoreClaimPrefs.blocksWrites(this);
+    boolean forceClaim =
+        getIntent() != null && getIntent().getBooleanExtra(EXTRA_SHOW_CLAIM_GATE, false);
+    if (forceClaim && getIntent() != null) {
+      getIntent().removeExtra(EXTRA_SHOW_CLAIM_GATE);
+    }
+    boolean canSell =
+        !forceClaim && ShiftPrefs.isOpen(this) && !StoreClaimPrefs.blocksWrites(this);
     if (canSell) {
       clockInPanel.setVisibility(View.GONE);
       sellPanel.setVisibility(View.VISIBLE);
@@ -527,7 +569,7 @@ public class MainActivity extends Activity {
     }
     if (isClaimGateVisible()) {
       pollClaimUpdateChip();
-      clockHandler.postDelayed(claimPollTick, 45_000L);
+      clockHandler.postDelayed(claimPollTick, 30_000L);
     }
     ForegroundHeartbeat.forceNow(this);
     StoreClaimClient.syncPendingClaim(this);
@@ -571,12 +613,13 @@ public class MainActivity extends Activity {
         () -> {
           openingShift = false;
           try {
-            // Stay on hub — user picks สั่งและชำระเงิน (like web shell)
             if (clockInPanel != null) clockInPanel.setVisibility(View.GONE);
             if (sellPanel != null) sellPanel.setVisibility(View.VISIBLE);
             if (hubShiftStrip != null) {
               hubShiftStrip.setText(ShiftPrefs.dutyLine(this));
             }
+            // Counter flow: open shift → go straight to sell.
+            startActivity(new Intent(MainActivity.this, SellActivity.class));
           } catch (Exception e) {
             OpsLogger.error(
                 this, "shift", "เปิดกะอัปเดต UI", e.getMessage() == null ? "" : e.getMessage());

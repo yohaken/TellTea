@@ -231,6 +231,8 @@ public class SellActivity extends Activity {
     styleSoftCartAction(findViewById(R.id.discountButton));
     styleSoftCartAction(findViewById(R.id.holdBillButton));
     styleSoftCartAction(findViewById(R.id.restoreHoldButton));
+    styleSoftCartAction(findViewById(R.id.clearCartButton));
+    styleSoftCartAction(findViewById(R.id.priceChannelToggle));
     if (menuGrid != null) {
       menuGrid.setColumnCount(uiScale.menuCols);
     }
@@ -238,8 +240,14 @@ public class SellActivity extends Activity {
 
   private void styleSoftCartAction(View v) {
     if (!(v instanceof TextView)) return;
-    NposUi.applyBtn((TextView) v, NposUi.Btn.CHIP);
-    ((TextView) v).setTextColor(NposUi.color(this, R.color.npos_orange));
+    TextView tv = (TextView) v;
+    tv.setTypeface(NposFonts.semibold(this));
+    if (v.getId() == R.id.clearCartButton
+        || v.getId() == R.id.discountButton
+        || v.getId() == R.id.holdBillButton
+        || v.getId() == R.id.restoreHoldButton) {
+      tv.setTextColor(NposUi.color(this, R.color.npos_orange));
+    }
   }
 
 

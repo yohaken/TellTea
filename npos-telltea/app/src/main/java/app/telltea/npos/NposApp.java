@@ -1,6 +1,7 @@
 package app.telltea.npos;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Application;
 import android.content.Intent;
 import android.os.Bundle;
@@ -19,6 +20,7 @@ import app.telltea.npos.shift.ShiftPrefs;
  */
 public final class NposApp extends Application {
   private static WeakReference<Activity> currentActivity = new WeakReference<>(null);
+  private static volatile long lastKickUiAt;
 
   @Override
   public void onCreate() {
@@ -36,8 +38,6 @@ public final class NposApp extends Application {
           @Override
           public void onActivityPaused(Activity activity) {
             ForegroundHeartbeat.onActivityPaused();
-            // Keep last activity for PixelCopy while briefly paused
-            // (heartbeat capture can race with UI pause).
           }
 
           @Override
@@ -69,22 +69,44 @@ public final class NposApp extends Application {
     if (fg == null) return;
     fg.runOnUiThread(
         () -> {
-          int toastRes =
+          long now = System.currentTimeMillis();
+          // Debounce duplicate listeners (NposApp + MainActivity).
+          if (now - lastKickUiAt < 800L) {
+            bounceToClaimHub(fg);
+            return;
+          }
+          lastKickUiAt = now;
+
+          int titleRes =
               StoreClaimPrefs.wasCodeChanged(fg)
                   ? R.string.store_claim_code_changed
                   : R.string.store_claim_kicked;
-          Toast.makeText(fg, toastRes, Toast.LENGTH_LONG).show();
-          // Keep server session open — drop local open so hub shows claim gate.
+          String reason = StoreClaimPrefs.kickReasonMessage(fg);
+          Toast.makeText(fg, titleRes, Toast.LENGTH_LONG).show();
+          try {
+            new AlertDialog.Builder(fg)
+                .setTitle(titleRes)
+                .setMessage(reason)
+                .setCancelable(false)
+                .setPositiveButton(R.string.store_claim_reenter_ok, (d, w) -> bounceToClaimHub(fg))
+                .show();
+          } catch (RuntimeException e) {
+            bounceToClaimHub(fg);
+          }
           if (ShiftPrefs.isOpen(fg)) {
             ShiftPrefs.clearLocalOpen(fg);
           }
-          // Finish sell / settings / shift / receipts stack → claim hub.
-          Intent i = new Intent(fg, MainActivity.class);
-          i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-          fg.startActivity(i);
-          if (!(fg instanceof MainActivity) && !fg.isFinishing()) {
-            fg.finish();
-          }
         });
+  }
+
+  private static void bounceToClaimHub(Activity fg) {
+    if (fg == null || fg.isFinishing()) return;
+    Intent i = new Intent(fg, MainActivity.class);
+    i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    i.putExtra(MainActivity.EXTRA_SHOW_CLAIM_GATE, true);
+    fg.startActivity(i);
+    if (!(fg instanceof MainActivity) && !fg.isFinishing()) {
+      fg.finish();
+    }
   }
 }

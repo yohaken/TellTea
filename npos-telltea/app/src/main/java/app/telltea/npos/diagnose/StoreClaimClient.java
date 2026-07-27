@@ -39,6 +39,7 @@ public final class StoreClaimClient {
       if (callback != null) callback.onError("รหัสร้านไม่ถูกต้อง");
       return;
     }
+    StoreClaimPrefs.rememberStoreCode(app, code);
 
     // Local-first: hash already warmed from heartbeat / shop settings.
     if (StoreClaimCrypto.matchesCachedHash(code, StoreClaimPrefs.cachedCodeHash(app))) {

@@ -23,6 +23,8 @@ public final class StoreClaimPrefs {
   private static final String KEY_HASH_AT = "codeHashAt";
   private static final String KEY_PENDING_SYNC = "claimPendingSync";
   private static final String KEY_PENDING_CODE = "claimPendingCode";
+  /** Remembered plaintext until user intentionally clears — survives kick / sync / update. */
+  private static final String KEY_REMEMBERED_CODE = "rememberedStoreCode";
 
   /** Owner revoked claim from BO table / clear seat. */
   public static final String REASON_KICKED = "kicked";
@@ -231,6 +233,28 @@ public final class StoreClaimPrefs {
     return prefs(context).getString(KEY_PENDING_CODE, "");
   }
 
+  /** Persist last entered store code (survives kick / update / claim clear). */
+  public static void rememberStoreCode(Context context, String code) {
+    if (code == null) return;
+    String trimmed = code.trim();
+    if (trimmed.isEmpty()) return;
+    prefs(context).edit().putString(KEY_REMEMBERED_CODE, trimmed).apply();
+  }
+
+  public static String rememberedStoreCode(Context context) {
+    return prefs(context).getString(KEY_REMEMBERED_CODE, "");
+  }
+
+  public static boolean hasRememberedStoreCode(Context context) {
+    String c = rememberedStoreCode(context);
+    return c != null && !c.trim().isEmpty();
+  }
+
+  /** Only call from an explicit user «ล้างรหัสที่จำไว้» action. */
+  public static void clearRememberedStoreCode(Context context) {
+    prefs(context).edit().remove(KEY_REMEMBERED_CODE).apply();
+  }
+
   public static void markClaimSynced(Context context) {
     prefs(context)
         .edit()
@@ -302,6 +326,18 @@ public final class StoreClaimPrefs {
     if (isSeatHeld(context)) return false;
     // Exclusive seat empty or lost.
     return true;
+  }
+
+  public static String kickReasonMessage(Context context) {
+    if (wasCodeChanged(context)) {
+      return "สาเหตุ: รหัสร้านถูกเปลี่ยนจากหลังบ้าน — ใส่รหัสใหม่เพื่อเคลมต่อ";
+    }
+    if (isKicked(context) || REASON_KICKED.equals(kickReason(context))) {
+      return "สาเหตุ: ถูกเตะจากตารางเครื่องหลังบ้าน — กะบนเซิร์ฟเวอร์ยังไม่ปิด";
+    }
+    String block = blockReason(context);
+    if (block != null && !block.isEmpty()) return "สาเหตุ: " + block;
+    return "สาเหตุ: สิทธิ์เครื่องหาย — กรอกรหัสร้านใหม่";
   }
 
   public static String blockReason(Context context) {

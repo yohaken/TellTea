@@ -114,6 +114,35 @@
         <item name="android:fontFamily">@font/prompt_semibold</item>
     </style>
 
+    <!-- Sell cart: full-width tap rows (easy at counter). -->
+    <style name="Npos.Btn.SellRow" parent="Npos.Btn">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:maxWidth">999dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:layout_gravity">fill_horizontal</item>
+        <item name="android:background">@drawable/npos_touch_ghost</item>
+        <item name="android:textColor">@color/npos_ink</item>
+        <item name="android:fontFamily">@font/prompt_semibold</item>
+        <item name="android:minHeight">@dimen/npos_btn_secondary_h</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingBottom">10dp</item>
+        <item name="android:textSize">@dimen/npos_text_btn</item>
+    </style>
+
+    <style name="Npos.Btn.SellRow.Primary" parent="Npos.Btn.SellRow">
+        <item name="android:background">@drawable/npos_touch_primary</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:minHeight">@dimen/npos_btn_primary_h</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="Npos.Btn.SellRow.Accent" parent="Npos.Btn.SellRow">
+        <item name="android:textColor">@color/npos_orange</item>
+    </style>
+
     <style name="Npos.Btn.Back" parent="Npos.Btn.Ghost">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:maxWidth">999dp</item>
