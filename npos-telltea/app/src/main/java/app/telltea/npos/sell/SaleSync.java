@@ -15,6 +15,7 @@ import java.util.concurrent.Executors;
 import app.telltea.npos.diagnose.DeviceIdentity;
 import app.telltea.npos.diagnose.OpsLogger;
 import app.telltea.npos.diagnose.StoreClaimPrefs;
+import app.telltea.npos.printer.CashDrawerPolicy;
 import app.telltea.npos.printer.EscPos;
 import app.telltea.npos.printer.PrinterEndpoint;
 import app.telltea.npos.printer.PrinterPrefs;
@@ -276,7 +277,8 @@ public final class SaleSync {
                                         payload,
                                         provisionalBillNo(mutationId),
                                         total,
-                                        paymentMethod);
+                                        paymentMethod,
+                                        CashDrawerPolicy.shouldKickAfterSale(paymentMethod));
                                 markReceiptPrinted(app, mutationId);
                                 try {
                                     payload.put("receiptPrinted", true);
@@ -475,7 +477,15 @@ public final class SaleSync {
                                     "receiptFooterNote",
                                     receiptRow.optString("receiptFooterNote", ""));
                             JSONObject shop = loadShopJson(app);
-                            maybePrintAndKick(app, shop, payload, billNo, total, pay);
+                            // Reprint: paper only — never open drawer again.
+                            maybePrintAndKick(
+                                    app,
+                                    shop,
+                                    payload,
+                                    billNo,
+                                    total,
+                                    pay,
+                                    CashDrawerPolicy.shouldKickOnReprint());
                             OpsLogger.info(app, "printer", "พิมพ์ใบเสร็จซ้ำ", billNo);
                         }
                     } catch (Exception e) {
@@ -694,7 +704,11 @@ public final class SaleSync {
                     payload,
                     billNo,
                     total,
-                    paymentMethod == null ? payload.optString("paymentMethod") : paymentMethod);
+                    paymentMethod == null ? payload.optString("paymentMethod") : paymentMethod,
+                    CashDrawerPolicy.shouldKickAfterSale(
+                            paymentMethod == null
+                                    ? payload.optString("paymentMethod")
+                                    : paymentMethod));
             markReceiptPrinted(app, payload.optString("clientMutationId"));
             try {
                 payload.put("receiptPrinted", true);
@@ -778,7 +792,8 @@ public final class SaleSync {
             JSONObject payload,
             String billNo,
             double total,
-            String paymentMethod) {
+            String paymentMethod,
+            boolean kickDrawer) {
         PrinterEndpoint ep = PrinterPrefs.savedOrNull(app);
         if (ep == null) {
             OpsLogger.warn(app, "printer", "ข้ามพิมพ์ — ยังไม่เลือกปริ้นเตอร์", billNo);
@@ -802,7 +817,7 @@ public final class SaleSync {
                 result -> {
                     if (result.ok) {
                         OpsLogger.result(app, "printer", "พิมพ์ใบเสร็จแล้ว", billNo, true);
-                        if ("cash".equals(paymentMethod)) {
+                        if (kickDrawer && CashDrawerPolicy.shouldKickAfterSale(paymentMethod)) {
                             transport.send(
                                     app,
                                     ep,

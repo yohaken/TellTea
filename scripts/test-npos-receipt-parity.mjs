@@ -10,14 +10,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 278/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 77/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+47/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.24"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 279/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 78/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+48/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.25"/);
 
 assert.ok(existsSync(join(root, "docs/npos-receipt-parity-checklist.md")));
 const doc = read("docs/npos-receipt-parity-checklist.md");
-assert.match(doc, /1\.14\.24/);
+assert.match(doc, /1\.14\.25/);
 assert.match(doc, /ReceiptFormBuilder/);
 assert.match(doc, /documentReceipt/);
 assert.match(doc, /ไม่พิมพ์ badge|ไม่มี.*badge/);
@@ -28,7 +28,6 @@ const javaBuilder = read(
 for (const token of [
   "ใบเสร็จ",
   "ยอดสุทธิ",
-  "TellTea POS",
   "ขอบคุณที่อุดหนุน",
   "shopNameTh",
   "shopAddress",
@@ -46,11 +45,13 @@ for (const token of [
   assert.match(javaBuilder, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 }
 assert.match(javaBuilder, /Front-counter only/);
+assert.doesNotMatch(javaBuilder, /TellTea POS/);
 assert.doesNotMatch(javaBuilder, /"ทานที่ร้าน"|"รับกลับ"|"ShopeeFood"/);
 
 const esc = read("npos-telltea/app/src/main/java/app/telltea/npos/printer/EscPos.java");
 assert.match(esc, /documentReceipt/);
 assert.match(esc, /saleReceipt/);
+assert.doesNotMatch(esc, /parts\.add\(text\("TellTea\\n"\)\)/);
 
 const saleSync = read("npos-telltea/app/src/main/java/app/telltea/npos/sell/SaleSync.java");
 assert.match(saleSync, /ReceiptFormBuilder/);
@@ -61,21 +62,32 @@ assert.match(saleSync, /isReceiptPrinted/);
 assert.match(saleSync, /receiptPrinted/);
 assert.match(saleSync, /subtotal/);
 assert.match(saleSync, /cashReceived/);
+assert.match(saleSync, /CashDrawerPolicy/);
 
 const webTpl = read("src/lib/pos-printer/receipt-template.ts");
 assert.match(webTpl, /buildUnifiedReceiptBody/);
 assert.match(webTpl, /Front-counter only|never print dine-in/);
 assert.match(webTpl, /ยอดสุทธิ/);
-assert.match(webTpl, /TellTea POS/);
+assert.doesNotMatch(webTpl, /TellTea POS/);
 
 const textForm = read("src/lib/pos-printer/receipt-text-form.ts");
 assert.match(textForm, /buildUnifiedReceiptText/);
 assert.match(textForm, /ยอดสุทธิ:/);
 assert.match(textForm, /RECEIPT_TEXT_COLS_80/);
+assert.doesNotMatch(textForm, /TellTea POS/);
 assert.match(read("src/lib/pos-printer/index.ts"), /buildUnifiedReceiptText/);
 
 // Shared label tokens must appear in both web HTML template and native builder.
-const sharedLabels = ["ใบเสร็จ", "ยอดสุทธิ", "จำนวน:", "ส่วนลด", "ชำระ", "เงินสด", "เงินทอน", "TellTea POS"];
+const sharedLabels = [
+  "ใบเสร็จ",
+  "ยอดสุทธิ",
+  "จำนวน:",
+  "ส่วนลด",
+  "ชำระ",
+  "เงินสด",
+  "เงินทอน",
+  "ขอบคุณที่อุดหนุน",
+];
 for (const label of sharedLabels) {
   assert.match(webTpl, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(javaBuilder, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
@@ -84,6 +96,6 @@ for (const label of sharedLabels) {
 
 const remaining = read("docs/npos-remaining-checklist.md");
 assert.match(remaining, /npos-receipt-parity-checklist/);
-assert.match(remaining, /1\.14\.24/);
+assert.match(remaining, /1\.14\.25/);
 
 console.log("OK test-npos-receipt-parity");

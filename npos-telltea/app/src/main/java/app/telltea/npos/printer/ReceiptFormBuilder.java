@@ -126,7 +126,7 @@ public final class ReceiptFormBuilder {
     }
     sb.append('\n');
     sb.append(center(footerNote, width)).append('\n');
-    sb.append(center("TellTea POS", width)).append('\n');
+    // Shop-only document — no system/product brand on customer paper.
     return sb.toString();
   }
 

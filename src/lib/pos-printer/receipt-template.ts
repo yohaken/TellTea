@@ -361,7 +361,7 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
       ${cashRows}
     </div>
     ${notesBlock}
-    <div class="footer">${escapeReceiptHtml(footerNote)}<br />TellTea POS</div>
+    <div class="footer">${escapeReceiptHtml(footerNote)}</div>
   </div>`;
 }
 
@@ -375,7 +375,7 @@ export function sampleReceiptPayload(): ReceiptPrintPayload {
     shopPhone: DEFAULT_SHOP.shopPhone,
     billNo: "561",
     orderChannel: "dine_in",
-    staffName: "TellTea POS",
+    staffName: "หน้าร้าน",
     staffId: "DEMO",
     lines: [
       {

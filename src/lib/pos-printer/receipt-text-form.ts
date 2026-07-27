@@ -157,6 +157,6 @@ export function buildUnifiedReceiptText(
   }
   out.push("");
   out.push(center(footerNote, width));
-  out.push(center("TellTea POS", width));
+  // Shop-only document — no system/product brand on customer paper.
   return `${out.join("\n")}\n`;
 }

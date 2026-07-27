@@ -5,7 +5,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Minimal ESC/POS helpers for test page + cash-drawer kick. */
+/**
+ * Minimal ESC/POS helpers for test page + cash-drawer kick.
+ *
+ * Customer / shift documents use {@link #documentReceipt(String)} so the body
+ * owns shop branding — never inject product brand ("TellTea") on paper.
+ */
 public final class EscPos {
     private EscPos() {}
 
@@ -14,12 +19,13 @@ public final class EscPos {
         return new byte[] {0x1B, 0x70, 0x00, 0x19, (byte) 0xFA};
     }
 
+    /** Hardware install test page only — not a customer document. */
     public static byte[] testReceipt(String versionName, int versionCode, String endpointLabel) {
         List<byte[]> parts = new ArrayList<>();
         parts.add(new byte[] {0x1B, 0x40}); // init
         parts.add(new byte[] {0x1B, 0x61, 0x01}); // center
-        parts.add(text("nPos-telltea\n"));
-        parts.add(text("TEST PRINT (N4)\n"));
+        parts.add(text("PRINTER TEST\n"));
+        parts.add(text("ติดตั้งเครื่องพิมพ์\n"));
         parts.add(new byte[] {0x1B, 0x61, 0x00}); // left
         parts.add(text("----------------\n"));
         parts.add(text("ver " + safe(versionName) + " (" + versionCode + ")\n"));
@@ -31,26 +37,17 @@ public final class EscPos {
     }
 
     /**
-     * Legacy wrapper for Z/X reports — centered TellTea brand then body.
-     * Customer receipts should use {@link #documentReceipt(String)} (full form in body).
+     * @deprecated Prefer {@link #documentReceipt(String)} — body already has shop header.
+     * Kept as alias so callers do not accidentally reintroduce product branding.
      */
     public static byte[] saleReceipt(String body) {
-        List<byte[]> parts = new ArrayList<>();
-        parts.add(new byte[] {0x1B, 0x40});
-        parts.add(new byte[] {0x1B, 0x61, 0x01});
-        parts.add(text("TellTea\n"));
-        parts.add(new byte[] {0x1B, 0x61, 0x00});
-        parts.add(text("----------------\n"));
-        parts.add(text(body == null ? "" : body));
-        if (body == null || !body.endsWith("\n")) parts.add(text("\n"));
-        parts.add(text("----------------\n\n\n"));
-        parts.add(new byte[] {0x1D, 0x56, 0x00});
-        return concat(parts);
+        return documentReceipt(body);
     }
 
     /**
-     * Full customer receipt document — body already includes shop/bill/totals
-     * (see {@link ReceiptFormBuilder}). No extra brand header.
+     * Full document — body already includes shop/bill/totals
+     * (see {@link ReceiptFormBuilder} / {@link ShiftReportFormBuilder}).
+     * No extra brand header.
      */
     public static byte[] documentReceipt(String body) {
         List<byte[]> parts = new ArrayList<>();
