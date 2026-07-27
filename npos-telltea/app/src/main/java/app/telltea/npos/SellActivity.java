@@ -38,6 +38,7 @@ import java.util.Map;
 import app.telltea.npos.diagnose.CustomerDisplayController;
 import app.telltea.npos.diagnose.CustomerDisplayPresentation;
 import app.telltea.npos.diagnose.OpsLogger;
+import app.telltea.npos.diagnose.StoreClaimPrefs;
 import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.ImageLoader;
 import app.telltea.npos.sell.MenuModels;

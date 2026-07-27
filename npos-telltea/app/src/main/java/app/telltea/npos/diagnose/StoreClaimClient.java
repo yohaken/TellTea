@@ -60,8 +60,8 @@ public final class StoreClaimClient {
               return;
             }
             String err = res.optString("error", "claim_failed");
-            String code = res.optString("code", "");
-            if ("seat_taken".equals(code) && (err == null || err.isEmpty())) {
+            String errCode = res.optString("code", "");
+            if ("seat_taken".equals(errCode) && (err == null || err.isEmpty())) {
               err = "มีเครื่องอื่นใช้อยู่ — ให้หลังบ้านเตะเครื่องนั้นก่อน";
             }
             if (callback != null) callback.onError(err);
