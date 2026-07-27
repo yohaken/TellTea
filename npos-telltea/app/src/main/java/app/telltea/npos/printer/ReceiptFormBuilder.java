@@ -28,9 +28,6 @@ public final class ReceiptFormBuilder {
   /** Our shop fallback when settings are empty — not a third-party POS brand. */
   private static final String DEFAULT_SHOP_EN = "TELL TEA";
   private static final String DEFAULT_SHOP_TH = "เทล ที";
-  private static final String DEFAULT_ADDRESS =
-      "ถ.พรรณนาชัย ต.หมากแข้ง อ.เมืองอุดรธานี จ.อุดรธานี";
-  private static final String DEFAULT_PHONE = "0884818817";
   private static final String DEFAULT_FOOTER = "ขอบคุณที่อุดหนุน";
 
   private ReceiptFormBuilder() {}
@@ -43,8 +40,10 @@ public final class ReceiptFormBuilder {
     String shopEn = firstNonEmpty(opt(shop, "shopName"), DEFAULT_SHOP_EN);
     String shopTh = firstNonEmpty(opt(shop, "shopNameTh"), DEFAULT_SHOP_TH);
     String shopName = shopDisplayName(shopEn, shopTh);
-    String shopAddress = firstNonEmpty(opt(shop, "shopAddress"), DEFAULT_ADDRESS);
-    String shopPhone = firstNonEmpty(opt(shop, "shopPhone"), DEFAULT_PHONE);
+    // Prefer live settings; do not invent a street address when cloud/cache is empty
+    // (that made BO edits look "stuck" on the old default).
+    String shopAddress = opt(shop, "shopAddress");
+    String shopPhone = opt(shop, "shopPhone");
     String footerNote =
         firstNonEmpty(
             opt(shop, "receiptFooterNote"),

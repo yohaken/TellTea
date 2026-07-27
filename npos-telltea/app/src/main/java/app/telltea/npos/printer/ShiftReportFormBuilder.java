@@ -27,9 +27,6 @@ public final class ShiftReportFormBuilder {
   /** Our shop fallback when settings are empty — not a third-party POS brand. */
   private static final String DEFAULT_SHOP_EN = "TELL TEA";
   private static final String DEFAULT_SHOP_TH = "เทล ที";
-  private static final String DEFAULT_ADDRESS =
-      "ถ.พรรณนาชัย ต.หมากแข้ง อ.เมืองอุดรธานี จ.อุดรธานี";
-  private static final String DEFAULT_PHONE = "0884818817";
 
   private ShiftReportFormBuilder() {}
 
@@ -158,8 +155,8 @@ public final class ShiftReportFormBuilder {
 
     String shopEn = firstNonEmpty(opt(shop, "shopName"), DEFAULT_SHOP_EN);
     String shopTh = firstNonEmpty(opt(shop, "shopNameTh"), DEFAULT_SHOP_TH);
-    String shopAddress = firstNonEmpty(opt(shop, "shopAddress"), DEFAULT_ADDRESS);
-    String shopPhone = firstNonEmpty(opt(shop, "shopPhone"), DEFAULT_PHONE);
+    String shopAddress = opt(shop, "shopAddress");
+    String shopPhone = opt(shop, "shopPhone");
     String staff = firstNonEmpty(opt(shop, "receiptStaffName"), "หน้าร้าน");
     String device =
         firstNonEmpty(deviceCode, opt(shop, "pairingCode"), "—");

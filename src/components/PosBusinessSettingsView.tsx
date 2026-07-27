@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
+  flushPosShopSettingsUpload,
   getLocalPosShopSettings,
+  isPosShopSettingsSyncPending,
   savePosShopSettings,
   setPosSettingsDbMode,
   subscribePosShopSettings,
@@ -71,7 +73,19 @@ export function PosBusinessSettingsView({
     const unsub = subscribePosShopSettings(applySettings, (err) => setError(err.message));
     return () => {
       unsub();
-      if (embedded) setPosSettingsDbMode("pos");
+      // Keep owner mode until pending upload finishes — flipping to pos mid-flush
+      // used to fail silently and leave Firebase with the old address.
+      if (embedded) {
+        void (async () => {
+          try {
+            if (isPosShopSettingsSyncPending()) {
+              await flushPosShopSettingsUpload("owner");
+            }
+          } finally {
+            setPosSettingsDbMode("pos");
+          }
+        })();
+      }
     };
   }, [applySettings, embedded]);
 
@@ -102,11 +116,19 @@ export function PosBusinessSettingsView({
         receiptStaffName,
         receiptFooterNote,
       });
-      setSavedMsg(
-        result.synced
-          ? "บันทึกแล้ว · อัปขึ้น Firebase แล้ว"
-          : "บันทึกในเครื่องแล้ว · จะอัปขึ้น Firebase ทีหลัง",
-      );
+      if (!result.synced && embedded) {
+        setError(
+          result.syncError ||
+            "บันทึกขึ้น Firebase ไม่สำเร็จ — ที่อยู่บนบิลแท็บเล็ตจะไม่เปลี่ยนจนกว่าจะอัปได้",
+        );
+        setSavedMsg("บันทึกในเครื่องแล้ว · ยังไม่ขึ้น Firebase");
+      } else {
+        setSavedMsg(
+          result.synced
+            ? "บันทึกแล้ว · อัปขึ้น Firebase แล้ว — แท็บเล็ตดึงค่าใหม่ตอนรีเฟรช/เปิดขาย"
+            : "บันทึกในเครื่องแล้ว · จะอัปขึ้น Firebase ทีหลัง",
+        );
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {

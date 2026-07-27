@@ -535,6 +535,20 @@ public class SellActivity extends Activity {
       return;
     }
     if (updatePrompt != null) updatePrompt.onResume();
+    // Refresh shop name/address from server so BO edits show on next bill.
+    if (menuRepo != null) {
+      menuRepo.loadShop(
+          this,
+          s ->
+              runOnUiThread(
+                  () -> {
+                    if (isFinishing() || s == null) return;
+                    shop = s;
+                    applyShopToCustomerDisplay();
+                    applyBrandChrome();
+                    syncCustomerDisplay();
+                  }));
+    }
     updateShiftSummary();
     updateHoldRestoreButton();
     updatePendingBadge();

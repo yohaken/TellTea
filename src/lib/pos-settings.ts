@@ -16,8 +16,12 @@ export function setPosSettingsDbMode(mode: PosSettingsDbMode): void {
   settingsDbMode = mode;
 }
 
-function settingsDb() {
-  return settingsDbMode === "owner" ? getDb() : getPosDb();
+export function getPosSettingsDbMode(): PosSettingsDbMode {
+  return settingsDbMode;
+}
+
+function settingsDb(mode: PosSettingsDbMode = settingsDbMode) {
+  return mode === "owner" ? getDb() : getPosDb();
 }
 
 export type PosShopSettings = {
@@ -42,6 +46,8 @@ export type SavePosShopSettingsResult = {
   savedLocal: true;
   /** อัปโหลด Firebase สำเร็จในรอบนี้ (false = จะลองใหม่ทีหลัง) */
   synced: boolean;
+  /** ข้อความ error ล่าสุดตอนอัปไม่สำเร็จ (ถ้ามี) */
+  syncError?: string;
 };
 
 type StoredShopSettings = PosShopSettings & {
@@ -69,9 +75,10 @@ const localListeners = new Set<SettingsListener>();
 
 let flushInFlight: Promise<boolean> | null = null;
 let onlineHookInstalled = false;
+let lastSyncError = "";
 
-function metaPosRef() {
-  return doc(settingsDb(), "meta", "pos");
+function metaPosRef(mode: PosSettingsDbMode = settingsDbMode) {
+  return doc(settingsDb(mode), "meta", "pos");
 }
 
 function toPublic(stored: StoredShopSettings): PosShopSettings {
@@ -89,23 +96,31 @@ function toPublic(stored: StoredShopSettings): PosShopSettings {
   };
 }
 
-function mapSettings(data: Record<string, unknown> | undefined): PosShopSettings {
+/**
+ * Map remote/local JSON → settings.
+ * When {@code preferRemoteEmpty} (cloud snapshot), keep empty strings instead of
+ * inventing the Udon default — empty means "omit on bill", not "use template".
+ */
+function mapSettings(
+  data: Record<string, unknown> | undefined,
+  opts?: { preferRemoteEmpty?: boolean },
+): PosShopSettings {
+  const emptyOk = opts?.preferRemoteEmpty === true;
+  const str = (v: unknown, fallback: string) => {
+    if (typeof v !== "string") return emptyOk ? "" : fallback;
+    const t = v.trim();
+    if (t) return t;
+    return emptyOk ? "" : fallback;
+  };
   return {
-    shopName: typeof data?.shopName === "string" && data.shopName.trim() ? data.shopName.trim() : DEFAULTS.shopName,
-    shopNameTh: typeof data?.shopNameTh === "string" && data.shopNameTh.trim() ? data.shopNameTh.trim() : DEFAULTS.shopNameTh,
-    shopAddress:
-      typeof data?.shopAddress === "string" && data.shopAddress.trim() ? data.shopAddress.trim() : DEFAULTS.shopAddress,
-    shopPhone: typeof data?.shopPhone === "string" && data.shopPhone.trim() ? data.shopPhone.trim() : DEFAULTS.shopPhone,
+    shopName: str(data?.shopName, DEFAULTS.shopName) || DEFAULTS.shopName,
+    shopNameTh: str(data?.shopNameTh, DEFAULTS.shopNameTh),
+    shopAddress: str(data?.shopAddress, emptyOk ? "" : DEFAULTS.shopAddress),
+    shopPhone: str(data?.shopPhone, emptyOk ? "" : DEFAULTS.shopPhone),
     promptPayId: typeof data?.promptPayId === "string" ? data.promptPayId.trim() : "",
     autoPrintReceipt: data?.autoPrintReceipt !== false,
-    receiptStaffName:
-      typeof data?.receiptStaffName === "string" && data.receiptStaffName.trim()
-        ? data.receiptStaffName.trim()
-        : DEFAULTS.receiptStaffName,
-    receiptFooterNote:
-      typeof data?.receiptFooterNote === "string" && data.receiptFooterNote.trim()
-        ? data.receiptFooterNote.trim()
-        : DEFAULTS.receiptFooterNote,
+    receiptStaffName: str(data?.receiptStaffName, DEFAULTS.receiptStaffName) || DEFAULTS.receiptStaffName,
+    receiptFooterNote: str(data?.receiptFooterNote, DEFAULTS.receiptFooterNote) || DEFAULTS.receiptFooterNote,
     menuArrangeMode: normalizeMenuArrangeMode(data?.menuArrangeMode),
     bestsellerWindowDays: normalizeWindowDays(data?.bestsellerWindowDays),
   };
@@ -118,6 +133,16 @@ function mapSettings(data: Record<string, unknown> | undefined): PosShopSettings
 function remoteUpdatedAt(data: Record<string, unknown> | undefined): number {
   const v = data?.shopSettingsUpdatedAt;
   return typeof v === "number" && Number.isFinite(v) ? v : 0;
+}
+
+function cloudHasShopFields(data: Record<string, unknown> | undefined): boolean {
+  if (!data) return false;
+  return (
+    typeof data.shopName === "string" ||
+    typeof data.shopNameTh === "string" ||
+    typeof data.shopAddress === "string" ||
+    typeof data.shopPhone === "string"
+  );
 }
 
 function readStored(): StoredShopSettings | null {
@@ -185,9 +210,15 @@ function remotePayload(settings: PosShopSettings, updatedAt: number): Record<str
   };
 }
 
-async function uploadStored(stored: StoredShopSettings): Promise<boolean> {
+async function uploadStored(
+  stored: StoredShopSettings,
+  mode: PosSettingsDbMode = settingsDbMode,
+): Promise<boolean> {
   try {
-    await setDoc(metaPosRef(), remotePayload(toPublic(stored), stored.updatedAt), { merge: true });
+    await setDoc(metaPosRef(mode), remotePayload(toPublic(stored), stored.updatedAt), {
+      merge: true,
+    });
+    lastSyncError = "";
     const latest = readStored();
     // ทับคิวใหม่ระหว่างอัปโหลด — อย่าเคลียร์ pending ของรุ่นที่ใหม่กว่า
     if (latest && latest.updatedAt > stored.updatedAt) {
@@ -200,30 +231,25 @@ async function uploadStored(stored: StoredShopSettings): Promise<boolean> {
     };
     writeStored(next);
     return true;
-  } catch {
+  } catch (err) {
+    lastSyncError = err instanceof Error ? err.message : String(err);
     return false;
   }
 }
 
 /** อัปโหลดค่าที่ค้างส่งขึ้น Firebase (เรียกซ้ำได้) */
-export async function flushPosShopSettingsUpload(): Promise<boolean> {
+export async function flushPosShopSettingsUpload(
+  mode: PosSettingsDbMode = settingsDbMode,
+): Promise<boolean> {
   ensureOnlineFlushHook();
   const stored = readStored();
   if (!stored?.syncPending) return true;
   if (flushInFlight) return flushInFlight;
 
-  flushInFlight = uploadStored(stored).finally(() => {
+  flushInFlight = uploadStored(stored, mode).finally(() => {
     flushInFlight = null;
   });
-  const ok = await flushInFlight;
-  if (!ok) {
-    const again = readStored();
-    if (again?.syncPending) {
-      // ยังค้าง — ลองรอบสั้น ๆ อีกครั้งถ้าเครือข่ายกลับมา
-      return false;
-    }
-  }
-  return ok;
+  return flushInFlight;
 }
 
 /** อ่านทันทีสำหรับ boot UI — local → defaults */
@@ -234,6 +260,29 @@ export function getLocalPosShopSettings(): PosShopSettings {
 
 export function isPosShopSettingsSyncPending(): boolean {
   return readStored()?.syncPending === true;
+}
+
+export function getPosShopSettingsLastSyncError(): string {
+  return lastSyncError;
+}
+
+function adoptRemote(
+  data: Record<string, unknown> | undefined,
+  remoteAt: number,
+): PosShopSettings {
+  const remote = mapSettings(data, { preferRemoteEmpty: true });
+  // Name must never be blank on UI — fall back to brand default only for name.
+  if (!remote.shopName.trim()) remote.shopName = DEFAULTS.shopName;
+  if (!remote.shopNameTh.trim()) remote.shopNameTh = DEFAULTS.shopNameTh;
+  if (!remote.receiptStaffName.trim()) remote.receiptStaffName = DEFAULTS.receiptStaffName;
+  if (!remote.receiptFooterNote.trim()) remote.receiptFooterNote = DEFAULTS.receiptFooterNote;
+  const next: StoredShopSettings = {
+    ...remote,
+    updatedAt: remoteAt > 0 ? remoteAt : Date.now(),
+    syncPending: false,
+  };
+  writeStored(next);
+  return toPublic(next);
 }
 
 export function subscribePosShopSettings(
@@ -253,37 +302,41 @@ export function subscribePosShopSettings(
     metaPosRef(),
     (snap) => {
       const data = snap.data() as Record<string, unknown> | undefined;
-      const remote = mapSettings(data);
       const remoteAt = remoteUpdatedAt(data);
       const stored = readStored();
 
-      // local-first: คิวอัปโหลดค้าง — หรือ remote ยังไม่มี shopSettingsUpdatedAt
+      // Remote newer than local pending/edit → cloud wins (another device / BO save).
+      if (remoteAt > 0 && stored && remoteAt > stored.updatedAt) {
+        onSettings(adoptRemote(data, remoteAt));
+        return;
+      }
+
+      // local-first: คิวอัปโหลดค้าง และยังใหม่กว่าหรือเท่า remote
       if (stored?.syncPending && (remoteAt === 0 || stored.updatedAt >= remoteAt)) {
         void flushPosShopSettingsUpload();
         onSettings(toPublic(stored));
         return;
       }
 
-      if (stored && !stored.syncPending && stored.updatedAt > remoteAt && remoteAt > 0) {
-        writeStored({ ...stored, syncPending: true });
-        void flushPosShopSettingsUpload();
-        onSettings(toPublic(stored));
+      // Legacy cloud (no shopSettingsUpdatedAt) but has shop fields — adopt cloud,
+      // never let stale localStorage silently win / overwrite.
+      if (remoteAt === 0 && cloudHasShopFields(data) && !stored?.syncPending) {
+        onSettings(adoptRemote(data, 0));
         return;
       }
 
-      // ไม่มีนาฬิกาหัวบิลบนคลาวด์ — อย่าทับค่าในเครื่องด้วย defaults ว่าง
       if (remoteAt === 0 && stored) {
+        if (stored.syncPending) void flushPosShopSettingsUpload();
         onSettings(toPublic(stored));
         return;
       }
 
-      const next: StoredShopSettings = {
-        ...remote,
-        updatedAt: remoteAt || Date.now(),
-        syncPending: false,
-      };
-      writeStored(next);
-      onSettings(toPublic(next));
+      if (remoteAt > 0) {
+        onSettings(adoptRemote(data, remoteAt));
+        return;
+      }
+
+      onSettings(stored ? toPublic(stored) : { ...DEFAULTS });
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );
@@ -303,20 +356,21 @@ export async function getPosShopSettings(): Promise<PosShopSettings> {
   try {
     const snap = await getDoc(metaPosRef());
     const data = snap.data() as Record<string, unknown> | undefined;
-    const remote = mapSettings(data);
     const remoteAt = remoteUpdatedAt(data);
-    if (stored && stored.updatedAt > remoteAt) {
-      writeStored({ ...stored, syncPending: true });
+    if (remoteAt > 0 && stored && remoteAt >= stored.updatedAt) {
+      return adoptRemote(data, remoteAt);
+    }
+    if (remoteAt === 0 && cloudHasShopFields(data)) {
+      return adoptRemote(data, 0);
+    }
+    if (stored && stored.updatedAt > remoteAt && remoteAt > 0 && stored.syncPending) {
       void flushPosShopSettingsUpload();
       return toPublic(stored);
     }
-    const next: StoredShopSettings = {
-      ...remote,
-      updatedAt: remoteAt || Date.now(),
-      syncPending: false,
-    };
-    writeStored(next);
-    return toPublic(next);
+    if (remoteAt > 0) {
+      return adoptRemote(data, remoteAt);
+    }
+    return stored ? toPublic(stored) : { ...DEFAULTS };
   } catch {
     return stored ? toPublic(stored) : { ...DEFAULTS };
   }
@@ -325,12 +379,13 @@ export async function getPosShopSettings(): Promise<PosShopSettings> {
 /**
  * บันทึกตั้งค่ากิจการแบบ local-first:
  * 1) เขียนเครื่องทันที → UI ใช้ได้
- * 2) อัปโหลด Firebase เบื้องหลัง (ล้มเหลวไม่บล็อก — จะลองใหม่ตอน online)
+ * 2) อัปโหลด Firebase (owner หลังร้านต้อง sync สำเร็จ — ไม่เงียบ)
  */
 export async function savePosShopSettings(
   patch: Partial<PosShopSettings>,
 ): Promise<SavePosShopSettingsResult> {
   ensureOnlineFlushHook();
+  const modeAtSave = settingsDbMode;
   const current = getLocalPosShopSettings();
   const next: PosShopSettings = {
     shopName: patch.shopName != null ? patch.shopName.trim() || DEFAULTS.shopName : current.shopName,
@@ -366,6 +421,17 @@ export async function savePosShopSettings(
   writeStored(stored);
   notifyLocal(next);
 
-  const synced = await flushPosShopSettingsUpload();
-  return { savedLocal: true, synced };
+  let synced = await flushPosShopSettingsUpload(modeAtSave);
+  // Owner BO: if mode flipped mid-flight, retry once with owner db.
+  if (!synced && modeAtSave === "owner") {
+    synced = await uploadStored(readStored() ?? stored, "owner");
+  }
+  if (!synced && modeAtSave === "owner") {
+    return {
+      savedLocal: true,
+      synced: false,
+      syncError: lastSyncError || "อัป Firebase ไม่สำเร็จ — ตรวจเน็ต/สิทธิ์แล้วกดบันทึกอีกครั้ง",
+    };
+  }
+  return { savedLocal: true, synced, syncError: synced ? undefined : lastSyncError || undefined };
 }

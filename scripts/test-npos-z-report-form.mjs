@@ -10,10 +10,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 286/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 81/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+51/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.28"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 287/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 82/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+52/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.29"/);
 
 assert.ok(existsSync(join(root, "docs/npos-z-report-form-checklist.md")));
 const doc = read("docs/npos-z-report-form-checklist.md");
