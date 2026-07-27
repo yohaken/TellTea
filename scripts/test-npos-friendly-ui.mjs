@@ -23,6 +23,7 @@ assert.ok(existsSync(join(root, "npos-telltea/app/src/main/assets/fonts/Prompt-R
 assert.ok(existsSync(join(root, "npos-telltea/third_party/prompt/OFL.txt")));
 
 assert.match(read("npos-telltea/app/src/main/AndroidManifest.xml"), /Theme\.Npos/);
+assert.match(read("npos-telltea/app/src/main/res/values/styles.xml"), /name="Npos"/);
 assert.match(read("npos-telltea/app/src/main/res/values/styles.xml"), /Npos\.Btn\.Primary/);
 assert.match(read("npos-telltea/app/src/main/res/values/styles.xml"), /prompt_semibold|prompt_bold/);
 assert.match(read("npos-telltea/app/src/main/res/values/colors.xml"), /npos_orange/);
