@@ -1,10 +1,14 @@
 package app.telltea.npos;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.InputType;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -39,8 +43,6 @@ import app.telltea.npos.sell.ImageLoader;
 import app.telltea.npos.sell.MenuModels;
 import app.telltea.npos.sell.MenuRepository;
 import app.telltea.npos.sell.OptionPickerLogic;
-import app.telltea.npos.sell.PromptPayPayload;
-import app.telltea.npos.sell.QrBitmaps;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shell.PosShellNav;
 import app.telltea.npos.shift.BlindCloseFlow;
@@ -51,7 +53,7 @@ import app.telltea.npos.update.UpdatePromptController;
 
 /**
  * Sell screen — clone web PosSellView: categories, menu images, options, cart, discount,
- * cash / PromptPay QR, sold-out long-press.
+ * cash pay (PromptPay/QR hidden for early phase), sold-out long-press.
  */
 public class SellActivity extends Activity {
   private LinearLayout categoryBar;
@@ -77,6 +79,15 @@ public class SellActivity extends Activity {
   private CustomerDisplayController customerDisplay;
   private UpdatePromptController updatePrompt;
   private UiScale uiScale;
+  private final Handler dutyHandler = new Handler(Looper.getMainLooper());
+  private final Runnable dutyTick =
+      new Runnable() {
+        @Override
+        public void run() {
+          updateShiftSummary();
+          dutyHandler.postDelayed(this, 1000L);
+        }
+      };
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -113,7 +124,12 @@ public class SellActivity extends Activity {
     View back = findViewById(R.id.backButton);
     if (back != null) back.setOnClickListener(v -> finish());
     findViewById(R.id.payCashButton).setOnClickListener(v -> startPay("cash"));
-    findViewById(R.id.payPromptButton).setOnClickListener(v -> startPay("promptpay"));
+    View payPpBtn = findViewById(R.id.payPromptButton);
+    if (payPpBtn != null) {
+      // Early phase: hide PromptPay + QR from main sell chrome.
+      payPpBtn.setVisibility(View.GONE);
+      payPpBtn.setOnClickListener(null);
+    }
     findViewById(R.id.discountButton).setOnClickListener(v -> showDiscountDialog());
     View clearCart = findViewById(R.id.clearCartButton);
     if (clearCart != null) {
@@ -147,6 +163,7 @@ public class SellActivity extends Activity {
                 () -> {
                   shop = s;
                   applyShopToCustomerDisplay();
+                  applyBrandChrome();
                   syncCustomerDisplay();
                 }));
     reloadMenu(false);
@@ -158,6 +175,29 @@ public class SellActivity extends Activity {
     if (ResumePrefs.consumeRestoreHoldAfterUpdate(this) && HoldCart.hasHold(this) && cart.isEmpty()) {
       doRestoreHold();
     }
+  }
+
+  private void applyBrandChrome() {
+    PosShellNav.applyBrandLogo(this, shop);
+    if (shop == null) return;
+    String logo = shop.optString("brandLogo", "");
+    if (logo.isEmpty()) return;
+    // Recents / task switcher icon (home launcher still uses mipmap until rebuild).
+    ImageLoader.decodeAsync(
+        this,
+        logo,
+        bmp -> {
+          if (bmp == null || isFinishing()) return;
+          try {
+            String label =
+                shop.optString(
+                    "shopName",
+                    shop.optString("shopNameTh", getString(R.string.app_name)));
+            setTaskDescription(new ActivityManager.TaskDescription(label, bmp));
+          } catch (Exception ignored) {
+            /* older API / OEM */
+          }
+        });
   }
 
   private void applySmartChrome() {
@@ -180,10 +220,7 @@ public class SellActivity extends Activity {
       }
     }
     if (payPp != null) {
-      payPp.setMinimumHeight(uiScale.paySecondaryMinPx);
-      if (payPp instanceof TextView) {
-        ((TextView) payPp).setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.bodySp + 1f);
-      }
+      payPp.setVisibility(View.GONE);
     }
     if (xReport != null) {
       xReport.setMinimumHeight(uiScale.touchMinPx);
@@ -427,7 +464,7 @@ public class SellActivity extends Activity {
 
   private void updateShiftSummary() {
     if (shiftSummary == null) return;
-    shiftSummary.setText(ShiftPrefs.summaryLine(this));
+    shiftSummary.setText(ShiftPrefs.dutyLine(this));
   }
 
   private void reloadMenu(boolean forceNetwork) {
@@ -495,6 +532,8 @@ public class SellActivity extends Activity {
     updateShiftSummary();
     updateHoldRestoreButton();
     updatePendingBadge();
+    dutyHandler.removeCallbacks(dutyTick);
+    dutyHandler.post(dutyTick);
     if (saleSync != null) saleSync.flushPending(this);
     if (customerDisplay != null && sellSyncStatus != null && cart.isEmpty()) {
       sellSyncStatus.setText(customerDisplay.statusLabel(this));
@@ -503,7 +542,14 @@ public class SellActivity extends Activity {
   }
 
   @Override
+  protected void onPause() {
+    dutyHandler.removeCallbacks(dutyTick);
+    super.onPause();
+  }
+
+  @Override
   protected void onDestroy() {
+    dutyHandler.removeCallbacks(dutyTick);
     if (customerDisplay != null) {
       customerDisplay.release();
       customerDisplay = null;
@@ -713,11 +759,12 @@ public class SellActivity extends Activity {
         badge.setTextColor(0xFFFFFFFF);
         badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(11f, uiScale.captionSp));
         badge.setTypeface(Typeface.DEFAULT_BOLD);
-        badge.setBackgroundColor(0xFFE85D24);
-        badge.setPadding(uiScale.dp(8), uiScale.dp(2), uiScale.dp(8), uiScale.dp(2));
-        FrameLayout.LayoutParams blp =
-            new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+        badge.setGravity(Gravity.CENTER);
+        int badgeSize = uiScale.dp(22);
+        badge.setBackgroundResource(R.drawable.npos_menu_qty_badge);
+        badge.setMinWidth(badgeSize);
+        badge.setMinHeight(badgeSize);
+        FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(badgeSize, badgeSize);
         blp.gravity = Gravity.TOP | Gravity.END;
         blp.setMargins(0, uiScale.dp(4), uiScale.dp(4), 0);
         badge.setLayoutParams(blp);
@@ -1438,6 +1485,7 @@ public class SellActivity extends Activity {
 
   private void renderCart() {
     renderCartViewsOnly();
+    if (menu != null) renderMenu();
     syncCustomerDisplay();
   }
 
@@ -1622,12 +1670,17 @@ public class SellActivity extends Activity {
       Toast.makeText(this, R.string.cart_empty, Toast.LENGTH_SHORT).show();
       return;
     }
-    double total = cartTotal();
-    if ("cash".equals(method)) {
-      showCashKeypad(total);
-    } else {
-      showPromptPayDialog(total);
+    if (!"cash".equals(method)) {
+      Toast.makeText(this, R.string.pay_pp_hidden_early, Toast.LENGTH_LONG).show();
+      return;
     }
+    showCashKeypad(cartTotal());
+  }
+
+  /** Early phase: PromptPay UI kept for compile safety but unused (QR removed). */
+  @SuppressWarnings("unused")
+  private void showPromptPayDialog(double total) {
+    Toast.makeText(this, R.string.pay_pp_hidden_early, Toast.LENGTH_SHORT).show();
   }
 
   /** Clone web PosCashKeypad: exact · bills · digits · change. */
@@ -1794,62 +1847,6 @@ public class SellActivity extends Activity {
     }
   }
 
-  private void showPromptPayDialog(double total) {
-    String pp = shop == null ? "" : shop.optString("promptPayId", "");
-    LinearLayout root = new LinearLayout(this);
-    root.setOrientation(LinearLayout.VERTICAL);
-    root.setGravity(Gravity.CENTER_HORIZONTAL);
-    root.setPadding(32, 24, 32, 8);
-
-    TextView msg = new TextView(this);
-    msg.setGravity(Gravity.CENTER);
-    android.graphics.Bitmap customerQr = null;
-    if (pp.isEmpty() || !PromptPayPayload.isValid(pp)) {
-      msg.setText(getString(R.string.pay_pp_no_id, total));
-      root.addView(msg);
-      if (customerDisplay != null) customerDisplay.showPaymentQr(total, null);
-    } else {
-      msg.setText(getString(R.string.pay_pp_msg, pp, total));
-      root.addView(msg);
-      try {
-        String emv = PromptPayPayload.build(pp, total);
-        ImageView qr = new ImageView(this);
-        int size =
-            (int)
-                TypedValue.applyDimension(
-                    TypedValue.COMPLEX_UNIT_DIP, 200, getResources().getDisplayMetrics());
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
-        lp.topMargin = 16;
-        qr.setLayoutParams(lp);
-        qr.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        qr.setBackgroundColor(0xFFFFFFFF);
-        android.graphics.Bitmap bmp = QrBitmaps.encode(emv, size);
-        if (bmp != null) {
-          qr.setImageBitmap(bmp);
-          customerQr = bmp;
-        } else {
-          // Fallback online QR only if local encode fails
-          ImageLoader.bind(qr, PromptPayPayload.qrImageUrl(emv), 0xFFFFFFFF);
-        }
-        root.addView(qr);
-      } catch (Exception e) {
-        TextView err = new TextView(this);
-        err.setText(R.string.pay_pp_qr_fail);
-        err.setTextColor(0xFFB00020);
-        root.addView(err);
-      }
-      if (customerDisplay != null) customerDisplay.showPaymentQr(total, customerQr);
-    }
-
-    new AlertDialog.Builder(this)
-        .setTitle(R.string.pay_pp_title)
-        .setView(root)
-        .setPositiveButton(R.string.btn_confirm_sale, (d, w) -> commitSale("promptpay", 0))
-        .setNegativeButton(android.R.string.cancel, (d, w) -> syncCustomerDisplay())
-        .setOnCancelListener(d -> syncCustomerDisplay())
-        .show();
-  }
-
   private void commitSale(String method, double cashReceived) {
     sellSyncStatus.setText(R.string.sell_saving);
     List<MenuModels.CartLine> snapshot = new ArrayList<>(cart);
@@ -1883,6 +1880,7 @@ public class SellActivity extends Activity {
                             cart.clear();
                             discountBaht = 0;
                             renderCartViewsOnly();
+                            if (menu != null) renderMenu();
                             updateShiftSummary();
                             updatePendingBadge();
                             sellSyncStatus.setText(R.string.sell_saved_local);

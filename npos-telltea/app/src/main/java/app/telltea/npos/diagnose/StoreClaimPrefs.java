@@ -57,11 +57,15 @@ public final class StoreClaimPrefs {
     return prefs(context).getBoolean(KEY_BLOCKED, false);
   }
 
+  public static boolean rejectDev(Context context) {
+    return prefs(context).getBoolean(KEY_REJECT_DEV, true);
+  }
+
   /** True when server gate would reject writes from this install. */
   public static boolean blocksWrites(Context context) {
     if (isBlocked(context)) return true;
     if (!isRequired(context)) return false;
-    if (prefs(context).getBoolean(KEY_REJECT_DEV, true) && DeviceIdentity.isEmulator()) {
+    if (rejectDev(context) && DeviceIdentity.isEmulator()) {
       return true;
     }
     return !isClaimed(context);
@@ -70,7 +74,7 @@ public final class StoreClaimPrefs {
   public static String blockReason(Context context) {
     if (isBlocked(context)) return "เครื่องนี้ถูกบล็อกจากหลังบ้าน";
     if (!isRequired(context)) return "";
-    if (prefs(context).getBoolean(KEY_REJECT_DEV, true) && DeviceIdentity.isEmulator()) {
+    if (rejectDev(context) && DeviceIdentity.isEmulator()) {
       return "เครื่องจำลองถูกปิดกั้นช่วงทดลองหน้าร้าน";
     }
     if (!isClaimed(context)) return "กรอกรหัสร้านเพื่อเคลมเครื่องก่อนขาย";

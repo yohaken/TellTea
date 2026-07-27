@@ -36,6 +36,7 @@ const steps = [
   { name: "device-class-d1", cmd: ["node", "scripts/test-npos-device-class.mjs"] },
   { name: "store-claim", cmd: ["node", "scripts/test-npos-store-claim.mjs"] },
   { name: "doc-drawer-polish", cmd: ["node", "scripts/test-npos-doc-drawer-polish.mjs"] },
+  { name: "counter-ux-batch", cmd: ["node", "scripts/test-npos-counter-ux-batch.mjs"] },
 ];
 
 if (process.env.SKIP_CAPTURE_SMOKE !== "1") {

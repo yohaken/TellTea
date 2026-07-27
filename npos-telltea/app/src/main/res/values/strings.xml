@@ -118,6 +118,10 @@
     <string name="sell_flushing">กำลังซิงก์บิลค้าง…</string>
     <string name="sell_pending_n">รอซิงก์ %1$d บิล</string>
     <string name="shift_summary_fmt">รอบนี้ · ขาย %1$d · เงินสด ฿%2$s · PP ฿%3$s · ทำลาย %4$d</string>
+    <string name="shift_duty_fmt">เข้างาน %1$s · ผ่านมา %2$s</string>
+    <string name="shift_duty_closed">ยังไม่เปิดกะ</string>
+    <string name="store_claim_not_configured">ยังไม่ได้ตั้งรหัสร้านหลังบ้าน — ไม่ถามรหัสบนเครื่องนี้</string>
+    <string name="store_claim_emulator_blocked">เครื่องจำลองถูกปิดกั้น (rejectDev) — ปิดตัวเลือกนี้ในหลังบ้านเพื่อเทส หรือใช้แท็บเล็ตจริง</string>
     <string name="printer_lan_title">ปริ้นเตอร์ LAN (Wi‑Fi)</string>
     <string name="printer_lan_host_hint">IP เช่น 192.168.1.50</string>
     <string name="printer_lan_port_hint">พอร์ต (ปกติ 9100)</string>
@@ -134,9 +138,10 @@
     <string name="pay_cash_clear">ล้าง</string>
     <string name="pay_cash_short">เงินที่รับน้อยกว่ายอด</string>
     <string name="pay_pp_title">PromptPay</string>
-    <string name="pay_pp_msg">โอนเข้า %1$s\nยอด %2$.0f บาท\nเมื่อลูกค้าโอนแล้วกดยืนยัน</string>
+    <string name="pay_pp_msg">โอนเข้า %1$s\nยอด %2$.0f บาท\nเมื่อลูกค้าโอนแล้วกดยืนยัน\n(ช่วงนี้ยังไม่แสดง QR)</string>
     <string name="pay_pp_no_id">ยังไม่มีเลข PromptPay ในตั้งค่าร้าน\nยอด %.0f บาท — กดยืนยันเมื่อรับเงินแล้ว</string>
     <string name="pay_pp_qr_fail">สร้าง QR ไม่ได้ — ตรวจเลข PromptPay</string>
+    <string name="pay_pp_hidden_early">ช่วงแรกปิด PromptPay / QR ชั่วคราว — ใช้เงินสด</string>
     <string name="discount_title">ส่วนลดท้ายบิล</string>
     <string name="discount_hint_baht">จำนวนบาท</string>
     <string name="discount_clear">ล้างส่วนลด</string>

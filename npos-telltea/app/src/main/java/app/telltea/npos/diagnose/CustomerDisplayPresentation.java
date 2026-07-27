@@ -232,6 +232,7 @@ public final class CustomerDisplayPresentation extends Presentation {
             double discountBaht,
             double total,
             Bitmap qrBitmap) {
+        // Early phase: amount-only — never show QR on customer display.
         mode = Mode.PAYMENT;
         panelSuccess.setVisibility(View.GONE);
         receiptIdle.setVisibility(View.GONE);
@@ -240,18 +241,13 @@ public final class CustomerDisplayPresentation extends Presentation {
 
         mediaPayOverlay.setVisibility(View.VISIBLE);
         mediaCaptionBar.setVisibility(View.GONE);
-        payTitle.setText(R.string.customer_pay_qr_title);
+        payTitle.setText(R.string.customer_pay_cash_title);
         payTotal.setText(String.format(Locale.getDefault(), "฿%.0f", total));
-        payHint.setText(R.string.customer_pay_qr_hint);
+        payHint.setText(R.string.pay_pp_hidden_early);
         payCashDetail.setVisibility(View.GONE);
-        if (qrBitmap != null) {
-            payQr.setVisibility(View.VISIBLE);
-            payQr.setImageBitmap(qrBitmap);
-            sizeQr();
-        } else {
+        if (payQr != null) {
             payQr.setVisibility(View.GONE);
             payQr.setImageDrawable(null);
-            payHint.setText(R.string.customer_pay_qr_missing);
         }
     }
 
