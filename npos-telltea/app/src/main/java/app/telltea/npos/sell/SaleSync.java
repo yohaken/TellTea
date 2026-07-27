@@ -489,6 +489,32 @@ public final class SaleSync {
         }
     }
 
+    /**
+     * Heartbeat / BO: [0]=still retrying (not failed), [1]=gave up (failed).
+     * Cheap prefs read — safe every few seconds.
+     */
+    public static int[] outboxCounts(Context context) {
+        int pending = 0;
+        int failed = 0;
+        try {
+            JSONArray q =
+                    new JSONArray(
+                            context
+                                    .getApplicationContext()
+                                    .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                                    .getString(KEY_QUEUE, "[]"));
+            for (int i = 0; i < q.length(); i++) {
+                JSONObject row = q.optJSONObject(i);
+                if (row == null) continue;
+                if ("failed".equals(row.optString("status", ""))) failed++;
+                else pending++;
+            }
+        } catch (Exception ignored) {
+            /* empty */
+        }
+        return new int[] {pending, failed};
+    }
+
     /** Reprint a stored local receipt (N6.6 parity with web PosReceiptsView). */
     public void reprintReceipt(Context context, JSONObject receiptRow, Runnable onDone) {
         Context app = context.getApplicationContext();

@@ -167,6 +167,9 @@ public final class DeviceHeartbeat {
         body.put("printerLabel", PrinterPrefs.label(context));
         body.put("permissionsOk", PermissionBootstrap.allCriticalGranted(context));
         body.put("permissionsStatus", PermissionBootstrap.statusLine(context));
+        int[] outbox = app.telltea.npos.sell.SaleSync.outboxCounts(context);
+        body.put("syncPendingCount", outbox[0]);
+        body.put("syncFailedCount", outbox[1]);
         return body;
     }
 

@@ -193,7 +193,20 @@ async function completePosSaleAdmin(db, data, uid) {
       0,
       Math.round(((Number(session.totalSales) || 0) + total) * 100) / 100,
     );
-    tx.set(sessionRef, { saleCount, totalSales, updatedAt: now }, { merge: true });
+    const patch = { saleCount, totalSales, updatedAt: now };
+    // Live tender splits for BO while shift is open (not only at close).
+    if (paymentMethod === "promptpay") {
+      patch.promptpayTotal = Math.max(
+        0,
+        Math.round(((Number(session.promptpayTotal) || 0) + total) * 100) / 100,
+      );
+    } else {
+      patch.cashTotal = Math.max(
+        0,
+        Math.round(((Number(session.cashTotal) || 0) + total) * 100) / 100,
+      );
+    }
+    tx.set(sessionRef, patch, { merge: true });
   });
 
   return { saleId: saleRef.id, billNo, change, total };
@@ -249,6 +262,7 @@ async function voidPosSaleAdmin(db, data, deviceId) {
         saleId,
         billNo: typeof sale.billNo === "string" ? sale.billNo : "—",
         total: Number(sale.total) || 0,
+        paymentMethod: sale.paymentMethod === "promptpay" ? "promptpay" : "cash",
         sessionId: typeof sale.sessionId === "string" ? sale.sessionId : "",
       };
     }
@@ -265,6 +279,7 @@ async function voidPosSaleAdmin(db, data, deviceId) {
       saleId,
       billNo: typeof sale.billNo === "string" ? sale.billNo : "—",
       total: Number(sale.total) || 0,
+      paymentMethod: sale.paymentMethod === "promptpay" ? "promptpay" : "cash",
       sessionId: typeof sale.sessionId === "string" ? sale.sessionId : "",
     };
   });
@@ -281,7 +296,22 @@ async function voidPosSaleAdmin(db, data, deviceId) {
         0,
         Math.round(((Number(session.totalSales) || 0) - (Number(outcome.total) || 0)) * 100) / 100,
       );
-      tx.set(sessionRef, { saleCount, totalSales, updatedAt: now }, { merge: true });
+      const patch = { saleCount, totalSales, updatedAt: now };
+      const amt = Number(outcome.total) || 0;
+      if (outcome.paymentMethod === "promptpay") {
+        patch.promptpayTotal = Math.max(
+          0,
+          Math.round(((Number(session.promptpayTotal) || 0) - amt) * 100) / 100,
+        );
+      } else {
+        patch.cashTotal = Math.max(
+          0,
+          Math.round(((Number(session.cashTotal) || 0) - amt) * 100) / 100,
+        );
+      }
+      const voidedCount = Math.max(0, (Number(session.voidedCount) || 0) + 1);
+      patch.voidedCount = voidedCount;
+      tx.set(sessionRef, patch, { merge: true });
     });
   }
 

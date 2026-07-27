@@ -149,6 +149,12 @@ exports.nposDeviceHeartbeat = functions
       if (Object.prototype.hasOwnProperty.call(body, "permissionsStatus")) {
         patch.permissionsStatus = asString(body.permissionsStatus, 120);
       }
+      if (Number.isFinite(Number(body.syncPendingCount))) {
+        patch.syncPendingCount = Math.max(0, Math.floor(Number(body.syncPendingCount)));
+      }
+      if (Number.isFinite(Number(body.syncFailedCount))) {
+        patch.syncFailedCount = Math.max(0, Math.floor(Number(body.syncFailedCount)));
+      }
 
       if (!snap.exists) {
         Object.assign(patch, {

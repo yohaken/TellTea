@@ -9,13 +9,13 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 296/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 91/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+61/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.38"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 297/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 92/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+62/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.39"/);
 
 assert.ok(existsSync(join(root, "docs/npos-store-claim-checklist.md")));
-assert.match(read("docs/npos-store-claim-checklist.md"), /1.14.38/);
+assert.match(read("docs/npos-store-claim-checklist.md"), /1.14.39/);
 
 const settings = read("src/lib/pos-settings.ts");
 assert.match(settings, /shopSettingsUpdatedAt/);
@@ -98,6 +98,20 @@ assert.match(remaining, /npos-store-claim-checklist/);
 
 const check = read("scripts/check-npos-shop.mjs");
 assert.match(check, /store-claim/);
+
+
+assert.match(read("functions/npos-heartbeat.js"), /syncPendingCount/);
+assert.match(read("functions/pos-complete-sale.js"), /cashTotal|promptpayTotal/);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/sell/SaleSync.java"),
+  /outboxCounts/,
+);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/DeviceHeartbeat.java"),
+  /syncPendingCount/,
+);
+assert.match(read("src/components/NposDevicesPanel.tsx"), /ค้างส่ง|syncPendingCount/);
+assert.ok(existsSync(join(root, "docs/npos-receipt-history-staff.md")));
 
 console.log("OK test-npos-store-claim");
 

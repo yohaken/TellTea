@@ -98,7 +98,7 @@ export async function voidPosSale(
       voidReason: reason.trim(),
     });
     await batch.commit();
-    await adjustPosSessionTotalsAdmin(sale.sessionId, -sale.total, -1);
+    await adjustPosSessionTotalsAdmin(sale.sessionId, -sale.total, -1, sale.paymentMethod);
   } catch (err) {
     throw new Error(mapFirestoreError(err, "ยกเลิกบิล POS"));
   }
@@ -108,6 +108,7 @@ async function adjustPosSessionTotalsAdmin(
   sessionId: string,
   totalDelta: number,
   countDelta: number,
+  paymentMethod?: "cash" | "promptpay",
 ): Promise<void> {
   const ref = doc(getDb(), POS_SESSIONS_COL, sessionId);
   const snap = await getDoc(ref);
@@ -120,7 +121,28 @@ async function adjustPosSessionTotalsAdmin(
       ((typeof data.totalSales === "number" ? data.totalSales : 0) + totalDelta) * 100,
     ) / 100,
   );
-  await updateDoc(ref, { saleCount, totalSales, updatedAt: Date.now() });
+  const patch: Record<string, unknown> = { saleCount, totalSales, updatedAt: Date.now() };
+  if (paymentMethod === "promptpay") {
+    patch.promptpayTotal = Math.max(
+      0,
+      Math.round(
+        ((typeof data.promptpayTotal === "number" ? data.promptpayTotal : 0) + totalDelta) * 100,
+      ) / 100,
+    );
+  } else if (paymentMethod === "cash") {
+    patch.cashTotal = Math.max(
+      0,
+      Math.round(((typeof data.cashTotal === "number" ? data.cashTotal : 0) + totalDelta) * 100) /
+        100,
+    );
+  }
+  if (countDelta < 0) {
+    patch.voidedCount = Math.max(
+      0,
+      (typeof data.voidedCount === "number" ? data.voidedCount : 0) + 1,
+    );
+  }
+  await updateDoc(ref, patch);
 }
 
 export function summarizePosSales(sales: PosSale[]) {

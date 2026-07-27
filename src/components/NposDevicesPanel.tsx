@@ -647,6 +647,13 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                     >
                       <strong>{shift}</strong> · {who} · เปิดอยู่ · {s.saleCount} บิล · ฿
                       {formatPlainNumber(s.totalSales)}
+                      {(s.cashTotal != null || s.promptpayTotal != null) && (
+                        <span className="muted">
+                          {" "}
+                          · สด ฿{formatPlainNumber(s.cashTotal || 0)} · PP ฿
+                          {formatPlainNumber(s.promptpayTotal || 0)}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
@@ -663,6 +670,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                   <th style={{ padding: "0.35rem" }}>สถานะ</th>
                   <th style={{ padding: "0.35rem" }}>รอบ</th>
                   <th style={{ padding: "0.35rem" }}>ยอดรอบ</th>
+                  <th style={{ padding: "0.35rem" }}>ค้างส่ง</th>
                   <th style={{ padding: "0.35rem" }}>เชื่อม</th>
                   <th style={{ padding: "0.35rem" }}>เวอร์ชัน</th>
                   <th style={{ padding: "0.35rem" }}>แอ็กชัน</th>
@@ -690,9 +698,20 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                   const roundCell = sess
                     ? `${shiftLabel}${sess.status === "open" ? " · เปิด" : " · ปิด"}`
                     : "—";
-                  const salesCell = sess
-                    ? `${sess.saleCount} บิล · ฿${formatPlainNumber(sess.totalSales)}`
-                    : "—";
+                  let salesCell = "—";
+                  if (sess) {
+                    const cash = sess.cashTotal ?? 0;
+                    const pp = sess.promptpayTotal ?? 0;
+                    salesCell = `${sess.saleCount} บิล · ฿${formatPlainNumber(sess.totalSales)}`;
+                    if (cash > 0 || pp > 0) {
+                      salesCell += ` · สด ${formatPlainNumber(cash)} / PP ${formatPlainNumber(pp)}`;
+                    }
+                  }
+                  const pending = d.syncPendingCount || 0;
+                  const failed = d.syncFailedCount || 0;
+                  let pendingCell = "—";
+                  if (failed > 0) pendingCell = `⚠ ${pending}+${failed}`;
+                  else if (pending > 0) pendingCell = String(pending);
                   return (
                     <tr
                       key={`slim-${d.id}`}
@@ -708,6 +727,15 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                       <td style={{ padding: "0.35rem" }}>{status}</td>
                       <td style={{ padding: "0.35rem" }}>{roundCell}</td>
                       <td style={{ padding: "0.35rem" }}>{salesCell}</td>
+                      <td
+                        style={{
+                          padding: "0.35rem",
+                          color: failed > 0 ? "#B00020" : pending > 0 ? "#8A4B12" : undefined,
+                          fontWeight: pending + failed > 0 ? 600 : undefined,
+                        }}
+                      >
+                        {pendingCell}
+                      </td>
                       <td style={{ padding: "0.35rem" }}>{online ? "ออน" : "หลุด"}</td>
                       <td style={{ padding: "0.35rem" }}>
                         {d.nativeShellBuild || d.appBuild || "—"}
@@ -739,7 +767,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                 })}
                 {[...buckets.shop, ...buckets.dev].length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="muted" style={{ padding: "0.5rem" }}>
+                    <td colSpan={8} className="muted" style={{ padding: "0.5rem" }}>
                       ยังไม่มีเครื่อง
                     </td>
                   </tr>
