@@ -92,6 +92,10 @@ const claimPanel = read("src/components/PosStoreClaimPanel.tsx");
 assert.match(claimPanel, /activeSeatId|เครื่องเดียว/);
 assert.match(claimPanel, /เตะเครื่อง.*บังคับปิดกะ|≠ บังคับปิดกะ/);
 
+const devices = read("src/lib/pos-devices.ts");
+assert.match(devices, /seatMode\?:/);
+assert.match(devices, /activeSeatInstallId\?:/);
+
 const remaining = read("docs/npos-remaining-checklist.md");
 assert.match(remaining, /npos-exclusive-seat-checklist/);
 

@@ -37,6 +37,8 @@ type OwnerDeviceCommandResult = {
   codeHint?: string;
   storeClaimRejectDev?: boolean;
   storeClaimUpdatedAt?: number;
+  seatMode?: "exclusive" | "multi" | string;
+  activeSeatInstallId?: string;
 };
 
 async function callNposOwnerDeviceCommand(
