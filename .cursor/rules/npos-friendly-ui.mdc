@@ -9,6 +9,6 @@ When changing nPos Android UI (`npos-telltea/`):
 
 - Use `app.telltea.npos.ui.NposUi` for buttons, titles, captions, fields — never `new Button()` for user-facing chrome.
 - Use `NposFonts` / Prompt — never `Typeface.DEFAULT` / `DEFAULT_BOLD` for on-screen text.
-- XML: `Npos.Btn.*`, `Theme.Npos`, colors from `npos_*` — no full-bleed Material bars, no purple/cream AI themes.
-- Primary ~52dp, secondary/ghost ~40–44dp, secondary actions as chips.
+- XML: `Npos.Btn.*` (`wrap_content`, max ~280dp), `Theme.Npos`, colors from `npos_*` — no full-bleed Material bars, no `maxWidth=999dp`, no purple/cream AI themes.
+- Primary ~52dp tall · secondary/ghost ~40–44dp · secondary actions as chips · programmatic CTAs use `NposUi.cta()` not `matchWidth()`.
 - Policy doc: `docs/npos-friendly-ui-checklist.md`
