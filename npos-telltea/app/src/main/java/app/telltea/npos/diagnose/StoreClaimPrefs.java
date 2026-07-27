@@ -15,11 +15,17 @@ public final class StoreClaimPrefs {
   private static final String KEY_SEAT_HELD = "seatHeldByMe";
   private static final String KEY_SEAT_TAKEN = "seatTaken";
   private static final String KEY_KICKED = "kicked";
+  private static final String KEY_KICK_REASON = "kickReason";
   private static final String KEY_UPDATED = "updatedAt";
   private static final String KEY_CODE_HASH = "codeHash";
   private static final String KEY_HASH_AT = "codeHashAt";
   private static final String KEY_PENDING_SYNC = "claimPendingSync";
   private static final String KEY_PENDING_CODE = "claimPendingCode";
+
+  /** Owner revoked claim from BO table / clear seat. */
+  public static final String REASON_KICKED = "kicked";
+  /** Store code hash changed — must re-enter new code. */
+  public static final String REASON_CODE_CHANGED = "code_changed";
 
   public interface KickListener {
     void onKickedOrLostSeat();
@@ -61,28 +67,61 @@ public final class StoreClaimPrefs {
       String codeHash,
       long hashUpdatedAt) {
     boolean wasHeld = isSeatHeld(context) || isClaimed(context);
+    String prevHash = cachedCodeHash(context);
+    String nextHash =
+        codeHash != null && codeHash.length() >= 32 ? codeHash.trim().toLowerCase() : null;
+    // Only treat as code-change when we already had a real hash (avoid false kick on first cache).
+    boolean hashChanged =
+        prevHash != null
+            && prevHash.length() >= 32
+            && nextHash != null
+            && !prevHash.equals(nextHash);
+
+    boolean effectiveClaimed = claimed;
+    boolean effectiveHeld = seatHeldByMe;
+    boolean effectiveKicked = kicked;
+    String reason = "";
+    if (hashChanged && wasHeld) {
+      effectiveClaimed = false;
+      effectiveHeld = false;
+      effectiveKicked = true;
+      reason = REASON_CODE_CHANGED;
+    } else if (kicked) {
+      reason = REASON_KICKED;
+    }
+
     SharedPreferences.Editor ed =
         prefs(context)
             .edit()
             .putBoolean(KEY_REQUIRED, required)
-            .putBoolean(KEY_CLAIMED, claimed)
+            .putBoolean(KEY_CLAIMED, effectiveClaimed)
             .putBoolean(KEY_BLOCKED, blocked)
             .putBoolean(KEY_REJECT_DEV, rejectDev)
-            .putBoolean(KEY_SEAT_HELD, seatHeldByMe)
+            .putBoolean(KEY_SEAT_HELD, effectiveHeld)
             .putBoolean(KEY_SEAT_TAKEN, seatTaken)
-            .putBoolean(KEY_KICKED, kicked)
+            .putBoolean(KEY_KICKED, effectiveKicked)
             .putLong(KEY_UPDATED, System.currentTimeMillis());
-    if (codeHash != null && codeHash.length() >= 32) {
-      ed.putString(KEY_CODE_HASH, codeHash.trim().toLowerCase());
+    if (reason.isEmpty()) {
+      ed.remove(KEY_KICK_REASON);
+    } else {
+      ed.putString(KEY_KICK_REASON, reason);
+    }
+    if (nextHash != null) {
+      ed.putString(KEY_CODE_HASH, nextHash);
       if (hashUpdatedAt > 0) ed.putLong(KEY_HASH_AT, hashUpdatedAt);
     } else if (!required) {
       ed.remove(KEY_CODE_HASH);
     }
-    if (seatHeldByMe) {
+    if (effectiveHeld) {
       ed.putBoolean(KEY_PENDING_SYNC, false);
+    } else if (hashChanged && wasHeld) {
+      ed.putBoolean(KEY_PENDING_SYNC, false);
+      ed.remove(KEY_PENDING_CODE);
     }
     ed.apply();
-    boolean lost = wasHeld && required && (kicked || !seatHeldByMe);
+    boolean lost =
+        (hashChanged && wasHeld)
+            || (wasHeld && required && (effectiveKicked || !effectiveHeld));
     if (lost) {
       KickListener l = kickListener;
       if (l != null) l.onKickedOrLostSeat();
@@ -101,11 +140,29 @@ public final class StoreClaimPrefs {
 
   public static void cacheCodeHash(Context context, String codeHash, long updatedAt) {
     if (codeHash == null || codeHash.length() < 32) return;
-    prefs(context)
-        .edit()
-        .putString(KEY_CODE_HASH, codeHash.trim().toLowerCase())
-        .putLong(KEY_HASH_AT, updatedAt > 0 ? updatedAt : System.currentTimeMillis())
-        .apply();
+    String next = codeHash.trim().toLowerCase();
+    String prev = cachedCodeHash(context);
+    boolean wasHeld = isSeatHeld(context) || isClaimed(context);
+    boolean hashChanged = prev != null && prev.length() >= 32 && !prev.equals(next);
+    SharedPreferences.Editor ed =
+        prefs(context)
+            .edit()
+            .putString(KEY_CODE_HASH, next)
+            .putLong(KEY_HASH_AT, updatedAt > 0 ? updatedAt : System.currentTimeMillis());
+    if (hashChanged && wasHeld) {
+      ed.putBoolean(KEY_CLAIMED, false)
+          .putBoolean(KEY_SEAT_HELD, false)
+          .putBoolean(KEY_KICKED, true)
+          .putString(KEY_KICK_REASON, REASON_CODE_CHANGED)
+          .putBoolean(KEY_PENDING_SYNC, false)
+          .remove(KEY_PENDING_CODE)
+          .putLong(KEY_UPDATED, System.currentTimeMillis());
+    }
+    ed.apply();
+    if (hashChanged && wasHeld) {
+      KickListener l = kickListener;
+      if (l != null) l.onKickedOrLostSeat();
+    }
   }
 
   public static String cachedCodeHash(Context context) {
@@ -135,6 +192,7 @@ public final class StoreClaimPrefs {
             .putBoolean(KEY_SEAT_HELD, true)
             .putBoolean(KEY_SEAT_TAKEN, false)
             .putBoolean(KEY_KICKED, false)
+            .remove(KEY_KICK_REASON)
             .putBoolean(KEY_PENDING_SYNC, pendingSync)
             .putLong(KEY_UPDATED, System.currentTimeMillis());
     if (pendingSync && pendingCode != null && !pendingCode.isEmpty()) {
@@ -167,10 +225,19 @@ public final class StoreClaimPrefs {
         .putBoolean(KEY_CLAIMED, false)
         .putBoolean(KEY_SEAT_HELD, false)
         .putBoolean(KEY_KICKED, true)
+        .putString(KEY_KICK_REASON, REASON_KICKED)
         .putBoolean(KEY_PENDING_SYNC, false)
         .remove(KEY_PENDING_CODE)
         .putLong(KEY_UPDATED, System.currentTimeMillis())
         .apply();
+  }
+
+  public static String kickReason(Context context) {
+    return prefs(context).getString(KEY_KICK_REASON, "");
+  }
+
+  public static boolean wasCodeChanged(Context context) {
+    return REASON_CODE_CHANGED.equals(kickReason(context));
   }
 
   public static boolean isRequired(Context context) {
@@ -219,7 +286,10 @@ public final class StoreClaimPrefs {
     if (rejectDev(context) && DeviceIdentity.isEmulator()) {
       return "เครื่องจำลองถูกปิดกั้นช่วงทดลองหน้าร้าน";
     }
-    if (isKicked(context)) return "ถูกถอนสิทธิ์จากหลังบ้าน — กรอกรหัสร้านใหม่";
+    if (isKicked(context)) {
+      if (wasCodeChanged(context)) return "รหัสร้านเปลี่ยน — กรอกรหัสใหม่";
+      return "ถูกถอนสิทธิ์จากหลังบ้าน — กรอกรหัสร้านใหม่";
+    }
     if (isSeatTaken(context)) return "มีเครื่องอื่นใช้อยู่ — ให้หลังบ้านเตะเครื่องนั้นก่อน";
     if (!isSeatHeld(context)) return "กรอกรหัสร้านเพื่อเคลมเครื่องก่อนขาย";
     return "";
