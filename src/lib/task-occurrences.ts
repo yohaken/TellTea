@@ -14,7 +14,9 @@ import { getDb } from "./firebase";
 import type { TaskOccurrence, TaskOccurrenceStatus } from "./task-types";
 import {
   computeCompletedKind,
+  occurrenceDocId,
   type SyncCreateOp,
+  type SyncDeleteOp,
   type SyncMissedOp,
 } from "./task-weekly-logic";
 
@@ -96,13 +98,18 @@ export function subscribeTaskOccurrencesForAssignee(
 export async function applySyncOperations(
   create: SyncCreateOp[],
   markMissed: SyncMissedOp[],
+  deleteDupes: SyncDeleteOp[] = [],
 ): Promise<void> {
-  if (!create.length && !markMissed.length) return;
+  if (!create.length && !markMissed.length && !deleteDupes.length) return;
   const batch = writeBatch(getDb());
   const now = Date.now();
 
+  for (const op of deleteDupes) {
+    batch.delete(doc(getDb(), "taskOccurrences", op.occurrenceId));
+  }
+
   for (const op of create) {
-    const ref = doc(occurrencesCol());
+    const ref = doc(getDb(), "taskOccurrences", occurrenceDocId(op.templateId, op.periodKey));
     batch.set(ref, {
       templateId: op.templateId,
       periodKey: op.periodKey,

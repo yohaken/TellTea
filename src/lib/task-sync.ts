@@ -19,7 +19,15 @@ export async function runTaskOccurrenceSync(
   occurrences: TaskOccurrence[],
   now = Date.now(),
 ) {
-  const { create, markMissed } = planTaskOccurrenceSync(templates, occurrences, now);
-  await applySyncOperations(create, markMissed);
-  return { created: create.length, markedMissed: markMissed.length };
+  const { create, markMissed, deleteDupes } = planTaskOccurrenceSync(
+    templates,
+    occurrences,
+    now,
+  );
+  await applySyncOperations(create, markMissed, deleteDupes);
+  return {
+    created: create.length,
+    markedMissed: markMissed.length,
+    deletedDupes: deleteDupes.length,
+  };
 }

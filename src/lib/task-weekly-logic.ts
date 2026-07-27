@@ -2,6 +2,7 @@ import type { TaskChecklistItem, TaskOccurrence, TaskTemplate } from "./task-typ
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 export const DEFAULT_OPEN_DAYS_BEFORE = 3;
+const BANGKOK_OFFSET_MS = 7 * 60 * 60 * 1000;
 
 export const WEEKDAY_LABELS = [
   "อาทิตย์",
@@ -16,51 +17,67 @@ export const WEEKDAY_LABELS = [
 export type CompletedKind = "on_time" | "late" | "backfill";
 export type OccurrenceTab = "thisWeek" | "missed" | "history";
 
+const WEEKDAY_SHORT: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
+
+/** ปฏิทิน Asia/Bangkok — ไม่พึ่ง timezone ของเครื่อง/เซิร์ฟเวอร์ */
+export function bangkokCalendarParts(ms: number) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+  }).formatToParts(new Date(ms));
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value || "";
+  return {
+    y: Number(get("year")),
+    m: Number(get("month")),
+    d: Number(get("day")),
+    weekday: WEEKDAY_SHORT[get("weekday")] ?? 0,
+  };
+}
+
+/** เที่ยงคืนวันนั้นตามปฏิทินไทย (Asia/Bangkok) เป็น epoch ms */
 export function startOfLocalDay(ms: number) {
-  const d = new Date(ms);
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const { y, m, d } = bangkokCalendarParts(ms);
+  return Date.UTC(y, m - 1, d) - BANGKOK_OFFSET_MS;
 }
 
 export function periodKeyFromDue(dueDate: number) {
-  const d = new Date(startOfLocalDay(dueDate));
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  const { y, m, d } = bangkokCalendarParts(dueDate);
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+/** doc id คงที่ กัน client+CF สร้างซ้ำ */
+export function occurrenceDocId(templateId: string, periodKey: string) {
+  const tid = String(templateId || "").trim();
+  const pk = String(periodKey || "").trim();
+  return `${tid}_${pk}`;
 }
 
 export function labelWeekday(weekday: number) {
   return WEEKDAY_LABELS[weekday] ?? `วัน ${weekday}`;
 }
 
-/** วันรับผิดชอบของสัปดาห์ที่มี `ms` */
+/** วันรับผิดชอบของสัปดาห์ที่มี `ms` (ปฏิทินไทย) */
 export function dueDateForWeekContaining(ms: number, weekday: number) {
   const todayStart = startOfLocalDay(ms);
-  const todayDay = new Date(todayStart).getDay();
+  const todayDay = bangkokCalendarParts(ms).weekday;
   const daysBack = (todayDay - weekday + 7) % 7;
   return todayStart - daysBack * DAY_MS;
 }
 
 export function openAtForDue(dueDate: number, openDaysBefore = DEFAULT_OPEN_DAYS_BEFORE) {
   return startOfLocalDay(dueDate) - openDaysBefore * DAY_MS;
-}
-
-export function dueDatesToEnsure(now: number, weekday: number, openDaysBefore: number) {
-  const currentDue = dueDateForWeekContaining(now, weekday);
-  // สร้างแค่สัปดาห์นี้ + สัปดาห์หน้า — ไม่ย้อนสร้างสัปดาห์เก่าซ้ำหลังลบ
-  const candidates = [currentDue, currentDue + 7 * DAY_MS];
-  const out: number[] = [];
-  for (const due of candidates) {
-    if (now >= openAtForDue(due, openDaysBefore)) out.push(due);
-  }
-  return [...new Set(out)].sort((a, b) => a - b);
-}
-
-export function isPeriodDismissed(
-  template: Pick<TaskTemplate, "dismissedPeriodKeys">,
-  periodKey: string,
-) {
-  return (template.dismissedPeriodKeys || []).includes(periodKey);
 }
 
 export function shouldMarkMissed(
@@ -70,6 +87,29 @@ export function shouldMarkMissed(
 ) {
   const nextDue = dueDate + 7 * DAY_MS;
   return now >= openAtForDue(nextDue, openDaysBefore);
+}
+
+/**
+ * รอบที่ต้องมีในระบบ: เฉพาะรอบที่เปิดส่งแล้ว และยังไม่พ้นเกณฑ์พลาด
+ * → ไม่สร้างรอบสัปดาห์ก่อนเป็น "พลาด" ทันทีตอนสร้างกติกาใหม่
+ */
+export function dueDatesToEnsure(now: number, weekday: number, openDaysBefore: number) {
+  const currentDue = dueDateForWeekContaining(now, weekday);
+  const candidates = [currentDue, currentDue + 7 * DAY_MS];
+  const out: number[] = [];
+  for (const due of candidates) {
+    if (now < openAtForDue(due, openDaysBefore)) continue;
+    if (shouldMarkMissed(due, now, openDaysBefore)) continue;
+    out.push(due);
+  }
+  return [...new Set(out)].sort((a, b) => a - b);
+}
+
+export function isPeriodDismissed(
+  template: Pick<TaskTemplate, "dismissedPeriodKeys">,
+  periodKey: string,
+) {
+  return (template.dismissedPeriodKeys || []).includes(periodKey);
 }
 
 export function computeCompletedKind(
@@ -118,24 +158,67 @@ export type SyncCreateOp = {
 };
 
 export type SyncMissedOp = { occurrenceId: string };
+export type SyncDeleteOp = { occurrenceId: string };
+
+function statusRank(status: string) {
+  if (status === "completed") return 3;
+  if (status === "missed") return 2;
+  return 1;
+}
+
+function preferOccurrence(a: TaskOccurrence, b: TaskOccurrence) {
+  const ideal = occurrenceDocId(a.templateId, a.periodKey);
+  if (a.id === ideal && b.id !== ideal) return -1;
+  if (b.id === ideal && a.id !== ideal) return 1;
+  const sr = statusRank(b.status) - statusRank(a.status);
+  if (sr) return sr;
+  return (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0);
+}
 
 export function computeSyncOperations(
   templates: TaskTemplate[],
   occurrences: TaskOccurrence[],
   now = Date.now(),
 ) {
-  const byKey = new Map<string, TaskOccurrence>();
+  const deleteDupes: SyncDeleteOp[] = [];
+  const groups = new Map<string, TaskOccurrence[]>();
   for (const occ of occurrences) {
-    byKey.set(`${occ.templateId}:${occ.periodKey}`, occ);
+    const key = `${occ.templateId}:${occ.periodKey}`;
+    const arr = groups.get(key) || [];
+    arr.push(occ);
+    groups.set(key, arr);
+  }
+
+  const byKey = new Map<string, TaskOccurrence>();
+  for (const [key, group] of groups) {
+    if (group.length === 1) {
+      byKey.set(key, group[0]!);
+      continue;
+    }
+    const sorted = [...group].sort(preferOccurrence);
+    const keep = sorted[0]!;
+    byKey.set(key, keep);
+    for (let i = 1; i < sorted.length; i++) {
+      deleteDupes.push({ occurrenceId: sorted[i]!.id });
+    }
   }
 
   const create: SyncCreateOp[] = [];
   const markMissed: SyncMissedOp[] = [];
+  const missedIds = new Set<string>();
+  const deletedIds = new Set(deleteDupes.map((d) => d.occurrenceId));
+
+  function pushMissed(id: string) {
+    if (!id || missedIds.has(id) || deletedIds.has(id)) return;
+    missedIds.add(id);
+    markMissed.push({ occurrenceId: id });
+  }
 
   for (const tpl of templates) {
     if (!tpl.active) continue;
     const openDays = tpl.openDaysBefore ?? DEFAULT_OPEN_DAYS_BEFORE;
     const dues = dueDatesToEnsure(now, tpl.weekday, openDays);
+    const ensuredKeys = new Set(dues.map((due) => periodKeyFromDue(due)));
 
     for (const dueDate of dues) {
       const periodKey = periodKeyFromDue(dueDate);
@@ -155,16 +238,31 @@ export function computeSyncOperations(
       }
     }
 
+    const openPending: TaskOccurrence[] = [];
     for (const occ of occurrences) {
       if (occ.templateId !== tpl.id) continue;
+      if (deletedIds.has(occ.id)) continue;
       if (occ.status !== "pending") continue;
       if (shouldMarkMissed(occ.dueDate, now, openDays)) {
-        markMissed.push({ occurrenceId: occ.id });
+        pushMissed(occ.id);
+        continue;
+      }
+      openPending.push(occ);
+    }
+
+    // ค้างเปิดได้แค่ 1 รอบต่อกติกา — เก็บรอบที่อยู่ใน ensured / due ล่าสุด
+    if (openPending.length > 1) {
+      const preferred = openPending.filter((o) => ensuredKeys.has(o.periodKey));
+      const pool = preferred.length ? preferred : openPending;
+      pool.sort((a, b) => b.dueDate - a.dueDate || (b.updatedAt || 0) - (a.updatedAt || 0));
+      const keepId = pool[0]!.id;
+      for (const occ of openPending) {
+        if (occ.id !== keepId) pushMissed(occ.id);
       }
     }
   }
 
-  return { create, markMissed };
+  return { create, markMissed, deleteDupes };
 }
 
 export function openDaysFromOcc(occ: Pick<{ dueDate: number; openAt: number }, "dueDate" | "openAt">) {
@@ -195,10 +293,23 @@ export function filterOccurrencesByTab(
     });
   }
 
-  return sorted.filter((o) => {
+  // สัปดาห์นี้ / ค้างเปิด — การ์ดเดียวต่อกติกา
+  const open = sorted.filter((o) => {
     if (o.status !== "pending") return false;
     return !shouldMarkMissed(o.dueDate, now, openDaysFromOcc(o));
   });
+  const byTpl = new Map<string, TaskOccurrence>();
+  for (const o of open) {
+    const prev = byTpl.get(o.templateId);
+    if (
+      !prev ||
+      o.dueDate > prev.dueDate ||
+      (o.dueDate === prev.dueDate && (o.updatedAt || 0) > (prev.updatedAt || 0))
+    ) {
+      byTpl.set(o.templateId, o);
+    }
+  }
+  return [...byTpl.values()].sort((a, b) => b.dueDate - a.dueDate || b.updatedAt - a.updatedAt);
 }
 
 export type DisciplineRow = {
