@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="npos_bg">#F7F7F5</color>
+    <color name="npos_bg_soft">#EEF0F4</color>
+    <color name="npos_surface">#FFFFFF</color>
+    <color name="npos_ink">#1A2E24</color>
+    <color name="npos_ink_soft">#5B6B7A</color>
+    <color name="npos_muted">#6B7280</color>
+    <color name="npos_orange">#E85D24</color>
+    <color name="npos_orange_soft">#FFF1E8</color>
+    <color name="npos_ghost">#F4F6F8</color>
+    <color name="npos_ok">#2E6B4E</color>
+    <color name="npos_border">#E5E7EB</color>
+</resources>

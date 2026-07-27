@@ -272,49 +272,26 @@
 
                     <TextView
                         android:id="@+id/payCashButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        style="@style/Npos.Btn.Primary"
                         android:layout_marginTop="8dp"
-                        android:background="@drawable/npos_touch_primary"
-                        android:gravity="center"
-                        android:minHeight="64dp"
-                        android:paddingTop="14dp"
-                        android:paddingBottom="14dp"
+                        android:maxWidth="999dp"
                         android:text="@string/btn_pay_cash"
-                        android:textColor="#FFFFFF"
-                        android:textSize="17sp"
-                        android:textStyle="bold" />
+                        android:textSize="16sp" />
 
                     <TextView
                         android:id="@+id/payPromptButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        style="@style/Npos.Btn.Secondary"
                         android:layout_marginTop="8dp"
-                        android:background="@drawable/npos_touch_secondary"
-                        android:gravity="center"
-                        android:minHeight="52dp"
-                        android:paddingTop="12dp"
-                        android:paddingBottom="12dp"
+                        android:maxWidth="999dp"
                         android:text="@string/btn_pay_promptpay"
-                        android:textColor="#E85D24"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
                         android:visibility="gone" />
 
                     <TextView
                         android:id="@+id/xReportButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        style="@style/Npos.Btn.Ghost"
                         android:layout_marginTop="8dp"
-                        android:background="@drawable/npos_touch_ghost"
-                        android:gravity="center"
-                        android:minHeight="44dp"
-                        android:paddingTop="10dp"
-                        android:paddingBottom="10dp"
-                        android:text="@string/btn_x_report"
-                        android:textColor="#1E2D3D"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
+                        android:maxWidth="999dp"
+                        android:text="@string/btn_x_report" />
 
                     <!-- Kept for code wiring; nav moved to left rail -->
                     <Button

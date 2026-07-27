@@ -2,7 +2,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#EEF0F4">
+    android:background="@color/npos_bg_soft">
 
     <!-- Clock-in (shift closed) -->
     <ScrollView
@@ -23,18 +23,20 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="36dp"
+                android:fontFamily="@font/prompt_bold"
+                android:letterSpacing="-0.01"
                 android:text="@string/app_name"
-                android:textColor="#1A2E24"
-                android:textSize="26sp"
-                android:textStyle="bold" />
+                android:textColor="@color/npos_ink"
+                android:textSize="@dimen/npos_text_brand" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:fontFamily="@font/prompt_semibold"
                 android:text="@string/clock_in_title"
-                android:textColor="#222222"
-                android:textSize="22sp" />
+                android:textColor="@color/npos_ink"
+                android:textSize="@dimen/npos_text_title" />
 
             <TextView
                 android:id="@+id/clockInTime"
@@ -93,19 +95,9 @@
 
             <TextView
                 android:id="@+id/grantPermsButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                style="@style/Npos.Btn.Ghost"
                 android:layout_marginTop="10dp"
-                android:background="@drawable/npos_touch_ghost"
-                android:gravity="center"
-                android:maxWidth="420dp"
-                android:minHeight="56dp"
-                android:paddingTop="14dp"
-                android:paddingBottom="14dp"
                 android:text="@string/btn_grant_all_perms"
-                android:textColor="#1E2D3D"
-                android:textSize="15sp"
-                android:textStyle="bold"
                 android:visibility="gone" />
 
             <TextView
@@ -121,36 +113,24 @@
 
             <EditText
                 android:id="@+id/storeClaimInput"
+                style="@style/Npos.Input"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
                 android:layout_marginTop="10dp"
-                android:background="@drawable/npos_touch_ghost"
                 android:gravity="center"
                 android:hint="@string/store_claim_input_hint"
                 android:inputType="textCapCharacters"
                 android:maxLength="16"
-                android:maxWidth="420dp"
-                android:minHeight="52dp"
-                android:padding="12dp"
-                android:textColor="#1A2E24"
-                android:textSize="18sp"
+                android:maxWidth="@dimen/npos_btn_max_w"
+                android:textSize="17sp"
                 android:visibility="gone" />
 
             <TextView
                 android:id="@+id/storeClaimButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                style="@style/Npos.Btn.Secondary"
                 android:layout_marginTop="10dp"
-                android:background="@drawable/npos_touch_secondary"
-                android:gravity="center"
-                android:maxWidth="420dp"
-                android:minHeight="52dp"
-                android:paddingTop="12dp"
-                android:paddingBottom="12dp"
                 android:text="@string/store_claim_btn"
-                android:textColor="#E85D24"
-                android:textSize="16sp"
-                android:textStyle="bold"
                 android:visibility="gone" />
 
             <TextView
@@ -165,52 +145,23 @@
 
             <TextView
                 android:id="@+id/claimUpdateButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                style="@style/Npos.Btn.Ghost"
                 android:layout_marginTop="8dp"
-                android:background="@drawable/npos_touch_secondary"
-                android:gravity="center"
-                android:maxWidth="420dp"
-                android:minHeight="48dp"
-                android:paddingTop="10dp"
-                android:paddingBottom="10dp"
                 android:text="@string/claim_update_btn"
-                android:textColor="#1E2D3D"
-                android:textSize="15sp"
-                android:textStyle="bold"
                 android:visibility="gone" />
 
             <TextView
                 android:id="@+id/openShiftButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="28dp"
-                android:background="@drawable/npos_touch_primary"
-                android:gravity="center"
-                android:maxWidth="420dp"
-                android:minHeight="64dp"
-                android:paddingTop="16dp"
-                android:paddingBottom="16dp"
+                style="@style/Npos.Btn.Primary"
+                android:layout_marginTop="24dp"
                 android:text="@string/btn_open_shift"
-                android:textColor="#FFFFFF"
-                android:textSize="20sp"
-                android:textStyle="bold" />
+                android:textSize="17sp" />
 
             <TextView
                 android:id="@+id/settingsButtonClock"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/npos_touch_secondary"
-                android:gravity="center"
-                android:maxWidth="420dp"
-                android:minHeight="52dp"
-                android:paddingTop="12dp"
-                android:paddingBottom="12dp"
-                android:text="@string/btn_settings_short"
-                android:textColor="#E85D24"
-                android:textSize="15sp"
-                android:textStyle="bold" />
+                style="@style/Npos.Btn.Secondary"
+                android:layout_marginTop="10dp"
+                android:text="@string/btn_settings_short" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -323,35 +274,21 @@
 
                 <TextView
                     android:id="@+id/closeShiftButton"
+                    style="@style/Npos.Btn.Ghost"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
                     android:layout_marginEnd="6dp"
                     android:layout_weight="1"
-                    android:background="@drawable/npos_touch_ghost"
-                    android:gravity="center"
-                    android:minHeight="52dp"
-                    android:paddingTop="12dp"
-                    android:paddingBottom="12dp"
-                    android:text="@string/btn_close_shift"
-                    android:textColor="#1E2D3D"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:maxWidth="999dp"
+                    android:text="@string/btn_close_shift" />
 
                 <TextView
                     android:id="@+id/settingsButtonSell"
+                    style="@style/Npos.Btn.Secondary"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
                     android:layout_marginStart="6dp"
                     android:layout_weight="1"
-                    android:background="@drawable/npos_touch_secondary"
-                    android:gravity="center"
-                    android:minHeight="52dp"
-                    android:paddingTop="12dp"
-                    android:paddingBottom="12dp"
-                    android:text="@string/btn_settings_short"
-                    android:textColor="#E85D24"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:maxWidth="999dp"
+                    android:text="@string/btn_settings_short" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

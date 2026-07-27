@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 290/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+55/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.32"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 291/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+56/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.33"/);
 assert.match(read("docs/npos-smart-ui-scale-checklist.md"), /UiScale|เลื่อน|คิดเงิน|เวอร์ชัน/);
 
 assert.ok(
@@ -34,7 +34,7 @@ assert.match(sell, /payPrimaryMinPx|applySmartChrome/);
 
 const layout = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
 assert.match(layout, /sellVersion/);
-assert.match(layout, /npos_touch_primary/);
+assert.match(layout, /npos_touch_primary|Npos\.Btn\.Primary/);
 assert.match(layout, /menuScroll|scrollbars="vertical"/);
 assert.match(layout, /payCashButton/);
 

@@ -8,7 +8,6 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,6 +25,7 @@ import app.telltea.npos.printer.EscPos;
 import app.telltea.npos.printer.PrinterEndpoint;
 import app.telltea.npos.printer.PrinterPrefs;
 import app.telltea.npos.printer.PrinterTransport;
+import app.telltea.npos.ui.NposFonts;
 import app.telltea.npos.update.ApkInstaller;
 import app.telltea.npos.update.UpdateChecker;
 import app.telltea.npos.update.UpdateConfig;
@@ -43,9 +43,9 @@ public class SettingsActivity extends Activity {
     private TextView bannerView;
     private TextView customerStatus;
     private TextView printerStatus;
-    private Button updateButton;
-    private Button printerTestButton;
-    private Button drawerKickButton;
+    private TextView updateButton;
+    private TextView printerTestButton;
+    private TextView drawerKickButton;
 
     private UpdateChecker checker;
     private UpdateDownloader downloader;
@@ -64,6 +64,7 @@ public class SettingsActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
+        NposFonts.applyActivity(this);
 
         settingsVersion = findViewById(R.id.settingsVersion);
         statusView = findViewById(R.id.status);

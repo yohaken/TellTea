@@ -99,6 +99,7 @@ public class SellActivity extends Activity {
     }
     setContentView(R.layout.activity_sell);
     uiScale = UiScale.from(this);
+    app.telltea.npos.ui.NposFonts.applyActivity(this);
 
     categoryBar = findViewById(R.id.categoryBar);
     menuGrid = findViewById(R.id.menuGrid);

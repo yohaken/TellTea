@@ -100,10 +100,10 @@ public final class UiScale {
     float captionSp = sp(12.5f * scale);
     float priceSp = sp(12f * scale);
 
-    int touchMinPx = Math.max(dp(density, 48), Math.round(52 * density * scale));
-    // Web pay primary ~3.25–3.6rem tall; keep cash CTA dominant.
-    int payPrimaryMinPx = Math.max(dp(density, 56), Math.round(64 * density * scale));
-    int paySecondaryMinPx = Math.max(dp(density, 48), Math.round(52 * density * scale));
+    int touchMinPx = Math.max(dp(density, 44), Math.round(44 * density * scale));
+    // Friendly CTA — compact vs old 64dp bars; still ≥52dp primary.
+    int payPrimaryMinPx = Math.max(dp(density, 52), Math.round(52 * density * scale));
+    int paySecondaryMinPx = Math.max(dp(density, 44), Math.round(44 * density * scale));
     // Web media max-height ~5.5rem — shrink tiles so ~5 rows fit, scroll vertically.
     int menuMediaMaxPx = Math.max(dp(density, 48), Math.round(5.2f * 16f * density * scale));
 

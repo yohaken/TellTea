@@ -2,7 +2,6 @@ package app.telltea.npos.shell;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Typeface;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -22,6 +21,7 @@ import app.telltea.npos.SettingsActivity;
 import app.telltea.npos.ShiftActivity;
 import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.ImageLoader;
+import app.telltea.npos.ui.NposFonts;
 import app.telltea.npos.ui.UiScale;
 
 /**
@@ -53,6 +53,7 @@ public final class PosShellNav {
     TextView brand = activity.findViewById(R.id.sidebarBrand);
     if (brand != null) {
       brand.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.brandSp);
+      brand.setTypeface(NposFonts.bold(activity));
     }
     View refreshBtn = activity.findViewById(R.id.sidebarRefreshBtn);
     if (refreshBtn != null) {
@@ -124,6 +125,7 @@ public final class PosShellNav {
     }
     if (lock != null) {
       lock.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.navSp);
+      lock.setTypeface(NposFonts.medium(activity));
       lock.setMinHeight(ui.touchMinPx);
       lock.setOnClickListener(
           v -> {
@@ -159,7 +161,7 @@ public final class PosShellNav {
     TextView row = new TextView(activity);
     row.setText(labelRes);
     row.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.navSp);
-    row.setTypeface(Typeface.DEFAULT_BOLD);
+    row.setTypeface(NposFonts.medium(activity));
     row.setGravity(Gravity.CENTER_VERTICAL);
     int padH = ui.dp(10);
     int padV = Math.max(ui.dp(8), Math.round(ui.touchMinPx * 0.22f));
