@@ -5,6 +5,7 @@
 const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
 const { completePosSaleAdmin, voidPosSaleAdmin } = require("./pos-complete-sale");
+const { assertNposDeviceAllowed } = require("./npos-device-gate");
 
 function cors(res) {
   res.set("Access-Control-Allow-Origin", "*");
@@ -35,6 +36,19 @@ function requireInstallId(body) {
     return null;
   }
   return installId;
+}
+
+async function rejectIfDeviceNotAllowed(db, installId, res) {
+  const gate = await assertNposDeviceAllowed(db, installId);
+  if (gate.ok) return null;
+  res.status(403).json({
+    ok: false,
+    error: gate.error || "device_not_allowed",
+    code: gate.code || "device_not_allowed",
+    storeClaimRequired: gate.required,
+    storeClaimed: gate.claimed,
+  });
+  return gate;
 }
 
 function shiftFromHour(h) {
@@ -185,6 +199,7 @@ exports.nposToggleSoldOut = functions.region("asia-southeast1").https.onRequest(
   const soldOut = body.soldOut === true;
   try {
     const db = getFirestore();
+    if (await rejectIfDeviceNotAllowed(db, installId, res)) return;
     const ref = db.doc(`menuItems/${itemId}`);
     const snap = await ref.get();
     if (!snap.exists) {
@@ -211,18 +226,24 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
     const x = snap.exists ? snap.data() || {} : {};
     res.status(200).json({
       ok: true,
-      shopName: asString(x.shopName || x.shopNameTh, 120) || "TellTea",
+      shopName: asString(x.shopName, 120) || "TellTea",
+      shopNameTh: asString(x.shopNameTh, 120),
       shopAddress: asString(x.shopAddress, 200),
       shopPhone: asString(x.shopPhone, 40),
       promptPayId: asString(x.promptPayId, 32),
       autoPrintReceipt: x.autoPrintReceipt !== false,
+      receiptStaffName: asString(x.receiptStaffName, 80) || "หน้าร้าน",
       receiptFooterNote: asString(x.receiptFooterNote, 160),
       menuArrangeMode: x.menuArrangeMode === "bestsellers" ? "bestsellers" : "fix",
       bestsellerWindowDays:
         typeof x.bestsellerWindowDays === "number" && x.bestsellerWindowDays >= 7
           ? Math.min(14, Math.round(x.bestsellerWindowDays))
           : 7,
-      updatedAt: typeof x.shopSettingsUpdatedAt === "number" ? x.shopSettingsUpdatedAt : Date.now(),
+      storeClaimRequired:
+        typeof x.storeClaimCodeHash === "string" &&
+        x.storeClaimCodeHash.length >= 32 &&
+        x.storeClaimRequired !== false,
+      updatedAt: typeof x.shopSettingsUpdatedAt === "number" ? x.shopSettingsUpdatedAt : 0,
     });
   } catch (err) {
     console.error("nposShopSettings", err);
@@ -248,6 +269,7 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
   }
   try {
     const db = getFirestore();
+    if (await rejectIfDeviceNotAllowed(db, installId, res)) return;
     const now = Date.now();
     const bangkokHour = Number(
       new Intl.DateTimeFormat("en-GB", {
@@ -300,6 +322,7 @@ exports.nposSessionClose = functions.region("asia-southeast1").https.onRequest(a
   }
   try {
     const db = getFirestore();
+    if (await rejectIfDeviceNotAllowed(db, installId, res)) return;
     const ref = db.doc(`posSessions/${sessionId}`);
     const snap = await ref.get();
     if (!snap.exists) {
@@ -363,6 +386,7 @@ exports.nposCompleteSale = functions.region("asia-southeast1").https.onRequest(a
   }
   try {
     const db = getFirestore();
+    if (await rejectIfDeviceNotAllowed(db, installId, res)) return;
     const payload = {
       clientMutationId: body.clientMutationId,
       deviceId: installId,
@@ -405,6 +429,7 @@ exports.nposVoidSale = functions.region("asia-southeast1").https.onRequest(async
   }
   try {
     const db = getFirestore();
+    if (await rejectIfDeviceNotAllowed(db, installId, res)) return;
     const result = await voidPosSaleAdmin(
       db,
       {
@@ -446,6 +471,7 @@ exports.nposReorderCategories = functions.region("asia-southeast1").https.onRequ
   }
   try {
     const db = getFirestore();
+    if (await rejectIfDeviceNotAllowed(db, installId, res)) return;
     const batch = db.batch();
     let n = 0;
     for (let i = 0; i < ids.length && i < 80; i++) {

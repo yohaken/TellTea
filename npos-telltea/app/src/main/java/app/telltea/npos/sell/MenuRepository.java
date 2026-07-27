@@ -249,7 +249,17 @@ public final class MenuRepository {
                     code >= 200 && code < 300 ? conn.getInputStream() : conn.getErrorStream();
             String raw = readAll(stream);
             if (code < 200 || code >= 300) {
-                throw new IllegalStateException("HTTP " + code + " " + raw);
+                try {
+                    JSONObject err = new JSONObject(raw.isEmpty() ? "{}" : raw);
+                    if (!err.has("ok")) err.put("ok", false);
+                    if (!err.has("error") || err.optString("error").isEmpty()) {
+                        err.put("error", "HTTP " + code);
+                    }
+                    err.put("httpStatus", code);
+                    return err;
+                } catch (Exception parseErr) {
+                    throw new IllegalStateException("HTTP " + code + " " + raw);
+                }
             }
             return new JSONObject(raw.isEmpty() ? "{}" : raw);
         } finally {

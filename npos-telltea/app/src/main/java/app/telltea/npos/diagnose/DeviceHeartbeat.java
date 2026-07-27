@@ -71,6 +71,12 @@ public final class DeviceHeartbeat {
                         res.optString("pairingCode", DeviceIdentity.pairingCode(app));
                 long seen = res.optLong("lastSeenAt", System.currentTimeMillis());
                 lastSentAt.set(seen);
+                StoreClaimPrefs.applyFromServer(
+                        app,
+                        res.optBoolean("storeClaimRequired", false),
+                        res.optBoolean("storeClaimed", false),
+                        res.optBoolean("deviceBlocked", false),
+                        res.optBoolean("storeClaimRejectDev", true));
                 handleCaptureCommand(app, res);
                 if (callback != null) callback.onSuccess(pairing, seen);
             } catch (Exception e) {

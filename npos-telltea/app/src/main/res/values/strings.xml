@@ -35,6 +35,12 @@
     <string name="status_signature_hint">ถ้าติดตั้งทับไม่ได้: ถอนแอปนี้ครั้งหนึ่ง แล้วกดลิงก์ด้านล่าง</string>
     <string name="install_page_hint">หน้าติดตั้ง: telltea-pos.web.app/install/</string>
     <string name="device_code_label">รหัสเครื่อง %1$s</string>
+    <string name="store_claim_hint">กรอกรหัสร้านเพื่อเคลมเครื่อง (ครั้งเดียว) ก่อนเปิดกะ</string>
+    <string name="store_claim_input_hint">รหัสร้าน</string>
+    <string name="store_claim_btn">เคลมเครื่อง</string>
+    <string name="store_claim_busy">กำลังเคลม…</string>
+    <string name="store_claim_ok">เคลมเครื่องแล้ว — พร้อมเปิดกะ</string>
+    <string name="store_claim_blocked">เครื่องนี้ยังไม่เคลมหรือถูกบล็อก — ส่งบิลไม่ได้</string>
     <string name="heartbeat_idle">กำลังเชื่อม…</string>
     <string name="heartbeat_sending">กำลังเชื่อมร้าน…</string>
     <string name="heartbeat_ok">ออนไลน์</string>

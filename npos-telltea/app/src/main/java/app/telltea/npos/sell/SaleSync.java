@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 
 import app.telltea.npos.diagnose.DeviceIdentity;
 import app.telltea.npos.diagnose.OpsLogger;
+import app.telltea.npos.diagnose.StoreClaimPrefs;
 import app.telltea.npos.printer.EscPos;
 import app.telltea.npos.printer.PrinterEndpoint;
 import app.telltea.npos.printer.PrinterPrefs;
@@ -64,6 +65,15 @@ public final class SaleSync {
         executor.execute(
                 () -> {
                     try {
+                        if (StoreClaimPrefs.blocksWrites(app)) {
+                            OpsLogger.warn(
+                                    app,
+                                    "shift",
+                                    "เปิดรอบถูกบล็อก",
+                                    StoreClaimPrefs.blockReason(app));
+                            if (done != null) done.run();
+                            return;
+                        }
                         long openedAt = System.currentTimeMillis();
                         String sessionId = DeviceIdentity.getOrCreateInstallId(app) + "_" + openedAt;
                         JSONObject body = new JSONObject();
@@ -75,22 +85,58 @@ public final class SaleSync {
                             ShiftPrefs.open(
                                     app, sessionId, res.optString("shift", "morning"), openedAt, opening);
                             OpsLogger.info(app, "shift", "เปิดรอบแล้ว", sessionId + " float=" + opening);
+                        } else if (isDeviceGateError(res)) {
+                            OpsLogger.warn(
+                                    app,
+                                    "shift",
+                                    "เปิดรอบถูกบล็อก",
+                                    res.optString("error", res.optString("code")));
                         } else {
                             ShiftPrefs.open(app, sessionId, "morning", openedAt, opening);
                             OpsLogger.warn(app, "shift", "เปิดรอบออฟไลน์", res.optString("error"));
                         }
                     } catch (Exception e) {
-                        long openedAt = System.currentTimeMillis();
-                        String sessionId = DeviceIdentity.getOrCreateInstallId(app) + "_" + openedAt;
-                        ShiftPrefs.open(app, sessionId, "morning", openedAt, opening);
-                        OpsLogger.warn(
-                                app,
-                                "shift",
-                                "เปิดรอบออฟไลน์",
-                                e.getMessage() == null ? "" : e.getMessage());
+                        if (isDeviceGateException(e) || StoreClaimPrefs.blocksWrites(app)) {
+                            OpsLogger.warn(
+                                    app,
+                                    "shift",
+                                    "เปิดรอบถูกบล็อก",
+                                    e.getMessage() == null ? "" : e.getMessage());
+                        } else {
+                            long openedAt = System.currentTimeMillis();
+                            String sessionId =
+                                    DeviceIdentity.getOrCreateInstallId(app) + "_" + openedAt;
+                            ShiftPrefs.open(app, sessionId, "morning", openedAt, opening);
+                            OpsLogger.warn(
+                                    app,
+                                    "shift",
+                                    "เปิดรอบออฟไลน์",
+                                    e.getMessage() == null ? "" : e.getMessage());
+                        }
                     }
                     if (done != null) done.run();
                 });
+    }
+
+    private static boolean isDeviceGateError(JSONObject res) {
+        if (res == null) return false;
+        String code = res.optString("code", "");
+        String err = res.optString("error", "");
+        return code.contains("device_")
+                || err.contains("device_not_claimed")
+                || err.contains("device_blocked")
+                || err.contains("device_dev_rejected")
+                || err.contains("เคลม")
+                || err.contains("บล็อก");
+    }
+
+    private static boolean isDeviceGateException(Exception e) {
+        String m = e == null || e.getMessage() == null ? "" : e.getMessage();
+        return m.contains("device_not_claimed")
+                || m.contains("device_blocked")
+                || m.contains("device_dev_rejected")
+                || m.contains("device_not_allowed")
+                || m.contains("device_unknown");
     }
 
     public void closeSession(Context context, Runnable done) {
@@ -606,9 +652,15 @@ public final class SaleSync {
             String paymentMethod,
             SaleCallback callback)
             throws Exception {
+        if (StoreClaimPrefs.blocksWrites(app)) {
+            throw new IllegalStateException(StoreClaimPrefs.blockReason(app));
+        }
         JSONObject saleBody = saleBodyFromOutbox(payload);
         JSONObject res = MenuRepository.postJson(SALE_URL, saleBody);
         if (!res.optBoolean("ok", false)) {
+            if (isDeviceGateError(res)) {
+                throw new IllegalStateException(res.optString("error", "device_not_allowed"));
+            }
             throw new IllegalStateException(res.optString("error", "sale_failed"));
         }
         String billNo = res.optString("billNo", "—");

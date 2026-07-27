@@ -1,6 +1,6 @@
 # nPos — Float open crash + P0 leave float
 
-อัปเดต: **1.14.21** · ship **1.14.23** · `APP_BUILD` 254 · `POS_BUILD` 74 · `versionCode` 45  
+อัปเดต: **1.14.21** · ship **1.14.24** · `APP_BUILD` 278 · `POS_BUILD` 77 · `versionCode` 47  
 
 ## อาการที่รายงาน
 กดเข้างาน → กรอกเงินทอน (เช่น 500) → แอปเด้งปิด · เปิดใหม่แล้วยังอยู่ในกะ

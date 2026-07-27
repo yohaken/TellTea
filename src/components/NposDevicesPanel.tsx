@@ -19,6 +19,7 @@ import {
   requestNposScreenCapture,
   setNposCaptureInterval,
   setNposDeviceBlocked,
+  setNposDeviceStoreClaimed,
   subscribePosDevicesAdmin,
   withResolvedStableKey,
   type PosDevice,
@@ -98,6 +99,8 @@ function DeviceCard({
   onCapture,
   onClearCaptures,
   onInterval,
+  onGrantClaim,
+  onRevokeClaim,
 }: {
   d: Row;
   now: number;
@@ -108,6 +111,8 @@ function DeviceCard({
   onCapture: () => void;
   onClearCaptures: () => void;
   onInterval: (mins: number) => void;
+  onGrantClaim: () => void;
+  onRevokeClaim: () => void;
 }) {
   const online = isPosDeviceOnline(d.lastSeenAt, now);
   const machine = shortStableKey(d.stableKey, d.id);
@@ -126,6 +131,12 @@ function DeviceCard({
         รหัส {d.pairingCode} · เครื่อง {machine} · APK {d.nativeShellBuild || d.appBuild || "—"} ·{" "}
         {d.deviceHint || "android"}
         {d.isEmulator ? " · emulator" : ""}
+      </p>
+      <p className="muted npos-diagnose-id">
+        เคลมร้าน{" "}
+        {d.storeClaimed
+          ? `แล้ว${d.storeClaimMethod ? ` (${d.storeClaimMethod})` : ""}`
+          : "ยังไม่เคลม — ส่งบิลไม่ได้ถ้าเกตเปิด"}
       </p>
       <p className="muted npos-diagnose-id">
         จอลูกค้า {d.customerDisplay || "—"} · แคปล่าสุด{" "}
@@ -180,6 +191,15 @@ function DeviceCard({
             <option value="30">30 นาที</option>
           </select>
         </label>
+        {d.storeClaimed ? (
+          <button type="button" className="npos-device-btn" disabled={busy} onClick={onRevokeClaim}>
+            ถอนเคลม
+          </button>
+        ) : (
+          <button type="button" className="npos-device-btn" disabled={busy} onClick={onGrantClaim}>
+            อนุญาตเคลม
+          </button>
+        )}
         {d.deviceClass === "blocked" ? (
           <button type="button" className="npos-device-btn" disabled={busy} onClick={onUnblock}>
             ปลดบล็อก
@@ -205,6 +225,8 @@ function ClassSection({
   onCapture,
   onClearCaptures,
   onInterval,
+  onGrantClaim,
+  onRevokeClaim,
 }: {
   cls: NposDeviceClass;
   rows: Row[];
@@ -216,6 +238,8 @@ function ClassSection({
   onCapture: (d: Row) => void;
   onClearCaptures: (d: Row) => void;
   onInterval: (d: Row, mins: number) => void;
+  onGrantClaim: (d: Row) => void;
+  onRevokeClaim: (d: Row) => void;
 }) {
   if (rows.length === 0) return null;
   return (
@@ -237,6 +261,8 @@ function ClassSection({
             onCapture={() => onCapture(d)}
             onClearCaptures={() => onClearCaptures(d)}
             onInterval={(mins) => onInterval(d, mins)}
+            onGrantClaim={() => onGrantClaim(d)}
+            onRevokeClaim={() => onRevokeClaim(d)}
           />
         ))}
       </ul>
@@ -431,6 +457,38 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     }
   }
 
+  async function grantClaim(d: Row) {
+    if (!actorId) {
+      onError("ต้องเข้าสู่ระบบเจ้าของก่อนอนุญาตเคลม");
+      return;
+    }
+    setBusyId(d.id);
+    try {
+      await setNposDeviceStoreClaimed(d.id, true, { isEmulator: d.isEmulator });
+      onError(null);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function revokeClaim(d: Row) {
+    if (!actorId) {
+      onError("ต้องเข้าสู่ระบบเจ้าของก่อนถอนเคลม");
+      return;
+    }
+    setBusyId(d.id);
+    try {
+      await setNposDeviceStoreClaimed(d.id, false, { isEmulator: d.isEmulator });
+      onError(null);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <SettingsFold
       title={
@@ -468,6 +526,8 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             onCapture={capture}
             onClearCaptures={clearCaptures}
             onInterval={setIntervalMins}
+            onGrantClaim={grantClaim}
+            onRevokeClaim={revokeClaim}
           />
           <ClassSection
             cls="dev"
@@ -480,6 +540,8 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             onCapture={capture}
             onClearCaptures={clearCaptures}
             onInterval={setIntervalMins}
+            onGrantClaim={grantClaim}
+            onRevokeClaim={revokeClaim}
           />
           <ClassSection
             cls="blocked"
@@ -492,6 +554,8 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             onCapture={capture}
             onClearCaptures={clearCaptures}
             onInterval={setIntervalMins}
+            onGrantClaim={grantClaim}
+            onRevokeClaim={revokeClaim}
           />
         </>
       )}
