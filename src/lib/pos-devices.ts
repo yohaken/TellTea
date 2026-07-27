@@ -37,6 +37,7 @@ type OwnerDeviceCommandResult = {
   storeClaimRequired?: boolean;
   hasCode?: boolean;
   codeHint?: string;
+  storeClaimCode?: string;
   storeClaimRejectDev?: boolean;
   storeClaimUpdatedAt?: number;
   seatMode?: "exclusive" | "multi" | string;
