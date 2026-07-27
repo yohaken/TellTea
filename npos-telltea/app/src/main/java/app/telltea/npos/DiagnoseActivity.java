@@ -39,6 +39,7 @@ public class DiagnoseActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_diagnose);
+        app.telltea.npos.ui.NposFonts.applyActivity(this);
 
         displayList = findViewById(R.id.displayList);
         hardwareList = findViewById(R.id.hardwareList);

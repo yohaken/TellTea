@@ -100,6 +100,7 @@ public class MainActivity extends Activity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
+    app.telltea.npos.ui.NposFonts.applyActivity(this);
 
     clockInPanel = findViewById(R.id.clockInPanel);
     sellPanel = findViewById(R.id.sellPanel);
@@ -407,13 +408,15 @@ public class MainActivity extends Activity {
     if (open != null) {
       open.setMinimumHeight(ui.payPrimaryMinPx);
       if (open instanceof TextView) {
-        ((TextView) open).setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, ui.titleSp + 3f);
+        ((TextView) open).setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, ui.titleSp + 1f);
+        ((TextView) open).setTypeface(app.telltea.npos.ui.NposFonts.semibold(this));
       }
     }
     if (settings != null) {
       settings.setMinimumHeight(ui.paySecondaryMinPx);
       if (settings instanceof TextView) {
         ((TextView) settings).setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, ui.bodySp);
+        ((TextView) settings).setTypeface(app.telltea.npos.ui.NposFonts.medium(this));
       }
     }
     if (grant != null) grant.setMinimumHeight(ui.touchMinPx);

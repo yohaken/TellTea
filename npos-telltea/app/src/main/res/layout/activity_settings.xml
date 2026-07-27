@@ -2,8 +2,8 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:background="#F7F7F5">
+    android:background="@color/npos_bg"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -17,61 +17,58 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <Button
+            <TextView
                 android:id="@+id/backButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minHeight="40dp"
-                android:text="@string/btn_back"
-                android:textAllCaps="false" />
+                style="@style/Npos.Btn.Back"
+                android:text="@string/btn_back" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:layout_weight="1"
+                android:fontFamily="@font/prompt_semibold"
                 android:text="@string/settings_title"
-                android:textColor="#1A2E24"
-                android:textSize="24sp"
-                android:textStyle="bold" />
+                android:textColor="@color/npos_ink"
+                android:textSize="@dimen/npos_text_title" />
         </LinearLayout>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="8dp"
+            android:fontFamily="@font/prompt_regular"
+            android:lineSpacingMultiplier="1.25"
             android:text="@string/settings_hint"
-            android:textColor="#666666"
-            android:textSize="13sp" />
+            android:textColor="@color/npos_muted"
+            android:textSize="@dimen/npos_text_caption" />
 
+        <!-- Device -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="@dimen/npos_space_section"
+            android:fontFamily="@font/prompt_semibold"
             android:text="@string/settings_section_device"
-            android:textColor="#1A2E24"
-            android:textSize="17sp"
-            android:textStyle="bold" />
+            android:textColor="@color/npos_ink"
+            android:textSize="@dimen/npos_text_section" />
 
         <TextView
             android:id="@+id/settingsVersion"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:textColor="#1A2E24"
-            android:textSize="15sp"
-            android:textStyle="bold" />
+            android:fontFamily="@font/prompt_medium"
+            android:textColor="@color/npos_ink"
+            android:textSize="@dimen/npos_text_body" />
 
         <TextView
             android:id="@+id/banner"
+            style="@style/Npos.Banner.Update"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:background="#1A2E24"
-            android:padding="14dp"
             android:text="@string/banner_update"
-            android:textColor="#FFFFFF"
-            android:textSize="15sp"
             android:visibility="gone" />
 
         <TextView
@@ -79,235 +76,243 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
+            android:fontFamily="@font/prompt_regular"
             android:text="@string/status_ready"
-            android:textColor="#555555"
-            android:textSize="14sp" />
+            android:textColor="@color/npos_muted"
+            android:textSize="@dimen/npos_text_caption" />
 
-        <Button
-            android:id="@+id/updateButton"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:minHeight="52dp"
-            android:text="@string/btn_check_update"
-            android:textAllCaps="false"
-            android:textSize="16sp" />
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
 
-        <Button
-            android:id="@+id/grantPermsSettingsButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="52dp"
-            android:text="@string/btn_grant_all_perms"
-            android:textAllCaps="false"
-            android:textSize="16sp" />
+            <TextView
+                android:id="@+id/updateButton"
+                style="@style/Npos.Btn.Primary"
+                android:text="@string/btn_check_update" />
 
+            <TextView
+                android:id="@+id/grantPermsSettingsButton"
+                style="@style/Npos.Btn.Ghost"
+                android:layout_marginTop="8dp"
+                android:text="@string/btn_grant_all_perms" />
+
+            <TextView
+                android:id="@+id/permStatusSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:fontFamily="@font/prompt_regular"
+                android:gravity="center_horizontal"
+                android:maxWidth="@dimen/npos_btn_max_w"
+                android:textColor="@color/npos_muted"
+                android:textSize="@dimen/npos_text_caption" />
+
+            <TextView
+                android:id="@+id/installPageButton"
+                style="@style/Npos.Btn.Ghost"
+                android:layout_marginTop="8dp"
+                android:text="@string/btn_open_install_page" />
+
+            <TextView
+                android:id="@+id/openMenuAdminButton"
+                style="@style/Npos.Btn.Ghost"
+                android:layout_marginTop="8dp"
+                android:text="@string/btn_open_menu_admin"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/openMenuAdminHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:fontFamily="@font/prompt_regular"
+                android:text="@string/menu_admin_hint"
+                android:textColor="@color/npos_muted"
+                android:textSize="12sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Printer -->
         <TextView
-            android:id="@+id/permStatusSettings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:textColor="#555555"
-            android:textSize="13sp" />
-
-        <Button
-            android:id="@+id/installPageButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="48dp"
-            android:text="@string/btn_open_install_page"
-            android:textAllCaps="false" />
-
-        <Button
-            android:id="@+id/openMenuAdminButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="48dp"
-            android:visibility="gone"
-            android:text="@string/btn_open_menu_admin"
-            android:textAllCaps="false" />
-
-        <TextView
-            android:id="@+id/openMenuAdminHint"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:visibility="gone"
-            android:text="@string/menu_admin_hint"
-            android:textColor="#666666"
-            android:textSize="12sp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
+            android:layout_marginTop="@dimen/npos_space_section"
+            android:fontFamily="@font/prompt_semibold"
             android:text="@string/settings_section_printer"
-            android:textColor="#1A2E24"
-            android:textSize="17sp"
-            android:textStyle="bold" />
+            android:textColor="@color/npos_ink"
+            android:textSize="@dimen/npos_text_section" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
+            android:fontFamily="@font/prompt_regular"
+            android:lineSpacingMultiplier="1.25"
             android:text="@string/printer_hint"
-            android:textColor="#666666"
-            android:textSize="13sp" />
+            android:textColor="@color/npos_muted"
+            android:textSize="@dimen/npos_text_caption" />
 
         <TextView
             android:id="@+id/printerStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:fontFamily="@font/prompt_medium"
             android:text="@string/printer_idle"
-            android:textColor="#555555"
-            android:textSize="14sp" />
+            android:textColor="@color/npos_ok"
+            android:textSize="@dimen/npos_text_body" />
 
-        <Button
-            android:id="@+id/printerScanButton"
+        <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="48dp"
-            android:text="@string/btn_printer_scan"
-            android:textAllCaps="false" />
+            android:layout_marginTop="10dp"
+            android:scrollbars="none">
 
-        <Button
-            android:id="@+id/printerNextButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="48dp"
-            android:text="@string/btn_printer_next"
-            android:textAllCaps="false" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/printerTestButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="48dp"
-            android:text="@string/btn_printer_test"
-            android:textAllCaps="false" />
+                <TextView
+                    android:id="@+id/printerScanButton"
+                    style="@style/Npos.Btn.Chip.Primary"
+                    android:text="@string/btn_printer_scan" />
 
-        <Button
-            android:id="@+id/drawerKickButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="48dp"
-            android:text="@string/btn_drawer_kick"
-            android:textAllCaps="false" />
+                <TextView
+                    android:id="@+id/printerNextButton"
+                    style="@style/Npos.Btn.Chip"
+                    android:text="@string/btn_printer_next" />
 
-        <TextView
+                <TextView
+                    android:id="@+id/printerTestButton"
+                    style="@style/Npos.Btn.Chip"
+                    android:text="@string/btn_printer_test" />
+
+                <TextView
+                    android:id="@+id/drawerKickButton"
+                    style="@style/Npos.Btn.Chip"
+                    android:text="@string/btn_drawer_kick" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
-            android:text="@string/printer_lan_title"
-            android:textColor="#1A2E24"
-            android:textSize="15sp"
-            android:textStyle="bold" />
+            android:background="@drawable/npos_card_surface"
+            android:orientation="vertical"
+            android:padding="14dp">
 
-        <EditText
-            android:id="@+id/printerLanHost"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:hint="@string/printer_lan_host_hint"
-            android:inputType="text"
-            android:minHeight="48dp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/prompt_semibold"
+                android:text="@string/printer_lan_title"
+                android:textColor="@color/npos_ink"
+                android:textSize="@dimen/npos_text_body" />
 
-        <EditText
-            android:id="@+id/printerLanPort"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:hint="@string/printer_lan_port_hint"
-            android:inputType="number"
-            android:minHeight="48dp"
-            android:text="9100" />
+            <EditText
+                android:id="@+id/printerLanHost"
+                style="@style/Npos.Input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:hint="@string/printer_lan_host_hint"
+                android:inputType="text" />
 
-        <Button
-            android:id="@+id/printerLanAddButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:minHeight="48dp"
-            android:text="@string/btn_printer_lan_add"
-            android:textAllCaps="false" />
+            <EditText
+                android:id="@+id/printerLanPort"
+                style="@style/Npos.Input"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="@string/printer_lan_port_hint"
+                android:inputType="number"
+                android:text="9100" />
 
+            <TextView
+                android:id="@+id/printerLanAddButton"
+                style="@style/Npos.Btn.Primary"
+                android:layout_marginTop="10dp"
+                android:minHeight="@dimen/npos_btn_secondary_h"
+                android:text="@string/btn_printer_lan_add"
+                android:textSize="@dimen/npos_text_btn_sm" />
+        </LinearLayout>
+
+        <!-- Tech -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
+            android:layout_marginTop="@dimen/npos_space_section"
+            android:fontFamily="@font/prompt_semibold"
             android:text="@string/settings_section_tech"
-            android:textColor="#1A2E24"
-            android:textSize="17sp"
-            android:textStyle="bold" />
+            android:textColor="@color/npos_ink"
+            android:textSize="@dimen/npos_text_section" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
+            android:fontFamily="@font/prompt_regular"
             android:text="@string/settings_tech_hint"
-            android:textColor="#666666"
-            android:textSize="13sp" />
+            android:textColor="@color/npos_muted"
+            android:textSize="@dimen/npos_text_caption" />
 
-        <Button
+        <TextView
             android:id="@+id/diagnoseButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="48dp"
-            android:text="@string/btn_diagnose"
-            android:textAllCaps="false" />
+            style="@style/Npos.Btn.Secondary"
+            android:layout_marginTop="10dp"
+            android:text="@string/btn_diagnose" />
 
+        <!-- Customer display -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="@dimen/npos_space_section"
+            android:fontFamily="@font/prompt_semibold"
             android:text="@string/settings_section_customer"
-            android:textColor="#1A2E24"
-            android:textSize="15sp"
-            android:textStyle="bold" />
+            android:textColor="@color/npos_ink"
+            android:textSize="@dimen/npos_text_section" />
 
         <TextView
             android:id="@+id/customerStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:fontFamily="@font/prompt_regular"
             android:text="@string/customer_test_idle"
-            android:textColor="#555555"
-            android:textSize="13sp" />
+            android:textColor="@color/npos_muted"
+            android:textSize="@dimen/npos_text_caption" />
 
-        <Button
-            android:id="@+id/customerAmount1Button"
+        <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="44dp"
-            android:text="@string/btn_customer_amount_1"
-            android:textAllCaps="false" />
+            android:layout_marginTop="10dp"
+            android:scrollbars="none">
 
-        <Button
-            android:id="@+id/customerAmount2Button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="44dp"
-            android:text="@string/btn_customer_amount_2"
-            android:textAllCaps="false" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/customerCloseButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="44dp"
-            android:text="@string/btn_customer_close"
-            android:textAllCaps="false" />
+                <TextView
+                    android:id="@+id/customerAmount1Button"
+                    style="@style/Npos.Btn.Chip"
+                    android:text="@string/btn_customer_amount_1" />
+
+                <TextView
+                    android:id="@+id/customerAmount2Button"
+                    style="@style/Npos.Btn.Chip"
+                    android:text="@string/btn_customer_amount_2" />
+
+                <TextView
+                    android:id="@+id/customerCloseButton"
+                    style="@style/Npos.Btn.Chip"
+                    android:text="@string/btn_customer_close" />
+            </LinearLayout>
+        </HorizontalScrollView>
     </LinearLayout>
 </ScrollView>

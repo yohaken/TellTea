@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Friendly touch sizes (general users — not oversized POS bars). -->
+    <dimen name="npos_btn_primary_h">52dp</dimen>
+    <dimen name="npos_btn_secondary_h">44dp</dimen>
+    <dimen name="npos_btn_ghost_h">40dp</dimen>
+    <dimen name="npos_btn_chip_h">40dp</dimen>
+    <dimen name="npos_btn_max_w">340dp</dimen>
+    <dimen name="npos_radius">14dp</dimen>
+    <dimen name="npos_radius_sm">12dp</dimen>
+    <dimen name="npos_space_section">22dp</dimen>
+
+    <dimen name="npos_text_brand">26sp</dimen>
+    <dimen name="npos_text_title">20sp</dimen>
+    <dimen name="npos_text_section">16sp</dimen>
+    <dimen name="npos_text_body">14sp</dimen>
+    <dimen name="npos_text_caption">13sp</dimen>
+    <dimen name="npos_text_btn">15sp</dimen>
+    <dimen name="npos_text_btn_sm">13sp</dimen>
+</resources>
