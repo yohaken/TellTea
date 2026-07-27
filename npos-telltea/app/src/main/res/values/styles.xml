@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Dot-path parents required by AAPT (Npos.Btn.Primary → Npos + Npos.Btn). -->
+    <style name="Npos" />
+    <style name="Npos.Text" parent="Npos" />
+    <style name="Npos.Banner" parent="Npos" />
+
     <style name="Theme.Npos" parent="@android:style/Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/npos_bg</item>
         <item name="android:textColorPrimary">@color/npos_ink</item>
@@ -11,33 +16,33 @@
         <item name="android:navigationBarColor">@color/npos_bg</item>
     </style>
 
-    <style name="Npos.Text.Brand" parent="@android:style/TextAppearance.Material">
+    <style name="Npos.Text.Brand" parent="Npos.Text">
         <item name="android:fontFamily">@font/prompt_bold</item>
         <item name="android:textSize">@dimen/npos_text_brand</item>
         <item name="android:textColor">@color/npos_ink</item>
         <item name="android:letterSpacing">-0.01</item>
     </style>
 
-    <style name="Npos.Text.Title" parent="@android:style/TextAppearance.Material">
+    <style name="Npos.Text.Title" parent="Npos.Text">
         <item name="android:fontFamily">@font/prompt_semibold</item>
         <item name="android:textSize">@dimen/npos_text_title</item>
         <item name="android:textColor">@color/npos_ink</item>
     </style>
 
-    <style name="Npos.Text.Section" parent="@android:style/TextAppearance.Material">
+    <style name="Npos.Text.Section" parent="Npos.Text">
         <item name="android:fontFamily">@font/prompt_semibold</item>
         <item name="android:textSize">@dimen/npos_text_section</item>
         <item name="android:textColor">@color/npos_ink</item>
     </style>
 
-    <style name="Npos.Text.Body" parent="@android:style/TextAppearance.Material">
+    <style name="Npos.Text.Body" parent="Npos.Text">
         <item name="android:fontFamily">@font/prompt_regular</item>
         <item name="android:textSize">@dimen/npos_text_body</item>
         <item name="android:textColor">@color/npos_ink_soft</item>
         <item name="android:lineSpacingMultiplier">1.25</item>
     </style>
 
-    <style name="Npos.Text.Caption" parent="@android:style/TextAppearance.Material">
+    <style name="Npos.Text.Caption" parent="Npos.Text">
         <item name="android:fontFamily">@font/prompt_regular</item>
         <item name="android:textSize">@dimen/npos_text_caption</item>
         <item name="android:textColor">@color/npos_muted</item>
@@ -45,7 +50,7 @@
     </style>
 
     <!-- Touch controls — TextView-based, friendly proportions. -->
-    <style name="Npos.Btn">
+    <style name="Npos.Btn" parent="Npos">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:gravity">center</item>
@@ -83,7 +88,7 @@
         <item name="android:textSize">@dimen/npos_text_btn_sm</item>
     </style>
 
-    <style name="Npos.Btn.Chip">
+    <style name="Npos.Btn.Chip" parent="Npos.Btn">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:background">@drawable/npos_touch_chip</item>
@@ -92,6 +97,8 @@
         <item name="android:textColor">@color/npos_ink</item>
         <item name="android:textSize">@dimen/npos_text_btn_sm</item>
         <item name="android:minHeight">@dimen/npos_btn_chip_h</item>
+        <item name="android:maxWidth">999dp</item>
+        <item name="android:layout_gravity">start</item>
         <item name="android:paddingLeft">14dp</item>
         <item name="android:paddingRight">14dp</item>
         <item name="android:paddingTop">8dp</item>
@@ -115,7 +122,7 @@
         <item name="android:minHeight">36dp</item>
     </style>
 
-    <style name="Npos.Input">
+    <style name="Npos.Input" parent="Npos">
         <item name="android:background">@drawable/npos_input_field</item>
         <item name="android:fontFamily">@font/prompt_regular</item>
         <item name="android:textColor">@color/npos_ink</item>
@@ -128,7 +135,7 @@
         <item name="android:paddingBottom">10dp</item>
     </style>
 
-    <style name="Npos.Banner.Update">
+    <style name="Npos.Banner.Update" parent="Npos.Banner">
         <item name="android:background">@drawable/npos_banner_peach</item>
         <item name="android:fontFamily">@font/prompt_medium</item>
         <item name="android:textColor">@color/npos_orange</item>
