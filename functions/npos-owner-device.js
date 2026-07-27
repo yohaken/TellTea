@@ -87,18 +87,38 @@ exports.nposOwnerDeviceCommand = functions
       }
       const hash = hashStoreCode(code);
       const now = Date.now();
-      await getFirestore()
-        .doc(META_POS)
-        .set(
+      const db = getFirestore();
+      // Changing the secret clears the exclusive seat and revokes all claims.
+      const claimed = await db.collection(COL).where("storeClaimed", "==", true).get();
+      const batch = db.batch();
+      batch.set(
+        db.doc(META_POS),
+        {
+          storeClaimCodeHash: hash,
+          storeClaimRequired: true,
+          storeClaimRejectDev: data?.rejectDev === false ? false : true,
+          storeClaimUpdatedAt: now,
+          storeClaimUpdatedBy: actorId,
+          seatMode: data?.seatMode === "multi" ? "multi" : "exclusive",
+          activeSeatInstallId: "",
+          seatClaimedAt: 0,
+        },
+        { merge: true },
+      );
+      claimed.forEach((docSnap) => {
+        batch.set(
+          docSnap.ref,
           {
-            storeClaimCodeHash: hash,
-            storeClaimRequired: true,
-            storeClaimRejectDev: data?.rejectDev === false ? false : true,
-            storeClaimUpdatedAt: now,
-            storeClaimUpdatedBy: actorId,
+            storeClaimed: false,
+            storeClaimRevokedAt: now,
+            storeClaimMethod: "revoked",
+            storeClaimRevokeReason: "code_changed",
+            updatedAt: now,
           },
           { merge: true },
         );
+      });
+      await batch.commit();
       return {
         ok: true,
         action,
@@ -106,6 +126,7 @@ exports.nposOwnerDeviceCommand = functions
         at: now,
         storeClaimRequired: true,
         codeHint: code.slice(0, 2) + "••" + code.slice(-2),
+        revokedCount: claimed.size,
       };
     }
 
@@ -119,6 +140,8 @@ exports.nposOwnerDeviceCommand = functions
             storeClaimRequired: false,
             storeClaimUpdatedAt: now,
             storeClaimUpdatedBy: actorId,
+            activeSeatInstallId: "",
+            seatClaimedAt: 0,
           },
           { merge: true },
         );
@@ -134,6 +157,8 @@ exports.nposOwnerDeviceCommand = functions
         storeClaimRejectDev: policy.rejectDev,
         storeClaimUpdatedAt: policy.updatedAt,
         hasCode: policy.hash.length >= 32,
+        seatMode: policy.seatMode,
+        activeSeatInstallId: policy.activeSeatInstallId || "",
       };
     }
 
@@ -165,12 +190,22 @@ exports.nposOwnerDeviceCommand = functions
       const intervalMinutes = allowed.has(mins) ? mins : 0;
       patch.captureIntervalMinutes = intervalMinutes;
     } else if (action === "block") {
+      const policy = await loadStoreClaimPolicy(db);
+      if (policy.activeSeatInstallId === deviceId) {
+        await db.doc(META_POS).set(
+          { activeSeatInstallId: "", seatClaimedAt: 0, updatedAt: now },
+          { merge: true },
+        );
+      }
       patch = {
         ...patch,
         blocked: true,
         disabled: true,
         deviceClass: "blocked",
         storeClaimed: false,
+        storeClaimMethod: "revoked",
+        storeClaimRevokeReason: "blocked",
+        storeClaimRevokedAt: now,
       };
     } else if (action === "unblock") {
       const isEmulator = data?.isEmulator === true || snap.get("isEmulator") === true;
@@ -181,22 +216,61 @@ exports.nposOwnerDeviceCommand = functions
         deviceClass: isEmulator ? "dev" : "shop",
       };
     } else if (action === "grant_claim") {
+      // Owner grants exclusive seat to this device (kicks previous holder).
+      const policy = await loadStoreClaimPolicy(db);
+      await db.doc(META_POS).set(
+        {
+          activeSeatInstallId: deviceId,
+          seatMode: policy.seatMode === "multi" ? "multi" : "exclusive",
+          seatClaimedAt: now,
+          updatedAt: now,
+        },
+        { merge: true },
+      );
+      if (policy.seatMode !== "multi" && policy.activeSeatInstallId && policy.activeSeatInstallId !== deviceId) {
+        await db
+          .collection(COL)
+          .doc(policy.activeSeatInstallId)
+          .set(
+            {
+              storeClaimed: false,
+              storeClaimRevokedAt: now,
+              storeClaimMethod: "revoked",
+              storeClaimRevokeReason: "kicked",
+              updatedAt: now,
+            },
+            { merge: true },
+          );
+      }
       patch = {
         ...patch,
         storeClaimed: true,
         storeClaimedAt: now,
         storeClaimMethod: "owner",
+        storeClaimRevokeReason: "",
         blocked: false,
         disabled: false,
         deviceClass:
           snap.get("isEmulator") === true || data?.isEmulator === true ? "dev" : "shop",
       };
     } else if (action === "revoke_claim") {
+      const policy = await loadStoreClaimPolicy(db);
+      if (policy.activeSeatInstallId === deviceId) {
+        await db.doc(META_POS).set(
+          {
+            activeSeatInstallId: "",
+            seatClaimedAt: 0,
+            updatedAt: now,
+          },
+          { merge: true },
+        );
+      }
       patch = {
         ...patch,
         storeClaimed: false,
         storeClaimRevokedAt: now,
         storeClaimMethod: "revoked",
+        storeClaimRevokeReason: "kicked",
       };
     } else {
       throw new functions.https.HttpsError("invalid-argument", "action ไม่รู้จัก");

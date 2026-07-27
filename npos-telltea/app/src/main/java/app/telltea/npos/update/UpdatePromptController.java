@@ -95,6 +95,25 @@ public final class UpdatePromptController {
     startCheck();
   }
 
+  /** Claim / kick gate — poll sooner than sell auto-check. */
+  public void forceCheck() {
+    lastCheckAt = 0L;
+    onResume();
+  }
+
+  /** Expose local vs remote for claim-screen version chip. */
+  public int localVersionCode() {
+    return localVersionCode;
+  }
+
+  public void checkManifest(UpdateChecker.Callback callback) {
+    String manifestUrl =
+        BuildConfig.UPDATE_MANIFEST_URL == null || BuildConfig.UPDATE_MANIFEST_URL.isEmpty()
+            ? UpdateConfig.MANIFEST_URL
+            : BuildConfig.UPDATE_MANIFEST_URL;
+    checker.check(manifestUrl, callback);
+  }
+
   private void startCheck() {
     if (busy) return;
     String manifestUrl =

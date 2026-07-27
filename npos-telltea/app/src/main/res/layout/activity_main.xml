@@ -154,6 +154,33 @@
                 android:visibility="gone" />
 
             <TextView
+                android:id="@+id/claimVersionChip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:textColor="#5B6B7A"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/claimUpdateButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/npos_touch_secondary"
+                android:gravity="center"
+                android:maxWidth="420dp"
+                android:minHeight="48dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp"
+                android:text="@string/claim_update_btn"
+                android:textColor="#1E2D3D"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <TextView
                 android:id="@+id/openShiftButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

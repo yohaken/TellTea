@@ -1,14 +1,17 @@
 /**
  * Tablet HTTP: claim this install with the shop store code (half-login).
+ * Exclusive seat (default): only one installId may hold the shop seat.
  */
 const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
 const {
+  META_POS,
   DEVICES,
   hashStoreCode,
   isValidStoreCodeShape,
   loadStoreClaimPolicy,
   normalizeStoreCode,
+  isExclusive,
 } = require("./npos-device-gate");
 
 function cors(res) {
@@ -108,15 +111,65 @@ exports.nposClaimDevice = functions.region("asia-southeast1").https.onRequest(as
     }
 
     const now = Date.now();
-    await ref.set(
-      {
-        storeClaimed: true,
-        storeClaimedAt: now,
-        storeClaimMethod: "code",
-        updatedAt: now,
-      },
-      { merge: true },
-    );
+    const exclusive = isExclusive(policy);
+
+    if (exclusive) {
+      const metaRef = db.doc(META_POS);
+      try {
+        await db.runTransaction(async (tx) => {
+          const metaSnap = await tx.get(metaRef);
+          const meta = metaSnap.exists ? metaSnap.data() || {} : {};
+          const seat = asString(meta.activeSeatInstallId, 64);
+          if (seat && seat !== installId) {
+            const err = new Error("seat_taken");
+            err.code = "seat_taken";
+            throw err;
+          }
+          tx.set(
+            metaRef,
+            {
+              activeSeatInstallId: installId,
+              seatMode: "exclusive",
+              seatClaimedAt: now,
+              updatedAt: now,
+            },
+            { merge: true },
+          );
+          tx.set(
+            ref,
+            {
+              storeClaimed: true,
+              storeClaimedAt: now,
+              storeClaimMethod: "code",
+              storeClaimRevokeReason: "",
+              updatedAt: now,
+            },
+            { merge: true },
+          );
+        });
+      } catch (err) {
+        if (err && (err.code === "seat_taken" || err.message === "seat_taken")) {
+          res.status(403).json({
+            ok: false,
+            error: "มีเครื่องอื่นใช้อยู่ — ให้หลังบ้านเตะเครื่องนั้นก่อน",
+            code: "seat_taken",
+            activeSeatInstallId: policy.activeSeatInstallId || "",
+          });
+          return;
+        }
+        throw err;
+      }
+    } else {
+      await ref.set(
+        {
+          storeClaimed: true,
+          storeClaimedAt: now,
+          storeClaimMethod: "code",
+          updatedAt: now,
+        },
+        { merge: true },
+      );
+    }
 
     res.status(200).json({
       ok: true,
@@ -124,6 +177,8 @@ exports.nposClaimDevice = functions.region("asia-southeast1").https.onRequest(as
       storeClaimed: true,
       storeClaimedAt: now,
       storeClaimRequired: true,
+      seatMode: exclusive ? "exclusive" : "multi",
+      seatHeldByMe: true,
     });
   } catch (err) {
     console.error("nposClaimDevice", err);

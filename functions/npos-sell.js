@@ -289,6 +289,47 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
       }).format(new Date(now)),
     );
     const shift = asString(body.shift, 20) || shiftFromHour(bangkokHour);
+
+    // Exclusive-seat handoff: resume an already-open server session (kick ≠ close).
+    const openSnap = await db.collection("posSessions").where("status", "==", "open").limit(10).get();
+    if (!openSnap.empty) {
+      let best = null;
+      openSnap.forEach((doc) => {
+        const data = doc.data() || {};
+        const openedAt = Number(data.openedAt) || 0;
+        if (!best || openedAt > (Number(best.data.openedAt) || 0)) {
+          best = { id: doc.id, ref: doc.ref, data };
+        }
+      });
+      if (best) {
+        const prevDevice = asString(best.data.deviceId, 64);
+        await best.ref.set(
+          {
+            deviceId: installId,
+            previousDeviceId: prevDevice && prevDevice !== installId ? prevDevice : best.data.previousDeviceId || "",
+            resumedAt: now,
+            updatedAt: now,
+          },
+          { merge: true },
+        );
+        res.status(200).json({
+          ok: true,
+          sessionId: best.id,
+          shift: asString(best.data.shift, 20) || shift,
+          openedAt: Number(best.data.openedAt) || now,
+          resumed: true,
+          openingCash: Number(best.data.openingCash) || 0,
+          saleCount: Number(best.data.saleCount) || 0,
+          totalSales: Number(best.data.totalSales) || 0,
+          cashTotal: Number(best.data.cashTotal) || 0,
+          promptpayTotal: Number(best.data.promptpayTotal) || 0,
+          voidedCount: Number(best.data.voidedCount) || 0,
+          discountTotal: Number(best.data.discountTotal) || 0,
+        });
+        return;
+      }
+    }
+
     const sessionId = asString(body.sessionId, 80) || `${installId}_${now}`;
     const openingCash = Number(body.openingCash);
     await db.doc(`posSessions/${sessionId}`).set(
@@ -306,7 +347,7 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
       },
       { merge: true },
     );
-    res.status(200).json({ ok: true, sessionId, shift, openedAt: now });
+    res.status(200).json({ ok: true, sessionId, shift, openedAt: now, resumed: false });
   } catch (err) {
     console.error("nposSessionOpen", err);
     res.status(500).json({ ok: false, error: "session_open_failed" });
@@ -340,7 +381,8 @@ exports.nposSessionClose = functions.region("asia-southeast1").https.onRequest(a
       return;
     }
     const data = snap.data() || {};
-    if (data.deviceId !== installId) {
+    // Allow seat holder after handoff (deviceId reassigned on resume).
+    if (data.deviceId && data.deviceId !== installId) {
       res.status(403).json({ ok: false, error: "device_mismatch" });
       return;
     }

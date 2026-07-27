@@ -16,6 +16,7 @@ import {
   isPosDeviceOnline,
   posDeviceLabel,
   clearNposDeviceCaptures,
+  getNposStoreClaimStatus,
   requestNposScreenCapture,
   setNposCaptureInterval,
   setNposDeviceBlocked,
@@ -133,10 +134,12 @@ function DeviceCard({
         {d.isEmulator ? " · emulator" : ""}
       </p>
       <p className="muted npos-diagnose-id">
-        เคลมร้าน{" "}
+        เคลม/seat{" "}
         {d.storeClaimed
-          ? `แล้ว${d.storeClaimMethod ? ` (${d.storeClaimMethod})` : ""}`
-          : "ยังไม่เคลม — ส่งบิลไม่ได้ถ้าเกตเปิด"}
+          ? `ถือสิทธิ์${d.storeClaimMethod ? ` (${d.storeClaimMethod})` : ""}`
+          : d.storeClaimMethod === "revoked"
+            ? `ถูกเตะ${d.storeClaimRevokeReason ? ` · ${d.storeClaimRevokeReason}` : ""}`
+            : "ยังไม่เคลม"}
       </p>
       <p className="muted npos-diagnose-id">
         จอลูกค้า {d.customerDisplay || "—"} · แคปล่าสุด{" "}
@@ -193,11 +196,11 @@ function DeviceCard({
         </label>
         {d.storeClaimed ? (
           <button type="button" className="npos-device-btn" disabled={busy} onClick={onRevokeClaim}>
-            ถอนเคลม
+            เตะเครื่อง
           </button>
         ) : (
           <button type="button" className="npos-device-btn" disabled={busy} onClick={onGrantClaim}>
-            อนุญาตเคลม
+            ให้ seat
           </button>
         )}
         {d.deviceClass === "blocked" ? (
@@ -277,11 +280,18 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => Date.now());
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [activeSeatId, setActiveSeatId] = useState("");
 
   useEffect(() => {
     const t = window.setInterval(() => setNow(Date.now()), 15_000);
     return () => window.clearInterval(t);
   }, []);
+
+  useEffect(() => {
+    void getNposStoreClaimStatus()
+      .then((s) => setActiveSeatId(s.activeSeatInstallId || ""))
+      .catch(() => setActiveSeatId(""));
+  }, [devices]);
 
   useEffect(() => {
     setLoading(true);
@@ -457,14 +467,18 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     }
   }
 
-  async function grantClaim(d: Row) {
+  async function revokeClaim(d: Row) {
     if (!actorId) {
-      onError("ต้องเข้าสู่ระบบเจ้าของก่อนอนุญาตเคลม");
+      onError("ต้องเข้าสู่ระบบเจ้าของก่อนเตะเครื่อง");
+      return;
+    }
+    if (!window.confirm(`เตะเครื่อง ${posDeviceLabel(d)}? เครื่องจะเด้งไปใส่รหัสใหม่ (กะไม่ปิดอัตโนมัติ)`)) {
       return;
     }
     setBusyId(d.id);
     try {
-      await setNposDeviceStoreClaimed(d.id, true, { isEmulator: d.isEmulator });
+      await setNposDeviceStoreClaimed(d.id, false, { isEmulator: d.isEmulator });
+      setActiveSeatId("");
       onError(null);
     } catch (err) {
       onError(err instanceof Error ? err.message : String(err));
@@ -473,14 +487,15 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     }
   }
 
-  async function revokeClaim(d: Row) {
+  async function grantClaim(d: Row) {
     if (!actorId) {
-      onError("ต้องเข้าสู่ระบบเจ้าของก่อนถอนเคลม");
+      onError("ต้องเข้าสู่ระบบเจ้าของก่อนให้ seat");
       return;
     }
     setBusyId(d.id);
     try {
-      await setNposDeviceStoreClaimed(d.id, false, { isEmulator: d.isEmulator });
+      await setNposDeviceStoreClaimed(d.id, true, { isEmulator: d.isEmulator });
+      setActiveSeatId(d.id);
       onError(null);
     } catch (err) {
       onError(err instanceof Error ? err.message : String(err));
@@ -515,6 +530,75 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
         <p className="muted">ยังไม่มีเครื่อง native</p>
       ) : (
         <>
+          <div className="npos-seat-slim" style={{ marginBottom: "0.75rem", overflowX: "auto" }}>
+            <p className="muted" style={{ marginBottom: "0.5rem" }}>
+              เตะเครื่อง ≠ บังคับปิดกะ · กะบนเซิร์ฟเวอร์อยู่ต่อให้เครื่องใหม่ resume
+            </p>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+              <thead>
+                <tr style={{ textAlign: "left", borderBottom: "1px solid #ddd" }}>
+                  <th style={{ padding: "0.35rem" }}>เครื่อง</th>
+                  <th style={{ padding: "0.35rem" }}>สถานะ</th>
+                  <th style={{ padding: "0.35rem" }}>เชื่อม</th>
+                  <th style={{ padding: "0.35rem" }}>เวอร์ชัน</th>
+                  <th style={{ padding: "0.35rem" }}>แอ็กชัน</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...buckets.shop, ...buckets.dev].map((d) => {
+                  const online = isPosDeviceOnline(d.lastSeenAt, now);
+                  const isSeat = activeSeatId === d.id || (d.storeClaimed && !activeSeatId);
+                  let status = "ว่าง";
+                  if (d.deviceClass === "blocked") status = "บล็อก";
+                  else if (d.storeClaimMethod === "revoked" && !d.storeClaimed) status = "ถูกเตะ";
+                  else if (isSeat && online) status = "ออนไลน์ · seat";
+                  else if (isSeat && !online) status = "หลุดเน็ต · seat";
+                  else if (d.storeClaimed) status = "เคลม";
+                  return (
+                    <tr key={`slim-${d.id}`} style={{ borderBottom: "1px solid #eee" }}>
+                      <td style={{ padding: "0.35rem" }}>
+                        {posDeviceLabel(d)}
+                        <span className="muted"> · {d.pairingCode}</span>
+                      </td>
+                      <td style={{ padding: "0.35rem" }}>{status}</td>
+                      <td style={{ padding: "0.35rem" }}>{online ? "ออน" : "หลุด"}</td>
+                      <td style={{ padding: "0.35rem" }}>
+                        {d.nativeShellBuild || d.appBuild || "—"}
+                      </td>
+                      <td style={{ padding: "0.35rem" }}>
+                        {d.storeClaimed ? (
+                          <button
+                            type="button"
+                            className="npos-device-btn"
+                            disabled={busyId === d.id}
+                            onClick={() => void revokeClaim(d)}
+                          >
+                            เตะ
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="npos-device-btn"
+                            disabled={busyId === d.id || d.deviceClass === "blocked"}
+                            onClick={() => void grantClaim(d)}
+                          >
+                            ให้ seat
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {[...buckets.shop, ...buckets.dev].length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="muted" style={{ padding: "0.5rem" }}>
+                      ยังไม่มีเครื่อง
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
           <ClassSection
             cls="shop"
             rows={buckets.shop}

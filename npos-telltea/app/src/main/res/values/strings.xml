@@ -41,6 +41,8 @@
     <string name="store_claim_busy">กำลังเคลม…</string>
     <string name="store_claim_ok">เคลมเครื่องแล้ว — พร้อมเปิดกะ</string>
     <string name="store_claim_blocked">เครื่องนี้ยังไม่เคลมหรือถูกบล็อก — ส่งบิลไม่ได้</string>
+    <string name="store_claim_kicked">ถูกถอนสิทธิ์จากหลังบ้าน — กรอกรหัสร้านใหม่</string>
+    <string name="store_claim_seat_taken">มีเครื่องอื่นใช้อยู่ — ให้หลังบ้านเตะเครื่องนั้นก่อน</string>
     <string name="heartbeat_idle">กำลังเชื่อม…</string>
     <string name="heartbeat_sending">กำลังเชื่อมร้าน…</string>
     <string name="heartbeat_ok">ออนไลน์</string>
@@ -122,6 +124,11 @@
     <string name="shift_duty_closed">ยังไม่เปิดกะ</string>
     <string name="store_claim_not_configured">ยังไม่ได้ตั้งรหัสร้านหลังบ้าน — ไม่ถามรหัสบนเครื่องนี้</string>
     <string name="store_claim_emulator_blocked">เครื่องจำลองถูกปิดกั้น (rejectDev) — ปิดตัวเลือกนี้ในหลังบ้านเพื่อเทส หรือใช้แท็บเล็ตจริง</string>
+    <string name="claim_version_chip">เวอร์ชันเครื่อง %1$s (%2$d)%3$s</string>
+    <string name="claim_version_latest"> · ล่าสุด %1$s (%2$d)</string>
+    <string name="claim_version_current"> · เป็นปัจจุบันแล้ว</string>
+    <string name="claim_update_btn">อัปเดตแอป</string>
+    <string name="shift_resumed">ต่อรอบที่เปิดอยู่แล้ว — กะไม่ถูกตัดตอนเตะ</string>
     <string name="printer_lan_title">ปริ้นเตอร์ LAN (Wi‑Fi)</string>
     <string name="printer_lan_host_hint">IP เช่น 192.168.1.50</string>
     <string name="printer_lan_port_hint">พอร์ต (ปกติ 9100)</string>

@@ -252,6 +252,11 @@ exports.nposDeviceHeartbeat = functions
         storeClaimed: claim.storeClaimed,
         storeClaimRejectDev: claim.storeClaimRejectDev,
         deviceBlocked: claim.deviceBlocked,
+        seatMode: claim.seatMode || "exclusive",
+        activeSeatInstallId: claim.activeSeatInstallId || "",
+        seatHeldByMe: claim.seatHeldByMe === true,
+        seatTaken: claim.seatTaken === true,
+        kicked: claim.kicked === true,
         capture: {
           requestAt: captureRequestAt,
           intervalMinutes: captureIntervalMinutes,

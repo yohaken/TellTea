@@ -23,6 +23,7 @@ public final class ShiftPrefs {
   private static final String KEY_VOIDED = "voidedCount";
   private static final String KEY_OPENING_CASH = "openingCash";
   private static final String KEY_NEXT_OPENING = "nextOpeningCash";
+  private static final String KEY_LAST_RESUMED = "lastOpenResumed";
 
   private ShiftPrefs() {}
 
@@ -165,6 +166,58 @@ public final class ShiftPrefs {
         .putInt(KEY_PP_BILLS, 0)
         .putLong(KEY_DISCOUNT, Double.doubleToRawLongBits(0))
         .putInt(KEY_VOIDED, 0)
+        .putBoolean(KEY_LAST_RESUMED, false)
+        .commit();
+  }
+
+  /**
+   * Bind to an already-open server session after seat handoff (kick ≠ close).
+   * Local counters seed from server totals when available.
+   */
+  public static void resume(
+      Context context,
+      String sessionId,
+      String shift,
+      long openedAt,
+      double openingCash,
+      double cashTotal,
+      double promptpayTotal,
+      int saleCount,
+      int voidedCount,
+      double discountTotal) {
+    SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    prefs
+        .edit()
+        .putBoolean(KEY_OPEN, true)
+        .putLong(KEY_OPENED_AT, openedAt > 0 ? openedAt : System.currentTimeMillis())
+        .putString(KEY_SESSION, sessionId == null ? "" : sessionId)
+        .putString(KEY_SHIFT, shift == null ? "morning" : shift)
+        .putLong(KEY_OPENING_CASH, Double.doubleToRawLongBits(Math.max(0, openingCash)))
+        .putLong(KEY_NEXT_OPENING, Double.doubleToRawLongBits(0))
+        .putLong(KEY_CASH, Double.doubleToRawLongBits(Math.max(0, cashTotal)))
+        .putLong(KEY_PP, Double.doubleToRawLongBits(Math.max(0, promptpayTotal)))
+        .putInt(KEY_SALE_COUNT, Math.max(0, saleCount))
+        .putInt(KEY_CASH_BILLS, 0)
+        .putInt(KEY_PP_BILLS, 0)
+        .putLong(KEY_DISCOUNT, Double.doubleToRawLongBits(Math.max(0, discountTotal)))
+        .putInt(KEY_VOIDED, Math.max(0, voidedCount))
+        .putBoolean(KEY_LAST_RESUMED, true)
+        .commit();
+  }
+
+  public static boolean consumeLastResumed(Context context) {
+    SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    boolean v = prefs.getBoolean(KEY_LAST_RESUMED, false);
+    if (v) prefs.edit().putBoolean(KEY_LAST_RESUMED, false).apply();
+    return v;
+  }
+
+  /** Drop local open flag only — does not call server close (used on kick). */
+  public static void clearLocalOpen(Context context) {
+    context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean(KEY_OPEN, false)
         .commit();
   }
 

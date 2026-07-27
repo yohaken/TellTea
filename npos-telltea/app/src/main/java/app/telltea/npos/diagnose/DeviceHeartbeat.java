@@ -76,7 +76,10 @@ public final class DeviceHeartbeat {
                         res.optBoolean("storeClaimRequired", false),
                         res.optBoolean("storeClaimed", false),
                         res.optBoolean("deviceBlocked", false),
-                        res.optBoolean("storeClaimRejectDev", true));
+                        res.optBoolean("storeClaimRejectDev", true),
+                        res.optBoolean("seatHeldByMe", res.optBoolean("storeClaimed", false)),
+                        res.optBoolean("seatTaken", false),
+                        res.optBoolean("kicked", false));
                 handleCaptureCommand(app, res);
                 if (callback != null) callback.onSuccess(pairing, seen);
             } catch (Exception e) {

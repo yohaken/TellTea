@@ -21,6 +21,8 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
   const [hasCode, setHasCode] = useState(false);
   const [rejectDev, setRejectDev] = useState(true);
   const [updatedAt, setUpdatedAt] = useState(0);
+  const [activeSeatId, setActiveSeatId] = useState("");
+  const [seatMode, setSeatMode] = useState<"exclusive" | "multi">("exclusive");
   const [code, setCode] = useState("");
   const [hint, setHint] = useState<string | null>(null);
 
@@ -32,6 +34,8 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
       setHasCode(s.hasCode);
       setRejectDev(s.storeClaimRejectDev);
       setUpdatedAt(s.storeClaimUpdatedAt);
+      setActiveSeatId(s.activeSeatInstallId || "");
+      setSeatMode(s.seatMode || "exclusive");
       onError(null);
     } catch (err) {
       onError(err instanceof Error ? err.message : String(err));
@@ -96,16 +100,25 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
         loading
           ? "กำลังโหลด…"
           : required && hasCode
-            ? `เกตเปิดอยู่ · เครื่องต้องเคลมก่อนขาย${rejectDev ? " · บล็อกเครื่องจำลอง" : ""}`
+            ? `เกตเปิด · โหมดเครื่องเดียว${activeSeatId ? ` · seat ${activeSeatId.slice(-6).toUpperCase()}` : " · ว่าง"}${rejectDev ? " · บล็อกจำลอง" : ""}`
             : "ยังไม่ตั้งรหัส — ตั้งก่อนทดลองหน้าร้าน"
       }
       defaultOpen
       className="npos-store-claim-fold"
     >
       <p className="muted" style={{ marginBottom: "0.75rem" }}>
-        รหัสคงที่สำหรับแท็บเล็ตร้าน (half-login) — กรอกครั้งเดียวบนเครื่อง ·
-        เครื่องที่ไม่มีรหัส/ยังไม่เคลม <strong>ส่งบิลเข้าไม่ได้</strong>
+        รหัสลับ 1:1 กับหลังบ้าน · <strong>เครื่องเดียวถือสิทธิ์ขาย</strong> ·
+        เปลี่ยนรหัส = เตะทุกเครื่องให้ใส่รหัสใหม่
       </p>
+      <p className="muted" style={{ marginBottom: "0.75rem" }}>
+        ปุ่ม <strong>เตะเครื่อง</strong> ≠ บังคับปิดกะ — กะบนเซิร์ฟเวอร์อยู่ต่อ
+        ให้เครื่องใหม่เคลมแล้วเปิดกะเพื่อต่อรอบเดิม
+      </p>
+      {seatMode === "exclusive" && required ? (
+        <p className="muted" style={{ marginBottom: "0.5rem" }}>
+          Seat ปัจจุบัน: {activeSeatId ? activeSeatId.slice(-8).toUpperCase() : "— ว่าง —"}
+        </p>
+      ) : null}
       {updatedAt > 0 ? (
         <p className="muted" style={{ marginBottom: "0.5rem" }}>
           อัปเดตล่าสุด {new Date(updatedAt).toLocaleString("th-TH")}

@@ -528,6 +528,11 @@ public class SellActivity extends Activity {
   @Override
   protected void onResume() {
     super.onResume();
+    if (StoreClaimPrefs.blocksWrites(this) && StoreClaimPrefs.isRequired(this)) {
+      Toast.makeText(this, StoreClaimPrefs.blockReason(this), Toast.LENGTH_LONG).show();
+      finish();
+      return;
+    }
     if (updatePrompt != null) updatePrompt.onResume();
     updateShiftSummary();
     updateHoldRestoreButton();

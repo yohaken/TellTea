@@ -2,7 +2,8 @@
  * nPos store-claim gate — shared by sell / claim / heartbeat / owner commands.
  *
  * When meta/pos.storeClaimCodeHash is set, writes (sale/session/void/sold-out)
- * require: device exists, not blocked, storeClaimed, and not emulator/dev.
+ * require: device exists, not blocked, holds exclusive seat (or claimed if
+ * seatMode is not exclusive), and not emulator/dev when rejectDev.
  * Menu + shop settings reads stay open so the tablet can show the claim UI.
  */
 const crypto = require("crypto");
@@ -36,7 +37,9 @@ function isValidStoreCodeShape(code) {
  *   required: boolean,
  *   hash: string,
  *   rejectDev: boolean,
- *   updatedAt: number
+ *   updatedAt: number,
+ *   seatMode: "exclusive" | "multi",
+ *   activeSeatInstallId: string
  * }>}
  */
 async function loadStoreClaimPolicy(db) {
@@ -45,11 +48,16 @@ async function loadStoreClaimPolicy(db) {
   const hash = asString(x.storeClaimCodeHash, 80);
   const required = hash.length >= 32 && x.storeClaimRequired !== false;
   const rejectDev = x.storeClaimRejectDev !== false;
+  // Default exclusive when gate is on (shop pilot). Explicit "multi" keeps old behavior.
+  const seatMode = x.seatMode === "multi" ? "multi" : "exclusive";
+  const activeSeatInstallId = asString(x.activeSeatInstallId, 64);
   return {
     required,
     hash,
     rejectDev,
     updatedAt: typeof x.storeClaimUpdatedAt === "number" ? x.storeClaimUpdatedAt : 0,
+    seatMode,
+    activeSeatInstallId,
   };
 }
 
@@ -70,6 +78,10 @@ function deviceIsClaimed(data) {
   return data && data.storeClaimed === true;
 }
 
+function isExclusive(policy) {
+  return policy && policy.seatMode !== "multi";
+}
+
 /**
  * @returns {Promise<{
  *   ok: boolean,
@@ -79,6 +91,9 @@ function deviceIsClaimed(data) {
  *   claimed: boolean,
  *   blocked: boolean,
  *   isDev: boolean,
+ *   seatHeldByMe: boolean,
+ *   seatTaken: boolean,
+ *   kicked: boolean,
  *   device?: object
  * }>}
  */
@@ -90,12 +105,31 @@ async function assertNposDeviceAllowed(db, installId) {
   const blocked = deviceIsBlocked(data);
   const isDev = deviceIsDev(data);
   const claimed = deviceIsClaimed(data);
+  const exclusive = isExclusive(policy);
+  const seatHeldByMe =
+    exclusive && policy.required
+      ? policy.activeSeatInstallId === installId
+      : claimed;
+  const seatTaken =
+    exclusive &&
+    policy.required &&
+    !!policy.activeSeatInstallId &&
+    policy.activeSeatInstallId !== installId;
+  const kicked =
+    exclusive &&
+    policy.required &&
+    data &&
+    data.storeClaimMethod === "revoked" &&
+    !seatHeldByMe;
 
   const base = {
     required: policy.required,
     claimed,
     blocked,
     isDev,
+    seatHeldByMe,
+    seatTaken,
+    kicked,
     device: data || undefined,
   };
 
@@ -116,7 +150,32 @@ async function assertNposDeviceAllowed(db, installId) {
     };
   }
 
-  if (!claimed) {
+  if (exclusive) {
+    if (!seatHeldByMe) {
+      if (seatTaken) {
+        return {
+          ok: false,
+          error: "มีเครื่องอื่นใช้อยู่ — ให้หลังบ้านเตะเครื่องนั้นก่อน หรือรอว่าง",
+          code: "seat_taken",
+          ...base,
+        };
+      }
+      if (kicked) {
+        return {
+          ok: false,
+          error: "ถูกถอนสิทธิ์จากหลังบ้าน — กรอกรหัสร้านใหม่",
+          code: "device_kicked",
+          ...base,
+        };
+      }
+      return {
+        ok: false,
+        error: "กรอกรหัสร้านเพื่อเคลมเครื่องก่อนขาย",
+        code: "device_not_claimed",
+        ...base,
+      };
+    }
+  } else if (!claimed) {
     return {
       ok: false,
       error: "กรอกรหัสร้านเพื่อเคลมเครื่องก่อนขาย",
@@ -139,12 +198,35 @@ async function assertNposDeviceAllowed(db, installId) {
 
 async function claimStatusForHeartbeat(db, installId, deviceData) {
   const policy = await loadStoreClaimPolicy(db);
+  const exclusive = isExclusive(policy);
+  const claimed = deviceIsClaimed(deviceData);
+  const seatHeldByMe =
+    exclusive && policy.required
+      ? policy.activeSeatInstallId === installId
+      : claimed;
+  const seatTaken =
+    exclusive &&
+    policy.required &&
+    !!policy.activeSeatInstallId &&
+    policy.activeSeatInstallId !== installId;
+  const kicked =
+    exclusive &&
+    policy.required &&
+    deviceData &&
+    deviceData.storeClaimMethod === "revoked" &&
+    !seatHeldByMe;
+
   return {
     storeClaimRequired: policy.required,
-    storeClaimed: deviceIsClaimed(deviceData),
+    storeClaimed: seatHeldByMe || (!exclusive && claimed),
     storeClaimRejectDev: policy.rejectDev,
     deviceBlocked: deviceIsBlocked(deviceData),
     deviceIsDev: deviceIsDev(deviceData),
+    seatMode: policy.seatMode,
+    activeSeatInstallId: policy.activeSeatInstallId || "",
+    seatHeldByMe,
+    seatTaken,
+    kicked,
   };
 }
 
@@ -160,4 +242,5 @@ module.exports = {
   deviceIsBlocked,
   deviceIsClaimed,
   deviceIsDev,
+  isExclusive,
 };

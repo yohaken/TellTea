@@ -83,9 +83,32 @@ public final class SaleSync {
                         body.put("openingCash", opening);
                         JSONObject res = MenuRepository.postJson(OPEN_URL, body);
                         if (res.optBoolean("ok", false)) {
-                            ShiftPrefs.open(
-                                    app, sessionId, res.optString("shift", "morning"), openedAt, opening);
-                            OpsLogger.info(app, "shift", "เปิดรอบแล้ว", sessionId + " float=" + opening);
+                            String sid = res.optString("sessionId", sessionId);
+                            String shiftName = res.optString("shift", "morning");
+                            long serverOpened = res.optLong("openedAt", openedAt);
+                            if (res.optBoolean("resumed", false)) {
+                                double cash = res.optDouble("cashTotal", 0);
+                                double pp = res.optDouble("promptpayTotal", 0);
+                                double totalSales = res.optDouble("totalSales", 0);
+                                if (cash <= 0 && pp <= 0 && totalSales > 0) {
+                                    cash = totalSales;
+                                }
+                                ShiftPrefs.resume(
+                                        app,
+                                        sid,
+                                        shiftName,
+                                        serverOpened,
+                                        res.optDouble("openingCash", opening),
+                                        cash,
+                                        pp,
+                                        res.optInt("saleCount", 0),
+                                        res.optInt("voidedCount", 0),
+                                        res.optDouble("discountTotal", 0));
+                                OpsLogger.info(app, "shift", "ต่อรอบเดิมหลังสลับเครื่อง", sid);
+                            } else {
+                                ShiftPrefs.open(app, sid, shiftName, serverOpened, opening);
+                                OpsLogger.info(app, "shift", "เปิดรอบแล้ว", sid + " float=" + opening);
+                            }
                         } else if (isDeviceGateError(res)) {
                             OpsLogger.warn(
                                     app,
@@ -124,11 +147,16 @@ public final class SaleSync {
         String code = res.optString("code", "");
         String err = res.optString("error", "");
         return code.contains("device_")
+                || "seat_taken".equals(code)
                 || err.contains("device_not_claimed")
                 || err.contains("device_blocked")
                 || err.contains("device_dev_rejected")
+                || err.contains("device_kicked")
+                || err.contains("seat_taken")
                 || err.contains("เคลม")
-                || err.contains("บล็อก");
+                || err.contains("บล็อก")
+                || err.contains("ถอนสิทธิ์")
+                || err.contains("เครื่องอื่น");
     }
 
     private static boolean isDeviceGateException(Exception e) {
@@ -137,7 +165,9 @@ public final class SaleSync {
                 || m.contains("device_blocked")
                 || m.contains("device_dev_rejected")
                 || m.contains("device_not_allowed")
-                || m.contains("device_unknown");
+                || m.contains("device_unknown")
+                || m.contains("device_kicked")
+                || m.contains("seat_taken");
     }
 
     public void closeSession(Context context, Runnable done) {

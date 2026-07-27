@@ -9,16 +9,16 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 285/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+50/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.27"/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 80/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 286/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+51/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.28"/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 81/);
 
 assert.ok(existsSync(join(root, "docs/npos-sell-flow-polish-checklist.md")));
 const doc = read("docs/npos-sell-flow-polish-checklist.md");
 assert.match(doc, /F0|ตัด.*ทานที่ร้าน/);
 assert.match(doc, /ล้างตะกร้า/);
-assert.match(doc, /1.14.27/);
+assert.match(doc, /1.14.28/);
 
 const sell = read("src/components/PosSellView.tsx");
 assert.doesNotMatch(sell, /pos-cart-channel|>\s*ทานที่ร้าน\s*</);

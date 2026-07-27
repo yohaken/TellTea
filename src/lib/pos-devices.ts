@@ -140,6 +140,7 @@ export type PosDevice = {
   storeClaimed: boolean;
   storeClaimedAt: number;
   storeClaimMethod: string;
+  storeClaimRevokeReason: string;
   /** ok | missing | unknown — customer / secondary display. */
   customerDisplay: string;
   captureRequestAt: number;
@@ -253,6 +254,8 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
     storeClaimed: data.storeClaimed === true,
     storeClaimedAt: typeof data.storeClaimedAt === "number" ? data.storeClaimedAt : 0,
     storeClaimMethod: typeof data.storeClaimMethod === "string" ? data.storeClaimMethod : "",
+    storeClaimRevokeReason:
+      typeof data.storeClaimRevokeReason === "string" ? data.storeClaimRevokeReason : "",
     customerDisplay: typeof data.customerDisplay === "string" ? data.customerDisplay : "",
     captureRequestAt: typeof data.captureRequestAt === "number" ? data.captureRequestAt : 0,
     lastCaptureAckAt: typeof data.lastCaptureAckAt === "number" ? data.lastCaptureAckAt : 0,
@@ -482,6 +485,8 @@ export async function getNposStoreClaimStatus(): Promise<{
   hasCode: boolean;
   storeClaimRejectDev: boolean;
   storeClaimUpdatedAt: number;
+  seatMode: "exclusive" | "multi";
+  activeSeatInstallId: string;
 }> {
   const res = await callNposOwnerDeviceCommand("get_store_claim");
   return {
@@ -489,6 +494,9 @@ export async function getNposStoreClaimStatus(): Promise<{
     hasCode: res.hasCode === true,
     storeClaimRejectDev: res.storeClaimRejectDev !== false,
     storeClaimUpdatedAt: typeof res.storeClaimUpdatedAt === "number" ? res.storeClaimUpdatedAt : 0,
+    seatMode: res.seatMode === "multi" ? "multi" : "exclusive",
+    activeSeatInstallId:
+      typeof res.activeSeatInstallId === "string" ? res.activeSeatInstallId : "",
   };
 }
 

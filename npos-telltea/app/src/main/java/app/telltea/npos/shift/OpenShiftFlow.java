@@ -97,7 +97,12 @@ public final class OpenShiftFlow {
                                 if (onCancel != null) onCancel.run();
                                 return;
                               }
-                              Toast.makeText(activity, R.string.shift_opened, Toast.LENGTH_SHORT)
+                              Toast.makeText(
+                                      activity,
+                                      ShiftPrefs.consumeLastResumed(activity)
+                                          ? R.string.shift_resumed
+                                          : R.string.shift_opened,
+                                      Toast.LENGTH_SHORT)
                                   .show();
                               if (done != null) done.onOpened();
                             } catch (Exception e) {

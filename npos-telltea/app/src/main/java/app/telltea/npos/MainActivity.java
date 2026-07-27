@@ -33,6 +33,7 @@ import app.telltea.npos.shift.OpenShiftFlow;
 import app.telltea.npos.shift.ShiftPrefs;
 import app.telltea.npos.ui.UiScale;
 import app.telltea.npos.update.ResumePrefs;
+import app.telltea.npos.update.UpdateManifest;
 import app.telltea.npos.update.UpdatePromptController;
 
 /**
@@ -57,6 +58,8 @@ public class MainActivity extends Activity {
   private String localVersionName = "1.0";
   private boolean openingShift;
   private boolean resumeSellHandled;
+  private int latestRemoteVersionCode;
+  private String latestRemoteVersionName = "";
 
   private final Runnable clockTick =
       new Runnable() {
@@ -75,6 +78,21 @@ public class MainActivity extends Activity {
             hubShiftStrip.setText(ShiftPrefs.dutyLine(MainActivity.this));
             clockHandler.postDelayed(this, 1000L);
           }
+        }
+      };
+
+  /** Claim screen: refresh seat + latest.json ~45s. */
+  private final Runnable claimPollTick =
+      new Runnable() {
+        @Override
+        public void run() {
+          if (isClaimGateVisible()) {
+            ForegroundHeartbeat.forceNow(MainActivity.this);
+            refreshStoreClaimGate();
+            pollClaimUpdateChip();
+            if (updatePrompt != null) updatePrompt.forceCheck();
+          }
+          clockHandler.postDelayed(this, 45_000L);
         }
       };
 
@@ -172,8 +190,16 @@ public class MainActivity extends Activity {
                       }
                     }));
     updatePrompt = new UpdatePromptController(this);
+    View claimUpdate = findViewById(R.id.claimUpdateButton);
+    if (claimUpdate != null) {
+      claimUpdate.setOnClickListener(
+          v -> {
+            if (updatePrompt != null) updatePrompt.forceCheck();
+          });
+    }
     refreshPermissionGate();
     refreshStoreClaimGate();
+    StoreClaimPrefs.setKickListener(this::onLostSeat);
     // First open: auto-prompt so staff do not hunt Settings.
     if (!PermissionBootstrap.wasPrompted(this) && !PermissionBootstrap.allCriticalGranted(this)) {
       PermissionBootstrap.grantAll(this);
@@ -182,17 +208,26 @@ public class MainActivity extends Activity {
     maybeResumeSellAfterUpdate();
   }
 
+  private boolean isClaimGateVisible() {
+    boolean required = StoreClaimPrefs.isRequired(this);
+    return required && !StoreClaimPrefs.isSeatHeld(this) && !StoreClaimPrefs.isBlocked(this);
+  }
+
   private void refreshStoreClaimGate() {
     View hint = findViewById(R.id.storeClaimHint);
     View input = findViewById(R.id.storeClaimInput);
     View btn = findViewById(R.id.storeClaimButton);
     View open = findViewById(R.id.openShiftButton);
+    View versionChip = findViewById(R.id.claimVersionChip);
+    View updateBtn = findViewById(R.id.claimUpdateButton);
     boolean required = StoreClaimPrefs.isRequired(this);
-    boolean claimed = StoreClaimPrefs.isClaimed(this);
+    boolean claimed = StoreClaimPrefs.isSeatHeld(this) || StoreClaimPrefs.isClaimed(this);
     boolean deviceBlocked = StoreClaimPrefs.isBlocked(this);
     boolean rejectDev = StoreClaimPrefs.rejectDev(this);
     boolean emulator = DeviceIdentity.isEmulator();
-    boolean needClaim = required && !claimed && !deviceBlocked;
+    boolean kicked = StoreClaimPrefs.isKicked(this);
+    boolean seatTaken = StoreClaimPrefs.isSeatTaken(this);
+    boolean needClaim = required && !StoreClaimPrefs.isSeatHeld(this) && !deviceBlocked;
     boolean blocked = StoreClaimPrefs.blocksWrites(this) && !needClaim;
     if (hint != null) {
       boolean showHint = blocked || needClaim || (!required && emulator);
@@ -200,6 +235,10 @@ public class MainActivity extends Activity {
       if (hint instanceof TextView) {
         if (blocked && rejectDev && emulator) {
           ((TextView) hint).setText(R.string.store_claim_emulator_blocked);
+        } else if (kicked) {
+          ((TextView) hint).setText(R.string.store_claim_kicked);
+        } else if (seatTaken) {
+          ((TextView) hint).setText(R.string.store_claim_seat_taken);
         } else if (blocked) {
           ((TextView) hint).setText(R.string.store_claim_blocked);
         } else if (needClaim) {
@@ -209,12 +248,79 @@ public class MainActivity extends Activity {
         }
       }
     }
-    if (input != null) input.setVisibility(needClaim && !blocked ? View.VISIBLE : View.GONE);
-    if (btn != null) btn.setVisibility(needClaim && !blocked ? View.VISIBLE : View.GONE);
-    if (open != null) {
-      open.setEnabled(!blocked && !needClaim);
-      open.setAlpha(blocked || needClaim ? 0.45f : 1f);
+    if (input != null) input.setVisibility(needClaim && !deviceBlocked ? View.VISIBLE : View.GONE);
+    if (btn != null) btn.setVisibility(needClaim && !deviceBlocked ? View.VISIBLE : View.GONE);
+    if (versionChip != null) {
+      versionChip.setVisibility(needClaim ? View.VISIBLE : View.GONE);
+      if (needClaim) updateClaimVersionChipText();
     }
+    if (updateBtn != null) {
+      boolean newer =
+          latestRemoteVersionCode > 0 && latestRemoteVersionCode > localVersionCode;
+      updateBtn.setVisibility(needClaim && newer ? View.VISIBLE : View.GONE);
+    }
+    if (open != null) {
+      open.setEnabled(!StoreClaimPrefs.blocksWrites(this));
+      open.setAlpha(StoreClaimPrefs.blocksWrites(this) ? 0.45f : 1f);
+    }
+  }
+
+  private void updateClaimVersionChipText() {
+    TextView chip = findViewById(R.id.claimVersionChip);
+    if (chip == null) return;
+    String remotePart;
+    if (latestRemoteVersionCode > 0) {
+      if (latestRemoteVersionCode > localVersionCode) {
+        remotePart =
+            getString(
+                R.string.claim_version_latest, latestRemoteVersionName, latestRemoteVersionCode);
+      } else {
+        remotePart = getString(R.string.claim_version_current);
+      }
+    } else {
+      remotePart = "";
+    }
+    chip.setText(
+        getString(R.string.claim_version_chip, localVersionName, localVersionCode, remotePart));
+  }
+
+  private void pollClaimUpdateChip() {
+    if (updatePrompt == null) return;
+    updatePrompt.checkManifest(
+        new app.telltea.npos.update.UpdateChecker.Callback() {
+          @Override
+          public void onResult(UpdateManifest manifest) {
+            runOnUiThread(
+                () -> {
+                  if (manifest == null) return;
+                  latestRemoteVersionCode = manifest.versionCode;
+                  latestRemoteVersionName =
+                      manifest.versionName == null ? "" : manifest.versionName;
+                  refreshStoreClaimGate();
+                });
+          }
+
+          @Override
+          public void onError(Exception error) {
+            /* silent — chip keeps last known */
+          }
+        });
+  }
+
+  private void onLostSeat() {
+    runOnUiThread(
+        () -> {
+          Toast.makeText(this, R.string.store_claim_kicked, Toast.LENGTH_LONG).show();
+          // Keep server session open — only drop local open so UI returns to claim.
+          if (ShiftPrefs.isOpen(this)) {
+            ShiftPrefs.clearLocalOpen(this);
+          }
+          clockInPanel.setVisibility(View.VISIBLE);
+          if (sellPanel != null) sellPanel.setVisibility(View.GONE);
+          refreshStoreClaimGate();
+          pollClaimUpdateChip();
+          if (updatePrompt != null) updatePrompt.forceCheck();
+        });
   }
 
   private void submitStoreClaim() {
@@ -402,7 +508,8 @@ public class MainActivity extends Activity {
     if (deviceCode != null) {
       deviceCode.setText(DeviceIdentity.pairingCode(this));
     }
-    if (ShiftPrefs.isOpen(this)) {
+    boolean canSell = ShiftPrefs.isOpen(this) && !StoreClaimPrefs.blocksWrites(this);
+    if (canSell) {
       clockInPanel.setVisibility(View.GONE);
       sellPanel.setVisibility(View.VISIBLE);
       if (hubShiftStrip != null) {
@@ -410,6 +517,9 @@ public class MainActivity extends Activity {
       }
       maybeResumeSellAfterUpdate();
     } else {
+      if (ShiftPrefs.isOpen(this) && StoreClaimPrefs.blocksWrites(this)) {
+        ShiftPrefs.clearLocalOpen(this);
+      }
       clockInPanel.setVisibility(View.VISIBLE);
       sellPanel.setVisibility(View.GONE);
     }
@@ -418,9 +528,14 @@ public class MainActivity extends Activity {
     updateClockLabels();
     clockHandler.removeCallbacks(clockTick);
     clockHandler.removeCallbacks(dutyTick);
+    clockHandler.removeCallbacks(claimPollTick);
     clockHandler.post(clockTick);
-    if (ShiftPrefs.isOpen(this)) {
+    if (ShiftPrefs.isOpen(this) && !StoreClaimPrefs.blocksWrites(this)) {
       clockHandler.post(dutyTick);
+    }
+    if (isClaimGateVisible()) {
+      pollClaimUpdateChip();
+      clockHandler.postDelayed(claimPollTick, 45_000L);
     }
     ForegroundHeartbeat.forceNow(this);
     autoHealth.maybeRun(this, false, null);
@@ -432,13 +547,16 @@ public class MainActivity extends Activity {
   protected void onPause() {
     clockHandler.removeCallbacks(clockTick);
     clockHandler.removeCallbacks(dutyTick);
+    clockHandler.removeCallbacks(claimPollTick);
     super.onPause();
   }
 
   @Override
   protected void onDestroy() {
+    StoreClaimPrefs.setKickListener(null);
     clockHandler.removeCallbacks(clockTick);
     clockHandler.removeCallbacks(dutyTick);
+    clockHandler.removeCallbacks(claimPollTick);
     ForegroundHeartbeat.setStatusListener(null);
     if (autoHealth != null) autoHealth.shutdown();
     if (saleSync != null) saleSync.shutdown();
