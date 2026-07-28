@@ -2,7 +2,8 @@
 
 > แทนที่แนวคิด dailySales + เมลรายวัน  
 > Route เดิม: `/vat-sales/` · owner-only  
-> วันที่: 2026-07-28
+> วันที่: 2026-07-28  
+> **เฟส:** [`vat-phases-next.md`](./vat-phases-next.md) (M0–M5)
 
 ---
 
