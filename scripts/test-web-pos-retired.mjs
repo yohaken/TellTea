@@ -9,8 +9,8 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 299/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 94/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 300/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 95/);
 
 const retired = read("src/components/PosWebRetired.tsx");
 assert.match(retired, /เว็บ POS เลิกใช้แล้ว|nPos-telltea/);

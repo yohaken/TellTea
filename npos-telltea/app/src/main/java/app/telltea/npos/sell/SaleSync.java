@@ -467,13 +467,20 @@ public final class SaleSync {
     }
 
     public List<JSONObject> recentReceipts(Context context) {
+        List<JSONObject> all = listReceiptsNewestFirst(context);
+        if (all.size() <= 40) return all;
+        return new ArrayList<>(all.subList(0, 40));
+    }
+
+    /** All stored local receipts, newest first (cap ~60 in prefs). */
+    public List<JSONObject> listReceiptsNewestFirst(Context context) {
         List<JSONObject> out = new ArrayList<>();
         try {
             JSONArray arr =
                     new JSONArray(
                             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                                     .getString(KEY_RECEIPTS, "[]"));
-            for (int i = arr.length() - 1; i >= 0 && out.size() < 40; i--) {
+            for (int i = arr.length() - 1; i >= 0; i--) {
                 out.add(arr.getJSONObject(i));
             }
         } catch (Exception ignored) {
@@ -936,7 +943,7 @@ public final class SaleSync {
     }
 
     /** Flatten option choices for a short kitchen-readable receipt line. */
-    static String formatOptionsForReceipt(Object optionsRaw) {
+    public static String formatOptionsForReceipt(Object optionsRaw) {
         if (!(optionsRaw instanceof JSONArray)) return "";
         JSONArray groups = (JSONArray) optionsRaw;
         StringBuilder sb = new StringBuilder();
