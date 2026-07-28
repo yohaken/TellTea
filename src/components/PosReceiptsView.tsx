@@ -16,6 +16,7 @@ import { formatPlainNumber, startOfLocalDay } from "@/lib/utils";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 
 type ReceiptFilter = "all" | "pending" | "synced";
+type TimeFilter = "shift" | "today";
 
 const DEFAULT_SHOP: PosShopSettings = getLocalPosShopSettings();
 
@@ -25,6 +26,8 @@ export function PosReceiptsView() {
   const [rows, setRows] = useState(() => listLocalReceiptsForDay(dayStart));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState<ReceiptFilter>("all");
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>("shift");
+  const [billQuery, setBillQuery] = useState("");
   const [shop, setShop] = useState<PosShopSettings>(DEFAULT_SHOP);
   const [voidBusy, setVoidBusy] = useState(false);
   const [voidTarget, setVoidTarget] = useState<PosLocalReceipt | null>(null);
@@ -50,10 +53,21 @@ export function PosReceiptsView() {
 
   const filtered = useMemo(() => {
     let list = rows;
+    if (timeFilter === "shift" && session?.id) {
+      list = list.filter((r) => !r.sessionId || r.sessionId === session.id);
+    }
     if (filter === "pending") list = list.filter((r) => r.pending && !r.voided);
     if (filter === "synced") list = list.filter((r) => !r.pending && !r.voided);
+    const q = billQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (r) =>
+          (r.billNo || "").toLowerCase().includes(q) ||
+          r.id.toLowerCase().includes(q),
+      );
+    }
     return list;
-  }, [rows, filter]);
+  }, [rows, filter, timeFilter, session?.id, billQuery]);
 
   const selected = useMemo(
     () => filtered.find((r) => r.id === selectedId) || filtered[0] || null,
@@ -105,6 +119,20 @@ export function PosReceiptsView() {
             {pendingCount > 0 ? ` · รอส่ง ${pendingCount}` : ""}
           </p>
           <div className="pos-receipts-filters">
+            <button
+              type="button"
+              className={timeFilter === "shift" ? "is-active" : ""}
+              onClick={() => setTimeFilter("shift")}
+            >
+              รอบนี้
+            </button>
+            <button
+              type="button"
+              className={timeFilter === "today" ? "is-active" : ""}
+              onClick={() => setTimeFilter("today")}
+            >
+              วันนี้
+            </button>
             <button type="button" className={filter === "all" ? "is-active" : ""} onClick={() => setFilter("all")}>
               ทั้งหมด ({rows.length})
             </button>
@@ -123,6 +151,15 @@ export function PosReceiptsView() {
               ส่งแล้ว ({rows.filter((r) => !r.pending && !r.voided).length})
             </button>
           </div>
+          <label className="pos-receipts-search">
+            <span className="muted">ค้นหาเลขบิล</span>
+            <input
+              type="search"
+              value={billQuery}
+              onChange={(e) => setBillQuery(e.target.value)}
+              placeholder="เช่น P2707-001"
+            />
+          </label>
           <button type="button" className="pos-receipts-demo-btn" onClick={loadDemoData}>
             โหลดข้อมูลทดสอบ
           </button>

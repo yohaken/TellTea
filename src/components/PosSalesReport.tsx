@@ -16,10 +16,35 @@ import {
   summarizePosSalesDetailed,
   voidedForSession,
 } from "@/lib/pos-sales-report";
+import {
+  saleLinesToLocalReceiptLines,
+  type PosLocalReceipt,
+} from "@/lib/pos-local-receipts";
 import type { PosSale, PosSession } from "@/lib/types";
 import { formatPlainNumber, startOfLocalDay } from "@/lib/utils";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { PosManagePanel } from "@/components/PosManagePanel";
+import { PosReceiptPaper } from "@/components/PosReceiptPaper";
+
+function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
+  return {
+    id: sale.id,
+    billNo: sale.billNo,
+    sessionId: sale.sessionId,
+    total: sale.total,
+    paymentMethod: sale.paymentMethod,
+    linePreview: sale.lines.map((l) => `${l.name}×${l.qty}`).join(", "),
+    lines: saleLinesToLocalReceiptLines(sale.lines),
+    discountBaht: sale.discountBaht,
+    cashReceived: sale.cashReceived,
+    change: sale.change,
+    createdAt: sale.createdAt,
+    pending: false,
+    voided: sale.status === "voided",
+    voidedAt: sale.voidedAt,
+    voidReason: sale.voidReason,
+  };
+}
 
 type PosSalesHubTab = "report" | "manage";
 
@@ -135,6 +160,8 @@ export function PosSalesReport({
   const [voidTarget, setVoidTarget] = useState<PosSale | null>(null);
   const [voidReason, setVoidReason] = useState("");
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
+  const [billQuery, setBillQuery] = useState("");
 
   const isToday = dateMs === startOfLocalDay();
 
@@ -169,13 +196,36 @@ export function PosSalesReport({
     [sessions],
   );
   const filteredSales = useMemo(() => {
-    if (!selectedSessionId) return sales;
-    return sales.filter((s) => s.sessionId === selectedSessionId);
-  }, [sales, selectedSessionId]);
+    let list = selectedSessionId
+      ? sales.filter((s) => s.sessionId === selectedSessionId)
+      : sales;
+    const q = billQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (s) =>
+          (s.billNo || "").toLowerCase().includes(q) ||
+          s.id.toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [sales, selectedSessionId, billQuery]);
+
+  const selectedSale = useMemo(
+    () => filteredSales.find((s) => s.id === selectedSaleId) || filteredSales[0] || null,
+    [filteredSales, selectedSaleId],
+  );
 
   useEffect(() => {
     setSelectedSessionId(null);
+    setSelectedSaleId(null);
+    setBillQuery("");
   }, [dateMs]);
+
+  useEffect(() => {
+    if (selectedSaleId && !filteredSales.some((s) => s.id === selectedSaleId)) {
+      setSelectedSaleId(filteredSales[0]?.id || null);
+    }
+  }, [filteredSales, selectedSaleId]);
 
   function openVoidDialog(sale: PosSale) {
     if (!actorId || sale.status === "voided") return;
@@ -326,66 +376,112 @@ export function PosSalesReport({
             ? ` · รอบ #${selectedSessionId.slice(-6).toUpperCase()}`
             : ""}
         </h3>
-        {selectedSessionId ? (
-          <button
-            type="button"
-            className="ghost-btn"
-            onClick={() => setSelectedSessionId(null)}
-          >
-            แสดงทุกบิลวันนี้
-          </button>
-        ) : null}
+        <div className="pos-sales-bill-toolbar">
+          {selectedSessionId ? (
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={() => setSelectedSessionId(null)}
+            >
+              แสดงทุกบิลวันนี้
+            </button>
+          ) : null}
+          <label className="pos-sales-bill-search">
+            <span className="muted">ค้นหาเลขบิล</span>
+            <input
+              type="search"
+              value={billQuery}
+              onChange={(e) => setBillQuery(e.target.value)}
+              placeholder="เช่น P2707-001"
+            />
+          </label>
+        </div>
         {loading ? <p className="empty">กำลังโหลด...</p> : null}
         {!loading && filteredSales.length === 0 ? (
           <p className="muted">ยังไม่มีบิล — ขายที่แท็บเล็ต POS</p>
         ) : null}
         {!loading && filteredSales.length > 0 ? (
-          <ul className="pos-sales-list">
-            {filteredSales.map((sale) => {
-              const voided = sale.status === "voided";
-              const busy = busyId === sale.id;
-              const preview = sale.lines
-                .slice(0, 2)
-                .map((l) => `${l.name}×${l.qty}`)
-                .join(", ");
-              return (
-                <li key={sale.id} className={`pos-sales-row ${voided ? "pos-sales-row--void" : ""}`}>
-                  <div className="pos-sales-row-main">
-                    <strong className="pos-sales-bill-id">
-                      #{(sale.billNo || "—").replace(/^#/, "")}
-                    </strong>
-                    <span className="muted">
-                      {formatTime(sale.createdAt)} · {labelOtShift(sale.shift as "late" | "morning" | "evening")} ·{" "}
-                      {sale.paymentMethod === "promptpay" ? "PromptPay" : "เงินสด"}
-                      {(sale.discountBaht || 0) > 0
-                        ? ` · ส่วนลด ฿${formatPlainNumber(sale.discountBaht || 0)}`
-                        : ""}
-                    </span>
-                    <span className="pos-sales-row-items">{preview}</span>
-                    {sale.voidReason ? (
-                      <span className="muted">เหตุผล: {sale.voidReason}</span>
-                    ) : null}
-                  </div>
-                  <div className="pos-sales-row-end">
-                    <strong className={voided ? "muted" : ""}>฿{formatPlainNumber(sale.total)}</strong>
+          <div className="pos-sales-bill-split">
+            <ul className="pos-sales-list">
+              {filteredSales.map((sale) => {
+                const voided = sale.status === "voided";
+                const busy = busyId === sale.id;
+                const active = selectedSale?.id === sale.id;
+                const preview = sale.lines
+                  .slice(0, 2)
+                  .map((l) => `${l.name}×${l.qty}`)
+                  .join(", ");
+                return (
+                  <li
+                    key={sale.id}
+                    className={`pos-sales-row ${voided ? "pos-sales-row--void" : ""} ${active ? "is-active" : ""}`}
+                  >
+                    <button
+                      type="button"
+                      className="pos-sales-row-select"
+                      onClick={() => setSelectedSaleId(sale.id)}
+                    >
+                      <div className="pos-sales-row-main">
+                        <strong className="pos-sales-bill-id">
+                          #{(sale.billNo || "—").replace(/^#/, "")}
+                        </strong>
+                        <span className="muted">
+                          {formatTime(sale.createdAt)} ·{" "}
+                          {labelOtShift(sale.shift as "late" | "morning" | "evening")} ·{" "}
+                          {sale.paymentMethod === "promptpay" ? "PromptPay" : "เงินสด"}
+                          {(sale.discountBaht || 0) > 0
+                            ? ` · ส่วนลด ฿${formatPlainNumber(sale.discountBaht || 0)}`
+                            : ""}
+                        </span>
+                        <span className="pos-sales-row-items">{preview}</span>
+                        {sale.voidReason ? (
+                          <span className="muted">เหตุผล: {sale.voidReason}</span>
+                        ) : null}
+                      </div>
+                      <div className="pos-sales-row-end">
+                        <strong className={voided ? "muted" : ""}>
+                          ฿{formatPlainNumber(sale.total)}
+                        </strong>
+                        {voided ? <span className="pos-sales-voided">ยกเลิกแล้ว</span> : null}
+                      </div>
+                    </button>
                     {!voided && isToday ? (
                       <button
                         type="button"
                         className="ghost-btn pos-sales-void-btn"
                         disabled={busy}
-                        onClick={() => openVoidDialog(sale)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openVoidDialog(sale);
+                        }}
                       >
                         <Ban size={14} aria-hidden />
                         ยกเลิก
                       </button>
-                    ) : voided ? (
-                      <span className="pos-sales-voided">ยกเลิกแล้ว</span>
                     ) : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                  </li>
+                );
+              })}
+            </ul>
+            <aside className="pos-sales-bill-detail" aria-label="รายละเอียดบิล">
+              {selectedSale ? (
+                <PosReceiptPaper
+                  receipt={saleToLocalReceipt(selectedSale)}
+                  onVoid={
+                    isToday && selectedSale.status !== "voided"
+                      ? () => openVoidDialog(selectedSale)
+                      : undefined
+                  }
+                  voidBusy={busyId === selectedSale.id}
+                />
+              ) : (
+                <p className="muted">เลือกบิลจากรายการ</p>
+              )}
+              <p className="muted pos-sales-bill-detail-note">
+                หลังบ้านดูรายละเอียดได้อย่างเดียว — พิมพ์ซ้ำที่แท็บเล็ต POS
+              </p>
+            </aside>
+          </div>
         ) : null}
       </section>
 
