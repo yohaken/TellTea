@@ -7,6 +7,8 @@ import { VatSalesMailPanel } from "@/components/vat-sales/VatSalesMailPanel";
 import { VatSalesMonthClosePanel } from "@/components/vat-sales/VatSalesMonthClosePanel";
 import { VatSalesReconcilePanel } from "@/components/vat-sales/VatSalesReconcilePanel";
 import { VatSalesInputVatPanel } from "@/components/vat-sales/VatSalesInputVatPanel";
+import { VatSalesAuditPanel } from "@/components/vat-sales/VatSalesAuditPanel";
+import { VatSalesOwnerGuide } from "@/components/vat-sales/VatSalesOwnerGuide";
 import { useAuth } from "@/lib/auth";
 import { formatPlainNumber } from "@/lib/utils";
 import {
@@ -42,7 +44,7 @@ import {
   type DayOpsStatus,
 } from "@/lib/vat-sales-status";
 
-type VatTab = "daily" | "mail" | "recon" | "input" | "close";
+type VatTab = "daily" | "mail" | "recon" | "input" | "close" | "audit";
 
 export default function VatSalesPage() {
   return (
@@ -135,14 +137,29 @@ function VatSalesView({ actor }: { actor: string }) {
   >({});
   const [statusFilter, setStatusFilter] = useState<DayOpsStatus | "all" | "action">("all");
   const [highlightDay, setHighlightDay] = useState<string | null>(null);
+  const [jumpDay, setJumpDay] = useState("");
+  const [minGross, setMinGross] = useState("");
+  const [mailFocusDate, setMailFocusDate] = useState<string | null>(null);
   const todayKey = useMemo(() => bangkokDateKey(), []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const t = params.get("tab");
-    if (t === "mail" || t === "close" || t === "daily" || t === "recon" || t === "input") {
+    if (
+      t === "mail" ||
+      t === "close" ||
+      t === "daily" ||
+      t === "recon" ||
+      t === "input" ||
+      t === "audit"
+    ) {
       setTab(t);
+    }
+    const date = params.get("date");
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      setMailFocusDate(date);
+      if (t === "mail" || !t) setTab("mail");
     }
     const mail = params.get("mail");
     const provider = params.get("provider");
@@ -216,12 +233,6 @@ function VatSalesView({ actor }: { actor: string }) {
     [dateKeys, dayStatuses],
   );
 
-  const visibleKeys = useMemo(() => {
-    if (statusFilter === "all") return dateKeys;
-    if (statusFilter === "action") return actionDays;
-    return dateKeys.filter((k) => dayStatuses[k] === statusFilter);
-  }, [dateKeys, statusFilter, dayStatuses, actionDays]);
-
   const totals = useMemo(() => sumMonthSales(rows), [rows]);
   const confirmedTotals = useMemo(
     () => sumMonthSales(rows, { confirmedOnly: true }),
@@ -244,6 +255,26 @@ function VatSalesView({ actor }: { actor: string }) {
     },
     [docs, drafts],
   );
+
+  const visibleKeys = useMemo(() => {
+    let keys =
+      statusFilter === "all"
+        ? dateKeys
+        : statusFilter === "action"
+          ? actionDays
+          : dateKeys.filter((k) => dayStatuses[k] === statusFilter);
+
+    if (jumpDay.trim()) {
+      const day = jumpDay.trim().padStart(2, "0");
+      keys = keys.filter((k) => k.endsWith(`-${day}`) || k === jumpDay.trim());
+    }
+
+    const min = Number(String(minGross).replace(/,/g, ""));
+    if (Number.isFinite(min) && min > 0) {
+      keys = keys.filter((k) => previewRow(k).totalGross >= min);
+    }
+    return keys;
+  }, [dateKeys, statusFilter, dayStatuses, actionDays, jumpDay, minGross, previewRow]);
 
   const setDraftField = (
     dateKey: string,
@@ -374,6 +405,46 @@ function VatSalesView({ actor }: { actor: string }) {
     }
   };
 
+  const confirmAllReady = async () => {
+    const ready = dateKeys.filter((k) => dayStatuses[k] === "ready");
+    if (ready.length === 0) {
+      setError("ไม่มีวันที่สถานะพร้อมยืนยัน");
+      return;
+    }
+    const dirty = ready.filter((k) => drafts[k]?.dirty);
+    if (dirty.length > 0) {
+      setError(`มี ${dirty.length} วันยังไม่บันทึก — บันทึกก่อนยืนยันทั้งชุด`);
+      return;
+    }
+    if (!window.confirm(`ยืนยันทั้ง ${ready.length} วันที่พร้อมในเดือน ${month}?`)) return;
+    setBusy("bulk-confirm");
+    setError("");
+    setMsg("");
+    try {
+      let n = 0;
+      for (const dateKey of ready) {
+        const next = await confirmDailySales(dateKey, actor);
+        setDocs((prev) => ({ ...prev, [dateKey]: next }));
+        n += 1;
+      }
+      setMsg(`ยืนยันแล้ว ${n} วัน`);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const jumpToDay = () => {
+    const raw = jumpDay.trim();
+    if (!raw) return;
+    const key = raw.includes("-") ? raw : `${month}-${raw.padStart(2, "0")}`;
+    setHighlightDay(key);
+    const el = document.getElementById(`vat-day-${key}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   const pullPosMonth = async () => {
     if (!window.confirm(`ดึงยอดหน้าร้านจาก POS ทั้งเดือน ${month}? ค่าที่มาจากมือ/เมลจะถามก่อนทับ`)) {
       return;
@@ -495,6 +566,7 @@ function VatSalesView({ actor }: { actor: string }) {
           <p className="muted vat-sales-lead">
             เดลิเวอรี่ 3 ช่องทาง + หน้าร้าน · คิด VAT 7% จากยอดลูกค้า · เฉพาะเจ้าของ
           </p>
+          <VatSalesOwnerGuide />
         </div>
         <div className="vat-sales-tabs" role="tablist">
           <button
@@ -542,6 +614,15 @@ function VatSalesView({ actor }: { actor: string }) {
           >
             ปิดเดือน / VAT
           </button>
+          <button
+            type="button"
+            role="tab"
+            className={tab === "audit" ? "vat-sales-tab is-active" : "vat-sales-tab"}
+            aria-selected={tab === "audit"}
+            onClick={() => setTab("audit")}
+          >
+            ประวัติ
+          </button>
         </div>
       </header>
 
@@ -559,6 +640,7 @@ function VatSalesView({ actor }: { actor: string }) {
             setBusy={setBusy}
             setError={setError}
             setMsg={setMsg}
+            focusDate={mailFocusDate}
           />
         ) : (
           <p className="muted">กำลังโหลด...</p>
@@ -601,6 +683,14 @@ function VatSalesView({ actor }: { actor: string }) {
         />
       ) : null}
 
+      {tab === "audit" ? (
+        <VatSalesAuditPanel
+          month={month}
+          onMonthChange={setMonth}
+          setError={setError}
+        />
+      ) : null}
+
       {tab === "daily" ? (
         <>
         <div className="vat-sales-toolbar" style={{ marginBottom: "0.85rem" }}>
@@ -635,6 +725,42 @@ function VatSalesView({ actor }: { actor: string }) {
           >
             {showSettings ? "ซ่อนตั้งค่า" : "ตั้งค่า"}
           </button>
+          <button
+            type="button"
+            className="primary-btn"
+            disabled={busy !== null || loading || statusCounts.ready <= 0}
+            onClick={() => void confirmAllReady()}
+          >
+            {busy === "bulk-confirm"
+              ? "กำลังยืนยัน..."
+              : `ยืนยันทั้งที่พร้อม (${statusCounts.ready})`}
+          </button>
+          <label className="vat-sales-month">
+            ไปวัน
+            <input
+              inputMode="numeric"
+              placeholder="15"
+              value={jumpDay}
+              onChange={(e) => setJumpDay(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") jumpToDay();
+              }}
+              style={{ width: "4.5rem" }}
+            />
+          </label>
+          <button type="button" className="ghost-btn" onClick={jumpToDay}>
+            กระโดด
+          </button>
+          <label className="vat-sales-month">
+            ยอดร้าน ≥
+            <input
+              inputMode="decimal"
+              placeholder="0"
+              value={minGross}
+              onChange={(e) => setMinGross(e.target.value)}
+              style={{ width: "5.5rem" }}
+            />
+          </label>
           <label className="vat-sales-month">
             กรองสถานะ
             <select
@@ -952,7 +1078,10 @@ function VatSalesView({ actor }: { actor: string }) {
                           <button
                             type="button"
                             className="ghost-btn vat-sales-act-btn"
-                            onClick={() => setTab("mail")}
+                            onClick={() => {
+                              setMailFocusDate(dateKey);
+                              setTab("mail");
+                            }}
                           >
                             เมล
                           </button>

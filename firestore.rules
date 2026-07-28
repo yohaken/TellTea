@@ -450,6 +450,11 @@ service cloud.firestore {
       allow read, write: if isOwner();
     }
 
+    /** audit ยอดขาย/VAT — เจ้าของเท่านั้น */
+    match /vatSalesAudit/{id} {
+      allow read, write: if isOwner();
+    }
+
     match /stock/{itemId} {
       allow read: if hasPerm('stock');
       allow create, delete: if isOwner();

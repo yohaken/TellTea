@@ -65,9 +65,11 @@ export function deriveDayOpsStatus(
   if (doc.status === "confirmed") return "confirmed";
 
   const enabled = enabledDeliveryChannels(settings);
-  const relevant = emails.filter(
-    (e) => e.channel === "unknown" || enabled.includes(e.channel as DeliveryChannel),
-  );
+  const relevant = emails.filter((e) => {
+    const kind = e.parsed?.reportKind || e.reportKind || "daily";
+    if (kind !== "daily") return false;
+    return e.channel === "unknown" || enabled.includes(e.channel as DeliveryChannel);
+  });
   const hasPendingReview = relevant.some((e) => e.parseStatus === "ok");
   const hasParseFail = relevant.some((e) => e.parseStatus === "fail");
   const hasAnyMail = relevant.some((e) => e.parseStatus !== "ignored");
@@ -80,7 +82,16 @@ export function deriveDayOpsStatus(
   const storefrontOk = !storefrontNeeded || (doc.storefrontGross || 0) > 0;
 
   const allDeliveryFilled = enabled.length === 0 || filledDelivery.length === enabled.length;
-  if (allDeliveryFilled && storefrontOk && (doc.totalGross > 0 || enabled.length === 0)) {
+  // วันศูนย์ที่เมลยืนยันครบ (emailRefs) ก็พร้อมยืนยันได้
+  const zeroDayFromMail =
+    enabled.length > 0 &&
+    filledDelivery.length === enabled.length &&
+    enabled.every((ch) => Boolean(doc.emailRefs?.[ch]));
+  if (
+    allDeliveryFilled &&
+    storefrontOk &&
+    (doc.totalGross > 0 || zeroDayFromMail || enabled.length === 0)
+  ) {
     return "ready";
   }
 

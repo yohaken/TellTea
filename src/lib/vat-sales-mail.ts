@@ -28,6 +28,7 @@ import {
   type VatMailRules,
 } from "./vat-sales";
 import { parsePlatformEmail, type ParsedPlatformReport } from "./vat-sales-parse";
+import { appendVatSalesAudit } from "./vat-sales-audit";
 
 export type { MailChannelRule, VatMailRules };
 export { DEFAULT_MAIL_RULES, mapMailRules };
@@ -477,6 +478,24 @@ export async function confirmEmailSalesToDaily(
     parseError: "",
     confirmedAt: Date.now(),
     confirmedDateKey: dateKey,
+  });
+
+  await appendVatSalesAudit({
+    action: "confirm_email",
+    dateKey,
+    summary: `ยืนยันเมล ${channel} → ${dateKey} · ${nextAmount.grossInclusive}`,
+    before: {
+      grossInclusive: prev.grossInclusive,
+      emailRef: existing.emailRefs[channel] || "",
+    },
+    after: {
+      grossInclusive: nextAmount.grossInclusive,
+      fee: nextAmount.fee || 0,
+      netTransfer: nextAmount.netTransfer || 0,
+      reportId: input.reportId,
+      channel,
+    },
+    actor: input.actor,
   });
 
   return { dateKey };

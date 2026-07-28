@@ -16,6 +16,10 @@ import {
 import { getDb } from "./firebase";
 import { POS_SALES_COL } from "./pos-sales";
 import { daysInMonthKey } from "./categories";
+import {
+  appendVatSalesAudit,
+  snapshotDailyAmounts,
+} from "./vat-sales-audit";
 
 export const DAILY_SALES_COL = "dailySales";
 export const VAT_SALES_SETTINGS_DOC = "vatSalesSettings";
@@ -454,6 +458,7 @@ export async function upsertDailySales(
   if (!isDateKey(dateKey)) throw new Error("วันที่ไม่ถูกต้อง");
 
   const existing = await getDailySales(dateKey);
+  const beforeSnap = snapshotDailyAmounts(existing);
   const unlocking = input.status === "draft";
   const confirming = input.status === "confirmed";
   if (existing.status === "confirmed" && !unlocking && !confirming) {
@@ -530,6 +535,26 @@ export async function upsertDailySales(
   };
 
   await setDoc(dailyRef(dateKey), docData, { merge: true });
+
+  const afterSnap = snapshotDailyAmounts(docData);
+  let action: "upsert_day" | "confirm_day" | "unconfirm_day" = "upsert_day";
+  let summary = `แก้ยอด ${dateKey}`;
+  if (confirming && existing.status !== "confirmed") {
+    action = "confirm_day";
+    summary = `ยืนยันวัน ${dateKey}`;
+  } else if (unlocking && existing.status === "confirmed") {
+    action = "unconfirm_day";
+    summary = `ปลดล็อกวัน ${dateKey}`;
+  }
+  await appendVatSalesAudit({
+    action,
+    dateKey,
+    summary,
+    before: beforeSnap,
+    after: afterSnap,
+    actor: updatedBy,
+  });
+
   return docData;
 }
 

@@ -14,6 +14,7 @@ import {
   type MonthSalesTotals,
   type PnlIncomeMode,
 } from "./vat-sales";
+import { appendVatSalesAudit } from "./vat-sales-audit";
 
 export const VAT_MONTH_CLOSE_COL = "vatMonthCloses";
 
@@ -105,5 +106,17 @@ export async function closeVatMonthToIncome(
     closedBy,
   };
   await setDoc(doc(getDb(), VAT_MONTH_CLOSE_COL, month), audit, { merge: true });
+  await appendVatSalesAudit({
+    action: "close_month",
+    monthKey: month,
+    summary: `ปิดเดือน ${month} · รายได้ ${income}`,
+    before: { income: preview.currentIncome },
+    after: {
+      income,
+      confirmedDays: preview.confirmedDays,
+      vatOutput: preview.totals.vatOutput,
+    },
+    actor: closedBy,
+  });
   return audit;
 }

@@ -60,7 +60,7 @@
 | **P4** | สถานะวัน · dashboard ขาดรายงาน · แจ้งเตือนเจ้าของ | ✅ |
 | **P5** | ปิดเดือน → `monthlyIncome` + รายงาน VAT เดือน | ✅ |
 | **P6** | Outlook/Hotmail · เมลสัปดาห์/เดือน · Input VAT | ✅ |
-| **P7** | ขัดเกลา UX · audit log · สำรอง raw · เอกสารผู้ใช้ | ⬜ หลังนิ่ง |
+| **P7** | ขัดเกลา UX · audit log · สำรอง raw · เอกสารผู้ใช้ | ✅ |
 
 ### ตัดออกจากแผน (ยืนยันแล้ว)
 
@@ -556,12 +556,16 @@ platformEmailReports/{id}
 
 ## P7 — ขัดเกลาหลังนิ่ง
 
-- [ ] Audit log การแก้ยอด / ยืนยันวัน / ปิดเดือน
-- [ ] เก็บ raw เมลตามนโยบายระยะเวลา (เช่น 12–24 เดือน) + งาน prune owner-triggered
-- [ ] ค้นหาวัน/ยอดในตารางเร็วขึ้น
-- [ ] คู่มือสั้นในแอปสำหรับเจ้าของ: เชื่อมเมล · ยืนยันวัน · ปิดเดือน
-- [ ] ระบบสุขภาพ parser: นับ fail rate ต่อช่องทาง
-- [ ] เมื่อแพลตฟอร์มเปลี่ยนเทมเพลต → แจ้งเจ้าของว่าต้องอัป parser
+- [x] Audit log การแก้ยอด / ยืนยันวัน / ปิดเดือน — `vatSalesAudit` + แท็บประวัติ
+- [x] เก็บ raw เมลตามนโยบายระยะเวลา + prune owner-triggered (ลบ raw เก่า · คง metadata)
+- [x] ค้นหาวัน/ยอดในตารางเร็วขึ้น (กระโดดวัน · ยอดร้าน ≥)
+- [x] คู่มือสั้นในแอปสำหรับเจ้าของ: เชื่อมเมล · ยืนยันวัน · ปิดเดือน
+- [x] ระบบสุขภาพ parser: นับ fail rate ต่อช่องทาง
+- [x] เมื่อแพลตฟอร์มเปลี่ยนเทมเพลต → แจ้งเจ้าของว่าต้องอัป parser (drift banner)
+- [x] ยืนยันทั้งวันที่พร้อม · โฟกัสเมลจากวัน · วันศูนย์จากเมล = พร้อมยืนยัน
+- [x] เมลสัปดาห์/เดือนไม่นับเป็นเมลรายวันในสถานะวัน
+
+> Ship: `APP_BUILD` **337** · deploy ไว้ทีหลัง (อื่นๆ)
 
 ---
 
@@ -572,6 +576,7 @@ dailySales/{YYYY-MM-DD}
 platformEmailReports/{id}
 vatInputInvoices/{id}
 vatMonthCloses/{YYYY-MM}
+vatSalesAudit/{id}
 meta/vatSalesSettings      // owner-only · ห้าม staff อ่าน
 meta/vatMailOAuth          // owner-only · Gmail refresh token
 meta/vatMailOAuthOutlook   // owner-only · Outlook refresh token

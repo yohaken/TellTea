@@ -35,6 +35,8 @@ import {
   startVatOutlookOAuth,
   syncVatOutlook,
 } from "@/lib/vat-sales-outlook";
+import { loadParserHealth, type ParserHealthSummary } from "@/lib/vat-sales-parser-health";
+import { prunePlatformEmailRaw } from "@/lib/vat-sales-mail-prune";
 
 const DEFAULT_REDIRECT =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/vatMailOAuthCallback";
@@ -56,6 +58,8 @@ type Props = {
   setBusy: (v: string | null) => void;
   setError: (v: string) => void;
   setMsg: (v: string) => void;
+  /** กรอง/โฟกัสวันจากตารางรายวัน */
+  focusDate?: string | null;
 };
 
 export function VatSalesMailPanel({
@@ -67,6 +71,7 @@ export function VatSalesMailPanel({
   setBusy,
   setError,
   setMsg,
+  focusDate = null,
 }: Props) {
   const [status, setStatus] = useState<VatMailStatus | null>(null);
   const [outlookStatus, setOutlookStatus] = useState<VatMailStatus | null>(null);
@@ -87,6 +92,8 @@ export function VatSalesMailPanel({
   const [olSecret, setOlSecret] = useState("");
   const [olRedirect, setOlRedirect] = useState(DEFAULT_OUTLOOK_REDIRECT);
   const [olHasSecret, setOlHasSecret] = useState(false);
+  const [health, setHealth] = useState<ParserHealthSummary | null>(null);
+  const [pruneMonths, setPruneMonths] = useState("12");
   const [review, setReview] = useState<{
     reportDate: string;
     grossInclusive: string;
@@ -98,7 +105,7 @@ export function VatSalesMailPanel({
     setLoading(true);
     setError("");
     try {
-      const [st, ol, rows, cfg, olCfg] = await Promise.all([
+      const [st, ol, rows, cfg, olCfg, healthSum] = await Promise.all([
         fetchVatMailStatus(),
         fetchVatOutlookStatus().catch(() => null),
         listPlatformEmailReports({
@@ -108,10 +115,20 @@ export function VatSalesMailPanel({
         }),
         loadVatMailOAuthConfig().catch(() => null),
         loadVatOutlookOAuthConfig().catch(() => null),
+        loadParserHealth(200).catch(() => null),
       ]);
       setStatus(st);
       setOutlookStatus(ol);
-      setReports(rows);
+      let nextRows = rows;
+      if (focusDate) {
+        nextRows = rows.filter((r) => {
+          const d = r.parsed?.reportDate || r.reportDateGuess || "";
+          return d === focusDate || d.startsWith(focusDate);
+        });
+        if (nextRows.length === 0) nextRows = rows;
+      }
+      setReports(nextRows);
+      setHealth(healthSum);
       if (cfg) {
         setCfgClientId(cfg.clientId);
         setCfgRedirect(cfg.redirectUri || DEFAULT_REDIRECT);
@@ -127,7 +144,7 @@ export function VatSalesMailPanel({
     } finally {
       setLoading(false);
     }
-  }, [channelFilter, statusFilter, setError]);
+  }, [channelFilter, statusFilter, focusDate, setError]);
 
   useEffect(() => {
     void refresh();
@@ -240,6 +257,34 @@ export function VatSalesMailPanel({
       setOlSecret("");
       setMsg("บันทึก Outlook OAuth config แล้ว");
       await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const runPruneRaw = async (dryRun: boolean) => {
+    const months = Number(pruneMonths) || 12;
+    if (!dryRun) {
+      const ok = window.confirm(
+        `ลบเนื้อหา raw ของเมลเก่ากว่า ${months} เดือน?\nเก็บ metadata/parsed ไว้ · ย้อนกลับไม่ได้`,
+      );
+      if (!ok) return;
+    }
+    setBusy(dryRun ? "mail-prune-dry" : "mail-prune");
+    setError("");
+    setMsg("");
+    try {
+      const res = await prunePlatformEmailRaw({
+        months,
+        actor,
+        dryRun,
+      });
+      setMsg(
+        `${dryRun ? "ตรวจแล้ว" : "ลบ raw แล้ว"} · สแกน ${res.scanned} · เข้าเกณฑ์ ${res.pruned} ฉบับ (เก่ากว่า ${res.months} เดือน)`,
+      );
+      if (!dryRun) await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -412,6 +457,67 @@ export function VatSalesMailPanel({
 
   return (
     <div className="vat-mail-panel">
+      {focusDate ? (
+        <p className="muted vat-sales-msg">โฟกัสเมลของวัน {focusDate}</p>
+      ) : null}
+      {health?.driftChannels?.length ? (
+        <p className="error-text">
+          สงสัยเทมเพลตเมลเปลี่ยน · fail ติดกันที่{" "}
+          {health.driftChannels
+            .map((ch) =>
+              ch === "unknown"
+                ? "ไม่ทราบช่องทาง"
+                : DELIVERY_CHANNEL_LABELS[ch],
+            )
+            .join(", ")}{" "}
+          — ควรอัป parser
+        </p>
+      ) : null}
+      {health ? (
+        <section className="vat-sales-settings">
+          <h2 className="vat-sales-section-title">สุขภาพ parser</h2>
+          <p className="muted">
+            รวม {health.total} ฉบับ · fail {health.fail}
+            {health.failRate != null ? ` (${health.failRate}%)` : ""}
+          </p>
+          {health.channels.length ? (
+            <div className="sheet-wrap vat-sales-scroll">
+              <table className="sheet-table vat-sales-table" style={{ minWidth: 0 }}>
+                <thead>
+                  <tr>
+                    <th>ช่องทาง</th>
+                    <th className="col-num">ทั้งหมด</th>
+                    <th className="col-num">รอตรวจ</th>
+                    <th className="col-num">fail</th>
+                    <th className="col-num">% fail</th>
+                    <th>เวอร์ชัน</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {health.channels.map((c) => (
+                    <tr key={c.channel}>
+                      <td>
+                        {c.label}
+                        {c.driftSuspected ? " · สงสัย drift" : ""}
+                      </td>
+                      <td className="col-num">{c.total}</td>
+                      <td className="col-num">{c.ok}</td>
+                      <td className="col-num">{c.fail}</td>
+                      <td className="col-num">
+                        {c.failRate != null ? `${c.failRate}%` : "—"}
+                      </td>
+                      <td className="muted">{c.versions.join(", ") || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="muted">ยังไม่มีเมลให้สรุป</p>
+          )}
+        </section>
+      ) : null}
+
       <section className="vat-sales-settings">
         <h2 className="vat-sales-section-title">เชื่อม Gmail</h2>
         <p className="muted vat-sales-hint">
@@ -683,6 +789,40 @@ export function VatSalesMailPanel({
         >
           บันทึกกฎค้นหา
         </button>
+      </section>
+
+      <section className="vat-sales-settings">
+        <h2 className="vat-sales-section-title">ลบ raw เมลเก่า</h2>
+        <p className="muted vat-sales-hint">
+          เก็บหัวข้อ / parsed / สถานะ · ลบเฉพาะเนื้อหา raw ที่เก่ากว่า N เดือน (เจ้าของกดเอง)
+        </p>
+        <div className="vat-sales-toolbar">
+          <label className="vat-sales-month">
+            เดือน
+            <select value={pruneMonths} onChange={(e) => setPruneMonths(e.target.value)}>
+              <option value="6">6</option>
+              <option value="12">12</option>
+              <option value="18">18</option>
+              <option value="24">24</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className="ghost-btn"
+            disabled={busy !== null}
+            onClick={() => void runPruneRaw(true)}
+          >
+            {busy === "mail-prune-dry" ? "กำลังตรวจ..." : "ตรวจจำนวน"}
+          </button>
+          <button
+            type="button"
+            className="ghost-btn"
+            disabled={busy !== null}
+            onClick={() => void runPruneRaw(false)}
+          >
+            {busy === "mail-prune" ? "กำลังลบ..." : "ลบ raw เก่า"}
+          </button>
+        </div>
       </section>
 
       <section>
