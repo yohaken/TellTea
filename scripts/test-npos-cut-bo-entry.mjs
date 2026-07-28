@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 304/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 99/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+69/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.46"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 305/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 100/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+70/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.47"/);
 
 assert.ok(existsSync(join(root, "docs/npos-cut-bo-entry-checklist.md")));
 const doc = read("docs/npos-cut-bo-entry-checklist.md");
