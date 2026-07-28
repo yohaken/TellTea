@@ -7,6 +7,7 @@ import android.util.DisplayMetrics;
 import android.view.WindowManager;
 
 import app.telltea.npos.printer.PrinterPrefs;
+import app.telltea.npos.shift.ShiftPrefs;
 
 import org.json.JSONObject;
 
@@ -83,6 +84,15 @@ public final class DeviceHeartbeat {
                         res.optLong("storeClaimUpdatedAt", 0L));
                 if (res.has("heartbeatIntervalSec")) {
                     OpsPulsePrefs.applyFromServer(app, res.optInt("heartbeatIntervalSec", 5));
+                }
+                // Kick ≠ close: BO-closed round settles via sessionRemoteClosed (seat kept).
+                if (res.optBoolean("sessionRemoteClosed", false)
+                        && ShiftPrefs.isOpen(app)
+                        && !res.optBoolean("kicked", false)) {
+                    ShiftPrefs.applyRemoteSessionClosed(
+                            app,
+                            res.optString("sessionId", ShiftPrefs.sessionId(app)),
+                            res.optString("sessionCloseSource", ""));
                 }
                 handleCaptureCommand(app, res);
                 if (callback != null) callback.onSuccess(pairing, seen);
@@ -173,6 +183,12 @@ public final class DeviceHeartbeat {
         int[] outbox = app.telltea.npos.sell.SaleSync.outboxCounts(context);
         body.put("syncPendingCount", outbox[0]);
         body.put("syncFailedCount", outbox[1]);
+        if (ShiftPrefs.isOpen(context)) {
+            String sid = ShiftPrefs.sessionId(context);
+            if (sid != null && !sid.isEmpty()) {
+                body.put("sessionId", sid);
+            }
+        }
         return body;
     }
 

@@ -276,6 +276,30 @@ exports.nposDeviceHeartbeat = functions
         console.warn("nposDeviceHeartbeat session date repair failed", repairErr);
       }
 
+      // Cooperative session signal (same channel as kick): if tablet still holds a
+      // local sessionId that BO already closed, tell native to settle — not revoke seat.
+      let sessionRemoteClosed = false;
+      let sessionCloseSource = "";
+      let sessionClosedAt = 0;
+      let sessionStatus = "";
+      const clientSessionId = asString(body.sessionId, 80);
+      if (clientSessionId) {
+        try {
+          const sessSnap = await db.collection("posSessions").doc(clientSessionId).get();
+          if (sessSnap.exists) {
+            const sess = sessSnap.data() || {};
+            sessionStatus = asString(sess.status, 16) || "open";
+            if (sessionStatus === "closed") {
+              sessionRemoteClosed = true;
+              sessionCloseSource = asString(sess.closeSource, 40);
+              sessionClosedAt = Number(sess.closedAt) || 0;
+            }
+          }
+        } catch (sessErr) {
+          console.warn("nposDeviceHeartbeat session status read failed", sessErr);
+        }
+      }
+
       res.status(200).json({
         ok: true,
         installId,
@@ -299,6 +323,11 @@ exports.nposDeviceHeartbeat = functions
         storeClaimCodeHash: claim.storeClaimCodeHash || "",
         storeClaimUpdatedAt: claim.storeClaimUpdatedAt || 0,
         heartbeatIntervalSec,
+        sessionId: clientSessionId || "",
+        sessionStatus,
+        sessionRemoteClosed,
+        sessionCloseSource,
+        sessionClosedAt,
         capture: {
           requestAt: captureRequestAt,
           intervalMinutes: captureIntervalMinutes,

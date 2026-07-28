@@ -693,7 +693,55 @@ public class SellActivity extends Activity {
           discountBaht = 0;
           draftCartCode = "";
           renderCart();
+          maybeSettleRemoteClosed();
         });
+  }
+
+  /**
+   * Heartbeat learned BO closed this round — keep seat; finish cart if any, then hub.
+   * Called from {@link NposApp} (not a kick).
+   */
+  public void onRemoteSessionClosedFromSync() {
+    if (isFinishing()) return;
+    updateShiftSummary();
+    if (cart.isEmpty()) {
+      settleRemoteClosedAndLeave();
+      return;
+    }
+    Toast.makeText(this, R.string.shift_remote_closed_banner, Toast.LENGTH_LONG).show();
+    if (sellSyncStatus != null) {
+      sellSyncStatus.setText(R.string.shift_remote_closed_banner);
+    }
+  }
+
+  private void maybeSettleRemoteClosed() {
+    if (!ShiftPrefs.isRemoteClosedPending(this)) return;
+    if (!cart.isEmpty()) return;
+    settleRemoteClosedAndLeave();
+  }
+
+  private void settleRemoteClosedAndLeave() {
+    if (isFinishing()) return;
+    Toast.makeText(this, R.string.shift_remote_closed_toast, Toast.LENGTH_LONG).show();
+    try {
+      NposConfirmDialog.alert(
+          this,
+          getString(R.string.shift_remote_closed_title),
+          getString(R.string.shift_remote_closed_msg),
+          getString(android.R.string.ok),
+          false,
+          this::leaveSellAfterRemoteClose);
+    } catch (RuntimeException e) {
+      leaveSellAfterRemoteClose();
+    }
+  }
+
+  private void leaveSellAfterRemoteClose() {
+    ShiftPrefs.settleRemoteClosed(this);
+    Intent hub = new Intent(this, MainActivity.class);
+    hub.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    startActivity(hub);
+    finish();
   }
 
   private void holdBill() {
@@ -710,6 +758,7 @@ public class SellActivity extends Activity {
       updateHoldRestoreButton();
       Toast.makeText(this, R.string.hold_saved, Toast.LENGTH_SHORT).show();
       OpsLogger.info(this, "sale", "พักบิล", "");
+      maybeSettleRemoteClosed();
     } catch (Exception e) {
       Toast.makeText(this, R.string.hold_fail, Toast.LENGTH_SHORT).show();
     }
@@ -895,6 +944,10 @@ public class SellActivity extends Activity {
 
   private void updateShiftSummary() {
     if (shiftSummary == null) return;
+    if (ShiftPrefs.isRemoteClosedPending(this)) {
+      shiftSummary.setText(R.string.shift_remote_closed_banner);
+      return;
+    }
     shiftSummary.setText(ShiftPrefs.dutyLine(this));
   }
 
@@ -988,6 +1041,7 @@ public class SellActivity extends Activity {
     updateShiftSummary();
     updateHoldRestoreButton();
     updatePendingBadge();
+    maybeSettleRemoteClosed();
     dutyHandler.removeCallbacks(dutyTick);
     dutyHandler.post(dutyTick);
     if (saleSync != null) saleSync.flushPending(this);
@@ -2513,6 +2567,7 @@ public class SellActivity extends Activity {
                                     getString(R.string.sell_saved_toast, total),
                                     Toast.LENGTH_SHORT)
                                 .show();
+                            maybeSettleRemoteClosed();
                           });
                     }
 

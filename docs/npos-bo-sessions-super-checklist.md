@@ -1,6 +1,6 @@
 # nPos — BO sessions table slim super
 
-อัปเดต: **1.14.65** · `APP_BUILD` 324 · `POS_BUILD` 118 · vc **88**
+อัปเดต: **1.14.66** · `APP_BUILD` 325 · `POS_BUILD` 119 · vc **89**
 
 ## มติ
 
@@ -14,7 +14,7 @@
 | คอลัมน์รวม | เวลารวมของรอบ (เปิด = ถึงตอนนี้) |
 | กลุ่มรหัส (เจ้าของร้าน) | **เครื่อง** (pairing) · **รหัสรอบ** — รหัสรอบซ่อนเมื่อจอแคบ |
 | คอลัมน์ปิด | เวลา `closedAt` |
-| ปิดรอบจาก BO (ทดลอง) | คอลัมน์ **ปิด** · `closePosSessionAdmin` · ไม่แทนที่การปิดกะบนแท็บเล็ต |
+| ปิดรอบจาก BO (ทดลอง) | คอลัมน์ **ปิด** · `closePosSessionAdmin` · แท็บเล็ตตาม heartbeat (ไม่เตะ seat) · ดู `npos-bo-close-sync-checklist` |
 | ปิดกะเร็ว | ไม่รอ heartbeat / ไม่บล็อกด้วย pending dialog · flush แล้ว `nposSessionClose` ก่อนออกงานในเครื่อง |
 | หลังปิดต้องขึ้นตาราง | ปิด local เฉพาะเมื่อเซิร์ฟเวอร์ `ok` · CF ซ่อม `date` Bangkok |
 

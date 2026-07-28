@@ -604,7 +604,7 @@ export function PosSalesReport({
         }
         message={
           forceCloseTarget
-            ? `ช่วงทดลอง 3–5 วัน · ข้อมูลยังไม่ใช้จริงเต็มรูปแบบ\nกะ: ${forceCloseTarget.shift || "—"}\nวันที่: ${
+            ? `ปิดบนเซิร์ฟเวอร์ทันที · แท็บเล็ตตาม heartbeat (~5วิ) โดยไม่เสีย seat\nถ้ามีบิลในตะกร้า จะจบได้ก่อนแล้วค่อยออกจากขาย\nกะ: ${forceCloseTarget.shift || "—"}\nวันที่: ${
                 forceCloseTarget.date
                   ? new Date(forceCloseTarget.date).toLocaleDateString("th-TH", {
                       day: "numeric",
