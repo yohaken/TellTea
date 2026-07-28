@@ -73,7 +73,11 @@ type PosAppContextValue = {
   boot: () => Promise<void>;
   handleOpenShift: () => void;
   /** ปิดรอบบนเครื่องทันที — sync เซิร์ฟเวอร์เงียบด้านหลัง */
-  handleCloseShift: (totals?: { cashTotal: number; promptpayTotal: number }) => Promise<void>;
+  handleCloseShift: (totals?: {
+    cashTotal: number;
+    promptpayTotal: number;
+    transferTotal?: number;
+  }) => Promise<void>;
   installApp: () => Promise<void>;
   performReload: () => void;
 };
@@ -303,7 +307,11 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleCloseShift = useCallback(
-    async (totals?: { cashTotal: number; promptpayTotal: number }) => {
+    async (totals?: {
+      cashTotal: number;
+      promptpayTotal: number;
+      transferTotal?: number;
+    }) => {
       const deviceId = deviceIdRef.current;
       const current = session;
       if (!deviceId || !current || current.status !== "open") return;
@@ -325,6 +333,7 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
         closedAt: closed.closedAt || Date.now(),
         cashTotal: totals?.cashTotal ?? 0,
         promptpayTotal: totals?.promptpayTotal ?? 0,
+        transferTotal: totals?.transferTotal ?? 0,
       });
 
       // sync เงียบด้านหลัง: ส่งบิลค้างก่อน แล้วค่อยปิดรอบบนเซิร์ฟ

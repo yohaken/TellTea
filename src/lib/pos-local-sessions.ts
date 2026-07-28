@@ -5,6 +5,7 @@ export type PosLocalSessionRecord = PosSession & {
   closedAt: number;
   cashTotal: number;
   promptpayTotal: number;
+  transferTotal?: number;
 };
 
 const KEY = "telltea-pos-local-sessions";

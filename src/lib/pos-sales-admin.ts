@@ -108,7 +108,7 @@ async function adjustPosSessionTotalsAdmin(
   sessionId: string,
   totalDelta: number,
   countDelta: number,
-  paymentMethod?: "cash" | "promptpay",
+  paymentMethod?: "cash" | "promptpay" | "transfer",
 ): Promise<void> {
   const ref = doc(getDb(), POS_SESSIONS_COL, sessionId);
   const snap = await getDoc(ref);
@@ -127,6 +127,13 @@ async function adjustPosSessionTotalsAdmin(
       0,
       Math.round(
         ((typeof data.promptpayTotal === "number" ? data.promptpayTotal : 0) + totalDelta) * 100,
+      ) / 100,
+    );
+  } else if (paymentMethod === "transfer") {
+    patch.transferTotal = Math.max(
+      0,
+      Math.round(
+        ((typeof data.transferTotal === "number" ? data.transferTotal : 0) + totalDelta) * 100,
       ) / 100,
     );
   } else if (paymentMethod === "cash") {
