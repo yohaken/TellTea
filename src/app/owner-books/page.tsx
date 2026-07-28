@@ -17,6 +17,7 @@ import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoC
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
+import { OwnerBooksModeSwitch } from "@/components/OwnerBooksModeSwitch";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -290,8 +291,11 @@ function OwnerBooksView() {
 
   if (!can(staff, "ownerBooks")) return null;
 
+  const isOwner = staff?.role === "owner";
+
   return (
     <div className="owner-books-page module-page">
+      {isOwner ? <OwnerBooksModeSwitch active="out" /> : null}
       <div className="balance-bar owner-books-balance">
         <span>รวมออก</span>
         <strong>{totalOut == null ? "…" : formatBaht(totalOut)}</strong>

@@ -2,6 +2,7 @@
 
 > ถอดจากงานที่ทำบน TellTea โดยผิดแอป · ใช้เป็นสเปกพกไปลงแอปที่ถูก  
 > วันที่ถอด: 2026-07-28 · สาขาอ้างอิง: `cursor/vat-daily-sales-checklist-deaf` · PR #132  
+> **อัปเดต:** รวมเข้า **บช.เจ้าของ** (`OwnerBooksModeSwitch`: เงินออก ↔ ยอดขาย/VAT) · ตารางวัน **super slim**  
 > **ไม่ผูก Excel** · **owner-only ทั้งก้อน** · เดลิเวอรี่จาก **API เมล** เท่านั้น
 
 ---
@@ -43,11 +44,11 @@
 
 ## 4) UI แผนที่ (แท็บย่อ)
 
-Route: `/vat-sales/` · การ์ดใน `/more/` (owner only) · prefix ใน AppShell
+Route: `/vat-sales/` · สลับจาก `/owner-books/` (บช.เจ้าของ) · prefix ใน AppShell · การ์ดแยกใน `/more/` ถูกยุบเข้าบัญชีเจ้าของ
 
 | แท็บ | ย่อ | งาน |
 |------|-----|-----|
-| daily | **วัน** | ตาราง Sp/Grab/LM + ร้าน · เซฟ/ยืนยัน · ดึง POS · กระโดดวัน · ยืนยันพร้อมทั้งชุด |
+| daily | **วัน** | ตาราง slim: `ว · Sp · Grab · LM · ร้าน · รวม · ฐาน · VAT · สถ · …` |
 | mail | **เมล** | API Gmail/Outlook (ID+Secret) · ซิงก์ · Parse · ยืนยันเข้าวัน |
 | recon | **เทียบ** | เมลสัปดาห์/เดือน vs รวมวัน · ไม่ทับ |
 | input | **ซื้อ** | `vatInputInvoices` · VAT สุทธิ |

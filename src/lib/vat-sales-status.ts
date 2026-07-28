@@ -33,7 +33,7 @@ export const DAY_OPS_STATUS_LABELS: Record<DayOpsStatus, string> = {
 /** ย่อชื่อช่องทางในตาราง */
 export const CHANNEL_SHORT: Record<DeliveryChannel, string> = {
   shopee: "Sp",
-  grab: "Grab",
+  grab: "G",
   lineman: "LM",
 };
 

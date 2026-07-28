@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
+import { OwnerBooksModeSwitch } from "@/components/OwnerBooksModeSwitch";
 import { VatSalesMailPanel } from "@/components/vat-sales/VatSalesMailPanel";
 import { VatSalesMonthClosePanel } from "@/components/vat-sales/VatSalesMonthClosePanel";
 import { VatSalesReconcilePanel } from "@/components/vat-sales/VatSalesReconcilePanel";
@@ -560,7 +561,8 @@ function VatSalesView({ actor }: { actor: string }) {
   };
 
   return (
-    <div className="vat-sales-page">
+    <div className="vat-sales-page owner-books-page">
+      <OwnerBooksModeSwitch active="vat" />
       <header className="vat-sales-header">
         <div>
           <h1 className="panel-title">ยอดขาย / VAT</h1>
@@ -658,7 +660,7 @@ function VatSalesView({ actor }: { actor: string }) {
 
       {tab === "daily" ? (
         <>
-        <div className="vat-sales-toolbar" style={{ marginBottom: "0.85rem" }}>
+        <div className="vat-sales-toolbar vat-sales-toolbar--slim" style={{ marginBottom: "0.45rem" }}>
           <label className="vat-sales-month">
             เดือน
             <input
@@ -673,7 +675,7 @@ function VatSalesView({ actor }: { actor: string }) {
             disabled={busy !== null || loading}
             onClick={() => void refresh()}
           >
-            รีเฟรช
+            รี
           </button>
           <button
             type="button"
@@ -681,14 +683,14 @@ function VatSalesView({ actor }: { actor: string }) {
             disabled={busy !== null || loading}
             onClick={() => void pullPosMonth()}
           >
-            ดึงหน้าร้านจาก POS
+            POS
           </button>
           <button
             type="button"
             className="ghost-btn"
             onClick={() => setShowSettings((v) => !v)}
           >
-            {showSettings ? "ซ่อนตั้งค่า" : "ตั้งค่า"}
+            {showSettings ? "ซ่อน" : "ตั้งค่า"}
           </button>
           <button
             type="button"
@@ -698,10 +700,10 @@ function VatSalesView({ actor }: { actor: string }) {
           >
             {busy === "bulk-confirm"
               ? "…"
-              : `ยืนยันพร้อม (${statusCounts.ready})`}
+              : `ยืนยัน (${statusCounts.ready})`}
           </button>
           <label className="vat-sales-month">
-            ไปวัน
+            วัน
             <input
               inputMode="numeric"
               placeholder="15"
@@ -710,24 +712,24 @@ function VatSalesView({ actor }: { actor: string }) {
               onKeyDown={(e) => {
                 if (e.key === "Enter") jumpToDay();
               }}
-              style={{ width: "4.5rem" }}
+              style={{ width: "3.2rem" }}
             />
           </label>
           <button type="button" className="ghost-btn" onClick={jumpToDay}>
-            กระโดด
+            ไป
           </button>
           <label className="vat-sales-month">
-            ยอดร้าน ≥
+            ≥
             <input
               inputMode="decimal"
               placeholder="0"
               value={minGross}
               onChange={(e) => setMinGross(e.target.value)}
-              style={{ width: "5.5rem" }}
+              style={{ width: "4rem" }}
             />
           </label>
           <label className="vat-sales-month">
-            กรองสถานะ
+            สถ
             <select
               value={statusFilter}
               onChange={(e) =>
@@ -746,8 +748,7 @@ function VatSalesView({ actor }: { actor: string }) {
         </div>
 
       {actionDays.length > 0 ? (
-        <section className="vat-sales-action-board">
-          <h2 className="vat-sales-section-title">ต้องจัดการ ({actionDays.length} วัน)</h2>
+        <section className="vat-sales-action-board vat-sales-action-board--slim">
           <div className="vat-sales-action-chips">
             {actionDays.slice(0, 31).map((d) => (
               <button
@@ -761,21 +762,21 @@ function VatSalesView({ actor }: { actor: string }) {
                   el?.scrollIntoView({ behavior: "smooth", block: "center" });
                 }}
               >
-                {d.slice(8)} · {DAY_OPS_STATUS_LABELS[dayStatuses[d] || "empty"]}
+                {d.slice(8)}·{DAY_OPS_STATUS_LABELS[dayStatuses[d] || "empty"]}
               </button>
             ))}
           </div>
           <p className="muted vat-sales-hint">
-            ขาดเมล {statusCounts.missing_mail} · รอตรวจ {statusCounts.pending_review} ·
-            parse พัง {statusCounts.parse_error} · ยังไม่ครบ {statusCounts.incomplete} ·
-            พร้อมยืนยัน {statusCounts.ready} · ยืนยันแล้ว {statusCounts.confirmed}
+            ขาด {statusCounts.missing_mail} · รอ {statusCounts.pending_review} ·
+            fail {statusCounts.parse_error} · ไม่ครบ {statusCounts.incomplete} ·
+            พร้อม {statusCounts.ready} · OK {statusCounts.confirmed}
           </p>
         </section>
       ) : null}
 
       <p className="muted vat-sales-hint">
-        รายได้ชั่วคราวจากวันยืนยันแล้ว (ยังไม่เข้า P&amp;L จนกดปิดเดือน): ฐานภาษี{" "}
-        {fmt(confirmedTotals.vatBase)} · รวม VAT {fmt(confirmedTotals.totalGross)}
+        ยืนยันแล้ว→P&amp;L หลังปิดเดือน · ฐาน {fmt(confirmedTotals.vatBase)} · VAT{" "}
+        {fmt(confirmedTotals.vatOutput)} · รวม {fmt(confirmedTotals.totalGross)}
       </p>
 
       {showSettings && settings ? (
@@ -884,7 +885,7 @@ function VatSalesView({ actor }: { actor: string }) {
           ส่ง <strong>{fmt(totals.deliveryGross)}</strong>
           <small className="muted">
             {" "}
-            Sp {fmt(totals.shopee)} · Grab {fmt(totals.grab)} · LM {fmt(totals.lineman)}
+            Sp {fmt(totals.shopee)} · G {fmt(totals.grab)} · LM {fmt(totals.lineman)}
           </small>
         </span>
         <span>
@@ -900,19 +901,16 @@ function VatSalesView({ actor }: { actor: string }) {
           VAT <strong>{fmt(totals.vatOutput)}</strong>
         </span>
         <span className="muted">
-          GP {fmt(totals.feeTotal)} · โอน {fmt(totals.netTransferTotal)}
+          GP {fmt(totals.feeTotal)} · โอน {fmt(totals.netTransferTotal)} ·{" "}
+          {totals.confirmedDays}/{dateKeys.length}
         </span>
       </section>
-
-      <p className="muted vat-sales-hint">
-        ยอด = รวม VAT ลูกค้า · ฐาน=÷1.07 · ยืนยัน {totals.confirmedDays}/{dateKeys.length}
-      </p>
 
       {loading ? (
         <p className="muted">กำลังโหลด...</p>
       ) : (
         <div className="sheet-wrap vat-sales-scroll">
-          <table className="sheet-table vat-sales-table">
+          <table className="sheet-table vat-sales-table vat-sales-table--slim">
             <thead>
               <tr>
                 <th className="col-date">ว</th>
@@ -921,20 +919,18 @@ function VatSalesView({ actor }: { actor: string }) {
                     {CHANNEL_SHORT[ch]}
                   </th>
                 ))}
-                <th className="col-num">ส่ง</th>
                 <th className="col-num">ร้าน</th>
                 <th className="col-num">รวม</th>
                 <th className="col-num">ฐาน</th>
                 <th className="col-num">VAT</th>
-                <th>สถานะ</th>
-                <th>บ.</th>
-                <th className="col-act">…</th>
+                <th>สถ</th>
+                <th className="col-act" />
               </tr>
             </thead>
             <tbody>
               {visibleKeys.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="empty">
+                  <td colSpan={10} className="empty">
                     ไม่มีวันที่ตรงตัวกรอง
                   </td>
                 </tr>
@@ -946,6 +942,7 @@ function VatSalesView({ actor }: { actor: string }) {
                 const locked = row.status === "confirmed";
                 const dayBusy = busy === dateKey;
                 const ops = dayStatuses[dateKey] || "empty";
+                const bookLabel = locked ? "OK" : draft?.dirty ? "…" : "ร่าง";
                 return (
                   <tr
                     key={dateKey}
@@ -958,11 +955,8 @@ function VatSalesView({ actor }: { actor: string }) {
                       .filter(Boolean)
                       .join(" ") || undefined}
                   >
-                    <td className="col-date">
+                    <td className="col-date" title={sourceLabel(row.sources.storefront)}>
                       {fmtDay(dateKey)}
-                      <div className="vat-sales-src muted">
-                        {sourceLabel(row.sources.storefront)}
-                      </div>
                     </td>
                     {DELIVERY_CHANNELS.map((ch) => (
                       <td key={ch} className="col-num">
@@ -976,7 +970,6 @@ function VatSalesView({ actor }: { actor: string }) {
                         />
                       </td>
                     ))}
-                    <td className="col-num">{fmt(preview.deliveryGross)}</td>
                     <td className="col-num">
                       <input
                         className="vat-sales-input"
@@ -995,17 +988,12 @@ function VatSalesView({ actor }: { actor: string }) {
                     <td className="col-num">{fmt(preview.vatBase)}</td>
                     <td className="col-num">{fmt(preview.vatOutput)}</td>
                     <td>
-                      <span className={`vat-ops-badge vat-ops-${ops}`}>
-                        {DAY_OPS_STATUS_LABELS[ops]}
-                      </span>
-                    </td>
-                    <td>
                       <span
-                        className={
-                          locked ? "vat-sales-badge ok" : "vat-sales-badge draft"
-                        }
+                        className={`vat-ops-badge vat-ops-${ops}`}
+                        title={`${DAY_OPS_STATUS_LABELS[ops]} · ${bookLabel}`}
                       >
-                        {locked ? "OK" : draft?.dirty ? "dirty" : "ร่าง"}
+                        {DAY_OPS_STATUS_LABELS[ops]}
+                        {locked || draft?.dirty ? `·${bookLabel}` : ""}
                       </span>
                     </td>
                     <td className="col-act">
@@ -1026,7 +1014,7 @@ function VatSalesView({ actor }: { actor: string }) {
                           disabled={dayBusy || busy !== null}
                           onClick={() => void toggleConfirm(dateKey)}
                         >
-                          {locked ? "ปลด" : "ยืนยัน"}
+                          {locked ? "ปลด" : "ยืน"}
                         </button>
                         {ops === "pending_review" || ops === "parse_error" || ops === "missing_mail" ? (
                           <button
@@ -1049,16 +1037,15 @@ function VatSalesView({ actor }: { actor: string }) {
             </tbody>
             <tfoot>
               <tr className="vat-sales-totals-row">
-                <td className="col-date">รวม</td>
+                <td className="col-date">Σ</td>
                 <td className="col-num">{fmt(totals.shopee)}</td>
                 <td className="col-num">{fmt(totals.grab)}</td>
                 <td className="col-num">{fmt(totals.lineman)}</td>
-                <td className="col-num">{fmt(totals.deliveryGross)}</td>
                 <td className="col-num">{fmt(totals.storefrontGross)}</td>
                 <td className="col-num">{fmt(totals.totalGross)}</td>
                 <td className="col-num">{fmt(totals.vatBase)}</td>
                 <td className="col-num">{fmt(totals.vatOutput)}</td>
-                <td colSpan={3} />
+                <td colSpan={2} />
               </tr>
             </tfoot>
           </table>

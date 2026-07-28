@@ -14,7 +14,6 @@ import {
   ClipboardList,
   Coffee,
   Download,
-  Percent,
   Receipt,
   Settings,
   UserCircle,
@@ -75,6 +74,8 @@ function MoreView() {
 
   if (!showMoreTab) return null;
 
+  const isOwner = staff?.role === "owner";
+
   const tools: {
     href: string;
     title: string;
@@ -92,7 +93,9 @@ function MoreView() {
     {
       href: "/owner-books/",
       title: "บัญชีเจ้าของ",
-      desc: "บช.ส่วนตัวเจ้าของร้าน",
+      desc: isOwner
+        ? "เงินออก · ยอดขาย/VAT รายวัน — บช.เจ้าของร้าน"
+        : "บช.ส่วนตัวเจ้าของร้าน",
       icon: BookMarked,
       perm: "ownerBooks",
     },
@@ -113,7 +116,6 @@ function MoreView() {
   ];
 
   const extraTools = tools.filter((t) => can(staff, t.perm));
-  const isOwner = staff?.role === "owner";
   const profileIncomplete = needsProfileSetup(staff);
   const personalIncomplete = needsPersonalProfileSetup(staff);
   const hasExtras = hasAnyExtraPermission(staff);
@@ -162,15 +164,6 @@ function MoreView() {
             <div>
               <strong>POS</strong>
               <p>รายงานยอดขาย POS</p>
-            </div>
-          </Link>
-        ) : null}
-        {isOwner ? (
-          <Link href="/vat-sales/" className="more-card">
-            <Percent size={22} />
-            <div>
-              <strong>ยอดขาย / VAT</strong>
-              <p>เดลิเวอรี่ + หน้าร้านรายวัน · VAT 7% — เฉพาะเจ้าของ</p>
             </div>
           </Link>
         ) : null}
