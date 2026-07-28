@@ -71,6 +71,12 @@ public final class ForegroundHeartbeat {
                     notifyListener();
                     if (app != null) {
                         UpdateCheckCoordinator.onServerSyncPulse(app);
+                        // Flush sales outbox + retry open-session sync so BO sees live rounds.
+                        try {
+                            new app.telltea.npos.sell.SaleSync().flushPending(app);
+                        } catch (Throwable ignored) {
+                            /* never break heartbeat */
+                        }
                     }
                 }
 

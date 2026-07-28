@@ -304,44 +304,123 @@ export function subscribePosSalesForDate(
   onSales: (sales: PosSale[]) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
-  const q = query(
-    collection(getDb(), POS_SALES_COL),
-    where("date", "==", dateMs),
-    orderBy("createdAt", "desc"),
-  );
-  return onSnapshot(
-    q,
+  const legacyUtcDate = dateMs + 7 * 60 * 60 * 1000;
+  let primary: PosSale[] = [];
+  let legacy: PosSale[] = [];
+
+  const emit = () => {
+    const map = new Map<string, PosSale>();
+    for (const s of primary) map.set(s.id, s);
+    for (const s of legacy) map.set(s.id, s);
+    onSales(
+      [...map.values()].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
+    );
+  };
+
+  const unsub1 = onSnapshot(
+    query(
+      collection(getDb(), POS_SALES_COL),
+      where("date", "==", dateMs),
+      orderBy("createdAt", "desc"),
+    ),
     (snap) => {
-      onSales(snap.docs.map((d) => mapPosSale(d.id, d.data() as Record<string, unknown>)));
+      primary = snap.docs.map((d) => mapPosSale(d.id, d.data() as Record<string, unknown>));
+      emit();
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );
+
+  const unsub2 = onSnapshot(
+    query(
+      collection(getDb(), POS_SALES_COL),
+      where("date", "==", legacyUtcDate),
+      orderBy("createdAt", "desc"),
+    ),
+    (snap) => {
+      legacy = snap.docs.map((d) => mapPosSale(d.id, d.data() as Record<string, unknown>));
+      emit();
+    },
+    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
+  );
+
+  return () => {
+    unsub1();
+    unsub2();
+  };
 }
 
 /**
  * Live nPos sales cycles for a day — open + closed from `posSessions`.
  * Sorted client-side (open first, newest closed); not OT morning/evening order.
+ *
+ * Today also merges:
+ * - all `status==open` sessions (live tablet rounds)
+ * - legacy UTC-midnight `date` keys from the old CF day helper
  */
 export function subscribePosSessionsForDate(
   dateMs: number,
   onSessions: (sessions: PosSession[]) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
-  const q = query(collection(getDb(), POS_SESSIONS_COL), where("date", "==", dateMs));
-  return onSnapshot(
-    q,
+  const todayMs = startOfLocalDay();
+  const isToday = dateMs === todayMs;
+  const legacyUtcDate = dateMs + 7 * 60 * 60 * 1000;
+
+  let byDate: PosSession[] = [];
+  let byLegacy: PosSession[] = [];
+  let openLive: PosSession[] = [];
+
+  const emit = () => {
+    const map = new Map<string, PosSession>();
+    for (const s of byDate) map.set(s.id, s);
+    for (const s of byLegacy) map.set(s.id, s);
+    if (isToday) {
+      for (const s of openLive) map.set(s.id, s);
+    }
+    onSessions(sortSessionsOpenFirst([...map.values()]));
+  };
+
+  const handleErr = (err: Error) => onError?.(err);
+
+  const unsubDate = onSnapshot(
+    query(collection(getDb(), POS_SESSIONS_COL), where("date", "==", dateMs)),
     (snap) => {
-      const mapped = snap.docs.map((d) => mapSession(d.id, d.data() as Record<string, unknown>));
-      onSessions(sortSessionsOpenFirst(mapped));
+      byDate = snap.docs.map((d) => mapSession(d.id, d.data() as Record<string, unknown>));
+      emit();
     },
-    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
+    (err) => handleErr(err instanceof Error ? err : new Error(String(err))),
   );
+
+  const unsubLegacy = onSnapshot(
+    query(collection(getDb(), POS_SESSIONS_COL), where("date", "==", legacyUtcDate)),
+    (snap) => {
+      byLegacy = snap.docs.map((d) => mapSession(d.id, d.data() as Record<string, unknown>));
+      emit();
+    },
+    (err) => handleErr(err instanceof Error ? err : new Error(String(err))),
+  );
+
+  let unsubOpen: Unsubscribe = () => {};
+  if (isToday) {
+    unsubOpen = onSnapshot(
+      query(collection(getDb(), POS_SESSIONS_COL), where("status", "==", "open")),
+      (snap) => {
+        openLive = snap.docs.map((d) => mapSession(d.id, d.data() as Record<string, unknown>));
+        emit();
+      },
+      (err) => handleErr(err instanceof Error ? err : new Error(String(err))),
+    );
+  }
+
+  return () => {
+    unsubDate();
+    unsubLegacy();
+    unsubOpen();
+  };
 }
 
 export function shiftDayMs(offsetDays = 0): number {
-  const d = new Date(startOfLocalDay());
-  d.setDate(d.getDate() + offsetDays);
-  return d.getTime();
+  return startOfLocalDay() + offsetDays * 24 * 60 * 60 * 1000;
 }
 
 export function formatPosReportDate(ms: number): string {

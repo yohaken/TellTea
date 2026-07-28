@@ -1,10 +1,5 @@
 const { HttpsError } = require("firebase-functions/v1/https");
-
-function startOfBangkokDay(now = Date.now()) {
-  const local = new Date(new Date(now).toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
-  local.setHours(0, 0, 0, 0);
-  return local.getTime();
-}
+const { startOfBangkokDay } = require("./bangkok-day");
 
 function formatBillNo(dateMs, seq) {
   const parts = new Intl.DateTimeFormat("en-GB", {

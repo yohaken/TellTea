@@ -29,6 +29,7 @@ public final class ShiftPrefs {
   private static final String KEY_CASH_OUT = "cashOutTotal";
   private static final String KEY_CASH_IN = "cashInTotal";
   private static final String KEY_CASH_DROP_COUNT = "cashDropCount";
+  private static final String KEY_SERVER_SYNCED = "serverSessionSynced";
 
   private ShiftPrefs() {}
 
@@ -213,6 +214,7 @@ public final class ShiftPrefs {
         .putLong(KEY_CASH_IN, Double.doubleToRawLongBits(0))
         .putInt(KEY_CASH_DROP_COUNT, 0)
         .putBoolean(KEY_LAST_RESUMED, false)
+        .putBoolean(KEY_SERVER_SYNCED, false)
         .commit();
   }
 
@@ -276,6 +278,7 @@ public final class ShiftPrefs {
         .putLong(KEY_DISCOUNT, Double.doubleToRawLongBits(Math.max(0, discountTotal)))
         .putInt(KEY_VOIDED, Math.max(0, voidedCount))
         .putBoolean(KEY_LAST_RESUMED, true)
+        .putBoolean(KEY_SERVER_SYNCED, true)
         .commit();
   }
 
@@ -286,12 +289,28 @@ public final class ShiftPrefs {
     return v;
   }
 
+  /** True after nposSessionOpen succeeded (or resume). Retry sync while false. */
+  public static boolean isServerSessionSynced(Context context) {
+    return context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .getBoolean(KEY_SERVER_SYNCED, false);
+  }
+
+  public static void markServerSessionSynced(Context context, boolean synced) {
+    context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean(KEY_SERVER_SYNCED, synced)
+        .apply();
+  }
+
   /** Drop local open flag only — does not call server close (used on kick). */
   public static void clearLocalOpen(Context context) {
     context
         .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         .edit()
         .putBoolean(KEY_OPEN, false)
+        .putBoolean(KEY_SERVER_SYNCED, false)
         .commit();
   }
 
@@ -363,6 +382,7 @@ public final class ShiftPrefs {
         .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         .edit()
         .putBoolean(KEY_OPEN, false)
+        .putBoolean(KEY_SERVER_SYNCED, false)
         .commit();
   }
 }

@@ -118,7 +118,17 @@ export function todayInputValue(date = new Date()) {
 }
 
 export function startOfLocalDay(date = new Date()) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
+  // Always Asia/Bangkok calendar day (matches Cloud Functions bangkok-day.js).
+  // Host timezone must not affect POS day buckets.
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date instanceof Date ? date : new Date(date));
+  const get = (type: string) => parts.find((p) => p.type === type)?.value || "0";
+  const y = Number(get("year"));
+  const m = Number(get("month"));
+  const d = Number(get("day"));
+  return Date.UTC(y, m - 1, d) - 7 * 60 * 60 * 1000;
 }

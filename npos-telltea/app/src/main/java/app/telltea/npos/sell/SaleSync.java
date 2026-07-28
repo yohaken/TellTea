@@ -115,8 +115,10 @@ public final class SaleSync {
                                     OpsLogger.info(app, "shift", "ต่อรอบเดิมหลังสลับเครื่อง", sid);
                                 } else if (!sid.equals(sessionId)) {
                                     ShiftPrefs.open(app, sid, shiftName, serverOpened, opening);
+                                    ShiftPrefs.markServerSessionSynced(app, true);
                                     OpsLogger.info(app, "shift", "เปิดรอบเซิร์ฟเวอร์", sid);
                                 } else {
+                                    ShiftPrefs.markServerSessionSynced(app, true);
                                     OpsLogger.info(app, "shift", "ซิงก์รอบแล้ว", sid);
                                 }
                             } else if (isDeviceGateError(res)) {
@@ -152,6 +154,59 @@ public final class SaleSync {
                         if (done != null) done.run();
                     }
                 });
+    }
+
+    /**
+     * If local shift is open but CF open never landed, retry until BO can see the session.
+     * Called from flushPending + heartbeat pulse.
+     */
+    public void ensureOpenSessionSynced(Context context) {
+        Context app = context.getApplicationContext();
+        if (!ShiftPrefs.isOpen(app)) return;
+        if (ShiftPrefs.isServerSessionSynced(app)) return;
+        if (StoreClaimPrefs.blocksWrites(app)) return;
+        String sessionId = ShiftPrefs.sessionId(app);
+        if (sessionId == null || sessionId.isEmpty()) return;
+        try {
+            JSONObject body = new JSONObject();
+            body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
+            body.put("sessionId", sessionId);
+            body.put("openingCash", ShiftPrefs.openingCash(app));
+            body.put("shift", ShiftPrefs.shift(app));
+            JSONObject res = MenuRepository.postJson(OPEN_URL, body, 4_000, 6_000);
+            if (res.optBoolean("ok", false)) {
+                String sid = res.optString("sessionId", sessionId);
+                if (res.optBoolean("resumed", false)) {
+                    ShiftPrefs.resume(
+                            app,
+                            sid,
+                            res.optString("shift", ShiftPrefs.shift(app)),
+                            res.optLong("openedAt", ShiftPrefs.openedAt(app)),
+                            res.optDouble("openingCash", ShiftPrefs.openingCash(app)),
+                            res.optDouble("cashTotal", ShiftPrefs.cashTotal(app)),
+                            res.optDouble("promptpayTotal", ShiftPrefs.promptpayTotal(app)),
+                            res.optDouble("transferTotal", ShiftPrefs.transferTotal(app)),
+                            res.optInt("saleCount", ShiftPrefs.saleCount(app)),
+                            res.optInt("voidedCount", ShiftPrefs.voidedCount(app)),
+                            res.optDouble("discountTotal", ShiftPrefs.discountTotal(app)));
+                } else {
+                    ShiftPrefs.markServerSessionSynced(app, true);
+                }
+                OpsLogger.info(app, "shift", "ซิงก์รอบค้างสำเร็จ", sid);
+            } else if (isDeviceGateError(res)) {
+                OpsLogger.warn(
+                        app,
+                        "shift",
+                        "ซิงก์รอบค้างถูกบล็อก",
+                        res.optString("error", res.optString("code")));
+            }
+        } catch (Exception e) {
+            OpsLogger.warn(
+                    app,
+                    "shift",
+                    "ซิงก์รอบค้างยังไม่สำเร็จ",
+                    e.getMessage() == null ? "" : e.getMessage());
+        }
     }
 
     private static boolean isDeviceGateError(JSONObject res) {
@@ -379,6 +434,7 @@ public final class SaleSync {
         executor.execute(
                 () -> {
                     try {
+                        ensureOpenSessionSynced(app);
                         JSONArray q = readQueue(app);
                         for (int i = 0; i < q.length(); i++) {
                             JSONObject row = q.getJSONObject(i);

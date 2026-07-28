@@ -51,16 +51,12 @@ async function rejectIfDeviceNotAllowed(db, installId, res) {
   return gate;
 }
 
+const { startOfBangkokDay } = require("./bangkok-day");
+
 function shiftFromHour(h) {
   if (h >= 0 && h < 6) return "late";
   if (h < 15) return "morning";
   return "evening";
-}
-
-function startOfBangkokDay(now = Date.now()) {
-  const local = new Date(new Date(now).toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
-  local.setHours(0, 0, 0, 0);
-  return local.getTime();
 }
 
 exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
@@ -309,12 +305,16 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
       });
       if (best) {
         const prevDevice = asString(best.data.deviceId, 64);
+        const openedAt = Number(best.data.openedAt) || now;
+        const correctDate = startOfBangkokDay(openedAt);
         await best.ref.set(
           {
             deviceId: installId,
             previousDeviceId: prevDevice && prevDevice !== installId ? prevDevice : best.data.previousDeviceId || "",
             resumedAt: now,
             updatedAt: now,
+            // Repair legacy UTC-midnight date keys so BO today query matches.
+            date: correctDate,
           },
           { merge: true },
         );

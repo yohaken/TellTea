@@ -51,14 +51,13 @@ public final class UpdatePromptController {
     laterBtn = activity.findViewById(R.id.updatePopupLater);
     readLocalVersion();
     positionPopup();
+    // Mandatory update — never honor leftover snooze from older APKs.
+    ResumePrefs.clearPopupDismiss(activity);
     if (goBtn != null) goBtn.setOnClickListener(v -> onGo());
     if (laterBtn != null) {
-      laterBtn.setOnClickListener(
-          v -> {
-            // Short snooze only — BO countdown / sync pulse will re-show.
-            ResumePrefs.dismissPopupFor(activity, UpdateConfig.POPUP_SNOOZE_MS);
-            hide();
-          });
+      // Hide "Later" — outdated APK must update; wrong-button must not silence popup.
+      laterBtn.setVisibility(View.GONE);
+      laterBtn.setOnClickListener(null);
     }
   }
 
@@ -86,6 +85,10 @@ public final class UpdatePromptController {
   public void onResume() {
     UpdateCheckCoordinator.bind(this);
     if (popup == null) return;
+    ResumePrefs.clearPopupDismiss(activity);
+    if (hasPendingUpdate()) {
+      showPending();
+    }
     UpdateCheckCoordinator.requestCheck(activity, "resume");
   }
 
@@ -112,13 +115,12 @@ public final class UpdatePromptController {
   }
 
   /**
-   * Sync pulse with a known newer build — re-show after short snooze expires.
-   * Closing many times does not stop reminders; each pulse after snooze brings it back.
+   * Sync pulse with a known newer build — always re-show (no snooze).
    */
   void reassertPendingUpdate() {
     if (activity.isFinishing() || busy) return;
     if (!hasPendingUpdate()) return;
-    if (ResumePrefs.isPopupDismissed(activity)) return;
+    ResumePrefs.clearPopupDismiss(activity);
     showPending();
   }
 
@@ -126,10 +128,7 @@ public final class UpdatePromptController {
   void runAutoCheck(String reason) {
     if (activity.isFinishing()) return;
     if (popup == null) return;
-    if (ResumePrefs.isPopupDismissed(activity) && !"force".equals(reason)) {
-      // Short snooze only; after it ends the next pulse/resume checks again.
-      return;
-    }
+    ResumePrefs.clearPopupDismiss(activity);
     startCheck();
   }
 
@@ -174,10 +173,7 @@ public final class UpdatePromptController {
       return;
     }
     pending = manifest;
-    if (ResumePrefs.isPopupDismissed(activity)) {
-      // Keep pending; next sync pulse clears snooze and reasserts.
-      return;
-    }
+    ResumePrefs.clearPopupDismiss(activity);
     showPending();
   }
 
@@ -193,7 +189,10 @@ public final class UpdatePromptController {
       goBtn.setEnabled(true);
       goBtn.setText(R.string.btn_install_update);
     }
-    if (laterBtn != null) laterBtn.setEnabled(true);
+    if (laterBtn != null) {
+      laterBtn.setVisibility(View.GONE);
+      laterBtn.setEnabled(false);
+    }
     if (popup != null) popup.setVisibility(View.VISIBLE);
   }
 

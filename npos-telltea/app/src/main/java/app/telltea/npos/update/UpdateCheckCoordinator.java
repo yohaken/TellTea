@@ -36,7 +36,7 @@ public final class UpdateCheckCoordinator {
   public static void onServerSyncPulse(Context context) {
     UpdatePromptController host = LIVE.get();
     if (host != null && host.hasPendingUpdate()) {
-      // Mandatory: keep resurfacing even if staff dismissed many times.
+      // Mandatory: always resurface — never honor dismiss/snooze.
       host.reassertPendingUpdate();
       return;
     }

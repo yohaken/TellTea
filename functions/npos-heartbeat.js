@@ -255,6 +255,27 @@ exports.nposDeviceHeartbeat = functions
         if (batchOps > 0) await batch.commit();
       }
 
+      // Repair open-session date keys (legacy UTC midnight → Bangkok day) so BO today shows them.
+      try {
+        const { startOfBangkokDay } = require("./bangkok-day");
+        const openSnap = await db
+          .collection("posSessions")
+          .where("status", "==", "open")
+          .where("deviceId", "==", installId)
+          .limit(5)
+          .get();
+        for (const doc of openSnap.docs) {
+          const data = doc.data() || {};
+          const openedAt = Number(data.openedAt) || now;
+          const correct = startOfBangkokDay(openedAt);
+          if (Number(data.date) !== correct) {
+            await doc.ref.set({ date: correct, updatedAt: now, dateRepairedAt: now }, { merge: true });
+          }
+        }
+      } catch (repairErr) {
+        console.warn("nposDeviceHeartbeat session date repair failed", repairErr);
+      }
+
       res.status(200).json({
         ok: true,
         installId,
