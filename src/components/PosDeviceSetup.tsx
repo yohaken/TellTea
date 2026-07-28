@@ -22,6 +22,7 @@ import {
   subscribePosDevices,
   type PosDevice,
 } from "@/lib/pos-devices";
+import { isNposDevOrEmulator } from "@/lib/npos-device-class";
 
 function formatLastSeen(ts: number): string {
   if (!ts) return "ยังไม่เคยออนไลน์";
@@ -100,7 +101,8 @@ export function PosDeviceSetup({ onError }: { onError: (msg: string | null) => v
   useEffect(() => {
     const unsub = subscribePosDevices(
       (list) => {
-        setDevices(list);
+        // Shop emp only — hide emulator / deviceClass=dev noise from POS table.
+        setDevices(list.filter((d) => !isNposDevOrEmulator(d)));
         setLoading(false);
       },
       (err) => {

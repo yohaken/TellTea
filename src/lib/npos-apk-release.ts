@@ -1,0 +1,79 @@
+/**
+ * Expected nPos APK release for BO version compare.
+ * Keep in sync with `npos-telltea/app/build.gradle` (and live latest.json when fetch works).
+ */
+export const NPOS_SYSTEM_VERSION_NAME = "1.14.67";
+export const NPOS_SYSTEM_VERSION_CODE = 90;
+
+export const NPOS_LATEST_MANIFEST_URL =
+  "https://telltea-pos.web.app/downloads/latest.json";
+
+export type NposSystemRelease = {
+  versionName: string;
+  versionCode: number;
+  label: string;
+  source: "bundled" | "manifest";
+};
+
+export function formatNposReleaseLabel(versionName: string, versionCode: number): string {
+  const name = (versionName || "").trim();
+  const code = Number.isFinite(versionCode) ? Math.floor(versionCode) : 0;
+  if (name && code > 0) return `${name} (${code})`;
+  if (name) return name;
+  if (code > 0) return String(code);
+  return "—";
+}
+
+export function bundledNposSystemRelease(): NposSystemRelease {
+  return {
+    versionName: NPOS_SYSTEM_VERSION_NAME,
+    versionCode: NPOS_SYSTEM_VERSION_CODE,
+    label: formatNposReleaseLabel(NPOS_SYSTEM_VERSION_NAME, NPOS_SYSTEM_VERSION_CODE),
+    source: "bundled",
+  };
+}
+
+/** Fetch live latest.json; fall back to bundled gradle pin. */
+export async function fetchNposSystemRelease(
+  signal?: AbortSignal,
+): Promise<NposSystemRelease> {
+  const fallback = bundledNposSystemRelease();
+  try {
+    const res = await fetch(`${NPOS_LATEST_MANIFEST_URL}?t=${Date.now()}`, {
+      cache: "no-store",
+      signal,
+    });
+    if (!res.ok) return fallback;
+    const data = (await res.json()) as {
+      versionName?: unknown;
+      versionCode?: unknown;
+    };
+    const versionName =
+      typeof data.versionName === "string" ? data.versionName.trim() : "";
+    const versionCode = Number(data.versionCode);
+    if (!versionName || !Number.isFinite(versionCode) || versionCode <= 0) {
+      return fallback;
+    }
+    return {
+      versionName,
+      versionCode: Math.floor(versionCode),
+      label: formatNposReleaseLabel(versionName, Math.floor(versionCode)),
+      source: "manifest",
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export type NposVersionMatch = "ok" | "behind" | "ahead" | "unknown";
+
+/** Compare client build code to expected system release. */
+export function nposVersionMatch(
+  clientCode: number,
+  systemCode: number,
+): NposVersionMatch {
+  if (!(clientCode > 0) || !(systemCode > 0)) return "unknown";
+  if (clientCode === systemCode) return "ok";
+  if (clientCode < systemCode) return "behind";
+  return "ahead";
+}

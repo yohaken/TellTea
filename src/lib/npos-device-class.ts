@@ -26,6 +26,22 @@ export function nposDeviceClassLabel(c: NposDeviceClass): string {
   return "บล็อก";
 }
 
+/** AVD / goldfish / ranchu / generic SDK — not a shop tablet. */
+export function looksLikeEmulatorHint(deviceHint?: string): boolean {
+  return /sdk|emulator|generic|goldfish|ranchu/i.test(deviceHint || "");
+}
+
+/** Emulator or long-lived "dev" class — hide from shop-facing BO tables. */
+export function isNposDevOrEmulator(input: {
+  isEmulator?: boolean;
+  deviceClass?: string;
+  deviceHint?: string;
+}): boolean {
+  if (input.isEmulator === true) return true;
+  if (input.deviceClass === "dev") return true;
+  return looksLikeEmulatorHint(input.deviceHint);
+}
+
 /**
  * Recover ANDROID_ID from installId when older docs never stored stableKey.
  * Current native id = `npos` + ANDROID_ID (usually 16 hex).

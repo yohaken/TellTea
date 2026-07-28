@@ -7,12 +7,19 @@ import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import {
   dedupeByStableKey,
   foldByDeviceClass,
+  looksLikeEmulatorHint,
   nposDeviceClassLabel,
   preferOnlineRows,
   resolveNposDeviceClass,
   shortStableKey,
   type NposDeviceClass,
 } from "@/lib/npos-device-class";
+import {
+  bundledNposSystemRelease,
+  fetchNposSystemRelease,
+  nposVersionMatch,
+  type NposSystemRelease,
+} from "@/lib/npos-apk-release";
 import {
   isPosDeviceOnline,
   posClientVersionLabel,
@@ -21,6 +28,7 @@ import {
   clearNposDeviceCaptures,
   clearNposExclusiveSeat,
   getNposStoreClaimStatus,
+  purgeNposDevDevices,
   requestNposScreenCapture,
   setNposCaptureInterval,
   setNposDeviceBlocked,
@@ -33,9 +41,6 @@ import { useAuth } from "@/lib/auth";
 import { NposCaptureGallery } from "@/components/NposCaptureGallery";
 import { subscribeNposDiagnoseReports } from "@/lib/npos-diagnose";
 import { resolveNposCaptureDisplayUrl } from "@/lib/npos-capture-media";
-import { shiftDayMs, shortPosSessionId, subscribePosSessionsForDate } from "@/lib/pos-sales-report";
-import type { PosSession } from "@/lib/types";
-import { formatPlainNumber } from "@/lib/utils";
 
 function isNposDevice(d: PosDevice): boolean {
   if (d.shellKind === "native") return true;
@@ -54,15 +59,16 @@ type CaptureUrls = {
  * Ghosts = disabled siblings from reinstall (not BO-blocked).
  * Keep newest per physical machine (stableKey / recovered from installId);
  * hide UUID wipe orphans when a keyed machine exists; prefer online.
+ * Shop-facing: drop emulator / deviceClass=dev from buckets used in UI.
  */
 function prepareNposDevices(
   devices: PosDevice[],
   now: number,
 ): {
   shop: Row[];
-  dev: Row[];
   blocked: Row[];
   ghostCount: number;
+  hiddenDevCount: number;
 } {
   const rows: Row[] = devices.map((d) => {
     const resolved = withResolvedStableKey(d);
@@ -72,8 +78,7 @@ function prepareNposDevices(
         ...resolved,
         // Old docs without isEmulator often came from AVD testing — treat SDK hints as dev.
         isEmulator:
-          resolved.isEmulator === true ||
-          /sdk|emulator|generic|goldfish|ranchu/i.test(resolved.deviceHint || ""),
+          resolved.isEmulator === true || looksLikeEmulatorHint(resolved.deviceHint),
       }),
       sortAt: resolved.lastSeenAt || 0,
     };
@@ -85,7 +90,16 @@ function prepareNposDevices(
     isPosDeviceOnline(d.lastSeenAt, now),
   );
   const buckets = foldByDeviceClass(deduped);
-  return { ...buckets, ghostCount: ghosts.length };
+  // Blocked shop tablets stay; blocked emulators stay hidden with other dev rows.
+  const blockedShop = buckets.blocked.filter(
+    (d) => !(d.isEmulator || looksLikeEmulatorHint(d.deviceHint)),
+  );
+  return {
+    shop: buckets.shop,
+    blocked: blockedShop,
+    ghostCount: ghosts.length,
+    hiddenDevCount: buckets.dev.length + (buckets.blocked.length - blockedShop.length),
+  };
 }
 
 function formatSeen(ts: number): string {
@@ -102,6 +116,7 @@ function DeviceCard({
   now,
   busy,
   capture,
+  systemRelease,
   onBlock,
   onUnblock,
   onCapture,
@@ -114,6 +129,7 @@ function DeviceCard({
   now: number;
   busy: boolean;
   capture?: CaptureUrls;
+  systemRelease: NposSystemRelease;
   onBlock: () => void;
   onUnblock: () => void;
   onCapture: () => void;
@@ -125,6 +141,10 @@ function DeviceCard({
   const online = isPosDeviceOnline(d.lastSeenAt, now);
   const machine = shortStableKey(d.stableKey, d.id);
   const versionLabel = posClientVersionLabel(d);
+  const clientCode = d.nativeShellBuild || d.appBuild || 0;
+  const match = nposVersionMatch(clientCode, systemRelease.versionCode);
+  const matchHint =
+    match === "ok" ? "ตรงระบบ" : match === "behind" ? "เก่ากว่าระบบ" : match === "ahead" ? "ใหม่กว่าระบบ" : "";
   const equip = posDeviceEquipment(d);
   const capturePending =
     d.captureRequestAt > 0 && d.captureRequestAt > (d.lastCaptureAckAt || 0);
@@ -138,9 +158,9 @@ function DeviceCard({
         </span>
       </div>
       <p className="muted npos-diagnose-id">
-        รหัส {d.pairingCode} · เครื่อง {machine} · เวอร์ชัน {versionLabel} ·{" "}
-        {d.deviceHint || "android"}
-        {d.isEmulator ? " · emulator" : ""}
+        รหัส {d.pairingCode} · เครื่อง {machine} · ระบบ {systemRelease.label} · nPos{" "}
+        {versionLabel}
+        {matchHint ? ` · ${matchHint}` : ""} · {d.deviceHint || "android"}
         {" · "}
         {d.storeClaimed
           ? `เคลม${d.storeClaimMethod ? ` (${d.storeClaimMethod})` : ""}`
@@ -237,6 +257,7 @@ function ClassSection({
   now,
   busyId,
   captures,
+  systemRelease,
   onBlock,
   onUnblock,
   onCapture,
@@ -250,6 +271,7 @@ function ClassSection({
   now: number;
   busyId: string | null;
   captures: Record<string, CaptureUrls>;
+  systemRelease: NposSystemRelease;
   onBlock: (d: Row) => void;
   onUnblock: (d: Row) => void;
   onCapture: (d: Row) => void;
@@ -273,6 +295,7 @@ function ClassSection({
             now={now}
             busy={busyId === d.id}
             capture={captures[d.id]}
+            systemRelease={systemRelease}
             onBlock={() => onBlock(d)}
             onUnblock={() => onUnblock(d)}
             onCapture={() => onCapture(d)}
@@ -287,7 +310,7 @@ function ClassSection({
   );
 }
 
-type ConfirmKind = "clearCaptures" | "revoke" | "clearSeat";
+type ConfirmKind = "clearCaptures" | "revoke" | "clearSeat" | "purgeDev";
 
 export function NposDevicesPanel({ onError }: { onError: (msg: string | null) => void }) {
   const { actorId } = useAuth();
@@ -297,7 +320,9 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
   const [now, setNow] = useState(() => Date.now());
   const [busyId, setBusyId] = useState<string | null>(null);
   const [activeSeatId, setActiveSeatId] = useState("");
-  const [todaySessions, setTodaySessions] = useState<PosSession[]>([]);
+  const [systemRelease, setSystemRelease] = useState<NposSystemRelease>(() =>
+    bundledNposSystemRelease(),
+  );
   const [confirm, setConfirm] = useState<{ kind: ConfirmKind; device?: Row } | null>(null);
 
   useEffect(() => {
@@ -306,43 +331,16 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
   }, []);
 
   useEffect(() => {
+    const ac = new AbortController();
+    void fetchNposSystemRelease(ac.signal).then(setSystemRelease);
+    return () => ac.abort();
+  }, []);
+
+  useEffect(() => {
     void getNposStoreClaimStatus()
       .then((s) => setActiveSeatId(s.activeSeatInstallId || ""))
       .catch(() => setActiveSeatId(""));
   }, [devices]);
-
-  useEffect(() => {
-    const day = shiftDayMs(0);
-    return subscribePosSessionsForDate(
-      day,
-      (sessions) => setTodaySessions(sessions),
-      () => setTodaySessions([]),
-    );
-  }, []);
-
-  /** Newest open session per device; else newest closed today. */
-  const sessionByDevice = useMemo(() => {
-    const map = new Map<string, PosSession>();
-    const sorted = [...todaySessions].sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0));
-    for (const s of sorted) {
-      if (!s.deviceId) continue;
-      const prev = map.get(s.deviceId);
-      if (!prev) {
-        map.set(s.deviceId, s);
-        continue;
-      }
-      if (prev.status !== "open" && s.status === "open") {
-        map.set(s.deviceId, s);
-      }
-    }
-    return map;
-  }, [todaySessions]);
-
-  const openRoundBar = useMemo(() => {
-    return todaySessions
-      .filter((s) => s.status === "open")
-      .sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0));
-  }, [todaySessions]);
 
   useEffect(() => {
     setLoading(true);
@@ -420,10 +418,9 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
   }, [captures, devices]);
 
   const buckets = useMemo(() => prepareNposDevices(devices, now), [devices, now]);
-  const total =
-    buckets.shop.length + buckets.dev.length + buckets.blocked.length;
+  const total = buckets.shop.length + buckets.blocked.length;
   const onlineShop = buckets.shop.filter((d) => isPosDeviceOnline(d.lastSeenAt, now)).length;
-  const onlineDev = buckets.dev.filter((d) => isPosDeviceOnline(d.lastSeenAt, now)).length;
+  const tableRows = buckets.shop;
 
   async function block(d: Row) {
     if (!actorId) {
@@ -513,6 +510,14 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     setConfirm({ kind: "clearSeat" });
   }
 
+  function purgeDev() {
+    if (!actorId) {
+      onError("ต้องเข้าสู่ระบบเจ้าของก่อนลบเครื่องพัฒนา");
+      return;
+    }
+    setConfirm({ kind: "purgeDev" });
+  }
+
   async function runConfirmedAction() {
     if (!confirm || !actorId) return;
     const kind = confirm.kind;
@@ -561,6 +566,21 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
       } finally {
         setBusyId(null);
       }
+      return;
+    }
+    if (kind === "purgeDev") {
+      setBusyId("__purge_dev__");
+      try {
+        const r = await purgeNposDevDevices();
+        onError(null);
+        window.alert(
+          `ลบ emulator/dev แล้ว · เครื่อง ${r.deletedDevices} · diagnose ${r.deletedDiagnose} · ops ${r.deletedOps}`,
+        );
+      } catch (err) {
+        onError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setBusyId(null);
+      }
     }
   }
 
@@ -588,7 +608,9 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
         ? `เตะเครื่อง ${posDeviceLabel(confirm.device)}?`
         : confirm?.kind === "clearSeat"
           ? "เคลียร์ seat + เตะทุกเครื่อง?"
-          : "";
+          : confirm?.kind === "purgeDev"
+            ? "ลบเครื่องพัฒนา / emulator ออกจากระบบ?"
+            : "";
   const confirmMessage =
     confirm?.kind === "clearCaptures"
       ? "ลบจากที่เก็บและไทม์ไลน์ — กู้คืนไม่ได้"
@@ -596,7 +618,9 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
         ? "เครื่องจะเด้งไปใส่รหัสใหม่ (กะไม่ปิดอัตโนมัติ)"
         : confirm?.kind === "clearSeat"
           ? "แท็บเล็ตจะเด้งใส่รหัสใหม่ (กะไม่ปิด)"
-          : undefined;
+          : confirm?.kind === "purgeDev"
+            ? "ลบเอกสาร emulator/dev จาก posDevices · diagnose · ops log — โฟกัสเครื่องหน้าร้านเท่านั้น"
+            : undefined;
 
   return (
     <>
@@ -611,25 +635,26 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
         loading
           ? "กำลังโหลดรายการเครื่อง…"
           : total
-            ? `ออน ${onlineShop + onlineDev} · หน้าร้าน ${buckets.shop.length} · พัฒนา ${buckets.dev.length} · บล็อก ${buckets.blocked.length}${
-                buckets.ghostCount ? ` · ซ่อนซ้ำ ${buckets.ghostCount}` : ""
-              }`
-            : "ยังไม่มีเครื่อง — เปิดแอป nPos แล้วจะลงทะเบียนเอง"
+            ? `ออน ${onlineShop} · หน้าร้าน ${buckets.shop.length} · บล็อก ${buckets.blocked.length}${
+                buckets.hiddenDevCount ? ` · ซ่อน dev ${buckets.hiddenDevCount}` : ""
+              }${buckets.ghostCount ? ` · ซ่อนซ้ำ ${buckets.ghostCount}` : ""} · ระบบ ${systemRelease.label}`
+            : "ยังไม่มีเครื่องหน้าร้าน — เปิดแอป nPos แล้วจะลงทะเบียนเอง"
       }
       defaultOpen={false}
       className="npos-devices-fold"
     >
       {loading ? (
         <p className="muted">กำลังโหลด…</p>
-      ) : total === 0 ? (
-        <p className="muted">ยังไม่มีเครื่อง native</p>
       ) : (
         <>
           <div className="npos-seat-slim">
             <div className="npos-slim-filters">
               <p className="muted npos-slim-empty" style={{ margin: 0 }}>
-                ตารางเครื่อง · เตะ = เคลียร์สิทธิ์ (กะไม่ปิด)
+                ตารางเทคนิค · เทียบเวอร์ชันระบบ vs nPos · ยอดขายดูที่รอบการขาย nPos
                 {activeSeatId ? ` · seat ${activeSeatId.slice(-6).toUpperCase()}` : " · seat ว่าง"}
+                {buckets.hiddenDevCount
+                  ? ` · มี emulator/dev ${buckets.hiddenDevCount} รายการซ่อนอยู่`
+                  : ""}
               </p>
               <button
                 type="button"
@@ -639,61 +664,37 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
               >
                 เคลียร์ seat ทั้งหมด
               </button>
+              <button
+                type="button"
+                className="npos-slim-text-btn npos-slim-text-btn--danger"
+                disabled={busyId === "__purge_dev__"}
+                onClick={() => void purgeDev()}
+              >
+                ลบ emulator/dev
+              </button>
             </div>
-            {openRoundBar.length > 0 ? (
-              <div className="npos-slim-open-rounds">
-                {openRoundBar.map((s) => {
-                  const dev = devices.find((d) => d.id === s.deviceId);
-                  const who = dev ? posDeviceLabel(dev) : s.deviceId.slice(-6).toUpperCase() || "—";
-                  return (
-                    <p key={s.id} className="npos-slim-summary">
-                      <strong>{shortPosSessionId(s.id)}</strong>
-                      <span>·</span>
-                      <span>{who}</span>
-                      <span>·</span>
-                      <span className="npos-slim-status">
-                        <i aria-hidden className="is-live" />
-                        เปิด
-                      </span>
-                      <span>·</span>
-                      <span>{s.saleCount} บิล</span>
-                      <span>·</span>
-                      <strong>฿{formatPlainNumber(s.totalSales)}</strong>
-                      {(s.cashTotal != null ||
-                        s.promptpayTotal != null ||
-                        s.transferTotal != null) && (
-                        <span className="muted">
-                          · สด {formatPlainNumber(s.cashTotal || 0)} / โอน{" "}
-                          {formatPlainNumber(s.transferTotal || 0)} / PP{" "}
-                          {formatPlainNumber(s.promptpayTotal || 0)}
-                        </span>
-                      )}
-                    </p>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="muted npos-slim-empty">วันนี้ยังไม่มีรอบเปิดบนเซิร์ฟเวอร์</p>
-            )}
+            {total === 0 ? (
+              <p className="muted npos-slim-empty">ยังไม่มีเครื่องหน้าร้าน</p>
+            ) : null}
+            {total > 0 ? (
             <div className="npos-slim-scroll" role="table" aria-label="เครื่อง nPos">
               <div className="npos-slim-row npos-slim-row--head npos-slim-row--device" role="row">
                 <span role="columnheader">เครื่อง</span>
                 <span role="columnheader">สถานะ</span>
-                <span role="columnheader">รอบ</span>
-                <span role="columnheader" className="npos-slim-num">
-                  ยอด
-                </span>
                 <span role="columnheader" className="npos-slim-num">
                   ค้าง
                 </span>
                 <span role="columnheader">เชื่อม</span>
                 <span role="columnheader" className="npos-slim-num">
-                  เวอร์ชัน
+                  เวอร์ชันระบบ
+                </span>
+                <span role="columnheader" className="npos-slim-num">
+                  เวอร์ชัน nPos
                 </span>
                 <span role="columnheader">อุปกรณ์</span>
                 <span role="columnheader">แอ็กชัน</span>
               </div>
-              {[...buckets.shop, ...buckets.dev].map((d) => {
+              {tableRows.map((d) => {
                 const online = isPosDeviceOnline(d.lastSeenAt, now);
                 const isSeat = activeSeatId === d.id || (d.storeClaimed && !activeSeatId);
                 let status = "ว่าง";
@@ -703,26 +704,20 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                 else if (isSeat && !online) status = "seat · หลุด";
                 else if (d.storeClaimed) status = "เคลม";
                 const canKick = d.storeClaimed || activeSeatId === d.id;
-                const sess = sessionByDevice.get(d.id);
-                const roundCell = sess
-                  ? `${shortPosSessionId(sess.id)}${sess.status === "open" ? " · เปิด" : " · ปิด"}`
-                  : "—";
-                let salesCell = "—";
-                if (sess) {
-                  const cash = sess.cashTotal ?? 0;
-                  const pp = sess.promptpayTotal ?? 0;
-                  const transfer = sess.transferTotal ?? 0;
-                  salesCell = `${sess.saleCount}·฿${formatPlainNumber(sess.totalSales)}`;
-                  if (cash > 0 || pp > 0 || transfer > 0) {
-                    salesCell += ` ส${formatPlainNumber(cash)}/โ${formatPlainNumber(transfer)}/P${formatPlainNumber(pp)}`;
-                  }
-                }
                 const pending = d.syncPendingCount || 0;
                 const failed = d.syncFailedCount || 0;
                 let pendingCell = "—";
                 if (failed > 0) pendingCell = `⚠${pending}+${failed}`;
                 else if (pending > 0) pendingCell = String(pending);
                 const versionLabel = posClientVersionLabel(d);
+                const clientCode = d.nativeShellBuild || d.appBuild || 0;
+                const match = nposVersionMatch(clientCode, systemRelease.versionCode);
+                const matchClass =
+                  match === "behind"
+                    ? "npos-slim-warn"
+                    : match === "ok"
+                      ? "npos-slim-ver-ok"
+                      : "";
                 const equip = posDeviceEquipment(d);
                 return (
                   <div
@@ -735,12 +730,6 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                       <span className="muted"> · {d.pairingCode}</span>
                     </span>
                     <span role="cell">{status}</span>
-                    <span role="cell" className="npos-slim-ellipsis">
-                      {roundCell}
-                    </span>
-                    <span role="cell" className="npos-slim-num npos-slim-ellipsis" title={salesCell}>
-                      {salesCell}
-                    </span>
                     <span
                       role="cell"
                       className={`npos-slim-num ${failed > 0 ? "npos-slim-warn" : ""}`}
@@ -754,7 +743,22 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                     <span
                       role="cell"
                       className="npos-slim-num npos-slim-ellipsis"
-                      title={versionLabel}
+                      title={`เวอร์ชันระบบ ${systemRelease.label}`}
+                    >
+                      {systemRelease.label}
+                    </span>
+                    <span
+                      role="cell"
+                      className={`npos-slim-num npos-slim-ellipsis ${matchClass}`}
+                      title={`${versionLabel}${
+                        match === "behind"
+                          ? " · เก่ากว่าระบบ"
+                          : match === "ahead"
+                            ? " · ใหม่กว่าระบบ"
+                            : match === "ok"
+                              ? " · ตรงระบบ"
+                              : ""
+                      }`}
                     >
                       {versionLabel}
                     </span>
@@ -789,10 +793,11 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                   </div>
                 );
               })}
-              {[...buckets.shop, ...buckets.dev].length === 0 ? (
-                <p className="muted npos-slim-empty">ยังไม่มีเครื่อง</p>
+              {tableRows.length === 0 ? (
+                <p className="muted npos-slim-empty">ยังไม่มีเครื่องหน้าร้าน</p>
               ) : null}
             </div>
+            ) : null}
           </div>
           <ClassSection
             cls="shop"
@@ -800,20 +805,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             now={now}
             busyId={busyId}
             captures={capturesForUi}
-            onBlock={block}
-            onUnblock={unblock}
-            onCapture={capture}
-            onClearCaptures={clearCaptures}
-            onInterval={setIntervalMins}
-            onGrantClaim={grantClaim}
-            onRevokeClaim={revokeClaim}
-          />
-          <ClassSection
-            cls="dev"
-            rows={buckets.dev}
-            now={now}
-            busyId={busyId}
-            captures={capturesForUi}
+            systemRelease={systemRelease}
             onBlock={block}
             onUnblock={unblock}
             onCapture={capture}
@@ -828,6 +820,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
             now={now}
             busyId={busyId}
             captures={capturesForUi}
+            systemRelease={systemRelease}
             onBlock={block}
             onUnblock={unblock}
             onCapture={capture}
@@ -848,7 +841,9 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
           ? "ล้างภาพ"
           : confirm?.kind === "revoke"
             ? "เตะเครื่อง"
-            : "เคลียร์ seat"
+            : confirm?.kind === "purgeDev"
+              ? "ลบ emulator/dev"
+              : "เคลียร์ seat"
       }
       destructive
       onCancel={() => setConfirm(null)}

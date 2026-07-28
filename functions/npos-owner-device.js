@@ -77,6 +77,70 @@ exports.nposOwnerDeviceCommand = functions
       return { ok: true, action, actorId, at: Date.now(), ...result };
     }
 
+    // Purge emulator / deviceClass=dev docs from tech tables + diagnose + ops log.
+    if (action === "purge_dev_devices") {
+      const db = getFirestore();
+      const now = Date.now();
+      const emuHint = /sdk|emulator|generic|goldfish|ranchu/i;
+      const isDevDoc = (data) => {
+        if (!data || typeof data !== "object") return false;
+        if (data.isEmulator === true) return true;
+        if (data.deviceClass === "dev") return true;
+        const hint = typeof data.deviceHint === "string" ? data.deviceHint : "";
+        return emuHint.test(hint);
+      };
+
+      const devicesSnap = await db.collection(COL).get();
+      const purgeIds = [];
+      for (const docSnap of devicesSnap.docs) {
+        if (isDevDoc(docSnap.data() || {})) purgeIds.push(docSnap.id);
+      }
+
+      // Also catch orphan diagnose/ops rows that never had a matching posDevices doc.
+      const [diagSnap, opsSnap] = await Promise.all([
+        db.collection("nposDiagnose").get(),
+        db.collection("nposOpsLog").get(),
+      ]);
+      const extraIds = new Set();
+      for (const docSnap of [...diagSnap.docs, ...opsSnap.docs]) {
+        if (purgeIds.includes(docSnap.id)) continue;
+        if (isDevDoc(docSnap.data() || {})) extraIds.add(docSnap.id);
+      }
+      const allIds = [...new Set([...purgeIds, ...extraIds])];
+
+      let deletedDevices = 0;
+      let deletedDiagnose = 0;
+      let deletedOps = 0;
+      // Firestore batches max 500 ops — chunk deletes.
+      const chunkSize = 100;
+      for (let i = 0; i < allIds.length; i += chunkSize) {
+        const chunk = allIds.slice(i, i + chunkSize);
+        const batch = db.batch();
+        for (const id of chunk) {
+          if (purgeIds.includes(id)) {
+            batch.delete(db.collection(COL).doc(id));
+            deletedDevices += 1;
+          }
+          batch.delete(db.collection("nposDiagnose").doc(id));
+          deletedDiagnose += 1;
+          batch.delete(db.collection("nposOpsLog").doc(id));
+          deletedOps += 1;
+        }
+        await batch.commit();
+      }
+
+      return {
+        ok: true,
+        action,
+        actorId,
+        at: now,
+        deletedDevices,
+        deletedDiagnose,
+        deletedOps,
+        purgedIds: allIds.slice(0, 40),
+      };
+    }
+
     // Store claim code — shop-wide, no deviceId.
     if (action === "set_store_code") {
       const code = normalizeStoreCode(data?.storeCode);

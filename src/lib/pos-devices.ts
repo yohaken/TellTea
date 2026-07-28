@@ -23,6 +23,7 @@ type OwnerDeviceAction =
   | "unblock"
   | "clear_captures"
   | "clear_captures_all"
+  | "purge_dev_devices"
   | "set_store_code"
   | "clear_store_code"
   | "get_store_claim"
@@ -33,6 +34,9 @@ type OwnerDeviceAction =
 type OwnerDeviceCommandResult = {
   ok: boolean;
   deleted?: number;
+  deletedDevices?: number;
+  deletedDiagnose?: number;
+  deletedOps?: number;
   revokedCount?: number;
   storeClaimRequired?: boolean;
   hasCode?: boolean;
@@ -56,6 +60,7 @@ async function callNposOwnerDeviceCommand(
   try {
     const shopWide =
       action === "clear_captures_all" ||
+      action === "purge_dev_devices" ||
       action === "set_store_code" ||
       action === "clear_store_code" ||
       action === "get_store_claim" ||
@@ -78,13 +83,15 @@ async function callNposOwnerDeviceCommand(
               ? "ตั้งช่วงแคปจอ nPos"
               : action === "clear_captures" || action === "clear_captures_all"
                 ? "ล้างภาพแคป nPos"
-                : action === "block"
-                  ? "บล็อกเครื่อง nPos"
-                  : action === "set_store_code" || action === "clear_store_code"
-                    ? "ตั้งรหัสร้าน"
-                    : action === "grant_claim" || action === "revoke_claim"
-                      ? "จัดการเคลมเครื่อง"
-                      : "ปลดบล็อกเครื่อง nPos",
+                : action === "purge_dev_devices"
+                  ? "ลบเครื่องพัฒนา/emulator"
+                  : action === "block"
+                    ? "บล็อกเครื่อง nPos"
+                    : action === "set_store_code" || action === "clear_store_code"
+                      ? "ตั้งรหัสร้าน"
+                      : action === "grant_claim" || action === "revoke_claim"
+                        ? "จัดการเคลมเครื่อง"
+                        : "ปลดบล็อกเครื่อง nPos",
           "staff",
         ),
       );
@@ -624,6 +631,20 @@ export async function clearNposStoreClaimCode(): Promise<void> {
 export async function clearNposExclusiveSeat(): Promise<{ revokedCount: number }> {
   const res = await callNposOwnerDeviceCommand("clear_seat");
   return { revokedCount: typeof res.revokedCount === "number" ? res.revokedCount : 0 };
+}
+
+/** Owner: delete emulator / deviceClass=dev rows from posDevices + diagnose + ops log. */
+export async function purgeNposDevDevices(): Promise<{
+  deletedDevices: number;
+  deletedDiagnose: number;
+  deletedOps: number;
+}> {
+  const res = await callNposOwnerDeviceCommand("purge_dev_devices");
+  return {
+    deletedDevices: typeof res.deletedDevices === "number" ? res.deletedDevices : 0,
+    deletedDiagnose: typeof res.deletedDiagnose === "number" ? res.deletedDiagnose : 0,
+    deletedOps: typeof res.deletedOps === "number" ? res.deletedOps : 0,
+  };
 }
 
 export async function setNposDeviceStoreClaimed(

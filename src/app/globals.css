@@ -6607,14 +6607,13 @@ body.modal-open .main-panel {
   grid-template-columns:
     minmax(5rem, 1.3fr)
     minmax(3.4rem, max-content)
-    minmax(3.2rem, 0.9fr)
-    minmax(4rem, 1.1fr)
     minmax(2rem, max-content)
     minmax(2.6rem, max-content)
-    minmax(4.2rem, max-content)
+    minmax(4.8rem, max-content)
+    minmax(4.8rem, max-content)
     minmax(4.6rem, max-content)
     minmax(3.2rem, max-content);
-  min-width: 46rem;
+  min-width: 42rem;
   cursor: default;
 }
 
@@ -6622,6 +6621,10 @@ body.modal-open .main-panel {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   white-space: nowrap;
+}
+
+.npos-slim-ver-ok {
+  color: #1b6b3a;
 }
 
 .npos-slim-row--device.is-selected {

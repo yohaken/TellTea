@@ -5,6 +5,7 @@ import { ScrollText } from "lucide-react";
 import { SettingsFold } from "@/components/SettingsFold";
 import {
   foldByDeviceClass,
+  isNposDevOrEmulator,
   nposDeviceClassLabel,
   nposGroupKey,
   shortStableKey,
@@ -123,12 +124,13 @@ export function NposOpsLogPanel({ onError }: { onError: (msg: string | null) => 
   const buckets = useMemo(() => {
     const rows: FlatRow[] = [];
     for (const d of docs) {
+      if (isNposDevOrEmulator(d)) continue;
       for (const ev of d.events.slice(0, 40)) {
         rows.push({
           key: `${d.id}-${ev.at}-${ev.msg}`,
           installId: d.installId,
           stableKey: d.stableKey,
-          deviceClass: d.deviceClass,
+          deviceClass: d.deviceClass === "dev" ? "shop" : d.deviceClass,
           groupKey: nposGroupKey(d.stableKey, d.installId),
           sortAt: ev.at,
           ev,
@@ -140,9 +142,8 @@ export function NposOpsLogPanel({ onError }: { onError: (msg: string | null) => 
     return foldByDeviceClass(capped);
   }, [docs]);
 
-  const flatCount =
-    buckets.shop.length + buckets.dev.length + buckets.blocked.length;
-  const errorCount = [...buckets.shop, ...buckets.dev, ...buckets.blocked].filter(
+  const flatCount = buckets.shop.length + buckets.blocked.length;
+  const errorCount = [...buckets.shop, ...buckets.blocked].filter(
     (r) => r.ev.level === "error",
   ).length;
 
@@ -170,7 +171,7 @@ export function NposOpsLogPanel({ onError }: { onError: (msg: string | null) => 
         <p className="muted">ยังไม่มีเหตุการณ์</p>
       ) : (
         <>
-          {(["shop", "dev", "blocked"] as const).map((cls) => {
+          {(["shop", "blocked"] as const).map((cls) => {
             const rows = buckets[cls];
             if (!rows.length) return null;
             return (

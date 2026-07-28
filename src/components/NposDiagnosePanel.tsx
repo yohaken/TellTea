@@ -6,6 +6,8 @@ import { SettingsFold } from "@/components/SettingsFold";
 import {
   dedupeByStableKey,
   foldByDeviceClass,
+  isNposDevOrEmulator,
+  looksLikeEmulatorHint,
   nposDeviceClassLabel,
   nposGroupKey,
   preferOnlineRows,
@@ -52,8 +54,7 @@ function liveDeviceIds(devices: PosDevice[], now: number): {
       deviceClass: resolveNposDeviceClass({
         ...resolved,
         isEmulator:
-          resolved.isEmulator === true ||
-          /sdk|emulator|generic|goldfish|ranchu/i.test(resolved.deviceHint || ""),
+          resolved.isEmulator === true || looksLikeEmulatorHint(resolved.deviceHint),
       }),
       sortAt: resolved.lastSeenAt || 0,
     };
@@ -210,7 +211,9 @@ export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) =
       (r) => !nposGroupKey(r.stableKey, r.installId).startsWith("orphan:"),
     );
 
-    const enriched: Row[] = kept.map((r) => {
+    const enriched: Row[] = kept
+      .filter((r) => !isNposDevOrEmulator(r))
+      .map((r) => {
       const group = nposGroupKey(r.stableKey, r.installId);
       let prior = reports.filter(
         (x) => x.id !== r.id && nposGroupKey(x.stableKey, x.installId) === group,
@@ -237,8 +240,7 @@ export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) =
     };
   }, [reports, devices, now]);
 
-  const total =
-    buckets.shop.length + buckets.dev.length + buckets.blocked.length;
+  const total = buckets.shop.length + buckets.blocked.length;
 
   return (
     <SettingsFold
@@ -266,7 +268,7 @@ export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) =
         <p className="muted">ยังไม่มีข้อมูลตรวจเครื่อง</p>
       ) : (
         <>
-          {(["shop", "dev", "blocked"] as const).map((cls) => {
+          {(["shop", "blocked"] as const).map((cls) => {
             const rows = buckets[cls];
             if (!rows.length) return null;
             return (
