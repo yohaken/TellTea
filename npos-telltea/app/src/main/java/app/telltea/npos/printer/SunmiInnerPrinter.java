@@ -1,9 +1,6 @@
 package app.telltea.npos.printer;
 
 import android.content.Context;
-import android.os.Build;
-import android.os.RemoteException;
-
 import com.sunmi.peripheral.printer.InnerPrinterCallback;
 import com.sunmi.peripheral.printer.InnerPrinterException;
 import com.sunmi.peripheral.printer.InnerPrinterManager;
@@ -109,7 +106,10 @@ public final class SunmiInnerPrinter {
       }
       PrinterTransport.Result r = out.get();
       return r != null ? r : new PrinterTransport.Result(false, "SUNMI ไม่ตอบ");
-    } catch (InnerPrinterException | RemoteException | InterruptedException e) {
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new PrinterTransport.Result(false, "interrupted");
+    } catch (Exception e) {
       String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
       return new PrinterTransport.Result(false, msg);
     }
@@ -159,7 +159,10 @@ public final class SunmiInnerPrinter {
       }
       PrinterTransport.Result r = out.get();
       return r != null ? r : new PrinterTransport.Result(false, "SUNMI ลิ้นชักไม่ตอบ");
-    } catch (InnerPrinterException | RemoteException | InterruptedException e) {
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new PrinterTransport.Result(false, "interrupted");
+    } catch (Exception e) {
       String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
       return new PrinterTransport.Result(false, msg);
     }
