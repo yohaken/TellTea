@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ScrollText } from "lucide-react";
 import { SettingsFold } from "@/components/SettingsFold";
+import { ManageEmbedSection } from "@/components/ManageEmbedSection";
 import {
   foldByDeviceClass,
   isNposDevOrEmulator,
@@ -102,7 +103,13 @@ function OpsTable({ rows }: { rows: FlatRow[] }) {
   );
 }
 
-export function NposOpsLogPanel({ onError }: { onError: (msg: string | null) => void }) {
+export function NposOpsLogPanel({
+  onError,
+  embedded = false,
+}: {
+  onError: (msg: string | null) => void;
+  embedded?: boolean;
+}) {
   const [docs, setDocs] = useState<NposOpsLogDoc[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -147,6 +154,42 @@ export function NposOpsLogPanel({ onError }: { onError: (msg: string | null) => 
     (r) => r.ev.level === "error",
   ).length;
 
+  const hint = loading
+    ? "กำลังโหลด…"
+    : flatCount
+      ? `${flatCount} แถว${errorCount ? ` · E${errorCount}` : ""}`
+      : "ยังไม่มี log";
+
+  const body = loading ? (
+    <p className="muted">กำลังโหลด…</p>
+  ) : flatCount === 0 ? (
+    <p className="muted">ยังไม่มีเหตุการณ์</p>
+  ) : (
+    <>
+      {(["shop", "blocked"] as const).map((cls) => {
+        const rows = buckets[cls];
+        if (!rows.length) return null;
+        return (
+          <section key={cls} className="npos-class-section">
+            <h4 className="npos-class-head">
+              {nposDeviceClassLabel(cls)}{" "}
+              <span className="muted">({rows.length})</span>
+            </h4>
+            <OpsTable rows={rows} />
+          </section>
+        );
+      })}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <ManageEmbedSection title="ops log" hint={hint}>
+        {body}
+      </ManageEmbedSection>
+    );
+  }
+
   return (
     <SettingsFold
       title={
@@ -155,37 +198,11 @@ export function NposOpsLogPanel({ onError }: { onError: (msg: string | null) => 
           ไทม์ไลน์ nPos (ops log)
         </span>
       }
-      hint={
-        loading
-          ? "กำลังโหลด…"
-          : flatCount
-            ? `${flatCount} แถว${errorCount ? ` · E${errorCount}` : ""} · คอลัมน์เครื่อง = stableKey (ซ้ำ install ไม่แยกเครื่อง)`
-            : "ยังไม่มี log"
-      }
+      hint={hint}
       defaultOpen={false}
       className="npos-ops-fold"
     >
-      {loading ? (
-        <p className="muted">กำลังโหลด…</p>
-      ) : flatCount === 0 ? (
-        <p className="muted">ยังไม่มีเหตุการณ์</p>
-      ) : (
-        <>
-          {(["shop", "blocked"] as const).map((cls) => {
-            const rows = buckets[cls];
-            if (!rows.length) return null;
-            return (
-              <section key={cls} className="npos-class-section">
-                <h4 className="npos-class-head">
-                  {nposDeviceClassLabel(cls)}{" "}
-                  <span className="muted">({rows.length})</span>
-                </h4>
-                <OpsTable rows={rows} />
-              </section>
-            );
-          })}
-        </>
-      )}
+      {body}
     </SettingsFold>
   );
 }

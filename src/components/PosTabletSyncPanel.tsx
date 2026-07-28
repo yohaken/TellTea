@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { SettingsFold } from "@/components/SettingsFold";
+import { ManageEmbedSection } from "@/components/ManageEmbedSection";
 import {
   HEARTBEAT_INTERVAL_PRESETS,
   clampHeartbeatIntervalSec,
@@ -12,7 +13,13 @@ import {
 /**
  * Owner: tablet BO-check / update-pulse cadence — change without shipping APK.
  */
-export function PosTabletSyncPanel({ onError }: { onError: (msg: string | null) => void }) {
+export function PosTabletSyncPanel({
+  onError,
+  embedded = false,
+}: {
+  onError: (msg: string | null) => void;
+  embedded?: boolean;
+}) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [sec, setSec] = useState(5);
@@ -49,19 +56,14 @@ export function PosTabletSyncPanel({ onError }: { onError: (msg: string | null) 
     }
   }
 
-  return (
-    <SettingsFold
-      title="แท็บเล็ต · ช่วงเช็คเซิร์ฟเวอร์"
-      hint={
-        loading
-          ? "กำลังโหลด…"
-          : `ชีพจร BO / เช็คเวอร์ชัน · ตอนนี้ ${sec} วิ · เปลี่ยนได้โดยไม่ปล่อย APK`
-      }
-      defaultOpen={false}
-      className="npos-tablet-sync-fold"
-    >
+  const foldHint = loading
+    ? "กำลังโหลด…"
+    : `ชีพจร BO / เช็คเวอร์ชัน · ตอนนี้ ${sec} วิ`;
+
+  const body = (
+    <>
       <p className="muted npos-slim-empty">
-        ค่าเริ่ม 5 วิ · นิ่งแล้วยืดได้ · ช่วง 5–600 · ชิปเดียวกันมีในตารางรอบด้วย
+        ค่าเริ่ม 5 วิ · นิ่งแล้วยืดได้ · ช่วง 5–600
       </p>
       <div className="npos-slim-filters" role="group" aria-label="ช่วงชีพจร">
         {HEARTBEAT_INTERVAL_PRESETS.map((p) => (
@@ -97,6 +99,25 @@ export function PosTabletSyncPanel({ onError }: { onError: (msg: string | null) 
         </button>
       </label>
       {saved ? <p className="ok-text npos-slim-empty">{saved}</p> : null}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <ManageEmbedSection title="ช่วงเช็คเซิร์ฟเวอร์" hint={foldHint}>
+        {body}
+      </ManageEmbedSection>
+    );
+  }
+
+  return (
+    <SettingsFold
+      title="แท็บเล็ต · ช่วงเช็คเซิร์ฟเวอร์"
+      hint={foldHint}
+      defaultOpen={false}
+      className="npos-tablet-sync-fold"
+    >
+      {body}
     </SettingsFold>
   );
 }

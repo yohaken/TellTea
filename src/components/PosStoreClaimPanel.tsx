@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { KeyRound } from "lucide-react";
 import { SettingsFold } from "@/components/SettingsFold";
+import { ManageEmbedSection } from "@/components/ManageEmbedSection";
 import {
   clearNposExclusiveSeat,
   clearNposStoreClaimCode,
@@ -14,7 +15,13 @@ import { useAuth } from "@/lib/auth";
 /**
  * Owner: set shop store code (half-login). Hash only on server — tablets claim via nposClaimDevice.
  */
-export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) => void }) {
+export function PosStoreClaimPanel({
+  onError,
+  embedded = false,
+}: {
+  onError: (msg: string | null) => void;
+  embedded?: boolean;
+}) {
   const { actorId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -124,24 +131,14 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
     }
   }
 
-  return (
-    <SettingsFold
-      title={
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-          <KeyRound size={16} aria-hidden />
-          รหัสร้าน · เคลมเครื่อง
-        </span>
-      }
-      hint={
-        loading
-          ? "กำลังโหลด…"
-          : required && hasCode
-            ? `เกตเปิด · โหมดเครื่องเดียว${activeSeatId ? ` · seat ${activeSeatId.slice(-6).toUpperCase()}` : " · ว่าง"}${rejectDev ? " · บล็อกจำลอง" : ""}`
-            : "ยังไม่ตั้งรหัส — แท็บเล็ตเข้าไม่ได้จนกว่าจะตั้งด้านล่าง"
-      }
-      defaultOpen={false}
-      className="npos-store-claim-fold"
-    >
+  const foldHint = loading
+    ? "กำลังโหลด…"
+    : required && hasCode
+      ? `เกตเปิด · โหมดเครื่องเดียว${activeSeatId ? ` · seat ${activeSeatId.slice(-6).toUpperCase()}` : " · ว่าง"}${rejectDev ? " · บล็อกจำลอง" : ""}`
+      : "ยังไม่ตั้งรหัส — แท็บเล็ตเข้าไม่ได้จนกว่าจะตั้งด้านล่าง";
+
+  const body = (
+    <>
       {!loading && !hasCode ? (
         <p className="error-text npos-slim-warn-banner">
           ยังไม่ได้ตั้งรหัสร้าน — แท็บเล็ตเข้าไม่ได้จนกว่าจะกด{" "}
@@ -222,6 +219,30 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
         </div>
       </form>
       {hint ? <p className="ok-text npos-slim-empty">{hint}</p> : null}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <ManageEmbedSection title="รหัสร้าน · seat" hint={foldHint}>
+        {body}
+      </ManageEmbedSection>
+    );
+  }
+
+  return (
+    <SettingsFold
+      title={
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+          <KeyRound size={16} aria-hidden />
+          รหัสร้าน · เคลมเครื่อง
+        </span>
+      }
+      hint={foldHint}
+      defaultOpen={false}
+      className="npos-store-claim-fold"
+    >
+      {body}
     </SettingsFold>
   );
 }

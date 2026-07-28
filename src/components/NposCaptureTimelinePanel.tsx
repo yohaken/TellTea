@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Images } from "lucide-react";
 import { SettingsFold } from "@/components/SettingsFold";
+import { ManageEmbedSection } from "@/components/ManageEmbedSection";
 import { NposCaptureGallery } from "@/components/NposCaptureGallery";
 import {
   formatCaptureAt,
@@ -18,8 +19,10 @@ import { useAuth } from "@/lib/auth";
 /** Capture history timeline with thumbs (nposScreenShots). */
 export function NposCaptureTimelinePanel({
   onError,
+  embedded = false,
 }: {
   onError: (msg: string | null) => void;
+  embedded?: boolean;
 }) {
   const { actorId } = useAuth();
   const [shots, setShots] = useState<NposScreenShot[]>([]);
@@ -73,41 +76,31 @@ export function NposCaptureTimelinePanel({
     }
   }
 
-  return (
-    <SettingsFold
-      title={
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-          <Images size={16} aria-hidden />
-          ไทม์ไลน์แคปจอ
-        </span>
-      }
-      hint={
-        loading
-          ? "กำลังโหลด…"
-          : shots.length
-            ? `${withImages.length} ชุดมีรูป${emptyUploads ? ` · ${emptyUploads} ไม่มี URL` : ""} · เก็บสูงสุด ${NPOS_CAPTURE_MAX_KEEP}/เครื่อง`
-            : "ยังไม่มีแคป"
-      }
-      defaultOpen={false}
-      className="npos-ops-fold"
-    >
+  const hint = loading
+    ? "กำลังโหลด…"
+    : shots.length
+      ? `${withImages.length} ชุดมีรูป${emptyUploads ? ` · ${emptyUploads} ไม่มี URL` : ""} · ≤${NPOS_CAPTURE_MAX_KEEP}/เครื่อง`
+      : "ยังไม่มีแคป";
+
+  const body = (
+    <>
       <div className="npos-capture-timeline-toolbar">
         <button
           type="button"
-          className="npos-device-btn npos-device-btn--danger"
+          className="npos-slim-text-btn npos-slim-text-btn--danger"
           disabled={clearing || loading || shots.length === 0}
           onClick={() => void clearAll()}
         >
-          {clearing ? "กำลังล้าง…" : "ล้างรูปเคลียร์ทั้งหมด"}
+          {clearing ? "กำลังล้าง…" : "ล้างรูปทั้งหมด"}
         </button>
         <p className="muted npos-capture-caption">
-          แสดงเต็มความละเอียด · เก็บไม่เกิน {NPOS_CAPTURE_MAX_KEEP} รูป/เครื่อง (ลบเก่าอัตโนมัติ)
+          เต็มความละเอียด · เก็บไม่เกิน {NPOS_CAPTURE_MAX_KEEP}/เครื่อง
         </p>
       </div>
       {loading ? (
         <p className="muted">กำลังโหลด…</p>
       ) : shots.length === 0 ? (
-        <p className="muted">ยังไม่มีประวัติแคปใน nposScreenShots</p>
+        <p className="muted">ยังไม่มีประวัติแคป</p>
       ) : (
         <ul className="npos-capture-timeline">
           {shots.map((s) => (
@@ -131,12 +124,36 @@ export function NposCaptureTimelinePanel({
                   role: "secondary",
                   storedUrl: s.secondaryUrl,
                 })}
-                emptyHint="อัปโหลดแล้วแต่ไม่มี URL รูป (ลองสั่งแคปใหม่หลังอัปเดตเซิร์ฟเวอร์)"
+                emptyHint="อัปโหลดแล้วแต่ไม่มี URL รูป"
               />
             </li>
           ))}
         </ul>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <ManageEmbedSection title="แคปจอ" hint={hint}>
+        {body}
+      </ManageEmbedSection>
+    );
+  }
+
+  return (
+    <SettingsFold
+      title={
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+          <Images size={16} aria-hidden />
+          ไทม์ไลน์แคปจอ
+        </span>
+      }
+      hint={hint}
+      defaultOpen={false}
+      className="npos-ops-fold"
+    >
+      {body}
     </SettingsFold>
   );
 }

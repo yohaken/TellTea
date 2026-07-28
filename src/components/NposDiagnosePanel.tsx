@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MonitorSmartphone } from "lucide-react";
 import { SettingsFold } from "@/components/SettingsFold";
+import { ManageEmbedSection } from "@/components/ManageEmbedSection";
 import {
   dedupeByStableKey,
   foldByDeviceClass,
@@ -152,7 +153,13 @@ function ReportCard({ r }: { r: Row }) {
   );
 }
 
-export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) => void }) {
+export function NposDiagnosePanel({
+  onError,
+  embedded = false,
+}: {
+  onError: (msg: string | null) => void;
+  embedded?: boolean;
+}) {
   const [reports, setReports] = useState<NposDiagnoseReport[]>([]);
   const [devices, setDevices] = useState<PosDevice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -242,6 +249,46 @@ export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) =
 
   const total = buckets.shop.length + buckets.blocked.length;
 
+  const hint = loading
+    ? "กำลังโหลดรายงานจากแท็บเล็ต…"
+    : total
+      ? `${total} เครื่อง · สเปกจอ + แคปล่าสุด${hidden ? ` · ซ่อนซ้ำ/เก่า ${hidden}` : ""}`
+      : "ยังไม่มีรายงาน";
+
+  const body = loading ? (
+    <p className="muted">กำลังโหลด…</p>
+  ) : total === 0 ? (
+    <p className="muted">ยังไม่มีข้อมูลตรวจเครื่อง</p>
+  ) : (
+    <>
+      {(["shop", "blocked"] as const).map((cls) => {
+        const rows = buckets[cls];
+        if (!rows.length) return null;
+        return (
+          <section key={cls} className="npos-class-section">
+            <h4 className="npos-class-head">
+              {nposDeviceClassLabel(cls)}{" "}
+              <span className="muted">({rows.length})</span>
+            </h4>
+            <ul className="npos-diagnose-list">
+              {rows.map((r) => (
+                <ReportCard key={r.id} r={r} />
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <ManageEmbedSection title="ตรวจเครื่อง" hint={hint}>
+        {body}
+      </ManageEmbedSection>
+    );
+  }
+
   return (
     <SettingsFold
       title={
@@ -250,43 +297,11 @@ export function NposDiagnosePanel({ onError }: { onError: (msg: string | null) =
           ตรวจเครื่อง (nPos)
         </span>
       }
-      hint={
-        loading
-          ? "กำลังโหลดรายงานจากแท็บเล็ต…"
-          : total
-            ? `${total} เครื่อง · สเปกจอ + แคปล่าสุด · ยึด id เครื่อง${
-                hidden ? ` · ซ่อนซ้ำ/เก่า ${hidden}` : ""
-              }`
-            : "ยังไม่มีรายงาน — เปิดแอปแล้วระบบสแกนอัตโนมัติ"
-      }
+      hint={hint}
       defaultOpen={false}
       className="npos-diagnose-fold"
     >
-      {loading ? (
-        <p className="muted">กำลังโหลด…</p>
-      ) : total === 0 ? (
-        <p className="muted">ยังไม่มีข้อมูลตรวจเครื่อง</p>
-      ) : (
-        <>
-          {(["shop", "blocked"] as const).map((cls) => {
-            const rows = buckets[cls];
-            if (!rows.length) return null;
-            return (
-              <section key={cls} className="npos-class-section">
-                <h4 className="npos-class-head">
-                  {nposDeviceClassLabel(cls)}{" "}
-                  <span className="muted">({rows.length})</span>
-                </h4>
-                <ul className="npos-diagnose-list">
-                  {rows.map((r) => (
-                    <ReportCard key={r.id} r={r} />
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
-        </>
-      )}
+      {body}
     </SettingsFold>
   );
 }
