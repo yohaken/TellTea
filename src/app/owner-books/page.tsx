@@ -408,7 +408,7 @@ function OwnerBooksView() {
       ) : !loading ? (
         <>
           <div className="sheet-wrap owner-books-sheet">
-            <table className="sheet-table owner-books-table">
+            <table className="sheet-table owner-books-table owner-books-table--slim">
               <thead>
                 <tr>
                   <th className="bulk-check-col" aria-label="เลือก">
