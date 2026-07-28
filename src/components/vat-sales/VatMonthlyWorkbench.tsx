@@ -21,7 +21,6 @@ import {
   type VatLogicRates,
   type VatMonthlyReturn,
   type VatMonthlySettings,
-  type VatSegmentKind,
   type VatSegmentState,
 } from "@/lib/vat-monthly";
 
@@ -80,6 +79,14 @@ function draftToSeg(d: DraftSeg): VatSegmentState {
   });
 }
 
+function roundPct(n: number) {
+  return Math.round(n * 10000) / 100;
+}
+
+function pctLabel(n: number) {
+  return `${formatPlainNumber(roundPct(n))}%`;
+}
+
 function RatesEditor({
   title,
   rates,
@@ -96,7 +103,7 @@ function RatesEditor({
       <h3 className="vat-sales-section-title">{title}</h3>
       <div className="vat-rates-grid">
         <label className="vat-sales-field">
-          ภาษีขาย (เศษ)
+          ภาษีขาย เศษ
           <input
             type="number"
             min={0}
@@ -112,7 +119,7 @@ function RatesEditor({
           />
         </label>
         <label className="vat-sales-field">
-          ภาษีขาย (ส่วน)
+          ภาษีขาย ส่วน
           <input
             type="number"
             min={1}
@@ -128,43 +135,36 @@ function RatesEditor({
           />
         </label>
         <label className="vat-sales-field">
-          GP ≈ สัดส่วนของภาษีขาย
+          GP % ของภาษีขาย
           <input
             type="number"
             min={0}
-            max={1}
+            max={100}
             step={0.01}
             disabled={disabled}
-            value={rates.gpOfOutput}
-            onChange={(e) =>
-              onChange({
-                ...rates,
-                gpOfOutput: Math.min(
-                  1,
-                  parseRate(e.target.value, rates.gpOfOutput),
-                ),
-              })
-            }
+            value={roundPct(rates.gpOfOutput)}
+            onChange={(e) => {
+              const pct = Math.min(100, parseRate(e.target.value, roundPct(rates.gpOfOutput)));
+              onChange({ ...rates, gpOfOutput: pct / 100 });
+            }}
           />
         </label>
         <label className="vat-sales-field">
-          Play-safe claim (ภาษีซื้อ)
+          ยื่นภาษีซื้อ %
           <input
             type="number"
-            min={0.01}
-            max={1}
+            min={1}
+            max={100}
             step={0.01}
             disabled={disabled}
-            value={rates.inputClaimFactor}
-            onChange={(e) =>
-              onChange({
-                ...rates,
-                inputClaimFactor: Math.min(
-                  1,
-                  Math.max(0.01, parseRate(e.target.value, rates.inputClaimFactor)),
-                ),
-              })
-            }
+            value={roundPct(rates.inputClaimFactor)}
+            onChange={(e) => {
+              const pct = Math.min(
+                100,
+                Math.max(1, parseRate(e.target.value, roundPct(rates.inputClaimFactor))),
+              );
+              onChange({ ...rates, inputClaimFactor: pct / 100 });
+            }}
           />
         </label>
         <label className="vat-sales-check-slim">
@@ -179,59 +179,49 @@ function RatesEditor({
           ปัดลงภาษีซื้อ
         </label>
       </div>
-      <p className="muted vat-sales-hint">
+      <p className="muted vat-sales-hint vat-hint-one-line">
         ภาษีขาย = ยอดรวม × {rates.outputNum}/{rates.outputDen}
         {" · "}
-        GP ประมาณ {formatPlainNumber(roundPct(rates.gpOfOutput))}% ของภาษีขาย
+        GP ประมาณ {pctLabel(rates.gpOfOutput)} ของภาษีขาย
         {" · "}
-        ยื่นภาษีซื้อ {formatPlainNumber(roundPct(rates.inputClaimFactor))}%
+        ยื่นภาษีซื้อ {pctLabel(rates.inputClaimFactor)}
       </p>
     </div>
   );
 }
 
-function roundPct(n: number) {
-  return Math.round(n * 10000) / 100;
-}
-
-function SegmentCard({
-  kind,
+function MonthSegmentRow({
+  label,
   draft,
   computed,
   locked,
   onChange,
 }: {
-  kind: VatSegmentKind;
+  label: string;
   draft: DraftSeg;
   computed: VatSegmentState;
   locked: boolean;
   onChange: (d: DraftSeg) => void;
 }) {
-  const title = kind === "delivery" ? "เดลิเวอรี่ (ทุกแอป)" : "หน้าร้าน";
   return (
-    <section className="vat-seg-card">
-      <header className="vat-seg-head">
-        <h2 className="vat-sales-section-title">{title}</h2>
-        <span className="muted">
-          เรท {computed.rates.outputNum}/{computed.rates.outputDen}
-        </span>
-      </header>
-
-      <div className="vat-seg-fields">
-        <label className="vat-sales-field">
-          ยอดขายรวมทั้งเดือน (รวม VAT)
-          <input
-            inputMode="decimal"
-            disabled={locked}
-            value={draft.grossSales}
-            placeholder="0"
-            onChange={(e) =>
-              onChange({ ...draft, grossSales: e.target.value })
-            }
-          />
-        </label>
-
-        <label className="vat-sales-check-slim">
+    <tr>
+      <td className="col-seg">{label}</td>
+      <td className="col-num col-input">
+        <input
+          className="vat-sales-input"
+          inputMode="decimal"
+          disabled={locked}
+          value={draft.grossSales}
+          placeholder="0"
+          aria-label={`${label} ยอดขายรวม VAT`}
+          onChange={(e) => onChange({ ...draft, grossSales: e.target.value })}
+        />
+      </td>
+      <td className="col-num">{fmt(computed.vatBase)}</td>
+      <td className="col-num">{fmt(computed.outputVat)}</td>
+      <td className="col-pct">
+        <span className="vat-pct-val">{pctLabel(computed.rates.gpOfOutput)}</span>
+        <label className="vat-gp-toggle">
           <input
             type="checkbox"
             disabled={locked}
@@ -240,69 +230,42 @@ function SegmentCard({
               onChange({ ...draft, useGpEstimate: e.target.checked })
             }
           />
-          ใช้ประมาณ GP จากเรท (~1/3 ภาษีขาย)
+          ประมาณ
         </label>
-
-        {!draft.useGpEstimate ? (
-          <label className="vat-sales-field">
-            ภาษีซื้อจากบิล GP (สรุปรายเดือน)
-            <input
-              inputMode="decimal"
-              disabled={locked}
-              value={draft.gpVat}
-              placeholder="0"
-              onChange={(e) => onChange({ ...draft, gpVat: e.target.value })}
-            />
-          </label>
+      </td>
+      <td className="col-num col-input">
+        {draft.useGpEstimate ? (
+          <span className="vat-est-val" title="ภาษีซื้อ GP หลัง play-safe">
+            {fmt(computed.gpVatClaimed)}
+          </span>
         ) : (
-          <p className="muted vat-sales-hint">
-            GP ประมาณ = {fmt(computed.gpEstimate)} บาท
-          </p>
-        )}
-
-        <label className="vat-sales-field">
-          ภาษีซื้อจากบิลวัตถุดิบจริง
           <input
+            className="vat-sales-input"
             inputMode="decimal"
             disabled={locked}
-            value={draft.ingredientVat}
+            value={draft.gpVat}
             placeholder="0"
-            onChange={(e) =>
-              onChange({ ...draft, ingredientVat: e.target.value })
-            }
+            aria-label={`${label} ภาษีซื้อ GP`}
+            onChange={(e) => onChange({ ...draft, gpVat: e.target.value })}
           />
-        </label>
-      </div>
-
-      <table className="sheet-table vat-seg-result">
-        <tbody>
-          <tr>
-            <th>ฐานภาษี</th>
-            <td className="col-num">{fmt(computed.vatBase)}</td>
-          </tr>
-          <tr>
-            <th>ภาษีขาย (Output)</th>
-            <td className="col-num">{fmt(computed.outputVat)}</td>
-          </tr>
-          <tr>
-            <th>ภาษีซื้อ GP (หลัง play-safe)</th>
-            <td className="col-num">{fmt(computed.gpVatClaimed)}</td>
-          </tr>
-          <tr>
-            <th>ภาษีซื้อวัตถุดิบ (หลัง play-safe)</th>
-            <td className="col-num">{fmt(computed.ingredientVatClaimed)}</td>
-          </tr>
-          <tr>
-            <th>ภาษีซื้อรวม (Input)</th>
-            <td className="col-num">{fmt(computed.inputVat)}</td>
-          </tr>
-          <tr className="vat-sales-totals-row">
-            <th>ภาษีสุทธิต้องนำส่ง</th>
-            <td className="col-num">{fmt(computed.netVat)}</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
+        )}
+      </td>
+      <td className="col-num col-input">
+        <input
+          className="vat-sales-input"
+          inputMode="decimal"
+          disabled={locked}
+          value={draft.ingredientVat}
+          placeholder="0"
+          aria-label={`${label} ภาษีซื้อวัตถุดิบ`}
+          onChange={(e) =>
+            onChange({ ...draft, ingredientVat: e.target.value })
+          }
+        />
+      </td>
+      <td className="col-num">{fmt(computed.inputVat)}</td>
+      <td className="col-num col-net">{fmt(computed.netVat)}</td>
+    </tr>
   );
 }
 
@@ -552,7 +515,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     <div className="vat-monthly-workbench">
       <header className="vat-sales-header">
         <p className="vat-sales-lead">
-          VAT รายเดือน · ใส่ยอดรวมสิ้นเดือน · แยกเดลิเวอรี่ / หน้าร้าน · Play-safe
+          VAT รายเดือน · ตารางกระชับแยกเดลิเวอรี่/หน้าร้าน · GP ระบุ % · Play-safe
         </p>
         <div className="vat-sales-tabs" role="tablist">
           {(
@@ -597,13 +560,11 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         {busy ? <span className="muted">กำลังทำงาน…</span> : null}
       </div>
 
-      <div className="vat-period-banner" role="note">
+      <p className="vat-period-banner vat-period-banner--one-line" role="note">
         <strong>รอบตัดยอด</strong>
         <span>{period.labelInclusive}</span>
-        <span className="muted vat-period-banner-sub">
-          ({period.labelExclusive} · เวลา {period.timeZone})
-        </span>
-      </div>
+        <span className="muted">· {period.timeZone}</span>
+      </p>
 
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
@@ -614,50 +575,81 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         <>
           {tab === "month" ? (
             <>
-              <p className="muted vat-sales-hint">
-                ยอดขายรวมจริง 100% (ภาษีขาย) · ภาษีซื้อปัดลง/ยื่นหย่อนเล็กน้อย ·
-                จ่ายเกินหลักสิบได้ แต่ปลอดภัย
+              <p className="muted vat-sales-hint vat-hint-one-line">
+                ยอดขายจริง 100% · ภาษีซื้อยื่นหย่อน/ปัดลงเล็กน้อย · GP ระบุเป็น %
+                ของภาษีขาย (ไม่ใช้เศษ 1/3)
               </p>
-              <div className="vat-seg-grid">
-                <SegmentCard
-                  kind="delivery"
-                  draft={deliveryDraft}
-                  computed={delivery}
-                  locked={Boolean(locked)}
-                  onChange={setDeliveryDraft}
-                />
-                <SegmentCard
-                  kind="storefront"
-                  draft={storefrontDraft}
-                  computed={storefront}
-                  locked={Boolean(locked)}
-                  onChange={setStorefrontDraft}
-                />
+
+              <div className="sheet-wrap vat-month-slim-wrap">
+                <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim">
+                  <thead>
+                    <tr>
+                      <th className="col-seg">ส่วน</th>
+                      <th className="col-num">ยอดขายรวม VAT</th>
+                      <th className="col-num">ฐานภาษี</th>
+                      <th className="col-num">ภาษีขาย</th>
+                      <th className="col-pct">GP % ของภาษีขาย</th>
+                      <th className="col-num">ภาษีซื้อ GP</th>
+                      <th className="col-num">ภาษีซื้อวัตถุดิบ</th>
+                      <th className="col-num">ภาษีซื้อรวม</th>
+                      <th className="col-num">สุทธิต้องนำส่ง</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <MonthSegmentRow
+                      label="เดลิเวอรี่"
+                      draft={deliveryDraft}
+                      computed={delivery}
+                      locked={Boolean(locked)}
+                      onChange={setDeliveryDraft}
+                    />
+                    <MonthSegmentRow
+                      label="หน้าร้าน"
+                      draft={storefrontDraft}
+                      computed={storefront}
+                      locked={Boolean(locked)}
+                      onChange={setStorefrontDraft}
+                    />
+                    <tr className="vat-sales-totals-row">
+                      <td className="col-seg">รวม</td>
+                      <td className="col-num">{fmt(totals.grossSales)}</td>
+                      <td className="col-num">{fmt(totals.vatBase)}</td>
+                      <td className="col-num">{fmt(totals.outputVat)}</td>
+                      <td className="col-pct">—</td>
+                      <td className="col-num">
+                        {fmt(
+                          delivery.gpVatClaimed + storefront.gpVatClaimed,
+                        )}
+                      </td>
+                      <td className="col-num">
+                        {fmt(
+                          delivery.ingredientVatClaimed +
+                            storefront.ingredientVatClaimed,
+                        )}
+                      </td>
+                      <td className="col-num">{fmt(totals.inputVat)}</td>
+                      <td className="col-num col-net">{fmt(totals.netVat)}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
 
-              <section className="vat-sales-summary vat-sales-summary--slim vat-month-totals">
-                <span>
-                  รวมขาย <strong>{fmt(totals.grossSales)}</strong>
-                </span>
-                <span>
-                  ภาษีขาย <strong>{fmt(totals.outputVat)}</strong>
-                </span>
-                <span>
-                  ภาษีซื้อ <strong>{fmt(totals.inputVat)}</strong>
-                </span>
-                <span className="vat-sales-summary-main">
-                  สุทธิต้องนำส่ง <strong>{fmt(totals.netVat)}</strong>
-                </span>
-              </section>
+              <p className="muted vat-sales-hint vat-hint-one-line">
+                ติ๊ก «ประมาณ» = คำนวณภาษีซื้อ GP จาก % · ปิดติ๊กแล้วคีย์จากบิล GP จริง
+                {" · "}
+                ส่ง {delivery.rates.outputNum}/{delivery.rates.outputDen}
+                {" · "}
+                ร้าน {storefront.rates.outputNum}/{storefront.rates.outputDen}
+              </p>
 
-              <label className="vat-sales-field">
+              <label className="vat-sales-field vat-note-slim">
                 หมายเหตุ
-                <textarea
-                  rows={2}
+                <input
+                  type="text"
                   disabled={locked}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="เช่น แหล่งยอด Shopee/Grab/LM + บิล GP เดือนนี้"
+                  placeholder="แหล่งยอดแอป + บิล GP เดือนนี้"
                 />
               </label>
 
@@ -776,33 +768,46 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                 </label>
               </div>
 
-              <div className="sheet-wrap">
-                <table className="sheet-table vat-sales-table">
+              <div className="sheet-wrap vat-month-slim-wrap">
+                <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim">
                   <thead>
                     <tr>
-                      <th>ส่วน</th>
+                      <th className="col-seg">ส่วน</th>
+                      <th className="col-pct">GP % ของภาษีขาย</th>
                       <th className="col-num">ภาษีขาย</th>
-                      <th className="col-num">GP (ประมาณ+safe)</th>
-                      <th className="col-num">วัตถุดิบ</th>
-                      <th className="col-num">ภาษีซื้อ</th>
-                      <th className="col-num">สุทธิ</th>
+                      <th className="col-num">ภาษีซื้อ GP</th>
+                      <th className="col-num">ภาษีซื้อวัตถุดิบ</th>
+                      <th className="col-num">ภาษีซื้อรวม</th>
+                      <th className="col-num">สุทธิต้องนำส่ง</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td>เดลิเวอรี่</td>
-                      <td className="col-num">{fmt(trialDeliverySeg.outputVat)}</td>
+                      <td className="col-seg">เดลิเวอรี่</td>
+                      <td className="col-pct">
+                        {pctLabel(trialDelivery.gpOfOutput)}
+                      </td>
+                      <td className="col-num">
+                        {fmt(trialDeliverySeg.outputVat)}
+                      </td>
                       <td className="col-num">
                         {fmt(trialDeliverySeg.gpVatClaimed)}
                       </td>
                       <td className="col-num">
                         {fmt(trialDeliverySeg.ingredientVatClaimed)}
                       </td>
-                      <td className="col-num">{fmt(trialDeliverySeg.inputVat)}</td>
-                      <td className="col-num">{fmt(trialDeliverySeg.netVat)}</td>
+                      <td className="col-num">
+                        {fmt(trialDeliverySeg.inputVat)}
+                      </td>
+                      <td className="col-num col-net">
+                        {fmt(trialDeliverySeg.netVat)}
+                      </td>
                     </tr>
                     <tr>
-                      <td>หน้าร้าน</td>
+                      <td className="col-seg">หน้าร้าน</td>
+                      <td className="col-pct">
+                        {pctLabel(trialStorefront.gpOfOutput)}
+                      </td>
                       <td className="col-num">
                         {fmt(trialStorefrontSeg.outputVat)}
                       </td>
@@ -815,10 +820,13 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                       <td className="col-num">
                         {fmt(trialStorefrontSeg.inputVat)}
                       </td>
-                      <td className="col-num">{fmt(trialStorefrontSeg.netVat)}</td>
+                      <td className="col-num col-net">
+                        {fmt(trialStorefrontSeg.netVat)}
+                      </td>
                     </tr>
                     <tr className="vat-sales-totals-row">
-                      <td>รวม</td>
+                      <td className="col-seg">รวม</td>
+                      <td className="col-pct">—</td>
                       <td className="col-num">
                         {fmt(
                           trialDeliverySeg.outputVat +
@@ -839,10 +847,11 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                       </td>
                       <td className="col-num">
                         {fmt(
-                          trialDeliverySeg.inputVat + trialStorefrontSeg.inputVat,
+                          trialDeliverySeg.inputVat +
+                            trialStorefrontSeg.inputVat,
                         )}
                       </td>
-                      <td className="col-num">
+                      <td className="col-num col-net">
                         {fmt(
                           trialDeliverySeg.netVat + trialStorefrontSeg.netVat,
                         )}

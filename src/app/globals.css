@@ -16057,8 +16057,8 @@ a.ghost-btn {
 .vat-seg-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
-  margin: 0.75rem 0 1rem;
+  gap: 0.75rem;
+  margin: 0.55rem 0 0.75rem;
 }
 
 @media (min-width: 820px) {
@@ -16067,96 +16067,151 @@ a.ghost-btn {
   }
 }
 
-.vat-seg-card {
-  border-top: 1px solid rgba(28, 42, 31, 0.12);
-  padding-top: 0.65rem;
-}
-
-.vat-seg-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.35rem 0.75rem;
-  margin-bottom: 0.45rem;
-}
-
-.vat-seg-fields {
-  display: grid;
-  gap: 0.55rem;
-  margin-bottom: 0.65rem;
-}
-
-.vat-seg-result {
-  width: 100%;
-}
-
-.vat-seg-result th {
-  font-weight: 500;
-  text-align: left;
-  color: rgba(28, 42, 31, 0.72);
-}
-
-.vat-month-totals {
-  margin: 0.75rem 0;
-}
-
 .vat-month-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0.85rem 0 1.25rem;
+  gap: 0.45rem;
+  margin: 0.65rem 0 1rem;
 }
 
 .vat-rates-block {
   border-top: 1px solid rgba(28, 42, 31, 0.12);
-  padding-top: 0.55rem;
+  padding-top: 0.45rem;
 }
 
 .vat-rates-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
-  gap: 0.55rem 0.75rem;
-  margin-bottom: 0.35rem;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.4rem 0.65rem;
+  margin-bottom: 0.25rem;
 }
 
 .vat-trial-inputs {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-  gap: 0.55rem 0.75rem;
-  margin: 0.55rem 0 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.4rem 0.65rem;
+  margin: 0.45rem 0 0.65rem;
 }
 
 .vat-trial-panel,
 .vat-close-panel {
-  margin-top: 0.25rem;
+  margin-top: 0.2rem;
 }
 
 .vat-period-banner {
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  margin: 0.35rem 0 0.75rem;
-  padding: 0.55rem 0.7rem;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.55rem;
+  margin: 0.25rem 0 0.55rem;
+  padding: 0.4rem 0.55rem;
   border-left: 3px solid rgba(28, 42, 31, 0.45);
   background: rgba(28, 42, 31, 0.04);
-  font-size: 0.92rem;
-  line-height: 1.35;
+  font-size: 0.88rem;
+  line-height: 1.3;
+}
+
+.vat-period-banner--one-line {
+  white-space: normal;
 }
 
 .vat-period-banner strong {
   font-size: 0.78rem;
   letter-spacing: 0.02em;
-  text-transform: uppercase;
   color: rgba(28, 42, 31, 0.62);
-}
-
-.vat-period-banner-sub {
-  font-size: 0.82rem;
 }
 
 .vat-period-start-field {
   max-width: 18rem;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.65rem;
+}
+
+.vat-hint-one-line {
+  margin: 0.25rem 0 0.45rem;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.vat-note-slim {
+  margin: 0.35rem 0 0.25rem;
+}
+
+.vat-note-slim input {
+  width: 100%;
+  min-height: 2.2rem;
+}
+
+.vat-month-slim-wrap {
+  margin: 0.35rem 0 0.45rem;
+  overflow-x: auto;
+}
+
+.vat-month-slim {
+  width: max-content;
+  min-width: 100%;
+}
+
+.vat-month-slim th,
+.vat-month-slim td {
+  white-space: nowrap;
+  vertical-align: middle;
+  padding: 0.28rem 0.4rem;
+  font-size: 0.84rem;
+  line-height: 1.25;
+}
+
+.vat-month-slim th {
+  font-weight: 600;
+}
+
+.vat-month-slim .col-seg {
+  min-width: 5.2rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.vat-month-slim .col-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  min-width: 5.5rem;
+}
+
+.vat-month-slim .col-pct {
+  text-align: left;
+  min-width: 7.5rem;
+}
+
+.vat-month-slim .col-net {
+  font-weight: 700;
+}
+
+.vat-month-slim .col-input .vat-sales-input {
+  width: 6.4rem;
+  max-width: 100%;
+  min-height: 1.9rem;
+  padding: 0.15rem 0.3rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.vat-pct-val {
+  font-variant-numeric: tabular-nums;
+  margin-right: 0.35rem;
+}
+
+.vat-gp-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  color: rgba(28, 42, 31, 0.72);
+  white-space: nowrap;
+}
+
+.vat-est-val {
+  display: inline-block;
+  min-width: 4.5rem;
+  text-align: right;
+  color: rgba(28, 42, 31, 0.78);
 }
 

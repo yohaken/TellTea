@@ -49,7 +49,7 @@
    [ ภาษีขาย Output ]  = ยอดรวม × 7/107   (ยื่น 100% ตามจริง)
                │
                ▼
-   [ ภาษีซื้อ Input ]  = บิล GP (~1/3 ของภาษีขาย) + บิลวัตถุดิบ
+   [ ภาษีซื้อ Input ]  = บิล GP (ระบุ % ของภาษีขาย เช่น 33.33%) + บิลวัตถุดิบ
                          · ปัดลง / claim factor < 1 (play-safe)
                │
                ▼
@@ -100,8 +100,8 @@ meta/vatMonthlySettings
 ```
 outputVat = round(gross × outputNum / outputDen)   // default 7/107
 vatBase   = gross − outputVat
-gpEstimate = floor(outputVat × gpOfOutput)         // default 1/3
-gpClaimed  = floor(gpRaw × inputClaimFactor)       // default 0.98
+gpEstimate = floor(outputVat × gpOfOutput)         // default 33.33% (ไม่เขียน 1/3)
+gpClaimed  = floor(gpRaw × inputClaimFactor)       // default 98%
 ingredientClaimed = floor(ingredientVat × inputClaimFactor)
 inputVat = gpClaimed + ingredientClaimed
 netVat   = outputVat − inputVat
@@ -109,7 +109,18 @@ netVat   = outputVat − inputVat
 
 ---
 
-## 7) สิ่งที่ยกทิ้งจากทางใช้งานหลัก
+## 7) UI compact slim (วิเคราะห์สั้น)
+
+| ปัญหาเดิม | แก้ |
+|-----------|-----|
+| การ์ดส่ง/ร้านแนวตั้ง + ตารางผลซ้อน | ตารางเดียว 2 แถว + แถวรวม |
+| คำว่า ~1/3 คลุมเครือ | แสดง/แก้เป็น **GP %** ชัดเจน |
+| ย่อหัวคอลัมน์เกิน / ตัดข้อความ | หัวเต็ม อ่านได้ · `nowrap` แถวเดียว · เลื่อนแนวนอนเมื่อแคบ |
+| แบนเนอร์รอบหลายบรรทัด | บรรทัดเดียวกระชับ |
+
+---
+
+## 8) สิ่งที่ยกทิ้งจากทางใช้งานหลัก
 
 - ตารางรายวัน / สถานะวัน / confirm รายวัน  
 - แท็บเมล · เทียบยอด · parser health เป็น workflow หลัก  
