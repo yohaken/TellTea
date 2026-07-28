@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 305/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 100/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+70/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.47"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 306/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 101/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+71/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.48"/);
 
 assert.ok(existsSync(join(root, "docs/npos-z-web-form-parity-checklist.md")));
 assert.match(read("docs/npos-z-web-form-parity-checklist.md"), /1.14.42/);

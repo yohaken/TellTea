@@ -205,6 +205,13 @@ public final class SaleSync {
                             body.put("leaveFloat", report.leaveFloat);
                             body.put("discrepancyNote", report.discrepancyNote);
                             body.put("discrepancyLabel", report.discrepancyLabel());
+                            body.put("cashOutTotal", report.cashOutTotal);
+                            body.put("cashInTotal", report.cashInTotal);
+                            body.put("cashDropCount", report.cashDropCount);
+                        } else {
+                            body.put("cashOutTotal", ShiftPrefs.cashOutTotal(app));
+                            body.put("cashInTotal", ShiftPrefs.cashInTotal(app));
+                            body.put("cashDropCount", ShiftPrefs.cashDropCount(app));
                         }
                         JSONObject res = MenuRepository.postJson(CLOSE_URL, body);
                         if (res.optBoolean("ok", false)) {
@@ -657,7 +664,10 @@ public final class SaleSync {
                             double leaveFloat = 0;
                             String note = "";
                             if ("close".equals(reportKind)) {
-                                expected = report != null ? report.expectedCash : opening + cash;
+                                expected =
+                                        report != null
+                                                ? report.expectedCash
+                                                : ShiftPrefs.expectedCash(app);
                                 counted = report != null ? report.countedCash : expected;
                                 diff = report != null ? report.cashDifference : 0;
                                 label = report != null ? report.discrepancyLabel() : "ตรง";
@@ -1230,5 +1240,45 @@ public final class SaleSync {
         } catch (Exception e) {
             return new JSONArray();
         }
+    }
+
+    /** Mid-shift void rollup for the shift panel. */
+    public static final class VoidSessionStats {
+        public final int count;
+        public final double amount;
+        public final String reasonsText;
+
+        public VoidSessionStats(int count, double amount, String reasonsText) {
+            this.count = count;
+            this.amount = amount;
+            this.reasonsText = reasonsText == null ? "" : reasonsText;
+        }
+    }
+
+    public VoidSessionStats voidSessionStats(Context context) {
+        return voidStatsForSession(context, ShiftPrefs.sessionId(context));
+    }
+
+    public static VoidSessionStats voidStatsForSession(Context context, String sessionId) {
+        JSONArray rows = loadSessionReceipts(context.getApplicationContext(), sessionId);
+        int count = 0;
+        double amount = 0;
+        StringBuilder reasons = new StringBuilder();
+        for (int i = 0; i < rows.length(); i++) {
+            JSONObject o = rows.optJSONObject(i);
+            if (o == null || !o.optBoolean("voided", false)) continue;
+            count += 1;
+            amount += o.optDouble("total", 0);
+            String reason = o.optString("voidReason", "").trim();
+            if (reason.isEmpty()) reason = "—";
+            String bill = o.optString("billNo", "").trim();
+            if (reasons.length() > 0) reasons.append('\n');
+            if (!bill.isEmpty()) {
+                reasons.append(bill).append(" · ").append(reason);
+            } else {
+                reasons.append(reason);
+            }
+        }
+        return new VoidSessionStats(count, amount, reasons.toString());
     }
 }

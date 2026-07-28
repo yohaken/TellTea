@@ -145,6 +145,9 @@ public final class BlindCloseFlow {
                   ShiftPrefs.saleCount(activity),
                   ShiftPrefs.voidedCount(activity),
                   ShiftPrefs.discountTotal(activity),
+                  ShiftPrefs.cashOutTotal(activity),
+                  ShiftPrefs.cashInTotal(activity),
+                  ShiftPrefs.cashDropCount(activity),
                   counted,
                   leaveAmt,
                   note.getText() == null ? "" : note.getText().toString());
@@ -175,6 +178,8 @@ public final class BlindCloseFlow {
             report.discountTotal,
             report.voidedCount,
             report.openingCash,
+            report.cashOutTotal,
+            report.cashDropCount,
             report.expectedCash,
             report.countedCash,
             report.discrepancyLabel(),

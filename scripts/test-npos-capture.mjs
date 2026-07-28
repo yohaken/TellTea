@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 305/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+70/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.47"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 306/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+71/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.48"/);
 assert.match(read("docs/npos-capture-checklist.md"), /สั่งแคปจอ|C1|C4|50/);
 assert.match(read("docs/npos-pilot-gate-faq.md"), /แคปจอ/);
 
