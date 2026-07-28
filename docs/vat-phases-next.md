@@ -3,6 +3,7 @@
 > แทนคิวรายวัน P1–P7 เดิม  
 > Route: `/vat-sales/` · owner-only · ทางเข้า: บช.เจ้าของ → **VAT เดือน**  
 > สเปก: [`vat-monthly-play-safe.md`](./vat-monthly-play-safe.md) · PR #142  
+> **เช็คใช้จริง:** [`vat-monthly-check.md`](./vat-monthly-check.md)  
 > อัปเดต: 2026-07-28
 
 ---
