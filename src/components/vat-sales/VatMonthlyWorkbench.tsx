@@ -353,13 +353,6 @@ function OutputVatTable({
       <h2 className="vat-table-title">1) ภาษีขาย — กลุ่มรายได้</h2>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-month-slim--output">
-          <colgroup>
-            <col className="vat-col-seg" />
-            <col className="vat-col-num" />
-            <col className="vat-col-num" />
-            <col className="vat-col-rate" />
-            <col className="vat-col-num" />
-          </colgroup>
           <thead>
             <tr>
               <th className="col-seg">ส่วน</th>
@@ -508,14 +501,6 @@ function InputVatTable({
       <h2 className="vat-table-title">2) ภาษีซื้อ — กลุ่มหักได้</h2>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-month-slim--input">
-          <colgroup>
-            <col className="vat-col-seg" />
-            <col className="vat-col-pct" />
-            <col className="vat-col-num" />
-            <col className="vat-col-pct-sm" />
-            <col className="vat-col-num" />
-            <col className="vat-col-num" />
-          </colgroup>
           <thead>
             <tr>
               <th className="col-seg">ส่วน</th>
@@ -585,12 +570,6 @@ function SummaryVatTable({
       </h2>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-month-slim--summary vat-close-table">
-          <colgroup>
-            <col className="vat-col-seg-wide" />
-            <col className="vat-col-num" />
-            <col className="vat-col-num" />
-            <col className="vat-col-num" />
-          </colgroup>
           <thead>
             <tr>
               <th className="col-seg">รายการ</th>
