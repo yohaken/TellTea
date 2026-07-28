@@ -4,7 +4,7 @@
 > อัปเดต: 2026-07-28  
 > แหล่งเดลิเวอรี่ = **API เมลเท่านั้น** · **ไม่ใช้ Excel** เป็นทางหลัก  
 > ทางเข้า: **บช.เจ้าของ** (`/owner-books/` ↔ `/vat-sales/`) · สวิตช์ `เงินออก` | `ยอดขาย/VAT`  
-> **เช็คลิสต์ตรวจ P1–P4:** [`docs/vat-p1-p4-check.md`](./vat-p1-p4-check.md)
+> **เช็ค P1–P4:** [`vat-p1-p4-check.md`](./vat-p1-p4-check.md) · **P5:** [`vat-p5-check.md`](./vat-p5-check.md) · **เฟสถัดไป:** [`vat-phases-next.md`](./vat-phases-next.md)
 
 ---
 
@@ -52,16 +52,13 @@
 
 ## สถานะรวม
 
-| เฟส | โฟกัส | สถานะ |
-|-----|--------|--------|
-| **P0** | แผน · เช็คลิส · ขอบเขต + owner-only | ✅ เอกสาร |
-| **P1** | Types · rules · lib · UI ตารางรายวัน + VAT สูตร | ✅ เยียวยา (slim + บช.เจ้าของ + rules validate) |
-| **P2** | Gmail OAuth · กล่องรายงานเมล · sync | ✅ โค้ดพร้อม · รอ OAuth client จริงตอนเปิดใช้ |
-| **P3** | Parser รายวันต่อแพลตฟอร์ม · คิวยืนยัน | ✅ fixture ผ่าน |
-| **P4** | สถานะวัน · dashboard ขาดรายงาน · แจ้งเตือนเจ้าของ | ✅ โค้ดพร้อม · รอเทส push จริง |
-| **P5** | ปิดเดือน → `monthlyIncome` + รายงาน VAT เดือน | ⏸ รอบถัดไปหลังเช็ค P1–P4 |
-| **P6** | Outlook/Hotmail · เมลสัปดาห์/เดือน · Input VAT | ⏸ หลัง P5 |
-| **P7** | ขัดเกลา UX · audit log · สำรอง raw · เอกสารผู้ใช้ | ⏸ หลังใช้งานจริง |
+| เฟส | โฟกัส | สถานะ | เช็ค |
+|-----|--------|--------|------|
+| **P0** | แผน · เช็คลิส · ขอบเขต + owner-only | ✅ เอกสาร | — |
+| **P1–P4** | วัน · เมล · parse · สถานะ/แจ้งเตือน | ✅ เยียวยา | [`vat-p1-p4-check.md`](./vat-p1-p4-check.md) |
+| **P5** | ปิดเดือน → `monthlyIncome` + VAT เดือน | ✅ โค้ด · กำลังใช้ | [`vat-p5-check.md`](./vat-p5-check.md) |
+| **P6** | Outlook/Hotmail · เมลสัปดาห์/เดือน · Input VAT | ⏸ วางไว้ · รายละเอียดทีหลัง | [`vat-phases-next.md`](./vat-phases-next.md) |
+| **P7** | ขัดเกลา UX · audit log · สำรอง raw · เอกสารผู้ใช้ | ⏸ วางไว้ · รายละเอียดทีหลัง | [`vat-phases-next.md`](./vat-phases-next.md) |
 
 ### ตัดออกจากแผน (ยืนยันแล้ว)
 
@@ -639,11 +636,10 @@ meta/vatMailOAuthOutlook   // owner-only · Outlook refresh token
 
 ## คิวทำถัดไป (ลงมือ)
 
-1. **ติ๊ก [`vat-p1-p4-check.md`](./vat-p1-p4-check.md)** บนเครื่องเจ้าของ  
-2. ตั้ง OAuth Gmail จริง → ซิงก์เมลตัวอย่าง  
-3. เทสสิทธิ์ A–H + push (P4)  
-4. **P5** ปิดเดือน → `monthlyIncome`  
-5. **P6–P7** ตามความต้องการหลังใช้งานจริง  
+1. ติ๊ก [`vat-p1-p4-check.md`](./vat-p1-p4-check.md)  
+2. ใช้แท็บ **ปิด** · ติ๊ก [`vat-p5-check.md`](./vat-p5-check.md)  
+3. เก็บรายละเอียด P6–P7 ทีหลัง — ดู [`vat-phases-next.md`](./vat-phases-next.md)  
+4. เทสสิทธิ์ A–H + push เมื่อพร้อม  
 
 ---
 
@@ -658,3 +654,4 @@ meta/vatMailOAuthOutlook   // owner-only · Outlook refresh token
 | 2026-07-28 | **P2 ลงมือ** — Gmail OAuth callables · กล่องเมล · mailRules · build 333 |
 | 2026-07-28 | **P1 ลงมือ** — lib `vat-sales` · rules owner-only · `/vat-sales/` · การ์ด more · POS suggest · build 332 |
 | 2026-07-28 | **รวมยำบช.เจ้าของ + slim** · เยียวยา P1–P4 · เช็คลิสต์ตรวจ `vat-p1-p4-check.md` · rules validate · build 340 |
+| 2026-07-28 | **วางเฟส P5–P7** · ลุย P5 ปิดเดือน slim · `vat-p5-check.md` · `vat-phases-next.md` · build 341 |

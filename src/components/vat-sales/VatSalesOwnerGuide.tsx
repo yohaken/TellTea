@@ -17,7 +17,7 @@ export function VatSalesOwnerGuide() {
           {open ? "ซ่อนแผน" : "แผน"}
         </button>
         <span>
-          เมล→วัน→ยืนยัน→ปิดเดือน · VAT7% จากยอดลูกค้า · owner only · เช็ค P1–P4 ใน docs/vat-p1-p4-check.md
+          เมล→วัน→ยืนยัน→ปิดเดือน · VAT7% จากยอดลูกค้า · owner only · เช็ค docs/vat-p1-p4-check.md · P5 docs/vat-p5-check.md
         </span>
       </p>
       {open ? (

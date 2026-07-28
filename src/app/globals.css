@@ -15856,6 +15856,22 @@ body.modal-open .main-panel {
   text-align: left;
 }
 
+.vat-month-vat-box,
+.vat-month-income-box {
+  margin-top: 0.65rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.vat-month-vat-table {
+  min-width: 0 !important;
+  width: 100%;
+  max-width: 22rem;
+}
+
+.vat-month-vat-table td {
+  padding: 0.18rem 0.35rem;
+}
+
 a.ghost-btn {
   display: inline-flex;
   align-items: center;

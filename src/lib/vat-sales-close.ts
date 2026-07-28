@@ -53,6 +53,7 @@ export async function buildMonthClosePreview(month: string): Promise<{
   totals: MonthSalesTotals;
   currentIncome: number;
   lastClose: VatMonthCloseAudit | null;
+  vatRegistered: boolean;
 }> {
   const [docsMap, settings, currentIncome, lastClose] = await Promise.all([
     listDailySalesInMonth(month),
@@ -74,6 +75,7 @@ export async function buildMonthClosePreview(month: string): Promise<{
     totals,
     currentIncome,
     lastClose,
+    vatRegistered: Boolean(settings.vatRegistered),
   };
 }
 
