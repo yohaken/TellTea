@@ -1,5 +1,5 @@
 /**
- * Gate: BO sessions slim-super — codes + date col, no date slider, 50-row scroll, newest first,
+ * Gate: BO sessions slim-super — codes + date col, no date slider, 50-row scroll, date newest→oldest,
  * close flush-then-server before local exit.
  */
 import assert from "node:assert/strict";
@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 323/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 324/);
 assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 118/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+88/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.65"/);
@@ -43,8 +43,16 @@ assert.match(slim, /pairingCode|posPairingCodeFromId/);
 assert.doesNotMatch(slim, /shortPosSessionId/);
 
 const libOpen = read("src/lib/pos-sales-report.ts");
-assert.match(libOpen, /sortSessionsOpenFirst\(\[\.\.\.map\.values\(\)\]\)/);
+assert.match(libOpen, /sortSessionsByDateNewestFirst\(\[\.\.\.map\.values\(\)\]\)/);
+assert.match(libOpen, /export function inspectPosSessionData/);
 assert.match(libOpen, /formatPosSessionDuration/);
+
+const reportUi = read("src/components/PosSalesReport.tsx");
+assert.match(reportUi, /inspectPosSessionData/);
+assert.match(reportUi, /pos-sales-data-issue-list/);
+
+const slimCopy = read("src/components/PosSessionsSlimTable.tsx");
+assert.match(slimCopy, /วันใหม่→เก่า/);
 
 const report = read("src/components/PosSalesReport.tsx");
 assert.match(report, /subscribePosSessionsRecent/);

@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 323/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 324/);
 assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 118/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+88/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.65"/);
@@ -34,16 +34,17 @@ assert.doesNotMatch(sell, /showTransferConfirm[\s\S]*EditText ref/);
 
 const lib = read("src/lib/pos-sales-report.ts");
 assert.match(lib, /export function sortSessionsOpenFirst/);
+assert.match(lib, /export function sortSessionsByDateNewestFirst/);
 assert.match(lib, /formatPosSessionDuration/);
 assert.match(lib, /posSessionDurationMs/);
-assert.match(lib, /sortSessionsOpenFirst\(\[\.\.\.map\.values\(\)\]\)/);
+assert.match(lib, /sortSessionsByDateNewestFirst\(\[\.\.\.map\.values\(\)\]\)/);
 assert.match(lib, /rowLimit = 120/);
 
 const slim = read("src/components/PosSessionsSlimTable.tsx");
 assert.match(slim, /durationLabel/);
 assert.match(slim, />\s*รวม\s*</);
 assert.match(slim, /npos-slim-duration/);
-assert.match(slim, /เปิดอยู่บน|active/);
+assert.match(slim, /วันใหม่→เก่า|active/);
 assert.match(slim, /ยอดจากบิล realtime/);
 
 const css = read("src/app/globals.css");

@@ -1,6 +1,6 @@
 # nPos — BO sessions table slim super
 
-อัปเดต: **1.14.65** · `APP_BUILD` 323 · `POS_BUILD` 118 · vc **88**
+อัปเดต: **1.14.65** · `APP_BUILD` 324 · `POS_BUILD` 118 · vc **88**
 
 ## มติ
 
@@ -8,7 +8,8 @@
 |-----|----|
 | ไม่ใช้ date slider | ลบแถบเลื่อนวัน — โหลดรอบล่าสุด |
 | 50 แถว + scroll | `subscribePosSessionsRecent(50)` · `.npos-slim-scroll--rows` สูงจำกัด |
-| เปิดอยู่ขึ้นบน | `sortSessionsOpenFirst` · active แสดงยอดบิล realtime |
+| วันใหม่→เก่า | `sortSessionsByDateNewestFirst` · active แสดงยอดบิล realtime |
+| สแกนผิดปกติ | `inspectPosSessionData` — วันที่เพี้ยน / เปิดค้าง / ยอด≠บิล |
 | คอลัมน์วันที่ | แสดงวันของรอบ |
 | คอลัมน์รวม | เวลารวมของรอบ (เปิด = ถึงตอนนี้) |
 | กลุ่มรหัส (เจ้าของร้าน) | **เครื่อง** (pairing) · **รหัสรอบ** — รหัสรอบซ่อนเมื่อจอแคบ |
