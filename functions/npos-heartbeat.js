@@ -136,12 +136,14 @@ exports.nposDeviceHeartbeat = functions
         patch.stableKey = stableKey;
       }
       if (Object.prototype.hasOwnProperty.call(body, "printerReady")) {
-        patch.printerReady = body.printerReady === true;
+        patch.printerReady = body.printerReady === true || body.printerReady === "true";
         // Drawer kicks through the selected receipt printer endpoint.
-        patch.drawerReady = body.printerReady === true;
+        if (!Object.prototype.hasOwnProperty.call(body, "drawerReady")) {
+          patch.drawerReady = patch.printerReady;
+        }
       }
       if (Object.prototype.hasOwnProperty.call(body, "drawerReady")) {
-        patch.drawerReady = body.drawerReady === true;
+        patch.drawerReady = body.drawerReady === true || body.drawerReady === "true";
       }
       if (Object.prototype.hasOwnProperty.call(body, "printerLabel")) {
         patch.printerLabel = asString(body.printerLabel, 80);
@@ -150,7 +152,7 @@ exports.nposDeviceHeartbeat = functions
         patch.customerDisplay = asString(body.customerDisplay, 24) || "unknown";
       }
       if (Object.prototype.hasOwnProperty.call(body, "permissionsOk")) {
-        patch.permissionsOk = body.permissionsOk === true;
+        patch.permissionsOk = body.permissionsOk === true || body.permissionsOk === "true";
       }
       if (Object.prototype.hasOwnProperty.call(body, "permissionsStatus")) {
         patch.permissionsStatus = asString(body.permissionsStatus, 120);
@@ -163,7 +165,8 @@ exports.nposDeviceHeartbeat = functions
       }
 
       if (!snap.exists) {
-        Object.assign(patch, {
+        // Defaults only — never overwrite equipment fields already set from this body.
+        const created = {
           label: "",
           registeredAt: now,
           forceReloadAt: 0,
@@ -189,7 +192,10 @@ exports.nposDeviceHeartbeat = functions
           captureIntervalMinutes: 0,
           customerDisplay: "unknown",
           storeClaimed: false,
-        });
+        };
+        for (const [k, v] of Object.entries(created)) {
+          if (!Object.prototype.hasOwnProperty.call(patch, k)) patch[k] = v;
+        }
       }
       // Heartbeat must never grant or clear storeClaimed / owner claim fields.
       await ref.set(patch, { merge: true });

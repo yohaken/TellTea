@@ -7,6 +7,7 @@ import android.util.DisplayMetrics;
 import android.view.WindowManager;
 
 import app.telltea.npos.printer.PrinterPrefs;
+import app.telltea.npos.printer.SunmiInnerPrinter;
 import app.telltea.npos.shift.ShiftPrefs;
 
 import org.json.JSONObject;
@@ -139,6 +140,12 @@ public final class DeviceHeartbeat {
     }
 
     private static JSONObject buildBody(Context context) throws Exception {
+        // Heal Sunmi ready flag so BO equipment ✓ catches up after a false markNotReady.
+        try {
+            SunmiInnerPrinter.autoSelectIfNeeded(context);
+        } catch (RuntimeException ignored) {
+            /* never block heartbeat */
+        }
         int versionCode = 0;
         String versionName = "0";
         try {
@@ -176,7 +183,10 @@ public final class DeviceHeartbeat {
         body.put("isEmulator", DeviceIdentity.isEmulator());
         body.put("deviceClass", DeviceIdentity.deviceClass());
         body.put("customerDisplay", DisplayProbe.customerDisplayStatus(context));
-        body.put("printerReady", PrinterPrefs.isReady(context));
+        boolean printerReady = PrinterPrefs.isReady(context);
+        // Drawer shares the receipt printer endpoint (Sunmi openDrawer / ESC kick).
+        body.put("printerReady", printerReady);
+        body.put("drawerReady", printerReady);
         body.put("printerLabel", PrinterPrefs.label(context));
         body.put("permissionsOk", PermissionBootstrap.allCriticalGranted(context));
         body.put("permissionsStatus", PermissionBootstrap.statusLine(context));

@@ -63,6 +63,14 @@ public final class PrinterTransport {
                                 e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
                         result = new Result(false, msg);
                     }
+                    // Any successful print/drawer must flip BO equipment ✓ via next heartbeat.
+                    if (result != null && result.ok && endpoint != null) {
+                        try {
+                            PrinterPrefs.saveSuccess(app, endpoint);
+                        } catch (RuntimeException ignored) {
+                            /* prefs must never break the send path */
+                        }
+                    }
                     if (callback != null) callback.onDone(result);
                 });
     }
