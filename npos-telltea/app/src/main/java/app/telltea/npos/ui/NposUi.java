@@ -172,13 +172,14 @@ public final class NposUi {
         padV = dp(context, 8);
         break;
       case BACK:
-        btn.setBackgroundResource(R.drawable.npos_touch_ghost);
-        btn.setTextColor(color(context, R.color.npos_ink));
-        btn.setTypeface(NposFonts.medium(context));
-        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-        btn.setMinHeight(dp(context, 36));
-        padH = dp(context, 12);
-        padV = dp(context, 8);
+        btn.setBackgroundResource(R.drawable.npos_touch_secondary);
+        btn.setTextColor(color(context, R.color.npos_orange));
+        btn.setTypeface(NposFonts.semibold(context));
+        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
+        btn.setMinHeight(dp(context, 52));
+        btn.setMinWidth(dp(context, 120));
+        padH = dp(context, 20);
+        padV = dp(context, 12);
         break;
       case GHOST:
       default:
@@ -229,16 +230,22 @@ public final class NposUi {
     return lp;
   }
 
-  /** Header row: back chip + title. */
+  /** Header row: large friendly back + title (table-first tap target). */
   public static LinearLayout headerBar(Activity activity, CharSequence titleText) {
     LinearLayout top = new LinearLayout(activity);
     top.setOrientation(LinearLayout.HORIZONTAL);
     top.setGravity(Gravity.CENTER_VERTICAL);
+    top.setPadding(0, dp(activity, 4), 0, dp(activity, 8));
     TextView back = back(activity);
     back.setOnClickListener(v -> activity.finish());
+    LinearLayout.LayoutParams blp =
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    blp.setMarginEnd(dp(activity, 8));
+    back.setLayoutParams(blp);
     top.addView(back);
     TextView title = title(activity, titleText);
-    title.setPadding(dp(activity, 12), dp(activity, 4), 0, 0);
+    title.setPadding(dp(activity, 8), dp(activity, 4), 0, 0);
     LinearLayout.LayoutParams tlp =
         new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
     title.setLayoutParams(tlp);

@@ -112,8 +112,8 @@ public final class UiScale {
     float priceSp = sp(12f * scale);
 
     int touchMinPx = Math.max(dp(density, 44), Math.round(44 * density * scale));
-    // Friendly CTA — compact vs old 64dp bars; still ≥52dp primary.
-    int payPrimaryMinPx = Math.max(dp(density, 52), Math.round(52 * density * scale));
+    // Tall pay CTA — ~15–18% cart Y feel on counter tablets.
+    int payPrimaryMinPx = Math.max(dp(density, 72), Math.round(72 * density * scale));
     int paySecondaryMinPx = Math.max(dp(density, 44), Math.round(44 * density * scale));
     // Number pad only — restore pre-shrink tall keys (not all chips).
     int padKeyMinPx = Math.max(dp(density, 56), Math.round(64 * density * scale));

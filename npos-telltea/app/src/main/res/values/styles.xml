@@ -143,13 +143,18 @@
         <item name="android:textColor">@color/npos_orange</item>
     </style>
 
-    <style name="Npos.Btn.Back" parent="Npos.Btn.Ghost">
+    <style name="Npos.Btn.Back" parent="Npos.Btn.Secondary">
         <item name="android:layout_width">wrap_content</item>
+        <item name="android:minWidth">120dp</item>
         <item name="android:maxWidth">999dp</item>
         <item name="android:layout_gravity">start</item>
-        <item name="android:paddingLeft">12dp</item>
-        <item name="android:paddingRight">12dp</item>
-        <item name="android:minHeight">36dp</item>
+        <item name="android:paddingLeft">20dp</item>
+        <item name="android:paddingRight">20dp</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">@font/prompt_semibold</item>
     </style>
 
     <style name="Npos.Input" parent="Npos">

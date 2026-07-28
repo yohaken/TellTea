@@ -141,11 +141,11 @@
 
         <TextView
             android:id="@+id/optionCancel"
-            style="@style/Npos.Btn.Ghost"
+            style="@style/Npos.Btn.Back"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
-                        android:text="@android:string/cancel" />
+            android:text="@string/btn_back" />
 
         <TextView
             android:id="@+id/optionLineTotal"
@@ -165,7 +165,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
+            android:minWidth="140dp"
             android:layout_gravity="center_vertical"
-                        android:text="@string/btn_option_confirm" />
+            android:text="@string/btn_option_confirm" />
     </LinearLayout>
 </LinearLayout>

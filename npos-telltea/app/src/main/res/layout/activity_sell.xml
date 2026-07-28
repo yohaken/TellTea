@@ -193,7 +193,7 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_marginStart="6dp"
-                    android:layout_weight="70"
+                    android:layout_weight="51"
                     android:fillViewport="true"
                     android:overScrollMode="never"
                     android:scrollbars="vertical">
@@ -208,12 +208,12 @@
                         android:useDefaultMargins="false" />
                 </ScrollView>
 
-                <!-- Right: cart + only 2 footer buttons -->
+                <!-- Right: cart ~35% X · text actions · tall pay bar ~18% Y -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_marginStart="6dp"
-                    android:layout_weight="16"
+                    android:layout_weight="35"
                     android:background="#FFFFFF"
                     android:elevation="2dp"
                     android:orientation="vertical"
@@ -227,7 +227,7 @@
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:paddingBottom="4dp">
+                        android:paddingBottom="2dp">
 
                         <TextView
                             android:id="@+id/cartTitle"
@@ -249,10 +249,66 @@
                             android:textSize="13sp" />
                     </LinearLayout>
 
+                    <!-- Cart tools: one text row · same size as line names · clear = orange -->
+                    <LinearLayout
+                        android:id="@+id/cartActionRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:orientation="horizontal"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="6dp">
+
+                        <TextView
+                            android:id="@+id/discountButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/prompt_regular"
+                            android:gravity="center"
+                            android:minHeight="36dp"
+                            android:paddingLeft="8dp"
+                            android:paddingRight="8dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
+                            android:text="@string/sell_hub_discount"
+                            android:textColor="@color/npos_ink"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/restoreHoldButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/prompt_regular"
+                            android:gravity="center"
+                            android:minHeight="36dp"
+                            android:paddingLeft="8dp"
+                            android:paddingRight="8dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
+                            android:text="@string/sell_hub_restore_hold"
+                            android:textColor="@color/npos_ink"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/clearCartButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/prompt_semibold"
+                            android:gravity="center"
+                            android:minHeight="36dp"
+                            android:paddingLeft="8dp"
+                            android:paddingRight="8dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
+                            android:text="@string/sell_hub_clear_cart"
+                            android:textColor="@color/npos_orange"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
                     <ScrollView
                         android:layout_width="match_parent"
                         android:layout_height="0dp"
-                        android:layout_weight="1">
+                        android:layout_weight="82">
 
                         <LinearLayout
                             android:id="@+id/cartList"
@@ -288,14 +344,14 @@
                             android:text="@string/cart_total_zero" />
                     </LinearLayout>
 
-                    <!-- Footer: ชำระทั้งหมด (~85%) + บันทึก (~15%), same height -->
+                    <!-- Footer: ชำระทั้งหมด (~85% X) + บันทึก · ~18% of cart Y -->
                     <LinearLayout
                         android:id="@+id/cartPayBar"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_height="0dp"
+                        android:layout_marginTop="6dp"
+                        android:layout_weight="18"
                         android:gravity="center_vertical"
-                        android:minHeight="64dp"
                         android:orientation="horizontal">
 
                         <LinearLayout
@@ -306,12 +362,11 @@
                             android:layout_weight="85"
                             android:background="@drawable/npos_touch_primary"
                             android:gravity="center"
-                            android:minHeight="64dp"
                             android:orientation="vertical"
                             android:paddingLeft="10dp"
                             android:paddingRight="10dp"
-                            android:paddingTop="8dp"
-                            android:paddingBottom="8dp">
+                            android:paddingTop="10dp"
+                            android:paddingBottom="10dp">
 
                             <TextView
                                 android:id="@+id/payAllLabel"
@@ -323,7 +378,7 @@
                                 android:maxLines="1"
                                 android:text="@string/btn_pay_all"
                                 android:textColor="@android:color/white"
-                                android:textSize="13sp" />
+                                android:textSize="14sp" />
 
                             <TextView
                                 android:id="@+id/payAllAmount"
@@ -335,7 +390,7 @@
                                 android:maxLines="1"
                                 android:text="@string/cart_total_zero"
                                 android:textColor="@android:color/white"
-                                android:textSize="20sp" />
+                                android:textSize="22sp" />
 
                             <TextView
                                 android:id="@+id/payAllDiscount"
@@ -347,7 +402,7 @@
                                 android:maxLines="1"
                                 android:text="@string/pay_all_discount_none"
                                 android:textColor="#E8F5EE"
-                                android:textSize="11sp"
+                                android:textSize="12sp"
                                 android:visibility="gone" />
                         </LinearLayout>
 
@@ -360,33 +415,13 @@
                             android:ellipsize="end"
                             android:fontFamily="@font/prompt_semibold"
                             android:gravity="center"
-                            android:maxLines="1"
-                            android:minHeight="64dp"
+                            android:maxLines="2"
                             android:paddingLeft="4dp"
                             android:paddingRight="4dp"
                             android:text="@string/btn_hold_save"
                             android:textColor="@color/npos_orange"
                             android:textSize="13sp" />
                     </LinearLayout>
-
-                    <!-- Legacy / hub-wired controls — not shown in table-view footer -->
-                    <TextView
-                        android:id="@+id/discountButton"
-                        style="@style/Npos.Btn.SellRow.Accent"
-                        android:text="@string/btn_discount"
-                        android:visibility="gone" />
-
-                    <TextView
-                        android:id="@+id/restoreHoldButton"
-                        style="@style/Npos.Btn.SellRow.Accent"
-                        android:text="@string/btn_restore_hold"
-                        android:visibility="gone" />
-
-                    <TextView
-                        android:id="@+id/clearCartButton"
-                        style="@style/Npos.Btn.SellRow.Accent"
-                        android:text="@string/btn_clear_cart"
-                        android:visibility="gone" />
 
                     <TextView
                         android:id="@+id/flushSyncButton"

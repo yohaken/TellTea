@@ -1,5 +1,5 @@
 /**
- * nPos sell: vertical category table + 2-button pay/hold footer + search icon.
+ * nPos sell: vertical category table + cart 35% + text tools + tall pay/hold.
  */
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 319/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 114/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+84/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.61"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 320/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 115/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+85/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.62"/);
 assert.ok(existsSync(join(root, "docs/npos-sell-table-pay-checklist.md")));
 
 const layout = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
@@ -21,8 +21,9 @@ assert.match(layout, /android:id="@\+id\/categoryBar"/);
 assert.match(layout, /android:orientation="vertical"/);
 assert.doesNotMatch(layout, /HorizontalScrollView[\s\S]*categoryBar/);
 assert.match(layout, /layout_weight="14"/);
-assert.match(layout, /layout_weight="70"/);
-assert.match(layout, /layout_weight="16"/);
+assert.match(layout, /layout_weight="51"/);
+assert.match(layout, /layout_weight="35"/);
+assert.match(layout, /cartActionRow/);
 assert.match(layout, /sellSearchButton/);
 assert.match(layout, /sellSearch[\s\S]*android:visibility="gone"/);
 assert.match(layout, /payAllButton/);
@@ -32,6 +33,7 @@ assert.match(layout, /holdBillButton/);
 assert.match(layout, /btn_hold_save|บันทึก/);
 assert.match(layout, /layout_weight="85"/);
 assert.match(layout, /layout_weight="15"/);
+assert.match(layout, /cartPayBar[\s\S]*layout_weight="18"/);
 assert.match(layout, /cartTotalsBlock[\s\S]*android:visibility="gone"/);
 assert.match(layout, /payCashButton[\s\S]*Npos\.Btn\.(SellRow\.)?Primary/);
 
@@ -47,7 +49,7 @@ assert.match(sell, /startPayAll/);
 assert.match(sell, /payAllAmount/);
 assert.match(sell, /toggleSellSearch/);
 assert.match(sell, /TextView sellSearchBtn/);
-assert.match(sell, /sell_hub_discount/);
+assert.match(sell, /styleCartTextAction/);
 assert.match(sell, /holdBill\(\)/);
 
 console.log("OK test-npos-sell-table-pay");

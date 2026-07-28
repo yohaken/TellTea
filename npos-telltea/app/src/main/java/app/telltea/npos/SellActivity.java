@@ -206,19 +206,19 @@ public class SellActivity extends Activity {
     View discountBtn = findViewById(R.id.discountButton);
     if (discountBtn != null) {
       discountBtn.setOnClickListener(v -> showDiscountDialog());
-      discountBtn.setVisibility(View.GONE);
+      discountBtn.setVisibility(View.VISIBLE);
     }
     View clearCart = findViewById(R.id.clearCartButton);
     if (clearCart != null) {
       clearCart.setOnClickListener(v -> confirmClearCart());
-      clearCart.setVisibility(View.GONE);
+      clearCart.setVisibility(View.VISIBLE);
     }
     if (holdBillButton != null) {
       holdBillButton.setOnClickListener(v -> holdBill());
     }
     if (restoreHoldButton != null) {
       restoreHoldButton.setOnClickListener(v -> restoreHold());
-      restoreHoldButton.setVisibility(View.GONE);
+      restoreHoldButton.setVisibility(View.VISIBLE);
     }
     if (flushSyncButton != null) {
       flushSyncButton.setOnClickListener(v -> flushPendingNow());
@@ -346,10 +346,10 @@ public class SellActivity extends Activity {
       xReport.setMinimumHeight(uiScale.touchMinPx);
       xReport.setVisibility(View.GONE);
     }
-    styleSoftCartAction(findViewById(R.id.discountButton));
+    styleCartTextAction(findViewById(R.id.discountButton), false);
     styleSoftCartAction(holdBillButton);
-    styleSoftCartAction(findViewById(R.id.restoreHoldButton));
-    styleSoftCartAction(findViewById(R.id.clearCartButton));
+    styleCartTextAction(findViewById(R.id.restoreHoldButton), false);
+    styleCartTextAction(findViewById(R.id.clearCartButton), true);
     if (menuGrid != null) {
       menuGrid.setColumnCount(uiScale.menuCols);
     }
@@ -398,34 +398,19 @@ public class SellActivity extends Activity {
     }
   }
 
-  /** Gpos-style overflow: cart extras + settings / shift / history behind grid. */
+  /** Overflow: settings / shift / history (cart tools live on cart header row). */
   private void showSellHubMenu(View anchor) {
     PopupMenu popup = new PopupMenu(this, anchor);
-    popup.getMenu().add(0, 10, 0, R.string.sell_hub_discount);
-    popup.getMenu().add(0, 11, 1, R.string.sell_hub_restore_hold);
-    popup.getMenu().add(0, 12, 2, R.string.sell_hub_clear_cart);
-    popup.getMenu().add(0, 1, 3, R.string.nav_open_bills);
-    popup.getMenu().add(0, 2, 4, R.string.nav_receipts);
-    popup.getMenu().add(0, 3, 5, R.string.nav_shift);
-    popup.getMenu().add(0, 4, 6, R.string.btn_settings_device);
-    popup.getMenu().add(0, 5, 7, R.string.sell_hub_x_report);
-    popup.getMenu().add(0, 6, 8, R.string.sell_hub_close_shift);
-    popup.getMenu().add(0, 7, 9, R.string.nav_lock_pin);
+    popup.getMenu().add(0, 1, 0, R.string.nav_open_bills);
+    popup.getMenu().add(0, 2, 1, R.string.nav_receipts);
+    popup.getMenu().add(0, 3, 2, R.string.nav_shift);
+    popup.getMenu().add(0, 4, 3, R.string.btn_settings_device);
+    popup.getMenu().add(0, 5, 4, R.string.sell_hub_x_report);
+    popup.getMenu().add(0, 6, 5, R.string.sell_hub_close_shift);
+    popup.getMenu().add(0, 7, 6, R.string.nav_lock_pin);
     popup.setOnMenuItemClickListener(
         (MenuItem item) -> {
           int id = item.getItemId();
-          if (id == 10) {
-            showDiscountDialog();
-            return true;
-          }
-          if (id == 11) {
-            restoreHold();
-            return true;
-          }
-          if (id == 12) {
-            confirmClearCart();
-            return true;
-          }
           if (id == 1) {
             PosShellNav.openOpenBillsHint(this);
             return true;
@@ -459,14 +444,31 @@ public class SellActivity extends Activity {
     popup.show();
   }
 
+  private void styleCartTextAction(View v, boolean orange) {
+    if (!(v instanceof TextView)) return;
+    TextView tv = (TextView) v;
+    tv.setTypeface(orange ? NposFonts.semibold(this) : NposFonts.regular(this));
+    float sp = uiScale != null ? Math.max(12f, uiScale.captionSp) : 13f;
+    tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
+    tv.setBackgroundColor(0x00000000);
+    tv.setTextColor(
+        orange
+            ? NposUi.color(this, R.color.npos_orange)
+            : NposUi.color(this, R.color.npos_ink));
+    int minH =
+        uiScale != null
+            ? Math.max(uiScale.dp(36), uiScale.touchMinPx - 8)
+            : NposUi.dp(this, 36);
+    tv.setMinHeight(minH);
+    tv.setPadding(NposUi.dp(this, 8), NposUi.dp(this, 4), NposUi.dp(this, 8), NposUi.dp(this, 4));
+    tv.setAllCaps(false);
+  }
+
   private void styleSoftCartAction(View v) {
     if (!(v instanceof TextView)) return;
     TextView tv = (TextView) v;
     tv.setTypeface(NposFonts.semibold(this));
-    if (v.getId() == R.id.clearCartButton
-        || v.getId() == R.id.discountButton
-        || v.getId() == R.id.holdBillButton
-        || v.getId() == R.id.restoreHoldButton) {
+    if (v.getId() == R.id.holdBillButton) {
       tv.setTextColor(NposUi.color(this, R.color.npos_orange));
     }
   }
