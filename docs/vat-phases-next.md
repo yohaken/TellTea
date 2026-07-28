@@ -27,7 +27,7 @@
 
 ## P6 — Outlook · เทียบ · ซื้อ
 
-- [x] Outlook OAuth + sync (fallback ไม่มี `$search`)
+- [x] Outlook OAuth + sync (โค้ดมี · **ซ่อนจาก UI ชั่วคราว** — ใช้ Gmail + forward)
 - [x] Redirect เริ่มต้น → `telltea-shop.web.app`
 - [x] เทียบสัปดาห์/เดือน · ตัวเลือกนับเฉพาะวันยืนยัน · ไม่ทับวัน
 - [x] ภาษีซื้อ · แก้ vatInput แล้ว vatBase ตาม

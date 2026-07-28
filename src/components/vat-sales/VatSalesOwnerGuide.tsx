@@ -26,7 +26,7 @@ export function VatSalesOwnerGuide() {
             <b>วัน</b> ตาราง Sp/G/LM + ร้าน · ยืนยันวัน
           </li>
           <li>
-            <b>เมล</b> Gmail/Outlook · ซิงก์ · parse · ยืนยันเข้าวัน
+            <b>เมล</b> Gmail · ซิงก์ · parse · ยืนยันเข้าวัน (อีเมลอื่น forward เข้า Gmail)
           </li>
           <li>
             <b>เทียบ</b> สัปดาห์/เดือน vs รวมวัน (ไม่ทับ) · นับวันยืนยันได้

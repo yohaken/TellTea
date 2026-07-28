@@ -27,22 +27,11 @@ import {
   type PlatformEmailReport,
   type VatMailStatus,
 } from "@/lib/vat-sales-mail";
-import {
-  disconnectVatOutlook,
-  fetchVatOutlookStatus,
-  loadVatOutlookOAuthConfig,
-  saveVatOutlookOAuthConfig,
-  startVatOutlookOAuth,
-  syncVatOutlook,
-} from "@/lib/vat-sales-outlook";
 import { loadParserHealth, type ParserHealthSummary } from "@/lib/vat-sales-parser-health";
 import { prunePlatformEmailRaw } from "@/lib/vat-sales-mail-prune";
 
 const DEFAULT_REDIRECT =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/vatMailOAuthCallback";
-const DEFAULT_OUTLOOK_REDIRECT =
-  "https://asia-southeast1-mypeer-501909.cloudfunctions.net/vatOutlookOAuthCallback";
-
 function reportKindLabel(kind: string) {
   if (kind === "weekly") return "สัปดาห์";
   if (kind === "monthly") return "เดือน";
@@ -74,7 +63,6 @@ export function VatSalesMailPanel({
   focusDate = null,
 }: Props) {
   const [status, setStatus] = useState<VatMailStatus | null>(null);
-  const [outlookStatus, setOutlookStatus] = useState<VatMailStatus | null>(null);
   const [reports, setReports] = useState<PlatformEmailReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [channelFilter, setChannelFilter] = useState<"all" | DeliveryChannel | "unknown">(
@@ -83,16 +71,11 @@ export function VatSalesMailPanel({
   const [statusFilter, setStatusFilter] = useState<MailParseStatus | "all">("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
-  const [showOutlookConfig, setShowOutlookConfig] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [cfgClientId, setCfgClientId] = useState("");
   const [cfgSecret, setCfgSecret] = useState("");
   const [cfgRedirect, setCfgRedirect] = useState(DEFAULT_REDIRECT);
   const [hasSecret, setHasSecret] = useState(false);
-  const [olClientId, setOlClientId] = useState("");
-  const [olSecret, setOlSecret] = useState("");
-  const [olRedirect, setOlRedirect] = useState(DEFAULT_OUTLOOK_REDIRECT);
-  const [olHasSecret, setOlHasSecret] = useState(false);
   const [health, setHealth] = useState<ParserHealthSummary | null>(null);
   const [pruneMonths, setPruneMonths] = useState("12");
   const [review, setReview] = useState<{
@@ -106,20 +89,17 @@ export function VatSalesMailPanel({
     setLoading(true);
     setError("");
     try {
-      const [st, ol, rows, cfg, olCfg, healthSum] = await Promise.all([
+      const [st, rows, cfg, healthSum] = await Promise.all([
         fetchVatMailStatus(),
-        fetchVatOutlookStatus().catch(() => null),
         listPlatformEmailReports({
           channel: channelFilter,
           parseStatus: statusFilter,
           max: 80,
         }),
         loadVatMailOAuthConfig().catch(() => null),
-        loadVatOutlookOAuthConfig().catch(() => null),
         loadParserHealth(200).catch(() => null),
       ]);
       setStatus(st);
-      setOutlookStatus(ol);
       let nextRows = rows;
       if (focusDate) {
         nextRows = rows.filter((r) => {
@@ -134,11 +114,6 @@ export function VatSalesMailPanel({
         setCfgClientId(cfg.clientId);
         setCfgRedirect(cfg.redirectUri || DEFAULT_REDIRECT);
         setHasSecret(cfg.hasSecret);
-      }
-      if (olCfg) {
-        setOlClientId(olCfg.clientId);
-        setOlRedirect(olCfg.redirectUri || DEFAULT_OUTLOOK_REDIRECT);
-        setOlHasSecret(olCfg.hasSecret);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -158,7 +133,7 @@ export function VatSalesMailPanel({
       const returnTo =
         typeof window !== "undefined"
           ? `${window.location.origin}/vat-sales/?tab=mail`
-          : "https://mypeer-501909.web.app/vat-sales/?tab=mail";
+          : "https://telltea-shop.web.app/vat-sales/?tab=mail";
       const url = await startVatMailOAuth(returnTo);
       window.location.href = url;
     } catch (e) {
@@ -197,73 +172,6 @@ export function VatSalesMailPanel({
     }
   };
 
-  const connectOutlook = async () => {
-    setBusy("outlook-connect");
-    setError("");
-    try {
-      const returnTo =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/vat-sales/?tab=mail`
-          : "https://mypeer-501909.web.app/vat-sales/?tab=mail";
-      const url = await startVatOutlookOAuth(returnTo);
-      window.location.href = url;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setBusy(null);
-    }
-  };
-
-  const disconnectOutlook = async () => {
-    if (!window.confirm("ตัดการเชื่อม Outlook?")) return;
-    setBusy("outlook-disconnect");
-    setError("");
-    try {
-      await disconnectVatOutlook();
-      setMsg("ตัดการเชื่อม Outlook แล้ว");
-      await refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const syncOutlook = async () => {
-    setBusy("outlook-sync");
-    setError("");
-    setMsg("");
-    try {
-      const res = await syncVatOutlook(31);
-      setMsg(
-        `ซิงก์ Outlook แล้ว · สแกน ${res.scanned} · เพิ่ม ${res.added} · ข้ามซ้ำ ${res.skipped}`,
-      );
-      await refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const saveOutlookConfig = async () => {
-    setBusy("outlook-config");
-    setError("");
-    try {
-      await saveVatOutlookOAuthConfig({
-        clientId: olClientId,
-        clientSecret: olSecret || undefined,
-        redirectUri: (olRedirect || DEFAULT_OUTLOOK_REDIRECT).trim() || DEFAULT_OUTLOOK_REDIRECT,
-        updatedBy: actor,
-      });
-      setOlSecret("");
-      setMsg("บันทึก Outlook OAuth config แล้ว");
-      await refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(null);
-    }
-  };
 
   const runPruneRaw = async (dryRun: boolean) => {
     const months = Number(pruneMonths) || 12;
@@ -476,7 +384,7 @@ export function VatSalesMailPanel({
       <section className="vat-api-box">
         <div className="vat-api-head">
           <h2 className="vat-sales-section-title">API เมล</h2>
-          <span className="muted">ใส่แค่ ID + Secret</span>
+          <span className="muted">Gmail เท่านั้น · อีเมลอื่น forward เข้ามา</span>
         </div>
 
         <div className="vat-api-row">
@@ -505,7 +413,7 @@ export function VatSalesMailPanel({
                 </button>
               </>
             )}
-            <button type="button" className="ghost-btn vat-sales-act-btn" onClick={() => { setShowConfig((v) => !v); setShowOutlookConfig(false); }}>
+            <button type="button" className="ghost-btn vat-sales-act-btn" onClick={() => setShowConfig((v) => !v)}>
               {showConfig ? "ปิดค่า" : "ตั้งค่า"}
             </button>
           </div>
@@ -530,56 +438,6 @@ export function VatSalesMailPanel({
           </div>
         ) : null}
 
-        <div className="vat-api-row">
-          <div className="vat-api-label">
-            <strong>Outlook</strong>
-            <span className="muted">
-              {outlookStatus?.connected
-                ? outlookStatus.email || "ok"
-                : outlookStatus?.hasConfig
-                  ? "พร้อมเชื่อม"
-                  : "ยังไม่ตั้งค่า"}
-            </span>
-          </div>
-          <div className="vat-sales-acts">
-            {!outlookStatus?.connected ? (
-              <button type="button" className="primary-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void connectOutlook()}>
-                เชื่อม
-              </button>
-            ) : (
-              <>
-                <button type="button" className="primary-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void syncOutlook()}>
-                  {busy === "outlook-sync" ? "…" : "ซิงก์"}
-                </button>
-                <button type="button" className="ghost-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void disconnectOutlook()}>
-                  ตัด
-                </button>
-              </>
-            )}
-            <button type="button" className="ghost-btn vat-sales-act-btn" onClick={() => { setShowOutlookConfig((v) => !v); setShowConfig(false); }}>
-              {showOutlookConfig ? "ปิดค่า" : "ตั้งค่า"}
-            </button>
-          </div>
-        </div>
-        {showOutlookConfig ? (
-          <div className="vat-mail-config vat-api-fields">
-            <label className="vat-sales-field">
-              Client ID
-              <input value={olClientId} onChange={(e) => setOlClientId(e.target.value)} autoComplete="off" placeholder="Azure Application (client) ID" />
-            </label>
-            <label className="vat-sales-field">
-              Client Secret {olHasSecret ? "(มีแล้ว — ใส่ใหม่ถ้าเปลี่ยน)" : ""}
-              <input type="password" value={olSecret} onChange={(e) => setOlSecret(e.target.value)} autoComplete="off" placeholder={olHasSecret ? "••••••" : ""} />
-            </label>
-            <p className="muted vat-api-hint">
-              Redirect ติดมาให้แล้ว · วางใน Azure:
-              <code className="vat-api-code">{DEFAULT_OUTLOOK_REDIRECT}</code>
-            </p>
-            <button type="button" className="primary-btn" disabled={busy !== null} onClick={() => void saveOutlookConfig()}>
-              บันทึก Outlook
-            </button>
-          </div>
-        ) : null}
 
         <div className="vat-sales-toolbar vat-api-actions">
           <button type="button" className="ghost-btn" disabled={busy !== null || loading} onClick={() => void refresh()}>
@@ -732,7 +590,7 @@ export function VatSalesMailPanel({
         {loading ? (
           <p className="muted">กำลังโหลดกล่องเมล...</p>
         ) : reports.length === 0 ? (
-          <p className="muted">ยังไม่มีเมลในกล่อง — เชื่อม Gmail/Outlook แล้วกดซิงก์</p>
+          <p className="muted">ยังไม่มีเมลในกล่อง — เชื่อม Gmail แล้วกดซิงก์ (อีเมลอื่น forward เข้า Gmail นี้)</p>
         ) : (
           <div className="sheet-wrap vat-sales-scroll">
             <table className="sheet-table vat-sales-table vat-mail-table">
