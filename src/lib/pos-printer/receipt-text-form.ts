@@ -115,6 +115,7 @@ export function buildUnifiedReceiptText(
   const shopName = shopDisplayName(data);
   const shopAddress = (data.shopAddress || DEFAULT_SHOP.shopAddress).trim();
   const shopPhone = (data.shopPhone || DEFAULT_SHOP.shopPhone).trim();
+  const taxId = (data.taxId || "").trim();
   const billDisplay = data.billNo.startsWith("#") ? data.billNo : `#${data.billNo}`;
   const itemCount = itemQtyTotal(data.lines);
   const subtotal = data.subtotal ?? data.total;
@@ -131,6 +132,7 @@ export function buildUnifiedReceiptText(
   out.push(center(shopName, width));
   if (shopAddress) for (const part of wrap(shopAddress, width)) out.push(center(part, width));
   if (shopPhone) out.push(center(`โทร : ${shopPhone}`, width));
+  if (taxId) out.push(center(`เลขผู้เสียภาษี : ${taxId}`, width));
   out.push(center("ใบเสร็จ", width));
 
   if (data.externalOrderId) out.push(`Order: ${data.externalOrderId}`);

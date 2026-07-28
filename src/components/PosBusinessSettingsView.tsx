@@ -117,6 +117,7 @@ export function PosBusinessSettingsView({
   const [shopNameTh, setShopNameTh] = useState("");
   const [shopAddress, setShopAddress] = useState("");
   const [shopPhone, setShopPhone] = useState("");
+  const [taxId, setTaxId] = useState("");
   const [receiptStaffName, setReceiptStaffName] = useState("");
   const [receiptFooterNote, setReceiptFooterNote] = useState("");
   const [promptPayId, setPromptPayId] = useState("");
@@ -131,6 +132,7 @@ export function PosBusinessSettingsView({
     setShopNameTh(s.shopNameTh);
     setShopAddress(s.shopAddress);
     setShopPhone(s.shopPhone);
+    setTaxId(s.taxId || "");
     setReceiptStaffName(s.receiptStaffName);
     setReceiptFooterNote(s.receiptFooterNote);
     setPromptPayId(s.promptPayId);
@@ -166,6 +168,7 @@ export function PosBusinessSettingsView({
     shopNameTh,
     shopAddress,
     shopPhone,
+    taxId,
     promptPayId,
     autoPrintReceipt,
     receiptStaffName,
@@ -185,6 +188,7 @@ export function PosBusinessSettingsView({
         shopNameTh,
         shopAddress,
         shopPhone,
+        taxId,
         receiptStaffName,
         receiptFooterNote,
       });
@@ -324,6 +328,15 @@ export function PosBusinessSettingsView({
                     onChange={(e) => setShopPhone(e.target.value)}
                     inputMode="tel"
                     autoComplete="tel"
+                  />
+                </label>
+                <label>
+                  <span>เลขผู้เสียภาษี</span>
+                  <input
+                    value={taxId}
+                    onChange={(e) => setTaxId(e.target.value)}
+                    inputMode="numeric"
+                    placeholder="13 หลัก (ถ้ามี · แสดงบนสลิป)"
                   />
                 </label>
                 <label>

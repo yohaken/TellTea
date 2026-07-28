@@ -313,12 +313,21 @@
     <string name="settings_title">ตั้งค่า</string>
     <string name="settings_hint">อัปเดตและปริ้นเตอร์สำหรับหน้าร้าน · ส่วนเทคนิคอยู่ด้านล่าง</string>
     <string name="settings_section_device">เครื่องนี้</string>
-    <string name="settings_section_printer">ปริ้นเตอร์ / ลิ้นชัก</string>
+    <string name="settings_section_printer">อุปกรณ์ · ปริ้นเตอร์ / ลิ้นชัก</string>
+    <string name="printer_hint">ร้านชงชาหน้าบาร์ — ใบเสร็จ + ลิ้นชักพอ · ไม่ใช้ปริ้นเตอร์ครัว\nเชื่อม USB / Bluetooth / LAN · ลิ้นชักเสียบ RJ11 หลังปริ้นเตอร์หลัก</string>
+    <string name="printer_paper_title">ขนาดกระดาษ</string>
+    <string name="printer_paper_80">80 มม.</string>
+    <string name="printer_paper_58">58 มม.</string>
+    <string name="printer_paper_saved">ใช้กระดาษ %1$d มม.</string>
+    <string name="btn_drawer_kick">เปิดลิ้นชัก (เทส)</string>
+    <string name="sell_hub_open_drawer">เปิดลิ้นชัก</string>
+    <string name="drawer_no_sale_ok">เปิดลิ้นชักแล้ว</string>
+    <string name="drawer_no_sale_fail">เปิดลิ้นชักไม่สำเร็จ — ตรวจปริ้นเตอร์</string>
+    <string name="drawer_no_sale_no_printer">ยังไม่เลือกปริ้นเตอร์ — ไปที่ตั้งค่าอุปกรณ์</string>
     <string name="settings_section_tech">เทคนิค (ไม่ต้องใช้ทุกวัน)</string>
     <string name="settings_tech_hint">ระบบสแกนส่งหลังร้านอัตโนมัติแล้ว — กดด้านล่างเฉพาะตอนติดตั้ง/แก้ปัญหา</string>
     <string name="settings_section_customer">เทสจอลูกค้า</string>
 
-    <string name="printer_hint">สแกน USB หรือ Bluetooth ที่จับคู่ไว้ แล้วพิมพ์ทดสอบ / เปิดลิ้นชัก</string>
     <string name="printer_idle">ยังไม่ได้สแกนปริ้นเตอร์</string>
     <string name="printer_none">ยังไม่พบปริ้นเตอร์ — เสียบ USB หรือจับคู่ Bluetooth แล้วสแกน</string>
     <string name="printer_saved_offline">เคยใช้ได้: %1$s (ตอนนี้ไม่เห็นในรายการ)</string>
@@ -333,7 +342,6 @@
     <string name="btn_printer_scan">สแกนปริ้นเตอร์</string>
     <string name="btn_printer_next">เลือกตัวถัดไป</string>
     <string name="btn_printer_test">พิมพ์หน้าทดสอบ</string>
-    <string name="btn_drawer_kick">เปิดลิ้นชัก (เทส)</string>
 
     <string name="customer_caption">ยอดชำระ</string>
     <string name="customer_status_ok">จอลูกค้า: พร้อม</string>

@@ -1,6 +1,6 @@
 # nPos — sell drag-resize layout (แถบเลื่อนแกน X)
 
-อัปเดต: **1.14.64** · `APP_BUILD` 322 · `POS_BUILD` 117 · vc **87**
+อัปเดต: **1.14.65** · `APP_BUILD` 323 · `POS_BUILD` 118 · vc **88**
 
 ## มติ
 

@@ -1030,7 +1030,7 @@ public final class SaleSync {
                 /* ignore */
             }
         }
-        String body = ReceiptFormBuilder.build(shopJson, payload, billNo, total);
+        String body = ReceiptFormBuilder.build(shopJson, payload, billNo, total, PrinterPrefs.receiptCols(app));
         byte[] receipt = EscPos.documentReceipt(body);
         transport.send(
                 app,

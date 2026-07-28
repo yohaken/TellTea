@@ -26,6 +26,7 @@ import app.telltea.npos.printer.PrinterEndpoint;
 import app.telltea.npos.printer.PrinterPrefs;
 import app.telltea.npos.printer.PrinterTransport;
 import app.telltea.npos.ui.NposFonts;
+import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.update.ApkInstaller;
 import app.telltea.npos.update.UpdateChecker;
 import app.telltea.npos.update.UpdateConfig;
@@ -107,10 +108,43 @@ public class SettingsActivity extends Activity {
         printerTestButton.setOnClickListener(v -> runPrinterTest());
         drawerKickButton.setOnClickListener(v -> runDrawerKick());
         findViewById(R.id.printerLanAddButton).setOnClickListener(v -> addLanPrinter());
+        View paper80 = findViewById(R.id.paperWidth80Button);
+        View paper58 = findViewById(R.id.paperWidth58Button);
+        if (paper80 != null) {
+            paper80.setOnClickListener(v -> selectPaperWidth(PrinterPrefs.PAPER_80));
+        }
+        if (paper58 != null) {
+            paper58.setOnClickListener(v -> selectPaperWidth(PrinterPrefs.PAPER_58));
+        }
+        refreshPaperWidthChips();
 
         restorePrinterSelection();
         refreshPermissionStatus();
         OpsLogger.info(this, "app", "เปิดตั้งค่า", "vc=" + localVersionCode);
+    }
+
+    private void selectPaperWidth(int widthMm) {
+        PrinterPrefs.setPaperWidthMm(this, widthMm);
+        refreshPaperWidthChips();
+        int w = PrinterPrefs.getPaperWidthMm(this);
+        Toast.makeText(this, getString(R.string.printer_paper_saved, w), Toast.LENGTH_SHORT).show();
+        OpsLogger.info(this, "printer", "ตั้งขนาดกระดาษ", w + "mm");
+    }
+
+    private void refreshPaperWidthChips() {
+        TextView paper80 = findViewById(R.id.paperWidth80Button);
+        TextView paper58 = findViewById(R.id.paperWidth58Button);
+        if (paper80 == null || paper58 == null) return;
+        int w = PrinterPrefs.getPaperWidthMm(this);
+        boolean is80 = w != PrinterPrefs.PAPER_58;
+        int ink = NposUi.color(this, R.color.npos_ink);
+        int orange = NposUi.color(this, R.color.npos_orange);
+        paper80.setText(is80 ? "✓ " + getString(R.string.printer_paper_80) : getString(R.string.printer_paper_80));
+        paper58.setText(!is80 ? "✓ " + getString(R.string.printer_paper_58) : getString(R.string.printer_paper_58));
+        paper80.setTextColor(is80 ? orange : ink);
+        paper58.setTextColor(!is80 ? orange : ink);
+        paper80.setTypeface(is80 ? NposFonts.semibold(this) : NposFonts.regular(this));
+        paper58.setTypeface(!is80 ? NposFonts.semibold(this) : NposFonts.regular(this));
     }
 
     private void refreshPermissionStatus() {

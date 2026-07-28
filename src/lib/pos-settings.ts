@@ -29,6 +29,8 @@ export type PosShopSettings = {
   shopNameTh: string;
   shopAddress: string;
   shopPhone: string;
+  /** เลขประจำตัวผู้เสียภาษี — แสดงบนสลิปเมื่อมีค่า */
+  taxId: string;
   promptPayId: string;
   autoPrintReceipt: boolean;
   /** ชื่อพนักงานบนใบเสร็จ (ค่าเริ่มต้น) */
@@ -60,6 +62,7 @@ const DEFAULTS: PosShopSettings = {
   shopNameTh: "เทล ที",
   shopAddress: "ถ.พรรณนาชัย ต.หมากแข้ง อ.เมืองอุดรธานี จ.อุดรธานี",
   shopPhone: "0884818817",
+  taxId: "",
   promptPayId: "",
   autoPrintReceipt: true,
   receiptStaffName: "หน้าร้าน",
@@ -87,6 +90,7 @@ function toPublic(stored: StoredShopSettings): PosShopSettings {
     shopNameTh: stored.shopNameTh,
     shopAddress: stored.shopAddress,
     shopPhone: stored.shopPhone,
+    taxId: stored.taxId,
     promptPayId: stored.promptPayId,
     autoPrintReceipt: stored.autoPrintReceipt,
     receiptStaffName: stored.receiptStaffName,
@@ -117,6 +121,7 @@ function mapSettings(
     shopNameTh: str(data?.shopNameTh, DEFAULTS.shopNameTh),
     shopAddress: str(data?.shopAddress, emptyOk ? "" : DEFAULTS.shopAddress),
     shopPhone: str(data?.shopPhone, emptyOk ? "" : DEFAULTS.shopPhone),
+    taxId: typeof data?.taxId === "string" ? data.taxId.trim() : "",
     promptPayId: typeof data?.promptPayId === "string" ? data.promptPayId.trim() : "",
     autoPrintReceipt: data?.autoPrintReceipt !== false,
     receiptStaffName: str(data?.receiptStaffName, DEFAULTS.receiptStaffName) || DEFAULTS.receiptStaffName,
@@ -201,6 +206,7 @@ function remotePayload(settings: PosShopSettings, updatedAt: number): Record<str
     shopNameTh: settings.shopNameTh,
     shopAddress: settings.shopAddress,
     shopPhone: settings.shopPhone,
+    taxId: settings.taxId,
     promptPayId: settings.promptPayId,
     autoPrintReceipt: settings.autoPrintReceipt,
     receiptStaffName: settings.receiptStaffName,
@@ -393,6 +399,7 @@ export async function savePosShopSettings(
     shopAddress:
       patch.shopAddress != null ? patch.shopAddress.trim() || DEFAULTS.shopAddress : current.shopAddress,
     shopPhone: patch.shopPhone != null ? patch.shopPhone.trim() || DEFAULTS.shopPhone : current.shopPhone,
+    taxId: patch.taxId != null ? patch.taxId.trim() : current.taxId,
     promptPayId:
       patch.promptPayId != null ? normalizePromptPayId(patch.promptPayId) : current.promptPayId,
     autoPrintReceipt: patch.autoPrintReceipt != null ? patch.autoPrintReceipt : current.autoPrintReceipt,

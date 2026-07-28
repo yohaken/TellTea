@@ -17,7 +17,8 @@ package app.telltea.npos.printer;
  * - open shift / close shift UI alone
  *
  * Manual kick:
- * - Settings → test drawer only
+ * - Settings → test drawer
+ * - Sell hub → เปิดลิ้นชัก (No Sale) — always logged
  */
 public final class CashDrawerPolicy {
   private CashDrawerPolicy() {}

@@ -91,6 +91,10 @@ public final class ReceiptFormBuilder {
     if (!shopPhone.isEmpty()) {
       sb.append(center("โทร : " + shopPhone, width)).append('\n');
     }
+    String taxId = opt(shop, "taxId");
+    if (!taxId.isEmpty()) {
+      sb.append(center("เลขผู้เสียภาษี : " + taxId, width)).append('\n');
+    }
     sb.append(center("ใบเสร็จ", width)).append('\n');
 
     if (!externalOrderId.isEmpty()) sb.append(metaRow("Order", externalOrderId, width));

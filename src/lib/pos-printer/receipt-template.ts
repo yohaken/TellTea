@@ -281,6 +281,7 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
   const shopName = shopDisplayName(data);
   const shopAddress = (data.shopAddress || DEFAULT_SHOP.shopAddress).trim();
   const shopPhone = (data.shopPhone || DEFAULT_SHOP.shopPhone).trim();
+  const taxId = (data.taxId || "").trim();
 
   const billDisplay = data.billNo.startsWith("#") ? data.billNo : `#${data.billNo}`;
   const itemCount = itemQtyTotal(data.lines);
@@ -351,6 +352,7 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
       <div class="shop-name">${escapeReceiptHtml(shopName)}</div>
       ${shopAddress ? `<div class="shop-addr">${escapeReceiptHtml(shopAddress)}</div>` : ""}
       ${shopPhone ? `<div class="shop-phone">โทร : ${escapeReceiptHtml(shopPhone)}</div>` : ""}
+      ${taxId ? `<div class="shop-phone">เลขผู้เสียภาษี : ${escapeReceiptHtml(taxId)}</div>` : ""}
     </div>
     <div class="doc-title">ใบเสร็จ</div>
     <div class="meta-block">${metaRows}</div>
@@ -615,6 +617,7 @@ export function applyShopToReceiptSample(
     shopNameTh?: string;
     shopAddress?: string;
     shopPhone?: string;
+    taxId?: string;
     receiptStaffName?: string;
     receiptFooterNote?: string;
   },
@@ -625,6 +628,7 @@ export function applyShopToReceiptSample(
     shopNameTh: shop.shopNameTh?.trim() || sample.shopNameTh,
     shopAddress: shop.shopAddress?.trim() || sample.shopAddress,
     shopPhone: shop.shopPhone?.trim() || sample.shopPhone,
+    taxId: shop.taxId?.trim() || sample.taxId,
     staffName: shop.receiptStaffName?.trim() || sample.staffName,
     receiptFooterNote: shop.receiptFooterNote?.trim() || sample.receiptFooterNote,
   };

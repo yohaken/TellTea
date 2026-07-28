@@ -10,10 +10,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 322/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 117/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+87/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.64"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 323/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 118/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+88/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.65"/);
 
 assert.ok(existsSync(join(root, "docs/npos-doc-drawer-polish-checklist.md")));
 const polishDoc = read("docs/npos-doc-drawer-polish-checklist.md");
@@ -52,8 +52,9 @@ const policy = read(
 assert.match(policy, /shouldKickAfterSale/);
 assert.match(policy, /shouldKickOnReprint/);
 assert.match(policy, /shouldKickAfterShiftReport/);
-assert.match(policy, /return "cash"\.equals/);
+assert.match(policy, /return "cash"\.equals|PaymentMethods\.isCash/);
 assert.match(policy, /return false/);
+assert.match(policy, /No Sale|เปิดลิ้นชัก/);
 
 const sync = read("npos-telltea/app/src/main/java/app/telltea/npos/sell/SaleSync.java");
 assert.match(sync, /CashDrawerPolicy\.shouldKickAfterSale/);

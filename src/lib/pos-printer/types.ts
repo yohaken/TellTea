@@ -55,6 +55,8 @@ export type ReceiptPrintPayload = {
   shopNameTh?: string;
   shopAddress?: string;
   shopPhone?: string;
+  /** Tax ID on paper when set. */
+  taxId?: string;
   billNo: string;
   lines: PosSaleLine[];
   total: number;

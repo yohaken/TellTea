@@ -59,6 +59,7 @@ import app.telltea.npos.sell.SellLayoutPrefs;
 import app.telltea.npos.shell.PosShellNav;
 import app.telltea.npos.shift.BlindCloseFlow;
 import app.telltea.npos.shift.ShiftPrefs;
+import app.telltea.npos.printer.DrawerKick;
 import app.telltea.npos.ui.NposConfirmDialog;
 import app.telltea.npos.ui.NposFonts;
 import app.telltea.npos.ui.NposNumberPad;
@@ -571,10 +572,11 @@ public class SellActivity extends Activity {
     popup.getMenu().add(0, 1, 0, R.string.nav_open_bills);
     popup.getMenu().add(0, 2, 1, R.string.nav_receipts);
     popup.getMenu().add(0, 3, 2, R.string.nav_shift);
-    popup.getMenu().add(0, 4, 3, R.string.btn_settings_device);
-    popup.getMenu().add(0, 5, 4, R.string.sell_hub_x_report);
-    popup.getMenu().add(0, 6, 5, R.string.sell_hub_close_shift);
-    popup.getMenu().add(0, 7, 6, R.string.nav_lock_pin);
+    popup.getMenu().add(0, 8, 3, R.string.sell_hub_open_drawer);
+    popup.getMenu().add(0, 4, 4, R.string.btn_settings_device);
+    popup.getMenu().add(0, 5, 5, R.string.sell_hub_x_report);
+    popup.getMenu().add(0, 6, 6, R.string.sell_hub_close_shift);
+    popup.getMenu().add(0, 7, 7, R.string.nav_lock_pin);
     popup.setOnMenuItemClickListener(
         (MenuItem item) -> {
           int id = item.getItemId();
@@ -588,6 +590,10 @@ public class SellActivity extends Activity {
           }
           if (id == 3) {
             PosShellNav.openShift(this);
+            return true;
+          }
+          if (id == 8) {
+            openDrawerNoSale();
             return true;
           }
           if (id == 4) {
@@ -609,6 +615,25 @@ public class SellActivity extends Activity {
           return false;
         });
     popup.show();
+  }
+
+  /** No Sale — open cash drawer via receipt printer; always logged. */
+  private void openDrawerNoSale() {
+    DrawerKick.send(
+        this,
+        "no-sale",
+        (ok, message, ep) ->
+            runOnUiThread(
+                () -> {
+                  if (ok) {
+                    Toast.makeText(this, R.string.drawer_no_sale_ok, Toast.LENGTH_SHORT).show();
+                  } else if (ep == null) {
+                    Toast.makeText(this, R.string.drawer_no_sale_no_printer, Toast.LENGTH_LONG)
+                        .show();
+                  } else {
+                    Toast.makeText(this, R.string.drawer_no_sale_fail, Toast.LENGTH_LONG).show();
+                  }
+                }));
   }
 
   private void styleCartTextAction(View v, boolean orange) {
