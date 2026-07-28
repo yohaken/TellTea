@@ -2286,7 +2286,7 @@ public class SellActivity extends Activity {
         getString(R.string.pay_transfer_title),
         getString(R.string.pay_transfer_msg, total),
         getString(R.string.pay_transfer_confirm),
-        () -> commitSale(PaymentMethods.TRANSFER, 0, "");
+        () -> commitSale(PaymentMethods.TRANSFER, 0, ""));
   }
 
   /** Early phase: PromptPay UI kept for compile safety but unused (QR removed). */
