@@ -156,26 +156,33 @@
                     android:orientation="vertical"
                     android:padding="10dp">
 
-                    <TextView
+                    <!-- Cart header: title + short bill ref -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/prompt_semibold"
-                        android:text="@string/cart_title"
-                        android:textColor="@color/npos_ink"
-                        android:textSize="15sp" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingBottom="4dp">
 
-                    <TextView
-                        android:id="@+id/priceChannelToggle"
-                        style="@style/Npos.Btn.SellRow"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/price_channel_store" />
+                        <TextView
+                            android:id="@+id/cartTitle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/prompt_semibold"
+                            android:text="@string/cart_title"
+                            android:textColor="@color/npos_ink"
+                            android:textSize="15sp" />
 
-                    <TextView
-                        android:id="@+id/clearCartButton"
-                        style="@style/Npos.Btn.SellRow.Accent"
-                        android:layout_marginTop="4dp"
-                        android:layout_marginBottom="4dp"
-                        android:text="@string/btn_clear_cart" />
+                        <TextView
+                            android:id="@+id/cartBillRef"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/prompt_semibold"
+                            android:text="@string/cart_bill_new"
+                            android:textColor="@color/npos_muted"
+                            android:textSize="13sp" />
+                    </LinearLayout>
 
                     <ScrollView
                         android:layout_width="match_parent"
@@ -189,25 +196,92 @@
                             android:orientation="vertical" />
                     </ScrollView>
 
-                    <TextView
-                        android:id="@+id/cartTotal"
+                    <!-- Totals: subtotal · discount · net -->
+                    <LinearLayout
+                        android:id="@+id/cartTotalsBlock"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:fontFamily="@font/prompt_semibold"
-                        android:text="@string/cart_total_zero"
-                        android:textColor="@color/npos_ink"
-                        android:textSize="18sp" />
+                        android:orientation="vertical"
+                        android:paddingTop="4dp"
+                        android:paddingBottom="2dp">
 
-                    <TextView
-                        android:id="@+id/discountLabel"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/prompt_medium"
-                        android:textColor="@color/npos_orange"
-                        android:textSize="13sp"
-                        android:visibility="gone" />
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
 
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="@font/prompt_regular"
+                                android:text="@string/cart_subtotal_label"
+                                android:textColor="@color/npos_ink_soft"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:id="@+id/cartSubtotal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/prompt_medium"
+                                android:text="฿0"
+                                android:textColor="@color/npos_ink"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="@font/prompt_regular"
+                                android:text="@string/cart_discount_label"
+                                android:textColor="@color/npos_ink_soft"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:id="@+id/discountLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/prompt_medium"
+                                android:text="—"
+                                android:textColor="@color/npos_orange"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="@font/prompt_semibold"
+                                android:text="@string/cart_net_label"
+                                android:textColor="@color/npos_ink"
+                                android:textSize="16sp" />
+
+                            <TextView
+                                android:id="@+id/cartTotal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/prompt_bold"
+                                android:text="@string/cart_total_zero"
+                                android:textColor="@color/npos_ink"
+                                android:textSize="20sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Secondary actions -->
                     <TextView
                         android:id="@+id/discountButton"
                         style="@style/Npos.Btn.SellRow.Accent"
@@ -227,12 +301,19 @@
                         android:text="@string/btn_restore_hold" />
 
                     <TextView
+                        android:id="@+id/clearCartButton"
+                        style="@style/Npos.Btn.SellRow.Accent"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/btn_clear_cart" />
+
+                    <TextView
                         android:id="@+id/flushSyncButton"
                         style="@style/Npos.Btn.SellRow"
                         android:layout_marginTop="4dp"
                         android:text="@string/btn_flush_sync"
                         android:visibility="gone" />
 
+                    <!-- Primary pay (PromptPay parked — keep GONE) -->
                     <TextView
                         android:id="@+id/payCashButton"
                         style="@style/Npos.Btn.SellRow.Primary"

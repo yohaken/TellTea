@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 298/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 93/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+63/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.40"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 299/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 94/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+64/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.41"/);
 
 const confirm = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/ui/NposConfirmDialog.java",
@@ -67,6 +67,6 @@ assert.match(read("src/components/NposDevicesPanel.tsx"), /PosConfirmDialog/);
 assert.doesNotMatch(read("src/components/NposDevicesPanel.tsx"), /window\.confirm/);
 
 assert.ok(existsSync(join(root, "docs/npos-friendly-ui-checklist.md")));
-assert.match(read("docs/npos-friendly-ui-checklist.md"), /1\.14\.40|NposConfirmDialog/);
+assert.match(read("docs/npos-friendly-ui-checklist.md"), /1\.14\.41|NposConfirmDialog/);
 
 console.log("OK test-npos-confirm-billid-previews");

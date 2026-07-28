@@ -59,14 +59,16 @@ import app.telltea.npos.update.ResumePrefs;
 import app.telltea.npos.update.UpdatePromptController;
 
 /**
- * Sell screen — clone web PosSellView: categories, menu images, options, cart, discount,
- * cash pay (PromptPay/QR hidden for early phase), sold-out long-press.
+ * Sell screen — front-counter only: categories, menu images, options, cart, discount,
+ * cash pay (PromptPay parked — shop unused), sold-out long-press. No delivery price channel.
  */
 public class SellActivity extends Activity {
   private LinearLayout categoryBar;
   private GridLayout menuGrid;
   private LinearLayout cartList;
   private TextView cartTotalView;
+  private TextView cartSubtotalView;
+  private TextView cartBillRef;
   private TextView sellSyncStatus;
   private TextView sellTitle;
   private TextView sellServerCheckChip;
@@ -82,8 +84,6 @@ public class SellActivity extends Activity {
   private String selectedCategoryId = "";
   private final List<MenuModels.CartLine> cart = new ArrayList<>();
   private double discountBaht = 0;
-  private boolean deliveryChannel = false;
-  private TextView priceChannelToggle;
   private CustomerDisplayController customerDisplay;
   private UpdatePromptController updatePrompt;
   private UiScale uiScale;
@@ -113,7 +113,8 @@ public class SellActivity extends Activity {
     menuGrid = findViewById(R.id.menuGrid);
     cartList = findViewById(R.id.cartList);
     cartTotalView = findViewById(R.id.cartTotal);
-    priceChannelToggle = findViewById(R.id.priceChannelToggle);
+    cartSubtotalView = findViewById(R.id.cartSubtotal);
+    cartBillRef = findViewById(R.id.cartBillRef);
     sellSyncStatus = findViewById(R.id.sellSyncStatus);
     sellTitle = findViewById(R.id.sellTitle);
     sellServerCheckChip = findViewById(R.id.sellServerCheckChip);
@@ -145,10 +146,6 @@ public class SellActivity extends Activity {
     View clearCart = findViewById(R.id.clearCartButton);
     if (clearCart != null) {
       clearCart.setOnClickListener(v -> confirmClearCart());
-    }
-    if (priceChannelToggle != null) {
-      priceChannelToggle.setOnClickListener(v -> togglePriceChannel());
-      updatePriceChannelLabel();
     }
     findViewById(R.id.holdBillButton).setOnClickListener(v -> holdBill());
     restoreHoldButton.setOnClickListener(v -> restoreHold());
@@ -240,7 +237,6 @@ public class SellActivity extends Activity {
     styleSoftCartAction(findViewById(R.id.holdBillButton));
     styleSoftCartAction(findViewById(R.id.restoreHoldButton));
     styleSoftCartAction(findViewById(R.id.clearCartButton));
-    styleSoftCartAction(findViewById(R.id.priceChannelToggle));
     if (menuGrid != null) {
       menuGrid.setColumnCount(uiScale.menuCols);
     }
@@ -346,7 +342,11 @@ public class SellActivity extends Activity {
 
   private void updateHoldRestoreButton() {
     if (restoreHoldButton == null) return;
-    restoreHoldButton.setEnabled(HoldCart.hasHold(this));
+    boolean has = HoldCart.hasHold(this);
+    restoreHoldButton.setEnabled(has);
+    restoreHoldButton.setText(
+        has ? R.string.btn_restore_hold_ready : R.string.btn_restore_hold);
+    restoreHoldButton.setAlpha(has ? 1f : 0.55f);
   }
 
   private void flushPendingNow() {
@@ -904,26 +904,13 @@ public class SellActivity extends Activity {
     return n;
   }
 
+  /** Front-counter only — always store price (delivery channel removed from POS). */
   private double itemPrice(MenuModels.Item item) {
-    return item.priceForChannel(deliveryChannel);
+    return item.price;
   }
 
   private double optionDelta(MenuModels.Option opt) {
-    return opt.priceDeltaForChannel(deliveryChannel);
-  }
-
-  private void updatePriceChannelLabel() {
-    if (priceChannelToggle == null) return;
-    priceChannelToggle.setText(
-        deliveryChannel ? R.string.price_channel_delivery : R.string.price_channel_store);
-  }
-
-  private void togglePriceChannel() {
-    deliveryChannel = !deliveryChannel;
-    updatePriceChannelLabel();
-    repriceCartForChannel();
-    if (menu != null) renderMenu();
-    renderCart();
+    return opt.priceDelta;
   }
 
   private MenuModels.Item findMenuItem(String id) {
@@ -932,63 +919,6 @@ public class SellActivity extends Activity {
       if (id.equals(it.id)) return it;
     }
     return null;
-  }
-
-  private MenuModels.Option findMenuOption(String optionId) {
-    if (menu == null || optionId == null) return null;
-    for (MenuModels.OptionGroup g : menu.optionGroups) {
-      if (g.options == null) continue;
-      for (MenuModels.Option o : g.options) {
-        if (optionId.equals(o.id)) return o;
-      }
-    }
-    return null;
-  }
-
-  private void repriceCartForChannel() {
-    if (cart.isEmpty()) return;
-    List<MenuModels.CartLine> next = new ArrayList<>();
-    for (MenuModels.CartLine line : cart) {
-      MenuModels.Item item = findMenuItem(line.menuItemId);
-      double unit = item != null ? itemPrice(item) : line.unitPrice;
-      JSONArray newOpts = line.optionsJson != null ? line.optionsJson : new JSONArray();
-      try {
-        if (line.optionsJson != null) {
-          newOpts = new JSONArray();
-          for (int i = 0; i < line.optionsJson.length(); i++) {
-            JSONObject g = line.optionsJson.getJSONObject(i);
-            JSONArray choices = g.optJSONArray("choices");
-            JSONArray newChoices = new JSONArray();
-            if (choices != null) {
-              for (int j = 0; j < choices.length(); j++) {
-                JSONObject c = choices.getJSONObject(j);
-                String oid = c.optString("optionId");
-                MenuModels.Option opt = findMenuOption(oid);
-                double delta =
-                    opt != null ? optionDelta(opt) : c.optDouble("priceDelta", 0);
-                JSONObject nc = new JSONObject();
-                nc.put("optionId", oid);
-                nc.put("name", c.optString("name"));
-                nc.put("priceDelta", delta);
-                newChoices.put(nc);
-                unit += delta;
-              }
-            }
-            JSONObject ng = new JSONObject();
-            ng.put("groupId", g.optString("groupId"));
-            ng.put("groupName", g.optString("groupName"));
-            ng.put("choices", newChoices);
-            newOpts.put(ng);
-          }
-        }
-      } catch (Exception ignored) {
-        // keep prior optionsJson
-      }
-      next.add(
-          new MenuModels.CartLine(line.menuItemId, line.name, unit, line.qty, newOpts));
-    }
-    cart.clear();
-    cart.addAll(next);
   }
 
   private void onTapItem(MenuModels.Item item) {
@@ -1555,82 +1485,116 @@ public class SellActivity extends Activity {
   /** Update cashier cart UI without touching customer Presentation (e.g. during SUCCESS). */
   private void renderCartViewsOnly() {
     cartList.removeAllViews();
+    int padV = NposUi.dp(this, 6);
     for (int i = 0; i < cart.size(); i++) {
       final int idx = i;
       MenuModels.CartLine line = cart.get(i);
       LinearLayout block = new LinearLayout(this);
       block.setOrientation(LinearLayout.VERTICAL);
-      block.setPadding(0, 4, 0, 8);
+      block.setPadding(0, padV, 0, padV);
 
-      LinearLayout row = new LinearLayout(this);
-      row.setOrientation(LinearLayout.HORIZONTAL);
-      TextView label = new TextView(this);
-      label.setLayoutParams(
-          new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
-      label.setText(
-          String.format(
-              Locale.getDefault(), "%s x%d · ฿%.0f", line.name, line.qty, line.lineTotal()));
-      label.setTextColor(0xFF222222);
-      label.setTypeface(NposFonts.semibold(this));
+      LinearLayout nameRow = new LinearLayout(this);
+      nameRow.setOrientation(LinearLayout.HORIZONTAL);
+      nameRow.setGravity(Gravity.CENTER_VERTICAL);
+
+      TextView nameTv = NposUi.section(this, line.name);
+      nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+      nameTv.setLayoutParams(
+          new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
       MenuModels.Item menuItem = findMenuItem(line.menuItemId);
-      boolean canEdit =
-          menuItem != null && menuItem.hasOptions() && line.optionsJson != null
-              && line.optionsJson.length() > 0;
-      if (canEdit || (menuItem != null && menuItem.hasOptions())) {
-        label.setOnClickListener(v -> editCartLineOptions(idx));
+      if (menuItem != null && menuItem.hasOptions()) {
+        nameTv.setOnClickListener(v -> editCartLineOptions(idx));
       }
-      TextView plus = NposUi.chip(this, "+");
-      plus.setText("+");
-      plus.setOnClickListener(
-          v -> {
-            line.qty += 1;
-            renderCart();
-          });
+
+      TextView priceTv =
+          NposUi.section(
+              this, String.format(Locale.getDefault(), "฿%.0f", line.lineTotal()));
+      priceTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+      priceTv.setGravity(Gravity.END);
+
+      nameRow.addView(nameTv);
+      nameRow.addView(priceTv);
+      block.addView(nameRow);
+
+      String opts = line.optionsSummary();
+      if (!opts.isEmpty()) {
+        TextView optView = NposUi.caption(this, opts);
+        optView.setPadding(0, NposUi.dp(this, 2), 0, NposUi.dp(this, 2));
+        if (menuItem != null && menuItem.hasOptions()) {
+          optView.setOnClickListener(v -> editCartLineOptions(idx));
+        }
+        block.addView(optView);
+      }
+
+      LinearLayout qtyRow = new LinearLayout(this);
+      qtyRow.setOrientation(LinearLayout.HORIZONTAL);
+      qtyRow.setGravity(Gravity.CENTER_VERTICAL);
+      qtyRow.setPadding(0, NposUi.dp(this, 4), 0, 0);
+
+      TextView qtyLabel =
+          NposUi.caption(this, String.format(Locale.getDefault(), "×%d", line.qty));
+      qtyLabel.setLayoutParams(
+          new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
       TextView minus = NposUi.chip(this, "−");
-      minus.setText("−");
       minus.setOnClickListener(
           v -> {
             line.qty -= 1;
             if (line.qty <= 0) cart.remove(idx);
             renderCart();
           });
-      TextView remove = NposUi.chip(this, getString(R.string.btn_remove_line));
-      remove.setText("×");
+      TextView plus = NposUi.chip(this, "+");
+      plus.setOnClickListener(
+          v -> {
+            line.qty += 1;
+            renderCart();
+          });
+      TextView remove = NposUi.chip(this, "×");
       remove.setOnClickListener(
           v -> {
             cart.remove(idx);
             renderCart();
           });
-      row.addView(label);
-      row.addView(minus);
-      row.addView(plus);
-      row.addView(remove);
-      block.addView(row);
 
-      String opts = line.optionsSummary();
-      if (!opts.isEmpty()) {
-        TextView optView = new TextView(this);
-        optView.setText(opts);
-        optView.setTextColor(0xFF666666);
-        optView.setTextSize(12);
-        optView.setPadding(4, 0, 4, 0);
-        if (menuItem != null && menuItem.hasOptions()) {
-          optView.setOnClickListener(v -> editCartLineOptions(idx));
-        }
-        block.addView(optView);
-      }
+      qtyRow.addView(qtyLabel);
+      qtyRow.addView(minus, NposUi.wrap(this, 6, 0));
+      qtyRow.addView(plus, NposUi.wrap(this, 6, 0));
+      qtyRow.addView(remove);
+      block.addView(qtyRow);
+
       cartList.addView(block);
     }
+
+    double sub = cartSubtotal();
     double total = cartTotal();
-    cartTotalView.setText(getString(R.string.cart_total_fmt, total));
+    if (cartSubtotalView != null) {
+      cartSubtotalView.setText(getString(R.string.cart_money_fmt, sub));
+    }
+    if (cartTotalView != null) {
+      cartTotalView.setText(getString(R.string.cart_total_fmt, total));
+    }
     if (discountLabel != null) {
       if (discountBaht > 0) {
-        discountLabel.setVisibility(View.VISIBLE);
-        discountLabel.setText(getString(R.string.discount_applied_fmt, discountBaht));
+        discountLabel.setText(getString(R.string.cart_discount_fmt, discountBaht));
+        discountLabel.setTextColor(NposUi.color(this, R.color.npos_orange));
       } else {
-        discountLabel.setVisibility(View.GONE);
+        discountLabel.setText(R.string.cart_discount_none);
+        discountLabel.setTextColor(NposUi.color(this, R.color.npos_muted));
       }
     }
+    if (cartBillRef != null) {
+      if (cart.isEmpty()) {
+        cartBillRef.setText(R.string.cart_bill_new);
+      } else {
+        String sid = ShiftPrefs.sessionId(this);
+        String shortRef =
+            sid != null && sid.length() >= 4
+                ? sid.substring(sid.length() - 4).toUpperCase(Locale.US)
+                : "NEW";
+        cartBillRef.setText(getString(R.string.cart_bill_ref_fmt, shortRef));
+      }
+    }
+    updateHoldRestoreButton();
   }
 
   private void editCartLineOptions(int index) {
