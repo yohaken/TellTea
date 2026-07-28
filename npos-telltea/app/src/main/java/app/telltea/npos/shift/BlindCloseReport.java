@@ -10,6 +10,9 @@ public final class BlindCloseReport {
   public final int saleCount;
   public final int voidedCount;
   public final double discountTotal;
+  public final double cashOutTotal;
+  public final double cashInTotal;
+  public final int cashDropCount;
   public final double expectedCash;
   public final double countedCash;
   public final double cashDifference;
@@ -25,6 +28,9 @@ public final class BlindCloseReport {
       int saleCount,
       int voidedCount,
       double discountTotal,
+      double cashOutTotal,
+      double cashInTotal,
+      int cashDropCount,
       double countedCash,
       double leaveFloat,
       String discrepancyNote) {
@@ -36,7 +42,10 @@ public final class BlindCloseReport {
     this.saleCount = saleCount;
     this.voidedCount = voidedCount;
     this.discountTotal = discountTotal;
-    this.expectedCash = openingCash + cashSales;
+    this.cashOutTotal = Math.max(0, cashOutTotal);
+    this.cashInTotal = Math.max(0, cashInTotal);
+    this.cashDropCount = Math.max(0, cashDropCount);
+    this.expectedCash = openingCash + cashSales - this.cashOutTotal + this.cashInTotal;
     this.countedCash = countedCash;
     this.cashDifference = countedCash - this.expectedCash;
     this.leaveFloat = Math.max(0, leaveFloat);

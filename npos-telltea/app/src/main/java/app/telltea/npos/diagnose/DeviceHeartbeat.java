@@ -81,6 +81,9 @@ public final class DeviceHeartbeat {
                         res.optBoolean("kicked", false),
                         res.optString("storeClaimCodeHash", ""),
                         res.optLong("storeClaimUpdatedAt", 0L));
+                if (res.has("heartbeatIntervalSec")) {
+                    OpsPulsePrefs.applyFromServer(app, res.optInt("heartbeatIntervalSec", 5));
+                }
                 handleCaptureCommand(app, res);
                 if (callback != null) callback.onSuccess(pairing, seen);
             } catch (Exception e) {

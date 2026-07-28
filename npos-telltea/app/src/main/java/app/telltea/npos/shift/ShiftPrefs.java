@@ -24,6 +24,9 @@ public final class ShiftPrefs {
   private static final String KEY_OPENING_CASH = "openingCash";
   private static final String KEY_NEXT_OPENING = "nextOpeningCash";
   private static final String KEY_LAST_RESUMED = "lastOpenResumed";
+  private static final String KEY_CASH_OUT = "cashOutTotal";
+  private static final String KEY_CASH_IN = "cashInTotal";
+  private static final String KEY_CASH_DROP_COUNT = "cashDropCount";
 
   private ShiftPrefs() {}
 
@@ -50,9 +53,35 @@ public final class ShiftPrefs {
         .commit();
   }
 
-  /** Expected drawer cash = opening float + cash sales this shift. */
+  /** Expected drawer cash = opening float + cash sales − drops + cash-in. */
   public static double expectedCash(Context context) {
-    return openingCash(context) + cashTotal(context);
+    return openingCash(context) + cashTotal(context) - cashOutTotal(context) + cashInTotal(context);
+  }
+
+  public static double cashOutTotal(Context context) {
+    return Double.longBitsToDouble(
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong(KEY_CASH_OUT, 0L));
+  }
+
+  public static double cashInTotal(Context context) {
+    return Double.longBitsToDouble(
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong(KEY_CASH_IN, 0L));
+  }
+
+  public static int cashDropCount(Context context) {
+    return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_CASH_DROP_COUNT, 0);
+  }
+
+  /** Mid-shift cash drop (เงินออกจากลิ้นชัก). */
+  public static void recordCashDrop(Context context, double amount) {
+    if (amount <= 0) return;
+    SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    double next = cashOutTotal(context) + amount;
+    prefs
+        .edit()
+        .putLong(KEY_CASH_OUT, Double.doubleToRawLongBits(next))
+        .putInt(KEY_CASH_DROP_COUNT, cashDropCount(context) + 1)
+        .commit();
   }
 
   /**
@@ -166,6 +195,9 @@ public final class ShiftPrefs {
         .putInt(KEY_PP_BILLS, 0)
         .putLong(KEY_DISCOUNT, Double.doubleToRawLongBits(0))
         .putInt(KEY_VOIDED, 0)
+        .putLong(KEY_CASH_OUT, Double.doubleToRawLongBits(0))
+        .putLong(KEY_CASH_IN, Double.doubleToRawLongBits(0))
+        .putInt(KEY_CASH_DROP_COUNT, 0)
         .putBoolean(KEY_LAST_RESUMED, false)
         .commit();
   }

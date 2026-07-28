@@ -7,6 +7,7 @@ import { NposOpsLogPanel } from "@/components/NposOpsLogPanel";
 import { NposCaptureTimelinePanel } from "@/components/NposCaptureTimelinePanel";
 import { PosBusinessSettingsView } from "@/components/PosBusinessSettingsView";
 import { PosStoreClaimPanel } from "@/components/PosStoreClaimPanel";
+import { PosTabletSyncPanel } from "@/components/PosTabletSyncPanel";
 
 /**
  * หมวดจัดการ Pos — compact · เปิดมาพับหมวด · ตัวอย่างสลิปเต็มพื้นที่ในตั้งค่าร้าน
@@ -26,6 +27,7 @@ export function PosManagePanel({ onError }: { onError: (msg: string | null) => v
         <PosBusinessSettingsView embedded />
       </SettingsFold>
       <PosStoreClaimPanel onError={onError} />
+      <PosTabletSyncPanel onError={onError} />
       <NposDevicesPanel onError={onError} />
       <NposCaptureTimelinePanel onError={onError} />
       <NposOpsLogPanel onError={onError} />

@@ -190,6 +190,18 @@ exports.nposDeviceHeartbeat = functions
       const afterSnap = await ref.get();
       const after = afterSnap.exists ? afterSnap.data() || {} : {};
       const claim = await claimStatusForHeartbeat(db, installId, after);
+
+      let heartbeatIntervalSec = 5;
+      try {
+        const metaPos = await db.collection("meta").doc("pos").get();
+        const raw = metaPos.exists ? metaPos.get("heartbeatIntervalSec") : null;
+        const n = typeof raw === "number" ? raw : Number(raw);
+        if (Number.isFinite(n)) {
+          heartbeatIntervalSec = Math.max(5, Math.min(600, Math.round(n)));
+        }
+      } catch (err) {
+        console.warn("nposDeviceHeartbeat heartbeatIntervalSec read failed", err);
+      }
       const captureRequestAt =
         typeof after.captureRequestAt === "number" ? after.captureRequestAt : 0;
       const lastCaptureAckAt =
@@ -265,6 +277,7 @@ exports.nposDeviceHeartbeat = functions
         kicked: claim.kicked === true,
         storeClaimCodeHash: claim.storeClaimCodeHash || "",
         storeClaimUpdatedAt: claim.storeClaimUpdatedAt || 0,
+        heartbeatIntervalSec,
         capture: {
           requestAt: captureRequestAt,
           intervalMinutes: captureIntervalMinutes,

@@ -15,8 +15,8 @@ public final class UpdateConfig {
 
     /**
      * Shared throttle for resume + server-sync-pulse APK checks.
-     * Heartbeat ticks every ~5s; this keeps latest.json traffic modest while
-     * still surfacing updates within one short window on the sell screen.
+     * Floor only — actual wait scales with BO heartbeat via
+     * {@link UpdateCheckCoordinator#throttleMs} (typically 4× interval).
      */
     public static final long AUTO_CHECK_MIN_INTERVAL_MS = 20_000L;
 

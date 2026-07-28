@@ -18,7 +18,7 @@ import app.telltea.npos.update.UpdateCheckCoordinator;
  * BO countdown discovers APK updates without waiting for activity resume.
  */
 public final class ForegroundHeartbeat {
-    /** Next BO/server seat check — keep short so kick is felt at the counter. */
+    /** Fallback when prefs not warmed yet — BO can raise via meta/pos.heartbeatIntervalSec. */
     public static final long INTERVAL_MS = 5_000L;
 
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -161,14 +161,22 @@ public final class ForegroundHeartbeat {
         if (!err.isEmpty()) return LinkStatus.FAIL;
         if (inFlight || lastNetworkAtMs <= 0) return LinkStatus.CHECKING;
         long age = System.currentTimeMillis() - lastNetworkAtMs;
-        if (age > 25_000L) return LinkStatus.WARN;
-        if (age > INTERVAL_MS * 2) return LinkStatus.CHECKING;
+        long interval = currentIntervalMs();
+        if (age > Math.max(25_000L, interval * 5)) return LinkStatus.WARN;
+        if (age > interval * 2) return LinkStatus.CHECKING;
         return LinkStatus.OK;
     }
 
+    /** Effective cadence — BO {@code heartbeatIntervalSec} via {@link OpsPulsePrefs}. */
+    public static long currentIntervalMs() {
+        if (app != null) return OpsPulsePrefs.heartbeatIntervalMs(app);
+        return INTERVAL_MS;
+    }
+
     private static void scheduleNext() {
-        nextCheckAtMs = System.currentTimeMillis() + INTERVAL_MS;
-        MAIN.postDelayed(TICK, INTERVAL_MS);
+        long interval = currentIntervalMs();
+        nextCheckAtMs = System.currentTimeMillis() + interval;
+        MAIN.postDelayed(TICK, interval);
     }
 
     private static void notifyListener() {
