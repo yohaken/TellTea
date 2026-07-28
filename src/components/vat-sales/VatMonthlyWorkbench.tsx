@@ -238,8 +238,10 @@ function OutputVatTable({
       <>
         <tr className="vat-row-parent">
           <td className="col-seg">
-            <ExpandBtn open={open} onToggle={onToggle} label={label} />
-            <span>{label}</span>
+            <span className="vat-seg-cell">
+              <ExpandBtn open={open} onToggle={onToggle} label={label} />
+              <span className="vat-seg-label">{label}</span>
+            </span>
           </td>
           <td className="col-num col-input">
             {usesParts ? (
@@ -350,7 +352,14 @@ function OutputVatTable({
     <section className="vat-table-block">
       <h2 className="vat-table-title">1) ภาษีขาย — กลุ่มรายได้</h2>
       <div className="sheet-wrap vat-month-slim-wrap">
-        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim">
+        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-month-slim--output">
+          <colgroup>
+            <col className="vat-col-seg" />
+            <col className="vat-col-num" />
+            <col className="vat-col-num" />
+            <col className="vat-col-rate" />
+            <col className="vat-col-num" />
+          </colgroup>
           <thead>
             <tr>
               <th className="col-seg">ส่วน</th>
@@ -420,33 +429,35 @@ function InputVatTable({
     <tr className="vat-row-parent">
       <td className="col-seg">{label}</td>
       <td className="col-pct">
-        <TapRate
-          value={roundPct(draft.rates.gpOfOutput)}
-          locked={locked}
-          ariaLabel={`${label} GP %`}
-          suffix="%"
-          step="0.01"
-          onCommit={(pct) =>
-            onChange({
-              ...draft,
-              rates: {
-                ...draft.rates,
-                gpOfOutput: Math.min(100, Math.max(0, pct)) / 100,
-              },
-            })
-          }
-        />
-        <label className="vat-gp-toggle">
-          <input
-            type="checkbox"
-            disabled={locked}
-            checked={draft.useGpEstimate}
-            onChange={(e) =>
-              onChange({ ...draft, useGpEstimate: e.target.checked })
+        <span className="vat-pct-cell">
+          <TapRate
+            value={roundPct(draft.rates.gpOfOutput)}
+            locked={locked}
+            ariaLabel={`${label} GP %`}
+            suffix="%"
+            step="0.01"
+            onCommit={(pct) =>
+              onChange({
+                ...draft,
+                rates: {
+                  ...draft.rates,
+                  gpOfOutput: Math.min(100, Math.max(0, pct)) / 100,
+                },
+              })
             }
           />
-          ประมาณ
-        </label>
+          <label className="vat-gp-toggle">
+            <input
+              type="checkbox"
+              disabled={locked}
+              checked={draft.useGpEstimate}
+              onChange={(e) =>
+                onChange({ ...draft, useGpEstimate: e.target.checked })
+              }
+            />
+            ประมาณ
+          </label>
+        </span>
       </td>
       <td className="col-num col-input">
         {draft.useGpEstimate ? (
@@ -496,7 +507,15 @@ function InputVatTable({
     <section className="vat-table-block">
       <h2 className="vat-table-title">2) ภาษีซื้อ — กลุ่มหักได้</h2>
       <div className="sheet-wrap vat-month-slim-wrap">
-        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim">
+        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-month-slim--input">
+          <colgroup>
+            <col className="vat-col-seg" />
+            <col className="vat-col-pct" />
+            <col className="vat-col-num" />
+            <col className="vat-col-pct-sm" />
+            <col className="vat-col-num" />
+            <col className="vat-col-num" />
+          </colgroup>
           <thead>
             <tr>
               <th className="col-seg">ส่วน</th>
@@ -565,7 +584,13 @@ function SummaryVatTable({
         3) สรุป — ภาษีขาย − ภาษีซื้อ = สุทธิต้องนำส่ง
       </h2>
       <div className="sheet-wrap vat-month-slim-wrap">
-        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-month-slim--summary vat-close-table">
+          <colgroup>
+            <col className="vat-col-seg-wide" />
+            <col className="vat-col-num" />
+            <col className="vat-col-num" />
+            <col className="vat-col-num" />
+          </colgroup>
           <thead>
             <tr>
               <th className="col-seg">รายการ</th>
