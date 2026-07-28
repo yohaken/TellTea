@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import {
   HEARTBEAT_INTERVAL_PRESETS,
   clampHeartbeatIntervalSec,
@@ -8,11 +15,13 @@ import {
   setHeartbeatIntervalSec,
 } from "@/lib/pos-tablet-sync";
 import {
+  NPOS_SHOP_KEEP_PAIRING_CODE,
   posDeviceLabel,
   posPairingCodeFromId,
   subscribePosDevicesAdmin,
   type PosDevice,
 } from "@/lib/pos-devices";
+import { deletePosSessionsAdmin } from "@/lib/pos-sales-admin";
 import {
   POS_SESSIONS_SLIM_LIMIT,
   formatPosSessionDuration,
@@ -66,6 +75,7 @@ type RowModel = {
   cashIn: number | undefined;
   cashDrops: number | undefined;
   note: string;
+  searchBlob: string;
 };
 
 function buildRows(
@@ -93,7 +103,6 @@ function buildRows(
       device?.pairingCode ||
       (session.deviceId ? posPairingCodeFromId(session.deviceId) : "—");
     const dayMs = session.date || session.openedAt || 0;
-    // Open rounds: prefer live bill window so totals update before close.
     const total = open ? salesTotal || session.totalSales || 0 : session.totalSales || salesTotal || 0;
     const bills = open ? active.length || session.saleCount || 0 : session.saleCount || active.length || 0;
     const cash = open ? cashSum || session.cashTotal || 0 : session.cashTotal ?? cashSum;
@@ -101,17 +110,21 @@ function buildRows(
       ? transferSum || session.transferTotal || 0
       : session.transferTotal ?? transferSum;
     const pp = open ? ppSum || session.promptpayTotal || 0 : session.promptpayTotal ?? ppSum;
+    const deviceLabel = device
+      ? posDeviceLabel(device)
+      : session.deviceId
+        ? `#${session.deviceId.slice(-4).toUpperCase()}`
+        : "—";
+    const sessionCode = posSessionCode(session.id);
+    const dateLabel = formatDateShort(dayMs);
+    const note = session.discrepancyNote || "";
     return {
       session,
-      deviceLabel: device
-        ? posDeviceLabel(device)
-        : session.deviceId
-          ? `#${session.deviceId.slice(-4).toUpperCase()}`
-          : "—",
+      deviceLabel,
       pairingCode: pairing,
-      sessionCode: posSessionCode(session.id),
+      sessionCode,
       open,
-      dateLabel: formatDateShort(dayMs),
+      dateLabel,
       durationLabel: formatPosSessionDuration(posSessionDurationMs(session, nowMs)),
       total,
       bills,
@@ -127,7 +140,20 @@ function buildRows(
       cashOut: session.cashOutTotal,
       cashIn: session.cashInTotal,
       cashDrops: session.cashDropCount,
-      note: session.discrepancyNote || "",
+      note,
+      searchBlob: [
+        pairing,
+        sessionCode,
+        deviceLabel,
+        session.deviceId,
+        session.id,
+        dateLabel,
+        open ? "เปิด" : "ปิด",
+        note,
+        session.shift || "",
+      ]
+        .join(" ")
+        .toLowerCase(),
     };
   });
 }
@@ -164,7 +190,7 @@ function daySummaryFromSales(sales: PosSale[]): DaySummary {
 
 /**
  * Super-slim nPos sales-cycle rows — realtime, date newest→oldest, ~50 with scroll.
- * Codes visible (owner-only). No date slider. No close-shift CTA (native only).
+ * Smart table: search · multi-check · bulk delete (owner).
  */
 export function PosSessionsSlimTable({
   sessions,
@@ -193,6 +219,11 @@ export function PosSessionsSlimTable({
   const [openOnly, setOpenOnly] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [queryText, setQueryText] = useState("");
+  const deferredQuery = useDeferredValue(queryText.trim().toLowerCase());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     return subscribePosDevicesAdmin(
@@ -263,16 +294,106 @@ export function PosSessionsSlimTable({
     return rows.filter((row) => {
       if (openOnly && !row.open) return false;
       if (deviceId && row.session.deviceId !== deviceId) return false;
+      if (deferredQuery && !row.searchBlob.includes(deferredQuery)) return false;
       return true;
     });
-  }, [rows, openOnly, deviceId]);
+  }, [rows, openOnly, deviceId, deferredQuery]);
+
+  const visibleIds = useMemo(
+    () => filteredRows.map((r) => r.session.id),
+    [filteredRows],
+  );
+
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+  const someVisibleSelected = visibleIds.some((id) => selectedIds.has(id));
+
+  const keepPairing = NPOS_SHOP_KEEP_PAIRING_CODE;
+  const nonKeepVisibleIds = useMemo(
+    () =>
+      filteredRows
+        .filter((r) => r.pairingCode.toUpperCase() !== keepPairing)
+        .map((r) => r.session.id),
+    [filteredRows, keepPairing],
+  );
+
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (!prev.size) return prev;
+      const alive = new Set(sessions.map((s) => s.id));
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (alive.has(id)) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [sessions]);
 
   function resetDayFilters() {
     setOpenOnly(false);
     setDeviceId(null);
   }
 
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible() {
+    setSelectedIds((prev) => {
+      if (visibleIds.length === 0) return prev;
+      const allOn = visibleIds.every((id) => prev.has(id));
+      if (allOn) {
+        const next = new Set(prev);
+        for (const id of visibleIds) next.delete(id);
+        return next;
+      }
+      const next = new Set(prev);
+      for (const id of visibleIds) next.add(id);
+      return next;
+    });
+  }
+
+  function selectNonKeepVisible() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of nonKeepVisibleIds) next.add(id);
+      return next;
+    });
+  }
+
+  function clearSelected() {
+    setSelectedIds(new Set());
+  }
+
+  async function confirmBulkDelete() {
+    const ids = Array.from(selectedIds);
+    if (!ids.length || bulkBusy) return;
+    setBulkBusy(true);
+    onError?.(null);
+    try {
+      const result = await deletePosSessionsAdmin(ids);
+      if (selectedSessionId && ids.includes(selectedSessionId)) onSelect(null);
+      setSelectedIds(new Set());
+      setConfirmDelete(false);
+      window.alert(
+        `ลบแล้ว ${result.deletedSessions} รอบ · บิล ${result.deletedSales}`,
+      );
+    } catch (err) {
+      onError?.(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   const emptyDay = sessions.length === 0;
+  const selectedCount = selectedIds.size;
 
   return (
     <section className="npos-slim-sessions">
@@ -309,44 +430,125 @@ export function PosSessionsSlimTable({
       </p>
 
       {!emptyDay ? (
-        <div className="npos-slim-filters" role="toolbar" aria-label="กรองรอบ">
-          <button
-            type="button"
-            className={`npos-slim-text-btn ${!openOnly && !deviceId ? "is-active" : ""}`}
-            onClick={resetDayFilters}
-          >
-            {dayLabel}
-          </button>
-          <button
-            type="button"
-            className={`npos-slim-text-btn ${openOnly ? "is-active" : ""}`}
-            onClick={() => setOpenOnly((v) => !v)}
-          >
-            เปิดอยู่
-          </button>
-          {deviceOptions.length > 1
-            ? deviceOptions.map((d) => (
+        <>
+          <div className="npos-slim-filters" role="toolbar" aria-label="กรองรอบ">
+            <button
+              type="button"
+              className={`npos-slim-text-btn ${!openOnly && !deviceId ? "is-active" : ""}`}
+              onClick={resetDayFilters}
+            >
+              {dayLabel}
+            </button>
+            <button
+              type="button"
+              className={`npos-slim-text-btn ${openOnly ? "is-active" : ""}`}
+              onClick={() => setOpenOnly((v) => !v)}
+            >
+              เปิดอยู่
+            </button>
+            {deviceOptions.length > 1
+              ? deviceOptions.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    className={`npos-slim-text-btn ${deviceId === d.id ? "is-active" : ""}`}
+                    title={d.label}
+                    onClick={() => setDeviceId((cur) => (cur === d.id ? null : d.id))}
+                  >
+                    {d.label}
+                  </button>
+                ))
+              : null}
+          </div>
+
+          <div className="table-search npos-slim-search">
+            <input
+              type="search"
+              value={queryText}
+              onChange={(e) => setQueryText(e.target.value)}
+              placeholder="ค้นรหัสเครื่อง · รหัสรอบ · วันที่ · เปิด/ปิด"
+              aria-label="ค้นหารอบการขาย"
+            />
+            {queryText ? (
+              <button
+                type="button"
+                className="ghost-btn table-search-clear"
+                onClick={() => setQueryText("")}
+              >
+                ล้าง
+              </button>
+            ) : null}
+          </div>
+
+          <div className="bulk-status-toolbar npos-slim-bulk" role="group" aria-label="เลือกหลายรอบ">
+            <button
+              type="button"
+              className="ghost-btn bulk-status-chip"
+              disabled={bulkBusy || !visibleIds.length}
+              onClick={toggleSelectAllVisible}
+            >
+              {allVisibleSelected ? "ยกเลิกที่แสดง" : `เลือกที่แสดง (${visibleIds.length})`}
+            </button>
+            {nonKeepVisibleIds.length > 0 ? (
+              <button
+                type="button"
+                className="ghost-btn bulk-status-chip"
+                disabled={bulkBusy}
+                title={`ติ๊กทุกรอบที่ไม่ใช่เครื่อง ${keepPairing}`}
+                onClick={selectNonKeepVisible}
+              >
+                เลือกที่ไม่ใช่ {keepPairing}
+              </button>
+            ) : null}
+            {selectedCount > 0 ? (
+              <div className="bulk-status-actions" role="group" aria-label="ลบรอบที่เลือก">
+                <span className="bulk-status-count">เลือก {selectedCount} รอบ</span>
                 <button
-                  key={d.id}
                   type="button"
-                  className={`npos-slim-text-btn ${deviceId === d.id ? "is-active" : ""}`}
-                  title={d.label}
-                  onClick={() => setDeviceId((cur) => (cur === d.id ? null : d.id))}
+                  className="ghost-btn bulk-status-btn npos-slim-bulk-delete"
+                  disabled={bulkBusy}
+                  onClick={() => setConfirmDelete(true)}
                 >
-                  {d.label}
+                  ลบที่เลือก
                 </button>
-              ))
-            : null}
-        </div>
+                <button
+                  type="button"
+                  className="ghost-btn bulk-status-clear"
+                  disabled={bulkBusy}
+                  onClick={clearSelected}
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            ) : (
+              <p className="muted bulk-status-hint">
+                ติ๊กหน้าแถว · ค้น/กรอง · เลือกที่แสดง หรือเลือกที่ไม่ใช่ {keepPairing} → ลบที่เลือก
+              </p>
+            )}
+          </div>
+        </>
       ) : null}
 
       {emptyDay ? (
         <p className="muted npos-slim-empty">ยังไม่มีรอบ nPos — เปิดกะที่แท็บเล็ต</p>
       ) : filteredRows.length === 0 ? (
-        <p className="muted npos-slim-empty">ไม่มีรอบตามตัวกรอง</p>
+        <p className="muted npos-slim-empty">
+          {deferredQuery ? "ไม่พบรอบตามคำค้น" : "ไม่มีรอบตามตัวกรอง"}
+        </p>
       ) : (
         <div className="npos-slim-scroll npos-slim-scroll--rows" role="table" aria-label="รอบการขาย nPos">
           <div className="npos-slim-row npos-slim-row--head npos-slim-row--sessions-super" role="row">
+            <span role="columnheader" className="npos-slim-check-col" aria-label="เลือก">
+              <input
+                type="checkbox"
+                checked={allVisibleSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected;
+                }}
+                onChange={toggleSelectAllVisible}
+                aria-label="เลือกทั้งหมดที่แสดง"
+              />
+            </span>
             <span role="columnheader">สถานะ</span>
             <span role="columnheader">วันที่</span>
             <span role="columnheader">เครื่อง</span>
@@ -378,14 +580,27 @@ export function PosSessionsSlimTable({
 
           {filteredRows.map((row) => {
             const selected = selectedSessionId === row.session.id;
+            const checked = selectedIds.has(row.session.id);
             const closing = forceCloseBusyId === row.session.id;
             return (
               <div key={row.session.id} className="npos-slim-block">
                 <div
                   role="row"
-                  className={`npos-slim-row npos-slim-row--sessions-super ${row.open ? "is-open" : ""} ${selected ? "is-selected" : ""}`}
+                  className={`npos-slim-row npos-slim-row--sessions-super ${row.open ? "is-open" : ""} ${selected ? "is-selected" : ""} ${checked ? "is-bulk-selected" : ""}`}
                   onClick={() => onSelect(selected ? null : row.session.id)}
                 >
+                  <span
+                    className="npos-slim-check-col"
+                    role="cell"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleSelected(row.session.id)}
+                      aria-label={`เลือก ${row.pairingCode} ${row.sessionCode}`}
+                    />
+                  </span>
                   <span className="npos-slim-status" role="cell">
                     <i aria-hidden className={row.open ? "is-live" : ""} />
                     {row.open ? "เปิด" : "ปิด"}
@@ -438,7 +653,7 @@ export function PosSessionsSlimTable({
                       <button
                         type="button"
                         className="npos-slim-text-btn npos-slim-close-btn"
-                        disabled={closing}
+                        disabled={closing || bulkBusy}
                         title="ทดลอง: ปิดรอบจากหลังร้าน"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -495,9 +710,23 @@ export function PosSessionsSlimTable({
       <p className="muted npos-slim-foot">
         รอบ = กะ nPos · คอลัมน์กระชับ · รหัสรอบซ่อนเมื่อจอแคบ · รอบเปิดอยู่ขึ้นบนพร้อมยอด realtime ·
         คอลัมน์รวม = เวลารวมของรอบ · ปิดกะที่แท็บเล็ตเท่านั้นเป็นหลัก ·{" "}
-        <strong>ปิดรอบ</strong> จากหลังร้าน · แท็บเล็ตรับสัญญาณผ่าน heartbeat (~5วิ) ·
-        ไม่เตะเครื่อง · จบบิลในตะกร้าได้แล้วเปิดรอบใหม่
+        <strong>ปิดรอบ</strong> จากหลังร้าน · <strong>ลบที่เลือก</strong> ลบรอบ+บิลถาวร ·
+        แท็บเล็ตรับสัญญาณผ่าน heartbeat (~5วิ) · ไม่เตะเครื่อง · จบบิลในตะกร้าได้แล้วเปิดรอบใหม่
       </p>
+
+      <PosConfirmDialog
+        open={confirmDelete}
+        title={`ลบ ${selectedCount} รอบที่เลือก?`}
+        message="ลบถาวรทั้งรอบและบิลในรอบนั้น — กู้คืนไม่ได้"
+        confirmLabel={bulkBusy ? "กำลังลบ…" : "ลบถาวร"}
+        cancelLabel="ยกเลิก"
+        destructive
+        busy={bulkBusy}
+        onConfirm={() => void confirmBulkDelete()}
+        onCancel={() => {
+          if (!bulkBusy) setConfirmDelete(false);
+        }}
+      />
     </section>
   );
 }

@@ -2,12 +2,14 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
   updateDoc,
   where,
   writeBatch,
+  type DocumentReference,
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
@@ -16,6 +18,23 @@ import { POS_SALES_COL } from "./pos-sales";
 import { POS_SESSIONS_COL } from "./pos-session";
 import type { PosSale } from "./types";
 import { startOfLocalDay } from "./utils";
+
+const BATCH_LIMIT = 400;
+const IN_QUERY_LIMIT = 30;
+
+async function commitDeletes(refs: DocumentReference[]): Promise<number> {
+  if (!refs.length) return 0;
+  const db = getDb();
+  let deleted = 0;
+  for (let i = 0; i < refs.length; i += BATCH_LIMIT) {
+    const chunk = refs.slice(i, i + BATCH_LIMIT);
+    const batch = writeBatch(db);
+    for (const ref of chunk) batch.delete(ref);
+    await batch.commit();
+    deleted += chunk.length;
+  }
+  return deleted;
+}
 
 function salesCol() {
   return collection(getDb(), POS_SALES_COL);
@@ -150,6 +169,39 @@ async function adjustPosSessionTotalsAdmin(
     );
   }
   await updateDoc(ref, patch);
+}
+
+/**
+ * Owner: hard-delete selected nPos sales rounds + their bills.
+ * Used by BO multi-select on /pos-sales (test/dev cleanup).
+ */
+export async function deletePosSessionsAdmin(
+  sessionIds: string[],
+): Promise<{ deletedSessions: number; deletedSales: number }> {
+  const ids = [
+    ...new Set(
+      sessionIds
+        .map((id) => String(id || "").trim())
+        .filter((id) => id.length > 0),
+    ),
+  ];
+  if (!ids.length) return { deletedSessions: 0, deletedSales: 0 };
+
+  const db = getDb();
+  const saleRefs: DocumentReference[] = [];
+  try {
+    for (let i = 0; i < ids.length; i += IN_QUERY_LIMIT) {
+      const chunk = ids.slice(i, i + IN_QUERY_LIMIT);
+      const snap = await getDocs(query(salesCol(), where("sessionId", "in", chunk)));
+      for (const d of snap.docs) saleRefs.push(d.ref);
+    }
+    const deletedSales = await commitDeletes(saleRefs);
+    const sessionRefs = ids.map((id) => doc(db, POS_SESSIONS_COL, id));
+    const deletedSessions = await commitDeletes(sessionRefs);
+    return { deletedSessions, deletedSales };
+  } catch (err) {
+    throw new Error(mapFirestoreError(err, "ลบรอบการขาย nPos"));
+  }
 }
 
 /**

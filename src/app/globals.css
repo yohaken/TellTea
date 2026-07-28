@@ -7156,6 +7156,7 @@ body.modal-open .main-panel {
 
 .npos-slim-row--sessions-super {
   grid-template-columns:
+    minmax(1.35rem, max-content)
     minmax(2.4rem, max-content)
     minmax(3.2rem, max-content)
     minmax(3.6rem, max-content)
@@ -7169,7 +7170,49 @@ body.modal-open .main-panel {
     minmax(2.4rem, max-content)
     minmax(2.4rem, max-content)
     minmax(2.2rem, max-content);
-  min-width: 52rem;
+  min-width: 54rem;
+}
+
+.npos-slim-check-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+}
+
+.npos-slim-check-col input[type="checkbox"] {
+  width: 0.85rem;
+  height: 0.85rem;
+  margin: 0;
+  cursor: pointer;
+}
+
+.npos-slim-row.is-bulk-selected {
+  background: rgba(232, 93, 4, 0.07);
+}
+
+.npos-slim-search {
+  margin: 0 0 0.35rem;
+  max-width: 28rem;
+}
+
+.npos-slim-search input[type="search"] {
+  font-size: 0.78rem;
+  padding: 0.28rem 0.45rem;
+}
+
+.npos-slim-bulk {
+  margin: 0 0 0.4rem;
+}
+
+.npos-slim-bulk-delete {
+  border-color: rgba(180, 35, 24, 0.35) !important;
+  color: #b42318 !important;
+  font-weight: 700;
+}
+
+.npos-slim-bulk-delete:hover:not(:disabled) {
+  background: rgba(180, 35, 24, 0.06);
 }
 
 .npos-slim-duration {
@@ -7280,6 +7323,7 @@ body.modal-open .main-panel {
 
   .npos-slim-row--sessions-super {
     grid-template-columns:
+      minmax(1.35rem, max-content)
       minmax(2.4rem, max-content)
       minmax(3.2rem, max-content)
       minmax(3.6rem, max-content)
@@ -7292,7 +7336,7 @@ body.modal-open .main-panel {
       minmax(2.4rem, max-content)
       minmax(2.4rem, max-content)
       minmax(2.2rem, max-content);
-    min-width: 40rem;
+    min-width: 42rem;
   }
 
   .npos-slim-row--bills-super {
