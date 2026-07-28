@@ -86,6 +86,13 @@ public final class UiScale {
   }
 
   public static UiScale from(Context context) {
+    return from(context, true);
+  }
+
+  /**
+   * @param subtractNav when false (Gpos hub chrome / sidebar hidden), menu columns use full width.
+   */
+  public static UiScale from(Context context, boolean subtractNav) {
     DisplayMetrics dm = context.getResources().getDisplayMetrics();
     int w = Math.max(1, dm.widthPixels);
     int h = Math.max(1, dm.heightPixels);
@@ -113,7 +120,7 @@ public final class UiScale {
     // Web media max-height ~5.5rem — shrink tiles so ~5 rows fit, scroll vertically.
     int menuMediaMaxPx = Math.max(dp(density, 48), Math.round(5.2f * 16f * density * scale));
 
-    int contentW = Math.max(1, w - navWidthPx);
+    int contentW = Math.max(1, subtractNav ? w - navWidthPx : w);
     int menuCols = contentW > dp(density, 900) ? 5 : contentW > dp(density, 640) ? 4 : 3;
 
     int gapPx = Math.max(dp(density, 3), Math.round(4 * density * scale));

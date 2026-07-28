@@ -8,12 +8,15 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Editable;
 import android.text.InputType;
 import android.text.SpannableString;
 import android.text.Spanned;
+import android.text.TextWatcher;
 import android.text.style.ForegroundColorSpan;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -21,6 +24,7 @@ import android.widget.FrameLayout;
 import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.ScrollView;
@@ -83,6 +87,7 @@ public class SellActivity extends Activity {
   private MenuModels.Bundle menu;
   private JSONObject shop;
   private String selectedCategoryId = "";
+  private String menuQuery = "";
   private final List<MenuModels.CartLine> cart = new ArrayList<>();
   private double discountBaht = 0;
   private CustomerDisplayController customerDisplay;
@@ -107,7 +112,9 @@ public class SellActivity extends Activity {
       return;
     }
     setContentView(R.layout.activity_sell);
-    uiScale = UiScale.from(this);
+    // Gpos chrome: hub in header — no left rail; full-width menu columns.
+    PosShellNav.hideSidebar(this);
+    uiScale = UiScale.from(this, false);
     app.telltea.npos.ui.NposFonts.applyActivity(this);
 
     categoryBar = findViewById(R.id.categoryBar);
@@ -130,6 +137,27 @@ public class SellActivity extends Activity {
     customerDisplay.bind(this);
 
     PosShellNav.bind(this, PosShellNav.ACTIVE_SELL, null);
+    View sellHub = findViewById(R.id.sellHubButton);
+    if (sellHub != null) {
+      sellHub.setOnClickListener(v -> showSellHubMenu(v));
+    }
+    EditText sellSearch = findViewById(R.id.sellSearch);
+    if (sellSearch != null) {
+      sellSearch.addTextChangedListener(
+          new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(Editable s) {
+              menuQuery = s == null ? "" : s.toString().trim();
+              renderMenu();
+            }
+          });
+    }
     updatePrompt = new UpdatePromptController(this);
     updatePrompt.setBeforeInstall(this::persistWorkBeforeUpdate);
     applySmartChrome();
@@ -216,7 +244,7 @@ public class SellActivity extends Activity {
   }
 
   private void applySmartChrome() {
-    if (uiScale == null) uiScale = UiScale.from(this);
+    if (uiScale == null) uiScale = UiScale.from(this, false);
     TextView version = findViewById(R.id.sellVersion);
     if (version != null) {
       version.setText(getString(R.string.version_label, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE));
@@ -224,6 +252,16 @@ public class SellActivity extends Activity {
     }
     if (sellTitle != null) {
       sellTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.titleSp);
+    }
+    View sellHub = findViewById(R.id.sellHubButton);
+    if (sellHub != null) {
+      sellHub.setMinimumHeight(uiScale.touchMinPx);
+      sellHub.setMinimumWidth(uiScale.touchMinPx);
+    }
+    EditText sellSearch = findViewById(R.id.sellSearch);
+    if (sellSearch != null) {
+      sellSearch.setMinimumHeight(uiScale.touchMinPx);
+      sellSearch.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.bodySp);
     }
     View payCash = findViewById(R.id.payCashButton);
     View payTransfer = findViewById(R.id.payTransferButton);
@@ -254,6 +292,52 @@ public class SellActivity extends Activity {
     if (menuGrid != null) {
       menuGrid.setColumnCount(uiScale.menuCols);
     }
+  }
+
+  /** Gpos-style overflow: settings / shift / history / lock behind grid. */
+  private void showSellHubMenu(View anchor) {
+    PopupMenu popup = new PopupMenu(this, anchor);
+    popup.getMenu().add(0, 1, 0, R.string.nav_open_bills);
+    popup.getMenu().add(0, 2, 1, R.string.nav_receipts);
+    popup.getMenu().add(0, 3, 2, R.string.nav_shift);
+    popup.getMenu().add(0, 4, 3, R.string.btn_settings_device);
+    popup.getMenu().add(0, 5, 4, R.string.sell_hub_x_report);
+    popup.getMenu().add(0, 6, 5, R.string.sell_hub_close_shift);
+    popup.getMenu().add(0, 7, 6, R.string.nav_lock_pin);
+    popup.setOnMenuItemClickListener(
+        (MenuItem item) -> {
+          int id = item.getItemId();
+          if (id == 1) {
+            PosShellNav.openOpenBillsHint(this);
+            return true;
+          }
+          if (id == 2) {
+            PosShellNav.openReceipts(this);
+            return true;
+          }
+          if (id == 3) {
+            PosShellNav.openShift(this);
+            return true;
+          }
+          if (id == 4) {
+            PosShellNav.openSettings(this);
+            return true;
+          }
+          if (id == 5) {
+            printXReport();
+            return true;
+          }
+          if (id == 6) {
+            closeShift();
+            return true;
+          }
+          if (id == 7) {
+            PosShellNav.openLockHub(this);
+            return true;
+          }
+          return false;
+        });
+    popup.show();
   }
 
   private void styleSoftCartAction(View v) {
@@ -782,7 +866,7 @@ public class SellActivity extends Activity {
 
   private void renderMenu() {
     if (menuGrid == null) return;
-    if (uiScale == null) uiScale = UiScale.from(this);
+    if (uiScale == null) uiScale = UiScale.from(this, false);
     // Wait until grid has real width so tiles never overflow horizontally.
     if (menuGrid.getWidth() <= 0) {
       menuGrid.post(this::renderMenu);
@@ -800,11 +884,22 @@ public class SellActivity extends Activity {
     int mediaH = Math.min(uiScale.menuMediaMaxPx, Math.round(cellW * 10f / 16f));
     mediaH = Math.max(uiScale.dp(44), mediaH);
 
+    String q = menuQuery == null ? "" : menuQuery.toLowerCase(Locale.getDefault());
+    boolean searching = !q.isEmpty();
+
     int shown = 0;
     int col = 0;
     int row = 0;
     for (MenuModels.Item item : menu.items) {
-      if (!selectedCategoryId.isEmpty() && !selectedCategoryId.equals(item.categoryId)) continue;
+      if (!searching
+          && !selectedCategoryId.isEmpty()
+          && !selectedCategoryId.equals(item.categoryId)) {
+        continue;
+      }
+      if (searching) {
+        String name = item.name == null ? "" : item.name.toLowerCase(Locale.getDefault());
+        if (!name.contains(q)) continue;
+      }
 
       LinearLayout cell = new LinearLayout(this);
       cell.setOrientation(LinearLayout.VERTICAL);
@@ -1500,82 +1595,80 @@ public class SellActivity extends Activity {
   /** Update cashier cart UI without touching customer Presentation (e.g. during SUCCESS). */
   private void renderCartViewsOnly() {
     cartList.removeAllViews();
-    int padV = NposUi.dp(this, 6);
+    int padV = NposUi.dp(this, 4);
     for (int i = 0; i < cart.size(); i++) {
       final int idx = i;
       MenuModels.CartLine line = cart.get(i);
+      MenuModels.Item menuItem = findMenuItem(line.menuItemId);
+
       LinearLayout block = new LinearLayout(this);
       block.setOrientation(LinearLayout.VERTICAL);
       block.setPadding(0, padV, 0, padV);
 
-      LinearLayout nameRow = new LinearLayout(this);
-      nameRow.setOrientation(LinearLayout.HORIZONTAL);
-      nameRow.setGravity(Gravity.CENTER_VERTICAL);
+      // Super-slim one line: name · − qty + · price
+      LinearLayout row = new LinearLayout(this);
+      row.setOrientation(LinearLayout.HORIZONTAL);
+      row.setGravity(Gravity.CENTER_VERTICAL);
+      row.setMinimumHeight(NposUi.dp(this, 40));
 
       TextView nameTv = NposUi.section(this, line.name);
-      nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+      nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+      nameTv.setMaxLines(1);
+      nameTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
       nameTv.setLayoutParams(
           new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-      MenuModels.Item menuItem = findMenuItem(line.menuItemId);
       if (menuItem != null && menuItem.hasOptions()) {
         nameTv.setOnClickListener(v -> editCartLineOptions(idx));
       }
 
-      TextView priceTv =
-          NposUi.section(
-              this, String.format(Locale.getDefault(), "฿%.0f", line.lineTotal()));
-      priceTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
-      priceTv.setGravity(Gravity.END);
-
-      nameRow.addView(nameTv);
-      nameRow.addView(priceTv);
-      block.addView(nameRow);
-
-      String opts = line.optionsSummary();
-      if (!opts.isEmpty()) {
-        TextView optView = NposUi.caption(this, opts);
-        optView.setPadding(0, NposUi.dp(this, 2), 0, NposUi.dp(this, 2));
-        if (menuItem != null && menuItem.hasOptions()) {
-          optView.setOnClickListener(v -> editCartLineOptions(idx));
-        }
-        block.addView(optView);
-      }
-
-      LinearLayout qtyRow = new LinearLayout(this);
-      qtyRow.setOrientation(LinearLayout.HORIZONTAL);
-      qtyRow.setGravity(Gravity.CENTER_VERTICAL);
-      qtyRow.setPadding(0, NposUi.dp(this, 4), 0, 0);
-
-      TextView qtyLabel =
-          NposUi.caption(this, String.format(Locale.getDefault(), "×%d", line.qty));
-      qtyLabel.setLayoutParams(
-          new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-
       TextView minus = NposUi.chip(this, "−");
+      minus.setMinimumWidth(NposUi.dp(this, 36));
       minus.setOnClickListener(
           v -> {
             line.qty -= 1;
             if (line.qty <= 0) cart.remove(idx);
             renderCart();
           });
+
+      TextView qtyTv =
+          NposUi.section(this, String.format(Locale.getDefault(), "%d", line.qty));
+      qtyTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+      qtyTv.setGravity(Gravity.CENTER);
+      qtyTv.setMinimumWidth(NposUi.dp(this, 28));
+
       TextView plus = NposUi.chip(this, "+");
+      plus.setMinimumWidth(NposUi.dp(this, 36));
       plus.setOnClickListener(
           v -> {
             line.qty += 1;
             renderCart();
           });
-      TextView remove = NposUi.chip(this, "×");
-      remove.setOnClickListener(
-          v -> {
-            cart.remove(idx);
-            renderCart();
-          });
 
-      qtyRow.addView(qtyLabel);
-      qtyRow.addView(minus, NposUi.wrap(this, 6, 0));
-      qtyRow.addView(plus, NposUi.wrap(this, 6, 0));
-      qtyRow.addView(remove);
-      block.addView(qtyRow);
+      TextView priceTv =
+          NposUi.section(
+              this, String.format(Locale.getDefault(), "฿%.0f", line.lineTotal()));
+      priceTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+      priceTv.setGravity(Gravity.END);
+      priceTv.setMinimumWidth(NposUi.dp(this, 48));
+
+      row.addView(nameTv);
+      row.addView(minus, NposUi.wrap(this, 4, 0));
+      row.addView(qtyTv);
+      row.addView(plus, NposUi.wrap(this, 4, 0));
+      row.addView(priceTv);
+      block.addView(row);
+
+      String opts = line.optionsSummary();
+      if (!opts.isEmpty()) {
+        TextView optView = NposUi.caption(this, opts);
+        optView.setMaxLines(1);
+        optView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        optView.setPadding(0, 0, 0, 0);
+        if (menuItem != null && menuItem.hasOptions()) {
+          optView.setOnClickListener(v -> editCartLineOptions(idx));
+        }
+        block.addView(optView);
+      }
 
       cartList.addView(block);
     }

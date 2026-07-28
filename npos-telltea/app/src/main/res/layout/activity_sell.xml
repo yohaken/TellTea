@@ -24,20 +24,61 @@
                 android:background="@color/npos_chrome"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingLeft="12dp"
+                android:paddingLeft="10dp"
                 android:paddingRight="12dp"
                 android:paddingTop="8dp"
                 android:paddingBottom="8dp">
 
                 <TextView
-                    android:id="@+id/sellTitle"
-                    android:layout_width="0dp"
+                    android:id="@+id/sellHubButton"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:background="@color/npos_chrome_soft"
+                    android:contentDescription="@string/sell_hub_menu"
+                    android:fontFamily="@font/prompt_bold"
+                    android:gravity="center"
+                    android:minWidth="40dp"
+                    android:minHeight="40dp"
+                    android:paddingLeft="10dp"
+                    android:paddingRight="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:text="@string/sell_hub_glyph"
+                    android:textColor="@color/npos_chrome_text"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/sellTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="10dp"
                     android:fontFamily="@font/prompt_semibold"
+                    android:maxLines="1"
                     android:text="@string/sell_title"
                     android:textColor="@color/npos_chrome_text"
                     android:textSize="16sp" />
+
+                <EditText
+                    android:id="@+id/sellSearch"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="10dp"
+                    android:layout_weight="1"
+                    android:background="@color/npos_chrome_soft"
+                    android:fontFamily="@font/prompt_regular"
+                    android:hint="@string/sell_search_hint"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:minHeight="40dp"
+                    android:paddingLeft="10dp"
+                    android:paddingRight="10dp"
+                    android:paddingTop="6dp"
+                    android:paddingBottom="6dp"
+                    android:textColor="@color/npos_chrome_text"
+                    android:textColorHint="@color/npos_chrome_muted"
+                    android:textSize="13sp" />
 
                 <TextView
                     android:id="@+id/sellVersion"

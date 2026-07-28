@@ -138,6 +138,45 @@ public final class PosShellNav {
     }
   }
 
+  /** Public openers for Gpos header hub (same destinations as the left rail). */
+  public static void openSell(Activity activity) {
+    openNative(activity, SellActivity.class, ACTIVE_SELL);
+  }
+
+  public static void openReceipts(Activity activity) {
+    openNative(activity, ReceiptsActivity.class, ACTIVE_RECEIPTS);
+  }
+
+  public static void openShift(Activity activity) {
+    openNative(activity, ShiftActivity.class, ACTIVE_SHIFT);
+  }
+
+  public static void openSettings(Activity activity) {
+    openNative(activity, SettingsActivity.class, ACTIVE_SETTINGS);
+  }
+
+  public static void openOpenBillsHint(Activity activity) {
+    if (HoldCart.hasHold(activity)) {
+      openNative(activity, SellActivity.class, ACTIVE_SELL);
+      Toast.makeText(activity, R.string.hub_open_bills_hint, Toast.LENGTH_LONG).show();
+    } else {
+      Toast.makeText(activity, R.string.hold_empty, Toast.LENGTH_SHORT).show();
+    }
+  }
+
+  public static void openLockHub(Activity activity) {
+    Intent i = new Intent(activity, MainActivity.class);
+    i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    activity.startActivity(i);
+    if (!(activity instanceof MainActivity)) activity.finish();
+  }
+
+  /** Hide left rail on sell (hub lives in header grid). Other screens keep the rail. */
+  public static void hideSidebar(Activity activity) {
+    View sidebar = activity.findViewById(R.id.posSidebar);
+    if (sidebar != null) sidebar.setVisibility(View.GONE);
+  }
+
   private static void addLink(
       Activity activity,
       LinearLayout nav,

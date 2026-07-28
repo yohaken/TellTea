@@ -58,6 +58,11 @@
     <string name="shift_opening">กำลังเปิดรอบ…</string>
     <string name="sell_title">สั่งและชำระเงิน</string>
     <string name="sell_title_demo">สั่งและชำระ (เมนูเดโม)</string>
+    <string name="sell_hub_menu">เมนูหน้าร้าน</string>
+    <string name="sell_hub_glyph">▦</string>
+    <string name="sell_search_hint">ค้นหาเมนู</string>
+    <string name="sell_hub_x_report">พิมพ์สรุปกลางรอบ (X)</string>
+    <string name="sell_hub_close_shift">ปิดรอบการขาย</string>
     <string name="sell_loading_menu">กำลังโหลดเมนู…</string>
     <string name="sell_menu_ready">เมนูพร้อม (เครื่องก่อน · ซิงก์พื้นหลัง)</string>
     <string name="sell_menu_cached">เมนูจากแคชเครื่อง</string>
