@@ -42,10 +42,10 @@ export function VatSalesAuditPanel({ month, onMonthChange, setError }: Props) {
 
   return (
     <div className="vat-audit-panel">
-      <section className="vat-sales-settings">
+      <section className="vat-sales-settings vat-sales-settings--slim">
         <h2 className="vat-sales-section-title">ประวัติ</h2>
         <p className="muted vat-sales-hint">แก้ยอด · ยืนยัน · เมล · ปิดเดือน · prune</p>
-        <div className="vat-sales-toolbar">
+        <div className="vat-sales-toolbar vat-sales-toolbar--slim">
           <label className="vat-sales-month">
             เดือน
             <input
@@ -54,19 +54,16 @@ export function VatSalesAuditPanel({ month, onMonthChange, setError }: Props) {
               onChange={(e) => onMonthChange(e.target.value)}
             />
           </label>
-          <label
-            className="vat-sales-field"
-            style={{ flexDirection: "row", alignItems: "center", gap: "0.4rem" }}
-          >
+          <label className="check-row vat-sales-check-slim">
             <input
               type="checkbox"
               checked={filterMonth}
               onChange={(e) => setFilterMonth(e.target.checked)}
             />
-            เฉพาะเดือนนี้
+            เดือนนี้
           </label>
           <button type="button" className="ghost-btn" onClick={() => void refresh()}>
-            รีเฟรช
+            รี
           </button>
         </div>
       </section>
@@ -77,22 +74,26 @@ export function VatSalesAuditPanel({ month, onMonthChange, setError }: Props) {
         <p className="muted">ยังไม่มีประวัติ</p>
       ) : (
         <div className="sheet-wrap vat-sales-scroll">
-          <table className="sheet-table vat-sales-table">
+          <table className="sheet-table vat-sales-table vat-sales-table--slim vat-audit-table">
             <thead>
               <tr>
-                <th>เมื่อ</th>
+                <th className="col-date">เมื่อ</th>
                 <th>การกระทำ</th>
-                <th>สรุป</th>
+                <th className="col-desc">สรุป</th>
                 <th>โดย</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id}>
+                <tr key={r.id} title={r.summary}>
                   <td className="col-date">{formatDateTimeShort(r.at)}</td>
                   <td>{auditActionLabel(r.action)}</td>
-                  <td className="col-desc">{r.summary}</td>
-                  <td>{r.actor}</td>
+                  <td className="col-desc">
+                    <div className="vat-mail-subject">{r.summary}</div>
+                  </td>
+                  <td className="vat-audit-actor" title={r.actor}>
+                    {r.actor.includes("@") ? r.actor.split("@")[0] : r.actor}
+                  </td>
                 </tr>
               ))}
             </tbody>

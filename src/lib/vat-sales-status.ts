@@ -30,6 +30,17 @@ export const DAY_OPS_STATUS_LABELS: Record<DayOpsStatus, string> = {
   empty: "—",
 };
 
+/** ย่อในตาราง/ชิป — รายละเอียดเต็มอยู่ที่ title */
+export const DAY_OPS_STATUS_SHORT: Record<DayOpsStatus, string> = {
+  confirmed: "OK",
+  pending_review: "รอ",
+  parse_error: "fail",
+  missing_mail: "ขาด",
+  incomplete: "ค้าง",
+  ready: "พร้อม",
+  empty: "—",
+};
+
 /** ย่อชื่อช่องทางในตาราง */
 export const CHANNEL_SHORT: Record<DeliveryChannel, string> = {
   shopee: "Sp",

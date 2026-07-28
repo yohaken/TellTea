@@ -9,6 +9,7 @@ import {
   type DeliveryChannel,
   type VatSalesSettings,
 } from "@/lib/vat-sales";
+import { CHANNEL_SHORT } from "@/lib/vat-sales-status";
 import {
   channelReportLabel,
   confirmEmailSalesToDaily,
@@ -35,9 +36,39 @@ import { prunePlatformEmailRaw } from "@/lib/vat-sales-mail-prune";
 const DEFAULT_REDIRECT =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/vatMailOAuthCallback";
 function reportKindLabel(kind: string) {
-  if (kind === "weekly") return "สัปดาห์";
-  if (kind === "monthly") return "เดือน";
+  if (kind === "weekly") return "ว";
+  if (kind === "monthly") return "ด";
   return "วัน";
+}
+
+function reportKindTitle(kind: string) {
+  if (kind === "weekly") return "รายสัปดาห์";
+  if (kind === "monthly") return "รายเดือน";
+  return "รายวัน";
+}
+
+function channelShort(channel: string) {
+  if (channel === "shopee" || channel === "grab" || channel === "lineman") {
+    return CHANNEL_SHORT[channel];
+  }
+  return "?";
+}
+
+function parseStatusShort(status: MailParseStatus) {
+  switch (status) {
+    case "pending":
+      return "รอP";
+    case "ok":
+      return "รอ";
+    case "fail":
+      return "fail";
+    case "confirmed":
+      return "ลง";
+    case "ignored":
+      return "ข้าม";
+    default:
+      return status;
+  }
 }
 
 type Props = {
@@ -554,15 +585,15 @@ export function VatSalesMailPanel({
         </p>
       </section>
 
-      <div className="vat-sales-toolbar" style={{ marginBottom: "0.5rem" }}>
+      <div className="vat-sales-toolbar vat-sales-toolbar--slim">
         <button type="button" className="ghost-btn" onClick={() => setShowAdvanced((v) => !v)}>
-          {showAdvanced ? "ซ่อนขั้นสูง" : "ขั้นสูง (กฎค้นหา / ลบ raw)"}
+          {showAdvanced ? "ซ่อนขั้นสูง" : "ขั้นสูง"}
         </button>
       </div>
 
       {showAdvanced ? (
       <>
-      <section className="vat-sales-settings">
+      <section className="vat-sales-settings vat-sales-settings--slim">
         <h2 className="vat-sales-section-title">กฎค้นหาเมลต่อช่องทาง</h2>
         {DELIVERY_CHANNELS.map((ch) => {
           const rule = settings.mailRules[ch];
@@ -613,12 +644,12 @@ export function VatSalesMailPanel({
         </button>
       </section>
 
-      <section className="vat-sales-settings">
+      <section className="vat-sales-settings vat-sales-settings--slim">
         <h2 className="vat-sales-section-title">ลบ raw เมลเก่า</h2>
         <p className="muted vat-sales-hint">
-          เก็บหัวข้อ / parsed / สถานะ · ลบเฉพาะเนื้อหา raw ที่เก่ากว่า N เดือน (เจ้าของกดเอง)
+          เก็บหัวข้อ / parsed / สถานะ · ลบเฉพาะเนื้อหา raw ที่เก่ากว่า N เดือน
         </p>
-        <div className="vat-sales-toolbar">
+        <div className="vat-sales-toolbar vat-sales-toolbar--slim">
           <label className="vat-sales-month">
             เดือน
             <select value={pruneMonths} onChange={(e) => setPruneMonths(e.target.value)}>
@@ -634,7 +665,7 @@ export function VatSalesMailPanel({
             disabled={busy !== null}
             onClick={() => void runPruneRaw(true)}
           >
-            {busy === "mail-prune-dry" ? "กำลังตรวจ..." : "ตรวจจำนวน"}
+            {busy === "mail-prune-dry" ? "…" : "ตรวจ"}
           </button>
           <button
             type="button"
@@ -642,7 +673,7 @@ export function VatSalesMailPanel({
             disabled={busy !== null}
             onClick={() => void runPruneRaw(false)}
           >
-            {busy === "mail-prune" ? "กำลังลบ..." : "ลบ raw เก่า"}
+            {busy === "mail-prune" ? "…" : "ลบ raw"}
           </button>
         </div>
       </section>
@@ -650,9 +681,9 @@ export function VatSalesMailPanel({
       ) : null}
 
       <section>
-        <div className="vat-sales-toolbar" style={{ marginBottom: "0.65rem" }}>
-          <label className="vat-sales-field">
-            ช่องทาง
+        <div className="vat-sales-toolbar vat-sales-toolbar--slim">
+          <label className="vat-sales-month">
+            ช่อง
             <select
               value={channelFilter}
               onChange={(e) =>
@@ -662,14 +693,14 @@ export function VatSalesMailPanel({
               <option value="all">ทั้งหมด</option>
               {DELIVERY_CHANNELS.map((ch) => (
                 <option key={ch} value={ch}>
-                  {DELIVERY_CHANNEL_LABELS[ch]}
+                  {CHANNEL_SHORT[ch]} · {DELIVERY_CHANNEL_LABELS[ch]}
                 </option>
               ))}
-              <option value="unknown">ไม่ทราบช่องทาง</option>
+              <option value="unknown">?</option>
             </select>
           </label>
-          <label className="vat-sales-field">
-            สถานะ
+          <label className="vat-sales-month">
+            สถ
             <select
               value={statusFilter}
               onChange={(e) =>
@@ -680,8 +711,8 @@ export function VatSalesMailPanel({
               <option value="pending">รอ parse</option>
               <option value="ignored">ข้าม</option>
               <option value="ok">รอตรวจ</option>
-              <option value="fail">parse ไม่ผ่าน</option>
-              <option value="confirmed">ยืนยันแล้ว</option>
+              <option value="fail">fail</option>
+              <option value="confirmed">ลงตารางแล้ว</option>
             </select>
           </label>
         </div>
@@ -692,38 +723,46 @@ export function VatSalesMailPanel({
           <p className="muted">ยังไม่มีเมลในกล่อง — เชื่อม Gmail / Gmail LINE MAN แล้วกดซิงก์</p>
         ) : (
           <div className="sheet-wrap vat-sales-scroll">
-            <table className="sheet-table vat-sales-table vat-mail-table">
+            <table className="sheet-table vat-sales-table vat-sales-table--slim vat-mail-table">
               <thead>
                 <tr>
-                  <th>รับ</th>
-                  <th>ช่อง</th>
-                  <th>ชนิด</th>
-                  <th>วัน</th>
-                  <th>ยอด</th>
-                  <th>หัวข้อ</th>
-                  <th>สถานะ</th>
-                  <th className="col-act">…</th>
+                  <th className="col-date" title="เวลารับ">รับ</th>
+                  <th title="ช่องทาง">ช่อง</th>
+                  <th title="ชนิดรายงาน">ชนิด</th>
+                  <th title="วันที่รายงาน">วัน</th>
+                  <th className="col-num" title="ยอดลูกค้า">ยอด</th>
+                  <th className="col-desc">หัวข้อ</th>
+                  <th title="สถานะ parse">สถ</th>
+                  <th className="col-act" />
                 </tr>
               </thead>
               <tbody>
                 {reports.map((r) => {
                   const kind = r.parsed?.reportKind || r.reportKind || "daily";
+                  const dateDisp = (r.parsed?.reportDate || r.reportDateGuess || "").slice(5) || "—";
+                  const received = formatDateTimeShort(r.receivedAt);
+                  const [recvDate, recvTime = ""] = received.split(" ");
                   return (
                   <tr key={r.id}>
-                    <td className="col-date">{formatDateTimeShort(r.receivedAt)}</td>
-                    <td>
-                      {channelReportLabel(r.channel)}
+                    <td className="col-date" title={received}>
+                      {recvDate}
+                      {recvTime ? <div className="muted vat-sales-src">{recvTime}</div> : null}
+                    </td>
+                    <td title={channelReportLabel(r.channel)}>
+                      {channelShort(r.channel)}
                       {r.provider ? (
-                        <div className="muted vat-sales-src">{r.provider}</div>
+                        <div className="muted vat-sales-src">
+                          {r.provider === "gmail_lm" ? "LM" : r.provider === "gmail" ? "G" : r.provider}
+                        </div>
                       ) : null}
                     </td>
-                    <td>{reportKindLabel(kind)}</td>
-                    <td>{r.parsed?.reportDate || r.reportDateGuess || "—"}</td>
+                    <td title={reportKindTitle(kind)}>{reportKindLabel(kind)}</td>
+                    <td title={r.parsed?.reportDate || r.reportDateGuess || ""}>{dateDisp}</td>
                     <td className="col-num">
                       {r.parsed ? formatPlainNumber(r.parsed.grossInclusive) : "—"}
                     </td>
-                    <td className="col-desc">
-                      <div>{r.subject || "(ไม่มีหัวข้อ)"}</div>
+                    <td className="col-desc" title={r.subject || ""}>
+                      <div className="vat-mail-subject">{r.subject || "(ไม่มีหัวข้อ)"}</div>
                       <div className="muted vat-sales-src">{r.from}</div>
                     </td>
                     <td>
@@ -733,8 +772,9 @@ export function VatSalesMailPanel({
                             ? "vat-sales-badge ok"
                             : "vat-sales-badge draft"
                         }
+                        title={parseStatusLabel(r.parseStatus)}
                       >
-                        {parseStatusLabel(r.parseStatus)}
+                        {parseStatusShort(r.parseStatus)}
                       </span>
                     </td>
                     <td className="col-act">

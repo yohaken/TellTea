@@ -147,10 +147,10 @@ export function VatSalesInputVatPanel({
 
   return (
     <div className="vat-input-panel">
-      <section className="vat-sales-settings">
+      <section className="vat-sales-settings vat-sales-settings--slim">
         <h2 className="vat-sales-section-title">ภาษีซื้อ</h2>
         <p className="muted vat-sales-hint">owner · ใบกำกับ · แนบรูปได้</p>
-        <div className="vat-sales-toolbar">
+        <div className="vat-sales-toolbar vat-sales-toolbar--slim">
           <label className="vat-sales-month">
             เดือน
             <input
@@ -165,29 +165,26 @@ export function VatSalesInputVatPanel({
             disabled={busy !== null || loading}
             onClick={() => void refresh()}
           >
-            รีเฟรช
+            รี
           </button>
         </div>
-        <div className="vat-sales-summary">
-          <div className="vat-sales-summary-card">
-            <span>ภาษีซื้อรวม</span>
-            <strong>{fmt(totals.vatInput)}</strong>
-          </div>
-          <div className="vat-sales-summary-card">
-            <span>ภาษีขาย (เดือนนี้)</span>
-            <strong>{fmt(outputVat)}</strong>
-          </div>
-          <div className="vat-sales-summary-card vat-sales-summary-main">
-            <span>VAT สุทธิ (ขาย − ซื้อ)</span>
-            <strong>{fmt(netVat)}</strong>
-          </div>
+        <div className="vat-sales-summary vat-sales-summary--slim">
+          <span>
+            ซื้อ <strong>{fmt(totals.vatInput)}</strong>
+          </span>
+          <span>
+            ขาย <strong>{fmt(outputVat)}</strong>
+          </span>
+          <span className="vat-sales-summary-main">
+            สุทธิ <strong>{fmt(netVat)}</strong>
+          </span>
         </div>
       </section>
 
-      <section className="vat-sales-settings">
+      <section className="vat-sales-settings vat-sales-settings--slim">
         <h3 className="vat-sales-section-title">เพิ่มใบกำกับ</h3>
-        <div className="vat-sales-toolbar" style={{ flexWrap: "wrap" }}>
-          <label className="vat-sales-field">
+        <div className="vat-sales-toolbar vat-sales-toolbar--slim" style={{ flexWrap: "wrap" }}>
+          <label className="vat-sales-month">
             วันที่
             <input
               type="date"
@@ -195,12 +192,12 @@ export function VatSalesInputVatPanel({
               onChange={(e) => setDateKey(e.target.value)}
             />
           </label>
-          <label className="vat-sales-field">
-            ผู้ขาย / ร้าน
+          <label className="vat-sales-month">
+            ผู้ขาย
             <input value={vendor} onChange={(e) => setVendor(e.target.value)} />
           </label>
-          <label className="vat-sales-field">
-            ยอดรวม (รวม VAT)
+          <label className="vat-sales-month">
+            ยอดรวม
             <input
               inputMode="decimal"
               value={gross}
@@ -257,29 +254,31 @@ export function VatSalesInputVatPanel({
         <p className="muted">ยังไม่มีใบกำกับซื้อในเดือนนี้</p>
       ) : (
         <div className="sheet-wrap vat-sales-scroll">
-          <table className="sheet-table vat-sales-table">
+          <table className="sheet-table vat-sales-table vat-sales-table--slim vat-input-table">
             <thead>
               <tr>
-                <th>วันที่</th>
+                <th className="col-date">วัน</th>
                 <th>ผู้ขาย</th>
-                <th>รายละเอียด</th>
-                <th className="col-num">ยอดรวม</th>
+                <th className="col-desc">รายละเอียด</th>
+                <th className="col-num">ยอด</th>
                 <th className="col-num">ฐาน</th>
-                <th className="col-num">VAT ซื้อ</th>
-                <th>หลักฐาน</th>
-                <th className="col-act">จัดการ</th>
+                <th className="col-num">VAT</th>
+                <th title="หลักฐาน">รูป</th>
+                <th className="col-act" />
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.dateKey}</td>
+                <tr key={r.id} title={[r.vendor, r.description, r.note].filter(Boolean).join(" · ")}>
+                  <td className="col-date">{r.dateKey.slice(8)}</td>
                   <td>{r.vendor}</td>
-                  <td className="col-desc">{r.description || r.note || "—"}</td>
+                  <td className="col-desc">
+                    <div className="vat-mail-subject">{r.description || r.note || "—"}</div>
+                  </td>
                   <td className="col-num">{fmt(r.grossInclusive)}</td>
                   <td className="col-num">{fmt(r.vatBase)}</td>
                   <td className="col-num">{fmt(r.vatInput)}</td>
-                  <td>{r.evidenceRef ? "มี" : "—"}</td>
+                  <td>{r.evidenceRef ? "✓" : "—"}</td>
                   <td className="col-act">
                     <button
                       type="button"

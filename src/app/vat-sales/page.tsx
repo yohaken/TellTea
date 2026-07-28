@@ -40,6 +40,7 @@ import { listPlatformEmailReportsForMonth } from "@/lib/vat-sales-mail";
 import {
   countDayStatuses,
   DAY_OPS_STATUS_LABELS,
+  DAY_OPS_STATUS_SHORT,
   deriveDayOpsStatus,
   groupReportsByDate,
   isActionNeeded,
@@ -598,7 +599,7 @@ function VatSalesView({ actor }: { actor: string }) {
   };
 
   return (
-    <div className="vat-sales-page owner-books-page">
+    <div className="vat-sales-page vat-sales-page--compact owner-books-page">
       <OwnerBooksModeSwitch active="vat" />
       <header className="vat-sales-header">
         <div>
@@ -799,13 +800,15 @@ function VatSalesView({ actor }: { actor: string }) {
                   el?.scrollIntoView({ behavior: "smooth", block: "center" });
                 }}
               >
-                {d.slice(8)}·{DAY_OPS_STATUS_LABELS[dayStatuses[d] || "empty"]}
+                <span title={DAY_OPS_STATUS_LABELS[dayStatuses[d] || "empty"]}>
+                  {d.slice(8)}·{DAY_OPS_STATUS_SHORT[dayStatuses[d] || "empty"]}
+                </span>
               </button>
             ))}
           </div>
           <p className="muted vat-sales-hint">
             ขาด {statusCounts.missing_mail} · รอ {statusCounts.pending_review} ·
-            fail {statusCounts.parse_error} · ไม่ครบ {statusCounts.incomplete} ·
+            fail {statusCounts.parse_error} · ค้าง {statusCounts.incomplete} ·
             พร้อม {statusCounts.ready} · OK {statusCounts.confirmed}
           </p>
         </section>
@@ -817,7 +820,7 @@ function VatSalesView({ actor }: { actor: string }) {
       </p>
 
       {showSettings && settings ? (
-        <section className="vat-sales-settings">
+        <section className="vat-sales-settings vat-sales-settings--slim">
           <h2 className="vat-sales-section-title">ตั้งค่าภาษี / ช่องทาง</h2>
           <label className="check-row">
             <input
@@ -1031,9 +1034,9 @@ function VatSalesView({ actor }: { actor: string }) {
                     <td>
                       <span
                         className={`vat-ops-badge vat-ops-${ops}`}
-                        title={`${DAY_OPS_STATUS_LABELS[ops]} · ${bookLabel}`}
+                        title={`${DAY_OPS_STATUS_LABELS[ops]} · บช.${bookLabel}`}
                       >
-                        {DAY_OPS_STATUS_LABELS[ops]}
+                        {DAY_OPS_STATUS_SHORT[ops]}
                         {locked || draft?.dirty ? `·${bookLabel}` : ""}
                       </span>
                     </td>

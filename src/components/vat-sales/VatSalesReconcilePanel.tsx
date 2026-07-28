@@ -78,12 +78,12 @@ export function VatSalesReconcilePanel({
 
   return (
     <div className="vat-recon-panel">
-      <section className="vat-sales-settings">
+      <section className="vat-sales-settings vat-sales-settings--slim">
         <h2 className="vat-sales-section-title">เทียบ สัปดาห์/เดือน</h2>
         <p className="muted vat-sales-hint">
           สรุปแพลตฟอร์ม vs รวมวัน · <strong>ไม่ทับ</strong> ตารางวัน
         </p>
-        <div className="vat-sales-toolbar">
+        <div className="vat-sales-toolbar vat-sales-toolbar--slim">
           <label className="vat-sales-month">
             เดือน
             <input
@@ -92,21 +92,21 @@ export function VatSalesReconcilePanel({
               onChange={(e) => onMonthChange(e.target.value)}
             />
           </label>
-          <label className="vat-sales-field" style={{ flexDirection: "row", alignItems: "center", gap: "0.4rem" }}>
+          <label className="check-row vat-sales-check-slim">
             <input
               type="checkbox"
               checked={filterMonthOnly}
               onChange={(e) => setFilterMonthOnly(e.target.checked)}
             />
-            เฉพาะช่วงที่ทับเดือนนี้
+            ทับเดือนนี้
           </label>
-          <label className="vat-sales-field" style={{ flexDirection: "row", alignItems: "center", gap: "0.4rem" }}>
+          <label className="check-row vat-sales-check-slim">
             <input
               type="checkbox"
               checked={confirmedOnly}
               onChange={(e) => setConfirmedOnly(e.target.checked)}
             />
-            นับเฉพาะวันยืนยัน
+            นับวันยืนยัน
           </label>
           <button
             type="button"
@@ -127,31 +127,43 @@ export function VatSalesReconcilePanel({
         </p>
       ) : (
         <div className="sheet-wrap vat-sales-scroll">
-          <table className="sheet-table vat-sales-table">
+          <table className="sheet-table vat-sales-table vat-sales-table--slim vat-recon-table">
             <thead>
               <tr>
-                <th>ชนิด</th>
-                <th>ช่องทาง</th>
-                <th>ช่วง</th>
-                <th className="col-num">ยอดแพลตฟอร์ม</th>
-                <th className="col-num">ยอดในตาราง</th>
-                <th className="col-num">ส่วนต่าง</th>
-                <th>วันที่มียอด</th>
-                <th>เมล</th>
-                <th className="col-act">จัดการ</th>
+                <th title="ชนิด">ชนิด</th>
+                <th title="ช่องทาง">ช่อง</th>
+                <th title="ช่วงรายงาน">ช่วง</th>
+                <th className="col-num" title="ยอดแพลตฟอร์ม">แพลตฯ</th>
+                <th className="col-num" title="ยอดในตารางวัน">ตาราง</th>
+                <th className="col-num" title="ส่วนต่าง">ต่าง</th>
+                <th title="จำนวนวันที่มียอด">วัน</th>
+                <th className="col-desc">เมล</th>
+                <th className="col-act" />
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => {
                 const abs = Math.abs(r.diff);
                 const warn = abs >= 1;
+                const period =
+                  r.periodStart && r.periodEnd
+                    ? `${r.periodStart.slice(5)}→${r.periodEnd.slice(5)}`
+                    : "—";
                 return (
                   <tr key={r.report.id} className={warn ? "vat-recon-diff" : undefined}>
-                    <td>{r.kind === "weekly" ? "สัปดาห์" : "เดือน"}</td>
-                    <td>{channelLabel(r.channel)}</td>
-                    <td>
-                      {r.periodStart} → {r.periodEnd}
+                    <td title={r.kind === "weekly" ? "รายสัปดาห์" : "รายเดือน"}>
+                      {r.kind === "weekly" ? "ว" : "ด"}
                     </td>
+                    <td title={channelLabel(r.channel)}>
+                      {r.channel === "unknown"
+                        ? "?"
+                        : r.channel === "shopee"
+                          ? "Sp"
+                          : r.channel === "grab"
+                            ? "G"
+                            : "LM"}
+                    </td>
+                    <td title={`${r.periodStart} → ${r.periodEnd}`}>{period}</td>
                     <td className="col-num">{fmt(r.platformGross)}</td>
                     <td className="col-num">{fmt(r.booksGross)}</td>
                     <td className="col-num">
@@ -161,8 +173,8 @@ export function VatSalesReconcilePanel({
                       ) : null}
                     </td>
                     <td>{r.daysCounted}</td>
-                    <td className="col-desc">
-                      <div>{r.report.subject || "(ไม่มีหัวข้อ)"}</div>
+                    <td className="col-desc" title={r.report.subject || ""}>
+                      <div className="vat-mail-subject">{r.report.subject || "(ไม่มีหัวข้อ)"}</div>
                       <div className="muted vat-sales-src">
                         {formatDateTimeShort(r.report.receivedAt)}
                       </div>
@@ -174,7 +186,7 @@ export function VatSalesReconcilePanel({
                         disabled={busy !== null}
                         onClick={() => void reparse(r)}
                       >
-                        Parse ใหม่
+                        Parse
                       </button>
                     </td>
                   </tr>

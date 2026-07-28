@@ -15405,6 +15405,23 @@ body.modal-open .main-panel {
   background: rgba(28, 42, 31, 0.02);
 }
 
+.vat-sales-settings--slim {
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  margin-bottom: 0.55rem;
+  gap: 0.35rem;
+}
+
+.vat-sales-settings--slim .vat-sales-section-title {
+  font-size: 0.88rem;
+}
+
+.vat-sales-check-slim {
+  font-size: 0.72rem;
+  gap: 0.25rem;
+  align-items: center;
+}
+
 .vat-sales-section-title {
   margin: 0;
   font-size: 1rem;
@@ -15472,69 +15489,123 @@ body.modal-open .main-panel {
 }
 
 .vat-sales-table--slim {
-  min-width: 640px;
-  font-size: 0.68rem;
+  min-width: 560px;
+  font-size: 0.64rem;
   table-layout: fixed;
 }
 
 .vat-sales-table--slim th,
 .vat-sales-table--slim td {
-  padding: 0.1rem 0.18rem;
-  line-height: 1.15;
+  padding: 0.06rem 0.14rem;
+  line-height: 1.12;
   vertical-align: middle;
 }
 
 .vat-sales-table--slim th {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 700;
   letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .vat-sales-table--slim .col-date {
-  width: 1.6rem;
-  padding-left: 0.2rem;
+  width: 1.55rem;
+  padding-left: 0.16rem;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
 
 .vat-sales-table--slim .col-num {
-  width: 4.1rem;
+  width: 3.7rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
+.vat-sales-table--slim .col-desc {
+  width: auto;
+  max-width: 12rem;
+}
+
 .vat-sales-table--slim .col-act {
-  width: 5.6rem;
+  width: 5.2rem;
   white-space: nowrap;
 }
 
 .vat-sales-table--slim .vat-sales-input {
   width: 100%;
-  max-width: 4.2rem;
-  min-height: 1.45rem;
-  padding: 0.08rem 0.22rem;
-  font-size: 0.68rem;
-  border-radius: 3px;
-  line-height: 1.2;
+  max-width: 3.8rem;
+  min-height: 1.28rem;
+  padding: 0.04rem 0.16rem;
+  font-size: 0.64rem;
+  border-radius: 2px;
+  line-height: 1.15;
 }
 
 .vat-sales-table--slim .vat-ops-badge {
-  font-size: 0.58rem;
-  padding: 0.02rem 0.22rem;
-  border-radius: 3px;
-  line-height: 1.25;
+  font-size: 0.56rem;
+  padding: 0.01rem 0.18rem;
+  border-radius: 2px;
+  line-height: 1.2;
 }
 
 .vat-sales-table--slim .vat-sales-acts {
-  gap: 0.15rem;
+  gap: 0.12rem;
   flex-wrap: nowrap;
 }
 
 .vat-sales-table--slim .vat-sales-act-btn {
-  min-height: 1.4rem;
-  padding: 0.05rem 0.28rem;
-  font-size: 0.62rem;
-  border-radius: 3px;
+  min-height: 1.28rem;
+  padding: 0.02rem 0.22rem;
+  font-size: 0.58rem;
+  border-radius: 2px;
+}
+
+.vat-sales-table--slim .vat-sales-badge {
+  font-size: 0.56rem;
+  padding: 0.02rem 0.22rem;
+  border-radius: 2px;
+  line-height: 1.2;
+}
+
+.vat-sales-table--slim .vat-sales-src {
+  font-size: 0.54rem;
+  line-height: 1.1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vat-sales-table--slim .vat-mail-subject {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 14rem;
+}
+
+.vat-mail-table.vat-sales-table--slim {
+  min-width: 640px;
+}
+
+.vat-mail-table.vat-sales-table--slim .col-date {
+  width: 3.4rem;
+}
+
+.vat-mail-table.vat-sales-table--slim .col-act {
+  width: 6.2rem;
+}
+
+.vat-recon-table.vat-sales-table--slim,
+.vat-audit-table.vat-sales-table--slim,
+.vat-input-table.vat-sales-table--slim {
+  min-width: 520px;
+}
+
+.vat-audit-actor {
+  max-width: 5.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .vat-sales-toolbar--slim {
@@ -15657,24 +15728,42 @@ body.modal-open .main-panel {
 .vat-sales-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.25rem;
   width: 100%;
-  margin-top: 0.35rem;
+  margin-top: 0.25rem;
 }
 
 .vat-sales-tab {
-  min-height: 1.9rem;
-  padding: 0.2rem 0.65rem;
-  border-radius: 6px;
+  min-height: 1.55rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
   border: 1px solid rgba(28, 42, 31, 0.16);
   background: transparent;
-  font-size: 0.82rem;
+  font-size: 0.74rem;
 }
 
 .vat-sales-tab.is-active {
   background: rgba(87, 15, 15, 0.1);
   border-color: rgba(87, 15, 15, 0.35);
   font-weight: 600;
+}
+
+.vat-sales-page--compact .vat-sales-msg {
+  margin-bottom: 0.35rem;
+  font-size: 0.74rem;
+}
+
+.vat-sales-page--compact .panel-title {
+  font-size: 0.98rem;
+}
+
+.vat-sales-page--compact .vat-map-line {
+  font-size: 0.72rem;
+}
+
+.vat-sales-page--compact .vat-map-toggle {
+  font-size: 0.68rem;
+  padding: 0.05rem 0.32rem;
 }
 
 .vat-mail-status {
@@ -15691,35 +15780,87 @@ body.modal-open .main-panel {
 }
 
 .vat-mail-table {
-  min-width: 720px;
+  min-width: 640px;
+}
+
+.vat-mail-panel--slim .vat-api-box {
+  padding: 0.4rem 0.55rem;
+  gap: 0.28rem;
+  margin-bottom: 0.5rem;
+  border-radius: 6px;
+}
+
+.vat-mail-panel--slim .vat-api-row {
+  padding: 0.22rem 0;
+  gap: 0.25rem 0.45rem;
+}
+
+.vat-mail-panel--slim .vat-api-label {
+  font-size: 0.78rem;
+  min-width: 6.5rem;
+  gap: 0.02rem;
+}
+
+.vat-mail-panel--slim .vat-api-label strong {
+  font-size: 0.8rem;
+}
+
+.vat-mail-panel--slim .vat-api-hint {
+  font-size: 0.68rem;
+}
+
+.vat-mail-panel--slim .vat-sales-act-btn {
+  min-height: 1.4rem;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.68rem;
+}
+
+.vat-mail-panel--slim .vat-sales-section-title {
+  font-size: 0.88rem;
 }
 
 .vat-mail-preview {
-  margin-top: 0.85rem;
-  padding: 0.85rem 1rem;
-  border-radius: 10px;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
   border: 1px solid rgba(28, 42, 31, 0.12);
   background: rgba(28, 42, 31, 0.02);
+}
+
+.vat-mail-panel--slim .vat-mail-preview .vat-sales-section-title {
+  font-size: 0.84rem;
+  margin-bottom: 0.2rem;
 }
 
 .vat-mail-raw {
   white-space: pre-wrap;
   word-break: break-word;
-  font-size: 0.8rem;
-  max-height: 22rem;
+  font-size: 0.7rem;
+  max-height: 14rem;
   overflow: auto;
-  margin: 0.5rem 0;
-  padding: 0.65rem;
+  margin: 0.35rem 0;
+  padding: 0.4rem 0.5rem;
   background: rgba(255, 255, 255, 0.7);
-  border-radius: 8px;
+  border-radius: 5px;
   border: 1px solid rgba(28, 42, 31, 0.08);
 }
 
 .vat-mail-review {
   display: grid;
-  gap: 0.55rem;
-  margin: 0.65rem 0;
-  max-width: 28rem;
+  gap: 0.35rem;
+  margin: 0.4rem 0;
+  max-width: 26rem;
+}
+
+.vat-mail-panel--slim .vat-mail-review .vat-sales-field {
+  font-size: 0.76rem;
+  gap: 0.15rem;
+}
+
+.vat-mail-panel--slim .vat-mail-review input {
+  min-height: 1.55rem;
+  font-size: 0.76rem;
+  padding: 0.1rem 0.3rem;
 }
 
 .vat-owner-guide {
