@@ -212,6 +212,10 @@ function FinancialTable({
           <dd>฿{formatPlainNumber(summary.promptpayTotal)}</dd>
         </div>
         <div>
+          <dt>โอนเงิน</dt>
+          <dd>฿{formatPlainNumber(summary.transferTotal)}</dd>
+        </div>
+        <div>
           <dt>จำนวนบิล</dt>
           <dd>{summary.count}</dd>
         </div>
@@ -460,6 +464,8 @@ export function PosShiftView() {
             cashTotal: row.cashTotal ?? 0,
             promptpayCount: 0,
             promptpayTotal: row.promptpayTotal ?? 0,
+            transferCount: 0,
+            transferTotal: row.transferTotal ?? 0,
             pendingCount: 0,
             voidedCount: 0,
           };
@@ -598,6 +604,12 @@ export function PosShiftView() {
                     value={`฿${formatPlainNumber(displaySummary.promptpayTotal)}`}
                     sub={`${displaySummary.promptpayCount} บิล`}
                     accent="blue"
+                  />
+                  <KpiCard
+                    label="โอนเงิน"
+                    value={`฿${formatPlainNumber(displaySummary.transferTotal)}`}
+                    sub={`${displaySummary.transferCount} บิล`}
+                    accent="neutral"
                   />
                   <KpiCard
                     label="เข้างาน"
