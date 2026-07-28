@@ -98,6 +98,8 @@ export type DailySalesSources = {
   lineman?: ChannelSource;
 };
 
+export type DailySalesEmailRefs = Partial<Record<DeliveryChannel, string>>;
+
 export type DailySalesDoc = {
   dateKey: string;
   storefront: ChannelAmount;
@@ -109,6 +111,8 @@ export type DailySalesDoc = {
   vatOutput: number;
   status: DailySalesStatus;
   sources: DailySalesSources;
+  /** platformEmailReports doc id ต่อช่องทาง */
+  emailRefs: DailySalesEmailRefs;
   note: string;
   confirmedAt: number | null;
   confirmedBy: string;
@@ -238,6 +242,16 @@ function mapSources(raw: unknown): DailySalesSources {
   };
 }
 
+function mapEmailRefs(raw: unknown): DailySalesEmailRefs {
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const out: DailySalesEmailRefs = {};
+  for (const ch of DELIVERY_CHANNELS) {
+    const id = typeof o[ch] === "string" ? String(o[ch]).trim() : "";
+    if (id) out[ch] = id;
+  }
+  return out;
+}
+
 export function recomputeDailyTotals(input: {
   storefront: ChannelAmount;
   delivery: Record<DeliveryChannel, ChannelAmount>;
@@ -272,6 +286,7 @@ export function emptyDailySales(dateKey: string): DailySalesDoc {
     ...totals,
     status: "draft",
     sources: { storefront: "manual" },
+    emailRefs: {},
     note: "",
     confirmedAt: null,
     confirmedBy: "",
@@ -309,6 +324,7 @@ export function mapDailySalesDoc(
     ...totals,
     status,
     sources: mapSources(data.sources),
+    emailRefs: mapEmailRefs(data.emailRefs),
     note: typeof data.note === "string" ? data.note : "",
     confirmedAt: typeof data.confirmedAt === "number" ? data.confirmedAt : null,
     confirmedBy: typeof data.confirmedBy === "string" ? data.confirmedBy : "",
@@ -412,6 +428,7 @@ export type UpsertDailySalesInput = {
   storefront?: ChannelAmount;
   delivery?: Partial<Record<DeliveryChannel, ChannelAmount>>;
   sources?: Partial<DailySalesSources>;
+  emailRefs?: DailySalesEmailRefs;
   note?: string;
   status?: DailySalesStatus;
   confirmedBy?: string;
@@ -480,6 +497,11 @@ export async function upsertDailySales(
       : {}),
   };
 
+  const emailRefs: DailySalesEmailRefs = {
+    ...existing.emailRefs,
+    ...(input.emailRefs || {}),
+  };
+
   const docData: DailySalesDoc = {
     dateKey,
     storefront,
@@ -487,6 +509,7 @@ export async function upsertDailySales(
     ...totals,
     status,
     sources,
+    emailRefs,
     note: input.note != null ? String(input.note) : existing.note,
     confirmedAt,
     confirmedBy,

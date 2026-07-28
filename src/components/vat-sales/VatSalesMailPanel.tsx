@@ -1,21 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { formatDateTimeShort } from "@/lib/utils";
+import { formatDateTimeShort, formatPlainNumber } from "@/lib/utils";
 import {
   DELIVERY_CHANNEL_LABELS,
   DELIVERY_CHANNELS,
+  getDailySales,
   type DeliveryChannel,
-  type VatMailRules,
   type VatSalesSettings,
 } from "@/lib/vat-sales";
 import {
   channelReportLabel,
+  confirmEmailSalesToDaily,
   disconnectVatMail,
   fetchVatMailStatus,
   listPlatformEmailReports,
   loadVatMailOAuthConfig,
   parseStatusLabel,
+  reparsePendingPlatformEmails,
+  reparsePlatformEmailReport,
   saveVatMailOAuthConfig,
   setPlatformEmailIgnored,
   startVatMailOAuth,
@@ -62,6 +65,12 @@ export function VatSalesMailPanel({
   const [cfgSecret, setCfgSecret] = useState("");
   const [cfgRedirect, setCfgRedirect] = useState(DEFAULT_REDIRECT);
   const [hasSecret, setHasSecret] = useState(false);
+  const [review, setReview] = useState<{
+    reportDate: string;
+    grossInclusive: string;
+    fee: string;
+    netTransfer: string;
+  } | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -132,6 +141,126 @@ export function VatSalesMailPanel({
     try {
       const res = await syncVatMail(31);
       setMsg(`ซิงก์แล้ว · สแกน ${res.scanned} · เพิ่ม ${res.added} · ข้ามซ้ำ ${res.skipped}`);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const runParsePending = async () => {
+    setBusy("mail-parse");
+    setError("");
+    setMsg("");
+    try {
+      const res = await reparsePendingPlatformEmails(50);
+      setMsg(`Parse แล้ว · สำเร็จ ${res.ok} · ไม่ผ่าน ${res.fail} · ข้าม ${res.skipped}`);
+      setStatusFilter("ok");
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const openReport = (r: PlatformEmailReport) => {
+    if (openId === r.id) {
+      setOpenId(null);
+      setReview(null);
+      return;
+    }
+    setOpenId(r.id);
+    if (r.parsed) {
+      setReview({
+        reportDate: r.parsed.reportDate,
+        grossInclusive: String(r.parsed.grossInclusive || ""),
+        fee: String(r.parsed.fee || ""),
+        netTransfer: String(r.parsed.netTransfer || ""),
+      });
+    } else {
+      setReview({
+        reportDate: r.reportDateGuess || "",
+        grossInclusive: "",
+        fee: "",
+        netTransfer: "",
+      });
+    }
+  };
+
+  const parseOne = async (r: PlatformEmailReport) => {
+    setBusy(r.id);
+    setError("");
+    try {
+      const next = await reparsePlatformEmailReport(r);
+      await refresh();
+      setOpenId(next.id);
+      if (next.parsed) {
+        setReview({
+          reportDate: next.parsed.reportDate,
+          grossInclusive: String(next.parsed.grossInclusive || ""),
+          fee: String(next.parsed.fee || ""),
+          netTransfer: String(next.parsed.netTransfer || ""),
+        });
+      }
+      if (next.parseStatus === "fail") {
+        setError(next.parseError || "parse ไม่ผ่าน");
+      } else {
+        setMsg(`Parse สำเร็จ · ${channelReportLabel(next.channel)}`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const confirmOne = async (r: PlatformEmailReport, overwrite: boolean) => {
+    if (!review) return;
+    if (r.channel === "unknown") {
+      setError("ระบุช่องทางก่อนยืนยัน");
+      return;
+    }
+    const reportDate = review.reportDate.trim();
+    const gross = Number(String(review.grossInclusive).replace(/,/g, ""));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(reportDate)) {
+      setError("วันที่รายงานไม่ถูกต้อง");
+      return;
+    }
+    if (!Number.isFinite(gross) || gross < 0) {
+      setError("ยอดลูกค้าไม่ถูกต้อง");
+      return;
+    }
+    setBusy(r.id);
+    setError("");
+    setMsg("");
+    try {
+      if (!overwrite) {
+        const day = await getDailySales(reportDate);
+        const prev = day.delivery[r.channel].grossInclusive;
+        if (prev > 0 && Math.abs(prev - gross) > 0.009) {
+          const ok = window.confirm(
+            `${reportDate} มียอด ${channelReportLabel(r.channel)} ${formatPlainNumber(prev)} อยู่แล้ว — ทับด้วย ${formatPlainNumber(gross)}?`,
+          );
+          if (!ok) {
+            setBusy(null);
+            return;
+          }
+          overwrite = true;
+        }
+      }
+      const res = await confirmEmailSalesToDaily({
+        reportId: r.id,
+        channel: r.channel,
+        reportDate,
+        grossInclusive: gross,
+        fee: Number(String(review.fee).replace(/,/g, "")) || 0,
+        netTransfer: Number(String(review.netTransfer).replace(/,/g, "")) || 0,
+        overwrite,
+        actor,
+      });
+      setMsg(`ยืนยันเข้าตาราง ${res.dateKey} · ${channelReportLabel(r.channel)}`);
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -253,6 +382,14 @@ export function VatSalesMailPanel({
             onClick={() => void refresh()}
           >
             รีเฟรชกล่องเมล
+          </button>
+          <button
+            type="button"
+            className="primary-btn"
+            disabled={busy !== null}
+            onClick={() => void runParsePending()}
+          >
+            {busy === "mail-parse" ? "กำลัง parse..." : "Parse เมลที่รอ"}
           </button>
         </div>
 
@@ -399,7 +536,8 @@ export function VatSalesMailPanel({
                 <tr>
                   <th>รับเมื่อ</th>
                   <th>ช่องทาง</th>
-                  <th>วันรายงาน (เดา)</th>
+                  <th>วันรายงาน</th>
+                  <th>ยอดลูกค้า</th>
                   <th>หัวข้อ</th>
                   <th>สถานะ</th>
                   <th className="col-act">จัดการ</th>
@@ -410,13 +548,22 @@ export function VatSalesMailPanel({
                   <tr key={r.id}>
                     <td className="col-date">{formatDateTimeShort(r.receivedAt)}</td>
                     <td>{channelReportLabel(r.channel)}</td>
-                    <td>{r.reportDateGuess || "—"}</td>
+                    <td>{r.parsed?.reportDate || r.reportDateGuess || "—"}</td>
+                    <td className="col-num">
+                      {r.parsed ? formatPlainNumber(r.parsed.grossInclusive) : "—"}
+                    </td>
                     <td className="col-desc">
                       <div>{r.subject || "(ไม่มีหัวข้อ)"}</div>
                       <div className="muted vat-sales-src">{r.from}</div>
                     </td>
                     <td>
-                      <span className="vat-sales-badge draft">
+                      <span
+                        className={
+                          r.parseStatus === "ok" || r.parseStatus === "confirmed"
+                            ? "vat-sales-badge ok"
+                            : "vat-sales-badge draft"
+                        }
+                      >
                         {parseStatusLabel(r.parseStatus)}
                       </span>
                     </td>
@@ -425,11 +572,21 @@ export function VatSalesMailPanel({
                         <button
                           type="button"
                           className="ghost-btn vat-sales-act-btn"
-                          onClick={() => setOpenId(openId === r.id ? null : r.id)}
+                          onClick={() => openReport(r)}
                         >
-                          {openId === r.id ? "ปิด" : "ดู"}
+                          {openId === r.id ? "ปิด" : "ดู/ตรวจ"}
                         </button>
-                        {r.parseStatus !== "ignored" ? (
+                        {r.parseStatus === "pending" || r.parseStatus === "fail" ? (
+                          <button
+                            type="button"
+                            className="ghost-btn vat-sales-act-btn"
+                            disabled={busy !== null}
+                            onClick={() => void parseOne(r)}
+                          >
+                            Parse
+                          </button>
+                        ) : null}
+                        {r.parseStatus !== "ignored" && r.parseStatus !== "confirmed" ? (
                           <button
                             type="button"
                             className="ghost-btn vat-sales-act-btn"
@@ -450,28 +607,7 @@ export function VatSalesMailPanel({
                           >
                             ข้าม
                           </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="ghost-btn vat-sales-act-btn"
-                            disabled={busy !== null}
-                            onClick={() => {
-                              void (async () => {
-                                setBusy(r.id);
-                                try {
-                                  await setPlatformEmailIgnored(r.id, false);
-                                  await refresh();
-                                } catch (e) {
-                                  setError(e instanceof Error ? e.message : String(e));
-                                } finally {
-                                  setBusy(null);
-                                }
-                              })();
-                            }}
-                          >
-                            ยกเลิกข้าม
-                          </button>
-                        )}
+                        ) : null}
                       </div>
                     </td>
                   </tr>
@@ -485,13 +621,89 @@ export function VatSalesMailPanel({
           <div className="vat-mail-preview">
             <h3 className="vat-sales-section-title">{open.subject || "(ไม่มีหัวข้อ)"}</h3>
             <p className="muted">
-              {open.from} · {formatDateTimeShort(open.receivedAt)} · เดาวันที่{" "}
-              {open.reportDateGuess || "—"}
+              {open.from} · {formatDateTimeShort(open.receivedAt)} ·{" "}
+              {channelReportLabel(open.channel)}
+              {open.parserVersion ? ` · ${open.parserVersion}` : ""}
             </p>
+            {open.parseStatus === "fail" ? (
+              <p className="error-text">{open.parseError || "parse ไม่ผ่าน"}</p>
+            ) : null}
+            {open.parsed?.warnings?.length ? (
+              <p className="muted">คำเตือน: {open.parsed.warnings.join(" · ")}</p>
+            ) : null}
+
+            {review && open.parseStatus !== "confirmed" ? (
+              <div className="vat-mail-review">
+                <label className="vat-sales-field">
+                  วันที่รายงาน
+                  <input
+                    value={review.reportDate}
+                    onChange={(e) => setReview({ ...review, reportDate: e.target.value })}
+                  />
+                </label>
+                <label className="vat-sales-field">
+                  ยอดลูกค้า (รวม VAT)
+                  <input
+                    inputMode="decimal"
+                    value={review.grossInclusive}
+                    onChange={(e) =>
+                      setReview({ ...review, grossInclusive: e.target.value })
+                    }
+                  />
+                </label>
+                <label className="vat-sales-field">
+                  ค่าธรรมเนียม
+                  <input
+                    inputMode="decimal"
+                    value={review.fee}
+                    onChange={(e) => setReview({ ...review, fee: e.target.value })}
+                  />
+                </label>
+                <label className="vat-sales-field">
+                  ยอดโอนสุทธิ
+                  <input
+                    inputMode="decimal"
+                    value={review.netTransfer}
+                    onChange={(e) =>
+                      setReview({ ...review, netTransfer: e.target.value })
+                    }
+                  />
+                </label>
+                <div className="vat-sales-acts">
+                  {open.channel !== "unknown" ? (
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      disabled={busy !== null}
+                      onClick={() => void confirmOne(open, false)}
+                    >
+                      ยืนยันเข้าตารางรายวัน
+                    </button>
+                  ) : null}
+                  {open.parseStatus === "fail" || !open.parsed ? (
+                    <button
+                      type="button"
+                      className="ghost-btn"
+                      disabled={busy !== null}
+                      onClick={() => void parseOne(open)}
+                    >
+                      Parse อีกครั้ง
+                    </button>
+                  ) : null}
+                </div>
+                <p className="muted">
+                  ยืนยันเฉพาะช่องทางนี้เข้าตาราง · ไม่ปิดวันอัตโนมัติ · ไม่ทับวันที่ยืนยันแล้ว
+                </p>
+              </div>
+            ) : null}
+
+            {open.parseStatus === "confirmed" ? (
+              <p className="muted">ยืนยันเข้าตารางแล้ว</p>
+            ) : null}
+
             <pre className="vat-mail-raw">
               {(open.rawText || open.snippet || "(ไม่มีข้อความ)").slice(0, 8000)}
             </pre>
-            <p className="muted">Parse ตัวเลขเข้าตารางรายวัน = เฟส P3</p>
           </div>
         ) : null}
       </section>

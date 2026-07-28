@@ -19,11 +19,15 @@ import { getDb, getFirebaseFunctions } from "./firebase";
 import {
   DELIVERY_CHANNEL_LABELS,
   DEFAULT_MAIL_RULES,
+  getDailySales,
   mapMailRules,
+  upsertDailySales,
+  type ChannelAmount,
   type DeliveryChannel,
   type MailChannelRule,
   type VatMailRules,
 } from "./vat-sales";
+import { parsePlatformEmail, type ParsedPlatformReport } from "./vat-sales-parse";
 
 export type { MailChannelRule, VatMailRules };
 export { DEFAULT_MAIL_RULES, mapMailRules };
@@ -54,6 +58,16 @@ export type PlatformEmailReport = {
   parseStatus: MailParseStatus;
   parseError: string;
   syncedAt: number;
+  parserVersion: string;
+  parsed: {
+    reportDate: string;
+    grossInclusive: number;
+    fee: number;
+    netTransfer: number;
+    orderCount: number | null;
+    confidence: string;
+    warnings: string[];
+  } | null;
 };
 
 export type VatMailStatus = {
@@ -105,6 +119,10 @@ function mapReport(id: string, data: Record<string, unknown>): PlatformEmailRepo
     parseRaw === "ignored"
       ? parseRaw
       : "pending";
+  const parsedRaw =
+    data.parsed && typeof data.parsed === "object"
+      ? (data.parsed as Record<string, unknown>)
+      : null;
   return {
     id,
     channel,
@@ -121,6 +139,21 @@ function mapReport(id: string, data: Record<string, unknown>): PlatformEmailRepo
     parseStatus,
     parseError: String(data.parseError || ""),
     syncedAt: Number(data.syncedAt) || 0,
+    parserVersion: String(data.parserVersion || ""),
+    parsed: parsedRaw
+      ? {
+          reportDate: String(parsedRaw.reportDate || ""),
+          grossInclusive: Number(parsedRaw.grossInclusive) || 0,
+          fee: Number(parsedRaw.fee) || 0,
+          netTransfer: Number(parsedRaw.netTransfer) || 0,
+          orderCount:
+            typeof parsedRaw.orderCount === "number" ? parsedRaw.orderCount : null,
+          confidence: String(parsedRaw.confidence || ""),
+          warnings: Array.isArray(parsedRaw.warnings)
+            ? parsedRaw.warnings.map(String)
+            : [],
+        }
+      : null,
   };
 }
 
@@ -236,3 +269,172 @@ export async function saveVatMailOAuthConfig(input: {
   if (secret) payload.clientSecret = secret;
   await setDoc(doc(getDb(), "meta", VAT_MAIL_OAUTH_CONFIG_DOC), payload, { merge: true });
 }
+
+export async function reparsePlatformEmailReport(
+  report: PlatformEmailReport,
+): Promise<PlatformEmailReport> {
+  if (report.channel === "unknown") {
+    await updateDoc(doc(getDb(), PLATFORM_EMAIL_REPORTS_COL, report.id), {
+      parseStatus: "fail",
+      parseError: "ไม่ทราบช่องทาง",
+      parserVersion: "unknown-v0",
+      parsed: null,
+    });
+    return { ...report, parseStatus: "fail", parseError: "ไม่ทราบช่องทาง", parsed: null };
+  }
+
+  const result = parsePlatformEmail({
+    channel: report.channel,
+    subject: report.subject,
+    rawText: report.rawText,
+    rawHtml: report.rawHtml,
+    reportDateGuess: report.reportDateGuess,
+    receivedAt: report.receivedAt,
+  });
+
+  if (!result.ok) {
+    await updateDoc(doc(getDb(), PLATFORM_EMAIL_REPORTS_COL, report.id), {
+      parseStatus: "fail",
+      parseError: result.error,
+      parserVersion: result.parserVersion,
+      parsed: null,
+    });
+    return {
+      ...report,
+      parseStatus: "fail",
+      parseError: result.error,
+      parserVersion: result.parserVersion,
+      parsed: null,
+    };
+  }
+
+  const parsed = result.parsed;
+  await updateDoc(doc(getDb(), PLATFORM_EMAIL_REPORTS_COL, report.id), {
+    parseStatus: "ok",
+    parseError: "",
+    parserVersion: parsed.parserVersion,
+    reportDateGuess: parsed.reportDate,
+    parsed: {
+      reportDate: parsed.reportDate,
+      grossInclusive: parsed.grossInclusive,
+      fee: parsed.fee,
+      netTransfer: parsed.netTransfer,
+      orderCount: parsed.orderCount,
+      confidence: parsed.confidence,
+      warnings: parsed.warnings,
+      matchedLabels: parsed.matchedLabels,
+      currency: parsed.currency,
+    },
+  });
+
+  return {
+    ...report,
+    parseStatus: "ok",
+    parseError: "",
+    parserVersion: parsed.parserVersion,
+    reportDateGuess: parsed.reportDate,
+    parsed: {
+      reportDate: parsed.reportDate,
+      grossInclusive: parsed.grossInclusive,
+      fee: parsed.fee,
+      netTransfer: parsed.netTransfer,
+      orderCount: parsed.orderCount,
+      confidence: parsed.confidence,
+      warnings: parsed.warnings,
+    },
+  };
+}
+
+export async function reparsePendingPlatformEmails(max = 40): Promise<{
+  ok: number;
+  fail: number;
+  skipped: number;
+}> {
+  const pending = await listPlatformEmailReports({ parseStatus: "pending", max: 200 });
+  let ok = 0;
+  let fail = 0;
+  let skipped = 0;
+  for (const r of pending.slice(0, max)) {
+    if (r.channel === "unknown") {
+      skipped += 1;
+      continue;
+    }
+    const next = await reparsePlatformEmailReport(r);
+    if (next.parseStatus === "ok") ok += 1;
+    else fail += 1;
+  }
+  return { ok, fail, skipped };
+}
+
+export type ConfirmEmailSalesInput = {
+  reportId: string;
+  channel: DeliveryChannel;
+  reportDate: string;
+  grossInclusive: number;
+  fee?: number;
+  netTransfer?: number;
+  /** ทับยอดช่องทางเดิมถ้ามี */
+  overwrite?: boolean;
+  actor: string;
+};
+
+/**
+ * ยืนยันยอดจากเมลเข้า dailySales ช่องทางนั้น (ไม่ auto ยืนยันทั้งวัน)
+ * ถ้าวัน dailySales confirmed แล้ว → ต้องปลดล็อกวันก่อน
+ */
+export async function confirmEmailSalesToDaily(
+  input: ConfirmEmailSalesInput,
+): Promise<{ dateKey: string }> {
+  const channel = input.channel;
+  const dateKey = input.reportDate;
+  const existing = await getDailySales(dateKey);
+  if (existing.status === "confirmed") {
+    throw new Error("วันนี้ยืนยันแล้ว — ปลดล็อกวันในตารางรายวันก่อน");
+  }
+
+  const prev = existing.delivery[channel];
+  const nextAmount: ChannelAmount = {
+    grossInclusive: input.grossInclusive,
+    fee: input.fee ?? 0,
+    netTransfer: input.netTransfer ?? 0,
+  };
+
+  if (
+    !input.overwrite &&
+    prev.grossInclusive > 0 &&
+    Math.abs(prev.grossInclusive - nextAmount.grossInclusive) > 0.009
+  ) {
+    throw new Error(
+      `วัน ${dateKey} มียอด ${channel} อยู่แล้ว (${prev.grossInclusive}) — เลือกทับยอดถ้าต้องการ`,
+    );
+  }
+
+  // กันยืนยันเมลซ้ำ
+  if (existing.emailRefs[channel] && existing.emailRefs[channel] !== input.reportId) {
+    if (!input.overwrite) {
+      throw new Error("ช่องทางนี้ยืนยันจากเมลอื่นแล้ว — เลือกทับยอดถ้าต้องการ");
+    }
+  }
+
+  await upsertDailySales(
+    {
+      dateKey,
+      delivery: { [channel]: nextAmount },
+      sources: { [channel]: "email", storefront: existing.sources.storefront },
+      emailRefs: { [channel]: input.reportId },
+    },
+    input.actor,
+  );
+
+  await updateDoc(doc(getDb(), PLATFORM_EMAIL_REPORTS_COL, input.reportId), {
+    parseStatus: "confirmed",
+    parseError: "",
+    confirmedAt: Date.now(),
+    confirmedDateKey: dateKey,
+  });
+
+  return { dateKey };
+}
+
+export type { ParsedPlatformReport };
+

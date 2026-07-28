@@ -15494,3 +15494,10 @@ body.modal-open .main-panel {
   border: 1px solid rgba(28, 42, 31, 0.08);
 }
 
+.vat-mail-review {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.65rem 0;
+  max-width: 28rem;
+}
+

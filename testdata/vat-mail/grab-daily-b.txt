@@ -1,0 +1,9 @@
+# Grab daily sample B — EN labels
+From: merchant@grab.com
+Subject: GrabFood Daily Sales 2026/07/21
+
+Report date: 2026-07-21
+Total orders: 18
+Gross sales: ฿5,350.50
+Commission fee: 1,070.10
+Net payout: 4,280.40
