@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 353/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+91/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.68"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 354/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+92/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.69"/);
 assert.match(read("docs/npos-smart-ui-scale-checklist.md"), /UiScale|เลื่อน|คิดเงิน|เวอร์ชัน/);
 
 assert.ok(
@@ -24,6 +24,7 @@ assert.match(ui, /payPrimaryMinPx/);
 assert.match(ui, /menuMediaMaxPx/);
 assert.match(ui, /menuCols/);
 assert.match(ui, /touchMinPx/);
+assert.match(ui, /padKeyMinPxForChrome/);
 
 const sell = read("npos-telltea/app/src/main/java/app/telltea/npos/SellActivity.java");
 assert.match(sell, /UiScale/);
@@ -31,6 +32,8 @@ assert.match(sell, /FIT_CENTER/);
 assert.match(sell, /menuGrid\.getWidth|renderMenu/);
 assert.match(sell, /sellVersion|version_label/);
 assert.match(sell, /payPrimaryMinPx|applySmartChrome/);
+assert.match(sell, /CHROME_CASH_DP/);
+assert.match(sell, /fitCardToWindow|No nested ScrollView/);
 
 const layout = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
 assert.match(layout, /sellVersion/);

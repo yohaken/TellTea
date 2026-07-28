@@ -35,7 +35,10 @@ public final class UiScale {
   public final int touchMinPx;
   public final int payPrimaryMinPx;
   public final int paySecondaryMinPx;
-  /** Tall keys for POS number pads only (cash / float / claim) — pre-shrink ~56–64dp. */
+  /**
+   * Preferred tall keys for POS number pads (cash / float / claim) — ~56–64dp.
+   * Prefer {@link #padKeyMinPxForChrome(int)} so dialogs fit the window.
+   */
   public final int padKeyMinPx;
   public final int menuMediaMaxPx;
   public final int menuCols;
@@ -165,6 +168,23 @@ public final class UiScale {
 
   public int dp(float v) {
     return Math.round(v * density);
+  }
+
+  /**
+   * Number-pad key height that keeps 4 rows + chrome inside ~90% of the window.
+   *
+   * @param chromeAbovePadDp approximate height above the pad (title, amount, bills, etc.)
+   */
+  public int padKeyMinPxForChrome(int chromeAbovePadDp) {
+    int maxCard = Math.round(heightPx * 0.90f);
+    int chromePx = dp(Math.max(80, chromeAbovePadDp));
+    // Dialog padding + confirm/cancel row under the pad.
+    int dialogChromePx = dp(40) + Math.max(touchMinPx, dp(52));
+    int rowGaps = 4 * Math.max(dp(4), gapPx);
+    int available = maxCard - chromePx - dialogChromePx - rowGaps;
+    int perKey = available / 4;
+    int floor = Math.max(dp(48), touchMinPx);
+    return clampInt(perKey, floor, padKeyMinPx);
   }
 
   public void applyMinHeight(View view, int minPx) {

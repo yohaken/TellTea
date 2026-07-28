@@ -2,8 +2,11 @@ package app.telltea.npos.ui;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -232,15 +235,53 @@ public final class NposConfirmDialog {
     holder[0] = dialog;
     try {
       dialog.show();
-      if (dialog.getWindow() != null) {
-        dialog
-            .getWindow()
-            .setBackgroundDrawableResource(android.R.color.transparent);
+      Window window = dialog.getWindow();
+      if (window != null) {
+        window.setBackgroundDrawableResource(android.R.color.transparent);
+        fitCardToWindow(window, scroll, root);
       }
     } catch (RuntimeException e) {
       if (onCancel != null) onCancel.run();
       return null;
     }
     return dialog;
+  }
+
+  /**
+   * Cap dialog to ~92% of the screen; if content is still taller, scale the card uniformly so
+   * number-pad proportions stay intact (no clipped keys).
+   */
+  static void fitCardToWindow(Window window, View scroll, View card) {
+    if (window == null || scroll == null || card == null) return;
+    DisplayMetrics dm = card.getResources().getDisplayMetrics();
+    final int maxH = Math.round(dm.heightPixels * 0.92f);
+    final int maxW = Math.round(dm.widthPixels * 0.94f);
+    try {
+      window.setLayout(Math.min(maxW, dm.widthPixels), ViewGroup.LayoutParams.WRAP_CONTENT);
+    } catch (RuntimeException ignored) {
+      /* some OEMs reject setLayout */
+    }
+    card.post(
+        () -> {
+          int h = card.getMeasuredHeight();
+          int w = card.getMeasuredWidth();
+          if (h <= 0 || w <= 0) return;
+          float s = 1f;
+          if (h > maxH) s = Math.min(s, maxH / (float) h);
+          if (w > maxW) s = Math.min(s, maxW / (float) w);
+          if (s >= 0.995f) return;
+          s = Math.max(0.70f, s);
+          scroll.setPivotX(w / 2f);
+          scroll.setPivotY(0f);
+          scroll.setScaleX(s);
+          scroll.setScaleY(s);
+          ViewGroup.LayoutParams lp = scroll.getLayoutParams();
+          if (lp != null) {
+            lp.height = Math.round(h * s);
+            lp.width = Math.round(Math.min(w, maxW) * (w > maxW ? s : 1f));
+            if (lp.width <= 0) lp.width = Math.round(w * s);
+            scroll.setLayoutParams(lp);
+          }
+        });
   }
 }

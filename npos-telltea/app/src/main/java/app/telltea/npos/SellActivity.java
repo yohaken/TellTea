@@ -2377,32 +2377,35 @@ public class SellActivity extends Activity {
   /** Clone web PosCashKeypad: exact · bills · digits · change. */
   private void showCashKeypad(double total) {
     final String[] valueHolder = {String.format(Locale.US, "%.0f", Math.ceil(total))};
+    UiScale ui = uiScale != null ? uiScale : UiScale.from(this);
 
     LinearLayout root = new LinearLayout(this);
     root.setOrientation(LinearLayout.VERTICAL);
-    root.setPadding(28, 20, 28, 8);
+    int padH = ui.dp(12);
+    root.setPadding(padH, ui.dp(4), padH, 0);
 
     TextView due = new TextView(this);
     due.setText(getString(R.string.pay_cash_due, total));
     due.setTextColor(0xFF1A2E24);
-    due.setTextSize(15);
+    due.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.bodySp);
     root.addView(due);
 
     TextView receivedLabel = new TextView(this);
     receivedLabel.setText(R.string.pay_cash_received_label);
     receivedLabel.setTextColor(0xFF666666);
-    receivedLabel.setPadding(0, 12, 0, 0);
+    receivedLabel.setPadding(0, ui.dp(6), 0, 0);
+    receivedLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.captionSp);
     root.addView(receivedLabel);
 
     TextView amountView = new TextView(this);
-    amountView.setTextSize(28);
+    amountView.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(22f, ui.titleSp + 8f));
     amountView.setTypeface(NposFonts.semibold(this));
     amountView.setTextColor(0xFF1A2E24);
     root.addView(amountView);
 
     TextView changeView = new TextView(this);
-    changeView.setTextSize(14);
-    changeView.setPadding(0, 4, 0, 12);
+    changeView.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.bodySp);
+    changeView.setPadding(0, ui.dp(2), 0, ui.dp(6));
     root.addView(changeView);
 
     Runnable refresh =
@@ -2486,16 +2489,16 @@ public class SellActivity extends Activity {
                 }
                 refresh.run();
               }
-            });
+            },
+            true,
+            NposNumberPad.CHROME_CASH_DP);
     root.addView(pad);
 
-    ScrollView scroll = new ScrollView(this);
-    scroll.addView(root);
-
+    // No nested ScrollView — NposConfirmDialog already scrolls + fitCardToWindow.
     NposConfirmDialog.custom(
         this,
         getString(R.string.pay_cash_title),
-        scroll,
+        root,
         getString(R.string.btn_confirm_sale),
         () -> {
           double received = parseCashAmount(valueHolder[0]);
