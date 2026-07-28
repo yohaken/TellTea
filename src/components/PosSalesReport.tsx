@@ -59,7 +59,7 @@ function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
 }
 
 type BillStatusFilter = "all" | "ok" | "voided";
-type BillPayFilter = "all" | "cash" | "promptpay";
+type BillPayFilter = "all" | "cash" | "promptpay" | "transfer";
 
 function dateInputValue(ms: number) {
   const d = new Date(ms);
@@ -99,6 +99,7 @@ function SessionShiftCard({
   const voided = voidedForSession(sales, session.id);
   const cash = active.filter((s) => s.paymentMethod === "cash");
   const pp = active.filter((s) => s.paymentMethod === "promptpay");
+  const transfer = active.filter((s) => s.paymentMethod === "transfer");
   const salesTotal = active.reduce((sum, s) => sum + s.total, 0);
   const discount = active.reduce((sum, s) => sum + Math.max(0, s.discountBaht || 0), 0);
   const open = session.status === "open";
@@ -130,6 +131,9 @@ function SessionShiftCard({
         </span>
         <span>{active.length || session.saleCount} บิล</span>
         <span>สด ฿{formatPlainNumber(session.cashTotal ?? cash.reduce((a, s) => a + s.total, 0))}</span>
+        <span>
+          โอน ฿{formatPlainNumber(session.transferTotal ?? transfer.reduce((a, s) => a + s.total, 0))}
+        </span>
         <span>
           QR ฿{formatPlainNumber(session.promptpayTotal ?? pp.reduce((a, s) => a + s.total, 0))}
         </span>
@@ -228,6 +232,7 @@ export function PosSalesReport({
     if (statusFilter === "voided") list = list.filter((s) => s.status === "voided");
     if (payFilter === "cash") list = list.filter((s) => s.paymentMethod === "cash");
     if (payFilter === "promptpay") list = list.filter((s) => s.paymentMethod === "promptpay");
+    if (payFilter === "transfer") list = list.filter((s) => s.paymentMethod === "transfer");
     const q = billQuery.trim().toLowerCase();
     if (q) {
       list = list.filter((s) => {
@@ -339,6 +344,7 @@ export function PosSalesReport({
               [
                 ["all", "ทุกชำระ"],
                 ["cash", "สด"],
+                ["transfer", "โอน"],
                 ["promptpay", "PP"],
               ] as const
             ).map(([id, label]) => (
@@ -394,7 +400,11 @@ export function PosSalesReport({
                         <span className="muted">
                           {formatTime(sale.createdAt)} ·{" "}
                           {labelOtShift(sale.shift as "late" | "morning" | "evening")} ·{" "}
-                          {sale.paymentMethod === "promptpay" ? "PromptPay" : "เงินสด"}
+                          {sale.paymentMethod === "promptpay"
+                            ? "PromptPay"
+                            : sale.paymentMethod === "transfer"
+                              ? "โอนเงิน"
+                              : "เงินสด"}
                           {(sale.discountBaht || 0) > 0
                             ? ` · ส่วนลด ฿${formatPlainNumber(sale.discountBaht || 0)}`
                             : ""}
@@ -457,7 +467,8 @@ export function PosSalesReport({
           สรุปยอด · กะ · เมนูขายดี
           <span className="muted">
             {" "}
-            · สด ฿{formatPlainNumber(summary.cashTotal)} · PP ฿
+            · สด ฿{formatPlainNumber(summary.cashTotal)} · โอน ฿
+            {formatPlainNumber(summary.transferTotal)} · PP ฿
             {formatPlainNumber(summary.promptpayTotal)}
           </span>
         </summary>
@@ -482,6 +493,11 @@ export function PosSalesReport({
             <span className="muted">{summary.cashCount} บิล</span>
           </div>
           <div className="pos-sales-summary-card">
+            <span className="pos-sales-summary-label">โอนเงิน</span>
+            <strong>฿{formatPlainNumber(summary.transferTotal)}</strong>
+            <span className="muted">{summary.transferCount} บิล</span>
+          </div>
+          <div className="pos-sales-summary-card">
             <span className="pos-sales-summary-label">PromptPay</span>
             <strong>฿{formatPlainNumber(summary.promptpayTotal)}</strong>
             <span className="muted">{summary.promptpayCount} บิล</span>
@@ -502,6 +518,7 @@ export function PosSalesReport({
                   <th>กะ</th>
                   <th className="col-num">บิล</th>
                   <th className="col-num">เงินสด</th>
+                  <th className="col-num">โอน</th>
                   <th className="col-num">PromptPay</th>
                   <th className="col-num">รวม</th>
                 </tr>
@@ -512,6 +529,9 @@ export function PosSalesReport({
                     <td>{row.label}</td>
                     <td className="col-num">{row.count || "—"}</td>
                     <td className="col-num">{row.cashTotal ? formatPlainNumber(row.cashTotal) : "—"}</td>
+                    <td className="col-num">
+                      {row.transferTotal ? formatPlainNumber(row.transferTotal) : "—"}
+                    </td>
                     <td className="col-num">
                       {row.promptpayTotal ? formatPlainNumber(row.promptpayTotal) : "—"}
                     </td>

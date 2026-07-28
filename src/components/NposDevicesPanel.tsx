@@ -670,10 +670,11 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                     >
                       <strong>{shift}</strong> · {who} · เปิดอยู่ · {s.saleCount} บิล · ฿
                       {formatPlainNumber(s.totalSales)}
-                      {(s.cashTotal != null || s.promptpayTotal != null) && (
+                      {(s.cashTotal != null || s.promptpayTotal != null || s.transferTotal != null) && (
                         <span className="muted">
                           {" "}
-                          · สด ฿{formatPlainNumber(s.cashTotal || 0)} · PP ฿
+                          · สด ฿{formatPlainNumber(s.cashTotal || 0)} · โอน ฿
+                          {formatPlainNumber(s.transferTotal || 0)} · PP ฿
                           {formatPlainNumber(s.promptpayTotal || 0)}
                         </span>
                       )}

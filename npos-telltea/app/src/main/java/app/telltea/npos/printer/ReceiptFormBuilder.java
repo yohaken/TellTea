@@ -154,7 +154,8 @@ public final class ReceiptFormBuilder {
   }
 
   static String paymentLabel(String method) {
-    return "promptpay".equals(method) ? "PromptPay" : "เงินสด";
+    // cash / PromptPay / โอนเงิน — see PaymentMethods.labelTh
+    return app.telltea.npos.sell.PaymentMethods.labelTh(method);
   }
 
   static String receiptLineBaseName(String name) {

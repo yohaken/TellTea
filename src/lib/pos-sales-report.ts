@@ -20,6 +20,7 @@ export type PosShiftSalesRow = {
   total: number;
   cashTotal: number;
   promptpayTotal: number;
+  transferTotal: number;
 };
 
 export type PosMenuSalesRow = {
@@ -41,6 +42,8 @@ export type PosSalesDetailedSummary = {
   cashCount: number;
   promptpayTotal: number;
   promptpayCount: number;
+  transferTotal: number;
+  transferCount: number;
   byShift: PosShiftSalesRow[];
   topItems: PosMenuSalesRow[];
 };
@@ -52,6 +55,13 @@ export type PosSessionReconcileRow = {
   countMatch: boolean;
   totalMatch: boolean;
 };
+
+function normalizePaymentMethod(raw: unknown): PosSale["paymentMethod"] {
+  const m = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  if (m === "promptpay") return "promptpay";
+  if (m === "transfer" || m === "bank" || m === "bank_transfer") return "transfer";
+  return "cash";
+}
 
 function resolveSaleDiscountBaht(data: Record<string, unknown>, subtotal: number, total: number): number {
   if (typeof data.discountBaht === "number" && data.discountBaht > 0) {
@@ -76,7 +86,10 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     subtotal,
     ...(discountBaht > 0 ? { discountBaht } : {}),
     total,
-    paymentMethod: data.paymentMethod === "promptpay" ? "promptpay" : "cash",
+    paymentMethod: normalizePaymentMethod(data.paymentMethod),
+    ...(typeof data.transferRef === "string" && data.transferRef.trim()
+      ? { transferRef: data.transferRef.trim() }
+      : {}),
     cashReceived: typeof data.cashReceived === "number" ? data.cashReceived : 0,
     change: typeof data.change === "number" ? data.change : 0,
     ledgerEntryId: typeof data.ledgerEntryId === "string" ? data.ledgerEntryId : undefined,
@@ -109,6 +122,7 @@ function mapSession(id: string, data: Record<string, unknown>): PosSession {
     openingCash: num("openingCash"),
     cashTotal: num("cashTotal"),
     promptpayTotal: num("promptpayTotal"),
+    transferTotal: num("transferTotal"),
     closingCashCounted: num("closingCashCounted"),
     expectedCash: num("expectedCash"),
     cashDifference: num("cashDifference"),
@@ -136,11 +150,13 @@ export function summarizePosSalesDetailed(sales: PosSale[]): PosSalesDetailedSum
 
   const cashSales = active.filter((s) => s.paymentMethod === "cash");
   const ppSales = active.filter((s) => s.paymentMethod === "promptpay");
+  const transferSales = active.filter((s) => s.paymentMethod === "transfer");
 
   const byShift: PosShiftSalesRow[] = OT_SHIFTS.map(({ id, label }) => {
     const rows = active.filter((s) => s.shift === id);
     const cashRows = rows.filter((s) => s.paymentMethod === "cash");
     const ppRows = rows.filter((s) => s.paymentMethod === "promptpay");
+    const transferRows = rows.filter((s) => s.paymentMethod === "transfer");
     return {
       shift: id,
       label,
@@ -148,6 +164,7 @@ export function summarizePosSalesDetailed(sales: PosSale[]): PosSalesDetailedSum
       total: rows.reduce((sum, s) => sum + s.total, 0),
       cashTotal: cashRows.reduce((sum, s) => sum + s.total, 0),
       promptpayTotal: ppRows.reduce((sum, s) => sum + s.total, 0),
+      transferTotal: transferRows.reduce((sum, s) => sum + s.total, 0),
     };
   });
 
@@ -190,6 +207,8 @@ export function summarizePosSalesDetailed(sales: PosSale[]): PosSalesDetailedSum
     cashCount: cashSales.length,
     promptpayTotal: ppSales.reduce((sum, s) => sum + s.total, 0),
     promptpayCount: ppSales.length,
+    transferTotal: transferSales.reduce((sum, s) => sum + s.total, 0),
+    transferCount: transferSales.length,
     byShift,
     topItems,
   };

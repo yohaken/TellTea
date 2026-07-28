@@ -329,6 +329,7 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
           totalSales: Number(best.data.totalSales) || 0,
           cashTotal: Number(best.data.cashTotal) || 0,
           promptpayTotal: Number(best.data.promptpayTotal) || 0,
+          transferTotal: Number(best.data.transferTotal) || 0,
           voidedCount: Number(best.data.voidedCount) || 0,
           discountTotal: Number(best.data.discountTotal) || 0,
         });
@@ -400,6 +401,7 @@ exports.nposSessionClose = functions.region("asia-southeast1").https.onRequest(a
         updatedAt: now,
         cashTotal: Number(body.cashTotal) || 0,
         promptpayTotal: Number(body.promptpayTotal) || 0,
+        transferTotal: Number(body.transferTotal) || 0,
         openingCash: Number(body.openingCash) || 0,
         closingCashCounted: Number(body.closingCashCounted) || 0,
         expectedCash: Number(body.expectedCash) || 0,
@@ -454,6 +456,7 @@ exports.nposCompleteSale = functions.region("asia-southeast1").https.onRequest(a
       paymentMethod: body.paymentMethod,
       cashReceived: body.cashReceived,
       discountBaht: body.discountBaht,
+      transferRef: body.transferRef,
     };
     const result = await completePosSaleAdmin(db, payload, installId);
     res.status(200).json({ ok: true, ...result });

@@ -11,6 +11,7 @@ package app.telltea.npos.printer;
  *
  * Never auto kick:
  * - PromptPay
+ * - bank transfer (โอนเงิน — sticker QR / account)
  * - reprint / reprint-only flows
  * - X snapshot / Z close reports
  * - open shift / close shift UI alone
@@ -23,7 +24,7 @@ public final class CashDrawerPolicy {
 
   /** True when a completed sale should pulse the drawer after paper prints. */
   public static boolean shouldKickAfterSale(String paymentMethod) {
-    return "cash".equals(paymentMethod);
+    return app.telltea.npos.sell.PaymentMethods.isCash(paymentMethod);
   }
 
   /** Shift X/Z reports are documents only — never open the drawer. */

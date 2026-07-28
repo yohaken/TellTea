@@ -69,7 +69,13 @@ export function PosReceiptPaper({
             ) : null}
             <div>
               <dt>ชำระโดย</dt>
-              <dd>{receipt.paymentMethod === "cash" ? "เงินสด" : "PromptPay"}</dd>
+              <dd>
+                {receipt.paymentMethod === "cash"
+                  ? "เงินสด"
+                  : receipt.paymentMethod === "transfer"
+                    ? "โอนเงิน"
+                    : "PromptPay"}
+              </dd>
             </div>
             <div>
               <dt>วันที่</dt>

@@ -102,7 +102,8 @@ public class ShiftActivity extends Activity {
 
     double cash = ShiftPrefs.cashTotal(this);
     double pp = ShiftPrefs.promptpayTotal(this);
-    double net = cash + pp;
+    double transfer = ShiftPrefs.transferTotal(this);
+    double net = cash + pp + transfer;
     SaleSync.VoidSessionStats voids = saleSync.voidSessionStats(this);
     String reasons =
         voids.reasonsText.isEmpty()
@@ -126,6 +127,12 @@ public class ShiftActivity extends Activity {
                 R.string.shift_panel_pp,
                 ShiftPrefs.promptpayBillCount(this),
                 ShiftPrefs.moneyPlain(pp)))
+        .append('\n');
+    sb.append(
+            getString(
+                R.string.shift_panel_transfer,
+                ShiftPrefs.transferBillCount(this),
+                ShiftPrefs.moneyPlain(transfer)))
         .append('\n');
     sb.append(getString(R.string.shift_panel_net, ShiftPrefs.moneyPlain(net))).append('\n');
     sb.append(
