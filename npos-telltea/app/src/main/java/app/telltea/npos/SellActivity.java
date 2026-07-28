@@ -105,6 +105,8 @@ public class SellActivity extends Activity {
   private boolean searchOpen = false;
   private final List<MenuModels.CartLine> cart = new ArrayList<>();
   private double discountBaht = 0;
+  /** Short draft code shown after ตะกร้า until cart clears / sale commits. */
+  private String draftCartCode = "";
   private CustomerDisplayController customerDisplay;
   private UpdatePromptController updatePrompt;
   private UiScale uiScale;
@@ -664,6 +666,7 @@ public class SellActivity extends Activity {
         () -> {
           cart.clear();
           discountBaht = 0;
+          draftCartCode = "";
           renderCart();
         });
   }
@@ -677,6 +680,7 @@ public class SellActivity extends Activity {
       HoldCart.save(this, cart, discountBaht);
       cart.clear();
       discountBaht = 0;
+      draftCartCode = "";
       renderCart();
       updateHoldRestoreButton();
       Toast.makeText(this, R.string.hold_saved, Toast.LENGTH_SHORT).show();
@@ -716,6 +720,7 @@ public class SellActivity extends Activity {
       }
       cart.addAll(held.lines);
       discountBaht = held.discountBaht;
+      ensureDraftCartCode();
       renderCart();
       updateHoldRestoreButton();
       Toast.makeText(this, R.string.hold_restored, Toast.LENGTH_SHORT).show();
@@ -1901,9 +1906,20 @@ public class SellActivity extends Activity {
   private void addItemWithOptions(
       MenuModels.Item item, JSONArray optionsJson, double unit, int qty) {
     int q = Math.max(1, qty);
+    ensureDraftCartCode();
     cart.add(new MenuModels.CartLine(item.id, item.name, unit, q, optionsJson));
     renderCart();
     OpsLogger.info(this, "sale", "เพิ่มเมนู", item.name + " ×" + q);
+  }
+
+  /** Assign a short cart code once per basket — shown after ตะกร้า. */
+  private void ensureDraftCartCode() {
+    if (draftCartCode != null && !draftCartCode.isEmpty()) return;
+    String raw = Long.toString(System.currentTimeMillis(), 36) + Integer.toString((int) (Math.random() * 1296), 36);
+    String tail = raw.replaceAll("[^a-zA-Z0-9]", "");
+    if (tail.length() > 6) tail = tail.substring(tail.length() - 6);
+    if (tail.isEmpty()) tail = "LOCAL1";
+    draftCartCode = tail.toUpperCase(Locale.US);
   }
 
   private MenuModels.OptionGroup findGroup(String id) {
@@ -2051,16 +2067,22 @@ public class SellActivity extends Activity {
         payAllDiscount.setText(R.string.pay_all_discount_none);
       }
     }
-    if (cartBillRef != null) {
-      if (cart.isEmpty()) {
+    TextView cartTitle = findViewById(R.id.cartTitle);
+    if (cart.isEmpty()) {
+      draftCartCode = "";
+      if (cartTitle != null) cartTitle.setText(R.string.cart_title);
+      if (cartBillRef != null) {
+        cartBillRef.setVisibility(View.VISIBLE);
         cartBillRef.setText(R.string.cart_bill_new);
-      } else {
-        String sid = ShiftPrefs.sessionId(this);
-        String shortRef =
-            sid != null && sid.length() >= 4
-                ? sid.substring(sid.length() - 4).toUpperCase(Locale.US)
-                : "NEW";
-        cartBillRef.setText(getString(R.string.cart_bill_ref_fmt, shortRef));
+      }
+    } else {
+      ensureDraftCartCode();
+      if (cartTitle != null) {
+        cartTitle.setText(getString(R.string.cart_title_with_code, draftCartCode));
+      }
+      if (cartBillRef != null) {
+        // Code lives in the title (ตะกร้า · #XXXX) — hide trailing duplicate.
+        cartBillRef.setVisibility(View.GONE);
       }
     }
     updateHoldRestoreButton();
@@ -2256,38 +2278,15 @@ public class SellActivity extends Activity {
   }
 
   /**
-   * Bank transfer to shop account (sticker QR / account number) — staff verifies slip,
-   * then confirms. Not PromptPay QR on the POS screen; drawer stays closed.
+   * Bank transfer — staff only confirms slip was checked. No account/code entry screen.
    */
   private void showTransferConfirm(double total) {
-    LinearLayout box = new LinearLayout(this);
-    box.setOrientation(LinearLayout.VERTICAL);
-    int pad = NposUi.dp(this, 8);
-    box.setPadding(pad, pad, pad, pad);
-
-    TextView msg = NposUi.body(this, getString(R.string.pay_transfer_msg, total));
-    msg.setPadding(0, 0, 0, NposUi.dp(this, 10));
-    box.addView(msg);
-
-    EditText ref = NposUi.field(this);
-    ref.setHint(R.string.pay_transfer_ref_hint);
-    ref.setInputType(InputType.TYPE_CLASS_TEXT);
-    box.addView(ref);
-
-    ScrollView scroll = new ScrollView(this);
-    scroll.addView(box);
-
-    NposConfirmDialog.custom(
+    NposConfirmDialog.confirm(
         this,
         getString(R.string.pay_transfer_title),
-        scroll,
+        getString(R.string.pay_transfer_msg, total),
         getString(R.string.pay_transfer_confirm),
-        () -> {
-          String note = ref.getText() == null ? "" : ref.getText().toString().trim();
-          commitSale(PaymentMethods.TRANSFER, 0, note);
-          return true;
-        },
-        this::syncCustomerDisplay);
+        () -> commitSale(PaymentMethods.TRANSFER, 0, "");
   }
 
   /** Early phase: PromptPay UI kept for compile safety but unused (QR removed). */
@@ -2478,6 +2477,7 @@ public class SellActivity extends Activity {
                             }
                             cart.clear();
                             discountBaht = 0;
+                            draftCartCode = "";
                             renderCartViewsOnly();
                             if (menu != null) renderMenu();
                             updateShiftSummary();

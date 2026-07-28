@@ -180,8 +180,8 @@ export function sortSessionsNewestFirst(sessions: PosSession[]): PosSession[] {
   return [...sessions].sort((a, b) => posSessionActivityAt(b) - posSessionActivityAt(a));
 }
 
-/** @deprecated prefer sortSessionsNewestFirst for slim overview */
-function sortSessionsOpenFirst(sessions: PosSession[]): PosSession[] {
+/** Open rounds first (latest open on top), then closed by newest close. */
+export function sortSessionsOpenFirst(sessions: PosSession[]): PosSession[] {
   return [...sessions].sort((a, b) => {
     const aOpen = a.status === "open" ? 1 : 0;
     const bOpen = b.status === "open" ? 1 : 0;
@@ -191,6 +191,29 @@ function sortSessionsOpenFirst(sessions: PosSession[]): PosSession[] {
     const bClosed = b.closedAt || b.openedAt || 0;
     return bClosed - aClosed;
   });
+}
+
+/** Elapsed open time, or closed−opened when closed. */
+export function posSessionDurationMs(session: PosSession, nowMs = Date.now()): number {
+  const openAt = session.openedAt || 0;
+  if (!openAt) return 0;
+  if (session.status === "closed" && session.closedAt && session.closedAt >= openAt) {
+    return session.closedAt - openAt;
+  }
+  return Math.max(0, nowMs - openAt);
+}
+
+/** Compact Thai duration — e.g. `2ชม.15น.` · `45น.` · `12วิ` */
+export function formatPosSessionDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return "—";
+  const totalSec = Math.floor(ms / 1000);
+  if (totalSec < 60) return `${totalSec}วิ`;
+  const totalMin = Math.floor(totalSec / 60);
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  if (hours <= 0) return `${mins}น.`;
+  if (mins <= 0) return `${hours}ชม.`;
+  return `${hours}ชม.${mins}น.`;
 }
 
 /** Owner-visible session code (not truncated to 6). */
@@ -458,7 +481,7 @@ export function subscribePosSessionsRecent(
     const map = new Map<string, PosSession>();
     for (const s of recent) map.set(s.id, s);
     for (const s of openLive) map.set(s.id, s);
-    onSessions(sortSessionsNewestFirst([...map.values()]).slice(0, rowLimit));
+    onSessions(sortSessionsOpenFirst([...map.values()]).slice(0, rowLimit));
   };
 
   const handleErr = (err: Error) => onError?.(err);
@@ -495,7 +518,7 @@ export function subscribePosSessionsRecent(
 export function subscribePosSalesRecent(
   onSales: (sales: PosSale[]) => void,
   onError?: (err: Error) => void,
-  rowLimit = 80,
+  rowLimit = 120,
 ): Unsubscribe {
   return onSnapshot(
     query(

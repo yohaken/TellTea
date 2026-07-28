@@ -15,7 +15,9 @@ import {
 } from "@/lib/pos-devices";
 import {
   POS_SESSIONS_SLIM_LIMIT,
+  formatPosSessionDuration,
   posSessionCode,
+  posSessionDurationMs,
   salesForSession,
   voidedForSession,
 } from "@/lib/pos-sales-report";
@@ -48,6 +50,7 @@ type RowModel = {
   sessionCode: string;
   open: boolean;
   dateLabel: string;
+  durationLabel: string;
   total: number;
   bills: number;
   voids: number;
@@ -69,8 +72,10 @@ function buildRows(
   sessions: PosSession[],
   sales: PosSale[],
   devicesById: Map<string, PosDevice>,
+  nowMs: number,
 ): RowModel[] {
   return sessions.map((session) => {
+    const open = session.status === "open";
     const active = salesForSession(sales, session.id);
     const voided = voidedForSession(sales, session.id);
     const cashSum = active
@@ -88,6 +93,14 @@ function buildRows(
       device?.pairingCode ||
       (session.deviceId ? posPairingCodeFromId(session.deviceId) : "—");
     const dayMs = session.date || session.openedAt || 0;
+    // Open rounds: prefer live bill window so totals update before close.
+    const total = open ? salesTotal || session.totalSales || 0 : session.totalSales || salesTotal || 0;
+    const bills = open ? active.length || session.saleCount || 0 : session.saleCount || active.length || 0;
+    const cash = open ? cashSum || session.cashTotal || 0 : session.cashTotal ?? cashSum;
+    const transfer = open
+      ? transferSum || session.transferTotal || 0
+      : session.transferTotal ?? transferSum;
+    const pp = open ? ppSum || session.promptpayTotal || 0 : session.promptpayTotal ?? ppSum;
     return {
       session,
       deviceLabel: device
@@ -97,14 +110,15 @@ function buildRows(
           : "—",
       pairingCode: pairing,
       sessionCode: posSessionCode(session.id),
-      open: session.status === "open",
+      open,
       dateLabel: formatDateShort(dayMs),
-      total: salesTotal || session.totalSales || 0,
-      bills: active.length || session.saleCount || 0,
+      durationLabel: formatPosSessionDuration(posSessionDurationMs(session, nowMs)),
+      total,
+      bills,
       voids: voided.length || session.voidedCount || 0,
-      cash: session.cashTotal ?? cashSum,
-      transfer: session.transferTotal ?? transferSum,
-      pp: session.promptpayTotal ?? ppSum,
+      cash,
+      transfer,
+      pp,
       opening: session.openingCash,
       counted: session.closingCashCounted,
       expected: session.expectedCash,
@@ -178,6 +192,7 @@ export function PosSessionsSlimTable({
   const [pulseHint, setPulseHint] = useState<string | null>(null);
   const [openOnly, setOpenOnly] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     return subscribePosDevicesAdmin(
@@ -185,6 +200,13 @@ export function PosSessionsSlimTable({
       (err) => onError?.(err.message),
     );
   }, [onError]);
+
+  useEffect(() => {
+    const hasOpen = sessions.some((s) => s.status === "open");
+    if (!hasOpen) return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, [sessions]);
 
   const loadPulse = useCallback(async () => {
     try {
@@ -220,11 +242,12 @@ export function PosSessionsSlimTable({
   }, [devices]);
 
   const rows = useMemo(
-    () => buildRows(sessions, sales, devicesById),
-    [sessions, sales, devicesById],
+    () => buildRows(sessions, sales, devicesById, nowMs),
+    [sessions, sales, devicesById, nowMs],
   );
 
   const daySum = useMemo(() => daySummaryFromSales(sales), [sales]);
+  const openCount = useMemo(() => rows.filter((r) => r.open).length, [rows]);
 
   const deviceOptions = useMemo(() => {
     const seen = new Map<string, string>();
@@ -258,8 +281,9 @@ export function PosSessionsSlimTable({
           <h3>รอบการขาย nPos</h3>
           <span className="muted">
             {filteredRows.length}
-            {filteredRows.length !== rows.length ? `/${rows.length}` : ""} รอบ · ใหม่สุดบน · ≤
+            {filteredRows.length !== rows.length ? `/${rows.length}` : ""} รอบ · เปิดอยู่บน · ≤
             {POS_SESSIONS_SLIM_LIMIT}
+            {openCount ? ` · active ${openCount}` : ""}
           </span>
         </div>
         <PulseChips
@@ -332,6 +356,9 @@ export function PosSessionsSlimTable({
             <span role="columnheader">เริ่ม</span>
             <span role="columnheader">ปิด</span>
             <span role="columnheader" className="npos-slim-num">
+              รวม
+            </span>
+            <span role="columnheader" className="npos-slim-num">
               บิล
             </span>
             <span role="columnheader" className="npos-slim-num">
@@ -383,6 +410,13 @@ export function PosSessionsSlimTable({
                   <span role="cell">{formatHm(row.session.openedAt)}</span>
                   <span role="cell">
                     {row.session.closedAt ? formatHm(row.session.closedAt) : "—"}
+                  </span>
+                  <span
+                    role="cell"
+                    className="npos-slim-num npos-slim-duration"
+                    title={row.open ? "เวลารวมถึงตอนนี้" : "เวลารวมทั้งรอบ"}
+                  >
+                    {row.durationLabel}
                   </span>
                   <span role="cell" className="npos-slim-num">
                     {row.bills || "—"}
@@ -439,6 +473,7 @@ export function PosSessionsSlimTable({
                         ? ` · ทอนค้าง ${moneyOrDash(row.leave)}`
                         : ""}
                       {row.note ? ` · ${row.note}` : ""}
+                      {row.open ? ` · เวลารวม ${row.durationLabel}` : ` · รวม ${row.durationLabel}`}
                       {" · รายบิลด้านล่างกรองตามรอบนี้"}
                       {" · "}
                       <button
@@ -458,7 +493,8 @@ export function PosSessionsSlimTable({
       )}
 
       <p className="muted npos-slim-foot">
-        รอบ = กะ nPos · คอลัมน์กระชับ · รหัสรอบซ่อนเมื่อจอแคบ · ปิดกะที่แท็บเล็ตเท่านั้นเป็นหลัก ·{" "}
+        รอบ = กะ nPos · คอลัมน์กระชับ · รหัสรอบซ่อนเมื่อจอแคบ · รอบเปิดอยู่ขึ้นบนพร้อมยอด realtime ·
+        คอลัมน์รวม = เวลารวมของรอบ · ปิดกะที่แท็บเล็ตเท่านั้นเป็นหลัก ·{" "}
         <strong>ปิดรอบ</strong> จากหลังร้านใช้ช่วงทดลอง (แท็บเล็ตอาจยังคิดว่าเปิดอยู่จนกว่าซิงก์)
       </p>
     </section>

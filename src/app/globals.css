@@ -7019,13 +7019,20 @@ body.modal-open .main-panel {
     minmax(5rem, 1.1fr)
     minmax(2.6rem, max-content)
     minmax(2.6rem, max-content)
+    minmax(3.2rem, max-content)
     minmax(1.6rem, max-content)
     minmax(1.8rem, max-content)
     minmax(3rem, max-content)
     minmax(2.4rem, max-content)
     minmax(2.4rem, max-content)
     minmax(2.2rem, max-content);
-  min-width: 48rem;
+  min-width: 52rem;
+}
+
+.npos-slim-duration {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #3d4a42;
 }
 
 .npos-slim-close-cell {
@@ -7135,13 +7142,14 @@ body.modal-open .main-panel {
       minmax(3.6rem, max-content)
       minmax(2.6rem, max-content)
       minmax(2.6rem, max-content)
+      minmax(3.2rem, max-content)
       minmax(1.6rem, max-content)
       minmax(1.8rem, max-content)
       minmax(3rem, max-content)
       minmax(2.4rem, max-content)
       minmax(2.4rem, max-content)
       minmax(2.2rem, max-content);
-    min-width: 36rem;
+    min-width: 40rem;
   }
 
   .npos-slim-row--bills-super {

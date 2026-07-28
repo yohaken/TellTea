@@ -1,6 +1,6 @@
 # nPos — sell table-view first (หมวดซ้าย + ชำระ/บันทึก)
 
-อัปเดต: **1.14.63** · `APP_BUILD` 321 · `POS_BUILD` 116 · vc **86**
+อัปเดต: **1.14.64** · `APP_BUILD` 322 · `POS_BUILD` 117 · vc **87**
 
 ## สเปกที่ยืนยัน
 

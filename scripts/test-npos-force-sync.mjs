@@ -11,10 +11,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 const require = createRequire(import.meta.url);
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 321/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 116/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+86/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.63"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 322/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 117/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+87/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.64"/);
 
 assert.ok(existsSync(join(root, "docs/npos-force-sync-checklist.md")));
 

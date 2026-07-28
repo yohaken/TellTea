@@ -10,10 +10,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 321/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 116/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+86/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.63"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 322/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 117/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+87/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.64"/);
 
 assert.ok(existsSync(join(root, "docs/npos-bo-sessions-super-checklist.md")));
 assert.match(read("docs/npos-bo-sessions-super-checklist.md"), /50|รหัส|closedAt|flush/);
@@ -32,6 +32,8 @@ assert.match(slim, /เครื่อง/);
 assert.match(slim, /รหัสรอบ/);
 assert.match(slim, /วันที่/);
 assert.match(slim, /ปิดรอบ/);
+assert.match(slim, /durationLabel|npos-slim-duration/);
+assert.match(slim, /formatPosSessionDuration|posSessionDurationMs/);
 assert.match(slim, /onForceClose/);
 assert.match(slim, /npos-slim-col-session/);
 assert.match(slim, /npos-slim-row--sessions-super/);
@@ -39,6 +41,10 @@ assert.match(slim, /npos-slim-scroll--rows/);
 assert.match(slim, /closedAt/);
 assert.match(slim, /pairingCode|posPairingCodeFromId/);
 assert.doesNotMatch(slim, /shortPosSessionId/);
+
+const libOpen = read("src/lib/pos-sales-report.ts");
+assert.match(libOpen, /sortSessionsOpenFirst\(\[\.\.\.map\.values\(\)\]\)/);
+assert.match(libOpen, /formatPosSessionDuration/);
 
 const report = read("src/components/PosSalesReport.tsx");
 assert.match(report, /subscribePosSessionsRecent/);

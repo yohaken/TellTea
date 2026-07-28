@@ -1,6 +1,6 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **1.14.63** + แผน **Exclusive seat S1–S4** · friction F0–F5  
+อัปเดต: **1.14.64** + แผน **Exclusive seat S1–S4** · friction F0–F5  
 ดู [npos-friendly-ui-checklist.md](./npos-friendly-ui-checklist.md) · [npos-bank-transfer-pay-checklist.md](./npos-bank-transfer-pay-checklist.md) · [npos-shift-panel-pulse-interval-checklist.md](./npos-shift-panel-pulse-interval-checklist.md) · [npos-force-update-pulse-checklist.md](./npos-force-update-pulse-checklist.md) · [npos-sales-history-compact-checklist.md](./npos-sales-history-compact-checklist.md) · [npos-version-on-sync-checklist.md](./npos-version-on-sync-checklist.md) · [npos-version-prod-verify-checklist.md](./npos-version-prod-verify-checklist.md) · [npos-sales-history-checklist.md](./npos-sales-history-checklist.md) · [npos-sell-counter-polish-checklist.md](./npos-sell-counter-polish-checklist.md) · [npos-kick-reclaim-checklist.md](./npos-kick-reclaim-checklist.md) · [npos-exclusive-seat-checklist.md](./npos-exclusive-seat-checklist.md) · [npos-counter-ux-batch-checklist.md](./npos-counter-ux-batch-checklist.md) · [npos-ops-friction-phases.md](./npos-ops-friction-phases.md) · [npos-doc-drawer-polish-checklist.md](./npos-doc-drawer-polish-checklist.md) · [npos-sell-table-pay-checklist.md](./npos-sell-table-pay-checklist.md) · [npos-shift-dashboard-checklist.md](./npos-shift-dashboard-checklist.md) · [npos-option-cart-wrap-checklist.md](./npos-option-cart-wrap-checklist.md) · [npos-customer-focus-checklist.md](./npos-customer-focus-checklist.md) · [npos-store-claim-checklist.md](./npos-store-claim-checklist.md) · [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-blind-shift-close-checklist.md](./npos-blind-shift-close-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md) · [npos-bestseller-rank-checklist.md](./npos-bestseller-rank-checklist.md) · [npos-sell-flow-polish-checklist.md](./npos-sell-flow-polish-checklist.md) · [npos-receipt-parity-checklist.md](./npos-receipt-parity-checklist.md) · [npos-z-report-form-checklist.md](./npos-z-report-form-checklist.md) · [npos-z-web-form-parity-checklist.md](./npos-z-web-form-parity-checklist.md) · [npos-bo-shift-readonly-checklist.md](./npos-bo-shift-readonly-checklist.md) · [npos-cut-bo-entry-checklist.md](./npos-cut-bo-entry-checklist.md) · [npos-float-shift-p0-checklist.md](./npos-float-shift-p0-checklist.md) · [npos-bo-sales-retention-plan.md](./npos-bo-sales-retention-plan.md) · [npos-receipt-history-staff.md](./npos-receipt-history-staff.md)
 
 ## ทำแล้ว
@@ -44,7 +44,7 @@
 - [x] **Customer focus + prod verify MD** จอลูกค้าโฟกัสรายการ · หลังจ่ายค้างเช็ค · checklist ตรวจ latest.json (**1.14.59**)
 - [x] **Pay chooser touch** เลิก `setItems` รายการบาง · ปุ่มใหญ่เงินสด/โอน + MD friendly-ui #8 (**1.14.60**)
 - [x] **BO sessions slim super** รหัสเครื่อง/รอบ · วันที่ · เลิก date slider · 50 แถว scroll · ปิดกะ flush→เซิร์ฟก่อนออกงาน (**1.14.61**)
-- [x] **Cart layout touch** ตะกร้า 35% · แถวข้อความส่วนลด/พัก/ล้าง · ชำระสูง ~18% · ปุ่มกลับใหญ่ (**1.14.63**)
+- [x] **Cart layout touch** ตะกร้า 35% · แถวข้อความส่วนลด/พัก/ล้าง · ชำระสูง ~18% · ปุ่มกลับใหญ่ (**1.14.64**)
 - [x] จิ้มเมนู → จ่าย → ใบเสร็จ → รีเซ็ต · ลิ้นชักตอนสด
 
 ## คิวถัดไป (เฟสก่อนหน้าที่ยังไม่ทำ)

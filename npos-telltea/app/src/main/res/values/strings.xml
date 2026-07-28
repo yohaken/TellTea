@@ -74,6 +74,7 @@
     <string name="sell_menu_demo">ใช้เมนูเดโม — ยังดึงเมนูร้านไม่ได้</string>
     <string name="sell_menu_empty">ไม่มีเมนูในหมวดนี้</string>
     <string name="cart_title">ตะกร้า</string>
+    <string name="cart_title_with_code">ตะกร้า · #%1$s</string>
     <string name="cart_bill_new">บิลใหม่</string>
     <string name="cart_bill_ref_fmt">#%1$s</string>
     <string name="cart_subtotal_label">ยอดรวม</string>
@@ -210,9 +211,9 @@
     <string name="pay_pp_qr_fail">สร้าง QR ไม่ได้ — ตรวจเลข PromptPay</string>
     <string name="pay_pp_hidden_early">ช่วงแรกปิด PromptPay / QR ชั่วคราว — ใช้เงินสดหรือโอนเงิน</string>
     <string name="pay_transfer_title">โอนเงินเข้าบัญชีร้าน</string>
-    <string name="pay_transfer_msg">ยอด ฿%1$.0f\n\nลูกค้าโอนเข้าบัญชีร้านแล้ว (สแกน QR ป้าย / เลขบัญชี) · ตรวจสลิปหรือแจ้งเตือนเงินเข้าแล้วค่อยยืนยัน\n\nไม่สร้าง QR บนจอ · ลิ้นชักไม่เด้ง · ไม่นับในเงินสดลิ้นชัก</string>
+    <string name="pay_transfer_msg">ยอด ฿%1$.0f\n\nตรวจสอบสลิปแล้ว OK?\n\nลิ้นชักไม่เด้ง · ไม่นับในเงินสดลิ้นชัก</string>
     <string name="pay_transfer_ref_hint">เลขอ้างอิงสลิป (ถ้ามี · เช่น 4 ตัวท้าย)</string>
-    <string name="pay_transfer_confirm">ยืนยันปิดบิลโอน</string>
+    <string name="pay_transfer_confirm">ตรวจสอบสลิปแล้ว OK</string>
     <string name="receipts_filter_transfer">โอน</string>
     <string name="shift_summary_fmt">รอบนี้ · ขาย %1$d · เงินสด ฿%2$s · PP ฿%3$s · โอน ฿%4$s · ทำลาย %5$d</string>
     <string name="blind_close_summary_fmt">บิลขาย %1$d\nเงินสด %2$d บิล · ฿%3$.0f\nPromptPay %4$d บิล · ฿%5$.0f\nโอนเงิน %6$d บิล · ฿%7$.0f\nส่วนลด ฿%8$.0f · ทำลายบิล %9$d\n————\nเงินทอนเริ่ม ฿%10$.0f\nถอนกลางกะ ฿%11$.0f · %12$d ครั้ง\nควรมีในลิ้นชัก ฿%13$.0f\nนับได้ ฿%14$.0f\nส่วนต่าง %15$s ฿%16$.0f\nเงินทอนค้างรอบถัดไป ฿%17$.0f\nเหตุผล: %18$s</string>
