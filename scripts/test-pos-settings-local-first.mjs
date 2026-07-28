@@ -51,7 +51,7 @@ assert.match(sell, /Refresh shop name\/address|loadShop/);
 
 const version = readFileSync(join(root, "src/lib/pos-version.ts"), "utf8");
 assert.match(version, /POS_BUILD = 102/);
-assert.match(readFileSync(join(root, "src/lib/version.ts"), "utf8"), /APP_BUILD = 359/);
+assert.match(readFileSync(join(root, "src/lib/version.ts"), "utf8"), /APP_BUILD = 364/);
 assert.match(
   readFileSync(join(root, "npos-telltea/app/build.gradle"), "utf8"),
   /versionCode\s+72/,

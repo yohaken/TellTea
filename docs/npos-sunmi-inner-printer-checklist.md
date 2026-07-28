@@ -1,6 +1,6 @@
 # nPos — SUNMI InnerPrinter (built-in)
 
-อัปเดต: **1.14.71** · vc **94**
+อัปเดต: **1.14.72** · vc **95**
 
 ## ปัญหาหน้างาน
 Wongnai พิมพ์ไทย/ลิ้นชักบน **SUNMI D2s_PLUS** ได้ · nPos เดิมส่ง ESC/POS TIS-620 ผ่าน `sendRAWData` → ตัวอักษรเพี้ยนเป็นจีน  

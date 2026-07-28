@@ -10,15 +10,23 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 359/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 364/);
+
+const gradle = read("npos-telltea/app/build.gradle");
+const code = Number((gradle.match(/versionCode\s+(\d+)/) || [])[1] || 0);
+const name = (gradle.match(/versionName\s+"([^"]+)"/) || [])[1] || "";
+assert.ok(code > 0 && name);
 
 const release = read("src/lib/npos-apk-release.ts");
 assert.match(release, /NPOS_SYSTEM_VERSION_NAME/);
 assert.match(release, /NPOS_SYSTEM_VERSION_CODE/);
 assert.match(release, /fetchNposSystemRelease/);
 assert.match(release, /nposVersionMatch/);
-assert.match(release, /1\.14\.67/);
-assert.match(release, /90/);
+assert.match(
+  release,
+  new RegExp(`NPOS_SYSTEM_VERSION_NAME = "${name.replace(/\./g, "\\.")}"`),
+);
+assert.match(release, new RegExp(`NPOS_SYSTEM_VERSION_CODE = ${code};`));
 
 const panel = read("src/components/NposDevicesPanel.tsx");
 assert.match(panel, /เวอร์ชันระบบ/);

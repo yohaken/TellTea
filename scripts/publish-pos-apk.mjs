@@ -93,7 +93,23 @@ const meta = {
 
 fs.writeFileSync(path.join(destDir, "latest.json"), `${JSON.stringify(meta, null, 2)}\n`);
 
+/** Fail loud if BO table pin lags APK — «เวอร์ชันระบบ» must match every ship. */
+const pinPath = path.join(root, "src/lib/npos-apk-release.ts");
+const pinSrc = fs.readFileSync(pinPath, "utf8");
+const pinName = (pinSrc.match(/NPOS_SYSTEM_VERSION_NAME = "([^"]+)"/) || [])[1] || "";
+const pinCode = Number((pinSrc.match(/NPOS_SYSTEM_VERSION_CODE = (\d+)/) || [])[1] || 0);
+if (pinName !== versionName || pinCode !== versionCode) {
+  console.error(
+    `FAIL: npos-apk-release.ts pin ${pinName} (${pinCode}) != APK ${versionName} (${versionCode})`,
+  );
+  console.error(
+    "Bump NPOS_SYSTEM_VERSION_* in src/lib/npos-apk-release.ts so BO «เวอร์ชันระบบ» updates.",
+  );
+  process.exit(1);
+}
+
 console.log(
   `OK publish-pos-apk → ${dest} (${st.size} bytes) v${versionName} (${versionCode})`,
 );
 console.log(`OK manifest → ${publicManifestUrl}`);
+console.log(`OK BO system pin matches APK ${versionName} (${versionCode})`);
