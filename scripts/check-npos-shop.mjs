@@ -20,6 +20,7 @@ const steps = [
   { name: "shift-dashboard", cmd: ["node", "scripts/test-npos-shift-dashboard.mjs"] },
   { name: "option-cart-wrap", cmd: ["node", "scripts/test-npos-option-cart-wrap.mjs"] },
   { name: "customer-display", cmd: ["node", "scripts/test-npos-customer-display.mjs"] },
+  { name: "customer-focus", cmd: ["node", "scripts/test-npos-customer-focus.mjs"] },
   { name: "capture-wiring", cmd: ["node", "scripts/test-npos-capture.mjs"] },
   { name: "web-parity-shot", cmd: ["node", "scripts/test-npos-web-parity-shot.mjs"] },
   { name: "smart-ui-scale", cmd: ["node", "scripts/test-npos-smart-ui-scale.mjs"] },

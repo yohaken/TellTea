@@ -337,6 +337,7 @@
     <string name="customer_standby_recommend_label">เมนูแนะนำ</string>
     <string name="customer_standby_promo_fallback">TellTea · สดใหม่ทุกแก้ว</string>
     <string name="customer_select_title">รายการของคุณ</string>
+    <string name="customer_paid_review_title">รายการที่ชำระแล้ว · เช็คได้</string>
     <string name="customer_select_discount_fmt">ส่วนลด −฿%.0f</string>
     <string name="customer_select_total_fmt">รวม ฿%.0f</string>
     <string name="customer_pay_title">ยอดชำระ</string>

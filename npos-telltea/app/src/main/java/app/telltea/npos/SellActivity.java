@@ -1918,9 +1918,11 @@ public class SellActivity extends Activity {
     }
     List<CustomerDisplayPresentation.Line> lines = new ArrayList<>();
     for (MenuModels.CartLine line : cart) {
+      List<String> optLines = line.optionsLines();
+      String detail = optLines.isEmpty() ? "" : String.join("\n", optLines);
       lines.add(
           new CustomerDisplayPresentation.Line(
-              line.name, line.qty, line.unitPrice, line.lineTotal(), line.optionsSummary()));
+              line.name, line.qty, line.unitPrice, line.lineTotal(), detail));
     }
     double sub = cartSubtotal();
     customerDisplay.showSelecting(lines, sub, discountBaht, Math.max(0, sub - discountBaht));

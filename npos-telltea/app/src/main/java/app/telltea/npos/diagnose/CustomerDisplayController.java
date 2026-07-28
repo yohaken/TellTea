@@ -12,12 +12,14 @@ import app.telltea.npos.R;
 import app.telltea.npos.sell.MenuModels;
 
 /**
- * Secondary-display controller: two-pane layout + auto-resize metrics.
- * Idle media slideshow continues during Ordering (upsell); QR overlays media on Payment.
+ * Secondary-display controller: cart-first while ordering; promo only when idle.
+ * After pay: success splash → brief paid-receipt review → standby (interrupted by new cart).
  */
 public final class CustomerDisplayController {
     public static final long SUCCESS_HOLD_MS = 3500L;
-    /** Idle/ordering promo slideshow — web-feel pacing (~5s). */
+    /** After success splash — keep paid lines so customer can verify (option C). */
+    public static final long PAID_REVIEW_MS = 12000L;
+    /** Idle promo slideshow pacing. */
     public static final long PROMO_ROTATE_MS = 5000L;
 
     /** Live secondary Presentation for diagnose capture (not the probe stub). */
@@ -103,12 +105,11 @@ public final class CustomerDisplayController {
             double discount,
             double total) {
         cancelSuccess();
+        stopRotate();
         if (!ensurePresentation()) return;
         rememberCart(lines, subtotal, discount, total);
+        // Cart is primary — collapse promo media while ordering.
         presentation.showSelecting(lastLines, lastSubtotal, lastDiscount, lastTotal);
-        // Keep upsell media rotating while ordering.
-        applyIdleOrPromoFrame(false);
-        startRotate();
     }
 
     public void showPaymentCash(double total, double received, double change, boolean enough) {
@@ -128,6 +129,10 @@ public final class CustomerDisplayController {
         presentation.showPaymentQr(lastLines, lastSubtotal, lastDiscount, lastTotal, qr);
     }
 
+    /**
+     * Success splash → paid receipt review (cart-full) → standby.
+     * New {@link #showSelecting} / {@link #showStandby} cancels the chain.
+     */
     public void showSuccessThenStandby(String message, double total, double change) {
         stopRotate();
         cancelSuccess();
@@ -136,7 +141,19 @@ public final class CustomerDisplayController {
         successTask =
                 () -> {
                     successTask = null;
-                    showStandby();
+                    if (presentation == null) return;
+                    if (lastLines != null && !lastLines.isEmpty()) {
+                        presentation.showPaidReview(
+                                lastLines, lastSubtotal, lastDiscount, lastTotal);
+                        successTask =
+                                () -> {
+                                    successTask = null;
+                                    showStandby();
+                                };
+                        main.postDelayed(successTask, PAID_REVIEW_MS);
+                    } else {
+                        showStandby();
+                    }
                 };
         main.postDelayed(successTask, SUCCESS_HOLD_MS);
     }
@@ -237,18 +254,18 @@ public final class CustomerDisplayController {
     private void startRotate() {
         stopRotate();
         if (promos.size() <= 1) return;
-        rotateTask =
+                rotateTask =
                 new Runnable() {
                     @Override
                     public void run() {
                         if (presentation == null) return;
                         CustomerDisplayPresentation.Mode m = presentation.getMode();
-                        if (m != CustomerDisplayPresentation.Mode.STANDBY
-                                && m != CustomerDisplayPresentation.Mode.SELECTING) {
+                        // Promo rotates only while idle — not during cart focus / paid review.
+                        if (m != CustomerDisplayPresentation.Mode.STANDBY) {
                             return;
                         }
                         promoIndex = (promoIndex + 1) % promos.size();
-                        applyIdleOrPromoFrame(m == CustomerDisplayPresentation.Mode.STANDBY);
+                        applyIdleOrPromoFrame(true);
                         main.postDelayed(this, PROMO_ROTATE_MS);
                     }
                 };

@@ -20,15 +20,16 @@ import app.telltea.npos.R;
 import app.telltea.npos.sell.ImageLoader;
 
 /**
- * Two-pane customer UI (media 60–70% + receipt 30–40%) with auto-resize for
- * portrait emu / landscape shop panels. Modes: idle · ordering · payment · success.
+ * Customer UI: idle = promo + welcome; ordering/paid-review = cart full-screen;
+ * payment overlays media; success splash.
  */
 public final class CustomerDisplayPresentation extends Presentation {
     public enum Mode {
         STANDBY,
         SELECTING,
         PAYMENT,
-        SUCCESS
+        SUCCESS,
+        PAID_REVIEW
     }
 
     public static final class Line {
@@ -156,6 +157,7 @@ public final class CustomerDisplayPresentation extends Presentation {
         mode = Mode.STANDBY;
         panelSuccess.setVisibility(View.GONE);
         mediaPayOverlay.setVisibility(View.GONE);
+        setCartFocus(false);
         mediaCaptionBar.setVisibility(View.VISIBLE);
         mediaImage.setVisibility(View.VISIBLE);
         receiptIdle.setVisibility(View.VISIBLE);
@@ -173,22 +175,35 @@ public final class CustomerDisplayPresentation extends Presentation {
         bindPromo(promoText, promoImageUrl);
     }
 
-    /** Ordering: media keeps promo; side = live receipt. */
+    /** Ordering: cart full-screen — promo media collapsed. */
     public void showSelecting(
             List<Line> lines, double subtotal, double discountBaht, double total) {
         mode = Mode.SELECTING;
         panelSuccess.setVisibility(View.GONE);
         mediaPayOverlay.setVisibility(View.GONE);
-        mediaCaptionBar.setVisibility(View.VISIBLE);
-        mediaImage.setVisibility(View.VISIBLE);
+        setCartFocus(true);
         receiptIdle.setVisibility(View.GONE);
         receiptOrder.setVisibility(View.VISIBLE);
+        receiptOrderTitle.setText(R.string.customer_select_title);
         bindReceipt(lines, subtotal, discountBaht, total);
     }
 
-    /** Keep promo frame while ordering (controller rotates). */
+    /** After success splash — keep paid lines full-screen for customer check. */
+    public void showPaidReview(
+            List<Line> lines, double subtotal, double discountBaht, double total) {
+        mode = Mode.PAID_REVIEW;
+        panelSuccess.setVisibility(View.GONE);
+        mediaPayOverlay.setVisibility(View.GONE);
+        setCartFocus(true);
+        receiptIdle.setVisibility(View.GONE);
+        receiptOrder.setVisibility(View.VISIBLE);
+        receiptOrderTitle.setText(R.string.customer_paid_review_title);
+        bindReceipt(lines, subtotal, discountBaht, total);
+    }
+
+    /** Keep promo frame while idle only (controller rotates). */
     public void updatePromo(String promoText, String promoImageUrl) {
-        if (mode != Mode.STANDBY && mode != Mode.SELECTING) return;
+        if (mode != Mode.STANDBY) return;
         bindPromo(promoText, promoImageUrl);
     }
 
@@ -202,8 +217,10 @@ public final class CustomerDisplayPresentation extends Presentation {
             boolean enough) {
         mode = Mode.PAYMENT;
         panelSuccess.setVisibility(View.GONE);
+        setCartFocus(false);
         receiptIdle.setVisibility(View.GONE);
         receiptOrder.setVisibility(View.VISIBLE);
+        receiptOrderTitle.setText(R.string.customer_select_title);
         bindReceipt(lines, subtotal, discountBaht, total);
 
         mediaPayOverlay.setVisibility(View.VISIBLE);
@@ -235,8 +252,10 @@ public final class CustomerDisplayPresentation extends Presentation {
         // Early phase: amount-only — never show QR on customer display.
         mode = Mode.PAYMENT;
         panelSuccess.setVisibility(View.GONE);
+        setCartFocus(false);
         receiptIdle.setVisibility(View.GONE);
         receiptOrder.setVisibility(View.VISIBLE);
+        receiptOrderTitle.setText(R.string.customer_select_title);
         bindReceipt(lines, subtotal, discountBaht, total);
 
         mediaPayOverlay.setVisibility(View.VISIBLE);
@@ -253,6 +272,7 @@ public final class CustomerDisplayPresentation extends Presentation {
 
     public void showSuccess(String message, double total, double change) {
         mode = Mode.SUCCESS;
+        setCartFocus(false);
         panelSuccess.setVisibility(View.VISIBLE);
         mediaPayOverlay.setVisibility(View.GONE);
         successTitle.setText(R.string.customer_success_paid);
@@ -270,6 +290,23 @@ public final class CustomerDisplayPresentation extends Presentation {
                         : message.trim();
         successMessage.setText(msg);
         applyTextScale();
+    }
+
+    /** Collapse promo pane so cart/receipt fills the customer screen. */
+    private void setCartFocus(boolean cartPrimary) {
+        if (paneMedia == null || paneReceipt == null || customerSplit == null) return;
+        if (cartPrimary) {
+            paneMedia.setVisibility(View.GONE);
+            LinearLayout.LayoutParams receiptLp =
+                    new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            1f);
+            paneReceipt.setLayoutParams(receiptLp);
+        } else {
+            paneMedia.setVisibility(View.VISIBLE);
+            applyMetricsLayout();
+        }
     }
 
     private void bindPromo(String promoText, String promoImageUrl) {
@@ -297,17 +334,22 @@ public final class CustomerDisplayPresentation extends Presentation {
                 row.setPadding(0, Math.round(4 * metrics.scale), 0, Math.round(6 * metrics.scale));
 
                 TextView name = new TextView(getContext());
-                name.setText(line.name);
+                name.setText(
+                        String.format(
+                                Locale.getDefault(), "%d× %s", Math.max(1, line.qty), line.name));
                 name.setTextColor(0xFFF3F6F2);
                 name.setTextSize(TypedValue.COMPLEX_UNIT_SP, metrics.bodySp);
                 name.setTypeface(name.getTypeface(), android.graphics.Typeface.BOLD);
+                name.setMaxLines(Integer.MAX_VALUE);
+                name.setSingleLine(false);
+                name.setEllipsize(null);
+                name.setHorizontallyScrolling(false);
 
                 TextView meta = new TextView(getContext());
                 meta.setText(
                         String.format(
                                 Locale.getDefault(),
-                                "×%d  ·  ฿%.0f  ·  ฿%.0f",
-                                line.qty,
+                                "฿%.0f  ·  รวม ฿%.0f",
                                 line.unitPrice,
                                 line.lineTotal));
                 meta.setTextColor(0xFFA8B5AE);
@@ -316,11 +358,21 @@ public final class CustomerDisplayPresentation extends Presentation {
                 row.addView(name);
                 row.addView(meta);
                 if (line.detail != null && !line.detail.trim().isEmpty()) {
-                    TextView detail = new TextView(getContext());
-                    detail.setText(line.detail.trim());
-                    detail.setTextColor(0xFF7A8A82);
-                    detail.setTextSize(TypedValue.COMPLEX_UNIT_SP, metrics.bodySp * 0.85f);
-                    row.addView(detail);
+                    String[] parts = line.detail.trim().split("\n");
+                    for (String part : parts) {
+                        String t = part.trim();
+                        if (t.isEmpty()) continue;
+                        TextView detail = new TextView(getContext());
+                        detail.setText(t);
+                        detail.setTextColor(0xFF7A8A82);
+                        detail.setTextSize(TypedValue.COMPLEX_UNIT_SP, metrics.bodySp * 0.85f);
+                        detail.setMaxLines(Integer.MAX_VALUE);
+                        detail.setSingleLine(false);
+                        detail.setEllipsize(null);
+                        detail.setHorizontallyScrolling(false);
+                        detail.setPadding(Math.round(8 * metrics.scale), 0, 0, 0);
+                        row.addView(detail);
+                    }
                 }
                 receiptLines.addView(row);
             }
