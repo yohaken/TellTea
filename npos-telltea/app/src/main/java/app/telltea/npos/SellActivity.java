@@ -1842,6 +1842,7 @@ public class SellActivity extends Activity {
         optView.setMaxLines(Integer.MAX_VALUE);
         optView.setSingleLine(false);
         optView.setEllipsize(null);
+        optView.setHorizontallyScrolling(false);
         optView.setPadding(NposUi.dp(this, 8), NposUi.dp(this, 1), 0, 0);
         if (menuItem != null && menuItem.hasOptions()) {
           optView.setOnClickListener(v -> editCartLineOptions(idx));
