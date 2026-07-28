@@ -1316,6 +1316,7 @@ public class SellActivity extends Activity {
 
     final Runnable[] rebuildRef = new Runnable[1];
     final Runnable[] refreshTotalRef = new Runnable[1];
+    final Map<String, View> groupAnchors = new HashMap<>();
 
     refreshTotalRef[0] =
         () -> {
@@ -1335,6 +1336,7 @@ public class SellActivity extends Activity {
     rebuildRef[0] =
         () -> {
           groupsRoot.removeAllViews();
+          groupAnchors.clear();
           if (groups.size() > 1) {
             TextView lead = new TextView(this);
             lead.setText("เลือกตัวเลือก");
@@ -1355,6 +1357,7 @@ public class SellActivity extends Activity {
             header.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.captionSp);
             header.setPadding(0, uiScale.dp(6), 0, uiScale.dp(4));
             groupsRoot.addView(header);
+            groupAnchors.put(group.id, header);
 
             if (OptionPickerLogic.isSweetnessGroup(group)) {
               // Chip row — wrap, no scroll emphasis
@@ -1612,12 +1615,17 @@ public class SellActivity extends Activity {
               int max = group.effectiveMax();
               if (totalUnits < min) {
                 errView.setVisibility(View.VISIBLE);
-                errView.setText(getString(R.string.option_min, group.name, min));
+                errView.setText(
+                    min <= 1 && totalUnits == 0
+                        ? getString(R.string.option_required, group.name)
+                        : getString(R.string.option_min, group.name, min));
+                jumpToOptionGroup(groupsScroll, groupAnchors.get(group.id));
                 return;
               }
               if (max < Integer.MAX_VALUE && totalUnits > max) {
                 errView.setVisibility(View.VISIBLE);
                 errView.setText(getString(R.string.option_max, group.name, max));
+                jumpToOptionGroup(groupsScroll, groupAnchors.get(group.id));
                 return;
               }
               if (totalUnits == 0) continue;
@@ -1662,6 +1670,19 @@ public class SellActivity extends Activity {
           .getWindow()
           .setLayout(w, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
     }
+  }
+
+  /** Jump to required option group instantly (no smooth scroll) for fast counter work. */
+  private void jumpToOptionGroup(ScrollView scroll, View anchor) {
+    if (scroll == null || anchor == null) return;
+    scroll.setSmoothScrollingEnabled(false);
+    scroll.post(
+        () -> {
+          int y = Math.max(0, anchor.getTop() - NposUi.dp(this, 6));
+          scroll.scrollTo(0, y);
+          anchor.setBackgroundColor(0x33E85D24);
+          anchor.postDelayed(() -> anchor.setBackgroundColor(0x00000000), 900L);
+        });
   }
 
   /** Prefill option picker maps from a cart line's optionsJson. */
@@ -1733,7 +1754,11 @@ public class SellActivity extends Activity {
   /** Update cashier cart UI without touching customer Presentation (e.g. during SUCCESS). */
   private void renderCartViewsOnly() {
     cartList.removeAllViews();
-    int padV = NposUi.dp(this, 4);
+    if (uiScale == null) uiScale = UiScale.from(this, false);
+    int padV = NposUi.dp(this, 6);
+    // Slightly under left menu tile name (captionSp+0.5) — readable for tea prep.
+    float nameSp = Math.max(12f, uiScale.captionSp);
+    float optSp = Math.max(11f, uiScale.captionSp - 0.5f);
     for (int i = 0; i < cart.size(); i++) {
       final int idx = i;
       MenuModels.CartLine line = cart.get(i);
@@ -1743,21 +1768,30 @@ public class SellActivity extends Activity {
       block.setOrientation(LinearLayout.VERTICAL);
       block.setPadding(0, padV, 0, padV);
 
-      // Super-slim one line: name · − qty + · price
+      // Receipt-style: name wraps · steppers · line total (no ellipsis hide)
       LinearLayout row = new LinearLayout(this);
       row.setOrientation(LinearLayout.HORIZONTAL);
-      row.setGravity(Gravity.CENTER_VERTICAL);
+      row.setGravity(Gravity.TOP);
       row.setMinimumHeight(NposUi.dp(this, 40));
 
-      TextView nameTv = NposUi.section(this, line.name);
-      nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-      nameTv.setMaxLines(1);
-      nameTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+      TextView nameTv =
+          NposUi.section(
+              this,
+              String.format(Locale.getDefault(), "%d× %s", Math.max(1, line.qty), line.name));
+      nameTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, nameSp);
+      nameTv.setMaxLines(Integer.MAX_VALUE);
+      nameTv.setSingleLine(false);
+      nameTv.setEllipsize(null);
+      nameTv.setHorizontallyScrolling(false);
       nameTv.setLayoutParams(
           new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
       if (menuItem != null && menuItem.hasOptions()) {
         nameTv.setOnClickListener(v -> editCartLineOptions(idx));
       }
+
+      LinearLayout steppers = new LinearLayout(this);
+      steppers.setOrientation(LinearLayout.HORIZONTAL);
+      steppers.setGravity(Gravity.CENTER_VERTICAL);
 
       TextView minus = NposUi.chip(this, "−");
       minus.setMinimumWidth(NposUi.dp(this, 36));
@@ -1770,7 +1804,7 @@ public class SellActivity extends Activity {
 
       TextView qtyTv =
           NposUi.section(this, String.format(Locale.getDefault(), "%d", line.qty));
-      qtyTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+      qtyTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, nameSp);
       qtyTv.setGravity(Gravity.CENTER);
       qtyTv.setMinimumWidth(NposUi.dp(this, 28));
 
@@ -1785,23 +1819,30 @@ public class SellActivity extends Activity {
       TextView priceTv =
           NposUi.section(
               this, String.format(Locale.getDefault(), "฿%.0f", line.lineTotal()));
-      priceTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+      priceTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, nameSp);
       priceTv.setGravity(Gravity.END);
       priceTv.setMinimumWidth(NposUi.dp(this, 48));
+      priceTv.setPadding(NposUi.dp(this, 4), 0, 0, 0);
+
+      steppers.addView(minus, NposUi.wrap(this, 4, 0));
+      steppers.addView(qtyTv);
+      steppers.addView(plus, NposUi.wrap(this, 4, 0));
+      steppers.addView(priceTv);
 
       row.addView(nameTv);
-      row.addView(minus, NposUi.wrap(this, 4, 0));
-      row.addView(qtyTv);
-      row.addView(plus, NposUi.wrap(this, 4, 0));
-      row.addView(priceTv);
+      row.addView(steppers);
       block.addView(row);
 
-      String opts = line.optionsSummary();
-      if (!opts.isEmpty()) {
-        TextView optView = NposUi.caption(this, opts);
-        optView.setMaxLines(1);
-        optView.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        optView.setPadding(0, 0, 0, 0);
+      // Options: one line each, wrap if long — never truncate (prep checklist)
+      for (String optLine : line.optionsLines()) {
+        TextView optView = NposUi.caption(this, optLine);
+        optView.setTextSize(TypedValue.COMPLEX_UNIT_SP, optSp);
+        optView.setTextColor(NposUi.color(this, R.color.npos_ink_soft));
+        optView.setTypeface(NposFonts.regular(this));
+        optView.setMaxLines(Integer.MAX_VALUE);
+        optView.setSingleLine(false);
+        optView.setEllipsize(null);
+        optView.setPadding(NposUi.dp(this, 8), NposUi.dp(this, 1), 0, 0);
         if (menuItem != null && menuItem.hasOptions()) {
           optView.setOnClickListener(v -> editCartLineOptions(idx));
         }

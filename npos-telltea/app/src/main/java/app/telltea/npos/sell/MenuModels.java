@@ -204,29 +204,48 @@ public final class MenuModels {
       return unitPrice * qty;
     }
 
-    /** Short option/topping text for cart, customer display, receipt. */
+    /** Short option/topping text for customer display (single line). */
     public String optionsSummary() {
-      if (optionsJson == null || optionsJson.length() == 0) return "";
+      List<String> lines = optionsLines();
+      if (lines.isEmpty()) return "";
       StringBuilder sb = new StringBuilder();
+      for (String line : lines) {
+        String bare = line.startsWith("- ") ? line.substring(2) : line;
+        if (sb.length() > 0) sb.append(" · ");
+        sb.append(bare);
+      }
+      return sb.toString();
+    }
+
+    /**
+     * Receipt-style option lines for staff cart / kitchen read:
+     * {@code - เย็น x1} one option per line (aggregated counts).
+     */
+    public List<String> optionsLines() {
+      List<String> out = new ArrayList<>();
+      if (optionsJson == null || optionsJson.length() == 0) return out;
       try {
         for (int i = 0; i < optionsJson.length(); i++) {
           JSONObject g = optionsJson.optJSONObject(i);
           if (g == null) continue;
           JSONArray choices = g.optJSONArray("choices");
           if (choices == null) continue;
+          java.util.LinkedHashMap<String, Integer> byName = new java.util.LinkedHashMap<>();
           for (int j = 0; j < choices.length(); j++) {
             JSONObject c = choices.optJSONObject(j);
             if (c == null) continue;
             String n = c.optString("name", "").trim();
             if (n.isEmpty()) continue;
-            if (sb.length() > 0) sb.append(" · ");
-            sb.append(n);
+            byName.put(n, byName.getOrDefault(n, 0) + 1);
+          }
+          for (java.util.Map.Entry<String, Integer> e : byName.entrySet()) {
+            out.add("- " + e.getKey() + " x" + e.getValue());
           }
         }
       } catch (Exception ignored) {
-        return "";
+        return out;
       }
-      return sb.toString();
+      return out;
     }
   }
 
