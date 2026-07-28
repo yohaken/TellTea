@@ -351,7 +351,9 @@ export function PosSalesReport({
               return (
                 <li key={sale.id} className={`pos-sales-row ${voided ? "pos-sales-row--void" : ""}`}>
                   <div className="pos-sales-row-main">
-                    <strong>{sale.billNo}</strong>
+                    <strong className="pos-sales-bill-id">
+                      #{(sale.billNo || "—").replace(/^#/, "")}
+                    </strong>
                     <span className="muted">
                       {formatTime(sale.createdAt)} · {labelOtShift(sale.shift as "late" | "morning" | "evening")} ·{" "}
                       {sale.paymentMethod === "promptpay" ? "PromptPay" : "เงินสด"}
@@ -389,7 +391,11 @@ export function PosSalesReport({
 
       <PosConfirmDialog
         open={voidTarget !== null}
-        title={voidTarget ? `ยกเลิกบิล ${voidTarget.billNo}?` : ""}
+        title={
+          voidTarget
+            ? `ยกเลิกบิล #${(voidTarget.billNo || "—").replace(/^#/, "")}?`
+            : ""
+        }
         message={voidTarget ? `ยอด ฿${formatPlainNumber(voidTarget.total)}` : undefined}
         variant="prompt"
         promptLabel="เหตุผล"

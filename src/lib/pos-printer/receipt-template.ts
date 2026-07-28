@@ -365,53 +365,206 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
   </div>`;
 }
 
-/** ตัวอย่างสลิปสำหรับทดสอบเครื่องพิมพ์ */
-export function sampleReceiptPayload(): ReceiptPrintPayload {
+export type SampleReceiptCaseId =
+  | "promptpay_options"
+  | "cash_change"
+  | "discount"
+  | "multi_qty"
+  | "pending";
+
+export type SampleReceiptCase = {
+  id: SampleReceiptCaseId;
+  label: string;
+  payload: ReceiptPrintPayload;
+};
+
+function demoBase(partial: Partial<ReceiptPrintPayload> & Pick<ReceiptPrintPayload, "billNo" | "lines" | "total" | "paymentMethod">): ReceiptPrintPayload {
   return {
     kind: "receipt",
     shopName: DEFAULT_SHOP.shopName,
     shopNameTh: DEFAULT_SHOP.shopNameTh,
     shopAddress: DEFAULT_SHOP.shopAddress,
     shopPhone: DEFAULT_SHOP.shopPhone,
-    billNo: "561",
     orderChannel: "dine_in",
     staffName: "หน้าร้าน",
     staffId: "DEMO",
-    lines: [
-      {
-        menuItemId: "demo1",
-        name: "ชานมไต้หวัน (เย็น)",
-        price: 29,
-        qty: 1,
-        options: [
-          {
-            groupId: "sweet",
-            groupName: "ความหวาน",
-            choices: [{ optionId: "50", name: "หวาน 50%", priceDelta: 0 }],
-          },
-          {
-            groupId: "top",
-            groupName: "ท็อปปิ้ง",
-            choices: [{ optionId: "pearl", name: "ไข่มุก", priceDelta: 0 }],
-          },
-        ],
-      },
-      {
-        menuItemId: "demo2",
-        name: "ชาเขียวนม (ปั่น)",
-        price: 39,
-        qty: 2,
-        options: [
-          {
-            groupId: "sweet",
-            groupName: "ความหวาน",
-            choices: [{ optionId: "100", name: "หวาน 100%", priceDelta: 0 }],
-          },
-        ],
-      },
-    ],
-    total: 107,
-    paymentMethod: "promptpay",
     createdAt: Date.now(),
+    receiptFooterNote: "ขอบคุณที่อุดหนุน",
+    ...partial,
+  };
+}
+
+/** ตัวอย่างสลิปสำหรับทดสอบเครื่องพิมพ์ */
+export function sampleReceiptPayload(): ReceiptPrintPayload {
+  return sampleReceiptCases()[0]!.payload;
+}
+
+/** ชุดตัวอย่างครบเงื่อนไข — ใช้ในตั้งค่าร้าน (ดูจัดวาง/ขาดตก) */
+export function sampleReceiptCases(): SampleReceiptCase[] {
+  return [
+    {
+      id: "promptpay_options",
+      label: "PromptPay · ท็อปปิ้ง",
+      payload: demoBase({
+        billNo: "P2707-001",
+        lines: [
+          {
+            menuItemId: "demo1",
+            name: "ชานมไต้หวัน (เย็น)",
+            price: 29,
+            qty: 1,
+            options: [
+              {
+                groupId: "sweet",
+                groupName: "ความหวาน",
+                choices: [{ optionId: "50", name: "หวาน 50%", priceDelta: 0 }],
+              },
+              {
+                groupId: "top",
+                groupName: "ท็อปปิ้ง",
+                choices: [{ optionId: "pearl", name: "ไข่มุก", priceDelta: 0 }],
+              },
+            ],
+          },
+          {
+            menuItemId: "demo2",
+            name: "ชาเขียวนม (ปั่น)",
+            price: 39,
+            qty: 2,
+            options: [
+              {
+                groupId: "sweet",
+                groupName: "ความหวาน",
+                choices: [{ optionId: "100", name: "หวาน 100%", priceDelta: 0 }],
+              },
+            ],
+          },
+        ],
+        subtotal: 107,
+        total: 107,
+        paymentMethod: "promptpay",
+      }),
+    },
+    {
+      id: "cash_change",
+      label: "เงินสด · ทอน",
+      payload: demoBase({
+        billNo: "P2707-002",
+        lines: [
+          {
+            menuItemId: "demo3",
+            name: "โกโก้เย็น",
+            price: 35,
+            qty: 1,
+            options: [],
+          },
+        ],
+        subtotal: 35,
+        total: 35,
+        paymentMethod: "cash",
+        cashReceived: 100,
+        change: 65,
+      }),
+    },
+    {
+      id: "discount",
+      label: "ส่วนลดท้ายบิล",
+      payload: demoBase({
+        billNo: "P2707-003",
+        lines: [
+          {
+            menuItemId: "demo4",
+            name: "ชาไทยเย็น",
+            price: 45,
+            qty: 2,
+            options: [
+              {
+                groupId: "sweet",
+                groupName: "ความหวาน",
+                choices: [{ optionId: "0", name: "ไม่หวาน", priceDelta: 0 }],
+              },
+            ],
+          },
+        ],
+        subtotal: 90,
+        discountBaht: 10,
+        total: 80,
+        paymentMethod: "cash",
+        cashReceived: 80,
+        change: 0,
+        orderNotes: "ลดโปรสมาชิก",
+      }),
+    },
+    {
+      id: "multi_qty",
+      label: "หลายรายการ · qty ใหญ่",
+      payload: demoBase({
+        billNo: "P2707-004",
+        lines: [
+          { menuItemId: "a", name: "น้ำเปล่า", price: 10, qty: 5, options: [] },
+          { menuItemId: "b", name: "ครัวซองต์", price: 45, qty: 3, options: [] },
+          {
+            menuItemId: "c",
+            name: "กาแฟเย็น",
+            price: 55,
+            qty: 1,
+            options: [
+              {
+                groupId: "shot",
+                groupName: "ช็อต",
+                choices: [{ optionId: "x2", name: "2 ช็อต", priceDelta: 10 }],
+              },
+            ],
+          },
+        ],
+        subtotal: 250,
+        total: 250,
+        paymentMethod: "promptpay",
+      }),
+    },
+    {
+      id: "pending",
+      label: "บิลรอส่ง (ออฟไลน์)",
+      payload: demoBase({
+        billNo: "รอส่ง-A1B2C3",
+        lines: [
+          {
+            menuItemId: "demo5",
+            name: "ชานมไต้หวัน (ร้อน)",
+            price: 29,
+            qty: 1,
+            options: [],
+          },
+        ],
+        subtotal: 29,
+        total: 29,
+        paymentMethod: "cash",
+        cashReceived: 29,
+        change: 0,
+      }),
+    },
+  ];
+}
+
+/** รวมค่าจากตั้งค่าร้านลงตัวอย่างบิล */
+export function applyShopToReceiptSample(
+  sample: ReceiptPrintPayload,
+  shop: {
+    shopName?: string;
+    shopNameTh?: string;
+    shopAddress?: string;
+    shopPhone?: string;
+    receiptStaffName?: string;
+    receiptFooterNote?: string;
+  },
+): ReceiptPrintPayload {
+  return {
+    ...sample,
+    shopName: shop.shopName?.trim() || sample.shopName,
+    shopNameTh: shop.shopNameTh?.trim() || sample.shopNameTh,
+    shopAddress: shop.shopAddress?.trim() || sample.shopAddress,
+    shopPhone: shop.shopPhone?.trim() || sample.shopPhone,
+    staffName: shop.receiptStaffName?.trim() || sample.staffName,
+    receiptFooterNote: shop.receiptFooterNote?.trim() || sample.receiptFooterNote,
   };
 }

@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 297/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 92/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+62/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.39"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 298/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 93/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+63/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.40"/);
 
 assert.ok(existsSync(join(root, "docs/npos-friendly-ui-checklist.md")));
 assert.match(read("docs/npos-friendly-ui-checklist.md"), /NposUi|1\.14\.39/);
@@ -41,6 +41,12 @@ const nposUi = read("npos-telltea/app/src/main/java/app/telltea/npos/ui/NposUi.j
 assert.match(nposUi, /enum Btn/);
 assert.match(nposUi, /primary\(|chip\(|field\(|headerBar\(/);
 assert.doesNotMatch(nposUi, /new Button\(/);
+
+const confirmDlg = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/ui/NposConfirmDialog.java",
+);
+assert.match(confirmDlg, /NposUi\.(primary|ghost)/);
+assert.doesNotMatch(confirmDlg, /\.setPositiveButton\s*\(/);
 
 const ui = read("npos-telltea/app/src/main/java/app/telltea/npos/ui/UiScale.java");
 assert.match(ui, /52 \* density \* scale/);

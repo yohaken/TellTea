@@ -1,7 +1,6 @@
 package app.telltea.npos.shift;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.widget.LinearLayout;
@@ -11,6 +10,7 @@ import android.widget.Toast;
 import app.telltea.npos.R;
 import app.telltea.npos.diagnose.OpsLogger;
 import app.telltea.npos.sell.SaleSync;
+import app.telltea.npos.ui.NposConfirmDialog;
 import app.telltea.npos.ui.NposFonts;
 import app.telltea.npos.ui.NposNumberPad;
 import app.telltea.npos.ui.NposUi;
@@ -85,69 +85,60 @@ public final class OpenShiftFlow {
               }
             }));
 
-    new AlertDialog.Builder(activity)
-        .setTitle(R.string.open_shift_float_title)
-        .setView(box)
-        .setCancelable(true)
-        .setPositiveButton(
-            R.string.open_shift_float_confirm,
-            (d, w) -> {
-              double amountVal = parseMoney(valueHolder[0]);
-              amountVal = Math.max(0, amountVal);
-              Toast.makeText(activity, R.string.shift_opening, Toast.LENGTH_SHORT).show();
-              saleSync.openSession(
-                  activity,
-                  amountVal,
-                  () ->
-                      activity.runOnUiThread(
-                          () -> {
-                            if (activity.isFinishing()) return;
-                            try {
-                              if (!ShiftPrefs.isOpen(activity)) {
-                                Toast.makeText(
-                                        activity,
-                                        R.string.store_claim_blocked,
-                                        Toast.LENGTH_LONG)
-                                    .show();
-                                if (onCancel != null) onCancel.run();
-                                return;
-                              }
-                              Toast.makeText(
-                                      activity,
-                                      ShiftPrefs.consumeLastResumed(activity)
-                                          ? R.string.shift_resumed
-                                          : R.string.shift_opened,
-                                      Toast.LENGTH_SHORT)
-                                  .show();
-                              if (done != null) done.onOpened();
-                            } catch (Exception e) {
-                              OpsLogger.error(
+    NposConfirmDialog.custom(
+        activity,
+        activity.getString(R.string.open_shift_float_title),
+        null,
+        box,
+        activity.getString(R.string.open_shift_float_confirm),
+        activity.getString(android.R.string.cancel),
+        true,
+        () -> {
+          double amountVal = Math.max(0, parseMoney(valueHolder[0]));
+          Toast.makeText(activity, R.string.shift_opening, Toast.LENGTH_SHORT).show();
+          saleSync.openSession(
+              activity,
+              amountVal,
+              () ->
+                  activity.runOnUiThread(
+                      () -> {
+                        if (activity.isFinishing()) return;
+                        try {
+                          if (!ShiftPrefs.isOpen(activity)) {
+                            Toast.makeText(
+                                    activity, R.string.store_claim_blocked, Toast.LENGTH_LONG)
+                                .show();
+                            if (onCancel != null) onCancel.run();
+                            return;
+                          }
+                          Toast.makeText(
                                   activity,
-                                  "shift",
-                                  "เปิดกะ UI ล้ม",
-                                  e.getMessage() == null ? "" : e.getMessage());
-                              if (ShiftPrefs.isOpen(activity) && done != null) {
-                                try {
-                                  done.onOpened();
-                                } catch (Exception ignored) {
-                                  /* hub update best-effort */
-                                }
-                              } else if (onCancel != null) {
-                                onCancel.run();
-                              }
+                                  ShiftPrefs.consumeLastResumed(activity)
+                                      ? R.string.shift_resumed
+                                      : R.string.shift_opened,
+                                  Toast.LENGTH_SHORT)
+                              .show();
+                          if (done != null) done.onOpened();
+                        } catch (Exception e) {
+                          OpsLogger.error(
+                              activity,
+                              "shift",
+                              "เปิดกะ UI ล้ม",
+                              e.getMessage() == null ? "" : e.getMessage());
+                          if (ShiftPrefs.isOpen(activity) && done != null) {
+                            try {
+                              done.onOpened();
+                            } catch (Exception ignored) {
+                              /* hub update best-effort */
                             }
-                          }));
-            })
-        .setNegativeButton(
-            android.R.string.cancel,
-            (d, w) -> {
-              if (onCancel != null) onCancel.run();
-            })
-        .setOnCancelListener(
-            d -> {
-              if (onCancel != null) onCancel.run();
-            })
-        .show();
+                          } else if (onCancel != null) {
+                            onCancel.run();
+                          }
+                        }
+                      }));
+          return true;
+        },
+        onCancel);
   }
 
   private static String formatBaht(String raw) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   flushPosShopSettingsUpload,
   getLocalPosShopSettings,
@@ -12,21 +12,94 @@ import {
 } from "@/lib/pos-settings";
 import { isValidPromptPayId, maskPromptPayId, normalizePromptPayId } from "@/lib/pos-promptpay";
 import { posVersionLabel } from "@/lib/pos-version";
+import {
+  applyShopToReceiptSample,
+  buildShiftReportHtml,
+  buildUnifiedReceiptBody,
+  getKindProfile,
+  sampleReceiptCases,
+  sampleShiftReportPayload,
+  unifiedReceiptStyles,
+  type SampleReceiptCaseId,
+} from "@/lib/pos-printer";
 
 type Tab = "bill" | "pay" | "menu";
+type PreviewDoc = "receipt" | "x" | "z";
 
-function BillPreview({ shop }: { shop: PosShopSettings }) {
+function stripPrintScripts(html: string) {
+  return html.replace(/<script[\s\S]*?<\/script>/gi, "");
+}
+
+function DocPreview({ shop }: { shop: PosShopSettings }) {
+  const cases = useMemo(() => sampleReceiptCases(), []);
+  const [doc, setDoc] = useState<PreviewDoc>("receipt");
+  const [caseId, setCaseId] = useState<SampleReceiptCaseId>("cash_change");
+
+  const html = useMemo(() => {
+    if (doc === "receipt") {
+      const sample = cases.find((c) => c.id === caseId)?.payload ?? cases[0]!.payload;
+      const payload = applyShopToReceiptSample(sample, shop);
+      const layout = getKindProfile("desktop_80");
+      const body = buildUnifiedReceiptBody(payload, layout);
+      const css = unifiedReceiptStyles(layout, "auto");
+      return `<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"/><style>${css}
+        body{margin:0;background:#fff;}
+      </style></head><body>${body}</body></html>`;
+    }
+    const kind = doc === "x" ? "snapshot" : "close";
+    return stripPrintScripts(buildShiftReportHtml(sampleShiftReportPayload(kind, shop)));
+  }, [cases, caseId, doc, shop]);
+
   return (
-    <aside className="pos-biz-preview" aria-label="ตัวอย่างหัวบิล">
-      <p className="pos-biz-preview-label">ตัวอย่างบนบิล</p>
-      <div className="pos-biz-preview-slip">
-        <strong className="pos-biz-preview-name">{shop.shopName || "—"}</strong>
-        {shop.shopNameTh ? <span className="pos-biz-preview-th">{shop.shopNameTh}</span> : null}
-        {shop.shopAddress ? <span className="pos-biz-preview-line">{shop.shopAddress}</span> : null}
-        {shop.shopPhone ? <span className="pos-biz-preview-line">โทร {shop.shopPhone}</span> : null}
-        <hr className="pos-biz-preview-rule" />
-        <span className="pos-biz-preview-meta">พนักงาน: {shop.receiptStaffName || "—"}</span>
-        <span className="pos-biz-preview-foot">{shop.receiptFooterNote || ""}</span>
+    <aside className="pos-biz-preview" aria-label="ตัวอย่างเอกสาร">
+      <p className="pos-biz-preview-label">ตัวอย่างเอกสาร (จำลองครบเงื่อนไข)</p>
+      <div className="pos-biz-preview-tabs" role="tablist">
+        {(
+          [
+            ["receipt", "ใบเสร็จ"],
+            ["x", "X · กลางรอบ"],
+            ["z", "Z · ปิดรอบ"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={doc === id}
+            className={doc === id ? "is-active" : ""}
+            onClick={() => setDoc(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {doc === "receipt" ? (
+        <div className="pos-biz-preview-cases">
+          {cases.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className={caseId === c.id ? "is-active" : ""}
+              onClick={() => setCaseId(c.id)}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="pos-biz-preview-hint muted">
+          {doc === "x"
+            ? "Snapshot กลางรอบ — มีรายบิล · หมวด · รอส่ง · void"
+            : "รายงานปิดรอบ — รวมนับเงินสด · ทอนเปิด/ปิด · เซ็นรับส่งกะ"}
+        </p>
+      )}
+      <div className="pos-biz-preview-frame-wrap">
+        <iframe
+          className="pos-biz-preview-frame"
+          title="ตัวอย่างเอกสาร"
+          sandbox=""
+          srcDoc={html}
+        />
       </div>
     </aside>
   );
@@ -275,7 +348,7 @@ export function PosBusinessSettingsView({
                 {busy ? "กำลังบันทึกขึ้น Firebase..." : "บันทึกชื่อ·ที่อยู่ขึ้น Firebase"}
               </button>
             </form>
-            <BillPreview shop={draftPreview} />
+            <DocPreview shop={draftPreview} />
           </div>
         ) : tab === "pay" ? (
           <form className="pos-biz-form pos-biz-form--pay" onSubmit={(e) => void savePay(e)}>

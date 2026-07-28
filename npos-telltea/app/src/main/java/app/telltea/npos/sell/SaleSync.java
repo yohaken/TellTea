@@ -292,7 +292,8 @@ public final class SaleSync {
                         ensureOutboxMeta(payload);
 
                         pushQueue(app, payload);
-                        rememberReceipt(app, payload, "รอส่ง");
+                        // Same pending label as web formatPendingBillNo / printed provisional #.
+                        rememberReceipt(app, payload, provisionalBillNo(mutationId));
                         ShiftPrefs.recordSale(app, paymentMethod, total, discountBaht);
                         BestsellerPrefs.recordLines(app, lineArr);
                         if (callback != null) callback.onLocalSaved(mutationId, total);
@@ -914,12 +915,24 @@ public final class SaleSync {
         return new JSONObject();
     }
 
-    /** Short local bill label before server assigns billNo (customer paper on offline). */
-    static String provisionalBillNo(String mutationId) {
-        if (mutationId == null || mutationId.length() < 6) return "LOCAL";
-        String tail = mutationId.replace("npos_", "");
+    /**
+     * Pending bill label before server assigns billNo — matches web {@code formatPendingBillNo}
+     * ({@code รอส่ง-XXXXXX}) so receipts, outbox, and printed paper share one readable id.
+     */
+    public static String provisionalBillNo(String mutationId) {
+        if (mutationId == null || mutationId.isEmpty()) return "รอส่ง-LOCAL";
+        String tail = mutationId.replaceAll("[^a-zA-Z0-9]", "");
         if (tail.length() > 6) tail = tail.substring(tail.length() - 6);
-        return "L-" + tail.toUpperCase(java.util.Locale.US);
+        if (tail.isEmpty()) return "รอส่ง-LOCAL";
+        return "รอส่ง-" + tail.toUpperCase(java.util.Locale.US);
+    }
+
+    /** Display label with leading # when missing (lists + confirms). */
+    public static String formatBillDisplay(String billNo) {
+        if (billNo == null || billNo.trim().isEmpty() || "—".equals(billNo)) return "#—";
+        String b = billNo.trim();
+        if (b.startsWith("#")) return b;
+        return "#" + b;
     }
 
     /** Flatten option choices for a short kitchen-readable receipt line. */

@@ -1,7 +1,6 @@
 package app.telltea.npos;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Application;
 import android.content.Intent;
 import android.os.Bundle;
@@ -13,6 +12,7 @@ import app.telltea.npos.diagnose.ForegroundHeartbeat;
 import app.telltea.npos.diagnose.StoreClaimPrefs;
 import app.telltea.npos.sell.MenuWarmup;
 import app.telltea.npos.shift.ShiftPrefs;
+import app.telltea.npos.ui.NposConfirmDialog;
 
 /**
  * Tracks the foreground activity for PixelCopy + keeps heartbeat alive while UI is open.
@@ -84,12 +84,13 @@ public final class NposApp extends Application {
           String reason = StoreClaimPrefs.kickReasonMessage(fg);
           Toast.makeText(fg, titleRes, Toast.LENGTH_LONG).show();
           try {
-            new AlertDialog.Builder(fg)
-                .setTitle(titleRes)
-                .setMessage(reason)
-                .setCancelable(false)
-                .setPositiveButton(R.string.store_claim_reenter_ok, (d, w) -> bounceToClaimHub(fg))
-                .show();
+            NposConfirmDialog.alert(
+                fg,
+                fg.getString(titleRes),
+                reason,
+                fg.getString(R.string.store_claim_reenter_ok),
+                false,
+                () -> bounceToClaimHub(fg));
           } catch (RuntimeException e) {
             bounceToClaimHub(fg);
           }

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Radio } from "lucide-react";
 import { SettingsFold } from "@/components/SettingsFold";
+import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import {
   dedupeByStableKey,
   foldByDeviceClass,
@@ -278,6 +279,8 @@ function ClassSection({
   );
 }
 
+type ConfirmKind = "clearCaptures" | "revoke" | "clearSeat";
+
 export function NposDevicesPanel({ onError }: { onError: (msg: string | null) => void }) {
   const { actorId } = useAuth();
   const [devices, setDevices] = useState<PosDevice[]>([]);
@@ -287,6 +290,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
   const [busyId, setBusyId] = useState<string | null>(null);
   const [activeSeatId, setActiveSeatId] = useState("");
   const [todaySessions, setTodaySessions] = useState<PosSession[]>([]);
+  const [confirm, setConfirm] = useState<{ kind: ConfirmKind; device?: Row } | null>(null);
 
   useEffect(() => {
     const t = window.setInterval(() => setNow(Date.now()), 15_000);
@@ -477,77 +481,78 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     }
   }
 
-  async function clearCaptures(d: Row) {
+  function clearCaptures(d: Row) {
     if (!actorId) {
       onError("ต้องเข้าสู่ระบบเจ้าของก่อนล้างภาพแคป");
       return;
     }
-    if (
-      !window.confirm(
-        `ล้างภาพแคปทั้งหมดของเครื่อง ${posDeviceLabel(d)}?\nลบจากที่เก็บและไทม์ไลน์ — กู้คืนไม่ได้`,
-      )
-    ) {
-      return;
-    }
-    setBusyId(d.id);
-    try {
-      const n = await clearNposDeviceCaptures(d.id, actorId);
-      setCaptures((prev) => {
-        const next = { ...prev };
-        delete next[d.id];
-        return next;
-      });
-      onError(null);
-      window.alert(n > 0 ? `ลบแล้ว ${n} ชุด` : "ไม่มีภาพให้ลบ");
-    } catch (err) {
-      onError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusyId(null);
-    }
+    setConfirm({ kind: "clearCaptures", device: d });
   }
 
-  async function revokeClaim(d: Row) {
+  function revokeClaim(d: Row) {
     if (!actorId) {
       onError("ต้องเข้าสู่ระบบเจ้าของก่อนเตะเครื่อง");
       return;
     }
-    if (!window.confirm(`เตะเครื่อง ${posDeviceLabel(d)}? เครื่องจะเด้งไปใส่รหัสใหม่ (กะไม่ปิดอัตโนมัติ)`)) {
-      return;
-    }
-    setBusyId(d.id);
-    try {
-      await setNposDeviceStoreClaimed(d.id, false, { isEmulator: d.isEmulator });
-      const s = await getNposStoreClaimStatus();
-      setActiveSeatId(s.activeSeatInstallId || "");
-      onError(null);
-    } catch (err) {
-      onError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusyId(null);
-    }
+    setConfirm({ kind: "revoke", device: d });
   }
 
-  async function clearAllSeats() {
+  function clearAllSeats() {
     if (!actorId) {
       onError("ต้องเข้าสู่ระบบเจ้าของก่อนเคลียร์ seat");
       return;
     }
-    if (
-      !window.confirm(
-        "เคลียร์ seat + เตะทุกเครื่อง? แท็บเล็ตจะเด้งใส่รหัสใหม่ (กะไม่ปิด)",
-      )
-    ) {
+    setConfirm({ kind: "clearSeat" });
+  }
+
+  async function runConfirmedAction() {
+    if (!confirm || !actorId) return;
+    const kind = confirm.kind;
+    const d = confirm.device;
+    setConfirm(null);
+    if (kind === "clearCaptures" && d) {
+      setBusyId(d.id);
+      try {
+        const n = await clearNposDeviceCaptures(d.id, actorId);
+        setCaptures((prev) => {
+          const next = { ...prev };
+          delete next[d.id];
+          return next;
+        });
+        onError(null);
+        window.alert(n > 0 ? `ลบแล้ว ${n} ชุด` : "ไม่มีภาพให้ลบ");
+      } catch (err) {
+        onError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setBusyId(null);
+      }
       return;
     }
-    setBusyId("__clear_seat__");
-    try {
-      await clearNposExclusiveSeat();
-      setActiveSeatId("");
-      onError(null);
-    } catch (err) {
-      onError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusyId(null);
+    if (kind === "revoke" && d) {
+      setBusyId(d.id);
+      try {
+        await setNposDeviceStoreClaimed(d.id, false, { isEmulator: d.isEmulator });
+        const s = await getNposStoreClaimStatus();
+        setActiveSeatId(s.activeSeatInstallId || "");
+        onError(null);
+      } catch (err) {
+        onError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setBusyId(null);
+      }
+      return;
+    }
+    if (kind === "clearSeat") {
+      setBusyId("__clear_seat__");
+      try {
+        await clearNposExclusiveSeat();
+        setActiveSeatId("");
+        onError(null);
+      } catch (err) {
+        onError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setBusyId(null);
+      }
     }
   }
 
@@ -568,7 +573,25 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     }
   }
 
+  const confirmTitle =
+    confirm?.kind === "clearCaptures" && confirm.device
+      ? `ล้างภาพแคป · ${posDeviceLabel(confirm.device)}?`
+      : confirm?.kind === "revoke" && confirm.device
+        ? `เตะเครื่อง ${posDeviceLabel(confirm.device)}?`
+        : confirm?.kind === "clearSeat"
+          ? "เคลียร์ seat + เตะทุกเครื่อง?"
+          : "";
+  const confirmMessage =
+    confirm?.kind === "clearCaptures"
+      ? "ลบจากที่เก็บและไทม์ไลน์ — กู้คืนไม่ได้"
+      : confirm?.kind === "revoke"
+        ? "เครื่องจะเด้งไปใส่รหัสใหม่ (กะไม่ปิดอัตโนมัติ)"
+        : confirm?.kind === "clearSeat"
+          ? "แท็บเล็ตจะเด้งใส่รหัสใหม่ (กะไม่ปิด)"
+          : undefined;
+
   return (
+    <>
     <SettingsFold
       title={
         <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
@@ -820,5 +843,21 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
         </>
       )}
     </SettingsFold>
+    <PosConfirmDialog
+      open={confirm !== null}
+      title={confirmTitle}
+      message={confirmMessage}
+      confirmLabel={
+        confirm?.kind === "clearCaptures"
+          ? "ล้างภาพ"
+          : confirm?.kind === "revoke"
+            ? "เตะเครื่อง"
+            : "เคลียร์ seat"
+      }
+      destructive
+      onCancel={() => setConfirm(null)}
+      onConfirm={() => void runConfirmedAction()}
+    />
+    </>
   );
 }

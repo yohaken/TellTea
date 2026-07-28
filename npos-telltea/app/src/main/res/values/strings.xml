@@ -108,7 +108,7 @@
     <string name="outbox_cancel_msg">บิลนี้ยังไม่ขึ้นเซิร์ฟเวอร์ — ลบออกจากคิวและไม่นับยอดรอบ</string>
     <string name="outbox_cancel_done">ยกเลิกบิลรอส่งแล้ว</string>
     <string name="outbox_retry_done">สั่งลองซิงก์แล้ว</string>
-    <string name="outbox_row_fmt">รอส่ง-%1$s · ฿%2$.0f · %3$s · ลอง %4$d\n%5$s</string>
+    <string name="outbox_row_fmt">%1$s · %2$s · %3$s · ลอง %4$d\n%5$s</string>
     <string name="btn_flush_sync_failed_n">บิลค้าง %1$d (ล้มเหลว %2$d)</string>
     <string name="sell_pending_failed_n">รอซิงก์ %1$d · ล้มเหลว %2$d</string>
     <string name="sell_printing_x">กำลังพิมพ์สรุปกลางรอบ…</string>
