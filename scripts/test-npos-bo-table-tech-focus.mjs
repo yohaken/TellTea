@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 356/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 357/);
 
 const release = read("src/lib/npos-apk-release.ts");
 assert.match(release, /NPOS_SYSTEM_VERSION_NAME/);
