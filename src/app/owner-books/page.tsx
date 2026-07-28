@@ -425,9 +425,9 @@ function OwnerBooksView() {
                   <th className="col-exclude" aria-label="ไม่รวม" title="ไม่รวมในยอด" />
                   <th className="col-date">วันที่</th>
                   <th className="col-desc">รายการ</th>
-                  <th className="col-out">ออก</th>
-                  <th className="col-type">ประเภท</th>
-                  <th className="col-note">note</th>
+                  <th className="col-out" title="ออก">ออก</th>
+                  <th className="col-type" title="ประเภท">ประเภท</th>
+                  <th className="col-note" title="note">note</th>
                 </tr>
               </thead>
               <tbody>
