@@ -1974,135 +1974,8 @@ body.modal-open .main-panel {
   margin-top: 0.2rem;
 }
 
-/*
- * Owner-books table: slightly dense rows, but use full width.
- * Never starve ออก / ประเภท / note — empty space goes there, not wasted in รายการ.
- */
-.owner-books-table.sheet-table {
-  font-size: 0.8rem;
-  table-layout: fixed;
-  width: 100%;
-}
-
-.owner-books-table.sheet-table th {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: rgba(28, 42, 31, 0.82);
-  white-space: nowrap;
-  overflow: visible;
-}
-
-.owner-books-table.sheet-table th,
-.owner-books-table.sheet-table td {
-  padding: 0.28rem 0.32rem;
-  line-height: 1.3;
-  vertical-align: middle;
-}
-
-.owner-books-table .bulk-check-col,
-.owner-books-table .col-exclude {
-  width: 1.45rem;
-  min-width: 1.45rem;
-  max-width: 1.45rem;
-  padding-left: 0.12rem !important;
-  padding-right: 0.12rem !important;
-  overflow: visible;
-}
-
-.owner-books-table .bulk-check-col input[type="checkbox"],
-.owner-books-table .owner-exclude-check input {
-  width: 0.9rem;
-  height: 0.9rem;
-}
-
-.owner-books-table .owner-exclude-check {
-  min-height: 1.5rem;
-  min-width: 1.5rem;
-}
-
-.owner-books-table .col-date {
-  width: 3.4rem;
-  font-size: 0.76rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: rgba(28, 42, 31, 0.72);
-  white-space: nowrap;
-  overflow: visible;
-}
-
-/* รายการ shares space — do not let it eat the whole row */
-.owner-books-table .col-desc {
-  width: 34%;
-  min-width: 0;
-  line-height: 1.3;
-  overflow: hidden;
-}
-
-.owner-books-table .col-desc .desc-with-photo {
-  align-items: center;
-  gap: 0.28rem;
-  min-width: 0;
-}
-
-.owner-books-table .col-desc .desc-link {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.8rem;
-  color: rgba(28, 42, 31, 0.92);
-}
-
-.owner-books-table .col-desc .photo-status {
-  width: 1.3rem;
-  height: 1.3rem;
-  min-width: 1.3rem;
-  min-height: 1.3rem;
-}
-
-.owner-books-table .col-desc .photo-status-count {
-  font-size: 0.62rem;
-  min-width: 0.85rem;
-  height: 0.85rem;
-  line-height: 0.85rem;
-}
-
-/* Amounts must stay fully visible */
-.owner-books-table .col-out {
-  width: 6.75rem;
-  font-size: 0.86rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  text-align: right;
-  overflow: visible;
-  text-overflow: clip;
-}
-
-.owner-books-table .col-type {
-  width: 5.25rem;
-  max-width: none;
-  white-space: nowrap;
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: rgba(28, 42, 31, 0.78);
-  overflow: visible;
-  text-overflow: clip;
-}
-
-/* Spare width goes to notes instead of empty desc */
-.owner-books-table .col-note {
-  width: 26%;
-  max-width: none;
-  font-size: 0.74rem;
-  color: rgba(28, 42, 31, 0.62);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+/* Owner-books table follows /ledger/ sheet-table auto layout.
+   Keep only page chrome + exclude/note extras — do not override column widths. */
 .owner-books-page .bulk-status-toolbar {
   margin-bottom: 0.35rem;
 }
@@ -2113,27 +1986,8 @@ body.modal-open .main-panel {
 }
 
 @media (max-width: 640px) {
-  .owner-books-table .col-note {
+  .owner-books-page .sheet-table .col-note {
     display: none;
-  }
-
-  .owner-books-table .col-desc {
-    width: auto;
-  }
-
-  .owner-books-table .col-type {
-    width: 4.75rem;
-  }
-
-  .owner-books-table .col-out {
-    width: 6.25rem;
-  }
-
-  .owner-books-table .bulk-check-col,
-  .owner-books-table .col-exclude {
-    width: 1.4rem;
-    min-width: 1.4rem;
-    max-width: 1.4rem;
   }
 }
 
