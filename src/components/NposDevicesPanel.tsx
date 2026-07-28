@@ -29,6 +29,7 @@ import {
   clearNposExclusiveSeat,
   getNposStoreClaimStatus,
   purgeNposDevDevices,
+  NPOS_SHOP_KEEP_PAIRING_CODE,
   requestNposScreenCapture,
   setNposCaptureInterval,
   setNposDeviceBlocked,
@@ -572,19 +573,20 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
     if (kind === "purgeDev") {
       setBusyId("__purge_dev__");
       try {
-        const r = await purgeNposDevDevices();
+        const r = await purgeNposDevDevices({
+          keepPairingCode: NPOS_SHOP_KEEP_PAIRING_CODE,
+        });
         onError(null);
         window.alert(
           [
-            "ลบข้อมูล emulator/dev แล้ว",
-            `เครื่อง ${r.deletedDevices}`,
-            `diagnose ${r.deletedDiagnose}`,
-            `ops ${r.deletedOps}`,
+            `เก็บเฉพาะ ${r.keepPairingCode}`,
+            `เครื่องเหลือ ${r.shopKept}`,
+            `ลบเครื่อง ${r.deletedDevices}`,
             `รอบ ${r.deletedSessions}`,
             `บิล ${r.deletedSales}`,
-            `mutations ${r.deletedMutations}`,
-            `แคปจอ ${r.deletedShots}`,
-            `เก็บเครื่องหน้าร้าน ${r.shopKept}`,
+            `ops ${r.deletedOps}`,
+            `diagnose ${r.deletedDiagnose}`,
+            `แคป ${r.deletedShots}`,
           ].join(" · "),
         );
       } catch (err) {
@@ -620,7 +622,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
         : confirm?.kind === "clearSeat"
           ? "เคลียร์ seat + เตะทุกเครื่อง?"
           : confirm?.kind === "purgeDev"
-            ? "ลบเครื่องพัฒนา / emulator + รอบ/บิล/log ที่มาจากเครื่องเหล่านั้น?"
+            ? `เก็บเฉพาะเครื่อง ${NPOS_SHOP_KEEP_PAIRING_CODE}?`
             : "";
   const confirmMessage =
     confirm?.kind === "clearCaptures"
@@ -630,7 +632,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
         : confirm?.kind === "clearSeat"
           ? "แท็บเล็ตจะเด้งใส่รหัสใหม่ (กะไม่ปิด)"
           : confirm?.kind === "purgeDev"
-            ? "ลบ emulator/dev + รอบขาย + บิล + ops/diagnose/แคป ที่ไม่ใช่เครื่องหน้าร้าน — สรุปยอดหลังบ้านเริ่มใหม่ · เก็บเฉพาะแท็บเล็ตร้านจริง"
+            ? `ลบทุกเครื่อง/รอบ/บิล/log ที่ไม่ใช่รหัส ${NPOS_SHOP_KEEP_PAIRING_CODE} — โฟกัส nPos emp หน้าร้าน`
             : undefined;
 
   return (
@@ -681,7 +683,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                 disabled={busyId === "__purge_dev__"}
                 onClick={() => void purgeDev()}
               >
-                ลบ emulator + บิลทดสอบ
+                เก็บเฉพาะ {NPOS_SHOP_KEEP_PAIRING_CODE}
               </button>
             </div>
             {total === 0 ? (
@@ -858,7 +860,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
           : confirm?.kind === "revoke"
             ? "เตะเครื่อง"
             : confirm?.kind === "purgeDev"
-              ? "ลบ emulator + บิล"
+              ? `เก็บ ${NPOS_SHOP_KEEP_PAIRING_CODE}`
               : "เคลียร์ seat"
       }
       destructive

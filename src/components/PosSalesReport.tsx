@@ -462,7 +462,7 @@ export function PosSalesReport({
 
       <details className="pos-sales-fold pos-sales-fold--slim">
         <summary>
-          สรุปยอด · รอบ nPos · เมนูขายดี
+          ช่องทาง · เมนูขายดี
           <span className="muted">
             {" "}
             · ฿{formatPlainNumber(summary.total)} · {summary.activeCount} บิล
@@ -512,54 +512,6 @@ export function PosSalesReport({
           ) : null}
         </div>
 
-        {summary.bySession.length > 0 ? (
-          <section className="pos-sales-report-section">
-            <h3>แยกตามรอบ nPos</h3>
-            <div className="npos-slim-scroll" role="table" aria-label="แยกตามรอบ">
-              <div className="npos-slim-row npos-slim-row--head npos-slim-row--shift" role="row">
-                <span role="columnheader">รอบ</span>
-                <span role="columnheader" className="npos-slim-num">
-                  บิล
-                </span>
-                <span role="columnheader" className="npos-slim-num">
-                  สด
-                </span>
-                <span role="columnheader" className="npos-slim-num">
-                  โอน
-                </span>
-                <span role="columnheader" className="npos-slim-num">
-                  PP
-                </span>
-                <span role="columnheader" className="npos-slim-num">
-                  รวม
-                </span>
-              </div>
-              {summary.bySession.map((row) => (
-                <div key={row.sessionId} className="npos-slim-row npos-slim-row--shift" role="row">
-                  <span role="cell" title={row.sessionId}>
-                    {row.label}
-                  </span>
-                  <span role="cell" className="npos-slim-num">
-                    {row.count || "—"}
-                  </span>
-                  <span role="cell" className="npos-slim-num">
-                    {row.cashTotal ? formatPlainNumber(row.cashTotal) : "—"}
-                  </span>
-                  <span role="cell" className="npos-slim-num">
-                    {row.transferTotal ? formatPlainNumber(row.transferTotal) : "—"}
-                  </span>
-                  <span role="cell" className="npos-slim-num">
-                    {row.promptpayTotal ? formatPlainNumber(row.promptpayTotal) : "—"}
-                  </span>
-                  <span role="cell" className="npos-slim-num npos-slim-strong">
-                    {row.total ? formatPlainNumber(row.total) : "—"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
         {summary.topItems.length > 0 ? (
           <section className="pos-sales-report-section">
             <h3>เมนูขายดี</h3>
@@ -573,7 +525,7 @@ export function PosSalesReport({
                   ยอด
                 </span>
               </div>
-              {summary.topItems.map((item) => (
+              {summary.topItems.slice(0, 12).map((item) => (
                 <div
                   key={item.menuItemId || item.name}
                   className="npos-slim-row npos-slim-row--compact"
@@ -665,7 +617,7 @@ export function PosSalesReportPage() {
         <div>
           <h1 className="panel-title pos-sales-page-title">POS</h1>
           <p className="muted pos-sales-page-lead">
-            ตาราง slim · ใหม่สุดบน · รหัสเครื่อง/รอบ · ปิดกะ realtime — ไม่ใช่กะ OT
+            รอบ + บิล · โฟกัสเครื่อง 570F0F · ไม่ใช่กะ OT
           </p>
         </div>
         <nav className="npos-bo-page-tabs" role="tablist" aria-label="หมวด POS">

@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 330/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 331/);
 assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 119/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+90/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.67"/);
@@ -32,8 +32,8 @@ assert.doesNotMatch(slim, /labelOtShift|OtShiftId|shortShift/);
 assert.doesNotMatch(slim, /setShiftId|shiftOptions|morning.*evening.*late/);
 
 const page = read("src/components/PosSalesReport.tsx");
-assert.match(page, /shortPosSessionId|bySession/);
-assert.match(page, /แยกตามรอบ nPos/);
+assert.match(page, /shortPosSessionId|bySession|ช่องทาง · เมนูขายดี/);
+assert.match(page, /แยกตามรอบ nPos|รอบการขาย nPos|PosSessionsSlimTable/);
 assert.doesNotMatch(page, /labelOtShift|แยกตามกะ/);
 
 const devices = read("src/components/NposDevicesPanel.tsx");

@@ -51,6 +51,8 @@ type OwnerDeviceCommandResult = {
   storeClaimUpdatedAt?: number;
   seatMode?: "exclusive" | "multi" | string;
   activeSeatInstallId?: string;
+  keepPairingCode?: string;
+  keptIds?: string[];
 };
 
 async function callNposOwnerDeviceCommand(
@@ -638,8 +640,13 @@ export async function clearNposExclusiveSeat(): Promise<{ revokedCount: number }
   return { revokedCount: typeof res.revokedCount === "number" ? res.revokedCount : 0 };
 }
 
-/** Owner: wipe emulator/dev devices + their sessions/sales/logs (shop start clean). */
-export async function purgeNposDevDevices(): Promise<{
+/** Shop emp tablet pairing code — SUNMI D2s counter. */
+export const NPOS_SHOP_KEEP_PAIRING_CODE = "570F0F";
+
+/** Owner: wipe every device/bill/log except keepPairingCode (default 570F0F). */
+export async function purgeNposDevDevices(opts?: {
+  keepPairingCode?: string;
+}): Promise<{
   deletedDevices: number;
   deletedDiagnose: number;
   deletedOps: number;
@@ -648,8 +655,15 @@ export async function purgeNposDevDevices(): Promise<{
   deletedMutations: number;
   deletedShots: number;
   shopKept: number;
+  keepPairingCode: string;
+  keptIds: string[];
 }> {
-  const res = await callNposOwnerDeviceCommand("purge_dev_devices");
+  const keepPairingCode = (opts?.keepPairingCode || NPOS_SHOP_KEEP_PAIRING_CODE)
+    .trim()
+    .toUpperCase();
+  const res = await callNposOwnerDeviceCommand("purge_dev_devices", undefined, {
+    keepPairingCode,
+  });
   return {
     deletedDevices: typeof res.deletedDevices === "number" ? res.deletedDevices : 0,
     deletedDiagnose: typeof res.deletedDiagnose === "number" ? res.deletedDiagnose : 0,
@@ -659,6 +673,9 @@ export async function purgeNposDevDevices(): Promise<{
     deletedMutations: typeof res.deletedMutations === "number" ? res.deletedMutations : 0,
     deletedShots: typeof res.deletedShots === "number" ? res.deletedShots : 0,
     shopKept: typeof res.shopKept === "number" ? res.shopKept : 0,
+    keepPairingCode:
+      typeof res.keepPairingCode === "string" ? res.keepPairingCode : keepPairingCode,
+    keptIds: Array.isArray(res.keptIds) ? res.keptIds.map(String) : [],
   };
 }
 

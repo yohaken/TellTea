@@ -78,25 +78,17 @@ async function commitDeletes(db, refs) {
   return deleted;
 }
 
-function isDevOrEmulatorDoc(data) {
-  if (!data || typeof data !== "object") return false;
-  if (data.isEmulator === true) return true;
-  if (data.deviceClass === "dev") return true;
-  const hint = typeof data.deviceHint === "string" ? data.deviceHint : "";
-  return /sdk|emulator|generic|goldfish|ranchu/i.test(hint);
+function pairingCodeFromId(id) {
+  return String(id || "")
+    .replace(/-/g, "")
+    .slice(-6)
+    .toUpperCase();
 }
 
-/**
- * Keep only live shop tablets. Everything else (emu/dev/orphan) is test noise
- * to wipe from sessions/sales after early AVD testing.
- */
-function shouldPurgeDeviceId(deviceId, purgeIds, shopKeepIds) {
-  const id = asString(deviceId, 64);
-  if (!id) return true;
-  if (shopKeepIds.has(id)) return false;
-  if (purgeIds.has(id)) return true;
-  // Orphaned install from deleted emulator / unknown non-shop.
-  return true;
+function devicePairingCode(id, data) {
+  const raw = typeof data?.pairingCode === "string" ? data.pairingCode.trim().toUpperCase() : "";
+  if (raw.length >= 4) return raw;
+  return pairingCodeFromId(id);
 }
 
 exports.nposOwnerDeviceCommand = functions
@@ -112,18 +104,30 @@ exports.nposOwnerDeviceCommand = functions
       return { ok: true, action, actorId, at: Date.now(), ...result };
     }
 
-    // Purge emulator/dev tech docs + their sessions/sales/logs — start shop clean.
+    /**
+     * Keep only tablet(s) with pairingCode (default 570F0F = SUNMI shop emp).
+     * Wipe every other device + their sessions/sales/logs/diagnose/captures.
+     */
     if (action === "purge_dev_devices") {
       const db = getFirestore();
       const now = Date.now();
+      const keepPairing = asString(data?.keepPairingCode, 16).toUpperCase() || "570F0F";
 
       const devicesSnap = await db.collection(COL).get();
+      const keepIds = new Set();
       const purgeIds = new Set();
-      const shopKeepIds = new Set();
       for (const docSnap of devicesSnap.docs) {
-        const data = docSnap.data() || {};
-        if (isDevOrEmulatorDoc(data)) purgeIds.add(docSnap.id);
-        else shopKeepIds.add(docSnap.id);
+        const dataDoc = docSnap.data() || {};
+        const code = devicePairingCode(docSnap.id, dataDoc);
+        if (code === keepPairing) keepIds.add(docSnap.id);
+        else purgeIds.add(docSnap.id);
+      }
+
+      if (keepIds.size === 0) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          `ไม่พบเครื่องรหัส ${keepPairing} — ไม่ลบอะไรเพื่อกันพลาด`,
+        );
       }
 
       const [diagSnap, opsSnap, sessionsSnap, salesSnap, mutationsSnap, shotsSnap] =
@@ -136,63 +140,42 @@ exports.nposOwnerDeviceCommand = functions
           db.collection("nposScreenShots").get(),
         ]);
 
-      for (const docSnap of [...diagSnap.docs, ...opsSnap.docs]) {
-        if (isDevOrEmulatorDoc(docSnap.data() || {})) purgeIds.add(docSnap.id);
-      }
-
       const deviceRefs = [];
       for (const id of purgeIds) {
-        if (devicesSnap.docs.some((d) => d.id === id)) {
-          deviceRefs.push(db.collection(COL).doc(id));
-        }
+        deviceRefs.push(db.collection(COL).doc(id));
       }
 
       const diagnoseRefs = [];
-      const opsRefs = [];
       for (const docSnap of diagSnap.docs) {
-        if (purgeIds.has(docSnap.id) || isDevOrEmulatorDoc(docSnap.data() || {})) {
-          diagnoseRefs.push(docSnap.ref);
-          purgeIds.add(docSnap.id);
-        }
+        if (!keepIds.has(docSnap.id)) diagnoseRefs.push(docSnap.ref);
       }
+      const opsRefs = [];
       for (const docSnap of opsSnap.docs) {
-        if (purgeIds.has(docSnap.id) || isDevOrEmulatorDoc(docSnap.data() || {})) {
-          opsRefs.push(docSnap.ref);
-          purgeIds.add(docSnap.id);
-        }
+        if (!keepIds.has(docSnap.id)) opsRefs.push(docSnap.ref);
       }
 
       const sessionRefs = [];
       for (const docSnap of sessionsSnap.docs) {
-        const data = docSnap.data() || {};
-        if (shouldPurgeDeviceId(data.deviceId, purgeIds, shopKeepIds)) {
-          sessionRefs.push(docSnap.ref);
-        }
+        const deviceId = asString((docSnap.data() || {}).deviceId, 64);
+        if (!keepIds.has(deviceId)) sessionRefs.push(docSnap.ref);
       }
 
       const saleRefs = [];
       for (const docSnap of salesSnap.docs) {
-        const data = docSnap.data() || {};
-        if (shouldPurgeDeviceId(data.deviceId, purgeIds, shopKeepIds)) {
-          saleRefs.push(docSnap.ref);
-        }
+        const deviceId = asString((docSnap.data() || {}).deviceId, 64);
+        if (!keepIds.has(deviceId)) saleRefs.push(docSnap.ref);
       }
 
       const mutationRefs = [];
       for (const docSnap of mutationsSnap.docs) {
-        const data = docSnap.data() || {};
-        if (shouldPurgeDeviceId(data.deviceId, purgeIds, shopKeepIds)) {
-          mutationRefs.push(docSnap.ref);
-        }
+        const deviceId = asString((docSnap.data() || {}).deviceId, 64);
+        if (!keepIds.has(deviceId)) mutationRefs.push(docSnap.ref);
       }
 
       const shotRefs = [];
       for (const docSnap of shotsSnap.docs) {
-        const data = docSnap.data() || {};
-        const installId = asString(data.installId, 64);
-        if (purgeIds.has(installId) || shouldPurgeDeviceId(installId, purgeIds, shopKeepIds)) {
-          shotRefs.push(docSnap.ref);
-        }
+        const installId = asString((docSnap.data() || {}).installId, 64);
+        if (!keepIds.has(installId)) shotRefs.push(docSnap.ref);
       }
 
       const deletedDevices = await commitDeletes(db, deviceRefs);
@@ -203,23 +186,33 @@ exports.nposOwnerDeviceCommand = functions
       const deletedMutations = await commitDeletes(db, mutationRefs);
       const deletedShots = await commitDeletes(db, shotRefs);
 
-      // Clear bestseller cache so BO "เมนูขายดี" doesn't show emu noise.
       await db.doc("meta/posMenuRank").set(
         {
           items: [],
           categories: [],
           updatedAt: now,
           purgedBy: actorId,
-          purgedReason: "purge_dev_devices",
+          purgedReason: `purge_except_${keepPairing}`,
         },
         { merge: true },
       );
+
+      // Clear exclusive seat if it pointed at a purged device.
+      const policy = await loadStoreClaimPolicy(db);
+      if (policy.activeSeatInstallId && !keepIds.has(policy.activeSeatInstallId)) {
+        await db.doc(META_POS).set(
+          { activeSeatInstallId: "", seatClaimedAt: 0, updatedAt: now },
+          { merge: true },
+        );
+      }
 
       return {
         ok: true,
         action,
         actorId,
         at: now,
+        keepPairingCode: keepPairing,
+        keptIds: [...keepIds],
         deletedDevices,
         deletedDiagnose,
         deletedOps,
@@ -227,7 +220,7 @@ exports.nposOwnerDeviceCommand = functions
         deletedSales,
         deletedMutations,
         deletedShots,
-        shopKept: shopKeepIds.size,
+        shopKept: keepIds.size,
         purgedIds: [...purgeIds].slice(0, 40),
       };
     }
