@@ -1,7 +1,6 @@
 package app.telltea.npos.shift;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.text.InputType;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -18,6 +17,7 @@ import org.json.JSONObject;
 
 import app.telltea.npos.R;
 import app.telltea.npos.sell.SaleSync;
+import app.telltea.npos.ui.NposConfirmDialog;
 import app.telltea.npos.ui.NposFonts;
 import app.telltea.npos.ui.NposNumberPad;
 import app.telltea.npos.ui.NposUi;
@@ -42,18 +42,15 @@ public final class BlindCloseFlow {
     }
     List<JSONObject> pending = saleSync.listPending(activity);
     if (pending != null && !pending.isEmpty()) {
-      new AlertDialog.Builder(activity)
-          .setTitle(R.string.blind_close_pending_title)
-          .setMessage(activity.getString(R.string.blind_close_pending_msg, pending.size()))
-          .setPositiveButton(
-              R.string.outbox_sync_all,
-              (d, w) -> {
-                saleSync.flushPending(activity);
-                Toast.makeText(activity, R.string.blind_close_pending_retry, Toast.LENGTH_LONG)
-                    .show();
-              })
-          .setNegativeButton(android.R.string.cancel, null)
-          .show();
+      NposConfirmDialog.confirm(
+          activity,
+          activity.getString(R.string.blind_close_pending_title),
+          activity.getString(R.string.blind_close_pending_msg, pending.size()),
+          activity.getString(R.string.outbox_sync_all),
+          () -> {
+            saleSync.flushPending(activity);
+            Toast.makeText(activity, R.string.blind_close_pending_retry, Toast.LENGTH_LONG).show();
+          });
       return;
     }
     askCountedCash(activity, saleSync, done);
@@ -78,17 +75,16 @@ public final class BlindCloseFlow {
     ScrollView scroll = new ScrollView(activity);
     scroll.addView(box);
 
-    new AlertDialog.Builder(activity)
-        .setTitle(R.string.blind_close_count_title)
-        .setView(scroll)
-        .setPositiveButton(
-            R.string.blind_close_next,
-            (d, w) -> {
-              double counted = parseMoney(valueHolder[0]);
-              askNoteAndFloat(activity, saleSync, done, counted);
-            })
-        .setNegativeButton(android.R.string.cancel, null)
-        .show();
+    NposConfirmDialog.custom(
+        activity,
+        activity.getString(R.string.blind_close_count_title),
+        scroll,
+        activity.getString(R.string.blind_close_next),
+        () -> {
+          askNoteAndFloat(activity, saleSync, done, parseMoney(valueHolder[0]));
+          return true;
+        },
+        null);
   }
 
   private static void askNoteAndFloat(
@@ -126,36 +122,36 @@ public final class BlindCloseFlow {
     ScrollView scroll = new ScrollView(activity);
     scroll.addView(box);
 
-    new AlertDialog.Builder(activity)
-        .setTitle(R.string.blind_close_extra_title)
-        .setView(scroll)
-        .setPositiveButton(
-            R.string.blind_close_next,
-            (d, w) -> {
-              double leaveAmt = parseMoney(leaveHolder[0]);
-              if (leaveAmt > counted + 0.009) {
-                Toast.makeText(activity, R.string.blind_close_leave_too_high, Toast.LENGTH_LONG)
-                    .show();
-                askNoteAndFloat(activity, saleSync, done, counted);
-                return;
-              }
-              BlindCloseReport report =
-                  new BlindCloseReport(
-                      opening,
-                      cashSales,
-                      ShiftPrefs.promptpayTotal(activity),
-                      ShiftPrefs.cashBillCount(activity),
-                      ShiftPrefs.promptpayBillCount(activity),
-                      ShiftPrefs.saleCount(activity),
-                      ShiftPrefs.voidedCount(activity),
-                      ShiftPrefs.discountTotal(activity),
-                      counted,
-                      leaveAmt,
-                      note.getText() == null ? "" : note.getText().toString());
-              revealSummary(activity, saleSync, done, report);
-            })
-        .setNegativeButton(android.R.string.cancel, null)
-        .show();
+    NposConfirmDialog.custom(
+        activity,
+        activity.getString(R.string.blind_close_extra_title),
+        scroll,
+        activity.getString(R.string.blind_close_next),
+        () -> {
+          double leaveAmt = parseMoney(leaveHolder[0]);
+          if (leaveAmt > counted + 0.009) {
+            Toast.makeText(activity, R.string.blind_close_leave_too_high, Toast.LENGTH_LONG)
+                .show();
+            askNoteAndFloat(activity, saleSync, done, counted);
+            return true;
+          }
+          BlindCloseReport report =
+              new BlindCloseReport(
+                  opening,
+                  cashSales,
+                  ShiftPrefs.promptpayTotal(activity),
+                  ShiftPrefs.cashBillCount(activity),
+                  ShiftPrefs.promptpayBillCount(activity),
+                  ShiftPrefs.saleCount(activity),
+                  ShiftPrefs.voidedCount(activity),
+                  ShiftPrefs.discountTotal(activity),
+                  counted,
+                  leaveAmt,
+                  note.getText() == null ? "" : note.getText().toString());
+          revealSummary(activity, saleSync, done, report);
+          return true;
+        },
+        null);
   }
 
   private static void revealSummary(
@@ -187,32 +183,31 @@ public final class BlindCloseFlow {
             report.discrepancyNote.isEmpty() ? "—" : report.discrepancyNote));
     scroll.addView(body);
 
-    new AlertDialog.Builder(activity)
-        .setTitle(R.string.blind_close_confirm_title)
-        .setView(scroll)
-        .setPositiveButton(
-            R.string.blind_close_confirm_btn,
-            (d, w) -> {
-              Toast.makeText(activity, R.string.sell_closing_shift, Toast.LENGTH_SHORT).show();
-              saleSync.printShiftReport(
-                  activity,
-                  "close",
-                  report,
-                  () ->
-                      saleSync.closeSession(
-                          activity,
-                          report,
-                          () ->
-                              activity.runOnUiThread(
-                                  () -> {
-                                    Toast.makeText(
-                                            activity, R.string.shift_closed, Toast.LENGTH_SHORT)
-                                        .show();
-                                    if (done != null) done.onClosed();
-                                  })));
-            })
-        .setNegativeButton(android.R.string.cancel, null)
-        .show();
+    NposConfirmDialog.custom(
+        activity,
+        activity.getString(R.string.blind_close_confirm_title),
+        scroll,
+        activity.getString(R.string.blind_close_confirm_btn),
+        () -> {
+          Toast.makeText(activity, R.string.sell_closing_shift, Toast.LENGTH_SHORT).show();
+          saleSync.printShiftReport(
+              activity,
+              "close",
+              report,
+              () ->
+                  saleSync.closeSession(
+                      activity,
+                      report,
+                      () ->
+                          activity.runOnUiThread(
+                              () -> {
+                                Toast.makeText(activity, R.string.shift_closed, Toast.LENGTH_SHORT)
+                                    .show();
+                                if (done != null) done.onClosed();
+                              })));
+          return true;
+        },
+        null);
   }
 
   private static TextView moneyDisplay(Activity activity, UiScale ui, CharSequence seed) {

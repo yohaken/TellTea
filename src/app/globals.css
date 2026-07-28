@@ -9546,6 +9546,14 @@ body.modal-open .main-panel {
   min-width: 0;
 }
 
+.pos-sales-bill-id {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  color: #1a2e24;
+}
+
 .pos-sales-row-items {
   font-size: 0.78rem;
   color: rgba(28, 42, 31, 0.62);
@@ -12283,6 +12291,62 @@ body.modal-open .main-panel {
   color: #6b7580;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.pos-biz-preview-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.45rem;
+}
+
+.pos-biz-preview-tabs button,
+.pos-biz-preview-cases button {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+  color: #3d4652;
+  border-radius: 0.4rem;
+  padding: 0.28rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pos-biz-preview-tabs button.is-active,
+.pos-biz-preview-cases button.is-active {
+  background: #1a2e24;
+  color: #fff;
+  border-color: #1a2e24;
+}
+
+.pos-biz-preview-cases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+  margin-bottom: 0.45rem;
+}
+
+.pos-biz-preview-hint {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.pos-biz-preview-frame-wrap {
+  background: #fff;
+  border: 1px dashed rgba(0, 0, 0, 0.12);
+  border-radius: 0.35rem;
+  overflow: auto;
+  max-height: min(70vh, 36rem);
+}
+
+.pos-biz-preview-frame {
+  display: block;
+  width: 100%;
+  min-height: 22rem;
+  height: 32rem;
+  border: 0;
+  background: #fff;
 }
 
 .pos-biz-preview-slip {

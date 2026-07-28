@@ -1,7 +1,6 @@
 package app.telltea.npos;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.os.Bundle;
 import android.text.InputType;
 import android.util.TypedValue;
@@ -21,6 +20,7 @@ import java.util.List;
 import java.util.Locale;
 
 import app.telltea.npos.sell.SaleSync;
+import app.telltea.npos.ui.NposConfirmDialog;
 import app.telltea.npos.ui.NposFonts;
 import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.ui.UiScale;
@@ -65,7 +65,11 @@ public class ReceiptsActivity extends Activity {
     SimpleDateFormat fmt = new SimpleDateFormat("dd/MM HH:mm", Locale.getDefault());
     for (JSONObject row : rows) {
       boolean voided = row.optBoolean("voided", false);
-      String bill = row.optString("billNo", "—");
+      String billRaw = row.optString("billNo", "—");
+      if (billRaw.isEmpty() || "รอส่ง".equals(billRaw)) {
+        billRaw = SaleSync.provisionalBillNo(row.optString("mutationId", ""));
+      }
+      String bill = SaleSync.formatBillDisplay(billRaw);
       double total = row.optDouble("total", 0);
       String pay = row.optString("paymentMethod", "");
       String when = fmt.format(new Date(row.optLong("at", 0)));
@@ -83,6 +87,7 @@ public class ReceiptsActivity extends Activity {
       card.setLayoutParams(cardLp);
 
       TextView billTv = NposUi.section(this, bill + (voided ? " · ทำลายแล้ว" : ""));
+      billTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.titleSp);
       if (voided) billTv.setTextColor(NposUi.color(this, R.color.npos_muted));
       card.addView(billTv);
 
@@ -93,7 +98,7 @@ public class ReceiptsActivity extends Activity {
                   Locale.getDefault(),
                   "%s · %s · %d รายการ",
                   when,
-                  pay.isEmpty() ? "—" : pay,
+                  payLabel(pay),
                   n));
       meta.setPadding(0, ui.dp(4), 0, ui.dp(8));
       card.addView(meta);
@@ -111,76 +116,81 @@ public class ReceiptsActivity extends Activity {
         actions.setPadding(0, ui.dp(10), 0, 0);
 
         TextView reprint = NposUi.chip(this, getString(R.string.btn_reprint));
-        reprint.setOnClickListener(v -> confirmReprint(row));
+        final String billForConfirm = bill;
+        reprint.setOnClickListener(v -> confirmReprint(row, billForConfirm));
         actions.addView(reprint, NposUi.wrap(this, 8, 0));
 
         TextView voidBtn = NposUi.ghost(this, getString(R.string.btn_void_receipt));
-        voidBtn.setOnClickListener(v -> confirmVoid(row));
+        voidBtn.setOnClickListener(v -> confirmVoid(row, billForConfirm));
         actions.addView(voidBtn);
 
         card.addView(actions);
       } else {
-        card.setOnClickListener(v -> showAlreadyVoided(bill));
+        final String billForAlert = bill;
+        card.setOnClickListener(v -> showAlreadyVoided(billForAlert));
       }
       listRoot.addView(card);
     }
   }
 
+  private static String payLabel(String pay) {
+    if (pay == null || pay.isEmpty()) return "—";
+    if ("promptpay".equalsIgnoreCase(pay)) return "PromptPay";
+    if ("cash".equalsIgnoreCase(pay)) return "เงินสด";
+    return pay;
+  }
+
   private void showAlreadyVoided(String bill) {
-    new AlertDialog.Builder(this)
-        .setTitle(bill)
-        .setMessage(R.string.receipts_already_voided)
-        .setPositiveButton(android.R.string.ok, null)
-        .show();
+    NposConfirmDialog.alert(
+        this, bill, getString(R.string.receipts_already_voided), getString(android.R.string.ok), true, null);
   }
 
-  private void confirmReprint(JSONObject receipt) {
-    String bill = receipt.optString("billNo", "—");
-    new AlertDialog.Builder(this)
-        .setTitle(R.string.receipts_reprint_title)
-        .setMessage(getString(R.string.receipts_reprint_msg, bill))
-        .setPositiveButton(
-            R.string.btn_reprint,
-            (d, w) -> {
-              Toast.makeText(this, R.string.receipts_reprinting, Toast.LENGTH_SHORT).show();
-              saleSync.reprintReceipt(
-                  this,
-                  receipt,
-                  () ->
-                      runOnUiThread(
-                          () ->
-                              Toast.makeText(this, R.string.receipts_reprint_done, Toast.LENGTH_SHORT)
-                                  .show()));
-            })
-        .setNegativeButton(android.R.string.cancel, null)
-        .show();
+  private void confirmReprint(JSONObject receipt, String bill) {
+    NposConfirmDialog.confirm(
+        this,
+        getString(R.string.receipts_reprint_title),
+        getString(R.string.receipts_reprint_msg, bill),
+        getString(R.string.btn_reprint),
+        () -> {
+          Toast.makeText(this, R.string.receipts_reprinting, Toast.LENGTH_SHORT).show();
+          saleSync.reprintReceipt(
+              this,
+              receipt,
+              () ->
+                  runOnUiThread(
+                      () ->
+                          Toast.makeText(this, R.string.receipts_reprint_done, Toast.LENGTH_SHORT)
+                              .show()));
+        });
   }
 
-  private void confirmVoid(JSONObject receipt) {
+  private void confirmVoid(JSONObject receipt, String bill) {
     EditText reason = NposUi.field(this);
     reason.setInputType(InputType.TYPE_CLASS_TEXT);
     reason.setHint(R.string.void_reason_hint);
-    new AlertDialog.Builder(this)
-        .setTitle(R.string.void_confirm_title)
-        .setMessage(getString(R.string.void_confirm_msg, receipt.optString("billNo", "—")))
-        .setView(reason)
-        .setPositiveButton(
-            R.string.btn_void_receipt,
-            (d, w) -> {
-              String r = reason.getText().toString().trim();
-              saleSync.voidReceipt(
-                  this,
-                  receipt,
-                  r.isEmpty() ? "ทำลายบิล" : r,
-                  () ->
-                      runOnUiThread(
-                          () -> {
-                            Toast.makeText(this, R.string.void_done, Toast.LENGTH_SHORT).show();
-                            renderList();
-                          }));
-            })
-        .setNegativeButton(android.R.string.cancel, null)
-        .show();
+    NposConfirmDialog.custom(
+        this,
+        getString(R.string.void_confirm_title),
+        getString(R.string.void_confirm_msg, bill),
+        reason,
+        getString(R.string.btn_void_receipt),
+        getString(android.R.string.cancel),
+        true,
+        () -> {
+          String r = reason.getText().toString().trim();
+          saleSync.voidReceipt(
+              this,
+              receipt,
+              r.isEmpty() ? "ทำลายบิล" : r,
+              () ->
+                  runOnUiThread(
+                      () -> {
+                        Toast.makeText(this, R.string.void_done, Toast.LENGTH_SHORT).show();
+                        renderList();
+                      }));
+          return true;
+        },
+        null);
   }
 
   @Override

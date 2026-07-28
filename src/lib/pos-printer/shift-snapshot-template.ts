@@ -2,6 +2,129 @@ import { formatPlainNumber } from "../utils";
 import { escapeReceiptHtml } from "./receipt-template";
 import type { ShiftReportPayload } from "../pos-shift-report";
 
+/** เอกสารจำลอง X/Z สำหรับตั้งค่าร้าน — ครบหมวด+รายบิล+ส่วนลด+void */
+export function sampleShiftReportPayload(
+  kind: "snapshot" | "close",
+  shop?: {
+    shopName?: string;
+    shopNameTh?: string;
+    shopAddress?: string;
+    shopPhone?: string;
+    receiptStaffName?: string;
+  },
+): ShiftReportPayload {
+  const now = Date.now();
+  const openedAt = now - 4 * 60 * 60 * 1000;
+  return {
+    kind,
+    shopName: shop?.shopName?.trim() || "TELL TEA",
+    shopNameTh: shop?.shopNameTh?.trim() || "เทล ที",
+    shopAddress: shop?.shopAddress?.trim() || "ถ.พรรณนาชัย ต.หมากแข้ง อ.เมืองอุดรธานี จ.อุดรธานี",
+    shopPhone: shop?.shopPhone?.trim() || "0884818817",
+    deviceCode: "T01",
+    sessionId: "sess_demo_abcd",
+    openedAt,
+    closedAt: kind === "close" ? now : null,
+    printedAt: now,
+    staffName: shop?.receiptStaffName?.trim() || "หน้าร้าน",
+    openingCash: 2000,
+    closingCashCounted: kind === "close" ? 2850 : undefined,
+    expectedCash: kind === "close" ? 2840 : undefined,
+    cashDifference: kind === "close" ? 10 : undefined,
+    leaveFloat: kind === "close" ? 2000 : undefined,
+    discrepancyLabel: kind === "close" ? "เกิน" : undefined,
+    summary: {
+      count: 4,
+      total: 372,
+      cashCount: 2,
+      cashTotal: 115,
+      promptpayCount: 2,
+      promptpayTotal: 257,
+      pendingCount: 1,
+      voidedCount: 1,
+    },
+    detail: {
+      itemQty: 7,
+      grossSales: 382,
+      discountTotal: 10,
+      discountCount: 1,
+      netSales: 372,
+      customerCount: 4,
+      avgPerBill: 93,
+      byCategory: [
+        { name: "ชา", qty: 4, amount: 194 },
+        { name: "กาแฟ", qty: 2, amount: 110 },
+        { name: "อื่นๆ", qty: 1, amount: 78 },
+      ],
+      byItem: [
+        { name: "ชานมไต้หวัน", qty: 3, amount: 87 },
+        { name: "กาแฟเย็น", qty: 2, amount: 110 },
+        { name: "ครัวซองต์", qty: 2, amount: 90 },
+      ],
+      bills: [
+        {
+          billNo: "P2707-001",
+          createdAt: openedAt + 20 * 60 * 1000,
+          paymentMethod: "promptpay",
+          total: 107,
+          discountBaht: 0,
+          voided: false,
+          pending: false,
+          lines: [
+            { name: "ชานมไต้หวัน", qty: 1, amount: 29, optionText: "หวาน 50% · ไข่มุก" },
+            { name: "ชาเขียวนม", qty: 2, amount: 78 },
+          ],
+        },
+        {
+          billNo: "P2707-002",
+          createdAt: openedAt + 55 * 60 * 1000,
+          paymentMethod: "cash",
+          total: 35,
+          discountBaht: 0,
+          voided: false,
+          pending: false,
+          lines: [{ name: "โกโก้เย็น", qty: 1, amount: 35 }],
+        },
+        {
+          billNo: "P2707-003",
+          createdAt: openedAt + 90 * 60 * 1000,
+          paymentMethod: "cash",
+          total: 80,
+          discountBaht: 10,
+          voided: false,
+          pending: false,
+          lines: [{ name: "ชาไทยเย็น", qty: 2, amount: 90 }],
+        },
+        {
+          billNo: "รอส่ง-A1B2C3",
+          createdAt: openedAt + 150 * 60 * 1000,
+          paymentMethod: "promptpay",
+          total: 150,
+          discountBaht: 0,
+          voided: false,
+          pending: true,
+          lines: [{ name: "กาแฟเย็น", qty: 2, amount: 110 }, { name: "ครัวซองต์", qty: 1, amount: 40 }],
+        },
+      ],
+      voidedBills: [
+        {
+          billNo: "P2707-000",
+          createdAt: openedAt + 10 * 60 * 1000,
+          paymentMethod: "cash",
+          total: 29,
+          discountBaht: 0,
+          voided: true,
+          pending: false,
+          lines: [{ name: "ชานมไต้หวัน", qty: 1, amount: 29 }],
+        },
+      ],
+      voidedTotal: 29,
+      dineInCount: 4,
+      dineInTotal: 372,
+    },
+  };
+}
+
 function formatTs(ts: number) {
   return new Date(ts).toLocaleString("th-TH", {
     day: "2-digit",

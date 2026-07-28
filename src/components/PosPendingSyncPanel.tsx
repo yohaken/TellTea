@@ -119,7 +119,9 @@ export function PosPendingSyncPanel({
                   className={`pos-sync-bill-row ${failed ? "pos-sync-bill-row--failed" : ""} ${bill.stuck ? "pos-sync-bill-row--stuck" : ""}`}
                 >
                   <div className="pos-sync-bill-main">
-                    <strong>{bill.billNo}</strong>
+                    <strong className="pos-sales-bill-id">
+                      #{(bill.billNo || "—").replace(/^#/, "")}
+                    </strong>
                     <span className="muted">
                       {formatTime(bill.createdAt)} · ค้าง {formatAge(bill.createdAt)} ·{" "}
                       {labelOtShift(bill.shift as OtShiftId)} ·{" "}

@@ -28,13 +28,26 @@ export {
 } from "./profiles";
 
 export { buildKitchenTicketHtml, buildReceiptHtml, buildTestPageHtml } from "./layout";
-export { RECEIPT_CHANNEL_LABELS, sampleReceiptPayload } from "./receipt-template";
+export {
+  RECEIPT_CHANNEL_LABELS,
+  sampleReceiptPayload,
+  sampleReceiptCases,
+  applyShopToReceiptSample,
+  buildUnifiedReceiptBody,
+  unifiedReceiptStyles,
+  type SampleReceiptCase,
+  type SampleReceiptCaseId,
+} from "./receipt-template";
 export {
   buildUnifiedReceiptText,
   RECEIPT_TEXT_COLS_58,
   RECEIPT_TEXT_COLS_80,
 } from "./receipt-text-form";
-export { buildShiftReportHtml, openShiftReportPrint } from "./shift-snapshot-template";
+export {
+  buildShiftReportHtml,
+  openShiftReportPrint,
+  sampleShiftReportPayload,
+} from "./shift-snapshot-template";
 export { buildShiftReportPayload, buildShiftReportDetail } from "../pos-shift-report";
 export type {
   ShiftReportKind,

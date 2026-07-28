@@ -50,6 +50,7 @@ import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shell.PosShellNav;
 import app.telltea.npos.shift.BlindCloseFlow;
 import app.telltea.npos.shift.ShiftPrefs;
+import app.telltea.npos.ui.NposConfirmDialog;
 import app.telltea.npos.ui.NposFonts;
 import app.telltea.npos.ui.NposNumberPad;
 import app.telltea.npos.ui.NposUi;
@@ -275,18 +276,16 @@ public class SellActivity extends Activity {
       Toast.makeText(this, R.string.cart_empty, Toast.LENGTH_SHORT).show();
       return;
     }
-    new AlertDialog.Builder(this)
-        .setTitle(R.string.clear_cart_title)
-        .setMessage(R.string.clear_cart_msg)
-        .setPositiveButton(
-            R.string.btn_clear_cart,
-            (d, w) -> {
-              cart.clear();
-              discountBaht = 0;
-              renderCart();
-            })
-        .setNegativeButton(android.R.string.cancel, null)
-        .show();
+    NposConfirmDialog.confirmDestructive(
+        this,
+        getString(R.string.clear_cart_title),
+        getString(R.string.clear_cart_msg),
+        getString(R.string.btn_clear_cart),
+        () -> {
+          cart.clear();
+          discountBaht = 0;
+          renderCart();
+        });
   }
 
   private void holdBill() {
@@ -313,17 +312,15 @@ public class SellActivity extends Activity {
       return;
     }
     if (!cart.isEmpty()) {
-      new AlertDialog.Builder(this)
-          .setTitle(R.string.hold_restore_title)
-          .setMessage(R.string.hold_restore_replace)
-          .setPositiveButton(
-              android.R.string.ok,
-              (d, w) -> {
-                cart.clear();
-                doRestoreHold();
-              })
-          .setNegativeButton(android.R.string.cancel, null)
-          .show();
+      NposConfirmDialog.confirm(
+          this,
+          getString(R.string.hold_restore_title),
+          getString(R.string.hold_restore_replace),
+          getString(android.R.string.ok),
+          () -> {
+            cart.clear();
+            doRestoreHold();
+          });
       return;
     }
     doRestoreHold();
@@ -375,19 +372,21 @@ public class SellActivity extends Activity {
       double total = row.optDouble("localTotal", 0);
       String err = row.optString("lastError", "");
       int attempts = row.optInt("attempts", 0);
-      String shortId =
-          mid.length() > 6 ? mid.substring(mid.length() - 6).toUpperCase(Locale.US) : mid;
-      TextView line = new TextView(this);
+      String billId = SaleSync.formatBillDisplay(SaleSync.provisionalBillNo(mid));
+      String pay = row.optString("paymentMethod", "");
+      TextView billTv = NposUi.section(this, billId);
+      billTv.setPadding(0, pad / 2, 0, 0);
+      root.addView(billTv);
+      TextView line = NposUi.caption(this, "");
       line.setText(
           getString(
               R.string.outbox_row_fmt,
-              shortId,
-              total,
+              String.format(Locale.getDefault(), "฿%.0f", total),
+              pay.isEmpty() ? "—" : ("promptpay".equals(pay) ? "PromptPay" : "เงินสด"),
               "failed".equals(status) ? "ล้มเหลว" : "รอส่ง",
               attempts,
               err.isEmpty() ? "—" : err));
-      line.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-      line.setPadding(0, pad / 2, 0, pad / 2);
+      line.setPadding(0, pad / 4, 0, pad / 2);
       root.addView(line);
 
       LinearLayout actions = new LinearLayout(this);
@@ -412,45 +411,41 @@ public class SellActivity extends Activity {
       cancel.setText(R.string.outbox_cancel_one);
       cancel.setOnClickListener(
           v ->
-              new AlertDialog.Builder(this)
-                  .setTitle(R.string.outbox_cancel_title)
-                  .setMessage(R.string.outbox_cancel_msg)
-                  .setPositiveButton(
-                      android.R.string.ok,
-                      (d, w) ->
-                          saleSync.cancelPending(
-                              this,
-                              mid,
-                              () ->
-                                  runOnUiThread(
-                                      () -> {
-                                        updatePendingBadge();
-                                        updateShiftSummary();
-                                        Toast.makeText(
-                                                this,
-                                                R.string.outbox_cancel_done,
-                                                Toast.LENGTH_SHORT)
-                                            .show();
-                                      })))
-                  .setNegativeButton(android.R.string.cancel, null)
-                  .show());
+              NposConfirmDialog.confirmDestructive(
+                  this,
+                  getString(R.string.outbox_cancel_title),
+                  getString(R.string.outbox_cancel_msg) + "\n" + billId,
+                  getString(android.R.string.ok),
+                  () ->
+                      saleSync.cancelPending(
+                          this,
+                          mid,
+                          () ->
+                              runOnUiThread(
+                                  () -> {
+                                    updatePendingBadge();
+                                    updateShiftSummary();
+                                    Toast.makeText(
+                                            this, R.string.outbox_cancel_done, Toast.LENGTH_SHORT)
+                                        .show();
+                                  }))));
       actions.addView(retry);
       actions.addView(cancel);
       root.addView(actions);
     }
     scroll.addView(root);
-    new AlertDialog.Builder(this)
-        .setTitle(getString(R.string.outbox_title_n, rows.size()))
-        .setView(scroll)
-        .setPositiveButton(
-            R.string.outbox_sync_all,
-            (d, w) -> {
-              sellSyncStatus.setText(R.string.sell_flushing);
-              saleSync.flushPending(this);
-              flushSyncButton.postDelayed(this::updatePendingBadge, 1200);
-            })
-        .setNegativeButton(android.R.string.cancel, null)
-        .show();
+    NposConfirmDialog.custom(
+        this,
+        getString(R.string.outbox_title_n, rows.size()),
+        scroll,
+        getString(R.string.outbox_sync_all),
+        () -> {
+          sellSyncStatus.setText(R.string.sell_flushing);
+          saleSync.flushPending(this);
+          flushSyncButton.postDelayed(this::updatePendingBadge, 1200);
+          return true;
+        },
+        null);
   }
 
   private void updatePendingBadge() {
@@ -1011,37 +1006,33 @@ public class SellActivity extends Activity {
       return;
     }
     boolean toSoldOut = item.active;
-    new AlertDialog.Builder(this)
-        .setTitle(toSoldOut ? R.string.sold_out_confirm_title : R.string.sold_out_restore_title)
-        .setMessage(item.name)
-        .setPositiveButton(
-            android.R.string.ok,
-            (d, w) -> {
-              menuRepo.toggleSoldOut(
-                  this,
-                  item.id,
-                  toSoldOut,
-                  (ok, active, err) ->
-                      runOnUiThread(
-                          () -> {
-                            if (!ok) {
-                              Toast.makeText(this, R.string.sold_out_fail, Toast.LENGTH_LONG)
-                                  .show();
-                              return;
+    NposConfirmDialog.confirm(
+        this,
+        getString(toSoldOut ? R.string.sold_out_confirm_title : R.string.sold_out_restore_title),
+        item.name,
+        getString(android.R.string.ok),
+        () ->
+            menuRepo.toggleSoldOut(
+                this,
+                item.id,
+                toSoldOut,
+                (ok, active, err) ->
+                    runOnUiThread(
+                        () -> {
+                          if (!ok) {
+                            Toast.makeText(this, R.string.sold_out_fail, Toast.LENGTH_LONG).show();
+                            return;
+                          }
+                          replaceItemActive(item.id, active);
+                          // Clear cart lines for sold-out item (web parity)
+                          if (!active) {
+                            for (int i = cart.size() - 1; i >= 0; i--) {
+                              if (item.id.equals(cart.get(i).menuItemId)) cart.remove(i);
                             }
-                            replaceItemActive(item.id, active);
-                            // Clear cart lines for sold-out item (web parity)
-                            if (!active) {
-                              for (int i = cart.size() - 1; i >= 0; i--) {
-                                if (item.id.equals(cart.get(i).menuItemId)) cart.remove(i);
-                              }
-                              renderCart();
-                            }
-                            renderMenu();
-                          }));
-            })
-        .setNegativeButton(android.R.string.cancel, null)
-        .show();
+                            renderCart();
+                          }
+                          renderMenu();
+                        })));
   }
 
   private void replaceItemActive(String id, boolean active) {
@@ -1873,26 +1864,22 @@ public class SellActivity extends Activity {
     ScrollView scroll = new ScrollView(this);
     scroll.addView(root);
 
-    AlertDialog dialog =
-        new AlertDialog.Builder(this)
-            .setTitle(R.string.pay_cash_title)
-            .setView(scroll)
-            .setPositiveButton(
-                R.string.btn_confirm_sale,
-                (d, w) -> {
-                  double received = parseCashAmount(valueHolder[0]);
-                  if (received < total) {
-                    Toast.makeText(this, R.string.pay_cash_short, Toast.LENGTH_LONG).show();
-                    syncCustomerDisplay();
-                    return;
-                  }
-                  commitSale("cash", received);
-                })
-            .setNegativeButton(
-                android.R.string.cancel, (d, w) -> syncCustomerDisplay())
-            .setOnCancelListener(d -> syncCustomerDisplay())
-            .create();
-    dialog.show();
+    NposConfirmDialog.custom(
+        this,
+        getString(R.string.pay_cash_title),
+        scroll,
+        getString(R.string.btn_confirm_sale),
+        () -> {
+          double received = parseCashAmount(valueHolder[0]);
+          if (received < total) {
+            Toast.makeText(this, R.string.pay_cash_short, Toast.LENGTH_LONG).show();
+            syncCustomerDisplay();
+            return false;
+          }
+          commitSale("cash", received);
+          return true;
+        },
+        this::syncCustomerDisplay);
   }
 
   private static double parseCashAmount(String raw) {
