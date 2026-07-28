@@ -12,4 +12,5 @@ When changing nPos Android UI (`npos-telltea/`):
 - Use `NposFonts` / Prompt — never `Typeface.DEFAULT` / `DEFAULT_BOLD` for on-screen text.
 - XML: `Npos.Btn.*` (`wrap_content`, max ~280dp), `Theme.Npos`, colors from `npos_*` — no full-bleed Material bars, no `maxWidth=999dp`, no purple/cream AI themes.
 - Primary ~52dp tall · secondary/ghost ~40–44dp · secondary actions as chips · programmatic CTAs use `NposUi.cta()` not `matchWidth()`.
+- **Never** `AlertDialog.Builder#setItems` (or thin Material list + CANCEL) for counter choices such as pay method — use large full-width `NposUi.primary` / `secondary` / `ghost` instead.
 - Policy doc: `docs/npos-friendly-ui-checklist.md`

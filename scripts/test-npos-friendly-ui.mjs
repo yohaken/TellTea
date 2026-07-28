@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 317/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 112/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+82/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.59"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 318/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 113/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+83/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.60"/);
 
 assert.ok(existsSync(join(root, "docs/npos-friendly-ui-checklist.md")));
 assert.match(read("docs/npos-friendly-ui-checklist.md"), /NposUi|1\.14\.39/);
@@ -94,6 +94,11 @@ assert.match(sellJava, /NposUi\.(primary|chip|ghost|secondary)/);
 assert.doesNotMatch(sellJava, /new Button\(/);
 assert.doesNotMatch(sellJava, /Typeface\.DEFAULT/);
 assert.doesNotMatch(sellJava, /0xFF2D7FE0|2D7FE0/);
+const startPayAll = sellJava.match(/private void startPayAll\(\) \{[\s\S]*?\n  private void startPay\(/);
+assert.ok(startPayAll);
+assert.doesNotMatch(startPayAll[0], /\.setItems\s*\(/);
+assert.match(startPayAll[0], /NposUi\.primary/);
+assert.match(read("docs/npos-friendly-ui-checklist.md"), /setItems/);
 
 const picker = read("npos-telltea/app/src/main/res/layout/dialog_option_picker.xml");
 assert.match(picker, /prompt_semibold|Npos\.Btn/);

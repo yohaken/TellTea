@@ -94,6 +94,7 @@
     <string name="pay_all_discount_fmt">ส่วนลด −฿%.0f</string>
     <string name="pay_all_discount_none">ส่วนลด —</string>
     <string name="pay_choose_title">เลือกวิธีชำระ</string>
+    <string name="pay_choose_hint">แตะปุ่มใหญ่ด้านล่าง · เงินสดหรือโอน</string>
     <string name="btn_pay_cash">💵 ชำระเงินสด</string>
     <string name="btn_pay_transfer">โอนเงิน</string>
     <string name="btn_pay_promptpay">📱 ชำระ PromptPay</string>

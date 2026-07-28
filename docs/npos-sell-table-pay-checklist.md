@@ -1,6 +1,6 @@
 # nPos — sell table-view first (หมวดซ้าย + ชำระ/บันทึก)
 
-อัปเดต: **1.14.57** · `APP_BUILD` 315 · `POS_BUILD` 110 · vc **80**
+อัปเดต: **1.14.60** · `APP_BUILD` 318 · `POS_BUILD` 113 · vc **83**
 
 ## สเปกที่ยืนยัน
 
@@ -19,7 +19,9 @@
 - [x] ยอดรวมไม่แสดงที่อื่นในตะกร้า
 - [x] ปุ่ม 2 (~15%): **บันทึก** = พักบิล / hold
 - [x] ส่วนลด · ดึงบิลพัก · ล้างตะกร้า ย้ายไป hub ▦
+- [x] เลือกวิธีชำระ = ปุ่มใหญ่ `NposUi` (**ห้าม** `AlertDialog.setItems`)
 
 ```bash
 node scripts/test-npos-sell-table-pay.mjs
+node scripts/test-npos-pay-chooser-touch.mjs
 ```

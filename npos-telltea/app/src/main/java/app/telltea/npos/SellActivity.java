@@ -1999,20 +1999,74 @@ public class SellActivity extends Activity {
       Toast.makeText(this, R.string.cart_empty, Toast.LENGTH_SHORT).show();
       return;
     }
-    CharSequence[] methods =
-        new CharSequence[] {
-          getString(R.string.btn_pay_cash), getString(R.string.btn_pay_transfer)
-        };
-    new AlertDialog.Builder(this)
-        .setTitle(R.string.pay_choose_title)
-        .setItems(
-            methods,
-            (d, which) -> {
-              if (which == 0) startPay("cash");
-              else if (which == 1) startPay(PaymentMethods.TRANSFER);
-            })
-        .setNegativeButton(android.R.string.cancel, null)
-        .show();
+    if (uiScale == null) uiScale = UiScale.from(this);
+
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    int pad = uiScale.dp(12);
+    box.setPadding(pad, pad, pad, pad);
+
+    TextView hint = NposUi.caption(this, getString(R.string.pay_choose_hint));
+    hint.setPadding(0, 0, 0, uiScale.dp(12));
+    box.addView(hint);
+
+    final AlertDialog[] holder = new AlertDialog[1];
+
+    TextView cash = NposUi.primary(this, getString(R.string.btn_pay_cash));
+    cash.setMaxWidth(Integer.MAX_VALUE);
+    cash.setMinHeight(uiScale.payPrimaryMinPx);
+    cash.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.titleSp);
+    LinearLayout.LayoutParams cashLp =
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    cashLp.bottomMargin = uiScale.dp(10);
+    cash.setLayoutParams(cashLp);
+    cash.setOnClickListener(
+        v -> {
+          if (holder[0] != null) holder[0].dismiss();
+          startPay("cash");
+        });
+    box.addView(cash);
+
+    TextView transfer = NposUi.secondary(this, getString(R.string.btn_pay_transfer));
+    transfer.setMaxWidth(Integer.MAX_VALUE);
+    transfer.setMinHeight(uiScale.payPrimaryMinPx);
+    transfer.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.titleSp);
+    LinearLayout.LayoutParams transferLp =
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    transferLp.bottomMargin = uiScale.dp(10);
+    transfer.setLayoutParams(transferLp);
+    transfer.setOnClickListener(
+        v -> {
+          if (holder[0] != null) holder[0].dismiss();
+          startPay(PaymentMethods.TRANSFER);
+        });
+    box.addView(transfer);
+
+    TextView cancel = NposUi.ghost(this, getString(android.R.string.cancel));
+    cancel.setMaxWidth(Integer.MAX_VALUE);
+    cancel.setLayoutParams(
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+    cancel.setOnClickListener(
+        v -> {
+          if (holder[0] != null) holder[0].dismiss();
+        });
+    box.addView(cancel);
+
+    holder[0] =
+        new AlertDialog.Builder(this).setTitle(R.string.pay_choose_title).setView(box).create();
+    holder[0].show();
+    if (holder[0].getWindow() != null) {
+      int w =
+          Math.min(
+              (int) (getResources().getDisplayMetrics().widthPixels * 0.42f), uiScale.dp(420));
+      w = Math.max(w, uiScale.dp(320));
+      holder[0]
+          .getWindow()
+          .setLayout(w, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+    }
   }
 
   private void startPay(String method) {
