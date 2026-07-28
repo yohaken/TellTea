@@ -3,18 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Ban, ChevronLeft, ChevronRight, MonitorSmartphone, Receipt } from "lucide-react";
+import { Ban, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { labelOtShift } from "@/lib/ot";
 import { voidPosSale } from "@/lib/pos-sales-admin";
 import {
   formatPosReportDate,
   reconcilePosSessions,
-  salesForSession,
   subscribePosSalesForDate,
   subscribePosSessionsForDate,
   summarizePosSalesDetailed,
-  voidedForSession,
 } from "@/lib/pos-sales-report";
 import {
   saleLinesToLocalReceiptLines,
@@ -25,6 +23,7 @@ import { formatPlainNumber, startOfLocalDay } from "@/lib/utils";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { PosManagePanel } from "@/components/PosManagePanel";
 import { PosReceiptPaper } from "@/components/PosReceiptPaper";
+import { PosSessionsSlimTable } from "@/components/PosSessionsSlimTable";
 
 function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
   const extra = sale as PosSale & {
@@ -69,106 +68,11 @@ function dateInputValue(ms: number) {
   return `${y}-${m}-${day}`;
 }
 
-type PosSalesHubTab = "report" | "manage";
-
-function formatTime(ts: number): string {
+function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatTs(ts: number): string {
-  return new Date(ts).toLocaleString("th-TH", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function SessionShiftCard({
-  session,
-  sales,
-  selected,
-  onSelect,
-}: {
-  session: PosSession;
-  sales: PosSale[];
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  const active = salesForSession(sales, session.id);
-  const voided = voidedForSession(sales, session.id);
-  const cash = active.filter((s) => s.paymentMethod === "cash");
-  const pp = active.filter((s) => s.paymentMethod === "promptpay");
-  const transfer = active.filter((s) => s.paymentMethod === "transfer");
-  const salesTotal = active.reduce((sum, s) => sum + s.total, 0);
-  const discount = active.reduce((sum, s) => sum + Math.max(0, s.discountBaht || 0), 0);
-  const open = session.status === "open";
-  const counted = session.closingCashCounted;
-  const expected = session.expectedCash;
-  const diff = session.cashDifference;
-  const label = session.discrepancyLabel;
-
-  return (
-    <button
-      type="button"
-      className={`pos-session-card ${open ? "pos-session-card--open" : ""} ${selected ? "is-selected" : ""}`}
-      onClick={onSelect}
-    >
-      <div className="pos-session-card-head">
-        <strong>
-          {labelOtShift(session.shift as "late" | "morning" | "evening")} ·{" "}
-          {open ? "กำลังเปิด" : "ปิดแล้ว"}
-        </strong>
-        <span className="muted">#{session.id.slice(-6).toUpperCase()}</span>
-      </div>
-      <p className="muted pos-session-card-time">
-        เปิด {formatTs(session.openedAt)}
-        {session.closedAt ? ` · ปิด ${formatTs(session.closedAt)}` : " · รันอยู่"}
-      </p>
-      <div className="pos-session-card-kpis">
-        <span>
-          ยอด ฿{formatPlainNumber(salesTotal || session.totalSales)}
-        </span>
-        <span>{active.length || session.saleCount} บิล</span>
-        <span>สด ฿{formatPlainNumber(session.cashTotal ?? cash.reduce((a, s) => a + s.total, 0))}</span>
-        <span>
-          โอน ฿{formatPlainNumber(session.transferTotal ?? transfer.reduce((a, s) => a + s.total, 0))}
-        </span>
-        <span>
-          QR ฿{formatPlainNumber(session.promptpayTotal ?? pp.reduce((a, s) => a + s.total, 0))}
-        </span>
-      </div>
-      {typeof session.openingCash === "number" ? (
-        <p className="muted">เงินทอนเริ่ม ฿{formatPlainNumber(session.openingCash)}</p>
-      ) : null}
-      {!open && typeof session.leaveFloat === "number" ? (
-        <p className="muted">ทอนรอบถัดไป ฿{formatPlainNumber(session.leaveFloat)}</p>
-      ) : null}
-      {!open && typeof counted === "number" ? (
-        <p className="pos-session-card-diff">
-          นับได้ ฿{formatPlainNumber(counted)}
-          {typeof expected === "number" ? ` · ควรมี ฿${formatPlainNumber(expected)}` : ""}
-          {typeof diff === "number"
-            ? ` · ${label || "ส่วนต่าง"} ฿${formatPlainNumber(diff)}`
-            : ""}
-        </p>
-      ) : null}
-      {(discount > 0 || voided.length > 0 || (session.voidedCount || 0) > 0) && (
-        <p className="muted">
-          {discount > 0 ? `ส่วนลด ฿${formatPlainNumber(discount)}` : ""}
-          {discount > 0 && (voided.length > 0 || (session.voidedCount || 0) > 0) ? " · " : ""}
-          {voided.length > 0 || (session.voidedCount || 0) > 0
-            ? `void ${voided.length || session.voidedCount}`
-            : ""}
-        </p>
-      )}
-      {session.discrepancyNote ? (
-        <p className="muted">เหตุผล: {session.discrepancyNote}</p>
-      ) : null}
-      <span className="pos-session-card-hint">{selected ? "แสดงบิลรอบนี้ด้านล่าง" : "แตะเพื่อดูบิลในรอบ"}</span>
-    </button>
-  );
-}
+type PosSalesHubTab = "report" | "manage";
 
 export function PosSalesReport({
   dateMs,
@@ -220,10 +124,6 @@ export function PosSalesReport({
 
   const summary = useMemo(() => summarizePosSalesDetailed(sales), [sales]);
   const reconcile = useMemo(() => reconcilePosSessions(sales, sessions), [sales, sessions]);
-  const sortedSessions = useMemo(
-    () => [...sessions].sort((a, b) => b.openedAt - a.openedAt),
-    [sessions],
-  );
   const filteredSales = useMemo(() => {
     let list = selectedSessionId
       ? sales.filter((s) => s.sessionId === selectedSessionId)
@@ -295,8 +195,18 @@ export function PosSalesReport({
 
   return (
     <div className={compact ? "pos-sales-report pos-sales-report--compact" : "pos-sales-report"}>
-      {!compact ? (
-        <p className="muted pos-sales-report-date">{formatPosReportDate(dateMs)}</p>
+      <PosSessionsSlimTable
+        sessions={sessions}
+        sales={sales}
+        selectedSessionId={selectedSessionId}
+        onSelect={setSelectedSessionId}
+        onError={onError}
+      />
+
+      {reconcile.some((r) => !r.countMatch || !r.totalMatch) ? (
+        <p className="muted pos-sales-reconcile-warn-note">
+          มีรอบที่ตัวเลข session กับบิลไม่ตรง — ดูแถวรอบ + รายบิลด้านล่าง
+        </p>
       ) : null}
 
       <section className="pos-sales-report-section pos-sales-bills-section">
@@ -315,13 +225,13 @@ export function PosSalesReport({
           {selectedSessionId ? (
             <button
               type="button"
-              className="ghost-btn"
+              className="npos-slim-text-btn"
               onClick={() => setSelectedSessionId(null)}
             >
-              แสดงทุกบิลวันนี้
+              แสดงทุกบิล
             </button>
           ) : null}
-          <div className="pos-sales-bill-chips" role="group" aria-label="กรองสถานะ">
+          <div className="pos-sales-bill-chips pos-sales-bill-chips--text" role="group" aria-label="กรองสถานะ">
             {(
               [
                 ["all", "ทั้งหมด"],
@@ -339,7 +249,7 @@ export function PosSalesReport({
               </button>
             ))}
           </div>
-          <div className="pos-sales-bill-chips" role="group" aria-label="กรองชำระ">
+          <div className="pos-sales-bill-chips pos-sales-bill-chips--text" role="group" aria-label="กรองชำระ">
             {(
               [
                 ["all", "ทุกชำระ"],
@@ -424,14 +334,14 @@ export function PosSalesReport({
                     {!voided && isToday ? (
                       <button
                         type="button"
-                        className="ghost-btn pos-sales-void-btn"
+                        className="npos-slim-text-btn pos-sales-void-btn"
                         disabled={busy}
                         onClick={(e) => {
                           e.stopPropagation();
                           openVoidDialog(sale);
                         }}
                       >
-                        <Ban size={14} aria-hidden />
+                        <Ban size={12} aria-hidden />
                         ยกเลิก
                       </button>
                     ) : null}
@@ -570,33 +480,6 @@ export function PosSalesReport({
         ) : null}
       </details>
 
-      {sortedSessions.length > 0 ? (
-        <details className="pos-sales-fold">
-          <summary>
-            การ์ดรอบขาย ({sortedSessions.length})
-            <span className="muted"> · ดูอย่างเดียว · ปิดกะบน nPos</span>
-          </summary>
-          <div className="pos-session-cards">
-            {sortedSessions.map((session) => (
-              <SessionShiftCard
-                key={session.id}
-                session={session}
-                sales={sales}
-                selected={selectedSessionId === session.id}
-                onSelect={() =>
-                  setSelectedSessionId((cur) => (cur === session.id ? null : session.id))
-                }
-              />
-            ))}
-          </div>
-          {reconcile.some((r) => !r.countMatch || !r.totalMatch) ? (
-            <p className="muted pos-sales-reconcile-warn-note">
-              มีรอบที่ตัวเลข session กับบิลไม่ตรง — ดูการ์ด + รายบิลด้านบน
-            </p>
-          ) : null}
-        </details>
-      ) : null}
-
       <PosConfirmDialog
         open={voidTarget !== null}
         title={
@@ -643,37 +526,33 @@ export function PosSalesReportPage() {
   }
 
   return (
-    <div className="module-page pos-sales-report-page pos-sales-report-page--dense">
-      <h1 className="panel-title pos-sales-page-title">
-        <Receipt size={18} aria-hidden />
-        POS
-      </h1>
-      <p className="muted pos-sales-page-lead">
-        รายงาน · ตัวอย่างบิล · เครื่อง — ขายหน้าร้านใช้แอป nPos
-      </p>
-
-      <div className="stock-owner-tabs" role="tablist" aria-label="หมวด POS">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "report"}
-          className={tab === "report" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-          onClick={() => setTab("report")}
-        >
-          <Receipt size={15} aria-hidden />
-          รายงานยอดขาย
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "manage"}
-          className={tab === "manage" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-          onClick={() => setTab("manage")}
-        >
-          <MonitorSmartphone size={15} aria-hidden />
-          จัดการ Pos
-        </button>
-      </div>
+    <div className="module-page pos-sales-report-page pos-sales-report-page--dense pos-sales-report-page--slim">
+      <header className="npos-bo-page-head">
+        <div>
+          <h1 className="panel-title pos-sales-page-title">POS</h1>
+          <p className="muted pos-sales-page-lead">ภาพรวมรอบ · บิล · เครื่อง — ขายที่แอป nPos</p>
+        </div>
+        <nav className="npos-bo-page-tabs" role="tablist" aria-label="หมวด POS">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "report"}
+            className={tab === "report" ? "npos-slim-text-btn is-active" : "npos-slim-text-btn"}
+            onClick={() => setTab("report")}
+          >
+            รายงานยอดขาย
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "manage"}
+            className={tab === "manage" ? "npos-slim-text-btn is-active" : "npos-slim-text-btn"}
+            onClick={() => setTab("manage")}
+          >
+            จัดการ
+          </button>
+        </nav>
+      </header>
 
       {error ? <p className="error-text">{error}</p> : null}
 
@@ -681,9 +560,9 @@ export function PosSalesReportPage() {
         <PosManagePanel onError={setError} />
       ) : (
         <>
-          <div className="pos-sales-date-nav">
-            <button type="button" className="ghost-btn" aria-label="วันก่อนหน้า" onClick={() => shiftDate(-1)}>
-              <ChevronLeft size={18} aria-hidden />
+          <div className="pos-sales-date-nav npos-slim-date-nav">
+            <button type="button" className="npos-slim-text-btn" aria-label="วันก่อนหน้า" onClick={() => shiftDate(-1)}>
+              <ChevronLeft size={16} aria-hidden />
             </button>
             <label className="pos-sales-date-pick">
               <span className="sr-only">เลือกวัน</span>
@@ -703,15 +582,15 @@ export function PosSalesReportPage() {
             <strong>{formatPosReportDate(dateMs)}</strong>
             <button
               type="button"
-              className="ghost-btn"
+              className="npos-slim-text-btn"
               aria-label="วันถัดไป"
               disabled={dateMs >= today}
               onClick={() => shiftDate(1)}
             >
-              <ChevronRight size={18} aria-hidden />
+              <ChevronRight size={16} aria-hidden />
             </button>
             {dateMs !== today ? (
-              <button type="button" className="ghost-btn" onClick={() => setDateMs(today)}>
+              <button type="button" className="npos-slim-text-btn" onClick={() => setDateMs(today)}>
                 วันนี้
               </button>
             ) : null}

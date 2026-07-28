@@ -6633,6 +6633,328 @@ body.modal-open .main-panel {
   border-color: #1a2e24;
 }
 
+/* —— nPos BO super-slim sessions (Wongnai-like hairline rows) —— */
+.npos-bo-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.55rem 1rem;
+  margin-bottom: 0.65rem;
+}
+
+.npos-bo-page-head .pos-sales-page-lead {
+  margin-bottom: 0;
+}
+
+.npos-bo-page-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.55rem;
+  align-items: center;
+}
+
+.npos-slim-text-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #5a6570;
+  padding: 0.12rem 0.2rem;
+  margin: 0;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  border-radius: 0.2rem;
+  white-space: nowrap;
+  width: fit-content;
+  max-width: max-content;
+}
+
+.npos-slim-text-btn:hover:not(:disabled) {
+  color: #1a2e24;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.npos-slim-text-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.npos-slim-text-btn.is-active {
+  color: #e85d04;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.npos-slim-date-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+  margin-bottom: 0.65rem;
+}
+
+.npos-slim-date-nav strong {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.npos-slim-sessions {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.75rem 0.55rem;
+  border-radius: 0.85rem;
+  background: #fff;
+  border: 1px solid rgba(28, 42, 31, 0.08);
+  box-shadow: 0 1px 0 rgba(28, 42, 31, 0.03);
+}
+
+.npos-slim-sessions-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.85rem;
+  margin-bottom: 0.45rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.npos-slim-sessions-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.55rem;
+  min-width: 0;
+}
+
+.npos-slim-sessions-head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a2e24;
+}
+
+.npos-slim-pulse {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.1rem 0.35rem;
+}
+
+.npos-slim-pulse-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8a939c;
+  margin-right: 0.15rem;
+}
+
+.npos-slim-pulse-hint {
+  font-size: 0.7rem;
+  color: #2f6b4f;
+  font-weight: 600;
+}
+
+.npos-slim-empty,
+.npos-slim-foot {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+}
+
+.npos-slim-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.npos-slim-row {
+  display: grid;
+  grid-template-columns:
+    minmax(2.6rem, max-content)
+    minmax(3.5rem, 1fr)
+    minmax(2.2rem, max-content)
+    minmax(2.8rem, max-content)
+    minmax(2.8rem, max-content)
+    minmax(1.6rem, max-content)
+    minmax(1.8rem, max-content)
+    minmax(3rem, max-content)
+    minmax(2.6rem, max-content)
+    minmax(2.6rem, max-content)
+    minmax(2.2rem, max-content);
+  gap: 0.35rem 0.55rem;
+  align-items: center;
+  width: 100%;
+  min-width: 42rem;
+  padding: 0.38rem 0.15rem;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.07);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.npos-slim-row--head {
+  cursor: default;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #8a939c;
+  padding-top: 0.15rem;
+  padding-bottom: 0.28rem;
+  border-bottom-color: rgba(28, 42, 31, 0.1);
+}
+
+.npos-slim-row:not(.npos-slim-row--head):hover {
+  background: rgba(232, 93, 4, 0.04);
+}
+
+.npos-slim-row.is-selected {
+  background: rgba(232, 93, 4, 0.08);
+}
+
+.npos-slim-row.is-open .npos-slim-status {
+  color: #2f6b4f;
+  font-weight: 700;
+}
+
+.npos-slim-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.npos-slim-strong {
+  font-weight: 700;
+  color: #1a2e24;
+}
+
+.npos-slim-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.npos-slim-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.npos-slim-status i {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: #c4c9ce;
+  flex-shrink: 0;
+}
+
+.npos-slim-status i.is-live {
+  background: #2f6b4f;
+  box-shadow: 0 0 0 2px rgba(47, 107, 79, 0.2);
+}
+
+.npos-slim-block {
+  min-width: 0;
+}
+
+.npos-slim-detail {
+  padding: 0.28rem 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  color: #5a6570;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.07);
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.pos-sales-bill-chips--text {
+  gap: 0.15rem 0.4rem;
+}
+
+.pos-sales-bill-chips--text button {
+  border: 0;
+  background: transparent;
+  color: #5a6570;
+  border-radius: 0.2rem;
+  padding: 0.1rem 0.15rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.pos-sales-bill-chips--text button.is-active {
+  background: transparent;
+  color: #e85d04;
+  border-color: transparent;
+  font-weight: 700;
+}
+
+.pos-sales-report-page--slim .pos-sales-bills-section {
+  margin-top: 0.35rem;
+  padding: 0.65rem 0.75rem 0.75rem;
+  border-radius: 0.85rem;
+  background: #fff;
+  border: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.pos-sales-report-page--slim .pos-sales-bills-section > h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.92rem;
+}
+
+.pos-sales-report-page--slim .pos-sales-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.32rem 0;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.07);
+  background: transparent;
+  border-radius: 0;
+}
+
+.pos-sales-report-page--slim .pos-sales-row-select {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  white-space: nowrap;
+}
+
+.pos-sales-report-page--slim .pos-sales-row-main {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0.35rem 0.55rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pos-sales-report-page--slim .pos-sales-row-items,
+.pos-sales-report-page--slim .pos-sales-row-main > .muted {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pos-sales-report-page--slim .pos-sales-void-btn {
+  border: 0;
+  background: transparent;
+  color: #b42318;
+  padding: 0.1rem 0.15rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  width: fit-content;
+  box-shadow: none;
+}
+
 .npos-diagnose-list {
   list-style: none;
   margin: 0;
