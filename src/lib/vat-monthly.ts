@@ -129,7 +129,12 @@ export function getVatPeriodBoundary(
 }
 
 export type VatLogicRates = {
-  /** ภาษีขาย: gross × outputNum / outputDen */
+  /**
+   * เรทขายเป็น % (เช่น 7 = VAT 7% รวมในราคา)
+   * สูตร: ภาษีขาย = gross × outputPct / (100 + outputPct)  ≡  7/107 เมื่อเป็น 7%
+   */
+  outputPct: number;
+  /** สำรอง sync กับของเก่า: outputNum/outputDen */
   outputNum: number;
   outputDen: number;
   /** สัดส่วนประมาณภาษีซื้อจาก GP เทียบภาษีขาย (เช่น 0.3333 = 33.33%) */
@@ -140,13 +145,36 @@ export type VatLogicRates = {
   floorInput: boolean;
 };
 
+export const DEFAULT_OUTPUT_PCT = 7;
+export const DEFAULT_STOREFRONT_REMIT_PCT = 90;
+
 export const DEFAULT_VAT_LOGIC_RATES: VatLogicRates = {
-  outputNum: 7,
-  outputDen: 107,
+  outputPct: DEFAULT_OUTPUT_PCT,
+  outputNum: DEFAULT_OUTPUT_PCT,
+  outputDen: 100 + DEFAULT_OUTPUT_PCT,
   gpOfOutput: 1 / 3,
   inputClaimFactor: 0.98,
   floorInput: true,
 };
+
+/** เรทขาย % → คู่เศษ/ส่วน (7 → 7/107) */
+export function outputPctToFraction(pct: number): { outputNum: number; outputDen: number } {
+  const outputPct =
+    Number.isFinite(pct) && pct > 0 ? pct : DEFAULT_OUTPUT_PCT;
+  return { outputNum: outputPct, outputDen: 100 + outputPct };
+}
+
+export function normalizeOutputPct(raw: unknown, fallback = DEFAULT_OUTPUT_PCT): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0 || n >= 100) return fallback;
+  return Math.round(n * 100) / 100;
+}
+
+export function normalizeRemitPct(raw: unknown, fallback = DEFAULT_STOREFRONT_REMIT_PCT): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0 || n > 100) return fallback;
+  return Math.round(n * 100) / 100;
+}
 
 export type VatSegmentKind = "delivery" | "storefront";
 
@@ -218,6 +246,11 @@ export type VatSegmentInput = {
   channels: DeliveryChannels;
   tenders: StorefrontTenders;
   /**
+   * % นำส่งจริงจากรายได้ (หน้าร้าน default 90 · เดลิเวอรี่ = 100)
+   * เฉพาะยอดนำส่งจริงที่นำไปคิด VAT
+   */
+  remitPct: number;
+  /**
    * ภาษีซื้อจากบิล GP สรุปรายเดือน
    * ถ้าวาง 0 และ useGpEstimate=true → ใช้ประมาณ gpOfOutput × ภาษีขาย
    */
@@ -230,7 +263,11 @@ export type VatSegmentInput = {
 };
 
 export type VatSegmentComputed = {
-  /** ยอดขายรวมที่ใช้คิด (หลัง resolve จากย่อย/มือ) */
+  /** รายได้/ยอดขายรวมก่อนคิด % นำส่ง */
+  reportedGross: number;
+  /** ยอดนำส่งจริง = reportedGross × remitPct% — ใช้คิด VAT */
+  remitAmount: number;
+  /** alias ยอดที่คิด VAT (= remitAmount) */
   grossSales: number;
   partsSum: number;
   vatBase: number;
@@ -287,11 +324,23 @@ export function mapVatLogicRates(raw: unknown): VatLogicRates {
   const den = Number(o.outputDen);
   const gp = Number(o.gpOfOutput);
   const claim = Number(o.inputClaimFactor);
+  let outputPct = normalizeOutputPct(o.outputPct, 0);
+  if (!(outputPct > 0)) {
+    // ของเก่า 7/107 → 7%
+    if (Number.isFinite(num) && num > 0 && Number.isFinite(den) && den === 100 + num) {
+      outputPct = num;
+    } else if (Number.isFinite(num) && num > 0 && Number.isFinite(den) && den > num) {
+      // ประมาณ % จากเศษ/ส่วน
+      outputPct = normalizeOutputPct((num / (den - num)) * 100, DEFAULT_OUTPUT_PCT);
+    } else {
+      outputPct = DEFAULT_OUTPUT_PCT;
+    }
+  }
+  const frac = outputPctToFraction(outputPct);
   return {
-    outputNum:
-      Number.isFinite(num) && num > 0 ? num : DEFAULT_VAT_LOGIC_RATES.outputNum,
-    outputDen:
-      Number.isFinite(den) && den > 0 ? den : DEFAULT_VAT_LOGIC_RATES.outputDen,
+    outputPct,
+    outputNum: frac.outputNum,
+    outputDen: frac.outputDen,
     gpOfOutput:
       Number.isFinite(gp) && gp >= 0 && gp <= 1
         ? gp
@@ -308,15 +357,16 @@ function applyMoneyMode(n: number, floor: boolean): number {
   return floor ? floorMoney(n) : roundMoney(n);
 }
 
-/** ภาษีขายจากยอดรวม: gross × num/den */
+/** ภาษีขายจากยอดรวม: gross × pct/(100+pct) */
 export function computeOutputVat(
   grossInclusive: number,
-  rates: Pick<VatLogicRates, "outputNum" | "outputDen"> = DEFAULT_VAT_LOGIC_RATES,
+  rates: Pick<VatLogicRates, "outputPct" | "outputNum" | "outputDen"> = DEFAULT_VAT_LOGIC_RATES,
 ): { vatBase: number; outputVat: number } {
   const gross = normalizeMoney(grossInclusive);
-  const den = rates.outputDen > 0 ? rates.outputDen : 107;
-  const num = rates.outputNum > 0 ? rates.outputNum : 7;
-  const outputVat = roundMoney((gross * num) / den);
+  const mapped = mapVatLogicRates(rates);
+  const outputVat = roundMoney(
+    (gross * mapped.outputPct) / (100 + mapped.outputPct),
+  );
   const vatBase = roundMoney(Math.max(0, gross - outputVat));
   return { vatBase, outputVat };
 }
@@ -330,7 +380,13 @@ export function computeVatSegment(input: VatSegmentInput): VatSegmentComputed {
     kind === "delivery"
       ? sumDeliveryChannels(channels)
       : sumStorefrontTenders(tenders);
-  const grossSales = resolveGrossSales(input.grossManual, partsSum);
+  const reportedGross = resolveGrossSales(input.grossManual, partsSum);
+  const remitPct =
+    kind === "storefront"
+      ? normalizeRemitPct(input.remitPct, DEFAULT_STOREFRONT_REMIT_PCT)
+      : 100;
+  const remitAmount = roundMoney((reportedGross * remitPct) / 100);
+  const grossSales = remitAmount;
   const { vatBase, outputVat } = computeOutputVat(grossSales, rates);
 
   const gpEstimate = applyMoneyMode(outputVat * rates.gpOfOutput, rates.floorInput);
@@ -347,6 +403,8 @@ export function computeVatSegment(input: VatSegmentInput): VatSegmentComputed {
   const netVat = roundMoney(outputVat - inputVat);
 
   return {
+    reportedGross,
+    remitAmount,
     grossSales,
     partsSum,
     vatBase,
@@ -368,6 +426,7 @@ export function emptySegment(
     grossManual: 0,
     channels: { ...EMPTY_DELIVERY_CHANNELS },
     tenders: { ...EMPTY_STOREFRONT_TENDERS },
+    remitPct: kind === "storefront" ? DEFAULT_STOREFRONT_REMIT_PCT : 100,
     gpVat: 0,
     useGpEstimate: true,
     ingredientVat: 0,
@@ -378,11 +437,16 @@ export function emptySegment(
 
 export function recomputeSegment(seg: VatSegmentInput): VatSegmentState {
   const rates = mapVatLogicRates(seg.rates);
+  const kind = seg.kind === "storefront" ? "storefront" : "delivery";
   const input: VatSegmentInput = {
-    kind: seg.kind === "storefront" ? "storefront" : "delivery",
+    kind,
     grossManual: normalizeMoney(seg.grossManual),
     channels: mapDeliveryChannels(seg.channels),
     tenders: mapStorefrontTenders(seg.tenders),
+    remitPct:
+      kind === "storefront"
+        ? normalizeRemitPct(seg.remitPct, DEFAULT_STOREFRONT_REMIT_PCT)
+        : 100,
     gpVat: normalizeMoney(seg.gpVat),
     useGpEstimate: Boolean(seg.useGpEstimate),
     ingredientVat: normalizeMoney(seg.ingredientVat),
@@ -430,6 +494,10 @@ function mapSegment(
     grossManual,
     channels: mapDeliveryChannels(o.channels),
     tenders: mapStorefrontTenders(o.tenders),
+    remitPct:
+      kind === "storefront"
+        ? normalizeRemitPct(o.remitPct, DEFAULT_STOREFRONT_REMIT_PCT)
+        : 100,
     gpVat: normalizeMoney(o.gpVat),
     useGpEstimate: o.useGpEstimate !== false,
     ingredientVat: normalizeMoney(o.ingredientVat),
@@ -688,7 +756,8 @@ export async function unlockVatMonthlyReturn(
 }
 
 export function ratesLabel(rates: VatLogicRates): string {
-  return `${rates.outputNum}/${rates.outputDen}`;
+  const r = mapVatLogicRates(rates);
+  return `${r.outputPct}%`;
 }
 
 export function gpRatePercent(rates: VatLogicRates): string {
