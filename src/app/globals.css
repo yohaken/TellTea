@@ -10620,6 +10620,17 @@ body.modal-open .main-panel {
   font-size: 0.8rem;
 }
 
+.pos-sales-data-issue-list {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.pos-sales-data-issue-list li {
+  margin: 0.1rem 0;
+}
+
 .pos-shift-bo-note {
   margin: 0 0 0.45rem;
   font-size: 0.82rem;

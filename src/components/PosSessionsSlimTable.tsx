@@ -163,7 +163,7 @@ function daySummaryFromSales(sales: PosSale[]): DaySummary {
 }
 
 /**
- * Super-slim nPos sales-cycle rows — realtime, newest first, ~50 with scroll.
+ * Super-slim nPos sales-cycle rows — realtime, date newest→oldest, ~50 with scroll.
  * Codes visible (owner-only). No date slider. No close-shift CTA (native only).
  */
 export function PosSessionsSlimTable({
@@ -281,7 +281,7 @@ export function PosSessionsSlimTable({
           <h3>รอบการขาย nPos</h3>
           <span className="muted">
             {filteredRows.length}
-            {filteredRows.length !== rows.length ? `/${rows.length}` : ""} รอบ · เปิดอยู่บน · ≤
+            {filteredRows.length !== rows.length ? `/${rows.length}` : ""} รอบ · วันใหม่→เก่า · ≤
             {POS_SESSIONS_SLIM_LIMIT}
             {openCount ? ` · active ${openCount}` : ""}
           </span>

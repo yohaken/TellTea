@@ -175,7 +175,7 @@ export function posSessionActivityAt(session: PosSession): number {
   return session.openedAt || session.closedAt || 0;
 }
 
-/** Newest activity first (open or closed) — table-slim default. */
+/** Newest activity first (open or closed). */
 export function sortSessionsNewestFirst(sessions: PosSession[]): PosSession[] {
   return [...sessions].sort((a, b) => posSessionActivityAt(b) - posSessionActivityAt(a));
 }
@@ -191,6 +191,91 @@ export function sortSessionsOpenFirst(sessions: PosSession[]): PosSession[] {
     const bClosed = b.closedAt || b.openedAt || 0;
     return bClosed - aClosed;
   });
+}
+
+/**
+ * Calendar day newest → oldest (`date` Bangkok midnight), then latest activity in-day.
+ * Slim `/pos-sales` table default.
+ */
+export function sortSessionsByDateNewestFirst(sessions: PosSession[]): PosSession[] {
+  return [...sessions].sort((a, b) => {
+    const aDay = a.date || 0;
+    const bDay = b.date || 0;
+    if (aDay !== bDay) return bDay - aDay;
+    return posSessionActivityAt(b) - posSessionActivityAt(a);
+  });
+}
+
+/** Open longer than this is flagged as stale (tea-bar day). */
+export const POS_SESSION_STALE_OPEN_MS = 18 * 60 * 60 * 1000;
+
+export type PosSessionDataIssue = {
+  sessionId: string;
+  label: string;
+  issues: string[];
+};
+
+/**
+ * Client-side scan of loaded sessions + bills — missing/skewed date, stale open,
+ * inverted close, session totals ≠ bills.
+ */
+export function inspectPosSessionData(
+  sessions: PosSession[],
+  sales: PosSale[],
+  nowMs = Date.now(),
+): PosSessionDataIssue[] {
+  const reconcile = reconcilePosSessions(sales, sessions);
+  const byId = new Map(reconcile.map((r) => [r.session.id, r]));
+  const out: PosSessionDataIssue[] = [];
+
+  for (const session of sessions) {
+    const issues: string[] = [];
+    if (!session.date) {
+      issues.push("ไม่มีวันที่รอบ");
+    } else if (session.openedAt) {
+      const expected = startOfLocalDay(new Date(session.openedAt));
+      const legacyUtc = expected + 7 * 60 * 60 * 1000;
+      if (
+        session.date !== expected &&
+        session.date !== legacyUtc &&
+        Math.abs(session.date - expected) >= 20 * 60 * 60 * 1000
+      ) {
+        issues.push("วันที่รอบไม่ตรงเวลาเปิด");
+      }
+    }
+    if (
+      session.status === "closed" &&
+      session.closedAt &&
+      session.openedAt &&
+      session.closedAt < session.openedAt
+    ) {
+      issues.push("เวลาปิดก่อนเวลาเปิด");
+    }
+    if (
+      session.status === "open" &&
+      session.openedAt &&
+      nowMs - session.openedAt > POS_SESSION_STALE_OPEN_MS
+    ) {
+      issues.push("เปิดค้างนาน");
+    }
+    const rec = byId.get(session.id);
+    if (rec && !rec.countMatch) {
+      issues.push(`จำนวนบิลไม่ตรง (${rec.salesCount}≠${session.saleCount})`);
+    }
+    if (rec && !rec.totalMatch) {
+      issues.push(
+        `ยอดไม่ตรง (฿${rec.salesTotal}≠฿${session.totalSales})`,
+      );
+    }
+    if (issues.length) {
+      out.push({
+        sessionId: session.id,
+        label: posSessionCode(session.id),
+        issues,
+      });
+    }
+  }
+  return out;
 }
 
 /** Elapsed open time, or closed−opened when closed. */
@@ -244,7 +329,7 @@ export function summarizePosSalesDetailed(
   const ppSales = active.filter((s) => s.paymentMethod === "promptpay");
   const transferSales = active.filter((s) => s.paymentMethod === "transfer");
 
-  const sessionOrder = sortSessionsOpenFirst(sessions);
+  const sessionOrder = sortSessionsByDateNewestFirst(sessions);
   const knownIds = new Set(sessionOrder.map((s) => s.id));
   const orphanIds = [
     ...new Set(active.map((s) => s.sessionId).filter((id) => id && !knownIds.has(id))),
@@ -481,7 +566,7 @@ export function subscribePosSessionsRecent(
     const map = new Map<string, PosSession>();
     for (const s of recent) map.set(s.id, s);
     for (const s of openLive) map.set(s.id, s);
-    onSessions(sortSessionsOpenFirst([...map.values()]).slice(0, rowLimit));
+    onSessions(sortSessionsByDateNewestFirst([...map.values()]).slice(0, rowLimit));
   };
 
   const handleErr = (err: Error) => onError?.(err);

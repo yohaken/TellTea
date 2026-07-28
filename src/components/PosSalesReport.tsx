@@ -8,8 +8,8 @@ import { useAuth } from "@/lib/auth";
 import { closePosSessionAdmin, voidPosSale } from "@/lib/pos-sales-admin";
 import {
   POS_BILLS_SLIM_PAGE,
+  inspectPosSessionData,
   posSessionCode,
-  reconcilePosSessions,
   shortPosSessionId,
   subscribePosSalesRecent,
   subscribePosSessionsRecent,
@@ -121,7 +121,7 @@ export function PosSalesReport({
   }, [onError]);
 
   const summary = useMemo(() => summarizePosSalesDetailed(sales, sessions), [sales, sessions]);
-  const reconcile = useMemo(() => reconcilePosSessions(sales, sessions), [sales, sessions]);
+  const dataIssues = useMemo(() => inspectPosSessionData(sessions, sales), [sessions, sales]);
   const filteredSales = useMemo(() => {
     let list = selectedSessionId
       ? sales.filter((s) => s.sessionId === selectedSessionId)
@@ -250,10 +250,32 @@ export function PosSalesReport({
         onError={onError}
       />
 
-      {reconcile.some((r) => !r.countMatch || !r.totalMatch) ? (
-        <p className="muted pos-sales-reconcile-warn-note">
-          มีรอบที่ตัวเลข session กับบิลไม่ตรง — ดูแถวรอบ + รายบิลด้านล่าง
-        </p>
+      {dataIssues.length ? (
+        <div className="pos-sales-reconcile-warn-note" role="status">
+          <p className="muted">
+            พบข้อมูลผิดปกติ {dataIssues.length} รอบในหน้าต่างนี้ — ตรวจแถวรอบ + รายบิล
+          </p>
+          <ul className="pos-sales-data-issue-list">
+            {dataIssues.slice(0, 8).map((row) => (
+              <li key={row.sessionId}>
+                <button
+                  type="button"
+                  className="npos-slim-text-btn"
+                  onClick={() => {
+                    setSelectedSessionId(row.sessionId);
+                    setBillsOpen(true);
+                  }}
+                >
+                  {row.label}
+                </button>
+                <span className="muted"> · {row.issues.join(" · ")}</span>
+              </li>
+            ))}
+            {dataIssues.length > 8 ? (
+              <li className="muted">…และอีก {dataIssues.length - 8} รอบ</li>
+            ) : null}
+          </ul>
+        </div>
       ) : null}
 
       <details
