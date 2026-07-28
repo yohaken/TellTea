@@ -203,11 +203,18 @@ export async function syncVatMail(lookbackDays = 31): Promise<{
   scanned: number;
   added: number;
   skipped: number;
+  pdfEnriched?: number;
   lookbackDays: number;
 }> {
   const fn = httpsCallable<
     { lookbackDays?: number },
-    { scanned: number; added: number; skipped: number; lookbackDays: number }
+    {
+      scanned: number;
+      added: number;
+      skipped: number;
+      pdfEnriched?: number;
+      lookbackDays: number;
+    }
   >(getFirebaseFunctions(), "vatMailSync");
   const res = await fn({ lookbackDays });
   return res.data;
@@ -682,7 +689,13 @@ export async function autoApplyMailToDaily(opts: {
 }
 
 export type PullAndFillMailResult = {
-  sync: { ok: boolean; added?: number; scanned?: number; error?: string } | null;
+  sync: {
+    ok: boolean;
+    added?: number;
+    scanned?: number;
+    pdfEnriched?: number;
+    error?: string;
+  } | null;
   parse: { ok: number; fail: number; skipped: number };
   apply: AutoApplyChannelResult[];
 };
@@ -702,7 +715,12 @@ export async function pullAndFillDailyFromMail(opts: {
   if (opts.sync !== false) {
     try {
       const res = await syncVatMail(lookbackDays);
-      sync = { ok: true, added: res.added, scanned: res.scanned };
+      sync = {
+        ok: true,
+        added: res.added,
+        scanned: res.scanned,
+        pdfEnriched: res.pdfEnriched || 0,
+      };
     } catch (e) {
       sync = {
         ok: false,

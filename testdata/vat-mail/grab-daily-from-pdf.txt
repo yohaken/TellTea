@@ -1,0 +1,13 @@
+# Body notice + extracted PDF text (as sync would merge)
+From: no-reply@grab.com
+Subject: สรุปยอดขายสำหรับคำสั่งซื้อ 26 กรกฎาคม 2024 ออนไลน์ประจำวันที่ GrabFood
+
+เรียนพันธมิตรทางธุรกิจ
+สรุปยอดขาย GrabFood ประจำวันที่ 26 กรกฎาคม 2024 ได้ถูกสรุปเป็นไฟล์แนบเรียบร้อยแล้ว
+
+--- PDF ---
+# file: sales_20240726.pdf
+GrabFood Daily Sales 26/07/2024
+Gross sales: 12840.00
+Commission fee: 2568.00
+Net payout: 10272.00

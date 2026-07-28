@@ -23,6 +23,7 @@ const grabB = readFileSync(join(root, "testdata/vat-mail/grab-daily-b.txt"), "ut
 const lm = readFileSync(join(root, "testdata/vat-mail/lineman-daily-a.txt"), "utf8");
 const lmWn = readFileSync(join(root, "testdata/vat-mail/lineman-daily-wongnai.txt"), "utf8");
 const grabPdf = readFileSync(join(root, "testdata/vat-mail/grab-daily-pdf-notice.txt"), "utf8");
+const grabFromPdf = readFileSync(join(root, "testdata/vat-mail/grab-daily-from-pdf.txt"), "utf8");
 const grabTax = readFileSync(join(root, "testdata/vat-mail/grab-tax-invoice.txt"), "utf8");
 const sh = readFileSync(join(root, "testdata/vat-mail/shopee-daily-a.html"), "utf8");
 
@@ -118,11 +119,28 @@ const grabPdfRes = parsePlatformEmail({
   subject: "สรุปยอดขายสำหรับคำสั่งซื้อ 26 กรกฎาคม 2024 ออนไลน์ประจำวันที่ GrabFood",
   rawText: grabPdf,
 });
-assert(!grabPdfRes.ok, "grab pdf-only should fail until PDF parse");
+assert(!grabPdfRes.ok, "grab body-only (no PDF text) should fail");
 assert(
   String((grabPdfRes as { error?: string }).error || "").includes("PDF"),
   "grab pdf error mentions PDF",
 );
+
+const grabFromPdfRes = parsePlatformEmail({
+  channel: "grab",
+  subject: "สรุปยอดขายสำหรับคำสั่งซื้อ 26 กรกฎาคม 2024 ออนไลน์ประจำวันที่ GrabFood",
+  rawText: grabFromPdf,
+});
+assert(grabFromPdfRes.ok, (grabFromPdfRes as { error?: string }).error || "grab from pdf");
+if (grabFromPdfRes.ok) {
+  assert(
+    grabFromPdfRes.parsed.reportDate === "2024-07-26",
+    `grabFromPdf date ${grabFromPdfRes.parsed.reportDate}`,
+  );
+  assert(
+    grabFromPdfRes.parsed.grossInclusive === 12840,
+    `grabFromPdf gross ${grabFromPdfRes.parsed.grossInclusive}`,
+  );
+}
 const grabPdfDate = extractReportDate(
   "สรุปยอดขายสำหรับคำสั่งซื้อ 26 กรกฎาคม 2024 ออนไลน์ประจำวันที่ GrabFood",
   grabPdf,

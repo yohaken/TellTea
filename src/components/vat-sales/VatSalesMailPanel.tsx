@@ -196,7 +196,8 @@ export function VatSalesMailPanel({
     try {
       const res = await syncVatMail(31);
       setMsg(
-        `ซิงก์ Gmail แล้ว · สแกน ${res.scanned} · เพิ่ม ${res.added} · ข้ามซ้ำ ${res.skipped}`,
+        `ซิงก์ Gmail แล้ว · สแกน ${res.scanned} · เพิ่ม ${res.added} · ข้ามซ้ำ ${res.skipped}` +
+          (res.pdfEnriched ? ` · ดึง PDF ${res.pdfEnriched}` : ""),
       );
       await refresh();
     } catch (e) {
@@ -219,7 +220,9 @@ export function VatSalesMailPanel({
       });
       const syncPart = res.sync
         ? res.sync.ok
-          ? `Gmail+${res.sync.added ?? 0}`
+          ? `Gmail+${res.sync.added ?? 0}${
+              res.sync.pdfEnriched ? `·PDF${res.sync.pdfEnriched}` : ""
+            }`
           : "Gmail✗"
         : "—";
       const short: Record<string, string> = { shopee: "Sp", grab: "G", lineman: "LM" };

@@ -6,6 +6,11 @@
 const functions = require("firebase-functions/v1");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("crypto");
+const {
+  extractPdfTextFromMessage,
+  mergeBodyWithPdf,
+  needsPdfEnrich,
+} = require("./vat-mail-pdf");
 
 const REGION = "asia-southeast1";
 const OWNER_EMAIL = String(process.env.TELLTEA_OWNER_EMAIL || "yohaken@gmail.com")
@@ -610,6 +615,7 @@ exports.vatMailSync = functions
       let scanned = 0;
       let added = 0;
       let skipped = 0;
+      let pdfEnriched = 0;
 
       for (const channel of channels) {
         if (channelsEnabled[channel] === false) continue;
@@ -624,7 +630,40 @@ exports.vatMailSync = functions
           const docId = reportDocId(messageId);
           const existing = await db.collection(REPORTS_COL).doc(docId).get();
           if (existing.exists) {
-            skipped += 1;
+            const prev = existing.data() || {};
+            if (!needsPdfEnrich(prev)) {
+              skipped += 1;
+              continue;
+            }
+            try {
+              const msg = await getMessage(accessToken, messageId);
+              const pdf = await extractPdfTextFromMessage(
+                accessToken,
+                messageId,
+                msg.payload,
+              );
+              if (!pdf.text) {
+                skipped += 1;
+                continue;
+              }
+              const rawText = mergeBodyWithPdf(prev.rawText || "", pdf.text);
+              await db.collection(REPORTS_COL).doc(docId).set(
+                {
+                  rawText,
+                  pdfFilenames: pdf.filenames,
+                  parseStatus: "pending",
+                  parseError: "",
+                  syncedAt: Date.now(),
+                  syncedBy: actorId,
+                  pdfEnrichedAt: Date.now(),
+                },
+                { merge: true },
+              );
+              pdfEnriched += 1;
+            } catch (e) {
+              console.warn("pdf enrich", messageId, e?.message || e);
+              skipped += 1;
+            }
             continue;
           }
           const msg = await getMessage(accessToken, messageId);
@@ -645,8 +684,28 @@ exports.vatMailSync = functions
           }
           const matched = matchChannel(from, subject, rules);
           const channelFinal = matched === "unknown" ? channel : matched;
-          const rawText = String(bodies.text || "").slice(0, 200000);
+          let rawText = String(bodies.text || "").slice(0, 200000);
           const rawHtml = String(bodies.html || "").slice(0, 200000);
+          let pdfFilenames = [];
+          // Grab (และเมลสรุปยอด) — ดึงข้อความจาก PDF แนบมาใส่ rawText
+          if (
+            channelFinal === "grab" ||
+            /สรุปยอดขาย|grabfood|daily sales/i.test(subject)
+          ) {
+            try {
+              const pdf = await extractPdfTextFromMessage(
+                accessToken,
+                messageId,
+                msg.payload,
+              );
+              if (pdf.text) {
+                rawText = mergeBodyWithPdf(rawText, pdf.text);
+                pdfFilenames = pdf.filenames;
+              }
+            } catch (e) {
+              console.warn("pdf extract", messageId, e?.message || e);
+            }
+          }
           await db.collection(REPORTS_COL).doc(docId).set({
             channel: channelFinal,
             provider: "gmail",
@@ -659,6 +718,7 @@ exports.vatMailSync = functions
             snippet: asString(msg.snippet, 400),
             rawText,
             rawHtml,
+            ...(pdfFilenames.length ? { pdfFilenames } : {}),
             reportDateGuess: guessReportDate(subject, internalDate),
             reportKind: guessReportKind(subject),
             parseStatus: "pending",
@@ -676,12 +736,13 @@ exports.vatMailSync = functions
           lastSyncError: "",
           lastSyncAdded: added,
           lastSyncScanned: scanned,
+          lastSyncPdfEnriched: pdfEnriched,
           updatedAt: Date.now(),
         },
         { merge: true },
       );
 
-      return { ok: true, scanned, added, skipped, lookbackDays };
+      return { ok: true, scanned, added, skipped, pdfEnriched, lookbackDays };
     } catch (e) {
       const msg = asString(e?.message || String(e), 300);
       await db.doc(OAUTH_DOC).set(
