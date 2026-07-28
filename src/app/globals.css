@@ -6737,6 +6737,35 @@ body.modal-open .main-panel {
   color: #1a2e24;
 }
 
+.npos-slim-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.4rem;
+  margin: 0 0 0.4rem;
+  padding: 0.28rem 0;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.07);
+}
+
+.npos-slim-summary strong {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1a2e24;
+  font-variant-numeric: tabular-nums;
+}
+
+.npos-slim-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.1rem 0.4rem;
+  margin: 0 0 0.4rem;
+}
+
 .npos-slim-pulse {
   display: flex;
   flex-wrap: wrap;
@@ -6871,6 +6900,43 @@ body.modal-open .main-panel {
   border-bottom: 1px solid rgba(28, 42, 31, 0.07);
   white-space: normal;
   line-height: 1.35;
+}
+
+.npos-slim-row--compact {
+  grid-template-columns: minmax(4rem, 1fr) minmax(2.4rem, max-content) minmax(3.2rem, max-content);
+  min-width: 16rem;
+  cursor: default;
+}
+
+.npos-slim-row--shift {
+  grid-template-columns:
+    minmax(4.5rem, 1.2fr)
+    minmax(2rem, max-content)
+    minmax(2.6rem, max-content)
+    minmax(2.6rem, max-content)
+    minmax(2.4rem, max-content)
+    minmax(3rem, max-content);
+  min-width: 22rem;
+  cursor: default;
+}
+
+.pos-sales-fold--slim {
+  margin-top: 0.75rem;
+  padding: 0.45rem 0.7rem 0.65rem;
+  background: #fff;
+  border: 1px solid rgba(28, 42, 31, 0.08);
+  border-radius: 0.85rem;
+}
+
+.pos-sales-fold--slim .pos-sales-report-section {
+  margin-top: 0.65rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.07);
+}
+
+.pos-sales-fold--slim .pos-sales-report-section h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.82rem;
 }
 
 .pos-sales-bill-chips--text {

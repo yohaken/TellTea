@@ -199,7 +199,18 @@ export function PosSalesReport({
         sessions={sessions}
         sales={sales}
         selectedSessionId={selectedSessionId}
-        onSelect={setSelectedSessionId}
+        dayLabel={isToday ? "วันนี้" : "ทั้งหมด"}
+        onSelect={(id) => {
+          setSelectedSessionId(id);
+          if (id) {
+            requestAnimationFrame(() => {
+              document.getElementById("pos-sales-bills")?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
+            });
+          }
+        }}
         onError={onError}
       />
 
@@ -209,7 +220,10 @@ export function PosSalesReport({
         </p>
       ) : null}
 
-      <section className="pos-sales-report-section pos-sales-bills-section">
+      <section
+        id="pos-sales-bills"
+        className="pos-sales-report-section pos-sales-bills-section"
+      >
         <h3>
           รายการบิล{isToday ? " วันนี้" : ""}
           {selectedSessionId
@@ -372,109 +386,132 @@ export function PosSalesReport({
         ) : null}
       </section>
 
-      <details className="pos-sales-fold">
+      <details className="pos-sales-fold pos-sales-fold--slim">
         <summary>
           สรุปยอด · กะ · เมนูขายดี
           <span className="muted">
             {" "}
-            · สด ฿{formatPlainNumber(summary.cashTotal)} · โอน ฿
-            {formatPlainNumber(summary.transferTotal)} · PP ฿
-            {formatPlainNumber(summary.promptpayTotal)}
+            · ฿{formatPlainNumber(summary.total)} · {summary.activeCount} บิล
+            {summary.voidedCount ? ` · ทำลาย ${summary.voidedCount}` : ""}
           </span>
         </summary>
-        <div className="pos-sales-summary-grid">
-          <div className="pos-sales-summary-card pos-sales-summary-card--total">
-            <span className="pos-sales-summary-label">ยอดขายสุทธิ</span>
-            <strong>฿{formatPlainNumber(summary.total)}</strong>
-            <span className="muted">{summary.activeCount} บิล</span>
+
+        <div className="npos-slim-scroll" role="table" aria-label="สรุปช่องทางชำระ">
+          <div className="npos-slim-row npos-slim-row--head npos-slim-row--compact" role="row">
+            <span role="columnheader">ช่องทาง</span>
+            <span role="columnheader" className="npos-slim-num">
+              บิล
+            </span>
+            <span role="columnheader" className="npos-slim-num">
+              ยอด
+            </span>
           </div>
+          {(
+            [
+              ["สุทธิ", summary.activeCount, summary.total],
+              ["สด", summary.cashCount, summary.cashTotal],
+              ["โอน", summary.transferCount, summary.transferTotal],
+              ["PP", summary.promptpayCount, summary.promptpayTotal],
+              ["ทำลาย", summary.voidedCount, summary.voidedTotal],
+            ] as const
+          ).map(([label, count, total]) => (
+            <div key={label} className="npos-slim-row npos-slim-row--compact" role="row">
+              <span role="cell">{label}</span>
+              <span role="cell" className="npos-slim-num">
+                {count || "—"}
+              </span>
+              <span role="cell" className="npos-slim-num npos-slim-strong">
+                {total ? formatPlainNumber(total) : "—"}
+              </span>
+            </div>
+          ))}
           {summary.discountTotal > 0 ? (
-            <div className="pos-sales-summary-card">
-              <span className="pos-sales-summary-label">ส่วนลด</span>
-              <strong>-฿{formatPlainNumber(summary.discountTotal)}</strong>
-              <span className="muted">
-                {summary.discountCount} บิล · ก่อนลด ฿{formatPlainNumber(summary.grossTotal)}
+            <div className="npos-slim-row npos-slim-row--compact" role="row">
+              <span role="cell">ส่วนลด</span>
+              <span role="cell" className="npos-slim-num">
+                {summary.discountCount || "—"}
+              </span>
+              <span role="cell" className="npos-slim-num">
+                -{formatPlainNumber(summary.discountTotal)}
               </span>
             </div>
           ) : null}
-          <div className="pos-sales-summary-card">
-            <span className="pos-sales-summary-label">เงินสด</span>
-            <strong>฿{formatPlainNumber(summary.cashTotal)}</strong>
-            <span className="muted">{summary.cashCount} บิล</span>
-          </div>
-          <div className="pos-sales-summary-card">
-            <span className="pos-sales-summary-label">โอนเงิน</span>
-            <strong>฿{formatPlainNumber(summary.transferTotal)}</strong>
-            <span className="muted">{summary.transferCount} บิล</span>
-          </div>
-          <div className="pos-sales-summary-card">
-            <span className="pos-sales-summary-label">PromptPay</span>
-            <strong>฿{formatPlainNumber(summary.promptpayTotal)}</strong>
-            <span className="muted">{summary.promptpayCount} บิล</span>
-          </div>
-          <div className="pos-sales-summary-card pos-sales-summary-card--void">
-            <span className="pos-sales-summary-label">ยกเลิก</span>
-            <strong>฿{formatPlainNumber(summary.voidedTotal)}</strong>
-            <span className="muted">{summary.voidedCount} บิล</span>
-          </div>
         </div>
 
         <section className="pos-sales-report-section">
           <h3>แยกตามกะ</h3>
-          <div className="sheet-wrap">
-            <table className="sheet-table pos-sales-shift-table">
-              <thead>
-                <tr>
-                  <th>กะ</th>
-                  <th className="col-num">บิล</th>
-                  <th className="col-num">เงินสด</th>
-                  <th className="col-num">โอน</th>
-                  <th className="col-num">PromptPay</th>
-                  <th className="col-num">รวม</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.byShift.map((row) => (
-                  <tr key={row.shift}>
-                    <td>{row.label}</td>
-                    <td className="col-num">{row.count || "—"}</td>
-                    <td className="col-num">{row.cashTotal ? formatPlainNumber(row.cashTotal) : "—"}</td>
-                    <td className="col-num">
-                      {row.transferTotal ? formatPlainNumber(row.transferTotal) : "—"}
-                    </td>
-                    <td className="col-num">
-                      {row.promptpayTotal ? formatPlainNumber(row.promptpayTotal) : "—"}
-                    </td>
-                    <td className="col-num">{row.total ? formatPlainNumber(row.total) : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="npos-slim-scroll" role="table" aria-label="แยกตามกะ">
+            <div className="npos-slim-row npos-slim-row--head npos-slim-row--shift" role="row">
+              <span role="columnheader">กะ</span>
+              <span role="columnheader" className="npos-slim-num">
+                บิล
+              </span>
+              <span role="columnheader" className="npos-slim-num">
+                สด
+              </span>
+              <span role="columnheader" className="npos-slim-num">
+                โอน
+              </span>
+              <span role="columnheader" className="npos-slim-num">
+                PP
+              </span>
+              <span role="columnheader" className="npos-slim-num">
+                รวม
+              </span>
+            </div>
+            {summary.byShift.map((row) => (
+              <div key={row.shift} className="npos-slim-row npos-slim-row--shift" role="row">
+                <span role="cell">{row.label}</span>
+                <span role="cell" className="npos-slim-num">
+                  {row.count || "—"}
+                </span>
+                <span role="cell" className="npos-slim-num">
+                  {row.cashTotal ? formatPlainNumber(row.cashTotal) : "—"}
+                </span>
+                <span role="cell" className="npos-slim-num">
+                  {row.transferTotal ? formatPlainNumber(row.transferTotal) : "—"}
+                </span>
+                <span role="cell" className="npos-slim-num">
+                  {row.promptpayTotal ? formatPlainNumber(row.promptpayTotal) : "—"}
+                </span>
+                <span role="cell" className="npos-slim-num npos-slim-strong">
+                  {row.total ? formatPlainNumber(row.total) : "—"}
+                </span>
+              </div>
+            ))}
           </div>
         </section>
 
         {summary.topItems.length > 0 ? (
           <section className="pos-sales-report-section">
             <h3>เมนูขายดี</h3>
-            <div className="sheet-wrap">
-              <table className="sheet-table">
-                <thead>
-                  <tr>
-                    <th>เมนู</th>
-                    <th className="col-num">จำนวน</th>
-                    <th className="col-num">ยอด</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summary.topItems.map((item) => (
-                    <tr key={item.menuItemId || item.name}>
-                      <td>{item.name}</td>
-                      <td className="col-num">{item.qty}</td>
-                      <td className="col-num">{formatPlainNumber(item.total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="npos-slim-scroll" role="table" aria-label="เมนูขายดี">
+              <div className="npos-slim-row npos-slim-row--head npos-slim-row--compact" role="row">
+                <span role="columnheader">เมนู</span>
+                <span role="columnheader" className="npos-slim-num">
+                  จำนวน
+                </span>
+                <span role="columnheader" className="npos-slim-num">
+                  ยอด
+                </span>
+              </div>
+              {summary.topItems.map((item) => (
+                <div
+                  key={item.menuItemId || item.name}
+                  className="npos-slim-row npos-slim-row--compact"
+                  role="row"
+                >
+                  <span role="cell" className="npos-slim-ellipsis">
+                    {item.name}
+                  </span>
+                  <span role="cell" className="npos-slim-num">
+                    {item.qty}
+                  </span>
+                  <span role="cell" className="npos-slim-num">
+                    {formatPlainNumber(item.total)}
+                  </span>
+                </div>
+              ))}
             </div>
           </section>
         ) : null}
