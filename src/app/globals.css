@@ -16070,8 +16070,8 @@ a.ghost-btn {
 .vat-month-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
-  margin: 0.65rem 0 1rem;
+  gap: 0.35rem;
+  margin: 0.45rem 0 0.75rem;
 }
 
 .vat-rates-block {
@@ -16102,13 +16102,13 @@ a.ghost-btn {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.35rem 0.55rem;
-  margin: 0.25rem 0 0.55rem;
-  padding: 0.4rem 0.55rem;
+  gap: 0.25rem 0.45rem;
+  margin: 0.2rem 0 0.4rem;
+  padding: 0.28rem 0.45rem;
   border-left: 3px solid rgba(28, 42, 31, 0.45);
   background: rgba(28, 42, 31, 0.04);
-  font-size: 0.88rem;
-  line-height: 1.3;
+  font-size: 0.78rem;
+  line-height: 1.25;
 }
 
 .vat-period-banner--one-line {
@@ -16127,18 +16127,19 @@ a.ghost-btn {
 }
 
 .vat-hint-one-line {
-  margin: 0.25rem 0 0.45rem;
-  font-size: 0.84rem;
-  line-height: 1.35;
+  margin: 0.15rem 0 0.3rem;
+  font-size: 0.72rem;
+  line-height: 1.25;
 }
 
 .vat-note-slim {
-  margin: 0.35rem 0 0.25rem;
+  margin: 0.25rem 0 0.15rem;
 }
 
 .vat-note-slim input {
   width: 100%;
-  min-height: 2.2rem;
+  min-height: 1.45rem;
+  font-size: 0.78rem;
 }
 
 .vat-month-slim-wrap {
@@ -16358,31 +16359,5 @@ a.ghost-btn {
   line-height: 1.2;
   color: rgba(28, 42, 31, 0.88);
   white-space: nowrap;
-}
-
-.vat-hint-one-line {
-  margin: 0.15rem 0 0.3rem;
-  font-size: 0.72rem;
-  line-height: 1.25;
-}
-
-.vat-period-banner {
-  padding: 0.28rem 0.45rem;
-  margin: 0.2rem 0 0.4rem;
-  font-size: 0.78rem;
-}
-
-.vat-note-slim {
-  margin: 0.25rem 0 0.15rem;
-}
-
-.vat-note-slim input {
-  min-height: 1.45rem;
-  font-size: 0.78rem;
-}
-
-.vat-month-actions {
-  margin: 0.45rem 0 0.75rem;
-  gap: 0.35rem;
 }
 
