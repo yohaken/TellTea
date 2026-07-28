@@ -81,6 +81,10 @@ public class SellActivity extends Activity {
   private TextView shiftSummary;
   private TextView flushSyncButton;
   private TextView restoreHoldButton;
+  private View payAllButton;
+  private TextView payAllAmount;
+  private TextView payAllDiscount;
+  private TextView holdBillButton;
 
   private MenuRepository menuRepo;
   private SaleSync saleSync;
@@ -130,6 +134,10 @@ public class SellActivity extends Activity {
     shiftSummary = findViewById(R.id.shiftSummary);
     flushSyncButton = findViewById(R.id.flushSyncButton);
     restoreHoldButton = findViewById(R.id.restoreHoldButton);
+    payAllButton = findViewById(R.id.payAllButton);
+    payAllAmount = findViewById(R.id.payAllAmount);
+    payAllDiscount = findViewById(R.id.payAllDiscount);
+    holdBillButton = findViewById(R.id.holdBillButton);
 
     menuRepo = new MenuRepository();
     saleSync = new SaleSync();
@@ -164,29 +172,52 @@ public class SellActivity extends Activity {
 
     View back = findViewById(R.id.backButton);
     if (back != null) back.setOnClickListener(v -> finish());
-    findViewById(R.id.payCashButton).setOnClickListener(v -> startPay("cash"));
+    if (payAllButton != null) {
+      payAllButton.setOnClickListener(v -> startPayAll());
+    }
+    View payCashBtn = findViewById(R.id.payCashButton);
+    if (payCashBtn != null) {
+      payCashBtn.setOnClickListener(v -> startPay("cash"));
+      payCashBtn.setVisibility(View.GONE);
+    }
     View payTransferBtn = findViewById(R.id.payTransferButton);
     if (payTransferBtn != null) {
       payTransferBtn.setOnClickListener(v -> startPay(PaymentMethods.TRANSFER));
+      payTransferBtn.setVisibility(View.GONE);
     }
     View payPpBtn = findViewById(R.id.payPromptButton);
     if (payPpBtn != null) {
       // Early phase: hide PromptPay + QR from main sell chrome.
-      // Bank transfer (sticker QR / account) uses payTransferButton instead.
       payPpBtn.setVisibility(View.GONE);
       payPpBtn.setOnClickListener(null);
     }
-    findViewById(R.id.discountButton).setOnClickListener(v -> showDiscountDialog());
+    View discountBtn = findViewById(R.id.discountButton);
+    if (discountBtn != null) {
+      discountBtn.setOnClickListener(v -> showDiscountDialog());
+      discountBtn.setVisibility(View.GONE);
+    }
     View clearCart = findViewById(R.id.clearCartButton);
     if (clearCart != null) {
       clearCart.setOnClickListener(v -> confirmClearCart());
+      clearCart.setVisibility(View.GONE);
     }
-    findViewById(R.id.holdBillButton).setOnClickListener(v -> holdBill());
-    restoreHoldButton.setOnClickListener(v -> restoreHold());
-    flushSyncButton.setOnClickListener(v -> flushPendingNow());
+    if (holdBillButton != null) {
+      holdBillButton.setOnClickListener(v -> holdBill());
+    }
+    if (restoreHoldButton != null) {
+      restoreHoldButton.setOnClickListener(v -> restoreHold());
+      restoreHoldButton.setVisibility(View.GONE);
+    }
+    if (flushSyncButton != null) {
+      flushSyncButton.setOnClickListener(v -> flushPendingNow());
+    }
     View refreshMenu = findViewById(R.id.refreshMenuButton);
     if (refreshMenu != null) refreshMenu.setVisibility(View.GONE);
-    findViewById(R.id.xReportButton).setOnClickListener(v -> printXReport());
+    View xReport = findViewById(R.id.xReportButton);
+    if (xReport != null) {
+      xReport.setOnClickListener(v -> printXReport());
+      xReport.setVisibility(View.GONE);
+    }
     View receipts = findViewById(R.id.receiptsButton);
     if (receipts != null) {
       receipts.setOnClickListener(v -> startActivity(new Intent(this, ReceiptsActivity.class)));
@@ -267,14 +298,26 @@ public class SellActivity extends Activity {
     View payTransfer = findViewById(R.id.payTransferButton);
     View payPp = findViewById(R.id.payPromptButton);
     View xReport = findViewById(R.id.xReportButton);
+    if (payAllButton != null) {
+      payAllButton.setMinimumHeight(uiScale.payPrimaryMinPx);
+    }
+    if (holdBillButton != null) {
+      holdBillButton.setMinimumHeight(uiScale.payPrimaryMinPx);
+      holdBillButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(12f, uiScale.bodySp - 1f));
+    }
+    if (payAllAmount != null) {
+      payAllAmount.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.titleSp + 2f);
+    }
     if (payCash != null) {
       payCash.setMinimumHeight(uiScale.payPrimaryMinPx);
+      payCash.setVisibility(View.GONE);
       if (payCash instanceof TextView) {
         ((TextView) payCash).setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.titleSp + 1f);
       }
     }
     if (payTransfer != null) {
       payTransfer.setMinimumHeight(uiScale.payPrimaryMinPx);
+      payTransfer.setVisibility(View.GONE);
       if (payTransfer instanceof TextView) {
         ((TextView) payTransfer).setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.titleSp);
       }
@@ -284,9 +327,10 @@ public class SellActivity extends Activity {
     }
     if (xReport != null) {
       xReport.setMinimumHeight(uiScale.touchMinPx);
+      xReport.setVisibility(View.GONE);
     }
     styleSoftCartAction(findViewById(R.id.discountButton));
-    styleSoftCartAction(findViewById(R.id.holdBillButton));
+    styleSoftCartAction(holdBillButton);
     styleSoftCartAction(findViewById(R.id.restoreHoldButton));
     styleSoftCartAction(findViewById(R.id.clearCartButton));
     if (menuGrid != null) {
@@ -294,19 +338,34 @@ public class SellActivity extends Activity {
     }
   }
 
-  /** Gpos-style overflow: settings / shift / history / lock behind grid. */
+  /** Gpos-style overflow: cart extras + settings / shift / history behind grid. */
   private void showSellHubMenu(View anchor) {
     PopupMenu popup = new PopupMenu(this, anchor);
-    popup.getMenu().add(0, 1, 0, R.string.nav_open_bills);
-    popup.getMenu().add(0, 2, 1, R.string.nav_receipts);
-    popup.getMenu().add(0, 3, 2, R.string.nav_shift);
-    popup.getMenu().add(0, 4, 3, R.string.btn_settings_device);
-    popup.getMenu().add(0, 5, 4, R.string.sell_hub_x_report);
-    popup.getMenu().add(0, 6, 5, R.string.sell_hub_close_shift);
-    popup.getMenu().add(0, 7, 6, R.string.nav_lock_pin);
+    popup.getMenu().add(0, 10, 0, R.string.sell_hub_discount);
+    popup.getMenu().add(0, 11, 1, R.string.sell_hub_restore_hold);
+    popup.getMenu().add(0, 12, 2, R.string.sell_hub_clear_cart);
+    popup.getMenu().add(0, 1, 3, R.string.nav_open_bills);
+    popup.getMenu().add(0, 2, 4, R.string.nav_receipts);
+    popup.getMenu().add(0, 3, 5, R.string.nav_shift);
+    popup.getMenu().add(0, 4, 6, R.string.btn_settings_device);
+    popup.getMenu().add(0, 5, 7, R.string.sell_hub_x_report);
+    popup.getMenu().add(0, 6, 8, R.string.sell_hub_close_shift);
+    popup.getMenu().add(0, 7, 9, R.string.nav_lock_pin);
     popup.setOnMenuItemClickListener(
         (MenuItem item) -> {
           int id = item.getItemId();
+          if (id == 10) {
+            showDiscountDialog();
+            return true;
+          }
+          if (id == 11) {
+            restoreHold();
+            return true;
+          }
+          if (id == 12) {
+            confirmClearCart();
+            return true;
+          }
           if (id == 1) {
             PosShellNav.openOpenBillsHint(this);
             return true;
@@ -439,12 +498,19 @@ public class SellActivity extends Activity {
   }
 
   private void updateHoldRestoreButton() {
+    // Restore lives in hub menu; keep label ready for hub / auto-restore after update.
     if (restoreHoldButton == null) return;
     boolean has = HoldCart.hasHold(this);
     restoreHoldButton.setEnabled(has);
     restoreHoldButton.setText(
         has ? R.string.btn_restore_hold_ready : R.string.btn_restore_hold);
     restoreHoldButton.setAlpha(has ? 1f : 0.55f);
+    if (holdBillButton != null) {
+      holdBillButton.setAlpha(cart.isEmpty() ? 0.55f : 1f);
+    }
+    if (payAllButton != null) {
+      payAllButton.setAlpha(cart.isEmpty() ? 0.55f : 1f);
+    }
   }
 
   private void flushPendingNow() {
@@ -752,33 +818,37 @@ public class SellActivity extends Activity {
       applySavedCategoryOrder();
     }
     float density = getResources().getDisplayMetrics().density;
-    int padH = Math.round(14 * density);
-    int padV = Math.round(10 * density);
-    int gap = Math.round(8 * density);
-    int catMin = Math.max(Math.round(48 * density), uiScale != null ? uiScale.touchMinPx : 0);
+    int padH = Math.round(12 * density);
+    int padV = Math.round(14 * density);
+    int catMin = Math.max(Math.round(52 * density), uiScale != null ? uiScale.touchMinPx : 0);
+      int ink = NposUi.color(this, R.color.npos_ink);
+      int activeBg = NposUi.color(this, R.color.npos_orange_soft);
+      int activeFg = NposUi.color(this, R.color.npos_orange);
     for (int i = 0; i < menu.categories.size(); i++) {
       final int idx = i;
       MenuModels.Category cat = menu.categories.get(i);
-      TextView b = NposUi.chip(this, "");
+      TextView b = new TextView(this);
       b.setText(cat.name);
       b.setAllCaps(false);
       b.setMinHeight(catMin);
+      b.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
       b.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale != null ? uiScale.bodySp : 14f);
       b.setTypeface(NposFonts.semibold(this));
       b.setPadding(padH, padV, padH, padV);
+      b.setMaxLines(2);
+      b.setEllipsize(android.text.TextUtils.TruncateAt.END);
       LinearLayout.LayoutParams lp =
           new LinearLayout.LayoutParams(
-              LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-      lp.setMargins(0, 0, gap, 0);
+              LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
       b.setLayoutParams(lp);
       boolean active = cat.id.equals(selectedCategoryId);
       if (active) {
-        NposUi.applyBtn(b, NposUi.Btn.CHIP_PRIMARY);
+        b.setBackgroundColor(activeBg);
+        b.setTextColor(activeFg);
       } else {
-        NposUi.applyBtn(b, NposUi.Btn.CHIP);
+        b.setBackgroundColor(0x00000000);
+        b.setTextColor(ink);
       }
-      b.setMinHeight(catMin);
-      b.setPadding(padH, padV, padH, padV);
       b.setOnClickListener(
           v -> {
             selectedCategoryId = cat.id;
@@ -788,14 +858,22 @@ public class SellActivity extends Activity {
       b.setOnLongClickListener(
           v -> {
             if (menu != null && menu.isBestsellers()) return true;
+            // Vertical table: long-press moves up (or down if already first).
             moveCategory(idx, idx == 0 ? 1 : -1);
             return true;
           });
       categoryBar.addView(b);
+      if (i < menu.categories.size() - 1) {
+        View hair = new View(this);
+        hair.setBackgroundColor(NposUi.color(this, R.color.npos_border));
+        categoryBar.addView(
+            hair,
+            new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Math.max(1, Math.round(density))));
+      }
     }
   }
 
-  /** Long-press: move left (or right if already first) — clone web sell category reorder. */
+  /** Long-press: move up (or down if already first) — vertical category table reorder. */
   private void moveCategory(int from, int delta) {
     if (menu == null || menu.isBestsellers()) return;
     int to = from + delta;
@@ -1690,6 +1768,18 @@ public class SellActivity extends Activity {
         discountLabel.setTextColor(NposUi.color(this, R.color.npos_muted));
       }
     }
+    if (payAllAmount != null) {
+      payAllAmount.setText(getString(R.string.cart_total_fmt, total));
+    }
+    if (payAllDiscount != null) {
+      if (discountBaht > 0) {
+        payAllDiscount.setVisibility(View.VISIBLE);
+        payAllDiscount.setText(getString(R.string.pay_all_discount_fmt, discountBaht));
+      } else {
+        payAllDiscount.setVisibility(View.GONE);
+        payAllDiscount.setText(R.string.pay_all_discount_none);
+      }
+    }
     if (cartBillRef != null) {
       if (cart.isEmpty()) {
         cartBillRef.setText(R.string.cart_bill_new);
@@ -1795,6 +1885,27 @@ public class SellActivity extends Activity {
             (d, w) -> {
               discountBaht = 0;
               renderCart();
+            })
+        .setNegativeButton(android.R.string.cancel, null)
+        .show();
+  }
+
+  private void startPayAll() {
+    if (cart.isEmpty()) {
+      Toast.makeText(this, R.string.cart_empty, Toast.LENGTH_SHORT).show();
+      return;
+    }
+    CharSequence[] methods =
+        new CharSequence[] {
+          getString(R.string.btn_pay_cash), getString(R.string.btn_pay_transfer)
+        };
+    new AlertDialog.Builder(this)
+        .setTitle(R.string.pay_choose_title)
+        .setItems(
+            methods,
+            (d, which) -> {
+              if (which == 0) startPay("cash");
+              else if (which == 1) startPay(PaymentMethods.TRANSFER);
             })
         .setNegativeButton(android.R.string.cancel, null)
         .show();

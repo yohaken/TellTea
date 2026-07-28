@@ -87,9 +87,17 @@
     <string name="cart_total_fmt">฿%.0f</string>
     <string name="cart_empty">เลือกเมนูก่อนชำระ</string>
     <string name="btn_restore_hold_ready">▶ ดึงบิลพัก · มีค้าง</string>
+    <string name="btn_pay_all">ชำระทั้งหมด</string>
+    <string name="btn_hold_save">บันทึก</string>
+    <string name="pay_all_discount_fmt">ส่วนลด −฿%.0f</string>
+    <string name="pay_all_discount_none">ส่วนลด —</string>
+    <string name="pay_choose_title">เลือกวิธีชำระ</string>
     <string name="btn_pay_cash">💵 ชำระเงินสด</string>
     <string name="btn_pay_transfer">โอนเงิน</string>
     <string name="btn_pay_promptpay">📱 ชำระ PromptPay</string>
+    <string name="sell_hub_discount">ส่วนลด</string>
+    <string name="sell_hub_restore_hold">ดึงบิลพัก</string>
+    <string name="sell_hub_clear_cart">ล้างตะกร้า</string>
     <string name="btn_refresh_menu">รีเฟรช</string>
     <string name="category_reordered">เรียงหมวดแล้ว</string>
     <string name="btn_open_menu_admin">เปิดจัดการเมนู (เว็บ)</string>

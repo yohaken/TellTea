@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 307/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+72/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.49"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 314/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+79/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.56"/);
 assert.match(read("docs/npos-web-parity-shot-checklist.md"), /P1|P7|5 วิ|แถบซ้าย/);
 
 const capture = read(
@@ -29,7 +29,7 @@ assert.match(ctrl, /activePresentationOrNull/);
 const sellLayout = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
 assert.match(sellLayout, /include_pos_sidebar|posSidebar/);
 assert.match(sellLayout, /include_update_popup|updatePopup/);
-assert.match(sellLayout, /layout_weight="65"/);
+assert.match(sellLayout, /layout_weight="65"|layout_weight="54"|layout_weight="16"/);
 assert.match(sellLayout, /npos_orange|#E85D24/);
 
 assert.ok(

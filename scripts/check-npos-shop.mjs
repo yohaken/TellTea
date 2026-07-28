@@ -16,6 +16,7 @@ mkdirSync(outDir, { recursive: true });
 const steps = [
   { name: "master-sell-phases", cmd: ["node", "scripts/test-npos-master-sell-phases.mjs"] },
   { name: "sell-layout", cmd: ["node", "scripts/test-npos-sell-layout.mjs"] },
+  { name: "sell-table-pay", cmd: ["node", "scripts/test-npos-sell-table-pay.mjs"] },
   { name: "customer-display", cmd: ["node", "scripts/test-npos-customer-display.mjs"] },
   { name: "capture-wiring", cmd: ["node", "scripts/test-npos-capture.mjs"] },
   { name: "web-parity-shot", cmd: ["node", "scripts/test-npos-web-parity-shot.mjs"] },

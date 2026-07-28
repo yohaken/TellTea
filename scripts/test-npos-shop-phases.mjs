@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 307/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+72/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.49"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 314/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+79/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.56"/);
 
 assert.ok(existsSync(join(root, "docs/npos-shop-work-checklist.md")));
 assert.match(read("docs/npos-shop-work-checklist.md"), /W1|W2|W3|W4|W5/);
@@ -23,7 +23,7 @@ assert.match(check, /test-npos-outbox/);
 assert.match(check, /test-npos-void-server/);
 
 const layout = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
-assert.match(layout, /layout_weight="65"|layout_weight="35"/);
+assert.match(layout, /layout_weight="65"|layout_weight="35"|layout_weight="54"|layout_weight="30"|layout_weight="16"/);
 assert.doesNotMatch(layout, /android:layout_width="344dp"/);
 
 const menuModels = read(
