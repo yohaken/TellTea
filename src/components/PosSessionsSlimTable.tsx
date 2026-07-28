@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { labelOtShift, type OtShiftId } from "@/lib/ot";
 import {
   HEARTBEAT_INTERVAL_PRESETS,
   clampHeartbeatIntervalSec,
@@ -15,6 +14,7 @@ import {
 } from "@/lib/pos-devices";
 import {
   salesForSession,
+  shortPosSessionId,
   voidedForSession,
 } from "@/lib/pos-sales-report";
 import type { PosSale, PosSession } from "@/lib/types";
@@ -28,13 +28,6 @@ function moneyOrDash(n: number | undefined): string {
   if (n == null || !Number.isFinite(n)) return "—";
   if (Math.abs(n) < 0.0001) return "0";
   return formatPlainNumber(n);
-}
-
-function shortShift(shift: string): string {
-  if (shift === "morning") return "เช้า";
-  if (shift === "evening") return "เย็น";
-  if (shift === "late") return "ดึก";
-  return labelOtShift(shift as OtShiftId);
 }
 
 type RowModel = {
@@ -52,6 +45,9 @@ type RowModel = {
   expected: number | undefined;
   diff: number | undefined;
   leave: number | undefined;
+  cashOut: number | undefined;
+  cashIn: number | undefined;
+  cashDrops: number | undefined;
   note: string;
 };
 
@@ -60,16 +56,8 @@ function buildRows(
   sales: PosSale[],
   devicesById: Map<string, PosDevice>,
 ): RowModel[] {
-  const sorted = [...sessions].sort((a, b) => {
-    const aOpen = a.status === "open" ? 1 : 0;
-    const bOpen = b.status === "open" ? 1 : 0;
-    if (aOpen !== bOpen) return bOpen - aOpen;
-    if (a.status === "open") return (b.openedAt || 0) - (a.openedAt || 0);
-    const aClosed = a.closedAt || a.openedAt || 0;
-    const bClosed = b.closedAt || b.openedAt || 0;
-    return bClosed - aClosed;
-  });
-  return sorted.map((session) => {
+  // Parent already sorts open-first; keep stable.
+  return sessions.map((session) => {
     const active = salesForSession(sales, session.id);
     const voided = voidedForSession(sales, session.id);
     const cashSum = active
@@ -102,6 +90,9 @@ function buildRows(
       expected: session.expectedCash,
       diff: session.cashDifference,
       leave: session.leaveFloat,
+      cashOut: session.cashOutTotal,
+      cashIn: session.cashInTotal,
+      cashDrops: session.cashDropCount,
       note: session.discrepancyNote || "",
     };
   });
@@ -138,8 +129,8 @@ function daySummaryFromSales(sales: PosSale[]): DaySummary {
 }
 
 /**
- * Super-slim one-line session rows for BO — open first, closed newest first.
- * Thin filters (day / open / device / shift) + day summary bar; no close-shift CTA.
+ * Super-slim nPos sales-cycle rows — realtime from posSessions + posSales.
+ * Not OT morning/evening. No close-shift CTA (native only).
  */
 export function PosSessionsSlimTable({
   sessions,
@@ -154,7 +145,6 @@ export function PosSessionsSlimTable({
   selectedSessionId: string | null;
   onSelect: (sessionId: string | null) => void;
   onError?: (msg: string | null) => void;
-  /** Chip label for “all sessions on this date” — usually วันนี้. */
   dayLabel?: string;
 }) {
   const [devices, setDevices] = useState<PosDevice[]>([]);
@@ -163,7 +153,6 @@ export function PosSessionsSlimTable({
   const [pulseHint, setPulseHint] = useState<string | null>(null);
   const [openOnly, setOpenOnly] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
-  const [shiftId, setShiftId] = useState<OtShiftId | null>(null);
 
   useEffect(() => {
     return subscribePosDevicesAdmin(
@@ -222,28 +211,17 @@ export function PosSessionsSlimTable({
     return [...seen.entries()].map(([id, label]) => ({ id, label }));
   }, [rows]);
 
-  const shiftOptions = useMemo(() => {
-    const set = new Set<OtShiftId>();
-    for (const row of rows) {
-      const sh = row.session.shift as OtShiftId;
-      if (sh === "morning" || sh === "evening" || sh === "late") set.add(sh);
-    }
-    return (["morning", "evening", "late"] as OtShiftId[]).filter((id) => set.has(id));
-  }, [rows]);
-
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
       if (openOnly && !row.open) return false;
       if (deviceId && row.session.deviceId !== deviceId) return false;
-      if (shiftId && row.session.shift !== shiftId) return false;
       return true;
     });
-  }, [rows, openOnly, deviceId, shiftId]);
+  }, [rows, openOnly, deviceId]);
 
   function resetDayFilters() {
     setOpenOnly(false);
     setDeviceId(null);
-    setShiftId(null);
   }
 
   const emptyDay = sessions.length === 0;
@@ -252,7 +230,7 @@ export function PosSessionsSlimTable({
     <section className="npos-slim-sessions">
       <header className="npos-slim-sessions-head">
         <div className="npos-slim-sessions-title">
-          <h3>รอบการขาย</h3>
+          <h3>รอบการขาย nPos</h3>
           <span className="muted">
             {filteredRows.length}
             {filteredRows.length !== rows.length ? `/${rows.length}` : ""} รอบ · realtime
@@ -284,7 +262,7 @@ export function PosSessionsSlimTable({
         <div className="npos-slim-filters" role="toolbar" aria-label="กรองรอบ">
           <button
             type="button"
-            className={`npos-slim-text-btn ${!openOnly && !deviceId && !shiftId ? "is-active" : ""}`}
+            className={`npos-slim-text-btn ${!openOnly && !deviceId ? "is-active" : ""}`}
             onClick={resetDayFilters}
           >
             {dayLabel}
@@ -309,25 +287,15 @@ export function PosSessionsSlimTable({
                 </button>
               ))
             : null}
-          {shiftOptions.map((id) => (
-            <button
-              key={id}
-              type="button"
-              className={`npos-slim-text-btn ${shiftId === id ? "is-active" : ""}`}
-              onClick={() => setShiftId((cur) => (cur === id ? null : id))}
-            >
-              {shortShift(id)}
-            </button>
-          ))}
         </div>
       ) : null}
 
       {emptyDay ? (
-        <p className="muted npos-slim-empty">ยังไม่มีรอบในวันนี้</p>
+        <p className="muted npos-slim-empty">ยังไม่มีรอบ nPos ในวันนี้ — เปิดกะที่แท็บเล็ต</p>
       ) : filteredRows.length === 0 ? (
         <p className="muted npos-slim-empty">ไม่มีรอบตามตัวกรอง</p>
       ) : (
-        <div className="npos-slim-scroll" role="table" aria-label="รอบการขาย">
+        <div className="npos-slim-scroll" role="table" aria-label="รอบการขาย nPos">
           <div className="npos-slim-row npos-slim-row--head" role="row">
             <span role="columnheader">สถานะ</span>
             <span role="columnheader">เครื่อง</span>
@@ -356,6 +324,7 @@ export function PosSessionsSlimTable({
 
           {filteredRows.map((row) => {
             const selected = selectedSessionId === row.session.id;
+            const sid = shortPosSessionId(row.session.id);
             return (
               <div key={row.session.id} className="npos-slim-block">
                 <button
@@ -371,7 +340,9 @@ export function PosSessionsSlimTable({
                   <span role="cell" className="npos-slim-ellipsis" title={row.deviceLabel}>
                     {row.deviceLabel}
                   </span>
-                  <span role="cell">{shortShift(row.session.shift)}</span>
+                  <span role="cell" title={row.session.id}>
+                    {sid}
+                  </span>
                   <span role="cell">{formatHm(row.session.openedAt)}</span>
                   <span role="cell">
                     {row.session.closedAt ? formatHm(row.session.closedAt) : "—"}
@@ -399,6 +370,18 @@ export function PosSessionsSlimTable({
                   <div className="npos-slim-detail" role="row">
                     <span>
                       ทอนเริ่ม {moneyOrDash(row.opening)}
+                      {row.open
+                        ? ` · ระหว่างกะ · ยอดจากบิล realtime`
+                        : ""}
+                      {(row.cashOut != null && row.cashOut > 0) ||
+                      (row.cashDrops != null && row.cashDrops > 0)
+                        ? ` · ถอน ${moneyOrDash(row.cashOut)}${
+                            row.cashDrops ? ` (${row.cashDrops} ครั้ง)` : ""
+                          }`
+                        : ""}
+                      {row.cashIn != null && row.cashIn > 0
+                        ? ` · เติม ${moneyOrDash(row.cashIn)}`
+                        : ""}
                       {!row.open && row.counted != null
                         ? ` · นับ ${moneyOrDash(row.counted)} · ควรมี ${moneyOrDash(row.expected)} · ส่วนต่าง ${moneyOrDash(row.diff)}`
                         : ""}
@@ -425,7 +408,7 @@ export function PosSessionsSlimTable({
       )}
 
       <p className="muted npos-slim-foot">
-        ปิดกะที่แท็บเล็ตเท่านั้น · แตะแถวเพื่อเปิดบิลของรอบ · ไม่มีปุ่มปิดกะในตารางนี้
+        รอบ = กะ nPos บนแท็บเล็ต (เปิด–ปิดมือ) · ไม่ใช่ระบบ OT · ปิดกะที่แท็บเล็ตเท่านั้น
       </p>
     </section>
   );

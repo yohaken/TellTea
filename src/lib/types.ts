@@ -269,11 +269,12 @@ export type PosSaleLine = {
   options?: PosSaleLineOption[];
 };
 
-/** POS — รอบขาย (เปิดกะขายบนเครื่อง) */
+/** POS — รอบขาย (เปิดกะขายบนเครื่อง) · ไม่ใช่กะ OT เช้า/เย็น */
 export type PosSession = {
   id: string;
   deviceId: string;
   date: number;
+  /** Metadata stamp ตอนเปิด — ไม่ใช่ตัวตนรอบขาย */
   shift: string;
   openedAt: number;
   closedAt?: number;
@@ -291,6 +292,10 @@ export type PosSession = {
   leaveFloat?: number;
   discountTotal?: number;
   voidedCount?: number;
+  /** ถอน/เติมกลางกะ (ซิงก์ตอนปิดรอบ) */
+  cashOutTotal?: number;
+  cashInTotal?: number;
+  cashDropCount?: number;
   discrepancyNote?: string;
   discrepancyLabel?: string;
   source?: string;

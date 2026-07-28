@@ -7,14 +7,26 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
-import { OT_SHIFTS, type OtShiftId } from "./ot";
 import { POS_SALES_COL } from "./pos-sales";
 import { POS_SESSIONS_COL } from "./pos-session";
 import type { PosSale, PosSession } from "./types";
 import { startOfLocalDay } from "./utils";
 
+/** สรุปรอบขาย nPos (ไม่ใช่กะ OT เช้า/เย็น) */
+export type PosSessionSalesRow = {
+  sessionId: string;
+  label: string;
+  status: "open" | "closed";
+  count: number;
+  total: number;
+  cashTotal: number;
+  promptpayTotal: number;
+  transferTotal: number;
+};
+
+/** @deprecated OT window — do not use for sales overview */
 export type PosShiftSalesRow = {
-  shift: OtShiftId;
+  shift: string;
   label: string;
   count: number;
   total: number;
@@ -44,6 +56,9 @@ export type PosSalesDetailedSummary = {
   promptpayCount: number;
   transferTotal: number;
   transferCount: number;
+  /** สรุปตามรอบขาย nPos (sessionId) */
+  bySession: PosSessionSalesRow[];
+  /** @deprecated kept empty for older callers */
   byShift: PosShiftSalesRow[];
   topItems: PosMenuSalesRow[];
 };
@@ -55,6 +70,15 @@ export type PosSessionReconcileRow = {
   countMatch: boolean;
   totalMatch: boolean;
 };
+
+/** Short display id for a sales cycle — not OT morning/evening. */
+export function shortPosSessionId(sessionId: string): string {
+  const id = (sessionId || "").trim();
+  if (!id) return "—";
+  const tail = id.includes("_") ? id.slice(id.lastIndexOf("_") + 1) : id;
+  const slice = (tail.length >= 6 ? tail.slice(-6) : id.slice(-6)).toUpperCase();
+  return `#${slice}`;
+}
 
 function normalizePaymentMethod(raw: unknown): PosSale["paymentMethod"] {
   const m = typeof raw === "string" ? raw.trim().toLowerCase() : "";
@@ -129,10 +153,25 @@ function mapSession(id: string, data: Record<string, unknown>): PosSession {
     leaveFloat: num("leaveFloat"),
     discountTotal: num("discountTotal"),
     voidedCount: num("voidedCount"),
+    cashOutTotal: num("cashOutTotal"),
+    cashInTotal: num("cashInTotal"),
+    cashDropCount: num("cashDropCount"),
     discrepancyNote: str("discrepancyNote"),
     discrepancyLabel: str("discrepancyLabel"),
     source: str("source"),
   };
+}
+
+function sortSessionsOpenFirst(sessions: PosSession[]): PosSession[] {
+  return [...sessions].sort((a, b) => {
+    const aOpen = a.status === "open" ? 1 : 0;
+    const bOpen = b.status === "open" ? 1 : 0;
+    if (aOpen !== bOpen) return bOpen - aOpen;
+    if (a.status === "open") return (b.openedAt || 0) - (a.openedAt || 0);
+    const aClosed = a.closedAt || a.openedAt || 0;
+    const bClosed = b.closedAt || b.openedAt || 0;
+    return bClosed - aClosed;
+  });
 }
 
 /** บิลในรอบ (active) — ใช้กับการ์ดหลังบ้าน */
@@ -144,7 +183,10 @@ export function voidedForSession(sales: PosSale[], sessionId: string): PosSale[]
   return sales.filter((s) => s.sessionId === sessionId && s.status === "voided");
 }
 
-export function summarizePosSalesDetailed(sales: PosSale[]): PosSalesDetailedSummary {
+export function summarizePosSalesDetailed(
+  sales: PosSale[],
+  sessions: PosSession[] = [],
+): PosSalesDetailedSummary {
   const active = sales.filter((s) => s.status === "completed");
   const voided = sales.filter((s) => s.status === "voided");
 
@@ -152,21 +194,46 @@ export function summarizePosSalesDetailed(sales: PosSale[]): PosSalesDetailedSum
   const ppSales = active.filter((s) => s.paymentMethod === "promptpay");
   const transferSales = active.filter((s) => s.paymentMethod === "transfer");
 
-  const byShift: PosShiftSalesRow[] = OT_SHIFTS.map(({ id, label }) => {
-    const rows = active.filter((s) => s.shift === id);
-    const cashRows = rows.filter((s) => s.paymentMethod === "cash");
-    const ppRows = rows.filter((s) => s.paymentMethod === "promptpay");
-    const transferRows = rows.filter((s) => s.paymentMethod === "transfer");
-    return {
-      shift: id,
-      label,
-      count: rows.length,
-      total: rows.reduce((sum, s) => sum + s.total, 0),
-      cashTotal: cashRows.reduce((sum, s) => sum + s.total, 0),
-      promptpayTotal: ppRows.reduce((sum, s) => sum + s.total, 0),
-      transferTotal: transferRows.reduce((sum, s) => sum + s.total, 0),
-    };
-  });
+  const sessionOrder = sortSessionsOpenFirst(sessions);
+  const knownIds = new Set(sessionOrder.map((s) => s.id));
+  const orphanIds = [
+    ...new Set(active.map((s) => s.sessionId).filter((id) => id && !knownIds.has(id))),
+  ];
+
+  const bySession: PosSessionSalesRow[] = [
+    ...sessionOrder.map((session) => {
+      const rows = active.filter((s) => s.sessionId === session.id);
+      const cashRows = rows.filter((s) => s.paymentMethod === "cash");
+      const ppRows = rows.filter((s) => s.paymentMethod === "promptpay");
+      const transferRows = rows.filter((s) => s.paymentMethod === "transfer");
+      return {
+        sessionId: session.id,
+        label: `${shortPosSessionId(session.id)}${session.status === "open" ? " · เปิด" : " · ปิด"}`,
+        status: session.status,
+        count: rows.length,
+        total: rows.reduce((sum, s) => sum + s.total, 0),
+        cashTotal: cashRows.reduce((sum, s) => sum + s.total, 0),
+        promptpayTotal: ppRows.reduce((sum, s) => sum + s.total, 0),
+        transferTotal: transferRows.reduce((sum, s) => sum + s.total, 0),
+      };
+    }),
+    ...orphanIds.map((sessionId) => {
+      const rows = active.filter((s) => s.sessionId === sessionId);
+      const cashRows = rows.filter((s) => s.paymentMethod === "cash");
+      const ppRows = rows.filter((s) => s.paymentMethod === "promptpay");
+      const transferRows = rows.filter((s) => s.paymentMethod === "transfer");
+      return {
+        sessionId,
+        label: `${shortPosSessionId(sessionId)} · บิล`,
+        status: "closed" as const,
+        count: rows.length,
+        total: rows.reduce((sum, s) => sum + s.total, 0),
+        cashTotal: cashRows.reduce((sum, s) => sum + s.total, 0),
+        promptpayTotal: ppRows.reduce((sum, s) => sum + s.total, 0),
+        transferTotal: transferRows.reduce((sum, s) => sum + s.total, 0),
+      };
+    }),
+  ];
 
   const itemMap = new Map<string, PosMenuSalesRow>();
   for (const sale of active) {
@@ -209,7 +276,8 @@ export function summarizePosSalesDetailed(sales: PosSale[]): PosSalesDetailedSum
     promptpayCount: ppSales.length,
     transferTotal: transferSales.reduce((sum, s) => sum + s.total, 0),
     transferCount: transferSales.length,
-    byShift,
+    bySession,
+    byShift: [],
     topItems,
   };
 }
@@ -250,20 +318,21 @@ export function subscribePosSalesForDate(
   );
 }
 
+/**
+ * Live nPos sales cycles for a day — open + closed from `posSessions`.
+ * Sorted client-side (open first, newest closed); not OT morning/evening order.
+ */
 export function subscribePosSessionsForDate(
   dateMs: number,
   onSessions: (sessions: PosSession[]) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
-  const q = query(
-    collection(getDb(), POS_SESSIONS_COL),
-    where("date", "==", dateMs),
-    orderBy("shift", "asc"),
-  );
+  const q = query(collection(getDb(), POS_SESSIONS_COL), where("date", "==", dateMs));
   return onSnapshot(
     q,
     (snap) => {
-      onSessions(snap.docs.map((d) => mapSession(d.id, d.data() as Record<string, unknown>)));
+      const mapped = snap.docs.map((d) => mapSession(d.id, d.data() as Record<string, unknown>));
+      onSessions(sortSessionsOpenFirst(mapped));
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );

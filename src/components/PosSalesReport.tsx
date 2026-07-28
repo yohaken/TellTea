@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Ban, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { labelOtShift } from "@/lib/ot";
 import { voidPosSale } from "@/lib/pos-sales-admin";
 import {
   formatPosReportDate,
   reconcilePosSessions,
+  shortPosSessionId,
   subscribePosSalesForDate,
   subscribePosSessionsForDate,
   summarizePosSalesDetailed,
@@ -122,7 +122,7 @@ export function PosSalesReport({
     };
   }, [dateMs, onError]);
 
-  const summary = useMemo(() => summarizePosSalesDetailed(sales), [sales]);
+  const summary = useMemo(() => summarizePosSalesDetailed(sales, sessions), [sales, sessions]);
   const reconcile = useMemo(() => reconcilePosSessions(sales, sessions), [sales, sessions]);
   const filteredSales = useMemo(() => {
     let list = selectedSessionId
@@ -322,8 +322,7 @@ export function PosSalesReport({
                           #{(sale.billNo || "—").replace(/^#/, "")}
                         </strong>
                         <span className="muted">
-                          {formatTime(sale.createdAt)} ·{" "}
-                          {labelOtShift(sale.shift as "late" | "morning" | "evening")} ·{" "}
+                          {formatTime(sale.createdAt)} · {shortPosSessionId(sale.sessionId)} ·{" "}
                           {sale.paymentMethod === "promptpay"
                             ? "PromptPay"
                             : sale.paymentMethod === "transfer"
@@ -388,7 +387,7 @@ export function PosSalesReport({
 
       <details className="pos-sales-fold pos-sales-fold--slim">
         <summary>
-          สรุปยอด · กะ · เมนูขายดี
+          สรุปยอด · รอบ nPos · เมนูขายดี
           <span className="muted">
             {" "}
             · ฿{formatPlainNumber(summary.total)} · {summary.activeCount} บิล
@@ -438,49 +437,53 @@ export function PosSalesReport({
           ) : null}
         </div>
 
-        <section className="pos-sales-report-section">
-          <h3>แยกตามกะ</h3>
-          <div className="npos-slim-scroll" role="table" aria-label="แยกตามกะ">
-            <div className="npos-slim-row npos-slim-row--head npos-slim-row--shift" role="row">
-              <span role="columnheader">กะ</span>
-              <span role="columnheader" className="npos-slim-num">
-                บิล
-              </span>
-              <span role="columnheader" className="npos-slim-num">
-                สด
-              </span>
-              <span role="columnheader" className="npos-slim-num">
-                โอน
-              </span>
-              <span role="columnheader" className="npos-slim-num">
-                PP
-              </span>
-              <span role="columnheader" className="npos-slim-num">
-                รวม
-              </span>
-            </div>
-            {summary.byShift.map((row) => (
-              <div key={row.shift} className="npos-slim-row npos-slim-row--shift" role="row">
-                <span role="cell">{row.label}</span>
-                <span role="cell" className="npos-slim-num">
-                  {row.count || "—"}
+        {summary.bySession.length > 0 ? (
+          <section className="pos-sales-report-section">
+            <h3>แยกตามรอบ nPos</h3>
+            <div className="npos-slim-scroll" role="table" aria-label="แยกตามรอบ">
+              <div className="npos-slim-row npos-slim-row--head npos-slim-row--shift" role="row">
+                <span role="columnheader">รอบ</span>
+                <span role="columnheader" className="npos-slim-num">
+                  บิล
                 </span>
-                <span role="cell" className="npos-slim-num">
-                  {row.cashTotal ? formatPlainNumber(row.cashTotal) : "—"}
+                <span role="columnheader" className="npos-slim-num">
+                  สด
                 </span>
-                <span role="cell" className="npos-slim-num">
-                  {row.transferTotal ? formatPlainNumber(row.transferTotal) : "—"}
+                <span role="columnheader" className="npos-slim-num">
+                  โอน
                 </span>
-                <span role="cell" className="npos-slim-num">
-                  {row.promptpayTotal ? formatPlainNumber(row.promptpayTotal) : "—"}
+                <span role="columnheader" className="npos-slim-num">
+                  PP
                 </span>
-                <span role="cell" className="npos-slim-num npos-slim-strong">
-                  {row.total ? formatPlainNumber(row.total) : "—"}
+                <span role="columnheader" className="npos-slim-num">
+                  รวม
                 </span>
               </div>
-            ))}
-          </div>
-        </section>
+              {summary.bySession.map((row) => (
+                <div key={row.sessionId} className="npos-slim-row npos-slim-row--shift" role="row">
+                  <span role="cell" title={row.sessionId}>
+                    {row.label}
+                  </span>
+                  <span role="cell" className="npos-slim-num">
+                    {row.count || "—"}
+                  </span>
+                  <span role="cell" className="npos-slim-num">
+                    {row.cashTotal ? formatPlainNumber(row.cashTotal) : "—"}
+                  </span>
+                  <span role="cell" className="npos-slim-num">
+                    {row.transferTotal ? formatPlainNumber(row.transferTotal) : "—"}
+                  </span>
+                  <span role="cell" className="npos-slim-num">
+                    {row.promptpayTotal ? formatPlainNumber(row.promptpayTotal) : "—"}
+                  </span>
+                  <span role="cell" className="npos-slim-num npos-slim-strong">
+                    {row.total ? formatPlainNumber(row.total) : "—"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {summary.topItems.length > 0 ? (
           <section className="pos-sales-report-section">
@@ -567,7 +570,7 @@ export function PosSalesReportPage() {
       <header className="npos-bo-page-head">
         <div>
           <h1 className="panel-title pos-sales-page-title">POS</h1>
-          <p className="muted pos-sales-page-lead">ภาพรวมรอบ · บิล · เครื่อง — ขายที่แอป nPos</p>
+          <p className="muted pos-sales-page-lead">รอบขาย nPos realtime · บิล · เครื่อง — ไม่ใช่กะ OT</p>
         </div>
         <nav className="npos-bo-page-tabs" role="tablist" aria-label="หมวด POS">
           <button

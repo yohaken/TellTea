@@ -412,6 +412,9 @@ exports.nposSessionClose = functions.region("asia-southeast1").https.onRequest(a
         saleCountLocal: Number(body.saleCount) || 0,
         discrepancyNote: String(body.discrepancyNote || "").slice(0, 240),
         discrepancyLabel: String(body.discrepancyLabel || "").slice(0, 40),
+        cashOutTotal: Number(body.cashOutTotal) || 0,
+        cashInTotal: Number(body.cashInTotal) || 0,
+        cashDropCount: Number(body.cashDropCount) || 0,
       },
       { merge: true },
     );

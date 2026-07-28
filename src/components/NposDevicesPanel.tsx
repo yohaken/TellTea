@@ -31,8 +31,7 @@ import { useAuth } from "@/lib/auth";
 import { NposCaptureGallery } from "@/components/NposCaptureGallery";
 import { subscribeNposDiagnoseReports } from "@/lib/npos-diagnose";
 import { resolveNposCaptureDisplayUrl } from "@/lib/npos-capture-media";
-import { shiftDayMs, subscribePosSessionsForDate } from "@/lib/pos-sales-report";
-import { labelOtShift, type OtShiftId } from "@/lib/ot";
+import { shiftDayMs, shortPosSessionId, subscribePosSessionsForDate } from "@/lib/pos-sales-report";
 import type { PosSession } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
 
@@ -639,13 +638,9 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                 {openRoundBar.map((s) => {
                   const dev = devices.find((d) => d.id === s.deviceId);
                   const who = dev ? posDeviceLabel(dev) : s.deviceId.slice(-6).toUpperCase() || "—";
-                  const shift =
-                    s.shift === "late" || s.shift === "morning" || s.shift === "evening"
-                      ? labelOtShift(s.shift as OtShiftId)
-                      : s.shift || "รอบ";
                   return (
                     <p key={s.id} className="npos-slim-summary">
-                      <strong>{shift}</strong>
+                      <strong>{shortPosSessionId(s.id)}</strong>
                       <span>·</span>
                       <span>{who}</span>
                       <span>·</span>
@@ -701,15 +696,8 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                 else if (d.storeClaimed) status = "เคลม";
                 const canKick = d.storeClaimed || activeSeatId === d.id;
                 const sess = sessionByDevice.get(d.id);
-                const shiftLabel = sess
-                  ? sess.shift === "late" ||
-                    sess.shift === "morning" ||
-                    sess.shift === "evening"
-                    ? labelOtShift(sess.shift as OtShiftId)
-                    : sess.shift || "—"
-                  : "—";
                 const roundCell = sess
-                  ? `${shiftLabel}${sess.status === "open" ? " · เปิด" : " · ปิด"}`
+                  ? `${shortPosSessionId(sess.id)}${sess.status === "open" ? " · เปิด" : " · ปิด"}`
                   : "—";
                 let salesCell = "—";
                 if (sess) {
