@@ -75,6 +75,9 @@ export type PlatformEmailReport = {
   } | null;
 };
 
+/** primary = Gmail หลัก · lineman = Gmail เฉพาะ LINE MAN */
+export type VatMailMailbox = "primary" | "lineman";
+
 export type VatMailStatus = {
   hasConfig: boolean;
   connected: boolean;
@@ -84,6 +87,7 @@ export type VatMailStatus = {
   lastSyncAt: number;
   lastSyncError: string;
   lastSyncAdded: number;
+  mailbox?: VatMailMailbox;
 };
 
 export function channelReportLabel(channel: string): string {
@@ -173,42 +177,65 @@ function mapReport(id: string, data: Record<string, unknown>): PlatformEmailRepo
   };
 }
 
-export async function fetchVatMailStatus(): Promise<VatMailStatus> {
-  const fn = httpsCallable<Record<string, never>, VatMailStatus>(
+export async function fetchVatMailStatus(
+  mailbox: VatMailMailbox = "primary",
+): Promise<VatMailStatus> {
+  const fn = httpsCallable<{ mailbox?: VatMailMailbox }, VatMailStatus>(
     getFirebaseFunctions(),
     "vatMailStatus",
   );
-  const res = await fn({});
+  const res = await fn({ mailbox });
   return res.data;
 }
 
-export async function startVatMailOAuth(returnTo?: string): Promise<string> {
-  const fn = httpsCallable<{ returnTo?: string }, { url: string }>(
-    getFirebaseFunctions(),
-    "vatMailOAuthStart",
-  );
-  const res = await fn(returnTo ? { returnTo } : {});
+export async function startVatMailOAuth(
+  returnTo?: string,
+  mailbox: VatMailMailbox = "primary",
+): Promise<string> {
+  const fn = httpsCallable<
+    { returnTo?: string; mailbox?: VatMailMailbox },
+    { url: string }
+  >(getFirebaseFunctions(), "vatMailOAuthStart");
+  const res = await fn({
+    ...(returnTo ? { returnTo } : {}),
+    mailbox,
+  });
   const url = String(res.data?.url || "");
   if (!url) throw new Error("ไม่ได้รับลิงก์เชื่อม Gmail");
   return url;
 }
 
-export async function disconnectVatMail(): Promise<void> {
-  const fn = httpsCallable(getFirebaseFunctions(), "vatMailDisconnect");
-  await fn({});
+export async function disconnectVatMail(
+  mailbox: VatMailMailbox = "primary",
+): Promise<void> {
+  const fn = httpsCallable<{ mailbox?: VatMailMailbox }, { ok: boolean }>(
+    getFirebaseFunctions(),
+    "vatMailDisconnect",
+  );
+  await fn({ mailbox });
 }
 
-export async function syncVatMail(lookbackDays = 31): Promise<{
+export async function syncVatMail(
+  lookbackDays = 31,
+  mailbox: VatMailMailbox = "primary",
+): Promise<{
   scanned: number;
   added: number;
   skipped: number;
   lookbackDays: number;
+  mailbox?: VatMailMailbox;
 }> {
   const fn = httpsCallable<
-    { lookbackDays?: number },
-    { scanned: number; added: number; skipped: number; lookbackDays: number }
+    { lookbackDays?: number; mailbox?: VatMailMailbox },
+    {
+      scanned: number;
+      added: number;
+      skipped: number;
+      lookbackDays: number;
+      mailbox?: VatMailMailbox;
+    }
   >(getFirebaseFunctions(), "vatMailSync");
-  const res = await fn({ lookbackDays });
+  const res = await fn({ lookbackDays, mailbox });
   return res.data;
 }
 
