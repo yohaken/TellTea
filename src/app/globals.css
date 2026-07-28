@@ -7028,6 +7028,134 @@ body.modal-open .main-panel {
   min-width: 48rem;
 }
 
+.npos-slim-close-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.npos-slim-close-btn {
+  color: #c2410c !important;
+  font-weight: 700;
+  padding: 0.05rem 0.2rem !important;
+}
+
+.npos-slim-row--bills-super {
+  grid-template-columns:
+    minmax(4.2rem, max-content)
+    minmax(2.6rem, max-content)
+    minmax(2.2rem, max-content)
+    minmax(3.2rem, max-content)
+    minmax(2rem, max-content)
+    minmax(3rem, max-content)
+    minmax(1.6rem, max-content);
+  min-width: 22rem;
+  cursor: pointer;
+}
+
+.npos-slim-row--bills-super.is-void {
+  opacity: 0.72;
+}
+
+.npos-bills-slim-scroll {
+  max-height: min(42vh, 22rem);
+  overflow: auto;
+  min-width: 0;
+  border: 1px solid rgba(28, 42, 31, 0.07);
+  border-radius: 0.55rem;
+  background: #fafbfa;
+}
+
+.npos-bills-slim-table {
+  max-height: none;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+
+.npos-bills-slim-more {
+  margin: 0;
+  padding: 0.35rem;
+  text-align: center;
+  font-size: 0.72rem;
+}
+
+.pos-sales-bills-fold {
+  margin-top: 0.35rem;
+}
+
+.pos-sales-bills-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1a2e24;
+  padding: 0.1rem 0;
+}
+
+.pos-sales-bills-summary::-webkit-details-marker {
+  display: none;
+}
+
+.pos-sales-bills-summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 0.35rem;
+  color: #e85d04;
+  font-weight: 700;
+}
+
+.pos-sales-bills-fold[open] > .pos-sales-bills-summary::before {
+  content: "▾";
+}
+
+.pos-sales-bill-split--slim {
+  align-items: stretch;
+}
+
+.pos-sales-bill-split--slim .npos-bills-slim-scroll {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .npos-slim-col-session {
+    display: none;
+  }
+
+  .npos-slim-row--sessions-super {
+    grid-template-columns:
+      minmax(2.4rem, max-content)
+      minmax(3.2rem, max-content)
+      minmax(3.6rem, max-content)
+      minmax(2.6rem, max-content)
+      minmax(2.6rem, max-content)
+      minmax(1.6rem, max-content)
+      minmax(1.8rem, max-content)
+      minmax(3rem, max-content)
+      minmax(2.4rem, max-content)
+      minmax(2.4rem, max-content)
+      minmax(2.2rem, max-content);
+    min-width: 36rem;
+  }
+
+  .npos-slim-row--bills-super {
+    grid-template-columns:
+      minmax(4.2rem, max-content)
+      minmax(2.6rem, max-content)
+      minmax(2.2rem, max-content)
+      minmax(2rem, max-content)
+      minmax(3rem, max-content)
+      minmax(1.6rem, max-content);
+    min-width: 18rem;
+  }
+}
+
 .npos-slim-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.72rem;

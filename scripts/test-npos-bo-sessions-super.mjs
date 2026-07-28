@@ -10,10 +10,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 320/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 115/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+85/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.62"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 321/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 116/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+86/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.63"/);
 
 assert.ok(existsSync(join(root, "docs/npos-bo-sessions-super-checklist.md")));
 assert.match(read("docs/npos-bo-sessions-super-checklist.md"), /50|รหัส|closedAt|flush/);
@@ -28,9 +28,12 @@ assert.match(lib, /orderBy\("openedAt",\s*"desc"\)/);
 assert.match(lib, /limit\(/);
 
 const slim = read("src/components/PosSessionsSlimTable.tsx");
-assert.match(slim, /รหัสเครื่อง/);
+assert.match(slim, /เครื่อง/);
 assert.match(slim, /รหัสรอบ/);
 assert.match(slim, /วันที่/);
+assert.match(slim, /ปิดรอบ/);
+assert.match(slim, /onForceClose/);
+assert.match(slim, /npos-slim-col-session/);
 assert.match(slim, /npos-slim-row--sessions-super/);
 assert.match(slim, /npos-slim-scroll--rows/);
 assert.match(slim, /closedAt/);
@@ -40,13 +43,22 @@ assert.doesNotMatch(slim, /shortPosSessionId/);
 const report = read("src/components/PosSalesReport.tsx");
 assert.match(report, /subscribePosSessionsRecent/);
 assert.match(report, /subscribePosSalesRecent/);
+assert.match(report, /closePosSessionAdmin|forceCloseTargetId/);
+assert.match(report, /pos-sales-bills-fold|npos-slim-row--bills-super/);
+assert.match(report, /POS_BILLS_SLIM_PAGE|billsVisible/);
 assert.doesNotMatch(report, /npos-slim-date-nav|pos-sales-date-nav/);
 assert.doesNotMatch(report, /ChevronLeft|dateInputValue|shiftDate/);
 assert.doesNotMatch(report, /dateMs/);
 
+const admin = read("src/lib/pos-sales-admin.ts");
+assert.match(admin, /closePosSessionAdmin/);
+assert.match(admin, /bo-force/);
+
 const css = read("src/app/globals.css");
 assert.match(css, /npos-slim-scroll--rows/);
 assert.match(css, /npos-slim-row--sessions-super/);
+assert.match(css, /npos-slim-row--bills-super/);
+assert.match(css, /npos-slim-col-session/);
 assert.match(css, /npos-slim-code/);
 assert.match(css, /max-height:\s*min\(22rem/);
 

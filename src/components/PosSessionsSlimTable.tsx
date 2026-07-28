@@ -158,6 +158,8 @@ export function PosSessionsSlimTable({
   selectedSessionId,
   onSelect,
   onError,
+  onForceClose,
+  forceCloseBusyId = null,
   dayLabel = "ล่าสุด",
 }: {
   sessions: PosSession[];
@@ -165,6 +167,9 @@ export function PosSessionsSlimTable({
   selectedSessionId: string | null;
   onSelect: (sessionId: string | null) => void;
   onError?: (msg: string | null) => void;
+  /** Trial: owner can force-close open rounds from BO. */
+  onForceClose?: (sessionId: string) => void;
+  forceCloseBusyId?: string | null;
   dayLabel?: string;
 }) {
   const [devices, setDevices] = useState<PosDevice[]>([]);
@@ -320,15 +325,14 @@ export function PosSessionsSlimTable({
           <div className="npos-slim-row npos-slim-row--head npos-slim-row--sessions-super" role="row">
             <span role="columnheader">สถานะ</span>
             <span role="columnheader">วันที่</span>
-            <span role="columnheader">รหัสเครื่อง</span>
-            <span role="columnheader">รหัสรอบ</span>
+            <span role="columnheader">เครื่อง</span>
+            <span role="columnheader" className="npos-slim-col-session">
+              รหัสรอบ
+            </span>
             <span role="columnheader">เริ่ม</span>
             <span role="columnheader">ปิด</span>
             <span role="columnheader" className="npos-slim-num">
               บิล
-            </span>
-            <span role="columnheader" className="npos-slim-num">
-              ทำลาย
             </span>
             <span role="columnheader" className="npos-slim-num">
               ยอด
@@ -342,14 +346,15 @@ export function PosSessionsSlimTable({
             <span role="columnheader" className="npos-slim-num">
               PP
             </span>
+            <span role="columnheader">ปิดรอบ</span>
           </div>
 
           {filteredRows.map((row) => {
             const selected = selectedSessionId === row.session.id;
+            const closing = forceCloseBusyId === row.session.id;
             return (
               <div key={row.session.id} className="npos-slim-block">
-                <button
-                  type="button"
+                <div
                   role="row"
                   className={`npos-slim-row npos-slim-row--sessions-super ${row.open ? "is-open" : ""} ${selected ? "is-selected" : ""}`}
                   onClick={() => onSelect(selected ? null : row.session.id)}
@@ -368,7 +373,11 @@ export function PosSessionsSlimTable({
                   >
                     {row.pairingCode}
                   </span>
-                  <span role="cell" className="npos-slim-code" title={row.session.id}>
+                  <span
+                    role="cell"
+                    className="npos-slim-code npos-slim-col-session"
+                    title={row.session.id}
+                  >
                     {row.sessionCode}
                   </span>
                   <span role="cell">{formatHm(row.session.openedAt)}</span>
@@ -377,9 +386,6 @@ export function PosSessionsSlimTable({
                   </span>
                   <span role="cell" className="npos-slim-num">
                     {row.bills || "—"}
-                  </span>
-                  <span role="cell" className="npos-slim-num">
-                    {row.voids || "—"}
                   </span>
                   <span role="cell" className="npos-slim-num npos-slim-strong">
                     {moneyOrDash(row.total)}
@@ -393,7 +399,25 @@ export function PosSessionsSlimTable({
                   <span role="cell" className="npos-slim-num">
                     {moneyOrDash(row.pp)}
                   </span>
-                </button>
+                  <span role="cell" className="npos-slim-close-cell">
+                    {row.open && onForceClose ? (
+                      <button
+                        type="button"
+                        className="npos-slim-text-btn npos-slim-close-btn"
+                        disabled={closing}
+                        title="ทดลอง: ปิดรอบจากหลังร้าน"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onForceClose(row.session.id);
+                        }}
+                      >
+                        {closing ? "…" : "ปิด"}
+                      </button>
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
+                  </span>
+                </div>
                 {selected ? (
                   <div className="npos-slim-detail" role="row">
                     <span>
@@ -434,8 +458,8 @@ export function PosSessionsSlimTable({
       )}
 
       <p className="muted npos-slim-foot">
-        รอบ = กะ nPos บนแท็บเล็ต · รหัสเครื่อง/รอบโชว์เต็ม (เจ้าของร้าน) · ปิดกะที่แท็บเล็ตเท่านั้น ·
-        ไม่ใช่ระบบ OT
+        รอบ = กะ nPos · คอลัมน์กระชับ · รหัสรอบซ่อนเมื่อจอแคบ · ปิดกะที่แท็บเล็ตเท่านั้นเป็นหลัก ·{" "}
+        <strong>ปิดรอบ</strong> จากหลังร้านใช้ช่วงทดลอง (แท็บเล็ตอาจยังคิดว่าเปิดอยู่จนกว่าซิงก์)
       </p>
     </section>
   );

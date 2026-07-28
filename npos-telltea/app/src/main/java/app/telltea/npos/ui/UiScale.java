@@ -121,7 +121,7 @@ public final class UiScale {
     int menuMediaMaxPx = Math.max(dp(density, 48), Math.round(5.2f * 16f * density * scale));
 
     int contentW = Math.max(1, subtractNav ? w - navWidthPx : w);
-    int menuCols = contentW > dp(density, 900) ? 5 : contentW > dp(density, 640) ? 4 : 3;
+    int menuCols = menuColsForWidth(contentW, density);
 
     int gapPx = Math.max(dp(density, 3), Math.round(4 * density * scale));
     int cornerPx = Math.max(dp(density, 8), Math.round(10 * density * scale));
@@ -147,6 +147,20 @@ public final class UiScale {
         menuCols,
         gapPx,
         cornerPx);
+  }
+
+  /** Menu columns from live pane width — shrink/grow with user drag-resize, not Y-inflate. */
+  public static int menuColsForWidth(int widthPx, float density) {
+    float d = density <= 0 ? 1f : density;
+    int w = Math.max(1, widthPx);
+    if (w > dp(d, 900)) return 5;
+    if (w > dp(d, 640)) return 4;
+    if (w > dp(d, 420)) return 3;
+    return 2;
+  }
+
+  public int menuColsForWidth(int widthPx) {
+    return menuColsForWidth(widthPx, density);
   }
 
   public int dp(float v) {

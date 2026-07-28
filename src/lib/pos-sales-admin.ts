@@ -152,6 +152,38 @@ async function adjustPosSessionTotalsAdmin(
   await updateDoc(ref, patch);
 }
 
+/**
+ * Owner trial close — force-close an open nPos round from BO (not tablet installId).
+ * Does not run blind cash count; marks closedAt only so the slim table stays usable.
+ */
+export async function closePosSessionAdmin(
+  sessionId: string,
+  actorId: string,
+  note = "",
+): Promise<void> {
+  const id = (sessionId || "").trim();
+  if (!id) throw new Error("ไม่พบรหัสรอบ");
+  const ref = doc(getDb(), POS_SESSIONS_COL, id);
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) throw new Error("ไม่พบรอบนี้");
+    const data = snap.data() as Record<string, unknown>;
+    if (data.status === "closed") throw new Error("รอบนี้ปิดแล้ว");
+    const now = Date.now();
+    await updateDoc(ref, {
+      status: "closed",
+      closedAt: now,
+      updatedAt: now,
+      closedBy: actorId || "owner",
+      closeSource: "bo-force",
+      discrepancyNote: String(note || "ปิดจากหลังร้าน (ทดลอง)").slice(0, 240),
+    });
+  } catch (err) {
+    if (err instanceof Error && /ไม่พบ|ปิดแล้ว/.test(err.message)) throw err;
+    throw new Error(mapFirestoreError(err, "ปิดรอบจากหลังร้าน"));
+  }
+}
+
 export function summarizePosSales(sales: PosSale[]) {
   const active = sales.filter((s) => s.status === "completed");
   const voided = sales.filter((s) => s.status === "voided");

@@ -16,6 +16,9 @@ import { startOfLocalDay } from "./utils";
 /** Initial slim-table page size (scroll for the rest of the window). */
 export const POS_SESSIONS_SLIM_LIMIT = 50;
 
+/** Bills superslim window — newest first, load more on scroll. */
+export const POS_BILLS_SLIM_PAGE = 25;
+
 /** สรุปรอบขาย nPos (ไม่ใช่กะ OT เช้า/เย็น) */
 export type PosSessionSalesRow = {
   sessionId: string;
@@ -492,13 +495,13 @@ export function subscribePosSessionsRecent(
 export function subscribePosSalesRecent(
   onSales: (sales: PosSale[]) => void,
   onError?: (err: Error) => void,
-  rowLimit = 200,
+  rowLimit = 80,
 ): Unsubscribe {
   return onSnapshot(
     query(
       collection(getDb(), POS_SALES_COL),
       orderBy("createdAt", "desc"),
-      limit(Math.max(50, rowLimit)),
+      limit(Math.max(POS_BILLS_SLIM_PAGE * 2, rowLimit)),
     ),
     (snap) => {
       onSales(snap.docs.map((d) => mapPosSale(d.id, d.data() as Record<string, unknown>)));

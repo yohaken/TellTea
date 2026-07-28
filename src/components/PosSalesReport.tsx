@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type UIEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Ban } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { voidPosSale } from "@/lib/pos-sales-admin";
+import { closePosSessionAdmin, voidPosSale } from "@/lib/pos-sales-admin";
 import {
+  POS_BILLS_SLIM_PAGE,
   posSessionCode,
   reconcilePosSessions,
   shortPosSessionId,
@@ -90,6 +91,10 @@ export function PosSalesReport({
   const [billQuery, setBillQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<BillStatusFilter>("all");
   const [payFilter, setPayFilter] = useState<BillPayFilter>("all");
+  const [billsVisible, setBillsVisible] = useState(POS_BILLS_SLIM_PAGE);
+  const [forceCloseBusyId, setForceCloseBusyId] = useState<string | null>(null);
+  const [forceCloseTargetId, setForceCloseTargetId] = useState<string | null>(null);
+  const [billsOpen, setBillsOpen] = useState(false);
 
   const todayMs = startOfLocalDay();
 
@@ -151,6 +156,15 @@ export function PosSalesReport({
     [filteredSales, selectedSaleId],
   );
 
+  const visibleSales = useMemo(
+    () => filteredSales.slice(0, billsVisible),
+    [filteredSales, billsVisible],
+  );
+
+  useEffect(() => {
+    setBillsVisible(POS_BILLS_SLIM_PAGE);
+  }, [selectedSessionId, statusFilter, payFilter, billQuery]);
+
   useEffect(() => {
     if (selectedSaleId && !filteredSales.some((s) => s.id === selectedSaleId)) {
       setSelectedSaleId(filteredSales[0]?.id || null);
@@ -178,6 +192,40 @@ export function PosSalesReport({
     }
   }
 
+  const forceCloseTarget = useMemo(
+    () => (forceCloseTargetId ? sessions.find((s) => s.id === forceCloseTargetId) || null : null),
+    [forceCloseTargetId, sessions],
+  );
+
+  async function confirmForceClose() {
+    if (!actorId || !forceCloseTargetId) return;
+    const sid = forceCloseTargetId;
+    setForceCloseBusyId(sid);
+    onError?.(null);
+    try {
+      await closePosSessionAdmin(sid, actorId);
+      setForceCloseTargetId(null);
+    } catch (err) {
+      onError?.((err as Error).message || "ปิดรอบไม่สำเร็จ");
+    } finally {
+      setForceCloseBusyId(null);
+    }
+  }
+
+  function onBillsScroll(e: UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget;
+    if (el.scrollTop + el.clientHeight < el.scrollHeight - 48) return;
+    if (billsVisible >= filteredSales.length) return;
+    setBillsVisible((n) => Math.min(filteredSales.length, n + POS_BILLS_SLIM_PAGE));
+  }
+
+  function payLabel(method: string | undefined): string {
+    if (method === "promptpay") return "PP";
+    if (method === "transfer") return "โอน";
+    if (method === "cash") return "สด";
+    return method || "—";
+  }
+
   return (
     <div className={compact ? "pos-sales-report pos-sales-report--compact" : "pos-sales-report"}>
       <PosSessionsSlimTable
@@ -188,6 +236,7 @@ export function PosSalesReport({
         onSelect={(id) => {
           setSelectedSessionId(id);
           if (id) {
+            setBillsOpen(true);
             requestAnimationFrame(() => {
               document.getElementById("pos-sales-bills")?.scrollIntoView({
                 behavior: "smooth",
@@ -196,6 +245,8 @@ export function PosSalesReport({
             });
           }
         }}
+        onForceClose={(sessionId) => setForceCloseTargetId(sessionId)}
+        forceCloseBusyId={forceCloseBusyId}
         onError={onError}
       />
 
@@ -205,21 +256,26 @@ export function PosSalesReport({
         </p>
       ) : null}
 
-      <section
+      <details
         id="pos-sales-bills"
-        className="pos-sales-report-section pos-sales-bills-section"
+        className="pos-sales-report-section pos-sales-bills-section pos-sales-bills-fold"
+        open={billsOpen}
+        onToggle={(e) => setBillsOpen((e.target as HTMLDetailsElement).open)}
       >
-        <h3>
-          รายการบิลล่าสุด
-          {selectedSessionId
-            ? ` · รอบ ${posSessionCode(selectedSessionId)}`
-            : ""}
+        <summary className="pos-sales-bills-summary">
+          <span>
+            รายการบิลล่าสุด
+            {selectedSessionId ? ` · รอบ ${posSessionCode(selectedSessionId)}` : ""}
+          </span>
           <span className="muted pos-sales-bills-count">
-            {" "}
-            · สุทธิ ฿{formatPlainNumber(summary.total)} · {summary.activeCount} บิล
+            {filteredSales.length
+              ? `${Math.min(billsVisible, filteredSales.length)}/${filteredSales.length} · ใหม่→เก่า`
+              : "หุบไว้"}
+            {" · "}฿{formatPlainNumber(summary.total)} · {summary.activeCount} บิล
             {summary.voidedCount ? ` · ทำลาย ${summary.voidedCount}` : ""}
           </span>
-        </h3>
+        </summary>
+
         <div className="pos-sales-bill-toolbar">
           {selectedSessionId ? (
             <button
@@ -282,72 +338,83 @@ export function PosSalesReport({
           <p className="muted">ยังไม่มีบิล — ขายที่แท็บเล็ต POS</p>
         ) : null}
         {!loading && filteredSales.length > 0 ? (
-          <div className="pos-sales-bill-split">
-            <ul className="pos-sales-list">
-              {filteredSales.map((sale) => {
-                const voided = sale.status === "voided";
-                const busy = busyId === sale.id;
-                const active = selectedSale?.id === sale.id;
-                const canVoid = !voided && saleIsToday(sale, todayMs);
-                const preview = sale.lines
-                  .slice(0, 2)
-                  .map((l) => `${l.name}×${l.qty}`)
-                  .join(", ");
-                return (
-                  <li
-                    key={sale.id}
-                    className={`pos-sales-row ${voided ? "pos-sales-row--void" : ""} ${active ? "is-active" : ""}`}
-                  >
-                    <button
-                      type="button"
-                      className="pos-sales-row-select"
+          <div className="pos-sales-bill-split pos-sales-bill-split--slim">
+            <div className="npos-bills-slim-scroll" onScroll={onBillsScroll}>
+              <div
+                className="npos-slim-scroll npos-bills-slim-table"
+                role="table"
+                aria-label="รายการบิลล่าสุด"
+              >
+                <div className="npos-slim-row npos-slim-row--head npos-slim-row--bills-super" role="row">
+                  <span role="columnheader">บิล</span>
+                  <span role="columnheader">เวลา</span>
+                  <span role="columnheader">ชำระ</span>
+                  <span role="columnheader" className="npos-slim-col-session">
+                    รอบ
+                  </span>
+                  <span role="columnheader" className="npos-slim-num">
+                    รายการ
+                  </span>
+                  <span role="columnheader" className="npos-slim-num">
+                    ยอด
+                  </span>
+                  <span role="columnheader"> </span>
+                </div>
+                {visibleSales.map((sale) => {
+                  const voided = sale.status === "voided";
+                  const busy = busyId === sale.id;
+                  const active = selectedSale?.id === sale.id;
+                  const canVoid = !voided && saleIsToday(sale, todayMs);
+                  return (
+                    <div
+                      key={sale.id}
+                      role="row"
+                      className={`npos-slim-row npos-slim-row--bills-super ${voided ? "is-void" : ""} ${active ? "is-selected" : ""}`}
                       onClick={() => setSelectedSaleId(sale.id)}
                     >
-                      <div className="pos-sales-row-main">
-                        <strong className="pos-sales-bill-id">
-                          #{(sale.billNo || "—").replace(/^#/, "")}
-                        </strong>
-                        <span className="muted">
-                          {formatTime(sale.createdAt)} · {shortPosSessionId(sale.sessionId)} ·{" "}
-                          {sale.paymentMethod === "promptpay"
-                            ? "PromptPay"
-                            : sale.paymentMethod === "transfer"
-                              ? "โอนเงิน"
-                              : "เงินสด"}
-                          {(sale.discountBaht || 0) > 0
-                            ? ` · ส่วนลด ฿${formatPlainNumber(sale.discountBaht || 0)}`
-                            : ""}
-                        </span>
-                        <span className="pos-sales-row-items">{preview}</span>
-                        {sale.voidReason ? (
-                          <span className="muted">เหตุผล: {sale.voidReason}</span>
-                        ) : null}
-                      </div>
-                      <div className="pos-sales-row-end">
-                        <strong className={voided ? "muted" : ""}>
-                          ฿{formatPlainNumber(sale.total)}
-                        </strong>
-                        {voided ? <span className="pos-sales-voided">ยกเลิกแล้ว</span> : null}
-                      </div>
-                    </button>
-                    {canVoid ? (
-                      <button
-                        type="button"
-                        className="npos-slim-text-btn pos-sales-void-btn"
-                        disabled={busy}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openVoidDialog(sale);
-                        }}
-                      >
-                        <Ban size={12} aria-hidden />
-                        ยกเลิก
-                      </button>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ul>
+                      <span role="cell" className="npos-slim-strong">
+                        #{(sale.billNo || "—").replace(/^#/, "")}
+                        {voided ? <span className="muted"> · ยกเลิก</span> : null}
+                      </span>
+                      <span role="cell" className="muted">
+                        {formatTime(sale.createdAt)}
+                      </span>
+                      <span role="cell">{payLabel(sale.paymentMethod)}</span>
+                      <span role="cell" className="npos-slim-code npos-slim-col-session">
+                        {shortPosSessionId(sale.sessionId)}
+                      </span>
+                      <span role="cell" className="npos-slim-num">
+                        {sale.lines?.length || "—"}
+                      </span>
+                      <span role="cell" className="npos-slim-num npos-slim-strong">
+                        {formatPlainNumber(sale.total)}
+                      </span>
+                      <span role="cell" className="npos-slim-close-cell">
+                        {canVoid ? (
+                          <button
+                            type="button"
+                            className="npos-slim-text-btn pos-sales-void-btn"
+                            disabled={busy}
+                            title="ยกเลิกบิล"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openVoidDialog(sale);
+                            }}
+                          >
+                            <Ban size={12} aria-hidden />
+                          </button>
+                        ) : (
+                          <span className="muted">—</span>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {billsVisible < filteredSales.length ? (
+                <p className="muted npos-bills-slim-more">เลื่อนลงเพื่อโหลดเพิ่ม…</p>
+              ) : null}
+            </div>
             <aside className="pos-sales-bill-detail" aria-label="รายละเอียดบิล">
               {selectedSale ? (
                 <PosReceiptPaper
@@ -369,7 +436,7 @@ export function PosSalesReport({
             </aside>
           </div>
         ) : null}
-      </section>
+      </details>
 
       <details className="pos-sales-fold pos-sales-fold--slim">
         <summary>
@@ -505,6 +572,35 @@ export function PosSalesReport({
           </section>
         ) : null}
       </details>
+
+      <PosConfirmDialog
+        open={forceCloseTargetId !== null}
+        title={
+          forceCloseTarget
+            ? `ปิดรอบ ${posSessionCode(forceCloseTarget.id)} จากหลังร้าน?`
+            : "ปิดรอบจากหลังร้าน?"
+        }
+        message={
+          forceCloseTarget
+            ? `ช่วงทดลอง 3–5 วัน · ข้อมูลยังไม่ใช้จริงเต็มรูปแบบ\nกะ: ${forceCloseTarget.shift || "—"}\nวันที่: ${
+                forceCloseTarget.date
+                  ? new Date(forceCloseTarget.date).toLocaleDateString("th-TH", {
+                      day: "numeric",
+                      month: "short",
+                    })
+                  : "—"
+              }`
+            : "กำลังโหลดรอบ…"
+        }
+        confirmLabel="ปิดรอบ"
+        destructive
+        busy={!!forceCloseBusyId}
+        onCancel={() => {
+          if (forceCloseBusyId) return;
+          setForceCloseTargetId(null);
+        }}
+        onConfirm={() => void confirmForceClose()}
+      />
 
       <PosConfirmDialog
         open={voidTarget !== null}

@@ -62,6 +62,8 @@
     <string name="sell_hub_glyph">▦</string>
     <string name="sell_search_glyph">⌕</string>
     <string name="sell_search_hint">ค้นหาเมนู</string>
+    <string name="sell_split_cat_menu">เลื่อนปรับความกว้างหมวด/เมนู</string>
+    <string name="sell_split_menu_cart">เลื่อนปรับความกว้างเมนู/ตะกร้า</string>
     <string name="sell_search_close">ปิดค้นหา</string>
     <string name="sell_hub_x_report">พิมพ์สรุปกลางรอบ (X)</string>
     <string name="sell_hub_close_shift">ปิดรอบการขาย</string>

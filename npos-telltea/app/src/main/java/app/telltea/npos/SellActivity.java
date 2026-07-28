@@ -17,7 +17,9 @@ import android.text.style.ForegroundColorSpan;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -53,6 +55,7 @@ import app.telltea.npos.sell.MenuRepository;
 import app.telltea.npos.sell.OptionPickerLogic;
 import app.telltea.npos.sell.PaymentMethods;
 import app.telltea.npos.sell.SaleSync;
+import app.telltea.npos.sell.SellLayoutPrefs;
 import app.telltea.npos.shell.PosShellNav;
 import app.telltea.npos.shift.BlindCloseFlow;
 import app.telltea.npos.shift.ShiftPrefs;
@@ -86,6 +89,12 @@ public class SellActivity extends Activity {
   private TextView payAllAmount;
   private TextView payAllDiscount;
   private TextView holdBillButton;
+  private View categoryScroll;
+  private View menuScroll;
+  private View cartColumn;
+  private View sellContentRow;
+  private SellLayoutPrefs.Weights paneWeights = SellLayoutPrefs.load(null);
+  private float categoryTextScale = 1f;
 
   private MenuRepository menuRepo;
   private SaleSync saleSync;
@@ -140,6 +149,13 @@ public class SellActivity extends Activity {
     payAllAmount = findViewById(R.id.payAllAmount);
     payAllDiscount = findViewById(R.id.payAllDiscount);
     holdBillButton = findViewById(R.id.holdBillButton);
+    categoryScroll = findViewById(R.id.categoryScroll);
+    menuScroll = findViewById(R.id.menuScroll);
+    cartColumn = findViewById(R.id.cartColumn);
+    sellContentRow = findViewById(R.id.sellContentRow);
+    paneWeights = SellLayoutPrefs.load(this);
+    applySellPaneWeights(paneWeights);
+    bindSellSplitters();
 
     menuRepo = new MenuRepository();
     saleSync = new SaleSync();
@@ -353,6 +369,155 @@ public class SellActivity extends Activity {
     if (menuGrid != null) {
       menuGrid.setColumnCount(uiScale.menuCols);
     }
+    applySellPaneWeights(paneWeights);
+  }
+
+  private void applySellPaneWeights(SellLayoutPrefs.Weights w) {
+    applySellPaneWeights(w, true);
+  }
+
+  private void applySellPaneWeights(SellLayoutPrefs.Weights w, boolean reflow) {
+    if (w == null) w = SellLayoutPrefs.load(this);
+    paneWeights = w;
+    setPaneWeight(categoryScroll, w.cat);
+    setPaneWeight(menuScroll, w.menu);
+    setPaneWeight(cartColumn, w.cart);
+    if (menuScroll != null) {
+      menuScroll.requestLayout();
+    }
+    if (!reflow || menuGrid == null) return;
+    menuGrid.post(
+        () -> {
+          applyPaneSmartScale();
+          renderMenu();
+        });
+  }
+
+  private static void setPaneWeight(View pane, float weight) {
+    if (pane == null) return;
+    ViewGroup.LayoutParams lp = pane.getLayoutParams();
+    if (!(lp instanceof LinearLayout.LayoutParams)) return;
+    LinearLayout.LayoutParams llp = (LinearLayout.LayoutParams) lp;
+    llp.width = 0;
+    llp.weight = weight;
+    pane.setLayoutParams(llp);
+  }
+
+  private void bindSellSplitters() {
+    View splitCat = findViewById(R.id.splitCatMenu);
+    View splitCart = findViewById(R.id.splitMenuCart);
+    if (splitCat != null) {
+      int hit = uiScale != null ? Math.max(uiScale.dp(12), uiScale.touchMinPx / 3) : 24;
+      ViewGroup.LayoutParams lp = splitCat.getLayoutParams();
+      if (lp != null) {
+        lp.width = hit;
+        splitCat.setLayoutParams(lp);
+      }
+      splitCat.setOnTouchListener(makeSplitterListener(true));
+    }
+    if (splitCart != null) {
+      int hit = uiScale != null ? Math.max(uiScale.dp(12), uiScale.touchMinPx / 3) : 24;
+      ViewGroup.LayoutParams lp = splitCart.getLayoutParams();
+      if (lp != null) {
+        lp.width = hit;
+        splitCart.setLayoutParams(lp);
+      }
+      splitCart.setOnTouchListener(makeSplitterListener(false));
+    }
+  }
+
+  /**
+   * Horizontal drag on the divider line — standard IDE/editor split feel. Clamps each side ≤35%
+   * and keeps menu ≥30% so tiles/text shrink with X instead of stretching Y awkwardly.
+   */
+  private View.OnTouchListener makeSplitterListener(boolean catSide) {
+    return new View.OnTouchListener() {
+      private float lastX;
+      private boolean dragging;
+
+      @Override
+      public boolean onTouch(View v, MotionEvent event) {
+        if (sellContentRow == null) return false;
+        int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN) {
+          lastX = event.getRawX();
+          dragging = true;
+          v.getParent().requestDisallowInterceptTouchEvent(true);
+          return true;
+        }
+        if (!dragging) return false;
+        if (action == MotionEvent.ACTION_MOVE) {
+          float dx = event.getRawX() - lastX;
+          lastX = event.getRawX();
+          int rowW = Math.max(1, sellContentRow.getWidth());
+          float dWeight = (dx / rowW) * 100f;
+          SellLayoutPrefs.Weights cur =
+              paneWeights != null ? paneWeights : SellLayoutPrefs.load(SellActivity.this);
+          SellLayoutPrefs.Weights next =
+              catSide
+                  ? SellLayoutPrefs.adjustCat(cur.cat + dWeight, cur.cart)
+                  : SellLayoutPrefs.adjustCart(cur.cat, cur.cart - dWeight);
+          applySellPaneWeights(next, false);
+          return true;
+        }
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+          dragging = false;
+          v.getParent().requestDisallowInterceptTouchEvent(false);
+          if (paneWeights != null) {
+            SellLayoutPrefs.save(
+                SellActivity.this, paneWeights.cat, paneWeights.menu, paneWeights.cart);
+          }
+          applyPaneSmartScale();
+          renderCategories();
+          renderMenu();
+          return true;
+        }
+        return false;
+      }
+    };
+  }
+
+  /** Scale type / cols from live pane widths after drag — avoid dumb Y growth when X shrinks. */
+  private void applyPaneSmartScale() {
+    if (uiScale == null) uiScale = UiScale.from(this, false);
+    int menuW = menuScroll != null && menuScroll.getWidth() > 0
+        ? menuScroll.getWidth()
+        : (menuGrid != null ? menuGrid.getWidth() : 0);
+    if (menuW > 0 && menuGrid != null) {
+      menuGrid.setColumnCount(uiScale.menuColsForWidth(menuW));
+    }
+    float catScale = 1f;
+    if (categoryScroll != null && categoryScroll.getWidth() > 0 && sellContentRow != null) {
+      float expect = Math.max(1f, sellContentRow.getWidth() * (SellLayoutPrefs.CAT_DEFAULT / 100f));
+      catScale = clampFloat(categoryScroll.getWidth() / expect, 0.82f, 1.18f);
+    }
+    float cartScale = 1f;
+    if (cartColumn != null && cartColumn.getWidth() > 0 && sellContentRow != null) {
+      float expect = Math.max(1f, sellContentRow.getWidth() * (SellLayoutPrefs.CART_DEFAULT / 100f));
+      cartScale = clampFloat(cartColumn.getWidth() / expect, 0.85f, 1.12f);
+    }
+    TextView cartTitle = findViewById(R.id.cartTitle);
+    if (cartTitle != null) {
+      cartTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.titleSp * cartScale);
+    }
+    if (cartBillRef != null) {
+      cartBillRef.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.bodySp * cartScale);
+    }
+    if (cartTotalView != null) {
+      cartTotalView.setTextSize(TypedValue.COMPLEX_UNIT_SP, (uiScale.titleSp + 2f) * cartScale);
+    }
+    if (payAllAmount != null) {
+      payAllAmount.setTextSize(TypedValue.COMPLEX_UNIT_SP, (uiScale.titleSp + 2f) * cartScale);
+    }
+    styleCartTextAction(findViewById(R.id.discountButton), false);
+    styleCartTextAction(findViewById(R.id.restoreHoldButton), false);
+    styleCartTextAction(findViewById(R.id.clearCartButton), true);
+    // stash for categories
+    categoryTextScale = catScale;
+  }
+
+  private static float clampFloat(float v, float lo, float hi) {
+    return Math.max(lo, Math.min(hi, v));
   }
 
   private void toggleSellSearch() {
@@ -880,9 +1045,10 @@ public class SellActivity extends Activity {
       applySavedCategoryOrder();
     }
     float density = getResources().getDisplayMetrics().density;
-    int padH = Math.round(12 * density);
-    int padV = Math.round(14 * density);
-    int catMin = Math.max(Math.round(52 * density), uiScale != null ? uiScale.touchMinPx : 0);
+    float catScale = categoryTextScale > 0.1f ? categoryTextScale : 1f;
+    int padH = Math.round(12 * density * Math.min(1f, catScale));
+    int padV = Math.round(14 * density * Math.min(1f, 0.92f + 0.08f * catScale));
+    int catMin = Math.max(Math.round(48 * density), uiScale != null ? Math.round(uiScale.touchMinPx * 0.92f * catScale) : 0);
       int ink = NposUi.color(this, R.color.npos_ink);
       int activeBg = NposUi.color(this, R.color.npos_orange_soft);
       int activeFg = NposUi.color(this, R.color.npos_orange);
@@ -894,7 +1060,8 @@ public class SellActivity extends Activity {
       b.setAllCaps(false);
       b.setMinHeight(catMin);
       b.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
-      b.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale != null ? uiScale.bodySp : 14f);
+      float catSp = (uiScale != null ? uiScale.bodySp : 14f) * catScale;
+      b.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(11f, catSp));
       b.setTypeface(NposFonts.semibold(this));
       b.setPadding(padH, padV, padH, padV);
       b.setMaxLines(2);
@@ -1016,13 +1183,13 @@ public class SellActivity extends Activity {
     if (menu == null) return;
 
     int gap = uiScale.gapPx;
-    int colCount = Math.max(3, Math.min(5, uiScale.menuCols));
-    menuGrid.setColumnCount(colCount);
     int avail = menuGrid.getWidth();
-    int cellW = Math.max(uiScale.dp(72), (avail - gap * (colCount + 1)) / colCount);
-    // 16:10 media, capped like web max-height so ~5 rows fit → scroll down only.
+    int colCount = Math.max(2, Math.min(5, uiScale.menuColsForWidth(avail)));
+    menuGrid.setColumnCount(colCount);
+    int cellW = Math.max(uiScale.dp(64), (avail - gap * (colCount + 1)) / colCount);
+    // Cap media by cell width so shrinking X shrinks tiles — never inflate Y to "fill".
     int mediaH = Math.min(uiScale.menuMediaMaxPx, Math.round(cellW * 10f / 16f));
-    mediaH = Math.max(uiScale.dp(44), mediaH);
+    mediaH = Math.max(uiScale.dp(40), mediaH);
 
     String q = menuQuery == null ? "" : menuQuery.toLowerCase(Locale.getDefault());
     boolean searching = !q.isEmpty();
