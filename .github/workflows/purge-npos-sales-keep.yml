@@ -1,0 +1,43 @@
+name: Purge nPos sales except keep pairing
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep_pairing:
+        description: "Pairing code to keep (default 570F0F)"
+        required: false
+        default: "570F0F"
+      apply:
+        description: "Set to 1 to delete for real (otherwise dry-run)"
+        required: true
+        default: "0"
+      purge_devices:
+        description: "Set to 1 to also delete other devices/logs/captures"
+        required: false
+        default: "0"
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Purge nPos sales (keep pairing)
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          KEEP_PAIRING: ${{ inputs.keep_pairing }}
+          APPLY: ${{ inputs.apply }}
+          PURGE_DEVICES: ${{ inputs.purge_devices }}
+        run: node scripts/purge-npos-sales-keep.mjs
