@@ -159,6 +159,7 @@ function DeviceCard({
       </div>
       <p className="muted npos-diagnose-id">
         รหัส {d.pairingCode} · เครื่อง {machine} · ระบบ {systemRelease.label} · nPos{" "}
+        {match === "ok" ? "✓ " : ""}
         {versionLabel}
         {matchHint ? ` · ${matchHint}` : ""} · {d.deviceHint || "android"}
         {" · "}
@@ -574,7 +575,17 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
         const r = await purgeNposDevDevices();
         onError(null);
         window.alert(
-          `ลบ emulator/dev แล้ว · เครื่อง ${r.deletedDevices} · diagnose ${r.deletedDiagnose} · ops ${r.deletedOps}`,
+          [
+            "ลบข้อมูล emulator/dev แล้ว",
+            `เครื่อง ${r.deletedDevices}`,
+            `diagnose ${r.deletedDiagnose}`,
+            `ops ${r.deletedOps}`,
+            `รอบ ${r.deletedSessions}`,
+            `บิล ${r.deletedSales}`,
+            `mutations ${r.deletedMutations}`,
+            `แคปจอ ${r.deletedShots}`,
+            `เก็บเครื่องหน้าร้าน ${r.shopKept}`,
+          ].join(" · "),
         );
       } catch (err) {
         onError(err instanceof Error ? err.message : String(err));
@@ -609,7 +620,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
         : confirm?.kind === "clearSeat"
           ? "เคลียร์ seat + เตะทุกเครื่อง?"
           : confirm?.kind === "purgeDev"
-            ? "ลบเครื่องพัฒนา / emulator ออกจากระบบ?"
+            ? "ลบเครื่องพัฒนา / emulator + รอบ/บิล/log ที่มาจากเครื่องเหล่านั้น?"
             : "";
   const confirmMessage =
     confirm?.kind === "clearCaptures"
@@ -619,7 +630,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
         : confirm?.kind === "clearSeat"
           ? "แท็บเล็ตจะเด้งใส่รหัสใหม่ (กะไม่ปิด)"
           : confirm?.kind === "purgeDev"
-            ? "ลบเอกสาร emulator/dev จาก posDevices · diagnose · ops log — โฟกัสเครื่องหน้าร้านเท่านั้น"
+            ? "ลบ emulator/dev + รอบขาย + บิล + ops/diagnose/แคป ที่ไม่ใช่เครื่องหน้าร้าน — สรุปยอดหลังบ้านเริ่มใหม่ · เก็บเฉพาะแท็บเล็ตร้านจริง"
             : undefined;
 
   return (
@@ -670,7 +681,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                 disabled={busyId === "__purge_dev__"}
                 onClick={() => void purgeDev()}
               >
-                ลบ emulator/dev
+                ลบ emulator + บิลทดสอบ
               </button>
             </div>
             {total === 0 ? (
@@ -760,6 +771,11 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                               : ""
                       }`}
                     >
+                      {match === "ok" ? (
+                        <span className="npos-slim-ver-check" aria-label="เวอร์ชันตรง">
+                          ✓
+                        </span>
+                      ) : null}
                       {versionLabel}
                     </span>
                     <span
@@ -842,7 +858,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
           : confirm?.kind === "revoke"
             ? "เตะเครื่อง"
             : confirm?.kind === "purgeDev"
-              ? "ลบ emulator/dev"
+              ? "ลบ emulator + บิล"
               : "เคลียร์ seat"
       }
       destructive

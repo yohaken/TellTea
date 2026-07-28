@@ -37,6 +37,11 @@ type OwnerDeviceCommandResult = {
   deletedDevices?: number;
   deletedDiagnose?: number;
   deletedOps?: number;
+  deletedSessions?: number;
+  deletedSales?: number;
+  deletedMutations?: number;
+  deletedShots?: number;
+  shopKept?: number;
   revokedCount?: number;
   storeClaimRequired?: boolean;
   hasCode?: boolean;
@@ -633,17 +638,27 @@ export async function clearNposExclusiveSeat(): Promise<{ revokedCount: number }
   return { revokedCount: typeof res.revokedCount === "number" ? res.revokedCount : 0 };
 }
 
-/** Owner: delete emulator / deviceClass=dev rows from posDevices + diagnose + ops log. */
+/** Owner: wipe emulator/dev devices + their sessions/sales/logs (shop start clean). */
 export async function purgeNposDevDevices(): Promise<{
   deletedDevices: number;
   deletedDiagnose: number;
   deletedOps: number;
+  deletedSessions: number;
+  deletedSales: number;
+  deletedMutations: number;
+  deletedShots: number;
+  shopKept: number;
 }> {
   const res = await callNposOwnerDeviceCommand("purge_dev_devices");
   return {
     deletedDevices: typeof res.deletedDevices === "number" ? res.deletedDevices : 0,
     deletedDiagnose: typeof res.deletedDiagnose === "number" ? res.deletedDiagnose : 0,
     deletedOps: typeof res.deletedOps === "number" ? res.deletedOps : 0,
+    deletedSessions: typeof res.deletedSessions === "number" ? res.deletedSessions : 0,
+    deletedSales: typeof res.deletedSales === "number" ? res.deletedSales : 0,
+    deletedMutations: typeof res.deletedMutations === "number" ? res.deletedMutations : 0,
+    deletedShots: typeof res.deletedShots === "number" ? res.deletedShots : 0,
+    shopKept: typeof res.shopKept === "number" ? res.shopKept : 0,
   };
 }
 

@@ -6627,6 +6627,13 @@ body.modal-open .main-panel {
   color: #1b6b3a;
 }
 
+.npos-slim-ver-check {
+  display: inline-block;
+  margin-right: 0.25rem;
+  color: #15803d;
+  font-weight: 700;
+}
+
 .npos-slim-row--device.is-selected {
   background: rgba(232, 93, 4, 0.06);
 }

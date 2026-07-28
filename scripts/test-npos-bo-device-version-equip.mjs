@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 328/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 329/);
 
 const devicesLib = read("src/lib/pos-devices.ts");
 assert.match(devicesLib, /versionName/);
@@ -36,6 +36,6 @@ const css = read("src/app/globals.css");
 assert.match(css, /\.npos-slim-equip/);
 assert.match(css, /minmax\(4\.8rem, max-content\)/);
 
-assert.match(read("docs/npos-manage-slim-checklist.md"), /เวอร์ชันระบบ|เวอร์ชัน nPos|อุปกรณ์/);
+assert.match(read("docs/npos-manage-slim-checklist.md"), /เวอร์ชันระบบ|เวอร์ชัน nPos|อุปกรณ์|APP_BUILD.?329/);
 
 console.log("ok: npos-bo-device-version-equip gate");

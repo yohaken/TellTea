@@ -64,9 +64,44 @@ async function assertOwner(context) {
   return { actorId: staffId };
 }
 
+async function commitDeletes(db, refs) {
+  let deleted = 0;
+  const chunkSize = 400;
+  for (let i = 0; i < refs.length; i += chunkSize) {
+    const batch = db.batch();
+    for (const ref of refs.slice(i, i + chunkSize)) {
+      batch.delete(ref);
+      deleted += 1;
+    }
+    await batch.commit();
+  }
+  return deleted;
+}
+
+function isDevOrEmulatorDoc(data) {
+  if (!data || typeof data !== "object") return false;
+  if (data.isEmulator === true) return true;
+  if (data.deviceClass === "dev") return true;
+  const hint = typeof data.deviceHint === "string" ? data.deviceHint : "";
+  return /sdk|emulator|generic|goldfish|ranchu/i.test(hint);
+}
+
+/**
+ * Keep only live shop tablets. Everything else (emu/dev/orphan) is test noise
+ * to wipe from sessions/sales after early AVD testing.
+ */
+function shouldPurgeDeviceId(deviceId, purgeIds, shopKeepIds) {
+  const id = asString(deviceId, 64);
+  if (!id) return true;
+  if (shopKeepIds.has(id)) return false;
+  if (purgeIds.has(id)) return true;
+  // Orphaned install from deleted emulator / unknown non-shop.
+  return true;
+}
+
 exports.nposOwnerDeviceCommand = functions
   .region("asia-southeast1")
-  .runWith({ memory: "512MB", timeoutSeconds: 120 })
+  .runWith({ memory: "1GB", timeoutSeconds: 540 })
   .https.onCall(async (data, context) => {
     const { actorId } = await assertOwner(context);
     const action = asString(data?.action, 32).toLowerCase();
@@ -77,57 +112,108 @@ exports.nposOwnerDeviceCommand = functions
       return { ok: true, action, actorId, at: Date.now(), ...result };
     }
 
-    // Purge emulator / deviceClass=dev docs from tech tables + diagnose + ops log.
+    // Purge emulator/dev tech docs + their sessions/sales/logs — start shop clean.
     if (action === "purge_dev_devices") {
       const db = getFirestore();
       const now = Date.now();
-      const emuHint = /sdk|emulator|generic|goldfish|ranchu/i;
-      const isDevDoc = (data) => {
-        if (!data || typeof data !== "object") return false;
-        if (data.isEmulator === true) return true;
-        if (data.deviceClass === "dev") return true;
-        const hint = typeof data.deviceHint === "string" ? data.deviceHint : "";
-        return emuHint.test(hint);
-      };
 
       const devicesSnap = await db.collection(COL).get();
-      const purgeIds = [];
+      const purgeIds = new Set();
+      const shopKeepIds = new Set();
       for (const docSnap of devicesSnap.docs) {
-        if (isDevDoc(docSnap.data() || {})) purgeIds.push(docSnap.id);
+        const data = docSnap.data() || {};
+        if (isDevOrEmulatorDoc(data)) purgeIds.add(docSnap.id);
+        else shopKeepIds.add(docSnap.id);
       }
 
-      // Also catch orphan diagnose/ops rows that never had a matching posDevices doc.
-      const [diagSnap, opsSnap] = await Promise.all([
-        db.collection("nposDiagnose").get(),
-        db.collection("nposOpsLog").get(),
-      ]);
-      const extraIds = new Set();
+      const [diagSnap, opsSnap, sessionsSnap, salesSnap, mutationsSnap, shotsSnap] =
+        await Promise.all([
+          db.collection("nposDiagnose").get(),
+          db.collection("nposOpsLog").get(),
+          db.collection("posSessions").get(),
+          db.collection("posSales").get(),
+          db.collection("posSaleMutations").get(),
+          db.collection("nposScreenShots").get(),
+        ]);
+
       for (const docSnap of [...diagSnap.docs, ...opsSnap.docs]) {
-        if (purgeIds.includes(docSnap.id)) continue;
-        if (isDevDoc(docSnap.data() || {})) extraIds.add(docSnap.id);
+        if (isDevOrEmulatorDoc(docSnap.data() || {})) purgeIds.add(docSnap.id);
       }
-      const allIds = [...new Set([...purgeIds, ...extraIds])];
 
-      let deletedDevices = 0;
-      let deletedDiagnose = 0;
-      let deletedOps = 0;
-      // Firestore batches max 500 ops — chunk deletes.
-      const chunkSize = 100;
-      for (let i = 0; i < allIds.length; i += chunkSize) {
-        const chunk = allIds.slice(i, i + chunkSize);
-        const batch = db.batch();
-        for (const id of chunk) {
-          if (purgeIds.includes(id)) {
-            batch.delete(db.collection(COL).doc(id));
-            deletedDevices += 1;
-          }
-          batch.delete(db.collection("nposDiagnose").doc(id));
-          deletedDiagnose += 1;
-          batch.delete(db.collection("nposOpsLog").doc(id));
-          deletedOps += 1;
+      const deviceRefs = [];
+      for (const id of purgeIds) {
+        if (devicesSnap.docs.some((d) => d.id === id)) {
+          deviceRefs.push(db.collection(COL).doc(id));
         }
-        await batch.commit();
       }
+
+      const diagnoseRefs = [];
+      const opsRefs = [];
+      for (const docSnap of diagSnap.docs) {
+        if (purgeIds.has(docSnap.id) || isDevOrEmulatorDoc(docSnap.data() || {})) {
+          diagnoseRefs.push(docSnap.ref);
+          purgeIds.add(docSnap.id);
+        }
+      }
+      for (const docSnap of opsSnap.docs) {
+        if (purgeIds.has(docSnap.id) || isDevOrEmulatorDoc(docSnap.data() || {})) {
+          opsRefs.push(docSnap.ref);
+          purgeIds.add(docSnap.id);
+        }
+      }
+
+      const sessionRefs = [];
+      for (const docSnap of sessionsSnap.docs) {
+        const data = docSnap.data() || {};
+        if (shouldPurgeDeviceId(data.deviceId, purgeIds, shopKeepIds)) {
+          sessionRefs.push(docSnap.ref);
+        }
+      }
+
+      const saleRefs = [];
+      for (const docSnap of salesSnap.docs) {
+        const data = docSnap.data() || {};
+        if (shouldPurgeDeviceId(data.deviceId, purgeIds, shopKeepIds)) {
+          saleRefs.push(docSnap.ref);
+        }
+      }
+
+      const mutationRefs = [];
+      for (const docSnap of mutationsSnap.docs) {
+        const data = docSnap.data() || {};
+        if (shouldPurgeDeviceId(data.deviceId, purgeIds, shopKeepIds)) {
+          mutationRefs.push(docSnap.ref);
+        }
+      }
+
+      const shotRefs = [];
+      for (const docSnap of shotsSnap.docs) {
+        const data = docSnap.data() || {};
+        const installId = asString(data.installId, 64);
+        if (purgeIds.has(installId) || shouldPurgeDeviceId(installId, purgeIds, shopKeepIds)) {
+          shotRefs.push(docSnap.ref);
+        }
+      }
+
+      const deletedDevices = await commitDeletes(db, deviceRefs);
+      const deletedDiagnose = await commitDeletes(db, diagnoseRefs);
+      const deletedOps = await commitDeletes(db, opsRefs);
+      const deletedSessions = await commitDeletes(db, sessionRefs);
+      const deletedSales = await commitDeletes(db, saleRefs);
+      const deletedMutations = await commitDeletes(db, mutationRefs);
+      const deletedShots = await commitDeletes(db, shotRefs);
+
+      // Clear bestseller cache so BO "เมนูขายดี" doesn't show emu noise.
+      await db.doc("meta/posMenuRank").set(
+        {
+          items: [],
+          categories: [],
+          updatedAt: now,
+          purgedBy: actorId,
+          purgedReason: "purge_dev_devices",
+        },
+        { merge: true },
+      );
 
       return {
         ok: true,
@@ -137,7 +223,12 @@ exports.nposOwnerDeviceCommand = functions
         deletedDevices,
         deletedDiagnose,
         deletedOps,
-        purgedIds: allIds.slice(0, 40),
+        deletedSessions,
+        deletedSales,
+        deletedMutations,
+        deletedShots,
+        shopKept: shopKeepIds.size,
+        purgedIds: [...purgeIds].slice(0, 40),
       };
     }
 
