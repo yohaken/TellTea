@@ -80,7 +80,7 @@
 - [x] **Compact buttons** wrap_content · max 280dp · ไม่ยืดเต็มจอ (**1.14.42**)
 - [x] **Friendly UI sweep** NposUi ทั้งแอป + นโยบายฝังงานใหม่ · แถบซ้าย/จอลูกค้า/option (**1.14.42**)
 - [x] **Kick bounce จากหน้าขาย** NposApp CLEAR_TOP เมื่อถูกเตะ + HB force ~5s + ชิปนับถอยหลัง (**1.14.42**)
-- [x] **POS number pad** ทอนเปิดกะ · ปิดกะ · เคลม · เงินสด — คีย์สูง `padKeyMinPx` + fit-to-window (**1.14.69**)
+- [x] **POS number pad** ทอนเปิดกะ · ปิดกะ · เคลม · เงินสด · ดึงเงิน — `padKeyMinPxForChrome` + `padAmountMinPx` (**1.14.71**)
 - [x] **บิลย้อนหลัง + หมวดเมนู** การ์ด Npos · ชิปหมวดใหญ่ขึ้น (**1.14.42**)
 - [x] **Link status orb** เขียว/เหลือง/แดง + นับถอยหลัง BO (**1.14.42**)
 - [x] **BO รหัสเต็ม + ตารางรอบ/ยอด** · แผนเก็บยอด `npos-bo-sales-retention-plan` (**1.14.42**)

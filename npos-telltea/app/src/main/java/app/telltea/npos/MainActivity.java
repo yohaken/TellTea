@@ -332,7 +332,8 @@ public class MainActivity extends Activity {
                 input.setSelection(input.getText().length());
               }
             },
-            false));
+            false,
+            NposNumberPad.CHROME_CLAIM_DP));
   }
 
   private void updateClaimVersionChipText() {
