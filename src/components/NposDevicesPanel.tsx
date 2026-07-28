@@ -608,7 +608,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
               }`
             : "ยังไม่มีเครื่อง — เปิดแอป nPos แล้วจะลงทะเบียนเอง"
       }
-      defaultOpen
+      defaultOpen={false}
       className="npos-devices-fold"
     >
       {loading ? (

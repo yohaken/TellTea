@@ -103,10 +103,13 @@
     <string name="receipts_actions_hint">ดูยอดตรวจเงิน · พิมพ์ซ้ำถ้าใบไม่ชัด/พัง/หาย · ทำลายบิลถ้าผิด (ตัดยอดรอบ)</string>
     <string name="receipts_already_voided">บิลนี้ทำลายแล้ว — พิมพ์ซ้ำไม่ได้</string>
     <string name="receipts_select_hint">เลือกบิลจากรายการด้านซ้าย</string>
-    <string name="receipts_search_hint">ค้นหาเลขบิล…</string>
+    <string name="receipts_search_hint">ค้นหาเลขบิล · ชื่อ · เบอร์…</string>
     <string name="receipts_filter_shift">รอบนี้</string>
     <string name="receipts_filter_today">วันนี้</string>
     <string name="receipts_filter_recent">ล่าสุด</string>
+    <string name="receipts_filter_custom">ระบุวัน</string>
+    <string name="receipts_custom_from">จาก %1$s</string>
+    <string name="receipts_custom_to">ถึง %1$s</string>
     <string name="receipts_filter_all">ทั้งหมด</string>
     <string name="receipts_filter_ok">ปกติ</string>
     <string name="receipts_filter_voided">ทำลาย</string>
@@ -114,6 +117,10 @@
     <string name="receipts_filter_pay_all">ทุกชำระ</string>
     <string name="receipts_filter_cash">สด</string>
     <string name="receipts_filter_pp">PP</string>
+    <string name="receipts_meta_customer">ลูกค้า</string>
+    <string name="receipts_meta_phone">เบอร์</string>
+    <string name="receipts_meta_vat">VAT</string>
+    <string name="receipts_meta_service">ค่าบริการ</string>
     <string name="receipts_badge_voided">ทำลายแล้ว</string>
     <string name="receipts_badge_pending">รอส่ง</string>
     <string name="receipts_meta_time">เวลา</string>

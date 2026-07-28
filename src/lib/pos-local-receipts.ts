@@ -29,6 +29,12 @@ export type PosLocalReceipt = {
   voided?: boolean;
   voidedAt?: number;
   voidReason?: string;
+  /** Optional — search/display when present; counter does not capture yet. */
+  customerName?: string;
+  customerPhone?: string;
+  staffName?: string;
+  vatBaht?: number;
+  serviceChargeBaht?: number;
 };
 
 const KEY = "telltea-pos-local-receipts";

@@ -1,12 +1,14 @@
 package app.telltea.npos;
 
 import android.app.Activity;
+import android.app.DatePickerDialog;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
@@ -33,13 +35,14 @@ import app.telltea.npos.ui.UiScale;
 
 /**
  * Local receipt history — list + detail (web PosReceiptsView parity).
- * Filters: shift / today / recent · status · payment · bill search.
+ * Filters: shift / today / recent / custom range · status · payment · bill/customer search.
  */
 public class ReceiptsActivity extends Activity {
   private enum TimeFilter {
     SHIFT,
     TODAY,
-    RECENT
+    RECENT,
+    CUSTOM
   }
 
   private enum StatusFilter {
@@ -72,6 +75,7 @@ public class ReceiptsActivity extends Activity {
   private TextView chipShift;
   private TextView chipToday;
   private TextView chipRecent;
+  private TextView chipCustom;
   private TextView chipStatusAll;
   private TextView chipOk;
   private TextView chipVoid;
@@ -79,6 +83,12 @@ public class ReceiptsActivity extends Activity {
   private TextView chipPayAll;
   private TextView chipCash;
   private TextView chipPp;
+  private LinearLayout customRangeRow;
+  private TextView customFromBtn;
+  private TextView customToBtn;
+  /** Inclusive local-day bounds for CUSTOM filter. */
+  private long customFromDayMs = startOfLocalDayMs();
+  private long customToDayMs = startOfLocalDayMs();
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -98,6 +108,7 @@ public class ReceiptsActivity extends Activity {
     page.addView(hint);
 
     page.addView(buildChipRow());
+    page.addView(buildCustomRangeRow());
     page.addView(buildStatusPayRow());
 
     searchField = NposUi.field(this);
@@ -176,7 +187,74 @@ public class ReceiptsActivity extends Activity {
       paintFilterChips();
       renderAll();
     });
+    chipCustom = addFilterChip(row, getString(R.string.receipts_filter_custom), () -> {
+      timeFilter = TimeFilter.CUSTOM;
+      paintFilterChips();
+      renderAll();
+    });
     return wrapHorizontal(row);
+  }
+
+  private LinearLayout buildCustomRangeRow() {
+    customRangeRow = new LinearLayout(this);
+    customRangeRow.setOrientation(LinearLayout.HORIZONTAL);
+    customRangeRow.setGravity(Gravity.CENTER_VERTICAL);
+    customRangeRow.setLayoutParams(NposUi.matchWidth(this, 6));
+    customRangeRow.setVisibility(View.GONE);
+
+    customFromBtn = NposUi.chip(this, "");
+    customFromBtn.setOnClickListener(v -> pickCustomDay(true));
+    customToBtn = NposUi.chip(this, "");
+    customToBtn.setOnClickListener(v -> pickCustomDay(false));
+    customRangeRow.addView(customFromBtn, NposUi.wrap(this, 6, 4));
+    customRangeRow.addView(customToBtn, NposUi.wrap(this, 6, 4));
+    paintCustomRangeLabels();
+    return customRangeRow;
+  }
+
+  private void pickCustomDay(boolean from) {
+    Calendar c = Calendar.getInstance();
+    c.setTimeInMillis(from ? customFromDayMs : customToDayMs);
+    new DatePickerDialog(
+            this,
+            (view, year, month, dayOfMonth) -> {
+              Calendar picked = Calendar.getInstance();
+              picked.set(Calendar.YEAR, year);
+              picked.set(Calendar.MONTH, month);
+              picked.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+              picked.set(Calendar.HOUR_OF_DAY, 0);
+              picked.set(Calendar.MINUTE, 0);
+              picked.set(Calendar.SECOND, 0);
+              picked.set(Calendar.MILLISECOND, 0);
+              long ms = picked.getTimeInMillis();
+              if (from) {
+                customFromDayMs = ms;
+                if (customToDayMs < customFromDayMs) customToDayMs = customFromDayMs;
+              } else {
+                customToDayMs = ms;
+                if (customFromDayMs > customToDayMs) customFromDayMs = customToDayMs;
+              }
+              paintCustomRangeLabels();
+              timeFilter = TimeFilter.CUSTOM;
+              paintFilterChips();
+              renderAll();
+            },
+            c.get(Calendar.YEAR),
+            c.get(Calendar.MONTH),
+            c.get(Calendar.DAY_OF_MONTH))
+        .show();
+  }
+
+  private void paintCustomRangeLabels() {
+    SimpleDateFormat dayFmt = new SimpleDateFormat("d/M/yy", Locale.getDefault());
+    if (customFromBtn != null) {
+      customFromBtn.setText(
+          getString(R.string.receipts_custom_from, dayFmt.format(new Date(customFromDayMs))));
+    }
+    if (customToBtn != null) {
+      customToBtn.setText(
+          getString(R.string.receipts_custom_to, dayFmt.format(new Date(customToDayMs))));
+    }
   }
 
   private LinearLayout buildStatusPayRow() {
@@ -248,6 +326,10 @@ public class ReceiptsActivity extends Activity {
     paintChip(chipShift, timeFilter == TimeFilter.SHIFT);
     paintChip(chipToday, timeFilter == TimeFilter.TODAY);
     paintChip(chipRecent, timeFilter == TimeFilter.RECENT);
+    paintChip(chipCustom, timeFilter == TimeFilter.CUSTOM);
+    if (customRangeRow != null) {
+      customRangeRow.setVisibility(timeFilter == TimeFilter.CUSTOM ? View.VISIBLE : View.GONE);
+    }
     paintChip(chipStatusAll, statusFilter == StatusFilter.ALL);
     paintChip(chipOk, statusFilter == StatusFilter.OK);
     paintChip(chipVoid, statusFilter == StatusFilter.VOIDED);
@@ -299,6 +381,9 @@ public class ReceiptsActivity extends Activity {
         }
       } else if (timeFilter == TimeFilter.TODAY) {
         if (at < dayStart) continue;
+      } else if (timeFilter == TimeFilter.CUSTOM) {
+        long toEnd = endOfLocalDayMs(customToDayMs);
+        if (at < customFromDayMs || at > toEnd) continue;
       } else if (out.size() >= 40) {
         break;
       }
@@ -316,7 +401,16 @@ public class ReceiptsActivity extends Activity {
       if (!q.isEmpty()) {
         String bill = displayBillRaw(row).toLowerCase(Locale.US);
         String mid = row.optString("mutationId", "").toLowerCase(Locale.US);
-        if (!bill.contains(q) && !mid.contains(q)) continue;
+        String staff = row.optString("staffName", "").toLowerCase(Locale.US);
+        String cust = row.optString("customerName", "").toLowerCase(Locale.US);
+        String phone = row.optString("customerPhone", "").toLowerCase(Locale.US);
+        if (!bill.contains(q)
+            && !mid.contains(q)
+            && !staff.contains(q)
+            && !cust.contains(q)
+            && !phone.contains(q)) {
+          continue;
+        }
       }
       out.add(row);
     }
@@ -330,6 +424,10 @@ public class ReceiptsActivity extends Activity {
     c.set(Calendar.SECOND, 0);
     c.set(Calendar.MILLISECOND, 0);
     return c.getTimeInMillis();
+  }
+
+  private static long endOfLocalDayMs(long dayStartMs) {
+    return dayStartMs + 24L * 60L * 60L * 1000L - 1L;
   }
 
   private static boolean isPending(JSONObject row) {
@@ -438,6 +536,14 @@ public class ReceiptsActivity extends Activity {
     if (!staff.isEmpty()) {
       detailRoot.addView(metaRow(getString(R.string.receipts_meta_staff), staff));
     }
+    String customer = row.optString("customerName", "").trim();
+    if (!customer.isEmpty()) {
+      detailRoot.addView(metaRow(getString(R.string.receipts_meta_customer), customer));
+    }
+    String phone = row.optString("customerPhone", "").trim();
+    if (!phone.isEmpty()) {
+      detailRoot.addView(metaRow(getString(R.string.receipts_meta_phone), phone));
+    }
     String voidReason = row.optString("voidReason", "").trim();
     if (voided && !voidReason.isEmpty()) {
       detailRoot.addView(metaRow(getString(R.string.receipts_meta_void_reason), voidReason));
@@ -512,6 +618,20 @@ public class ReceiptsActivity extends Activity {
             discount > 0
                 ? String.format(Locale.getDefault(), "−฿%.0f", discount)
                 : "—"));
+    double service = row.optDouble("serviceChargeBaht", 0);
+    if (service > 0) {
+      detailRoot.addView(
+          metaRow(
+              getString(R.string.receipts_meta_service),
+              String.format(Locale.getDefault(), "฿%.0f", service)));
+    }
+    double vat = row.optDouble("vatBaht", 0);
+    if (vat > 0) {
+      detailRoot.addView(
+          metaRow(
+              getString(R.string.receipts_meta_vat),
+              String.format(Locale.getDefault(), "฿%.0f", vat)));
+    }
     TextView net =
         metaRow(
             getString(R.string.cart_net_label),

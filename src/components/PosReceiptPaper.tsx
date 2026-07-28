@@ -75,6 +75,24 @@ export function PosReceiptPaper({
               <dt>วันที่</dt>
               <dd>{formatReceiptDate(receipt.createdAt)}</dd>
             </div>
+            {receipt.staffName?.trim() ? (
+              <div>
+                <dt>พนักงาน</dt>
+                <dd>{receipt.staffName.trim()}</dd>
+              </div>
+            ) : null}
+            {receipt.customerName?.trim() ? (
+              <div>
+                <dt>ลูกค้า</dt>
+                <dd>{receipt.customerName.trim()}</dd>
+              </div>
+            ) : null}
+            {receipt.customerPhone?.trim() ? (
+              <div>
+                <dt>เบอร์</dt>
+                <dd>{receipt.customerPhone.trim()}</dd>
+              </div>
+            ) : null}
             {receipt.paymentMethod === "cash" && receipt.cashReceived != null ? (
               <>
                 <div>
@@ -145,6 +163,18 @@ export function PosReceiptPaper({
             <div className="pos-receipt-paper-total-row pos-receipt-paper-total-row--discount">
               <span>ส่วนลด</span>
               <span>-{formatPlainNumber(discountBaht)}</span>
+            </div>
+          ) : null}
+          {(receipt.serviceChargeBaht || 0) > 0 ? (
+            <div className="pos-receipt-paper-total-row">
+              <span>ค่าบริการ</span>
+              <span>{formatPlainNumber(receipt.serviceChargeBaht || 0)}</span>
+            </div>
+          ) : null}
+          {(receipt.vatBaht || 0) > 0 ? (
+            <div className="pos-receipt-paper-total-row">
+              <span>VAT</span>
+              <span>{formatPlainNumber(receipt.vatBaht || 0)}</span>
             </div>
           ) : null}
           <div className="pos-receipt-paper-total-row pos-receipt-paper-total-row--grand">

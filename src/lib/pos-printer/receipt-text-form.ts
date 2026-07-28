@@ -122,7 +122,12 @@ export function buildUnifiedReceiptText(
 
   const out: string[] = [];
   out.push(center(billDisplay, width));
-  if (data.customerName?.trim()) out.push(center(data.customerName.trim(), width));
+  {
+    const cust = [data.customerName?.trim() || "", data.customerPhone?.trim() || ""]
+      .filter(Boolean)
+      .join(" · ");
+    if (cust) out.push(center(cust, width));
+  }
   out.push(center(shopName, width));
   if (shopAddress) for (const part of wrap(shopAddress, width)) out.push(center(part, width));
   if (shopPhone) out.push(center(`โทร : ${shopPhone}`, width));
@@ -142,6 +147,12 @@ export function buildUnifiedReceiptText(
   out.push(pairRow("รวม:", formatMoney(subtotal), width));
   if (data.discountBaht && data.discountBaht > 0) {
     out.push(pairRow("ส่วนลด", `-${formatMoney(data.discountBaht)}`, width));
+  }
+  if (data.serviceChargeBaht && data.serviceChargeBaht > 0) {
+    out.push(pairRow("ค่าบริการ", formatMoney(data.serviceChargeBaht), width));
+  }
+  if (data.vatBaht && data.vatBaht > 0) {
+    out.push(pairRow("VAT", formatMoney(data.vatBaht), width));
   }
   out.push(doubleRule(width));
   out.push(pairRow("ยอดสุทธิ:", formatMoney(data.total), width));

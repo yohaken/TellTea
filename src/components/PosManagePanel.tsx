@@ -1,5 +1,6 @@
 "use client";
 
+import { SettingsFold } from "@/components/SettingsFold";
 import { NposDiagnosePanel } from "@/components/NposDiagnosePanel";
 import { NposDevicesPanel } from "@/components/NposDevicesPanel";
 import { NposOpsLogPanel } from "@/components/NposOpsLogPanel";
@@ -8,21 +9,22 @@ import { PosBusinessSettingsView } from "@/components/PosBusinessSettingsView";
 import { PosStoreClaimPanel } from "@/components/PosStoreClaimPanel";
 
 /**
- * หมวดจัดการ Pos — ตั้งค่าร้าน + รหัสเคลม + เครื่อง + ตรวจเครื่อง + ไทม์ไลน์
+ * หมวดจัดการ Pos — compact · เปิดมาพับหมวด · ตัวอย่างสลิปเต็มพื้นที่ในตั้งค่าร้าน
  */
 export function PosManagePanel({ onError }: { onError: (msg: string | null) => void }) {
   return (
-    <div className="owner-settings-stack pos-manage-stack">
+    <div className="owner-settings-stack pos-manage-stack pos-manage-stack--dense">
       <p className="muted pos-manage-lead">
-        1) ตั้งชื่อ/ที่อยู่ → กด <strong>บันทึกขึ้น Firebase</strong> · 2) ตั้งรหัสร้าน → เปิดเกต ·
-        3) แท็บเล็ตกรอกรหัส · ถ้าติด seat กด <strong>เตะ / เคลียร์ seat</strong>
+        ตั้งชื่อ/ที่อยู่ → บันทึก Firebase · รหัสร้าน → แท็บเล็ตเคลม · seat ค้าง → เตะ
       </p>
-      <section className="pos-manage-settings" aria-label="ตั้งค่าร้าน POS">
-        <h2 className="panel-title" style={{ fontSize: "1rem", marginBottom: "0.5rem" }}>
-          ตั้งค่าร้าน (ซิงก์ไป nPos)
-        </h2>
+      <SettingsFold
+        title="ตั้งค่าร้าน · ตัวอย่างสลิป"
+        hint="ชื่อ/ที่อยู่บนบิล · ดูตัวอย่างแบบพิมพ์เต็มพื้นที่"
+        defaultOpen
+        className="pos-manage-shop-fold"
+      >
         <PosBusinessSettingsView embedded />
-      </section>
+      </SettingsFold>
       <PosStoreClaimPanel onError={onError} />
       <NposDevicesPanel onError={onError} />
       <NposCaptureTimelinePanel onError={onError} />

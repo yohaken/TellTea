@@ -50,11 +50,11 @@ const sell = readFileSync(
 assert.match(sell, /Refresh shop name\/address|loadShop/);
 
 const version = readFileSync(join(root, "src/lib/pos-version.ts"), "utf8");
-assert.match(version, /POS_BUILD = 96/);
-assert.match(readFileSync(join(root, "src/lib/version.ts"), "utf8"), /APP_BUILD = 301/);
+assert.match(version, /POS_BUILD = 97/);
+assert.match(readFileSync(join(root, "src/lib/version.ts"), "utf8"), /APP_BUILD = 302/);
 assert.match(
   readFileSync(join(root, "npos-telltea/app/build.gradle"), "utf8"),
-  /versionCode\s+66/,
+  /versionCode\s+67/,
 );
 
 console.log("OK pos-settings-local-first");

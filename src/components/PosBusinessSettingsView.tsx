@@ -51,48 +51,47 @@ function DocPreview({ shop }: { shop: PosShopSettings }) {
   }, [cases, caseId, doc, shop]);
 
   return (
-    <aside className="pos-biz-preview" aria-label="ตัวอย่างเอกสาร">
-      <p className="pos-biz-preview-label">ตัวอย่างเอกสาร (จำลองครบเงื่อนไข)</p>
-      <div className="pos-biz-preview-tabs" role="tablist">
-        {(
-          [
-            ["receipt", "ใบเสร็จ"],
-            ["x", "X · กลางรอบ"],
-            ["z", "Z · ปิดรอบ"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={doc === id}
-            className={doc === id ? "is-active" : ""}
-            onClick={() => setDoc(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {doc === "receipt" ? (
-        <div className="pos-biz-preview-cases">
-          {cases.map((c) => (
+    <aside className="pos-biz-preview pos-biz-preview--print" aria-label="ตัวอย่างเอกสาร">
+      <div className="pos-biz-preview-toolbar">
+        <div className="pos-biz-preview-tabs" role="tablist">
+          {(
+            [
+              ["receipt", "ใบเสร็จ"],
+              ["x", "X"],
+              ["z", "Z"],
+            ] as const
+          ).map(([id, label]) => (
             <button
-              key={c.id}
+              key={id}
               type="button"
-              className={caseId === c.id ? "is-active" : ""}
-              onClick={() => setCaseId(c.id)}
+              role="tab"
+              aria-selected={doc === id}
+              className={doc === id ? "is-active" : ""}
+              onClick={() => setDoc(id)}
             >
-              {c.label}
+              {label}
             </button>
           ))}
         </div>
-      ) : (
-        <p className="pos-biz-preview-hint muted">
-          {doc === "x"
-            ? "Snapshot กลางรอบ — มีรายบิล · หมวด · รอส่ง · void"
-            : "รายงานปิดรอบ — รวมนับเงินสด · ทอนเปิด/ปิด · เซ็นรับส่งกะ"}
-        </p>
-      )}
+        {doc === "receipt" ? (
+          <div className="pos-biz-preview-cases">
+            {cases.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={caseId === c.id ? "is-active" : ""}
+                onClick={() => setCaseId(c.id)}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="pos-biz-preview-hint muted">
+            {doc === "x" ? "กลางรอบ" : "ปิดรอบ"} · ฟอร์มเดียวกับพิมพ์
+          </p>
+        )}
+      </div>
       <div className="pos-biz-preview-frame-wrap">
         <iframe
           className="pos-biz-preview-frame"
@@ -285,11 +284,11 @@ export function PosBusinessSettingsView({
         {savedMsg ? <p className="ok-text pos-biz-saved">{savedMsg}</p> : null}
 
         {tab === "bill" ? (
-          <div className="pos-biz-layout">
+          <div className="pos-biz-layout pos-biz-layout--preview-first">
+            <DocPreview shop={draftPreview} />
             <form className="pos-biz-form" onSubmit={(e) => void saveBill(e)}>
               <p className="muted pos-biz-lead">
-                ชื่อ · ที่อยู่ · โทร — แสดงหัวใบเสร็จ · <strong>ต้องกดปุ่มบันทึกด้านล่าง</strong>{" "}
-                ถึงจะขึ้น Firebase (แก้แล้วไม่กดบันทึก = แท็บเล็ตยังเป็นค่าเก่า)
+                หัวบิล · <strong>กดบันทึก</strong> ถึงขึ้น Firebase
               </p>
               <div className="pos-biz-grid">
                 <label>
@@ -345,10 +344,9 @@ export function PosBusinessSettingsView({
                 </label>
               </div>
               <button type="submit" className="primary-btn pos-biz-save" disabled={busy}>
-                {busy ? "กำลังบันทึกขึ้น Firebase..." : "บันทึกชื่อ·ที่อยู่ขึ้น Firebase"}
+                {busy ? "กำลังบันทึก..." : "บันทึกขึ้น Firebase"}
               </button>
             </form>
-            <DocPreview shop={draftPreview} />
           </div>
         ) : tab === "pay" ? (
           <form className="pos-biz-form pos-biz-form--pay" onSubmit={(e) => void savePay(e)}>

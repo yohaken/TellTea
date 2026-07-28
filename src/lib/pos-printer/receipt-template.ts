@@ -324,9 +324,22 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
     ? `<div class="notes">${escapeReceiptHtml(data.orderNotes.trim())}</div>`
     : "";
 
-  const customerBlock = data.customerName?.trim()
-    ? `<div class="customer">${escapeReceiptHtml(data.customerName.trim())}</div>`
+  const customerParts = [
+    data.customerName?.trim() || "",
+    data.customerPhone?.trim() || "",
+  ].filter(Boolean);
+  const customerBlock = customerParts.length
+    ? `<div class="customer">${escapeReceiptHtml(customerParts.join(" · "))}</div>`
     : "";
+
+  const vatRow =
+    data.vatBaht != null && data.vatBaht > 0
+      ? `<div class="total-row"><span>VAT</span><span>${formatMoney(data.vatBaht)}</span></div>`
+      : "";
+  const serviceRow =
+    data.serviceChargeBaht != null && data.serviceChargeBaht > 0
+      ? `<div class="total-row"><span>ค่าบริการ</span><span>${formatMoney(data.serviceChargeBaht)}</span></div>`
+      : "";
 
   const footerNote = (data.receiptFooterNote || "ขอบคุณที่อุดหนุน").trim();
 
@@ -352,6 +365,8 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
           ? `<div class="total-row"><span>ส่วนลด</span><span>-${formatMoney(data.discountBaht)}</span></div>`
           : ""
       }
+      ${serviceRow}
+      ${vatRow}
       <hr class="rule double" />
       <div class="total-row grand"><span>ยอดสุทธิ:</span><span>${formatMoney(data.total)}</span></div>
       <hr class="rule double" />
@@ -370,7 +385,9 @@ export type SampleReceiptCaseId =
   | "cash_change"
   | "discount"
   | "multi_qty"
-  | "pending";
+  | "pending"
+  | "customer"
+  | "vat_service";
 
 export type SampleReceiptCase = {
   id: SampleReceiptCaseId;
@@ -541,6 +558,50 @@ export function sampleReceiptCases(): SampleReceiptCase[] {
         paymentMethod: "cash",
         cashReceived: 29,
         change: 0,
+      }),
+    },
+    {
+      id: "customer",
+      label: "ลูกค้า · เบอร์",
+      payload: demoBase({
+        billNo: "P2707-005",
+        customerName: "คุณสมชาย",
+        customerPhone: "0812345678",
+        lines: [
+          {
+            menuItemId: "demo6",
+            name: "ชานมไต้หวัน (เย็น)",
+            price: 29,
+            qty: 1,
+            options: [],
+          },
+        ],
+        subtotal: 29,
+        total: 29,
+        paymentMethod: "promptpay",
+      }),
+    },
+    {
+      id: "vat_service",
+      label: "VAT · ค่าบริการ",
+      payload: demoBase({
+        billNo: "P2707-006",
+        lines: [
+          {
+            menuItemId: "demo7",
+            name: "ชุดของว่าง",
+            price: 100,
+            qty: 1,
+            options: [],
+          },
+        ],
+        subtotal: 100,
+        serviceChargeBaht: 10,
+        vatBaht: 7.7,
+        total: 117.7,
+        paymentMethod: "cash",
+        cashReceived: 120,
+        change: 2.3,
       }),
     },
   ];

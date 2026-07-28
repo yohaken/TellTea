@@ -139,7 +139,7 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
             ? `เกตเปิด · โหมดเครื่องเดียว${activeSeatId ? ` · seat ${activeSeatId.slice(-6).toUpperCase()}` : " · ว่าง"}${rejectDev ? " · บล็อกจำลอง" : ""}`
             : "ยังไม่ตั้งรหัส — แท็บเล็ตเข้าไม่ได้จนกว่าจะตั้งด้านล่าง"
       }
-      defaultOpen
+      defaultOpen={false}
       className="npos-store-claim-fold"
     >
       {!loading && !hasCode ? (

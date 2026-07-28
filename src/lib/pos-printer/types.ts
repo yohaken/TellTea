@@ -66,11 +66,16 @@ export type ReceiptPrintPayload = {
   createdAt: number;
   orderChannel?: ReceiptOrderChannel;
   customerName?: string;
+  /** Optional — shown when present; sell flow does not capture yet. */
+  customerPhone?: string;
   externalOrderId?: string;
   staffName?: string;
   staffId?: string;
   orderNotes?: string;
   receiptFooterNote?: string;
+  /** Optional display-only amounts — not computed in counter sell yet. */
+  vatBaht?: number;
+  serviceChargeBaht?: number;
 };
 
 export type KitchenTicketPrintPayload = {
