@@ -491,11 +491,29 @@ export function mapVatMonthlySettings(
   };
 }
 
+function firestoreErr(e: unknown, action: string): Error {
+  const code =
+    e && typeof e === "object" && "code" in e
+      ? String((e as { code?: string }).code || "")
+      : "";
+  const msg = e instanceof Error ? e.message : String(e);
+  if (code.includes("permission") || /insufficient permissions/i.test(msg)) {
+    return new Error(
+      `${action}: สิทธิ์ไม่พอ (ต้องเป็นเจ้าของ) — ลองรีเฟรชหรือเข้าใหม่`,
+    );
+  }
+  return e instanceof Error ? e : new Error(msg);
+}
+
 export async function loadVatMonthlySettings(): Promise<VatMonthlySettings> {
-  const snap = await getDoc(doc(getDb(), "meta", VAT_MONTHLY_SETTINGS_DOC));
-  return mapVatMonthlySettings(
-    snap.exists() ? (snap.data() as Partial<VatMonthlySettings>) : undefined,
-  );
+  try {
+    const snap = await getDoc(doc(getDb(), "meta", VAT_MONTHLY_SETTINGS_DOC));
+    return mapVatMonthlySettings(
+      snap.exists() ? (snap.data() as Partial<VatMonthlySettings>) : undefined,
+    );
+  } catch (e) {
+    throw firestoreErr(e, "โหลดตั้งค่า VAT");
+  }
 }
 
 export async function saveVatMonthlySettings(
@@ -519,21 +537,31 @@ export async function saveVatMonthlySettings(
     updatedAt: Date.now(),
     updatedBy: by,
   });
-  await setDoc(doc(getDb(), "meta", VAT_MONTHLY_SETTINGS_DOC), next, { merge: true });
+  try {
+    await setDoc(doc(getDb(), "meta", VAT_MONTHLY_SETTINGS_DOC), next, {
+      merge: true,
+    });
+  } catch (e) {
+    throw firestoreErr(e, "บันทึกตั้งค่า VAT");
+  }
   return next;
 }
 
 export async function loadVatMonthlyReturn(monthKey: string): Promise<VatMonthlyReturn> {
   if (!isMonthKey(monthKey)) throw new Error("เดือนไม่ถูกต้อง");
-  const [snap, settings] = await Promise.all([
-    getDoc(doc(getDb(), VAT_MONTHLY_COL, monthKey)),
-    loadVatMonthlySettings(),
-  ]);
-  return mapVatMonthlyReturn(
-    monthKey,
-    snap.exists() ? (snap.data() as Partial<VatMonthlyReturn>) : undefined,
-    settings,
-  );
+  try {
+    const [snap, settings] = await Promise.all([
+      getDoc(doc(getDb(), VAT_MONTHLY_COL, monthKey)),
+      loadVatMonthlySettings(),
+    ]);
+    return mapVatMonthlyReturn(
+      monthKey,
+      snap.exists() ? (snap.data() as Partial<VatMonthlyReturn>) : undefined,
+      settings,
+    );
+  } catch (e) {
+    throw firestoreErr(e, "โหลดยอด VAT เดือน");
+  }
 }
 
 export type VatMonthlySaveInput = {
@@ -585,7 +613,13 @@ export async function saveVatMonthlyReturn(
     updatedAt: Date.now(),
     updatedBy: by,
   };
-  await setDoc(doc(getDb(), VAT_MONTHLY_COL, input.monthKey), docBody, { merge: true });
+  try {
+    await setDoc(doc(getDb(), VAT_MONTHLY_COL, input.monthKey), docBody, {
+      merge: true,
+    });
+  } catch (e) {
+    throw firestoreErr(e, "บันทึกยอด VAT เดือน");
+  }
   return docBody;
 }
 
@@ -608,7 +642,11 @@ export async function fileVatMonthlyReturn(
     throw new Error("ยอดรายได้ไม่ถูกต้อง");
   }
 
-  await saveMonthlyIncome(monthKey, income, by);
+  try {
+    await saveMonthlyIncome(monthKey, income, by);
+  } catch (e) {
+    throw firestoreErr(e, "ใส่รายได้ P&L");
+  }
 
   const filed: VatMonthlyReturn = {
     ...current,
@@ -619,7 +657,11 @@ export async function fileVatMonthlyReturn(
     updatedAt: Date.now(),
     updatedBy: by,
   };
-  await setDoc(doc(getDb(), VAT_MONTHLY_COL, monthKey), filed, { merge: true });
+  try {
+    await setDoc(doc(getDb(), VAT_MONTHLY_COL, monthKey), filed, { merge: true });
+  } catch (e) {
+    throw firestoreErr(e, "ปิดงบ VAT เดือน");
+  }
   return filed;
 }
 
@@ -637,7 +679,11 @@ export async function unlockVatMonthlyReturn(
     updatedAt: Date.now(),
     updatedBy: by,
   };
-  await setDoc(doc(getDb(), VAT_MONTHLY_COL, monthKey), next, { merge: true });
+  try {
+    await setDoc(doc(getDb(), VAT_MONTHLY_COL, monthKey), next, { merge: true });
+  } catch (e) {
+    throw firestoreErr(e, "ปลดล็อกเดือน VAT");
+  }
   return next;
 }
 

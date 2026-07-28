@@ -464,14 +464,7 @@ service cloud.firestore {
 
     /** VAT รายเดือน (play-safe) — เจ้าของเท่านั้น */
     match /vatMonthlyReturns/{monthId} {
-      allow read: if isOwner();
-      allow create, update: if isOwner()
-        && request.resource.data.monthKey is string
-        && request.resource.data.monthKey == monthId
-        && request.resource.data.status in ['draft', 'saved', 'filed']
-        && request.resource.data.updatedAt is number
-        && request.resource.data.updatedBy is string;
-      allow delete: if isOwner();
+      allow read, write: if isOwner() || isOwnerEmail();
     }
 
     /** ใบกำกับซื้อ (ภาษีซื้อ) — เจ้าของเท่านั้น */
@@ -637,7 +630,7 @@ service cloud.firestore {
         || (docId == 'foodstoryAuth' && isOwner())
         || (docId == 'posStoreClaimSecret' && isOwner())
         || (docId == 'vatSalesSettings' && isOwner())
-        || (docId == 'vatMonthlySettings' && isOwner())
+        || (docId == 'vatMonthlySettings' && (isOwner() || isOwnerEmail()))
         || (docId == 'vatMailOAuth' && isOwner())
         || (docId == 'vatMailOAuthLineman' && isOwner())
         || (docId == 'vatMailOAuthConfig' && isOwner())
@@ -649,6 +642,7 @@ service cloud.firestore {
         || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && docId != 'vatSalesSettings' && docId != 'vatMonthlySettings' && docId != 'vatMailOAuth' && docId != 'vatMailOAuthLineman' && docId != 'vatMailOAuthConfig' && docId != 'vatMailOAuthState' && docId != 'vatMailOAuthOutlook' && docId != 'vatMailOAuthConfigOutlook' && docId != 'vatMailOAuthStateOutlook' && docId != 'vatSalesAlertState' && isStaff())
         || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes' || docId == 'posMenuRank'));
       allow write: if isOwner()
+        || (isOwnerEmail() && docId == 'vatMonthlySettings')
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
         || (isOwner() && docId == 'lowBalanceAlert')
         || (hasPerm('ownerBooks') && docId == 'ownerBooks')
