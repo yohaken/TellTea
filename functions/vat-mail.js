@@ -31,17 +31,39 @@ const DEFAULT_MAIL_RULES = {
   shopee: {
     enabled: true,
     fromIncludes: ["shopee", "shopeefood"],
-    subjectIncludes: ["shopee", "shopeefood", "สรุปยอด", "ยอดขาย"],
+    subjectIncludes: ["shopeefood", "สรุปยอด", "ยอดขาย", "รายงานยอด"],
+    subjectExcludes: ["otp", "verify"],
   },
   grab: {
     enabled: true,
     fromIncludes: ["grab.com", "grabfood"],
-    subjectIncludes: ["grab", "รายงาน", "สรุป", "sales", "settlement"],
+    subjectIncludes: [
+      "สรุปยอดขาย",
+      "grabfood",
+      "daily sales",
+      "รายงานยอดขาย",
+      "sales summary",
+    ],
+    subjectExcludes: [
+      "tax invoice",
+      "ใบกำกับภาษี",
+      "receipt/tax",
+      "receipt / tax",
+      "ใบเสร็จ",
+    ],
   },
   lineman: {
     enabled: true,
-    fromIncludes: ["lineman", "line.me", "linedelivery"],
-    subjectIncludes: ["lineman", "line man", "สรุป", "ยอดขาย", "รายงาน"],
+    fromIncludes: ["lineman", "wongnai", "line.me"],
+    subjectIncludes: [
+      "รายงานยอดขายรายวัน",
+      "line man",
+      "lineman",
+      "wongnai",
+      "สรุปยอด",
+      "ยอดขายรายวัน",
+    ],
+    subjectExcludes: ["otp", "verify"],
   },
 };
 
@@ -227,10 +249,15 @@ function normalizeRule(raw, fallback) {
     }
     return [...fb];
   };
+  const excludes =
+    Array.isArray(o.subjectExcludes) && o.subjectExcludes.length
+      ? o.subjectExcludes.map((x) => String(x).trim().toLowerCase()).filter(Boolean).slice(0, 20)
+      : [...(fallback.subjectExcludes || [])];
   return {
     enabled: o.enabled !== false,
     fromIncludes: list(o.fromIncludes, fallback.fromIncludes),
     subjectIncludes: list(o.subjectIncludes, fallback.subjectIncludes),
+    subjectExcludes: excludes,
   };
 }
 
@@ -251,9 +278,15 @@ function matchChannel(from, subject, rules) {
   for (const channel of ["shopee", "grab", "lineman"]) {
     const rule = rules[channel];
     if (!rule || rule.enabled === false) continue;
+    const excludes = rule.subjectExcludes || [];
+    if (excludes.some((k) => k && s.includes(k))) continue;
     const fromHit = rule.fromIncludes.some((k) => f.includes(k));
     const subHit = rule.subjectIncludes.some((k) => s.includes(k));
-    if (fromHit || subHit) return channel;
+    // เงินเข้า: ต้องมีคำในหัวข้อ (กันเมลใบกำกับจาก grab.com)
+    if (subHit) return channel;
+    if (fromHit && /(ยอดขาย|สรุปยอด|daily sales|sales report|รายงานยอด|sales summary)/i.test(s)) {
+      return channel;
+    }
   }
   return "unknown";
 }
@@ -264,15 +297,17 @@ function buildSearchQuery(rule, lookbackDays) {
   const m = String(after.getUTCMonth() + 1).padStart(2, "0");
   const d = String(after.getUTCDate()).padStart(2, "0");
   const parts = [`after:${y}/${m}/${d}`];
-  const orTerms = [];
-  for (const t of rule.fromIncludes.slice(0, 3)) {
-    if (t.includes("@") || t.includes(".")) orTerms.push(`from:${t}`);
-    else orTerms.push(`from:${t}`);
+  const fromTerms = rule.fromIncludes.slice(0, 4).map((t) => `from:${t}`);
+  const subTerms = rule.subjectIncludes.slice(0, 5).map((t) => {
+    const q = String(t).includes(" ") ? `"${t}"` : t;
+    return `subject:${q}`;
+  });
+  if (fromTerms.length) parts.push(`(${fromTerms.join(" OR ")})`);
+  if (subTerms.length) parts.push(`(${subTerms.join(" OR ")})`);
+  for (const ex of (rule.subjectExcludes || []).slice(0, 5)) {
+    const q = String(ex).includes(" ") ? `"${ex}"` : ex;
+    parts.push(`-subject:${q}`);
   }
-  for (const t of rule.subjectIncludes.slice(0, 3)) {
-    orTerms.push(`subject:${t}`);
-  }
-  if (orTerms.length) parts.push(`(${orTerms.join(" OR ")})`);
   return parts.join(" ");
 }
 
@@ -313,23 +348,88 @@ function guessReportKind(subject) {
   return "daily";
 }
 
+function toCeYear(raw) {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return null;
+  if (n >= 2400) return n - 543;
+  if (n >= 1900) return n;
+  if (n >= 0 && n < 100) return 2500 + n - 543;
+  return null;
+}
+
+const THAI_MONTHS = {
+  มกราคม: 1,
+  กุมภาพันธ์: 2,
+  มีนาคม: 3,
+  เมษายน: 4,
+  พฤษภาคม: 5,
+  มิถุนายน: 6,
+  กรกฎาคม: 7,
+  สิงหาคม: 8,
+  กันยายน: 9,
+  ตุลาคม: 10,
+  พฤศจิกายน: 11,
+  ธันวาคม: 12,
+  "ม.ค": 1,
+  "ก.พ": 2,
+  "มี.ค": 3,
+  "เม.ย": 4,
+  "พ.ค": 5,
+  "มิ.ย": 6,
+  "ก.ค": 7,
+  "ส.ค": 8,
+  "ก.ย": 9,
+  "ต.ค": 10,
+  "พ.ย": 11,
+  "ธ.ค": 12,
+};
+
 function guessReportDate(subject, internalDateMs) {
   const s = String(subject || "");
-  const m = s.match(/(20\d{2})[-/](\d{1,2})[-/](\d{1,2})/);
-  if (m) {
-    const y = m[1];
-    const mo = String(m[2]).padStart(2, "0");
-    const d = String(m[3]).padStart(2, "0");
-    return `${y}-${mo}-${d}`;
+  const pad = (n) => String(n).padStart(2, "0");
+  const ok = (y, mo, d) => y >= 2018 && y <= 2100 && mo >= 1 && mo <= 12 && d >= 1 && d <= 31;
+
+  const thKeys = Object.keys(THAI_MONTHS).sort((a, b) => b.length - a.length);
+  const esc = (k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const thRe = new RegExp(
+    `(\\d{1,2})\\s*(${thKeys.map(esc).join("|")})\\.?\\s*(25\\d{2}|20\\d{2}|\\d{2})`,
+    "i",
+  );
+  const th = s.match(thRe);
+  if (th) {
+    const day = Number(th[1]);
+    const month = THAI_MONTHS[th[2].replace(/\.$/, "")] || THAI_MONTHS[th[2]];
+    const year = toCeYear(th[3]);
+    if (month && year && ok(year, month, day)) return `${year}-${pad(month)}-${pad(day)}`;
   }
-  const m2 = s.match(/(\d{1,2})[./](\d{1,2})[./](20\d{2})/);
-  if (m2) {
-    const d = String(m2[1]).padStart(2, "0");
-    const mo = String(m2[2]).padStart(2, "0");
-    return `${m2[3]}-${mo}-${d}`;
+
+  const iso = s.match(/(?<!\d)(20\d{2}|25\d{2})[-/.](\d{1,2})[-/.](\d{1,2})(?!\d)/);
+  if (iso) {
+    const year = toCeYear(iso[1]);
+    const mo = Number(iso[2]);
+    const d = Number(iso[3]);
+    if (year && ok(year, mo, d)) return `${year}-${pad(mo)}-${pad(d)}`;
   }
+
+  const dmy4 = s.match(/(?<!\d)(\d{1,2})[./](\d{1,2})[./](20\d{2}|25\d{2})(?!\d)/);
+  if (dmy4) {
+    const year = toCeYear(dmy4[3]);
+    const mo = Number(dmy4[2]);
+    const d = Number(dmy4[1]);
+    if (year && ok(year, mo, d)) return `${year}-${pad(mo)}-${pad(d)}`;
+  }
+
+  const dmy2 = s.match(/(?<!\d)(\d{1,2})[./](\d{1,2})[./](\d{2})(?!\d)/);
+  if (dmy2) {
+    const year = toCeYear(dmy2[3]);
+    const mo = Number(dmy2[2]);
+    const d = Number(dmy2[1]);
+    if (year && ok(year, mo, d)) return `${year}-${pad(mo)}-${pad(d)}`;
+  }
+
   return bangkokDateKey(internalDateMs || Date.now());
 }
+
 
 exports.vatMailStatus = functions
   .region(REGION)
@@ -533,6 +633,16 @@ exports.vatMailSync = functions
           const from = headers.from || "";
           const internalDate = Number(msg.internalDate) || Date.now();
           const bodies = collectParts(msg.payload);
+          const subjLower = String(subject || "").toLowerCase();
+          const excl = (rules[channel] && rules[channel].subjectExcludes) || [];
+          if (excl.some((k) => k && subjLower.includes(k))) {
+            skipped += 1;
+            continue;
+          }
+          if (/tax\s*invoice|ใบกำกับภาษี|receipt\s*\/\s*tax|receipt\/tax/.test(subjLower)) {
+            skipped += 1;
+            continue;
+          }
           const matched = matchChannel(from, subject, rules);
           const channelFinal = matched === "unknown" ? channel : matched;
           const rawText = String(bodies.text || "").slice(0, 200000);

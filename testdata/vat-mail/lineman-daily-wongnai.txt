@@ -1,0 +1,15 @@
+# LINE MAN Wongnai daily (from real shop mail pattern)
+From: noreply@lineman.line.me
+Subject: รายงานยอดขายรายวัน - LINE MAN Wongnai 27/07/67
+
+LINE MAN wongnai
+TELL TEA เมืองอุดรธานี ถนนทองใหญ่หน้าคลังใหม่
+27 ก.ค. 2567
+
+รายรับทั้งหมด
+฿ 956.00
+
+ยอดขายเงินสด และไทยคิวอาร์ พลัส
+0.00
+ยอดขาย E-Payment
+956.00

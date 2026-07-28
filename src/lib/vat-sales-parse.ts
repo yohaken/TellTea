@@ -6,8 +6,8 @@
 import { isDateKey, normalizeMoney, roundMoney, type DeliveryChannel } from "./vat-sales";
 
 export const PARSER_VERSIONS: Record<DeliveryChannel, string> = {
-  grab: "grab-daily-v1",
-  lineman: "lineman-daily-v1",
+  grab: "grab-daily-v2",
+  lineman: "lineman-daily-v2",
   shopee: "shopee-daily-v1",
 };
 
@@ -179,7 +179,16 @@ const CHANNEL_LABELS: Record<DeliveryChannel, LabelSpec[]> = {
     { key: "orders", labels: SHARED_ORDERS },
   ],
   lineman: [
-    { key: "gross", labels: ["ยอดขายรวม (รวมvat)", "ยอดขายรวม vat", ...SHARED_GROSS] },
+    {
+      key: "gross",
+      labels: [
+        "รายรับทั้งหมด",
+        "ยอดขาย e-payment",
+        "ยอดขายรวม (รวมvat)",
+        "ยอดขายรวม vat",
+        ...SHARED_GROSS,
+      ],
+    },
     { key: "fee", labels: ["ค่าธรรมเนียม line man", ...SHARED_FEE] },
     { key: "net", labels: SHARED_NET },
     { key: "orders", labels: SHARED_ORDERS },
@@ -192,8 +201,64 @@ const CHANNEL_LABELS: Record<DeliveryChannel, LabelSpec[]> = {
   ],
 };
 
+/** ปี ค.ศ. จาก ค.ศ. / พ.ศ. / ปีสั้นพ.ศ. (67 → 2024) */
+export function toCeYear(raw: string | number): number | null {
+  const n = typeof raw === "number" ? raw : Number(String(raw).trim());
+  if (!Number.isFinite(n)) return null;
+  if (n >= 2400) return n - 543;
+  if (n >= 1900) return n;
+  if (n >= 0 && n < 100) return 2500 + n - 543;
+  return null;
+}
+
+const THAI_MONTHS: Record<string, number> = {
+  มกราคม: 1,
+  กุมภาพันธ์: 2,
+  มีนาคม: 3,
+  เมษายน: 4,
+  พฤษภาคม: 5,
+  มิถุนายน: 6,
+  กรกฎาคม: 7,
+  สิงหาคม: 8,
+  กันยายน: 9,
+  ตุลาคม: 10,
+  พฤศจิกายน: 11,
+  ธันวาคม: 12,
+  "ม.ค": 1,
+  "ก.พ": 2,
+  "มี.ค": 3,
+  "เม.ย": 4,
+  "พ.ค": 5,
+  "มิ.ย": 6,
+  "ก.ค": 7,
+  "ส.ค": 8,
+  "ก.ย": 9,
+  "ต.ค": 10,
+  "พ.ย": 11,
+  "ธ.ค": 12,
+};
+
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+/** ใบกำกับรายออเดอร์ — ไม่ใช่สรุปเงินเข้ารายวัน */
+export function isTaxInvoiceMail(subject: string, body = ""): boolean {
+  const hay = `${subject}\n${body}`.toLowerCase();
+  return /tax\s*invoice|ใบกำกับภาษี|receipt\s*\/\s*tax|receipt\/tax|ใบเสร็จรับเงิน/.test(
+    hay,
+  );
+}
+
 function escapeRegExp(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function isTokenBoundary(ch: string | undefined) {
+  if (ch == null || ch === "") return true;
+  // กันจับ "ยอดขาย" กลางคำว่า "สรุปยอดขาย…"
+  if (/[\u0E00-\u0E7Fa-z0-9]/i.test(ch)) return false;
+  return true;
 }
 
 function findLabeledAmount(
@@ -204,25 +269,37 @@ function findLabeledAmount(
   // Prefer longer labels first
   const sorted = [...labels].sort((a, b) => b.length - a.length);
   for (const label of sorted) {
-    const idx = lower.indexOf(label.toLowerCase());
-    if (idx < 0) continue;
-    const window = text.slice(idx, idx + label.length + 80);
-    // amount after label
-    const after = window.slice(label.length);
-    const m = after.match(
-      /[:\s\-–—]*([฿]?\s*\d{1,3}(?:[,\s]\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)/,
-    );
-    if (m) {
-      const amount = parseAmountToken(m[1]);
-      if (amount != null) return { amount, label };
-    }
-    // amount on same line before label (rare)
-    const lineStart = text.lastIndexOf("\n", idx) + 1;
-    const before = text.slice(lineStart, idx);
-    const m2 = before.match(/([฿]?\s*\d{1,3}(?:[,\s]\d{3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\s*$/);
-    if (m2) {
-      const amount = parseAmountToken(m2[1]);
-      if (amount != null) return { amount, label };
+    const needle = label.toLowerCase();
+    let from = 0;
+    while (from < lower.length) {
+      const idx = lower.indexOf(needle, from);
+      if (idx < 0) break;
+      from = idx + needle.length;
+      if (!isTokenBoundary(text[idx - 1]) || !isTokenBoundary(text[idx + needle.length])) {
+        continue;
+      }
+      const window = text.slice(idx, idx + label.length + 100);
+      const after = window.slice(label.length);
+      const m = after.match(
+        /[:\s\-–—]*([฿]\s*\d{1,3}(?:[,\s]\d{3})*(?:\.\d{1,2})?|\d{1,3}(?:[,\s]\d{3})+(?:\.\d{1,2})?|\d+\.\d{1,2}|\d{3,})/,
+      );
+      if (m) {
+        const amount = parseAmountToken(m[1]);
+        // กันเลขวัน/เดือนใกล้ป้าย (เช่น 26 หลังสรุปยอด)
+        if (amount != null && amount >= 50) return { amount, label };
+        if (amount != null && /[฿.]/.test(m[1])) return { amount, label };
+      }
+      const lineStart = text.lastIndexOf("\n", idx) + 1;
+      const before = text.slice(lineStart, idx);
+      const m2 = before.match(
+        /([฿]?\s*\d{1,3}(?:[,\s]\d{3})*(?:\.\d{1,2})?|\d+\.\d{1,2})\s*$/,
+      );
+      if (m2) {
+        const amount = parseAmountToken(m2[1]);
+        if (amount != null && (amount >= 50 || /[฿.]/.test(m2[1]))) {
+          return { amount, label };
+        }
+      }
     }
   }
   return null;
@@ -292,34 +369,65 @@ export function extractReportDate(
   fallbackMs?: number,
 ): { date: string; label?: string } | null {
   const hay = `${subject}\n${body.slice(0, 2500)}`;
-  const patterns: { re: RegExp; label: string }[] = [
-    { re: /วันที่(?:รายงาน|สรุป)?\s*[:\s]*((20\d{2})[-\/.](\d{1,2})[-\/.](\d{1,2}))/i, label: "วันที่" },
-    { re: /report\s*date\s*[:\s]*((20\d{2})[-\/.](\d{1,2})[-\/.](\d{1,2}))/i, label: "report date" },
-    { re: /ประจำวันที่\s*((20\d{2})[-\/.](\d{1,2})[-\/.](\d{1,2}))/i, label: "ประจำวันที่" },
-    { re: /ประจำวันที่\s*((\d{1,2})[-\/.](\d{1,2})[-\/.](20\d{2}))/i, label: "ประจำวันที่" },
-    { re: /((20\d{2})[-\/.](\d{1,2})[-\/.](\d{1,2}))/, label: "iso-like" },
-    { re: /((\d{1,2})[-\/.](\d{1,2})[-\/.](20\d{2}))/, label: "dmy" },
-  ];
-  for (const { re, label } of patterns) {
-    const m = hay.match(re);
-    if (!m) continue;
-    const raw = m[1];
-    let y: string;
-    let mo: string;
-    let d: string;
-    if (/^20\d{2}/.test(raw)) {
-      const p = raw.split(/[-\/.]/);
-      y = p[0];
-      mo = p[1].padStart(2, "0");
-      d = p[2].padStart(2, "0");
-    } else {
-      const p = raw.split(/[-\/.]/);
-      d = p[0].padStart(2, "0");
-      mo = p[1].padStart(2, "0");
-      y = p[2];
+
+  // 26 กรกฎาคม 2024 / 27 ก.ค. 2567
+  const thMonthAlt = Object.keys(THAI_MONTHS)
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRegExp)
+    .join("|");
+  const thRe = new RegExp(
+    `(\\d{1,2})\\s*(${thMonthAlt})\\.?\\s*(25\\d{2}|20\\d{2}|\\d{2})`,
+    "i",
+  );
+  const th = hay.match(thRe);
+  const plausible = (y: number, month: number, day: number) =>
+    y >= 2018 && y <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= 31;
+
+  if (th) {
+    const day = Number(th[1]);
+    const monthKey = th[2].replace(/\.$/, "");
+    const month = THAI_MONTHS[monthKey] || THAI_MONTHS[th[2]];
+    const year = toCeYear(th[3]);
+    if (month && year && plausible(year, month, day)) {
+      const date = `${year}-${pad2(month)}-${pad2(day)}`;
+      if (isDateKey(date)) return { date, label: "thai-month" };
     }
-    const date = `${y}-${mo}-${d}`;
-    if (isDateKey(date)) return { date, label };
+  }
+
+  // ISO / พ.ศ. เต็มก่อน — กัน 2026/07/21 ถูกอ่านเป็น 26/07/21
+  const iso = hay.match(/(?<!\d)(20\d{2}|25\d{2})[-\/.](\d{1,2})[-\/.](\d{1,2})(?!\d)/);
+  if (iso) {
+    const year = toCeYear(iso[1]);
+    const month = Number(iso[2]);
+    const day = Number(iso[3]);
+    if (year && plausible(year, month, day)) {
+      const date = `${year}-${pad2(month)}-${pad2(day)}`;
+      if (isDateKey(date)) return { date, label: "iso-like" };
+    }
+  }
+
+  // 27/07/2567 · 27/07/2024
+  const dmy4 = hay.match(/(?<!\d)(\d{1,2})[./](\d{1,2})[./](20\d{2}|25\d{2})(?!\d)/);
+  if (dmy4) {
+    const day = Number(dmy4[1]);
+    const month = Number(dmy4[2]);
+    const year = toCeYear(dmy4[3]);
+    if (year && plausible(year, month, day)) {
+      const date = `${year}-${pad2(month)}-${pad2(day)}`;
+      if (isDateKey(date)) return { date, label: "dmy" };
+    }
+  }
+
+  // 27/07/67 (ปีสั้นพ.ศ.)
+  const dmy2 = hay.match(/(?<!\d)(\d{1,2})[./](\d{1,2})[./](\d{2})(?!\d)/);
+  if (dmy2) {
+    const day = Number(dmy2[1]);
+    const month = Number(dmy2[2]);
+    const year = toCeYear(dmy2[3]);
+    if (year && plausible(year, month, day)) {
+      const date = `${year}-${pad2(month)}-${pad2(day)}`;
+      if (isDateKey(date)) return { date, label: "dmy-be2" };
+    }
   }
   if (fallbackMs && Number.isFinite(fallbackMs)) {
     const parts = new Intl.DateTimeFormat("en-CA", {
@@ -337,7 +445,7 @@ export function extractReportDate(
 function confidenceFromHits(grossLabel: string | undefined, fee: number, net: number): ParseConfidence {
   if (!grossLabel) return "low";
   if (fee > 0 || net > 0) return "high";
-  if (/ลูกค้า|customer|gmv|gross/i.test(grossLabel)) return "high";
+  if (/ลูกค้า|customer|gmv|gross|รายรับทั้งหมด/i.test(grossLabel)) return "high";
   if (/ยอดขายรวม|total sales|ยอดขาย/i.test(grossLabel)) return "medium";
   return "medium";
 }
@@ -365,6 +473,15 @@ export function parsePlatformEmail(input: {
   const subject = String(input.subject || "");
   const warnings: string[] = [];
 
+  if (isTaxInvoiceMail(subject, body)) {
+    return {
+      ok: false,
+      error: "เมลใบกำกับ/Tax Invoice — ไม่ใช่สรุปเงินเข้ารายวัน (ข้ามได้)",
+      parserVersion,
+      warnings: ["tax_invoice"],
+    };
+  }
+
   if (body.length < 20 && subject.length < 5) {
     return { ok: false, error: "เนื้อเมลว่างเกินไป", parserVersion, warnings };
   }
@@ -378,11 +495,14 @@ export function parsePlatformEmail(input: {
   const hay = `${subject}\n${body}`;
   const grossHit = findLabeledAmount(hay, grossSpec.labels);
   if (!grossHit) {
+    const pdfHint = /\.pdf|ไฟล์แนบ|เอกสารแนบ|attached file|ได้ถูกสรุปเป็นไฟล์แนบ/i.test(hay);
     return {
       ok: false,
-      error: "หาป้ายยอดขาย/ยอดลูกค้าไม่เจอ — ตรวจรูปแบบเมลหรือกรอกมือ",
+      error: pdfHint
+        ? "ยอดอยู่ใน PDF แนบ — ยังไม่ดึงจาก PDF อัตโนมัติ (เปิดแนบแล้วกรอกมือได้)"
+        : "หาป้ายยอดขาย/ยอดลูกค้าไม่เจอ — ตรวจรูปแบบเมลหรือกรอกมือ",
       parserVersion,
-      warnings,
+      warnings: pdfHint ? ["pdf_attachment"] : warnings,
     };
   }
 

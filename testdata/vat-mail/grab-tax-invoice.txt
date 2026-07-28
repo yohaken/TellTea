@@ -1,0 +1,9 @@
+# Grab tax invoice — must NOT parse as daily money-in
+From: no-reply@grab.com
+Subject: Grab: Receipt/Tax Invoice No. IM20260726044071 Date 26/07/2026
+
+Dear นาย ชัยพจน์ โอหาเสน,
+
+This email is sent on behalf of Grabtaxi (Thailand) Co., Ltd.
+Grab Receipt/Tax Invoice No. IM20260726044071 issued date 26/07/2026 is attached.
+Password is your Tax ID.

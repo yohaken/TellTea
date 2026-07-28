@@ -4,7 +4,11 @@
  */
 import { readFileSync } from "fs";
 import { join } from "path";
-import { parsePlatformEmail } from "../src/lib/vat-sales-parse";
+import {
+  extractReportDate,
+  isTaxInvoiceMail,
+  parsePlatformEmail,
+} from "../src/lib/vat-sales-parse";
 
 function assert(cond: unknown, msg: string): asserts cond {
   if (!cond) {
@@ -17,6 +21,9 @@ const root = process.cwd();
 const grabA = readFileSync(join(root, "testdata/vat-mail/grab-daily-a.txt"), "utf8");
 const grabB = readFileSync(join(root, "testdata/vat-mail/grab-daily-b.txt"), "utf8");
 const lm = readFileSync(join(root, "testdata/vat-mail/lineman-daily-a.txt"), "utf8");
+const lmWn = readFileSync(join(root, "testdata/vat-mail/lineman-daily-wongnai.txt"), "utf8");
+const grabPdf = readFileSync(join(root, "testdata/vat-mail/grab-daily-pdf-notice.txt"), "utf8");
+const grabTax = readFileSync(join(root, "testdata/vat-mail/grab-tax-invoice.txt"), "utf8");
 const sh = readFileSync(join(root, "testdata/vat-mail/shopee-daily-a.html"), "utf8");
 
 const a = parsePlatformEmail({
@@ -94,5 +101,47 @@ const fail = parsePlatformEmail({
   rawText: "no amounts here",
 });
 assert(!fail.ok, "should fail without labels");
+
+const lmReal = parsePlatformEmail({
+  channel: "lineman",
+  subject: "รายงานยอดขายรายวัน - LINE MAN Wongnai 27/07/67",
+  rawText: lmWn,
+});
+assert(lmReal.ok, (lmReal as { error?: string }).error || "lineman wongnai");
+if (lmReal.ok) {
+  assert(lmReal.parsed.reportDate === "2024-07-27", `lmWn date ${lmReal.parsed.reportDate}`);
+  assert(lmReal.parsed.grossInclusive === 956, `lmWn gross ${lmReal.parsed.grossInclusive}`);
+}
+
+const grabPdfRes = parsePlatformEmail({
+  channel: "grab",
+  subject: "สรุปยอดขายสำหรับคำสั่งซื้อ 26 กรกฎาคม 2024 ออนไลน์ประจำวันที่ GrabFood",
+  rawText: grabPdf,
+});
+assert(!grabPdfRes.ok, "grab pdf-only should fail until PDF parse");
+assert(
+  String((grabPdfRes as { error?: string }).error || "").includes("PDF"),
+  "grab pdf error mentions PDF",
+);
+const grabPdfDate = extractReportDate(
+  "สรุปยอดขายสำหรับคำสั่งซื้อ 26 กรกฎาคม 2024 ออนไลน์ประจำวันที่ GrabFood",
+  grabPdf,
+);
+assert(grabPdfDate?.date === "2024-07-26", `grab thai date ${grabPdfDate?.date}`);
+
+assert(
+  isTaxInvoiceMail("Grab: Receipt/Tax Invoice No. IM20260726044071 Date 26/07/2026"),
+  "tax invoice detect",
+);
+const taxRes = parsePlatformEmail({
+  channel: "grab",
+  subject: "Grab: Receipt/Tax Invoice No. IM20260726044071 Date 26/07/2026",
+  rawText: grabTax,
+});
+assert(!taxRes.ok, "tax invoice must not parse as daily");
+assert(
+  String((taxRes as { error?: string }).error || "").includes("ใบกำกับ"),
+  "tax invoice error",
+);
 
 console.log("all vat-mail parse fixtures ok");

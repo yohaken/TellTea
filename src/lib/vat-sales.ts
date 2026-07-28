@@ -41,26 +41,52 @@ export type PnlIncomeMode = "exVat" | "incVat";
 export type MailChannelRule = {
   enabled: boolean;
   fromIncludes: string[];
+  /** คำในหัวข้อที่บ่งชี้สรุปเงินเข้า/ยอดขาย */
   subjectIncludes: string[];
+  /** คำในหัวข้อที่ต้องข้าม (เช่น ใบกำกับรายออเดอร์) */
+  subjectExcludes?: string[];
 };
 
 export type VatMailRules = Record<DeliveryChannel, MailChannelRule>;
 
+/** แพทเทิร์นเงินเข้าจากเมลจริง — ดู docs/vat-mail-money-in-patterns.md */
 export const DEFAULT_MAIL_RULES: VatMailRules = {
   shopee: {
     enabled: true,
     fromIncludes: ["shopee", "shopeefood"],
-    subjectIncludes: ["shopee", "shopeefood", "สรุปยอด", "ยอดขาย"],
+    subjectIncludes: ["shopeefood", "สรุปยอด", "ยอดขาย", "รายงานยอด"],
+    subjectExcludes: ["otp", "verify"],
   },
   grab: {
     enabled: true,
     fromIncludes: ["grab.com", "grabfood"],
-    subjectIncludes: ["grab", "รายงาน", "สรุป", "sales", "settlement"],
+    subjectIncludes: [
+      "สรุปยอดขาย",
+      "grabfood",
+      "daily sales",
+      "รายงานยอดขาย",
+      "sales summary",
+    ],
+    subjectExcludes: [
+      "tax invoice",
+      "ใบกำกับภาษี",
+      "receipt/tax",
+      "receipt / tax",
+      "ใบเสร็จ",
+    ],
   },
   lineman: {
     enabled: true,
-    fromIncludes: ["lineman", "line.me", "linedelivery"],
-    subjectIncludes: ["lineman", "line man", "สรุป", "ยอดขาย", "รายงาน"],
+    fromIncludes: ["lineman", "wongnai", "line.me"],
+    subjectIncludes: [
+      "รายงานยอดขายรายวัน",
+      "line man",
+      "lineman",
+      "wongnai",
+      "สรุปยอด",
+      "ยอดขายรายวัน",
+    ],
+    subjectExcludes: ["otp", "verify"],
   },
 };
 
@@ -73,10 +99,15 @@ export function mapMailRules(raw: unknown): VatMailRules {
       Array.isArray(v) && v.length
         ? v.map((x) => String(x).trim()).filter(Boolean).slice(0, 20)
         : [...fb];
+    const excludes =
+      Array.isArray(src.subjectExcludes) && src.subjectExcludes.length
+        ? src.subjectExcludes.map((x) => String(x).trim()).filter(Boolean).slice(0, 20)
+        : [...(fallback.subjectExcludes || [])];
     return {
       enabled: src.enabled !== false,
       fromIncludes: list(src.fromIncludes, fallback.fromIncludes),
       subjectIncludes: list(src.subjectIncludes, fallback.subjectIncludes),
+      subjectExcludes: excludes,
     };
   };
   return {
