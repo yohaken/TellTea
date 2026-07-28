@@ -132,6 +132,10 @@ export type VatSalesSettings = {
     storefront: boolean;
   };
   mailRules: VatMailRules;
+  /** แจ้งเตือนเจ้าของเมื่อขาดเมล / parse พัง */
+  alertsEnabled: boolean;
+  /** ชั่วโมง Bangkok หลังวันนี้แล้วค่อยเตือนของเมื่อวาน (0–23) */
+  alertAfterHourBangkok: number;
   updatedAt: number;
   updatedBy: string;
 };
@@ -148,6 +152,8 @@ export const DEFAULT_VAT_SALES_SETTINGS: VatSalesSettings = {
     storefront: true,
   },
   mailRules: mapMailRules(undefined),
+  alertsEnabled: true,
+  alertAfterHourBangkok: 10,
   updatedAt: 0,
   updatedBy: "",
 };
@@ -357,6 +363,12 @@ export function mapVatSalesSettings(data: Partial<VatSalesSettings> | undefined)
       storefront: ch?.storefront !== false,
     },
     mailRules: mapMailRules(data?.mailRules),
+    alertsEnabled: data?.alertsEnabled !== false,
+    alertAfterHourBangkok: (() => {
+      const h = Number(data?.alertAfterHourBangkok);
+      if (!Number.isFinite(h)) return 10;
+      return Math.min(23, Math.max(0, Math.round(h)));
+    })(),
     updatedAt: typeof data?.updatedAt === "number" ? data.updatedAt : 0,
     updatedBy: typeof data?.updatedBy === "string" ? data.updatedBy : "",
   };
@@ -538,11 +550,16 @@ export type MonthSalesTotals = {
   shopee: number;
   grab: number;
   lineman: number;
+  feeTotal: number;
+  netTransferTotal: number;
   daysWithSales: number;
   confirmedDays: number;
 };
 
-export function sumMonthSales(docs: DailySalesDoc[]): MonthSalesTotals {
+export function sumMonthSales(
+  docs: DailySalesDoc[],
+  opts?: { confirmedOnly?: boolean },
+): MonthSalesTotals {
   const tot: MonthSalesTotals = {
     storefrontGross: 0,
     deliveryGross: 0,
@@ -552,13 +569,16 @@ export function sumMonthSales(docs: DailySalesDoc[]): MonthSalesTotals {
     shopee: 0,
     grab: 0,
     lineman: 0,
+    feeTotal: 0,
+    netTransferTotal: 0,
     daysWithSales: 0,
     confirmedDays: 0,
   };
   for (const d of docs) {
     if (d.status === "confirmed") tot.confirmedDays += 1;
-    if (d.totalGross <= 0) continue;
-    tot.daysWithSales += 1;
+    if (opts?.confirmedOnly && d.status !== "confirmed") continue;
+    if (d.totalGross <= 0 && d.status !== "confirmed") continue;
+    if (d.totalGross > 0 || d.status === "confirmed") tot.daysWithSales += 1;
     tot.storefrontGross = roundMoney(tot.storefrontGross + d.storefrontGross);
     tot.deliveryGross = roundMoney(tot.deliveryGross + d.deliveryGross);
     tot.totalGross = roundMoney(tot.totalGross + d.totalGross);
@@ -567,8 +587,33 @@ export function sumMonthSales(docs: DailySalesDoc[]): MonthSalesTotals {
     tot.shopee = roundMoney(tot.shopee + d.delivery.shopee.grossInclusive);
     tot.grab = roundMoney(tot.grab + d.delivery.grab.grossInclusive);
     tot.lineman = roundMoney(tot.lineman + d.delivery.lineman.grossInclusive);
+    tot.feeTotal = roundMoney(
+      tot.feeTotal +
+        d.delivery.shopee.fee +
+        d.delivery.grab.fee +
+        d.delivery.lineman.fee +
+        d.storefront.fee,
+    );
+    tot.netTransferTotal = roundMoney(
+      tot.netTransferTotal +
+        d.delivery.shopee.netTransfer +
+        d.delivery.grab.netTransfer +
+        d.delivery.lineman.netTransfer +
+        d.storefront.netTransfer,
+    );
   }
   return tot;
+}
+
+/** รายได้เสนอเข้า monthlyIncome ตามโหมด */
+export function proposeMonthlyIncomeAmount(
+  docs: DailySalesDoc[],
+  mode: PnlIncomeMode,
+): { amount: number; confirmedDays: number; totals: MonthSalesTotals } {
+  const confirmed = docs.filter((d) => d.status === "confirmed");
+  const totals = sumMonthSales(confirmed, { confirmedOnly: true });
+  const amount = mode === "incVat" ? totals.totalGross : totals.vatBase;
+  return { amount, confirmedDays: confirmed.length, totals };
 }
 
 /**

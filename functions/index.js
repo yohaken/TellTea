@@ -40,6 +40,9 @@ exports.vatMailOAuthStart = vatMail.vatMailOAuthStart;
 exports.vatMailOAuthCallback = vatMail.vatMailOAuthCallback;
 exports.vatMailDisconnect = vatMail.vatMailDisconnect;
 exports.vatMailSync = vatMail.vatMailSync;
+const vatSalesAlerts = require("./vat-sales-alerts");
+exports.vatSalesDailyAlert = vatSalesAlerts.vatSalesDailyAlert;
+exports.vatSalesAlertCheck = vatSalesAlerts.vatSalesAlertCheck;
 const VAPID_PUBLIC =
   process.env.VAPID_PUBLIC_KEY ||
   "BI74S6JyDs61V0eqRuS9iy6XdhER9wtA-EXhLfWiEFZSeg2VBBQM1dnPnFsyVY2AQzcKF7gHZm-Eifpsc7cF0Zg";

@@ -440,6 +440,11 @@ service cloud.firestore {
       allow write: if isOwner();
     }
 
+    /** บันทึกปิดเดือน VAT → monthlyIncome — เจ้าของเท่านั้น */
+    match /vatMonthCloses/{monthId} {
+      allow read, write: if isOwner();
+    }
+
     match /stock/{itemId} {
       allow read: if hasPerm('stock');
       allow create, delete: if isOwner();
@@ -596,7 +601,8 @@ service cloud.firestore {
         || (docId == 'vatMailOAuth' && isOwner())
         || (docId == 'vatMailOAuthConfig' && isOwner())
         || (docId == 'vatMailOAuthState' && isOwner())
-        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && docId != 'vatSalesSettings' && docId != 'vatMailOAuth' && docId != 'vatMailOAuthConfig' && docId != 'vatMailOAuthState' && isStaff())
+        || (docId == 'vatSalesAlertState' && isOwner())
+        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && docId != 'vatSalesSettings' && docId != 'vatMailOAuth' && docId != 'vatMailOAuthConfig' && docId != 'vatMailOAuthState' && docId != 'vatSalesAlertState' && isStaff())
         || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes' || docId == 'posMenuRank'));
       allow write: if isOwner()
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))

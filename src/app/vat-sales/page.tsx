@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { VatSalesMailPanel } from "@/components/vat-sales/VatSalesMailPanel";
+import { VatSalesMonthClosePanel } from "@/components/vat-sales/VatSalesMonthClosePanel";
 import { useAuth } from "@/lib/auth";
 import { formatPlainNumber } from "@/lib/utils";
 import {
+  bangkokDateKey,
   bangkokMonthKey,
   confirmDailySales,
   dateKeysInMonth,
@@ -28,8 +30,17 @@ import {
   type PnlIncomeMode,
   type VatSalesSettings,
 } from "@/lib/vat-sales";
+import { listPlatformEmailReportsForMonth } from "@/lib/vat-sales-mail";
+import {
+  countDayStatuses,
+  DAY_OPS_STATUS_LABELS,
+  deriveDayOpsStatus,
+  groupReportsByDate,
+  isActionNeeded,
+  type DayOpsStatus,
+} from "@/lib/vat-sales-status";
 
-type VatTab = "daily" | "mail";
+type VatTab = "daily" | "mail" | "close";
 
 export default function VatSalesPage() {
   return (
@@ -117,11 +128,18 @@ function VatSalesView({ actor }: { actor: string }) {
   const [msg, setMsg] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [reportEmailsText, setReportEmailsText] = useState("");
+  const [reportsByDate, setReportsByDate] = useState<
+    Record<string, import("@/lib/vat-sales-mail").PlatformEmailReport[]>
+  >({});
+  const [statusFilter, setStatusFilter] = useState<DayOpsStatus | "all" | "action">("all");
+  const [highlightDay, setHighlightDay] = useState<string | null>(null);
+  const todayKey = useMemo(() => bangkokDateKey(), []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("tab") === "mail") setTab("mail");
+    const t = params.get("tab");
+    if (t === "mail" || t === "close" || t === "daily") setTab(t);
     const mail = params.get("mail");
     if (mail === "connected") {
       setTab("mail");
@@ -138,14 +156,16 @@ function VatSalesView({ actor }: { actor: string }) {
     setLoading(true);
     setError("");
     try {
-      const [monthDocs, vatSettings] = await Promise.all([
+      const [monthDocs, vatSettings, monthReports] = await Promise.all([
         listDailySalesInMonth(month),
         loadVatSalesSettings(),
+        listPlatformEmailReportsForMonth(month).catch(() => []),
       ]);
       setDocs(monthDocs);
       setDrafts(draftsFromDocs(monthDocs));
       setSettings(vatSettings);
       setReportEmailsText(vatSettings.reportEmails.join("\n"));
+      setReportsByDate(groupReportsByDate(monthReports));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -162,7 +182,42 @@ function VatSalesView({ actor }: { actor: string }) {
     [dateKeys, docs],
   );
 
+  const dayStatuses = useMemo(() => {
+    if (!settings) return {} as Record<string, DayOpsStatus>;
+    const out: Record<string, DayOpsStatus> = {};
+    for (const k of dateKeys) {
+      out[k] = deriveDayOpsStatus(
+        k,
+        docs[k] || emptyDailySales(k),
+        reportsByDate[k] || [],
+        settings,
+        todayKey,
+      );
+    }
+    return out;
+  }, [dateKeys, docs, reportsByDate, settings, todayKey]);
+
+  const statusCounts = useMemo(
+    () => countDayStatuses(Object.values(dayStatuses)),
+    [dayStatuses],
+  );
+
+  const actionDays = useMemo(
+    () => dateKeys.filter((k) => isActionNeeded(dayStatuses[k] || "empty")),
+    [dateKeys, dayStatuses],
+  );
+
+  const visibleKeys = useMemo(() => {
+    if (statusFilter === "all") return dateKeys;
+    if (statusFilter === "action") return actionDays;
+    return dateKeys.filter((k) => dayStatuses[k] === statusFilter);
+  }, [dateKeys, statusFilter, dayStatuses, actionDays]);
+
   const totals = useMemo(() => sumMonthSales(rows), [rows]);
+  const confirmedTotals = useMemo(
+    () => sumMonthSales(rows, { confirmedOnly: true }),
+    [rows],
+  );
 
   const previewRow = useCallback(
     (dateKey: string): DailySalesDoc => {
@@ -392,6 +447,8 @@ function VatSalesView({ actor }: { actor: string }) {
           channelsEnabled: settings.channelsEnabled,
           reportEmails: emails,
           mailRules: settings.mailRules,
+          alertsEnabled: settings.alertsEnabled,
+          alertAfterHourBangkok: settings.alertAfterHourBangkok,
         },
         actor,
       );
@@ -449,6 +506,15 @@ function VatSalesView({ actor }: { actor: string }) {
           >
             กล่องเมล
           </button>
+          <button
+            type="button"
+            role="tab"
+            className={tab === "close" ? "vat-sales-tab is-active" : "vat-sales-tab"}
+            aria-selected={tab === "close"}
+            onClick={() => setTab("close")}
+          >
+            ปิดเดือน / VAT
+          </button>
         </div>
       </header>
 
@@ -470,6 +536,18 @@ function VatSalesView({ actor }: { actor: string }) {
         ) : (
           <p className="muted">กำลังโหลด...</p>
         )
+      ) : null}
+
+      {tab === "close" ? (
+        <VatSalesMonthClosePanel
+          month={month}
+          onMonthChange={setMonth}
+          actor={actor}
+          busy={busy}
+          setBusy={setBusy}
+          setError={setError}
+          setMsg={setMsg}
+        />
       ) : null}
 
       {tab === "daily" ? (
@@ -506,7 +584,57 @@ function VatSalesView({ actor }: { actor: string }) {
           >
             {showSettings ? "ซ่อนตั้งค่า" : "ตั้งค่า"}
           </button>
+          <label className="vat-sales-month">
+            กรองสถานะ
+            <select
+              value={statusFilter}
+              onChange={(e) =>
+                setStatusFilter(e.target.value as typeof statusFilter)
+              }
+            >
+              <option value="all">ทั้งหมด</option>
+              <option value="action">ต้องจัดการ</option>
+              {(Object.keys(DAY_OPS_STATUS_LABELS) as DayOpsStatus[]).map((s) => (
+                <option key={s} value={s}>
+                  {DAY_OPS_STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
+
+      {actionDays.length > 0 ? (
+        <section className="vat-sales-action-board">
+          <h2 className="vat-sales-section-title">ต้องจัดการ ({actionDays.length} วัน)</h2>
+          <div className="vat-sales-action-chips">
+            {actionDays.slice(0, 31).map((d) => (
+              <button
+                key={d}
+                type="button"
+                className="vat-sales-action-chip"
+                onClick={() => {
+                  setHighlightDay(d);
+                  setStatusFilter("action");
+                  const el = document.getElementById(`vat-day-${d}`);
+                  el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }}
+              >
+                {d.slice(8)} · {DAY_OPS_STATUS_LABELS[dayStatuses[d] || "empty"]}
+              </button>
+            ))}
+          </div>
+          <p className="muted vat-sales-hint">
+            ขาดเมล {statusCounts.missing_mail} · รอตรวจ {statusCounts.pending_review} ·
+            parse พัง {statusCounts.parse_error} · ยังไม่ครบ {statusCounts.incomplete} ·
+            พร้อมยืนยัน {statusCounts.ready} · ยืนยันแล้ว {statusCounts.confirmed}
+          </p>
+        </section>
+      ) : null}
+
+      <p className="muted vat-sales-hint">
+        รายได้ชั่วคราวจากวันยืนยันแล้ว (ยังไม่เข้า P&amp;L จนกดปิดเดือน): ฐานภาษี{" "}
+        {fmt(confirmedTotals.vatBase)} · รวม VAT {fmt(confirmedTotals.totalGross)}
+      </p>
 
       {showSettings && settings ? (
         <section className="vat-sales-settings">
@@ -573,6 +701,31 @@ function VatSalesView({ actor }: { actor: string }) {
               placeholder="one@email.com"
             />
           </label>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={settings.alertsEnabled}
+              onChange={(e) =>
+                setSettings({ ...settings, alertsEnabled: e.target.checked })
+              }
+            />
+            แจ้งเตือนเจ้าของเมื่อขาดเมล / parse พัง (เฉพาะ owner push)
+          </label>
+          <label className="vat-sales-field">
+            ชั่วโมงแจ้งเตือน (Bangkok)
+            <input
+              type="number"
+              min={0}
+              max={23}
+              value={settings.alertAfterHourBangkok}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  alertAfterHourBangkok: Number(e.target.value) || 0,
+                })
+              }
+            />
+          </label>
           <button
             type="button"
             className="primary-btn"
@@ -609,6 +762,14 @@ function VatSalesView({ actor }: { actor: string }) {
           <span className="muted">VAT 7%</span>
           <strong>{fmt(totals.vatOutput)}</strong>
         </div>
+        <div className="vat-sales-summary-card">
+          <span className="muted">ค่าธรรมเนียม</span>
+          <strong>{fmt(totals.feeTotal)}</strong>
+        </div>
+        <div className="vat-sales-summary-card">
+          <span className="muted">ยอดโอนสุทธิ</span>
+          <strong>{fmt(totals.netTransferTotal)}</strong>
+        </div>
       </section>
 
       <p className="muted vat-sales-hint">
@@ -634,21 +795,37 @@ function VatSalesView({ actor }: { actor: string }) {
                 <th className="col-num">ยอดร้าน</th>
                 <th className="col-num">ฐานภาษี</th>
                 <th className="col-num">VAT</th>
-                <th>สถานะ</th>
+                <th>สถานะวัน</th>
+                <th>บันทึก</th>
                 <th className="col-act">จัดการ</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => {
-                const dateKey = row.dateKey;
+              {visibleKeys.length === 0 ? (
+                <tr>
+                  <td colSpan={12} className="empty">
+                    ไม่มีวันที่ตรงตัวกรอง
+                  </td>
+                </tr>
+              ) : (
+              visibleKeys.map((dateKey) => {
+                const row = docs[dateKey] || emptyDailySales(dateKey);
                 const draft = drafts[dateKey];
                 const preview = previewRow(dateKey);
                 const locked = row.status === "confirmed";
                 const dayBusy = busy === dateKey;
+                const ops = dayStatuses[dateKey] || "empty";
                 return (
                   <tr
                     key={dateKey}
-                    className={locked ? "vat-sales-row-confirmed" : undefined}
+                    id={`vat-day-${dateKey}`}
+                    className={[
+                      locked ? "vat-sales-row-confirmed" : "",
+                      highlightDay === dateKey ? "vat-sales-row-highlight" : "",
+                      isActionNeeded(ops) ? "vat-sales-row-action" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ") || undefined}
                   >
                     <td className="col-date">
                       {fmtDay(dateKey)}
@@ -687,6 +864,11 @@ function VatSalesView({ actor }: { actor: string }) {
                     <td className="col-num">{fmt(preview.vatBase)}</td>
                     <td className="col-num">{fmt(preview.vatOutput)}</td>
                     <td>
+                      <span className={`vat-ops-badge vat-ops-${ops}`}>
+                        {DAY_OPS_STATUS_LABELS[ops]}
+                      </span>
+                    </td>
+                    <td>
                       <span
                         className={
                           locked ? "vat-sales-badge ok" : "vat-sales-badge draft"
@@ -715,11 +897,21 @@ function VatSalesView({ actor }: { actor: string }) {
                         >
                           {locked ? "ปลดล็อก" : "ยืนยัน"}
                         </button>
+                        {ops === "pending_review" || ops === "parse_error" || ops === "missing_mail" ? (
+                          <button
+                            type="button"
+                            className="ghost-btn vat-sales-act-btn"
+                            onClick={() => setTab("mail")}
+                          >
+                            เมล
+                          </button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
                 );
-              })}
+              })
+              )}
             </tbody>
             <tfoot>
               <tr className="vat-sales-totals-row">
@@ -732,7 +924,7 @@ function VatSalesView({ actor }: { actor: string }) {
                 <td className="col-num">{fmt(totals.totalGross)}</td>
                 <td className="col-num">{fmt(totals.vatBase)}</td>
                 <td className="col-num">{fmt(totals.vatOutput)}</td>
-                <td colSpan={2} />
+                <td colSpan={3} />
               </tr>
             </tfoot>
           </table>

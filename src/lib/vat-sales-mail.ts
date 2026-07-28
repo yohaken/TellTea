@@ -205,7 +205,7 @@ export async function listPlatformEmailReports(opts?: {
     query(
       collection(getDb(), PLATFORM_EMAIL_REPORTS_COL),
       orderBy("receivedAt", "desc"),
-      limit(Math.min(200, Math.max(opts?.max || 80, 80))),
+      limit(Math.min(300, Math.max(opts?.max || 80, 80))),
     ),
   );
   let rows = snap.docs.map((d) => mapReport(d.id, d.data() as Record<string, unknown>));
@@ -216,6 +216,17 @@ export async function listPlatformEmailReports(opts?: {
     rows = rows.filter((r) => r.parseStatus === opts.parseStatus);
   }
   return rows.slice(0, opts?.max || 80);
+}
+
+/** เมลที่เกี่ยวกับเดือน (reportDate / guess ขึ้นต้นด้วย YYYY-MM) */
+export async function listPlatformEmailReportsForMonth(
+  monthKey: string,
+): Promise<PlatformEmailReport[]> {
+  const rows = await listPlatformEmailReports({ max: 300 });
+  return rows.filter((r) => {
+    const d = (r.parsed?.reportDate || r.reportDateGuess || "").trim();
+    return d.startsWith(monthKey);
+  });
 }
 
 export async function setPlatformEmailIgnored(id: string, ignored: boolean): Promise<void> {
