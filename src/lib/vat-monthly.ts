@@ -19,10 +19,113 @@ import {
 export const VAT_MONTHLY_COL = "vatMonthlyReturns";
 export const VAT_MONTHLY_SETTINGS_DOC = "vatMonthlySettings";
 
+/** โซนเวลารอบ VAT — ตรึง Asia/Bangkok เสมอ */
+export const VAT_PERIOD_TZ = "Asia/Bangkok";
+/** วันเริ่มรอบในเดือน (default = วันที่ 1 เวลา 00:00) */
+export const DEFAULT_PERIOD_START_DAY = 1;
+
 /** ปัดลงเป็นสตางค์ — ใช้ฝั่งภาษีซื้อ (play-safe) */
 export function floorMoney(n: number): number {
   if (!Number.isFinite(n) || n <= 0) return 0;
   return Math.floor(n * 100 + Number.EPSILON) / 100;
+}
+
+/** clamp วันเริ่มรอบ 1–28 (กันเดือนกุมภาพันธ์) */
+export function normalizePeriodStartDay(raw: unknown): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return DEFAULT_PERIOD_START_DAY;
+  return Math.min(28, Math.max(1, Math.floor(n)));
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function daysInMonth(year: number, month1to12: number): number {
+  return new Date(Date.UTC(year, month1to12, 0)).getUTCDate();
+}
+
+function addCalendarMonths(
+  year: number,
+  month1to12: number,
+  delta: number,
+): { year: number; month: number } {
+  const idx = year * 12 + (month1to12 - 1) + delta;
+  return { year: Math.floor(idx / 12), month: (idx % 12) + 1 };
+}
+
+/** วันที่แบบ d/M/พ.ศ. เช่น 1/7/2569 */
+export function formatThaiDateKey(dateKey: string): string {
+  if (!isMonthKey(dateKey) && !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return dateKey;
+  const [ys, ms, ds] = dateKey.split("-");
+  const y = Number(ys);
+  const m = Number(ms);
+  const d = Number(ds || "1");
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return dateKey;
+  return `${d}/${m}/${y + 543}`;
+}
+
+export type VatPeriodBoundary = {
+  monthKey: string;
+  startDay: number;
+  timeZone: string;
+  /** รวม — เริ่ม 00:00 */
+  startDateKey: string;
+  /** ไม่รวม — 00:00 ของวันถัดจากรอบ */
+  endExclusiveDateKey: string;
+  /** รวม — วันสุดท้ายของรอบ */
+  endInclusiveDateKey: string;
+  /** เช่น 00:00 น. 1/7/2569 → 00:00 น. 1/8/2569 (ไม่รวม) */
+  labelExclusive: string;
+  /** เช่น 00:00 น. 1/7/2569 → 23:59 น. 31/7/2569 */
+  labelInclusive: string;
+};
+
+/**
+ * ขอบเขตรอบ VAT ของ monthKey (YYYY-MM)
+ * เริ่ม 00:00 น. วันที่ startDay · จบก่อน 00:00 น. ของรอบถัดไป
+ * โซนเวลา: Asia/Bangkok
+ */
+export function getVatPeriodBoundary(
+  monthKey: string,
+  startDay: number = DEFAULT_PERIOD_START_DAY,
+): VatPeriodBoundary {
+  if (!isMonthKey(monthKey)) {
+    throw new Error("เดือนไม่ถูกต้อง");
+  }
+  const day = normalizePeriodStartDay(startDay);
+  const [ys, ms] = monthKey.split("-").map(Number);
+  const dim = daysInMonth(ys, ms);
+  const startD = Math.min(day, dim);
+  const startDateKey = `${ys}-${pad2(ms)}-${pad2(startD)}`;
+
+  const next = addCalendarMonths(ys, ms, 1);
+  const nextDim = daysInMonth(next.year, next.month);
+  const nextStartD = Math.min(day, nextDim);
+  const endExclusiveDateKey = `${next.year}-${pad2(next.month)}-${pad2(nextStartD)}`;
+
+  // วันสุดท้ายรวม = วันปฏิทินก่อน endExclusive
+  const endInclusiveDateKey = (() => {
+    const [ey, em, ed] = endExclusiveDateKey.split("-").map(Number);
+    if (ed > 1) return `${ey}-${pad2(em)}-${pad2(ed - 1)}`;
+    const prev = addCalendarMonths(ey, em, -1);
+    return `${prev.year}-${pad2(prev.month)}-${pad2(daysInMonth(prev.year, prev.month))}`;
+  })();
+
+  const startTh = formatThaiDateKey(startDateKey);
+  const endExTh = formatThaiDateKey(endExclusiveDateKey);
+  const endIncTh = formatThaiDateKey(endInclusiveDateKey);
+
+  return {
+    monthKey,
+    startDay: day,
+    timeZone: VAT_PERIOD_TZ,
+    startDateKey,
+    endExclusiveDateKey,
+    endInclusiveDateKey,
+    labelExclusive: `00:00 น. ${startTh} → 00:00 น. ${endExTh} (ไม่รวม)`,
+    labelInclusive: `00:00 น. ${startTh} → 23:59 น. ${endIncTh}`,
+  };
 }
 
 export type VatLogicRates = {
@@ -102,6 +205,11 @@ export type VatMonthlySettings = {
   deliveryRates: VatLogicRates;
   storefrontRates: VatLogicRates;
   pnlIncomeMode: "exVat" | "incVat";
+  /**
+   * วันเริ่มรอบในแต่ละเดือน (1–28) เวลา 00:00 น. Asia/Bangkok
+   * default = 1 → เช่น 00:00 น. 1/7/2569 → 00:00 น. 1/8/2569 (ไม่รวม)
+   */
+  periodStartDay: number;
   updatedAt: number;
   updatedBy: string;
 };
@@ -279,6 +387,9 @@ export function mapVatMonthlySettings(
     deliveryRates: mapVatLogicRates(data?.deliveryRates),
     storefrontRates: mapVatLogicRates(data?.storefrontRates),
     pnlIncomeMode: data?.pnlIncomeMode === "incVat" ? "incVat" : "exVat",
+    periodStartDay: normalizePeriodStartDay(
+      data?.periodStartDay ?? DEFAULT_PERIOD_START_DAY,
+    ),
     updatedAt: Number(data?.updatedAt) || 0,
     updatedBy: String(data?.updatedBy || ""),
   };
@@ -305,6 +416,10 @@ export async function saveVatMonthlySettings(
     storefrontRates: patch.storefrontRates
       ? mapVatLogicRates(patch.storefrontRates)
       : current.storefrontRates,
+    periodStartDay:
+      patch.periodStartDay != null
+        ? normalizePeriodStartDay(patch.periodStartDay)
+        : current.periodStartDay,
     updatedAt: Date.now(),
     updatedBy: by,
   });

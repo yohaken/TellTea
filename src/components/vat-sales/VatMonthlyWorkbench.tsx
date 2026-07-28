@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatPlainNumber } from "@/lib/utils";
 import {
+  DEFAULT_PERIOD_START_DAY,
   DEFAULT_VAT_LOGIC_RATES,
   emptySegment,
   fileVatMonthlyReturn,
+  getVatPeriodBoundary,
   loadVatMonthlyReturn,
   loadVatMonthlySettings,
   mapVatLogicRates,
+  normalizePeriodStartDay,
   proposePnlIncome,
   recomputeSegment,
   saveVatMonthlyReturn,
@@ -344,6 +347,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   const [trialGrossS, setTrialGrossS] = useState("");
   const [trialIngD, setTrialIngD] = useState("");
   const [trialIngS, setTrialIngS] = useState("");
+  const [periodStartDay, setPeriodStartDay] = useState(DEFAULT_PERIOD_START_DAY);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -355,6 +359,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       ]);
       setDoc(ret);
       setSettings(st);
+      setPeriodStartDay(st.periodStartDay);
       setDeliveryDraft(segToDraft(ret.delivery));
       setStorefrontDraft(segToDraft(ret.storefront));
       setNote(ret.note);
@@ -390,6 +395,11 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   );
 
   const locked = doc?.status === "filed";
+
+  const period = useMemo(
+    () => getVatPeriodBoundary(month, periodStartDay),
+    [month, periodStartDay],
+  );
 
   const trialDeliverySeg = useMemo(
     () =>
@@ -469,9 +479,11 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           deliveryRates: trialDelivery,
           storefrontRates: trialStorefront,
           pnlIncomeMode: pnlMode,
+          periodStartDay: normalizePeriodStartDay(periodStartDay),
         },
         actor,
       );
+      setPeriodStartDay(next.periodStartDay);
       setSettings(next);
       setMsg("บันทึกเรทเริ่มต้นแล้ว");
     } catch (e) {
@@ -585,6 +597,14 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         {busy ? <span className="muted">กำลังทำงาน…</span> : null}
       </div>
 
+      <div className="vat-period-banner" role="note">
+        <strong>รอบตัดยอด</strong>
+        <span>{period.labelInclusive}</span>
+        <span className="muted vat-period-banner-sub">
+          ({period.labelExclusive} · เวลา {period.timeZone})
+        </span>
+      </div>
+
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
 
@@ -683,6 +703,25 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                   ? ` · เรทเริ่มต้นที่บันทึกไว้: ส่ง ${settings.deliveryRates.outputNum}/${settings.deliveryRates.outputDen} · ร้าน ${settings.storefrontRates.outputNum}/${settings.storefrontRates.outputDen}`
                   : ""}
               </p>
+
+              <label className="vat-sales-field vat-period-start-field">
+                วันเริ่มรอบแต่ละเดือน (00:00 น. เวลาไทย)
+                <input
+                  type="number"
+                  min={1}
+                  max={28}
+                  step={1}
+                  value={periodStartDay}
+                  onChange={(e) =>
+                    setPeriodStartDay(
+                      normalizePeriodStartDay(e.target.value || 1),
+                    )
+                  }
+                />
+                <span className="muted vat-sales-hint">
+                  ค่าเริ่มต้น = 1 → เช่น 00:00 น. 1/7/2569 ถึงก่อน 00:00 น. 1/8/2569
+                </span>
+              </label>
 
               <div className="vat-seg-grid">
                 <RatesEditor

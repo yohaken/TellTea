@@ -20,7 +20,25 @@
 
 ---
 
-## 2) แนวคิดใหม่ (หนึ่งภาพ)
+## 2) รอบตัดยอด (ต้องชัด — กันสับสน)
+
+- โซนเวลา: **Asia/Bangkok** เท่านั้น  
+- เริ่มรอบ: **00:00 น.** ของวันที่เริ่ม (default = วันที่ **1** ของเดือน)  
+- จบรอบ: ก่อน **00:00 น.** ของวันเริ่มรอบถัดไป (ไม่รวม)
+
+ตัวอย่างเดือน ก.ค. 2569 (monthKey `2026-07`, startDay = 1):
+
+```
+00:00 น. 1/7/2569  →  00:00 น. 1/8/2569 (ไม่รวม)
+หรือเทียบเท่า:     →  23:59 น. 31/7/2569
+```
+
+ยอดที่ใส่ในเดือนนี้ = ยอดขายในช่วงเวลานี้เท่านั้น  
+วันเริ่มรอบแก้ได้ในแท็บ **ตารางทด** (1–28) แล้วบันทึกเป็นค่าเริ่มต้น
+
+---
+
+## 3) แนวคิดใหม่ (หนึ่งภาพ)
 
 ```
 [ ยอดขายรวมทั้งเดือน ]  ──แยก──►  Delivery | หน้าร้าน
@@ -44,7 +62,7 @@
 
 ---
 
-## 3) โครงสร้างหน้าใหม่
+## 4) โครงสร้างหน้าใหม่
 
 | แท็บ | งาน |
 |------|-----|
@@ -56,7 +74,7 @@
 
 ---
 
-## 4) Firestore (ใหม่)
+## 5) Firestore (ใหม่)
 
 ```
 vatMonthlyReturns/{YYYY-MM}
@@ -67,7 +85,7 @@ vatMonthlyReturns/{YYYY-MM}
   pnlIncome, pnlIncomeMode, note, filedAt/By, updatedAt/By
 
 meta/vatMonthlySettings
-  deliveryRates, storefrontRates, pnlIncomeMode
+  deliveryRates, storefrontRates, pnlIncomeMode, periodStartDay
 ```
 
 - Owner-only ทุกอัน  
@@ -75,7 +93,7 @@ meta/vatMonthlySettings
 
 ---
 
-## 5) สูตร (จุดเดียว)
+## 6) สูตร (จุดเดียว)
 
 ```
 outputVat = round(gross × outputNum / outputDen)   // default 7/107
@@ -89,7 +107,7 @@ netVat   = outputVat − inputVat
 
 ---
 
-## 6) สิ่งที่ยกทิ้งจากทางใช้งานหลัก
+## 7) สิ่งที่ยกทิ้งจากทางใช้งานหลัก
 
 - ตารางรายวัน / สถานะวัน / confirm รายวัน  
 - แท็บเมล · เทียบยอด · parser health เป็น workflow หลัก  

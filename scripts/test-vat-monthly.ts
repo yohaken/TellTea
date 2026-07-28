@@ -7,6 +7,8 @@ import {
   computeVatSegment,
   DEFAULT_VAT_LOGIC_RATES,
   floorMoney,
+  formatThaiDateKey,
+  getVatPeriodBoundary,
   mapVatLogicRates,
   proposePnlIncome,
   recomputeSegment,
@@ -92,6 +94,20 @@ assert.equal(floorMoney(0), 0);
   assert.ok(delivery.gpVatClaimed !== storefront.gpVatClaimed);
   assert.equal(proposePnlIncome(totals, "exVat"), totals.vatBase);
   assert.equal(proposePnlIncome(totals, "incVat"), totals.grossSales);
+}
+
+// รอบตัดยอด: 00:00 1/7/2569 → 00:00 1/8/2569 (ไม่รวม)
+{
+  assert.equal(formatThaiDateKey("2026-07-01"), "1/7/2569");
+  const p = getVatPeriodBoundary("2026-07", 1);
+  assert.equal(p.startDateKey, "2026-07-01");
+  assert.equal(p.endExclusiveDateKey, "2026-08-01");
+  assert.equal(p.endInclusiveDateKey, "2026-07-31");
+  assert.equal(p.labelInclusive, "00:00 น. 1/7/2569 → 23:59 น. 31/7/2569");
+  assert.equal(
+    p.labelExclusive,
+    "00:00 น. 1/7/2569 → 00:00 น. 1/8/2569 (ไม่รวม)",
+  );
 }
 
 console.log("test-vat-monthly: ok");
