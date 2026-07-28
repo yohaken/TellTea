@@ -68,11 +68,13 @@
 
 | แท็บ | งาน |
 |------|-----|
-| **เดือน** | กรอกยอดส่ง + ยอดร้าน + GP/วัตถุดิบ · เห็นภาษีขาย/ซื้อ/สุทธิ |
-| **ตารางทด** | แก้เรท (7/107, สัดส่วน GP, claim factor, ปัดลง) · ทดตัวเลขก่อนใช้จริง |
-| **ปิด P&L** | ยืนยันมือ → `monthlyIncome` |
+| **เดือน** | ตารางเดียว: ส่ง/ร้าน (+ ย่อย) · แตะแก้เรทเดือนนั้น · GP% · ภาษีซื้อ · สุทธิ |
+| **ปิด P&L** | ตารางมาตรฐาน Output−Input → รายได้ P&L · ปิดแล้วล็อก |
 
-แยกเรท Delivery / หน้าร้านได้ (เรทอาจต่างกันเล็กน้อย)
+- เดลิเวอรี่ `+` → ShopeeFood / Grab / LINE MAN  
+- หน้าร้าน `+` → เงินโอน / เงินสด  
+- เรทเก็บต่อเดือน (คนละเดือนต่างกันได้) · `filed` = ล็อกแก้  
+- ยกเลิกแท็บตารางทด — ปรับเรทในตารางเดือนเลย
 
 ---
 
@@ -80,10 +82,15 @@
 
 ```
 vatMonthlyReturns/{YYYY-MM}
-  delivery { grossSales, gpVat, useGpEstimate, ingredientVat, rates, …computed }
-  storefront { … }
+  delivery {
+    channels { shopee, grab, lineman }, grossManual, grossSales,
+    gpVat, useGpEstimate, ingredientVat, rates, …computed
+  }
+  storefront {
+    tenders { transfer, cash }, grossManual, grossSales, …
+  }
   totals { grossSales, vatBase, outputVat, inputVat, netVat }
-  status: draft|saved|filed
+  status: draft|saved|filed   // filed = ล็อกแก้
   pnlIncome, pnlIncomeMode, note, filedAt/By, updatedAt/By
 
 meta/vatMonthlySettings

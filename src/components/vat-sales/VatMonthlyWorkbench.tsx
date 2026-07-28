@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { formatPlainNumber } from "@/lib/utils";
+import { formatDateTimeShort, formatPlainNumber } from "@/lib/utils";
 import {
   DEFAULT_PERIOD_START_DAY,
   DEFAULT_VAT_LOGIC_RATES,
@@ -11,16 +11,16 @@ import {
   loadVatMonthlyReturn,
   loadVatMonthlySettings,
   mapVatLogicRates,
-  normalizePeriodStartDay,
   proposePnlIncome,
+  ratesLabel,
   recomputeSegment,
   saveVatMonthlyReturn,
-  saveVatMonthlySettings,
   sumMonthlyTotals,
   unlockVatMonthlyReturn,
+  type DeliveryChannels,
+  type StorefrontTenders,
   type VatLogicRates,
   type VatMonthlyReturn,
-  type VatMonthlySettings,
   type VatSegmentState,
 } from "@/lib/vat-monthly";
 
@@ -45,40 +45,6 @@ function parseRate(raw: string, fallback: number): number {
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 }
 
-type Props = {
-  actor: string;
-};
-
-type Tab = "month" | "trial" | "close";
-
-type DraftSeg = {
-  grossSales: string;
-  gpVat: string;
-  useGpEstimate: boolean;
-  ingredientVat: string;
-  rates: VatLogicRates;
-};
-
-function segToDraft(seg: VatSegmentState): DraftSeg {
-  return {
-    grossSales: moneyInputValue(seg.grossSales),
-    gpVat: moneyInputValue(seg.gpVat),
-    useGpEstimate: seg.useGpEstimate,
-    ingredientVat: moneyInputValue(seg.ingredientVat),
-    rates: mapVatLogicRates(seg.rates),
-  };
-}
-
-function draftToSeg(d: DraftSeg): VatSegmentState {
-  return recomputeSegment({
-    grossSales: parseMoneyInput(d.grossSales),
-    gpVat: parseMoneyInput(d.gpVat),
-    useGpEstimate: d.useGpEstimate,
-    ingredientVat: parseMoneyInput(d.ingredientVat),
-    rates: d.rates,
-  });
-}
-
 function roundPct(n: number) {
   return Math.round(n * 10000) / 100;
 }
@@ -87,185 +53,324 @@ function pctLabel(n: number) {
   return `${formatPlainNumber(roundPct(n))}%`;
 }
 
-function RatesEditor({
-  title,
-  rates,
-  onChange,
-  disabled,
-}: {
-  title: string;
+type Props = { actor: string };
+type Tab = "month" | "close";
+
+type DraftSeg = {
+  grossManual: string;
+  channels: Record<keyof DeliveryChannels, string>;
+  tenders: Record<keyof StorefrontTenders, string>;
+  gpVat: string;
+  useGpEstimate: boolean;
+  ingredientVat: string;
   rates: VatLogicRates;
-  onChange: (r: VatLogicRates) => void;
-  disabled?: boolean;
+};
+
+function segToDraft(seg: VatSegmentState): DraftSeg {
+  return {
+    grossManual: moneyInputValue(seg.grossManual),
+    channels: {
+      shopee: moneyInputValue(seg.channels.shopee),
+      grab: moneyInputValue(seg.channels.grab),
+      lineman: moneyInputValue(seg.channels.lineman),
+    },
+    tenders: {
+      transfer: moneyInputValue(seg.tenders.transfer),
+      cash: moneyInputValue(seg.tenders.cash),
+    },
+    gpVat: moneyInputValue(seg.gpVat),
+    useGpEstimate: seg.useGpEstimate,
+    ingredientVat: moneyInputValue(seg.ingredientVat),
+    rates: mapVatLogicRates(seg.rates),
+  };
+}
+
+function draftToSeg(
+  kind: "delivery" | "storefront",
+  d: DraftSeg,
+): VatSegmentState {
+  return recomputeSegment({
+    kind,
+    grossManual: parseMoneyInput(d.grossManual),
+    channels: {
+      shopee: parseMoneyInput(d.channels.shopee),
+      grab: parseMoneyInput(d.channels.grab),
+      lineman: parseMoneyInput(d.channels.lineman),
+    },
+    tenders: {
+      transfer: parseMoneyInput(d.tenders.transfer),
+      cash: parseMoneyInput(d.tenders.cash),
+    },
+    gpVat: parseMoneyInput(d.gpVat),
+    useGpEstimate: d.useGpEstimate,
+    ingredientVat: parseMoneyInput(d.ingredientVat),
+    rates: d.rates,
+  });
+}
+
+function MoneyCell({
+  value,
+  locked,
+  ariaLabel,
+  onChange,
+}: {
+  value: string;
+  locked: boolean;
+  ariaLabel: string;
+  onChange: (v: string) => void;
 }) {
   return (
-    <div className="vat-rates-block">
-      <h3 className="vat-sales-section-title">{title}</h3>
-      <div className="vat-rates-grid">
-        <label className="vat-sales-field">
-          ภาษีขาย เศษ
-          <input
-            type="number"
-            min={0}
-            step={1}
-            disabled={disabled}
-            value={rates.outputNum}
-            onChange={(e) =>
-              onChange({
-                ...rates,
-                outputNum: parseRate(e.target.value, rates.outputNum),
-              })
-            }
-          />
-        </label>
-        <label className="vat-sales-field">
-          ภาษีขาย ส่วน
-          <input
-            type="number"
-            min={1}
-            step={1}
-            disabled={disabled}
-            value={rates.outputDen}
-            onChange={(e) =>
-              onChange({
-                ...rates,
-                outputDen: parseRate(e.target.value, rates.outputDen) || 1,
-              })
-            }
-          />
-        </label>
-        <label className="vat-sales-field">
-          GP % ของภาษีขาย
-          <input
-            type="number"
-            min={0}
-            max={100}
-            step={0.01}
-            disabled={disabled}
-            value={roundPct(rates.gpOfOutput)}
-            onChange={(e) => {
-              const pct = Math.min(100, parseRate(e.target.value, roundPct(rates.gpOfOutput)));
-              onChange({ ...rates, gpOfOutput: pct / 100 });
-            }}
-          />
-        </label>
-        <label className="vat-sales-field">
-          ยื่นภาษีซื้อ %
-          <input
-            type="number"
-            min={1}
-            max={100}
-            step={0.01}
-            disabled={disabled}
-            value={roundPct(rates.inputClaimFactor)}
-            onChange={(e) => {
-              const pct = Math.min(
-                100,
-                Math.max(1, parseRate(e.target.value, roundPct(rates.inputClaimFactor))),
-              );
-              onChange({ ...rates, inputClaimFactor: pct / 100 });
-            }}
-          />
-        </label>
-        <label className="vat-sales-check-slim">
-          <input
-            type="checkbox"
-            disabled={disabled}
-            checked={rates.floorInput}
-            onChange={(e) =>
-              onChange({ ...rates, floorInput: e.target.checked })
-            }
-          />
-          ปัดลงภาษีซื้อ
-        </label>
-      </div>
-      <p className="muted vat-sales-hint vat-hint-one-line">
-        ภาษีขาย = ยอดรวม × {rates.outputNum}/{rates.outputDen}
-        {" · "}
-        GP ประมาณ {pctLabel(rates.gpOfOutput)} ของภาษีขาย
-        {" · "}
-        ยื่นภาษีซื้อ {pctLabel(rates.inputClaimFactor)}
-      </p>
-    </div>
+    <input
+      className="vat-sales-input"
+      inputMode="decimal"
+      disabled={locked}
+      value={value}
+      placeholder="0"
+      aria-label={ariaLabel}
+      onChange={(e) => onChange(e.target.value)}
+    />
   );
 }
 
-function MonthSegmentRow({
+function TapRate({
+  value,
+  locked,
+  ariaLabel,
+  onCommit,
+  suffix = "",
+  step = "1",
+}: {
+  value: number;
+  locked: boolean;
+  ariaLabel: string;
+  onCommit: (n: number) => void;
+  suffix?: string;
+  step?: string;
+}) {
+  if (locked) {
+    return (
+      <span className="vat-tap-val">
+        {formatPlainNumber(value)}
+        {suffix}
+      </span>
+    );
+  }
+  return (
+    <span className="vat-tap-edit">
+      <input
+        className="vat-sales-input vat-tap-input"
+        type="number"
+        step={step}
+        min={0}
+        disabled={locked}
+        aria-label={ariaLabel}
+        value={Number.isFinite(value) ? value : 0}
+        onChange={(e) => onCommit(parseRate(e.target.value, value))}
+      />
+      {suffix ? <span className="vat-tap-suffix">{suffix}</span> : null}
+    </span>
+  );
+}
+
+function ParentSegRows({
+  kind,
   label,
   draft,
   computed,
   locked,
+  open,
+  onToggle,
   onChange,
 }: {
+  kind: "delivery" | "storefront";
   label: string;
   draft: DraftSeg;
   computed: VatSegmentState;
   locked: boolean;
+  open: boolean;
+  onToggle: () => void;
   onChange: (d: DraftSeg) => void;
 }) {
+  const usesParts = computed.partsSum > 0;
+  const patchRates = (rates: VatLogicRates) => onChange({ ...draft, rates });
+
   return (
-    <tr>
-      <td className="col-seg">{label}</td>
-      <td className="col-num col-input">
-        <input
-          className="vat-sales-input"
-          inputMode="decimal"
-          disabled={locked}
-          value={draft.grossSales}
-          placeholder="0"
-          aria-label={`${label} ยอดขายรวม VAT`}
-          onChange={(e) => onChange({ ...draft, grossSales: e.target.value })}
-        />
-      </td>
-      <td className="col-num">{fmt(computed.vatBase)}</td>
-      <td className="col-num">{fmt(computed.outputVat)}</td>
-      <td className="col-pct">
-        <span className="vat-pct-val">{pctLabel(computed.rates.gpOfOutput)}</span>
-        <label className="vat-gp-toggle">
-          <input
-            type="checkbox"
-            disabled={locked}
-            checked={draft.useGpEstimate}
-            onChange={(e) =>
-              onChange({ ...draft, useGpEstimate: e.target.checked })
+    <>
+      <tr className="vat-row-parent">
+        <td className="col-seg">
+          <button
+            type="button"
+            className="vat-expand-btn"
+            aria-expanded={open}
+            onClick={onToggle}
+          >
+            {open ? "−" : "+"}
+          </button>
+          <span>{label}</span>
+        </td>
+        <td className="col-num col-input">
+          {usesParts ? (
+            <span className="vat-est-val" title="รวมจากรายการย่อย">
+              {fmt(computed.grossSales)}
+            </span>
+          ) : (
+            <MoneyCell
+              value={draft.grossManual}
+              locked={locked}
+              ariaLabel={`${label} ยอดขายรวม VAT`}
+              onChange={(v) => onChange({ ...draft, grossManual: v })}
+            />
+          )}
+        </td>
+        <td className="col-num">{fmt(computed.vatBase)}</td>
+        <td className="col-num">{fmt(computed.outputVat)}</td>
+        <td className="col-rate">
+          <span className="vat-rate-pair">
+            <TapRate
+              value={draft.rates.outputNum}
+              locked={locked}
+              ariaLabel={`${label} เศษภาษีขาย`}
+              onCommit={(n) =>
+                patchRates({ ...draft.rates, outputNum: Math.max(0, n) })
+              }
+            />
+            <span>/</span>
+            <TapRate
+              value={draft.rates.outputDen}
+              locked={locked}
+              ariaLabel={`${label} ส่วนภาษีขาย`}
+              onCommit={(n) =>
+                patchRates({ ...draft.rates, outputDen: Math.max(1, n) })
+              }
+            />
+          </span>
+        </td>
+        <td className="col-pct">
+          <TapRate
+            value={roundPct(draft.rates.gpOfOutput)}
+            locked={locked}
+            ariaLabel={`${label} GP %`}
+            suffix="%"
+            step="0.01"
+            onCommit={(pct) =>
+              patchRates({
+                ...draft.rates,
+                gpOfOutput: Math.min(100, Math.max(0, pct)) / 100,
+              })
             }
           />
-          ประมาณ
-        </label>
-      </td>
-      <td className="col-num col-input">
-        {draft.useGpEstimate ? (
-          <span className="vat-est-val" title="ภาษีซื้อ GP หลัง play-safe">
-            {fmt(computed.gpVatClaimed)}
-          </span>
-        ) : (
-          <input
-            className="vat-sales-input"
-            inputMode="decimal"
-            disabled={locked}
-            value={draft.gpVat}
-            placeholder="0"
-            aria-label={`${label} ภาษีซื้อ GP`}
-            onChange={(e) => onChange({ ...draft, gpVat: e.target.value })}
+          <label className="vat-gp-toggle">
+            <input
+              type="checkbox"
+              disabled={locked}
+              checked={draft.useGpEstimate}
+              onChange={(e) =>
+                onChange({ ...draft, useGpEstimate: e.target.checked })
+              }
+            />
+            ประมาณ
+          </label>
+        </td>
+        <td className="col-pct">
+          <TapRate
+            value={roundPct(draft.rates.inputClaimFactor)}
+            locked={locked}
+            ariaLabel={`${label} ยื่นภาษีซื้อ %`}
+            suffix="%"
+            step="0.01"
+            onCommit={(pct) =>
+              patchRates({
+                ...draft.rates,
+                inputClaimFactor: Math.min(100, Math.max(1, pct)) / 100,
+              })
+            }
           />
-        )}
-      </td>
-      <td className="col-num col-input">
-        <input
-          className="vat-sales-input"
-          inputMode="decimal"
-          disabled={locked}
-          value={draft.ingredientVat}
-          placeholder="0"
-          aria-label={`${label} ภาษีซื้อวัตถุดิบ`}
-          onChange={(e) =>
-            onChange({ ...draft, ingredientVat: e.target.value })
-          }
-        />
-      </td>
-      <td className="col-num">{fmt(computed.inputVat)}</td>
-      <td className="col-num col-net">{fmt(computed.netVat)}</td>
-    </tr>
+        </td>
+        <td className="col-num col-input">
+          {draft.useGpEstimate ? (
+            <span className="vat-est-val" title="หลัง play-safe">
+              {fmt(computed.gpVatClaimed)}
+            </span>
+          ) : (
+            <MoneyCell
+              value={draft.gpVat}
+              locked={locked}
+              ariaLabel={`${label} ภาษีซื้อ GP`}
+              onChange={(v) => onChange({ ...draft, gpVat: v })}
+            />
+          )}
+        </td>
+        <td className="col-num col-input">
+          <MoneyCell
+            value={draft.ingredientVat}
+            locked={locked}
+            ariaLabel={`${label} ภาษีซื้อวัตถุดิบ`}
+            onChange={(v) => onChange({ ...draft, ingredientVat: v })}
+          />
+        </td>
+        <td className="col-num">{fmt(computed.inputVat)}</td>
+        <td className="col-num col-net">{fmt(computed.netVat)}</td>
+      </tr>
+
+      {kind === "delivery" && open
+        ? (
+            [
+              ["shopee", "ShopeeFood"],
+              ["grab", "Grab"],
+              ["lineman", "LINE MAN"],
+            ] as const
+          ).map(([key, name]) => (
+            <tr key={key} className="vat-row-child">
+              <td className="col-seg col-child">{name}</td>
+              <td className="col-num col-input">
+                <MoneyCell
+                  value={draft.channels[key]}
+                  locked={locked}
+                  ariaLabel={`${name} ยอดขาย`}
+                  onChange={(v) =>
+                    onChange({
+                      ...draft,
+                      channels: { ...draft.channels, [key]: v },
+                    })
+                  }
+                />
+              </td>
+              <td className="col-num" colSpan={9}>
+                <span className="muted vat-child-hint">ย่อยรวมเข้าเดลิเวอรี่</span>
+              </td>
+            </tr>
+          ))
+        : null}
+
+      {kind === "storefront" && open
+        ? (
+            [
+              ["transfer", "เงินโอน"],
+              ["cash", "เงินสด"],
+            ] as const
+          ).map(([key, name]) => (
+            <tr key={key} className="vat-row-child">
+              <td className="col-seg col-child">{name}</td>
+              <td className="col-num col-input">
+                <MoneyCell
+                  value={draft.tenders[key]}
+                  locked={locked}
+                  ariaLabel={`${name} ยอดขาย`}
+                  onChange={(v) =>
+                    onChange({
+                      ...draft,
+                      tenders: { ...draft.tenders, [key]: v },
+                    })
+                  }
+                />
+              </td>
+              <td className="col-num" colSpan={9}>
+                <span className="muted vat-child-hint">ย่อยรวมเข้าหน้าร้าน</span>
+              </td>
+            </tr>
+          ))
+        : null}
+    </>
   );
 }
 
@@ -288,29 +393,18 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
   const [doc, setDoc] = useState<VatMonthlyReturn | null>(null);
-  const [settings, setSettings] = useState<VatMonthlySettings | null>(null);
+  const [periodStartDay, setPeriodStartDay] = useState(DEFAULT_PERIOD_START_DAY);
   const [deliveryDraft, setDeliveryDraft] = useState<DraftSeg>(() =>
-    segToDraft(emptySegment()),
+    segToDraft(emptySegment("delivery")),
   );
   const [storefrontDraft, setStorefrontDraft] = useState<DraftSeg>(() =>
-    segToDraft(emptySegment()),
+    segToDraft(emptySegment("storefront")),
   );
   const [note, setNote] = useState("");
   const [pnlMode, setPnlMode] = useState<"exVat" | "incVat">("exVat");
   const [pnlIncome, setPnlIncome] = useState("");
-
-  /** ตารางทด — ไม่บันทึกจนกว่าจะกดใช้เรท */
-  const [trialDelivery, setTrialDelivery] = useState<VatLogicRates>(
-    DEFAULT_VAT_LOGIC_RATES,
-  );
-  const [trialStorefront, setTrialStorefront] = useState<VatLogicRates>(
-    DEFAULT_VAT_LOGIC_RATES,
-  );
-  const [trialGrossD, setTrialGrossD] = useState("");
-  const [trialGrossS, setTrialGrossS] = useState("");
-  const [trialIngD, setTrialIngD] = useState("");
-  const [trialIngS, setTrialIngS] = useState("");
-  const [periodStartDay, setPeriodStartDay] = useState(DEFAULT_PERIOD_START_DAY);
+  const [openDelivery, setOpenDelivery] = useState(false);
+  const [openStorefront, setOpenStorefront] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -321,15 +415,14 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         loadVatMonthlySettings(),
       ]);
       setDoc(ret);
-      setSettings(st);
       setPeriodStartDay(st.periodStartDay);
       setDeliveryDraft(segToDraft(ret.delivery));
       setStorefrontDraft(segToDraft(ret.storefront));
       setNote(ret.note);
       setPnlMode(ret.pnlIncomeMode);
       setPnlIncome(moneyInputValue(ret.pnlIncome));
-      setTrialDelivery(mapVatLogicRates(st.deliveryRates));
-      setTrialStorefront(mapVatLogicRates(st.storefrontRates));
+      if (sumParts(ret.delivery) > 0) setOpenDelivery(true);
+      if (sumParts(ret.storefront) > 0) setOpenStorefront(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -341,9 +434,12 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     void refresh();
   }, [refresh]);
 
-  const delivery = useMemo(() => draftToSeg(deliveryDraft), [deliveryDraft]);
+  const delivery = useMemo(
+    () => draftToSeg("delivery", deliveryDraft),
+    [deliveryDraft],
+  );
   const storefront = useMemo(
-    () => draftToSeg(storefrontDraft),
+    () => draftToSeg("storefront", storefrontDraft),
     [storefrontDraft],
   );
   const totals = useMemo(
@@ -358,33 +454,9 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   );
 
   const locked = doc?.status === "filed";
-
   const period = useMemo(
     () => getVatPeriodBoundary(month, periodStartDay),
     [month, periodStartDay],
-  );
-
-  const trialDeliverySeg = useMemo(
-    () =>
-      recomputeSegment({
-        grossSales: parseMoneyInput(trialGrossD),
-        gpVat: 0,
-        useGpEstimate: true,
-        ingredientVat: parseMoneyInput(trialIngD),
-        rates: trialDelivery,
-      }),
-    [trialGrossD, trialIngD, trialDelivery],
-  );
-  const trialStorefrontSeg = useMemo(
-    () =>
-      recomputeSegment({
-        grossSales: parseMoneyInput(trialGrossS),
-        gpVat: 0,
-        useGpEstimate: true,
-        ingredientVat: parseMoneyInput(trialIngS),
-        rates: trialStorefront,
-      }),
-    [trialGrossS, trialIngS, trialStorefront],
   );
 
   const saveMonth = async (asDraft: boolean) => {
@@ -393,10 +465,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     setMsg("");
     try {
       const proposed = proposePnlIncome(
-        {
-          vatBase: totals.vatBase,
-          grossSales: totals.grossSales,
-        },
+        { vatBase: totals.vatBase, grossSales: totals.grossSales },
         pnlMode,
       );
       const incomeRaw = parseMoneyInput(pnlIncome);
@@ -422,40 +491,6 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     }
   };
 
-  const applyTrialRatesToMonth = () => {
-    setDeliveryDraft((d) => ({ ...d, rates: mapVatLogicRates(trialDelivery) }));
-    setStorefrontDraft((d) => ({
-      ...d,
-      rates: mapVatLogicRates(trialStorefront),
-    }));
-    setTab("month");
-    setMsg("นำเรทจากตารางทดมาใช้กับเดือนนี้แล้ว — กดบันทึกเพื่อเก็บ");
-  };
-
-  const saveDefaultRates = async () => {
-    setBusy(true);
-    setError("");
-    setMsg("");
-    try {
-      const next = await saveVatMonthlySettings(
-        {
-          deliveryRates: trialDelivery,
-          storefrontRates: trialStorefront,
-          pnlIncomeMode: pnlMode,
-          periodStartDay: normalizePeriodStartDay(periodStartDay),
-        },
-        actor,
-      );
-      setPeriodStartDay(next.periodStartDay);
-      setSettings(next);
-      setMsg("บันทึกเรทเริ่มต้นแล้ว");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const closeMonth = async () => {
     const income = parseMoneyInput(pnlIncome);
     const proposed = proposePnlIncome(
@@ -464,8 +499,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     );
     const finalIncome = income > 0 ? income : proposed;
     const ok = window.confirm(
-      `ปิดเดือน ${month} → ใส่รายได้ P&L = ${formatPlainNumber(finalIncome)} บาท?\n` +
-        `ภาษีขาย ${formatPlainNumber(totals.outputVat)} − ภาษีซื้อ ${formatPlainNumber(totals.inputVat)} = สุทธิ ${formatPlainNumber(totals.netVat)}`,
+      `ปิดงบเดือน ${month} → ใส่รายได้ P&L = ${formatPlainNumber(finalIncome)} บาท?\n` +
+        `ภาษีสุทธิ ${formatPlainNumber(totals.netVat)} · หลังปิดจะล็อกแก้ยอด`,
     );
     if (!ok) return;
     setBusy(true);
@@ -488,7 +523,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         forceIncome: finalIncome,
       });
       setDoc(filed);
-      setMsg(`ปิดเดือนแล้ว · รายได้ ${formatPlainNumber(filed.pnlIncome)} เข้า P&L`);
+      setMsg(`ปิดงบแล้ว · รายได้ ${formatPlainNumber(filed.pnlIncome)} เข้า P&L`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -515,13 +550,12 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     <div className="vat-monthly-workbench">
       <header className="vat-sales-header">
         <p className="vat-sales-lead">
-          VAT รายเดือน · ตารางกระชับแยกเดลิเวอรี่/หน้าร้าน · GP ระบุ % · Play-safe
+          VAT รายเดือน · ตารางกระชับ · แยกย่อยส่ง/ร้าน · แตะแก้เรทเดือนนี้ · ปิดงบแล้วล็อก
         </p>
         <div className="vat-sales-tabs" role="tablist">
           {(
             [
               ["month", "เดือน"],
-              ["trial", "ตารางทด"],
               ["close", "ปิด P&L"],
             ] as const
           ).map(([id, label]) => (
@@ -551,7 +585,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         {doc ? (
           <span className="vat-ops-badge" data-status={doc.status}>
             {doc.status === "filed"
-              ? "ปิดแล้ว"
+              ? "ปิดงบแล้ว · ล็อก"
               : doc.status === "saved"
                 ? "บันทึกแล้ว"
                 : "ร่าง"}
@@ -576,8 +610,10 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           {tab === "month" ? (
             <>
               <p className="muted vat-sales-hint vat-hint-one-line">
-                ยอดขายจริง 100% · ภาษีซื้อยื่นหย่อน/ปัดลงเล็กน้อย · GP ระบุเป็น %
-                ของภาษีขาย (ไม่ใช้เศษ 1/3)
+                กด + แยกย่อย · เรทภาษีแตะแก้ได้เฉพาะเดือนนี้ · ปิดงบแล้วแก้ไม่ได้
+                {" · "}
+                default {ratesLabel(DEFAULT_VAT_LOGIC_RATES)} · GP{" "}
+                {pctLabel(DEFAULT_VAT_LOGIC_RATES.gpOfOutput)}
               </p>
 
               <div className="sheet-wrap vat-month-slim-wrap">
@@ -588,7 +624,9 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                       <th className="col-num">ยอดขายรวม VAT</th>
                       <th className="col-num">ฐานภาษี</th>
                       <th className="col-num">ภาษีขาย</th>
+                      <th className="col-rate">เรทขาย</th>
                       <th className="col-pct">GP % ของภาษีขาย</th>
+                      <th className="col-pct">ยื่นภาษีซื้อ %</th>
                       <th className="col-num">ภาษีซื้อ GP</th>
                       <th className="col-num">ภาษีซื้อวัตถุดิบ</th>
                       <th className="col-num">ภาษีซื้อรวม</th>
@@ -596,18 +634,24 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                     </tr>
                   </thead>
                   <tbody>
-                    <MonthSegmentRow
+                    <ParentSegRows
+                      kind="delivery"
                       label="เดลิเวอรี่"
                       draft={deliveryDraft}
                       computed={delivery}
                       locked={Boolean(locked)}
+                      open={openDelivery}
+                      onToggle={() => setOpenDelivery((v) => !v)}
                       onChange={setDeliveryDraft}
                     />
-                    <MonthSegmentRow
+                    <ParentSegRows
+                      kind="storefront"
                       label="หน้าร้าน"
                       draft={storefrontDraft}
                       computed={storefront}
                       locked={Boolean(locked)}
+                      open={openStorefront}
+                      onToggle={() => setOpenStorefront((v) => !v)}
                       onChange={setStorefrontDraft}
                     />
                     <tr className="vat-sales-totals-row">
@@ -615,11 +659,11 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                       <td className="col-num">{fmt(totals.grossSales)}</td>
                       <td className="col-num">{fmt(totals.vatBase)}</td>
                       <td className="col-num">{fmt(totals.outputVat)}</td>
+                      <td className="col-rate">—</td>
+                      <td className="col-pct">—</td>
                       <td className="col-pct">—</td>
                       <td className="col-num">
-                        {fmt(
-                          delivery.gpVatClaimed + storefront.gpVatClaimed,
-                        )}
+                        {fmt(delivery.gpVatClaimed + storefront.gpVatClaimed)}
                       </td>
                       <td className="col-num">
                         {fmt(
@@ -633,14 +677,6 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                   </tbody>
                 </table>
               </div>
-
-              <p className="muted vat-sales-hint vat-hint-one-line">
-                ติ๊ก «ประมาณ» = คำนวณภาษีซื้อ GP จาก % · ปิดติ๊กแล้วคีย์จากบิล GP จริง
-                {" · "}
-                ส่ง {delivery.rates.outputNum}/{delivery.rates.outputDen}
-                {" · "}
-                ร้าน {storefront.rates.outputNum}/{storefront.rates.outputDen}
-              </p>
 
               <label className="vat-sales-field vat-note-slim">
                 หมายเหตุ
@@ -687,254 +723,168 @@ export function VatMonthlyWorkbench({ actor }: Props) {
             </>
           ) : null}
 
-          {tab === "trial" ? (
-            <section className="vat-trial-panel">
-              <p className="muted vat-sales-hint">
-                ตารางทดเรท — ปรับสูตรก่อนใช้จริง ไม่เขียนทับเดือนจนกว่าจะกดนำเรทไปใช้
-                {settings
-                  ? ` · เรทเริ่มต้นที่บันทึกไว้: ส่ง ${settings.deliveryRates.outputNum}/${settings.deliveryRates.outputDen} · ร้าน ${settings.storefrontRates.outputNum}/${settings.storefrontRates.outputDen}`
-                  : ""}
+          {tab === "close" ? (
+            <section className="vat-close-panel">
+              <p className="muted vat-sales-hint vat-hint-one-line">
+                โครงมาตรฐานปิดงบ VAT → สรุปรายได้ P&L · ยืนยันมือครั้งเดียว · ปิดแล้วล็อกเดือน
               </p>
 
-              <label className="vat-sales-field vat-period-start-field">
-                วันเริ่มรอบแต่ละเดือน (00:00 น. เวลาไทย)
-                <input
-                  type="number"
-                  min={1}
-                  max={28}
-                  step={1}
-                  value={periodStartDay}
-                  onChange={(e) =>
-                    setPeriodStartDay(
-                      normalizePeriodStartDay(e.target.value || 1),
-                    )
-                  }
-                />
-                <span className="muted vat-sales-hint">
-                  ค่าเริ่มต้น = 1 → เช่น 00:00 น. 1/7/2569 ถึงก่อน 00:00 น. 1/8/2569
-                </span>
-              </label>
-
-              <div className="vat-seg-grid">
-                <RatesEditor
-                  title="เรทเดลิเวอรี่"
-                  rates={trialDelivery}
-                  onChange={setTrialDelivery}
-                />
-                <RatesEditor
-                  title="เรทหน้าร้าน"
-                  rates={trialStorefront}
-                  onChange={setTrialStorefront}
-                />
-              </div>
-
-              <h3 className="vat-sales-section-title">ทดลองคำนวณ</h3>
-              <div className="vat-trial-inputs">
-                <label className="vat-sales-field">
-                  ยอดส่ง (ทด)
-                  <input
-                    inputMode="decimal"
-                    value={trialGrossD}
-                    onChange={(e) => setTrialGrossD(e.target.value)}
-                    placeholder="0"
-                  />
-                </label>
-                <label className="vat-sales-field">
-                  VAT วัตถุดิบส่ง (ทด)
-                  <input
-                    inputMode="decimal"
-                    value={trialIngD}
-                    onChange={(e) => setTrialIngD(e.target.value)}
-                    placeholder="0"
-                  />
-                </label>
-                <label className="vat-sales-field">
-                  ยอดร้าน (ทด)
-                  <input
-                    inputMode="decimal"
-                    value={trialGrossS}
-                    onChange={(e) => setTrialGrossS(e.target.value)}
-                    placeholder="0"
-                  />
-                </label>
-                <label className="vat-sales-field">
-                  VAT วัตถุดิบร้าน (ทด)
-                  <input
-                    inputMode="decimal"
-                    value={trialIngS}
-                    onChange={(e) => setTrialIngS(e.target.value)}
-                    placeholder="0"
-                  />
-                </label>
-              </div>
-
               <div className="sheet-wrap vat-month-slim-wrap">
-                <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim">
+                <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
                   <thead>
                     <tr>
-                      <th className="col-seg">ส่วน</th>
-                      <th className="col-pct">GP % ของภาษีขาย</th>
-                      <th className="col-num">ภาษีขาย</th>
-                      <th className="col-num">ภาษีซื้อ GP</th>
-                      <th className="col-num">ภาษีซื้อวัตถุดิบ</th>
-                      <th className="col-num">ภาษีซื้อรวม</th>
-                      <th className="col-num">สุทธิต้องนำส่ง</th>
+                      <th className="col-seg">รายการ</th>
+                      <th className="col-num">เดลิเวอรี่</th>
+                      <th className="col-num">หน้าร้าน</th>
+                      <th className="col-num">รวม</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td className="col-seg">เดลิเวอรี่</td>
-                      <td className="col-pct">
-                        {pctLabel(trialDelivery.gpOfOutput)}
-                      </td>
+                      <td className="col-seg">ยอดขายรวม VAT</td>
+                      <td className="col-num">{fmt(delivery.grossSales)}</td>
+                      <td className="col-num">{fmt(storefront.grossSales)}</td>
+                      <td className="col-num">{fmt(totals.grossSales)}</td>
+                    </tr>
+                    <tr>
+                      <td className="col-seg">ฐานภาษี (ก่อน VAT)</td>
+                      <td className="col-num">{fmt(delivery.vatBase)}</td>
+                      <td className="col-num">{fmt(storefront.vatBase)}</td>
+                      <td className="col-num">{fmt(totals.vatBase)}</td>
+                    </tr>
+                    <tr>
+                      <td className="col-seg">ภาษีขาย (Output)</td>
+                      <td className="col-num">{fmt(delivery.outputVat)}</td>
+                      <td className="col-num">{fmt(storefront.outputVat)}</td>
+                      <td className="col-num">{fmt(totals.outputVat)}</td>
+                    </tr>
+                    <tr>
+                      <td className="col-seg">หัก ภาษีซื้อ GP</td>
+                      <td className="col-num">{fmt(delivery.gpVatClaimed)}</td>
+                      <td className="col-num">{fmt(storefront.gpVatClaimed)}</td>
                       <td className="col-num">
-                        {fmt(trialDeliverySeg.outputVat)}
-                      </td>
-                      <td className="col-num">
-                        {fmt(trialDeliverySeg.gpVatClaimed)}
-                      </td>
-                      <td className="col-num">
-                        {fmt(trialDeliverySeg.ingredientVatClaimed)}
-                      </td>
-                      <td className="col-num">
-                        {fmt(trialDeliverySeg.inputVat)}
-                      </td>
-                      <td className="col-num col-net">
-                        {fmt(trialDeliverySeg.netVat)}
+                        {fmt(delivery.gpVatClaimed + storefront.gpVatClaimed)}
                       </td>
                     </tr>
                     <tr>
-                      <td className="col-seg">หน้าร้าน</td>
-                      <td className="col-pct">
-                        {pctLabel(trialStorefront.gpOfOutput)}
+                      <td className="col-seg">หัก ภาษีซื้อวัตถุดิบ</td>
+                      <td className="col-num">
+                        {fmt(delivery.ingredientVatClaimed)}
                       </td>
                       <td className="col-num">
-                        {fmt(trialStorefrontSeg.outputVat)}
+                        {fmt(storefront.ingredientVatClaimed)}
                       </td>
                       <td className="col-num">
-                        {fmt(trialStorefrontSeg.gpVatClaimed)}
-                      </td>
-                      <td className="col-num">
-                        {fmt(trialStorefrontSeg.ingredientVatClaimed)}
-                      </td>
-                      <td className="col-num">
-                        {fmt(trialStorefrontSeg.inputVat)}
-                      </td>
-                      <td className="col-num col-net">
-                        {fmt(trialStorefrontSeg.netVat)}
+                        {fmt(
+                          delivery.ingredientVatClaimed +
+                            storefront.ingredientVatClaimed,
+                        )}
                       </td>
                     </tr>
+                    <tr>
+                      <td className="col-seg">ภาษีซื้อรวม (Input)</td>
+                      <td className="col-num">{fmt(delivery.inputVat)}</td>
+                      <td className="col-num">{fmt(storefront.inputVat)}</td>
+                      <td className="col-num">{fmt(totals.inputVat)}</td>
+                    </tr>
                     <tr className="vat-sales-totals-row">
-                      <td className="col-seg">รวม</td>
-                      <td className="col-pct">—</td>
-                      <td className="col-num">
-                        {fmt(
-                          trialDeliverySeg.outputVat +
-                            trialStorefrontSeg.outputVat,
-                        )}
-                      </td>
-                      <td className="col-num">
-                        {fmt(
-                          trialDeliverySeg.gpVatClaimed +
-                            trialStorefrontSeg.gpVatClaimed,
-                        )}
-                      </td>
-                      <td className="col-num">
-                        {fmt(
-                          trialDeliverySeg.ingredientVatClaimed +
-                            trialStorefrontSeg.ingredientVatClaimed,
-                        )}
-                      </td>
-                      <td className="col-num">
-                        {fmt(
-                          trialDeliverySeg.inputVat +
-                            trialStorefrontSeg.inputVat,
-                        )}
-                      </td>
+                      <td className="col-seg">ภาษีสุทธิต้องนำส่ง</td>
+                      <td className="col-num col-net">{fmt(delivery.netVat)}</td>
                       <td className="col-num col-net">
-                        {fmt(
-                          trialDeliverySeg.netVat + trialStorefrontSeg.netVat,
-                        )}
+                        {fmt(storefront.netVat)}
                       </td>
+                      <td className="col-num col-net">{fmt(totals.netVat)}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
-              <div className="vat-month-actions">
-                <button
-                  type="button"
-                  className="ghost-btn"
-                  disabled={busy}
-                  onClick={() => void saveDefaultRates()}
-                >
-                  บันทึกเป็นเรทเริ่มต้น
-                </button>
-                <button
-                  type="button"
-                  className="primary-btn"
-                  disabled={busy || locked}
-                  onClick={applyTrialRatesToMonth}
-                >
-                  นำเรทไปใช้กับเดือนนี้
-                </button>
+              <div className="sheet-wrap vat-month-slim-wrap">
+                <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+                  <thead>
+                    <tr>
+                      <th className="col-seg">รายการปิดงบ → P&L</th>
+                      <th className="col-num">ค่า</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="col-seg">โหมดรายได้ P&L</td>
+                      <td className="col-num col-input">
+                        <select
+                          className="vat-inline-select"
+                          disabled={locked}
+                          value={pnlMode}
+                          onChange={(e) => {
+                            const mode =
+                              e.target.value === "incVat" ? "incVat" : "exVat";
+                            setPnlMode(mode);
+                            setPnlIncome(
+                              moneyInputValue(
+                                proposePnlIncome(
+                                  {
+                                    vatBase: totals.vatBase,
+                                    grossSales: totals.grossSales,
+                                  },
+                                  mode,
+                                ),
+                              ),
+                            );
+                          }}
+                        >
+                          <option value="exVat">ก่อน VAT (แนะนำ)</option>
+                          <option value="incVat">รวม VAT</option>
+                        </select>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="col-seg">ยอดรายได้ที่จะใส่ P&L</td>
+                      <td className="col-num col-input">
+                        <MoneyCell
+                          value={pnlIncome}
+                          locked={Boolean(locked)}
+                          ariaLabel="ยอดรายได้ P&L"
+                          onChange={setPnlIncome}
+                        />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="col-seg">สถานะเดือน</td>
+                      <td className="col-num">
+                        {doc?.status === "filed"
+                          ? "ปิดงบแล้ว · ล็อก"
+                          : doc?.status === "saved"
+                            ? "บันทึกแล้ว · ยังไม่ปิด"
+                            : "ร่าง"}
+                      </td>
+                    </tr>
+                    {doc?.filedAt ? (
+                      <tr>
+                        <td className="col-seg">ปิดงบเมื่อ</td>
+                        <td className="col-num">
+                          {formatDateTimeShort(doc.filedAt)}
+                        </td>
+                      </tr>
+                    ) : null}
+                    <tr>
+                      <td className="col-seg">เรทเดือนนี้ · ส่ง</td>
+                      <td className="col-num">
+                        {ratesLabel(delivery.rates)} · GP{" "}
+                        {pctLabel(delivery.rates.gpOfOutput)} · ยื่น{" "}
+                        {pctLabel(delivery.rates.inputClaimFactor)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="col-seg">เรทเดือนนี้ · ร้าน</td>
+                      <td className="col-num">
+                        {ratesLabel(storefront.rates)} · GP{" "}
+                        {pctLabel(storefront.rates.gpOfOutput)} · ยื่น{" "}
+                        {pctLabel(storefront.rates.inputClaimFactor)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-            </section>
-          ) : null}
-
-          {tab === "close" ? (
-            <section className="vat-close-panel">
-              <p className="muted vat-sales-hint">
-                ปิดเดือน = ยืนยันมือครั้งเดียว → ใส่รายได้เข้าสรุปรายเดือน (P&L)
-              </p>
-              <section className="vat-sales-summary vat-sales-summary--slim">
-                <span>
-                  รวมขาย <strong>{fmt(totals.grossSales)}</strong>
-                </span>
-                <span>
-                  ฐานภาษี <strong>{fmt(totals.vatBase)}</strong>
-                </span>
-                <span>
-                  ภาษีสุทธิ <strong>{fmt(totals.netVat)}</strong>
-                </span>
-              </section>
-
-              <label className="vat-sales-field">
-                โหมดรายได้ P&L
-                <select
-                  disabled={locked}
-                  value={pnlMode}
-                  onChange={(e) => {
-                    const mode =
-                      e.target.value === "incVat" ? "incVat" : "exVat";
-                    setPnlMode(mode);
-                    setPnlIncome(
-                      moneyInputValue(
-                        proposePnlIncome(
-                          {
-                            vatBase: totals.vatBase,
-                            grossSales: totals.grossSales,
-                          },
-                          mode,
-                        ),
-                      ),
-                    );
-                  }}
-                >
-                  <option value="exVat">ก่อน VAT (แนะนำ)</option>
-                  <option value="incVat">รวม VAT</option>
-                </select>
-              </label>
-
-              <label className="vat-sales-field">
-                ยอดรายได้ที่จะใส่ P&L
-                <input
-                  inputMode="decimal"
-                  disabled={locked}
-                  value={pnlIncome}
-                  onChange={(e) => setPnlIncome(e.target.value)}
-                />
-              </label>
 
               <div className="vat-month-actions">
                 {!locked ? (
@@ -944,7 +894,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                     disabled={busy || totals.grossSales <= 0}
                     onClick={() => void closeMonth()}
                   >
-                    ปิดเดือน → P&L
+                    ปิดงบเดือน → P&L
                   </button>
                 ) : (
                   <button
@@ -963,4 +913,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       )}
     </div>
   );
+}
+
+function sumParts(seg: VatSegmentState): number {
+  return seg.partsSum || 0;
 }

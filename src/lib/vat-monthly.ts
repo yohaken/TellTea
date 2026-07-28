@@ -150,9 +150,73 @@ export const DEFAULT_VAT_LOGIC_RATES: VatLogicRates = {
 
 export type VatSegmentKind = "delivery" | "storefront";
 
+/** ย่อยเดลิเวอรี่ */
+export type DeliveryChannels = {
+  shopee: number;
+  grab: number;
+  lineman: number;
+};
+
+/** ย่อยหน้าร้าน */
+export type StorefrontTenders = {
+  transfer: number;
+  cash: number;
+};
+
+export const EMPTY_DELIVERY_CHANNELS: DeliveryChannels = {
+  shopee: 0,
+  grab: 0,
+  lineman: 0,
+};
+
+export const EMPTY_STOREFRONT_TENDERS: StorefrontTenders = {
+  transfer: 0,
+  cash: 0,
+};
+
+export function mapDeliveryChannels(raw: unknown): DeliveryChannels {
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  return {
+    shopee: normalizeMoney(o.shopee),
+    grab: normalizeMoney(o.grab),
+    lineman: normalizeMoney(o.lineman),
+  };
+}
+
+export function mapStorefrontTenders(raw: unknown): StorefrontTenders {
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  return {
+    transfer: normalizeMoney(o.transfer),
+    cash: normalizeMoney(o.cash),
+  };
+}
+
+export function sumDeliveryChannels(c: DeliveryChannels): number {
+  return roundMoney(
+    normalizeMoney(c.shopee) + normalizeMoney(c.grab) + normalizeMoney(c.lineman),
+  );
+}
+
+export function sumStorefrontTenders(t: StorefrontTenders): number {
+  return roundMoney(normalizeMoney(t.transfer) + normalizeMoney(t.cash));
+}
+
+/**
+ * ยอดขายที่ใช้คิด VAT:
+ * ถ้าย่อยมียอด > 0 ใช้ผลรวมย่อย · ไม่เช่นนั้นใช้ยอดรวมที่คีย์เอง
+ */
+export function resolveGrossSales(grossManual: number, partsSum: number): number {
+  const parts = normalizeMoney(partsSum);
+  if (parts > 0) return parts;
+  return normalizeMoney(grossManual);
+}
+
 export type VatSegmentInput = {
-  /** ยอดขายรวมรวม VAT (gross inclusive) */
-  grossSales: number;
+  kind: VatSegmentKind;
+  /** ยอดรวมที่คีย์เอง (ใช้เมื่อยังไม่แยกย่อย) */
+  grossManual: number;
+  channels: DeliveryChannels;
+  tenders: StorefrontTenders;
   /**
    * ภาษีซื้อจากบิล GP สรุปรายเดือน
    * ถ้าวาง 0 และ useGpEstimate=true → ใช้ประมาณ gpOfOutput × ภาษีขาย
@@ -166,6 +230,9 @@ export type VatSegmentInput = {
 };
 
 export type VatSegmentComputed = {
+  /** ยอดขายรวมที่ใช้คิด (หลัง resolve จากย่อย/มือ) */
+  grossSales: number;
+  partsSum: number;
   vatBase: number;
   outputVat: number;
   gpEstimate: number;
@@ -256,7 +323,14 @@ export function computeOutputVat(
 
 export function computeVatSegment(input: VatSegmentInput): VatSegmentComputed {
   const rates = mapVatLogicRates(input.rates);
-  const grossSales = normalizeMoney(input.grossSales);
+  const kind = input.kind === "storefront" ? "storefront" : "delivery";
+  const channels = mapDeliveryChannels(input.channels);
+  const tenders = mapStorefrontTenders(input.tenders);
+  const partsSum =
+    kind === "delivery"
+      ? sumDeliveryChannels(channels)
+      : sumStorefrontTenders(tenders);
+  const grossSales = resolveGrossSales(input.grossManual, partsSum);
   const { vatBase, outputVat } = computeOutputVat(grossSales, rates);
 
   const gpEstimate = applyMoneyMode(outputVat * rates.gpOfOutput, rates.floorInput);
@@ -273,6 +347,8 @@ export function computeVatSegment(input: VatSegmentInput): VatSegmentComputed {
   const netVat = roundMoney(outputVat - inputVat);
 
   return {
+    grossSales,
+    partsSum,
     vatBase,
     outputVat,
     gpEstimate,
@@ -283,9 +359,15 @@ export function computeVatSegment(input: VatSegmentInput): VatSegmentComputed {
   };
 }
 
-export function emptySegment(rates: VatLogicRates = DEFAULT_VAT_LOGIC_RATES): VatSegmentState {
+export function emptySegment(
+  kind: VatSegmentKind = "delivery",
+  rates: VatLogicRates = DEFAULT_VAT_LOGIC_RATES,
+): VatSegmentState {
   const input: VatSegmentInput = {
-    grossSales: 0,
+    kind,
+    grossManual: 0,
+    channels: { ...EMPTY_DELIVERY_CHANNELS },
+    tenders: { ...EMPTY_STOREFRONT_TENDERS },
     gpVat: 0,
     useGpEstimate: true,
     ingredientVat: 0,
@@ -297,13 +379,16 @@ export function emptySegment(rates: VatLogicRates = DEFAULT_VAT_LOGIC_RATES): Va
 export function recomputeSegment(seg: VatSegmentInput): VatSegmentState {
   const rates = mapVatLogicRates(seg.rates);
   const input: VatSegmentInput = {
-    grossSales: normalizeMoney(seg.grossSales),
+    kind: seg.kind === "storefront" ? "storefront" : "delivery",
+    grossManual: normalizeMoney(seg.grossManual),
+    channels: mapDeliveryChannels(seg.channels),
+    tenders: mapStorefrontTenders(seg.tenders),
     gpVat: normalizeMoney(seg.gpVat),
     useGpEstimate: Boolean(seg.useGpEstimate),
     ingredientVat: normalizeMoney(seg.ingredientVat),
     rates,
   };
-  return { ...input, ...computeVatSegment(input) };
+  return { ...input, kind: input.kind, ...computeVatSegment(input) };
 }
 
 export function sumMonthlyTotals(
@@ -330,10 +415,21 @@ export function proposePnlIncome(
   return mode === "incVat" ? totals.grossSales : totals.vatBase;
 }
 
-function mapSegment(raw: unknown, fallbackRates: VatLogicRates): VatSegmentState {
+function mapSegment(
+  kind: VatSegmentKind,
+  raw: unknown,
+  fallbackRates: VatLogicRates,
+): VatSegmentState {
   const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  // รองรับเอกสารเก่าที่เก็บแค่ grossSales
+  const legacyGross = normalizeMoney(o.grossSales);
+  const grossManual =
+    o.grossManual != null ? normalizeMoney(o.grossManual) : legacyGross;
   return recomputeSegment({
-    grossSales: normalizeMoney(o.grossSales),
+    kind,
+    grossManual,
+    channels: mapDeliveryChannels(o.channels),
+    tenders: mapStorefrontTenders(o.tenders),
     gpVat: normalizeMoney(o.gpVat),
     useGpEstimate: o.useGpEstimate !== false,
     ingredientVat: normalizeMoney(o.ingredientVat),
@@ -348,8 +444,8 @@ export function mapVatMonthlyReturn(
 ): VatMonthlyReturn {
   const deliveryRates = settings?.deliveryRates || DEFAULT_VAT_LOGIC_RATES;
   const storefrontRates = settings?.storefrontRates || DEFAULT_VAT_LOGIC_RATES;
-  const delivery = mapSegment(data?.delivery, deliveryRates);
-  const storefront = mapSegment(data?.storefront, storefrontRates);
+  const delivery = mapSegment("delivery", data?.delivery, deliveryRates);
+  const storefront = mapSegment("storefront", data?.storefront, storefrontRates);
   const totals = sumMonthlyTotals(
     delivery,
     storefront,

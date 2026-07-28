@@ -16215,3 +16215,76 @@ a.ghost-btn {
   color: rgba(28, 42, 31, 0.78);
 }
 
+.vat-month-slim .col-rate {
+  min-width: 5.8rem;
+  text-align: center;
+}
+
+.vat-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-right: 0.3rem;
+  padding: 0;
+  border: 1px solid rgba(28, 42, 31, 0.22);
+  border-radius: 0.25rem;
+  background: rgba(28, 42, 31, 0.04);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.vat-row-parent .col-seg {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.vat-row-child td {
+  background: rgba(28, 42, 31, 0.025);
+}
+
+.vat-row-child .col-child {
+  padding-left: 1.85rem;
+  font-weight: 500;
+}
+
+.vat-child-hint {
+  font-size: 0.78rem;
+}
+
+.vat-rate-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.vat-tap-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.vat-tap-input {
+  width: 3.4rem !important;
+  min-width: 3.4rem;
+  text-align: right;
+}
+
+.vat-tap-val,
+.vat-tap-suffix {
+  font-variant-numeric: tabular-nums;
+}
+
+.vat-inline-select {
+  min-height: 1.9rem;
+  max-width: 11rem;
+  font-size: 0.84rem;
+}
+
+.vat-close-table .col-seg {
+  min-width: 11rem;
+}
+
