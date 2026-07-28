@@ -16070,8 +16070,8 @@ a.ghost-btn {
 .vat-month-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
-  margin: 0.65rem 0 1rem;
+  gap: 0.35rem;
+  margin: 0.45rem 0 0.75rem;
 }
 
 .vat-rates-block {
@@ -16102,13 +16102,13 @@ a.ghost-btn {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.35rem 0.55rem;
-  margin: 0.25rem 0 0.55rem;
-  padding: 0.4rem 0.55rem;
+  gap: 0.25rem 0.45rem;
+  margin: 0.2rem 0 0.4rem;
+  padding: 0.28rem 0.45rem;
   border-left: 3px solid rgba(28, 42, 31, 0.45);
   background: rgba(28, 42, 31, 0.04);
-  font-size: 0.88rem;
-  line-height: 1.3;
+  font-size: 0.78rem;
+  line-height: 1.25;
 }
 
 .vat-period-banner--one-line {
@@ -16127,186 +16127,237 @@ a.ghost-btn {
 }
 
 .vat-hint-one-line {
-  margin: 0.25rem 0 0.45rem;
-  font-size: 0.84rem;
-  line-height: 1.35;
+  margin: 0.15rem 0 0.3rem;
+  font-size: 0.72rem;
+  line-height: 1.25;
 }
 
 .vat-note-slim {
-  margin: 0.35rem 0 0.25rem;
+  margin: 0.25rem 0 0.15rem;
 }
 
 .vat-note-slim input {
   width: 100%;
-  min-height: 2.2rem;
+  min-height: 1.45rem;
+  font-size: 0.78rem;
 }
 
 .vat-month-slim-wrap {
-  margin: 0.35rem 0 0.45rem;
+  margin: 0.2rem 0 0.35rem;
   overflow-x: auto;
 }
 
+/* Super compact monthly VAT tables — aligned rows, full single-line labels */
 .vat-month-slim {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
+  min-width: 640px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.72rem;
 }
 
 .vat-month-slim th,
 .vat-month-slim td {
   white-space: nowrap;
   vertical-align: middle;
-  padding: 0.28rem 0.4rem;
-  font-size: 0.84rem;
-  line-height: 1.25;
+  padding: 0.08rem 0.22rem;
+  line-height: 1.15;
+  height: 1.55rem;
+  box-sizing: border-box;
 }
 
 .vat-month-slim th {
-  font-weight: 600;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.vat-month-slim .vat-col-seg,
+.vat-month-slim--output .col-seg,
+.vat-month-slim--input .col-seg {
+  width: 7.2rem;
+}
+
+.vat-month-slim .vat-col-seg-wide,
+.vat-month-slim--summary .col-seg,
+.vat-close-table .col-seg {
+  width: 12.5rem;
+}
+
+.vat-month-slim .vat-col-num,
+.vat-month-slim .col-num {
+  width: 5.4rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.vat-month-slim .vat-col-rate,
+.vat-month-slim .col-rate {
+  width: 5.2rem;
+  text-align: center;
+}
+
+.vat-month-slim .vat-col-pct,
+.vat-month-slim .col-pct {
+  width: 8.4rem;
+  text-align: left;
+}
+
+.vat-month-slim .vat-col-pct-sm {
+  width: 5.6rem;
 }
 
 .vat-month-slim .col-seg {
-  min-width: 5.2rem;
   text-align: left;
   font-weight: 600;
-}
-
-.vat-month-slim .col-num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  min-width: 5.5rem;
-}
-
-.vat-month-slim .col-pct {
-  text-align: left;
-  min-width: 7.5rem;
 }
 
 .vat-month-slim .col-net {
   font-weight: 700;
 }
 
-.vat-month-slim .col-input .vat-sales-input {
-  width: 6.4rem;
-  max-width: 100%;
-  min-height: 1.9rem;
-  padding: 0.15rem 0.3rem;
+.vat-month-slim .col-input .vat-sales-input,
+.vat-month-slim .vat-sales-input {
+  width: 100%;
+  max-width: 5.1rem;
+  min-height: 1.28rem;
+  height: 1.28rem;
+  padding: 0.02rem 0.18rem;
+  margin: 0;
+  border-radius: 2px;
+  font-size: 0.72rem;
+  line-height: 1.15;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  box-sizing: border-box;
+}
+
+.vat-seg-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.vat-seg-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vat-pct-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  vertical-align: middle;
 }
 
 .vat-pct-val {
   font-variant-numeric: tabular-nums;
-  margin-right: 0.35rem;
 }
 
 .vat-gp-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
-  font-size: 0.78rem;
+  gap: 0.14rem;
+  font-size: 0.66rem;
   color: rgba(28, 42, 31, 0.72);
   white-space: nowrap;
 }
 
-.vat-est-val {
-  display: inline-block;
-  min-width: 4.5rem;
-  text-align: right;
-  color: rgba(28, 42, 31, 0.78);
+.vat-gp-toggle input {
+  width: 0.78rem;
+  height: 0.78rem;
+  margin: 0;
 }
 
-.vat-month-slim .col-rate {
-  min-width: 5.8rem;
-  text-align: center;
+.vat-est-val {
+  display: inline-block;
+  min-width: 3.8rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: rgba(28, 42, 31, 0.78);
 }
 
 .vat-expand-btn {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 1.35rem;
-  height: 1.35rem;
-  margin-right: 0.3rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
   padding: 0;
   border: 1px solid rgba(28, 42, 31, 0.22);
-  border-radius: 0.25rem;
+  border-radius: 2px;
   background: rgba(28, 42, 31, 0.04);
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   line-height: 1;
   cursor: pointer;
 }
 
-.vat-row-parent .col-seg {
-  display: flex;
-  align-items: center;
-  gap: 0;
-}
-
 .vat-row-child td {
   background: rgba(28, 42, 31, 0.025);
+  height: 1.45rem;
 }
 
 .vat-row-child .col-child {
-  padding-left: 1.85rem;
+  padding-left: 1.55rem;
   font-weight: 500;
 }
 
 .vat-child-hint {
-  font-size: 0.78rem;
+  font-size: 0.66rem;
 }
 
 .vat-rate-pair {
   display: inline-flex;
   align-items: center;
-  gap: 0.15rem;
+  justify-content: flex-end;
+  gap: 0.08rem;
+  width: 100%;
 }
 
 .vat-tap-edit {
   display: inline-flex;
   align-items: center;
-  gap: 0.1rem;
+  gap: 0.06rem;
+  vertical-align: middle;
 }
 
 .vat-tap-input {
-  width: 3.4rem !important;
-  min-width: 3.4rem;
+  width: 2.55rem !important;
+  max-width: 2.55rem !important;
+  min-width: 2.55rem;
+  min-height: 1.28rem !important;
+  height: 1.28rem !important;
   text-align: right;
 }
 
 .vat-tap-val,
 .vat-tap-suffix {
   font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
 }
 
 .vat-inline-select {
-  min-height: 1.9rem;
-  max-width: 11rem;
-  font-size: 0.84rem;
-}
-
-.vat-close-table .col-seg {
-  min-width: 11rem;
+  min-height: 1.28rem;
+  height: 1.28rem;
+  max-width: 10rem;
+  padding: 0 0.2rem;
+  font-size: 0.72rem;
 }
 
 .vat-table-block {
-  margin: 0.55rem 0 0.85rem;
+  margin: 0.35rem 0 0.55rem;
 }
 
 .vat-table-title {
-  margin: 0 0 0.3rem;
-  font-size: 0.9rem;
+  margin: 0 0 0.18rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  line-height: 1.3;
+  line-height: 1.2;
   color: rgba(28, 42, 31, 0.88);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-@media (min-width: 720px) {
-  .vat-table-title {
-    overflow: visible;
-    text-overflow: unset;
-  }
 }
 
