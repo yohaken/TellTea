@@ -655,3 +655,4 @@ meta/vatMailOAuthOutlook   // owner-only · Outlook refresh token
 | 2026-07-28 | **P1 ลงมือ** — lib `vat-sales` · rules owner-only · `/vat-sales/` · การ์ด more · POS suggest · build 332 |
 | 2026-07-28 | **รวมยำบช.เจ้าของ + slim** · เยียวยา P1–P4 · เช็คลิสต์ตรวจ `vat-p1-p4-check.md` · rules validate · build 340 |
 | 2026-07-28 | **วางเฟส P5–P7** · ลุย P5 ปิดเดือน slim · `vat-p5-check.md` · `vat-phases-next.md` · build 341 |
+| 2026-07-28 | **P5 บน `/pnl/`** — แผงยอดขาย/VAT→รายได้ (owner) · build 342 |

@@ -223,8 +223,8 @@ export function VatSalesMonthClosePanel({
           <section className="vat-sales-settings vat-month-income-box">
             <h2 className="vat-sales-section-title">ใส่รายได้ → P&amp;L</h2>
             <p className="muted vat-sales-hint">
-              ในสรุปรายเดือนตอนนี้ <strong>{fmt(currentIncome)}</strong> · เสนอ{" "}
-              <strong>{fmt(proposed)}</strong>
+              แผงเดียวกันอยู่ที่สรุปรายเดือน (`/pnl/`) ด้วย · ในงบตอนนี้{" "}
+              <strong>{fmt(currentIncome)}</strong> · เสนอ <strong>{fmt(proposed)}</strong>
             </p>
             <label className="vat-sales-field">
               ยอดที่จะใส่

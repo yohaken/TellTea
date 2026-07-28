@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
+import { PnlVatIncomePanel } from "@/components/vat-sales/PnlVatIncomePanel";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
@@ -188,6 +189,9 @@ function PnlView() {
 
   if (!can(staff, "pnl")) return null;
 
+  const isOwner = staff?.role === "owner";
+  const actor = actorId || staff?.id || staff?.email || "owner";
+
   async function onSaveIncome(month: string) {
     if (!actorId) return;
     setSavingMonth(month);
@@ -234,8 +238,14 @@ function PnlView() {
     <div className="pnl-page">
       <h1 className="panel-title">สรุปรายเดือน</h1>
       <p className="muted" style={{ marginBottom: "0.85rem", textAlign: "left" }}>
-        มุมมองเจ้าของ — แยกบช. → รวม → กำไรขาดทุน · income กรอกเอง
+        {isOwner
+          ? "แยกบช. → รวม → กำไรขาดทุน · รายได้จากยอดขาย/VAT หรือกรอกเอง"
+          : "แยกบช. → รวม → กำไรขาดทุน · income กรอกเอง"}
       </p>
+
+      {isOwner ? (
+        <PnlVatIncomePanel actor={actor} onIncomeApplied={() => void refresh()} />
+      ) : null}
 
       <div className="btn-row pnl-toolbar">
         <button type="button" className="ghost-btn" disabled={loading} onClick={() => void refresh()}>
@@ -306,7 +316,9 @@ function PnlView() {
           <section className="pnl-section">
             <h2 className="pnl-section-title">3) สรุปกำไร–ขาดทุน</h2>
             <p className="muted" style={{ marginBottom: "0.55rem", textAlign: "left", fontSize: "0.85rem" }}>
-              กรอก income แล้วกดบันทึกทีละเดือน — โหมดสรุปตัดเดือนที่ยังไม่มีรายได้ออกจากทุกตาราง
+              {isOwner
+                ? "รายได้ใส่จากแผง VAT ด้านบน หรือกรอกเองแล้วกดบันทึกทีละเดือน"
+                : "กรอก income แล้วกดบันทึกทีละเดือน — โหมดสรุปตัดเดือนที่ยังไม่มีรายได้ออกจากทุกตาราง"}
             </p>
             <div className="sheet-wrap pnl-scroll">
               <table className="sheet-table pnl-table pnl-wide">

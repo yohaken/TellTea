@@ -86,7 +86,9 @@ function MoreView() {
     {
       href: "/pnl/",
       title: "สรุปรายเดือน",
-      desc: "แยกบช. → รวม → กำไรขาดทุน · income กรอกเอง",
+      desc: isOwner
+        ? "แยกบช. → รวม → กำไรขาดทุน · รายได้จากยอดขาย/VAT"
+        : "แยกบช. → รวม → กำไรขาดทุน · income กรอกเอง",
       icon: ChartColumn,
       perm: "pnl",
     },

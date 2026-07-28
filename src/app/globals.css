@@ -8031,6 +8031,64 @@ body.modal-open .main-panel {
 }
 
 /* Owner monthly P&L report */
+.pnl-vat-panel {
+  text-align: left;
+  margin: 0 0 0.85rem;
+  padding: 0.55rem 0.7rem 0.7rem;
+  border: 1px solid rgba(87, 15, 15, 0.16);
+  border-radius: 0.65rem;
+  background: rgba(87, 15, 15, 0.03);
+}
+
+.pnl-vat-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pnl-vat-head .pnl-section-title {
+  margin: 0;
+}
+
+.pnl-vat-link {
+  min-height: 1.7rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  text-decoration: none;
+}
+
+.pnl-vat-lead {
+  margin: 0.25rem 0 0.45rem;
+  font-size: 0.78rem;
+}
+
+.pnl-vat-apply {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: flex-end;
+  margin-top: 0.35rem;
+}
+
+.pnl-vat-apply .vat-sales-field {
+  margin: 0;
+  min-width: 8rem;
+}
+
+.pnl-vat-apply .vat-sales-field input {
+  min-height: 1.7rem;
+  font-size: 0.84rem;
+}
+
+.pnl-vat-apply .primary-btn,
+.pnl-vat-apply .ghost-btn {
+  min-height: 1.7rem;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.74rem;
+}
+
 .pnl-toolbar {
   margin-bottom: 0.65rem;
   flex-wrap: wrap;
