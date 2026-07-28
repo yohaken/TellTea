@@ -15257,3 +15257,179 @@ body.modal-open .main-panel {
   min-height: 2rem;
   padding: 0.25rem 0.4rem;
 }
+
+/* —— ยอดขาย / VAT (owner-only) —— */
+.vat-sales-page {
+  text-align: left;
+}
+
+.vat-sales-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.25rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.vat-sales-lead {
+  max-width: 36rem;
+  margin-top: 0.25rem;
+  text-align: left;
+  justify-self: start;
+}
+
+.vat-sales-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.vat-sales-month {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+  color: rgba(28, 42, 31, 0.68);
+}
+
+.vat-sales-month input {
+  min-height: 2.4rem;
+}
+
+.vat-sales-msg {
+  margin-bottom: 0.65rem;
+  text-align: left;
+  justify-self: start;
+  max-width: none;
+}
+
+.vat-sales-settings {
+  border: 1px solid rgba(28, 42, 31, 0.12);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  display: grid;
+  gap: 0.65rem;
+  background: rgba(28, 42, 31, 0.02);
+}
+
+.vat-sales-section-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.vat-sales-field {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.vat-sales-field textarea,
+.vat-sales-field select {
+  width: 100%;
+  max-width: 28rem;
+}
+
+.vat-sales-channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  align-items: center;
+}
+
+.vat-sales-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.65rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.vat-sales-summary-card {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(28, 42, 31, 0.04);
+  border: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.vat-sales-summary-card strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.vat-sales-summary-main {
+  background: rgba(87, 15, 15, 0.06);
+  border-color: rgba(87, 15, 15, 0.18);
+}
+
+.vat-sales-hint {
+  margin-bottom: 0.75rem;
+  max-width: none;
+  text-align: left;
+  justify-self: start;
+}
+
+.vat-sales-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.vat-sales-table {
+  min-width: 920px;
+}
+
+.vat-sales-table .vat-sales-input {
+  width: 5.5rem;
+  max-width: 100%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  padding: 0.35rem 0.4rem;
+  min-height: 2.1rem;
+}
+
+.vat-sales-src {
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.vat-sales-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(28, 42, 31, 0.15);
+}
+
+.vat-sales-badge.ok {
+  background: rgba(46, 125, 50, 0.12);
+  border-color: rgba(46, 125, 50, 0.35);
+}
+
+.vat-sales-badge.draft {
+  background: rgba(28, 42, 31, 0.05);
+}
+
+.vat-sales-row-confirmed td {
+  background: rgba(46, 125, 50, 0.04);
+}
+
+.vat-sales-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.vat-sales-act-btn {
+  min-height: 2rem;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.8rem;
+}
+
+.vat-sales-totals-row td {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+

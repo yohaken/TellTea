@@ -429,6 +429,17 @@ service cloud.firestore {
       allow read, write: if hasPerm('pnl');
     }
 
+    /** ยอดขายรายวัน + VAT — เจ้าของเท่านั้น (พนักงานหลังร้านอ่านไม่ได้) */
+    match /dailySales/{dateId} {
+      allow read, write: if isOwner();
+    }
+
+    /** เมลรายงานแพลตฟอร์มดิบ — เจ้าของอ่าน · เขียนจาก Admin SDK เป็นหลัก */
+    match /platformEmailReports/{id} {
+      allow read: if isOwner();
+      allow write: if isOwner();
+    }
+
     match /stock/{itemId} {
       allow read: if hasPerm('stock');
       allow create, delete: if isOwner();
@@ -575,12 +586,15 @@ service cloud.firestore {
       // brandLogo + businessProfile text are public (no secrets) so login can show the mark
       // aiSettings holds Gemini API key — owner-only read
       // posStoreClaimSecret = full shop claim code — owner-only (never staff / POS)
+      // vatSalesSettings / vatMailOAuth — บัญชี VAT / token เมล — owner-only (พนักงานห้ามอ่าน)
       allow read: if docId == 'businessProfile'
         || docId == 'brandLogo'
         || (docId == 'aiSettings' && isOwner())
         || (docId == 'foodstoryAuth' && isOwner())
         || (docId == 'posStoreClaimSecret' && isOwner())
-        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && isStaff())
+        || (docId == 'vatSalesSettings' && isOwner())
+        || (docId == 'vatMailOAuth' && isOwner())
+        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && docId != 'vatSalesSettings' && docId != 'vatMailOAuth' && isStaff())
         || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes' || docId == 'posMenuRank'));
       allow write: if isOwner()
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))

@@ -14,6 +14,7 @@ import {
   ClipboardList,
   Coffee,
   Download,
+  Percent,
   Receipt,
   Settings,
   UserCircle,
@@ -161,6 +162,15 @@ function MoreView() {
             <div>
               <strong>POS</strong>
               <p>รายงานยอดขาย POS</p>
+            </div>
+          </Link>
+        ) : null}
+        {isOwner ? (
+          <Link href="/vat-sales/" className="more-card">
+            <Percent size={22} />
+            <div>
+              <strong>ยอดขาย / VAT</strong>
+              <p>เดลิเวอรี่ + หน้าร้านรายวัน · VAT 7% — เฉพาะเจ้าของ</p>
             </div>
           </Link>
         ) : null}

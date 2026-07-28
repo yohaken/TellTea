@@ -54,7 +54,7 @@
 | เฟส | โฟกัส | สถานะ |
 |-----|--------|--------|
 | **P0** | แผน · เช็คลิส · ขอบเขต + owner-only | ✅ เอกสาร |
-| **P1** | Types · rules · lib · UI ตารางรายวัน + VAT สูตร | ⬜ |
+| **P1** | Types · rules · lib · UI ตารางรายวัน + VAT สูตร | ✅ |
 | **P2** | Gmail OAuth · กล่องรายงานเมล · sync | ⬜ |
 | **P3** | Parser รายวันต่อแพลตฟอร์ม · คิวยืนยัน | ⬜ |
 | **P4** | สถานะวัน · dashboard ขาดรายงาน · แจ้งเตือนเจ้าของ | ⬜ |
@@ -104,17 +104,17 @@
 
 ### P1.1 Types / ค่าคงที่
 
-- [ ] ไฟล์เช่น `src/lib/vat-sales.ts` (หรือแยก `vat-sales-types.ts`)
-- [ ] `DeliveryChannel = "shopee" | "grab" | "lineman"`
-- [ ] ป้ายไทย: ShopeeFood · Grab · LINE MAN
-- [ ] `DailySalesStatus = "draft" | "confirmed"`
-- [ ] `ChannelAmount`: `{ grossInclusive: number; fee?: number; netTransfer?: number }`
-- [ ] `DailySalesDoc` ครบฟิลด์ตามโมเดลด้านล่าง
-- [ ] helper วันที่ Bangkok: `dateKeyFromMs` / `todayBangkokDateKey` (reuse `bangkok-day` ถ้ารมี)
-- [ ] เงิน: ปัดทศนิยม 2 ตำแหน่งแบบร้านใช้ร่วมกัน (กำหนดฟังก์ชันเดียว ห้ามปัดคนละแบบ)
-- [ ] สูตรรวมศูนย์: `computeVatFromGross(gross)` → `{ vatBase, vatOutput }`
-- [ ] สูตรรวมวัน: `sumDailySales(doc)` → totalGross / deliveryTotal / storefront / VAT
-- [ ] validate: ยอดไม่ติดลบ · NaN ห้ามบันทึก · วันที่รูปแบบ `YYYY-MM-DD` เท่านั้น
+- [x] ไฟล์เช่น `src/lib/vat-sales.ts` (หรือแยก `vat-sales-types.ts`)
+- [x] `DeliveryChannel = "shopee" | "grab" | "lineman"`
+- [x] ป้ายไทย: ShopeeFood · Grab · LINE MAN
+- [x] `DailySalesStatus = "draft" | "confirmed"`
+- [x] `ChannelAmount`: `{ grossInclusive: number; fee?: number; netTransfer?: number }`
+- [x] `DailySalesDoc` ครบฟิลด์ตามโมเดลด้านล่าง
+- [x] helper วันที่ Bangkok: `dateKeyFromMs` / `todayBangkokDateKey` (reuse `bangkok-day` ถ้ารมี)
+- [x] เงิน: ปัดทศนิยม 2 ตำแหน่งแบบร้านใช้ร่วมกัน (กำหนดฟังก์ชันเดียว ห้ามปัดคนละแบบ)
+- [x] สูตรรวมศูนย์: `computeVatFromGross(gross)` → `{ vatBase, vatOutput }`
+- [x] สูตรรวมวัน: `sumDailySales(doc)` → totalGross / deliveryTotal / storefront / VAT
+- [x] validate: ยอดไม่ติดลบ · NaN ห้ามบันทึก · วันที่รูปแบบ `YYYY-MM-DD` เท่านั้น
 
 ### P1.2 Firestore model
 
@@ -154,73 +154,73 @@ meta/vatSalesSettings                // owner-only ใน rules
   updatedAt, updatedBy
 ```
 
-- [ ] สร้าง/อ่าน/เขียน `dailySales` ผ่าน lib เท่านั้น (หน้า UI ไม่แตะ Firestore ตรง ๆ ถ้าทีมใช้แบบเดิมก็ตาม pattern ใกล้เคียง)
-- [ ] `listDailySalesInMonth(YYYY-MM)`
-- [ ] `getDailySales(dateKey)` / `upsertDailySales(...)`
-- [ ] `confirmDailySales(dateKey)` / `unconfirmDailySales(dateKey)` (unconfirm = owner เท่านั้น)
-- [ ] เมื่อแก้ตัวเลขวัน `confirmed` → บังคับถาม หรือเด้งกลับ `draft` ตามที่ตกลงใน UI
-- [ ] อ่าน/เขียน `meta/vatSalesSettings` owner-only
-- [ ] **ไม่** เก็บ secret ใน `businessProfile` (โปรไฟล์นั้น staff อ่านได้)
+- [x] สร้าง/อ่าน/เขียน `dailySales` ผ่าน lib เท่านั้น (หน้า UI ไม่แตะ Firestore ตรง ๆ ถ้าทีมใช้แบบเดิมก็ตาม pattern ใกล้เคียง)
+- [x] `listDailySalesInMonth(YYYY-MM)`
+- [x] `getDailySales(dateKey)` / `upsertDailySales(...)`
+- [x] `confirmDailySales(dateKey)` / `unconfirmDailySales(dateKey)` (unconfirm = owner เท่านั้น)
+- [x] เมื่อแก้ตัวเลขวัน `confirmed` → บังคับถาม หรือเด้งกลับ `draft` ตามที่ตกลงใน UI
+- [x] อ่าน/เขียน `meta/vatSalesSettings` owner-only
+- [x] **ไม่** เก็บ secret ใน `businessProfile` (โปรไฟล์นั้น staff อ่านได้)
 
 ### P1.3 Firestore rules
 
-- [ ] `match /dailySales/{dateId}` → read/write `isOwner()` เท่านั้น
+- [x] `match /dailySales/{dateId}` → read/write `isOwner()` เท่านั้น
 - [ ] validate เบา ๆ ตอน create/update: มี `dateKey` · ตัวเลขเป็น number · ไม่ติดลบ (ถ้ารules รองรับ)
-- [ ] `meta/vatSalesSettings` → อ่าน/เขียนเฉพาะ `isOwner()` (อย่าให้ตกกฎ `isStaff()` กว้างของ `meta/{docId}`)
+- [x] `meta/vatSalesSettings` → อ่าน/เขียนเฉพาะ `isOwner()` (อย่าให้ตกกฎ `isStaff()` กว้างของ `meta/{docId}`)
 - [ ] ทดสอบ rules ด้วยบัญชี staff จริงหรือ emulator
 - [ ] deploy rules พร้อมฟีเจอร์ (หรือก่อนเปิด UI production)
 
 ### P1.4 Route + นำทาง (owner-only)
 
-- [ ] หน้า `src/app/vat-sales/page.tsx` (หรือชื่อที่ตกลง)
-- [ ] `AuthGate` + gate `staff.role === "owner"` → ไม่ใช่ `can(staff, …)`
-- [ ] พนักงาน → `router.replace("/more/")` + `return null`
-- [ ] การ์ดใน `/more/` อยู่บล็อก `isOwner` เดียวกับเมนู / รายงาน POS
-- [ ] ชื่อการ์ดชัด: **ยอดขาย / VAT** · คำอธิบายสั้น: เดลิเวอรี่ + หน้าร้าน · รายวัน
-- [ ] `AppShell` / prefix นำทางรองรับ path ใหม่ถ้าจำเป็น
-- [ ] **ไม่** เพิ่มแท็บ dock พนักงาน
-- [ ] **ไม่** เพิ่มใน `PERMISSION_GROUPS` / ศูนย์พนักงาน
+- [x] หน้า `src/app/vat-sales/page.tsx` (หรือชื่อที่ตกลง)
+- [x] `AuthGate` + gate `staff.role === "owner"` → ไม่ใช่ `can(staff, …)`
+- [x] พนักงาน → `router.replace("/more/")` + `return null`
+- [x] การ์ดใน `/more/` อยู่บล็อก `isOwner` เดียวกับเมนู / รายงาน POS
+- [x] ชื่อการ์ดชัด: **ยอดขาย / VAT** · คำอธิบายสั้น: เดลิเวอรี่ + หน้าร้าน · รายวัน
+- [x] `AppShell` / prefix นำทางรองรับ path ใหม่ถ้าจำเป็น
+- [x] **ไม่** เพิ่มแท็บ dock พนักงาน
+- [x] **ไม่** เพิ่มใน `PERMISSION_GROUPS` / ศูนย์พนักงาน
 
 ### P1.5 UI ตารางรายวัน
 
-- [ ] เลือกเดือน (ค่าเริ่มต้นเดือนปัจจุบัน Bangkok)
-- [ ] ตารางแถว = วันที่ในเดือน
-- [ ] คอลัมน์: วันที่ | Shopee | Grab | LINE MAN | รวมเดลิเวอรี่ | หน้าร้าน | **ยอดขายร้าน** | ฐานภาษี | VAT 7% | สถานะ
-- [ ] สรุปหัวหรือท้าย: กลุ่มเดลิเวอรี่ | กลุ่มหน้าร้าน | รวมเดือน (เฉพาะวันที่มียอด / ทั้งเดือน — ระบุให้ชัดใน UI)
-- [ ] แก้ไขเซลล์ได้เมื่อ `draft` (กรอกมือ = fallback ก่อนเมลเสร็จ)
-- [ ] วัน `confirmed` ล็อกแก้ หรือแก้แล้วต้อง unlock
-- [ ] ปุ่มยืนยันรายวัน / ยืนยันหลายวันที่เลือก
-- [ ] แสดงแหล่งที่มาเล็ก ๆ (`มือ` / `POS` / ภายหลัง `เมล`)
-- [ ] empty state: ยังไม่มีข้อมูลในเดือน
-- [ ] loading / error state
-- [ ] mobile: เลื่อนแนวนอนได้หรือสลับการ์ดรายวัน อ่านรู้เรื่อง
-- [ ] ไม่ใช้การ์ดเยอะเกินจำเป็น — โฟกัสตาราง/รายวัน
+- [x] เลือกเดือน (ค่าเริ่มต้นเดือนปัจจุบัน Bangkok)
+- [x] ตารางแถว = วันที่ในเดือน
+- [x] คอลัมน์: วันที่ | Shopee | Grab | LINE MAN | รวมเดลิเวอรี่ | หน้าร้าน | **ยอดขายร้าน** | ฐานภาษี | VAT 7% | สถานะ
+- [x] สรุปหัวหรือท้าย: กลุ่มเดลิเวอรี่ | กลุ่มหน้าร้าน | รวมเดือน (เฉพาะวันที่มียอด / ทั้งเดือน — ระบุให้ชัดใน UI)
+- [x] แก้ไขเซลล์ได้เมื่อ `draft` (กรอกมือ = fallback ก่อนเมลเสร็จ)
+- [x] วัน `confirmed` ล็อกแก้ หรือแก้แล้วต้อง unlock
+- [x] ปุ่มยืนยันรายวัน (ยืนยันหลายวันพร้อมกัน — ยังไม่ทำ)
+- [x] แสดงแหล่งที่มาเล็ก ๆ (`มือ` / `POS` / ภายหลัง `เมล`)
+- [x] empty state: ยังไม่มีข้อมูลในเดือน
+- [x] loading / error state
+- [x] mobile: เลื่อนแนวนอนได้หรือสลับการ์ดรายวัน อ่านรู้เรื่อง
+- [x] ไม่ใช้การ์ดเยอะเกินจำเป็น — โฟกัสตาราง/รายวัน
 
 ### P1.6 หน้าร้านจาก POS (suggest)
 
-- [ ] ปุ่ม “ดึงยอดหน้าร้านจาก POS” ต่อวันหรือทั้งเดือน
-- [ ] อ่าน `posSales` เฉพาะ owner (rules มีอยู่แล้ว)
-- [ ] รวมยอดวัน Bangkok ให้ตรงกับรายงาน `/pos-sales/`
-- [ ] ไม่นับบิล void
-- [ ] ใส่ `sources.storefront = "pos_suggest"`
-- [ ] ไม่ overwrite ค่าที่เจ้าของพิมพ์มือแล้วโดยไม่ถาม (confirm dialog)
-- [ ] **ไม่** เขียนกลับไปที่ POS / ledger
+- [x] ปุ่ม “ดึงยอดหน้าร้านจาก POS” ต่อวันหรือทั้งเดือน
+- [x] อ่าน `posSales` เฉพาะ owner (rules มีอยู่แล้ว)
+- [x] รวมยอดวัน Bangkok ให้ตรงกับรายงาน `/pos-sales/`
+- [x] ไม่นับบิล void
+- [x] ใส่ `sources.storefront = "pos_suggest"`
+- [x] ไม่ overwrite ค่าที่เจ้าของพิมพ์มือแล้วโดยไม่ถาม (confirm dialog)
+- [x] **ไม่** เขียนกลับไปที่ POS / ledger
 
 ### P1.7 ตั้งค่าภาษีสั้น ๆ (ในหน้าเดียวกันหรือ fold)
 
-- [ ] สวิตช์/สถานะ `vatRegistered` (จด VAT แล้วหรือยัง) — เก็บไว้โชว์บริบท
-- [ ] โหมดรายได้เข้า P&L: ก่อน VAT (แนะนำ) / รวม VAT
-- [ ] ช่องทางที่เปิดใช้ (ถ้าปิด Shopee ชั่วคราว ไม่บังคับในสถานะวัน)
-- [ ] อีเมลที่คาดว่าจะรับรายงาน (เตรียม P2)
+- [x] สวิตช์/สถานะ `vatRegistered` (จด VAT แล้วหรือยัง) — เก็บไว้โชว์บริบท
+- [x] โหมดรายได้เข้า P&L: ก่อน VAT (แนะนำ) / รวม VAT
+- [x] ช่องทางที่เปิดใช้ (ถ้าปิด Shopee ชั่วคราว ไม่บังคับในสถานะวัน)
+- [x] อีเมลที่คาดว่าจะรับรายงาน (เตรียม P2)
 
 ### P1.8 เช็ค P1 ปิดเฟส
 
-- [ ] สูตร VAT ตรวจด้วยตัวเลขตัวอย่าง (เช่น 107 → ฐาน 100 · VAT 7)
-- [ ] รวม 3 ช่อง + หน้าร้านถูกต้อง
-- [ ] บันทึกแล้วรีเฟรชยังอยู่
+- [x] สูตร VAT ตรวจด้วยตัวเลขตัวอย่าง (เช่น 107 → ฐาน 100 · VAT 7)
+- [x] รวม 3 ช่อง + หน้าร้านถูกต้อง
+- [x] บันทึกแล้วรีเฟรชยังอยู่
 - [ ] เคสสิทธิ์ A–D ผ่าน
-- [ ] bump `APP_BUILD` ถ้ามี UI production
-- [ ] ไม่มีโค้ด Excel import ในโมดูลนี้
+- [x] bump `APP_BUILD` → **332**
+- [x] ไม่มีโค้ด Excel import ในโมดูลนี้
 
 ---
 
@@ -634,3 +634,4 @@ meta/vatMailOAuth          // owner-only · มี refresh token · ห้าม
 |--------|--------|
 | 2026-07-28 | P0 เช็คลิสแรก (สั้น) |
 | 2026-07-28 | ขยายฉบับยาว: ย่อย P1–P7 · ตารางสิทธิ์ · ความเสี่ยง · แผนไฟล์ · คำศัพท์ |
+| 2026-07-28 | **P1 ลงมือ** — lib `vat-sales` · rules owner-only · `/vat-sales/` · การ์ด more · POS suggest · build 332 |
