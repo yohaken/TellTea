@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 353/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 120/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+91/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.68"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 354/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 121/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+92/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.69"/);
 
 assert.ok(existsSync(join(root, "docs/npos-friendly-ui-checklist.md")));
 assert.match(read("docs/npos-friendly-ui-checklist.md"), /NposUi|1\.14\.39/);
@@ -52,16 +52,15 @@ const ui = read("npos-telltea/app/src/main/java/app/telltea/npos/ui/UiScale.java
 assert.match(ui, /72 \* density \* scale/);
 assert.match(ui, /44 \* density \* scale/);
 assert.match(ui, /padKeyMinPx/);
+assert.match(ui, /padKeyMinPxForChrome/);
 assert.match(ui, /64 \* density \* scale/);
 
-assert.match(
-  read("npos-telltea/app/src/main/java/app/telltea/npos/ui/NposNumberPad.java"),
-  /padKeyMinPx/,
-);
-assert.doesNotMatch(
-  read("npos-telltea/app/src/main/java/app/telltea/npos/ui/NposNumberPad.java"),
-  /new Button\(/,
-);
+const pad = read("npos-telltea/app/src/main/java/app/telltea/npos/ui/NposNumberPad.java");
+assert.match(pad, /padKeyMinPxForChrome/);
+assert.match(pad, /CHROME_CASH_DP/);
+assert.doesNotMatch(pad, /new Button\(/);
+
+assert.match(confirmDlg, /fitCardToWindow/);
 
 const settings = read("npos-telltea/app/src/main/res/layout/activity_settings.xml");
 assert.match(settings, /Npos\.Btn\.Primary/);
