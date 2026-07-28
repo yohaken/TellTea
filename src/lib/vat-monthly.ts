@@ -132,7 +132,7 @@ export type VatLogicRates = {
   /** ภาษีขาย: gross × outputNum / outputDen */
   outputNum: number;
   outputDen: number;
-  /** สัดส่วนประมาณภาษีซื้อจาก GP เทียบภาษีขาย (เช่น 1/3) */
+  /** สัดส่วนประมาณภาษีซื้อจาก GP เทียบภาษีขาย (เช่น 0.3333 = 33.33%) */
   gpOfOutput: number;
   /** คูณลดภาษีซื้อที่ยื่น (เช่น 0.98 = ยื่น 98%) */
   inputClaimFactor: number;
