@@ -6558,6 +6558,156 @@ body.modal-open .main-panel {
   background: transparent;
 }
 
+/* —— Manage tab super-slim (visual only; same folds/actions) —— */
+.pos-manage-stack--slim {
+  gap: 0.45rem;
+}
+
+.pos-manage-stack--slim .settings-fold {
+  border-radius: 0.85rem;
+  border: 1px solid rgba(28, 42, 31, 0.08);
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(28, 42, 31, 0.03);
+}
+
+.pos-manage-stack--slim .settings-fold-toggle {
+  padding: 0.45rem 0.7rem;
+}
+
+.pos-manage-stack--slim .settings-fold-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.pos-manage-stack--slim .settings-fold-hint,
+.pos-manage-stack--slim .settings-fold-hint--collapsed {
+  font-size: 0.72rem;
+  margin: 0.2rem 0.7rem 0.45rem;
+  line-height: 1.35;
+}
+
+.pos-manage-stack--slim .settings-fold-body {
+  padding: 0 0.7rem 0.55rem;
+}
+
+.npos-slim-text-btn--danger {
+  color: #b42318;
+}
+
+.npos-slim-text-btn--danger:hover:not(:disabled) {
+  color: #912018;
+}
+
+.npos-slim-warn {
+  color: #b42318;
+  font-weight: 700;
+}
+
+.npos-slim-row--device {
+  grid-template-columns:
+    minmax(5rem, 1.3fr)
+    minmax(3.4rem, max-content)
+    minmax(3.2rem, 0.9fr)
+    minmax(4rem, 1.1fr)
+    minmax(2rem, max-content)
+    minmax(2.6rem, max-content)
+    minmax(2.2rem, max-content)
+    minmax(3.2rem, max-content);
+  min-width: 40rem;
+  cursor: default;
+}
+
+.npos-slim-row--device.is-selected {
+  background: rgba(232, 93, 4, 0.06);
+}
+
+.npos-seat-slim {
+  margin-bottom: 0.55rem;
+}
+
+.npos-slim-open-rounds {
+  margin: 0 0 0.35rem;
+}
+
+.npos-slim-open-rounds .npos-slim-summary {
+  border-bottom: 0;
+  padding: 0.15rem 0;
+  margin: 0;
+}
+
+.npos-device-actions--text {
+  flex-wrap: wrap;
+  gap: 0.15rem 0.45rem;
+  align-items: center;
+}
+
+.npos-device-slim-card {
+  padding: 0.45rem 0.35rem 0.5rem;
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.07);
+  background: transparent;
+}
+
+.npos-slim-custom-sec {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+  margin-top: 0.35rem;
+  font-size: 0.76rem;
+}
+
+.npos-slim-custom-sec input {
+  width: 4.5rem;
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: #fff;
+}
+
+.npos-slim-code-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.65rem;
+  margin: 0.25rem 0 0.45rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.npos-slim-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  color: #1a2e24;
+}
+
+.npos-slim-warn-banner {
+  margin: 0 0 0.45rem;
+  padding: 0.35rem 0;
+  font-size: 0.78rem;
+  border-bottom: 1px solid rgba(180, 35, 24, 0.18);
+}
+
+.npos-slim-check {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  margin: 0.35rem 0;
+  font-size: 0.78rem;
+}
+
+.npos-store-claim-form--slim .field {
+  margin-bottom: 0.35rem;
+}
+
+.npos-store-claim-form--slim .field > span {
+  font-size: 0.74rem;
+}
+
 .pos-sales-report-page--dense .pos-sales-page-title {
   display: flex;
   align-items: center;

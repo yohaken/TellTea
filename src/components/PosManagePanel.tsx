@@ -10,13 +10,13 @@ import { PosStoreClaimPanel } from "@/components/PosStoreClaimPanel";
 import { PosTabletSyncPanel } from "@/components/PosTabletSyncPanel";
 
 /**
- * หมวดจัดการ Pos — compact · เปิดมาพับหมวด · ตัวอย่างสลิปเต็มพื้นที่ในตั้งค่าร้าน
+ * หมวดจัดการ Pos — super slim · พับหมวด · ไม่เปลี่ยน workflow
  */
 export function PosManagePanel({ onError }: { onError: (msg: string | null) => void }) {
   return (
-    <div className="owner-settings-stack pos-manage-stack pos-manage-stack--dense">
+    <div className="owner-settings-stack pos-manage-stack pos-manage-stack--dense pos-manage-stack--slim">
       <p className="muted pos-manage-lead">
-        ตั้งชื่อ/ที่อยู่ → บันทึก Firebase · รหัสร้าน → แท็บเล็ตเคลม · seat ค้าง → เตะ
+        ตั้งชื่อ/ที่อยู่ · รหัสร้าน · เครื่อง · ชีพจร — แตะหมวดเพื่อเปิด
       </p>
       <SettingsFold
         title="ตั้งค่าร้าน · ตัวอย่างสลิป"

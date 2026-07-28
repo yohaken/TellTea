@@ -143,70 +143,35 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
       className="npos-store-claim-fold"
     >
       {!loading && !hasCode ? (
-        <p
-          className="error-text"
-          style={{
-            marginBottom: "0.75rem",
-            padding: "0.65rem 0.75rem",
-            borderRadius: 8,
-            background: "#fff4e8",
-            border: "1px solid #f0c9a0",
-          }}
-        >
-          ยังไม่ได้ตั้งรหัสร้านบน Firebase — แท็บเล็ตใส่รหัสแล้วเข้าไม่ได้จนกว่าจะกด{" "}
-          <strong>ตั้งรหัส + เปิดเกต</strong> ด้านล่าง
+        <p className="error-text npos-slim-warn-banner">
+          ยังไม่ได้ตั้งรหัสร้าน — แท็บเล็ตเข้าไม่ได้จนกว่าจะกด{" "}
+          <strong>ตั้งรหัส + เปิดเกต</strong>
         </p>
       ) : null}
-      <p className="muted" style={{ marginBottom: "0.75rem" }}>
-        รหัสลับ 1:1 กับหลังบ้าน · <strong>เครื่องเดียวถือสิทธิ์ขาย</strong> ·
-        เปลี่ยนรหัส = เตะทุกเครื่องให้ใส่รหัสใหม่
-      </p>
-      <p className="muted" style={{ marginBottom: "0.75rem" }}>
-        ปุ่ม <strong>เตะ / เคลียร์ seat</strong> ≠ บังคับปิดกะ — กะบนเซิร์ฟเวอร์อยู่ต่อ
+      <p className="muted npos-slim-empty">
+        รหัสลับ 1:1 · เครื่องเดียวถือสิทธิ์ขาย · เตะ/เคลียร์ seat ≠ ปิดกะ
       </p>
       {seatMode === "exclusive" && required ? (
-        <p className="muted" style={{ marginBottom: "0.5rem" }}>
-          Seat ปัจจุบัน: {activeSeatId ? activeSeatId.slice(-8).toUpperCase() : "— ว่าง —"}
+        <p className="muted npos-slim-empty">
+          Seat: {activeSeatId ? activeSeatId.slice(-8).toUpperCase() : "— ว่าง —"}
         </p>
       ) : null}
       {hasCode ? (
-        <div
-          style={{
-            marginBottom: "0.75rem",
-            padding: "0.75rem 0.85rem",
-            borderRadius: 10,
-            background: "#1A2E24",
-            color: "#F7F7F5",
-          }}
-        >
-          <div style={{ fontSize: "0.75rem", opacity: 0.75, marginBottom: "0.25rem" }}>
-            รหัสร้านที่ใช้อยู่ (เจ้าของเท่านั้น)
-          </div>
+        <div className="npos-slim-code-bar">
+          <span className="muted">รหัสร้าน</span>
           {currentCode ? (
-            <div
-              style={{
-                fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                fontSize: "1.45rem",
-                fontWeight: 700,
-                letterSpacing: "0.12em",
-              }}
-            >
-              {currentCode}
-            </div>
+            <strong className="npos-slim-code">{currentCode}</strong>
           ) : (
-            <p style={{ margin: 0, fontSize: "0.9rem", opacity: 0.9 }}>
-              มีรหัสบนเซิร์ฟเวอร์แล้ว แต่ยังไม่เก็บตัวเต็ม — กด{" "}
-              <strong>เปลี่ยนรหัส + เปิดเกต</strong> อีกครั้งเพื่อให้หลังบ้านจำรหัสเต็ม
-            </p>
+            <span className="muted">มีบนเซิร์ฟเวอร์แล้ว — เปลี่ยนรหัสอีกครั้งเพื่อจำตัวเต็ม</span>
           )}
         </div>
       ) : null}
       {updatedAt > 0 ? (
-        <p className="muted" style={{ marginBottom: "0.5rem" }}>
-          อัปเดตล่าสุด {new Date(updatedAt).toLocaleString("th-TH")}
+        <p className="muted npos-slim-empty">
+          อัปเดต {new Date(updatedAt).toLocaleString("th-TH")}
         </p>
       ) : null}
-      <form onSubmit={(e) => void onSave(e)} className="npos-store-claim-form">
+      <form onSubmit={(e) => void onSave(e)} className="npos-store-claim-form npos-store-claim-form--slim">
         <label className="field">
           <span>รหัสร้านใหม่ (A–Z / 0–9 · 4–16 ตัว)</span>
           <input
@@ -219,42 +184,44 @@ export function PosStoreClaimPanel({ onError }: { onError: (msg: string | null) 
             disabled={busy}
           />
         </label>
-        <label
-          className="field checkbox-field"
-          style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}
-        >
+        <label className="field checkbox-field npos-slim-check">
           <input
             type="checkbox"
             checked={rejectDev}
             onChange={(e) => setRejectDev(e.target.checked)}
             disabled={busy}
           />
-          <span>ปิดกั้นเครื่องจำลอง / พัฒนา (ถอดติ๊กถ้าเทสบน emulator)</span>
+          <span>ปิดกั้นเครื่องจำลอง / พัฒนา</span>
         </label>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "0.75rem" }}>
-          <button type="submit" className="primary-btn" disabled={busy || code.trim().length < 4}>
+        <div className="npos-slim-filters">
+          <button
+            type="submit"
+            className="npos-slim-text-btn is-active"
+            disabled={busy || code.trim().length < 4}
+          >
             {hasCode ? "เปลี่ยนรหัส + เปิดเกต" : "ตั้งรหัส + เปิดเกต"}
           </button>
           <button
             type="button"
-            className="ghost-btn"
+            className="npos-slim-text-btn"
             disabled={busy || (!hasCode && !activeSeatId)}
             onClick={() => void onClearSeat()}
           >
-            เคลียร์ seat / เริ่มใส่รหัสใหม่
+            เคลียร์ seat
           </button>
           {hasCode ? (
-            <button type="button" className="ghost-btn" disabled={busy} onClick={() => void onClear()}>
+            <button
+              type="button"
+              className="npos-slim-text-btn npos-slim-text-btn--danger"
+              disabled={busy}
+              onClick={() => void onClear()}
+            >
               ปิดเกต
             </button>
           ) : null}
         </div>
       </form>
-      {hint ? (
-        <p className="ok-text" style={{ marginTop: "0.75rem" }}>
-          {hint}
-        </p>
-      ) : null}
+      {hint ? <p className="ok-text npos-slim-empty">{hint}</p> : null}
     </SettingsFold>
   );
 }

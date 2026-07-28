@@ -60,27 +60,24 @@ export function PosTabletSyncPanel({ onError }: { onError: (msg: string | null) 
       defaultOpen={false}
       className="npos-tablet-sync-fold"
     >
-      <p className="muted" style={{ marginBottom: "0.65rem", fontSize: "0.78rem" }}>
-        ค่าเริ่ม 5 วิ (kick เร็ว) · ระบบนิ่งแล้วยืดได้ 10–30–120+ วิ · ช่วงที่อนุญาต 5–600
+      <p className="muted npos-slim-empty">
+        ค่าเริ่ม 5 วิ · นิ่งแล้วยืดได้ · ช่วง 5–600 · ชิปเดียวกันมีในตารางรอบด้วย
       </p>
-      <div className="pos-sales-bill-chips" role="group" aria-label="ช่วงชีพจร">
+      <div className="npos-slim-filters" role="group" aria-label="ช่วงชีพจร">
         {HEARTBEAT_INTERVAL_PRESETS.map((p) => (
           <button
             key={p}
             type="button"
-            className={sec === p ? "is-active" : ""}
+            className={`npos-slim-text-btn ${sec === p ? "is-active" : ""}`}
             disabled={busy || loading}
             onClick={() => void save(p)}
           >
-            {p} วิ
+            {p}วิ
           </button>
         ))}
       </div>
-      <label
-        className="pos-sales-bill-search"
-        style={{ marginTop: "0.65rem", display: "grid", gap: "0.25rem" }}
-      >
-        <span className="muted">กำหนดเอง (วินาที)</span>
+      <label className="npos-slim-custom-sec">
+        <span className="muted">กำหนดเอง (วิ)</span>
         <input
           type="number"
           min={5}
@@ -90,21 +87,16 @@ export function PosTabletSyncPanel({ onError }: { onError: (msg: string | null) 
           disabled={busy || loading}
           onChange={(e) => setSec(clampHeartbeatIntervalSec(Number(e.target.value)))}
         />
+        <button
+          type="button"
+          className="npos-slim-text-btn is-active"
+          disabled={busy || loading}
+          onClick={() => void save(sec)}
+        >
+          {busy ? "บันทึก…" : "บันทึก"}
+        </button>
       </label>
-      <button
-        type="button"
-        className="primary-btn"
-        style={{ marginTop: "0.55rem" }}
-        disabled={busy || loading}
-        onClick={() => void save(sec)}
-      >
-        {busy ? "กำลังบันทึก…" : "บันทึกช่วงเช็ค"}
-      </button>
-      {saved ? (
-        <p className="ok-text" style={{ marginTop: "0.45rem", fontSize: "0.78rem" }}>
-          {saved}
-        </p>
-      ) : null}
+      {saved ? <p className="ok-text npos-slim-empty">{saved}</p> : null}
     </SettingsFold>
   );
 }

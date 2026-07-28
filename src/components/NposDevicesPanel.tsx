@@ -127,7 +127,7 @@ function DeviceCard({
     d.captureRequestAt > 0 && d.captureRequestAt > (d.lastCaptureAckAt || 0);
   const hasCapture = !!(capture?.primaryUrl || capture?.secondaryUrl);
   return (
-    <li className="npos-diagnose-card">
+    <li className="npos-diagnose-card npos-device-slim-card">
       <div className="npos-device-row">
         <strong>{posDeviceLabel(d)}</strong>
         <span className={online ? "npos-pill npos-pill--on" : "npos-pill npos-pill--off"}>
@@ -138,29 +138,26 @@ function DeviceCard({
         รหัส {d.pairingCode} · เครื่อง {machine} · APK {d.nativeShellBuild || d.appBuild || "—"} ·{" "}
         {d.deviceHint || "android"}
         {d.isEmulator ? " · emulator" : ""}
-      </p>
-      <p className="muted npos-diagnose-id">
-        เคลม/seat{" "}
+        {" · "}
         {d.storeClaimed
-          ? `ถือสิทธิ์${d.storeClaimMethod ? ` (${d.storeClaimMethod})` : ""}`
+          ? `เคลม${d.storeClaimMethod ? ` (${d.storeClaimMethod})` : ""}`
           : d.storeClaimMethod === "revoked"
             ? `ถูกเตะ${d.storeClaimRevokeReason ? ` · ${d.storeClaimRevokeReason}` : ""}`
             : "ยังไม่เคลม"}
+        {" · เห็น "}
+        {formatSeen(d.lastSeenAt)}
       </p>
       <p className="muted npos-diagnose-id">
-        จอลูกค้า {d.customerDisplay || "—"} · แคปล่าสุด{" "}
+        จอลูกค้า {d.customerDisplay || "—"} · แคป{" "}
         {d.lastCaptureAt ? formatSeen(d.lastCaptureAt) : "ยังไม่มี"}
         {capturePending ? " · รอแคป…" : ""}
-      </p>
-      <p className="muted npos-diagnose-id">
-        สิทธิ์เครื่อง{" "}
+        {" · "}
         {d.permissionsStatus
           ? d.permissionsStatus
           : d.permissionsOk
             ? "สิทธิ์ครบ"
-            : "ยังไม่รายงาน — อัปเดต APK แล้วเปิดแอป"}
+            : "ยังไม่รายงานสิทธิ์"}
       </p>
-      <p className="muted npos-diagnose-id">เห็นล่าสุด {formatSeen(d.lastSeenAt)}</p>
       <NposCaptureGallery
         primaryUrl={capture?.primaryUrl}
         secondaryUrl={capture?.secondaryUrl}
@@ -175,13 +172,18 @@ function DeviceCard({
             : "ยังไม่มีภาพ — กด «สั่งแคปจอ» แล้วรอเครื่องออนไลน์"
         }
       />
-      <div className="npos-device-actions">
-        <button type="button" className="npos-device-btn" disabled={busy || !online} onClick={onCapture}>
+      <div className="npos-device-actions npos-device-actions--text">
+        <button
+          type="button"
+          className="npos-slim-text-btn"
+          disabled={busy || !online}
+          onClick={onCapture}
+        >
           สั่งแคปจอ
         </button>
         <button
           type="button"
-          className="npos-device-btn npos-device-btn--danger"
+          className="npos-slim-text-btn npos-slim-text-btn--danger"
           disabled={busy || !hasCapture}
           onClick={onClearCaptures}
         >
@@ -201,20 +203,20 @@ function DeviceCard({
           </select>
         </label>
         {d.storeClaimed ? (
-          <button type="button" className="npos-device-btn" disabled={busy} onClick={onRevokeClaim}>
+          <button type="button" className="npos-slim-text-btn" disabled={busy} onClick={onRevokeClaim}>
             เตะเครื่อง
           </button>
         ) : (
-          <button type="button" className="npos-device-btn" disabled={busy} onClick={onGrantClaim}>
+          <button type="button" className="npos-slim-text-btn" disabled={busy} onClick={onGrantClaim}>
             ให้ seat
           </button>
         )}
         {d.deviceClass === "blocked" ? (
-          <button type="button" className="npos-device-btn" disabled={busy} onClick={onUnblock}>
+          <button type="button" className="npos-slim-text-btn" disabled={busy} onClick={onUnblock}>
             ปลดบล็อก
           </button>
         ) : (
-          <button type="button" className="npos-device-btn" disabled={busy} onClick={onBlock}>
+          <button type="button" className="npos-slim-text-btn" disabled={busy} onClick={onBlock}>
             บล็อก
           </button>
         )}
@@ -617,24 +619,15 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
         <p className="muted">ยังไม่มีเครื่อง native</p>
       ) : (
         <>
-          <div className="npos-seat-slim" style={{ marginBottom: "0.75rem", overflowX: "auto" }}>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "0.5rem",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: "0.5rem",
-              }}
-            >
-              <p className="muted" style={{ margin: 0 }}>
-                ตารางเครื่อง · กด <strong>เตะ</strong> เพื่อเคลียร์สิทธิ์ (กะไม่ปิด)
+          <div className="npos-seat-slim">
+            <div className="npos-slim-filters">
+              <p className="muted npos-slim-empty" style={{ margin: 0 }}>
+                ตารางเครื่อง · เตะ = เคลียร์สิทธิ์ (กะไม่ปิด)
                 {activeSeatId ? ` · seat ${activeSeatId.slice(-6).toUpperCase()}` : " · seat ว่าง"}
               </p>
               <button
                 type="button"
-                className="npos-device-btn"
+                className="npos-slim-text-btn"
                 disabled={busyId === "__clear_seat__"}
                 onClick={() => void clearAllSeats()}
               >
@@ -642,14 +635,7 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
               </button>
             </div>
             {openRoundBar.length > 0 ? (
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "0.5rem",
-                  marginBottom: "0.65rem",
-                }}
-              >
+              <div className="npos-slim-open-rounds">
                 {openRoundBar.map((s) => {
                   const dev = devices.find((d) => d.id === s.deviceId);
                   const who = dev ? posDeviceLabel(dev) : s.deviceId.slice(-6).toUpperCase() || "—";
@@ -658,146 +644,146 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                       ? labelOtShift(s.shift as OtShiftId)
                       : s.shift || "รอบ";
                   return (
-                    <div
-                      key={s.id}
-                      style={{
-                        padding: "0.4rem 0.65rem",
-                        borderRadius: 8,
-                        background: "#fff4e8",
-                        border: "1px solid #f0c9a0",
-                        fontSize: "0.82rem",
-                      }}
-                    >
-                      <strong>{shift}</strong> · {who} · เปิดอยู่ · {s.saleCount} บิล · ฿
-                      {formatPlainNumber(s.totalSales)}
-                      {(s.cashTotal != null || s.promptpayTotal != null || s.transferTotal != null) && (
+                    <p key={s.id} className="npos-slim-summary">
+                      <strong>{shift}</strong>
+                      <span>·</span>
+                      <span>{who}</span>
+                      <span>·</span>
+                      <span className="npos-slim-status">
+                        <i aria-hidden className="is-live" />
+                        เปิด
+                      </span>
+                      <span>·</span>
+                      <span>{s.saleCount} บิล</span>
+                      <span>·</span>
+                      <strong>฿{formatPlainNumber(s.totalSales)}</strong>
+                      {(s.cashTotal != null ||
+                        s.promptpayTotal != null ||
+                        s.transferTotal != null) && (
                         <span className="muted">
-                          {" "}
-                          · สด ฿{formatPlainNumber(s.cashTotal || 0)} · โอน ฿
-                          {formatPlainNumber(s.transferTotal || 0)} · PP ฿
+                          · สด {formatPlainNumber(s.cashTotal || 0)} / โอน{" "}
+                          {formatPlainNumber(s.transferTotal || 0)} / PP{" "}
                           {formatPlainNumber(s.promptpayTotal || 0)}
                         </span>
                       )}
-                    </div>
+                    </p>
                   );
                 })}
               </div>
             ) : (
-              <p className="muted" style={{ marginBottom: "0.5rem", fontSize: "0.82rem" }}>
-                วันนี้ยังไม่มีรอบเปิดบนเซิร์ฟเวอร์
-              </p>
+              <p className="muted npos-slim-empty">วันนี้ยังไม่มีรอบเปิดบนเซิร์ฟเวอร์</p>
             )}
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
-              <thead>
-                <tr style={{ textAlign: "left", borderBottom: "1px solid #ddd" }}>
-                  <th style={{ padding: "0.35rem" }}>เครื่อง</th>
-                  <th style={{ padding: "0.35rem" }}>สถานะ</th>
-                  <th style={{ padding: "0.35rem" }}>รอบ</th>
-                  <th style={{ padding: "0.35rem" }}>ยอดรอบ</th>
-                  <th style={{ padding: "0.35rem" }}>ค้างส่ง</th>
-                  <th style={{ padding: "0.35rem" }}>เชื่อม</th>
-                  <th style={{ padding: "0.35rem" }}>เวอร์ชัน</th>
-                  <th style={{ padding: "0.35rem" }}>แอ็กชัน</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...buckets.shop, ...buckets.dev].map((d) => {
-                  const online = isPosDeviceOnline(d.lastSeenAt, now);
-                  const isSeat = activeSeatId === d.id || (d.storeClaimed && !activeSeatId);
-                  let status = "ว่าง";
-                  if (d.deviceClass === "blocked") status = "บล็อก";
-                  else if (d.storeClaimMethod === "revoked" && !d.storeClaimed) status = "ถูกเตะ";
-                  else if (isSeat && online) status = "ออนไลน์ · seat";
-                  else if (isSeat && !online) status = "หลุดเน็ต · seat";
-                  else if (d.storeClaimed) status = "เคลม";
-                  const canKick = d.storeClaimed || activeSeatId === d.id;
-                  const sess = sessionByDevice.get(d.id);
-                  const shiftLabel = sess
-                    ? sess.shift === "late" ||
-                      sess.shift === "morning" ||
-                      sess.shift === "evening"
-                      ? labelOtShift(sess.shift as OtShiftId)
-                      : sess.shift || "—"
-                    : "—";
-                  const roundCell = sess
-                    ? `${shiftLabel}${sess.status === "open" ? " · เปิด" : " · ปิด"}`
-                    : "—";
-                  let salesCell = "—";
-                  if (sess) {
-                    const cash = sess.cashTotal ?? 0;
-                    const pp = sess.promptpayTotal ?? 0;
-                    salesCell = `${sess.saleCount} บิล · ฿${formatPlainNumber(sess.totalSales)}`;
-                    if (cash > 0 || pp > 0) {
-                      salesCell += ` · สด ${formatPlainNumber(cash)} / PP ${formatPlainNumber(pp)}`;
-                    }
+            <div className="npos-slim-scroll" role="table" aria-label="เครื่อง nPos">
+              <div className="npos-slim-row npos-slim-row--head npos-slim-row--device" role="row">
+                <span role="columnheader">เครื่อง</span>
+                <span role="columnheader">สถานะ</span>
+                <span role="columnheader">รอบ</span>
+                <span role="columnheader" className="npos-slim-num">
+                  ยอด
+                </span>
+                <span role="columnheader" className="npos-slim-num">
+                  ค้าง
+                </span>
+                <span role="columnheader">เชื่อม</span>
+                <span role="columnheader" className="npos-slim-num">
+                  เวอร์
+                </span>
+                <span role="columnheader">แอ็กชัน</span>
+              </div>
+              {[...buckets.shop, ...buckets.dev].map((d) => {
+                const online = isPosDeviceOnline(d.lastSeenAt, now);
+                const isSeat = activeSeatId === d.id || (d.storeClaimed && !activeSeatId);
+                let status = "ว่าง";
+                if (d.deviceClass === "blocked") status = "บล็อก";
+                else if (d.storeClaimMethod === "revoked" && !d.storeClaimed) status = "ถูกเตะ";
+                else if (isSeat && online) status = "seat · ออน";
+                else if (isSeat && !online) status = "seat · หลุด";
+                else if (d.storeClaimed) status = "เคลม";
+                const canKick = d.storeClaimed || activeSeatId === d.id;
+                const sess = sessionByDevice.get(d.id);
+                const shiftLabel = sess
+                  ? sess.shift === "late" ||
+                    sess.shift === "morning" ||
+                    sess.shift === "evening"
+                    ? labelOtShift(sess.shift as OtShiftId)
+                    : sess.shift || "—"
+                  : "—";
+                const roundCell = sess
+                  ? `${shiftLabel}${sess.status === "open" ? " · เปิด" : " · ปิด"}`
+                  : "—";
+                let salesCell = "—";
+                if (sess) {
+                  const cash = sess.cashTotal ?? 0;
+                  const pp = sess.promptpayTotal ?? 0;
+                  const transfer = sess.transferTotal ?? 0;
+                  salesCell = `${sess.saleCount}·฿${formatPlainNumber(sess.totalSales)}`;
+                  if (cash > 0 || pp > 0 || transfer > 0) {
+                    salesCell += ` ส${formatPlainNumber(cash)}/โ${formatPlainNumber(transfer)}/P${formatPlainNumber(pp)}`;
                   }
-                  const pending = d.syncPendingCount || 0;
-                  const failed = d.syncFailedCount || 0;
-                  let pendingCell = "—";
-                  if (failed > 0) pendingCell = `⚠ ${pending}+${failed}`;
-                  else if (pending > 0) pendingCell = String(pending);
-                  return (
-                    <tr
-                      key={`slim-${d.id}`}
-                      style={{
-                        borderBottom: "1px solid #eee",
-                        background: isSeat ? "#fff8f0" : undefined,
-                      }}
+                }
+                const pending = d.syncPendingCount || 0;
+                const failed = d.syncFailedCount || 0;
+                let pendingCell = "—";
+                if (failed > 0) pendingCell = `⚠${pending}+${failed}`;
+                else if (pending > 0) pendingCell = String(pending);
+                return (
+                  <div
+                    key={`slim-${d.id}`}
+                    className={`npos-slim-row npos-slim-row--device ${isSeat ? "is-selected" : ""}`}
+                    role="row"
+                  >
+                    <span role="cell" className="npos-slim-ellipsis" title={posDeviceLabel(d)}>
+                      {posDeviceLabel(d)}
+                      <span className="muted"> · {d.pairingCode}</span>
+                    </span>
+                    <span role="cell">{status}</span>
+                    <span role="cell" className="npos-slim-ellipsis">
+                      {roundCell}
+                    </span>
+                    <span role="cell" className="npos-slim-num npos-slim-ellipsis" title={salesCell}>
+                      {salesCell}
+                    </span>
+                    <span
+                      role="cell"
+                      className={`npos-slim-num ${failed > 0 ? "npos-slim-warn" : ""}`}
                     >
-                      <td style={{ padding: "0.35rem" }}>
-                        {posDeviceLabel(d)}
-                        <span className="muted"> · {d.pairingCode}</span>
-                      </td>
-                      <td style={{ padding: "0.35rem" }}>{status}</td>
-                      <td style={{ padding: "0.35rem" }}>{roundCell}</td>
-                      <td style={{ padding: "0.35rem" }}>{salesCell}</td>
-                      <td
-                        style={{
-                          padding: "0.35rem",
-                          color: failed > 0 ? "#B00020" : pending > 0 ? "#8A4B12" : undefined,
-                          fontWeight: pending + failed > 0 ? 600 : undefined,
-                        }}
-                      >
-                        {pendingCell}
-                      </td>
-                      <td style={{ padding: "0.35rem" }}>{online ? "ออน" : "หลุด"}</td>
-                      <td style={{ padding: "0.35rem" }}>
-                        {d.nativeShellBuild || d.appBuild || "—"}
-                      </td>
-                      <td style={{ padding: "0.35rem", whiteSpace: "nowrap" }}>
-                        {canKick ? (
-                          <button
-                            type="button"
-                            className="primary-btn"
-                            style={{ padding: "0.35rem 0.75rem", fontSize: "0.85rem" }}
-                            disabled={busyId === d.id}
-                            onClick={() => void revokeClaim(d)}
-                          >
-                            เตะ
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="npos-device-btn"
-                            disabled={busyId === d.id || d.deviceClass === "blocked"}
-                            onClick={() => void grantClaim(d)}
-                          >
-                            ให้ seat
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-                {[...buckets.shop, ...buckets.dev].length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="muted" style={{ padding: "0.5rem" }}>
-                      ยังไม่มีเครื่อง
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
+                      {pendingCell}
+                    </span>
+                    <span role="cell" className="npos-slim-status">
+                      <i aria-hidden className={online ? "is-live" : ""} />
+                      {online ? "ออน" : "หลุด"}
+                    </span>
+                    <span role="cell" className="npos-slim-num">
+                      {d.nativeShellBuild || d.appBuild || "—"}
+                    </span>
+                    <span role="cell">
+                      {canKick ? (
+                        <button
+                          type="button"
+                          className="npos-slim-text-btn npos-slim-text-btn--danger"
+                          disabled={busyId === d.id}
+                          onClick={() => void revokeClaim(d)}
+                        >
+                          เตะ
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="npos-slim-text-btn"
+                          disabled={busyId === d.id || d.deviceClass === "blocked"}
+                          onClick={() => void grantClaim(d)}
+                        >
+                          ให้ seat
+                        </button>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
+              {[...buckets.shop, ...buckets.dev].length === 0 ? (
+                <p className="muted npos-slim-empty">ยังไม่มีเครื่อง</p>
+              ) : null}
+            </div>
           </div>
           <ClassSection
             cls="shop"
