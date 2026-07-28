@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateTimeShort, formatPlainNumber } from "@/lib/utils";
 import {
+  DEFAULT_OUTPUT_PCT,
   DEFAULT_PERIOD_START_DAY,
+  DEFAULT_STOREFRONT_REMIT_PCT,
   DEFAULT_VAT_LOGIC_RATES,
   emptySegment,
   fileVatMonthlyReturn,
@@ -11,6 +13,7 @@ import {
   loadVatMonthlyReturn,
   loadVatMonthlySettings,
   mapVatLogicRates,
+  outputPctToFraction,
   proposePnlIncome,
   ratesLabel,
   recomputeSegment,
@@ -53,6 +56,10 @@ function pctLabel(n: number) {
   return `${formatPlainNumber(roundPct(n))}%`;
 }
 
+function draftStorageKey(month: string) {
+  return `telltea:vat-monthly-draft:${month}`;
+}
+
 type Props = { actor: string };
 type Tab = "month" | "close";
 
@@ -60,6 +67,7 @@ type DraftSeg = {
   grossManual: string;
   channels: Record<keyof DeliveryChannels, string>;
   tenders: Record<keyof StorefrontTenders, string>;
+  remitPct: string;
   gpVat: string;
   useGpEstimate: boolean;
   ingredientVat: string;
@@ -78,6 +86,7 @@ function segToDraft(seg: VatSegmentState): DraftSeg {
       transfer: moneyInputValue(seg.tenders.transfer),
       cash: moneyInputValue(seg.tenders.cash),
     },
+    remitPct: String(seg.remitPct || (seg.kind === "storefront" ? DEFAULT_STOREFRONT_REMIT_PCT : 100)),
     gpVat: moneyInputValue(seg.gpVat),
     useGpEstimate: seg.useGpEstimate,
     ingredientVat: moneyInputValue(seg.ingredientVat),
@@ -101,11 +110,21 @@ function draftToSeg(
       transfer: parseMoneyInput(d.tenders.transfer),
       cash: parseMoneyInput(d.tenders.cash),
     },
+    remitPct: parseRate(
+      d.remitPct,
+      kind === "storefront" ? DEFAULT_STOREFRONT_REMIT_PCT : 100,
+    ),
     gpVat: parseMoneyInput(d.gpVat),
     useGpEstimate: d.useGpEstimate,
     ingredientVat: parseMoneyInput(d.ingredientVat),
     rates: d.rates,
   });
+}
+
+function setOutputPct(rates: VatLogicRates, pct: number): VatLogicRates {
+  const outputPct = Math.min(99, Math.max(0.01, pct));
+  const frac = outputPctToFraction(outputPct);
+  return mapVatLogicRates({ ...rates, outputPct, ...frac });
 }
 
 function MoneyCell({
@@ -194,7 +213,6 @@ function ExpandBtn({
   );
 }
 
-/** ตาราง 1 — ภาษีขาย (กลุ่มรายได้) */
 function OutputVatTable({
   deliveryDraft,
   storefrontDraft,
@@ -220,7 +238,8 @@ function OutputVatTable({
   onDeliveryChange: (d: DraftSeg) => void;
   onStorefrontChange: (d: DraftSeg) => void;
 }) {
-  const totalGross = delivery.grossSales + storefront.grossSales;
+  const totalReported = delivery.reportedGross + storefront.reportedGross;
+  const totalRemit = delivery.remitAmount + storefront.remitAmount;
   const totalBase = delivery.vatBase + storefront.vatBase;
   const totalOut = delivery.outputVat + storefront.outputVat;
 
@@ -234,6 +253,7 @@ function OutputVatTable({
     onChange: (d: DraftSeg) => void,
   ) => {
     const usesParts = computed.partsSum > 0;
+    const isStore = kind === "storefront";
     return (
       <>
         <tr className="vat-row-parent">
@@ -246,44 +266,51 @@ function OutputVatTable({
           <td className="col-num col-input">
             {usesParts ? (
               <span className="vat-est-val" title="รวมจากรายการย่อย">
-                {fmt(computed.grossSales)}
+                {fmt(computed.reportedGross)}
               </span>
             ) : (
               <MoneyCell
                 value={draft.grossManual}
                 locked={locked}
-                ariaLabel={`${label} ยอดขายรวม VAT`}
+                ariaLabel={
+                  isStore ? `${label} รายได้หน้าร้าน` : `${label} ยอดขายรวม VAT`
+                }
                 onChange={(v) => onChange({ ...draft, grossManual: v })}
               />
             )}
           </td>
+          <td className="col-pct">
+            {isStore ? (
+              <TapRate
+                value={parseRate(draft.remitPct, DEFAULT_STOREFRONT_REMIT_PCT)}
+                locked={locked}
+                ariaLabel="นำส่ง %"
+                suffix="%"
+                step="0.01"
+                onCommit={(pct) =>
+                  onChange({
+                    ...draft,
+                    remitPct: String(Math.min(100, Math.max(0.01, pct))),
+                  })
+                }
+              />
+            ) : (
+              <span className="vat-tap-val">100%</span>
+            )}
+          </td>
+          <td className="col-num">{fmt(computed.remitAmount)}</td>
           <td className="col-num">{fmt(computed.vatBase)}</td>
           <td className="col-rate">
-            <span className="vat-rate-pair">
-              <TapRate
-                value={draft.rates.outputNum}
-                locked={locked}
-                ariaLabel={`${label} เศษภาษีขาย`}
-                onCommit={(n) =>
-                  onChange({
-                    ...draft,
-                    rates: { ...draft.rates, outputNum: Math.max(0, n) },
-                  })
-                }
-              />
-              <span>/</span>
-              <TapRate
-                value={draft.rates.outputDen}
-                locked={locked}
-                ariaLabel={`${label} ส่วนภาษีขาย`}
-                onCommit={(n) =>
-                  onChange({
-                    ...draft,
-                    rates: { ...draft.rates, outputDen: Math.max(1, n) },
-                  })
-                }
-              />
-            </span>
+            <TapRate
+              value={draft.rates.outputPct || DEFAULT_OUTPUT_PCT}
+              locked={locked}
+              ariaLabel={`${label} เรทขาย %`}
+              suffix="%"
+              step="0.01"
+              onCommit={(pct) =>
+                onChange({ ...draft, rates: setOutputPct(draft.rates, pct) })
+              }
+            />
           </td>
           <td className="col-num col-net">{fmt(computed.outputVat)}</td>
         </tr>
@@ -310,7 +337,7 @@ function OutputVatTable({
                     }
                   />
                 </td>
-                <td className="col-num" colSpan={3}>
+                <td className="col-num" colSpan={5}>
                   <span className="muted vat-child-hint">ย่อยรวมเข้าเดลิเวอรี่</span>
                 </td>
               </tr>
@@ -338,8 +365,10 @@ function OutputVatTable({
                     }
                   />
                 </td>
-                <td className="col-num" colSpan={3}>
-                  <span className="muted vat-child-hint">ย่อยรวมเข้าหน้าร้าน</span>
+                <td className="col-num" colSpan={5}>
+                  <span className="muted vat-child-hint">
+                    ย่อยรวมเข้าหน้าร้าน · คิด VAT จากยอดนำส่งจริง
+                  </span>
                 </td>
               </tr>
             ))
@@ -356,9 +385,11 @@ function OutputVatTable({
           <thead>
             <tr>
               <th className="col-seg">ส่วน</th>
-              <th className="col-num">ยอดขายรวม VAT</th>
+              <th className="col-num">รายได้หน้าร้าน / ยอดขายรวม</th>
+              <th className="col-pct">นำส่ง %</th>
+              <th className="col-num">นำส่งจริง</th>
               <th className="col-num">ฐานภาษี</th>
-              <th className="col-rate">เรทขาย</th>
+              <th className="col-rate">เรทขาย %</th>
               <th className="col-num">ภาษีขาย</th>
             </tr>
           </thead>
@@ -383,7 +414,9 @@ function OutputVatTable({
             )}
             <tr className="vat-sales-totals-row">
               <td className="col-seg">รวมภาษีขาย</td>
-              <td className="col-num">{fmt(totalGross)}</td>
+              <td className="col-num">{fmt(totalReported)}</td>
+              <td className="col-pct">—</td>
+              <td className="col-num">{fmt(totalRemit)}</td>
               <td className="col-num">{fmt(totalBase)}</td>
               <td className="col-rate">—</td>
               <td className="col-num col-net">{fmt(totalOut)}</td>
@@ -391,11 +424,14 @@ function OutputVatTable({
           </tbody>
         </table>
       </div>
+      <p className="muted vat-sales-hint vat-hint-one-line">
+        หน้าร้าน: คิด VAT จากคอลัมน์นำส่งจริงเท่านั้น (default นำส่ง 90%) · เรทขาย %
+        เช่น 7% = รวมในราคา (7÷107)
+      </p>
     </section>
   );
 }
 
-/** ตาราง 2 — ภาษีซื้อ (กลุ่มหักได้) โครงแถวคล้ายตาราง 1 */
 function InputVatTable({
   deliveryDraft,
   storefrontDraft,
@@ -454,9 +490,7 @@ function InputVatTable({
       </td>
       <td className="col-num col-input">
         {draft.useGpEstimate ? (
-          <span className="vat-est-val" title="หลัง play-safe">
-            {fmt(computed.gpVatClaimed)}
-          </span>
+          <span className="vat-est-val">{fmt(computed.gpVatClaimed)}</span>
         ) : (
           <MoneyCell
             value={draft.gpVat}
@@ -539,15 +573,10 @@ function InputVatTable({
           </tbody>
         </table>
       </div>
-      <p className="muted vat-sales-hint vat-hint-one-line">
-        ติ๊กประมาณ = คำนวณ GP จาก % ของภาษีขาย · ปิดติ๊กแล้วคีย์จากบิล GP จริง ·
-        ยื่น % = play-safe (เช่น 98%)
-      </p>
     </section>
   );
 }
 
-/** ตาราง 3 — สรุป = ภาษีขาย − ภาษีซื้อ */
 function SummaryVatTable({
   delivery,
   storefront,
@@ -559,8 +588,6 @@ function SummaryVatTable({
     outputVat: number;
     inputVat: number;
     netVat: number;
-    vatBase: number;
-    grossSales: number;
   };
 }) {
   return (
@@ -631,10 +658,48 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     segToDraft(emptySegment("storefront")),
   );
   const [note, setNote] = useState("");
+  const [noteOpen, setNoteOpen] = useState(false);
   const [pnlMode, setPnlMode] = useState<"exVat" | "incVat">("exVat");
   const [pnlIncome, setPnlIncome] = useState("");
   const [openDelivery, setOpenDelivery] = useState(false);
   const [openStorefront, setOpenStorefront] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const savedSnapRef = useRef("");
+
+  const snapshotDraft = useCallback(
+    (
+      d: DraftSeg,
+      s: DraftSeg,
+      n: string,
+      mode: "exVat" | "incVat",
+      income: string,
+    ) =>
+      JSON.stringify({
+        delivery: d,
+        storefront: s,
+        note: n,
+        pnlMode: mode,
+        pnlIncome: income,
+      }),
+    [],
+  );
+
+  const markDirty = useCallback(() => setDirty(true), []);
+
+  const setDeliveryDraftTracked = useCallback(
+    (next: DraftSeg | ((prev: DraftSeg) => DraftSeg)) => {
+      setDeliveryDraft(next);
+      markDirty();
+    },
+    [markDirty],
+  );
+  const setStorefrontDraftTracked = useCallback(
+    (next: DraftSeg | ((prev: DraftSeg) => DraftSeg)) => {
+      setStorefrontDraft(next);
+      markDirty();
+    },
+    [markDirty],
+  );
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -644,21 +709,70 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         loadVatMonthlyReturn(month),
         loadVatMonthlySettings(),
       ]);
+      let d = segToDraft(ret.delivery);
+      let s = segToDraft(ret.storefront);
+      let n = ret.note;
+      let mode = ret.pnlIncomeMode;
+      let income = moneyInputValue(ret.pnlIncome);
+
+      // จำร่างจาก local ถ้ามีและยังไม่ปิดงบ
+      if (ret.status !== "filed" && typeof window !== "undefined") {
+        try {
+          const raw = localStorage.getItem(draftStorageKey(month));
+          if (raw) {
+            const cached = JSON.parse(raw) as {
+              delivery?: DraftSeg;
+              storefront?: DraftSeg;
+              note?: string;
+              pnlMode?: "exVat" | "incVat";
+              pnlIncome?: string;
+            };
+            if (cached.delivery) d = { ...d, ...cached.delivery, rates: mapVatLogicRates(cached.delivery.rates || d.rates) };
+            if (cached.storefront) {
+              s = {
+                ...s,
+                ...cached.storefront,
+                rates: mapVatLogicRates(cached.storefront.rates || s.rates),
+              };
+            }
+            if (typeof cached.note === "string") n = cached.note;
+            if (cached.pnlMode === "incVat" || cached.pnlMode === "exVat") {
+              mode = cached.pnlMode;
+            }
+            if (typeof cached.pnlIncome === "string") income = cached.pnlIncome;
+          }
+        } catch {
+          /* ignore bad cache */
+        }
+      }
+
       setDoc(ret);
       setPeriodStartDay(st.periodStartDay);
-      setDeliveryDraft(segToDraft(ret.delivery));
-      setStorefrontDraft(segToDraft(ret.storefront));
-      setNote(ret.note);
-      setPnlMode(ret.pnlIncomeMode);
-      setPnlIncome(moneyInputValue(ret.pnlIncome));
+      setDeliveryDraft(d);
+      setStorefrontDraft(s);
+      setNote(n);
+      setNoteOpen(Boolean(n.trim()));
+      setPnlMode(mode);
+      setPnlIncome(income);
       if (ret.delivery.partsSum > 0) setOpenDelivery(true);
       if (ret.storefront.partsSum > 0) setOpenStorefront(true);
+      // baseline = ของที่เซฟบนเซิร์ฟเวอร์ · ถ้า local ต่าง = dirty
+      const savedSnap = snapshotDraft(
+        segToDraft(ret.delivery),
+        segToDraft(ret.storefront),
+        ret.note,
+        ret.pnlIncomeMode,
+        moneyInputValue(ret.pnlIncome),
+      );
+      const localSnap = snapshotDraft(d, s, n, mode, income);
+      savedSnapRef.current = savedSnap;
+      setDirty(localSnap !== savedSnap);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }, [month]);
+  }, [month, snapshotDraft]);
 
   useEffect(() => {
     void refresh();
@@ -689,6 +803,63 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     [month, periodStartDay],
   );
 
+  // จำอัตโนมัติในเครื่อง
+  useEffect(() => {
+    if (loading || locked || typeof window === "undefined") return;
+    const payload = snapshotDraft(
+      deliveryDraft,
+      storefrontDraft,
+      note,
+      pnlMode,
+      pnlIncome,
+    );
+    try {
+      localStorage.setItem(draftStorageKey(month), payload);
+    } catch {
+      /* quota */
+    }
+    setDirty(payload !== savedSnapRef.current);
+  }, [
+    deliveryDraft,
+    storefrontDraft,
+    note,
+    pnlMode,
+    pnlIncome,
+    month,
+    loading,
+    locked,
+    snapshotDraft,
+  ]);
+
+  // ถามตอนออกแท็บ/ปิดหน้า ถ้ายังไม่เซฟ
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!dirty || locked) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty, locked]);
+
+  const confirmLeaveIfDirty = useCallback(() => {
+    if (!dirty || locked) return true;
+    return window.confirm(
+      "ยังไม่ได้บันทึกการเปลี่ยนแปลง — ต้องการออกโดยไม่บันทึกหรือไม่?\n\nกด OK = ออกโดยไม่เซฟ · Cancel = อยู่ต่อ",
+    );
+  }, [dirty, locked]);
+
+  const changeMonth = (next: string) => {
+    if (next === month) return;
+    if (!confirmLeaveIfDirty()) return;
+    setMonth(next);
+  };
+
+  const changeTab = (next: Tab) => {
+    if (next === tab) return;
+    setTab(next);
+  };
+
   const saveMonth = async (asDraft: boolean) => {
     setBusy(true);
     setError("");
@@ -713,7 +884,21 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       );
       setDoc(saved);
       setPnlIncome(moneyInputValue(saved.pnlIncome));
-      setMsg(asDraft ? "บันทึกแบบร่างแล้ว" : "บันทึกยอดเดือนแล้ว");
+      const snap = snapshotDraft(
+        segToDraft(saved.delivery),
+        segToDraft(saved.storefront),
+        saved.note,
+        saved.pnlIncomeMode,
+        moneyInputValue(saved.pnlIncome),
+      );
+      savedSnapRef.current = snap;
+      setDirty(false);
+      try {
+        localStorage.removeItem(draftStorageKey(month));
+      } catch {
+        /* ignore */
+      }
+      setMsg(asDraft ? "บันทึกร่างแล้ว" : "บันทึกยอดเดือนแล้ว");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -722,6 +907,12 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   };
 
   const closeMonth = async () => {
+    if (dirty) {
+      const okSave = window.confirm(
+        "มีการแก้ที่ยังไม่บันทึก — บันทึกแล้วปิดงบเลยหรือไม่?\n\nOK = บันทึกและปิดงบ · Cancel = ยกเลิก",
+      );
+      if (!okSave) return;
+    }
     const income = parseMoneyInput(pnlIncome);
     const proposed = proposePnlIncome(
       { vatBase: totals.vatBase, grossSales: totals.grossSales },
@@ -753,6 +944,12 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         forceIncome: finalIncome,
       });
       setDoc(filed);
+      setDirty(false);
+      try {
+        localStorage.removeItem(draftStorageKey(month));
+      } catch {
+        /* ignore */
+      }
       setMsg(`ปิดงบแล้ว · รายได้ ${formatPlainNumber(filed.pnlIncome)} เข้า P&L`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -780,7 +977,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     <div className="vat-monthly-workbench">
       <header className="vat-sales-header">
         <p className="vat-sales-lead">
-          VAT รายเดือน · 3 ตาราง: ภาษีขาย · ภาษีซื้อ · สรุป (ขาย − ซื้อ) · compact slim
+          VAT รายเดือน · 3 ตาราง compact · เรทขาย % · หน้าร้านคิดจากยอดนำส่งจริง
         </p>
         <div className="vat-sales-tabs" role="tablist">
           {(
@@ -795,7 +992,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
               role="tab"
               aria-selected={tab === id}
               className={tab === id ? "vat-sales-tab is-active" : "vat-sales-tab"}
-              onClick={() => setTab(id)}
+              onClick={() => changeTab(id)}
             >
               {label}
             </button>
@@ -803,31 +1000,62 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         </div>
       </header>
 
-      <div className="vat-sales-toolbar vat-sales-toolbar--slim">
-        <label className="vat-sales-month">
-          เดือน
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-          />
-        </label>
-        {doc ? (
-          <span className="vat-ops-badge" data-status={doc.status}>
-            {doc.status === "filed"
-              ? "ปิดงบแล้ว · ล็อก"
-              : doc.status === "saved"
-                ? "บันทึกแล้ว"
-                : "ร่าง"}
-          </span>
-        ) : null}
-        {busy ? <span className="muted">กำลังทำงาน…</span> : null}
+      <div className="vat-top-bar">
+        <div className="vat-sales-toolbar vat-sales-toolbar--slim">
+          <label className="vat-sales-month">
+            เดือน
+            <input
+              type="month"
+              value={month}
+              onChange={(e) => changeMonth(e.target.value)}
+            />
+          </label>
+          {doc ? (
+            <span className="vat-ops-badge" data-status={doc.status}>
+              {doc.status === "filed"
+                ? "ปิดงบแล้ว · ล็อก"
+                : doc.status === "saved"
+                  ? "บันทึกแล้ว"
+                  : "ร่าง"}
+            </span>
+          ) : null}
+          {dirty && !locked ? (
+            <span className="vat-dirty-dot" title="มีการแก้ที่ยังไม่บันทึก">
+              ยังไม่บันทึก
+            </span>
+          ) : null}
+          {busy ? <span className="muted">…</span> : null}
+        </div>
+
+        <div className="vat-note-box">
+          <button
+            type="button"
+            className="vat-note-toggle"
+            aria-expanded={noteOpen}
+            onClick={() => setNoteOpen((v) => !v)}
+          >
+            {noteOpen ? "− โน้ต" : "+ โน้ต"}
+            {note.trim() && !noteOpen ? " · มีข้อความ" : ""}
+          </button>
+          {noteOpen ? (
+            <textarea
+              className="vat-note-area"
+              rows={3}
+              disabled={locked}
+              value={note}
+              placeholder="โน้ตเดือนนี้…"
+              onChange={(e) => {
+                setNote(e.target.value);
+                markDirty();
+              }}
+            />
+          ) : null}
+        </div>
       </div>
 
       <p className="vat-period-banner vat-period-banner--one-line" role="note">
         <strong>รอบตัดยอด</strong>
         <span>{period.labelInclusive}</span>
-        <span className="muted">· {period.timeZone}</span>
       </p>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -840,10 +1068,9 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           {tab === "month" ? (
             <>
               <p className="muted vat-sales-hint vat-hint-one-line">
-                ตาราง 1 รายได้ → ตาราง 2 หักได้ → ตาราง 3 สุทธิ = ขาย − ซื้อ · เรทแตะแก้ได้ต่อเดือน
-                {" · "}
-                default {ratesLabel(DEFAULT_VAT_LOGIC_RATES)} · GP{" "}
-                {pctLabel(DEFAULT_VAT_LOGIC_RATES.gpOfOutput)}
+                ค่าที่คีย์จำในเครื่องอัตโนมัติ · ออกโดยไม่เซฟจะถามยืนยัน · default เรทขาย{" "}
+                {ratesLabel(DEFAULT_VAT_LOGIC_RATES)} · นำส่งหน้าร้าน{" "}
+                {DEFAULT_STOREFRONT_REMIT_PCT}%
               </p>
 
               <OutputVatTable
@@ -856,8 +1083,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                 openStorefront={openStorefront}
                 onToggleDelivery={() => setOpenDelivery((v) => !v)}
                 onToggleStorefront={() => setOpenStorefront((v) => !v)}
-                onDeliveryChange={setDeliveryDraft}
-                onStorefrontChange={setStorefrontDraft}
+                onDeliveryChange={setDeliveryDraftTracked}
+                onStorefrontChange={setStorefrontDraftTracked}
               />
 
               <InputVatTable
@@ -866,8 +1093,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                 delivery={delivery}
                 storefront={storefront}
                 locked={Boolean(locked)}
-                onDeliveryChange={setDeliveryDraft}
-                onStorefrontChange={setStorefrontDraft}
+                onDeliveryChange={setDeliveryDraftTracked}
+                onStorefrontChange={setStorefrontDraftTracked}
               />
 
               <SummaryVatTable
@@ -876,45 +1103,34 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                 totals={totals}
               />
 
-              <label className="vat-sales-field vat-note-slim">
-                หมายเหตุ
-                <input
-                  type="text"
-                  disabled={locked}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="แหล่งยอดแอป + บิล GP เดือนนี้"
-                />
-              </label>
-
-              <div className="vat-month-actions">
+              <div className="vat-month-actions vat-month-actions--mini">
                 {!locked ? (
                   <>
                     <button
                       type="button"
-                      className="ghost-btn"
+                      className="vat-mini-btn"
                       disabled={busy}
                       onClick={() => void saveMonth(true)}
                     >
-                      บันทึกร่าง
+                      ร่าง
                     </button>
                     <button
                       type="button"
-                      className="primary-btn"
+                      className="vat-mini-btn vat-mini-btn--primary"
                       disabled={busy}
                       onClick={() => void saveMonth(false)}
                     >
-                      บันทึกยอดเดือน
+                      บันทึก
                     </button>
                   </>
                 ) : (
                   <button
                     type="button"
-                    className="ghost-btn"
+                    className="vat-mini-btn"
                     disabled={busy}
                     onClick={() => void unlock()}
                   >
-                    ปลดล็อกแก้ยอด
+                    ปลดล็อก
                   </button>
                 )}
               </div>
@@ -924,7 +1140,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           {tab === "close" ? (
             <section className="vat-close-panel">
               <p className="muted vat-sales-hint vat-hint-one-line">
-                ปิดงบ = ยืนยันสรุปตาราง 3 → ใส่รายได้ P&L · ปิดแล้วล็อกทั้งเดือน
+                ปิดงบ = ยืนยันสรุป → ใส่รายได้ P&L · ปิดแล้วล็อกทั้งเดือน
               </p>
 
               <SummaryVatTable
@@ -964,6 +1180,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                                 ),
                               ),
                             );
+                            markDirty();
                           }}
                         >
                           <option value="exVat">ก่อน VAT (แนะนำ)</option>
@@ -978,7 +1195,10 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                           value={pnlIncome}
                           locked={Boolean(locked)}
                           ariaLabel="ยอดรายได้ P&L"
-                          onChange={setPnlIncome}
+                          onChange={(v) => {
+                            setPnlIncome(v);
+                            markDirty();
+                          }}
                         />
                       </td>
                     </tr>
@@ -1004,24 +1224,24 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                 </table>
               </div>
 
-              <div className="vat-month-actions">
+              <div className="vat-month-actions vat-month-actions--mini">
                 {!locked ? (
                   <button
                     type="button"
-                    className="primary-btn"
+                    className="vat-mini-btn vat-mini-btn--primary"
                     disabled={busy || totals.grossSales <= 0}
                     onClick={() => void closeMonth()}
                   >
-                    ปิดงบเดือน → P&L
+                    ปิดงบ → P&L
                   </button>
                 ) : (
                   <button
                     type="button"
-                    className="ghost-btn"
+                    className="vat-mini-btn"
                     disabled={busy}
                     onClick={() => void unlock()}
                   >
-                    ปลดล็อกเดือนนี้
+                    ปลดล็อก
                   </button>
                 )}
               </div>
