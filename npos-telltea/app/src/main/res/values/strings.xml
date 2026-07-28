@@ -42,6 +42,10 @@
     <string name="store_claim_ok">เคลมเครื่องแล้ว — พร้อมเปิดกะ</string>
     <string name="store_claim_blocked">เครื่องนี้ยังไม่เคลมหรือถูกบล็อก — ส่งบิลไม่ได้</string>
     <string name="store_claim_kicked">ถูกถอนสิทธิ์จากหลังบ้าน</string>
+    <string name="shift_remote_closed_title">รอบถูกปิดจากหลังร้าน</string>
+    <string name="shift_remote_closed_msg">สิทธิ์เครื่องยังอยู่ · จบบิลในตะกร้าได้ แล้วเปิดรอบใหม่เมื่อพร้อม</string>
+    <string name="shift_remote_closed_toast">รอบปิดจากหลังร้านแล้ว — เปิดรอบใหม่ได้</string>
+    <string name="shift_remote_closed_banner">รอบปิดจากหลังร้าน · จบบิลนี้แล้วจะออกจากขาย</string>
     <string name="store_claim_code_changed">รหัสร้านเปลี่ยน</string>
     <string name="store_claim_seat_taken">มีเครื่องอื่นใช้อยู่ — ให้หลังบ้านเตะเครื่องนั้นก่อน</string>
     <string name="store_claim_reenter_ok">ใส่รหัสใหม่</string>

@@ -26,6 +26,7 @@ public final class NposApp extends Application {
   public void onCreate() {
     super.onCreate();
     StoreClaimPrefs.addKickListener(this::onKickedOrLostSeat);
+    ShiftPrefs.addRemoteCloseListener(this::onRemoteSessionClosed);
     registerActivityLifecycleCallbacks(
         new ActivityLifecycleCallbacks() {
           @Override
@@ -109,5 +110,29 @@ public final class NposApp extends Application {
     if (!(fg instanceof MainActivity) && !fg.isFinishing()) {
       fg.finish();
     }
+  }
+
+  /**
+   * BO force-close via heartbeat — keep seat. SellActivity finishes the cart first;
+   * other screens settle immediately and return to hub.
+   */
+  private void onRemoteSessionClosed() {
+    Activity fg = foregroundActivity();
+    if (fg == null) return;
+    fg.runOnUiThread(
+        () -> {
+          if (fg instanceof SellActivity) {
+            ((SellActivity) fg).onRemoteSessionClosedFromSync();
+            return;
+          }
+          Toast.makeText(fg, R.string.shift_remote_closed_toast, Toast.LENGTH_LONG).show();
+          ShiftPrefs.settleRemoteClosed(fg);
+          if (!(fg instanceof MainActivity) && !fg.isFinishing()) {
+            Intent i = new Intent(fg, MainActivity.class);
+            i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            fg.startActivity(i);
+            fg.finish();
+          }
+        });
   }
 }

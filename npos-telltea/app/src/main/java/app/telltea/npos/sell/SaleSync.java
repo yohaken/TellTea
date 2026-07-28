@@ -122,6 +122,11 @@ public final class SaleSync {
                                     ShiftPrefs.markServerSessionSynced(app, true);
                                     OpsLogger.info(app, "shift", "ซิงก์รอบแล้ว", sid);
                                 }
+                            } else if (isRemoteSessionClosed(res)) {
+                                ShiftPrefs.applyRemoteSessionClosed(
+                                        app,
+                                        res.optString("sessionId", sessionId),
+                                        res.optString("closeSource", ""));
                             } else if (isDeviceGateError(res)) {
                                 ShiftPrefs.clearLocalOpen(app);
                                 OpsLogger.warn(
@@ -194,6 +199,11 @@ public final class SaleSync {
                     ShiftPrefs.markServerSessionSynced(app, true);
                 }
                 OpsLogger.info(app, "shift", "ซิงก์รอบค้างสำเร็จ", sid);
+            } else if (isRemoteSessionClosed(res)) {
+                ShiftPrefs.applyRemoteSessionClosed(
+                        app,
+                        res.optString("sessionId", sessionId),
+                        res.optString("closeSource", ""));
             } else if (isDeviceGateError(res)) {
                 OpsLogger.warn(
                         app,
@@ -208,6 +218,15 @@ public final class SaleSync {
                     "ซิงก์รอบค้างยังไม่สำเร็จ",
                     e.getMessage() == null ? "" : e.getMessage());
         }
+    }
+
+    private static boolean isRemoteSessionClosed(JSONObject res) {
+        if (res == null) return false;
+        String code = res.optString("code", "");
+        String err = res.optString("error", "");
+        return "session_remote_closed".equals(code)
+                || "session_closed".equals(err)
+                || "session_remote_closed".equals(err);
     }
 
     private static boolean isDeviceGateError(JSONObject res) {

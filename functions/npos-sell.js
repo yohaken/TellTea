@@ -337,8 +337,29 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
       }
     }
 
-    const sessionId = asString(body.sessionId, 80) || `${installId}_${now}`;
+    const requestedId = asString(body.sessionId, 80) || `${installId}_${now}`;
     const openingCash = Number(body.openingCash);
+
+    // Never revive a BO-force / already-closed round via merge — tablet must settle then open new.
+    if (requestedId) {
+      const prevSnap = await db.doc(`posSessions/${requestedId}`).get();
+      if (prevSnap.exists) {
+        const prev = prevSnap.data() || {};
+        if (asString(prev.status, 16) === "closed") {
+          res.status(200).json({
+            ok: false,
+            error: "session_closed",
+            code: "session_remote_closed",
+            sessionId: requestedId,
+            closeSource: asString(prev.closeSource, 40),
+            closedAt: Number(prev.closedAt) || 0,
+          });
+          return;
+        }
+      }
+    }
+
+    const sessionId = requestedId || `${installId}_${now}`;
     await db.doc(`posSessions/${sessionId}`).set(
       {
         deviceId: installId,
@@ -396,39 +417,45 @@ exports.nposSessionClose = functions.region("asia-southeast1").https.onRequest(a
     const now = Date.now();
     const openedAt = Number(data.openedAt) || now;
     const correctDate = startOfBangkokDay(openedAt);
-    await ref.set(
-      {
-        status: "closed",
-        closedAt: now,
-        updatedAt: now,
-        // Keep BO date query aligned with open day (Bangkok).
-        date: correctDate,
-        cashTotal: Number(body.cashTotal) || 0,
-        promptpayTotal: Number(body.promptpayTotal) || 0,
-        transferTotal: Number(body.transferTotal) || 0,
-        openingCash: Number(body.openingCash) || 0,
-        closingCashCounted: Number(body.closingCashCounted) || 0,
-        expectedCash: Number(body.expectedCash) || 0,
-        cashDifference: Number(body.cashDifference) || 0,
-        leaveFloat: Number(body.leaveFloat) || 0,
-        discountTotal: Number(body.discountTotal) || 0,
-        voidedCount: Number(body.voidedCount) || 0,
-        saleCountLocal: Number(body.saleCount) || 0,
-        discrepancyNote: String(body.discrepancyNote || "").slice(0, 240),
-        discrepancyLabel: String(body.discrepancyLabel || "").slice(0, 40),
-        cashOutTotal: Number(body.cashOutTotal) || 0,
-        cashInTotal: Number(body.cashInTotal) || 0,
-        cashDropCount: Number(body.cashDropCount) || 0,
-      },
-      { merge: true },
-    );
+    const alreadyClosed = asString(data.status, 16) === "closed";
+    // Keep original BO force-close clock; tablet Z can still finalize cash fields.
+    const closedAt = alreadyClosed && Number(data.closedAt) ? Number(data.closedAt) : now;
+    const patch = {
+      status: "closed",
+      closedAt,
+      updatedAt: now,
+      // Keep BO date query aligned with open day (Bangkok).
+      date: correctDate,
+      cashTotal: Number(body.cashTotal) || 0,
+      promptpayTotal: Number(body.promptpayTotal) || 0,
+      transferTotal: Number(body.transferTotal) || 0,
+      openingCash: Number(body.openingCash) || 0,
+      closingCashCounted: Number(body.closingCashCounted) || 0,
+      expectedCash: Number(body.expectedCash) || 0,
+      cashDifference: Number(body.cashDifference) || 0,
+      leaveFloat: Number(body.leaveFloat) || 0,
+      discountTotal: Number(body.discountTotal) || 0,
+      voidedCount: Number(body.voidedCount) || 0,
+      saleCountLocal: Number(body.saleCount) || 0,
+      discrepancyNote: String(body.discrepancyNote || "").slice(0, 240),
+      discrepancyLabel: String(body.discrepancyLabel || "").slice(0, 40),
+      cashOutTotal: Number(body.cashOutTotal) || 0,
+      cashInTotal: Number(body.cashInTotal) || 0,
+      cashDropCount: Number(body.cashDropCount) || 0,
+    };
+    if (alreadyClosed) {
+      patch.zFinalizedAt = now;
+      patch.zFinalizedBy = installId;
+    }
+    await ref.set(patch, { merge: true });
     res.status(200).json({
       ok: true,
       sessionId,
       saleCount: Number(data.saleCount) || 0,
       totalSales: Number(data.totalSales) || 0,
-      closedAt: now,
+      closedAt,
       date: correctDate,
+      alreadyClosed,
     });
   } catch (err) {
     console.error("nposSessionClose", err);

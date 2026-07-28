@@ -4,10 +4,17 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import java.util.Locale;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import app.telltea.npos.R;
+import app.telltea.npos.diagnose.OpsLogger;
 
-/** Local shift/session state for nPos sell. */
+/**
+ * Local shift/session state for nPos sell.
+ *
+ * <p>BO force-close arrives via heartbeat ({@code sessionRemoteClosed}) — seat stays;
+ * tablet settles cooperatively (finish cart if needed, then clear local open).
+ */
 public final class ShiftPrefs {
   private static final String PREFS = "npos_shift";
   private static final String KEY_OPEN = "open";
@@ -30,8 +37,38 @@ public final class ShiftPrefs {
   private static final String KEY_CASH_IN = "cashInTotal";
   private static final String KEY_CASH_DROP_COUNT = "cashDropCount";
   private static final String KEY_SERVER_SYNCED = "serverSessionSynced";
+  private static final String KEY_REMOTE_CLOSED_PENDING = "remoteClosedPending";
+  private static final String KEY_REMOTE_CLOSE_SOURCE = "remoteCloseSource";
+
+  /** BO/server closed this round — not a seat kick. */
+  public interface RemoteCloseListener {
+    void onRemoteSessionClosed();
+  }
+
+  private static final CopyOnWriteArrayList<RemoteCloseListener> remoteCloseListeners =
+      new CopyOnWriteArrayList<>();
 
   private ShiftPrefs() {}
+
+  public static void addRemoteCloseListener(RemoteCloseListener listener) {
+    if (listener != null && !remoteCloseListeners.contains(listener)) {
+      remoteCloseListeners.add(listener);
+    }
+  }
+
+  public static void removeRemoteCloseListener(RemoteCloseListener listener) {
+    if (listener != null) remoteCloseListeners.remove(listener);
+  }
+
+  private static void notifyRemoteCloseListeners() {
+    for (RemoteCloseListener l : remoteCloseListeners) {
+      try {
+        l.onRemoteSessionClosed();
+      } catch (RuntimeException ignored) {
+        /* one bad listener must not block others */
+      }
+    }
+  }
 
   public static boolean isOpen(Context context) {
     return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_OPEN, false);
@@ -215,6 +252,8 @@ public final class ShiftPrefs {
         .putInt(KEY_CASH_DROP_COUNT, 0)
         .putBoolean(KEY_LAST_RESUMED, false)
         .putBoolean(KEY_SERVER_SYNCED, false)
+        .putBoolean(KEY_REMOTE_CLOSED_PENDING, false)
+        .putString(KEY_REMOTE_CLOSE_SOURCE, "")
         .commit();
   }
 
@@ -279,6 +318,8 @@ public final class ShiftPrefs {
         .putInt(KEY_VOIDED, Math.max(0, voidedCount))
         .putBoolean(KEY_LAST_RESUMED, true)
         .putBoolean(KEY_SERVER_SYNCED, true)
+        .putBoolean(KEY_REMOTE_CLOSED_PENDING, false)
+        .putString(KEY_REMOTE_CLOSE_SOURCE, "")
         .commit();
   }
 
@@ -311,7 +352,58 @@ public final class ShiftPrefs {
         .edit()
         .putBoolean(KEY_OPEN, false)
         .putBoolean(KEY_SERVER_SYNCED, false)
+        .putBoolean(KEY_REMOTE_CLOSED_PENDING, false)
+        .putString(KEY_REMOTE_CLOSE_SOURCE, "")
         .commit();
+  }
+
+  public static boolean isRemoteClosedPending(Context context) {
+    return context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .getBoolean(KEY_REMOTE_CLOSED_PENDING, false);
+  }
+
+  public static String remoteCloseSource(Context context) {
+    return context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .getString(KEY_REMOTE_CLOSE_SOURCE, "");
+  }
+
+  /**
+   * Heartbeat / open-retry learned server already closed this sessionId.
+   * Keeps local open until UI settles (finish cart) — seat claim untouched.
+   */
+  public static void applyRemoteSessionClosed(
+      Context context, String sessionId, String closeSource) {
+    if (!isOpen(context)) return;
+    String local = sessionId(context);
+    if (sessionId != null
+        && !sessionId.isEmpty()
+        && local != null
+        && !local.isEmpty()
+        && !sessionId.equals(local)) {
+      return;
+    }
+    if (isRemoteClosedPending(context)) return;
+    String src = closeSource == null ? "" : closeSource.trim();
+    context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean(KEY_REMOTE_CLOSED_PENDING, true)
+        .putString(KEY_REMOTE_CLOSE_SOURCE, src)
+        .commit();
+    OpsLogger.info(
+        context.getApplicationContext(),
+        "shift",
+        "รอบปิดจากเซิร์ฟเวอร์",
+        (local == null ? "" : local) + (src.isEmpty() ? "" : " · " + src));
+    notifyRemoteCloseListeners();
+  }
+
+  /** After cart settle / hub — drop local open for a BO-closed round. */
+  public static void settleRemoteClosed(Context context) {
+    if (!isRemoteClosedPending(context) && !isOpen(context)) return;
+    clearLocalOpen(context);
   }
 
   public static void addCash(Context context, double amount) {
@@ -383,6 +475,8 @@ public final class ShiftPrefs {
         .edit()
         .putBoolean(KEY_OPEN, false)
         .putBoolean(KEY_SERVER_SYNCED, false)
+        .putBoolean(KEY_REMOTE_CLOSED_PENDING, false)
+        .putString(KEY_REMOTE_CLOSE_SOURCE, "")
         .commit();
   }
 }

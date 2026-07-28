@@ -10,10 +10,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 324/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 118/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+88/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.65"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 325/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 119/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+89/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.66"/);
 
 assert.ok(existsSync(join(root, "docs/npos-bo-sessions-super-checklist.md")));
 assert.match(read("docs/npos-bo-sessions-super-checklist.md"), /50|รหัส|closedAt|flush/);
@@ -90,7 +90,8 @@ assert.match(sync, /postCloseSession/);
 assert.match(sync, /ยังไม่ออกงาน/);
 
 const cf = read("functions/npos-sell.js");
-assert.match(cf, /closedAt:\s*now/);
+assert.match(cf, /closedAt/);
+assert.match(cf, /alreadyClosed|zFinalizedAt/);
 assert.match(cf, /startOfBangkokDay\(openedAt\)/);
 assert.match(cf, /date:\s*correctDate/);
 
