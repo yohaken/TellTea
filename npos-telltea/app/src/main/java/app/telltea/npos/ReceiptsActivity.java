@@ -632,11 +632,10 @@ public class ReceiptsActivity extends Activity {
               getString(R.string.receipts_meta_vat),
               String.format(Locale.getDefault(), "฿%.0f", vat)));
     }
-    TextView net =
+    detailRoot.addView(
         metaRow(
             getString(R.string.cart_net_label),
-            String.format(Locale.getDefault(), "฿%.0f", total));
-    detailRoot.addView(net);
+            String.format(Locale.getDefault(), "฿%.0f", total)));
 
     if ("cash".equalsIgnoreCase(row.optString("paymentMethod", ""))) {
       detailRoot.addView(

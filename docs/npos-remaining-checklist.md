@@ -1,6 +1,6 @@
 # nPos — เศษงาน (สcope เรียบ · หน้าร้านขาเร็ว)
 
-อัปเดต: **1.14.44** + แผน **Exclusive seat S1–S4** · friction F0–F5  
+อัปเดต: **1.14.45** + แผน **Exclusive seat S1–S4** · friction F0–F5  
 ดู [npos-friendly-ui-checklist.md](./npos-friendly-ui-checklist.md) · [npos-sales-history-compact-checklist.md](./npos-sales-history-compact-checklist.md) · [npos-version-on-sync-checklist.md](./npos-version-on-sync-checklist.md) · [npos-sales-history-checklist.md](./npos-sales-history-checklist.md) · [npos-sell-counter-polish-checklist.md](./npos-sell-counter-polish-checklist.md) · [npos-kick-reclaim-checklist.md](./npos-kick-reclaim-checklist.md) · [npos-exclusive-seat-checklist.md](./npos-exclusive-seat-checklist.md) · [npos-counter-ux-batch-checklist.md](./npos-counter-ux-batch-checklist.md) · [npos-ops-friction-phases.md](./npos-ops-friction-phases.md) · [npos-doc-drawer-polish-checklist.md](./npos-doc-drawer-polish-checklist.md) · [npos-store-claim-checklist.md](./npos-store-claim-checklist.md) · [npos-shop-work-checklist.md](./npos-shop-work-checklist.md) · [npos-blind-shift-close-checklist.md](./npos-blind-shift-close-checklist.md) · [npos-option-qty-parity-checklist.md](./npos-option-qty-parity-checklist.md) · [npos-bestseller-rank-checklist.md](./npos-bestseller-rank-checklist.md) · [npos-sell-flow-polish-checklist.md](./npos-sell-flow-polish-checklist.md) · [npos-receipt-parity-checklist.md](./npos-receipt-parity-checklist.md) · [npos-z-report-form-checklist.md](./npos-z-report-form-checklist.md) · [npos-z-web-form-parity-checklist.md](./npos-z-web-form-parity-checklist.md) · [npos-bo-shift-readonly-checklist.md](./npos-bo-shift-readonly-checklist.md) · [npos-cut-bo-entry-checklist.md](./npos-cut-bo-entry-checklist.md) · [npos-float-shift-p0-checklist.md](./npos-float-shift-p0-checklist.md) · [npos-bo-sales-retention-plan.md](./npos-bo-sales-retention-plan.md) · [npos-receipt-history-staff.md](./npos-receipt-history-staff.md)
 
 ## ทำแล้ว
@@ -28,7 +28,7 @@
 - [x] **Sales history H0–H2** list+detail · กรองรอบ/วันนี้ · ค้นหาเลขบิล · BO รายละเอียด (**1.14.42**)
 - [x] **Counter sell C0–C4** ตัดราคาส่ง · สรุปยอด · จัดปุ่ม · แถวตะกร้า · หัวบิล/พักบิล (**1.14.42**) · PromptPay native ฝาก
 - [x] **Version-on-sync V0–V1** heartbeat/sync pulse เช็คเวอร์ชัน · BO/POS โฟกัส+pulse (**1.14.43**)
-- [x] **Sales history compact** custom วัน · BO สลิปเต็มพื้นที่ · หมวดพับ · ค้นหาลูกค้า/VAT ถ้ามี (**1.14.44**)
+- [x] **Sales history compact** custom วัน · BO สลิปเต็มพื้นที่ · หมวดพับ · ค้นหาลูกค้า/VAT ถ้ามี (**1.14.45**)
 - [x] จิ้มเมนู → จ่าย → ใบเสร็จ → รีเซ็ต · ลิ้นชักตอนสด
 
 ## คิวถัดไป (เฟสก่อนหน้าที่ยังไม่ทำ)
