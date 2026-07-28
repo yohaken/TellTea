@@ -34,6 +34,54 @@ export type DailySalesStatus = "draft" | "confirmed";
 export type ChannelSource = "manual" | "pos_suggest" | "email";
 export type PnlIncomeMode = "exVat" | "incVat";
 
+export type MailChannelRule = {
+  enabled: boolean;
+  fromIncludes: string[];
+  subjectIncludes: string[];
+};
+
+export type VatMailRules = Record<DeliveryChannel, MailChannelRule>;
+
+export const DEFAULT_MAIL_RULES: VatMailRules = {
+  shopee: {
+    enabled: true,
+    fromIncludes: ["shopee", "shopeefood"],
+    subjectIncludes: ["shopee", "shopeefood", "สรุปยอด", "ยอดขาย"],
+  },
+  grab: {
+    enabled: true,
+    fromIncludes: ["grab.com", "grabfood"],
+    subjectIncludes: ["grab", "รายงาน", "สรุป", "sales", "settlement"],
+  },
+  lineman: {
+    enabled: true,
+    fromIncludes: ["lineman", "line.me", "linedelivery"],
+    subjectIncludes: ["lineman", "line man", "สรุป", "ยอดขาย", "รายงาน"],
+  },
+};
+
+export function mapMailRules(raw: unknown): VatMailRules {
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const one = (key: DeliveryChannel): MailChannelRule => {
+    const src = o[key] && typeof o[key] === "object" ? (o[key] as Record<string, unknown>) : {};
+    const fallback = DEFAULT_MAIL_RULES[key];
+    const list = (v: unknown, fb: string[]) =>
+      Array.isArray(v) && v.length
+        ? v.map((x) => String(x).trim()).filter(Boolean).slice(0, 20)
+        : [...fb];
+    return {
+      enabled: src.enabled !== false,
+      fromIncludes: list(src.fromIncludes, fallback.fromIncludes),
+      subjectIncludes: list(src.subjectIncludes, fallback.subjectIncludes),
+    };
+  };
+  return {
+    shopee: one("shopee"),
+    grab: one("grab"),
+    lineman: one("lineman"),
+  };
+}
+
 export type ChannelAmount = {
   /** ยอดที่ลูกค้าจ่าย (รวม VAT) — ฐานคิด VAT */
   grossInclusive: number;
@@ -79,6 +127,7 @@ export type VatSalesSettings = {
     lineman: boolean;
     storefront: boolean;
   };
+  mailRules: VatMailRules;
   updatedAt: number;
   updatedBy: string;
 };
@@ -94,6 +143,7 @@ export const DEFAULT_VAT_SALES_SETTINGS: VatSalesSettings = {
     lineman: true,
     storefront: true,
   },
+  mailRules: mapMailRules(undefined),
   updatedAt: 0,
   updatedBy: "",
 };
@@ -290,6 +340,7 @@ export function mapVatSalesSettings(data: Partial<VatSalesSettings> | undefined)
       lineman: ch?.lineman !== false,
       storefront: ch?.storefront !== false,
     },
+    mailRules: mapMailRules(data?.mailRules),
     updatedAt: typeof data?.updatedAt === "number" ? data.updatedAt : 0,
     updatedBy: typeof data?.updatedBy === "string" ? data.updatedBy : "",
   };
@@ -312,6 +363,9 @@ export async function saveVatSalesSettings(
       ...current.channelsEnabled,
       ...(patch.channelsEnabled || {}),
     },
+    mailRules: patch.mailRules
+      ? mapMailRules({ ...current.mailRules, ...patch.mailRules })
+      : current.mailRules,
     updatedAt: Date.now(),
     updatedBy,
   });

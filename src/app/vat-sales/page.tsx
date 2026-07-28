@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
+import { VatSalesMailPanel } from "@/components/vat-sales/VatSalesMailPanel";
 import { useAuth } from "@/lib/auth";
 import { formatPlainNumber } from "@/lib/utils";
 import {
@@ -27,6 +28,8 @@ import {
   type PnlIncomeMode,
   type VatSalesSettings,
 } from "@/lib/vat-sales";
+
+type VatTab = "daily" | "mail";
 
 export default function VatSalesPage() {
   return (
@@ -103,6 +106,7 @@ function channelFromDraft(
 }
 
 function VatSalesView({ actor }: { actor: string }) {
+  const [tab, setTab] = useState<VatTab>("daily");
   const [month, setMonth] = useState(() => bangkokMonthKey());
   const [docs, setDocs] = useState<Record<string, DailySalesDoc>>({});
   const [drafts, setDrafts] = useState<Record<string, DraftRow>>({});
@@ -113,6 +117,20 @@ function VatSalesView({ actor }: { actor: string }) {
   const [msg, setMsg] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [reportEmailsText, setReportEmailsText] = useState("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") === "mail") setTab("mail");
+    const mail = params.get("mail");
+    if (mail === "connected") {
+      setTab("mail");
+      setMsg("เชื่อม Gmail สำเร็จ");
+    } else if (mail === "error") {
+      setTab("mail");
+      setError(`เชื่อม Gmail ไม่สำเร็จ (${params.get("reason") || "error"})`);
+    }
+  }, []);
 
   const dateKeys = useMemo(() => dateKeysInMonth(month), [month]);
 
@@ -373,12 +391,29 @@ function VatSalesView({ actor }: { actor: string }) {
           pnlIncomeMode: settings.pnlIncomeMode,
           channelsEnabled: settings.channelsEnabled,
           reportEmails: emails,
+          mailRules: settings.mailRules,
         },
         actor,
       );
       setSettings(next);
       setReportEmailsText(next.reportEmails.join("\n"));
       setMsg("บันทึกตั้งค่าแล้ว");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const saveMailRulesOnly = async () => {
+    if (!settings) return;
+    setBusy("mail-rules");
+    setError("");
+    setMsg("");
+    try {
+      const next = await saveVatSalesSettings({ mailRules: settings.mailRules }, actor);
+      setSettings(next);
+      setMsg("บันทึกกฎค้นหาเมลแล้ว");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -395,7 +430,51 @@ function VatSalesView({ actor }: { actor: string }) {
             เดลิเวอรี่ 3 ช่องทาง + หน้าร้าน · คิด VAT 7% จากยอดลูกค้า · เฉพาะเจ้าของ
           </p>
         </div>
-        <div className="vat-sales-toolbar">
+        <div className="vat-sales-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            className={tab === "daily" ? "vat-sales-tab is-active" : "vat-sales-tab"}
+            aria-selected={tab === "daily"}
+            onClick={() => setTab("daily")}
+          >
+            ตารางรายวัน
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={tab === "mail" ? "vat-sales-tab is-active" : "vat-sales-tab"}
+            aria-selected={tab === "mail"}
+            onClick={() => setTab("mail")}
+          >
+            กล่องเมล
+          </button>
+        </div>
+      </header>
+
+      {error ? <p className="error-text">{error}</p> : null}
+      {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
+
+      {tab === "mail" ? (
+        settings ? (
+          <VatSalesMailPanel
+            actor={actor}
+            settings={settings}
+            onSettingsChange={setSettings}
+            onSaveMailRules={saveMailRulesOnly}
+            busy={busy}
+            setBusy={setBusy}
+            setError={setError}
+            setMsg={setMsg}
+          />
+        ) : (
+          <p className="muted">กำลังโหลด...</p>
+        )
+      ) : null}
+
+      {tab === "daily" ? (
+        <>
+        <div className="vat-sales-toolbar" style={{ marginBottom: "0.85rem" }}>
           <label className="vat-sales-month">
             เดือน
             <input
@@ -428,10 +507,6 @@ function VatSalesView({ actor }: { actor: string }) {
             {showSettings ? "ซ่อนตั้งค่า" : "ตั้งค่า"}
           </button>
         </div>
-      </header>
-
-      {error ? <p className="error-text">{error}</p> : null}
-      {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
 
       {showSettings && settings ? (
         <section className="vat-sales-settings">
@@ -663,6 +738,8 @@ function VatSalesView({ actor }: { actor: string }) {
           </table>
         </div>
       )}
+        </>
+      ) : null}
     </div>
   );
 }

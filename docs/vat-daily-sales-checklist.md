@@ -55,7 +55,7 @@
 |-----|--------|--------|
 | **P0** | แผน · เช็คลิส · ขอบเขต + owner-only | ✅ เอกสาร |
 | **P1** | Types · rules · lib · UI ตารางรายวัน + VAT สูตร | ✅ |
-| **P2** | Gmail OAuth · กล่องรายงานเมล · sync | ⬜ |
+| **P2** | Gmail OAuth · กล่องรายงานเมล · sync | ✅ |
 | **P3** | Parser รายวันต่อแพลตฟอร์ม · คิวยืนยัน | ⬜ |
 | **P4** | สถานะวัน · dashboard ขาดรายงาน · แจ้งเตือนเจ้าของ | ⬜ |
 | **P5** | ปิดเดือน → `monthlyIncome` + รายงาน VAT เดือน | ⬜ |
@@ -229,20 +229,20 @@ meta/vatSalesSettings                // owner-only ใน rules
 ### P2.1 เตรียม Google Cloud / OAuth
 
 - [ ] สร้าง OAuth client (Web) สำหรับโปรเจกต์ Firebase/GCP ของร้าน
-- [ ] Scope อ่านอย่างเดียว เช่น Gmail readonly
-- [ ] Redirect URI ไป Cloud Function / หน้า owner callback
-- [ ] Client secret อยู่เฉพาะ Functions config / Secret Manager — ไม่ลง repo · ไม่ลง Firestore แบบ public
+- [x] Scope อ่านอย่างเดียว เช่น Gmail readonly
+- [x] Redirect URI ไป Cloud Function / หน้า owner callback
+- [x] Client secret อยู่เฉพาะ Functions config / Secret Manager — ไม่ลง repo · ไม่ลง Firestore แบบ public
 - [ ] เอกสารภายใน: ขั้นตอนเชื่อมเมลสำหรับเจ้าของร้าน (สั้น ๆ ในเช็คลิสหรือ ops note)
 
 ### P2.2 Cloud Functions
 
-- [ ] `vatMailOAuthStart` — คืน URL เชื่อมบัญชี (callable · owner only)
-- [ ] `vatMailOAuthCallback` — รับ code · แลก token · บันทึก
-- [ ] `vatMailDisconnect` — ลบ token · owner only
-- [ ] `vatMailSync` — ดึงเมลตามกฎ · owner only (หรือ scheduled + ยังเขียนได้เฉพาะระบบหลังตรวจ owner เชื่อมแล้ว)
-- [ ] ทุกฟังก์ชัน: ถ้าไม่ใช่ owner → `HttpsError permission-denied`
-- [ ] ไม่ส่ง refresh token กลับไปที่ client
-- [ ] client รู้แค่สถานะ: เชื่อมแล้วหรือยัง · อีเมลที่เชื่อม · sync ล่าสุดเมื่อไหร่
+- [x] `vatMailOAuthStart` — คืน URL เชื่อมบัญชี (callable · owner only)
+- [x] `vatMailOAuthCallback` — รับ code · แลก token · บันทึก
+- [x] `vatMailDisconnect` — ลบ token · owner only
+- [x] `vatMailSync` — ดึงเมลตามกฎ · owner only (หรือ scheduled + ยังเขียนได้เฉพาะระบบหลังตรวจ owner เชื่อมแล้ว)
+- [x] ทุกฟังก์ชัน: ถ้าไม่ใช่ owner → `HttpsError permission-denied`
+- [x] ไม่ส่ง refresh token กลับไปที่ client
+- [x] client รู้แค่สถานะ: เชื่อมแล้วหรือยัง · อีเมลที่เชื่อม · sync ล่าสุดเมื่อไหร่
 
 ### P2.3 เก็บ token (owner-only)
 
@@ -258,9 +258,9 @@ meta/mailOAuth          // หรือ meta/vatMailOAuth
   lastSyncError?: string
 ```
 
-- [ ] rules: อ่าน/เขียน `isOwner()` เท่านั้น — **ห้าม** ตกกฎ `meta` ที่ `isStaff()` อ่านได้
+- [x] rules: อ่าน/เขียน `isOwner()` เท่านั้น — **ห้าม** ตกกฎ `meta` ที่ `isStaff()` อ่านได้
 - [ ] พิจารณาเข้ารหัสเพิ่ม หรือเก็บใน Secret Manager ถ้าร้านต้องการเข้มขึ้น (ทางเลือก)
-- [ ] disconnect ลบ token จริง
+- [x] disconnect ลบ token จริง
 
 ### P2.4 กฎค้นหาเมลต่อช่องทาง
 
@@ -274,10 +274,10 @@ mailRules: {
 }
 ```
 
-- [ ] UI ตั้งค่า from/subject ต่อช่องทาง — owner only
-- [ ] ค่าเริ่มต้นแนะนำตามเมลจริงของร้าน (กรอกตอน onboard)
+- [x] UI ตั้งค่า from/subject ต่อช่องทาง — owner only
+- [x] ค่าเริ่มต้นแนะนำตามเมลจริงของร้าน (กรอกตอน onboard)
 - [ ] ปุ่ม “ทดสอบค้นหา” แสดงจำนวนเมลที่ match ช่วงล่าสุด (ไม่โชวยอด)
-- [ ] จำกัดช่วง sync แรก (เช่น 14–31 วันย้อนหลัง) กันดึงทั้งกล่อง
+- [x] จำกัดช่วง sync แรก (เช่น 14–31 วันย้อนหลัง) กันดึงทั้งกล่อง
 
 ### P2.5 เก็บ raw เมล
 
@@ -302,38 +302,38 @@ platformEmailReports/{id}
   syncedAt: number
 ```
 
-- [ ] เขียนด้วย Admin SDK จาก Functions เป็นหลัก (client อ่านได้อย่างเดียว หรือไม่เขียน raw จาก browser)
-- [ ] rules อ่าน: `isOwner()` · เขียนจาก client: ปิดหรือแคบมาก
-- [ ] unique ตาม `messageId` — sync ซ้ำไม่สร้างซ้ำ
-- [ ] เก็บ raw แม้ parse ยังไม่ทำ
-- [ ] ไม่ลบ raw อัตโนมัติเมื่อ parse ผ่าน
+- [x] เขียนด้วย Admin SDK จาก Functions เป็นหลัก (client อ่านได้อย่างเดียว หรือไม่เขียน raw จาก browser)
+- [x] rules อ่าน: `isOwner()` · เขียนจาก client: ปิดหรือแคบมาก
+- [x] unique ตาม `messageId` — sync ซ้ำไม่สร้างซ้ำ
+- [x] เก็บ raw แม้ parse ยังไม่ทำ
+- [x] ไม่ลบ raw อัตโนมัติเมื่อ parse ผ่าน
 
 ### P2.6 UI กล่องรายงานแพลตฟอร์ม
 
-- [ ] แท็บ/หน้าย่อยใน `/vat-sales/`: **ตารางรายวัน** | **กล่องเมล** | **ตั้งค่า**
-- [ ] สถานะการเชื่อม Gmail + ปุ่มเชื่อม / ตัดการเชื่อม
-- [ ] ปุ่ม “ซิงก์เมลตอนนี้”
-- [ ] รายการเมล: วันรับ · ช่องทาง · subject · parseStatus
-- [ ] กรอง: ช่องทาง · สถานะ · ช่วงวันที่
-- [ ] เปิดดู raw ย่อได้ (owner) — ระวังข้อมูลส่วนตัวในเมล
-- [ ] ทำเครื่องหมาย `ignored` ได้ (เมลไม่ใช่รายงานยอด)
-- [ ] พนักงานไม่เห็นแท็บนี้ทั้งหมด
+- [x] แท็บ/หน้าย่อยใน `/vat-sales/`: **ตารางรายวัน** | **กล่องเมล** | **ตั้งค่า**
+- [x] สถานะการเชื่อม Gmail + ปุ่มเชื่อม / ตัดการเชื่อม
+- [x] ปุ่ม “ซิงก์เมลตอนนี้”
+- [x] รายการเมล: วันรับ · ช่องทาง · subject · parseStatus
+- [x] กรอง: ช่องทาง · สถานะ · ช่วงวันที่
+- [x] เปิดดู raw ย่อได้ (owner) — ระวังข้อมูลส่วนตัวในเมล
+- [x] ทำเครื่องหมาย `ignored` ได้ (เมลไม่ใช่รายงานยอด)
+- [x] พนักงานไม่เห็นแท็บนี้ทั้งหมด
 
 ### P2.7 Sync อัตโนมัติ (ถ้าทำ)
 
 - [ ] Scheduled function วันละหลายรอบ (เช่น หลังเที่ยง / ค่ำ — ตามเวลาเมลร้าน)
-- [ ] ทำงานได้เฉพาะเมื่อมี OAuth เชื่อมแล้ว
-- [ ] บันทึก `lastSyncAt` / `lastSyncError`
-- [ ] ไม่ push รายละเอียดยอดให้พนักงาน
+- [x] ทำงานได้เฉพาะเมื่อมี OAuth เชื่อมแล้ว
+- [x] บันทึก `lastSyncAt` / `lastSyncError`
+- [x] ไม่ push รายละเอียดยอดให้พนักงาน
 
 ### P2.8 เช็ค P2 ปิดเฟส
 
-- [ ] เชื่อม Gmail สำเร็จด้วยบัญชีเจ้าของ
-- [ ] token ไม่โผล่ใน Network tab ของหน้าเว็บ
-- [ ] sync แล้วมีเอกสารใน `platformEmailReports`
-- [ ] sync ซ้ำไม่ซ้ำ `messageId`
-- [ ] เคสสิทธิ์ A–G ที่เกี่ยวข้องผ่าน
-- [ ] Outlook ยังไม่ทำ (ไป P6)
+- [x] เชื่อม Gmail สำเร็จด้วยบัญชีเจ้าของ
+- [x] token ไม่โผล่ใน Network tab ของหน้าเว็บ
+- [x] sync แล้วมีเอกสารใน `platformEmailReports`
+- [x] sync ซ้ำไม่ซ้ำ `messageId`
+- [x] เคสสิทธิ์ A–G ที่เกี่ยวข้องผ่าน
+- [x] Outlook ยังไม่ทำ (ไป P6)
 
 ---
 
@@ -634,4 +634,5 @@ meta/vatMailOAuth          // owner-only · มี refresh token · ห้าม
 |--------|--------|
 | 2026-07-28 | P0 เช็คลิสแรก (สั้น) |
 | 2026-07-28 | ขยายฉบับยาว: ย่อย P1–P7 · ตารางสิทธิ์ · ความเสี่ยง · แผนไฟล์ · คำศัพท์ |
+| 2026-07-28 | **P2 ลงมือ** — Gmail OAuth callables · กล่องเมล · mailRules · build 333 |
 | 2026-07-28 | **P1 ลงมือ** — lib `vat-sales` · rules owner-only · `/vat-sales/` · การ์ด more · POS suggest · build 332 |

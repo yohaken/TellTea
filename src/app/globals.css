@@ -15433,3 +15433,64 @@ body.modal-open .main-panel {
   font-variant-numeric: tabular-nums;
 }
 
+.vat-sales-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  width: 100%;
+  margin-top: 0.35rem;
+}
+
+.vat-sales-tab {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(28, 42, 31, 0.16);
+  background: transparent;
+  font-size: 0.9rem;
+}
+
+.vat-sales-tab.is-active {
+  background: rgba(87, 15, 15, 0.1);
+  border-color: rgba(87, 15, 15, 0.35);
+  font-weight: 600;
+}
+
+.vat-mail-status {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.vat-mail-config,
+.vat-mail-rule {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.vat-mail-table {
+  min-width: 720px;
+}
+
+.vat-mail-preview {
+  margin-top: 0.85rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(28, 42, 31, 0.12);
+  background: rgba(28, 42, 31, 0.02);
+}
+
+.vat-mail-raw {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.8rem;
+  max-height: 22rem;
+  overflow: auto;
+  margin: 0.5rem 0;
+  padding: 0.65rem;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  border: 1px solid rgba(28, 42, 31, 0.08);
+}
+

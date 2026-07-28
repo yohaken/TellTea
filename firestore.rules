@@ -594,7 +594,9 @@ service cloud.firestore {
         || (docId == 'posStoreClaimSecret' && isOwner())
         || (docId == 'vatSalesSettings' && isOwner())
         || (docId == 'vatMailOAuth' && isOwner())
-        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && docId != 'vatSalesSettings' && docId != 'vatMailOAuth' && isStaff())
+        || (docId == 'vatMailOAuthConfig' && isOwner())
+        || (docId == 'vatMailOAuthState' && isOwner())
+        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && docId != 'vatSalesSettings' && docId != 'vatMailOAuth' && docId != 'vatMailOAuthConfig' && docId != 'vatMailOAuthState' && isStaff())
         || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes' || docId == 'posMenuRank'));
       allow write: if isOwner()
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
