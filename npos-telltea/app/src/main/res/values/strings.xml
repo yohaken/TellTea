@@ -26,9 +26,9 @@
     <string name="nav_shift">รอบการขาย</string>
     <string name="btn_settings">ตั้งค่า</string>
     <string name="banner_update">มีเวอร์ชันใหม่ — กดอัปเดตเลย</string>
-    <string name="update_popup_title">มีเวอร์ชันใหม่</string>
-    <string name="update_popup_body">อัปเดตเป็น %1$s (%2$d) — กดแล้วติดตั้งทันที · กลับหน้าร้านอัตโนมัติ</string>
-    <string name="update_popup_later">ไว้ก่อน</string>
+    <string name="update_popup_title">ต้องอัปเดตแอป</string>
+    <string name="update_popup_body">เวอร์ชันเซิร์ฟเวอร์ใหม่กว่า — อัปเดตเป็น %1$s (%2$d) ทันที · กลับหน้าร้านอัตโนมัติ · ปิดไว้ก่อนได้สั้นๆ แล้วระบบจะเตือนอีก</string>
+    <string name="update_popup_later">ปิดชั่วคราว</string>
     <string name="nav_lock_pin">กลับหน้าหลัก</string>
     <string name="nav_web_open_fail">เปิดลิงก์ไม่สำเร็จ</string>
     <string name="hub_rail_hint">ใช้แถบซ้ายเลือกเมนูหน้าร้าน — เหมือนเว็บ POS</string>

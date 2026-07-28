@@ -29,6 +29,12 @@ public final class UpdateCheckCoordinator {
 
   /** After a successful device heartbeat / seat check. */
   public static void onServerSyncPulse(Context context) {
+    UpdatePromptController host = LIVE.get();
+    if (host != null && host.hasPendingUpdate()) {
+      // Mandatory: keep resurfacing even if staff dismissed many times.
+      host.reassertPendingUpdate();
+      return;
+    }
     requestCheck(context, "sync");
   }
 

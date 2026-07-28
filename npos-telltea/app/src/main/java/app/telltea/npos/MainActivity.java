@@ -169,13 +169,7 @@ public class MainActivity extends Activity {
     findViewById(R.id.settingsButtonSell).setOnClickListener(openSettings);
 
     buildHubNav();
-    PosShellNav.bind(
-        this,
-        PosShellNav.ACTIVE_HUB,
-        () -> {
-          MenuWarmup.warm(this);
-          Toast.makeText(this, R.string.btn_refresh_menu, Toast.LENGTH_SHORT).show();
-        });
+    PosShellNav.bind(this, PosShellNav.ACTIVE_HUB, null);
     new app.telltea.npos.sell.MenuRepository()
         .loadShop(
             this,

@@ -73,7 +73,8 @@
                     style="@style/Npos.Btn.Chip"
                     android:layout_marginEnd="8dp"
                     android:layout_marginBottom="0dp"
-                    android:text="@string/btn_refresh_menu" />
+                    android:text="@string/btn_refresh_menu"
+                    android:visibility="gone" />
 
                 <TextView
                     android:id="@+id/sellSyncStatus"

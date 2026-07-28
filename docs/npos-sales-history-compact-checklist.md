@@ -1,6 +1,6 @@
 # nPos — ประวัติการขาย + ตัวอย่างบิล BO compact
 
-อัปเดต: **1.14.45** · `APP_BUILD` 303 · `POS_BUILD` 98 · vc **68**
+อัปเดต: **1.14.46** · `APP_BUILD` 304 · `POS_BUILD` 99 · vc **69**
 
 ## สcope
 

@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -55,19 +54,13 @@ public final class PosShellNav {
       brand.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.brandSp);
       brand.setTypeface(NposFonts.bold(activity));
     }
+    // Front-store refresh removed — menu/version sync rides BO countdown pulse.
     View refreshBtn = activity.findViewById(R.id.sidebarRefreshBtn);
     if (refreshBtn != null) {
-      int s = Math.max(ui.dp(32), Math.round(36 * ui.density * ui.scale));
-      ViewGroup.LayoutParams rlp = refreshBtn.getLayoutParams();
-      if (rlp != null) {
-        rlp.width = s;
-        rlp.height = s;
-        refreshBtn.setLayoutParams(rlp);
-      }
+      refreshBtn.setVisibility(View.GONE);
     }
 
     LinearLayout nav = activity.findViewById(R.id.sidebarNav);
-    View refresh = activity.findViewById(R.id.sidebarRefreshBtn);
     TextView lock = activity.findViewById(R.id.sidebarLock);
     if (nav == null) return;
     nav.removeAllViews();
@@ -116,13 +109,6 @@ public final class PosShellNav {
         ACTIVE_SETTINGS.equals(activeId),
         () -> openNative(activity, SettingsActivity.class, activeId));
 
-    if (refresh != null) {
-      refresh.setOnClickListener(
-          v -> {
-            if (refreshHook != null) refreshHook.onRefresh();
-            else Toast.makeText(activity, R.string.btn_refresh_menu, Toast.LENGTH_SHORT).show();
-          });
-    }
     if (lock != null) {
       lock.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.navSp);
       lock.setTypeface(NposFonts.medium(activity));

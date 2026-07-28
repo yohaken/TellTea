@@ -128,7 +128,7 @@ public class SellActivity extends Activity {
     customerDisplay = new CustomerDisplayController();
     customerDisplay.bind(this);
 
-    PosShellNav.bind(this, PosShellNav.ACTIVE_SELL, () -> reloadMenu(true));
+    PosShellNav.bind(this, PosShellNav.ACTIVE_SELL, null);
     updatePrompt = new UpdatePromptController(this);
     updatePrompt.setBeforeInstall(this::persistWorkBeforeUpdate);
     applySmartChrome();
@@ -150,7 +150,8 @@ public class SellActivity extends Activity {
     findViewById(R.id.holdBillButton).setOnClickListener(v -> holdBill());
     restoreHoldButton.setOnClickListener(v -> restoreHold());
     flushSyncButton.setOnClickListener(v -> flushPendingNow());
-    findViewById(R.id.refreshMenuButton).setOnClickListener(v -> reloadMenu(true));
+    View refreshMenu = findViewById(R.id.refreshMenuButton);
+    if (refreshMenu != null) refreshMenu.setVisibility(View.GONE);
     findViewById(R.id.xReportButton).setOnClickListener(v -> printXReport());
     View receipts = findViewById(R.id.receiptsButton);
     if (receipts != null) {

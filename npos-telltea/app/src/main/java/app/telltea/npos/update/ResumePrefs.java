@@ -69,6 +69,15 @@ public final class ResumePrefs {
         .apply();
   }
 
+  /** Clear snooze so the next sync pulse can force the update popup again. */
+  public static void clearPopupDismiss(Context context) {
+    context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .remove(KEY_DISMISS_UNTIL)
+        .apply();
+  }
+
   public static boolean isPopupDismissed(Context context) {
     long until =
         context
