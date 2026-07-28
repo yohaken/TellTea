@@ -5,15 +5,12 @@ import Link from "next/link";
 import { formatPlainNumber } from "@/lib/utils";
 import {
   bangkokMonthKey,
+  fileVatMonthlyReturn,
+  loadVatMonthlyReturn,
+  proposePnlIncome,
   roundMoney,
-  type MonthSalesTotals,
-  type PnlIncomeMode,
-} from "@/lib/vat-sales";
-import {
-  buildMonthClosePreview,
-  closeVatMonthToIncome,
-} from "@/lib/vat-sales-close";
-import { listVatInputInvoices, sumVatInput } from "@/lib/vat-input";
+  type VatMonthlyReturn,
+} from "@/lib/vat-monthly";
 
 function fmt(n: number) {
   if (!n) return "—";
@@ -25,40 +22,29 @@ type Props = {
   onIncomeApplied?: () => void;
 };
 
-/** แผงปิดเดือน VAT บนหน้าสรุปรายเดือน — เฉพาะเจ้าของ */
+/** แผง VAT รายเดือนบนหน้าสรุปรายเดือน — เฉพาะเจ้าของ */
 export function PnlVatIncomePanel({ actor, onIncomeApplied }: Props) {
   const [month, setMonth] = useState(() => bangkokMonthKey());
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
-  const [mode, setMode] = useState<PnlIncomeMode>("exVat");
-  const [proposed, setProposed] = useState(0);
-  const [confirmedDays, setConfirmedDays] = useState(0);
-  const [dayCount, setDayCount] = useState(0);
-  const [draftWithSales, setDraftWithSales] = useState(0);
-  const [totals, setTotals] = useState<MonthSalesTotals | null>(null);
-  const [currentIncome, setCurrentIncome] = useState(0);
+  const [doc, setDoc] = useState<VatMonthlyReturn | null>(null);
   const [editIncome, setEditIncome] = useState("");
-  const [vatInputTotal, setVatInputTotal] = useState(0);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [p, inputs] = await Promise.all([
-        buildMonthClosePreview(month),
-        listVatInputInvoices(month).catch(() => []),
-      ]);
-      setMode(p.mode);
-      setProposed(p.proposed);
-      setConfirmedDays(p.confirmedDays);
-      setDayCount(p.dayCount);
-      setDraftWithSales(p.draftWithSales);
-      setTotals(p.totals);
-      setCurrentIncome(p.currentIncome);
-      setEditIncome(String(p.proposed || ""));
-      setVatInputTotal(sumVatInput(inputs).vatInput);
+      const ret = await loadVatMonthlyReturn(month);
+      setDoc(ret);
+      setEditIncome(
+        String(
+          ret.pnlIncome ||
+            proposePnlIncome(ret.totals, ret.pnlIncomeMode) ||
+            "",
+        ),
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -70,8 +56,8 @@ export function PnlVatIncomePanel({ actor, onIncomeApplied }: Props) {
     void refresh();
   }, [refresh]);
 
-  const unconfirmed = Math.max(0, dayCount - confirmedDays);
-  const netVat = roundMoney((totals?.vatOutput || 0) - vatInputTotal);
+  const totals = doc?.totals;
+  const netVat = roundMoney(totals?.netVat || 0);
 
   const applyIncome = async () => {
     const income = Number(String(editIncome).replace(/,/g, ""));
@@ -79,28 +65,27 @@ export function PnlVatIncomePanel({ actor, onIncomeApplied }: Props) {
       setError("ยอดรายได้ไม่ถูกต้อง");
       return;
     }
-    if (confirmedDays <= 0) {
-      setError("ยังไม่มีวันที่ยืนยันในยอดขาย/VAT");
+    if (!totals || totals.grossSales <= 0) {
+      setError("ยังไม่มียอดขายในเดือนนี้ — กรอกที่หน้า VAT ก่อน");
       return;
     }
-    const warn =
-      unconfirmed > 0 ? `\nยังมี ${unconfirmed} วันยังไม่ยืนยัน (ไม่นับ)` : "";
-    if (
-      !window.confirm(
-        `ใส่รายได้ ${month} = ${formatPlainNumber(income)} เข้าสรุปรายเดือน?\n` +
-          `จากวันยืนยัน ${confirmedDays} วัน · ${mode === "exVat" ? "ก่อน VAT" : "รวม VAT"}` +
-          warn,
-      )
-    ) {
+    if (doc?.status === "filed") {
+      setError("เดือนนี้ปิดแล้ว — ปลดล็อกที่หน้า VAT ก่อน");
       return;
     }
+    const ok = window.confirm(
+      `ใส่รายได้เดือน ${month} = ${formatPlainNumber(income)} บาท เข้าสรุปรายเดือน (P&L)?`,
+    );
+    if (!ok) return;
     setBusy(true);
     setError("");
     setMsg("");
     try {
-      const audit = await closeVatMonthToIncome(month, actor, { forceIncome: income });
-      setMsg(`ใส่รายได้ ${formatPlainNumber(audit.income)} แล้ว`);
-      await refresh();
+      const filed = await fileVatMonthlyReturn(month, actor, {
+        forceIncome: income,
+      });
+      setDoc(filed);
+      setMsg(`ใส่รายได้ ${formatPlainNumber(filed.pnlIncome)} แล้ว`);
       onIncomeApplied?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -110,119 +95,58 @@ export function PnlVatIncomePanel({ actor, onIncomeApplied }: Props) {
   };
 
   return (
-    <section className="pnl-vat-panel" aria-label="ยอดขาย VAT ปิดเดือน">
-      <div className="pnl-vat-head">
-        <h2 className="pnl-section-title">ยอดขาย / VAT → รายได้</h2>
-        <Link href="/vat-sales/?tab=daily" className="ghost-btn pnl-vat-link">
-          ตารางวัน
+    <section className="pnl-vat-apply">
+      <header className="pnl-vat-apply-head">
+        <h2>VAT รายเดือน → รายได้</h2>
+        <Link href="/vat-sales/" className="ghost-btn">
+          เปิดหน้า VAT
         </Link>
-      </div>
-      <p className="muted pnl-vat-lead">
-        จากวันที่ยืนยันในบช.เจ้าของ · ใส่เข้าช่องรายได้ด้านล่างได้ที่นี่
-      </p>
+      </header>
 
-      <div className="vat-sales-toolbar vat-sales-toolbar--slim">
-        <label className="vat-sales-month">
-          เดือน
-          <input
-            type="month"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-          />
-        </label>
-        <button
-          type="button"
-          className="ghost-btn"
-          disabled={busy || loading}
-          onClick={() => void refresh()}
-        >
-          รี
-        </button>
-      </div>
+      <label className="vat-sales-field">
+        เดือน
+        <input
+          type="month"
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+        />
+      </label>
 
+      {loading ? <p className="muted">กำลังโหลด…</p> : null}
       {error ? <p className="error-text">{error}</p> : null}
-      {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
+      {msg ? <p className="muted">{msg}</p> : null}
 
-      {loading ? (
-        <p className="muted">กำลังโหลดยอด VAT...</p>
-      ) : (
+      {doc && !loading ? (
         <>
-          <p className="vat-sales-hint">
-            ยืนยัน <strong>{confirmedDays}</strong>/{dayCount}
-            {unconfirmed > 0 ? (
-              <span className="muted"> · ยังไม่ยืนยัน {unconfirmed}</span>
-            ) : null}
-            {draftWithSales > 0 ? (
-              <span className="muted"> · มียอดยังไม่ยืนยัน {draftWithSales} วัน</span>
-            ) : null}
+          <p className="muted">
+            ส่ง {fmt(doc.delivery.grossSales)} · ร้าน{" "}
+            {fmt(doc.storefront.grossSales)} · รวม {fmt(doc.totals.grossSales)}
             {" · "}
-            โหมด <strong>{mode === "exVat" ? "ก่อน VAT" : "รวม VAT"}</strong>
-            {" · "}
-            ในงบตอนนี้ <strong>{fmt(currentIncome)}</strong>
+            ภาษีขาย {fmt(doc.totals.outputVat)} − ซื้อ {fmt(doc.totals.inputVat)}{" "}
+            = สุทธิ {fmt(netVat)}
+            {doc.status === "filed" ? " · ปิดแล้ว" : ""}
           </p>
-
-          {totals ? (
-            <section className="vat-sales-summary vat-sales-summary--slim">
-              <span>
-                ส่ง <strong>{fmt(totals.deliveryGross)}</strong>
-                <small className="muted">
-                  {" "}
-                  Sp {fmt(totals.shopee)} · G {fmt(totals.grab)} · LM{" "}
-                  {fmt(totals.lineman)}
-                </small>
-              </span>
-              <span>
-                ร้าน <strong>{fmt(totals.storefrontGross)}</strong>
-              </span>
-              <span className="vat-sales-summary-main">
-                รวม <strong>{fmt(totals.totalGross)}</strong>
-              </span>
-              <span>
-                ฐาน <strong>{fmt(totals.vatBase)}</strong>
-              </span>
-              <span>
-                VAT <strong>{fmt(totals.vatOutput)}</strong>
-              </span>
-              <span className="muted">สุทธิ {fmt(netVat)}</span>
-            </section>
+          <label className="vat-sales-field">
+            ยอดรายได้ P&L
+            <input
+              inputMode="decimal"
+              disabled={doc.status === "filed" || busy}
+              value={editIncome}
+              onChange={(e) => setEditIncome(e.target.value)}
+            />
+          </label>
+          {doc.status !== "filed" ? (
+            <button
+              type="button"
+              className="primary-btn"
+              disabled={busy || doc.totals.grossSales <= 0}
+              onClick={() => void applyIncome()}
+            >
+              ใส่รายได้เข้า P&L
+            </button>
           ) : null}
-
-          {confirmedDays <= 0 ? (
-            <p className="error-text">
-              ยังไม่มีวันยืนยัน —{" "}
-              <Link href="/vat-sales/?tab=daily">ไปตารางวัน</Link>
-            </p>
-          ) : (
-            <div className="pnl-vat-apply">
-              <label className="vat-sales-field">
-                ยอดที่จะใส่
-                <input
-                  inputMode="decimal"
-                  value={editIncome}
-                  onChange={(e) => setEditIncome(e.target.value)}
-                />
-              </label>
-              <button
-                type="button"
-                className="primary-btn"
-                disabled={busy}
-                onClick={() => void applyIncome()}
-              >
-                {busy ? "…" : "ใส่เป็นรายได้เดือนนี้"}
-              </button>
-              <button
-                type="button"
-                className="ghost-btn"
-                disabled={busy}
-                onClick={() => setEditIncome(String(proposed || ""))}
-                title="ใช้ค่าเสนอจากวันยืนยัน"
-              >
-                ใช้เสนอ {fmt(proposed)}
-              </button>
-            </div>
-          )}
         </>
-      )}
+      ) : null}
     </section>
   );
 }

@@ -30,7 +30,7 @@ export function OwnerBooksModeSwitch({
         }
         aria-current={active === "vat" ? "page" : undefined}
       >
-        ยอดขาย/VAT
+        VAT เดือน
       </Link>
     </nav>
   );
