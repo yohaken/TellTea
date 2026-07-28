@@ -148,10 +148,8 @@ export function VatSalesInputVatPanel({
   return (
     <div className="vat-input-panel">
       <section className="vat-sales-settings">
-        <h2 className="vat-sales-section-title">ภาษีซื้อ (ใบกำกับซื้อ)</h2>
-        <p className="muted vat-sales-hint">
-          เจ้าของเท่านั้น · ไม่ปน ledger พนักงาน · แนบหลักฐานได้ (evp)
-        </p>
+        <h2 className="vat-sales-section-title">ภาษีซื้อ</h2>
+        <p className="muted vat-sales-hint">owner · ใบกำกับ · แนบรูปได้</p>
         <div className="vat-sales-toolbar">
           <label className="vat-sales-month">
             เดือน

@@ -738,14 +738,14 @@ export function VatSalesMailPanel({
             <table className="sheet-table vat-sales-table vat-mail-table">
               <thead>
                 <tr>
-                  <th>รับเมื่อ</th>
-                  <th>ช่องทาง</th>
+                  <th>รับ</th>
+                  <th>ช่อง</th>
                   <th>ชนิด</th>
-                  <th>วันรายงาน</th>
-                  <th>ยอดลูกค้า</th>
+                  <th>วัน</th>
+                  <th>ยอด</th>
                   <th>หัวข้อ</th>
                   <th>สถานะ</th>
-                  <th className="col-act">จัดการ</th>
+                  <th className="col-act">…</th>
                 </tr>
               </thead>
               <tbody>

@@ -43,10 +43,8 @@ export function VatSalesAuditPanel({ month, onMonthChange, setError }: Props) {
   return (
     <div className="vat-audit-panel">
       <section className="vat-sales-settings">
-        <h2 className="vat-sales-section-title">ประวัติการแก้ / ยืนยัน</h2>
-        <p className="muted vat-sales-hint">
-          บันทึกอัตโนมัติเมื่อแก้ยอด · ยืนยันวัน · ยืนยันเมล · ปิดเดือน · ลบ raw เมล
-        </p>
+        <h2 className="vat-sales-section-title">ประวัติ</h2>
+        <p className="muted vat-sales-hint">แก้ยอด · ยืนยัน · เมล · ปิดเดือน · prune</p>
         <div className="vat-sales-toolbar">
           <label className="vat-sales-month">
             เดือน
