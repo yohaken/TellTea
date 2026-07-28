@@ -1,0 +1,98 @@
+# VAT รายเดือน (Play-Safe) — สรุปวิเคราะห์ + สเปกใหม่
+
+> แทนที่แนวคิด dailySales + เมลรายวัน  
+> Route เดิม: `/vat-sales/` · owner-only  
+> วันที่: 2026-07-28
+
+---
+
+## 1) สรุปวิเคราะห์: ทำไมต้องยกโครงสร้างเดิม
+
+| ของเดิม (P1–P7) | ปัญหาที่เจอ |
+|-----------------|------------|
+| กรอก/ซิงก์ยอดรายวันทุกช่องทาง | งานหนัก · คีย์ผิดง่าย · ไม่ตรงกับวิธีคิดภาษีจริงของร้าน |
+| เมล Gmail/Outlook → parse → ยืนยันวัน | ความซับซ้อนสูง · parser ไม่นิ่ง · ไม่ใช่จุดที่ต้องยื่นรายวัน |
+| ปิดเดือน = รวมวันที่ยืนยัน | ถ้าวันไหนขาด = รายได้ไม่ครบ = เสี่ยงเบี้ยปรับฝั่งรายได้ |
+| ภาษีซื้อแยกใบกำกับทีละใบ | ดีสำหรับ audit แต่ช้า — ร้านใช้บิล GP สรุปเดือน + บิลวัตถุดิบ |
+
+**ข้อสรุป:** ระบบเดิมออกแบบมาเพื่อ “คุมรายวัน” แต่ธุรกิจต้องการ “ยื่นรายเดือนแบบปลอดภัยและเร็ว”  
+→ **ยกโครงสร้าง UI/โมเดลรายวันออกจากทางใช้งานหลัก** · ใช้ยอดรวมสิ้นเดือนแทน
+
+---
+
+## 2) แนวคิดใหม่ (หนึ่งภาพ)
+
+```
+[ ยอดขายรวมทั้งเดือน ]  ──แยก──►  Delivery | หน้าร้าน
+               │
+               ▼
+   [ ภาษีขาย Output ]  = ยอดรวม × 7/107   (ยื่น 100% ตามจริง)
+               │
+               ▼
+   [ ภาษีซื้อ Input ]  = บิล GP (~1/3 ของภาษีขาย) + บิลวัตถุดิบ
+                         · ปัดลง / claim factor < 1 (play-safe)
+               │
+               ▼
+   [ ภาษีสุทธิ ] = Output − Input  → นำส่งสรรพากร
+```
+
+### Play-Safe Strategy
+
+1. **รายได้:** ยื่นตามยอดขายรวมจริง 100% — ห้ามขาด  
+2. **ค่าใช้จ่าย (ภาษีซื้อ):** ดึงจากบิล GP สรุปเดือน + บิลวัตถุดิบ · ยื่นหย่อน/ปัดลงเล็กน้อย  
+3. **ผลลัพธ์:** อาจจ่ายเกินหลักสิบบาท แต่ปลอดภัย + ประหยัดเวลา · ลดความเสี่ยงถูกเรียกตรวจจากยอดรายได้ไม่ครบ
+
+---
+
+## 3) โครงสร้างหน้าใหม่
+
+| แท็บ | งาน |
+|------|-----|
+| **เดือน** | กรอกยอดส่ง + ยอดร้าน + GP/วัตถุดิบ · เห็นภาษีขาย/ซื้อ/สุทธิ |
+| **ตารางทด** | แก้เรท (7/107, สัดส่วน GP, claim factor, ปัดลง) · ทดตัวเลขก่อนใช้จริง |
+| **ปิด P&L** | ยืนยันมือ → `monthlyIncome` |
+
+แยกเรท Delivery / หน้าร้านได้ (เรทอาจต่างกันเล็กน้อย)
+
+---
+
+## 4) Firestore (ใหม่)
+
+```
+vatMonthlyReturns/{YYYY-MM}
+  delivery { grossSales, gpVat, useGpEstimate, ingredientVat, rates, …computed }
+  storefront { … }
+  totals { grossSales, vatBase, outputVat, inputVat, netVat }
+  status: draft|saved|filed
+  pnlIncome, pnlIncomeMode, note, filedAt/By, updatedAt/By
+
+meta/vatMonthlySettings
+  deliveryRates, storefrontRates, pnlIncomeMode
+```
+
+- Owner-only ทุกอัน  
+- Collection เดิม (`dailySales`, mail, …) คง rules ไว้แต่ไม่ใช้ใน UI หลัก
+
+---
+
+## 5) สูตร (จุดเดียว)
+
+```
+outputVat = round(gross × outputNum / outputDen)   // default 7/107
+vatBase   = gross − outputVat
+gpEstimate = floor(outputVat × gpOfOutput)         // default 1/3
+gpClaimed  = floor(gpRaw × inputClaimFactor)       // default 0.98
+ingredientClaimed = floor(ingredientVat × inputClaimFactor)
+inputVat = gpClaimed + ingredientClaimed
+netVat   = outputVat − inputVat
+```
+
+---
+
+## 6) สิ่งที่ยกทิ้งจากทางใช้งานหลัก
+
+- ตารางรายวัน / สถานะวัน / confirm รายวัน  
+- แท็บเมล · เทียบยอด · parser health เป็น workflow หลัก  
+- การบังคับยืนยันครบทุกวันก่อนปิดเดือน  
+
+(โค้ด/Functions เก่ายังอยู่ใน repo ได้ — ไม่ผูก UI หลักแล้ว)

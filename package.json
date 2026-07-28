@@ -12,6 +12,7 @@
     "test:vat-p5": "npx --yes tsx scripts/test-vat-p5.ts",
     "test:vat-p6": "npx --yes tsx scripts/test-vat-p6.ts",
     "test:vat-p7": "npx --yes tsx scripts/test-vat-sales-p7.ts",
+    "test:vat-monthly": "npx --yes tsx scripts/test-vat-monthly.ts",
     "test:vat-mail-parse": "npx --yes tsx scripts/test-vat-mail-parse.ts",
     "test:rate-schedule": "node scripts/test-rate-schedule.mjs",
     "repair:ot-rates": "node scripts/repair-ot-bonus-rates.mjs",

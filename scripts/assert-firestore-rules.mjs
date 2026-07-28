@@ -49,6 +49,7 @@ const REQUIRED_MATCHES = [
   "dailySales",
   "platformEmailReports",
   "vatMonthCloses",
+  "vatMonthlyReturns",
   "vatInputInvoices",
   "vatSalesAudit",
 ];
@@ -88,8 +89,11 @@ assert.match(
 
 // VAT / daily sales — owner-only + light write validation
 assert.match(rules, /match \/dailySales\/\{dateId\}/);
+assert.match(rules, /match \/vatMonthlyReturns\/\{monthId\}/);
 assert.match(rules, /request\.resource\.data\.dateKey == dateId/);
+assert.match(rules, /request\.resource\.data\.monthKey == monthId/);
 assert.match(rules, /vatSalesSettings' && isOwner\(\)/);
+assert.match(rules, /vatMonthlySettings' && isOwner\(\)/);
 assert.match(rules, /vatMailOAuth' && isOwner\(\)/);
 assert.doesNotMatch(
   rules,
