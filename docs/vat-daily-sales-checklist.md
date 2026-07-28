@@ -1,9 +1,10 @@
 # เช็คลิส: ยอดขายรายวัน · VAT · เมลแพลตฟอร์ม (ฉบับยาว)
 
-> TellTea / P-Note · บัญชี VAT → กำไรกิจการ (บุคคลธรรมดา)  
+> TellTea · บัญชี VAT → กำไรกิจการ (บุคคลธรรมดา)  
 > อัปเดต: 2026-07-28  
 > แหล่งเดลิเวอรี่ = **API เมลเท่านั้น** · **ไม่ใช้ Excel** เป็นทางหลัก  
-> Route เป้าหมาย (ร่าง): `/vat-sales/` · ชื่อการ์ด: **ยอดขาย / VAT**
+> ทางเข้า: **บช.เจ้าของ** (`/owner-books/` ↔ `/vat-sales/`) · สวิตช์ `เงินออก` | `ยอดขาย/VAT`  
+> **เช็คลิสต์ตรวจ P1–P4:** [`docs/vat-p1-p4-check.md`](./vat-p1-p4-check.md)
 
 ---
 
@@ -54,13 +55,13 @@
 | เฟส | โฟกัส | สถานะ |
 |-----|--------|--------|
 | **P0** | แผน · เช็คลิส · ขอบเขต + owner-only | ✅ เอกสาร |
-| **P1** | Types · rules · lib · UI ตารางรายวัน + VAT สูตร | ✅ |
-| **P2** | Gmail OAuth · กล่องรายงานเมล · sync | ✅ |
-| **P3** | Parser รายวันต่อแพลตฟอร์ม · คิวยืนยัน | ✅ |
-| **P4** | สถานะวัน · dashboard ขาดรายงาน · แจ้งเตือนเจ้าของ | ✅ |
-| **P5** | ปิดเดือน → `monthlyIncome` + รายงาน VAT เดือน | ✅ |
-| **P6** | Outlook/Hotmail · เมลสัปดาห์/เดือน · Input VAT | ✅ |
-| **P7** | ขัดเกลา UX · audit log · สำรอง raw · เอกสารผู้ใช้ | ✅ |
+| **P1** | Types · rules · lib · UI ตารางรายวัน + VAT สูตร | ✅ เยียวยา (slim + บช.เจ้าของ + rules validate) |
+| **P2** | Gmail OAuth · กล่องรายงานเมล · sync | ✅ โค้ดพร้อม · รอ OAuth client จริงตอนเปิดใช้ |
+| **P3** | Parser รายวันต่อแพลตฟอร์ม · คิวยืนยัน | ✅ fixture ผ่าน |
+| **P4** | สถานะวัน · dashboard ขาดรายงาน · แจ้งเตือนเจ้าของ | ✅ โค้ดพร้อม · รอเทส push จริง |
+| **P5** | ปิดเดือน → `monthlyIncome` + รายงาน VAT เดือน | ⏸ รอบถัดไปหลังเช็ค P1–P4 |
+| **P6** | Outlook/Hotmail · เมลสัปดาห์/เดือน · Input VAT | ⏸ หลัง P5 |
+| **P7** | ขัดเกลา UX · audit log · สำรอง raw · เอกสารผู้ใช้ | ⏸ หลังใช้งานจริง |
 
 ### ตัดออกจากแผน (ยืนยันแล้ว)
 
@@ -96,7 +97,7 @@
 | ยอดหน้าร้าน | รวมจาก POS / กรอกมือ (รวม VAT ถ้าร้านคิดรวม) | ✅ รวมในยอดร้าน |
 | ยอดขายร้านรายวัน | เดลิเวอรี่ + หน้าร้าน | ✅ |
 
-- [ ] ติดป้ายคำศัพท์สั้น ๆ ในหน้า UI (tooltip หรือข้อความใต้หัวตาราง)
+- [x] ติดป้ายคำศัพท์สั้น ๆ ในหน้า UI (tooltip หรือข้อความใต้หัวตาราง)
 
 ---
 
@@ -165,7 +166,7 @@ meta/vatSalesSettings                // owner-only ใน rules
 ### P1.3 Firestore rules
 
 - [x] `match /dailySales/{dateId}` → read/write `isOwner()` เท่านั้น
-- [ ] validate เบา ๆ ตอน create/update: มี `dateKey` · ตัวเลขเป็น number · ไม่ติดลบ (ถ้ารules รองรับ)
+- [x] validate เบา ๆ ตอน create/update: มี `dateKey` · ตัวเลขเป็น number · ไม่ติดลบ (ถ้ารules รองรับ)
 - [x] `meta/vatSalesSettings` → อ่าน/เขียนเฉพาะ `isOwner()` (อย่าให้ตกกฎ `isStaff()` กว้างของ `meta/{docId}`)
 - [ ] ทดสอบ rules ด้วยบัญชี staff จริงหรือ emulator
 - [ ] deploy rules พร้อมฟีเจอร์ (หรือก่อนเปิด UI production)
@@ -174,9 +175,9 @@ meta/vatSalesSettings                // owner-only ใน rules
 
 - [x] หน้า `src/app/vat-sales/page.tsx` (หรือชื่อที่ตกลง)
 - [x] `AuthGate` + gate `staff.role === "owner"` → ไม่ใช่ `can(staff, …)`
-- [x] พนักงาน → `router.replace("/more/")` + `return null`
-- [x] การ์ดใน `/more/` อยู่บล็อก `isOwner` เดียวกับเมนู / รายงาน POS
-- [x] ชื่อการ์ดชัด: **ยอดขาย / VAT** · คำอธิบายสั้น: เดลิเวอรี่ + หน้าร้าน · รายวัน
+- [x] พนักงาน → redirect `/owner-books/` (ถ้ามีสิทธิ์) หรือ `/more/` + `return null`
+- [x] ทางเข้าผ่าน **บช.เจ้าของ** (`OwnerBooksModeSwitch`) · การ์ด `/more/` ยุบเข้าบัญชีเจ้าของ
+- [x] ชื่อชัด: **ยอดขาย / VAT** · คำอธิบายสั้น: เดลิเวอรี่ + หน้าร้าน · รายวัน
 - [x] `AppShell` / prefix นำทางรองรับ path ใหม่ถ้าจำเป็น
 - [x] **ไม่** เพิ่มแท็บ dock พนักงาน
 - [x] **ไม่** เพิ่มใน `PERMISSION_GROUPS` / ศูนย์พนักงาน
@@ -638,14 +639,11 @@ meta/vatMailOAuthOutlook   // owner-only · Outlook refresh token
 
 ## คิวทำถัดไป (ลงมือ)
 
-1. **P1.1–P1.4** types + rules + route + การ์ด owner  
-2. **P1.5–P1.8** ตารางรายวัน + VAT + POS suggest + เทสสิทธิ์  
-3. **P2** Gmail OAuth + กล่องเมล  
-4. **P3a** parser ช่องทางแรก → ยืนยันเข้าตาราง  
-5. **P3b–P3c** ช่องทางที่เหลือ  
-6. **P4** สถานะวัน + แจ้งเตือน  
-7. **P5** ปิดเดือน + VAT เดือน  
-8. **P6–P7** ตามความต้องการหลังใช้งานจริง  
+1. **ติ๊ก [`vat-p1-p4-check.md`](./vat-p1-p4-check.md)** บนเครื่องเจ้าของ  
+2. ตั้ง OAuth Gmail จริง → ซิงก์เมลตัวอย่าง  
+3. เทสสิทธิ์ A–H + push (P4)  
+4. **P5** ปิดเดือน → `monthlyIncome`  
+5. **P6–P7** ตามความต้องการหลังใช้งานจริง  
 
 ---
 
@@ -659,3 +657,4 @@ meta/vatMailOAuthOutlook   // owner-only · Outlook refresh token
 | 2026-07-28 | **P3 ลงมือ** — parser Grab/LINE MAN/Shopee · คิวยืนยันเข้า dailySales · fixtures · build 334 |
 | 2026-07-28 | **P2 ลงมือ** — Gmail OAuth callables · กล่องเมล · mailRules · build 333 |
 | 2026-07-28 | **P1 ลงมือ** — lib `vat-sales` · rules owner-only · `/vat-sales/` · การ์ด more · POS suggest · build 332 |
+| 2026-07-28 | **รวมยำบช.เจ้าของ + slim** · เยียวยา P1–P4 · เช็คลิสต์ตรวจ `vat-p1-p4-check.md` · rules validate · build 340 |

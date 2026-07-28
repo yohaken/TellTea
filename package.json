@@ -8,6 +8,8 @@
     "smoke:hosting": "node scripts/smoke-hosting-export.mjs",
     "smoke:pos-hosting": "node scripts/smoke-pos-hosting.mjs",
     "test:firestore-rules": "node scripts/assert-firestore-rules.mjs",
+    "test:vat-p1-p4": "npx --yes tsx scripts/test-vat-p1-p4.ts",
+    "test:vat-mail-parse": "npx --yes tsx scripts/test-vat-mail-parse.ts",
     "test:rate-schedule": "node scripts/test-rate-schedule.mjs",
     "repair:ot-rates": "node scripts/repair-ot-bonus-rates.mjs",
     "test:ledger-multi-photo": "node scripts/test-ledger-multi-photo.mjs",

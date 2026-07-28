@@ -431,7 +431,24 @@ service cloud.firestore {
 
     /** ยอดขายรายวัน + VAT — เจ้าของเท่านั้น (พนักงานหลังร้านอ่านไม่ได้) */
     match /dailySales/{dateId} {
-      allow read, write: if isOwner();
+      allow read: if isOwner();
+      allow create, update: if isOwner()
+        && request.resource.data.dateKey is string
+        && request.resource.data.dateKey == dateId
+        && request.resource.data.storefrontGross is number
+        && request.resource.data.storefrontGross >= 0
+        && request.resource.data.deliveryGross is number
+        && request.resource.data.deliveryGross >= 0
+        && request.resource.data.totalGross is number
+        && request.resource.data.totalGross >= 0
+        && request.resource.data.vatBase is number
+        && request.resource.data.vatBase >= 0
+        && request.resource.data.vatOutput is number
+        && request.resource.data.vatOutput >= 0
+        && request.resource.data.status in ['draft', 'confirmed']
+        && request.resource.data.updatedAt is number
+        && request.resource.data.updatedBy is string;
+      allow delete: if isOwner();
     }
 
     /** เมลรายงานแพลตฟอร์มดิบ — เจ้าของอ่าน · เขียนจาก Admin SDK เป็นหลัก */

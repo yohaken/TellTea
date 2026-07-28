@@ -12,6 +12,7 @@ import { VatSalesAuditPanel } from "@/components/vat-sales/VatSalesAuditPanel";
 import { VatSalesOwnerGuide } from "@/components/vat-sales/VatSalesOwnerGuide";
 import { useAuth } from "@/lib/auth";
 import { formatPlainNumber } from "@/lib/utils";
+import { can } from "@/lib/permissions";
 import {
   bangkokDateKey,
   bangkokMonthKey,
@@ -62,7 +63,9 @@ function VatSalesGate() {
   const isOwner = staff?.role === "owner";
 
   useEffect(() => {
-    if (staff && !isOwner) router.replace("/more/");
+    if (staff && !isOwner) {
+      router.replace(can(staff, "ownerBooks") ? "/owner-books/" : "/more/");
+    }
   }, [staff, isOwner, router]);
 
   if (!isOwner) return null;
@@ -905,6 +908,10 @@ function VatSalesView({ actor }: { actor: string }) {
           {totals.confirmedDays}/{dateKeys.length}
         </span>
       </section>
+
+      <p className="muted vat-sales-hint vat-sales-glossary">
+        ยอดเซลล์ = รวม VAT ลูกค้า · ฐาน=÷1.07 · GP/โอนไม่ใช่ฐาน VAT · ยืนยันวันก่อนปิดเดือน
+      </p>
 
       {loading ? (
         <p className="muted">กำลังโหลด...</p>

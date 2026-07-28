@@ -46,6 +46,11 @@ const REQUIRED_MATCHES = [
   "nposOpsLog",
   "nposScreenShots",
   "menuItems",
+  "dailySales",
+  "platformEmailReports",
+  "vatMonthCloses",
+  "vatInputInvoices",
+  "vatSalesAudit",
 ];
 
 /** Sibling apps that share mypeer-501909 — keep their collections here too. */
@@ -79,6 +84,17 @@ assert.match(rules, /yohaken@gmail\.com/);
 assert.match(
   rules,
   /Never deploy a Tax-only firestore\.rules|Canonical Firestore rules|TaxTag/,
+);
+
+// VAT / daily sales — owner-only + light write validation
+assert.match(rules, /match \/dailySales\/\{dateId\}/);
+assert.match(rules, /request\.resource\.data\.dateKey == dateId/);
+assert.match(rules, /vatSalesSettings' && isOwner\(\)/);
+assert.match(rules, /vatMailOAuth' && isOwner\(\)/);
+assert.doesNotMatch(
+  rules,
+  /PERMISSION_KEYS|ownerBooks.*vat|vatSales.*hasPerm/,
+  "VAT must not be grantable via permissions",
 );
 
 // Sibling template must stay hosting-only (no firestore key) so copy-paste is safe.
