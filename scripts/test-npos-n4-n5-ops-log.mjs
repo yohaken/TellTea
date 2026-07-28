@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 357/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+94/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.71"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 359/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+95/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.72"/);
 assert.match(read("docs/npos-migration-phases.md"), /N4.*✅|✅ รอบนี้ \(1\.8\.0\)/);
 assert.match(read("docs/npos-migration-phases.md"), /N5.*✅|✅ รอบนี้ \(1\.8\.0\)/);
 assert.match(read("docs/npos-migration-phases.md"), /ทำไม POS web|แผนโคนราก/);

@@ -1,6 +1,7 @@
 # nPos — สลิปปิดกะโคลนฟอร์มเว็บเฟรมต่อเฟรม
 
-อัปเดต: **1.14.42** · `APP_BUILD` 289 · `POS_BUILD` 84 · `versionCode` 54  
+อัปเดต: **1.14.72** · `APP_BUILD` 359 · `POS_BUILD` 124 · `versionCode` 95  
+(จัดคอลัมน์ + เช็คลิสก่อนเซ็น — ดู `npos-z-report-align-checklist.md`)
 
 เป้าหมาย: สลิป ESC/POS บน native = ฟอร์มใบพิมพ์เว็บ `buildShiftReportHtml`  
 (ลำดับหัวข้อ · ป้าย · ตารางชำระ · สรุปยอด · ลิ้นชัก · รายบิล) + ตัวเลข Blind จริง + ช่องเซ็น  

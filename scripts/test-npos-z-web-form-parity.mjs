@@ -9,13 +9,13 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 357/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 123/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+94/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.71"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 359/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 124/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+95/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.72"/);
 
 assert.ok(existsSync(join(root, "docs/npos-z-web-form-parity-checklist.md")));
-assert.match(read("docs/npos-z-web-form-parity-checklist.md"), /1.14.42/);
+assert.match(read("docs/npos-z-web-form-parity-checklist.md"), /1\.14\.72/);
 
 const web = read("src/lib/pos-printer/shift-snapshot-template.ts");
 assert.match(web, /รายงานยอดการขาย/);
@@ -24,6 +24,8 @@ assert.match(web, /รอบการขาย \(เงินสด\)/);
 assert.match(web, /openingCash|closingCashCounted/);
 assert.doesNotMatch(web, /ทานที่ร้าน/);
 assert.match(web, /ลงชื่อผู้ส่งกะ/);
+assert.match(web, /ตรวจก่อนเซ็น/);
+assert.match(web, /table-layout:\s*fixed/);
 
 const builder = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/printer/ShiftReportFormBuilder.java",
@@ -45,9 +47,11 @@ for (const token of [
   "บิลรอส่ง",
   "รายการขายแยกตามบิล",
   "ปิดรอบเรียบร้อย",
+  "ตรวจก่อนเซ็น",
   "ลงชื่อผู้ส่งกะ",
   "ลงชื่อผู้รับกะ",
   "ไม่ใช่การปิดรอบ",
+  "padLeft",
 ]) {
   assert.match(builder, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 }

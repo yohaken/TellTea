@@ -228,6 +228,7 @@ public final class ShiftReportFormBuilder {
     if (!detail.byCategory.isEmpty()) {
       sb.append(rule(width)).append('\n');
       sb.append("ยอดขายตามหมวดหมู่").append('\n');
+      sb.append(tripleRow("หมวด", "จำนวน", "ยอด", width)).append('\n');
       for (NamedAmt row : detail.byCategory) {
         sb.append(tripleRow(row.name, String.valueOf(row.qty), money(row.amount), width))
             .append('\n');
@@ -336,6 +337,7 @@ public final class ShiftReportFormBuilder {
     if (!detail.byItem.isEmpty()) {
       sb.append(rule(width)).append('\n');
       sb.append("ยอดขายตามรายการ").append('\n');
+      sb.append(tripleRow("รายการ", "จำนวน", "ยอด", width)).append('\n');
       int shown = 0;
       for (NamedAmt row : detail.byItem) {
         if (shown++ >= 40) {
@@ -361,10 +363,16 @@ public final class ShiftReportFormBuilder {
       }
     }
 
-    // --- Frame 13: footer (+ Z signatures) ---
+    // --- Frame 13: footer (+ Z checklist + signatures) ---
     sb.append(rule(width)).append('\n');
     if (isClose) {
       sb.append(center("ปิดรอบเรียบร้อย", width)).append('\n');
+      sb.append('\n');
+      sb.append("ตรวจก่อนเซ็น").append('\n');
+      sb.append("[ ] นับเงินในลิ้นชักแล้ว").append('\n');
+      sb.append("[ ] ยอดเงินสดตรงกับบิลเงินสด").append('\n');
+      sb.append("[ ] โอน/PromptPay ตรวจสลิปแล้ว").append('\n');
+      sb.append("[ ] ส่วนต่างมีเหตุผล (ถ้ามี)").append('\n');
       sb.append('\n');
       sb.append("ลงชื่อผู้ส่งกะ").append('\n');
       sb.append(signLine(width)).append('\n');
@@ -449,11 +457,45 @@ public final class ShiftReportFormBuilder {
     return sb.toString();
   }
 
-  /** Left | mid | right — mid+right glued on the right like a 3-col table. */
+  /**
+   * Left | mid | right — fixed mid + amount columns so bill counts never glue to money
+   * (e.g. "8" + "301" must not read as "8301" on 80mm paper).
+   */
   static String tripleRow(String left, String mid, String right, int width) {
     String l = left == null ? "" : left;
-    String tail = (mid == null ? "" : mid) + " " + (right == null ? "" : right);
-    return pairRow(l, tail.trim(), width);
+    String m = mid == null ? "" : mid;
+    String r = right == null ? "" : right;
+    int midW = Math.max(4, Math.min(6, width / 8));
+    int rightW = Math.max(8, Math.min(12, width / 3));
+    int gap = 2;
+    int rightBlock = midW + gap + rightW;
+    if (rightBlock >= width - 4) {
+      midW = 4;
+      rightW = Math.max(6, width / 4);
+      rightBlock = midW + gap + rightW;
+    }
+    int leftW = Math.max(4, width - rightBlock);
+    if (l.length() > leftW) {
+      l = l.substring(0, Math.max(1, leftW - 1)) + "…";
+    }
+    if (m.length() > midW) m = m.substring(m.length() - midW);
+    if (r.length() > rightW) r = r.substring(r.length() - rightW);
+    StringBuilder sb = new StringBuilder(width);
+    sb.append(l);
+    while (sb.length() < leftW) sb.append(' ');
+    sb.append(padLeft(m, midW));
+    for (int i = 0; i < gap; i++) sb.append(' ');
+    sb.append(padLeft(r, rightW));
+    return sb.toString();
+  }
+
+  static String padLeft(String s, int w) {
+    String t = s == null ? "" : s;
+    if (t.length() >= w) return t;
+    StringBuilder sb = new StringBuilder(w);
+    for (int i = t.length(); i < w; i++) sb.append(' ');
+    sb.append(t);
+    return sb.toString();
   }
 
   static String rule(int width) {

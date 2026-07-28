@@ -372,15 +372,36 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
     .pay {
       width: 100%;
       border-collapse: collapse;
+      table-layout: fixed;
     }
     .pay th, .pay td {
       padding: 2px 0;
       text-align: right;
       font-weight: 600;
       vertical-align: top;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
+      overflow-wrap: anywhere;
     }
-    .pay th:first-child, .pay td:first-child { text-align: left; }
+    /* name | qty/bills | amount — keep mid+money apart on 80mm */
+    .pay th:first-child, .pay td:first-child {
+      text-align: left;
+      width: 52%;
+      padding-right: 8px;
+    }
+    .pay th:nth-child(2), .pay td:nth-child(2) {
+      width: 14%;
+      padding-left: 6px;
+      padding-right: 10px;
+    }
+    .pay th:nth-child(3), .pay td:nth-child(3) {
+      width: 34%;
+      padding-left: 4px;
+    }
     .pay .sum td { border-top: 1px dashed #222; padding-top: 4px; font-weight: 800; }
+    .check { margin: 8px 0 4px; }
+    .check .sec { margin-bottom: 4px; }
+    .check-item { margin: 2px 0; font-weight: 600; }
     .bill { margin: 6px 0 8px; }
     .bill-head { font-weight: 800; margin-bottom: 2px; }
     .bill-head.void { color: #666; text-decoration: line-through; }
@@ -450,7 +471,14 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
   <div class="center footer">${escapeReceiptHtml(footer)}</div>
   ${
     data.kind === "close"
-      ? `<div class="sign">
+      ? `<div class="check">
+  <div class="sec">ตรวจก่อนเซ็น</div>
+  <div class="check-item">[ ] นับเงินในลิ้นชักแล้ว</div>
+  <div class="check-item">[ ] ยอดเงินสดตรงกับบิลเงินสด</div>
+  <div class="check-item">[ ] โอน/PromptPay ตรวจสลิปแล้ว</div>
+  <div class="check-item">[ ] ส่วนต่างมีเหตุผล (ถ้ามี)</div>
+</div>
+<div class="sign">
   <p>ลงชื่อผู้ส่งกะ</p>
   <div class="sign-line"></div>
   <p>ลงชื่อผู้รับกะ</p>

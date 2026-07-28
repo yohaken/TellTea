@@ -1,6 +1,7 @@
 # nPos — สลิปสรุปปิดกะ (Z) ให้ครบพิธีเคาน์เตอร์
 
-อัปเดต: **1.14.14** (Z form) · ship **1.14.42** · `APP_BUILD` 289 · `POS_BUILD` 84 · `versionCode` 54  
+อัปเดต: **1.14.14** (Z form) · ship **1.14.72** · `APP_BUILD` 359 · `POS_BUILD` 124 · `versionCode` 95  
+(จัดคอลัมน์ + เช็คลิสก่อนเซ็น — ดู `npos-z-report-align-checklist.md`)
 
 เป้าหมาย: สลิป Z/X บน native พอใช้ปิดกะแบบ Wongnai **ที่ร้านเราใช้จริง**  
 (หัวร้าน · พนักงานตั้งค่า · เปิด/ปิดเวลา · สด/PP · Over/Short · ช่องเซ็นมือ)  
