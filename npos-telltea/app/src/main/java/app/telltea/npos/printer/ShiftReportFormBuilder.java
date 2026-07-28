@@ -43,6 +43,8 @@ public final class ShiftReportFormBuilder {
       double cashSales,
       int promptpayBills,
       double promptpaySales,
+      int transferBills,
+      double transferSales,
       double discountTotal,
       double openingCash,
       Double countedCash,
@@ -65,6 +67,8 @@ public final class ShiftReportFormBuilder {
         cashSales,
         promptpayBills,
         promptpaySales,
+        transferBills,
+        transferSales,
         discountTotal,
         openingCash,
         countedCash,
@@ -92,6 +96,8 @@ public final class ShiftReportFormBuilder {
       double cashSales,
       int promptpayBills,
       double promptpaySales,
+      int transferBills,
+      double transferSales,
       double discountTotal,
       double openingCash,
       Double countedCash,
@@ -113,6 +119,8 @@ public final class ShiftReportFormBuilder {
         cashSales,
         promptpayBills,
         promptpaySales,
+        transferBills,
+        transferSales,
         discountTotal,
         openingCash,
         countedCash,
@@ -138,6 +146,8 @@ public final class ShiftReportFormBuilder {
       double cashSales,
       int promptpayBills,
       double promptpaySales,
+      int transferBills,
+      double transferSales,
       double discountTotal,
       double openingCash,
       Double countedCash,
@@ -168,7 +178,7 @@ public final class ShiftReportFormBuilder {
                     .substring(Math.max(0, sessionId.length() - 4))
                     .toUpperCase(Locale.US);
 
-    double netSales = cashSales + promptpaySales;
+    double netSales = cashSales + promptpaySales + transferSales;
     int discountCount = discountTotal > 0.0001 ? 1 : 0;
     DetailAgg detail = DetailAgg.fromReceipts(sessionReceipts, sessionId);
     if (detail.discountTotal > discountTotal) {
@@ -262,6 +272,9 @@ public final class ShiftReportFormBuilder {
         .append('\n');
     sb.append(
             tripleRow("PromptPay", String.valueOf(promptpayBills), money(promptpaySales), width))
+        .append('\n');
+    sb.append(
+            tripleRow("โอนเงิน", String.valueOf(transferBills), money(transferSales), width))
         .append('\n');
     sb.append(tripleRow("ยอดขายสุทธิ", String.valueOf(saleCount), money(netSales), width))
         .append('\n');
@@ -527,7 +540,7 @@ public final class ShiftReportFormBuilder {
         String billNo = r.optString("billNo", "—");
         long at = r.optLong("at", System.currentTimeMillis());
         String pay = r.optString("paymentMethod", "cash");
-        String payLabel = "promptpay".equals(pay) ? "PP" : "สด";
+        String payLabel = app.telltea.npos.sell.PaymentMethods.labelShort(pay);
         if (voided) {
           d.voidedTotal += total;
           d.voidedHeads.add(

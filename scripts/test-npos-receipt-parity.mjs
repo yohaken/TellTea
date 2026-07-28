@@ -10,10 +10,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 306/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 101/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+71/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.48"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 307/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 102/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+72/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.49"/);
 
 assert.ok(existsSync(join(root, "docs/npos-receipt-parity-checklist.md")));
 const doc = read("docs/npos-receipt-parity-checklist.md");
@@ -38,12 +38,16 @@ for (const token of [
   "ส่วนลด",
   "เงินสด",
   "เงินทอน",
-  "PromptPay",
+  "PaymentMethods.labelTh",
   "COLS_80",
   "COLS_58",
 ]) {
   assert.match(javaBuilder, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 }
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/sell/PaymentMethods.java"),
+  /PromptPay|โอนเงิน/,
+);
 assert.match(javaBuilder, /Front-counter only/);
 assert.doesNotMatch(javaBuilder, /TellTea POS/);
 assert.doesNotMatch(javaBuilder, /"ทานที่ร้าน"|"รับกลับ"|"ShopeeFood"/);
@@ -96,6 +100,6 @@ for (const label of sharedLabels) {
 
 const remaining = read("docs/npos-remaining-checklist.md");
 assert.match(remaining, /npos-receipt-parity-checklist/);
-assert.match(remaining, /1.14.48/);
+assert.match(remaining, /1.14.49/);
 
 console.log("OK test-npos-receipt-parity");

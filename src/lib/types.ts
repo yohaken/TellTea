@@ -284,6 +284,7 @@ export type PosSession = {
   openingCash?: number;
   cashTotal?: number;
   promptpayTotal?: number;
+  transferTotal?: number;
   closingCashCounted?: number;
   expectedCash?: number;
   cashDifference?: number;
@@ -295,7 +296,7 @@ export type PosSession = {
   source?: string;
 };
 
-export type PosSalePaymentMethod = "cash" | "promptpay";
+export type PosSalePaymentMethod = "cash" | "promptpay" | "transfer";
 
 export type PosSale = {
   id: string;
@@ -312,6 +313,8 @@ export type PosSale = {
   paymentMethod: PosSalePaymentMethod;
   cashReceived: number;
   change: number;
+  /** Optional bank-slip ref for transfer tender */
+  transferRef?: string;
   ledgerEntryId?: string;
   createdAt: number;
   createdBy: string;

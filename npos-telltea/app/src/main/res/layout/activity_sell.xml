@@ -314,12 +314,18 @@
                         android:text="@string/btn_flush_sync"
                         android:visibility="gone" />
 
-                    <!-- Primary pay (PromptPay parked — keep GONE) -->
+                    <!-- Primary pay: cash + bank transfer (sticker QR). PromptPay POS-QR parked. -->
                     <TextView
                         android:id="@+id/payCashButton"
                         style="@style/Npos.Btn.SellRow.Primary"
                         android:layout_marginTop="8dp"
                         android:text="@string/btn_pay_cash" />
+
+                    <TextView
+                        android:id="@+id/payTransferButton"
+                        style="@style/Npos.Btn.SellRow"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/btn_pay_transfer" />
 
                     <TextView
                         android:id="@+id/payPromptButton"

@@ -13,6 +13,8 @@ export type ShiftReportSummary = {
   cashTotal: number;
   promptpayCount: number;
   promptpayTotal: number;
+  transferCount: number;
+  transferTotal: number;
   pendingCount: number;
   voidedCount: number;
 };
@@ -39,7 +41,7 @@ export type ShiftReportBillLine = {
 export type ShiftReportBillRow = {
   billNo: string;
   createdAt: number;
-  paymentMethod: "cash" | "promptpay";
+  paymentMethod: "cash" | "promptpay" | "transfer";
   total: number;
   discountBaht: number;
   voided: boolean;

@@ -83,6 +83,7 @@
     <string name="cart_empty">เลือกเมนูก่อนชำระ</string>
     <string name="btn_restore_hold_ready">▶ ดึงบิลพัก · มีค้าง</string>
     <string name="btn_pay_cash">💵 ชำระเงินสด</string>
+    <string name="btn_pay_transfer">โอนเงิน</string>
     <string name="btn_pay_promptpay">📱 ชำระ PromptPay</string>
     <string name="btn_refresh_menu">รีเฟรช</string>
     <string name="category_reordered">เรียงหมวดแล้ว</string>
@@ -161,7 +162,6 @@
     <string name="hold_restore_replace">ตะกร้าปัจจุบันจะถูกแทนที่</string>
     <string name="sell_flushing">กำลังซิงก์บิลค้าง…</string>
     <string name="sell_pending_n">รอซิงก์ %1$d บิล</string>
-    <string name="shift_summary_fmt">รอบนี้ · ขาย %1$d · เงินสด ฿%2$s · PP ฿%3$s · ทำลาย %4$d</string>
     <string name="shift_duty_fmt">เข้างาน %1$s · ผ่านมา %2$s</string>
     <string name="shift_duty_closed">ยังไม่เปิดกะ</string>
     <string name="store_claim_not_configured">ยังไม่ได้ตั้งรหัสร้านหลังบ้าน — ไม่ถามรหัสบนเครื่องนี้</string>
@@ -190,7 +190,14 @@
     <string name="pay_pp_msg">โอนเข้า %1$s\nยอด %2$.0f บาท\nเมื่อลูกค้าโอนแล้วกดยืนยัน\n(ช่วงนี้ยังไม่แสดง QR)</string>
     <string name="pay_pp_no_id">ยังไม่มีเลข PromptPay ในตั้งค่าร้าน\nยอด %.0f บาท — กดยืนยันเมื่อรับเงินแล้ว</string>
     <string name="pay_pp_qr_fail">สร้าง QR ไม่ได้ — ตรวจเลข PromptPay</string>
-    <string name="pay_pp_hidden_early">ช่วงแรกปิด PromptPay / QR ชั่วคราว — ใช้เงินสด</string>
+    <string name="pay_pp_hidden_early">ช่วงแรกปิด PromptPay / QR ชั่วคราว — ใช้เงินสดหรือโอนเงิน</string>
+    <string name="pay_transfer_title">โอนเงินเข้าบัญชีร้าน</string>
+    <string name="pay_transfer_msg">ยอด ฿%1$.0f\n\nลูกค้าโอนเข้าบัญชีร้านแล้ว (สแกน QR ป้าย / เลขบัญชี) · ตรวจสลิปหรือแจ้งเตือนเงินเข้าแล้วค่อยยืนยัน\n\nไม่สร้าง QR บนจอ · ลิ้นชักไม่เด้ง · ไม่นับในเงินสดลิ้นชัก</string>
+    <string name="pay_transfer_ref_hint">เลขอ้างอิงสลิป (ถ้ามี · เช่น 4 ตัวท้าย)</string>
+    <string name="pay_transfer_confirm">ยืนยันปิดบิลโอน</string>
+    <string name="receipts_filter_transfer">โอน</string>
+    <string name="shift_summary_fmt">รอบนี้ · ขาย %1$d · เงินสด ฿%2$s · PP ฿%3$s · โอน ฿%4$s · ทำลาย %5$d</string>
+    <string name="blind_close_summary_fmt">บิลขาย %1$d\nเงินสด %2$d บิล · ฿%3$.0f\nPromptPay %4$d บิล · ฿%5$.0f\nโอนเงิน %6$d บิล · ฿%7$.0f\nส่วนลด ฿%8$.0f · ทำลายบิล %9$d\n————\nเงินทอนเริ่ม ฿%10$.0f\nถอนกลางกะ ฿%11$.0f · %12$d ครั้ง\nควรมีในลิ้นชัก ฿%13$.0f\nนับได้ ฿%14$.0f\nส่วนต่าง %15$s ฿%16$.0f\nเงินทอนค้างรอบถัดไป ฿%17$.0f\nเหตุผล: %18$s</string>
     <string name="discount_title">ส่วนลดท้ายบิล</string>
     <string name="discount_hint_baht">จำนวนบาท</string>
     <string name="discount_clear">ล้างส่วนลด</string>
@@ -240,7 +247,6 @@
     <string name="blind_close_note_hint">เช่น นับผิด / ทอนเกิน / อื่นๆ</string>
     <string name="blind_close_confirm_title">ยืนยันปิดกะ</string>
     <string name="blind_close_confirm_btn">ยืนยันปิดกะ · พิมพ์</string>
-    <string name="blind_close_summary_fmt">บิลขาย %1$d\nเงินสด %2$d บิล · ฿%3$.0f\nPromptPay %4$d บิล · ฿%5$.0f\nส่วนลด ฿%6$.0f · ทำลายบิล %7$d\n————\nเงินทอนเริ่ม ฿%8$.0f\nถอนกลางกะ ฿%9$.0f · %10$d ครั้ง\nควรมีในลิ้นชัก ฿%11$.0f\nนับได้ ฿%12$.0f\nส่วนต่าง %13$s ฿%14$.0f\nเงินทอนค้างรอบถัดไป ฿%15$.0f\nเหตุผล: %16$s</string>
     <string name="shift_panel_status_open">กำลังเปิดกะ</string>
     <string name="shift_panel_status_closed">ยังไม่เปิดกะ</string>
     <string name="shift_panel_opened_at">เปิดเมื่อ %1$s</string>
@@ -248,6 +254,7 @@
     <string name="shift_panel_opening">เงินทอนเริ่ม ฿%1$s</string>
     <string name="shift_panel_cash">เงินสด %1$d บิล · ฿%2$s</string>
     <string name="shift_panel_pp">PromptPay %1$d บิล · ฿%2$s</string>
+    <string name="shift_panel_transfer">โอนเงิน %1$d บิล · ฿%2$s</string>
     <string name="shift_panel_net">สุทธิขาย ฿%1$s</string>
     <string name="shift_panel_discount">ส่วนลด ฿%1$s</string>
     <string name="shift_panel_void">ทำลาย %1$d บิล · ฿%2$s</string>

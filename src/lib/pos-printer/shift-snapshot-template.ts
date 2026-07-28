@@ -38,8 +38,10 @@ export function sampleShiftReportPayload(
       total: 372,
       cashCount: 2,
       cashTotal: 115,
-      promptpayCount: 2,
-      promptpayTotal: 257,
+      promptpayCount: 1,
+      promptpayTotal: 107,
+      transferCount: 1,
+      transferTotal: 150,
       pendingCount: 1,
       voidedCount: 1,
     },
@@ -146,8 +148,10 @@ function money(n: number) {
   return formatPlainNumber(n);
 }
 
-function payLabel(method: "cash" | "promptpay") {
-  return method === "cash" ? "สด" : "PP";
+function payLabel(method: "cash" | "promptpay" | "transfer") {
+  if (method === "promptpay") return "PromptPay";
+  if (method === "transfer") return "โอนเงิน";
+  return "เงินสด";
 }
 
 /** ใบพิมพ์สรุปกะ — Snapshot / รายงานปิดรอบ (แยกหมวด + รายบิล) */
@@ -424,6 +428,11 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
         <td>PromptPay</td>
         <td>${s.promptpayCount}</td>
         <td>${money(s.promptpayTotal)}</td>
+      </tr>
+      <tr>
+        <td>โอนเงิน</td>
+        <td>${s.transferCount ?? 0}</td>
+        <td>${money(s.transferTotal ?? 0)}</td>
       </tr>
       <tr class="sum">
         <td>ยอดขายสุทธิ</td>

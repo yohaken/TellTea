@@ -13,7 +13,7 @@ function buildMutationPayload(input: {
   sessionId: string;
   shift: string;
   lines: PosSaleLine[];
-  paymentMethod: "cash" | "promptpay";
+  paymentMethod: "cash" | "promptpay" | "transfer";
   cashReceived: number;
   clientMutationId: string;
   discountBaht?: number;
@@ -67,7 +67,7 @@ function recordSaleInstant(input: {
   sessionId: string;
   shift: string;
   lines: PosSaleLine[];
-  paymentMethod: "cash" | "promptpay";
+  paymentMethod: "cash" | "promptpay" | "transfer";
   cashReceived: number;
   discountBaht?: number;
 }): PosSaleResult {

@@ -55,7 +55,8 @@ public class ReceiptsActivity extends Activity {
   private enum PayFilter {
     ALL,
     CASH,
-    PROMPTPAY
+    PROMPTPAY,
+    TRANSFER
   }
 
   private final SaleSync saleSync = new SaleSync();
@@ -83,6 +84,7 @@ public class ReceiptsActivity extends Activity {
   private TextView chipPayAll;
   private TextView chipCash;
   private TextView chipPp;
+  private TextView chipTransfer;
   private LinearLayout customRangeRow;
   private TextView customFromBtn;
   private TextView customToBtn;
@@ -294,6 +296,11 @@ public class ReceiptsActivity extends Activity {
       paintFilterChips();
       renderAll();
     });
+    chipTransfer = addFilterChip(row, getString(R.string.receipts_filter_transfer), () -> {
+      payFilter = PayFilter.TRANSFER;
+      paintFilterChips();
+      renderAll();
+    });
     return wrapHorizontal(row);
   }
 
@@ -337,6 +344,7 @@ public class ReceiptsActivity extends Activity {
     paintChip(chipPayAll, payFilter == PayFilter.ALL);
     paintChip(chipCash, payFilter == PayFilter.CASH);
     paintChip(chipPp, payFilter == PayFilter.PROMPTPAY);
+    paintChip(chipTransfer, payFilter == PayFilter.TRANSFER);
   }
 
   private void paintChip(TextView chip, boolean active) {
@@ -397,6 +405,7 @@ public class ReceiptsActivity extends Activity {
       String pay = row.optString("paymentMethod", "");
       if (payFilter == PayFilter.CASH && !"cash".equalsIgnoreCase(pay)) continue;
       if (payFilter == PayFilter.PROMPTPAY && !"promptpay".equalsIgnoreCase(pay)) continue;
+      if (payFilter == PayFilter.TRANSFER && !"transfer".equalsIgnoreCase(pay)) continue;
 
       if (!q.isEmpty()) {
         String bill = displayBillRaw(row).toLowerCase(Locale.US);
@@ -723,10 +732,7 @@ public class ReceiptsActivity extends Activity {
   }
 
   private static String payLabel(String pay) {
-    if (pay == null || pay.isEmpty()) return "—";
-    if ("promptpay".equalsIgnoreCase(pay)) return "PromptPay";
-    if ("cash".equalsIgnoreCase(pay)) return "เงินสด";
-    return pay;
+    return app.telltea.npos.sell.PaymentMethods.labelTh(pay);
   }
 
   private void confirmReprint(JSONObject receipt, String bill) {

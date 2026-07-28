@@ -74,6 +74,14 @@ function parseMutationId(raw) {
 /**
  * Server-side POS sale — Admin SDK bypasses client Firestore rules.
  */
+
+function normalizePaymentMethod(raw) {
+  const m = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  if (m === "promptpay") return "promptpay";
+  if (m === "transfer" || m === "bank" || m === "bank_transfer") return "transfer";
+  return "cash";
+}
+
 async function completePosSaleAdmin(db, data, uid) {
   const deviceId = uid;
   const clientMutationId = parseMutationId(data?.clientMutationId);
@@ -92,7 +100,7 @@ async function completePosSaleAdmin(db, data, uid) {
     throw new HttpsError("invalid-argument", "ตะกร้าว่าง — เลือกเมนูก่อน");
   }
 
-  const paymentMethod = data?.paymentMethod === "promptpay" ? "promptpay" : "cash";
+  const paymentMethod = normalizePaymentMethod(data?.paymentMethod);
   const subtotal = Math.round(lines.reduce((sum, l) => sum + l.price * l.qty, 0) * 100) / 100;
   let discountBaht = Math.round(Number(data?.discountBaht || 0) * 100) / 100;
   if (!Number.isFinite(discountBaht) || discountBaht < 0) discountBaht = 0;
@@ -150,6 +158,9 @@ async function completePosSaleAdmin(db, data, uid) {
       paymentMethod,
       cashReceived,
       change,
+      ...(typeof data?.transferRef === "string" && data.transferRef.trim()
+        ? { transferRef: data.transferRef.trim().slice(0, 32) }
+        : {}),
       createdAt: now,
       createdBy,
       status: "completed",
@@ -199,6 +210,11 @@ async function completePosSaleAdmin(db, data, uid) {
       patch.promptpayTotal = Math.max(
         0,
         Math.round(((Number(session.promptpayTotal) || 0) + total) * 100) / 100,
+      );
+    } else if (paymentMethod === "transfer") {
+      patch.transferTotal = Math.max(
+        0,
+        Math.round(((Number(session.transferTotal) || 0) + total) * 100) / 100,
       );
     } else {
       patch.cashTotal = Math.max(
@@ -262,7 +278,7 @@ async function voidPosSaleAdmin(db, data, deviceId) {
         saleId,
         billNo: typeof sale.billNo === "string" ? sale.billNo : "—",
         total: Number(sale.total) || 0,
-        paymentMethod: sale.paymentMethod === "promptpay" ? "promptpay" : "cash",
+        paymentMethod: normalizePaymentMethod(sale.paymentMethod),
         sessionId: typeof sale.sessionId === "string" ? sale.sessionId : "",
       };
     }
@@ -279,7 +295,7 @@ async function voidPosSaleAdmin(db, data, deviceId) {
       saleId,
       billNo: typeof sale.billNo === "string" ? sale.billNo : "—",
       total: Number(sale.total) || 0,
-      paymentMethod: sale.paymentMethod === "promptpay" ? "promptpay" : "cash",
+      paymentMethod: normalizePaymentMethod(sale.paymentMethod),
       sessionId: typeof sale.sessionId === "string" ? sale.sessionId : "",
     };
   });
@@ -302,6 +318,11 @@ async function voidPosSaleAdmin(db, data, deviceId) {
         patch.promptpayTotal = Math.max(
           0,
           Math.round(((Number(session.promptpayTotal) || 0) - amt) * 100) / 100,
+        );
+      } else if (outcome.paymentMethod === "transfer") {
+        patch.transferTotal = Math.max(
+          0,
+          Math.round(((Number(session.transferTotal) || 0) - amt) * 100) / 100,
         );
       } else {
         patch.cashTotal = Math.max(

@@ -114,6 +114,7 @@ export function summarizeLocalReceipts(receipts: PosLocalReceipt[]) {
   const active = receipts.filter((r) => !r.voided);
   const cash = active.filter((r) => r.paymentMethod === "cash");
   const pp = active.filter((r) => r.paymentMethod === "promptpay");
+  const transfer = active.filter((r) => r.paymentMethod === "transfer");
 
   const discOf = (r: PosLocalReceipt) => {
     const stored = Math.max(0, Math.round(Number(r.discountBaht || 0) * 100) / 100);
@@ -139,6 +140,8 @@ export function summarizeLocalReceipts(receipts: PosLocalReceipt[]) {
     cashCount: cash.length,
     promptpayTotal: Math.round(pp.reduce((s, r) => s + r.total, 0) * 100) / 100,
     promptpayCount: pp.length,
+    transferTotal: Math.round(transfer.reduce((s, r) => s + r.total, 0) * 100) / 100,
+    transferCount: transfer.length,
     pendingCount: active.filter((r) => r.pending).length,
     voidedCount: receipts.filter((r) => r.voided).length,
   };

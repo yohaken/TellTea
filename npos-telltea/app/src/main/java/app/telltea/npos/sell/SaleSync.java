@@ -95,8 +95,9 @@ public final class SaleSync {
                                 if (res.optBoolean("resumed", false)) {
                                     double cash = res.optDouble("cashTotal", 0);
                                     double pp = res.optDouble("promptpayTotal", 0);
+                                    double transfer = res.optDouble("transferTotal", 0);
                                     double totalSales = res.optDouble("totalSales", 0);
-                                    if (cash <= 0 && pp <= 0 && totalSales > 0) {
+                                    if (cash <= 0 && pp <= 0 && transfer <= 0 && totalSales > 0) {
                                         cash = totalSales;
                                     }
                                     ShiftPrefs.resume(
@@ -107,6 +108,7 @@ public final class SaleSync {
                                             res.optDouble("openingCash", opening),
                                             cash,
                                             pp,
+                                            transfer,
                                             res.optInt("saleCount", 0),
                                             res.optInt("voidedCount", 0),
                                             res.optDouble("discountTotal", 0));
@@ -194,6 +196,7 @@ public final class SaleSync {
                         body.put("sessionId", ShiftPrefs.sessionId(app));
                         body.put("cashTotal", ShiftPrefs.cashTotal(app));
                         body.put("promptpayTotal", ShiftPrefs.promptpayTotal(app));
+                        body.put("transferTotal", ShiftPrefs.transferTotal(app));
                         body.put("openingCash", ShiftPrefs.openingCash(app));
                         body.put("discountTotal", ShiftPrefs.discountTotal(app));
                         body.put("voidedCount", ShiftPrefs.voidedCount(app));
@@ -257,7 +260,22 @@ public final class SaleSync {
             JSONObject shop,
             boolean autoPrint,
             SaleCallback callback) {
+        enqueueSale(
+                context, lines, paymentMethod, cashReceived, discountBaht, "", shop, autoPrint, callback);
+    }
+
+    public void enqueueSale(
+            Context context,
+            List<MenuModels.CartLine> lines,
+            String paymentMethod,
+            double cashReceived,
+            double discountBaht,
+            String transferRef,
+            JSONObject shop,
+            boolean autoPrint,
+            SaleCallback callback) {
         Context app = context.getApplicationContext();
+        final String method = PaymentMethods.normalize(paymentMethod);
         executor.execute(
                 () -> {
                     try {
@@ -284,8 +302,13 @@ public final class SaleSync {
                         payload.put("sessionId", ShiftPrefs.sessionId(app));
                         payload.put("shift", ShiftPrefs.shift(app));
                         payload.put("lines", lineArr);
-                        payload.put("paymentMethod", paymentMethod);
-                        payload.put("cashReceived", "cash".equals(paymentMethod) ? cashReceived : 0);
+                        payload.put("paymentMethod", method);
+                        payload.put("cashReceived", PaymentMethods.isCash(method) ? cashReceived : 0);
+                        if (PaymentMethods.isTransfer(method)
+                                && transferRef != null
+                                && !transferRef.trim().isEmpty()) {
+                            payload.put("transferRef", transferRef.trim());
+                        }
                         payload.put("discountBaht", discountBaht);
                         payload.put("subtotal", subtotal);
                         payload.put("localTotal", total);
@@ -301,7 +324,7 @@ public final class SaleSync {
                         pushQueue(app, payload);
                         // Same pending label as web formatPendingBillNo / printed provisional #.
                         rememberReceipt(app, payload, provisionalBillNo(mutationId));
-                        ShiftPrefs.recordSale(app, paymentMethod, total, discountBaht);
+                        ShiftPrefs.recordSale(app, method, total, discountBaht);
                         BestsellerPrefs.recordLines(app, lineArr);
                         if (callback != null) callback.onLocalSaved(mutationId, total);
 
@@ -309,7 +332,7 @@ public final class SaleSync {
                         if (shop != null) print = shop.optBoolean("autoPrintReceipt", true);
 
                         try {
-                            flushOne(app, payload, shop, print, paymentMethod, callback);
+                            flushOne(app, payload, shop, print, method, callback);
                         } catch (Exception syncErr) {
                             String msg =
                                     syncErr.getMessage() == null
@@ -325,8 +348,8 @@ public final class SaleSync {
                                         payload,
                                         provisionalBillNo(mutationId),
                                         total,
-                                        paymentMethod,
-                                        CashDrawerPolicy.shouldKickAfterSale(paymentMethod));
+                                        method,
+                                        CashDrawerPolicy.shouldKickAfterSale(method));
                                 markReceiptPrinted(app, mutationId);
                                 try {
                                     payload.put("receiptPrinted", true);
@@ -648,11 +671,13 @@ public final class SaleSync {
                             JSONObject shop = loadShopJson(app);
                             double cash = ShiftPrefs.cashTotal(app);
                             double pp = ShiftPrefs.promptpayTotal(app);
+                            double transfer = ShiftPrefs.transferTotal(app);
                             double discount = ShiftPrefs.discountTotal(app);
                             double opening = ShiftPrefs.openingCash(app);
                             int sales = ShiftPrefs.saleCount(app);
                             int cashBills = ShiftPrefs.cashBillCount(app);
                             int ppBills = ShiftPrefs.promptpayBillCount(app);
+                            int transferBills = ShiftPrefs.transferBillCount(app);
                             int voided = ShiftPrefs.voidedCount(app);
                             long openedAt = ShiftPrefs.openedAt(app);
                             long now = System.currentTimeMillis();
@@ -689,6 +714,8 @@ public final class SaleSync {
                                             cash,
                                             ppBills,
                                             pp,
+                                            transferBills,
+                                            transfer,
                                             discount,
                                             opening,
                                             counted,
@@ -1129,6 +1156,8 @@ public final class SaleSync {
         row.put("lines", payload.optJSONArray("lines"));
         row.put("voided", false);
         row.put("printed", false);
+        String transferRef = payload.optString("transferRef", "").trim();
+        if (!transferRef.isEmpty()) row.put("transferRef", transferRef);
         arr.put(row);
         while (arr.length() > 60) {
             JSONArray trimmed = new JSONArray();

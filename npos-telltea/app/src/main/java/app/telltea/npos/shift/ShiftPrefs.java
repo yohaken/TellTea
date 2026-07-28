@@ -16,9 +16,11 @@ public final class ShiftPrefs {
   private static final String KEY_SHIFT = "shift";
   private static final String KEY_CASH = "cashTotal";
   private static final String KEY_PP = "promptpayTotal";
+  private static final String KEY_TRANSFER = "transferTotal";
   private static final String KEY_SALE_COUNT = "saleCount";
   private static final String KEY_CASH_BILLS = "cashBills";
   private static final String KEY_PP_BILLS = "ppBills";
+  private static final String KEY_TRANSFER_BILLS = "transferBills";
   private static final String KEY_DISCOUNT = "discountTotal";
   private static final String KEY_VOIDED = "voidedCount";
   private static final String KEY_OPENING_CASH = "openingCash";
@@ -94,6 +96,7 @@ public final class ShiftPrefs {
         saleCount(context),
         moneyPlain(cashTotal(context)),
         moneyPlain(promptpayTotal(context)),
+        moneyPlain(transferTotal(context)),
         voidedCount(context));
   }
 
@@ -148,6 +151,11 @@ public final class ShiftPrefs {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong(KEY_PP, 0L));
   }
 
+  public static double transferTotal(Context context) {
+    return Double.longBitsToDouble(
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong(KEY_TRANSFER, 0L));
+  }
+
   public static int saleCount(Context context) {
     return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_SALE_COUNT, 0);
   }
@@ -158,6 +166,10 @@ public final class ShiftPrefs {
 
   public static int promptpayBillCount(Context context) {
     return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_PP_BILLS, 0);
+  }
+
+  public static int transferBillCount(Context context) {
+    return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_TRANSFER_BILLS, 0);
   }
 
   public static double discountTotal(Context context) {
@@ -190,9 +202,11 @@ public final class ShiftPrefs {
         .putLong(KEY_NEXT_OPENING, Double.doubleToRawLongBits(0))
         .putLong(KEY_CASH, Double.doubleToRawLongBits(0))
         .putLong(KEY_PP, Double.doubleToRawLongBits(0))
+        .putLong(KEY_TRANSFER, Double.doubleToRawLongBits(0))
         .putInt(KEY_SALE_COUNT, 0)
         .putInt(KEY_CASH_BILLS, 0)
         .putInt(KEY_PP_BILLS, 0)
+        .putInt(KEY_TRANSFER_BILLS, 0)
         .putLong(KEY_DISCOUNT, Double.doubleToRawLongBits(0))
         .putInt(KEY_VOIDED, 0)
         .putLong(KEY_CASH_OUT, Double.doubleToRawLongBits(0))
@@ -217,6 +231,32 @@ public final class ShiftPrefs {
       int saleCount,
       int voidedCount,
       double discountTotal) {
+    resume(
+        context,
+        sessionId,
+        shift,
+        openedAt,
+        openingCash,
+        cashTotal,
+        promptpayTotal,
+        0,
+        saleCount,
+        voidedCount,
+        discountTotal);
+  }
+
+  public static void resume(
+      Context context,
+      String sessionId,
+      String shift,
+      long openedAt,
+      double openingCash,
+      double cashTotal,
+      double promptpayTotal,
+      double transferTotal,
+      int saleCount,
+      int voidedCount,
+      double discountTotal) {
     SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     prefs
         .edit()
@@ -228,9 +268,11 @@ public final class ShiftPrefs {
         .putLong(KEY_NEXT_OPENING, Double.doubleToRawLongBits(0))
         .putLong(KEY_CASH, Double.doubleToRawLongBits(Math.max(0, cashTotal)))
         .putLong(KEY_PP, Double.doubleToRawLongBits(Math.max(0, promptpayTotal)))
+        .putLong(KEY_TRANSFER, Double.doubleToRawLongBits(Math.max(0, transferTotal)))
         .putInt(KEY_SALE_COUNT, Math.max(0, saleCount))
         .putInt(KEY_CASH_BILLS, 0)
         .putInt(KEY_PP_BILLS, 0)
+        .putInt(KEY_TRANSFER_BILLS, 0)
         .putLong(KEY_DISCOUNT, Double.doubleToRawLongBits(Math.max(0, discountTotal)))
         .putInt(KEY_VOIDED, Math.max(0, voidedCount))
         .putBoolean(KEY_LAST_RESUMED, true)
@@ -271,9 +313,13 @@ public final class ShiftPrefs {
     SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     SharedPreferences.Editor ed = prefs.edit();
     ed.putInt(KEY_SALE_COUNT, saleCount(context) + 1);
-    if ("cash".equals(paymentMethod)) {
+    String method = app.telltea.npos.sell.PaymentMethods.normalize(paymentMethod);
+    if (app.telltea.npos.sell.PaymentMethods.CASH.equals(method)) {
       ed.putInt(KEY_CASH_BILLS, cashBillCount(context) + 1);
       ed.putLong(KEY_CASH, Double.doubleToRawLongBits(cashTotal(context) + total));
+    } else if (app.telltea.npos.sell.PaymentMethods.TRANSFER.equals(method)) {
+      ed.putInt(KEY_TRANSFER_BILLS, transferBillCount(context) + 1);
+      ed.putLong(KEY_TRANSFER, Double.doubleToRawLongBits(transferTotal(context) + total));
     } else {
       ed.putInt(KEY_PP_BILLS, promptpayBillCount(context) + 1);
       ed.putLong(KEY_PP, Double.doubleToRawLongBits(promptpayTotal(context) + total));
@@ -292,9 +338,14 @@ public final class ShiftPrefs {
     SharedPreferences.Editor ed = prefs.edit();
     ed.putInt(KEY_SALE_COUNT, Math.max(0, saleCount(context) - 1));
     ed.putInt(KEY_VOIDED, voidedCount(context) + 1);
-    if ("cash".equals(paymentMethod)) {
+    String method = app.telltea.npos.sell.PaymentMethods.normalize(paymentMethod);
+    if (app.telltea.npos.sell.PaymentMethods.CASH.equals(method)) {
       ed.putInt(KEY_CASH_BILLS, Math.max(0, cashBillCount(context) - 1));
       ed.putLong(KEY_CASH, Double.doubleToRawLongBits(Math.max(0, cashTotal(context) - total)));
+    } else if (app.telltea.npos.sell.PaymentMethods.TRANSFER.equals(method)) {
+      ed.putInt(KEY_TRANSFER_BILLS, Math.max(0, transferBillCount(context) - 1));
+      ed.putLong(
+          KEY_TRANSFER, Double.doubleToRawLongBits(Math.max(0, transferTotal(context) - total)));
     } else {
       ed.putInt(KEY_PP_BILLS, Math.max(0, promptpayBillCount(context) - 1));
       ed.putLong(KEY_PP, Double.doubleToRawLongBits(Math.max(0, promptpayTotal(context) - total)));

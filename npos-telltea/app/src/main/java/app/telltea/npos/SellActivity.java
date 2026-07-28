@@ -46,6 +46,7 @@ import app.telltea.npos.sell.ImageLoader;
 import app.telltea.npos.sell.MenuModels;
 import app.telltea.npos.sell.MenuRepository;
 import app.telltea.npos.sell.OptionPickerLogic;
+import app.telltea.npos.sell.PaymentMethods;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shell.PosShellNav;
 import app.telltea.npos.shift.BlindCloseFlow;
@@ -60,7 +61,7 @@ import app.telltea.npos.update.UpdatePromptController;
 
 /**
  * Sell screen — front-counter only: categories, menu images, options, cart, discount,
- * cash pay (PromptPay parked — shop unused), sold-out long-press. No delivery price channel.
+ * cash / bank-transfer pay (PromptPay POS-QR parked), sold-out long-press. No delivery price channel.
  */
 public class SellActivity extends Activity {
   private LinearLayout categoryBar;
@@ -136,9 +137,14 @@ public class SellActivity extends Activity {
     View back = findViewById(R.id.backButton);
     if (back != null) back.setOnClickListener(v -> finish());
     findViewById(R.id.payCashButton).setOnClickListener(v -> startPay("cash"));
+    View payTransferBtn = findViewById(R.id.payTransferButton);
+    if (payTransferBtn != null) {
+      payTransferBtn.setOnClickListener(v -> startPay(PaymentMethods.TRANSFER));
+    }
     View payPpBtn = findViewById(R.id.payPromptButton);
     if (payPpBtn != null) {
       // Early phase: hide PromptPay + QR from main sell chrome.
+      // Bank transfer (sticker QR / account) uses payTransferButton instead.
       payPpBtn.setVisibility(View.GONE);
       payPpBtn.setOnClickListener(null);
     }
@@ -220,12 +226,19 @@ public class SellActivity extends Activity {
       sellTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.titleSp);
     }
     View payCash = findViewById(R.id.payCashButton);
+    View payTransfer = findViewById(R.id.payTransferButton);
     View payPp = findViewById(R.id.payPromptButton);
     View xReport = findViewById(R.id.xReportButton);
     if (payCash != null) {
       payCash.setMinimumHeight(uiScale.payPrimaryMinPx);
       if (payCash instanceof TextView) {
         ((TextView) payCash).setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.titleSp + 1f);
+      }
+    }
+    if (payTransfer != null) {
+      payTransfer.setMinimumHeight(uiScale.payPrimaryMinPx);
+      if (payTransfer instanceof TextView) {
+        ((TextView) payTransfer).setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.titleSp);
       }
     }
     if (payPp != null) {
@@ -1699,11 +1712,51 @@ public class SellActivity extends Activity {
       Toast.makeText(this, R.string.cart_empty, Toast.LENGTH_SHORT).show();
       return;
     }
-    if (!"cash".equals(method)) {
-      Toast.makeText(this, R.string.pay_pp_hidden_early, Toast.LENGTH_LONG).show();
+    String m = PaymentMethods.normalize(method);
+    if (PaymentMethods.isCash(m)) {
+      showCashKeypad(cartTotal());
       return;
     }
-    showCashKeypad(cartTotal());
+    if (PaymentMethods.isTransfer(m)) {
+      showTransferConfirm(cartTotal());
+      return;
+    }
+    Toast.makeText(this, R.string.pay_pp_hidden_early, Toast.LENGTH_LONG).show();
+  }
+
+  /**
+   * Bank transfer to shop account (sticker QR / account number) — staff verifies slip,
+   * then confirms. Not PromptPay QR on the POS screen; drawer stays closed.
+   */
+  private void showTransferConfirm(double total) {
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    int pad = NposUi.dp(this, 8);
+    box.setPadding(pad, pad, pad, pad);
+
+    TextView msg = NposUi.body(this, getString(R.string.pay_transfer_msg, total));
+    msg.setPadding(0, 0, 0, NposUi.dp(this, 10));
+    box.addView(msg);
+
+    EditText ref = NposUi.field(this);
+    ref.setHint(R.string.pay_transfer_ref_hint);
+    ref.setInputType(InputType.TYPE_CLASS_TEXT);
+    box.addView(ref);
+
+    ScrollView scroll = new ScrollView(this);
+    scroll.addView(box);
+
+    NposConfirmDialog.custom(
+        this,
+        getString(R.string.pay_transfer_title),
+        scroll,
+        getString(R.string.pay_transfer_confirm),
+        () -> {
+          String note = ref.getText() == null ? "" : ref.getText().toString().trim();
+          commitSale(PaymentMethods.TRANSFER, 0, note);
+          return true;
+        },
+        this::syncCustomerDisplay);
   }
 
   /** Early phase: PromptPay UI kept for compile safety but unused (QR removed). */
@@ -1858,11 +1911,15 @@ public class SellActivity extends Activity {
   }
 
   private void commitSale(String method, double cashReceived) {
+    commitSale(method, cashReceived, "");
+  }
+
+  private void commitSale(String method, double cashReceived, String transferRef) {
     sellSyncStatus.setText(R.string.sell_saving);
     List<MenuModels.CartLine> snapshot = new ArrayList<>(cart);
     double disc = discountBaht;
     final double changeForCustomer =
-        "cash".equals(method) ? Math.max(0, cashReceived - cartTotal()) : 0;
+        PaymentMethods.isCash(method) ? Math.max(0, cashReceived - cartTotal()) : 0;
     boolean autoPrint = shop == null || shop.optBoolean("autoPrintReceipt", true);
     saleSync.enqueueSale(
         this,
@@ -1870,6 +1927,7 @@ public class SellActivity extends Activity {
         method,
         cashReceived,
         disc,
+        transferRef,
         shop,
         autoPrint,
         new SaleSync.SaleCallback() {

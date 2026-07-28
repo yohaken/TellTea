@@ -5,8 +5,10 @@ public final class BlindCloseReport {
   public final double openingCash;
   public final double cashSales;
   public final double promptpaySales;
+  public final double transferSales;
   public final int cashBills;
   public final int promptpayBills;
+  public final int transferBills;
   public final int saleCount;
   public final int voidedCount;
   public final double discountTotal;
@@ -23,8 +25,10 @@ public final class BlindCloseReport {
       double openingCash,
       double cashSales,
       double promptpaySales,
+      double transferSales,
       int cashBills,
       int promptpayBills,
+      int transferBills,
       int saleCount,
       int voidedCount,
       double discountTotal,
@@ -37,8 +41,10 @@ public final class BlindCloseReport {
     this.openingCash = openingCash;
     this.cashSales = cashSales;
     this.promptpaySales = promptpaySales;
+    this.transferSales = transferSales;
     this.cashBills = cashBills;
     this.promptpayBills = promptpayBills;
+    this.transferBills = transferBills;
     this.saleCount = saleCount;
     this.voidedCount = voidedCount;
     this.discountTotal = discountTotal;
