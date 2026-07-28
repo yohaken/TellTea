@@ -1,6 +1,8 @@
 package app.telltea.npos.printer;
 
 import android.content.Context;
+import android.os.Build;
+
 import com.sunmi.peripheral.printer.InnerPrinterCallback;
 import com.sunmi.peripheral.printer.InnerPrinterException;
 import com.sunmi.peripheral.printer.InnerPrinterManager;
