@@ -39,21 +39,23 @@ export function VatSalesReconcilePanel({
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<ReconcileRow[]>([]);
   const [filterMonthOnly, setFilterMonthOnly] = useState(true);
+  const [confirmedOnly, setConfirmedOnly] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const next = await buildReconcileRows(
-        filterMonthOnly ? { monthKey: month } : undefined,
-      );
+      const next = await buildReconcileRows({
+        ...(filterMonthOnly ? { monthKey: month } : {}),
+        confirmedOnly,
+      });
       setRows(next);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }, [month, filterMonthOnly, setError]);
+  }, [month, filterMonthOnly, confirmedOnly, setError]);
 
   useEffect(() => {
     void refresh();
@@ -98,13 +100,21 @@ export function VatSalesReconcilePanel({
             />
             เฉพาะช่วงที่ทับเดือนนี้
           </label>
+          <label className="vat-sales-field" style={{ flexDirection: "row", alignItems: "center", gap: "0.4rem" }}>
+            <input
+              type="checkbox"
+              checked={confirmedOnly}
+              onChange={(e) => setConfirmedOnly(e.target.checked)}
+            />
+            นับเฉพาะวันยืนยัน
+          </label>
           <button
             type="button"
             className="ghost-btn"
             disabled={busy !== null || loading}
             onClick={() => void refresh()}
           >
-            รีเฟรช
+            รี
           </button>
         </div>
       </section>

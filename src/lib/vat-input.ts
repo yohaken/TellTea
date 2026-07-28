@@ -7,6 +7,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   query,
   setDoc,
@@ -125,6 +126,11 @@ export async function updateVatInputInvoice(
   patch: Partial<VatInputInput>,
   by: string,
 ): Promise<void> {
+  const ref = doc(getDb(), VAT_INPUT_COL, id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("ไม่พบใบกำกับ");
+  const existing = mapInvoice(id, snap.data() as Record<string, unknown>);
+
   const updates: Record<string, unknown> = {
     updatedAt: Date.now(),
     updatedBy: by,
@@ -138,24 +144,24 @@ export async function updateVatInputInvoice(
   if (patch.description != null) updates.description = String(patch.description).trim();
   if (patch.note != null) updates.note = String(patch.note).trim();
   if (patch.evidenceRef != null) updates.evidenceRef = String(patch.evidenceRef).trim();
+
   if (patch.grossInclusive != null || patch.vatInput != null) {
-    const gross = normalizeMoney(patch.grossInclusive ?? 0);
-    if (patch.grossInclusive != null) {
+    const gross =
+      patch.grossInclusive != null
+        ? normalizeMoney(patch.grossInclusive)
+        : existing.grossInclusive;
+    updates.grossInclusive = gross;
+    if (patch.vatInput != null) {
+      const vatInput = normalizeMoney(patch.vatInput);
+      updates.vatInput = vatInput;
+      updates.vatBase = roundMoney(Math.max(0, gross - vatInput));
+    } else {
       const computed = computeVatFromGross(gross);
-      updates.grossInclusive = gross;
-      if (patch.vatInput != null) {
-        const vatInput = normalizeMoney(patch.vatInput);
-        updates.vatInput = vatInput;
-        updates.vatBase = roundMoney(Math.max(0, gross - vatInput));
-      } else {
-        updates.vatBase = computed.vatBase;
-        updates.vatInput = computed.vatOutput;
-      }
-    } else if (patch.vatInput != null) {
-      updates.vatInput = normalizeMoney(patch.vatInput);
+      updates.vatBase = computed.vatBase;
+      updates.vatInput = computed.vatOutput;
     }
   }
-  await setDoc(doc(getDb(), VAT_INPUT_COL, id), updates, { merge: true });
+  await setDoc(ref, updates, { merge: true });
 }
 
 export async function deleteVatInputInvoice(id: string): Promise<void> {

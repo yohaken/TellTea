@@ -55,16 +55,22 @@ function sumChannelInDocs(
   docs: Record<string, DailySalesDoc>,
   keys: string[],
   channel: DeliveryChannel,
+  opts?: { confirmedOnly?: boolean },
 ): { gross: number; days: number } {
   let gross = 0;
   let days = 0;
   for (const k of keys) {
     const d = docs[k];
     if (!d) continue;
+    if (opts?.confirmedOnly && d.status !== "confirmed") continue;
     const g = d.delivery[channel]?.grossInclusive || 0;
-    if (g > 0) {
-      gross = roundMoney(gross + g);
-      days += 1;
+    if (g > 0 || d.status === "confirmed") {
+      if (g > 0) {
+        gross = roundMoney(gross + g);
+        days += 1;
+      } else if (d.status === "confirmed") {
+        days += 1;
+      }
     }
   }
   return { gross, days };
@@ -72,6 +78,8 @@ function sumChannelInDocs(
 
 export async function buildReconcileRows(opts?: {
   monthKey?: string;
+  /** นับเฉพาะวัน confirmed ในสมุด (แนะนำตอนเทียบปิดเดือน) */
+  confirmedOnly?: boolean;
 }): Promise<ReconcileRow[]> {
   const all = await listPlatformEmailReports({ max: 300 });
   const summaries = all.filter((r) => {
@@ -79,7 +87,6 @@ export async function buildReconcileRows(opts?: {
     if (kind !== "weekly" && kind !== "monthly") return false;
     if (r.parseStatus === "ignored") return false;
     if (!r.parsed && r.parseStatus !== "ok" && r.parseStatus !== "confirmed") {
-      // still include if has gross in parsed only
       return false;
     }
     return Boolean(r.parsed?.grossInclusive || r.parsed);
@@ -126,7 +133,9 @@ export async function buildReconcileRows(opts?: {
       Object.assign(docs, await loadMonth(m));
     }
     const keys = dateKeysInRange(periodStart, periodEnd);
-    const { gross: booksGross, days } = sumChannelInDocs(docs, keys, channel);
+    const { gross: booksGross, days } = sumChannelInDocs(docs, keys, channel, {
+      confirmedOnly: opts?.confirmedOnly === true,
+    });
     const platformGross = report.parsed?.grossInclusive || 0;
     const diff = roundMoney(platformGross - booksGross);
     const diffPct =
@@ -153,6 +162,15 @@ export async function buildReconcileRows(opts?: {
 /** helper export for tests */
 export function _dateKeysInRange(start: string, end: string) {
   return dateKeysInRange(start, end);
+}
+
+export function _sumChannelInDocs(
+  docs: Record<string, DailySalesDoc>,
+  keys: string[],
+  channel: DeliveryChannel,
+  opts?: { confirmedOnly?: boolean },
+) {
+  return sumChannelInDocs(docs, keys, channel, opts);
 }
 
 export function _unusedDateKeysInMonth(month: string) {

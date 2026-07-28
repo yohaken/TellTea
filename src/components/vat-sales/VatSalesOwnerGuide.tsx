@@ -17,28 +17,28 @@ export function VatSalesOwnerGuide() {
           {open ? "ซ่อนแผน" : "แผน"}
         </button>
         <span>
-          เมล→วัน→ยืนยัน→ปิดเดือน · VAT7% จากยอดลูกค้า · owner only · เช็ค docs/vat-p1-p4-check.md · P5 docs/vat-p5-check.md
+          เมล→วัน→ยืนยัน→ปิดที่ /pnl/ · VAT7% · owner only · เช็ค docs/vat-p*-check.md
         </span>
       </p>
       {open ? (
         <ul className="vat-map-list">
           <li>
-            <b>วัน</b> ตาราง Sp/Grab/LM + หน้าร้าน · ยืนยันวัน
+            <b>วัน</b> ตาราง Sp/G/LM + ร้าน · ยืนยันวัน
           </li>
           <li>
             <b>เมล</b> Gmail/Outlook · ซิงก์ · parse · ยืนยันเข้าวัน
           </li>
           <li>
-            <b>เทียบ</b> สรุปสัปดาห์/เดือน vs รวมวัน (ไม่ทับ)
+            <b>เทียบ</b> สัปดาห์/เดือน vs รวมวัน (ไม่ทับ) · นับวันยืนยันได้
           </li>
           <li>
             <b>ซื้อ</b> ใบกำกับ · ภาษีซื้อ
           </li>
           <li>
-            <b>ปิด</b> ใส่รายได้→P&amp;L · VAT สุทธิ
+            <b>ปิด</b> หรือแผงบน <b>/pnl/</b> ใส่รายได้
           </li>
           <li>
-            <b>ประวัติ</b> audit แก้/ยืนยัน/ปิด
+            <b>ประวัติ</b> audit · prune raw ในเมล
           </li>
         </ul>
       ) : null}

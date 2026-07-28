@@ -10,6 +10,7 @@ import {
   orderBy,
   query,
   updateDoc,
+  where,
   doc,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
@@ -33,9 +34,11 @@ export async function prunePlatformEmailRaw(opts: {
   const maxScan = Math.min(500, Math.max(50, opts.maxScan || 300));
   const cutoffMs = Date.now() - months * 30 * 24 * 60 * 60 * 1000;
 
+  // เฉพาะเมลเก่ากว่า cutoff — ไม่ดึงชุดเดิมที่ prune แล้วซ้ำ
   const snap = await getDocs(
     query(
       collection(getDb(), PLATFORM_EMAIL_REPORTS_COL),
+      where("receivedAt", "<", cutoffMs),
       orderBy("receivedAt", "asc"),
       limit(maxScan),
     ),
@@ -46,8 +49,7 @@ export async function prunePlatformEmailRaw(opts: {
   for (const d of snap.docs) {
     scanned += 1;
     const data = d.data() as Record<string, unknown>;
-    const receivedAt = Number(data.receivedAt) || 0;
-    if (receivedAt >= cutoffMs) continue;
+    if (data.rawPrunedAt) continue;
     const rawText = String(data.rawText || "");
     const rawHtml = String(data.rawHtml || "");
     if (!rawText && !rawHtml) continue;

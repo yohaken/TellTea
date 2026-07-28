@@ -56,9 +56,9 @@
 |-----|--------|--------|------|
 | **P0** | แผน · เช็คลิส · ขอบเขต + owner-only | ✅ เอกสาร | — |
 | **P1–P4** | วัน · เมล · parse · สถานะ/แจ้งเตือน | ✅ เยียวยา | [`vat-p1-p4-check.md`](./vat-p1-p4-check.md) |
-| **P5** | ปิดเดือน → `monthlyIncome` + VAT เดือน | ✅ โค้ด · กำลังใช้ | [`vat-p5-check.md`](./vat-p5-check.md) |
-| **P6** | Outlook/Hotmail · เมลสัปดาห์/เดือน · Input VAT | ⏸ วางไว้ · รายละเอียดทีหลัง | [`vat-phases-next.md`](./vat-phases-next.md) |
-| **P7** | ขัดเกลา UX · audit log · สำรอง raw · เอกสารผู้ใช้ | ⏸ วางไว้ · รายละเอียดทีหลัง | [`vat-phases-next.md`](./vat-phases-next.md) |
+| **P5** | ปิดเดือน → `monthlyIncome` + VAT เดือน · แผง `/pnl/` | ✅ เยียวยา | [`vat-p5-check.md`](./vat-p5-check.md) |
+| **P6** | Outlook/Hotmail · เมลสัปดาห์/เดือน · Input VAT | ✅ เยียวยาโค้ด | [`vat-p6-check.md`](./vat-p6-check.md) |
+| **P7** | ขัดเกลา UX · audit log · สำรอง raw · เอกสารผู้ใช้ | ✅ เยียวยาโค้ด | [`vat-p7-check.md`](./vat-p7-check.md) |
 
 ### ตัดออกจากแผน (ยืนยันแล้ว)
 
@@ -656,3 +656,4 @@ meta/vatMailOAuthOutlook   // owner-only · Outlook refresh token
 | 2026-07-28 | **รวมยำบช.เจ้าของ + slim** · เยียวยา P1–P4 · เช็คลิสต์ตรวจ `vat-p1-p4-check.md` · rules validate · build 340 |
 | 2026-07-28 | **วางเฟส P5–P7** · ลุย P5 ปิดเดือน slim · `vat-p5-check.md` · `vat-phases-next.md` · build 341 |
 | 2026-07-28 | **P5 บน `/pnl/`** — แผงยอดขาย/VAT→รายได้ (owner) · build 342 |
+| 2026-07-28 | **ยาว P5–P7** — Outlook fallback · prune · sources · reconcile confirmed · เช็ค p6/p7 · build 343 |

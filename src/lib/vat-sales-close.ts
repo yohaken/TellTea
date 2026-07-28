@@ -6,6 +6,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getDb } from "./firebase";
 import { saveMonthlyIncome } from "./pnl";
 import {
+  dateKeysInMonth,
   isMonthKey,
   listDailySalesInMonth,
   loadVatSalesSettings,
@@ -49,7 +50,10 @@ export async function buildMonthClosePreview(month: string): Promise<{
   mode: PnlIncomeMode;
   proposed: number;
   confirmedDays: number;
+  /** วันในปฏิทินเดือน (ไม่ใช่แค่ doc ที่มี) */
   dayCount: number;
+  /** วันมียอดแต่ยังไม่ยืนยัน */
+  draftWithSales: number;
   totals: MonthSalesTotals;
   currentIncome: number;
   lastClose: VatMonthCloseAudit | null;
@@ -61,17 +65,24 @@ export async function buildMonthClosePreview(month: string): Promise<{
     getMonthlyIncomeValue(month),
     getVatMonthCloseAudit(month),
   ]);
-  const docs = Object.values(docsMap);
+  const calendarKeys = dateKeysInMonth(month);
+  const docs = calendarKeys.map((k) => docsMap[k]).filter(Boolean) as DailySalesDoc[];
+  const allDocs = Object.values(docsMap);
   const { amount, confirmedDays, totals } = proposeMonthlyIncomeAmount(
-    docs,
+    allDocs,
     settings.pnlIncomeMode,
   );
+  let draftWithSales = 0;
+  for (const d of allDocs) {
+    if (d.status !== "confirmed" && d.totalGross > 0) draftWithSales += 1;
+  }
   return {
     docs,
     mode: settings.pnlIncomeMode,
     proposed: amount,
     confirmedDays,
-    dayCount: docs.length,
+    dayCount: calendarKeys.length,
+    draftWithSales,
     totals,
     currentIncome,
     lastClose,

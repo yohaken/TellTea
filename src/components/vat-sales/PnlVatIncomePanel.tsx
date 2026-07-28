@@ -36,6 +36,7 @@ export function PnlVatIncomePanel({ actor, onIncomeApplied }: Props) {
   const [proposed, setProposed] = useState(0);
   const [confirmedDays, setConfirmedDays] = useState(0);
   const [dayCount, setDayCount] = useState(0);
+  const [draftWithSales, setDraftWithSales] = useState(0);
   const [totals, setTotals] = useState<MonthSalesTotals | null>(null);
   const [currentIncome, setCurrentIncome] = useState(0);
   const [editIncome, setEditIncome] = useState("");
@@ -53,6 +54,7 @@ export function PnlVatIncomePanel({ actor, onIncomeApplied }: Props) {
       setProposed(p.proposed);
       setConfirmedDays(p.confirmedDays);
       setDayCount(p.dayCount);
+      setDraftWithSales(p.draftWithSales);
       setTotals(p.totals);
       setCurrentIncome(p.currentIncome);
       setEditIncome(String(p.proposed || ""));
@@ -149,6 +151,9 @@ export function PnlVatIncomePanel({ actor, onIncomeApplied }: Props) {
             ยืนยัน <strong>{confirmedDays}</strong>/{dayCount}
             {unconfirmed > 0 ? (
               <span className="muted"> · ยังไม่ยืนยัน {unconfirmed}</span>
+            ) : null}
+            {draftWithSales > 0 ? (
+              <span className="muted"> · มียอดยังไม่ยืนยัน {draftWithSales} วัน</span>
             ) : null}
             {" · "}
             โหมด <strong>{mode === "exVat" ? "ก่อน VAT" : "รวม VAT"}</strong>

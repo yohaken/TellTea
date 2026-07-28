@@ -118,7 +118,7 @@ function publicOAuthStatus(oauthData, hasConfig) {
 }
 
 function appReturnUrl(base, query) {
-  const root = asString(base, 400) || "https://mypeer-501909.web.app/vat-sales/";
+  const root = asString(base, 400) || "https://telltea-shop.web.app/vat-sales/";
   const url = new URL(root.includes("?") ? root : root.endsWith("/") ? root : `${root}/`);
   if (!url.pathname.includes("vat-sales")) {
     url.pathname = "/vat-sales/";
@@ -362,7 +362,7 @@ exports.vatMailOAuthStart = functions
         "ยังไม่ได้ตั้งค่า Gmail OAuth (GMAIL_OAUTH_* หรือ meta/vatMailOAuthConfig)",
       );
     }
-    const returnTo = asString(data?.returnTo, 400) || "https://mypeer-501909.web.app/vat-sales/";
+    const returnTo = asString(data?.returnTo, 400) || "https://telltea-shop.web.app/vat-sales/";
     const state = crypto.randomBytes(24).toString("hex");
     await db.doc(OAUTH_STATE_DOC).set({
       state,
@@ -385,7 +385,7 @@ exports.vatMailOAuthCallback = functions
   .region(REGION)
   .https.onRequest(async (req, res) => {
     const db = getFirestore();
-    let returnTo = "https://mypeer-501909.web.app/vat-sales/";
+    let returnTo = "https://telltea-shop.web.app/vat-sales/";
     try {
       const code = asString(req.query.code, 500);
       const state = asString(req.query.state, 120);

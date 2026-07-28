@@ -40,6 +40,7 @@ export function VatSalesMonthClosePanel({
   const [proposed, setProposed] = useState(0);
   const [confirmedDays, setConfirmedDays] = useState(0);
   const [dayCount, setDayCount] = useState(0);
+  const [draftWithSales, setDraftWithSales] = useState(0);
   const [totals, setTotals] = useState<MonthSalesTotals | null>(null);
   const [currentIncome, setCurrentIncome] = useState(0);
   const [lastClose, setLastClose] = useState<VatMonthCloseAudit | null>(null);
@@ -59,6 +60,7 @@ export function VatSalesMonthClosePanel({
       setProposed(p.proposed);
       setConfirmedDays(p.confirmedDays);
       setDayCount(p.dayCount);
+      setDraftWithSales(p.draftWithSales);
       setTotals(p.totals);
       setCurrentIncome(p.currentIncome);
       setLastClose(p.lastClose);
@@ -145,6 +147,9 @@ export function VatSalesMonthClosePanel({
             ยืนยัน <strong>{confirmedDays}</strong>/{dayCount}
             {unconfirmed > 0 ? (
               <span className="muted"> · ยังไม่ยืนยัน {unconfirmed}</span>
+            ) : null}
+            {draftWithSales > 0 ? (
+              <span className="muted"> · มียอดยังไม่ยืนยัน {draftWithSales} วัน</span>
             ) : null}
             {" · "}
             โหมด <strong>{mode === "exVat" ? "ก่อน VAT" : "รวม VAT"}</strong>

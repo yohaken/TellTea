@@ -104,8 +104,8 @@ function publicStatus(oauth, hasConfig) {
 }
 
 function appReturnUrl(base, query) {
-  const root = asString(base, 400) || "https://mypeer-501909.web.app/vat-sales/";
-  const url = new URL(root.includes("://") ? root : `https://mypeer-501909.web.app${root}`);
+  const root = asString(base, 400) || "https://telltea-shop.web.app/vat-sales/";
+  const url = new URL(root.includes("://") ? root : `https://telltea-shop.web.app${root}`);
   if (!url.pathname.includes("vat-sales")) url.pathname = "/vat-sales/";
   Object.entries(query || {}).forEach(([k, v]) => url.searchParams.set(k, String(v)));
   return url.toString();
@@ -262,7 +262,7 @@ exports.vatOutlookOAuthStart = functions.region(REGION).https.onCall(async (data
       "ยังไม่ได้ตั้งค่า Outlook OAuth (OUTLOOK_OAUTH_* หรือ meta/vatMailOAuthConfigOutlook)",
     );
   }
-  const returnTo = asString(data?.returnTo, 400) || "https://mypeer-501909.web.app/vat-sales/";
+  const returnTo = asString(data?.returnTo, 400) || "https://telltea-shop.web.app/vat-sales/";
   const state = crypto.randomBytes(24).toString("hex");
   await db.doc(OAUTH_STATE_DOC).set({ state, actorId, returnTo, createdAt: Date.now() });
   const url = new URL("https://login.microsoftonline.com/common/oauth2/v2.0/authorize");
@@ -277,7 +277,7 @@ exports.vatOutlookOAuthStart = functions.region(REGION).https.onCall(async (data
 
 exports.vatOutlookOAuthCallback = functions.region(REGION).https.onRequest(async (req, res) => {
   const db = getFirestore();
-  let returnTo = "https://mypeer-501909.web.app/vat-sales/";
+  let returnTo = "https://telltea-shop.web.app/vat-sales/";
   try {
     const code = asString(req.query.code, 2000);
     const state = asString(req.query.state, 120);
@@ -394,11 +394,23 @@ exports.vatOutlookSync = functions
             ConsistencyLevel: "eventual",
           },
         });
-        const json = await res.json().catch(() => ({}));
+        let json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          // fallback without $search if tenant blocks
-          console.warn("outlook list failed", channel, json.error?.message);
-          continue;
+          // fallback without $search if tenant blocks combined filter+search
+          console.warn("outlook list failed, retry without $search", channel, json.error?.message);
+          const url2 = new URL("https://graph.microsoft.com/v1.0/me/messages");
+          url2.searchParams.set("$top", String(Math.min(25, MAX_MESSAGES)));
+          url2.searchParams.set("$select", "id,subject,from,receivedDateTime,bodyPreview,body");
+          url2.searchParams.set("$orderby", "receivedDateTime desc");
+          url2.searchParams.set("$filter", `receivedDateTime ge ${after}`);
+          const res2 = await fetch(url2, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          json = await res2.json().catch(() => ({}));
+          if (!res2.ok) {
+            console.warn("outlook list fallback failed", channel, json.error?.message);
+            continue;
+          }
         }
         for (const msg of json.value || []) {
           const messageId = asString(msg.id, 200);

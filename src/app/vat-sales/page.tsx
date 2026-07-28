@@ -125,6 +125,17 @@ function channelFromDraft(
   };
 }
 
+/** คงแหล่งเมล/POS ถ้ายอดไม่เปลี่ยน */
+function keepChannelSource(
+  prev: "manual" | "pos_suggest" | "email" | undefined,
+  oldAmt: number,
+  newAmt: number,
+): "manual" | "pos_suggest" | "email" {
+  if (prev === "email" && oldAmt === newAmt) return "email";
+  if (prev === "pos_suggest" && oldAmt === newAmt) return "pos_suggest";
+  return "manual";
+}
+
 function VatSalesView({ actor }: { actor: string }) {
   const [tab, setTab] = useState<VatTab>("daily");
   const [month, setMonth] = useState(() => bangkokMonthKey());
@@ -320,16 +331,27 @@ function VatSalesView({ actor }: { actor: string }) {
       };
       const storefront = channelFromDraft(base.storefront, d.storefront);
       const sources = {
-        storefront:
-          base.sources.storefront === "pos_suggest" &&
-          storefront.grossInclusive === base.storefront.grossInclusive
-            ? ("pos_suggest" as const)
-            : ("manual" as const),
-        shopee: "manual" as const,
-        grab: "manual" as const,
-        lineman: "manual" as const,
+        storefront: keepChannelSource(
+          base.sources.storefront,
+          base.storefront.grossInclusive,
+          storefront.grossInclusive,
+        ),
+        shopee: keepChannelSource(
+          base.sources.shopee,
+          base.delivery.shopee.grossInclusive,
+          delivery.shopee.grossInclusive,
+        ),
+        grab: keepChannelSource(
+          base.sources.grab,
+          base.delivery.grab.grossInclusive,
+          delivery.grab.grossInclusive,
+        ),
+        lineman: keepChannelSource(
+          base.sources.lineman,
+          base.delivery.lineman.grossInclusive,
+          delivery.lineman.grossInclusive,
+        ),
       };
-      // keep email source if unchanged later — P1 all manual for delivery
       const saved = await upsertDailySales(
         { dateKey, storefront, delivery, sources },
         actor,
@@ -374,14 +396,26 @@ function VatSalesView({ actor }: { actor: string }) {
             storefront,
             delivery,
             sources: {
-              storefront:
-                base.sources.storefront === "pos_suggest" &&
-                storefront.grossInclusive === base.storefront.grossInclusive
-                  ? "pos_suggest"
-                  : "manual",
-              shopee: "manual",
-              grab: "manual",
-              lineman: "manual",
+              storefront: keepChannelSource(
+                base.sources.storefront,
+                base.storefront.grossInclusive,
+                storefront.grossInclusive,
+              ),
+              shopee: keepChannelSource(
+                base.sources.shopee,
+                base.delivery.shopee.grossInclusive,
+                delivery.shopee.grossInclusive,
+              ),
+              grab: keepChannelSource(
+                base.sources.grab,
+                base.delivery.grab.grossInclusive,
+                delivery.grab.grossInclusive,
+              ),
+              lineman: keepChannelSource(
+                base.sources.lineman,
+                base.delivery.lineman.grossInclusive,
+                delivery.lineman.grossInclusive,
+              ),
             },
           },
           actor,
