@@ -9,10 +9,8 @@ import { applyActiveIdsOrder } from "@/lib/pos-drag-reorder";
 import {
   buildCartKey,
   cartLineToSaleLine,
-  computeLineUnitPrice,
   itemNeedsOptions,
   optionGroupsForItem,
-  repriceSelections,
   type PosCartLine,
   type PosCartSelection,
 } from "@/lib/pos-menu-cart";
@@ -100,7 +98,8 @@ export function PosSellView({
   const [menuSyncing, setMenuSyncing] = useState(initialMenu.syncing);
   const [menuError, setMenuError] = useState<string | null>(initialMenu.error);
   const [categoryId, setCategoryId] = useState("");
-  const [priceChannel, setPriceChannel] = useState<MenuPriceChannel>("store");
+  /** Front-counter POS — store price only (delivery apps own delivery pricing). */
+  const priceChannel: MenuPriceChannel = "store";
   const [cart, setCart] = useState<Record<string, PosCartLine>>({});
   const [payMode, setPayMode] = useState<PayMode>(null);
   const [cashInput, setCashInput] = useState("");
@@ -266,22 +265,6 @@ export function PosSellView({
     }
     const unitPrice = resolveMenuItemPrice(item, priceChannel);
     addToCartDirect(item, [], unitPrice);
-  }
-
-  function applyPriceChannel(next: MenuPriceChannel) {
-    if (next === priceChannel) return;
-    setPriceChannel(next);
-    setCart((prev) => {
-      const out: Record<string, PosCartLine> = {};
-      for (const line of Object.values(prev)) {
-        const groups = optionGroupsForItem(line.item, optionGroups, next);
-        const selections = repriceSelections(groups, line.selections, next);
-        const unitPrice = computeLineUnitPrice(line.item, selections, next);
-        const cartKey = buildCartKey(line.item.id, selections);
-        out[cartKey] = { ...line, cartKey, selections, unitPrice };
-      }
-      return out;
-    });
   }
 
   function openEditCartLine(line: PosCartLine) {
@@ -593,22 +576,6 @@ export function PosSellView({
               ? "จัดตามขายดีจริง · กดค้างเมนู = ของหมด"
               : "กดค้างหมวด = ลากเรียง · กดค้างเมนู = ของหมด"}
           </span>
-          <div className="pos-sell-channel" role="group" aria-label="ช่องทางราคา">
-            <button
-              type="button"
-              className={priceChannel === "store" ? "is-active" : ""}
-              onClick={() => applyPriceChannel("store")}
-            >
-              หน้าร้าน
-            </button>
-            <button
-              type="button"
-              className={priceChannel === "delivery" ? "is-active" : ""}
-              onClick={() => applyPriceChannel("delivery")}
-            >
-              ส่ง
-            </button>
-          </div>
           {success ? <span className="ok-text pos-sell-flash">{success}</span> : null}
         </div>
 
@@ -670,10 +637,7 @@ export function PosSellView({
               <span className="pos-cart-head-count">{cartCount} รายการ</span>
             ) : null}
           </div>
-          <span className="pos-cart-bill-id">
-            #{session.id.slice(-5).toUpperCase()}
-            {priceChannel === "delivery" ? " · ส่ง" : ""}
-          </span>
+          <span className="pos-cart-bill-id">#{session.id.slice(-5).toUpperCase()}</span>
         </header>
 
         <div className="pos-cart-scroll">

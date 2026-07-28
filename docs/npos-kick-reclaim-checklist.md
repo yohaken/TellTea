@@ -1,6 +1,6 @@
 # nPos — เตะในตาราง · เปลี่ยนรหัสแล้วเด้งล็อกใหม่
 
-อัปเดต: **1.14.40** · อ้างอิงหลัง `1.14.31` (local-first claim)  
+อัปเดต: **1.14.41** · อ้างอิงหลัง `1.14.31` (local-first claim)  
 เป้าหมาย: หลังบ้านเตะจากตารางได้ชัด · เปลี่ยนรหัสร้านแล้วแท็บเล็ตถูกเตะอัตโนมัติ · อัป hash ในเครื่อง · ต้องใส่รหัสใหม่
 
 อ้างอิง: `NposDevicesPanel` · `PosStoreClaimPanel` · `nposOwnerDeviceCommand` · `StoreClaimPrefs` / heartbeat · `NposApp` kick bounce
