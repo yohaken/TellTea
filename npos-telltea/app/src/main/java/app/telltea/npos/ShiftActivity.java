@@ -415,22 +415,23 @@ public class ShiftActivity extends Activity {
       return;
     }
     UiScale ui = UiScale.from(this);
+    int chrome = NposNumberPad.CHROME_STANDARD_DP;
     LinearLayout box = new LinearLayout(this);
     box.setOrientation(LinearLayout.VERTICAL);
-    int pad = ui.dp(16);
-    box.setPadding(pad, pad, pad, pad);
+    int pad = ui.dp(12);
+    box.setPadding(pad, ui.dp(4), pad, 0);
 
     TextView hint = NposUi.caption(this, getString(R.string.shift_cash_drop_hint));
-    hint.setPadding(0, 0, 0, ui.dp(10));
+    hint.setPadding(0, 0, 0, ui.dp(6));
     box.addView(hint);
 
     final String[] valueHolder = {""};
     TextView amount = NposUi.title(this, "฿0");
     amount.setGravity(Gravity.CENTER);
-    amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.titleSp + 8f);
+    amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(20f, ui.titleSp + 6f));
     amount.setTypeface(NposFonts.semibold(this));
-    amount.setMinHeight(ui.payPrimaryMinPx);
-    amount.setPadding(0, ui.dp(8), 0, ui.dp(12));
+    amount.setMinHeight(ui.padAmountMinPx(chrome));
+    amount.setPadding(0, ui.dp(4), 0, ui.dp(6));
     box.addView(amount);
     box.addView(
         NposNumberPad.attach(
@@ -447,15 +448,14 @@ public class ShiftActivity extends Activity {
                 NposNumberPad.applyKey(valueHolder, null, true, 9);
                 amount.setText(formatBaht(valueHolder[0]));
               }
-            }));
-
-    ScrollView scroll = new ScrollView(this);
-    scroll.addView(box);
+            },
+            true,
+            chrome));
 
     NposConfirmDialog.custom(
         this,
         getString(R.string.shift_cash_drop_title),
-        scroll,
+        box,
         getString(R.string.shift_cash_drop_confirm),
         () -> {
           double amt = parseMoney(valueHolder[0]);

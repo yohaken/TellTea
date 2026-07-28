@@ -2,8 +2,8 @@
  * Expected nPos APK release for BO version compare.
  * Keep in sync with `npos-telltea/app/build.gradle` (and live latest.json when fetch works).
  */
-export const NPOS_SYSTEM_VERSION_NAME = "1.14.70";
-export const NPOS_SYSTEM_VERSION_CODE = 93;
+export const NPOS_SYSTEM_VERSION_NAME = "1.14.71";
+export const NPOS_SYSTEM_VERSION_CODE = 94;
 
 export const NPOS_LATEST_MANIFEST_URL =
   "https://telltea-pos.web.app/downloads/latest.json";

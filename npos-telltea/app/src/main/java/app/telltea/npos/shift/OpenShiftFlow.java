@@ -46,13 +46,14 @@ public final class OpenShiftFlow {
   private static void askOpeningFloat(
       Activity activity, SaleSync saleSync, Done done, Runnable onCancel) {
     UiScale ui = UiScale.from(activity);
+    int chrome = NposNumberPad.CHROME_STANDARD_DP;
     LinearLayout box = new LinearLayout(activity);
     box.setOrientation(LinearLayout.VERTICAL);
-    int pad = ui.dp(16);
-    box.setPadding(pad, pad, pad, pad);
+    int pad = ui.dp(12);
+    box.setPadding(pad, ui.dp(4), pad, 0);
 
     TextView hint = NposUi.caption(activity, activity.getString(R.string.open_shift_float_hint));
-    hint.setPadding(0, 0, 0, ui.dp(10));
+    hint.setPadding(0, 0, 0, ui.dp(6));
     box.addView(hint);
 
     double seed = ShiftPrefs.nextOpeningCash(activity);
@@ -60,10 +61,10 @@ public final class OpenShiftFlow {
 
     TextView amount = NposUi.title(activity, formatBaht(valueHolder[0]));
     amount.setGravity(Gravity.CENTER);
-    amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.titleSp + 8f);
+    amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(20f, ui.titleSp + 6f));
     amount.setTypeface(NposFonts.semibold(activity));
-    amount.setMinHeight(ui.payPrimaryMinPx);
-    amount.setPadding(0, ui.dp(8), 0, ui.dp(12));
+    amount.setMinHeight(ui.padAmountMinPx(chrome));
+    amount.setPadding(0, ui.dp(4), 0, ui.dp(6));
     box.addView(amount);
 
     Runnable refresh = () -> amount.setText(formatBaht(valueHolder[0]));
@@ -83,7 +84,9 @@ public final class OpenShiftFlow {
                 NposNumberPad.applyKey(valueHolder, null, true, 9);
                 refresh.run();
               }
-            }));
+            },
+            true,
+            chrome));
 
     NposConfirmDialog.custom(
         activity,

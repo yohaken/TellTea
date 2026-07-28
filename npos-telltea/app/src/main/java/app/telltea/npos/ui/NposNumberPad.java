@@ -12,12 +12,19 @@ import android.widget.TextView;
  * confirm card fits the window (no clipped keys / useless nested scroll).
  */
 public final class NposNumberPad {
-  /** Float / close-shift style: amount + pad. */
-  public static final int CHROME_STANDARD_DP = 200;
+  /** Float / close-shift / cash-drop: hint + amount + pad. */
+  public static final int CHROME_STANDARD_DP = 220;
+  /** Blind-close step with note field under the pad. */
+  public static final int CHROME_FLOAT_NOTE_DP = 300;
   /** Cash pay: due + amount + change + exact + bill chips. */
   public static final int CHROME_CASH_DP = 300;
-  /** Claim code on hub (less chrome above pad). */
-  public static final int CHROME_COMPACT_DP = 160;
+  /**
+   * Claim code on hub — brand/hint/input/buttons around the pad take real height, so budget
+   * high chrome to shrink keys (was 160 and stayed oversized on D2s).
+   */
+  public static final int CHROME_CLAIM_DP = 340;
+  /** @deprecated use {@link #CHROME_CLAIM_DP} */
+  public static final int CHROME_COMPACT_DP = CHROME_CLAIM_DP;
 
   public interface Listener {
     void onDigit(String digit);
@@ -37,7 +44,7 @@ public final class NposNumberPad {
    */
   public static LinearLayout attach(Context context, Listener listener, boolean wideZero) {
     return attach(
-        context, listener, wideZero, wideZero ? CHROME_STANDARD_DP : CHROME_COMPACT_DP);
+        context, listener, wideZero, wideZero ? CHROME_STANDARD_DP : CHROME_CLAIM_DP);
   }
 
   /**

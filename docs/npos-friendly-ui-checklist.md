@@ -1,6 +1,6 @@
 # nPos — Friendly UI (บังคับใช้ต่อจากนี้)
 
-อัปเดต: **1.14.69** · แป้นตัวเลข fit-to-window · `NposConfirmDialog` · **ห้าม** `AlertDialog.setItems` รายการบาง
+อัปเดต: **1.14.71** · แป้นเงินสด/เปิดกะ/ปิดกะ/เคลม fit-to-window · **ห้าม** `AlertDialog.setItems` รายการบาง
 
 ## นโยบายล็อก (งานใหม่ทุกชิ้น)
 
@@ -9,7 +9,7 @@
 3. Layout XML ใช้สไตล์ `Npos.Btn.*` / `Npos.Text.*` / `Theme.Npos` — ไม่ฮาร์ดโค้ดม่วงหรือครีมเทอร์ราคอตตา  
 4. **ตั้งค่า / เข้างาน / hub:** ปุ่มหลักสูง ~52dp · กว้าง **wrap_content** (max ~280dp) จัดกลาง · ใช้ `NposUi.cta()`  
 5. **หน้าขาย (ตะกร้า):** ปุ่มเป็นแถวยาว `Npos.Btn.SellRow*` + ไอคอน/อีโมจิในข้อความ — แตะง่ายที่เคาน์เตอร์  
-6. **แป้นตัวเลข POS** (เงินสด / ทอนเปิดกะ / ปิดกะ / รหัสเคลม): ใช้ `NposNumberPad` + `UiScale.padKeyMinPxForChrome` (เป้าหมาย ~56–64dp · หดลงได้ถึง ~48dp ให้การ์ดพอดีจอ) · `NposConfirmDialog.fitCardToWindow` สเกลการ์ดถ้ายังล้น — ไม่ใช้ชิปเล็ก  
+6. **แป้นตัวเลข POS** (เงินสด / ทอนเปิดกะ / ปิดกะ / ดึงเงิน / รหัสเคลม): `NposNumberPad` + `padKeyMinPxForChrome` + `padAmountMinPx` (เป้าหมาย ~56–64dp · หดถึง ~48dp) · chrome: CASH/STANDARD/FLOAT_NOTE/CLAIM · `fitCardToWindow` ถ้ายังล้น — ไม่ใช้ชิปเล็ก  
 7. สีแบรนด์: ส้ม `#E85D24` · หมึก `#1A2E24` · พื้น `#F7F7F5` (`colors.xml`)
 8. **ห้าม** `AlertDialog.Builder#setItems` / รายการ Material แถวข้อความเล็ก + ปุ่ม CANCEL สำหรับเลือกที่เคาน์เตอร์ (เช่น วิธีชำระ) — **ไม่ใช่ table-first** · ใช้ปุ่มใหญ่ `NposUi.primary/secondary` เต็มความกว้างแทน
 

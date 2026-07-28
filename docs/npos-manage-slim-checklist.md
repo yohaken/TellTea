@@ -1,6 +1,6 @@
 # nPos — BO manage tab super slim
 
-อัปเดต: **1.14.70** · `APP_BUILD` 355 · `POS_BUILD` 122 · vc **93**
+อัปเดต: **1.14.71** · `APP_BUILD` 356 · `POS_BUILD` 123 · vc **94**
 
 ## มติ
 

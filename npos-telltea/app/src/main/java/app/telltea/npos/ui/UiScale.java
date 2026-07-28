@@ -187,6 +187,16 @@ public final class UiScale {
     return clampInt(perKey, floor, padKeyMinPx);
   }
 
+  /**
+   * Amount readout above a number pad — shrinks with the same chrome budget so it does not
+   * steal vertical space from the keys on short POS screens.
+   */
+  public int padAmountMinPx(int chromeAbovePadDp) {
+    int key = padKeyMinPxForChrome(chromeAbovePadDp);
+    int ideal = Math.max(dp(48), Math.round(key * 0.95f));
+    return clampInt(ideal, dp(48), payPrimaryMinPx);
+  }
+
   public void applyMinHeight(View view, int minPx) {
     if (view == null) return;
     view.setMinimumHeight(minPx);

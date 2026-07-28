@@ -43,27 +43,25 @@ public final class BlindCloseFlow {
 
   private static void askCountedCash(Activity activity, SaleSync saleSync, Done done) {
     UiScale ui = UiScale.from(activity);
+    int chrome = NposNumberPad.CHROME_STANDARD_DP;
     LinearLayout box = new LinearLayout(activity);
     box.setOrientation(LinearLayout.VERTICAL);
-    int pad = ui.dp(16);
-    box.setPadding(pad, pad, pad, pad);
+    int pad = ui.dp(12);
+    box.setPadding(pad, ui.dp(4), pad, 0);
 
     TextView hint = NposUi.caption(activity, activity.getString(R.string.blind_close_count_hint));
-    hint.setPadding(0, 0, 0, ui.dp(10));
+    hint.setPadding(0, 0, 0, ui.dp(6));
     box.addView(hint);
 
     final String[] valueHolder = {""};
-    TextView amount = moneyDisplay(activity, ui, "฿0");
+    TextView amount = moneyDisplay(activity, ui, "฿0", chrome);
     box.addView(amount);
-    box.addView(moneyPad(activity, valueHolder, amount));
-
-    ScrollView scroll = new ScrollView(activity);
-    scroll.addView(box);
+    box.addView(moneyPad(activity, valueHolder, amount, chrome));
 
     NposConfirmDialog.custom(
         activity,
         activity.getString(R.string.blind_close_count_title),
-        scroll,
+        box,
         activity.getString(R.string.blind_close_next),
         () -> {
           askNoteAndFloat(activity, saleSync, done, parseMoney(valueHolder[0]));
@@ -81,21 +79,22 @@ public final class BlindCloseFlow {
     // Seed leave float from this shift's opening (Wongnai: leave float for next shift).
     double leaveSeed = Math.min(opening, Math.max(0, counted));
 
+    int chrome = NposNumberPad.CHROME_FLOAT_NOTE_DP;
     LinearLayout box = new LinearLayout(activity);
     box.setOrientation(LinearLayout.VERTICAL);
-    int pad = ui.dp(16);
-    box.setPadding(pad, pad, pad, pad);
+    int pad = ui.dp(12);
+    box.setPadding(pad, ui.dp(4), pad, 0);
 
     TextView floatLabel = NposUi.caption(activity, activity.getString(R.string.blind_close_leave_float));
     box.addView(floatLabel);
 
     final String[] leaveHolder = {ShiftPrefs.moneyPlain(leaveSeed)};
-    TextView leaveAmount = moneyDisplay(activity, ui, formatBaht(leaveHolder[0]));
+    TextView leaveAmount = moneyDisplay(activity, ui, formatBaht(leaveHolder[0]), chrome);
     box.addView(leaveAmount);
-    box.addView(moneyPad(activity, leaveHolder, leaveAmount));
+    box.addView(moneyPad(activity, leaveHolder, leaveAmount, chrome));
 
     TextView noteLabel = NposUi.caption(activity, activity.getString(R.string.blind_close_note_optional));
-    noteLabel.setPadding(0, ui.dp(10), 0, ui.dp(4));
+    noteLabel.setPadding(0, ui.dp(8), 0, ui.dp(4));
     box.addView(noteLabel);
 
     EditText note = NposUi.field(activity);
@@ -104,6 +103,7 @@ public final class BlindCloseFlow {
     note.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
     box.addView(note);
 
+    // Nested scroll OK here — note field can grow; dialog still fitCardToWindow.
     ScrollView scroll = new ScrollView(activity);
     scroll.addView(box);
 
@@ -213,18 +213,19 @@ public final class BlindCloseFlow {
         null);
   }
 
-  private static TextView moneyDisplay(Activity activity, UiScale ui, CharSequence seed) {
+  private static TextView moneyDisplay(
+      Activity activity, UiScale ui, CharSequence seed, int chromeDp) {
     TextView amount = NposUi.title(activity, seed);
     amount.setGravity(Gravity.CENTER);
-    amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, ui.titleSp + 8f);
+    amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(20f, ui.titleSp + 6f));
     amount.setTypeface(NposFonts.semibold(activity));
-    amount.setMinHeight(ui.payPrimaryMinPx);
-    amount.setPadding(0, ui.dp(8), 0, ui.dp(12));
+    amount.setMinHeight(ui.padAmountMinPx(chromeDp));
+    amount.setPadding(0, ui.dp(4), 0, ui.dp(6));
     return amount;
   }
 
   private static LinearLayout moneyPad(
-      Activity activity, String[] valueHolder, TextView amountView) {
+      Activity activity, String[] valueHolder, TextView amountView, int chromeDp) {
     return NposNumberPad.attach(
         activity,
         new NposNumberPad.Listener() {
@@ -239,7 +240,9 @@ public final class BlindCloseFlow {
             NposNumberPad.applyKey(valueHolder, null, true, 9);
             amountView.setText(formatBaht(valueHolder[0]));
           }
-        });
+        },
+        true,
+        chromeDp);
   }
 
   private static String formatBaht(String raw) {
