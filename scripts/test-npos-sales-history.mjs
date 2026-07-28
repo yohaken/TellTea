@@ -11,8 +11,8 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 
 assert.match(read("src/lib/version.ts"), /APP_BUILD = 327/);
 assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 119/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+89/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.66"/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+90/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.67"/);
 
 assert.ok(existsSync(join(root, "docs/npos-sales-history-checklist.md")));
 const doc = read("docs/npos-sales-history-checklist.md");

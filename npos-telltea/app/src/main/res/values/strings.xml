@@ -318,7 +318,8 @@
     <string name="settings_hint">อัปเดตและปริ้นเตอร์สำหรับหน้าร้าน · ส่วนเทคนิคอยู่ด้านล่าง</string>
     <string name="settings_section_device">เครื่องนี้</string>
     <string name="settings_section_printer">อุปกรณ์ · ปริ้นเตอร์ / ลิ้นชัก</string>
-    <string name="printer_hint">ร้านชงชาหน้าบาร์ — ใบเสร็จ + ลิ้นชักพอ · ไม่ใช้ปริ้นเตอร์ครัว\nเชื่อม USB / Bluetooth / LAN · ลิ้นชักเสียบ RJ11 หลังปริ้นเตอร์หลัก</string>
+    <string name="printer_hint">ร้านชงชาหน้าบาร์ — ใบเสร็จ + ลิ้นชักพอ · ไม่ใช้ปริ้นเตอร์ครัว\nเครื่อง SUNMI: เลือก «SUNMI InnerPrinter» (ปริ้นในตัว เหมือน Wongnai)\nหรือเชื่อม USB / Bluetooth / LAN · ลิ้นชักเสียบ RJ11 หลังปริ้นเตอร์</string>
+    <string name="printer_none">ยังไม่พบปริ้นเตอร์ — บน SUNMI กดสแกนแล้วเลือก InnerPrinter · หรือเสียบ USB / จับคู่ BT</string>
     <string name="printer_paper_title">ขนาดกระดาษ</string>
     <string name="printer_paper_80">80 มม.</string>
     <string name="printer_paper_58">58 มม.</string>
@@ -333,7 +334,6 @@
     <string name="settings_section_customer">เทสจอลูกค้า</string>
 
     <string name="printer_idle">ยังไม่ได้สแกนปริ้นเตอร์</string>
-    <string name="printer_none">ยังไม่พบปริ้นเตอร์ — เสียบ USB หรือจับคู่ Bluetooth แล้วสแกน</string>
     <string name="printer_saved_offline">เคยใช้ได้: %1$s (ตอนนี้ไม่เห็นในรายการ)</string>
     <string name="printer_selected">เลือก %1$d/%2$d · %3$s</string>
     <string name="printer_scan_done">พบปริ้นเตอร์/ปลายทาง %1$d รายการ</string>

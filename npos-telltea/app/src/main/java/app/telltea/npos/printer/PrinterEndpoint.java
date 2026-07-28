@@ -22,7 +22,9 @@ public final class PrinterEndpoint {
   public enum Kind {
     USB,
     BLUETOOTH,
-    NETWORK
+    NETWORK,
+    /** Built-in SUNMI InnerPrinter via AIDL service. */
+    SUNMI
   }
 
   public final Kind kind;
@@ -71,6 +73,10 @@ public final class PrinterEndpoint {
 
   public static List<PrinterEndpoint> discover(Context context) {
     List<PrinterEndpoint> out = new ArrayList<>();
+    // Prefer built-in SUNMI path first (Wongnai-compatible) on Sunmi hardware.
+    if (SunmiInnerPrinter.isSunmiDevice()) {
+      out.add(SunmiInnerPrinter.endpoint());
+    }
     discoverUsb(context, out);
     discoverBluetooth(context, out);
     return out;
@@ -112,6 +118,10 @@ public final class PrinterEndpoint {
       if (bonded == null) return;
       for (BluetoothDevice device : bonded) {
         String name = safeName(device);
+        // Virtual InnerPrinter is driven via SUNMI AIDL — skip noisy BT duplicate.
+        if (name != null && name.trim().equalsIgnoreCase("InnerPrinter")) {
+          continue;
+        }
         String addr = device.getAddress();
         String id = "bt:" + addr;
         String label = firstNonEmpty(name, addr, "BT printer");

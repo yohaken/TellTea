@@ -53,6 +53,8 @@ public final class PrinterTransport {
                             result = sendUsb(app, endpoint, payload);
                         } else if (endpoint.kind == PrinterEndpoint.Kind.NETWORK) {
                             result = sendTcp(endpoint, payload);
+                        } else if (endpoint.kind == PrinterEndpoint.Kind.SUNMI) {
+                            result = SunmiInnerPrinter.sendRaw(app, payload);
                         } else {
                             result = sendBluetooth(app, endpoint, payload);
                         }

@@ -17,7 +17,7 @@ assert.match(read("src/lib/pos-devices.ts"), /subscribePosDevicesAdmin/);
 assert.match(read("src/components/NposDevicesPanel.tsx"), /subscribePosDevicesAdmin/);
 assert.match(read("src/components/NposDevicesPanel.tsx"), /เครื่อง nPos/);
 assert.match(read("src/components/PosManagePanel.tsx"), /NposDevicesPanel/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+89/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+90/);
 assert.match(
   read("npos-telltea/app/src/main/java/app/telltea/npos/diagnose/DeviceHeartbeat.java"),
   /nposDeviceHeartbeat/,

@@ -16,8 +16,8 @@ android {
         minSdk 23
         targetSdk 35
         // Bump BOTH when shipping an APK users should receive as an update.
-        versionCode 89
-        versionName "1.14.66"
+        versionCode 90
+        versionName "1.14.67"
         buildConfigField "String", "UPDATE_MANIFEST_URL", "\"https://telltea-pos.web.app/downloads/latest.json\""
         buildConfigField "String", "DEFAULT_APK_URL", "\"https://telltea-pos.web.app/downloads/nPos-telltea.apk\""
         buildConfigField "String", "INSTALL_PAGE_URL", "\"https://telltea-pos.web.app/install/\""
@@ -62,4 +62,6 @@ android {
 
 dependencies {
     implementation "com.google.zxing:core:3.5.3"
+    // Built-in SUNMI InnerPrinter (D2s etc.) — same service Wongnai uses.
+    implementation "com.sunmi:printerlibrary:1.0.24"
 }

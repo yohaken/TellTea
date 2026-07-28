@@ -80,6 +80,7 @@ public final class PrinterPrefs {
         if ("BLUETOOTH".equals(raw)) return PrinterEndpoint.Kind.BLUETOOTH;
         if ("USB".equals(raw)) return PrinterEndpoint.Kind.USB;
         if ("NETWORK".equals(raw)) return PrinterEndpoint.Kind.NETWORK;
+        if ("SUNMI".equals(raw)) return PrinterEndpoint.Kind.SUNMI;
         return null;
     }
 

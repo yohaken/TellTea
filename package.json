@@ -110,7 +110,8 @@
     "test:foodstory-menu-apply": "node scripts/test-foodstory-menu-apply.mjs",
     "start": "next start",
     "lint": "eslint",
-    "export": "next build"
+    "export": "next build",
+    "test:npos-sunmi-inner-printer": "node scripts/test-npos-sunmi-inner-printer.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.7",

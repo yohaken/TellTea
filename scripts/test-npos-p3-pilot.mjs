@@ -10,8 +10,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 assert.match(read("src/lib/version.ts"), /APP_BUILD = 327/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+89/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.66"/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+90/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.67"/);
 
 assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/printer/PrinterEndpoint.java"), /NETWORK/);
 assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/printer/PrinterTransport.java"), /sendTcp/);

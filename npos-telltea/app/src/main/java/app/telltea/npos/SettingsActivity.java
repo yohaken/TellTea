@@ -25,6 +25,7 @@ import app.telltea.npos.printer.EscPos;
 import app.telltea.npos.printer.PrinterEndpoint;
 import app.telltea.npos.printer.PrinterPrefs;
 import app.telltea.npos.printer.PrinterTransport;
+import app.telltea.npos.printer.SunmiInnerPrinter;
 import app.telltea.npos.ui.NposFonts;
 import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.update.ApkInstaller;
@@ -313,8 +314,24 @@ public class SettingsActivity extends Activity {
                 printerEndpoints.add(0, saved);
                 printerIndex = 0;
             }
+            if (!found && saved.kind == PrinterEndpoint.Kind.SUNMI) {
+                printerEndpoints.add(0, SunmiInnerPrinter.endpoint());
+                printerIndex = 0;
+            }
+        } else {
+            preferSunmiEndpoint();
         }
         renderPrinterStatus();
+    }
+
+    /** On SUNMI hardware, highlight built-in InnerPrinter first. */
+    private void preferSunmiEndpoint() {
+        for (int i = 0; i < printerEndpoints.size(); i++) {
+            if (printerEndpoints.get(i).kind == PrinterEndpoint.Kind.SUNMI) {
+                printerIndex = i;
+                return;
+            }
+        }
     }
 
     private void scanPrinters(boolean requestBt) {
@@ -336,6 +353,9 @@ public class SettingsActivity extends Activity {
         if (keepLan != null) printerEndpoints.add(keepLan);
         printerEndpoints.addAll(PrinterEndpoint.discover(this));
         if (printerIndex >= printerEndpoints.size()) printerIndex = 0;
+        if (PrinterPrefs.savedOrNull(this) == null) {
+            preferSunmiEndpoint();
+        }
         renderPrinterStatus();
         OpsLogger.info(
                 this,

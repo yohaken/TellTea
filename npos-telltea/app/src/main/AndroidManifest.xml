@@ -16,6 +16,14 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
+    <!-- Allow binding SUNMI built-in printer service on Android 11+. -->
+    <queries>
+        <package android:name="woyou.aidlservice.jiuiv5" />
+        <intent>
+            <action android:name="woyou.aidlservice.jiuiv5.IWoyouService" />
+        </intent>
+    </queries>
+
     <application
         android:name=".NposApp"
         android:allowBackup="true"
