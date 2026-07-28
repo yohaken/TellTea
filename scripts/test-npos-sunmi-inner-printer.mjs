@@ -1,5 +1,5 @@
 /**
- * Gate: SUNMI InnerPrinter AIDL path for built-in printer/drawer.
+ * Gate: SUNMI InnerPrinter — Thai via printText + auto-select (staff need not scan).
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -9,9 +9,13 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+90/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.67"/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+91/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.68"/);
 assert.match(read("npos-telltea/app/build.gradle"), /com\.sunmi:printerlibrary:1\.0\.24/);
+assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1\.14\.68"/);
+assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 91/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 120/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 353/);
 
 assert.match(
   read("npos-telltea/app/src/main/AndroidManifest.xml"),
@@ -23,8 +27,16 @@ const bridge = read(
 );
 assert.match(bridge, /InnerPrinterManager/);
 assert.match(bridge, /sendRAWData/);
+assert.match(bridge, /printText/);
+assert.match(bridge, /printPlain/);
+assert.match(bridge, /escPosTis620ToPlain/);
+assert.match(bridge, /autoSelectIfNeeded/);
 assert.match(bridge, /openDrawer/);
 assert.match(bridge, /isSunmiDevice/);
+assert.match(bridge, /decodeTis620Manual/);
+
+const app = read("npos-telltea/app/src/main/java/app/telltea/npos/NposApp.java");
+assert.match(app, /SunmiInnerPrinter\.autoSelectIfNeeded/);
 
 const endpoint = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/printer/PrinterEndpoint.java",
@@ -46,7 +58,10 @@ const settings = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/SettingsActivity.java",
 );
 assert.match(settings, /preferSunmiEndpoint/);
+assert.match(settings, /SunmiInnerPrinter\.autoSelectIfNeeded/);
 
-assert.match(read("docs/npos-sunmi-inner-printer-checklist.md"), /1\.14\.67/);
+assert.match(read("docs/npos-sunmi-inner-printer-checklist.md"), /1\.14\.68/);
+assert.match(read("docs/npos-sunmi-inner-printer-checklist.md"), /printText/);
+assert.match(read("docs/npos-staff-setup-checklist.md"), /พิมพ์ทดสอบ/);
 
 console.log("ok: npos-sunmi-inner-printer gate");

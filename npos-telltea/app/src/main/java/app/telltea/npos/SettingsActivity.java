@@ -299,6 +299,7 @@ public class SettingsActivity extends Activity {
     }
 
     private void restorePrinterSelection() {
+        SunmiInnerPrinter.autoSelectIfNeeded(this);
         scanPrinters(false);
         PrinterEndpoint saved = PrinterPrefs.savedOrNull(this);
         if (saved != null) {
@@ -353,7 +354,10 @@ public class SettingsActivity extends Activity {
         if (keepLan != null) printerEndpoints.add(keepLan);
         printerEndpoints.addAll(PrinterEndpoint.discover(this));
         if (printerIndex >= printerEndpoints.size()) printerIndex = 0;
+        SunmiInnerPrinter.autoSelectIfNeeded(this);
         if (PrinterPrefs.savedOrNull(this) == null) {
+            preferSunmiEndpoint();
+        } else if (PrinterPrefs.kind(this) == PrinterEndpoint.Kind.SUNMI) {
             preferSunmiEndpoint();
         }
         renderPrinterStatus();

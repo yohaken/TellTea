@@ -10,6 +10,7 @@ import java.lang.ref.WeakReference;
 
 import app.telltea.npos.diagnose.ForegroundHeartbeat;
 import app.telltea.npos.diagnose.StoreClaimPrefs;
+import app.telltea.npos.printer.SunmiInnerPrinter;
 import app.telltea.npos.sell.MenuWarmup;
 import app.telltea.npos.shift.ShiftPrefs;
 import app.telltea.npos.ui.NposConfirmDialog;
@@ -27,6 +28,12 @@ public final class NposApp extends Application {
     super.onCreate();
     StoreClaimPrefs.addKickListener(this::onKickedOrLostSeat);
     ShiftPrefs.addRemoteCloseListener(this::onRemoteSessionClosed);
+    // D2s etc.: pick built-in InnerPrinter without staff scanning.
+    try {
+      SunmiInnerPrinter.autoSelectIfNeeded(this);
+    } catch (RuntimeException ignored) {
+      /* never block boot */
+    }
     registerActivityLifecycleCallbacks(
         new ActivityLifecycleCallbacks() {
           @Override
