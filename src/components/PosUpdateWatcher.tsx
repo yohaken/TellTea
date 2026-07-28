@@ -10,12 +10,16 @@ import { isPosSafeToReload, POS_IDLE_BEFORE_RELOAD_MS, type PosSellBusyState } f
 const POLL_MS = 30 * 1000;
 const FORCE_POLL_MS = 12 * 1000;
 const RETRY_MS = 4 * 1000;
-const MIN_VISIBILITY_CHECK_MS = 30 * 1000;
+const MIN_VISIBILITY_CHECK_MS = 15 * 1000;
+const MIN_SYNC_PULSE_CHECK_MS = 15 * 1000;
 const MIN_RELOAD_GAP_MS = 45 * 1000;
 const RELOAD_BUILD_KEY = "telltea_pos_last_reload_build";
+const SYNC_PULSE_EVENT = "telltea-pos-sync-pulse";
 
 /**
  * POS auto-update — polls /pos-version.json.
+ * Also re-checks after device heartbeat success (sync pulse) so version
+ * discovery rides the same channel as online presence.
  * ช่วงพัฒนา (DEV_FORCE_IMMEDIATE_UPDATE): อัปเดตเองทันทีเมื่อตะกร้าว่าง
  * ระยะยาว: กันแท็บค้าง build เก่า + รอว่างก่อนรีโหลด
  */
@@ -58,6 +62,7 @@ export function PosUpdateWatcher({
   }, []);
 
   const checkVersion = useCallback(async () => {
+    lastVersionCheckAt.current = Date.now();
     const build = await fetchPosServerBuild();
     if (build != null && build > POS_CLIENT_BUILD) {
       setServerBuild(build);
@@ -79,11 +84,19 @@ export function PosUpdateWatcher({
       void checkVersion();
     }
 
+    function onSyncPulse() {
+      const now = Date.now();
+      if (now - lastVersionCheckAt.current < MIN_SYNC_PULSE_CHECK_MS) return;
+      lastVersionCheckAt.current = now;
+      void checkVersion();
+    }
+
     document.addEventListener("input", markInput, true);
     document.addEventListener("change", markInput, true);
     document.addEventListener("pointerdown", markInput, true);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
+    window.addEventListener(SYNC_PULSE_EVENT, onSyncPulse);
     lastVersionCheckAt.current = Date.now();
     void checkVersion();
 
@@ -93,6 +106,7 @@ export function PosUpdateWatcher({
       document.removeEventListener("pointerdown", markInput, true);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
+      window.removeEventListener(SYNC_PULSE_EVENT, onSyncPulse);
     };
   }, [checkVersion, enabled]);
 

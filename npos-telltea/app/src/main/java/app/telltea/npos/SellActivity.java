@@ -579,6 +579,7 @@ public class SellActivity extends Activity {
   @Override
   protected void onPause() {
     dutyHandler.removeCallbacks(dutyTick);
+    if (updatePrompt != null) updatePrompt.onPause();
     super.onPause();
   }
 

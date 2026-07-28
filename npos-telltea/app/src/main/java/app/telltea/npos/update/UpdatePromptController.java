@@ -40,7 +40,6 @@ public final class UpdatePromptController {
   private BeforeInstall beforeInstall;
   private UpdateManifest pending;
   private boolean busy;
-  private long lastCheckAt;
   private int localVersionCode = 1;
 
   public UpdatePromptController(Activity activity) {
@@ -84,21 +83,41 @@ public final class UpdatePromptController {
   }
 
   public void onResume() {
+    UpdateCheckCoordinator.bind(this);
     if (popup == null) return;
     if (ResumePrefs.isPopupDismissed(activity)) {
       hide();
       return;
     }
-    long now = System.currentTimeMillis();
-    if (now - lastCheckAt < UpdateConfig.AUTO_CHECK_MIN_INTERVAL_MS) return;
-    lastCheckAt = now;
-    startCheck();
+    UpdateCheckCoordinator.requestCheck(activity, "resume");
+  }
+
+  /** Drop live host so background activities do not steal sync-pulse UI. */
+  public void onPause() {
+    UpdateCheckCoordinator.unbind(this);
   }
 
   /** Claim / kick gate — poll sooner than sell auto-check. */
   public void forceCheck() {
-    lastCheckAt = 0L;
-    onResume();
+    UpdateCheckCoordinator.resetThrottle();
+    UpdateCheckCoordinator.bind(this);
+    if (popup == null) return;
+    if (ResumePrefs.isPopupDismissed(activity)) {
+      hide();
+      return;
+    }
+    UpdateCheckCoordinator.requestCheck(activity, "force");
+  }
+
+  /** Invoked by {@link UpdateCheckCoordinator} after throttle allows. */
+  void runAutoCheck(String reason) {
+    if (activity.isFinishing()) return;
+    if (popup == null) return;
+    if (ResumePrefs.isPopupDismissed(activity)) {
+      hide();
+      return;
+    }
+    startCheck();
   }
 
   /** Expose local vs remote for claim-screen version chip. */

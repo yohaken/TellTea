@@ -9,8 +9,8 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 300/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 95/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 301/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 96/);
 
 // P3 — search / duplicate / archive
 const admin = read("src/components/PosMenuAdmin.tsx");
@@ -80,8 +80,8 @@ assert.match(nposSell, /optionDelta\(/);
 assert.match(nposSell, /priceChannelToggle/);
 assert.match(nposSell, /togglePriceChannel/);
 
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode 65/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName "1.14.42"/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode 66/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName "1.14.43"/);
 
 // P5 — cut POS menu admin (+ web counter retired)
 const posMenuPage = read("src/app/pos/menu/page.tsx");

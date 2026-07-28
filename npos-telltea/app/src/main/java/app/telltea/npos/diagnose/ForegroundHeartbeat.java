@@ -4,6 +4,8 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
+import app.telltea.npos.update.UpdateCheckCoordinator;
+
 /**
  * Keeps nPos visible as online in BO while any activity is in the foreground.
  * MainActivity alone used to heartbeat only on hub resume — SellActivity left
@@ -11,6 +13,9 @@ import android.os.Looper;
  *
  * <p>Tick always {@code force=true} so kick/revoke from BO applies within one interval
  * (throttle must not fake success without {@code applyFromServer}).
+ *
+ * <p>On success, also pulses {@link UpdateCheckCoordinator} so the sell-screen
+ * BO countdown discovers APK updates without waiting for activity resume.
  */
 public final class ForegroundHeartbeat {
     /** Next BO/server seat check — keep short so kick is felt at the counter. */
@@ -64,6 +69,9 @@ public final class ForegroundHeartbeat {
                     lastError = "";
                     inFlight = false;
                     notifyListener();
+                    if (app != null) {
+                        UpdateCheckCoordinator.onServerSyncPulse(app);
+                    }
                 }
 
                 @Override

@@ -349,6 +349,12 @@ export function PosAppProvider({ children }: { children: ReactNode }) {
         .then(() => {
           setLastHeartbeatAt(Date.now());
           setHeartbeatError(null);
+          // Reuse sync pulse for version discovery (PosUpdateWatcher).
+          try {
+            window.dispatchEvent(new CustomEvent("telltea-pos-sync-pulse"));
+          } catch {
+            /* ignore */
+          }
         })
         .catch((err) => {
           setHeartbeatError((err as Error).message || "ส่งสัญญาณไม่สำเร็จ");

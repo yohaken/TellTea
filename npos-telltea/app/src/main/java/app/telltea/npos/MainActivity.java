@@ -623,6 +623,7 @@ public class MainActivity extends Activity {
     clockHandler.removeCallbacks(clockTick);
     clockHandler.removeCallbacks(dutyTick);
     clockHandler.removeCallbacks(claimPollTick);
+    if (updatePrompt != null) updatePrompt.onPause();
     super.onPause();
   }
 
