@@ -18,6 +18,7 @@ import java.util.Locale;
 
 import app.telltea.npos.R;
 import app.telltea.npos.sell.ImageLoader;
+import app.telltea.npos.ui.NposFonts;
 
 /**
  * Customer UI: idle = promo + welcome; ordering/paid-review = cart full-screen;
@@ -103,6 +104,8 @@ public final class CustomerDisplayPresentation extends Presentation {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.presentation_customer);
+        // Prompt on every TextView — smooth modern Thai (XML + dynamic lines).
+        NposFonts.applyTree(findViewById(R.id.customerRoot));
         customerSplit = findViewById(R.id.customerSplit);
         paneMedia = findViewById(R.id.paneMedia);
         paneReceipt = findViewById(R.id.paneReceipt);
@@ -339,7 +342,9 @@ public final class CustomerDisplayPresentation extends Presentation {
                                 Locale.getDefault(), "%d× %s", Math.max(1, line.qty), line.name));
                 name.setTextColor(0xFFF3F6F2);
                 name.setTextSize(TypedValue.COMPLEX_UNIT_SP, metrics.bodySp);
-                name.setTypeface(name.getTypeface(), android.graphics.Typeface.BOLD);
+                name.setTypeface(NposFonts.semibold(getContext()));
+                name.setLetterSpacing(-0.01f);
+                name.setIncludeFontPadding(false);
                 name.setMaxLines(Integer.MAX_VALUE);
                 name.setSingleLine(false);
                 name.setEllipsize(null);
@@ -353,7 +358,9 @@ public final class CustomerDisplayPresentation extends Presentation {
                                 line.unitPrice,
                                 line.lineTotal));
                 meta.setTextColor(0xFFA8B5AE);
-                meta.setTextSize(TypedValue.COMPLEX_UNIT_SP, metrics.bodySp * 0.9f);
+                meta.setTextSize(TypedValue.COMPLEX_UNIT_SP, metrics.bodySp * 0.92f);
+                meta.setTypeface(NposFonts.regular(getContext()));
+                meta.setIncludeFontPadding(false);
 
                 row.addView(name);
                 row.addView(meta);
@@ -364,13 +371,15 @@ public final class CustomerDisplayPresentation extends Presentation {
                         if (t.isEmpty()) continue;
                         TextView detail = new TextView(getContext());
                         detail.setText(t);
-                        detail.setTextColor(0xFF7A8A82);
-                        detail.setTextSize(TypedValue.COMPLEX_UNIT_SP, metrics.bodySp * 0.85f);
+                        detail.setTextColor(0xFF8A9A92);
+                        detail.setTextSize(TypedValue.COMPLEX_UNIT_SP, metrics.bodySp * 0.88f);
+                        detail.setTypeface(NposFonts.regular(getContext()));
+                        detail.setIncludeFontPadding(false);
                         detail.setMaxLines(Integer.MAX_VALUE);
                         detail.setSingleLine(false);
                         detail.setEllipsize(null);
                         detail.setHorizontallyScrolling(false);
-                        detail.setPadding(Math.round(8 * metrics.scale), 0, 0, 0);
+                        detail.setPadding(Math.round(10 * metrics.scale), 0, 0, 0);
                         row.addView(detail);
                     }
                 }
@@ -425,28 +434,32 @@ public final class CustomerDisplayPresentation extends Presentation {
 
     private void applyTextScale() {
         if (metrics == null) return;
-        setSp(mediaLabel, metrics.bodySp * 0.85f);
+        setSp(mediaLabel, metrics.bodySp * 0.9f);
         setSp(mediaTitle, metrics.titleSp);
         setSp(receiptBrand, metrics.brandSp);
-        setSp(receiptWelcome, metrics.bodySp * 1.1f);
-        setSp(receiptFooter, metrics.bodySp * 0.9f);
-        setSp(receiptOrderTitle, metrics.titleSp * 0.85f);
+        setSp(receiptWelcome, metrics.bodySp * 1.15f);
+        setSp(receiptFooter, metrics.bodySp * 0.95f);
+        setSp(receiptOrderTitle, metrics.titleSp * 0.9f);
         setSp(receiptSubtotal, metrics.bodySp);
         setSp(receiptDiscount, metrics.bodySp);
-        setSp(receiptTotal, metrics.totalSp * 0.85f);
+        setSp(receiptTotal, metrics.totalSp * 0.9f);
         setSp(payTitle, metrics.titleSp);
         setSp(payTotal, metrics.totalSp);
         setSp(payHint, metrics.bodySp);
-        setSp(payCashDetail, metrics.titleSp * 0.9f);
+        setSp(payCashDetail, metrics.titleSp * 0.95f);
         setSp(successCheck, metrics.totalSp * 1.8f);
-        setSp(successTitle, metrics.titleSp * 1.15f);
+        setSp(successTitle, metrics.titleSp * 1.2f);
         setSp(successAmount, metrics.totalSp);
         setSp(successChange, metrics.titleSp);
-        setSp(successMessage, metrics.bodySp * 1.1f);
+        setSp(successMessage, metrics.bodySp * 1.15f);
     }
 
     private static void setSp(TextView tv, float sp) {
         if (tv == null) return;
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
+        tv.setIncludeFontPadding(false);
+        if (sp >= 18f && tv.getLetterSpacing() == 0f) {
+            tv.setLetterSpacing(-0.01f);
+        }
     }
 }

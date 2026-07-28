@@ -8,6 +8,9 @@ import android.view.Display;
  *
  * <p>Policy: measure secondary display → pick orientation → pane split → type/QR scale from
  * shortest edge (not primary tablet density).
+ *
+ * <p>Tuned for Sunmi D2s-class <b>10.1" customer</b> panels at 1024×600 (short edge 600). The old
+ * 720 reference made body type ~12.5sp — too small at counter distance.
  */
 public final class CustomerDisplayMetrics {
     public final int widthPx;
@@ -16,7 +19,7 @@ public final class CustomerDisplayMetrics {
     /** 0.65 media / 0.35 receipt in landscape; portrait stacks media 0.58 / receipt 0.42. */
     public final float mediaWeight;
     public final float receiptWeight;
-    /** sp multiplier relative to a 720-short-edge reference. */
+    /** sp multiplier relative to a 600-short-edge reference (D2s 10.1"). */
     public final float scale;
     public final int qrEdgePx;
     public final int padDp;
@@ -64,8 +67,9 @@ public final class CustomerDisplayMetrics {
         boolean landscape = w >= h;
         int shortEdge = Math.min(w, h);
         int longEdge = Math.max(w, h);
-        // Reference: 720px short edge (common 1080×1920 portrait / 1280×800 landscape short).
-        float scale = clamp(shortEdge / 720f, 0.72f, 1.55f);
+        // Reference: 600px short edge = Sunmi D2s 10.1" HD customer (1024×600).
+        // Floor 0.95 so tiny emulators stay readable; cap 1.45 for 15.6" secondary.
+        float scale = clamp(shortEdge / 600f, 0.95f, 1.45f);
 
         float mediaWeight;
         float receiptWeight;
@@ -89,9 +93,10 @@ public final class CustomerDisplayMetrics {
         int mediaLong = landscape ? Math.round(w * mediaWeight) : w;
         int qrCap = Math.min(mediaShort, mediaLong);
         int qrEdge = Math.round(qrCap * (landscape ? 0.62f : 0.55f));
-        qrEdge = clampInt(qrEdge, 160, 520);
+        qrEdge = clampInt(qrEdge, 180, 560);
 
-        int padDp = Math.round(clamp(12f * scale, 10f, 22f));
+        int padDp = Math.round(clamp(14f * scale, 12f, 24f));
+        // Base sizes for arm's-length counter reading on 10.1" (scale=1 → body ~19sp).
         return new CustomerDisplayMetrics(
                 w,
                 h,
@@ -101,10 +106,10 @@ public final class CustomerDisplayMetrics {
                 scale,
                 qrEdge,
                 padDp,
-                20f * scale,
-                15f * scale,
-                34f * scale,
-                26f * scale);
+                24f * scale,
+                19f * scale,
+                40f * scale,
+                30f * scale);
     }
 
     public String debugLabel() {
