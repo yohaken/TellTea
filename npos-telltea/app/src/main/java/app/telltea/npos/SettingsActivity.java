@@ -431,6 +431,7 @@ public class SettingsActivity extends Activity {
                                     printerBusy = false;
                                     setPrinterButtonsEnabled(true);
                                     if (result.ok) {
+                                        // PrinterTransport also saveSuccess — keep explicit for clarity.
                                         PrinterPrefs.saveSuccess(this, ep);
                                         printerStatus.setText(
                                                 getString(R.string.printer_ok, ep.label));
@@ -441,7 +442,8 @@ public class SettingsActivity extends Activity {
                                                 ep.displayLine() + " · " + result.message,
                                                 true);
                                     } else {
-                                        PrinterPrefs.markNotReady(this);
+                                        // Do not clear a previously-good endpoint: paper/drawer may still
+                                        // work (timeout race) and sale print uses savedOrNull without ready.
                                         printerStatus.setText(R.string.printer_fail);
                                         OpsLogger.error(
                                                 this,

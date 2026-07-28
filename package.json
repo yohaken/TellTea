@@ -116,7 +116,8 @@
     "start": "next start",
     "lint": "eslint",
     "export": "next build",
-    "test:npos-sunmi-inner-printer": "node scripts/test-npos-sunmi-inner-printer.mjs"
+    "test:npos-sunmi-inner-printer": "node scripts/test-npos-sunmi-inner-printer.mjs",
+    "test:npos-equip-status": "node scripts/test-npos-equip-status.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.7",
