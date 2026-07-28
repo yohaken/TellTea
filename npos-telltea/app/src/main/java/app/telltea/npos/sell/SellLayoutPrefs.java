@@ -64,8 +64,8 @@ public final class SellLayoutPrefs {
 
   /** Drag category↔menu: change cat, keep cart fixed. */
   public static Weights adjustCat(float cat, float cart) {
-    float c = clamp(cat, CAT_MIN, SIDE_MAX);
-    float k = clamp(cart, CART_MIN, SIDE_MAX);
+    float c = clampF(cat, CAT_MIN, SIDE_MAX);
+    float k = clampF(cart, CART_MIN, SIDE_MAX);
     float menu = 100f - c - k;
     if (menu < MENU_MIN) {
       float overflow = MENU_MIN - menu;
@@ -77,8 +77,8 @@ public final class SellLayoutPrefs {
 
   /** Drag menu↔cart: change cart, keep cat fixed. */
   public static Weights adjustCart(float cat, float cart) {
-    float c = clamp(cat, CAT_MIN, SIDE_MAX);
-    float k = clamp(cart, CART_MIN, SIDE_MAX);
+    float c = clampF(cat, CAT_MIN, SIDE_MAX);
+    float k = clampF(cart, CART_MIN, SIDE_MAX);
     float menu = 100f - c - k;
     if (menu < MENU_MIN) {
       float overflow = MENU_MIN - menu;
@@ -89,16 +89,16 @@ public final class SellLayoutPrefs {
   }
 
   public static Weights clamp(float cat, float menu, float cart) {
-    float c = clamp(cat, CAT_MIN, SIDE_MAX);
-    float k = clamp(cart, CART_MIN, SIDE_MAX);
-    float m = clamp(menu, MENU_MIN, 100f - CAT_MIN - CART_MIN);
+    float c = clampF(cat, CAT_MIN, SIDE_MAX);
+    float k = clampF(cart, CART_MIN, SIDE_MAX);
+    float m = clampF(menu, MENU_MIN, 100f - CAT_MIN - CART_MIN);
     float sum = c + m + k;
     if (sum <= 0.01f) {
       return new Weights(CAT_DEFAULT, MENU_DEFAULT, CART_DEFAULT);
     }
     // Renormalize to 100 while re-applying mins/maxes once.
-    c = clamp(c * 100f / sum, CAT_MIN, SIDE_MAX);
-    k = clamp(k * 100f / sum, CART_MIN, SIDE_MAX);
+    c = clampF(c * 100f / sum, CAT_MIN, SIDE_MAX);
+    k = clampF(k * 100f / sum, CART_MIN, SIDE_MAX);
     m = Math.max(MENU_MIN, 100f - c - k);
     if (c + k + m > 100.01f) {
       m = Math.max(MENU_MIN, 100f - c - k);
@@ -106,7 +106,7 @@ public final class SellLayoutPrefs {
     return new Weights(c, m, k);
   }
 
-  private static float clamp(float v, float lo, float hi) {
+  private static float clampF(float v, float lo, float hi) {
     return Math.max(lo, Math.min(hi, v));
   }
 }
