@@ -14,8 +14,8 @@
 
 | # | เช็ค | ☐ |
 |---|------|---|
-| 0.1 | Merge PR #142 → deploy ขึ้น `telltea-shop.web.app` | ☐ |
-| 0.2 | Hard refresh `/vat-sales/` เห็น UI ใหม่ (ไม่ใช่ตารางรายวัน) | ☐ |
+| 0.1 | Merge PR #142 → deploy ขึ้น `telltea-shop.web.app` | ☐ (กำลังทำ) |
+| 0.2 | Hard refresh `/vat-sales/` เห็น UI ใหม่ (ไม่ใช่ตารางรายวัน) · build ≥ 362 | ☐ |
 | 0.3 | พนักงานเปิด `/vat-sales/` ไม่ได้ / เด้งออก | ☐ |
 | 0.4 | ทางเข้าจากบช.เจ้าของปุ่ม **VAT เดือน** ใช้ได้ | ☐ |
 
