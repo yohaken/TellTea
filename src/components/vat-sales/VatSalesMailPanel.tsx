@@ -17,6 +17,7 @@ import {
   listPlatformEmailReports,
   loadVatMailOAuthConfig,
   parseStatusLabel,
+  pullAndFillDailyFromMail,
   reparsePendingPlatformEmails,
   reparsePlatformEmailReport,
   saveVatMailOAuthConfig,
@@ -172,6 +173,40 @@ export function VatSalesMailPanel({
       setMsg(
         `ซิงก์ ${label} แล้ว · สแกน ${res.scanned} · เพิ่ม ${res.added} · ข้ามซ้ำ ${res.skipped}`,
       );
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** ดึงเมล → parse → ลงร่างตารางทีละแพลตฟอร์ม */
+  const pullAndFill = async () => {
+    setBusy("mail-auto");
+    setError("");
+    setMsg("กำลังดึงเมล…");
+    try {
+      const res = await pullAndFillDailyFromMail({
+        actor,
+        lookbackDays: 31,
+        syncPrimary: Boolean(status?.connected),
+        syncLineman: Boolean(statusLm?.connected),
+      });
+      const syncParts = res.sync.map((s) => {
+        const name = s.mailbox === "lineman" ? "LM" : "Gmail";
+        if (!s.ok) return `${name}✗`;
+        return `${name}+${s.added ?? 0}`;
+      });
+      const short: Record<string, string> = { shopee: "Sp", grab: "G", lineman: "LM" };
+      const applyParts = res.apply.map(
+        (a) => `${short[a.channel] || a.channel}:${a.applied}`,
+      );
+      const appliedTotal = res.apply.reduce((n, a) => n + a.applied, 0);
+      setMsg(
+        `ลงตารางแล้ว ${appliedTotal} วัน · ซิงก์ ${syncParts.join(" · ") || "—"} · parse ${res.parse.ok}/${res.parse.fail} · ${applyParts.join(" · ")}`,
+      );
+      setStatusFilter("confirmed");
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -492,10 +527,19 @@ export function VatSalesMailPanel({
 
 
         <div className="vat-sales-toolbar vat-api-actions">
+          <button
+            type="button"
+            className="primary-btn"
+            disabled={busy !== null}
+            onClick={() => void pullAndFill()}
+            title="ซิงก์ → parse → ลงร่างตารางทีละ Shopee / Grab / LINE MAN"
+          >
+            {busy === "mail-auto" ? "กำลังลงตาราง…" : "ดึงลงตาราง"}
+          </button>
           <button type="button" className="ghost-btn" disabled={busy !== null || loading} onClick={() => void refresh()}>
             รีเฟรช
           </button>
-          <button type="button" className="primary-btn" disabled={busy !== null} onClick={() => void runParsePending()}>
+          <button type="button" className="ghost-btn" disabled={busy !== null} onClick={() => void runParsePending()}>
             {busy === "mail-parse" ? "…" : "Parse คิว"}
           </button>
           {health ? (
@@ -505,6 +549,9 @@ export function VatSalesMailPanel({
             </span>
           ) : null}
         </div>
+        <p className="muted vat-api-hint">
+          ดึงลงตาราง = ซิงก์เมล → parse → ใส่ยอดเข้าตารางทีละแพลตฟอร์ม (วันยังเป็นร่าง · ไม่ทับวันที่ยืนยันแล้ว)
+        </p>
       </section>
 
       <div className="vat-sales-toolbar" style={{ marginBottom: "0.5rem" }}>

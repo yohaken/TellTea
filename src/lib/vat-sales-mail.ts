@@ -18,6 +18,7 @@ import { httpsCallable } from "firebase/functions";
 import { getDb, getFirebaseFunctions } from "./firebase";
 import {
   DELIVERY_CHANNEL_LABELS,
+  DELIVERY_CHANNELS,
   DEFAULT_MAIL_RULES,
   getDailySales,
   mapMailRules,
@@ -526,6 +527,258 @@ export async function confirmEmailSalesToDaily(
   });
 
   return { dateKey };
+}
+
+export type AutoApplySkipReason =
+  | "not_daily"
+  | "no_parsed"
+  | "day_confirmed"
+  | "manual_exists"
+  | "email_exists"
+  | "already"
+  | "date_conflict"
+  | "error";
+
+export type AutoApplyChannelResult = {
+  channel: DeliveryChannel;
+  candidates: number;
+  applied: number;
+  skipped: number;
+  reasons: Partial<Record<AutoApplySkipReason, number>>;
+  appliedDates: string[];
+};
+
+function bumpReason(
+  reasons: Partial<Record<AutoApplySkipReason, number>>,
+  reason: AutoApplySkipReason,
+) {
+  reasons[reason] = (reasons[reason] || 0) + 1;
+}
+
+/**
+ * ลงยอดจากเมล parse แล้วเข้าตารางรายวัน (วันยังเป็น draft)
+ * ทีละแพลตฟอร์ม · ข้ามสัปดาห์/เดือน · ไม่ทับวันยืนยัน / ยอดมือ / เมลอื่น
+ */
+export async function autoApplyMailToDaily(opts: {
+  channel: DeliveryChannel;
+  actor: string;
+  max?: number;
+}): Promise<AutoApplyChannelResult> {
+  const channel = opts.channel;
+  const max = Math.min(120, Math.max(opts.max || 80, 1));
+  const reasons: Partial<Record<AutoApplySkipReason, number>> = {};
+  const appliedDates: string[] = [];
+  let applied = 0;
+  let skipped = 0;
+
+  const rows = await listPlatformEmailReports({
+    channel,
+    parseStatus: "ok",
+    max: 200,
+  });
+  const candidates = rows.filter((r) => {
+    if (r.channel !== channel) return false;
+    if (!r.parsed) {
+      bumpReason(reasons, "no_parsed");
+      skipped += 1;
+      return false;
+    }
+    const kind = r.parsed.reportKind || r.reportKind;
+    if (kind !== "daily") {
+      bumpReason(reasons, "not_daily");
+      skipped += 1;
+      return false;
+    }
+    return true;
+  });
+
+  // จัดกลุ่มตามวัน — ถ้าวันเดียวหลายฉบับยอดไม่ตรง = ข้ามทั้งวัน
+  const byDate = new Map<string, PlatformEmailReport[]>();
+  for (const r of candidates) {
+    const dateKey = (r.parsed?.reportDate || r.reportDateGuess || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+      bumpReason(reasons, "no_parsed");
+      skipped += 1;
+      continue;
+    }
+    const list = byDate.get(dateKey) || [];
+    list.push(r);
+    byDate.set(dateKey, list);
+  }
+
+  const sortedDates = [...byDate.keys()].sort();
+  for (const dateKey of sortedDates) {
+    if (applied >= max) break;
+    const group = byDate.get(dateKey) || [];
+    if (group.length === 0) continue;
+
+    const amounts = group.map((r) => r.parsed!.grossInclusive);
+    const base = amounts[0];
+    const conflict = amounts.some((g) => Math.abs(g - base) > 0.009);
+    if (conflict) {
+      bumpReason(reasons, "date_conflict");
+      skipped += group.length;
+      continue;
+    }
+
+    // เลือกฉบับล่าสุด
+    const report = [...group].sort((a, b) => b.receivedAt - a.receivedAt)[0];
+    const parsed = report.parsed!;
+    try {
+      const day = await getDailySales(dateKey);
+      if (day.status === "confirmed") {
+        bumpReason(reasons, "day_confirmed");
+        skipped += 1;
+        continue;
+      }
+
+      const prev = day.delivery[channel];
+      const src = day.sources[channel];
+      const ref = day.emailRefs[channel] || "";
+
+      if (ref === report.id) {
+        bumpReason(reasons, "already");
+        skipped += 1;
+        // เมลยังเป็น ok — ทำเครื่องหมาย confirmed ให้ตรงตาราง
+        if (report.parseStatus === "ok") {
+          await updateDoc(doc(getDb(), PLATFORM_EMAIL_REPORTS_COL, report.id), {
+            parseStatus: "confirmed",
+            parseError: "",
+            confirmedAt: Date.now(),
+            confirmedDateKey: dateKey,
+          });
+        }
+        continue;
+      }
+
+      if (ref && ref !== report.id) {
+        bumpReason(reasons, "email_exists");
+        skipped += 1;
+        continue;
+      }
+
+      const hasAmount =
+        prev.grossInclusive > 0.009 ||
+        (prev.fee || 0) > 0.009 ||
+        (prev.netTransfer || 0) > 0.009;
+
+      // มียอดอยู่แล้วแต่ไม่ได้มาจากเมล → ข้าม (กันทับมือ / POS)
+      if (hasAmount && src !== "email") {
+        bumpReason(reasons, "manual_exists");
+        skipped += 1;
+        continue;
+      }
+
+      if (
+        hasAmount &&
+        src === "email" &&
+        Math.abs(prev.grossInclusive - parsed.grossInclusive) > 0.009
+      ) {
+        bumpReason(reasons, "email_exists");
+        skipped += 1;
+        continue;
+      }
+
+      // ยอดเท่ากันอยู่แล้ว (มือ/ว่าง) — ลง ref ได้
+      await confirmEmailSalesToDaily({
+        reportId: report.id,
+        channel,
+        reportDate: dateKey,
+        grossInclusive: parsed.grossInclusive,
+        fee: parsed.fee,
+        netTransfer: parsed.netTransfer,
+        overwrite: !hasAmount || Math.abs(prev.grossInclusive - parsed.grossInclusive) <= 0.009,
+        actor: opts.actor,
+      });
+      applied += 1;
+      appliedDates.push(dateKey);
+    } catch {
+      bumpReason(reasons, "error");
+      skipped += 1;
+    }
+  }
+
+  return {
+    channel,
+    candidates: candidates.length,
+    applied,
+    skipped,
+    reasons,
+    appliedDates,
+  };
+}
+
+export type PullAndFillMailResult = {
+  sync: Array<{ mailbox: VatMailMailbox; ok: boolean; added?: number; scanned?: number; error?: string }>;
+  parse: { ok: number; fail: number; skipped: number };
+  apply: AutoApplyChannelResult[];
+};
+
+/**
+ * ดึงเมล → parse → ลงตารางทีละแพลตฟอร์ม (Shopee → Grab → LINE MAN)
+ * วันในตารางยังเป็น draft · เจ้าของยืนยันวันทีหลัง
+ */
+export async function pullAndFillDailyFromMail(opts: {
+  actor: string;
+  lookbackDays?: number;
+  syncPrimary?: boolean;
+  syncLineman?: boolean;
+}): Promise<PullAndFillMailResult> {
+  const lookbackDays = opts.lookbackDays ?? 31;
+  const sync: PullAndFillMailResult["sync"] = [];
+
+  if (opts.syncPrimary !== false) {
+    try {
+      const res = await syncVatMail(lookbackDays, "primary");
+      sync.push({
+        mailbox: "primary",
+        ok: true,
+        added: res.added,
+        scanned: res.scanned,
+      });
+    } catch (e) {
+      sync.push({
+        mailbox: "primary",
+        ok: false,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
+  if (opts.syncLineman !== false) {
+    try {
+      const st = await fetchVatMailStatus("lineman");
+      if (st.connected) {
+        const res = await syncVatMail(lookbackDays, "lineman");
+        sync.push({
+          mailbox: "lineman",
+          ok: true,
+          added: res.added,
+          scanned: res.scanned,
+        });
+      }
+    } catch (e) {
+      sync.push({
+        mailbox: "lineman",
+        ok: false,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
+  const parse = await reparsePendingPlatformEmails(80);
+  const apply: AutoApplyChannelResult[] = [];
+  for (const channel of DELIVERY_CHANNELS) {
+    apply.push(
+      await autoApplyMailToDaily({
+        channel,
+        actor: opts.actor,
+        max: 80,
+      }),
+    );
+  }
+
+  return { sync, parse, apply };
 }
 
 export type { ParsedPlatformReport };
