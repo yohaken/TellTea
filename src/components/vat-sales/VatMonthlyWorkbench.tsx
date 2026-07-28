@@ -172,205 +172,431 @@ function TapRate({
   );
 }
 
-function ParentSegRows({
-  kind,
-  label,
-  draft,
-  computed,
-  locked,
+function ExpandBtn({
   open,
   onToggle,
-  onChange,
+  label,
 }: {
-  kind: "delivery" | "storefront";
-  label: string;
-  draft: DraftSeg;
-  computed: VatSegmentState;
-  locked: boolean;
   open: boolean;
   onToggle: () => void;
-  onChange: (d: DraftSeg) => void;
+  label: string;
 }) {
-  const usesParts = computed.partsSum > 0;
-  const patchRates = (rates: VatLogicRates) => onChange({ ...draft, rates });
+  return (
+    <button
+      type="button"
+      className="vat-expand-btn"
+      aria-expanded={open}
+      aria-label={`${open ? "ยุบ" : "ขยาย"} ${label}`}
+      onClick={onToggle}
+    >
+      {open ? "−" : "+"}
+    </button>
+  );
+}
+
+/** ตาราง 1 — ภาษีขาย (กลุ่มรายได้) */
+function OutputVatTable({
+  deliveryDraft,
+  storefrontDraft,
+  delivery,
+  storefront,
+  locked,
+  openDelivery,
+  openStorefront,
+  onToggleDelivery,
+  onToggleStorefront,
+  onDeliveryChange,
+  onStorefrontChange,
+}: {
+  deliveryDraft: DraftSeg;
+  storefrontDraft: DraftSeg;
+  delivery: VatSegmentState;
+  storefront: VatSegmentState;
+  locked: boolean;
+  openDelivery: boolean;
+  openStorefront: boolean;
+  onToggleDelivery: () => void;
+  onToggleStorefront: () => void;
+  onDeliveryChange: (d: DraftSeg) => void;
+  onStorefrontChange: (d: DraftSeg) => void;
+}) {
+  const totalGross = delivery.grossSales + storefront.grossSales;
+  const totalBase = delivery.vatBase + storefront.vatBase;
+  const totalOut = delivery.outputVat + storefront.outputVat;
+
+  const renderParent = (
+    kind: "delivery" | "storefront",
+    label: string,
+    draft: DraftSeg,
+    computed: VatSegmentState,
+    open: boolean,
+    onToggle: () => void,
+    onChange: (d: DraftSeg) => void,
+  ) => {
+    const usesParts = computed.partsSum > 0;
+    return (
+      <>
+        <tr className="vat-row-parent">
+          <td className="col-seg">
+            <ExpandBtn open={open} onToggle={onToggle} label={label} />
+            <span>{label}</span>
+          </td>
+          <td className="col-num col-input">
+            {usesParts ? (
+              <span className="vat-est-val" title="รวมจากรายการย่อย">
+                {fmt(computed.grossSales)}
+              </span>
+            ) : (
+              <MoneyCell
+                value={draft.grossManual}
+                locked={locked}
+                ariaLabel={`${label} ยอดขายรวม VAT`}
+                onChange={(v) => onChange({ ...draft, grossManual: v })}
+              />
+            )}
+          </td>
+          <td className="col-num">{fmt(computed.vatBase)}</td>
+          <td className="col-rate">
+            <span className="vat-rate-pair">
+              <TapRate
+                value={draft.rates.outputNum}
+                locked={locked}
+                ariaLabel={`${label} เศษภาษีขาย`}
+                onCommit={(n) =>
+                  onChange({
+                    ...draft,
+                    rates: { ...draft.rates, outputNum: Math.max(0, n) },
+                  })
+                }
+              />
+              <span>/</span>
+              <TapRate
+                value={draft.rates.outputDen}
+                locked={locked}
+                ariaLabel={`${label} ส่วนภาษีขาย`}
+                onCommit={(n) =>
+                  onChange({
+                    ...draft,
+                    rates: { ...draft.rates, outputDen: Math.max(1, n) },
+                  })
+                }
+              />
+            </span>
+          </td>
+          <td className="col-num col-net">{fmt(computed.outputVat)}</td>
+        </tr>
+        {kind === "delivery" && open
+          ? (
+              [
+                ["shopee", "ShopeeFood"],
+                ["grab", "Grab"],
+                ["lineman", "LINE MAN"],
+              ] as const
+            ).map(([key, name]) => (
+              <tr key={key} className="vat-row-child">
+                <td className="col-seg col-child">{name}</td>
+                <td className="col-num col-input">
+                  <MoneyCell
+                    value={draft.channels[key]}
+                    locked={locked}
+                    ariaLabel={`${name} ยอดขาย`}
+                    onChange={(v) =>
+                      onChange({
+                        ...draft,
+                        channels: { ...draft.channels, [key]: v },
+                      })
+                    }
+                  />
+                </td>
+                <td className="col-num" colSpan={3}>
+                  <span className="muted vat-child-hint">ย่อยรวมเข้าเดลิเวอรี่</span>
+                </td>
+              </tr>
+            ))
+          : null}
+        {kind === "storefront" && open
+          ? (
+              [
+                ["transfer", "เงินโอน"],
+                ["cash", "เงินสด"],
+              ] as const
+            ).map(([key, name]) => (
+              <tr key={key} className="vat-row-child">
+                <td className="col-seg col-child">{name}</td>
+                <td className="col-num col-input">
+                  <MoneyCell
+                    value={draft.tenders[key]}
+                    locked={locked}
+                    ariaLabel={`${name} ยอดขาย`}
+                    onChange={(v) =>
+                      onChange({
+                        ...draft,
+                        tenders: { ...draft.tenders, [key]: v },
+                      })
+                    }
+                  />
+                </td>
+                <td className="col-num" colSpan={3}>
+                  <span className="muted vat-child-hint">ย่อยรวมเข้าหน้าร้าน</span>
+                </td>
+              </tr>
+            ))
+          : null}
+      </>
+    );
+  };
 
   return (
-    <>
-      <tr className="vat-row-parent">
-        <td className="col-seg">
-          <button
-            type="button"
-            className="vat-expand-btn"
-            aria-expanded={open}
-            onClick={onToggle}
-          >
-            {open ? "−" : "+"}
-          </button>
-          <span>{label}</span>
-        </td>
-        <td className="col-num col-input">
-          {usesParts ? (
-            <span className="vat-est-val" title="รวมจากรายการย่อย">
-              {fmt(computed.grossSales)}
-            </span>
-          ) : (
-            <MoneyCell
-              value={draft.grossManual}
-              locked={locked}
-              ariaLabel={`${label} ยอดขายรวม VAT`}
-              onChange={(v) => onChange({ ...draft, grossManual: v })}
-            />
-          )}
-        </td>
-        <td className="col-num">{fmt(computed.vatBase)}</td>
-        <td className="col-num">{fmt(computed.outputVat)}</td>
-        <td className="col-rate">
-          <span className="vat-rate-pair">
-            <TapRate
-              value={draft.rates.outputNum}
-              locked={locked}
-              ariaLabel={`${label} เศษภาษีขาย`}
-              onCommit={(n) =>
-                patchRates({ ...draft.rates, outputNum: Math.max(0, n) })
-              }
-            />
-            <span>/</span>
-            <TapRate
-              value={draft.rates.outputDen}
-              locked={locked}
-              ariaLabel={`${label} ส่วนภาษีขาย`}
-              onCommit={(n) =>
-                patchRates({ ...draft.rates, outputDen: Math.max(1, n) })
-              }
-            />
-          </span>
-        </td>
-        <td className="col-pct">
-          <TapRate
-            value={roundPct(draft.rates.gpOfOutput)}
-            locked={locked}
-            ariaLabel={`${label} GP %`}
-            suffix="%"
-            step="0.01"
-            onCommit={(pct) =>
-              patchRates({
+    <section className="vat-table-block">
+      <h2 className="vat-table-title">1) ภาษีขาย — กลุ่มรายได้</h2>
+      <div className="sheet-wrap vat-month-slim-wrap">
+        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim">
+          <thead>
+            <tr>
+              <th className="col-seg">ส่วน</th>
+              <th className="col-num">ยอดขายรวม VAT</th>
+              <th className="col-num">ฐานภาษี</th>
+              <th className="col-rate">เรทขาย</th>
+              <th className="col-num">ภาษีขาย</th>
+            </tr>
+          </thead>
+          <tbody>
+            {renderParent(
+              "delivery",
+              "เดลิเวอรี่",
+              deliveryDraft,
+              delivery,
+              openDelivery,
+              onToggleDelivery,
+              onDeliveryChange,
+            )}
+            {renderParent(
+              "storefront",
+              "หน้าร้าน",
+              storefrontDraft,
+              storefront,
+              openStorefront,
+              onToggleStorefront,
+              onStorefrontChange,
+            )}
+            <tr className="vat-sales-totals-row">
+              <td className="col-seg">รวมภาษีขาย</td>
+              <td className="col-num">{fmt(totalGross)}</td>
+              <td className="col-num">{fmt(totalBase)}</td>
+              <td className="col-rate">—</td>
+              <td className="col-num col-net">{fmt(totalOut)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+/** ตาราง 2 — ภาษีซื้อ (กลุ่มหักได้) โครงแถวคล้ายตาราง 1 */
+function InputVatTable({
+  deliveryDraft,
+  storefrontDraft,
+  delivery,
+  storefront,
+  locked,
+  onDeliveryChange,
+  onStorefrontChange,
+}: {
+  deliveryDraft: DraftSeg;
+  storefrontDraft: DraftSeg;
+  delivery: VatSegmentState;
+  storefront: VatSegmentState;
+  locked: boolean;
+  onDeliveryChange: (d: DraftSeg) => void;
+  onStorefrontChange: (d: DraftSeg) => void;
+}) {
+  const renderRow = (
+    label: string,
+    draft: DraftSeg,
+    computed: VatSegmentState,
+    onChange: (d: DraftSeg) => void,
+  ) => (
+    <tr className="vat-row-parent">
+      <td className="col-seg">{label}</td>
+      <td className="col-pct">
+        <TapRate
+          value={roundPct(draft.rates.gpOfOutput)}
+          locked={locked}
+          ariaLabel={`${label} GP %`}
+          suffix="%"
+          step="0.01"
+          onCommit={(pct) =>
+            onChange({
+              ...draft,
+              rates: {
                 ...draft.rates,
                 gpOfOutput: Math.min(100, Math.max(0, pct)) / 100,
-              })
+              },
+            })
+          }
+        />
+        <label className="vat-gp-toggle">
+          <input
+            type="checkbox"
+            disabled={locked}
+            checked={draft.useGpEstimate}
+            onChange={(e) =>
+              onChange({ ...draft, useGpEstimate: e.target.checked })
             }
           />
-          <label className="vat-gp-toggle">
-            <input
-              type="checkbox"
-              disabled={locked}
-              checked={draft.useGpEstimate}
-              onChange={(e) =>
-                onChange({ ...draft, useGpEstimate: e.target.checked })
-              }
-            />
-            ประมาณ
-          </label>
-        </td>
-        <td className="col-pct">
-          <TapRate
-            value={roundPct(draft.rates.inputClaimFactor)}
+          ประมาณ
+        </label>
+      </td>
+      <td className="col-num col-input">
+        {draft.useGpEstimate ? (
+          <span className="vat-est-val" title="หลัง play-safe">
+            {fmt(computed.gpVatClaimed)}
+          </span>
+        ) : (
+          <MoneyCell
+            value={draft.gpVat}
             locked={locked}
-            ariaLabel={`${label} ยื่นภาษีซื้อ %`}
-            suffix="%"
-            step="0.01"
-            onCommit={(pct) =>
-              patchRates({
+            ariaLabel={`${label} ภาษีซื้อ GP`}
+            onChange={(v) => onChange({ ...draft, gpVat: v })}
+          />
+        )}
+      </td>
+      <td className="col-pct">
+        <TapRate
+          value={roundPct(draft.rates.inputClaimFactor)}
+          locked={locked}
+          ariaLabel={`${label} ยื่นภาษีซื้อ %`}
+          suffix="%"
+          step="0.01"
+          onCommit={(pct) =>
+            onChange({
+              ...draft,
+              rates: {
                 ...draft.rates,
                 inputClaimFactor: Math.min(100, Math.max(1, pct)) / 100,
-              })
-            }
-          />
-        </td>
-        <td className="col-num col-input">
-          {draft.useGpEstimate ? (
-            <span className="vat-est-val" title="หลัง play-safe">
-              {fmt(computed.gpVatClaimed)}
-            </span>
-          ) : (
-            <MoneyCell
-              value={draft.gpVat}
-              locked={locked}
-              ariaLabel={`${label} ภาษีซื้อ GP`}
-              onChange={(v) => onChange({ ...draft, gpVat: v })}
-            />
-          )}
-        </td>
-        <td className="col-num col-input">
-          <MoneyCell
-            value={draft.ingredientVat}
-            locked={locked}
-            ariaLabel={`${label} ภาษีซื้อวัตถุดิบ`}
-            onChange={(v) => onChange({ ...draft, ingredientVat: v })}
-          />
-        </td>
-        <td className="col-num">{fmt(computed.inputVat)}</td>
-        <td className="col-num col-net">{fmt(computed.netVat)}</td>
-      </tr>
+              },
+            })
+          }
+        />
+      </td>
+      <td className="col-num col-input">
+        <MoneyCell
+          value={draft.ingredientVat}
+          locked={locked}
+          ariaLabel={`${label} ภาษีซื้อวัตถุดิบ`}
+          onChange={(v) => onChange({ ...draft, ingredientVat: v })}
+        />
+      </td>
+      <td className="col-num col-net">{fmt(computed.inputVat)}</td>
+    </tr>
+  );
 
-      {kind === "delivery" && open
-        ? (
-            [
-              ["shopee", "ShopeeFood"],
-              ["grab", "Grab"],
-              ["lineman", "LINE MAN"],
-            ] as const
-          ).map(([key, name]) => (
-            <tr key={key} className="vat-row-child">
-              <td className="col-seg col-child">{name}</td>
-              <td className="col-num col-input">
-                <MoneyCell
-                  value={draft.channels[key]}
-                  locked={locked}
-                  ariaLabel={`${name} ยอดขาย`}
-                  onChange={(v) =>
-                    onChange({
-                      ...draft,
-                      channels: { ...draft.channels, [key]: v },
-                    })
-                  }
-                />
+  return (
+    <section className="vat-table-block">
+      <h2 className="vat-table-title">2) ภาษีซื้อ — กลุ่มหักได้</h2>
+      <div className="sheet-wrap vat-month-slim-wrap">
+        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim">
+          <thead>
+            <tr>
+              <th className="col-seg">ส่วน</th>
+              <th className="col-pct">GP % ของภาษีขาย</th>
+              <th className="col-num">ภาษีซื้อ GP</th>
+              <th className="col-pct">ยื่นภาษีซื้อ %</th>
+              <th className="col-num">ภาษีซื้อวัตถุดิบ</th>
+              <th className="col-num">ภาษีซื้อรวม</th>
+            </tr>
+          </thead>
+          <tbody>
+            {renderRow("เดลิเวอรี่", deliveryDraft, delivery, onDeliveryChange)}
+            {renderRow(
+              "หน้าร้าน",
+              storefrontDraft,
+              storefront,
+              onStorefrontChange,
+            )}
+            <tr className="vat-sales-totals-row">
+              <td className="col-seg">รวมภาษีซื้อ</td>
+              <td className="col-pct">—</td>
+              <td className="col-num">
+                {fmt(delivery.gpVatClaimed + storefront.gpVatClaimed)}
               </td>
-              <td className="col-num" colSpan={9}>
-                <span className="muted vat-child-hint">ย่อยรวมเข้าเดลิเวอรี่</span>
+              <td className="col-pct">—</td>
+              <td className="col-num">
+                {fmt(
+                  delivery.ingredientVatClaimed +
+                    storefront.ingredientVatClaimed,
+                )}
+              </td>
+              <td className="col-num col-net">
+                {fmt(delivery.inputVat + storefront.inputVat)}
               </td>
             </tr>
-          ))
-        : null}
+          </tbody>
+        </table>
+      </div>
+      <p className="muted vat-sales-hint vat-hint-one-line">
+        ติ๊กประมาณ = คำนวณ GP จาก % ของภาษีขาย · ปิดติ๊กแล้วคีย์จากบิล GP จริง ·
+        ยื่น % = play-safe (เช่น 98%)
+      </p>
+    </section>
+  );
+}
 
-      {kind === "storefront" && open
-        ? (
-            [
-              ["transfer", "เงินโอน"],
-              ["cash", "เงินสด"],
-            ] as const
-          ).map(([key, name]) => (
-            <tr key={key} className="vat-row-child">
-              <td className="col-seg col-child">{name}</td>
-              <td className="col-num col-input">
-                <MoneyCell
-                  value={draft.tenders[key]}
-                  locked={locked}
-                  ariaLabel={`${name} ยอดขาย`}
-                  onChange={(v) =>
-                    onChange({
-                      ...draft,
-                      tenders: { ...draft.tenders, [key]: v },
-                    })
-                  }
-                />
-              </td>
-              <td className="col-num" colSpan={9}>
-                <span className="muted vat-child-hint">ย่อยรวมเข้าหน้าร้าน</span>
-              </td>
+/** ตาราง 3 — สรุป = ภาษีขาย − ภาษีซื้อ */
+function SummaryVatTable({
+  delivery,
+  storefront,
+  totals,
+}: {
+  delivery: VatSegmentState;
+  storefront: VatSegmentState;
+  totals: {
+    outputVat: number;
+    inputVat: number;
+    netVat: number;
+    vatBase: number;
+    grossSales: number;
+  };
+}) {
+  return (
+    <section className="vat-table-block">
+      <h2 className="vat-table-title">
+        3) สรุป — ภาษีขาย − ภาษีซื้อ = สุทธิต้องนำส่ง
+      </h2>
+      <div className="sheet-wrap vat-month-slim-wrap">
+        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+          <thead>
+            <tr>
+              <th className="col-seg">รายการ</th>
+              <th className="col-num">เดลิเวอรี่</th>
+              <th className="col-num">หน้าร้าน</th>
+              <th className="col-num">รวม</th>
             </tr>
-          ))
-        : null}
-    </>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="col-seg">ภาษีขาย (จากตาราง 1)</td>
+              <td className="col-num">{fmt(delivery.outputVat)}</td>
+              <td className="col-num">{fmt(storefront.outputVat)}</td>
+              <td className="col-num">{fmt(totals.outputVat)}</td>
+            </tr>
+            <tr>
+              <td className="col-seg">หัก ภาษีซื้อ (จากตาราง 2)</td>
+              <td className="col-num">{fmt(delivery.inputVat)}</td>
+              <td className="col-num">{fmt(storefront.inputVat)}</td>
+              <td className="col-num">{fmt(totals.inputVat)}</td>
+            </tr>
+            <tr className="vat-sales-totals-row">
+              <td className="col-seg">ภาษีสุทธิต้องนำส่ง</td>
+              <td className="col-num col-net">{fmt(delivery.netVat)}</td>
+              <td className="col-num col-net">{fmt(storefront.netVat)}</td>
+              <td className="col-num col-net">{fmt(totals.netVat)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
@@ -421,8 +647,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       setNote(ret.note);
       setPnlMode(ret.pnlIncomeMode);
       setPnlIncome(moneyInputValue(ret.pnlIncome));
-      if (sumParts(ret.delivery) > 0) setOpenDelivery(true);
-      if (sumParts(ret.storefront) > 0) setOpenStorefront(true);
+      if (ret.delivery.partsSum > 0) setOpenDelivery(true);
+      if (ret.storefront.partsSum > 0) setOpenStorefront(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -550,7 +776,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     <div className="vat-monthly-workbench">
       <header className="vat-sales-header">
         <p className="vat-sales-lead">
-          VAT รายเดือน · ตารางกระชับ · แยกย่อยส่ง/ร้าน · แตะแก้เรทเดือนนี้ · ปิดงบแล้วล็อก
+          VAT รายเดือน · 3 ตาราง: ภาษีขาย · ภาษีซื้อ · สรุป (ขาย − ซื้อ) · compact slim
         </p>
         <div className="vat-sales-tabs" role="tablist">
           {(
@@ -610,73 +836,41 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           {tab === "month" ? (
             <>
               <p className="muted vat-sales-hint vat-hint-one-line">
-                กด + แยกย่อย · เรทภาษีแตะแก้ได้เฉพาะเดือนนี้ · ปิดงบแล้วแก้ไม่ได้
+                ตาราง 1 รายได้ → ตาราง 2 หักได้ → ตาราง 3 สุทธิ = ขาย − ซื้อ · เรทแตะแก้ได้ต่อเดือน
                 {" · "}
                 default {ratesLabel(DEFAULT_VAT_LOGIC_RATES)} · GP{" "}
                 {pctLabel(DEFAULT_VAT_LOGIC_RATES.gpOfOutput)}
               </p>
 
-              <div className="sheet-wrap vat-month-slim-wrap">
-                <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim">
-                  <thead>
-                    <tr>
-                      <th className="col-seg">ส่วน</th>
-                      <th className="col-num">ยอดขายรวม VAT</th>
-                      <th className="col-num">ฐานภาษี</th>
-                      <th className="col-num">ภาษีขาย</th>
-                      <th className="col-rate">เรทขาย</th>
-                      <th className="col-pct">GP % ของภาษีขาย</th>
-                      <th className="col-pct">ยื่นภาษีซื้อ %</th>
-                      <th className="col-num">ภาษีซื้อ GP</th>
-                      <th className="col-num">ภาษีซื้อวัตถุดิบ</th>
-                      <th className="col-num">ภาษีซื้อรวม</th>
-                      <th className="col-num">สุทธิต้องนำส่ง</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <ParentSegRows
-                      kind="delivery"
-                      label="เดลิเวอรี่"
-                      draft={deliveryDraft}
-                      computed={delivery}
-                      locked={Boolean(locked)}
-                      open={openDelivery}
-                      onToggle={() => setOpenDelivery((v) => !v)}
-                      onChange={setDeliveryDraft}
-                    />
-                    <ParentSegRows
-                      kind="storefront"
-                      label="หน้าร้าน"
-                      draft={storefrontDraft}
-                      computed={storefront}
-                      locked={Boolean(locked)}
-                      open={openStorefront}
-                      onToggle={() => setOpenStorefront((v) => !v)}
-                      onChange={setStorefrontDraft}
-                    />
-                    <tr className="vat-sales-totals-row">
-                      <td className="col-seg">รวม</td>
-                      <td className="col-num">{fmt(totals.grossSales)}</td>
-                      <td className="col-num">{fmt(totals.vatBase)}</td>
-                      <td className="col-num">{fmt(totals.outputVat)}</td>
-                      <td className="col-rate">—</td>
-                      <td className="col-pct">—</td>
-                      <td className="col-pct">—</td>
-                      <td className="col-num">
-                        {fmt(delivery.gpVatClaimed + storefront.gpVatClaimed)}
-                      </td>
-                      <td className="col-num">
-                        {fmt(
-                          delivery.ingredientVatClaimed +
-                            storefront.ingredientVatClaimed,
-                        )}
-                      </td>
-                      <td className="col-num">{fmt(totals.inputVat)}</td>
-                      <td className="col-num col-net">{fmt(totals.netVat)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              <OutputVatTable
+                deliveryDraft={deliveryDraft}
+                storefrontDraft={storefrontDraft}
+                delivery={delivery}
+                storefront={storefront}
+                locked={Boolean(locked)}
+                openDelivery={openDelivery}
+                openStorefront={openStorefront}
+                onToggleDelivery={() => setOpenDelivery((v) => !v)}
+                onToggleStorefront={() => setOpenStorefront((v) => !v)}
+                onDeliveryChange={setDeliveryDraft}
+                onStorefrontChange={setStorefrontDraft}
+              />
+
+              <InputVatTable
+                deliveryDraft={deliveryDraft}
+                storefrontDraft={storefrontDraft}
+                delivery={delivery}
+                storefront={storefront}
+                locked={Boolean(locked)}
+                onDeliveryChange={setDeliveryDraft}
+                onStorefrontChange={setStorefrontDraft}
+              />
+
+              <SummaryVatTable
+                delivery={delivery}
+                storefront={storefront}
+                totals={totals}
+              />
 
               <label className="vat-sales-field vat-note-slim">
                 หมายเหตุ
@@ -726,78 +920,14 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           {tab === "close" ? (
             <section className="vat-close-panel">
               <p className="muted vat-sales-hint vat-hint-one-line">
-                โครงมาตรฐานปิดงบ VAT → สรุปรายได้ P&L · ยืนยันมือครั้งเดียว · ปิดแล้วล็อกเดือน
+                ปิดงบ = ยืนยันสรุปตาราง 3 → ใส่รายได้ P&L · ปิดแล้วล็อกทั้งเดือน
               </p>
 
-              <div className="sheet-wrap vat-month-slim-wrap">
-                <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
-                  <thead>
-                    <tr>
-                      <th className="col-seg">รายการ</th>
-                      <th className="col-num">เดลิเวอรี่</th>
-                      <th className="col-num">หน้าร้าน</th>
-                      <th className="col-num">รวม</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="col-seg">ยอดขายรวม VAT</td>
-                      <td className="col-num">{fmt(delivery.grossSales)}</td>
-                      <td className="col-num">{fmt(storefront.grossSales)}</td>
-                      <td className="col-num">{fmt(totals.grossSales)}</td>
-                    </tr>
-                    <tr>
-                      <td className="col-seg">ฐานภาษี (ก่อน VAT)</td>
-                      <td className="col-num">{fmt(delivery.vatBase)}</td>
-                      <td className="col-num">{fmt(storefront.vatBase)}</td>
-                      <td className="col-num">{fmt(totals.vatBase)}</td>
-                    </tr>
-                    <tr>
-                      <td className="col-seg">ภาษีขาย (Output)</td>
-                      <td className="col-num">{fmt(delivery.outputVat)}</td>
-                      <td className="col-num">{fmt(storefront.outputVat)}</td>
-                      <td className="col-num">{fmt(totals.outputVat)}</td>
-                    </tr>
-                    <tr>
-                      <td className="col-seg">หัก ภาษีซื้อ GP</td>
-                      <td className="col-num">{fmt(delivery.gpVatClaimed)}</td>
-                      <td className="col-num">{fmt(storefront.gpVatClaimed)}</td>
-                      <td className="col-num">
-                        {fmt(delivery.gpVatClaimed + storefront.gpVatClaimed)}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="col-seg">หัก ภาษีซื้อวัตถุดิบ</td>
-                      <td className="col-num">
-                        {fmt(delivery.ingredientVatClaimed)}
-                      </td>
-                      <td className="col-num">
-                        {fmt(storefront.ingredientVatClaimed)}
-                      </td>
-                      <td className="col-num">
-                        {fmt(
-                          delivery.ingredientVatClaimed +
-                            storefront.ingredientVatClaimed,
-                        )}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="col-seg">ภาษีซื้อรวม (Input)</td>
-                      <td className="col-num">{fmt(delivery.inputVat)}</td>
-                      <td className="col-num">{fmt(storefront.inputVat)}</td>
-                      <td className="col-num">{fmt(totals.inputVat)}</td>
-                    </tr>
-                    <tr className="vat-sales-totals-row">
-                      <td className="col-seg">ภาษีสุทธิต้องนำส่ง</td>
-                      <td className="col-num col-net">{fmt(delivery.netVat)}</td>
-                      <td className="col-num col-net">
-                        {fmt(storefront.netVat)}
-                      </td>
-                      <td className="col-num col-net">{fmt(totals.netVat)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              <SummaryVatTable
+                delivery={delivery}
+                storefront={storefront}
+                totals={totals}
+              />
 
               <div className="sheet-wrap vat-month-slim-wrap">
                 <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
@@ -866,22 +996,6 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                         </td>
                       </tr>
                     ) : null}
-                    <tr>
-                      <td className="col-seg">เรทเดือนนี้ · ส่ง</td>
-                      <td className="col-num">
-                        {ratesLabel(delivery.rates)} · GP{" "}
-                        {pctLabel(delivery.rates.gpOfOutput)} · ยื่น{" "}
-                        {pctLabel(delivery.rates.inputClaimFactor)}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="col-seg">เรทเดือนนี้ · ร้าน</td>
-                      <td className="col-num">
-                        {ratesLabel(storefront.rates)} · GP{" "}
-                        {pctLabel(storefront.rates.gpOfOutput)} · ยื่น{" "}
-                        {pctLabel(storefront.rates.inputClaimFactor)}
-                      </td>
-                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -913,8 +1027,4 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       )}
     </div>
   );
-}
-
-function sumParts(seg: VatSegmentState): number {
-  return seg.partsSum || 0;
 }
