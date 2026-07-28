@@ -40,6 +40,7 @@ exports.vatMailOAuthStart = vatMail.vatMailOAuthStart;
 exports.vatMailOAuthCallback = vatMail.vatMailOAuthCallback;
 exports.vatMailDisconnect = vatMail.vatMailDisconnect;
 exports.vatMailSync = vatMail.vatMailSync;
+exports.vatMailPdfUrl = vatMail.vatMailPdfUrl;
 const vatOutlook = require("./vat-mail-outlook");
 exports.vatOutlookStatus = vatOutlook.vatOutlookStatus;
 exports.vatOutlookOAuthStart = vatOutlook.vatOutlookOAuthStart;

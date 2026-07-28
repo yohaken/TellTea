@@ -10,6 +10,7 @@ const {
   extractPdfTextFromMessage,
   mergeBodyWithPdf,
   needsPdfEnrich,
+  signedPdfReadUrl,
 } = require("./vat-mail-pdf");
 
 const REGION = "asia-southeast1";
@@ -642,18 +643,24 @@ exports.vatMailSync = functions
                 messageId,
                 msg.payload,
               );
+              const paths = Array.isArray(pdf.storagePaths) ? pdf.storagePaths : [];
+              const names = Array.isArray(pdf.filenames) ? pdf.filenames : [];
               if (!pdf.text) {
                 await db.collection(REPORTS_COL).doc(docId).set(
                   {
                     parseStatus: "fail",
                     parseError: pdf.error || "ดึงข้อความ PDF ไม่สำเร็จ",
                     pdfError: pdf.error || "empty",
+                    ...(names.length ? { pdfFilenames: names } : {}),
+                    ...(paths.length ? { pdfStoragePaths: paths } : {}),
                     syncedAt: Date.now(),
                     syncedBy: actorId,
+                    pdfEnrichedAt: Date.now(),
                   },
                   { merge: true },
                 );
-                skipped += 1;
+                if (paths.length) pdfEnriched += 1;
+                else skipped += 1;
                 continue;
               }
               const rawText = mergeBodyWithPdf(prev.rawText || "", pdf.text, {
@@ -662,7 +669,8 @@ exports.vatMailSync = functions
               await db.collection(REPORTS_COL).doc(docId).set(
                 {
                   rawText,
-                  pdfFilenames: pdf.filenames,
+                  pdfFilenames: names,
+                  pdfStoragePaths: paths,
                   pdfError: "",
                   parseStatus: "pending",
                   parseError: "",
@@ -700,8 +708,9 @@ exports.vatMailSync = functions
           let rawText = String(bodies.text || "").slice(0, 200000);
           const rawHtml = String(bodies.html || "").slice(0, 200000);
           let pdfFilenames = [];
+          let pdfStoragePaths = [];
           let pdfError = "";
-          // Grab (และเมลสรุปยอด) — ดึงข้อความจาก PDF แนบมาใส่ rawText
+          // Grab (และเมลสรุปยอด) — เก็บ PDF + ดึงข้อความใส่ rawText
           if (
             channelFinal === "grab" ||
             /สรุปยอดขาย|grabfood|daily sales/i.test(subject)
@@ -712,9 +721,10 @@ exports.vatMailSync = functions
                 messageId,
                 msg.payload,
               );
+              pdfFilenames = Array.isArray(pdf.filenames) ? pdf.filenames : [];
+              pdfStoragePaths = Array.isArray(pdf.storagePaths) ? pdf.storagePaths : [];
               if (pdf.text) {
                 rawText = mergeBodyWithPdf(rawText, pdf.text);
-                pdfFilenames = pdf.filenames;
               } else {
                 pdfError = pdf.error || "ดึงข้อความ PDF ไม่สำเร็จ";
               }
@@ -736,6 +746,7 @@ exports.vatMailSync = functions
             rawText,
             rawHtml,
             ...(pdfFilenames.length ? { pdfFilenames } : {}),
+            ...(pdfStoragePaths.length ? { pdfStoragePaths } : {}),
             ...(pdfError ? { pdfError } : { pdfError: "" }),
             reportDateGuess: guessReportDate(subject, internalDate),
             reportKind: guessReportKind(subject),
@@ -773,6 +784,35 @@ exports.vatMailSync = functions
       );
       throw new functions.https.HttpsError("internal", `ซิงก์เมลไม่สำเร็จ — ${msg.slice(0, 120)}`);
     }
+  });
+
+/** Owner-only signed URL to open a stored mail PDF (Firebase Storage). */
+exports.vatMailPdfUrl = functions
+  .region(REGION)
+  .https.onCall(async (data, context) => {
+    await assertOwner(context);
+    const path = asString(data?.path, 500);
+    if (!path.startsWith("vat-mail-pdfs/") || path.includes("..")) {
+      throw new functions.https.HttpsError("invalid-argument", "พาธ PDF ไม่ถูกต้อง");
+    }
+    const reportId = asString(data?.reportId, 120);
+    if (reportId) {
+      const snap = await getFirestore().collection(REPORTS_COL).doc(reportId).get();
+      if (!snap.exists) {
+        throw new functions.https.HttpsError("not-found", "ไม่พบรายงานเมล");
+      }
+      const paths = Array.isArray(snap.data()?.pdfStoragePaths)
+        ? snap.data().pdfStoragePaths
+        : [];
+      if (!paths.includes(path)) {
+        throw new functions.https.HttpsError(
+          "permission-denied",
+          "PDF นี้ไม่ได้ผูกกับรายงาน",
+        );
+      }
+    }
+    const url = await signedPdfReadUrl(path, 60 * 60 * 1000);
+    return { ok: true, url, expiresInMinutes: 60 };
   });
 
 exports.DEFAULT_MAIL_RULES = DEFAULT_MAIL_RULES;

@@ -14,6 +14,7 @@ import {
   channelReportLabel,
   confirmEmailSalesToDaily,
   disconnectVatMail,
+  fetchVatMailPdfUrl,
   fetchVatMailStatus,
   listPlatformEmailReports,
   loadVatMailOAuthConfig,
@@ -797,6 +798,43 @@ export function VatSalesMailPanel({
             </p>
             {open.parseStatus === "fail" ? (
               <p className="error-text">{open.parseError || "parse ไม่ผ่าน"}</p>
+            ) : null}
+            {open.pdfError ? (
+              <p className="muted">PDF: {open.pdfError}</p>
+            ) : null}
+            {open.pdfStoragePaths.length ? (
+              <div className="vat-sales-acts" style={{ marginBottom: "0.5rem" }}>
+                {open.pdfStoragePaths.map((path, i) => {
+                  const label =
+                    open.pdfFilenames[i] ||
+                    path.split("/").pop() ||
+                    `PDF ${i + 1}`;
+                  return (
+                    <button
+                      key={path}
+                      type="button"
+                      className="ghost-btn vat-sales-act-btn"
+                      disabled={busy !== null}
+                      onClick={() => {
+                        void (async () => {
+                          setBusy(`pdf-${open.id}-${i}`);
+                          setError("");
+                          try {
+                            const url = await fetchVatMailPdfUrl(path, open.id);
+                            window.open(url, "_blank", "noopener,noreferrer");
+                          } catch (e) {
+                            setError(e instanceof Error ? e.message : String(e));
+                          } finally {
+                            setBusy(null);
+                          }
+                        })();
+                      }}
+                    >
+                      เปิด PDF{open.pdfStoragePaths.length > 1 ? ` · ${label}` : ""}
+                    </button>
+                  );
+                })}
+              </div>
             ) : null}
             {open.parsed?.warnings?.length ? (
               <p className="muted">คำเตือน: {open.parsed.warnings.join(" · ")}</p>

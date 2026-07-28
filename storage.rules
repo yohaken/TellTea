@@ -30,5 +30,10 @@ service firebase.storage {
       allow write: if signedIn() && evidenceImageOk();
       allow delete: if signedIn();
     }
+
+    // VAT mail PDFs — Admin SDK upload only; owner opens via signed URL callable.
+    match /vat-mail-pdfs/{allPaths=**} {
+      allow read, write: if false;
+    }
   }
 }

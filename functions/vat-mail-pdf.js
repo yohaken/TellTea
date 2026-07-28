@@ -1,7 +1,13 @@
 /**
- * Extract text from Gmail PDF attachments (GrabFood daily sales, etc.).
- * Uses pdfjs-dist (no native deps) — suitable for Cloud Functions.
+ * VAT mail PDFs — download Gmail attachments, store in Firebase Storage,
+ * extract text for amount parse.
+ *
+ * Storage path: vat-mail-pdfs/{yyyy}/{messageId}/{filename}.pdf
+ * Admin upload (bypass Storage rules) · owner opens via signed URL callable.
  */
+const crypto = require("crypto");
+const { resolveStorageBucket } = require("./storage-bucket");
+
 const MAX_PDF_BYTES = 8 * 1024 * 1024;
 const MAX_PDF_TEXT = 120000;
 const PDF_MARKER = "\n\n--- PDF ---\n";
@@ -9,6 +15,13 @@ const PDF_MARKER = "\n\n--- PDF ---\n";
 function asString(v, max = 200) {
   if (typeof v !== "string") return "";
   return v.trim().slice(0, max);
+}
+
+function safeFilename(raw) {
+  const base = String(raw || "attachment.pdf")
+    .replace(/[^a-zA-Z0-9._\-\u0E00-\u0E7F]+/g, "_")
+    .slice(0, 80);
+  return /\.pdf$/i.test(base) ? base : `${base || "attachment"}.pdf`;
 }
 
 function decodeAttachmentData(data) {
@@ -96,18 +109,69 @@ async function pdfBufferToText(buffer) {
     .slice(0, MAX_PDF_TEXT);
 }
 
+/** Save PDF bytes to Storage · returns object path */
+async function storeMailPdfBuffer(buffer, opts) {
+  const messageId = asString(opts.messageId, 80) || crypto.randomBytes(8).toString("hex");
+  const year = String(opts.year || new Date().getFullYear());
+  const filename = safeFilename(opts.filename);
+  const objectPath = `vat-mail-pdfs/${year}/${messageId}/${filename}`;
+  const bucket = await resolveStorageBucket();
+  const file = bucket.file(objectPath);
+  const token = crypto.randomUUID();
+  await file.save(buffer, {
+    resumable: false,
+    contentType: "application/pdf",
+    metadata: {
+      contentType: "application/pdf",
+      metadata: {
+        firebaseStorageDownloadTokens: token,
+        source: "vat-mail-gmail",
+        gmailMessageId: messageId,
+        originalFilename: asString(opts.filename, 200),
+      },
+    },
+  });
+  return {
+    path: objectPath,
+    bucket: bucket.name,
+    token,
+    bytes: buffer.length,
+  };
+}
+
+async function signedPdfReadUrl(objectPath, expiresMs = 60 * 60 * 1000) {
+  const bucket = await resolveStorageBucket();
+  const file = bucket.file(objectPath);
+  const [url] = await file.getSignedUrl({
+    version: "v4",
+    action: "read",
+    expires: Date.now() + expiresMs,
+  });
+  return url;
+}
+
 /**
- * Download first PDF attachment(s) and return concatenated text.
- * @returns {{ text: string, filenames: string[] }}
+ * Download PDF attachments → store files + extract text.
+ * เก็บไฟล์แม้ถอดข้อความไม่ได้ (เปิดดูทีหลังได้)
  */
 async function extractPdfTextFromMessage(accessToken, messageId, payload) {
   const parts = listPdfParts(payload).slice(0, 2);
   if (!parts.length) {
-    return { text: "", filenames: [], error: "ไม่พบไฟล์ PDF แนบ" };
+    return {
+      text: "",
+      filenames: [],
+      storagePaths: [],
+      stored: [],
+      error: "ไม่พบไฟล์ PDF แนบ",
+    };
   }
   const chunks = [];
   const filenames = [];
+  const storagePaths = [];
+  const stored = [];
   const errors = [];
+  const year = new Date().getFullYear();
+
   for (const part of parts) {
     try {
       let buf;
@@ -124,25 +188,53 @@ async function extractPdfTextFromMessage(accessToken, messageId, payload) {
         errors.push(`${part.filename}: ไม่ใช่ PDF`);
         continue;
       }
-      const text = await pdfBufferToText(buf);
-      if (text.length < 20) {
-        errors.push(
-          `${part.filename}: อ่านข้อความไม่ได้ (อาจเป็นรูปสแกนหรือมีรหัสผ่าน)`,
-        );
-        continue;
+
+      const name = part.filename || "attachment.pdf";
+      filenames.push(name);
+
+      // เก็บไฟล์ก่อน — สำคัญแม้ parse ข้อความพัง
+      try {
+        const saved = await storeMailPdfBuffer(buf, {
+          messageId,
+          filename: name,
+          year,
+        });
+        storagePaths.push(saved.path);
+        stored.push(saved);
+      } catch (e) {
+        errors.push(`store ${name}: ${asString(e?.message || String(e), 100)}`);
+        console.warn("vat-mail-pdf store", name, e?.message || e);
       }
-      filenames.push(part.filename || "attachment.pdf");
-      chunks.push(`# file: ${part.filename || "attachment.pdf"}\n${text}`);
+
+      try {
+        const text = await pdfBufferToText(buf);
+        if (text.length >= 20) {
+          chunks.push(`# file: ${name}\n${text}`);
+        } else {
+          errors.push(`${name}: อ่านข้อความไม่ได้ (อาจเป็นรูปสแกนหรือมีรหัสผ่าน)`);
+        }
+      } catch (e) {
+        const msg = e?.message || String(e);
+        errors.push(`${name}: ${String(msg).slice(0, 120)}`);
+      }
     } catch (e) {
       const msg = e?.message || String(e);
       console.warn("vat-mail-pdf extract", part.filename, msg);
       errors.push(`${part.filename || "pdf"}: ${String(msg).slice(0, 120)}`);
     }
   }
+
+  const text = chunks.join("\n\n").slice(0, MAX_PDF_TEXT);
   return {
-    text: chunks.join("\n\n").slice(0, MAX_PDF_TEXT),
+    text,
     filenames,
-    error: chunks.length ? "" : errors[0] || "ดึงข้อความ PDF ไม่สำเร็จ",
+    storagePaths,
+    stored,
+    error: text
+      ? ""
+      : storagePaths.length
+        ? errors[0] || "เก็บ PDF แล้ว แต่ถอดข้อความไม่ได้"
+        : errors[0] || "ดึง PDF ไม่สำเร็จ",
   };
 }
 
@@ -168,10 +260,13 @@ function needsPdfEnrich(doc) {
   const isGrab =
     channel === "grab" || /สรุปยอดขาย|grabfood|daily sales/.test(subject);
   if (!isGrab) return false;
+
+  const paths = Array.isArray(doc.pdfStoragePaths) ? doc.pdfStoragePaths : [];
   const raw = String(doc.rawText || "");
-  // ยังไม่มีข้อความ PDF → ต้องดึง
+  // ยังไม่เก็บไฟล์ PDF
+  if (!paths.length) return true;
+  // ยังไม่มีข้อความ PDF
   if (!raw.includes("--- PDF ---")) return true;
-  // มี marker แต่สั้นมาก / fail ป้ายยอด → ลองดึงใหม่
   const pdfPart = raw.split("--- PDF ---")[1] || "";
   if (pdfPart.trim().length < 40) return true;
   if (status === "fail" && /PDF|ป้ายยอด|ยอดขาย|ลูกค้า/i.test(String(doc.parseError || ""))) {
@@ -187,4 +282,7 @@ module.exports = {
   mergeBodyWithPdf,
   needsPdfEnrich,
   pdfBufferToText,
+  storeMailPdfBuffer,
+  signedPdfReadUrl,
+  safeFilename,
 };

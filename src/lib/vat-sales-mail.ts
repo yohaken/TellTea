@@ -60,6 +60,11 @@ export type PlatformEmailReport = {
   reportKind: "daily" | "weekly" | "monthly";
   parseStatus: MailParseStatus;
   parseError: string;
+  /** ชื่อไฟล์ PDF จาก Gmail */
+  pdfFilenames: string[];
+  /** พาธใน Firebase Storage (vat-mail-pdfs/…) */
+  pdfStoragePaths: string[];
+  pdfError: string;
   syncedAt: number;
   parserVersion: string;
   parsed: {
@@ -148,6 +153,13 @@ function mapReport(id: string, data: Record<string, unknown>): PlatformEmailRepo
     reportKind,
     parseStatus,
     parseError: String(data.parseError || ""),
+    pdfFilenames: Array.isArray(data.pdfFilenames)
+      ? data.pdfFilenames.map(String)
+      : [],
+    pdfStoragePaths: Array.isArray(data.pdfStoragePaths)
+      ? data.pdfStoragePaths.map(String)
+      : [],
+    pdfError: String(data.pdfError || ""),
     syncedAt: Number(data.syncedAt) || 0,
     parserVersion: String(data.parserVersion || ""),
     parsed: parsedRaw
@@ -197,6 +209,21 @@ export async function startVatMailOAuth(returnTo?: string): Promise<string> {
 export async function disconnectVatMail(): Promise<void> {
   const fn = httpsCallable(getFirebaseFunctions(), "vatMailDisconnect");
   await fn({});
+}
+
+/** Owner signed URL to open a stored mail PDF. */
+export async function fetchVatMailPdfUrl(
+  path: string,
+  reportId?: string,
+): Promise<string> {
+  const fn = httpsCallable<
+    { path: string; reportId?: string },
+    { ok?: boolean; url?: string }
+  >(getFirebaseFunctions(), "vatMailPdfUrl");
+  const res = await fn(reportId ? { path, reportId } : { path });
+  const url = String(res.data?.url || "");
+  if (!url) throw new Error("ไม่ได้รับลิงก์เปิด PDF");
+  return url;
 }
 
 export async function syncVatMail(lookbackDays = 31): Promise<{
