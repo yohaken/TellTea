@@ -1,6 +1,6 @@
 # nPos — ตรวจเวอร์ชันขึ้นโปรดักชัน / พร้อมโหลด
 
-อัปเดต: **1.14.60** · ใช้ทุกครั้งหลัง bump `versionCode` / `versionName` / `APP_BUILD` / `POS_BUILD`
+อัปเดต: **1.14.61** · ใช้ทุกครั้งหลัง bump `versionCode` / `versionName` / `APP_BUILD` / `POS_BUILD`
 
 ## ทำไมต้องเช็ค
 โค้ดบน `main` ≠ APK ที่แท็บเล็ตดาวน์โหลดได้เสมอ — ต้องยืนยันว่า **Hosting deploy แล้ว** และ **`latest.json` + APK** ตรงเวอร์ชันที่เพิ่ง ship

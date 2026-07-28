@@ -394,11 +394,15 @@ exports.nposSessionClose = functions.region("asia-southeast1").https.onRequest(a
       return;
     }
     const now = Date.now();
+    const openedAt = Number(data.openedAt) || now;
+    const correctDate = startOfBangkokDay(openedAt);
     await ref.set(
       {
         status: "closed",
         closedAt: now,
         updatedAt: now,
+        // Keep BO date query aligned with open day (Bangkok).
+        date: correctDate,
         cashTotal: Number(body.cashTotal) || 0,
         promptpayTotal: Number(body.promptpayTotal) || 0,
         transferTotal: Number(body.transferTotal) || 0,
@@ -424,6 +428,7 @@ exports.nposSessionClose = functions.region("asia-southeast1").https.onRequest(a
       saleCount: Number(data.saleCount) || 0,
       totalSales: Number(data.totalSales) || 0,
       closedAt: now,
+      date: correctDate,
     });
   } catch (err) {
     console.error("nposSessionClose", err);

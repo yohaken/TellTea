@@ -22,7 +22,8 @@
 ### B4 พิมพ์ + ซิงก์
 - [x] พิมพ์ Z-Report รวม counted / expected / diff / note
 - [x] `nposSessionClose` บันทึกฟิลด์ปิดกะขึ้น Firestore ให้หลังร้านอ่านได้
-- [x] บล็อก/เตือนถ้ามีบิลค้าง outbox
+- [x] **ไม่** บล็อกด้วย pending dialog / นับถอยหลัง heartbeat — flush ทันทีใน `flushThenCloseSession` แล้วปิดเซิร์ฟเวอร์ก่อนออกงานในเครื่อง
+- [x] ถ้าเซิร์ฟไม่รับปิดรอบ → ยังไม่ออกงานในเครื่อง (BO ได้ `closedAt`)
 
 ### นอกรอบนี้
 - [ ] เซ็นชื่อบนสลิป (กายภาพ)

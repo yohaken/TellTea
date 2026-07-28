@@ -243,54 +243,37 @@ public final class SaleSync {
     }
 
     public void closeSession(Context context, BlindCloseReport report, Runnable done) {
+        flushThenCloseSession(
+                context,
+                report,
+                ok -> {
+                    if (done != null) done.run();
+                });
+    }
+
+    public interface CloseResult {
+        void onDone(boolean serverOk);
+    }
+
+    /**
+     * Flush outbox + ensure session open on server, then close CF.
+     * Only clears local shift when server close succeeds — so BO always gets closedAt.
+     */
+    public void flushThenCloseSession(
+            Context context, BlindCloseReport report, CloseResult result) {
         Context app = context.getApplicationContext();
         executor.execute(
                 () -> {
+                    boolean serverOk = false;
                     try {
-                        JSONObject body = new JSONObject();
-                        body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
-                        body.put("sessionId", ShiftPrefs.sessionId(app));
-                        body.put("cashTotal", ShiftPrefs.cashTotal(app));
-                        body.put("promptpayTotal", ShiftPrefs.promptpayTotal(app));
-                        body.put("transferTotal", ShiftPrefs.transferTotal(app));
-                        body.put("openingCash", ShiftPrefs.openingCash(app));
-                        body.put("discountTotal", ShiftPrefs.discountTotal(app));
-                        body.put("voidedCount", ShiftPrefs.voidedCount(app));
-                        body.put("saleCount", ShiftPrefs.saleCount(app));
-                        if (report != null) {
-                            body.put("closingCashCounted", report.countedCash);
-                            body.put("expectedCash", report.expectedCash);
-                            body.put("cashDifference", report.cashDifference);
-                            body.put("leaveFloat", report.leaveFloat);
-                            body.put("discrepancyNote", report.discrepancyNote);
-                            body.put("discrepancyLabel", report.discrepancyLabel());
-                            body.put("cashOutTotal", report.cashOutTotal);
-                            body.put("cashInTotal", report.cashInTotal);
-                            body.put("cashDropCount", report.cashDropCount);
-                        } else {
-                            body.put("cashOutTotal", ShiftPrefs.cashOutTotal(app));
-                            body.put("cashInTotal", ShiftPrefs.cashInTotal(app));
-                            body.put("cashDropCount", ShiftPrefs.cashDropCount(app));
-                        }
-                        JSONObject res = MenuRepository.postJson(CLOSE_URL, body);
-                        if (res.optBoolean("ok", false)) {
-                            OpsLogger.info(
-                                    app,
-                                    "shift",
-                                    "ปิดรอบแล้ว",
-                                    "sales="
-                                            + res.optInt("saleCount")
-                                            + " total="
-                                            + res.optDouble("totalSales")
-                                            + (report != null
-                                                    ? " diff="
-                                                            + String.format(
-                                                                    java.util.Locale.US,
-                                                                    "%.0f",
-                                                                    report.cashDifference)
-                                                    : ""));
-                        } else {
-                            OpsLogger.warn(app, "shift", "ปิดรอบเซิร์ฟเวอร์ไม่สำเร็จ", res.optString("error"));
+                        ensureOpenSessionSynced(app);
+                        flushPendingBlocking(app);
+                        ensureOpenSessionSynced(app);
+                        serverOk = postCloseSession(app, report);
+                        if (!serverOk) {
+                            ensureOpenSessionSynced(app);
+                            flushPendingBlocking(app);
+                            serverOk = postCloseSession(app, report);
                         }
                     } catch (Exception e) {
                         OpsLogger.warn(
@@ -299,25 +282,111 @@ public final class SaleSync {
                                 "ปิดรอบออฟไลน์",
                                 e.getMessage() == null ? "" : e.getMessage());
                     }
-                    if (report != null) {
-                        ShiftPrefs.setNextOpeningCash(app, report.leaveFloat);
+                    if (serverOk) {
+                        if (report != null) {
+                            ShiftPrefs.setNextOpeningCash(app, report.leaveFloat);
+                        }
+                        String staff = "";
+                        try {
+                            String shopRaw =
+                                    app.getSharedPreferences("npos_menu", Context.MODE_PRIVATE)
+                                            .getString("shopJson", "{}");
+                            staff =
+                                    new JSONObject(shopRaw == null ? "{}" : shopRaw)
+                                            .optString("receiptStaffName", "")
+                                            .trim();
+                        } catch (Exception ignored) {
+                            /* optional */
+                        }
+                        SessionHistory.rememberClose(
+                                app, report, staff, DeviceIdentity.getOrCreateInstallId(app));
+                        ShiftPrefs.close(app);
+                    } else {
+                        OpsLogger.warn(app, "shift", "ยังไม่ออกงาน — เซิร์ฟเวอร์ไม่รับปิดรอบ", "");
                     }
-                    String staff = "";
-                    try {
-                        String shopRaw =
-                            app.getSharedPreferences("npos_menu", Context.MODE_PRIVATE)
-                                .getString("shopJson", "{}");
-                        staff = new JSONObject(shopRaw == null ? "{}" : shopRaw)
-                            .optString("receiptStaffName", "")
-                            .trim();
-                    } catch (Exception ignored) {
-                      /* optional */
-                    }
-                    SessionHistory.rememberClose(
-                        app, report, staff, DeviceIdentity.getOrCreateInstallId(app));
-                    ShiftPrefs.close(app);
-                    if (done != null) done.run();
+                    if (result != null) result.onDone(serverOk);
                 });
+    }
+
+    private void flushPendingBlocking(Context app) {
+        try {
+            ensureOpenSessionSynced(app);
+            JSONArray q = readQueue(app);
+            for (int i = 0; i < q.length(); i++) {
+                JSONObject row = q.getJSONObject(i);
+                ensureOutboxMeta(row);
+                if ("failed".equals(row.optString("status"))) continue;
+                try {
+                    flushOne(app, row, null, true, null, null);
+                } catch (Exception syncErr) {
+                    String msg =
+                            syncErr.getMessage() == null
+                                    ? syncErr.getClass().getSimpleName()
+                                    : syncErr.getMessage();
+                    markQueueAttempt(
+                            app,
+                            row.optString("clientMutationId"),
+                            msg,
+                            isPermanentSaleError(msg));
+                }
+            }
+            flushVoidQueue(app);
+        } catch (Exception e) {
+            OpsLogger.warn(
+                    app,
+                    "sync",
+                    "flush pending พลาด",
+                    e.getMessage() == null ? "" : e.getMessage());
+        }
+    }
+
+    private boolean postCloseSession(Context app, BlindCloseReport report) throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
+        body.put("sessionId", ShiftPrefs.sessionId(app));
+        body.put("cashTotal", ShiftPrefs.cashTotal(app));
+        body.put("promptpayTotal", ShiftPrefs.promptpayTotal(app));
+        body.put("transferTotal", ShiftPrefs.transferTotal(app));
+        body.put("openingCash", ShiftPrefs.openingCash(app));
+        body.put("discountTotal", ShiftPrefs.discountTotal(app));
+        body.put("voidedCount", ShiftPrefs.voidedCount(app));
+        body.put("saleCount", ShiftPrefs.saleCount(app));
+        if (report != null) {
+            body.put("closingCashCounted", report.countedCash);
+            body.put("expectedCash", report.expectedCash);
+            body.put("cashDifference", report.cashDifference);
+            body.put("leaveFloat", report.leaveFloat);
+            body.put("discrepancyNote", report.discrepancyNote);
+            body.put("discrepancyLabel", report.discrepancyLabel());
+            body.put("cashOutTotal", report.cashOutTotal);
+            body.put("cashInTotal", report.cashInTotal);
+            body.put("cashDropCount", report.cashDropCount);
+        } else {
+            body.put("cashOutTotal", ShiftPrefs.cashOutTotal(app));
+            body.put("cashInTotal", ShiftPrefs.cashInTotal(app));
+            body.put("cashDropCount", ShiftPrefs.cashDropCount(app));
+        }
+        JSONObject res = MenuRepository.postJson(CLOSE_URL, body);
+        if (res.optBoolean("ok", false)) {
+            OpsLogger.info(
+                    app,
+                    "shift",
+                    "ปิดรอบแล้ว",
+                    "sales="
+                            + res.optInt("saleCount")
+                            + " total="
+                            + res.optDouble("totalSales")
+                            + (report != null
+                                    ? " diff="
+                                            + String.format(
+                                                    java.util.Locale.US,
+                                                    "%.0f",
+                                                    report.cashDifference)
+                                    : ""));
+            return true;
+        }
+        OpsLogger.warn(app, "shift", "ปิดรอบเซิร์ฟเวอร์ไม่สำเร็จ", res.optString("error"));
+        return false;
     }
 
     public void enqueueSale(
@@ -445,35 +514,7 @@ public final class SaleSync {
 
     public void flushPending(Context context) {
         Context app = context.getApplicationContext();
-        executor.execute(
-                () -> {
-                    try {
-                        ensureOpenSessionSynced(app);
-                        JSONArray q = readQueue(app);
-                        for (int i = 0; i < q.length(); i++) {
-                            JSONObject row = q.getJSONObject(i);
-                            ensureOutboxMeta(row);
-                            if ("failed".equals(row.optString("status"))) continue;
-                            try {
-                                // Print once if never printed (e.g. was offline at sale time).
-                                flushOne(app, row, null, true, null, null);
-                            } catch (Exception syncErr) {
-                                String msg =
-                                        syncErr.getMessage() == null
-                                                ? syncErr.getClass().getSimpleName()
-                                                : syncErr.getMessage();
-                                markQueueAttempt(
-                                        app,
-                                        row.optString("clientMutationId"),
-                                        msg,
-                                        isPermanentSaleError(msg));
-                            }
-                        }
-                        flushVoidQueue(app);
-                    } catch (Exception e) {
-                        OpsLogger.warn(app, "sync", "flush pending พลาด", e.getMessage() == null ? "" : e.getMessage());
-                    }
-                });
+        executor.execute(() -> flushPendingBlocking(app));
     }
 
     /** Retry one pending/failed outbox row (clears failed → pending). */

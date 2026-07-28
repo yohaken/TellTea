@@ -6947,6 +6947,15 @@ body.modal-open .main-panel {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Vertical window so categories/bills below stay usable */
+.npos-slim-scroll--rows {
+  max-height: min(22rem, 48vh);
+  overflow-y: auto;
+  overflow-x: auto;
+  border-top: 1px solid rgba(28, 42, 31, 0.06);
+  border-bottom: 1px solid rgba(28, 42, 31, 0.06);
+}
+
 .npos-slim-row {
   display: grid;
   grid-template-columns:
@@ -7000,6 +7009,31 @@ body.modal-open .main-panel {
 .npos-slim-row.is-open .npos-slim-status {
   color: #2f6b4f;
   font-weight: 700;
+}
+
+.npos-slim-row--sessions-super {
+  grid-template-columns:
+    minmax(2.4rem, max-content)
+    minmax(3.2rem, max-content)
+    minmax(3.6rem, max-content)
+    minmax(5rem, 1.1fr)
+    minmax(2.6rem, max-content)
+    minmax(2.6rem, max-content)
+    minmax(1.6rem, max-content)
+    minmax(1.8rem, max-content)
+    minmax(3rem, max-content)
+    minmax(2.4rem, max-content)
+    minmax(2.4rem, max-content)
+    minmax(2.2rem, max-content);
+  min-width: 48rem;
+}
+
+.npos-slim-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: #1a2e24;
 }
 
 .npos-slim-num {

@@ -10,10 +10,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.List;
 import java.util.Locale;
-
-import org.json.JSONObject;
 
 import app.telltea.npos.R;
 import app.telltea.npos.sell.SaleSync;
@@ -40,19 +37,7 @@ public final class BlindCloseFlow {
       Toast.makeText(activity, R.string.shift_closed, Toast.LENGTH_SHORT).show();
       return;
     }
-    List<JSONObject> pending = saleSync.listPending(activity);
-    if (pending != null && !pending.isEmpty()) {
-      NposConfirmDialog.confirm(
-          activity,
-          activity.getString(R.string.blind_close_pending_title),
-          activity.getString(R.string.blind_close_pending_msg, pending.size()),
-          activity.getString(R.string.outbox_sync_all),
-          () -> {
-            saleSync.flushPending(activity);
-            Toast.makeText(activity, R.string.blind_close_pending_retry, Toast.LENGTH_LONG).show();
-          });
-      return;
-    }
+    // Do not block on outbox / heartbeat countdown — flush happens inside close.
     askCountedCash(activity, saleSync, done);
   }
 
@@ -204,15 +189,24 @@ public final class BlindCloseFlow {
               "close",
               report,
               () ->
-                  saleSync.closeSession(
+                  saleSync.flushThenCloseSession(
                       activity,
                       report,
-                      () ->
+                      ok ->
                           activity.runOnUiThread(
                               () -> {
-                                Toast.makeText(activity, R.string.shift_closed, Toast.LENGTH_SHORT)
-                                    .show();
-                                if (done != null) done.onClosed();
+                                if (ok) {
+                                  Toast.makeText(
+                                          activity, R.string.shift_closed, Toast.LENGTH_SHORT)
+                                      .show();
+                                  if (done != null) done.onClosed();
+                                } else {
+                                  Toast.makeText(
+                                          activity,
+                                          R.string.blind_close_server_failed,
+                                          Toast.LENGTH_LONG)
+                                      .show();
+                                }
                               })));
           return true;
         },

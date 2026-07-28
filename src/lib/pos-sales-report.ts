@@ -1,5 +1,6 @@
 import {
   collection,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -11,6 +12,9 @@ import { POS_SALES_COL } from "./pos-sales";
 import { POS_SESSIONS_COL } from "./pos-session";
 import type { PosSale, PosSession } from "./types";
 import { startOfLocalDay } from "./utils";
+
+/** Initial slim-table page size (scroll for the rest of the window). */
+export const POS_SESSIONS_SLIM_LIMIT = 50;
 
 /** สรุปรอบขาย nPos (ไม่ใช่กะ OT เช้า/เย็น) */
 export type PosSessionSalesRow = {
@@ -162,6 +166,18 @@ function mapSession(id: string, data: Record<string, unknown>): PosSession {
   };
 }
 
+/** Activity clock for sort — closedAt when closed, else openedAt. */
+export function posSessionActivityAt(session: PosSession): number {
+  if (session.status === "closed" && session.closedAt) return session.closedAt;
+  return session.openedAt || session.closedAt || 0;
+}
+
+/** Newest activity first (open or closed) — table-slim default. */
+export function sortSessionsNewestFirst(sessions: PosSession[]): PosSession[] {
+  return [...sessions].sort((a, b) => posSessionActivityAt(b) - posSessionActivityAt(a));
+}
+
+/** @deprecated prefer sortSessionsNewestFirst for slim overview */
 function sortSessionsOpenFirst(sessions: PosSession[]): PosSession[] {
   return [...sessions].sort((a, b) => {
     const aOpen = a.status === "open" ? 1 : 0;
@@ -172,6 +188,14 @@ function sortSessionsOpenFirst(sessions: PosSession[]): PosSession[] {
     const bClosed = b.closedAt || b.openedAt || 0;
     return bClosed - aClosed;
   });
+}
+
+/** Owner-visible session code (not truncated to 6). */
+export function posSessionCode(sessionId: string): string {
+  const id = (sessionId || "").trim();
+  if (!id) return "—";
+  if (id.length <= 16) return id.toUpperCase();
+  return id.slice(-12).toUpperCase();
 }
 
 /** บิลในรอบ (active) — ใช้กับการ์ดหลังบ้าน */
@@ -351,11 +375,7 @@ export function subscribePosSalesForDate(
 
 /**
  * Live nPos sales cycles for a day — open + closed from `posSessions`.
- * Sorted client-side (open first, newest closed); not OT morning/evening order.
- *
- * Today also merges:
- * - all `status==open` sessions (live tablet rounds)
- * - legacy UTC-midnight `date` keys from the old CF day helper
+ * Prefer {@link subscribePosSessionsRecent} for the slim overview (no date slider).
  */
 export function subscribePosSessionsForDate(
   dateMs: number,
@@ -377,7 +397,7 @@ export function subscribePosSessionsForDate(
     if (isToday) {
       for (const s of openLive) map.set(s.id, s);
     }
-    onSessions(sortSessionsOpenFirst([...map.values()]));
+    onSessions(sortSessionsNewestFirst([...map.values()]));
   };
 
   const handleErr = (err: Error) => onError?.(err);
@@ -417,6 +437,74 @@ export function subscribePosSessionsForDate(
     unsubLegacy();
     unsubOpen();
   };
+}
+
+/**
+ * Slim-super overview: newest ~50 sessions + all live open rounds.
+ * No day slider — each row carries its own date column.
+ */
+export function subscribePosSessionsRecent(
+  onSessions: (sessions: PosSession[]) => void,
+  onError?: (err: Error) => void,
+  rowLimit = POS_SESSIONS_SLIM_LIMIT,
+): Unsubscribe {
+  let recent: PosSession[] = [];
+  let openLive: PosSession[] = [];
+
+  const emit = () => {
+    const map = new Map<string, PosSession>();
+    for (const s of recent) map.set(s.id, s);
+    for (const s of openLive) map.set(s.id, s);
+    onSessions(sortSessionsNewestFirst([...map.values()]).slice(0, rowLimit));
+  };
+
+  const handleErr = (err: Error) => onError?.(err);
+
+  const unsubRecent = onSnapshot(
+    query(
+      collection(getDb(), POS_SESSIONS_COL),
+      orderBy("openedAt", "desc"),
+      limit(Math.max(rowLimit, POS_SESSIONS_SLIM_LIMIT)),
+    ),
+    (snap) => {
+      recent = snap.docs.map((d) => mapSession(d.id, d.data() as Record<string, unknown>));
+      emit();
+    },
+    (err) => handleErr(err instanceof Error ? err : new Error(String(err))),
+  );
+
+  const unsubOpen = onSnapshot(
+    query(collection(getDb(), POS_SESSIONS_COL), where("status", "==", "open")),
+    (snap) => {
+      openLive = snap.docs.map((d) => mapSession(d.id, d.data() as Record<string, unknown>));
+      emit();
+    },
+    (err) => handleErr(err instanceof Error ? err : new Error(String(err))),
+  );
+
+  return () => {
+    unsubRecent();
+    unsubOpen();
+  };
+}
+
+/** Recent bills for slim overview (no date slider). Cap keeps the page fast. */
+export function subscribePosSalesRecent(
+  onSales: (sales: PosSale[]) => void,
+  onError?: (err: Error) => void,
+  rowLimit = 200,
+): Unsubscribe {
+  return onSnapshot(
+    query(
+      collection(getDb(), POS_SALES_COL),
+      orderBy("createdAt", "desc"),
+      limit(Math.max(50, rowLimit)),
+    ),
+    (snap) => {
+      onSales(snap.docs.map((d) => mapPosSale(d.id, d.data() as Record<string, unknown>)));
+    },
+    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
+  );
 }
 
 export function shiftDayMs(offsetDays = 0): number {

@@ -9,19 +9,30 @@ import {
 } from "@/lib/pos-tablet-sync";
 import {
   posDeviceLabel,
+  posPairingCodeFromId,
   subscribePosDevicesAdmin,
   type PosDevice,
 } from "@/lib/pos-devices";
 import {
+  POS_SESSIONS_SLIM_LIMIT,
+  posSessionCode,
   salesForSession,
-  shortPosSessionId,
   voidedForSession,
 } from "@/lib/pos-sales-report";
 import type { PosSale, PosSession } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
 
 function formatHm(ts: number): string {
+  if (!ts) return "—";
   return new Date(ts).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDateShort(ts: number): string {
+  if (!ts) return "—";
+  return new Date(ts).toLocaleDateString("th-TH", {
+    day: "numeric",
+    month: "short",
+  });
 }
 
 function moneyOrDash(n: number | undefined): string {
@@ -33,7 +44,10 @@ function moneyOrDash(n: number | undefined): string {
 type RowModel = {
   session: PosSession;
   deviceLabel: string;
+  pairingCode: string;
+  sessionCode: string;
   open: boolean;
+  dateLabel: string;
   total: number;
   bills: number;
   voids: number;
@@ -56,7 +70,6 @@ function buildRows(
   sales: PosSale[],
   devicesById: Map<string, PosDevice>,
 ): RowModel[] {
-  // Parent already sorts open-first; keep stable.
   return sessions.map((session) => {
     const active = salesForSession(sales, session.id);
     const voided = voidedForSession(sales, session.id);
@@ -71,6 +84,10 @@ function buildRows(
       .reduce((a, s) => a + s.total, 0);
     const salesTotal = active.reduce((a, s) => a + s.total, 0);
     const device = devicesById.get(session.deviceId);
+    const pairing =
+      device?.pairingCode ||
+      (session.deviceId ? posPairingCodeFromId(session.deviceId) : "—");
+    const dayMs = session.date || session.openedAt || 0;
     return {
       session,
       deviceLabel: device
@@ -78,7 +95,10 @@ function buildRows(
         : session.deviceId
           ? `#${session.deviceId.slice(-4).toUpperCase()}`
           : "—",
+      pairingCode: pairing,
+      sessionCode: posSessionCode(session.id),
       open: session.status === "open",
+      dateLabel: formatDateShort(dayMs),
       total: salesTotal || session.totalSales || 0,
       bills: active.length || session.saleCount || 0,
       voids: voided.length || session.voidedCount || 0,
@@ -129,8 +149,8 @@ function daySummaryFromSales(sales: PosSale[]): DaySummary {
 }
 
 /**
- * Super-slim nPos sales-cycle rows — realtime from posSessions + posSales.
- * Not OT morning/evening. No close-shift CTA (native only).
+ * Super-slim nPos sales-cycle rows — realtime, newest first, ~50 with scroll.
+ * Codes visible (owner-only). No date slider. No close-shift CTA (native only).
  */
 export function PosSessionsSlimTable({
   sessions,
@@ -138,7 +158,7 @@ export function PosSessionsSlimTable({
   selectedSessionId,
   onSelect,
   onError,
-  dayLabel = "วันนี้",
+  dayLabel = "ล่าสุด",
 }: {
   sessions: PosSession[];
   sales: PosSale[];
@@ -206,7 +226,7 @@ export function PosSessionsSlimTable({
     for (const row of rows) {
       const id = row.session.deviceId || "";
       if (!id || seen.has(id)) continue;
-      seen.set(id, row.deviceLabel);
+      seen.set(id, row.pairingCode !== "—" ? row.pairingCode : row.deviceLabel);
     }
     return [...seen.entries()].map(([id, label]) => ({ id, label }));
   }, [rows]);
@@ -233,7 +253,8 @@ export function PosSessionsSlimTable({
           <h3>รอบการขาย nPos</h3>
           <span className="muted">
             {filteredRows.length}
-            {filteredRows.length !== rows.length ? `/${rows.length}` : ""} รอบ · realtime
+            {filteredRows.length !== rows.length ? `/${rows.length}` : ""} รอบ · ใหม่สุดบน · ≤
+            {POS_SESSIONS_SLIM_LIMIT}
           </span>
         </div>
         <PulseChips
@@ -244,9 +265,9 @@ export function PosSessionsSlimTable({
         />
       </header>
 
-      <p className="npos-slim-summary" aria-label="สรุปยอดวัน">
+      <p className="npos-slim-summary" aria-label="สรุปยอดในหน้าต่าง">
         <strong>฿{formatPlainNumber(daySum.total)}</strong>
-        <span className="muted">ยอด{dayLabel}</span>
+        <span className="muted">ยอดในหน้าต่างบิล</span>
         <span>·</span>
         <span>{daySum.bills} บิล</span>
         <span>·</span>
@@ -291,15 +312,16 @@ export function PosSessionsSlimTable({
       ) : null}
 
       {emptyDay ? (
-        <p className="muted npos-slim-empty">ยังไม่มีรอบ nPos ในวันนี้ — เปิดกะที่แท็บเล็ต</p>
+        <p className="muted npos-slim-empty">ยังไม่มีรอบ nPos — เปิดกะที่แท็บเล็ต</p>
       ) : filteredRows.length === 0 ? (
         <p className="muted npos-slim-empty">ไม่มีรอบตามตัวกรอง</p>
       ) : (
-        <div className="npos-slim-scroll" role="table" aria-label="รอบการขาย nPos">
-          <div className="npos-slim-row npos-slim-row--head" role="row">
+        <div className="npos-slim-scroll npos-slim-scroll--rows" role="table" aria-label="รอบการขาย nPos">
+          <div className="npos-slim-row npos-slim-row--head npos-slim-row--sessions-super" role="row">
             <span role="columnheader">สถานะ</span>
-            <span role="columnheader">เครื่อง</span>
-            <span role="columnheader">รอบ</span>
+            <span role="columnheader">วันที่</span>
+            <span role="columnheader">รหัสเครื่อง</span>
+            <span role="columnheader">รหัสรอบ</span>
             <span role="columnheader">เริ่ม</span>
             <span role="columnheader">ปิด</span>
             <span role="columnheader" className="npos-slim-num">
@@ -324,24 +346,30 @@ export function PosSessionsSlimTable({
 
           {filteredRows.map((row) => {
             const selected = selectedSessionId === row.session.id;
-            const sid = shortPosSessionId(row.session.id);
             return (
               <div key={row.session.id} className="npos-slim-block">
                 <button
                   type="button"
                   role="row"
-                  className={`npos-slim-row ${row.open ? "is-open" : ""} ${selected ? "is-selected" : ""}`}
+                  className={`npos-slim-row npos-slim-row--sessions-super ${row.open ? "is-open" : ""} ${selected ? "is-selected" : ""}`}
                   onClick={() => onSelect(selected ? null : row.session.id)}
                 >
                   <span className="npos-slim-status" role="cell">
                     <i aria-hidden className={row.open ? "is-live" : ""} />
                     {row.open ? "เปิด" : "ปิด"}
                   </span>
-                  <span role="cell" className="npos-slim-ellipsis" title={row.deviceLabel}>
-                    {row.deviceLabel}
+                  <span role="cell" title={row.dateLabel}>
+                    {row.dateLabel}
                   </span>
-                  <span role="cell" title={row.session.id}>
-                    {sid}
+                  <span
+                    role="cell"
+                    className="npos-slim-code"
+                    title={`${row.deviceLabel} · ${row.session.deviceId}`}
+                  >
+                    {row.pairingCode}
+                  </span>
+                  <span role="cell" className="npos-slim-code" title={row.session.id}>
+                    {row.sessionCode}
                   </span>
                   <span role="cell">{formatHm(row.session.openedAt)}</span>
                   <span role="cell">
@@ -370,9 +398,7 @@ export function PosSessionsSlimTable({
                   <div className="npos-slim-detail" role="row">
                     <span>
                       ทอนเริ่ม {moneyOrDash(row.opening)}
-                      {row.open
-                        ? ` · ระหว่างกะ · ยอดจากบิล realtime`
-                        : ""}
+                      {row.open ? ` · ระหว่างกะ · ยอดจากบิล realtime` : ""}
                       {(row.cashOut != null && row.cashOut > 0) ||
                       (row.cashDrops != null && row.cashDrops > 0)
                         ? ` · ถอน ${moneyOrDash(row.cashOut)}${
@@ -408,7 +434,8 @@ export function PosSessionsSlimTable({
       )}
 
       <p className="muted npos-slim-foot">
-        รอบ = กะ nPos บนแท็บเล็ต (เปิด–ปิดมือ) · ไม่ใช่ระบบ OT · ปิดกะที่แท็บเล็ตเท่านั้น
+        รอบ = กะ nPos บนแท็บเล็ต · รหัสเครื่อง/รอบโชว์เต็ม (เจ้าของร้าน) · ปิดกะที่แท็บเล็ตเท่านั้น ·
+        ไม่ใช่ระบบ OT
       </p>
     </section>
   );

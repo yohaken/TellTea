@@ -3,15 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Ban, ChevronLeft, ChevronRight } from "lucide-react";
+import { Ban } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { voidPosSale } from "@/lib/pos-sales-admin";
 import {
-  formatPosReportDate,
+  posSessionCode,
   reconcilePosSessions,
   shortPosSessionId,
-  subscribePosSalesForDate,
-  subscribePosSessionsForDate,
+  subscribePosSalesRecent,
+  subscribePosSessionsRecent,
   summarizePosSalesDetailed,
 } from "@/lib/pos-sales-report";
 import {
@@ -60,26 +60,21 @@ function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
 type BillStatusFilter = "all" | "ok" | "voided";
 type BillPayFilter = "all" | "cash" | "promptpay" | "transfer";
 
-function dateInputValue(ms: number) {
-  const d = new Date(ms);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+}
+
+function saleIsToday(sale: PosSale, todayMs: number): boolean {
+  if (sale.date === todayMs) return true;
+  return startOfLocalDay(new Date(sale.createdAt || 0)) === todayMs;
 }
 
 type PosSalesHubTab = "report" | "manage";
 
 export function PosSalesReport({
-  dateMs,
   onError,
   compact = false,
 }: {
-  dateMs: number;
   onError?: (msg: string | null) => void;
   compact?: boolean;
 }) {
@@ -96,12 +91,11 @@ export function PosSalesReport({
   const [statusFilter, setStatusFilter] = useState<BillStatusFilter>("all");
   const [payFilter, setPayFilter] = useState<BillPayFilter>("all");
 
-  const isToday = dateMs === startOfLocalDay();
+  const todayMs = startOfLocalDay();
 
   useEffect(() => {
     setLoading(true);
-    const unsubSales = subscribePosSalesForDate(
-      dateMs,
+    const unsubSales = subscribePosSalesRecent(
       (list) => {
         setSales(list);
         setLoading(false);
@@ -111,8 +105,7 @@ export function PosSalesReport({
         setLoading(false);
       },
     );
-    const unsubSessions = subscribePosSessionsForDate(
-      dateMs,
+    const unsubSessions = subscribePosSessionsRecent(
       setSessions,
       (err) => onError?.(err.message),
     );
@@ -120,7 +113,7 @@ export function PosSalesReport({
       unsubSales();
       unsubSessions();
     };
-  }, [dateMs, onError]);
+  }, [onError]);
 
   const summary = useMemo(() => summarizePosSalesDetailed(sales, sessions), [sales, sessions]);
   const reconcile = useMemo(() => reconcilePosSessions(sales, sessions), [sales, sessions]);
@@ -159,14 +152,6 @@ export function PosSalesReport({
   );
 
   useEffect(() => {
-    setSelectedSessionId(null);
-    setSelectedSaleId(null);
-    setBillQuery("");
-    setStatusFilter("all");
-    setPayFilter("all");
-  }, [dateMs]);
-
-  useEffect(() => {
     if (selectedSaleId && !filteredSales.some((s) => s.id === selectedSaleId)) {
       setSelectedSaleId(filteredSales[0]?.id || null);
     }
@@ -199,7 +184,7 @@ export function PosSalesReport({
         sessions={sessions}
         sales={sales}
         selectedSessionId={selectedSessionId}
-        dayLabel={isToday ? "วันนี้" : "ทั้งหมด"}
+        dayLabel="ล่าสุด"
         onSelect={(id) => {
           setSelectedSessionId(id);
           if (id) {
@@ -225,9 +210,9 @@ export function PosSalesReport({
         className="pos-sales-report-section pos-sales-bills-section"
       >
         <h3>
-          รายการบิล{isToday ? " วันนี้" : ""}
+          รายการบิลล่าสุด
           {selectedSessionId
-            ? ` · รอบ #${selectedSessionId.slice(-6).toUpperCase()}`
+            ? ` · รอบ ${posSessionCode(selectedSessionId)}`
             : ""}
           <span className="muted pos-sales-bills-count">
             {" "}
@@ -303,6 +288,7 @@ export function PosSalesReport({
                 const voided = sale.status === "voided";
                 const busy = busyId === sale.id;
                 const active = selectedSale?.id === sale.id;
+                const canVoid = !voided && saleIsToday(sale, todayMs);
                 const preview = sale.lines
                   .slice(0, 2)
                   .map((l) => `${l.name}×${l.qty}`)
@@ -344,7 +330,7 @@ export function PosSalesReport({
                         {voided ? <span className="pos-sales-voided">ยกเลิกแล้ว</span> : null}
                       </div>
                     </button>
-                    {!voided && isToday ? (
+                    {canVoid ? (
                       <button
                         type="button"
                         className="npos-slim-text-btn pos-sales-void-btn"
@@ -368,7 +354,7 @@ export function PosSalesReport({
                   compact
                   receipt={saleToLocalReceipt(selectedSale)}
                   onVoid={
-                    isToday && selectedSale.status !== "voided"
+                    saleIsToday(selectedSale, todayMs) && selectedSale.status !== "voided"
                       ? () => openVoidDialog(selectedSale)
                       : undefined
                   }
@@ -548,21 +534,11 @@ export function PosSalesReportPage() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const tab: PosSalesHubTab = tabParam === "manage" ? "manage" : "report";
-  const [dateMs, setDateMs] = useState(() => startOfLocalDay());
   const [error, setError] = useState<string | null>(null);
-  const today = startOfLocalDay();
 
   function setTab(next: PosSalesHubTab) {
     setError(null);
     router.replace(next === "manage" ? "/pos-sales/?tab=manage" : "/pos-sales/", { scroll: false });
-  }
-
-  function shiftDate(delta: number) {
-    const next = new Date(dateMs);
-    next.setDate(next.getDate() + delta);
-    const nextMs = startOfLocalDay(next);
-    if (nextMs > today) return;
-    setDateMs(nextMs);
   }
 
   return (
@@ -570,7 +546,9 @@ export function PosSalesReportPage() {
       <header className="npos-bo-page-head">
         <div>
           <h1 className="panel-title pos-sales-page-title">POS</h1>
-          <p className="muted pos-sales-page-lead">รอบขาย nPos realtime · บิล · เครื่อง — ไม่ใช่กะ OT</p>
+          <p className="muted pos-sales-page-lead">
+            ตาราง slim · ใหม่สุดบน · รหัสเครื่อง/รอบ · ปิดกะ realtime — ไม่ใช่กะ OT
+          </p>
         </div>
         <nav className="npos-bo-page-tabs" role="tablist" aria-label="หมวด POS">
           <button
@@ -596,48 +574,7 @@ export function PosSalesReportPage() {
 
       {error ? <p className="error-text">{error}</p> : null}
 
-      {tab === "manage" ? (
-        <PosManagePanel onError={setError} />
-      ) : (
-        <>
-          <div className="pos-sales-date-nav npos-slim-date-nav">
-            <button type="button" className="npos-slim-text-btn" aria-label="วันก่อนหน้า" onClick={() => shiftDate(-1)}>
-              <ChevronLeft size={16} aria-hidden />
-            </button>
-            <label className="pos-sales-date-pick">
-              <span className="sr-only">เลือกวัน</span>
-              <input
-                type="date"
-                value={dateInputValue(dateMs)}
-                max={dateInputValue(today)}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (!v) return;
-                  const next = startOfLocalDay(new Date(`${v}T12:00:00`));
-                  if (next > today) return;
-                  setDateMs(next);
-                }}
-              />
-            </label>
-            <strong>{formatPosReportDate(dateMs)}</strong>
-            <button
-              type="button"
-              className="npos-slim-text-btn"
-              aria-label="วันถัดไป"
-              disabled={dateMs >= today}
-              onClick={() => shiftDate(1)}
-            >
-              <ChevronRight size={16} aria-hidden />
-            </button>
-            {dateMs !== today ? (
-              <button type="button" className="npos-slim-text-btn" onClick={() => setDateMs(today)}>
-                วันนี้
-              </button>
-            ) : null}
-          </div>
-          <PosSalesReport dateMs={dateMs} onError={setError} />
-        </>
-      )}
+      {tab === "manage" ? <PosManagePanel onError={setError} /> : <PosSalesReport onError={setError} />}
     </div>
   );
 }

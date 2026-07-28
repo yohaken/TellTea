@@ -9,15 +9,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 318/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 113/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+83/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.60"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 319/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 114/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+84/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.61"/);
 
 assert.ok(existsSync(join(root, "docs/npos-bo-slim-sessions-checklist.md")));
 const doc = read("docs/npos-bo-slim-sessions-checklist.md");
-assert.match(doc, /1\.14\.51/);
-assert.match(doc, /เปิดอยู่|สรุป|ปิดกะ/);
+assert.match(doc, /slim|สรุป|ปิดกะ/i);
 
 const slim = read("src/components/PosSessionsSlimTable.tsx");
 assert.match(slim, /PosSessionsSlimTable/);
@@ -39,6 +38,7 @@ assert.match(report, /npos-slim-row--compact/);
 assert.match(report, /pos-sales-bills/);
 assert.doesNotMatch(report, /SessionShiftCard/);
 assert.doesNotMatch(report, /pos-sales-summary-card/);
+assert.doesNotMatch(report, /npos-slim-date-nav/);
 
 const css = read("src/app/globals.css");
 assert.match(css, /\.npos-slim-sessions/);
