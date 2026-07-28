@@ -18,6 +18,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -92,6 +93,7 @@ public class SellActivity extends Activity {
   private JSONObject shop;
   private String selectedCategoryId = "";
   private String menuQuery = "";
+  private boolean searchOpen = false;
   private final List<MenuModels.CartLine> cart = new ArrayList<>();
   private double discountBaht = 0;
   private CustomerDisplayController customerDisplay;
@@ -150,7 +152,9 @@ public class SellActivity extends Activity {
       sellHub.setOnClickListener(v -> showSellHubMenu(v));
     }
     EditText sellSearch = findViewById(R.id.sellSearch);
+    View sellSearchBtn = findViewById(R.id.sellSearchButton);
     if (sellSearch != null) {
+      sellSearch.setVisibility(View.GONE);
       sellSearch.addTextChangedListener(
           new TextWatcher() {
             @Override
@@ -165,6 +169,14 @@ public class SellActivity extends Activity {
               renderMenu();
             }
           });
+      sellSearch.setOnEditorActionListener(
+          (v, actionId, event) -> {
+            hideKeyboard(sellSearch);
+            return true;
+          });
+    }
+    if (sellSearchBtn != null) {
+      sellSearchBtn.setOnClickListener(v -> toggleSellSearch());
     }
     updatePrompt = new UpdatePromptController(this);
     updatePrompt.setBeforeInstall(this::persistWorkBeforeUpdate);
@@ -294,6 +306,11 @@ public class SellActivity extends Activity {
       sellSearch.setMinimumHeight(uiScale.touchMinPx);
       sellSearch.setTextSize(TypedValue.COMPLEX_UNIT_SP, uiScale.bodySp);
     }
+    View sellSearchBtn = findViewById(R.id.sellSearchButton);
+    if (sellSearchBtn != null) {
+      sellSearchBtn.setMinimumHeight(uiScale.touchMinPx);
+      sellSearchBtn.setMinimumWidth(uiScale.touchMinPx);
+    }
     View payCash = findViewById(R.id.payCashButton);
     View payTransfer = findViewById(R.id.payTransferButton);
     View payPp = findViewById(R.id.payPromptButton);
@@ -335,6 +352,49 @@ public class SellActivity extends Activity {
     styleSoftCartAction(findViewById(R.id.clearCartButton));
     if (menuGrid != null) {
       menuGrid.setColumnCount(uiScale.menuCols);
+    }
+  }
+
+  private void toggleSellSearch() {
+    EditText sellSearch = findViewById(R.id.sellSearch);
+    View sellSearchBtn = findViewById(R.id.sellSearchButton);
+    TextView title = sellTitle != null ? sellTitle : findViewById(R.id.sellTitle);
+    if (sellSearch == null) return;
+    searchOpen = !searchOpen;
+    if (searchOpen) {
+      if (title != null) title.setVisibility(View.GONE);
+      sellSearch.setVisibility(View.VISIBLE);
+      if (sellSearchBtn != null) {
+        sellSearchBtn.setText("✕");
+        sellSearchBtn.setContentDescription(getString(R.string.sell_search_close));
+      }
+      sellSearch.requestFocus();
+      sellSearch.post(
+          () -> {
+            InputMethodManager imm =
+                (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null) {
+              imm.showSoftInput(sellSearch, InputMethodManager.SHOW_IMPLICIT);
+            }
+          });
+    } else {
+      hideKeyboard(sellSearch);
+      sellSearch.setText("");
+      menuQuery = "";
+      sellSearch.setVisibility(View.GONE);
+      if (title != null) title.setVisibility(View.VISIBLE);
+      if (sellSearchBtn != null) {
+        sellSearchBtn.setText(R.string.sell_search_glyph);
+        sellSearchBtn.setContentDescription(getString(R.string.sell_search_hint));
+      }
+      renderMenu();
+    }
+  }
+
+  private void hideKeyboard(View focus) {
+    InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+    if (imm != null && focus != null) {
+      imm.hideSoftInputFromWindow(focus.getWindowToken(), 0);
     }
   }
 

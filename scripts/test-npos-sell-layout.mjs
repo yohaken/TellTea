@@ -9,16 +9,16 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 314/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+79/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.56"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 315/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+80/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.57"/);
 assert.match(read("docs/npos-sell-layout-checklist.md"), /กริด|local-first|65|35|344/);
 
 const layout = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
 assert.match(layout, /menuGrid/);
 assert.match(layout, /columnCount="5"/);
-assert.match(layout, /layout_weight="16"|layout_weight="54"|layout_weight="65"/);
-assert.match(layout, /layout_weight="30"|layout_weight="35"/);
+assert.match(layout, /layout_weight="16"|layout_weight="54"|layout_weight="65"|layout_weight="14"|layout_weight="70"/);
+assert.match(layout, /layout_weight="30"|layout_weight="35"|layout_weight="16"/);
 assert.match(layout, /categoryBar/);
 assert.match(layout, /include_pos_sidebar|posSidebar|npos_chrome|#2A3038/);
 assert.doesNotMatch(layout, /menuList/);

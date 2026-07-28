@@ -7,17 +7,23 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONObject;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
+import app.telltea.npos.diagnose.DeviceIdentity;
 import app.telltea.npos.sell.SaleSync;
 import app.telltea.npos.shift.BlindCloseFlow;
+import app.telltea.npos.shift.SessionHistory;
 import app.telltea.npos.shift.ShiftPrefs;
 import app.telltea.npos.ui.NposConfirmDialog;
 import app.telltea.npos.ui.NposFonts;
@@ -26,17 +32,28 @@ import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.ui.UiScale;
 
 /**
- * Mid-shift overview — duration, payments, voids, cash drop, X-report, close.
+ * Shift / sales-session panel — left rail actions · right TellTea dashboard cards.
  */
 public class ShiftActivity extends Activity {
+  private static final int TAB_DASH = 0;
+  private static final int TAB_HISTORY = 1;
+
   private final SaleSync saleSync = new SaleSync();
   private final Handler dutyHandler = new Handler(Looper.getMainLooper());
-  private TextView overviewView;
+  private LinearLayout dashHost;
+  private LinearLayout historyHost;
+  private TextView navDash;
+  private TextView navHistory;
+  private TextView staffLine;
+  private TextView cashCardBody;
+  private TextView transferCardBody;
+  private TextView summaryCardBody;
+  private int activeTab = TAB_DASH;
   private final Runnable dutyTick =
       new Runnable() {
         @Override
         public void run() {
-          refreshOverview();
+          refreshDashboard();
           if (ShiftPrefs.isOpen(ShiftActivity.this)) {
             dutyHandler.postDelayed(this, 1000L);
           }
@@ -46,22 +63,49 @@ public class ShiftActivity extends Activity {
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    LinearLayout root = NposUi.pageColumn(this);
-    root.addView(NposUi.headerBar(this, getString(R.string.nav_shift)));
+    UiScale ui = UiScale.from(this);
 
-    overviewView = NposUi.body(this, "");
-    overviewView.setTextColor(NposUi.color(this, R.color.npos_ink));
-    overviewView.setTypeface(NposFonts.medium(this));
-    overviewView.setPadding(0, NposUi.dp(this, 12), 0, NposUi.dp(this, 16));
-    root.addView(overviewView);
+    LinearLayout page = new LinearLayout(this);
+    page.setOrientation(LinearLayout.VERTICAL);
+    page.setBackgroundColor(NposUi.color(this, R.color.npos_bg));
+    page.addView(NposUi.headerBar(this, getString(R.string.nav_shift)));
+
+    LinearLayout split = new LinearLayout(this);
+    split.setOrientation(LinearLayout.HORIZONTAL);
+    split.setLayoutParams(
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
+    split.setPadding(ui.dp(10), ui.dp(8), ui.dp(10), ui.dp(10));
+
+    // Left ~30%: sub-menu
+    LinearLayout left = new LinearLayout(this);
+    left.setOrientation(LinearLayout.VERTICAL);
+    left.setBackgroundColor(NposUi.color(this, R.color.npos_surface));
+    left.setPadding(ui.dp(10), ui.dp(12), ui.dp(10), ui.dp(12));
+    LinearLayout.LayoutParams leftLp =
+        new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 30f);
+    leftLp.setMarginEnd(ui.dp(8));
+    left.setLayoutParams(leftLp);
+
+    TextView leftTitle = NposUi.caption(this, getString(R.string.shift_nav_title));
+    leftTitle.setPadding(0, 0, 0, ui.dp(10));
+    left.addView(leftTitle);
+
+    navDash = navItem(getString(R.string.shift_nav_dashboard), true);
+    navDash.setOnClickListener(v -> showTab(TAB_DASH));
+    left.addView(navDash);
+
+    navHistory = navItem(getString(R.string.shift_nav_history), false);
+    navHistory.setOnClickListener(v -> showTab(TAB_HISTORY));
+    left.addView(navHistory);
 
     TextView drop = NposUi.secondary(this, getString(R.string.shift_cash_drop_btn));
-    drop.setLayoutParams(NposUi.cta(this, 10));
+    drop.setLayoutParams(matchRow(ui, 12));
     drop.setOnClickListener(v -> askCashDrop());
-    root.addView(drop);
+    left.addView(drop);
 
     TextView x = NposUi.secondary(this, getString(R.string.btn_x_report));
-    x.setLayoutParams(NposUi.cta(this, 10));
+    x.setLayoutParams(matchRow(ui, 8));
     x.setOnClickListener(
         v -> {
           Toast.makeText(this, R.string.sell_printing_x, Toast.LENGTH_SHORT).show();
@@ -72,26 +116,153 @@ public class ShiftActivity extends Activity {
                   runOnUiThread(
                       () -> Toast.makeText(this, R.string.sell_x_printed, Toast.LENGTH_SHORT).show()));
         });
-    root.addView(x);
+    left.addView(x);
 
     TextView z = NposUi.primary(this, getString(R.string.btn_close_shift));
-    z.setLayoutParams(NposUi.cta(this, 0));
+    z.setLayoutParams(matchRow(ui, 8));
     z.setOnClickListener(v -> closeShift());
-    root.addView(z);
+    left.addView(z);
 
-    ScrollView scroll = new ScrollView(this);
-    scroll.setFillViewport(true);
-    scroll.setBackgroundColor(NposUi.color(this, R.color.npos_bg));
-    scroll.addView(root);
-    setContentView(scroll);
+    // Right ~70%: dashboard / history
+    LinearLayout right = new LinearLayout(this);
+    right.setOrientation(LinearLayout.VERTICAL);
+    right.setLayoutParams(
+        new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 70f));
+
+    staffLine = NposUi.body(this, "");
+    staffLine.setTypeface(NposFonts.semibold(this));
+    staffLine.setTextColor(NposUi.color(this, R.color.npos_ink));
+    staffLine.setPadding(ui.dp(4), 0, ui.dp(4), ui.dp(8));
+    right.addView(staffLine);
+
+    dashHost = new LinearLayout(this);
+    dashHost.setOrientation(LinearLayout.VERTICAL);
+    ScrollView dashScroll = new ScrollView(this);
+    dashScroll.setFillViewport(true);
+    LinearLayout dashInner = new LinearLayout(this);
+    dashInner.setOrientation(LinearLayout.VERTICAL);
+    cashCardBody = addDashCard(dashInner, getString(R.string.shift_card_cash_title), ui);
+    transferCardBody = addDashCard(dashInner, getString(R.string.shift_card_transfer_title), ui);
+    summaryCardBody = addDashCard(dashInner, getString(R.string.shift_card_summary_title), ui);
+    dashScroll.addView(dashInner);
+    dashHost.addView(
+        dashScroll,
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
+    right.addView(
+        dashHost,
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
+
+    historyHost = new LinearLayout(this);
+    historyHost.setOrientation(LinearLayout.VERTICAL);
+    historyHost.setVisibility(View.GONE);
+    ScrollView histScroll = new ScrollView(this);
+    histScroll.setFillViewport(true);
+    LinearLayout histList = new LinearLayout(this);
+    histList.setOrientation(LinearLayout.VERTICAL);
+    histList.setId(View.generateViewId());
+    histScroll.addView(histList);
+    historyHost.setTag(histList);
+    historyHost.addView(
+        histScroll,
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
+    right.addView(
+        historyHost,
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
+
+    split.addView(left);
+    split.addView(right);
+    page.addView(
+        split,
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
+    setContentView(page);
     NposFonts.applyActivity(this);
-    refreshOverview();
+    refreshDashboard();
+    refreshHistory();
   }
 
-  private void refreshOverview() {
-    if (overviewView == null) return;
+  private TextView navItem(String label, boolean active) {
+    TextView tv = NposUi.body(this, label);
+    tv.setTypeface(NposFonts.semibold(this));
+    tv.setMinHeight(UiScale.from(this).touchMinPx);
+    tv.setGravity(Gravity.CENTER_VERTICAL);
+    tv.setPadding(NposUi.dp(this, 10), NposUi.dp(this, 10), NposUi.dp(this, 10), NposUi.dp(this, 10));
+    styleNav(tv, active);
+    LinearLayout.LayoutParams lp =
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    lp.bottomMargin = NposUi.dp(this, 6);
+    tv.setLayoutParams(lp);
+    return tv;
+  }
+
+  private void styleNav(TextView tv, boolean active) {
+    if (active) {
+      tv.setBackgroundColor(NposUi.color(this, R.color.npos_orange_soft));
+      tv.setTextColor(NposUi.color(this, R.color.npos_orange));
+    } else {
+      tv.setBackgroundColor(0x00000000);
+      tv.setTextColor(NposUi.color(this, R.color.npos_ink));
+    }
+  }
+
+  private void showTab(int tab) {
+    activeTab = tab;
+    boolean dash = tab == TAB_DASH;
+    dashHost.setVisibility(dash ? View.VISIBLE : View.GONE);
+    historyHost.setVisibility(dash ? View.GONE : View.VISIBLE);
+    styleNav(navDash, dash);
+    styleNav(navHistory, !dash);
+    if (!dash) refreshHistory();
+  }
+
+  private TextView addDashCard(LinearLayout parent, String title, UiScale ui) {
+    LinearLayout card = new LinearLayout(this);
+    card.setOrientation(LinearLayout.VERTICAL);
+    card.setBackgroundColor(NposUi.color(this, R.color.npos_surface));
+    card.setPadding(ui.dp(14), ui.dp(12), ui.dp(14), ui.dp(12));
+    LinearLayout.LayoutParams lp =
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    lp.bottomMargin = ui.dp(10);
+    card.setLayoutParams(lp);
+
+    TextView h = NposUi.section(this, title);
+    h.setPadding(0, 0, 0, ui.dp(6));
+    card.addView(h);
+
+    TextView body = NposUi.body(this, "");
+    body.setTypeface(NposFonts.medium(this));
+    body.setTextColor(NposUi.color(this, R.color.npos_ink));
+    body.setLineSpacing(0f, 1.25f);
+    card.addView(body);
+    parent.addView(card);
+    return body;
+  }
+
+  private static LinearLayout.LayoutParams matchRow(UiScale ui, int topDp) {
+    LinearLayout.LayoutParams lp =
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    lp.topMargin = ui.dp(topDp);
+    return lp;
+  }
+
+  private void refreshDashboard() {
+    String staff = loadStaffName();
+    String device = DeviceIdentity.pairingCode(this);
     if (!ShiftPrefs.isOpen(this)) {
-      overviewView.setText(getString(R.string.shift_panel_status_closed));
+      staffLine.setText(
+          getString(R.string.shift_staff_line, staff.isEmpty() ? "—" : staff, device)
+              + "\n"
+              + getString(R.string.shift_panel_status_closed));
+      if (cashCardBody != null) cashCardBody.setText("—");
+      if (transferCardBody != null) transferCardBody.setText("—");
+      if (summaryCardBody != null) summaryCardBody.setText("—");
       return;
     }
 
@@ -100,64 +271,130 @@ public class ShiftActivity extends Activity {
     String openedAt = opened > 0 ? when.format(new Date(opened)) : "—";
     String duration = formatElapsed(opened);
 
+    staffLine.setText(
+        getString(R.string.shift_staff_line, staff.isEmpty() ? "—" : staff, device)
+            + "\n"
+            + getString(R.string.shift_panel_opened_at, openedAt)
+            + " · "
+            + getString(R.string.shift_panel_duration, duration));
+
     double cash = ShiftPrefs.cashTotal(this);
-    double pp = ShiftPrefs.promptpayTotal(this);
+    double opening = ShiftPrefs.openingCash(this);
+    double expected = ShiftPrefs.expectedCash(this);
+    double drop = ShiftPrefs.cashOutTotal(this);
+    cashCardBody.setText(
+        getString(R.string.shift_panel_opening, ShiftPrefs.moneyPlain(opening))
+            + "\n"
+            + getString(
+                R.string.shift_panel_cash,
+                ShiftPrefs.cashBillCount(this),
+                ShiftPrefs.moneyPlain(cash))
+            + "\n"
+            + getString(
+                R.string.shift_panel_cash_drop,
+                ShiftPrefs.moneyPlain(drop),
+                ShiftPrefs.cashDropCount(this))
+            + "\n"
+            + getString(R.string.shift_panel_expected, ShiftPrefs.moneyPlain(expected)));
+
     double transfer = ShiftPrefs.transferTotal(this);
-    double net = cash + pp + transfer;
+    double pp = ShiftPrefs.promptpayTotal(this);
+    transferCardBody.setText(
+        getString(
+                R.string.shift_panel_transfer,
+                ShiftPrefs.transferBillCount(this),
+                ShiftPrefs.moneyPlain(transfer))
+            + (pp > 0.009
+                ? "\n"
+                    + getString(
+                        R.string.shift_panel_pp,
+                        ShiftPrefs.promptpayBillCount(this),
+                        ShiftPrefs.moneyPlain(pp))
+                : ""));
+
     SaleSync.VoidSessionStats voids = saleSync.voidSessionStats(this);
+    double net = cash + pp + transfer;
     String reasons =
         voids.reasonsText.isEmpty()
             ? getString(R.string.shift_panel_void_none)
             : voids.reasonsText;
-
-    StringBuilder sb = new StringBuilder();
-    sb.append(getString(R.string.shift_panel_status_open)).append('\n');
-    sb.append(getString(R.string.shift_panel_opened_at, openedAt)).append('\n');
-    sb.append(getString(R.string.shift_panel_duration, duration)).append('\n');
-    sb.append(getString(R.string.shift_panel_opening, ShiftPrefs.moneyPlain(ShiftPrefs.openingCash(this))))
-        .append('\n');
-    sb.append(
-            getString(
-                R.string.shift_panel_cash,
-                ShiftPrefs.cashBillCount(this),
-                ShiftPrefs.moneyPlain(cash)))
-        .append('\n');
-    sb.append(
-            getString(
-                R.string.shift_panel_pp,
-                ShiftPrefs.promptpayBillCount(this),
-                ShiftPrefs.moneyPlain(pp)))
-        .append('\n');
-    sb.append(
-            getString(
-                R.string.shift_panel_transfer,
-                ShiftPrefs.transferBillCount(this),
-                ShiftPrefs.moneyPlain(transfer)))
-        .append('\n');
-    sb.append(getString(R.string.shift_panel_net, ShiftPrefs.moneyPlain(net))).append('\n');
-    sb.append(
-            getString(
+    summaryCardBody.setText(
+        getString(R.string.shift_panel_net, ShiftPrefs.moneyPlain(net))
+            + "\n"
+            + getString(R.string.shift_orders_fmt, ShiftPrefs.saleCount(this))
+            + "\n"
+            + getString(
                 R.string.shift_panel_discount,
-                ShiftPrefs.moneyPlain(ShiftPrefs.discountTotal(this))))
-        .append('\n');
-    sb.append(
-            getString(
-                R.string.shift_panel_void,
-                voids.count,
-                ShiftPrefs.moneyPlain(voids.amount)))
-        .append('\n');
-    sb.append(getString(R.string.shift_panel_void_reasons, reasons)).append('\n');
-    sb.append(
-            getString(
-                R.string.shift_panel_cash_drop,
-                ShiftPrefs.moneyPlain(ShiftPrefs.cashOutTotal(this)),
-                ShiftPrefs.cashDropCount(this)))
-        .append('\n');
-    sb.append(
-        getString(
-            R.string.shift_panel_expected,
-            ShiftPrefs.moneyPlain(ShiftPrefs.expectedCash(this))));
-    overviewView.setText(sb.toString());
+                ShiftPrefs.moneyPlain(ShiftPrefs.discountTotal(this)))
+            + "\n"
+            + getString(
+                R.string.shift_panel_void, voids.count, ShiftPrefs.moneyPlain(voids.amount))
+            + "\n"
+            + getString(R.string.shift_panel_void_reasons, reasons));
+  }
+
+  private void refreshHistory() {
+    Object tag = historyHost.getTag();
+    if (!(tag instanceof LinearLayout)) return;
+    LinearLayout list = (LinearLayout) tag;
+    list.removeAllViews();
+    List<JSONObject> rows = SessionHistory.listNewestFirst(this);
+    if (rows.isEmpty()) {
+      TextView empty = NposUi.caption(this, getString(R.string.shift_history_empty));
+      empty.setPadding(NposUi.dp(this, 8), NposUi.dp(this, 16), NposUi.dp(this, 8), 0);
+      list.addView(empty);
+      return;
+    }
+    SimpleDateFormat when = new SimpleDateFormat("d MMM HH:mm", Locale.getDefault());
+    UiScale ui = UiScale.from(this);
+    for (JSONObject row : rows) {
+      LinearLayout card = new LinearLayout(this);
+      card.setOrientation(LinearLayout.VERTICAL);
+      card.setBackgroundColor(NposUi.color(this, R.color.npos_surface));
+      card.setPadding(ui.dp(12), ui.dp(10), ui.dp(12), ui.dp(10));
+      LinearLayout.LayoutParams lp =
+          new LinearLayout.LayoutParams(
+              LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+      lp.bottomMargin = ui.dp(8);
+      card.setLayoutParams(lp);
+
+      long openedAt = row.optLong("openedAt", 0L);
+      long closedAt = row.optLong("closedAt", 0L);
+      String sid = row.optString("sessionId", "");
+      String shortId =
+          sid.length() >= 6 ? sid.substring(sid.length() - 6).toUpperCase(Locale.US) : sid;
+      TextView title = NposUi.section(this, getString(R.string.shift_history_id, shortId));
+      card.addView(title);
+
+      TextView meta =
+          NposUi.caption(
+              this,
+              when.format(new Date(openedAt))
+                  + " → "
+                  + when.format(new Date(closedAt))
+                  + "\n"
+                  + getString(
+                      R.string.shift_history_meta,
+                      ShiftPrefs.moneyPlain(row.optDouble("cashSales", 0)
+                          + row.optDouble("transferSales", 0)
+                          + row.optDouble("promptpaySales", 0)),
+                      row.optInt("saleCount", 0),
+                      row.optString("discrepancyLabel", "—"),
+                      ShiftPrefs.moneyPlain(Math.abs(row.optDouble("cashDifference", 0)))));
+      meta.setPadding(0, ui.dp(4), 0, 0);
+      card.addView(meta);
+      list.addView(card);
+    }
+  }
+
+  private String loadStaffName() {
+    try {
+      String raw =
+          getSharedPreferences("npos_menu", MODE_PRIVATE).getString("shopJson", "{}");
+      return new JSONObject(raw == null ? "{}" : raw).optString("receiptStaffName", "").trim();
+    } catch (Exception e) {
+      return "";
+    }
   }
 
   private static String formatElapsed(long openedAt) {
@@ -232,7 +469,7 @@ public class ShiftActivity extends Activity {
                   getString(R.string.shift_cash_drop_ok, ShiftPrefs.moneyPlain(amt)),
                   Toast.LENGTH_SHORT)
               .show();
-          refreshOverview();
+          refreshDashboard();
           return true;
         },
         null);
@@ -270,7 +507,8 @@ public class ShiftActivity extends Activity {
   protected void onResume() {
     super.onResume();
     dutyHandler.removeCallbacks(dutyTick);
-    refreshOverview();
+    refreshDashboard();
+    if (activeTab == TAB_HISTORY) refreshHistory();
     if (ShiftPrefs.isOpen(this)) {
       dutyHandler.postDelayed(dutyTick, 1000L);
     }

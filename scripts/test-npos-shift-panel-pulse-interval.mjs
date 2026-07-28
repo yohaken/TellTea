@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 314/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 109/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+79/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.56"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 315/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 110/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+80/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.57"/);
 
 assert.ok(existsSync(join(root, "docs/npos-shift-panel-pulse-interval-checklist.md")));
 const doc = read("docs/npos-shift-panel-pulse-interval-checklist.md");
@@ -69,7 +69,7 @@ const shiftAct = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/ShiftActivity.java",
 );
 assert.match(shiftAct, /askCashDrop|voidSessionStats|shift_panel_/);
-assert.match(shiftAct, /dutyTick|refreshOverview/);
+assert.match(shiftAct, /dutyTick|refreshDashboard|refreshOverview/);
 
 const report = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/shift/BlindCloseReport.java",

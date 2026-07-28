@@ -23,6 +23,7 @@ import app.telltea.npos.printer.PrinterTransport;
 import app.telltea.npos.printer.ReceiptFormBuilder;
 import app.telltea.npos.printer.ShiftReportFormBuilder;
 import app.telltea.npos.shift.BlindCloseReport;
+import app.telltea.npos.shift.SessionHistory;
 import app.telltea.npos.shift.ShiftPrefs;
 
 /**
@@ -301,6 +302,19 @@ public final class SaleSync {
                     if (report != null) {
                         ShiftPrefs.setNextOpeningCash(app, report.leaveFloat);
                     }
+                    String staff = "";
+                    try {
+                        String shopRaw =
+                            app.getSharedPreferences("npos_menu", Context.MODE_PRIVATE)
+                                .getString("shopJson", "{}");
+                        staff = new JSONObject(shopRaw == null ? "{}" : shopRaw)
+                            .optString("receiptStaffName", "")
+                            .trim();
+                    } catch (Exception ignored) {
+                      /* optional */
+                    }
+                    SessionHistory.rememberClose(
+                        app, report, staff, DeviceIdentity.getOrCreateInstallId(app));
                     ShiftPrefs.close(app);
                     if (done != null) done.run();
                 });

@@ -60,7 +60,9 @@
     <string name="sell_title_demo">สั่งและชำระ (เมนูเดโม)</string>
     <string name="sell_hub_menu">เมนูหน้าร้าน</string>
     <string name="sell_hub_glyph">▦</string>
+    <string name="sell_search_glyph">⌕</string>
     <string name="sell_search_hint">ค้นหาเมนู</string>
+    <string name="sell_search_close">ปิดค้นหา</string>
     <string name="sell_hub_x_report">พิมพ์สรุปกลางรอบ (X)</string>
     <string name="sell_hub_close_shift">ปิดรอบการขาย</string>
     <string name="sell_loading_menu">กำลังโหลดเมนู…</string>
@@ -260,6 +262,17 @@
     <string name="blind_close_note_hint">เช่น นับผิด / ทอนเกิน / อื่นๆ</string>
     <string name="blind_close_confirm_title">ยืนยันปิดกะ</string>
     <string name="blind_close_confirm_btn">ยืนยันปิดกะ · พิมพ์</string>
+    <string name="shift_nav_title">เมนูรอบขาย</string>
+    <string name="shift_nav_dashboard">สรุปรอบนี้</string>
+    <string name="shift_nav_history">ประวัติรอบขาย</string>
+    <string name="shift_card_cash_title">เงินสด</string>
+    <string name="shift_card_transfer_title">เงินโอน</string>
+    <string name="shift_card_summary_title">สรุปรวม</string>
+    <string name="shift_staff_line">พนักงาน %1$s · เครื่อง %2$s</string>
+    <string name="shift_orders_fmt">ออร์เดอร์ %1$d บิล</string>
+    <string name="shift_history_empty">ยังไม่มีประวัติรอบที่ปิดบนเครื่องนี้</string>
+    <string name="shift_history_id">รอบ #%1$s</string>
+    <string name="shift_history_meta">สุทธิ ฿%1$s · %2$d บิล · %3$s ฿%4$s</string>
     <string name="shift_panel_status_open">กำลังเปิดกะ</string>
     <string name="shift_panel_status_closed">ยังไม่เปิดกะ</string>
     <string name="shift_panel_opened_at">เปิดเมื่อ %1$s</string>

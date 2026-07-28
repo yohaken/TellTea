@@ -50,14 +50,34 @@
 
                 <TextView
                     android:id="@+id/sellTitle"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="10dp"
+                    android:layout_weight="1"
                     android:fontFamily="@font/prompt_semibold"
                     android:maxLines="1"
                     android:text="@string/sell_title"
                     android:textColor="@color/npos_chrome_text"
                     android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/sellSearchButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:background="@color/npos_chrome_soft"
+                    android:contentDescription="@string/sell_search_hint"
+                    android:fontFamily="@font/prompt_bold"
+                    android:gravity="center"
+                    android:minWidth="40dp"
+                    android:minHeight="40dp"
+                    android:paddingLeft="10dp"
+                    android:paddingRight="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:text="@string/sell_search_glyph"
+                    android:textColor="@color/npos_chrome_text"
+                    android:textSize="18sp" />
 
                 <EditText
                     android:id="@+id/sellSearch"
@@ -78,7 +98,8 @@
                     android:paddingBottom="6dp"
                     android:textColor="@color/npos_chrome_text"
                     android:textColorHint="@color/npos_chrome_muted"
-                    android:textSize="13sp" />
+                    android:textSize="13sp"
+                    android:visibility="gone" />
 
                 <TextView
                     android:id="@+id/sellVersion"
@@ -151,7 +172,7 @@
                     android:id="@+id/categoryScroll"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:layout_weight="16"
+                    android:layout_weight="14"
                     android:background="@color/npos_surface"
                     android:fillViewport="true"
                     android:overScrollMode="never"
@@ -172,7 +193,7 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_marginStart="6dp"
-                    android:layout_weight="54"
+                    android:layout_weight="70"
                     android:fillViewport="true"
                     android:overScrollMode="never"
                     android:scrollbars="vertical">
@@ -192,7 +213,7 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_marginStart="6dp"
-                    android:layout_weight="30"
+                    android:layout_weight="16"
                     android:background="#FFFFFF"
                     android:elevation="2dp"
                     android:orientation="vertical"
