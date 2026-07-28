@@ -357,7 +357,7 @@ public class SellActivity extends Activity {
 
   private void toggleSellSearch() {
     EditText sellSearch = findViewById(R.id.sellSearch);
-    View sellSearchBtn = findViewById(R.id.sellSearchButton);
+    TextView sellSearchBtn = findViewById(R.id.sellSearchButton);
     TextView title = sellTitle != null ? sellTitle : findViewById(R.id.sellTitle);
     if (sellSearch == null) return;
     searchOpen = !searchOpen;

@@ -46,6 +46,7 @@ const sell = read("npos-telltea/app/src/main/java/app/telltea/npos/SellActivity.
 assert.match(sell, /startPayAll/);
 assert.match(sell, /payAllAmount/);
 assert.match(sell, /toggleSellSearch/);
+assert.match(sell, /TextView sellSearchBtn/);
 assert.match(sell, /sell_hub_discount/);
 assert.match(sell, /holdBill\(\)/);
 
