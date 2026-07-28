@@ -15,6 +15,8 @@ import {
 } from "@/lib/npos-device-class";
 import {
   isPosDeviceOnline,
+  posClientVersionLabel,
+  posDeviceEquipment,
   posDeviceLabel,
   clearNposDeviceCaptures,
   clearNposExclusiveSeat,
@@ -122,6 +124,8 @@ function DeviceCard({
 }) {
   const online = isPosDeviceOnline(d.lastSeenAt, now);
   const machine = shortStableKey(d.stableKey, d.id);
+  const versionLabel = posClientVersionLabel(d);
+  const equip = posDeviceEquipment(d);
   const capturePending =
     d.captureRequestAt > 0 && d.captureRequestAt > (d.lastCaptureAckAt || 0);
   const hasCapture = !!(capture?.primaryUrl || capture?.secondaryUrl);
@@ -134,7 +138,7 @@ function DeviceCard({
         </span>
       </div>
       <p className="muted npos-diagnose-id">
-        รหัส {d.pairingCode} · เครื่อง {machine} · APK {d.nativeShellBuild || d.appBuild || "—"} ·{" "}
+        รหัส {d.pairingCode} · เครื่อง {machine} · เวอร์ชัน {versionLabel} ·{" "}
         {d.deviceHint || "android"}
         {d.isEmulator ? " · emulator" : ""}
         {" · "}
@@ -146,8 +150,11 @@ function DeviceCard({
         {" · เห็น "}
         {formatSeen(d.lastSeenAt)}
       </p>
-      <p className="muted npos-diagnose-id">
-        จอลูกค้า {d.customerDisplay || "—"} · แคป{" "}
+      <p className="muted npos-diagnose-id" title={equip.title}>
+        อุปกรณ์ {equip.short}
+        {d.printerLabel ? ` · ${d.printerLabel}` : ""}
+        {" · จอลูกค้า "}
+        {d.customerDisplay || "—"} · แคป{" "}
         {d.lastCaptureAt ? formatSeen(d.lastCaptureAt) : "ยังไม่มี"}
         {capturePending ? " · รอแคป…" : ""}
         {" · "}
@@ -681,8 +688,9 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                 </span>
                 <span role="columnheader">เชื่อม</span>
                 <span role="columnheader" className="npos-slim-num">
-                  เวอร์
+                  เวอร์ชัน
                 </span>
+                <span role="columnheader">อุปกรณ์</span>
                 <span role="columnheader">แอ็กชัน</span>
               </div>
               {[...buckets.shop, ...buckets.dev].map((d) => {
@@ -714,6 +722,8 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                 let pendingCell = "—";
                 if (failed > 0) pendingCell = `⚠${pending}+${failed}`;
                 else if (pending > 0) pendingCell = String(pending);
+                const versionLabel = posClientVersionLabel(d);
+                const equip = posDeviceEquipment(d);
                 return (
                   <div
                     key={`slim-${d.id}`}
@@ -741,8 +751,19 @@ export function NposDevicesPanel({ onError }: { onError: (msg: string | null) =>
                       <i aria-hidden className={online ? "is-live" : ""} />
                       {online ? "ออน" : "หลุด"}
                     </span>
-                    <span role="cell" className="npos-slim-num">
-                      {d.nativeShellBuild || d.appBuild || "—"}
+                    <span
+                      role="cell"
+                      className="npos-slim-num npos-slim-ellipsis"
+                      title={versionLabel}
+                    >
+                      {versionLabel}
+                    </span>
+                    <span
+                      role="cell"
+                      className="npos-slim-equip npos-slim-ellipsis"
+                      title={equip.title}
+                    >
+                      {equip.short}
                     </span>
                     <span role="cell">
                       {canKick ? (

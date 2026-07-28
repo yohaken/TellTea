@@ -31,6 +31,7 @@
     "test:web-pos-retired": "node scripts/test-web-pos-retired.mjs",
     "test:ledger-transfer-in-fab": "node scripts/test-ledger-transfer-in-fab.mjs",
     "test:alerts-pos-manage-hub": "node scripts/test-alerts-pos-manage-hub.mjs",
+    "test:npos-bo-device-version-equip": "node scripts/test-npos-bo-device-version-equip.mjs",
     "test:check-sop-settings-fold": "node scripts/test-check-sop-settings-fold.mjs",
     "test:ledger-type-labels-unify": "node scripts/test-ledger-type-labels-unify.mjs",
     "test:ledger-bulk-retype-owner": "node scripts/test-ledger-bulk-retype-owner.mjs",

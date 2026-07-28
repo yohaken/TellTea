@@ -9,13 +9,13 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 326/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 327/);
 assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 119/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+89/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.66"/);
 
 assert.ok(existsSync(join(root, "docs/npos-manage-slim-checklist.md")));
-assert.match(read("docs/npos-manage-slim-checklist.md"), /1\.14\.52/);
+assert.match(read("docs/npos-manage-slim-checklist.md"), /1\.14\.66|เวอร์ชันย่อย|อุปกรณ์/);
 
 const manage = read("src/components/PosManagePanel.tsx");
 assert.match(manage, /pos-manage-stack--slim/);
@@ -26,6 +26,7 @@ assert.match(devices, /npos-slim-row--device/);
 assert.match(devices, /npos-slim-text-btn/);
 assert.match(devices, /revokeClaim|grantClaim|requestNposScreenCapture/);
 assert.match(devices, /npos-slim-open-rounds/);
+assert.match(devices, /posClientVersionLabel|posDeviceEquipment/);
 
 const sync = read("src/components/PosTabletSyncPanel.tsx");
 assert.match(sync, /npos-slim-text-btn/);

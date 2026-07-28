@@ -116,6 +116,7 @@ exports.nposDeviceHeartbeat = functions
         pairingCode,
         lastSeenAt: now,
         appBuild: versionCode,
+        versionName,
         userAgent: `nPos-telltea/${versionName}`,
         shellKind: "native",
         nativeShellBuild: versionCode,
@@ -136,6 +137,11 @@ exports.nposDeviceHeartbeat = functions
       }
       if (Object.prototype.hasOwnProperty.call(body, "printerReady")) {
         patch.printerReady = body.printerReady === true;
+        // Drawer kicks through the selected receipt printer endpoint.
+        patch.drawerReady = body.printerReady === true;
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "drawerReady")) {
+        patch.drawerReady = body.drawerReady === true;
       }
       if (Object.prototype.hasOwnProperty.call(body, "printerLabel")) {
         patch.printerLabel = asString(body.printerLabel, 80);
@@ -168,6 +174,8 @@ exports.nposDeviceHeartbeat = functions
           syncLastError: "",
           printerLabel: "",
           printerReady: false,
+          drawerReady: false,
+          versionName: versionName || "0",
           updateStatus: "idle",
           updateTargetBuild: 0,
           updateError: "",

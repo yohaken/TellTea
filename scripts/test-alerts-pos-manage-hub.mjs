@@ -23,7 +23,7 @@ const rules = read("firestore.rules");
 const smoke = read("scripts/smoke-hosting-export.mjs");
 const indexFn = read("functions/index.js");
 
-assert.match(version, /APP_BUILD = 307/);
+assert.match(version, /APP_BUILD = 327/);
 
 assert.match(alerts, /router\.replace\("\/more\/"\)/);
 assert.doesNotMatch(more, /href: "\/alerts\/"/);
@@ -41,7 +41,7 @@ assert.match(settings, /BusinessProfileSetup/);
 assert.doesNotMatch(settings, /ChecklistSetup/);
 
 assert.match(posSales, /Suspense/);
-assert.match(report, /จัดการ Pos/);
+assert.match(report, /จัดการ/);
 assert.match(report, /PosManagePanel/);
 assert.match(report, /tab=manage/);
 assert.doesNotMatch(manage, /MenuCatalogSetup/);

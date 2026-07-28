@@ -26,4 +26,4 @@ FIREBASE_SERVICE_ACCOUNT='{...}' npm run check:npos-devices
 GitHub Actions: workflow **Check nPos on-site devices** (`workflow_dispatch` หรือ push ไฟล์สคริปต์เข้า `main`)  
 → artifact `npos-onsite-devices` (`summary.md` + `report.json`)
 
-รายงานรวม: รุ่นเครื่อง · ออนไลน์ · พร้อมพิมพ์ · จอลูกค้า · จอ px/dpi · USB/BT จาก diagnose
+รายงานรวม: รุ่นย่อย client (`1.14.66 (89)`) · ออนไลน์ · พร้อมพิมพ์/ลิ้นชัก/จอลูกค้า · จอ px/dpi · USB/BT จาก diagnose

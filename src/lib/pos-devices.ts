@@ -107,6 +107,8 @@ export type PosDevice = {
   registeredAt: number;
   lastSeenAt: number;
   appBuild: number;
+  /** Native client semver from heartbeat (e.g. 1.14.66). */
+  versionName: string;
   userAgent: string;
   forceReloadAt: number;
   lastReloadAckAt: number;
@@ -118,6 +120,8 @@ export type PosDevice = {
   deviceHint: string;
   printerLabel: string;
   printerReady: boolean;
+  /** Cash drawer via receipt printer — true when printer endpoint is ready. */
+  drawerReady: boolean;
   standalone: boolean;
   screenSize: string;
   platform: string;
@@ -178,6 +182,82 @@ export function posDeviceLabel(device: PosDevice): string {
   return device.label.trim() || `เครื่อง ${device.pairingCode}`;
 }
 
+/** Semver from heartbeat field, else parse `nPos-telltea/1.14.66` userAgent. */
+export function posClientVersionName(device: PosDevice): string {
+  const named = (device.versionName || "").trim();
+  if (named && named !== "0") return named;
+  const ua = (device.userAgent || "").trim();
+  const m = /^nPos-telltea\/(.+)$/i.exec(ua);
+  if (m?.[1]?.trim() && m[1].trim() !== "0") return m[1].trim();
+  return "";
+}
+
+/** Client version as minor+code — e.g. `1.14.66 (89)` (not build-only). */
+export function posClientVersionLabel(device: PosDevice): string {
+  const name = posClientVersionName(device);
+  const code = device.nativeShellBuild || device.appBuild || 0;
+  if (name && code > 0) return `${name} (${code})`;
+  if (name) return name;
+  if (code > 0) return String(code);
+  return "—";
+}
+
+export type PosEquipState = "ready" | "missing" | "unknown";
+
+function equipMark(ready: boolean, known: boolean): PosEquipState {
+  if (ready) return "ready";
+  if (known) return "missing";
+  return "unknown";
+}
+
+function equipGlyph(state: PosEquipState): string {
+  if (state === "ready") return "✓";
+  if (state === "missing") return "×";
+  return "—";
+}
+
+function equipWord(state: PosEquipState): string {
+  if (state === "ready") return "พร้อม";
+  if (state === "missing") return "ยัง";
+  return "—";
+}
+
+/** Printer / drawer / customer-display readiness for BO table. */
+export function posDeviceEquipment(device: PosDevice): {
+  printer: PosEquipState;
+  drawer: PosEquipState;
+  customerDisplay: PosEquipState;
+  short: string;
+  title: string;
+} {
+  const knownHw =
+    device.shellKind === "native" ||
+    device.telemetryAt > 0 ||
+    !!device.printerLabel ||
+    device.appBuild > 0;
+  const printer = equipMark(device.printerReady, knownHw);
+  const drawer = equipMark(device.drawerReady || device.printerReady, knownHw);
+  const cdRaw = (device.customerDisplay || "").toLowerCase();
+  let customerDisplay: PosEquipState = "unknown";
+  if (cdRaw === "ok" || cdRaw === "ready") customerDisplay = "ready";
+  else if (cdRaw === "missing" || cdRaw === "none") customerDisplay = "missing";
+  else if (cdRaw && cdRaw !== "unknown") customerDisplay = "missing";
+  else if (knownHw) customerDisplay = "unknown";
+
+  const short = `พ${equipGlyph(printer)} ล${equipGlyph(drawer)} จ${equipGlyph(customerDisplay)}`;
+  const printerBit = device.printerLabel
+    ? `พิมพ์ ${equipWord(printer)} (${device.printerLabel})`
+    : `พิมพ์ ${equipWord(printer)}`;
+  const title = [
+    printerBit,
+    `ลิ้นชัก ${equipWord(drawer)}${device.printerReady ? " · พ่วงปริ้น" : ""}`,
+    `จอลูกค้า ${
+      customerDisplay === "ready" ? "มี" : customerDisplay === "missing" ? "ไม่มี" : "—"
+    }`,
+  ].join(" · ");
+  return { printer, drawer, customerDisplay, short, title };
+}
+
 export function isPosDeviceOnline(lastSeenAt: number, now = Date.now()): boolean {
   return lastSeenAt > 0 && now - lastSeenAt <= POS_ONLINE_MS;
 }
@@ -229,6 +309,14 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
     registeredAt: typeof data.registeredAt === "number" ? data.registeredAt : 0,
     lastSeenAt: typeof data.lastSeenAt === "number" ? data.lastSeenAt : 0,
     appBuild: typeof data.appBuild === "number" ? data.appBuild : 0,
+    versionName: (() => {
+      if (typeof data.versionName === "string" && data.versionName.trim()) {
+        return data.versionName.trim();
+      }
+      const ua = typeof data.userAgent === "string" ? data.userAgent.trim() : "";
+      const m = /^nPos-telltea\/(.+)$/i.exec(ua);
+      return m?.[1]?.trim() || "";
+    })(),
     userAgent: typeof data.userAgent === "string" ? data.userAgent : "",
     forceReloadAt: typeof data.forceReloadAt === "number" ? data.forceReloadAt : 0,
     lastReloadAckAt: typeof data.lastReloadAckAt === "number" ? data.lastReloadAckAt : 0,
@@ -240,6 +328,10 @@ function mapPosDeviceDoc(id: string, data: Record<string, unknown>): PosDevice {
     deviceHint: typeof data.deviceHint === "string" ? data.deviceHint : "",
     printerLabel: typeof data.printerLabel === "string" ? data.printerLabel : "",
     printerReady: data.printerReady === true,
+    drawerReady:
+      typeof data.drawerReady === "boolean"
+        ? data.drawerReady === true
+        : data.printerReady === true,
     standalone: data.standalone === true,
     screenSize: typeof data.screenSize === "string" ? data.screenSize : "",
     platform: typeof data.platform === "string" ? data.platform : "",

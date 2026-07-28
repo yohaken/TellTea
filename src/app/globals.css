@@ -6611,10 +6611,17 @@ body.modal-open .main-panel {
     minmax(4rem, 1.1fr)
     minmax(2rem, max-content)
     minmax(2.6rem, max-content)
-    minmax(2.2rem, max-content)
+    minmax(4.2rem, max-content)
+    minmax(4.6rem, max-content)
     minmax(3.2rem, max-content);
-  min-width: 40rem;
+  min-width: 46rem;
   cursor: default;
+}
+
+.npos-slim-equip {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .npos-slim-row--device.is-selected {
