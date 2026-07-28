@@ -76,9 +76,6 @@ export type PlatformEmailReport = {
   } | null;
 };
 
-/** primary = Gmail หลัก · lineman = Gmail เฉพาะ LINE MAN */
-export type VatMailMailbox = "primary" | "lineman";
-
 export type VatMailStatus = {
   hasConfig: boolean;
   connected: boolean;
@@ -88,7 +85,6 @@ export type VatMailStatus = {
   lastSyncAt: number;
   lastSyncError: string;
   lastSyncAdded: number;
-  mailbox?: VatMailMailbox;
 };
 
 export function channelReportLabel(channel: string): string {
@@ -178,65 +174,42 @@ function mapReport(id: string, data: Record<string, unknown>): PlatformEmailRepo
   };
 }
 
-export async function fetchVatMailStatus(
-  mailbox: VatMailMailbox = "primary",
-): Promise<VatMailStatus> {
-  const fn = httpsCallable<{ mailbox?: VatMailMailbox }, VatMailStatus>(
+export async function fetchVatMailStatus(): Promise<VatMailStatus> {
+  const fn = httpsCallable<Record<string, never>, VatMailStatus>(
     getFirebaseFunctions(),
     "vatMailStatus",
   );
-  const res = await fn({ mailbox });
+  const res = await fn({});
   return res.data;
 }
 
-export async function startVatMailOAuth(
-  returnTo?: string,
-  mailbox: VatMailMailbox = "primary",
-): Promise<string> {
-  const fn = httpsCallable<
-    { returnTo?: string; mailbox?: VatMailMailbox },
-    { url: string }
-  >(getFirebaseFunctions(), "vatMailOAuthStart");
-  const res = await fn({
-    ...(returnTo ? { returnTo } : {}),
-    mailbox,
-  });
+export async function startVatMailOAuth(returnTo?: string): Promise<string> {
+  const fn = httpsCallable<{ returnTo?: string }, { url: string }>(
+    getFirebaseFunctions(),
+    "vatMailOAuthStart",
+  );
+  const res = await fn(returnTo ? { returnTo } : {});
   const url = String(res.data?.url || "");
   if (!url) throw new Error("ไม่ได้รับลิงก์เชื่อม Gmail");
   return url;
 }
 
-export async function disconnectVatMail(
-  mailbox: VatMailMailbox = "primary",
-): Promise<void> {
-  const fn = httpsCallable<{ mailbox?: VatMailMailbox }, { ok: boolean }>(
-    getFirebaseFunctions(),
-    "vatMailDisconnect",
-  );
-  await fn({ mailbox });
+export async function disconnectVatMail(): Promise<void> {
+  const fn = httpsCallable(getFirebaseFunctions(), "vatMailDisconnect");
+  await fn({});
 }
 
-export async function syncVatMail(
-  lookbackDays = 31,
-  mailbox: VatMailMailbox = "primary",
-): Promise<{
+export async function syncVatMail(lookbackDays = 31): Promise<{
   scanned: number;
   added: number;
   skipped: number;
   lookbackDays: number;
-  mailbox?: VatMailMailbox;
 }> {
   const fn = httpsCallable<
-    { lookbackDays?: number; mailbox?: VatMailMailbox },
-    {
-      scanned: number;
-      added: number;
-      skipped: number;
-      lookbackDays: number;
-      mailbox?: VatMailMailbox;
-    }
+    { lookbackDays?: number },
+    { scanned: number; added: number; skipped: number; lookbackDays: number }
   >(getFirebaseFunctions(), "vatMailSync");
-  const res = await fn({ lookbackDays, mailbox });
+  const res = await fn({ lookbackDays });
   return res.data;
 }
 
@@ -709,60 +682,32 @@ export async function autoApplyMailToDaily(opts: {
 }
 
 export type PullAndFillMailResult = {
-  sync: Array<{ mailbox: VatMailMailbox; ok: boolean; added?: number; scanned?: number; error?: string }>;
+  sync: { ok: boolean; added?: number; scanned?: number; error?: string } | null;
   parse: { ok: number; fail: number; skipped: number };
   apply: AutoApplyChannelResult[];
 };
 
 /**
- * ดึงเมล → parse → ลงตารางทีละแพลตฟอร์ม (Shopee → Grab → LINE MAN)
+ * ดึงเมล Gmail หลัก → parse → ลงตารางทีละแพลตฟอร์ม (Shopee → Grab → LINE MAN)
  * วันในตารางยังเป็น draft · เจ้าของยืนยันวันทีหลัง
  */
 export async function pullAndFillDailyFromMail(opts: {
   actor: string;
   lookbackDays?: number;
-  syncPrimary?: boolean;
-  syncLineman?: boolean;
+  sync?: boolean;
 }): Promise<PullAndFillMailResult> {
   const lookbackDays = opts.lookbackDays ?? 31;
-  const sync: PullAndFillMailResult["sync"] = [];
+  let sync: PullAndFillMailResult["sync"] = null;
 
-  if (opts.syncPrimary !== false) {
+  if (opts.sync !== false) {
     try {
-      const res = await syncVatMail(lookbackDays, "primary");
-      sync.push({
-        mailbox: "primary",
-        ok: true,
-        added: res.added,
-        scanned: res.scanned,
-      });
+      const res = await syncVatMail(lookbackDays);
+      sync = { ok: true, added: res.added, scanned: res.scanned };
     } catch (e) {
-      sync.push({
-        mailbox: "primary",
+      sync = {
         ok: false,
         error: e instanceof Error ? e.message : String(e),
-      });
-    }
-  }
-
-  if (opts.syncLineman !== false) {
-    try {
-      const st = await fetchVatMailStatus("lineman");
-      if (st.connected) {
-        const res = await syncVatMail(lookbackDays, "lineman");
-        sync.push({
-          mailbox: "lineman",
-          ok: true,
-          added: res.added,
-          scanned: res.scanned,
-        });
-      }
-    } catch (e) {
-      sync.push({
-        mailbox: "lineman",
-        ok: false,
-        error: e instanceof Error ? e.message : String(e),
-      });
+      };
     }
   }
 

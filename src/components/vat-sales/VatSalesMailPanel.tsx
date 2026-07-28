@@ -27,7 +27,6 @@ import {
   syncVatMail,
   type MailParseStatus,
   type PlatformEmailReport,
-  type VatMailMailbox,
   type VatMailStatus,
 } from "@/lib/vat-sales-mail";
 import { loadParserHealth, type ParserHealthSummary } from "@/lib/vat-sales-parser-health";
@@ -96,7 +95,6 @@ export function VatSalesMailPanel({
   focusDate = null,
 }: Props) {
   const [status, setStatus] = useState<VatMailStatus | null>(null);
-  const [statusLm, setStatusLm] = useState<VatMailStatus | null>(null);
   const [reports, setReports] = useState<PlatformEmailReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [channelFilter, setChannelFilter] = useState<"all" | DeliveryChannel | "unknown">(
@@ -123,9 +121,8 @@ export function VatSalesMailPanel({
     setLoading(true);
     setError("");
     try {
-      const [st, stLm, rows, cfg, healthSum] = await Promise.all([
-        fetchVatMailStatus("primary"),
-        fetchVatMailStatus("lineman"),
+      const [st, rows, cfg, healthSum] = await Promise.all([
+        fetchVatMailStatus(),
         listPlatformEmailReports({
           channel: channelFilter,
           parseStatus: statusFilter,
@@ -135,7 +132,6 @@ export function VatSalesMailPanel({
         loadParserHealth(200).catch(() => null),
       ]);
       setStatus(st);
-      setStatusLm(stLm);
       let nextRows = rows;
       if (focusDate) {
         nextRows = rows.filter((r) => {
@@ -162,15 +158,15 @@ export function VatSalesMailPanel({
     void refresh();
   }, [refresh]);
 
-  const connect = async (mailbox: VatMailMailbox = "primary") => {
-    setBusy(mailbox === "lineman" ? "mail-connect-lm" : "mail-connect");
+  const connect = async () => {
+    setBusy("mail-connect");
     setError("");
     try {
       const returnTo =
         typeof window !== "undefined"
           ? `${window.location.origin}/vat-sales/?tab=mail`
           : "https://telltea-shop.web.app/vat-sales/?tab=mail";
-      const url = await startVatMailOAuth(returnTo, mailbox);
+      const url = await startVatMailOAuth(returnTo);
       window.location.href = url;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -178,14 +174,13 @@ export function VatSalesMailPanel({
     }
   };
 
-  const disconnect = async (mailbox: VatMailMailbox = "primary") => {
-    const label = mailbox === "lineman" ? "Gmail LINE MAN" : "Gmail";
-    if (!window.confirm(`ตัดการเชื่อม ${label}?`)) return;
-    setBusy(mailbox === "lineman" ? "mail-disconnect-lm" : "mail-disconnect");
+  const disconnect = async () => {
+    if (!window.confirm("ตัดการเชื่อม Gmail?")) return;
+    setBusy("mail-disconnect");
     setError("");
     try {
-      await disconnectVatMail(mailbox);
-      setMsg(`ตัดการเชื่อม ${label} แล้ว`);
+      await disconnectVatMail();
+      setMsg("ตัดการเชื่อม Gmail แล้ว");
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -194,15 +189,14 @@ export function VatSalesMailPanel({
     }
   };
 
-  const sync = async (mailbox: VatMailMailbox = "primary") => {
-    const label = mailbox === "lineman" ? "Gmail LINE MAN" : "Gmail";
-    setBusy(mailbox === "lineman" ? "mail-sync-lm" : "mail-sync");
+  const sync = async () => {
+    setBusy("mail-sync");
     setError("");
     setMsg("");
     try {
-      const res = await syncVatMail(31, mailbox);
+      const res = await syncVatMail(31);
       setMsg(
-        `ซิงก์ ${label} แล้ว · สแกน ${res.scanned} · เพิ่ม ${res.added} · ข้ามซ้ำ ${res.skipped}`,
+        `ซิงก์ Gmail แล้ว · สแกน ${res.scanned} · เพิ่ม ${res.added} · ข้ามซ้ำ ${res.skipped}`,
       );
       await refresh();
     } catch (e) {
@@ -221,21 +215,20 @@ export function VatSalesMailPanel({
       const res = await pullAndFillDailyFromMail({
         actor,
         lookbackDays: 31,
-        syncPrimary: Boolean(status?.connected),
-        syncLineman: Boolean(statusLm?.connected),
+        sync: Boolean(status?.connected),
       });
-      const syncParts = res.sync.map((s) => {
-        const name = s.mailbox === "lineman" ? "LM" : "Gmail";
-        if (!s.ok) return `${name}✗`;
-        return `${name}+${s.added ?? 0}`;
-      });
+      const syncPart = res.sync
+        ? res.sync.ok
+          ? `Gmail+${res.sync.added ?? 0}`
+          : "Gmail✗"
+        : "—";
       const short: Record<string, string> = { shopee: "Sp", grab: "G", lineman: "LM" };
       const applyParts = res.apply.map(
         (a) => `${short[a.channel] || a.channel}:${a.applied}`,
       );
       const appliedTotal = res.apply.reduce((n, a) => n + a.applied, 0);
       setMsg(
-        `ลงตารางแล้ว ${appliedTotal} วัน · ซิงก์ ${syncParts.join(" · ") || "—"} · parse ${res.parse.ok}/${res.parse.fail} · ${applyParts.join(" · ")}`,
+        `ลงตารางแล้ว ${appliedTotal} วัน · ซิงก์ ${syncPart} · parse ${res.parse.ok}/${res.parse.fail} · ${applyParts.join(" · ")}`,
       );
       setStatusFilter("confirmed");
       await refresh();
@@ -458,7 +451,7 @@ export function VatSalesMailPanel({
       <section className="vat-api-box">
         <div className="vat-api-head">
           <h2 className="vat-sales-section-title">API เมล</h2>
-          <span className="muted">Gmail สองกล่อง · Client ID ชุดเดียว</span>
+          <span className="muted">Gmail หลัก · Sp / Grab / LM</span>
         </div>
 
         <div className="vat-api-row">
@@ -474,15 +467,15 @@ export function VatSalesMailPanel({
           </div>
           <div className="vat-sales-acts">
             {!status?.connected ? (
-              <button type="button" className="primary-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void connect("primary")}>
+              <button type="button" className="primary-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void connect()}>
                 เชื่อม
               </button>
             ) : (
               <>
-                <button type="button" className="primary-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void sync("primary")}>
+                <button type="button" className="primary-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void sync()}>
                   {busy === "mail-sync" ? "…" : "ซิงก์"}
                 </button>
-                <button type="button" className="ghost-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void disconnect("primary")}>
+                <button type="button" className="ghost-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void disconnect()}>
                   ตัด
                 </button>
               </>
@@ -492,45 +485,8 @@ export function VatSalesMailPanel({
             </button>
           </div>
         </div>
-
-        <div className="vat-api-row">
-          <div className="vat-api-label">
-            <strong>Gmail LINE MAN</strong>
-            <span className="muted">
-              {statusLm?.connected
-                ? statusLm.email || "ok"
-                : status?.hasConfig || statusLm?.hasConfig
-                  ? "พร้อมเชื่อม · บัญชี LM"
-                  : "ยังไม่ตั้งค่า"}
-            </span>
-          </div>
-          <div className="vat-sales-acts">
-            {!statusLm?.connected ? (
-              <button
-                type="button"
-                className="primary-btn vat-sales-act-btn"
-                disabled={busy !== null || !(status?.hasConfig || statusLm?.hasConfig)}
-                onClick={() => void connect("lineman")}
-              >
-                เชื่อม
-              </button>
-            ) : (
-              <>
-                <button type="button" className="primary-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void sync("lineman")}>
-                  {busy === "mail-sync-lm" ? "…" : "ซิงก์"}
-                </button>
-                <button type="button" className="ghost-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void disconnect("lineman")}>
-                  ตัด
-                </button>
-              </>
-            )}
-          </div>
-        </div>
         {status?.lastSyncError ? (
-          <p className="error-text">Gmail: {status.lastSyncError}</p>
-        ) : null}
-        {statusLm?.lastSyncError ? (
-          <p className="error-text">LINE MAN: {statusLm.lastSyncError}</p>
+          <p className="error-text">{status.lastSyncError}</p>
         ) : null}
 
         {showConfig ? (
@@ -546,9 +502,6 @@ export function VatSalesMailPanel({
             <p className="muted vat-api-hint">
               Redirect ติดมาให้แล้ว · วางใน Google Cloud:
               <code className="vat-api-code">{DEFAULT_REDIRECT}</code>
-            </p>
-            <p className="muted vat-api-hint">
-              ตั้งค่าชุดเดียวใช้ทั้ง Gmail หลักและ Gmail LINE MAN · ตอนเชื่อมเลือกบัญชีที่ต่างกัน
             </p>
             <button type="button" className="primary-btn" disabled={busy !== null} onClick={() => void saveConfig()}>
               บันทึก Gmail
@@ -720,7 +673,7 @@ export function VatSalesMailPanel({
         {loading ? (
           <p className="muted">กำลังโหลดกล่องเมล...</p>
         ) : reports.length === 0 ? (
-          <p className="muted">ยังไม่มีเมลในกล่อง — เชื่อม Gmail / Gmail LINE MAN แล้วกดซิงก์</p>
+          <p className="muted">ยังไม่มีเมลในกล่อง — เชื่อม Gmail แล้วกดซิงก์ หรือ ดึงลงตาราง</p>
         ) : (
           <div className="sheet-wrap vat-sales-scroll">
             <table className="sheet-table vat-sales-table vat-sales-table--slim vat-mail-table">
@@ -752,7 +705,7 @@ export function VatSalesMailPanel({
                       {channelShort(r.channel)}
                       {r.provider ? (
                         <div className="muted vat-sales-src">
-                          {r.provider === "gmail_lm" ? "LM" : r.provider === "gmail" ? "G" : r.provider}
+                          {r.provider === "gmail" || r.provider === "gmail_lm" ? "G" : r.provider}
                         </div>
                       ) : null}
                     </td>

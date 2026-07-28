@@ -1,7 +1,6 @@
 /**
  * VAT mail — Gmail OAuth + sync platform daily reports (owner-only).
- * Tokens: meta/vatMailOAuth (หลัก) · meta/vatMailOAuthLineman (LINE MAN)
- * Shared OAuth client: env or meta/vatMailOAuthConfig
+ * Tokens: meta/vatMailOAuth · OAuth client: env or meta/vatMailOAuthConfig
  *   GMAIL_OAUTH_CLIENT_ID / SECRET / REDIRECT_URI
  */
 const functions = require("firebase-functions/v1");
@@ -14,7 +13,6 @@ const OWNER_EMAIL = String(process.env.TELLTEA_OWNER_EMAIL || "yohaken@gmail.com
   .toLowerCase();
 
 const OAUTH_DOC = "meta/vatMailOAuth";
-const OAUTH_DOC_LINEMAN = "meta/vatMailOAuthLineman";
 const OAUTH_CONFIG_DOC = "meta/vatMailOAuthConfig";
 const OAUTH_STATE_DOC = "meta/vatMailOAuthState";
 const SETTINGS_DOC = "meta/vatSalesSettings";
@@ -24,19 +22,9 @@ const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 const DEFAULT_LOOKBACK_DAYS = 31;
 const MAX_MESSAGES_PER_SYNC = 80;
 
-/** primary = Gmail หลัก · lineman = Gmail เฉพาะ LINE MAN */
-function resolveMailbox(raw) {
-  return asString(raw, 32) === "lineman" ? "lineman" : "primary";
-}
-
-function oauthDocPath(mailbox) {
-  return resolveMailbox(mailbox) === "lineman" ? OAUTH_DOC_LINEMAN : OAUTH_DOC;
-}
-
-function reportDocId(messageId, mailbox) {
-  const safe = String(messageId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 70);
-  const prefix = resolveMailbox(mailbox) === "lineman" ? "gmail_lm" : "gmail";
-  return `${prefix}_${safe || crypto.randomBytes(8).toString("hex")}`;
+function reportDocId(messageId) {
+  const safe = String(messageId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+  return `gmail_${safe || crypto.randomBytes(8).toString("hex")}`;
 }
 
 const DEFAULT_MAIL_RULES = {
@@ -348,14 +336,12 @@ exports.vatMailStatus = functions
   .https.onCall(async (data, context) => {
     const { actorId } = await assertOwner(context);
     const db = getFirestore();
-    const mailbox = resolveMailbox(data?.mailbox);
     const [oauthSnap, config] = await Promise.all([
-      db.doc(oauthDocPath(mailbox)).get(),
+      db.doc(OAUTH_DOC).get(),
       loadOAuthConfig(db),
     ]);
     return {
       ...publicOAuthStatus(oauthSnap.exists ? oauthSnap.data() : null, Boolean(config)),
-      mailbox,
       actorId,
     };
   });
@@ -372,14 +358,12 @@ exports.vatMailOAuthStart = functions
         "ยังไม่ได้ตั้งค่า Gmail OAuth (GMAIL_OAUTH_* หรือ meta/vatMailOAuthConfig)",
       );
     }
-    const mailbox = resolveMailbox(data?.mailbox);
     const returnTo = asString(data?.returnTo, 400) || "https://telltea-shop.web.app/vat-sales/";
     const state = crypto.randomBytes(24).toString("hex");
     await db.doc(OAUTH_STATE_DOC).set({
       state,
       actorId,
       returnTo,
-      mailbox,
       createdAt: Date.now(),
     });
     const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
@@ -390,7 +374,7 @@ exports.vatMailOAuthStart = functions
     url.searchParams.set("access_type", "offline");
     url.searchParams.set("prompt", "consent select_account");
     url.searchParams.set("state", state);
-    return { url: url.toString(), mailbox };
+    return { url: url.toString() };
   });
 
 exports.vatMailOAuthCallback = functions
@@ -405,25 +389,23 @@ exports.vatMailOAuthCallback = functions
       const stateSnap = await db.doc(OAUTH_STATE_DOC).get();
       const stateData = stateSnap.exists ? stateSnap.data() : null;
       if (stateData?.returnTo) returnTo = asString(stateData.returnTo, 400) || returnTo;
-      const mailbox = resolveMailbox(stateData?.mailbox);
-      const oauthPath = oauthDocPath(mailbox);
 
       if (err) {
-        res.redirect(appReturnUrl(returnTo, { mail: "error", reason: err, mailbox }));
+        res.redirect(appReturnUrl(returnTo, { mail: "error", reason: err }));
         return;
       }
       if (!code || !state || !stateData || stateData.state !== state) {
-        res.redirect(appReturnUrl(returnTo, { mail: "error", reason: "invalid_state", mailbox }));
+        res.redirect(appReturnUrl(returnTo, { mail: "error", reason: "invalid_state" }));
         return;
       }
       if (Date.now() - Number(stateData.createdAt || 0) > 15 * 60 * 1000) {
-        res.redirect(appReturnUrl(returnTo, { mail: "error", reason: "state_expired", mailbox }));
+        res.redirect(appReturnUrl(returnTo, { mail: "error", reason: "state_expired" }));
         return;
       }
 
       const config = await loadOAuthConfig(db);
       if (!config) {
-        res.redirect(appReturnUrl(returnTo, { mail: "error", reason: "no_config", mailbox }));
+        res.redirect(appReturnUrl(returnTo, { mail: "error", reason: "no_config" }));
         return;
       }
 
@@ -431,17 +413,16 @@ exports.vatMailOAuthCallback = functions
       const accessToken = tokenJson.access_token;
       const refreshToken = tokenJson.refresh_token;
       if (!refreshToken) {
-        const prev = await db.doc(oauthPath).get();
+        const prev = await db.doc(OAUTH_DOC).get();
         const oldRefresh = prev.exists ? asString(prev.get("refreshToken"), 500) : "";
         if (!oldRefresh) {
-          res.redirect(appReturnUrl(returnTo, { mail: "error", reason: "no_refresh_token", mailbox }));
+          res.redirect(appReturnUrl(returnTo, { mail: "error", reason: "no_refresh_token" }));
           return;
         }
         const email = await gmailGetProfile(accessToken);
-        await db.doc(oauthPath).set(
+        await db.doc(OAUTH_DOC).set(
           {
             provider: "gmail",
-            mailbox,
             email,
             scope: GMAIL_SCOPE,
             connectedAt: Date.now(),
@@ -452,10 +433,9 @@ exports.vatMailOAuthCallback = functions
         );
       } else {
         const email = await gmailGetProfile(accessToken);
-        await db.doc(oauthPath).set(
+        await db.doc(OAUTH_DOC).set(
           {
             provider: "gmail",
-            mailbox,
             email,
             refreshToken,
             scope: GMAIL_SCOPE,
@@ -470,7 +450,7 @@ exports.vatMailOAuthCallback = functions
       }
 
       await db.doc(OAUTH_STATE_DOC).delete().catch(() => undefined);
-      res.redirect(appReturnUrl(returnTo, { mail: "connected", tab: "mail", mailbox }));
+      res.redirect(appReturnUrl(returnTo, { mail: "connected", tab: "mail" }));
     } catch (e) {
       console.error("vatMailOAuthCallback", e);
       res.redirect(
@@ -487,9 +467,8 @@ exports.vatMailDisconnect = functions
   .https.onCall(async (data, context) => {
     await assertOwner(context);
     const db = getFirestore();
-    const mailbox = resolveMailbox(data?.mailbox);
-    await db.doc(oauthDocPath(mailbox)).delete().catch(() => undefined);
-    return { ok: true, mailbox };
+    await db.doc(OAUTH_DOC).delete().catch(() => undefined);
+    return { ok: true };
   });
 
 exports.vatMailSync = functions
@@ -498,8 +477,6 @@ exports.vatMailSync = functions
   .https.onCall(async (data, context) => {
     const { actorId } = await assertOwner(context);
     const db = getFirestore();
-    const mailbox = resolveMailbox(data?.mailbox);
-    const oauthPath = oauthDocPath(mailbox);
     const config = await loadOAuthConfig(db);
     if (!config) {
       throw new functions.https.HttpsError(
@@ -507,11 +484,11 @@ exports.vatMailSync = functions
         "ยังไม่ได้ตั้งค่า Gmail OAuth",
       );
     }
-    const oauthSnap = await db.doc(oauthPath).get();
+    const oauthSnap = await db.doc(OAUTH_DOC).get();
     if (!oauthSnap.exists || !oauthSnap.get("refreshToken")) {
       throw new functions.https.HttpsError(
         "failed-precondition",
-        mailbox === "lineman" ? "ยังไม่ได้เชื่อม Gmail LINE MAN" : "ยังไม่ได้เชื่อม Gmail",
+        "ยังไม่ได้เชื่อม Gmail",
       );
     }
     const refreshToken = asString(oauthSnap.get("refreshToken"), 500);
@@ -527,9 +504,7 @@ exports.vatMailSync = functions
       const rules = loadMailRules(settings);
       const channelsEnabled = settings.channelsEnabled || {};
 
-      // กล่อง LINE MAN ซิงก์เฉพาะช่องทาง lineman
-      const channels =
-        mailbox === "lineman" ? ["lineman"] : ["shopee", "grab", "lineman"];
+      const channels = ["shopee", "grab", "lineman"];
 
       const seen = new Set();
       let scanned = 0;
@@ -546,7 +521,7 @@ exports.vatMailSync = functions
           if (seen.has(messageId)) continue;
           seen.add(messageId);
           scanned += 1;
-          const docId = reportDocId(messageId, mailbox);
+          const docId = reportDocId(messageId);
           const existing = await db.collection(REPORTS_COL).doc(docId).get();
           if (existing.exists) {
             skipped += 1;
@@ -559,23 +534,12 @@ exports.vatMailSync = functions
           const internalDate = Number(msg.internalDate) || Date.now();
           const bodies = collectParts(msg.payload);
           const matched = matchChannel(from, subject, rules);
-          // กล่อง LM: บังคับช่องทาง lineman (ข้ามถ้า match เป็นช่องอื่นชัดเจน)
-          let channelFinal;
-          if (mailbox === "lineman") {
-            if (matched === "shopee" || matched === "grab") {
-              skipped += 1;
-              continue;
-            }
-            channelFinal = "lineman";
-          } else {
-            channelFinal = matched === "unknown" ? channel : matched;
-          }
+          const channelFinal = matched === "unknown" ? channel : matched;
           const rawText = String(bodies.text || "").slice(0, 200000);
           const rawHtml = String(bodies.html || "").slice(0, 200000);
           await db.collection(REPORTS_COL).doc(docId).set({
             channel: channelFinal,
-            provider: mailbox === "lineman" ? "gmail_lm" : "gmail",
-            mailbox,
+            provider: "gmail",
             messageId,
             threadId: asString(msg.threadId, 120),
             receivedAt: internalDate,
@@ -596,7 +560,7 @@ exports.vatMailSync = functions
         }
       }
 
-      await db.doc(oauthPath).set(
+      await db.doc(OAUTH_DOC).set(
         {
           lastSyncAt: Date.now(),
           lastSyncError: "",
@@ -607,10 +571,10 @@ exports.vatMailSync = functions
         { merge: true },
       );
 
-      return { ok: true, scanned, added, skipped, lookbackDays, mailbox };
+      return { ok: true, scanned, added, skipped, lookbackDays };
     } catch (e) {
       const msg = asString(e?.message || String(e), 300);
-      await db.doc(oauthPath).set(
+      await db.doc(OAUTH_DOC).set(
         {
           lastSyncAt: Date.now(),
           lastSyncError: msg,
