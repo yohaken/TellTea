@@ -56,10 +56,10 @@
 | **P0** | แผน · เช็คลิส · ขอบเขต + owner-only | ✅ เอกสาร |
 | **P1** | Types · rules · lib · UI ตารางรายวัน + VAT สูตร | ✅ |
 | **P2** | Gmail OAuth · กล่องรายงานเมล · sync | ✅ |
-| **P3** | Parser รายวันต่อแพลตฟอร์ม · คิวยืนยัน | ⬜ |
-| **P4** | สถานะวัน · dashboard ขาดรายงาน · แจ้งเตือนเจ้าของ | ⬜ |
+| **P3** | Parser รายวันต่อแพลตฟอร์ม · คิวยืนยัน | ✅ |
+| **P4** | สถานะวัน · dashboard ขาดรายงาน · แจ้งเตือนเจ้าของ | ✅ |
 | **P5** | ปิดเดือน → `monthlyIncome` + รายงาน VAT เดือน | ✅ |
-| **P6** | Outlook/Hotmail · เมลสัปดาห์/เดือน · Input VAT | ⬜ ทางเลือก |
+| **P6** | Outlook/Hotmail · เมลสัปดาห์/เดือน · Input VAT | ✅ |
 | **P7** | ขัดเกลา UX · audit log · สำรอง raw · เอกสารผู้ใช้ | ⬜ หลังนิ่ง |
 
 ### ตัดออกจากแผน (ยืนยันแล้ว)
@@ -526,29 +526,31 @@ platformEmailReports/{id}
 
 ### P6.1 Outlook / Hotmail
 
-- [ ] Microsoft Graph OAuth (Mail.Read)
-- [ ] เก็บ token แยก provider ใน `meta/mailOAuth` หรือ doc แยก
-- [ ] sync เข้า `platformEmailReports` โครงสร้างเดิม
-- [ ] UI เชื่อมบัญชีที่สอง
-- [ ] owner-only เหมือน Gmail
+- [x] Microsoft Graph OAuth (Mail.Read) — `functions/vat-mail-outlook.js`
+- [x] เก็บ token แยก provider ใน `meta/vatMailOAuthOutlook`
+- [x] sync เข้า `platformEmailReports` โครงสร้างเดิม (`provider: outlook`)
+- [x] UI เชื่อมบัญชีที่สองในกล่องเมล
+- [x] owner-only เหมือน Gmail
 
 ### P6.2 เมลสรุปรายสัปดาห์ / รายเดือน
 
-- [ ] parse แยกจากรายวัน (`reportKind: daily | weekly | monthly`)
-- [ ] ใช้หน้า “เทียบยอด” ไม่เขียนทับรายวันอัตโนมัติ
-- [ ] แสดงส่วนต่างรายวันรวม vs สรุปแพลตฟอร์ม
+- [x] parse แยกจากรายวัน (`reportKind: daily | weekly | monthly`)
+- [x] ใช้แท็บ “เทียบยอด” ไม่เขียนทับรายวันอัตโนมัติ
+- [x] แสดงส่วนต่างรายวันรวม vs สรุปแพลตฟอร์ม
 
 ### P6.3 Input VAT (ใบกำกับซื้อ)
 
-- [ ] ถ้าจด VAT และต้องการเครดิตภาษีซื้อ — ออกแบบ collection แยก
-- [ ] ผูกหลักฐานรูป (`evidencePhotos`) ได้
-- [ ] owner-only
-- [ ] ไม่ปนกับ ledger พนักงานโดยไม่ตั้งใจ
+- [x] collection `vatInputInvoices` · rules owner-only
+- [x] ผูกหลักฐานรูป (`evp:`) ได้
+- [x] owner-only UI แท็บภาษีซื้อ
+- [x] ไม่ปนกับ ledger พนักงาน · แสดง VAT สุทธิในปิดเดือน
 
 ### P6.4 Foodpanda / ช่องทางอื่น
 
 - [ ] เพิ่ม channel ใน type + UI + mail rules + parser เมื่อร้านใช้จริง
-- [ ] ไม่ทำล่วงหน้าถ้ายังไม่มีเมล
+- [x] ไม่ทำล่วงหน้าถ้ายังไม่มีเมล
+
+> Ship: `APP_BUILD` **336**
 
 ---
 
@@ -568,11 +570,14 @@ platformEmailReports/{id}
 ```
 dailySales/{YYYY-MM-DD}
 platformEmailReports/{id}
+vatInputInvoices/{id}
+vatMonthCloses/{YYYY-MM}
 meta/vatSalesSettings      // owner-only · ห้าม staff อ่าน
-meta/vatMailOAuth          // owner-only · มี refresh token · ห้าม staff อ่าน
+meta/vatMailOAuth          // owner-only · Gmail refresh token
+meta/vatMailOAuthOutlook   // owner-only · Outlook refresh token
 ```
 
-**Firestore:** ทุกอันด้านบน `isOwner()` เท่านั้น  
+**Rules:** ทุกอันด้านบน `isOwner()` เท่านั้น  
 **Functions:** Admin SDK เขียนรายงานเมล + ตรวจ caller owner สำหรับ callable
 
 ---
@@ -581,11 +586,11 @@ meta/vatMailOAuth          // owner-only · มี refresh token · ห้าม
 
 | พื้นที่ | ไฟล์โดยประมาณ |
 |---------|----------------|
-| Lib | `src/lib/vat-sales.ts`, `vat-sales-mail.ts`, `vat-sales-vat.ts` |
+| Lib | `src/lib/vat-sales.ts`, `vat-sales-mail.ts`, `vat-sales-outlook.ts`, `vat-sales-reconcile.ts`, `vat-input.ts` |
 | UI | `src/app/vat-sales/page.tsx`, components ใต้ `src/components/vat-sales/` |
 | นำทาง | `src/app/more/page.tsx` (การ์ด isOwner) |
 | Rules | `firestore.rules` |
-| Functions | `functions/vat-mail-*.js` + export ใน `functions/index.js` |
+| Functions | `functions/vat-mail.js`, `vat-mail-outlook.js` + export ใน `functions/index.js` |
 | Docs | ไฟล์เช็คลิสนี้ · อัปสถานะเฟสเมื่อปิด |
 | Build | bump `APP_BUILD` / version เมื่อมี UI |
 

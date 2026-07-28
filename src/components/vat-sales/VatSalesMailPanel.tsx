@@ -27,9 +27,25 @@ import {
   type PlatformEmailReport,
   type VatMailStatus,
 } from "@/lib/vat-sales-mail";
+import {
+  disconnectVatOutlook,
+  fetchVatOutlookStatus,
+  loadVatOutlookOAuthConfig,
+  saveVatOutlookOAuthConfig,
+  startVatOutlookOAuth,
+  syncVatOutlook,
+} from "@/lib/vat-sales-outlook";
 
 const DEFAULT_REDIRECT =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/vatMailOAuthCallback";
+const DEFAULT_OUTLOOK_REDIRECT =
+  "https://asia-southeast1-mypeer-501909.cloudfunctions.net/vatOutlookOAuthCallback";
+
+function reportKindLabel(kind: string) {
+  if (kind === "weekly") return "สัปดาห์";
+  if (kind === "monthly") return "เดือน";
+  return "วัน";
+}
 
 type Props = {
   actor: string;
@@ -53,6 +69,7 @@ export function VatSalesMailPanel({
   setMsg,
 }: Props) {
   const [status, setStatus] = useState<VatMailStatus | null>(null);
+  const [outlookStatus, setOutlookStatus] = useState<VatMailStatus | null>(null);
   const [reports, setReports] = useState<PlatformEmailReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [channelFilter, setChannelFilter] = useState<"all" | DeliveryChannel | "unknown">(
@@ -61,10 +78,15 @@ export function VatSalesMailPanel({
   const [statusFilter, setStatusFilter] = useState<MailParseStatus | "all">("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
+  const [showOutlookConfig, setShowOutlookConfig] = useState(false);
   const [cfgClientId, setCfgClientId] = useState("");
   const [cfgSecret, setCfgSecret] = useState("");
   const [cfgRedirect, setCfgRedirect] = useState(DEFAULT_REDIRECT);
   const [hasSecret, setHasSecret] = useState(false);
+  const [olClientId, setOlClientId] = useState("");
+  const [olSecret, setOlSecret] = useState("");
+  const [olRedirect, setOlRedirect] = useState(DEFAULT_OUTLOOK_REDIRECT);
+  const [olHasSecret, setOlHasSecret] = useState(false);
   const [review, setReview] = useState<{
     reportDate: string;
     grossInclusive: string;
@@ -76,21 +98,29 @@ export function VatSalesMailPanel({
     setLoading(true);
     setError("");
     try {
-      const [st, rows, cfg] = await Promise.all([
+      const [st, ol, rows, cfg, olCfg] = await Promise.all([
         fetchVatMailStatus(),
+        fetchVatOutlookStatus().catch(() => null),
         listPlatformEmailReports({
           channel: channelFilter,
           parseStatus: statusFilter,
           max: 80,
         }),
         loadVatMailOAuthConfig().catch(() => null),
+        loadVatOutlookOAuthConfig().catch(() => null),
       ]);
       setStatus(st);
+      setOutlookStatus(ol);
       setReports(rows);
       if (cfg) {
         setCfgClientId(cfg.clientId);
         setCfgRedirect(cfg.redirectUri || DEFAULT_REDIRECT);
         setHasSecret(cfg.hasSecret);
+      }
+      if (olCfg) {
+        setOlClientId(olCfg.clientId);
+        setOlRedirect(olCfg.redirectUri || DEFAULT_OUTLOOK_REDIRECT);
+        setOlHasSecret(olCfg.hasSecret);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -140,7 +170,75 @@ export function VatSalesMailPanel({
     setMsg("");
     try {
       const res = await syncVatMail(31);
-      setMsg(`ซิงก์แล้ว · สแกน ${res.scanned} · เพิ่ม ${res.added} · ข้ามซ้ำ ${res.skipped}`);
+      setMsg(`ซิงก์ Gmail แล้ว · สแกน ${res.scanned} · เพิ่ม ${res.added} · ข้ามซ้ำ ${res.skipped}`);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const connectOutlook = async () => {
+    setBusy("outlook-connect");
+    setError("");
+    try {
+      const returnTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/vat-sales/?tab=mail`
+          : "https://mypeer-501909.web.app/vat-sales/?tab=mail";
+      const url = await startVatOutlookOAuth(returnTo);
+      window.location.href = url;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(null);
+    }
+  };
+
+  const disconnectOutlook = async () => {
+    if (!window.confirm("ตัดการเชื่อม Outlook?")) return;
+    setBusy("outlook-disconnect");
+    setError("");
+    try {
+      await disconnectVatOutlook();
+      setMsg("ตัดการเชื่อม Outlook แล้ว");
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const syncOutlook = async () => {
+    setBusy("outlook-sync");
+    setError("");
+    setMsg("");
+    try {
+      const res = await syncVatOutlook(31);
+      setMsg(
+        `ซิงก์ Outlook แล้ว · สแกน ${res.scanned} · เพิ่ม ${res.added} · ข้ามซ้ำ ${res.skipped}`,
+      );
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const saveOutlookConfig = async () => {
+    setBusy("outlook-config");
+    setError("");
+    try {
+      await saveVatOutlookOAuthConfig({
+        clientId: olClientId,
+        clientSecret: olSecret || undefined,
+        redirectUri: olRedirect,
+        updatedBy: actor,
+      });
+      setOlSecret("");
+      setMsg("บันทึก Outlook OAuth config แล้ว");
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -438,6 +536,105 @@ export function VatSalesMailPanel({
       </section>
 
       <section className="vat-sales-settings">
+        <h2 className="vat-sales-section-title">เชื่อม Outlook / Hotmail</h2>
+        <p className="muted vat-sales-hint">
+          Microsoft Graph · อ่านเมลอย่างเดียว · token แยกจาก Gmail · เจ้าของเท่านั้น
+        </p>
+        {outlookStatus ? (
+          <div className="vat-mail-status">
+            <div>
+              สถานะ:{" "}
+              <strong>
+                {outlookStatus.connected
+                  ? `เชื่อมแล้ว (${outlookStatus.email || "outlook"})`
+                  : "ยังไม่เชื่อม"}
+              </strong>
+            </div>
+            <div className="muted">
+              OAuth config: {outlookStatus.hasConfig ? "พร้อม" : "ยังไม่ครบ"}
+              {outlookStatus.lastSyncAt
+                ? ` · ซิงก์ล่าสุด ${formatDateTimeShort(outlookStatus.lastSyncAt)}`
+                : ""}
+            </div>
+            {outlookStatus.lastSyncError ? (
+              <p className="error-text">ซิงก์ล่าสุดพลาด: {outlookStatus.lastSyncError}</p>
+            ) : null}
+          </div>
+        ) : null}
+        <div className="vat-sales-toolbar">
+          {!outlookStatus?.connected ? (
+            <button
+              type="button"
+              className="primary-btn"
+              disabled={busy !== null}
+              onClick={() => void connectOutlook()}
+            >
+              เชื่อม Outlook
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="primary-btn"
+                disabled={busy !== null}
+                onClick={() => void syncOutlook()}
+              >
+                {busy === "outlook-sync" ? "กำลังซิงก์..." : "ซิงก์ Outlook"}
+              </button>
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={busy !== null}
+                onClick={() => void disconnectOutlook()}
+              >
+                ตัดการเชื่อม
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            className="ghost-btn"
+            onClick={() => setShowOutlookConfig((v) => !v)}
+          >
+            {showOutlookConfig ? "ซ่อน Outlook OAuth" : "ตั้งค่า Outlook OAuth"}
+          </button>
+        </div>
+        {showOutlookConfig ? (
+          <div className="vat-mail-config">
+            <p className="muted">
+              Azure App Registration · Redirect URI ชี้{" "}
+              <code>vatOutlookOAuthCallback</code> · scope Mail.Read + offline_access
+            </p>
+            <label className="vat-sales-field">
+              Client ID
+              <input value={olClientId} onChange={(e) => setOlClientId(e.target.value)} />
+            </label>
+            <label className="vat-sales-field">
+              Client Secret {olHasSecret ? "(มีอยู่แล้ว — ใส่ใหม่ถ้าจะเปลี่ยน)" : ""}
+              <input
+                type="password"
+                value={olSecret}
+                onChange={(e) => setOlSecret(e.target.value)}
+                autoComplete="off"
+              />
+            </label>
+            <label className="vat-sales-field">
+              Redirect URI
+              <input value={olRedirect} onChange={(e) => setOlRedirect(e.target.value)} />
+            </label>
+            <button
+              type="button"
+              className="primary-btn"
+              disabled={busy !== null}
+              onClick={() => void saveOutlookConfig()}
+            >
+              บันทึก Outlook OAuth
+            </button>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="vat-sales-settings">
         <h2 className="vat-sales-section-title">กฎค้นหาเมลต่อช่องทาง</h2>
         {DELIVERY_CHANNELS.map((ch) => {
           const rule = settings.mailRules[ch];
@@ -528,7 +725,7 @@ export function VatSalesMailPanel({
         {loading ? (
           <p className="muted">กำลังโหลดกล่องเมล...</p>
         ) : reports.length === 0 ? (
-          <p className="muted">ยังไม่มีเมลในกล่อง — เชื่อม Gmail แล้วกดซิงก์</p>
+          <p className="muted">ยังไม่มีเมลในกล่อง — เชื่อม Gmail/Outlook แล้วกดซิงก์</p>
         ) : (
           <div className="sheet-wrap vat-sales-scroll">
             <table className="sheet-table vat-sales-table vat-mail-table">
@@ -536,6 +733,7 @@ export function VatSalesMailPanel({
                 <tr>
                   <th>รับเมื่อ</th>
                   <th>ช่องทาง</th>
+                  <th>ชนิด</th>
                   <th>วันรายงาน</th>
                   <th>ยอดลูกค้า</th>
                   <th>หัวข้อ</th>
@@ -544,10 +742,18 @@ export function VatSalesMailPanel({
                 </tr>
               </thead>
               <tbody>
-                {reports.map((r) => (
+                {reports.map((r) => {
+                  const kind = r.parsed?.reportKind || r.reportKind || "daily";
+                  return (
                   <tr key={r.id}>
                     <td className="col-date">{formatDateTimeShort(r.receivedAt)}</td>
-                    <td>{channelReportLabel(r.channel)}</td>
+                    <td>
+                      {channelReportLabel(r.channel)}
+                      {r.provider ? (
+                        <div className="muted vat-sales-src">{r.provider}</div>
+                      ) : null}
+                    </td>
+                    <td>{reportKindLabel(kind)}</td>
                     <td>{r.parsed?.reportDate || r.reportDateGuess || "—"}</td>
                     <td className="col-num">
                       {r.parsed ? formatPlainNumber(r.parsed.grossInclusive) : "—"}
@@ -611,7 +817,8 @@ export function VatSalesMailPanel({
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -623,6 +830,9 @@ export function VatSalesMailPanel({
             <p className="muted">
               {open.from} · {formatDateTimeShort(open.receivedAt)} ·{" "}
               {channelReportLabel(open.channel)}
+              {" · "}
+              {reportKindLabel(open.parsed?.reportKind || open.reportKind || "daily")}
+              {open.provider ? ` · ${open.provider}` : ""}
               {open.parserVersion ? ` · ${open.parserVersion}` : ""}
             </p>
             {open.parseStatus === "fail" ? (
@@ -632,7 +842,17 @@ export function VatSalesMailPanel({
               <p className="muted">คำเตือน: {open.parsed.warnings.join(" · ")}</p>
             ) : null}
 
-            {review && open.parseStatus !== "confirmed" ? (
+            {(open.parsed?.reportKind || open.reportKind) === "weekly" ||
+            (open.parsed?.reportKind || open.reportKind) === "monthly" ? (
+              <p className="muted">
+                เมลสรุป{(open.parsed?.reportKind || open.reportKind) === "weekly" ? "สัปดาห์" : "เดือน"} —
+                ไม่ใส่ตารางรายวัน · ไปแท็บ <strong>เทียบยอด</strong>
+              </p>
+            ) : null}
+
+            {review &&
+            open.parseStatus !== "confirmed" &&
+            (open.parsed?.reportKind || open.reportKind || "daily") === "daily" ? (
               <div className="vat-mail-review">
                 <label className="vat-sales-field">
                   วันที่รายงาน

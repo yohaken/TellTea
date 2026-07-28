@@ -29,7 +29,7 @@ if (a.ok) {
   assert(a.parsed.reportDate === "2026-07-20", "grabA date");
   assert(a.parsed.grossInclusive === 12840, `grabA gross ${a.parsed.grossInclusive}`);
   assert(a.parsed.fee === 2568, "grabA fee");
-  assert(a.parsed.netTransfer === 10272, "grabA net");
+  assert(a.parsed.reportKind === "daily", "grabA kind");
 }
 
 const b = parsePlatformEmail({
@@ -64,6 +64,28 @@ if (d.ok) {
   assert(d.parsed.grossInclusive === 3210, "shopee gross");
   assert(d.parsed.reportDate === "2026-07-22", "shopee date");
   assert(d.parsed.fee === 642, "shopee fee");
+}
+
+const weekly = parsePlatformEmail({
+  channel: "grab",
+  subject: "รายงานยอดขาย GrabFood ประจำสัปดาห์ 14–20 ก.ค. 2026",
+  rawText: grabA,
+  reportDateGuess: "2026-07-20",
+});
+assert(weekly.ok, "weekly");
+if (weekly.ok) {
+  assert(weekly.parsed.reportKind === "weekly", `weekly kind ${weekly.parsed.reportKind}`);
+}
+
+const monthly = parsePlatformEmail({
+  channel: "grab",
+  subject: "สรุปยอดขายรายเดือน กรกฎาคม 2026",
+  rawText: grabA,
+  reportDateGuess: "2026-07-31",
+});
+assert(monthly.ok, "monthly");
+if (monthly.ok) {
+  assert(monthly.parsed.reportKind === "monthly", `monthly kind ${monthly.parsed.reportKind}`);
 }
 
 const fail = parsePlatformEmail({

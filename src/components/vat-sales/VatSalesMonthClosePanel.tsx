@@ -8,7 +8,8 @@ import {
   closeVatMonthToIncome,
   type VatMonthCloseAudit,
 } from "@/lib/vat-sales-close";
-import type { MonthSalesTotals, PnlIncomeMode } from "@/lib/vat-sales";
+import { listVatInputInvoices, sumVatInput } from "@/lib/vat-input";
+import { roundMoney, type MonthSalesTotals, type PnlIncomeMode } from "@/lib/vat-sales";
 
 function fmt(n: number) {
   if (!n) return "—";
@@ -43,12 +44,16 @@ export function VatSalesMonthClosePanel({
   const [currentIncome, setCurrentIncome] = useState(0);
   const [lastClose, setLastClose] = useState<VatMonthCloseAudit | null>(null);
   const [editIncome, setEditIncome] = useState("");
+  const [vatInputTotal, setVatInputTotal] = useState(0);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const p = await buildMonthClosePreview(month);
+      const [p, inputs] = await Promise.all([
+        buildMonthClosePreview(month),
+        listVatInputInvoices(month).catch(() => []),
+      ]);
       setMode(p.mode);
       setProposed(p.proposed);
       setConfirmedDays(p.confirmedDays);
@@ -57,6 +62,7 @@ export function VatSalesMonthClosePanel({
       setCurrentIncome(p.currentIncome);
       setLastClose(p.lastClose);
       setEditIncome(String(p.proposed || ""));
+      setVatInputTotal(sumVatInput(inputs).vatInput);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -190,8 +196,18 @@ export function VatSalesMonthClosePanel({
                   <td className="col-num">{fmt(totals?.vatBase || 0)}</td>
                 </tr>
                 <tr>
-                  <td>VAT 7%</td>
+                  <td>VAT 7% (ขาย)</td>
                   <td className="col-num">{fmt(totals?.vatOutput || 0)}</td>
+                </tr>
+                <tr>
+                  <td>ภาษีซื้อ (ใบกำกับ)</td>
+                  <td className="col-num">{fmt(vatInputTotal)}</td>
+                </tr>
+                <tr>
+                  <td>VAT สุทธิ (ขาย − ซื้อ)</td>
+                  <td className="col-num">
+                    {fmt(roundMoney((totals?.vatOutput || 0) - vatInputTotal))}
+                  </td>
                 </tr>
                 <tr>
                   <td>เดลิเวอรี่</td>

@@ -55,12 +55,16 @@ export type PlatformEmailReport = {
   rawText: string;
   rawHtml: string;
   reportDateGuess: string;
+  reportKind: "daily" | "weekly" | "monthly";
   parseStatus: MailParseStatus;
   parseError: string;
   syncedAt: number;
   parserVersion: string;
   parsed: {
     reportDate: string;
+    reportKind: "daily" | "weekly" | "monthly";
+    periodStart: string | null;
+    periodEnd: string | null;
     grossInclusive: number;
     fee: number;
     netTransfer: number;
@@ -123,6 +127,9 @@ function mapReport(id: string, data: Record<string, unknown>): PlatformEmailRepo
     data.parsed && typeof data.parsed === "object"
       ? (data.parsed as Record<string, unknown>)
       : null;
+  const kindRaw = String(data.reportKind || parsedRaw?.reportKind || "daily");
+  const reportKind: "daily" | "weekly" | "monthly" =
+    kindRaw === "weekly" || kindRaw === "monthly" ? kindRaw : "daily";
   return {
     id,
     channel,
@@ -136,6 +143,7 @@ function mapReport(id: string, data: Record<string, unknown>): PlatformEmailRepo
     rawText: String(data.rawText || ""),
     rawHtml: String(data.rawHtml || ""),
     reportDateGuess: String(data.reportDateGuess || ""),
+    reportKind,
     parseStatus,
     parseError: String(data.parseError || ""),
     syncedAt: Number(data.syncedAt) || 0,
@@ -143,6 +151,13 @@ function mapReport(id: string, data: Record<string, unknown>): PlatformEmailRepo
     parsed: parsedRaw
       ? {
           reportDate: String(parsedRaw.reportDate || ""),
+          reportKind:
+            parsedRaw.reportKind === "weekly" || parsedRaw.reportKind === "monthly"
+              ? parsedRaw.reportKind
+              : reportKind,
+          periodStart:
+            typeof parsedRaw.periodStart === "string" ? parsedRaw.periodStart : null,
+          periodEnd: typeof parsedRaw.periodEnd === "string" ? parsedRaw.periodEnd : null,
           grossInclusive: Number(parsedRaw.grossInclusive) || 0,
           fee: Number(parsedRaw.fee) || 0,
           netTransfer: Number(parsedRaw.netTransfer) || 0,
@@ -325,8 +340,12 @@ export async function reparsePlatformEmailReport(
     parseError: "",
     parserVersion: parsed.parserVersion,
     reportDateGuess: parsed.reportDate,
+    reportKind: parsed.reportKind,
     parsed: {
       reportDate: parsed.reportDate,
+      reportKind: parsed.reportKind,
+      periodStart: parsed.periodStart,
+      periodEnd: parsed.periodEnd,
       grossInclusive: parsed.grossInclusive,
       fee: parsed.fee,
       netTransfer: parsed.netTransfer,
@@ -344,8 +363,12 @@ export async function reparsePlatformEmailReport(
     parseError: "",
     parserVersion: parsed.parserVersion,
     reportDateGuess: parsed.reportDate,
+    reportKind: parsed.reportKind,
     parsed: {
       reportDate: parsed.reportDate,
+      reportKind: parsed.reportKind,
+      periodStart: parsed.periodStart,
+      periodEnd: parsed.periodEnd,
       grossInclusive: parsed.grossInclusive,
       fee: parsed.fee,
       netTransfer: parsed.netTransfer,
@@ -398,6 +421,18 @@ export async function confirmEmailSalesToDaily(
 ): Promise<{ dateKey: string }> {
   const channel = input.channel;
   const dateKey = input.reportDate;
+  // weekly/monthly ห้ามใส่ตารางรายวัน — ใช้แท็บเทียบยอด
+  const reportSnap = await getDoc(doc(getDb(), PLATFORM_EMAIL_REPORTS_COL, input.reportId));
+  const parsedKind = reportSnap.exists()
+    ? String((reportSnap.get("parsed") as { reportKind?: string } | undefined)?.reportKind || "")
+    : "";
+  const kind = String(
+    parsedKind ||
+      (reportSnap.exists() ? reportSnap.get("reportKind") || "daily" : "daily"),
+  );
+  if (kind === "weekly" || kind === "monthly") {
+    throw new Error("เมลสรุปรายสัปดาห์/เดือน — ไปแท็บเทียบยอด ไม่ใส่ตารางรายวัน");
+  }
   const existing = await getDailySales(dateKey);
   if (existing.status === "confirmed") {
     throw new Error("วันนี้ยืนยันแล้ว — ปลดล็อกวันในตารางรายวันก่อน");

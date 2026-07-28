@@ -13,8 +13,14 @@ export const PARSER_VERSIONS: Record<DeliveryChannel, string> = {
 
 export type ParseConfidence = "high" | "medium" | "low";
 
+export type ReportKind = "daily" | "weekly" | "monthly";
+
 export type ParsedPlatformReport = {
   reportDate: string;
+  reportKind: ReportKind;
+  /** inclusive period for weekly/monthly */
+  periodStart: string | null;
+  periodEnd: string | null;
   grossInclusive: number;
   fee: number;
   netTransfer: number;
@@ -237,6 +243,49 @@ function findOrderCount(text: string, labels: string[]): number | null {
   return null;
 }
 
+export function detectReportKind(subject: string, body = ""): ReportKind {
+  const hay = `${subject}\n${body}`.toLowerCase();
+  if (
+    /รายเดือน|monthly|month[- ]?end|สรุปรอบเดือน|settlement\s*month|ประจำเดือน/.test(
+      hay,
+    )
+  ) {
+    return "monthly";
+  }
+  if (/รายสัปดาห์|weekly|week\s*ending|สัปดาห์|ประจำสัปดาห์|week[- ]?of/.test(hay)) {
+    return "weekly";
+  }
+  return "daily";
+}
+
+/** จากวันสิ้นสุดช่วง → ต้นสัปดาห์ (ย้อน 6 วัน) หรือต้นเดือน */
+export function periodBoundsForKind(
+  kind: ReportKind,
+  reportDate: string,
+): { periodStart: string | null; periodEnd: string | null } {
+  if (!isDateKey(reportDate)) return { periodStart: null, periodEnd: null };
+  if (kind === "daily") return { periodStart: reportDate, periodEnd: reportDate };
+  if (kind === "monthly") {
+    const month = reportDate.slice(0, 7);
+    return { periodStart: `${month}-01`, periodEnd: reportDate };
+  }
+  // weekly: end = reportDate, start = reportDate - 6 days (Bangkok calendar via UTC offset)
+  const [y, m, d] = reportDate.split("-").map(Number);
+  const endMs = Date.UTC(y, m - 1, d) - 7 * 60 * 60 * 1000;
+  const startMs = endMs - 6 * 24 * 60 * 60 * 1000;
+  const fmt = (ms: number) => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Bangkok",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date(ms));
+    const get = (t: string) => parts.find((p) => p.type === t)?.value || "0";
+    return `${get("year")}-${get("month")}-${get("day")}`;
+  };
+  return { periodStart: fmt(startMs), periodEnd: reportDate };
+}
+
 export function extractReportDate(
   subject: string,
   body: string,
@@ -381,10 +430,19 @@ export function parsePlatformEmail(input: {
     warnings.push("ยอดขายต่ำผิดปกติ อาจจับจำนวนออเดอร์แทนยอดเงิน");
   }
 
+  const reportKind = detectReportKind(subject, body);
+  const { periodStart, periodEnd } = periodBoundsForKind(reportKind, reportDate);
+  if (reportKind !== "daily") {
+    warnings.push(`จัดเป็นรายงาน${reportKind === "weekly" ? "รายสัปดาห์" : "รายเดือน"} — ใช้เทียบยอด ไม่ใส่ตารางรายวันอัตโนมัติ`);
+  }
+
   return {
     ok: true,
     parsed: {
       reportDate,
+      reportKind,
+      periodStart,
+      periodEnd,
       grossInclusive,
       fee,
       netTransfer,

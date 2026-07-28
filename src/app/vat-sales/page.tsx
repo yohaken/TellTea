@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { VatSalesMailPanel } from "@/components/vat-sales/VatSalesMailPanel";
 import { VatSalesMonthClosePanel } from "@/components/vat-sales/VatSalesMonthClosePanel";
+import { VatSalesReconcilePanel } from "@/components/vat-sales/VatSalesReconcilePanel";
+import { VatSalesInputVatPanel } from "@/components/vat-sales/VatSalesInputVatPanel";
 import { useAuth } from "@/lib/auth";
 import { formatPlainNumber } from "@/lib/utils";
 import {
@@ -40,7 +42,7 @@ import {
   type DayOpsStatus,
 } from "@/lib/vat-sales-status";
 
-type VatTab = "daily" | "mail" | "close";
+type VatTab = "daily" | "mail" | "recon" | "input" | "close";
 
 export default function VatSalesPage() {
   return (
@@ -139,14 +141,21 @@ function VatSalesView({ actor }: { actor: string }) {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const t = params.get("tab");
-    if (t === "mail" || t === "close" || t === "daily") setTab(t);
+    if (t === "mail" || t === "close" || t === "daily" || t === "recon" || t === "input") {
+      setTab(t);
+    }
     const mail = params.get("mail");
+    const provider = params.get("provider");
     if (mail === "connected") {
       setTab("mail");
-      setMsg("เชื่อม Gmail สำเร็จ");
+      setMsg(
+        provider === "outlook" ? "เชื่อม Outlook สำเร็จ" : "เชื่อม Gmail สำเร็จ",
+      );
     } else if (mail === "error") {
       setTab("mail");
-      setError(`เชื่อม Gmail ไม่สำเร็จ (${params.get("reason") || "error"})`);
+      setError(
+        `เชื่อม${provider === "outlook" ? " Outlook" : " Gmail"} ไม่สำเร็จ (${params.get("reason") || "error"})`,
+      );
     }
   }, []);
 
@@ -509,6 +518,24 @@ function VatSalesView({ actor }: { actor: string }) {
           <button
             type="button"
             role="tab"
+            className={tab === "recon" ? "vat-sales-tab is-active" : "vat-sales-tab"}
+            aria-selected={tab === "recon"}
+            onClick={() => setTab("recon")}
+          >
+            เทียบยอด
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={tab === "input" ? "vat-sales-tab is-active" : "vat-sales-tab"}
+            aria-selected={tab === "input"}
+            onClick={() => setTab("input")}
+          >
+            ภาษีซื้อ
+          </button>
+          <button
+            type="button"
+            role="tab"
             className={tab === "close" ? "vat-sales-tab is-active" : "vat-sales-tab"}
             aria-selected={tab === "close"}
             onClick={() => setTab("close")}
@@ -536,6 +563,30 @@ function VatSalesView({ actor }: { actor: string }) {
         ) : (
           <p className="muted">กำลังโหลด...</p>
         )
+      ) : null}
+
+      {tab === "recon" ? (
+        <VatSalesReconcilePanel
+          month={month}
+          onMonthChange={setMonth}
+          busy={busy}
+          setBusy={setBusy}
+          setError={setError}
+          setMsg={setMsg}
+        />
+      ) : null}
+
+      {tab === "input" ? (
+        <VatSalesInputVatPanel
+          month={month}
+          onMonthChange={setMonth}
+          actor={actor}
+          busy={busy}
+          setBusy={setBusy}
+          setError={setError}
+          setMsg={setMsg}
+          outputVat={confirmedTotals.vatOutput}
+        />
       ) : null}
 
       {tab === "close" ? (

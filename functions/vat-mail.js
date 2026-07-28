@@ -303,6 +303,15 @@ async function getMessage(accessToken, id) {
   return json;
 }
 
+function guessReportKind(subject) {
+  const hay = String(subject || "").toLowerCase();
+  if (/รายเดือน|monthly|month[- ]?end|สรุปรอบเดือน|ประจำเดือน/.test(hay)) return "monthly";
+  if (/รายสัปดาห์|weekly|สัปดาห์|ประจำสัปดาห์|week[- ]?of|week\s*ending/.test(hay)) {
+    return "weekly";
+  }
+  return "daily";
+}
+
 function guessReportDate(subject, internalDateMs) {
   const s = String(subject || "");
   const m = s.match(/(20\d{2})[-/](\d{1,2})[-/](\d{1,2})/);
@@ -540,6 +549,7 @@ exports.vatMailSync = functions
             rawText,
             rawHtml,
             reportDateGuess: guessReportDate(subject, internalDate),
+            reportKind: guessReportKind(subject),
             parseStatus: "pending",
             parseError: "",
             syncedAt: Date.now(),
