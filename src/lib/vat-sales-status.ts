@@ -21,13 +21,20 @@ export type DayOpsStatus =
   | "empty";
 
 export const DAY_OPS_STATUS_LABELS: Record<DayOpsStatus, string> = {
-  confirmed: "ยืนยันแล้ว",
-  pending_review: "รอตรวจเมล",
-  parse_error: "parse พัง",
+  confirmed: "OK",
+  pending_review: "รอตรวจ",
+  parse_error: "fail",
   missing_mail: "ขาดเมล",
-  incomplete: "ยังไม่ครบ",
-  ready: "พร้อมยืนยัน",
-  empty: "ว่าง",
+  incomplete: "ไม่ครบ",
+  ready: "พร้อม",
+  empty: "—",
+};
+
+/** ย่อชื่อช่องทางในตาราง */
+export const CHANNEL_SHORT: Record<DeliveryChannel, string> = {
+  shopee: "Sp",
+  grab: "Grab",
+  lineman: "LM",
 };
 
 export function reportDateKey(r: PlatformEmailReport): string {

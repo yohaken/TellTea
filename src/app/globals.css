@@ -15442,12 +15442,12 @@ body.modal-open .main-panel {
 }
 
 .vat-sales-tab {
-  min-height: 2.25rem;
-  padding: 0.35rem 0.85rem;
-  border-radius: 999px;
+  min-height: 1.9rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 6px;
   border: 1px solid rgba(28, 42, 31, 0.16);
   background: transparent;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
 }
 
 .vat-sales-tab.is-active {
@@ -15513,6 +15513,117 @@ body.modal-open .main-panel {
   font-size: 0.92rem;
   line-height: 1.45;
   max-width: 42rem;
+}
+
+.vat-sales-summary--slim {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.85rem;
+  align-items: baseline;
+  font-size: 0.88rem;
+  padding: 0.35rem 0;
+  margin: 0.35rem 0;
+}
+
+.vat-sales-summary--slim strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.vat-map {
+  margin-top: 0.2rem;
+}
+
+.vat-map-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+  align-items: center;
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.vat-map-toggle {
+  border: 1px solid rgba(28, 42, 31, 0.16);
+  background: transparent;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.vat-map-list {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.vat-api-box {
+  border: 1px solid rgba(28, 42, 31, 0.12);
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.75rem;
+  display: grid;
+  gap: 0.45rem;
+  background: rgba(28, 42, 31, 0.02);
+}
+
+.vat-api-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.vat-api-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  border-top: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.vat-api-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 8rem;
+  font-size: 0.88rem;
+}
+
+.vat-api-fields {
+  max-width: 28rem;
+}
+
+.vat-api-hint {
+  font-size: 0.78rem;
+  margin: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.vat-api-code {
+  display: block;
+  font-size: 0.72rem;
+  word-break: break-all;
+  padding: 0.35rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.vat-api-actions {
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.vat-api-health {
+  font-size: 0.8rem;
 }
 
 .vat-sales-action-board {

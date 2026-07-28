@@ -84,6 +84,7 @@ export function VatSalesMailPanel({
   const [openId, setOpenId] = useState<string | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [showOutlookConfig, setShowOutlookConfig] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [cfgClientId, setCfgClientId] = useState("");
   const [cfgSecret, setCfgSecret] = useState("");
   const [cfgRedirect, setCfgRedirect] = useState(DEFAULT_REDIRECT);
@@ -251,7 +252,7 @@ export function VatSalesMailPanel({
       await saveVatOutlookOAuthConfig({
         clientId: olClientId,
         clientSecret: olSecret || undefined,
-        redirectUri: olRedirect,
+        redirectUri: (olRedirect || DEFAULT_OUTLOOK_REDIRECT).trim() || DEFAULT_OUTLOOK_REDIRECT,
         updatedBy: actor,
       });
       setOlSecret("");
@@ -419,7 +420,7 @@ export function VatSalesMailPanel({
       await saveVatMailOAuthConfig({
         clientId: cfgClientId,
         clientSecret: cfgSecret || undefined,
-        redirectUri: cfgRedirect,
+        redirectUri: (cfgRedirect || DEFAULT_REDIRECT).trim() || DEFAULT_REDIRECT,
         updatedBy: actor,
       });
       setCfgSecret("");
@@ -456,290 +457,154 @@ export function VatSalesMailPanel({
   const open = reports.find((r) => r.id === openId) || null;
 
   return (
-    <div className="vat-mail-panel">
+    <div className="vat-mail-panel vat-mail-panel--slim">
       {focusDate ? (
-        <p className="muted vat-sales-msg">โฟกัสเมลของวัน {focusDate}</p>
+        <p className="muted vat-sales-msg">โฟกัส {focusDate}</p>
       ) : null}
       {health?.driftChannels?.length ? (
         <p className="error-text">
-          สงสัยเทมเพลตเมลเปลี่ยน · fail ติดกันที่{" "}
+          drift:{" "}
           {health.driftChannels
             .map((ch) =>
-              ch === "unknown"
-                ? "ไม่ทราบช่องทาง"
-                : DELIVERY_CHANNEL_LABELS[ch],
+              ch === "unknown" ? "?" : DELIVERY_CHANNEL_LABELS[ch],
             )
             .join(", ")}{" "}
-          — ควรอัป parser
+          · อัป parser
         </p>
-      ) : null}
-      {health ? (
-        <section className="vat-sales-settings">
-          <h2 className="vat-sales-section-title">สุขภาพ parser</h2>
-          <p className="muted">
-            รวม {health.total} ฉบับ · fail {health.fail}
-            {health.failRate != null ? ` (${health.failRate}%)` : ""}
-          </p>
-          {health.channels.length ? (
-            <div className="sheet-wrap vat-sales-scroll">
-              <table className="sheet-table vat-sales-table" style={{ minWidth: 0 }}>
-                <thead>
-                  <tr>
-                    <th>ช่องทาง</th>
-                    <th className="col-num">ทั้งหมด</th>
-                    <th className="col-num">รอตรวจ</th>
-                    <th className="col-num">fail</th>
-                    <th className="col-num">% fail</th>
-                    <th>เวอร์ชัน</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {health.channels.map((c) => (
-                    <tr key={c.channel}>
-                      <td>
-                        {c.label}
-                        {c.driftSuspected ? " · สงสัย drift" : ""}
-                      </td>
-                      <td className="col-num">{c.total}</td>
-                      <td className="col-num">{c.ok}</td>
-                      <td className="col-num">{c.fail}</td>
-                      <td className="col-num">
-                        {c.failRate != null ? `${c.failRate}%` : "—"}
-                      </td>
-                      <td className="muted">{c.versions.join(", ") || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="muted">ยังไม่มีเมลให้สรุป</p>
-          )}
-        </section>
       ) : null}
 
-      <section className="vat-sales-settings">
-        <h2 className="vat-sales-section-title">เชื่อม Gmail</h2>
-        <p className="muted vat-sales-hint">
-          อ่านเมลอย่างเดียว · token เก็บบนเซิร์ฟเวอร์ · พนักงานเข้าถึงไม่ได้
-        </p>
-        {status ? (
-          <div className="vat-mail-status">
-            <div>
-              สถานะ:{" "}
-              <strong>
-                {status.connected ? `เชื่อมแล้ว (${status.email || "gmail"})` : "ยังไม่เชื่อม"}
-              </strong>
-            </div>
-            <div className="muted">
-              OAuth config: {status.hasConfig ? "พร้อม" : "ยังไม่ครบ"}
-              {status.lastSyncAt
-                ? ` · ซิงก์ล่าสุด ${formatDateTimeShort(status.lastSyncAt)}`
-                : ""}
-            </div>
-            {status.lastSyncError ? (
-              <p className="error-text">ซิงก์ล่าสุดพลาด: {status.lastSyncError}</p>
-            ) : null}
-          </div>
-        ) : null}
-        <div className="vat-sales-toolbar">
-          {!status?.connected ? (
-            <button
-              type="button"
-              className="primary-btn"
-              disabled={busy !== null}
-              onClick={() => void connect()}
-            >
-              เชื่อม Gmail
-            </button>
-          ) : (
-            <>
-              <button
-                type="button"
-                className="primary-btn"
-                disabled={busy !== null}
-                onClick={() => void sync()}
-              >
-                {busy === "mail-sync" ? "กำลังซิงก์..." : "ซิงก์เมลตอนนี้"}
-              </button>
-              <button
-                type="button"
-                className="ghost-btn"
-                disabled={busy !== null}
-                onClick={() => void disconnect()}
-              >
-                ตัดการเชื่อม
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            className="ghost-btn"
-            onClick={() => setShowConfig((v) => !v)}
-          >
-            {showConfig ? "ซ่อน OAuth config" : "ตั้งค่า OAuth"}
-          </button>
-          <button
-            type="button"
-            className="ghost-btn"
-            disabled={busy !== null || loading}
-            onClick={() => void refresh()}
-          >
-            รีเฟรชกล่องเมล
-          </button>
-          <button
-            type="button"
-            className="primary-btn"
-            disabled={busy !== null}
-            onClick={() => void runParsePending()}
-          >
-            {busy === "mail-parse" ? "กำลัง parse..." : "Parse เมลที่รอ"}
-          </button>
+      <section className="vat-api-box">
+        <div className="vat-api-head">
+          <h2 className="vat-sales-section-title">API เมล</h2>
+          <span className="muted">ใส่แค่ ID + Secret</span>
         </div>
 
+        <div className="vat-api-row">
+          <div className="vat-api-label">
+            <strong>Gmail</strong>
+            <span className="muted">
+              {status?.connected
+                ? status.email || "ok"
+                : status?.hasConfig
+                  ? "พร้อมเชื่อม"
+                  : "ยังไม่ตั้งค่า"}
+            </span>
+          </div>
+          <div className="vat-sales-acts">
+            {!status?.connected ? (
+              <button type="button" className="primary-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void connect()}>
+                เชื่อม
+              </button>
+            ) : (
+              <>
+                <button type="button" className="primary-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void sync()}>
+                  {busy === "mail-sync" ? "…" : "ซิงก์"}
+                </button>
+                <button type="button" className="ghost-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void disconnect()}>
+                  ตัด
+                </button>
+              </>
+            )}
+            <button type="button" className="ghost-btn vat-sales-act-btn" onClick={() => { setShowConfig((v) => !v); setShowOutlookConfig(false); }}>
+              {showConfig ? "ปิดค่า" : "ตั้งค่า"}
+            </button>
+          </div>
+        </div>
         {showConfig ? (
-          <div className="vat-mail-config">
-            <p className="muted">
-              ใส่ Google OAuth Client (Web) · Redirect URI ต้องชี้ไป Cloud Function{" "}
-              <code>vatMailOAuthCallback</code>
-            </p>
+          <div className="vat-mail-config vat-api-fields">
             <label className="vat-sales-field">
               Client ID
-              <input
-                value={cfgClientId}
-                onChange={(e) => setCfgClientId(e.target.value)}
-                autoComplete="off"
-              />
+              <input value={cfgClientId} onChange={(e) => setCfgClientId(e.target.value)} autoComplete="off" placeholder="….apps.googleusercontent.com" />
             </label>
             <label className="vat-sales-field">
-              Client Secret {hasSecret ? "(มีอยู่แล้ว — ใส่ใหม่เมื่อจะเปลี่ยน)" : ""}
-              <input
-                type="password"
-                value={cfgSecret}
-                onChange={(e) => setCfgSecret(e.target.value)}
-                autoComplete="off"
-                placeholder={hasSecret ? "••••••" : ""}
-              />
+              Client Secret {hasSecret ? "(มีแล้ว — ใส่ใหม่ถ้าเปลี่ยน)" : ""}
+              <input type="password" value={cfgSecret} onChange={(e) => setCfgSecret(e.target.value)} autoComplete="off" placeholder={hasSecret ? "••••••" : ""} />
             </label>
-            <label className="vat-sales-field">
-              Redirect URI
-              <input
-                value={cfgRedirect}
-                onChange={(e) => setCfgRedirect(e.target.value)}
-                autoComplete="off"
-              />
-            </label>
-            <button
-              type="button"
-              className="primary-btn"
-              disabled={busy !== null}
-              onClick={() => void saveConfig()}
-            >
-              บันทึก OAuth config
+            <p className="muted vat-api-hint">
+              Redirect ติดมาให้แล้ว · วางใน Google Cloud:
+              <code className="vat-api-code">{DEFAULT_REDIRECT}</code>
+            </p>
+            <button type="button" className="primary-btn" disabled={busy !== null} onClick={() => void saveConfig()}>
+              บันทึก Gmail
             </button>
           </div>
         ) : null}
-      </section>
 
-      <section className="vat-sales-settings">
-        <h2 className="vat-sales-section-title">เชื่อม Outlook / Hotmail</h2>
-        <p className="muted vat-sales-hint">
-          Microsoft Graph · อ่านเมลอย่างเดียว · token แยกจาก Gmail · เจ้าของเท่านั้น
-        </p>
-        {outlookStatus ? (
-          <div className="vat-mail-status">
-            <div>
-              สถานะ:{" "}
-              <strong>
-                {outlookStatus.connected
-                  ? `เชื่อมแล้ว (${outlookStatus.email || "outlook"})`
-                  : "ยังไม่เชื่อม"}
-              </strong>
-            </div>
-            <div className="muted">
-              OAuth config: {outlookStatus.hasConfig ? "พร้อม" : "ยังไม่ครบ"}
-              {outlookStatus.lastSyncAt
-                ? ` · ซิงก์ล่าสุด ${formatDateTimeShort(outlookStatus.lastSyncAt)}`
-                : ""}
-            </div>
-            {outlookStatus.lastSyncError ? (
-              <p className="error-text">ซิงก์ล่าสุดพลาด: {outlookStatus.lastSyncError}</p>
-            ) : null}
+        <div className="vat-api-row">
+          <div className="vat-api-label">
+            <strong>Outlook</strong>
+            <span className="muted">
+              {outlookStatus?.connected
+                ? outlookStatus.email || "ok"
+                : outlookStatus?.hasConfig
+                  ? "พร้อมเชื่อม"
+                  : "ยังไม่ตั้งค่า"}
+            </span>
           </div>
-        ) : null}
-        <div className="vat-sales-toolbar">
-          {!outlookStatus?.connected ? (
-            <button
-              type="button"
-              className="primary-btn"
-              disabled={busy !== null}
-              onClick={() => void connectOutlook()}
-            >
-              เชื่อม Outlook
+          <div className="vat-sales-acts">
+            {!outlookStatus?.connected ? (
+              <button type="button" className="primary-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void connectOutlook()}>
+                เชื่อม
+              </button>
+            ) : (
+              <>
+                <button type="button" className="primary-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void syncOutlook()}>
+                  {busy === "outlook-sync" ? "…" : "ซิงก์"}
+                </button>
+                <button type="button" className="ghost-btn vat-sales-act-btn" disabled={busy !== null} onClick={() => void disconnectOutlook()}>
+                  ตัด
+                </button>
+              </>
+            )}
+            <button type="button" className="ghost-btn vat-sales-act-btn" onClick={() => { setShowOutlookConfig((v) => !v); setShowConfig(false); }}>
+              {showOutlookConfig ? "ปิดค่า" : "ตั้งค่า"}
             </button>
-          ) : (
-            <>
-              <button
-                type="button"
-                className="primary-btn"
-                disabled={busy !== null}
-                onClick={() => void syncOutlook()}
-              >
-                {busy === "outlook-sync" ? "กำลังซิงก์..." : "ซิงก์ Outlook"}
-              </button>
-              <button
-                type="button"
-                className="ghost-btn"
-                disabled={busy !== null}
-                onClick={() => void disconnectOutlook()}
-              >
-                ตัดการเชื่อม
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            className="ghost-btn"
-            onClick={() => setShowOutlookConfig((v) => !v)}
-          >
-            {showOutlookConfig ? "ซ่อน Outlook OAuth" : "ตั้งค่า Outlook OAuth"}
-          </button>
+          </div>
         </div>
         {showOutlookConfig ? (
-          <div className="vat-mail-config">
-            <p className="muted">
-              Azure App Registration · Redirect URI ชี้{" "}
-              <code>vatOutlookOAuthCallback</code> · scope Mail.Read + offline_access
-            </p>
+          <div className="vat-mail-config vat-api-fields">
             <label className="vat-sales-field">
               Client ID
-              <input value={olClientId} onChange={(e) => setOlClientId(e.target.value)} />
+              <input value={olClientId} onChange={(e) => setOlClientId(e.target.value)} autoComplete="off" placeholder="Azure Application (client) ID" />
             </label>
             <label className="vat-sales-field">
-              Client Secret {olHasSecret ? "(มีอยู่แล้ว — ใส่ใหม่ถ้าจะเปลี่ยน)" : ""}
-              <input
-                type="password"
-                value={olSecret}
-                onChange={(e) => setOlSecret(e.target.value)}
-                autoComplete="off"
-              />
+              Client Secret {olHasSecret ? "(มีแล้ว — ใส่ใหม่ถ้าเปลี่ยน)" : ""}
+              <input type="password" value={olSecret} onChange={(e) => setOlSecret(e.target.value)} autoComplete="off" placeholder={olHasSecret ? "••••••" : ""} />
             </label>
-            <label className="vat-sales-field">
-              Redirect URI
-              <input value={olRedirect} onChange={(e) => setOlRedirect(e.target.value)} />
-            </label>
-            <button
-              type="button"
-              className="primary-btn"
-              disabled={busy !== null}
-              onClick={() => void saveOutlookConfig()}
-            >
-              บันทึก Outlook OAuth
+            <p className="muted vat-api-hint">
+              Redirect ติดมาให้แล้ว · วางใน Azure:
+              <code className="vat-api-code">{DEFAULT_OUTLOOK_REDIRECT}</code>
+            </p>
+            <button type="button" className="primary-btn" disabled={busy !== null} onClick={() => void saveOutlookConfig()}>
+              บันทึก Outlook
             </button>
           </div>
         ) : null}
+
+        <div className="vat-sales-toolbar vat-api-actions">
+          <button type="button" className="ghost-btn" disabled={busy !== null || loading} onClick={() => void refresh()}>
+            รีเฟรช
+          </button>
+          <button type="button" className="primary-btn" disabled={busy !== null} onClick={() => void runParsePending()}>
+            {busy === "mail-parse" ? "…" : "Parse คิว"}
+          </button>
+          {health ? (
+            <span className="muted vat-api-health">
+              parser {health.fail}/{health.total}
+              {health.failRate != null ? ` · ${health.failRate}% fail` : ""}
+            </span>
+          ) : null}
+        </div>
       </section>
 
+      <div className="vat-sales-toolbar" style={{ marginBottom: "0.5rem" }}>
+        <button type="button" className="ghost-btn" onClick={() => setShowAdvanced((v) => !v)}>
+          {showAdvanced ? "ซ่อนขั้นสูง" : "ขั้นสูง (กฎค้นหา / ลบ raw)"}
+        </button>
+      </div>
+
+      {showAdvanced ? (
+      <>
       <section className="vat-sales-settings">
         <h2 className="vat-sales-section-title">กฎค้นหาเมลต่อช่องทาง</h2>
         {DELIVERY_CHANNELS.map((ch) => {
@@ -824,6 +689,8 @@ export function VatSalesMailPanel({
           </button>
         </div>
       </section>
+      </>
+      ) : null}
 
       <section>
         <div className="vat-sales-toolbar" style={{ marginBottom: "0.65rem" }}>

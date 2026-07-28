@@ -41,6 +41,7 @@ import {
   deriveDayOpsStatus,
   groupReportsByDate,
   isActionNeeded,
+  CHANNEL_SHORT,
   type DayOpsStatus,
 } from "@/lib/vat-sales-status";
 
@@ -563,66 +564,30 @@ function VatSalesView({ actor }: { actor: string }) {
       <header className="vat-sales-header">
         <div>
           <h1 className="panel-title">ยอดขาย / VAT</h1>
-          <p className="muted vat-sales-lead">
-            เดลิเวอรี่ 3 ช่องทาง + หน้าร้าน · คิด VAT 7% จากยอดลูกค้า · เฉพาะเจ้าของ
-          </p>
           <VatSalesOwnerGuide />
         </div>
         <div className="vat-sales-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            className={tab === "daily" ? "vat-sales-tab is-active" : "vat-sales-tab"}
-            aria-selected={tab === "daily"}
-            onClick={() => setTab("daily")}
-          >
-            ตารางรายวัน
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className={tab === "mail" ? "vat-sales-tab is-active" : "vat-sales-tab"}
-            aria-selected={tab === "mail"}
-            onClick={() => setTab("mail")}
-          >
-            กล่องเมล
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className={tab === "recon" ? "vat-sales-tab is-active" : "vat-sales-tab"}
-            aria-selected={tab === "recon"}
-            onClick={() => setTab("recon")}
-          >
-            เทียบยอด
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className={tab === "input" ? "vat-sales-tab is-active" : "vat-sales-tab"}
-            aria-selected={tab === "input"}
-            onClick={() => setTab("input")}
-          >
-            ภาษีซื้อ
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className={tab === "close" ? "vat-sales-tab is-active" : "vat-sales-tab"}
-            aria-selected={tab === "close"}
-            onClick={() => setTab("close")}
-          >
-            ปิดเดือน / VAT
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className={tab === "audit" ? "vat-sales-tab is-active" : "vat-sales-tab"}
-            aria-selected={tab === "audit"}
-            onClick={() => setTab("audit")}
-          >
-            ประวัติ
-          </button>
+          {(
+            [
+              ["daily", "วัน"],
+              ["mail", "เมล"],
+              ["recon", "เทียบ"],
+              ["input", "ซื้อ"],
+              ["close", "ปิด"],
+              ["audit", "ประวัติ"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              className={tab === id ? "vat-sales-tab is-active" : "vat-sales-tab"}
+              aria-selected={tab === id}
+              onClick={() => setTab(id)}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </header>
 
@@ -732,8 +697,8 @@ function VatSalesView({ actor }: { actor: string }) {
             onClick={() => void confirmAllReady()}
           >
             {busy === "bulk-confirm"
-              ? "กำลังยืนยัน..."
-              : `ยืนยันทั้งที่พร้อม (${statusCounts.ready})`}
+              ? "…"
+              : `ยืนยันพร้อม (${statusCounts.ready})`}
           </button>
           <label className="vat-sales-month">
             ไปวัน
@@ -914,44 +879,33 @@ function VatSalesView({ actor }: { actor: string }) {
         </section>
       ) : null}
 
-      <section className="vat-sales-summary">
-        <div className="vat-sales-summary-card">
-          <span className="muted">เดลิเวอรี่</span>
-          <strong>{fmt(totals.deliveryGross)}</strong>
+      <section className="vat-sales-summary vat-sales-summary--slim">
+        <span>
+          ส่ง <strong>{fmt(totals.deliveryGross)}</strong>
           <small className="muted">
-            Shopee {fmt(totals.shopee)} · Grab {fmt(totals.grab)} · LINE MAN{" "}
-            {fmt(totals.lineman)}
+            {" "}
+            Sp {fmt(totals.shopee)} · Grab {fmt(totals.grab)} · LM {fmt(totals.lineman)}
           </small>
-        </div>
-        <div className="vat-sales-summary-card">
-          <span className="muted">หน้าร้าน</span>
-          <strong>{fmt(totals.storefrontGross)}</strong>
-        </div>
-        <div className="vat-sales-summary-card vat-sales-summary-main">
-          <span className="muted">ยอดขายร้าน (รวม VAT)</span>
-          <strong>{fmt(totals.totalGross)}</strong>
-        </div>
-        <div className="vat-sales-summary-card">
-          <span className="muted">ฐานภาษี</span>
-          <strong>{fmt(totals.vatBase)}</strong>
-        </div>
-        <div className="vat-sales-summary-card">
-          <span className="muted">VAT 7%</span>
-          <strong>{fmt(totals.vatOutput)}</strong>
-        </div>
-        <div className="vat-sales-summary-card">
-          <span className="muted">ค่าธรรมเนียม</span>
-          <strong>{fmt(totals.feeTotal)}</strong>
-        </div>
-        <div className="vat-sales-summary-card">
-          <span className="muted">ยอดโอนสุทธิ</span>
-          <strong>{fmt(totals.netTransferTotal)}</strong>
-        </div>
+        </span>
+        <span>
+          ร้าน <strong>{fmt(totals.storefrontGross)}</strong>
+        </span>
+        <span className="vat-sales-summary-main">
+          รวม <strong>{fmt(totals.totalGross)}</strong>
+        </span>
+        <span>
+          ฐาน <strong>{fmt(totals.vatBase)}</strong>
+        </span>
+        <span>
+          VAT <strong>{fmt(totals.vatOutput)}</strong>
+        </span>
+        <span className="muted">
+          GP {fmt(totals.feeTotal)} · โอน {fmt(totals.netTransferTotal)}
+        </span>
       </section>
 
       <p className="muted vat-sales-hint">
-        ยอดในช่อง = ยอดที่ลูกค้าจ่าย (รวม VAT) · สูตร: ฐาน = รวม÷1.07 · VAT = รวม−ฐาน · วันยืนยัน{" "}
-        {totals.confirmedDays}/{dateKeys.length}
+        ยอด = รวม VAT ลูกค้า · ฐาน=÷1.07 · ยืนยัน {totals.confirmedDays}/{dateKeys.length}
       </p>
 
       {loading ? (
@@ -961,20 +915,20 @@ function VatSalesView({ actor }: { actor: string }) {
           <table className="sheet-table vat-sales-table">
             <thead>
               <tr>
-                <th className="col-date">วัน</th>
+                <th className="col-date">ว</th>
                 {DELIVERY_CHANNELS.map((ch) => (
-                  <th key={ch} className="col-num">
-                    {DELIVERY_CHANNEL_LABELS[ch]}
+                  <th key={ch} className="col-num" title={DELIVERY_CHANNEL_LABELS[ch]}>
+                    {CHANNEL_SHORT[ch]}
                   </th>
                 ))}
-                <th className="col-num">รวมส่ง</th>
-                <th className="col-num">หน้าร้าน</th>
-                <th className="col-num">ยอดร้าน</th>
-                <th className="col-num">ฐานภาษี</th>
+                <th className="col-num">ส่ง</th>
+                <th className="col-num">ร้าน</th>
+                <th className="col-num">รวม</th>
+                <th className="col-num">ฐาน</th>
                 <th className="col-num">VAT</th>
-                <th>สถานะวัน</th>
-                <th>บันทึก</th>
-                <th className="col-act">จัดการ</th>
+                <th>สถานะ</th>
+                <th>บ.</th>
+                <th className="col-act">…</th>
               </tr>
             </thead>
             <tbody>
@@ -1051,7 +1005,7 @@ function VatSalesView({ actor }: { actor: string }) {
                           locked ? "vat-sales-badge ok" : "vat-sales-badge draft"
                         }
                       >
-                        {locked ? "ยืนยัน" : draft?.dirty ? "ยังไม่บันทึก" : "ร่าง"}
+                        {locked ? "OK" : draft?.dirty ? "dirty" : "ร่าง"}
                       </span>
                     </td>
                     <td className="col-act">
@@ -1063,7 +1017,7 @@ function VatSalesView({ actor }: { actor: string }) {
                             disabled={dayBusy || busy !== null}
                             onClick={() => void saveRow(dateKey)}
                           >
-                            บันทึก
+                            เซฟ
                           </button>
                         ) : null}
                         <button
@@ -1072,7 +1026,7 @@ function VatSalesView({ actor }: { actor: string }) {
                           disabled={dayBusy || busy !== null}
                           onClick={() => void toggleConfirm(dateKey)}
                         >
-                          {locked ? "ปลดล็อก" : "ยืนยัน"}
+                          {locked ? "ปลด" : "ยืนยัน"}
                         </button>
                         {ops === "pending_review" || ops === "parse_error" || ops === "missing_mail" ? (
                           <button

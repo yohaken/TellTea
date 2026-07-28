@@ -77,10 +77,9 @@ export function VatSalesReconcilePanel({
   return (
     <div className="vat-recon-panel">
       <section className="vat-sales-settings">
-        <h2 className="vat-sales-section-title">เทียบยอดสัปดาห์ / เดือน</h2>
+        <h2 className="vat-sales-section-title">เทียบ สัปดาห์/เดือน</h2>
         <p className="muted vat-sales-hint">
-          เมลสรุปแพลตฟอร์มเทียบกับผลรวมตารางรายวัน ·{" "}
-          <strong>ไม่เขียนทับ</strong> ยอดรายวันอัตโนมัติ
+          สรุปแพลตฟอร์ม vs รวมวัน · <strong>ไม่ทับ</strong> ตารางวัน
         </p>
         <div className="vat-sales-toolbar">
           <label className="vat-sales-month">
