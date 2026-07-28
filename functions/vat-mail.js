@@ -643,14 +643,27 @@ exports.vatMailSync = functions
                 msg.payload,
               );
               if (!pdf.text) {
+                await db.collection(REPORTS_COL).doc(docId).set(
+                  {
+                    parseStatus: "fail",
+                    parseError: pdf.error || "ดึงข้อความ PDF ไม่สำเร็จ",
+                    pdfError: pdf.error || "empty",
+                    syncedAt: Date.now(),
+                    syncedBy: actorId,
+                  },
+                  { merge: true },
+                );
                 skipped += 1;
                 continue;
               }
-              const rawText = mergeBodyWithPdf(prev.rawText || "", pdf.text);
+              const rawText = mergeBodyWithPdf(prev.rawText || "", pdf.text, {
+                force: true,
+              });
               await db.collection(REPORTS_COL).doc(docId).set(
                 {
                   rawText,
                   pdfFilenames: pdf.filenames,
+                  pdfError: "",
                   parseStatus: "pending",
                   parseError: "",
                   syncedAt: Date.now(),
@@ -687,6 +700,7 @@ exports.vatMailSync = functions
           let rawText = String(bodies.text || "").slice(0, 200000);
           const rawHtml = String(bodies.html || "").slice(0, 200000);
           let pdfFilenames = [];
+          let pdfError = "";
           // Grab (และเมลสรุปยอด) — ดึงข้อความจาก PDF แนบมาใส่ rawText
           if (
             channelFinal === "grab" ||
@@ -701,9 +715,12 @@ exports.vatMailSync = functions
               if (pdf.text) {
                 rawText = mergeBodyWithPdf(rawText, pdf.text);
                 pdfFilenames = pdf.filenames;
+              } else {
+                pdfError = pdf.error || "ดึงข้อความ PDF ไม่สำเร็จ";
               }
             } catch (e) {
-              console.warn("pdf extract", messageId, e?.message || e);
+              pdfError = asString(e?.message || String(e), 160);
+              console.warn("pdf extract", messageId, pdfError);
             }
           }
           await db.collection(REPORTS_COL).doc(docId).set({
@@ -719,6 +736,7 @@ exports.vatMailSync = functions
             rawText,
             rawHtml,
             ...(pdfFilenames.length ? { pdfFilenames } : {}),
+            ...(pdfError ? { pdfError } : { pdfError: "" }),
             reportDateGuess: guessReportDate(subject, internalDate),
             reportKind: guessReportKind(subject),
             parseStatus: "pending",

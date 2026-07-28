@@ -102,35 +102,59 @@ async function pdfBufferToText(buffer) {
  */
 async function extractPdfTextFromMessage(accessToken, messageId, payload) {
   const parts = listPdfParts(payload).slice(0, 2);
-  if (!parts.length) return { text: "", filenames: [] };
+  if (!parts.length) {
+    return { text: "", filenames: [], error: "ไม่พบไฟล์ PDF แนบ" };
+  }
   const chunks = [];
   const filenames = [];
+  const errors = [];
   for (const part of parts) {
     try {
       let buf;
       if (part.inlineData) {
         buf = decodeAttachmentData(part.inlineData);
-        if (buf.length > MAX_PDF_BYTES) continue;
+        if (buf.length > MAX_PDF_BYTES) {
+          errors.push(`${part.filename}: ไฟล์ใหญ่เกิน`);
+          continue;
+        }
       } else {
         buf = await fetchAttachmentBuffer(accessToken, messageId, part.attachmentId);
       }
-      if (buf.slice(0, 5).toString() !== "%PDF-") continue;
+      if (buf.slice(0, 5).toString() !== "%PDF-") {
+        errors.push(`${part.filename}: ไม่ใช่ PDF`);
+        continue;
+      }
       const text = await pdfBufferToText(buf);
-      if (text.length < 20) continue;
+      if (text.length < 20) {
+        errors.push(
+          `${part.filename}: อ่านข้อความไม่ได้ (อาจเป็นรูปสแกนหรือมีรหัสผ่าน)`,
+        );
+        continue;
+      }
       filenames.push(part.filename || "attachment.pdf");
       chunks.push(`# file: ${part.filename || "attachment.pdf"}\n${text}`);
     } catch (e) {
-      console.warn("vat-mail-pdf extract", part.filename, e?.message || e);
+      const msg = e?.message || String(e);
+      console.warn("vat-mail-pdf extract", part.filename, msg);
+      errors.push(`${part.filename || "pdf"}: ${String(msg).slice(0, 120)}`);
     }
   }
-  return { text: chunks.join("\n\n").slice(0, MAX_PDF_TEXT), filenames };
+  return {
+    text: chunks.join("\n\n").slice(0, MAX_PDF_TEXT),
+    filenames,
+    error: chunks.length ? "" : errors[0] || "ดึงข้อความ PDF ไม่สำเร็จ",
+  };
 }
 
-function mergeBodyWithPdf(rawText, pdfText) {
-  const body = String(rawText || "").trim();
+function mergeBodyWithPdf(rawText, pdfText, opts = {}) {
+  const force = Boolean(opts.force);
+  const bodyAll = String(rawText || "").trim();
   const pdf = String(pdfText || "").trim();
-  if (!pdf) return body;
-  if (body.includes("--- PDF ---")) return body;
+  if (!pdf) return bodyAll;
+  const body = bodyAll.includes("--- PDF ---")
+    ? bodyAll.split("--- PDF ---")[0].trim()
+    : bodyAll;
+  if (!force && bodyAll.includes("--- PDF ---")) return bodyAll;
   if (!body) return `--- PDF ---\n${pdf}`;
   return `${body}${PDF_MARKER}${pdf}`.slice(0, 200000);
 }
@@ -139,12 +163,20 @@ function needsPdfEnrich(doc) {
   if (!doc || typeof doc !== "object") return false;
   const status = String(doc.parseStatus || "");
   if (status === "confirmed" || status === "ignored") return false;
-  const raw = String(doc.rawText || "");
-  if (raw.includes("--- PDF ---")) return false;
   const channel = String(doc.channel || "");
   const subject = String(doc.subject || "").toLowerCase();
-  if (channel === "grab") return true;
-  if (/สรุปยอดขาย|grabfood|daily sales/.test(subject)) return true;
+  const isGrab =
+    channel === "grab" || /สรุปยอดขาย|grabfood|daily sales/.test(subject);
+  if (!isGrab) return false;
+  const raw = String(doc.rawText || "");
+  // ยังไม่มีข้อความ PDF → ต้องดึง
+  if (!raw.includes("--- PDF ---")) return true;
+  // มี marker แต่สั้นมาก / fail ป้ายยอด → ลองดึงใหม่
+  const pdfPart = raw.split("--- PDF ---")[1] || "";
+  if (pdfPart.trim().length < 40) return true;
+  if (status === "fail" && /PDF|ป้ายยอด|ยอดขาย|ลูกค้า/i.test(String(doc.parseError || ""))) {
+    return true;
+  }
   return false;
 }
 

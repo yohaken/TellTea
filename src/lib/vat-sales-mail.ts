@@ -393,12 +393,51 @@ export async function reparsePendingPlatformEmails(max = 40): Promise<{
   fail: number;
   skipped: number;
 }> {
-  const pending = await listPlatformEmailReports({ parseStatus: "pending", max: 200 });
+  return reparseMailQueue({ max, statuses: ["pending"] });
+}
+
+/**
+ * Parse คิวเมลอัตโนมัติ — รวม pending + fail (กันค้างหลังดึง PDF แล้ว)
+ */
+export async function reparseMailQueue(opts?: {
+  max?: number;
+  statuses?: Array<"pending" | "fail" | "ok">;
+}): Promise<{
+  ok: number;
+  fail: number;
+  skipped: number;
+}> {
+  const max = Math.min(120, Math.max(opts?.max || 80, 1));
+  const statuses = opts?.statuses?.length
+    ? opts.statuses
+    : (["pending", "fail"] as Array<"pending" | "fail">);
+  const seen = new Set<string>();
+  const queue: PlatformEmailReport[] = [];
+  for (const st of statuses) {
+    const rows = await listPlatformEmailReports({ parseStatus: st, max: 200 });
+    for (const r of rows) {
+      if (seen.has(r.id)) continue;
+      seen.add(r.id);
+      queue.push(r);
+    }
+  }
+  // ใหม่ก่อน · Grab/PDF ก่อน
+  queue.sort((a, b) => {
+    const ap = a.rawText.includes("--- PDF ---") || a.channel === "grab" ? 1 : 0;
+    const bp = b.rawText.includes("--- PDF ---") || b.channel === "grab" ? 1 : 0;
+    if (ap !== bp) return bp - ap;
+    return b.receivedAt - a.receivedAt;
+  });
+
   let ok = 0;
   let fail = 0;
   let skipped = 0;
-  for (const r of pending.slice(0, max)) {
+  for (const r of queue.slice(0, max)) {
     if (r.channel === "unknown") {
+      skipped += 1;
+      continue;
+    }
+    if (r.parseStatus === "confirmed" || r.parseStatus === "ignored") {
       skipped += 1;
       continue;
     }
@@ -729,14 +768,15 @@ export async function pullAndFillDailyFromMail(opts: {
     }
   }
 
-  const parse = await reparsePendingPlatformEmails(80);
+  // parse ทั้ง pending + fail — กันเมล Grab ที่เคย fail ก่อนมีดึง PDF
+  const parse = await reparseMailQueue({ max: 100, statuses: ["pending", "fail"] });
   const apply: AutoApplyChannelResult[] = [];
   for (const channel of DELIVERY_CHANNELS) {
     apply.push(
       await autoApplyMailToDaily({
         channel,
         actor: opts.actor,
-        max: 80,
+        max: 100,
       }),
     );
   }

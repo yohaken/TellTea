@@ -6,7 +6,7 @@
 import { isDateKey, normalizeMoney, roundMoney, type DeliveryChannel } from "./vat-sales";
 
 export const PARSER_VERSIONS: Record<DeliveryChannel, string> = {
-  grab: "grab-daily-v2",
+  grab: "grab-daily-v3",
   lineman: "lineman-daily-v2",
   shopee: "shopee-daily-v1",
 };
@@ -117,18 +117,24 @@ const SHARED_GROSS = [
   "ยอดที่ลูกค้าจ่าย",
   "ยอดลูกค้าชำระ",
   "ยอดรวมที่ลูกค้าชำระ",
+  "ยอดขายรวมทั้งสิ้น",
+  "ยอดขายรวมทั้งหมด",
+  "มูลค่ายอดขาย",
   "ยอดขายรวม",
   "ยอดขายสุทธิ",
-  "ยอดขาย",
+  "ยอดขายสินค้า",
   "ยอดรวมออเดอร์",
   "ยอดคำสั่งซื้อ",
-  "ยอดขายสินค้า",
-  "gross sales",
+  "ยอดขาย",
+  "gross sales (incl. vat)",
+  "gross sales incl. vat",
   "gross sales amount",
-  "total sales",
+  "gross sales",
   "total sales amount",
+  "total sales",
   "sales amount",
   "order sales",
+  "sales (incl. vat)",
   "gmv",
 ];
 
@@ -173,7 +179,17 @@ const SHARED_ORDERS = [
 
 const CHANNEL_LABELS: Record<DeliveryChannel, LabelSpec[]> = {
   grab: [
-    { key: "gross", labels: ["ยอดขายจากลูกค้า", "customer paid", ...SHARED_GROSS] },
+    {
+      key: "gross",
+      labels: [
+        "ยอดขายจากลูกค้า",
+        "ยอดขายที่ลูกค้าชำระ",
+        "customer paid amount",
+        "customer paid",
+        "gross merchandise value",
+        ...SHARED_GROSS,
+      ],
+    },
     { key: "fee", labels: ["ค่าคอมมิชชัน grab", ...SHARED_FEE] },
     { key: "net", labels: ["ยอดเงินที่จะได้รับ", ...SHARED_NET] },
     { key: "orders", labels: SHARED_ORDERS },

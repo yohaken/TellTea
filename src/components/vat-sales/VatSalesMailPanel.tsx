@@ -537,7 +537,7 @@ export function VatSalesMailPanel({
           ) : null}
         </div>
         <p className="muted vat-api-hint">
-          ดึงลงตาราง = ซิงก์เมล → parse → ใส่ยอดเข้าตารางทีละแพลตฟอร์ม (วันยังเป็นร่าง · ไม่ทับวันที่ยืนยันแล้ว)
+          ดึงลงตาราง = ซิงก์ (+ดึง PDF Grab) → parse ใหม่ทั้งคิว fail → ใส่ยอดมุมลูกค้าเข้าตารางอัตโนมัติ (วันยังเป็นร่าง)
         </p>
       </section>
 
