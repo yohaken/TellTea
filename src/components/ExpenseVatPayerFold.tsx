@@ -3,6 +3,7 @@
 import type { ExpenseVatPayerFields } from "@/lib/expense-vat";
 import {
   buildExpenseVatPayerPayload,
+  canSyncVatInputInvoice,
   expenseVatFoldSummary,
   expenseVatFromGross,
   labelExpenseInvoiceNameOk,
@@ -35,6 +36,7 @@ export function ExpenseVatPayerFold({
   idPrefix = "exp-vat",
 }: Props) {
   const summary = expenseVatFoldSummary(value);
+  const syncGate = canSyncVatInputInvoice(value);
 
   function patch(partial: Partial<ExpenseVatPayerFields>) {
     const merged = { ...value, ...partial };
@@ -214,11 +216,13 @@ export function ExpenseVatPayerFold({
 
         {value.vatInputInvoiceId ? (
           <p className="muted expense-vat-fold-help">
-            ลิงก์ภาษีซื้อแล้ว · เจ้าของบันทึกเมื่อ «มี VAT + ใช้ขอคืนได้»
+            ลิงก์ภาษีซื้อแล้ว · ถ้าเปลี่ยนเป็นไม่ขอคืน ระบบจะถอนลิงก์ตอนบันทึก
           </p>
-        ) : value.vatMode === "inclusive" && value.invoiceNameOk === "ok" ? (
+        ) : value.vatMode === "inclusive" ? (
           <p className="muted expense-vat-fold-help">
-            พร้อมลิงก์ภาษีซื้อเมื่อเจ้าของบันทึก/รับบิล
+            {syncGate.ok
+              ? "พร้อมลิงก์ภาษีซื้อเมื่อเจ้าของบันทึก/รับบิล"
+              : syncGate.reason}
           </p>
         ) : null}
       </div>

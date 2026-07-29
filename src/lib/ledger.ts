@@ -28,6 +28,7 @@ import {
   buildExpenseVatPayerPayload,
   normalizeExpenseVatPayer,
 } from "./expense-vat";
+import { deleteLinkedVatInputInvoice } from "./expense-vat-sync";
 import { getDb } from "./firebase";
 import type { LedgerEntry, LedgerEntryInput } from "./types";
 import type { ImportLedgerRow } from "./xlsx-import";
@@ -569,7 +570,8 @@ export async function deleteLedgerEntry(id: string): Promise<void> {
   const entryRef = doc(getDb(), "ledger", id);
   const prevSnap = await getDoc(entryRef);
   if (!prevSnap.exists()) return;
-  const prev = prevSnap.data() as LedgerEntry;
+  const prev = mapEntry(prevSnap);
+  await deleteLinkedVatInputInvoice(prev.vatInputInvoiceId);
   await deleteDoc(entryRef);
   await applyBalanceDelta(-(Number(prev.amountIn) || 0), -(Number(prev.amountOut) || 0));
 }

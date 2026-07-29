@@ -210,12 +210,32 @@ export function hasExpenseVatPayerDetail(fields: ExpenseVatPayerFields): boolean
   );
 }
 
-/** พร้อมสร้าง/อัปเดตใบกำกับภาษีซื้อ */
-export function shouldSyncVatInputInvoice(fields: ExpenseVatPayerFields): boolean {
+/**
+ * พร้อมลิงก์ภาษีซื้อ — ต้องครบ: มี VAT · ผู้ขาย · ในนาม · ยืนยันใช้ขอคืนได้
+ * (กันสร้างใบที่สรรพากรไม่รับจากข้อมูลครึ่งๆ)
+ */
+export function canSyncVatInputInvoice(
+  fields: ExpenseVatPayerFields,
+): { ok: true } | { ok: false; reason: string } {
   const n = normalizeExpenseVatPayer(fields);
-  return (
-    n.vatMode === "inclusive" &&
-    n.invoiceNameOk === "ok" &&
-    n.vatInput > 0
-  );
+  if (n.vatMode !== "inclusive") {
+    return { ok: false, reason: "ยังไม่ใช่บิลมี VAT" };
+  }
+  if (!(n.vatInput > 0)) {
+    return { ok: false, reason: "ใส่ยอด VAT ก่อน" };
+  }
+  if (!n.vendor.trim()) {
+    return { ok: false, reason: "ใส่ชื่อผู้ขายก่อนลิงก์ภาษีซื้อ" };
+  }
+  if (!n.invoiceName.trim()) {
+    return { ok: false, reason: "ใส่ชื่อในนามก่อนลิงก์ภาษีซื้อ" };
+  }
+  if (n.invoiceNameOk !== "ok") {
+    return { ok: false, reason: "ยืนยัน «ใช้ขอคืนได้» หลังเช็คชื่อบนบิล" };
+  }
+  return { ok: true };
+}
+
+export function shouldSyncVatInputInvoice(fields: ExpenseVatPayerFields): boolean {
+  return canSyncVatInputInvoice(fields).ok;
 }

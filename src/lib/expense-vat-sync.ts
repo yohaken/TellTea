@@ -1,10 +1,12 @@
 /**
- * ผูกแถวค่าใช้จ่าย → vatInputInvoices (ภาษีซื้อ)
- * เรียกเมื่อเจ้าของบันทึก/รับบิล และแถวพร้อมขอคืน
+ * ผูก/ถอนแถวค่าใช้จ่าย ↔ vatInputInvoices (ภาษีซื้อ)
+ * - sync เมื่อครบเงื่อนไข (มี VAT · ผู้ขาย · ในนาม · ใช้ขอคืนได้)
+ * - ถอนเมื่อเงื่อนไขหลุด หรือลบแถวบช.
  */
 
 import {
   buildExpenseVatPayerPayload,
+  canSyncVatInputInvoice,
   normalizeExpenseVatPayer,
   shouldSyncVatInputInvoice,
   type ExpenseVatPayerFields,
@@ -12,6 +14,7 @@ import {
 import { todayInputValue } from "./utils";
 import {
   createVatInputInvoice,
+  deleteVatInputInvoice,
   updateVatInputInvoice,
 } from "./vat-input";
 
@@ -25,26 +28,55 @@ export type ExpenseVatSyncSource = {
   fields: Partial<ExpenseVatPayerFields>;
 };
 
+export type ExpenseVatSyncResult = {
+  vatInputInvoiceId: string;
+  action: "created" | "updated" | "removed" | "skipped";
+  reason?: string;
+};
+
+/** ลบใบกำกับที่ลิงก์ไว้ (เงียบถ้าไม่มีสิทธิ์/ไม่พบ) */
+export async function deleteLinkedVatInputInvoice(
+  invoiceId: string | undefined | null,
+): Promise<boolean> {
+  const id = String(invoiceId || "").trim();
+  if (!id) return false;
+  try {
+    await deleteVatInputInvoice(id);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * สร้างหรืออัปเดตใบกำกับภาษีซื้อ แล้วคืน vatInputInvoiceId
- * ถ้ายังไม่พร้อม sync คืน id เดิม (หรือ "")
+ * สร้าง/อัปเดต หรือถอนใบกำกับภาษีซื้อตามสถานะแถว
+ * — ต้องมีผู้ขายจริง (ไม่ใช้คำอธิบายรายการแทน)
  */
-export async function syncExpenseVatInputInvoice(
+export async function reconcileExpenseVatInputInvoice(
   source: ExpenseVatSyncSource,
   by: string,
-): Promise<string> {
+): Promise<ExpenseVatSyncResult> {
   const amountOut = Number(source.amountOut) || 0;
   const fields = buildExpenseVatPayerPayload(source.fields, amountOut);
-  if (!shouldSyncVatInputInvoice(fields)) {
-    return fields.vatInputInvoiceId || "";
+  const existingId = fields.vatInputInvoiceId || "";
+  const gate = canSyncVatInputInvoice(fields);
+
+  if (!gate.ok) {
+    if (existingId) {
+      await deleteLinkedVatInputInvoice(existingId);
+      return {
+        vatInputInvoiceId: "",
+        action: "removed",
+        reason: gate.reason,
+      };
+    }
+    return { vatInputInvoiceId: "", action: "skipped", reason: gate.reason };
   }
+
   if (!by.trim()) throw new Error("ไม่พบผู้บันทึกภาษีซื้อ");
 
   const dateKey = todayInputValue(new Date(source.dateMs || Date.now()));
-  const vendor =
-    fields.vendor.trim() ||
-    String(source.description || "").trim() ||
-    "ไม่ระบุผู้ขาย";
+  const vendor = fields.vendor.trim();
   const noteParts = [
     source.note,
     fields.taxInvoiceNo ? `เลขที่ ${fields.taxInvoiceNo}` : "",
@@ -61,13 +93,22 @@ export async function syncExpenseVatInputInvoice(
     note: noteParts.join(" · "),
   };
 
-  if (fields.vatInputInvoiceId) {
-    await updateVatInputInvoice(fields.vatInputInvoiceId, payload, by.trim());
-    return fields.vatInputInvoiceId;
+  if (existingId) {
+    await updateVatInputInvoice(existingId, payload, by.trim());
+    return { vatInputInvoiceId: existingId, action: "updated" };
   }
 
   const created = await createVatInputInvoice(payload, by.trim());
-  return created.id;
+  return { vatInputInvoiceId: created.id, action: "created" };
+}
+
+/** @deprecated ใช้ reconcileExpenseVatInputInvoice */
+export async function syncExpenseVatInputInvoice(
+  source: ExpenseVatSyncSource,
+  by: string,
+): Promise<string> {
+  const result = await reconcileExpenseVatInputInvoice(source, by);
+  return result.vatInputInvoiceId;
 }
 
 /** รวมผล sync เข้าฟิลด์แถว */
@@ -78,3 +119,5 @@ export function withSyncedVatInputId(
   const n = normalizeExpenseVatPayer(fields);
   return { ...n, vatInputInvoiceId: String(invoiceId || "").trim() };
 }
+
+export { shouldSyncVatInputInvoice, canSyncVatInputInvoice };

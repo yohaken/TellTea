@@ -34,7 +34,7 @@ import {
   type ExpenseVatPayerFields,
 } from "@/lib/expense-vat";
 import {
-  syncExpenseVatInputInvoice,
+  reconcileExpenseVatInputInvoice,
   withSyncedVatInputId,
 } from "@/lib/expense-vat-sync";
 import { can } from "@/lib/permissions";
@@ -817,7 +817,7 @@ function OwnerEntryModal({
       const dateMs = parseDateInput(date);
       let vat = prepareExpenseVatForSave(vatPayer, amountOut);
       try {
-        const invoiceId = await syncExpenseVatInputInvoice(
+        const synced = await reconcileExpenseVatInputInvoice(
           {
             dateMs,
             amountOut,
@@ -828,7 +828,7 @@ function OwnerEntryModal({
           },
           createdBy,
         );
-        if (invoiceId) vat = withSyncedVatInputId(vat, invoiceId);
+        vat = withSyncedVatInputId(vat, synced.vatInputInvoiceId);
       } catch {
         /* ลิงก์ภาษีซื้อไม่บังคับ */
       }

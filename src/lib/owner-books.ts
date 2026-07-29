@@ -23,6 +23,7 @@ import {
   normalizeExpenseVatPayer,
   type ExpenseVatPayerFields,
 } from "./expense-vat";
+import { deleteLinkedVatInputInvoice } from "./expense-vat-sync";
 import type { LedgerEntry } from "./types";
 import type { ImportOwnerBookRow } from "./xlsx-import";
 
@@ -418,7 +419,9 @@ export async function deleteOwnerBookEntry(id: string): Promise<void> {
   const entryRef = doc(getDb(), "ownerBooks", id);
   const prevSnap = await getDoc(entryRef);
   if (!prevSnap.exists()) return;
-  const prevOut = Number(prevSnap.data().amountOut) || 0;
+  const prev = mapEntry(prevSnap);
+  const prevOut = Number(prev.amountOut) || 0;
+  await deleteLinkedVatInputInvoice(prev.vatInputInvoiceId);
   await deleteDoc(entryRef);
   await applyOwnerOutDelta(-prevOut);
 }

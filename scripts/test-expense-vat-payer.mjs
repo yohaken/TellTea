@@ -26,7 +26,7 @@ const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
 const phases = read("docs/expense-vat-payer-phases.md");
 
-assert.match(version, /APP_BUILD = 394/);
+assert.match(version, /APP_BUILD = 395/);
 assert.ok(existsSync(join(root, "docs/expense-vat-payer-phases.md")));
 assert.match(phases, /E0|E1|E3|E4|E5|vatMode|ผู้จ่าย/);
 
@@ -34,8 +34,11 @@ assert.match(lib, /export type ExpenseVatMode/);
 assert.match(lib, /vendor/);
 assert.match(lib, /vatInputInvoiceId/);
 assert.match(lib, /shouldSyncVatInputInvoice/);
+assert.match(lib, /canSyncVatInputInvoice/);
 assert.match(lib, /buildExpenseVatPayerPayload/);
 
+assert.match(sync, /reconcileExpenseVatInputInvoice/);
+assert.match(sync, /deleteLinkedVatInputInvoice/);
 assert.match(sync, /syncExpenseVatInputInvoice/);
 assert.match(sync, /createVatInputInvoice/);
 assert.match(sync, /withSyncedVatInputId/);
@@ -45,21 +48,23 @@ assert.match(fold, /<details className="expense-vat-fold">/);
 assert.match(fold, /ผู้ขาย/);
 assert.doesNotMatch(fold, /open=\{true\}/);
 
-assert.match(bill, /syncExpenseVatInputInvoice/);
+assert.match(bill, /reconcileExpenseVatInputInvoice/);
 assert.match(billUi, /ExpenseVatPayerFold/);
 assert.match(billUi, /mergeExtractIntoExpenseVat/);
 assert.match(billUi, /col-vat/);
 
 assert.match(owner, /vatInputInvoiceId/);
+assert.match(owner, /deleteLinkedVatInputInvoice/);
+assert.match(ledger, /deleteLinkedVatInputInvoice/);
 assert.match(ownerUi, /ExpenseVatPayerFold/);
-assert.match(ownerUi, /syncExpenseVatInputInvoice/);
+assert.match(ownerUi, /reconcileExpenseVatInputInvoice/);
 assert.match(ownerUi, /mergeExtractIntoExpenseVat/);
 
 assert.match(types, /ExpenseVatPayerFields/);
 assert.match(ledger, /buildExpenseVatPayerPayload/);
 assert.match(ledgerUi, /ExpenseVatPayerFold/);
 assert.match(ledgerUi, /col-vat/);
-assert.match(ledgerUi, /syncExpenseVatInputInvoice/);
+assert.match(ledgerUi, /reconcileExpenseVatInputInvoice/);
 
 assert.match(ai, /mergeExtractIntoExpenseVat/);
 assert.match(ai, /vatMode/);
@@ -95,11 +100,16 @@ assert.equal(buildExpenseVatPayerPayload(empty, 107).vatInput, 0);
 assert.equal(shouldSyncVatInputInvoice(empty), false);
 
 const inc = buildExpenseVatPayerPayload(
-  { vatMode: "inclusive", invoiceNameOk: "ok" },
+  { vatMode: "inclusive", invoiceNameOk: "ok", vendor: "ร้านไฟ", invoiceName: "TellTea" },
   107,
 );
 assert.equal(inc.vatInput, expenseVatFromGross(107).vatInput);
 assert.equal(shouldSyncVatInputInvoice(inc), true);
+const noVendor = buildExpenseVatPayerPayload(
+  { vatMode: "inclusive", invoiceNameOk: "ok", invoiceName: "TellTea" },
+  107,
+);
+assert.equal(shouldSyncVatInputInvoice(noVendor), false);
 assert.match(shortExpenseVatHint(inc), /VAT/);
 
 const merged = mergeExtractIntoExpenseVat(empty, {

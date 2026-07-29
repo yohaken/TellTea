@@ -19,7 +19,7 @@ import {
   type ExpenseVatPayerFields,
 } from "./expense-vat";
 import {
-  syncExpenseVatInputInvoice,
+  reconcileExpenseVatInputInvoice,
   withSyncedVatInputId,
 } from "./expense-vat-sync";
 import { guessTypeFromDescription } from "./ledger-labels";
@@ -458,7 +458,7 @@ export async function acceptBillNotice(input: {
 
   let linkedVat = vat;
   try {
-    const invoiceId = await syncExpenseVatInputInvoice(
+    const synced = await reconcileExpenseVatInputInvoice(
       {
         dateMs: prev.date,
         amountOut: prev.amountOut,
@@ -469,8 +469,8 @@ export async function acceptBillNotice(input: {
       },
       input.verifiedBy.trim(),
     );
-    if (invoiceId && invoiceId !== vat.vatInputInvoiceId) {
-      linkedVat = withSyncedVatInputId(vat, invoiceId);
+    linkedVat = withSyncedVatInputId(vat, synced.vatInputInvoiceId);
+    if (linkedVat.vatInputInvoiceId !== vat.vatInputInvoiceId) {
       await updateOwnerBookEntry(ownerBookId, linkedVat);
     }
   } catch {

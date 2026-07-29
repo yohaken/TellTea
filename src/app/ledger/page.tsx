@@ -56,7 +56,7 @@ import {
   type ExpenseVatPayerFields,
 } from "@/lib/expense-vat";
 import {
-  syncExpenseVatInputInvoice,
+  reconcileExpenseVatInputInvoice,
   withSyncedVatInputId,
 } from "@/lib/expense-vat-sync";
 import { BASE_TYPE_OPTIONS, frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
@@ -924,7 +924,7 @@ function AddOutModal({
       });
       if (isOwner) {
         try {
-          const invoiceId = await syncExpenseVatInputInvoice(
+          const synced = await reconcileExpenseVatInputInvoice(
             {
               dateMs,
               amountOut,
@@ -934,8 +934,9 @@ function AddOutModal({
             },
             createdBy,
           );
-          if (invoiceId && invoiceId !== vat.vatInputInvoiceId) {
-            vat = withSyncedVatInputId(vat, invoiceId);
+          const nextVat = withSyncedVatInputId(vat, synced.vatInputInvoiceId);
+          if (nextVat.vatInputInvoiceId !== vat.vatInputInvoiceId) {
+            vat = nextVat;
             await updateLedgerEntry(entryId, vat);
           }
         } catch {
@@ -1225,7 +1226,7 @@ function EditEntryModal({
       });
       if (!isIn && isOwner) {
         try {
-          const invoiceId = await syncExpenseVatInputInvoice(
+          const synced = await reconcileExpenseVatInputInvoice(
             {
               dateMs,
               amountOut,
@@ -1235,9 +1236,9 @@ function EditEntryModal({
             },
             actorId,
           );
-          if (invoiceId && invoiceId !== vat.vatInputInvoiceId) {
-            vat = withSyncedVatInputId(vat, invoiceId);
-            await updateLedgerEntry(entry.id, vat);
+          const nextVat = withSyncedVatInputId(vat, synced.vatInputInvoiceId);
+          if (nextVat.vatInputInvoiceId !== vat.vatInputInvoiceId) {
+            await updateLedgerEntry(entry.id, nextVat);
           }
         } catch {
           /* optional */

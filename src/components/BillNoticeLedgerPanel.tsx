@@ -35,6 +35,7 @@ import {
   type BillNoticeStatus,
 } from "@/lib/bill-notices";
 import {
+  canSyncVatInputInvoice,
   emptyExpenseVatPayer,
   expenseVatFoldSummary,
   hasExpenseVatPayerDetail,
@@ -140,9 +141,16 @@ export function BillNoticeLedgerPanel({
       setError(ready.message);
       return;
     }
+    const vatFields = normalizeExpenseVatPayer(row);
+    const syncGate = canSyncVatInputInvoice(vatFields);
+    const vatHint = syncGate.ok
+      ? "\n\nจะลิงก์ภาษีซื้อ (มีผู้ขาย + ในนาม + ใช้ขอคืนได้)"
+      : vatFields.vatMode === "inclusive"
+        ? `\n\nยังไม่ลิงก์ภาษีซื้อ: ${syncGate.reason}`
+        : "\n\nยังไม่แจกแจง VAT — แก้ในบช.เจ้าของทีหลังได้";
     if (
       !window.confirm(
-        `รับบิล «${row.description}» ฿${formatPlainNumber(row.amountOut)} เข้า บช.เจ้าของ?`,
+        `รับบิล «${row.description}» ฿${formatPlainNumber(row.amountOut)} เข้า บช.เจ้าของ?${vatHint}\n\nตรวจชื่อบนบิลก่อนถ้าจะขอคืน VAT`,
       )
     ) {
       return;
