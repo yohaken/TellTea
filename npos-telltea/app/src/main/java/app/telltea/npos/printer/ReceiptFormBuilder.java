@@ -105,9 +105,12 @@ public final class ReceiptFormBuilder {
     sb.append(rule(width)).append('\n');
 
     if (lines != null) {
+      boolean firstItem = true;
       for (int i = 0; i < lines.length(); i++) {
         JSONObject line = lines.optJSONObject(i);
         if (line == null) continue;
+        if (!firstItem) sb.append('\n'); // blank line between drinks (FoodStory-style)
+        firstItem = false;
         appendItem(sb, line, width, compact);
       }
     }
@@ -196,24 +199,30 @@ public final class ReceiptFormBuilder {
   }
 
   private static void appendItem(StringBuilder sb, JSONObject line, int width, boolean compact) {
-    int qty = line.optInt("qty", 1);
+    int qty = Math.max(1, line.optInt("qty", 1));
     double price = line.optDouble("price", 0);
     double lineTotal = Math.round(price * qty * 100.0) / 100.0;
     String title = receiptLineBaseName(line.optString("name", ""));
     String priceText = formatMoney(lineTotal);
 
-    if (qtyEmphasized(qty)) {
-      String left = "×" + qty + " " + title;
-      sb.append(pairRow(left, priceText, width)).append('\n');
-    } else {
-      sb.append(pairRow(title, priceText, width)).append('\n');
-    }
+    // Always show qty (ASCII "2 name") — Unicode × becomes "?" on TIS-620 thermals.
+    // Bold the item title row; options stay normal unless x2+.
+    String left = qty + " " + title;
+    sb.append(EscPos.BOLD_ON)
+        .append(pairRow(left, priceText, width))
+        .append(EscPos.BOLD_OFF)
+        .append('\n');
 
     for (ModTally mod : tallyModifiers(line.opt("options"), compact)) {
-      String label = "• " + mod.label;
-      if (mod.count > 1) label = label + " ×" + mod.count;
+      // ASCII "-" / "xN" (cart UI already uses this). Always show count like FoodStory.
+      String label = "- " + mod.label + " x" + Math.max(1, mod.count);
+      boolean emphasizeQty = qtyEmphasized(mod.count);
       for (String part : wrap("  " + label, width)) {
-        sb.append(part).append('\n');
+        if (emphasizeQty) {
+          sb.append(EscPos.BOLD_ON).append(part).append(EscPos.BOLD_OFF).append('\n');
+        } else {
+          sb.append(part).append('\n');
+        }
       }
     }
   }
@@ -286,7 +295,8 @@ public final class ReceiptFormBuilder {
     String r = right == null ? "" : right;
     if (l.length() + 1 + r.length() > width) {
       int maxLeft = Math.max(1, width - r.length() - 1);
-      if (l.length() > maxLeft) l = l.substring(0, Math.max(1, maxLeft - 1)) + "…";
+      // ASCII "..." — Unicode ellipsis becomes "?" on TIS-620 thermals.
+      if (l.length() > maxLeft) l = l.substring(0, Math.max(1, maxLeft - 3)) + "...";
     }
     int spaces = width - l.length() - r.length();
     if (spaces < 1) spaces = 1;
