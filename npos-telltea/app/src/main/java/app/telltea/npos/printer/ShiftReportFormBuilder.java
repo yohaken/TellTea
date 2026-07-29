@@ -236,10 +236,10 @@ public final class ShiftReportFormBuilder {
     String shopPhone = opt(shop, "shopPhone");
     String staff = firstNonEmpty(opt(shop, "receiptStaffName"), "หน้าร้าน");
     String device =
-        firstNonEmpty(deviceCode, opt(shop, "pairingCode"), "—");
+        firstNonEmpty(deviceCode, opt(shop, "pairingCode"), "-");
     String sessionShort =
         sessionId == null || sessionId.isEmpty()
-            ? "—"
+            ? "-"
             : "#"
                 + sessionId
                     .substring(Math.max(0, sessionId.length() - 4))
@@ -274,12 +274,20 @@ public final class ShiftReportFormBuilder {
     sb.append(rule(width)).append('\n');
 
     // --- Frame 2: title + print time ---
+    // Clear banner so staff never confuse this long slip with a customer receipt.
+    sb.append(EscPos.BOLD_ON)
+        .append(center("*** รายงานสรุปรอบ ***", width))
+        .append(EscPos.BOLD_OFF)
+        .append('\n');
+    sb.append(center(isClose ? "(ปิดรอบ Z - ไม่ใช่ใบเสร็จลูกค้า)" : "(X ระหว่างรอบ - ไม่ใช่ใบเสร็จ)", width))
+        .append('\n');
+    sb.append('\n');
     String title = isClose ? "รายงานยอดการขาย" : "Snapshot ระหว่างรอบการขาย";
-    sb.append(center(title, width)).append('\n');
+    sb.append(EscPos.BOLD_ON).append(center(title, width)).append(EscPos.BOLD_OFF).append('\n');
     sb.append(center("พิมพ์ " + formatDateTime(closedOrPrintedAt), width)).append('\n');
 
     // --- Frame 3: meta ---
-    sb.append(pairRow("รหัสเครื่อง", device + " · รอบ " + sessionShort, width)).append('\n');
+    sb.append(pairRow("รหัสเครื่อง", device + " / รอบ " + sessionShort, width)).append('\n');
     if (openedAt > 0) {
       sb.append(pairRow("เปิดรอบ", formatDateTime(openedAt), width)).append('\n');
     }
@@ -294,7 +302,8 @@ public final class ShiftReportFormBuilder {
     // --- Frame 4: ยอดขายตามหมวดหมู่ ---
     if (!detail.byCategory.isEmpty()) {
       sb.append(rule(width)).append('\n');
-      sb.append("ยอดขายตามหมวดหมู่").append('\n');
+      sb.append('\n');
+      sb.append(EscPos.BOLD_ON).append("ยอดขายตามหมวดหมู่").append(EscPos.BOLD_OFF).append('\n');
       sb.append(tripleRow("หมวด", "จำนวน", "ยอด", width)).append('\n');
       for (NamedAmt row : detail.byCategory) {
         sb.append(tripleRow(row.name, String.valueOf(row.qty), money(row.amount), width))
@@ -311,7 +320,8 @@ public final class ShiftReportFormBuilder {
 
     // --- Frame 5: สรุปยอด (web totals block) ---
     sb.append(rule(width)).append('\n');
-    sb.append("สรุปยอด").append('\n');
+    sb.append('\n');
+    sb.append(EscPos.BOLD_ON).append("สรุปยอด").append(EscPos.BOLD_OFF).append('\n');
     sb.append(pairRow("ยอดขายรวม", money(grossSales), width)).append('\n');
     sb.append(pairRow("ส่วนลด", "-" + money(discountTotal), width)).append('\n');
     sb.append(pairRow("ค่าบริการ", money(0), width)).append('\n');
@@ -324,17 +334,19 @@ public final class ShiftReportFormBuilder {
 
     // --- Frame 6: ส่วนลด & โปรโมชั่น ---
     sb.append(rule(width)).append('\n');
-    sb.append("ส่วนลด & โปรโมชั่น").append('\n');
+    sb.append('\n');
+    sb.append(EscPos.BOLD_ON).append("ส่วนลด & โปรโมชั่น").append(EscPos.BOLD_OFF).append('\n');
     sb.append(
             pairRow(
                 "ส่วนลดท้ายบิล",
-                discountCount + " ครั้ง · -" + money(discountTotal),
+                discountCount + " ครั้ง / -" + money(discountTotal),
                 width))
         .append('\n');
 
     // --- Frame 7: ยอดขายตามการชำระเงิน ---
     sb.append(rule(width)).append('\n');
-    sb.append("ยอดขายตามการชำระเงิน").append('\n');
+    sb.append('\n');
+    sb.append(EscPos.BOLD_ON).append("ยอดขายตามการชำระเงิน").append(EscPos.BOLD_OFF).append('\n');
     sb.append(tripleRow("ช่องทาง", "บิล", "ยอด", width)).append('\n');
     sb.append(tripleRow("เงินสด", String.valueOf(cashBills), money(cashSales), width))
         .append('\n');
@@ -352,7 +364,8 @@ public final class ShiftReportFormBuilder {
     double inAmt = Math.max(0, cashInTotal);
     double netInOut = inAmt - outAmt; // FoodStory-style signed line (ออก = ติดลบ)
     sb.append(rule(width)).append('\n');
-    sb.append("รอบการขาย (เงินสด)").append('\n');
+    sb.append('\n');
+    sb.append(EscPos.BOLD_ON).append("รอบการขาย (เงินสด)").append(EscPos.BOLD_OFF).append('\n');
     if (isClose) {
       double expected =
           expectedCash != null
@@ -377,7 +390,7 @@ public final class ShiftReportFormBuilder {
         sb.append(pairRow("ทอนรอบถัดไป", money(leaveFloat), width)).append('\n');
       }
       sb.append(pairRow("ยอดเงินสดที่ต้องนำส่ง", money(remit), width)).append('\n');
-      sb.append(center("*นับจริง − ทอนรอบถัดไป", width)).append('\n');
+      sb.append(center("*นับจริง - ทอนรอบถัดไป", width)).append('\n');
       if (discrepancyNote != null && !discrepancyNote.trim().isEmpty()) {
         sb.append(pairRow("เหตุผล", discrepancyNote.trim(), width)).append('\n');
       }
@@ -388,23 +401,24 @@ public final class ShiftReportFormBuilder {
       sb.append(pairRow("คืนเงิน", money(0), width)).append('\n');
       sb.append(pairRow("เงินเข้า/เงินออก", money(netInOut), width)).append('\n');
       sb.append(pairRow("ควรมีในลิ้นชัก*", money(expectedSnap), width)).append('\n');
-      sb.append(pairRow("นับจริงในลิ้นชัก", "—", width)).append('\n');
-      sb.append(pairRow("ส่วนต่าง", "—", width)).append('\n');
-      sb.append(pairRow("ยอดเงินสดที่ต้องนำส่ง", "—", width)).append('\n');
-      sb.append(center("*ยังไม่ปิดรอบ — ยังไม่นับส่งเงิน", width)).append('\n');
+      sb.append(pairRow("นับจริงในลิ้นชัก", "-", width)).append('\n');
+      sb.append(pairRow("ส่วนต่าง", "-", width)).append('\n');
+      sb.append(pairRow("ยอดเงินสดที่ต้องนำส่ง", "-", width)).append('\n');
+      sb.append(center("*ยังไม่ปิดรอบ - ยังไม่นับส่งเงิน", width)).append('\n');
     }
 
     // --- Frame 9: ทำลายบิล / ยกเลิก ---
     sb.append(rule(width)).append('\n');
-    sb.append("ทำลายบิล / ยกเลิก").append('\n');
+    sb.append('\n');
+    sb.append(EscPos.BOLD_ON).append("ทำลายบิล / ยกเลิก").append(EscPos.BOLD_OFF).append('\n');
     sb.append(
             pairRow(
                 "ทำลายทั้งบิล",
-                voidedCount + " · " + money(detail.voidedTotal),
+                voidedCount + " / " + money(detail.voidedTotal),
                 width))
         .append('\n');
-    sb.append(pairRow("ทำลายรายเมนู", "0 · " + money(0), width)).append('\n');
-    sb.append(pairRow("ยกเลิกบิล", "0 · " + money(0), width)).append('\n');
+    sb.append(pairRow("ทำลายรายเมนู", "0 / " + money(0), width)).append('\n');
+    sb.append(pairRow("ยกเลิกบิล", "0 / " + money(0), width)).append('\n');
     for (String head : detail.voidedHeads) {
       sb.append(head).append('\n');
     }
@@ -415,12 +429,13 @@ public final class ShiftReportFormBuilder {
     // --- Frame 11: ยอดขายตามรายการ ---
     if (!detail.byItem.isEmpty()) {
       sb.append(rule(width)).append('\n');
-      sb.append("ยอดขายตามรายการ").append('\n');
+      sb.append('\n');
+      sb.append(EscPos.BOLD_ON).append("ยอดขายตามรายการ").append(EscPos.BOLD_OFF).append('\n');
       sb.append(tripleRow("รายการ", "จำนวน", "ยอด", width)).append('\n');
       int shown = 0;
       for (NamedAmt row : detail.byItem) {
         if (shown++ >= 40) {
-          sb.append(center("…", width)).append('\n');
+          sb.append(center("...", width)).append('\n');
           break;
         }
         sb.append(tripleRow(row.name, String.valueOf(row.qty), money(row.amount), width))
@@ -431,11 +446,15 @@ public final class ShiftReportFormBuilder {
     // --- Frame 12: รายการขายแยกตามบิล ---
     if (!detail.billBlocks.isEmpty()) {
       sb.append(rule(width)).append('\n');
-      sb.append("รายการขายแยกตามบิล (" + detail.billBlocks.size() + ")").append('\n');
+      sb.append('\n');
+      sb.append(EscPos.BOLD_ON)
+          .append("รายการขายแยกตามบิล (" + detail.billBlocks.size() + ")")
+          .append(EscPos.BOLD_OFF)
+          .append('\n');
       int shown = 0;
       for (String block : detail.billBlocks) {
         if (shown++ >= 25) {
-          sb.append(center("…", width)).append('\n');
+          sb.append(center("...", width)).append('\n');
           break;
         }
         sb.append(block);
@@ -445,7 +464,7 @@ public final class ShiftReportFormBuilder {
     // --- Frame 13: footer (+ Z checklist + signatures) ---
     sb.append(rule(width)).append('\n');
     if (isClose) {
-      sb.append(center("ปิดรอบเรียบร้อย · สรุปส่งเงินสด", width)).append('\n');
+      sb.append(center("ปิดรอบเรียบร้อย / สรุปส่งเงินสด", width)).append('\n');
       sb.append('\n');
       sb.append("ตรวจก่อนเซ็น / ส่งเงิน").append('\n');
       sb.append("[ ] นับรวมเงินทอนเริ่มต้นแล้ว").append('\n');
@@ -466,7 +485,7 @@ public final class ShiftReportFormBuilder {
   }
 
   static String shiftLabel(String shift) {
-    if (shift == null) return "—";
+    if (shift == null) return "-";
     switch (shift) {
       case "morning":
         return "เช้า";
@@ -525,7 +544,7 @@ public final class ShiftReportFormBuilder {
     String r = right == null ? "" : right;
     if (l.length() + 1 + r.length() > width) {
       int maxLeft = Math.max(1, width - r.length() - 1);
-      if (l.length() > maxLeft) l = l.substring(0, Math.max(1, maxLeft - 1)) + "…";
+      if (l.length() > maxLeft) l = l.substring(0, Math.max(1, maxLeft - 1)) + "...";
     }
     int spaces = width - l.length() - r.length();
     if (spaces < 1) spaces = 1;
@@ -555,7 +574,7 @@ public final class ShiftReportFormBuilder {
     }
     int leftW = Math.max(4, width - rightBlock);
     if (l.length() > leftW) {
-      l = l.substring(0, Math.max(1, leftW - 1)) + "…";
+      l = l.substring(0, Math.max(1, leftW - 1)) + "...";
     }
     if (m.length() > midW) m = m.substring(m.length() - midW);
     if (r.length() > rightW) r = r.substring(r.length() - rightW);
@@ -658,14 +677,14 @@ public final class ShiftReportFormBuilder {
         boolean voided = r.optBoolean("voided", false);
         double total = r.optDouble("total", 0);
         double disc = r.optDouble("discountBaht", 0);
-        String billNo = r.optString("billNo", "—");
+        String billNo = r.optString("billNo", "-");
         long at = r.optLong("at", System.currentTimeMillis());
         String pay = r.optString("paymentMethod", "cash");
         String payLabel = app.telltea.npos.sell.PaymentMethods.labelShort(pay);
         if (voided) {
           d.voidedTotal += total;
           d.voidedHeads.add(
-              "#" + billNo + " " + formatTime(at) + " · " + money(total));
+              "#" + billNo + " " + formatTime(at) + " / " + money(total));
           continue;
         }
         d.activeBills += 1;
@@ -678,9 +697,9 @@ public final class ShiftReportFormBuilder {
         block
             .append("#")
             .append(billNo)
-            .append(" · ")
+            .append(" / ")
             .append(formatTime(at))
-            .append(" · ")
+            .append(" / ")
             .append(payLabel)
             .append('\n');
         if (lines != null && lines.length() > 0) {
