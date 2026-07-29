@@ -17158,6 +17158,40 @@ a.ghost-btn {
   margin-top: 0.2rem;
 }
 
+.vat-net-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.55rem;
+  margin: 0.35rem 0 0.65rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  border-radius: 4px;
+  background: rgba(28, 42, 31, 0.035);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.vat-net-strip-sep {
+  color: rgba(28, 42, 31, 0.45);
+  font-weight: 600;
+}
+
+.vat-net-strip-item strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.vat-net-strip-item--net strong {
+  color: rgba(20, 70, 40, 0.95);
+}
+
+.vat-gp-src {
+  margin-left: 0.25rem;
+  font-size: 0.72rem;
+  color: rgba(28, 42, 31, 0.55);
+  white-space: nowrap;
+}
+
 .vat-period-banner {
   display: flex;
   flex-wrap: wrap;

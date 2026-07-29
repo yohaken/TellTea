@@ -110,7 +110,6 @@ function draftStorageKey(month: string) {
 }
 
 type Props = { actor: string };
-type Tab = "month" | "close";
 
 type DraftSeg = {
   grossManual: string;
@@ -763,27 +762,24 @@ function InputVatTable({
   ) => (
     <tr className="vat-row-parent">
       <td className="col-seg">{label}</td>
-      <td className="col-pct">
+      <td className="col-num col-input">
         {opts?.fromChannels ? (
-          <span className="vat-est-val">จากช่องทาง</span>
+          <span className="vat-est-val" title="จากตาราง GP ช่องทางด้านบน">
+            {fmt(computed.gpVatClaimed)}
+            <span className="vat-gp-src"> จากช่องทาง</span>
+          </span>
         ) : (
           <span className="vat-pct-cell">
-            <TapRate
-              value={roundPct(draft.rates.gpOfOutput)}
-              locked={locked}
-              ariaLabel={`${label} GP %`}
-              suffix="%"
-              step="0.01"
-              onCommit={(pct) =>
-                onChange({
-                  ...draft,
-                  rates: {
-                    ...draft.rates,
-                    gpOfOutput: Math.min(100, Math.max(0, pct)) / 100,
-                  },
-                })
-              }
-            />
+            {draft.useGpEstimate ? (
+              <span className="vat-est-val">{fmt(computed.gpVatClaimed)}</span>
+            ) : (
+              <MoneyCell
+                value={draft.gpVat}
+                locked={locked}
+                ariaLabel={`${label} ภาษีซื้อ GP`}
+                onChange={(v) => onChange({ ...draft, gpVat: v })}
+              />
+            )}
             <label className="vat-gp-toggle">
               <input
                 type="checkbox"
@@ -796,20 +792,6 @@ function InputVatTable({
               ประมาณ
             </label>
           </span>
-        )}
-      </td>
-      <td className="col-num col-input">
-        {opts?.fromChannels ? (
-          <span className="vat-est-val">{fmt(computed.gpVatClaimed)}</span>
-        ) : draft.useGpEstimate ? (
-          <span className="vat-est-val">{fmt(computed.gpVatClaimed)}</span>
-        ) : (
-          <MoneyCell
-            value={draft.gpVat}
-            locked={locked}
-            ariaLabel={`${label} ภาษีซื้อ GP`}
-            onChange={(v) => onChange({ ...draft, gpVat: v })}
-          />
         )}
       </td>
       <td className="col-pct">
@@ -844,10 +826,10 @@ function InputVatTable({
 
   return (
     <section className="vat-table-block">
-      <h2 className="vat-table-title">2) ภาษีซื้อ — กลุ่มหักได้</h2>
+      <h2 className="vat-table-title">3) ภาษีซื้อ — วัตถุดิบ + GP</h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        วัตถุดิบ = รวมรายการที่ติ๊ก「รวมเข้าระบบ」จากสองบช. · GP เดลิเวอรี่ = Σ
-        ภาษีซื้อจากตารางช่องทาง · อย่าคีย์บิลซ้ำสองบช.
+        GP เดลิเวอรี่มาจากตารางช่องทาง · วัตถุดิบ = ติ๊ก「รวมเข้าระบบ」จากสองบช. ·
+        อย่าคีย์บิลซ้ำ
       </p>
       {!locked ? (
         <div className="vat-month-actions vat-month-actions--mini">
@@ -867,10 +849,9 @@ function InputVatTable({
           <thead>
             <tr>
               <th className="col-seg">ส่วน</th>
-              <th className="col-pct">GP % ของภาษีขาย</th>
               <th className="col-num">ภาษีซื้อ GP</th>
-              <th className="col-pct">ยื่นภาษีซื้อ %</th>
-              <th className="col-num">ภาษีซื้อวัตถุดิบ</th>
+              <th className="col-pct">ยื่น %</th>
+              <th className="col-num">วัตถุดิบ</th>
               <th className="col-num">ภาษีซื้อรวม</th>
             </tr>
           </thead>
@@ -890,7 +871,6 @@ function InputVatTable({
             )}
             <tr className="vat-sales-totals-row">
               <td className="col-seg">รวมภาษีซื้อ</td>
-              <td className="col-pct">—</td>
               <td className="col-num">
                 {fmt(delivery.gpVatClaimed + storefront.gpVatClaimed)}
               </td>
@@ -1057,7 +1037,8 @@ function InputVatTable({
   );
 }
 
-function SummaryVatTable({
+/** แถบสรุป VAT กระชับ — ไม่แยกเป็นตารางเต็ม */
+function NetVatStrip({
   delivery,
   storefront,
   totals,
@@ -1071,43 +1052,27 @@ function SummaryVatTable({
   };
 }) {
   return (
-    <section className="vat-table-block">
-      <h2 className="vat-table-title">
-        3) สรุป — ภาษีขาย − ภาษีซื้อ = สุทธิต้องนำส่ง
-      </h2>
-      <div className="sheet-wrap vat-month-slim-wrap">
-        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-month-slim--summary vat-close-table">
-          <thead>
-            <tr>
-              <th className="col-seg">รายการ</th>
-              <th className="col-num">เดลิเวอรี่</th>
-              <th className="col-num">หน้าร้าน</th>
-              <th className="col-num">รวม</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="col-seg">ภาษีขาย (จากตาราง 1)</td>
-              <td className="col-num">{fmt(delivery.outputVat)}</td>
-              <td className="col-num">{fmt(storefront.outputVat)}</td>
-              <td className="col-num">{fmt(totals.outputVat)}</td>
-            </tr>
-            <tr>
-              <td className="col-seg">หัก ภาษีซื้อ (จากตาราง 2)</td>
-              <td className="col-num">{fmt(delivery.inputVat)}</td>
-              <td className="col-num">{fmt(storefront.inputVat)}</td>
-              <td className="col-num">{fmt(totals.inputVat)}</td>
-            </tr>
-            <tr className="vat-sales-totals-row">
-              <td className="col-seg">ภาษีสุทธิต้องนำส่ง</td>
-              <td className="col-num col-net">{fmt(delivery.netVat)}</td>
-              <td className="col-num col-net">{fmt(storefront.netVat)}</td>
-              <td className="col-num col-net">{fmt(totals.netVat)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <div className="vat-net-strip" role="status">
+      <span className="vat-net-strip-item">
+        ขาย <strong>{fmt(totals.outputVat)}</strong>
+        <span className="muted">
+          {" "}
+          (ส่ง {fmt(delivery.outputVat)} · ร้าน {fmt(storefront.outputVat)})
+        </span>
+      </span>
+      <span className="vat-net-strip-sep">−</span>
+      <span className="vat-net-strip-item">
+        ซื้อ <strong>{fmt(totals.inputVat)}</strong>
+        <span className="muted">
+          {" "}
+          (ส่ง {fmt(delivery.inputVat)} · ร้าน {fmt(storefront.inputVat)})
+        </span>
+      </span>
+      <span className="vat-net-strip-sep">=</span>
+      <span className="vat-net-strip-item vat-net-strip-item--net">
+        สุทธิต้องนำส่ง <strong>{fmt(totals.netVat)}</strong>
+      </span>
+    </div>
   );
 }
 
@@ -1128,7 +1093,6 @@ function IncomeBridgeTable({
   bridge,
   gpByChannel,
   pnlIncomeStr,
-  showPnlIncome = true,
   onModeChange,
   onGpByChannelChange,
   onPnlIncomeChange,
@@ -1140,8 +1104,6 @@ function IncomeBridgeTable({
   bridge: ReturnType<typeof buildIncomeBridge>;
   gpByChannel: GpByChannel;
   pnlIncomeStr: string;
-  /** แท็บเดือน: โชว์ภาษีซื้อ · แท็บปิด: โชว์รายได้สุทธิ P&L ด้วย */
-  showPnlIncome?: boolean;
   onModeChange: (m: "exVat" | "incVat") => void;
   onGpByChannelChange: (next: GpByChannel) => void;
   onPnlIncomeChange: (v: string) => void;
@@ -1222,11 +1184,11 @@ function IncomeBridgeTable({
   return (
     <section className="vat-table-block vat-income-bridge">
       <h2 className="vat-table-title">
-        GP รายช่องทาง → VAT + P&L — {formatThaiMonthKey(month)}
+        2) GP รายช่องทาง → VAT + P&L — {formatThaiMonthKey(month)}
       </h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        ใส่ยอดโอนจริง → คชจ. = รายได้ − โอนหลัง · ภาษีซื้อ GP = คชจ.×7/107 (หรือ
-        ×7/100 โหมดก่อน VAT) · Σ → ภาษีซื้อเดลิเวอรี่ · เฉลี่ย = ภาพรวมเท่านั้น
+        ใส่ยอดโอนจริง → คชจ. = รายได้ − โอนหลัง · ภาษีซื้อ GP จากคชจ. · Σ →
+        ภาษีซื้อเดลิเวอรี่ · เฉลี่ย = ภาพรวมเท่านั้น
       </p>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table vat-gp-channel-table">
@@ -1289,23 +1251,21 @@ function IncomeBridgeTable({
               </td>
               <td className="col-num col-net">{fmt(bridge.gpVatTotal)}</td>
             </tr>
-            {showPnlIncome ? (
-              <tr className="vat-sales-totals-row">
-                <td className="col-seg">= รายได้สุทธิ → P&L</td>
-                <td className="col-num col-input col-net" colSpan={5}>
-                  <MoneyCell
-                    value={pnlIncomeStr}
-                    locked={locked}
-                    ariaLabel="รายได้สุทธิเข้า P&L"
-                    onChange={onPnlIncomeChange}
-                  />
-                </td>
-              </tr>
-            ) : null}
+            <tr className="vat-sales-totals-row">
+              <td className="col-seg">= รายได้สุทธิ → P&L</td>
+              <td className="col-num col-input col-net" colSpan={5}>
+                <MoneyCell
+                  value={pnlIncomeStr}
+                  locked={locked}
+                  ariaLabel="รายได้สุทธิเข้า P&L"
+                  onChange={onPnlIncomeChange}
+                />
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
-      {!locked && showPnlIncome ? (
+      {!locked ? (
         <div className="vat-month-actions vat-month-actions--mini">
           <button
             type="button"
@@ -1373,7 +1333,7 @@ function PersonalTaxBlock({
   return (
     <section className="vat-table-block vat-personal-pnl">
       <h2 className="vat-table-title">
-        กำไรขาดทุนง่าย · บุคคลธรรมดา — {formatThaiMonthKey(month)}
+        5) กำไรขาดทุนง่าย · บุคคลธรรมดา — {formatThaiMonthKey(month)}
       </h2>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
@@ -1560,7 +1520,6 @@ function PersonalTaxBlock({
 }
 
 export function VatMonthlyWorkbench({ actor }: Props) {
-  const [tab, setTab] = useState<Tab>("month");
   const [month, setMonth] = useState(() => {
     const d = new Date();
     const y = d.toLocaleString("en-CA", {
@@ -2062,11 +2021,6 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     setMonth(next);
   };
 
-  const changeTab = (next: Tab) => {
-    if (next === tab) return;
-    setTab(next);
-  };
-
   const saveMonth = async (asDraft: boolean) => {
     setBusy(true);
     setError("");
@@ -2370,27 +2324,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     <div className="vat-monthly-workbench">
       <header className="vat-sales-header">
         <p className="vat-sales-lead">
-          กำไรขาดทุนง่าย · บุคคลธรรมดา · VAT รายเดือน · นำส่งรายได้สรรพากร
+          VAT + P&L หน้าเดียว · ขาย → GP ช่องทาง → ซื้อ → บช. → ภ.ง.ด.
         </p>
-        <div className="vat-sales-tabs" role="tablist">
-          {(
-            [
-              ["month", "เดือน"],
-              ["close", "ปิด P&L"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={tab === id}
-              className={tab === id ? "vat-sales-tab is-active" : "vat-sales-tab"}
-              onClick={() => changeTab(id)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
       </header>
 
       <div className="vat-top-bar">
@@ -2470,287 +2405,209 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         <p className="muted">กำลังโหลด…</p>
       ) : (
         <>
-          {tab === "month" ? (
-            <>
-              <p className="muted vat-sales-hint vat-hint-one-line">
-                จำในเครื่อง + เซฟร่างอัตโนมัติ · เรทขาย{" "}
-                {ratesLabel(DEFAULT_VAT_LOGIC_RATES)} · นำส่งหน้าร้าน{" "}
-                {DEFAULT_STOREFRONT_REMIT_PCT}%
-              </p>
+          <p className="muted vat-sales-hint vat-hint-one-line">
+            จำในเครื่อง + เซฟร่างอัตโนมัติ · เรทขาย{" "}
+            {ratesLabel(DEFAULT_VAT_LOGIC_RATES)} · นำส่งหน้าร้าน{" "}
+            {DEFAULT_STOREFRONT_REMIT_PCT}% · ปิดงบจริงค่อยล็อก
+          </p>
 
-              <OutputVatTable
-                deliveryDraft={deliveryDraft}
-                storefrontDraft={storefrontDraft}
-                delivery={delivery}
-                storefront={storefront}
-                locked={Boolean(locked)}
-                openDelivery={openDelivery}
-                openStorefront={openStorefront}
-                onToggleDelivery={() => setOpenDelivery((v) => !v)}
-                onToggleStorefront={() => setOpenStorefront((v) => !v)}
-                onDeliveryChange={setDeliveryDraftTracked}
-                onStorefrontChange={setStorefrontDraftTracked}
-              />
+          <OutputVatTable
+            deliveryDraft={deliveryDraft}
+            storefrontDraft={storefrontDraft}
+            delivery={delivery}
+            storefront={storefront}
+            locked={Boolean(locked)}
+            openDelivery={openDelivery}
+            openStorefront={openStorefront}
+            onToggleDelivery={() => setOpenDelivery((v) => !v)}
+            onToggleStorefront={() => setOpenStorefront((v) => !v)}
+            onDeliveryChange={setDeliveryDraftTracked}
+            onStorefrontChange={setStorefrontDraftTracked}
+          />
 
-              <IncomeBridgeTable
-                month={month}
-                locked={Boolean(locked)}
-                mode={pnlMode}
-                bridge={incomeBridge}
-                gpByChannel={gpByChannel}
-                pnlIncomeStr={pnlIncome}
-                showPnlIncome={false}
-                onModeChange={applyPnlMode}
-                onGpByChannelChange={applyGpByChannel}
-                onPnlIncomeChange={(v) => {
-                  setPnlIncome(v);
-                  markDirty();
-                }}
-                onUseBridgeIncome={() => {
-                  setPnlIncome(moneyInputValue(incomeBridge.pnlIncome));
-                  markDirty();
-                }}
-              />
+          <IncomeBridgeTable
+            month={month}
+            locked={Boolean(locked)}
+            mode={pnlMode}
+            bridge={incomeBridge}
+            gpByChannel={gpByChannel}
+            pnlIncomeStr={pnlIncome}
+            onModeChange={applyPnlMode}
+            onGpByChannelChange={applyGpByChannel}
+            onPnlIncomeChange={(v) => {
+              setPnlIncome(v);
+              markDirty();
+            }}
+            onUseBridgeIncome={() => {
+              setPnlIncome(moneyInputValue(incomeBridge.pnlIncome));
+              markDirty();
+            }}
+          />
 
-              <InputVatTable
-                month={month}
-                deliveryGpFromChannels
-                deliveryDraft={deliveryDraft}
-                storefrontDraft={storefrontDraft}
-                delivery={delivery}
-                storefront={storefront}
-                locked={Boolean(locked)}
-                onDeliveryChange={setDeliveryDraftTracked}
-                onStorefrontChange={setStorefrontDraftTracked}
-              />
+          <InputVatTable
+            month={month}
+            deliveryGpFromChannels
+            deliveryDraft={deliveryDraft}
+            storefrontDraft={storefrontDraft}
+            delivery={delivery}
+            storefront={storefront}
+            locked={Boolean(locked)}
+            onDeliveryChange={setDeliveryDraftTracked}
+            onStorefrontChange={setStorefrontDraftTracked}
+          />
 
-              <SummaryVatTable
-                delivery={delivery}
-                storefront={storefront}
-                totals={totals}
-              />
+          <NetVatStrip
+            delivery={delivery}
+            storefront={storefront}
+            totals={totals}
+          />
 
-              <div className="vat-month-actions vat-month-actions--mini">
-                {!locked ? (
-                  <>
-                    <button
-                      type="button"
-                      className="vat-mini-btn"
-                      disabled={busy}
-                      onClick={() => void saveMonth(true)}
-                    >
-                      ร่าง
-                    </button>
-                    <button
-                      type="button"
-                      className="vat-mini-btn vat-mini-btn--primary"
-                      disabled={busy}
-                      onClick={() => void saveMonth(false)}
-                    >
-                      บันทึก
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    className="vat-mini-btn"
-                    disabled={busy}
-                    onClick={() => void unlock()}
-                  >
-                    ปลดล็อก
-                  </button>
-                )}
-              </div>
-            </>
-          ) : null}
+          <div className="vat-books-block">
+            <div className="vat-books-head">
+              <h2 className="vat-table-title">
+                4) บช. สองสมุด — {formatThaiMonthKey(month)}
+              </h2>
+              <button
+                type="button"
+                className="vat-mini-btn"
+                disabled={booksBusy || busy}
+                onClick={() => void pullBothBooks()}
+              >
+                {booksBusy ? "กำลังดึง…" : "ดึงบช. พนง. + เจ้าของ"}
+              </button>
+            </div>
+            <p className="muted vat-sales-hint vat-hint-one-line">
+              ดึงเข้า = ยอดออกจาก ledger / ownerBooks ตามเดือน · ไม่ใช่ปิดงบ
+              {booksPulledAt
+                ? ` · ดึงล่าสุด ${formatDateTimeShort(booksPulledAt)}`
+                : " · ยังไม่ได้ดึง"}
+            </p>
+            <div className="sheet-wrap vat-month-slim-wrap">
+              <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+                <thead>
+                  <tr>
+                    <th className="col-seg">บช.</th>
+                    <th className="col-num">COGS</th>
+                    <th className="col-num">SGA</th>
+                    <th className="col-num">สินทรัพย์</th>
+                    <th className="col-num">อื่น</th>
+                    <th className="col-num">รวมออก</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(
+                    [
+                      ["บช. พนักงาน", bookStaff],
+                      ["บช. เจ้าของ", bookOwner],
+                    ] as const
+                  ).map(([label, row]) => (
+                    <tr key={label}>
+                      <td className="col-seg">{label}</td>
+                      <td className="col-num">{row ? fmt(row.cogs) : "—"}</td>
+                      <td className="col-num">{row ? fmt(row.sga) : "—"}</td>
+                      <td className="col-num">{row ? fmt(row.asset) : "—"}</td>
+                      <td className="col-num">{row ? fmt(row.other) : "—"}</td>
+                      <td className="col-num col-net">
+                        {row ? fmt(bookOutTotal(row)) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                  {bookStaff && bookOwner ? (
+                    <tr className="vat-sales-totals-row">
+                      <td className="col-seg">รวมสองบช.</td>
+                      <td className="col-num">
+                        {fmt(bookStaff.cogs + bookOwner.cogs)}
+                      </td>
+                      <td className="col-num">
+                        {fmt(bookStaff.sga + bookOwner.sga)}
+                      </td>
+                      <td className="col-num">
+                        {fmt(bookStaff.asset + bookOwner.asset)}
+                      </td>
+                      <td className="col-num">
+                        {fmt(bookStaff.other + bookOwner.other)}
+                      </td>
+                      <td className="col-num col-net">
+                        {fmt(
+                          bookOutTotal(bookStaff) + bookOutTotal(bookOwner),
+                        )}
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-          {tab === "close" ? (
-            <section className="vat-close-panel">
-              <p className="muted vat-sales-hint vat-hint-one-line">
-                1) แยกรายได้หัก GP เดลิเวอรี่ → 2) ดึงบช. → 3) ลดหย่อน/ภาษีปี · ทดลองได้ ·
-                ปิดงบจริงค่อยล็อก
-              </p>
+          <PersonalTaxBlock
+            month={month}
+            income={parseMoneyInput(pnlIncome) || incomeBridge.pnlIncome}
+            netVat={totals.netVat}
+            staff={bookStaff}
+            owner={bookOwner}
+            booksPulled={Boolean(bookStaff && bookOwner)}
+            locked={Boolean(locked)}
+            allowanceStr={allowanceStr}
+            otherDeductStr={otherDeductStr}
+            taxNote={taxNote}
+            yearBusy={yearBusy}
+            yearProfit={yearProfit}
+            yearTax={yearTax}
+            onAllowanceChange={setAllowanceStr}
+            onOtherDeductChange={setOtherDeductStr}
+            onTaxNoteChange={setTaxNote}
+            onSaveTaxSettings={() => void saveTaxSettings()}
+            onPullYear={() => void pullYearSummary()}
+            onExportYear={exportYearTax}
+          />
 
-              <IncomeBridgeTable
-                month={month}
-                locked={Boolean(locked)}
-                mode={pnlMode}
-                bridge={incomeBridge}
-                gpByChannel={gpByChannel}
-                pnlIncomeStr={pnlIncome}
-                showPnlIncome
-                onModeChange={applyPnlMode}
-                onGpByChannelChange={applyGpByChannel}
-                onPnlIncomeChange={(v) => {
-                  setPnlIncome(v);
-                  markDirty();
-                }}
-                onUseBridgeIncome={() => {
-                  setPnlIncome(moneyInputValue(incomeBridge.pnlIncome));
-                  markDirty();
-                }}
-              />
-
-              <SummaryVatTable
-                delivery={delivery}
-                storefront={storefront}
-                totals={totals}
-              />
-
-              <div className="vat-books-block">
-                <div className="vat-books-head">
-                  <h2 className="vat-table-title">
-                    บช. สองสมุด — {formatThaiMonthKey(month)}
-                  </h2>
-                  <button
-                    type="button"
-                    className="vat-mini-btn"
-                    disabled={booksBusy || busy}
-                    onClick={() => void pullBothBooks()}
-                  >
-                    {booksBusy ? "กำลังดึง…" : "ดึงบช. พนง. + เจ้าของ"}
-                  </button>
-                </div>
-                <p className="muted vat-sales-hint vat-hint-one-line">
-                  ดึงเข้า = ดูยอดออกจาก ledger / ownerBooks ตามเดือน · ไม่ใช่ปิดงบ
-                  {booksPulledAt
-                    ? ` · ดึงล่าสุด ${formatDateTimeShort(booksPulledAt)}`
-                    : " · ยังไม่ได้ดึง"}
-                </p>
-                <div className="sheet-wrap vat-month-slim-wrap">
-                  <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
-                    <thead>
-                      <tr>
-                        <th className="col-seg">บช.</th>
-                        <th className="col-num">COGS</th>
-                        <th className="col-num">SGA</th>
-                        <th className="col-num">สินทรัพย์</th>
-                        <th className="col-num">อื่น</th>
-                        <th className="col-num">รวมออก</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(
-                        [
-                          ["บช. พนักงาน", bookStaff],
-                          ["บช. เจ้าของ", bookOwner],
-                        ] as const
-                      ).map(([label, row]) => (
-                        <tr key={label}>
-                          <td className="col-seg">{label}</td>
-                          <td className="col-num">
-                            {row ? fmt(row.cogs) : "—"}
-                          </td>
-                          <td className="col-num">
-                            {row ? fmt(row.sga) : "—"}
-                          </td>
-                          <td className="col-num">
-                            {row ? fmt(row.asset) : "—"}
-                          </td>
-                          <td className="col-num">
-                            {row ? fmt(row.other) : "—"}
-                          </td>
-                          <td className="col-num col-net">
-                            {row ? fmt(bookOutTotal(row)) : "—"}
-                          </td>
-                        </tr>
-                      ))}
-                      {bookStaff && bookOwner ? (
-                        <tr className="vat-sales-totals-row">
-                          <td className="col-seg">รวมสองบช.</td>
-                          <td className="col-num">
-                            {fmt(bookStaff.cogs + bookOwner.cogs)}
-                          </td>
-                          <td className="col-num">
-                            {fmt(bookStaff.sga + bookOwner.sga)}
-                          </td>
-                          <td className="col-num">
-                            {fmt(bookStaff.asset + bookOwner.asset)}
-                          </td>
-                          <td className="col-num">
-                            {fmt(bookStaff.other + bookOwner.other)}
-                          </td>
-                          <td className="col-num col-net">
-                            {fmt(
-                              bookOutTotal(bookStaff) + bookOutTotal(bookOwner),
-                            )}
-                          </td>
-                        </tr>
-                      ) : null}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <PersonalTaxBlock
-                month={month}
-                income={
-                  parseMoneyInput(pnlIncome) || incomeBridge.pnlIncome
-                }
-                netVat={totals.netVat}
-                staff={bookStaff}
-                owner={bookOwner}
-                booksPulled={Boolean(bookStaff && bookOwner)}
-                locked={Boolean(locked)}
-                allowanceStr={allowanceStr}
-                otherDeductStr={otherDeductStr}
-                taxNote={taxNote}
-                yearBusy={yearBusy}
-                yearProfit={yearProfit}
-                yearTax={yearTax}
-                onAllowanceChange={setAllowanceStr}
-                onOtherDeductChange={setOtherDeductStr}
-                onTaxNoteChange={setTaxNote}
-                onSaveTaxSettings={() => void saveTaxSettings()}
-                onPullYear={() => void pullYearSummary()}
-                onExportYear={exportYearTax}
-              />
-
-              <p className="muted vat-sales-hint vat-hint-one-line">
-                สถานะเดือน:{" "}
-                {doc?.status === "filed"
-                  ? "ปิดงบแล้ว · ล็อก"
-                  : doc?.status === "saved"
-                    ? "บันทึกแล้ว · ยังไม่ปิด"
-                    : "ร่าง"}
-                {doc?.filedAt
-                  ? ` · ปิดเมื่อ ${formatDateTimeShort(doc.filedAt)}`
-                  : ""}
-              </p>
-
-              <div className="vat-month-actions vat-month-actions--mini">
-                {!locked ? (
-                  <>
-                    <button
-                      type="button"
-                      className="vat-mini-btn"
-                      disabled={busy || incomeBridge.pnlIncome <= 0}
-                      onClick={() => void pushTrialIncome()}
-                    >
-                      ใส่รายได้ทดลอง → P&L
-                    </button>
-                    <button
-                      type="button"
-                      className="vat-mini-btn vat-mini-btn--primary"
-                      disabled={busy || incomeBridge.pnlIncome <= 0}
-                      onClick={() => void closeMonth()}
-                    >
-                      ปิดงบจริง → ล็อก
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    className="vat-mini-btn"
-                    disabled={busy}
-                    onClick={() => void unlock()}
-                  >
-                    ปลดล็อก
-                  </button>
-                )}
-              </div>
-            </section>
-          ) : null}
+          <div className="vat-month-actions vat-month-actions--mini">
+            {!locked ? (
+              <>
+                <button
+                  type="button"
+                  className="vat-mini-btn"
+                  disabled={busy}
+                  onClick={() => void saveMonth(true)}
+                >
+                  ร่าง
+                </button>
+                <button
+                  type="button"
+                  className="vat-mini-btn"
+                  disabled={busy}
+                  onClick={() => void saveMonth(false)}
+                >
+                  บันทึก
+                </button>
+                <button
+                  type="button"
+                  className="vat-mini-btn"
+                  disabled={busy || incomeBridge.pnlIncome <= 0}
+                  onClick={() => void pushTrialIncome()}
+                >
+                  รายได้ทดลอง → P&L
+                </button>
+                <button
+                  type="button"
+                  className="vat-mini-btn vat-mini-btn--primary"
+                  disabled={busy || incomeBridge.pnlIncome <= 0}
+                  onClick={() => void closeMonth()}
+                >
+                  ปิดงบจริง → ล็อก
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="vat-mini-btn"
+                disabled={busy}
+                onClick={() => void unlock()}
+              >
+                ปลดล็อก
+              </button>
+            )}
+          </div>
         </>
       )}
     </div>

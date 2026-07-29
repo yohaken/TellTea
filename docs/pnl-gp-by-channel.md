@@ -1,6 +1,6 @@
 # หัก GP รายช่องทาง → VAT + P&L (ยอดโอนจริง)
 
-> หน้า `/vat-sales/` แท็บ **เดือน** (ระหว่างภาษีขายกับภาษีซื้อ) และแท็บปิด P&L  
+> หน้า `/vat-sales/` บล็อก **2) GP รายช่องทาง** (ระหว่างภาษีขายกับภาษีซื้อ)  
 > อัปเดต 2026-07-29
 
 ---
@@ -43,6 +43,6 @@
 ## โค้ด
 
 - `src/lib/personal-income-tax.ts` — `deriveGpFromNetTransfer` · `gpVatFromFee` · `mode: "transfer"`
-- UI: `VatMonthlyWorkbench` → `IncomeBridgeTable` (แท็บเดือน + ปิด)
+- UI: `VatMonthlyWorkbench` → `IncomeBridgeTable` (หน้าเดียว)
 
 ตัวเลขเงิน: [`vat-number-format.md`](./vat-number-format.md)
