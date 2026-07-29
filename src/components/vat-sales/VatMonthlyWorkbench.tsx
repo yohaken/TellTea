@@ -28,7 +28,6 @@ import {
   normalizeMoneyFieldText,
   parseVatMoneyInput,
   parseVatPctInput,
-  pctFieldValue,
 } from "@/lib/vat-number-format";
 import { listVatImportRows } from "@/lib/vat-import";
 import {
