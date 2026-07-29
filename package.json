@@ -82,6 +82,7 @@
     "test:npos-n6-sell": "node scripts/test-npos-n6-sell.mjs",
     "test:pos-apk-download": "node scripts/test-pos-apk-download.mjs",
     "test:pos-ops-notes": "node scripts/test-pos-ops-notes.mjs",
+    "test:staff-news": "node scripts/test-staff-news.mjs",
     "test:pos-owner-ping": "node scripts/test-pos-owner-ping.mjs",
     "ping:pos-devices": "node scripts/ping-pos-devices.mjs",
     "check:npos-devices": "node scripts/check-npos-devices-live.mjs",

@@ -7,6 +7,7 @@ import { AppUpdateSetup } from "@/components/AppUpdateSetup";
 import { BusinessProfileSetup } from "@/components/BusinessProfileSetup";
 import { AuthGate } from "@/components/AuthGate";
 import { NavMenuOrderSetup } from "@/components/NavMenuOrderSetup";
+import { StaffNewsSetup } from "@/components/StaffNewsSetup";
 import { useAuth } from "@/lib/auth";
 
 export default function SettingsPage() {
@@ -44,7 +45,7 @@ function SettingsView() {
         ตั้งค่าโมดูล
       </h1>
       <p className="muted" style={{ marginBottom: "1rem", textAlign: "left" }}>
-        โปรไฟล์กิจการ · เมนูหลัก · อัปเดตแอป — เฉพาะเจ้าของ · แตะหัวข้อเพื่อพับ/ขยาย
+        โปรไฟล์กิจการ · แจ้งข่าวสาร/คลังโนต · เมนูหลัก · อัปเดตแอป — เฉพาะเจ้าของ · แตะหัวข้อเพื่อพับ/ขยาย
         (SmartCheck อยู่หน้าเช็ค → รายการ SOP · คลังอยู่หน้า คลัง ·
         สินค้าผลิตอยู่หน้า ผลิต · เรทโบนัสอยู่หน้า สรุปโบนัส)
       </p>
@@ -55,6 +56,7 @@ function SettingsView() {
       {!loading ? (
         <div className="owner-settings-stack">
           <BusinessProfileSetup onError={setError} />
+          <StaffNewsSetup onError={setError} />
           <NavMenuOrderSetup onError={setError} />
           <AppUpdateSetup onError={setError} />
         </div>

@@ -19,6 +19,7 @@ import { AppBrand } from "@/components/AppBrand";
 import { LowBalanceAlert } from "@/components/LowBalanceAlert";
 import { PersonalProfileModal } from "@/components/PersonalProfileModal";
 import { ProfilePromptBanner } from "@/components/ProfilePromptBanner";
+import { StaffNewsPopup } from "@/components/StaffNewsPopup";
 import {
   DEFAULT_NAV_ORDER,
   DEFAULT_DOCK_TAB_MAX,
@@ -142,6 +143,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <ProfilePromptBanner />
           {children}
         </main>
+
+        <StaffNewsPopup />
 
         <LowBalanceAlert />
 
