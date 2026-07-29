@@ -567,7 +567,7 @@ function OwnerBooksView() {
         ariaLabel="บันทึกเงินออก"
         formOpen={adding}
         onAdd={() => setAdding(true)}
-        addLabel="บันทึกเงินออก"
+        addLabel="+ ออก"
         variant="glass-out"
       />
     </div>

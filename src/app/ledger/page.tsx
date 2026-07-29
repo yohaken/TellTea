@@ -726,7 +726,7 @@ function LedgerView() {
           setTransferInOpen(false);
           setAdding(true);
         }}
-        addLabel="บันทึกเงินออก"
+        addLabel="+ ออก"
         variant="glass-out"
       />
 

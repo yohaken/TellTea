@@ -9,10 +9,10 @@ import {
   DEFAULT_OWNER_QUICK_KEYS,
   moveOwnerQuickKey,
   OWNER_QUICK_CATALOG,
-  OWNER_QUICK_KEYS,
   OWNER_QUICK_MAX,
   resolveOwnerQuickItems,
   saveOwnerQuickKeys,
+  setupOwnerQuickListOrder,
   subscribeOwnerQuickKeys,
   toggleOwnerQuickKey,
   type OwnerQuickKey,
@@ -36,6 +36,8 @@ export function OwnerQuickDock() {
   const [error, setError] = useState<string | null>(null);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pressFired = useRef(false);
+  const keysRef = useRef(keys);
+  keysRef.current = keys;
 
   useEffect(() => {
     if (!isOwner) return;
@@ -75,12 +77,17 @@ export function OwnerQuickDock() {
   }
 
   async function persist(next: OwnerQuickKey[]) {
-    if (!actorId) return;
-    setBusy(true);
+    // อัปเดตทันทีให้ ↑↓ / ชิปเห็นลำดับจริง แล้วค่อยเขียน Firestore
+    setKeys(next);
+    keysRef.current = next;
     setError(null);
+    if (!actorId) {
+      setError("บันทึกลำดับไม่ได้ — ลองเข้าสู่ระบบใหม่");
+      return;
+    }
+    setBusy(true);
     try {
       await saveOwnerQuickKeys(next, actorId);
-      setKeys(next);
     } catch (err) {
       setError((err as Error).message || "บันทึกลำดับไม่สำเร็จ");
     } finally {
@@ -96,9 +103,11 @@ export function OwnerQuickDock() {
         aria-label="ทางลัดเจ้าของ"
       >
         {items.map((item) => {
+          const hrefBase = item.href.replace(/\/$/, "");
           const active =
             pathname === item.href ||
-            pathname.startsWith(item.href.replace(/\/$/, ""));
+            pathname === hrefBase ||
+            pathname.startsWith(`${hrefBase}/`);
           return (
             <Link
               key={item.key}
@@ -131,8 +140,12 @@ export function OwnerQuickDock() {
             setSetupOpen(false);
             setError(null);
           }}
-          onToggle={(key, on) => void persist(toggleOwnerQuickKey(keys, key, on))}
-          onMove={(key, dir) => void persist(moveOwnerQuickKey(keys, key, dir))}
+          onToggle={(key, on) =>
+            void persist(toggleOwnerQuickKey(keysRef.current, key, on))
+          }
+          onMove={(key, dir) =>
+            void persist(moveOwnerQuickKey(keysRef.current, key, dir))
+          }
           onReset={() => void persist([...DEFAULT_OWNER_QUICK_KEYS])}
         />
       ) : null}
@@ -158,6 +171,7 @@ function OwnerQuickSetupModal({
   onReset: () => void;
 }) {
   const active = new Set(keys);
+  const listOrder = setupOwnerQuickListOrder(keys);
 
   return (
     <div
@@ -184,24 +198,41 @@ function OwnerQuickSetupModal({
           </button>
         </div>
         <p className="muted owner-quick-setup-hint">
-          เลือกสูงสุด {OWNER_QUICK_MAX} · จัดลำดับซ้าย→ขวา · เฉพาะเจ้าของ
+          เลือกสูงสุด {OWNER_QUICK_MAX} · ใช้ ↑↓ เลื่อนลำดับซ้าย→ขวาบนแถบ · เฉพาะเจ้าของ
+          {busy ? " · กำลังบันทึก…" : ""}
         </p>
         {error ? <p className="error-text">{error}</p> : null}
 
         <ul className="owner-quick-setup-list">
-          {OWNER_QUICK_KEYS.map((key) => {
+          {listOrder.map((key) => {
             const item = OWNER_QUICK_CATALOG[key];
             const on = active.has(key);
             const idx = keys.indexOf(key);
             return (
-              <li key={key} className="owner-quick-setup-row">
+              <li
+                key={key}
+                className={cn(
+                  "owner-quick-setup-row",
+                  on && "is-on",
+                  on && idx === 0 && "is-first",
+                )}
+              >
                 <label className="owner-quick-setup-check">
                   <input
                     type="checkbox"
                     checked={on}
-                    disabled={busy || (!on && keys.length >= OWNER_QUICK_MAX)}
+                    disabled={!on && keys.length >= OWNER_QUICK_MAX}
                     onChange={(e) => onToggle(key, e.target.checked)}
                   />
+                  {on ? (
+                    <span className="owner-quick-setup-rank" aria-hidden>
+                      {idx + 1}
+                    </span>
+                  ) : (
+                    <span className="owner-quick-setup-rank is-off" aria-hidden>
+                      ·
+                    </span>
+                  )}
                   <span className="owner-quick-setup-abbr">{item.abbr}</span>
                   <span className="owner-quick-setup-label">{item.label}</span>
                 </label>
@@ -210,7 +241,7 @@ function OwnerQuickSetupModal({
                     <button
                       type="button"
                       className="ghost-btn owner-quick-move-btn"
-                      disabled={busy || idx <= 0}
+                      disabled={idx <= 0}
                       aria-label={`เลื่อน ${item.label} ขึ้น`}
                       onClick={() => onMove(key, -1)}
                     >
@@ -219,7 +250,7 @@ function OwnerQuickSetupModal({
                     <button
                       type="button"
                       className="ghost-btn owner-quick-move-btn"
-                      disabled={busy || idx < 0 || idx >= keys.length - 1}
+                      disabled={idx < 0 || idx >= keys.length - 1}
                       aria-label={`เลื่อน ${item.label} ลง`}
                       onClick={() => onMove(key, 1)}
                     >
@@ -236,7 +267,6 @@ function OwnerQuickSetupModal({
           <button
             type="button"
             className="ghost-btn"
-            disabled={busy}
             onClick={onReset}
           >
             คืนค่าเริ่มต้น

@@ -140,6 +140,14 @@ export function moveOwnerQuickKey(
   return copy;
 }
 
+/** รายการในโมดัลตั้งค่า: ชิปที่เปิดเรียงตามลำดับจริง แล้วตามด้วยที่ยังไม่เลือก */
+export function setupOwnerQuickListOrder(keys: OwnerQuickKey[]): OwnerQuickKey[] {
+  const active = normalizeOwnerQuickKeys(keys);
+  const on = new Set(active);
+  const rest = OWNER_QUICK_KEYS.filter((k) => !on.has(k));
+  return [...active, ...rest];
+}
+
 export function toggleOwnerQuickKey(
   keys: OwnerQuickKey[],
   key: OwnerQuickKey,
