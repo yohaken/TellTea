@@ -1,6 +1,6 @@
 # nPos — สลิปปิดกะโคลนฟอร์มเว็บเฟรมต่อเฟรม
 
-อัปเดต: **1.14.82** · `APP_BUILD` 409 · `POS_BUILD` 134 · `versionCode` 105  
+อัปเดต: **1.14.83** · `APP_BUILD` 418 · `POS_BUILD` 135 · `versionCode` 106  
 (เฟรมโคลนตั้งแต่ 1.14.74 · ส่งเงินสด — ดู `npos-z-cash-remit-checklist.md`)
 (ส่งเงินสด — ดู `npos-z-cash-remit-checklist.md`)
 

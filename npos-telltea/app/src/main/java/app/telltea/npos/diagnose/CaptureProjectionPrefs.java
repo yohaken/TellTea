@@ -7,8 +7,8 @@ import android.content.SharedPreferences;
  * Consent for MediaProjection screen capture only (not BT / notifications).
  *
  * <ul>
- *   <li>Ask once when needed (first capture / after update if projection not live).
- *   <li>If staff deny — do not spam; re-ask only on the next capture request or next update.
+ *   <li>BO manual capture / after-update: keep asking until staff grant (nag-until-grant).
+ *   <li>Interval captures: after deny, throttle 6h so sell flow is not interrupted every tick.
  *   <li>Projection token does not survive process death — re-ask then is necessary.
  * </ul>
  */
@@ -17,6 +17,8 @@ public final class CaptureProjectionPrefs {
   private static final String KEY_STATE = "consent_state"; // none|granted|denied
   private static final String KEY_PROMPT_AFTER_UPDATE = "prompt_after_update";
   private static final String KEY_LAST_PROMPT_AT = "last_prompt_at";
+  /** Sticky: keep re-showing the system dialog until MediaProjection is live. */
+  private static final String KEY_NAG_UNTIL_GRANT = "nag_until_grant";
 
   public static final String STATE_NONE = "none";
   public static final String STATE_GRANTED = "granted";
@@ -39,6 +41,7 @@ public final class CaptureProjectionPrefs {
         .edit()
         .putString(KEY_STATE, STATE_GRANTED)
         .putBoolean(KEY_PROMPT_AFTER_UPDATE, false)
+        .putBoolean(KEY_NAG_UNTIL_GRANT, false)
         .apply();
   }
 
@@ -50,7 +53,7 @@ public final class CaptureProjectionPrefs {
         .apply();
   }
 
-  /** Call when APK update finishes — ask capture consent once on next UI open. */
+  /** Call when APK update finishes — ask capture consent on next UI open. */
   public static void markPromptAfterUpdate(Context context) {
     prefs(context).edit().putBoolean(KEY_PROMPT_AFTER_UPDATE, true).apply();
   }
@@ -62,6 +65,18 @@ public final class CaptureProjectionPrefs {
     return true;
   }
 
+  public static void markNagUntilGrant(Context context) {
+    prefs(context).edit().putBoolean(KEY_NAG_UNTIL_GRANT, true).apply();
+  }
+
+  public static void clearNagUntilGrant(Context context) {
+    prefs(context).edit().putBoolean(KEY_NAG_UNTIL_GRANT, false).apply();
+  }
+
+  public static boolean shouldNagUntilGrant(Context context) {
+    return prefs(context).getBoolean(KEY_NAG_UNTIL_GRANT, false);
+  }
+
   public static void touchPrompted(Context context) {
     prefs(context).edit().putLong(KEY_LAST_PROMPT_AT, System.currentTimeMillis()).apply();
   }
@@ -70,22 +85,20 @@ public final class CaptureProjectionPrefs {
     return prefs(context).getLong(KEY_LAST_PROMPT_AT, 0L);
   }
 
-  /**
-   * Need a system capture dialog when we do not already hold a live MediaProjection.
-   * Denied staff get asked again only when a capture is actually requested (or after update).
-   */
+  /** Need a system capture dialog when we do not already hold a live MediaProjection. */
   public static boolean needsCaptureConsent(Context context) {
     return !CaptureProjectionService.hasLiveProjection();
   }
 
   /**
-   * Auto-prompt policy: always for BO manual / after-update. After a deny, throttle interval
-   * retries so staff are not nagged every heartbeat.
+   * Auto-prompt policy: always for BO manual / after-update / sticky nag. After a deny, throttle
+   * interval-only retries so staff are not interrupted every heartbeat while selling.
    */
   public static boolean shouldAutoPrompt(Context context, String reason) {
     if (!needsCaptureConsent(context)) return false;
     String why = reason == null ? "" : reason;
     if ("manual".equals(why) || "after_update".equals(why)) return true;
+    if (shouldNagUntilGrant(context)) return true;
     if (STATE_DENIED.equals(consentState(context))) {
       long last = lastPromptAt(context);
       if (last > 0 && System.currentTimeMillis() - last < 6L * 60L * 60L * 1000L) {
