@@ -336,6 +336,11 @@ public final class SunmiInnerPrinter {
           i += 3;
           continue;
         }
+        // ESC E n — bold on/off (drop markers; InnerPrinter printText has no inline bold)
+        if (n == 0x45 && i + 2 < payload.length) {
+          i += 3;
+          continue;
+        }
         i += 2;
         continue;
       }

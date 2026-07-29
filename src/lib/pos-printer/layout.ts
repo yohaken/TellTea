@@ -26,7 +26,7 @@ function formatLineOptions(line: import("../types").PosSaleLine, compact: boolea
       tallies.set(label, (tallies.get(label) ?? 0) + 1);
     }
   }
-  return [...tallies.entries()].map(([label, n]) => (n > 1 ? `${label} ×${n}` : label));
+  return [...tallies.entries()].map(([label, n]) => `${label} x${Math.max(1, n)}`);
 }
 
 /** สลิปใบเสร็จรูปแบบเดียว — รวมแบบ FoodStory / ShopeeFood / LINE MAN */
