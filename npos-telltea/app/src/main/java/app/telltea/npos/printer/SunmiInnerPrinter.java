@@ -80,10 +80,18 @@ public final class SunmiInnerPrinter {
     return sendRawBytes(context, payload);
   }
 
-  /** UTF text path — same family as stock SUNMI / Wongnai receipts. */
+  /**
+   * UTF text path — same family as stock SUNMI / Wongnai receipts.
+   *
+   * <p>Preserves {@link EscPos#BOLD_ON}/{@link EscPos#BOLD_OFF} (or ESC E decoded to those
+   * markers) by toggling bold via {@code sendRAWData} between {@code printText} chunks — so
+   * item titles actually print heavier than option lines.
+   */
   public static PrinterTransport.Result printPlain(Context context, String text) {
     String body = text == null ? "" : text;
     if (!body.endsWith("\n")) body = body + "\n";
+    boolean hasBold =
+        body.indexOf(EscPos.BOLD_ON) >= 0 || body.indexOf(EscPos.BOLD_OFF) >= 0;
     try {
       SunmiPrinterService svc = ensureService(context);
       if (svc == null) {
@@ -98,57 +106,153 @@ public final class SunmiInnerPrinter {
       } catch (Exception ignored) {
         /* optional */
       }
-      CountDownLatch done = new CountDownLatch(1);
-      AtomicReference<PrinterTransport.Result> out = new AtomicReference<>();
-      final String toPrint = body;
-      svc.printText(
-          toPrint,
+      PrinterTransport.Result printed =
+          hasBold ? printTextBoldSegments(svc, body) : printTextOnce(svc, body);
+      if (!printed.ok) return printed;
+      try {
+        svc.lineWrap(2, null);
+      } catch (Exception ignored) {
+        /* optional */
+      }
+      return cutPaperBestEffort(svc, "SUNMI พิมพ์ไทยแล้ว");
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return new PrinterTransport.Result(false, "interrupted");
+    } catch (Exception e) {
+      String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+      return new PrinterTransport.Result(false, msg);
+    }
+  }
+
+  /** One-shot printText (no inline bold). */
+  private static PrinterTransport.Result printTextOnce(SunmiPrinterService svc, String body)
+      throws Exception {
+    CountDownLatch done = new CountDownLatch(1);
+    AtomicReference<PrinterTransport.Result> out = new AtomicReference<>();
+    svc.printText(
+        body,
+        latchCallback(
+            out,
+            done,
+            new PrinterTransport.Result(true, "ok"),
+            new PrinterTransport.Result(false, "SUNMI printText ไม่สำเร็จ")));
+    if (!done.await(20, TimeUnit.SECONDS)) {
+      return new PrinterTransport.Result(false, "SUNMI timeout (printText)");
+    }
+    PrinterTransport.Result r = out.get();
+    return r != null ? r : new PrinterTransport.Result(false, "SUNMI ไม่ตอบ");
+  }
+
+  /**
+   * Walk bold markers: flush text → ESC E on/off → more text. Keeps Thai on printText path.
+   */
+  private static PrinterTransport.Result printTextBoldSegments(
+      SunmiPrinterService svc, String body) throws Exception {
+    StringBuilder acc = new StringBuilder();
+    boolean bold = false;
+    for (int i = 0; i < body.length(); i++) {
+      char c = body.charAt(i);
+      if (c == EscPos.BOLD_ON) {
+        PrinterTransport.Result flush = flushAccPrintText(svc, acc);
+        if (!flush.ok) return flush;
+        PrinterTransport.Result em = sendEscE(svc, true);
+        if (!em.ok) return em;
+        bold = true;
+      } else if (c == EscPos.BOLD_OFF) {
+        PrinterTransport.Result flush = flushAccPrintText(svc, acc);
+        if (!flush.ok) return flush;
+        PrinterTransport.Result em = sendEscE(svc, false);
+        if (!em.ok) return em;
+        bold = false;
+      } else {
+        acc.append(c);
+      }
+    }
+    PrinterTransport.Result flush = flushAccPrintText(svc, acc);
+    if (!flush.ok) return flush;
+    if (bold) {
+      PrinterTransport.Result em = sendEscE(svc, false);
+      if (!em.ok) return em;
+    }
+    return new PrinterTransport.Result(true, "SUNMI พิมพ์ไทย (ตัวหนา) แล้ว");
+  }
+
+  private static PrinterTransport.Result flushAccPrintText(
+      SunmiPrinterService svc, StringBuilder acc) throws Exception {
+    if (acc.length() == 0) return new PrinterTransport.Result(true, "ok");
+    String chunk = acc.toString();
+    acc.setLength(0);
+    return printTextOnce(svc, chunk);
+  }
+
+  private static PrinterTransport.Result sendEscE(SunmiPrinterService svc, boolean on)
+      throws Exception {
+    byte[] cmd = new byte[] {0x1B, 0x45, (byte) (on ? 0x01 : 0x00)};
+    CountDownLatch done = new CountDownLatch(1);
+    AtomicReference<PrinterTransport.Result> out = new AtomicReference<>();
+    svc.sendRAWData(
+        cmd,
+        latchCallback(
+            out,
+            done,
+            new PrinterTransport.Result(true, "ok"),
+            new PrinterTransport.Result(false, "SUNMI bold ไม่สำเร็จ")));
+    if (!done.await(8, TimeUnit.SECONDS)) {
+      return new PrinterTransport.Result(false, "SUNMI timeout (bold)");
+    }
+    PrinterTransport.Result r = out.get();
+    return r != null ? r : new PrinterTransport.Result(false, "SUNMI bold ไม่ตอบ");
+  }
+
+  private static InnerResultCallback latchCallback(
+      AtomicReference<PrinterTransport.Result> out,
+      CountDownLatch done,
+      PrinterTransport.Result ok,
+      PrinterTransport.Result fail) {
+    return new InnerResultCallback() {
+      @Override
+      public void onRunResult(boolean isSuccess) {
+        out.set(isSuccess ? ok : fail);
+        done.countDown();
+      }
+
+      @Override
+      public void onReturnString(String result) {}
+
+      @Override
+      public void onRaiseException(int code, String msg) {
+        out.set(
+            new PrinterTransport.Result(
+                false, "SUNMI exception " + code + (msg == null ? "" : ": " + msg)));
+        done.countDown();
+      }
+
+      @Override
+      public void onPrintResult(int code, String msg) {
+        if (out.get() == null) {
+          out.set(
+              code == 0
+                  ? ok
+                  : new PrinterTransport.Result(false, "SUNMI printResult " + code + " " + msg));
+          done.countDown();
+        }
+      }
+    };
+  }
+
+  private static PrinterTransport.Result cutPaperBestEffort(
+      SunmiPrinterService svc, String okMsg) throws Exception {
+    CountDownLatch done = new CountDownLatch(1);
+    AtomicReference<PrinterTransport.Result> out = new AtomicReference<>();
+    try {
+      svc.cutPaper(
           new InnerResultCallback() {
             @Override
-            public void onRunResult(boolean isSuccess) {
-              if (!isSuccess) {
-                out.set(new PrinterTransport.Result(false, "SUNMI printText ไม่สำเร็จ"));
-                done.countDown();
-                return;
-              }
-              try {
-                svc.lineWrap(2, null);
-              } catch (Exception ignored) {
-                /* optional */
-              }
-              try {
-                svc.cutPaper(
-                    new InnerResultCallback() {
-                      @Override
-                      public void onRunResult(boolean cutOk) {
-                        out.set(
-                            new PrinterTransport.Result(
-                                true, "SUNMI พิมพ์ไทยแล้ว" + (cutOk ? "" : " (ตัดกระดาษข้าม)")));
-                        done.countDown();
-                      }
-
-                      @Override
-                      public void onReturnString(String result) {}
-
-                      @Override
-                      public void onRaiseException(int code, String msg) {
-                        out.set(
-                            new PrinterTransport.Result(true, "SUNMI พิมพ์ไทยแล้ว (ตัดกระดาษข้าม)"));
-                        done.countDown();
-                      }
-
-                      @Override
-                      public void onPrintResult(int code, String msg) {
-                        if (out.get() == null) {
-                          out.set(new PrinterTransport.Result(true, "SUNMI พิมพ์ไทยแล้ว"));
-                          done.countDown();
-                        }
-                      }
-                    });
-              } catch (Exception cutErr) {
-                out.set(new PrinterTransport.Result(true, "SUNMI พิมพ์ไทยแล้ว"));
-                done.countDown();
-              }
+            public void onRunResult(boolean cutOk) {
+              out.set(
+                  new PrinterTransport.Result(
+                      true, okMsg + (cutOk ? "" : " (ตัดกระดาษข้าม)")));
+              done.countDown();
             }
 
             @Override
@@ -156,33 +260,25 @@ public final class SunmiInnerPrinter {
 
             @Override
             public void onRaiseException(int code, String msg) {
-              out.set(
-                  new PrinterTransport.Result(
-                      false, "SUNMI exception " + code + (msg == null ? "" : ": " + msg)));
+              out.set(new PrinterTransport.Result(true, okMsg + " (ตัดกระดาษข้าม)"));
               done.countDown();
             }
 
             @Override
             public void onPrintResult(int code, String msg) {
-              if (out.get() == null && code != 0) {
-                out.set(
-                    new PrinterTransport.Result(
-                        false, "SUNMI printResult " + code + " " + msg));
+              if (out.get() == null) {
+                out.set(new PrinterTransport.Result(true, okMsg));
                 done.countDown();
               }
             }
           });
-      if (!done.await(20, TimeUnit.SECONDS)) {
-        return new PrinterTransport.Result(false, "SUNMI timeout (printText)");
+      if (!done.await(8, TimeUnit.SECONDS)) {
+        return new PrinterTransport.Result(true, okMsg);
       }
       PrinterTransport.Result r = out.get();
-      return r != null ? r : new PrinterTransport.Result(false, "SUNMI ไม่ตอบ");
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      return new PrinterTransport.Result(false, "interrupted");
-    } catch (Exception e) {
-      String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-      return new PrinterTransport.Result(false, msg);
+      return r != null ? r : new PrinterTransport.Result(true, okMsg);
+    } catch (Exception cutErr) {
+      return new PrinterTransport.Result(true, okMsg);
     }
   }
 
@@ -336,8 +432,10 @@ public final class SunmiInnerPrinter {
           i += 3;
           continue;
         }
-        // ESC E n — bold on/off (drop markers; InnerPrinter printText has no inline bold)
+        // ESC E n — keep as bold markers for printPlain chunked bold
         if (n == 0x45 && i + 2 < payload.length) {
+          int mode = payload[i + 2] & 0xFF;
+          sb.append(mode != 0 ? EscPos.BOLD_ON : EscPos.BOLD_OFF);
           i += 3;
           continue;
         }

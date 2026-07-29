@@ -222,19 +222,19 @@ public final class ReceiptFormBuilder {
     String title = receiptLineBaseName(line.optString("name", ""));
     String priceText = formatMoney(lineTotal);
 
-    // Always show qty (ASCII "2 name") — Unicode × becomes "?" on TIS-620 thermals.
-    // Bold the item title row; options stay normal unless x2+.
-    String left = qty + " " + title;
+    // Fixed 2-char qty column so prices line up; bold title row; options indented + normal.
+    String qtyCol = qty < 10 ? (" " + qty) : String.valueOf(Math.min(qty, 99));
+    String left = qtyCol + " " + title;
     sb.append(EscPos.BOLD_ON)
         .append(pairRow(left, priceText, width))
         .append(EscPos.BOLD_OFF)
         .append('\n');
 
     for (ModTally mod : tallyModifiers(line.opt("options"), compact)) {
-      // ASCII "-" / "xN" (cart UI already uses this). Always show count like FoodStory.
+      // Indent under name (past qty column). ASCII "-" / "xN". Bold only x2+.
       String label = "- " + mod.label + " x" + Math.max(1, mod.count);
       boolean emphasizeQty = qtyEmphasized(mod.count);
-      for (String part : wrap("  " + label, width)) {
+      for (String part : wrap("    " + label, width)) {
         if (emphasizeQty) {
           sb.append(EscPos.BOLD_ON).append(part).append(EscPos.BOLD_OFF).append('\n');
         } else {

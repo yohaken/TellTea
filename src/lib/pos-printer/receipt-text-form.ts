@@ -91,12 +91,13 @@ function appendItem(lines: string[], line: PosSaleLine, width: number, compact: 
   const lineTotal = Math.round(line.price * qty * 100) / 100;
   const title = receiptLineBaseName(line);
   const priceText = formatMoney(lineTotal);
-  // ASCII qty + blank gap handled by caller — matches native ReceiptFormBuilder.
-  lines.push(pairRow(`${qty} ${title}`, priceText, width));
+  // Fixed 2-char qty column + indented options — matches native ReceiptFormBuilder.
+  const qtyCol = qty < 10 ? ` ${qty}` : String(Math.min(qty, 99));
+  lines.push(pairRow(`${qtyCol} ${title}`, priceText, width));
   for (const mod of tallySaleLineModifiers(line, compact)) {
     const count = Math.max(1, mod.count);
     const label = `- ${mod.label} x${count}`;
-    for (const part of wrap(`  ${label}`, width)) lines.push(part);
+    for (const part of wrap(`    ${label}`, width)) lines.push(part);
   }
 }
 
