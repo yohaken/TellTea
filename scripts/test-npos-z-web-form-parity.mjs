@@ -9,13 +9,13 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 392/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 128/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+99/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.76"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 393/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 129/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+100/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.77"/);
 
 assert.ok(existsSync(join(root, "docs/npos-z-web-form-parity-checklist.md")));
-assert.match(read("docs/npos-z-web-form-parity-checklist.md"), /1\.14\.76/);
+assert.match(read("docs/npos-z-web-form-parity-checklist.md"), /1\.14\.77/);
 
 const web = read("src/lib/pos-printer/shift-snapshot-template.ts");
 assert.match(web, /รายงานยอดการขาย/);
