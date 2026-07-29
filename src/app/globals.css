@@ -15614,6 +15614,17 @@ body.modal-open .main-panel {
   gap: 0.1rem;
 }
 
+.vat-thai-month-select {
+  min-width: 9.5rem;
+  max-width: 14rem;
+  font-size: 0.78rem;
+}
+
+.vat-gap-row td {
+  color: rgba(28, 42, 31, 0.55);
+  font-style: italic;
+}
+
 .vat-sales-toolbar--slim .vat-sales-month input,
 .vat-sales-toolbar--slim .vat-sales-month select {
   min-height: 1.7rem;

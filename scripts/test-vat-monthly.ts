@@ -10,7 +10,9 @@ import {
   EMPTY_STOREFRONT_TENDERS,
   floorMoney,
   formatThaiDateKey,
+  formatThaiMonthKey,
   getVatPeriodBoundary,
+  listThaiMonthOptions,
   mapVatLogicRates,
   proposePnlIncome,
   recomputeSegment,
@@ -123,6 +125,10 @@ assert.equal(
 
 {
   assert.equal(formatThaiDateKey("2026-07-01"), "1/7/2569");
+  assert.equal(formatThaiMonthKey("2026-07"), "กรกฎาคม 2569");
+  const opts = listThaiMonthOptions("2026-07", 2, 1);
+  assert.equal(opts[0]?.key, "2026-08");
+  assert.ok(opts.some((o) => o.key === "2026-07" && o.label === "กรกฎาคม 2569"));
   const p = getVatPeriodBoundary("2026-07", 1);
   assert.equal(p.labelInclusive, "00:00 น. 1/7/2569 → 23:59 น. 31/7/2569");
 }
