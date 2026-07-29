@@ -398,6 +398,8 @@ export function PosShiftView() {
     cashDifference?: number;
     leaveFloat?: number;
     discrepancyLabel?: string;
+    cashOutTotal?: number;
+    cashInTotal?: number;
   }) {
     setPrintingReport(true);
     setPrintMsg(null);
@@ -421,6 +423,8 @@ export function PosShiftView() {
         cashDifference: opts.cashDifference,
         leaveFloat: opts.leaveFloat,
         discrepancyLabel: opts.discrepancyLabel,
+        cashOutTotal: opts.cashOutTotal,
+        cashInTotal: opts.cashInTotal,
       });
       const ok = openShiftReportPrint(buildShiftReportHtml(payload));
       setPrintMsg(
@@ -446,6 +450,8 @@ export function PosShiftView() {
       summary: sessionSummary,
       receipts: sessionReceipts,
       openingCash: session.openingCash,
+      cashOutTotal: session.cashOutTotal,
+      cashInTotal: session.cashInTotal,
     });
   }
 
@@ -482,6 +488,8 @@ export function PosShiftView() {
       cashDifference: row.cashDifference,
       leaveFloat: row.leaveFloat,
       discrepancyLabel: row.discrepancyLabel,
+      cashOutTotal: row.cashOutTotal,
+      cashInTotal: row.cashInTotal,
     });
   }
 

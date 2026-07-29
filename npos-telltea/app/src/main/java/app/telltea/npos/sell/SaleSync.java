@@ -818,6 +818,14 @@ public final class SaleSync {
                             String label = null;
                             double leaveFloat = 0;
                             String note = "";
+                            double cashOut =
+                                    report != null
+                                            ? report.cashOutTotal
+                                            : ShiftPrefs.cashOutTotal(app);
+                            double cashIn =
+                                    report != null
+                                            ? report.cashInTotal
+                                            : ShiftPrefs.cashInTotal(app);
                             if ("close".equals(reportKind)) {
                                 expected =
                                         report != null
@@ -854,6 +862,8 @@ public final class SaleSync {
                                             label,
                                             leaveFloat,
                                             note,
+                                            cashOut,
+                                            cashIn,
                                             DeviceIdentity.pairingCode(app),
                                             listPending(app).size(),
                                             loadSessionReceipts(app, ShiftPrefs.sessionId(app)),
