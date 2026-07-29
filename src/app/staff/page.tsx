@@ -68,6 +68,7 @@ function StaffView() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [members, setMembers] = useState<StaffMember[]>([]);
   const [empName, setEmpName] = useState("");
+  const [empNickname, setEmpNickname] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [linkEmployeeId, setLinkEmployeeId] = useState("");
@@ -152,15 +153,25 @@ function StaffView() {
     setError(null);
     setSuccess(null);
     try {
-      const id = await addEmployee(name);
+      const nick = empNickname.trim();
+      const id = await addEmployee(name, nick || undefined);
       const now = Date.now();
       setEmployees((prev) => {
         if (prev.some((e) => e.id === id)) return prev;
-        return [...prev, { id, name, active: true, createdAt: now, updatedAt: now }].sort((a, b) =>
-          a.name.localeCompare(b.name, "th"),
-        );
+        return [
+          ...prev,
+          {
+            id,
+            name,
+            ...(nick ? { nickname: nick } : {}),
+            active: true,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ].sort((a, b) => a.name.localeCompare(b.name, "th"));
       });
       setEmpName("");
+      setEmpNickname("");
       setSuccess(`เพิ่ม "${name}" ในรายชื่อร้านแล้ว (ขั้นที่ 1) — ต่อไปสร้างบัญชีขั้นที่ 2`);
       const { employeesOk } = await reload();
       if (employeesOk) setError(null);
@@ -356,8 +367,18 @@ function StaffView() {
               id="emp-name"
               value={empName}
               onChange={(e) => setEmpName(e.target.value)}
-              placeholder="เช่น เป้, เตย"
+              placeholder="เช่น สมชาย, เป้"
               required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="emp-nickname">ชื่อเล่น (ไอคอนสั้น)</label>
+            <input
+              id="emp-nickname"
+              value={empNickname}
+              onChange={(e) => setEmpNickname(e.target.value)}
+              placeholder="เช่น เป้ — ว่างได้ ใช้ต้นชื่อจริง"
+              maxLength={12}
             />
           </div>
           <button type="submit" className="primary-btn" disabled={busy}>
@@ -521,19 +542,110 @@ function EmployeeRosterRow({
   onReload: () => Promise<void>;
   onDelete: () => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(emp.name);
+  const [nickname, setNickname] = useState(emp.nickname || "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!editing) {
+      setName(emp.name);
+      setNickname(emp.nickname || "");
+    }
+  }, [emp.name, emp.nickname, editing]);
+
+  async function saveEdit() {
+    const nextName = name.trim();
+    if (!nextName) {
+      onError("ใส่ชื่อพนักงาน");
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateEmployee(emp.id, { name: nextName, nickname: nickname.trim() });
+      setEditing(false);
+      await onReload();
+    } catch (err) {
+      onError((err as Error).message || "อัปเดตไม่สำเร็จ");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="employee-roster-row">
       <div className="employee-roster-main">
-        <strong>{emp.name}</strong>
-        <div className="muted employee-roster-meta">
-          {emp.active ? "ใช้งาน" : "ปิดใช้"} · {rosterLinkLabel(emp)}
-        </div>
+        {editing ? (
+          <div className="employee-roster-edit">
+            <label className="field">
+              <span>ชื่อ</span>
+              <input
+                value={name}
+                disabled={saving || busy}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="ชื่อในร้าน"
+              />
+            </label>
+            <label className="field">
+              <span>ชื่อเล่น</span>
+              <input
+                value={nickname}
+                disabled={saving || busy}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="สั้นๆ สำหรับไอคอน"
+                maxLength={12}
+              />
+            </label>
+          </div>
+        ) : (
+          <>
+            <strong>
+              {emp.name}
+              {emp.nickname ? (
+                <span className="employee-roster-nick"> · {emp.nickname}</span>
+              ) : null}
+            </strong>
+            <div className="muted employee-roster-meta">
+              {emp.active ? "ใช้งาน" : "ปิดใช้"} · {rosterLinkLabel(emp)}
+              {!emp.nickname ? " · ยังไม่มีชื่อเล่น" : ""}
+            </div>
+          </>
+        )}
       </div>
       <div className="employee-roster-actions">
+        {editing ? (
+          <>
+            <button
+              type="button"
+              className="primary-btn"
+              disabled={saving || busy}
+              onClick={() => void saveEdit()}
+            >
+              {saving ? "..." : "บันทึก"}
+            </button>
+            <button
+              type="button"
+              className="ghost-btn"
+              disabled={saving || busy}
+              onClick={() => setEditing(false)}
+            >
+              ยกเลิก
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="ghost-btn"
+            disabled={busy}
+            onClick={() => setEditing(true)}
+          >
+            แก้ชื่อ
+          </button>
+        )}
         <button
           type="button"
           className="ghost-btn"
-          disabled={busy}
+          disabled={busy || editing}
           onClick={() =>
             void updateEmployee(emp.id, { active: !emp.active })
               .then(onReload)
@@ -546,7 +658,7 @@ function EmployeeRosterRow({
           type="button"
           className="ghost-btn icon-btn"
           aria-label={`ลบ ${emp.name}`}
-          disabled={busy}
+          disabled={busy || editing}
           onClick={onDelete}
         >
           <Trash2 size={14} />

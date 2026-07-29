@@ -23,6 +23,8 @@ export type StaffMember = {
   createdAt: number;
   /** Fine-grained page/feature access — owners always get full set in resolvePermissions */
   permissions?: Partial<StaffPermissions>;
+  /** เข้าใช้แอปหลังสุด (heartbeat) — เจ้าของใช้ดูว่าใครอยู่ในระบบ */
+  lastSeenAt?: number;
 };
 
 /** ข้อมูลส่วนตัวละเอียดอ่อน — คอลเลกชัน staffPersonal (เจ้าของอ่านได้) */
