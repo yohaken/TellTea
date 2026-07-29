@@ -20,6 +20,7 @@ import app.telltea.npos.diagnose.AutoHealth;
 import app.telltea.npos.diagnose.DeviceIdentity;
 import app.telltea.npos.diagnose.ForegroundHeartbeat;
 import app.telltea.npos.diagnose.OpsLogger;
+import app.telltea.npos.diagnose.CaptureConsentActivity;
 import app.telltea.npos.diagnose.PermissionBootstrap;
 import app.telltea.npos.diagnose.StoreClaimClient;
 import app.telltea.npos.diagnose.StoreClaimPrefs;
@@ -218,6 +219,9 @@ public class MainActivity extends Activity {
     }
     OpsLogger.info(this, "app", "เปิดแอป", "vc=" + localVersionCode);
     maybeResumeSellAfterUpdate();
+    // After APK update: one-shot screen-capture consent (MediaProjection) — not every update forever.
+    findViewById(android.R.id.content)
+        .postDelayed(() -> CaptureConsentActivity.launchAfterUpdateIfNeeded(this), 700);
   }
 
   private boolean isClaimGateVisible() {

@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import app.telltea.npos.diagnose.CaptureConsentActivity;
 import app.telltea.npos.diagnose.CustomerDisplayController;
 import app.telltea.npos.diagnose.CustomerDisplayPresentation;
 import app.telltea.npos.diagnose.OpsLogger;
@@ -1023,6 +1024,8 @@ public class SellActivity extends Activity {
     // Faster kick detection while selling (heartbeat may have been throttled).
     ForegroundHeartbeat.forceNow(this);
     updateServerCheckChip();
+    // After APK update (resume sell): one-shot screen-capture consent if still needed.
+    CaptureConsentActivity.launchAfterUpdateIfNeeded(this);
     if (updatePrompt != null) updatePrompt.onResume();
     // Refresh shop name/address from server so BO edits show on next bill.
     if (menuRepo != null) {
