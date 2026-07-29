@@ -24,6 +24,8 @@ assert.match(index, /extractCashDepositSlip/);
 assert.match(cf, /mode === "bank"/);
 assert.match(cf, /BANK_SYSTEM_PROMPT|สลิปโอนเงิน/);
 assert.match(cf, /DAY_SYSTEM_PROMPT|เงินสด/);
+assert.match(cf, /ยอดขายตามการชำระเงิน|Expected Cash/);
+assert.match(cf, /drawerCloseAmount เป็น null/);
 assert.match(cf, /transferFee/);
 assert.match(cf, /สลิปโอนหนึ่งใบ|อย่ารวมยอดจากสลิปอื่น/);
 assert.match(client, /extractCashBankSlipFromPhotos/);
@@ -38,12 +40,15 @@ assert.match(lib, /bankAmountSource/);
 assert.match(lib, /cashAmountSource/);
 assert.match(panel, /runAiBank/);
 assert.match(panel, /runAiDay/);
+assert.match(panel, /เข้าบช\.สุทธิ/);
+assert.match(panel, /คงเหลือ|remainingToTransfer/);
 assert.match(panel, /คชจ\.|transferFee|workingFee/);
 assert.match(panel, /ใส่โดยพนักงาน|is-staff|cash-in-src/);
 assert.match(panel, /อ่าน AI ใหม่|ให้อ่านสลิปโอนใหม่/);
 assert.match(panel, /\+ สลิปโอน/);
 assert.match(panel, /cash-in-bank-table/);
 assert.match(panel, /addBankTransfer/);
+assert.match(panel, /drawerCloseAmount ignored/);
 
 const runner = `
 import assert from "node:assert/strict";

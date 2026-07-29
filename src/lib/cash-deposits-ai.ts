@@ -66,7 +66,7 @@ export async function extractCashBankSlipFromPhotos(
   };
 }
 
-/** อ่านสลิปสรุป POS เงินสดรายวัน/กะ → ยอดเงินสด / ปิดลิ้นชัก / วันที่ */
+/** อ่านสลิปสรุป POS → ยอดขายเงินสด (Payment→Cash) / วันที่ — ไม่ใช้ยอดลิ้นชัก */
 export async function extractCashDaySlipFromPhotos(
   imageRefs: string[],
   opts?: { model?: string },
