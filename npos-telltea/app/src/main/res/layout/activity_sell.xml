@@ -160,6 +160,44 @@
                 android:textColor="@color/npos_chrome_muted"
                 android:textSize="12sp" />
 
+            <!-- Cash change hold — stays until timer ends or staff taps ตกลง -->
+            <LinearLayout
+                android:id="@+id/changeHoldBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#1B6B3A"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingLeft="12dp"
+                android:paddingRight="10dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/changeHoldText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="@font/prompt_semibold"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/changeHoldDismiss"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="#FFFFFF"
+                    android:fontFamily="@font/prompt_bold"
+                    android:paddingLeft="14dp"
+                    android:paddingRight="14dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:text="@string/change_hold_dismiss"
+                    android:textColor="#1B6B3A"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/sellContentRow"
                 android:layout_width="match_parent"

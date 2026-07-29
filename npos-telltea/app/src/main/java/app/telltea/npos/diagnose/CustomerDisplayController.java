@@ -51,6 +51,10 @@ public final class CustomerDisplayController {
     private Runnable rotateTask;
     private Runnable successTask;
     private boolean loggedReady;
+    /** Waiting for staff «ตกลง» when change-display mode is manual. */
+    private boolean awaitingManualDismiss;
+    private double pendingChangeAmt;
+    private String pendingSuccessMessage;
 
     private List<CustomerDisplayPresentation.Line> lastLines = new ArrayList<>();
     private double lastSubtotal;
@@ -138,33 +142,77 @@ public final class CustomerDisplayController {
     /**
      * Success splash → paid receipt review (cart-full) → standby.
      * New {@link #showSelecting} / {@link #showStandby} cancels the chain.
-     * When {@code change > 0}, hold the change splash longer so staff can hand cash.
+     * When {@code change > 0}, hold time comes from {@link ChangeDisplayPrefs}
+     * (seconds or manual until {@link #dismissChangeHold()}).
      */
     public void showSuccessThenStandby(String message, double total, double change) {
         stopRotate();
         cancelSuccess();
+        awaitingManualDismiss = false;
         if (!ensurePresentation()) return;
         final double changeAmt = Math.max(0, change);
+        pendingChangeAmt = changeAmt;
+        pendingSuccessMessage = message;
         presentation.showSuccess(message, total, changeAmt);
-        long holdMs = changeAmt > 0.01 ? SUCCESS_HOLD_CHANGE_MS : SUCCESS_HOLD_MS;
+
+        if (changeAmt <= 0.01) {
+            scheduleAfterSuccess(changeAmt, SUCCESS_HOLD_MS);
+            return;
+        }
+
+        long holdMs =
+                host != null
+                        ? ChangeDisplayPrefs.holdMsForChange(host)
+                        : SUCCESS_HOLD_CHANGE_MS;
+        if (holdMs < 0) {
+            awaitingManualDismiss = true;
+            return;
+        }
+        scheduleAfterSuccess(changeAmt, holdMs);
+    }
+
+    /** True while change splash is waiting for staff to tap «ตกลง». */
+    public boolean isAwaitingChangeDismiss() {
+        return awaitingManualDismiss
+                || (successTask != null && pendingChangeAmt > 0.01);
+    }
+
+    /**
+     * Staff dismisses change screen early (or ends manual hold) → paid review → standby.
+     */
+    public void dismissChangeHold() {
+        if (presentation == null) {
+            awaitingManualDismiss = false;
+            return;
+        }
+        cancelSuccess();
+        awaitingManualDismiss = false;
+        advanceAfterSuccess(pendingChangeAmt);
+    }
+
+    private void scheduleAfterSuccess(double changeAmt, long holdMs) {
         successTask =
                 () -> {
                     successTask = null;
-                    if (presentation == null) return;
-                    if (lastLines != null && !lastLines.isEmpty()) {
-                        presentation.showPaidReview(
-                                lastLines, lastSubtotal, lastDiscount, lastTotal, changeAmt);
-                        successTask =
-                                () -> {
-                                    successTask = null;
-                                    showStandby();
-                                };
-                        main.postDelayed(successTask, PAID_REVIEW_MS);
-                    } else {
-                        showStandby();
-                    }
+                    advanceAfterSuccess(changeAmt);
                 };
-        main.postDelayed(successTask, holdMs);
+        main.postDelayed(successTask, Math.max(500L, holdMs));
+    }
+
+    private void advanceAfterSuccess(double changeAmt) {
+        if (presentation == null) return;
+        if (lastLines != null && !lastLines.isEmpty()) {
+            presentation.showPaidReview(
+                    lastLines, lastSubtotal, lastDiscount, lastTotal, changeAmt);
+            successTask =
+                    () -> {
+                        successTask = null;
+                        showStandby();
+                    };
+            main.postDelayed(successTask, PAID_REVIEW_MS);
+        } else {
+            showStandby();
+        }
     }
 
     public void release() {
@@ -293,5 +341,6 @@ public final class CustomerDisplayController {
             main.removeCallbacks(successTask);
             successTask = null;
         }
+        awaitingManualDismiss = false;
     }
 }

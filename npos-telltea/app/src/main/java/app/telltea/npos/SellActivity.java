@@ -44,6 +44,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import app.telltea.npos.diagnose.CaptureConsentActivity;
+import app.telltea.npos.diagnose.ChangeDisplayPrefs;
 import app.telltea.npos.diagnose.CustomerDisplayController;
 import app.telltea.npos.diagnose.CustomerDisplayPresentation;
 import app.telltea.npos.diagnose.OpsLogger;
@@ -85,6 +86,9 @@ public class SellActivity extends Activity {
   private TextView sellServerCheckChip;
   private TextView discountLabel;
   private TextView shiftSummary;
+  private View changeHoldBar;
+  private TextView changeHoldText;
+  private Runnable changeHoldHideTask;
   private TextView flushSyncButton;
   private TextView restoreHoldButton;
   private View payAllButton;
@@ -147,6 +151,12 @@ public class SellActivity extends Activity {
     sellServerCheckChip = findViewById(R.id.sellServerCheckChip);
     discountLabel = findViewById(R.id.discountLabel);
     shiftSummary = findViewById(R.id.shiftSummary);
+    changeHoldBar = findViewById(R.id.changeHoldBar);
+    changeHoldText = findViewById(R.id.changeHoldText);
+    View changeHoldDismiss = findViewById(R.id.changeHoldDismiss);
+    if (changeHoldDismiss != null) {
+      changeHoldDismiss.setOnClickListener(v -> dismissChangeHoldUi());
+    }
     flushSyncButton = findViewById(R.id.flushSyncButton);
     restoreHoldButton = findViewById(R.id.restoreHoldButton);
     payAllButton = findViewById(R.id.payAllButton);
@@ -2013,9 +2023,48 @@ public class SellActivity extends Activity {
   }
 
   private void renderCart() {
+    if (!cart.isEmpty()) {
+      // Next bill started — clear change hold so it never blocks the line.
+      hideChangeHoldBar();
+    }
     renderCartViewsOnly();
     if (menu != null) renderMenu();
     syncCustomerDisplay();
+  }
+
+  private void showChangeHoldBar(double change) {
+    if (changeHoldBar == null || changeHoldText == null) return;
+    if (changeHoldHideTask != null) {
+      dutyHandler.removeCallbacks(changeHoldHideTask);
+      changeHoldHideTask = null;
+    }
+    changeHoldText.setText(getString(R.string.sell_change_hold, change));
+    changeHoldBar.setVisibility(View.VISIBLE);
+    long holdMs = ChangeDisplayPrefs.holdMsForChange(this);
+    if (holdMs > 0) {
+      changeHoldHideTask =
+          () -> {
+            changeHoldHideTask = null;
+            hideChangeHoldBar();
+          };
+      dutyHandler.postDelayed(changeHoldHideTask, holdMs);
+    }
+  }
+
+  private void hideChangeHoldBar() {
+    if (changeHoldHideTask != null) {
+      dutyHandler.removeCallbacks(changeHoldHideTask);
+      changeHoldHideTask = null;
+    }
+    if (changeHoldBar != null) changeHoldBar.setVisibility(View.GONE);
+  }
+
+  private void dismissChangeHoldUi() {
+    hideChangeHoldBar();
+    if (customerDisplay != null) customerDisplay.dismissChangeHold();
+    if (sellSyncStatus != null) {
+      sellSyncStatus.setText(R.string.sell_saved_local);
+    }
   }
 
   /** Update cashier cart UI without touching customer Presentation (e.g. during SUCCESS). */
@@ -2568,15 +2617,14 @@ public class SellActivity extends Activity {
                             if (menu != null) renderMenu();
                             updateShiftSummary();
                             updatePendingBadge();
-                            // Show change immediately (don't wait for server) and keep it on the
-                            // status line so staff can hand cash — Toast alone disappears too fast.
+                            // Pin change on a hold bar (timer or until «ตกลง») — Toast alone is too brief.
                             if (changeForCustomer > 0.01) {
                               String changeLine =
                                   getString(R.string.sell_change_hold, changeForCustomer);
                               sellSyncStatus.setText(changeLine);
-                              Toast.makeText(SellActivity.this, changeLine, Toast.LENGTH_LONG)
-                                  .show();
+                              showChangeHoldBar(changeForCustomer);
                             } else {
+                              hideChangeHoldBar();
                               sellSyncStatus.setText(R.string.sell_saved_local);
                               Toast.makeText(
                                       SellActivity.this,
