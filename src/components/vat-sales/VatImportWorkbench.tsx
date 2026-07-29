@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  applyVatImportRowsToMonth,
+  previewApplyVatImportRows,
+} from "@/lib/vat-import-apply";
+import {
   createVatImportRow,
   createVatImportRowsSkippingDupes,
   deleteVatImportRow,
@@ -22,11 +26,21 @@ import {
   type VatImportRowStatus,
 } from "@/lib/vat-import";
 import {
+  grabCsvToImportRows,
+  looksLikeGrabTransactionCsv,
+  parseGrabTransactionCsv,
+} from "@/lib/vat-import-grab-csv";
+import {
   linemanMonthlyToImportRows,
   looksLikeLinemanMonthlyReport,
   parseLinemanMonthlyReport,
 } from "@/lib/vat-import-lineman-monthly";
 import { extractPdfTextFromFile } from "@/lib/vat-import-pdf-text";
+import {
+  looksLikeShopeeTaxInvoice,
+  parseShopeeTaxInvoice,
+  shopeeTaxInvoiceToImportRow,
+} from "@/lib/vat-import-shopee-taxinvoice";
 import {
   formatVatMoney,
   moneyFieldValue,
@@ -99,6 +113,9 @@ export function VatImportWorkbench({ actor }: Props) {
     useState<VatImportChannel>("grab");
   const fileRef = useRef<HTMLInputElement>(null);
   const linemanRef = useRef<HTMLInputElement>(null);
+  const shopeeRef = useRef<HTMLInputElement>(null);
+  const grabRef = useRef<HTMLInputElement>(null);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -124,6 +141,21 @@ export function VatImportWorkbench({ actor }: Props) {
         ? rows
         : rows.filter((r) => r.channel === filterChannel),
     [rows, filterChannel],
+  );
+
+  const draftVisible = useMemo(
+    () => visible.filter((r) => r.status === "draft"),
+    [visible],
+  );
+
+  const selectedRows = useMemo(() => {
+    const picked = rows.filter((r) => selected[r.id] && r.status === "draft");
+    return picked.length > 0 ? picked : draftVisible;
+  }, [rows, selected, draftVisible]);
+
+  const applyPreview = useMemo(
+    () => previewApplyVatImportRows(month, selectedRows),
+    [month, selectedRows],
   );
 
   const sums = useMemo(() => sumVatImportDraftByChannel(rows), [rows]);
@@ -363,6 +395,191 @@ export function VatImportWorkbench({ actor }: Props) {
     }
   }
 
+  async function onImportShopeeInvoices(fileList: FileList | null) {
+    if (!fileList?.length) return;
+    setBusyId("shopee");
+    setError("");
+    setMsg("");
+    try {
+      const inputs = [];
+      let targetMonth = month;
+      for (const file of Array.from(fileList)) {
+        const text = await extractPdfTextFromFile(file);
+        if (!looksLikeShopeeTaxInvoice(text)) {
+          throw new Error(`ไม่ใช่ใบกำกับ Shopee: ${file.name}`);
+        }
+        const parsed = parseShopeeTaxInvoice(text, file.name);
+        if (!parsed.monthKey) {
+          throw new Error(`อ่านเดือนไม่ได้: ${file.name}`);
+        }
+        targetMonth = parsed.monthKey;
+        const up = await uploadVatImportFile({
+          file,
+          monthKey: parsed.monthKey,
+          channel: "shopee",
+        });
+        const row = shopeeTaxInvoiceToImportRow(parsed, {
+          storagePath: up.storagePath,
+          downloadUrl: up.downloadUrl,
+          fileName: up.fileName,
+          contentType: up.contentType,
+        });
+        if (row) inputs.push(row);
+      }
+      if (targetMonth !== month) setMonth(targetMonth);
+      const existing =
+        targetMonth === month ? rows : await listVatImportRows(targetMonth);
+      const { created, skipped } = await createVatImportRowsSkippingDupes(
+        inputs,
+        actor,
+        existing,
+      );
+      if (targetMonth === month) {
+        setRows((prev) =>
+          [...prev, ...created].sort((a, b) =>
+            a.dateKey.localeCompare(b.dateKey),
+          ),
+        );
+      } else {
+        setRows(
+          [...existing, ...created].sort((a, b) =>
+            a.dateKey.localeCompare(b.dateKey),
+          ),
+        );
+      }
+      setFilterChannel("shopee");
+      setMsg(
+        `Shopee ใบกำกับ · นำเข้า ${created.length}` +
+          (skipped ? ` · ข้ามซ้ำ ${skipped}` : "") +
+          ` · รวม VAT ${formatVatMoney(
+            created.reduce((s, r) => s + r.gpVat, 0),
+          )}`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyId("");
+      if (shopeeRef.current) shopeeRef.current.value = "";
+    }
+  }
+
+  async function onImportGrabCsv(fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file) return;
+    setBusyId("grab");
+    setError("");
+    setMsg("");
+    try {
+      const text = await file.text();
+      if (!looksLikeGrabTransactionCsv(text)) {
+        throw new Error(
+          "ไม่พบหัวตารางวันที่+ยอดใน CSV (รองรับ Transaction_Store / Gross+Commission+Net)",
+        );
+      }
+      const parsed = parseGrabTransactionCsv(text);
+      if (!parsed.monthKey || parsed.days.length === 0) {
+        throw new Error(
+          `อ่านแถววันไม่ได้${parsed.warnings.length ? ` · ${parsed.warnings.join(" · ")}` : ""}`,
+        );
+      }
+      if (parsed.monthKey !== month) setMonth(parsed.monthKey);
+      const existing =
+        parsed.monthKey === month
+          ? rows
+          : await listVatImportRows(parsed.monthKey);
+      const up = await uploadVatImportFile({
+        file,
+        monthKey: parsed.monthKey,
+        channel: "grab",
+      });
+      const inputs = grabCsvToImportRows(parsed, {
+        storagePath: up.storagePath,
+        downloadUrl: up.downloadUrl,
+        fileName: up.fileName,
+        contentType: up.contentType,
+      });
+      const { created, skipped } = await createVatImportRowsSkippingDupes(
+        inputs,
+        actor,
+        existing,
+      );
+      if (parsed.monthKey === month) {
+        setRows((prev) =>
+          [...prev, ...created].sort((a, b) =>
+            a.dateKey.localeCompare(b.dateKey),
+          ),
+        );
+      } else {
+        setRows(
+          [...existing, ...created].sort((a, b) =>
+            a.dateKey.localeCompare(b.dateKey),
+          ),
+        );
+      }
+      setFilterChannel("grab");
+      const g = created.reduce((s, r) => s + r.grossInclusive, 0);
+      setMsg(
+        `Grab CSV · ${created.length} วัน` +
+          (skipped ? ` · ข้ามซ้ำ ${skipped}` : "") +
+          ` · ขาย ${formatVatMoney(g)}` +
+          (parsed.warnings.length
+            ? ` · เตือน: ${parsed.warnings.join(" · ")}`
+            : ""),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyId("");
+      if (grabRef.current) grabRef.current.value = "";
+    }
+  }
+
+  async function onApplyToMonth() {
+    const targets = selectedRows;
+    if (targets.length === 0) {
+      setError("ไม่มีแถว draft ที่จะใช้เข้าเดือน");
+      return;
+    }
+    const prev = previewApplyVatImportRows(month, targets);
+    const ok = window.confirm(
+      `ใช้ ${prev.rowIds.length} แถวเข้าเดือน ${formatThaiMonthKey(month)}?\n` +
+        `LM ขาย ${formatVatMoney(prev.byChannel.lineman.gross)} · ` +
+        `Grab ${formatVatMoney(prev.byChannel.grab.gross)} · ` +
+        `Shopee ${formatVatMoney(prev.byChannel.shopee.gross)}\n` +
+        `ภาษีซื้อ GP เดลิเวอรี่ Σ ${formatVatMoney(prev.deliveryGpVat)}`,
+    );
+    if (!ok) return;
+    setBusyId("apply");
+    setError("");
+    setMsg("");
+    try {
+      const result = await applyVatImportRowsToMonth({
+        monthKey: month,
+        rows: targets,
+        actor,
+      });
+      await refresh();
+      setSelected({});
+      setMsg(
+        `ใช้เข้าเดือนแล้ว ${result.appliedCount} แถว · GP VAT ${formatVatMoney(result.preview.deliveryGpVat)} · สลับแท็บ「เดือน」ตรวจยอด`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  function toggleSelectAllDraft(on: boolean) {
+    if (!on) {
+      setSelected({});
+      return;
+    }
+    const next: Record<string, boolean> = {};
+    for (const r of draftVisible) next[r.id] = true;
+    setSelected(next);
+  }
+
   async function attachToRow(row: VatImportRow, file: File | null) {
     if (!file) return;
     setBusyId(row.id);
@@ -390,8 +607,8 @@ export function VatImportWorkbench({ actor }: Props) {
     <div className="vat-import-workbench">
       <header className="vat-sales-header">
         <p className="vat-sales-lead">
-          นำเข้าไฟล์จริง · แถววัน × ช่องทาง · LINE MAN อ่านรายงานเดือนได้ ·
-          ยังไม่รวมเข้าเดือนอัตโนมัติ (I3)
+          นำเข้าไฟล์ → แถววัน · LINE MAN / Grab CSV / Shopee ใบกำกับ · แล้วกดใช้เข้าเดือน
+          (I4–I5)
         </p>
       </header>
 
@@ -438,43 +655,52 @@ export function VatImportWorkbench({ actor }: Props) {
       </div>
 
       <p className="muted vat-sales-hint vat-hint-one-line">
-        LINE MAN: ปุ่มอ่านรายงานเดือน → แถววันอัตโนมัติ (GP รวม VAT ·
-        โอนหลัง=ยอดเงินในระบบ) · อื่นๆ คีย์มือ/อัปโหลด · รวมเข้าเดือน = I5
+        ติ๊กแถว draft (ไม่ติ๊ก = ใช้ทุก draft ที่มองเห็น) →{" "}
+        <strong>ใช้เข้าเดือน</strong> · Σ ขาย/โอน/GP VAT เข้าแท็บเดือน
       </p>
 
       <div className="vat-month-actions vat-month-actions--mini">
         <button
           type="button"
-          className="vat-mini-btn vat-mini-btn--primary"
+          className="vat-mini-btn"
           disabled={Boolean(busyId)}
           onClick={() => linemanRef.current?.click()}
         >
-          {busyId === "lineman" ? "กำลังอ่าน…" : "อ่าน LINE MAN รายงานเดือน"}
+          {busyId === "lineman" ? "…" : "LINE MAN รายงานเดือน"}
         </button>
-        <label className="vat-sales-month">
-          ช่องทางอัปโหลด
-          <select
-            className="vat-thai-month-select"
-            value={uploadChannel}
-            disabled={Boolean(busyId)}
-            onChange={(e) =>
-              setUploadChannel(e.target.value as VatImportChannel)
-            }
-          >
-            {CHANNELS.map((c) => (
-              <option key={c} value={c}>
-                {VAT_IMPORT_CHANNEL_LABELS[c]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <button
+          type="button"
+          className="vat-mini-btn"
+          disabled={Boolean(busyId)}
+          onClick={() => grabRef.current?.click()}
+        >
+          {busyId === "grab" ? "…" : "Grab CSV"}
+        </button>
+        <button
+          type="button"
+          className="vat-mini-btn"
+          disabled={Boolean(busyId)}
+          onClick={() => shopeeRef.current?.click()}
+        >
+          {busyId === "shopee" ? "…" : "Shopee ใบกำกับ PDF"}
+        </button>
+        <button
+          type="button"
+          className="vat-mini-btn vat-mini-btn--primary"
+          disabled={Boolean(busyId) || applyPreview.rowIds.length === 0}
+          onClick={() => void onApplyToMonth()}
+        >
+          {busyId === "apply"
+            ? "กำลังใส่เดือน…"
+            : `ใช้เข้าเดือน (${applyPreview.rowIds.length})`}
+        </button>
         <button
           type="button"
           className="vat-mini-btn"
           disabled={Boolean(busyId)}
           onClick={() => fileRef.current?.click()}
         >
-          อัปโหลดไฟล์
+          อัปโหลดอื่น
         </button>
         <button
           type="button"
@@ -507,6 +733,21 @@ export function VatImportWorkbench({ actor }: Props) {
           hidden
           onChange={(e) => void onImportLinemanMonthly(e.target.files)}
         />
+        <input
+          ref={shopeeRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          multiple
+          hidden
+          onChange={(e) => void onImportShopeeInvoices(e.target.files)}
+        />
+        <input
+          ref={grabRef}
+          type="file"
+          accept=".csv,text/csv"
+          hidden
+          onChange={(e) => void onImportGrabCsv(e.target.files)}
+        />
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -533,6 +774,19 @@ export function VatImportWorkbench({ actor }: Props) {
           <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-import-table">
             <thead>
               <tr>
+                <th className="col-claim">
+                  <input
+                    type="checkbox"
+                    className="vat-claim-check"
+                    checked={
+                      draftVisible.length > 0 &&
+                      draftVisible.every((r) => selected[r.id])
+                    }
+                    disabled={draftVisible.length === 0}
+                    onChange={(e) => toggleSelectAllDraft(e.target.checked)}
+                    aria-label="เลือก draft ทั้งหมด"
+                  />
+                </th>
                 <th className="col-date">วันที่</th>
                 <th className="col-seg">ช่องทาง</th>
                 <th className="col-seg">ชนิด</th>
@@ -549,8 +803,8 @@ export function VatImportWorkbench({ actor }: Props) {
             <tbody>
               {visible.length === 0 ? (
                 <tr>
-                  <td className="col-seg" colSpan={11}>
-                    ยังไม่มีแถว — อัปโหลดไฟล์หรือกด + แถวว่าง
+                  <td className="col-seg" colSpan={12}>
+                    ยังไม่มีแถว — ใช้ปุ่ม LINE MAN / Grab / Shopee หรือ + แถวว่าง
                   </td>
                 </tr>
               ) : (
@@ -562,6 +816,21 @@ export function VatImportWorkbench({ actor }: Props) {
                       key={row.id}
                       className={dup ? "vat-import-row--dup" : undefined}
                     >
+                      <td className="col-claim">
+                        <input
+                          type="checkbox"
+                          className="vat-claim-check"
+                          disabled={row.status !== "draft"}
+                          checked={Boolean(selected[row.id])}
+                          onChange={(e) =>
+                            setSelected((prev) => ({
+                              ...prev,
+                              [row.id]: e.target.checked,
+                            }))
+                          }
+                          aria-label={`เลือก ${row.dateKey}`}
+                        />
+                      </td>
                       <td className="col-date col-input">
                         <input
                           className="vat-sales-input"
