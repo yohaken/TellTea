@@ -9,13 +9,19 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD\s*=\s*391\b/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD\s*=\s*396\b/);
 assert.match(read("src/lib/staff-presence.ts"), /touchStaffPresence/);
 assert.match(read("src/lib/staff-presence.ts"), /formatPresenceAge/);
 assert.match(read("src/lib/staff-presence.ts"), /staffShortLabel/);
 assert.match(read("src/lib/staff-presence.ts"), /resolvePresenceLabel/);
 assert.match(read("src/lib/staff-presence.ts"), /ชื่อเล่นเต็มก่อน/);
+assert.match(read("src/lib/staff-presence.ts"), /STAFF_PRESENCE_IDLE_MS/);
+assert.match(read("src/lib/staff-presence.ts"), /STAFF_PRESENCE_AGE_TICK_MS/);
 assert.match(read("src/components/StaffPresenceDock.tsx"), /staff-presence-name/);
+assert.match(read("src/components/StaffPresenceDock.tsx"), /visibilitychange/);
+assert.match(read("src/components/StaffPresenceDock.tsx"), /pageshow/);
+assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /STAFF_PRESENCE_IDLE_MS/);
+assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /pointerdown/);
 assert.match(read("src/app/globals.css"), /\.staff-presence-name\b/);
 assert.match(read("src/lib/employees.ts"), /nickname/);
 assert.match(read("src/lib/types.ts"), /lastSeenAt/);
@@ -29,7 +35,6 @@ assert.match(read("src/app/staff/page.tsx"), /แก้ชื่อ/);
 assert.match(read("src/components/StaffReadinessTable.tsx"), /staff-ready-col-nick/);
 assert.match(read("src/app/globals.css"), /\.staff-presence-dock\b/);
 
-// unit-ish: short label + age formatting via dynamic import of logic duplicated inline
 function staffShortLabel(source, max = 2) {
   const t = source.trim().replace(/\s+/g, "");
   if (!t) return "?";
@@ -51,5 +56,6 @@ assert.equal(staffShortLabel("เป้"), "เป้");
 assert.equal(staffShortLabel("สมชาย"), "สม");
 assert.equal(formatPresenceAge(Date.now() - 5 * 60_000, Date.now()), "5น");
 assert.equal(formatPresenceAge(Date.now() - 2 * 3600_000, Date.now()), "2ช");
+assert.equal(formatPresenceAge(Date.now() - 55 * 60_000, Date.now()), "55น");
 
 console.log("test-staff-presence: ok");

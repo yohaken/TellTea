@@ -15,7 +15,11 @@ import { mapFirestoreError } from "./firestore-errors";
 /** ถือว่ายังอยู่ในระบบถ้าเห็นภายในช่วงนี้ */
 export const STAFF_PRESENCE_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** heartbeat ระหว่างใช้งาน */
-export const STAFF_PRESENCE_HEARTBEAT_MS = 60_000;
+export const STAFF_PRESENCE_HEARTBEAT_MS = 45_000;
+/** ไม่มี interaction นานเกินนี้ → หยุดปัก lastSeenAt (แท็บเปิดทิ้งไว้ไม่นับ) */
+export const STAFF_PRESENCE_IDLE_MS = 2.5 * 60_000;
+/** รีเฟรชป้ายอายุบน dock ของเจ้าของ */
+export const STAFF_PRESENCE_AGE_TICK_MS = 15_000;
 /** ออนไลน์สด (เขียว) */
 export const STAFF_PRESENCE_ONLINE_MS = 3 * 60_000;
 
