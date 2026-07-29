@@ -39,6 +39,7 @@ import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal"
 import { CashInLedgerPanel } from "@/components/CashInLedgerPanel";
 import { BillNoticeLedgerPanel } from "@/components/BillNoticeLedgerPanel";
 import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
+import { EntryVatFieldset } from "@/components/EntryVatFieldset";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { personalProfileLabel } from "@/lib/profile";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
@@ -50,6 +51,7 @@ import {
   type LedgerTypeSource,
 } from "@/lib/ledger-ai";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
+import { proposePurchaseVatInput } from "@/lib/entry-vat";
 import { friendlyFirestoreWriteError, saveImageToDevice } from "@/lib/receipts";
 import {
   type PhotoUploadProgress,
@@ -63,6 +65,7 @@ import {
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
+import { formatVatMoney } from "@/lib/vat-number-format";
 import { ArrowDownLeft, Trash2, X } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
@@ -516,6 +519,7 @@ function LedgerView() {
                   <th className="col-desc">รายการ</th>
                   <th className="col-in">เข้า</th>
                   <th className="col-out">ออก</th>
+                  <th className="col-vat" title="ภาษีซื้อ">VAT</th>
                   <th className="col-type">ประเภท</th>
                 </tr>
               </thead>
@@ -548,7 +552,7 @@ function LedgerView() {
                           <button
                             type="button"
                             className="desc-link"
-                            title="แตะเพื่อแก้ไข"
+                            title="แตะเพื่อแก้ไข · ช่อง VAT ในกล่อง"
                             onClick={() => setEditing(row)}
                           >
                             {row.description}
@@ -583,6 +587,15 @@ function LedgerView() {
                       </td>
                       <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>
                       <td className="col-out">{row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}</td>
+                      <td className="col-vat">
+                        {row.amountOut > 0 && row.hasVat && (row.vatInput || 0) > 0 ? (
+                          <span className="owner-vat-badge" title="ภาษีซื้อ">
+                            {formatVatMoney(row.vatInput || 0)}
+                          </span>
+                        ) : (
+                          <span className="muted owner-vat-empty">—</span>
+                        )}
+                      </td>
                       <td className="col-type">
                         <span className="muted" style={{ fontSize: "0.72rem" }}>
                           {row.type ? labelLedgerType(row.type) : "—"}
@@ -785,6 +798,9 @@ function AddOutModal({
   const [previewSource, setPreviewSource] = useState<LedgerTypeSource>("heuristic");
   const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [hasVat, setHasVat] = useState(false);
+  const [vatInputStr, setVatInputStr] = useState("");
+  const [vatInvoiceNo, setVatInvoiceNo] = useState("");
 
   const filteredSuggestions = useMemo(() => {
     const q = description.trim().toLowerCase();
@@ -864,17 +880,27 @@ function AddOutModal({
         }
       }
 
+      const amountOut = Number(amount);
+      const vatInputNum = Number(String(vatInputStr).replace(/,/g, ""));
       setSaveStage("saving");
       await addLedgerEntry({
         date: parseDateInput(date),
         description,
         amountIn: 0,
-        amountOut: Number(amount),
+        amountOut,
         type,
         typeSource,
         typeAiReason,
         createdBy,
         receiptUrls,
+        hasVat,
+        vatInput:
+          hasVat && Number.isFinite(vatInputNum) && vatInputNum > 0
+            ? vatInputNum
+            : hasVat
+              ? proposePurchaseVatInput(amountOut)
+              : 0,
+        vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
       });
       setSaveStage("done");
       onSaved();
@@ -929,10 +955,33 @@ function AddOutModal({
               step="0.01"
               inputMode="decimal"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setAmount(next);
+                if (hasVat && !vatInputStr.trim()) {
+                  const n = Number(next);
+                  if (Number.isFinite(n) && n > 0) {
+                    setVatInputStr(String(proposePurchaseVatInput(n)));
+                  }
+                }
+              }}
               required
             />
           </div>
+          <EntryVatFieldset
+            idPrefix="add-out"
+            disabled={busy}
+            amountInclusive={Number(amount) || 0}
+            hasVat={hasVat}
+            vatInputStr={vatInputStr}
+            vatInvoiceNo={vatInvoiceNo}
+            onHasVatChange={setHasVat}
+            onVatInputChange={setVatInputStr}
+            onVatInvoiceNoChange={setVatInvoiceNo}
+            onVendorHint={(name) => {
+              if (!description.trim()) setDescription(name);
+            }}
+          />
           <aside className="ledger-photo-tip is-in-form" role="note" aria-label="คำแนะนำถ่ายหลักฐาน">
             <p className="ledger-photo-tip-title">ถ่ายหลักฐานให้คมชัดก่อนแนบ</p>
             <p className="ledger-photo-tip-text">
@@ -1036,6 +1085,15 @@ function EditEntryModal({
   const [saveStage, setSaveStage] = useState<AiSaveStage | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
+  const [hasVat, setHasVat] = useState(Boolean(!isIn && entry.hasVat));
+  const [vatInputStr, setVatInputStr] = useState(() =>
+    !isIn && entry.hasVat && (entry.vatInput || 0) > 0
+      ? String(entry.vatInput)
+      : "",
+  );
+  const [vatInvoiceNo, setVatInvoiceNo] = useState(
+    !isIn ? entry.vatInvoiceNo || "" : "",
+  );
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getLedgerReceiptUrls(entry));
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
   const [previewType, setPreviewType] = useState(entry.type || "");
@@ -1129,6 +1187,7 @@ function EditEntryModal({
         }
       }
 
+      const vatInputNum = Number(String(vatInputStr).replace(/,/g, ""));
       await updateLedgerEntry(entry.id, {
         date: parseDateInput(date),
         description,
@@ -1138,6 +1197,18 @@ function EditEntryModal({
         typeSource,
         typeAiReason,
         receiptUrls,
+        ...(isIn
+          ? { hasVat: false, vatInput: 0, vatInvoiceNo: "" }
+          : {
+              hasVat,
+              vatInput:
+                hasVat && Number.isFinite(vatInputNum) && vatInputNum > 0
+                  ? vatInputNum
+                  : hasVat
+                    ? proposePurchaseVatInput(value)
+                    : 0,
+              vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
+            }),
       });
       onSaved();
     } catch (err) {
@@ -1171,15 +1242,27 @@ function EditEntryModal({
       >
         <div className="entry-toolbar module-form-head">
           <h2 className="panel-title">แก้ไขรายการ</h2>
-          <button
-            type="button"
-            className="ghost-btn icon-btn"
-            aria-label="ปิด"
-            disabled={busy}
-            onClick={onClose}
-          >
-            <X size={18} />
-          </button>
+          <div className="entry-toolbar-actions">
+            <button
+              type="button"
+              className="trash-btn"
+              aria-label="ลบรายการ"
+              title="ลบรายการ"
+              disabled={busy}
+              onClick={() => void onDelete()}
+            >
+              <Trash2 size={16} />
+            </button>
+            <button
+              type="button"
+              className="ghost-btn icon-btn"
+              aria-label="ปิด"
+              disabled={busy}
+              onClick={onClose}
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
         <EntryTimestampsMeta
           entryDate={entry.date}
@@ -1244,10 +1327,36 @@ function EditEntryModal({
               step="0.01"
               inputMode="decimal"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setAmount(next);
+                if (!isIn && hasVat && !vatInputStr.trim()) {
+                  const n = Number(next);
+                  if (Number.isFinite(n) && n > 0) {
+                    setVatInputStr(String(proposePurchaseVatInput(n)));
+                  }
+                }
+              }}
               required
             />
           </div>
+
+          {!isIn ? (
+            <EntryVatFieldset
+              idPrefix="edit-ledger"
+              disabled={busy}
+              amountInclusive={Number(amount) || 0}
+              hasVat={hasVat}
+              vatInputStr={vatInputStr}
+              vatInvoiceNo={vatInvoiceNo}
+              onHasVatChange={setHasVat}
+              onVatInputChange={setVatInputStr}
+              onVatInvoiceNoChange={setVatInvoiceNo}
+              onVendorHint={(name) => {
+                if (!description.trim()) setDescription(name);
+              }}
+            />
+          ) : null}
 
           <PhotoAttachMultiField
             label="รูป"

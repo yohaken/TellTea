@@ -3,15 +3,20 @@
  */
 import assert from "node:assert/strict";
 import {
+  normalizePurchaseVat,
+  proposePurchaseVatInput,
+} from "../src/lib/entry-vat";
+import {
   normalizeOwnerBookVat,
   proposeOwnerBookVatInput,
 } from "../src/lib/owner-books";
 
+assert.equal(proposePurchaseVatInput(107), 7);
 assert.equal(proposeOwnerBookVatInput(107), 7);
-assert.equal(proposeOwnerBookVatInput(0), 0);
+assert.equal(proposePurchaseVatInput(0), 0);
 
 {
-  const off = normalizeOwnerBookVat({ hasVat: false }, 107);
+  const off = normalizePurchaseVat({ hasVat: false }, 107);
   assert.equal(off.hasVat, false);
   assert.equal(off.vatInput, 0);
   assert.equal(off.vatBase, 0);
@@ -25,7 +30,7 @@ assert.equal(proposeOwnerBookVatInput(0), 0);
 }
 
 {
-  const custom = normalizeOwnerBookVat(
+  const custom = normalizePurchaseVat(
     { hasVat: true, vatInput: 5.5, vatInvoiceNo: " INV-1 " },
     107,
   );

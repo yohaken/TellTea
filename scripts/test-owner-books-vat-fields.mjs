@@ -29,7 +29,16 @@ assert.match(pageSrc, /className="trash-btn"/);
 assert.match(pageSrc, /col-vat/);
 assert.match(pageSrc, /owner-vat-box/);
 
-assert.match(vatSrc, /sumOwnerBooksVatInputByMonth/);
-assert.match(vatSrc, /ดึงภาษีซื้อจากบช\.เจ้าของ/);
+assert.match(vatSrc, /sumBothBooksVatInputByMonth/);
+assert.match(vatSrc, /ดึงภาษีซื้อจากสองบช/);
+
+const booksSrc = readFileSync(join(root, "src/lib/books-vat-month.ts"), "utf8");
+assert.match(booksSrc, /sumBothBooksVatInputByMonth/);
+assert.match(booksSrc, /sumLedgerVatInputByMonth/);
+assert.match(booksSrc, /sumOwnerBooksVatInputByMonth/);
+
+const ledgerPage = readFileSync(join(root, "src/app/ledger/page.tsx"), "utf8");
+assert.match(ledgerPage, /EntryVatFieldset/);
+assert.match(ledgerPage, /col-vat/);
 
 console.log("OK test-owner-books-vat-fields");

@@ -2127,21 +2127,39 @@ body.modal-open .main-panel {
   }
 }
 
-.owner-books-page .sheet-table .col-vat {
+.owner-books-page .sheet-table .col-vat,
+.sheet-table .col-vat {
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   font-size: 0.78rem;
 }
 
-.owner-books-page .owner-vat-badge {
+.owner-books-page .owner-vat-badge,
+.owner-vat-badge {
   display: inline-block;
   color: #1a5c3a;
   font-weight: 600;
 }
 
-.owner-books-page .owner-vat-empty {
+.owner-books-page .owner-vat-empty,
+.owner-vat-empty {
   font-size: 0.78rem;
+}
+
+.entry-vat-box {
+  margin: 0.35rem 0 0.55rem;
+  padding: 0.55rem 0.65rem 0.45rem;
+  border: 1px solid rgba(40, 90, 60, 0.28);
+  border-radius: 0.65rem;
+  background: rgba(40, 90, 60, 0.05);
+}
+
+.entry-vat-box legend {
+  padding: 0 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1a5c3a;
 }
 
 .owner-books-page .owner-row-tappable .col-date,

@@ -53,7 +53,7 @@ import {
   type VatMonthlyReturn,
   type VatSegmentState,
 } from "@/lib/vat-monthly";
-import { sumOwnerBooksVatInputByMonth } from "@/lib/owner-books";
+import { sumBothBooksVatInputByMonth } from "@/lib/books-vat-month";
 import { exportPersonalTaxYearXlsx } from "@/lib/xlsx-export";
 
 function emptyBookRow(month: string): MonthCategoryRow {
@@ -616,23 +616,25 @@ function InputVatTable({
   const [pullBusy, setPullBusy] = useState(false);
   const [pullMsg, setPullMsg] = useState("");
 
-  async function pullIngredientFromOwnerBooks() {
+  async function pullIngredientFromBothBooks() {
     if (locked) return;
     setPullBusy(true);
     setPullMsg("");
     try {
-      const { vatInput, count } = await sumOwnerBooksVatInputByMonth(month);
-      if (count <= 0 || vatInput <= 0) {
-        setPullMsg("ยังไม่มีรายการบช.เจ้าของที่ติ๊กช่อง VAT ในเดือนนี้");
+      const sum = await sumBothBooksVatInputByMonth(month);
+      if (sum.count <= 0 || sum.vatInput <= 0) {
+        setPullMsg(
+          "ยังไม่มีรายการที่ติ๊กช่อง VAT ในบช.พนักงานหรือบช.เจ้าของเดือนนี้",
+        );
         return;
       }
-      // ใส่รวมที่หน้าร้าน (วัตถุดิบทั่วไป) · เดลิเวอรี่คง GP
+      // รวมสองบช. → วัตถุดิบหน้าร้าน · GP เดลิเวอรี่แยก (ไม่ทับ)
       onStorefrontChange({
         ...storefrontDraft,
-        ingredientVat: moneyInputValue(vatInput),
+        ingredientVat: moneyInputValue(sum.vatInput),
       });
       setPullMsg(
-        `ดึงภาษีซื้อ ${formatVatMoney(vatInput)} จาก ${count} รายการบช.เจ้าของ → วัตถุดิบหน้าร้าน`,
+        `ดึง ${formatVatMoney(sum.vatInput)} · พนง. ${formatVatMoney(sum.ledgerVat)} (${sum.ledgerCount}) + เจ้าของ ${formatVatMoney(sum.ownerVat)} (${sum.ownerCount}) → วัตถุดิบหน้าร้าน`,
       );
     } catch (e) {
       setPullMsg(e instanceof Error ? e.message : "ดึงไม่สำเร็จ");
@@ -726,7 +728,8 @@ function InputVatTable({
     <section className="vat-table-block">
       <h2 className="vat-table-title">2) ภาษีซื้อ — กลุ่มหักได้</h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        ภาษีซื้อวัตถุดิบดึงจากรายการบช.เจ้าของที่ติ๊กช่อง VAT ได้ · GP คีย์/ประมาณแยก
+        วัตถุดิบ = รวมภาษีซื้อที่ติ๊กจากบช.พนง. + บช.เจ้าของ · GP เดลิเวอรี่แยก ·
+        อย่าคีย์บิลซ้ำสองบช.
       </p>
       {!locked ? (
         <div className="vat-month-actions vat-month-actions--mini">
@@ -734,9 +737,9 @@ function InputVatTable({
             type="button"
             className="vat-mini-btn"
             disabled={pullBusy}
-            onClick={() => void pullIngredientFromOwnerBooks()}
+            onClick={() => void pullIngredientFromBothBooks()}
           >
-            {pullBusy ? "กำลังดึง…" : "ดึงภาษีซื้อจากบช.เจ้าของ"}
+            {pullBusy ? "กำลังดึง…" : "ดึงภาษีซื้อจากสองบช."}
           </button>
         </div>
       ) : null}

@@ -18,9 +18,14 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { monthKeyFromMs } from "./categories";
+import {
+  normalizePurchaseVat,
+  proposePurchaseVatInput,
+  type EntryVatFields,
+} from "./entry-vat";
 import { getDb } from "./firebase";
 import type { LedgerEntry } from "./types";
-import { computeVatFromGross, normalizeMoney, roundMoney } from "./vat-sales";
+import { normalizeMoney, roundMoney } from "./vat-sales";
 import type { ImportOwnerBookRow } from "./xlsx-import";
 
 export const OWNER_BOOKS_PAGE_SIZE = 60;
@@ -31,22 +36,9 @@ export const OWNER_BOOKS_RECEIPT_MAX = 6;
 /** Owner books row — out-only + optional note + ช่อง VAT (ภาษีซื้อ). */
 export type OwnerBookEntry = LedgerEntry & {
   note?: string;
-  /** มีใบกำกับ / ขอหักภาษีซื้อ */
-  hasVat?: boolean;
-  /** ยอดภาษีซื้อ (บาท) */
-  vatInput?: number;
-  /** ฐานก่อน VAT (บาท) — คำนวณหรือคีย์ */
-  vatBase?: number;
-  /** เลขที่ใบกำกับภาษี (ถ้ามี) */
-  vatInvoiceNo?: string;
 };
 
-export type OwnerBookVatFields = {
-  hasVat: boolean;
-  vatInput: number;
-  vatBase: number;
-  vatInvoiceNo: string;
-};
+export type OwnerBookVatFields = EntryVatFields;
 
 export type OwnerBookEntryInput = {
   date: number;
@@ -65,37 +57,10 @@ export type OwnerBookEntryInput = {
   vatInvoiceNo?: string;
 };
 
-/** เสนอภาษีซื้อจากยอดรวม (รวม VAT) · เรท 7% */
-export function proposeOwnerBookVatInput(amountOut: number): number {
-  return computeVatFromGross(normalizeMoney(amountOut)).vatOutput;
-}
-
-export function normalizeOwnerBookVat(
-  raw: Partial<OwnerBookVatFields> | undefined,
-  amountOut = 0,
-): OwnerBookVatFields {
-  const hasVat = Boolean(raw?.hasVat);
-  if (!hasVat) {
-    return { hasVat: false, vatInput: 0, vatBase: 0, vatInvoiceNo: "" };
-  }
-  const proposed = proposeOwnerBookVatInput(amountOut);
-  const vatInputRaw = Number(raw?.vatInput);
-  const vatInput =
-    Number.isFinite(vatInputRaw) && vatInputRaw > 0
-      ? normalizeMoney(vatInputRaw)
-      : proposed;
-  const vatBaseRaw = Number(raw?.vatBase);
-  const vatBase =
-    Number.isFinite(vatBaseRaw) && vatBaseRaw > 0
-      ? normalizeMoney(vatBaseRaw)
-      : roundMoney(Math.max(0, normalizeMoney(amountOut) - vatInput));
-  return {
-    hasVat: true,
-    vatInput,
-    vatBase,
-    vatInvoiceNo: String(raw?.vatInvoiceNo || "").trim(),
-  };
-}
+/** @deprecated ใช้ proposePurchaseVatInput จาก entry-vat */
+export const proposeOwnerBookVatInput = proposePurchaseVatInput;
+/** @deprecated ใช้ normalizePurchaseVat จาก entry-vat */
+export const normalizeOwnerBookVat = normalizePurchaseVat;
 
 export type OwnerBooksPage = {
   entries: OwnerBookEntry[];

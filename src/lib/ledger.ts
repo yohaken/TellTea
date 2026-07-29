@@ -24,8 +24,10 @@ import {
   type Query,
   type Unsubscribe,
 } from "firebase/firestore";
+import { normalizePurchaseVat } from "./entry-vat";
 import { getDb } from "./firebase";
 import type { LedgerEntry, LedgerEntryInput } from "./types";
+import { normalizeMoney, roundMoney } from "./vat-sales";
 import type { ImportLedgerRow } from "./xlsx-import";
 
 export const LEDGER_PAGE_SIZE = 60;
@@ -67,19 +69,33 @@ function normalizeReceiptFields(input: {
 function mapEntry(d: QueryDocumentSnapshot): LedgerEntry {
   const data = d.data() as Omit<LedgerEntry, "id">;
   const createdAt = Number(data.createdAt) || 0;
+  const amountIn = Number(data.amountIn) || 0;
+  const amountOut = Number(data.amountOut) || 0;
   const { receiptUrl, receiptUrls } = normalizeReceiptFields({
     receiptUrl: data.receiptUrl,
     receiptUrls: data.receiptUrls,
   });
+  // VAT ใช้กับเงินออกเท่านั้น (บิลซื้อ)
+  const vat = normalizePurchaseVat(
+    {
+      hasVat: Boolean(data.hasVat) && amountOut > 0,
+      vatInput: Number(data.vatInput) || 0,
+      vatBase: Number(data.vatBase) || 0,
+      vatInvoiceNo:
+        typeof data.vatInvoiceNo === "string" ? data.vatInvoiceNo : "",
+    },
+    amountOut,
+  );
   return {
     id: d.id,
     ...data,
-    amountIn: Number(data.amountIn) || 0,
-    amountOut: Number(data.amountOut) || 0,
+    amountIn,
+    amountOut,
     createdAt,
     updatedAt: Number(data.updatedAt) || createdAt,
     receiptUrl,
     receiptUrls,
+    ...vat,
   };
 }
 
@@ -344,11 +360,22 @@ function validateLedgerPayload(payload: {
 export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
   const now = Date.now();
   const { receiptUrl, receiptUrls } = normalizeReceiptFields(input);
+  const amountIn = Number(input.amountIn) || 0;
+  const amountOut = Number(input.amountOut) || 0;
+  const vat = normalizePurchaseVat(
+    {
+      hasVat: Boolean(input.hasVat) && amountOut > 0,
+      vatInput: input.vatInput,
+      vatBase: input.vatBase,
+      vatInvoiceNo: input.vatInvoiceNo,
+    },
+    amountOut,
+  );
   const payload = {
     date: input.date,
     description: input.description.trim(),
-    amountIn: Number(input.amountIn) || 0,
-    amountOut: Number(input.amountOut) || 0,
+    amountIn,
+    amountOut,
     type: (input.type || "").trim(),
     typeSource: (input.typeSource || "").trim(),
     typeAiReason: (input.typeAiReason || "").trim(),
@@ -357,6 +384,10 @@ export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
     updatedAt: now,
     receiptUrl,
     receiptUrls,
+    hasVat: vat.hasVat,
+    vatInput: vat.vatInput,
+    vatBase: vat.vatBase,
+    vatInvoiceNo: vat.vatInvoiceNo,
   };
   validateLedgerPayload(payload);
   const ref = await addDoc(collection(getDb(), "ledger"), payload);
@@ -378,6 +409,10 @@ export async function updateLedgerEntry(
       | "typeAiReason"
       | "receiptUrl"
       | "receiptUrls"
+      | "hasVat"
+      | "vatInput"
+      | "vatBase"
+      | "vatInvoiceNo"
     >
   >,
 ): Promise<void> {
@@ -388,7 +423,9 @@ export async function updateLedgerEntry(
   const prevIn = Number(prev.amountIn) || 0;
   const prevOut = Number(prev.amountOut) || 0;
 
-  const next: Record<string, string | number | string[]> = { updatedAt: Date.now() };
+  const next: Record<string, string | number | boolean | string[]> = {
+    updatedAt: Date.now(),
+  };
   if (patch.date != null) next.date = patch.date;
   if (patch.description != null) next.description = patch.description.trim();
   if (patch.amountIn != null) next.amountIn = Number(patch.amountIn);
@@ -418,8 +455,62 @@ export async function updateLedgerEntry(
       amountOut: nextOut,
     });
   }
+
+  const vatTouched =
+    patch.hasVat != null ||
+    patch.vatInput != null ||
+    patch.vatBase != null ||
+    patch.vatInvoiceNo != null ||
+    patch.amountOut != null ||
+    patch.amountIn != null;
+  if (vatTouched) {
+    const vat = normalizePurchaseVat(
+      {
+        hasVat:
+          nextOut > 0 &&
+          (patch.hasVat != null ? Boolean(patch.hasVat) : Boolean(prev.hasVat)),
+        vatInput:
+          patch.vatInput != null ? patch.vatInput : Number(prev.vatInput) || 0,
+        vatBase: patch.vatBase != null ? patch.vatBase : Number(prev.vatBase) || 0,
+        vatInvoiceNo:
+          patch.vatInvoiceNo != null
+            ? patch.vatInvoiceNo
+            : String(prev.vatInvoiceNo || ""),
+      },
+      nextOut,
+    );
+    next.hasVat = vat.hasVat;
+    next.vatInput = vat.vatInput;
+    next.vatBase = vat.vatBase;
+    next.vatInvoiceNo = vat.vatInvoiceNo;
+  }
+
   await updateDoc(entryRef, next);
   await applyBalanceDelta(nextIn - prevIn, nextOut - prevOut);
+}
+
+/** รวมภาษีซื้อจากรายการบช.พนักงานที่ติ๊ก VAT ในเดือน YYYY-MM */
+export async function sumLedgerVatInputByMonth(
+  monthKey: string,
+): Promise<{ vatInput: number; count: number }> {
+  if (!/^\d{4}-\d{2}$/.test(monthKey)) {
+    return { vatInput: 0, count: 0 };
+  }
+  const [ys, ms] = monthKey.split("-");
+  const year = Number(ys);
+  const month = Number(ms);
+  if (!year || !month) return { vatInput: 0, count: 0 };
+  const rows = await listLedgerEntriesInMonth(year, month);
+  let vatInput = 0;
+  let count = 0;
+  for (const row of rows) {
+    if (!row.hasVat || row.amountOut <= 0) continue;
+    const v = normalizeMoney(row.vatInput);
+    if (v <= 0) continue;
+    vatInput = roundMoney(vatInput + v);
+    count += 1;
+  }
+  return { vatInput, count };
 }
 
 /** Bulk upsert type on many ledger rows (owner-driven reclassify). */
