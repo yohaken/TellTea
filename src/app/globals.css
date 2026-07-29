@@ -17299,6 +17299,219 @@ a.ghost-btn {
   background: #fffef8;
 }
 
+/* โต๊ะจูน — Tune Desk popup */
+.vat-tune-desk-fab {
+  position: fixed;
+  right: 0.85rem;
+  bottom: 0.85rem;
+  z-index: 80;
+  border: 1px solid rgba(28, 42, 31, 0.35);
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  background: #1c2a1f;
+  color: #f6f1e6;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(20, 30, 22, 0.22);
+}
+
+.vat-tune-desk-fab--pulse {
+  animation: vat-tune-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes vat-tune-pulse {
+  0%,
+  100% {
+    box-shadow: 0 6px 18px rgba(20, 30, 22, 0.22);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(180, 120, 40, 0.35);
+  }
+}
+
+.vat-tune-desk-badge {
+  margin-left: 0.35rem;
+  display: inline-flex;
+  min-width: 1.1rem;
+  justify-content: center;
+  border-radius: 999px;
+  background: #c47a20;
+  color: #fff;
+  font-size: 0.68rem;
+  padding: 0.05rem 0.3rem;
+}
+
+.vat-tune-desk-panel {
+  position: fixed;
+  right: 0.75rem;
+  bottom: 3.2rem;
+  z-index: 85;
+  width: min(22rem, calc(100vw - 1.2rem));
+  max-height: min(70vh, 34rem);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(28, 42, 31, 0.25);
+  border-radius: 10px;
+  background: #fffdf7;
+  box-shadow: 0 12px 36px rgba(20, 30, 22, 0.22);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  overflow: hidden;
+}
+
+.vat-tune-desk-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.12);
+  background: rgba(28, 42, 31, 0.05);
+}
+
+.vat-tune-desk-presence {
+  margin: 0;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.72rem;
+}
+
+.vat-tune-desk-presence.is-online {
+  background: rgba(40, 110, 60, 0.1);
+  color: rgba(20, 70, 35, 0.95);
+}
+
+.vat-tune-desk-presence.is-offline {
+  background: rgba(120, 70, 20, 0.1);
+  color: rgba(90, 50, 10, 0.95);
+}
+
+.vat-tune-desk-protocol {
+  margin: 0 0.55rem 0.35rem;
+  font-size: 0.7rem;
+}
+
+.vat-tune-desk-protocol ol {
+  margin: 0.25rem 0 0 1rem;
+  padding: 0;
+}
+
+.vat-tune-desk-namegate,
+.vat-tune-desk-identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: end;
+  padding: 0.25rem 0.55rem 0.4rem;
+}
+
+.vat-tune-desk-namegate label,
+.vat-tune-desk-role {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.7rem;
+  flex: 1;
+  min-width: 7rem;
+}
+
+.vat-tune-desk-log {
+  flex: 1;
+  min-height: 8rem;
+  overflow: auto;
+  padding: 0.35rem 0.55rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.08);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.vat-tune-desk-msg {
+  margin: 0 0 0.45rem;
+  padding: 0.3rem 0.4rem;
+  border-radius: 6px;
+  background: rgba(28, 42, 31, 0.04);
+}
+
+.vat-tune-desk-msg--mentor,
+.vat-tune-desk-msg--owner {
+  background: rgba(40, 90, 120, 0.08);
+}
+
+.vat-tune-desk-msg--system {
+  background: transparent;
+  color: rgba(28, 42, 31, 0.6);
+  font-size: 0.7rem;
+}
+
+.vat-tune-desk-msg header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.4rem;
+  align-items: baseline;
+  margin-bottom: 0.15rem;
+}
+
+.vat-tune-desk-msg p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.vat-tune-desk-ask-tag,
+.vat-tune-desk-wait,
+.vat-tune-desk-timeout {
+  font-size: 0.65rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+}
+
+.vat-tune-desk-ask-tag {
+  background: rgba(28, 42, 31, 0.12);
+}
+
+.vat-tune-desk-wait {
+  background: rgba(180, 120, 40, 0.2);
+}
+
+.vat-tune-desk-timeout {
+  background: rgba(120, 40, 40, 0.12);
+  color: rgba(100, 30, 30, 0.95);
+}
+
+.vat-tune-desk-compose {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.3rem 0.4rem;
+  padding: 0.4rem 0.55rem 0.5rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.12);
+  background: rgba(28, 42, 31, 0.03);
+}
+
+.vat-tune-desk-askopt {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  margin: 0;
+  font-size: 0.7rem;
+}
+
+.vat-tune-desk-input {
+  width: 100%;
+  border: 1px solid rgba(28, 42, 31, 0.2);
+  border-radius: 6px;
+  padding: 0.35rem 0.45rem;
+  font: inherit;
+  resize: vertical;
+  min-height: 2.6rem;
+  background: #fff;
+}
+
+.vat-tune-desk-actor {
+  grid-column: 1 / -1;
+  font-size: 0.65rem;
+}
+
+
 .vat-import-guide {
   margin: 0.35rem 0 0.55rem;
   padding: 0.35rem 0.55rem 0.45rem;

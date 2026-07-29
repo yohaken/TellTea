@@ -4,7 +4,9 @@
  */
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getDb } from "./firebase";
+import { TUNE_DESK_PROTOCOL } from "./vat-agent-chat";
 import { VAT_IMPORT_AI_RULES } from "./vat-import-guide";
+
 
 export const VAT_IMPORT_AI_NOTES_DOC = "vatImportAiNotes";
 
@@ -22,9 +24,13 @@ export function defaultVatImportAiNotesText(): string {
     "",
     ...VAT_IMPORT_AI_RULES.map((r, i) => `${i + 1}. ${r}`),
     "",
+    "— โต๊ะจูน (Tune Desk) —",
+    ...TUNE_DESK_PROTOCOL.map((r, i) => `T${i + 1}. ${r}`),
+    "",
     "ไฟล์ต้นทาง: แถวที่มีตัวเลขควรมีไฟล์ใน Storage อ้างอิง (ชื่อไฟล์รู้ได้แม้คนไม่เปิดดู)",
   ].join("\n");
 }
+
 
 
 export async function loadVatImportAiNotes(): Promise<VatImportAiNotes> {

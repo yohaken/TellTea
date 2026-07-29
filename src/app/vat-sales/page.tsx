@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { OwnerBooksModeSwitch } from "@/components/OwnerBooksModeSwitch";
+import { VatAgentChatPopup } from "@/components/vat-sales/VatAgentChatPopup";
 import { VatImportWorkbench } from "@/components/vat-sales/VatImportWorkbench";
 import { VatMonthlyWorkbench } from "@/components/vat-sales/VatMonthlyWorkbench";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { bangkokMonthKey } from "@/lib/vat-sales";
+
 
 type VatSalesTab = "month" | "import";
 
@@ -63,6 +66,8 @@ function VatSalesGate() {
       ) : (
         <VatImportWorkbench actor={actor} />
       )}
+      <VatAgentChatPopup actor={actor} monthKey={bangkokMonthKey()} />
     </div>
   );
 }
+
