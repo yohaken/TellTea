@@ -1,3 +1,4 @@
+import type { ExpenseVatPayerFields } from "./expense-vat";
 import type { StaffPermissions } from "./permissions";
 
 export type StaffRole = "owner" | "staff";
@@ -59,7 +60,7 @@ export type LedgerEntry = {
   receiptUrl?: string;
   /** สลิปหลายรูป — ถ้าว่างใช้ receiptUrl */
   receiptUrls?: string[];
-};
+} & Partial<ExpenseVatPayerFields>;
 
 export type LedgerEntryInput = {
   date: number;
@@ -72,7 +73,7 @@ export type LedgerEntryInput = {
   createdBy: string;
   receiptUrl?: string;
   receiptUrls?: string[];
-};
+} & Partial<ExpenseVatPayerFields>;
 
 /** Perpetual inventory — วัตถุดิบร้าน (Products) */
 export type StockItem = {

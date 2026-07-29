@@ -15,11 +15,28 @@ import { AuthGate } from "@/components/AuthGate";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
+import {
+  ExpenseVatPayerFold,
+  prepareExpenseVatForSave,
+} from "@/components/ExpenseVatPayerFold";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { OwnerBooksModeSwitch } from "@/components/OwnerBooksModeSwitch";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useAuth } from "@/lib/auth";
+import {
+  emptyExpenseVatPayer,
+  expenseVatFoldSummary,
+  hasExpenseVatPayerDetail,
+  normalizeExpenseVatPayer,
+  shortExpensePayerHint,
+  shortExpenseVatHint,
+  type ExpenseVatPayerFields,
+} from "@/lib/expense-vat";
+import {
+  reconcileExpenseVatInputInvoice,
+  withSyncedVatInputId,
+} from "@/lib/expense-vat-sync";
 import { can } from "@/lib/permissions";
 import {
   classifyLedgerTypeHeuristic,
@@ -47,7 +64,10 @@ import {
   updateOwnerBookEntry,
   type OwnerBookEntry,
 } from "@/lib/owner-books";
-import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
+import {
+  extractOwnerBookFromReceipt,
+  mergeExtractIntoExpenseVat,
+} from "@/lib/owner-books-ai";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
   formatBaht,
@@ -425,6 +445,7 @@ function OwnerBooksView() {
                   <th className="col-date">วันที่</th>
                   <th className="col-desc">รายการ</th>
                   <th className="col-out">ออก</th>
+                  <th className="col-vat">VAT</th>
                   <th className="col-type">ประเภท</th>
                   <th className="col-note">note</th>
                 </tr>
@@ -433,6 +454,13 @@ function OwnerBooksView() {
                 {filteredEntries.map((row) => {
                   const excluded = excludedIds.has(row.id);
                   const selected = selectedIds.has(row.id);
+                  const vatFields = normalizeExpenseVatPayer(row);
+                  const vatLabel = [
+                    shortExpenseVatHint(vatFields),
+                    shortExpensePayerHint(vatFields),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ");
                   return (
                   <tr
                     key={row.id}
@@ -443,6 +471,11 @@ function OwnerBooksView() {
                     ]
                       .filter(Boolean)
                       .join(" ")}
+                    title={
+                      hasExpenseVatPayerDetail(vatFields)
+                        ? expenseVatFoldSummary(vatFields)
+                        : undefined
+                    }
                   >
                     <td className="bulk-check-col">
                       <input
@@ -502,6 +535,11 @@ function OwnerBooksView() {
                     </td>
                     <td className="col-out">
                       {row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}
+                    </td>
+                    <td className="col-vat">
+                      <span className="bill-notice-vat-chip">
+                        {vatLabel || "—"}
+                      </span>
                     </td>
                     <td className="col-type">
                       <span className="muted" style={{ fontSize: "0.72rem" }}>
@@ -601,6 +639,9 @@ function OwnerEntryModal({
   );
   const [ownerLocked, setOwnerLocked] = useState(wasOwnerType);
   const [note, setNote] = useState(entry?.note || "");
+  const [vatPayer, setVatPayer] = useState<ExpenseVatPayerFields>(() =>
+    entry ? normalizeExpenseVatPayer(entry) : emptyExpenseVatPayer(),
+  );
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getOwnerBookReceiptUrls(entry));
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
   const [formError, setFormError] = useState("");
@@ -703,6 +744,7 @@ function OwnerEntryModal({
           setAmount(String(result.amountOut));
         }
       }
+      setVatPayer((prev) => mergeExtractIntoExpenseVat(prev, result));
       if (result.note) {
         if (mode === "add" || !noteRef.current.trim()) {
           setNote(result.note);
@@ -771,28 +813,49 @@ function OwnerEntryModal({
         setSaveStage("saving");
       }
 
+      const amountOut = Number(amount);
+      const dateMs = parseDateInput(date);
+      let vat = prepareExpenseVatForSave(vatPayer, amountOut);
+      try {
+        const synced = await reconcileExpenseVatInputInvoice(
+          {
+            dateMs,
+            amountOut,
+            description,
+            note,
+            evidenceRef: urls[0] || "",
+            fields: vat,
+          },
+          createdBy,
+        );
+        vat = withSyncedVatInputId(vat, synced.vatInputInvoiceId);
+      } catch {
+        /* ลิงก์ภาษีซื้อไม่บังคับ */
+      }
       if (mode === "add") {
         await addOwnerBookEntry({
-          date: parseDateInput(date),
+          date: dateMs,
           description,
-          amountOut: Number(amount),
+          amountOut,
           type,
           typeSource,
           typeAiReason,
           createdBy,
           receiptUrls: urls,
           note,
+          ...vat,
         });
       } else if (entry) {
         await updateOwnerBookEntry(entry.id, {
-          date: parseDateInput(date),
+          date: dateMs,
           description,
-          amountOut: Number(amount),
+          amountOut,
           type,
           typeSource,
           typeAiReason,
           receiptUrls: urls,
           note,
+          ...vat,
         });
       }
       onSaved();
@@ -936,6 +999,14 @@ function OwnerEntryModal({
               required
             />
           </div>
+
+          <ExpenseVatPayerFold
+            idPrefix="ob-vat"
+            value={vatPayer}
+            amountOut={Number(amount) || 0}
+            disabled={busy}
+            onChange={setVatPayer}
+          />
 
           <LedgerTypeField
             id="ob-type"

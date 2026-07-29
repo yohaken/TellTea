@@ -13,8 +13,17 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
+import {
+  buildExpenseVatPayerPayload,
+  normalizeExpenseVatPayer,
+  type ExpenseVatPayerFields,
+} from "./expense-vat";
+import {
+  reconcileExpenseVatInputInvoice,
+  withSyncedVatInputId,
+} from "./expense-vat-sync";
 import { guessTypeFromDescription } from "./ledger-labels";
-import { addOwnerBookEntry } from "./owner-books";
+import { addOwnerBookEntry, updateOwnerBookEntry } from "./owner-books";
 
 export const BILL_NOTICE_PAGE_SIZE = 40;
 export const BILL_NOTICE_LIVE_MAX = 200;
@@ -44,7 +53,7 @@ export type BillNotice = {
   verifiedAt: number;
   /** Set when accepted into บช.เจ้าของ */
   ownerBookId: string;
-};
+} & ExpenseVatPayerFields;
 
 export type BillNoticeInput = {
   date: number;
@@ -58,7 +67,7 @@ export type BillNoticeInput = {
   receiptUrls?: string[];
   createdBy: string;
   staffName: string;
-};
+} & Partial<ExpenseVatPayerFields>;
 
 export type BillNoticePage = {
   entries: BillNotice[];
@@ -128,6 +137,7 @@ function mapData(id: string, data: Record<string, unknown>): BillNotice {
     receiptUrls: data.receiptUrls as string[] | undefined,
   });
   const statusRaw = String(data.status || "pending") as BillNoticeStatus;
+  const vat = normalizeExpenseVatPayer(data);
   return {
     id,
     date: Number(data.date) || 0,
@@ -148,6 +158,7 @@ function mapData(id: string, data: Record<string, unknown>): BillNotice {
     verifiedBy: typeof data.verifiedBy === "string" ? data.verifiedBy : "",
     verifiedAt: Number(data.verifiedAt) || 0,
     ownerBookId: typeof data.ownerBookId === "string" ? data.ownerBookId : "",
+    ...vat,
   };
 }
 
@@ -308,10 +319,12 @@ function buildPayload(input: BillNoticeInput) {
     (input.type || "").trim() || guessTypeFromDescription(description) || "sga";
   // Bill notices are owner utilities — never default free-text to cogs.
   const type = guessed === "cogs" ? "sga" : guessed;
+  const amountOut = Number(input.amountOut) || 0;
+  const vat = buildExpenseVatPayerPayload(input, amountOut);
   const payload = {
     date: Number(input.date) || 0,
     description,
-    amountOut: Number(input.amountOut) || 0,
+    amountOut,
     type,
     typeSource: (input.typeSource || (input.type ? "staff" : "heuristic")).trim(),
     typeAiReason: (input.typeAiReason || "").trim(),
@@ -320,6 +333,7 @@ function buildPayload(input: BillNoticeInput) {
     receiptUrls,
     createdBy: input.createdBy.trim(),
     staffName: input.staffName.trim(),
+    ...vat,
   };
   validatePayload(payload);
   return payload;
@@ -424,6 +438,10 @@ export async function acceptBillNotice(input: {
     guessTypeFromDescription(prev.description) ||
     "sga";
 
+  const vat = buildExpenseVatPayerPayload(prev, prev.amountOut);
+  const note = [prev.note, input.ownerNote]
+    .filter((s) => String(s || "").trim())
+    .join(" · ");
   const ownerBookId = await addOwnerBookEntry({
     date: prev.date,
     description: prev.description.trim(),
@@ -434,8 +452,30 @@ export async function acceptBillNotice(input: {
     createdBy: input.verifiedBy.trim(),
     receiptUrl: prev.receiptUrl,
     receiptUrls: prev.receiptUrls,
-    note: [prev.note, input.ownerNote].filter((s) => String(s || "").trim()).join(" · "),
+    note,
+    ...vat,
   });
+
+  let linkedVat = vat;
+  try {
+    const synced = await reconcileExpenseVatInputInvoice(
+      {
+        dateMs: prev.date,
+        amountOut: prev.amountOut,
+        description: prev.description.trim(),
+        note,
+        evidenceRef: prev.receiptUrl || prev.receiptUrls[0] || "",
+        fields: vat,
+      },
+      input.verifiedBy.trim(),
+    );
+    linkedVat = withSyncedVatInputId(vat, synced.vatInputInvoiceId);
+    if (linkedVat.vatInputInvoiceId !== vat.vatInputInvoiceId) {
+      await updateOwnerBookEntry(ownerBookId, linkedVat);
+    }
+  } catch {
+    /* ภาษีซื้อลิงก์ไม่สำเร็จ — บิลยังรับเข้าแล้ว */
+  }
 
   await updateDoc(entryRef, {
     status: "accepted" satisfies BillNoticeStatus,
@@ -445,6 +485,7 @@ export async function acceptBillNotice(input: {
     verifiedAt: Date.now(),
     updatedAt: Date.now(),
     type,
+    ...linkedVat,
   });
 
   return ownerBookId;
