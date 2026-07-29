@@ -9,14 +9,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 446/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 136/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+107/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.84"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 448/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 137/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+108/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.85"/);
 
 assert.ok(existsSync(join(root, "docs/npos-bank-transfer-pay-checklist.md")));
 const doc = read("docs/npos-bank-transfer-pay-checklist.md");
-assert.match(doc, /1.14.84|ตรวจสอบสลิปแล้ว OK/);
+assert.match(doc, /1.14.85|ตรวจสอบสลิปแล้ว OK/);
 assert.match(doc, /transfer|โอนเงิน|Wongnai/);
 
 const methods = read(

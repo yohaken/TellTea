@@ -1,5 +1,5 @@
 /**
- * Gate: device setting for cash-change display duration / manual dismiss.
+ * Gate: cash-change hold — countdown, ✕ / tap-elsewhere dismiss, last-change chip, hub shortcut.
  */
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
@@ -9,14 +9,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 446/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 136/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+107/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.84"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 448/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 137/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+108/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.85"/);
 
 assert.ok(existsSync(join(root, "docs/npos-change-display-setting-checklist.md")));
-assert.match(read("docs/npos-change-display-setting-checklist.md"), /1\.14\.84/);
-assert.match(read("docs/npos-change-display-setting-checklist.md"), /ปิดด้วยตนเอง|MANUAL|10/);
+assert.match(read("docs/npos-change-display-setting-checklist.md"), /1\.14\.85/);
+assert.match(read("docs/npos-change-display-setting-checklist.md"), /ทอนล่าสุด|✕|10/);
 
 const prefs = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/diagnose/ChangeDisplayPrefs.java",
@@ -45,15 +45,22 @@ assert.match(layout, /change_display_title/);
 const sellLayout = read("npos-telltea/app/src/main/res/layout/activity_sell.xml");
 assert.match(sellLayout, /changeHoldBar/);
 assert.match(sellLayout, /changeHoldDismiss/);
+assert.match(sellLayout, /change_hold_dismiss_x/);
 
 const sell = read("npos-telltea/app/src/main/java/app/telltea/npos/SellActivity.java");
 assert.match(sell, /showChangeHoldBar/);
 assert.match(sell, /dismissChangeHoldUi/);
-assert.match(sell, /change_hold_dismiss|ChangeDisplayPrefs/);
+assert.match(sell, /pinLastChangeStatus/);
+assert.match(sell, /sell_last_change_fmt/);
+assert.match(sell, /sell_hub_change_display_fmt/);
+assert.match(sell, /ACTION_DOWN/);
+assert.match(sell, /changeHoldTickTask|refreshChangeHoldLabels/);
 
 const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
 assert.match(strings, /change_display_manual/);
-assert.match(strings, /change_hold_dismiss/);
+assert.match(strings, /change_hold_dismiss_x/);
+assert.match(strings, /sell_last_change_fmt/);
+assert.match(strings, /sell_hub_change_display_fmt/);
 
 assert.match(read("docs/npos-remaining-checklist.md"), /npos-change-display-setting-checklist/);
 assert.match(read("scripts/check-npos-shop.mjs"), /change-display-setting/);

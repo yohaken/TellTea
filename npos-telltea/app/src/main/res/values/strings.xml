@@ -327,11 +327,15 @@
     <string name="settings_section_device">เครื่องนี้</string>
     <string name="settings_section_payment">การชำระเงิน</string>
     <string name="change_display_title">ระยะเวลาแสดงหน้าต่างเงินทอน</string>
-    <string name="change_display_hint">หลังรับเงินสด — จอลูกค้าโชว์เงินทอนค้างเท่าไรก่อนกลับหน้าขาย\nแตะ «เปลี่ยน» เลือก 3–15 วินาที หรือปิดด้วยตนเอง (พนักงานกดตกลง)</string>
+    <string name="change_display_hint">หลังรับเงินสด — ค้างยอดทอนบนจอขาย/จอลูกค้า\nค่าเริ่มต้น 10 วิ · แตะที่อื่นหรือกด ✕ ปิดได้ทันที\nหลังปิดยังเห็น «ทอนล่าสุด» จนกว่าจะเริ่มบิลใหม่\nทางลัด: เมนู ▦ บนหน้าขาย → เวลาแสดงเงินทอน</string>
     <string name="change_display_cycle_btn">เปลี่ยนค่า</string>
     <string name="change_display_seconds_fmt">%d วินาที</string>
-    <string name="change_display_manual">ปิดด้วยตนเอง (กดตกลง)</string>
+    <string name="change_display_manual">ปิดด้วยตนเอง (กด ✕)</string>
     <string name="change_display_current_fmt">ตอนนี้: %1$s</string>
+    <string name="sell_hub_change_display_fmt">เวลาแสดงเงินทอน · %1$s</string>
+    <string name="sell_last_change_fmt">ทอนล่าสุด ฿%.0f</string>
+    <string name="change_hold_dismiss_countdown">✕ · %d</string>
+    <string name="change_hold_dismiss_x">✕ ปิด</string>
     <string name="change_hold_dismiss">ตกลง · ปิดหน้าทอน</string>
     <string name="settings_section_printer">อุปกรณ์ · ปริ้นเตอร์ / ลิ้นชัก</string>
     <string name="printer_hint">ร้านชงชาหน้าบาร์ — ใบเสร็จ + ลิ้นชักพอ · ไม่ใช้ปริ้นเตอร์ครัว\nเครื่อง SUNMI: เลือก «SUNMI InnerPrinter» (ปริ้นในตัว เหมือน Wongnai)\nหรือเชื่อม USB / Bluetooth / LAN · ลิ้นชักเสียบ RJ11 หลังปริ้นเตอร์</string>
@@ -373,6 +377,7 @@
     <string name="customer_paid_review_title">รายการที่ชำระแล้ว · เช็คได้</string>
     <string name="customer_paid_review_change_fmt">เงินทอน ฿%.0f · รายการที่ชำระแล้ว</string>
     <string name="sell_change_hold">ทอน ฿%.0f — ส่งเงินทอนให้ลูกค้า</string>
+    <string name="sell_change_hold_countdown">ทอน ฿%1$.0f — ส่งเงินทอน · ปิดเองได้ (%2$d)</string>
     <string name="customer_select_discount_fmt">ส่วนลด −฿%.0f</string>
     <string name="customer_select_total_fmt">รวม ฿%.0f</string>
     <string name="customer_pay_title">ยอดชำระ</string>
