@@ -41,6 +41,7 @@ const REQUIRED_MATCHES = [
   "prodEntries",
   "otEntries",
   "checklistRecords",
+  "staffSuggestions",
   "meta",
   "loginTickets",
   "posSales",

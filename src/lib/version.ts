@@ -1,5 +1,9 @@
 /** Bump APP_BUILD on each production UI/JS ship. */
+<<<<<<< HEAD
 export const APP_BUILD = 404;
+=======
+export const APP_BUILD = 403;
+>>>>>>> cursor/staff-utility-dock-d3e1
 
 export const APP_BUILT_AT =
   process.env.NEXT_PUBLIC_APP_BUILT_AT || "1970-01-01T00:00:00.000Z";
