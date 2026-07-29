@@ -18,7 +18,7 @@ const lib = read("src/lib/cash-deposits.ts");
 const panel = read("src/components/CashInLedgerPanel.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 386/);
+assert.match(version, /APP_BUILD = 387/);
 assert.ok(existsSync(join(root, "functions/extract-cash-deposit.js")));
 assert.match(index, /extractCashDepositSlip/);
 assert.match(cf, /mode === "bank"/);
@@ -40,15 +40,17 @@ assert.match(lib, /bankAmountSource/);
 assert.match(lib, /cashAmountSource/);
 assert.match(panel, /runAiBank/);
 assert.match(panel, /runAiDay/);
-assert.match(panel, /เข้าบช\.สุทธิ/);
+assert.match(panel, /โอนเข้า/);
 assert.match(panel, /คงเหลือ|remainingToTransfer/);
-assert.match(panel, /คชจ\.|transferFee|workingFee/);
+assert.match(panel, /ค่าธรรม\.|ค่าธรรมเนียม|workingFee/);
 assert.match(panel, /ใส่โดยพนักงาน|is-staff|cash-in-src/);
-assert.match(panel, /อ่าน AI ใหม่|ให้อ่านสลิปโอนใหม่/);
+assert.match(panel, /ให้อ่านสลิปโอนใหม่|ให้อ่านสลิปใหม่/);
+assert.match(panel, /cash-in-slip-actions is-row/);
 assert.match(panel, /\+ สลิปโอน/);
 assert.match(panel, /cash-in-bank-table/);
 assert.match(panel, /addBankTransfer/);
 assert.match(panel, /drawerCloseAmount ignored/);
+assert.doesNotMatch(panel, /Σยอดขายเงินสด/);
 
 const runner = `
 import assert from "node:assert/strict";
@@ -93,6 +95,12 @@ assert.equal(sumBankTransferFees(fromList), 25);
 
 console.log("OK fee reconcile + multi bankTransfers");
 `;
+if (!existsSync(join(root, "node_modules/firebase"))) {
+  console.log("SKIP cash-deposit-ai runtime (no node_modules/firebase)");
+  console.log("OK test-cash-deposit-ai");
+  process.exit(0);
+}
+
 const tmp = join(root, "scripts/.tmp-cash-ai-run.mts");
 writeFileSync(tmp, runner);
 const res = spawnSync("npx", ["--yes", "tsx", tmp], { cwd: root, encoding: "utf8" });

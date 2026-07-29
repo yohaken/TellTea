@@ -392,7 +392,7 @@ export function BillNoticeLedgerPanel({
               setAdding(true);
             }}
           >
-            เพิ่มแจ้งบิล
+            แจ้งบิล
           </button>
         </div>
       ) : null}

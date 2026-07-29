@@ -681,11 +681,11 @@ export function CashInLedgerPanel({
     setError(null);
     try {
       if (coverage.issues.length) throw new Error(coverage.issues[0]!.message);
-      if (!(workingBank > 0)) throw new Error("ต้องใส่ยอดโอนธนาคารของรอบ");
-      if (!workingTransfers.length) throw new Error("ต้องมีอย่างน้อย 1 สลิปโอนเข้าบัญชี");
+      if (!(workingBank > 0)) throw new Error("ใส่ยอดโอนเข้าบัญชีอย่างน้อย 1 สลิป");
+      if (!workingTransfers.length) throw new Error("ต้องมีอย่างน้อย 1 สลิปโอน");
       for (const t of workingTransfers) {
         if (!(Number(t.amount) > 0)) {
-          throw new Error("ยอดเข้าบัญชีในแต่ละสลิปโอนต้องมากกว่า 0");
+          throw new Error("ยอดโอนแต่ละสลิปต้องมากกว่า 0");
         }
       }
       const days = workingDays.map((d) => ({
@@ -803,7 +803,7 @@ export function CashInLedgerPanel({
       {open ? (
         <div className="cash-in-panel-body">
           <p className="muted cash-in-hint">
-            สลิปโอนหลายใบได้ · เข้าบช.สุทธิต่อใบ · ดูคงเหลือใต้ตารางโอน
+            สลิปโอนหลายใบได้ · ดูคงเหลือใต้ตาราง · ร้านปิดใส่เงินสด 0 ได้
           </p>
 
           <div className="cash-in-create-bar">
@@ -905,7 +905,7 @@ export function CashInLedgerPanel({
                       <tr>
                         <th className="col-round">รอบ</th>
                         <th className="col-date">วัน</th>
-                        <th className="col-num">ยอดขายเงินสด</th>
+                        <th className="col-num">เงินสด</th>
                         <th className="col-slip">สลิป</th>
                         <th className="col-type">สถานะ</th>
                       </tr>
@@ -927,9 +927,7 @@ export function CashInLedgerPanel({
                           </td>
                           <td className="col-date">{formatCashDayShort(row.day.date)}</td>
                           <td className="col-num">
-                            {row.day.cashAmount
-                              ? formatPlainNumber(row.day.cashAmount)
-                              : ""}
+                            {formatPlainNumber(row.day.cashAmount || 0)}
                           </td>
                           <td className="col-slip">
                             {row.day.slipUrls.length ? (
@@ -1009,12 +1007,13 @@ export function CashInLedgerPanel({
                     <tr>
                       <th className="col-round">#</th>
                       <th className="col-num" title="ยอดเงินที่เข้าบัญชีจริงในสลิปนี้">
-                        เข้าบช.สุทธิ
+                        โอนเข้า
                       </th>
-                      <th className="col-num">คชจ.</th>
+                      <th className="col-num" title="ค่าธรรมเนียมธนาคาร">
+                        ค่าธรรม.
+                      </th>
                       <th>Ref</th>
-                      <th className="col-slip">สลิป</th>
-                      <th className="col-slip" aria-label="AI" />
+                      <th className="col-slip">รูป/AI</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1037,7 +1036,7 @@ export function CashInLedgerPanel({
                           </div>
                         </td>
                         <td className="col-num">
-                          <div className="cash-in-cell-stack">
+                          <div className="cash-in-cell-inline">
                             {sourceBadge(t.amountSource)}
                             <input
                               type="number"
@@ -1056,7 +1055,7 @@ export function CashInLedgerPanel({
                           </div>
                         </td>
                         <td className="col-num">
-                          <div className="cash-in-cell-stack">
+                          <div className="cash-in-cell-inline">
                             {sourceBadge(t.feeSource)}
                             <input
                               type="number"
@@ -1085,7 +1084,7 @@ export function CashInLedgerPanel({
                           />
                         </td>
                         <td className="col-slip">
-                          <div className="cash-in-slip-actions is-col">
+                          <div className="cash-in-slip-actions is-row">
                             <EntryPhotoIndicator
                               imageUrls={t.slipUrls}
                               label={`สลิปโอน ${idx + 1}`}
@@ -1102,47 +1101,48 @@ export function CashInLedgerPanel({
                                 })
                               }
                             />
-                            <div className="cash-in-slip-btn-row">
-                              {t.slipUrls.length > 0 &&
-                              t.slipUrls.length < CASH_DEPOSIT_BANK_SLIP_MAX ? (
-                                <button
-                                  type="button"
-                                  className="ghost-btn cash-in-ai-reread"
-                                  disabled={busy}
-                                  onClick={() => openBankPhoto(t.id)}
-                                  title="ถ่าย/แนบรูปเพิ่ม หรือใส่ใหม่หลังลบ"
-                                >
-                                  +
-                                </button>
-                              ) : null}
-                              {t.slipUrls.length ? (
+                            {t.slipUrls.length > 0 &&
+                            t.slipUrls.length < CASH_DEPOSIT_BANK_SLIP_MAX ? (
+                              <button
+                                type="button"
+                                className="ghost-btn cash-in-ai-reread"
+                                disabled={busy}
+                                onClick={() => openBankPhoto(t.id)}
+                                title="ถ่าย/แนบรูปเพิ่ม"
+                              >
+                                +
+                              </button>
+                            ) : null}
+                            {t.slipUrls.length ? (
+                              <>
                                 <button
                                   type="button"
                                   className="ghost-btn danger-text cash-in-ai-reread"
                                   disabled={busy}
                                   onClick={() =>
-                                    clearSlipUrls({ kind: "bank", transferId: t.id })
+                                    clearSlipUrls({
+                                      kind: "bank",
+                                      transferId: t.id,
+                                    })
                                   }
-                                  title="ลบรูปทั้งหมดของสลิปนี้"
+                                  title="ลบรูปสลิปนี้"
                                 >
-                                  ลบรูป
+                                  ลบ
                                 </button>
-                              ) : null}
-                            </div>
+                                <button
+                                  type="button"
+                                  className="ghost-btn cash-in-ai-reread"
+                                  disabled={busy || aiBusy}
+                                  onClick={() =>
+                                    void runAiBank(t.id, t.slipUrls, true)
+                                  }
+                                  title="ให้อ่านสลิปโอนใหม่"
+                                >
+                                  AI
+                                </button>
+                              </>
+                            ) : null}
                           </div>
-                        </td>
-                        <td className="col-slip">
-                          {t.slipUrls.length ? (
-                            <button
-                              type="button"
-                              className="ghost-btn cash-in-ai-reread"
-                              disabled={busy || aiBusy}
-                              onClick={() => void runAiBank(t.id, t.slipUrls, true)}
-                              title="ให้อ่านสลิปโอนใหม่"
-                            >
-                              AI
-                            </button>
-                          ) : null}
                         </td>
                       </tr>
                     ))}
@@ -1156,7 +1156,7 @@ export function CashInLedgerPanel({
                       <td className="col-num">
                         {workingFee ? formatPlainNumber(workingFee) : "0"}
                       </td>
-                      <td colSpan={3} />
+                      <td colSpan={2} />
                     </tr>
                   </tfoot>
                 </table>
@@ -1174,8 +1174,8 @@ export function CashInLedgerPanel({
               ) : null}
 
               <p className="cash-in-remain" aria-live="polite">
-                ต้องโอน (Σยอดขายเงินสด) {formatPlainNumber(expected)} · โอนแล้ว
-                (Σเข้าบช.สุทธิ) {formatPlainNumber(workingBank)} · คงเหลือ{" "}
+                เงินสดรวม {formatPlainNumber(expected)} · โอนแล้ว{" "}
+                {formatPlainNumber(workingBank)} · คงเหลือ{" "}
                 <strong
                   className={
                     remainingToTransfer === 0
@@ -1187,14 +1187,20 @@ export function CashInLedgerPanel({
                 >
                   {formatPlainNumber(remainingToTransfer)}
                 </strong>
-                {workingFee
-                  ? ` · Σคชจ. ${formatPlainNumber(workingFee)}`
-                  : ""}
+                {workingFee ? ` · ค่าธรรมเนียม ${formatPlainNumber(workingFee)}` : ""}
               </p>
 
               {aiHint ? (
-                <p className={aiBusy ? "muted cash-in-ai-hint" : "cash-in-ai-hint"}>
-                  {aiBusy ? "…" : ""}
+                <p
+                  className={[
+                    "cash-in-ai-hint",
+                    aiBusy ? "is-busy" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  title={aiHint}
+                >
+                  {aiBusy ? "AI กำลังอ่าน… " : "AI · "}
                   {aiHint}
                 </p>
               ) : null}
@@ -1207,12 +1213,12 @@ export function CashInLedgerPanel({
                       <th className="col-date">วัน</th>
                       <th
                         className="col-num"
-                        title="จากบิล POS: ยอดขายตามการชำระเงิน → เงินสด"
+                        title="จากบิล POS: ยอดขายตามการชำระเงิน → เงินสด · ร้านปิดใส่ 0 ได้"
                       >
-                        ยอดขายเงินสด
+                        เงินสด
                       </th>
                       <th className="col-note">โน้ตวัน</th>
-                      <th className="col-slip">สลิป</th>
+                      <th className="col-slip">รูป/AI</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1251,7 +1257,7 @@ export function CashInLedgerPanel({
                           />
                         </td>
                         <td className="col-num">
-                          <div className="cash-in-cell-stack">
+                          <div className="cash-in-cell-inline">
                             {sourceBadge(day.cashAmountSource)}
                             <input
                               type="number"
@@ -1259,8 +1265,13 @@ export function CashInLedgerPanel({
                               step="0.01"
                               inputMode="decimal"
                               className="cash-in-cell-input is-num"
-                              value={day.cashAmount ? String(day.cashAmount) : ""}
+                              value={
+                                day.cashAmount || day.cashAmountSource
+                                  ? String(day.cashAmount)
+                                  : ""
+                              }
                               placeholder="0"
+                              title="ร้านปิดใส่ 0 ได้"
                               onChange={(e) =>
                                 patchDay(day.id, {
                                   cashAmount: Number(e.target.value) || 0,
@@ -1282,7 +1293,7 @@ export function CashInLedgerPanel({
                           />
                         </td>
                         <td className="col-slip">
-                          <div className="cash-in-slip-actions is-col">
+                          <div className="cash-in-slip-actions is-row">
                             <EntryPhotoIndicator
                               imageUrls={day.slipUrls}
                               label={formatCashDayShort(day.date)}
@@ -1299,46 +1310,44 @@ export function CashInLedgerPanel({
                                 })
                               }
                             />
-                            <div className="cash-in-slip-btn-row">
-                              {day.slipUrls.length > 0 &&
-                              day.slipUrls.length < CASH_DEPOSIT_DAY_SLIP_MAX ? (
+                            {day.slipUrls.length > 0 &&
+                            day.slipUrls.length < CASH_DEPOSIT_DAY_SLIP_MAX ? (
+                              <button
+                                type="button"
+                                className="ghost-btn cash-in-ai-reread"
+                                disabled={busy}
+                                onClick={() => openDayPhoto(day.id)}
+                                title="ถ่าย/แนบรูปเพิ่ม"
+                              >
+                                +
+                              </button>
+                            ) : null}
+                            {day.slipUrls.length ? (
+                              <>
+                                <button
+                                  type="button"
+                                  className="ghost-btn danger-text cash-in-ai-reread"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    clearSlipUrls({ kind: "day", dayId: day.id })
+                                  }
+                                  title="ลบรูปวันนี้"
+                                >
+                                  ลบ
+                                </button>
                                 <button
                                   type="button"
                                   className="ghost-btn cash-in-ai-reread"
-                                  disabled={busy}
-                                  onClick={() => openDayPhoto(day.id)}
-                                  title="ถ่าย/แนบรูปเพิ่ม หรือใส่ใหม่หลังลบ"
+                                  disabled={busy || aiBusy}
+                                  onClick={() =>
+                                    void runAiDay(day.id, day.slipUrls, true)
+                                  }
+                                  title="ให้อ่านสลิปใหม่"
                                 >
-                                  +
+                                  AI
                                 </button>
-                              ) : null}
-                              {day.slipUrls.length ? (
-                                <>
-                                  <button
-                                    type="button"
-                                    className="ghost-btn danger-text cash-in-ai-reread"
-                                    disabled={busy}
-                                    onClick={() =>
-                                      clearSlipUrls({ kind: "day", dayId: day.id })
-                                    }
-                                    title="ลบรูปทั้งหมดของวันนี้"
-                                  >
-                                    ลบรูป
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="ghost-btn cash-in-ai-reread"
-                                    disabled={busy || aiBusy}
-                                    onClick={() =>
-                                      void runAiDay(day.id, day.slipUrls, true)
-                                    }
-                                    title="ให้อ่านสลิปใหม่"
-                                  >
-                                    AI
-                                  </button>
-                                </>
-                              ) : null}
-                            </div>
+                              </>
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -1379,23 +1388,20 @@ export function CashInLedgerPanel({
 
               <div className="cash-in-math is-slim" aria-live="polite">
                 <span>
-                  Σยอดขายเงินสด {formatPlainNumber(expected)} · Σเข้าบช.สุทธิ{" "}
+                  เงินสด {formatPlainNumber(expected)} · โอนเข้า{" "}
                   {formatPlainNumber(workingBank)}
                   {workingFee
-                    ? ` · Σคชจ. ${formatPlainNumber(workingFee)}`
-                    : " · Σคชจ. 0"}
-                  {bankSlipUrlCount
-                    ? ` · สลิปโอน ${bankSlipUrlCount} รูป`
-                    : ""}{" "}
-                  · ผลเทียบ{" "}
+                    ? ` · ค่าธรรมเนียม ${formatPlainNumber(workingFee)}`
+                    : ""}
+                  {bankSlipUrlCount ? ` · สลิป ${bankSlipUrlCount}` : ""} ·{" "}
                   <strong className={variance === 0 ? "is-ok" : "is-off"}>
                     {variance === 0
                       ? "ตรง"
-                      : `${variance > 0 ? "+" : ""}${formatPlainNumber(variance)}`}
+                      : `ต่าง ${variance > 0 ? "+" : ""}${formatPlainNumber(variance)}`}
                   </strong>
                 </span>
                 <span className="muted cash-in-math-formula">
-                  (Σเข้าบช.สุทธิ + Σคชจ) − Σยอดขายเงินสด
+                  เทียบ = (โอนเข้า + ค่าธรรมเนียม) − เงินสด
                 </span>
               </div>
 
@@ -1406,37 +1412,37 @@ export function CashInLedgerPanel({
                   ))}
                 </ul>
               ) : (
-                <p className="cash-in-issues-ok">วันต่อเนื่อง ไม่ซ้ำ</p>
+                <p className="cash-in-issues-ok">วันเรียงต่อกัน · ร้านปิดใส่ 0 ได้</p>
               )}
 
               <div className="cash-in-round-actions">
                 <button
                   type="button"
-                  className="primary-btn action-in"
+                  className="primary-btn action-in cash-in-act-btn"
                   disabled={busy || !!coverage.issues.length}
                   onClick={() => void saveWorking()}
                 >
-                  {busy ? "กำลังบันทึก..." : draft ? "บันทึกรอบ" : "บันทึกการแก้"}
+                  {busy ? "…" : "บันทึก"}
                 </button>
                 <button
                   type="button"
-                  className="ghost-btn"
+                  className="ghost-btn cash-in-act-btn"
                   disabled={busy}
                   onClick={() => {
                     setDraft(null);
                     setSelectedId(null);
                   }}
                 >
-                  ปิดรอบนี้
+                  ปิด
                 </button>
                 {selected && (isOwner || selected.createdBy === actorId) ? (
                   <button
                     type="button"
-                    className="ghost-btn danger-text"
+                    className="ghost-btn danger-text cash-in-act-btn"
                     disabled={busy}
                     onClick={() => void onDeleteRound()}
                   >
-                    ลบรอบ
+                    ลบ
                   </button>
                 ) : null}
               </div>
