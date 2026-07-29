@@ -17,11 +17,24 @@ assert.match(lib, /loadBothBooksVatByMonth/);
 assert.match(lib, /BooksVatLine/);
 assert.match(lib, /bookLabel/);
 assert.match(lib, /sumBothBooksVatInputByMonth/);
+assert.match(lib, /vatClaim/);
+assert.match(lib, /allCount/);
 
 assert.match(ui, /loadBothBooksVatByMonth/);
 assert.match(ui, /openBooksLines/);
 assert.match(ui, /รายการจากสองบช/);
 assert.match(ui, /vat-books-breakdown/);
 assert.match(ui, /ExpandBtn/);
+assert.match(ui, /รวมเข้าระบบ|vat-claim-check/);
+assert.match(ui, /BooksVatEntryDetailModal/);
+assert.match(ui, /toggleLineClaim/);
+
+const detail = readFileSync(
+  join(root, "src/components/vat-sales/BooksVatEntryDetailModal.tsx"),
+  "utf8",
+);
+assert.match(detail, /รวมเข้าระบบ/);
+assert.match(detail, /EntryVatFieldset/);
+assert.match(detail, /getLedgerEntry|getOwnerBookEntry/);
 
 console.log("OK test-vat-books-breakdown");

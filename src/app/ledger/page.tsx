@@ -964,6 +964,8 @@ function AddOutModal({
         vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
         vatSource: hasVat ? vatSource || "manual" : "",
         vatVerified: hasVat ? vatVerified : false,
+        // รวมเข้า VAT เดือน — ติ๊กที่ตารางเดือน (+) ไม่ auto จาก AI
+        vatClaim: false,
       });
       setSaveStage("done");
       onSaved();
@@ -1342,6 +1344,7 @@ function EditEntryModal({
               vatInvoiceNo: "",
               vatSource: "",
               vatVerified: false,
+              vatClaim: false,
             }
           : {
               hasVat,
@@ -1349,6 +1352,8 @@ function EditEntryModal({
               vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
               vatSource: hasVat ? vatSource || "manual" : "",
               vatVerified: hasVat ? vatVerified : false,
+              // แก้ที่บช. — คงสถานะรวมเข้าระบบเดิม (ติ๊กหลักอยู่ที่ VAT เดือน)
+              vatClaim: hasVat ? Boolean(entry.vatClaim) : false,
             }),
       });
       onSaved();

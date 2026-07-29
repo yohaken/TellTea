@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { formatPlainNumber } from "@/lib/utils";
+import {
+  formatVatMoney,
+  moneyFieldValue,
+  normalizeMoneyFieldText,
+  parseVatMoneyInput,
+} from "@/lib/vat-number-format";
 import {
   bangkokMonthKey,
   fileVatMonthlyReturn,
@@ -13,8 +18,8 @@ import {
 } from "@/lib/vat-monthly";
 
 function fmt(n: number) {
-  if (!n) return "—";
-  return formatPlainNumber(n);
+  if (!Number.isFinite(n)) return "—";
+  return formatVatMoney(n);
 }
 
 type Props = {
@@ -39,10 +44,10 @@ export function PnlVatIncomePanel({ actor, onIncomeApplied }: Props) {
       const ret = await loadVatMonthlyReturn(month);
       setDoc(ret);
       setEditIncome(
-        String(
+        moneyFieldValue(
           ret.pnlIncome ||
             proposePnlIncome(ret.totals, ret.pnlIncomeMode) ||
-            "",
+            0,
         ),
       );
     } catch (e) {
@@ -60,7 +65,7 @@ export function PnlVatIncomePanel({ actor, onIncomeApplied }: Props) {
   const netVat = roundMoney(totals?.netVat || 0);
 
   const applyIncome = async () => {
-    const income = Number(String(editIncome).replace(/,/g, ""));
+    const income = parseVatMoneyInput(editIncome);
     if (!Number.isFinite(income) || income < 0) {
       setError("ยอดรายได้ไม่ถูกต้อง");
       return;
@@ -74,7 +79,7 @@ export function PnlVatIncomePanel({ actor, onIncomeApplied }: Props) {
       return;
     }
     const ok = window.confirm(
-      `ใส่รายได้เดือน ${month} = ${formatPlainNumber(income)} บาท เข้าสรุปรายเดือน (P&L)?`,
+      `ใส่รายได้เดือน ${month} = ${formatVatMoney(income)} บาท เข้าสรุปรายเดือน (P&L)?`,
     );
     if (!ok) return;
     setBusy(true);
@@ -85,7 +90,7 @@ export function PnlVatIncomePanel({ actor, onIncomeApplied }: Props) {
         forceIncome: income,
       });
       setDoc(filed);
-      setMsg(`ใส่รายได้ ${formatPlainNumber(filed.pnlIncome)} แล้ว`);
+      setMsg(`ใส่รายได้ ${formatVatMoney(filed.pnlIncome)} แล้ว`);
       onIncomeApplied?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -132,7 +137,9 @@ export function PnlVatIncomePanel({ actor, onIncomeApplied }: Props) {
               inputMode="decimal"
               disabled={doc.status === "filed" || busy}
               value={editIncome}
+              placeholder="0.00"
               onChange={(e) => setEditIncome(e.target.value)}
+              onBlur={() => setEditIncome(normalizeMoneyFieldText(editIncome))}
             />
           </label>
           {doc.status !== "filed" ? (

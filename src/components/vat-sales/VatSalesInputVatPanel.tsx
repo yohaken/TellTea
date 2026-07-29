@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { formatPlainNumber } from "@/lib/utils";
+import {
+  formatVatMoney,
+  normalizeMoneyFieldText,
+  parseVatMoneyInput,
+} from "@/lib/vat-number-format";
 import {
   createVatInputInvoice,
   deleteVatInputInvoice,
@@ -13,8 +17,8 @@ import { uploadEvidencePhotos } from "@/lib/photo-upload";
 import { computeVatFromGross, roundMoney } from "@/lib/vat-sales";
 
 function fmt(n: number) {
-  if (!n && n !== 0) return "—";
-  return formatPlainNumber(n);
+  if (!Number.isFinite(n)) return "—";
+  return formatVatMoney(n);
 }
 
 type Props = {
@@ -73,11 +77,11 @@ export function VatSalesInputVatPanel({
   const netVat = roundMoney(outputVat - totals.vatInput);
 
   const previewVat = useMemo(() => {
-    const g = Number(String(gross).replace(/,/g, ""));
-    if (!Number.isFinite(g) || g < 0) return null;
+    const g = parseVatMoneyInput(gross);
+    if (!gross.trim() || g < 0) return null;
     if (vatOverride.trim()) {
-      const v = Number(String(vatOverride).replace(/,/g, ""));
-      if (!Number.isFinite(v) || v < 0) return null;
+      const v = parseVatMoneyInput(vatOverride);
+      if (v < 0) return null;
       return { vatBase: roundMoney(Math.max(0, g - v)), vatAmount: roundMoney(v) };
     }
     const c = computeVatFromGross(g);
@@ -89,8 +93,8 @@ export function VatSalesInputVatPanel({
     setError("");
     setMsg("");
     try {
-      const g = Number(String(gross).replace(/,/g, ""));
-      if (!Number.isFinite(g) || g < 0) throw new Error("ยอดรวมไม่ถูกต้อง");
+      const g = parseVatMoneyInput(gross);
+      if (!gross.trim() || g < 0) throw new Error("ยอดรวมไม่ถูกต้อง");
       let evidenceRef = "";
       if (file) {
         const refs = await uploadEvidencePhotos([file], {
@@ -101,7 +105,7 @@ export function VatSalesInputVatPanel({
       }
       const vatInput =
         vatOverride.trim() !== ""
-          ? Number(String(vatOverride).replace(/,/g, ""))
+          ? parseVatMoneyInput(vatOverride)
           : undefined;
       await createVatInputInvoice(
         {
@@ -201,7 +205,9 @@ export function VatSalesInputVatPanel({
             <input
               inputMode="decimal"
               value={gross}
+              placeholder="0.00"
               onChange={(e) => setGross(e.target.value)}
+              onBlur={() => setGross(normalizeMoneyFieldText(gross))}
             />
           </label>
           <label className="vat-sales-field">
@@ -210,7 +216,12 @@ export function VatSalesInputVatPanel({
               inputMode="decimal"
               value={vatOverride}
               onChange={(e) => setVatOverride(e.target.value)}
-              placeholder={previewVat ? String(previewVat.vatAmount) : ""}
+              onBlur={() =>
+                setVatOverride(normalizeMoneyFieldText(vatOverride))
+              }
+              placeholder={
+                previewVat ? formatVatMoney(previewVat.vatAmount) : ""
+              }
             />
           </label>
           <label className="vat-sales-field">

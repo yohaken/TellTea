@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { formatDateShort, formatDateTimeShort, formatPlainNumber } from "@/lib/utils";
+import { formatDateShort, formatDateTimeShort } from "@/lib/utils";
 import {
   loadOwnerMonthBreakdown,
   loadPnlReport,
@@ -26,6 +26,9 @@ import {
   formatVatMoney,
   formatVatPct,
   moneyFieldValue,
+  normalizeMoneyFieldText,
+  parseVatMoneyInput,
+  parseVatPctInput,
   pctFieldValue,
 } from "@/lib/vat-number-format";
 import {
@@ -56,8 +59,12 @@ import {
 import {
   bookLabel,
   loadBothBooksVatByMonth,
+  type BooksVatBook,
   type BooksVatLine,
 } from "@/lib/books-vat-month";
+import { updateLedgerEntry } from "@/lib/ledger";
+import { updateOwnerBookEntry } from "@/lib/owner-books";
+import { BooksVatEntryDetailModal } from "@/components/vat-sales/BooksVatEntryDetailModal";
 import { exportPersonalTaxYearXlsx } from "@/lib/xlsx-export";
 
 function emptyBookRow(month: string): MonthCategoryRow {
@@ -83,15 +90,11 @@ function moneyInputValue(n: number) {
 }
 
 function parseMoneyInput(raw: string): number {
-  const t = raw.trim().replace(/,/g, "");
-  if (!t) return 0;
-  const n = Number(t);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
+  return parseVatMoneyInput(raw);
 }
 
 function parseRate(raw: string, fallback: number): number {
-  const n = Number(String(raw).trim());
-  return Number.isFinite(n) && n >= 0 ? n : fallback;
+  return parseVatPctInput(raw, fallback);
 }
 
 function roundPct(n: number) {
@@ -290,9 +293,13 @@ function MoneyCell({
       inputMode="decimal"
       disabled={locked}
       value={value}
-      placeholder="0"
+      placeholder="0.00"
       aria-label={ariaLabel}
       onChange={(e) => onChange(e.target.value)}
+      onBlur={() => {
+        const next = normalizeMoneyFieldText(value);
+        if (next !== value) onChange(next);
+      }}
     />
   );
 }
@@ -620,12 +627,18 @@ function InputVatTable({
   const [pullBusy, setPullBusy] = useState(false);
   const [pullMsg, setPullMsg] = useState("");
   const [linesBusy, setLinesBusy] = useState(false);
+  const [claimBusyId, setClaimBusyId] = useState("");
   const [booksLines, setBooksLines] = useState<BooksVatLine[]>([]);
   const [booksCount, setBooksCount] = useState(0);
+  const [booksAllCount, setBooksAllCount] = useState(0);
   const [booksVatTotal, setBooksVatTotal] = useState(0);
   const [ledgerCount, setLedgerCount] = useState(0);
   const [ownerCount, setOwnerCount] = useState(0);
   const [openBooksLines, setOpenBooksLines] = useState(false);
+  const [detailLine, setDetailLine] = useState<{
+    book: BooksVatBook;
+    id: string;
+  } | null>(null);
 
   const refreshBooksVatLines = useCallback(async () => {
     setLinesBusy(true);
@@ -633,6 +646,7 @@ function InputVatTable({
       const bundle = await loadBothBooksVatByMonth(month);
       setBooksLines(bundle.lines);
       setBooksCount(bundle.count);
+      setBooksAllCount(bundle.allCount);
       setBooksVatTotal(bundle.vatInput);
       setLedgerCount(bundle.ledgerCount);
       setOwnerCount(bundle.ownerCount);
@@ -640,6 +654,7 @@ function InputVatTable({
     } catch {
       setBooksLines([]);
       setBooksCount(0);
+      setBooksAllCount(0);
       setBooksVatTotal(0);
       setLedgerCount(0);
       setOwnerCount(0);
@@ -651,8 +666,28 @@ function InputVatTable({
 
   useEffect(() => {
     setOpenBooksLines(false);
+    setDetailLine(null);
     void refreshBooksVatLines();
   }, [month, refreshBooksVatLines]);
+
+  async function toggleLineClaim(line: BooksVatLine, nextClaim: boolean) {
+    if (locked) return;
+    const key = `${line.book}-${line.id}`;
+    setClaimBusyId(key);
+    setPullMsg("");
+    try {
+      if (line.book === "ledger") {
+        await updateLedgerEntry(line.id, { vatClaim: nextClaim });
+      } else {
+        await updateOwnerBookEntry(line.id, { vatClaim: nextClaim });
+      }
+      await refreshBooksVatLines();
+    } catch (e) {
+      setPullMsg(e instanceof Error ? e.message : "อัปเดตไม่สำเร็จ");
+    } finally {
+      setClaimBusyId("");
+    }
+  }
 
   async function pullIngredientFromBothBooks() {
     if (locked) return;
@@ -662,8 +697,11 @@ function InputVatTable({
       const bundle = await refreshBooksVatLines();
       if (!bundle || bundle.count <= 0 || bundle.vatInput <= 0) {
         setPullMsg(
-          "ยังไม่มีรายการที่ติ๊กช่อง VAT ในบช.พนักงานหรือบช.เจ้าของเดือนนี้",
+          bundle && bundle.allCount > 0
+            ? `มี ${bundle.allCount} รายการมียอด VAT แต่ยังไม่มีรายการที่ติ๊ก「รวมเข้าระบบ」 — เปิด + แล้วติ๊กก่อนดึง`
+            : "ยังไม่มีรายการภาษีซื้อจากสองบช. ในเดือนนี้",
         );
+        setOpenBooksLines(true);
         return;
       }
       // รวมสองบช. → วัตถุดิบหน้าร้าน · GP เดลิเวอรี่แยก (ไม่ทับ)
@@ -767,8 +805,8 @@ function InputVatTable({
     <section className="vat-table-block">
       <h2 className="vat-table-title">2) ภาษีซื้อ — กลุ่มหักได้</h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        วัตถุดิบ = รวมภาษีซื้อที่ติ๊กจากบช.พนง. + บช.เจ้าของ · GP เดลิเวอรี่แยก ·
-        อย่าคีย์บิลซ้ำสองบช. · กด + ดูรายการ
+        วัตถุดิบ = รวมรายการที่ติ๊ก「รวมเข้าระบบ」จากสองบช. · แตะรายการดูรูป/ยอดเหมือนบช. ·
+        GP เดลิเวอรี่แยก · อย่าคีย์บิลซ้ำสองบช.
       </p>
       {!locked ? (
         <div className="vat-month-actions vat-month-actions--mini">
@@ -836,27 +874,28 @@ function InputVatTable({
               รายการจากสองบช.
               {linesBusy
                 ? "…"
-                : booksCount > 0
-                  ? ` (${booksCount} · ${formatVatMoney(booksVatTotal)})`
+                : booksAllCount > 0
+                  ? ` (${booksCount}/${booksAllCount} รวม · ${formatVatMoney(booksVatTotal)})`
                   : " (ยังไม่มี)"}
             </span>
           </span>
-          {!linesBusy && booksCount > 0 ? (
+          {!linesBusy && booksAllCount > 0 ? (
             <span className="muted vat-books-breakdown-meta">
-              พนง. {ledgerCount} · เจ้าของ {ownerCount}
+              รวมแล้ว พนง. {ledgerCount} · เจ้าของ {ownerCount}
             </span>
           ) : null}
         </div>
         {openBooksLines ? (
-          booksCount === 0 ? (
+          booksAllCount === 0 ? (
             <p className="muted vat-sales-hint vat-hint-one-line">
-              ยังไม่มีรายการที่ติ๊กช่อง VAT ในเดือนนี้ — ไปบช.พนง./เจ้าของติ๊กก่อน
+              ยังไม่มีรายการมียอด VAT จากสองบช. ในเดือนนี้ — บันทึกบิลที่บช.ก่อน
             </p>
           ) : (
             <div className="sheet-wrap vat-month-slim-wrap">
               <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-books-lines">
                 <thead>
                   <tr>
+                    <th className="col-claim">รวม</th>
                     <th className="col-date">วันที่</th>
                     <th className="col-seg">บช.</th>
                     <th className="col-seg">รายการ</th>
@@ -866,27 +905,57 @@ function InputVatTable({
                   </tr>
                 </thead>
                 <tbody>
-                  {booksLines.map((line) => (
-                    <tr key={`${line.book}-${line.id}`} className="vat-row-child">
-                      <td className="col-date">{formatDateShort(line.date)}</td>
-                      <td className="col-seg">{bookLabel(line.book)}</td>
-                      <td className="col-seg col-child" title={line.description}>
-                        {line.description}
-                      </td>
-                      <td className="col-num">{fmt(line.amountOut)}</td>
-                      <td className="col-num col-net">{fmt(line.vatInput)}</td>
-                      <td className="col-seg">
-                        {line.vatVerified ? (
-                          <span className="vat-line-ok">ตรงบิล</span>
-                        ) : (
-                          <span className="muted">ยังไม่ติ๊ก</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {booksLines.map((line) => {
+                    const rowKey = `${line.book}-${line.id}`;
+                    return (
+                      <tr
+                        key={rowKey}
+                        className={`vat-row-child vat-books-line-row${line.vatClaim ? " is-claimed" : ""}`}
+                        onClick={() =>
+                          setDetailLine({ book: line.book, id: line.id })
+                        }
+                      >
+                        <td
+                          className="col-claim"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            className="vat-claim-check"
+                            checked={line.vatClaim}
+                            disabled={
+                              locked || claimBusyId === rowKey || linesBusy
+                            }
+                            title="รวมเข้าระบบ"
+                            aria-label={`รวมเข้าระบบ ${line.description}`}
+                            onChange={(e) =>
+                              void toggleLineClaim(line, e.target.checked)
+                            }
+                          />
+                        </td>
+                        <td className="col-date">{formatDateShort(line.date)}</td>
+                        <td className="col-seg">{bookLabel(line.book)}</td>
+                        <td
+                          className="col-seg col-child"
+                          title={`${line.description} — แตะเพื่อดูรายละเอียด`}
+                        >
+                          {line.description}
+                        </td>
+                        <td className="col-num">{fmt(line.amountOut)}</td>
+                        <td className="col-num col-net">{fmt(line.vatInput)}</td>
+                        <td className="col-seg">
+                          {line.vatVerified ? (
+                            <span className="vat-line-ok">ตรงบิล</span>
+                          ) : (
+                            <span className="muted">ยังไม่ติ๊ก</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   <tr className="vat-sales-totals-row">
-                    <td className="col-seg" colSpan={3}>
-                      รวมที่ติ๊ก VAT
+                    <td className="col-seg" colSpan={4}>
+                      รวมที่ติ๊ก「รวมเข้าระบบ」
                     </td>
                     <td className="col-num">—</td>
                     <td className="col-num col-net">
@@ -896,10 +965,26 @@ function InputVatTable({
                   </tr>
                 </tbody>
               </table>
+              <p className="muted vat-sales-hint vat-hint-one-line">
+                ติ๊ก「รวม」เพื่อหัก · แตะแถวเปิดมุมมองเหมือนบช. (รูป + ยอด VAT)
+              </p>
             </div>
           )
         ) : null}
       </div>
+
+      {detailLine ? (
+        <BooksVatEntryDetailModal
+          book={detailLine.book}
+          entryId={detailLine.id}
+          locked={locked}
+          onClose={() => setDetailLine(null)}
+          onSaved={() => {
+            setDetailLine(null);
+            void refreshBooksVatLines();
+          }}
+        />
+      ) : null}
     </section>
   );
 }
@@ -1954,8 +2039,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     const income = parseMoneyInput(pnlIncome);
     const finalIncome = income > 0 ? income : incomeBridge.pnlIncome;
     const ok = window.confirm(
-      `ปิดงบ ${formatThaiMonthKey(month)} → รายได้ P&L = ${formatPlainNumber(finalIncome)} บาท?\n` +
-        `(หัก GP เดลิเวอรี่ ${formatPlainNumber(effectiveGpDeduct)}) · VAT สุทธิ ${formatPlainNumber(totals.netVat)} · หลังปิดล็อกแก้ยอด`,
+      `ปิดงบ ${formatThaiMonthKey(month)} → รายได้ P&L = ${formatVatMoney(finalIncome)} บาท?\n` +
+        `(หัก GP เดลิเวอรี่ ${formatVatMoney(effectiveGpDeduct)}) · VAT สุทธิ ${formatVatMoney(totals.netVat)} · หลังปิดล็อกแก้ยอด`,
     );
     if (!ok) return;
     setBusy(true);
@@ -2107,7 +2192,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         }),
       );
       setMsg(
-        `ดึงสรุปปี ${Number(year) + 543} แล้ว · กำไร ${formatPlainNumber(profit)} · ${months.length} เดือน`,
+        `ดึงสรุปปี ${Number(year) + 543} แล้ว · กำไร ${formatVatMoney(profit)} · ${months.length} เดือน`,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -2144,7 +2229,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       return;
     }
     const ok = window.confirm(
-      `ใส่รายได้ทดลอง ${formatPlainNumber(finalIncome)} บาท เข้า P&L เดือน ${month}?\n\n` +
+      `ใส่รายได้ทดลอง ${formatVatMoney(finalIncome)} บาท เข้า P&L เดือน ${month}?\n\n` +
         "ไม่ปิดงบ · ไม่ล็อกตาราง VAT · แก้/ดึงใหม่ได้ระหว่างงวด",
     );
     if (!ok) return;

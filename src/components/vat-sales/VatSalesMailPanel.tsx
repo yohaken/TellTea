@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { formatDateTimeShort, formatPlainNumber } from "@/lib/utils";
+import { formatDateTimeShort } from "@/lib/utils";
+import { formatVatMoney } from "@/lib/vat-number-format";
 import {
   DELIVERY_CHANNEL_LABELS,
   DELIVERY_CHANNELS,
@@ -364,7 +365,7 @@ export function VatSalesMailPanel({
         const prev = day.delivery[r.channel].grossInclusive;
         if (prev > 0 && Math.abs(prev - gross) > 0.009) {
           const ok = window.confirm(
-            `${reportDate} มียอด ${channelReportLabel(r.channel)} ${formatPlainNumber(prev)} อยู่แล้ว — ทับด้วย ${formatPlainNumber(gross)}?`,
+            `${reportDate} มียอด ${channelReportLabel(r.channel)} ${formatVatMoney(prev)} อยู่แล้ว — ทับด้วย ${formatVatMoney(gross)}?`,
           );
           if (!ok) {
             setBusy(null);
@@ -716,7 +717,7 @@ export function VatSalesMailPanel({
                     <td title={reportKindTitle(kind)}>{reportKindLabel(kind)}</td>
                     <td title={r.parsed?.reportDate || r.reportDateGuess || ""}>{dateDisp}</td>
                     <td className="col-num">
-                      {r.parsed ? formatPlainNumber(r.parsed.grossInclusive) : "—"}
+                      {r.parsed ? formatVatMoney(r.parsed.grossInclusive) : "—"}
                     </td>
                     <td className="col-desc" title={r.subject || ""}>
                       <div className="vat-mail-subject">{r.subject || "(ไม่มีหัวข้อ)"}</div>

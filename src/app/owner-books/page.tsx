@@ -827,6 +827,13 @@ function OwnerEntryModal({
         vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
         vatSource: hasVat ? vatSource || "manual" : "",
         vatVerified: hasVat ? vatVerified : false,
+        // รายการใหม่ไม่ auto รวม · แก้รายการคงสถานะเดิม (ติ๊กหลักที่ VAT เดือน)
+        vatClaim:
+          mode === "add"
+            ? false
+            : hasVat
+              ? Boolean(entry?.vatClaim)
+              : false,
       };
 
       if (mode === "add") {

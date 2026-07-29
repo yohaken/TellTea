@@ -3,7 +3,10 @@
  *
  * สูตร VAT เดือน:
  *   ภาษีซื้อรวม = GP (เดลิเวอรี่) + วัตถุดิบ
- *   วัตถุดิบ ← ผลรวม vatInput ของรายการที่ติ๊ก hasVat ในเดือนนั้น
+ *   วัตถุดิบ ← ผลรวม vatInput ของรายการที่ติ๊ก「รวมเข้าระบบ」(vatClaim) ในเดือนนั้น
+ *
+ * รายการที่มียอด VAT บนบิล (hasVat) แสดงในตาราง + ทั้งหมด
+ * แต่ดึงเข้าระบบเฉพาะที่ vatClaim
  *
  * ห้ามบันทึกบิลซ้ำสองบช. (จะนับภาษีซื้อซ้ำ)
  */
@@ -14,7 +17,7 @@ import { normalizeMoney, roundMoney } from "./vat-sales";
 
 export type BooksVatBook = "ledger" | "owner";
 
-/** รายการย่อยที่ติ๊ก VAT — ใช้แจกแจงใต้ตารางภาษีซื้อ */
+/** รายการย่อยที่มีภาษีซื้อบนบิล — ใช้แจกแจงใต้ตารางภาษีซื้อ */
 export type BooksVatLine = {
   id: string;
   book: BooksVatBook;
@@ -24,17 +27,22 @@ export type BooksVatLine = {
   vatInput: number;
   vatVerified: boolean;
   vatSource: string;
+  /** รวมเข้าหัก VAT เดือน */
+  vatClaim: boolean;
 };
 
 export type BooksVatMonthSum = {
   monthKey: string;
+  /** ยอดที่ติ๊กรวมเข้าระบบเท่านั้น */
   ledgerVat: number;
   ledgerCount: number;
   ownerVat: number;
   ownerCount: number;
-  /** ledger + owner */
+  /** ledger + owner (claimed) */
   vatInput: number;
   count: number;
+  /** จำนวนรายการที่มี VAT บนบิลทั้งหมด (รวมยังไม่ติ๊ก) */
+  allCount: number;
 };
 
 export type BooksVatMonthBundle = BooksVatMonthSum & {
@@ -47,7 +55,7 @@ function bookLabel(book: BooksVatBook): string {
 
 export { bookLabel };
 
-/** โหลดยอดรวม + รายการย่อยที่ติ๊ก VAT ในเดือน */
+/** โหลดยอดรวม (claimed) + รายการย่อยทั้งหมดที่มี VAT ในเดือน */
 export async function loadBothBooksVatByMonth(
   monthKey: string,
 ): Promise<BooksVatMonthBundle> {
@@ -59,6 +67,7 @@ export async function loadBothBooksVatByMonth(
     ownerCount: 0,
     vatInput: 0,
     count: 0,
+    allCount: 0,
     lines: [],
   };
   if (!/^\d{4}-\d{2}$/.test(monthKey)) return empty;
@@ -83,8 +92,11 @@ export async function loadBothBooksVatByMonth(
     if (!row.hasVat || row.amountOut <= 0) continue;
     const v = normalizeMoney(row.vatInput);
     if (v <= 0) continue;
-    ledgerVat = roundMoney(ledgerVat + v);
-    ledgerCount += 1;
+    const claimed = Boolean(row.vatClaim);
+    if (claimed) {
+      ledgerVat = roundMoney(ledgerVat + v);
+      ledgerCount += 1;
+    }
     lines.push({
       id: row.id,
       book: "ledger",
@@ -94,6 +106,7 @@ export async function loadBothBooksVatByMonth(
       vatInput: v,
       vatVerified: Boolean(row.vatVerified),
       vatSource: String(row.vatSource || ""),
+      vatClaim: claimed,
     });
   }
 
@@ -102,8 +115,11 @@ export async function loadBothBooksVatByMonth(
     if (monthKeyFromMs(row.date) !== monthKey) continue;
     const v = normalizeMoney(row.vatInput);
     if (v <= 0) continue;
-    ownerVat = roundMoney(ownerVat + v);
-    ownerCount += 1;
+    const claimed = Boolean(row.vatClaim);
+    if (claimed) {
+      ownerVat = roundMoney(ownerVat + v);
+      ownerCount += 1;
+    }
     lines.push({
       id: row.id,
       book: "owner",
@@ -113,6 +129,7 @@ export async function loadBothBooksVatByMonth(
       vatInput: v,
       vatVerified: Boolean(row.vatVerified),
       vatSource: String(row.vatSource || ""),
+      vatClaim: claimed,
     });
   }
 
@@ -126,6 +143,7 @@ export async function loadBothBooksVatByMonth(
     ownerCount,
     vatInput: roundMoney(ledgerVat + ownerVat),
     count: ledgerCount + ownerCount,
+    allCount: lines.length,
     lines,
   };
 }

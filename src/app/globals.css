@@ -17425,6 +17425,35 @@ a.ghost-btn {
   text-overflow: ellipsis;
 }
 
+.vat-books-lines .col-claim {
+  width: 2.2rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.vat-books-line-row {
+  cursor: pointer;
+}
+
+.vat-books-line-row:hover td {
+  background: rgba(26, 92, 58, 0.06);
+}
+
+.vat-books-line-row.is-claimed td {
+  background: rgba(26, 92, 58, 0.04);
+}
+
+.vat-claim-check {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: #1a5c3a;
+}
+
+.vat-claim-toggle {
+  margin: 0.35rem 0 0.15rem;
+  font-weight: 600;
+}
+
 .vat-line-ok {
   color: #1a5c3a;
   font-size: 0.72rem;
