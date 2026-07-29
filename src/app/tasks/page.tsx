@@ -20,7 +20,14 @@ import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { isAppOwnerEmail } from "@/lib/firebase";
-import { completeTaskOccurrence, deleteTaskOccurrences, subscribeTaskOccurrences, subscribeTaskOccurrencesForAssignee, syncPendingOccurrencesFromTemplate } from "@/lib/task-occurrences";
+import {
+  completeTaskOccurrence,
+  deleteTaskOccurrences,
+  subscribeTaskOccurrences,
+  subscribeTaskOccurrencesForAssignee,
+  syncPendingOccurrencesFromTemplate,
+  taskOccurrenceSinceMs,
+} from "@/lib/task-occurrences";
 import {
   createTaskTemplate,
   deactivateTaskTemplate,
@@ -137,6 +144,7 @@ function TasksView() {
           }
         },
         (err) => setError(err.message || "โหลดรอบงานไม่สำเร็จ"),
+        { since: taskOccurrenceSinceMs() },
       );
 
       return () => {
@@ -164,6 +172,7 @@ function TasksView() {
         setError(err.message || "โหลดงานของฉันไม่สำเร็จ");
         setLoading(false);
       },
+      { since: taskOccurrenceSinceMs() },
     );
     return () => unsubOcc();
   }, [staff, isOwnerManager, myEmployeeId]);

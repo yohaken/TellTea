@@ -20,6 +20,7 @@ import {
   getSessionForRound,
   STOCK_COUNT_ROUNDS,
   submitStockCountSession,
+  stockCountSinceMs,
   subscribeStockCountSessions,
 } from "@/lib/stock-count";
 import type { StockCountRound, StockCountSession, StockItem } from "@/lib/types";
@@ -86,6 +87,7 @@ function StockView() {
     const unsubSessions = subscribeStockCountSessions(
       (rows) => setSessions(rows),
       (err) => setError(err.message),
+      { since: stockCountSinceMs() },
     );
     return () => {
       unsubItems();

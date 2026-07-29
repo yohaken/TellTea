@@ -283,19 +283,28 @@ export function checkHistorySinceMs(
 export function subscribeChecklistRecords(
   onRows: (rows: ChecklistRecord[]) => void,
   onError?: (err: Error) => void,
-  opts?: { since?: number },
+  opts?: { since?: number; until?: number },
 ): Unsubscribe {
   const since = opts?.since;
+  const until = opts?.until;
   // date ASC + submittedAt DESC ใช้ index ที่มีอยู่แล้วใน firestore.indexes.json
-  const q =
-    since != null
-      ? query(
-          recordsCol(),
-          where("date", ">=", since),
-          orderBy("date", "asc"),
-          orderBy("submittedAt", "desc"),
-        )
-      : query(recordsCol(), orderBy("submittedAt", "desc"));
+  let q = query(recordsCol(), orderBy("submittedAt", "desc"));
+  if (since != null && until != null) {
+    q = query(
+      recordsCol(),
+      where("date", ">=", since),
+      where("date", "<", until),
+      orderBy("date", "asc"),
+      orderBy("submittedAt", "desc"),
+    );
+  } else if (since != null) {
+    q = query(
+      recordsCol(),
+      where("date", ">=", since),
+      orderBy("date", "asc"),
+      orderBy("submittedAt", "desc"),
+    );
+  }
   return onSnapshot(
     q,
     (snap) => {

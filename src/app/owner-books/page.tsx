@@ -45,6 +45,8 @@ import {
   frequentOwnerDescriptions,
   getOwnerBookReceiptUrls,
   listOwnerBookEntries,
+  listOwnerBookEntriesSince,
+  listRecentOwnerBookEntries,
   OWNER_BOOKS_LIVE_MAX,
   OWNER_BOOKS_PAGE_SIZE,
   OWNER_BOOKS_RECEIPT_MAX,
@@ -62,6 +64,7 @@ import {
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
+import { daysAgoMs } from "@/lib/query-window";
 import { filterOwnerBookRows } from "@/lib/smart-search";
 import { exportOwnerBooksXlsx } from "@/lib/xlsx-export";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
@@ -151,7 +154,7 @@ function OwnerBooksView() {
     }
     let cancelled = false;
     setSearchLoading(true);
-    void listOwnerBookEntries()
+    void listOwnerBookEntriesSince(daysAgoMs(180))
       .then((rows) => {
         if (!cancelled) setSearchPool(rows);
       })
@@ -670,7 +673,7 @@ function OwnerEntryModal({
   }, [description, suggestions]);
 
   useEffect(() => {
-    void listOwnerBookEntries()
+    void listRecentOwnerBookEntries(200)
       .then((rows) => {
         setSuggestions(frequentOwnerDescriptions(rows));
         setTypeFreq(frequentTypes(rows));

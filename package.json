@@ -24,6 +24,7 @@
     "test:stock-catalog-owner": "node scripts/test-stock-catalog-owner.mjs",
     "test:ot-rate-settings-dedupe": "node scripts/test-ot-rate-settings-dedupe.mjs",
     "test:ot-load-perf": "node scripts/test-ot-load-perf.mjs",
+    "test:scoped-firestore-loads": "node scripts/test-scoped-firestore-loads.mjs",
     "test:prod-catalog-owner": "node scripts/test-prod-catalog-owner.mjs",
     "test:boh-menu-mgmt": "node scripts/test-boh-menu-mgmt.mjs",
     "test:boh-menu-p3-p5": "node scripts/test-boh-menu-p3-p5.mjs",

@@ -13,11 +13,11 @@ import {
   setDoc,
   startAfter,
   updateDoc,
+  where,
   writeBatch,
   type QueryDocumentSnapshot,
   type Unsubscribe,
 } from "firebase/firestore";
-import { monthKeyFromMs } from "./categories";
 import {
   normalizePurchaseVat,
   normalizeVatSource,
@@ -381,12 +381,15 @@ export async function sumOwnerBooksVatInputByMonth(
   if (!/^\d{4}-\d{2}$/.test(monthKey)) {
     return { vatInput: 0, count: 0 };
   }
-  const rows = await listOwnerBookEntries();
+  const [ys, ms] = monthKey.split("-");
+  const year = Number(ys);
+  const month = Number(ms);
+  if (!year || !month) return { vatInput: 0, count: 0 };
+  const rows = await listOwnerBookEntriesInMonth(year, month);
   let vatInput = 0;
   let count = 0;
   for (const row of rows) {
     if (!row.hasVat) continue;
-    if (monthKeyFromMs(row.date) !== monthKey) continue;
     const v = normalizeMoney(row.vatInput);
     if (v <= 0) continue;
     vatInput = roundMoney(vatInput + v);
@@ -502,10 +505,66 @@ export async function deleteOwnerBookEntry(id: string): Promise<void> {
   await applyOwnerOutDelta(-prevOut);
 }
 
-/** Full scan for owner reports (P&L). */
+/** Full scan for export — อย่าใช้ตอนเปิดหน้าปกติ */
 export async function listOwnerBookEntries(): Promise<OwnerBookEntry[]> {
   const snap = await getDocs(
     query(ownerBooksCol(), orderBy("date", "asc"), orderBy("createdAt", "asc")),
+  );
+  return snap.docs.map(mapEntry);
+}
+
+/** เดือนปฏิทิน — month = 1–12 (คู่กับ listLedgerEntriesInMonth) */
+export async function listOwnerBookEntriesInMonth(
+  year: number,
+  month: number,
+): Promise<OwnerBookEntry[]> {
+  const start = new Date(year, month - 1, 1).getTime();
+  const end = new Date(year, month, 1).getTime();
+  const snap = await getDocs(
+    query(
+      ownerBooksCol(),
+      where("date", ">=", start),
+      where("date", "<", end),
+      orderBy("date", "asc"),
+      orderBy("createdAt", "asc"),
+    ),
+  );
+  return snap.docs.map(mapEntry);
+}
+
+/** ช่วงวันที่ (until exclusive) — ใช้ P&L / ค้นหา */
+export async function listOwnerBookEntriesSince(
+  sinceMs: number,
+  untilMs?: number,
+): Promise<OwnerBookEntry[]> {
+  const q =
+    untilMs != null
+      ? query(
+          ownerBooksCol(),
+          where("date", ">=", sinceMs),
+          where("date", "<", untilMs),
+          orderBy("date", "asc"),
+          orderBy("createdAt", "asc"),
+        )
+      : query(
+          ownerBooksCol(),
+          where("date", ">=", sinceMs),
+          orderBy("date", "asc"),
+          orderBy("createdAt", "asc"),
+        );
+  const snap = await getDocs(q);
+  return snap.docs.map(mapEntry);
+}
+
+/** Recent outs for suggestion chips — ไม่สแกนทั้งก้อน */
+export async function listRecentOwnerBookEntries(max = 200): Promise<OwnerBookEntry[]> {
+  const snap = await getDocs(
+    query(
+      ownerBooksCol(),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+      limit(max),
+    ),
   );
   return snap.docs.map(mapEntry);
 }

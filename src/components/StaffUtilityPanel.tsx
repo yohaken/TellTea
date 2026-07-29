@@ -18,7 +18,10 @@ import {
   STAFF_UTILITY_CATALOG,
   type StaffUtilitySlot,
 } from "@/lib/staff-utility";
-import { subscribeTaskOccurrencesForAssignee } from "@/lib/task-occurrences";
+import {
+  subscribeTaskOccurrencesForAssignee,
+  taskOccurrenceSinceMs,
+} from "@/lib/task-occurrences";
 import { filterOccurrencesByTab } from "@/lib/task-weekly-logic";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +77,7 @@ export function StaffUtilityPanel({
         setPendingTasks(filterOccurrencesByTab(rows, "thisWeek").length);
       },
       () => setPendingTasks(0),
+      { since: taskOccurrenceSinceMs() },
     );
   }, [ready, isOwner, myEmployeeId]);
 
