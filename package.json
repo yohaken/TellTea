@@ -60,6 +60,7 @@
     "test:owner-books-multi-photo-ui": "node scripts/test-owner-books-multi-photo-ui.mjs",
     "test:owner-books-bulk-retype": "node scripts/test-owner-books-bulk-retype.mjs",
     "test:owner-books-vat-fields": "node scripts/test-owner-books-vat-fields.mjs",
+    "test:ai-vat-extract": "node scripts/test-ai-vat-extract.mjs",
     "ensure:storage-bucket": "node scripts/ensure-storage-bucket.mjs",
     "test:pos-connectivity": "node scripts/test-pos-connectivity.mjs",
     "test:pos-complete-sale": "node scripts/test-pos-complete-sale.mjs",

@@ -20,6 +20,7 @@ import {
 import { monthKeyFromMs } from "./categories";
 import {
   normalizePurchaseVat,
+  normalizeVatSource,
   proposePurchaseVatInput,
   type EntryVatFields,
 } from "./entry-vat";
@@ -55,6 +56,8 @@ export type OwnerBookEntryInput = {
   vatInput?: number;
   vatBase?: number;
   vatInvoiceNo?: string;
+  vatSource?: string;
+  vatVerified?: boolean;
 };
 
 /** @deprecated ใช้ proposePurchaseVatInput จาก entry-vat */
@@ -108,6 +111,8 @@ function mapEntry(d: QueryDocumentSnapshot): OwnerBookEntry {
       vatBase: Number(data.vatBase) || 0,
       vatInvoiceNo:
         typeof data.vatInvoiceNo === "string" ? data.vatInvoiceNo : "",
+      vatSource: normalizeVatSource(data.vatSource),
+      vatVerified: Boolean(data.vatVerified),
     },
     amountOut,
   );
@@ -236,9 +241,14 @@ export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<str
       vatInput: input.vatInput,
       vatBase: input.vatBase,
       vatInvoiceNo: input.vatInvoiceNo,
+      vatSource: normalizeVatSource(input.vatSource),
+      vatVerified: Boolean(input.vatVerified),
     },
     amountOut,
   );
+  if (vat.hasVat && vat.vatInput <= 0) {
+    throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล หรือกดใช้ประมาณ");
+  }
   const payload = {
     date: input.date,
     description: input.description.trim(),
@@ -257,6 +267,8 @@ export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<str
     vatInput: vat.vatInput,
     vatBase: vat.vatBase,
     vatInvoiceNo: vat.vatInvoiceNo,
+    vatSource: vat.vatSource,
+    vatVerified: vat.vatVerified,
   };
   validateOwnerPayload(payload);
   const ref = await addDoc(ownerBooksCol(), payload);
@@ -282,6 +294,8 @@ export async function updateOwnerBookEntry(
       | "vatInput"
       | "vatBase"
       | "vatInvoiceNo"
+      | "vatSource"
+      | "vatVerified"
     >
   >,
 ): Promise<void> {
@@ -320,6 +334,8 @@ export async function updateOwnerBookEntry(
     patch.vatInput != null ||
     patch.vatBase != null ||
     patch.vatInvoiceNo != null ||
+    patch.vatSource != null ||
+    patch.vatVerified != null ||
     patch.amountOut != null;
   if (vatTouched) {
     const vat = normalizeOwnerBookVat(
@@ -332,13 +348,26 @@ export async function updateOwnerBookEntry(
           patch.vatInvoiceNo != null
             ? patch.vatInvoiceNo
             : String(prev.vatInvoiceNo || ""),
+        vatSource:
+          patch.vatSource != null
+            ? normalizeVatSource(patch.vatSource)
+            : normalizeVatSource(prev.vatSource),
+        vatVerified:
+          patch.vatVerified != null
+            ? Boolean(patch.vatVerified)
+            : Boolean(prev.vatVerified),
       },
       nextOut,
     );
+    if (vat.hasVat && vat.vatInput <= 0) {
+      throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล หรือกดใช้ประมาณ");
+    }
     next.hasVat = vat.hasVat;
     next.vatInput = vat.vatInput;
     next.vatBase = vat.vatBase;
     next.vatInvoiceNo = vat.vatInvoiceNo;
+    next.vatSource = vat.vatSource;
+    next.vatVerified = vat.vatVerified;
   }
 
   await updateDoc(entryRef, next);

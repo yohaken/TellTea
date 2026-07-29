@@ -19,17 +19,24 @@ const MAX_IMAGE_BYTES = 3.5 * 1024 * 1024;
 const BOOTSTRAP_GEMINI_API_KEY = "";
 
 const EXTRACT_SYSTEM_PROMPT = `คุณเป็นผู้ช่วยอ่านใบเสร็จ/หลักฐานการจ่ายเงินสำหรับร้านเครื่องดื่ม/เบเกอรี่ในไทย
-อ่านจากรูปแล้วดึงข้อมูลสำหรับบันทึกบัญชีเงินออก
+อ่านจากรูปแล้วดึงข้อมูลสำหรับบันทึกบัญชีเงินออก + ภาษีซื้อ (VAT)
 
 ตอบเป็น JSON เท่านั้น ในรูป:
-{"date":"YYYY-MM-DD หรือว่าง","description":"ชื่อรายการสั้นๆ ภาษาไทย","amountOut":จำนวนเงินเป็นตัวเลขหรือ null,"type":"cogs|sga|asset|อื่นๆ","note":"หมายเหตุสั้นๆ หรือว่าง","reason":"เหตุผลสั้นๆ ภาษาไทยไม่เกิน 40 ตัวอักษร"}
+{"date":"YYYY-MM-DD หรือว่าง","description":"ชื่อรายการสั้นๆ ภาษาไทย","amountOut":จำนวนเงินเป็นตัวเลขหรือ null,"type":"cogs|sga|asset|อื่นๆ","note":"หมายเหตุสั้นๆ หรือว่าง","reason":"เหตุผลสั้นๆ ภาษาไทยไม่เกิน 40 ตัวอักษร","hasVat":trueหรือfalse,"vatInput":จำนวนภาษีมูลค่าเพิ่มเป็นตัวเลขหรือ null,"vatBase":มูลค่าก่อนภาษีหรือ null,"vatInvoiceNo":"เลขที่ใบกำกับหรือว่าง","vatSeenOnBill":trueหรือfalse,"vatReason":"สั้นๆ ว่าเห็น VAT จากตรงไหน หรือทำไมไม่มี"}
 
 กฎ:
 - date = วันที่บนใบเสร็จ (ไม่ใช่วันที่อัปโหลด) ถ้าไม่ชัดให้ "" 
-- description = สรุปสิ่งที่ซื้อ/จ่าย สั้น ชัด (เช่น "นมสด" "ค่าไฟ" "แก้วพลาสติก")
+- description = สรุปสิ่งที่ซื้อ/จ่าย สั้น ชัด (เช่น "นมสดแม็คโคร" "ท็อปส์" "ค่าไฟ")
 - amountOut = ยอดรวมที่จ่ายจริง (ตัวเลข ไม่มี comma) ถ้าไม่ชัดให้ null
 - type ตามกฎบัญชี: cogs=วัตถุดิบ/บรรจุภัณฑ์/ค่าขนส่งวัตถุดิบ · sga=ค่าแรง/ค่าไฟ/ค่าเช่า/ซ่อม · asset=เครื่องจักร/อุปกรณ์ถาวร · อื่นๆ=ไม่ชัด
 - ถ้ามีหลายรายการในใบเสร็จ ให้สรุปเป็นรายการหลักหนึ่งรายการ + ยอดรวม
+- **VAT (สำคัญ):**
+  - vatInput = ยอด "ภาษีมูลค่าเพิ่ม" / "VAT" / "ภาษี 7%" ที่พิมพ์บนบิลเท่านั้น
+  - vatBase = มูลค่าสินค้าก่อน VAT ถ้าเห็นบนบิล
+  - hasVat = true เฉพาะเมื่อเห็นบรรทัดภาษีหรือใบกำกับภาษีชัด
+  - vatSeenOnBill = true เมื่ออ่านตัวเลขภาษีจากบิลได้ (ไม่ใช่เดา)
+  - **ห้ามคำนวณ VAT จากยอดรวม×7/107 เอง** ถ้าบิลไม่แสดงบรรทัดภาษี ให้ hasVat=false, vatInput=null
+  - vatInvoiceNo = เลขที่ใบกำกับภาษีถ้าเห็น
 - ห้ามแต่งข้อมูลที่มองไม่เห็นในรูป`;
 
 function buildExtractSystemPrompt(businessContext) {
@@ -196,6 +203,17 @@ async function callGeminiExtract({ apiKey, model, imageParts, businessContext })
     throw new Error("AI ตอบประเภทไม่ถูกต้อง");
   }
 
+  const vatInput = normalizeAmount(parsed.vatInput);
+  const vatBase = normalizeAmount(parsed.vatBase);
+  const hasVatFlag =
+    parsed.hasVat === true ||
+    parsed.hasVat === "true" ||
+    (vatInput != null && vatInput > 0);
+  const vatSeenOnBill =
+    parsed.vatSeenOnBill === true ||
+    parsed.vatSeenOnBill === "true" ||
+    (hasVatFlag && vatInput != null);
+
   return {
     date: normalizeDate(parsed.date),
     description: String(parsed.description || "")
@@ -207,6 +225,16 @@ async function callGeminiExtract({ apiKey, model, imageParts, businessContext })
       .trim()
       .slice(0, 120),
     reason: String(parsed.reason || "")
+      .trim()
+      .slice(0, 80),
+    hasVat: Boolean(hasVatFlag && vatInput != null),
+    vatInput,
+    vatBase,
+    vatInvoiceNo: String(parsed.vatInvoiceNo || "")
+      .trim()
+      .slice(0, 80),
+    vatSeenOnBill: Boolean(vatSeenOnBill && vatInput != null),
+    vatReason: String(parsed.vatReason || "")
       .trim()
       .slice(0, 80),
   };

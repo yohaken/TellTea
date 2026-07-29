@@ -24,7 +24,7 @@ import {
   type Query,
   type Unsubscribe,
 } from "firebase/firestore";
-import { normalizePurchaseVat } from "./entry-vat";
+import { normalizePurchaseVat, normalizeVatSource } from "./entry-vat";
 import { getDb } from "./firebase";
 import type { LedgerEntry, LedgerEntryInput } from "./types";
 import { normalizeMoney, roundMoney } from "./vat-sales";
@@ -83,6 +83,8 @@ function mapEntry(d: QueryDocumentSnapshot): LedgerEntry {
       vatBase: Number(data.vatBase) || 0,
       vatInvoiceNo:
         typeof data.vatInvoiceNo === "string" ? data.vatInvoiceNo : "",
+      vatSource: normalizeVatSource(data.vatSource),
+      vatVerified: Boolean(data.vatVerified),
     },
     amountOut,
   );
@@ -368,9 +370,14 @@ export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
       vatInput: input.vatInput,
       vatBase: input.vatBase,
       vatInvoiceNo: input.vatInvoiceNo,
+      vatSource: normalizeVatSource(input.vatSource),
+      vatVerified: Boolean(input.vatVerified),
     },
     amountOut,
   );
+  if (vat.hasVat && vat.vatInput <= 0) {
+    throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล หรือกดใช้ประมาณ");
+  }
   const payload = {
     date: input.date,
     description: input.description.trim(),
@@ -388,6 +395,8 @@ export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
     vatInput: vat.vatInput,
     vatBase: vat.vatBase,
     vatInvoiceNo: vat.vatInvoiceNo,
+    vatSource: vat.vatSource,
+    vatVerified: vat.vatVerified,
   };
   validateLedgerPayload(payload);
   const ref = await addDoc(collection(getDb(), "ledger"), payload);
@@ -413,6 +422,8 @@ export async function updateLedgerEntry(
       | "vatInput"
       | "vatBase"
       | "vatInvoiceNo"
+      | "vatSource"
+      | "vatVerified"
     >
   >,
 ): Promise<void> {
@@ -461,6 +472,8 @@ export async function updateLedgerEntry(
     patch.vatInput != null ||
     patch.vatBase != null ||
     patch.vatInvoiceNo != null ||
+    patch.vatSource != null ||
+    patch.vatVerified != null ||
     patch.amountOut != null ||
     patch.amountIn != null;
   if (vatTouched) {
@@ -476,13 +489,26 @@ export async function updateLedgerEntry(
           patch.vatInvoiceNo != null
             ? patch.vatInvoiceNo
             : String(prev.vatInvoiceNo || ""),
+        vatSource:
+          patch.vatSource != null
+            ? normalizeVatSource(patch.vatSource)
+            : normalizeVatSource(prev.vatSource),
+        vatVerified:
+          patch.vatVerified != null
+            ? Boolean(patch.vatVerified)
+            : Boolean(prev.vatVerified),
       },
       nextOut,
     );
+    if (vat.hasVat && vat.vatInput <= 0) {
+      throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล หรือกดใช้ประมาณ");
+    }
     next.hasVat = vat.hasVat;
     next.vatInput = vat.vatInput;
     next.vatBase = vat.vatBase;
     next.vatInvoiceNo = vat.vatInvoiceNo;
+    next.vatSource = vat.vatSource;
+    next.vatVerified = vat.vatVerified;
   }
 
   await updateDoc(entryRef, next);

@@ -2200,6 +2200,13 @@ body.modal-open .main-panel {
   height: 1.1rem;
 }
 
+.owner-vat-verify {
+  margin-top: 0.35rem;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.5rem;
+  background: rgba(40, 90, 60, 0.08);
+}
+
 .entry-toolbar-actions {
   display: flex;
   align-items: center;

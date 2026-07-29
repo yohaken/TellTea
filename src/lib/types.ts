@@ -67,6 +67,10 @@ export type LedgerEntry = {
   vatBase?: number;
   /** เลขที่ใบกำกับภาษี (ถ้ามี) */
   vatInvoiceNo?: string;
+  /** ai | manual | propose */
+  vatSource?: string;
+  /** คนตรวจแล้วว่าตรงบิล */
+  vatVerified?: boolean;
 };
 
 export type LedgerEntryInput = {
@@ -84,6 +88,8 @@ export type LedgerEntryInput = {
   vatInput?: number;
   vatBase?: number;
   vatInvoiceNo?: string;
+  vatSource?: string;
+  vatVerified?: boolean;
 };
 
 /** Perpetual inventory — วัตถุดิบร้าน (Products) */

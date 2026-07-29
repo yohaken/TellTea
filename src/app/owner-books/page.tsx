@@ -15,12 +15,18 @@ import { AuthGate } from "@/components/AuthGate";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
+import { EntryVatFieldset } from "@/components/EntryVatFieldset";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { OwnerBooksModeSwitch } from "@/components/OwnerBooksModeSwitch";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import {
+  normalizeVatSource,
+  parseVatInputStr,
+  type VatSource,
+} from "@/lib/entry-vat";
 import {
   classifyLedgerTypeHeuristic,
   classifyLedgerTypeWithAi,
@@ -42,7 +48,6 @@ import {
   OWNER_BOOKS_LIVE_MAX,
   OWNER_BOOKS_PAGE_SIZE,
   OWNER_BOOKS_RECEIPT_MAX,
-  proposeOwnerBookVatInput,
   subscribeOwnerBooksPage,
   subscribeOwnerBooksTotalOut,
   updateOwnerBookEntry,
@@ -622,6 +627,11 @@ function OwnerEntryModal({
     entry?.hasVat && (entry.vatInput || 0) > 0 ? String(entry.vatInput) : "",
   );
   const [vatInvoiceNo, setVatInvoiceNo] = useState(entry?.vatInvoiceNo || "");
+  const [vatSource, setVatSource] = useState<VatSource>(() =>
+    normalizeVatSource(entry?.vatSource),
+  );
+  const [vatVerified, setVatVerified] = useState(Boolean(entry?.vatVerified));
+  const [aiVatReason, setAiVatReason] = useState("");
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getOwnerBookReceiptUrls(entry));
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
   const [formError, setFormError] = useState("");
@@ -737,6 +747,20 @@ function OwnerEntryModal({
         setPreviewStatus("ready");
         setPreviewError(null);
       }
+      // VAT: AI อ่านจากบิลก่อน — ไม่คำนวณ ×7/107
+      setAiVatReason(result.vatReason || result.reason || "");
+      if (result.hasVat && result.vatInput != null && result.vatInput > 0) {
+        setHasVat(true);
+        setVatInputStr(String(result.vatInput));
+        if (result.vatInvoiceNo) setVatInvoiceNo(result.vatInvoiceNo);
+        setVatSource("ai");
+        setVatVerified(false);
+      } else {
+        setAiVatReason(
+          result.vatReason ||
+            "AI ไม่เห็นบรรทัดภาษีบนบิล — กรอกเองหรือไม่ติ๊ก VAT",
+        );
+      }
       setExtractStatus("ready");
     } catch (err) {
       setExtractStatus("error");
@@ -793,16 +817,16 @@ function OwnerEntryModal({
       }
 
       const amountOut = Number(amount);
-      const vatInputNum = Number(String(vatInputStr).replace(/,/g, ""));
+      const vatInputNum = parseVatInputStr(vatInputStr);
+      if (hasVat && vatInputNum <= 0) {
+        throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล หรือกดใช้ประมาณ ×7/107");
+      }
       const vatPayload = {
         hasVat,
-        vatInput:
-          hasVat && Number.isFinite(vatInputNum) && vatInputNum > 0
-            ? vatInputNum
-            : hasVat
-              ? proposeOwnerBookVatInput(amountOut)
-              : 0,
+        vatInput: hasVat ? vatInputNum : 0,
         vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
+        vatSource: hasVat ? vatSource || "manual" : "",
+        vatVerified: hasVat ? vatVerified : false,
       };
 
       if (mode === "add") {
@@ -982,86 +1006,46 @@ function OwnerEntryModal({
               step="0.01"
               inputMode="decimal"
               value={amount}
-              onChange={(e) => {
-                const next = e.target.value;
-                setAmount(next);
-                if (hasVat && !vatInputStr.trim()) {
-                  const n = Number(next);
-                  if (Number.isFinite(n) && n > 0) {
-                    setVatInputStr(String(proposeOwnerBookVatInput(n)));
-                  }
-                }
-              }}
+              onChange={(e) => setAmount(e.target.value)}
               required
             />
           </div>
 
-          <fieldset className="owner-vat-box">
-            <legend>ช่อง VAT · ภาษีซื้อ</legend>
-            <label className="owner-vat-toggle">
-              <input
-                type="checkbox"
-                checked={hasVat}
-                disabled={busy}
-                onChange={(e) => {
-                  const on = e.target.checked;
-                  setHasVat(on);
-                  if (on) {
-                    const n = Number(amount);
-                    if ((!vatInputStr.trim() || Number(vatInputStr) <= 0) && n > 0) {
-                      setVatInputStr(String(proposeOwnerBookVatInput(n)));
-                    }
-                  }
-                }}
-              />
-              มีใบกำกับภาษี · หักภาษีซื้อได้
-            </label>
-            {hasVat ? (
-              <>
-                <div className="field">
-                  <label htmlFor="ob-vat-input">
-                    ภาษีซื้อ (บาท)
-                    <span className="muted">
-                      {" "}
-                      · เสนอ{" "}
-                      {formatVatMoney(
-                        proposeOwnerBookVatInput(Number(amount) || 0),
-                      )}{" "}
-                      จากยอด×7/107
-                    </span>
-                  </label>
-                  <input
-                    id="ob-vat-input"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={vatInputStr}
-                    disabled={busy}
-                    placeholder={String(
-                      proposeOwnerBookVatInput(Number(amount) || 0) || "",
-                    )}
-                    onChange={(e) => setVatInputStr(e.target.value)}
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="ob-vat-inv">เลขที่ใบกำกับ (ถ้ามี)</label>
-                  <input
-                    id="ob-vat-inv"
-                    value={vatInvoiceNo}
-                    disabled={busy}
-                    autoComplete="off"
-                    placeholder="เช่น INV-001"
-                    onChange={(e) => setVatInvoiceNo(e.target.value)}
-                  />
-                </div>
-              </>
-            ) : (
-              <p className="muted form-hint-inline">
-                ติ๊กเมื่อบิลมี VAT — ยอดไปรวมภาษีซื้อในแท็บ VAT เดือนได้
-              </p>
-            )}
-          </fieldset>
+          <EntryVatFieldset
+            idPrefix="ob"
+            disabled={busy}
+            amountInclusive={Number(amount) || 0}
+            hasVat={hasVat}
+            vatInputStr={vatInputStr}
+            vatInvoiceNo={vatInvoiceNo}
+            vatSource={vatSource}
+            vatVerified={vatVerified}
+            aiStatus={
+              receiptUrls.length === 0
+                ? "none"
+                : extractStatus === "loading"
+                  ? "loading"
+                  : extractStatus === "error"
+                    ? "error"
+                    : extractStatus === "ready"
+                      ? "ready"
+                      : "idle"
+            }
+            aiVatReason={aiVatReason}
+            onHasVatChange={setHasVat}
+            onVatInputChange={setVatInputStr}
+            onVatInvoiceNoChange={setVatInvoiceNo}
+            onVatSourceChange={setVatSource}
+            onVatVerifiedChange={setVatVerified}
+            onVendorHint={(name) => {
+              if (!description.trim()) setDescription(name);
+            }}
+            canRereadAi={receiptUrls.length > 0}
+            onRereadAi={() => {
+              lastExtractKeyRef.current = "";
+              void runExtractFromPhotos(receiptUrls);
+            }}
+          />
 
           <LedgerTypeField
             id="ob-type"

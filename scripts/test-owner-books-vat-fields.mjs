@@ -21,13 +21,13 @@ assert.match(libSrc, /proposeOwnerBookVatInput/);
 assert.match(libSrc, /normalizeOwnerBookVat/);
 assert.match(libSrc, /sumOwnerBooksVatInputByMonth/);
 
-assert.match(pageSrc, /ช่อง VAT/);
+assert.match(pageSrc, /EntryVatFieldset/);
 assert.match(pageSrc, /hasVat/);
 assert.match(pageSrc, /vatInputStr/);
+assert.match(pageSrc, /vatVerified/);
 assert.match(pageSrc, /entry-toolbar-actions/);
 assert.match(pageSrc, /className="trash-btn"/);
 assert.match(pageSrc, /col-vat/);
-assert.match(pageSrc, /owner-vat-box/);
 
 assert.match(vatSrc, /sumBothBooksVatInputByMonth/);
 assert.match(vatSrc, /ดึงภาษีซื้อจากสองบช/);
