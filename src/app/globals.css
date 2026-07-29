@@ -16603,6 +16603,191 @@ a.ghost-btn {
   text-align: left;
 }
 
+.cash-in-create-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.35rem;
+  margin: 0 0 0.45rem;
+}
+
+.cash-in-create-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.55);
+  text-align: left;
+}
+
+.cash-in-create-field input {
+  min-height: 1.7rem;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.78rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(28, 42, 31, 0.16);
+  background: #fff;
+  max-width: 9.5rem;
+}
+
+.cash-in-create-days input {
+  max-width: 3.6rem;
+  text-align: center;
+}
+
+.cash-in-create-btn {
+  min-height: 1.7rem;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.78rem;
+}
+
+.cash-in-create-field-label {
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.55);
+  margin-bottom: 0.12rem;
+}
+
+.cash-in-round-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+  margin: 0 0 0.4rem;
+}
+
+.cash-in-round-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-height: 1.55rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.72);
+  cursor: pointer;
+}
+
+.cash-in-round-chip.is-active {
+  border-color: rgba(87, 15, 15, 0.35);
+  background: rgba(87, 15, 15, 0.06);
+  color: rgba(87, 15, 15, 0.95);
+}
+
+.cash-in-round-chip.is-draft {
+  border-style: dashed;
+}
+
+.cash-in-round-chip.is-void {
+  opacity: 0.55;
+}
+
+.cash-in-slim {
+  font-size: 0.72rem;
+}
+
+.cash-in-slim th,
+.cash-in-slim td {
+  padding: 0.22rem 0.28rem !important;
+  vertical-align: middle;
+}
+
+.cash-in-slim th {
+  font-size: 0.66rem;
+  white-space: nowrap;
+}
+
+.cash-in-slim .col-round {
+  width: 3.6rem;
+  max-width: 4.2rem;
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.cash-in-slim .col-date {
+  width: 4.8rem;
+}
+
+.cash-in-slim .col-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 3.4rem;
+}
+
+.cash-in-slim .col-slip {
+  width: 2.2rem;
+  text-align: center;
+}
+
+.cash-in-slim tfoot td {
+  font-weight: 700;
+  border-top: 1px solid rgba(28, 42, 31, 0.12);
+}
+
+.cash-in-cell-input {
+  width: 100%;
+  min-height: 1.45rem;
+  padding: 0.08rem 0.2rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  border-radius: 0.3rem;
+  font-size: 0.72rem;
+  background: #fff;
+}
+
+.cash-in-cell-input.is-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  max-width: 5.2rem;
+  margin-left: auto;
+  display: block;
+}
+
+.cash-in-round-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: flex-end;
+  margin: 0 0 0.4rem;
+}
+
+.cash-in-bank-slip-cell {
+  text-align: left;
+}
+
+.cash-in-math.is-slim {
+  display: block;
+  margin: 0.35rem 0;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+.cash-in-math.is-slim .is-ok {
+  color: rgba(30, 96, 54, 0.95);
+}
+
+.cash-in-math.is-slim .is-off {
+  color: rgba(160, 48, 32, 0.95);
+}
+
+.cash-in-round-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.25rem;
+}
+
+.cash-in-verify.is-slim {
+  margin-top: 0.45rem;
+  padding-top: 0.45rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
 .cash-in-table .col-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
