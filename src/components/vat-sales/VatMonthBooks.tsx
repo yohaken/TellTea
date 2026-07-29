@@ -67,7 +67,6 @@ import { bangkokMonthKey } from "@/lib/vat-sales";
 import { listVatImportRows } from "@/lib/vat-import";
 import {
   describeImportIntoBooks,
-  mergeVatImportIntoMonth,
   previewApplyVatImportRows,
   type ImportIntoBooksMap,
 } from "@/lib/vat-import-apply";
@@ -186,7 +185,6 @@ export function VatMonthBooks({ actor }: Props) {
   const [openDeliverySales, setOpenDeliverySales] = useState(true);
   const [openStorefrontSales, setOpenStorefrontSales] = useState(true);
   const [importMap, setImportMap] = useState<ImportIntoBooksMap | null>(null);
-  const [importPullBusy, setImportPullBusy] = useState(false);
 
   const draftRef = useRef(draft);
   draftRef.current = draft;
@@ -337,37 +335,6 @@ export function VatMonthBooks({ actor }: Props) {
     setDraft((d) => patchSales(d, key, parseVatMoneyInput(raw)));
     markDirty();
   }
-
-  /** ดึงตารางนำเข้า → ประสานเข้างบ A/B/D */
-  const pullImportIntoBooks = async () => {
-    if (locked) return;
-    setImportPullBusy(true);
-    setError("");
-    try {
-      const rows = await listVatImportRows(month);
-      const result = await mergeVatImportIntoMonth({
-        monthKey: month,
-        rows,
-        actor,
-        markApplied: false,
-      });
-      if (result.skipped) {
-        setMsg(result.reason || "ยังไม่มียอดจากนำเข้า");
-        setImportMap(describeImportIntoBooks(result.preview));
-        return;
-      }
-      hydrateFromReturn(result.saved);
-      const map = describeImportIntoBooks(result.preview);
-      setImportMap(map);
-      setMsg(
-        `ดึงจากนำเข้า → งบ · โอน ${formatVatMoney(map.transferTotal)} · คชจ. ${formatVatMoney(map.feeTotal)} · ขาย ${formatVatMoney(map.salesTotal)} · GP≠ ${formatVatMoney(map.gpVatTotal)}`,
-      );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setImportPullBusy(false);
-    }
-  };
 
   const pullBothBooks = async () => {
     setBooksBusy(true);
@@ -662,20 +629,9 @@ export function VatMonthBooks({ actor }: Props) {
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
 
-      {/* สรุปสิ่งที่ดึงจากตารางนำเข้าเข้างบได้ */}
+      {/* สรุปยอดจากนำเข้าที่ผสานเข้างบอัตโนมัติแล้ว (เนื้อเดียว · ไม่มีปุ่มดึง) */}
       <section className="vat-table-block vat-import-into-books">
-        <h2 className="vat-table-title">
-          จากตารางนำเข้า → งบ{" "}
-          <button
-            type="button"
-            className="vat-mini-btn vat-mini-btn--primary"
-            disabled={locked || importPullBusy || loading}
-            title="รวมยอดขาย / คชจ. / โอน / ภาษีซื้อ GP จากแท็บนำเข้าเข้ากล่อง A·B·D"
-            onClick={() => void pullImportIntoBooks()}
-          >
-            {importPullBusy ? "…" : "ดึงเข้างบ"}
-          </button>
-        </h2>
+        <h2 className="vat-table-title">จากตารางนำเข้า → งบ (ผสานอัตโนมัติ)</h2>
         {importMap && importMap.rowCount > 0 ? (
           <>
             <div className="sheet-wrap vat-month-slim-wrap">
@@ -741,14 +697,12 @@ export function VatMonthBooks({ actor }: Props) {
               </table>
             </div>
             <p className="muted vat-sales-hint vat-hint-one-line">
-              โอน = รายได้เงินสด (หลังหัก GP) · GP≠ = VAT บนบิลค่า GP ไม่ใช่เงินหักเพิ่ม
-              · ไม่ดึง: {importMap.notPulled.slice(0, 3).join(" · ")}
+              แก้ที่แท็บนำเข้าแล้วเข้างบทันที · โอน = รายได้ · GP≠ = ภาษีซื้อ
             </p>
           </>
         ) : (
           <p className="muted vat-sales-hint vat-hint-one-line">
-            ยังไม่มีแถวในแท็บนำเข้าเดือนนี้ — กรอก/อัปโหลดที่แท็บนำเข้าแล้วกด
-            「ดึงเข้างบ」 (หรือรอซิงก์อัตโนมัติ)
+            ยังไม่มีแถวในแท็บนำเข้าเดือนนี้ — กรอกที่แท็บนำเข้าแล้วผสานเข้างบอัตโนมัติ
           </p>
         )}
       </section>
