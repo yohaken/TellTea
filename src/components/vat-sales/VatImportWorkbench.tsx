@@ -24,6 +24,7 @@ import {
   type VatImportRowStatus,
 } from "@/lib/vat-import";
 
+import { VatImportAiScratchpad } from "@/components/vat-sales/VatImportAiScratchpad";
 import {
   VAT_IMPORT_AI_RULES,
   VAT_IMPORT_CHANNEL_GUIDE,
@@ -31,6 +32,7 @@ import {
   VAT_IMPORT_WORKFLOW_NOTES,
   columnTitleAttr,
 } from "@/lib/vat-import-guide";
+
 
 import {
   grabCsvToImportRows,
@@ -669,6 +671,8 @@ export function VatImportWorkbench({ actor }: Props) {
           แล้วใช้เข้าเดือน
         </p>
       </header>
+
+      <VatImportAiScratchpad actor={actor} />
 
       <details
         className="vat-import-guide"

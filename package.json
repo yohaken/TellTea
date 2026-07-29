@@ -20,6 +20,8 @@
     "test:vat-import-grab": "npx --yes tsx scripts/test-vat-import-grab-csv.ts",
     "test:vat-import-inbox": "npx --yes tsx scripts/test-vat-import-inbox.ts",
     "test:vat-import-scaffold": "npx --yes tsx scripts/test-vat-import-scaffold.ts",
+    "test:vat-import-ai-notes": "npx --yes tsx scripts/test-vat-import-ai-notes.ts",
+
 
 
     "test:vat-mail-parse": "npx --yes tsx scripts/test-vat-mail-parse.ts",

@@ -17234,6 +17234,71 @@ a.ghost-btn {
   background: rgba(28, 42, 31, 0.02);
 }
 
+/* AI-only scratchpad: full text in DOM, nearly invisible to humans */
+.vat-import-ai-scratch {
+  position: relative;
+  margin: 0.15rem 0 0.25rem;
+}
+
+.vat-import-ai-scratch-body {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: pre-wrap;
+  border: 0;
+}
+
+.vat-import-ai-scratch-edit {
+  display: inline-block;
+  max-width: 100%;
+  font-size: 0.68rem;
+  color: rgba(28, 42, 31, 0.35);
+}
+
+.vat-import-ai-scratch-edit > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  padding: 0 0.15rem;
+}
+
+.vat-import-ai-scratch-edit > summary::-webkit-details-marker {
+  display: none;
+}
+
+.vat-import-ai-scratch-edit[open] {
+  display: block;
+  margin-top: 0.25rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px dashed rgba(28, 42, 31, 0.22);
+  border-radius: 4px;
+  color: rgba(28, 42, 31, 0.75);
+  background: rgba(28, 42, 31, 0.03);
+}
+
+.vat-import-ai-scratch-hint {
+  margin: 0.2rem 0 0.35rem;
+  font-size: 0.72rem;
+}
+
+.vat-import-ai-scratch-input {
+  width: 100%;
+  min-height: 10rem;
+  margin: 0.25rem 0;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid rgba(28, 42, 31, 0.2);
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  resize: vertical;
+  background: #fffef8;
+}
+
 .vat-import-guide {
   margin: 0.35rem 0 0.55rem;
   padding: 0.35rem 0.55rem 0.45rem;

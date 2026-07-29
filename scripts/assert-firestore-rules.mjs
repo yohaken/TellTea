@@ -97,6 +97,8 @@ assert.match(rules, /match \/vatMonthlyReturns\/\{monthId\}/);
 assert.match(rules, /request\.resource\.data\.dateKey == dateId/);
 assert.match(rules, /vatMonthlyReturns\/\{monthId\}[\s\S]*?isOwner\(\) \|\| isOwnerEmail\(\)/);
 assert.match(rules, /vatSalesSettings' && isOwner\(\)/);
+assert.match(rules, /vatImportAiNotes' && isOwner\(\)/);
+
 assert.match(rules, /vatMonthlySettings' && \(isOwner\(\) \|\| isOwnerEmail\(\)\)/);
 assert.match(rules, /personalTaxSettings' && \(isOwner\(\) \|\| isOwnerEmail\(\)\)/);
 assert.match(rules, /vatMailOAuth' && isOwner\(\)/);
