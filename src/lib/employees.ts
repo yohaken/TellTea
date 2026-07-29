@@ -19,6 +19,8 @@ import { normalizeEmail, normalizePhone } from "./utils";
 export type Employee = {
   id: string;
   name: string;
+  /** ชื่อเล่นสั้น — ใช้ไอคอน presence ของเจ้าของ (1–2 ตัว) */
+  nickname?: string;
   active: boolean;
   /** อีเมลบัญชีที่เชื่อม (legacy / Google) */
   linkedEmail?: string;
@@ -63,12 +65,14 @@ export async function listActiveEmployees(): Promise<Employee[]> {
   return (await listEmployees()).filter((e) => e.active);
 }
 
-export async function addEmployee(name: string): Promise<string> {
+export async function addEmployee(name: string, nickname?: string): Promise<string> {
   const n = name.trim();
   if (!n) throw new Error("ต้องใส่ชื่อพนักงาน");
+  const nick = nickname?.trim() || "";
   const now = Date.now();
   const ref = await addDoc(employeesCol(), {
     name: n,
+    ...(nick ? { nickname: nick } : {}),
     active: true,
     createdAt: now,
     updatedAt: now,
@@ -95,7 +99,10 @@ export async function upsertEmployeeWithId(
 export async function updateEmployee(
   id: string,
   patch: Partial<
-    Pick<Employee, "name" | "active" | "linkedEmail" | "linkedPhone" | "linkedStaffId" | "unitRate">
+    Pick<
+      Employee,
+      "name" | "nickname" | "active" | "linkedEmail" | "linkedPhone" | "linkedStaffId" | "unitRate"
+    >
   >,
 ): Promise<void> {
   const next: Record<string, unknown> = { updatedAt: Date.now() };
@@ -103,6 +110,10 @@ export async function updateEmployee(
     const n = patch.name.trim();
     if (!n) throw new Error("ต้องใส่ชื่อพนักงาน");
     next.name = n;
+  }
+  if (patch.nickname !== undefined) {
+    const nick = patch.nickname?.trim() || "";
+    next.nickname = nick ? nick : deleteField();
   }
   if (patch.active != null) next.active = patch.active;
   if (patch.linkedEmail !== undefined) {

@@ -84,7 +84,12 @@ service cloud.firestore {
               'profileComplete',
               'profileSnoozeUntil',
               'personalProfileComplete',
-            ]);
+              'lastSeenAt',
+            ])
+        && (
+          !after.diff(before).affectedKeys().hasAny(['lastSeenAt'])
+          || after.lastSeenAt is number
+        );
     }
 
     function employeeSelfLinkUpdate() {

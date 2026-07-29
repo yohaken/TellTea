@@ -92,6 +92,7 @@ export function StaffReadinessTable({
           <thead>
             <tr>
               <th className="staff-ready-col-name">ชื่อในร้าน</th>
+              <th className="staff-ready-col-nick">ชื่อเล่น</th>
               <th className="staff-ready-col-account">บัญชี</th>
               <th className="staff-ready-col-check-h">เข้า</th>
               <th className="staff-ready-col-check-h">ส่วนตัว</th>
@@ -126,6 +127,12 @@ export function StaffReadinessTable({
                     {row.kind === "roster-only" ? (
                       <span className="staff-ready-tag is-roster">ขั้นที่ 1 ✓</span>
                     ) : null}
+                  </td>
+                  <td className="staff-ready-col-nick muted">
+                    {(() => {
+                      const emp = employees.find((e) => e.id === row.employeeId);
+                      return emp?.nickname?.trim() || "—";
+                    })()}
                   </td>
                   <td className="staff-ready-col-account muted">{row.accountLabel}</td>
                   <CheckCell ok={row.checks.login} title={row.checks.login ? "ล็อกอินได้" : "ไม่มีอีเมล/เบอร์"} />
@@ -168,7 +175,7 @@ export function StaffReadinessTable({
       </div>
 
       <p className="muted staff-readiness-legend" style={{ textAlign: "left", fontSize: "0.8rem", marginTop: "0.5rem" }}>
-        ขั้นที่ 1 = ชื่อในรายชื่อร้าน · ขั้นที่ 2 = บัญชีอีเมล/เบอร์ (เข้า) · ส่วนตัว/PDPA = กรอกที่โปรไฟล์หลังล็อกอิน
+        ขั้นที่ 1 = ชื่อในรายชื่อร้าน · ชื่อเล่น = ไอคอนสั้นมุมบน (แก้ที่รายชื่อ) · ขั้นที่ 2 = บัญชีอีเมล/เบอร์ (เข้า) · ส่วนตัว/PDPA = กรอกที่โปรไฟล์หลังล็อกอิน
         {!ownerView ? " · รายละเอียดบัตรเห็นได้เฉพาะเจ้าของ" : ""}
       </p>
     </section>

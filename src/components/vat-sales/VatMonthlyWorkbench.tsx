@@ -12,12 +12,22 @@ import {
 import {
   buildIncomeBridge,
   computePersonalIncomeTax,
+  DEFAULT_GP_DEDUCT_PCT,
   DEFAULT_PERSONAL_ALLOWANCE,
   loadPersonalTaxSettings,
   proposeDeliveryGpDeduct,
+  proposeGpDeductPct,
+  resolveGpDeductAmount,
   savePersonalTaxSettings,
   THAI_PIT_BRACKETS,
+  type GpDeductMode,
 } from "@/lib/personal-income-tax";
+import {
+  formatVatMoney,
+  formatVatPct,
+  moneyFieldValue,
+  pctFieldValue,
+} from "@/lib/vat-number-format";
 import {
   DEFAULT_OUTPUT_PCT,
   DEFAULT_PERIOD_START_DAY,
@@ -57,13 +67,14 @@ function bookOutTotal(row: MonthCategoryRow) {
   return row.asset + row.cogs + row.sga + row.other;
 }
 
+/** แสดงเงินในตาราง — ทศนิยม 2 เสมอ (รวม 0.00) */
 function fmt(n: number) {
-  if (!n) return "—";
-  return formatPlainNumber(n);
+  if (!Number.isFinite(n)) return "—";
+  return formatVatMoney(n);
 }
 
 function moneyInputValue(n: number) {
-  return n ? String(n) : "";
+  return moneyFieldValue(n);
 }
 
 function parseMoneyInput(raw: string): number {
@@ -83,7 +94,7 @@ function roundPct(n: number) {
 }
 
 function pctLabel(n: number) {
-  return `${formatPlainNumber(roundPct(n))}%`;
+  return formatVatPct(roundPct(n));
 }
 
 function draftStorageKey(month: string) {
@@ -299,7 +310,7 @@ function TapRate({
   if (locked) {
     return (
       <span className="vat-tap-val">
-        {formatPlainNumber(value)}
+        {formatVatMoney(value)}
         {suffix}
       </span>
     );
@@ -426,7 +437,7 @@ function OutputVatTable({
               />
             ) : (
               <span className="vat-tap-edit vat-tap-edit--static" title="เดลิเวอรี่นำส่ง 100%">
-                <span className="vat-tap-val">100</span>
+                <span className="vat-tap-val">{formatVatMoney(100)}</span>
                 <span className="vat-tap-suffix">%</span>
               </span>
             )}
@@ -796,10 +807,15 @@ function IncomeBridgeTable({
   locked,
   mode,
   bridge,
+  gpDeductMode,
+  gpDeductPctStr,
   gpDeductStr,
   gpPropose,
+  gpProposePct,
   pnlIncomeStr,
   onModeChange,
+  onGpDeductModeChange,
+  onGpDeductPctChange,
   onGpDeductChange,
   onPnlIncomeChange,
   onUseBridgeIncome,
@@ -808,10 +824,15 @@ function IncomeBridgeTable({
   locked: boolean;
   mode: "exVat" | "incVat";
   bridge: ReturnType<typeof buildIncomeBridge>;
+  gpDeductMode: GpDeductMode;
+  gpDeductPctStr: string;
   gpDeductStr: string;
   gpPropose: number;
+  gpProposePct: number;
   pnlIncomeStr: string;
   onModeChange: (m: "exVat" | "incVat") => void;
+  onGpDeductModeChange: (m: GpDeductMode) => void;
+  onGpDeductPctChange: (v: string) => void;
   onGpDeductChange: (v: string) => void;
   onPnlIncomeChange: (v: string) => void;
   onUseBridgeIncome: () => void;
@@ -822,20 +843,20 @@ function IncomeBridgeTable({
         รายได้แยก → P&L — {formatThaiMonthKey(month)}
       </h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        เดลิเวอรี่มียอดก้อนจากแพลตฟอร์ม — ต้องหัก GP ก้อนก่อน ถึงจะใส่รายได้บุคคล ·
-        หน้าร้านไม่หัก GP นี้
+        หัก GP เดลิเวอรี่ก่อนใส่รายได้บุคคล · แนะนำโหมดเรท % คงที่เพื่อเทียบค่าเฉลี่ยหลายเดือน ·
+        ตัวเลขเงินทศนิยม 2 ตำแหน่ง
       </p>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
           <thead>
             <tr>
               <th className="col-seg">รายการ</th>
-              <th className="col-num">ยอด</th>
+              <th className="col-num">ยอด (บาท · ทศนิยม 2)</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td className="col-seg">โหมดยอด</td>
+              <td className="col-seg">โหมดยอดรายได้</td>
               <td className="col-num col-input">
                 <select
                   className="vat-inline-select"
@@ -865,18 +886,67 @@ function IncomeBridgeTable({
               <td className="col-num">{fmt(bridge.grossTotal)}</td>
             </tr>
             <tr>
-              <td className="col-seg">
-                − หัก GP ก้อนเดลิเวอรี่
-                <span className="muted"> · ประมาณ {fmt(gpPropose)}</span>
-              </td>
+              <td className="col-seg">โหมดหัก GP ก้อนเดลิเวอรี่</td>
               <td className="col-num col-input">
-                <MoneyCell
-                  value={gpDeductStr}
-                  locked={locked}
-                  ariaLabel="หัก GP ก้อนเดลิเวอรี่"
-                  onChange={onGpDeductChange}
-                />
+                <select
+                  className="vat-inline-select"
+                  disabled={locked}
+                  value={gpDeductMode}
+                  aria-label="โหมดหัก GP"
+                  onChange={(e) =>
+                    onGpDeductModeChange(
+                      e.target.value === "amount" ? "amount" : "pct",
+                    )
+                  }
+                >
+                  <option value="pct">เรท % คงที่ (หาค่าเฉลี่ย)</option>
+                  <option value="amount">ยอดบาท</option>
+                </select>
               </td>
+            </tr>
+            {gpDeductMode === "pct" ? (
+              <tr>
+                <td className="col-seg">
+                  − หัก GP เรท % คงที่
+                  <span className="muted">
+                    {" "}
+                    · เสนอ {pctFieldValue(gpProposePct) || DEFAULT_GP_DEDUCT_PCT}%
+                  </span>
+                </td>
+                <td className="col-num col-input">
+                  <span className="vat-tap-edit">
+                    <input
+                      className="vat-sales-input vat-tap-input"
+                      inputMode="decimal"
+                      disabled={locked}
+                      value={gpDeductPctStr}
+                      placeholder={String(DEFAULT_GP_DEDUCT_PCT)}
+                      aria-label="เรทหัก GP %"
+                      onChange={(e) => onGpDeductPctChange(e.target.value)}
+                    />
+                    <span className="vat-tap-suffix">%</span>
+                  </span>
+                </td>
+              </tr>
+            ) : (
+              <tr>
+                <td className="col-seg">
+                  − หัก GP ยอดบาท
+                  <span className="muted"> · ประมาณ {fmt(gpPropose)}</span>
+                </td>
+                <td className="col-num col-input">
+                  <MoneyCell
+                    value={gpDeductStr}
+                    locked={locked}
+                    ariaLabel="หัก GP ยอดบาท"
+                    onChange={onGpDeductChange}
+                  />
+                </td>
+              </tr>
+            )}
+            <tr>
+              <td className="col-seg">ยอดหัก GP (คำนวณ)</td>
+              <td className="col-num">{fmt(bridge.gpDeduct)}</td>
             </tr>
             <tr className="vat-sales-totals-row">
               <td className="col-seg">= รายได้สุทธิ → P&L</td>
@@ -899,7 +969,7 @@ function IncomeBridgeTable({
             className="vat-mini-btn"
             onClick={onUseBridgeIncome}
           >
-            ใช้ยอดคำนวณ ({formatPlainNumber(bridge.pnlIncome)})
+            ใช้ยอดคำนวณ ({formatVatMoney(bridge.pnlIncome)})
           </button>
         </div>
       ) : null}
@@ -990,7 +1060,7 @@ function PersonalTaxBlock({
             <tr className="vat-sales-totals-row">
               <td className="col-seg">= กำไรประมาณการเดือน</td>
               <td className="col-num col-net">
-                {monthProfit == null ? "—" : formatPlainNumber(monthProfit)}
+                {monthProfit == null ? "—" : fmt(monthProfit)}
               </td>
             </tr>
             <tr>
@@ -1009,8 +1079,8 @@ function PersonalTaxBlock({
         ค่าลดหย่อน + ภาษีเงินได้ (ภ.ง.ด.) · ปี {yearBe}
       </h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        ค่าลดหย่อนผู้มีเงินได้หลัก {formatPlainNumber(DEFAULT_PERSONAL_ALLOWANCE)} บาท ·
-        แก้ได้ · ขั้นบันไดตามกฎหมาย
+        ค่าลดหย่อนผู้มีเงินได้หลัก {formatVatMoney(DEFAULT_PERSONAL_ALLOWANCE)} บาท ·
+        แก้ได้ · ขั้นบันไดตามกฎหมาย · เงินทศนิยม 2
       </p>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
@@ -1060,19 +1130,19 @@ function PersonalTaxBlock({
             <tr>
               <td className="col-seg">กำไรปี (หลังดึงสรุปปี)</td>
               <td className="col-num">
-                {yearProfit == null ? "—" : formatPlainNumber(yearProfit)}
+                {yearProfit == null ? "—" : fmt(yearProfit)}
               </td>
             </tr>
             <tr>
               <td className="col-seg">เงินได้สุทธิ (หลังลดหย่อน)</td>
               <td className="col-num">
-                {yearTax ? formatPlainNumber(yearTax.taxable) : "—"}
+                {yearTax ? fmt(yearTax.taxable) : "—"}
               </td>
             </tr>
             <tr className="vat-sales-totals-row">
               <td className="col-seg">ภาษีเงินได้ประมาณ</td>
               <td className="col-num col-net">
-                {yearTax ? formatPlainNumber(yearTax.tax) : "—"}
+                {yearTax ? fmt(yearTax.tax) : "—"}
               </td>
             </tr>
           </tbody>
@@ -1132,7 +1202,7 @@ function PersonalTaxBlock({
             ).map((s) => (
               <tr key={s.label}>
                 <td className="col-seg">{s.label}</td>
-                <td className="col-pct">{Math.round(s.rate * 100)}%</td>
+                <td className="col-pct">{formatVatPct(s.rate * 100)}</td>
                 <td className="col-num">
                   {yearTax ? fmt(s.bandAmount) : "—"}
                 </td>
@@ -1194,6 +1264,10 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   const [booksBusy, setBooksBusy] = useState(false);
   const [booksPulledAt, setBooksPulledAt] = useState(0);
   const [gpDeductStr, setGpDeductStr] = useState("");
+  const [gpDeductMode, setGpDeductMode] = useState<GpDeductMode>("pct");
+  const [gpDeductPctStr, setGpDeductPctStr] = useState(
+    String(DEFAULT_GP_DEDUCT_PCT),
+  );
   const [allowanceStr, setAllowanceStr] = useState(
     String(DEFAULT_PERSONAL_ALLOWANCE),
   );
@@ -1223,6 +1297,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       mode: "exVat" | "incVat",
       income: string,
       gpDeduct = "",
+      gpMode: GpDeductMode = "pct",
+      gpPct = "",
     ) =>
       JSON.stringify({
         delivery: d,
@@ -1231,6 +1307,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         pnlMode: mode,
         pnlIncome: income,
         gpDeduct,
+        gpDeductMode: gpMode,
+        gpDeductPct: gpPct,
       }),
     [],
   );
@@ -1272,6 +1350,13 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         gpEstimate: ret.delivery.gpEstimate,
         outputPct: ret.delivery.rates.outputPct,
       });
+      const delGrossForPct =
+        mode === "incVat" ? ret.delivery.grossSales : ret.delivery.vatBase;
+      const gpProposePct = proposeGpDeductPct(delGrossForPct, gpPropose);
+      let gpMode: GpDeductMode = ret.pnlDeliveryGpMode || "pct";
+      let gpPct = pctFieldValue(
+        ret.pnlDeliveryGpPct > 0 ? ret.pnlDeliveryGpPct : gpProposePct,
+      );
       let gpDeduct = moneyInputValue(
         ret.pnlDeliveryGpDeduct > 0 ? ret.pnlDeliveryGpDeduct : gpPropose,
       );
@@ -1285,6 +1370,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           pnlMode?: "exVat" | "incVat";
           pnlIncome?: string;
           gpDeduct?: string;
+          gpDeductMode?: GpDeductMode;
+          gpDeductPct?: string;
         } | null;
         if (cached?.delivery) d = mergePreferMoney(d, cached.delivery);
         if (cached?.storefront) s = mergePreferMoney(s, cached.storefront);
@@ -1294,6 +1381,12 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         }
         if (typeof cached?.pnlIncome === "string" && cached.pnlIncome.trim()) {
           income = cached.pnlIncome;
+        }
+        if (cached?.gpDeductMode === "amount" || cached?.gpDeductMode === "pct") {
+          gpMode = cached.gpDeductMode;
+        }
+        if (typeof cached?.gpDeductPct === "string" && cached.gpDeductPct.trim()) {
+          gpPct = cached.gpDeductPct;
         }
         if (typeof cached?.gpDeduct === "string" && cached.gpDeduct.trim()) {
           gpDeduct = cached.gpDeduct;
@@ -1318,6 +1411,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       setPnlMode(mode);
       setPnlIncome(income);
       setGpDeductStr(gpDeduct);
+      setGpDeductMode(gpMode);
+      setGpDeductPctStr(gpPct || String(DEFAULT_GP_DEDUCT_PCT));
       setAllowanceStr(String(taxSt.personalAllowance || DEFAULT_PERSONAL_ALLOWANCE));
       setOtherDeductStr(moneyInputValue(taxSt.otherDeductions));
       setTaxNote(taxSt.note);
@@ -1345,8 +1440,21 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         moneyInputValue(
           ret.pnlDeliveryGpDeduct > 0 ? ret.pnlDeliveryGpDeduct : gpPropose,
         ),
+        ret.pnlDeliveryGpMode || "pct",
+        pctFieldValue(
+          ret.pnlDeliveryGpPct > 0 ? ret.pnlDeliveryGpPct : gpProposePct,
+        ),
       );
-      const localSnap = snapshotDraft(d, s, n, mode, income, gpDeduct);
+      const localSnap = snapshotDraft(
+        d,
+        s,
+        n,
+        mode,
+        income,
+        gpDeduct,
+        gpMode,
+        gpPct,
+      );
       savedSnapRef.current = savedSnap;
       setDirty(localSnap !== savedSnap);
       // เก็บร่างในเครื่องหลัง hydrate (สำรองแม้เซิร์ฟเวอร์ว่าง)
@@ -1409,7 +1517,24 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     [delivery.gpVatClaimed, delivery.gpEstimate, delivery.rates.outputPct],
   );
 
-  const effectiveGpDeduct = parseMoneyInput(gpDeductStr) || gpPropose;
+  const deliveryGrossForMode =
+    pnlMode === "incVat" ? delivery.grossSales : delivery.vatBase;
+
+  const gpProposePct = useMemo(
+    () => proposeGpDeductPct(deliveryGrossForMode, gpPropose),
+    [deliveryGrossForMode, gpPropose],
+  );
+
+  const effectiveGpPct =
+    parseRate(gpDeductPctStr, DEFAULT_GP_DEDUCT_PCT) || DEFAULT_GP_DEDUCT_PCT;
+  const effectiveGpAmount = parseMoneyInput(gpDeductStr) || gpPropose;
+
+  const effectiveGpDeduct = resolveGpDeductAmount({
+    mode: gpDeductMode,
+    pct: effectiveGpPct,
+    amount: effectiveGpAmount,
+    deliveryGross: deliveryGrossForMode,
+  });
 
   const incomeBridge = useMemo(
     () =>
@@ -1419,7 +1544,9 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         storefrontVatBase: storefront.vatBase,
         storefrontGrossSales: storefront.grossSales,
         mode: pnlMode,
-        gpDeduct: effectiveGpDeduct,
+        gpDeductMode,
+        gpDeductPct: effectiveGpPct,
+        gpDeduct: effectiveGpAmount,
       }),
     [
       delivery.vatBase,
@@ -1427,7 +1554,9 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       storefront.vatBase,
       storefront.grossSales,
       pnlMode,
-      effectiveGpDeduct,
+      gpDeductMode,
+      effectiveGpPct,
+      effectiveGpAmount,
     ],
   );
 
@@ -1447,6 +1576,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       pnlMode,
       pnlIncome,
       gpDeductStr,
+      gpDeductMode,
+      gpDeductPctStr,
     );
     writeLocalDraft(month, payload);
     setDirty(payload !== savedSnapRef.current);
@@ -1457,6 +1588,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     pnlMode,
     pnlIncome,
     gpDeductStr,
+    gpDeductMode,
+    gpDeductPctStr,
     month,
     loading,
     locked,
@@ -1478,21 +1611,27 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           const sf = draftToSeg("storefront", storefrontDraftRef.current);
           const mode = pnlModeRef.current;
           const incomeRaw = parseMoneyInput(pnlIncomeRef.current);
-          const gp =
+          const gpAmt =
             parseMoneyInput(gpDeductStr) ||
             proposeDeliveryGpDeduct({
               gpVatClaimed: del.gpVatClaimed,
               gpEstimate: del.gpEstimate,
               outputPct: del.rates.outputPct,
             });
-          const proposed = buildIncomeBridge({
+          const delG = mode === "incVat" ? del.grossSales : del.vatBase;
+          const gpPct =
+            parseRate(gpDeductPctStr, DEFAULT_GP_DEDUCT_PCT) ||
+            DEFAULT_GP_DEDUCT_PCT;
+          const bridge = buildIncomeBridge({
             deliveryVatBase: del.vatBase,
             deliveryGrossSales: del.grossSales,
             storefrontVatBase: sf.vatBase,
             storefrontGrossSales: sf.grossSales,
             mode,
-            gpDeduct: gp,
-          }).pnlIncome;
+            gpDeductMode,
+            gpDeductPct: gpPct,
+            gpDeduct: gpAmt,
+          });
           const saved = await saveVatMonthlyReturn(
             {
               monthKey: month,
@@ -1500,8 +1639,10 @@ export function VatMonthlyWorkbench({ actor }: Props) {
               storefront: sf,
               note: noteRef.current,
               pnlIncomeMode: mode,
-              pnlIncome: incomeRaw > 0 ? incomeRaw : proposed,
-              pnlDeliveryGpDeduct: gp,
+              pnlIncome: incomeRaw > 0 ? incomeRaw : bridge.pnlIncome,
+              pnlDeliveryGpDeduct: bridge.gpDeduct,
+              pnlDeliveryGpMode: gpDeductMode,
+              pnlDeliveryGpPct: gpPct,
               status: "draft",
             },
             actor,
@@ -1515,6 +1656,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
             saved.pnlIncomeMode,
             moneyInputValue(saved.pnlIncome),
             moneyInputValue(saved.pnlDeliveryGpDeduct),
+            saved.pnlDeliveryGpMode,
+            pctFieldValue(saved.pnlDeliveryGpPct),
           );
           savedSnapRef.current = snap;
           writeLocalDraft(month, snap);
@@ -1526,6 +1669,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
             pnlModeRef.current,
             pnlIncomeRef.current,
             gpDeductStr,
+            gpDeductMode,
+            gpDeductPctStr,
           );
           setDirty(now !== snap);
         } catch {
@@ -1541,6 +1686,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     pnlMode,
     pnlIncome,
     gpDeductStr,
+    gpDeductMode,
+    gpDeductPctStr,
     month,
     actor,
     hydrated,
@@ -1598,6 +1745,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           pnlIncomeMode: pnlMode,
           pnlIncome: incomeRaw > 0 ? incomeRaw : proposed,
           pnlDeliveryGpDeduct: effectiveGpDeduct,
+          pnlDeliveryGpMode: gpDeductMode,
+          pnlDeliveryGpPct: effectiveGpPct,
           status: asDraft ? "draft" : "saved",
         },
         actor,
@@ -1605,6 +1754,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       setDoc(saved);
       setPnlIncome(moneyInputValue(saved.pnlIncome));
       setGpDeductStr(moneyInputValue(saved.pnlDeliveryGpDeduct));
+      setGpDeductMode(saved.pnlDeliveryGpMode);
+      setGpDeductPctStr(pctFieldValue(saved.pnlDeliveryGpPct));
       const snap = snapshotDraft(
         segToDraft(saved.delivery),
         segToDraft(saved.storefront),
@@ -1612,6 +1763,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         saved.pnlIncomeMode,
         moneyInputValue(saved.pnlIncome),
         moneyInputValue(saved.pnlDeliveryGpDeduct),
+        saved.pnlDeliveryGpMode,
+        pctFieldValue(saved.pnlDeliveryGpPct),
       );
       savedSnapRef.current = snap;
       setDirty(false);
@@ -1652,6 +1805,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           pnlIncomeMode: pnlMode,
           pnlIncome: finalIncome,
           pnlDeliveryGpDeduct: effectiveGpDeduct,
+          pnlDeliveryGpMode: gpDeductMode,
+          pnlDeliveryGpPct: effectiveGpPct,
           status: "saved",
         },
         actor,
@@ -1660,6 +1815,9 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         forceIncome: finalIncome,
       });
       setDoc(filed);
+      setGpDeductMode(filed.pnlDeliveryGpMode);
+      setGpDeductPctStr(pctFieldValue(filed.pnlDeliveryGpPct));
+      setGpDeductStr(moneyInputValue(filed.pnlDeliveryGpDeduct));
       setDirty(false);
       writeLocalDraft(
         month,
@@ -1670,9 +1828,11 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           filed.pnlIncomeMode,
           moneyInputValue(filed.pnlIncome),
           moneyInputValue(filed.pnlDeliveryGpDeduct),
+          filed.pnlDeliveryGpMode,
+          pctFieldValue(filed.pnlDeliveryGpPct),
         ),
       );
-      setMsg(`ปิดงบแล้ว · รายได้ ${formatPlainNumber(filed.pnlIncome)} เข้า P&L`);
+      setMsg(`ปิดงบแล้ว · รายได้ ${formatVatMoney(filed.pnlIncome)} เข้า P&L`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -1835,12 +1995,15 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           pnlIncomeMode: pnlMode,
           pnlIncome: finalIncome,
           pnlDeliveryGpDeduct: effectiveGpDeduct,
+          pnlDeliveryGpMode: gpDeductMode,
+          pnlDeliveryGpPct: effectiveGpPct,
           status: "saved",
         },
         actor,
       );
       await saveMonthlyIncome(month, finalIncome, actor);
       setPnlIncome(moneyInputValue(finalIncome));
+      setGpDeductStr(moneyInputValue(effectiveGpDeduct));
       const snap = snapshotDraft(
         segToDraft(delivery),
         segToDraft(storefront),
@@ -1848,11 +2011,14 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         pnlMode,
         moneyInputValue(finalIncome),
         moneyInputValue(effectiveGpDeduct),
+        gpDeductMode,
+        pctFieldValue(effectiveGpPct),
       );
       savedSnapRef.current = snap;
       setDirty(false);
+      writeLocalDraft(month, snap);
       setMsg(
-        `ใส่รายได้ทดลอง ${formatPlainNumber(finalIncome)} เข้า P&L แล้ว · เดือนยังไม่ล็อก`,
+        `ใส่รายได้ทดลอง ${formatVatMoney(finalIncome)} เข้า P&L แล้ว · เดือนยังไม่ล็อก`,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -2049,8 +2215,11 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                 locked={Boolean(locked)}
                 mode={pnlMode}
                 bridge={incomeBridge}
+                gpDeductMode={gpDeductMode}
+                gpDeductPctStr={gpDeductPctStr}
                 gpDeductStr={gpDeductStr}
                 gpPropose={gpPropose}
+                gpProposePct={gpProposePct}
                 pnlIncomeStr={pnlIncome}
                 onModeChange={(mode) => {
                   setPnlMode(mode);
@@ -2060,7 +2229,41 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                     storefrontVatBase: storefront.vatBase,
                     storefrontGrossSales: storefront.grossSales,
                     mode,
-                    gpDeduct: effectiveGpDeduct,
+                    gpDeductMode,
+                    gpDeductPct: effectiveGpPct,
+                    gpDeduct: effectiveGpAmount,
+                  });
+                  setPnlIncome(moneyInputValue(next.pnlIncome));
+                  markDirty();
+                }}
+                onGpDeductModeChange={(m) => {
+                  setGpDeductMode(m);
+                  const next = buildIncomeBridge({
+                    deliveryVatBase: delivery.vatBase,
+                    deliveryGrossSales: delivery.grossSales,
+                    storefrontVatBase: storefront.vatBase,
+                    storefrontGrossSales: storefront.grossSales,
+                    mode: pnlMode,
+                    gpDeductMode: m,
+                    gpDeductPct: effectiveGpPct,
+                    gpDeduct: effectiveGpAmount,
+                  });
+                  setPnlIncome(moneyInputValue(next.pnlIncome));
+                  markDirty();
+                }}
+                onGpDeductPctChange={(v) => {
+                  setGpDeductPctStr(v);
+                  const pct =
+                    parseRate(v, DEFAULT_GP_DEDUCT_PCT) || DEFAULT_GP_DEDUCT_PCT;
+                  const next = buildIncomeBridge({
+                    deliveryVatBase: delivery.vatBase,
+                    deliveryGrossSales: delivery.grossSales,
+                    storefrontVatBase: storefront.vatBase,
+                    storefrontGrossSales: storefront.grossSales,
+                    mode: pnlMode,
+                    gpDeductMode: "pct",
+                    gpDeductPct: pct,
+                    gpDeduct: effectiveGpAmount,
                   });
                   setPnlIncome(moneyInputValue(next.pnlIncome));
                   markDirty();
@@ -2074,6 +2277,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                     storefrontVatBase: storefront.vatBase,
                     storefrontGrossSales: storefront.grossSales,
                     mode: pnlMode,
+                    gpDeductMode: "amount",
+                    gpDeductPct: effectiveGpPct,
                     gpDeduct: gp,
                   });
                   setPnlIncome(moneyInputValue(next.pnlIncome));
@@ -2085,6 +2290,9 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                 }}
                 onUseBridgeIncome={() => {
                   setGpDeductStr(moneyInputValue(effectiveGpDeduct));
+                  if (gpDeductMode === "pct") {
+                    setGpDeductPctStr(pctFieldValue(effectiveGpPct));
+                  }
                   setPnlIncome(moneyInputValue(incomeBridge.pnlIncome));
                   markDirty();
                 }}

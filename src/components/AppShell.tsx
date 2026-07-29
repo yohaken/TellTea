@@ -20,6 +20,8 @@ import { LowBalanceAlert } from "@/components/LowBalanceAlert";
 import { PersonalProfileModal } from "@/components/PersonalProfileModal";
 import { ProfilePromptBanner } from "@/components/ProfilePromptBanner";
 import { StaffNewsPopup } from "@/components/StaffNewsPopup";
+import { StaffPresenceDock } from "@/components/StaffPresenceDock";
+import { StaffPresenceHeartbeat } from "@/components/StaffPresenceHeartbeat";
 import {
   DEFAULT_NAV_ORDER,
   DEFAULT_DOCK_TAB_MAX,
@@ -124,7 +126,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {userLabel}
               </Link>
             ) : (
-              <span className="topbar-email" title={user?.email || user?.phoneNumber || ""}>
+              <span
+                className={`topbar-email${isOwner ? " topbar-email--owner-slim" : ""}`}
+                title={user?.email || user?.phoneNumber || ""}
+              >
                 {userLabel}
               </span>
             )}
@@ -138,6 +143,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         </header>
+
+        {isOwner ? <StaffPresenceDock /> : null}
+        <StaffPresenceHeartbeat />
 
         <main className="main-panel">
           <ProfilePromptBanner />
