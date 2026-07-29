@@ -9,6 +9,11 @@ import {
   type MonthCategoryRow,
 } from "@/lib/pnl";
 import {
+  fetchPosStorefrontTotalsByMonth,
+  listDailySalesInMonth,
+  sumMonthSales,
+} from "@/lib/vat-sales";
+import {
   DEFAULT_OUTPUT_PCT,
   DEFAULT_PERIOD_START_DAY,
   DEFAULT_STOREFRONT_REMIT_PCT,
@@ -91,6 +96,106 @@ type DraftSeg = {
   ingredientVat: string;
   rates: VatLogicRates;
 };
+
+/** เลือกข้อความตัวเลขที่ไม่ว่าง / มากกว่า */
+function pickMoneyStr(a: string, b: string): string {
+  const na = parseMoneyInput(a);
+  const nb = parseMoneyInput(b);
+  if (na > 0 && nb > 0) return na >= nb ? a : b;
+  if (na > 0) return a;
+  if (nb > 0) return b;
+  return a || b || "";
+}
+
+function draftMoneyScore(d: DraftSeg): number {
+  return (
+    parseMoneyInput(d.grossManual) +
+    parseMoneyInput(d.channels.shopee) +
+    parseMoneyInput(d.channels.grab) +
+    parseMoneyInput(d.channels.lineman) +
+    parseMoneyInput(d.tenders.transfer) +
+    parseMoneyInput(d.tenders.cash) +
+    parseMoneyInput(d.gpVat) +
+    parseMoneyInput(d.ingredientVat)
+  );
+}
+
+/** รวมร่างแบบไม่ให้ค่าว่างทับค่าที่มีตัวเลข */
+function mergePreferMoney(base: DraftSeg, overlay: DraftSeg): DraftSeg {
+  return {
+    grossManual: pickMoneyStr(base.grossManual, overlay.grossManual),
+    channels: {
+      shopee: pickMoneyStr(base.channels.shopee, overlay.channels.shopee),
+      grab: pickMoneyStr(base.channels.grab, overlay.channels.grab),
+      lineman: pickMoneyStr(base.channels.lineman, overlay.channels.lineman),
+    },
+    tenders: {
+      transfer: pickMoneyStr(base.tenders.transfer, overlay.tenders.transfer),
+      cash: pickMoneyStr(base.tenders.cash, overlay.tenders.cash),
+    },
+    remitPct: overlay.remitPct || base.remitPct,
+    gpVat: pickMoneyStr(base.gpVat, overlay.gpVat),
+    useGpEstimate: overlay.useGpEstimate,
+    ingredientVat: pickMoneyStr(base.ingredientVat, overlay.ingredientVat),
+    rates: mapVatLogicRates(overlay.rates || base.rates),
+  };
+}
+
+function readLocalDraft(month: string): {
+  delivery?: DraftSeg;
+  storefront?: DraftSeg;
+  note?: string;
+  pnlMode?: "exVat" | "incVat";
+  pnlIncome?: string;
+} | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(draftStorageKey(month));
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as {
+      delivery?: DraftSeg;
+      storefront?: DraftSeg;
+      note?: string;
+      pnlMode?: "exVat" | "incVat";
+      pnlIncome?: string;
+    };
+    return cached && typeof cached === "object" ? cached : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalDraft(month: string, payload: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const prevRaw = localStorage.getItem(draftStorageKey(month));
+    if (prevRaw) {
+      try {
+        const prev = JSON.parse(prevRaw) as {
+          delivery?: DraftSeg;
+          storefront?: DraftSeg;
+        };
+        const next = JSON.parse(payload) as {
+          delivery?: DraftSeg;
+          storefront?: DraftSeg;
+        };
+        const prevScore =
+          (prev.delivery ? draftMoneyScore(prev.delivery) : 0) +
+          (prev.storefront ? draftMoneyScore(prev.storefront) : 0);
+        const nextScore =
+          (next.delivery ? draftMoneyScore(next.delivery) : 0) +
+          (next.storefront ? draftMoneyScore(next.storefront) : 0);
+        // กัน race: ค่าว่างตอนโหลดห้ามทับร่างที่มีตัวเลข
+        if (prevScore > 0 && nextScore === 0) return;
+      } catch {
+        /* ignore parse, write anyway */
+      }
+    }
+    localStorage.setItem(draftStorageKey(month), payload);
+  } catch {
+    /* quota */
+  }
+}
 
 function segToDraft(seg: VatSegmentState): DraftSeg {
   return {
@@ -702,11 +807,27 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   const [openDelivery, setOpenDelivery] = useState(false);
   const [openStorefront, setOpenStorefront] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const savedSnapRef = useRef("");
+  const hydratedRef = useRef(false);
+  const dirtyRef = useRef(false);
+  const deliveryDraftRef = useRef(deliveryDraft);
+  const storefrontDraftRef = useRef(storefrontDraft);
+  const noteRef = useRef(note);
+  const pnlModeRef = useRef(pnlMode);
+  const pnlIncomeRef = useRef(pnlIncome);
+  const cloudSaveGen = useRef(0);
   const [bookStaff, setBookStaff] = useState<MonthCategoryRow | null>(null);
   const [bookOwner, setBookOwner] = useState<MonthCategoryRow | null>(null);
   const [booksBusy, setBooksBusy] = useState(false);
   const [booksPulledAt, setBooksPulledAt] = useState(0);
+
+  deliveryDraftRef.current = deliveryDraft;
+  storefrontDraftRef.current = storefrontDraft;
+  noteRef.current = note;
+  pnlModeRef.current = pnlMode;
+  pnlIncomeRef.current = pnlIncome;
+  dirtyRef.current = dirty;
 
   const snapshotDraft = useCallback(
     (
@@ -744,7 +865,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   );
 
   const refresh = useCallback(async () => {
-    setLoading(true);
+    // soft load: หลัง hydrate แล้วไม่เคลียร์ตาราง (ตัวเลขไม่หายตอนอัปเดต)
+    if (!hydratedRef.current) setLoading(true);
     setError("");
     try {
       const [ret, st] = await Promise.all([
@@ -757,35 +879,27 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       let mode = ret.pnlIncomeMode;
       let income = moneyInputValue(ret.pnlIncome);
 
-      // จำร่างจาก local ถ้ามีและยังไม่ปิดงบ
-      if (ret.status !== "filed" && typeof window !== "undefined") {
-        try {
-          const raw = localStorage.getItem(draftStorageKey(month));
-          if (raw) {
-            const cached = JSON.parse(raw) as {
-              delivery?: DraftSeg;
-              storefront?: DraftSeg;
-              note?: string;
-              pnlMode?: "exVat" | "incVat";
-              pnlIncome?: string;
-            };
-            if (cached.delivery) d = { ...d, ...cached.delivery, rates: mapVatLogicRates(cached.delivery.rates || d.rates) };
-            if (cached.storefront) {
-              s = {
-                ...s,
-                ...cached.storefront,
-                rates: mapVatLogicRates(cached.storefront.rates || s.rates),
-              };
-            }
-            if (typeof cached.note === "string") n = cached.note;
-            if (cached.pnlMode === "incVat" || cached.pnlMode === "exVat") {
-              mode = cached.pnlMode;
-            }
-            if (typeof cached.pnlIncome === "string") income = cached.pnlIncome;
-          }
-        } catch {
-          /* ignore bad cache */
+      // ร่างในเครื่อง — รวมแบบไม่ให้ค่าว่างทับตัวเลข
+      if (ret.status !== "filed") {
+        const cached = readLocalDraft(month);
+        if (cached?.delivery) d = mergePreferMoney(d, cached.delivery);
+        if (cached?.storefront) s = mergePreferMoney(s, cached.storefront);
+        if (typeof cached?.note === "string" && cached.note.trim()) n = cached.note;
+        if (cached?.pnlMode === "incVat" || cached?.pnlMode === "exVat") {
+          mode = cached.pnlMode;
         }
+        if (typeof cached?.pnlIncome === "string" && cached.pnlIncome.trim()) {
+          income = cached.pnlIncome;
+        }
+      }
+
+      // ถ้ากำลังแก้ค้างอยู่ ห้ามรีเฟรชทับด้วยค่าว่างจากเซิร์ฟเวอร์
+      if (hydratedRef.current && dirtyRef.current) {
+        d = mergePreferMoney(d, deliveryDraftRef.current);
+        s = mergePreferMoney(s, storefrontDraftRef.current);
+        if (noteRef.current.trim()) n = noteRef.current;
+        mode = pnlModeRef.current;
+        if (pnlIncomeRef.current.trim()) income = pnlIncomeRef.current;
       }
 
       setDoc(ret);
@@ -796,9 +910,21 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       setNoteOpen(Boolean(n.trim()));
       setPnlMode(mode);
       setPnlIncome(income);
-      if (ret.delivery.partsSum > 0) setOpenDelivery(true);
-      if (ret.storefront.partsSum > 0) setOpenStorefront(true);
-      // baseline = ของที่เซฟบนเซิร์ฟเวอร์ · ถ้า local ต่าง = dirty
+      if (
+        ret.delivery.partsSum > 0 ||
+        parseMoneyInput(d.channels.shopee) +
+          parseMoneyInput(d.channels.grab) +
+          parseMoneyInput(d.channels.lineman) >
+          0
+      ) {
+        setOpenDelivery(true);
+      }
+      if (
+        ret.storefront.partsSum > 0 ||
+        parseMoneyInput(s.tenders.transfer) + parseMoneyInput(s.tenders.cash) > 0
+      ) {
+        setOpenStorefront(true);
+      }
       const savedSnap = snapshotDraft(
         segToDraft(ret.delivery),
         segToDraft(ret.storefront),
@@ -809,14 +935,34 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       const localSnap = snapshotDraft(d, s, n, mode, income);
       savedSnapRef.current = savedSnap;
       setDirty(localSnap !== savedSnap);
+      // เก็บร่างในเครื่องหลัง hydrate (สำรองแม้เซิร์ฟเวอร์ว่าง)
+      writeLocalDraft(month, localSnap);
+      hydratedRef.current = true;
+      setHydrated(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      // โหลดพลาด: กู้จาก local ถ้ามี — ห้ามเขียนทับ local ด้วยค่าว่าง
+      const cached = readLocalDraft(month);
+      if (cached?.delivery || cached?.storefront) {
+        if (cached.delivery) setDeliveryDraft(cached.delivery);
+        if (cached.storefront) setStorefrontDraft(cached.storefront);
+        if (typeof cached.note === "string") setNote(cached.note);
+        if (cached.pnlMode === "incVat" || cached.pnlMode === "exVat") {
+          setPnlMode(cached.pnlMode);
+        }
+        if (typeof cached.pnlIncome === "string") setPnlIncome(cached.pnlIncome);
+        setDirty(true);
+        hydratedRef.current = true;
+        setHydrated(true);
+      }
     } finally {
       setLoading(false);
     }
   }, [month, snapshotDraft]);
 
   useEffect(() => {
+    hydratedRef.current = false;
+    setHydrated(false);
     void refresh();
   }, [refresh]);
 
@@ -845,9 +991,9 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     [month, periodStartDay],
   );
 
-  // จำอัตโนมัติในเครื่อง
+  // จำอัตโนมัติในเครื่อง — หลัง hydrate เท่านั้น และไม่ทับร่างที่มีตัวเลขด้วยค่าว่าง
   useEffect(() => {
-    if (loading || locked || typeof window === "undefined") return;
+    if (!hydrated || loading || locked) return;
     const payload = snapshotDraft(
       deliveryDraft,
       storefrontDraft,
@@ -855,11 +1001,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       pnlMode,
       pnlIncome,
     );
-    try {
-      localStorage.setItem(draftStorageKey(month), payload);
-    } catch {
-      /* quota */
-    }
+    writeLocalDraft(month, payload);
     setDirty(payload !== savedSnapRef.current);
   }, [
     deliveryDraft,
@@ -870,6 +1012,81 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     month,
     loading,
     locked,
+    hydrated,
+    snapshotDraft,
+  ]);
+
+  // อัตโนมัติเซฟร่างขึ้น Firestore เบาๆ — กันตัวเลขหายตอนรีโหลด/อัปเดต
+  useEffect(() => {
+    if (!hydrated || loading || locked || !dirty) return;
+    const score =
+      draftMoneyScore(deliveryDraft) + draftMoneyScore(storefrontDraft);
+    if (score <= 0 && !note.trim()) return;
+    const gen = ++cloudSaveGen.current;
+    const t = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const del = draftToSeg("delivery", deliveryDraftRef.current);
+          const sf = draftToSeg("storefront", storefrontDraftRef.current);
+          const mode = pnlModeRef.current;
+          const incomeRaw = parseMoneyInput(pnlIncomeRef.current);
+          const proposed = proposePnlIncome(
+            {
+              vatBase: del.vatBase + sf.vatBase,
+              grossSales: del.grossSales + sf.grossSales,
+            },
+            mode,
+          );
+          const saved = await saveVatMonthlyReturn(
+            {
+              monthKey: month,
+              delivery: del,
+              storefront: sf,
+              note: noteRef.current,
+              pnlIncomeMode: mode,
+              pnlIncome: incomeRaw > 0 ? incomeRaw : proposed,
+              status: "draft",
+            },
+            actor,
+          );
+          if (gen !== cloudSaveGen.current) return;
+          setDoc(saved);
+          const snap = snapshotDraft(
+            segToDraft(saved.delivery),
+            segToDraft(saved.storefront),
+            saved.note,
+            saved.pnlIncomeMode,
+            moneyInputValue(saved.pnlIncome),
+          );
+          savedSnapRef.current = snap;
+          writeLocalDraft(month, snap);
+          // ถ้าผู้ใช้พิมพ์ต่อระหว่างเซฟ — คง dirty ไว้
+          const now = snapshotDraft(
+            deliveryDraftRef.current,
+            storefrontDraftRef.current,
+            noteRef.current,
+            pnlModeRef.current,
+            pnlIncomeRef.current,
+          );
+          setDirty(now !== snap);
+        } catch {
+          /* เงียบ — ผู้ใช้ยังมี local + ปุ่มบันทึก */
+        }
+      })();
+    }, 1800);
+    return () => window.clearTimeout(t);
+  }, [
+    deliveryDraft,
+    storefrontDraft,
+    note,
+    pnlMode,
+    pnlIncome,
+    month,
+    actor,
+    hydrated,
+    loading,
+    locked,
+    dirty,
     snapshotDraft,
   ]);
 
@@ -938,12 +1155,85 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       );
       savedSnapRef.current = snap;
       setDirty(false);
-      try {
-        localStorage.removeItem(draftStorageKey(month));
-      } catch {
-        /* ignore */
-      }
+      // คงสำรองในเครื่อง — ห้ามลบ (กันตัวเลขหายตอนอัปเดต)
+      writeLocalDraft(month, snap);
       setMsg(asDraft ? "บันทึกร่างแล้ว" : "บันทึกยอดเดือนแล้ว");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** ดึงยอดแอพเดลิเวอรี่ + หน้าร้าน จาก dailySales / POS กลับเข้าตาราง */
+  const pullSalesFromSources = async () => {
+    if (locked) return;
+    setBusy(true);
+    setError("");
+    setMsg("");
+    try {
+      const [byDay, posByDay] = await Promise.all([
+        listDailySalesInMonth(month),
+        fetchPosStorefrontTotalsByMonth(month),
+      ]);
+      const totalsDay = sumMonthSales(Object.values(byDay));
+      const posSum = Object.values(posByDay).reduce(
+        (acc, n) => acc + (Number(n) || 0),
+        0,
+      );
+      const storefrontGross =
+        totalsDay.storefrontGross > 0 ? totalsDay.storefrontGross : posSum;
+
+      setDeliveryDraftTracked((prev) => {
+        const hasApps =
+          totalsDay.shopee + totalsDay.grab + totalsDay.lineman > 0;
+        return {
+          ...prev,
+          // มียอดย่อยแอพแล้วไม่ใช้ grossManual (กันสับสน)
+          grossManual: hasApps ? "" : prev.grossManual,
+          channels: {
+            shopee:
+              totalsDay.shopee > 0
+                ? moneyInputValue(totalsDay.shopee)
+                : prev.channels.shopee,
+            grab:
+              totalsDay.grab > 0
+                ? moneyInputValue(totalsDay.grab)
+                : prev.channels.grab,
+            lineman:
+              totalsDay.lineman > 0
+                ? moneyInputValue(totalsDay.lineman)
+                : prev.channels.lineman,
+          },
+        };
+      });
+      setStorefrontDraftTracked((prev) => ({
+        ...prev,
+        grossManual:
+          storefrontGross > 0
+            ? moneyInputValue(storefrontGross)
+            : prev.grossManual,
+      }));
+      if (totalsDay.shopee + totalsDay.grab + totalsDay.lineman > 0) {
+        setOpenDelivery(true);
+      }
+      if (storefrontGross > 0) setOpenStorefront(true);
+
+      const parts = [
+        totalsDay.shopee || totalsDay.grab || totalsDay.lineman
+          ? `แอพ ส่ง=${formatPlainNumber(totalsDay.deliveryGross)}`
+          : null,
+        storefrontGross > 0
+          ? `หน้าร้าน=${formatPlainNumber(storefrontGross)}${
+              totalsDay.storefrontGross > 0 ? "" : " (POS)"
+            }`
+          : null,
+      ].filter(Boolean);
+      setMsg(
+        parts.length
+          ? `ดึงยอดกลับแล้ว · ${parts.join(" · ")} · จำในเครื่อง + จะเซฟร่างอัตโนมัติ`
+          : "ไม่พบยอดใน dailySales/POS เดือนนี้ — ถ้าเคยคีย์ไว้ให้ดูว่ายังมีจุด「ยังไม่บันทึก」หรือกดร่าง",
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -990,11 +1280,16 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       });
       setDoc(filed);
       setDirty(false);
-      try {
-        localStorage.removeItem(draftStorageKey(month));
-      } catch {
-        /* ignore */
-      }
+      writeLocalDraft(
+        month,
+        snapshotDraft(
+          segToDraft(filed.delivery),
+          segToDraft(filed.storefront),
+          filed.note,
+          filed.pnlIncomeMode,
+          moneyInputValue(filed.pnlIncome),
+        ),
+      );
       setMsg(`ปิดงบแล้ว · รายได้ ${formatPlainNumber(filed.pnlIncome)} เข้า P&L`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -1144,6 +1439,22 @@ export function VatMonthlyWorkbench({ actor }: Props) {
             </span>
           ) : null}
           {busy ? <span className="muted">…</span> : null}
+          {loading && hydrated ? (
+            <span className="muted" title="อัปเดตพื้นหลัง — ตัวเลขไม่ถูกล้าง">
+              ซิงก์…
+            </span>
+          ) : null}
+          {!locked ? (
+            <button
+              type="button"
+              className="vat-mini-btn"
+              disabled={busy || (loading && !hydrated)}
+              onClick={() => void pullSalesFromSources()}
+              title="ดึงยอด Shopee/Grab/LINE MAN + หน้าร้าน จาก dailySales หรือ POS"
+            >
+              ดึงยอดแอพ/ร้าน
+            </button>
+          ) : null}
         </div>
 
         <div className="vat-note-box">
@@ -1180,15 +1491,15 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
 
-      {loading ? (
+      {loading && !hydrated ? (
         <p className="muted">กำลังโหลด…</p>
       ) : (
         <>
           {tab === "month" ? (
             <>
               <p className="muted vat-sales-hint vat-hint-one-line">
-                ค่าที่คีย์จำในเครื่องอัตโนมัติ · ออกโดยไม่เซฟจะถามยืนยัน · default เรทขาย{" "}
-                {ratesLabel(DEFAULT_VAT_LOGIC_RATES)} · นำส่งหน้าร้าน{" "}
+                จำในเครื่อง + เซฟร่างอัตโนมัติ · ตัวเลขไม่ถูกล้างตอนอัปเดต · ดึงยอดแอพ/ร้านได้ ·
+                เรทขาย {ratesLabel(DEFAULT_VAT_LOGIC_RATES)} · นำส่งหน้าร้าน{" "}
                 {DEFAULT_STOREFRONT_REMIT_PCT}%
               </p>
 
