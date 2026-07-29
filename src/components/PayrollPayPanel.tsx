@@ -6,6 +6,7 @@ import type { Employee } from "@/lib/employees";
 import type { OtEntry } from "@/lib/ot";
 import {
   generatePayrollForPeriod,
+  kindUsesMonthEndAccount,
   markPayrollPaid,
   PAYROLL_KIND_LABELS,
   PAYROLL_SLIP_MAX,
@@ -15,6 +16,7 @@ import {
   summarizePayrollItems,
   voidPayrollItem,
   type BonusAmountByEmployee,
+  type PayrollGenerateScope,
   type PayrollItem,
   type PayrollKind,
   type PayrollSchedule,
@@ -103,7 +105,7 @@ export function PayrollPayPanel({
     [employees],
   );
 
-  async function onGenerate() {
+  async function onGenerate(scope: PayrollGenerateScope) {
     if (!isOwner) return;
     setBusy(true);
     try {
@@ -113,21 +115,28 @@ export function PayrollPayPanel({
         bonusByEmployee,
         createdBy: actorId,
         schedule,
+        scope,
       });
+      const scopeLabel =
+        scope === "salary" ? "เงินเดือน" : scope === "bonus" ? "โบนัส" : "ทั้งหมด";
       const parts: string[] = [];
       if (result.created > 0) parts.push(`สร้าง ${result.created}`);
       if (result.restored > 0) parts.push(`กู้คืน ${result.restored}`);
       if (parts.length) {
         onInfo?.(
-          `${parts.join(" · ")} รายการรอโอน` +
+          `${scopeLabel}: ${parts.join(" · ")} รายการรอโอน` +
             (result.skipped ? ` · ข้าม ${result.skipped}` : ""),
         );
       } else if (result.skipped) {
         onInfo?.(
-          `ไม่มีรายการใหม่ (ข้าม ${result.skipped} — มีอยู่แล้วหรือยอด 0)`,
+          `${scopeLabel}: ไม่มีรายการใหม่ (ข้าม ${result.skipped} — มีอยู่แล้วหรือยอด 0)`,
         );
       } else {
-        onInfo?.("ไม่มีรายการให้สร้าง — ตั้งเงินเดือนหรือมีโบนัสก่อน");
+        onInfo?.(
+          scope === "bonus"
+            ? "ยังไม่มีโบนัสให้สร้าง — ตรวจสรุปโบนัส/หักก่อน"
+            : "ไม่มีรายการให้สร้าง — ตั้งเงินเดือนที่แท็บตั้งค่าจ่าย",
+        );
       }
     } catch (err) {
       onError((err as Error).message || "สร้างรายการไม่สำเร็จ");
@@ -209,17 +218,28 @@ export function PayrollPayPanel({
 
       {isOwner ? (
         <div className="payroll-actions">
-          <button
-            type="button"
-            className="primary-btn"
-            disabled={busy}
-            onClick={() => void onGenerate()}
-          >
-            {busy ? "..." : "สร้างรายการรอโอน"}
-          </button>
+          <div className="payroll-actions-row">
+            <button
+              type="button"
+              className="primary-btn"
+              disabled={busy}
+              onClick={() => void onGenerate("salary")}
+            >
+              {busy ? "..." : "สร้างเงินเดือน"}
+            </button>
+            <button
+              type="button"
+              className="ghost-btn"
+              disabled={busy}
+              onClick={() => void onGenerate("bonus")}
+              title="สร้างหลังหักโบนัสนิ่งแล้ว"
+            >
+              สร้างโบนัส
+            </button>
+          </div>
           <p className="muted payroll-actions-hint">
-            เงินเดือนตามตาราง ({schedule.salarySplits.map((s) => `${s.percent}%`).join(" + ")})
-            + โบนัสคงเหลือ · ไม่ทับรายการรอโอน/จ่ายแล้ว · รายการที่ยกเลิกจะถูกกู้คืนอัตโนมัติ
+            แยกสร้าง: เงินเดือนได้เลย · โบนัสรอหักนิ่งก่อน · สิ้นเดือนลงบัญชีวันสิ้นเดือน (โอนวันที่{" "}
+            {schedule.salarySplits[1]?.dayOfMonth ?? 1}) · หักเบิกค้างอัตโนมัติ · ยกเลิกแล้วกดสร้างใหม่ได้
             {missingSalary
               ? ` · ยังไม่มีเงินเดือน ${missingSalary} คน — ไปแท็บตั้งค่าจ่าย`
               : ""}
@@ -276,7 +296,13 @@ export function PayrollPayPanel({
                     </span>
                   </div>
                   <div className="payroll-row-meta muted">
-                    {PAYROLL_KIND_LABELS[item.kind]} · ครบ {formatDateShort(item.dueDate)}
+                    {PAYROLL_KIND_LABELS[item.kind]}
+                    {kindUsesMonthEndAccount(item.kind)
+                      ? ` · ลงบัญชี ${formatDateShort(item.accountDate || item.dueDate)} · โอน ${formatDateShort(item.dueDate)}`
+                      : ` · โอน ${formatDateShort(item.dueDate)}`}
+                    {item.advanceDeduct > 0
+                      ? ` · หักเบิก ฿${fmt(item.advanceDeduct)} (ก่อนหัก ฿${fmt(item.grossAmount)})`
+                      : ""}
                     {accountBits.length ? ` · ${accountBits.join(" · ")}` : ""}
                   </div>
                   <div className="payroll-row-amt">฿{fmt(item.amount)}</div>
@@ -286,8 +312,10 @@ export function PayrollPayPanel({
                     <button
                       type="button"
                       className="primary-btn"
-                      disabled={busy || !canPay}
-                      title={canPay ? undefined : "ต้องมีสิทธิ์บช.เจ้าของ"}
+                      disabled={busy || (!canPay && item.amount > 0)}
+                      title={
+                        item.amount > 0 && !canPay ? "ต้องมีสิทธิ์บช.เจ้าของ" : undefined
+                      }
                       onClick={() =>
                         setPayTarget({
                           item,
@@ -296,7 +324,7 @@ export function PayrollPayPanel({
                         })
                       }
                     >
-                      โอนแล้ว
+                      {item.amount > 0 ? "โอนแล้ว" : "เคลียรเบิก"}
                     </button>
                     <button
                       type="button"

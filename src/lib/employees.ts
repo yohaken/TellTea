@@ -4,6 +4,7 @@ import {
   deleteDoc,
   deleteField,
   doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -38,6 +39,11 @@ export type Employee = {
   payAccountNo?: string;
   /** ชื่อบัญชีรับโอน (optional) */
   payAccountName?: string;
+  /**
+   * ยอดเบิกล่วงหน้าค้างหัก (บาท)
+   * หักจากรอบเงินเดือน/โบนัสตอนสร้างคิวจ่าย — ตัดยอดจริงตอน mark จ่ายแล้ว
+   */
+  advanceBalance?: number;
   createdAt: number;
   updatedAt: number;
 };
@@ -120,6 +126,7 @@ export async function updateEmployee(
       | "payBank"
       | "payAccountNo"
       | "payAccountName"
+      | "advanceBalance"
     >
   >,
 ): Promise<void> {
@@ -173,7 +180,31 @@ export async function updateEmployee(
     const v = (patch.payAccountName || "").trim();
     next.payAccountName = v ? v : deleteField();
   }
+  if (patch.advanceBalance !== undefined) {
+    const n = Number(patch.advanceBalance);
+    next.advanceBalance =
+      patch.advanceBalance == null || !Number.isFinite(n) || n <= 0
+        ? deleteField()
+        : Math.round(n * 100) / 100;
+  }
   await updateDoc(doc(getDb(), "employees", id), next);
+}
+
+/** ปรับยอดเบิกค้าง (+ เพิ่มเมื่อเบิกใหม่ / − ตอนหักจากเงินเดือน) */
+export async function adjustEmployeeAdvanceBalance(
+  id: string,
+  delta: number,
+): Promise<number> {
+  const ref = doc(getDb(), "employees", id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("ไม่พบพนักงาน");
+  const prev = Math.max(0, Number(snap.data().advanceBalance) || 0);
+  const next = Math.round(Math.max(0, prev + (Number(delta) || 0)) * 100) / 100;
+  await updateDoc(ref, {
+    advanceBalance: next > 0 ? next : deleteField(),
+    updatedAt: Date.now(),
+  });
+  return next;
 }
 
 export async function deleteEmployee(id: string): Promise<void> {

@@ -20,6 +20,7 @@ type DraftSalary = {
   payBank: string;
   payAccountNo: string;
   payAccountName: string;
+  advanceBalance: string;
 };
 
 function draftFromEmployee(emp: Employee): DraftSalary {
@@ -29,6 +30,8 @@ function draftFromEmployee(emp: Employee): DraftSalary {
     payBank: emp.payBank || "",
     payAccountNo: emp.payAccountNo || "",
     payAccountName: emp.payAccountName || "",
+    advanceBalance:
+      emp.advanceBalance != null && emp.advanceBalance > 0 ? String(emp.advanceBalance) : "",
   };
 }
 
@@ -83,6 +86,7 @@ export function PayrollSettingsPanel({
   );
 
   const missingSalary = roster.filter((e) => !(Number(e.monthlySalary) > 0)).length;
+  const withAdvance = roster.filter((e) => Number(e.advanceBalance) > 0).length;
   const midPctN = Number(midPct) || 0;
   const endPctN = Number(endPct) || 0;
 
@@ -149,6 +153,12 @@ export function PayrollSettingsPanel({
       onError(`เงินเดือนของ ${emp.name} ไม่ถูกต้อง`);
       return;
     }
+    const advRaw = draft.advanceBalance.trim();
+    const advNum = advRaw === "" ? 0 : Number(advRaw);
+    if (advRaw !== "" && (!Number.isFinite(advNum) || advNum < 0)) {
+      onError(`ยอดเบิกค้างของ ${emp.name} ไม่ถูกต้อง`);
+      return;
+    }
     setSavingId(emp.id);
     try {
       await updateEmployee(emp.id, {
@@ -156,10 +166,15 @@ export function PayrollSettingsPanel({
         payBank: draft.payBank.trim(),
         payAccountNo: draft.payAccountNo.trim(),
         payAccountName: draft.payAccountName.trim(),
+        advanceBalance: advNum,
       });
       const refreshed = await listActiveEmployees();
       onEmployeesChange?.(refreshed);
-      onInfo?.(`บันทึกเงินเดือน · ${emp.name}`);
+      onInfo?.(
+        advNum > 0
+          ? `บันทึกแล้ว · ${emp.name} · เบิกค้าง ฿${fmt(advNum)}`
+          : `บันทึกเงินเดือน · ${emp.name}`,
+      );
       setExpandedId(null);
     } catch (err) {
       onError((err as Error).message || "บันทึกเงินเดือนไม่สำเร็จ");
@@ -230,9 +245,9 @@ export function PayrollSettingsPanel({
           </div>
 
           <div className="payroll-round-card">
-            <span className="payroll-round-label">รอบที่ 2 · ต้นเดือนถัดไป</span>
+            <span className="payroll-round-label">รอบที่ 2 · สิ้นเดือน</span>
             <label className="field">
-              <span>วันที่</span>
+              <span>วันโอน (เดือนถัดไป)</span>
               <input
                 type="number"
                 min={1}
@@ -255,7 +270,7 @@ export function PayrollSettingsPanel({
               />
             </label>
             <p className="muted payroll-round-note">
-              เคลียรเงินเดือนที่เหลือ + โบนัสของเดือนที่แล้ว
+              ของสิ้นเดือนก่อนหน้า · ลงบัญชีวันสิ้นเดือน · โอนวันที่ตั้งไว้ (ค่าเริ่มต้น 1)
             </p>
           </div>
         </div>
@@ -283,8 +298,9 @@ export function PayrollSettingsPanel({
       <div className="payroll-settings-block">
         <h2 className="payroll-settings-title">2) เงินเดือนพนักงาน</h2>
         <p className="muted payroll-settings-hint">
-          ใส่ยอดต่อเดือนที่นี่ · ระบบจะแบ่งตามรอบด้านบนอัตโนมัติ
-          {missingSalary ? ` · ยังไม่ตั้ง ${missingSalary} คน` : ""}
+          ใส่ยอดต่อเดือน + เบิกค้าง (ถ้ามี) · ระบบหักเบิกจากรอบจ่ายอัตโนมัติ
+          {missingSalary ? ` · ยังไม่ตั้งเงินเดือน ${missingSalary} คน` : ""}
+          {withAdvance ? ` · มีเบิกค้าง ${withAdvance} คน` : ""}
         </p>
 
         {!roster.length ? (
@@ -305,8 +321,11 @@ export function PayrollSettingsPanel({
                       <strong>{emp.name}</strong>
                       <div className="muted payroll-salary-meta">
                         {salaryNum > 0
-                          ? `฿${fmt(salaryNum)} / เดือน · รอบ1 ฿${fmt(midAmt)} · รอบ2 ฿${fmt(endAmt)}`
+                          ? `฿${fmt(salaryNum)} / เดือน · รอบ1 ฿${fmt(midAmt)} · สิ้นเดือน ฿${fmt(endAmt)}`
                           : "ยังไม่ตั้งเงินเดือน"}
+                        {Number(emp.advanceBalance) > 0
+                          ? ` · เบิกค้าง ฿${fmt(Number(emp.advanceBalance))}`
+                          : ""}
                       </div>
                     </div>
                     <button
@@ -362,12 +381,25 @@ export function PayrollSettingsPanel({
                           placeholder="optional"
                         />
                       </label>
-                      {salaryNum > 0 ? (
-                        <p className="muted form-hint-inline">
-                          ตัวอย่างจ่าย: วันที่ {midDay} = ฿{fmt(midAmt)} · วันที่ {endDay} = ฿
-                          {fmt(endAmt)} (+ โบนัส)
-                        </p>
-                      ) : null}
+                      <label className="field">
+                        <span>เบิกค้าง (บาท)</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={100}
+                          inputMode="decimal"
+                          value={draft.advanceBalance}
+                          onChange={(e) => patchDraft(emp.id, { advanceBalance: e.target.value })}
+                          disabled={busy}
+                          placeholder="เช่น 2000 — ว่าง = ไม่มี"
+                        />
+                      </label>
+                      <p className="muted form-hint-inline">
+                        เบิกค้างเดิมใส่ยอดอย่างเดียว (ไม่ลงสมุดซ้ำ) · ระบบจะหักจากรอบจ่ายถัดไปจนครบ
+                        {salaryNum > 0
+                          ? ` · ตัวอย่างก่อนหัก: วันที่ ${midDay} = ฿${fmt(midAmt)} · สิ้นเดือนโอนวันที่ ${endDay} = ฿${fmt(endAmt)}`
+                          : ""}
+                      </p>
                       <div className="module-form-actions">
                         <button
                           type="button"

@@ -5139,6 +5139,12 @@ body.modal-open .main-panel {
   margin-bottom: 0.75rem;
 }
 
+.payroll-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
 .payroll-actions-hint,
 .payroll-settings-hint {
   margin-top: 0.4rem;
