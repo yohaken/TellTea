@@ -17192,6 +17192,48 @@ a.ghost-btn {
   white-space: nowrap;
 }
 
+.vat-import-workbench {
+  margin-top: 0.15rem;
+}
+
+.vat-import-sum-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.85rem;
+  margin: 0.35rem 0 0.55rem;
+  padding: 0.35rem 0.45rem;
+  border-left: 3px solid rgba(28, 42, 31, 0.35);
+  background: rgba(28, 42, 31, 0.035);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.vat-import-sum-item strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.vat-import-table .col-date {
+  min-width: 7.5rem;
+}
+
+.vat-import-table .vat-import-file-link {
+  font-size: 0.78rem;
+  word-break: break-all;
+}
+
+.vat-import-attach {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.vat-import-row--dup {
+  background: rgba(160, 90, 20, 0.08);
+}
+
+.vat-sales-page .vat-sales-tabs {
+  margin: 0.15rem 0 0.45rem;
+}
+
 .vat-period-banner {
   display: flex;
   flex-wrap: wrap;

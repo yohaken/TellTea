@@ -538,6 +538,11 @@ service cloud.firestore {
       allow read, write: if isOwner() || isOwnerEmail();
     }
 
+    /** แถวนำเข้าไฟล์ VAT (วัน×ช่องทาง) — เจ้าของเท่านั้น */
+    match /vatImportRows/{rowId} {
+      allow read, write: if isOwner() || isOwnerEmail();
+    }
+
     /** ใบกำกับซื้อ (ภาษีซื้อ) — เจ้าของเท่านั้น */
     match /vatInputInvoices/{docId} {
       allow read, write: if isOwner();

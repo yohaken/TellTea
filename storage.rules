@@ -41,5 +41,24 @@ service firebase.storage {
     match /vat-mail-pdfs/{allPaths=**} {
       allow read, write: if false;
     }
+
+    // VAT import files (Excel/PDF/CSV/images) — owner-gated page; signed-in write.
+    function vatImportFileOk() {
+      return request.resource.size < 25 * 1024 * 1024
+        && (
+          request.resource.contentType == 'application/pdf'
+          || request.resource.contentType == 'text/csv'
+          || request.resource.contentType == 'application/vnd.ms-excel'
+          || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          || request.resource.contentType.matches('image/.*')
+          || request.resource.contentType == 'application/octet-stream'
+        );
+    }
+
+    match /vat-imports/{allPaths=**} {
+      allow read: if signedIn();
+      allow write: if signedIn() && vatImportFileOk();
+      allow delete: if signedIn();
+    }
   }
 }
