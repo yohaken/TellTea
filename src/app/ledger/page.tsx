@@ -423,8 +423,6 @@ function LedgerView() {
         />
       ) : null}
 
-      {isOwner && actorId ? <LedgerAiSettingsPanel actorId={actorId} /> : null}
-
       <div className="table-search">
         <input
           type="search"
@@ -754,6 +752,8 @@ function LedgerView() {
           <span>เข้า</span>
         </button>
       ) : null}
+
+      {isOwner && actorId ? <LedgerAiSettingsPanel actorId={actorId} /> : null}
     </div>
   );
 }

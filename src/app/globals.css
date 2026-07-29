@@ -1518,50 +1518,39 @@ body.modal-open .main-panel {
   text-align: left;
 }
 
-.ledger-ai-settings {
-  margin: 0 0 0.75rem;
-  border-radius: 0.85rem;
-  border: 1px solid rgba(47, 107, 79, 0.18);
-  background: linear-gradient(135deg, rgba(47, 107, 79, 0.08), rgba(255, 255, 255, 0.7));
-  overflow: hidden;
-}
-
-.ledger-ai-settings-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.65rem 0.85rem;
-  border: 0;
-  background: transparent;
-  color: rgba(28, 42, 31, 0.88);
-  font: inherit;
-  font-size: 0.86rem;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.ledger-ai-settings-toggle-left {
+/** FAB ตั้งค่า AI เล็กมาก — เจ้าของ · ใต้ปุ่มโอนเข้า */
+.ledger-ai-fab {
+  position: fixed;
+  right: max(1.15rem, calc((100vw - var(--shell-max)) / 2 + 1.15rem));
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 3.35rem);
+  z-index: 12;
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  flex-wrap: wrap;
+  justify-content: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(47, 107, 79, 0.22);
+  background: rgba(255, 255, 255, 0.78);
+  color: rgba(47, 107, 79, 0.72);
+  box-shadow: 0 3px 10px rgba(28, 42, 31, 0.08);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  opacity: 0.72;
 }
 
-.ledger-ai-settings-toggle-rare {
-  font-size: 0.68rem;
-  font-weight: 550;
-  color: rgba(28, 42, 31, 0.45);
+.ledger-ai-fab:active {
+  transform: scale(0.96);
+  opacity: 1;
 }
 
-.ledger-ai-settings-body {
-  padding: 0 0.85rem 0.85rem;
-  border-top: 1px solid rgba(47, 107, 79, 0.12);
+.ledger-ai-settings-modal .ledger-ai-settings-body {
+  padding-top: 0.15rem;
 }
 
 .ledger-ai-settings-hint {
-  margin: 0.65rem 0 0.55rem;
+  margin: 0.35rem 0 0.55rem;
   font-size: 0.78rem;
   text-align: left;
 }
@@ -2152,11 +2141,11 @@ body.modal-open .main-panel {
   letter-spacing: 0.01em;
 }
 
-/** ปุ่มโอนเข้าเล็ก — เจ้าของเท่านั้น · มุมขวาล่างเหนือ dock */
+/** ปุ่มโอนเข้าเล็ก — เจ้าของเท่านั้น · มุมขวาล่างเหนือ FAB AI */
 .ledger-transfer-in-fab {
   position: fixed;
   right: max(0.85rem, calc((100vw - var(--shell-max)) / 2 + 0.85rem));
-  bottom: calc(var(--nav-h) + var(--safe-bottom) + 3.35rem);
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 5.15rem);
   z-index: 12;
   display: inline-flex;
   align-items: center;
