@@ -40,7 +40,7 @@ assert.match(panel, /fetchNposSystemRelease/);
 assert.match(hosting, /"source":\s*"\/downloads\/\*\*"/);
 assert.match(hosting, /Access-Control-Allow-Origin/);
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 407/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 132/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 408/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 133/);
 
 console.log(`OK test-npos-system-ver-sync ${name} (${code})`);
