@@ -160,6 +160,7 @@ export function shopeeTaxInvoiceToImportRow(
     downloadUrl?: string;
     fileName?: string;
     contentType?: string;
+    contentHash?: string;
   },
 ): VatImportRowInput | null {
   if (!parsed.dateKey || !parsed.monthKey) return null;
@@ -179,7 +180,7 @@ export function shopeeTaxInvoiceToImportRow(
     downloadUrl: opts?.downloadUrl || "",
     fileName: opts?.fileName || "",
     contentType: opts?.contentType || "application/pdf",
-    contentHash: "",
+    contentHash: opts?.contentHash || "",
     adapterId: SHOPEE_TAXINVOICE_ADAPTER_ID,
     adapterVersion: SHOPEE_TAXINVOICE_ADAPTER_VERSION,
     externalId: `shopee-inv:${parsed.invoiceNo}`,

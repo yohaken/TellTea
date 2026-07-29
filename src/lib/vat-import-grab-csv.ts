@@ -245,6 +245,7 @@ export function grabCsvToImportRows(
     downloadUrl?: string;
     fileName?: string;
     contentType?: string;
+    contentHash?: string;
   },
 ): VatImportRowInput[] {
   if (!parsed.monthKey) return [];
@@ -264,7 +265,7 @@ export function grabCsvToImportRows(
     downloadUrl: opts?.downloadUrl || "",
     fileName: opts?.fileName || "",
     contentType: opts?.contentType || "text/csv",
-    contentHash: "",
+    contentHash: opts?.contentHash || "",
     adapterId: GRAB_CSV_ADAPTER_ID,
     adapterVersion: GRAB_CSV_ADAPTER_VERSION,
     externalId: `grab-day:${d.dateKey}`,
@@ -274,3 +275,4 @@ export function grabCsvToImportRows(
     appliedToMonth: "",
   }));
 }
+

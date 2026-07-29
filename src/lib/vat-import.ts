@@ -20,11 +20,13 @@ import {
   uploadBytes,
 } from "firebase/storage";
 import { getDb, getFirebaseAuth, getFirebaseStorage } from "./firebase";
+import { hashFileSha256 } from "./vat-import-hash";
 import {
   isMonthKey,
   normalizeMoney,
   type DeliveryChannel,
 } from "./vat-sales";
+
 
 export const VAT_IMPORT_ROWS_COL = "vatImportRows";
 export const VAT_IMPORT_STORAGE_PREFIX = "vat-imports";
@@ -405,7 +407,7 @@ export function guessContentType(file: File): string {
   return "application/octet-stream";
 }
 
-/** อัปโหลดไฟล์นำเข้า → Storage path ตามสเปก */
+/** อัปโหลดไฟล์นำเข้า → Storage path ตามสเปก · คืน contentHash สำหรับ dedupe inbox */
 export async function uploadVatImportFile(input: {
   file: File;
   monthKey: string;
@@ -415,6 +417,7 @@ export async function uploadVatImportFile(input: {
   downloadUrl: string;
   fileName: string;
   contentType: string;
+  contentHash: string;
 }> {
   const auth = getFirebaseAuth();
   if (!auth.currentUser) throw new Error("ยังไม่ได้เข้าสู่ระบบ");
@@ -422,6 +425,7 @@ export async function uploadVatImportFile(input: {
   if (!isAllowedVatImportFile(input.file)) {
     throw new Error("รองรับ PDF / Excel / CSV / รูป · สูงสุด 25MB");
   }
+  const contentHash = await hashFileSha256(input.file);
   const [yyyy, mm] = input.monthKey.split("-");
   const uploadId = `${Date.now().toString(36)}-${Math.random()
     .toString(36)
@@ -430,10 +434,14 @@ export async function uploadVatImportFile(input: {
   const storagePath = `${VAT_IMPORT_STORAGE_PREFIX}/${yyyy}/${mm}/${input.channel}/${uploadId}-${fileName}`;
   const contentType = guessContentType(input.file);
   const ref = storageRef(getFirebaseStorage(), storagePath);
-  await uploadBytes(ref, input.file, { contentType });
+  await uploadBytes(ref, input.file, {
+    contentType,
+    customMetadata: { monthKey: input.monthKey, channel: input.channel, contentHash },
+  });
   const downloadUrl = await getDownloadURL(ref);
-  return { storagePath, downloadUrl, fileName, contentType };
+  return { storagePath, downloadUrl, fileName, contentType, contentHash };
 }
+
 
 /** รวมยอดแถว draft ในเดือน — ใช้ตอน I5 / ดูภาพรวม */
 export function sumVatImportDraftByChannel(rows: VatImportRow[]): Record<

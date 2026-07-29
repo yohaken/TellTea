@@ -30,6 +30,7 @@ import {
   looksLikeGrabTransactionCsv,
   parseGrabTransactionCsv,
 } from "@/lib/vat-import-grab-csv";
+import { ingestNewVatImportFiles } from "@/lib/vat-import-inbox";
 import {
   linemanMonthlyToImportRows,
   looksLikeLinemanMonthlyReport,
@@ -41,6 +42,7 @@ import {
   parseShopeeTaxInvoice,
   shopeeTaxInvoiceToImportRow,
 } from "@/lib/vat-import-shopee-taxinvoice";
+
 import {
   formatVatMoney,
   moneyFieldValue,
@@ -299,8 +301,9 @@ export function VatImportWorkbench({ actor }: Props) {
             downloadUrl: up.downloadUrl,
             fileName: up.fileName,
             contentType: up.contentType,
+            contentHash: up.contentHash,
             adapterId: "manual",
-            note: `อัปโหลด ${up.fileName}`,
+            note: `อัปโหลด ${up.fileName} · รอแปลง/กรอกยอด`,
           }),
           actor,
         );
@@ -356,7 +359,9 @@ export function VatImportWorkbench({ actor }: Props) {
         downloadUrl: up.downloadUrl,
         fileName: up.fileName,
         contentType: up.contentType,
+        contentHash: up.contentHash,
       });
+
       const { created, skipped } = await createVatImportRowsSkippingDupes(
         inputs,
         actor,
@@ -423,6 +428,7 @@ export function VatImportWorkbench({ actor }: Props) {
           downloadUrl: up.downloadUrl,
           fileName: up.fileName,
           contentType: up.contentType,
+          contentHash: up.contentHash,
         });
         if (row) inputs.push(row);
       }
@@ -497,7 +503,9 @@ export function VatImportWorkbench({ actor }: Props) {
         downloadUrl: up.downloadUrl,
         fileName: up.fileName,
         contentType: up.contentType,
+        contentHash: up.contentHash,
       });
+
       const { created, skipped } = await createVatImportRowsSkippingDupes(
         inputs,
         actor,
@@ -595,6 +603,7 @@ export function VatImportWorkbench({ actor }: Props) {
         downloadUrl: up.downloadUrl,
         fileName: up.fileName,
         contentType: up.contentType,
+        contentHash: up.contentHash,
       });
       setMsg(`แนบไฟล์ ${up.fileName} แล้ว`);
     } catch (e) {
@@ -603,14 +612,39 @@ export function VatImportWorkbench({ actor }: Props) {
     }
   }
 
+  async function onIngestInbox() {
+    setBusyId("inbox");
+    setError("");
+    setMsg("");
+    try {
+      const result = await ingestNewVatImportFiles(month, actor);
+      await refresh();
+      const err =
+        result.errors.length > 0
+          ? ` · พัง ${result.errors.length}: ${result.errors.slice(0, 2).join(" · ")}`
+          : "";
+      setMsg(
+        `ดึงไฟล์ใหม่ · สแกน ${result.scanned} · สร้าง ${result.created}` +
+          (result.pending ? ` · ว่างรอแปลง ${result.pending}` : "") +
+          (result.skipped ? ` · ข้ามซ้ำ ${result.skipped}` : "") +
+          err,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyId("");
+    }
+  }
+
   return (
     <div className="vat-import-workbench">
       <header className="vat-sales-header">
         <p className="vat-sales-lead">
-          นำเข้าไฟล์ → แถววัน · LINE MAN / Grab CSV / Shopee ใบกำกับ · แล้วกดใช้เข้าเดือน
-          (I4–I5)
+          Storage inbox → ตารางวัน×ช่องทาง · แปลงเฉพาะช่องที่ชัวร์ · ว่างไว้ให้ AI/คนเติม ·
+          แล้วใช้เข้าเดือน
         </p>
       </header>
+
 
       <div className="vat-top-bar">
         <div className="vat-sales-toolbar vat-sales-toolbar--slim">
@@ -662,6 +696,15 @@ export function VatImportWorkbench({ actor }: Props) {
       <div className="vat-month-actions vat-month-actions--mini">
         <button
           type="button"
+          className="vat-mini-btn vat-mini-btn--primary"
+          disabled={Boolean(busyId) || loading}
+          onClick={() => void onIngestInbox()}
+          title="สแกนไฟล์ใน Storage ของเดือนนี้ → ใส่ตาราง (ไม่ซ้ำ)"
+        >
+          {busyId === "inbox" ? "กำลังดึง…" : "ดึงไฟล์ใหม่"}
+        </button>
+        <button
+          type="button"
           className="vat-mini-btn"
           disabled={Boolean(busyId)}
           onClick={() => linemanRef.current?.click()}
@@ -686,7 +729,7 @@ export function VatImportWorkbench({ actor }: Props) {
         </button>
         <button
           type="button"
-          className="vat-mini-btn vat-mini-btn--primary"
+          className="vat-mini-btn"
           disabled={Boolean(busyId) || applyPreview.rowIds.length === 0}
           onClick={() => void onApplyToMonth()}
         >

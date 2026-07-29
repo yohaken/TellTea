@@ -14,9 +14,11 @@ function ensureWorker() {
   workerReady = true;
 }
 
-export async function extractPdfTextFromFile(file: File): Promise<string> {
+export async function extractPdfTextFromBytes(
+  bytes: ArrayBuffer | Uint8Array,
+): Promise<string> {
   ensureWorker();
-  const data = new Uint8Array(await file.arrayBuffer());
+  const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   const doc = await getDocument({ data, useSystemFonts: true }).promise;
   const parts: string[] = [];
   for (let i = 1; i <= doc.numPages; i++) {
@@ -31,3 +33,8 @@ export async function extractPdfTextFromFile(file: File): Promise<string> {
   await doc.destroy();
   return parts.join("\n");
 }
+
+export async function extractPdfTextFromFile(file: File): Promise<string> {
+  return extractPdfTextFromBytes(await file.arrayBuffer());
+}
+
