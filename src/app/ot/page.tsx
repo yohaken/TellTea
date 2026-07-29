@@ -25,8 +25,10 @@ import {
   type PhotoForensicsReport,
 } from "@/lib/photo-forensics-scan";
 import {
+  OT_HISTORY_LOOKBACK_DAYS,
   OT_SHIFTS,
   OT_IMAGE_MAX,
+  OT_IMAGE_PAYLOAD_BUDGET,
   addOtEntry,
   assertOtImageUrlsFit,
   bulkUpdateOtEntryStatus,
@@ -40,6 +42,7 @@ import {
   isOtEntryClosed,
   labelOtShift,
   labelOtStatus,
+  otHistorySinceMs,
   subscribeOtEntries,
   updateOtEntry,
   type OtEntry,
@@ -68,6 +71,7 @@ import {
   type SopDraftItem,
 } from "@/components/ShiftSopSection";
 import {
+  checkHistorySinceMs,
   listActiveChecklistItems,
   subscribeChecklistRecords,
   type ChecklistItem,
@@ -80,6 +84,7 @@ import {
   computeShiftQuality,
   closingItemsFromCatalog,
   getCurrentShiftId,
+  indexChecklistRecordsByDayShift,
   openingItemsFromCatalog,
   ownerQualityHints,
   hasOtProcessOrderIssue,
@@ -186,12 +191,16 @@ function OtView() {
   const [workers, setWorkers] = useState<Employee[]>([]);
   const [bonusRate, setBonusRate] = useState(0.6);
   const [rateSchedule, setRateSchedule] = useState<RateScheduleEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [catalogReady, setCatalogReady] = useState(false);
+  const [entriesReady, setEntriesReady] = useState(false);
+  const [checksReady, setChecksReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<OtEntry | null>(null);
   const [slotDraft, setSlotDraft] = useState<{ date: number; shift: OtShiftId } | null>(null);
   const [checkItems, setCheckItems] = useState<ChecklistItem[]>([]);
   const [checkRecords, setCheckRecords] = useState<ChecklistRecord[]>([]);
+  const loading = !catalogReady || !entriesReady || !checksReady;
+  const historySinceMs = useMemo(() => otHistorySinceMs(), []);
 
   async function reloadCatalog() {
     const [emps, settings, items] = await Promise.all([
@@ -212,32 +221,56 @@ function OtView() {
 
   useEffect(() => {
     if (!can(staff, "otBonus")) return;
-    setLoading(true);
+    setCatalogReady(false);
+    setEntriesReady(false);
+    setChecksReady(false);
     void reloadCatalog()
-      .catch((err) => setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ"))
-      .finally(() => setLoading(false));
+      .then(() => setCatalogReady(true))
+      .catch((err) => {
+        setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ");
+        setCatalogReady(true);
+      });
 
+    const since = historySinceMs;
     const unsubSchedule = subscribeRateSchedule(
       (doc) => setRateSchedule(doc.entries),
       (err) => setError(err.message),
     );
     const unsubOt = subscribeOtEntries(
-      (rows) => setEntries(rows),
-      (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
+      (rows) => {
+        setEntries(rows);
+        setEntriesReady(true);
+      },
+      (err) => {
+        setError(err.message || "โหลดรายการไม่สำเร็จ");
+        setEntriesReady(true);
+      },
+      { since },
     );
     const unsubCheck = subscribeChecklistRecords(
-      (rows) => setCheckRecords(rows),
-      (err) => setError(err.message || "โหลด SOP ไม่สำเร็จ"),
+      (rows) => {
+        setCheckRecords(rows);
+        setChecksReady(true);
+      },
+      (err) => {
+        setError(err.message || "โหลด SOP ไม่สำเร็จ");
+        setChecksReady(true);
+      },
+      { since: checkHistorySinceMs() },
     );
     return () => {
       unsubSchedule();
       unsubOt();
       unsubCheck();
     };
-  }, [staff]);
+  }, [staff, historySinceMs]);
 
   const openingItems = useMemo(() => openingItemsFromCatalog(checkItems), [checkItems]);
   const closingItems = useMemo(() => closingItemsFromCatalog(checkItems), [checkItems]);
+  const checkRecordsByDayShift = useMemo(
+    () => indexChecklistRecordsByDayShift(checkRecords),
+    [checkRecords],
+  );
 
   const todayShift = getCurrentShiftId();
   const todayMs = startOfLocalDay();
@@ -254,8 +287,9 @@ function OtView() {
         closingItems,
         date: todayMs,
         shift: todayShift,
+        recordsByDayShift: checkRecordsByDayShift,
       }),
-    [todayEntry, checkRecords, openingItems, closingItems, todayMs, todayShift],
+    [todayEntry, checkRecords, checkRecordsByDayShift, openingItems, closingItems, todayMs, todayShift],
   );
 
   useBodyScrollLock(formOpen);
@@ -312,6 +346,8 @@ function OtView() {
           <OtTable
             entries={entries}
             checkRecords={checkRecords}
+            checkRecordsByDayShift={checkRecordsByDayShift}
+            historySinceMs={historySinceMs}
             openingItems={openingItems}
             closingItems={closingItems}
             staff={staff}
@@ -1029,6 +1065,7 @@ function OtEntryForm({
             onError={reportError}
             label="รูป"
             max={OT_IMAGE_MAX}
+            maxTotalChars={OT_IMAGE_PAYLOAD_BUDGET}
             storageFolder="ot-photos"
             storageSlotKey={`${date}_${shift}_${createdBy || entry?.id || "new"}`}
             hint={
@@ -1130,6 +1167,8 @@ function OtEntryForm({
 function OtTable({
   entries,
   checkRecords,
+  checkRecordsByDayShift,
+  historySinceMs,
   openingItems,
   closingItems,
   staff,
@@ -1140,6 +1179,8 @@ function OtTable({
 }: {
   entries: OtEntry[];
   checkRecords: ChecklistRecord[];
+  checkRecordsByDayShift: Map<string, ChecklistRecord[]>;
+  historySinceMs: number;
   openingItems: ChecklistItem[];
   closingItems: ChecklistItem[];
   staff: StaffMember | null;
@@ -1191,7 +1232,10 @@ function OtTable({
     return { shiftCount, summaryQty, totalBonus, pendingBonus, myBonus };
   }, [filtered, myName]);
 
-  const dateGroups = useMemo(() => buildOtGrid(filtered), [filtered]);
+  const dateGroups = useMemo(
+    () => buildOtGrid(filtered, { minDate: historySinceMs }),
+    [filtered, historySinceMs],
+  );
 
   const pendingIds = useMemo(
     () => filtered.filter((r) => r.status === "pending").map((r) => r.id),
@@ -1236,7 +1280,9 @@ function OtTable({
   return (
     <div className="ot-table-view">
       <div className="ot-toolbar-slim">
-        <span className="ot-slim-hint muted">ทุกวัน · ใหม่ → เก่า · 3 กะ/วัน · ล่วงหน้า 3 วัน</span>
+        <span className="ot-slim-hint muted">
+          {OT_HISTORY_LOOKBACK_DAYS} วันล่าสุด · ใหม่ → เก่า · 3 กะ/วัน · ล่วงหน้า 3 วัน
+        </span>
         <select
           id="ot-status-filter"
           className="ot-slim-input"
@@ -1310,6 +1356,7 @@ function OtTable({
         <OtSheetTable
           groups={dateGroups}
           checkRecords={checkRecords}
+          checkRecordsByDayShift={checkRecordsByDayShift}
           openingItems={openingItems}
           closingItems={closingItems}
           isOwner={isOwner}
@@ -1369,6 +1416,7 @@ function OtTable({
 function OtSheetTable({
   groups,
   checkRecords,
+  checkRecordsByDayShift,
   openingItems,
   closingItems,
   isOwner,
@@ -1384,6 +1432,7 @@ function OtSheetTable({
 }: {
   groups: OtDayGroup[];
   checkRecords: ChecklistRecord[];
+  checkRecordsByDayShift: Map<string, ChecklistRecord[]>;
   openingItems: ChecklistItem[];
   closingItems: ChecklistItem[];
   isOwner: boolean;
@@ -1464,6 +1513,7 @@ function OtSheetTable({
                   closingItems,
                   date: group.date,
                   shift: slot.shiftId,
+                  recordsByDayShift: checkRecordsByDayShift,
                 });
                 const slotStatus = slotProgress.status;
                 const slotHints = isOwner ? ownerQualityHints(slotProgress.quality) : [];

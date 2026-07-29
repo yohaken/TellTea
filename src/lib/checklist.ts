@@ -267,19 +267,39 @@ export async function deleteChecklistItem(id: string): Promise<void> {
   await deleteDoc(doc(getDb(), "checklistItems", id));
 }
 
+/** คู่กับ OT lookback — หน้าชง/SOP ไม่ต้อง sync ประวัติทั้งร้าน */
+export const CHECK_HISTORY_LOOKBACK_DAYS = 60;
+
+export function checkHistorySinceMs(
+  now = Date.now(),
+  days: number = CHECK_HISTORY_LOOKBACK_DAYS,
+): number {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - Math.max(1, Math.floor(days)));
+  return d.getTime();
+}
+
 export function subscribeChecklistRecords(
   onRows: (rows: ChecklistRecord[]) => void,
   onError?: (err: Error) => void,
+  opts?: { since?: number },
 ): Unsubscribe {
+  const since = opts?.since;
+  // date ASC + submittedAt DESC ใช้ index ที่มีอยู่แล้วใน firestore.indexes.json
+  const q =
+    since != null
+      ? query(
+          recordsCol(),
+          where("date", ">=", since),
+          orderBy("date", "asc"),
+          orderBy("submittedAt", "desc"),
+        )
+      : query(recordsCol(), orderBy("submittedAt", "desc"));
   return onSnapshot(
-    query(recordsCol(), orderBy("submittedAt", "desc")),
+    q,
     (snap) => {
-      onRows(
-        snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<ChecklistRecord, "id">),
-        })),
-      );
+      onRows(snap.docs.map((d) => mapCheckRecordDoc(d.id, d.data() as Record<string, unknown>)));
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );

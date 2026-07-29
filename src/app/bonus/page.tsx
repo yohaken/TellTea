@@ -105,9 +105,11 @@ function BonusView() {
       .catch((err) => setError((err as Error).message || "โหลดพนักงานไม่สำเร็จ"))
       .finally(() => setLoading(false));
 
+    const monthSince = new Date(year, monthIdx, 1).getTime();
     const unsubOt = subscribeOtEntries(
       (rows) => setOtEntries(rows),
       (err) => setError(err.message),
+      { since: monthSince },
     );
     const unsubProd = subscribeProdEntries(
       (rows) => setProdEntries(rows),
@@ -137,7 +139,7 @@ function BonusView() {
       unsubPayrollSchedule();
       unsubPayrollItems();
     };
-  }, [staff, canView]);
+  }, [staff, canView, year, monthIdx]);
 
   useEffect(() => {
     if (!canView) return;

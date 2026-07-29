@@ -56,15 +56,32 @@ function sessionCoversItems(
   return session.total >= items.length;
 }
 
+/** Index ครั้งเดียวต่อ snapshot — กัน O(slots × records) ตอนเรนเดอร์ตารางชง */
+export function indexChecklistRecordsByDayShift(
+  records: ChecklistRecord[],
+): Map<string, ChecklistRecord[]> {
+  const map = new Map<string, ChecklistRecord[]>();
+  for (const row of records) {
+    const key = `${startOfLocalDay(new Date(row.date))}_${row.shift}`;
+    const list = map.get(key);
+    if (list) list.push(row);
+    else map.set(key, [row]);
+  }
+  return map;
+}
+
 export function getShiftCheckSessions(
   records: ChecklistRecord[],
   date: number,
   shift: CheckShiftId,
+  recordsByDayShift?: Map<string, ChecklistRecord[]>,
 ): { opening: CheckSessionSummary | null; closing: CheckSessionSummary | null } {
   const dayMs = startOfLocalDay(new Date(date));
-  const dayShift = records.filter(
-    (r) => startOfLocalDay(new Date(r.date)) === dayMs && r.shift === shift,
-  );
+  const dayShift = recordsByDayShift
+    ? recordsByDayShift.get(`${dayMs}_${shift}`) || []
+    : records.filter(
+        (r) => startOfLocalDay(new Date(r.date)) === dayMs && r.shift === shift,
+      );
   const sessions = groupRecordsBySession(dayShift);
 
   let opening: CheckSessionSummary | null = null;
@@ -171,10 +188,12 @@ export function computeShiftProgress(input: {
   closingItems: ChecklistItem[];
   date: number;
   shift: OtShiftId;
+  /** ถ้าส่งมา จะ lookup O(1) แทน filter ทั้งก้อนทุกรอบ */
+  recordsByDayShift?: Map<string, ChecklistRecord[]>;
 }): ShiftProgress {
-  const { entry, records, openingItems, closingItems, date, shift } = input;
+  const { entry, records, openingItems, closingItems, date, shift, recordsByDayShift } = input;
   const workersSet = !!(entry?.workerNames || []).filter(Boolean).length;
-  const { opening, closing } = getShiftCheckSessions(records, date, shift);
+  const { opening, closing } = getShiftCheckSessions(records, date, shift, recordsByDayShift);
 
   const openSopComplete = openingItems.length === 0 || sessionCoversItems(opening, openingItems);
   const closeSopComplete = closingItems.length === 0 || sessionCoversItems(closing, closingItems);
