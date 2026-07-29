@@ -459,7 +459,9 @@ function BillNoticeFormModal({
       if (!dateMs) throw new Error("ต้องใส่วันที่บิล");
       if (!desc) throw new Error("ต้องใส่รายการ");
       if (!(amountOut > 0)) throw new Error("ต้องใส่จำนวนเงินออก");
-      const type = guessTypeFromDescription(desc) || "sga";
+      // Utility bills are sga; keep heuristic only when it already yields sga/asset.
+      const guessed = guessTypeFromDescription(desc) || "sga";
+      const type = guessed === "cogs" ? "sga" : guessed;
       if (mode === "add") {
         await addBillNotice({
           date: dateMs,

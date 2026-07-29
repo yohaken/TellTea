@@ -290,8 +290,10 @@ function buildPayload(input: BillNoticeInput) {
     throw new Error("รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่");
   }
   const description = input.description.trim();
-  const type =
+  const guessed =
     (input.type || "").trim() || guessTypeFromDescription(description) || "sga";
+  // Bill notices are owner utilities — never default free-text to cogs.
+  const type = guessed === "cogs" ? "sga" : guessed;
   const payload = {
     date: Number(input.date) || 0,
     description,
