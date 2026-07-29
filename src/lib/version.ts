@@ -1,8 +1,17 @@
-/** Bump APP_BUILD on each production UI/JS ship. */
-export const APP_BUILD = 432;
+/** TellTea web version: 4.xxx — bump APP_BUILD on each production UI/JS ship. */
+export const APP_VERSION_MAJOR = 4;
+export const APP_BUILD = 433;
 
 export const APP_BUILT_AT =
   process.env.NEXT_PUBLIC_APP_BUILT_AT || "1970-01-01T00:00:00.000Z";
+
+/** e.g. 4.433 */
+export function appVersionString(
+  major = APP_VERSION_MAJOR,
+  build = APP_BUILD,
+): string {
+  return `${major}.${build}`;
+}
 
 /** Deterministic Asia/Bangkok label — same on Node build and browser hydrate. */
 export function formatAppBuiltAt(iso = APP_BUILT_AT) {
@@ -19,5 +28,5 @@ export function formatAppBuiltAt(iso = APP_BUILT_AT) {
 }
 
 export function appVersionLabel() {
-  return `v${APP_BUILD} · ${formatAppBuiltAt()}`;
+  return `${appVersionString()} · ${formatAppBuiltAt()}`;
 }

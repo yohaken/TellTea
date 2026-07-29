@@ -17681,6 +17681,60 @@ a.ghost-btn {
   z-index: 2;
 }
 
+.vat-import-channel-fixed {
+  font-weight: 650;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: rgba(28, 42, 31, 0.75);
+  white-space: nowrap;
+}
+
+.vat-import-paste {
+  margin: 0.35rem 0 0.5rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px dashed rgba(28, 42, 31, 0.25);
+  border-radius: 6px;
+  background: rgba(28, 42, 31, 0.03);
+}
+
+.vat-import-paste-hint {
+  margin: 0 0 0.3rem;
+  font-size: 0.72rem;
+}
+
+.vat-import-paste-hint code {
+  font-size: 0.68rem;
+}
+
+.vat-import-paste-input {
+  width: 100%;
+  margin: 0 0 0.35rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid rgba(28, 42, 31, 0.2);
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  resize: vertical;
+  background: #fffef8;
+}
+
+.vat-import-file-alt {
+  margin: 0.25rem 0 0.45rem;
+  font-size: 0.72rem;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.vat-import-file-alt > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.vat-import-file-alt > summary::-webkit-details-marker {
+  display: none;
+}
+
+
 
 .vat-import-table--compact .vat-import-file-link {
   font-size: 0.7rem;

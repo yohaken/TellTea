@@ -18,9 +18,21 @@ function readBuild(file, constName) {
 }
 
 const appBuild = readBuild("src/lib/version.ts", "APP_BUILD");
+const appMajor = (() => {
+  try {
+    return readBuild("src/lib/version.ts", "APP_VERSION_MAJOR");
+  } catch {
+    return 4;
+  }
+})();
 const posBuild = readBuild("src/lib/pos-version.ts", "POS_BUILD");
 
-const appPayload = { build: appBuild, builtAt };
+const appPayload = {
+  build: appBuild,
+  major: appMajor,
+  version: `${appMajor}.${appBuild}`,
+  builtAt,
+};
 const posPayload = { build: posBuild, builtAt, product: "telltea-pos" };
 
 const appJson = `${JSON.stringify(appPayload, null, 2)}\n`;
@@ -31,5 +43,5 @@ for (const dir of ["public", "out"]) {
   writeFileSync(join(root, dir, "pos-version.json"), posJson, "utf8");
 }
 
-console.log(`OK version.json → build ${appBuild}`);
+console.log(`OK version.json → ${appPayload.version} (build ${appBuild})`);
 console.log(`OK pos-version.json → POS ${posBuild}`);

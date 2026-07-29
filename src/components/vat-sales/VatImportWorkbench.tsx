@@ -48,6 +48,7 @@ import {
   parseLinemanMonthlyReport,
 } from "@/lib/vat-import-lineman-monthly";
 import { extractPdfTextFromFile } from "@/lib/vat-import-pdf-text";
+import { parseVatImportPasteText } from "@/lib/vat-import-paste";
 import {
   ensureVatImportMonthScaffold,
   upsertVatImportSalesIntoSlots,
@@ -57,6 +58,7 @@ import {
   parseShopeeTaxInvoice,
   shopeeTaxInvoiceToImportRow,
 } from "@/lib/vat-import-shopee-taxinvoice";
+
 import {
   formatVatMoney,
   moneyFieldValue,
@@ -130,6 +132,9 @@ export function VatImportWorkbench({ actor }: Props) {
   const [filterChannel, setFilterChannel] = useState<VatImportChannel | "all">(
     "all",
   );
+  const [filterFill, setFilterFill] = useState<"all" | "empty" | "filled">(
+    "all",
+  );
   const [uploadChannel, setUploadChannel] =
     useState<VatImportChannel>("grab");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -137,7 +142,10 @@ export function VatImportWorkbench({ actor }: Props) {
   const shopeeRef = useRef<HTMLInputElement>(null);
   const grabRef = useRef<HTMLInputElement>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [guideOpen, setGuideOpen] = useState(true);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const [pasteOpen, setPasteOpen] = useState(false);
+
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -159,11 +167,22 @@ export function VatImportWorkbench({ actor }: Props) {
 
   const visible = useMemo(() => {
     // หน้าร้านไม่อยู่ในตารางนำเข้า (แม้มีแถวเก่าค้าง)
-    const base = rows.filter((r) => r.channel !== "storefront");
-    return filterChannel === "all"
-      ? base
-      : base.filter((r) => r.channel === filterChannel);
-  }, [rows, filterChannel]);
+    let base = rows.filter((r) => r.channel !== "storefront");
+    if (filterChannel !== "all") {
+      base = base.filter((r) => r.channel === filterChannel);
+    }
+    if (filterFill === "empty") {
+      base = base.filter(
+        (r) => !r.grossInclusive && !r.fee && !r.netTransfer && !r.gpVat,
+      );
+    } else if (filterFill === "filled") {
+      base = base.filter(
+        (r) => r.grossInclusive || r.fee || r.netTransfer || r.gpVat,
+      );
+    }
+    return base;
+  }, [rows, filterChannel, filterFill]);
+
 
 
   const draftVisible = useMemo(
@@ -616,26 +635,40 @@ export function VatImportWorkbench({ actor }: Props) {
     setSelected(next);
   }
 
-  async function attachToRow(row: VatImportRow, file: File | null) {
-    if (!file) return;
-    setBusyId(row.id);
+  async function onPasteFill() {
+    setBusyId("paste");
     setError("");
+    setMsg("");
     try {
-      const up = await uploadVatImportFile({
-        file,
-        monthKey: month,
-        channel: row.channel,
-      });
-      await saveRow(row, {
-        storagePath: up.storagePath,
-        downloadUrl: up.downloadUrl,
-        fileName: up.fileName,
-        contentType: up.contentType,
-        contentHash: up.contentHash,
-      });
-      setMsg(`แนบไฟล์ ${up.fileName} แล้ว`);
+      const parsed = parseVatImportPasteText(pasteText, month);
+      if (parsed.inputs.length === 0) {
+        throw new Error(
+          parsed.errors[0]
+            ? `วางแล้วอ่านไม่ได้ · ${parsed.errors[0]}`
+            : "ไม่มีบรรทัดที่แปลงได้ — รูปแบบ: วัน ช่องทาง ขาย [คชจ.] [โอน] [GP≠] [เลขที่]",
+        );
+      }
+      const existing = [...rows];
+      const { created, updated, skipped } = await upsertVatImportSalesIntoSlots(
+        parsed.inputs,
+        actor,
+        existing,
+      );
+      setRows(
+        [...existing].sort((a, b) => a.dateKey.localeCompare(b.dateKey)),
+      );
+      setPasteText("");
+      setMsg(
+        `วางข้อความ · เติม ${created.length + updated.length} แถว` +
+          (updated.length ? ` (อัปเดต ${updated.length})` : "") +
+          (skipped ? ` · ข้าม ${skipped}` : "") +
+          (parsed.errors.length
+            ? ` · อ่านไม่ได้ ${parsed.errors.length}`
+            : ""),
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    } finally {
       setBusyId("");
     }
   }
@@ -668,9 +701,8 @@ export function VatImportWorkbench({ actor }: Props) {
     <div className="vat-import-workbench">
       <header className="vat-sales-header">
         <p className="vat-sales-lead">
-          สร้างตาราง SF/GB/LM → เติมช่องจากไฟล์จริง · แนบไฟล์ทันที · หน้าร้านอยู่นอกตารางนี้
+          เดือน → สร้างตาราง SF/GB/LM → กรอก/วางข้อความ → ใช้เข้าเดือน · หน้าร้านอยู่นอกตารางนี้
         </p>
-
       </header>
 
       <VatImportAiScratchpad actor={actor} />
@@ -680,9 +712,7 @@ export function VatImportWorkbench({ actor }: Props) {
         open={guideOpen}
         onToggle={(e) => setGuideOpen((e.target as HTMLDetailsElement).open)}
       >
-        <summary>
-          บริบทตาราง + กฎ AI — อ่านก่อนเติม (คน / local AI)
-        </summary>
+        <summary>คำแนะนำ / กฎ AI (หุบไว้)</summary>
         <section className="vat-import-guide-ai" aria-label="กฎสำหรับ AI">
           <h3 className="vat-import-guide-h">กฎสำหรับ local AI</h3>
           <ol className="vat-import-guide-steps">
@@ -769,7 +799,7 @@ export function VatImportWorkbench({ actor }: Props) {
             </select>
           </label>
           <label className="vat-sales-month">
-            กรองช่องทาง
+            ช่องทาง
             <select
               className="vat-thai-month-select"
               value={filterChannel}
@@ -789,14 +819,23 @@ export function VatImportWorkbench({ actor }: Props) {
               ))}
             </select>
           </label>
+          <label className="vat-sales-month">
+            สถานะช่อง
+            <select
+              className="vat-thai-month-select"
+              value={filterFill}
+              onChange={(e) =>
+                setFilterFill(e.target.value as "all" | "empty" | "filled")
+              }
+            >
+              <option value="all">ทุกแถว</option>
+              <option value="empty">ว่าง</option>
+              <option value="filled">มียอด</option>
+            </select>
+          </label>
           {busyId ? <span className="muted">…</span> : null}
         </div>
       </div>
-
-      <p className="muted vat-sales-hint vat-hint-one-line">
-        ติ๊กแถว draft (ไม่ติ๊ก = ใช้ทุก draft ที่มองเห็น) →{" "}
-        <strong>ใช้เข้าเดือน</strong> · Σ ขาย/โอน/GP VAT เข้าแท็บเดือน
-      </p>
 
       <div className="vat-month-actions vat-month-actions--mini">
         <button
@@ -804,68 +843,28 @@ export function VatImportWorkbench({ actor }: Props) {
           className="vat-mini-btn vat-mini-btn--primary"
           disabled={Boolean(busyId) || loading}
           onClick={() => void onScaffoldMonth()}
-          title="สร้างแถวว่างครบทุกวัน × ทุกช่องทาง"
+          title="สร้างแถวว่างวัน×SF/GB/LM — ไม่ซ้ำถ้ามีแล้ว"
         >
           {busyId === "scaffold" ? "กำลังสร้าง…" : "สร้างตารางเดือน"}
         </button>
         <button
           type="button"
           className="vat-mini-btn"
-          disabled={Boolean(busyId) || loading}
-          onClick={() => void onIngestInbox()}
-          title="สแกนไฟล์ใน Storage ของเดือนนี้ → ใส่ตาราง (ไม่ซ้ำ)"
-        >
-          {busyId === "inbox" ? "กำลังดึง…" : "ดึงไฟล์ใหม่"}
-        </button>
-        <button
-          type="button"
-          className="vat-mini-btn"
           disabled={Boolean(busyId)}
-          onClick={() => linemanRef.current?.click()}
+          onClick={() => setPasteOpen((v) => !v)}
         >
-          {busyId === "lineman" ? "…" : "LINE MAN รายงานเดือน"}
+          วางข้อความ
         </button>
         <button
           type="button"
-          className="vat-mini-btn"
-          disabled={Boolean(busyId)}
-          onClick={() => grabRef.current?.click()}
-        >
-          {busyId === "grab" ? "…" : "Grab CSV"}
-        </button>
-        <button
-          type="button"
-          className="vat-mini-btn"
-          disabled={Boolean(busyId)}
-          onClick={() => shopeeRef.current?.click()}
-        >
-          {busyId === "shopee" ? "…" : "Shopee ใบกำกับ PDF"}
-        </button>
-        <button
-          type="button"
-          className="vat-mini-btn"
+          className="vat-mini-btn vat-mini-btn--primary"
           disabled={Boolean(busyId) || applyPreview.rowIds.length === 0}
           onClick={() => void onApplyToMonth()}
+          title="ผสานยอดจากตารางนี้เข้าแท็บเดือน"
         >
           {busyId === "apply"
             ? "กำลังใส่เดือน…"
             : `ใช้เข้าเดือน (${applyPreview.rowIds.length})`}
-        </button>
-        <button
-          type="button"
-          className="vat-mini-btn"
-          disabled={Boolean(busyId)}
-          onClick={() => fileRef.current?.click()}
-        >
-          อัปโหลดอื่น
-        </button>
-        <button
-          type="button"
-          className="vat-mini-btn"
-          disabled={Boolean(busyId)}
-          onClick={() => void addBlankRow()}
-        >
-          + แถวว่าง
         </button>
         <button
           type="button"
@@ -875,6 +874,78 @@ export function VatImportWorkbench({ actor }: Props) {
         >
           รีเฟรช
         </button>
+      </div>
+
+      {pasteOpen ? (
+        <div className="vat-import-paste" data-ai-context="vat-import-paste">
+          <p className="muted vat-import-paste-hint">
+            วางทีละบรรทัด · กระชับ:{" "}
+            <code>YYYY-MM-DD SF|GB|LM ขาย [คชจ.] [โอน] [GP≠] [เลขที่]</code>
+          </p>
+          <textarea
+            className="vat-import-paste-input"
+            rows={4}
+            value={pasteText}
+            spellCheck={false}
+            placeholder={"2026-07-01 GB 1200 84 1116\n2026-07-01 LM 800 56 744"}
+            onChange={(e) => setPasteText(e.target.value)}
+            aria-label="วางข้อความเติมแถว"
+          />
+          <button
+            type="button"
+            className="vat-mini-btn vat-mini-btn--primary"
+            disabled={Boolean(busyId) || !pasteText.trim()}
+            onClick={() => void onPasteFill()}
+          >
+            {busyId === "paste" ? "…" : "เติมลงตาราง"}
+          </button>
+        </div>
+      ) : null}
+
+      <details className="vat-import-file-alt">
+        <summary>ทางเลือก: ดึงจากไฟล์ (ไม่บังคับ)</summary>
+        <div className="vat-month-actions vat-month-actions--mini">
+          <button
+            type="button"
+            className="vat-mini-btn"
+            disabled={Boolean(busyId) || loading}
+            onClick={() => void onIngestInbox()}
+          >
+            {busyId === "inbox" ? "กำลังดึง…" : "ดึงไฟล์ใหม่"}
+          </button>
+          <button
+            type="button"
+            className="vat-mini-btn"
+            disabled={Boolean(busyId)}
+            onClick={() => linemanRef.current?.click()}
+          >
+            {busyId === "lineman" ? "…" : "LINE MAN PDF"}
+          </button>
+          <button
+            type="button"
+            className="vat-mini-btn"
+            disabled={Boolean(busyId)}
+            onClick={() => grabRef.current?.click()}
+          >
+            {busyId === "grab" ? "…" : "Grab CSV"}
+          </button>
+          <button
+            type="button"
+            className="vat-mini-btn"
+            disabled={Boolean(busyId)}
+            onClick={() => shopeeRef.current?.click()}
+          >
+            {busyId === "shopee" ? "…" : "Shopee ใบกำกับ"}
+          </button>
+          <button
+            type="button"
+            className="vat-mini-btn"
+            disabled={Boolean(busyId)}
+            onClick={() => fileRef.current?.click()}
+          >
+            อัปโหลดอื่น
+          </button>
+        </div>
         <input
           ref={fileRef}
           type="file"
@@ -905,7 +976,12 @@ export function VatImportWorkbench({ actor }: Props) {
           hidden
           onChange={(e) => void onImportGrabCsv(e.target.files)}
         />
-      </div>
+      </details>
+
+      <p className="muted vat-sales-hint vat-hint-one-line">
+        ติ๊กแถว draft (ไม่ติ๊ก = ทุก draft ที่กรอง) → <strong>ใช้เข้าเดือน</strong>{" "}
+        ผสานเข้าแท็บเดือน
+      </p>
 
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
@@ -965,14 +1041,6 @@ export function VatImportWorkbench({ actor }: Props) {
                     </th>
                   );
                 })}
-                <th
-                  className="col-seg"
-                  title={columnTitleAttr(
-                    VAT_IMPORT_COLUMN_GUIDE.find((c) => c.id === "file")!,
-                  )}
-                >
-                  ไฟล์
-                </th>
                 <th className="col-seg" title="draft / ข้าม / applied">
                   สถ.
                 </th>
@@ -990,8 +1058,8 @@ export function VatImportWorkbench({ actor }: Props) {
             <tbody>
               {visible.length === 0 ? (
                 <tr>
-                  <td className="col-seg" colSpan={11}>
-                    ยังไม่มีแถว — กด「สร้างตารางเดือน」(SF/GB/LM) แล้วเติมช่อง + แนบไฟล์
+                  <td className="col-seg" colSpan={10}>
+                    ยังไม่มีแถว — กด「สร้างตารางเดือน」แล้วกรอกหรือวางข้อความ
                   </td>
                 </tr>
               ) : (
@@ -1042,24 +1110,11 @@ export function VatImportWorkbench({ actor }: Props) {
                           }
                         />
                       </td>
-                      <td className="col-seg col-input">
-                        <select
-                          className="vat-inline-select"
-                          disabled={locked || busyId === row.id}
-                          value={row.channel}
-                          title={VAT_IMPORT_CHANNEL_LABELS[row.channel]}
-                          onChange={(e) =>
-                            void saveRow(row, {
-                              channel: e.target.value as VatImportChannel,
-                            })
-                          }
-                        >
-                          {CHANNELS.map((c) => (
-                            <option key={c} value={c}>
-                              {CHANNEL_SHORT[c]}
-                            </option>
-                          ))}
-                        </select>
+                      <td
+                        className="col-seg vat-import-channel-fixed"
+                        title={VAT_IMPORT_CHANNEL_LABELS[row.channel]}
+                      >
+                        {CHANNEL_SHORT[row.channel]}
                       </td>
                       <td className="col-num col-input">
                         <MoneyInput
@@ -1096,35 +1151,6 @@ export function VatImportWorkbench({ actor }: Props) {
                           ariaLabel="ภาษีซื้อ GP"
                           onCommit={(n) => void saveRow(row, { gpVat: n })}
                         />
-                      </td>
-                      <td className="col-seg">
-                        {row.downloadUrl ? (
-                          <a
-                            className="vat-import-file-link"
-                            href={row.downloadUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            title={row.fileName || "เปิดไฟล์"}
-                          >
-                            ไฟล์
-                          </a>
-                        ) : (
-                          <label className="vat-mini-btn vat-import-attach">
-                            +
-                            <input
-                              type="file"
-                              accept=".pdf,.xlsx,.xls,.csv,image/*"
-                              hidden
-                              disabled={locked || busyId === row.id}
-                              onChange={(e) =>
-                                void attachToRow(
-                                  row,
-                                  e.target.files?.[0] || null,
-                                )
-                              }
-                            />
-                          </label>
-                        )}
                       </td>
                       <td className="col-seg col-input">
                         <select

@@ -49,7 +49,8 @@ assert.ok(VAT_IMPORT_CHANNEL_GUIDE.some((g) => g.channel === "grab"));
 assert.ok(VAT_IMPORT_WORKFLOW_NOTES.length >= 3);
 assert.ok(VAT_IMPORT_AI_RULES.some((r) => r.includes("หน้าร้าน")));
 assert.ok(VAT_IMPORT_AI_RULES.some((r) => r.includes("7/107")));
-assert.ok(VAT_IMPORT_AI_RULES.some((r) => r.includes("ใช้เข้าเดือน")));
+assert.ok(VAT_IMPORT_AI_RULES.some((r) => r.includes("วางข้อความ")));
+
 
 
 

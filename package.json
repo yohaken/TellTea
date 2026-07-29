@@ -22,6 +22,8 @@
     "test:vat-import-scaffold": "npx --yes tsx scripts/test-vat-import-scaffold.ts",
     "test:vat-import-ai-notes": "npx --yes tsx scripts/test-vat-import-ai-notes.ts",
     "test:vat-agent-chat": "npx --yes tsx scripts/test-vat-agent-chat.ts",
+    "test:vat-import-paste": "npx --yes tsx scripts/test-vat-import-paste.ts",
+
 
 
 
