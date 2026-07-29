@@ -77,6 +77,8 @@ public final class ShiftReportFormBuilder {
         discrepancyLabel,
         leaveFloat,
         discrepancyNote,
+        0,
+        0,
         "",
         0,
         null,
@@ -156,6 +158,71 @@ public final class ShiftReportFormBuilder {
       String discrepancyLabel,
       double leaveFloat,
       String discrepancyNote,
+      String deviceCode,
+      int pendingCount,
+      JSONArray sessionReceipts,
+      int cols) {
+    return build(
+        shop,
+        kind,
+        shift,
+        sessionId,
+        openedAt,
+        closedOrPrintedAt,
+        saleCount,
+        voidedCount,
+        cashBills,
+        cashSales,
+        promptpayBills,
+        promptpaySales,
+        transferBills,
+        transferSales,
+        discountTotal,
+        openingCash,
+        countedCash,
+        expectedCash,
+        cashDifference,
+        discrepancyLabel,
+        leaveFloat,
+        discrepancyNote,
+        0,
+        0,
+        deviceCode,
+        pendingCount,
+        sessionReceipts,
+        cols);
+  }
+
+  /**
+   * Full build including mid-shift cash in/out — Z slip is the daily cash-remit evidence
+   * staff already know from prior POS (เริ่มต้น · ขายสด · เข้า/ออก · ควรมี · นับจริง · ส่วนต่าง ·
+   * ทอนรอบถัดไป · ยอดที่ต้องนำส่ง).
+   */
+  public static String build(
+      JSONObject shop,
+      String kind,
+      String shift,
+      String sessionId,
+      long openedAt,
+      long closedOrPrintedAt,
+      int saleCount,
+      int voidedCount,
+      int cashBills,
+      double cashSales,
+      int promptpayBills,
+      double promptpaySales,
+      int transferBills,
+      double transferSales,
+      double discountTotal,
+      double openingCash,
+      Double countedCash,
+      Double expectedCash,
+      Double cashDifference,
+      String discrepancyLabel,
+      double leaveFloat,
+      String discrepancyNote,
+      double cashOutTotal,
+      double cashInTotal,
       String deviceCode,
       int pendingCount,
       JSONArray sessionReceipts,
@@ -280,39 +347,51 @@ public final class ShiftReportFormBuilder {
     sb.append(tripleRow("ยอดขายสุทธิ", String.valueOf(saleCount), money(netSales), width))
         .append('\n');
 
-    // --- Frame 8: รอบการขาย (เงินสด) — web labels + real blind numbers on Z ---
+    // --- Frame 8: รอบการขาย (เงินสด) = กระทบยอด + ยอดที่ต้องนำส่ง ---
+    double outAmt = Math.max(0, cashOutTotal);
+    double inAmt = Math.max(0, cashInTotal);
+    double netInOut = inAmt - outAmt; // FoodStory-style signed line (ออก = ติดลบ)
     sb.append(rule(width)).append('\n');
     sb.append("รอบการขาย (เงินสด)").append('\n');
     if (isClose) {
-      double expected = expectedCash != null ? expectedCash : openingCash + cashSales;
+      double expected =
+          expectedCash != null
+              ? expectedCash
+              : openingCash + cashSales - outAmt + inAmt;
       double counted = countedCash != null ? countedCash : expected;
       double diff = cashDifference != null ? cashDifference : counted - expected;
       String label =
           discrepancyLabel != null && !discrepancyLabel.isEmpty()
               ? discrepancyLabel
               : (Math.abs(diff) < 0.5 ? "ตรง" : (diff > 0 ? "เกิน (Over)" : "ขาด (Short)"));
+      // เงินที่ต้องนำส่งเจ้าของ = นับจริง − ทอนค้างลิ้นชักรอบถัดไป
+      double remit = Math.max(0, counted - Math.max(0, leaveFloat));
       sb.append(pairRow("เงินสดเริ่มต้น", money(openingCash), width)).append('\n');
       sb.append(pairRow("ยอดขายเงินสด", money(cashSales), width)).append('\n');
       sb.append(pairRow("คืนเงิน", money(0), width)).append('\n');
-      sb.append(pairRow("เงินเข้า/เงินออก", money(0), width)).append('\n');
+      sb.append(pairRow("เงินเข้า/เงินออก", money(netInOut), width)).append('\n');
       sb.append(pairRow("ควรมีในลิ้นชัก", money(expected), width)).append('\n');
       sb.append(pairRow("นับจริงในลิ้นชัก", money(counted), width)).append('\n');
       sb.append(pairRow("ส่วนต่าง", label + " " + money(diff), width)).append('\n');
       if (leaveFloat > 0.0001) {
         sb.append(pairRow("ทอนรอบถัดไป", money(leaveFloat), width)).append('\n');
       }
+      sb.append(pairRow("ยอดเงินสดที่ต้องนำส่ง", money(remit), width)).append('\n');
+      sb.append(center("*นับจริง − ทอนรอบถัดไป", width)).append('\n');
       if (discrepancyNote != null && !discrepancyNote.trim().isEmpty()) {
         sb.append(pairRow("เหตุผล", discrepancyNote.trim(), width)).append('\n');
       }
     } else {
+      double expectedSnap = openingCash + cashSales - outAmt + inAmt;
       sb.append(pairRow("เงินสดเริ่มต้น", money(openingCash), width)).append('\n');
       sb.append(pairRow("ยอดขายเงินสด", money(cashSales), width)).append('\n');
       sb.append(pairRow("คืนเงิน", money(0), width)).append('\n');
-      sb.append(pairRow("เงินเข้า/เงินออก", money(0), width)).append('\n');
-      sb.append(pairRow("ควรมีในลิ้นชัก*", money(openingCash + cashSales), width)).append('\n');
+      sb.append(pairRow("เงินเข้า/เงินออก", money(netInOut), width)).append('\n');
+      sb.append(pairRow("ควรมีในลิ้นชัก*", money(expectedSnap), width)).append('\n');
       sb.append(pairRow("นับจริงในลิ้นชัก", "—", width)).append('\n');
       sb.append(pairRow("ส่วนต่าง", "—", width)).append('\n');
-      sb.append(center("*รวมเงินทอนเริ่มต้น", width)).append('\n');
+      sb.append(pairRow("ยอดเงินสดที่ต้องนำส่ง", "—", width)).append('\n');
+      sb.append(center("*ยังไม่ปิดรอบ — ยังไม่นับส่งเงิน", width)).append('\n');
     }
 
     // --- Frame 9: ทำลายบิล / ยกเลิก ---
@@ -366,18 +445,18 @@ public final class ShiftReportFormBuilder {
     // --- Frame 13: footer (+ Z checklist + signatures) ---
     sb.append(rule(width)).append('\n');
     if (isClose) {
-      sb.append(center("ปิดรอบเรียบร้อย", width)).append('\n');
+      sb.append(center("ปิดรอบเรียบร้อย · สรุปส่งเงินสด", width)).append('\n');
       sb.append('\n');
-      sb.append("ตรวจก่อนเซ็น").append('\n');
-      sb.append("[ ] นับเงินในลิ้นชักแล้ว").append('\n');
-      sb.append("[ ] ยอดเงินสดตรงกับบิลเงินสด").append('\n');
+      sb.append("ตรวจก่อนเซ็น / ส่งเงิน").append('\n');
+      sb.append("[ ] นับรวมเงินทอนเริ่มต้นแล้ว").append('\n');
+      sb.append("[ ] ยอดที่ต้องนำส่งตรงกับเงินในมือ").append('\n');
       sb.append("[ ] โอน/PromptPay ตรวจสลิปแล้ว").append('\n');
       sb.append("[ ] ส่วนต่างมีเหตุผล (ถ้ามี)").append('\n');
       sb.append('\n');
-      sb.append("ลงชื่อผู้ส่งกะ").append('\n');
+      sb.append("ลงชื่อผู้ส่งเงิน").append('\n');
       sb.append(signLine(width)).append('\n');
       sb.append('\n');
-      sb.append("ลงชื่อผู้รับกะ").append('\n');
+      sb.append("ลงชื่อผู้รับเงิน").append('\n');
       sb.append(signLine(width)).append('\n');
     } else {
       sb.append(center("*** ไม่ใช่การปิดรอบ ***", width)).append('\n');
