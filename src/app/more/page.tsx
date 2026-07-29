@@ -16,6 +16,7 @@ import {
   Download,
   Receipt,
   Settings,
+  Sparkles,
   UserCircle,
   Users,
   UtensilsCrossed,
@@ -151,6 +152,17 @@ function MoreView() {
             </div>
           </Link>
         ) : null}
+        <Link href="/utility/" className="more-card">
+          <Sparkles size={22} />
+          <div>
+            <strong>ยูทิลิตี้</strong>
+            <p>
+              {isOwner
+                ? "ข้อเสนอจากพนักงาน · รับไว้ / ยังไม่ทำ / ทำแล้ว"
+                : "ข้อเสนอ · งาน — เปิดจากโมดูลหลังร้านได้เสมอ"}
+            </p>
+          </div>
+        </Link>
         {isOwner ? (
           <Link href="/menu/" className="more-card">
             <UtensilsCrossed size={22} />

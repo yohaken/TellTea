@@ -2699,6 +2699,22 @@ body.modal-open .main-panel {
   align-self: flex-start;
 }
 
+.staff-utility-page-lead {
+  margin: 0 0 0.85rem;
+  text-align: left;
+  font-size: 0.82rem;
+}
+
+.staff-utility-panel-inner.is-embedded {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.staff-utility-panel-inner.is-embedded .staff-utility-body {
+  max-height: none;
+}
+
 .module-tab-dock {
   position: fixed;
   left: 50%;
