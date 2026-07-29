@@ -2379,7 +2379,8 @@ public class SellActivity extends Activity {
 
   /** Clone web PosCashKeypad: exact · bills · digits · change. */
   private void showCashKeypad(double total) {
-    final String[] valueHolder = {String.format(Locale.US, "%.0f", Math.ceil(total))};
+    // Always start at 0 / empty — staff type received cash (exact button still one-tap).
+    final String[] valueHolder = {""};
     UiScale ui = uiScale != null ? uiScale : UiScale.from(this);
 
     LinearLayout root = new LinearLayout(this);

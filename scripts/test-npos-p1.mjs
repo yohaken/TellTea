@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 391/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+98/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.75"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 392/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+99/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.76"/);
 assert.match(read("npos-telltea/app/build.gradle"), /zxing:core/);
 
 assert.ok(existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/sell/QrBitmaps.java")));
@@ -24,6 +24,12 @@ const sell = read("npos-telltea/app/src/main/java/app/telltea/npos/SellActivity.
 assert.match(sell, /showCashKeypad/);
 assert.match(sell, /pay_pp_hidden_early|showPromptPayDialog|QrBitmaps/);
 assert.match(sell, /pay_cash_exact|ตรงพอดี/);
+// Cash pad must open at 0/empty — not prefilled with cart total.
+assert.match(sell, /valueHolder = \{""\}/);
+assert.doesNotMatch(
+  sell,
+  /valueHolder = \{String\.format\(Locale\.US,\s*"%\.0f",\s*Math\.ceil\(total\)\)\}/,
+);
 
 const shift = read("npos-telltea/app/src/main/java/app/telltea/npos/shift/ShiftPrefs.java");
 assert.match(shift, /recordSale/);
