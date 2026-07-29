@@ -24,12 +24,6 @@
     "test:vat-agent-chat": "npx --yes tsx scripts/test-vat-agent-chat.ts",
     "test:vat-import-paste": "npx --yes tsx scripts/test-vat-import-paste.ts",
     "test:vat-import-fill-verify": "npx --yes tsx scripts/test-vat-import-fill-verify.ts",
-
-
-
-
-
-
     "test:vat-mail-parse": "npx --yes tsx scripts/test-vat-mail-parse.ts",
     "test:rate-schedule": "node scripts/test-rate-schedule.mjs",
     "test:payroll": "node scripts/test-payroll.mjs",
