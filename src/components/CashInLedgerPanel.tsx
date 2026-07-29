@@ -11,6 +11,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
 import {
+  addCalendarDays,
   addCashDeposit,
   analyzeCashDepositDays,
   buildCashDepositOccupancy,
@@ -31,6 +32,7 @@ import {
   coerceBankTransfers,
   deleteCashDeposit,
   emptyCashDepositBankTransfer,
+  emptyCashDepositDay,
   flattenBankTransferUrls,
   formatCashDayShort,
   labelCashDepositRound,
@@ -101,9 +103,19 @@ type DraftRound = {
   transferDate: number;
   dayCount: number;
   staffName: string;
+  note: string;
   bankTransfers: CashDepositBankTransfer[];
   days: CashDepositDayLine[];
   aiReason: string;
+};
+
+type PhotoPreviewState = {
+  urls: string[];
+  title: string;
+  /** When set, viewer can delete individual photos */
+  editTarget?:
+    | { kind: "day"; dayId: string }
+    | { kind: "bank"; transferId: string };
 };
 
 function cloneTransfers(rows: CashDepositBankTransfer[]): CashDepositBankTransfer[] {
@@ -162,10 +174,8 @@ export function CashInLedgerPanel({
   const [createDays, setCreateDays] = useState("7");
   const [busy, setBusy] = useState(false);
   const [ownerNote, setOwnerNote] = useState("");
-  const [imagePreview, setImagePreview] = useState<{
-    urls: string[];
-    title: string;
-  } | null>(null);
+  const [editNote, setEditNote] = useState("");
+  const [imagePreview, setImagePreview] = useState<PhotoPreviewState | null>(null);
   const [uploadProgress, setUploadProgress] = useState<PhotoUploadProgress | null>(null);
   const uploadCancelRef = useRef(false);
   const dayPhotoRef = useRef<HTMLInputElement>(null);
@@ -241,6 +251,7 @@ export function CashInLedgerPanel({
     setEditBankTransfers(ensureTransfers(transfers, selected.transferDate));
     setEditStaff(selected.staffName || staffName);
     setEditDays(selected.days.map((d) => ({ ...d, slipUrls: [...d.slipUrls] })));
+    setEditNote(selected.note || "");
     setOwnerNote(selected.ownerNote || "");
   }, [selected, draft, staffName]);
 
@@ -330,11 +341,21 @@ export function CashInLedgerPanel({
       transferDate: endMs,
       dayCount: n,
       staffName: staffName || "",
+      note: "",
       bankTransfers: [emptyCashDepositBankTransfer(endMs)],
       days: buildCashDepositRoundDays(endMs, n),
       aiReason: "",
     });
     setAiHint(null);
+  }
+
+  function setDays(next: CashDepositDayLine[]) {
+    const sorted = [...next].sort((a, b) => a.date - b.date);
+    if (draft) {
+      setDraft({ ...draft, days: sorted, dayCount: sorted.length });
+    } else {
+      setEditDays(sorted);
+    }
   }
 
   function setTransfers(next: CashDepositBankTransfer[]) {
@@ -413,6 +434,97 @@ export function CashInLedgerPanel({
   function openBankPhoto(transferId: string) {
     photoTargetRef.current = { kind: "bank", transferId };
     bankPhotoRef.current?.click();
+  }
+
+  function addDay(where: "start" | "end" = "end") {
+    if (workingDays.length >= CASH_DEPOSIT_DAY_MAX) {
+      setError(`รอบหนึ่งมีได้สูงสุด ${CASH_DEPOSIT_DAY_MAX} วัน`);
+      return;
+    }
+    setError(null);
+    const sorted = [...workingDays].sort((a, b) => a.date - b.date);
+    const fallback = cashDepositDayKey(
+      draft?.transferDate ?? selected?.transferDate ?? Date.now(),
+    );
+    const anchor =
+      where === "end"
+        ? sorted[sorted.length - 1]?.date || fallback
+        : sorted[0]?.date || fallback;
+    const date = addCalendarDays(anchor, where === "end" ? 1 : -1);
+    const day = emptyCashDepositDay(date);
+    setDays(where === "end" ? [...workingDays, day] : [day, ...workingDays]);
+  }
+
+  function removeDay(dayId: string) {
+    if (workingDays.length <= 1) {
+      setError("รอบต้องมีอย่างน้อย 1 วัน");
+      return;
+    }
+    setError(null);
+    setDays(workingDays.filter((d) => d.id !== dayId));
+    setImagePreview((prev) =>
+      prev?.editTarget?.kind === "day" && prev.editTarget.dayId === dayId
+        ? null
+        : prev,
+    );
+  }
+
+  function setTransferSlipUrls(transferId: string, slipUrls: string[]) {
+    const apply = (rows: CashDepositBankTransfer[]) =>
+      rows.map((t) => (t.id === transferId ? { ...t, slipUrls } : t));
+    if (draft) setDraft({ ...draft, bankTransfers: apply(draft.bankTransfers) });
+    else setEditBankTransfers((prev) => apply(prev));
+  }
+
+  function setDaySlipUrls(dayId: string, slipUrls: string[]) {
+    const apply = (days: CashDepositDayLine[]) =>
+      days.map((d) => (d.id === dayId ? { ...d, slipUrls } : d));
+    if (draft) setDraft({ ...draft, days: apply(draft.days) });
+    else setEditDays((prev) => apply(prev));
+  }
+
+  function removePreviewPhotoAt(index: number) {
+    const prev = imagePreview;
+    if (!prev?.editTarget) return;
+    const nextUrls = prev.urls.filter((_, i) => i !== index);
+    if (prev.editTarget.kind === "bank") {
+      setTransferSlipUrls(prev.editTarget.transferId, nextUrls);
+    } else {
+      setDaySlipUrls(prev.editTarget.dayId, nextUrls);
+    }
+    if (!nextUrls.length) {
+      setImagePreview(null);
+      setAiHint("ลบรูปแล้ว — กด + เพื่อถ่าย/แนบใหม่");
+      return;
+    }
+    setImagePreview({ ...prev, urls: nextUrls });
+  }
+
+  function clearSlipUrls(
+    target: { kind: "day"; dayId: string } | { kind: "bank"; transferId: string },
+  ) {
+    if (!window.confirm("ลบรูปทั้งหมดของแถวนี้? แล้วถ่าย/แนบใหม่ได้")) return;
+    if (target.kind === "bank") setTransferSlipUrls(target.transferId, []);
+    else setDaySlipUrls(target.dayId, []);
+    setImagePreview((prev) => {
+      if (!prev?.editTarget) return prev;
+      if (
+        target.kind === "bank" &&
+        prev.editTarget.kind === "bank" &&
+        prev.editTarget.transferId === target.transferId
+      ) {
+        return null;
+      }
+      if (
+        target.kind === "day" &&
+        prev.editTarget.kind === "day" &&
+        prev.editTarget.dayId === target.dayId
+      ) {
+        return null;
+      }
+      return prev;
+    });
+    setAiHint("ลบรูปแล้ว — กด + เพื่อถ่าย/แนบใหม่");
   }
 
   async function runAiBank(transferId: string, refs: string[], force = false) {
@@ -588,6 +700,7 @@ export function CashInLedgerPanel({
         cashAmountSource: d.cashAmountSource || ("" as CashFillSource),
         drawerCloseAmountSource: d.drawerCloseAmountSource || ("" as CashFillSource),
         dateSource: d.dateSource || ("" as CashFillSource),
+        note: (d.note || "").trim().slice(0, 200),
         slipUrls: [...d.slipUrls],
       }));
       const bankTransfers = workingTransfers.map((t) => ({
@@ -604,6 +717,7 @@ export function CashInLedgerPanel({
         periodStart: coverage.periodStart,
         periodEnd: coverage.periodEnd,
         staffName: (draft?.staffName ?? editStaff).trim() || staffName,
+        note: (draft?.note ?? editNote).trim().slice(0, 500),
         bankTransfers,
         days,
       };
@@ -885,6 +999,18 @@ export function CashInLedgerPanel({
                     }}
                   />
                 </label>
+                <label className="cash-in-create-field cash-in-note-field">
+                  <span>โน้ตรอบ</span>
+                  <input
+                    value={draft ? draft.note : editNote}
+                    maxLength={500}
+                    placeholder="ข้อความถึงเจ้าของ / หมายเหตุทั้งรอบ"
+                    onChange={(e) => {
+                      if (draft) setDraft({ ...draft, note: e.target.value });
+                      else setEditNote(e.target.value);
+                    }}
+                  />
+                </label>
               </div>
 
               <div className="sheet-wrap cash-in-panel-table-wrap">
@@ -967,17 +1093,51 @@ export function CashInLedgerPanel({
                           />
                         </td>
                         <td className="col-slip">
-                          <EntryPhotoIndicator
-                            imageUrls={t.slipUrls}
-                            label={`สลิปโอน ${idx + 1}`}
-                            onAdd={() => openBankPhoto(t.id)}
-                            onView={(urls) =>
-                              setImagePreview({
-                                urls,
-                                title: `สลิปโอน #${idx + 1}`,
-                              })
-                            }
-                          />
+                          <div className="cash-in-slip-actions is-col">
+                            <EntryPhotoIndicator
+                              imageUrls={t.slipUrls}
+                              label={`สลิปโอน ${idx + 1}`}
+                              onAdd={
+                                t.slipUrls.length === 0
+                                  ? () => openBankPhoto(t.id)
+                                  : undefined
+                              }
+                              onView={(urls) =>
+                                setImagePreview({
+                                  urls,
+                                  title: `สลิปโอน #${idx + 1}`,
+                                  editTarget: { kind: "bank", transferId: t.id },
+                                })
+                              }
+                            />
+                            <div className="cash-in-slip-btn-row">
+                              {t.slipUrls.length > 0 &&
+                              t.slipUrls.length < CASH_DEPOSIT_BANK_SLIP_MAX ? (
+                                <button
+                                  type="button"
+                                  className="ghost-btn cash-in-ai-reread"
+                                  disabled={busy}
+                                  onClick={() => openBankPhoto(t.id)}
+                                  title="ถ่าย/แนบรูปเพิ่ม หรือใส่ใหม่หลังลบ"
+                                >
+                                  +
+                                </button>
+                              ) : null}
+                              {t.slipUrls.length ? (
+                                <button
+                                  type="button"
+                                  className="ghost-btn danger-text cash-in-ai-reread"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    clearSlipUrls({ kind: "bank", transferId: t.id })
+                                  }
+                                  title="ลบรูปทั้งหมดของสลิปนี้"
+                                >
+                                  ลบรูป
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
                         </td>
                         <td className="col-slip">
                           {t.slipUrls.length ? (
@@ -1032,22 +1192,32 @@ export function CashInLedgerPanel({
                 <table className="sheet-table cash-in-slim is-edit">
                   <thead>
                     <tr>
-                      <th className="col-round">รอบ</th>
+                      <th className="col-round">#</th>
                       <th className="col-date">วัน</th>
                       <th className="col-num">เงินสด</th>
                       <th className="col-num">ปิดลิ้นชัก</th>
+                      <th className="col-note">โน้ตวัน</th>
                       <th className="col-slip">สลิป</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {workingDays.map((day) => (
+                    {workingDays.map((day, dayIdx) => (
                       <tr key={day.id}>
                         <td className="col-round">
-                          {draft
-                            ? `${draft.dayCount}ว`
-                            : selected
-                              ? labelCashDepositRound(selected)
-                              : "—"}
+                          <div className="cash-in-bank-idx">
+                            <span>{dayIdx + 1}</span>
+                            {workingDays.length > 1 ? (
+                              <button
+                                type="button"
+                                className="ghost-btn danger-text cash-in-ai-reread"
+                                disabled={busy}
+                                title="ลบวันนี้จากรอบ"
+                                onClick={() => removeDay(day.id)}
+                              >
+                                ×
+                              </button>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="col-date">
                           <input
@@ -1107,30 +1277,76 @@ export function CashInLedgerPanel({
                             />
                           </div>
                         </td>
+                        <td className="col-note">
+                          <input
+                            className="cash-in-cell-input"
+                            value={day.note || ""}
+                            maxLength={200}
+                            placeholder="โน้ต"
+                            title="ข้อความพนักงานสำหรับวันนี้"
+                            onChange={(e) =>
+                              patchDay(day.id, { note: e.target.value })
+                            }
+                          />
+                        </td>
                         <td className="col-slip">
                           <div className="cash-in-slip-actions is-col">
                             <EntryPhotoIndicator
                               imageUrls={day.slipUrls}
                               label={formatCashDayShort(day.date)}
-                              onAdd={() => openDayPhoto(day.id)}
+                              onAdd={
+                                day.slipUrls.length === 0
+                                  ? () => openDayPhoto(day.id)
+                                  : undefined
+                              }
                               onView={(urls) =>
                                 setImagePreview({
                                   urls,
                                   title: formatCashDayShort(day.date),
+                                  editTarget: { kind: "day", dayId: day.id },
                                 })
                               }
                             />
-                            {day.slipUrls.length ? (
-                              <button
-                                type="button"
-                                className="ghost-btn cash-in-ai-reread"
-                                disabled={busy || aiBusy}
-                                onClick={() => void runAiDay(day.id, day.slipUrls, true)}
-                                title="ให้อ่านสลิปใหม่"
-                              >
-                                AI
-                              </button>
-                            ) : null}
+                            <div className="cash-in-slip-btn-row">
+                              {day.slipUrls.length > 0 &&
+                              day.slipUrls.length < CASH_DEPOSIT_DAY_SLIP_MAX ? (
+                                <button
+                                  type="button"
+                                  className="ghost-btn cash-in-ai-reread"
+                                  disabled={busy}
+                                  onClick={() => openDayPhoto(day.id)}
+                                  title="ถ่าย/แนบรูปเพิ่ม หรือใส่ใหม่หลังลบ"
+                                >
+                                  +
+                                </button>
+                              ) : null}
+                              {day.slipUrls.length ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="ghost-btn danger-text cash-in-ai-reread"
+                                    disabled={busy}
+                                    onClick={() =>
+                                      clearSlipUrls({ kind: "day", dayId: day.id })
+                                    }
+                                    title="ลบรูปทั้งหมดของวันนี้"
+                                  >
+                                    ลบรูป
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="ghost-btn cash-in-ai-reread"
+                                    disabled={busy || aiBusy}
+                                    onClick={() =>
+                                      void runAiDay(day.id, day.slipUrls, true)
+                                    }
+                                    title="ให้อ่านสลิปใหม่"
+                                  >
+                                    AI
+                                  </button>
+                                </>
+                              ) : null}
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -1139,17 +1355,38 @@ export function CashInLedgerPanel({
                   <tfoot>
                     <tr>
                       <td className="col-round" colSpan={2}>
-                        รวม
+                        รวม {workingDays.length} วัน
                       </td>
                       <td className="col-num">{formatPlainNumber(expected)}</td>
                       <td className="col-num">
                         {drawerSum ? formatPlainNumber(drawerSum) : ""}
                       </td>
-                      <td />
+                      <td colSpan={2} />
                     </tr>
                   </tfoot>
                 </table>
               </div>
+
+              {workingDays.length < CASH_DEPOSIT_DAY_MAX ? (
+                <div className="cash-in-day-add-bar">
+                  <button
+                    type="button"
+                    className="ghost-btn cash-in-add-transfer"
+                    disabled={busy}
+                    onClick={() => addDay("start")}
+                  >
+                    + วันก่อนหน้า
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost-btn cash-in-add-transfer"
+                    disabled={busy}
+                    onClick={() => addDay("end")}
+                  >
+                    + วันถัดไป
+                  </button>
+                </div>
+              ) : null}
 
               <div className="cash-in-math is-slim" aria-live="polite">
                 <span>
@@ -1278,6 +1515,11 @@ export function CashInLedgerPanel({
           urls={imagePreview.urls}
           title={imagePreview.title}
           showCaptureMeta={isOwner}
+          onRemoveAt={
+            imagePreview.editTarget
+              ? (index) => removePreviewPhotoAt(index)
+              : undefined
+          }
           onClose={() => setImagePreview(null)}
         />
       ) : null}
