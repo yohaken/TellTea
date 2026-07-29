@@ -41,7 +41,6 @@ import {
 import {
   DEFAULT_OUTPUT_PCT,
   DEFAULT_PERIOD_START_DAY,
-  DEFAULT_STOREFRONT_REMIT_PCT,
   emptySegment,
   fileVatMonthlyReturn,
   formatThaiMonthKey,
@@ -79,10 +78,6 @@ function emptyBookRow(month: string): MonthCategoryRow {
 
 function pickBookRow(rows: MonthCategoryRow[], month: string): MonthCategoryRow {
   return rows.find((r) => r.month === month) || emptyBookRow(month);
-}
-
-function bookOutTotal(row: MonthCategoryRow) {
-  return row.asset + row.cogs + row.sga + row.other;
 }
 
 /** แสดงเงินในตาราง — ทศนิยม 2 เสมอ (รวม 0.00) */
@@ -240,7 +235,8 @@ function segToDraft(seg: VatSegmentState): DraftSeg {
       transfer: moneyInputValue(seg.tenders.transfer),
       cash: moneyInputValue(seg.tenders.cash),
     },
-    remitPct: String(seg.remitPct || (seg.kind === "storefront" ? DEFAULT_STOREFRONT_REMIT_PCT : 100)),
+    // หน้าร้านเริ่มนำส่ง 100% ตามมาตรฐานง่าย
+    remitPct: seg.kind === "storefront" ? "100" : String(seg.remitPct || 100),
     gpVat: moneyInputValue(seg.gpVat),
     useGpEstimate: seg.useGpEstimate,
     ingredientVat: moneyInputValue(seg.ingredientVat),
@@ -264,10 +260,7 @@ function draftToSeg(
       transfer: parseMoneyInput(d.tenders.transfer),
       cash: parseMoneyInput(d.tenders.cash),
     },
-    remitPct: parseRate(
-      d.remitPct,
-      kind === "storefront" ? DEFAULT_STOREFRONT_REMIT_PCT : 100,
-    ),
+    remitPct: kind === "storefront" ? 100 : parseRate(d.remitPct, 100),
     gpVat: parseMoneyInput(d.gpVat),
     useGpEstimate: d.useGpEstimate,
     ingredientVat: parseMoneyInput(d.ingredientVat),
@@ -371,7 +364,8 @@ function ExpandBtn({
   );
 }
 
-function OutputVatTable({
+/** ยอดขายอ้างอิงคิดภาษีขาย — นำส่ง 100% · ไม่ใช่ตารางรายได้ */
+function SalesVatTable({
   deliveryDraft,
   storefrontDraft,
   delivery,
@@ -396,8 +390,7 @@ function OutputVatTable({
   onDeliveryChange: (d: DraftSeg) => void;
   onStorefrontChange: (d: DraftSeg) => void;
 }) {
-  const totalReported = delivery.reportedGross + storefront.reportedGross;
-  const totalRemit = delivery.remitAmount + storefront.remitAmount;
+  const totalSales = delivery.reportedGross + storefront.reportedGross;
   const totalOut = delivery.outputVat + storefront.outputVat;
 
   const renderParent = (
@@ -430,35 +423,12 @@ function OutputVatTable({
                 value={draft.grossManual}
                 locked={locked}
                 ariaLabel={
-                  isStore ? `${label} รายได้หน้าร้าน` : `${label} ยอดขายรวม VAT`
+                  isStore ? `${label} ยอดขายหน้าร้าน` : `${label} ยอดขายรวม VAT`
                 }
                 onChange={(v) => onChange({ ...draft, grossManual: v })}
               />
             )}
           </td>
-          <td className="col-pct col-remit">
-            {isStore ? (
-              <TapRate
-                value={parseRate(draft.remitPct, DEFAULT_STOREFRONT_REMIT_PCT)}
-                locked={locked}
-                ariaLabel="นำส่ง %"
-                suffix="%"
-                step="0.01"
-                onCommit={(pct) =>
-                  onChange({
-                    ...draft,
-                    remitPct: String(Math.min(100, Math.max(0.01, pct))),
-                  })
-                }
-              />
-            ) : (
-              <span className="vat-tap-edit vat-tap-edit--static" title="เดลิเวอรี่นำส่ง 100%">
-                <span className="vat-tap-val">{formatVatMoney(100)}</span>
-                <span className="vat-tap-suffix">%</span>
-              </span>
-            )}
-          </td>
-          <td className="col-num">{fmt(computed.remitAmount)}</td>
           <td className="col-rate">
             <TapRate
               value={draft.rates.outputPct || DEFAULT_OUTPUT_PCT}
@@ -476,8 +446,8 @@ function OutputVatTable({
         {kind === "delivery" && open
           ? (
               [
-                ["shopee", "ShopeeFood"],
                 ["grab", "Grab"],
+                ["shopee", "ShopeeFood"],
                 ["lineman", "LINE MAN"],
               ] as const
             ).map(([key, name]) => (
@@ -496,8 +466,6 @@ function OutputVatTable({
                     }
                   />
                 </td>
-                <td className="col-pct col-remit" />
-                <td className="col-num" />
                 <td className="col-rate" />
                 <td className="col-num" />
               </tr>
@@ -525,8 +493,6 @@ function OutputVatTable({
                     }
                   />
                 </td>
-                <td className="col-pct col-remit" />
-                <td className="col-num" />
                 <td className="col-rate" />
                 <td className="col-num" />
               </tr>
@@ -538,31 +504,21 @@ function OutputVatTable({
 
   return (
     <section className="vat-table-block">
-      <h2 className="vat-table-title">1) ภาษีขาย — กลุ่มรายได้</h2>
+      <h2 className="vat-table-title">ยอดขาย → ภาษีขาย</h2>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-month-slim--output">
-          <colgroup>
-            <col className="vat-col-seg" />
-            <col className="vat-col-gross" />
-            <col className="vat-col-remit-pct" />
-            <col className="vat-col-money" />
-            <col className="vat-col-rate" />
-            <col className="vat-col-money" />
-          </colgroup>
           <thead>
             <tr>
               <th className="col-seg">ส่วน</th>
-              <th className="col-num">รายได้หน้าร้าน / ยอดขายรวม</th>
-              <th className="col-pct col-remit">นำส่ง %</th>
-              <th className="col-num">นำส่งจริง</th>
-              <th className="col-rate">เรทขาย %</th>
+              <th className="col-num">ยอดขาย (นำส่ง 100%)</th>
+              <th className="col-rate">เรท %</th>
               <th className="col-num">ภาษีขาย</th>
             </tr>
           </thead>
           <tbody>
             {renderParent(
               "delivery",
-              "เดลิเวอรี่",
+              "ยอดขายเดลิเวอรี่",
               deliveryDraft,
               delivery,
               openDelivery,
@@ -571,7 +527,7 @@ function OutputVatTable({
             )}
             {renderParent(
               "storefront",
-              "หน้าร้าน",
+              "ยอดขายหน้าร้าน",
               storefrontDraft,
               storefront,
               openStorefront,
@@ -579,10 +535,8 @@ function OutputVatTable({
               onStorefrontChange,
             )}
             <tr className="vat-sales-totals-row">
-              <td className="col-seg">รวมภาษีขาย</td>
-              <td className="col-num">{fmt(totalReported)}</td>
-              <td className="col-pct col-remit">—</td>
-              <td className="col-num">{fmt(totalRemit)}</td>
+              <td className="col-seg">รวม</td>
+              <td className="col-num">{fmt(totalSales)}</td>
               <td className="col-rate">—</td>
               <td className="col-num col-net">{fmt(totalOut)}</td>
             </tr>
@@ -815,7 +769,7 @@ function InputVatTable({
 
   return (
     <section className="vat-table-block">
-      <h2 className="vat-table-title">ภาษีซื้อ — วัตถุดิบ + GP</h2>
+      <h2 className="vat-table-title">ภาษีซื้อ — GP + บช.</h2>
       {!locked ? (
         <div className="vat-month-actions vat-month-actions--mini">
           <button
@@ -1016,7 +970,7 @@ function InputVatTable({
   );
 }
 
-/** แถบสรุป VAT กระชับ — ไม่แยกเป็นตารางเต็ม */
+/** VAT มาตรฐานบช. — ขาย − ซื้อ · คนละชั้นกับรายได้/คชจ. */
 function NetVatStrip({
   delivery,
   storefront,
@@ -1033,7 +987,7 @@ function NetVatStrip({
   return (
     <div className="vat-net-strip" role="status">
       <span className="vat-net-strip-item">
-        ขาย <strong>{fmt(totals.outputVat)}</strong>
+        ภาษีขาย <strong>{fmt(totals.outputVat)}</strong>
         <span className="muted">
           {" "}
           (ส่ง {fmt(delivery.outputVat)} · ร้าน {fmt(storefront.outputVat)})
@@ -1041,15 +995,15 @@ function NetVatStrip({
       </span>
       <span className="vat-net-strip-sep">−</span>
       <span className="vat-net-strip-item">
-        ซื้อ <strong>{fmt(totals.inputVat)}</strong>
+        ภาษีซื้อ <strong>{fmt(totals.inputVat)}</strong>
         <span className="muted">
           {" "}
-          (ส่ง {fmt(delivery.inputVat)} · ร้าน {fmt(storefront.inputVat)})
+          (GP {fmt(delivery.inputVat)} · บช. {fmt(storefront.inputVat)})
         </span>
       </span>
       <span className="vat-net-strip-sep">=</span>
       <span className="vat-net-strip-item vat-net-strip-item--net">
-        สุทธิต้องนำส่ง <strong>{fmt(totals.netVat)}</strong>
+        VAT สุทธิ <strong>{fmt(totals.netVat)}</strong>
       </span>
     </div>
   );
@@ -1061,11 +1015,20 @@ function bookOpEx(row: MonthCategoryRow | null) {
   return row.cogs + row.sga + row.other;
 }
 
-/**
- * ตาราง GP: ยอดโอนจริงถึงร้าน · คชจ./ภาษีซื้อแยก
- * เดลิเวอรี่รวม ⟷ หน้าร้าน ระดับเดียวกัน · ไม่มีโหมดก่อน/รวม VAT
- */
-function IncomeBridgeTable({
+function patchGpChannel(
+  gpByChannel: GpByChannel,
+  key: GpChannelKey,
+  patch: Partial<GpByChannel[GpChannelKey]>,
+  onChange: (next: GpByChannel) => void,
+) {
+  onChange({
+    ...gpByChannel,
+    [key]: { ...gpByChannel[key], ...patch },
+  });
+}
+
+/** 1) รายได้ = ยอดโอนจริงถึงร้าน (≠ ยอดขาย) */
+function IncomeTransferTable({
   month,
   locked,
   bridge,
@@ -1084,16 +1047,6 @@ function IncomeBridgeTable({
   onPnlIncomeChange: (v: string) => void;
   onUseBridgeIncome: () => void;
 }) {
-  function patchChannel(
-    key: GpChannelKey,
-    patch: Partial<GpByChannel[GpChannelKey]>,
-  ) {
-    onGpByChannelChange({
-      ...gpByChannel,
-      [key]: { ...gpByChannel[key], ...patch },
-    });
-  }
-
   function setNetTransfer(key: GpChannelKey, raw: string) {
     const net = parseVatMoneyInput(raw);
     const fee = gpByChannel[key].amount;
@@ -1101,129 +1054,74 @@ function IncomeBridgeTable({
       fee + net > 0
         ? Math.min(100, Math.round((fee / (fee + net)) * 10000) / 100)
         : 0;
-    patchChannel(key, {
-      mode: "transfer",
-      netTransfer: net,
-      pct,
-    });
-  }
-
-  function setFee(key: GpChannelKey, raw: string) {
-    const fee = parseVatMoneyInput(raw);
-    const net = gpByChannel[key].netTransfer;
-    const pct =
-      fee + net > 0
-        ? Math.min(100, Math.round((fee / (fee + net)) * 10000) / 100)
-        : 0;
-    patchChannel(key, {
-      mode: "transfer",
-      amount: fee,
-      pct,
-    });
-  }
-
-  function setGpVatOverride(key: GpChannelKey, raw: string) {
-    patchChannel(key, { gpVatOverride: parseVatMoneyInput(raw) });
-  }
-
-  function renderMoneyCells(key: GpChannelKey, row: (typeof bridge.channelRows)[number]) {
-    const s = gpByChannel[key];
-    const transferDisplay =
-      s.mode === "transfer" || s.mode === "amount"
-        ? moneyFieldValue(s.netTransfer)
-        : moneyFieldValue(row.netTransfer);
-    const feeDisplay = moneyFieldValue(
-      s.mode === "transfer" || s.mode === "amount" ? s.amount : row.deduct,
-    );
-    const vatDisplay =
-      s.gpVatOverride > 0
-        ? moneyFieldValue(s.gpVatOverride)
-        : moneyFieldValue(row.gpVat);
-    return (
-      <>
-        <td className="col-num col-input">
-          <MoneyCell
-            value={transferDisplay}
-            locked={locked}
-            ariaLabel={`ยอดโอนจริง ${row.label}`}
-            onChange={(v) => setNetTransfer(key, v)}
-          />
-        </td>
-        <td className="col-num col-input">
-          <MoneyCell
-            value={feeDisplay}
-            locked={locked}
-            ariaLabel={`คชจ. GP ${row.label}`}
-            onChange={(v) => setFee(key, v)}
-          />
-        </td>
-        <td className="col-num col-input">
-          <MoneyCell
-            value={vatDisplay}
-            locked={locked}
-            ariaLabel={`ภาษีซื้อ GP ${row.label}`}
-            onChange={(v) => setGpVatOverride(key, v)}
-          />
-        </td>
-      </>
+    patchGpChannel(
+      gpByChannel,
+      key,
+      { mode: "transfer", netTransfer: net, pct },
+      onGpByChannelChange,
     );
   }
 
   const deliveryRows = bridge.channelRows.filter((r) => r.key !== "storefront");
   const storefrontRow = bridge.channelRows.find((r) => r.key === "storefront");
-  const deliveryFee = deliveryRows.reduce((s, r) => s + r.deduct, 0);
-  const gpRateNote =
-    bridge.weightedAvgPct > 0
-      ? `เรท GP เฉลี่ยเดลิเวอรี่ ≈ ${formatVatPct(bridge.weightedAvgPct)}% (= คชจ.÷(คชจ.+ยอดโอนจริง))`
-      : "เรท GP ≈ คชจ.÷(คชจ.+ยอดโอนจริง)";
+
+  function transferCell(key: GpChannelKey, row: (typeof bridge.channelRows)[number]) {
+    const s = gpByChannel[key];
+    const value =
+      s.mode === "transfer" || s.mode === "amount"
+        ? moneyFieldValue(s.netTransfer)
+        : moneyFieldValue(row.netTransfer);
+    return (
+      <MoneyCell
+        value={value}
+        locked={locked}
+        ariaLabel={`ยอดโอน ${row.label}`}
+        onChange={(v) => setNetTransfer(key, v)}
+      />
+    );
+  }
 
   return (
     <section className="vat-table-block vat-income-bridge">
       <h2 className="vat-table-title">
-        GP รายช่องทาง — {formatThaiMonthKey(month)}
+        1) รายได้ — ยอดโอน — {formatThaiMonthKey(month)}
       </h2>
       <div className="sheet-wrap vat-month-slim-wrap">
-        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table vat-gp-channel-table">
+        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
           <thead>
             <tr>
-              <th className="col-seg">ช่องทาง</th>
-              <th className="col-num">ยอดโอนจริง</th>
-              <th className="col-num">คชจ. GP</th>
-              <th className="col-num">ภาษีซื้อ GP</th>
+              <th className="col-seg">รายการ</th>
+              <th className="col-num">ยอดโอน / ถึงร้าน</th>
             </tr>
           </thead>
           <tbody>
             <tr className="vat-row-parent">
-              <td className="col-seg">ยอดโอนจริงเดลิเวอรี่ (รวม)</td>
+              <td className="col-seg">รายได้เดลิเวอรี่ (รวม)</td>
               <td className="col-num col-net">{fmt(bridge.deliveryGross)}</td>
-              <td className="col-num">{fmt(deliveryFee)}</td>
-              <td className="col-num col-net">{fmt(bridge.deliveryGpVat)}</td>
             </tr>
             {deliveryRows.map((row) => (
               <tr key={row.key} className="vat-row-child">
                 <td className="col-seg col-child">{row.label}</td>
-                {renderMoneyCells(row.key, row)}
+                <td className="col-num col-input">
+                  {transferCell(row.key, row)}
+                </td>
               </tr>
             ))}
             {storefrontRow ? (
               <tr className="vat-row-parent">
-                <td className="col-seg">ยอดหน้าร้าน</td>
-                {renderMoneyCells("storefront", storefrontRow)}
+                <td className="col-seg">รายได้หน้าร้าน</td>
+                <td className="col-num col-input">
+                  {transferCell("storefront", storefrontRow)}
+                </td>
               </tr>
             ) : null}
-            <tr>
-              <td className="col-seg">รวมถึงร้าน · คชจ. · ภาษีซื้อ GP</td>
-              <td className="col-num col-net">{fmt(bridge.grossTotal)}</td>
-              <td className="col-num col-net">{fmt(bridge.gpDeduct)}</td>
-              <td className="col-num col-net">{fmt(bridge.gpVatTotal)}</td>
-            </tr>
             <tr className="vat-sales-totals-row">
-              <td className="col-seg">= รายได้สุทธิ → P&L</td>
-              <td className="col-num col-input col-net" colSpan={3}>
+              <td className="col-seg">= รายได้สุทธิ</td>
+              <td className="col-num col-input col-net">
                 <MoneyCell
                   value={pnlIncomeStr}
                   locked={locked}
-                  ariaLabel="รายได้สุทธิเข้า P&L"
+                  ariaLabel="รายได้สุทธิ"
                   onChange={onPnlIncomeChange}
                 />
               </td>
@@ -1231,7 +1129,6 @@ function IncomeBridgeTable({
           </tbody>
         </table>
       </div>
-      <p className="muted vat-sales-hint vat-hint-one-line">{gpRateNote}</p>
       {!locked ? (
         <div className="vat-month-actions vat-month-actions--mini">
           <button
@@ -1247,9 +1144,153 @@ function IncomeBridgeTable({
   );
 }
 
+/** 2) คชจ. — GP + บช. (ไม่รวมสินทรัพย์) */
+function CostsTable({
+  month,
+  locked,
+  bridge,
+  gpByChannel,
+  staff,
+  owner,
+  booksPulled,
+  booksBusy,
+  booksPulledAt,
+  onGpByChannelChange,
+  onPullBooks,
+}: {
+  month: string;
+  locked: boolean;
+  bridge: ReturnType<typeof buildIncomeBridge>;
+  gpByChannel: GpByChannel;
+  staff: MonthCategoryRow | null;
+  owner: MonthCategoryRow | null;
+  booksPulled: boolean;
+  booksBusy: boolean;
+  booksPulledAt: number;
+  onGpByChannelChange: (next: GpByChannel) => void;
+  onPullBooks: () => void;
+}) {
+  function setFee(key: GpChannelKey, raw: string) {
+    const fee = parseVatMoneyInput(raw);
+    const net = gpByChannel[key].netTransfer;
+    const pct =
+      fee + net > 0
+        ? Math.min(100, Math.round((fee / (fee + net)) * 10000) / 100)
+        : 0;
+    patchGpChannel(
+      gpByChannel,
+      key,
+      { mode: "transfer", amount: fee, pct },
+      onGpByChannelChange,
+    );
+  }
+
+  const deliveryRows = bridge.channelRows.filter((r) => r.key !== "storefront");
+  const deliveryFee = deliveryRows.reduce((s, r) => s + r.deduct, 0);
+  const staffOp = bookOpEx(staff) || 0;
+  const ownerOp = bookOpEx(owner) || 0;
+  const booksOp = staffOp + ownerOp;
+  const assetTotal = (staff?.asset || 0) + (owner?.asset || 0);
+  const costNet = deliveryFee + (booksPulled ? booksOp : 0);
+  const gpRateNote =
+    bridge.weightedAvgPct > 0
+      ? `เรท GP เฉลี่ยเดลิเวอรี่ ≈ ${formatVatPct(bridge.weightedAvgPct)}% (= คชจ.÷(คชจ.+ยอดโอนจริง))`
+      : "เรท GP ≈ คชจ.÷(คชจ.+ยอดโอนจริง)";
+
+  return (
+    <section className="vat-table-block">
+      <h2 className="vat-table-title">
+        2) คชจ. — {formatThaiMonthKey(month)}
+      </h2>
+      <div className="sheet-wrap vat-month-slim-wrap">
+        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+          <thead>
+            <tr>
+              <th className="col-seg">รายการ</th>
+              <th className="col-num">ยอด</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="vat-row-parent">
+              <td className="col-seg">คชจ. GP เดลิเวอรี่ (รวม)</td>
+              <td className="col-num col-net">{fmt(deliveryFee)}</td>
+            </tr>
+            {deliveryRows.map((row) => {
+              const s = gpByChannel[row.key];
+              const feeDisplay = moneyFieldValue(
+                s.mode === "transfer" || s.mode === "amount"
+                  ? s.amount
+                  : row.deduct,
+              );
+              return (
+                <tr key={row.key} className="vat-row-child">
+                  <td className="col-seg col-child">{row.label}</td>
+                  <td className="col-num col-input">
+                    <MoneyCell
+                      value={feeDisplay}
+                      locked={locked}
+                      ariaLabel={`คชจ. GP ${row.label}`}
+                      onChange={(v) => setFee(row.key, v)}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+            <tr className="vat-row-parent">
+              <td className="col-seg">
+                บช. สองสมุด (COGS+SGA+อื่น)
+                {!locked ? (
+                  <>
+                    {" "}
+                    <button
+                      type="button"
+                      className="vat-mini-btn"
+                      disabled={booksBusy}
+                      onClick={onPullBooks}
+                    >
+                      {booksBusy ? "…" : "ดึง"}
+                    </button>
+                  </>
+                ) : null}
+                {booksPulledAt ? (
+                  <span className="muted">
+                    {" "}
+                    {formatDateTimeShort(booksPulledAt)}
+                  </span>
+                ) : null}
+              </td>
+              <td className="col-num col-net">
+                {booksPulled ? fmt(booksOp) : "—"}
+              </td>
+            </tr>
+            <tr className="vat-row-child">
+              <td className="col-seg col-child">บช. พนักงาน</td>
+              <td className="col-num">{booksPulled ? fmt(staffOp) : "—"}</td>
+            </tr>
+            <tr className="vat-row-child">
+              <td className="col-seg col-child">บช. เจ้าของ</td>
+              <td className="col-num">{booksPulled ? fmt(ownerOp) : "—"}</td>
+            </tr>
+            <tr>
+              <td className="col-seg">ซื้อสินทรัพย์ (ไม่หักคชจ.)</td>
+              <td className="col-num">{booksPulled ? fmt(assetTotal) : "—"}</td>
+            </tr>
+            <tr className="vat-sales-totals-row">
+              <td className="col-seg">= คชจ. สุทธิ</td>
+              <td className="col-num col-net">{fmt(costNet)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="muted vat-sales-hint vat-hint-one-line">{gpRateNote}</p>
+    </section>
+  );
+}
+
 function PersonalTaxBlock({
   month,
   income,
+  gpCost,
   netVat,
   staff,
   owner,
@@ -1270,6 +1311,7 @@ function PersonalTaxBlock({
 }: {
   month: string;
   income: number;
+  gpCost: number;
   netVat: number;
   staff: MonthCategoryRow | null;
   owner: MonthCategoryRow | null;
@@ -1290,17 +1332,19 @@ function PersonalTaxBlock({
 }) {
   const staffOp = bookOpEx(staff);
   const ownerOp = bookOpEx(owner);
-  const assetTotal = (staff?.asset || 0) + (owner?.asset || 0);
-  const monthProfit =
+  const booksOp =
     booksPulled && staffOp != null && ownerOp != null
-      ? income - staffOp - ownerOp
+      ? staffOp + ownerOp
       : null;
+  const costNet = gpCost + (booksOp ?? 0);
+  const monthProfit =
+    booksOp != null ? income - gpCost - booksOp : income - gpCost;
   const yearBe = Number(month.slice(0, 4)) + 543;
 
   return (
     <section className="vat-table-block vat-personal-pnl">
       <h2 className="vat-table-title">
-        5) กำไรขาดทุนง่าย · บุคคลธรรมดา — {formatThaiMonthKey(month)}
+        3) กำไรขาดทุนง่าย — {formatThaiMonthKey(month)}
       </h2>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
@@ -1312,34 +1356,28 @@ function PersonalTaxBlock({
           </thead>
           <tbody>
             <tr>
-              <td className="col-seg">รายได้สุทธิ (จากตารางแยก)</td>
+              <td className="col-seg">รายได้สุทธิ (ยอดโอน)</td>
               <td className="col-num">{fmt(income)}</td>
             </tr>
             <tr>
-              <td className="col-seg">− ค่าใช้จ่าย บช. พนักงาน</td>
-              <td className="col-num">
-                {staffOp == null ? "—" : fmt(staffOp)}
-              </td>
+              <td className="col-seg">− คชจ. สุทธิ</td>
+              <td className="col-num">{fmt(costNet)}</td>
             </tr>
-            <tr>
-              <td className="col-seg">− ค่าใช้จ่าย บช. เจ้าของ</td>
-              <td className="col-num">
-                {ownerOp == null ? "—" : fmt(ownerOp)}
-              </td>
+            <tr className="vat-row-child">
+              <td className="col-seg col-child">คชจ. GP</td>
+              <td className="col-num">{fmt(gpCost)}</td>
+            </tr>
+            <tr className="vat-row-child">
+              <td className="col-seg col-child">บช. สองสมุด</td>
+              <td className="col-num">{booksOp == null ? "—" : fmt(booksOp)}</td>
             </tr>
             <tr className="vat-sales-totals-row">
               <td className="col-seg">= กำไรประมาณการเดือน</td>
-              <td className="col-num col-net">
-                {monthProfit == null ? "—" : fmt(monthProfit)}
-              </td>
+              <td className="col-num col-net">{fmt(monthProfit)}</td>
             </tr>
             <tr>
-              <td className="col-seg">VAT สุทธิ (แยก · ไม่หักเงินได้)</td>
+              <td className="col-seg">VAT สุทธิ (แยก · ไม่หักกำไร)</td>
               <td className="col-num">{fmt(netVat)}</td>
-            </tr>
-            <tr>
-              <td className="col-seg">ซื้อสินทรัพย์ (ไม่หักรายได้ทันที)</td>
-              <td className="col-num">{booksPulled ? fmt(assetTotal) : "—"}</td>
             </tr>
           </tbody>
         </table>
@@ -1718,7 +1756,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       setDoc(ret);
       setPeriodStartDay(st.periodStartDay);
       setDeliveryDraft(d);
-      setStorefrontDraft(s);
+      setStorefrontDraft({ ...s, remitPct: "100" });
       setNote(n);
       setNoteOpen(Boolean(n.trim()));
       setPnlIncome(income);
@@ -2462,137 +2500,41 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         <p className="muted">กำลังโหลด…</p>
       ) : (
         <>
-          <OutputVatTable
-            deliveryDraft={deliveryDraft}
-            storefrontDraft={storefrontDraft}
-            delivery={delivery}
-            storefront={storefront}
+          <IncomeTransferTable
+            month={month}
             locked={Boolean(locked)}
-            openDelivery={openDelivery}
-            openStorefront={openStorefront}
-            onToggleDelivery={() => setOpenDelivery((v) => !v)}
-            onToggleStorefront={() => setOpenStorefront((v) => !v)}
-            onDeliveryChange={setDeliveryDraftTracked}
-            onStorefrontChange={setStorefrontDraftTracked}
+            bridge={incomeBridge}
+            gpByChannel={gpByChannel}
+            pnlIncomeStr={pnlIncome}
+            onGpByChannelChange={applyGpByChannel}
+            onPnlIncomeChange={(v) => {
+              setPnlIncome(v);
+              markDirty();
+            }}
+            onUseBridgeIncome={() => {
+              setPnlIncome(moneyInputValue(incomeBridge.pnlIncome));
+              markDirty();
+            }}
           />
 
-          <div className="vat-gp-input-bundle">
-            <h2 className="vat-table-title">
-              2–3) GP ช่องทาง + ภาษีซื้อ — {formatThaiMonthKey(month)}
-            </h2>
-            <IncomeBridgeTable
-              month={month}
-              locked={Boolean(locked)}
-              bridge={incomeBridge}
-              gpByChannel={gpByChannel}
-              pnlIncomeStr={pnlIncome}
-              onGpByChannelChange={applyGpByChannel}
-              onPnlIncomeChange={(v) => {
-                setPnlIncome(v);
-                markDirty();
-              }}
-              onUseBridgeIncome={() => {
-                setPnlIncome(moneyInputValue(incomeBridge.pnlIncome));
-                markDirty();
-              }}
-            />
-
-            <InputVatTable
-              month={month}
-              deliveryGpFromChannels
-              deliveryDraft={deliveryDraft}
-              storefrontDraft={storefrontDraft}
-              delivery={delivery}
-              storefront={storefront}
-              locked={Boolean(locked)}
-              onDeliveryChange={setDeliveryDraftTracked}
-              onStorefrontChange={setStorefrontDraftTracked}
-            />
-          </div>
-
-          <NetVatStrip
-            delivery={delivery}
-            storefront={storefront}
-            totals={totals}
+          <CostsTable
+            month={month}
+            locked={Boolean(locked)}
+            bridge={incomeBridge}
+            gpByChannel={gpByChannel}
+            staff={bookStaff}
+            owner={bookOwner}
+            booksPulled={Boolean(bookStaff && bookOwner)}
+            booksBusy={booksBusy}
+            booksPulledAt={booksPulledAt}
+            onGpByChannelChange={applyGpByChannel}
+            onPullBooks={() => void pullBothBooks()}
           />
-
-          <div className="vat-books-block">
-            <div className="vat-books-head">
-              <h2 className="vat-table-title">
-                4) บช. สองสมุด — {formatThaiMonthKey(month)}
-              </h2>
-              <button
-                type="button"
-                className="vat-mini-btn"
-                disabled={booksBusy || busy}
-                onClick={() => void pullBothBooks()}
-              >
-                {booksBusy ? "กำลังดึง…" : "ดึงบช. พนง. + เจ้าของ"}
-              </button>
-              {booksPulledAt ? (
-                <span className="muted">{formatDateTimeShort(booksPulledAt)}</span>
-              ) : null}
-            </div>
-            <div className="sheet-wrap vat-month-slim-wrap">
-              <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
-                <thead>
-                  <tr>
-                    <th className="col-seg">บช.</th>
-                    <th className="col-num">COGS</th>
-                    <th className="col-num">SGA</th>
-                    <th className="col-num">สินทรัพย์</th>
-                    <th className="col-num">อื่น</th>
-                    <th className="col-num">รวมออก</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(
-                    [
-                      ["บช. พนักงาน", bookStaff],
-                      ["บช. เจ้าของ", bookOwner],
-                    ] as const
-                  ).map(([label, row]) => (
-                    <tr key={label}>
-                      <td className="col-seg">{label}</td>
-                      <td className="col-num">{row ? fmt(row.cogs) : "—"}</td>
-                      <td className="col-num">{row ? fmt(row.sga) : "—"}</td>
-                      <td className="col-num">{row ? fmt(row.asset) : "—"}</td>
-                      <td className="col-num">{row ? fmt(row.other) : "—"}</td>
-                      <td className="col-num col-net">
-                        {row ? fmt(bookOutTotal(row)) : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                  {bookStaff && bookOwner ? (
-                    <tr className="vat-sales-totals-row">
-                      <td className="col-seg">รวมสองบช.</td>
-                      <td className="col-num">
-                        {fmt(bookStaff.cogs + bookOwner.cogs)}
-                      </td>
-                      <td className="col-num">
-                        {fmt(bookStaff.sga + bookOwner.sga)}
-                      </td>
-                      <td className="col-num">
-                        {fmt(bookStaff.asset + bookOwner.asset)}
-                      </td>
-                      <td className="col-num">
-                        {fmt(bookStaff.other + bookOwner.other)}
-                      </td>
-                      <td className="col-num col-net">
-                        {fmt(
-                          bookOutTotal(bookStaff) + bookOutTotal(bookOwner),
-                        )}
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          </div>
 
           <PersonalTaxBlock
             month={month}
             income={parseMoneyInput(pnlIncome) || incomeBridge.pnlIncome}
+            gpCost={incomeBridge.gpDeduct}
             netVat={totals.netVat}
             staff={bookStaff}
             owner={bookOwner}
@@ -2611,6 +2553,45 @@ export function VatMonthlyWorkbench({ actor }: Props) {
             onPullYear={() => void pullYearSummary()}
             onExportYear={exportYearTax}
           />
+
+          <div className="vat-gp-input-bundle">
+            <h2 className="vat-table-title">
+              4) VAT — ภาษีขาย − ภาษีซื้อ — {formatThaiMonthKey(month)}
+            </h2>
+            <SalesVatTable
+              deliveryDraft={deliveryDraft}
+              storefrontDraft={storefrontDraft}
+              delivery={delivery}
+              storefront={storefront}
+              locked={Boolean(locked)}
+              openDelivery={openDelivery}
+              openStorefront={openStorefront}
+              onToggleDelivery={() => setOpenDelivery((v) => !v)}
+              onToggleStorefront={() => setOpenStorefront((v) => !v)}
+              onDeliveryChange={setDeliveryDraftTracked}
+              onStorefrontChange={(d) =>
+                setStorefrontDraftTracked({ ...d, remitPct: "100" })
+              }
+            />
+            <InputVatTable
+              month={month}
+              deliveryGpFromChannels
+              deliveryDraft={deliveryDraft}
+              storefrontDraft={storefrontDraft}
+              delivery={delivery}
+              storefront={storefront}
+              locked={Boolean(locked)}
+              onDeliveryChange={setDeliveryDraftTracked}
+              onStorefrontChange={(d) =>
+                setStorefrontDraftTracked({ ...d, remitPct: "100" })
+              }
+            />
+            <NetVatStrip
+              delivery={delivery}
+              storefront={storefront}
+              totals={totals}
+            />
+          </div>
 
           <div className="vat-month-actions vat-month-actions--mini">
             {!locked ? (
