@@ -3,8 +3,8 @@
  * MUST match `npos-telltea/app/build.gradle` versionName/versionCode on every nPos ship.
  * Gate: `scripts/test-npos-system-ver-sync.mjs` — bumping APK without this pin fails CI.
  */
-export const NPOS_SYSTEM_VERSION_NAME = "1.14.77";
-export const NPOS_SYSTEM_VERSION_CODE = 100;
+export const NPOS_SYSTEM_VERSION_NAME = "1.14.78";
+export const NPOS_SYSTEM_VERSION_CODE = 101;
 
 export const NPOS_LATEST_MANIFEST_URL =
   "https://telltea-pos.web.app/downloads/latest.json";

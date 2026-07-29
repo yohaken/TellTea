@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 393/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 394/);
 
 const admin = read("src/lib/pos-sales-admin.ts");
 assert.match(admin, /export async function deletePosSessionsAdmin/);
