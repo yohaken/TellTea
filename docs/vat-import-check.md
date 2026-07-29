@@ -13,7 +13,7 @@
 | **I0–I3** | ตาราง · แท็บ · Storage · LINE MAN PDF | ✅ |
 | **I4** | Grab CSV + Shopee ใบกำกับ PDF | ✅ โค้ดฐาน |
 | **I5** | ใช้เข้าเดือน (ขาย/โอน/GP VAT) | ✅ โค้ดฐาน |
-| **I6** | ใช้จริงเดือนแรก · ปรับ parser | ⬜ รอร้าน |
+| **I6–I10** | จูนจริง · Shopee ขาย · ZIP ใบกำกับ · ปลด apply · ปิดงาน | ⬜ ดู [`vat-import-phases.md`](./vat-import-phases.md) |
 
 ---
 
