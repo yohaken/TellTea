@@ -18,7 +18,7 @@ const css = read("src/app/globals.css");
 const rules = read("firestore.rules");
 const assertRules = read("scripts/assert-firestore-rules.mjs");
 
-assert.match(version, /APP_BUILD = 405/);
+assert.match(version, /APP_BUILD = 406/);
 assert.match(shell, /StaffUtilityDock/);
 assert.match(dock, /staff-utility-fab/);
 assert.match(dock, /is-attention/);
@@ -33,6 +33,12 @@ assert.match(suggestions, /accepted/);
 assert.match(suggestions, /later/);
 assert.match(css, /\.staff-utility-fab/);
 assert.match(css, /staff-utility-blink/);
+assert.match(css, /top:\s*50%/);
+assert.match(css, /translateY\(-50%\)/);
+assert.doesNotMatch(
+  css.match(/\.staff-utility-fab\s*\{[^}]+\}/)?.[0] || "",
+  /bottom:\s*calc\(var\(--nav-h\)/,
+);
 assert.match(rules, /match \/staffSuggestions\/\{id\}/);
 assert.match(rules, /staffSuggestionCreate/);
 assert.match(assertRules, /staffSuggestions/);

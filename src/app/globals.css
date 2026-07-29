@@ -2412,14 +2412,16 @@ body.modal-open .main-panel {
 }
 
 /**
- * ไอคอนยูทิลิตี้พนักงาน — ซ้ายมือ เหนือแถบล่าง
+ * ไอคอนยูทิลิตี้พนักงาน — ซ้ายกลางจอ (ไม่ทับแถบล่าง / FAB อื่น)
  * กระพริบเมื่อมีงานค้าง / ข้อเสนอรอเจ้าของ
  */
 .staff-utility-fab {
   position: fixed;
-  left: max(0.55rem, calc((100vw - var(--shell-max)) / 2 + 0.55rem));
-  bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.45rem);
-  z-index: 13;
+  top: 50%;
+  left: max(0.45rem, calc((100vw - var(--shell-max)) / 2 + 0.45rem));
+  bottom: auto;
+  transform: translateY(-50%);
+  z-index: 12;
   width: 2.35rem;
   height: 2.35rem;
   padding: 0;
@@ -2444,11 +2446,11 @@ body.modal-open .main-panel {
   0%,
   100% {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(-50%) scale(1);
   }
   50% {
     opacity: 0.55;
-    transform: scale(1.06);
+    transform: translateY(-50%) scale(1.06);
   }
 }
 

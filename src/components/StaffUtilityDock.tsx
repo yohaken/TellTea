@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 const OWNER_STATUS_ACTIONS: SuggestionStatus[] = ["accepted", "later", "done"];
 
 /**
- * ไอคอนยูทิลิตี้ซ้ายมือ — พนักงาน + เจ้าของ
+ * ไอคอนยูทิลิตี้ซ้ายกลางจอ — พนักงาน + เจ้าของ (ไม่ทับแถบล่าง/FAB)
  * แผง: ข้อเสนอ (ใช้ได้) · งาน (โครง + กระพริบเมื่อมีค้าง)
  */
 export function StaffUtilityDock() {
