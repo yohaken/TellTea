@@ -60,16 +60,21 @@ export type MonthBooksDraft = {
 };
 
 export type MonthBooksView = {
-  /** A — รายได้ถึงร้าน */
+  /** A — รายได้ถึงร้าน = ยอดโอน (หลังหัก GP แล้ว) + หน้าร้าน */
   incomeTotal: number;
   deliveryTransfer: number;
   storefrontIncome: number;
-  /** B — คชจ. */
+  /**
+   * คชจ. GP แพลตฟอร์ม — หักจากยอดโอนแล้ว
+   * โชว์ติดตาม / ใช้คิดภาษีซื้อ · **ไม่หักซ้ำในกำไร**
+   */
   gpCostTotal: number;
+  /** คชจ. สองบช. ที่หักกำไรได้ (ไม่รวมสินทรัพย์) */
   booksOpex: number | null;
   booksAsset: number;
+  /** คชจ. ที่หักกำไร = เฉพาะบช. (ไม่รวม GP) */
   costTotal: number | null;
-  /** C — กำไร */
+  /** C — กำไร = รายได้ถึงร้าน − คชจ.บช. */
   monthProfit: number | null;
   /** D — VAT */
   salesTotal: number;
@@ -258,6 +263,7 @@ export function deriveMonthBooksView(
   );
   const storefrontIncome = normalizeMoney(draft.transfer.storefront);
   const incomeTotal = roundMoney(deliveryTransfer + storefrontIncome);
+  // GP หักจากยอดโอนแล้ว — เก็บไว้โชว์/VAT ห้ามหักซ้ำในกำไร
   const gpCostTotal = bridge.gpDeduct;
   const booksOpex =
     books == null
@@ -266,10 +272,12 @@ export function deriveMonthBooksView(
           (books.cogs || 0) + (books.sga || 0) + (books.other || 0),
         );
   const booksAsset = books == null ? 0 : normalizeMoney(books.asset);
-  const costTotal =
-    booksOpex == null ? null : roundMoney(gpCostTotal + booksOpex);
+  // หักกำไรได้แค่คชจ.บช. · GP อยู่ในยอดโอนแล้ว
+  const costTotal = booksOpex;
   const monthProfit =
-    costTotal == null ? null : roundMoney(incomeTotal - costTotal);
+    booksOpex == null
+      ? incomeTotal
+      : roundMoney(incomeTotal - booksOpex);
 
   const salesTotal = roundMoney(
     delivery.reportedGross + storefront.reportedGross,
