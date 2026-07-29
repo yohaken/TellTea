@@ -9,11 +9,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD\s*=\s*390\b/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD\s*=\s*391\b/);
 assert.match(read("src/lib/staff-presence.ts"), /touchStaffPresence/);
 assert.match(read("src/lib/staff-presence.ts"), /formatPresenceAge/);
 assert.match(read("src/lib/staff-presence.ts"), /staffShortLabel/);
 assert.match(read("src/lib/staff-presence.ts"), /resolvePresenceLabel/);
+assert.match(read("src/lib/staff-presence.ts"), /ชื่อเล่นเต็มก่อน/);
+assert.match(read("src/components/StaffPresenceDock.tsx"), /staff-presence-name/);
+assert.match(read("src/app/globals.css"), /\.staff-presence-name\b/);
 assert.match(read("src/lib/employees.ts"), /nickname/);
 assert.match(read("src/lib/types.ts"), /lastSeenAt/);
 assert.match(read("firestore.rules"), /'lastSeenAt'/);

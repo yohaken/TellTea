@@ -39,7 +39,7 @@ export function staffShortLabel(source: string, max = 2): string {
   return chars.slice(0, max).join("");
 }
 
-/** ชื่อเล่นก่อน · ไม่มีใช้ชื่อจริง/displayName */
+/** ชื่อเล่นเต็มก่อน · ไม่มีชื่อเล่นค่อยย่อจากชื่อจริง */
 export function resolvePresenceLabel(
   member: StaffMember,
   employees: Employee[],
@@ -50,7 +50,7 @@ export function resolvePresenceLabel(
   const nick = emp?.nickname?.trim();
   const fullName = (emp?.name || member.displayName || "").trim() || member.id;
   if (nick) {
-    return { label: staffShortLabel(nick, nick.length <= 2 ? nick.length : 2), fullName };
+    return { label: nick, fullName };
   }
   return { label: staffShortLabel(fullName, 2), fullName };
 }

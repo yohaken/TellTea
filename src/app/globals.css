@@ -17639,8 +17639,10 @@ a.ghost-btn {
 
 .staff-presence-chip {
   position: relative;
-  width: 1.85rem;
-  height: 1.85rem;
+  min-width: 1.85rem;
+  max-width: 4.6rem;
+  height: 1.7rem;
+  padding: 0 0.38rem;
   border-radius: 999px;
   background: #f3efe4;
   border: 1px solid rgba(28, 42, 31, 0.14);
@@ -17655,15 +17657,15 @@ a.ghost-btn {
   box-shadow: 0 0 0 1.5px rgba(47, 107, 58, 0.22), 0 3px 10px rgba(28, 42, 31, 0.12);
 }
 
-.staff-presence-initial {
-  font-size: 0.68rem;
+.staff-presence-name {
+  font-size: 0.58rem;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.1;
   color: #1c2a1f;
-  letter-spacing: -0.02em;
-  max-width: 1.5rem;
+  letter-spacing: -0.01em;
+  max-width: 100%;
   overflow: hidden;
-  text-overflow: clip;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
