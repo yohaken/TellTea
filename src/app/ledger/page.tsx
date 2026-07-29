@@ -37,6 +37,7 @@ import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
 import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
+import { LedgerModeSwitch } from "@/components/LedgerModeSwitch";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
 import { BASE_TYPE_OPTIONS, frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
@@ -376,6 +377,7 @@ function LedgerView() {
 
   return (
     <div className="ledger-page module-page">
+      <LedgerModeSwitch active="ledger" />
       <div className="balance-bar">
         <span>
           คงเหลือ
