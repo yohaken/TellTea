@@ -83,15 +83,17 @@ public final class SunmiInnerPrinter {
   /**
    * UTF text path — same family as stock SUNMI / Wongnai receipts.
    *
-   * <p>Preserves {@link EscPos#BOLD_ON}/{@link EscPos#BOLD_OFF} (or ESC E decoded to those
-   * markers) by toggling bold via {@code sendRAWData} between {@code printText} chunks — so
-   * item titles actually print heavier than option lines.
+   * <p>Short sale slips: toggle bold via {@code sendRAWData(ESC E)} between {@code printText}
+   * chunks. Long X/Z reports have many section headers — chunking aborts mid-slip on Sunmi, so
+   * those print as one {@code printText} (bold markers stripped) to finish the whole document.
    */
   public static PrinterTransport.Result printPlain(Context context, String text) {
     String body = text == null ? "" : text;
     if (!body.endsWith("\n")) body = body + "\n";
-    boolean hasBold =
-        body.indexOf(EscPos.BOLD_ON) >= 0 || body.indexOf(EscPos.BOLD_OFF) >= 0;
+    int boldOns = EscPos.boldOnCount(body);
+    boolean hasBold = boldOns > 0 || body.indexOf(EscPos.BOLD_OFF) >= 0;
+    // X/Z has ~10 section titles; chunked ESC E often dies after the banner → tiny scrap.
+    boolean longDoc = boldOns >= 6 || body.length() >= 1200;
     try {
       SunmiPrinterService svc = ensureService(context);
       if (svc == null) {
@@ -106,15 +108,23 @@ public final class SunmiInnerPrinter {
       } catch (Exception ignored) {
         /* optional */
       }
-      PrinterTransport.Result printed =
-          hasBold ? printTextBoldSegments(svc, body) : printTextOnce(svc, body);
+      PrinterTransport.Result printed;
+      if (hasBold && longDoc) {
+        // One shot — avoids mid-slip abort after X/Z banner on InnerPrinter.
+        printed = printTextOnce(svc, EscPos.stripBoldMarkers(body));
+      } else if (hasBold) {
+        printed = printTextBoldSegments(svc, body);
+      } else {
+        printed = printTextOnce(svc, body);
+      }
       if (!printed.ok) return printed;
       try {
         svc.lineWrap(2, null);
       } catch (Exception ignored) {
         /* optional */
       }
-      return cutPaperBestEffort(svc, "SUNMI พิมพ์ไทยแล้ว");
+      return cutPaperBestEffort(
+          svc, longDoc ? "SUNMI พิมพ์สรุปรอบแล้ว" : "SUNMI พิมพ์ไทยแล้ว");
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return new PrinterTransport.Result(false, "interrupted");
@@ -145,6 +155,7 @@ public final class SunmiInnerPrinter {
 
   /**
    * Walk bold markers: flush text → ESC E on/off → more text. Keeps Thai on printText path.
+   * Bold toggle failures are ignored so the rest of the slip still prints.
    */
   private static PrinterTransport.Result printTextBoldSegments(
       SunmiPrinterService svc, String body) throws Exception {
@@ -155,14 +166,12 @@ public final class SunmiInnerPrinter {
       if (c == EscPos.BOLD_ON) {
         PrinterTransport.Result flush = flushAccPrintText(svc, acc);
         if (!flush.ok) return flush;
-        PrinterTransport.Result em = sendEscE(svc, true);
-        if (!em.ok) return em;
+        sendEscE(svc, true); // best-effort — do not abort the slip
         bold = true;
       } else if (c == EscPos.BOLD_OFF) {
         PrinterTransport.Result flush = flushAccPrintText(svc, acc);
         if (!flush.ok) return flush;
-        PrinterTransport.Result em = sendEscE(svc, false);
-        if (!em.ok) return em;
+        sendEscE(svc, false);
         bold = false;
       } else {
         acc.append(c);
@@ -171,8 +180,7 @@ public final class SunmiInnerPrinter {
     PrinterTransport.Result flush = flushAccPrintText(svc, acc);
     if (!flush.ok) return flush;
     if (bold) {
-      PrinterTransport.Result em = sendEscE(svc, false);
-      if (!em.ok) return em;
+      sendEscE(svc, false);
     }
     return new PrinterTransport.Result(true, "SUNMI พิมพ์ไทย (ตัวหนา) แล้ว");
   }

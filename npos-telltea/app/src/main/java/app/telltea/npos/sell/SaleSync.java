@@ -880,22 +880,26 @@ public final class SaleSync {
                                             DeviceIdentity.pairingCode(app),
                                             listPending(app).size(),
                                             loadSessionReceipts(app, ShiftPrefs.sessionId(app)),
-                                            ShiftReportFormBuilder.COLS_80);
+                                            PrinterPrefs.receiptCols(app));
+                            // Wait for paper to finish before close-shift flush/kick races the printer.
                             transport.send(
                                     app,
                                     ep,
                                     EscPos.documentReceipt(body),
-                                    result ->
-                                            OpsLogger.result(
-                                                    app,
-                                                    "printer",
-                                                    result.ok
-                                                            ? ("close".equals(reportKind)
-                                                                    ? "พิมพ์ปิดรอบแล้ว"
-                                                                    : "พิมพ์สรุปกลางรอบแล้ว")
-                                                            : "พิมพ์สรุปรอบไม่สำเร็จ",
-                                                    result.message,
-                                                    result.ok));
+                                    result -> {
+                                        OpsLogger.result(
+                                                app,
+                                                "printer",
+                                                result.ok
+                                                        ? ("close".equals(reportKind)
+                                                                ? "พิมพ์ปิดรอบแล้ว"
+                                                                : "พิมพ์สรุปกลางรอบแล้ว")
+                                                        : "พิมพ์สรุปรอบไม่สำเร็จ",
+                                                result.message,
+                                                result.ok);
+                                        if (onDone != null) onDone.run();
+                                    });
+                            return;
                         }
                     } catch (Exception e) {
                         OpsLogger.warn(

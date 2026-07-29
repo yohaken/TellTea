@@ -70,6 +70,28 @@ public final class EscPos {
     return concat(parts);
   }
 
+  /** Remove inline bold markers (for one-shot print paths that cannot toggle ESC E). */
+  public static String stripBoldMarkers(String s) {
+    if (s == null || s.isEmpty()) return s == null ? "" : s;
+    StringBuilder sb = new StringBuilder(s.length());
+    for (int i = 0; i < s.length(); i++) {
+      char c = s.charAt(i);
+      if (c == BOLD_ON || c == BOLD_OFF) continue;
+      sb.append(c);
+    }
+    return sb.toString();
+  }
+
+  /** Count BOLD_ON markers — used to decide Sunmi chunked vs one-shot print. */
+  public static int boldOnCount(String s) {
+    if (s == null || s.isEmpty()) return 0;
+    int n = 0;
+    for (int i = 0; i < s.length(); i++) {
+      if (s.charAt(i) == BOLD_ON) n++;
+    }
+    return n;
+  }
+
   /** Emit TIS-620 text with {@code ESC E} around {@link #BOLD_ON}/{@link #BOLD_OFF} segments. */
   static void appendTextWithBold(List<byte[]> parts, String s) {
     if (s == null || s.isEmpty()) return;
