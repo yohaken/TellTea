@@ -1,6 +1,10 @@
 /**
- * Owner-books receipt OCR / autofill via Gemini (multimodal).
+ * Owner-books / ledger receipt OCR via Gemini (multimodal).
  * Resolves evp: refs from evidencePhotos, data URLs, or Firebase Storage HTTPS.
+ *
+ * Multi-photo: staff often attach bank transfer slip + tax invoice together.
+ * Each image is read separately; VAT is taken only from the tax invoice.
+ * Never invent VAT via ×7/107 (mixed VAT / non-VAT lines on Top World etc.).
  */
 const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
@@ -14,53 +18,48 @@ const {
   formatBusinessProfile,
   MAX_IMAGES,
 } = require("./classify-ledger");
-const { completeVatFromBill } = require("./vat-from-bill");
+const { mergeExtractResults, normalizeDocKind } = require("./merge-receipt-extract");
 
 const MAX_IMAGE_BYTES = 3.5 * 1024 * 1024;
 const BOOTSTRAP_GEMINI_API_KEY = "";
 
 const EXTRACT_SYSTEM_PROMPT = `คุณเป็นผู้ช่วยอ่านใบเสร็จ/หลักฐานการจ่ายเงินสำหรับร้านเครื่องดื่ม/เบเกอรี่ในไทย
-อ่านจากรูปแล้วดึงข้อมูลสำหรับบันทึกบัญชีเงินออก + ภาษีซื้อ (VAT)
+อ่านจากรูปเดียวแล้วดึงข้อมูลสำหรับบันทึกบัญชีเงินออก + ภาษีซื้อ (VAT)
 
 ตอบเป็น JSON เท่านั้น ในรูป:
-{"date":"YYYY-MM-DD หรือว่าง","description":"ชื่อรายการสั้นๆ ภาษาไทย","amountOut":จำนวนเงินเป็นตัวเลขหรือ null,"type":"cogs|sga|asset|อื่นๆ","note":"หมายเหตุสั้นๆ หรือว่าง","reason":"เหตุผลสั้นๆ ภาษาไทยไม่เกิน 40 ตัวอักษร","hasVat":trueหรือfalse,"vatInput":จำนวนภาษีมูลค่าเพิ่มเป็นตัวเลขหรือ null,"vatBase":มูลค่าก่อนภาษีหรือ null,"vatInvoiceNo":"เลขที่ใบกำกับหรือว่าง","vatSeenOnBill":trueหรือfalse,"vatReason":"สั้นๆ ว่าเห็น VAT จากตรงไหน หรือทำไมไม่มี"}
+{"docKind":"tax_invoice|bank_slip|other","date":"YYYY-MM-DD หรือว่าง","description":"ชื่อรายการสั้นๆ ภาษาไทย","amountOut":จำนวนเงินเป็นตัวเลขหรือ null,"type":"cogs|sga|asset|อื่นๆ","note":"หมายเหตุสั้นๆ หรือว่าง","reason":"เหตุผลสั้นๆ ภาษาไทยไม่เกิน 40 ตัวอักษร","hasVat":trueหรือfalse,"vatInput":จำนวนภาษีมูลค่าเพิ่มเป็นตัวเลขหรือ null,"vatBase":มูลค่าก่อนภาษีหรือ null,"vatInvoiceNo":"เลขที่ใบกำกับหรือว่าง","vatSeenOnBill":trueหรือfalse,"vatReason":"สั้นๆ ว่าเห็น VAT จากตรงไหน หรือทำไมไม่มี"}
 
 กฎ:
-- date = วันที่บนใบเสร็จ (ไม่ใช่วันที่อัปโหลด) ถ้าไม่ชัดให้ "" 
-- description = สรุปสิ่งที่ซื้อ/จ่าย สั้น ชัด (เช่น "นมสดแม็คโคร" "ท็อปเวิลด์" "ท็อปส์" "ค่าไฟ")
-- amountOut = ยอดรวมที่จ่ายจริง (ตัวเลข ไม่มี comma) ถ้าไม่ชัดให้ null
-- type ตามกฎบัญชี: cogs=วัตถุดิบ/บรรจุภัณฑ์/ค่าขนส่งวัตถุดิบ · sga=ค่าแรง/ค่าไฟ/ค่าเช่า/ซ่อม · asset=เครื่องจักร/อุปกรณ์ถาวร · อื่นๆ=ไม่ชัด
-- ถ้ามีหลายรายการในใบเสร็จ ให้สรุปเป็นรายการหลักหนึ่งรายการ + ยอดรวม
-- **VAT (สำคัญ — อ่านท้ายบิลให้ละเอียด):**
-  - โฟกัสบล็อกสรุปท้ายใบเสร็จ ใต้ยอดรวมตัวใหญ่ (TOTAL / ยอดสุทธิ) — มักอยู่ 2–4 บรรทัดถัดลงมา
-  - ค้นหาป้ายเหล่านี้แม้ตัวพิมพ์เล็ก จาง หรือใบเสร็จความร้อน:
-    "ภาษีมูลค่าเพิ่ม" · "ภาษีมูลค่าเพิ่ม 7%" · "ฐานภาษี" · "ฐานภาษี 7%" · "VAT" · "V.A.T" · "VAT 7%" · "ภาษี 7%" · "TAX" · "รวมภาษีมูลค่าเพิ่ม"
-  - **ท็อปเวิลด์ (Top World) รูปแบบมาตรฐาน:** ใต้ยอดรวมตัวหนา จะมี
-    1) บรรทัด "ฐานภาษี 7%" = vatBase
-    2) บรรทัด "ภาษีมูลค่าเพิ่ม 7%" = vatInput
-    สินค้าที่เสีย VAT มักมีตัว "V" ท้ายบรรทัดรายการ — ไม่ใช่ยอดภาษี
-  - ห้างค้าส่งอื่น (ท็อปส์ · ท็อปแวลู · แม็คโคร · บิ๊กซี · โลตัส) ก็มักมีคู่ฐานภาษี+VAT ท้ายบิล
-  - vatInput = ตัวเลขข้างป้ายภาษีมูลค่าเพิ่ม (ไม่ใช่ยอดรวม ไม่ใช่จำนวนชิ้น ไม่ใช่ตัว V)
-  - vatBase = ตัวเลขข้างป้ายฐานภาษี / มูลค่าสินค้าก่อน VAT
-  - hasVat = true และ vatSeenOnBill = true เมื่ออ่านตัวเลขภาษีหรือฐานภาษีจากบิลได้
-  - **ห้ามคำนวณ VAT จากยอดรวม×7/107 เอง** เมื่อไม่เห็นทั้งฐานภาษีและบรรทัดภาษี
-  - ถ้าอ่านได้ทั้งยอดรวมกับฐานภาษี แต่ตัวเลขภาษีจาง ให้ใส่ vatBase + amountOut ไว้ (ระบบช่วยเติม vatInput จากผลต่างบนบิลได้)
-  - vatInvoiceNo = เลขที่ใบกำกับ/เลขที่เอกสารถ้าเห็น
+- docKind:
+  - tax_invoice = ใบเสร็จรับเงิน / ใบกำกับภาษี / ใบกำกับอย่างย่อ / บิลห้าง (ท็อปเวิลด์ ท็อปส์ แม็คโคร ฯลฯ)
+  - bank_slip = สลิปโอนเงิน / PromptPay / แอปธนาคาร / หลักฐานโอน — **ไม่มี VAT บนสลิปนี้**
+  - other = อื่นๆ
+- ถ้า docKind=bank_slip → hasVat=false, vatInput=null, vatBase=null เสมอ (อย่าเดา VAT จากยอดโอน)
+- date = วันที่บนเอกสาร (ไม่ใช่วันที่อัปโหลด) ถ้าไม่ชัดให้ ""
+- description = สรุปสั้น ชัด (เช่น "ท็อปเวิลด์" "นมสดแม็คโคร" "โอนค่าของ")
+- amountOut = ยอดบนเอกสารนั้น (ตัวเลข ไม่มี comma) ถ้าไม่ชัดให้ null
+- type: cogs=วัตถุดิบ/บรรจุภัณฑ์ · sga=ค่าแรง/ค่าไฟ/ค่าเช่า/ซ่อม · asset=เครื่องจักร · อื่นๆ=ไม่ชัด
+- **VAT — อ่านตัวเลขที่พิมพ์บนใบกำกับเท่านั้น ห้ามคำนวณ ×7/107 จากยอดรวม**
+  (บางรายการสินค้าไม่มี VAT การคูณยอดรวมจะผิด)
+  - โฟกัสท้ายบิลใต้ยอดรวมตัวหนา: หา "ภาษีมูลค่าเพิ่ม" / "ภาษีมูลค่าเพิ่ม 7%" / "VAT" / "VAT 7%"
+  - ท็อปเวิลด์มักมีคู่ "ฐานภาษี 7%" และ "ภาษีมูลค่าเพิ่ม 7%" ใต้ยอดรวม — อ่านตัวเลขขวาสุดของแต่ละบรรทัด
+  - ตัว "V" ท้ายรายการสินค้า = สินค้าเสีย VAT ไม่ใช่ยอดภาษี
+  - vatInput = ตัวเลขข้างป้ายภาษีมูลค่าเพิ่มเท่านั้น
+  - vatBase = ตัวเลขข้างป้ายฐานภาษี ถ้าเห็น
+  - ถ้าไม่เห็นบรรทัดภาษีชัด → hasVat=false, vatInput=null
 - ห้ามแต่งข้อมูลที่มองไม่เห็นในรูป`;
 
-const VAT_RETRY_SYSTEM_PROMPT = `คุณเป็นผู้ช่วย OCR ใบเสร็จไทย — รอบนี้โฟกัสเฉพาะภาษีมูลค่าเพิ่ม (VAT) ท้ายบิล
-โดยเฉพาะท็อปเวิลด์: ใต้ยอดรวมตัวหนา มี "ฐานภาษี 7%" แล้วตามด้วย "ภาษีมูลค่าเพิ่ม 7%"
+const VAT_RETRY_SYSTEM_PROMPT = `คุณเป็นผู้ช่วย OCR ใบเสร็จไทย — โฟกัสเฉพาะยอดภาษีมูลค่าเพิ่มที่พิมพ์บนใบกำกับ/ใบเสร็จ
+ข้ามสลิปโอนเงิน — รูปนี้ควรเป็นใบเสร็จห้างหรือใบกำกับภาษีเท่านั้น
 
 ตอบเป็น JSON เท่านั้น:
-{"hasVat":trueหรือfalse,"vatInput":จำนวนภาษีเป็นตัวเลขหรือ null,"vatBase":มูลค่าฐานภาษีเป็นตัวเลขหรือ null,"vatInvoiceNo":"เลขที่ใบกำกับหรือว่าง","vatSeenOnBill":trueหรือfalse,"vatReason":"สั้นๆ"}
+{"hasVat":trueหรือfalse,"vatInput":จำนวนภาษีเป็นตัวเลขหรือ null,"vatBase":มูลค่าฐานภาษีหรือ null,"vatInvoiceNo":"เลขที่ใบกำกับหรือว่าง","vatSeenOnBill":trueหรือfalse,"vatReason":"สั้นๆ"}
 
 กฎ:
-- อ่านตัวเลขขวาสุดของบรรทัด "ฐานภาษี 7%" → vatBase
-- อ่านตัวเลขขวาสุดของบรรทัด "ภาษีมูลค่าเพิ่ม 7%" → vatInput
-- ป้ายอื่นที่รับได้: VAT · VAT 7% · ภาษี 7% · V.A.T · TAX
-- ห้ามสับสนกับตัว "V" ท้ายรายการสินค้า
-- ห้ามคำนวณจากยอดรวม×7/107 เมื่อไม่เห็นตัวเลขบนบิล
-- ถ้าเห็นแค่ฐานภาษี ให้ใส่ vatBase ไว้ (แม้ vatInput จะอ่านยาก)`;
+- อ่านตัวเลขขวาสุดของบรรทัด "ภาษีมูลค่าเพิ่ม 7%" หรือ "VAT" → vatInput
+- อ่าน "ฐานภาษี 7%" → vatBase ถ้าเห็น
+- ห้ามคำนวณจากยอดรวม×7/107 (สินค้าผสม VAT/ไม่มี VAT ได้)
+- ถ้าเป็นสลิปโอน/ไม่เห็นบรรทัดภาษี → hasVat=false, vatInput=null`;
 
 function buildExtractSystemPrompt(businessContext) {
   const ctx = String(businessContext || "").trim() || DEFAULT_BUSINESS_CONTEXT;
@@ -185,12 +184,11 @@ function normalizeVatFields(parsed) {
   const hasVatFlag =
     parsed?.hasVat === true ||
     parsed?.hasVat === "true" ||
-    (vatInput != null && vatInput > 0) ||
-    (vatBase != null && vatBase > 0);
+    (vatInput != null && vatInput > 0);
   const vatSeenOnBill =
     parsed?.vatSeenOnBill === true ||
     parsed?.vatSeenOnBill === "true" ||
-    (hasVatFlag && (vatInput != null || vatBase != null));
+    (hasVatFlag && vatInput != null);
   return {
     hasVat: Boolean(hasVatFlag && vatInput != null),
     vatInput,
@@ -212,14 +210,11 @@ async function postGeminiGenerate({ apiKey, model, imageParts, systemText, userT
 
   const generationConfig = {
     temperature: 0.1,
-    // Leave room after thinking tokens; OCR needs a complete JSON object.
     maxOutputTokens: 2048,
     responseMimeType: "application/json",
   };
   if (richVision) {
-    // Prefer fine text on thermal receipts (Top World / Tops / Makro).
     generationConfig.mediaResolution = "MEDIA_RESOLUTION_HIGH";
-    // Keep thinking small so VAT fields are not truncated.
     generationConfig.thinkingConfig = { thinkingBudget: 256 };
   }
 
@@ -259,7 +254,6 @@ async function callGeminiJson({
     const msg = String(
       body?.error?.message || body?.error?.status || `Gemini HTTP ${res.status}`,
     );
-    // Older / alternate models may reject mediaResolution or thinkingConfig.
     if (/mediaResolution|thinkingConfig|Unknown name|Invalid JSON/i.test(msg)) {
       ({ res, body } = await postGeminiGenerate({
         apiKey,
@@ -289,15 +283,16 @@ async function callGeminiJson({
   return parsed;
 }
 
-async function callGeminiExtract({ apiKey, model, imageParts, businessContext }) {
+async function extractOneImage({ apiKey, model, imagePart, businessContext, imageIndex, imageCount }) {
   const parsed = await callGeminiJson({
     apiKey,
     model,
-    imageParts,
+    imageParts: [imagePart],
     systemText: buildExtractSystemPrompt(businessContext),
-    userText: `อ่านใบเสร็จ/หลักฐานในรูป ${imageParts.length} รูป แล้วดึงข้อมูลบัญชีเงินออกตามรูปแบบ JSON
-สำคัญมาก: ดูใต้ยอดรวมตัวหนาท้ายบิล — ท็อปเวิลด์มี "ฐานภาษี 7%" และ "ภาษีมูลค่าเพิ่ม 7%" (เช่น ยอด 5743 → ฐาน ~5367 / ภาษี ~376)
-อย่าสับสนตัว V ท้ายรายการสินค้ากับยอดภาษี`,
+    userText: `อ่านเอกสารในรูปนี้ (รูปที่ ${imageIndex}/${imageCount}) แล้วดึง JSON
+ก่อนอื่นตัดสิน docKind: สลิปโอนเงิน=bank_slip / ใบเสร็จ-ใบกำกับ=tax_invoice
+ถ้าเป็นใบเสร็จห้าง/ใบกำกับ ให้อ่านบรรทัดภาษีมูลค่าเพิ่มที่พิมพ์บนบิล (ห้าม×7/107)
+ถ้าเป็นสลิปโอน ให้ hasVat=false`,
   });
 
   const type = normalizeType(parsed.type) || "อื่นๆ";
@@ -305,46 +300,58 @@ async function callGeminiExtract({ apiKey, model, imageParts, businessContext })
     throw new Error("AI ตอบประเภทไม่ถูกต้อง");
   }
 
-  let vat = normalizeVatFields(parsed);
-  const amountOut = normalizeAmount(parsed.amountOut);
-  // If model read ฐานภาษี + total but missed the VAT line, fill from bill math.
-  vat = completeVatFromBill(vat, amountOut);
+  let docKind = normalizeDocKind(parsed.docKind);
+  // Heuristic fallback if model omits docKind
+  if (docKind === "other") {
+    const blob = `${parsed.description || ""} ${parsed.note || ""} ${parsed.vatReason || ""} ${parsed.reason || ""}`;
+    if (/สลิป|โอนเงิน|promptpay|ธนาคาร|เป๋าตัง|พร้อมเพย์/i.test(blob)) {
+      docKind = "bank_slip";
+    } else if (
+      /ท็อปเวิลด์|ท็อปส์|แม็คโคร|ใบกำกับ|ใบเสร็จ|ภาษีมูลค่าเพิ่ม|top\s*world/i.test(blob)
+    ) {
+      docKind = "tax_invoice";
+    }
+  }
 
-  // Second pass: amount found but VAT still missing — common on Top World slips.
-  if ((!vat.hasVat || vat.vatInput == null) && amountOut != null) {
+  let vat = normalizeVatFields(parsed);
+  if (docKind === "bank_slip") {
+    vat = {
+      hasVat: false,
+      vatInput: null,
+      vatBase: null,
+      vatInvoiceNo: "",
+      vatSeenOnBill: false,
+      vatReason: "สลิปโอนเงิน — ไม่ใช้เป็นแหล่ง VAT",
+    };
+  }
+
+  const amountOut = normalizeAmount(parsed.amountOut);
+
+  // Retry VAT OCR only on non-bank docs when the first pass missed the tax line.
+  if (docKind !== "bank_slip" && (!vat.hasVat || vat.vatInput == null)) {
     try {
       const vatParsed = await callGeminiJson({
         apiKey,
         model,
-        imageParts,
+        imageParts: [imagePart],
         systemText: VAT_RETRY_SYSTEM_PROMPT,
-        userText: `รอบสอง: โฟกัสเฉพาะท้ายบิลใบเสร็จ ${imageParts.length} รูป
-หากร้านท็อปเวิลด์/Top World: ดูใต้ยอดรวมตัวหนา → บรรทัด "ฐานภาษี 7%" และ "ภาษีมูลค่าเพิ่ม 7%"
-ยอดจ่ายที่อ่านได้ก่อนหน้า ≈ ${amountOut} (ใช้อ้างอิงตำแหน่งท้ายบิลเท่านั้น ห้าม×7/107)`,
+        userText: `รอบสอง: อ่านเฉพาะยอด "ภาษีมูลค่าเพิ่ม" / "VAT" ที่พิมพ์ท้ายบิลในรูปนี้
+ห้ามคำนวณจากยอดรวม — ต้องเห็นตัวเลขบนบิล`,
       });
-      let retryVat = normalizeVatFields(vatParsed);
-      retryVat = completeVatFromBill(retryVat, amountOut);
+      const retryVat = normalizeVatFields(vatParsed);
       if (retryVat.hasVat && retryVat.vatInput != null) {
         vat = retryVat;
-      } else {
-        vat = completeVatFromBill(
-          {
-            ...vat,
-            vatBase: vat.vatBase ?? retryVat.vatBase,
-            vatInvoiceNo: vat.vatInvoiceNo || retryVat.vatInvoiceNo,
-            vatReason: vat.vatReason || retryVat.vatReason,
-          },
-          amountOut,
-        );
+        if (docKind === "other") docKind = "tax_invoice";
+      } else if (retryVat.vatReason && !vat.vatReason) {
+        vat = { ...vat, vatReason: retryVat.vatReason };
       }
     } catch (err) {
       console.warn("vat retry skip", err?.message || err);
     }
   }
 
-  vat = completeVatFromBill(vat, amountOut);
-
   return {
+    docKind,
     date: normalizeDate(parsed.date),
     description: String(parsed.description || "")
       .trim()
@@ -361,9 +368,33 @@ async function callGeminiExtract({ apiKey, model, imageParts, businessContext })
   };
 }
 
+async function callGeminiExtract({ apiKey, model, imageParts, businessContext }) {
+  const results = [];
+  for (let i = 0; i < imageParts.length; i++) {
+    try {
+      results.push(
+        await extractOneImage({
+          apiKey,
+          model,
+          imagePart: imageParts[i],
+          businessContext,
+          imageIndex: i + 1,
+          imageCount: imageParts.length,
+        }),
+      );
+    } catch (err) {
+      console.warn("skip image extract", i, err?.message || err);
+    }
+  }
+  if (!results.length) {
+    throw new Error("อ่านจากรูปไม่สำเร็จ");
+  }
+  return mergeExtractResults(results);
+}
+
 exports.extractOwnerBookFromReceipt = functions
   .region("asia-southeast1")
-  .runWith({ timeoutSeconds: 120, memory: "512MB" })
+  .runWith({ timeoutSeconds: 180, memory: "512MB" })
   .https.onCall(async (data, context) => {
     requireStaff(context);
 
@@ -434,3 +465,7 @@ exports.extractOwnerBookFromReceipt = functions
       );
     }
   });
+
+// Test hooks (no firebase)
+exports._mergeExtractResults = mergeExtractResults;
+exports._normalizeDocKind = normalizeDocKind;

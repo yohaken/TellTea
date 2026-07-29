@@ -33,8 +33,8 @@ export async function extractOwnerBookFromReceipt(
     { imageRefs: string[]; model?: string },
     Record<string, unknown>
   >(getFirebaseFunctions(), "extractOwnerBookFromReceipt", {
-    // CF may run a VAT-focused second Gemini pass on long slips (Top World).
-    timeout: 120_000,
+    // Per-image extract when transfer slip + tax invoice are attached.
+    timeout: 180_000,
   });
   const result = await fn({
     imageRefs: refs,
