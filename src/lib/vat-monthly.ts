@@ -353,9 +353,14 @@ export type VatMonthlyReturn = {
   };
   status: VatMonthlyStatus;
   note: string;
-  /** รายได้ที่ส่งเข้า P&L (ฐานก่อน VAT เป็นค่าเริ่มต้น) */
+  /** รายได้ที่ส่งเข้า P&L (หลังหัก GP ก้อนเดลิเวอรี่) */
   pnlIncome: number;
   pnlIncomeMode: "exVat" | "incVat";
+  /**
+   * หัก GP ก้อนเดลิเวอรี่จากรายได้ก่อนเข้า P&L (บาท · ก่อน VAT)
+   * 0 = ใช้ค่าประมาณจากภาษีซื้อ GP
+   */
+  pnlDeliveryGpDeduct: number;
   filedAt: number;
   filedBy: string;
   updatedAt: number;
@@ -536,6 +541,13 @@ export function proposePnlIncome(
   return mode === "incVat" ? totals.grossSales : totals.vatBase;
 }
 
+/** อ่านค่าหัก GP ที่เซฟไว้ (0 = ยังไม่กำหนด ให้ UI ใช้ค่าประมาณ) */
+export function mapPnlDeliveryGpDeduct(raw: unknown): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return normalizeMoney(n);
+}
+
 function mapSegment(
   kind: VatSegmentKind,
   raw: unknown,
@@ -594,6 +606,7 @@ export function mapVatMonthlyReturn(
         ? normalizeMoney(data.pnlIncome)
         : proposePnlIncome(totals, mode),
     pnlIncomeMode: mode,
+    pnlDeliveryGpDeduct: mapPnlDeliveryGpDeduct(data?.pnlDeliveryGpDeduct),
     filedAt: Number(data?.filedAt) || 0,
     filedBy: String(data?.filedBy || ""),
     updatedAt: Number(data?.updatedAt) || 0,
@@ -696,6 +709,8 @@ export type VatMonthlySaveInput = {
   note?: string;
   pnlIncomeMode?: "exVat" | "incVat";
   pnlIncome?: number;
+  /** หัก GP ก้อนเดลิเวอรี่ (บาท) · ไม่ส่ง = คงค่าเดิม / 0 */
+  pnlDeliveryGpDeduct?: number;
   status?: "draft" | "saved";
 };
 
@@ -724,6 +739,10 @@ export async function saveVatMonthlyReturn(
     input.pnlIncome != null && Number.isFinite(Number(input.pnlIncome))
       ? normalizeMoney(input.pnlIncome)
       : proposePnlIncome(totals, mode);
+  const pnlDeliveryGpDeduct =
+    input.pnlDeliveryGpDeduct != null
+      ? mapPnlDeliveryGpDeduct(input.pnlDeliveryGpDeduct)
+      : mapPnlDeliveryGpDeduct(prev?.pnlDeliveryGpDeduct);
   const docBody: VatMonthlyReturn = {
     monthKey: input.monthKey,
     delivery,
@@ -733,6 +752,7 @@ export async function saveVatMonthlyReturn(
     note: String(input.note || "").trim(),
     pnlIncome,
     pnlIncomeMode: mode,
+    pnlDeliveryGpDeduct,
     filedAt: 0,
     filedBy: "",
     updatedAt: Date.now(),

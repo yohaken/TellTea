@@ -18,17 +18,26 @@ const push = read("src/lib/push.ts");
 const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 365/);
+assert.match(version, /APP_BUILD = 386/);
 assert.match(ledger, /TransferInModal/);
 assert.match(ledger, /ledger-transfer-in-fab/);
 assert.match(ledger, /isOwner/);
 assert.match(ledger, /transferInOpen/);
+assert.match(ledger, /LedgerAiSettingsPanel/);
+assert.doesNotMatch(ledger, /นานๆ ครั้ง/);
 assert.match(transfer, /บันทึกโอนเข้า/);
 assert.match(inPage, /ledger\/\?transferIn=1/);
 assert.doesNotMatch(more, /href: "\/in\/"/);
 assert.match(alert, /ledger\/\?transferIn=1/);
 assert.match(push, /ledger\/\?transferIn=1/);
 assert.match(css, /\.ledger-transfer-in-fab/);
+assert.match(css, /\.ledger-ai-fab/);
+assert.doesNotMatch(css, /\.ledger-ai-settings-toggle/);
+
+const aiPanel = read("src/components/LedgerAiSettingsPanel.tsx");
+assert.match(aiPanel, /ledger-ai-fab/);
+assert.doesNotMatch(aiPanel, /นานๆ ครั้ง/);
+assert.match(aiPanel, /modal-backdrop/);
 
 const cf = read("functions/index.js");
 const sw = read("public/sw.js");

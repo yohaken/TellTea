@@ -437,6 +437,39 @@ service cloud.firestore {
         && (isOwner() || resource.data.createdBy == actorId());
     }
 
+    /**
+     * ตารางแจ้งบิล — พนักงานเสนอบิลค่าไฟ/น้ำ (รูป+ยอด) ให้เจ้าของจ่าย
+     * อ่าน/สร้าง: มีสิทธิ ledger · พนักงานแก้ได้เฉพาะของตัวเองขณะรอ
+     * รับเข้า บช.เจ้าของ / ไม่รับ: เจ้าของ · ลบ: เจ้าของหรือคนสร้าง
+     */
+    match /billNotices/{entryId} {
+      allow read: if hasPerm('ledger');
+      allow create: if hasPerm('ledger')
+        && request.resource.data.createdBy == actorId()
+        && request.resource.data.date is number
+        && request.resource.data.date > 0
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.amountOut is number
+        && request.resource.data.amountOut > 0
+        && request.resource.data.status == 'pending';
+      allow update: if hasPerm('ledger')
+        && (
+          isOwner()
+          || (
+            resource.data.createdBy == actorId()
+            && request.resource.data.createdBy == resource.data.createdBy
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'pending'
+            && request.resource.data.verifiedBy == ''
+            && request.resource.data.verifiedAt == 0
+            && request.resource.data.ownerBookId == ''
+          )
+        );
+      allow delete: if hasPerm('ledger')
+        && (isOwner() || resource.data.createdBy == actorId());
+    }
+
     match /ownerBooks/{entryId} {
       allow read, write: if hasPerm('ownerBooks');
     }
@@ -664,6 +697,7 @@ service cloud.firestore {
         || (docId == 'posStoreClaimSecret' && isOwner())
         || (docId == 'vatSalesSettings' && isOwner())
         || (docId == 'vatMonthlySettings' && (isOwner() || isOwnerEmail()))
+        || (docId == 'personalTaxSettings' && (isOwner() || isOwnerEmail()))
         || (docId == 'vatMailOAuth' && isOwner())
         || (docId == 'vatMailOAuthLineman' && isOwner())
         || (docId == 'vatMailOAuthConfig' && isOwner())
@@ -672,10 +706,10 @@ service cloud.firestore {
         || (docId == 'vatMailOAuthConfigOutlook' && isOwner())
         || (docId == 'vatMailOAuthStateOutlook' && isOwner())
         || (docId == 'vatSalesAlertState' && isOwner())
-        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && docId != 'vatSalesSettings' && docId != 'vatMonthlySettings' && docId != 'vatMailOAuth' && docId != 'vatMailOAuthLineman' && docId != 'vatMailOAuthConfig' && docId != 'vatMailOAuthState' && docId != 'vatMailOAuthOutlook' && docId != 'vatMailOAuthConfigOutlook' && docId != 'vatMailOAuthStateOutlook' && docId != 'vatSalesAlertState' && isStaff())
+        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && docId != 'vatSalesSettings' && docId != 'vatMonthlySettings' && docId != 'personalTaxSettings' && docId != 'vatMailOAuth' && docId != 'vatMailOAuthLineman' && docId != 'vatMailOAuthConfig' && docId != 'vatMailOAuthState' && docId != 'vatMailOAuthOutlook' && docId != 'vatMailOAuthConfigOutlook' && docId != 'vatMailOAuthStateOutlook' && docId != 'vatSalesAlertState' && isStaff())
         || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes' || docId == 'posMenuRank'));
       allow write: if isOwner()
-        || (isOwnerEmail() && docId == 'vatMonthlySettings')
+        || (isOwnerEmail() && (docId == 'vatMonthlySettings' || docId == 'personalTaxSettings'))
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
         || (isOwner() && docId == 'lowBalanceAlert')
         || (hasPerm('ownerBooks') && docId == 'ownerBooks')

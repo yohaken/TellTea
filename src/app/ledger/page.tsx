@@ -37,6 +37,7 @@ import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
 import { CashInLedgerPanel } from "@/components/CashInLedgerPanel";
+import { BillNoticeLedgerPanel } from "@/components/BillNoticeLedgerPanel";
 import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { personalProfileLabel } from "@/lib/profile";
@@ -130,10 +131,16 @@ function LedgerView() {
   );
 
   const [cashInForceOpen, setCashInForceOpen] = useState(false);
+  const [billNoticeForceOpen, setBillNoticeForceOpen] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("cashIn") === "1") {
       setCashInForceOpen(true);
+      router.replace("/ledger/", { scroll: false });
+      return;
+    }
+    if (searchParams.get("billNotice") === "1") {
+      setBillNoticeForceOpen(true);
       router.replace("/ledger/", { scroll: false });
       return;
     }
@@ -388,14 +395,6 @@ function LedgerView() {
 
   return (
     <div className="ledger-page module-page">
-      <div className="balance-bar">
-        <span>
-          คงเหลือ
-          {refreshing ? <span className="sync-dot" aria-hidden> ·</span> : null}
-        </span>
-        <strong>{balance == null ? "…" : `฿${formatPlainNumber(balance)}`}</strong>
-      </div>
-
       {actorId ? (
         <CashInLedgerPanel
           actorId={actorId}
@@ -406,79 +405,88 @@ function LedgerView() {
         />
       ) : null}
 
-      {isOwner && actorId ? <LedgerAiSettingsPanel actorId={actorId} /> : null}
-
-      <div className="table-search">
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="ค้นหา รายการ / ประเภท / ยอด / วันที่…"
-          autoComplete="off"
-          enterKeyHint="search"
-          aria-label="ค้นหาในตาราง"
+      {actorId ? (
+        <BillNoticeLedgerPanel
+          actorId={actorId}
+          isOwner={!!isOwner}
+          staffName={cashInStaffName}
+          forceOpen={billNoticeForceOpen}
+          onForceOpenConsumed={() => setBillNoticeForceOpen(false)}
         />
-        {query.trim() ? (
-          <button
-            type="button"
-            className="ghost-btn table-search-clear"
-            onClick={() => setQuery("")}
-            aria-label="ล้างคำค้น"
-          >
-            ล้าง
-          </button>
-        ) : null}
-      </div>
-      {deferredQuery ? (
-        <p className="muted table-search-meta">
-          {searchLoading
-            ? "กำลังค้นหาทั้งบัญชี…"
-            : `พบ ${filteredEntries.length} รายการ`}
-        </p>
       ) : null}
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {isOwner && !loading && filteredEntries.length > 0 ? (
-        <div className="bulk-status-toolbar" role="group" aria-label="จัดประเภทหลายรายการ">
-          <button
-            type="button"
-            className="ghost-btn bulk-status-chip"
-            disabled={bulkBusy || !visibleIds.length}
-            onClick={toggleSelectAllVisible}
-          >
-            {allVisibleSelected ? "ยกเลิกที่แสดง" : `เลือกที่แสดง (${visibleIds.length})`}
-          </button>
-          {selectedIds.size > 0 ? (
-            <div className="bulk-status-actions" role="group" aria-label="ตั้งประเภทกลุ่ม">
-              <span className="bulk-status-count">เลือก {selectedIds.size} รายการ</span>
-              {BULK_TYPE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  className="ghost-btn bulk-status-btn"
-                  disabled={bulkBusy}
-                  onClick={() => void onBulkRetype(opt.value)}
-                >
-                  {opt.label}
-                </button>
-              ))}
+      {isOwner && selectedIds.size > 0 ? (
+        <div
+          className="bulk-status-toolbar ledger-bulk-compact"
+          role="group"
+          aria-label="จัดประเภทหลายรายการ"
+        >
+          <div className="bulk-status-actions" role="group" aria-label="ตั้งประเภทกลุ่ม">
+            <span className="bulk-status-count">{selectedIds.size}</span>
+            {BULK_TYPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className="ghost-btn bulk-status-btn"
+                disabled={bulkBusy}
+                onClick={() => void onBulkRetype(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              className="ghost-btn bulk-status-clear"
+              disabled={bulkBusy}
+              onClick={clearSelected}
+            >
+              ยกเลิก
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {!loading ? (
+        <div className="ledger-staff-toolbar">
+          <div className="table-search ledger-table-search">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="ค้นหา…"
+              autoComplete="off"
+              enterKeyHint="search"
+              aria-label="ค้นหาในตาราง"
+            />
+            {query.trim() ? (
               <button
                 type="button"
-                className="ghost-btn bulk-status-clear"
-                disabled={bulkBusy}
-                onClick={clearSelected}
+                className="ghost-btn table-search-clear"
+                onClick={() => setQuery("")}
+                aria-label="ล้างคำค้น"
               >
-                ยกเลิก
+                ล้าง
               </button>
-            </div>
-          ) : (
-            <p className="muted bulk-status-hint">
-              ติ๊กเลือกด้านหน้าหลายแถว → กดปุ่มประเภทเพื่อจัดใหม่พร้อมกัน (เจ้าของเท่านั้น)
-            </p>
-          )}
+            ) : null}
+          </div>
+          <div className="ledger-balance-over-in" aria-label="คงเหลือบัญชีพนักงาน">
+            <span>
+              คงเหลือ
+              {refreshing ? <span className="sync-dot" aria-hidden> ·</span> : null}
+            </span>
+            <strong>{balance == null ? "…" : `฿${formatPlainNumber(balance)}`}</strong>
+          </div>
         </div>
+      ) : null}
+      {deferredQuery ? (
+        <p className="muted table-search-meta ledger-table-search-meta">
+          {searchLoading
+            ? "กำลังค้นหาทั้งบัญชี…"
+            : `พบ ${filteredEntries.length} รายการ`}
+        </p>
       ) : null}
 
       {!loading && entries.length === 0 ? (
@@ -487,7 +495,7 @@ function LedgerView() {
         <p className="empty">ไม่พบรายการที่ตรงกับคำค้น</p>
       ) : !loading ? (
         <>
-          <div className="sheet-wrap">
+          <div className="sheet-wrap ledger-staff-sheet">
             <table className="sheet-table">
               <thead>
                 <tr>
@@ -737,6 +745,8 @@ function LedgerView() {
           <span>เข้า</span>
         </button>
       ) : null}
+
+      {isOwner && actorId ? <LedgerAiSettingsPanel actorId={actorId} /> : null}
     </div>
   );
 }

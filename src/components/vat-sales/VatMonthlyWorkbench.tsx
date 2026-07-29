@@ -4,10 +4,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateTimeShort, formatPlainNumber } from "@/lib/utils";
 import {
   loadOwnerMonthBreakdown,
+  loadPnlReport,
   loadStaffMonthBreakdown,
   saveMonthlyIncome,
   type MonthCategoryRow,
 } from "@/lib/pnl";
+import {
+  buildIncomeBridge,
+  computePersonalIncomeTax,
+  DEFAULT_PERSONAL_ALLOWANCE,
+  loadPersonalTaxSettings,
+  proposeDeliveryGpDeduct,
+  savePersonalTaxSettings,
+  THAI_PIT_BRACKETS,
+} from "@/lib/personal-income-tax";
 import {
   DEFAULT_OUTPUT_PCT,
   DEFAULT_PERIOD_START_DAY,
@@ -22,7 +32,6 @@ import {
   loadVatMonthlySettings,
   mapVatLogicRates,
   outputPctToFraction,
-  proposePnlIncome,
   ratesLabel,
   recomputeSegment,
   saveVatMonthlyReturn,
@@ -34,6 +43,7 @@ import {
   type VatMonthlyReturn,
   type VatSegmentState,
 } from "@/lib/vat-monthly";
+import { exportPersonalTaxYearXlsx } from "@/lib/xlsx-export";
 
 function emptyBookRow(month: string): MonthCategoryRow {
   return { month, asset: 0, cogs: 0, sga: 0, other: 0 };
@@ -778,16 +788,145 @@ function bookOpEx(row: MonthCategoryRow | null) {
 }
 
 /**
- * ตารางกำไรขาดทุนง่าย · บุคคลธรรมดา
- * แสดงของที่มีในระบบ + ช่องที่ยังขาดสำหรับนำส่งรายได้สรรพากร
+ * ตารางแยกรายได้ → P&L
+ * สำคัญ: เดลิเวอรี่ต้องหัก GP ก้อนก่อน ถึงจะเป็นรายได้บุคคล
  */
-function PersonalPnlGapTable({
+function IncomeBridgeTable({
+  month,
+  locked,
+  mode,
+  bridge,
+  gpDeductStr,
+  gpPropose,
+  pnlIncomeStr,
+  onModeChange,
+  onGpDeductChange,
+  onPnlIncomeChange,
+  onUseBridgeIncome,
+}: {
+  month: string;
+  locked: boolean;
+  mode: "exVat" | "incVat";
+  bridge: ReturnType<typeof buildIncomeBridge>;
+  gpDeductStr: string;
+  gpPropose: number;
+  pnlIncomeStr: string;
+  onModeChange: (m: "exVat" | "incVat") => void;
+  onGpDeductChange: (v: string) => void;
+  onPnlIncomeChange: (v: string) => void;
+  onUseBridgeIncome: () => void;
+}) {
+  return (
+    <section className="vat-table-block vat-income-bridge">
+      <h2 className="vat-table-title">
+        รายได้แยก → P&L — {formatThaiMonthKey(month)}
+      </h2>
+      <p className="muted vat-sales-hint vat-hint-one-line">
+        เดลิเวอรี่มียอดก้อนจากแพลตฟอร์ม — ต้องหัก GP ก้อนก่อน ถึงจะใส่รายได้บุคคล ·
+        หน้าร้านไม่หัก GP นี้
+      </p>
+      <div className="sheet-wrap vat-month-slim-wrap">
+        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+          <thead>
+            <tr>
+              <th className="col-seg">รายการ</th>
+              <th className="col-num">ยอด</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="col-seg">โหมดยอด</td>
+              <td className="col-num col-input">
+                <select
+                  className="vat-inline-select"
+                  disabled={locked}
+                  value={mode}
+                  onChange={(e) =>
+                    onModeChange(
+                      e.target.value === "incVat" ? "incVat" : "exVat",
+                    )
+                  }
+                >
+                  <option value="exVat">ก่อน VAT (แนะนำ)</option>
+                  <option value="incVat">รวม VAT</option>
+                </select>
+              </td>
+            </tr>
+            <tr>
+              <td className="col-seg">รายได้เดลิเวอรี่</td>
+              <td className="col-num">{fmt(bridge.deliveryGross)}</td>
+            </tr>
+            <tr>
+              <td className="col-seg">รายได้หน้าร้าน</td>
+              <td className="col-num">{fmt(bridge.storefrontGross)}</td>
+            </tr>
+            <tr>
+              <td className="col-seg">รวมรายได้ก่อนหัก</td>
+              <td className="col-num">{fmt(bridge.grossTotal)}</td>
+            </tr>
+            <tr>
+              <td className="col-seg">
+                − หัก GP ก้อนเดลิเวอรี่
+                <span className="muted"> · ประมาณ {fmt(gpPropose)}</span>
+              </td>
+              <td className="col-num col-input">
+                <MoneyCell
+                  value={gpDeductStr}
+                  locked={locked}
+                  ariaLabel="หัก GP ก้อนเดลิเวอรี่"
+                  onChange={onGpDeductChange}
+                />
+              </td>
+            </tr>
+            <tr className="vat-sales-totals-row">
+              <td className="col-seg">= รายได้สุทธิ → P&L</td>
+              <td className="col-num col-input col-net">
+                <MoneyCell
+                  value={pnlIncomeStr}
+                  locked={locked}
+                  ariaLabel="รายได้สุทธิเข้า P&L"
+                  onChange={onPnlIncomeChange}
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {!locked ? (
+        <div className="vat-month-actions vat-month-actions--mini">
+          <button
+            type="button"
+            className="vat-mini-btn"
+            onClick={onUseBridgeIncome}
+          >
+            ใช้ยอดคำนวณ ({formatPlainNumber(bridge.pnlIncome)})
+          </button>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function PersonalTaxBlock({
   month,
   income,
   netVat,
   staff,
   owner,
   booksPulled,
+  locked,
+  allowanceStr,
+  otherDeductStr,
+  taxNote,
+  yearBusy,
+  yearProfit,
+  yearTax,
+  onAllowanceChange,
+  onOtherDeductChange,
+  onTaxNoteChange,
+  onSaveTaxSettings,
+  onPullYear,
+  onExportYear,
 }: {
   month: string;
   income: number;
@@ -795,124 +934,209 @@ function PersonalPnlGapTable({
   staff: MonthCategoryRow | null;
   owner: MonthCategoryRow | null;
   booksPulled: boolean;
+  locked: boolean;
+  allowanceStr: string;
+  otherDeductStr: string;
+  taxNote: string;
+  yearBusy: boolean;
+  yearProfit: number | null;
+  yearTax: ReturnType<typeof computePersonalIncomeTax> | null;
+  onAllowanceChange: (v: string) => void;
+  onOtherDeductChange: (v: string) => void;
+  onTaxNoteChange: (v: string) => void;
+  onSaveTaxSettings: () => void;
+  onPullYear: () => void;
+  onExportYear: () => void;
 }) {
   const staffOp = bookOpEx(staff);
   const ownerOp = bookOpEx(owner);
-  const assetTotal =
-    (staff?.asset || 0) + (owner?.asset || 0);
-  const profit =
+  const assetTotal = (staff?.asset || 0) + (owner?.asset || 0);
+  const monthProfit =
     booksPulled && staffOp != null && ownerOp != null
       ? income - staffOp - ownerOp
       : null;
-
-  const rows: {
-    item: string;
-    source: string;
-    status: string;
-    amount: string;
-    tone?: "net" | "gap" | "muted";
-  }[] = [
-    {
-      item: "รายได้ (ก่อน VAT / ฐาน)",
-      source: "VAT ตาราง 1 → รายได้ P&L",
-      status: income > 0 ? "มี" : "ยังไม่ใส่",
-      amount: fmt(income),
-    },
-    {
-      item: "− ค่าใช้จ่าย บช. พนักงาน (COGS+SGA+อื่น)",
-      source: "ledger",
-      status: booksPulled ? "ดึงแล้ว" : "กดดึงบช.",
-      amount: staffOp == null ? "—" : fmt(staffOp),
-    },
-    {
-      item: "− ค่าใช้จ่าย บช. เจ้าของ (COGS+SGA+อื่น)",
-      source: "ownerBooks",
-      status: booksPulled ? "ดึงแล้ว" : "กดดึงบช.",
-      amount: ownerOp == null ? "—" : fmt(ownerOp),
-    },
-    {
-      item: "= กำไรประมาณการเดือน",
-      source: "คำนวณ",
-      status: profit == null ? "รอข้อมูล" : "ประมาณ",
-      amount: profit == null ? "—" : formatPlainNumber(profit),
-      tone: "net",
-    },
-    {
-      item: "ภาษีมูลค่าเพิ่มสุทธิ (แยกจากเงินได้)",
-      source: "VAT ตาราง 3",
-      status: "มี",
-      amount: fmt(netVat),
-    },
-    {
-      item: "ซื้อสินทรัพย์ (ไม่หักรายได้ทันที)",
-      source: "ledger / ownerBooks · asset",
-      status: booksPulled ? "ดึงแล้ว" : "กดดึงบช.",
-      amount: booksPulled ? fmt(assetTotal) : "—",
-      tone: "muted",
-    },
-    {
-      item: "ค่าลดหย่อนบุคคล (ภ.ง.ด.)",
-      source: "—",
-      status: "ยังไม่มี",
-      amount: "—",
-      tone: "gap",
-    },
-    {
-      item: "คำนวณภาษีเงินได้บุคคล / ขั้นบันได",
-      source: "—",
-      status: "ยังไม่มี",
-      amount: "—",
-      tone: "gap",
-    },
-    {
-      item: "สรุปรายปี + ส่งออกยื่น ภ.ง.ด.",
-      source: "—",
-      status: "ยังไม่มี",
-      amount: "—",
-      tone: "gap",
-    },
-  ];
+  const yearBe = Number(month.slice(0, 4)) + 543;
 
   return (
     <section className="vat-table-block vat-personal-pnl">
       <h2 className="vat-table-title">
         กำไรขาดทุนง่าย · บุคคลธรรมดา — {formatThaiMonthKey(month)}
       </h2>
+      <div className="sheet-wrap vat-month-slim-wrap">
+        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+          <thead>
+            <tr>
+              <th className="col-seg">รายการเดือน</th>
+              <th className="col-num">ยอด</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="col-seg">รายได้สุทธิ (จากตารางแยก)</td>
+              <td className="col-num">{fmt(income)}</td>
+            </tr>
+            <tr>
+              <td className="col-seg">− ค่าใช้จ่าย บช. พนักงาน</td>
+              <td className="col-num">
+                {staffOp == null ? "—" : fmt(staffOp)}
+              </td>
+            </tr>
+            <tr>
+              <td className="col-seg">− ค่าใช้จ่าย บช. เจ้าของ</td>
+              <td className="col-num">
+                {ownerOp == null ? "—" : fmt(ownerOp)}
+              </td>
+            </tr>
+            <tr className="vat-sales-totals-row">
+              <td className="col-seg">= กำไรประมาณการเดือน</td>
+              <td className="col-num col-net">
+                {monthProfit == null ? "—" : formatPlainNumber(monthProfit)}
+              </td>
+            </tr>
+            <tr>
+              <td className="col-seg">VAT สุทธิ (แยก · ไม่หักเงินได้)</td>
+              <td className="col-num">{fmt(netVat)}</td>
+            </tr>
+            <tr>
+              <td className="col-seg">ซื้อสินทรัพย์ (ไม่หักรายได้ทันที)</td>
+              <td className="col-num">{booksPulled ? fmt(assetTotal) : "—"}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="vat-table-title" style={{ marginTop: "0.55rem" }}>
+        ค่าลดหย่อน + ภาษีเงินได้ (ภ.ง.ด.) · ปี {yearBe}
+      </h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        ของที่มีในระบบใช้ประมาณกำไรเดือนได้ · ช่อง「ยังไม่มี」คือสิ่งที่ต้องเติมเพื่อยื่นรายได้สรรพากร
+        ค่าลดหย่อนผู้มีเงินได้หลัก {formatPlainNumber(DEFAULT_PERSONAL_ALLOWANCE)} บาท ·
+        แก้ได้ · ขั้นบันไดตามกฎหมาย
       </p>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
           <thead>
             <tr>
               <th className="col-seg">รายการ</th>
-              <th className="col-seg">แหล่งในระบบ</th>
-              <th className="col-pct">สถานะ</th>
-              <th className="col-num">ยอด</th>
+              <th className="col-num">ค่า</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr
-                key={r.item}
-                className={
-                  r.tone === "net"
-                    ? "vat-sales-totals-row"
-                    : r.tone === "gap"
-                      ? "vat-gap-row"
-                      : undefined
-                }
-              >
-                <td className="col-seg">{r.item}</td>
-                <td className="col-seg muted">{r.source}</td>
-                <td className="col-pct">{r.status}</td>
-                <td
-                  className={
-                    r.tone === "net" ? "col-num col-net" : "col-num"
-                  }
-                >
-                  {r.amount}
+            <tr>
+              <td className="col-seg">ค่าลดหย่อนผู้มีเงินได้</td>
+              <td className="col-num col-input">
+                <MoneyCell
+                  value={allowanceStr}
+                  locked={locked}
+                  ariaLabel="ค่าลดหย่อนผู้มีเงินได้"
+                  onChange={onAllowanceChange}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td className="col-seg">ค่าลดหย่อน / รายการอื่น (แก้เอง)</td>
+              <td className="col-num col-input">
+                <MoneyCell
+                  value={otherDeductStr}
+                  locked={locked}
+                  ariaLabel="ค่าลดหย่อนอื่น"
+                  onChange={onOtherDeductChange}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td className="col-seg">โน้ตภาษี</td>
+              <td className="col-num col-input">
+                <input
+                  className="vat-sales-input"
+                  disabled={locked}
+                  value={taxNote}
+                  placeholder="เช่น คู่สมรส / บุตร…"
+                  aria-label="โน้ตภาษี"
+                  onChange={(e) => onTaxNoteChange(e.target.value)}
+                  style={{ textAlign: "left", minWidth: "8rem" }}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td className="col-seg">กำไรปี (หลังดึงสรุปปี)</td>
+              <td className="col-num">
+                {yearProfit == null ? "—" : formatPlainNumber(yearProfit)}
+              </td>
+            </tr>
+            <tr>
+              <td className="col-seg">เงินได้สุทธิ (หลังลดหย่อน)</td>
+              <td className="col-num">
+                {yearTax ? formatPlainNumber(yearTax.taxable) : "—"}
+              </td>
+            </tr>
+            <tr className="vat-sales-totals-row">
+              <td className="col-seg">ภาษีเงินได้ประมาณ</td>
+              <td className="col-num col-net">
+                {yearTax ? formatPlainNumber(yearTax.tax) : "—"}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="vat-month-actions vat-month-actions--mini">
+        {!locked ? (
+          <button
+            type="button"
+            className="vat-mini-btn"
+            onClick={onSaveTaxSettings}
+          >
+            บันทึกค่าลดหย่อน
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="vat-mini-btn"
+          disabled={yearBusy}
+          onClick={onPullYear}
+        >
+          {yearBusy ? "กำลังดึงปี…" : `ดึงสรุปปี ${yearBe}`}
+        </button>
+        <button
+          type="button"
+          className="vat-mini-btn"
+          disabled={!yearTax}
+          onClick={onExportYear}
+        >
+          ส่งออกยื่น ภ.ง.ด.
+        </button>
+      </div>
+
+      <h2 className="vat-table-title" style={{ marginTop: "0.45rem" }}>
+        ขั้นบันไดภาษีเงินได้
+      </h2>
+      <div className="sheet-wrap vat-month-slim-wrap">
+        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+          <thead>
+            <tr>
+              <th className="col-seg">ช่วงเงินได้สุทธิ</th>
+              <th className="col-pct">อัตรา</th>
+              <th className="col-num">ยอดในชั้น</th>
+              <th className="col-num">ภาษีชั้น</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(yearTax?.slices?.length
+              ? yearTax.slices
+              : THAI_PIT_BRACKETS.map((b) => ({
+                  label: b.label,
+                  rate: b.rate,
+                  bandAmount: 0,
+                  tax: 0,
+                }))
+            ).map((s) => (
+              <tr key={s.label}>
+                <td className="col-seg">{s.label}</td>
+                <td className="col-pct">{Math.round(s.rate * 100)}%</td>
+                <td className="col-num">
+                  {yearTax ? fmt(s.bandAmount) : "—"}
                 </td>
+                <td className="col-num">{yearTax ? fmt(s.tax) : "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -969,6 +1193,20 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   const [bookOwner, setBookOwner] = useState<MonthCategoryRow | null>(null);
   const [booksBusy, setBooksBusy] = useState(false);
   const [booksPulledAt, setBooksPulledAt] = useState(0);
+  const [gpDeductStr, setGpDeductStr] = useState("");
+  const [allowanceStr, setAllowanceStr] = useState(
+    String(DEFAULT_PERSONAL_ALLOWANCE),
+  );
+  const [otherDeductStr, setOtherDeductStr] = useState("");
+  const [taxNote, setTaxNote] = useState("");
+  const [yearBusy, setYearBusy] = useState(false);
+  const [yearProfit, setYearProfit] = useState<number | null>(null);
+  const [yearTax, setYearTax] = useState<ReturnType<
+    typeof computePersonalIncomeTax
+  > | null>(null);
+  const [yearMonths, setYearMonths] = useState<
+    { month: string; income: number; opex: number; profit: number }[]
+  >([]);
 
   deliveryDraftRef.current = deliveryDraft;
   storefrontDraftRef.current = storefrontDraft;
@@ -984,6 +1222,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       n: string,
       mode: "exVat" | "incVat",
       income: string,
+      gpDeduct = "",
     ) =>
       JSON.stringify({
         delivery: d,
@@ -991,6 +1230,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         note: n,
         pnlMode: mode,
         pnlIncome: income,
+        gpDeduct,
       }),
     [],
   );
@@ -1017,19 +1257,35 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     if (!hydratedRef.current) setLoading(true);
     setError("");
     try {
-      const [ret, st] = await Promise.all([
+      const [ret, st, taxSt] = await Promise.all([
         loadVatMonthlyReturn(month),
         loadVatMonthlySettings(),
+        loadPersonalTaxSettings(),
       ]);
       let d = segToDraft(ret.delivery);
       let s = segToDraft(ret.storefront);
       let n = ret.note;
       let mode = ret.pnlIncomeMode;
       let income = moneyInputValue(ret.pnlIncome);
+      const gpPropose = proposeDeliveryGpDeduct({
+        gpVatClaimed: ret.delivery.gpVatClaimed,
+        gpEstimate: ret.delivery.gpEstimate,
+        outputPct: ret.delivery.rates.outputPct,
+      });
+      let gpDeduct = moneyInputValue(
+        ret.pnlDeliveryGpDeduct > 0 ? ret.pnlDeliveryGpDeduct : gpPropose,
+      );
 
       // ร่างในเครื่อง — รวมแบบไม่ให้ค่าว่างทับตัวเลข
       if (ret.status !== "filed") {
-        const cached = readLocalDraft(month);
+        const cached = readLocalDraft(month) as {
+          delivery?: DraftSeg;
+          storefront?: DraftSeg;
+          note?: string;
+          pnlMode?: "exVat" | "incVat";
+          pnlIncome?: string;
+          gpDeduct?: string;
+        } | null;
         if (cached?.delivery) d = mergePreferMoney(d, cached.delivery);
         if (cached?.storefront) s = mergePreferMoney(s, cached.storefront);
         if (typeof cached?.note === "string" && cached.note.trim()) n = cached.note;
@@ -1038,6 +1294,9 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         }
         if (typeof cached?.pnlIncome === "string" && cached.pnlIncome.trim()) {
           income = cached.pnlIncome;
+        }
+        if (typeof cached?.gpDeduct === "string" && cached.gpDeduct.trim()) {
+          gpDeduct = cached.gpDeduct;
         }
       }
 
@@ -1058,6 +1317,10 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       setNoteOpen(Boolean(n.trim()));
       setPnlMode(mode);
       setPnlIncome(income);
+      setGpDeductStr(gpDeduct);
+      setAllowanceStr(String(taxSt.personalAllowance || DEFAULT_PERSONAL_ALLOWANCE));
+      setOtherDeductStr(moneyInputValue(taxSt.otherDeductions));
+      setTaxNote(taxSt.note);
       if (
         ret.delivery.partsSum > 0 ||
         parseMoneyInput(d.channels.shopee) +
@@ -1079,8 +1342,11 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         ret.note,
         ret.pnlIncomeMode,
         moneyInputValue(ret.pnlIncome),
+        moneyInputValue(
+          ret.pnlDeliveryGpDeduct > 0 ? ret.pnlDeliveryGpDeduct : gpPropose,
+        ),
       );
-      const localSnap = snapshotDraft(d, s, n, mode, income);
+      const localSnap = snapshotDraft(d, s, n, mode, income, gpDeduct);
       savedSnapRef.current = savedSnap;
       setDirty(localSnap !== savedSnap);
       // เก็บร่างในเครื่องหลัง hydrate (สำรองแม้เซิร์ฟเวอร์ว่าง)
@@ -1133,6 +1399,38 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     [delivery, storefront],
   );
 
+  const gpPropose = useMemo(
+    () =>
+      proposeDeliveryGpDeduct({
+        gpVatClaimed: delivery.gpVatClaimed,
+        gpEstimate: delivery.gpEstimate,
+        outputPct: delivery.rates.outputPct,
+      }),
+    [delivery.gpVatClaimed, delivery.gpEstimate, delivery.rates.outputPct],
+  );
+
+  const effectiveGpDeduct = parseMoneyInput(gpDeductStr) || gpPropose;
+
+  const incomeBridge = useMemo(
+    () =>
+      buildIncomeBridge({
+        deliveryVatBase: delivery.vatBase,
+        deliveryGrossSales: delivery.grossSales,
+        storefrontVatBase: storefront.vatBase,
+        storefrontGrossSales: storefront.grossSales,
+        mode: pnlMode,
+        gpDeduct: effectiveGpDeduct,
+      }),
+    [
+      delivery.vatBase,
+      delivery.grossSales,
+      storefront.vatBase,
+      storefront.grossSales,
+      pnlMode,
+      effectiveGpDeduct,
+    ],
+  );
+
   const locked = doc?.status === "filed";
   const period = useMemo(
     () => getVatPeriodBoundary(month, periodStartDay),
@@ -1148,6 +1446,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       note,
       pnlMode,
       pnlIncome,
+      gpDeductStr,
     );
     writeLocalDraft(month, payload);
     setDirty(payload !== savedSnapRef.current);
@@ -1157,6 +1456,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     note,
     pnlMode,
     pnlIncome,
+    gpDeductStr,
     month,
     loading,
     locked,
@@ -1178,13 +1478,21 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           const sf = draftToSeg("storefront", storefrontDraftRef.current);
           const mode = pnlModeRef.current;
           const incomeRaw = parseMoneyInput(pnlIncomeRef.current);
-          const proposed = proposePnlIncome(
-            {
-              vatBase: del.vatBase + sf.vatBase,
-              grossSales: del.grossSales + sf.grossSales,
-            },
+          const gp =
+            parseMoneyInput(gpDeductStr) ||
+            proposeDeliveryGpDeduct({
+              gpVatClaimed: del.gpVatClaimed,
+              gpEstimate: del.gpEstimate,
+              outputPct: del.rates.outputPct,
+            });
+          const proposed = buildIncomeBridge({
+            deliveryVatBase: del.vatBase,
+            deliveryGrossSales: del.grossSales,
+            storefrontVatBase: sf.vatBase,
+            storefrontGrossSales: sf.grossSales,
             mode,
-          );
+            gpDeduct: gp,
+          }).pnlIncome;
           const saved = await saveVatMonthlyReturn(
             {
               monthKey: month,
@@ -1193,6 +1501,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
               note: noteRef.current,
               pnlIncomeMode: mode,
               pnlIncome: incomeRaw > 0 ? incomeRaw : proposed,
+              pnlDeliveryGpDeduct: gp,
               status: "draft",
             },
             actor,
@@ -1205,6 +1514,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
             saved.note,
             saved.pnlIncomeMode,
             moneyInputValue(saved.pnlIncome),
+            moneyInputValue(saved.pnlDeliveryGpDeduct),
           );
           savedSnapRef.current = snap;
           writeLocalDraft(month, snap);
@@ -1215,6 +1525,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
             noteRef.current,
             pnlModeRef.current,
             pnlIncomeRef.current,
+            gpDeductStr,
           );
           setDirty(now !== snap);
         } catch {
@@ -1229,6 +1540,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     note,
     pnlMode,
     pnlIncome,
+    gpDeductStr,
     month,
     actor,
     hydrated,
@@ -1275,10 +1587,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     setError("");
     setMsg("");
     try {
-      const proposed = proposePnlIncome(
-        { vatBase: totals.vatBase, grossSales: totals.grossSales },
-        pnlMode,
-      );
+      const proposed = incomeBridge.pnlIncome;
       const incomeRaw = parseMoneyInput(pnlIncome);
       const saved = await saveVatMonthlyReturn(
         {
@@ -1288,18 +1597,21 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           note,
           pnlIncomeMode: pnlMode,
           pnlIncome: incomeRaw > 0 ? incomeRaw : proposed,
+          pnlDeliveryGpDeduct: effectiveGpDeduct,
           status: asDraft ? "draft" : "saved",
         },
         actor,
       );
       setDoc(saved);
       setPnlIncome(moneyInputValue(saved.pnlIncome));
+      setGpDeductStr(moneyInputValue(saved.pnlDeliveryGpDeduct));
       const snap = snapshotDraft(
         segToDraft(saved.delivery),
         segToDraft(saved.storefront),
         saved.note,
         saved.pnlIncomeMode,
         moneyInputValue(saved.pnlIncome),
+        moneyInputValue(saved.pnlDeliveryGpDeduct),
       );
       savedSnapRef.current = snap;
       setDirty(false);
@@ -1321,14 +1633,10 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       if (!okSave) return;
     }
     const income = parseMoneyInput(pnlIncome);
-    const proposed = proposePnlIncome(
-      { vatBase: totals.vatBase, grossSales: totals.grossSales },
-      pnlMode,
-    );
-    const finalIncome = income > 0 ? income : proposed;
+    const finalIncome = income > 0 ? income : incomeBridge.pnlIncome;
     const ok = window.confirm(
-      `ปิดงบเดือน ${month} → ใส่รายได้ P&L = ${formatPlainNumber(finalIncome)} บาท?\n` +
-        `ภาษีสุทธิ ${formatPlainNumber(totals.netVat)} · หลังปิดจะล็อกแก้ยอด`,
+      `ปิดงบ ${formatThaiMonthKey(month)} → รายได้ P&L = ${formatPlainNumber(finalIncome)} บาท?\n` +
+        `(หัก GP เดลิเวอรี่ ${formatPlainNumber(effectiveGpDeduct)}) · VAT สุทธิ ${formatPlainNumber(totals.netVat)} · หลังปิดล็อกแก้ยอด`,
     );
     if (!ok) return;
     setBusy(true);
@@ -1343,6 +1651,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           note,
           pnlIncomeMode: pnlMode,
           pnlIncome: finalIncome,
+          pnlDeliveryGpDeduct: effectiveGpDeduct,
           status: "saved",
         },
         actor,
@@ -1360,6 +1669,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           filed.note,
           filed.pnlIncomeMode,
           moneyInputValue(filed.pnlIncome),
+          moneyInputValue(filed.pnlDeliveryGpDeduct),
         ),
       );
       setMsg(`ปิดงบแล้ว · รายได้ ${formatPlainNumber(filed.pnlIncome)} เข้า P&L`);
@@ -1397,7 +1707,9 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       setBookStaff(pickBookRow(staffRows, month));
       setBookOwner(pickBookRow(ownerRows, month));
       setBooksPulledAt(Date.now());
-      setMsg(`ดึงบช. พนง. + เจ้าของ เดือน ${month} แล้ว (ยังไม่ปิดงบ)`);
+      setMsg(
+        `ดึงบช. พนง. + เจ้าของ ${formatThaiMonthKey(month)} แล้ว (ยังไม่ปิดงบ)`,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -1405,14 +1717,102 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     }
   };
 
+  const saveTaxSettings = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const saved = await savePersonalTaxSettings(
+        {
+          personalAllowance:
+            parseMoneyInput(allowanceStr) || DEFAULT_PERSONAL_ALLOWANCE,
+          otherDeductions: parseMoneyInput(otherDeductStr),
+          note: taxNote,
+        },
+        actor,
+      );
+      setAllowanceStr(String(saved.personalAllowance));
+      setOtherDeductStr(moneyInputValue(saved.otherDeductions));
+      setTaxNote(saved.note);
+      if (yearProfit != null) {
+        setYearTax(
+          computePersonalIncomeTax(yearProfit, {
+            personalAllowance: saved.personalAllowance,
+            otherDeductions: saved.otherDeductions,
+          }),
+        );
+      }
+      setMsg("บันทึกค่าลดหย่อนแล้ว");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const pullYearSummary = async () => {
+    setYearBusy(true);
+    setError("");
+    try {
+      const report = await loadPnlReport();
+      const year = month.slice(0, 4);
+      const months = report.combined
+        .filter((r) => r.month.startsWith(year))
+        .map((r) => {
+          const income = Number(report.incomeByMonth[r.month]) || 0;
+          const opex = r.cogs + r.sga + r.other;
+          return {
+            month: r.month,
+            income,
+            opex,
+            profit: income - opex,
+          };
+        })
+        .filter((m) => m.income > 0 || m.opex > 0);
+      const profit = months.reduce((s, m) => s + m.profit, 0);
+      const allowance =
+        parseMoneyInput(allowanceStr) || DEFAULT_PERSONAL_ALLOWANCE;
+      const other = parseMoneyInput(otherDeductStr);
+      setYearMonths(months);
+      setYearProfit(profit);
+      setYearTax(
+        computePersonalIncomeTax(profit, {
+          personalAllowance: allowance,
+          otherDeductions: other,
+        }),
+      );
+      setMsg(
+        `ดึงสรุปปี ${Number(year) + 543} แล้ว · กำไร ${formatPlainNumber(profit)} · ${months.length} เดือน`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setYearBusy(false);
+    }
+  };
+
+  const exportYearTax = () => {
+    if (!yearTax || yearProfit == null) return;
+    try {
+      exportPersonalTaxYearXlsx({
+        yearCe: Number(month.slice(0, 4)),
+        months: yearMonths,
+        personalAllowance: yearTax.personalAllowance,
+        otherDeductions: yearTax.otherDeductions,
+        taxable: yearTax.taxable,
+        tax: yearTax.tax,
+        slices: yearTax.slices,
+        note: taxNote,
+      });
+      setMsg("ส่งออกไฟล์ ภ.ง.ด. แล้ว");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   /** ใส่รายได้ทดลองเข้า P&L โดยไม่ล็อกเดือน */
   const pushTrialIncome = async () => {
     const income = parseMoneyInput(pnlIncome);
-    const proposed = proposePnlIncome(
-      { vatBase: totals.vatBase, grossSales: totals.grossSales },
-      pnlMode,
-    );
-    const finalIncome = income > 0 ? income : proposed;
+    const finalIncome = income > 0 ? income : incomeBridge.pnlIncome;
     if (finalIncome <= 0) {
       setError("ยังมียอดรายได้ที่จะใส่ P&L ไม่พอ");
       return;
@@ -1434,6 +1834,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           note,
           pnlIncomeMode: pnlMode,
           pnlIncome: finalIncome,
+          pnlDeliveryGpDeduct: effectiveGpDeduct,
           status: "saved",
         },
         actor,
@@ -1446,6 +1847,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         note,
         pnlMode,
         moneyInputValue(finalIncome),
+        moneyInputValue(effectiveGpDeduct),
       );
       savedSnapRef.current = snap;
       setDirty(false);
@@ -1638,32 +2040,60 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           {tab === "close" ? (
             <section className="vat-close-panel">
               <p className="muted vat-sales-hint vat-hint-one-line">
-                กำไรขาดทุนง่าย · บุคคลธรรมดา · ดึงบช.ดูระหว่างงวดได้ · ใส่รายได้ทดลองได้ ·
+                1) แยกรายได้หัก GP เดลิเวอรี่ → 2) ดึงบช. → 3) ลดหย่อน/ภาษีปี · ทดลองได้ ·
                 ปิดงบจริงค่อยล็อก
               </p>
+
+              <IncomeBridgeTable
+                month={month}
+                locked={Boolean(locked)}
+                mode={pnlMode}
+                bridge={incomeBridge}
+                gpDeductStr={gpDeductStr}
+                gpPropose={gpPropose}
+                pnlIncomeStr={pnlIncome}
+                onModeChange={(mode) => {
+                  setPnlMode(mode);
+                  const next = buildIncomeBridge({
+                    deliveryVatBase: delivery.vatBase,
+                    deliveryGrossSales: delivery.grossSales,
+                    storefrontVatBase: storefront.vatBase,
+                    storefrontGrossSales: storefront.grossSales,
+                    mode,
+                    gpDeduct: effectiveGpDeduct,
+                  });
+                  setPnlIncome(moneyInputValue(next.pnlIncome));
+                  markDirty();
+                }}
+                onGpDeductChange={(v) => {
+                  setGpDeductStr(v);
+                  const gp = parseMoneyInput(v) || gpPropose;
+                  const next = buildIncomeBridge({
+                    deliveryVatBase: delivery.vatBase,
+                    deliveryGrossSales: delivery.grossSales,
+                    storefrontVatBase: storefront.vatBase,
+                    storefrontGrossSales: storefront.grossSales,
+                    mode: pnlMode,
+                    gpDeduct: gp,
+                  });
+                  setPnlIncome(moneyInputValue(next.pnlIncome));
+                  markDirty();
+                }}
+                onPnlIncomeChange={(v) => {
+                  setPnlIncome(v);
+                  markDirty();
+                }}
+                onUseBridgeIncome={() => {
+                  setGpDeductStr(moneyInputValue(effectiveGpDeduct));
+                  setPnlIncome(moneyInputValue(incomeBridge.pnlIncome));
+                  markDirty();
+                }}
+              />
 
               <SummaryVatTable
                 delivery={delivery}
                 storefront={storefront}
                 totals={totals}
-              />
-
-              <PersonalPnlGapTable
-                month={month}
-                income={
-                  parseMoneyInput(pnlIncome) ||
-                  proposePnlIncome(
-                    {
-                      vatBase: totals.vatBase,
-                      grossSales: totals.grossSales,
-                    },
-                    pnlMode,
-                  )
-                }
-                netVat={totals.netVat}
-                staff={bookStaff}
-                owner={bookOwner}
-                booksPulled={Boolean(bookStaff && bookOwner)}
               />
 
               <div className="vat-books-block">
@@ -1751,80 +2181,41 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                 </div>
               </div>
 
-              <div className="sheet-wrap vat-month-slim-wrap">
-                <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
-                  <thead>
-                    <tr>
-                      <th className="col-seg">รายได้ → P&L</th>
-                      <th className="col-num">ค่า</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="col-seg">โหมดรายได้ P&L</td>
-                      <td className="col-num col-input">
-                        <select
-                          className="vat-inline-select"
-                          disabled={locked}
-                          value={pnlMode}
-                          onChange={(e) => {
-                            const mode =
-                              e.target.value === "incVat" ? "incVat" : "exVat";
-                            setPnlMode(mode);
-                            setPnlIncome(
-                              moneyInputValue(
-                                proposePnlIncome(
-                                  {
-                                    vatBase: totals.vatBase,
-                                    grossSales: totals.grossSales,
-                                  },
-                                  mode,
-                                ),
-                              ),
-                            );
-                            markDirty();
-                          }}
-                        >
-                          <option value="exVat">ก่อน VAT (แนะนำ)</option>
-                          <option value="incVat">รวม VAT</option>
-                        </select>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="col-seg">ยอดรายได้ที่จะใส่ P&L</td>
-                      <td className="col-num col-input">
-                        <MoneyCell
-                          value={pnlIncome}
-                          locked={Boolean(locked)}
-                          ariaLabel="ยอดรายได้ P&L"
-                          onChange={(v) => {
-                            setPnlIncome(v);
-                            markDirty();
-                          }}
-                        />
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="col-seg">สถานะเดือน</td>
-                      <td className="col-num">
-                        {doc?.status === "filed"
-                          ? "ปิดงบแล้ว · ล็อก"
-                          : doc?.status === "saved"
-                            ? "บันทึกแล้ว · ยังไม่ปิด"
-                            : "ร่าง"}
-                      </td>
-                    </tr>
-                    {doc?.filedAt ? (
-                      <tr>
-                        <td className="col-seg">ปิดงบเมื่อ</td>
-                        <td className="col-num">
-                          {formatDateTimeShort(doc.filedAt)}
-                        </td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
+              <PersonalTaxBlock
+                month={month}
+                income={
+                  parseMoneyInput(pnlIncome) || incomeBridge.pnlIncome
+                }
+                netVat={totals.netVat}
+                staff={bookStaff}
+                owner={bookOwner}
+                booksPulled={Boolean(bookStaff && bookOwner)}
+                locked={Boolean(locked)}
+                allowanceStr={allowanceStr}
+                otherDeductStr={otherDeductStr}
+                taxNote={taxNote}
+                yearBusy={yearBusy}
+                yearProfit={yearProfit}
+                yearTax={yearTax}
+                onAllowanceChange={setAllowanceStr}
+                onOtherDeductChange={setOtherDeductStr}
+                onTaxNoteChange={setTaxNote}
+                onSaveTaxSettings={() => void saveTaxSettings()}
+                onPullYear={() => void pullYearSummary()}
+                onExportYear={exportYearTax}
+              />
+
+              <p className="muted vat-sales-hint vat-hint-one-line">
+                สถานะเดือน:{" "}
+                {doc?.status === "filed"
+                  ? "ปิดงบแล้ว · ล็อก"
+                  : doc?.status === "saved"
+                    ? "บันทึกแล้ว · ยังไม่ปิด"
+                    : "ร่าง"}
+                {doc?.filedAt
+                  ? ` · ปิดเมื่อ ${formatDateTimeShort(doc.filedAt)}`
+                  : ""}
+              </p>
 
               <div className="vat-month-actions vat-month-actions--mini">
                 {!locked ? (
@@ -1832,7 +2223,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                     <button
                       type="button"
                       className="vat-mini-btn"
-                      disabled={busy || totals.grossSales <= 0}
+                      disabled={busy || incomeBridge.pnlIncome <= 0}
                       onClick={() => void pushTrialIncome()}
                     >
                       ใส่รายได้ทดลอง → P&L
@@ -1840,7 +2231,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                     <button
                       type="button"
                       className="vat-mini-btn vat-mini-btn--primary"
-                      disabled={busy || totals.grossSales <= 0}
+                      disabled={busy || incomeBridge.pnlIncome <= 0}
                       onClick={() => void closeMonth()}
                     >
                       ปิดงบจริง → ล็อก

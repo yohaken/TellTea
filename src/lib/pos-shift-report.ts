@@ -88,6 +88,9 @@ export type ShiftReportPayload = {
   cashDifference?: number;
   leaveFloat?: number;
   discrepancyLabel?: string;
+  /** Mid-shift cash drop / top-up (บาท) — ใช้คำนวณควรมีในลิ้นชัก + แถวเงินเข้า/เงินออก */
+  cashOutTotal?: number;
+  cashInTotal?: number;
 };
 
 function round2(n: number) {
@@ -267,6 +270,8 @@ export function buildShiftReportPayload(input: {
   cashDifference?: number;
   leaveFloat?: number;
   discrepancyLabel?: string;
+  cashOutTotal?: number;
+  cashInTotal?: number;
 }): ShiftReportPayload {
   const detail =
     input.receipts && input.receipts.length > 0
@@ -303,5 +308,7 @@ export function buildShiftReportPayload(input: {
     cashDifference: input.cashDifference,
     leaveFloat: input.leaveFloat,
     discrepancyLabel: input.discrepancyLabel,
+    cashOutTotal: input.cashOutTotal,
+    cashInTotal: input.cashInTotal,
   };
 }

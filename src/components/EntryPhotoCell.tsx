@@ -116,6 +116,8 @@ export function ImagePreviewModal({
   showCaptureMeta = false,
   /** Business date of parent entry — used for mismatch hint */
   entryDateMs,
+  /** Edit mode: remove current photo from the parent list (index in `urls`) */
+  onRemoveAt,
 }: {
   url?: string;
   urls?: string[];
@@ -124,6 +126,7 @@ export function ImagePreviewModal({
   onClose: () => void;
   showCaptureMeta?: boolean;
   entryDateMs?: number;
+  onRemoveAt?: (index: number) => void;
 }) {
   const list = urls?.length ? urls : url ? [url] : [];
   const start = Math.min(Math.max(0, initialIndex), Math.max(0, list.length - 1));
@@ -227,6 +230,15 @@ export function ImagePreviewModal({
   useEffect(() => {
     dismissYRef.current = dismissY;
   }, [dismissY]);
+
+  /** Parent list shrank after delete — keep index in range or close */
+  useEffect(() => {
+    if (!list.length) {
+      onCloseRef.current();
+      return;
+    }
+    if (idx > list.length - 1) setIdx(list.length - 1);
+  }, [list.length, idx]);
 
   useEffect(() => {
     let cancelled = false;
@@ -723,6 +735,22 @@ export function ImagePreviewModal({
           <p className="photo-fs-hint-solo">ปัดลงหรือกากบาทเพื่อปิด</p>
         )}
         <div className="photo-fs-actions">
+          {onRemoveAt ? (
+            <button
+              type="button"
+              className="photo-fs-download is-danger"
+              disabled={!list.length || saving}
+              onClick={() => {
+                if (!list.length) return;
+                if (!window.confirm("ลบรูปนี้? แล้วถ่าย/แนบใหม่ได้")) return;
+                const removeAt = Math.min(idx, list.length - 1);
+                onRemoveAt(removeAt);
+              }}
+            >
+              <X size={16} aria-hidden />
+              ลบรูปนี้
+            </button>
+          ) : null}
           <button
             type="button"
             className="photo-fs-download"

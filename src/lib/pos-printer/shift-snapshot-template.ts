@@ -28,11 +28,13 @@ export function sampleShiftReportPayload(
     printedAt: now,
     staffName: shop?.receiptStaffName?.trim() || "หน้าร้าน",
     openingCash: 2000,
-    closingCashCounted: kind === "close" ? 2850 : undefined,
-    expectedCash: kind === "close" ? 2840 : undefined,
-    cashDifference: kind === "close" ? 10 : undefined,
+    cashOutTotal: 50,
+    cashInTotal: 0,
+    closingCashCounted: kind === "close" ? 2065 : undefined,
+    expectedCash: kind === "close" ? 2065 : undefined,
+    cashDifference: kind === "close" ? 0 : undefined,
     leaveFloat: kind === "close" ? 2000 : undefined,
-    discrepancyLabel: kind === "close" ? "เกิน" : undefined,
+    discrepancyLabel: kind === "close" ? "ตรง" : undefined,
     summary: {
       count: 4,
       total: 372,
@@ -162,7 +164,9 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
   const title =
     data.kind === "snapshot" ? "Snapshot ระหว่างรอบการขาย" : "รายงานยอดการขาย";
   const footer =
-    data.kind === "snapshot" ? "*** ไม่ใช่การปิดรอบ ***" : "ปิดรอบเรียบร้อย";
+    data.kind === "snapshot"
+      ? "*** ไม่ใช่การปิดรอบ ***"
+      : "ปิดรอบเรียบร้อย · สรุปส่งเงินสด";
   const sessionShort = `#${data.sessionId.slice(-4).toUpperCase()}`;
   const s = data.summary;
   const d = data.detail;
@@ -248,6 +252,15 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
       typeof data.openingCash === "number" && Number.isFinite(data.openingCash)
         ? data.openingCash
         : null;
+    const outAmt =
+      typeof data.cashOutTotal === "number" && Number.isFinite(data.cashOutTotal)
+        ? Math.max(0, data.cashOutTotal)
+        : 0;
+    const inAmt =
+      typeof data.cashInTotal === "number" && Number.isFinite(data.cashInTotal)
+        ? Math.max(0, data.cashInTotal)
+        : 0;
+    const netInOut = inAmt - outAmt; // FoodStory-style signed line (ออก = ติดลบ)
     const counted =
       typeof data.closingCashCounted === "number" && Number.isFinite(data.closingCashCounted)
         ? data.closingCashCounted
@@ -256,8 +269,8 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
       typeof data.expectedCash === "number" && Number.isFinite(data.expectedCash)
         ? data.expectedCash
         : opening != null
-          ? opening + s.cashTotal
-          : s.cashTotal;
+          ? opening + s.cashTotal - outAmt + inAmt
+          : s.cashTotal - outAmt + inAmt;
     const diff =
       typeof data.cashDifference === "number" && Number.isFinite(data.cashDifference)
         ? data.cashDifference
@@ -271,20 +284,27 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
     const countedLabel = counted != null ? money(counted) : "—";
     const diffLabel =
       diff == null ? "—" : `${label ? `${escapeReceiptHtml(label)} ` : ""}${money(diff)}`;
-    const expectedNote =
-      opening != null
-        ? ""
+    const isClose = data.kind === "close";
+    const remit =
+      isClose && counted != null
+        ? Math.max(0, counted - Math.max(0, leave ?? 0))
+        : null;
+    const expectedNote = isClose
+      ? `<div class="muted tiny">*นับจริง − ทอนรอบถัดไป</div>`
+      : opening != null
+        ? `<div class="muted tiny">*ยังไม่ปิดรอบ — ยังไม่นับส่งเงิน</div>`
         : `<div class="muted tiny">*ยังไม่รวมเงินทอนเริ่มต้น (จะเพิ่มตอนเปิดกะ)</div>`;
     return `<hr class="rule" />
   <div class="sec">รอบการขาย (เงินสด)</div>
   <div class="row"><span>เงินสดเริ่มต้น</span><span>${openingLabel}</span></div>
   <div class="row"><span>ยอดขายเงินสด</span><span>${money(s.cashTotal)}</span></div>
   <div class="row"><span>คืนเงิน</span><span>${money(0)}</span></div>
-  <div class="row"><span>เงินเข้า/เงินออก</span><span>${money(0)}</span></div>
-  <div class="row"><span>ควรมีในลิ้นชัก${opening != null ? "" : "*"}</span><span>${money(expected)}</span></div>
+  <div class="row"><span>เงินเข้า/เงินออก</span><span>${money(netInOut)}</span></div>
+  <div class="row"><span>ควรมีในลิ้นชัก${opening != null || isClose ? "" : "*"}</span><span>${money(expected)}</span></div>
   <div class="row"><span>นับจริงในลิ้นชัก</span><span>${countedLabel}</span></div>
   <div class="row"><span>ส่วนต่าง</span><span>${diffLabel}</span></div>
   ${leave != null ? `<div class="row"><span>ทอนรอบถัดไป</span><span>${money(leave)}</span></div>` : ""}
+  <div class="row"><span>ยอดเงินสดที่ต้องนำส่ง</span><span>${remit != null ? money(remit) : "—"}</span></div>
   ${expectedNote}`;
   })();
 
@@ -472,16 +492,16 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
   ${
     data.kind === "close"
       ? `<div class="check">
-  <div class="sec">ตรวจก่อนเซ็น</div>
-  <div class="check-item">[ ] นับเงินในลิ้นชักแล้ว</div>
-  <div class="check-item">[ ] ยอดเงินสดตรงกับบิลเงินสด</div>
+  <div class="sec">ตรวจก่อนเซ็น / ส่งเงิน</div>
+  <div class="check-item">[ ] นับรวมเงินทอนเริ่มต้นแล้ว</div>
+  <div class="check-item">[ ] ยอดที่ต้องนำส่งตรงกับเงินในมือ</div>
   <div class="check-item">[ ] โอน/PromptPay ตรวจสลิปแล้ว</div>
   <div class="check-item">[ ] ส่วนต่างมีเหตุผล (ถ้ามี)</div>
 </div>
 <div class="sign">
-  <p>ลงชื่อผู้ส่งกะ</p>
+  <p>ลงชื่อผู้ส่งเงิน</p>
   <div class="sign-line"></div>
-  <p>ลงชื่อผู้รับกะ</p>
+  <p>ลงชื่อผู้รับเงิน</p>
   <div class="sign-line"></div>
 </div>`
       : ""

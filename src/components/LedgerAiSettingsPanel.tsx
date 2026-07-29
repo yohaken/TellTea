@@ -11,7 +11,8 @@ import {
 } from "@/lib/ai-settings";
 import { classifyLedgerTypeWithAi, reclassifyLedgerMonthWithAi } from "@/lib/ledger-ai";
 import type { ReclassifyMonthProgress } from "@/lib/ledger-ai";
-import { ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
+import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 /** เดือนที่เปิดให้จัดประเภทย้อนหลังด้วย AI (ตามที่เจ้าของขอ) */
 const BACKFILL_YEAR = 2026;
@@ -21,7 +22,10 @@ type Props = {
   actorId: string;
 };
 
-/** แผงตั้งค่า AI เล็กๆ ในสมุดบัญชี — เฉพาะเจ้าของ */
+/**
+ * ปุ่มลอยเล็กมาก (เจ้าของเท่านั้น) — ใต้ FAB โอนเข้า
+ * เปิด modal ตั้งค่า AI จัดประเภท (ใช้ไม่บ่อย)
+ */
 export function LedgerAiSettingsPanel({ actorId }: Props) {
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState<LedgerAiSettings>({
@@ -36,8 +40,12 @@ export function LedgerAiSettingsPanel({ actorId }: Props) {
   const [err, setErr] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
+  useBodyScrollLock(open);
+
   useEffect(() => {
+    if (!open) return;
     let cancelled = false;
+    setLoaded(false);
     void getLedgerAiSettings()
       .then((s) => {
         if (cancelled) return;
@@ -52,7 +60,7 @@ export function LedgerAiSettingsPanel({ actorId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [open]);
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
@@ -119,113 +127,134 @@ export function LedgerAiSettingsPanel({ actorId }: Props) {
   }
 
   return (
-    <aside className="ledger-ai-settings" aria-label="ตั้งค่าจัดประเภทด้วย AI">
+    <>
       <button
         type="button"
-        className="ledger-ai-settings-toggle"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        className="ledger-ai-fab"
+        aria-label="ตั้งค่า AI จัดประเภท"
+        title="ตั้งค่า AI"
+        onClick={() => {
+          setMsg(null);
+          setErr(null);
+          setOpen(true);
+        }}
       >
-        <span className="ledger-ai-settings-toggle-left">
-          <Sparkles size={15} aria-hidden />
-          <span className="ledger-ai-settings-toggle-label">ตั้งค่า AI จัดประเภท</span>
-          <span className="ledger-ai-settings-toggle-rare">นานๆ ครั้ง</span>
-        </span>
-        {open ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
+        <Sparkles size={12} aria-hidden />
       </button>
 
       {open ? (
-        <form className="ledger-ai-settings-body" onSubmit={(e) => void onSave(e)}>
-          <p className="muted ledger-ai-settings-hint">
-            ใช้ปีละไม่กี่ครั้งพอ · พนักงานเห็นเฉพาะผล AI — แก้ประเภทได้เฉพาะคุณ · คีย์เก็บฝั่งเซิร์ฟเวอร์
-            · บริบทร้านแก้ได้ที่ อื่นๆ → ตั้งค่าโมดูล → โปรไฟล์กิจการ (พับหัวข้อ)
-          </p>
+        <div className="modal-backdrop edit-modal is-module-form" role="presentation">
+          <div
+            className="modal-card ledger-ai-settings-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="ตั้งค่าจัดประเภทด้วย AI"
+          >
+            <div className="entry-toolbar module-form-head">
+              <h2 className="panel-title">ตั้งค่า AI จัดประเภท</h2>
+              <button
+                type="button"
+                className="ghost-btn icon-btn"
+                aria-label="ปิด"
+                disabled={busy || backfilling}
+                onClick={() => setOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-          <label className="ledger-ai-check">
-            <input
-              type="checkbox"
-              checked={settings.enabled}
-              onChange={(e) =>
-                setSettings((prev) => ({ ...prev, enabled: e.target.checked }))
-              }
-            />
-            เปิดจัดประเภทด้วย AI
-          </label>
-
-          <div className="field">
-            <label htmlFor="ledger-ai-model">โมเดล</label>
-            <select
-              id="ledger-ai-model"
-              value={settings.model}
-              onChange={(e) => setSettings((prev) => ({ ...prev, model: e.target.value }))}
-            >
-              {LEDGER_AI_MODELS.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
-              ))}
-              {!LEDGER_AI_MODELS.some((m) => m.value === settings.model) && settings.model ? (
-                <option value={settings.model}>{settings.model}</option>
-              ) : null}
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="ledger-ai-key">Gemini API key</label>
-            <input
-              id="ledger-ai-key"
-              type="password"
-              autoComplete="off"
-              value={apiKeyDraft}
-              onChange={(e) => setApiKeyDraft(e.target.value)}
-              placeholder={
-                loaded && settings.apiKey
-                  ? `มีคีย์แล้ว (${maskApiKey(settings.apiKey)}) — วางใหม่เพื่อเปลี่ยน`
-                  : "วาง API key (ถ้ายังไม่ใส่ในเซิร์ฟเวอร์)"
-              }
-            />
-          </div>
-
-          <div className="ledger-ai-settings-actions">
-            <button type="submit" className="primary-btn" disabled={busy || !loaded || backfilling}>
-              {busy ? "กำลังบันทึก..." : "บันทึก"}
-            </button>
-            <button
-              type="button"
-              className="ghost-btn"
-              disabled={testing || !loaded || backfilling}
-              onClick={() => void onTest()}
-            >
-              {testing ? "กำลังทดสอบ..." : "ทดสอบ AI"}
-            </button>
-          </div>
-
-          <div className="ledger-ai-backfill">
-            <p className="muted ledger-ai-settings-hint">
-              รายการเก่าก่อนมี AI อาจติดประเภทผิด (เช่น 「ค่าเครื่องดื่ม」→ สินทรัพย์ จากกฎคำว่า「เครื่อง」)
-              — จัดใหม่เฉพาะ ก.ค. {BACKFILL_YEAR}
-            </p>
-            <button
-              type="button"
-              className="ghost-btn"
-              disabled={!loaded || backfilling || testing || busy}
-              onClick={() => void onBackfillJuly()}
-            >
-              {backfilling
-                ? `กำลังจัด ก.ค.… ${backfillProgress ? `${backfillProgress.done}/${backfillProgress.total}` : ""}`
-                : `จัดประเภทใหม่ด้วย AI — ก.ค. ${BACKFILL_YEAR}`}
-            </button>
-            {backfilling && backfillProgress?.currentDescription ? (
-              <p className="muted" style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", textAlign: "left" }}>
-                {backfillProgress.currentDescription}
+            <form className="form-card entry-form ledger-ai-settings-body" onSubmit={(e) => void onSave(e)}>
+              <p className="muted ledger-ai-settings-hint">
+                ใช้ปีละไม่กี่ครั้งพอ · พนักงานเห็นเฉพาะผล AI — แก้ประเภทได้เฉพาะคุณ · คีย์เก็บฝั่งเซิร์ฟเวอร์
+                · บริบทร้านแก้ได้ที่ อื่นๆ → ตั้งค่าโมดูล → โปรไฟล์กิจการ
               </p>
-            ) : null}
-          </div>
 
-          {msg ? <p className="ledger-ai-settings-msg">{msg}</p> : null}
-          {err ? <p className="error-text">{err}</p> : null}
-        </form>
+              <label className="ledger-ai-check">
+                <input
+                  type="checkbox"
+                  checked={settings.enabled}
+                  onChange={(e) =>
+                    setSettings((prev) => ({ ...prev, enabled: e.target.checked }))
+                  }
+                />
+                เปิดจัดประเภทด้วย AI
+              </label>
+
+              <div className="field">
+                <label htmlFor="ledger-ai-model">โมเดล</label>
+                <select
+                  id="ledger-ai-model"
+                  value={settings.model}
+                  onChange={(e) => setSettings((prev) => ({ ...prev, model: e.target.value }))}
+                >
+                  {LEDGER_AI_MODELS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                  {!LEDGER_AI_MODELS.some((m) => m.value === settings.model) && settings.model ? (
+                    <option value={settings.model}>{settings.model}</option>
+                  ) : null}
+                </select>
+              </div>
+
+              <div className="field">
+                <label htmlFor="ledger-ai-key">Gemini API key</label>
+                <input
+                  id="ledger-ai-key"
+                  type="password"
+                  autoComplete="off"
+                  value={apiKeyDraft}
+                  onChange={(e) => setApiKeyDraft(e.target.value)}
+                  placeholder={
+                    loaded && settings.apiKey
+                      ? `มีคีย์แล้ว (${maskApiKey(settings.apiKey)}) — วางใหม่เพื่อเปลี่ยน`
+                      : "วาง API key (ถ้ายังไม่ใส่ในเซิร์ฟเวอร์)"
+                  }
+                />
+              </div>
+
+              <div className="ledger-ai-settings-actions">
+                <button type="submit" className="primary-btn" disabled={busy || !loaded || backfilling}>
+                  {busy ? "กำลังบันทึก..." : "บันทึก"}
+                </button>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  disabled={testing || !loaded || backfilling}
+                  onClick={() => void onTest()}
+                >
+                  {testing ? "กำลังทดสอบ..." : "ทดสอบ AI"}
+                </button>
+              </div>
+
+              <div className="ledger-ai-backfill">
+                <p className="muted ledger-ai-settings-hint">
+                  รายการเก่าก่อนมี AI อาจติดประเภทผิด — จัดใหม่เฉพาะ ก.ค. {BACKFILL_YEAR}
+                </p>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  disabled={!loaded || backfilling || testing || busy}
+                  onClick={() => void onBackfillJuly()}
+                >
+                  {backfilling
+                    ? `กำลังจัด ก.ค.… ${backfillProgress ? `${backfillProgress.done}/${backfillProgress.total}` : ""}`
+                    : `จัดประเภทใหม่ด้วย AI — ก.ค. ${BACKFILL_YEAR}`}
+                </button>
+                {backfilling && backfillProgress?.currentDescription ? (
+                  <p className="muted" style={{ margin: "0.35rem 0 0", fontSize: "0.75rem", textAlign: "left" }}>
+                    {backfillProgress.currentDescription}
+                  </p>
+                ) : null}
+              </div>
+
+              {msg ? <p className="ledger-ai-settings-msg">{msg}</p> : null}
+              {err ? <p className="error-text">{err}</p> : null}
+            </form>
+          </div>
+        </div>
       ) : null}
-    </aside>
+    </>
   );
 }

@@ -31,6 +31,7 @@ const REQUIRED_MATCHES = [
   "staffPhones",
   "ledger",
   "cashDeposits",
+  "billNotices",
   "ownerBooks",
   "evidencePhotos",
   "monthlyIncome",
@@ -95,6 +96,7 @@ assert.match(rules, /request\.resource\.data\.dateKey == dateId/);
 assert.match(rules, /vatMonthlyReturns\/\{monthId\}[\s\S]*?isOwner\(\) \|\| isOwnerEmail\(\)/);
 assert.match(rules, /vatSalesSettings' && isOwner\(\)/);
 assert.match(rules, /vatMonthlySettings' && \(isOwner\(\) \|\| isOwnerEmail\(\)\)/);
+assert.match(rules, /personalTaxSettings' && \(isOwner\(\) \|\| isOwnerEmail\(\)\)/);
 assert.match(rules, /vatMailOAuth' && isOwner\(\)/);
 assert.doesNotMatch(
   rules,
