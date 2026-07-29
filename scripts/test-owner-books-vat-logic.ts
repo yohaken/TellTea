@@ -33,12 +33,12 @@ assert.equal(proposeOwnerBookVatInput(107), 7);
 }
 
 {
-  // legacy: ไม่มี vatClaim แต่มียอด → นับว่า claim แล้ว
+  // ไม่มี vatClaim แต่มียอด → ยังไม่รวม (ต้องติ๊กที่ VAT เดือน)
   const legacy = normalizePurchaseVat(
     { hasVat: true, vatInput: 7, vatSource: "manual" },
     107,
   );
-  assert.equal(legacy.vatClaim, true);
+  assert.equal(legacy.vatClaim, false);
 }
 
 {

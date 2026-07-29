@@ -49,7 +49,7 @@ export function proposePurchaseVatInput(amountInclusive: number): number {
 /**
  * normalize ตอนโหลด/บันทึก
  * hasVat = เก็บยอดบนบิล · vatClaim = รวมเข้า VAT เดือน
- * รายการเก่าที่ยังไม่มี vatClaim แต่ hasVat+vatInput → นับว่า claim แล้ว (กันยอดเดือนเดิมหาย)
+ * vatClaim ต้องติ๊กเองที่ VAT เดือน — รายการใหม่/เก่าที่ไม่มีฟิลด์ = ยังไม่รวม
  */
 export function normalizePurchaseVat(
   raw: Partial<EntryVatFields> | Record<string, unknown> | undefined,
@@ -86,7 +86,7 @@ export function normalizePurchaseVat(
   let vatClaim: boolean;
   if (claimRaw === true || claimRaw === "true") vatClaim = true;
   else if (claimRaw === false || claimRaw === "false") vatClaim = false;
-  else vatClaim = vatInput > 0; // legacy: รายการเก่าที่ติ๊ก hasVat ไว้แล้วนับรวมต่อ
+  else vatClaim = false; // ไม่ auto รวม — ติ๊กที่ VAT เดือน (+) ครั้งแรก แล้วจำในรายการ
   return {
     hasVat: true,
     vatInput,

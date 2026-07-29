@@ -8,6 +8,10 @@
 
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getDb } from "./firebase";
+import {
+  mapGpByChannel,
+  type GpByChannel,
+} from "./personal-income-tax";
 import { saveMonthlyIncome } from "./pnl";
 import {
   bangkokMonthKey,
@@ -357,14 +361,16 @@ export type VatMonthlyReturn = {
   pnlIncome: number;
   pnlIncomeMode: "exVat" | "incVat";
   /**
-   * หัก GP ก้อนเดลิเวอรี่จากรายได้ก่อนเข้า P&L (บาท · ก่อน VAT)
-   * คำนวณจากโหมด pct หรือ amount
+   * หัก GP รวมทุกช่องทางจากรายได้ก่อนเข้า P&L (บาท)
+   * คำนวณจาก pnlGpByChannel
    */
   pnlDeliveryGpDeduct: number;
-  /** โหมดหัก: เรท % คงที่ (หาค่าเฉลี่ย) หรือยอดบาท */
+  /** @deprecated ใช้ pnlGpByChannel รายช่องทาง */
   pnlDeliveryGpMode: "pct" | "amount";
-  /** เรท % คงที่เมื่อ mode = pct */
+  /** @deprecated ใช้ pnlGpByChannel รายช่องทาง */
   pnlDeliveryGpPct: number;
+  /** หัก GP แยกช่องทาง (Shopee/Grab/LM/หน้าร้าน) · % หรือยอดบาท */
+  pnlGpByChannel: GpByChannel;
   filedAt: number;
   filedBy: string;
   updatedAt: number;
@@ -380,6 +386,8 @@ export type VatMonthlySettings = {
    * default = 1 → เช่น 00:00 น. 1/7/2569 → 00:00 น. 1/8/2569 (ไม่รวม)
    */
   periodStartDay: number;
+  /** จำเรทหัก GP รายช่องทางไว้ใช้เดือนถัดไป */
+  pnlGpByChannel: GpByChannel;
   updatedAt: number;
   updatedBy: string;
 };
@@ -623,6 +631,14 @@ export function mapVatMonthlyReturn(
     pnlDeliveryGpDeduct: mapPnlDeliveryGpDeduct(data?.pnlDeliveryGpDeduct),
     pnlDeliveryGpMode: mapPnlDeliveryGpMode(data?.pnlDeliveryGpMode),
     pnlDeliveryGpPct: mapPnlDeliveryGpPct(data?.pnlDeliveryGpPct),
+    pnlGpByChannel: mapGpByChannel(
+      data?.pnlGpByChannel ?? settings?.pnlGpByChannel,
+      {
+        mode: mapPnlDeliveryGpMode(data?.pnlDeliveryGpMode),
+        pct: mapPnlDeliveryGpPct(data?.pnlDeliveryGpPct),
+        amount: mapPnlDeliveryGpDeduct(data?.pnlDeliveryGpDeduct),
+      },
+    ),
     filedAt: Number(data?.filedAt) || 0,
     filedBy: String(data?.filedBy || ""),
     updatedAt: Number(data?.updatedAt) || 0,
@@ -640,6 +656,7 @@ export function mapVatMonthlySettings(
     periodStartDay: normalizePeriodStartDay(
       data?.periodStartDay ?? DEFAULT_PERIOD_START_DAY,
     ),
+    pnlGpByChannel: mapGpByChannel(data?.pnlGpByChannel),
     updatedAt: Number(data?.updatedAt) || 0,
     updatedBy: String(data?.updatedBy || ""),
   };
@@ -688,6 +705,9 @@ export async function saveVatMonthlySettings(
       patch.periodStartDay != null
         ? normalizePeriodStartDay(patch.periodStartDay)
         : current.periodStartDay,
+    pnlGpByChannel: patch.pnlGpByChannel
+      ? mapGpByChannel(patch.pnlGpByChannel)
+      : current.pnlGpByChannel,
     updatedAt: Date.now(),
     updatedBy: by,
   });
@@ -725,10 +745,12 @@ export type VatMonthlySaveInput = {
   note?: string;
   pnlIncomeMode?: "exVat" | "incVat";
   pnlIncome?: number;
-  /** หัก GP ก้อนเดลิเวอรี่ (บาท) · ไม่ส่ง = คงค่าเดิม / 0 */
+  /** หัก GP รวม (บาท) · ไม่ส่ง = คงค่าเดิม / 0 */
   pnlDeliveryGpDeduct?: number;
   pnlDeliveryGpMode?: "pct" | "amount";
   pnlDeliveryGpPct?: number;
+  /** หัก GP รายช่องทาง */
+  pnlGpByChannel?: GpByChannel;
   status?: "draft" | "saved";
 };
 
@@ -769,6 +791,16 @@ export async function saveVatMonthlyReturn(
     input.pnlDeliveryGpPct != null
       ? mapPnlDeliveryGpPct(input.pnlDeliveryGpPct)
       : mapPnlDeliveryGpPct(prev?.pnlDeliveryGpPct);
+  const pnlGpByChannel = mapGpByChannel(
+    input.pnlGpByChannel != null
+      ? input.pnlGpByChannel
+      : prev?.pnlGpByChannel,
+    {
+      mode: pnlDeliveryGpMode,
+      pct: pnlDeliveryGpPct,
+      amount: pnlDeliveryGpDeduct,
+    },
+  );
   const docBody: VatMonthlyReturn = {
     monthKey: input.monthKey,
     delivery,
@@ -781,6 +813,7 @@ export async function saveVatMonthlyReturn(
     pnlDeliveryGpDeduct,
     pnlDeliveryGpMode,
     pnlDeliveryGpPct,
+    pnlGpByChannel,
     filedAt: 0,
     filedBy: "",
     updatedAt: Date.now(),

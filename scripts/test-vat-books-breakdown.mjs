@@ -28,6 +28,8 @@ assert.match(ui, /ExpandBtn/);
 assert.match(ui, /รวมเข้าระบบ|vat-claim-check/);
 assert.match(ui, /BooksVatEntryDetailModal/);
 assert.match(ui, /toggleLineClaim/);
+assert.match(ui, /toggleClaimAll/);
+assert.match(ui, /ติ๊กรวมยอดทั้งหมด|aria-label=\"ติ๊กรวมเข้าระบบทั้งหมด\"/);
 
 const detail = readFileSync(
   join(root, "src/components/vat-sales/BooksVatEntryDetailModal.tsx"),
