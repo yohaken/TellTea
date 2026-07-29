@@ -470,23 +470,30 @@ async function loadOccupancy(excludeDepositId?: string) {
   return buildCashDepositOccupancy(entries, excludeDepositId);
 }
 
+/** Newest-first for UI — transferDate then createdAt (client-side). */
+function sortCashDepositsNewestFirst(entries: CashDeposit[]): CashDeposit[] {
+  return [...entries].sort((a, b) => {
+    if (b.transferDate !== a.transferDate) return b.transferDate - a.transferDate;
+    return b.createdAt - a.createdAt;
+  });
+}
+
+/**
+ * Single orderBy(createdAt) — no composite index required.
+ * (transferDate+createdAt composite may still be building in Firebase Console.)
+ */
 export function subscribeCashDepositsPage(
   limitCount: number,
   onPage: (page: CashDepositPage) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
   const size = Math.max(1, Math.min(limitCount, CASH_DEPOSIT_LIVE_MAX));
-  const q = query(
-    cashDepositsCol(),
-    orderBy("transferDate", "desc"),
-    orderBy("createdAt", "desc"),
-    limit(size),
-  );
+  const q = query(cashDepositsCol(), orderBy("createdAt", "desc"), limit(size));
   return onSnapshot(
     q,
     (snap) => {
       onPage({
-        entries: snap.docs.map(mapEntry),
+        entries: sortCashDepositsNewestFirst(snap.docs.map(mapEntry)),
         hasMore: snap.docs.length >= size,
       });
     },
@@ -497,12 +504,11 @@ export function subscribeCashDepositsPage(
 export async function listCashDeposits(max = CASH_DEPOSIT_LIVE_MAX) {
   const q = query(
     cashDepositsCol(),
-    orderBy("transferDate", "desc"),
     orderBy("createdAt", "desc"),
     limit(Math.max(1, Math.min(max, CASH_DEPOSIT_LIVE_MAX))),
   );
   const snap = await getDocs(q);
-  return snap.docs.map(mapEntry);
+  return sortCashDepositsNewestFirst(snap.docs.map(mapEntry));
 }
 
 export async function addCashDeposit(input: CashDepositInput) {

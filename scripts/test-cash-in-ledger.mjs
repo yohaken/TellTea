@@ -19,7 +19,7 @@ const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
 const assertRules = read("scripts/assert-firestore-rules.mjs");
 
-assert.match(version, /APP_BUILD = 375/);
+assert.match(version, /APP_BUILD = 376/);
 assert.equal(existsSync(join(root, "src/components/LedgerModeSwitch.tsx")), false);
 assert.match(ledger, /CashInLedgerPanel/);
 assert.match(ledger, /cashInForceOpen|cashIn=1/);
@@ -35,6 +35,11 @@ assert.match(panel, /CASH_DEPOSIT_ROUND_PRESETS/);
 assert.match(lib, /export async function addCashDeposit/);
 assert.match(lib, /CASH_DEPOSIT_DAY_MAX = 31/);
 assert.match(lib, /analyzeCashDepositDays/);
+assert.match(lib, /orderBy\("createdAt", "desc"\)/);
+assert.doesNotMatch(
+  lib,
+  /orderBy\("transferDate", "desc"\)[\s\S]*orderBy\("createdAt", "desc"\)/,
+);
 assert.match(rules, /match \/cashDeposits\/\{entryId\}/);
 assert.match(rules, /days\.size\(\) <= 31/);
 assert.match(indexes, /"collectionGroup": "cashDeposits"/);
