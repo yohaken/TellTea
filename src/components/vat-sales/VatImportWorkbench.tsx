@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createVatImportRow,
+  createVatImportRowsSkippingDupes,
   deleteVatImportRow,
   emptyVatImportRow,
   isAllowedVatImportFile,
@@ -20,6 +21,12 @@ import {
   type VatImportRowKind,
   type VatImportRowStatus,
 } from "@/lib/vat-import";
+import {
+  linemanMonthlyToImportRows,
+  looksLikeLinemanMonthlyReport,
+  parseLinemanMonthlyReport,
+} from "@/lib/vat-import-lineman-monthly";
+import { extractPdfTextFromFile } from "@/lib/vat-import-pdf-text";
 import {
   formatVatMoney,
   moneyFieldValue,
@@ -91,6 +98,7 @@ export function VatImportWorkbench({ actor }: Props) {
   const [uploadChannel, setUploadChannel] =
     useState<VatImportChannel>("grab");
   const fileRef = useRef<HTMLInputElement>(null);
+  const linemanRef = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -278,6 +286,83 @@ export function VatImportWorkbench({ actor }: Props) {
     }
   }
 
+  async function onImportLinemanMonthly(fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file) return;
+    setBusyId("lineman");
+    setError("");
+    setMsg("");
+    try {
+      if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
+        throw new Error("ต้องเป็น PDF รายงานประจำเดือน LINE MAN");
+      }
+      const text = await extractPdfTextFromFile(file);
+      if (!looksLikeLinemanMonthlyReport(text)) {
+        throw new Error(
+          "ไม่ใช่รายงานยอดขายประจำเดือน LINE MAN (หาคำว่า ค่า GP (รวม VAT) ไม่เจอ)",
+        );
+      }
+      const parsed = parseLinemanMonthlyReport(text);
+      if (!parsed.monthKey || parsed.days.length === 0) {
+        throw new Error(
+          `อ่านแถววันไม่ได้${parsed.warnings.length ? ` · ${parsed.warnings.join(" · ")}` : ""}`,
+        );
+      }
+      const targetMonth = parsed.monthKey;
+      if (targetMonth !== month) {
+        setMonth(targetMonth);
+      }
+      const existing =
+        targetMonth === month ? rows : await listVatImportRows(targetMonth);
+      const up = await uploadVatImportFile({
+        file,
+        monthKey: targetMonth,
+        channel: "lineman",
+      });
+      const inputs = linemanMonthlyToImportRows(parsed, {
+        storagePath: up.storagePath,
+        downloadUrl: up.downloadUrl,
+        fileName: up.fileName,
+        contentType: up.contentType,
+      });
+      const { created, skipped } = await createVatImportRowsSkippingDupes(
+        inputs,
+        actor,
+        existing,
+      );
+      if (targetMonth === month) {
+        setRows((prev) =>
+          [...prev, ...created].sort((a, b) =>
+            a.dateKey.localeCompare(b.dateKey),
+          ),
+        );
+      } else {
+        setRows(
+          [...existing, ...created].sort((a, b) =>
+            a.dateKey.localeCompare(b.dateKey),
+          ),
+        );
+      }
+      const warn =
+        parsed.warnings.length > 0
+          ? ` · เตือน: ${parsed.warnings.join(" · ")}`
+          : "";
+      setMsg(
+        `LINE MAN ${formatThaiMonthKey(targetMonth)} · นำเข้า ${created.length} วัน` +
+          (skipped ? ` · ข้ามซ้ำ ${skipped}` : "") +
+          ` · ขาย ${formatVatMoney(parsed.monthGross)} · GP ${formatVatMoney(parsed.monthFeeInclVat)}` +
+          warn,
+      );
+      setFilterChannel("lineman");
+      setUploadChannel("lineman");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyId("");
+      if (linemanRef.current) linemanRef.current.value = "";
+    }
+  }
+
   async function attachToRow(row: VatImportRow, file: File | null) {
     if (!file) return;
     setBusyId(row.id);
@@ -305,8 +390,8 @@ export function VatImportWorkbench({ actor }: Props) {
     <div className="vat-import-workbench">
       <header className="vat-sales-header">
         <p className="vat-sales-lead">
-          นำเข้าไฟล์จริง · แถววัน × ช่องทาง · เก็บ Firebase Storage · ยังไม่รวมเข้าเดือน
-          (I1–I2)
+          นำเข้าไฟล์จริง · แถววัน × ช่องทาง · LINE MAN อ่านรายงานเดือนได้ ·
+          ยังไม่รวมเข้าเดือนอัตโนมัติ (I3)
         </p>
       </header>
 
@@ -353,11 +438,19 @@ export function VatImportWorkbench({ actor }: Props) {
       </div>
 
       <p className="muted vat-sales-hint vat-hint-one-line">
-        คีย์มือหรืออัปโหลด PDF/Excel/CSV/รูป → แก้ยอดในแถว · เลขใบกำกับเก็บในคอลัมน์ ·
-        รวมเข้าเดือนเป็นเฟส I5
+        LINE MAN: ปุ่มอ่านรายงานเดือน → แถววันอัตโนมัติ (GP รวม VAT ·
+        โอนหลัง=ยอดเงินในระบบ) · อื่นๆ คีย์มือ/อัปโหลด · รวมเข้าเดือน = I5
       </p>
 
       <div className="vat-month-actions vat-month-actions--mini">
+        <button
+          type="button"
+          className="vat-mini-btn vat-mini-btn--primary"
+          disabled={Boolean(busyId)}
+          onClick={() => linemanRef.current?.click()}
+        >
+          {busyId === "lineman" ? "กำลังอ่าน…" : "อ่าน LINE MAN รายงานเดือน"}
+        </button>
         <label className="vat-sales-month">
           ช่องทางอัปโหลด
           <select
@@ -406,6 +499,13 @@ export function VatImportWorkbench({ actor }: Props) {
           multiple
           hidden
           onChange={(e) => void onUploadFiles(e.target.files)}
+        />
+        <input
+          ref={linemanRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          hidden
+          onChange={(e) => void onImportLinemanMonthly(e.target.files)}
         />
       </div>
 

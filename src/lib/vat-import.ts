@@ -295,6 +295,37 @@ export async function createVatImportRow(
   return mapRow(ref.id, payload);
 }
 
+/**
+ * สร้างหลายแถว · ข้ามถ้ามี externalId ซ้ำในเดือนเดียวกันแล้ว
+ * คืน { created, skipped }
+ */
+export async function createVatImportRowsSkippingDupes(
+  inputs: VatImportRowInput[],
+  actor: string,
+  existing: VatImportRow[],
+): Promise<{ created: VatImportRow[]; skipped: number }> {
+  const seen = new Set(
+    existing
+      .filter((r) => r.externalId)
+      .map((r) => `${r.channel}|${r.externalId}`),
+  );
+  const created: VatImportRow[] = [];
+  let skipped = 0;
+  for (const input of inputs) {
+    const key = input.externalId
+      ? `${mapVatImportChannel(input.channel)}|${String(input.externalId).trim()}`
+      : "";
+    if (key && seen.has(key)) {
+      skipped += 1;
+      continue;
+    }
+    const row = await createVatImportRow(input, actor);
+    created.push(row);
+    if (key) seen.add(key);
+  }
+  return { created, skipped };
+}
+
 export async function updateVatImportRow(
   id: string,
   input: VatImportRowInput,
