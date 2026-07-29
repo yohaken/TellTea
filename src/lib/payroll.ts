@@ -313,6 +313,8 @@ export type BonusAmountByEmployee = Record<string, number>;
 
 export type GeneratePayrollResult = {
   created: number;
+  /** รายการที่เคยยกเลิก (void) แล้วเปิดกลับเป็นรอโอน */
+  restored: number;
   skipped: number;
   ids: string[];
 };
@@ -340,7 +342,9 @@ function resolvePeriodAndDue(
 
 /**
  * สร้างรายการรอโอนทั้งรอบของเดือนอ้างอิง (เงินเดือนทุกงวด + โบนัส)
- * ไม่ทับรายการที่มีอยู่แล้ว (รวม paid/void)
+ * - ยังไม่มี → สร้างใหม่
+ * - เคยยกเลิก (void) → เปิดกลับเป็นรอโอน (ยังไม่จ่าย)
+ * - pending / paid → ข้าม ไม่ทับ
  */
 export async function generatePayrollForPeriod(input: {
   periodMonth: string;
@@ -359,6 +363,7 @@ export async function generatePayrollForPeriod(input: {
   const active = input.employees.filter((e) => e.active);
   const now = Date.now();
   let created = 0;
+  let restored = 0;
   let skipped = 0;
   const ids: string[] = [];
 
@@ -420,7 +425,35 @@ export async function generatePayrollForPeriod(input: {
       const ref = doc(db, "payrollItems", id);
       const existing = await getDoc(ref);
       if (existing.exists()) {
-        skipped += 1;
+        const prev = mapPayrollItem(existing.id, existing.data() as Record<string, unknown>);
+        if (prev.status !== "void") {
+          skipped += 1;
+          continue;
+        }
+        // เคยยกเลิก — เปิดกลับเป็นรอโอน พร้อมยอดล่าสุด
+        batch.set(ref, {
+          employeeId: emp.id,
+          employeeName: emp.name,
+          periodMonth: input.periodMonth,
+          kind: plan.kind,
+          dueDate,
+          amount,
+          status: "pending" satisfies PayrollStatus,
+          slipUrls: [],
+          note: "",
+          paidAt: 0,
+          paidBy: "",
+          ownerBookId: "",
+          salaryBase: plan.salaryBase(emp),
+          bonusRemaining: plan.bonusRemaining(emp),
+          createdAt: prev.createdAt || now,
+          updatedAt: now,
+          createdBy,
+        });
+        ops += 1;
+        restored += 1;
+        ids.push(id);
+        if (ops >= 400) await flush();
         continue;
       }
       batch.set(ref, {
@@ -449,7 +482,7 @@ export async function generatePayrollForPeriod(input: {
     }
   }
   await flush();
-  return { created, skipped, ids };
+  return { created, restored, skipped, ids };
 }
 
 export function payrollDescription(item: Pick<PayrollItem, "kind" | "periodMonth" | "employeeName">): string {
@@ -478,6 +511,22 @@ export async function voidPayrollItem(id: string, actorId: string): Promise<void
     status: "void" satisfies PayrollStatus,
     paidBy: actorId.trim(),
     paidAt: Date.now(),
+    updatedAt: Date.now(),
+  });
+}
+
+/** กู้คืนรายการที่ยกเลิก (ยังไม่เคยจ่าย) กลับเป็นรอโอน */
+export async function restorePayrollItem(id: string): Promise<void> {
+  const ref = doc(getDb(), "payrollItems", id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("ไม่พบรายการ");
+  const item = mapPayrollItem(snap.id, snap.data() as Record<string, unknown>);
+  if (item.status !== "void") throw new Error("กู้คืนได้เฉพาะรายการที่ยกเลิก");
+  if (item.ownerBookId) throw new Error("รายการนี้เคยลงบัญชีแล้ว กู้คืนไม่ได้");
+  await updateDoc(ref, {
+    status: "pending" satisfies PayrollStatus,
+    paidAt: 0,
+    paidBy: "",
     updatedAt: Date.now(),
   });
 }

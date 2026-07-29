@@ -11,6 +11,7 @@ import {
   PAYROLL_SLIP_MAX,
   PAYROLL_STATUS_LABELS,
   payrollDescription,
+  restorePayrollItem,
   summarizePayrollItems,
   voidPayrollItem,
   type BonusAmountByEmployee,
@@ -59,7 +60,7 @@ export function PayrollPayPanel({
   onError: (msg: string) => void;
   onInfo?: (msg: string) => void;
 }) {
-  const [filter, setFilter] = useState<"pending" | "all" | PayrollKind>("pending");
+  const [filter, setFilter] = useState<"pending" | "all" | "void" | PayrollKind>("pending");
   const [busy, setBusy] = useState(false);
   const [payTarget, setPayTarget] = useState<PayTarget | null>(null);
 
@@ -73,6 +74,7 @@ export function PayrollPayPanel({
   const visible = useMemo(() => {
     let rows = periodItems;
     if (filter === "pending") rows = rows.filter((i) => i.status === "pending");
+    else if (filter === "void") rows = rows.filter((i) => i.status === "void");
     else if (filter !== "all") rows = rows.filter((i) => i.kind === filter);
     return [...rows].sort((a, b) => {
       if (a.status === "pending" && b.status !== "pending") return -1;
@@ -80,6 +82,11 @@ export function PayrollPayPanel({
       return a.dueDate - b.dueDate || a.employeeName.localeCompare(b.employeeName, "th");
     });
   }, [periodItems, filter]);
+
+  const voidCount = useMemo(
+    () => periodItems.filter((i) => i.status === "void").length,
+    [periodItems],
+  );
 
   const summary = useMemo(() => summarizePayrollItems(periodItems), [periodItems]);
   const pendingAll = useMemo(
@@ -107,14 +114,21 @@ export function PayrollPayPanel({
         createdBy: actorId,
         schedule,
       });
-      onInfo?.(
-        result.created > 0
-          ? `สร้าง ${result.created} รายการรอโอน` +
-              (result.skipped ? ` · ข้าม ${result.skipped}` : "")
-          : result.skipped
-            ? `ไม่มีรายการใหม่ (ข้าม ${result.skipped} — มีอยู่แล้วหรือยอด 0)`
-            : "ไม่มีรายการให้สร้าง — ตั้งเงินเดือนหรือมีโบนัสก่อน",
-      );
+      const parts: string[] = [];
+      if (result.created > 0) parts.push(`สร้าง ${result.created}`);
+      if (result.restored > 0) parts.push(`กู้คืน ${result.restored}`);
+      if (parts.length) {
+        onInfo?.(
+          `${parts.join(" · ")} รายการรอโอน` +
+            (result.skipped ? ` · ข้าม ${result.skipped}` : ""),
+        );
+      } else if (result.skipped) {
+        onInfo?.(
+          `ไม่มีรายการใหม่ (ข้าม ${result.skipped} — มีอยู่แล้วหรือยอด 0)`,
+        );
+      } else {
+        onInfo?.("ไม่มีรายการให้สร้าง — ตั้งเงินเดือนหรือมีโบนัสก่อน");
+      }
     } catch (err) {
       onError((err as Error).message || "สร้างรายการไม่สำเร็จ");
     } finally {
@@ -145,13 +159,32 @@ export function PayrollPayPanel({
 
   async function onVoid(item: PayrollItem) {
     if (!isOwner) return;
-    if (!window.confirm(`ยกเลิกรายการรอโอน?\n${payrollDescription(item)}`)) return;
+    if (
+      !window.confirm(
+        `ยกเลิกรายการนี้?\n${payrollDescription(item)}\n\nยังไม่จ่าย — กู้คืนหรือกดสร้างรายการใหม่ได้ภายหลัง`,
+      )
+    ) {
+      return;
+    }
     setBusy(true);
     try {
       await voidPayrollItem(item.id, actorId);
-      onInfo?.("ยกเลิกรายการแล้ว");
+      onInfo?.("ยกเลิกแล้ว (ยังไม่จ่าย) — กดกู้คืนหรือสร้างรายการใหม่ได้");
     } catch (err) {
       onError((err as Error).message || "ยกเลิกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onRestore(item: PayrollItem) {
+    if (!isOwner) return;
+    setBusy(true);
+    try {
+      await restorePayrollItem(item.id);
+      onInfo?.(`กู้คืนแล้ว · ${payrollDescription(item)}`);
+    } catch (err) {
+      onError((err as Error).message || "กู้คืนไม่สำเร็จ");
     } finally {
       setBusy(false);
     }
@@ -186,7 +219,7 @@ export function PayrollPayPanel({
           </button>
           <p className="muted payroll-actions-hint">
             เงินเดือนตามตาราง ({schedule.salarySplits.map((s) => `${s.percent}%`).join(" + ")})
-            + โบนัสคงเหลือเดือนนี้ · ไม่ทับรายการเดิม
+            + โบนัสคงเหลือ · ไม่ทับรายการรอโอน/จ่ายแล้ว · รายการที่ยกเลิกจะถูกกู้คืนอัตโนมัติ
             {missingSalary
               ? ` · ยังไม่มีเงินเดือน ${missingSalary} คน — ไปแท็บตั้งค่าจ่าย`
               : ""}
@@ -201,6 +234,7 @@ export function PayrollPayPanel({
           [
             ["pending", "รอโอน"],
             ["all", "ทั้งหมด"],
+            ["void", voidCount ? `ยกเลิก (${voidCount})` : "ยกเลิก"],
             ["salary_mid", "กลางเดือน"],
             ["salary_month_end", "ปลายเดือน"],
             ["bonus", "โบนัส"],
@@ -271,6 +305,18 @@ export function PayrollPayPanel({
                       onClick={() => void onVoid(item)}
                     >
                       ยกเลิก
+                    </button>
+                  </div>
+                ) : null}
+                {item.status === "void" && isOwner ? (
+                  <div className="payroll-row-actions">
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      disabled={busy}
+                      onClick={() => void onRestore(item)}
+                    >
+                      กู้คืน
                     </button>
                   </div>
                 ) : null}
