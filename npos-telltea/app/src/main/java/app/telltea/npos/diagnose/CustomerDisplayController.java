@@ -16,7 +16,13 @@ import app.telltea.npos.sell.MenuModels;
  * After pay: success splash → brief paid-receipt review → standby (interrupted by new cart).
  */
 public final class CustomerDisplayController {
+    /** Exact tender / no change — short thank-you splash. */
     public static final long SUCCESS_HOLD_MS = 3500L;
+    /**
+     * Cash with change — keep «เงินทอน» on screen long enough to hand bills
+     * (staff reported 3.5s flash was too short).
+     */
+    public static final long SUCCESS_HOLD_CHANGE_MS = 12000L;
     /** After success splash — keep paid lines so customer can verify (option C). */
     public static final long PAID_REVIEW_MS = 12000L;
     /** Idle promo slideshow pacing. */
@@ -132,19 +138,22 @@ public final class CustomerDisplayController {
     /**
      * Success splash → paid receipt review (cart-full) → standby.
      * New {@link #showSelecting} / {@link #showStandby} cancels the chain.
+     * When {@code change > 0}, hold the change splash longer so staff can hand cash.
      */
     public void showSuccessThenStandby(String message, double total, double change) {
         stopRotate();
         cancelSuccess();
         if (!ensurePresentation()) return;
-        presentation.showSuccess(message, total, change);
+        final double changeAmt = Math.max(0, change);
+        presentation.showSuccess(message, total, changeAmt);
+        long holdMs = changeAmt > 0.01 ? SUCCESS_HOLD_CHANGE_MS : SUCCESS_HOLD_MS;
         successTask =
                 () -> {
                     successTask = null;
                     if (presentation == null) return;
                     if (lastLines != null && !lastLines.isEmpty()) {
                         presentation.showPaidReview(
-                                lastLines, lastSubtotal, lastDiscount, lastTotal);
+                                lastLines, lastSubtotal, lastDiscount, lastTotal, changeAmt);
                         successTask =
                                 () -> {
                                     successTask = null;
@@ -155,7 +164,7 @@ public final class CustomerDisplayController {
                         showStandby();
                     }
                 };
-        main.postDelayed(successTask, SUCCESS_HOLD_MS);
+        main.postDelayed(successTask, holdMs);
     }
 
     public void release() {
