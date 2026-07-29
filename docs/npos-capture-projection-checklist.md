@@ -1,6 +1,6 @@
 # nPos — แคปจอจริง (MediaProjection) + สิทธิ์แคปแยก
 
-อัปเดต: **1.14.75** · `versionCode` 98 · `APP_BUILD` 391 · `POS_BUILD` 127
+อัปเดต: **1.14.82** · `versionCode` 105 · `APP_BUILD` 409 · `POS_BUILD` 134
 
 ## ปัญหาเดิม
 - BO เห็นจอเขียว เพราะ `statusShot` สีแบรนด์ถูกอัปเป็น `ok=true`
