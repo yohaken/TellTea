@@ -18,7 +18,7 @@ const lib = read("src/lib/cash-deposits.ts");
 const panel = read("src/components/CashInLedgerPanel.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 383/);
+assert.match(version, /APP_BUILD = 384/);
 assert.ok(existsSync(join(root, "functions/extract-cash-deposit.js")));
 assert.match(index, /extractCashDepositSlip/);
 assert.match(cf, /mode === "bank"/);

@@ -17,9 +17,12 @@ assert.match(ledgerSrc, /recomputeLedgerBalance/);
 assert.match(ledgerSrc, /meta", "ledger"/);
 assert.match(ledgerSrc, /applyBalanceDelta/);
 assert.match(pageSrc, /subscribeLedgerBalance/);
+assert.match(pageSrc, /ledger-balance-over-in/);
+assert.doesNotMatch(pageSrc, /className="balance-bar"/);
 assert.doesNotMatch(pageSrc, /sheet-zoom|changeZoom|ขนาดตาราง/);
 assert.match(cssSrc, /\.balance-bar/);
+assert.match(cssSrc, /\.ledger-balance-over-in/);
 assert.doesNotMatch(cssSrc, /\.balance-hero|\.zoom-controls|--sheet-zoom/);
 assert.match(rulesSrc, /match \/meta\/\{docId\}/);
 
-console.log("OK balance bar + meta ledger + no zoom");
+console.log("OK balance over-in chip + meta ledger + no zoom");

@@ -393,16 +393,18 @@ function LedgerView() {
   const cashInStaffName =
     personalProfileLabel(staff) || staff?.displayName || staff?.email || "";
 
+  const balanceChip = (
+    <div className="ledger-balance-over-in" aria-label="คงเหลือบัญชีพนักงาน">
+      <span>
+        คงเหลือ
+        {refreshing ? <span className="sync-dot" aria-hidden> ·</span> : null}
+      </span>
+      <strong>{balance == null ? "…" : `฿${formatPlainNumber(balance)}`}</strong>
+    </div>
+  );
+
   return (
     <div className="ledger-page module-page">
-      <div className="balance-bar">
-        <span>
-          คงเหลือ
-          {refreshing ? <span className="sync-dot" aria-hidden> ·</span> : null}
-        </span>
-        <strong>{balance == null ? "…" : `฿${formatPlainNumber(balance)}`}</strong>
-      </div>
-
       {actorId ? (
         <CashInLedgerPanel
           actorId={actorId}
@@ -496,13 +498,15 @@ function LedgerView() {
         </div>
       ) : null}
 
+      {!loading ? balanceChip : null}
+
       {!loading && entries.length === 0 ? (
         <p className="empty">ยังไม่มีรายการ — เริ่มจากบันทึกเงินออก</p>
       ) : !loading && deferredQuery && !searchLoading && filteredEntries.length === 0 ? (
         <p className="empty">ไม่พบรายการที่ตรงกับคำค้น</p>
       ) : !loading ? (
         <>
-          <div className="sheet-wrap">
+          <div className="sheet-wrap ledger-staff-sheet">
             <table className="sheet-table">
               <thead>
                 <tr>

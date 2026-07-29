@@ -1458,6 +1458,56 @@ body.modal-open .main-panel {
   font-variant-numeric: tabular-nums;
 }
 
+/**
+ * คงเหลือบัญชีพนักงาน — ชิดบนตาราง ขวา เหนือคอลัมน์ «เข้า»
+ * กล่องกะทัดรัด · ขนาดตัวอักษรเท่า balance-bar เดิม
+ */
+.ledger-balance-over-in {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.35rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0.15rem 0 0;
+  margin-left: auto;
+  /* ดันไปใกล้คอลัมน์เข้า (ขวากลางของตาราง) — เหลือที่ให้ คอลัมน์ออก/ประเภท */
+  margin-right: clamp(3.6rem, 22vw, 6.5rem);
+  padding: 0.12rem 0.4rem;
+  border-radius: 0.4rem;
+  background: rgba(183, 228, 192, 0.35);
+  border: 1px solid rgba(47, 107, 79, 0.16);
+  line-height: 1.1;
+}
+
+.ledger-balance-over-in > span {
+  color: rgba(28, 42, 31, 0.55);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ledger-balance-over-in strong {
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.88);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ledger-page .sheet-wrap.ledger-staff-sheet {
+  margin-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+@media (max-width: 420px) {
+  .ledger-balance-over-in {
+    margin-right: clamp(2.4rem, 18vw, 4.2rem);
+  }
+}
+
 .ledger-photo-tip {
   display: flex;
   align-items: flex-start;
