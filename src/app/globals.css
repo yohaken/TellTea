@@ -17631,7 +17631,7 @@ a.ghost-btn {
   right: 3.15rem;
   z-index: 8;
   pointer-events: none;
-  max-width: min(58%, 14rem);
+  max-width: min(62%, 16.5rem);
 }
 
 .staff-presence-list {
@@ -17696,6 +17696,15 @@ a.ghost-btn {
 
 .staff-presence-chip:not(.is-online) .staff-presence-age {
   background: rgba(28, 42, 31, 0.62);
+}
+
+.staff-presence-chip.is-waiting {
+  opacity: 0.78;
+  border-style: dashed;
+}
+
+.staff-presence-chip.is-waiting .staff-presence-age {
+  background: rgba(28, 42, 31, 0.38);
 }
 
 .topbar-email--owner-slim {
