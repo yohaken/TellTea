@@ -39,6 +39,7 @@ import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal"
 import { CashInLedgerPanel } from "@/components/CashInLedgerPanel";
 import { BillNoticeLedgerPanel } from "@/components/BillNoticeLedgerPanel";
 import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
+import { EntryVatFieldset } from "@/components/EntryVatFieldset";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { personalProfileLabel } from "@/lib/profile";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
@@ -50,6 +51,12 @@ import {
   type LedgerTypeSource,
 } from "@/lib/ledger-ai";
 import { loadCachedLedger, saveCachedLedger } from "@/lib/cache";
+import {
+  normalizeVatSource,
+  parseVatInputStr,
+  type VatSource,
+} from "@/lib/entry-vat";
+import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
 import { friendlyFirestoreWriteError, saveImageToDevice } from "@/lib/receipts";
 import {
   type PhotoUploadProgress,
@@ -63,6 +70,7 @@ import {
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
+import { formatVatMoney } from "@/lib/vat-number-format";
 import { ArrowDownLeft, Trash2, X } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
@@ -516,6 +524,7 @@ function LedgerView() {
                   <th className="col-desc">รายการ</th>
                   <th className="col-in">เข้า</th>
                   <th className="col-out">ออก</th>
+                  <th className="col-vat" title="ภาษีซื้อ">VAT</th>
                   <th className="col-type">ประเภท</th>
                 </tr>
               </thead>
@@ -548,7 +557,7 @@ function LedgerView() {
                           <button
                             type="button"
                             className="desc-link"
-                            title="แตะเพื่อแก้ไข"
+                            title="แตะเพื่อแก้ไข · ช่อง VAT ในกล่อง"
                             onClick={() => setEditing(row)}
                           >
                             {row.description}
@@ -583,6 +592,15 @@ function LedgerView() {
                       </td>
                       <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>
                       <td className="col-out">{row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}</td>
+                      <td className="col-vat">
+                        {row.amountOut > 0 && row.hasVat && (row.vatInput || 0) > 0 ? (
+                          <span className="owner-vat-badge" title="ภาษีซื้อ">
+                            {formatVatMoney(row.vatInput || 0)}
+                          </span>
+                        ) : (
+                          <span className="muted owner-vat-empty">—</span>
+                        )}
+                      </td>
                       <td className="col-type">
                         <span className="muted" style={{ fontSize: "0.72rem" }}>
                           {row.type ? labelLedgerType(row.type) : "—"}
@@ -726,7 +744,7 @@ function LedgerView() {
           setTransferInOpen(false);
           setAdding(true);
         }}
-        addLabel="บันทึกเงินออก"
+        addLabel="+ ออก"
         variant="glass-out"
       />
 
@@ -785,6 +803,21 @@ function AddOutModal({
   const [previewSource, setPreviewSource] = useState<LedgerTypeSource>("heuristic");
   const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [hasVat, setHasVat] = useState(false);
+  const [vatInputStr, setVatInputStr] = useState("");
+  const [vatInvoiceNo, setVatInvoiceNo] = useState("");
+  const [vatSource, setVatSource] = useState<VatSource>("");
+  const [vatVerified, setVatVerified] = useState(false);
+  const [aiVatReason, setAiVatReason] = useState("");
+  const [extractStatus, setExtractStatus] = useState<"idle" | "loading" | "ready" | "error">(
+    "idle",
+  );
+  const lastExtractKeyRef = useRef("");
+  const extractBusyRef = useRef(false);
+  const descriptionRef = useRef(description);
+  const amountRef = useRef(amount);
+  descriptionRef.current = description;
+  amountRef.current = amount;
 
   const filteredSuggestions = useMemo(() => {
     const q = description.trim().toLowerCase();
@@ -803,6 +836,52 @@ function AddOutModal({
         setTypeFreq([]);
       });
   }, []);
+
+  async function runExtractFromPhotos(urls: string[]) {
+    const refs = urls.map((u) => String(u || "").trim()).filter(Boolean).slice(0, 2);
+    if (!refs.length) return;
+    const key = refs.join("|");
+    if (key === lastExtractKeyRef.current || extractBusyRef.current) return;
+    extractBusyRef.current = true;
+    setExtractStatus("loading");
+    try {
+      const result = await extractOwnerBookFromReceipt(refs);
+      lastExtractKeyRef.current = key;
+      if (result.date) setDate(result.date);
+      if (result.description && !descriptionRef.current.trim()) {
+        setDescription(result.description);
+      }
+      if (result.amountOut != null && !amountRef.current.trim()) {
+        setAmount(String(result.amountOut));
+      }
+      if (!ownerLocked && result.type) {
+        setTypeMode("auto");
+        setPreviewType(result.type);
+        setPreviewReason(result.reason || "อ่านจากรูปใบเสร็จ");
+        setPreviewSource("ai");
+        setPreviewStatus("ready");
+      }
+      setAiVatReason(result.vatReason || result.reason || "");
+      if (result.hasVat && result.vatInput != null && result.vatInput > 0) {
+        setHasVat(true);
+        setVatInputStr(String(result.vatInput));
+        if (result.vatInvoiceNo) setVatInvoiceNo(result.vatInvoiceNo);
+        setVatSource("ai");
+        setVatVerified(false);
+      } else {
+        setAiVatReason(
+          result.vatReason ||
+            "AI ไม่เห็นบรรทัดภาษีบนบิล — กรอกเองหรือไม่ติ๊ก VAT",
+        );
+      }
+      setExtractStatus("ready");
+    } catch {
+      setExtractStatus("error");
+      setAiVatReason("อ่านจากรูปไม่สำเร็จ — กรอก VAT เองได้");
+    } finally {
+      extractBusyRef.current = false;
+    }
+  }
 
   async function runOwnerPreview() {
     const text = description.trim();
@@ -864,17 +943,27 @@ function AddOutModal({
         }
       }
 
+      const amountOut = Number(amount);
+      const vatInputNum = parseVatInputStr(vatInputStr);
+      if (hasVat && vatInputNum <= 0) {
+        throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล หรือกดใช้ประมาณ ×7/107");
+      }
       setSaveStage("saving");
       await addLedgerEntry({
         date: parseDateInput(date),
         description,
         amountIn: 0,
-        amountOut: Number(amount),
+        amountOut,
         type,
         typeSource,
         typeAiReason,
         createdBy,
         receiptUrls,
+        hasVat,
+        vatInput: hasVat ? vatInputNum : 0,
+        vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
+        vatSource: hasVat ? vatSource || "manual" : "",
+        vatVerified: hasVat ? vatVerified : false,
       });
       setSaveStage("done");
       onSaved();
@@ -896,6 +985,27 @@ function AddOutModal({
           </button>
         </div>
         <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
+          <aside className="ledger-photo-tip is-in-form" role="note" aria-label="คำแนะนำถ่ายหลักฐาน">
+            <p className="ledger-photo-tip-title">แนบรูปก่อน — AI อ่าน VAT จากบิล</p>
+            <p className="ledger-photo-tip-text">
+              ใบเสร็จแม็คโคร/ท็อปส์ ฯลฯ ให้เห็นบรรทัดภาษีชัด · อย่าใช้ยอดจ่าย×7/107 แทนบิล
+            </p>
+          </aside>
+          <PhotoAttachMultiField
+            label="รูปใบเสร็จ"
+            values={receiptUrls}
+            onChange={(next) => {
+              const prev = receiptUrls;
+              setReceiptUrls(next);
+              const added = next.some((u) => !prev.includes(u));
+              if (added) void runExtractFromPhotos(next);
+            }}
+            onError={onError}
+            max={LEDGER_RECEIPT_MAX}
+            storageFolder="ledger-receipts"
+            storageSlotKey={`add-${createdBy || "new"}`}
+            hint="ถ่ายหรือแนบ — AI ใส่วันที่ รายการ ยอด และ VAT จากบิล"
+          />
           <div className="field">
             <label htmlFor="add-out-date">วันที่</label>
             <input id="add-out-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
@@ -933,22 +1043,40 @@ function AddOutModal({
               required
             />
           </div>
-          <aside className="ledger-photo-tip is-in-form" role="note" aria-label="คำแนะนำถ่ายหลักฐาน">
-            <p className="ledger-photo-tip-title">ถ่ายหลักฐานให้คมชัดก่อนแนบ</p>
-            <p className="ledger-photo-tip-text">
-              ใบเสร็จ / เอกสารซื้อ — ตัวหนังสืออ่านได้ แสงพอ ไม่เบลอ
-              รูปไม่ชัดอาจตรวจบัญชีไม่ได้
-            </p>
-          </aside>
-          <PhotoAttachMultiField
-            label="รูป"
-            values={receiptUrls}
-            onChange={setReceiptUrls}
-            onError={onError}
-            max={LEDGER_RECEIPT_MAX}
-            storageFolder="ledger-receipts"
-            storageSlotKey={`add-${createdBy || "new"}`}
-            hint=""
+          <EntryVatFieldset
+            idPrefix="add-out"
+            disabled={busy}
+            amountInclusive={Number(amount) || 0}
+            hasVat={hasVat}
+            vatInputStr={vatInputStr}
+            vatInvoiceNo={vatInvoiceNo}
+            vatSource={vatSource}
+            vatVerified={vatVerified}
+            aiStatus={
+              receiptUrls.length === 0
+                ? "none"
+                : extractStatus === "loading"
+                  ? "loading"
+                  : extractStatus === "error"
+                    ? "error"
+                    : extractStatus === "ready"
+                      ? "ready"
+                      : "idle"
+            }
+            aiVatReason={aiVatReason}
+            onHasVatChange={setHasVat}
+            onVatInputChange={setVatInputStr}
+            onVatInvoiceNoChange={setVatInvoiceNo}
+            onVatSourceChange={setVatSource}
+            onVatVerifiedChange={setVatVerified}
+            onVendorHint={(name) => {
+              if (!description.trim()) setDescription(name);
+            }}
+            canRereadAi={receiptUrls.length > 0}
+            onRereadAi={() => {
+              lastExtractKeyRef.current = "";
+              void runExtractFromPhotos(receiptUrls);
+            }}
           />
           {receiptUrls.length ? (
             <button
@@ -1036,6 +1164,31 @@ function EditEntryModal({
   const [saveStage, setSaveStage] = useState<AiSaveStage | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
+  const [hasVat, setHasVat] = useState(Boolean(!isIn && entry.hasVat));
+  const [vatInputStr, setVatInputStr] = useState(() =>
+    !isIn && entry.hasVat && (entry.vatInput || 0) > 0
+      ? String(entry.vatInput)
+      : "",
+  );
+  const [vatInvoiceNo, setVatInvoiceNo] = useState(
+    !isIn ? entry.vatInvoiceNo || "" : "",
+  );
+  const [vatSource, setVatSource] = useState<VatSource>(() =>
+    !isIn ? normalizeVatSource(entry.vatSource) : "",
+  );
+  const [vatVerified, setVatVerified] = useState(
+    Boolean(!isIn && entry.vatVerified),
+  );
+  const [aiVatReason, setAiVatReason] = useState("");
+  const [extractStatus, setExtractStatus] = useState<"idle" | "loading" | "ready" | "error">(
+    "idle",
+  );
+  const lastExtractKeyRef = useRef("");
+  const extractBusyRef = useRef(false);
+  const descriptionRef = useRef(description);
+  const amountRef = useRef(amount);
+  descriptionRef.current = description;
+  amountRef.current = amount;
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getLedgerReceiptUrls(entry));
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
   const [previewType, setPreviewType] = useState(entry.type || "");
@@ -1067,6 +1220,46 @@ function EditEntryModal({
         setTypeFreq([]);
       });
   }, []);
+
+  async function runExtractFromPhotos(urls: string[]) {
+    if (isIn) return;
+    const refs = urls.map((u) => String(u || "").trim()).filter(Boolean).slice(0, 2);
+    if (!refs.length) return;
+    const key = refs.join("|");
+    if (key === lastExtractKeyRef.current || extractBusyRef.current) return;
+    extractBusyRef.current = true;
+    setExtractStatus("loading");
+    try {
+      const result = await extractOwnerBookFromReceipt(refs);
+      lastExtractKeyRef.current = key;
+      if (result.date) setDate(result.date);
+      if (result.description && !descriptionRef.current.trim()) {
+        setDescription(result.description);
+      }
+      if (result.amountOut != null && !amountRef.current.trim()) {
+        setAmount(String(result.amountOut));
+      }
+      setAiVatReason(result.vatReason || result.reason || "");
+      if (result.hasVat && result.vatInput != null && result.vatInput > 0) {
+        setHasVat(true);
+        setVatInputStr(String(result.vatInput));
+        if (result.vatInvoiceNo) setVatInvoiceNo(result.vatInvoiceNo);
+        setVatSource("ai");
+        setVatVerified(false);
+      } else {
+        setAiVatReason(
+          result.vatReason ||
+            "AI ไม่เห็นบรรทัดภาษีบนบิล — กรอกเองหรือไม่ติ๊ก VAT",
+        );
+      }
+      setExtractStatus("ready");
+    } catch {
+      setExtractStatus("error");
+      setAiVatReason("อ่านจากรูปไม่สำเร็จ — กรอก VAT เองได้");
+    } finally {
+      extractBusyRef.current = false;
+    }
+  }
 
   async function runOwnerPreview() {
     const text = description.trim();
@@ -1129,6 +1322,10 @@ function EditEntryModal({
         }
       }
 
+      const vatInputNum = parseVatInputStr(vatInputStr);
+      if (!isIn && hasVat && vatInputNum <= 0) {
+        throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล หรือกดใช้ประมาณ ×7/107");
+      }
       await updateLedgerEntry(entry.id, {
         date: parseDateInput(date),
         description,
@@ -1138,6 +1335,21 @@ function EditEntryModal({
         typeSource,
         typeAiReason,
         receiptUrls,
+        ...(isIn
+          ? {
+              hasVat: false,
+              vatInput: 0,
+              vatInvoiceNo: "",
+              vatSource: "",
+              vatVerified: false,
+            }
+          : {
+              hasVat,
+              vatInput: hasVat ? vatInputNum : 0,
+              vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
+              vatSource: hasVat ? vatSource || "manual" : "",
+              vatVerified: hasVat ? vatVerified : false,
+            }),
       });
       onSaved();
     } catch (err) {
@@ -1171,15 +1383,27 @@ function EditEntryModal({
       >
         <div className="entry-toolbar module-form-head">
           <h2 className="panel-title">แก้ไขรายการ</h2>
-          <button
-            type="button"
-            className="ghost-btn icon-btn"
-            aria-label="ปิด"
-            disabled={busy}
-            onClick={onClose}
-          >
-            <X size={18} />
-          </button>
+          <div className="entry-toolbar-actions">
+            <button
+              type="button"
+              className="trash-btn"
+              aria-label="ลบรายการ"
+              title="ลบรายการ"
+              disabled={busy}
+              onClick={() => void onDelete()}
+            >
+              <Trash2 size={16} />
+            </button>
+            <button
+              type="button"
+              className="ghost-btn icon-btn"
+              aria-label="ปิด"
+              disabled={busy}
+              onClick={onClose}
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
         <EntryTimestampsMeta
           entryDate={entry.date}
@@ -1249,16 +1473,72 @@ function EditEntryModal({
             />
           </div>
 
-          <PhotoAttachMultiField
-            label="รูป"
-            values={receiptUrls}
-            onChange={setReceiptUrls}
-            onError={onError}
-            max={LEDGER_RECEIPT_MAX}
-            storageFolder="ledger-receipts"
-            storageSlotKey={`edit-${entry.id}`}
-            hint=""
-          />
+          {!isIn ? (
+            <PhotoAttachMultiField
+              label="รูปใบเสร็จ"
+              values={receiptUrls}
+              onChange={(next) => {
+                const prev = receiptUrls;
+                setReceiptUrls(next);
+                const added = next.some((u) => !prev.includes(u));
+                if (added) void runExtractFromPhotos(next);
+              }}
+              onError={onError}
+              max={LEDGER_RECEIPT_MAX}
+              storageFolder="ledger-receipts"
+              storageSlotKey={`edit-${entry.id}`}
+              hint="แนบรูป → AI อ่าน VAT จากบิลก่อน"
+            />
+          ) : (
+            <PhotoAttachMultiField
+              label="รูป"
+              values={receiptUrls}
+              onChange={setReceiptUrls}
+              onError={onError}
+              max={LEDGER_RECEIPT_MAX}
+              storageFolder="ledger-receipts"
+              storageSlotKey={`edit-${entry.id}`}
+              hint=""
+            />
+          )}
+
+          {!isIn ? (
+            <EntryVatFieldset
+              idPrefix="edit-ledger"
+              disabled={busy}
+              amountInclusive={Number(amount) || 0}
+              hasVat={hasVat}
+              vatInputStr={vatInputStr}
+              vatInvoiceNo={vatInvoiceNo}
+              vatSource={vatSource}
+              vatVerified={vatVerified}
+              aiStatus={
+                receiptUrls.length === 0
+                  ? "none"
+                  : extractStatus === "loading"
+                    ? "loading"
+                    : extractStatus === "error"
+                      ? "error"
+                      : extractStatus === "ready"
+                        ? "ready"
+                        : "idle"
+              }
+              aiVatReason={aiVatReason}
+              onHasVatChange={setHasVat}
+              onVatInputChange={setVatInputStr}
+              onVatInvoiceNoChange={setVatInvoiceNo}
+              onVatSourceChange={setVatSource}
+              onVatVerifiedChange={setVatVerified}
+              onVendorHint={(name) => {
+                if (!description.trim()) setDescription(name);
+              }}
+              canRereadAi={receiptUrls.length > 0}
+              onRereadAi={() => {
+                lastExtractKeyRef.current = "";
+                void runExtractFromPhotos(receiptUrls);
+              }}
+            />
+          ) : null}
           {receiptUrls.length ? (
             <button
               type="button"

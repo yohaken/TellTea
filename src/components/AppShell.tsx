@@ -20,8 +20,10 @@ import { LowBalanceAlert } from "@/components/LowBalanceAlert";
 import { PersonalProfileModal } from "@/components/PersonalProfileModal";
 import { ProfilePromptBanner } from "@/components/ProfilePromptBanner";
 import { StaffNewsPopup } from "@/components/StaffNewsPopup";
+import { OwnerQuickDock } from "@/components/OwnerQuickDock";
 import { StaffPresenceDock } from "@/components/StaffPresenceDock";
 import { StaffPresenceHeartbeat } from "@/components/StaffPresenceHeartbeat";
+import { StaffUtilityDock } from "@/components/StaffUtilityDock";
 import {
   DEFAULT_NAV_ORDER,
   DEFAULT_DOCK_TAB_MAX,
@@ -157,6 +159,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <LowBalanceAlert />
 
         <PersonalProfileModal />
+
+        {isOwner ? <OwnerQuickDock /> : null}
+        <StaffUtilityDock />
 
         <nav
           className={cn(

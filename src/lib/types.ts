@@ -59,6 +59,18 @@ export type LedgerEntry = {
   receiptUrl?: string;
   /** สลิปหลายรูป — ถ้าว่างใช้ receiptUrl */
   receiptUrls?: string[];
+  /** มีใบกำกับ / ขอหักภาษีซื้อ (เงินออก เช่น แม็คโคร ท็อปส์) */
+  hasVat?: boolean;
+  /** ยอดภาษีซื้อ (บาท) */
+  vatInput?: number;
+  /** ฐานก่อน VAT (บาท) */
+  vatBase?: number;
+  /** เลขที่ใบกำกับภาษี (ถ้ามี) */
+  vatInvoiceNo?: string;
+  /** ai | manual | propose */
+  vatSource?: string;
+  /** คนตรวจแล้วว่าตรงบิล */
+  vatVerified?: boolean;
 };
 
 export type LedgerEntryInput = {
@@ -72,6 +84,12 @@ export type LedgerEntryInput = {
   createdBy: string;
   receiptUrl?: string;
   receiptUrls?: string[];
+  hasVat?: boolean;
+  vatInput?: number;
+  vatBase?: number;
+  vatInvoiceNo?: string;
+  vatSource?: string;
+  vatVerified?: boolean;
 };
 
 /** Perpetual inventory — วัตถุดิบร้าน (Products) */

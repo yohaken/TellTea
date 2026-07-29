@@ -61,8 +61,10 @@ public final class EscPos {
     List<byte[]> parts = new ArrayList<>();
     parts.add(new byte[] {0x1B, 0x40}); // init
     parts.add(new byte[] {0x1B, 0x61, 0x00}); // left (builder centers with spaces)
-    appendTextWithBold(parts, body == null ? "" : body);
-    if (body == null || !body.endsWith("\n")) parts.add(text("\n"));
+    // Final safety net: every paper doc (sale / X / Z / reprint) — no TIS "?" glyphs.
+    String safe = ThermalSafe.ascii(body == null ? "" : body);
+    appendTextWithBold(parts, safe);
+    if (!safe.endsWith("\n")) parts.add(text("\n"));
     parts.add(text("\n\n"));
     parts.add(new byte[] {0x1D, 0x56, 0x00}); // full cut
     return concat(parts);

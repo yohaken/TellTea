@@ -1,4 +1,8 @@
 import { httpsCallable } from "firebase/functions";
+import {
+  normalizeAiVatExtract,
+  type AiVatExtract,
+} from "./entry-vat";
 import { getFirebaseFunctions } from "./firebase";
 import { normalizeLedgerOutType } from "./ledger-ai";
 
@@ -12,11 +16,11 @@ export type ExtractOwnerBookResult = {
   model: string;
   source: "ai";
   usedImages: number;
-};
+} & AiVatExtract;
 
 const ALLOWED = new Set(["cogs", "sga", "asset", "อื่นๆ"]);
 
-/** Client → Cloud Function: อ่านใบเสร็จจากรูป แล้วคืนฟิลด์บัญชีเข้าของ */
+/** Client → Cloud Function: อ่านใบเสร็จจากรูป (รวม VAT จากบิล) */
 export async function extractOwnerBookFromReceipt(
   imageRefs: string[],
   opts?: { model?: string },
@@ -27,27 +31,29 @@ export async function extractOwnerBookFromReceipt(
   }
   const fn = httpsCallable<
     { imageRefs: string[]; model?: string },
-    ExtractOwnerBookResult
+    Record<string, unknown>
   >(getFirebaseFunctions(), "extractOwnerBookFromReceipt");
   const result = await fn({
     imageRefs: refs,
     ...(opts?.model ? { model: opts.model } : {}),
   });
-  const data = result.data;
-  const type = normalizeLedgerOutType(data?.type || "อื่นๆ");
+  const data = result.data || {};
+  const type = normalizeLedgerOutType(String(data.type || "อื่นๆ"));
   if (!ALLOWED.has(type)) {
     throw new Error("AI ตอบประเภทไม่ถูกต้อง");
   }
-  const amountOut = Number(data?.amountOut);
+  const amountOut = Number(data.amountOut);
+  const vat = normalizeAiVatExtract(data);
   return {
-    date: String(data?.date || "").trim(),
-    description: String(data?.description || "").trim(),
+    date: String(data.date || "").trim(),
+    description: String(data.description || "").trim(),
     amountOut: Number.isFinite(amountOut) && amountOut > 0 ? amountOut : null,
     type,
-    note: String(data?.note || "").trim(),
-    reason: String(data?.reason || "").trim(),
-    model: String(data?.model || ""),
+    note: String(data.note || "").trim(),
+    reason: String(data.reason || "").trim(),
+    model: String(data.model || ""),
     source: "ai",
-    usedImages: Number(data?.usedImages) || 0,
+    usedImages: Number(data.usedImages) || 0,
+    ...vat,
   };
 }

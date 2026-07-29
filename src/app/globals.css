@@ -2127,6 +2127,93 @@ body.modal-open .main-panel {
   }
 }
 
+.owner-books-page .sheet-table .col-vat,
+.sheet-table .col-vat {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+}
+
+.owner-books-page .owner-vat-badge,
+.owner-vat-badge {
+  display: inline-block;
+  color: #1a5c3a;
+  font-weight: 600;
+}
+
+.owner-books-page .owner-vat-empty,
+.owner-vat-empty {
+  font-size: 0.78rem;
+}
+
+.entry-vat-box {
+  margin: 0.35rem 0 0.55rem;
+  padding: 0.55rem 0.65rem 0.45rem;
+  border: 1px solid rgba(40, 90, 60, 0.28);
+  border-radius: 0.65rem;
+  background: rgba(40, 90, 60, 0.05);
+}
+
+.entry-vat-box legend {
+  padding: 0 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1a5c3a;
+}
+
+.owner-books-page .owner-row-tappable .col-date,
+.owner-books-page .owner-row-tappable .col-out,
+.owner-books-page .owner-row-tappable .col-vat,
+.owner-books-page .owner-row-tappable .col-type,
+.owner-books-page .owner-row-tappable .col-note {
+  cursor: pointer;
+}
+
+.owner-vat-box {
+  margin: 0.35rem 0 0.55rem;
+  padding: 0.55rem 0.65rem 0.45rem;
+  border: 1px solid rgba(40, 90, 60, 0.28);
+  border-radius: 0.65rem;
+  background: rgba(40, 90, 60, 0.05);
+}
+
+.owner-vat-box legend {
+  padding: 0 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1a5c3a;
+}
+
+.owner-vat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  cursor: pointer;
+}
+
+.owner-vat-toggle input {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.owner-vat-verify {
+  margin-top: 0.35rem;
+  padding: 0.35rem 0.4rem;
+  border-radius: 0.5rem;
+  background: rgba(40, 90, 60, 0.08);
+}
+
+.entry-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
 .prod-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2174,6 +2261,444 @@ body.modal-open .main-panel {
   font-size: 1.05rem;
 }
 
+/**
+ * ทางลัดเจ้าของ — เรียงจากกลางไปขวา เหนือเมนูล่าง
+ * ไม่ทับปุ่ม + กรอก ที่ย้ายไปซ้ายสุดแล้ว
+ * z-index สูงกว่า module-tab-dock กันปุ่มซ้ายบังชิป
+ */
+.owner-quick-dock {
+  position: fixed;
+  left: 50%;
+  right: max(0.55rem, calc((100vw - var(--shell-max)) / 2 + 0.55rem));
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.45rem);
+  z-index: 13;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.22rem;
+  padding: 0.1rem 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  pointer-events: none;
+}
+
+.owner-quick-dock::-webkit-scrollbar {
+  display: none;
+}
+
+.owner-quick-chip {
+  pointer-events: auto;
+  flex: 0 0 auto;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.18rem 0.38rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  box-shadow: 0 3px 12px rgba(28, 42, 31, 0.1);
+  color: #1c2a1f;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.owner-quick-chip.is-active {
+  border-color: rgba(74, 107, 62, 0.45);
+  background: rgba(74, 107, 62, 0.14);
+  color: var(--tea-leaf);
+}
+
+.owner-quick-abbr {
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.owner-quick-setup-card {
+  max-width: 22rem;
+  width: min(100% - 1.5rem, 22rem);
+  text-align: left;
+}
+
+.owner-quick-setup-hint {
+  margin: 0 0 0.55rem;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.owner-quick-setup-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.owner-quick-setup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  min-height: 2.2rem;
+  padding: 0.15rem 0.2rem;
+  border-radius: 0.45rem;
+  background: rgba(28, 42, 31, 0.03);
+}
+
+.owner-quick-setup-row.is-on {
+  background: rgba(74, 107, 62, 0.1);
+}
+
+.owner-quick-setup-rank {
+  flex: 0 0 auto;
+  min-width: 1.1rem;
+  font-size: 0.68rem;
+  font-weight: 750;
+  color: var(--tea-leaf);
+  text-align: center;
+}
+
+.owner-quick-setup-rank.is-off {
+  color: rgba(28, 42, 31, 0.28);
+  font-weight: 500;
+}
+
+.owner-quick-setup-check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: 0.8rem;
+}
+
+.owner-quick-setup-check input {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.owner-quick-setup-abbr {
+  flex: 0 0 auto;
+  min-width: 2.2rem;
+  font-weight: 750;
+  font-size: 0.72rem;
+}
+
+.owner-quick-setup-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.owner-quick-setup-move {
+  display: inline-flex;
+  gap: 0.15rem;
+  flex: 0 0 auto;
+}
+
+.owner-quick-move-btn {
+  min-width: 1.7rem !important;
+  min-height: 1.7rem !important;
+  padding: 0 !important;
+  font-size: 0.78rem !important;
+}
+
+/**
+ * ไอคอนยูทิลิตี้พนักงาน — ซ้ายกลางจอ (ไม่ทับแถบล่าง / FAB อื่น)
+ * กระพริบเมื่อมีงานค้าง / ข้อเสนอรอเจ้าของ
+ */
+.staff-utility-fab {
+  position: fixed;
+  top: 50%;
+  left: max(0.45rem, calc((100vw - var(--shell-max)) / 2 + 0.45rem));
+  bottom: auto;
+  transform: translateY(-50%);
+  z-index: 12;
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--tea-leaf);
+  box-shadow: 0 3px 12px rgba(28, 42, 31, 0.12);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.staff-utility-fab.is-attention {
+  animation: staff-utility-blink 1.15s ease-in-out infinite;
+  border-color: rgba(201, 133, 45, 0.55);
+  color: #a66a16;
+}
+
+@keyframes staff-utility-blink {
+  0%,
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: translateY(-50%) scale(1.06);
+  }
+}
+
+.staff-utility-fab-badge {
+  position: absolute;
+  top: -0.22rem;
+  right: -0.22rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.22rem;
+  border-radius: 999px;
+  background: var(--tea-amber);
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 750;
+  line-height: 1rem;
+  text-align: center;
+}
+
+.staff-utility-backdrop {
+  z-index: 40;
+}
+
+.staff-utility-panel {
+  max-width: 22.5rem;
+  width: min(100% - 1.25rem, 22.5rem);
+  max-height: min(78vh, 34rem);
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  padding: 0.85rem 0.9rem 0.95rem;
+}
+
+.staff-utility-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.staff-utility-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.staff-utility-head .muted {
+  margin: 0.15rem 0 0;
+  font-size: 0.72rem;
+}
+
+.staff-utility-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.55rem;
+}
+
+.staff-utility-tab {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  min-height: 2rem;
+  padding: 0.28rem 0.4rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--tea-line);
+  background: rgba(28, 42, 31, 0.03);
+  color: var(--tea-ink);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.staff-utility-tab.is-active {
+  background: rgba(47, 107, 79, 0.12);
+  border-color: rgba(47, 107, 79, 0.35);
+  color: var(--tea-leaf);
+}
+
+.staff-utility-tab-badge {
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.22rem;
+  border-radius: 999px;
+  background: var(--tea-amber);
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 750;
+  line-height: 1rem;
+}
+
+.staff-utility-error {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+}
+
+.staff-utility-body {
+  overflow: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.staff-utility-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.staff-utility-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.staff-utility-form input,
+.staff-utility-form textarea {
+  width: 100%;
+  border: 1px solid var(--tea-line);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  font: inherit;
+  background: #fff;
+}
+
+.staff-utility-owner-hint {
+  margin: 0;
+  font-size: 0.74rem;
+}
+
+.staff-utility-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.staff-utility-empty {
+  padding: 0.6rem 0.2rem;
+  font-size: 0.78rem;
+}
+
+.staff-utility-item {
+  padding: 0.5rem 0.55rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--tea-line);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.staff-utility-item-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.staff-utility-item-top strong {
+  font-size: 0.86rem;
+  line-height: 1.25;
+}
+
+.staff-utility-item p {
+  margin: 0.28rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+
+.staff-utility-meta {
+  font-size: 0.7rem !important;
+}
+
+.staff-utility-status {
+  flex: 0 0 auto;
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 0.12rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(28, 42, 31, 0.06);
+  color: var(--tea-ink);
+}
+
+.staff-utility-status.is-pending {
+  background: rgba(201, 133, 45, 0.16);
+  color: #8a5a12;
+}
+
+.staff-utility-status.is-accepted {
+  background: rgba(47, 107, 79, 0.14);
+  color: var(--tea-leaf);
+}
+
+.staff-utility-status.is-later {
+  background: rgba(28, 42, 31, 0.08);
+}
+
+.staff-utility-status.is-done {
+  background: rgba(47, 107, 79, 0.22);
+  color: var(--tea-leaf);
+}
+
+.staff-utility-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+  margin-top: 0.4rem;
+}
+
+.staff-utility-status-btn {
+  min-height: 1.7rem !important;
+  padding: 0.15rem 0.45rem !important;
+  font-size: 0.7rem !important;
+}
+
+.staff-utility-status-btn.is-current {
+  border-color: rgba(47, 107, 79, 0.4);
+  color: var(--tea-leaf);
+}
+
+.staff-utility-tasks-scaffold {
+  padding: 0.35rem 0.1rem 0.2rem;
+}
+
+.staff-utility-tasks-scaffold p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.staff-utility-tasks-scaffold .muted {
+  font-size: 0.74rem;
+}
+
+.staff-utility-tasks-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  margin-top: 0.35rem;
+  align-self: flex-start;
+}
+
 .module-tab-dock {
   position: fixed;
   left: 50%;
@@ -2196,14 +2721,22 @@ body.modal-open .main-panel {
   grid-template-columns: 1fr 1fr;
 }
 
+/** + กรอก — ซ้ายสุด · เล็กลง ~ครึ่ง ยังแตะได้ · พื้นที่กลาง–ขวาให้ทางลัดเจ้าของ */
 .module-tab-dock.is-single {
-  grid-template-columns: 1fr;
-  width: min(calc(50% - 1.4rem), 10.5rem);
+  left: max(0.55rem, calc((100vw - var(--shell-max)) / 2 + 0.55rem));
+  right: auto;
+  transform: none;
+  grid-template-columns: minmax(0, 1fr);
+  width: auto;
+  max-width: 4.6rem;
+  min-width: 0;
   padding: 0;
   border: none;
   background: transparent;
   box-shadow: none;
   backdrop-filter: none;
+  overflow: hidden;
+  z-index: 11;
 }
 
 .module-tab {
@@ -2219,9 +2752,16 @@ body.modal-open .main-panel {
 }
 
 .module-tab-dock.is-single .module-tab.is-add {
-  min-height: 2.45rem;
-  font-size: 0.84rem;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 1.25rem;
+  padding: 0.12rem 0.45rem;
+  font-size: 0.66rem;
   letter-spacing: 0.01em;
+  box-shadow: 0 3px 12px rgba(47, 107, 79, 0.32);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .module-tab.is-active {
@@ -2258,9 +2798,16 @@ body.modal-open .main-panel {
 }
 
 .module-tab-dock.is-single .module-tab.is-glass-out {
-  min-height: 2.45rem;
-  font-size: 0.84rem;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 1.25rem;
+  padding: 0.12rem 0.45rem;
+  font-size: 0.66rem;
   letter-spacing: 0.01em;
+  box-shadow: 0 3px 12px rgba(244, 162, 97, 0.22);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /** ปุ่มโอนเข้าเล็ก — เจ้าของเท่านั้น · มุมขวาล่างเหนือ FAB AI */
@@ -4524,6 +5071,144 @@ body.modal-open .main-panel {
   background: rgba(149, 213, 178, 0.35);
   font-weight: 700;
   font-size: 0.72rem;
+}
+
+.payroll-tabs,
+.payroll-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.65rem;
+}
+
+.payroll-tabs button,
+.payroll-filter button {
+  border: 1px solid var(--tea-line);
+  background: rgba(255, 255, 255, 0.55);
+  color: inherit;
+  border-radius: 0.65rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  min-height: 2.15rem;
+}
+
+.payroll-tabs button.is-active,
+.payroll-filter button.is-active {
+  background: rgba(45, 106, 79, 0.14);
+  border-color: rgba(45, 106, 79, 0.35);
+}
+
+.payroll-summary-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
+}
+
+.payroll-summary-bar > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.75rem;
+  background: rgba(149, 213, 178, 0.18);
+}
+
+.payroll-summary-bar strong {
+  font-size: 1.05rem;
+}
+
+.payroll-actions {
+  margin-bottom: 0.75rem;
+}
+
+.payroll-actions-hint,
+.payroll-settings-hint {
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.payroll-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.payroll-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--tea-line);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.payroll-row.status-paid {
+  opacity: 0.72;
+}
+
+.payroll-row.status-void {
+  opacity: 0.5;
+}
+
+.payroll-row-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.payroll-row-meta {
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.payroll-row-amt {
+  font-weight: 800;
+  font-size: 1.05rem;
+  margin-top: 0.15rem;
+}
+
+.payroll-status {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.12rem 0.4rem;
+  border-radius: 0.45rem;
+  background: rgba(244, 162, 97, 0.25);
+}
+
+.payroll-status.status-paid {
+  background: rgba(149, 213, 178, 0.45);
+}
+
+.payroll-status.status-void {
+  background: rgba(120, 120, 120, 0.18);
+}
+
+.payroll-row-actions {
+  display: flex;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.payroll-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+  margin-top: 0.55rem;
+}
+
+@media (max-width: 520px) {
+  .payroll-summary-bar,
+  .payroll-settings-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .list-row.is-muted {
