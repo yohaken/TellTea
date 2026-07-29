@@ -425,7 +425,7 @@ function LedgerView() {
         />
       ) : null}
 
-      <div className="table-search">
+      <div className="table-search ledger-table-search">
         <input
           type="search"
           value={query}
@@ -447,7 +447,7 @@ function LedgerView() {
         ) : null}
       </div>
       {deferredQuery ? (
-        <p className="muted table-search-meta">
+        <p className="muted table-search-meta ledger-table-search-meta">
           {searchLoading
             ? "กำลังค้นหาทั้งบัญชี…"
             : `พบ ${filteredEntries.length} รายการ`}
@@ -457,44 +457,34 @@ function LedgerView() {
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {isOwner && !loading && filteredEntries.length > 0 ? (
-        <div className="bulk-status-toolbar" role="group" aria-label="จัดประเภทหลายรายการ">
-          <button
-            type="button"
-            className="ghost-btn bulk-status-chip"
-            disabled={bulkBusy || !visibleIds.length}
-            onClick={toggleSelectAllVisible}
-          >
-            {allVisibleSelected ? "ยกเลิกที่แสดง" : `เลือกที่แสดง (${visibleIds.length})`}
-          </button>
-          {selectedIds.size > 0 ? (
-            <div className="bulk-status-actions" role="group" aria-label="ตั้งประเภทกลุ่ม">
-              <span className="bulk-status-count">เลือก {selectedIds.size} รายการ</span>
-              {BULK_TYPE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  className="ghost-btn bulk-status-btn"
-                  disabled={bulkBusy}
-                  onClick={() => void onBulkRetype(opt.value)}
-                >
-                  {opt.label}
-                </button>
-              ))}
+      {isOwner && selectedIds.size > 0 ? (
+        <div
+          className="bulk-status-toolbar ledger-bulk-compact"
+          role="group"
+          aria-label="จัดประเภทหลายรายการ"
+        >
+          <div className="bulk-status-actions" role="group" aria-label="ตั้งประเภทกลุ่ม">
+            <span className="bulk-status-count">{selectedIds.size}</span>
+            {BULK_TYPE_OPTIONS.map((opt) => (
               <button
+                key={opt.value}
                 type="button"
-                className="ghost-btn bulk-status-clear"
+                className="ghost-btn bulk-status-btn"
                 disabled={bulkBusy}
-                onClick={clearSelected}
+                onClick={() => void onBulkRetype(opt.value)}
               >
-                ยกเลิก
+                {opt.label}
               </button>
-            </div>
-          ) : (
-            <p className="muted bulk-status-hint">
-              ติ๊กเลือกด้านหน้าหลายแถว → กดปุ่มประเภทเพื่อจัดใหม่พร้อมกัน (เจ้าของเท่านั้น)
-            </p>
-          )}
+            ))}
+            <button
+              type="button"
+              className="ghost-btn bulk-status-clear"
+              disabled={bulkBusy}
+              onClick={clearSelected}
+            >
+              ยกเลิก
+            </button>
+          </div>
         </div>
       ) : null}
 

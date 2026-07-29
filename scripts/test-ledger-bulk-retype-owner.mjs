@@ -19,12 +19,15 @@ assert.match(pageSrc, /bulkUpdateLedgerTypes/);
 assert.match(pageSrc, /selectedIds/);
 assert.match(pageSrc, /onBulkRetype/);
 assert.match(pageSrc, /BULK_TYPE_OPTIONS/);
-assert.match(pageSrc, /isOwner && !loading && filteredEntries\.length > 0/);
+assert.match(pageSrc, /isOwner && selectedIds\.size > 0/);
+assert.match(pageSrc, /ledger-bulk-compact/);
 assert.match(pageSrc, /\{isOwner \? \(/);
 assert.match(pageSrc, /bulk-check-col/);
-assert.match(pageSrc, /เจ้าของเท่านั้น/);
+assert.doesNotMatch(pageSrc, /เลือกที่แสดง/);
+assert.doesNotMatch(pageSrc, /ติ๊กเลือกด้านหน้าหลายแถว/);
 assert.match(pageSrc, /if \(!isOwner\) return;/);
+assert.match(pageSrc, /ledger-table-search/);
 
-assert.match(versionSrc, /APP_BUILD\s*=\s*228/);
+assert.match(versionSrc, /APP_BUILD\s*=\s*385/);
 
 console.log("OK test-ledger-bulk-retype-owner");

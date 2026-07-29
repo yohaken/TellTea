@@ -1837,6 +1837,55 @@ body.modal-open .main-panel {
   font-size: 0.8rem;
 }
 
+/** Ledger: compact slim search · ชิดตาราง */
+.ledger-page .ledger-table-search {
+  gap: 0.28rem;
+  margin: 0 0 0.18rem;
+}
+
+.ledger-page .ledger-table-search input[type="search"] {
+  min-height: 1.55rem;
+  height: 1.55rem;
+  padding: 0.12rem 0.55rem;
+  border-radius: 0.45rem;
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.ledger-page .ledger-table-search .table-search-clear {
+  min-height: 1.55rem;
+  height: 1.55rem;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.ledger-page .ledger-table-search-meta {
+  margin: 0 0 0.18rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.ledger-page .ledger-bulk-compact {
+  margin: 0 0 0.18rem;
+  gap: 0.2rem;
+}
+
+.ledger-page .ledger-bulk-compact .bulk-status-btn,
+.ledger-page .ledger-bulk-compact .bulk-status-clear {
+  min-height: 1.4rem;
+  padding: 0.08rem 0.4rem;
+  font-size: 0.66rem;
+}
+
+.ledger-page .ledger-bulk-compact .bulk-status-count {
+  font-size: 0.66rem;
+}
+
+.ledger-page .ledger-balance-over-in {
+  margin-top: 0.08rem;
+}
+
 .owner-calc-summary {
   margin: 0 0 0.55rem;
   padding: 0.55rem 0.7rem;
