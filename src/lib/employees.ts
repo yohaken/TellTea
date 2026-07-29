@@ -30,6 +30,14 @@ export type Employee = {
   linkedStaffId?: string;
   /** เรท/ค่าต่อหน่วย (optional — ลบได้โดยเคลียร์ค่า) */
   unitRate?: number;
+  /** เงินเดือนต่อเดือน (บาท) — ใช้สร้างรายการรอโอน */
+  monthlySalary?: number;
+  /** ธนาคารรับโอน (optional) */
+  payBank?: string;
+  /** เลขบัญชีรับโอน (optional) */
+  payAccountNo?: string;
+  /** ชื่อบัญชีรับโอน (optional) */
+  payAccountName?: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -101,7 +109,17 @@ export async function updateEmployee(
   patch: Partial<
     Pick<
       Employee,
-      "name" | "nickname" | "active" | "linkedEmail" | "linkedPhone" | "linkedStaffId" | "unitRate"
+      | "name"
+      | "nickname"
+      | "active"
+      | "linkedEmail"
+      | "linkedPhone"
+      | "linkedStaffId"
+      | "unitRate"
+      | "monthlySalary"
+      | "payBank"
+      | "payAccountNo"
+      | "payAccountName"
     >
   >,
 ): Promise<void> {
@@ -135,6 +153,25 @@ export async function updateEmployee(
   if (patch.unitRate !== undefined) {
     next.unitRate =
       patch.unitRate == null || patch.unitRate === 0 ? deleteField() : patch.unitRate;
+  }
+  if (patch.monthlySalary !== undefined) {
+    const n = Number(patch.monthlySalary);
+    next.monthlySalary =
+      patch.monthlySalary == null || !Number.isFinite(n) || n <= 0
+        ? deleteField()
+        : Math.round(n * 100) / 100;
+  }
+  if (patch.payBank !== undefined) {
+    const v = (patch.payBank || "").trim();
+    next.payBank = v ? v : deleteField();
+  }
+  if (patch.payAccountNo !== undefined) {
+    const v = (patch.payAccountNo || "").trim();
+    next.payAccountNo = v ? v : deleteField();
+  }
+  if (patch.payAccountName !== undefined) {
+    const v = (patch.payAccountName || "").trim();
+    next.payAccountName = v ? v : deleteField();
   }
   await updateDoc(doc(getDb(), "employees", id), next);
 }

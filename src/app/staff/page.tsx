@@ -545,14 +545,34 @@ function EmployeeRosterRow({
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(emp.name);
   const [nickname, setNickname] = useState(emp.nickname || "");
+  const [monthlySalary, setMonthlySalary] = useState(
+    emp.monthlySalary != null && emp.monthlySalary > 0 ? String(emp.monthlySalary) : "",
+  );
+  const [payBank, setPayBank] = useState(emp.payBank || "");
+  const [payAccountNo, setPayAccountNo] = useState(emp.payAccountNo || "");
+  const [payAccountName, setPayAccountName] = useState(emp.payAccountName || "");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!editing) {
       setName(emp.name);
       setNickname(emp.nickname || "");
+      setMonthlySalary(
+        emp.monthlySalary != null && emp.monthlySalary > 0 ? String(emp.monthlySalary) : "",
+      );
+      setPayBank(emp.payBank || "");
+      setPayAccountNo(emp.payAccountNo || "");
+      setPayAccountName(emp.payAccountName || "");
     }
-  }, [emp.name, emp.nickname, editing]);
+  }, [
+    emp.name,
+    emp.nickname,
+    emp.monthlySalary,
+    emp.payBank,
+    emp.payAccountNo,
+    emp.payAccountName,
+    editing,
+  ]);
 
   async function saveEdit() {
     const nextName = name.trim();
@@ -560,9 +580,22 @@ function EmployeeRosterRow({
       onError("ใส่ชื่อพนักงาน");
       return;
     }
+    const salaryRaw = monthlySalary.trim();
+    const salaryNum = salaryRaw === "" ? 0 : Number(salaryRaw);
+    if (salaryRaw !== "" && (!Number.isFinite(salaryNum) || salaryNum < 0)) {
+      onError("เงินเดือนไม่ถูกต้อง");
+      return;
+    }
     setSaving(true);
     try {
-      await updateEmployee(emp.id, { name: nextName, nickname: nickname.trim() });
+      await updateEmployee(emp.id, {
+        name: nextName,
+        nickname: nickname.trim(),
+        monthlySalary: salaryNum,
+        payBank: payBank.trim(),
+        payAccountNo: payAccountNo.trim(),
+        payAccountName: payAccountName.trim(),
+      });
       setEditing(false);
       await onReload();
     } catch (err) {
@@ -596,6 +629,46 @@ function EmployeeRosterRow({
                 maxLength={12}
               />
             </label>
+            <label className="field">
+              <span>เงินเดือน / เดือน</span>
+              <input
+                type="number"
+                min={0}
+                step={100}
+                inputMode="decimal"
+                value={monthlySalary}
+                disabled={saving || busy}
+                onChange={(e) => setMonthlySalary(e.target.value)}
+                placeholder="เช่น 15000"
+              />
+            </label>
+            <label className="field">
+              <span>ธนาคาร</span>
+              <input
+                value={payBank}
+                disabled={saving || busy}
+                onChange={(e) => setPayBank(e.target.value)}
+                placeholder="optional"
+              />
+            </label>
+            <label className="field">
+              <span>เลขบัญชี</span>
+              <input
+                value={payAccountNo}
+                disabled={saving || busy}
+                onChange={(e) => setPayAccountNo(e.target.value)}
+                placeholder="optional"
+              />
+            </label>
+            <label className="field">
+              <span>ชื่อบัญชี</span>
+              <input
+                value={payAccountName}
+                disabled={saving || busy}
+                onChange={(e) => setPayAccountName(e.target.value)}
+                placeholder="optional"
+              />
+            </label>
           </div>
         ) : (
           <>
@@ -608,6 +681,9 @@ function EmployeeRosterRow({
             <div className="muted employee-roster-meta">
               {emp.active ? "ใช้งาน" : "ปิดใช้"} · {rosterLinkLabel(emp)}
               {!emp.nickname ? " · ยังไม่มีชื่อเล่น" : ""}
+              {emp.monthlySalary && emp.monthlySalary > 0
+                ? ` · เงินเดือน ฿${emp.monthlySalary.toLocaleString("th-TH")}`
+                : " · ยังไม่มีเงินเดือน"}
             </div>
           </>
         )}
@@ -639,7 +715,7 @@ function EmployeeRosterRow({
             disabled={busy}
             onClick={() => setEditing(true)}
           >
-            แก้ชื่อ
+            แก้
           </button>
         )}
         <button

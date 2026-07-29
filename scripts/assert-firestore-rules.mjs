@@ -37,6 +37,7 @@ const REQUIRED_MATCHES = [
   "monthlyIncome",
   "stock",
   "employees",
+  "payrollItems",
   "prodEntries",
   "otEntries",
   "checklistRecords",
