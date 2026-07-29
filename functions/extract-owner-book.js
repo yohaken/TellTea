@@ -14,6 +14,7 @@ const {
   formatBusinessProfile,
   MAX_IMAGES,
 } = require("./classify-ledger");
+const { completeVatFromBill } = require("./vat-from-bill");
 
 const MAX_IMAGE_BYTES = 3.5 * 1024 * 1024;
 const BOOTSTRAP_GEMINI_API_KEY = "";
@@ -31,30 +32,35 @@ const EXTRACT_SYSTEM_PROMPT = `คุณเป็นผู้ช่วยอ่�
 - type ตามกฎบัญชี: cogs=วัตถุดิบ/บรรจุภัณฑ์/ค่าขนส่งวัตถุดิบ · sga=ค่าแรง/ค่าไฟ/ค่าเช่า/ซ่อม · asset=เครื่องจักร/อุปกรณ์ถาวร · อื่นๆ=ไม่ชัด
 - ถ้ามีหลายรายการในใบเสร็จ ให้สรุปเป็นรายการหลักหนึ่งรายการ + ยอดรวม
 - **VAT (สำคัญ — อ่านท้ายบิลให้ละเอียด):**
-  - โฟกัสบล็อกสรุปท้ายใบเสร็จ ใกล้ TOTAL / NET / ยอดสุทธิ / มูลค่าสินค้า / ส่วนลด
-  - ค้นหาป้ายเหล่านี้แม้ตัวพิมพ์เล็ก จาง หรือเป็นใบเสร็จความร้อนยาว:
-    "ภาษีมูลค่าเพิ่ม" · "ภาษีมูลค่าเพิ่ม 7%" · "VAT" · "V.A.T" · "VAT 7%" · "ภาษี 7%" · "TAX" · "รวมภาษีมูลค่าเพิ่ม" · "VAT AMOUNT"
-  - ห้างค้าส่ง/ซูเปอร์มาร์เก็ตไทย (ท็อปเวิลด์ · ท็อปส์ · ท็อปแวลู · แม็คโคร · บิ๊กซี · โลตัส · โฮมโปร) มักออกใบกำกับภาษีอย่างย่อ — VAT อยู่ท้ายบิลแยกจากยอดรวม
-  - ถ้าเห็นคำว่า "ใบกำกับภาษี" / "ใบกำกับภาษีอย่างย่อ" / "Tax Invoice" ให้หาบรรทัดยอดภาษีด้วย
-  - vatInput = ตัวเลขยอดภาษีที่พิมพ์ข้างป้ายด้านบน (ไม่ใช่ยอดรวม ไม่ใช่จำนวนชิ้น)
-  - vatBase = มูลค่าสินค้า/บริการก่อน VAT ถ้าเห็นบนบิล (เช่น "มูลค่าสินค้า" "AMOUNT before VAT")
-  - hasVat = true และ vatSeenOnBill = true เมื่ออ่านตัวเลขภาษีจากบิลได้
-  - **ห้ามคำนวณ VAT จากยอดรวม×7/107 เอง** — ถ้ามองไม่เห็นตัวเลขภาษีจริง ให้ hasVat=false, vatInput=null
-  - ถ้ายอดภาษีอ่านได้แต่ไม่ชัดทุกหลัก ให้ใส่ค่าที่อ่านได้พร้อม vatReason บอกความมั่นใจ
+  - โฟกัสบล็อกสรุปท้ายใบเสร็จ ใต้ยอดรวมตัวใหญ่ (TOTAL / ยอดสุทธิ) — มักอยู่ 2–4 บรรทัดถัดลงมา
+  - ค้นหาป้ายเหล่านี้แม้ตัวพิมพ์เล็ก จาง หรือใบเสร็จความร้อน:
+    "ภาษีมูลค่าเพิ่ม" · "ภาษีมูลค่าเพิ่ม 7%" · "ฐานภาษี" · "ฐานภาษี 7%" · "VAT" · "V.A.T" · "VAT 7%" · "ภาษี 7%" · "TAX" · "รวมภาษีมูลค่าเพิ่ม"
+  - **ท็อปเวิลด์ (Top World) รูปแบบมาตรฐาน:** ใต้ยอดรวมตัวหนา จะมี
+    1) บรรทัด "ฐานภาษี 7%" = vatBase
+    2) บรรทัด "ภาษีมูลค่าเพิ่ม 7%" = vatInput
+    สินค้าที่เสีย VAT มักมีตัว "V" ท้ายบรรทัดรายการ — ไม่ใช่ยอดภาษี
+  - ห้างค้าส่งอื่น (ท็อปส์ · ท็อปแวลู · แม็คโคร · บิ๊กซี · โลตัส) ก็มักมีคู่ฐานภาษี+VAT ท้ายบิล
+  - vatInput = ตัวเลขข้างป้ายภาษีมูลค่าเพิ่ม (ไม่ใช่ยอดรวม ไม่ใช่จำนวนชิ้น ไม่ใช่ตัว V)
+  - vatBase = ตัวเลขข้างป้ายฐานภาษี / มูลค่าสินค้าก่อน VAT
+  - hasVat = true และ vatSeenOnBill = true เมื่ออ่านตัวเลขภาษีหรือฐานภาษีจากบิลได้
+  - **ห้ามคำนวณ VAT จากยอดรวม×7/107 เอง** เมื่อไม่เห็นทั้งฐานภาษีและบรรทัดภาษี
+  - ถ้าอ่านได้ทั้งยอดรวมกับฐานภาษี แต่ตัวเลขภาษีจาง ให้ใส่ vatBase + amountOut ไว้ (ระบบช่วยเติม vatInput จากผลต่างบนบิลได้)
   - vatInvoiceNo = เลขที่ใบกำกับ/เลขที่เอกสารถ้าเห็น
 - ห้ามแต่งข้อมูลที่มองไม่เห็นในรูป`;
 
-const VAT_RETRY_SYSTEM_PROMPT = `คุณเป็นผู้ช่วย OCR ใบเสร็จไทย — รอบนี้โฟกัสเฉพาะภาษีมูลค่าเพิ่ม (VAT)
-อ่านท้ายบิล/บล็อกสรุปอย่างละเอียด แม้ตัวอักษรเล็ก จาง หรือใบเสร็จยาวจากท็อปเวิลด์ ท็อปส์ แม็คโคร บิ๊กซี โลตัส
+const VAT_RETRY_SYSTEM_PROMPT = `คุณเป็นผู้ช่วย OCR ใบเสร็จไทย — รอบนี้โฟกัสเฉพาะภาษีมูลค่าเพิ่ม (VAT) ท้ายบิล
+โดยเฉพาะท็อปเวิลด์: ใต้ยอดรวมตัวหนา มี "ฐานภาษี 7%" แล้วตามด้วย "ภาษีมูลค่าเพิ่ม 7%"
 
 ตอบเป็น JSON เท่านั้น:
-{"hasVat":trueหรือfalse,"vatInput":จำนวนภาษีเป็นตัวเลขหรือ null,"vatBase":มูลค่าก่อนภาษีหรือ null,"vatInvoiceNo":"เลขที่ใบกำกับหรือว่าง","vatSeenOnBill":trueหรือfalse,"vatReason":"สั้นๆ"}
+{"hasVat":trueหรือfalse,"vatInput":จำนวนภาษีเป็นตัวเลขหรือ null,"vatBase":มูลค่าฐานภาษีเป็นตัวเลขหรือ null,"vatInvoiceNo":"เลขที่ใบกำกับหรือว่าง","vatSeenOnBill":trueหรือfalse,"vatReason":"สั้นๆ"}
 
 กฎ:
-- หาป้าย: ภาษีมูลค่าเพิ่ม · VAT · VAT 7% · ภาษี 7% · V.A.T · TAX · รวมภาษีมูลค่าเพิ่ม
-- vatInput = ตัวเลขยอดภาษีที่พิมพ์บนบิลเท่านั้น
-- ห้ามคำนวณจากยอดรวม×7/107
-- ถ้าไม่เห็นตัวเลขภาษีจริง → hasVat=false, vatInput=null`;
+- อ่านตัวเลขขวาสุดของบรรทัด "ฐานภาษี 7%" → vatBase
+- อ่านตัวเลขขวาสุดของบรรทัด "ภาษีมูลค่าเพิ่ม 7%" → vatInput
+- ป้ายอื่นที่รับได้: VAT · VAT 7% · ภาษี 7% · V.A.T · TAX
+- ห้ามสับสนกับตัว "V" ท้ายรายการสินค้า
+- ห้ามคำนวณจากยอดรวม×7/107 เมื่อไม่เห็นตัวเลขบนบิล
+- ถ้าเห็นแค่ฐานภาษี ให้ใส่ vatBase ไว้ (แม้ vatInput จะอ่านยาก)`;
 
 function buildExtractSystemPrompt(businessContext) {
   const ctx = String(businessContext || "").trim() || DEFAULT_BUSINESS_CONTEXT;
@@ -179,11 +185,12 @@ function normalizeVatFields(parsed) {
   const hasVatFlag =
     parsed?.hasVat === true ||
     parsed?.hasVat === "true" ||
-    (vatInput != null && vatInput > 0);
+    (vatInput != null && vatInput > 0) ||
+    (vatBase != null && vatBase > 0);
   const vatSeenOnBill =
     parsed?.vatSeenOnBill === true ||
     parsed?.vatSeenOnBill === "true" ||
-    (hasVatFlag && vatInput != null);
+    (hasVatFlag && (vatInput != null || vatBase != null));
   return {
     hasVat: Boolean(hasVatFlag && vatInput != null),
     vatInput,
@@ -289,7 +296,8 @@ async function callGeminiExtract({ apiKey, model, imageParts, businessContext })
     imageParts,
     systemText: buildExtractSystemPrompt(businessContext),
     userText: `อ่านใบเสร็จ/หลักฐานในรูป ${imageParts.length} รูป แล้วดึงข้อมูลบัญชีเงินออกตามรูปแบบ JSON
-สำคัญ: สแกนท้ายบิลหาบรรทัดภาษีมูลค่าเพิ่ม/VAT ให้ละเอียด (โดยเฉพาะท็อปเวิลด์ ท็อปส์ แม็คโคร)`,
+สำคัญมาก: ดูใต้ยอดรวมตัวหนาท้ายบิล — ท็อปเวิลด์มี "ฐานภาษี 7%" และ "ภาษีมูลค่าเพิ่ม 7%" (เช่น ยอด 5743 → ฐาน ~5367 / ภาษี ~376)
+อย่าสับสนตัว V ท้ายรายการสินค้ากับยอดภาษี`,
   });
 
   const type = normalizeType(parsed.type) || "อื่นๆ";
@@ -299,8 +307,10 @@ async function callGeminiExtract({ apiKey, model, imageParts, businessContext })
 
   let vat = normalizeVatFields(parsed);
   const amountOut = normalizeAmount(parsed.amountOut);
+  // If model read ฐานภาษี + total but missed the VAT line, fill from bill math.
+  vat = completeVatFromBill(vat, amountOut);
 
-  // Second pass: amount found but VAT missed — common on long Top World slips.
+  // Second pass: amount found but VAT still missing — common on Top World slips.
   if ((!vat.hasVat || vat.vatInput == null) && amountOut != null) {
     try {
       const vatParsed = await callGeminiJson({
@@ -308,20 +318,31 @@ async function callGeminiExtract({ apiKey, model, imageParts, businessContext })
         model,
         imageParts,
         systemText: VAT_RETRY_SYSTEM_PROMPT,
-        userText: `รอบสอง: โฟกัสเฉพาะยอดภาษีมูลค่าเพิ่มบนใบเสร็จ ${imageParts.length} รูป
-ดูท้ายบิลใกล้ TOTAL/NET/ยอดสุทธิ — หากร้านท็อปเวิลด์/ท็อปส์/แม็คโคร ให้หา VAT 7% เป็นพิเศษ
-ยอดจ่ายที่อ่านได้ก่อนหน้า ≈ ${amountOut} (ใช้อ้างอิงตำแหน่งท้ายบิลเท่านั้น ห้ามเอาไปคำนวณ VAT)`,
+        userText: `รอบสอง: โฟกัสเฉพาะท้ายบิลใบเสร็จ ${imageParts.length} รูป
+หากร้านท็อปเวิลด์/Top World: ดูใต้ยอดรวมตัวหนา → บรรทัด "ฐานภาษี 7%" และ "ภาษีมูลค่าเพิ่ม 7%"
+ยอดจ่ายที่อ่านได้ก่อนหน้า ≈ ${amountOut} (ใช้อ้างอิงตำแหน่งท้ายบิลเท่านั้น ห้าม×7/107)`,
       });
-      const retryVat = normalizeVatFields(vatParsed);
+      let retryVat = normalizeVatFields(vatParsed);
+      retryVat = completeVatFromBill(retryVat, amountOut);
       if (retryVat.hasVat && retryVat.vatInput != null) {
         vat = retryVat;
-      } else if (retryVat.vatReason && !vat.vatReason) {
-        vat = { ...vat, vatReason: retryVat.vatReason };
+      } else {
+        vat = completeVatFromBill(
+          {
+            ...vat,
+            vatBase: vat.vatBase ?? retryVat.vatBase,
+            vatInvoiceNo: vat.vatInvoiceNo || retryVat.vatInvoiceNo,
+            vatReason: vat.vatReason || retryVat.vatReason,
+          },
+          amountOut,
+        );
       }
     } catch (err) {
       console.warn("vat retry skip", err?.message || err);
     }
   }
+
+  vat = completeVatFromBill(vat, amountOut);
 
   return {
     date: normalizeDate(parsed.date),

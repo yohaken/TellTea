@@ -21,11 +21,17 @@ assert.match(cf, /vatSeenOnBill/);
 assert.match(cf, /ห้ามคำนวณ VAT จากยอดรวม/);
 assert.match(cf, /hasVat/);
 assert.match(cf, /ท็อปเวิลด์/);
+assert.match(cf, /ฐานภาษี 7%/);
 assert.match(cf, /MEDIA_RESOLUTION_HIGH/);
 assert.match(cf, /thinkingBudget/);
 assert.match(cf, /VAT_RETRY_SYSTEM_PROMPT/);
 assert.match(cf, /vat retry skip/);
+assert.match(cf, /completeVatFromBill/);
 assert.match(cf, /timeoutSeconds: 120/);
+assert.match(
+  readFileSync(join(root, "functions/vat-from-bill.js"), "utf8"),
+  /fillVatFromBaseAndGross/,
+);
 
 assert.match(ai, /normalizeAiVatExtract/);
 assert.match(ai, /timeout:\s*120_000/);
@@ -50,6 +56,6 @@ assert.doesNotMatch(entryVat, /fallback.*proposePurchaseVatInput\(amountInclusiv
 assert.match(receipts, /maxShortEdge/);
 assert.match(receipts, /maxLongEdge/);
 assert.match(receipts, /shortEdge/);
-assert.match(version, /APP_BUILD = 452/);
+assert.match(version, /APP_BUILD = 455/);
 
 console.log("OK test-ai-vat-extract");
