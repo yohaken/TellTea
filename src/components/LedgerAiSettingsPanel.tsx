@@ -128,7 +128,8 @@ export function LedgerAiSettingsPanel({ actorId }: Props) {
       >
         <span className="ledger-ai-settings-toggle-left">
           <Sparkles size={15} aria-hidden />
-          ตั้งค่า AI จัดประเภทบัญชี
+          <span className="ledger-ai-settings-toggle-label">ตั้งค่า AI จัดประเภท</span>
+          <span className="ledger-ai-settings-toggle-rare">นานๆ ครั้ง</span>
         </span>
         {open ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
       </button>
@@ -136,7 +137,7 @@ export function LedgerAiSettingsPanel({ actorId }: Props) {
       {open ? (
         <form className="ledger-ai-settings-body" onSubmit={(e) => void onSave(e)}>
           <p className="muted ledger-ai-settings-hint">
-            พนักงานเห็นเฉพาะผล AI — แก้ประเภทได้เฉพาะคุณ · คีย์เก็บฝั่งเซิร์ฟเวอร์
+            ใช้ปีละไม่กี่ครั้งพอ · พนักงานเห็นเฉพาะผล AI — แก้ประเภทได้เฉพาะคุณ · คีย์เก็บฝั่งเซิร์ฟเวอร์
             · บริบทร้านแก้ได้ที่ อื่นๆ → ตั้งค่าโมดูล → โปรไฟล์กิจการ (พับหัวข้อ)
           </p>
 

@@ -36,8 +36,10 @@ import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoC
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
+import { CashInLedgerPanel } from "@/components/CashInLedgerPanel";
 import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
+import { personalProfileLabel } from "@/lib/profile";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
 import { BASE_TYPE_OPTIONS, frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
 import {
@@ -60,7 +62,7 @@ import {
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
-import { Camera, ArrowDownLeft, Trash2, X } from "lucide-react";
+import { ArrowDownLeft, Trash2, X } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 const BULK_TYPE_OPTIONS = BASE_TYPE_OPTIONS.filter((o) => o.value !== "auto");
@@ -127,7 +129,14 @@ function LedgerView() {
       !!rowUploadProgress,
   );
 
+  const [cashInForceOpen, setCashInForceOpen] = useState(false);
+
   useEffect(() => {
+    if (searchParams.get("cashIn") === "1") {
+      setCashInForceOpen(true);
+      router.replace("/ledger/", { scroll: false });
+      return;
+    }
     if (!isOwner) return;
     if (searchParams.get("transferIn") === "1") {
       setTransferInOpen(true);
@@ -374,6 +383,9 @@ function LedgerView() {
     return () => observer.disconnect();
   }, [loadMore, loading, hasMore, entries.length, deferredQuery]);
 
+  const cashInStaffName =
+    personalProfileLabel(staff) || staff?.displayName || staff?.email || "";
+
   return (
     <div className="ledger-page module-page">
       <div className="balance-bar">
@@ -384,18 +396,17 @@ function LedgerView() {
         <strong>{balance == null ? "…" : `฿${formatPlainNumber(balance)}`}</strong>
       </div>
 
-      {isOwner && actorId ? <LedgerAiSettingsPanel actorId={actorId} /> : null}
+      {actorId ? (
+        <CashInLedgerPanel
+          actorId={actorId}
+          isOwner={!!isOwner}
+          staffName={cashInStaffName}
+          forceOpen={cashInForceOpen}
+          onForceOpenConsumed={() => setCashInForceOpen(false)}
+        />
+      ) : null}
 
-      <aside className="ledger-photo-tip" role="note" aria-label="คำแนะนำถ่ายหลักฐาน">
-        <Camera size={18} aria-hidden className="ledger-photo-tip-icon" />
-        <div className="ledger-photo-tip-body">
-          <p className="ledger-photo-tip-title">ถ่ายหลักฐานให้คมชัด</p>
-          <p className="ledger-photo-tip-text">
-            โดยเฉพาะใบเสร็จ / เอกสารซื้อ — ตัวหนังสืออ่านได้ แสงพอ ไม่เบลอ
-            รูปไม่ชัดอาจตรวจบัญชีไม่ได้
-          </p>
-        </div>
-      </aside>
+      {isOwner && actorId ? <LedgerAiSettingsPanel actorId={actorId} /> : null}
 
       <div className="table-search">
         <input
@@ -912,6 +923,13 @@ function AddOutModal({
               required
             />
           </div>
+          <aside className="ledger-photo-tip is-in-form" role="note" aria-label="คำแนะนำถ่ายหลักฐาน">
+            <p className="ledger-photo-tip-title">ถ่ายหลักฐานให้คมชัดก่อนแนบ</p>
+            <p className="ledger-photo-tip-text">
+              ใบเสร็จ / เอกสารซื้อ — ตัวหนังสืออ่านได้ แสงพอ ไม่เบลอ
+              รูปไม่ชัดอาจตรวจบัญชีไม่ได้
+            </p>
+          </aside>
           <PhotoAttachMultiField
             label="รูป"
             values={receiptUrls}

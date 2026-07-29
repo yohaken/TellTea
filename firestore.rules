@@ -404,6 +404,39 @@ service cloud.firestore {
       allow update, delete: if hasPerm('ledger');
     }
 
+    /**
+     * ตารางเทียบเงินนำเข้า — เงินสดหน้าร้านโอนเข้า บช. ร้าน + สลิปสรุป POS
+     * อ่าน/สร้าง: มีสิทธิ ledger · พนักงานแก้ได้เฉพาะของตัวเองและคงสถานะรอตรวจ
+     * ตรวจสถานะ (verify): เจ้าของ · ลบ: เจ้าของหรือคนสร้าง
+     */
+    match /cashDeposits/{entryId} {
+      allow read: if hasPerm('ledger');
+      allow create: if hasPerm('ledger')
+        && request.resource.data.createdBy == actorId()
+        && request.resource.data.transferDate is number
+        && request.resource.data.bankAmount is number
+        && request.resource.data.bankAmount > 0
+        && request.resource.data.expectedCashTotal is number
+        && request.resource.data.expectedCashTotal >= 0
+        && request.resource.data.days is list
+        && request.resource.data.days.size() > 0
+        && request.resource.data.days.size() <= 31
+        && request.resource.data.status == 'pending';
+      allow update: if hasPerm('ledger')
+        && (
+          isOwner()
+          || (
+            resource.data.createdBy == actorId()
+            && request.resource.data.createdBy == resource.data.createdBy
+            && request.resource.data.status == 'pending'
+            && request.resource.data.verifiedBy == ''
+            && request.resource.data.verifiedAt == 0
+          )
+        );
+      allow delete: if hasPerm('ledger')
+        && (isOwner() || resource.data.createdBy == actorId());
+    }
+
     match /ownerBooks/{entryId} {
       allow read, write: if hasPerm('ownerBooks');
     }
