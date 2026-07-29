@@ -63,6 +63,28 @@ function isLinkedToStaff(emp: Employee, staff: StaffMember): boolean {
   return false;
 }
 
+/**
+ * หาแถวพนักงานที่ผูกกับบัญชี staff — ใช้กรองคิวจ่าย/เงินเดือนมุมพนักงาน
+ * ลำดับ: staff.employeeId → linkedStaffId/email/phone → ชื่อตรง displayName
+ */
+export function resolveLinkedEmployee(
+  employees: Employee[],
+  staff: Pick<StaffMember, "id" | "email" | "phone" | "displayName" | "employeeId"> | null | undefined,
+): Employee | null {
+  if (!staff || !employees.length) return null;
+  if (staff.employeeId) {
+    const byId = employees.find((e) => e.id === staff.employeeId);
+    if (byId) return byId;
+  }
+  const linked = employees.find((e) => isLinkedToStaff(e, staff as StaffMember));
+  if (linked) return linked;
+  const name = (staff.displayName || "").trim().toLowerCase();
+  if (!name) return null;
+  return (
+    employees.find((e) => e.active && e.name.trim().toLowerCase() === name) || null
+  );
+}
+
 function isUnlinked(emp: Employee): boolean {
   return !emp.linkedStaffId && !emp.linkedEmail && !emp.linkedPhone;
 }

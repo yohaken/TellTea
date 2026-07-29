@@ -35,8 +35,15 @@ type PayTarget = {
   note: string;
 };
 
+function shortKind(kind: PayrollKind): string {
+  if (kind === "salary_mid") return "กลางเดือน";
+  if (kind === "salary_month_end") return "สิ้นเดือน";
+  return "โบนัส";
+}
+
 export function PayrollPayPanel({
   isOwner,
+  shopView,
   actorId,
   periodMonth,
   employees,
@@ -50,6 +57,8 @@ export function PayrollPayPanel({
   onInfo,
 }: {
   isOwner: boolean;
+  /** true = เห็นคิวทั้งร้าน (เจ้าของ / คนโอน) · false = เฉพาะของตัวเอง */
+  shopView: boolean;
   actorId: string;
   periodMonth: string;
   employees: Employee[];
@@ -104,6 +113,8 @@ export function PayrollPayPanel({
     () => employees.filter((e) => e.active && !(Number(e.monthlySalary) > 0)).length,
     [employees],
   );
+
+  const showActions = shopView && (isOwner || canPay);
 
   async function onGenerate(scope: PayrollGenerateScope) {
     if (!isOwner) return;
@@ -201,19 +212,23 @@ export function PayrollPayPanel({
 
   return (
     <div className="payroll-panel">
-      <div className="payroll-summary-bar">
+      <div className={`payroll-summary-bar${shopView ? "" : " payroll-summary-bar--solo"}`}>
         <div>
-          <span className="bonus-summary-label">รอโอนเดือนนี้</span>
+          <span className="bonus-summary-label">
+            {shopView ? "รอโอนเดือนนี้" : "ของฉัน · รอโอนเดือนนี้"}
+          </span>
           <strong>฿{fmt(summary.pendingSum)}</strong>
           <span className="muted bonus-summary-pool-meta">
             {summary.pendingCount} รายการ · จ่ายแล้ว ฿{fmt(summary.paidSum)}
           </span>
         </div>
-        <div>
-          <span className="bonus-summary-label">คิวทั้งร้าน</span>
-          <strong>฿{fmt(pendingAllSum)}</strong>
-          <span className="muted bonus-summary-pool-meta">{pendingAll.length} รายการรอ</span>
-        </div>
+        {shopView ? (
+          <div>
+            <span className="bonus-summary-label">คิวทั้งร้าน</span>
+            <strong>฿{fmt(pendingAllSum)}</strong>
+            <span className="muted bonus-summary-pool-meta">{pendingAll.length} รายการรอ</span>
+          </div>
+        ) : null}
       </div>
 
       {isOwner ? (
@@ -245,8 +260,12 @@ export function PayrollPayPanel({
               : ""}
           </p>
         </div>
+      ) : shopView ? (
+        <p className="muted payroll-actions-hint">คิวโอนทั้งร้าน — กดโอนแล้วเมื่อโอนเสร็จ (แนบสลิปได้)</p>
       ) : (
-        <p className="muted payroll-actions-hint">รายการรอเจ้าของโอน — พนักงานดูได้อย่างเดียว</p>
+        <p className="muted payroll-actions-hint">
+          รายการจ่ายของคุณ · รอเจ้าของโอน — ไม่เห็นยอดคนอื่น
+        </p>
       )}
 
       <div className="payroll-filter" role="tablist" aria-label="กรองรายการจ่าย">
@@ -274,84 +293,117 @@ export function PayrollPayPanel({
       </div>
 
       {!visible.length ? (
-        <p className="empty">ยังไม่มีรายการในมุมมองนี้ — กดสร้างรายการรอโอน</p>
+        <p className="empty">
+          {shopView
+            ? "ยังไม่มีรายการในมุมมองนี้ — กดสร้างรายการรอโอน"
+            : "ยังไม่มีรายการจ่ายของคุณในเดือนนี้"}
+        </p>
       ) : (
-        <ul className="payroll-list">
-          {visible.map((item) => {
-            const emp = employees.find((e) => e.id === item.employeeId);
-            const accountBits = [
-              emp?.payBank,
-              emp?.payAccountNo,
-              emp?.payAccountName,
-            ]
-              .map((s) => (s || "").trim())
-              .filter(Boolean);
-            return (
-              <li key={item.id} className={`payroll-row status-${item.status}`}>
-                <div className="payroll-row-main">
-                  <div className="payroll-row-head">
-                    <strong>{item.employeeName}</strong>
-                    <span className={`payroll-status status-${item.status}`}>
-                      {PAYROLL_STATUS_LABELS[item.status]}
-                    </span>
-                  </div>
-                  <div className="payroll-row-meta muted">
-                    {PAYROLL_KIND_LABELS[item.kind]}
-                    {kindUsesMonthEndAccount(item.kind)
-                      ? ` · ลงบัญชี ${formatDateShort(item.accountDate || item.dueDate)} · โอน ${formatDateShort(item.dueDate)}`
-                      : ` · โอน ${formatDateShort(item.dueDate)}`}
-                    {item.advanceDeduct > 0
-                      ? ` · หักเบิก ฿${fmt(item.advanceDeduct)} (ก่อนหัก ฿${fmt(item.grossAmount)})`
-                      : ""}
-                    {accountBits.length ? ` · ${accountBits.join(" · ")}` : ""}
-                  </div>
-                  <div className="payroll-row-amt">฿{fmt(item.amount)}</div>
-                </div>
-                {item.status === "pending" && isOwner ? (
-                  <div className="payroll-row-actions">
-                    <button
-                      type="button"
-                      className="primary-btn"
-                      disabled={busy || (!canPay && item.amount > 0)}
-                      title={
-                        item.amount > 0 && !canPay ? "ต้องมีสิทธิ์บช.เจ้าของ" : undefined
-                      }
-                      onClick={() =>
-                        setPayTarget({
-                          item,
-                          slipUrls: [...item.slipUrls],
-                          note: item.note,
-                        })
-                      }
-                    >
-                      {item.amount > 0 ? "โอนแล้ว" : "เคลียรเบิก"}
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost-btn"
-                      disabled={busy}
-                      onClick={() => void onVoid(item)}
-                    >
-                      ยกเลิก
-                    </button>
-                  </div>
-                ) : null}
-                {item.status === "void" && isOwner ? (
-                  <div className="payroll-row-actions">
-                    <button
-                      type="button"
-                      className="primary-btn"
-                      disabled={busy}
-                      onClick={() => void onRestore(item)}
-                    >
-                      กู้คืน
-                    </button>
-                  </div>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
+        <div className="sheet-scroll payroll-sheet">
+          <table className="sheet-table payroll-table">
+            <thead>
+              <tr>
+                {shopView ? <th className="payroll-col-name">ชื่อ</th> : null}
+                <th className="payroll-col-kind">ประเภท</th>
+                <th className="payroll-col-status">สถานะ</th>
+                <th className="payroll-col-due">โอน</th>
+                <th className="payroll-col-amt col-out">ยอด</th>
+                {showActions ? <th className="payroll-col-act col-act" /> : null}
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((item) => {
+                const emp = employees.find((e) => e.id === item.employeeId);
+                const accountBits = [emp?.payBank, emp?.payAccountNo]
+                  .map((s) => (s || "").trim())
+                  .filter(Boolean);
+                const dueLabel = kindUsesMonthEndAccount(item.kind)
+                  ? `${formatDateShort(item.dueDate)}`
+                  : formatDateShort(item.dueDate);
+                const metaBits: string[] = [];
+                if (kindUsesMonthEndAccount(item.kind)) {
+                  metaBits.push(`บช.${formatDateShort(item.accountDate || item.dueDate)}`);
+                }
+                if (item.advanceDeduct > 0) {
+                  metaBits.push(`หักเบิก ฿${fmt(item.advanceDeduct)}`);
+                }
+                if (shopView && accountBits.length) {
+                  metaBits.push(accountBits.join(" "));
+                }
+                return (
+                  <tr key={item.id} className={`payroll-tr status-${item.status}`}>
+                    {shopView ? (
+                      <td className="payroll-col-name">
+                        <strong>{item.employeeName}</strong>
+                        {metaBits.length ? (
+                          <div className="muted payroll-cell-meta">{metaBits.join(" · ")}</div>
+                        ) : null}
+                      </td>
+                    ) : null}
+                    <td className="payroll-col-kind">
+                      <span title={PAYROLL_KIND_LABELS[item.kind]}>{shortKind(item.kind)}</span>
+                      {!shopView && metaBits.length ? (
+                        <div className="muted payroll-cell-meta">{metaBits.join(" · ")}</div>
+                      ) : null}
+                    </td>
+                    <td className="payroll-col-status">
+                      <span className={`payroll-status status-${item.status}`}>
+                        {PAYROLL_STATUS_LABELS[item.status]}
+                      </span>
+                    </td>
+                    <td className="payroll-col-due">{dueLabel}</td>
+                    <td className="payroll-col-amt col-out">฿{fmt(item.amount)}</td>
+                    {showActions ? (
+                      <td className="payroll-col-act col-act">
+                        {item.status === "pending" && canPay ? (
+                          <div className="payroll-inline-actions">
+                            <button
+                              type="button"
+                              className="primary-btn payroll-table-btn"
+                              disabled={busy || (!canPay && item.amount > 0)}
+                              title={
+                                item.amount > 0 && !canPay ? "ต้องมีสิทธิ์บช.เจ้าของ" : undefined
+                              }
+                              onClick={() =>
+                                setPayTarget({
+                                  item,
+                                  slipUrls: [...item.slipUrls],
+                                  note: item.note,
+                                })
+                              }
+                            >
+                              {item.amount > 0 ? "โอน" : "เคลียร์"}
+                            </button>
+                            {isOwner ? (
+                              <button
+                                type="button"
+                                className="ghost-btn payroll-table-btn"
+                                disabled={busy}
+                                onClick={() => void onVoid(item)}
+                              >
+                                ยกเลิก
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        {item.status === "void" && isOwner ? (
+                          <button
+                            type="button"
+                            className="primary-btn payroll-table-btn"
+                            disabled={busy}
+                            onClick={() => void onRestore(item)}
+                          >
+                            กู้คืน
+                          </button>
+                        ) : null}
+                      </td>
+                    ) : null}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {payTarget ? (

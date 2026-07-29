@@ -19,13 +19,14 @@ import {
 } from "@/lib/bonus-deductions";
 import {
   computeMonthBonus,
+  namesMatch,
   parseMonthInput,
   pickMyBonusRow,
   thaiMonthYearLabel,
   type MonthBonusReport,
 } from "@/lib/bonus";
 import { RateSchedulePanel } from "@/components/RateSchedulePanel";
-import { listActiveEmployees, type Employee } from "@/lib/employees";
+import { listActiveEmployees, resolveLinkedEmployee, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import { getOtSettings, subscribeOtEntries, type OtEntry } from "@/lib/ot";
 import {
@@ -86,6 +87,8 @@ function BonusView() {
 
   const canView = can(staff, "bonus");
   const canPay = isOwner || can(staff, "ownerBooks");
+  /** คิวทั้งร้าน: เจ้าของ หรือคนที่มีสิทธิ์โอน — พนักงานทั่วไปเห็นเฉพาะของตัวเอง */
+  const shopPayView = isOwner || canPay;
   const { year, month: monthIdx } = parseMonthInput(month);
 
   useBodyScrollLock(!!editTarget);
@@ -180,10 +183,20 @@ function BonusView() {
     rateSchedule,
   ]);
 
-  const myRow = useMemo(
-    () => (report ? pickMyBonusRow(report, employees, staff?.displayName) : null),
-    [report, employees, staff?.displayName],
+  const myEmployee = useMemo(
+    () => resolveLinkedEmployee(employees, staff),
+    [employees, staff],
   );
+
+  const myRow = useMemo(() => {
+    if (!report) return null;
+    if (myEmployee) {
+      const byId = report.rows.find((r) => r.workerId === myEmployee.id);
+      if (byId) return byId;
+      return report.rows.find((r) => namesMatch(r.workerName, myEmployee.name)) || null;
+    }
+    return pickMyBonusRow(report, employees, staff?.displayName);
+  }, [report, employees, staff?.displayName, myEmployee]);
 
   const bonusByEmployee = useMemo(() => {
     const map: Record<string, number> = {};
@@ -194,9 +207,15 @@ function BonusView() {
     return map;
   }, [report]);
 
+  const visiblePayrollItems = useMemo(() => {
+    if (shopPayView) return payrollItems;
+    if (!myEmployee) return [];
+    return payrollItems.filter((i) => i.employeeId === myEmployee.id);
+  }, [payrollItems, shopPayView, myEmployee]);
+
   const pendingCount = useMemo(
-    () => payrollItems.filter((i) => i.status === "pending").length,
-    [payrollItems],
+    () => visiblePayrollItems.filter((i) => i.status === "pending").length,
+    [visiblePayrollItems],
   );
 
   if (!canView) return null;
@@ -236,7 +255,7 @@ function BonusView() {
           aria-selected={tab === "settings"}
           onClick={() => setTab("settings")}
         >
-          ตั้งค่าจ่าย
+          {isOwner ? "ตั้งค่าจ่าย" : "เงินเดือนฉัน"}
         </button>
       </div>
 
@@ -257,7 +276,9 @@ function BonusView() {
         </div>
       ) : (
         <p className="muted bonus-toolbar-meta" style={{ margin: "0.25rem 0 0.65rem" }}>
-          ตั้งเงินเดือนและรอบจ่ายที่นี่ · ไม่ต้องไปหน้าอื่น
+          {isOwner
+            ? "ตั้งเงินเดือนและรอบจ่ายที่นี่ · ไม่ต้องไปหน้าอื่น"
+            : "ดูเงินเดือนและรอบจ่ายของตัวเอง · ไม่เห็นยอดคนอื่น"}
         </p>
       )}
 
@@ -270,11 +291,12 @@ function BonusView() {
         ) : (
           <PayrollPayPanel
             isOwner={isOwner}
+            shopView={shopPayView}
             actorId={actorId}
             periodMonth={month}
             employees={employees}
             schedule={payrollSchedule}
-            items={payrollItems}
+            items={visiblePayrollItems}
             bonusByEmployee={bonusByEmployee}
             prodEntries={prodEntries}
             otEntries={otEntries}
@@ -293,6 +315,7 @@ function BonusView() {
           schedule={payrollSchedule}
           employees={employees}
           isOwner={isOwner}
+          selfEmployeeId={myEmployee?.id ?? null}
           onEmployeesChange={setEmployees}
           onError={setError}
           onInfo={(msg) => {

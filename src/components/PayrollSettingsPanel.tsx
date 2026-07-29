@@ -39,6 +39,8 @@ export function PayrollSettingsPanel({
   schedule,
   employees,
   isOwner,
+  /** เมื่อไม่ใช่เจ้าของ — แสดงเฉพาะพนักงานคนนี้ (ไม่โชวยอดคนอื่น) */
+  selfEmployeeId = null,
   onError,
   onInfo,
   onEmployeesChange,
@@ -46,6 +48,7 @@ export function PayrollSettingsPanel({
   schedule: PayrollSchedule;
   employees: Employee[];
   isOwner: boolean;
+  selfEmployeeId?: string | null;
   onError: (msg: string) => void;
   onInfo?: (msg: string) => void;
   onEmployeesChange?: (emps: Employee[]) => void;
@@ -184,24 +187,70 @@ export function PayrollSettingsPanel({
   }
 
   if (!isOwner) {
+    const me = selfEmployeeId
+      ? roster.find((e) => e.id === selfEmployeeId) || null
+      : null;
+    const salary = me?.monthlySalary && me.monthlySalary > 0 ? me.monthlySalary : 0;
+    const midAmt = salaryAmountForSplit(salary, mid.percent);
+    const endAmt = salaryAmountForSplit(salary, end.percent);
+    const bankBits = [me?.payBank, me?.payAccountNo, me?.payAccountName]
+      .map((s) => (s || "").trim())
+      .filter(Boolean);
+
     return (
       <section className="payroll-settings">
-        <p className="muted">
+        <h2 className="payroll-settings-title">เงินเดือนของฉัน</h2>
+        <p className="muted payroll-settings-hint">
           จ่าย 2 รอบ: วันที่ {mid.dayOfMonth} ({mid.percent}%) · วันที่ {end.dayOfMonth} (
-          {end.percent}% + โบนัสเดือนที่แล้ว)
+          {end.percent}% + โบนัสเดือนที่แล้ว) · ดูได้เฉพาะของตัวเอง
         </p>
-        <ul className="payroll-salary-readonly">
-          {roster.map((emp) => (
-            <li key={emp.id}>
-              <strong>{emp.name}</strong>
-              <span className="muted">
-                {emp.monthlySalary && emp.monthlySalary > 0
-                  ? `฿${fmt(emp.monthlySalary)} / เดือน`
-                  : "ยังไม่ตั้งเงินเดือน"}
-              </span>
-            </li>
-          ))}
-        </ul>
+        {!me ? (
+          <p className="empty">
+            ยังไม่ได้เชื่อมชื่อกับรายชื่อร้าน — ไปโปรไฟล์เชื่อมชื่อก่อน จะเห็นเงินเดือนและคิวจ่ายของตัวเอง
+          </p>
+        ) : (
+          <div className="sheet-scroll payroll-sheet">
+            <table className="sheet-table payroll-table payroll-table--self">
+              <tbody>
+                <tr>
+                  <th scope="row">ชื่อ</th>
+                  <td>{me.name}</td>
+                </tr>
+                <tr>
+                  <th scope="row">เงินเดือน / เดือน</th>
+                  <td>{salary > 0 ? `฿${fmt(salary)}` : "ยังไม่ตั้ง — ถามเจ้าของ"}</td>
+                </tr>
+                <tr>
+                  <th scope="row">รอบกลางเดือน</th>
+                  <td>
+                    วันที่ {mid.dayOfMonth}
+                    {salary > 0 ? ` · ≈ ฿${fmt(midAmt)}` : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">รอบสิ้นเดือน</th>
+                  <td>
+                    โอนวันที่ {end.dayOfMonth}
+                    {salary > 0 ? ` · ≈ ฿${fmt(endAmt)}` : ""}
+                    {" · รวมโบนัสเดือนที่แล้ว (ถ้ามี)"}
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">เบิกค้าง</th>
+                  <td>
+                    {Number(me.advanceBalance) > 0
+                      ? `฿${fmt(Number(me.advanceBalance))} (หักจากรอบจ่ายถัดไป)`
+                      : "ไม่มี"}
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row">บัญชีรับโอน</th>
+                  <td>{bankBits.length ? bankBits.join(" · ") : "ยังไม่ระบุ"}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     );
   }
@@ -306,40 +355,86 @@ export function PayrollSettingsPanel({
         {!roster.length ? (
           <p className="empty">ยังไม่มีพนักงานใช้งาน — เพิ่มชื่อที่ศูนย์พนักงานก่อน</p>
         ) : (
-          <ul className="payroll-salary-list">
-            {roster.map((emp) => {
-              const draft = drafts[emp.id] || draftFromEmployee(emp);
-              const salaryNum = Number(draft.monthlySalary) || 0;
-              const midAmt = salaryAmountForSplit(salaryNum, midPctN);
-              const endAmt = salaryAmountForSplit(salaryNum, endPctN);
-              const open = expandedId === emp.id;
-              const busy = savingId === emp.id;
-              return (
-                <li key={emp.id} className="payroll-salary-row">
-                  <div className="payroll-salary-row-head">
-                    <div>
-                      <strong>{emp.name}</strong>
-                      <div className="muted payroll-salary-meta">
-                        {salaryNum > 0
-                          ? `฿${fmt(salaryNum)} / เดือน · รอบ1 ฿${fmt(midAmt)} · สิ้นเดือน ฿${fmt(endAmt)}`
-                          : "ยังไม่ตั้งเงินเดือน"}
-                        {Number(emp.advanceBalance) > 0
-                          ? ` · เบิกค้าง ฿${fmt(Number(emp.advanceBalance))}`
-                          : ""}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="ghost-btn"
-                      disabled={!!savingId}
-                      onClick={() => setExpandedId(open ? null : emp.id)}
-                    >
-                      {open ? "ปิด" : "ตั้งค่า"}
-                    </button>
-                  </div>
+          <>
+            <div className="sheet-scroll payroll-sheet">
+              <table className="sheet-table payroll-table">
+                <thead>
+                  <tr>
+                    <th className="payroll-col-name">ชื่อ</th>
+                    <th className="payroll-col-amt col-out">/เดือน</th>
+                    <th className="payroll-col-split">กลาง</th>
+                    <th className="payroll-col-split">สิ้นเดือน</th>
+                    <th className="payroll-col-adv">เบิกค้าง</th>
+                    <th className="payroll-col-act col-act" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {roster.map((emp) => {
+                    const draft = drafts[emp.id] || draftFromEmployee(emp);
+                    const salaryNum = Number(draft.monthlySalary) || 0;
+                    const midAmt = salaryAmountForSplit(salaryNum, midPctN);
+                    const endAmt = salaryAmountForSplit(salaryNum, endPctN);
+                    const open = expandedId === emp.id;
+                    const busy = savingId === emp.id;
+                    const adv = Number(emp.advanceBalance) || 0;
+                    return (
+                      <tr
+                        key={emp.id}
+                        className={
+                          open
+                            ? "payroll-tr is-expanded"
+                            : salaryNum > 0
+                              ? "payroll-tr"
+                              : "payroll-tr is-missing-salary"
+                        }
+                      >
+                        <td className="payroll-col-name">
+                          <strong>{emp.name}</strong>
+                          {(draft.payBank || draft.payAccountNo) && !open ? (
+                            <div className="muted payroll-cell-meta">
+                              {[draft.payBank, draft.payAccountNo].filter(Boolean).join(" ")}
+                            </div>
+                          ) : null}
+                        </td>
+                        <td className="payroll-col-amt col-out">
+                          {salaryNum > 0 ? `฿${fmt(salaryNum)}` : "—"}
+                        </td>
+                        <td className="payroll-col-split">
+                          {salaryNum > 0 ? `฿${fmt(midAmt)}` : "—"}
+                        </td>
+                        <td className="payroll-col-split">
+                          {salaryNum > 0 ? `฿${fmt(endAmt)}` : "—"}
+                        </td>
+                        <td className="payroll-col-adv">{adv > 0 ? `฿${fmt(adv)}` : "—"}</td>
+                        <td className="payroll-col-act col-act">
+                          <button
+                            type="button"
+                            className="ghost-btn payroll-table-btn"
+                            disabled={!!savingId}
+                            onClick={() => setExpandedId(open ? null : emp.id)}
+                          >
+                            {open ? "ปิด" : "ตั้ง"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                  {open ? (
+            {expandedId
+              ? (() => {
+                  const emp = roster.find((e) => e.id === expandedId);
+                  if (!emp) return null;
+                  const draft = drafts[emp.id] || draftFromEmployee(emp);
+                  const salaryNum = Number(draft.monthlySalary) || 0;
+                  const midAmt = salaryAmountForSplit(salaryNum, midPctN);
+                  const endAmt = salaryAmountForSplit(salaryNum, endPctN);
+                  const busy = savingId === emp.id;
+                  return (
                     <div className="payroll-salary-edit">
+                      <strong className="payroll-salary-edit-title">ตั้งค่า · {emp.name}</strong>
                       <label className="field">
                         <span>เงินเดือน / เดือน (บาท)</span>
                         <input
@@ -422,11 +517,10 @@ export function PayrollSettingsPanel({
                         </button>
                       </div>
                     </div>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
+                  );
+                })()
+              : null}
+          </>
         )}
       </div>
 

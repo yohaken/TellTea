@@ -27,6 +27,7 @@
     "test:vat-mail-parse": "npx --yes tsx scripts/test-vat-mail-parse.ts",
     "test:rate-schedule": "node scripts/test-rate-schedule.mjs",
     "test:payroll": "node scripts/test-payroll.mjs",
+    "test:resolve-linked-employee": "node scripts/test-resolve-linked-employee.mjs",
     "repair:ot-rates": "node scripts/repair-ot-bonus-rates.mjs",
     "test:ledger-multi-photo": "node scripts/test-ledger-multi-photo.mjs",
     "test:ledger-ai-classify": "node scripts/test-ledger-ai-classify.mjs",
