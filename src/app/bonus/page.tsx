@@ -68,7 +68,7 @@ function BonusView() {
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const [month, setMonth] = useState(() => suggestPeriodMonthForToday());
-  const [tab, setTab] = useState<PayTab>(isOwner ? "pay" : "bonus");
+  const [tab, setTab] = useState<PayTab>("bonus");
   const [otEntries, setOtEntries] = useState<OtEntry[]>([]);
   const [prodEntries, setProdEntries] = useState<ProdEntry[]>([]);
   const [deductionSettings, setDeductionSettings] = useState<BonusDeductionSettings | null>(null);
