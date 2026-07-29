@@ -1,0 +1,654 @@
+"use client";
+
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
+import { ChevronDown, ChevronUp, Trash2, X } from "lucide-react";
+import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
+import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
+import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
+import {
+  acceptBillNotice,
+  addBillNotice,
+  BILL_NOTICE_LIVE_MAX,
+  BILL_NOTICE_PAGE_SIZE,
+  BILL_NOTICE_PRESETS,
+  BILL_NOTICE_RECEIPT_MAX,
+  deleteBillNotice,
+  getBillNoticeReceiptUrls,
+  isBillNoticeReadyForOwnerBooks,
+  labelBillNoticeStatus,
+  rejectBillNotice,
+  subscribeBillNoticesPage,
+  summarizeBillNotices,
+  updateBillNotice,
+  type BillNotice,
+  type BillNoticeStatus,
+} from "@/lib/bill-notices";
+import { guessTypeFromDescription } from "@/lib/ledger-labels";
+import { friendlyFirestoreWriteError } from "@/lib/receipts";
+import {
+  formatDateShort,
+  formatPlainNumber,
+  parseDateInput,
+  todayInputValue,
+} from "@/lib/utils";
+import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
+
+function statusClass(status: BillNoticeStatus) {
+  switch (status) {
+    case "accepted":
+      return "bill-notice-status is-accepted";
+    case "rejected":
+      return "bill-notice-status is-rejected";
+    case "void":
+      return "bill-notice-status is-void";
+    default:
+      return "bill-notice-status is-pending";
+  }
+}
+
+type Props = {
+  actorId: string;
+  isOwner: boolean;
+  staffName: string;
+  forceOpen?: boolean;
+  onForceOpenConsumed?: () => void;
+};
+
+/**
+ * ตารางแจ้งบิลบน /ledger/ — พนักงานเสนอบิลค่าไฟ/น้ำ ฯลฯ
+ * เจ้าของรับแล้วรวมเข้า บช.เจ้าของ เมื่อวันที่·รายการ·รูป·ยอดครบ
+ */
+export function BillNoticeLedgerPanel({
+  actorId,
+  isOwner,
+  staffName,
+  forceOpen = false,
+  onForceOpenConsumed,
+}: Props) {
+  const [open, setOpen] = useState(false);
+  const [entries, setEntries] = useState<BillNotice[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [liveLimit, setLiveLimit] = useState(BILL_NOTICE_PAGE_SIZE);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<BillNotice | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<{
+    urls: string[];
+    title: string;
+    entryDateMs?: number;
+  } | null>(null);
+
+  useBodyScrollLock(adding || !!editing || !!imagePreview);
+
+  useEffect(() => {
+    if (forceOpen) {
+      setOpen(true);
+      onForceOpenConsumed?.();
+    }
+  }, [forceOpen, onForceOpenConsumed]);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    return subscribeBillNoticesPage(
+      liveLimit,
+      (page) => {
+        setEntries(page.entries);
+        setHasMore(page.hasMore);
+        setLoading(false);
+      },
+      (err) => {
+        setError(err.message || "โหลดแจ้งบิลไม่สำเร็จ");
+        setLoading(false);
+      },
+    );
+  }, [open, liveLimit]);
+
+  const summary = useMemo(() => summarizeBillNotices(entries), [entries]);
+  const pendingCount = summary.pendingCount;
+
+  async function onAccept(row: BillNotice) {
+    if (!isOwner) return;
+    const ready = isBillNoticeReadyForOwnerBooks(row);
+    if (!ready.ok) {
+      setError(ready.message);
+      return;
+    }
+    if (
+      !window.confirm(
+        `รับบิล «${row.description}» ฿${formatPlainNumber(row.amountOut)} เข้า บช.เจ้าของ?`,
+      )
+    ) {
+      return;
+    }
+    setBusyId(row.id);
+    setError(null);
+    try {
+      await acceptBillNotice({ id: row.id, verifiedBy: actorId });
+    } catch (err) {
+      setError(friendlyFirestoreWriteError(err, "รับบิลไม่สำเร็จ"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onReject(row: BillNotice) {
+    if (!isOwner) return;
+    if (!window.confirm(`ไม่รับบิล «${row.description}»?`)) return;
+    setBusyId(row.id);
+    setError(null);
+    try {
+      await rejectBillNotice({ id: row.id, verifiedBy: actorId });
+    } catch (err) {
+      setError(friendlyFirestoreWriteError(err, "บันทึกไม่สำเร็จ"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onDelete(row: BillNotice) {
+    const canDelete = isOwner || row.createdBy === actorId;
+    if (!canDelete) return;
+    if (row.status !== "pending" && !isOwner) {
+      setError("ลบได้เฉพาะรายการที่รอเจ้าของ");
+      return;
+    }
+    if (!window.confirm(`ลบแจ้งบิล «${row.description}»?`)) return;
+    setBusyId(row.id);
+    setError(null);
+    try {
+      await deleteBillNotice(row.id);
+    } catch (err) {
+      setError(friendlyFirestoreWriteError(err, "ลบไม่สำเร็จ"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <aside className="bill-notice-panel" aria-label="ตารางแจ้งบิล">
+      <button
+        type="button"
+        className="bill-notice-panel-toggle"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="bill-notice-panel-toggle-left">
+          <span className="bill-notice-panel-title">แจ้งบิล</span>
+          <span className="bill-notice-panel-meta">
+            {pendingCount > 0
+              ? `รอเจ้าของ ${pendingCount} · ฿${formatPlainNumber(summary.pendingSum)}`
+              : "ค่าไฟ · ค่าน้ำ · อื่นๆ → บช.เจ้าของ"}
+          </span>
+        </span>
+        {open ? <ChevronUp size={18} aria-hidden /> : <ChevronDown size={18} aria-hidden />}
+      </button>
+
+      {open ? (
+        <div className="bill-notice-panel-body">
+          <p className="muted bill-notice-hint">
+            พนักงานถ่ายรูปบิลเสนอบิล — เจ้าของตรวจแล้วรวมเข้า บช.เจ้าของ
+            (วันที่ · รายการ · อัพบิล · เงินออก · note)
+          </p>
+
+          {entries.length > 0 ? (
+            <div className="bill-notice-summary" aria-label="วิเคราะห์สรุปแจ้งบิล">
+              <p className="bill-notice-summary-line">
+                <span>รอเจ้าของ</span>
+                <strong>
+                  {summary.pendingCount} · ฿{formatPlainNumber(summary.pendingSum)}
+                </strong>
+              </p>
+              <p className="bill-notice-summary-line">
+                <span>เข้าร้านแล้ว</span>
+                <strong>
+                  {summary.acceptedCount} · ฿{formatPlainNumber(summary.acceptedSum)}
+                </strong>
+              </p>
+              {summary.byLabel.length > 0 ? (
+                <ul className="bill-notice-summary-buckets">
+                  {summary.byLabel.map((b) => (
+                    <li key={b.label}>
+                      {b.label} {b.count} · ฿{formatPlainNumber(b.sum)}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+
+          {error ? <p className="error-text">{error}</p> : null}
+          {loading ? <p className="empty">กำลังโหลดแจ้งบิล…</p> : null}
+
+          {!loading && entries.length === 0 ? (
+            <p className="empty">ยังไม่มีแจ้งบิล — กดเพิ่มบิลด้านล่าง</p>
+          ) : !loading ? (
+            <div className="sheet-wrap bill-notice-panel-table-wrap">
+              <table className="sheet-table bill-notice-slim">
+                <thead>
+                  <tr>
+                    <th className="col-date">วันที่</th>
+                    <th className="col-desc">รายการ</th>
+                    <th className="col-photo">อัพบิล</th>
+                    <th className="col-out">เงินออก</th>
+                    <th className="col-note">note</th>
+                    <th className="col-status">สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map((row) => {
+                    const urls = getBillNoticeReceiptUrls(row);
+                    const canEdit =
+                      row.status === "pending" &&
+                      (isOwner || row.createdBy === actorId);
+                    return (
+                      <tr
+                        key={row.id}
+                        className={[
+                          "row-out",
+                          row.status === "pending" ? "is-bill-pending" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        <td className="col-date">{formatDateShort(row.date)}</td>
+                        <td className="col-desc">
+                          {canEdit ? (
+                            <button
+                              type="button"
+                              className="desc-link"
+                              onClick={() => {
+                                setError(null);
+                                setEditing(row);
+                              }}
+                            >
+                              {row.description || "—"}
+                            </button>
+                          ) : (
+                            <span>{row.description || "—"}</span>
+                          )}
+                          {row.staffName ? (
+                            <span className="bill-notice-staff muted">
+                              {row.staffName}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="col-photo">
+                          {urls.length ? (
+                            <EntryPhotoIndicator
+                              imageUrls={urls}
+                              label={row.description || "บิล"}
+                              onView={(viewUrls) =>
+                                setImagePreview({
+                                  urls: viewUrls,
+                                  title: row.description || "บิล",
+                                  entryDateMs: row.date,
+                                })
+                              }
+                            />
+                          ) : (
+                            <span className="muted">—</span>
+                          )}
+                        </td>
+                        <td className="col-out">
+                          {formatPlainNumber(row.amountOut)}
+                        </td>
+                        <td className="col-note">{row.note || "—"}</td>
+                        <td className="col-status">
+                          <span className={statusClass(row.status)}>
+                            {labelBillNoticeStatus(row.status)}
+                          </span>
+                          {row.status === "pending" && isOwner ? (
+                            <div className="bill-notice-owner-actions">
+                              <button
+                                type="button"
+                                className="ghost-btn bill-notice-accept"
+                                disabled={busyId === row.id}
+                                onClick={() => void onAccept(row)}
+                              >
+                                รับเข้า บช.
+                              </button>
+                              <button
+                                type="button"
+                                className="ghost-btn"
+                                disabled={busyId === row.id}
+                                onClick={() => void onReject(row)}
+                              >
+                                ไม่รับ
+                              </button>
+                            </div>
+                          ) : null}
+                          {(isOwner ||
+                            (row.createdBy === actorId && row.status === "pending")) &&
+                          row.status !== "accepted" ? (
+                            <button
+                              type="button"
+                              className="ghost-btn icon-btn bill-notice-del"
+                              aria-label="ลบ"
+                              disabled={busyId === row.id}
+                              onClick={() => void onDelete(row)}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
+          {hasMore && liveLimit < BILL_NOTICE_LIVE_MAX ? (
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={() =>
+                setLiveLimit((n) =>
+                  Math.min(BILL_NOTICE_LIVE_MAX, n + BILL_NOTICE_PAGE_SIZE),
+                )
+              }
+            >
+              โหลดเพิ่ม
+            </button>
+          ) : null}
+
+          <button
+            type="button"
+            className="primary-btn action-out bill-notice-panel-add"
+            onClick={() => {
+              setError(null);
+              setAdding(true);
+            }}
+          >
+            เพิ่มแจ้งบิล
+          </button>
+        </div>
+      ) : null}
+
+      {adding ? (
+        <BillNoticeFormModal
+          mode="add"
+          actorId={actorId}
+          staffName={staffName}
+          onClose={() => setAdding(false)}
+          onSaved={() => setAdding(false)}
+          onError={setError}
+        />
+      ) : null}
+      {editing ? (
+        <BillNoticeFormModal
+          mode="edit"
+          actorId={actorId}
+          staffName={staffName}
+          entry={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => setEditing(null)}
+          onError={setError}
+        />
+      ) : null}
+      {imagePreview ? (
+        <ImagePreviewModal
+          urls={imagePreview.urls}
+          title={imagePreview.title}
+          entryDateMs={imagePreview.entryDateMs}
+          showCaptureMeta
+          onClose={() => setImagePreview(null)}
+        />
+      ) : null}
+    </aside>
+  );
+}
+
+function BillNoticeFormModal({
+  mode,
+  actorId,
+  staffName,
+  entry,
+  onClose,
+  onSaved,
+  onError,
+}: {
+  mode: "add" | "edit";
+  actorId: string;
+  staffName: string;
+  entry?: BillNotice;
+  onClose: () => void;
+  onSaved: () => void;
+  onError: (msg: string | null) => void;
+}) {
+  const [date, setDate] = useState(
+    entry ? todayInputValue(new Date(entry.date)) : todayInputValue(),
+  );
+  const [description, setDescription] = useState(entry?.description || "");
+  const [amount, setAmount] = useState(
+    entry?.amountOut ? String(entry.amountOut) : "",
+  );
+  const [note, setNote] = useState(entry?.note || "");
+  const [receiptUrls, setReceiptUrls] = useState<string[]>(() =>
+    entry ? getBillNoticeReceiptUrls(entry) : [],
+  );
+  const [busy, setBusy] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
+
+  useBodyScrollLock(true);
+
+  function reportError(msg: string) {
+    setFormError(msg);
+    onError(msg);
+  }
+
+  async function onSave(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setFormError(null);
+    onError(null);
+    try {
+      const dateMs = parseDateInput(date);
+      const amountOut = Number(amount);
+      const desc = description.trim();
+      if (!dateMs) throw new Error("ต้องใส่วันที่บิล");
+      if (!desc) throw new Error("ต้องใส่รายการ");
+      if (!(amountOut > 0)) throw new Error("ต้องใส่จำนวนเงินออก");
+      const type = guessTypeFromDescription(desc) || "sga";
+      if (mode === "add") {
+        await addBillNotice({
+          date: dateMs,
+          description: desc,
+          amountOut,
+          type,
+          typeSource: "heuristic",
+          note,
+          receiptUrls,
+          createdBy: actorId,
+          staffName,
+        });
+      } else if (entry) {
+        await updateBillNotice(entry.id, {
+          date: dateMs,
+          description: desc,
+          amountOut,
+          type,
+          typeSource: "heuristic",
+          note,
+          receiptUrls,
+          staffName,
+        });
+      }
+      onSaved();
+    } catch (err) {
+      reportError(friendlyFirestoreWriteError(err, "บันทึกไม่สำเร็จ"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDelete() {
+    if (!entry) return;
+    if (!window.confirm("ลบแจ้งบิลนี้?")) return;
+    setBusy(true);
+    try {
+      await deleteBillNotice(entry.id);
+      onSaved();
+    } catch (err) {
+      reportError(friendlyFirestoreWriteError(err, "ลบไม่สำเร็จ"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop edit-modal is-module-form" role="presentation">
+      <div
+        className="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-label={mode === "add" ? "เพิ่มแจ้งบิล" : "แก้ไขแจ้งบิล"}
+      >
+        <div className="entry-toolbar module-form-head">
+          <h2 className="panel-title">
+            {mode === "add" ? "เพิ่มแจ้งบิล" : "แก้ไขแจ้งบิล"}
+          </h2>
+          <button
+            type="button"
+            className="ghost-btn icon-btn"
+            aria-label="ปิด"
+            disabled={busy}
+            onClick={onClose}
+          >
+            <X size={18} />
+          </button>
+        </div>
+        {entry ? (
+          <EntryTimestampsMeta
+            entryDate={entry.date}
+            createdAt={entry.createdAt}
+            updatedAt={entry.updatedAt}
+          />
+        ) : null}
+        {formError ? <p className="error-text ot-form-error">{formError}</p> : null}
+        <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
+          <PhotoAttachMultiField
+            label="อัพบิล"
+            values={receiptUrls}
+            onChange={setReceiptUrls}
+            onError={reportError}
+            max={BILL_NOTICE_RECEIPT_MAX}
+            storageFolder="bill-notices"
+            storageSlotKey={`${mode}-${entry?.id || actorId || "new"}`}
+            hint="ถ่ายรูปบิลค่าไฟ ค่าน้ำ หรือบิลอื่นๆ ให้เจ้าของจ่าย"
+          />
+          {receiptUrls.length ? (
+            <div className="entry-actions" style={{ marginBottom: "0.55rem" }}>
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => setPreviewUrls(receiptUrls)}
+              >
+                ดูรูป ({receiptUrls.length})
+              </button>
+            </div>
+          ) : null}
+
+          <div className="field">
+            <label htmlFor="bn-date">วันที่</label>
+            <input
+              id="bn-date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="bn-desc">รายการ</label>
+            <input
+              id="bn-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              autoComplete="off"
+              required
+              placeholder="เช่น ค่าไฟ / ค่าน้ำ"
+            />
+            <div className="suggest-list" role="listbox" aria-label="รายการบิลหลัก">
+              {BILL_NOTICE_PRESETS.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className="suggest-chip"
+                  onClick={() => setDescription(item)}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="bn-amount">เงินออก</label>
+            <input
+              id="bn-amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="bn-note">note</label>
+            <input
+              id="bn-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              autoComplete="off"
+              placeholder="เช่น รอบมิ.ย. / เลขมิเตอร์"
+            />
+          </div>
+
+          <div className="entry-actions">
+            <button type="submit" className="primary-btn" disabled={busy}>
+              {busy ? "กำลังบันทึก..." : "บันทึก"}
+            </button>
+            <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
+              ออก
+            </button>
+            {mode === "edit" ? (
+              <button
+                type="button"
+                className="trash-btn"
+                aria-label="ลบรายการ"
+                title="ลบรายการ"
+                disabled={busy}
+                onClick={() => void onDelete()}
+              >
+                <Trash2 size={16} />
+              </button>
+            ) : (
+              <span aria-hidden style={{ width: "2.6rem" }} />
+            )}
+          </div>
+        </form>
+        {previewUrls ? (
+          <ImagePreviewModal
+            urls={previewUrls}
+            title="รูปบิล"
+            entryDateMs={entry?.date ?? parseDateInput(date)}
+            showCaptureMeta
+            onClose={() => setPreviewUrls(null)}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}

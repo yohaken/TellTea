@@ -37,6 +37,7 @@ import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
 import { CashInLedgerPanel } from "@/components/CashInLedgerPanel";
+import { BillNoticeLedgerPanel } from "@/components/BillNoticeLedgerPanel";
 import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { personalProfileLabel } from "@/lib/profile";
@@ -130,10 +131,16 @@ function LedgerView() {
   );
 
   const [cashInForceOpen, setCashInForceOpen] = useState(false);
+  const [billNoticeForceOpen, setBillNoticeForceOpen] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("cashIn") === "1") {
       setCashInForceOpen(true);
+      router.replace("/ledger/", { scroll: false });
+      return;
+    }
+    if (searchParams.get("billNotice") === "1") {
+      setBillNoticeForceOpen(true);
       router.replace("/ledger/", { scroll: false });
       return;
     }
@@ -403,6 +410,16 @@ function LedgerView() {
           staffName={cashInStaffName}
           forceOpen={cashInForceOpen}
           onForceOpenConsumed={() => setCashInForceOpen(false)}
+        />
+      ) : null}
+
+      {actorId ? (
+        <BillNoticeLedgerPanel
+          actorId={actorId}
+          isOwner={!!isOwner}
+          staffName={cashInStaffName}
+          forceOpen={billNoticeForceOpen}
+          onForceOpenConsumed={() => setBillNoticeForceOpen(false)}
         />
       ) : null}
 
