@@ -15,7 +15,7 @@ const shell = read("src/components/AppShell.tsx");
 const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 398/);
+assert.match(version, /APP_BUILD = 399/);
 assert.match(lib, /OWNER_QUICK_KEYS/);
 assert.match(lib, /DEFAULT_OWNER_QUICK_KEYS/);
 assert.match(lib, /ownerQuickKeys/);
@@ -39,5 +39,14 @@ assert.match(css, /\.owner-quick-dock\b/);
 assert.match(css, /\.owner-quick-chip\b/);
 assert.match(css, /\.owner-quick-abbr\b/);
 assert.match(css, /var\(--nav-h\)/);
+/* พนง.ซ้าย · เจ้าของกลาง→ขวา */
+assert.match(css, /\.module-tab-dock\.is-single[\s\S]*left:\s*max/);
+assert.match(css, /\.module-tab-dock\.is-single[\s\S]*min-height:\s*1\.25rem/);
+assert.match(css, /\.owner-quick-dock[\s\S]*left:\s*50%/);
+assert.match(css, /\.owner-quick-dock[\s\S]*justify-content:\s*flex-start/);
+assert.doesNotMatch(
+  css,
+  /\.owner-quick-dock\s*\{[^}]*transform:\s*translateX\(-50%\)/,
+);
 
 console.log("OK test-owner-quick-dock");
