@@ -225,3 +225,61 @@ export function exportCombinedTablesXlsx(input: CombinedExportInput) {
   if (!sheets) throw new Error("ไม่มีข้อมูลให้ส่งออก");
   downloadWorkbook(wb, `telltea-export-${stamp()}.xlsx`);
 }
+
+export type PersonalTaxExportInput = {
+  yearCe: number;
+  months: { month: string; income: number; opex: number; profit: number }[];
+  personalAllowance: number;
+  otherDeductions: number;
+  taxable: number;
+  tax: number;
+  slices: { label: string; rate: number; bandAmount: number; tax: number }[];
+  note?: string;
+};
+
+/** ส่งออกสรุปภาษีเงินได้บุคคลธรรมดา (ภ.ง.ด.) รายปี */
+export function exportPersonalTaxYearXlsx(input: PersonalTaxExportInput) {
+  const wb = XLSX.utils.book_new();
+  const yearBe = input.yearCe + 543;
+  appendSheet(
+    wb,
+    `เดือน-${yearBe}`,
+    input.months.map((m) => ({
+      เดือน: m.month,
+      รายได้: m.income,
+      ค่าใช้จ่าย: m.opex,
+      กำไร: m.profit,
+    })),
+  );
+  appendSheet(wb, `สรุป-${yearBe}`, [
+    { รายการ: "ปีภาษี (พ.ศ.)", ค่า: yearBe },
+    {
+      รายการ: "รวมรายได้",
+      ค่า: input.months.reduce((s, m) => s + m.income, 0),
+    },
+    {
+      รายการ: "รวมค่าใช้จ่าย",
+      ค่า: input.months.reduce((s, m) => s + m.opex, 0),
+    },
+    {
+      รายการ: "กำไรปี",
+      ค่า: input.months.reduce((s, m) => s + m.profit, 0),
+    },
+    { รายการ: "ค่าลดหย่อนผู้มีเงินได้", ค่า: input.personalAllowance },
+    { รายการ: "ค่าลดหย่อนอื่น", ค่า: input.otherDeductions },
+    { รายการ: "เงินได้สุทธิ (ฐานภาษี)", ค่า: input.taxable },
+    { รายการ: "ภาษีเงินได้ประมาณ", ค่า: input.tax },
+    { รายการ: "โน้ต", ค่า: input.note || "" },
+  ]);
+  appendSheet(
+    wb,
+    "ขั้นบันได",
+    input.slices.map((s) => ({
+      ช่วง: s.label,
+      อัตรา: `${Math.round(s.rate * 100)}%`,
+      ยอดในชั้น: s.bandAmount,
+      ภาษีชั้น: s.tax,
+    })),
+  );
+  downloadWorkbook(wb, `telltea-personal-tax-${yearBe}-${stamp()}.xlsx`);
+}
