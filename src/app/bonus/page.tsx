@@ -106,14 +106,18 @@ function BonusView() {
       .finally(() => setLoading(false));
 
     const monthSince = new Date(year, monthIdx, 1).getTime();
+    const monthUntil = new Date(year, monthIdx + 1, 1).getTime();
+    // payroll dueDate อาจข้ามเดือน — เผื่อเดือนก่อน/หลังเล็กน้อย
+    const payrollSince = new Date(year, monthIdx - 1, 1).getTime();
     const unsubOt = subscribeOtEntries(
       (rows) => setOtEntries(rows),
       (err) => setError(err.message),
-      { since: monthSince },
+      { since: monthSince, until: monthUntil },
     );
     const unsubProd = subscribeProdEntries(
       (rows) => setProdEntries(rows),
       (err) => setError(err.message),
+      { since: monthSince, until: monthUntil },
     );
     const unsubSettings = subscribeBonusDeductionSettings(
       (settings) => setDeductionSettings(settings),
@@ -130,6 +134,7 @@ function BonusView() {
     const unsubPayrollItems = subscribePayrollItems(
       (rows) => setPayrollItems(rows),
       (err) => setError(err.message),
+      { since: payrollSince },
     );
     return () => {
       unsubOt();

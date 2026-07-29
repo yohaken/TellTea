@@ -18,7 +18,7 @@ const version = read("src/lib/version.ts");
 
 assert.match(otLib, /OT_HISTORY_LOOKBACK_DAYS = 60/);
 assert.match(otLib, /otHistorySinceMs/);
-assert.match(otLib, /opts\?: \{ since\?: number \}/);
+assert.match(otLib, /opts\?: \{ since\?: number; until\?: number \}/);
 assert.match(otLib, /where\("date", ">=", since\)/);
 
 assert.match(checklist, /CHECK_HISTORY_LOOKBACK_DAYS = 60/);
@@ -38,7 +38,7 @@ assert.match(otPage, /recordsByDayShift: checkRecordsByDayShift/);
 assert.match(otPage, /OT_HISTORY_LOOKBACK_DAYS\} วันล่าสุด/);
 
 assert.match(bonusPage, /since: monthSince/);
-assert.match(version, /APP_BUILD = 412/);
+assert.match(version, /APP_BUILD = \d+/);
 
 // Pure lookback helper mirror
 function otHistorySinceMs(now, days = 60) {

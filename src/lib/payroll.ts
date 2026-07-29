@@ -271,8 +271,13 @@ export async function savePayrollSchedule(
 export function subscribePayrollItems(
   onData: (items: PayrollItem[]) => void,
   onError?: (err: Error) => void,
+  opts?: { since?: number },
 ): Unsubscribe {
-  const q = query(payrollCol(), orderBy("dueDate", "desc"));
+  const since = opts?.since;
+  const q =
+    since != null
+      ? query(payrollCol(), where("dueDate", ">=", since), orderBy("dueDate", "desc"))
+      : query(payrollCol(), orderBy("dueDate", "desc"));
   return onSnapshot(
     q,
     (snap) => {

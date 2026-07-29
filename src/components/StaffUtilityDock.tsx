@@ -7,7 +7,10 @@ import { useAuth } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { StaffUtilityPanel } from "@/components/StaffUtilityPanel";
 import { staffUtilityAttentionCount } from "@/lib/staff-utility";
-import { subscribeTaskOccurrencesForAssignee } from "@/lib/task-occurrences";
+import {
+  subscribeTaskOccurrencesForAssignee,
+  taskOccurrenceSinceMs,
+} from "@/lib/task-occurrences";
 import { filterOccurrencesByTab } from "@/lib/task-weekly-logic";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +44,7 @@ export function StaffUtilityDock() {
         setPendingTasks(filterOccurrencesByTab(rows, "thisWeek").length);
       },
       () => setPendingTasks(0),
+      { since: taskOccurrenceSinceMs() },
     );
   }, [ready, myEmployeeId]);
 

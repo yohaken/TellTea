@@ -388,18 +388,34 @@ export async function saveOtSettings(bonusRate: number): Promise<void> {
 export function subscribeOtEntries(
   onRows: (rows: OtEntry[]) => void,
   onError?: (err: Error) => void,
-  opts?: { since?: number },
+  opts?: { since?: number; until?: number },
 ): Unsubscribe {
   const since = opts?.since;
-  const q =
-    since != null
-      ? query(
-          entriesCol(),
-          where("date", ">=", since),
-          orderBy("date", "desc"),
-          orderBy("createdAt", "desc"),
-        )
-      : query(entriesCol(), orderBy("date", "desc"), orderBy("createdAt", "desc"));
+  const until = opts?.until;
+  let q = query(entriesCol(), orderBy("date", "desc"), orderBy("createdAt", "desc"));
+  if (since != null && until != null) {
+    q = query(
+      entriesCol(),
+      where("date", ">=", since),
+      where("date", "<", until),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  } else if (since != null) {
+    q = query(
+      entriesCol(),
+      where("date", ">=", since),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  } else if (until != null) {
+    q = query(
+      entriesCol(),
+      where("date", "<", until),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  }
   return onSnapshot(
     q,
     (snap) => {

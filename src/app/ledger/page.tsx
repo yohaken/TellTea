@@ -23,7 +23,7 @@ import {
   LEDGER_LIVE_MAX,
   LEDGER_PAGE_SIZE,
   LEDGER_RECEIPT_MAX,
-  listLedgerEntries,
+  listLedgerEntriesSince,
   listRecentLedgerEntries,
   recomputeLedgerBalance,
   subscribeLedgerBalance,
@@ -63,6 +63,7 @@ import {
   uploadEvidencePhotos,
 } from "@/lib/photo-upload";
 import type { LedgerEntry } from "@/lib/types";
+import { daysAgoMs } from "@/lib/query-window";
 import { filterLedgerRows } from "@/lib/smart-search";
 import {
   formatDateShort,
@@ -255,7 +256,7 @@ function LedgerView() {
     }
     let cancelled = false;
     setSearchLoading(true);
-    void listLedgerEntries()
+    void listLedgerEntriesSince(daysAgoMs(180))
       .then((rows) => {
         if (!cancelled) setSearchPool(rows);
       })

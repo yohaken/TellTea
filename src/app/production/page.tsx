@@ -18,7 +18,7 @@ import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
-import { isInMonth, monthInputValue, parseMonthInput } from "@/lib/bonus";
+import { monthInputValue, parseMonthInput } from "@/lib/bonus";
 import { can } from "@/lib/permissions";
 import {
   entryHasPhotoFlag,
@@ -36,6 +36,7 @@ import {
   listProdProducts,
   listProdWorkers,
   PROD_IMAGE_MAX,
+  prodHistorySinceMs,
   resolveProdEntryRates,
   seedProdCatalogIfEmpty,
   subscribeProdEntries,
@@ -76,10 +77,12 @@ function ProductionView() {
   const [entries, setEntries] = useState<ProdEntry[]>([]);
   const [products, setProducts] = useState<ProdProduct[]>([]);
   const [workers, setWorkers] = useState<ProdWorker[]>([]);
+  const [logMonth, setLogMonth] = useState(monthInputValue());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<ProdEntry | null>(null);
   const [rateSchedule, setRateSchedule] = useState<RateScheduleEntry[]>([]);
+  const { year: logYear, month: logMonthIdx } = parseMonthInput(logMonth);
 
   async function reloadCatalog() {
     const [p, w] = await Promise.all([listProdProducts(), listProdWorkers()]);
@@ -106,9 +109,16 @@ function ProductionView() {
       .catch((err) => setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ"))
       .finally(() => setLoading(false));
 
+    const windowOpts = isOwner
+      ? {
+          since: new Date(logYear, logMonthIdx, 1).getTime(),
+          until: new Date(logYear, logMonthIdx + 1, 1).getTime(),
+        }
+      : { since: prodHistorySinceMs() };
     const unsub = subscribeProdEntries(
       (rows) => setEntries(rows),
       (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
+      windowOpts,
     );
     const unsubSchedule = subscribeRateSchedule(
       (doc) => setRateSchedule(doc.entries),
@@ -118,7 +128,7 @@ function ProductionView() {
       unsub();
       unsubSchedule();
     };
-  }, [staff, isOwner]);
+  }, [staff, isOwner, logYear, logMonthIdx]);
 
   useBodyScrollLock(formOpen);
 
@@ -206,6 +216,8 @@ function ProductionView() {
         <ProdTable
           entries={entries}
           isOwner={isOwner}
+          month={logMonth}
+          onMonthChange={setLogMonth}
           onEdit={openEdit}
           onError={setError}
         />
@@ -535,11 +547,15 @@ function ProdEntryForm({
 function ProdTable({
   entries,
   isOwner,
+  month,
+  onMonthChange,
   onEdit,
   onError,
 }: {
   entries: ProdEntry[];
   isOwner: boolean;
+  month: string;
+  onMonthChange: (month: string) => void;
   onEdit: (row: ProdEntry) => void;
   onError: (msg: string | null) => void;
 }) {
@@ -548,18 +564,14 @@ function ProdTable({
     title: string;
     entryDateMs?: number;
   } | null>(null);
-  const [month, setMonth] = useState(monthInputValue());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [photoReport, setPhotoReport] = useState<PhotoForensicsReport | null>(null);
 
   useBodyScrollLock(!!preview);
 
-  const { year, month: monthIdx } = parseMonthInput(month);
-  const filtered = useMemo(
-    () => (isOwner ? entries.filter((row) => isInMonth(row.date, year, monthIdx)) : entries),
-    [entries, isOwner, year, monthIdx],
-  );
+  // entries ถูก scope ตามเดือน/lookback จาก parent แล้ว
+  const filtered = entries;
 
   const forensicsRows = useMemo(
     () =>
@@ -654,7 +666,7 @@ function ProdTable({
           selectedCount={selected.size}
           month={month}
           onMonthChange={(v) => {
-            setMonth(v);
+            onMonthChange(v);
             setSelected(new Set());
           }}
           onSelectUnpaid={() => setSelected(new Set(unpaidIds))}

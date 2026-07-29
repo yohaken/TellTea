@@ -299,10 +299,35 @@ export async function getLedgerBalance(): Promise<number> {
 }
 
 /** Full scan — only for rare tools (import preview / migration). Prefer paginated APIs. */
+/** Full scan for export — อย่าใช้ตอนเปิดหน้าปกติ */
 export async function listLedgerEntries(): Promise<LedgerEntry[]> {
   const snap = await getDocs(
     query(collection(getDb(), "ledger"), orderBy("date", "asc"), orderBy("createdAt", "asc")),
   );
+  return snap.docs.map(mapEntry);
+}
+
+/** ช่วงวันที่ (until exclusive) — ใช้ P&L / ค้นหา */
+export async function listLedgerEntriesSince(
+  sinceMs: number,
+  untilMs?: number,
+): Promise<LedgerEntry[]> {
+  const q =
+    untilMs != null
+      ? query(
+          collection(getDb(), "ledger"),
+          where("date", ">=", sinceMs),
+          where("date", "<", untilMs),
+          orderBy("date", "asc"),
+          orderBy("createdAt", "asc"),
+        )
+      : query(
+          collection(getDb(), "ledger"),
+          where("date", ">=", sinceMs),
+          orderBy("date", "asc"),
+          orderBy("createdAt", "asc"),
+        );
+  const snap = await getDocs(q);
   return snap.docs.map(mapEntry);
 }
 

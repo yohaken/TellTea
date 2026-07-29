@@ -12,7 +12,7 @@
  */
 import { monthKeyFromMs } from "./categories";
 import { listLedgerEntriesInMonth } from "./ledger";
-import { listOwnerBookEntries } from "./owner-books";
+import { listOwnerBookEntriesInMonth } from "./owner-books";
 import { normalizeMoney, roundMoney } from "./vat-sales";
 
 export type BooksVatBook = "ledger" | "owner";
@@ -79,7 +79,7 @@ export async function loadBothBooksVatByMonth(
 
   const [ledgerRows, ownerRows] = await Promise.all([
     listLedgerEntriesInMonth(year, month),
-    listOwnerBookEntries(),
+    listOwnerBookEntriesInMonth(year, month),
   ]);
 
   const lines: BooksVatLine[] = [];
