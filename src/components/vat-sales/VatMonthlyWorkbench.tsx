@@ -1193,14 +1193,14 @@ function IncomeBridgeTable({
         GP รายช่องทาง — {formatThaiMonthKey(month)}
       </h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        ยอดโอน → คชจ. GP · ภาษีซื้อ GP → รวมเดลิเวอรี่
+        รายได้ = เงินเข้าร้าน (ไม่หัก 7%) · แล้วค่อยหักคชจ. GP · เดลิเวอรี่≠หน้าร้าน
       </p>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table vat-gp-channel-table">
           <thead>
             <tr>
               <th className="col-seg">ช่องทาง</th>
-              <th className="col-num">รายได้</th>
+              <th className="col-num">เงินเข้าร้าน</th>
               <th className="col-num">ยอดโอนหลัง</th>
               <th className="col-num">คชจ. GP</th>
               <th className="col-num">เรท %</th>
@@ -1209,7 +1209,7 @@ function IncomeBridgeTable({
           </thead>
           <tbody>
             <tr>
-              <td className="col-seg">โหมดยอดรายได้</td>
+              <td className="col-seg">โหมดใส่ P&L</td>
               <td className="col-num col-input" colSpan={5}>
                 <select
                   className="vat-inline-select"
@@ -1221,8 +1221,8 @@ function IncomeBridgeTable({
                     )
                   }
                 >
-                  <option value="exVat">ก่อน VAT (แนะนำ)</option>
-                  <option value="incVat">รวม VAT</option>
+                  <option value="incVat">เงินเข้าร้าน (แนะนำ)</option>
+                  <option value="exVat">แปลงก่อน VAT หลังหักคชจ.</option>
                 </select>
               </td>
             </tr>
@@ -1245,7 +1245,7 @@ function IncomeBridgeTable({
               ? renderChannelRow(storefrontRow, "หน้าร้าน")
               : null}
             <tr>
-              <td className="col-seg">รวมคชจ. → P&L / ภาษีซื้อ GP → VAT</td>
+              <td className="col-seg">รวมเงินเข้า − คชจ. · ภาษีซื้อ GP</td>
               <td className="col-num">{fmt(bridge.grossTotal)}</td>
               <td className="col-num">—</td>
               <td className="col-num col-net">{fmt(bridge.gpDeduct)}</td>
@@ -1551,7 +1551,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   );
   const [note, setNote] = useState("");
   const [noteOpen, setNoteOpen] = useState(false);
-  const [pnlMode, setPnlMode] = useState<"exVat" | "incVat">("exVat");
+  const [pnlMode, setPnlMode] = useState<"exVat" | "incVat">("incVat");
   const [pnlIncome, setPnlIncome] = useState("");
   const [openDelivery, setOpenDelivery] = useState(false);
   const [openStorefront, setOpenStorefront] = useState(false);
@@ -2571,7 +2571,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
               2–3) GP ช่องทาง + ภาษีซื้อ — {formatThaiMonthKey(month)}
             </h2>
             <p className="muted vat-sales-hint vat-hint-one-line">
-              เนื้อเดียว · ซิงก์จากแท็บนำเข้าอัตโนมัติ
+              เงินเข้าร้านก่อน · คชจ./ภาษีซื้อหลัง · ซิงก์จากนำเข้า · เดลิเวอรี่แยกหน้าร้าน
             </p>
             <IncomeBridgeTable
               month={month}
