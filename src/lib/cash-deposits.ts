@@ -474,23 +474,24 @@ export function analyzeCashDepositDays(
 ): CashDayCoverage {
   const issues: CashDayIssue[] = [];
   if (!days.length) {
-    issues.push({ code: "empty", message: "ต้องมีอย่างน้อย 1 วันจากสลิป POS" });
+    issues.push({ code: "empty", message: "ต้องมีอย่างน้อย 1 วันในรอบ" });
     return { issues, sortedDates: [], periodStart: 0, periodEnd: 0, dayCount: 0 };
   }
   if (days.length > CASH_DEPOSIT_DAY_MAX) {
     issues.push({
       code: "too_long",
-      message: `รอบหนึ่งใส่ได้สูงสุด ${CASH_DEPOSIT_DAY_MAX} วัน (เท่าเดือนที่ยาวที่สุด)`,
+      message: `รอบหนึ่งใส่ได้สูงสุด ${CASH_DEPOSIT_DAY_MAX} วัน`,
     });
   }
 
   if (days.some((day) => !day.date)) {
-    issues.push({ code: "empty", message: "ต้องใส่วันที่บนสลิปทุกแถว" });
+    issues.push({ code: "empty", message: "ใส่วันที่ให้ครบทุกแถว" });
   }
-  if (days.some((day) => !(Number(day.cashAmount) > 0))) {
+  // 0 ได้ (ร้านปิด) — ห้ามติดลบเท่านั้น
+  if (days.some((day) => Number(day.cashAmount) < 0)) {
     issues.push({
       code: "bad_amount",
-      message: "ยอดเงินสดในสลิปต้องมากกว่า 0 ทุกวัน",
+      message: "ยอดเงินสดติดลบไม่ได้ — ร้านปิดใส่ 0 ได้",
     });
   }
 
@@ -503,7 +504,7 @@ export function analyzeCashDepositDays(
     if (count > 1) {
       issues.push({
         code: "duplicate",
-        message: `บิลซ้ำวันที่ ${formatCashDayShort(key)} — หนึ่งวันมีได้ใบเดียว`,
+        message: `วันที่ ${formatCashDayShort(key)} ซ้ำในรอบนี้`,
         dateMs: key,
       });
     }
@@ -522,9 +523,9 @@ export function analyzeCashDepositDays(
       issues.push({
         code: "gap",
         message:
-          `ข้ามวันในรอบ (${missing.length} วัน) เช่น ${sample}` +
+          `ขาดวันในรอบ เช่น ${sample}` +
           (missing.length > 3 ? "…" : "") +
-          " — รอบต้องต่อเนื่องไม่มีช่องว่าง",
+          " — วันต้องต่อกัน",
         dateMs: missing[0],
       });
     }
@@ -537,7 +538,7 @@ export function analyzeCashDepositDays(
       if (otherId && otherId !== opts.excludeDepositId) {
         issues.push({
           code: "overlap",
-          message: `วันที่ ${formatCashDayShort(key)} ถูกใช้ในรอบอื่นแล้ว — ห้ามบิลซ้ำข้ามรอบ`,
+          message: `วันที่ ${formatCashDayShort(key)} ใช้ในรอบอื่นแล้ว`,
           dateMs: key,
         });
       }
@@ -560,7 +561,7 @@ export function analyzeCashDepositDays(
     if (total > cap) {
       issues.push({
         code: "month_overflow",
-        message: `เดือน ${mk} มีบิล ${total} วัน เกินจำนวนวันในเดือน (${cap})`,
+        message: `เดือน ${mk} มีวันเกิน (${total}/${cap})`,
       });
     }
   }

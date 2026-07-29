@@ -13,15 +13,24 @@ const panel = readFileSync(join(root, "src/components/CashInLedgerPanel.tsx"), "
 const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
 const rules = readFileSync(join(root, "firestore.rules"), "utf8");
 
-assert.match(version, /APP_BUILD = 386/);
+assert.match(version, /APP_BUILD = 387/);
 assert.match(lib, /CASH_DEPOSIT_DAY_MAX = 31/);
 assert.match(lib, /export function analyzeCashDepositDays/);
 assert.match(lib, /export function buildCashDepositRoundDays/);
 assert.match(lib, /drawerCloseAmount/);
-assert.match(lib, /ข้ามวัน|บิลซ้ำ|month_overflow/);
+assert.match(lib, /ขาดวัน|ซ้ำในรอบ|month_overflow|ร้านปิดใส่ 0/);
+assert.doesNotMatch(lib, /ยอดเงินสดในสลิปต้องมากกว่า 0 ทุกวัน/);
 assert.match(panel, /สร้างรอบ/);
 assert.match(panel, /cash-in-slim/);
 assert.match(panel, /cash-in-issues/);
+assert.match(panel, /เงินสด \{formatPlainNumber\(expected\)\}/);
+assert.match(panel, /เทียบ = \(โอนเข้า \+ ค่าธรรมเนียม\) − เงินสด/);
+assert.match(panel, /cash-in-cell-inline/);
+assert.match(panel, /cash-in-slip-actions is-row/);
+assert.match(panel, /"บันทึก"/);
+assert.match(panel, />\s*ปิด\s*</);
+assert.match(panel, /ร้านปิดใส่ 0 ได้/);
+assert.doesNotMatch(panel, /Σยอดขายเงินสด/);
 assert.match(rules, /days\.size\(\) <= 31/);
 
 const runner = `
@@ -43,6 +52,15 @@ assert.equal(round7[6].date, end);
 const ok = analyzeCashDepositDays(round7.map((d) => ({ date: d.date, cashAmount: 100 })));
 assert.equal(ok.issues.length, 0);
 assert.equal(ok.dayCount, 7);
+
+// ร้านปิด — ยอด 0 ได้
+const closed = analyzeCashDepositDays(
+  round7.map((d, i) => ({ date: d.date, cashAmount: i === 0 ? 0 : 100 })),
+);
+assert.equal(closed.issues.length, 0);
+
+const neg = analyzeCashDepositDays([{ date: end, cashAmount: -1 }]);
+assert.ok(neg.issues.some((i) => i.code === "bad_amount"));
 
 const dup = analyzeCashDepositDays([
   { date: end, cashAmount: 10 },
@@ -80,8 +98,14 @@ assert.ok(overflow.issues.some((i) => i.code === "too_long" || i.code === "month
 console.log("OK analyzeCashDepositDays runtime");
 `;
 
+import { existsSync, writeFileSync, unlinkSync } from "node:fs";
+if (!existsSync(join(root, "node_modules/firebase"))) {
+  console.log("SKIP analyzeCashDepositDays runtime (no node_modules/firebase)");
+  console.log("OK test-cash-deposit-days");
+  process.exit(0);
+}
+
 const tmp = join(root, "scripts/.tmp-cash-deposit-days-run.mts");
-import { writeFileSync, unlinkSync } from "node:fs";
 writeFileSync(tmp, runner);
 const res = spawnSync("npx", ["--yes", "tsx", tmp], { cwd: root, encoding: "utf8" });
 try {
