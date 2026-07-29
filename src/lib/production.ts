@@ -9,10 +9,22 @@ import {
   orderBy,
   query,
   updateDoc,
+  where,
   writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
+import { daysAgoMs } from "./query-window";
+
+/** หน้าผลิตพนักงาน — โหลดช่วงนี้แทนประวัติทั้งก้อน */
+export const PROD_HISTORY_LOOKBACK_DAYS = 60;
+
+export function prodHistorySinceMs(
+  now = Date.now(),
+  days: number = PROD_HISTORY_LOOKBACK_DAYS,
+): number {
+  return daysAgoMs(days, now);
+}
 import {
   addEmployee,
   listEmployees,
@@ -242,9 +254,29 @@ export async function listProdWorkers(): Promise<ProdWorker[]> {
 export function subscribeProdEntries(
   onRows: (rows: ProdEntry[]) => void,
   onError?: (err: Error) => void,
+  opts?: { since?: number; until?: number },
 ): Unsubscribe {
+  const since = opts?.since;
+  const until = opts?.until;
+  let q = query(entriesCol(), orderBy("date", "desc"), orderBy("createdAt", "desc"));
+  if (since != null && until != null) {
+    q = query(
+      entriesCol(),
+      where("date", ">=", since),
+      where("date", "<", until),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  } else if (since != null) {
+    q = query(
+      entriesCol(),
+      where("date", ">=", since),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  }
   return onSnapshot(
-    query(entriesCol(), orderBy("date", "desc"), orderBy("createdAt", "desc")),
+    q,
     (snap) => {
       onRows(
         snap.docs.map((d) => ({

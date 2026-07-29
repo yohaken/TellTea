@@ -5,8 +5,9 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
-import { listLedgerEntries } from "./ledger";
-import { listOwnerBookEntries } from "./owner-books";
+import { listLedgerEntriesSince } from "./ledger";
+import { listOwnerBookEntriesSince } from "./owner-books";
+import { monthsAgoStartMs } from "./query-window";
 import {
   daysInMonthKey,
   monthKeyFromMs,
@@ -14,6 +15,9 @@ import {
   type CategoryBucket,
   type PnlCategory,
 } from "./categories";
+
+/** P&L บนเว็บโหลดแค่ช่วงนี้ — ไม่สแกนบัญชีทั้งประวัติ */
+export const PNL_LOOKBACK_MONTHS = 18;
 
 export type MonthCategoryRow = {
   month: string;
@@ -82,8 +86,10 @@ function mapToRows(map: Map<string, Record<CategoryBucket, number>>): MonthCateg
     });
 }
 
-export async function loadStaffMonthBreakdown(): Promise<MonthCategoryRow[]> {
-  const entries = await listLedgerEntries();
+export async function loadStaffMonthBreakdown(
+  sinceMs = monthsAgoStartMs(PNL_LOOKBACK_MONTHS),
+): Promise<MonthCategoryRow[]> {
+  const entries = await listLedgerEntriesSince(sinceMs);
   const map = new Map<string, Record<CategoryBucket, number>>();
   for (const e of entries) {
     accumulateOut(map, e.date, e.amountOut, e.type);
@@ -91,8 +97,10 @@ export async function loadStaffMonthBreakdown(): Promise<MonthCategoryRow[]> {
   return mapToRows(map);
 }
 
-export async function loadOwnerMonthBreakdown(): Promise<MonthCategoryRow[]> {
-  const entries = await listOwnerBookEntries();
+export async function loadOwnerMonthBreakdown(
+  sinceMs = monthsAgoStartMs(PNL_LOOKBACK_MONTHS),
+): Promise<MonthCategoryRow[]> {
+  const entries = await listOwnerBookEntriesSince(sinceMs);
   const map = new Map<string, Record<CategoryBucket, number>>();
   for (const e of entries) {
     accumulateOut(map, e.date, e.amountOut, e.type);
@@ -374,10 +382,13 @@ export type PnlReportData = {
   pnl: PnlMonthRow[];
 };
 
-export async function loadPnlReport(): Promise<PnlReportData> {
+export async function loadPnlReport(
+  lookbackMonths: number = PNL_LOOKBACK_MONTHS,
+): Promise<PnlReportData> {
+  const sinceMs = monthsAgoStartMs(lookbackMonths);
   const [staff, owner, incomeByMonth] = await Promise.all([
-    loadStaffMonthBreakdown(),
-    loadOwnerMonthBreakdown(),
+    loadStaffMonthBreakdown(sinceMs),
+    loadOwnerMonthBreakdown(sinceMs),
     listMonthlyIncome(),
   ]);
   const combined = combineMonthBreakdowns(staff, owner);

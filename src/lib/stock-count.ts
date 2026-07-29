@@ -12,6 +12,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
+import { daysAgoMs } from "./query-window";
 import type {
   StockCountLine,
   StockCountRound,
@@ -22,6 +23,16 @@ import type {
 const SESSIONS_COL = "stockCountSessions";
 
 export const STOCK_COUNT_ROUNDS: StockCountRound[] = [1, 10, 20];
+
+/** นับสต๊อก ~2–3 รอบ/เดือน แต่เอกสารหนา — โหลดแค่ ~13 เดือน */
+export const STOCK_COUNT_LOOKBACK_DAYS = 400;
+
+export function stockCountSinceMs(
+  now = Date.now(),
+  days: number = STOCK_COUNT_LOOKBACK_DAYS,
+): number {
+  return daysAgoMs(days, now);
+}
 
 export function stockCountSessionId(year: number, month: number, dayOfMonth: StockCountRound) {
   const m = String(month + 1).padStart(2, "0");
@@ -59,8 +70,17 @@ function mapSessionDoc(id: string, data: Record<string, unknown>): StockCountSes
 export function subscribeStockCountSessions(
   onData: (rows: StockCountSession[]) => void,
   onError?: (err: Error) => void,
+  opts?: { since?: number },
 ): Unsubscribe {
-  const q = query(collection(getDb(), SESSIONS_COL), orderBy("date", "desc"));
+  const since = opts?.since;
+  const q =
+    since != null
+      ? query(
+          collection(getDb(), SESSIONS_COL),
+          where("date", ">=", since),
+          orderBy("date", "desc"),
+        )
+      : query(collection(getDb(), SESSIONS_COL), orderBy("date", "desc"));
   return onSnapshot(
     q,
     (snap) => {

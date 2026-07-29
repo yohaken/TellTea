@@ -9,10 +9,24 @@ import {
   query,
   setDoc,
   updateDoc,
+  where,
   writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
+
+/** หน้าชงโหลดเฉพาะช่วงนี้ — ไม่ดึงประวัติทั้งก้อน (เดิมช้าเพราะ unbounded onSnapshot) */
+export const OT_HISTORY_LOOKBACK_DAYS = 60;
+
+export function otHistorySinceMs(
+  now = Date.now(),
+  days: number = OT_HISTORY_LOOKBACK_DAYS,
+): number {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - Math.max(1, Math.floor(days)));
+  return d.getTime();
+}
 
 export type OtStatus = "pending" | "paid";
 
@@ -374,9 +388,36 @@ export async function saveOtSettings(bonusRate: number): Promise<void> {
 export function subscribeOtEntries(
   onRows: (rows: OtEntry[]) => void,
   onError?: (err: Error) => void,
+  opts?: { since?: number; until?: number },
 ): Unsubscribe {
+  const since = opts?.since;
+  const until = opts?.until;
+  let q = query(entriesCol(), orderBy("date", "desc"), orderBy("createdAt", "desc"));
+  if (since != null && until != null) {
+    q = query(
+      entriesCol(),
+      where("date", ">=", since),
+      where("date", "<", until),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  } else if (since != null) {
+    q = query(
+      entriesCol(),
+      where("date", ">=", since),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  } else if (until != null) {
+    q = query(
+      entriesCol(),
+      where("date", "<", until),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  }
   return onSnapshot(
-    query(entriesCol(), orderBy("date", "desc"), orderBy("createdAt", "desc")),
+    q,
     (snap) => {
       onRows(snap.docs.map((d) => mapOtEntryDoc(d.id, d.data() as Record<string, unknown>)));
     },

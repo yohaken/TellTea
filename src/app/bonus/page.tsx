@@ -68,7 +68,7 @@ function BonusView() {
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const [month, setMonth] = useState(() => suggestPeriodMonthForToday());
-  const [tab, setTab] = useState<PayTab>(isOwner ? "pay" : "bonus");
+  const [tab, setTab] = useState<PayTab>("bonus");
   const [otEntries, setOtEntries] = useState<OtEntry[]>([]);
   const [prodEntries, setProdEntries] = useState<ProdEntry[]>([]);
   const [deductionSettings, setDeductionSettings] = useState<BonusDeductionSettings | null>(null);
@@ -105,13 +105,19 @@ function BonusView() {
       .catch((err) => setError((err as Error).message || "โหลดพนักงานไม่สำเร็จ"))
       .finally(() => setLoading(false));
 
+    const monthSince = new Date(year, monthIdx, 1).getTime();
+    const monthUntil = new Date(year, monthIdx + 1, 1).getTime();
+    // payroll dueDate อาจข้ามเดือน — เผื่อเดือนก่อน/หลังเล็กน้อย
+    const payrollSince = new Date(year, monthIdx - 1, 1).getTime();
     const unsubOt = subscribeOtEntries(
       (rows) => setOtEntries(rows),
       (err) => setError(err.message),
+      { since: monthSince, until: monthUntil },
     );
     const unsubProd = subscribeProdEntries(
       (rows) => setProdEntries(rows),
       (err) => setError(err.message),
+      { since: monthSince, until: monthUntil },
     );
     const unsubSettings = subscribeBonusDeductionSettings(
       (settings) => setDeductionSettings(settings),
@@ -128,6 +134,7 @@ function BonusView() {
     const unsubPayrollItems = subscribePayrollItems(
       (rows) => setPayrollItems(rows),
       (err) => setError(err.message),
+      { since: payrollSince },
     );
     return () => {
       unsubOt();
@@ -137,7 +144,7 @@ function BonusView() {
       unsubPayrollSchedule();
       unsubPayrollItems();
     };
-  }, [staff, canView]);
+  }, [staff, canView, year, monthIdx]);
 
   useEffect(() => {
     if (!canView) return;
@@ -207,20 +214,20 @@ function BonusView() {
         <button
           type="button"
           role="tab"
-          className={tab === "pay" ? "is-active" : ""}
-          aria-selected={tab === "pay"}
-          onClick={() => setTab("pay")}
-        >
-          รอโอน{pendingCount ? ` (${pendingCount})` : ""}
-        </button>
-        <button
-          type="button"
-          role="tab"
           className={tab === "bonus" ? "is-active" : ""}
           aria-selected={tab === "bonus"}
           onClick={() => setTab("bonus")}
         >
           สรุปโบนัส
+        </button>
+        <button
+          type="button"
+          role="tab"
+          className={tab === "pay" ? "is-active" : ""}
+          aria-selected={tab === "pay"}
+          onClick={() => setTab("pay")}
+        >
+          รอโอน{pendingCount ? ` (${pendingCount})` : ""}
         </button>
         <button
           type="button"
@@ -233,20 +240,26 @@ function BonusView() {
         </button>
       </div>
 
-      <div className="bonus-toolbar">
-        <input
-          type="month"
-          className="ot-slim-input"
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          aria-label="เดือนอ้างอิง"
-        />
-        <span className="bonus-toolbar-meta muted">
-          {report
-            ? `${thaiMonthYearLabel(report.year, report.month)} · หารขาย ${report.employeeCount} คน`
-            : "…"}
-        </span>
-      </div>
+      {tab !== "settings" ? (
+        <div className="bonus-toolbar">
+          <input
+            type="month"
+            className="ot-slim-input"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            aria-label="เดือนอ้างอิง"
+          />
+          <span className="bonus-toolbar-meta muted">
+            {report
+              ? `${thaiMonthYearLabel(report.year, report.month)} · หารขาย ${report.employeeCount} คน`
+              : "…"}
+          </span>
+        </div>
+      ) : (
+        <p className="muted bonus-toolbar-meta" style={{ margin: "0.25rem 0 0.65rem" }}>
+          ตั้งเงินเดือนและรอบจ่ายที่นี่ · ไม่ต้องไปหน้าอื่น
+        </p>
+      )}
 
       {error ? <p className="error-text">{error}</p> : null}
       {info ? <p className="success-text">{info}</p> : null}
@@ -278,7 +291,9 @@ function BonusView() {
       {tab === "settings" ? (
         <PayrollSettingsPanel
           schedule={payrollSchedule}
+          employees={employees}
           isOwner={isOwner}
+          onEmployeesChange={setEmployees}
           onError={setError}
           onInfo={(msg) => {
             setInfo(msg);

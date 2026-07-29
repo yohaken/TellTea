@@ -614,6 +614,7 @@ public class MainActivity extends Activity {
     StoreClaimClient.syncPendingClaim(this);
     autoHealth.maybeRun(this, false, null);
     saleSync.flushPending(this);
+    CaptureConsentActivity.relaunchPendingIfNeeded(this);
     if (updatePrompt != null) updatePrompt.onResume();
   }
 

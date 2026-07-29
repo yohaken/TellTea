@@ -11,6 +11,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
+import { daysAgoMs } from "./query-window";
 import type { TaskOccurrence, TaskOccurrenceStatus } from "./task-types";
 import {
   computeCompletedKind,
@@ -19,6 +20,16 @@ import {
   type SyncDeleteOp,
   type SyncMissedOp,
 } from "./task-weekly-logic";
+
+/** พอสำหรับแท็บ missed (4 สัปดาห์) + ประวัติใกล้ๆ — ไม่ sync งานเก่าทั้งก้อน */
+export const TASK_OCCURRENCE_LOOKBACK_DAYS = 120;
+
+export function taskOccurrenceSinceMs(
+  now = Date.now(),
+  days: number = TASK_OCCURRENCE_LOOKBACK_DAYS,
+): number {
+  return daysAgoMs(days, now);
+}
 
 function occurrencesCol() {
   return collection(getDb(), "taskOccurrences");
@@ -65,9 +76,20 @@ function mapOccurrence(id: string, data: Record<string, unknown>): TaskOccurrenc
 export function subscribeTaskOccurrences(
   onRows: (rows: TaskOccurrence[]) => void,
   onError?: (err: Error) => void,
+  opts?: { since?: number },
 ): Unsubscribe {
+  const since = opts?.since;
+  const q =
+    since != null
+      ? query(
+          occurrencesCol(),
+          where("dueDate", ">=", since),
+          orderBy("dueDate", "desc"),
+          orderBy("createdAt", "desc"),
+        )
+      : query(occurrencesCol(), orderBy("dueDate", "desc"), orderBy("createdAt", "desc"));
   return onSnapshot(
-    query(occurrencesCol(), orderBy("dueDate", "desc"), orderBy("createdAt", "desc")),
+    q,
     (snap) => {
       onRows(snap.docs.map((d) => mapOccurrence(d.id, d.data() as Record<string, unknown>)));
     },
@@ -80,14 +102,26 @@ export function subscribeTaskOccurrencesForAssignee(
   assigneeId: string,
   onRows: (rows: TaskOccurrence[]) => void,
   onError?: (err: Error) => void,
+  opts?: { since?: number },
 ): Unsubscribe {
+  const since = opts?.since;
+  const q =
+    since != null
+      ? query(
+          occurrencesCol(),
+          where("assigneeIds", "array-contains", assigneeId),
+          where("dueDate", ">=", since),
+          orderBy("dueDate", "desc"),
+          orderBy("createdAt", "desc"),
+        )
+      : query(
+          occurrencesCol(),
+          where("assigneeIds", "array-contains", assigneeId),
+          orderBy("dueDate", "desc"),
+          orderBy("createdAt", "desc"),
+        );
   return onSnapshot(
-    query(
-      occurrencesCol(),
-      where("assigneeIds", "array-contains", assigneeId),
-      orderBy("dueDate", "desc"),
-      orderBy("createdAt", "desc"),
-    ),
+    q,
     (snap) => {
       onRows(snap.docs.map((d) => mapOccurrence(d.id, d.data() as Record<string, unknown>)));
     },

@@ -21,6 +21,7 @@ assert.equal(proposeOwnerBookVatInput(107), 7);
   assert.equal(off.hasVat, false);
   assert.equal(off.vatInput, 0);
   assert.equal(off.vatVerified, false);
+  assert.equal(off.vatClaim, false);
 }
 
 {
@@ -28,6 +29,25 @@ assert.equal(proposeOwnerBookVatInput(107), 7);
   const on = normalizePurchaseVat({ hasVat: true }, 107);
   assert.equal(on.hasVat, true);
   assert.equal(on.vatInput, 0);
+  assert.equal(on.vatClaim, false);
+}
+
+{
+  // ไม่มี vatClaim แต่มียอด → ยังไม่รวม (ต้องติ๊กที่ VAT เดือน)
+  const legacy = normalizePurchaseVat(
+    { hasVat: true, vatInput: 7, vatSource: "manual" },
+    107,
+  );
+  assert.equal(legacy.vatClaim, false);
+}
+
+{
+  // AI/รายการใหม่: ส่ง vatClaim=false ชัดเจน
+  const fresh = normalizePurchaseVat(
+    { hasVat: true, vatInput: 7, vatSource: "ai", vatClaim: false },
+    107,
+  );
+  assert.equal(fresh.vatClaim, false);
 }
 
 {
@@ -38,6 +58,7 @@ assert.equal(proposeOwnerBookVatInput(107), 7);
       vatInvoiceNo: " INV-1 ",
       vatSource: "ai",
       vatVerified: true,
+      vatClaim: true,
     },
     107,
   );
@@ -45,6 +66,7 @@ assert.equal(proposeOwnerBookVatInput(107), 7);
   assert.equal(custom.vatInvoiceNo, "INV-1");
   assert.equal(custom.vatSource, "ai");
   assert.equal(custom.vatVerified, true);
+  assert.equal(custom.vatClaim, true);
 }
 
 assert.equal(parseVatInputStr(""), 0);

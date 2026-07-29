@@ -59,7 +59,7 @@ export type LedgerEntry = {
   receiptUrl?: string;
   /** สลิปหลายรูป — ถ้าว่างใช้ receiptUrl */
   receiptUrls?: string[];
-  /** มีใบกำกับ / ขอหักภาษีซื้อ (เงินออก เช่น แม็คโคร ท็อปส์) */
+  /** มีใบกำกับ / มียอดภาษีซื้อบนบิล (เงินออก เช่น แม็คโคร ท็อปส์) */
   hasVat?: boolean;
   /** ยอดภาษีซื้อ (บาท) */
   vatInput?: number;
@@ -71,6 +71,8 @@ export type LedgerEntry = {
   vatSource?: string;
   /** คนตรวจแล้วว่าตรงบิล */
   vatVerified?: boolean;
+  /** รวมเข้าหักภาษีซื้อ VAT เดือน — ติ๊กที่ตารางเดือนเป็นหลัก */
+  vatClaim?: boolean;
 };
 
 export type LedgerEntryInput = {
@@ -90,6 +92,7 @@ export type LedgerEntryInput = {
   vatInvoiceNo?: string;
   vatSource?: string;
   vatVerified?: boolean;
+  vatClaim?: boolean;
 };
 
 /** Perpetual inventory — วัตถุดิบร้าน (Products) */

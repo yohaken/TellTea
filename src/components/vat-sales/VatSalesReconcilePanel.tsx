@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { formatDateTimeShort, formatPlainNumber } from "@/lib/utils";
+import { formatDateTimeShort } from "@/lib/utils";
+import { formatVatMoney } from "@/lib/vat-number-format";
 import { DELIVERY_CHANNEL_LABELS, type DeliveryChannel } from "@/lib/vat-sales";
 import {
   buildReconcileRows,
@@ -10,8 +11,8 @@ import {
 import { reparsePlatformEmailReport } from "@/lib/vat-sales-mail";
 
 function fmt(n: number) {
-  if (!n && n !== 0) return "—";
-  return formatPlainNumber(n);
+  if (!Number.isFinite(n)) return "—";
+  return formatVatMoney(n);
 }
 
 function channelLabel(ch: DeliveryChannel | "unknown") {

@@ -13,11 +13,11 @@ import {
   setDoc,
   startAfter,
   updateDoc,
+  where,
   writeBatch,
   type QueryDocumentSnapshot,
   type Unsubscribe,
 } from "firebase/firestore";
-import { monthKeyFromMs } from "./categories";
 import {
   normalizePurchaseVat,
   normalizeVatSource,
@@ -58,6 +58,7 @@ export type OwnerBookEntryInput = {
   vatInvoiceNo?: string;
   vatSource?: string;
   vatVerified?: boolean;
+  vatClaim?: boolean;
 };
 
 /** @deprecated ใช้ proposePurchaseVatInput จาก entry-vat */
@@ -113,6 +114,7 @@ function mapEntry(d: QueryDocumentSnapshot): OwnerBookEntry {
         typeof data.vatInvoiceNo === "string" ? data.vatInvoiceNo : "",
       vatSource: normalizeVatSource(data.vatSource),
       vatVerified: Boolean(data.vatVerified),
+      vatClaim: data.vatClaim,
     },
     amountOut,
   );
@@ -243,6 +245,8 @@ export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<str
       vatInvoiceNo: input.vatInvoiceNo,
       vatSource: normalizeVatSource(input.vatSource),
       vatVerified: Boolean(input.vatVerified),
+      // รายการใหม่: ไม่ส่ง vatClaim = ไม่รวมหักจนกว่าจะติ๊กที่ VAT เดือน
+      vatClaim: input.vatClaim === true,
     },
     amountOut,
   );
@@ -269,6 +273,7 @@ export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<str
     vatInvoiceNo: vat.vatInvoiceNo,
     vatSource: vat.vatSource,
     vatVerified: vat.vatVerified,
+    vatClaim: vat.vatClaim,
   };
   validateOwnerPayload(payload);
   const ref = await addDoc(ownerBooksCol(), payload);
@@ -296,6 +301,7 @@ export async function updateOwnerBookEntry(
       | "vatInvoiceNo"
       | "vatSource"
       | "vatVerified"
+      | "vatClaim"
     >
   >,
 ): Promise<void> {
@@ -336,6 +342,7 @@ export async function updateOwnerBookEntry(
     patch.vatInvoiceNo != null ||
     patch.vatSource != null ||
     patch.vatVerified != null ||
+    patch.vatClaim != null ||
     patch.amountOut != null;
   if (vatTouched) {
     const vat = normalizeOwnerBookVat(
@@ -356,6 +363,8 @@ export async function updateOwnerBookEntry(
           patch.vatVerified != null
             ? Boolean(patch.vatVerified)
             : Boolean(prev.vatVerified),
+        vatClaim:
+          patch.vatClaim != null ? patch.vatClaim : prev.vatClaim,
       },
       nextOut,
     );
@@ -368,25 +377,38 @@ export async function updateOwnerBookEntry(
     next.vatInvoiceNo = vat.vatInvoiceNo;
     next.vatSource = vat.vatSource;
     next.vatVerified = vat.vatVerified;
+    next.vatClaim = vat.vatClaim;
   }
 
   await updateDoc(entryRef, next);
   await applyOwnerOutDelta(nextOut - prevOut);
 }
 
-/** รวมภาษีซื้อจากรายการบช.เจ้าของที่มีติ๊ก VAT ในเดือน YYYY-MM */
+/** โหลดรายการบช.เจ้าของทีละ id */
+export async function getOwnerBookEntry(
+  id: string,
+): Promise<OwnerBookEntry | null> {
+  const snap = await getDoc(doc(getDb(), "ownerBooks", id));
+  if (!snap.exists()) return null;
+  return mapEntry(snap as QueryDocumentSnapshot);
+}
+
+/** รวมภาษีซื้อจากรายการบช.เจ้าของที่ติ๊ก「รวมเข้าระบบ」ในเดือน YYYY-MM */
 export async function sumOwnerBooksVatInputByMonth(
   monthKey: string,
 ): Promise<{ vatInput: number; count: number }> {
   if (!/^\d{4}-\d{2}$/.test(monthKey)) {
     return { vatInput: 0, count: 0 };
   }
-  const rows = await listOwnerBookEntries();
+  const [ys, ms] = monthKey.split("-");
+  const year = Number(ys);
+  const month = Number(ms);
+  if (!year || !month) return { vatInput: 0, count: 0 };
+  const rows = await listOwnerBookEntriesInMonth(year, month);
   let vatInput = 0;
   let count = 0;
   for (const row of rows) {
-    if (!row.hasVat) continue;
-    if (monthKeyFromMs(row.date) !== monthKey) continue;
+    if (!row.hasVat || !row.vatClaim) continue;
     const v = normalizeMoney(row.vatInput);
     if (v <= 0) continue;
     vatInput = roundMoney(vatInput + v);
@@ -502,10 +524,66 @@ export async function deleteOwnerBookEntry(id: string): Promise<void> {
   await applyOwnerOutDelta(-prevOut);
 }
 
-/** Full scan for owner reports (P&L). */
+/** Full scan for export — อย่าใช้ตอนเปิดหน้าปกติ */
 export async function listOwnerBookEntries(): Promise<OwnerBookEntry[]> {
   const snap = await getDocs(
     query(ownerBooksCol(), orderBy("date", "asc"), orderBy("createdAt", "asc")),
+  );
+  return snap.docs.map(mapEntry);
+}
+
+/** เดือนปฏิทิน — month = 1–12 (คู่กับ listLedgerEntriesInMonth) */
+export async function listOwnerBookEntriesInMonth(
+  year: number,
+  month: number,
+): Promise<OwnerBookEntry[]> {
+  const start = new Date(year, month - 1, 1).getTime();
+  const end = new Date(year, month, 1).getTime();
+  const snap = await getDocs(
+    query(
+      ownerBooksCol(),
+      where("date", ">=", start),
+      where("date", "<", end),
+      orderBy("date", "asc"),
+      orderBy("createdAt", "asc"),
+    ),
+  );
+  return snap.docs.map(mapEntry);
+}
+
+/** ช่วงวันที่ (until exclusive) — ใช้ P&L / ค้นหา */
+export async function listOwnerBookEntriesSince(
+  sinceMs: number,
+  untilMs?: number,
+): Promise<OwnerBookEntry[]> {
+  const q =
+    untilMs != null
+      ? query(
+          ownerBooksCol(),
+          where("date", ">=", sinceMs),
+          where("date", "<", untilMs),
+          orderBy("date", "asc"),
+          orderBy("createdAt", "asc"),
+        )
+      : query(
+          ownerBooksCol(),
+          where("date", ">=", sinceMs),
+          orderBy("date", "asc"),
+          orderBy("createdAt", "asc"),
+        );
+  const snap = await getDocs(q);
+  return snap.docs.map(mapEntry);
+}
+
+/** Recent outs for suggestion chips — ไม่สแกนทั้งก้อน */
+export async function listRecentOwnerBookEntries(max = 200): Promise<OwnerBookEntry[]> {
+  const snap = await getDocs(
+    query(
+      ownerBooksCol(),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+      limit(max),
+    ),
   );
   return snap.docs.map(mapEntry);
 }

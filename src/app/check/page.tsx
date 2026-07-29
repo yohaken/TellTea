@@ -101,8 +101,10 @@ function CheckView() {
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [records, setRecords] = useState<ChecklistRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [historyMonth, setHistoryMonth] = useState(checkMonthInputValue());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { year: historyYear, month: historyMonthIdx } = parseCheckMonthInput(historyMonth);
 
   async function reloadCatalog() {
     const [emps, catalog] = await Promise.all([
@@ -132,12 +134,15 @@ function CheckView() {
       .catch((err) => setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ"))
       .finally(() => setLoading(false));
 
+    const since = new Date(historyYear, historyMonthIdx, 1).getTime();
+    const until = new Date(historyYear, historyMonthIdx + 1, 1).getTime();
     const unsub = subscribeChecklistRecords(
       (rows) => setRecords(rows),
       (err) => setError(err.message || "โหลดบันทึกไม่สำเร็จ"),
+      { since, until },
     );
     return unsub;
-  }, [staff, isOwner]);
+  }, [staff, isOwner, historyYear, historyMonthIdx]);
 
   useEffect(() => {
     if (!isOwner && ownerView === "setup") setOwnerView("history");
@@ -238,6 +243,8 @@ function CheckView() {
       {!loading && showHistory ? (
         <CheckSummary
           records={records}
+          month={historyMonth}
+          onMonthChange={setHistoryMonth}
           isOwner={isOwner}
           onError={setError}
           onStartCheck={openFormForSlot}
@@ -842,16 +849,19 @@ function dateMsToInput(ms: number) {
 
 function CheckSummary({
   records,
+  month,
+  onMonthChange,
   isOwner,
   onError,
   onStartCheck,
 }: {
   records: ChecklistRecord[];
+  month: string;
+  onMonthChange: (month: string) => void;
   isOwner: boolean;
   onError: (msg: string) => void;
   onStartCheck: (dateMs: number, shift: CheckShiftId) => void;
 }) {
-  const [month, setMonth] = useState(checkMonthInputValue());
   const [filter, setFilter] = useState<HistoryFilter>("all");
   const [detail, setDetail] = useState<HistoryDetail | null>(null);
 
@@ -896,7 +906,7 @@ function CheckSummary({
           type="month"
           className="ot-slim-input"
           value={month}
-          onChange={(e) => setMonth(e.target.value)}
+          onChange={(e) => onMonthChange(e.target.value)}
           aria-label="เดือน"
         />
         <div className="check-filter-pills" role="group" aria-label="ตัวกรอง">

@@ -2,10 +2,10 @@
  * ช่อง VAT (ภาษีซื้อ) ร่วม — บช.พนักงาน + บช.เจ้าของ
  *
  * ลำดับหลัก:
- * 1) AI อ่านจากรูปใบเสร็จก่อน
- * 2) คนติ๊กตรวจว่าตรงบิล
- * 3) ถ้าไม่มี AI / ไม่ตรง → กรอกเอง
- * 4) ประมาณ ×7/107 เป็นทางเลือกสุดท้าย (ไม่ใช่ค่าเริ่มต้น)
+ * 1) AI อ่านยอดจากรูปใบเสร็จก่อน (เก็บยอด · ยังไม่รวมหัก)
+ * 2) คนตรวจตรงบิลได้ที่บช. หรือใน VAT เดือน
+ * 3) ติ๊ก「รวมเข้า VAT เดือน」ที่ตาราง VAT เดือน (+)
+ * 4) ประมาณ ×7/107 เป็นทางเลือกสุดท้าย
  */
 import { computeVatFromGross, normalizeMoney, roundMoney } from "./vat-sales";
 
@@ -13,6 +13,7 @@ import { computeVatFromGross, normalizeMoney, roundMoney } from "./vat-sales";
 export type VatSource = "" | "ai" | "manual" | "propose";
 
 export type EntryVatFields = {
+  /** มียอด VAT บนบิล / เก็บภาษีซื้อไว้ในรายการ */
   hasVat: boolean;
   vatInput: number;
   vatBase: number;
@@ -21,6 +22,8 @@ export type EntryVatFields = {
   vatSource: VatSource;
   /** คนติ๊กตรวจแล้วว่าตรงกับบิล */
   vatVerified: boolean;
+  /** รวมเข้าหักภาษีซื้อ VAT เดือน — ติ๊กที่ตารางเดือนเป็นหลัก */
+  vatClaim: boolean;
 };
 
 /** ผู้ขายที่พบบ่อย — hint UI */
@@ -45,13 +48,19 @@ export function proposePurchaseVatInput(amountInclusive: number): number {
 
 /**
  * normalize ตอนโหลด/บันทึก
- * ถ้า hasVat แต่ไม่มี vatInput → คง 0 (ไม่บังคับใส่ 7/107)
+ * hasVat = เก็บยอดบนบิล · vatClaim = รวมเข้า VAT เดือน
+ * vatClaim ต้องติ๊กเองที่ VAT เดือน — รายการใหม่/เก่าที่ไม่มีฟิลด์ = ยังไม่รวม
  */
 export function normalizePurchaseVat(
-  raw: Partial<EntryVatFields> | undefined,
+  raw: Partial<EntryVatFields> | Record<string, unknown> | undefined,
   amountInclusive = 0,
 ): EntryVatFields {
-  const hasVat = Boolean(raw?.hasVat);
+  const vatInputRaw = Number(raw?.vatInput);
+  const vatInputFromRaw =
+    Number.isFinite(vatInputRaw) && vatInputRaw > 0
+      ? normalizeMoney(vatInputRaw)
+      : 0;
+  const hasVat = Boolean(raw?.hasVat) || vatInputFromRaw > 0;
   if (!hasVat) {
     return {
       hasVat: false,
@@ -60,13 +69,10 @@ export function normalizePurchaseVat(
       vatInvoiceNo: "",
       vatSource: "",
       vatVerified: false,
+      vatClaim: false,
     };
   }
-  const vatInputRaw = Number(raw?.vatInput);
-  const vatInput =
-    Number.isFinite(vatInputRaw) && vatInputRaw > 0
-      ? normalizeMoney(vatInputRaw)
-      : 0;
+  const vatInput = vatInputFromRaw;
   const vatBaseRaw = Number(raw?.vatBase);
   const vatBase =
     Number.isFinite(vatBaseRaw) && vatBaseRaw > 0
@@ -76,6 +82,11 @@ export function normalizePurchaseVat(
         : 0;
   const vatSource = normalizeVatSource(raw?.vatSource);
   const vatVerified = Boolean(raw?.vatVerified) && vatInput > 0;
+  const claimRaw = (raw as { vatClaim?: unknown } | undefined)?.vatClaim;
+  let vatClaim: boolean;
+  if (claimRaw === true || claimRaw === "true") vatClaim = true;
+  else if (claimRaw === false || claimRaw === "false") vatClaim = false;
+  else vatClaim = false; // ไม่ auto รวม — ติ๊กที่ VAT เดือน (+) ครั้งแรก แล้วจำในรายการ
   return {
     hasVat: true,
     vatInput,
@@ -83,6 +94,7 @@ export function normalizePurchaseVat(
     vatInvoiceNo: String(raw?.vatInvoiceNo || "").trim(),
     vatSource: vatSource || (vatInput > 0 ? "manual" : ""),
     vatVerified,
+    vatClaim: Boolean(vatClaim && vatInput > 0),
   };
 }
 

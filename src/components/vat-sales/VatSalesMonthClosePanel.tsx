@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { formatDateTimeShort, formatPlainNumber } from "@/lib/utils";
+import { formatDateTimeShort } from "@/lib/utils";
+import {
+  formatVatMoney,
+  moneyFieldValue,
+  normalizeMoneyFieldText,
+  parseVatMoneyInput,
+} from "@/lib/vat-number-format";
 import {
   buildMonthClosePreview,
   closeVatMonthToIncome,
@@ -12,8 +18,8 @@ import { listVatInputInvoices, sumVatInput } from "@/lib/vat-input";
 import { roundMoney, type MonthSalesTotals, type PnlIncomeMode } from "@/lib/vat-sales";
 
 function fmt(n: number) {
-  if (!n) return "—";
-  return formatPlainNumber(n);
+  if (!Number.isFinite(n)) return "—";
+  return formatVatMoney(n);
 }
 
 type Props = {
@@ -64,7 +70,7 @@ export function VatSalesMonthClosePanel({
       setTotals(p.totals);
       setCurrentIncome(p.currentIncome);
       setLastClose(p.lastClose);
-      setEditIncome(String(p.proposed || ""));
+      setEditIncome(moneyFieldValue(p.proposed || 0));
       setVatInputTotal(sumVatInput(inputs).vatInput);
       setVatRegistered(p.vatRegistered);
     } catch (e) {
@@ -82,7 +88,7 @@ export function VatSalesMonthClosePanel({
   const netVat = roundMoney((totals?.vatOutput || 0) - vatInputTotal);
 
   const closeMonth = async () => {
-    const income = Number(String(editIncome).replace(/,/g, ""));
+    const income = parseVatMoneyInput(editIncome);
     if (!Number.isFinite(income) || income < 0) {
       setError("ยอดรายได้ไม่ถูกต้อง");
       return;
@@ -96,7 +102,7 @@ export function VatSalesMonthClosePanel({
         ? `\nยังมี ${unconfirmed} วันยังไม่ยืนยัน (ไม่นับในยอดนี้)`
         : "";
     const ok = window.confirm(
-      `ใส่รายได้เดือน ${month} = ${formatPlainNumber(income)} บาท เข้าสรุปรายเดือน (P&L)?\n` +
+      `ใส่รายได้เดือน ${month} = ${formatVatMoney(income)} บาท เข้าสรุปรายเดือน (P&L)?\n` +
         `จากวันยืนยัน ${confirmedDays} วัน · โหมด ${mode === "exVat" ? "ก่อน VAT" : "รวม VAT"}` +
         warn,
     );
@@ -106,7 +112,7 @@ export function VatSalesMonthClosePanel({
     setMsg("");
     try {
       const audit = await closeVatMonthToIncome(month, actor, { forceIncome: income });
-      setMsg(`ปิดเดือน ${month} แล้ว · รายได้ ${formatPlainNumber(audit.income)}`);
+      setMsg(`ปิดเดือน ${month} แล้ว · รายได้ ${formatVatMoney(audit.income)}`);
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -236,7 +242,9 @@ export function VatSalesMonthClosePanel({
               <input
                 inputMode="decimal"
                 value={editIncome}
+                placeholder="0.00"
                 onChange={(e) => setEditIncome(e.target.value)}
+                onBlur={() => setEditIncome(normalizeMoneyFieldText(editIncome))}
               />
             </label>
             <div className="vat-sales-acts">

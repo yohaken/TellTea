@@ -23,7 +23,7 @@ import {
   LEDGER_LIVE_MAX,
   LEDGER_PAGE_SIZE,
   LEDGER_RECEIPT_MAX,
-  listLedgerEntries,
+  listLedgerEntriesSince,
   listRecentLedgerEntries,
   recomputeLedgerBalance,
   subscribeLedgerBalance,
@@ -63,6 +63,7 @@ import {
   uploadEvidencePhotos,
 } from "@/lib/photo-upload";
 import type { LedgerEntry } from "@/lib/types";
+import { daysAgoMs } from "@/lib/query-window";
 import { filterLedgerRows } from "@/lib/smart-search";
 import {
   formatDateShort,
@@ -255,7 +256,7 @@ function LedgerView() {
     }
     let cancelled = false;
     setSearchLoading(true);
-    void listLedgerEntries()
+    void listLedgerEntriesSince(daysAgoMs(180))
       .then((rows) => {
         if (!cancelled) setSearchPool(rows);
       })
@@ -964,6 +965,8 @@ function AddOutModal({
         vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
         vatSource: hasVat ? vatSource || "manual" : "",
         vatVerified: hasVat ? vatVerified : false,
+        // รวมเข้า VAT เดือน — ติ๊กที่ตารางเดือน (+) ไม่ auto จาก AI
+        vatClaim: false,
       });
       setSaveStage("done");
       onSaved();
@@ -1342,6 +1345,7 @@ function EditEntryModal({
               vatInvoiceNo: "",
               vatSource: "",
               vatVerified: false,
+              vatClaim: false,
             }
           : {
               hasVat,
@@ -1349,6 +1353,8 @@ function EditEntryModal({
               vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
               vatSource: hasVat ? vatSource || "manual" : "",
               vatVerified: hasVat ? vatVerified : false,
+              // แก้ที่บช. — คงสถานะรวมเข้าระบบเดิม (ติ๊กหลักอยู่ที่ VAT เดือน)
+              vatClaim: hasVat ? Boolean(entry.vatClaim) : false,
             }),
       });
       onSaved();

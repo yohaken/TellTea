@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { formatDateTimeShort, formatPlainNumber } from "@/lib/utils";
+import { formatDateShort, formatDateTimeShort } from "@/lib/utils";
 import {
   loadOwnerMonthBreakdown,
   loadPnlReport,
@@ -14,18 +14,24 @@ import {
   computePersonalIncomeTax,
   DEFAULT_GP_DEDUCT_PCT,
   DEFAULT_PERSONAL_ALLOWANCE,
+  defaultGpByChannel,
   loadPersonalTaxSettings,
+  mapGpByChannel,
   proposeDeliveryGpDeduct,
   proposeGpDeductPct,
-  resolveGpDeductAmount,
   savePersonalTaxSettings,
   THAI_PIT_BRACKETS,
+  type GpByChannel,
+  type GpChannelKey,
   type GpDeductMode,
 } from "@/lib/personal-income-tax";
 import {
   formatVatMoney,
   formatVatPct,
   moneyFieldValue,
+  normalizeMoneyFieldText,
+  parseVatMoneyInput,
+  parseVatPctInput,
   pctFieldValue,
 } from "@/lib/vat-number-format";
 import {
@@ -45,6 +51,7 @@ import {
   ratesLabel,
   recomputeSegment,
   saveVatMonthlyReturn,
+  saveVatMonthlySettings,
   sumMonthlyTotals,
   unlockVatMonthlyReturn,
   type DeliveryChannels,
@@ -53,7 +60,15 @@ import {
   type VatMonthlyReturn,
   type VatSegmentState,
 } from "@/lib/vat-monthly";
-import { sumBothBooksVatInputByMonth } from "@/lib/books-vat-month";
+import {
+  bookLabel,
+  loadBothBooksVatByMonth,
+  type BooksVatBook,
+  type BooksVatLine,
+} from "@/lib/books-vat-month";
+import { updateLedgerEntry } from "@/lib/ledger";
+import { updateOwnerBookEntry } from "@/lib/owner-books";
+import { BooksVatEntryDetailModal } from "@/components/vat-sales/BooksVatEntryDetailModal";
 import { exportPersonalTaxYearXlsx } from "@/lib/xlsx-export";
 
 function emptyBookRow(month: string): MonthCategoryRow {
@@ -79,15 +94,11 @@ function moneyInputValue(n: number) {
 }
 
 function parseMoneyInput(raw: string): number {
-  const t = raw.trim().replace(/,/g, "");
-  if (!t) return 0;
-  const n = Number(t);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
+  return parseVatMoneyInput(raw);
 }
 
 function parseRate(raw: string, fallback: number): number {
-  const n = Number(String(raw).trim());
-  return Number.isFinite(n) && n >= 0 ? n : fallback;
+  return parseVatPctInput(raw, fallback);
 }
 
 function roundPct(n: number) {
@@ -286,9 +297,13 @@ function MoneyCell({
       inputMode="decimal"
       disabled={locked}
       value={value}
-      placeholder="0"
+      placeholder="0.00"
       aria-label={ariaLabel}
       onChange={(e) => onChange(e.target.value)}
+      onBlur={() => {
+        const next = normalizeMoneyFieldText(value);
+        if (next !== value) onChange(next);
+      }}
     />
   );
 }
@@ -615,27 +630,124 @@ function InputVatTable({
 }) {
   const [pullBusy, setPullBusy] = useState(false);
   const [pullMsg, setPullMsg] = useState("");
+  const [linesBusy, setLinesBusy] = useState(false);
+  const [claimBusyId, setClaimBusyId] = useState("");
+  const [booksLines, setBooksLines] = useState<BooksVatLine[]>([]);
+  const [booksCount, setBooksCount] = useState(0);
+  const [booksAllCount, setBooksAllCount] = useState(0);
+  const [booksVatTotal, setBooksVatTotal] = useState(0);
+  const [ledgerCount, setLedgerCount] = useState(0);
+  const [ownerCount, setOwnerCount] = useState(0);
+  const [openBooksLines, setOpenBooksLines] = useState(false);
+  const [detailLine, setDetailLine] = useState<{
+    book: BooksVatBook;
+    id: string;
+  } | null>(null);
+
+  const refreshBooksVatLines = useCallback(async () => {
+    setLinesBusy(true);
+    try {
+      const bundle = await loadBothBooksVatByMonth(month);
+      setBooksLines(bundle.lines);
+      setBooksCount(bundle.count);
+      setBooksAllCount(bundle.allCount);
+      setBooksVatTotal(bundle.vatInput);
+      setLedgerCount(bundle.ledgerCount);
+      setOwnerCount(bundle.ownerCount);
+      return bundle;
+    } catch {
+      setBooksLines([]);
+      setBooksCount(0);
+      setBooksAllCount(0);
+      setBooksVatTotal(0);
+      setLedgerCount(0);
+      setOwnerCount(0);
+      return null;
+    } finally {
+      setLinesBusy(false);
+    }
+  }, [month]);
+
+  useEffect(() => {
+    setOpenBooksLines(false);
+    setDetailLine(null);
+    void refreshBooksVatLines();
+  }, [month, refreshBooksVatLines]);
+
+  async function toggleLineClaim(line: BooksVatLine, nextClaim: boolean) {
+    if (locked) return;
+    const key = `${line.book}-${line.id}`;
+    setClaimBusyId(key);
+    setPullMsg("");
+    try {
+      if (line.book === "ledger") {
+        await updateLedgerEntry(line.id, { vatClaim: nextClaim });
+      } else {
+        await updateOwnerBookEntry(line.id, { vatClaim: nextClaim });
+      }
+      await refreshBooksVatLines();
+    } catch (e) {
+      setPullMsg(e instanceof Error ? e.message : "อัปเดตไม่สำเร็จ");
+    } finally {
+      setClaimBusyId("");
+    }
+  }
+
+  async function toggleClaimAll(nextClaim: boolean) {
+    if (locked || !booksLines.length) return;
+    setClaimBusyId("all");
+    setPullMsg("");
+    try {
+      await Promise.all(
+        booksLines
+          .filter((line) => line.vatClaim !== nextClaim)
+          .map((line) =>
+            line.book === "ledger"
+              ? updateLedgerEntry(line.id, { vatClaim: nextClaim })
+              : updateOwnerBookEntry(line.id, { vatClaim: nextClaim }),
+          ),
+      );
+      await refreshBooksVatLines();
+      setPullMsg(
+        nextClaim
+          ? `ติ๊กรวมทั้งหมด ${booksLines.length} รายการแล้ว · จำในรายการเดิมครั้งหน้า`
+          : "ยกเลิกติ๊กทั้งหมดแล้ว",
+      );
+    } catch (e) {
+      setPullMsg(e instanceof Error ? e.message : "อัปเดตไม่สำเร็จ");
+    } finally {
+      setClaimBusyId("");
+    }
+  }
+
+  const allClaimed =
+    booksAllCount > 0 && booksCount === booksAllCount && booksAllCount > 0;
+  const someClaimed = booksCount > 0 && booksCount < booksAllCount;
 
   async function pullIngredientFromBothBooks() {
     if (locked) return;
     setPullBusy(true);
     setPullMsg("");
     try {
-      const sum = await sumBothBooksVatInputByMonth(month);
-      if (sum.count <= 0 || sum.vatInput <= 0) {
+      const bundle = await refreshBooksVatLines();
+      if (!bundle || bundle.count <= 0 || bundle.vatInput <= 0) {
         setPullMsg(
-          "ยังไม่มีรายการที่ติ๊กช่อง VAT ในบช.พนักงานหรือบช.เจ้าของเดือนนี้",
+          bundle && bundle.allCount > 0
+            ? `มี ${bundle.allCount} รายการมียอด VAT แต่ยังไม่มีรายการที่ติ๊ก「รวมเข้าระบบ」 — เปิด + แล้วติ๊กก่อนดึง`
+            : "ยังไม่มีรายการภาษีซื้อจากสองบช. ในเดือนนี้",
         );
+        setOpenBooksLines(true);
         return;
       }
       // รวมสองบช. → วัตถุดิบหน้าร้าน · GP เดลิเวอรี่แยก (ไม่ทับ)
       onStorefrontChange({
         ...storefrontDraft,
-        ingredientVat: moneyInputValue(sum.vatInput),
+        ingredientVat: moneyInputValue(bundle.vatInput),
       });
       setPullMsg(
-        `ดึง ${formatVatMoney(sum.vatInput)} · พนง. ${formatVatMoney(sum.ledgerVat)} (${sum.ledgerCount}) + เจ้าของ ${formatVatMoney(sum.ownerVat)} (${sum.ownerCount}) → วัตถุดิบหน้าร้าน`,
+        `ดึง ${formatVatMoney(bundle.vatInput)} · พนง. ${formatVatMoney(bundle.ledgerVat)} (${bundle.ledgerCount}) + เจ้าของ ${formatVatMoney(bundle.ownerVat)} (${bundle.ownerCount}) → วัตถุดิบหน้าร้าน`,
       );
+      setOpenBooksLines(true);
     } catch (e) {
       setPullMsg(e instanceof Error ? e.message : "ดึงไม่สำเร็จ");
     } finally {
@@ -728,15 +840,15 @@ function InputVatTable({
     <section className="vat-table-block">
       <h2 className="vat-table-title">2) ภาษีซื้อ — กลุ่มหักได้</h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        วัตถุดิบ = รวมภาษีซื้อที่ติ๊กจากบช.พนง. + บช.เจ้าของ · GP เดลิเวอรี่แยก ·
-        อย่าคีย์บิลซ้ำสองบช.
+        วัตถุดิบ = รวมรายการที่ติ๊ก「รวมเข้าระบบ」จากสองบช. · แตะรายการดูรูป/ยอดเหมือนบช. ·
+        GP เดลิเวอรี่แยก · อย่าคีย์บิลซ้ำสองบช.
       </p>
       {!locked ? (
         <div className="vat-month-actions vat-month-actions--mini">
           <button
             type="button"
             className="vat-mini-btn"
-            disabled={pullBusy}
+            disabled={pullBusy || linesBusy}
             onClick={() => void pullIngredientFromBothBooks()}
           >
             {pullBusy ? "กำลังดึง…" : "ดึงภาษีซื้อจากสองบช."}
@@ -784,6 +896,151 @@ function InputVatTable({
           </tbody>
         </table>
       </div>
+
+      <div className="vat-books-breakdown">
+        <div className="vat-books-breakdown-head">
+          <span className="vat-seg-cell">
+            <ExpandBtn
+              open={openBooksLines}
+              onToggle={() => setOpenBooksLines((v) => !v)}
+              label="รายการภาษีซื้อจากสองบช."
+            />
+            <span className="vat-seg-label">
+              รายการจากสองบช.
+              {linesBusy
+                ? "…"
+                : booksAllCount > 0
+                  ? ` (${booksCount}/${booksAllCount} รวม · ${formatVatMoney(booksVatTotal)})`
+                  : " (ยังไม่มี)"}
+            </span>
+          </span>
+          {!linesBusy && booksAllCount > 0 ? (
+            <span className="muted vat-books-breakdown-meta">
+              รวมแล้ว พนง. {ledgerCount} · เจ้าของ {ownerCount}
+            </span>
+          ) : null}
+        </div>
+        {openBooksLines ? (
+          booksAllCount === 0 ? (
+            <p className="muted vat-sales-hint vat-hint-one-line">
+              ยังไม่มีรายการมียอด VAT จากสองบช. ในเดือนนี้ — บันทึกบิลที่บช.ก่อน
+            </p>
+          ) : (
+            <div className="sheet-wrap vat-month-slim-wrap">
+              <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-books-lines">
+                <thead>
+                  <tr>
+                    <th className="col-claim">
+                      <input
+                        type="checkbox"
+                        className="vat-claim-check"
+                        checked={allClaimed}
+                        ref={(el) => {
+                          if (el) el.indeterminate = someClaimed;
+                        }}
+                        disabled={
+                          locked || claimBusyId === "all" || linesBusy
+                        }
+                        title="ติ๊กรวมยอดทั้งหมด"
+                        aria-label="ติ๊กรวมเข้าระบบทั้งหมด"
+                        onChange={(e) =>
+                          void toggleClaimAll(e.target.checked)
+                        }
+                      />
+                    </th>
+                    <th className="col-date">วันที่</th>
+                    <th className="col-seg">บช.</th>
+                    <th className="col-seg">รายการ</th>
+                    <th className="col-num">จ่าย</th>
+                    <th className="col-num">ภาษีซื้อ</th>
+                    <th className="col-seg">ตรวจ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {booksLines.map((line) => {
+                    const rowKey = `${line.book}-${line.id}`;
+                    return (
+                      <tr
+                        key={rowKey}
+                        className={`vat-row-child vat-books-line-row${line.vatClaim ? " is-claimed" : ""}`}
+                        onClick={() =>
+                          setDetailLine({ book: line.book, id: line.id })
+                        }
+                      >
+                        <td
+                          className="col-claim"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            className="vat-claim-check"
+                            checked={line.vatClaim}
+                            disabled={
+                              locked ||
+                              claimBusyId === rowKey ||
+                              claimBusyId === "all" ||
+                              linesBusy
+                            }
+                            title="รวมเข้าระบบ"
+                            aria-label={`รวมเข้าระบบ ${line.description}`}
+                            onChange={(e) =>
+                              void toggleLineClaim(line, e.target.checked)
+                            }
+                          />
+                        </td>
+                        <td className="col-date">{formatDateShort(line.date)}</td>
+                        <td className="col-seg">{bookLabel(line.book)}</td>
+                        <td
+                          className="col-seg col-child"
+                          title={`${line.description} — แตะเพื่อดูรายละเอียด`}
+                        >
+                          {line.description}
+                        </td>
+                        <td className="col-num">{fmt(line.amountOut)}</td>
+                        <td className="col-num col-net">{fmt(line.vatInput)}</td>
+                        <td className="col-seg">
+                          {line.vatVerified ? (
+                            <span className="vat-line-ok">ตรงบิล</span>
+                          ) : (
+                            <span className="muted">ยังไม่ติ๊ก</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="vat-sales-totals-row">
+                    <td className="col-seg" colSpan={4}>
+                      รวมที่ติ๊ก「รวมเข้าระบบ」
+                    </td>
+                    <td className="col-num">—</td>
+                    <td className="col-num col-net">
+                      {fmt(booksVatTotal)}
+                    </td>
+                    <td className="col-seg">—</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p className="muted vat-sales-hint vat-hint-one-line">
+                เริ่มไม่ติ๊ก · ติ๊กทีละรายการหรือหัวตารางรวมยอด · จำในรายการเดิมครั้งหน้า ·
+                แตะแถวดูรูป/ยอดแบบบช.
+              </p>
+            </div>
+          )
+        ) : null}
+      </div>
+
+      {detailLine ? (
+        <BooksVatEntryDetailModal
+          book={detailLine.book}
+          entryId={detailLine.id}
+          locked={locked}
+          onClose={() => setDetailLine(null)}
+          onSaved={() => {
+            setDetailLine(null);
+            void refreshBooksVatLines();
+          }}
+        />
+      ) : null}
     </section>
   );
 }
@@ -850,23 +1107,19 @@ function bookOpEx(row: MonthCategoryRow | null) {
 
 /**
  * ตารางแยกรายได้ → P&L
- * สำคัญ: เดลิเวอรี่ต้องหัก GP ก้อนก่อน ถึงจะเป็นรายได้บุคคล
+ * หัก GP แยกช่องทางเดลิเวอรี่ (Shopee/Grab/LM) + หน้าร้าน · จำเรทข้ามเดือน
  */
 function IncomeBridgeTable({
   month,
   locked,
   mode,
   bridge,
-  gpDeductMode,
-  gpDeductPctStr,
-  gpDeductStr,
+  gpByChannel,
   gpPropose,
   gpProposePct,
   pnlIncomeStr,
   onModeChange,
-  onGpDeductModeChange,
-  onGpDeductPctChange,
-  onGpDeductChange,
+  onGpByChannelChange,
   onPnlIncomeChange,
   onUseBridgeIncome,
 }: {
@@ -874,40 +1127,49 @@ function IncomeBridgeTable({
   locked: boolean;
   mode: "exVat" | "incVat";
   bridge: ReturnType<typeof buildIncomeBridge>;
-  gpDeductMode: GpDeductMode;
-  gpDeductPctStr: string;
-  gpDeductStr: string;
+  gpByChannel: GpByChannel;
   gpPropose: number;
   gpProposePct: number;
   pnlIncomeStr: string;
   onModeChange: (m: "exVat" | "incVat") => void;
-  onGpDeductModeChange: (m: GpDeductMode) => void;
-  onGpDeductPctChange: (v: string) => void;
-  onGpDeductChange: (v: string) => void;
+  onGpByChannelChange: (next: GpByChannel) => void;
   onPnlIncomeChange: (v: string) => void;
   onUseBridgeIncome: () => void;
 }) {
+  function patchChannel(
+    key: GpChannelKey,
+    patch: Partial<GpByChannel[GpChannelKey]>,
+  ) {
+    onGpByChannelChange({
+      ...gpByChannel,
+      [key]: { ...gpByChannel[key], ...patch },
+    });
+  }
+
   return (
     <section className="vat-table-block vat-income-bridge">
       <h2 className="vat-table-title">
         รายได้แยก → P&L — {formatThaiMonthKey(month)}
       </h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        หัก GP เดลิเวอรี่ก่อนใส่รายได้บุคคล · แนะนำโหมดเรท % คงที่เพื่อเทียบค่าเฉลี่ยหลายเดือน ·
-        ตัวเลขเงินทศนิยม 2 ตำแหน่ง
+        หัก GP แยกช่องทาง (Shopee / Grab / LINE MAN) · หน้าร้านแยกต่างหาก ·
+        เรทจำไว้ใช้เดือนถัดไป · เงินมีคอมม่า
       </p>
       <div className="sheet-wrap vat-month-slim-wrap">
-        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table vat-gp-channel-table">
           <thead>
             <tr>
               <th className="col-seg">รายการ</th>
-              <th className="col-num">ยอด (บาท · ทศนิยม 2)</th>
+              <th className="col-num">รายได้</th>
+              <th className="col-seg">โหมดหัก</th>
+              <th className="col-num">เรท / ยอด</th>
+              <th className="col-num">หัก GP</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td className="col-seg">โหมดยอดรายได้</td>
-              <td className="col-num col-input">
+              <td className="col-num col-input" colSpan={4}>
                 <select
                   className="vat-inline-select"
                   disabled={locked}
@@ -924,83 +1186,164 @@ function IncomeBridgeTable({
               </td>
             </tr>
             <tr>
-              <td className="col-seg">รายได้เดลิเวอรี่</td>
-              <td className="col-num">{fmt(bridge.deliveryGross)}</td>
+              <td className="col-seg">รายได้เดลิเวอรี่ (รวม)</td>
+              <td className="col-num" colSpan={4}>
+                {fmt(bridge.deliveryGross)}
+              </td>
             </tr>
+            {bridge.channelRows
+              .filter((r) => r.key !== "storefront")
+              .map((row) => {
+                const s = gpByChannel[row.key];
+                return (
+                  <tr key={row.key} className="vat-row-child">
+                    <td className="col-seg col-child">− GP {row.label}</td>
+                    <td className="col-num">{fmt(row.gross)}</td>
+                    <td className="col-seg col-input">
+                      <select
+                        className="vat-inline-select"
+                        disabled={locked}
+                        value={s.mode}
+                        aria-label={`โหมดหัก GP ${row.label}`}
+                        onChange={(e) =>
+                          patchChannel(row.key, {
+                            mode:
+                              e.target.value === "amount" ? "amount" : "pct",
+                          })
+                        }
+                      >
+                        <option value="pct">เรท %</option>
+                        <option value="amount">ยอดบาท</option>
+                      </select>
+                    </td>
+                    <td className="col-num col-input">
+                      {s.mode === "pct" ? (
+                        <span className="vat-tap-edit">
+                          <input
+                            className="vat-sales-input vat-tap-input"
+                            inputMode="decimal"
+                            disabled={locked}
+                            value={pctFieldValue(s.pct) || ""}
+                            placeholder={
+                              row.key === "grab"
+                                ? String(
+                                    pctFieldValue(gpProposePct) ||
+                                      DEFAULT_GP_DEDUCT_PCT,
+                                  )
+                                : String(DEFAULT_GP_DEDUCT_PCT)
+                            }
+                            aria-label={`เรท GP % ${row.label}`}
+                            onChange={(e) =>
+                              patchChannel(row.key, {
+                                pct:
+                                  parseVatPctInput(
+                                    e.target.value,
+                                    DEFAULT_GP_DEDUCT_PCT,
+                                  ) || 0,
+                              })
+                            }
+                          />
+                          <span className="vat-tap-suffix">%</span>
+                        </span>
+                      ) : (
+                        <MoneyCell
+                          value={moneyFieldValue(s.amount)}
+                          locked={locked}
+                          ariaLabel={`หัก GP บาท ${row.label}`}
+                          onChange={(v) =>
+                            patchChannel(row.key, {
+                              amount: parseVatMoneyInput(v),
+                            })
+                          }
+                        />
+                      )}
+                    </td>
+                    <td className="col-num col-net">{fmt(row.deduct)}</td>
+                  </tr>
+                );
+              })}
             <tr>
               <td className="col-seg">รายได้หน้าร้าน</td>
               <td className="col-num">{fmt(bridge.storefrontGross)}</td>
-            </tr>
-            <tr>
-              <td className="col-seg">รวมรายได้ก่อนหัก</td>
-              <td className="col-num">{fmt(bridge.grossTotal)}</td>
-            </tr>
-            <tr>
-              <td className="col-seg">โหมดหัก GP ก้อนเดลิเวอรี่</td>
-              <td className="col-num col-input">
+              <td className="col-seg col-input">
                 <select
                   className="vat-inline-select"
                   disabled={locked}
-                  value={gpDeductMode}
-                  aria-label="โหมดหัก GP"
+                  value={gpByChannel.storefront.mode}
+                  aria-label="โหมดหัก GP หน้าร้าน"
                   onChange={(e) =>
-                    onGpDeductModeChange(
-                      e.target.value === "amount" ? "amount" : "pct",
-                    )
+                    patchChannel("storefront", {
+                      mode: e.target.value === "amount" ? "amount" : "pct",
+                    })
                   }
                 >
-                  <option value="pct">เรท % คงที่ (หาค่าเฉลี่ย)</option>
+                  <option value="pct">เรท %</option>
                   <option value="amount">ยอดบาท</option>
                 </select>
               </td>
-            </tr>
-            {gpDeductMode === "pct" ? (
-              <tr>
-                <td className="col-seg">
-                  − หัก GP เรท % คงที่
-                  <span className="muted">
-                    {" "}
-                    · เสนอ {pctFieldValue(gpProposePct) || DEFAULT_GP_DEDUCT_PCT}%
-                  </span>
-                </td>
-                <td className="col-num col-input">
+              <td className="col-num col-input">
+                {gpByChannel.storefront.mode === "pct" ? (
                   <span className="vat-tap-edit">
                     <input
                       className="vat-sales-input vat-tap-input"
                       inputMode="decimal"
                       disabled={locked}
-                      value={gpDeductPctStr}
-                      placeholder={String(DEFAULT_GP_DEDUCT_PCT)}
-                      aria-label="เรทหัก GP %"
-                      onChange={(e) => onGpDeductPctChange(e.target.value)}
+                      value={pctFieldValue(gpByChannel.storefront.pct) || ""}
+                      placeholder="0"
+                      aria-label="เรท GP % หน้าร้าน"
+                      onChange={(e) =>
+                        patchChannel("storefront", {
+                          pct: parseVatPctInput(e.target.value, 0) || 0,
+                        })
+                      }
                     />
                     <span className="vat-tap-suffix">%</span>
                   </span>
-                </td>
-              </tr>
-            ) : (
-              <tr>
-                <td className="col-seg">
-                  − หัก GP ยอดบาท
-                  <span className="muted"> · ประมาณ {fmt(gpPropose)}</span>
-                </td>
-                <td className="col-num col-input">
+                ) : (
                   <MoneyCell
-                    value={gpDeductStr}
+                    value={moneyFieldValue(gpByChannel.storefront.amount)}
                     locked={locked}
-                    ariaLabel="หัก GP ยอดบาท"
-                    onChange={onGpDeductChange}
+                    ariaLabel="หัก GP บาท หน้าร้าน"
+                    onChange={(v) =>
+                      patchChannel("storefront", {
+                        amount: parseVatMoneyInput(v),
+                      })
+                    }
                   />
-                </td>
-              </tr>
-            )}
+                )}
+              </td>
+              <td className="col-num col-net">
+                {fmt(
+                  bridge.channelRows.find((r) => r.key === "storefront")
+                    ?.deduct || 0,
+                )}
+              </td>
+            </tr>
             <tr>
-              <td className="col-seg">ยอดหัก GP (คำนวณ)</td>
-              <td className="col-num">{fmt(bridge.gpDeduct)}</td>
+              <td className="col-seg">รวมรายได้ก่อนหัก</td>
+              <td className="col-num" colSpan={3}>
+                {fmt(bridge.grossTotal)}
+              </td>
+              <td className="col-num">—</td>
+            </tr>
+            <tr>
+              <td className="col-seg">
+                รวมหัก GP
+                <span className="muted">
+                  {" "}
+                  · ประมาณก้อน {fmt(gpPropose)} ({pctFieldValue(gpProposePct) ||
+                    DEFAULT_GP_DEDUCT_PCT}
+                  %)
+                </span>
+              </td>
+              <td className="col-num" colSpan={3}>
+                —
+              </td>
+              <td className="col-num col-net">{fmt(bridge.gpDeduct)}</td>
             </tr>
             <tr className="vat-sales-totals-row">
               <td className="col-seg">= รายได้สุทธิ → P&L</td>
-              <td className="col-num col-input col-net">
+              <td className="col-num col-input col-net" colSpan={4}>
                 <MoneyCell
                   value={pnlIncomeStr}
                   locked={locked}
@@ -1313,11 +1656,10 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   const [bookOwner, setBookOwner] = useState<MonthCategoryRow | null>(null);
   const [booksBusy, setBooksBusy] = useState(false);
   const [booksPulledAt, setBooksPulledAt] = useState(0);
-  const [gpDeductStr, setGpDeductStr] = useState("");
-  const [gpDeductMode, setGpDeductMode] = useState<GpDeductMode>("pct");
-  const [gpDeductPctStr, setGpDeductPctStr] = useState(
-    String(DEFAULT_GP_DEDUCT_PCT),
+  const [gpByChannel, setGpByChannel] = useState<GpByChannel>(() =>
+    defaultGpByChannel(),
   );
+  const gpByChannelRef = useRef(gpByChannel);
   const [allowanceStr, setAllowanceStr] = useState(
     String(DEFAULT_PERSONAL_ALLOWANCE),
   );
@@ -1337,6 +1679,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   noteRef.current = note;
   pnlModeRef.current = pnlMode;
   pnlIncomeRef.current = pnlIncome;
+  gpByChannelRef.current = gpByChannel;
   dirtyRef.current = dirty;
 
   const snapshotDraft = useCallback(
@@ -1346,9 +1689,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       n: string,
       mode: "exVat" | "incVat",
       income: string,
-      gpDeduct = "",
-      gpMode: GpDeductMode = "pct",
-      gpPct = "",
+      gpMap: GpByChannel = defaultGpByChannel(),
     ) =>
       JSON.stringify({
         delivery: d,
@@ -1356,9 +1697,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         note: n,
         pnlMode: mode,
         pnlIncome: income,
-        gpDeduct,
-        gpDeductMode: gpMode,
-        gpDeductPct: gpPct,
+        gpByChannel: gpMap,
       }),
     [],
   );
@@ -1403,12 +1742,16 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       const delGrossForPct =
         mode === "incVat" ? ret.delivery.grossSales : ret.delivery.vatBase;
       const gpProposePct = proposeGpDeductPct(delGrossForPct, gpPropose);
-      let gpMode: GpDeductMode = ret.pnlDeliveryGpMode || "pct";
-      let gpPct = pctFieldValue(
-        ret.pnlDeliveryGpPct > 0 ? ret.pnlDeliveryGpPct : gpProposePct,
-      );
-      let gpDeduct = moneyInputValue(
-        ret.pnlDeliveryGpDeduct > 0 ? ret.pnlDeliveryGpDeduct : gpPropose,
+      // เดือนนี้ → ตั้งค่าร้าน (จำข้ามเดือน) → มรดกก้อนเดียว
+      let nextGp = mapGpByChannel(
+        ret.pnlGpByChannel || st.pnlGpByChannel,
+        {
+          mode: ret.pnlDeliveryGpMode || "pct",
+          pct:
+            ret.pnlDeliveryGpPct > 0 ? ret.pnlDeliveryGpPct : gpProposePct,
+          amount:
+            ret.pnlDeliveryGpDeduct > 0 ? ret.pnlDeliveryGpDeduct : gpPropose,
+        },
       );
 
       // ร่างในเครื่อง — รวมแบบไม่ให้ค่าว่างทับตัวเลข
@@ -1419,9 +1762,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           note?: string;
           pnlMode?: "exVat" | "incVat";
           pnlIncome?: string;
-          gpDeduct?: string;
-          gpDeductMode?: GpDeductMode;
-          gpDeductPct?: string;
+          gpByChannel?: GpByChannel;
         } | null;
         if (cached?.delivery) d = mergePreferMoney(d, cached.delivery);
         if (cached?.storefront) s = mergePreferMoney(s, cached.storefront);
@@ -1432,14 +1773,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         if (typeof cached?.pnlIncome === "string" && cached.pnlIncome.trim()) {
           income = cached.pnlIncome;
         }
-        if (cached?.gpDeductMode === "amount" || cached?.gpDeductMode === "pct") {
-          gpMode = cached.gpDeductMode;
-        }
-        if (typeof cached?.gpDeductPct === "string" && cached.gpDeductPct.trim()) {
-          gpPct = cached.gpDeductPct;
-        }
-        if (typeof cached?.gpDeduct === "string" && cached.gpDeduct.trim()) {
-          gpDeduct = cached.gpDeduct;
+        if (cached?.gpByChannel) {
+          nextGp = mapGpByChannel(cached.gpByChannel);
         }
       }
 
@@ -1450,6 +1785,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         if (noteRef.current.trim()) n = noteRef.current;
         mode = pnlModeRef.current;
         if (pnlIncomeRef.current.trim()) income = pnlIncomeRef.current;
+        nextGp = gpByChannelRef.current;
       }
 
       setDoc(ret);
@@ -1460,9 +1796,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       setNoteOpen(Boolean(n.trim()));
       setPnlMode(mode);
       setPnlIncome(income);
-      setGpDeductStr(gpDeduct);
-      setGpDeductMode(gpMode);
-      setGpDeductPctStr(gpPct || String(DEFAULT_GP_DEDUCT_PCT));
+      setGpByChannel(nextGp);
       setAllowanceStr(String(taxSt.personalAllowance || DEFAULT_PERSONAL_ALLOWANCE));
       setOtherDeductStr(moneyInputValue(taxSt.otherDeductions));
       setTaxNote(taxSt.note);
@@ -1487,24 +1821,15 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         ret.note,
         ret.pnlIncomeMode,
         moneyInputValue(ret.pnlIncome),
-        moneyInputValue(
-          ret.pnlDeliveryGpDeduct > 0 ? ret.pnlDeliveryGpDeduct : gpPropose,
-        ),
-        ret.pnlDeliveryGpMode || "pct",
-        pctFieldValue(
-          ret.pnlDeliveryGpPct > 0 ? ret.pnlDeliveryGpPct : gpProposePct,
-        ),
+        mapGpByChannel(ret.pnlGpByChannel || st.pnlGpByChannel, {
+          mode: ret.pnlDeliveryGpMode || "pct",
+          pct:
+            ret.pnlDeliveryGpPct > 0 ? ret.pnlDeliveryGpPct : gpProposePct,
+          amount:
+            ret.pnlDeliveryGpDeduct > 0 ? ret.pnlDeliveryGpDeduct : gpPropose,
+        }),
       );
-      const localSnap = snapshotDraft(
-        d,
-        s,
-        n,
-        mode,
-        income,
-        gpDeduct,
-        gpMode,
-        gpPct,
-      );
+      const localSnap = snapshotDraft(d, s, n, mode, income, nextGp);
       savedSnapRef.current = savedSnap;
       setDirty(localSnap !== savedSnap);
       // เก็บร่างในเครื่องหลัง hydrate (สำรองแม้เซิร์ฟเวอร์ว่าง)
@@ -1575,17 +1900,6 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     [deliveryGrossForMode, gpPropose],
   );
 
-  const effectiveGpPct =
-    parseRate(gpDeductPctStr, DEFAULT_GP_DEDUCT_PCT) || DEFAULT_GP_DEDUCT_PCT;
-  const effectiveGpAmount = parseMoneyInput(gpDeductStr) || gpPropose;
-
-  const effectiveGpDeduct = resolveGpDeductAmount({
-    mode: gpDeductMode,
-    pct: effectiveGpPct,
-    amount: effectiveGpAmount,
-    deliveryGross: deliveryGrossForMode,
-  });
-
   const incomeBridge = useMemo(
     () =>
       buildIncomeBridge({
@@ -1594,21 +1908,24 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         storefrontVatBase: storefront.vatBase,
         storefrontGrossSales: storefront.grossSales,
         mode: pnlMode,
-        gpDeductMode,
-        gpDeductPct: effectiveGpPct,
-        gpDeduct: effectiveGpAmount,
+        deliveryChannels: delivery.channels,
+        outputPct: delivery.rates.outputPct,
+        gpByChannel,
       }),
     [
       delivery.vatBase,
       delivery.grossSales,
+      delivery.channels,
+      delivery.rates.outputPct,
       storefront.vatBase,
       storefront.grossSales,
       pnlMode,
-      gpDeductMode,
-      effectiveGpPct,
-      effectiveGpAmount,
+      gpByChannel,
     ],
   );
+  const effectiveGpDeduct = incomeBridge.gpDeduct;
+  const effectiveGpPct = incomeBridge.gpDeductPct;
+  const gpDeductMode = incomeBridge.gpDeductMode;
 
   const locked = doc?.status === "filed";
   const period = useMemo(
@@ -1625,9 +1942,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       note,
       pnlMode,
       pnlIncome,
-      gpDeductStr,
-      gpDeductMode,
-      gpDeductPctStr,
+      gpByChannel,
     );
     writeLocalDraft(month, payload);
     setDirty(payload !== savedSnapRef.current);
@@ -1637,9 +1952,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     note,
     pnlMode,
     pnlIncome,
-    gpDeductStr,
-    gpDeductMode,
-    gpDeductPctStr,
+    gpByChannel,
     month,
     loading,
     locked,
@@ -1661,26 +1974,16 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           const sf = draftToSeg("storefront", storefrontDraftRef.current);
           const mode = pnlModeRef.current;
           const incomeRaw = parseMoneyInput(pnlIncomeRef.current);
-          const gpAmt =
-            parseMoneyInput(gpDeductStr) ||
-            proposeDeliveryGpDeduct({
-              gpVatClaimed: del.gpVatClaimed,
-              gpEstimate: del.gpEstimate,
-              outputPct: del.rates.outputPct,
-            });
-          const delG = mode === "incVat" ? del.grossSales : del.vatBase;
-          const gpPct =
-            parseRate(gpDeductPctStr, DEFAULT_GP_DEDUCT_PCT) ||
-            DEFAULT_GP_DEDUCT_PCT;
+          const gpMap = gpByChannelRef.current;
           const bridge = buildIncomeBridge({
             deliveryVatBase: del.vatBase,
             deliveryGrossSales: del.grossSales,
             storefrontVatBase: sf.vatBase,
             storefrontGrossSales: sf.grossSales,
             mode,
-            gpDeductMode,
-            gpDeductPct: gpPct,
-            gpDeduct: gpAmt,
+            deliveryChannels: del.channels,
+            outputPct: del.rates.outputPct,
+            gpByChannel: gpMap,
           });
           const saved = await saveVatMonthlyReturn(
             {
@@ -1691,11 +1994,16 @@ export function VatMonthlyWorkbench({ actor }: Props) {
               pnlIncomeMode: mode,
               pnlIncome: incomeRaw > 0 ? incomeRaw : bridge.pnlIncome,
               pnlDeliveryGpDeduct: bridge.gpDeduct,
-              pnlDeliveryGpMode: gpDeductMode,
-              pnlDeliveryGpPct: gpPct,
+              pnlDeliveryGpMode: bridge.gpDeductMode,
+              pnlDeliveryGpPct: bridge.gpDeductPct,
+              pnlGpByChannel: gpMap,
               status: "draft",
             },
             actor,
+          );
+          // จำเรทรายช่องทางไว้ใช้เดือนถัดไป
+          void saveVatMonthlySettings({ pnlGpByChannel: gpMap }, actor).catch(
+            () => undefined,
           );
           if (gen !== cloudSaveGen.current) return;
           setDoc(saved);
@@ -1705,9 +2013,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
             saved.note,
             saved.pnlIncomeMode,
             moneyInputValue(saved.pnlIncome),
-            moneyInputValue(saved.pnlDeliveryGpDeduct),
-            saved.pnlDeliveryGpMode,
-            pctFieldValue(saved.pnlDeliveryGpPct),
+            saved.pnlGpByChannel,
           );
           savedSnapRef.current = snap;
           writeLocalDraft(month, snap);
@@ -1718,9 +2024,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
             noteRef.current,
             pnlModeRef.current,
             pnlIncomeRef.current,
-            gpDeductStr,
-            gpDeductMode,
-            gpDeductPctStr,
+            gpByChannelRef.current,
           );
           setDirty(now !== snap);
         } catch {
@@ -1735,9 +2039,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     note,
     pnlMode,
     pnlIncome,
-    gpDeductStr,
-    gpDeductMode,
-    gpDeductPctStr,
+    gpByChannel,
     month,
     actor,
     hydrated,
@@ -1797,24 +2099,24 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           pnlDeliveryGpDeduct: effectiveGpDeduct,
           pnlDeliveryGpMode: gpDeductMode,
           pnlDeliveryGpPct: effectiveGpPct,
+          pnlGpByChannel: gpByChannel,
           status: asDraft ? "draft" : "saved",
         },
         actor,
       );
+      void saveVatMonthlySettings({ pnlGpByChannel: gpByChannel }, actor).catch(
+        () => undefined,
+      );
       setDoc(saved);
       setPnlIncome(moneyInputValue(saved.pnlIncome));
-      setGpDeductStr(moneyInputValue(saved.pnlDeliveryGpDeduct));
-      setGpDeductMode(saved.pnlDeliveryGpMode);
-      setGpDeductPctStr(pctFieldValue(saved.pnlDeliveryGpPct));
+      setGpByChannel(saved.pnlGpByChannel);
       const snap = snapshotDraft(
         segToDraft(saved.delivery),
         segToDraft(saved.storefront),
         saved.note,
         saved.pnlIncomeMode,
         moneyInputValue(saved.pnlIncome),
-        moneyInputValue(saved.pnlDeliveryGpDeduct),
-        saved.pnlDeliveryGpMode,
-        pctFieldValue(saved.pnlDeliveryGpPct),
+        saved.pnlGpByChannel,
       );
       savedSnapRef.current = snap;
       setDirty(false);
@@ -1838,8 +2140,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     const income = parseMoneyInput(pnlIncome);
     const finalIncome = income > 0 ? income : incomeBridge.pnlIncome;
     const ok = window.confirm(
-      `ปิดงบ ${formatThaiMonthKey(month)} → รายได้ P&L = ${formatPlainNumber(finalIncome)} บาท?\n` +
-        `(หัก GP เดลิเวอรี่ ${formatPlainNumber(effectiveGpDeduct)}) · VAT สุทธิ ${formatPlainNumber(totals.netVat)} · หลังปิดล็อกแก้ยอด`,
+      `ปิดงบ ${formatThaiMonthKey(month)} → รายได้ P&L = ${formatVatMoney(finalIncome)} บาท?\n` +
+        `(หัก GP เดลิเวอรี่ ${formatVatMoney(effectiveGpDeduct)}) · VAT สุทธิ ${formatVatMoney(totals.netVat)} · หลังปิดล็อกแก้ยอด`,
     );
     if (!ok) return;
     setBusy(true);
@@ -1857,17 +2159,19 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           pnlDeliveryGpDeduct: effectiveGpDeduct,
           pnlDeliveryGpMode: gpDeductMode,
           pnlDeliveryGpPct: effectiveGpPct,
+          pnlGpByChannel: gpByChannel,
           status: "saved",
         },
         actor,
+      );
+      void saveVatMonthlySettings({ pnlGpByChannel: gpByChannel }, actor).catch(
+        () => undefined,
       );
       const filed = await fileVatMonthlyReturn(month, actor, {
         forceIncome: finalIncome,
       });
       setDoc(filed);
-      setGpDeductMode(filed.pnlDeliveryGpMode);
-      setGpDeductPctStr(pctFieldValue(filed.pnlDeliveryGpPct));
-      setGpDeductStr(moneyInputValue(filed.pnlDeliveryGpDeduct));
+      setGpByChannel(filed.pnlGpByChannel);
       setDirty(false);
       writeLocalDraft(
         month,
@@ -1877,9 +2181,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           filed.note,
           filed.pnlIncomeMode,
           moneyInputValue(filed.pnlIncome),
-          moneyInputValue(filed.pnlDeliveryGpDeduct),
-          filed.pnlDeliveryGpMode,
-          pctFieldValue(filed.pnlDeliveryGpPct),
+          filed.pnlGpByChannel,
         ),
       );
       setMsg(`ปิดงบแล้ว · รายได้ ${formatVatMoney(filed.pnlIncome)} เข้า P&L`);
@@ -1991,7 +2293,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         }),
       );
       setMsg(
-        `ดึงสรุปปี ${Number(year) + 543} แล้ว · กำไร ${formatPlainNumber(profit)} · ${months.length} เดือน`,
+        `ดึงสรุปปี ${Number(year) + 543} แล้ว · กำไร ${formatVatMoney(profit)} · ${months.length} เดือน`,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -2028,7 +2330,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       return;
     }
     const ok = window.confirm(
-      `ใส่รายได้ทดลอง ${formatPlainNumber(finalIncome)} บาท เข้า P&L เดือน ${month}?\n\n` +
+      `ใส่รายได้ทดลอง ${formatVatMoney(finalIncome)} บาท เข้า P&L เดือน ${month}?\n\n` +
         "ไม่ปิดงบ · ไม่ล็อกตาราง VAT · แก้/ดึงใหม่ได้ระหว่างงวด",
     );
     if (!ok) return;
@@ -2047,22 +2349,23 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           pnlDeliveryGpDeduct: effectiveGpDeduct,
           pnlDeliveryGpMode: gpDeductMode,
           pnlDeliveryGpPct: effectiveGpPct,
+          pnlGpByChannel: gpByChannel,
           status: "saved",
         },
         actor,
       );
+      void saveVatMonthlySettings({ pnlGpByChannel: gpByChannel }, actor).catch(
+        () => undefined,
+      );
       await saveMonthlyIncome(month, finalIncome, actor);
       setPnlIncome(moneyInputValue(finalIncome));
-      setGpDeductStr(moneyInputValue(effectiveGpDeduct));
       const snap = snapshotDraft(
         segToDraft(delivery),
         segToDraft(storefront),
         note,
         pnlMode,
         moneyInputValue(finalIncome),
-        moneyInputValue(effectiveGpDeduct),
-        gpDeductMode,
-        pctFieldValue(effectiveGpPct),
+        gpByChannel,
       );
       savedSnapRef.current = snap;
       setDirty(false);
@@ -2266,9 +2569,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                 locked={Boolean(locked)}
                 mode={pnlMode}
                 bridge={incomeBridge}
-                gpDeductMode={gpDeductMode}
-                gpDeductPctStr={gpDeductPctStr}
-                gpDeductStr={gpDeductStr}
+                gpByChannel={gpByChannel}
                 gpPropose={gpPropose}
                 gpProposePct={gpProposePct}
                 pnlIncomeStr={pnlIncome}
@@ -2280,57 +2581,24 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                     storefrontVatBase: storefront.vatBase,
                     storefrontGrossSales: storefront.grossSales,
                     mode,
-                    gpDeductMode,
-                    gpDeductPct: effectiveGpPct,
-                    gpDeduct: effectiveGpAmount,
+                    deliveryChannels: delivery.channels,
+                    outputPct: delivery.rates.outputPct,
+                    gpByChannel,
                   });
                   setPnlIncome(moneyInputValue(next.pnlIncome));
                   markDirty();
                 }}
-                onGpDeductModeChange={(m) => {
-                  setGpDeductMode(m);
+                onGpByChannelChange={(nextMap) => {
+                  setGpByChannel(nextMap);
                   const next = buildIncomeBridge({
                     deliveryVatBase: delivery.vatBase,
                     deliveryGrossSales: delivery.grossSales,
                     storefrontVatBase: storefront.vatBase,
                     storefrontGrossSales: storefront.grossSales,
                     mode: pnlMode,
-                    gpDeductMode: m,
-                    gpDeductPct: effectiveGpPct,
-                    gpDeduct: effectiveGpAmount,
-                  });
-                  setPnlIncome(moneyInputValue(next.pnlIncome));
-                  markDirty();
-                }}
-                onGpDeductPctChange={(v) => {
-                  setGpDeductPctStr(v);
-                  const pct =
-                    parseRate(v, DEFAULT_GP_DEDUCT_PCT) || DEFAULT_GP_DEDUCT_PCT;
-                  const next = buildIncomeBridge({
-                    deliveryVatBase: delivery.vatBase,
-                    deliveryGrossSales: delivery.grossSales,
-                    storefrontVatBase: storefront.vatBase,
-                    storefrontGrossSales: storefront.grossSales,
-                    mode: pnlMode,
-                    gpDeductMode: "pct",
-                    gpDeductPct: pct,
-                    gpDeduct: effectiveGpAmount,
-                  });
-                  setPnlIncome(moneyInputValue(next.pnlIncome));
-                  markDirty();
-                }}
-                onGpDeductChange={(v) => {
-                  setGpDeductStr(v);
-                  const gp = parseMoneyInput(v) || gpPropose;
-                  const next = buildIncomeBridge({
-                    deliveryVatBase: delivery.vatBase,
-                    deliveryGrossSales: delivery.grossSales,
-                    storefrontVatBase: storefront.vatBase,
-                    storefrontGrossSales: storefront.grossSales,
-                    mode: pnlMode,
-                    gpDeductMode: "amount",
-                    gpDeductPct: effectiveGpPct,
-                    gpDeduct: gp,
+                    deliveryChannels: delivery.channels,
+                    outputPct: delivery.rates.outputPct,
+                    gpByChannel: nextMap,
                   });
                   setPnlIncome(moneyInputValue(next.pnlIncome));
                   markDirty();
@@ -2340,10 +2608,6 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                   markDirty();
                 }}
                 onUseBridgeIncome={() => {
-                  setGpDeductStr(moneyInputValue(effectiveGpDeduct));
-                  if (gpDeductMode === "pct") {
-                    setGpDeductPctStr(pctFieldValue(effectiveGpPct));
-                  }
                   setPnlIncome(moneyInputValue(incomeBridge.pnlIncome));
                   markDirty();
                 }}

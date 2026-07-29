@@ -7,6 +7,7 @@ import {
   computePersonalIncomeTax,
   DEFAULT_GP_DEDUCT_PCT,
   DEFAULT_PERSONAL_ALLOWANCE,
+  defaultGpByChannel,
   mapPersonalTaxSettings,
   proposeDeliveryGpDeduct,
   proposeGpDeductPct,
@@ -105,6 +106,38 @@ assert.equal(
   assert.equal(bridge.gpDeductPct, DEFAULT_GP_DEDUCT_PCT);
   assert.equal(bridge.gpDeduct, 30_000);
   assert.equal(bridge.pnlIncome, 70_000);
+}
+
+{
+  // หัก GP แยกช่องทาง — Shopee 30% · Grab 25% · LM ยอด fix · หน้าร้าน 0
+  const gp = defaultGpByChannel(30, "pct");
+  gp.grab = { mode: "pct", pct: 25, amount: 0 };
+  gp.lineman = { mode: "amount", pct: 0, amount: 1_000 };
+  gp.storefront = { mode: "pct", pct: 0, amount: 0 };
+  const bridge = buildIncomeBridge({
+    deliveryVatBase: 90_000,
+    deliveryGrossSales: 96_300,
+    storefrontVatBase: 40_000,
+    storefrontGrossSales: 42_800,
+    mode: "exVat",
+    deliveryChannels: { shopee: 32_100, grab: 32_100, lineman: 32_100 },
+    outputPct: 7,
+    gpByChannel: gp,
+  });
+  // แต่ละช่องทางก่อน VAT ≈ 30,000
+  assert.equal(bridge.channelRows.length, 4);
+  const shopee = bridge.channelRows.find((r) => r.key === "shopee");
+  const grab = bridge.channelRows.find((r) => r.key === "grab");
+  const lm = bridge.channelRows.find((r) => r.key === "lineman");
+  const sf = bridge.channelRows.find((r) => r.key === "storefront");
+  assert.ok(shopee && grab && lm && sf);
+  assert.equal(shopee.deduct, 9_000); // 30k × 30%
+  assert.equal(grab.deduct, 7_500); // 30k × 25%
+  assert.equal(lm.deduct, 1_000); // fix
+  assert.equal(sf.deduct, 0);
+  assert.equal(bridge.gpDeduct, 17_500);
+  assert.equal(bridge.storefrontGross, 40_000);
+  assert.equal(bridge.pnlIncome, 90_000 + 40_000 - 17_500);
 }
 
 {

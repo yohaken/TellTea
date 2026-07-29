@@ -85,6 +85,7 @@ function mapEntry(d: QueryDocumentSnapshot): LedgerEntry {
         typeof data.vatInvoiceNo === "string" ? data.vatInvoiceNo : "",
       vatSource: normalizeVatSource(data.vatSource),
       vatVerified: Boolean(data.vatVerified),
+      vatClaim: data.vatClaim,
     },
     amountOut,
   );
@@ -298,10 +299,35 @@ export async function getLedgerBalance(): Promise<number> {
 }
 
 /** Full scan — only for rare tools (import preview / migration). Prefer paginated APIs. */
+/** Full scan for export — อย่าใช้ตอนเปิดหน้าปกติ */
 export async function listLedgerEntries(): Promise<LedgerEntry[]> {
   const snap = await getDocs(
     query(collection(getDb(), "ledger"), orderBy("date", "asc"), orderBy("createdAt", "asc")),
   );
+  return snap.docs.map(mapEntry);
+}
+
+/** ช่วงวันที่ (until exclusive) — ใช้ P&L / ค้นหา */
+export async function listLedgerEntriesSince(
+  sinceMs: number,
+  untilMs?: number,
+): Promise<LedgerEntry[]> {
+  const q =
+    untilMs != null
+      ? query(
+          collection(getDb(), "ledger"),
+          where("date", ">=", sinceMs),
+          where("date", "<", untilMs),
+          orderBy("date", "asc"),
+          orderBy("createdAt", "asc"),
+        )
+      : query(
+          collection(getDb(), "ledger"),
+          where("date", ">=", sinceMs),
+          orderBy("date", "asc"),
+          orderBy("createdAt", "asc"),
+        );
+  const snap = await getDocs(q);
   return snap.docs.map(mapEntry);
 }
 
@@ -372,6 +398,8 @@ export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
       vatInvoiceNo: input.vatInvoiceNo,
       vatSource: normalizeVatSource(input.vatSource),
       vatVerified: Boolean(input.vatVerified),
+      // รายการใหม่: ไม่ส่ง vatClaim = ไม่รวมหักจนกว่าจะติ๊กที่ VAT เดือน
+      vatClaim: input.vatClaim === true,
     },
     amountOut,
   );
@@ -397,6 +425,7 @@ export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
     vatInvoiceNo: vat.vatInvoiceNo,
     vatSource: vat.vatSource,
     vatVerified: vat.vatVerified,
+    vatClaim: vat.vatClaim,
   };
   validateLedgerPayload(payload);
   const ref = await addDoc(collection(getDb(), "ledger"), payload);
@@ -424,6 +453,7 @@ export async function updateLedgerEntry(
       | "vatInvoiceNo"
       | "vatSource"
       | "vatVerified"
+      | "vatClaim"
     >
   >,
 ): Promise<void> {
@@ -474,6 +504,7 @@ export async function updateLedgerEntry(
     patch.vatInvoiceNo != null ||
     patch.vatSource != null ||
     patch.vatVerified != null ||
+    patch.vatClaim != null ||
     patch.amountOut != null ||
     patch.amountIn != null;
   if (vatTouched) {
@@ -497,6 +528,8 @@ export async function updateLedgerEntry(
           patch.vatVerified != null
             ? Boolean(patch.vatVerified)
             : Boolean(prev.vatVerified),
+        vatClaim:
+          patch.vatClaim != null ? patch.vatClaim : prev.vatClaim,
       },
       nextOut,
     );
@@ -509,13 +542,21 @@ export async function updateLedgerEntry(
     next.vatInvoiceNo = vat.vatInvoiceNo;
     next.vatSource = vat.vatSource;
     next.vatVerified = vat.vatVerified;
+    next.vatClaim = vat.vatClaim;
   }
 
   await updateDoc(entryRef, next);
   await applyBalanceDelta(nextIn - prevIn, nextOut - prevOut);
 }
 
-/** รวมภาษีซื้อจากรายการบช.พนักงานที่ติ๊ก VAT ในเดือน YYYY-MM */
+/** โหลดรายการบช.พนักงานทีละ id */
+export async function getLedgerEntry(id: string): Promise<LedgerEntry | null> {
+  const snap = await getDoc(doc(getDb(), "ledger", id));
+  if (!snap.exists()) return null;
+  return mapEntry(snap as unknown as QueryDocumentSnapshot);
+}
+
+/** รวมภาษีซื้อจากรายการบช.พนักงานที่ติ๊ก「รวมเข้าระบบ」ในเดือน YYYY-MM */
 export async function sumLedgerVatInputByMonth(
   monthKey: string,
 ): Promise<{ vatInput: number; count: number }> {
@@ -530,7 +571,7 @@ export async function sumLedgerVatInputByMonth(
   let vatInput = 0;
   let count = 0;
   for (const row of rows) {
-    if (!row.hasVat || row.amountOut <= 0) continue;
+    if (!row.hasVat || !row.vatClaim || row.amountOut <= 0) continue;
     const v = normalizeMoney(row.vatInput);
     if (v <= 0) continue;
     vatInput = roundMoney(vatInput + v);

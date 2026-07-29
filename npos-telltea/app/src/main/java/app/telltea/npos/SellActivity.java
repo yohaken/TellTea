@@ -1061,8 +1061,9 @@ public class SellActivity extends Activity {
     // Faster kick detection while selling (heartbeat may have been throttled).
     ForegroundHeartbeat.forceNow(this);
     updateServerCheckChip();
-    // After APK update (resume sell): one-shot screen-capture consent if still needed.
+    // After APK update / outstanding BO capture: keep asking until staff grant.
     CaptureConsentActivity.launchAfterUpdateIfNeeded(this);
+    CaptureConsentActivity.relaunchPendingIfNeeded(this);
     if (updatePrompt != null) updatePrompt.onResume();
     // Refresh shop name/address from server so BO edits show on next bill.
     if (menuRepo != null) {

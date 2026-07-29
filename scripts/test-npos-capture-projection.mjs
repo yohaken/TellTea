@@ -1,5 +1,5 @@
 /**
- * Gate: MediaProjection capture + one-shot capture consent (not every update).
+ * Gate: MediaProjection capture + nag-until-grant consent (BO / after update).
  */
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
@@ -9,16 +9,16 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 409/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 134/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+105/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.82"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 418/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 135/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+106/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.83"/);
 
 assert.ok(existsSync(join(root, "docs/npos-capture-projection-checklist.md")));
 const doc = read("docs/npos-capture-projection-checklist.md");
-assert.match(doc, /1\.14\.82/);
+assert.match(doc, /1\.14\.83/);
 assert.match(doc, /MediaProjection/);
-assert.match(doc, /ถามครั้งเดียว|after update|หลังอัปเดต/);
+assert.match(doc, /เด้งจนกว่าจะรับ|nag-until-grant|2\.5/);
 
 const manifest = read("npos-telltea/app/src/main/AndroidManifest.xml");
 assert.match(manifest, /FOREGROUND_SERVICE_MEDIA_PROJECTION/);
@@ -41,7 +41,6 @@ assert.match(capture, /MediaProjection|CaptureProjectionService/);
 assert.match(capture, /grabPrimary/);
 assert.match(capture, /reject_uniform_green|isMostlyBrandGreen/);
 assert.match(capture, /shouldAutoPrompt|CaptureConsentActivity/);
-// Must not treat synthetic status cards as successful uploads
 assert.doesNotMatch(capture, /statusShot\(/);
 assert.doesNotMatch(
   capture,
@@ -53,7 +52,22 @@ const prefs = read(
 );
 assert.match(prefs, /markPromptAfterUpdate/);
 assert.match(prefs, /shouldAutoPrompt/);
-assert.match(prefs, /6L \* 60L \* 60L/);
+assert.match(prefs, /markNagUntilGrant|shouldNagUntilGrant/);
+assert.match(prefs, /6L \* 60L \* 60L/); // interval-only throttle
+
+const consent = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/diagnose/CaptureConsentActivity.java",
+);
+assert.match(consent, /RETRY_AFTER_DENY_MS/);
+assert.match(consent, /scheduleRetry|relaunchPendingIfNeeded/);
+assert.match(consent, /พนักงานไม่รับสิทธิ์/);
+assert.match(consent, /SHOWING/);
+
+const capPrefs = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/diagnose/CapturePrefs.java",
+);
+assert.match(capPrefs, /hasOutstandingCaptureRequest/);
+assert.match(capPrefs, /setPendingConsent/);
 
 const install = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/update/InstallResultReceiver.java",
@@ -62,8 +76,10 @@ assert.match(install, /CaptureProjectionPrefs\.markPromptAfterUpdate/);
 
 const main = read("npos-telltea/app/src/main/java/app/telltea/npos/MainActivity.java");
 assert.match(main, /CaptureConsentActivity\.launchAfterUpdateIfNeeded/);
+assert.match(main, /CaptureConsentActivity\.relaunchPendingIfNeeded/);
 const sell = read("npos-telltea/app/src/main/java/app/telltea/npos/SellActivity.java");
 assert.match(sell, /CaptureConsentActivity\.launchAfterUpdateIfNeeded/);
+assert.match(sell, /CaptureConsentActivity\.relaunchPendingIfNeeded/);
 
 const remaining = read("docs/npos-remaining-checklist.md");
 assert.match(remaining, /npos-capture-projection-checklist/);

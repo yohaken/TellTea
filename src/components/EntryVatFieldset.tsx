@@ -68,7 +68,8 @@ export function EntryVatFieldset({
     <fieldset className="entry-vat-box owner-vat-box">
       <legend>ช่อง VAT · ภาษีซื้อ</legend>
       <p className="muted form-hint-inline" style={{ marginTop: 0 }}>
-        หลัก: แนบรูป → AI อ่านบรรทัดภาษีบนบิลก่อน · อย่าใช้ยอดจ่าย×7/107 แทนบิล
+        หลัก: แนบรูป → AI อ่านยอดภาษีบนบิลก่อน · รวมเข้า VAT เดือนติ๊กที่ตารางเดือน (+) ·
+        อย่าใช้ยอดจ่าย×7/107 แทนบิล
       </p>
 
       {aiStatus === "loading" ? (
@@ -118,7 +119,7 @@ export function EntryVatFieldset({
             if (!vatInputStr.trim()) onVatSourceChange("manual");
           }}
         />
-        มีใบกำกับภาษี · หักภาษีซื้อได้
+        มีใบกำกับภาษี · เก็บยอดภาษีซื้อ
       </label>
 
       {hasVat ? (
