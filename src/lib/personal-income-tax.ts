@@ -198,6 +198,11 @@ export type GpChannelDeduct = {
   amount: number;
   /** ยอดโอนเข้าหลังหักแพลตฟอร์ม (บาท · ฐานเดียวกับรายได้) */
   netTransfer: number;
+  /**
+   * ภาษีซื้อ GP จากใบกำกับ (บาท) — ว่าง/0 = คำนวณจากคชจ.
+   * โหมดรายได้รวม VAT → คชจ.×7/107 · ก่อน VAT → คชจ.×7/100
+   */
+  gpVatOverride: number;
 };
 
 export type GpByChannel = Record<GpChannelKey, GpChannelDeduct>;
@@ -213,6 +218,8 @@ export type GpChannelRow = {
   deduct: number;
   /** เรท % ที่ใช้หรือได้จากยอดโอน */
   impliedPct: number;
+  /** ภาษีซื้อ GP (บาท) — ฐานคืน VAT */
+  gpVat: number;
   settings: GpChannelDeduct;
 };
 
@@ -220,8 +227,16 @@ export type IncomeBridge = {
   deliveryGross: number;
   storefrontGross: number;
   grossTotal: number;
-  /** รวมหักทุกช่องทาง */
+  /** รวมหักทุกช่องทาง (คชจ. → P&L) */
   gpDeduct: number;
+  /** รวมภาษีซื้อ GP เดลิเวอรี่ (Shopee+Grab+LM) → ใส่ภาษีซื้อ VAT */
+  deliveryGpVat: number;
+  /** ภาษีซื้อ GP หน้าร้าน (ปกติ 0) */
+  storefrontGpVat: number;
+  /** deliveryGpVat + storefrontGpVat */
+  gpVatTotal: number;
+  /** เรทเฉลี่ยถ่วงน้ำหนักจากคชจ./รายได้เดลิเวอรี่ — ภาพรวมเท่านั้น */
+  weightedAvgPct: number;
   /** รายได้สุทธิที่ควรใส่ P&L */
   pnlIncome: number;
   /** แถวหักรายช่องทาง (เดลิเวอรี่ + หน้าร้าน) */
@@ -244,7 +259,28 @@ export function emptyGpChannelDeduct(
     pct: Math.min(100, Math.max(0, Number(pct) || 0)),
     amount: 0,
     netTransfer: 0,
+    gpVatOverride: 0,
   };
+}
+
+/**
+ * ภาษีซื้อจากค่า GP
+ * - รายได้โหมดรวม VAT → คชจ.รวม VAT → ×7/107
+ * - รายได้โหมดก่อน VAT → คชจ.ก่อน VAT → ×7/100
+ */
+export function gpVatFromFee(
+  fee: number,
+  incomeMode: "exVat" | "incVat",
+  outputPct = 7,
+): number {
+  const f = Math.max(0, normalizeMoney(fee));
+  if (f <= 0) return 0;
+  const pct =
+    Number.isFinite(outputPct) && outputPct > 0 ? outputPct : 7;
+  if (incomeMode === "incVat") {
+    return roundMoney((f * pct) / (100 + pct));
+  }
+  return roundMoney((f * pct) / 100);
 }
 
 /**
@@ -290,7 +326,12 @@ export function mapGpChannelDeduct(
     Number.isFinite(netRaw) && netRaw >= 0
       ? normalizeMoney(netRaw)
       : fallback.netTransfer;
-  return { mode, pct, amount, netTransfer };
+  const vatRaw = Number(o.gpVatOverride);
+  const gpVatOverride =
+    Number.isFinite(vatRaw) && vatRaw >= 0
+      ? normalizeMoney(vatRaw)
+      : fallback.gpVatOverride;
+  return { mode, pct, amount, netTransfer, gpVatOverride };
 }
 
 /**
@@ -318,6 +359,7 @@ export function mapGpByChannel(
       pct: legacyPct,
       amount: normalizeMoney(Number(legacy?.amount)),
       netTransfer: 0,
+      gpVatOverride: 0,
     };
     base.shopee = emptyGpChannelDeduct(0, "pct");
     base.lineman = emptyGpChannelDeduct(0, "pct");
@@ -455,15 +497,29 @@ export function buildIncomeBridge(input: {
         pct: gpDeductPct,
         amount: legacyDeduct,
         netTransfer: roundMoney(Math.max(0, deliveryGross - legacyDeduct)),
+        gpVatOverride: 0,
       };
       legacyMap.shopee = emptyGpChannelDeduct(0);
       legacyMap.lineman = emptyGpChannelDeduct(0);
     }
+    const deliveryGpVat = gpVatFromFee(
+      legacyDeduct,
+      input.mode,
+      input.outputPct,
+    );
+    const weightedAvgPct =
+      deliveryGross > 0
+        ? roundMoney((legacyDeduct / deliveryGross) * 100)
+        : gpDeductPct;
     return {
       deliveryGross,
       storefrontGross,
       grossTotal,
       gpDeduct: legacyDeduct,
+      deliveryGpVat,
+      storefrontGpVat: 0,
+      gpVatTotal: deliveryGpVat,
+      weightedAvgPct,
       pnlIncome,
       channelRows: [
         {
@@ -472,10 +528,8 @@ export function buildIncomeBridge(input: {
           gross: deliveryGross,
           netTransfer: roundMoney(Math.max(0, deliveryGross - legacyDeduct)),
           deduct: legacyDeduct,
-          impliedPct:
-            deliveryGross > 0
-              ? roundMoney((legacyDeduct / deliveryGross) * 100)
-              : gpDeductPct,
+          impliedPct: weightedAvgPct,
+          gpVat: deliveryGpVat,
           settings: legacyMap.grab,
         },
         {
@@ -485,6 +539,7 @@ export function buildIncomeBridge(input: {
           netTransfer: storefrontGross,
           deduct: 0,
           impliedPct: 0,
+          gpVat: 0,
           settings: legacyMap.storefront,
         },
       ],
@@ -508,6 +563,9 @@ export function buildIncomeBridge(input: {
   const outputPct = input.outputPct;
   const channelRows: GpChannelRow[] = [];
   let gpDeduct = 0;
+  let deliveryDeduct = 0;
+  let deliveryGpVat = 0;
+  let storefrontGpVat = 0;
 
   for (const key of GP_DELIVERY_CHANNEL_KEYS) {
     const settings = gpByChannel[key];
@@ -533,7 +591,13 @@ export function buildIncomeBridge(input: {
       settings.mode === "transfer"
         ? normalizeMoney(settings.netTransfer)
         : roundMoney(Math.max(0, gross - deduct));
+    const gpVat =
+      settings.gpVatOverride > 0
+        ? normalizeMoney(settings.gpVatOverride)
+        : gpVatFromFee(deduct, input.mode, outputPct);
     gpDeduct = roundMoney(gpDeduct + deduct);
+    deliveryDeduct = roundMoney(deliveryDeduct + deduct);
+    deliveryGpVat = roundMoney(deliveryGpVat + gpVat);
     channelRows.push({
       key,
       label: chSum <= 0 && key === "grab" ? "เดลิเวอรี่ (รวม)" : GP_CHANNEL_LABELS[key],
@@ -541,6 +605,7 @@ export function buildIncomeBridge(input: {
       netTransfer,
       deduct,
       impliedPct,
+      gpVat,
       settings,
     });
   }
@@ -564,7 +629,12 @@ export function buildIncomeBridge(input: {
       settings.mode === "transfer"
         ? normalizeMoney(settings.netTransfer)
         : roundMoney(Math.max(0, storefrontGross - deduct));
+    const gpVat =
+      settings.gpVatOverride > 0
+        ? normalizeMoney(settings.gpVatOverride)
+        : gpVatFromFee(deduct, input.mode, outputPct);
     gpDeduct = roundMoney(gpDeduct + deduct);
+    storefrontGpVat = gpVat;
     channelRows.push({
       key: "storefront",
       label: GP_CHANNEL_LABELS.storefront,
@@ -572,17 +642,26 @@ export function buildIncomeBridge(input: {
       netTransfer,
       deduct,
       impliedPct,
+      gpVat,
       settings,
     });
   }
 
   const pnlIncome = roundMoney(Math.max(0, grossTotal - gpDeduct));
+  const weightedAvgPct =
+    deliveryGross > 0
+      ? roundMoney((deliveryDeduct / deliveryGross) * 100)
+      : 0;
   const grabMode = gpByChannel.grab.mode;
   return {
     deliveryGross,
     storefrontGross,
     grossTotal,
     gpDeduct,
+    deliveryGpVat,
+    storefrontGpVat,
+    gpVatTotal: roundMoney(deliveryGpVat + storefrontGpVat),
+    weightedAvgPct,
     pnlIncome,
     channelRows,
     gpByChannel,

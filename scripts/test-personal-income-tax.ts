@@ -8,6 +8,8 @@ import {
   DEFAULT_GP_DEDUCT_PCT,
   DEFAULT_PERSONAL_ALLOWANCE,
   defaultGpByChannel,
+  emptyGpChannelDeduct,
+  gpVatFromFee,
   mapPersonalTaxSettings,
   proposeDeliveryGpDeduct,
   proposeGpDeductPct,
@@ -74,6 +76,11 @@ assert.equal(
   assert.equal(bridge.gpDeductMode, "amount");
   assert.equal(bridge.gpDeduct, 10_000);
   assert.equal(bridge.pnlIncome, 80_000);
+  // โหมดก่อน VAT → ภาษีซื้อ GP = คชจ. × 7/100
+  assert.equal(bridge.deliveryGpVat, gpVatFromFee(10_000, "exVat", 7));
+  assert.equal(bridge.deliveryGpVat, 700);
+  assert.equal(bridge.storefrontGpVat, 0);
+  assert.equal(bridge.gpVatTotal, 700);
 }
 
 {
@@ -111,9 +118,9 @@ assert.equal(
 {
   // หัก GP แยกช่องทาง — Shopee 30% · Grab 25% · LM ยอด fix · หน้าร้าน 0
   const gp = defaultGpByChannel(30, "pct");
-  gp.grab = { mode: "pct", pct: 25, amount: 0, netTransfer: 0 };
-  gp.lineman = { mode: "amount", pct: 0, amount: 1_000, netTransfer: 0 };
-  gp.storefront = { mode: "pct", pct: 0, amount: 0, netTransfer: 0 };
+  gp.grab = { ...emptyGpChannelDeduct(25, "pct") };
+  gp.lineman = { ...emptyGpChannelDeduct(0, "amount"), amount: 1_000 };
+  gp.storefront = emptyGpChannelDeduct(0, "pct");
   const bridge = buildIncomeBridge({
     deliveryVatBase: 90_000,
     deliveryGrossSales: 96_300,
@@ -138,14 +145,35 @@ assert.equal(
   assert.equal(bridge.gpDeduct, 17_500);
   assert.equal(bridge.storefrontGross, 40_000);
   assert.equal(bridge.pnlIncome, 90_000 + 40_000 - 17_500);
+  // ภาษีซื้อ GP รายช่องทาง (ก่อน VAT → ×7/100)
+  assert.equal(shopee.gpVat, 630); // 9000×7%
+  assert.equal(grab.gpVat, 525);
+  assert.equal(lm.gpVat, 70);
+  assert.equal(sf.gpVat, 0);
+  assert.equal(bridge.deliveryGpVat, 630 + 525 + 70);
+  assert.equal(bridge.gpVatTotal, bridge.deliveryGpVat);
+  assert.equal(bridge.weightedAvgPct, round2((17_500 / 90_000) * 100));
+}
+
+function round2(n: number) {
+  return Math.round(n * 100) / 100;
 }
 
 {
   // ยอดโอนจริง → คชจ. = รายได้ − โอนหลัง
   const gp = defaultGpByChannel(0, "transfer");
-  gp.shopee = { mode: "transfer", pct: 0, amount: 0, netTransfer: 21_000 };
-  gp.grab = { mode: "transfer", pct: 0, amount: 0, netTransfer: 24_000 };
-  gp.lineman = { mode: "transfer", pct: 0, amount: 0, netTransfer: 27_000 };
+  gp.shopee = {
+    ...emptyGpChannelDeduct(0, "transfer"),
+    netTransfer: 21_000,
+  };
+  gp.grab = {
+    ...emptyGpChannelDeduct(0, "transfer"),
+    netTransfer: 24_000,
+  };
+  gp.lineman = {
+    ...emptyGpChannelDeduct(0, "transfer"),
+    netTransfer: 27_000,
+  };
   const bridge = buildIncomeBridge({
     deliveryVatBase: 90_000,
     deliveryGrossSales: 96_300,
@@ -164,6 +192,39 @@ assert.equal(
   assert.equal(grab.deduct, 6_000);
   assert.equal(lm.deduct, 3_000);
   assert.equal(bridge.gpDeduct, 18_000);
+  assert.equal(bridge.deliveryGpVat, 630 + 420 + 210);
+  assert.equal(bridge.weightedAvgPct, 20); // 18k / 90k
+}
+
+{
+  // override ภาษีซื้อ GP จากใบกำกับ · โหมดรวม VAT → คชจ.×7/107
+  const gp = defaultGpByChannel(0, "transfer");
+  gp.shopee = {
+    ...emptyGpChannelDeduct(0, "transfer"),
+    netTransfer: 80_000,
+    gpVatOverride: 999,
+  };
+  gp.grab = emptyGpChannelDeduct(0, "pct");
+  gp.lineman = emptyGpChannelDeduct(0, "pct");
+  const bridge = buildIncomeBridge({
+    deliveryVatBase: 100_000,
+    deliveryGrossSales: 107_000,
+    storefrontVatBase: 0,
+    storefrontGrossSales: 0,
+    mode: "incVat",
+    deliveryChannels: { shopee: 107_000, grab: 0, lineman: 0 },
+    outputPct: 7,
+    gpByChannel: gp,
+  });
+  const shopee = bridge.channelRows.find((r) => r.key === "shopee")!;
+  assert.equal(shopee.gross, 107_000);
+  assert.equal(shopee.deduct, 27_000); // 107k − 80k
+  assert.equal(shopee.gpVat, 999); // override
+  assert.equal(
+    gpVatFromFee(27_000, "incVat", 7),
+    Math.round(((27_000 * 7) / 107) * 100) / 100,
+  );
+  assert.equal(bridge.deliveryGpVat, 999);
 }
 
 {

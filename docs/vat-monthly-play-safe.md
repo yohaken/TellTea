@@ -107,12 +107,15 @@ meta/vatMonthlySettings
 ```
 outputVat = round(gross × outputNum / outputDen)   // default 7/107
 vatBase   = gross − outputVat
-gpEstimate = floor(outputVat × gpOfOutput)         // default 33.33% (ไม่เขียน 1/3)
+gpEstimate = floor(outputVat × gpOfOutput)         // สำรองหน้าร้านเท่านั้น
+// เดลิเวอรี่: gpRaw = Σ ภาษีซื้อ GP จากยอดโอนจริงรายช่องทาง (ไม่ใช้ประมาณก้อน)
 gpClaimed  = floor(gpRaw × inputClaimFactor)       // default 98%
 ingredientClaimed = floor(ingredientVat × inputClaimFactor)
 inputVat = gpClaimed + ingredientClaimed
 netVat   = outputVat − inputVat
 ```
+
+ดูตารางช่องทาง: [`pnl-gp-by-channel.md`](./pnl-gp-by-channel.md)
 
 ---
 
