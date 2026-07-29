@@ -12,21 +12,28 @@ import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import {
   addCashDeposit,
+  addCalendarDays,
+  analyzeCashDepositDays,
+  buildCashDepositOccupancy,
+  buildCashDepositRoundDays,
   CASH_DEPOSIT_BANK_SLIP_MAX,
   CASH_DEPOSIT_DAY_MAX,
   CASH_DEPOSIT_DAY_SLIP_MAX,
   CASH_DEPOSIT_LIVE_MAX,
   CASH_DEPOSIT_PAGE_SIZE,
+  CASH_DEPOSIT_ROUND_PRESETS,
+  cashDepositDayKey,
   cashDepositVariance,
   type CashDeposit,
   type CashDepositDayLine,
   type CashDepositStatus,
   type CashSlipKind,
-  defaultCashPeriodStart,
   deleteCashDeposit,
   emptyCashDepositDay,
+  formatCashDayShort,
   labelCashDepositStatus,
   labelCashSlipKind,
+  listCashDeposits,
   subscribeCashDepositsPage,
   sumCashDepositDays,
   updateCashDeposit,
@@ -184,7 +191,7 @@ export function CashInLedgerPanel({
       {open ? (
         <div className="cash-in-panel-body">
           <p className="muted cash-in-hint">
-            แนบสลิป POS ทีละวันในรอบโอน · รวมยอดเทียบกับสลิปธนาคาร · AI ช่วยอ่านยอดจะต่อทีหลัง
+            รอบยาวเท่าไหร่ก็ได้ (เช่น 5 / 7 / 10 วัน) · แนบสลิปทีละวัน · ระบบกันบิลซ้ำและข้ามวัน
           </p>
           {error ? <p className="error-text">{error}</p> : null}
           {loading && !entries.length ? <p className="empty">กำลังโหลด...</p> : null}
@@ -346,14 +353,6 @@ function CashDepositFormModal({
   const [transferDate, setTransferDate] = useState(
     toDateInput(entry?.transferDate || Date.now()),
   );
-  const [periodStart, setPeriodStart] = useState(() => {
-    if (entry) return toDateInput(entry.periodStart);
-    const t = parseDateInput(todayInputValue());
-    return toDateInput(defaultCashPeriodStart(t));
-  });
-  const [periodEnd, setPeriodEnd] = useState(
-    toDateInput(entry?.periodEnd || Date.now()),
-  );
   const [staffName, setStaffName] = useState(entry?.staffName || defaultStaffName);
   const [bankAmount, setBankAmount] = useState(
     entry ? String(entry.bankAmount) : "",
@@ -364,11 +363,28 @@ function CashDepositFormModal({
   const [days, setDays] = useState<CashDepositDayLine[]>(() =>
     entry?.days?.length
       ? entry.days.map((d) => ({ ...d, slipUrls: [...d.slipUrls] }))
-      : [emptyCashDepositDay(parseDateInput(periodEnd))],
+      : buildCashDepositRoundDays(parseDateInput(todayInputValue()), 7),
   );
   const [ownerNote, setOwnerNote] = useState(entry?.ownerNote || "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [occupancy, setOccupancy] = useState(() =>
+    buildCashDepositOccupancy([]),
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void listCashDeposits()
+      .then((rows) => {
+        if (!cancelled) setOccupancy(buildCashDepositOccupancy(rows, entry?.id));
+      })
+      .catch(() => {
+        /* live check still runs on save */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [entry?.id]);
 
   const expected = sumCashDepositDays(
     days.map((d) => ({ cashAmount: Number(d.cashAmount) || 0 })),
@@ -376,13 +392,51 @@ function CashDepositFormModal({
   const bank = Number(bankAmount) || 0;
   const variance = cashDepositVariance(bank, expected);
 
+  const coverage = useMemo(
+    () =>
+      analyzeCashDepositDays(
+        days.map((d) => ({ date: d.date, cashAmount: Number(d.cashAmount) || 0 })),
+        {
+          occupiedByDepositId: occupancy.occupiedByDepositId,
+          occupiedMonthCounts: occupancy.occupiedMonthCounts,
+          excludeDepositId: entry?.id,
+        },
+      ),
+    [days, occupancy, entry?.id],
+  );
+
   function report(msg: string) {
     setError(msg);
     onError(msg);
   }
 
   function updateDay(id: string, patch: Partial<CashDepositDayLine>) {
-    setDays((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
+    setDays((prev) =>
+      prev.map((d) =>
+        d.id === id
+          ? {
+              ...d,
+              ...patch,
+              date: patch.date != null ? cashDepositDayKey(patch.date) : d.date,
+            }
+          : d,
+      ),
+    );
+  }
+
+  function applyRoundPreset(dayCount: number) {
+    const end = parseDateInput(transferDate);
+    const next = buildCashDepositRoundDays(end, dayCount);
+    // Keep amounts/photos if same dates already filled
+    const byDate = new Map(days.map((d) => [cashDepositDayKey(d.date), d]));
+    setDays(
+      next.map((blank) => {
+        const prev = byDate.get(blank.date);
+        return prev
+          ? { ...prev, id: blank.id, date: blank.date }
+          : blank;
+      }),
+    );
   }
 
   function addDay() {
@@ -391,12 +445,9 @@ function CashDepositFormModal({
       return;
     }
     const base = days.length
-      ? Math.max(...days.map((d) => d.date))
-      : parseDateInput(periodStart);
-    const next = new Date(base);
-    next.setDate(next.getDate() + 1);
-    next.setHours(0, 0, 0, 0);
-    setDays((prev) => [...prev, emptyCashDepositDay(next.getTime())]);
+      ? Math.max(...days.map((d) => cashDepositDayKey(d.date)))
+      : cashDepositDayKey(parseDateInput(transferDate));
+    setDays((prev) => [...prev, emptyCashDepositDay(addCalendarDays(base, 1))]);
   }
 
   function removeDay(id: string) {
@@ -408,10 +459,13 @@ function CashDepositFormModal({
     setBusy(true);
     setError(null);
     try {
+      if (coverage.issues.length) {
+        throw new Error(coverage.issues[0]!.message);
+      }
       const payload = {
         transferDate: parseDateInput(transferDate),
-        periodStart: parseDateInput(periodStart),
-        periodEnd: parseDateInput(periodEnd),
+        periodStart: coverage.periodStart,
+        periodEnd: coverage.periodEnd,
         staffName,
         bankAmount: bank,
         bankSlipUrls,
@@ -419,6 +473,7 @@ function CashDepositFormModal({
         note,
         days: days.map((d) => ({
           ...d,
+          date: cashDepositDayKey(d.date),
           cashAmount: Number(d.cashAmount) || 0,
         })),
       };
@@ -498,8 +553,8 @@ function CashDepositFormModal({
         </div>
 
         <p className="muted form-hint-inline">
-          แนบสลิปโอนธนาคาร + สลิปสรุป POS แต่ละวัน (กะหรือรายวันก็ได้) ·
-          ระบบคำนวณผลต่างให้อัตโนมัติ
+          รอบยืดหยุ่น (5 / 7 / 10 วัน หรืออื่น ๆ) · 1 บิล = 1 วัน ·
+          ห้ามซ้ำ / ข้ามวัน · ไม่เกินจำนวนวันในเดือน
         </p>
         {error ? <p className="error-text">{error}</p> : null}
 
@@ -511,18 +566,7 @@ function CashDepositFormModal({
                 id="cash-in-transfer-date"
                 type="date"
                 value={transferDate}
-                onChange={(e) => {
-                  setTransferDate(e.target.value);
-                  if (mode === "add") {
-                    try {
-                      const t = parseDateInput(e.target.value);
-                      setPeriodStart(toDateInput(defaultCashPeriodStart(t)));
-                      setPeriodEnd(e.target.value);
-                    } catch {
-                      /* ignore */
-                    }
-                  }
-                }}
+                onChange={(e) => setTransferDate(e.target.value)}
                 required
               />
             </div>
@@ -537,29 +581,6 @@ function CashDepositFormModal({
                 value={bankAmount}
                 onChange={(e) => setBankAmount(e.target.value)}
                 placeholder="13435"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="field-row cash-in-field-row">
-            <div className="field">
-              <label htmlFor="cash-in-period-start">ช่วงเงินสด เริ่ม</label>
-              <input
-                id="cash-in-period-start"
-                type="date"
-                value={periodStart}
-                onChange={(e) => setPeriodStart(e.target.value)}
-                required
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="cash-in-period-end">ถึง</label>
-              <input
-                id="cash-in-period-end"
-                type="date"
-                value={periodEnd}
-                onChange={(e) => setPeriodEnd(e.target.value)}
                 required
               />
             </div>
@@ -608,15 +629,41 @@ function CashDepositFormModal({
           ) : null}
 
           <div className="cash-in-days-head">
-            <h3 className="cash-in-days-title">สลิปสรุป POS รายวัน/กะ</h3>
+            <h3 className="cash-in-days-title">สลิปสรุป POS รายวัน</h3>
             <button type="button" className="ghost-btn" onClick={addDay} disabled={busy}>
               <Plus size={14} aria-hidden /> เพิ่มวัน
             </button>
           </div>
+          <div className="cash-in-round-presets" role="group" aria-label="ความยาวรอบ">
+            <span className="muted cash-in-preset-label">เติมรอบจบวันโอน:</span>
+            {CASH_DEPOSIT_ROUND_PRESETS.map((n) => (
+              <button
+                key={n}
+                type="button"
+                className="ghost-btn cash-in-preset-btn"
+                disabled={busy}
+                onClick={() => applyRoundPreset(n)}
+              >
+                {n} วัน
+              </button>
+            ))}
+          </div>
           <p className="muted cash-in-days-hint">
-            ใส่ยอด <strong>เงินสด</strong> จากสลิป (ไม่ใช่ยอดขายรวม) · ถ้าไม่แน่ใจว่าเป็นสลิปกะหรือสรุปรายวัน
-            เลือก «ไม่แน่ใจ» ได้
+            หนึ่งแถว = หนึ่งวันบนสลิป · ใส่ยอด <strong>เงินสด</strong> (ไม่ใช่ยอดขายรวม) ·
+            ช่วงรอบคำนวณจากวันแรก–วันสุดท้ายอัตโนมัติ
+            {coverage.periodStart && coverage.periodEnd
+              ? ` · ตอนนี้ ${formatCashDayShort(coverage.periodStart)}–${formatCashDayShort(coverage.periodEnd)} (${coverage.dayCount} วัน)`
+              : ""}
           </p>
+          {coverage.issues.length ? (
+            <ul className="cash-in-issues" aria-live="polite">
+              {coverage.issues.slice(0, 6).map((issue, i) => (
+                <li key={`${issue.code}-${i}`}>{issue.message}</li>
+              ))}
+            </ul>
+          ) : days.length ? (
+            <p className="cash-in-issues-ok">วันต่อเนื่อง ไม่ซ้ำ · พร้อมเทียบยอด</p>
+          ) : null}
 
           <div className="cash-in-days">
             {days.map((day, idx) => (

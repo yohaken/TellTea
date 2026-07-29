@@ -16639,6 +16639,44 @@ a.ghost-btn {
   text-align: left;
 }
 
+.cash-in-round-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0 0 0.35rem;
+}
+
+.cash-in-preset-label {
+  font-size: 0.72rem;
+}
+
+.cash-in-preset-btn {
+  min-height: 1.55rem;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+.cash-in-issues {
+  margin: 0 0 0.45rem;
+  padding: 0.4rem 0.55rem 0.4rem 1.2rem;
+  border-radius: 0.45rem;
+  background: rgba(160, 48, 32, 0.08);
+  border: 1px solid rgba(160, 48, 32, 0.18);
+  color: rgba(120, 32, 24, 0.95);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.cash-in-issues-ok {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(30, 96, 54, 0.92);
+  text-align: left;
+}
+
 .cash-in-days {
   display: flex;
   flex-direction: column;

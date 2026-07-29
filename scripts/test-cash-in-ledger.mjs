@@ -19,7 +19,7 @@ const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
 const assertRules = read("scripts/assert-firestore-rules.mjs");
 
-assert.match(version, /APP_BUILD = 373/);
+assert.match(version, /APP_BUILD = 374/);
 assert.equal(existsSync(join(root, "src/components/LedgerModeSwitch.tsx")), false);
 assert.match(ledger, /CashInLedgerPanel/);
 assert.match(ledger, /cashInForceOpen|cashIn=1/);
@@ -31,13 +31,17 @@ assert.match(panel, /addCashDeposit/);
 assert.match(panel, /verifyCashDeposit/);
 assert.match(panel, /สลิปสรุป POS|รูปสลิป POS/);
 assert.match(panel, /ยอดโอนธนาคาร/);
+assert.match(panel, /CASH_DEPOSIT_ROUND_PRESETS/);
 assert.match(lib, /export async function addCashDeposit/);
-assert.match(lib, /CASH_DEPOSIT_DAY_MAX = 14/);
+assert.match(lib, /CASH_DEPOSIT_DAY_MAX = 31/);
+assert.match(lib, /analyzeCashDepositDays/);
 assert.match(rules, /match \/cashDeposits\/\{entryId\}/);
+assert.match(rules, /days\.size\(\) <= 31/);
 assert.match(indexes, /"collectionGroup": "cashDeposits"/);
 assert.match(assertRules, /"cashDeposits"/);
 assert.match(css, /\.cash-in-panel\b/);
 assert.match(css, /\.cash-in-panel-toggle\b/);
+assert.match(css, /\.cash-in-issues\b/);
 
 function sumCashDepositDays(days) {
   return days.reduce((sum, d) => sum + (Number(d.cashAmount) || 0), 0);

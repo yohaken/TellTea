@@ -420,7 +420,7 @@ service cloud.firestore {
         && request.resource.data.expectedCashTotal >= 0
         && request.resource.data.days is list
         && request.resource.data.days.size() > 0
-        && request.resource.data.days.size() <= 14
+        && request.resource.data.days.size() <= 31
         && request.resource.data.status == 'pending';
       allow update: if hasPerm('ledger')
         && (

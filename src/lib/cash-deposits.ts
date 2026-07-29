@@ -20,8 +20,13 @@ export const CASH_DEPOSIT_LIVE_MAX = 200;
 export const CASH_DEPOSIT_BANK_SLIP_MAX = 6;
 /** POS shift/daily summary photos per day line */
 export const CASH_DEPOSIT_DAY_SLIP_MAX = 4;
-/** Typical batch is 7–10 days; hard cap keeps Firestore docs small */
-export const CASH_DEPOSIT_DAY_MAX = 14;
+/**
+ * Max day-lines per round. Rounds are variable (5 / 7 / 10 …) —
+ * hard cap = one full calendar month.
+ */
+export const CASH_DEPOSIT_DAY_MAX = 31;
+/** Quick-fill presets for common deposit cadences */
+export const CASH_DEPOSIT_ROUND_PRESETS = [5, 7, 10] as const;
 
 export type CashSlipKind = "daily" | "shift" | "unknown";
 
@@ -189,15 +194,214 @@ function mapEntry(d: QueryDocumentSnapshot): CashDeposit {
   };
 }
 
-function validateDays(days: CashDepositDayLine[]) {
-  if (!days.length) throw new Error("ต้องมีอย่างน้อย 1 วันจากสลิป POS");
+/** Local calendar midnight for a Date/ms (shop day key). */
+export function cashDepositDayKey(ms: number): number {
+  const d = new Date(ms);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+export function addCalendarDays(ms: number, delta: number): number {
+  const d = new Date(cashDepositDayKey(ms));
+  d.setDate(d.getDate() + delta);
+  return d.getTime();
+}
+
+export function calendarDaysInclusive(startMs: number, endMs: number): number[] {
+  const start = cashDepositDayKey(startMs);
+  const end = cashDepositDayKey(endMs);
+  if (end < start) return [];
+  const out: number[] = [];
+  let cur = start;
+  while (cur <= end) {
+    out.push(cur);
+    cur = addCalendarDays(cur, 1);
+  }
+  return out;
+}
+
+export function daysInCalendarMonth(ms: number): number {
+  const d = new Date(cashDepositDayKey(ms));
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+}
+
+export function monthKeyFromMs(ms: number): string {
+  const d = new Date(cashDepositDayKey(ms));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export type CashDayIssueCode =
+  | "empty"
+  | "too_long"
+  | "bad_amount"
+  | "duplicate"
+  | "gap"
+  | "overlap"
+  | "month_overflow";
+
+export type CashDayIssue = {
+  code: CashDayIssueCode;
+  message: string;
+  dateMs?: number;
+};
+
+export type CashDayCoverage = {
+  issues: CashDayIssue[];
+  /** Unique sorted day keys in this round */
+  sortedDates: number[];
+  periodStart: number;
+  periodEnd: number;
+  dayCount: number;
+};
+
+/**
+ * 1 บิล = 1 วันปฏิทิน · รอบยืดหยุ่น (5/7/10…)
+ * ตรวจ: ซ้ำในรอบ · ข้ามวัน · ชนกับรอบอื่น · เกินวันในเดือน
+ */
+export function analyzeCashDepositDays(
+  days: Pick<CashDepositDayLine, "date" | "cashAmount">[],
+  opts?: {
+    /** dateKey → deposit id that already claims it (non-void) */
+    occupiedByDepositId?: Map<number, string>;
+    excludeDepositId?: string;
+    /** Other deposits' day keys by month for month-cap (excluding self) */
+    occupiedMonthCounts?: Map<string, number>;
+  },
+): CashDayCoverage {
+  const issues: CashDayIssue[] = [];
+  if (!days.length) {
+    issues.push({ code: "empty", message: "ต้องมีอย่างน้อย 1 วันจากสลิป POS" });
+    return { issues, sortedDates: [], periodStart: 0, periodEnd: 0, dayCount: 0 };
+  }
   if (days.length > CASH_DEPOSIT_DAY_MAX) {
-    throw new Error(`ช่วงเงินสดยาวเกินไป (สูงสุด ${CASH_DEPOSIT_DAY_MAX} วัน)`);
+    issues.push({
+      code: "too_long",
+      message: `รอบหนึ่งใส่ได้สูงสุด ${CASH_DEPOSIT_DAY_MAX} วัน (เท่าเดือนที่ยาวที่สุด)`,
+    });
   }
-  for (const day of days) {
-    if (!day.date) throw new Error("ต้องใส่วันที่บนสลิปทุกแถว");
-    if (!(day.cashAmount > 0)) throw new Error("ยอดเงินสดในสลิปต้องมากกว่า 0");
+
+  if (days.some((day) => !day.date)) {
+    issues.push({ code: "empty", message: "ต้องใส่วันที่บนสลิปทุกแถว" });
   }
+  if (days.some((day) => !(Number(day.cashAmount) > 0))) {
+    issues.push({
+      code: "bad_amount",
+      message: "ยอดเงินสดในสลิปต้องมากกว่า 0 ทุกวัน",
+    });
+  }
+
+  const keyed = days.map((d) => cashDepositDayKey(d.date)).filter((n) => n > 0);
+  const seen = new Map<number, number>();
+  for (const key of keyed) {
+    seen.set(key, (seen.get(key) || 0) + 1);
+  }
+  for (const [key, count] of seen) {
+    if (count > 1) {
+      issues.push({
+        code: "duplicate",
+        message: `บิลซ้ำวันที่ ${formatCashDayShort(key)} — หนึ่งวันมีได้ใบเดียว`,
+        dateMs: key,
+      });
+    }
+  }
+
+  const sortedDates = [...seen.keys()].sort((a, b) => a - b);
+  const periodStart = sortedDates[0] || 0;
+  const periodEnd = sortedDates[sortedDates.length - 1] || 0;
+
+  if (sortedDates.length >= 2) {
+    const expected = calendarDaysInclusive(periodStart, periodEnd);
+    const have = new Set(sortedDates);
+    const missing = expected.filter((d) => !have.has(d));
+    if (missing.length) {
+      const sample = missing.slice(0, 3).map(formatCashDayShort).join(", ");
+      issues.push({
+        code: "gap",
+        message:
+          `ข้ามวันในรอบ (${missing.length} วัน) เช่น ${sample}` +
+          (missing.length > 3 ? "…" : "") +
+          " — รอบต้องต่อเนื่องไม่มีช่องว่าง",
+        dateMs: missing[0],
+      });
+    }
+  }
+
+  const occupied = opts?.occupiedByDepositId;
+  if (occupied) {
+    for (const key of sortedDates) {
+      const otherId = occupied.get(key);
+      if (otherId && otherId !== opts.excludeDepositId) {
+        issues.push({
+          code: "overlap",
+          message: `วันที่ ${formatCashDayShort(key)} ถูกใช้ในรอบอื่นแล้ว — ห้ามบิลซ้ำข้ามรอบ`,
+          dateMs: key,
+        });
+      }
+    }
+  }
+
+  // Per-month: days in this round + other rounds ≤ calendar days in that month
+  const monthLocal = new Map<string, number>();
+  for (const key of sortedDates) {
+    const mk = monthKeyFromMs(key);
+    monthLocal.set(mk, (monthLocal.get(mk) || 0) + 1);
+  }
+  for (const [mk, localCount] of monthLocal) {
+    const others = opts?.occupiedMonthCounts?.get(mk) || 0;
+    // When occupiedMonthCounts already excludes self, just add local.
+    // When built from all deposits including self, pass excludeDepositId path via buildOccupiedMaps.
+    const total = localCount + others;
+    const sampleMs = sortedDates.find((d) => monthKeyFromMs(d) === mk) || periodStart;
+    const cap = daysInCalendarMonth(sampleMs);
+    if (total > cap) {
+      issues.push({
+        code: "month_overflow",
+        message: `เดือน ${mk} มีบิล ${total} วัน เกินจำนวนวันในเดือน (${cap})`,
+      });
+    }
+  }
+
+  return {
+    issues,
+    sortedDates,
+    periodStart,
+    periodEnd,
+    dayCount: sortedDates.length,
+  };
+}
+
+export function formatCashDayShort(ms: number) {
+  const d = new Date(cashDepositDayKey(ms));
+  return `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(-2)}`;
+}
+
+/** Build occupancy maps from existing deposits (skip void). */
+export function buildCashDepositOccupancy(
+  entries: Pick<CashDeposit, "id" | "status" | "days">[],
+  excludeDepositId?: string,
+): {
+  occupiedByDepositId: Map<number, string>;
+  occupiedMonthCounts: Map<string, number>;
+} {
+  const occupiedByDepositId = new Map<number, string>();
+  const occupiedMonthCounts = new Map<string, number>();
+  for (const entry of entries) {
+    if (entry.status === "void") continue;
+    if (excludeDepositId && entry.id === excludeDepositId) continue;
+    const seenMonthDay = new Set<string>();
+    for (const day of entry.days || []) {
+      const key = cashDepositDayKey(day.date);
+      if (!key) continue;
+      if (!occupiedByDepositId.has(key)) occupiedByDepositId.set(key, entry.id);
+      const mk = monthKeyFromMs(key);
+      const stamp = `${mk}:${key}`;
+      if (!seenMonthDay.has(stamp)) {
+        seenMonthDay.add(stamp);
+        occupiedMonthCounts.set(mk, (occupiedMonthCounts.get(mk) || 0) + 1);
+      }
+    }
+  }
+  return { occupiedByDepositId, occupiedMonthCounts };
 }
 
 function normalizeInputDays(
@@ -214,16 +418,27 @@ function normalizeInputDays(
     .slice(0, CASH_DEPOSIT_DAY_MAX);
 }
 
-function buildPayload(input: CashDepositInput) {
+function buildPayload(
+  input: CashDepositInput,
+  occupancy?: ReturnType<typeof buildCashDepositOccupancy>,
+  excludeDepositId?: string,
+) {
   if (!input.createdBy.trim()) throw new Error("ไม่พบผู้บันทึก");
   if (!input.staffName.trim()) throw new Error("ต้องใส่ชื่อพนักงานที่โอน");
   if (!input.transferDate) throw new Error("ต้องใส่วันที่โอนเข้าบัญชี");
   if (!(input.bankAmount > 0)) throw new Error("ต้องใส่ยอดโอนธนาคาร");
   const days = normalizeInputDays(input.days);
-  validateDays(days);
-  const periodStart = input.periodStart || Math.min(...days.map((d) => d.date));
-  const periodEnd = input.periodEnd || Math.max(...days.map((d) => d.date));
-  if (periodEnd < periodStart) throw new Error("ช่วงวันไม่ถูกต้อง");
+  const coverage = analyzeCashDepositDays(days, {
+    occupiedByDepositId: occupancy?.occupiedByDepositId,
+    occupiedMonthCounts: occupancy?.occupiedMonthCounts,
+    excludeDepositId,
+  });
+  if (coverage.issues.length) {
+    throw new Error(coverage.issues[0]!.message);
+  }
+  const periodStart = coverage.periodStart;
+  const periodEnd = coverage.periodEnd;
+  if (!periodStart || periodEnd < periodStart) throw new Error("ช่วงวันไม่ถูกต้อง");
   const expectedCashTotal = sumCashDepositDays(days);
   const bankSlipUrls = normalizeUrls(input.bankSlipUrls, CASH_DEPOSIT_BANK_SLIP_MAX);
   if (bankSlipUrls.some((u) => u.startsWith("data:"))) {
@@ -243,11 +458,16 @@ function buildPayload(input: CashDepositInput) {
     bankAmount: Number(input.bankAmount),
     bankSlipUrls,
     bankRef: (input.bankRef || "").trim(),
-    days,
+    days: [...days].sort((a, b) => a.date - b.date),
     expectedCashTotal,
     variance: cashDepositVariance(input.bankAmount, expectedCashTotal),
     note: (input.note || "").trim(),
   };
+}
+
+async function loadOccupancy(excludeDepositId?: string) {
+  const entries = await listCashDeposits();
+  return buildCashDepositOccupancy(entries, excludeDepositId);
 }
 
 export function subscribeCashDepositsPage(
@@ -286,7 +506,8 @@ export async function listCashDeposits(max = CASH_DEPOSIT_LIVE_MAX) {
 }
 
 export async function addCashDeposit(input: CashDepositInput) {
-  const payload = buildPayload(input);
+  const occupancy = await loadOccupancy();
+  const payload = buildPayload(input, occupancy);
   const now = Date.now();
   const ref = await addDoc(cashDepositsCol(), {
     ...payload,
@@ -303,8 +524,9 @@ export async function addCashDeposit(input: CashDepositInput) {
 export type CashDepositUpdateInput = Omit<CashDepositInput, "createdBy">;
 
 export async function updateCashDeposit(id: string, input: CashDepositUpdateInput) {
+  const occupancy = await loadOccupancy(id);
   // createdBy is immutable — pass a placeholder only for shared validation.
-  const payload = buildPayload({ ...input, createdBy: "_" });
+  const payload = buildPayload({ ...input, createdBy: "_" }, occupancy, id);
   const { createdBy: _omit, ...rest } = payload;
   void _omit;
   await updateDoc(doc(getDb(), "cashDeposits", id), {
@@ -340,22 +562,28 @@ export async function deleteCashDeposit(id: string) {
   await deleteDoc(doc(getDb(), "cashDeposits", id));
 }
 
-/** Suggest period start = transferDate − 9 days (≈10 calendar days incl. transfer day). */
-export function defaultCashPeriodStart(transferDateMs: number) {
-  const d = new Date(transferDateMs);
-  d.setDate(d.getDate() - 9);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
+/** Suggest period start for a round of `dayCount` ending on transferDate (inclusive). */
+export function defaultCashPeriodStart(transferDateMs: number, dayCount = 7) {
+  const n = Math.max(1, Math.min(CASH_DEPOSIT_DAY_MAX, Math.round(dayCount)));
+  return addCalendarDays(cashDepositDayKey(transferDateMs), -(n - 1));
 }
 
 export function emptyCashDepositDay(dateMs: number): CashDepositDayLine {
   return {
     id: newCashDepositDayId(),
-    date: dateMs,
+    date: cashDepositDayKey(dateMs),
     slipKind: "unknown",
     shiftLabel: "",
     cashAmount: 0,
     note: "",
     slipUrls: [],
   };
+}
+
+/** Build N contiguous empty day lines ending on endMs (inclusive). */
+export function buildCashDepositRoundDays(endMs: number, dayCount: number): CashDepositDayLine[] {
+  const n = Math.max(1, Math.min(CASH_DEPOSIT_DAY_MAX, Math.round(dayCount)));
+  const end = cashDepositDayKey(endMs);
+  const start = addCalendarDays(end, -(n - 1));
+  return calendarDaysInclusive(start, end).map((date) => emptyCashDepositDay(date));
 }
