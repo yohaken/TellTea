@@ -152,6 +152,19 @@ export function ExpenseVatPayerFold({
         </div>
 
         <div className="field">
+          <label htmlFor={`${idPrefix}-vendor`}>ผู้ขาย / ร้าน</label>
+          <input
+            id={`${idPrefix}-vendor`}
+            value={value.vendor}
+            disabled={disabled}
+            maxLength={120}
+            placeholder="ชื่อบนใบกำกับฝั่งผู้ขาย"
+            autoComplete="off"
+            onChange={(e) => patch({ vendor: e.target.value })}
+          />
+        </div>
+
+        <div className="field">
           <label htmlFor={`${idPrefix}-payer`}>ผู้จ่าย</label>
           <select
             id={`${idPrefix}-payer`}
@@ -198,6 +211,16 @@ export function ExpenseVatPayerFold({
             </option>
           </select>
         </div>
+
+        {value.vatInputInvoiceId ? (
+          <p className="muted expense-vat-fold-help">
+            ลิงก์ภาษีซื้อแล้ว · เจ้าของบันทึกเมื่อ «มี VAT + ใช้ขอคืนได้»
+          </p>
+        ) : value.vatMode === "inclusive" && value.invoiceNameOk === "ok" ? (
+          <p className="muted expense-vat-fold-help">
+            พร้อมลิงก์ภาษีซื้อเมื่อเจ้าของบันทึก/รับบิล
+          </p>
+        ) : null}
       </div>
     </details>
   );

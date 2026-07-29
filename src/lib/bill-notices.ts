@@ -18,8 +18,12 @@ import {
   normalizeExpenseVatPayer,
   type ExpenseVatPayerFields,
 } from "./expense-vat";
+import {
+  syncExpenseVatInputInvoice,
+  withSyncedVatInputId,
+} from "./expense-vat-sync";
 import { guessTypeFromDescription } from "./ledger-labels";
-import { addOwnerBookEntry } from "./owner-books";
+import { addOwnerBookEntry, updateOwnerBookEntry } from "./owner-books";
 
 export const BILL_NOTICE_PAGE_SIZE = 40;
 export const BILL_NOTICE_LIVE_MAX = 200;
@@ -435,6 +439,9 @@ export async function acceptBillNotice(input: {
     "sga";
 
   const vat = buildExpenseVatPayerPayload(prev, prev.amountOut);
+  const note = [prev.note, input.ownerNote]
+    .filter((s) => String(s || "").trim())
+    .join(" · ");
   const ownerBookId = await addOwnerBookEntry({
     date: prev.date,
     description: prev.description.trim(),
@@ -445,9 +452,30 @@ export async function acceptBillNotice(input: {
     createdBy: input.verifiedBy.trim(),
     receiptUrl: prev.receiptUrl,
     receiptUrls: prev.receiptUrls,
-    note: [prev.note, input.ownerNote].filter((s) => String(s || "").trim()).join(" · "),
+    note,
     ...vat,
   });
+
+  let linkedVat = vat;
+  try {
+    const invoiceId = await syncExpenseVatInputInvoice(
+      {
+        dateMs: prev.date,
+        amountOut: prev.amountOut,
+        description: prev.description.trim(),
+        note,
+        evidenceRef: prev.receiptUrl || prev.receiptUrls[0] || "",
+        fields: vat,
+      },
+      input.verifiedBy.trim(),
+    );
+    if (invoiceId && invoiceId !== vat.vatInputInvoiceId) {
+      linkedVat = withSyncedVatInputId(vat, invoiceId);
+      await updateOwnerBookEntry(ownerBookId, linkedVat);
+    }
+  } catch {
+    /* ภาษีซื้อลิงก์ไม่สำเร็จ — บิลยังรับเข้าแล้ว */
+  }
 
   await updateDoc(entryRef, {
     status: "accepted" satisfies BillNoticeStatus,
@@ -457,6 +485,7 @@ export async function acceptBillNotice(input: {
     verifiedAt: Date.now(),
     updatedAt: Date.now(),
     type,
+    ...linkedVat,
   });
 
   return ownerBookId;

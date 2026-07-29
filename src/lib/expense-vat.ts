@@ -19,9 +19,13 @@ export type ExpenseVatPayerFields = {
   vatInput: number;
   taxInvoiceNo: string;
   payer: ExpensePayer;
-  /** ใบกำกับออกในนาม */
+  /** ผู้ขาย / ร้านบนใบกำกับ */
+  vendor: string;
+  /** ใบกำกับออกในนาม (ผู้ซื้อ) */
   invoiceName: string;
   invoiceNameOk: ExpenseInvoiceNameOk;
+  /** ลิงก์ไป vatInputInvoices/{id} เมื่อ sync แล้ว */
+  vatInputInvoiceId: string;
 };
 
 const VAT_MODES = new Set<ExpenseVatMode>(["unknown", "none", "inclusive"]);
@@ -40,8 +44,10 @@ export function emptyExpenseVatPayer(): ExpenseVatPayerFields {
     vatInput: 0,
     taxInvoiceNo: "",
     payer: "",
+    vendor: "",
     invoiceName: "",
     invoiceNameOk: "unknown",
+    vatInputInvoiceId: "",
   };
 }
 
@@ -63,8 +69,12 @@ export function normalizeExpenseVatPayer(
     vatInput: normalizeMoney((raw as ExpenseVatPayerFields).vatInput),
     taxInvoiceNo: String((raw as ExpenseVatPayerFields).taxInvoiceNo || "").trim(),
     payer: PAYERS.has(payerRaw) ? payerRaw : "",
+    vendor: String((raw as ExpenseVatPayerFields).vendor || "").trim(),
     invoiceName: String((raw as ExpenseVatPayerFields).invoiceName || "").trim(),
     invoiceNameOk: NAME_OK.has(okRaw) ? okRaw : "unknown",
+    vatInputInvoiceId: String(
+      (raw as ExpenseVatPayerFields).vatInputInvoiceId || "",
+    ).trim(),
   };
 }
 
@@ -176,11 +186,13 @@ export function expenseVatFoldSummary(fields: ExpenseVatPayerFields): string {
   if (n.vatMode === "inclusive" && n.vatInput > 0) {
     parts.push(`VAT ${roundMoney(n.vatInput)}`);
   }
+  if (n.vendor) parts.push(n.vendor);
   if (n.payer) parts.push(labelExpensePayer(n.payer));
   if (n.invoiceName) parts.push(`ในนาม ${n.invoiceName}`);
   if (n.invoiceNameOk !== "unknown") {
     parts.push(labelExpenseInvoiceNameOk(n.invoiceNameOk));
   }
+  if (n.vatInputInvoiceId) parts.push("ลิงก์ภาษีซื้อแล้ว");
   return parts.join(" · ");
 }
 
@@ -189,9 +201,21 @@ export function hasExpenseVatPayerDetail(fields: ExpenseVatPayerFields): boolean
   return (
     n.vatMode !== "unknown" ||
     !!n.payer ||
+    !!n.vendor.trim() ||
     !!n.invoiceName.trim() ||
     !!n.taxInvoiceNo.trim() ||
     n.invoiceNameOk !== "unknown" ||
+    n.vatInput > 0 ||
+    !!n.vatInputInvoiceId
+  );
+}
+
+/** พร้อมสร้าง/อัปเดตใบกำกับภาษีซื้อ */
+export function shouldSyncVatInputInvoice(fields: ExpenseVatPayerFields): boolean {
+  const n = normalizeExpenseVatPayer(fields);
+  return (
+    n.vatMode === "inclusive" &&
+    n.invoiceNameOk === "ok" &&
     n.vatInput > 0
   );
 }

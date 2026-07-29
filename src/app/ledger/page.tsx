@@ -38,10 +38,27 @@ import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
 import { CashInLedgerPanel } from "@/components/CashInLedgerPanel";
 import { BillNoticeLedgerPanel } from "@/components/BillNoticeLedgerPanel";
+import {
+  ExpenseVatPayerFold,
+  prepareExpenseVatForSave,
+} from "@/components/ExpenseVatPayerFold";
 import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { personalProfileLabel } from "@/lib/profile";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
+import {
+  emptyExpenseVatPayer,
+  expenseVatFoldSummary,
+  hasExpenseVatPayerDetail,
+  normalizeExpenseVatPayer,
+  shortExpensePayerHint,
+  shortExpenseVatHint,
+  type ExpenseVatPayerFields,
+} from "@/lib/expense-vat";
+import {
+  syncExpenseVatInputInvoice,
+  withSyncedVatInputId,
+} from "@/lib/expense-vat-sync";
 import { BASE_TYPE_OPTIONS, frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
 import {
   classifyLedgerTypeHeuristic,
@@ -516,12 +533,23 @@ function LedgerView() {
                   <th className="col-desc">รายการ</th>
                   <th className="col-in">เข้า</th>
                   <th className="col-out">ออก</th>
+                  <th className="col-vat">VAT</th>
                   <th className="col-type">ประเภท</th>
                 </tr>
               </thead>
                 <tbody>
                   {filteredEntries.map((row) => {
                     const selected = isOwner && selectedIds.has(row.id);
+                    const vatFields = normalizeExpenseVatPayer(row);
+                    const vatLabel =
+                      row.amountOut > 0
+                        ? [
+                            shortExpenseVatHint(vatFields),
+                            shortExpensePayerHint(vatFields),
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")
+                        : "";
                     return (
                     <tr
                       key={row.id}
@@ -531,6 +559,11 @@ function LedgerView() {
                       ]
                         .filter(Boolean)
                         .join(" ")}
+                      title={
+                        row.amountOut > 0 && hasExpenseVatPayerDetail(vatFields)
+                          ? expenseVatFoldSummary(vatFields)
+                          : undefined
+                      }
                     >
                       {isOwner ? (
                         <td className="bulk-check-col">
@@ -583,6 +616,11 @@ function LedgerView() {
                       </td>
                       <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>
                       <td className="col-out">{row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}</td>
+                      <td className="col-vat">
+                        <span className="bill-notice-vat-chip">
+                          {row.amountOut > 0 ? vatLabel || "—" : ""}
+                        </span>
+                      </td>
                       <td className="col-type">
                         <span className="muted" style={{ fontSize: "0.72rem" }}>
                           {row.type ? labelLedgerType(row.type) : "—"}
@@ -610,9 +648,10 @@ function LedgerView() {
         </>
       ) : null}
 
-      {editing ? (
+      {editing && actorId ? (
         <EditEntryModal
           entry={editing}
+          actorId={actorId}
           isOwner={isOwner}
           onClose={() => setEditing(null)}
           onSaved={() => setEditing(null)}
@@ -772,6 +811,9 @@ function AddOutModal({
   const [date, setDate] = useState(todayInputValue());
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
+  const [vatPayer, setVatPayer] = useState<ExpenseVatPayerFields>(() =>
+    emptyExpenseVatPayer(),
+  );
   const [typeMode, setTypeMode] = useState("auto");
   const [ownerLocked, setOwnerLocked] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -865,17 +907,41 @@ function AddOutModal({
       }
 
       setSaveStage("saving");
-      await addLedgerEntry({
-        date: parseDateInput(date),
+      const amountOut = Number(amount);
+      const dateMs = parseDateInput(date);
+      let vat = prepareExpenseVatForSave(vatPayer, amountOut);
+      const entryId = await addLedgerEntry({
+        date: dateMs,
         description,
         amountIn: 0,
-        amountOut: Number(amount),
+        amountOut,
         type,
         typeSource,
         typeAiReason,
         createdBy,
         receiptUrls,
+        ...vat,
       });
+      if (isOwner) {
+        try {
+          const invoiceId = await syncExpenseVatInputInvoice(
+            {
+              dateMs,
+              amountOut,
+              description,
+              evidenceRef: receiptUrls[0] || "",
+              fields: vat,
+            },
+            createdBy,
+          );
+          if (invoiceId && invoiceId !== vat.vatInputInvoiceId) {
+            vat = withSyncedVatInputId(vat, invoiceId);
+            await updateLedgerEntry(entryId, vat);
+          }
+        } catch {
+          /* ลิงก์ภาษีซื้อไม่บังคับตอนบันทึกบช. */
+        }
+      }
       setSaveStage("done");
       onSaved();
     } catch (err) {
@@ -933,6 +999,13 @@ function AddOutModal({
               required
             />
           </div>
+          <ExpenseVatPayerFold
+            idPrefix="ledger-add-vat"
+            value={vatPayer}
+            amountOut={Number(amount) || 0}
+            disabled={busy}
+            onChange={setVatPayer}
+          />
           <aside className="ledger-photo-tip is-in-form" role="note" aria-label="คำแนะนำถ่ายหลักฐาน">
             <p className="ledger-photo-tip-title">ถ่ายหลักฐานให้คมชัดก่อนแนบ</p>
             <p className="ledger-photo-tip-text">
@@ -1008,12 +1081,14 @@ function AddOutModal({
 
 function EditEntryModal({
   entry,
+  actorId,
   isOwner,
   onClose,
   onSaved,
   onError,
 }: {
   entry: LedgerEntry;
+  actorId: string;
   isOwner: boolean;
   onClose: () => void;
   onSaved: () => void;
@@ -1025,6 +1100,9 @@ function EditEntryModal({
   const [date, setDate] = useState(toDateInput(entry.date));
   const [description, setDescription] = useState(entry.description);
   const [amount, setAmount] = useState(String(isIn ? entry.amountIn : entry.amountOut));
+  const [vatPayer, setVatPayer] = useState<ExpenseVatPayerFields>(() =>
+    normalizeExpenseVatPayer(entry),
+  );
   const [typeMode, setTypeMode] = useState(() =>
     wasOwnerType || initialSource === "legacy"
       ? (entry.type || "").trim() || "auto"
@@ -1129,16 +1207,42 @@ function EditEntryModal({
         }
       }
 
+      const dateMs = parseDateInput(date);
+      const amountOut = isIn ? 0 : value;
+      let vat = isIn
+        ? emptyExpenseVatPayer()
+        : prepareExpenseVatForSave(vatPayer, amountOut);
       await updateLedgerEntry(entry.id, {
-        date: parseDateInput(date),
+        date: dateMs,
         description,
         amountIn: isIn ? value : 0,
-        amountOut: isIn ? 0 : value,
+        amountOut,
         type,
         typeSource,
         typeAiReason,
         receiptUrls,
+        ...(isIn ? {} : vat),
       });
+      if (!isIn && isOwner) {
+        try {
+          const invoiceId = await syncExpenseVatInputInvoice(
+            {
+              dateMs,
+              amountOut,
+              description,
+              evidenceRef: receiptUrls[0] || "",
+              fields: vat,
+            },
+            actorId,
+          );
+          if (invoiceId && invoiceId !== vat.vatInputInvoiceId) {
+            vat = withSyncedVatInputId(vat, invoiceId);
+            await updateLedgerEntry(entry.id, vat);
+          }
+        } catch {
+          /* optional */
+        }
+      }
       onSaved();
     } catch (err) {
       onError((err as Error).message || "บันทึกไม่สำเร็จ");
@@ -1248,6 +1352,16 @@ function EditEntryModal({
               required
             />
           </div>
+
+          {!isIn ? (
+            <ExpenseVatPayerFold
+              idPrefix="ledger-edit-vat"
+              value={vatPayer}
+              amountOut={Number(amount) || 0}
+              disabled={busy}
+              onChange={setVatPayer}
+            />
+          ) : null}
 
           <PhotoAttachMultiField
             label="รูป"

@@ -249,8 +249,10 @@ export async function updateOwnerBookEntry(
       | "vatInput"
       | "taxInvoiceNo"
       | "payer"
+      | "vendor"
       | "invoiceName"
       | "invoiceNameOk"
+      | "vatInputInvoiceId"
     >
   >,
 ): Promise<void> {
@@ -288,8 +290,10 @@ export async function updateOwnerBookEntry(
     patch.vatInput != null ||
     patch.taxInvoiceNo != null ||
     patch.payer != null ||
+    patch.vendor != null ||
     patch.invoiceName != null ||
-    patch.invoiceNameOk != null;
+    patch.invoiceNameOk != null ||
+    patch.vatInputInvoiceId != null;
   if (vatTouched) {
     const vat = buildExpenseVatPayerPayload(
       {
@@ -298,8 +302,10 @@ export async function updateOwnerBookEntry(
         vatInput: patch.vatInput ?? prev.vatInput,
         taxInvoiceNo: patch.taxInvoiceNo ?? prev.taxInvoiceNo,
         payer: patch.payer ?? prev.payer,
+        vendor: patch.vendor ?? prev.vendor,
         invoiceName: patch.invoiceName ?? prev.invoiceName,
         invoiceNameOk: patch.invoiceNameOk ?? prev.invoiceNameOk,
+        vatInputInvoiceId: patch.vatInputInvoiceId ?? prev.vatInputInvoiceId,
       },
       nextOut,
     );

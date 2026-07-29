@@ -15,7 +15,7 @@ const preview = read("src/components/EntryPhotoCell.tsx");
 const css = read("src/app/globals.css");
 const lib = read("src/lib/cash-deposits.ts");
 
-assert.match(version, /APP_BUILD = 392/);
+assert.match(version, /APP_BUILD = 394/);
 assert.match(panel, /ลบรูป/);
 assert.match(panel, /clearSlipUrls|removePreviewPhotoAt/);
 assert.match(panel, /function addDay/);

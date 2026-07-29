@@ -33,6 +33,10 @@ import {
   shortExpenseVatHint,
   type ExpenseVatPayerFields,
 } from "@/lib/expense-vat";
+import {
+  syncExpenseVatInputInvoice,
+  withSyncedVatInputId,
+} from "@/lib/expense-vat-sync";
 import { can } from "@/lib/permissions";
 import {
   classifyLedgerTypeHeuristic,
@@ -60,7 +64,10 @@ import {
   updateOwnerBookEntry,
   type OwnerBookEntry,
 } from "@/lib/owner-books";
-import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
+import {
+  extractOwnerBookFromReceipt,
+  mergeExtractIntoExpenseVat,
+} from "@/lib/owner-books-ai";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
   formatBaht,
@@ -737,6 +744,7 @@ function OwnerEntryModal({
           setAmount(String(result.amountOut));
         }
       }
+      setVatPayer((prev) => mergeExtractIntoExpenseVat(prev, result));
       if (result.note) {
         if (mode === "add" || !noteRef.current.trim()) {
           setNote(result.note);
@@ -806,10 +814,27 @@ function OwnerEntryModal({
       }
 
       const amountOut = Number(amount);
-      const vat = prepareExpenseVatForSave(vatPayer, amountOut);
+      const dateMs = parseDateInput(date);
+      let vat = prepareExpenseVatForSave(vatPayer, amountOut);
+      try {
+        const invoiceId = await syncExpenseVatInputInvoice(
+          {
+            dateMs,
+            amountOut,
+            description,
+            note,
+            evidenceRef: urls[0] || "",
+            fields: vat,
+          },
+          createdBy,
+        );
+        if (invoiceId) vat = withSyncedVatInputId(vat, invoiceId);
+      } catch {
+        /* ลิงก์ภาษีซื้อไม่บังคับ */
+      }
       if (mode === "add") {
         await addOwnerBookEntry({
-          date: parseDateInput(date),
+          date: dateMs,
           description,
           amountOut,
           type,
@@ -822,7 +847,7 @@ function OwnerEntryModal({
         });
       } else if (entry) {
         await updateOwnerBookEntry(entry.id, {
-          date: parseDateInput(date),
+          date: dateMs,
           description,
           amountOut,
           type,

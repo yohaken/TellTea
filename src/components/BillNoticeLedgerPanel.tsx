@@ -44,7 +44,10 @@ import {
   type ExpenseVatPayerFields,
 } from "@/lib/expense-vat";
 import { guessTypeFromDescription } from "@/lib/ledger-labels";
-import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
+import {
+  extractOwnerBookFromReceipt,
+  mergeExtractIntoExpenseVat,
+} from "@/lib/owner-books-ai";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
   formatDateShort,
@@ -554,6 +557,7 @@ function BillNoticeFormModal({
           setAmount(String(result.amountOut));
         }
       }
+      setVatPayer((prev) => mergeExtractIntoExpenseVat(prev, result, { force }));
       if (result.note) {
         if (force || mode === "add" || !noteRef.current.trim()) {
           setNote(result.note);

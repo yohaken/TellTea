@@ -19,16 +19,22 @@ const MAX_IMAGE_BYTES = 3.5 * 1024 * 1024;
 const BOOTSTRAP_GEMINI_API_KEY = "";
 
 const EXTRACT_SYSTEM_PROMPT = `คุณเป็นผู้ช่วยอ่านใบเสร็จ/หลักฐานการจ่ายเงินสำหรับร้านเครื่องดื่ม/เบเกอรี่ในไทย
-อ่านจากรูปแล้วดึงข้อมูลสำหรับบันทึกบัญชีเงินออก
+อ่านจากรูปแล้วดึงข้อมูลสำหรับบันทึกบัญชีเงินออก + ภาษีซื้อ
 
 ตอบเป็น JSON เท่านั้น ในรูป:
-{"date":"YYYY-MM-DD หรือว่าง","description":"ชื่อรายการสั้นๆ ภาษาไทย","amountOut":จำนวนเงินเป็นตัวเลขหรือ null,"type":"cogs|sga|asset|อื่นๆ","note":"หมายเหตุสั้นๆ หรือว่าง","reason":"เหตุผลสั้นๆ ภาษาไทยไม่เกิน 40 ตัวอักษร"}
+{"date":"YYYY-MM-DD หรือว่าง","description":"ชื่อรายการสั้นๆ ภาษาไทย","amountOut":จำนวนเงินเป็นตัวเลขหรือ null,"type":"cogs|sga|asset|อื่นๆ","note":"หมายเหตุสั้นๆ หรือว่าง","reason":"เหตุผลสั้นๆ ภาษาไทยไม่เกิน 40 ตัวอักษร","vatMode":"unknown|none|inclusive","vatInput":จำนวน VAT หรือ null,"vatBase":ฐานภาษีหรือ null,"taxInvoiceNo":"เลขที่ใบกำกับหรือว่าง","vendor":"ชื่อผู้ขาย/ร้านหรือว่าง","invoiceName":"ชื่อผู้ซื้อบนใบกำกับหรือว่าง","invoiceNameOk":"unknown|ok|mismatch|no_invoice"}
 
 กฎ:
 - date = วันที่บนใบเสร็จ (ไม่ใช่วันที่อัปโหลด) ถ้าไม่ชัดให้ "" 
 - description = สรุปสิ่งที่ซื้อ/จ่าย สั้น ชัด (เช่น "นมสด" "ค่าไฟ" "แก้วพลาสติก")
-- amountOut = ยอดรวมที่จ่ายจริง (ตัวเลข ไม่มี comma) ถ้าไม่ชัดให้ null
+- amountOut = ยอดรวมที่จ่ายจริง รวม VAT ถ้ามี (ตัวเลข ไม่มี comma) ถ้าไม่ชัดให้ null
 - type ตามกฎบัญชี: cogs=วัตถุดิบ/บรรจุภัณฑ์/ค่าขนส่งวัตถุดิบ · sga=ค่าแรง/ค่าไฟ/ค่าเช่า/ซ่อม · asset=เครื่องจักร/อุปกรณ์ถาวร · อื่นๆ=ไม่ชัด
+- vatMode: inclusive=เห็น VAT/ใบกำกับภาษี · none=ใบเสร็จธรรมดาไม่มี VAT · unknown=ไม่แน่ใจ
+- vatInput/vatBase: ตัวเลขจากเอกสาร ถ้าไม่ชัดให้ null (อย่าเดา)
+- taxInvoiceNo = เลขที่ใบกำกับภาษี ถ้ามี
+- vendor = ชื่อผู้ขาย/ร้านบนเอกสาร
+- invoiceName = ชื่อผู้ซื้อ/ในนาม บนใบกำกับ ถ้ามี
+- invoiceNameOk: ok=มีใบกำกับและชื่อผู้ซื้ออ่านได้ · no_invoice=ไม่มีใบกำกับ · mismatch=ชื่อดูผิดปกติ · unknown=ไม่แน่ใจ
 - ถ้ามีหลายรายการในใบเสร็จ ให้สรุปเป็นรายการหลักหนึ่งรายการ + ยอดรวม
 - ห้ามแต่งข้อมูลที่มองไม่เห็นในรูป`;
 
@@ -196,6 +202,13 @@ async function callGeminiExtract({ apiKey, model, imageParts, businessContext })
     throw new Error("AI ตอบประเภทไม่ถูกต้อง");
   }
 
+  const vatModes = new Set(["unknown", "none", "inclusive"]);
+  const nameOks = new Set(["unknown", "ok", "mismatch", "no_invoice"]);
+  const vatModeRaw = String(parsed.vatMode || "unknown").trim();
+  const invoiceNameOkRaw = String(parsed.invoiceNameOk || "unknown").trim();
+  const vatInput = normalizeAmount(parsed.vatInput);
+  const vatBase = normalizeAmount(parsed.vatBase);
+
   return {
     date: normalizeDate(parsed.date),
     description: String(parsed.description || "")
@@ -209,6 +222,19 @@ async function callGeminiExtract({ apiKey, model, imageParts, businessContext })
     reason: String(parsed.reason || "")
       .trim()
       .slice(0, 80),
+    vatMode: vatModes.has(vatModeRaw) ? vatModeRaw : "unknown",
+    vatInput,
+    vatBase,
+    taxInvoiceNo: String(parsed.taxInvoiceNo || "")
+      .trim()
+      .slice(0, 80),
+    vendor: String(parsed.vendor || "")
+      .trim()
+      .slice(0, 120),
+    invoiceName: String(parsed.invoiceName || "")
+      .trim()
+      .slice(0, 120),
+    invoiceNameOk: nameOks.has(invoiceNameOkRaw) ? invoiceNameOkRaw : "unknown",
   };
 }
 
