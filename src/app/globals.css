@@ -17264,6 +17264,13 @@ a.ghost-btn {
   content: "▾ ";
 }
 
+.vat-import-guide-ai {
+  margin: 0.35rem 0 0.5rem;
+  padding: 0.35rem 0.45rem;
+  border-left: 3px solid rgba(28, 42, 31, 0.45);
+  background: rgba(28, 42, 31, 0.04);
+}
+
 .vat-import-guide-steps {
   margin: 0.35rem 0 0.45rem 1.1rem;
   padding: 0;

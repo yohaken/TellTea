@@ -25,11 +25,13 @@ import {
 } from "@/lib/vat-import";
 
 import {
+  VAT_IMPORT_AI_RULES,
   VAT_IMPORT_CHANNEL_GUIDE,
   VAT_IMPORT_COLUMN_GUIDE,
   VAT_IMPORT_WORKFLOW_NOTES,
   columnTitleAttr,
 } from "@/lib/vat-import-guide";
+
 import {
   grabCsvToImportRows,
   looksLikeGrabTransactionCsv,
@@ -673,7 +675,18 @@ export function VatImportWorkbench({ actor }: Props) {
         open={guideOpen}
         onToggle={(e) => setGuideOpen((e.target as HTMLDetailsElement).open)}
       >
-        <summary>บริบทตาราง — หาอะไร · ใส่อะไร (คน / AI)</summary>
+        <summary>
+          บริบทตาราง + กฎ AI — อ่านก่อนเติม (คน / local AI)
+        </summary>
+        <section className="vat-import-guide-ai" aria-label="กฎสำหรับ AI">
+          <h3 className="vat-import-guide-h">กฎสำหรับ local AI</h3>
+          <ol className="vat-import-guide-steps">
+            {VAT_IMPORT_AI_RULES.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ol>
+        </section>
+        <h3 className="vat-import-guide-h">ขั้นตอน</h3>
         <ol className="vat-import-guide-steps">
           {VAT_IMPORT_WORKFLOW_NOTES.map((n) => (
             <li key={n}>{n}</li>

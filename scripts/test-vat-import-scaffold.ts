@@ -11,10 +11,12 @@ import {
   VAT_IMPORT_SCAFFOLD_CHANNELS,
 } from "../src/lib/vat-import-scaffold";
 import {
+  VAT_IMPORT_AI_RULES,
   VAT_IMPORT_CHANNEL_GUIDE,
   VAT_IMPORT_COLUMN_GUIDE,
   VAT_IMPORT_WORKFLOW_NOTES,
 } from "../src/lib/vat-import-guide";
+
 
 const days = listMonthDateKeys("2026-07");
 assert.equal(days.length, 31);
@@ -41,5 +43,8 @@ assert.equal(keys.size, planned.length);
 assert.ok(VAT_IMPORT_COLUMN_GUIDE.length >= 6);
 assert.ok(VAT_IMPORT_CHANNEL_GUIDE.some((g) => g.channel === "grab"));
 assert.ok(VAT_IMPORT_WORKFLOW_NOTES.length >= 3);
+assert.ok(VAT_IMPORT_AI_RULES.some((r) => r.includes("ไฟล์ต้นทาง")));
+assert.ok(VAT_IMPORT_AI_RULES.some((r) => r.includes("ใช้เข้าเดือน")));
+
 
 console.log("test-vat-import-scaffold: ok");
