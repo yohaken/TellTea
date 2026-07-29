@@ -4825,6 +4825,10 @@ body.modal-open .main-panel {
   border: 1px solid rgba(255, 255, 255, 0.28);
 }
 
+.photo-fs-download.is-danger {
+  background: #8b3a3a;
+}
+
 .photo-fs-download:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -16785,6 +16789,35 @@ a.ghost-btn {
   padding: 0.1rem 0.45rem !important;
   font-size: 0.7rem !important;
   margin: 0 0 0.35rem;
+}
+
+.cash-in-day-add-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.15rem 0 0.4rem;
+}
+
+.cash-in-day-add-bar .cash-in-add-transfer {
+  margin: 0;
+}
+
+.cash-in-note-field {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.cash-in-slim .col-note {
+  min-width: 4.2rem;
+  max-width: 7.5rem;
+}
+
+.cash-in-slip-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.12rem;
+  align-items: center;
+  justify-content: center;
 }
 
 .cash-in-math.is-slim {
