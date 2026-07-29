@@ -13,14 +13,14 @@ const panel = readFileSync(join(root, "src/components/CashInLedgerPanel.tsx"), "
 const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
 const rules = readFileSync(join(root, "firestore.rules"), "utf8");
 
-assert.match(version, /APP_BUILD = 375/);
+assert.match(version, /APP_BUILD = 378/);
 assert.match(lib, /CASH_DEPOSIT_DAY_MAX = 31/);
-assert.match(lib, /CASH_DEPOSIT_ROUND_PRESETS/);
 assert.match(lib, /export function analyzeCashDepositDays/);
 assert.match(lib, /export function buildCashDepositRoundDays/);
+assert.match(lib, /drawerCloseAmount/);
 assert.match(lib, /ข้ามวัน|บิลซ้ำ|month_overflow/);
-assert.match(panel, /CASH_DEPOSIT_ROUND_PRESETS/);
-assert.match(panel, /applyRoundPreset/);
+assert.match(panel, /สร้างรอบ/);
+assert.match(panel, /cash-in-slim/);
 assert.match(panel, /cash-in-issues/);
 assert.match(rules, /days\.size\(\) <= 31/);
 

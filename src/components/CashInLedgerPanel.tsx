@@ -1,18 +1,17 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
-  type FormEvent,
 } from "react";
-import { ChevronDown, ChevronUp, Plus, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
-import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
-import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
+import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
 import {
   addCashDeposit,
-  addCalendarDays,
   analyzeCashDepositDays,
   buildCashDepositOccupancy,
   buildCashDepositRoundDays,
@@ -21,26 +20,27 @@ import {
   CASH_DEPOSIT_DAY_SLIP_MAX,
   CASH_DEPOSIT_LIVE_MAX,
   CASH_DEPOSIT_PAGE_SIZE,
-  CASH_DEPOSIT_ROUND_PRESETS,
   cashDepositDayKey,
   cashDepositVariance,
   type CashDeposit,
   type CashDepositDayLine,
   type CashDepositStatus,
-  type CashSlipKind,
   deleteCashDeposit,
-  emptyCashDepositDay,
   formatCashDayShort,
+  labelCashDepositRound,
   labelCashDepositStatus,
-  labelCashSlipKind,
   listCashDeposits,
   subscribeCashDepositsPage,
   sumCashDepositDays,
+  sumCashDepositDrawerClose,
   updateCashDeposit,
   verifyCashDeposit,
 } from "@/lib/cash-deposits";
 import {
-  formatDateShort,
+  type PhotoUploadProgress,
+  uploadEvidencePhotos,
+} from "@/lib/photo-upload";
+import {
   formatPlainNumber,
   parseDateInput,
   todayInputValue,
@@ -83,7 +83,21 @@ function statusClass(status: CashDepositStatus) {
   }
 }
 
-/** Collapsible cash-in reconcile table — sits above daily ledger, default collapsed (≈ weekly). */
+type DraftRound = {
+  key: string;
+  transferDate: number;
+  dayCount: number;
+  staffName: string;
+  bankAmount: string;
+  bankRef: string;
+  bankSlipUrls: string[];
+  days: CashDepositDayLine[];
+};
+
+/**
+ * Compact cash-in table on /ledger/ — no popup form.
+ * Create round with N days → slim editable rows (cash + optional drawer close + slip).
+ */
 export function CashInLedgerPanel({
   actorId,
   isOwner,
@@ -94,7 +108,6 @@ export function CashInLedgerPanel({
   actorId: string;
   isOwner: boolean;
   staffName: string;
-  /** Open once (e.g. ?cashIn=1) then clear */
   forceOpen?: boolean;
   onForceOpenConsumed?: () => void;
 }) {
@@ -104,12 +117,31 @@ export function CashInLedgerPanel({
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
-  const [editing, setEditing] = useState<CashDeposit | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<DraftRound | null>(null);
+  const [createEnd, setCreateEnd] = useState(todayInputValue());
+  const [createDays, setCreateDays] = useState("7");
+  const [busy, setBusy] = useState(false);
+  const [ownerNote, setOwnerNote] = useState("");
   const [imagePreview, setImagePreview] = useState<{
     urls: string[];
     title: string;
   } | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<PhotoUploadProgress | null>(null);
+  const uploadCancelRef = useRef(false);
+  const dayPhotoRef = useRef<HTMLInputElement>(null);
+  const bankPhotoRef = useRef<HTMLInputElement>(null);
+  const photoTargetRef = useRef<
+    | { kind: "day"; dayId: string }
+    | { kind: "bank" }
+    | null
+  >(null);
+
+  const [editBankAmount, setEditBankAmount] = useState("");
+  const [editBankRef, setEditBankRef] = useState("");
+  const [editBankSlips, setEditBankSlips] = useState<string[]>([]);
+  const [editStaff, setEditStaff] = useState("");
+  const [editDays, setEditDays] = useState<CashDepositDayLine[]>([]);
 
   useEffect(() => {
     setOpen(readOpenPref());
@@ -122,7 +154,7 @@ export function CashInLedgerPanel({
     onForceOpenConsumed?.();
   }, [forceOpen, onForceOpenConsumed]);
 
-  useBodyScrollLock(adding || !!editing || !!imagePreview);
+  useBodyScrollLock(!!imagePreview || !!uploadProgress);
 
   useEffect(() => {
     if (!open) return;
@@ -141,7 +173,6 @@ export function CashInLedgerPanel({
     );
   }, [open, liveLimit]);
 
-  // Light pending badge even when collapsed
   useEffect(() => {
     if (open) return;
     return subscribeCashDepositsPage(
@@ -154,10 +185,75 @@ export function CashInLedgerPanel({
     );
   }, [open]);
 
+  const selected = useMemo(
+    () => (selectedId ? entries.find((e) => e.id === selectedId) || null : null),
+    [entries, selectedId],
+  );
+
+  useEffect(() => {
+    if (!selected || draft) return;
+    setEditBankAmount(selected.bankAmount ? String(selected.bankAmount) : "");
+    setEditBankRef(selected.bankRef || "");
+    setEditBankSlips([...selected.bankSlipUrls]);
+    setEditStaff(selected.staffName || staffName);
+    setEditDays(selected.days.map((d) => ({ ...d, slipUrls: [...d.slipUrls] })));
+    setOwnerNote(selected.ownerNote || "");
+  }, [selected, draft, staffName]);
+
+  const occupancy = useMemo(
+    () => buildCashDepositOccupancy(entries, selected?.id),
+    [entries, selected?.id],
+  );
+
+  const workingDays = draft?.days ?? editDays;
+  const workingBank = Number(draft ? draft.bankAmount : editBankAmount) || 0;
+  const expected = sumCashDepositDays(workingDays);
+  const drawerSum = sumCashDepositDrawerClose(workingDays);
+  const variance = cashDepositVariance(workingBank, expected);
+  const coverage = useMemo(
+    () =>
+      analyzeCashDepositDays(
+        workingDays.map((d) => ({
+          date: d.date,
+          cashAmount: Number(d.cashAmount) || 0,
+        })),
+        {
+          occupiedByDepositId: occupancy.occupiedByDepositId,
+          occupiedMonthCounts: occupancy.occupiedMonthCounts,
+          excludeDepositId: selected?.id,
+        },
+      ),
+    [workingDays, occupancy, selected?.id],
+  );
+
   const pendingCount = useMemo(
     () => entries.filter((e) => e.status === "pending").length,
     [entries],
   );
+
+  const flatRows = useMemo(() => {
+    const rows: {
+      roundId: string;
+      roundLabel: string;
+      status: CashDepositStatus;
+      day: CashDepositDayLine;
+      bankAmount: number;
+    }[] = [];
+    for (const entry of entries) {
+      const label = labelCashDepositRound(entry);
+      for (const day of entry.days) {
+        rows.push({
+          roundId: entry.id,
+          roundLabel: label,
+          status: entry.status,
+          day,
+          bankAmount: entry.bankAmount,
+        });
+      }
+    }
+    rows.sort((a, b) => b.day.date - a.day.date);
+    return rows;
+  }, [entries]);
 
   function toggle() {
     setOpen((v) => {
@@ -166,6 +262,201 @@ export function CashInLedgerPanel({
       return next;
     });
   }
+
+  function startCreateRound() {
+    const n = Math.round(Number(createDays));
+    if (!Number.isFinite(n) || n < 1 || n > CASH_DEPOSIT_DAY_MAX) {
+      setError(`จำนวนวันต้องอยู่ระหว่าง 1–${CASH_DEPOSIT_DAY_MAX}`);
+      return;
+    }
+    let endMs: number;
+    try {
+      endMs = parseDateInput(createEnd);
+    } catch {
+      setError("วันสิ้นสุดรอบไม่ถูกต้อง");
+      return;
+    }
+    setError(null);
+    setSelectedId(null);
+    setDraft({
+      key: `draft-${Date.now()}`,
+      transferDate: endMs,
+      dayCount: n,
+      staffName: staffName || "",
+      bankAmount: "",
+      bankRef: "",
+      bankSlipUrls: [],
+      days: buildCashDepositRoundDays(endMs, n),
+    });
+  }
+
+  function patchDay(dayId: string, patch: Partial<CashDepositDayLine>) {
+    const apply = (days: CashDepositDayLine[]) =>
+      days.map((d) =>
+        d.id === dayId
+          ? {
+              ...d,
+              ...patch,
+              date: patch.date != null ? cashDepositDayKey(patch.date) : d.date,
+            }
+          : d,
+      );
+    if (draft) setDraft({ ...draft, days: apply(draft.days) });
+    else setEditDays((prev) => apply(prev));
+  }
+
+  function openDayPhoto(dayId: string) {
+    photoTargetRef.current = { kind: "day", dayId };
+    dayPhotoRef.current?.click();
+  }
+
+  function openBankPhoto() {
+    photoTargetRef.current = { kind: "bank" };
+    bankPhotoRef.current?.click();
+  }
+
+  async function onPhotoFiles(files: FileList | null) {
+    const target = photoTargetRef.current;
+    photoTargetRef.current = null;
+    if (!target || !files?.length) return;
+    const batch = Array.from(files).slice(0, CASH_DEPOSIT_DAY_SLIP_MAX);
+    uploadCancelRef.current = false;
+    setUploadProgress(null);
+    setBusy(true);
+    try {
+      const urls = await uploadEvidencePhotos(batch, {
+        folder: "cash-deposits",
+        slotKey:
+          target.kind === "bank"
+            ? `bank-${draft?.key || selectedId || "new"}`
+            : `day-${target.dayId}`,
+        cancelRef: uploadCancelRef,
+        onProgress: setUploadProgress,
+      });
+      if (!urls.length) throw new Error("อัปโหลดรูปไม่สำเร็จ");
+      if (target.kind === "bank") {
+        if (draft) {
+          setDraft({
+            ...draft,
+            bankSlipUrls: [...draft.bankSlipUrls, ...urls].slice(
+              0,
+              CASH_DEPOSIT_BANK_SLIP_MAX,
+            ),
+          });
+        } else {
+          setEditBankSlips((prev) =>
+            [...prev, ...urls].slice(0, CASH_DEPOSIT_BANK_SLIP_MAX),
+          );
+        }
+      } else {
+        const dayId = target.dayId;
+        const merge = (days: CashDepositDayLine[]) =>
+          days.map((d) =>
+            d.id === dayId
+              ? {
+                  ...d,
+                  slipUrls: [...d.slipUrls, ...urls].slice(0, CASH_DEPOSIT_DAY_SLIP_MAX),
+                }
+              : d,
+          );
+        if (draft) setDraft({ ...draft, days: merge(draft.days) });
+        else setEditDays((prev) => merge(prev));
+      }
+    } catch (err) {
+      if (!uploadCancelRef.current) {
+        setError((err as Error).message || "อัปโหลดรูปไม่สำเร็จ");
+      }
+    } finally {
+      setBusy(false);
+      setUploadProgress(null);
+      if (dayPhotoRef.current) dayPhotoRef.current.value = "";
+      if (bankPhotoRef.current) bankPhotoRef.current.value = "";
+    }
+  }
+
+  async function saveWorking() {
+    setBusy(true);
+    setError(null);
+    try {
+      if (coverage.issues.length) throw new Error(coverage.issues[0]!.message);
+      if (!(workingBank > 0)) throw new Error("ต้องใส่ยอดโอนธนาคารของรอบ");
+      const days = workingDays.map((d) => ({
+        ...d,
+        date: cashDepositDayKey(d.date),
+        cashAmount: Number(d.cashAmount) || 0,
+        drawerCloseAmount: Number(d.drawerCloseAmount) || 0,
+      }));
+      const payload = {
+        transferDate: draft?.transferDate ?? selected!.transferDate,
+        periodStart: coverage.periodStart,
+        periodEnd: coverage.periodEnd,
+        staffName: (draft?.staffName ?? editStaff).trim() || staffName,
+        bankAmount: workingBank,
+        bankSlipUrls: draft?.bankSlipUrls ?? editBankSlips,
+        bankRef: draft?.bankRef ?? editBankRef,
+        days,
+      };
+      if (draft) {
+        const id = await addCashDeposit({ ...payload, createdBy: actorId });
+        setDraft(null);
+        setSelectedId(id);
+      } else if (selected) {
+        await updateCashDeposit(selected.id, payload);
+      }
+    } catch (err) {
+      setError((err as Error).message || "บันทึกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onVerify(status: Exclude<CashDepositStatus, "pending">) {
+    if (!selected || !isOwner) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await verifyCashDeposit({
+        id: selected.id,
+        status,
+        ownerNote,
+        verifiedBy: actorId,
+      });
+    } catch (err) {
+      setError((err as Error).message || "บันทึกผลตรวจไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDeleteRound() {
+    if (!selected) return;
+    if (!window.confirm("ลบรอบนำเข้านี้ทั้งรอบ?")) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteCashDeposit(selected.id);
+      setSelectedId(null);
+    } catch (err) {
+      setError((err as Error).message || "ลบไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const editingRound = !!draft || !!selected;
+
+  const refreshOccupancy = useCallback(async () => {
+    try {
+      const rows = await listCashDeposits();
+      void rows;
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open) void refreshOccupancy();
+  }, [open, refreshOccupancy]);
 
   return (
     <aside className="cash-in-panel" aria-label="ตารางเทียบเงินนำเข้า">
@@ -181,8 +472,8 @@ export function CashInLedgerPanel({
             {loading && !entries.length
               ? "…"
               : pendingCount > 0
-                ? `รอตรวจ ${pendingCount}`
-                : "อาทิตย์ละครั้ง · หุบไว้ได้"}
+                ? `รอตรวจ ${pendingCount} รอบ`
+                : "ตารางรอบ · หุบไว้ได้"}
           </span>
         </span>
         {open ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
@@ -191,131 +482,453 @@ export function CashInLedgerPanel({
       {open ? (
         <div className="cash-in-panel-body">
           <p className="muted cash-in-hint">
-            รอบยาวเท่าไหร่ก็ได้ (เช่น 5 / 7 / 10 วัน) · แนบสลิปทีละวัน · ระบบกันบิลซ้ำและข้ามวัน
+            สร้างรอบด้วยจำนวนวันเอง → กรอกในตาราง (เงินสดเป็นหลัก · ปิดลิ้นชักเป็นตัวช่วย) ·
+            แนบสลิปทีละวันในแถว
           </p>
+
+          <div className="cash-in-create-bar">
+            <label className="cash-in-create-field">
+              <span>สิ้นสุดรอบ</span>
+              <input
+                type="date"
+                value={createEnd}
+                onChange={(e) => setCreateEnd(e.target.value)}
+                disabled={busy || !!draft}
+              />
+            </label>
+            <label className="cash-in-create-field cash-in-create-days">
+              <span>กี่วัน</span>
+              <input
+                type="number"
+                min={1}
+                max={CASH_DEPOSIT_DAY_MAX}
+                inputMode="numeric"
+                value={createDays}
+                onChange={(e) => setCreateDays(e.target.value)}
+                disabled={busy || !!draft}
+              />
+            </label>
+            <button
+              type="button"
+              className="primary-btn action-in cash-in-create-btn"
+              disabled={busy || !!draft}
+              onClick={startCreateRound}
+            >
+              สร้างรอบ
+            </button>
+          </div>
+
           {error ? <p className="error-text">{error}</p> : null}
-          {loading && !entries.length ? <p className="empty">กำลังโหลด...</p> : null}
-          {!loading && entries.length === 0 ? (
-            <p className="empty">ยังไม่มีรอบนำเข้า</p>
-          ) : entries.length ? (
-            <div className="sheet-wrap cash-in-panel-table-wrap">
-              <table className="sheet-table cash-in-table">
-                <thead>
-                  <tr>
-                    <th className="col-date">โอน</th>
-                    <th className="col-desc">ช่วง</th>
-                    <th className="col-num">สลิป</th>
-                    <th className="col-num">ธนาคาร</th>
-                    <th className="col-num">±</th>
-                    <th className="col-type">สถานะ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {entries.map((row) => {
-                    const slips = [
-                      ...row.bankSlipUrls,
-                      ...row.days.flatMap((d) => d.slipUrls),
-                    ];
-                    return (
-                      <tr key={row.id} className={row.status === "void" ? "is-void-row" : undefined}>
-                        <td className="col-date">{formatDateShort(row.transferDate)}</td>
-                        <td className="col-desc">
-                          <div className="desc-with-photo">
+
+          {/* Round chips */}
+          {entries.length || draft ? (
+            <div className="cash-in-round-chips" role="tablist" aria-label="เลือกรอบ">
+              {draft ? (
+                <button
+                  type="button"
+                  className="cash-in-round-chip is-active is-draft"
+                  aria-selected
+                >
+                  ร่าง {draft.dayCount} วัน
+                </button>
+              ) : null}
+              {entries.map((e) => (
+                <button
+                  key={e.id}
+                  type="button"
+                  className={[
+                    "cash-in-round-chip",
+                    !draft && selectedId === e.id ? "is-active" : "",
+                    e.status === "void" ? "is-void" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  aria-selected={!draft && selectedId === e.id}
+                  disabled={!!draft}
+                  onClick={() => {
+                    setDraft(null);
+                    setSelectedId(e.id);
+                  }}
+                >
+                  {labelCashDepositRound(e)}
+                  <span className={statusClass(e.status)}>
+                    {labelCashDepositStatus(e.status)}
+                  </span>
+                </button>
+              ))}
+              {!draft ? (
+                <button
+                  type="button"
+                  className={["cash-in-round-chip", !selectedId ? "is-active" : ""]
+                    .filter(Boolean)
+                    .join(" ")}
+                  aria-selected={!selectedId}
+                  onClick={() => setSelectedId(null)}
+                >
+                  ทุกรอบ
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* Overview: all rounds flattened */}
+          {!editingRound ? (
+            <>
+              {loading && !flatRows.length ? (
+                <p className="empty">กำลังโหลด...</p>
+              ) : !flatRows.length ? (
+                <p className="empty">ยังไม่มีรอบ — ใส่จำนวนวันแล้วกดสร้างรอบ</p>
+              ) : (
+                <div className="sheet-wrap cash-in-panel-table-wrap">
+                  <table className="sheet-table cash-in-slim">
+                    <thead>
+                      <tr>
+                        <th className="col-round">รอบ</th>
+                        <th className="col-date">วัน</th>
+                        <th className="col-num">เงินสด</th>
+                        <th className="col-num">ปิดลิ้นชัก</th>
+                        <th className="col-slip">สลิป</th>
+                        <th className="col-type">สถานะ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {flatRows.map((row) => (
+                        <tr
+                          key={`${row.roundId}-${row.day.id}`}
+                          className={row.status === "void" ? "is-void-row" : undefined}
+                        >
+                          <td className="col-round">
                             <button
                               type="button"
                               className="desc-link"
-                              title="แตะเพื่อดู/แก้ไข"
-                              onClick={() => setEditing(row)}
+                              onClick={() => setSelectedId(row.roundId)}
                             >
-                              {formatDateShort(row.periodStart)}–{formatDateShort(row.periodEnd)}
-                              <span className="cash-in-staff"> · {row.staffName || "—"}</span>
+                              {row.roundLabel}
                             </button>
-                            {slips.length ? (
+                          </td>
+                          <td className="col-date">{formatCashDayShort(row.day.date)}</td>
+                          <td className="col-num">
+                            {row.day.cashAmount
+                              ? formatPlainNumber(row.day.cashAmount)
+                              : ""}
+                          </td>
+                          <td className="col-num">
+                            {row.day.drawerCloseAmount
+                              ? formatPlainNumber(row.day.drawerCloseAmount)
+                              : ""}
+                          </td>
+                          <td className="col-slip">
+                            {row.day.slipUrls.length ? (
                               <EntryPhotoIndicator
-                                imageUrls={slips}
+                                imageUrls={row.day.slipUrls}
                                 label="สลิป"
                                 onView={(urls) =>
-                                  setImagePreview({ urls, title: `เงินนำเข้า · ${row.staffName}` })
+                                  setImagePreview({
+                                    urls,
+                                    title: formatCashDayShort(row.day.date),
+                                  })
                                 }
                               />
-                            ) : null}
-                          </div>
+                            ) : (
+                              <span className="muted">—</span>
+                            )}
+                          </td>
+                          <td className="col-type">
+                            <span className={statusClass(row.status)}>
+                              {labelCashDepositStatus(row.status)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {!loading && hasMore ? (
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  style={{ width: "100%", marginTop: "0.35rem" }}
+                  onClick={() =>
+                    setLiveLimit((n) =>
+                      Math.min(n + CASH_DEPOSIT_PAGE_SIZE, CASH_DEPOSIT_LIVE_MAX),
+                    )
+                  }
+                >
+                  โหลดเพิ่ม
+                </button>
+              ) : null}
+            </>
+          ) : null}
+
+          {/* Edit / draft round — slim table */}
+          {editingRound ? (
+            <div className="cash-in-round-edit">
+              <div className="cash-in-round-meta">
+                <label className="cash-in-create-field">
+                  <span>พนักงาน</span>
+                  <input
+                    value={draft ? draft.staffName : editStaff}
+                    onChange={(e) => {
+                      if (draft) setDraft({ ...draft, staffName: e.target.value });
+                      else setEditStaff(e.target.value);
+                    }}
+                  />
+                </label>
+                <label className="cash-in-create-field">
+                  <span>โอนธนาคาร</span>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    inputMode="decimal"
+                    placeholder="ยอดสลิปโอน"
+                    value={draft ? draft.bankAmount : editBankAmount}
+                    onChange={(e) => {
+                      if (draft) setDraft({ ...draft, bankAmount: e.target.value });
+                      else setEditBankAmount(e.target.value);
+                    }}
+                  />
+                </label>
+                <label className="cash-in-create-field">
+                  <span>อ้างอิง</span>
+                  <input
+                    value={draft ? draft.bankRef : editBankRef}
+                    onChange={(e) => {
+                      if (draft) setDraft({ ...draft, bankRef: e.target.value });
+                      else setEditBankRef(e.target.value);
+                    }}
+                    placeholder="Ref"
+                  />
+                </label>
+                <div className="cash-in-bank-slip-cell">
+                  <span className="cash-in-create-field-label">สลิปโอน</span>
+                  <EntryPhotoIndicator
+                    imageUrls={draft ? draft.bankSlipUrls : editBankSlips}
+                    label="สลิปโอน"
+                    onAdd={openBankPhoto}
+                    onView={(urls) =>
+                      setImagePreview({ urls, title: "สลิปโอนธนาคาร" })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="sheet-wrap cash-in-panel-table-wrap">
+                <table className="sheet-table cash-in-slim is-edit">
+                  <thead>
+                    <tr>
+                      <th className="col-round">รอบ</th>
+                      <th className="col-date">วัน</th>
+                      <th className="col-num">เงินสด</th>
+                      <th className="col-num">ปิดลิ้นชัก</th>
+                      <th className="col-slip">สลิป</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workingDays.map((day) => (
+                      <tr key={day.id}>
+                        <td className="col-round">
+                          {draft
+                            ? `${draft.dayCount}ว`
+                            : selected
+                              ? labelCashDepositRound(selected)
+                              : "—"}
                         </td>
-                        <td className="col-num">{formatPlainNumber(row.expectedCashTotal)}</td>
-                        <td className="col-num">{formatPlainNumber(row.bankAmount)}</td>
-                        <td
-                          className={[
-                            "col-num",
-                            row.variance === 0 ? "cash-in-var-ok" : "cash-in-var-off",
-                          ].join(" ")}
-                        >
-                          {row.variance === 0
-                            ? "0"
-                            : `${row.variance > 0 ? "+" : ""}${formatPlainNumber(row.variance)}`}
+                        <td className="col-date">
+                          <input
+                            type="date"
+                            className="cash-in-cell-input"
+                            value={toDateInput(day.date)}
+                            onChange={(e) => {
+                              try {
+                                patchDay(day.id, {
+                                  date: parseDateInput(e.target.value),
+                                });
+                              } catch {
+                                /* ignore */
+                              }
+                            }}
+                          />
                         </td>
-                        <td className="col-type">
-                          <span className={statusClass(row.status)}>
-                            {labelCashDepositStatus(row.status)}
-                          </span>
+                        <td className="col-num">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            inputMode="decimal"
+                            className="cash-in-cell-input is-num"
+                            value={day.cashAmount ? String(day.cashAmount) : ""}
+                            placeholder="0"
+                            onChange={(e) =>
+                              patchDay(day.id, {
+                                cashAmount: Number(e.target.value) || 0,
+                              })
+                            }
+                          />
+                        </td>
+                        <td className="col-num">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            inputMode="decimal"
+                            className="cash-in-cell-input is-num"
+                            value={
+                              day.drawerCloseAmount
+                                ? String(day.drawerCloseAmount)
+                                : ""
+                            }
+                            placeholder="—"
+                            onChange={(e) =>
+                              patchDay(day.id, {
+                                drawerCloseAmount: Number(e.target.value) || 0,
+                              })
+                            }
+                          />
+                        </td>
+                        <td className="col-slip">
+                          <EntryPhotoIndicator
+                            imageUrls={day.slipUrls}
+                            label={formatCashDayShort(day.date)}
+                            onAdd={() => openDayPhoto(day.id)}
+                            onView={(urls) =>
+                              setImagePreview({
+                                urls,
+                                title: formatCashDayShort(day.date),
+                              })
+                            }
+                          />
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td className="col-round" colSpan={2}>
+                        รวม
+                      </td>
+                      <td className="col-num">{formatPlainNumber(expected)}</td>
+                      <td className="col-num">
+                        {drawerSum ? formatPlainNumber(drawerSum) : ""}
+                      </td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <div className="cash-in-math is-slim" aria-live="polite">
+                <span>
+                  ธนาคาร {formatPlainNumber(workingBank)} · สลิปสด{" "}
+                  {formatPlainNumber(expected)} · ผลต่าง{" "}
+                  <strong className={variance === 0 ? "is-ok" : "is-off"}>
+                    {variance === 0
+                      ? "0"
+                      : `${variance > 0 ? "+" : ""}${formatPlainNumber(variance)}`}
+                  </strong>
+                </span>
+              </div>
+
+              {coverage.issues.length ? (
+                <ul className="cash-in-issues">
+                  {coverage.issues.slice(0, 4).map((issue, i) => (
+                    <li key={`${issue.code}-${i}`}>{issue.message}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="cash-in-issues-ok">วันต่อเนื่อง ไม่ซ้ำ</p>
+              )}
+
+              <div className="cash-in-round-actions">
+                <button
+                  type="button"
+                  className="primary-btn action-in"
+                  disabled={busy || !!coverage.issues.length}
+                  onClick={() => void saveWorking()}
+                >
+                  {busy ? "กำลังบันทึก..." : draft ? "บันทึกรอบ" : "บันทึกการแก้"}
+                </button>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  disabled={busy}
+                  onClick={() => {
+                    setDraft(null);
+                    setSelectedId(null);
+                  }}
+                >
+                  ปิดรอบนี้
+                </button>
+                {selected && (isOwner || selected.createdBy === actorId) ? (
+                  <button
+                    type="button"
+                    className="ghost-btn danger-text"
+                    disabled={busy}
+                    onClick={() => void onDeleteRound()}
+                  >
+                    ลบรอบ
+                  </button>
+                ) : null}
+              </div>
+
+              {selected && isOwner ? (
+                <div className="cash-in-verify is-slim">
+                  <input
+                    className="cash-in-cell-input"
+                    value={ownerNote}
+                    onChange={(e) => setOwnerNote(e.target.value)}
+                    placeholder="โน้ตเจ้าของ"
+                  />
+                  <div className="cash-in-verify-actions">
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      disabled={busy}
+                      onClick={() => void onVerify("matched")}
+                    >
+                      ตรง
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-btn"
+                      disabled={busy}
+                      onClick={() => void onVerify("mismatch")}
+                    >
+                      ไม่ตรง
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-btn"
+                      disabled={busy}
+                      onClick={() => void onVerify("void")}
+                    >
+                      ยกเลิก
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
-          {!loading && hasMore ? (
-            <button
-              type="button"
-              className="ghost-btn"
-              style={{ width: "100%", marginTop: "0.35rem" }}
-              onClick={() =>
-                setLiveLimit((n) => Math.min(n + CASH_DEPOSIT_PAGE_SIZE, CASH_DEPOSIT_LIVE_MAX))
-              }
-            >
-              โหลดเพิ่ม
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="primary-btn action-in cash-in-panel-add"
-            onClick={() => {
-              setEditing(null);
-              setAdding(true);
-            }}
-          >
-            + บันทึกรอบนำเข้า
-          </button>
         </div>
       ) : null}
 
-      {adding && actorId ? (
-        <CashDepositFormModal
-          mode="add"
-          createdBy={actorId}
-          defaultStaffName={staffName}
-          isOwner={isOwner}
-          onClose={() => setAdding(false)}
-          onSaved={() => setAdding(false)}
-          onError={setError}
-          onPreview={(urls, title) => setImagePreview({ urls, title })}
-        />
-      ) : null}
-
-      {editing && actorId ? (
-        <CashDepositFormModal
-          mode="edit"
-          entry={editing}
-          createdBy={actorId}
-          defaultStaffName={staffName}
-          isOwner={isOwner}
-          onClose={() => setEditing(null)}
-          onSaved={() => setEditing(null)}
-          onError={setError}
-          onPreview={(urls, title) => setImagePreview({ urls, title })}
-        />
-      ) : null}
+      <input
+        ref={dayPhotoRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="sr-only"
+        onChange={(e) => void onPhotoFiles(e.target.files)}
+      />
+      <input
+        ref={bankPhotoRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="sr-only"
+        onChange={(e) => void onPhotoFiles(e.target.files)}
+      />
 
       {imagePreview ? (
         <ImagePreviewModal
@@ -325,538 +938,15 @@ export function CashInLedgerPanel({
           onClose={() => setImagePreview(null)}
         />
       ) : null}
+
+      {uploadProgress ? (
+        <PhotoUploadProgressModal
+          progress={uploadProgress}
+          onCancel={() => {
+            uploadCancelRef.current = true;
+          }}
+        />
+      ) : null}
     </aside>
-  );
-}
-
-function CashDepositFormModal({
-  mode,
-  entry,
-  createdBy,
-  defaultStaffName,
-  isOwner,
-  onClose,
-  onSaved,
-  onError,
-  onPreview,
-}: {
-  mode: "add" | "edit";
-  entry?: CashDeposit;
-  createdBy: string;
-  defaultStaffName: string;
-  isOwner: boolean;
-  onClose: () => void;
-  onSaved: () => void;
-  onError: (msg: string) => void;
-  onPreview: (urls: string[], title: string) => void;
-}) {
-  const [transferDate, setTransferDate] = useState(
-    toDateInput(entry?.transferDate || Date.now()),
-  );
-  const [staffName, setStaffName] = useState(entry?.staffName || defaultStaffName);
-  const [bankAmount, setBankAmount] = useState(
-    entry ? String(entry.bankAmount) : "",
-  );
-  const [bankRef, setBankRef] = useState(entry?.bankRef || "");
-  const [note, setNote] = useState(entry?.note || "");
-  const [bankSlipUrls, setBankSlipUrls] = useState<string[]>(entry?.bankSlipUrls || []);
-  const [days, setDays] = useState<CashDepositDayLine[]>(() =>
-    entry?.days?.length
-      ? entry.days.map((d) => ({ ...d, slipUrls: [...d.slipUrls] }))
-      : buildCashDepositRoundDays(parseDateInput(todayInputValue()), 7),
-  );
-  const [ownerNote, setOwnerNote] = useState(entry?.ownerNote || "");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [occupancy, setOccupancy] = useState(() =>
-    buildCashDepositOccupancy([]),
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    void listCashDeposits()
-      .then((rows) => {
-        if (!cancelled) setOccupancy(buildCashDepositOccupancy(rows, entry?.id));
-      })
-      .catch(() => {
-        /* live check still runs on save */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [entry?.id]);
-
-  const expected = sumCashDepositDays(
-    days.map((d) => ({ cashAmount: Number(d.cashAmount) || 0 })),
-  );
-  const bank = Number(bankAmount) || 0;
-  const variance = cashDepositVariance(bank, expected);
-
-  const coverage = useMemo(
-    () =>
-      analyzeCashDepositDays(
-        days.map((d) => ({ date: d.date, cashAmount: Number(d.cashAmount) || 0 })),
-        {
-          occupiedByDepositId: occupancy.occupiedByDepositId,
-          occupiedMonthCounts: occupancy.occupiedMonthCounts,
-          excludeDepositId: entry?.id,
-        },
-      ),
-    [days, occupancy, entry?.id],
-  );
-
-  function report(msg: string) {
-    setError(msg);
-    onError(msg);
-  }
-
-  function updateDay(id: string, patch: Partial<CashDepositDayLine>) {
-    setDays((prev) =>
-      prev.map((d) =>
-        d.id === id
-          ? {
-              ...d,
-              ...patch,
-              date: patch.date != null ? cashDepositDayKey(patch.date) : d.date,
-            }
-          : d,
-      ),
-    );
-  }
-
-  function applyRoundPreset(dayCount: number) {
-    const end = parseDateInput(transferDate);
-    const next = buildCashDepositRoundDays(end, dayCount);
-    // Keep amounts/photos if same dates already filled
-    const byDate = new Map(days.map((d) => [cashDepositDayKey(d.date), d]));
-    setDays(
-      next.map((blank) => {
-        const prev = byDate.get(blank.date);
-        return prev
-          ? { ...prev, id: blank.id, date: blank.date }
-          : blank;
-      }),
-    );
-  }
-
-  function addDay() {
-    if (days.length >= CASH_DEPOSIT_DAY_MAX) {
-      report(`สูงสุด ${CASH_DEPOSIT_DAY_MAX} วันต่อรอบ`);
-      return;
-    }
-    const base = days.length
-      ? Math.max(...days.map((d) => cashDepositDayKey(d.date)))
-      : cashDepositDayKey(parseDateInput(transferDate));
-    setDays((prev) => [...prev, emptyCashDepositDay(addCalendarDays(base, 1))]);
-  }
-
-  function removeDay(id: string) {
-    setDays((prev) => (prev.length <= 1 ? prev : prev.filter((d) => d.id !== id)));
-  }
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      if (coverage.issues.length) {
-        throw new Error(coverage.issues[0]!.message);
-      }
-      const payload = {
-        transferDate: parseDateInput(transferDate),
-        periodStart: coverage.periodStart,
-        periodEnd: coverage.periodEnd,
-        staffName,
-        bankAmount: bank,
-        bankSlipUrls,
-        bankRef,
-        note,
-        days: days.map((d) => ({
-          ...d,
-          date: cashDepositDayKey(d.date),
-          cashAmount: Number(d.cashAmount) || 0,
-        })),
-      };
-      if (mode === "add") {
-        await addCashDeposit({ ...payload, createdBy });
-      } else if (entry) {
-        await updateCashDeposit(entry.id, payload);
-      }
-      onSaved();
-    } catch (err) {
-      report((err as Error).message || "บันทึกไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onVerify(status: Exclude<CashDepositStatus, "pending">) {
-    if (!entry || !isOwner) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await verifyCashDeposit({
-        id: entry.id,
-        status,
-        ownerNote,
-        verifiedBy: createdBy,
-      });
-      onSaved();
-    } catch (err) {
-      report((err as Error).message || "บันทึกผลตรวจไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onDelete() {
-    if (!entry) return;
-    if (!window.confirm("ลบรายการเงินนำเข้านี้?")) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await deleteCashDeposit(entry.id);
-      onSaved();
-    } catch (err) {
-      report((err as Error).message || "ลบไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div
-      className="modal-backdrop edit-modal is-module-form cash-in-form-modal"
-      role="presentation"
-      onClick={onClose}
-    >
-      <div
-        className="modal-card"
-        role="dialog"
-        aria-modal="true"
-        aria-label={mode === "add" ? "บันทึกเงินนำเข้า" : "รายละเอียดเงินนำเข้า"}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="entry-toolbar module-form-head">
-          <h2 className="panel-title">
-            {mode === "add" ? "บันทึกเงินนำเข้า" : "เทียบเงินนำเข้า"}
-          </h2>
-          <button
-            type="button"
-            className="ghost-btn icon-btn"
-            aria-label="ปิด"
-            disabled={busy}
-            onClick={onClose}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <p className="muted form-hint-inline">
-          รอบยืดหยุ่น (5 / 7 / 10 วัน หรืออื่น ๆ) · 1 บิล = 1 วัน ·
-          ห้ามซ้ำ / ข้ามวัน · ไม่เกินจำนวนวันในเดือน
-        </p>
-        {error ? <p className="error-text">{error}</p> : null}
-
-        <form className="form-card module-entry-form cash-in-form" onSubmit={(e) => void onSubmit(e)}>
-          <div className="field-row cash-in-field-row">
-            <div className="field">
-              <label htmlFor="cash-in-transfer-date">วันที่โอนเข้า บช.</label>
-              <input
-                id="cash-in-transfer-date"
-                type="date"
-                value={transferDate}
-                onChange={(e) => setTransferDate(e.target.value)}
-                required
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="cash-in-bank-amount">ยอดโอนธนาคาร</label>
-              <input
-                id="cash-in-bank-amount"
-                type="number"
-                min="0.01"
-                step="0.01"
-                inputMode="decimal"
-                value={bankAmount}
-                onChange={(e) => setBankAmount(e.target.value)}
-                placeholder="13435"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="field">
-            <label htmlFor="cash-in-staff">พนักงานที่โอน</label>
-            <input
-              id="cash-in-staff"
-              value={staffName}
-              onChange={(e) => setStaffName(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="cash-in-bank-ref">เลขอ้างอิงโอน (ถ้ามี)</label>
-            <input
-              id="cash-in-bank-ref"
-              value={bankRef}
-              onChange={(e) => setBankRef(e.target.value)}
-              placeholder="Transaction ID / Ref"
-            />
-          </div>
-
-          <PhotoAttachMultiField
-            label="สลิปโอนธนาคาร"
-            values={bankSlipUrls}
-            onChange={setBankSlipUrls}
-            onError={report}
-            max={CASH_DEPOSIT_BANK_SLIP_MAX}
-            storageFolder="cash-deposits"
-            storageSlotKey={entry?.id || "new-bank"}
-            hint={`หลักฐาน K+ / ธนาคาร · สูงสุด ${CASH_DEPOSIT_BANK_SLIP_MAX} รูป`}
-            allowCamera
-          />
-          {bankSlipUrls.length ? (
-            <button
-              type="button"
-              className="ghost-btn"
-              style={{ marginBottom: "0.45rem" }}
-              onClick={() => onPreview(bankSlipUrls, "สลิปโอนธนาคาร")}
-            >
-              ดูสลิปธนาคาร ({bankSlipUrls.length})
-            </button>
-          ) : null}
-
-          <div className="cash-in-days-head">
-            <h3 className="cash-in-days-title">สลิปสรุป POS รายวัน</h3>
-            <button type="button" className="ghost-btn" onClick={addDay} disabled={busy}>
-              <Plus size={14} aria-hidden /> เพิ่มวัน
-            </button>
-          </div>
-          <div className="cash-in-round-presets" role="group" aria-label="ความยาวรอบ">
-            <span className="muted cash-in-preset-label">เติมรอบจบวันโอน:</span>
-            {CASH_DEPOSIT_ROUND_PRESETS.map((n) => (
-              <button
-                key={n}
-                type="button"
-                className="ghost-btn cash-in-preset-btn"
-                disabled={busy}
-                onClick={() => applyRoundPreset(n)}
-              >
-                {n} วัน
-              </button>
-            ))}
-          </div>
-          <p className="muted cash-in-days-hint">
-            หนึ่งแถว = หนึ่งวันบนสลิป · ใส่ยอด <strong>เงินสด</strong> (ไม่ใช่ยอดขายรวม) ·
-            ช่วงรอบคำนวณจากวันแรก–วันสุดท้ายอัตโนมัติ
-            {coverage.periodStart && coverage.periodEnd
-              ? ` · ตอนนี้ ${formatCashDayShort(coverage.periodStart)}–${formatCashDayShort(coverage.periodEnd)} (${coverage.dayCount} วัน)`
-              : ""}
-          </p>
-          {coverage.issues.length ? (
-            <ul className="cash-in-issues" aria-live="polite">
-              {coverage.issues.slice(0, 6).map((issue, i) => (
-                <li key={`${issue.code}-${i}`}>{issue.message}</li>
-              ))}
-            </ul>
-          ) : days.length ? (
-            <p className="cash-in-issues-ok">วันต่อเนื่อง ไม่ซ้ำ · พร้อมเทียบยอด</p>
-          ) : null}
-
-          <div className="cash-in-days">
-            {days.map((day, idx) => (
-              <div key={day.id} className="cash-in-day-card">
-                <div className="cash-in-day-top">
-                  <strong>วันที่ {idx + 1}</strong>
-                  {days.length > 1 ? (
-                    <button
-                      type="button"
-                      className="ghost-btn icon-btn"
-                      aria-label="ลบวัน"
-                      onClick={() => removeDay(day.id)}
-                      disabled={busy}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  ) : null}
-                </div>
-                <div className="field-row cash-in-field-row">
-                  <div className="field">
-                    <label htmlFor={`cash-day-date-${day.id}`}>วันที่บนสลิป</label>
-                    <input
-                      id={`cash-day-date-${day.id}`}
-                      type="date"
-                      value={toDateInput(day.date)}
-                      onChange={(e) =>
-                        updateDay(day.id, { date: parseDateInput(e.target.value) })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="field">
-                    <label htmlFor={`cash-day-amt-${day.id}`}>เงินสด (บาท)</label>
-                    <input
-                      id={`cash-day-amt-${day.id}`}
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      inputMode="decimal"
-                      value={day.cashAmount ? String(day.cashAmount) : ""}
-                      onChange={(e) =>
-                        updateDay(day.id, { cashAmount: Number(e.target.value) || 0 })
-                      }
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="field-row cash-in-field-row">
-                  <div className="field">
-                    <label htmlFor={`cash-day-kind-${day.id}`}>ชนิดสลิป</label>
-                    <select
-                      id={`cash-day-kind-${day.id}`}
-                      value={day.slipKind}
-                      onChange={(e) =>
-                        updateDay(day.id, { slipKind: e.target.value as CashSlipKind })
-                      }
-                    >
-                      <option value="unknown">{labelCashSlipKind("unknown")}</option>
-                      <option value="daily">{labelCashSlipKind("daily")}</option>
-                      <option value="shift">{labelCashSlipKind("shift")}</option>
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label htmlFor={`cash-day-shift-${day.id}`}>กะ (ถ้ามี)</label>
-                    <input
-                      id={`cash-day-shift-${day.id}`}
-                      value={day.shiftLabel}
-                      onChange={(e) => updateDay(day.id, { shiftLabel: e.target.value })}
-                      placeholder="เช้า / เย็น"
-                    />
-                  </div>
-                </div>
-                <PhotoAttachMultiField
-                  label="รูปสลิป POS"
-                  values={day.slipUrls}
-                  onChange={(urls) => updateDay(day.id, { slipUrls: urls })}
-                  onError={report}
-                  max={CASH_DEPOSIT_DAY_SLIP_MAX}
-                  storageFolder="cash-deposits"
-                  storageSlotKey={`${entry?.id || "new"}-${day.id}`}
-                  hint={`สูงสุด ${CASH_DEPOSIT_DAY_SLIP_MAX} รูป`}
-                  allowCamera
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="field">
-            <label htmlFor="cash-in-note">หมายเหตุพนักงาน</label>
-            <textarea
-              id="cash-in-note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={2}
-              placeholder="เช่น รวม 9 วัน · มีทอนเงินเปิดลิ้นชักคืน"
-            />
-          </div>
-
-          <div className="cash-in-math" aria-live="polite">
-            <div>
-              <span>รวมเงินสดจากสลิป</span>
-              <strong>{formatPlainNumber(expected)}</strong>
-            </div>
-            <div>
-              <span>ยอดโอนธนาคาร</span>
-              <strong>{formatPlainNumber(bank)}</strong>
-            </div>
-            <div className={variance === 0 ? "is-ok" : "is-off"}>
-              <span>ผลต่าง (ธนาคาร − สลิป)</span>
-              <strong>
-                {variance === 0
-                  ? "0.00"
-                  : `${variance > 0 ? "+" : ""}${formatPlainNumber(variance)}`}
-              </strong>
-            </div>
-          </div>
-
-          {entry ? (
-            <EntryTimestampsMeta
-              entryDate={entry.transferDate}
-              createdAt={entry.createdAt}
-              updatedAt={entry.updatedAt}
-            />
-          ) : null}
-
-          <div className="module-form-actions">
-            <button type="submit" className="primary-btn action-in" disabled={busy}>
-              {busy ? "กำลังบันทึก..." : mode === "add" ? "บันทึกรอบนำเข้า" : "บันทึกการแก้ไข"}
-            </button>
-            <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
-              ออก
-            </button>
-            {entry && (isOwner || entry.createdBy === createdBy) ? (
-              <button
-                type="button"
-                className="ghost-btn danger-text"
-                disabled={busy}
-                onClick={() => void onDelete()}
-              >
-                ลบ
-              </button>
-            ) : null}
-          </div>
-        </form>
-
-        {entry && isOwner ? (
-          <div className="cash-in-verify">
-            <h3 className="cash-in-days-title">เจ้าของตรวจ</h3>
-            <p className="muted cash-in-days-hint">
-              สถานะปัจจุบัน: {labelCashDepositStatus(entry.status)}
-              {entry.verifiedAt
-                ? ` · ${formatDateShort(entry.verifiedAt)}`
-                : ""}
-            </p>
-            <div className="field">
-              <label htmlFor="cash-in-owner-note">โน้ตเจ้าของ</label>
-              <textarea
-                id="cash-in-owner-note"
-                value={ownerNote}
-                onChange={(e) => setOwnerNote(e.target.value)}
-                rows={2}
-                placeholder="เช่น ตรงกับสลิป K+ · หรือขาด 50 จากทอน"
-              />
-            </div>
-            <div className="cash-in-verify-actions">
-              <button
-                type="button"
-                className="primary-btn"
-                disabled={busy}
-                onClick={() => void onVerify("matched")}
-              >
-                ยืนยันตรง
-              </button>
-              <button
-                type="button"
-                className="ghost-btn"
-                disabled={busy}
-                onClick={() => void onVerify("mismatch")}
-              >
-                ทำเครื่องหมายไม่ตรง
-              </button>
-              <button
-                type="button"
-                className="ghost-btn"
-                disabled={busy}
-                onClick={() => void onVerify("void")}
-              >
-                ยกเลิกรายการ
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </div>
-    </div>
   );
 }

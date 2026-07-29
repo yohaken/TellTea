@@ -25,9 +25,6 @@ export const CASH_DEPOSIT_DAY_SLIP_MAX = 4;
  * hard cap = one full calendar month.
  */
 export const CASH_DEPOSIT_DAY_MAX = 31;
-/** Quick-fill presets for common deposit cadences */
-export const CASH_DEPOSIT_ROUND_PRESETS = [5, 7, 10] as const;
-
 export type CashSlipKind = "daily" | "shift" | "unknown";
 
 export type CashDepositStatus = "pending" | "matched" | "mismatch" | "void";
@@ -39,8 +36,13 @@ export type CashDepositDayLine = {
   slipKind: CashSlipKind;
   /** Free label e.g. กะเช้า / กะเย็น — useful when slipKind is shift */
   shiftLabel: string;
-  /** Cash amount read from the POS summary slip */
+  /** Cash sales from POS summary — primary figure for bank reconcile */
   cashAmount: number;
+  /**
+   * Optional: actual/expected cash in drawer at close (เงินปิดลิ้นชัก).
+   * Useful for till variance; bank reconcile still uses cashAmount sum.
+   */
+  drawerCloseAmount: number;
   note: string;
   slipUrls: string[];
 };
@@ -101,6 +103,28 @@ export function sumCashDepositDays(days: Pick<CashDepositDayLine, "cashAmount">[
   return days.reduce((sum, d) => sum + (Number(d.cashAmount) || 0), 0);
 }
 
+export function sumCashDepositDrawerClose(
+  days: Pick<CashDepositDayLine, "drawerCloseAmount">[],
+) {
+  return days.reduce((sum, d) => sum + (Number(d.drawerCloseAmount) || 0), 0);
+}
+
+/** Short round label for table column — e.g. 18–25/12 */
+export function labelCashDepositRound(
+  entry: Pick<CashDeposit, "periodStart" | "periodEnd" | "transferDate">,
+) {
+  const start = entry.periodStart || entry.transferDate;
+  const end = entry.periodEnd || entry.transferDate;
+  if (!start || !end) return "—";
+  const a = new Date(cashDepositDayKey(start));
+  const b = new Date(cashDepositDayKey(end));
+  const sameMonth = a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+  if (sameMonth) {
+    return `${a.getDate()}–${b.getDate()}/${b.getMonth() + 1}`;
+  }
+  return `${formatCashDayShort(start)}–${formatCashDayShort(end)}`;
+}
+
 export function cashDepositVariance(bankAmount: number, expectedCashTotal: number) {
   return Math.round((Number(bankAmount) - Number(expectedCashTotal)) * 100) / 100;
 }
@@ -151,6 +175,7 @@ function normalizeDay(raw: unknown): CashDepositDayLine | null {
     slipKind,
     shiftLabel: typeof d.shiftLabel === "string" ? d.shiftLabel : "",
     cashAmount,
+    drawerCloseAmount: Math.max(0, Number(d.drawerCloseAmount) || 0),
     note: typeof d.note === "string" ? d.note : "",
     slipUrls: normalizeUrls(d.slipUrls, CASH_DEPOSIT_DAY_SLIP_MAX),
   };
@@ -470,23 +495,30 @@ async function loadOccupancy(excludeDepositId?: string) {
   return buildCashDepositOccupancy(entries, excludeDepositId);
 }
 
+/** Newest-first for UI — transferDate then createdAt (client-side). */
+function sortCashDepositsNewestFirst(entries: CashDeposit[]): CashDeposit[] {
+  return [...entries].sort((a, b) => {
+    if (b.transferDate !== a.transferDate) return b.transferDate - a.transferDate;
+    return b.createdAt - a.createdAt;
+  });
+}
+
+/**
+ * Single orderBy(createdAt) — no composite index required.
+ * (transferDate+createdAt composite may still be building in Firebase Console.)
+ */
 export function subscribeCashDepositsPage(
   limitCount: number,
   onPage: (page: CashDepositPage) => void,
   onError?: (err: Error) => void,
 ): Unsubscribe {
   const size = Math.max(1, Math.min(limitCount, CASH_DEPOSIT_LIVE_MAX));
-  const q = query(
-    cashDepositsCol(),
-    orderBy("transferDate", "desc"),
-    orderBy("createdAt", "desc"),
-    limit(size),
-  );
+  const q = query(cashDepositsCol(), orderBy("createdAt", "desc"), limit(size));
   return onSnapshot(
     q,
     (snap) => {
       onPage({
-        entries: snap.docs.map(mapEntry),
+        entries: sortCashDepositsNewestFirst(snap.docs.map(mapEntry)),
         hasMore: snap.docs.length >= size,
       });
     },
@@ -497,12 +529,11 @@ export function subscribeCashDepositsPage(
 export async function listCashDeposits(max = CASH_DEPOSIT_LIVE_MAX) {
   const q = query(
     cashDepositsCol(),
-    orderBy("transferDate", "desc"),
     orderBy("createdAt", "desc"),
     limit(Math.max(1, Math.min(max, CASH_DEPOSIT_LIVE_MAX))),
   );
   const snap = await getDocs(q);
-  return snap.docs.map(mapEntry);
+  return sortCashDepositsNewestFirst(snap.docs.map(mapEntry));
 }
 
 export async function addCashDeposit(input: CashDepositInput) {
@@ -575,6 +606,7 @@ export function emptyCashDepositDay(dateMs: number): CashDepositDayLine {
     slipKind: "unknown",
     shiftLabel: "",
     cashAmount: 0,
+    drawerCloseAmount: 0,
     note: "",
     slipUrls: [],
   };
