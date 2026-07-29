@@ -18,7 +18,7 @@ const lib = read("src/lib/cash-deposits.ts");
 const panel = read("src/components/CashInLedgerPanel.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 386/);
+assert.match(version, /APP_BUILD = 392/);
 assert.ok(existsSync(join(root, "functions/extract-cash-deposit.js")));
 assert.match(index, /extractCashDepositSlip/);
 assert.match(cf, /mode === "bank"/);
@@ -93,6 +93,12 @@ assert.equal(sumBankTransferFees(fromList), 25);
 
 console.log("OK fee reconcile + multi bankTransfers");
 `;
+if (!existsSync(join(root, "node_modules/firebase"))) {
+  console.log("SKIP cash-deposit-ai runtime (no node_modules/firebase)");
+  console.log("OK test-cash-deposit-ai");
+  process.exit(0);
+}
+
 const tmp = join(root, "scripts/.tmp-cash-ai-run.mts");
 writeFileSync(tmp, runner);
 const res = spawnSync("npx", ["--yes", "tsx", tmp], { cwd: root, encoding: "utf8" });

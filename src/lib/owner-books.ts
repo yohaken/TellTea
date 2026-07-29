@@ -18,6 +18,11 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
+import {
+  buildExpenseVatPayerPayload,
+  normalizeExpenseVatPayer,
+  type ExpenseVatPayerFields,
+} from "./expense-vat";
 import type { LedgerEntry } from "./types";
 import type { ImportOwnerBookRow } from "./xlsx-import";
 
@@ -26,10 +31,10 @@ export const OWNER_BOOKS_LIVE_MAX = 480;
 /** Max slip photos per owner-books row */
 export const OWNER_BOOKS_RECEIPT_MAX = 6;
 
-/** Owner books row — out-only + optional note. */
+/** Owner books row — out-only + optional note + VAT/payer. */
 export type OwnerBookEntry = LedgerEntry & {
   note?: string;
-};
+} & ExpenseVatPayerFields;
 
 export type OwnerBookEntryInput = {
   date: number;
@@ -42,7 +47,7 @@ export type OwnerBookEntryInput = {
   receiptUrl?: string;
   receiptUrls?: string[];
   note?: string;
-};
+} & Partial<ExpenseVatPayerFields>;
 
 export type OwnerBooksPage = {
   entries: OwnerBookEntry[];
@@ -82,6 +87,7 @@ function mapEntry(d: QueryDocumentSnapshot): OwnerBookEntry {
     receiptUrl: data.receiptUrl,
     receiptUrls: data.receiptUrls,
   });
+  const vat = normalizeExpenseVatPayer(data as Record<string, unknown>);
   return {
     id: d.id,
     ...data,
@@ -92,6 +98,7 @@ function mapEntry(d: QueryDocumentSnapshot): OwnerBookEntry {
     note: typeof data.note === "string" ? data.note : "",
     receiptUrl,
     receiptUrls,
+    ...vat,
   };
 }
 
@@ -199,11 +206,13 @@ export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<str
     receiptUrl: input.receiptUrl,
     receiptUrls: input.receiptUrls,
   });
+  const amountOut = Number(input.amountOut) || 0;
+  const vat = buildExpenseVatPayerPayload(input, amountOut);
   const payload = {
     date: input.date,
     description: input.description.trim(),
     amountIn: 0,
-    amountOut: Number(input.amountOut) || 0,
+    amountOut,
     type: (input.type || "").trim(),
     typeSource: (input.typeSource || "").trim(),
     typeAiReason: (input.typeAiReason || "").trim(),
@@ -213,6 +222,7 @@ export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<str
     receiptUrl,
     receiptUrls,
     note: (input.note || "").trim(),
+    ...vat,
   };
   validateOwnerPayload(payload);
   const ref = await addDoc(ownerBooksCol(), payload);
@@ -234,13 +244,20 @@ export async function updateOwnerBookEntry(
       | "receiptUrl"
       | "receiptUrls"
       | "note"
+      | "vatMode"
+      | "vatBase"
+      | "vatInput"
+      | "taxInvoiceNo"
+      | "payer"
+      | "invoiceName"
+      | "invoiceNameOk"
     >
   >,
 ): Promise<void> {
   const entryRef = doc(getDb(), "ownerBooks", id);
   const prevSnap = await getDoc(entryRef);
   if (!prevSnap.exists()) throw new Error("ไม่พบรายการ");
-  const prev = prevSnap.data() as OwnerBookEntry;
+  const prev = mapEntry(prevSnap);
   const prevOut = Number(prev.amountOut) || 0;
 
   const next: Record<string, string | number | string[]> = { updatedAt: Date.now() };
@@ -264,6 +281,30 @@ export async function updateOwnerBookEntry(
   const nextDesc =
     patch.description != null ? patch.description.trim() : String(prev.description || "");
   validateOwnerPayload({ description: nextDesc, amountOut: nextOut });
+
+  const vatTouched =
+    patch.vatMode != null ||
+    patch.vatBase != null ||
+    patch.vatInput != null ||
+    patch.taxInvoiceNo != null ||
+    patch.payer != null ||
+    patch.invoiceName != null ||
+    patch.invoiceNameOk != null;
+  if (vatTouched) {
+    const vat = buildExpenseVatPayerPayload(
+      {
+        vatMode: patch.vatMode ?? prev.vatMode,
+        vatBase: patch.vatBase ?? prev.vatBase,
+        vatInput: patch.vatInput ?? prev.vatInput,
+        taxInvoiceNo: patch.taxInvoiceNo ?? prev.taxInvoiceNo,
+        payer: patch.payer ?? prev.payer,
+        invoiceName: patch.invoiceName ?? prev.invoiceName,
+        invoiceNameOk: patch.invoiceNameOk ?? prev.invoiceNameOk,
+      },
+      nextOut,
+    );
+    Object.assign(next, vat);
+  }
 
   await updateDoc(entryRef, next);
   await applyOwnerOutDelta(nextOut - prevOut);

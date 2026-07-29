@@ -28,6 +28,6 @@ assert.doesNotMatch(pageSrc, /ติ๊กเลือกด้านหน้�
 assert.match(pageSrc, /if \(!isOwner\) return;/);
 assert.match(pageSrc, /ledger-table-search/);
 
-assert.match(versionSrc, /APP_BUILD\s*=\s*386/);
+assert.match(versionSrc, /APP_BUILD\s*=\s*392/);
 
 console.log("OK test-ledger-bulk-retype-owner");

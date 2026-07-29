@@ -17518,8 +17518,47 @@ a.ghost-btn {
   font-variant-numeric: tabular-nums;
 }
 
+.bill-notice-slim .col-vat,
+.sheet-table .col-vat {
+  width: 3.4rem;
+  max-width: 4.2rem;
+  font-size: 0.62rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bill-notice-vat-chip {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.72);
+}
+
 .bill-notice-slim .col-note {
   width: 4.2rem;
+}
+
+.bill-notice-summary.expense-fold-box {
+  margin: 0 0 0.35rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.4rem;
+  background: rgba(120, 72, 28, 0.05);
+}
+
+.bill-notice-summary-toggle {
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 650;
+  list-style: none;
+}
+
+.bill-notice-summary-toggle::-webkit-details-marker {
+  display: none;
 }
 
 .bill-notice-slim .col-status {
@@ -17724,4 +17763,72 @@ a.ghost-btn {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* VAT / ผู้จ่าย — กล่องหุบเท่านั้น (ไม่บังคับเปิด) */
+.expense-vat-fold {
+  margin: 0.35rem 0 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.12);
+  border-radius: 0.45rem;
+  background: rgba(28, 42, 31, 0.03);
+}
+
+.expense-vat-fold-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.expense-vat-fold-summary::-webkit-details-marker {
+  display: none;
+}
+
+.expense-vat-fold-title {
+  flex: 0 0 auto;
+}
+
+.expense-vat-fold-hint {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.64rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expense-vat-fold-body {
+  padding: 0 0.55rem 0.55rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.08);
+}
+
+.expense-vat-fold-help {
+  margin: 0.35rem 0 0.4rem;
+  font-size: 0.66rem;
+  line-height: 1.3;
+}
+
+.expense-vat-fold-vat-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.4rem;
+}
+
+.expense-vat-fold-vat-row .field {
+  flex: 1 1 5.5rem;
+  min-width: 0;
+  margin-bottom: 0.35rem;
+}
+
+.expense-vat-recalc {
+  min-height: 1.45rem !important;
+  padding: 0.08rem 0.4rem !important;
+  font-size: 0.68rem !important;
+  margin-bottom: 0.35rem;
 }

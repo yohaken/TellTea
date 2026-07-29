@@ -12,6 +12,10 @@ import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoC
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import {
+  ExpenseVatPayerFold,
+  prepareExpenseVatForSave,
+} from "@/components/ExpenseVatPayerFold";
+import {
   acceptBillNotice,
   addBillNotice,
   billNoticeBucketLabel,
@@ -30,6 +34,15 @@ import {
   type BillNotice,
   type BillNoticeStatus,
 } from "@/lib/bill-notices";
+import {
+  emptyExpenseVatPayer,
+  expenseVatFoldSummary,
+  hasExpenseVatPayerDetail,
+  normalizeExpenseVatPayer,
+  shortExpensePayerHint,
+  shortExpenseVatHint,
+  type ExpenseVatPayerFields,
+} from "@/lib/expense-vat";
 import { guessTypeFromDescription } from "@/lib/ledger-labels";
 import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
@@ -201,7 +214,13 @@ export function BillNoticeLedgerPanel({
           </p>
 
           {entries.length > 0 ? (
-            <div className="bill-notice-summary" aria-label="วิเคราะห์สรุปแจ้งบิล">
+            <details className="bill-notice-summary expense-fold-box">
+              <summary className="bill-notice-summary-toggle">
+                สรุป{" "}
+                <span className="muted">
+                  รอ {summary.pendingCount} · เข้าแล้ว {summary.acceptedCount}
+                </span>
+              </summary>
               <p className="bill-notice-summary-line">
                 <span className="bill-notice-summary-text">
                   รอ {summary.pendingCount} · ฿{formatPlainNumber(summary.pendingSum)}
@@ -215,7 +234,7 @@ export function BillNoticeLedgerPanel({
                     : ""}
                 </span>
               </p>
-            </div>
+            </details>
           ) : null}
 
           {error ? <p className="error-text">{error}</p> : null}
@@ -232,6 +251,7 @@ export function BillNoticeLedgerPanel({
                     <th className="col-desc">รายการ</th>
                     <th className="col-photo">บิล</th>
                     <th className="col-out">ออก</th>
+                    <th className="col-vat">VAT</th>
                     <th className="col-note">note</th>
                     <th className="col-status">สถานะ</th>
                     <th className="col-act" aria-label="จัดการ" />
@@ -247,10 +267,17 @@ export function BillNoticeLedgerPanel({
                       row.status !== "accepted" &&
                       (isOwner ||
                         (row.createdBy === actorId && row.status === "pending"));
+                    const vatFields = normalizeExpenseVatPayer(row);
+                    const vatChip = shortExpenseVatHint(vatFields);
+                    const payerChip = shortExpensePayerHint(vatFields);
+                    const vatLabel = [vatChip, payerChip].filter(Boolean).join(" · ");
                     const tip = [
                       row.description,
                       row.staffName ? `โดย ${row.staffName}` : "",
                       row.note,
+                      hasExpenseVatPayerDetail(vatFields)
+                        ? expenseVatFoldSummary(vatFields)
+                        : "",
                     ]
                       .filter(Boolean)
                       .join(" · ");
@@ -304,6 +331,18 @@ export function BillNoticeLedgerPanel({
                         </td>
                         <td className="col-out">
                           {formatPlainNumber(row.amountOut)}
+                        </td>
+                        <td className="col-vat">
+                          <span
+                            className="bill-notice-vat-chip"
+                            title={
+                              hasExpenseVatPayerDetail(vatFields)
+                                ? expenseVatFoldSummary(vatFields)
+                                : "ยังไม่แจกแจง VAT"
+                            }
+                          >
+                            {vatLabel || "—"}
+                          </span>
                         </td>
                         <td className="col-note">
                           <span className="bill-notice-line" title={row.note || undefined}>
@@ -456,6 +495,9 @@ function BillNoticeFormModal({
     entry?.amountOut ? String(entry.amountOut) : "",
   );
   const [note, setNote] = useState(entry?.note || "");
+  const [vatPayer, setVatPayer] = useState<ExpenseVatPayerFields>(() =>
+    entry ? normalizeExpenseVatPayer(entry) : emptyExpenseVatPayer(),
+  );
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() =>
     entry ? getBillNoticeReceiptUrls(entry) : [],
   );
@@ -552,6 +594,7 @@ function BillNoticeFormModal({
       const type = guessed === "cogs" ? "sga" : guessed;
       const source =
         typeSource === "ai" && extractStatus === "ready" ? "ai" : "staff";
+      const vat = prepareExpenseVatForSave(vatPayer, amountOut);
       if (mode === "add") {
         await addBillNotice({
           date: dateMs,
@@ -563,6 +606,7 @@ function BillNoticeFormModal({
           receiptUrls,
           createdBy: actorId,
           staffName,
+          ...vat,
         });
       } else if (entry) {
         await updateBillNotice(entry.id, {
@@ -574,6 +618,7 @@ function BillNoticeFormModal({
           note,
           receiptUrls,
           staffName,
+          ...vat,
         });
       }
       onSaved();
@@ -739,6 +784,13 @@ function BillNoticeFormModal({
               required
             />
           </div>
+          <ExpenseVatPayerFold
+            idPrefix="bn-vat"
+            value={vatPayer}
+            amountOut={Number(amount) || 0}
+            disabled={busy}
+            onChange={setVatPayer}
+          />
           <div className="field">
             <label htmlFor="bn-note">note</label>
             <input

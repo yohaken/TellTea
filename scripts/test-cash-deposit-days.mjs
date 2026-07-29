@@ -13,7 +13,7 @@ const panel = readFileSync(join(root, "src/components/CashInLedgerPanel.tsx"), "
 const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
 const rules = readFileSync(join(root, "firestore.rules"), "utf8");
 
-assert.match(version, /APP_BUILD = 386/);
+assert.match(version, /APP_BUILD = 392/);
 assert.match(lib, /CASH_DEPOSIT_DAY_MAX = 31/);
 assert.match(lib, /export function analyzeCashDepositDays/);
 assert.match(lib, /export function buildCashDepositRoundDays/);
@@ -80,8 +80,14 @@ assert.ok(overflow.issues.some((i) => i.code === "too_long" || i.code === "month
 console.log("OK analyzeCashDepositDays runtime");
 `;
 
+import { existsSync, writeFileSync, unlinkSync } from "node:fs";
+if (!existsSync(join(root, "node_modules/firebase"))) {
+  console.log("SKIP analyzeCashDepositDays runtime (no node_modules/firebase)");
+  console.log("OK test-cash-deposit-days");
+  process.exit(0);
+}
+
 const tmp = join(root, "scripts/.tmp-cash-deposit-days-run.mts");
-import { writeFileSync, unlinkSync } from "node:fs";
 writeFileSync(tmp, runner);
 const res = spawnSync("npx", ["--yes", "tsx", tmp], { cwd: root, encoding: "utf8" });
 try {
