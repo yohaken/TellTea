@@ -66,15 +66,12 @@
 
 ## 4) โครงสร้างหน้าใหม่
 
-| แท็บ | งาน |
-|------|-----|
-| **เดือน** | ตารางเดียว: ส่ง/ร้าน (+ ย่อย) · แตะแก้เรทเดือนนั้น · GP% · ภาษีซื้อ · สุทธิ |
-| **ปิด P&L** | ตารางมาตรฐาน Output−Input → รายได้ P&L · ปิดแล้วล็อก |
+**หน้าเดียว** (ไม่มีแท็บเดือน/ปิด): ภาษีขาย → GP ช่องทาง → ภาษีซื้อ → แถบสุทธิ → บช. → ภ.ง.ด. → ปุ่มบันทึก/ปิดงบ
 
 - เดลิเวอรี่ `+` → ShopeeFood / Grab / LINE MAN  
 - หน้าร้าน `+` → เงินโอน / เงินสด  
 - เรทเก็บต่อเดือน (คนละเดือนต่างกันได้) · `filed` = ล็อกแก้  
-- ยกเลิกแท็บตารางทด — ปรับเรทในตารางเดือนเลย
+- ดูโครงตาราง: [`vat-table-structure.md`](./vat-table-structure.md)
 
 ---
 
@@ -107,12 +104,15 @@ meta/vatMonthlySettings
 ```
 outputVat = round(gross × outputNum / outputDen)   // default 7/107
 vatBase   = gross − outputVat
-gpEstimate = floor(outputVat × gpOfOutput)         // default 33.33% (ไม่เขียน 1/3)
+gpEstimate = floor(outputVat × gpOfOutput)         // สำรองหน้าร้านเท่านั้น
+// เดลิเวอรี่: gpRaw = Σ ภาษีซื้อ GP จากยอดโอนจริงรายช่องทาง (ไม่ใช้ประมาณก้อน)
 gpClaimed  = floor(gpRaw × inputClaimFactor)       // default 98%
 ingredientClaimed = floor(ingredientVat × inputClaimFactor)
 inputVat = gpClaimed + ingredientClaimed
 netVat   = outputVat − inputVat
 ```
+
+ดูตารางช่องทาง: [`pnl-gp-by-channel.md`](./pnl-gp-by-channel.md)
 
 ---
 

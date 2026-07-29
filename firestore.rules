@@ -538,6 +538,17 @@ service cloud.firestore {
       allow read, write: if isOwner() || isOwnerEmail();
     }
 
+    /** แถวนำเข้าไฟล์ VAT (วัน×ช่องทาง) — เจ้าของเท่านั้น */
+    match /vatImportRows/{rowId} {
+      allow read, write: if isOwner() || isOwnerEmail();
+    }
+
+    /** โต๊ะจูน — แชท local AI ↔ mentor (โปร่งใสบนเว็บ) */
+    match /vatAgentChat/{msgId} {
+      allow read, write: if isOwner() || isOwnerEmail();
+    }
+
+
     /** ใบกำกับซื้อ (ภาษีซื้อ) — เจ้าของเท่านั้น */
     match /vatInputInvoices/{docId} {
       allow read, write: if isOwner();
@@ -756,6 +767,8 @@ service cloud.firestore {
         || (docId == 'foodstoryAuth' && isOwner())
         || (docId == 'posStoreClaimSecret' && isOwner())
         || (docId == 'vatSalesSettings' && isOwner())
+        || (docId == 'vatImportAiNotes' && isOwner())
+        || (docId == 'vatAgentChatPresence' && (isOwner() || isOwnerEmail()))
         || (docId == 'vatMonthlySettings' && (isOwner() || isOwnerEmail()))
         || (docId == 'personalTaxSettings' && (isOwner() || isOwnerEmail()))
         || (docId == 'vatMailOAuth' && isOwner())
@@ -766,10 +779,12 @@ service cloud.firestore {
         || (docId == 'vatMailOAuthConfigOutlook' && isOwner())
         || (docId == 'vatMailOAuthStateOutlook' && isOwner())
         || (docId == 'vatSalesAlertState' && isOwner())
-        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && docId != 'vatSalesSettings' && docId != 'vatMonthlySettings' && docId != 'personalTaxSettings' && docId != 'vatMailOAuth' && docId != 'vatMailOAuthLineman' && docId != 'vatMailOAuthConfig' && docId != 'vatMailOAuthState' && docId != 'vatMailOAuthOutlook' && docId != 'vatMailOAuthConfigOutlook' && docId != 'vatMailOAuthStateOutlook' && docId != 'vatSalesAlertState' && isStaff())
+        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && docId != 'vatSalesSettings' && docId != 'vatImportAiNotes' && docId != 'vatAgentChatPresence' && docId != 'vatMonthlySettings' && docId != 'personalTaxSettings' && docId != 'vatMailOAuth' && docId != 'vatMailOAuthLineman' && docId != 'vatMailOAuthConfig' && docId != 'vatMailOAuthState' && docId != 'vatMailOAuthOutlook' && docId != 'vatMailOAuthConfigOutlook' && docId != 'vatMailOAuthStateOutlook' && docId != 'vatSalesAlertState' && isStaff())
         || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes' || docId == 'posMenuRank'));
       allow write: if isOwner()
-        || (isOwnerEmail() && (docId == 'vatMonthlySettings' || docId == 'personalTaxSettings'))
+        || (isOwnerEmail() && (docId == 'vatMonthlySettings' || docId == 'personalTaxSettings' || docId == 'vatAgentChatPresence'))
+
+
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
         || (isOwner() && docId == 'lowBalanceAlert')
         || (hasPerm('ownerBooks') && docId == 'ownerBooks')

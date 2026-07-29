@@ -56,7 +56,9 @@ const REQUIRED_MATCHES = [
   "vatMonthlyReturns",
   "vatInputInvoices",
   "vatSalesAudit",
+  "vatAgentChat",
 ];
+
 
 /** Sibling apps that share mypeer-501909 — keep their collections here too. */
 const SHARED_APP_MATCHES = [
@@ -97,6 +99,11 @@ assert.match(rules, /match \/vatMonthlyReturns\/\{monthId\}/);
 assert.match(rules, /request\.resource\.data\.dateKey == dateId/);
 assert.match(rules, /vatMonthlyReturns\/\{monthId\}[\s\S]*?isOwner\(\) \|\| isOwnerEmail\(\)/);
 assert.match(rules, /vatSalesSettings' && isOwner\(\)/);
+assert.match(rules, /vatImportAiNotes' && isOwner\(\)/);
+assert.match(rules, /match \/vatAgentChat\/\{msgId\}/);
+assert.match(rules, /vatAgentChatPresence'/);
+
+
 assert.match(rules, /vatMonthlySettings' && \(isOwner\(\) \|\| isOwnerEmail\(\)\)/);
 assert.match(rules, /personalTaxSettings' && \(isOwner\(\) \|\| isOwnerEmail\(\)\)/);
 assert.match(rules, /vatMailOAuth' && isOwner\(\)/);

@@ -165,8 +165,13 @@ export function proposeDeliveryGpDeduct(input: {
   return roundMoney((vatBaht * 100) / pct);
 }
 
-/** โหมดหัก GP — เรท % หรือยอดบาท fix */
-export type GpDeductMode = "pct" | "amount";
+/**
+ * โหมดหัก GP ต่อช่องทาง
+ * - transfer: ใส่ยอดโอนหลัง → คชจ. = รายได้ − โอนหลัง (แนะนำ)
+ * - pct: ใส่เรท % → คชจ. = รายได้ × %
+ * - amount: ใส่ยอดหัก fix
+ */
+export type GpDeductMode = "pct" | "amount" | "transfer";
 
 /** เรท % คงที่เริ่มต้น — ใช้หาค่าเฉลี่ยหลายเดือน (ต่อช่องทาง) */
 export const DEFAULT_GP_DEDUCT_PCT = 30;
@@ -190,7 +195,14 @@ export const GP_CHANNEL_LABELS: Record<GpChannelKey, string> = {
 export type GpChannelDeduct = {
   mode: GpDeductMode;
   pct: number;
+  /** คชจ. GP (บาท) — ใส่เอง / จากนำเข้า · แยกจากยอดโอนจริง */
   amount: number;
+  /** ยอดโอนจริงถึงร้าน (บาท) */
+  netTransfer: number;
+  /**
+   * ภาษีซื้อ GP จากใบกำกับ (บาท) — ว่าง/0 = ประมาณคชจ.×7/107
+   */
+  gpVatOverride: number;
 };
 
 export type GpByChannel = Record<GpChannelKey, GpChannelDeduct>;
@@ -198,28 +210,49 @@ export type GpByChannel = Record<GpChannelKey, GpChannelDeduct>;
 export type GpChannelRow = {
   key: GpChannelKey;
   label: string;
-  /** รายได้ช่องทางตามโหมดก่อน/รวม VAT */
+  /** @deprecated อ้างอิงยอดขายแพลตฟอร์ม — ตาราง GP ไม่โชว์แล้ว */
   gross: number;
+  /** ยอดโอนจริงถึงร้าน */
+  netTransfer: number;
+  /** คชจ. GP (แยกใส่ · ไม่ = รายได้−โอน ในตารางนี้) */
   deduct: number;
+  /** เรทประมาณ คชจ./(คชจ.+โอน) ถ้ามีทั้งคู่ */
+  impliedPct: number;
+  /** ภาษีซื้อ GP (บาท) — จากใบกำกับ หรือประมาณจากคชจ.×7/107 */
+  gpVat: number;
   settings: GpChannelDeduct;
 };
 
 export type IncomeBridge = {
+  /**
+   * รวมยอดโอนจริงเดลิเวอรี่ (SF+GB+LM) — ไม่รวมหน้าร้าน
+   * (ชื่อ deliveryGross คงไว้ให้โค้ดเก่า · ความหมาย = โอนจริง)
+   */
   deliveryGross: number;
+  /** หน้าร้านแยก — ยอดจริงถึงร้าน */
   storefrontGross: number;
+  /** รวมถึงร้าน = โอนเดลิเวอรี่ + หน้าร้าน */
   grossTotal: number;
-  /** รวมหักทุกช่องทาง */
+  /** รวมคชจ. GP (ติดตามภาษีซื้อ · ไม่หักซ้ำจากยอดโอนจริงตอนใส่ P&L) */
   gpDeduct: number;
-  /** รายได้สุทธิที่ควรใส่ P&L */
+  /** รวมภาษีซื้อ GP เดลิเวอรี่ (Shopee+Grab+LM) → ใส่ภาษีซื้อ VAT */
+  deliveryGpVat: number;
+  /** ภาษีซื้อ GP หน้าร้าน (ปกติ 0) */
+  storefrontGpVat: number;
+  /** deliveryGpVat + storefrontGpVat */
+  gpVatTotal: number;
+  /** เรทเฉลี่ย คชจ./(คชจ.+โอน) เดลิเวอรี่ */
+  weightedAvgPct: number;
+  /** รายได้สุทธิที่ควรใส่ P&L = ยอดถึงร้าน (โอนจริง+หน้าร้าน) */
   pnlIncome: number;
-  /** แถวหักรายช่องทาง (เดลิเวอรี่ + หน้าร้าน) */
+  /** แถวรายช่องทาง (เดลิเวอรี่ + หน้าร้าน) */
   channelRows: GpChannelRow[];
   gpByChannel: GpByChannel;
   /**
    * @deprecated ค่าเฉลี่ย/มรดก — UI ใช้รายช่องทาง
-   * คงไว้ให้เซฟเก่าอ่านได้
+   * คงไว้ให้เซฟเก่าอ่านได้ (transfer รายงานเป็น amount)
    */
-  gpDeductMode: GpDeductMode;
+  gpDeductMode: "pct" | "amount";
   gpDeductPct: number;
 };
 
@@ -231,13 +264,35 @@ export function emptyGpChannelDeduct(
     mode,
     pct: Math.min(100, Math.max(0, Number(pct) || 0)),
     amount: 0,
+    netTransfer: 0,
+    gpVatOverride: 0,
   };
 }
 
-/** ค่าเริ่ม: เดลิเวอรี่ 3 ช่องทางใช้เรทเดียวกัน · หน้าร้านไม่หัก (0%) */
+/**
+ * ภาษีซื้อประมาณจากค่า GP (คชจ.เป็นยอดรวม VAT / เงินแพลตฟอร์ม)
+ * ใช้ × pct/(100+pct) เสมอ — ตาราง GP หาคชจ.จากเงินเข้าร้าน ไม่หัก 7% ก่อน
+ * พารามิเตอร์ incomeMode คงไว้ให้เรียกเก่า — ไม่เปลี่ยนสูตรแล้ว
+ */
+export function gpVatFromFee(
+  fee: number,
+  _incomeMode: "exVat" | "incVat" = "incVat",
+  outputPct = 7,
+): number {
+  const f = Math.max(0, normalizeMoney(fee));
+  if (f <= 0) return 0;
+  const pct =
+    Number.isFinite(outputPct) && outputPct > 0 ? outputPct : 7;
+  return roundMoney((f * pct) / (100 + pct));
+}
+
+/**
+ * ค่าเริ่ม: เดลิเวอรี่รอใส่ยอดโอนจริง (ไม่ประมาณก้อน)
+ * หน้าร้านไม่หัก (0%)
+ */
 export function defaultGpByChannel(
-  deliveryPct = DEFAULT_GP_DEDUCT_PCT,
-  deliveryMode: GpDeductMode = "pct",
+  deliveryPct = 0,
+  deliveryMode: GpDeductMode = "transfer",
 ): GpByChannel {
   const d = emptyGpChannelDeduct(deliveryPct, deliveryMode);
   return {
@@ -248,12 +303,17 @@ export function defaultGpByChannel(
   };
 }
 
+export function mapGpDeductMode(raw: unknown, fallback: GpDeductMode = "pct"): GpDeductMode {
+  if (raw === "amount" || raw === "transfer" || raw === "pct") return raw;
+  return fallback;
+}
+
 export function mapGpChannelDeduct(
   raw: unknown,
   fallback: GpChannelDeduct = emptyGpChannelDeduct(DEFAULT_GP_DEDUCT_PCT),
 ): GpChannelDeduct {
   const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-  const mode: GpDeductMode = o.mode === "amount" ? "amount" : "pct";
+  const mode = mapGpDeductMode(o.mode, fallback.mode);
   const pctRaw = Number(o.pct);
   const pct =
     Number.isFinite(pctRaw) && pctRaw >= 0 && pctRaw <= 100
@@ -264,7 +324,17 @@ export function mapGpChannelDeduct(
     Number.isFinite(amtRaw) && amtRaw >= 0
       ? normalizeMoney(amtRaw)
       : fallback.amount;
-  return { mode, pct, amount };
+  const netRaw = Number(o.netTransfer);
+  const netTransfer =
+    Number.isFinite(netRaw) && netRaw >= 0
+      ? normalizeMoney(netRaw)
+      : fallback.netTransfer;
+  const vatRaw = Number(o.gpVatOverride);
+  const gpVatOverride =
+    Number.isFinite(vatRaw) && vatRaw >= 0
+      ? normalizeMoney(vatRaw)
+      : fallback.gpVatOverride;
+  return { mode, pct, amount, netTransfer, gpVatOverride };
 }
 
 /**
@@ -279,19 +349,20 @@ export function mapGpByChannel(
     amount?: number;
   },
 ): GpByChannel {
-  const legacyMode: GpDeductMode =
-    legacy?.mode === "amount" ? "amount" : "pct";
+  const legacyMode = mapGpDeductMode(legacy?.mode, "pct");
   const legacyPct =
     Number.isFinite(Number(legacy?.pct)) && Number(legacy?.pct) > 0
       ? Number(legacy?.pct)
       : DEFAULT_GP_DEDUCT_PCT;
-  const base = defaultGpByChannel(legacyPct, legacyMode);
+  const base = defaultGpByChannel(legacyPct, legacyMode === "transfer" ? "pct" : legacyMode);
   if (legacyMode === "amount" && Number(legacy?.amount) > 0) {
     // มรดกยอดก้อน — ใส่ Grab เป็นที่เก็บหลัก (แยกมือทีหลังได้)
     base.grab = {
       mode: "amount",
       pct: legacyPct,
       amount: normalizeMoney(Number(legacy?.amount)),
+      netTransfer: 0,
+      gpVatOverride: 0,
     };
     base.shopee = emptyGpChannelDeduct(0, "pct");
     base.lineman = emptyGpChannelDeduct(0, "pct");
@@ -323,19 +394,49 @@ export function proposeGpDeductPct(
   return Math.min(100, Math.max(0.01, pct));
 }
 
-/** คำนวณยอดหัก GP ตามโหมด (ต่อฐานรายได้ช่องทาง) */
+/**
+ * จากยอดโอนหลัง → คชจ. + เรท%
+ * คชจ. = รายได้ − ยอดโอนหลัง
+ */
+export function deriveGpFromNetTransfer(
+  gross: number,
+  netTransfer: number,
+): { deduct: number; pct: number; netTransfer: number } {
+  const g = Math.max(0, normalizeMoney(gross));
+  const net = Math.max(0, normalizeMoney(netTransfer));
+  const deduct = roundMoney(Math.max(0, g - net));
+  const pct =
+    g > 0 ? Math.min(100, Math.max(0, roundMoney((deduct / g) * 100))) : 0;
+  return { deduct, pct, netTransfer: net };
+}
+
+/** คำนวณยอดคชจ. GP ตามโหมด */
 export function resolveGpDeductAmount(input: {
   mode: GpDeductMode;
   pct: number;
   amount: number;
   deliveryGross: number;
+  netTransfer?: number;
 }): number {
-  const deliveryGross = Math.max(0, normalizeMoney(input.deliveryGross));
-  if (input.mode === "pct") {
-    const pct = Math.min(100, Math.max(0, Number(input.pct) || 0));
-    return roundMoney((deliveryGross * pct) / 100);
+  // โหมดโอนจริง: คชจ. = amount ที่ใส่/นำเข้า แยกจากยอดโอน (ไม่ = รายได้−โอน)
+  if (input.mode === "transfer" || input.mode === "amount") {
+    return Math.max(0, normalizeMoney(input.amount));
   }
-  return Math.max(0, normalizeMoney(input.amount));
+  const deliveryGross = Math.max(0, normalizeMoney(input.deliveryGross));
+  const pct = Math.min(100, Math.max(0, Number(input.pct) || 0));
+  return roundMoney((deliveryGross * pct) / 100);
+}
+
+/** เรทประมาณจากคชจ. กับยอดโอนจริง */
+export function impliedGpPctFromTransfer(
+  deduct: number,
+  netTransfer: number,
+): number {
+  const fee = Math.max(0, normalizeMoney(deduct));
+  const net = Math.max(0, normalizeMoney(netTransfer));
+  const base = roundMoney(fee + net);
+  if (base <= 0) return 0;
+  return Math.min(100, roundMoney((fee / base) * 100));
 }
 
 /** ยอดรายได้ช่องทางตามโหมดก่อน/รวม VAT */
@@ -353,14 +454,31 @@ export function channelIncomeGross(
   return roundMoney(Math.max(0, gross - vat));
 }
 
-/** สะพานรายได้ → P&L: แยกร้าน/ส่ง · หัก GP รายช่องทาง */
+/**
+ * รายได้สุทธิเข้า P&L = ยอดถึงร้าน (ยอดโอนจริง + หน้าร้าน)
+ * ไม่หักคชจ.ซ้ำ — คชจ.แยกไว้ทำภาษีซื้อ
+ * โหมดก่อน VAT = แปลงยอดถึงร้านเป็นก่อน VAT
+ */
+export function pnlIncomeFromCashBridge(
+  cashAtShop: number,
+  mode: "exVat" | "incVat",
+  outputPct = 7,
+  /** @deprecated ไม่หักจากยอดถึงร้านแล้ว — รับไว้ไม่ใช้ */
+  _gpDeduct = 0,
+): number {
+  const cash = roundMoney(Math.max(0, normalizeMoney(cashAtShop)));
+  if (mode === "incVat") return cash;
+  return channelIncomeGross(cash, "exVat", outputPct);
+}
+
+/** สะพานรายได้ → P&L: ยอดโอนจริงถึงร้าน · คชจ./ภาษีซื้อแยก */
 export function buildIncomeBridge(input: {
   deliveryVatBase: number;
   deliveryGrossSales: number;
   storefrontVatBase: number;
   storefrontGrossSales: number;
   mode: "exVat" | "incVat";
-  /** ยอดรวม VAT (inc) รายช่องทางเดลิเวอรี่ — แยกหัก GP */
+  /** ยอดขายแพลตฟอร์ม (อ้างอิงนำเข้า) — ตาราง GP ไม่โชว์เป็นคอลัมน์รายได้ */
   deliveryChannels?: { shopee: number; grab: number; lineman: number };
   outputPct?: number;
   gpByChannel?: unknown;
@@ -369,65 +487,85 @@ export function buildIncomeBridge(input: {
   gpDeductPct?: number;
   gpDeduct?: number;
 }): IncomeBridge {
-  const deliveryGross =
-    input.mode === "incVat"
-      ? normalizeMoney(input.deliveryGrossSales)
-      : normalizeMoney(input.deliveryVatBase);
-  const storefrontGross =
-    input.mode === "incVat"
-      ? normalizeMoney(input.storefrontGrossSales)
-      : normalizeMoney(input.storefrontVatBase);
-  const grossTotal = roundMoney(deliveryGross + storefrontGross);
+  const platformDelivery = normalizeMoney(input.deliveryGrossSales);
+  const storefrontGross = normalizeMoney(input.storefrontGrossSales);
+  const outputPct = input.outputPct;
 
-  // เส้นทางเก่า: ไม่ส่งช่องทาง / แผนที่ → หักก้อนเดียวจากยอดเดลิเวอรี่รวม
+  // เส้นทางเก่า: ไม่ส่งช่องทาง / แผนที่
   if (input.deliveryChannels == null && input.gpByChannel == null) {
     const gpDeductMode: GpDeductMode =
-      input.gpDeductMode === "amount" ? "amount" : "pct";
+      input.gpDeductMode === "amount"
+        ? "amount"
+        : input.gpDeductMode === "transfer"
+          ? "transfer"
+          : "pct";
     const gpDeductPct = Math.min(
       100,
       Math.max(0, Number(input.gpDeductPct) || DEFAULT_GP_DEDUCT_PCT),
     );
     const legacyDeduct = resolveGpDeductAmount({
-      mode: gpDeductMode,
+      mode: gpDeductMode === "pct" ? "pct" : "amount",
       pct: gpDeductPct,
       amount: Number(input.gpDeduct) || 0,
-      deliveryGross,
+      deliveryGross: platformDelivery,
     });
-    const pnlIncome = roundMoney(Math.max(0, grossTotal - legacyDeduct));
-    const legacyMap = defaultGpByChannel(gpDeductPct, gpDeductMode);
-    if (gpDeductMode === "amount") {
+    // มรดก: ประมาณโอนจริง = ขาย − คชจ.
+    const legacyTransfer = roundMoney(
+      Math.max(0, platformDelivery - legacyDeduct),
+    );
+    const cashAtShop = roundMoney(legacyTransfer + storefrontGross);
+    const pnlIncome = pnlIncomeFromCashBridge(cashAtShop, input.mode, outputPct);
+    const legacyMap = defaultGpByChannel(
+      gpDeductPct,
+      gpDeductMode === "pct" ? "pct" : "transfer",
+    );
+    if (gpDeductMode !== "pct") {
       legacyMap.grab = {
-        mode: "amount",
+        mode: "transfer",
         pct: gpDeductPct,
         amount: legacyDeduct,
+        netTransfer: legacyTransfer,
+        gpVatOverride: 0,
       };
-      legacyMap.shopee = emptyGpChannelDeduct(0);
-      legacyMap.lineman = emptyGpChannelDeduct(0);
+      legacyMap.shopee = emptyGpChannelDeduct(0, "transfer");
+      legacyMap.lineman = emptyGpChannelDeduct(0, "transfer");
     }
+    const deliveryGpVat = gpVatFromFee(legacyDeduct, "incVat", outputPct);
+    const weightedAvgPct = impliedGpPctFromTransfer(legacyDeduct, legacyTransfer);
     return {
-      deliveryGross,
+      deliveryGross: legacyTransfer,
       storefrontGross,
-      grossTotal,
+      grossTotal: cashAtShop,
       gpDeduct: legacyDeduct,
+      deliveryGpVat,
+      storefrontGpVat: 0,
+      gpVatTotal: deliveryGpVat,
+      weightedAvgPct,
       pnlIncome,
       channelRows: [
         {
           key: "grab",
           label: "เดลิเวอรี่ (รวม)",
-          gross: deliveryGross,
+          gross: platformDelivery,
+          netTransfer: legacyTransfer,
           deduct: legacyDeduct,
+          impliedPct: weightedAvgPct,
+          gpVat: deliveryGpVat,
           settings: legacyMap.grab,
         },
         {
           key: "storefront",
           label: GP_CHANNEL_LABELS.storefront,
           gross: storefrontGross,
+          netTransfer: storefrontGross,
           deduct: 0,
+          impliedPct: 0,
+          gpVat: 0,
           settings: legacyMap.storefront,
         },
       ],
       gpByChannel: legacyMap,
-      gpDeductMode,
+      gpDeductMode: gpDeductMode === "pct" ? "pct" : "amount",
       gpDeductPct,
     };
   }
@@ -442,30 +580,53 @@ export function buildIncomeBridge(input: {
     grab: normalizeMoney(input.deliveryChannels?.grab),
     lineman: normalizeMoney(input.deliveryChannels?.lineman),
   };
-  const chSum = channels.shopee + channels.grab + channels.lineman;
-  const outputPct = input.outputPct;
+  const chSum = roundMoney(channels.shopee + channels.grab + channels.lineman);
   const channelRows: GpChannelRow[] = [];
   let gpDeduct = 0;
+  let deliveryDeduct = 0;
+  let deliveryTransfer = 0;
+  let deliveryGpVat = 0;
+  let storefrontGpVat = 0;
 
   for (const key of GP_DELIVERY_CHANNEL_KEYS) {
     const settings = gpByChannel[key];
-    // ยังไม่แยกช่องในตารางขาย — ใส่ยอดรวมที่แถว Grab ชั่วคราว
     const gross =
-      chSum <= 0 && key === "grab"
-        ? deliveryGross
-        : channelIncomeGross(channels[key], input.mode, outputPct);
+      chSum <= 0 && key === "grab" ? platformDelivery : channels[key];
     const deduct = resolveGpDeductAmount({
-      mode: settings.mode,
+      mode: settings.mode === "pct" ? "pct" : "transfer",
       pct: settings.pct,
       amount: settings.amount,
       deliveryGross: gross,
+      netTransfer: settings.netTransfer,
     });
+    // ยอดโอนจริง — โหมดโอน/ยอดใช้ค่าที่ใส่ · โหมด% ประมาณจากขาย−คชจ.
+    const netTransfer =
+      settings.mode === "pct"
+        ? roundMoney(Math.max(0, gross - deduct))
+        : normalizeMoney(settings.netTransfer);
+    const impliedPct =
+      settings.mode === "pct"
+        ? settings.pct
+        : impliedGpPctFromTransfer(deduct, netTransfer);
+    const gpVat =
+      settings.gpVatOverride > 0
+        ? normalizeMoney(settings.gpVatOverride)
+        : gpVatFromFee(deduct, "incVat", outputPct);
     gpDeduct = roundMoney(gpDeduct + deduct);
+    deliveryDeduct = roundMoney(deliveryDeduct + deduct);
+    deliveryTransfer = roundMoney(deliveryTransfer + netTransfer);
+    deliveryGpVat = roundMoney(deliveryGpVat + gpVat);
     channelRows.push({
       key,
-      label: chSum <= 0 && key === "grab" ? "เดลิเวอรี่ (รวม)" : GP_CHANNEL_LABELS[key],
+      label:
+        chSum <= 0 && key === "grab"
+          ? "เดลิเวอรี่ (รวม)"
+          : GP_CHANNEL_LABELS[key],
       gross,
+      netTransfer,
       deduct,
+      impliedPct,
+      gpVat,
       settings,
     });
   }
@@ -473,31 +634,60 @@ export function buildIncomeBridge(input: {
   {
     const settings = gpByChannel.storefront;
     const deduct = resolveGpDeductAmount({
-      mode: settings.mode,
+      mode: settings.mode === "pct" ? "pct" : "transfer",
       pct: settings.pct,
       amount: settings.amount,
       deliveryGross: storefrontGross,
+      netTransfer: settings.netTransfer,
     });
+    const netTransfer =
+      settings.mode === "transfer" && settings.netTransfer > 0
+        ? normalizeMoney(settings.netTransfer)
+        : roundMoney(Math.max(0, storefrontGross - deduct));
+    const impliedPct =
+      settings.mode === "pct"
+        ? settings.pct
+        : impliedGpPctFromTransfer(deduct, netTransfer);
+    const gpVat =
+      settings.gpVatOverride > 0
+        ? normalizeMoney(settings.gpVatOverride)
+        : gpVatFromFee(deduct, "incVat", outputPct);
     gpDeduct = roundMoney(gpDeduct + deduct);
+    storefrontGpVat = gpVat;
     channelRows.push({
       key: "storefront",
       label: GP_CHANNEL_LABELS.storefront,
       gross: storefrontGross,
+      netTransfer,
       deduct,
+      impliedPct,
+      gpVat,
       settings,
     });
   }
 
-  const pnlIncome = roundMoney(Math.max(0, grossTotal - gpDeduct));
+  const storefrontTransfer =
+    channelRows.find((r) => r.key === "storefront")?.netTransfer || 0;
+  const cashAtShop = roundMoney(deliveryTransfer + storefrontTransfer);
+  const pnlIncome = pnlIncomeFromCashBridge(cashAtShop, input.mode, outputPct);
+  const weightedAvgPct = impliedGpPctFromTransfer(
+    deliveryDeduct,
+    deliveryTransfer,
+  );
+  const grabMode = gpByChannel.grab.mode;
   return {
-    deliveryGross,
-    storefrontGross,
-    grossTotal,
+    deliveryGross: deliveryTransfer,
+    storefrontGross: storefrontTransfer,
+    grossTotal: cashAtShop,
     gpDeduct,
+    deliveryGpVat,
+    storefrontGpVat,
+    gpVatTotal: roundMoney(deliveryGpVat + storefrontGpVat),
+    weightedAvgPct,
     pnlIncome,
     channelRows,
     gpByChannel,
-    gpDeductMode: gpByChannel.grab.mode,
+    gpDeductMode: grabMode === "transfer" ? "amount" : grabMode,
     gpDeductPct: gpByChannel.grab.pct,
   };
 }

@@ -366,7 +366,7 @@ export type VatMonthlyReturn = {
    */
   pnlDeliveryGpDeduct: number;
   /** @deprecated ใช้ pnlGpByChannel รายช่องทาง */
-  pnlDeliveryGpMode: "pct" | "amount";
+  pnlDeliveryGpMode: "pct" | "amount" | "transfer";
   /** @deprecated ใช้ pnlGpByChannel รายช่องทาง */
   pnlDeliveryGpPct: number;
   /** หัก GP แยกช่องทาง (Shopee/Grab/LM/หน้าร้าน) · % หรือยอดบาท */
@@ -560,8 +560,9 @@ export function mapPnlDeliveryGpDeduct(raw: unknown): number {
   return normalizeMoney(n);
 }
 
-export function mapPnlDeliveryGpMode(raw: unknown): "pct" | "amount" {
-  return raw === "amount" ? "amount" : "pct";
+export function mapPnlDeliveryGpMode(raw: unknown): "pct" | "amount" | "transfer" {
+  if (raw === "amount" || raw === "transfer") return raw;
+  return "pct";
 }
 
 export function mapPnlDeliveryGpPct(raw: unknown, fallback = 30): number {
@@ -747,7 +748,7 @@ export type VatMonthlySaveInput = {
   pnlIncome?: number;
   /** หัก GP รวม (บาท) · ไม่ส่ง = คงค่าเดิม / 0 */
   pnlDeliveryGpDeduct?: number;
-  pnlDeliveryGpMode?: "pct" | "amount";
+  pnlDeliveryGpMode?: "pct" | "amount" | "transfer";
   pnlDeliveryGpPct?: number;
   /** หัก GP รายช่องทาง */
   pnlGpByChannel?: GpByChannel;
@@ -837,15 +838,16 @@ export async function fileVatMonthlyReturn(
 ): Promise<VatMonthlyReturn> {
   if (!isMonthKey(monthKey)) throw new Error("เดือนไม่ถูกต้อง");
   const current = await loadVatMonthlyReturn(monthKey);
-  if (current.totals.grossSales <= 0) {
-    throw new Error("ยังไม่มียอดขายในเดือนนี้");
-  }
   const income =
     opts?.forceIncome != null
       ? normalizeMoney(opts.forceIncome)
       : current.pnlIncome || proposePnlIncome(current.totals, current.pnlIncomeMode);
   if (!Number.isFinite(income) || income < 0) {
     throw new Error("ยอดรายได้ไม่ถูกต้อง");
+  }
+  // ปิดงบได้เมื่อมียอดขาย VAT หรือรายได้ถึงร้าน (ยอดโอน)
+  if (current.totals.grossSales <= 0 && income <= 0) {
+    throw new Error("ยังไม่มีรายได้หรือยอดขายในเดือนนี้");
   }
 
   try {
