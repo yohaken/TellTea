@@ -2568,12 +2568,22 @@ public class SellActivity extends Activity {
                             if (menu != null) renderMenu();
                             updateShiftSummary();
                             updatePendingBadge();
-                            sellSyncStatus.setText(R.string.sell_saved_local);
-                            Toast.makeText(
-                                    SellActivity.this,
-                                    getString(R.string.sell_saved_toast, total),
-                                    Toast.LENGTH_SHORT)
-                                .show();
+                            // Show change immediately (don't wait for server) and keep it on the
+                            // status line so staff can hand cash — Toast alone disappears too fast.
+                            if (changeForCustomer > 0.01) {
+                              String changeLine =
+                                  getString(R.string.sell_change_hold, changeForCustomer);
+                              sellSyncStatus.setText(changeLine);
+                              Toast.makeText(SellActivity.this, changeLine, Toast.LENGTH_LONG)
+                                  .show();
+                            } else {
+                              sellSyncStatus.setText(R.string.sell_saved_local);
+                              Toast.makeText(
+                                      SellActivity.this,
+                                      getString(R.string.sell_saved_toast, total),
+                                      Toast.LENGTH_SHORT)
+                                  .show();
+                            }
                             maybeSettleRemoteClosed();
                           });
                     }
@@ -2582,15 +2592,16 @@ public class SellActivity extends Activity {
                     public void onSynced(String billNo, double change, double total) {
                       runOnUiThread(
                           () -> {
-                            sellSyncStatus.setText(getString(R.string.sell_synced, billNo));
-                            updatePendingBadge();
-                            if (change > 0) {
-                              Toast.makeText(
-                                      SellActivity.this,
-                                      getString(R.string.sell_change, change),
-                                      Toast.LENGTH_LONG)
-                                  .show();
+                            // Keep change reminder on status until next cart edit if still handing cash.
+                            if (change > 0.01 && cart.isEmpty()) {
+                              sellSyncStatus.setText(
+                                  getString(R.string.sell_change_hold, change)
+                                      + " · #"
+                                      + billNo);
+                            } else {
+                              sellSyncStatus.setText(getString(R.string.sell_synced, billNo));
                             }
+                            updatePendingBadge();
                           });
                     }
 
