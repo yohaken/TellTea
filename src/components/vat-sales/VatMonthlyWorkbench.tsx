@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateTimeShort, formatPlainNumber } from "@/lib/utils";
 import {
+  loadOwnerMonthBreakdown,
+  loadStaffMonthBreakdown,
+  saveMonthlyIncome,
+  type MonthCategoryRow,
+} from "@/lib/pnl";
+import {
   DEFAULT_OUTPUT_PCT,
   DEFAULT_PERIOD_START_DAY,
   DEFAULT_STOREFRONT_REMIT_PCT,
@@ -26,6 +32,18 @@ import {
   type VatMonthlyReturn,
   type VatSegmentState,
 } from "@/lib/vat-monthly";
+
+function emptyBookRow(month: string): MonthCategoryRow {
+  return { month, asset: 0, cogs: 0, sga: 0, other: 0 };
+}
+
+function pickBookRow(rows: MonthCategoryRow[], month: string): MonthCategoryRow {
+  return rows.find((r) => r.month === month) || emptyBookRow(month);
+}
+
+function bookOutTotal(row: MonthCategoryRow) {
+  return row.asset + row.cogs + row.sga + row.other;
+}
 
 function fmt(n: number) {
   if (!n) return "—";
@@ -279,7 +297,7 @@ function OutputVatTable({
               />
             )}
           </td>
-          <td className="col-pct">
+          <td className="col-pct col-remit">
             {isStore ? (
               <TapRate
                 value={parseRate(draft.remitPct, DEFAULT_STOREFRONT_REMIT_PCT)}
@@ -295,7 +313,10 @@ function OutputVatTable({
                 }
               />
             ) : (
-              <span className="vat-tap-val">100%</span>
+              <span className="vat-tap-edit vat-tap-edit--static" title="เดลิเวอรี่นำส่ง 100%">
+                <span className="vat-tap-val">100</span>
+                <span className="vat-tap-suffix">%</span>
+              </span>
             )}
           </td>
           <td className="col-num">{fmt(computed.remitAmount)}</td>
@@ -337,7 +358,11 @@ function OutputVatTable({
                     }
                   />
                 </td>
-                <td className="col-num" colSpan={5}>
+                <td className="col-pct col-remit" />
+                <td className="col-num" />
+                <td className="col-num" />
+                <td className="col-rate" />
+                <td className="col-num">
                   <span className="muted vat-child-hint">ย่อยรวมเข้าเดลิเวอรี่</span>
                 </td>
               </tr>
@@ -365,9 +390,13 @@ function OutputVatTable({
                     }
                   />
                 </td>
-                <td className="col-num" colSpan={5}>
+                <td className="col-pct col-remit" />
+                <td className="col-num" />
+                <td className="col-num" />
+                <td className="col-rate" />
+                <td className="col-num">
                   <span className="muted vat-child-hint">
-                    ย่อยรวมเข้าหน้าร้าน · คิด VAT จากยอดนำส่งจริง
+                    ย่อยรวม · VAT จากนำส่งจริง
                   </span>
                 </td>
               </tr>
@@ -382,11 +411,20 @@ function OutputVatTable({
       <h2 className="vat-table-title">1) ภาษีขาย — กลุ่มรายได้</h2>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-month-slim--output">
+          <colgroup>
+            <col className="vat-col-seg" />
+            <col className="vat-col-gross" />
+            <col className="vat-col-remit-pct" />
+            <col className="vat-col-money" />
+            <col className="vat-col-money" />
+            <col className="vat-col-rate" />
+            <col className="vat-col-money" />
+          </colgroup>
           <thead>
             <tr>
               <th className="col-seg">ส่วน</th>
               <th className="col-num">รายได้หน้าร้าน / ยอดขายรวม</th>
-              <th className="col-pct">นำส่ง %</th>
+              <th className="col-pct col-remit">นำส่ง %</th>
               <th className="col-num">นำส่งจริง</th>
               <th className="col-num">ฐานภาษี</th>
               <th className="col-rate">เรทขาย %</th>
@@ -415,7 +453,7 @@ function OutputVatTable({
             <tr className="vat-sales-totals-row">
               <td className="col-seg">รวมภาษีขาย</td>
               <td className="col-num">{fmt(totalReported)}</td>
-              <td className="col-pct">—</td>
+              <td className="col-pct col-remit">—</td>
               <td className="col-num">{fmt(totalRemit)}</td>
               <td className="col-num">{fmt(totalBase)}</td>
               <td className="col-rate">—</td>
@@ -665,6 +703,10 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   const [openStorefront, setOpenStorefront] = useState(false);
   const [dirty, setDirty] = useState(false);
   const savedSnapRef = useRef("");
+  const [bookStaff, setBookStaff] = useState<MonthCategoryRow | null>(null);
+  const [bookOwner, setBookOwner] = useState<MonthCategoryRow | null>(null);
+  const [booksBusy, setBooksBusy] = useState(false);
+  const [booksPulledAt, setBooksPulledAt] = useState(0);
 
   const snapshotDraft = useCallback(
     (
@@ -852,6 +894,9 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   const changeMonth = (next: string) => {
     if (next === month) return;
     if (!confirmLeaveIfDirty()) return;
+    setBookStaff(null);
+    setBookOwner(null);
+    setBooksPulledAt(0);
     setMonth(next);
   };
 
@@ -966,6 +1011,80 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       const next = await unlockVatMonthlyReturn(month, actor);
       setDoc(next);
       setMsg("ปลดล็อกแล้ว");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** ดึงบช.พนักงาน + บช.เจ้าของ ดูระหว่างงวด — ไม่ปิดงบ */
+  const pullBothBooks = async () => {
+    setBooksBusy(true);
+    setError("");
+    try {
+      const [staffRows, ownerRows] = await Promise.all([
+        loadStaffMonthBreakdown(),
+        loadOwnerMonthBreakdown(),
+      ]);
+      setBookStaff(pickBookRow(staffRows, month));
+      setBookOwner(pickBookRow(ownerRows, month));
+      setBooksPulledAt(Date.now());
+      setMsg(`ดึงบช. พนง. + เจ้าของ เดือน ${month} แล้ว (ยังไม่ปิดงบ)`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBooksBusy(false);
+    }
+  };
+
+  /** ใส่รายได้ทดลองเข้า P&L โดยไม่ล็อกเดือน */
+  const pushTrialIncome = async () => {
+    const income = parseMoneyInput(pnlIncome);
+    const proposed = proposePnlIncome(
+      { vatBase: totals.vatBase, grossSales: totals.grossSales },
+      pnlMode,
+    );
+    const finalIncome = income > 0 ? income : proposed;
+    if (finalIncome <= 0) {
+      setError("ยังมียอดรายได้ที่จะใส่ P&L ไม่พอ");
+      return;
+    }
+    const ok = window.confirm(
+      `ใส่รายได้ทดลอง ${formatPlainNumber(finalIncome)} บาท เข้า P&L เดือน ${month}?\n\n` +
+        "ไม่ปิดงบ · ไม่ล็อกตาราง VAT · แก้/ดึงใหม่ได้ระหว่างงวด",
+    );
+    if (!ok) return;
+    setBusy(true);
+    setError("");
+    setMsg("");
+    try {
+      await saveVatMonthlyReturn(
+        {
+          monthKey: month,
+          delivery,
+          storefront,
+          note,
+          pnlIncomeMode: pnlMode,
+          pnlIncome: finalIncome,
+          status: "saved",
+        },
+        actor,
+      );
+      await saveMonthlyIncome(month, finalIncome, actor);
+      setPnlIncome(moneyInputValue(finalIncome));
+      const snap = snapshotDraft(
+        segToDraft(delivery),
+        segToDraft(storefront),
+        note,
+        pnlMode,
+        moneyInputValue(finalIncome),
+      );
+      savedSnapRef.current = snap;
+      setDirty(false);
+      setMsg(
+        `ใส่รายได้ทดลอง ${formatPlainNumber(finalIncome)} เข้า P&L แล้ว · เดือนยังไม่ล็อก`,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -1140,7 +1259,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           {tab === "close" ? (
             <section className="vat-close-panel">
               <p className="muted vat-sales-hint vat-hint-one-line">
-                ปิดงบ = ยืนยันสรุป → ใส่รายได้ P&L · ปิดแล้วล็อกทั้งเดือน
+                ดึงบช. พนง. + เจ้าของ ดูระหว่างงวดได้ · ใส่รายได้ทดลองได้โดยไม่ล็อก ·
+                ปิดงบจริงค่อยล็อกเดือน
               </p>
 
               <SummaryVatTable
@@ -1149,11 +1269,94 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                 totals={totals}
               />
 
+              <div className="vat-books-block">
+                <div className="vat-books-head">
+                  <h2 className="vat-table-title">บช. สองสมุด — เดือน {month}</h2>
+                  <button
+                    type="button"
+                    className="vat-mini-btn"
+                    disabled={booksBusy || busy}
+                    onClick={() => void pullBothBooks()}
+                  >
+                    {booksBusy ? "กำลังดึง…" : "ดึงบช. พนง. + เจ้าของ"}
+                  </button>
+                </div>
+                <p className="muted vat-sales-hint vat-hint-one-line">
+                  ดึงเข้า = ดูยอดออกจาก ledger / ownerBooks ตามเดือน · ไม่ใช่ปิดงบ
+                  {booksPulledAt
+                    ? ` · ดึงล่าสุด ${formatDateTimeShort(booksPulledAt)}`
+                    : " · ยังไม่ได้ดึง"}
+                </p>
+                <div className="sheet-wrap vat-month-slim-wrap">
+                  <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+                    <thead>
+                      <tr>
+                        <th className="col-seg">บช.</th>
+                        <th className="col-num">COGS</th>
+                        <th className="col-num">SGA</th>
+                        <th className="col-num">สินทรัพย์</th>
+                        <th className="col-num">อื่น</th>
+                        <th className="col-num">รวมออก</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(
+                        [
+                          ["บช. พนักงาน", bookStaff],
+                          ["บช. เจ้าของ", bookOwner],
+                        ] as const
+                      ).map(([label, row]) => (
+                        <tr key={label}>
+                          <td className="col-seg">{label}</td>
+                          <td className="col-num">
+                            {row ? fmt(row.cogs) : "—"}
+                          </td>
+                          <td className="col-num">
+                            {row ? fmt(row.sga) : "—"}
+                          </td>
+                          <td className="col-num">
+                            {row ? fmt(row.asset) : "—"}
+                          </td>
+                          <td className="col-num">
+                            {row ? fmt(row.other) : "—"}
+                          </td>
+                          <td className="col-num col-net">
+                            {row ? fmt(bookOutTotal(row)) : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                      {bookStaff && bookOwner ? (
+                        <tr className="vat-sales-totals-row">
+                          <td className="col-seg">รวมสองบช.</td>
+                          <td className="col-num">
+                            {fmt(bookStaff.cogs + bookOwner.cogs)}
+                          </td>
+                          <td className="col-num">
+                            {fmt(bookStaff.sga + bookOwner.sga)}
+                          </td>
+                          <td className="col-num">
+                            {fmt(bookStaff.asset + bookOwner.asset)}
+                          </td>
+                          <td className="col-num">
+                            {fmt(bookStaff.other + bookOwner.other)}
+                          </td>
+                          <td className="col-num col-net">
+                            {fmt(
+                              bookOutTotal(bookStaff) + bookOutTotal(bookOwner),
+                            )}
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
               <div className="sheet-wrap vat-month-slim-wrap">
                 <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
                   <thead>
                     <tr>
-                      <th className="col-seg">รายการปิดงบ → P&L</th>
+                      <th className="col-seg">รายได้ → P&L</th>
                       <th className="col-num">ค่า</th>
                     </tr>
                   </thead>
@@ -1226,14 +1429,24 @@ export function VatMonthlyWorkbench({ actor }: Props) {
 
               <div className="vat-month-actions vat-month-actions--mini">
                 {!locked ? (
-                  <button
-                    type="button"
-                    className="vat-mini-btn vat-mini-btn--primary"
-                    disabled={busy || totals.grossSales <= 0}
-                    onClick={() => void closeMonth()}
-                  >
-                    ปิดงบ → P&L
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="vat-mini-btn"
+                      disabled={busy || totals.grossSales <= 0}
+                      onClick={() => void pushTrialIncome()}
+                    >
+                      ใส่รายได้ทดลอง → P&L
+                    </button>
+                    <button
+                      type="button"
+                      className="vat-mini-btn vat-mini-btn--primary"
+                      disabled={busy || totals.grossSales <= 0}
+                      onClick={() => void closeMonth()}
+                    >
+                      ปิดงบจริง → ล็อก
+                    </button>
+                  </>
                 ) : (
                   <button
                     type="button"

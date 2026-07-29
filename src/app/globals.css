@@ -16295,13 +16295,48 @@ a.ghost-btn {
 
 .vat-month-slim .col-rate,
 .vat-month-slim .col-pct {
-  text-align: left;
+  text-align: center;
   width: auto;
   min-width: max-content;
 }
 
-.vat-month-slim .col-rate {
+/* ตารางภาษีขาย: ตรึงคอลัมน์นำส่ง % ให้เดลิเวอรี่/หน้าร้านตรงแนว */
+.vat-month-slim--output {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 42rem;
+}
+
+.vat-month-slim--output .vat-col-seg {
+  width: 7.5rem;
+}
+
+.vat-month-slim--output .vat-col-gross {
+  width: 9.5rem;
+}
+
+.vat-month-slim--output .vat-col-remit-pct,
+.vat-month-slim--output .vat-col-rate {
+  width: 4.6rem;
+}
+
+.vat-month-slim--output .vat-col-money {
+  width: 5.5rem;
+}
+
+.vat-month-slim--output .col-remit,
+.vat-month-slim--output .col-rate {
   text-align: center;
+}
+
+.vat-month-slim--output .col-remit .vat-tap-edit,
+.vat-month-slim--output .col-rate .vat-tap-edit {
+  justify-content: center;
+  width: 100%;
+}
+
+.vat-tap-edit--static {
+  pointer-events: none;
 }
 
 .vat-month-slim .col-net {
@@ -16446,6 +16481,23 @@ a.ghost-btn {
   max-width: none;
   padding: 0 0.25rem;
   font-size: 0.72rem;
+}
+
+.vat-books-block {
+  margin: 0.35rem 0 0.55rem;
+}
+
+.vat-books-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.1rem;
+}
+
+.vat-books-head .vat-table-title {
+  margin: 0;
 }
 
 .vat-table-block {
