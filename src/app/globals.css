@@ -17158,6 +17158,17 @@ a.ghost-btn {
   margin-top: 0.2rem;
 }
 
+.vat-table-subtitle {
+  margin: 0.35rem 0 0.15rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: rgba(28, 42, 31, 0.88);
+}
+
+.vat-month-books .vat-table-block {
+  margin-bottom: 0.65rem;
+}
+
 .vat-net-strip {
   display: flex;
   flex-wrap: wrap;

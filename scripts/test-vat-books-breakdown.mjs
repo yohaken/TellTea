@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const lib = readFileSync(join(root, "src/lib/books-vat-month.ts"), "utf8");
 const ui = readFileSync(
-  join(root, "src/components/vat-sales/VatMonthlyWorkbench.tsx"),
+  join(root, "src/components/vat-sales/VatMonthBooks.tsx"),
   "utf8",
 );
 

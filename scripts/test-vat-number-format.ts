@@ -35,7 +35,7 @@ assert.match(doc, /moneyFieldValue/);
 assert.match(doc, /Checklist ตอนสร้าง/);
 
 const workbench = readFileSync(
-  join(root, "src/components/vat-sales/VatMonthlyWorkbench.tsx"),
+  join(root, "src/components/vat-sales/VatMonthBooks.tsx"),
   "utf8",
 );
 assert.match(workbench, /normalizeMoneyFieldText/);

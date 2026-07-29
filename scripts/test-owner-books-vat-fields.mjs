@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const libSrc = readFileSync(join(root, "src/lib/owner-books.ts"), "utf8");
 const pageSrc = readFileSync(join(root, "src/app/owner-books/page.tsx"), "utf8");
 const vatSrc = readFileSync(
-  join(root, "src/components/vat-sales/VatMonthlyWorkbench.tsx"),
+  join(root, "src/components/vat-sales/VatMonthBooks.tsx"),
   "utf8",
 );
 

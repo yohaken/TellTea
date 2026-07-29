@@ -838,15 +838,16 @@ export async function fileVatMonthlyReturn(
 ): Promise<VatMonthlyReturn> {
   if (!isMonthKey(monthKey)) throw new Error("เดือนไม่ถูกต้อง");
   const current = await loadVatMonthlyReturn(monthKey);
-  if (current.totals.grossSales <= 0) {
-    throw new Error("ยังไม่มียอดขายในเดือนนี้");
-  }
   const income =
     opts?.forceIncome != null
       ? normalizeMoney(opts.forceIncome)
       : current.pnlIncome || proposePnlIncome(current.totals, current.pnlIncomeMode);
   if (!Number.isFinite(income) || income < 0) {
     throw new Error("ยอดรายได้ไม่ถูกต้อง");
+  }
+  // ปิดงบได้เมื่อมียอดขาย VAT หรือรายได้ถึงร้าน (ยอดโอน)
+  if (current.totals.grossSales <= 0 && income <= 0) {
+    throw new Error("ยังไม่มีรายได้หรือยอดขายในเดือนนี้");
   }
 
   try {

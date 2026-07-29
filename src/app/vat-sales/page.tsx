@@ -6,7 +6,7 @@ import { AuthGate } from "@/components/AuthGate";
 import { OwnerBooksModeSwitch } from "@/components/OwnerBooksModeSwitch";
 import { VatAgentChatPopup } from "@/components/vat-sales/VatAgentChatPopup";
 import { VatImportWorkbench } from "@/components/vat-sales/VatImportWorkbench";
-import { VatMonthlyWorkbench } from "@/components/vat-sales/VatMonthlyWorkbench";
+import { VatMonthBooks } from "@/components/vat-sales/VatMonthBooks";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { bangkokMonthKey } from "@/lib/vat-sales";
@@ -62,7 +62,7 @@ function VatSalesGate() {
       </div>
       {/* คงทั้งสองแท็บใน DOM — ผสานนำเข้า→เดือนแบบเรียลไทม์ */}
       <div hidden={tab !== "month"}>
-        <VatMonthlyWorkbench actor={actor} />
+        <VatMonthBooks actor={actor} />
       </div>
       <div hidden={tab !== "import"}>
         <VatImportWorkbench actor={actor} />
