@@ -6,6 +6,8 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getDb } from "./firebase";
 import { TUNE_DESK_PROTOCOL } from "./vat-agent-chat";
 import { VAT_IMPORT_AI_RULES } from "./vat-import-guide";
+import { VAT_IMPORT_VERIFY_NOTES } from "./vat-import-verify";
+
 
 
 export const VAT_IMPORT_AI_NOTES_DOC = "vatImportAiNotes";
@@ -18,20 +20,19 @@ export type VatImportAiNotes = {
 
 export function defaultVatImportAiNotesText(): string {
   return [
-    "VAT IMPORT — AI NOTES (Firestore meta/vatImportAiNotes)",
-    "คนไม่ต้องอ่าน · local AI อ่านจาก #vat-import-ai-notes ใน DOM (อาจซ่อนตา)",
-    "คำสั่งล่าสุดอยู่ที่นี่ · ทับค่าเริ่มเมื่อเจ้าของกด「แก้โน้ต AI」บันทึก",
+    "VAT IMPORT — AI NOTES",
+    "อ่านจาก #vat-import-ai-notes · คนไม่ต้องอ่าน",
     "",
     ...VAT_IMPORT_AI_RULES.map((r, i) => `${i + 1}. ${r}`),
     "",
-    "— โต๊ะจูน (Tune Desk) —",
+    "— โต๊ะจูน —",
     ...TUNE_DESK_PROTOCOL.map((r, i) => `T${i + 1}. ${r}`),
     "",
-    "เติมหลัก = กรอก/วางข้อความ · ไฟล์เป็นทางเลือกหุบไว้",
-    "หน้าร้าน: นอกตารางนำเข้า — ยอดจริงแท็บเดือน",
-    "ใช้เข้าเดือน = ผสานเข้าแท็บเดือน",
+    "— verify —",
+    ...VAT_IMPORT_VERIFY_NOTES.map((r, i) => `V${i + 1}. ${r}`),
   ].join("\n");
 }
+
 
 
 

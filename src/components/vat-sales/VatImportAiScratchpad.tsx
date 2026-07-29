@@ -75,10 +75,10 @@ export function VatImportAiScratchpad({ actor }: Props) {
           AI
         </summary>
         <p className="muted vat-import-ai-scratch-hint">
-          โน้ตสำหรับ local AI เท่านั้น · เก็บในระบบ · แก้ข้อความได้โดยไม่แก้โครงเว็บ
+          สำหรับ AI · แก้ได้โดยไม่ deploy
           {updatedAt
-            ? ` · อัปเดต ${new Date(updatedAt).toLocaleString("th-TH")}`
-            : " · ยังใช้ค่าเริ่ม"}
+            ? ` · ${new Date(updatedAt).toLocaleString("th-TH")}`
+            : " · ค่าเริ่ม"}
         </p>
         {err ? <p className="error-text">{err}</p> : null}
         {editing ? (

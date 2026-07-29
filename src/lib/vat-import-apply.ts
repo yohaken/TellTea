@@ -19,6 +19,7 @@ import {
   type VatImportChannel,
   type VatImportRow,
 } from "./vat-import";
+import { notifyVatImportMonthMerged } from "./vat-import-month-sync";
 
 const DELIVERY_KEYS = ["shopee", "grab", "lineman"] as const satisfies ReadonlyArray<
   Exclude<VatImportChannel, "storefront">
@@ -110,43 +111,68 @@ function patchChannelGp(
 }
 
 /**
- * เขียนเข้า vatMonthlyReturns/{month} + ตั้งแถวเป็น applied
- * - ยอดขายช่องทาง: ทับเฉพาะช่องที่มีแถว sales/gross
- * - ยอดโอน: โหมด transfer ต่อช่องทาง
- * - ภาษีซื้อ GP เดลิเวอรี่: Σ gpVat ของช่องทางเดลิเวอรี่ที่อยู่ในชุด apply
- *   (รวมกับ gpVat ช่องทางที่ไม่ได้แตะครั้งนี้ — เก็บของเดิม)
+ * ผสานแถวนำเข้า → vatMonthlyReturns/{month} (เนื้อเดียวกับแท็บเดือน)
+ * - ค่าเริ่ม: ไม่ล็อกแถวเป็น applied (แก้ต่อได้ · ซิงก์อัตโนมัติ)
+ * - markApplied: true = โหมดเก่า (ตั้ง applied)
  */
-export async function applyVatImportRowsToMonth(input: {
+export async function mergeVatImportIntoMonth(input: {
   monthKey: string;
   rows: VatImportRow[];
   actor: string;
+  markApplied?: boolean;
 }): Promise<{
   preview: ApplyVatImportPreview;
   saved: VatMonthlyReturn;
-  appliedCount: number;
+  mergedCount: number;
+  skipped: boolean;
+  reason?: string;
 }> {
   const preview = previewApplyVatImportRows(input.monthKey, input.rows);
   if (preview.rowIds.length === 0) {
-    throw new Error("ไม่มีแถวที่จะใช้เข้าเดือน");
+    return {
+      preview,
+      saved: await loadVatMonthlyReturn(input.monthKey),
+      mergedCount: 0,
+      skipped: true,
+      reason: "ไม่มีแถว",
+    };
   }
   const ret = await loadVatMonthlyReturn(input.monthKey);
   if (ret.status === "filed") {
-    throw new Error("เดือนนี้ปิดงบแล้ว — ปลดล็อกก่อน");
+    return {
+      preview,
+      saved: ret,
+      mergedCount: 0,
+      skipped: true,
+      reason: "เดือนปิดงบแล้ว",
+    };
   }
 
   const channels = { ...ret.delivery.channels };
   let gpMap = mapGpByChannel(ret.pnlGpByChannel);
   let touchedVat = false;
+  let touchedSales = false;
 
   for (const k of DELIVERY_KEYS) {
     const sum = preview.byChannel[k];
     if (sum.salesCount > 0 && sum.gross > 0) {
       channels[k] = sum.gross;
+      touchedSales = true;
     }
     if (sum.salesCount > 0 || sum.gpVat > 0) {
       gpMap = patchChannelGp(gpMap, k, sum);
     }
     if (sum.gpVat > 0) touchedVat = true;
+  }
+
+  if (!touchedSales && !touchedVat) {
+    return {
+      preview,
+      saved: ret,
+      mergedCount: 0,
+      skipped: true,
+      reason: "ยังไม่มียอดที่จะผสาน",
+    };
   }
 
   const overrideSum = roundMoney(
@@ -202,22 +228,54 @@ export async function applyVatImportRowsToMonth(input: {
     () => undefined,
   );
 
-  const now = Date.now();
-  for (const id of preview.rowIds) {
-    await patchVatImportRow(
-      id,
-      {
-        status: "applied",
-        appliedAt: now,
-        appliedToMonth: input.monthKey,
-      },
-      input.actor,
-    );
+  notifyVatImportMonthMerged(input.monthKey, saved);
+
+  if (input.markApplied) {
+    const now = Date.now();
+    for (const id of preview.rowIds) {
+      await patchVatImportRow(
+        id,
+        {
+          status: "applied",
+          appliedAt: now,
+          appliedToMonth: input.monthKey,
+        },
+        input.actor,
+      );
+    }
   }
 
   return {
     preview,
     saved,
-    appliedCount: preview.rowIds.length,
+    mergedCount: preview.rowIds.length,
+    skipped: false,
+  };
+}
+
+/** @deprecated ใช้ mergeVatImportIntoMonth — คงชื่อเดิมให้โค้ดเก่า */
+export async function applyVatImportRowsToMonth(input: {
+  monthKey: string;
+  rows: VatImportRow[];
+  actor: string;
+}): Promise<{
+  preview: ApplyVatImportPreview;
+  saved: VatMonthlyReturn;
+  appliedCount: number;
+}> {
+  const result = await mergeVatImportIntoMonth({
+    ...input,
+    markApplied: true,
+  });
+  if (result.skipped && result.reason === "เดือนปิดงบแล้ว") {
+    throw new Error("เดือนนี้ปิดงบแล้ว — ปลดล็อกก่อน");
+  }
+  if (result.skipped && result.mergedCount === 0 && result.preview.rowIds.length === 0) {
+    throw new Error("ไม่มีแถวที่จะใช้เข้าเดือน");
+  }
+  return {
+    preview: result.preview,
+    saved: result.saved,
+    appliedCount: result.mergedCount,
   };
 }

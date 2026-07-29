@@ -2,9 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  applyVatImportRowsToMonth,
+  mergeVatImportIntoMonth,
   previewApplyVatImportRows,
 } from "@/lib/vat-import-apply";
+import {
+  computeImportFillStats,
+  formatFillPct,
+} from "@/lib/vat-import-fill";
+import { verifyVatImportRows } from "@/lib/vat-import-verify";
+
 import {
   createVatImportRow,
   createVatImportRowsSkippingDupes,
@@ -82,7 +88,7 @@ const CHANNEL_SHORT: Record<VatImportChannel, string> = {
 type Props = { actor: string };
 
 /** ช่องทางในตารางนำเข้า — ไม่มีหน้าร้าน */
-const CHANNELS: VatImportChannel[] = ["shopee", "grab", "lineman"];
+const CHANNELS = ["shopee", "grab", "lineman"] as const;
 
 
 function fmt(n: number) {
@@ -145,7 +151,8 @@ export function VatImportWorkbench({ actor }: Props) {
   const [guideOpen, setGuideOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [pasteOpen, setPasteOpen] = useState(false);
-
+  const [syncNote, setSyncNote] = useState("");
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -201,6 +208,51 @@ export function VatImportWorkbench({ actor }: Props) {
   );
 
   const sums = useMemo(() => sumVatImportDraftByChannel(rows), [rows]);
+
+  const fillStats = useMemo(
+    () => computeImportFillStats(month, rows),
+    [month, rows],
+  );
+
+  const verifyReport = useMemo(() => verifyVatImportRows(rows), [rows]);
+
+  const scheduleMergeToMonth = useCallback(
+    (list: VatImportRow[], silent = true) => {
+      if (syncTimer.current) clearTimeout(syncTimer.current);
+      syncTimer.current = setTimeout(() => {
+        void (async () => {
+          try {
+            const draftish = list.filter((r) => r.status !== "skipped");
+            const result = await mergeVatImportIntoMonth({
+              monthKey: month,
+              rows: draftish,
+              actor,
+              markApplied: false,
+            });
+            if (result.skipped) {
+              if (!silent && result.reason) setSyncNote(result.reason);
+              return;
+            }
+            setSyncNote(
+              `ผสานเข้าเดือนอัตโนมัติ · Σ ขาย SF ${formatVatMoney(result.preview.byChannel.shopee.gross)} · GB ${formatVatMoney(result.preview.byChannel.grab.gross)} · LM ${formatVatMoney(result.preview.byChannel.lineman.gross)}`,
+            );
+          } catch (e) {
+            if (!silent) {
+              setError(e instanceof Error ? e.message : String(e));
+            }
+          }
+        })();
+      }, 700);
+    },
+    [actor, month],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (syncTimer.current) clearTimeout(syncTimer.current);
+    };
+  }, []);
+
 
   const dedupeWarnings = useMemo(() => {
     const seen = new Map<string, string>();
@@ -308,11 +360,13 @@ export function VatImportWorkbench({ actor }: Props) {
         actor,
         row.createdAt,
       );
-      setRows((prev) =>
-        prev
+      setRows((prev) => {
+        const next = prev
           .map((r) => (r.id === row.id ? saved : r))
-          .sort((a, b) => a.dateKey.localeCompare(b.dateKey)),
-      );
+          .sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+        scheduleMergeToMonth(next);
+        return next;
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -430,9 +484,11 @@ export function VatImportWorkbench({ actor }: Props) {
         existing,
       );
       const filled = created.length + updated.length;
-      setRows(
-        [...existing].sort((a, b) => a.dateKey.localeCompare(b.dateKey)),
+      const nextLm = [...existing].sort((a, b) =>
+        a.dateKey.localeCompare(b.dateKey),
       );
+      setRows(nextLm);
+      scheduleMergeToMonth(nextLm);
       const warn =
         parsed.warnings.length > 0
           ? ` · เตือน: ${parsed.warnings.join(" · ")}`
@@ -495,19 +551,11 @@ export function VatImportWorkbench({ actor }: Props) {
         actor,
         existing,
       );
-      if (targetMonth === month) {
-        setRows((prev) =>
-          [...prev, ...created].sort((a, b) =>
-            a.dateKey.localeCompare(b.dateKey),
-          ),
-        );
-      } else {
-        setRows(
-          [...existing, ...created].sort((a, b) =>
-            a.dateKey.localeCompare(b.dateKey),
-          ),
-        );
-      }
+      const nextSp = [...existing, ...created].sort((a, b) =>
+        a.dateKey.localeCompare(b.dateKey),
+      );
+      setRows(nextSp);
+      scheduleMergeToMonth(nextSp);
       setFilterChannel("shopee");
       setMsg(
         `Shopee ใบกำกับ · นำเข้า ${created.length}` +
@@ -567,9 +615,11 @@ export function VatImportWorkbench({ actor }: Props) {
         existing,
       );
       const filledRows = [...created, ...updated];
-      setRows(
-        [...existing].sort((a, b) => a.dateKey.localeCompare(b.dateKey)),
+      const nextGb = [...existing].sort((a, b) =>
+        a.dateKey.localeCompare(b.dateKey),
       );
+      setRows(nextGb);
+      scheduleMergeToMonth(nextGb);
       setFilterChannel("grab");
       const g = filledRows.reduce((s, r) => s + r.grossInclusive, 0);
       setMsg(
@@ -589,35 +639,26 @@ export function VatImportWorkbench({ actor }: Props) {
     }
   }
 
-  async function onApplyToMonth() {
-    const targets = selectedRows;
-    if (targets.length === 0) {
-      setError("ไม่มีแถว draft ที่จะใช้เข้าเดือน");
-      return;
-    }
-    const prev = previewApplyVatImportRows(month, targets);
-    const ok = window.confirm(
-      `ใช้ ${prev.rowIds.length} แถวเข้าเดือน ${formatThaiMonthKey(month)}?\n` +
-        `LM ขาย ${formatVatMoney(prev.byChannel.lineman.gross)} · ` +
-        `Grab ${formatVatMoney(prev.byChannel.grab.gross)} · ` +
-        `Shopee ${formatVatMoney(prev.byChannel.shopee.gross)}\n` +
-        `ภาษีซื้อ GP เดลิเวอรี่ Σ ${formatVatMoney(prev.deliveryGpVat)}`,
-    );
-    if (!ok) return;
+  async function onForceSyncMonth() {
     setBusyId("apply");
     setError("");
     setMsg("");
     try {
-      const result = await applyVatImportRowsToMonth({
+      const draftish = rows.filter((r) => r.status !== "skipped");
+      const result = await mergeVatImportIntoMonth({
         monthKey: month,
-        rows: targets,
+        rows: draftish,
         actor,
+        markApplied: false,
       });
-      await refresh();
-      setSelected({});
-      setMsg(
-        `ใช้เข้าเดือนแล้ว ${result.appliedCount} แถว · GP VAT ${formatVatMoney(result.preview.deliveryGpVat)} · สลับแท็บ「เดือน」ตรวจยอด`,
-      );
+      if (result.skipped) {
+        setMsg(result.reason || "ยังไม่ผสาน");
+      } else {
+        setSyncNote(
+          `ผสานเข้าเดือน · SF ${formatVatMoney(result.preview.byChannel.shopee.gross)} · GB ${formatVatMoney(result.preview.byChannel.grab.gross)} · LM ${formatVatMoney(result.preview.byChannel.lineman.gross)}`,
+        );
+        setMsg("ผสานเข้าแท็บเดือนแล้ว (แก้แถวต่อได้ · ซิงก์อัตโนมัติ)");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -654,9 +695,11 @@ export function VatImportWorkbench({ actor }: Props) {
         actor,
         existing,
       );
-      setRows(
-        [...existing].sort((a, b) => a.dateKey.localeCompare(b.dateKey)),
+      const next = [...existing].sort((a, b) =>
+        a.dateKey.localeCompare(b.dateKey),
       );
+      setRows(next);
+      scheduleMergeToMonth(next);
       setPasteText("");
       setMsg(
         `วางข้อความ · เติม ${created.length + updated.length} แถว` +
@@ -664,7 +707,8 @@ export function VatImportWorkbench({ actor }: Props) {
           (skipped ? ` · ข้าม ${skipped}` : "") +
           (parsed.errors.length
             ? ` · อ่านไม่ได้ ${parsed.errors.length}`
-            : ""),
+            : "") +
+          " · ผสานเดือนอัตโนมัติ",
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -701,9 +745,27 @@ export function VatImportWorkbench({ actor }: Props) {
     <div className="vat-import-workbench">
       <header className="vat-sales-header">
         <p className="vat-sales-lead">
-          เดือน → สร้างตาราง SF/GB/LM → กรอก/วางข้อความ → ใช้เข้าเดือน · หน้าร้านอยู่นอกตารางนี้
+          กรอก/วาง → ผสานเดือนอัตโนมัติ (GP + ภาษีซื้อ) · ไม่รวมหน้าร้าน
         </p>
       </header>
+
+      <div className="vat-import-fill-strip" role="status">
+        <span>
+          ครบรวม <strong>{formatFillPct(fillStats.overallPct)}</strong>
+        </span>
+        <span className="muted">
+          SF {formatFillPct(fillStats.byChannel.shopee.pct)} (
+          {fillStats.byChannel.shopee.daysFilled}/{fillStats.daysInMonth})
+        </span>
+        <span className="muted">
+          GB {formatFillPct(fillStats.byChannel.grab.pct)} (
+          {fillStats.byChannel.grab.daysFilled}/{fillStats.daysInMonth})
+        </span>
+        <span className="muted">
+          LM {formatFillPct(fillStats.byChannel.lineman.pct)} (
+          {fillStats.byChannel.lineman.daysFilled}/{fillStats.daysInMonth})
+        </span>
+      </div>
 
       <VatImportAiScratchpad actor={actor} />
 
@@ -857,14 +919,12 @@ export function VatImportWorkbench({ actor }: Props) {
         </button>
         <button
           type="button"
-          className="vat-mini-btn vat-mini-btn--primary"
+          className="vat-mini-btn"
           disabled={Boolean(busyId) || applyPreview.rowIds.length === 0}
-          onClick={() => void onApplyToMonth()}
-          title="ผสานยอดจากตารางนี้เข้าแท็บเดือน"
+          onClick={() => void onForceSyncMonth()}
+          title="บังคับผสานเข้าแท็บเดือนทันที (ปกติซิงก์อัตโนมัติหลังแก้)"
         >
-          {busyId === "apply"
-            ? "กำลังใส่เดือน…"
-            : `ใช้เข้าเดือน (${applyPreview.rowIds.length})`}
+          {busyId === "apply" ? "กำลังผสาน…" : "ซิงก์เดือน"}
         </button>
         <button
           type="button"
@@ -979,25 +1039,44 @@ export function VatImportWorkbench({ actor }: Props) {
       </details>
 
       <p className="muted vat-sales-hint vat-hint-one-line">
-        ติ๊กแถว draft (ไม่ติ๊ก = ทุก draft ที่กรอง) → <strong>ใช้เข้าเดือน</strong>{" "}
-        ผสานเข้าแท็บเดือน
+        แก้แล้วซิงก์เดือน · มี verify ก่อนปิดงบ
       </p>
 
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
+      {syncNote ? <p className="muted vat-sales-msg">{syncNote}</p> : null}
+      {verifyReport.issues.length > 0 ? (
+        <p className="vat-import-verify" role="status">
+          {verifyReport.summary}
+          {verifyReport.issues.slice(0, 3).map((i) => (
+            <span key={`${i.rowId}-${i.code}`} className="vat-import-verify-item">
+              {" "}
+              · {i.dateKey} {CHANNEL_SHORT[i.channel as VatImportChannel] || i.channel}:{" "}
+              {i.message}
+            </span>
+          ))}
+          {verifyReport.issues.length > 3
+            ? ` · +${verifyReport.issues.length - 3}`
+            : ""}
+        </p>
+      ) : null}
 
       <div className="vat-import-sum-strip" role="status">
-        {CHANNELS.map((c) => (
-          <span key={c} className="vat-import-sum-item">
-            {VAT_IMPORT_CHANNEL_LABELS[c]}{" "}
-            <strong>{sums[c].count}</strong>
-            <span className="muted">
-              {" "}
-              ขาย {fmt(sums[c].gross)} · โอน {fmt(sums[c].netTransfer)} · GP{" "}
-              {fmt(sums[c].gpVat)}
+        {CHANNELS.map((c) => {
+          const st = fillStats.byChannel[c];
+          return (
+            <span key={c} className="vat-import-sum-item">
+              {VAT_IMPORT_CHANNEL_LABELS[c]}{" "}
+              <strong>{formatFillPct(st.pct)}</strong>
+              <span className="muted">
+                {" "}
+                {st.daysFilled}/{fillStats.daysInMonth} วัน · ขาย{" "}
+                {fmt(sums[c].gross)} · โอน {fmt(sums[c].netTransfer)} · GP{" "}
+                {fmt(sums[c].gpVat)}
+              </span>
             </span>
-          </span>
-        ))}
+          );
+        })}
       </div>
 
       {loading ? (
@@ -1216,8 +1295,7 @@ export function VatImportWorkbench({ actor }: Props) {
 
       {dedupeWarnings.size > 0 ? (
         <p className="muted vat-sales-hint vat-hint-one-line">
-          มีแถวที่คีย์ซ้ำ (ช่องทาง+เลขใบกำกับ หรือ วัน+ชนิด) — แถวไฮไลต์ · ตรวจก่อน
-          apply เดือน
+          มีแถวคีย์ซ้ำ — แถวไฮไลต์
         </p>
       ) : null}
     </div>

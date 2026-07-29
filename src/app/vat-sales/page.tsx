@@ -11,7 +11,6 @@ import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { bangkokMonthKey } from "@/lib/vat-sales";
 
-
 type VatSalesTab = "month" | "import";
 
 export default function VatSalesPage() {
@@ -61,13 +60,14 @@ function VatSalesGate() {
           นำเข้า
         </button>
       </div>
-      {tab === "month" ? (
+      {/* คงทั้งสองแท็บใน DOM — ผสานนำเข้า→เดือนแบบเรียลไทม์ */}
+      <div hidden={tab !== "month"}>
         <VatMonthlyWorkbench actor={actor} />
-      ) : (
+      </div>
+      <div hidden={tab !== "import"}>
         <VatImportWorkbench actor={actor} />
-      )}
+      </div>
       <VatAgentChatPopup actor={actor} monthKey={bangkokMonthKey()} />
     </div>
   );
 }
-

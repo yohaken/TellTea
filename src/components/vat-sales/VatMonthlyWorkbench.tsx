@@ -30,6 +30,15 @@ import {
   parseVatPctInput,
   pctFieldValue,
 } from "@/lib/vat-number-format";
+import { listVatImportRows } from "@/lib/vat-import";
+import {
+  computeImportFillStats,
+  formatFillPct,
+} from "@/lib/vat-import-fill";
+import {
+  recentVatImportMergeAt,
+  subscribeVatImportMonthMerged,
+} from "@/lib/vat-import-month-sync";
 import {
   DEFAULT_OUTPUT_PCT,
   DEFAULT_PERIOD_START_DAY,
@@ -597,8 +606,7 @@ function OutputVatTable({
         </table>
       </div>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        หน้าร้าน: คิด VAT จากคอลัมน์นำส่งจริงเท่านั้น (default นำส่ง 90%) · เรทขาย %
-        เช่น 7% = รวมในราคา (7÷107)
+        หน้าร้านคิดจากยอดนำส่ง · default 90%
       </p>
     </section>
   );
@@ -826,10 +834,9 @@ function InputVatTable({
 
   return (
     <section className="vat-table-block">
-      <h2 className="vat-table-title">3) ภาษีซื้อ — วัตถุดิบ + GP</h2>
+      <h2 className="vat-table-title">ภาษีซื้อ — วัตถุดิบ + GP</h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        GP เดลิเวอรี่มาจากตารางช่องทาง · วัตถุดิบ = ติ๊ก「รวมเข้าระบบ」จากสองบช. ·
-        อย่าคีย์บิลซ้ำ
+        GP เดลิเวอรี่จากช่องทาง · วัตถุดิบดึงจากสองบช.
       </p>
       {!locked ? (
         <div className="vat-month-actions vat-month-actions--mini">
@@ -1013,8 +1020,7 @@ function InputVatTable({
                 </tbody>
               </table>
               <p className="muted vat-sales-hint vat-hint-one-line">
-                เริ่มไม่ติ๊ก · ติ๊กทีละรายการหรือหัวตารางรวมยอด · จำในรายการเดิมครั้งหน้า ·
-                แตะแถวดูรูป/ยอดแบบบช.
+                ติ๊ก「รวมเข้าระบบ」· แตะแถวดูรายละเอียด
               </p>
             </div>
           )
@@ -1184,11 +1190,10 @@ function IncomeBridgeTable({
   return (
     <section className="vat-table-block vat-income-bridge">
       <h2 className="vat-table-title">
-        2) GP รายช่องทาง → VAT + P&L — {formatThaiMonthKey(month)}
+        GP รายช่องทาง — {formatThaiMonthKey(month)}
       </h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        ใส่ยอดโอนจริง → คชจ. = รายได้ − โอนหลัง · ภาษีซื้อ GP จากคชจ. · Σ →
-        ภาษีซื้อเดลิเวอรี่ · เฉลี่ย = ภาพรวมเท่านั้น
+        ยอดโอน → คชจ. GP · ภาษีซื้อ GP → รวมเดลิเวอรี่
       </p>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table vat-gp-channel-table">
@@ -1582,6 +1587,13 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   const [yearMonths, setYearMonths] = useState<
     { month: string; income: number; opex: number; profit: number }[]
   >([]);
+  const [importFillPct, setImportFillPct] = useState<{
+    overall: number;
+    shopee: number;
+    grab: number;
+    lineman: number;
+    days: number;
+  } | null>(null);
 
   deliveryDraftRef.current = deliveryDraft;
   storefrontDraftRef.current = storefrontDraft;
@@ -1633,11 +1645,21 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     if (!hydratedRef.current) setLoading(true);
     setError("");
     try {
-      const [ret, st, taxSt] = await Promise.all([
+      const [ret, st, taxSt, importRows] = await Promise.all([
         loadVatMonthlyReturn(month),
         loadVatMonthlySettings(),
         loadPersonalTaxSettings(),
+        listVatImportRows(month).catch(() => []),
       ]);
+      const fill = computeImportFillStats(month, importRows);
+      setImportFillPct({
+        overall: fill.overallPct,
+        shopee: fill.byChannel.shopee.pct,
+        grab: fill.byChannel.grab.pct,
+        lineman: fill.byChannel.lineman.pct,
+        days: fill.daysInMonth,
+      });
+
       let d = segToDraft(ret.delivery);
       let s = segToDraft(ret.storefront);
       let n = ret.note;
@@ -1652,6 +1674,13 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           amount: ret.pnlDeliveryGpDeduct > 0 ? ret.pnlDeliveryGpDeduct : 0,
         },
       );
+
+      const importOwned =
+        ret.delivery.channels.shopee > 0 ||
+        ret.delivery.channels.grab > 0 ||
+        ret.delivery.channels.lineman > 0 ||
+        ret.delivery.gpVat > 0 ||
+        recentVatImportMergeAt(month) > 0;
 
       // ร่างในเครื่อง — รวมแบบไม่ให้ค่าว่างทับตัวเลข
       if (ret.status !== "filed") {
@@ -1672,19 +1701,63 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         if (typeof cached?.pnlIncome === "string" && cached.pnlIncome.trim()) {
           income = cached.pnlIncome;
         }
-        if (cached?.gpByChannel) {
+        if (cached?.gpByChannel && !importOwned) {
           nextGp = mapGpByChannel(cached.gpByChannel);
         }
       }
 
+      // ฟิลด์จากนำเข้า (ขายเดลิเวอรี่ / GP / ภาษีซื้อ GP) — เซิร์ฟเวอร์ชนะ
+      if (importOwned && ret.status !== "filed") {
+        const ch = ret.delivery.channels;
+        d = {
+          ...d,
+          channels: {
+            shopee:
+              ch.shopee > 0 ? moneyInputValue(ch.shopee) : d.channels.shopee,
+            grab: ch.grab > 0 ? moneyInputValue(ch.grab) : d.channels.grab,
+            lineman:
+              ch.lineman > 0 ? moneyInputValue(ch.lineman) : d.channels.lineman,
+          },
+          gpVat: moneyInputValue(ret.delivery.gpVat),
+          useGpEstimate: false,
+        };
+        nextGp = mapGpByChannel(
+          ret.pnlGpByChannel || st.pnlGpByChannel,
+          {
+            mode: ret.pnlDeliveryGpMode || "transfer",
+            pct: ret.pnlDeliveryGpPct > 0 ? ret.pnlDeliveryGpPct : 0,
+            amount: ret.pnlDeliveryGpDeduct > 0 ? ret.pnlDeliveryGpDeduct : 0,
+          },
+        );
+      }
+
       // ถ้ากำลังแก้ค้างอยู่ ห้ามรีเฟรชทับด้วยค่าว่างจากเซิร์ฟเวอร์
+      // (ยกเว้นฟิลด์นำเข้าที่เพิ่งผสาน — คงค่า importOwned ด้านบน)
       if (hydratedRef.current && dirtyRef.current) {
-        d = mergePreferMoney(d, deliveryDraftRef.current);
+        const recentImport =
+          Date.now() - recentVatImportMergeAt(month) < 5 * 60 * 1000;
+        if (!recentImport) {
+          d = mergePreferMoney(d, deliveryDraftRef.current);
+          nextGp = gpByChannelRef.current;
+        } else {
+          // คง ingredient / rates / tenders จากร่างที่แก้ค้าง
+          d = {
+            ...d,
+            ingredientVat: pickMoneyStr(
+              d.ingredientVat,
+              deliveryDraftRef.current.ingredientVat,
+            ),
+            rates: mapVatLogicRates(
+              deliveryDraftRef.current.rates || d.rates,
+            ),
+            remitPct:
+              deliveryDraftRef.current.remitPct || d.remitPct,
+          };
+        }
         s = mergePreferMoney(s, storefrontDraftRef.current);
         if (noteRef.current.trim()) n = noteRef.current;
         mode = pnlModeRef.current;
         if (pnlIncomeRef.current.trim()) income = pnlIncomeRef.current;
-        nextGp = gpByChannelRef.current;
       }
 
       setDoc(ret);
@@ -1759,6 +1832,63 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     setHydrated(false);
     void refresh();
   }, [refresh]);
+
+  // ผสานจากแท็บนำเข้า → อัปเดต GP ช่องทาง + ภาษีซื้อ GP แบบเรียลไทม์
+  useEffect(() => {
+    return subscribeVatImportMonthMerged((detail) => {
+      if (detail.monthKey !== month) return;
+      const ret = detail.saved;
+      if (ret.status === "filed") return;
+      const ch = ret.delivery.channels;
+      const nextGp = mapGpByChannel(ret.pnlGpByChannel);
+      setDoc(ret);
+      setDeliveryDraft((prev) => ({
+        ...prev,
+        channels: {
+          shopee:
+            ch.shopee > 0 ? moneyInputValue(ch.shopee) : prev.channels.shopee,
+          grab: ch.grab > 0 ? moneyInputValue(ch.grab) : prev.channels.grab,
+          lineman:
+            ch.lineman > 0
+              ? moneyInputValue(ch.lineman)
+              : prev.channels.lineman,
+        },
+        gpVat: moneyInputValue(ret.delivery.gpVat),
+        useGpEstimate: false,
+      }));
+      setGpByChannel(nextGp);
+      setOpenDelivery(true);
+      const dSeg = recomputeSegment({
+        ...ret.delivery,
+        kind: "delivery",
+      });
+      const sSeg = draftToSeg("storefront", storefrontDraftRef.current);
+      const bridge = buildIncomeBridge({
+        deliveryVatBase: dSeg.vatBase,
+        deliveryGrossSales: dSeg.grossSales,
+        storefrontVatBase: sSeg.vatBase,
+        storefrontGrossSales: sSeg.grossSales,
+        mode: pnlModeRef.current,
+        deliveryChannels: ret.delivery.channels,
+        outputPct: dSeg.rates.outputPct,
+        gpByChannel: nextGp,
+      });
+      setPnlIncome(moneyInputValue(bridge.pnlIncome));
+      setMsg("ซิงก์จากนำเข้า · GP + ภาษีซื้อ");
+      void listVatImportRows(month)
+        .then((importRows) => {
+          const fill = computeImportFillStats(month, importRows);
+          setImportFillPct({
+            overall: fill.overallPct,
+            shopee: fill.byChannel.shopee.pct,
+            grab: fill.byChannel.grab.pct,
+            lineman: fill.byChannel.lineman.pct,
+            days: fill.daysInMonth,
+          });
+        })
+        .catch(() => undefined);
+    });
+  }, [month]);
 
   const delivery = useMemo(
     () => draftToSeg("delivery", deliveryDraft),
@@ -2324,7 +2454,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     <div className="vat-monthly-workbench">
       <header className="vat-sales-header">
         <p className="vat-sales-lead">
-          VAT + P&L หน้าเดียว · ขาย → GP ช่องทาง → ซื้อ → บช. → ภ.ง.ด.
+          VAT + P&L · ขาย → GP/ซื้อ → บช. → ภ.ง.ด.
         </p>
       </header>
 
@@ -2398,6 +2528,18 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         <span>{period.labelInclusive}</span>
       </p>
 
+      {importFillPct ? (
+        <p className="vat-import-fill-strip vat-import-fill-strip--month" role="status">
+          <span>
+            นำเข้าครบ <strong>{formatFillPct(importFillPct.overall)}</strong>
+          </span>
+          <span className="muted">SF {formatFillPct(importFillPct.shopee)}</span>
+          <span className="muted">GB {formatFillPct(importFillPct.grab)}</span>
+          <span className="muted">LM {formatFillPct(importFillPct.lineman)}</span>
+          <span className="muted">· {importFillPct.days} วัน/เดือน</span>
+        </p>
+      ) : null}
+
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
 
@@ -2406,9 +2548,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       ) : (
         <>
           <p className="muted vat-sales-hint vat-hint-one-line">
-            จำในเครื่อง + เซฟร่างอัตโนมัติ · เรทขาย{" "}
-            {ratesLabel(DEFAULT_VAT_LOGIC_RATES)} · นำส่งหน้าร้าน{" "}
-            {DEFAULT_STOREFRONT_REMIT_PCT}% · ปิดงบจริงค่อยล็อก
+            จำในเครื่อง · เรท {ratesLabel(DEFAULT_VAT_LOGIC_RATES)} · หน้าร้าน{" "}
+            {DEFAULT_STOREFRONT_REMIT_PCT}% · ปิดงบค่อยล็อก
           </p>
 
           <OutputVatTable
@@ -2425,36 +2566,44 @@ export function VatMonthlyWorkbench({ actor }: Props) {
             onStorefrontChange={setStorefrontDraftTracked}
           />
 
-          <IncomeBridgeTable
-            month={month}
-            locked={Boolean(locked)}
-            mode={pnlMode}
-            bridge={incomeBridge}
-            gpByChannel={gpByChannel}
-            pnlIncomeStr={pnlIncome}
-            onModeChange={applyPnlMode}
-            onGpByChannelChange={applyGpByChannel}
-            onPnlIncomeChange={(v) => {
-              setPnlIncome(v);
-              markDirty();
-            }}
-            onUseBridgeIncome={() => {
-              setPnlIncome(moneyInputValue(incomeBridge.pnlIncome));
-              markDirty();
-            }}
-          />
+          <div className="vat-gp-input-bundle">
+            <h2 className="vat-table-title">
+              2–3) GP ช่องทาง + ภาษีซื้อ — {formatThaiMonthKey(month)}
+            </h2>
+            <p className="muted vat-sales-hint vat-hint-one-line">
+              เนื้อเดียว · ซิงก์จากแท็บนำเข้าอัตโนมัติ
+            </p>
+            <IncomeBridgeTable
+              month={month}
+              locked={Boolean(locked)}
+              mode={pnlMode}
+              bridge={incomeBridge}
+              gpByChannel={gpByChannel}
+              pnlIncomeStr={pnlIncome}
+              onModeChange={applyPnlMode}
+              onGpByChannelChange={applyGpByChannel}
+              onPnlIncomeChange={(v) => {
+                setPnlIncome(v);
+                markDirty();
+              }}
+              onUseBridgeIncome={() => {
+                setPnlIncome(moneyInputValue(incomeBridge.pnlIncome));
+                markDirty();
+              }}
+            />
 
-          <InputVatTable
-            month={month}
-            deliveryGpFromChannels
-            deliveryDraft={deliveryDraft}
-            storefrontDraft={storefrontDraft}
-            delivery={delivery}
-            storefront={storefront}
-            locked={Boolean(locked)}
-            onDeliveryChange={setDeliveryDraftTracked}
-            onStorefrontChange={setStorefrontDraftTracked}
-          />
+            <InputVatTable
+              month={month}
+              deliveryGpFromChannels
+              deliveryDraft={deliveryDraft}
+              storefrontDraft={storefrontDraft}
+              delivery={delivery}
+              storefront={storefront}
+              locked={Boolean(locked)}
+              onDeliveryChange={setDeliveryDraftTracked}
+              onStorefrontChange={setStorefrontDraftTracked}
+            />
+          </div>
 
           <NetVatStrip
             delivery={delivery}
@@ -2477,10 +2626,10 @@ export function VatMonthlyWorkbench({ actor }: Props) {
               </button>
             </div>
             <p className="muted vat-sales-hint vat-hint-one-line">
-              ดึงเข้า = ยอดออกจาก ledger / ownerBooks ตามเดือน · ไม่ใช่ปิดงบ
+              ยอดออก ledger / ownerBooks
               {booksPulledAt
-                ? ` · ดึงล่าสุด ${formatDateTimeShort(booksPulledAt)}`
-                : " · ยังไม่ได้ดึง"}
+                ? ` · ${formatDateTimeShort(booksPulledAt)}`
+                : " · ยังไม่ดึง"}
             </p>
             <div className="sheet-wrap vat-month-slim-wrap">
               <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">

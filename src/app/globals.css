@@ -17208,6 +17208,37 @@ a.ghost-btn {
   line-height: 1.35;
 }
 
+.vat-import-fill-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+  margin: 0.2rem 0 0.4rem;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.76rem;
+  border-radius: 4px;
+  background: rgba(40, 90, 60, 0.07);
+  color: rgba(20, 55, 35, 0.95);
+}
+
+.vat-import-fill-strip--month {
+  margin-top: 0.15rem;
+}
+
+.vat-import-verify {
+  margin: 0.25rem 0 0.4rem;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  border-left: 3px solid rgba(160, 90, 20, 0.55);
+  background: rgba(160, 90, 20, 0.08);
+  color: rgba(90, 50, 10, 0.95);
+}
+
+.vat-import-verify-item {
+  white-space: nowrap;
+}
+
 .vat-import-sum-item strong {
   font-variant-numeric: tabular-nums;
 }
@@ -18107,6 +18138,29 @@ a.ghost-btn {
 
 .vat-books-head .vat-table-title {
   margin: 0;
+}
+
+.vat-gp-input-bundle {
+  margin: 0.35rem 0 0.55rem;
+  padding: 0.35rem 0.45rem 0.15rem;
+  border-radius: 6px;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  background: rgba(28, 42, 31, 0.02);
+}
+
+.vat-gp-input-bundle > .vat-table-title {
+  margin-bottom: 0.1rem;
+}
+
+.vat-gp-input-bundle .vat-table-block {
+  margin-top: 0.25rem;
+}
+
+.vat-gp-input-bundle .vat-income-bridge .vat-table-title,
+.vat-gp-input-bundle .vat-table-block > .vat-table-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.72);
 }
 
 .vat-table-block {
