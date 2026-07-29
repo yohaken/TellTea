@@ -20,7 +20,7 @@ const labels = read("src/lib/ledger-labels.ts");
 const assertRules = read("scripts/assert-firestore-rules.mjs");
 const ownerBooks = read("src/lib/owner-books.ts");
 
-assert.match(version, /APP_BUILD = 383/);
+assert.match(version, /APP_BUILD = 384/);
 assert.ok(existsSync(join(root, "src/lib/bill-notices.ts")));
 assert.ok(existsSync(join(root, "src/components/BillNoticeLedgerPanel.tsx")));
 

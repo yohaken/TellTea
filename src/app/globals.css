@@ -16824,6 +16824,28 @@ a.ghost-btn {
   color: rgba(160, 48, 32, 0.95);
 }
 
+.cash-in-remain {
+  margin: 0.2rem 0 0.45rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: rgba(40, 55, 48, 0.92);
+  background: rgba(127, 183, 126, 0.12);
+  border-radius: 0.35rem;
+}
+
+.cash-in-remain .is-ok {
+  color: rgba(30, 96, 54, 0.95);
+}
+
+.cash-in-remain .is-off {
+  color: rgba(160, 48, 32, 0.95);
+}
+
+.cash-in-remain .is-over {
+  color: rgba(120, 70, 20, 0.95);
+}
+
 .cash-in-round-actions {
   display: flex;
   flex-wrap: wrap;

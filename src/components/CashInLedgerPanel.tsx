@@ -42,7 +42,6 @@ import {
   sumBankTransferAmounts,
   sumBankTransferFees,
   sumCashDepositDays,
-  sumCashDepositDrawerClose,
   updateCashDeposit,
   verifyCashDeposit,
 } from "@/lib/cash-deposits";
@@ -265,7 +264,8 @@ export function CashInLedgerPanel({
   const workingBank = sumBankTransferAmounts(workingTransfers);
   const workingFee = sumBankTransferFees(workingTransfers);
   const expected = sumCashDepositDays(workingDays);
-  const drawerSum = sumCashDepositDrawerClose(workingDays);
+  const remainingToTransfer =
+    Math.round((expected - workingBank) * 100) / 100;
   const variance = cashDepositVariance(workingBank, expected, workingFee);
   const bankSlipUrlCount = flattenBankTransferUrls(workingTransfers).length;
   const coverage = useMemo(
@@ -417,7 +417,6 @@ export function CashInLedgerPanel({
         };
         if (!fromAi) {
           if (patch.cashAmount != null) next.cashAmountSource = "staff";
-          if (patch.drawerCloseAmount != null) next.drawerCloseAmountSource = "staff";
           if (patch.date != null) next.dateSource = "staff";
         }
         return next;
@@ -596,10 +595,7 @@ export function CashInLedgerPanel({
         patch.cashAmount = result.cashAmount;
         patch.cashAmountSource = "ai";
       }
-      if (result.drawerCloseAmount != null) {
-        patch.drawerCloseAmount = result.drawerCloseAmount;
-        patch.drawerCloseAmountSource = "ai";
-      }
+      // drawerCloseAmount ignored — Expected/Actual รวมเงินทอนเริ่มต้น งงง่าย ไม่ใช้เทียบโอน
       if (result.date) {
         try {
           patch.date = parseDateInput(result.date);
@@ -807,7 +803,7 @@ export function CashInLedgerPanel({
       {open ? (
         <div className="cash-in-panel-body">
           <p className="muted cash-in-hint">
-            สลิปโอนได้หลายใบ แต่ละใบมีคชจ. ของตัวเอง · AI อ่านทีละใบ
+            สลิปโอนหลายใบได้ · เข้าบช.สุทธิต่อใบ · ดูคงเหลือใต้ตารางโอน
           </p>
 
           <div className="cash-in-create-bar">
@@ -909,8 +905,7 @@ export function CashInLedgerPanel({
                       <tr>
                         <th className="col-round">รอบ</th>
                         <th className="col-date">วัน</th>
-                        <th className="col-num">เงินสด</th>
-                        <th className="col-num">ปิดลิ้นชัก</th>
+                        <th className="col-num">ยอดขายเงินสด</th>
                         <th className="col-slip">สลิป</th>
                         <th className="col-type">สถานะ</th>
                       </tr>
@@ -934,11 +929,6 @@ export function CashInLedgerPanel({
                           <td className="col-num">
                             {row.day.cashAmount
                               ? formatPlainNumber(row.day.cashAmount)
-                              : ""}
-                          </td>
-                          <td className="col-num">
-                            {row.day.drawerCloseAmount
-                              ? formatPlainNumber(row.day.drawerCloseAmount)
                               : ""}
                           </td>
                           <td className="col-slip">
@@ -1018,7 +1008,9 @@ export function CashInLedgerPanel({
                   <thead>
                     <tr>
                       <th className="col-round">#</th>
-                      <th className="col-num">ยอดเข้า</th>
+                      <th className="col-num" title="ยอดเงินที่เข้าบัญชีจริงในสลิปนี้">
+                        เข้าบช.สุทธิ
+                      </th>
                       <th className="col-num">คชจ.</th>
                       <th>Ref</th>
                       <th className="col-slip">สลิป</th>
@@ -1181,6 +1173,25 @@ export function CashInLedgerPanel({
                 </button>
               ) : null}
 
+              <p className="cash-in-remain" aria-live="polite">
+                ต้องโอน (Σยอดขายเงินสด) {formatPlainNumber(expected)} · โอนแล้ว
+                (Σเข้าบช.สุทธิ) {formatPlainNumber(workingBank)} · คงเหลือ{" "}
+                <strong
+                  className={
+                    remainingToTransfer === 0
+                      ? "is-ok"
+                      : remainingToTransfer > 0
+                        ? "is-off"
+                        : "is-over"
+                  }
+                >
+                  {formatPlainNumber(remainingToTransfer)}
+                </strong>
+                {workingFee
+                  ? ` · Σคชจ. ${formatPlainNumber(workingFee)}`
+                  : ""}
+              </p>
+
               {aiHint ? (
                 <p className={aiBusy ? "muted cash-in-ai-hint" : "cash-in-ai-hint"}>
                   {aiBusy ? "…" : ""}
@@ -1194,8 +1205,12 @@ export function CashInLedgerPanel({
                     <tr>
                       <th className="col-round">#</th>
                       <th className="col-date">วัน</th>
-                      <th className="col-num">เงินสด</th>
-                      <th className="col-num">ปิดลิ้นชัก</th>
+                      <th
+                        className="col-num"
+                        title="จากบิล POS: ยอดขายตามการชำระเงิน → เงินสด"
+                      >
+                        ยอดขายเงินสด
+                      </th>
                       <th className="col-note">โน้ตวัน</th>
                       <th className="col-slip">สลิป</th>
                     </tr>
@@ -1249,29 +1264,6 @@ export function CashInLedgerPanel({
                               onChange={(e) =>
                                 patchDay(day.id, {
                                   cashAmount: Number(e.target.value) || 0,
-                                })
-                              }
-                            />
-                          </div>
-                        </td>
-                        <td className="col-num">
-                          <div className="cash-in-cell-stack">
-                            {sourceBadge(day.drawerCloseAmountSource)}
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              inputMode="decimal"
-                              className="cash-in-cell-input is-num"
-                              value={
-                                day.drawerCloseAmount
-                                  ? String(day.drawerCloseAmount)
-                                  : ""
-                              }
-                              placeholder="—"
-                              onChange={(e) =>
-                                patchDay(day.id, {
-                                  drawerCloseAmount: Number(e.target.value) || 0,
                                 })
                               }
                             />
@@ -1358,9 +1350,6 @@ export function CashInLedgerPanel({
                         รวม {workingDays.length} วัน
                       </td>
                       <td className="col-num">{formatPlainNumber(expected)}</td>
-                      <td className="col-num">
-                        {drawerSum ? formatPlainNumber(drawerSum) : ""}
-                      </td>
                       <td colSpan={2} />
                     </tr>
                   </tfoot>
@@ -1390,7 +1379,7 @@ export function CashInLedgerPanel({
 
               <div className="cash-in-math is-slim" aria-live="polite">
                 <span>
-                  รวมเงินสด {formatPlainNumber(expected)} · Σเข้า{" "}
+                  Σยอดขายเงินสด {formatPlainNumber(expected)} · Σเข้าบช.สุทธิ{" "}
                   {formatPlainNumber(workingBank)}
                   {workingFee
                     ? ` · Σคชจ. ${formatPlainNumber(workingFee)}`
@@ -1398,7 +1387,7 @@ export function CashInLedgerPanel({
                   {bankSlipUrlCount
                     ? ` · สลิปโอน ${bankSlipUrlCount} รูป`
                     : ""}{" "}
-                  · หลังหัก/รวม fee{" "}
+                  · ผลเทียบ{" "}
                   <strong className={variance === 0 ? "is-ok" : "is-off"}>
                     {variance === 0
                       ? "ตรง"
@@ -1406,7 +1395,7 @@ export function CashInLedgerPanel({
                   </strong>
                 </span>
                 <span className="muted cash-in-math-formula">
-                  (Σเข้า + Σคชจ) − รวมเงินสด
+                  (Σเข้าบช.สุทธิ + Σคชจ) − Σยอดขายเงินสด
                 </span>
               </div>
 

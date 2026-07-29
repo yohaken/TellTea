@@ -19,7 +19,7 @@ const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
 const assertRules = read("scripts/assert-firestore-rules.mjs");
 
-assert.match(version, /APP_BUILD = 383/);
+assert.match(version, /APP_BUILD = 384/);
 assert.equal(existsSync(join(root, "src/components/LedgerModeSwitch.tsx")), false);
 assert.match(ledger, /CashInLedgerPanel/);
 assert.match(ledger, /cashInForceOpen|cashIn=1/);
@@ -29,7 +29,11 @@ assert.match(panel, /สร้างรอบ/);
 assert.match(panel, /cash-in-slim/);
 assert.match(panel, /cash-in-bank-table/);
 assert.match(panel, /\+ สลิปโอน/);
-assert.match(panel, /drawerCloseAmount|ปิดลิ้นชัก/);
+assert.match(panel, /เข้าบช\.สุทธิ/);
+assert.match(panel, /ยอดขายเงินสด/);
+assert.match(panel, /remainingToTransfer|cash-in-remain/);
+assert.match(panel, /คงเหลือ/);
+assert.doesNotMatch(panel, /ปิดลิ้นชัก/);
 assert.match(panel, /startCreateRound/);
 assert.doesNotMatch(panel, /CashDepositFormModal/);
 assert.doesNotMatch(panel, /modal-backdrop edit-modal/);
@@ -53,5 +57,6 @@ assert.match(css, /\.cash-in-panel\b/);
 assert.match(css, /\.cash-in-slim\b/);
 assert.match(css, /\.cash-in-create-bar\b/);
 assert.match(css, /\.cash-in-bank-table\b/);
+assert.match(css, /\.cash-in-remain\b/);
 
 console.log("OK test-cash-in-ledger");
