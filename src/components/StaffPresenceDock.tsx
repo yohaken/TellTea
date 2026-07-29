@@ -60,7 +60,7 @@ function PresenceChip({ item, now }: { item: StaffPresenceItem; now: number }) {
       className={`staff-presence-chip${item.online ? " is-online" : ""}`}
       title={`${item.fullName} · เข้าหลังสุด ${age}`}
     >
-      <span className="staff-presence-initial">{item.label}</span>
+      <span className="staff-presence-name">{item.label}</span>
       <span className="staff-presence-age">{age}</span>
     </li>
   );
