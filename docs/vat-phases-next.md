@@ -18,9 +18,11 @@
 | **M3** | ปิด → P&L | ยืนยันมือครั้งเดียว → `monthlyIncome` | ✅ โค้ดฐาน |
 | **M3b** | ช่อง VAT ต่อรายการสองบช. | ledger + ownerBooks · ดึงรวมเข้าวัตถุดิบเดือน | ✅ โค้ดฐาน |
 | **M4** | ใช้จริงเดือนแรก | กรอกยอดจริง · เทียบบิล GP/วัตถุดิบ · ปรับเรท | ⬜ รอร้าน |
-| **M5** | เก็บกวาดของเก่า | ถอด UI/Functions รายวัน·เมล ที่ไม่ใช้แล้ว | ⬜ หลัง M4 นิ่ง |
+| **I0–I6** | นำเข้าไฟล์จริง | แท็บนำเข้า · แถววัน · Storage · อะแดปเตอร์ · รวมเข้าเดือน | ⬜ วางเฟส |
+| **M5** | เก็บกวาดของเก่า | ถอด UI/Functions รายวัน·เมล ที่ไม่ใช้แล้ว | ⬜ หลัง M4/I นิ่ง |
 
-รายละเอียด: [`owner-books-vat-slot.md`](./owner-books-vat-slot.md) · ผสานเดือน: [`books-vat-into-month.md`](./books-vat-into-month.md)
+รายละเอียด: [`owner-books-vat-slot.md`](./owner-books-vat-slot.md) · ผสานเดือน: [`books-vat-into-month.md`](./books-vat-into-month.md)  
+นำเข้าไฟล์: [`vat-import-phases.md`](./vat-import-phases.md)
 
 ---
 
