@@ -42,6 +42,7 @@ import {
   OWNER_BOOKS_LIVE_MAX,
   OWNER_BOOKS_PAGE_SIZE,
   OWNER_BOOKS_RECEIPT_MAX,
+  proposeOwnerBookVatInput,
   subscribeOwnerBooksPage,
   subscribeOwnerBooksTotalOut,
   updateOwnerBookEntry,
@@ -59,6 +60,7 @@ import {
 import { filterOwnerBookRows } from "@/lib/smart-search";
 import { exportOwnerBooksXlsx } from "@/lib/xlsx-export";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
+import { formatVatMoney } from "@/lib/vat-number-format";
 
 const BULK_TYPE_OPTIONS = BASE_TYPE_OPTIONS.filter((o) => o.value !== "auto");
 export default function OwnerBooksPage() {
@@ -425,6 +427,7 @@ function OwnerBooksView() {
                   <th className="col-date">วันที่</th>
                   <th className="col-desc">รายการ</th>
                   <th className="col-out">ออก</th>
+                  <th className="col-vat" title="ภาษีซื้อ">VAT</th>
                   <th className="col-type">ประเภท</th>
                   <th className="col-note">note</th>
                 </tr>
@@ -433,18 +436,20 @@ function OwnerBooksView() {
                 {filteredEntries.map((row) => {
                   const excluded = excludedIds.has(row.id);
                   const selected = selectedIds.has(row.id);
+                  const openEdit = () => setEditing(row);
                   return (
                   <tr
                     key={row.id}
                     className={[
                       "row-out",
+                      "owner-row-tappable",
                       excluded ? "is-excluded" : "",
                       selected ? "is-bulk-selected" : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
                   >
-                    <td className="bulk-check-col">
+                    <td className="bulk-check-col" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selected}
@@ -452,7 +457,7 @@ function OwnerBooksView() {
                         aria-label={`เลือก ${row.description}`}
                       />
                     </td>
-                    <td className="col-exclude">
+                    <td className="col-exclude" onClick={(e) => e.stopPropagation()}>
                       <label className="owner-exclude-check" title="ไม่รวมในยอด">
                         <input
                           type="checkbox"
@@ -462,14 +467,16 @@ function OwnerBooksView() {
                         />
                       </label>
                     </td>
-                    <td className="col-date">{formatDateShort(row.date)}</td>
+                    <td className="col-date" onClick={openEdit}>
+                      {formatDateShort(row.date)}
+                    </td>
                     <td className="col-desc">
                       <div className="desc-with-photo">
                         <button
                           type="button"
                           className="desc-link"
-                          title="แตะเพื่อแก้ไข"
-                          onClick={() => setEditing(row)}
+                          title="แตะเพื่อแก้ไข · ลบได้ในกล่อง"
+                          onClick={openEdit}
                         >
                           {row.description}
                         </button>
@@ -489,7 +496,7 @@ function OwnerBooksView() {
                           <button
                             type="button"
                             className="photo-status"
-                            onClick={() => setEditing(row)}
+                            onClick={openEdit}
                             title="เพิ่มรูป"
                             aria-label="เพิ่มรูป"
                           >
@@ -500,15 +507,24 @@ function OwnerBooksView() {
                         )}
                       </div>
                     </td>
-                    <td className="col-out">
+                    <td className="col-out" onClick={openEdit}>
                       {row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}
                     </td>
-                    <td className="col-type">
+                    <td className="col-vat" onClick={openEdit}>
+                      {row.hasVat && (row.vatInput || 0) > 0 ? (
+                        <span className="owner-vat-badge" title="ภาษีซื้อ">
+                          {formatVatMoney(row.vatInput || 0)}
+                        </span>
+                      ) : (
+                        <span className="muted owner-vat-empty">—</span>
+                      )}
+                    </td>
+                    <td className="col-type" onClick={openEdit}>
                       <span className="muted" style={{ fontSize: "0.72rem" }}>
                         {row.type ? labelLedgerType(row.type) : "—"}
                       </span>
                     </td>
-                    <td className="col-note" title={row.note || ""}>
+                    <td className="col-note" title={row.note || ""} onClick={openEdit}>
                       {row.note || ""}
                     </td>
                   </tr>
@@ -601,6 +617,11 @@ function OwnerEntryModal({
   );
   const [ownerLocked, setOwnerLocked] = useState(wasOwnerType);
   const [note, setNote] = useState(entry?.note || "");
+  const [hasVat, setHasVat] = useState(Boolean(entry?.hasVat));
+  const [vatInputStr, setVatInputStr] = useState(() =>
+    entry?.hasVat && (entry.vatInput || 0) > 0 ? String(entry.vatInput) : "",
+  );
+  const [vatInvoiceNo, setVatInvoiceNo] = useState(entry?.vatInvoiceNo || "");
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getOwnerBookReceiptUrls(entry));
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
   const [formError, setFormError] = useState("");
@@ -771,28 +792,43 @@ function OwnerEntryModal({
         setSaveStage("saving");
       }
 
+      const amountOut = Number(amount);
+      const vatInputNum = Number(String(vatInputStr).replace(/,/g, ""));
+      const vatPayload = {
+        hasVat,
+        vatInput:
+          hasVat && Number.isFinite(vatInputNum) && vatInputNum > 0
+            ? vatInputNum
+            : hasVat
+              ? proposeOwnerBookVatInput(amountOut)
+              : 0,
+        vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
+      };
+
       if (mode === "add") {
         await addOwnerBookEntry({
           date: parseDateInput(date),
           description,
-          amountOut: Number(amount),
+          amountOut,
           type,
           typeSource,
           typeAiReason,
           createdBy,
           receiptUrls: urls,
           note,
+          ...vatPayload,
         });
       } else if (entry) {
         await updateOwnerBookEntry(entry.id, {
           date: parseDateInput(date),
           description,
-          amountOut: Number(amount),
+          amountOut,
           type,
           typeSource,
           typeAiReason,
           receiptUrls: urls,
           note,
+          ...vatPayload,
         });
       }
       onSaved();
@@ -828,15 +864,29 @@ function OwnerEntryModal({
       >
         <div className="entry-toolbar module-form-head">
           <h2 className="panel-title">{mode === "add" ? "บันทึกเงินออก" : "แก้ไขรายการ"}</h2>
-          <button
-            type="button"
-            className="ghost-btn icon-btn"
-            aria-label="ปิด"
-            disabled={busy}
-            onClick={onClose}
-          >
-            <X size={18} />
-          </button>
+          <div className="entry-toolbar-actions">
+            {mode === "edit" ? (
+              <button
+                type="button"
+                className="trash-btn"
+                aria-label="ลบรายการ"
+                title="ลบรายการ"
+                disabled={busy}
+                onClick={() => void onDelete()}
+              >
+                <Trash2 size={16} />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="ghost-btn icon-btn"
+              aria-label="ปิด"
+              disabled={busy}
+              onClick={onClose}
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
         {entry ? (
           <EntryTimestampsMeta
@@ -932,10 +982,86 @@ function OwnerEntryModal({
               step="0.01"
               inputMode="decimal"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setAmount(next);
+                if (hasVat && !vatInputStr.trim()) {
+                  const n = Number(next);
+                  if (Number.isFinite(n) && n > 0) {
+                    setVatInputStr(String(proposeOwnerBookVatInput(n)));
+                  }
+                }
+              }}
               required
             />
           </div>
+
+          <fieldset className="owner-vat-box">
+            <legend>ช่อง VAT · ภาษีซื้อ</legend>
+            <label className="owner-vat-toggle">
+              <input
+                type="checkbox"
+                checked={hasVat}
+                disabled={busy}
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  setHasVat(on);
+                  if (on) {
+                    const n = Number(amount);
+                    if ((!vatInputStr.trim() || Number(vatInputStr) <= 0) && n > 0) {
+                      setVatInputStr(String(proposeOwnerBookVatInput(n)));
+                    }
+                  }
+                }}
+              />
+              มีใบกำกับภาษี · หักภาษีซื้อได้
+            </label>
+            {hasVat ? (
+              <>
+                <div className="field">
+                  <label htmlFor="ob-vat-input">
+                    ภาษีซื้อ (บาท)
+                    <span className="muted">
+                      {" "}
+                      · เสนอ{" "}
+                      {formatVatMoney(
+                        proposeOwnerBookVatInput(Number(amount) || 0),
+                      )}{" "}
+                      จากยอด×7/107
+                    </span>
+                  </label>
+                  <input
+                    id="ob-vat-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={vatInputStr}
+                    disabled={busy}
+                    placeholder={String(
+                      proposeOwnerBookVatInput(Number(amount) || 0) || "",
+                    )}
+                    onChange={(e) => setVatInputStr(e.target.value)}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="ob-vat-inv">เลขที่ใบกำกับ (ถ้ามี)</label>
+                  <input
+                    id="ob-vat-inv"
+                    value={vatInvoiceNo}
+                    disabled={busy}
+                    autoComplete="off"
+                    placeholder="เช่น INV-001"
+                    onChange={(e) => setVatInvoiceNo(e.target.value)}
+                  />
+                </div>
+              </>
+            ) : (
+              <p className="muted form-hint-inline">
+                ติ๊กเมื่อบิลมี VAT — ยอดไปรวมภาษีซื้อในแท็บ VAT เดือนได้
+              </p>
+            )}
+          </fieldset>
 
           <LedgerTypeField
             id="ob-type"

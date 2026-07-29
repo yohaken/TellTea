@@ -53,6 +53,7 @@ import {
   type VatMonthlyReturn,
   type VatSegmentState,
 } from "@/lib/vat-monthly";
+import { sumOwnerBooksVatInputByMonth } from "@/lib/owner-books";
 import { exportPersonalTaxYearXlsx } from "@/lib/xlsx-export";
 
 function emptyBookRow(month: string): MonthCategoryRow {
@@ -594,6 +595,7 @@ function OutputVatTable({
 }
 
 function InputVatTable({
+  month,
   deliveryDraft,
   storefrontDraft,
   delivery,
@@ -602,6 +604,7 @@ function InputVatTable({
   onDeliveryChange,
   onStorefrontChange,
 }: {
+  month: string;
   deliveryDraft: DraftSeg;
   storefrontDraft: DraftSeg;
   delivery: VatSegmentState;
@@ -610,6 +613,34 @@ function InputVatTable({
   onDeliveryChange: (d: DraftSeg) => void;
   onStorefrontChange: (d: DraftSeg) => void;
 }) {
+  const [pullBusy, setPullBusy] = useState(false);
+  const [pullMsg, setPullMsg] = useState("");
+
+  async function pullIngredientFromOwnerBooks() {
+    if (locked) return;
+    setPullBusy(true);
+    setPullMsg("");
+    try {
+      const { vatInput, count } = await sumOwnerBooksVatInputByMonth(month);
+      if (count <= 0 || vatInput <= 0) {
+        setPullMsg("ยังไม่มีรายการบช.เจ้าของที่ติ๊กช่อง VAT ในเดือนนี้");
+        return;
+      }
+      // ใส่รวมที่หน้าร้าน (วัตถุดิบทั่วไป) · เดลิเวอรี่คง GP
+      onStorefrontChange({
+        ...storefrontDraft,
+        ingredientVat: moneyInputValue(vatInput),
+      });
+      setPullMsg(
+        `ดึงภาษีซื้อ ${formatVatMoney(vatInput)} จาก ${count} รายการบช.เจ้าของ → วัตถุดิบหน้าร้าน`,
+      );
+    } catch (e) {
+      setPullMsg(e instanceof Error ? e.message : "ดึงไม่สำเร็จ");
+    } finally {
+      setPullBusy(false);
+    }
+  }
+
   const renderRow = (
     label: string,
     draft: DraftSeg,
@@ -694,6 +725,22 @@ function InputVatTable({
   return (
     <section className="vat-table-block">
       <h2 className="vat-table-title">2) ภาษีซื้อ — กลุ่มหักได้</h2>
+      <p className="muted vat-sales-hint vat-hint-one-line">
+        ภาษีซื้อวัตถุดิบดึงจากรายการบช.เจ้าของที่ติ๊กช่อง VAT ได้ · GP คีย์/ประมาณแยก
+      </p>
+      {!locked ? (
+        <div className="vat-month-actions vat-month-actions--mini">
+          <button
+            type="button"
+            className="vat-mini-btn"
+            disabled={pullBusy}
+            onClick={() => void pullIngredientFromOwnerBooks()}
+          >
+            {pullBusy ? "กำลังดึง…" : "ดึงภาษีซื้อจากบช.เจ้าของ"}
+          </button>
+        </div>
+      ) : null}
+      {pullMsg ? <p className="muted vat-sales-hint vat-hint-one-line">{pullMsg}</p> : null}
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-month-slim--input">
           <thead>
@@ -2154,6 +2201,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
               />
 
               <InputVatTable
+                month={month}
                 deliveryDraft={deliveryDraft}
                 storefrontDraft={storefrontDraft}
                 delivery={delivery}
