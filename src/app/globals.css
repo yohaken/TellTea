@@ -16770,6 +16770,23 @@ a.ghost-btn {
   text-align: left;
 }
 
+.cash-in-bank-table {
+  margin-bottom: 0.2rem;
+}
+
+.cash-in-bank-idx {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.cash-in-add-transfer {
+  min-height: 1.45rem !important;
+  padding: 0.1rem 0.45rem !important;
+  font-size: 0.7rem !important;
+  margin: 0 0 0.35rem;
+}
+
 .cash-in-math.is-slim {
   display: block;
   margin: 0.35rem 0;
