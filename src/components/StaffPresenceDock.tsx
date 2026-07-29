@@ -14,8 +14,8 @@ import type { Employee } from "@/lib/employees";
 import type { StaffMember } from "@/lib/types";
 
 /**
- * ไอคอนลอยขวาบน — เฉพาะเจ้าของ
- * รีเฟรชป้ายเวลาเรื่อยๆ + ทันทีตอนกลับมาโฟกัสแท็บ
+ * ไอคอนลอยขวาบน — เฉพาะเจ้าของ · แสดงพนักงานทุกคน
+ * ป้ายเวลาจาก lastSeenAt ในตาราง staff (ยังไม่มี = —)
  */
 export function StaffPresenceDock() {
   const { staff } = useAuth();
@@ -76,7 +76,7 @@ export function StaffPresenceDock() {
   if (!isOwner || items.length === 0) return null;
 
   return (
-    <div className="staff-presence-dock" aria-label="พนักงานในระบบ" title="พนักงานที่เข้าใช้ล่าสุด">
+    <div className="staff-presence-dock" aria-label="พนักงานทั้งหมด" title="พนักงานทั้งหมด · เข้าใช้ล่าสุด">
       <ul className="staff-presence-list">
         {items.map((item) => (
           <PresenceChip key={item.staffId} item={item} now={now} />
@@ -88,10 +88,15 @@ export function StaffPresenceDock() {
 
 function PresenceChip({ item, now }: { item: StaffPresenceItem; now: number }) {
   const age = formatPresenceAge(item.lastSeenAt, now);
+  const hasSeen = item.lastSeenAt > 0;
   return (
     <li
-      className={`staff-presence-chip${item.online ? " is-online" : ""}`}
-      title={`${item.fullName} · เข้าหลังสุด ${age}`}
+      className={`staff-presence-chip${item.online ? " is-online" : ""}${!hasSeen ? " is-waiting" : ""}`}
+      title={
+        hasSeen
+          ? `${item.fullName} · เข้าหลังสุด ${age}`
+          : `${item.fullName} · ยังไม่เคยเข้า (รอระบบบันทึก)`
+      }
     >
       <span className="staff-presence-name">{item.label}</span>
       <span className="staff-presence-age">{age}</span>

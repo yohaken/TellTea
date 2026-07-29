@@ -12,16 +12,12 @@ import type { Employee } from "./employees";
 import type { StaffMember } from "./types";
 import { mapFirestoreError } from "./firestore-errors";
 
-/** ถือว่ายังอยู่ในระบบถ้าเห็นภายในช่วงนี้ */
-export const STAFF_PRESENCE_WINDOW_MS = 24 * 60 * 60 * 1000;
-/** heartbeat ระหว่างใช้งาน */
-export const STAFF_PRESENCE_HEARTBEAT_MS = 45_000;
-/** ไม่มี interaction นานเกินนี้ → หยุดปัก lastSeenAt (แท็บเปิดทิ้งไว้ไม่นับ) */
-export const STAFF_PRESENCE_IDLE_MS = 2.5 * 60_000;
-/** รีเฟรชป้ายอายุบน dock ของเจ้าของ */
-export const STAFF_PRESENCE_AGE_TICK_MS = 15_000;
-/** ออนไลน์สด (เขียว) */
-export const STAFF_PRESENCE_ONLINE_MS = 3 * 60_000;
+/** วนปัก lastSeenAt ระหว่างใช้งาน (~10 นาที) — ตาราง staff เป็นแหล่งความจริง */
+export const STAFF_PRESENCE_HEARTBEAT_MS = 10 * 60_000;
+/** รีเฟรชป้ายอายุบน dock ของเจ้าของ (คำนวณจาก lastSeenAt ในตาราง) */
+export const STAFF_PRESENCE_AGE_TICK_MS = 30_000;
+/** ออนไลน์สด (เขียว) — เห็นภายใน 15 นาทีหลัง heartbeat */
+export const STAFF_PRESENCE_ONLINE_MS = 15 * 60_000;
 
 export type StaffPresenceItem = {
   staffId: string;
@@ -72,6 +68,7 @@ export function formatPresenceAge(lastSeenAt: number, now = Date.now()): string 
   return `${day}ว`;
 }
 
+/** แสดงพนักงานทุกคน — ยังไม่มี lastSeenAt ก็โชว์รอ (ป้าย —) */
 export function buildStaffPresenceItems(
   members: StaffMember[],
   employees: Employee[],
@@ -90,8 +87,15 @@ export function buildStaffPresenceItems(
         online: lastSeenAt > 0 && now - lastSeenAt <= STAFF_PRESENCE_ONLINE_MS,
       };
     })
-    .filter((p) => p.lastSeenAt > 0 && now - p.lastSeenAt <= STAFF_PRESENCE_WINDOW_MS)
-    .sort((a, b) => b.lastSeenAt - a.lastSeenAt);
+    .sort((a, b) => {
+      // มีเวลาเข้าล่าสุดก่อน · ยังไม่เคยอยู่ท้าย · ในกลุ่มเดียวกันเรียงชื่อ
+      if (a.lastSeenAt !== b.lastSeenAt) {
+        if (!a.lastSeenAt) return 1;
+        if (!b.lastSeenAt) return -1;
+        return b.lastSeenAt - a.lastSeenAt;
+      }
+      return a.label.localeCompare(b.label, "th");
+    });
 }
 
 function mapStaffDoc(id: string, data: Record<string, unknown>): StaffMember {
