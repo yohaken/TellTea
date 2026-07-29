@@ -74,8 +74,10 @@ export type MonthBooksView = {
   booksAsset: number;
   /** คชจ. ที่หักกำไร = เฉพาะบช. (ไม่รวม GP) */
   costTotal: number | null;
-  /** C — กำไร = รายได้ถึงร้าน − คชจ.บช. */
+  /** C — กำไรประมาณการ = รายได้ถึงร้าน − คชจ.บช. */
   monthProfit: number | null;
+  /** กำไรสุทธิหลังหัก VAT สุทธิ (เงินเหลือโดยประมาณ) */
+  profitAfterVat: number | null;
   /** D — VAT */
   salesTotal: number;
   outputVat: number;
@@ -287,6 +289,9 @@ export function deriveMonthBooksView(
   const inputBooksVat = normalizeMoney(storefront.ingredientVatClaimed);
   const inputVat = roundMoney(inputGpVat + inputBooksVat);
   const netVat = roundMoney(outputVat - inputVat);
+  // กำไรสุทธิหลัง VAT = กำไรประมาณการ − VAT สุทธิ (VAT ติดลบ = ได้คืน → บวกเข้า)
+  const profitAfterVat =
+    monthProfit == null ? null : roundMoney(monthProfit - netVat);
 
   return {
     incomeTotal,
@@ -297,6 +302,7 @@ export function deriveMonthBooksView(
     booksAsset,
     costTotal,
     monthProfit,
+    profitAfterVat,
     salesTotal,
     outputVat,
     inputGpVat,

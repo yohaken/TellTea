@@ -1,6 +1,6 @@
 # nPos — จอลูกค้าโฟกัสรายการ (cart-first)
 
-อัปเดต: **1.14.84** · `APP_BUILD` 446 · `POS_BUILD` 136 · vc **107**  
+อัปเดต: **1.14.85** · `APP_BUILD` 448 · `POS_BUILD` 137 · vc **108**  
 ตั้งค่าเวลาทอน: ดู [npos-change-display-setting-checklist.md](./npos-change-display-setting-checklist.md)
 
 ## พฤติกรรม (ทางเลือก C หลังจ่าย)

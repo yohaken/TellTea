@@ -948,7 +948,12 @@ export function VatMonthBooks({ actor }: Props) {
                     <td className="col-num">{fmt(view.gpCostTotal)}</td>
                   </tr>
                   <tr className="vat-sales-totals-row">
-                    <td className="col-seg">= กำไรประมาณการเดือน</td>
+                    <td
+                      className="col-seg"
+                      title="รายได้ถึงร้าน − คชจ.บช. · ยังไม่หัก VAT"
+                    >
+                      = กำไรประมาณการเดือน
+                    </td>
                     <td className="col-num col-net">
                       {view.monthProfit == null ? "—" : fmt(view.monthProfit)}
                     </td>
@@ -956,15 +961,35 @@ export function VatMonthBooks({ actor }: Props) {
                   <tr>
                     <td
                       className="col-seg"
-                      title="VAT แยกกล่อง D — ไม่หักออกจากกำไร"
+                      title="จากกล่อง D · ยอดบวก = ต้องนำส่ง · ติดลบ = ได้คืน"
                     >
-                      VAT สุทธิ (แยก · ไม่หักกำไร)
+                      − VAT สุทธิ
                     </td>
                     <td className="col-num">{fmt(view.netVat)}</td>
+                  </tr>
+                  <tr className="vat-sales-totals-row">
+                    <td
+                      className="col-seg"
+                      title="กำไรประมาณการ − VAT สุทธิ = เงินเหลือโดยประมาณหลังนำส่ง VAT"
+                    >
+                      = กำไรสุทธิ (หลังหัก VAT)
+                    </td>
+                    <td className="col-num col-net">
+                      {view.profitAfterVat == null
+                        ? "—"
+                        : fmt(view.profitAfterVat)}
+                    </td>
                   </tr>
                 </tbody>
               </table>
             </div>
+            <p className="muted vat-sales-hint vat-hint-one-line">
+              ใช้เข้า ภ.ง.ด.: รายได้ถึงร้าน {fmt(view.incomeTotal)}
+              {view.booksOpex != null
+                ? ` · กำไรประมาณการ ${fmt(view.monthProfit ?? 0)}`
+                : " · ดึงบช.เพื่อหักคชจ.ก่อนดูกำไร"}{" "}
+              · กำไรสุทธิหลัง VAT = เงินเหลือดูเอง (ยังไม่ส่งเข้า P&L อัตโนมัติ)
+            </p>
 
             <h2 className="vat-table-title" style={{ marginTop: "0.55rem" }}>
               ค่าลดหย่อน + ภาษีเงินได้ (ภ.ง.ด.) · ปี{" "}
