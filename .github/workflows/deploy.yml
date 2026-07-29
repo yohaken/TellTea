@@ -25,6 +25,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Need HEAD~1 for APP_BUILD / POS_BUILD bump guard
+          fetch-depth: 2
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -37,6 +40,9 @@ jobs:
 
       - name: Guard Firestore rules (block incomplete / wiped rules)
         run: npm run test:firestore-rules
+
+      - name: Guard APP_BUILD / POS_BUILD bump when UI changes
+        run: npm run test:app-build-bump
 
       - name: Build static export
         run: npm run build
@@ -170,6 +176,9 @@ jobs:
 
       - name: Verify live install page + APK download
         run: node scripts/smoke-pos-install-live.mjs
+
+      - name: Verify live shop + POS version.json matches this commit
+        run: npm run smoke:live-version
 
       # one-shot channel proof was useful once; keep dedicated ping workflow instead
       # (avoids failing/noise on every deploy when tablets are idle)

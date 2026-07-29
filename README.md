@@ -81,3 +81,16 @@ npm run dev
 ## Deploy
 
 Push ไป `main` → GitHub Actions deploy Hosting + Firestore rules
+
+### เวอร์ชันขึ้นเว็บ (อย่าให้ค้างของเก่า)
+
+| เช็ค | ความหมาย |
+|------|----------|
+| `https://telltea-shop.web.app/version.json` | build หลังบ้านจริงบน CDN |
+| ป้ายเวอร์ชันในแอป (`4.xxx`) | build ของ JS ที่แท็บนั้นโหลดอยู่ |
+| CI `test:app-build-bump` | แก้ UI แล้วต้อง bump `APP_BUILD` |
+| CI `smoke:live-version` | หลัง deploy บังคับให้ live ≥ build ใน commit |
+
+ถ้าแก้หน้าจอ/JS แล้ว: **bump `src/lib/version.ts` → `APP_BUILD`** ทุกครั้ง  
+แท็บที่เปิดค้างจะเห็นแบนเนอร์อัปเดต และรีเฟรชเองเมื่อว่างกรอก (~90 วินาที) — หรือ Settings → บังคับอัปเดตทันที  
+รายละเอียด: `docs/deploy-version.md`
