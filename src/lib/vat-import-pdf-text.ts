@@ -18,7 +18,10 @@ export async function extractPdfTextFromBytes(
   bytes: ArrayBuffer | Uint8Array,
 ): Promise<string> {
   ensureWorker();
-  const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  // Copy into a fresh Uint8Array so TS accepts BufferSource (no SharedArrayBuffer).
+  const src = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const data = new Uint8Array(src.byteLength);
+  data.set(src);
   const doc = await getDocument({ data, useSystemFonts: true }).promise;
   const parts: string[] = [];
   for (let i = 1; i <= doc.numPages; i++) {
