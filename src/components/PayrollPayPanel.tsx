@@ -188,7 +188,7 @@ export function PayrollPayPanel({
             เงินเดือนตามตาราง ({schedule.salarySplits.map((s) => `${s.percent}%`).join(" + ")})
             + โบนัสคงเหลือเดือนนี้ · ไม่ทับรายการเดิม
             {missingSalary
-              ? ` · ยังไม่มีเงินเดือน ${missingSalary} คน (ตั้งที่ศูนย์พนักงาน)`
+              ? ` · ยังไม่มีเงินเดือน ${missingSalary} คน — ไปแท็บตั้งค่าจ่าย`
               : ""}
           </p>
         </div>

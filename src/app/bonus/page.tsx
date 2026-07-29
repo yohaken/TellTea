@@ -233,20 +233,26 @@ function BonusView() {
         </button>
       </div>
 
-      <div className="bonus-toolbar">
-        <input
-          type="month"
-          className="ot-slim-input"
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          aria-label="เดือนอ้างอิง"
-        />
-        <span className="bonus-toolbar-meta muted">
-          {report
-            ? `${thaiMonthYearLabel(report.year, report.month)} · หารขาย ${report.employeeCount} คน`
-            : "…"}
-        </span>
-      </div>
+      {tab !== "settings" ? (
+        <div className="bonus-toolbar">
+          <input
+            type="month"
+            className="ot-slim-input"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            aria-label="เดือนอ้างอิง"
+          />
+          <span className="bonus-toolbar-meta muted">
+            {report
+              ? `${thaiMonthYearLabel(report.year, report.month)} · หารขาย ${report.employeeCount} คน`
+              : "…"}
+          </span>
+        </div>
+      ) : (
+        <p className="muted bonus-toolbar-meta" style={{ margin: "0.25rem 0 0.65rem" }}>
+          ตั้งเงินเดือนและรอบจ่ายที่นี่ · ไม่ต้องไปหน้าอื่น
+        </p>
+      )}
 
       {error ? <p className="error-text">{error}</p> : null}
       {info ? <p className="success-text">{info}</p> : null}
@@ -278,7 +284,9 @@ function BonusView() {
       {tab === "settings" ? (
         <PayrollSettingsPanel
           schedule={payrollSchedule}
+          employees={employees}
           isOwner={isOwner}
+          onEmployeesChange={setEmployees}
           onError={setError}
           onInfo={(msg) => {
             setInfo(msg);
