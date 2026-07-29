@@ -1089,8 +1089,7 @@ function bookOpEx(row: MonthCategoryRow | null) {
 }
 
 /**
- * ตารางช่องทางเดียว: ยอดโอน → คชจ. GP (P&L) + ภาษีซื้อ GP (VAT)
- * เฉลี่ยถ่วงน้ำหนัก = ภาพรวมเท่านั้น · ไม่ใช้ประมาณก้อน
+ * ตาราง GP: ยอดโอนจริงถึงร้าน · คชจ./ภาษีซื้อแยก (ไม่โชว์คอลัมน์รายได้)
  */
 function IncomeBridgeTable({
   month,
@@ -1125,17 +1124,30 @@ function IncomeBridgeTable({
     });
   }
 
-  function setNetTransfer(key: GpChannelKey, raw: string, gross: number) {
+  function setNetTransfer(key: GpChannelKey, raw: string) {
     const net = parseVatMoneyInput(raw);
-    const deduct = Math.max(0, Math.round((gross - net) * 100) / 100);
+    const fee = gpByChannel[key].amount;
     const pct =
-      gross > 0
-        ? Math.min(100, Math.round((deduct / gross) * 10000) / 100)
+      fee + net > 0
+        ? Math.min(100, Math.round((fee / (fee + net)) * 10000) / 100)
         : 0;
     patchChannel(key, {
       mode: "transfer",
       netTransfer: net,
-      amount: deduct,
+      pct,
+    });
+  }
+
+  function setFee(key: GpChannelKey, raw: string) {
+    const fee = parseVatMoneyInput(raw);
+    const net = gpByChannel[key].netTransfer;
+    const pct =
+      fee + net > 0
+        ? Math.min(100, Math.round((fee / (fee + net)) * 10000) / 100)
+        : 0;
+    patchChannel(key, {
+      mode: "transfer",
+      amount: fee,
       pct,
     });
   }
@@ -1150,9 +1162,12 @@ function IncomeBridgeTable({
   ) {
     const s = gpByChannel[row.key];
     const transferDisplay =
-      s.mode === "transfer"
+      s.mode === "transfer" || s.mode === "amount"
         ? moneyFieldValue(s.netTransfer)
         : moneyFieldValue(row.netTransfer);
+    const feeDisplay = moneyFieldValue(
+      s.mode === "transfer" || s.mode === "amount" ? s.amount : row.deduct,
+    );
     const vatDisplay =
       s.gpVatOverride > 0
         ? moneyFieldValue(s.gpVatOverride)
@@ -1160,18 +1175,21 @@ function IncomeBridgeTable({
     return (
       <tr key={row.key} className="vat-row-child">
         <td className="col-seg col-child">{label}</td>
-        <td className="col-num">{fmt(row.gross)}</td>
         <td className="col-num col-input">
           <MoneyCell
             value={transferDisplay}
             locked={locked}
-            ariaLabel={`ยอดโอนหลัง ${label}`}
-            onChange={(v) => setNetTransfer(row.key, v, row.gross)}
+            ariaLabel={`ยอดโอนจริง ${label}`}
+            onChange={(v) => setNetTransfer(row.key, v)}
           />
         </td>
-        <td className="col-num col-net">{fmt(row.deduct)}</td>
-        <td className="col-num">
-          {row.gross > 0 ? `${pctFieldValue(row.impliedPct) || "0.00"}%` : "—"}
+        <td className="col-num col-input">
+          <MoneyCell
+            value={feeDisplay}
+            locked={locked}
+            ariaLabel={`คชจ. GP ${label}`}
+            onChange={(v) => setFee(row.key, v)}
+          />
         </td>
         <td className="col-num col-input">
           <MoneyCell
@@ -1193,24 +1211,22 @@ function IncomeBridgeTable({
         GP รายช่องทาง — {formatThaiMonthKey(month)}
       </h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        รายได้ = เงินเข้าร้าน (ไม่หัก 7%) · แล้วค่อยหักคชจ. GP · เดลิเวอรี่≠หน้าร้าน
+        ยอดโอนจริงถึงร้าน · คชจ./ภาษีซื้อแยก · เดลิเวอรี่≠หน้าร้าน
       </p>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table vat-gp-channel-table">
           <thead>
             <tr>
               <th className="col-seg">ช่องทาง</th>
-              <th className="col-num">เงินเข้าร้าน</th>
-              <th className="col-num">ยอดโอนหลัง</th>
+              <th className="col-num">ยอดโอนจริง</th>
               <th className="col-num">คชจ. GP</th>
-              <th className="col-num">เรท %</th>
               <th className="col-num">ภาษีซื้อ GP</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td className="col-seg">โหมดใส่ P&L</td>
-              <td className="col-num col-input" colSpan={5}>
+              <td className="col-num col-input" colSpan={3}>
                 <select
                   className="vat-inline-select"
                   disabled={locked}
@@ -1221,20 +1237,20 @@ function IncomeBridgeTable({
                     )
                   }
                 >
-                  <option value="incVat">เงินเข้าร้าน (แนะนำ)</option>
-                  <option value="exVat">แปลงก่อน VAT หลังหักคชจ.</option>
+                  <option value="incVat">ยอดโอนจริง (แนะนำ)</option>
+                  <option value="exVat">แปลงก่อน VAT</option>
                 </select>
               </td>
             </tr>
             <tr>
-              <td className="col-seg">รายได้เดลิเวอรี่ (รวม)</td>
-              <td className="col-num">{fmt(bridge.deliveryGross)}</td>
-              <td className="col-num">—</td>
-              <td className="col-num">—</td>
+              <td className="col-seg">ยอดโอนจริงเดลิเวอรี่ (รวม)</td>
+              <td className="col-num col-net">{fmt(bridge.deliveryGross)}</td>
               <td className="col-num">
-                {bridge.deliveryGross > 0
-                  ? `${pctFieldValue(bridge.weightedAvgPct) || "0.00"}% เฉลี่ย`
-                  : "—"}
+                {fmt(
+                  bridge.channelRows
+                    .filter((r) => r.key !== "storefront")
+                    .reduce((s, r) => s + r.deduct, 0),
+                )}
               </td>
               <td className="col-num col-net">{fmt(bridge.deliveryGpVat)}</td>
             </tr>
@@ -1245,20 +1261,14 @@ function IncomeBridgeTable({
               ? renderChannelRow(storefrontRow, "หน้าร้าน")
               : null}
             <tr>
-              <td className="col-seg">รวมเงินเข้า − คชจ. · ภาษีซื้อ GP</td>
-              <td className="col-num">{fmt(bridge.grossTotal)}</td>
-              <td className="col-num">—</td>
+              <td className="col-seg">รวมถึงร้าน · คชจ. · ภาษีซื้อ GP</td>
+              <td className="col-num col-net">{fmt(bridge.grossTotal)}</td>
               <td className="col-num col-net">{fmt(bridge.gpDeduct)}</td>
-              <td className="col-num">
-                {bridge.deliveryGross > 0
-                  ? `${pctFieldValue(bridge.weightedAvgPct) || "0.00"}%`
-                  : "—"}
-              </td>
               <td className="col-num col-net">{fmt(bridge.gpVatTotal)}</td>
             </tr>
             <tr className="vat-sales-totals-row">
               <td className="col-seg">= รายได้สุทธิ → P&L</td>
-              <td className="col-num col-input col-net" colSpan={5}>
+              <td className="col-num col-input col-net" colSpan={3}>
                 <MoneyCell
                   value={pnlIncomeStr}
                   locked={locked}
@@ -2571,7 +2581,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
               2–3) GP ช่องทาง + ภาษีซื้อ — {formatThaiMonthKey(month)}
             </h2>
             <p className="muted vat-sales-hint vat-hint-one-line">
-              เงินเข้าร้านก่อน · คชจ./ภาษีซื้อหลัง · ซิงก์จากนำเข้า · เดลิเวอรี่แยกหน้าร้าน
+              ยอดโอนจริงถึงร้าน · คชจ./ภาษีซื้อแยก · ซิงก์จากนำเข้า
             </p>
             <IncomeBridgeTable
               month={month}
