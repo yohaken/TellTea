@@ -81,15 +81,15 @@ function lineModifiers(line: PosSaleLine, compact: boolean): ReceiptModifierTall
 
 function renderModifierHtml(mod: ReceiptModifierTally): string {
   const label = escapeReceiptHtml(mod.label);
-  if (mod.count > 1) {
-    return `<div class="mod-line"><span class="mod-bullet">•</span> <span class="mod-label">${label}</span> <strong class="mod-qty">×${mod.count}</strong></div>`;
-  }
-  return `<div class="mod-line"><span class="mod-bullet">•</span> <span class="mod-label">${label}</span></div>`;
+  const count = Math.max(1, mod.count);
+  const qtyClass = count >= 2 ? "mod-qty mod-qty--hot" : "mod-qty";
+  return `<div class="mod-line"><span class="mod-bullet">-</span> <span class="mod-label">${label}</span> <span class="${qtyClass}">x${count}</span></div>`;
 }
 
 function renderItemQtyHtml(qty: number): string {
-  if (!receiptQtyEmphasized(qty)) return "";
-  return `<span class="qty-badge">×${qty}</span>`;
+  const n = Math.max(1, qty);
+  const hot = receiptQtyEmphasized(n) ? " qty-badge--hot" : "";
+  return `<span class="qty-badge${hot}">${n}</span>`;
 }
 
 function itemQtyTotal(lines: PosSaleLine[]): number {
@@ -201,11 +201,12 @@ export function unifiedReceiptStyles(layout: PrinterKindProfile, cutMode: PosPri
       border-radius: 0;
       background: transparent;
       color: #000;
-      font-weight: 800;
+      font-weight: 700;
       font-size: ${layout.bodyFontPx}px;
       line-height: 1.2;
       font-variant-numeric: tabular-nums;
     }
+    .qty-badge--hot { font-weight: 800; }
     .qty-plain {
       display: none;
     }
@@ -239,9 +240,13 @@ export function unifiedReceiptStyles(layout: PrinterKindProfile, cutMode: PosPri
     }
     .mod-bullet { color: #888; }
     .mod-qty {
+      font-weight: 500;
+      color: #444;
+      font-variant-numeric: tabular-nums;
+    }
+    .mod-qty--hot {
       font-weight: 800;
       color: #000;
-      font-variant-numeric: tabular-nums;
     }
     .totals { font-size: ${layout.bodyFontPx}px; }
     .total-row {
@@ -295,9 +300,8 @@ export function buildUnifiedReceiptBody(data: ReceiptPrintPayload, layout: Print
       const lineTotal = Math.round(line.price * line.qty * 100) / 100;
       const title = receiptLineBaseName(line);
       const qtyBadge = renderItemQtyHtml(line.qty);
-      const lineClass = receiptQtyEmphasized(line.qty) ? "item-line" : "item-line item-line--single";
       return `<div class="item">
-        <div class="${lineClass}">
+        <div class="item-line">
           ${qtyBadge}
           <span class="name">${escapeReceiptHtml(title)}</span>
           <span class="price">${formatMoney(lineTotal)}</span>

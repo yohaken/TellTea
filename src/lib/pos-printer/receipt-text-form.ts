@@ -4,10 +4,7 @@
  * Used for golden tests + docs; thermal on web still uses HTML → browser print.
  */
 import type { PosSaleLine } from "../types";
-import {
-  receiptQtyEmphasized,
-  tallySaleLineModifiers,
-} from "../pos-receipt-format";
+import { tallySaleLineModifiers } from "../pos-receipt-format";
 import { receiptLineBaseName } from "./receipt-template";
 import type { ReceiptPrintPayload } from "./types";
 
@@ -64,7 +61,7 @@ function pairRow(left: string, right: string, width: number): string {
   const r = right;
   if (l.length + 1 + r.length > width) {
     const maxLeft = Math.max(1, width - r.length - 1);
-    if (l.length > maxLeft) l = `${l.slice(0, Math.max(1, maxLeft - 1))}…`;
+    if (l.length > maxLeft) l = `${l.slice(0, Math.max(1, maxLeft - 3))}...`;
   }
   const spaces = Math.max(1, width - l.length - r.length);
   return `${l}${" ".repeat(spaces)}${r}`;
@@ -90,17 +87,15 @@ function itemQtyTotal(lines: PosSaleLine[]): number {
 }
 
 function appendItem(lines: string[], line: PosSaleLine, width: number, compact: boolean): void {
-  const lineTotal = Math.round(line.price * line.qty * 100) / 100;
+  const qty = Math.max(1, line.qty || 1);
+  const lineTotal = Math.round(line.price * qty * 100) / 100;
   const title = receiptLineBaseName(line);
   const priceText = formatMoney(lineTotal);
-  if (receiptQtyEmphasized(line.qty)) {
-    lines.push(pairRow(`×${line.qty} ${title}`, priceText, width));
-  } else {
-    lines.push(pairRow(title, priceText, width));
-  }
+  // ASCII qty + blank gap handled by caller — matches native ReceiptFormBuilder.
+  lines.push(pairRow(`${qty} ${title}`, priceText, width));
   for (const mod of tallySaleLineModifiers(line, compact)) {
-    let label = `• ${mod.label}`;
-    if (mod.count > 1) label = `${label} ×${mod.count}`;
+    const count = Math.max(1, mod.count);
+    const label = `- ${mod.label} x${count}`;
     for (const part of wrap(`  ${label}`, width)) lines.push(part);
   }
 }
@@ -142,7 +137,10 @@ export function buildUnifiedReceiptText(
   out.push(`เวลา: ${formatReceiptTime(data.createdAt)}`);
   out.push(rule(width));
 
-  for (const line of data.lines) appendItem(out, line, width, compact);
+  data.lines.forEach((line, idx) => {
+    if (idx > 0) out.push(""); // blank line between drinks
+    appendItem(out, line, width, compact);
+  });
 
   out.push(rule(width));
   out.push(pairRow("จำนวน:", String(itemCount), width));

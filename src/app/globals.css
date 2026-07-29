@@ -14327,11 +14327,15 @@ body.modal-open .main-panel {
   border-radius: 0;
   background: transparent;
   color: #111;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.9rem; /* ต่ำกว่าชื่อเมนูเล็กน้อย */
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
+}
+
+.pos-receipt-paper-item-qty-badge.is-hot {
+  font-weight: 800;
 }
 
 .pos-receipt-paper-item-head {
@@ -14383,9 +14387,14 @@ body.modal-open .main-panel {
 }
 
 .pos-receipt-paper-mod-qty {
+  font-weight: 500;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+}
+
+.pos-receipt-paper-mod-qty.is-hot {
   font-weight: 800;
   color: #111;
-  font-variant-numeric: tabular-nums;
 }
 
 .pos-receipt-paper-wrap--compact .pos-receipt-paper {

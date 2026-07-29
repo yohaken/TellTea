@@ -136,9 +136,15 @@ export function PosReceiptPaper({
               return (
                 <li key={`${receipt.id}-${idx}`} className="pos-receipt-paper-item">
                   <div className="pos-receipt-paper-item-head">
-                    {emphasizeQty ? (
-                      <span className="pos-receipt-paper-item-qty-badge">×{line.qty}</span>
-                    ) : null}
+                    <span
+                      className={
+                        emphasizeQty
+                          ? "pos-receipt-paper-item-qty-badge is-hot"
+                          : "pos-receipt-paper-item-qty-badge"
+                      }
+                    >
+                      {Math.max(1, line.qty)}
+                    </span>
                     <div className="pos-receipt-paper-item-main">
                       <span className="pos-receipt-paper-item-name">{line.name}</span>
                       <span className="pos-receipt-paper-item-price">
@@ -148,10 +154,16 @@ export function PosReceiptPaper({
                   </div>
                   {mods.map((mod) => (
                     <p key={`${idx}-${mod.label}`} className="pos-receipt-paper-mod">
-                      · {mod.label}
-                      {mod.count > 1 ? (
-                        <strong className="pos-receipt-paper-mod-qty"> ×{mod.count}</strong>
-                      ) : null}
+                      - {mod.label}{" "}
+                      <span
+                        className={
+                          mod.count >= 2
+                            ? "pos-receipt-paper-mod-qty is-hot"
+                            : "pos-receipt-paper-mod-qty"
+                        }
+                      >
+                        x{Math.max(1, mod.count)}
+                      </span>
                     </p>
                   ))}
                 </li>
