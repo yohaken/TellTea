@@ -29,6 +29,7 @@ export type EntryVatFields = {
 /** ผู้ขายที่พบบ่อย — hint UI */
 export const COMMON_VAT_VENDORS = [
   "แม็คโคร",
+  "ท็อปเวิลด์",
   "ท็อปส์",
   "ท็อปแวลู",
   "บิ๊กซี",

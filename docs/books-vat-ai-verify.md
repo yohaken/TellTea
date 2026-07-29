@@ -51,3 +51,10 @@
 
 `extractOwnerBookFromReceipt` คืนเพิ่ม: `hasVat`, `vatInput`, `vatBase`, `vatInvoiceNo`, `vatSeenOnBill`, `vatReason`  
 กฎใน prompt: **อ่านจากบิลเท่านั้น ห้ามเดา ×7/107**
+
+### OCR ที่พลาดบ่อย (แก้แล้ว)
+
+- ใบเสร็จยาวห้างค้าส่ง เช่น **ท็อปเวิลด์** — VAT อยู่ท้ายบิล ตัวเล็ก/จาง
+- รounds 1: อ่านบิลเต็ม + `MEDIA_RESOLUTION_HIGH` + thinking budget จำกัด
+- รอบ 2 (ถ้ามียอดจ่ายแต่ไม่มี VAT): โฟกัสเฉพาะบรรทัดภาษีท้ายบิล
+- ฝั่งอัปโหลด: รักษาด้านสั้นของรูปใบเสร็จยาว ไม่ย่อจนอ่าน VAT ไม่ได้

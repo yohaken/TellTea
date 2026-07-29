@@ -41,22 +41,37 @@ export async function saveImageToDevice(
   return "downloaded";
 }
 
+export type CompressImageOptions = {
+  /** Cap on the longer side (default = maxEdge arg). */
+  maxLongEdge?: number;
+  /** Cap on the shorter side — keeps thermal receipt width readable. */
+  maxShortEdge?: number;
+};
+
 /** บีบอัดรูป — เบาขึ้นบนมือถือทั้ง iOS/Android */
 export async function compressImageForUpload(
   file: File,
   maxEdge = 1280,
   quality = 0.72,
+  opts?: CompressImageOptions,
 ): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+  const maxLong = Math.max(1, opts?.maxLongEdge ?? maxEdge);
+  const maxShort = Math.max(1, opts?.maxShortEdge ?? maxEdge);
+  const short = Math.min(bitmap.width, bitmap.height);
+  const long = Math.max(bitmap.width, bitmap.height);
+  const scale = Math.min(1, maxLong / long, maxShort / short);
   const w = Math.max(1, Math.round(bitmap.width * scale));
   const h = Math.max(1, Math.round(bitmap.height * scale));
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return file;
+  if (!ctx) {
+    bitmap.close();
+    return file;
+  }
   ctx.drawImage(bitmap, 0, 0, w, h);
   bitmap.close();
   const blob = await new Promise<Blob | null>((resolve) =>
@@ -76,6 +91,7 @@ export const RECEIPT_DATA_URL_HARD_MAX = 900_000;
 /**
  * เก็บสลิปเป็น data URL ใน Firestore (ไม่พึ่ง Firebase Storage ที่ยังไม่ได้เปิดในโปรเจค)
  * จำกัดขนาดเพื่อไม่เกินลิมิตเอกสาร
+ * ใบเสร็จยาว (ท็อปเวิลด์ ฯลฯ): รักษาด้านสั้นให้อ่าน VAT ท้ายบิลได้ — ลดคุณภาพก่อนย่อด้านสั้น
  * @param maxChars soft target length for this image (kept under hard max)
  */
 export async function fileToReceiptDataUrl(
@@ -83,15 +99,43 @@ export async function fileToReceiptDataUrl(
   maxChars: number = RECEIPT_DATA_URL_SOFT_MAX,
 ): Promise<string> {
   const soft = Math.min(Math.max(80_000, maxChars), RECEIPT_DATA_URL_HARD_MAX);
-  let current = await compressImageForUpload(file, 1280, 0.72);
+  // Prefer readable thermal text: keep short edge high, allow taller long edge.
+  let longEdge = 2400;
+  let shortEdge = 1400;
+  let quality = 0.86;
+  let current = await compressImageForUpload(file, longEdge, quality, {
+    maxLongEdge: longEdge,
+    maxShortEdge: shortEdge,
+  });
   let dataUrl = await readAsDataUrl(current);
-  let quality = 0.65;
-  let edge = 1100;
-  while (dataUrl.length > soft && quality > 0.28) {
-    current = await compressImageForUpload(file, edge, quality);
+  while (dataUrl.length > soft && quality > 0.55) {
+    quality = Math.max(0.55, quality - 0.06);
+    current = await compressImageForUpload(file, longEdge, quality, {
+      maxLongEdge: longEdge,
+      maxShortEdge: shortEdge,
+    });
     dataUrl = await readAsDataUrl(current);
-    quality -= 0.08;
-    edge = Math.max(480, edge - 120);
+  }
+  while (dataUrl.length > soft && longEdge > 1400) {
+    longEdge = Math.max(1400, longEdge - 200);
+    shortEdge = Math.max(900, shortEdge - 80);
+    current = await compressImageForUpload(file, longEdge, quality, {
+      maxLongEdge: longEdge,
+      maxShortEdge: shortEdge,
+    });
+    dataUrl = await readAsDataUrl(current);
+  }
+  while (dataUrl.length > soft && (quality > 0.32 || shortEdge > 640)) {
+    if (quality > 0.32) quality = Math.max(0.32, quality - 0.06);
+    else {
+      longEdge = Math.max(960, longEdge - 160);
+      shortEdge = Math.max(640, shortEdge - 80);
+    }
+    current = await compressImageForUpload(file, longEdge, quality, {
+      maxLongEdge: longEdge,
+      maxShortEdge: shortEdge,
+    });
+    dataUrl = await readAsDataUrl(current);
   }
   if (dataUrl.length > RECEIPT_DATA_URL_HARD_MAX) {
     throw new Error("รูปใหญ่เกินไป — ลองถ่ายใหม่ให้ชัดและใกล้ขึ้น");
