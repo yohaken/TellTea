@@ -13,7 +13,6 @@ import {
 import { getFirebaseStorage } from "./firebase";
 import { hashBytesSha256 } from "./vat-import-hash";
 import {
-  createVatImportRowsSkippingDupes,
   emptyVatImportRow,
   listVatImportRows,
   mapVatImportChannel,
@@ -22,6 +21,8 @@ import {
   type VatImportRow,
   type VatImportRowInput,
 } from "./vat-import";
+import { upsertVatImportSalesIntoSlots } from "./vat-import-scaffold";
+
 import {
   grabCsvToImportRows,
   looksLikeGrabTransactionCsv,
@@ -370,12 +371,15 @@ export async function ingestNewVatImportFiles(
         bytes,
         monthKey,
       );
-      const { created: newRows, skipped: skipDup } =
-        await createVatImportRowsSkippingDupes(built.rows, actor, existing);
-      created += newRows.length;
+      const {
+        created: newRows,
+        updated,
+        skipped: skipDup,
+      } = await upsertVatImportSalesIntoSlots(built.rows, actor, existing);
+      created += newRows.length + updated.length;
       skipped += skipDup;
-      if (built.mode === "pending") pending += newRows.length;
-      existing.push(...newRows);
+      if (built.mode === "pending") pending += newRows.length + updated.length;
+
     } catch (e) {
       errors.push(`${file.name}: ${e instanceof Error ? e.message : String(e)}`);
     }

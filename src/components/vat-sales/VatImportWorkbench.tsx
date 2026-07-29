@@ -18,13 +18,18 @@ import {
   updateVatImportRow,
   uploadVatImportFile,
   VAT_IMPORT_CHANNEL_LABELS,
-  VAT_IMPORT_KIND_LABELS,
   vatImportDedupeKey,
   type VatImportChannel,
   type VatImportRow,
-  type VatImportRowKind,
   type VatImportRowStatus,
 } from "@/lib/vat-import";
+
+import {
+  VAT_IMPORT_CHANNEL_GUIDE,
+  VAT_IMPORT_COLUMN_GUIDE,
+  VAT_IMPORT_WORKFLOW_NOTES,
+  columnTitleAttr,
+} from "@/lib/vat-import-guide";
 import {
   grabCsvToImportRows,
   looksLikeGrabTransactionCsv,
@@ -38,11 +43,14 @@ import {
 } from "@/lib/vat-import-lineman-monthly";
 import { extractPdfTextFromFile } from "@/lib/vat-import-pdf-text";
 import {
+  ensureVatImportMonthScaffold,
+  upsertVatImportSalesIntoSlots,
+} from "@/lib/vat-import-scaffold";
+import {
   looksLikeShopeeTaxInvoice,
   parseShopeeTaxInvoice,
   shopeeTaxInvoiceToImportRow,
 } from "@/lib/vat-import-shopee-taxinvoice";
-
 import {
   formatVatMoney,
   moneyFieldValue,
@@ -54,6 +62,14 @@ import {
   listThaiMonthOptions,
 } from "@/lib/vat-monthly";
 import { bangkokMonthKey } from "@/lib/vat-sales";
+
+const CHANNEL_SHORT: Record<VatImportChannel, string> = {
+  shopee: "SF",
+  grab: "GB",
+  lineman: "LM",
+  storefront: "หน้าร้าน",
+};
+
 
 type Props = { actor: string };
 
@@ -118,6 +134,7 @@ export function VatImportWorkbench({ actor }: Props) {
   const shopeeRef = useRef<HTMLInputElement>(null);
   const grabRef = useRef<HTMLInputElement>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [guideOpen, setGuideOpen] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -193,6 +210,27 @@ export function VatImportWorkbench({ actor }: Props) {
       );
       setRows((prev) => [...prev, created].sort((a, b) => a.dateKey.localeCompare(b.dateKey)));
       setMsg("เพิ่มแถวว่างแล้ว — กรอกวันที่/ยอด หรืออัปโหลดไฟล์");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  async function onScaffoldMonth() {
+    setBusyId("scaffold");
+    setError("");
+    setMsg("");
+    try {
+      const existing = [...rows];
+      const result = await ensureVatImportMonthScaffold(month, actor, existing);
+      await refresh();
+      setMsg(
+        `สร้างตาราง ${formatThaiMonthKey(month)} · โครง ${result.planned} ช่อง · ใหม่ ${result.created}` +
+          (result.skipped ? ` · มีแล้วข้าม ${result.skipped}` : "") +
+          " · เติมด้วยไฟล์หรือรายบรรทัดได้",
+      );
+      setGuideOpen(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -362,36 +400,29 @@ export function VatImportWorkbench({ actor }: Props) {
         contentHash: up.contentHash,
       });
 
-      const { created, skipped } = await createVatImportRowsSkippingDupes(
+      const { created, updated, skipped } = await upsertVatImportSalesIntoSlots(
         inputs,
         actor,
         existing,
       );
-      if (targetMonth === month) {
-        setRows((prev) =>
-          [...prev, ...created].sort((a, b) =>
-            a.dateKey.localeCompare(b.dateKey),
-          ),
-        );
-      } else {
-        setRows(
-          [...existing, ...created].sort((a, b) =>
-            a.dateKey.localeCompare(b.dateKey),
-          ),
-        );
-      }
+      const filled = created.length + updated.length;
+      setRows(
+        [...existing].sort((a, b) => a.dateKey.localeCompare(b.dateKey)),
+      );
       const warn =
         parsed.warnings.length > 0
           ? ` · เตือน: ${parsed.warnings.join(" · ")}`
           : "";
       setMsg(
-        `LINE MAN ${formatThaiMonthKey(targetMonth)} · นำเข้า ${created.length} วัน` +
+        `LINE MAN ${formatThaiMonthKey(targetMonth)} · เติม ${filled} วัน` +
+          (updated.length ? ` (อัปเดตช่องว่าง ${updated.length})` : "") +
           (skipped ? ` · ข้ามซ้ำ ${skipped}` : "") +
           ` · ขาย ${formatVatMoney(parsed.monthGross)} · GP ${formatVatMoney(parsed.monthFeeInclVat)}` +
           warn,
       );
       setFilterChannel("lineman");
       setUploadChannel("lineman");
+
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -506,28 +537,20 @@ export function VatImportWorkbench({ actor }: Props) {
         contentHash: up.contentHash,
       });
 
-      const { created, skipped } = await createVatImportRowsSkippingDupes(
+      const { created, updated, skipped } = await upsertVatImportSalesIntoSlots(
         inputs,
         actor,
         existing,
       );
-      if (parsed.monthKey === month) {
-        setRows((prev) =>
-          [...prev, ...created].sort((a, b) =>
-            a.dateKey.localeCompare(b.dateKey),
-          ),
-        );
-      } else {
-        setRows(
-          [...existing, ...created].sort((a, b) =>
-            a.dateKey.localeCompare(b.dateKey),
-          ),
-        );
-      }
+      const filledRows = [...created, ...updated];
+      setRows(
+        [...existing].sort((a, b) => a.dateKey.localeCompare(b.dateKey)),
+      );
       setFilterChannel("grab");
-      const g = created.reduce((s, r) => s + r.grossInclusive, 0);
+      const g = filledRows.reduce((s, r) => s + r.grossInclusive, 0);
       setMsg(
-        `Grab CSV · ${created.length} วัน` +
+        `Grab CSV · เติม ${filledRows.length} วัน` +
+          (updated.length ? ` (อัปเดตช่องว่าง ${updated.length})` : "") +
           (skipped ? ` · ข้ามซ้ำ ${skipped}` : "") +
           ` · ขาย ${formatVatMoney(g)}` +
           (parsed.warnings.length
@@ -640,10 +663,74 @@ export function VatImportWorkbench({ actor }: Props) {
     <div className="vat-import-workbench">
       <header className="vat-sales-header">
         <p className="vat-sales-lead">
-          Storage inbox → ตารางวัน×ช่องทาง · แปลงเฉพาะช่องที่ชัวร์ · ว่างไว้ให้ AI/คนเติม ·
+          สร้างตารางเดือนก่อน → เติมรายบรรทัดหรืออัปโหลดไฟล์ · ช่องไม่ชัวร์ปล่อยว่าง ·
           แล้วใช้เข้าเดือน
         </p>
       </header>
+
+      <details
+        className="vat-import-guide"
+        open={guideOpen}
+        onToggle={(e) => setGuideOpen((e.target as HTMLDetailsElement).open)}
+      >
+        <summary>บริบทตาราง — หาอะไร · ใส่อะไร (คน / AI)</summary>
+        <ol className="vat-import-guide-steps">
+          {VAT_IMPORT_WORKFLOW_NOTES.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ol>
+        <div className="vat-import-guide-grid">
+          <section>
+            <h3 className="vat-import-guide-h">คอลัมน์</h3>
+            <table className="vat-import-guide-table">
+              <thead>
+                <tr>
+                  <th>ช่อง</th>
+                  <th>หาจาก</th>
+                  <th>ใส่</th>
+                </tr>
+              </thead>
+              <tbody>
+                {VAT_IMPORT_COLUMN_GUIDE.map((c) => (
+                  <tr key={c.id}>
+                    <td>
+                      <strong>{c.short}</strong> {c.label}
+                    </td>
+                    <td>{c.find}</td>
+                    <td>{c.put}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+          <section>
+            <h3 className="vat-import-guide-h">ช่องทาง</h3>
+            <table className="vat-import-guide-table">
+              <thead>
+                <tr>
+                  <th>ช่อง</th>
+                  <th>แหล่งไฟล์</th>
+                  <th>วิธีเติม</th>
+                </tr>
+              </thead>
+              <tbody>
+                {VAT_IMPORT_CHANNEL_GUIDE.map((g) => (
+                  <tr key={g.channel}>
+                    <td>
+                      <strong>{g.short}</strong> {g.label}
+                    </td>
+                    <td>{g.source}</td>
+                    <td>
+                      {g.how}
+                      <span className="muted"> · ได้: {g.fills}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </details>
 
 
       <div className="vat-top-bar">
@@ -697,6 +784,15 @@ export function VatImportWorkbench({ actor }: Props) {
         <button
           type="button"
           className="vat-mini-btn vat-mini-btn--primary"
+          disabled={Boolean(busyId) || loading}
+          onClick={() => void onScaffoldMonth()}
+          title="สร้างแถวว่างครบทุกวัน × ทุกช่องทาง"
+        >
+          {busyId === "scaffold" ? "กำลังสร้าง…" : "สร้างตารางเดือน"}
+        </button>
+        <button
+          type="button"
+          className="vat-mini-btn"
           disabled={Boolean(busyId) || loading}
           onClick={() => void onIngestInbox()}
           title="สแกนไฟล์ใน Storage ของเดือนนี้ → ใส่ตาราง (ไม่ซ้ำ)"
@@ -813,8 +909,8 @@ export function VatImportWorkbench({ actor }: Props) {
       {loading ? (
         <p className="muted">กำลังโหลด…</p>
       ) : (
-        <div className="sheet-wrap vat-month-slim-wrap">
-          <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-import-table">
+        <div className="sheet-wrap vat-month-slim-wrap vat-import-table-wrap">
+          <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-import-table vat-import-table--compact">
             <thead>
               <tr>
                 <th className="col-claim">
@@ -830,34 +926,67 @@ export function VatImportWorkbench({ actor }: Props) {
                     aria-label="เลือก draft ทั้งหมด"
                   />
                 </th>
-                <th className="col-date">วันที่</th>
-                <th className="col-seg">ช่องทาง</th>
-                <th className="col-seg">ชนิด</th>
-                <th className="col-num">ยอดขาย</th>
-                <th className="col-num">คชจ.</th>
-                <th className="col-num">ยอดโอน</th>
-                <th className="col-num">ภาษีซื้อ GP</th>
-                <th className="col-seg">เลขที่ใบกำกับ</th>
-                <th className="col-seg">ไฟล์</th>
-                <th className="col-seg">สถานะ</th>
+                {VAT_IMPORT_COLUMN_GUIDE.filter((c) => c.id !== "file").map(
+                  (c) => (
+                    <th
+                      key={c.id}
+                      className={
+                        c.id === "dateKey"
+                          ? "col-date"
+                          : c.id === "grossInclusive" ||
+                              c.id === "fee" ||
+                              c.id === "netTransfer" ||
+                              c.id === "gpVat"
+                            ? "col-num"
+                            : "col-seg"
+                      }
+                      title={columnTitleAttr(c)}
+                    >
+                      {c.short}
+                    </th>
+                  ),
+                )}
+                <th
+                  className="col-seg"
+                  title={columnTitleAttr(
+                    VAT_IMPORT_COLUMN_GUIDE.find((c) => c.id === "file")!,
+                  )}
+                >
+                  ไฟล์
+                </th>
+                <th className="col-seg" title="draft / ข้าม / applied">
+                  สถ.
+                </th>
                 <th className="col-act"> </th>
               </tr>
             </thead>
             <tbody>
               {visible.length === 0 ? (
                 <tr>
-                  <td className="col-seg" colSpan={12}>
-                    ยังไม่มีแถว — ใช้ปุ่ม LINE MAN / Grab / Shopee หรือ + แถวว่าง
+                  <td className="col-seg" colSpan={11}>
+                    ยังไม่มีแถว — กด「สร้างตารางเดือน」ก่อน แล้วค่อยอัปโหลดหรือเติมรายบรรทัด
                   </td>
                 </tr>
               ) : (
                 visible.map((row) => {
                   const locked = row.status === "applied";
                   const dup = dedupeWarnings.has(row.id);
+                  const emptySlot =
+                    !row.grossInclusive &&
+                    !row.fee &&
+                    !row.netTransfer &&
+                    !row.gpVat &&
+                    !row.invoiceNo;
                   return (
                     <tr
                       key={row.id}
-                      className={dup ? "vat-import-row--dup" : undefined}
+                      className={[
+                        dup ? "vat-import-row--dup" : "",
+                        emptySlot ? "vat-import-row--empty" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ") || undefined}
+                      title={row.note || undefined}
                     >
                       <td className="col-claim">
                         <input
@@ -891,6 +1020,7 @@ export function VatImportWorkbench({ actor }: Props) {
                           className="vat-inline-select"
                           disabled={locked || busyId === row.id}
                           value={row.channel}
+                          title={VAT_IMPORT_CHANNEL_LABELS[row.channel]}
                           onChange={(e) =>
                             void saveRow(row, {
                               channel: e.target.value as VatImportChannel,
@@ -899,27 +1029,7 @@ export function VatImportWorkbench({ actor }: Props) {
                         >
                           {CHANNELS.map((c) => (
                             <option key={c} value={c}>
-                              {VAT_IMPORT_CHANNEL_LABELS[c]}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="col-seg col-input">
-                        <select
-                          className="vat-inline-select"
-                          disabled={locked || busyId === row.id}
-                          value={row.rowKind}
-                          onChange={(e) =>
-                            void saveRow(row, {
-                              rowKind: e.target.value as VatImportRowKind,
-                            })
-                          }
-                        >
-                          {(
-                            Object.keys(VAT_IMPORT_KIND_LABELS) as VatImportRowKind[]
-                          ).map((k) => (
-                            <option key={k} value={k}>
-                              {VAT_IMPORT_KIND_LABELS[k]}
+                              {CHANNEL_SHORT[c]}
                             </option>
                           ))}
                         </select>
@@ -962,11 +1072,11 @@ export function VatImportWorkbench({ actor }: Props) {
                       </td>
                       <td className="col-seg col-input">
                         <input
-                          className="vat-sales-input"
+                          className="vat-sales-input vat-import-inv"
                           disabled={locked || busyId === row.id}
                           value={row.invoiceNo}
                           aria-label="เลขที่ใบกำกับ"
-                          placeholder="—"
+                          placeholder=""
                           onChange={(e) =>
                             setRows((prev) =>
                               prev.map((r) =>
@@ -990,12 +1100,13 @@ export function VatImportWorkbench({ actor }: Props) {
                             href={row.downloadUrl}
                             target="_blank"
                             rel="noreferrer"
+                            title={row.fileName || "เปิดไฟล์"}
                           >
-                            {row.fileName || "เปิดไฟล์"}
+                            ไฟล์
                           </a>
                         ) : (
                           <label className="vat-mini-btn vat-import-attach">
-                            แนบ
+                            +
                             <input
                               type="file"
                               accept=".pdf,.xlsx,.xls,.csv,image/*"
@@ -1022,10 +1133,10 @@ export function VatImportWorkbench({ actor }: Props) {
                             })
                           }
                         >
-                          <option value="draft">draft</option>
+                          <option value="draft">ร่าง</option>
                           <option value="skipped">ข้าม</option>
                           <option value="applied" disabled>
-                            applied
+                            ใช้แล้ว
                           </option>
                         </select>
                       </td>
@@ -1035,8 +1146,9 @@ export function VatImportWorkbench({ actor }: Props) {
                           className="vat-mini-btn"
                           disabled={busyId === row.id || locked}
                           onClick={() => void removeRow(row)}
+                          title="ลบแถว"
                         >
-                          ลบ
+                          ×
                         </button>
                       </td>
                     </tr>

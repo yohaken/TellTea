@@ -19,6 +19,8 @@
     "test:vat-import-shopee": "npx --yes tsx scripts/test-vat-import-shopee-taxinvoice.ts",
     "test:vat-import-grab": "npx --yes tsx scripts/test-vat-import-grab-csv.ts",
     "test:vat-import-inbox": "npx --yes tsx scripts/test-vat-import-inbox.ts",
+    "test:vat-import-scaffold": "npx --yes tsx scripts/test-vat-import-scaffold.ts",
+
 
     "test:vat-mail-parse": "npx --yes tsx scripts/test-vat-mail-parse.ts",
     "test:rate-schedule": "node scripts/test-rate-schedule.mjs",

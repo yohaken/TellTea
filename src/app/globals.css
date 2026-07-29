@@ -17230,6 +17230,141 @@ a.ghost-btn {
   background: rgba(160, 90, 20, 0.08);
 }
 
+.vat-import-row--empty td {
+  background: rgba(28, 42, 31, 0.02);
+}
+
+.vat-import-guide {
+  margin: 0.35rem 0 0.55rem;
+  padding: 0.35rem 0.55rem 0.45rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  border-radius: 4px;
+  background: rgba(255, 252, 245, 0.85);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.vat-import-guide > summary {
+  cursor: pointer;
+  font-weight: 650;
+  color: rgba(28, 42, 31, 0.88);
+  list-style: none;
+}
+
+.vat-import-guide > summary::-webkit-details-marker {
+  display: none;
+}
+
+.vat-import-guide > summary::before {
+  content: "▸ ";
+  color: rgba(28, 42, 31, 0.45);
+}
+
+.vat-import-guide[open] > summary::before {
+  content: "▾ ";
+}
+
+.vat-import-guide-steps {
+  margin: 0.35rem 0 0.45rem 1.1rem;
+  padding: 0;
+}
+
+.vat-import-guide-steps li {
+  margin: 0.15rem 0;
+}
+
+.vat-import-guide-grid {
+  display: grid;
+  gap: 0.55rem;
+}
+
+@media (min-width: 900px) {
+  .vat-import-guide-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.vat-import-guide-h {
+  margin: 0 0 0.25rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.75);
+}
+
+.vat-import-guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+
+.vat-import-guide-table th,
+.vat-import-guide-table td {
+  border-top: 1px solid rgba(28, 42, 31, 0.1);
+  padding: 0.2rem 0.3rem;
+  vertical-align: top;
+  text-align: left;
+}
+
+.vat-import-guide-table th {
+  color: rgba(28, 42, 31, 0.55);
+  font-weight: 600;
+}
+
+.vat-import-table-wrap {
+  max-height: min(70vh, 720px);
+  overflow: auto;
+}
+
+.vat-import-table--compact {
+  font-size: 0.72rem;
+}
+
+.vat-import-table--compact th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f7f4ec;
+  font-size: 0.68rem;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  padding: 0.2rem 0.25rem;
+}
+
+.vat-import-table--compact td {
+  padding: 0.12rem 0.2rem;
+}
+
+.vat-import-table--compact .vat-sales-input,
+.vat-import-table--compact .vat-money-input,
+.vat-import-table--compact .vat-inline-select {
+  font-size: 0.72rem;
+  min-height: 1.55rem;
+  padding: 0.1rem 0.25rem;
+}
+
+.vat-import-table--compact .col-date {
+  min-width: 6.4rem;
+}
+
+.vat-import-table--compact .col-num {
+  min-width: 4.6rem;
+  max-width: 5.6rem;
+}
+
+.vat-import-table--compact .vat-import-inv {
+  min-width: 4.5rem;
+  max-width: 7rem;
+}
+
+.vat-import-table--compact .vat-import-file-link {
+  font-size: 0.7rem;
+}
+
+.vat-import-table--compact .col-act .vat-mini-btn {
+  min-width: 1.5rem;
+  padding: 0.1rem 0.3rem;
+}
+
 .vat-sales-page .vat-sales-tabs {
   margin: 0.15rem 0 0.45rem;
 }
