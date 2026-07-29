@@ -17283,6 +17283,10 @@ a.ghost-btn {
   background: rgba(28, 42, 31, 0.02);
 }
 
+.vat-import-row--skipped td {
+  opacity: 0.55;
+}
+
 /* AI-only scratchpad: full text in DOM, nearly invisible to humans */
 .vat-import-ai-scratch {
   position: relative;

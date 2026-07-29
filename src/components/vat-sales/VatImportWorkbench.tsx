@@ -27,7 +27,6 @@ import {
   vatImportDedupeKey,
   type VatImportChannel,
   type VatImportRow,
-  type VatImportRowStatus,
 } from "@/lib/vat-import";
 
 import { VatImportAiScratchpad } from "@/components/vat-sales/VatImportAiScratchpad";
@@ -147,7 +146,6 @@ export function VatImportWorkbench({ actor }: Props) {
   const linemanRef = useRef<HTMLInputElement>(null);
   const shopeeRef = useRef<HTMLInputElement>(null);
   const grabRef = useRef<HTMLInputElement>(null);
-  const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [guideOpen, setGuideOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [pasteOpen, setPasteOpen] = useState(false);
@@ -192,19 +190,13 @@ export function VatImportWorkbench({ actor }: Props) {
 
 
 
-  const draftVisible = useMemo(
-    () => visible.filter((r) => r.status === "draft"),
-    [visible],
-  );
-
-  const selectedRows = useMemo(() => {
-    const picked = rows.filter((r) => selected[r.id] && r.status === "draft");
-    return picked.length > 0 ? picked : draftVisible;
-  }, [rows, selected, draftVisible]);
-
   const applyPreview = useMemo(
-    () => previewApplyVatImportRows(month, selectedRows),
-    [month, selectedRows],
+    () =>
+      previewApplyVatImportRows(
+        month,
+        rows.filter((r) => r.status !== "skipped"),
+      ),
+    [month, rows],
   );
 
   const sums = useMemo(() => sumVatImportDraftByChannel(rows), [rows]);
@@ -666,16 +658,6 @@ export function VatImportWorkbench({ actor }: Props) {
     }
   }
 
-  function toggleSelectAllDraft(on: boolean) {
-    if (!on) {
-      setSelected({});
-      return;
-    }
-    const next: Record<string, boolean> = {};
-    for (const r of draftVisible) next[r.id] = true;
-    setSelected(next);
-  }
-
   async function onPasteFill() {
     setBusyId("paste");
     setError("");
@@ -1086,19 +1068,6 @@ export function VatImportWorkbench({ actor }: Props) {
           <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-import-table vat-import-table--compact">
             <thead>
               <tr>
-                <th className="col-claim">
-                  <input
-                    type="checkbox"
-                    className="vat-claim-check"
-                    checked={
-                      draftVisible.length > 0 &&
-                      draftVisible.every((r) => selected[r.id])
-                    }
-                    disabled={draftVisible.length === 0}
-                    onChange={(e) => toggleSelectAllDraft(e.target.checked)}
-                    aria-label="เลือก draft ทั้งหมด"
-                  />
-                </th>
                 {VAT_IMPORT_VISIBLE_COLUMN_IDS.map((id) => {
                   const c = VAT_IMPORT_COLUMN_GUIDE.find((x) => x.id === id)!;
                   return (
@@ -1120,8 +1089,11 @@ export function VatImportWorkbench({ actor }: Props) {
                     </th>
                   );
                 })}
-                <th className="col-seg" title="draft / ข้าม / applied">
-                  สถ.
+                <th
+                  className="col-claim"
+                  title="ติ๊ก = ไม่นำยอดแถวนี้เข้างบ (อื่นๆ ผสานอัตโนมัติ)"
+                >
+                  ข้าม
                 </th>
                 <th
                   className="col-inv-cloak"
@@ -1137,13 +1109,13 @@ export function VatImportWorkbench({ actor }: Props) {
             <tbody>
               {visible.length === 0 ? (
                 <tr>
-                  <td className="col-seg" colSpan={10}>
+                  <td className="col-seg" colSpan={9}>
                     ยังไม่มีแถว — กด「สร้างตารางเดือน」แล้วกรอกหรือวางข้อความ
                   </td>
                 </tr>
               ) : (
                 visible.map((row) => {
-                  const locked = row.status === "applied";
+                  const skipped = row.status === "skipped";
                   const dup = dedupeWarnings.has(row.id);
                   const emptySlot =
                     !row.grossInclusive &&
@@ -1157,35 +1129,24 @@ export function VatImportWorkbench({ actor }: Props) {
                       className={[
                         dup ? "vat-import-row--dup" : "",
                         emptySlot ? "vat-import-row--empty" : "",
+                        skipped ? "vat-import-row--skipped" : "",
                       ]
                         .filter(Boolean)
                         .join(" ") || undefined}
                       title={row.note || undefined}
                     >
-                      <td className="col-claim">
-                        <input
-                          type="checkbox"
-                          className="vat-claim-check"
-                          disabled={row.status !== "draft"}
-                          checked={Boolean(selected[row.id])}
-                          onChange={(e) =>
-                            setSelected((prev) => ({
-                              ...prev,
-                              [row.id]: e.target.checked,
-                            }))
-                          }
-                          aria-label={`เลือก ${row.dateKey}`}
-                        />
-                      </td>
                       <td className="col-date col-input">
                         <input
                           className="vat-sales-input"
                           type="date"
-                          disabled={locked || busyId === row.id}
+                          disabled={busyId === row.id}
                           value={row.dateKey}
                           aria-label="วันที่"
                           onChange={(e) =>
-                            void saveRow(row, { dateKey: e.target.value })
+                            void saveRow(row, {
+                              dateKey: e.target.value,
+                              status: skipped ? "skipped" : "draft",
+                            })
                           }
                         />
                       </td>
@@ -1198,61 +1159,76 @@ export function VatImportWorkbench({ actor }: Props) {
                       <td className="col-num col-input">
                         <MoneyInput
                           value={row.grossInclusive}
-                          disabled={locked || busyId === row.id}
+                          disabled={busyId === row.id}
                           ariaLabel="ยอดขาย"
                           onCommit={(n) =>
-                            void saveRow(row, { grossInclusive: n })
+                            void saveRow(row, {
+                              grossInclusive: n,
+                              status: skipped ? "skipped" : "draft",
+                            })
                           }
                         />
                       </td>
                       <td className="col-num col-input">
                         <MoneyInput
                           value={row.fee}
-                          disabled={locked || busyId === row.id}
+                          disabled={busyId === row.id}
                           ariaLabel="คชจ."
-                          onCommit={(n) => void saveRow(row, { fee: n })}
+                          onCommit={(n) =>
+                            void saveRow(row, {
+                              fee: n,
+                              status: skipped ? "skipped" : "draft",
+                            })
+                          }
                         />
                       </td>
                       <td className="col-num col-input">
                         <MoneyInput
                           value={row.netTransfer}
-                          disabled={locked || busyId === row.id}
+                          disabled={busyId === row.id}
                           ariaLabel="ยอดโอน"
                           onCommit={(n) =>
-                            void saveRow(row, { netTransfer: n })
+                            void saveRow(row, {
+                              netTransfer: n,
+                              status: skipped ? "skipped" : "draft",
+                            })
                           }
                         />
                       </td>
                       <td className="col-num col-input">
                         <MoneyInput
                           value={row.gpVat}
-                          disabled={locked || busyId === row.id}
+                          disabled={busyId === row.id}
                           ariaLabel="ภาษีซื้อ GP"
-                          onCommit={(n) => void saveRow(row, { gpVat: n })}
-                        />
-                      </td>
-                      <td className="col-seg col-input">
-                        <select
-                          className="vat-inline-select"
-                          disabled={busyId === row.id || row.status === "applied"}
-                          value={row.status}
-                          onChange={(e) =>
+                          onCommit={(n) =>
                             void saveRow(row, {
-                              status: e.target.value as VatImportRowStatus,
+                              gpVat: n,
+                              status: skipped ? "skipped" : "draft",
                             })
                           }
-                        >
-                          <option value="draft">ร่าง</option>
-                          <option value="skipped">ข้าม</option>
-                          <option value="applied" disabled>
-                            ใช้แล้ว
-                          </option>
-                        </select>
+                        />
+                      </td>
+                      <td className="col-claim">
+                        <input
+                          type="checkbox"
+                          className="vat-claim-check"
+                          disabled={busyId === row.id}
+                          checked={skipped}
+                          onChange={(e) =>
+                            void saveRow(row, {
+                              status: e.target.checked ? "skipped" : "draft",
+                              appliedAt: null,
+                              appliedToMonth: "",
+                            })
+                          }
+                          aria-label={`ข้าม ${row.dateKey}`}
+                          title="ติ๊ก = ไม่เข้างบ"
+                        />
                       </td>
                       <td className="col-inv-cloak col-input">
                         <input
                           className="vat-sales-input vat-import-inv-cloak"
-                          disabled={locked || busyId === row.id}
+                          disabled={busyId === row.id}
                           value={row.invoiceNo}
                           aria-label="เลขที่ใบกำกับ"
                           title={row.invoiceNo || "เลขที่ใบกำกับ (ซ่อน)"}
@@ -1269,6 +1245,7 @@ export function VatImportWorkbench({ actor }: Props) {
                           onBlur={(e) =>
                             void saveRow(row, {
                               invoiceNo: e.target.value.trim(),
+                              status: skipped ? "skipped" : "draft",
                             })
                           }
                         />
@@ -1277,7 +1254,7 @@ export function VatImportWorkbench({ actor }: Props) {
                         <button
                           type="button"
                           className="vat-mini-btn"
-                          disabled={busyId === row.id || locked}
+                          disabled={busyId === row.id}
                           onClick={() => void removeRow(row)}
                           title="ลบแถว"
                         >
