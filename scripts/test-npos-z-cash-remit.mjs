@@ -9,16 +9,16 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 395/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 131/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+102/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.79"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 407/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 132/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+103/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.80"/);
 
 assert.ok(existsSync(join(root, "docs/npos-z-cash-remit-checklist.md")));
 const doc = read("docs/npos-z-cash-remit-checklist.md");
-assert.match(doc, /1\.14\.79/);
-assert.match(doc, /ยอดเงินสดที่ต้องนำส่ง|นับจริง − ทอนรอบถัดไป/);
-assert.match(doc, /เงินเข้า − เงินออก|cashIn.*cashOut|inAmt - outAmt/);
+assert.match(doc, /1\.14\.80/);
+assert.match(doc, /ยอดเงินสดที่ต้องนำส่ง|นับจริง [-−] ทอนรอบถัดไป/);
+assert.match(doc, /เงินเข้า [-−] เงินออก|cashIn.*cashOut|inAmt - outAmt/);
 
 const builder = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/printer/ShiftReportFormBuilder.java",
@@ -27,7 +27,7 @@ assert.match(builder, /cashOutTotal/);
 assert.match(builder, /cashInTotal/);
 assert.match(builder, /netInOut = inAmt - outAmt/);
 assert.match(builder, /ยอดเงินสดที่ต้องนำส่ง/);
-assert.match(builder, /\*นับจริง − ทอนรอบถัดไป/);
+assert.match(builder, /\*นับจริง - ทอนรอบถัดไป/);
 assert.match(builder, /ตรวจก่อนเซ็น \/ ส่งเงิน/);
 assert.match(builder, /นับรวมเงินทอนเริ่มต้นแล้ว/);
 assert.match(builder, /ยอดที่ต้องนำส่งตรงกับเงินในมือ/);
@@ -46,7 +46,7 @@ assert.match(web, /cashOutTotal/);
 assert.match(web, /cashInTotal/);
 assert.match(web, /netInOut/);
 assert.match(web, /ยอดเงินสดที่ต้องนำส่ง/);
-assert.match(web, /นับจริง − ทอนรอบถัดไป/);
+assert.match(web, /นับจริง [-−] ทอนรอบถัดไป/);
 assert.match(web, /ตรวจก่อนเซ็น \/ ส่งเงิน/);
 assert.match(web, /ลงชื่อผู้ส่งเงิน/);
 assert.match(web, /ลงชื่อผู้รับเงิน/);

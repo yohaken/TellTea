@@ -78,11 +78,18 @@ public final class ReceiptFormBuilder {
     int itemCount = itemQtyTotal(lines);
 
     StringBuilder sb = new StringBuilder();
-    sb.append(center(billDisplay, width)).append('\n');
+    // Hierarchy: bold bill + shop, airy meta, spaced items, bold net.
+    sb.append(EscPos.BOLD_ON)
+        .append(center(billDisplay, width))
+        .append(EscPos.BOLD_OFF)
+        .append('\n');
     if (!customerName.isEmpty()) {
       sb.append(center(customerName, width)).append('\n');
     }
-    sb.append(center(shopName, width)).append('\n');
+    sb.append(EscPos.BOLD_ON)
+        .append(center(shopName, width))
+        .append(EscPos.BOLD_OFF)
+        .append('\n');
     if (!shopAddress.isEmpty()) {
       for (String part : wrap(shopAddress, width)) {
         sb.append(center(part, width)).append('\n');
@@ -95,7 +102,12 @@ public final class ReceiptFormBuilder {
     if (!taxId.isEmpty()) {
       sb.append(center("เลขผู้เสียภาษี : " + taxId, width)).append('\n');
     }
-    sb.append(center("ใบเสร็จ", width)).append('\n');
+    sb.append('\n');
+    sb.append(EscPos.BOLD_ON)
+        .append(center("ใบเสร็จ", width))
+        .append(EscPos.BOLD_OFF)
+        .append('\n');
+    sb.append('\n');
 
     if (!externalOrderId.isEmpty()) sb.append(metaRow("Order", externalOrderId, width));
     if (!staffName.isEmpty()) sb.append(metaRow("Staff", staffName, width));
@@ -103,6 +115,7 @@ public final class ReceiptFormBuilder {
     sb.append(metaRow("วันที่", formatDate(createdAt), width));
     sb.append(metaRow("เวลา", formatTime(createdAt), width));
     sb.append(rule(width)).append('\n');
+    sb.append('\n');
 
     if (lines != null) {
       boolean firstItem = true;
@@ -115,6 +128,7 @@ public final class ReceiptFormBuilder {
       }
     }
 
+    sb.append('\n');
     sb.append(rule(width)).append('\n');
     sb.append(moneyRow("จำนวน:", String.valueOf(itemCount), width)).append('\n');
     sb.append(moneyRow("รวม:", formatMoney(subtotal), width)).append('\n');
@@ -122,7 +136,10 @@ public final class ReceiptFormBuilder {
       sb.append(moneyRow("ส่วนลด", "-" + formatMoney(discount), width)).append('\n');
     }
     sb.append(doubleRule(width)).append('\n');
-    sb.append(moneyRow("ยอดสุทธิ:", formatMoney(total), width)).append('\n');
+    sb.append(EscPos.BOLD_ON)
+        .append(moneyRow("ยอดสุทธิ:", formatMoney(total), width))
+        .append(EscPos.BOLD_OFF)
+        .append('\n');
     sb.append(doubleRule(width)).append('\n');
     sb.append(moneyRow("ชำระ", paymentLabel(pay), width)).append('\n');
     if ("cash".equals(pay)) {
@@ -147,7 +164,7 @@ public final class ReceiptFormBuilder {
   }
 
   static String billDisplay(String billNo) {
-    String raw = billNo == null || billNo.trim().isEmpty() ? "—" : billNo.trim();
+    String raw = billNo == null || billNo.trim().isEmpty() ? "-" : billNo.trim();
     return raw.startsWith("#") ? raw : "#" + raw;
   }
 

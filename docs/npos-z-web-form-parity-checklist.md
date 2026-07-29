@@ -1,6 +1,7 @@
 # nPos — สลิปปิดกะโคลนฟอร์มเว็บเฟรมต่อเฟรม
 
-อัปเดต: **1.14.74** · `APP_BUILD` 388 · `POS_BUILD` 126 · `versionCode` 97  
+อัปเดต: **1.14.80** · `APP_BUILD` 407 · `POS_BUILD` 132 · `versionCode` 103  
+(เฟรมโคลนตั้งแต่ 1.14.74 · ส่งเงินสด — ดู `npos-z-cash-remit-checklist.md`)
 (ส่งเงินสด — ดู `npos-z-cash-remit-checklist.md`)
 
 เป้าหมาย: สลิป ESC/POS บน native = ฟอร์มใบพิมพ์เว็บ `buildShiftReportHtml`  
