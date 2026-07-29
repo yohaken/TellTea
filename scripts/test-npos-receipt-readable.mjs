@@ -9,21 +9,22 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 408/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 133/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+104/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.81"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 409/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 134/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+105/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.82"/);
 
 assert.ok(existsSync(join(root, "docs/npos-receipt-readable-checklist.md")));
-assert.match(read("docs/npos-receipt-readable-checklist.md"), /1\.14\.81/);
+assert.match(read("docs/npos-receipt-readable-checklist.md"), /1\.14\.82/);
 assert.match(read("docs/npos-receipt-readable-checklist.md"), /\?2|TIS-620|x2/);
 
 const java = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/printer/ReceiptFormBuilder.java",
 );
 assert.match(java, /BOLD_ON/);
-assert.match(java, /qty \+ " "/);
+assert.match(java, /qtyCol/);
 assert.match(java, /" x"/);
+assert.match(java, /"    "/); // option indent under name
 assert.match(java, /qtyEmphasized\(mod\.count\)/);
 assert.match(java, /blank line between drinks|firstItem/);
 assert.doesNotMatch(java, /"×"|"•"|'×'|'•'/);
@@ -37,10 +38,14 @@ const sunmi = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/printer/SunmiInnerPrinter.java",
 );
 assert.match(sunmi, /0x45/);
+assert.match(sunmi, /printTextBoldSegments/);
+assert.match(sunmi, /BOLD_ON/); // ESC E → markers, not stripped
 
 const textForm = read("src/lib/pos-printer/receipt-text-form.ts");
-assert.match(textForm, /\$\{qty\} \$\{title\}/);
+assert.match(textForm, /qtyCol/);
+assert.match(textForm, /\$\{qtyCol\} \$\{title\}/);
 assert.match(textForm, /- \$\{mod\.label\} x/);
+assert.match(textForm, / {4}\$\{label\}|` {4}\$\{label\}/);
 assert.match(textForm, /blank line between drinks/);
 assert.doesNotMatch(textForm, /×|•/);
 

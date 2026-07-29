@@ -1,6 +1,6 @@
 # nPos — สลิปสรุปปิดกะ (Z) ให้ครบพิธีเคาน์เตอร์
 
-อัปเดต: **1.14.81** · `APP_BUILD` 408 · `POS_BUILD` 133 · `versionCode` 104
+อัปเดต: **1.14.82** · `APP_BUILD` 409 · `POS_BUILD` 134 · `versionCode` 105
 (ส่งเงินสดประจำวัน — ดู `npos-z-cash-remit-checklist.md` · จัดคอลัมน์ `npos-z-report-align-checklist.md`)
 
 เป้าหมาย: สลิป Z/X บน native พอใช้ปิดกะแบบ Wongnai **ที่ร้านเราใช้จริง**  
