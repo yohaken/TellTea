@@ -88,7 +88,11 @@ public class SellActivity extends Activity {
   private TextView shiftSummary;
   private View changeHoldBar;
   private TextView changeHoldText;
+  private TextView changeHoldDismiss;
   private Runnable changeHoldHideTask;
+  private Runnable changeHoldTickTask;
+  private double lastChangeBaht;
+  private int changeHoldSecondsLeft;
   private TextView flushSyncButton;
   private TextView restoreHoldButton;
   private View payAllButton;
@@ -153,9 +157,12 @@ public class SellActivity extends Activity {
     shiftSummary = findViewById(R.id.shiftSummary);
     changeHoldBar = findViewById(R.id.changeHoldBar);
     changeHoldText = findViewById(R.id.changeHoldText);
-    View changeHoldDismiss = findViewById(R.id.changeHoldDismiss);
+    changeHoldDismiss = findViewById(R.id.changeHoldDismiss);
     if (changeHoldDismiss != null) {
       changeHoldDismiss.setOnClickListener(v -> dismissChangeHoldUi());
+    }
+    if (changeHoldBar != null) {
+      changeHoldBar.setOnClickListener(v -> dismissChangeHoldUi());
     }
     flushSyncButton = findViewById(R.id.flushSyncButton);
     restoreHoldButton = findViewById(R.id.restoreHoldButton);
@@ -175,6 +182,18 @@ public class SellActivity extends Activity {
     saleSync = new SaleSync();
     customerDisplay = new CustomerDisplayController();
     customerDisplay.bind(this);
+    // Tap menu/cart while change bar is up → dismiss hold (touch still reaches the control).
+    View content = findViewById(R.id.sellContentRow);
+    if (content != null) {
+      content.setOnTouchListener(
+          (v, event) -> {
+            if (event.getAction() == android.view.MotionEvent.ACTION_DOWN
+                && isChangeHoldVisible()) {
+              dismissChangeHoldUi();
+            }
+            return false;
+          });
+    }
 
     PosShellNav.bind(this, PosShellNav.ACTIVE_SELL, null);
     View sellHub = findViewById(R.id.sellHubButton);
@@ -584,10 +603,18 @@ public class SellActivity extends Activity {
     popup.getMenu().add(0, 2, 1, R.string.nav_receipts);
     popup.getMenu().add(0, 3, 2, R.string.nav_shift);
     popup.getMenu().add(0, 8, 3, R.string.sell_hub_open_drawer);
-    popup.getMenu().add(0, 4, 4, R.string.btn_settings_device);
-    popup.getMenu().add(0, 5, 5, R.string.sell_hub_x_report);
-    popup.getMenu().add(0, 6, 6, R.string.sell_hub_close_shift);
-    popup.getMenu().add(0, 7, 7, R.string.nav_lock_pin);
+    popup
+        .getMenu()
+        .add(
+            0,
+            9,
+            4,
+            getString(
+                R.string.sell_hub_change_display_fmt, ChangeDisplayPrefs.label(this)));
+    popup.getMenu().add(0, 4, 5, R.string.btn_settings_device);
+    popup.getMenu().add(0, 5, 6, R.string.sell_hub_x_report);
+    popup.getMenu().add(0, 6, 7, R.string.sell_hub_close_shift);
+    popup.getMenu().add(0, 7, 8, R.string.nav_lock_pin);
     popup.setOnMenuItemClickListener(
         (MenuItem item) -> {
           int id = item.getItemId();
@@ -605,6 +632,16 @@ public class SellActivity extends Activity {
           }
           if (id == 8) {
             openDrawerNoSale();
+            return true;
+          }
+          if (id == 9) {
+            ChangeDisplayPrefs.cycleNext(this);
+            Toast.makeText(
+                    this,
+                    getString(
+                        R.string.change_display_current_fmt, ChangeDisplayPrefs.label(this)),
+                    Toast.LENGTH_SHORT)
+                .show();
             return true;
           }
           if (id == 4) {
@@ -2052,45 +2089,107 @@ public class SellActivity extends Activity {
 
   private void renderCart() {
     if (!cart.isEmpty()) {
-      // Next bill started — clear change hold so it never blocks the line.
+      // Next bill started — clear change hold + last-change chip.
       hideChangeHoldBar();
+      clearLastChangeReminder();
     }
     renderCartViewsOnly();
     if (menu != null) renderMenu();
     syncCustomerDisplay();
   }
 
+  private boolean isChangeHoldVisible() {
+    return changeHoldBar != null && changeHoldBar.getVisibility() == View.VISIBLE;
+  }
+
   private void showChangeHoldBar(double change) {
     if (changeHoldBar == null || changeHoldText == null) return;
+    stopChangeHoldTimers();
+    lastChangeBaht = change;
+    changeHoldBar.setVisibility(View.VISIBLE);
+    long holdMs = ChangeDisplayPrefs.holdMsForChange(this);
+    if (holdMs > 0) {
+      changeHoldSecondsLeft = (int) Math.max(1, (holdMs + 999) / 1000);
+      refreshChangeHoldLabels(change);
+      changeHoldTickTask =
+          new Runnable() {
+            @Override
+            public void run() {
+              changeHoldSecondsLeft -= 1;
+              if (changeHoldSecondsLeft <= 0) {
+                changeHoldTickTask = null;
+                hideChangeHoldBar();
+                pinLastChangeStatus();
+                return;
+              }
+              refreshChangeHoldLabels(change);
+              dutyHandler.postDelayed(this, 1000L);
+            }
+          };
+      dutyHandler.postDelayed(changeHoldTickTask, 1000L);
+      changeHoldHideTask =
+          () -> {
+            changeHoldHideTask = null;
+            stopChangeHoldTimers();
+            hideChangeHoldBar();
+            pinLastChangeStatus();
+          };
+      dutyHandler.postDelayed(changeHoldHideTask, holdMs);
+    } else {
+      changeHoldSecondsLeft = -1;
+      changeHoldText.setText(getString(R.string.sell_change_hold, change));
+      if (changeHoldDismiss != null) {
+        changeHoldDismiss.setText(R.string.change_hold_dismiss_x);
+      }
+    }
+  }
+
+  private void refreshChangeHoldLabels(double change) {
+    if (changeHoldText != null) {
+      changeHoldText.setText(
+          getString(R.string.sell_change_hold_countdown, change, changeHoldSecondsLeft));
+    }
+    if (changeHoldDismiss != null) {
+      changeHoldDismiss.setText(
+          getString(R.string.change_hold_dismiss_countdown, changeHoldSecondsLeft));
+    }
+  }
+
+  private void stopChangeHoldTimers() {
     if (changeHoldHideTask != null) {
       dutyHandler.removeCallbacks(changeHoldHideTask);
       changeHoldHideTask = null;
     }
-    changeHoldText.setText(getString(R.string.sell_change_hold, change));
-    changeHoldBar.setVisibility(View.VISIBLE);
-    long holdMs = ChangeDisplayPrefs.holdMsForChange(this);
-    if (holdMs > 0) {
-      changeHoldHideTask =
-          () -> {
-            changeHoldHideTask = null;
-            hideChangeHoldBar();
-          };
-      dutyHandler.postDelayed(changeHoldHideTask, holdMs);
+    if (changeHoldTickTask != null) {
+      dutyHandler.removeCallbacks(changeHoldTickTask);
+      changeHoldTickTask = null;
     }
   }
 
   private void hideChangeHoldBar() {
-    if (changeHoldHideTask != null) {
-      dutyHandler.removeCallbacks(changeHoldHideTask);
-      changeHoldHideTask = null;
-    }
+    stopChangeHoldTimers();
     if (changeHoldBar != null) changeHoldBar.setVisibility(View.GONE);
+  }
+
+  /** Keep last change visible after the big bar closes — until next cart. */
+  private void pinLastChangeStatus() {
+    if (sellSyncStatus == null) return;
+    if (lastChangeBaht > 0.01 && cart.isEmpty()) {
+      sellSyncStatus.setText(getString(R.string.sell_last_change_fmt, lastChangeBaht));
+    }
   }
 
   private void dismissChangeHoldUi() {
     hideChangeHoldBar();
     if (customerDisplay != null) customerDisplay.dismissChangeHold();
-    if (sellSyncStatus != null) {
+    pinLastChangeStatus();
+  }
+
+  private void clearLastChangeReminder() {
+    lastChangeBaht = 0;
+    if (sellSyncStatus != null
+        && sellSyncStatus.getText() != null
+        && sellSyncStatus.getText().toString().startsWith("ทอนล่าสุด")) {
       sellSyncStatus.setText(R.string.sell_saved_local);
     }
   }
