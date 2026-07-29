@@ -890,26 +890,7 @@ public class SellActivity extends Activity {
           });
       TextView cancel = NposUi.ghost(this, getString(android.R.string.cancel));
       cancel.setText(R.string.outbox_cancel_one);
-      cancel.setOnClickListener(
-          v ->
-              NposConfirmDialog.confirmDestructive(
-                  this,
-                  getString(R.string.outbox_cancel_title),
-                  getString(R.string.outbox_cancel_msg) + "\n" + billId,
-                  getString(android.R.string.ok),
-                  () ->
-                      saleSync.cancelPending(
-                          this,
-                          mid,
-                          () ->
-                              runOnUiThread(
-                                  () -> {
-                                    updatePendingBadge();
-                                    updateShiftSummary();
-                                    Toast.makeText(
-                                            this, R.string.outbox_cancel_done, Toast.LENGTH_SHORT)
-                                        .show();
-                                  }))));
+      cancel.setOnClickListener(v -> confirmCancelPending(mid, billId));
       actions.addView(retry);
       actions.addView(cancel);
       root.addView(actions);
@@ -924,6 +905,52 @@ public class SellActivity extends Activity {
           sellSyncStatus.setText(R.string.sell_flushing);
           saleSync.flushPending(this);
           flushSyncButton.postDelayed(this::updatePendingBadge, 1200);
+          return true;
+        },
+        null);
+  }
+
+  private void confirmCancelPending(String mutationId, String billId) {
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    TextView reasonLabel = NposUi.caption(this, getString(R.string.void_reason_label));
+    reasonLabel.setPadding(0, 0, 0, NposUi.dp(this, 6));
+    box.addView(reasonLabel);
+    EditText reason = NposUi.field(this);
+    reason.setInputType(
+        InputType.TYPE_CLASS_TEXT
+            | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+    reason.setHint(R.string.void_reason_hint);
+    reason.setMinLines(2);
+    box.addView(reason);
+    NposConfirmDialog.custom(
+        this,
+        getString(R.string.outbox_cancel_title),
+        getString(R.string.outbox_cancel_msg) + "\n" + billId,
+        box,
+        getString(R.string.outbox_cancel_one),
+        getString(android.R.string.cancel),
+        true,
+        () -> {
+          String r = reason.getText().toString().trim();
+          if (r.isEmpty()) {
+            Toast.makeText(this, R.string.void_reason_required, Toast.LENGTH_SHORT).show();
+            reason.requestFocus();
+            return false;
+          }
+          saleSync.cancelPending(
+              this,
+              mutationId,
+              r,
+              () ->
+                  runOnUiThread(
+                      () -> {
+                        updatePendingBadge();
+                        updateShiftSummary();
+                        Toast.makeText(this, R.string.outbox_cancel_done, Toast.LENGTH_SHORT)
+                            .show();
+                      }));
           return true;
         },
         null);

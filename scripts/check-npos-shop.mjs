@@ -24,6 +24,7 @@ const steps = [
   { name: "change-display-setting", cmd: ["node", "scripts/test-npos-change-display-setting.mjs"] },
   { name: "receipt-readable", cmd: ["node", "scripts/test-npos-receipt-readable.mjs"] },
   { name: "thermal-all-docs", cmd: ["node", "scripts/test-npos-thermal-all-docs.mjs"] },
+  { name: "void-cashout-reason", cmd: ["node", "scripts/test-npos-void-cashout-reason.mjs"] },
   { name: "capture-wiring", cmd: ["node", "scripts/test-npos-capture.mjs"] },
   { name: "capture-projection", cmd: ["node", "scripts/test-npos-capture-projection.mjs"] },
   { name: "web-parity-shot", cmd: ["node", "scripts/test-npos-web-parity-shot.mjs"] },

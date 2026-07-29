@@ -2,11 +2,15 @@ package app.telltea.npos.ui;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -18,6 +22,9 @@ import app.telltea.npos.R;
  * not Material {@code setPositiveButton} chrome.
  *
  * <p>Policy: {@code docs/npos-friendly-ui-checklist.md}.
+ *
+ * <p>Dialogs that contain an {@link EditText} never scale the card (scale breaks IME /
+ * touch targeting) and request soft-keyboard focus.
  */
 public final class NposConfirmDialog {
   /** Return {@code true} to dismiss. */
@@ -169,6 +176,10 @@ public final class NposConfirmDialog {
     }
 
     if (content != null) {
+      // Detach if already parented (e.g. re-show).
+      if (content.getParent() instanceof ViewGroup) {
+        ((ViewGroup) content.getParent()).removeView(content);
+      }
       LinearLayout.LayoutParams clp =
           new LinearLayout.LayoutParams(
               LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -201,7 +212,6 @@ public final class NposConfirmDialog {
         destructive
             ? NposUi.secondary(activity, confirmLabel)
             : NposUi.primary(activity, confirmLabel);
-    // Dialog CTAs: fill row, still capped by NposUi max width when wrap — here stretch for balance.
     okBtn.setMaxWidth(Integer.MAX_VALUE);
     okBtn.setOnClickListener(
         v -> {
@@ -225,7 +235,10 @@ public final class NposConfirmDialog {
 
     ScrollView scroll = new ScrollView(activity);
     scroll.setFillViewport(true);
+    scroll.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
     scroll.addView(root);
+
+    boolean needsKeyboard = containsEditText(root);
 
     AlertDialog dialog =
         new AlertDialog.Builder(activity).setView(scroll).setCancelable(cancelable).create();
@@ -238,7 +251,22 @@ public final class NposConfirmDialog {
       Window window = dialog.getWindow();
       if (window != null) {
         window.setBackgroundDrawableResource(android.R.color.transparent);
-        fitCardToWindow(window, scroll, root);
+        DisplayMetrics dm = activity.getResources().getDisplayMetrics();
+        int maxW = Math.round(dm.widthPixels * 0.94f);
+        try {
+          window.setLayout(Math.min(maxW, dm.widthPixels), ViewGroup.LayoutParams.WRAP_CONTENT);
+        } catch (RuntimeException ignored) {
+          /* some OEMs reject setLayout */
+        }
+        if (needsKeyboard) {
+          // Scale breaks EditText hit-testing / IME on many tablets — scroll only.
+          window.setSoftInputMode(
+              WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+                  | WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+          focusFirstEditText(root);
+        } else {
+          fitCardToWindow(window, scroll, root);
+        }
       }
     } catch (RuntimeException e) {
       if (onCancel != null) onCancel.run();
@@ -247,12 +275,61 @@ public final class NposConfirmDialog {
     return dialog;
   }
 
+  static boolean containsEditText(View v) {
+    if (v == null) return false;
+    if (v instanceof EditText) return true;
+    if (v instanceof ViewGroup) {
+      ViewGroup g = (ViewGroup) v;
+      for (int i = 0; i < g.getChildCount(); i++) {
+        if (containsEditText(g.getChildAt(i))) return true;
+      }
+    }
+    return false;
+  }
+
+  static EditText findFirstEditText(View v) {
+    if (v == null) return null;
+    if (v instanceof EditText) return (EditText) v;
+    if (v instanceof ViewGroup) {
+      ViewGroup g = (ViewGroup) v;
+      for (int i = 0; i < g.getChildCount(); i++) {
+        EditText found = findFirstEditText(g.getChildAt(i));
+        if (found != null) return found;
+      }
+    }
+    return null;
+  }
+
+  static void focusFirstEditText(View root) {
+    EditText ed = findFirstEditText(root);
+    if (ed == null) return;
+    ed.setFocusable(true);
+    ed.setFocusableInTouchMode(true);
+    ed.post(
+        () -> {
+          ed.requestFocus();
+          try {
+            InputMethodManager imm =
+                (InputMethodManager)
+                    ed.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+              imm.showSoftInput(ed, InputMethodManager.SHOW_IMPLICIT);
+            }
+          } catch (RuntimeException ignored) {
+            /* OEM IME quirks */
+          }
+        });
+  }
+
   /**
    * Cap dialog to ~92% of the screen; if content is still taller, scale the card uniformly so
    * number-pad proportions stay intact (no clipped keys).
+   *
+   * <p>Do not use when the dialog has an {@link EditText} — scaling breaks typing.
    */
   static void fitCardToWindow(Window window, View scroll, View card) {
     if (window == null || scroll == null || card == null) return;
+    if (containsEditText(card) || containsEditText(scroll)) return;
     DisplayMetrics dm = card.getResources().getDisplayMetrics();
     final int maxH = Math.round(dm.heightPixels * 0.92f);
     final int maxW = Math.round(dm.widthPixels * 0.94f);
