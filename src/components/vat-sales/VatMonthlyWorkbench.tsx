@@ -12,18 +12,14 @@ import {
 import {
   buildIncomeBridge,
   computePersonalIncomeTax,
-  DEFAULT_GP_DEDUCT_PCT,
   DEFAULT_PERSONAL_ALLOWANCE,
   defaultGpByChannel,
   loadPersonalTaxSettings,
   mapGpByChannel,
-  proposeDeliveryGpDeduct,
-  proposeGpDeductPct,
   savePersonalTaxSettings,
   THAI_PIT_BRACKETS,
   type GpByChannel,
   type GpChannelKey,
-  type GpDeductMode,
 } from "@/lib/personal-income-tax";
 import {
   formatVatMoney,
@@ -1107,7 +1103,7 @@ function bookOpEx(row: MonthCategoryRow | null) {
 
 /**
  * ตารางแยกรายได้ → P&L
- * หัก GP แยกช่องทางเดลิเวอรี่ (Shopee/Grab/LM) + หน้าร้าน · จำเรทข้ามเดือน
+ * ใส่ยอดโอนจริงรายช่องทาง → คชจ./เรทคำนวณเอง · ไม่ใช้ประมาณก้อน
  */
 function IncomeBridgeTable({
   month,
@@ -1115,8 +1111,6 @@ function IncomeBridgeTable({
   mode,
   bridge,
   gpByChannel,
-  gpPropose,
-  gpProposePct,
   pnlIncomeStr,
   onModeChange,
   onGpByChannelChange,
@@ -1128,8 +1122,6 @@ function IncomeBridgeTable({
   mode: "exVat" | "incVat";
   bridge: ReturnType<typeof buildIncomeBridge>;
   gpByChannel: GpByChannel;
-  gpPropose: number;
-  gpProposePct: number;
   pnlIncomeStr: string;
   onModeChange: (m: "exVat" | "incVat") => void;
   onGpByChannelChange: (next: GpByChannel) => void;
@@ -1146,24 +1138,69 @@ function IncomeBridgeTable({
     });
   }
 
+  function setNetTransfer(key: GpChannelKey, raw: string, gross: number) {
+    const net = parseVatMoneyInput(raw);
+    const deduct = Math.max(0, Math.round((gross - net) * 100) / 100);
+    const pct =
+      gross > 0
+        ? Math.min(100, Math.round((deduct / gross) * 10000) / 100)
+        : 0;
+    patchChannel(key, {
+      mode: "transfer",
+      netTransfer: net,
+      amount: deduct,
+      pct,
+    });
+  }
+
+  function renderChannelRow(
+    row: (typeof bridge.channelRows)[number],
+    label: string,
+  ) {
+    const s = gpByChannel[row.key];
+    const transferDisplay =
+      s.mode === "transfer"
+        ? moneyFieldValue(s.netTransfer)
+        : moneyFieldValue(row.netTransfer);
+    return (
+      <tr key={row.key} className="vat-row-child">
+        <td className="col-seg col-child">{label}</td>
+        <td className="col-num">{fmt(row.gross)}</td>
+        <td className="col-num col-input">
+          <MoneyCell
+            value={transferDisplay}
+            locked={locked}
+            ariaLabel={`ยอดโอนหลัง ${label}`}
+            onChange={(v) => setNetTransfer(row.key, v, row.gross)}
+          />
+        </td>
+        <td className="col-num col-net">{fmt(row.deduct)}</td>
+        <td className="col-num">
+          {row.gross > 0 ? `${pctFieldValue(row.impliedPct) || "0.00"}%` : "—"}
+        </td>
+      </tr>
+    );
+  }
+
+  const storefrontRow = bridge.channelRows.find((r) => r.key === "storefront");
+
   return (
     <section className="vat-table-block vat-income-bridge">
       <h2 className="vat-table-title">
         รายได้แยก → P&L — {formatThaiMonthKey(month)}
       </h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        หัก GP แยกช่องทาง (Shopee / Grab / LINE MAN) · หน้าร้านแยกต่างหาก ·
-        เรทจำไว้ใช้เดือนถัดไป · เงินมีคอมม่า
+        ใส่ยอดโอนจริงรายช่องทาง → คชจ. = รายได้ − โอนหลัง · เรทคำนวณเอง · ไม่ใช้ประมาณก้อน
       </p>
       <div className="sheet-wrap vat-month-slim-wrap">
         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table vat-gp-channel-table">
           <thead>
             <tr>
-              <th className="col-seg">รายการ</th>
+              <th className="col-seg">ช่องทาง</th>
               <th className="col-num">รายได้</th>
-              <th className="col-seg">โหมดหัก</th>
-              <th className="col-num">เรท / ยอด</th>
-              <th className="col-num">หัก GP</th>
+              <th className="col-num">ยอดโอนหลัง</th>
+              <th className="col-num">คชจ. GP</th>
+              <th className="col-num">เรท %</th>
             </tr>
           </thead>
           <tbody>
@@ -1193,153 +1230,23 @@ function IncomeBridgeTable({
             </tr>
             {bridge.channelRows
               .filter((r) => r.key !== "storefront")
-              .map((row) => {
-                const s = gpByChannel[row.key];
-                return (
-                  <tr key={row.key} className="vat-row-child">
-                    <td className="col-seg col-child">− GP {row.label}</td>
-                    <td className="col-num">{fmt(row.gross)}</td>
-                    <td className="col-seg col-input">
-                      <select
-                        className="vat-inline-select"
-                        disabled={locked}
-                        value={s.mode}
-                        aria-label={`โหมดหัก GP ${row.label}`}
-                        onChange={(e) =>
-                          patchChannel(row.key, {
-                            mode:
-                              e.target.value === "amount" ? "amount" : "pct",
-                          })
-                        }
-                      >
-                        <option value="pct">เรท %</option>
-                        <option value="amount">ยอดบาท</option>
-                      </select>
-                    </td>
-                    <td className="col-num col-input">
-                      {s.mode === "pct" ? (
-                        <span className="vat-tap-edit">
-                          <input
-                            className="vat-sales-input vat-tap-input"
-                            inputMode="decimal"
-                            disabled={locked}
-                            value={pctFieldValue(s.pct) || ""}
-                            placeholder={
-                              row.key === "grab"
-                                ? String(
-                                    pctFieldValue(gpProposePct) ||
-                                      DEFAULT_GP_DEDUCT_PCT,
-                                  )
-                                : String(DEFAULT_GP_DEDUCT_PCT)
-                            }
-                            aria-label={`เรท GP % ${row.label}`}
-                            onChange={(e) =>
-                              patchChannel(row.key, {
-                                pct:
-                                  parseVatPctInput(
-                                    e.target.value,
-                                    DEFAULT_GP_DEDUCT_PCT,
-                                  ) || 0,
-                              })
-                            }
-                          />
-                          <span className="vat-tap-suffix">%</span>
-                        </span>
-                      ) : (
-                        <MoneyCell
-                          value={moneyFieldValue(s.amount)}
-                          locked={locked}
-                          ariaLabel={`หัก GP บาท ${row.label}`}
-                          onChange={(v) =>
-                            patchChannel(row.key, {
-                              amount: parseVatMoneyInput(v),
-                            })
-                          }
-                        />
-                      )}
-                    </td>
-                    <td className="col-num col-net">{fmt(row.deduct)}</td>
-                  </tr>
-                );
-              })}
-            <tr>
-              <td className="col-seg">รายได้หน้าร้าน</td>
-              <td className="col-num">{fmt(bridge.storefrontGross)}</td>
-              <td className="col-seg col-input">
-                <select
-                  className="vat-inline-select"
-                  disabled={locked}
-                  value={gpByChannel.storefront.mode}
-                  aria-label="โหมดหัก GP หน้าร้าน"
-                  onChange={(e) =>
-                    patchChannel("storefront", {
-                      mode: e.target.value === "amount" ? "amount" : "pct",
-                    })
-                  }
-                >
-                  <option value="pct">เรท %</option>
-                  <option value="amount">ยอดบาท</option>
-                </select>
-              </td>
-              <td className="col-num col-input">
-                {gpByChannel.storefront.mode === "pct" ? (
-                  <span className="vat-tap-edit">
-                    <input
-                      className="vat-sales-input vat-tap-input"
-                      inputMode="decimal"
-                      disabled={locked}
-                      value={pctFieldValue(gpByChannel.storefront.pct) || ""}
-                      placeholder="0"
-                      aria-label="เรท GP % หน้าร้าน"
-                      onChange={(e) =>
-                        patchChannel("storefront", {
-                          pct: parseVatPctInput(e.target.value, 0) || 0,
-                        })
-                      }
-                    />
-                    <span className="vat-tap-suffix">%</span>
-                  </span>
-                ) : (
-                  <MoneyCell
-                    value={moneyFieldValue(gpByChannel.storefront.amount)}
-                    locked={locked}
-                    ariaLabel="หัก GP บาท หน้าร้าน"
-                    onChange={(v) =>
-                      patchChannel("storefront", {
-                        amount: parseVatMoneyInput(v),
-                      })
-                    }
-                  />
-                )}
-              </td>
-              <td className="col-num col-net">
-                {fmt(
-                  bridge.channelRows.find((r) => r.key === "storefront")
-                    ?.deduct || 0,
-                )}
-              </td>
-            </tr>
+              .map((row) => renderChannelRow(row, row.label))}
+            {storefrontRow
+              ? renderChannelRow(storefrontRow, "หน้าร้าน")
+              : null}
             <tr>
               <td className="col-seg">รวมรายได้ก่อนหัก</td>
-              <td className="col-num" colSpan={3}>
-                {fmt(bridge.grossTotal)}
-              </td>
+              <td className="col-num">{fmt(bridge.grossTotal)}</td>
+              <td className="col-num">—</td>
+              <td className="col-num">—</td>
               <td className="col-num">—</td>
             </tr>
             <tr>
-              <td className="col-seg">
-                รวมหัก GP
-                <span className="muted">
-                  {" "}
-                  · ประมาณก้อน {fmt(gpPropose)} ({pctFieldValue(gpProposePct) ||
-                    DEFAULT_GP_DEDUCT_PCT}
-                  %)
-                </span>
-              </td>
-              <td className="col-num" colSpan={3}>
-                —
-              </td>
+              <td className="col-seg">รวมหัก GP (จากยอดโอนจริง)</td>
+              <td className="col-num">—</td>
+              <td className="col-num">—</td>
               <td className="col-num col-net">{fmt(bridge.gpDeduct)}</td>
+              <td className="col-num">—</td>
             </tr>
             <tr className="vat-sales-totals-row">
               <td className="col-seg">= รายได้สุทธิ → P&L</td>
@@ -1734,23 +1641,13 @@ export function VatMonthlyWorkbench({ actor }: Props) {
       let n = ret.note;
       let mode = ret.pnlIncomeMode;
       let income = moneyInputValue(ret.pnlIncome);
-      const gpPropose = proposeDeliveryGpDeduct({
-        gpVatClaimed: ret.delivery.gpVatClaimed,
-        gpEstimate: ret.delivery.gpEstimate,
-        outputPct: ret.delivery.rates.outputPct,
-      });
-      const delGrossForPct =
-        mode === "incVat" ? ret.delivery.grossSales : ret.delivery.vatBase;
-      const gpProposePct = proposeGpDeductPct(delGrossForPct, gpPropose);
-      // เดือนนี้ → ตั้งค่าร้าน (จำข้ามเดือน) → มรดกก้อนเดียว
+      // เดือนนี้ → ตั้งค่าร้าน (จำข้ามเดือน) — ไม่เติมจากประมาณก้อน VAT
       let nextGp = mapGpByChannel(
         ret.pnlGpByChannel || st.pnlGpByChannel,
         {
-          mode: ret.pnlDeliveryGpMode || "pct",
-          pct:
-            ret.pnlDeliveryGpPct > 0 ? ret.pnlDeliveryGpPct : gpProposePct,
-          amount:
-            ret.pnlDeliveryGpDeduct > 0 ? ret.pnlDeliveryGpDeduct : gpPropose,
+          mode: ret.pnlDeliveryGpMode || "transfer",
+          pct: ret.pnlDeliveryGpPct > 0 ? ret.pnlDeliveryGpPct : 0,
+          amount: ret.pnlDeliveryGpDeduct > 0 ? ret.pnlDeliveryGpDeduct : 0,
         },
       );
 
@@ -1822,11 +1719,9 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         ret.pnlIncomeMode,
         moneyInputValue(ret.pnlIncome),
         mapGpByChannel(ret.pnlGpByChannel || st.pnlGpByChannel, {
-          mode: ret.pnlDeliveryGpMode || "pct",
-          pct:
-            ret.pnlDeliveryGpPct > 0 ? ret.pnlDeliveryGpPct : gpProposePct,
-          amount:
-            ret.pnlDeliveryGpDeduct > 0 ? ret.pnlDeliveryGpDeduct : gpPropose,
+          mode: ret.pnlDeliveryGpMode || "transfer",
+          pct: ret.pnlDeliveryGpPct > 0 ? ret.pnlDeliveryGpPct : 0,
+          amount: ret.pnlDeliveryGpDeduct > 0 ? ret.pnlDeliveryGpDeduct : 0,
         }),
       );
       const localSnap = snapshotDraft(d, s, n, mode, income, nextGp);
@@ -1880,24 +1775,6 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         storefront.grossSales,
       ),
     [delivery, storefront],
-  );
-
-  const gpPropose = useMemo(
-    () =>
-      proposeDeliveryGpDeduct({
-        gpVatClaimed: delivery.gpVatClaimed,
-        gpEstimate: delivery.gpEstimate,
-        outputPct: delivery.rates.outputPct,
-      }),
-    [delivery.gpVatClaimed, delivery.gpEstimate, delivery.rates.outputPct],
-  );
-
-  const deliveryGrossForMode =
-    pnlMode === "incVat" ? delivery.grossSales : delivery.vatBase;
-
-  const gpProposePct = useMemo(
-    () => proposeGpDeductPct(deliveryGrossForMode, gpPropose),
-    [deliveryGrossForMode, gpPropose],
   );
 
   const incomeBridge = useMemo(
@@ -2570,8 +2447,6 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                 mode={pnlMode}
                 bridge={incomeBridge}
                 gpByChannel={gpByChannel}
-                gpPropose={gpPropose}
-                gpProposePct={gpProposePct}
                 pnlIncomeStr={pnlIncome}
                 onModeChange={(mode) => {
                   setPnlMode(mode);
