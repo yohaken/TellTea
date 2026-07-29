@@ -20,7 +20,7 @@ const labels = read("src/lib/ledger-labels.ts");
 const assertRules = read("scripts/assert-firestore-rules.mjs");
 const ownerBooks = read("src/lib/owner-books.ts");
 
-assert.match(version, /APP_BUILD = 381/);
+assert.match(version, /APP_BUILD = 382/);
 assert.ok(existsSync(join(root, "src/lib/bill-notices.ts")));
 assert.ok(existsSync(join(root, "src/components/BillNoticeLedgerPanel.tsx")));
 
@@ -31,11 +31,13 @@ assert.match(read("src/app/ledger/bill-notices/page.tsx"), /billNotice=1/);
 assert.match(panel, /export function BillNoticeLedgerPanel/);
 assert.match(panel, /วันที่/);
 assert.match(panel, /รายการ/);
-assert.match(panel, /อัพบิล/);
-assert.match(panel, /เงินออก/);
+assert.match(panel, />บิล</);
+assert.match(panel, />ออก</);
 assert.match(panel, /note/);
 assert.match(panel, /วิเคราะห์สรุป|bill-notice-summary/);
-assert.match(panel, /รับเข้า บช\./);
+assert.match(panel, /bill-notice-line/);
+assert.match(panel, /shortLabelBillNoticeStatus/);
+assert.match(panel, /bill-notice-act-row/);
 assert.match(panel, /BILL_NOTICE_PRESETS/);
 
 assert.match(lib, /export async function addBillNotice/);
@@ -43,6 +45,7 @@ assert.match(lib, /export async function acceptBillNotice/);
 assert.match(lib, /export async function rejectBillNotice/);
 assert.match(lib, /isBillNoticeReadyForOwnerBooks/);
 assert.match(lib, /summarizeBillNotices/);
+assert.match(lib, /shortLabelBillNoticeStatus/);
 assert.match(lib, /billNoticeBucketLabel/);
 assert.match(lib, /orderBy\("createdAt", "desc"\)/);
 assert.match(lib, /addOwnerBookEntry/);
@@ -59,6 +62,9 @@ assert.match(storage, /match \/bill-notices\//);
 assert.match(css, /\.bill-notice-panel\b/);
 assert.match(css, /\.bill-notice-summary\b/);
 assert.match(css, /\.bill-notice-slim\b/);
+assert.match(css, /\.bill-notice-line\b/);
+assert.match(css, /white-space:\s*nowrap/);
+assert.match(css, /\.bill-notice-act-row\b/);
 
 assert.match(labels, /"ค่าน้ำ"/);
 assert.match(labels, /"ค่าแก๊ส"/);

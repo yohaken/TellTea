@@ -20,8 +20,8 @@ import {
   deleteBillNotice,
   getBillNoticeReceiptUrls,
   isBillNoticeReadyForOwnerBooks,
-  labelBillNoticeStatus,
   rejectBillNotice,
+  shortLabelBillNoticeStatus,
   subscribeBillNoticesPage,
   summarizeBillNotices,
   updateBillNotice,
@@ -194,33 +194,24 @@ export function BillNoticeLedgerPanel({
       {open ? (
         <div className="bill-notice-panel-body">
           <p className="muted bill-notice-hint">
-            พนักงานถ่ายรูปบิลเสนอบิล — เจ้าของตรวจแล้วรวมเข้า บช.เจ้าของ
-            (วันที่ · รายการ · อัพบิล · เงินออก · note)
+            พนักงานถ่ายบิลเสนอ · เจ้าของรับเข้า บช.เจ้าของ
           </p>
 
           {entries.length > 0 ? (
             <div className="bill-notice-summary" aria-label="วิเคราะห์สรุปแจ้งบิล">
               <p className="bill-notice-summary-line">
-                <span>รอเจ้าของ</span>
-                <strong>
-                  {summary.pendingCount} · ฿{formatPlainNumber(summary.pendingSum)}
-                </strong>
+                <span className="bill-notice-summary-text">
+                  รอ {summary.pendingCount} · ฿{formatPlainNumber(summary.pendingSum)}
+                  {" · "}
+                  เข้าแล้ว {summary.acceptedCount} · ฿
+                  {formatPlainNumber(summary.acceptedSum)}
+                  {summary.byLabel.length
+                    ? ` · ${summary.byLabel
+                        .map((b) => `${b.label} ${formatPlainNumber(b.sum)}`)
+                        .join(" · ")}`
+                    : ""}
+                </span>
               </p>
-              <p className="bill-notice-summary-line">
-                <span>เข้าร้านแล้ว</span>
-                <strong>
-                  {summary.acceptedCount} · ฿{formatPlainNumber(summary.acceptedSum)}
-                </strong>
-              </p>
-              {summary.byLabel.length > 0 ? (
-                <ul className="bill-notice-summary-buckets">
-                  {summary.byLabel.map((b) => (
-                    <li key={b.label}>
-                      {b.label} {b.count} · ฿{formatPlainNumber(b.sum)}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
             </div>
           ) : null}
 
@@ -236,10 +227,11 @@ export function BillNoticeLedgerPanel({
                   <tr>
                     <th className="col-date">วันที่</th>
                     <th className="col-desc">รายการ</th>
-                    <th className="col-photo">อัพบิล</th>
-                    <th className="col-out">เงินออก</th>
+                    <th className="col-photo">บิล</th>
+                    <th className="col-out">ออก</th>
                     <th className="col-note">note</th>
                     <th className="col-status">สถานะ</th>
+                    <th className="col-act" aria-label="จัดการ" />
                   </tr>
                 </thead>
                 <tbody>
@@ -248,6 +240,17 @@ export function BillNoticeLedgerPanel({
                     const canEdit =
                       row.status === "pending" &&
                       (isOwner || row.createdBy === actorId);
+                    const canDelete =
+                      row.status !== "accepted" &&
+                      (isOwner ||
+                        (row.createdBy === actorId && row.status === "pending"));
+                    const tip = [
+                      row.description,
+                      row.staffName ? `โดย ${row.staffName}` : "",
+                      row.note,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ");
                     return (
                       <tr
                         key={row.id}
@@ -257,13 +260,15 @@ export function BillNoticeLedgerPanel({
                         ]
                           .filter(Boolean)
                           .join(" ")}
+                        title={tip}
                       >
                         <td className="col-date">{formatDateShort(row.date)}</td>
                         <td className="col-desc">
                           {canEdit ? (
                             <button
                               type="button"
-                              className="desc-link"
+                              className="desc-link bill-notice-line"
+                              title={tip || "แตะเพื่อแก้ไข"}
                               onClick={() => {
                                 setError(null);
                                 setEditing(row);
@@ -272,13 +277,10 @@ export function BillNoticeLedgerPanel({
                               {row.description || "—"}
                             </button>
                           ) : (
-                            <span>{row.description || "—"}</span>
-                          )}
-                          {row.staffName ? (
-                            <span className="bill-notice-staff muted">
-                              {row.staffName}
+                            <span className="bill-notice-line" title={tip}>
+                              {row.description || "—"}
                             </span>
-                          ) : null}
+                          )}
                         </td>
                         <td className="col-photo">
                           {urls.length ? (
@@ -300,44 +302,62 @@ export function BillNoticeLedgerPanel({
                         <td className="col-out">
                           {formatPlainNumber(row.amountOut)}
                         </td>
-                        <td className="col-note">{row.note || "—"}</td>
-                        <td className="col-status">
-                          <span className={statusClass(row.status)}>
-                            {labelBillNoticeStatus(row.status)}
+                        <td className="col-note">
+                          <span className="bill-notice-line" title={row.note || undefined}>
+                            {row.note || "—"}
                           </span>
-                          {row.status === "pending" && isOwner ? (
-                            <div className="bill-notice-owner-actions">
+                        </td>
+                        <td className="col-status">
+                          <span
+                            className={statusClass(row.status)}
+                            title={
+                              row.status === "pending"
+                                ? "รอเจ้าของ"
+                                : row.status === "accepted"
+                                  ? "เข้าร้านแล้ว"
+                                  : undefined
+                            }
+                          >
+                            {shortLabelBillNoticeStatus(row.status)}
+                          </span>
+                        </td>
+                        <td className="col-act">
+                          <div className="bill-notice-act-row">
+                            {row.status === "pending" && isOwner ? (
+                              <>
+                                <button
+                                  type="button"
+                                  className="ghost-btn bill-notice-act bill-notice-accept"
+                                  disabled={busyId === row.id}
+                                  title="รับเข้า บช.เจ้าของ"
+                                  onClick={() => void onAccept(row)}
+                                >
+                                  รับ
+                                </button>
+                                <button
+                                  type="button"
+                                  className="ghost-btn bill-notice-act"
+                                  disabled={busyId === row.id}
+                                  title="ไม่รับบิล"
+                                  onClick={() => void onReject(row)}
+                                >
+                                  ไม่
+                                </button>
+                              </>
+                            ) : null}
+                            {canDelete ? (
                               <button
                                 type="button"
-                                className="ghost-btn bill-notice-accept"
+                                className="ghost-btn icon-btn bill-notice-act"
+                                aria-label="ลบ"
+                                title="ลบ"
                                 disabled={busyId === row.id}
-                                onClick={() => void onAccept(row)}
+                                onClick={() => void onDelete(row)}
                               >
-                                รับเข้า บช.
+                                <Trash2 size={12} />
                               </button>
-                              <button
-                                type="button"
-                                className="ghost-btn"
-                                disabled={busyId === row.id}
-                                onClick={() => void onReject(row)}
-                              >
-                                ไม่รับ
-                              </button>
-                            </div>
-                          ) : null}
-                          {(isOwner ||
-                            (row.createdBy === actorId && row.status === "pending")) &&
-                          row.status !== "accepted" ? (
-                            <button
-                              type="button"
-                              className="ghost-btn icon-btn bill-notice-del"
-                              aria-label="ลบ"
-                              disabled={busyId === row.id}
-                              onClick={() => void onDelete(row)}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          ) : null}
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     );

@@ -175,6 +175,20 @@ export function labelBillNoticeStatus(status: BillNoticeStatus) {
   }
 }
 
+/** Compact single-line status for slim table */
+export function shortLabelBillNoticeStatus(status: BillNoticeStatus) {
+  switch (status) {
+    case "accepted":
+      return "เข้าแล้ว";
+    case "rejected":
+      return "ไม่รับ";
+    case "void":
+      return "ยกเลิก";
+    default:
+      return "รอ";
+  }
+}
+
 /** Bucket label for analysis (ค่าไฟ / ค่าน้ำ / …). */
 export function billNoticeBucketLabel(description: string): string {
   const t = description.trim().toLowerCase();
