@@ -35,6 +35,7 @@ import {
   MONTH_CHANNEL_SHORT,
   MONTH_CHANNELS,
   patchGpFee,
+  patchGpVat,
   patchSales,
   patchTransfer,
   retToMonthBooksDraft,
@@ -63,6 +64,13 @@ import {
   type VatMonthlyReturn,
 } from "@/lib/vat-monthly";
 import { bangkokMonthKey } from "@/lib/vat-sales";
+import { listVatImportRows } from "@/lib/vat-import";
+import {
+  describeImportIntoBooks,
+  mergeVatImportIntoMonth,
+  previewApplyVatImportRows,
+  type ImportIntoBooksMap,
+} from "@/lib/vat-import-apply";
 import {
   subscribeVatImportMonthMerged,
 } from "@/lib/vat-import-month-sync";
@@ -177,6 +185,8 @@ export function VatMonthBooks({ actor }: Props) {
 
   const [openDeliverySales, setOpenDeliverySales] = useState(true);
   const [openStorefrontSales, setOpenStorefrontSales] = useState(true);
+  const [importMap, setImportMap] = useState<ImportIntoBooksMap | null>(null);
+  const [importPullBusy, setImportPullBusy] = useState(false);
 
   const draftRef = useRef(draft);
   draftRef.current = draft;
@@ -184,6 +194,16 @@ export function VatMonthBooks({ actor }: Props) {
   const loadGen = useRef(0);
 
   const locked = draft.status === "filed";
+
+  const refreshImportMap = useCallback(async (m: string) => {
+    try {
+      const rows = await listVatImportRows(m);
+      const preview = previewApplyVatImportRows(m, rows);
+      setImportMap(describeImportIntoBooks(preview));
+    } catch {
+      setImportMap(null);
+    }
+  }, []);
 
   const booksCombo = useMemo(() => {
     if (!bookStaff || !bookOwner) return null;
@@ -238,6 +258,7 @@ export function VatMonthBooks({ actor }: Props) {
         setTaxNote(tax.note || "");
         hydrateFromReturn(ret);
         setHydrated(true);
+        void refreshImportMap(m);
       } catch (e) {
         if (gen !== loadGen.current) return;
         setError(e instanceof Error ? e.message : String(e));
@@ -247,7 +268,7 @@ export function VatMonthBooks({ actor }: Props) {
         if (gen === loadGen.current) setLoading(false);
       }
     },
-    [hydrateFromReturn],
+    [hydrateFromReturn, refreshImportMap],
   );
 
   useEffect(() => {
@@ -268,8 +289,9 @@ export function VatMonthBooks({ actor }: Props) {
         next.transfer.lineman +
         next.transfer.storefront;
       setMsg(`ซิงก์จากนำเข้า · รายได้ถึงร้าน ${formatVatMoney(income)}`);
+      void refreshImportMap(month);
     });
-  }, [month]);
+  }, [month, refreshImportMap]);
 
   // อัตโนมัติเซฟเบา ๆ
   useEffect(() => {
@@ -304,11 +326,48 @@ export function VatMonthBooks({ actor }: Props) {
     markDirty();
   }
 
+  function setGpVatField(key: MonthChannel, raw: string) {
+    if (locked) return;
+    setDraft((d) => patchGpVat(d, key, parseVatMoneyInput(raw)));
+    markDirty();
+  }
+
   function setSalesField(key: keyof MonthBooksDraft["sales"], raw: string) {
     if (locked) return;
     setDraft((d) => patchSales(d, key, parseVatMoneyInput(raw)));
     markDirty();
   }
+
+  /** ดึงตารางนำเข้า → ประสานเข้างบ A/B/D */
+  const pullImportIntoBooks = async () => {
+    if (locked) return;
+    setImportPullBusy(true);
+    setError("");
+    try {
+      const rows = await listVatImportRows(month);
+      const result = await mergeVatImportIntoMonth({
+        monthKey: month,
+        rows,
+        actor,
+        markApplied: false,
+      });
+      if (result.skipped) {
+        setMsg(result.reason || "ยังไม่มียอดจากนำเข้า");
+        setImportMap(describeImportIntoBooks(result.preview));
+        return;
+      }
+      hydrateFromReturn(result.saved);
+      const map = describeImportIntoBooks(result.preview);
+      setImportMap(map);
+      setMsg(
+        `ดึงจากนำเข้า → งบ · โอน ${formatVatMoney(map.transferTotal)} · คชจ. ${formatVatMoney(map.feeTotal)} · ขาย ${formatVatMoney(map.salesTotal)} · GP≠ ${formatVatMoney(map.gpVatTotal)}`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setImportPullBusy(false);
+    }
+  };
 
   const pullBothBooks = async () => {
     setBooksBusy(true);
@@ -602,6 +661,85 @@ export function VatMonthBooks({ actor }: Props) {
 
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
+
+      {/* สรุปสิ่งที่ดึงจากตารางนำเข้าเข้างบได้ */}
+      <section className="vat-table-block vat-import-into-books">
+        <h2 className="vat-table-title">
+          จากตารางนำเข้า → งบ{" "}
+          <button
+            type="button"
+            className="vat-mini-btn vat-mini-btn--primary"
+            disabled={locked || importPullBusy || loading}
+            title="รวมยอดขาย / คชจ. / โอน / ภาษีซื้อ GP จากแท็บนำเข้าเข้ากล่อง A·B·D"
+            onClick={() => void pullImportIntoBooks()}
+          >
+            {importPullBusy ? "…" : "ดึงเข้างบ"}
+          </button>
+        </h2>
+        {importMap && importMap.rowCount > 0 ? (
+          <>
+            <div className="sheet-wrap vat-month-slim-wrap">
+              <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+                <thead>
+                  <tr>
+                    <th className="col-seg">ช่อง</th>
+                    <th className="col-num" title="→ D ยอดขาย">
+                      ขาย→D
+                    </th>
+                    <th className="col-num" title="→ B คชจ. GP">
+                      คชจ.→B
+                    </th>
+                    <th className="col-num" title="→ A รายได้ถึงร้าน">
+                      โอน→A
+                    </th>
+                    <th className="col-num" title="→ D ภาษีซื้อ GP">
+                      GP≠→D
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {MONTH_CHANNELS.map((k) => {
+                    const c = importMap.byChannel[k];
+                    return (
+                      <tr key={k}>
+                        <td className="col-seg">{MONTH_CHANNEL_SHORT[k]}</td>
+                        <td className="col-num">{fmt(c.sales)}</td>
+                        <td className="col-num">{fmt(c.fee)}</td>
+                        <td className="col-num">{fmt(c.transfer)}</td>
+                        <td className="col-num">{fmt(c.gpVat)}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="vat-sales-totals-row">
+                    <td className="col-seg">รวม ({importMap.rowCount} แถว)</td>
+                    <td className="col-num col-net">
+                      {fmt(importMap.salesTotal)}
+                    </td>
+                    <td className="col-num col-net">
+                      {fmt(importMap.feeTotal)}
+                    </td>
+                    <td className="col-num col-net">
+                      {fmt(importMap.transferTotal)}
+                    </td>
+                    <td className="col-num col-net">
+                      {fmt(importMap.gpVatTotal)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="muted vat-sales-hint vat-hint-one-line">
+              ดึงได้: ขาย·คชจ.·โอน·GP≠ (SF/GB/LM) · ไม่ดึง:{" "}
+              {importMap.notPulled.join(" · ")}
+            </p>
+          </>
+        ) : (
+          <p className="muted vat-sales-hint vat-hint-one-line">
+            ยังไม่มีแถวในแท็บนำเข้าเดือนนี้ — กรอก/อัปโหลดที่แท็บนำเข้าแล้วกด
+            「ดึงเข้างบ」 (หรือรอซิงก์อัตโนมัติ)
+          </p>
+        )}
+      </section>
 
       {loading && !hydrated ? (
         <p className="muted">กำลังโหลด…</p>
@@ -1058,9 +1196,29 @@ export function VatMonthBooks({ actor }: Props) {
                   </thead>
                   <tbody>
                     <tr className="vat-row-parent">
-                      <td className="col-seg">ภาษีซื้อ GP เดลิเวอรี่</td>
+                      <td
+                        className="col-seg"
+                        title="จากนำเข้าคอลัมน์ GP≠ หรือประมาณคชจ.×7/107"
+                      >
+                        ภาษีซื้อ GP เดลิเวอรี่ (รวม)
+                      </td>
                       <td className="col-num col-net">{fmt(view.inputGpVat)}</td>
                     </tr>
+                    {MONTH_CHANNELS.map((k) => (
+                      <tr key={`gpvat-${k}`} className="vat-row-child">
+                        <td className="col-seg col-child">
+                          GP≠ {MONTH_CHANNEL_LABEL[k]}
+                        </td>
+                        <td className="col-num col-input">
+                          <MoneyCell
+                            value={moneyFieldValue(draft.gpVatOverride[k])}
+                            locked={locked}
+                            ariaLabel={`ภาษีซื้อ GP ${MONTH_CHANNEL_SHORT[k]}`}
+                            onChange={(v) => setGpVatField(k, v)}
+                          />
+                        </td>
+                      </tr>
+                    ))}
                     <tr className="vat-row-parent">
                       <td className="col-seg">
                         <span className="vat-seg-cell">

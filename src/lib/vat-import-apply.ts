@@ -44,6 +44,85 @@ export type ApplyVatImportPreview = {
   rowIds: string[];
 };
 
+/** สิ่งที่ดึงจากตารางนำเข้าเข้างบเดือนได้ (SF/GB/LM) */
+export type ImportIntoBooksMap = {
+  monthKey: string;
+  rowCount: number;
+  /** A รายได้ถึงร้าน — ยอดโอน */
+  transferTotal: number;
+  /** B คชจ. — ค่า GP */
+  feeTotal: number;
+  /** D ยอดขาย */
+  salesTotal: number;
+  /** D ภาษีซื้อ GP */
+  gpVatTotal: number;
+  byChannel: Record<
+    Exclude<VatImportChannel, "storefront">,
+    {
+      sales: number;
+      fee: number;
+      transfer: number;
+      gpVat: number;
+    }
+  >;
+  /** สิ่งที่ตารางนำเข้ามีแต่ไม่ดึงเข้างบนี้ */
+  notPulled: string[];
+};
+
+/** สรุปว่าแถวนำเข้าจะประสานเข้ากล่อง A/B/D อะไรบ้าง */
+export function describeImportIntoBooks(
+  preview: ApplyVatImportPreview,
+): ImportIntoBooksMap {
+  const byChannel = {
+    shopee: {
+      sales: preview.byChannel.shopee.gross,
+      fee: preview.byChannel.shopee.fee,
+      transfer: preview.byChannel.shopee.netTransfer,
+      gpVat: preview.byChannel.shopee.gpVat,
+    },
+    grab: {
+      sales: preview.byChannel.grab.gross,
+      fee: preview.byChannel.grab.fee,
+      transfer: preview.byChannel.grab.netTransfer,
+      gpVat: preview.byChannel.grab.gpVat,
+    },
+    lineman: {
+      sales: preview.byChannel.lineman.gross,
+      fee: preview.byChannel.lineman.fee,
+      transfer: preview.byChannel.lineman.netTransfer,
+      gpVat: preview.byChannel.lineman.gpVat,
+    },
+  };
+  const salesTotal = roundMoney(
+    byChannel.shopee.sales + byChannel.grab.sales + byChannel.lineman.sales,
+  );
+  const feeTotal = roundMoney(
+    byChannel.shopee.fee + byChannel.grab.fee + byChannel.lineman.fee,
+  );
+  const transferTotal = roundMoney(
+    byChannel.shopee.transfer +
+      byChannel.grab.transfer +
+      byChannel.lineman.transfer,
+  );
+  const gpVatTotal = roundMoney(
+    byChannel.shopee.gpVat + byChannel.grab.gpVat + byChannel.lineman.gpVat,
+  );
+  return {
+    monthKey: preview.monthKey,
+    rowCount: preview.rowIds.length,
+    transferTotal,
+    feeTotal,
+    salesTotal,
+    gpVatTotal,
+    byChannel,
+    notPulled: [
+      "หน้าร้าน (นอกตารางนำเข้า — ใส่ในงบเอง)",
+      "คชจ./ภาษีซื้อ จากสองบช. (ปุ่มดึงบช.)",
+      "เลขที่ใบกำกับ / หลักฐานไฟล์ (เก็บที่นำเข้า)",
+    ],
+  };
+}
+
 function emptySum(): ChannelApplySum {
   return {
     gross: 0,

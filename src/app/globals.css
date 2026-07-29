@@ -17165,6 +17165,13 @@ a.ghost-btn {
   color: rgba(28, 42, 31, 0.88);
 }
 
+.vat-import-into-books .vat-table-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+}
+
 .vat-month-books .vat-table-block {
   margin-bottom: 0.65rem;
 }

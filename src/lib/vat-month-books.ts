@@ -365,6 +365,17 @@ export function patchGpFee(
   };
 }
 
+export function patchGpVat(
+  draft: MonthBooksDraft,
+  key: MonthChannel,
+  value: number,
+): MonthBooksDraft {
+  return {
+    ...draft,
+    gpVatOverride: { ...draft.gpVatOverride, [key]: normalizeMoney(value) },
+  };
+}
+
 export function patchSales(
   draft: MonthBooksDraft,
   key: keyof MonthBooksDraft["sales"],
