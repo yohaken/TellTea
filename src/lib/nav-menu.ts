@@ -66,7 +66,7 @@ const NAV_MODULE_PERMS: Record<NavModuleKey, PermissionKey | "signedIn"> = {
 };
 
 export const NAV_MODULE_DESCRIPTIONS: Record<NavModuleKey, string> = {
-  ledger: "บัญชีเข้า–ออก · เทียบเงินนำเข้า",
+  ledger: "บัญชีเข้า–ออกรายวัน",
   production: "บันทึกผลิต / โบนัสเบเกอรี่",
   otBonus: "โบนัสชง / OT",
   bonus: "สรุปโบนัสเดือน",
