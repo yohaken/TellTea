@@ -230,6 +230,49 @@ export function VatMonthBooks({ actor }: Props) {
     setDirty(false);
   }, []);
 
+  /** ผสานคชจ. + ภาษีซื้อจากสองบช. อัตโนมัติ (ไม่ต้องกดดึง) */
+  const syncBooksFromLedgers = useCallback(
+    async (
+      m: string,
+      opts?: { writeVat?: boolean; prevIngredient?: number },
+    ) => {
+      setBooksBusy(true);
+      setBooksVatBusy(true);
+      try {
+        const [staffRows, ownerRows, bundle] = await Promise.all([
+          loadStaffMonthBreakdown(),
+          loadOwnerMonthBreakdown(),
+          loadBothBooksVatByMonth(m),
+        ]);
+        setBookStaff(pickBookRow(staffRows, m));
+        setBookOwner(pickBookRow(ownerRows, m));
+        setBooksPulledAt(Date.now());
+        setBooksLines(bundle.lines);
+        const writeVat = opts?.writeVat !== false;
+        if (!writeVat) return bundle;
+        const prev =
+          opts?.prevIngredient ??
+          (draftRef.current.monthKey === m
+            ? draftRef.current.ingredientVat
+            : bundle.vatInput);
+        const changed = Math.abs(prev - bundle.vatInput) >= 0.009;
+        setDraft((d) => {
+          if (d.monthKey !== m || d.status === "filed") return d;
+          if (!changed) return d;
+          return { ...d, ingredientVat: bundle.vatInput };
+        });
+        if (changed && draftRef.current.status !== "filed") {
+          setDirty(true);
+        }
+        return bundle;
+      } finally {
+        setBooksBusy(false);
+        setBooksVatBusy(false);
+      }
+    },
+    [],
+  );
+
   const loadMonth = useCallback(
     async (m: string) => {
       const gen = ++loadGen.current;
@@ -254,9 +297,19 @@ export function VatMonthBooks({ actor }: Props) {
           tax.otherDeductions > 0 ? moneyFieldValue(tax.otherDeductions) : "",
         );
         setTaxNote(tax.note || "");
+        const draft0 = retToMonthBooksDraft(ret);
         hydrateFromReturn(ret);
         setHydrated(true);
         void refreshImportMap(m);
+        // คชจ.บช. + ภาษีซื้อบช. ผสานอัตโนมัติ
+        try {
+          await syncBooksFromLedgers(m, {
+            writeVat: ret.status !== "filed",
+            prevIngredient: draft0.ingredientVat,
+          });
+        } catch {
+          /* โชว์งบต่อได้แม้บช.โหลดไม่ครบ */
+        }
       } catch (e) {
         if (gen !== loadGen.current) return;
         setError(e instanceof Error ? e.message : String(e));
@@ -266,7 +319,7 @@ export function VatMonthBooks({ actor }: Props) {
         if (gen === loadGen.current) setLoading(false);
       }
     },
-    [hydrateFromReturn, refreshImportMap],
+    [hydrateFromReturn, refreshImportMap, syncBooksFromLedgers],
   );
 
   useEffect(() => {
@@ -336,47 +389,6 @@ export function VatMonthBooks({ actor }: Props) {
     markDirty();
   }
 
-  const pullBothBooks = async () => {
-    setBooksBusy(true);
-    setError("");
-    try {
-      const [staffRows, ownerRows] = await Promise.all([
-        loadStaffMonthBreakdown(),
-        loadOwnerMonthBreakdown(),
-      ]);
-      setBookStaff(pickBookRow(staffRows, month));
-      setBookOwner(pickBookRow(ownerRows, month));
-      setBooksPulledAt(Date.now());
-      setMsg(`ดึงบช. พนง. + เจ้าของ ${formatThaiMonthKey(month)} แล้ว`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBooksBusy(false);
-    }
-  };
-
-  const pullBooksVat = async () => {
-    setBooksVatBusy(true);
-    setError("");
-    try {
-      const bundle = await loadBothBooksVatByMonth(month);
-      setBooksLines(bundle.lines);
-      setDraft((d) => ({
-        ...d,
-        ingredientVat: bundle.vatInput,
-      }));
-      markDirty();
-      setOpenBooksLines(true);
-      setMsg(
-        `ดึงภาษีซื้อจากสองบช. · รวม ${formatVatMoney(bundle.vatInput)} (${bundle.count}/${bundle.allCount} รายการ)`,
-      );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBooksVatBusy(false);
-    }
-  };
-
   const toggleLineClaim = async (line: BooksVatLine, nextClaim: boolean) => {
     if (locked) return;
     try {
@@ -385,10 +397,7 @@ export function VatMonthBooks({ actor }: Props) {
       } else {
         await updateOwnerBookEntry(line.id, { vatClaim: nextClaim });
       }
-      const bundle = await loadBothBooksVatByMonth(month);
-      setBooksLines(bundle.lines);
-      setDraft((d) => ({ ...d, ingredientVat: bundle.vatInput }));
-      markDirty();
+      await syncBooksFromLedgers(month, { writeVat: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -407,10 +416,7 @@ export function VatMonthBooks({ actor }: Props) {
               : updateOwnerBookEntry(line.id, { vatClaim: nextClaim }),
           ),
       );
-      const bundle = await loadBothBooksVatByMonth(month);
-      setBooksLines(bundle.lines);
-      setDraft((d) => ({ ...d, ingredientVat: bundle.vatInput }));
-      markDirty();
+      await syncBooksFromLedgers(month, { writeVat: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -837,16 +843,14 @@ export function VatMonthBooks({ actor }: Props) {
                     </tr>
                   ))}
                   <tr className="vat-row-parent">
-                    <td className="col-seg">
-                      คชจ. สองบช. (หักกำไร){" "}
-                      <button
-                        type="button"
-                        className="vat-mini-btn"
-                        disabled={locked || booksBusy}
-                        onClick={() => void pullBothBooks()}
-                      >
-                        {booksBusy ? "…" : "ดึง"}
-                      </button>
+                    <td
+                      className="col-seg"
+                      title="ผสานจากบช.พนักงาน + เจ้าของอัตโนมัติ"
+                    >
+                      คชจ. สองบช. (หักกำไร)
+                      {booksBusy ? (
+                        <span className="muted"> …</span>
+                      ) : null}
                     </td>
                     <td className="col-num col-net">
                       {view.booksOpex == null ? "—" : fmt(view.booksOpex)}
@@ -896,10 +900,9 @@ export function VatMonthBooks({ actor }: Props) {
               </table>
             </div>
             <p className="muted vat-sales-hint vat-hint-one-line">
-              รายได้ A = ยอดโอนหลังหัก GP แล้ว · กำไรหักแค่บช. · GP ใช้ติดตาม +
-              ภาษีซื้อใน D
+              คชจ.บช.ผสานอัตโนมัติ · กำไรหักแค่บช. · GP ใช้ติดตาม + ภาษีซื้อใน D
               {booksPulledAt
-                ? ` · ดึงบช.ล่าสุด ${formatDateShort(booksPulledAt)}`
+                ? ` · อัปเดต ${formatDateShort(booksPulledAt)}`
                 : ""}
             </p>
           </section>
@@ -987,7 +990,7 @@ export function VatMonthBooks({ actor }: Props) {
               ใช้เข้า ภ.ง.ด.: รายได้ถึงร้าน {fmt(view.incomeTotal)}
               {view.booksOpex != null
                 ? ` · กำไรประมาณการ ${fmt(view.monthProfit ?? 0)}`
-                : " · ดึงบช.เพื่อหักคชจ.ก่อนดูกำไร"}{" "}
+                : " · กำลังผสานคชจ.บช.…"}{" "}
               · กำไรสุทธิหลัง VAT = เงินเหลือดูเอง (ยังไม่ส่งเข้า P&L อัตโนมัติ)
             </p>
 
@@ -1246,18 +1249,14 @@ export function VatMonthBooks({ actor }: Props) {
                             onToggle={() => setOpenBooksLines((v) => !v)}
                             label="รายการจากสองบช"
                           />
-                          <span className="vat-seg-label">
+                          <span
+                            className="vat-seg-label"
+                            title="ผสานจากรายการที่ติ๊กรวมเข้าระบบในสองบช.อัตโนมัติ"
+                          >
                             ภาษีซื้อจากสองบช.
+                            {booksVatBusy ? " …" : ""}
                           </span>
-                        </span>{" "}
-                        <button
-                          type="button"
-                          className="vat-mini-btn"
-                          disabled={locked || booksVatBusy}
-                          onClick={() => void pullBooksVat()}
-                        >
-                          {booksVatBusy ? "…" : "ดึงภาษีซื้อจากสองบช"}
-                        </button>
+                        </span>
                       </td>
                       <td className="col-num col-input">
                         <MoneyCell
@@ -1403,7 +1402,7 @@ export function VatMonthBooks({ actor }: Props) {
           locked={locked}
           onClose={() => setDetailLine(null)}
           onSaved={() => {
-            void pullBooksVat();
+            void syncBooksFromLedgers(month, { writeVat: !locked });
             setDetailLine(null);
           }}
         />
