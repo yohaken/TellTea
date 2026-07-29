@@ -22,6 +22,7 @@ const steps = [
   { name: "customer-display", cmd: ["node", "scripts/test-npos-customer-display.mjs"] },
   { name: "customer-focus", cmd: ["node", "scripts/test-npos-customer-focus.mjs"] },
   { name: "capture-wiring", cmd: ["node", "scripts/test-npos-capture.mjs"] },
+  { name: "capture-projection", cmd: ["node", "scripts/test-npos-capture-projection.mjs"] },
   { name: "web-parity-shot", cmd: ["node", "scripts/test-npos-web-parity-shot.mjs"] },
   { name: "smart-ui-scale", cmd: ["node", "scripts/test-npos-smart-ui-scale.mjs"] },
   { name: "option-qty-parity", cmd: ["node", "scripts/test-npos-option-qty-parity.mjs"] },
