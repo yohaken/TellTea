@@ -29,13 +29,15 @@ assert.match(pageSrc, /entry-toolbar-actions/);
 assert.match(pageSrc, /className="trash-btn"/);
 assert.match(pageSrc, /col-vat/);
 
-assert.match(vatSrc, /sumBothBooksVatInputByMonth/);
+assert.match(vatSrc, /loadBothBooksVatByMonth/);
 assert.match(vatSrc, /ดึงภาษีซื้อจากสองบช/);
+assert.match(vatSrc, /รายการจากสองบช/);
 
 const booksSrc = readFileSync(join(root, "src/lib/books-vat-month.ts"), "utf8");
+assert.match(booksSrc, /loadBothBooksVatByMonth/);
 assert.match(booksSrc, /sumBothBooksVatInputByMonth/);
-assert.match(booksSrc, /sumLedgerVatInputByMonth/);
-assert.match(booksSrc, /sumOwnerBooksVatInputByMonth/);
+assert.match(booksSrc, /listLedgerEntriesInMonth/);
+assert.match(booksSrc, /listOwnerBookEntries/);
 
 const ledgerPage = readFileSync(join(root, "src/app/ledger/page.tsx"), "utf8");
 assert.match(ledgerPage, /EntryVatFieldset/);

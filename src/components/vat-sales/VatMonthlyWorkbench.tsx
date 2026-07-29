@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { formatDateTimeShort, formatPlainNumber } from "@/lib/utils";
+import { formatDateShort, formatDateTimeShort, formatPlainNumber } from "@/lib/utils";
 import {
   loadOwnerMonthBreakdown,
   loadPnlReport,
@@ -53,7 +53,11 @@ import {
   type VatMonthlyReturn,
   type VatSegmentState,
 } from "@/lib/vat-monthly";
-import { sumBothBooksVatInputByMonth } from "@/lib/books-vat-month";
+import {
+  bookLabel,
+  loadBothBooksVatByMonth,
+  type BooksVatLine,
+} from "@/lib/books-vat-month";
 import { exportPersonalTaxYearXlsx } from "@/lib/xlsx-export";
 
 function emptyBookRow(month: string): MonthCategoryRow {
@@ -615,14 +619,48 @@ function InputVatTable({
 }) {
   const [pullBusy, setPullBusy] = useState(false);
   const [pullMsg, setPullMsg] = useState("");
+  const [linesBusy, setLinesBusy] = useState(false);
+  const [booksLines, setBooksLines] = useState<BooksVatLine[]>([]);
+  const [booksCount, setBooksCount] = useState(0);
+  const [booksVatTotal, setBooksVatTotal] = useState(0);
+  const [ledgerCount, setLedgerCount] = useState(0);
+  const [ownerCount, setOwnerCount] = useState(0);
+  const [openBooksLines, setOpenBooksLines] = useState(false);
+
+  const refreshBooksVatLines = useCallback(async () => {
+    setLinesBusy(true);
+    try {
+      const bundle = await loadBothBooksVatByMonth(month);
+      setBooksLines(bundle.lines);
+      setBooksCount(bundle.count);
+      setBooksVatTotal(bundle.vatInput);
+      setLedgerCount(bundle.ledgerCount);
+      setOwnerCount(bundle.ownerCount);
+      return bundle;
+    } catch {
+      setBooksLines([]);
+      setBooksCount(0);
+      setBooksVatTotal(0);
+      setLedgerCount(0);
+      setOwnerCount(0);
+      return null;
+    } finally {
+      setLinesBusy(false);
+    }
+  }, [month]);
+
+  useEffect(() => {
+    setOpenBooksLines(false);
+    void refreshBooksVatLines();
+  }, [month, refreshBooksVatLines]);
 
   async function pullIngredientFromBothBooks() {
     if (locked) return;
     setPullBusy(true);
     setPullMsg("");
     try {
-      const sum = await sumBothBooksVatInputByMonth(month);
-      if (sum.count <= 0 || sum.vatInput <= 0) {
+      const bundle = await refreshBooksVatLines();
+      if (!bundle || bundle.count <= 0 || bundle.vatInput <= 0) {
         setPullMsg(
           "ยังไม่มีรายการที่ติ๊กช่อง VAT ในบช.พนักงานหรือบช.เจ้าของเดือนนี้",
         );
@@ -631,11 +669,12 @@ function InputVatTable({
       // รวมสองบช. → วัตถุดิบหน้าร้าน · GP เดลิเวอรี่แยก (ไม่ทับ)
       onStorefrontChange({
         ...storefrontDraft,
-        ingredientVat: moneyInputValue(sum.vatInput),
+        ingredientVat: moneyInputValue(bundle.vatInput),
       });
       setPullMsg(
-        `ดึง ${formatVatMoney(sum.vatInput)} · พนง. ${formatVatMoney(sum.ledgerVat)} (${sum.ledgerCount}) + เจ้าของ ${formatVatMoney(sum.ownerVat)} (${sum.ownerCount}) → วัตถุดิบหน้าร้าน`,
+        `ดึง ${formatVatMoney(bundle.vatInput)} · พนง. ${formatVatMoney(bundle.ledgerVat)} (${bundle.ledgerCount}) + เจ้าของ ${formatVatMoney(bundle.ownerVat)} (${bundle.ownerCount}) → วัตถุดิบหน้าร้าน`,
       );
+      setOpenBooksLines(true);
     } catch (e) {
       setPullMsg(e instanceof Error ? e.message : "ดึงไม่สำเร็จ");
     } finally {
@@ -729,14 +768,14 @@ function InputVatTable({
       <h2 className="vat-table-title">2) ภาษีซื้อ — กลุ่มหักได้</h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
         วัตถุดิบ = รวมภาษีซื้อที่ติ๊กจากบช.พนง. + บช.เจ้าของ · GP เดลิเวอรี่แยก ·
-        อย่าคีย์บิลซ้ำสองบช.
+        อย่าคีย์บิลซ้ำสองบช. · กด + ดูรายการ
       </p>
       {!locked ? (
         <div className="vat-month-actions vat-month-actions--mini">
           <button
             type="button"
             className="vat-mini-btn"
-            disabled={pullBusy}
+            disabled={pullBusy || linesBusy}
             onClick={() => void pullIngredientFromBothBooks()}
           >
             {pullBusy ? "กำลังดึง…" : "ดึงภาษีซื้อจากสองบช."}
@@ -783,6 +822,83 @@ function InputVatTable({
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div className="vat-books-breakdown">
+        <div className="vat-books-breakdown-head">
+          <span className="vat-seg-cell">
+            <ExpandBtn
+              open={openBooksLines}
+              onToggle={() => setOpenBooksLines((v) => !v)}
+              label="รายการภาษีซื้อจากสองบช."
+            />
+            <span className="vat-seg-label">
+              รายการจากสองบช.
+              {linesBusy
+                ? "…"
+                : booksCount > 0
+                  ? ` (${booksCount} · ${formatVatMoney(booksVatTotal)})`
+                  : " (ยังไม่มี)"}
+            </span>
+          </span>
+          {!linesBusy && booksCount > 0 ? (
+            <span className="muted vat-books-breakdown-meta">
+              พนง. {ledgerCount} · เจ้าของ {ownerCount}
+            </span>
+          ) : null}
+        </div>
+        {openBooksLines ? (
+          booksCount === 0 ? (
+            <p className="muted vat-sales-hint vat-hint-one-line">
+              ยังไม่มีรายการที่ติ๊กช่อง VAT ในเดือนนี้ — ไปบช.พนง./เจ้าของติ๊กก่อน
+            </p>
+          ) : (
+            <div className="sheet-wrap vat-month-slim-wrap">
+              <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-books-lines">
+                <thead>
+                  <tr>
+                    <th className="col-date">วันที่</th>
+                    <th className="col-seg">บช.</th>
+                    <th className="col-seg">รายการ</th>
+                    <th className="col-num">จ่าย</th>
+                    <th className="col-num">ภาษีซื้อ</th>
+                    <th className="col-seg">ตรวจ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {booksLines.map((line) => (
+                    <tr key={`${line.book}-${line.id}`} className="vat-row-child">
+                      <td className="col-date">{formatDateShort(line.date)}</td>
+                      <td className="col-seg">{bookLabel(line.book)}</td>
+                      <td className="col-seg col-child" title={line.description}>
+                        {line.description}
+                      </td>
+                      <td className="col-num">{fmt(line.amountOut)}</td>
+                      <td className="col-num col-net">{fmt(line.vatInput)}</td>
+                      <td className="col-seg">
+                        {line.vatVerified ? (
+                          <span className="vat-line-ok">ตรงบิล</span>
+                        ) : (
+                          <span className="muted">ยังไม่ติ๊ก</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="vat-sales-totals-row">
+                    <td className="col-seg" colSpan={3}>
+                      รวมที่ติ๊ก VAT
+                    </td>
+                    <td className="col-num">—</td>
+                    <td className="col-num col-net">
+                      {fmt(booksVatTotal)}
+                    </td>
+                    <td className="col-seg">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : null}
       </div>
     </section>
   );
