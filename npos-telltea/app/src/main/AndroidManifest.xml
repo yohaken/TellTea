@@ -14,6 +14,8 @@
         android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <!-- Allow binding SUNMI built-in printer service on Android 11+. -->
@@ -67,6 +69,19 @@
             android:name=".DiagnoseActivity"
             android:exported="false"
             android:label="@string/diagnose_title" />
+
+        <activity
+            android:name=".diagnose.CaptureConsentActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:taskAffinity=""
+            android:label="@string/capture_consent_title" />
+
+        <service
+            android:name=".diagnose.CaptureProjectionService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
 
         <receiver
             android:name=".update.InstallResultReceiver"

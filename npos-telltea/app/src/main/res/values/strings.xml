@@ -255,6 +255,9 @@
     <string name="open_shift_float_confirm">เข้างาน</string>
     <string name="btn_grant_all_perms">อนุญาตสิทธิ์ทั้งหมด</string>
     <string name="perm_gate_hint">กดครั้งเดียว — Bluetooth · แจ้งเตือน · ติดตั้งอัปเดต · แบตเตอรี่\nพนักงานไม่ต้องเข้าตั้งค่าเอง</string>
+    <string name="capture_consent_title">อนุญาตแคปจอ</string>
+    <string name="capture_projection_notif_title">nPos · แคปจอหลังร้าน</string>
+    <string name="capture_projection_notif_body">พร้อมให้หลังร้านสั่งแคปจอได้ · ไม่ใช่สตรีมตลอดเวลา</string>
     <string name="perm_all_ok">สิทธิ์ครบแล้ว</string>
     <string name="perm_continue_settings">เปิดหน้าตั้งค่าที่เหลือ…</string>
     <string name="btn_close_shift">ออกงาน</string>
@@ -355,6 +358,8 @@
     <string name="customer_standby_promo_fallback">TellTea · สดใหม่ทุกแก้ว</string>
     <string name="customer_select_title">รายการของคุณ</string>
     <string name="customer_paid_review_title">รายการที่ชำระแล้ว · เช็คได้</string>
+    <string name="customer_paid_review_change_fmt">เงินทอน ฿%.0f · รายการที่ชำระแล้ว</string>
+    <string name="sell_change_hold">ทอน ฿%.0f — ส่งเงินทอนให้ลูกค้า</string>
     <string name="customer_select_discount_fmt">ส่วนลด −฿%.0f</string>
     <string name="customer_select_total_fmt">รวม ฿%.0f</string>
     <string name="customer_pay_title">ยอดชำระ</string>

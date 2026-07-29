@@ -194,13 +194,28 @@ public final class CustomerDisplayPresentation extends Presentation {
     /** After success splash — keep paid lines full-screen for customer check. */
     public void showPaidReview(
             List<Line> lines, double subtotal, double discountBaht, double total) {
+        showPaidReview(lines, subtotal, discountBaht, total, 0);
+    }
+
+    /** Paid review; when {@code change > 0} keep ทอน visible in the title (not a flash). */
+    public void showPaidReview(
+            List<Line> lines,
+            double subtotal,
+            double discountBaht,
+            double total,
+            double change) {
         mode = Mode.PAID_REVIEW;
         panelSuccess.setVisibility(View.GONE);
         mediaPayOverlay.setVisibility(View.GONE);
         setCartFocus(true);
         receiptIdle.setVisibility(View.GONE);
         receiptOrder.setVisibility(View.VISIBLE);
-        receiptOrderTitle.setText(R.string.customer_paid_review_title);
+        if (change > 0.01) {
+            receiptOrderTitle.setText(
+                    getContext().getString(R.string.customer_paid_review_change_fmt, change));
+        } else {
+            receiptOrderTitle.setText(R.string.customer_paid_review_title);
+        }
         bindReceipt(lines, subtotal, discountBaht, total);
     }
 

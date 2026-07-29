@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import app.telltea.npos.diagnose.CaptureConsentActivity;
 import app.telltea.npos.diagnose.CustomerDisplayController;
 import app.telltea.npos.diagnose.CustomerDisplayPresentation;
 import app.telltea.npos.diagnose.OpsLogger;
@@ -1023,6 +1024,8 @@ public class SellActivity extends Activity {
     // Faster kick detection while selling (heartbeat may have been throttled).
     ForegroundHeartbeat.forceNow(this);
     updateServerCheckChip();
+    // After APK update (resume sell): one-shot screen-capture consent if still needed.
+    CaptureConsentActivity.launchAfterUpdateIfNeeded(this);
     if (updatePrompt != null) updatePrompt.onResume();
     // Refresh shop name/address from server so BO edits show on next bill.
     if (menuRepo != null) {
@@ -2376,7 +2379,8 @@ public class SellActivity extends Activity {
 
   /** Clone web PosCashKeypad: exact · bills · digits · change. */
   private void showCashKeypad(double total) {
-    final String[] valueHolder = {String.format(Locale.US, "%.0f", Math.ceil(total))};
+    // Always start at 0 / empty — staff type received cash (exact button still one-tap).
+    final String[] valueHolder = {""};
     UiScale ui = uiScale != null ? uiScale : UiScale.from(this);
 
     LinearLayout root = new LinearLayout(this);
@@ -2564,12 +2568,22 @@ public class SellActivity extends Activity {
                             if (menu != null) renderMenu();
                             updateShiftSummary();
                             updatePendingBadge();
-                            sellSyncStatus.setText(R.string.sell_saved_local);
-                            Toast.makeText(
-                                    SellActivity.this,
-                                    getString(R.string.sell_saved_toast, total),
-                                    Toast.LENGTH_SHORT)
-                                .show();
+                            // Show change immediately (don't wait for server) and keep it on the
+                            // status line so staff can hand cash — Toast alone disappears too fast.
+                            if (changeForCustomer > 0.01) {
+                              String changeLine =
+                                  getString(R.string.sell_change_hold, changeForCustomer);
+                              sellSyncStatus.setText(changeLine);
+                              Toast.makeText(SellActivity.this, changeLine, Toast.LENGTH_LONG)
+                                  .show();
+                            } else {
+                              sellSyncStatus.setText(R.string.sell_saved_local);
+                              Toast.makeText(
+                                      SellActivity.this,
+                                      getString(R.string.sell_saved_toast, total),
+                                      Toast.LENGTH_SHORT)
+                                  .show();
+                            }
                             maybeSettleRemoteClosed();
                           });
                     }
@@ -2578,15 +2592,16 @@ public class SellActivity extends Activity {
                     public void onSynced(String billNo, double change, double total) {
                       runOnUiThread(
                           () -> {
-                            sellSyncStatus.setText(getString(R.string.sell_synced, billNo));
-                            updatePendingBadge();
-                            if (change > 0) {
-                              Toast.makeText(
-                                      SellActivity.this,
-                                      getString(R.string.sell_change, change),
-                                      Toast.LENGTH_LONG)
-                                  .show();
+                            // Keep change reminder on status until next cart edit if still handing cash.
+                            if (change > 0.01 && cart.isEmpty()) {
+                              sellSyncStatus.setText(
+                                  getString(R.string.sell_change_hold, change)
+                                      + " · #"
+                                      + billNo);
+                            } else {
+                              sellSyncStatus.setText(getString(R.string.sell_synced, billNo));
                             }
+                            updatePendingBadge();
                           });
                     }
 
