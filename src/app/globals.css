@@ -16799,6 +16799,65 @@ a.ghost-btn {
   gap: 0.35rem;
 }
 
+.cash-in-src {
+  display: inline-block;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 0.1rem 0.28rem;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+.cash-in-src.is-ai {
+  color: rgba(30, 70, 120, 0.95);
+  background: rgba(40, 100, 180, 0.1);
+}
+
+.cash-in-src.is-staff {
+  color: rgba(100, 60, 20, 0.95);
+  background: rgba(180, 110, 40, 0.12);
+}
+
+.cash-in-ai-hint {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  text-align: left;
+  color: rgba(30, 70, 120, 0.92);
+}
+
+.cash-in-slip-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.cash-in-slip-actions.is-col {
+  flex-direction: column;
+  align-items: center;
+}
+
+.cash-in-ai-reread {
+  min-height: 1.3rem !important;
+  padding: 0.05rem 0.35rem !important;
+  font-size: 0.64rem !important;
+}
+
+.cash-in-cell-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+}
+
+.cash-in-math-formula {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.66rem;
+}
+
 .cash-in-table .col-num {
   text-align: right;
   font-variant-numeric: tabular-nums;

@@ -25,6 +25,7 @@ import {
   type CashDeposit,
   type CashDepositDayLine,
   type CashDepositStatus,
+  type CashFillSource,
   deleteCashDeposit,
   formatCashDayShort,
   labelCashDepositRound,
@@ -36,6 +37,11 @@ import {
   updateCashDeposit,
   verifyCashDeposit,
 } from "@/lib/cash-deposits";
+import {
+  extractCashBankSlipFromPhotos,
+  extractCashDaySlipFromPhotos,
+  labelCashFillSource,
+} from "@/lib/cash-deposits-ai";
 import {
   type PhotoUploadProgress,
   uploadEvidencePhotos,
@@ -89,10 +95,29 @@ type DraftRound = {
   dayCount: number;
   staffName: string;
   bankAmount: string;
+  transferFee: string;
+  bankAmountSource: CashFillSource;
+  transferFeeSource: CashFillSource;
   bankRef: string;
   bankSlipUrls: string[];
   days: CashDepositDayLine[];
+  aiReason: string;
 };
+
+function sourceBadge(source: CashFillSource | undefined) {
+  const label = labelCashFillSource(source);
+  if (!label) return null;
+  return (
+    <span
+      className={
+        source === "ai" ? "cash-in-src is-ai" : "cash-in-src is-staff"
+      }
+      title={source === "ai" ? "อ่านจากสลิปด้วย AI" : "ใส่โดยพนักงาน"}
+    >
+      {label}
+    </span>
+  );
+}
 
 /**
  * Compact cash-in table on /ledger/ — no popup form.
@@ -138,10 +163,18 @@ export function CashInLedgerPanel({
   >(null);
 
   const [editBankAmount, setEditBankAmount] = useState("");
+  const [editTransferFee, setEditTransferFee] = useState("");
+  const [editBankAmountSource, setEditBankAmountSource] =
+    useState<CashFillSource>("");
+  const [editTransferFeeSource, setEditTransferFeeSource] =
+    useState<CashFillSource>("");
   const [editBankRef, setEditBankRef] = useState("");
   const [editBankSlips, setEditBankSlips] = useState<string[]>([]);
   const [editStaff, setEditStaff] = useState("");
   const [editDays, setEditDays] = useState<CashDepositDayLine[]>([]);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiHint, setAiHint] = useState<string | null>(null);
+  const lastAiKeyRef = useRef("");
 
   useEffect(() => {
     setOpen(readOpenPref());
@@ -193,6 +226,11 @@ export function CashInLedgerPanel({
   useEffect(() => {
     if (!selected || draft) return;
     setEditBankAmount(selected.bankAmount ? String(selected.bankAmount) : "");
+    setEditTransferFee(
+      selected.transferFee ? String(selected.transferFee) : "",
+    );
+    setEditBankAmountSource(selected.bankAmountSource || "");
+    setEditTransferFeeSource(selected.transferFeeSource || "");
     setEditBankRef(selected.bankRef || "");
     setEditBankSlips([...selected.bankSlipUrls]);
     setEditStaff(selected.staffName || staffName);
@@ -207,9 +245,10 @@ export function CashInLedgerPanel({
 
   const workingDays = draft?.days ?? editDays;
   const workingBank = Number(draft ? draft.bankAmount : editBankAmount) || 0;
+  const workingFee = Number(draft ? draft.transferFee : editTransferFee) || 0;
   const expected = sumCashDepositDays(workingDays);
   const drawerSum = sumCashDepositDrawerClose(workingDays);
-  const variance = cashDepositVariance(workingBank, expected);
+  const variance = cashDepositVariance(workingBank, expected, workingFee);
   const coverage = useMemo(
     () =>
       analyzeCashDepositDays(
@@ -284,23 +323,38 @@ export function CashInLedgerPanel({
       dayCount: n,
       staffName: staffName || "",
       bankAmount: "",
+      transferFee: "",
+      bankAmountSource: "",
+      transferFeeSource: "",
       bankRef: "",
       bankSlipUrls: [],
       days: buildCashDepositRoundDays(endMs, n),
+      aiReason: "",
     });
+    setAiHint(null);
   }
 
-  function patchDay(dayId: string, patch: Partial<CashDepositDayLine>) {
+  function patchDay(
+    dayId: string,
+    patch: Partial<CashDepositDayLine>,
+    opts?: { fromAi?: boolean },
+  ) {
+    const fromAi = !!opts?.fromAi;
     const apply = (days: CashDepositDayLine[]) =>
-      days.map((d) =>
-        d.id === dayId
-          ? {
-              ...d,
-              ...patch,
-              date: patch.date != null ? cashDepositDayKey(patch.date) : d.date,
-            }
-          : d,
-      );
+      days.map((d) => {
+        if (d.id !== dayId) return d;
+        const next: CashDepositDayLine = {
+          ...d,
+          ...patch,
+          date: patch.date != null ? cashDepositDayKey(patch.date) : d.date,
+        };
+        if (!fromAi) {
+          if (patch.cashAmount != null) next.cashAmountSource = "staff";
+          if (patch.drawerCloseAmount != null) next.drawerCloseAmountSource = "staff";
+          if (patch.date != null) next.dateSource = "staff";
+        }
+        return next;
+      });
     if (draft) setDraft({ ...draft, days: apply(draft.days) });
     else setEditDays((prev) => apply(prev));
   }
@@ -313,6 +367,93 @@ export function CashInLedgerPanel({
   function openBankPhoto() {
     photoTargetRef.current = { kind: "bank" };
     bankPhotoRef.current?.click();
+  }
+
+  async function runAiBank(refs: string[], force = false) {
+    const key = `bank:${refs.slice(0, 2).join("|")}`;
+    if (!force && lastAiKeyRef.current === key) return;
+    lastAiKeyRef.current = key;
+    setAiBusy(true);
+    setAiHint("AI กำลังอ่านสลิปโอน…");
+    try {
+      const result = await extractCashBankSlipFromPhotos(refs.slice(0, 2));
+      if (draft) {
+        setDraft((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            bankAmount:
+              result.bankAmount != null ? String(result.bankAmount) : prev.bankAmount,
+            transferFee: String(result.transferFee ?? 0),
+            bankAmountSource: result.bankAmount != null ? "ai" : prev.bankAmountSource,
+            transferFeeSource: "ai",
+            bankRef: result.bankRef || prev.bankRef,
+            transferDate: result.transferDate
+              ? parseDateInput(result.transferDate)
+              : prev.transferDate,
+            aiReason: result.reason || prev.aiReason,
+          };
+        });
+      } else {
+        if (result.bankAmount != null) {
+          setEditBankAmount(String(result.bankAmount));
+          setEditBankAmountSource("ai");
+        }
+        setEditTransferFee(String(result.transferFee ?? 0));
+        setEditTransferFeeSource("ai");
+        if (result.bankRef) setEditBankRef(result.bankRef);
+      }
+      setAiHint(
+        result.reason
+          ? `AI อ่านสลิปโอนแล้ว · ${result.reason}`
+          : "AI อ่านสลิปโอนแล้ว — แก้ได้ถ้าผิด",
+      );
+    } catch (err) {
+      setAiHint((err as Error).message || "AI อ่านสลิปโอนไม่สำเร็จ — กรอกเองได้");
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  async function runAiDay(dayId: string, refs: string[], force = false) {
+    const key = `day:${dayId}:${refs.slice(0, 2).join("|")}`;
+    if (!force && lastAiKeyRef.current === key) return;
+    lastAiKeyRef.current = key;
+    setAiBusy(true);
+    setAiHint("AI กำลังอ่านสลิปเงินสด…");
+    try {
+      const result = await extractCashDaySlipFromPhotos(refs.slice(0, 2));
+      const patch: Partial<CashDepositDayLine> = {
+        slipKind: result.slipKind,
+        shiftLabel: result.shiftLabel || undefined,
+      };
+      if (result.cashAmount != null) {
+        patch.cashAmount = result.cashAmount;
+        patch.cashAmountSource = "ai";
+      }
+      if (result.drawerCloseAmount != null) {
+        patch.drawerCloseAmount = result.drawerCloseAmount;
+        patch.drawerCloseAmountSource = "ai";
+      }
+      if (result.date) {
+        try {
+          patch.date = parseDateInput(result.date);
+          patch.dateSource = "ai";
+        } catch {
+          /* ignore bad date */
+        }
+      }
+      patchDay(dayId, patch, { fromAi: true });
+      setAiHint(
+        result.reason
+          ? `AI ใส่วันนี้แล้ว · ${result.reason}`
+          : "AI ใส่วันนี้แล้ว — แก้/ถ่ายใหม่ได้",
+      );
+    } catch (err) {
+      setAiHint((err as Error).message || "AI อ่านสลิปวันไม่สำเร็จ — กรอกเองได้");
+    } finally {
+      setAiBusy(false);
+    }
   }
 
   async function onPhotoFiles(files: FileList | null) {
@@ -335,32 +476,26 @@ export function CashInLedgerPanel({
       });
       if (!urls.length) throw new Error("อัปโหลดรูปไม่สำเร็จ");
       if (target.kind === "bank") {
-        if (draft) {
-          setDraft({
-            ...draft,
-            bankSlipUrls: [...draft.bankSlipUrls, ...urls].slice(
-              0,
-              CASH_DEPOSIT_BANK_SLIP_MAX,
-            ),
-          });
-        } else {
-          setEditBankSlips((prev) =>
-            [...prev, ...urls].slice(0, CASH_DEPOSIT_BANK_SLIP_MAX),
-          );
-        }
+        const nextSlips = (
+          draft
+            ? [...draft.bankSlipUrls, ...urls]
+            : [...editBankSlips, ...urls]
+        ).slice(0, CASH_DEPOSIT_BANK_SLIP_MAX);
+        if (draft) setDraft({ ...draft, bankSlipUrls: nextSlips });
+        else setEditBankSlips(nextSlips);
+        void runAiBank(nextSlips);
       } else {
         const dayId = target.dayId;
+        let nextDayUrls: string[] = [];
         const merge = (days: CashDepositDayLine[]) =>
-          days.map((d) =>
-            d.id === dayId
-              ? {
-                  ...d,
-                  slipUrls: [...d.slipUrls, ...urls].slice(0, CASH_DEPOSIT_DAY_SLIP_MAX),
-                }
-              : d,
-          );
+          days.map((d) => {
+            if (d.id !== dayId) return d;
+            nextDayUrls = [...d.slipUrls, ...urls].slice(0, CASH_DEPOSIT_DAY_SLIP_MAX);
+            return { ...d, slipUrls: nextDayUrls };
+          });
         if (draft) setDraft({ ...draft, days: merge(draft.days) });
         else setEditDays((prev) => merge(prev));
+        void runAiDay(dayId, nextDayUrls);
       }
     } catch (err) {
       if (!uploadCancelRef.current) {
@@ -392,6 +527,9 @@ export function CashInLedgerPanel({
         periodEnd: coverage.periodEnd,
         staffName: (draft?.staffName ?? editStaff).trim() || staffName,
         bankAmount: workingBank,
+        transferFee: workingFee,
+        bankAmountSource: draft?.bankAmountSource ?? editBankAmountSource,
+        transferFeeSource: draft?.transferFeeSource ?? editTransferFeeSource,
         bankSlipUrls: draft?.bankSlipUrls ?? editBankSlips,
         bankRef: draft?.bankRef ?? editBankRef,
         days,
@@ -482,8 +620,9 @@ export function CashInLedgerPanel({
       {open ? (
         <div className="cash-in-panel-body">
           <p className="muted cash-in-hint">
-            สร้างรอบด้วยจำนวนวันเอง → กรอกในตาราง (เงินสดเป็นหลัก · ปิดลิ้นชักเป็นตัวช่วย) ·
-            แนบสลิปทีละวันในแถว
+            สลิป 2 ประเภท: <strong>โอนธนาคาร</strong> (1–2 รูป/รอบ) +{" "}
+            <strong>สรุปเงินสดรายวัน</strong> (ทีละแถว) · AI อ่านใส่ตาราง · แก้/ถ่ายใหม่ได้ ·
+            เทียบยอดหลังรวมค่าธรรมเนียม
           </p>
 
           <div className="cash-in-create-bar">
@@ -676,17 +815,58 @@ export function CashInLedgerPanel({
                   />
                 </label>
                 <label className="cash-in-create-field">
-                  <span>โอนธนาคาร</span>
+                  <span>
+                    โอนเข้าบัญชี{" "}
+                    {sourceBadge(
+                      draft ? draft.bankAmountSource : editBankAmountSource,
+                    )}
+                  </span>
                   <input
                     type="number"
                     min="0.01"
                     step="0.01"
                     inputMode="decimal"
-                    placeholder="ยอดสลิปโอน"
+                    placeholder="จากสลิปโอน"
                     value={draft ? draft.bankAmount : editBankAmount}
                     onChange={(e) => {
-                      if (draft) setDraft({ ...draft, bankAmount: e.target.value });
-                      else setEditBankAmount(e.target.value);
+                      if (draft) {
+                        setDraft({
+                          ...draft,
+                          bankAmount: e.target.value,
+                          bankAmountSource: "staff",
+                        });
+                      } else {
+                        setEditBankAmount(e.target.value);
+                        setEditBankAmountSource("staff");
+                      }
+                    }}
+                  />
+                </label>
+                <label className="cash-in-create-field cash-in-create-days">
+                  <span>
+                    คชจ.โอน{" "}
+                    {sourceBadge(
+                      draft ? draft.transferFeeSource : editTransferFeeSource,
+                    )}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    placeholder="0"
+                    value={draft ? draft.transferFee : editTransferFee}
+                    onChange={(e) => {
+                      if (draft) {
+                        setDraft({
+                          ...draft,
+                          transferFee: e.target.value,
+                          transferFeeSource: "staff",
+                        });
+                      } else {
+                        setEditTransferFee(e.target.value);
+                        setEditTransferFeeSource("staff");
+                      }
                     }}
                   />
                 </label>
@@ -702,17 +882,42 @@ export function CashInLedgerPanel({
                   />
                 </label>
                 <div className="cash-in-bank-slip-cell">
-                  <span className="cash-in-create-field-label">สลิปโอน</span>
-                  <EntryPhotoIndicator
-                    imageUrls={draft ? draft.bankSlipUrls : editBankSlips}
-                    label="สลิปโอน"
-                    onAdd={openBankPhoto}
-                    onView={(urls) =>
-                      setImagePreview({ urls, title: "สลิปโอนธนาคาร" })
-                    }
-                  />
+                  <span className="cash-in-create-field-label">
+                    สลิปโอน (1–2 รูป)
+                  </span>
+                  <div className="cash-in-slip-actions">
+                    <EntryPhotoIndicator
+                      imageUrls={draft ? draft.bankSlipUrls : editBankSlips}
+                      label="สลิปโอน"
+                      onAdd={openBankPhoto}
+                      onView={(urls) =>
+                        setImagePreview({ urls, title: "สลิปโอนธนาคาร" })
+                      }
+                    />
+                    {(draft ? draft.bankSlipUrls : editBankSlips).length ? (
+                      <button
+                        type="button"
+                        className="ghost-btn cash-in-ai-reread"
+                        disabled={busy || aiBusy}
+                        onClick={() =>
+                          void runAiBank(
+                            draft ? draft.bankSlipUrls : editBankSlips,
+                            true,
+                          )
+                        }
+                      >
+                        อ่าน AI ใหม่
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
+              {aiHint ? (
+                <p className={aiBusy ? "muted cash-in-ai-hint" : "cash-in-ai-hint"}>
+                  {aiBusy ? "…" : ""}
+                  {aiHint}
+                </p>
+              ) : null}
 
               <div className="sheet-wrap cash-in-panel-table-wrap">
                 <table className="sheet-table cash-in-slim is-edit">
@@ -752,53 +957,72 @@ export function CashInLedgerPanel({
                           />
                         </td>
                         <td className="col-num">
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            inputMode="decimal"
-                            className="cash-in-cell-input is-num"
-                            value={day.cashAmount ? String(day.cashAmount) : ""}
-                            placeholder="0"
-                            onChange={(e) =>
-                              patchDay(day.id, {
-                                cashAmount: Number(e.target.value) || 0,
-                              })
-                            }
-                          />
+                          <div className="cash-in-cell-stack">
+                            {sourceBadge(day.cashAmountSource)}
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              inputMode="decimal"
+                              className="cash-in-cell-input is-num"
+                              value={day.cashAmount ? String(day.cashAmount) : ""}
+                              placeholder="0"
+                              onChange={(e) =>
+                                patchDay(day.id, {
+                                  cashAmount: Number(e.target.value) || 0,
+                                })
+                              }
+                            />
+                          </div>
                         </td>
                         <td className="col-num">
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            inputMode="decimal"
-                            className="cash-in-cell-input is-num"
-                            value={
-                              day.drawerCloseAmount
-                                ? String(day.drawerCloseAmount)
-                                : ""
-                            }
-                            placeholder="—"
-                            onChange={(e) =>
-                              patchDay(day.id, {
-                                drawerCloseAmount: Number(e.target.value) || 0,
-                              })
-                            }
-                          />
+                          <div className="cash-in-cell-stack">
+                            {sourceBadge(day.drawerCloseAmountSource)}
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              inputMode="decimal"
+                              className="cash-in-cell-input is-num"
+                              value={
+                                day.drawerCloseAmount
+                                  ? String(day.drawerCloseAmount)
+                                  : ""
+                              }
+                              placeholder="—"
+                              onChange={(e) =>
+                                patchDay(day.id, {
+                                  drawerCloseAmount: Number(e.target.value) || 0,
+                                })
+                              }
+                            />
+                          </div>
                         </td>
                         <td className="col-slip">
-                          <EntryPhotoIndicator
-                            imageUrls={day.slipUrls}
-                            label={formatCashDayShort(day.date)}
-                            onAdd={() => openDayPhoto(day.id)}
-                            onView={(urls) =>
-                              setImagePreview({
-                                urls,
-                                title: formatCashDayShort(day.date),
-                              })
-                            }
-                          />
+                          <div className="cash-in-slip-actions is-col">
+                            <EntryPhotoIndicator
+                              imageUrls={day.slipUrls}
+                              label={formatCashDayShort(day.date)}
+                              onAdd={() => openDayPhoto(day.id)}
+                              onView={(urls) =>
+                                setImagePreview({
+                                  urls,
+                                  title: formatCashDayShort(day.date),
+                                })
+                              }
+                            />
+                            {day.slipUrls.length ? (
+                              <button
+                                type="button"
+                                className="ghost-btn cash-in-ai-reread"
+                                disabled={busy || aiBusy}
+                                onClick={() => void runAiDay(day.id, day.slipUrls, true)}
+                                title="ให้อ่านสลิปใหม่"
+                              >
+                                AI
+                              </button>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -820,13 +1044,20 @@ export function CashInLedgerPanel({
 
               <div className="cash-in-math is-slim" aria-live="polite">
                 <span>
-                  ธนาคาร {formatPlainNumber(workingBank)} · สลิปสด{" "}
-                  {formatPlainNumber(expected)} · ผลต่าง{" "}
+                  รวมเงินสด {formatPlainNumber(expected)} · เข้าบัญชี{" "}
+                  {formatPlainNumber(workingBank)}
+                  {workingFee
+                    ? ` · คชจ. ${formatPlainNumber(workingFee)}`
+                    : " · คชจ. 0"}{" "}
+                  · หลังหัก/รวม fee{" "}
                   <strong className={variance === 0 ? "is-ok" : "is-off"}>
                     {variance === 0
-                      ? "0"
+                      ? "ตรง"
                       : `${variance > 0 ? "+" : ""}${formatPlainNumber(variance)}`}
                   </strong>
+                </span>
+                <span className="muted cash-in-math-formula">
+                  (เข้าบัญชี + คชจ.) − รวมเงินสด
                 </span>
               </div>
 
