@@ -38,8 +38,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Capture primary activity window + live customer Presentation (fallback probe),
- * then POST JPEG base64 to reportNposScreenCapture.
+ * Capture tablet screen for BO.
+ *
+ * <ol>
+ *   <li>MediaProjection (real screen) when consent is live
+ *   <li>PixelCopy / View.draw of our windows as fallback
+ *   <li>Never upload synthetic green status frames as successful shots
+ * </ol>
  */
 public final class ScreenCapture {
     public static final String REPORT_URL =
@@ -59,6 +64,21 @@ public final class ScreenCapture {
 
     public static void requestCapture(Context context, long requestAt, String reason) {
         Context app = context.getApplicationContext();
+        final String why = reason == null ? "manual" : reason;
+
+        // Capture consent is separate from BT/notifications — ask only when needed.
+        if (CaptureProjectionPrefs.shouldAutoPrompt(app, why)) {
+            Activity fg = NposApp.foregroundActivity();
+            if (fg != null || "after_update".equals(why) || "manual".equals(why)) {
+                OpsLogger.info(app, "display", "แคปจอ · รออนุญาตแชร์หน้าจอ", why);
+                CaptureConsentActivity.launchIfNeeded(app, requestAt, why);
+                // Do not ack yet — heartbeat will retry after staff accepts.
+                return;
+            }
+            OpsLogger.warn(app, "display", "แคปจอ · ยังไม่มีสิทธิ์และแอปไม่ได้อยู่หน้าจอ", why);
+            // Fall through: still try PixelCopy if somehow possible; else report fail.
+        }
+
         synchronized (LOCK) {
             if (running) return;
             running = true;
@@ -66,7 +86,7 @@ public final class ScreenCapture {
         EXEC.execute(
                 () -> {
                     try {
-                        runCapture(app, requestAt, reason == null ? "manual" : reason);
+                        runCapture(app, requestAt, why);
                     } catch (Exception e) {
                         OpsLogger.error(
                                 app,
@@ -101,6 +121,11 @@ public final class ScreenCapture {
         body.put("customerDisplay", DisplayProbe.customerDisplayStatus(app));
         body.put("displays", displayJson);
         body.put("capturedAt", System.currentTimeMillis());
+        body.put(
+                "captureConsent",
+                CaptureProjectionService.hasLiveProjection()
+                        ? "live"
+                        : CaptureProjectionPrefs.consentState(app));
 
         if (primary != null) {
             JSONObject p = new JSONObject();
@@ -109,7 +134,7 @@ public final class ScreenCapture {
             p.put("detail", primary.detail);
             p.put("width", primary.width);
             p.put("height", primary.height);
-            if (primary.jpegBase64 != null) p.put("jpegBase64", primary.jpegBase64);
+            if (primary.ok && primary.jpegBase64 != null) p.put("jpegBase64", primary.jpegBase64);
             body.put("primary", p);
         }
         if (secondary != null) {
@@ -119,7 +144,9 @@ public final class ScreenCapture {
             s.put("detail", secondary.detail);
             s.put("width", secondary.width);
             s.put("height", secondary.height);
-            if (secondary.jpegBase64 != null) s.put("jpegBase64", secondary.jpegBase64);
+            if (secondary.ok && secondary.jpegBase64 != null) {
+                s.put("jpegBase64", secondary.jpegBase64);
+            }
             body.put("secondary", s);
         }
 
@@ -145,7 +172,9 @@ public final class ScreenCapture {
                             + " · หลัก="
                             + (primary != null && primary.ok)
                             + " · สอง="
-                            + (secondary != null && secondary.ok));
+                            + (secondary != null && secondary.ok)
+                            + " · "
+                            + (primary != null ? primary.detail : ""));
         } else {
             OpsLogger.warn(
                     app,
@@ -181,55 +210,99 @@ public final class ScreenCapture {
     }
 
     private static CaptureShot capturePrimary(Context app) {
+        // 1) Real screen via MediaProjection (fixes green placeholder / background cases).
+        if (CaptureProjectionService.hasLiveProjection()) {
+            try {
+                Bitmap proj = CaptureProjectionService.grabPrimary(2500);
+                CaptureShot shot = acceptRealFrame(proj, "media_projection");
+                if (shot != null) return shot;
+            } catch (Exception e) {
+                OpsLogger.warn(
+                        app,
+                        "display",
+                        "แคปจอ · MediaProjection ล้ม ใช้ fallback",
+                        e.getMessage() == null ? "" : e.getMessage());
+            }
+        }
+
         Activity activity = NposApp.foregroundActivity();
         if (activity == null) {
-            return statusShot(app, "app_background · ไม่มีหน้าจอ foreground");
+            return CaptureShot.fail("app_background · ไม่มีหน้าจอ foreground");
         }
         if (Build.VERSION.SDK_INT < 26) {
-            return statusShot(app, "api_lt_26");
+            return CaptureShot.fail("api_lt_26");
         }
         try {
             Bitmap bmp = pixelCopyWindow(activity.getWindow(), 2500);
             if (bmp == null) {
                 bmp = drawDecorBitmap(activity);
             }
-            if (bmp == null) return statusShot(app, "pixelcopy_null");
-            return encode(bmp);
+            CaptureShot shot = acceptRealFrame(bmp, bmp != null ? "pixelcopy" : null);
+            if (shot != null) return shot;
+            return CaptureShot.fail("pixelcopy_null");
         } catch (Exception e) {
             try {
                 Bitmap fallback = drawDecorBitmap(activity);
-                if (fallback != null) return encode(fallback);
+                CaptureShot shot = acceptRealFrame(fallback, "draw_decor");
+                if (shot != null) return shot;
             } catch (Exception ignored) {
                 /* fall through */
             }
-            return statusShot(
-                    app, e.getMessage() == null ? "primary_fail" : e.getMessage());
+            return CaptureShot.fail(
+                    e.getMessage() == null ? "primary_fail" : e.getMessage());
         }
     }
 
-    /** Always produce a small JPEG so BO still gets a visible frame when PixelCopy fails. */
-    private static CaptureShot statusShot(Context app, String detail) {
-        try {
-            Bitmap bmp = Bitmap.createBitmap(720, 405, Bitmap.Config.ARGB_8888);
-            Canvas c = new Canvas(bmp);
-            c.drawColor(Color.parseColor("#1A2E24"));
-            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            paint.setColor(Color.WHITE);
-            paint.setTextSize(28f);
-            c.drawText("nPos capture", 24, 56, paint);
-            paint.setTextSize(22f);
-            paint.setColor(Color.parseColor("#C4A35A"));
-            String line = detail == null ? "fail" : detail;
-            if (line.length() > 42) line = line.substring(0, 42);
-            c.drawText(line, 24, 100, paint);
-            paint.setColor(Color.parseColor("#D7E3DC"));
-            paint.setTextSize(18f);
-            c.drawText(DeviceIdentity.pairingCode(app), 24, 140, paint);
-            c.drawText(Build.MODEL == null ? "" : Build.MODEL, 24, 170, paint);
-            return encode(bmp);
-        } catch (Exception e) {
-            return CaptureShot.fail(detail);
+    /**
+     * Encode only real UI frames. Reject near-uniform brand-green placeholders so BO never
+     * mistakes a synthetic status card for a live screen.
+     */
+    private static CaptureShot acceptRealFrame(Bitmap bmp, String detail) {
+        if (bmp == null) return null;
+        if (isMostlyBrandGreen(bmp)) {
+            bmp.recycle();
+            return CaptureShot.fail("reject_uniform_green");
         }
+        CaptureShot shot = encode(bmp);
+        if (detail != null && !detail.isEmpty()) shot.detail = detail;
+        return shot;
+    }
+
+    /**
+     * Reject flat synthetic / empty green placeholders — not normal brand UI.
+     * Real sell/customer screens are green-tinted but have enough luminance variance.
+     */
+    private static boolean isMostlyBrandGreen(Bitmap bmp) {
+        int w = bmp.getWidth();
+        int h = bmp.getHeight();
+        if (w < 8 || h < 8) return true;
+        int samples = 0;
+        int greenish = 0;
+        long sum = 0;
+        long sumSq = 0;
+        int stepX = Math.max(1, w / 12);
+        int stepY = Math.max(1, h / 12);
+        for (int y = stepY / 2; y < h; y += stepY) {
+            for (int x = stepX / 2; x < w; x += stepX) {
+                int c = bmp.getPixel(x, y);
+                int r = (c >> 16) & 0xff;
+                int g = (c >> 8) & 0xff;
+                int b = c & 0xff;
+                int yv = (r * 30 + g * 59 + b * 11) / 100;
+                sum += yv;
+                sumSq += (long) yv * yv;
+                samples++;
+                // Brand ink ~ #1A2E24 / #102018 / #0F1A14 — dark green, low chroma.
+                if (g >= r && g >= b && g < 80 && r < 55 && b < 55) {
+                    greenish++;
+                }
+            }
+        }
+        if (samples <= 0) return true;
+        double mean = sum / (double) samples;
+        double var = sumSq / (double) samples - mean * mean;
+        boolean flat = var < 40.0; // placeholder cards are nearly flat
+        return flat && greenish * 100 / samples >= 90;
     }
 
     private static Bitmap drawDecorBitmap(Activity activity) throws Exception {
@@ -270,18 +343,15 @@ public final class ScreenCapture {
         try {
             // Prefer live customer UI (full detail) — never overwrite with probe if showing.
             Bitmap live = captureLiveCustomerOrNull();
-            if (live != null) {
-                CaptureShot shot = encode(live);
-                shot.detail = "live_customer";
-                return shot;
-            }
+            CaptureShot liveShot = acceptRealFrame(live, "live_customer");
+            if (liveShot != null) return liveShot;
+
             Context ui = NposApp.foregroundActivity();
             if (ui == null) ui = app;
             Bitmap bmp = showProbeAndCopy(ui, sec.display, sec);
-            if (bmp == null) return CaptureShot.fail("secondary_copy_null");
-            CaptureShot shot = encode(bmp);
-            shot.detail = "probe_fallback";
-            return shot;
+            CaptureShot shot = acceptRealFrame(bmp, "probe_fallback");
+            if (shot != null) return shot;
+            return CaptureShot.fail("secondary_copy_null");
         } catch (Exception e) {
             return CaptureShot.fail(e.getMessage() == null ? "secondary_fail" : e.getMessage());
         }
@@ -352,7 +422,6 @@ public final class ScreenCapture {
             if (window == null) throw new IllegalStateException("no_window");
             Bitmap bmp = pixelCopyWindow(window, 2500);
             if (bmp == null) {
-                // Fallback: draw View to bitmap
                 bmp = drawViewBitmap(presentation);
             }
             return bmp;
@@ -382,15 +451,7 @@ public final class ScreenCapture {
                         root.draw(canvas);
                         out.set(bmp);
                     } catch (Exception e) {
-                        // placeholder so we still send something
-                        Bitmap bmp = Bitmap.createBitmap(320, 180, Bitmap.Config.ARGB_8888);
-                        Canvas c = new Canvas(bmp);
-                        c.drawColor(Color.parseColor("#102018"));
-                        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-                        paint.setColor(Color.WHITE);
-                        paint.setTextSize(28f);
-                        c.drawText("capture fallback", 24, 90, paint);
-                        out.set(bmp);
+                        out.set(null);
                     } finally {
                         latch.countDown();
                     }

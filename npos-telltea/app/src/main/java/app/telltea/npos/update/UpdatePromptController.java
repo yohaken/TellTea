@@ -220,6 +220,7 @@ public final class UpdatePromptController {
       /* best effort */
     }
     ResumePrefs.markResumeSellAfterUpdate(activity);
+    app.telltea.npos.diagnose.CaptureProjectionPrefs.markPromptAfterUpdate(activity);
 
     String apkUrl = pending.apkUrl;
     if (apkUrl == null || apkUrl.isEmpty()) apkUrl = BuildConfig.DEFAULT_APK_URL;

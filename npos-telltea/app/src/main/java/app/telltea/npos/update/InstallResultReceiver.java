@@ -37,6 +37,8 @@ public final class InstallResultReceiver extends BroadcastReceiver {
                 Toast.makeText(context, "อัปเดตสำเร็จ — กลับหน้าร้าน", Toast.LENGTH_LONG).show();
                 try {
                     ResumePrefs.markResumeSellAfterUpdate(context);
+                    // Capture consent only (not BT/notify) — ask once after this update.
+                    app.telltea.npos.diagnose.CaptureProjectionPrefs.markPromptAfterUpdate(context);
                     Intent relaunch = new Intent(context, app.telltea.npos.MainActivity.class);
                     relaunch.addFlags(
                             Intent.FLAG_ACTIVITY_NEW_TASK
