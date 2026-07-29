@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import {
+  STAFF_PRESENCE_AGE_TICK_MS,
   buildStaffPresenceItems,
   formatPresenceAge,
   subscribeEmployeesForPresence,
@@ -14,7 +15,7 @@ import type { StaffMember } from "@/lib/types";
 
 /**
  * ไอคอนลอยขวาบน — เฉพาะเจ้าของ
- * แสดงใครอยู่ในระบบ + ป้ายเข้าหลังสุด (ชม./นาที)
+ * รีเฟรชป้ายเวลาเรื่อยๆ + ทันทีตอนกลับมาโฟกัสแท็บ
  */
 export function StaffPresenceDock() {
   const { staff } = useAuth();
@@ -27,11 +28,43 @@ export function StaffPresenceDock() {
     if (!isOwner) return;
     const unsubStaff = subscribeStaffForPresence(setMembers);
     const unsubEmp = subscribeEmployeesForPresence(setEmployees);
-    const tick = window.setInterval(() => setNow(Date.now()), 30_000);
+
+    const refreshNow = () => setNow(Date.now());
+    refreshNow();
+
+    let timer: number | null = null;
+    const startTick = () => {
+      if (timer != null) window.clearInterval(timer);
+      timer = window.setInterval(refreshNow, STAFF_PRESENCE_AGE_TICK_MS);
+    };
+    const stopTick = () => {
+      if (timer != null) {
+        window.clearInterval(timer);
+        timer = null;
+      }
+    };
+
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        refreshNow();
+        startTick();
+      } else {
+        stopTick();
+      }
+    };
+
+    if (document.visibilityState === "visible") startTick();
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", refreshNow);
+    window.addEventListener("pageshow", refreshNow);
+
     return () => {
       unsubStaff();
       unsubEmp();
-      window.clearInterval(tick);
+      stopTick();
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", refreshNow);
+      window.removeEventListener("pageshow", refreshNow);
     };
   }, [isOwner]);
 
