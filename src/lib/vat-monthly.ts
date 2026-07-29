@@ -54,6 +54,63 @@ function addCalendarMonths(
   return { year: Math.floor(idx / 12), month: (idx % 12) + 1 };
 }
 
+/** ชื่อเดือนไทยเต็ม (index 1–12) */
+export const THAI_MONTH_FULL = [
+  "",
+  "มกราคม",
+  "กุมภาพันธ์",
+  "มีนาคม",
+  "เมษายน",
+  "พฤษภาคม",
+  "มิถุนายน",
+  "กรกฎาคม",
+  "สิงหาคม",
+  "กันยายน",
+  "ตุลาคม",
+  "พฤศจิกายน",
+  "ธันวาคม",
+] as const;
+
+/** เดือน YYYY-MM → เช่น กรกฎาคม 2569 */
+export function formatThaiMonthKey(monthKey: string): string {
+  if (!isMonthKey(monthKey)) return monthKey;
+  const [ys, ms] = monthKey.split("-");
+  const y = Number(ys);
+  const m = Number(ms);
+  if (!Number.isFinite(y) || m < 1 || m > 12) return monthKey;
+  return `${THAI_MONTH_FULL[m]} ${y + 543}`;
+}
+
+/** รายการเดือนไทยสำหรับตัวเลือก (ล่าสุดก่อน · นับย้อนหลัง) */
+export function listThaiMonthOptions(
+  aroundKey?: string,
+  back = 24,
+  forward = 2,
+): { key: string; label: string }[] {
+  const base = isMonthKey(aroundKey || "")
+    ? (aroundKey as string)
+    : (() => {
+        const d = new Date();
+        const y = d.toLocaleString("en-CA", {
+          timeZone: VAT_PERIOD_TZ,
+          year: "numeric",
+        });
+        const m = d.toLocaleString("en-CA", {
+          timeZone: VAT_PERIOD_TZ,
+          month: "2-digit",
+        });
+        return `${y}-${m}`;
+      })();
+  const [ys, ms] = base.split("-").map(Number);
+  const out: { key: string; label: string }[] = [];
+  for (let delta = forward; delta >= -back; delta -= 1) {
+    const { year, month } = addCalendarMonths(ys, ms, delta);
+    const key = `${year}-${String(month).padStart(2, "0")}`;
+    out.push({ key, label: formatThaiMonthKey(key) });
+  }
+  return out;
+}
+
 /** วันที่แบบ d/M/พ.ศ. เช่น 1/7/2569 */
 export function formatThaiDateKey(dateKey: string): string {
   if (!isMonthKey(dateKey) && !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return dateKey;

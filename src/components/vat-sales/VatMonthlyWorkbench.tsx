@@ -9,18 +9,15 @@ import {
   type MonthCategoryRow,
 } from "@/lib/pnl";
 import {
-  fetchPosStorefrontTotalsByMonth,
-  listDailySalesInMonth,
-  sumMonthSales,
-} from "@/lib/vat-sales";
-import {
   DEFAULT_OUTPUT_PCT,
   DEFAULT_PERIOD_START_DAY,
   DEFAULT_STOREFRONT_REMIT_PCT,
   DEFAULT_VAT_LOGIC_RATES,
   emptySegment,
   fileVatMonthlyReturn,
+  formatThaiMonthKey,
   getVatPeriodBoundary,
+  listThaiMonthOptions,
   loadVatMonthlyReturn,
   loadVatMonthlySettings,
   mapVatLogicRates,
@@ -774,6 +771,157 @@ function SummaryVatTable({
   );
 }
 
+/** ค่าใช้จ่ายดำเนินงาน (หักรายได้) — ไม่นับซื้อสินทรัพย์ */
+function bookOpEx(row: MonthCategoryRow | null) {
+  if (!row) return null;
+  return row.cogs + row.sga + row.other;
+}
+
+/**
+ * ตารางกำไรขาดทุนง่าย · บุคคลธรรมดา
+ * แสดงของที่มีในระบบ + ช่องที่ยังขาดสำหรับนำส่งรายได้สรรพากร
+ */
+function PersonalPnlGapTable({
+  month,
+  income,
+  netVat,
+  staff,
+  owner,
+  booksPulled,
+}: {
+  month: string;
+  income: number;
+  netVat: number;
+  staff: MonthCategoryRow | null;
+  owner: MonthCategoryRow | null;
+  booksPulled: boolean;
+}) {
+  const staffOp = bookOpEx(staff);
+  const ownerOp = bookOpEx(owner);
+  const assetTotal =
+    (staff?.asset || 0) + (owner?.asset || 0);
+  const profit =
+    booksPulled && staffOp != null && ownerOp != null
+      ? income - staffOp - ownerOp
+      : null;
+
+  const rows: {
+    item: string;
+    source: string;
+    status: string;
+    amount: string;
+    tone?: "net" | "gap" | "muted";
+  }[] = [
+    {
+      item: "รายได้ (ก่อน VAT / ฐาน)",
+      source: "VAT ตาราง 1 → รายได้ P&L",
+      status: income > 0 ? "มี" : "ยังไม่ใส่",
+      amount: fmt(income),
+    },
+    {
+      item: "− ค่าใช้จ่าย บช. พนักงาน (COGS+SGA+อื่น)",
+      source: "ledger",
+      status: booksPulled ? "ดึงแล้ว" : "กดดึงบช.",
+      amount: staffOp == null ? "—" : fmt(staffOp),
+    },
+    {
+      item: "− ค่าใช้จ่าย บช. เจ้าของ (COGS+SGA+อื่น)",
+      source: "ownerBooks",
+      status: booksPulled ? "ดึงแล้ว" : "กดดึงบช.",
+      amount: ownerOp == null ? "—" : fmt(ownerOp),
+    },
+    {
+      item: "= กำไรประมาณการเดือน",
+      source: "คำนวณ",
+      status: profit == null ? "รอข้อมูล" : "ประมาณ",
+      amount: profit == null ? "—" : formatPlainNumber(profit),
+      tone: "net",
+    },
+    {
+      item: "ภาษีมูลค่าเพิ่มสุทธิ (แยกจากเงินได้)",
+      source: "VAT ตาราง 3",
+      status: "มี",
+      amount: fmt(netVat),
+    },
+    {
+      item: "ซื้อสินทรัพย์ (ไม่หักรายได้ทันที)",
+      source: "ledger / ownerBooks · asset",
+      status: booksPulled ? "ดึงแล้ว" : "กดดึงบช.",
+      amount: booksPulled ? fmt(assetTotal) : "—",
+      tone: "muted",
+    },
+    {
+      item: "ค่าลดหย่อนบุคคล (ภ.ง.ด.)",
+      source: "—",
+      status: "ยังไม่มี",
+      amount: "—",
+      tone: "gap",
+    },
+    {
+      item: "คำนวณภาษีเงินได้บุคคล / ขั้นบันได",
+      source: "—",
+      status: "ยังไม่มี",
+      amount: "—",
+      tone: "gap",
+    },
+    {
+      item: "สรุปรายปี + ส่งออกยื่น ภ.ง.ด.",
+      source: "—",
+      status: "ยังไม่มี",
+      amount: "—",
+      tone: "gap",
+    },
+  ];
+
+  return (
+    <section className="vat-table-block vat-personal-pnl">
+      <h2 className="vat-table-title">
+        กำไรขาดทุนง่าย · บุคคลธรรมดา — {formatThaiMonthKey(month)}
+      </h2>
+      <p className="muted vat-sales-hint vat-hint-one-line">
+        ของที่มีในระบบใช้ประมาณกำไรเดือนได้ · ช่อง「ยังไม่มี」คือสิ่งที่ต้องเติมเพื่อยื่นรายได้สรรพากร
+      </p>
+      <div className="sheet-wrap vat-month-slim-wrap">
+        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+          <thead>
+            <tr>
+              <th className="col-seg">รายการ</th>
+              <th className="col-seg">แหล่งในระบบ</th>
+              <th className="col-pct">สถานะ</th>
+              <th className="col-num">ยอด</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr
+                key={r.item}
+                className={
+                  r.tone === "net"
+                    ? "vat-sales-totals-row"
+                    : r.tone === "gap"
+                      ? "vat-gap-row"
+                      : undefined
+                }
+              >
+                <td className="col-seg">{r.item}</td>
+                <td className="col-seg muted">{r.source}</td>
+                <td className="col-pct">{r.status}</td>
+                <td
+                  className={
+                    r.tone === "net" ? "col-num col-net" : "col-num"
+                  }
+                >
+                  {r.amount}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 export function VatMonthlyWorkbench({ actor }: Props) {
   const [tab, setTab] = useState<Tab>("month");
   const [month, setMonth] = useState(() => {
@@ -1165,82 +1313,6 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     }
   };
 
-  /** ดึงยอดแอพเดลิเวอรี่ + หน้าร้าน จาก dailySales / POS กลับเข้าตาราง */
-  const pullSalesFromSources = async () => {
-    if (locked) return;
-    setBusy(true);
-    setError("");
-    setMsg("");
-    try {
-      const [byDay, posByDay] = await Promise.all([
-        listDailySalesInMonth(month),
-        fetchPosStorefrontTotalsByMonth(month),
-      ]);
-      const totalsDay = sumMonthSales(Object.values(byDay));
-      const posSum = Object.values(posByDay).reduce(
-        (acc, n) => acc + (Number(n) || 0),
-        0,
-      );
-      const storefrontGross =
-        totalsDay.storefrontGross > 0 ? totalsDay.storefrontGross : posSum;
-
-      setDeliveryDraftTracked((prev) => {
-        const hasApps =
-          totalsDay.shopee + totalsDay.grab + totalsDay.lineman > 0;
-        return {
-          ...prev,
-          // มียอดย่อยแอพแล้วไม่ใช้ grossManual (กันสับสน)
-          grossManual: hasApps ? "" : prev.grossManual,
-          channels: {
-            shopee:
-              totalsDay.shopee > 0
-                ? moneyInputValue(totalsDay.shopee)
-                : prev.channels.shopee,
-            grab:
-              totalsDay.grab > 0
-                ? moneyInputValue(totalsDay.grab)
-                : prev.channels.grab,
-            lineman:
-              totalsDay.lineman > 0
-                ? moneyInputValue(totalsDay.lineman)
-                : prev.channels.lineman,
-          },
-        };
-      });
-      setStorefrontDraftTracked((prev) => ({
-        ...prev,
-        grossManual:
-          storefrontGross > 0
-            ? moneyInputValue(storefrontGross)
-            : prev.grossManual,
-      }));
-      if (totalsDay.shopee + totalsDay.grab + totalsDay.lineman > 0) {
-        setOpenDelivery(true);
-      }
-      if (storefrontGross > 0) setOpenStorefront(true);
-
-      const parts = [
-        totalsDay.shopee || totalsDay.grab || totalsDay.lineman
-          ? `แอพ ส่ง=${formatPlainNumber(totalsDay.deliveryGross)}`
-          : null,
-        storefrontGross > 0
-          ? `หน้าร้าน=${formatPlainNumber(storefrontGross)}${
-              totalsDay.storefrontGross > 0 ? "" : " (POS)"
-            }`
-          : null,
-      ].filter(Boolean);
-      setMsg(
-        parts.length
-          ? `ดึงยอดกลับแล้ว · ${parts.join(" · ")} · จำในเครื่อง + จะเซฟร่างอัตโนมัติ`
-          : "ไม่พบยอดใน dailySales/POS เดือนนี้ — ถ้าเคยคีย์ไว้ให้ดูว่ายังมีจุด「ยังไม่บันทึก」หรือกดร่าง",
-      );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const closeMonth = async () => {
     if (dirty) {
       const okSave = window.confirm(
@@ -1391,7 +1463,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
     <div className="vat-monthly-workbench">
       <header className="vat-sales-header">
         <p className="vat-sales-lead">
-          VAT รายเดือน · 3 ตาราง compact · เรทขาย % · หน้าร้านคิดจากยอดนำส่งจริง
+          กำไรขาดทุนง่าย · บุคคลธรรมดา · VAT รายเดือน · นำส่งรายได้สรรพากร
         </p>
         <div className="vat-sales-tabs" role="tablist">
           {(
@@ -1418,11 +1490,18 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         <div className="vat-sales-toolbar vat-sales-toolbar--slim">
           <label className="vat-sales-month">
             เดือน
-            <input
-              type="month"
+            <select
+              className="vat-thai-month-select"
               value={month}
+              aria-label="เลือกเดือนไทย"
               onChange={(e) => changeMonth(e.target.value)}
-            />
+            >
+              {listThaiMonthOptions(month).map((opt) => (
+                <option key={opt.key} value={opt.key}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </label>
           {doc ? (
             <span className="vat-ops-badge" data-status={doc.status}>
@@ -1443,17 +1522,6 @@ export function VatMonthlyWorkbench({ actor }: Props) {
             <span className="muted" title="อัปเดตพื้นหลัง — ตัวเลขไม่ถูกล้าง">
               ซิงก์…
             </span>
-          ) : null}
-          {!locked ? (
-            <button
-              type="button"
-              className="vat-mini-btn"
-              disabled={busy || (loading && !hydrated)}
-              onClick={() => void pullSalesFromSources()}
-              title="ดึงยอด Shopee/Grab/LINE MAN + หน้าร้าน จาก dailySales หรือ POS"
-            >
-              ดึงยอดแอพ/ร้าน
-            </button>
           ) : null}
         </div>
 
@@ -1498,8 +1566,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           {tab === "month" ? (
             <>
               <p className="muted vat-sales-hint vat-hint-one-line">
-                จำในเครื่อง + เซฟร่างอัตโนมัติ · ตัวเลขไม่ถูกล้างตอนอัปเดต · ดึงยอดแอพ/ร้านได้ ·
-                เรทขาย {ratesLabel(DEFAULT_VAT_LOGIC_RATES)} · นำส่งหน้าร้าน{" "}
+                จำในเครื่อง + เซฟร่างอัตโนมัติ · เรทขาย{" "}
+                {ratesLabel(DEFAULT_VAT_LOGIC_RATES)} · นำส่งหน้าร้าน{" "}
                 {DEFAULT_STOREFRONT_REMIT_PCT}%
               </p>
 
@@ -1570,8 +1638,8 @@ export function VatMonthlyWorkbench({ actor }: Props) {
           {tab === "close" ? (
             <section className="vat-close-panel">
               <p className="muted vat-sales-hint vat-hint-one-line">
-                ดึงบช. พนง. + เจ้าของ ดูระหว่างงวดได้ · ใส่รายได้ทดลองได้โดยไม่ล็อก ·
-                ปิดงบจริงค่อยล็อกเดือน
+                กำไรขาดทุนง่าย · บุคคลธรรมดา · ดึงบช.ดูระหว่างงวดได้ · ใส่รายได้ทดลองได้ ·
+                ปิดงบจริงค่อยล็อก
               </p>
 
               <SummaryVatTable
@@ -1580,9 +1648,29 @@ export function VatMonthlyWorkbench({ actor }: Props) {
                 totals={totals}
               />
 
+              <PersonalPnlGapTable
+                month={month}
+                income={
+                  parseMoneyInput(pnlIncome) ||
+                  proposePnlIncome(
+                    {
+                      vatBase: totals.vatBase,
+                      grossSales: totals.grossSales,
+                    },
+                    pnlMode,
+                  )
+                }
+                netVat={totals.netVat}
+                staff={bookStaff}
+                owner={bookOwner}
+                booksPulled={Boolean(bookStaff && bookOwner)}
+              />
+
               <div className="vat-books-block">
                 <div className="vat-books-head">
-                  <h2 className="vat-table-title">บช. สองสมุด — เดือน {month}</h2>
+                  <h2 className="vat-table-title">
+                    บช. สองสมุด — {formatThaiMonthKey(month)}
+                  </h2>
                   <button
                     type="button"
                     className="vat-mini-btn"
