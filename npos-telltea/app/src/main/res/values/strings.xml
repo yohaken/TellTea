@@ -320,6 +320,14 @@
     <string name="settings_title">ตั้งค่า</string>
     <string name="settings_hint">อัปเดตและปริ้นเตอร์สำหรับหน้าร้าน · ส่วนเทคนิคอยู่ด้านล่าง</string>
     <string name="settings_section_device">เครื่องนี้</string>
+    <string name="settings_section_payment">การชำระเงิน</string>
+    <string name="change_display_title">ระยะเวลาแสดงหน้าต่างเงินทอน</string>
+    <string name="change_display_hint">หลังรับเงินสด — จอลูกค้าโชว์เงินทอนค้างเท่าไรก่อนกลับหน้าขาย\nแตะ «เปลี่ยน» เลือก 3–15 วินาที หรือปิดด้วยตนเอง (พนักงานกดตกลง)</string>
+    <string name="change_display_cycle_btn">เปลี่ยนค่า</string>
+    <string name="change_display_seconds_fmt">%d วินาที</string>
+    <string name="change_display_manual">ปิดด้วยตนเอง (กดตกลง)</string>
+    <string name="change_display_current_fmt">ตอนนี้: %1$s</string>
+    <string name="change_hold_dismiss">ตกลง · ปิดหน้าทอน</string>
     <string name="settings_section_printer">อุปกรณ์ · ปริ้นเตอร์ / ลิ้นชัก</string>
     <string name="printer_hint">ร้านชงชาหน้าบาร์ — ใบเสร็จ + ลิ้นชักพอ · ไม่ใช้ปริ้นเตอร์ครัว\nเครื่อง SUNMI: เลือก «SUNMI InnerPrinter» (ปริ้นในตัว เหมือน Wongnai)\nหรือเชื่อม USB / Bluetooth / LAN · ลิ้นชักเสียบ RJ11 หลังปริ้นเตอร์</string>
     <string name="printer_none">ยังไม่พบปริ้นเตอร์ — บน SUNMI กดสแกนแล้วเลือก InnerPrinter · หรือเสียบ USB / จับคู่ BT</string>

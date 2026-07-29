@@ -135,6 +135,50 @@
                 android:visibility="gone" />
         </LinearLayout>
 
+        <!-- Payment / change display (front-counter) -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/npos_space_section"
+            android:fontFamily="@font/prompt_semibold"
+            android:text="@string/settings_section_payment"
+            android:textColor="@color/npos_ink"
+            android:textSize="@dimen/npos_text_section" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:fontFamily="@font/prompt_regular"
+            android:lineSpacingMultiplier="1.25"
+            android:text="@string/change_display_hint"
+            android:textColor="@color/npos_muted"
+            android:textSize="@dimen/npos_text_caption" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:fontFamily="@font/prompt_semibold"
+            android:text="@string/change_display_title"
+            android:textColor="@color/npos_ink"
+            android:textSize="@dimen/npos_text_body" />
+
+        <TextView
+            android:id="@+id/changeDisplayValue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:fontFamily="@font/prompt_medium"
+            android:textColor="@color/npos_ink"
+            android:textSize="@dimen/npos_text_body" />
+
+        <TextView
+            android:id="@+id/changeDisplayCycleButton"
+            style="@style/Npos.Btn.Primary"
+            android:layout_marginTop="10dp"
+            android:text="@string/change_display_cycle_btn" />
+
         <!-- Printer -->
         <TextView
             android:layout_width="match_parent"

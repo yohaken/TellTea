@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import app.telltea.npos.diagnose.ChangeDisplayPrefs;
 import app.telltea.npos.diagnose.CustomerAmountPresentation;
 import app.telltea.npos.diagnose.DisplayProbe;
 import app.telltea.npos.diagnose.OpsLogger;
@@ -109,6 +110,27 @@ public class SettingsActivity extends Activity {
         printerTestButton.setOnClickListener(v -> runPrinterTest());
         drawerKickButton.setOnClickListener(v -> runDrawerKick());
         findViewById(R.id.printerLanAddButton).setOnClickListener(v -> addLanPrinter());
+        View changeCycle = findViewById(R.id.changeDisplayCycleButton);
+        if (changeCycle != null) {
+            changeCycle.setOnClickListener(
+                    v -> {
+                        ChangeDisplayPrefs.cycleNext(this);
+                        refreshChangeDisplaySetting();
+                        OpsLogger.info(
+                                this,
+                                "settings",
+                                "ตั้งค่าแสดงเงินทอน",
+                                ChangeDisplayPrefs.label(this));
+                        Toast.makeText(
+                                        this,
+                                        getString(
+                                                R.string.change_display_current_fmt,
+                                                ChangeDisplayPrefs.label(this)),
+                                        Toast.LENGTH_SHORT)
+                                .show();
+                    });
+        }
+        refreshChangeDisplaySetting();
         View paper80 = findViewById(R.id.paperWidth80Button);
         View paper58 = findViewById(R.id.paperWidth58Button);
         if (paper80 != null) {
@@ -146,6 +168,13 @@ public class SettingsActivity extends Activity {
         paper58.setTextColor(!is80 ? orange : ink);
         paper80.setTypeface(is80 ? NposFonts.semibold(this) : NposFonts.regular(this));
         paper58.setTypeface(!is80 ? NposFonts.semibold(this) : NposFonts.regular(this));
+    }
+
+    private void refreshChangeDisplaySetting() {
+        TextView v = findViewById(R.id.changeDisplayValue);
+        if (v == null) return;
+        v.setText(
+                getString(R.string.change_display_current_fmt, ChangeDisplayPrefs.label(this)));
     }
 
     private void refreshPermissionStatus() {
