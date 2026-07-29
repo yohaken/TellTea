@@ -209,20 +209,20 @@ function BonusView() {
         <button
           type="button"
           role="tab"
-          className={tab === "pay" ? "is-active" : ""}
-          aria-selected={tab === "pay"}
-          onClick={() => setTab("pay")}
-        >
-          รอโอน{pendingCount ? ` (${pendingCount})` : ""}
-        </button>
-        <button
-          type="button"
-          role="tab"
           className={tab === "bonus" ? "is-active" : ""}
           aria-selected={tab === "bonus"}
           onClick={() => setTab("bonus")}
         >
           สรุปโบนัส
+        </button>
+        <button
+          type="button"
+          role="tab"
+          className={tab === "pay" ? "is-active" : ""}
+          aria-selected={tab === "pay"}
+          onClick={() => setTab("pay")}
+        >
+          รอโอน{pendingCount ? ` (${pendingCount})` : ""}
         </button>
         <button
           type="button"
