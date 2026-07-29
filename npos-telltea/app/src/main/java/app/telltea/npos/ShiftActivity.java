@@ -5,9 +5,11 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.InputType;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -294,6 +296,7 @@ public class ShiftActivity extends Activity {
                 R.string.shift_panel_cash_drop,
                 ShiftPrefs.moneyPlain(drop),
                 ShiftPrefs.cashDropCount(this))
+            + ShiftPrefs.cashDropNotesSummary(this)
             + "\n"
             + getString(R.string.shift_panel_expected, ShiftPrefs.moneyPlain(expected)));
 
@@ -433,6 +436,20 @@ public class ShiftActivity extends Activity {
     amount.setMinHeight(ui.padAmountMinPx(chrome));
     amount.setPadding(0, ui.dp(4), 0, ui.dp(6));
     box.addView(amount);
+
+    TextView reasonLabel = NposUi.caption(this, getString(R.string.shift_cash_drop_reason_label));
+    reasonLabel.setPadding(0, ui.dp(4), 0, ui.dp(4));
+    box.addView(reasonLabel);
+    EditText reason = NposUi.field(this);
+    reason.setInputType(
+        InputType.TYPE_CLASS_TEXT
+            | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+    reason.setHint(R.string.shift_cash_drop_reason_hint);
+    reason.setMinLines(2);
+    reason.setMaxLines(3);
+    box.addView(reason);
+
     box.addView(
         NposNumberPad.attach(
             this,
@@ -463,7 +480,14 @@ public class ShiftActivity extends Activity {
             Toast.makeText(this, R.string.shift_cash_drop_invalid, Toast.LENGTH_SHORT).show();
             return false;
           }
-          ShiftPrefs.recordCashDrop(this, amt);
+          String note = reason.getText().toString().trim();
+          if (note.isEmpty()) {
+            Toast.makeText(this, R.string.shift_cash_drop_reason_required, Toast.LENGTH_SHORT)
+                .show();
+            reason.requestFocus();
+            return false;
+          }
+          ShiftPrefs.recordCashDrop(this, amt, note);
           Toast.makeText(
                   this,
                   getString(R.string.shift_cash_drop_ok, ShiftPrefs.moneyPlain(amt)),

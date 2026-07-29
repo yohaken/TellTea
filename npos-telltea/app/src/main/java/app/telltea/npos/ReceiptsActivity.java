@@ -755,23 +755,39 @@ public class ReceiptsActivity extends Activity {
   }
 
   private void confirmVoid(JSONObject receipt, String bill) {
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    TextView reasonLabel = NposUi.caption(this, getString(R.string.void_reason_label));
+    reasonLabel.setPadding(0, 0, 0, NposUi.dp(this, 6));
+    box.addView(reasonLabel);
     EditText reason = NposUi.field(this);
-    reason.setInputType(InputType.TYPE_CLASS_TEXT);
+    reason.setInputType(
+        InputType.TYPE_CLASS_TEXT
+            | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
     reason.setHint(R.string.void_reason_hint);
+    reason.setMinLines(2);
+    reason.setMaxLines(4);
+    box.addView(reason);
     NposConfirmDialog.custom(
         this,
         getString(R.string.void_confirm_title),
         getString(R.string.void_confirm_msg, bill),
-        reason,
+        box,
         getString(R.string.btn_void_receipt),
         getString(android.R.string.cancel),
         true,
         () -> {
           String r = reason.getText().toString().trim();
+          if (r.isEmpty()) {
+            Toast.makeText(this, R.string.void_reason_required, Toast.LENGTH_SHORT).show();
+            reason.requestFocus();
+            return false;
+          }
           saleSync.voidReceipt(
               this,
               receipt,
-              r.isEmpty() ? "ทำลายบิล" : r,
+              r,
               () ->
                   runOnUiThread(
                       () -> {

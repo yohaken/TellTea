@@ -36,6 +36,8 @@ public final class ShiftPrefs {
   private static final String KEY_CASH_OUT = "cashOutTotal";
   private static final String KEY_CASH_IN = "cashInTotal";
   private static final String KEY_CASH_DROP_COUNT = "cashDropCount";
+  /** JSON array of {amount, reason, at} mid-shift cash drops. */
+  private static final String KEY_CASH_DROP_NOTES = "cashDropNotes";
   private static final String KEY_SERVER_SYNCED = "serverSessionSynced";
   private static final String KEY_REMOTE_CLOSED_PENDING = "remoteClosedPending";
   private static final String KEY_REMOTE_CLOSE_SOURCE = "remoteCloseSource";
@@ -114,14 +116,70 @@ public final class ShiftPrefs {
 
   /** Mid-shift cash drop (เงินออกจากลิ้นชัก). */
   public static void recordCashDrop(Context context, double amount) {
+    recordCashDrop(context, amount, "");
+  }
+
+  /** Mid-shift cash drop with staff reason (required in UI). */
+  public static void recordCashDrop(Context context, double amount, String reason) {
     if (amount <= 0) return;
     SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     double next = cashOutTotal(context) + amount;
+    String note = reason == null ? "" : reason.trim();
+    String notesJson = prefs.getString(KEY_CASH_DROP_NOTES, "[]");
+    try {
+      org.json.JSONArray arr = new org.json.JSONArray(notesJson == null ? "[]" : notesJson);
+      org.json.JSONObject row = new org.json.JSONObject();
+      row.put("amount", amount);
+      row.put("reason", note);
+      row.put("at", System.currentTimeMillis());
+      arr.put(row);
+      // Keep last 20 drops for panel / close evidence.
+      while (arr.length() > 20) arr.remove(0);
+      notesJson = arr.toString();
+    } catch (Exception e) {
+      notesJson = "[]";
+    }
     prefs
         .edit()
         .putLong(KEY_CASH_OUT, Double.doubleToRawLongBits(next))
         .putInt(KEY_CASH_DROP_COUNT, cashDropCount(context) + 1)
+        .putString(KEY_CASH_DROP_NOTES, notesJson)
         .commit();
+    OpsLogger.info(
+        context,
+        "shift",
+        "ถอนเงินกลางกะ ฿" + moneyPlain(amount),
+        note.isEmpty() ? "(ไม่มีเหตุผล)" : note);
+  }
+
+  /** Multiline summary of recent cash-drop reasons for the shift panel. */
+  public static String cashDropNotesSummary(Context context) {
+    String notesJson =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_CASH_DROP_NOTES, "[]");
+    try {
+      org.json.JSONArray arr = new org.json.JSONArray(notesJson == null ? "[]" : notesJson);
+      if (arr.length() == 0) return "";
+      StringBuilder sb = new StringBuilder();
+      int start = Math.max(0, arr.length() - 5);
+      for (int i = start; i < arr.length(); i++) {
+        org.json.JSONObject row = arr.optJSONObject(i);
+        if (row == null) continue;
+        String reason = row.optString("reason", "").trim();
+        if (reason.isEmpty()) reason = "-";
+        double amt = row.optDouble("amount", 0);
+        sb.append("\n- ฿").append(moneyPlain(amt)).append(" ").append(reason);
+      }
+      return sb.toString();
+    } catch (Exception e) {
+      return "";
+    }
+  }
+
+  /** Raw JSON of cash-drop notes for close sync / Z evidence. */
+  public static String cashDropNotesJson(Context context) {
+    String v =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_CASH_DROP_NOTES, "[]");
+    return v == null || v.trim().isEmpty() ? "[]" : v;
   }
 
   /**
@@ -250,6 +308,7 @@ public final class ShiftPrefs {
         .putLong(KEY_CASH_OUT, Double.doubleToRawLongBits(0))
         .putLong(KEY_CASH_IN, Double.doubleToRawLongBits(0))
         .putInt(KEY_CASH_DROP_COUNT, 0)
+        .putString(KEY_CASH_DROP_NOTES, "[]")
         .putBoolean(KEY_LAST_RESUMED, false)
         .putBoolean(KEY_SERVER_SYNCED, false)
         .putBoolean(KEY_REMOTE_CLOSED_PENDING, false)

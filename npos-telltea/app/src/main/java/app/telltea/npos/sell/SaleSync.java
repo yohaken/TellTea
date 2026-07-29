@@ -385,6 +385,11 @@ public final class SaleSync {
             body.put("cashInTotal", ShiftPrefs.cashInTotal(app));
             body.put("cashDropCount", ShiftPrefs.cashDropCount(app));
         }
+        try {
+            body.put("cashDropNotes", new JSONArray(ShiftPrefs.cashDropNotesJson(app)));
+        } catch (Exception ignored) {
+            body.put("cashDropNotes", new JSONArray());
+        }
         JSONObject res = MenuRepository.postJson(CLOSE_URL, body);
         if (res.optBoolean("ok", false)) {
             OpsLogger.info(
@@ -575,21 +580,29 @@ public final class SaleSync {
      * Does not call the server (sale never synced).
      */
     public void cancelPending(Context context, String mutationId, Runnable done) {
+        cancelPending(context, mutationId, "", done);
+    }
+
+    public void cancelPending(Context context, String mutationId, String reason, Runnable done) {
         Context app = context.getApplicationContext();
+        final String why =
+                reason == null || reason.trim().isEmpty()
+                        ? "ยกเลิกบิลรอส่ง"
+                        : reason.trim();
         executor.execute(
                 () -> {
                     try {
                         JSONObject row = findQueueRow(app, mutationId);
                         if (row != null) {
                             removeFromQueue(app, mutationId);
-                            markReceiptVoided(app, mutationId, "ยกเลิกบิลรอส่ง");
+                            markReceiptVoided(app, mutationId, why);
                             ShiftPrefs.unrecordSale(
                                     app,
                                     row.optString("paymentMethod", ""),
                                     row.optDouble("localTotal", 0),
                                     row.optDouble("discountBaht", 0));
                             BestsellerPrefs.reverseLines(app, row.optJSONArray("lines"));
-                            OpsLogger.info(app, "sync", "ยกเลิกบิลรอส่ง", mutationId);
+                            OpsLogger.info(app, "sync", "ยกเลิกบิลรอส่ง", why + " · " + mutationId);
                         }
                     } catch (Exception e) {
                         OpsLogger.error(

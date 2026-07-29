@@ -157,7 +157,9 @@
     <string name="receipts_totals_head">สรุปยอด</string>
     <string name="void_confirm_title">ทำลายบิล?</string>
     <string name="void_confirm_msg">บิล %1$s จะไม่นับในยอดรอบ · ซิงก์ทำลายขึ้นเซิร์ฟเวอร์ถ้ามีเน็ต</string>
-    <string name="void_reason_hint">เหตุผล เช่น คิดผิด / ลูกค้ายกเลิก</string>
+    <string name="void_reason_label">เหตุผลทำลายบิล (จำเป็น)</string>
+    <string name="void_reason_hint">เช่น คิดผิด / ลูกค้ายกเลิก / สั่งซ้ำ</string>
+    <string name="void_reason_required">กรอกเหตุผลก่อนทำลายบิล</string>
     <string name="void_done">ทำลายบิลแล้ว</string>
     <string name="outbox_empty">ไม่มีบิลค้างซิงก์</string>
     <string name="outbox_title_n">บิลค้างซิงก์ (%1$d)</string>
@@ -302,6 +304,9 @@
     <string name="shift_cash_drop_btn">ถอนเงินกลางกะ</string>
     <string name="shift_cash_drop_title">ถอนเงินกลางกะ</string>
     <string name="shift_cash_drop_hint">เงินสดออกจากลิ้นชัก (ไม่ใช่ปิดกะ) · คิดในยอดที่ควรมี</string>
+    <string name="shift_cash_drop_reason_label">เหตุผลเงินออก (จำเป็น)</string>
+    <string name="shift_cash_drop_reason_hint">เช่น ซื้อของ / ทอนผิด / ส่งเงินเจ้าของ</string>
+    <string name="shift_cash_drop_reason_required">กรอกเหตุผลก่อนบันทึกเงินออก</string>
     <string name="shift_cash_drop_confirm">บันทึกถอน</string>
     <string name="shift_cash_drop_ok">บันทึกถอน ฿%1$s แล้ว</string>
     <string name="shift_cash_drop_need_open">เปิดกะก่อนถอนเงิน</string>
