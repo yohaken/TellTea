@@ -234,7 +234,7 @@ export function VatImportWorkbench({ actor }: Props) {
               return;
             }
             setSyncNote(
-              `ผสานเข้าเดือนอัตโนมัติ · Σ ขาย SF ${formatVatMoney(result.preview.byChannel.shopee.gross)} · GB ${formatVatMoney(result.preview.byChannel.grab.gross)} · LM ${formatVatMoney(result.preview.byChannel.lineman.gross)}`,
+              `ผสานเข้าเดือนอัตโนมัติ · โอน SF ${formatVatMoney(result.preview.byChannel.shopee.netTransfer)} · GB ${formatVatMoney(result.preview.byChannel.grab.netTransfer)} · LM ${formatVatMoney(result.preview.byChannel.lineman.netTransfer)} · ขาย SF ${formatVatMoney(result.preview.byChannel.shopee.gross)} · GB ${formatVatMoney(result.preview.byChannel.grab.gross)} · LM ${formatVatMoney(result.preview.byChannel.lineman.gross)}`,
             );
           } catch (e) {
             if (!silent) {

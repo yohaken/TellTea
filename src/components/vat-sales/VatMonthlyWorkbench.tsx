@@ -1060,6 +1060,25 @@ function IncomeTransferTable({
 
   const deliveryRows = bridge.channelRows.filter((r) => r.key !== "storefront");
   const storefrontRow = bridge.channelRows.find((r) => r.key === "storefront");
+  const parts = deliveryRows.map((r) => ({
+    key: r.key,
+    label:
+      r.key === "shopee" ? "SF" : r.key === "grab" ? "GB" : r.key === "lineman" ? "LM" : r.label,
+    amount: r.netTransfer,
+  }));
+  if (storefrontRow) {
+    parts.push({
+      key: "storefront",
+      label: "หน้าร้าน",
+      amount: storefrontRow.netTransfer,
+    });
+  }
+  const partsText = parts
+    .map((p) => `${p.label} ${formatVatMoney(p.amount)}`)
+    .join(" + ");
+  const incomeRaw = parseVatMoneyInput(pnlIncomeStr);
+  const incomeDiffers =
+    incomeRaw > 0 && Math.abs(incomeRaw - bridge.pnlIncome) > 0.009;
 
   function transferCell(key: GpChannelKey, row: (typeof bridge.channelRows)[number]) {
     const s = gpByChannel[key];
@@ -1087,17 +1106,32 @@ function IncomeTransferTable({
           <thead>
             <tr>
               <th className="col-seg">รายการ</th>
-              <th className="col-num">ยอดโอน / ถึงร้าน</th>
+              <th
+                className="col-num"
+                title="เงินถึงร้าน — ซิงก์จากแท็บนำเข้า (คอลัมน์ยอดโอน) หรือแก้ตรงนี้"
+              >
+                ยอดโอน / ถึงร้าน
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr className="vat-row-parent">
-              <td className="col-seg">รายได้เดลิเวอรี่ (รวม)</td>
+              <td
+                className="col-seg"
+                title="ผลรวมยอดโอน SF + GB + LM (ไม่ใช่ยอดขาย)"
+              >
+                รายได้เดลิเวอรี่ (รวม)
+              </td>
               <td className="col-num col-net">{fmt(bridge.deliveryGross)}</td>
             </tr>
             {deliveryRows.map((row) => (
               <tr key={row.key} className="vat-row-child">
-                <td className="col-seg col-child">{row.label}</td>
+                <td
+                  className="col-seg col-child"
+                  title={`ยอดโอน ${row.label} จากแท็บนำเข้า · ซิงก์อัตโนมัติ`}
+                >
+                  {row.label}
+                </td>
                 <td className="col-num col-input">
                   {transferCell(row.key, row)}
                 </td>
@@ -1105,14 +1139,24 @@ function IncomeTransferTable({
             ))}
             {storefrontRow ? (
               <tr className="vat-row-parent">
-                <td className="col-seg">รายได้หน้าร้าน</td>
+                <td
+                  className="col-seg"
+                  title="ยอดถึงร้านหน้าร้าน — ใส่เอง (ไม่ผ่านนำเข้า SF/GB/LM)"
+                >
+                  รายได้หน้าร้าน
+                </td>
                 <td className="col-num col-input">
                   {transferCell("storefront", storefrontRow)}
                 </td>
               </tr>
             ) : null}
             <tr className="vat-sales-totals-row">
-              <td className="col-seg">= รายได้สุทธิ</td>
+              <td
+                className="col-seg"
+                title={`รายได้สุทธิ = ${partsText} = ${formatVatMoney(bridge.pnlIncome)} · ใช้เข้ากำไรขาดทุน`}
+              >
+                = รายได้สุทธิ
+              </td>
               <td className="col-num col-input col-net">
                 <MoneyCell
                   value={pnlIncomeStr}
@@ -1125,11 +1169,16 @@ function IncomeTransferTable({
           </tbody>
         </table>
       </div>
+      <p className="muted vat-sales-hint vat-hint-one-line" title="ที่มาของยอดคำนวณ">
+        ยอดคำนวณ = {partsText || "—"} = {formatVatMoney(bridge.pnlIncome)}
+        {incomeDiffers ? " · ช่องรายได้สุทธิต่างจากผลรวม (กดปุ่มด้านล่างเพื่อใส่ยอดคำนวณ)" : ""}
+      </p>
       {!locked ? (
         <div className="vat-month-actions vat-month-actions--mini">
           <button
             type="button"
             className="vat-mini-btn"
+            title={`ใส่ผลรวมยอดโอนด้านบน (${formatVatMoney(bridge.pnlIncome)}) เข้าช่องรายได้สุทธิ — ใช้เมื่อแก้ช่องรายได้แล้วอยากกลับยอดคำนวณ`}
             onClick={onUseBridgeIncome}
           >
             ใช้ยอดคำนวณ ({formatVatMoney(bridge.pnlIncome)})
@@ -1859,7 +1908,9 @@ export function VatMonthlyWorkbench({ actor }: Props) {
         gpByChannel: nextGp,
       });
       setPnlIncome(moneyInputValue(bridge.pnlIncome));
-      setMsg("ซิงก์จากนำเข้า · GP + ภาษีซื้อ");
+      setMsg(
+        `ซิงก์จากนำเข้า · ยอดโอนตาราง 1 + รายได้สุทธิ ${formatVatMoney(bridge.pnlIncome)}`,
+      );
       void listVatImportRows(month)
         .then((importRows) => {
           const fill = computeImportFillStats(month, importRows);

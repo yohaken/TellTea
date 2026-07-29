@@ -2,13 +2,16 @@
  * I5 — รวมแถวนำเข้าเข้าเดือน VAT (ยอดขาย / ยอดโอน / ภาษีซื้อ GP)
  */
 import {
+  buildIncomeBridge,
   deriveGpFromNetTransfer,
+  impliedGpPctFromTransfer,
   mapGpByChannel,
   type GpByChannel,
   type GpChannelKey,
 } from "./personal-income-tax";
 import {
   loadVatMonthlyReturn,
+  recomputeSegment,
   saveVatMonthlyReturn,
   saveVatMonthlySettings,
   type VatMonthlyReturn,
@@ -83,21 +86,42 @@ export function previewApplyVatImportRows(
   return { monthKey, byChannel, deliveryGpVat, rowIds };
 }
 
+/** มียอดขาย / โอน / GP / ภาษีซื้อ ที่จะผสานเข้าเดือน */
+function channelHasApplyMoney(sum: ChannelApplySum): boolean {
+  return (
+    sum.gross > 0 ||
+    sum.netTransfer > 0 ||
+    sum.fee > 0 ||
+    sum.gpVat > 0
+  );
+}
+
+/**
+ * ผูกยอดโอน (+ คชจ. GP) จากนำเข้าเข้าแผนที่ช่องทางตาราง 1/2
+ * — ไม่ต้องรอมียอดขาย: ใส่แค่ยอดโอนก็เข้าตาราง 1 ได้
+ */
 function patchChannelGp(
   prev: GpByChannel,
   key: GpChannelKey,
   sum: ChannelApplySum,
 ): GpByChannel {
   const next = { ...prev, [key]: { ...prev[key] } };
-  const hasSales = sum.salesCount > 0 && sum.gross > 0;
-  const hasNet = sum.salesCount > 0; // รวมวันที่ยอดโอน = 0 ได้
-  if (hasSales && hasNet) {
+  const hasMoney =
+    sum.gross > 0 || sum.netTransfer > 0 || sum.fee > 0;
+  if (hasMoney) {
     const derived = deriveGpFromNetTransfer(sum.gross, sum.netTransfer);
+    const fee =
+      sum.fee > 0 ? normalizeMoney(sum.fee) : derived.deduct;
+    const net = normalizeMoney(sum.netTransfer);
+    const pct =
+      sum.gross > 0
+        ? derived.pct
+        : impliedGpPctFromTransfer(fee, net);
     next[key] = {
       mode: "transfer",
-      netTransfer: derived.netTransfer,
-      amount: derived.deduct,
-      pct: derived.pct,
+      netTransfer: net,
+      amount: fee,
+      pct,
       gpVatOverride:
         sum.gpVat > 0 ? sum.gpVat : next[key].gpVatOverride || 0,
     };
@@ -152,20 +176,23 @@ export async function mergeVatImportIntoMonth(input: {
   let gpMap = mapGpByChannel(ret.pnlGpByChannel);
   let touchedVat = false;
   let touchedSales = false;
+  let touchedTransfer = false;
 
   for (const k of DELIVERY_KEYS) {
     const sum = preview.byChannel[k];
-    if (sum.salesCount > 0 && sum.gross > 0) {
+    if (!channelHasApplyMoney(sum)) continue;
+    if (sum.gross > 0) {
       channels[k] = sum.gross;
       touchedSales = true;
     }
-    if (sum.salesCount > 0 || sum.gpVat > 0) {
-      gpMap = patchChannelGp(gpMap, k, sum);
+    if (sum.netTransfer > 0 || sum.fee > 0 || sum.gross > 0) {
+      touchedTransfer = true;
     }
+    gpMap = patchChannelGp(gpMap, k, sum);
     if (sum.gpVat > 0) touchedVat = true;
   }
 
-  if (!touchedSales && !touchedVat) {
+  if (!touchedSales && !touchedVat && !touchedTransfer) {
     return {
       preview,
       saved: ret,
@@ -186,6 +213,30 @@ export async function mergeVatImportIntoMonth(input: {
     : overrideSum > 0
       ? overrideSum
       : normalizeMoney(ret.delivery.gpVat);
+
+  const deliverySeg = recomputeSegment({
+    ...ret.delivery,
+    kind: "delivery",
+    grossManual: 0,
+    channels,
+    remitPct: 100,
+    gpVat: deliveryGpVat,
+    useGpEstimate: false,
+  });
+  const storefrontSeg = recomputeSegment({
+    ...ret.storefront,
+    kind: "storefront",
+  });
+  const bridge = buildIncomeBridge({
+    deliveryVatBase: deliverySeg.vatBase,
+    deliveryGrossSales: deliverySeg.grossSales,
+    storefrontVatBase: storefrontSeg.vatBase,
+    storefrontGrossSales: storefrontSeg.grossSales,
+    mode: ret.pnlIncomeMode === "exVat" ? "exVat" : "incVat",
+    deliveryChannels: channels,
+    outputPct: deliverySeg.rates.outputPct,
+    gpByChannel: gpMap,
+  });
 
   const saved = await saveVatMonthlyReturn(
     {
@@ -213,11 +264,12 @@ export async function mergeVatImportIntoMonth(input: {
         rates: ret.storefront.rates,
       },
       note: ret.note,
-      pnlIncomeMode: ret.pnlIncomeMode,
-      pnlIncome: ret.pnlIncome,
-      pnlDeliveryGpDeduct: ret.pnlDeliveryGpDeduct,
+      pnlIncomeMode: ret.pnlIncomeMode === "exVat" ? "exVat" : "incVat",
+      // ผูกยอดคำนวณจากยอดโอนตาราง 1 ทันทีเมื่อนำเข้าซิงก์
+      pnlIncome: bridge.pnlIncome,
+      pnlDeliveryGpDeduct: bridge.gpDeduct,
       pnlDeliveryGpMode: "amount",
-      pnlDeliveryGpPct: ret.pnlDeliveryGpPct,
+      pnlDeliveryGpPct: bridge.gpDeductPct,
       pnlGpByChannel: gpMap,
       status: ret.status === "saved" ? "saved" : "draft",
     },
