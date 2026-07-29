@@ -2174,6 +2174,137 @@ body.modal-open .main-panel {
   font-size: 1.05rem;
 }
 
+/**
+ * ทางลัดเจ้าของ — เรียงจากกลางไปขวา เหนือเมนูล่าง
+ * ไม่ทับปุ่ม + กรอก ที่ย้ายไปซ้ายสุดแล้ว
+ */
+.owner-quick-dock {
+  position: fixed;
+  left: 50%;
+  right: max(0.55rem, calc((100vw - var(--shell-max)) / 2 + 0.55rem));
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.45rem);
+  z-index: 11;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.22rem;
+  padding: 0.1rem 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  pointer-events: none;
+}
+
+.owner-quick-dock::-webkit-scrollbar {
+  display: none;
+}
+
+.owner-quick-chip {
+  pointer-events: auto;
+  flex: 0 0 auto;
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0.18rem 0.38rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  box-shadow: 0 3px 12px rgba(28, 42, 31, 0.1);
+  color: #1c2a1f;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.owner-quick-chip.is-active {
+  border-color: rgba(74, 107, 62, 0.45);
+  background: rgba(74, 107, 62, 0.14);
+  color: var(--tea-leaf);
+}
+
+.owner-quick-abbr {
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.owner-quick-setup-card {
+  max-width: 22rem;
+  width: min(100% - 1.5rem, 22rem);
+  text-align: left;
+}
+
+.owner-quick-setup-hint {
+  margin: 0 0 0.55rem;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.owner-quick-setup-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.owner-quick-setup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  min-height: 2.2rem;
+  padding: 0.15rem 0.2rem;
+  border-radius: 0.45rem;
+  background: rgba(28, 42, 31, 0.03);
+}
+
+.owner-quick-setup-check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: 0.8rem;
+}
+
+.owner-quick-setup-check input {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.owner-quick-setup-abbr {
+  flex: 0 0 auto;
+  min-width: 2.2rem;
+  font-weight: 750;
+  font-size: 0.72rem;
+}
+
+.owner-quick-setup-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.owner-quick-setup-move {
+  display: inline-flex;
+  gap: 0.15rem;
+  flex: 0 0 auto;
+}
+
+.owner-quick-move-btn {
+  min-width: 1.7rem !important;
+  min-height: 1.7rem !important;
+  padding: 0 !important;
+  font-size: 0.78rem !important;
+}
+
 .module-tab-dock {
   position: fixed;
   left: 50%;
@@ -2196,9 +2327,14 @@ body.modal-open .main-panel {
   grid-template-columns: 1fr 1fr;
 }
 
+/** + กรอก — ซ้ายสุด · เล็กลง ~ครึ่ง ยังแตะได้ · พื้นที่กลาง–ขวาให้ทางลัดเจ้าของ */
 .module-tab-dock.is-single {
+  left: max(0.55rem, calc((100vw - var(--shell-max)) / 2 + 0.55rem));
+  right: auto;
+  transform: none;
   grid-template-columns: 1fr;
-  width: min(calc(50% - 1.4rem), 10.5rem);
+  width: auto;
+  max-width: 5.2rem;
   padding: 0;
   border: none;
   background: transparent;
@@ -2219,9 +2355,11 @@ body.modal-open .main-panel {
 }
 
 .module-tab-dock.is-single .module-tab.is-add {
-  min-height: 2.45rem;
-  font-size: 0.84rem;
+  min-height: 1.25rem;
+  padding: 0.12rem 0.55rem;
+  font-size: 0.66rem;
   letter-spacing: 0.01em;
+  box-shadow: 0 3px 12px rgba(47, 107, 79, 0.32);
 }
 
 .module-tab.is-active {
@@ -2258,9 +2396,11 @@ body.modal-open .main-panel {
 }
 
 .module-tab-dock.is-single .module-tab.is-glass-out {
-  min-height: 2.45rem;
-  font-size: 0.84rem;
+  min-height: 1.25rem;
+  padding: 0.12rem 0.55rem;
+  font-size: 0.66rem;
   letter-spacing: 0.01em;
+  box-shadow: 0 3px 12px rgba(244, 162, 97, 0.22);
 }
 
 /** ปุ่มโอนเข้าเล็ก — เจ้าของเท่านั้น · มุมขวาล่างเหนือ FAB AI */
