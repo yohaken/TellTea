@@ -17641,6 +17641,47 @@ a.ghost-btn {
   max-width: 7rem;
 }
 
+/* เลขที่ใบกำกับ — ซ่อนแคบปลายแถว · โฟกัสแล้วขยาย */
+.vat-import-table--compact .col-inv-cloak {
+  width: 1.6rem;
+  max-width: 1.6rem;
+  padding-left: 0.1rem;
+  padding-right: 0.1rem;
+  overflow: hidden;
+  color: rgba(28, 42, 31, 0.35);
+  font-size: 0.62rem;
+}
+
+.vat-import-table--compact .vat-import-inv-cloak {
+  width: 1.35rem;
+  max-width: 1.35rem;
+  min-width: 0;
+  padding: 0.1rem 0.15rem;
+  font-size: 0.62rem;
+  color: transparent;
+  text-shadow: none;
+  border-color: transparent;
+  background: transparent;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vat-import-table--compact .vat-import-inv-cloak:not(:placeholder-shown) {
+  color: rgba(28, 42, 31, 0.28);
+}
+
+.vat-import-table--compact tr:hover .vat-import-inv-cloak,
+.vat-import-table--compact .vat-import-inv-cloak:focus {
+  width: 9rem;
+  max-width: 12rem;
+  color: inherit;
+  border-color: rgba(28, 42, 31, 0.2);
+  background: #fffef8;
+  position: relative;
+  z-index: 2;
+}
+
+
 .vat-import-table--compact .vat-import-file-link {
   font-size: 0.7rem;
 }

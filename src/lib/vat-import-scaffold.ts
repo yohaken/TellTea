@@ -16,13 +16,13 @@ import { isMonthKey } from "./vat-sales";
 
 export const MONTH_SCAFFOLD_ADAPTER_ID = "month-scaffold";
 
-/** ช่องทางที่สร้างโครงตารางเดือน */
+/** ช่องทางที่สร้างโครงตารางเดือน — ไม่รวมหน้าร้าน (คีย์ที่แท็บเดือน / ยอดจริง) */
 export const VAT_IMPORT_SCAFFOLD_CHANNELS: VatImportChannel[] = [
   "shopee",
   "grab",
   "lineman",
-  "storefront",
 ];
+
 
 export function padDay(day: number): string {
   return String(day).padStart(2, "0");

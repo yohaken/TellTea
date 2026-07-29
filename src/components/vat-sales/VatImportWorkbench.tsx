@@ -29,9 +29,11 @@ import {
   VAT_IMPORT_AI_RULES,
   VAT_IMPORT_CHANNEL_GUIDE,
   VAT_IMPORT_COLUMN_GUIDE,
+  VAT_IMPORT_VISIBLE_COLUMN_IDS,
   VAT_IMPORT_WORKFLOW_NOTES,
   columnTitleAttr,
 } from "@/lib/vat-import-guide";
+
 
 
 import {
@@ -77,12 +79,9 @@ const CHANNEL_SHORT: Record<VatImportChannel, string> = {
 
 type Props = { actor: string };
 
-const CHANNELS: VatImportChannel[] = [
-  "shopee",
-  "grab",
-  "lineman",
-  "storefront",
-];
+/** ช่องทางในตารางนำเข้า — ไม่มีหน้าร้าน */
+const CHANNELS: VatImportChannel[] = ["shopee", "grab", "lineman"];
+
 
 function fmt(n: number) {
   if (!Number.isFinite(n)) return "—";
@@ -158,13 +157,14 @@ export function VatImportWorkbench({ actor }: Props) {
     void refresh();
   }, [refresh]);
 
-  const visible = useMemo(
-    () =>
-      filterChannel === "all"
-        ? rows
-        : rows.filter((r) => r.channel === filterChannel),
-    [rows, filterChannel],
-  );
+  const visible = useMemo(() => {
+    // หน้าร้านไม่อยู่ในตารางนำเข้า (แม้มีแถวเก่าค้าง)
+    const base = rows.filter((r) => r.channel !== "storefront");
+    return filterChannel === "all"
+      ? base
+      : base.filter((r) => r.channel === filterChannel);
+  }, [rows, filterChannel]);
+
 
   const draftVisible = useMemo(
     () => visible.filter((r) => r.status === "draft"),
@@ -230,10 +230,11 @@ export function VatImportWorkbench({ actor }: Props) {
       const result = await ensureVatImportMonthScaffold(month, actor, existing);
       await refresh();
       setMsg(
-        `สร้างตาราง ${formatThaiMonthKey(month)} · โครง ${result.planned} ช่อง · ใหม่ ${result.created}` +
+        `สร้างตาราง ${formatThaiMonthKey(month)} · SF/GB/LM ${result.planned} ช่อง · ใหม่ ${result.created}` +
           (result.skipped ? ` · มีแล้วข้าม ${result.skipped}` : "") +
-          " · เติมด้วยไฟล์หรือรายบรรทัดได้",
+          " · ไม่รวมหน้าร้าน (ยอดจริงแท็บเดือน)",
       );
+
       setGuideOpen(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -667,9 +668,9 @@ export function VatImportWorkbench({ actor }: Props) {
     <div className="vat-import-workbench">
       <header className="vat-sales-header">
         <p className="vat-sales-lead">
-          สร้างตารางเดือนก่อน → เติมรายบรรทัดหรืออัปโหลดไฟล์ · ช่องไม่ชัวร์ปล่อยว่าง ·
-          แล้วใช้เข้าเดือน
+          สร้างตาราง SF/GB/LM → เติมช่องจากไฟล์จริง · แนบไฟล์ทันที · หน้าร้านอยู่นอกตารางนี้
         </p>
+
       </header>
 
       <VatImportAiScratchpad actor={actor} />
@@ -943,8 +944,9 @@ export function VatImportWorkbench({ actor }: Props) {
                     aria-label="เลือก draft ทั้งหมด"
                   />
                 </th>
-                {VAT_IMPORT_COLUMN_GUIDE.filter((c) => c.id !== "file").map(
-                  (c) => (
+                {VAT_IMPORT_VISIBLE_COLUMN_IDS.map((id) => {
+                  const c = VAT_IMPORT_COLUMN_GUIDE.find((x) => x.id === id)!;
+                  return (
                     <th
                       key={c.id}
                       className={
@@ -961,8 +963,8 @@ export function VatImportWorkbench({ actor }: Props) {
                     >
                       {c.short}
                     </th>
-                  ),
-                )}
+                  );
+                })}
                 <th
                   className="col-seg"
                   title={columnTitleAttr(
@@ -974,6 +976,14 @@ export function VatImportWorkbench({ actor }: Props) {
                 <th className="col-seg" title="draft / ข้าม / applied">
                   สถ.
                 </th>
+                <th
+                  className="col-inv-cloak"
+                  title={columnTitleAttr(
+                    VAT_IMPORT_COLUMN_GUIDE.find((c) => c.id === "invoiceNo")!,
+                  )}
+                >
+                  #
+                </th>
                 <th className="col-act"> </th>
               </tr>
             </thead>
@@ -981,7 +991,7 @@ export function VatImportWorkbench({ actor }: Props) {
               {visible.length === 0 ? (
                 <tr>
                   <td className="col-seg" colSpan={11}>
-                    ยังไม่มีแถว — กด「สร้างตารางเดือน」ก่อน แล้วค่อยอัปโหลดหรือเติมรายบรรทัด
+                    ยังไม่มีแถว — กด「สร้างตารางเดือน」(SF/GB/LM) แล้วเติมช่อง + แนบไฟล์
                   </td>
                 </tr>
               ) : (
@@ -1087,29 +1097,6 @@ export function VatImportWorkbench({ actor }: Props) {
                           onCommit={(n) => void saveRow(row, { gpVat: n })}
                         />
                       </td>
-                      <td className="col-seg col-input">
-                        <input
-                          className="vat-sales-input vat-import-inv"
-                          disabled={locked || busyId === row.id}
-                          value={row.invoiceNo}
-                          aria-label="เลขที่ใบกำกับ"
-                          placeholder=""
-                          onChange={(e) =>
-                            setRows((prev) =>
-                              prev.map((r) =>
-                                r.id === row.id
-                                  ? { ...r, invoiceNo: e.target.value }
-                                  : r,
-                              ),
-                            )
-                          }
-                          onBlur={(e) =>
-                            void saveRow(row, {
-                              invoiceNo: e.target.value.trim(),
-                            })
-                          }
-                        />
-                      </td>
                       <td className="col-seg">
                         {row.downloadUrl ? (
                           <a
@@ -1156,6 +1143,30 @@ export function VatImportWorkbench({ actor }: Props) {
                             ใช้แล้ว
                           </option>
                         </select>
+                      </td>
+                      <td className="col-inv-cloak col-input">
+                        <input
+                          className="vat-sales-input vat-import-inv-cloak"
+                          disabled={locked || busyId === row.id}
+                          value={row.invoiceNo}
+                          aria-label="เลขที่ใบกำกับ"
+                          title={row.invoiceNo || "เลขที่ใบกำกับ (ซ่อน)"}
+                          placeholder=""
+                          onChange={(e) =>
+                            setRows((prev) =>
+                              prev.map((r) =>
+                                r.id === row.id
+                                  ? { ...r, invoiceNo: e.target.value }
+                                  : r,
+                              ),
+                            )
+                          }
+                          onBlur={(e) =>
+                            void saveRow(row, {
+                              invoiceNo: e.target.value.trim(),
+                            })
+                          }
+                        />
                       </td>
                       <td className="col-act">
                         <button

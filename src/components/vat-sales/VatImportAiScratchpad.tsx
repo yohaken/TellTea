@@ -132,9 +132,22 @@ export function VatImportAiScratchpad({ actor }: Props) {
             >
               รีโหลด
             </button>
+            <button
+              type="button"
+              className="vat-mini-btn"
+              title="เขียนทับด้วยค่าเริ่มล่าสุดจากโค้ด"
+              onClick={() => {
+                const d = defaultVatImportAiNotesText();
+                setDraft(d);
+                setEditing(true);
+              }}
+            >
+              โหลดค่าเริ่ม
+            </button>
           </div>
         )}
       </details>
     </aside>
   );
 }
+
