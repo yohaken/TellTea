@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { CircleDollarSign } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
+import { PayrollPayPanel } from "@/components/PayrollPayPanel";
+import { PayrollSettingsPanel } from "@/components/PayrollSettingsPanel";
 import { useAuth } from "@/lib/auth";
 import {
   saveBonusDeductionMonthQty,
@@ -17,7 +19,6 @@ import {
 } from "@/lib/bonus-deductions";
 import {
   computeMonthBonus,
-  monthInputValue,
   parseMonthInput,
   pickMyBonusRow,
   thaiMonthYearLabel,
@@ -27,6 +28,14 @@ import { RateSchedulePanel } from "@/components/RateSchedulePanel";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import { getOtSettings, subscribeOtEntries, type OtEntry } from "@/lib/ot";
+import {
+  DEFAULT_PAYROLL_SCHEDULE,
+  suggestPeriodMonthForToday,
+  subscribePayrollItems,
+  subscribePayrollSchedule,
+  type PayrollItem,
+  type PayrollSchedule,
+} from "@/lib/payroll";
 import { subscribeProdEntries, type ProdEntry } from "@/lib/production";
 import { subscribeRateSchedule, type RateScheduleEntry } from "@/lib/rate-schedule";
 import { formatPlainNumber } from "@/lib/utils";
@@ -44,6 +53,8 @@ type EditTarget =
   | { kind: "rate"; rule: BonusDeductionRule }
   | { kind: "qty"; rule: BonusDeductionRule; qty: number };
 
+type PayTab = "pay" | "bonus" | "settings";
+
 export default function BonusPage() {
   return (
     <AuthGate>
@@ -56,7 +67,8 @@ function BonusView() {
   const { actorId, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
-  const [month, setMonth] = useState(monthInputValue());
+  const [month, setMonth] = useState(() => suggestPeriodMonthForToday());
+  const [tab, setTab] = useState<PayTab>(isOwner ? "pay" : "bonus");
   const [otEntries, setOtEntries] = useState<OtEntry[]>([]);
   const [prodEntries, setProdEntries] = useState<ProdEntry[]>([]);
   const [deductionSettings, setDeductionSettings] = useState<BonusDeductionSettings | null>(null);
@@ -64,12 +76,16 @@ function BonusView() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [otSettingsRate, setOtSettingsRate] = useState(0.6);
   const [rateSchedule, setRateSchedule] = useState<RateScheduleEntry[]>([]);
+  const [payrollSchedule, setPayrollSchedule] = useState<PayrollSchedule>(DEFAULT_PAYROLL_SCHEDULE);
+  const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(isOwner);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
 
   const canView = can(staff, "bonus");
+  const canPay = isOwner || can(staff, "ownerBooks");
   const { year, month: monthIdx } = parseMonthInput(month);
 
   useBodyScrollLock(!!editTarget);
@@ -105,11 +121,21 @@ function BonusView() {
       (doc) => setRateSchedule(doc.entries),
       (err) => setError(err.message),
     );
+    const unsubPayrollSchedule = subscribePayrollSchedule(
+      (doc) => setPayrollSchedule(doc),
+      (err) => setError(err.message),
+    );
+    const unsubPayrollItems = subscribePayrollItems(
+      (rows) => setPayrollItems(rows),
+      (err) => setError(err.message),
+    );
     return () => {
       unsubOt();
       unsubProd();
       unsubSettings();
       unsubSchedule();
+      unsubPayrollSchedule();
+      unsubPayrollItems();
     };
   }, [staff, canView]);
 
@@ -152,6 +178,20 @@ function BonusView() {
     [report, employees, staff?.displayName],
   );
 
+  const bonusByEmployee = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (!report) return map;
+    for (const row of report.rows) {
+      if (row.workerId) map[row.workerId] = row.remaining;
+    }
+    return map;
+  }, [report]);
+
+  const pendingCount = useMemo(
+    () => payrollItems.filter((i) => i.status === "pending").length,
+    [payrollItems],
+  );
+
   if (!canView) return null;
 
   return (
@@ -159,8 +199,38 @@ function BonusView() {
       <div className="module-page-head">
         <h1 className="panel-title module-page-title">
           <CircleDollarSign size={18} aria-hidden />
-          สรุปโบนัสเดือน
+          จ่าย / โบนัส
         </h1>
+      </div>
+
+      <div className="payroll-tabs" role="tablist" aria-label="จ่ายและโบนัส">
+        <button
+          type="button"
+          role="tab"
+          className={tab === "pay" ? "is-active" : ""}
+          aria-selected={tab === "pay"}
+          onClick={() => setTab("pay")}
+        >
+          รอโอน{pendingCount ? ` (${pendingCount})` : ""}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          className={tab === "bonus" ? "is-active" : ""}
+          aria-selected={tab === "bonus"}
+          onClick={() => setTab("bonus")}
+        >
+          สรุปโบนัส
+        </button>
+        <button
+          type="button"
+          role="tab"
+          className={tab === "settings" ? "is-active" : ""}
+          aria-selected={tab === "settings"}
+          onClick={() => setTab("settings")}
+        >
+          ตั้งค่าจ่าย
+        </button>
       </div>
 
       <div className="bonus-toolbar">
@@ -169,7 +239,7 @@ function BonusView() {
           className="ot-slim-input"
           value={month}
           onChange={(e) => setMonth(e.target.value)}
-          aria-label="เดือน"
+          aria-label="เดือนอ้างอิง"
         />
         <span className="bonus-toolbar-meta muted">
           {report
@@ -179,105 +249,147 @@ function BonusView() {
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
-      {loading || !report ? <p className="empty">กำลังโหลด...</p> : null}
+      {info ? <p className="success-text">{info}</p> : null}
 
-      {report ? (
-        <div className="bonus-summary-bar">
-          <div className="bonus-summary-pool">
-            <span className="bonus-summary-label">โบนัสขายเบเกอรี่ รวม</span>
-            <strong className="bonus-summary-pool-amt">฿{fmt(report.totalSalesPool)}</strong>
-            <span className="muted bonus-summary-pool-meta">
-              จากผลิต {fmt(report.totalProdQty)} ชิ้น × เรทขายตามวัน (ตารางเรท)
-            </span>
-          </div>
-          <div className="bonus-summary-total">
-            <span className="bonus-summary-label">คงเหลือรวม</span>
-            <strong>฿{fmt(report.totalRemaining)}</strong>
-          </div>
-        </div>
+      {tab === "pay" ? (
+        loading || !report ? (
+          <p className="empty">กำลังโหลด...</p>
+        ) : (
+          <PayrollPayPanel
+            isOwner={isOwner}
+            actorId={actorId}
+            periodMonth={month}
+            employees={employees}
+            schedule={payrollSchedule}
+            items={payrollItems}
+            bonusByEmployee={bonusByEmployee}
+            prodEntries={prodEntries}
+            otEntries={otEntries}
+            canPay={canPay}
+            onError={setError}
+            onInfo={(msg) => {
+              setInfo(msg);
+              setError(null);
+            }}
+          />
+        )
       ) : null}
 
-      {!loading && report && myRow ? (
-        <section className="bonus-my-card">
-          <header className="bonus-my-head">
-            <div>
-              <span className="bonus-my-label">ของฉัน</span>
-              <h2 className="bonus-my-name">{myRow.workerName}</h2>
-            </div>
-            <p className="bonus-my-total">฿{fmt(myRow.remaining)}</p>
-          </header>
-          <dl className="bonus-my-grid">
-            <div>
-              <dt>ขายเบเกอรี่</dt>
-              <dd>฿{fmt(myRow.salesShare)}</dd>
-            </div>
-            <div>
-              <dt>ผลิตเบเกอรี่</dt>
-              <dd>฿{fmt(myRow.prodBonus)}</dd>
-            </div>
-            <div>
-              <dt>โบนัสชง</dt>
-              <dd>฿{fmt(myRow.otMain)}</dd>
-            </div>
-            <div>
-              <dt>รวม</dt>
-              <dd>฿{fmt(myRow.total)}</dd>
-            </div>
-            <div>
-              <dt>หักโบนัส ({fmtPct(myRow.deductPct)})</dt>
-              <dd className="bonus-my-deduct">−฿{fmt(myRow.deductAmount)}</dd>
-            </div>
-          </dl>
-          <p className="muted bonus-live-note">
-            หัก% จากตารางสรุปทั้งร้าน · อัปเดตทันทีเมื่อมีการกรอกชง / ผลิต
-          </p>
-        </section>
-      ) : null}
-
-      {!loading && report && !myRow && staff?.displayName ? (
-        <p className="muted bonus-no-match">
-          ไม่พบชื่อ &quot;{staff.displayName}&quot; ในรายชื่อพนักงาน — ตรวจที่{" "}
-          <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
-        </p>
-      ) : null}
-
-      {!isOwner && report ? (
-        <button
-          type="button"
-          className="ghost-btn bonus-toggle-all"
-          onClick={() => setShowAll((v) => !v)}
-        >
-          {showAll ? "ซ่อนตารางทั้งร้าน" : "ดูตารางทั้งร้าน"}
-        </button>
-      ) : null}
-
-      {!loading && report && (isOwner || showAll) ? (
-        <BonusTable report={report} highlightName={myRow?.workerName} />
-      ) : null}
-
-      {report ? (
-        <p className="muted bonus-footnote">
-          ขาย = จำนวนผลิต × เรทขายจากตารางเรท (ตามวันผลิต) แล้วหารคนที่ลงทะเบียนทำงานในเดือน
-          (ผลิตหรือชง) — มีชื่ออย่างเดียวไม่หาร · ผลิต/ชง จากยอดจริง · เจ้าของกรอกจำนวนหักทั้งร้านสิ้นเดือน ·
-          เรท% ถาวร
-        </p>
-      ) : null}
-
-      {report ? (
-        <BonusDeductionSummaryTable
-          report={report}
+      {tab === "settings" ? (
+        <PayrollSettingsPanel
+          schedule={payrollSchedule}
           isOwner={isOwner}
-          onEditRate={(rule) => setEditTarget({ kind: "rate", rule })}
-          onEditQty={(rule, qty) => setEditTarget({ kind: "qty", rule, qty })}
+          onError={setError}
+          onInfo={(msg) => {
+            setInfo(msg);
+            setError(null);
+          }}
         />
       ) : null}
 
-      <RateSchedulePanel
-        isOwner={isOwner}
-        actorId={actorId}
-        otSettingsFallback={otSettingsRate}
-        onError={setError}
-      />
+      {tab === "bonus" ? (
+        <>
+          {loading || !report ? <p className="empty">กำลังโหลด...</p> : null}
+
+          {report ? (
+            <div className="bonus-summary-bar">
+              <div className="bonus-summary-pool">
+                <span className="bonus-summary-label">โบนัสขายเบเกอรี่ รวม</span>
+                <strong className="bonus-summary-pool-amt">฿{fmt(report.totalSalesPool)}</strong>
+                <span className="muted bonus-summary-pool-meta">
+                  จากผลิต {fmt(report.totalProdQty)} ชิ้น × เรทขายตามวัน (ตารางเรท)
+                </span>
+              </div>
+              <div className="bonus-summary-total">
+                <span className="bonus-summary-label">คงเหลือรวม</span>
+                <strong>฿{fmt(report.totalRemaining)}</strong>
+              </div>
+            </div>
+          ) : null}
+
+          {!loading && report && myRow ? (
+            <section className="bonus-my-card">
+              <header className="bonus-my-head">
+                <div>
+                  <span className="bonus-my-label">ของฉัน</span>
+                  <h2 className="bonus-my-name">{myRow.workerName}</h2>
+                </div>
+                <p className="bonus-my-total">฿{fmt(myRow.remaining)}</p>
+              </header>
+              <dl className="bonus-my-grid">
+                <div>
+                  <dt>ขายเบเกอรี่</dt>
+                  <dd>฿{fmt(myRow.salesShare)}</dd>
+                </div>
+                <div>
+                  <dt>ผลิตเบเกอรี่</dt>
+                  <dd>฿{fmt(myRow.prodBonus)}</dd>
+                </div>
+                <div>
+                  <dt>โบนัสชง</dt>
+                  <dd>฿{fmt(myRow.otMain)}</dd>
+                </div>
+                <div>
+                  <dt>รวม</dt>
+                  <dd>฿{fmt(myRow.total)}</dd>
+                </div>
+                <div>
+                  <dt>หักโบนัส ({fmtPct(myRow.deductPct)})</dt>
+                  <dd className="bonus-my-deduct">−฿{fmt(myRow.deductAmount)}</dd>
+                </div>
+              </dl>
+              <p className="muted bonus-live-note">
+                หัก% จากตารางสรุปทั้งร้าน · อัปเดตทันทีเมื่อมีการกรอกชง / ผลิต
+              </p>
+            </section>
+          ) : null}
+
+          {!loading && report && !myRow && staff?.displayName ? (
+            <p className="muted bonus-no-match">
+              ไม่พบชื่อ &quot;{staff.displayName}&quot; ในรายชื่อพนักงาน — ตรวจที่{" "}
+              <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
+            </p>
+          ) : null}
+
+          {!isOwner && report ? (
+            <button
+              type="button"
+              className="ghost-btn bonus-toggle-all"
+              onClick={() => setShowAll((v) => !v)}
+            >
+              {showAll ? "ซ่อนตารางทั้งร้าน" : "ดูตารางทั้งร้าน"}
+            </button>
+          ) : null}
+
+          {!loading && report && (isOwner || showAll) ? (
+            <BonusTable report={report} highlightName={myRow?.workerName} />
+          ) : null}
+
+          {report ? (
+            <p className="muted bonus-footnote">
+              ขาย = จำนวนผลิต × เรทขายจากตารางเรท (ตามวันผลิต) แล้วหารคนที่ลงทะเบียนทำงานในเดือน
+              (ผลิตหรือชง) — มีชื่ออย่างเดียวไม่หาร · ผลิต/ชง จากยอดจริง · เจ้าของกรอกจำนวนหักทั้งร้านสิ้นเดือน ·
+              เรท% ถาวร
+            </p>
+          ) : null}
+
+          {report ? (
+            <BonusDeductionSummaryTable
+              report={report}
+              isOwner={isOwner}
+              onEditRate={(rule) => setEditTarget({ kind: "rate", rule })}
+              onEditQty={(rule, qty) => setEditTarget({ kind: "qty", rule, qty })}
+            />
+          ) : null}
+
+          <RateSchedulePanel
+            isOwner={isOwner}
+            actorId={actorId}
+            otSettingsFallback={otSettingsRate}
+            onError={setError}
+          />
+        </>
+      ) : null}
 
       {editTarget ? (
         <BonusEditModal

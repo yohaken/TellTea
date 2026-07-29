@@ -690,6 +690,15 @@ service cloud.firestore {
       allow write: if isOwner();
     }
 
+    /**
+     * คิวจ่ายเงินเดือน + โบนัส — ระบบสร้างรายการรอโอนให้เจ้าของแนบสลิป
+     * อ่าน: มีสิทธิ bonus · สร้าง/แก้/จ่าย: เจ้าของ
+     */
+    match /payrollItems/{id} {
+      allow read: if hasPerm('bonus');
+      allow create, update, delete: if isOwner();
+    }
+
     match /meta/{docId} {
       // brandLogo + businessProfile text are public (no secrets) so login can show the mark
       // aiSettings holds Gemini API key — owner-only read
