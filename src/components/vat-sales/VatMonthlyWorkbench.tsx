@@ -102,10 +102,6 @@ function roundPct(n: number) {
   return Math.round(n * 10000) / 100;
 }
 
-function pctLabel(n: number) {
-  return formatVatPct(roundPct(n));
-}
-
 function draftStorageKey(month: string) {
   return `telltea:vat-monthly-draft:${month}`;
 }
@@ -1548,7 +1544,7 @@ export function VatMonthlyWorkbench({ actor }: Props) {
   const [note, setNote] = useState("");
   const [noteOpen, setNoteOpen] = useState(false);
   /** ระบบเดียว: ยอดโอนจริงถึงร้าน (incVat) — ไม่สลับโหมดก่อน VAT */
-  const pnlMode: "incVat" = "incVat";
+  const pnlMode = "incVat" as const;
   const [pnlIncome, setPnlIncome] = useState("");
   const [openDelivery, setOpenDelivery] = useState(false);
   const [openStorefront, setOpenStorefront] = useState(false);
