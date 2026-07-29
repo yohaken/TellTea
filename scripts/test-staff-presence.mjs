@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD\s*=\s*397\b/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD\s*=\s*398\b/);
 assert.match(read("src/lib/staff-presence.ts"), /touchStaffPresence/);
 assert.match(read("src/lib/staff-presence.ts"), /formatPresenceAge/);
 assert.match(read("src/lib/staff-presence.ts"), /staffShortLabel/);
