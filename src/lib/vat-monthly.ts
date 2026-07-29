@@ -358,9 +358,13 @@ export type VatMonthlyReturn = {
   pnlIncomeMode: "exVat" | "incVat";
   /**
    * หัก GP ก้อนเดลิเวอรี่จากรายได้ก่อนเข้า P&L (บาท · ก่อน VAT)
-   * 0 = ใช้ค่าประมาณจากภาษีซื้อ GP
+   * คำนวณจากโหมด pct หรือ amount
    */
   pnlDeliveryGpDeduct: number;
+  /** โหมดหัก: เรท % คงที่ (หาค่าเฉลี่ย) หรือยอดบาท */
+  pnlDeliveryGpMode: "pct" | "amount";
+  /** เรท % คงที่เมื่อ mode = pct */
+  pnlDeliveryGpPct: number;
   filedAt: number;
   filedBy: string;
   updatedAt: number;
@@ -548,6 +552,16 @@ export function mapPnlDeliveryGpDeduct(raw: unknown): number {
   return normalizeMoney(n);
 }
 
+export function mapPnlDeliveryGpMode(raw: unknown): "pct" | "amount" {
+  return raw === "amount" ? "amount" : "pct";
+}
+
+export function mapPnlDeliveryGpPct(raw: unknown, fallback = 30): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0 || n > 100) return fallback;
+  return Math.round(n * 100) / 100;
+}
+
 function mapSegment(
   kind: VatSegmentKind,
   raw: unknown,
@@ -607,6 +621,8 @@ export function mapVatMonthlyReturn(
         : proposePnlIncome(totals, mode),
     pnlIncomeMode: mode,
     pnlDeliveryGpDeduct: mapPnlDeliveryGpDeduct(data?.pnlDeliveryGpDeduct),
+    pnlDeliveryGpMode: mapPnlDeliveryGpMode(data?.pnlDeliveryGpMode),
+    pnlDeliveryGpPct: mapPnlDeliveryGpPct(data?.pnlDeliveryGpPct),
     filedAt: Number(data?.filedAt) || 0,
     filedBy: String(data?.filedBy || ""),
     updatedAt: Number(data?.updatedAt) || 0,
@@ -711,6 +727,8 @@ export type VatMonthlySaveInput = {
   pnlIncome?: number;
   /** หัก GP ก้อนเดลิเวอรี่ (บาท) · ไม่ส่ง = คงค่าเดิม / 0 */
   pnlDeliveryGpDeduct?: number;
+  pnlDeliveryGpMode?: "pct" | "amount";
+  pnlDeliveryGpPct?: number;
   status?: "draft" | "saved";
 };
 
@@ -743,6 +761,14 @@ export async function saveVatMonthlyReturn(
     input.pnlDeliveryGpDeduct != null
       ? mapPnlDeliveryGpDeduct(input.pnlDeliveryGpDeduct)
       : mapPnlDeliveryGpDeduct(prev?.pnlDeliveryGpDeduct);
+  const pnlDeliveryGpMode =
+    input.pnlDeliveryGpMode != null
+      ? mapPnlDeliveryGpMode(input.pnlDeliveryGpMode)
+      : mapPnlDeliveryGpMode(prev?.pnlDeliveryGpMode);
+  const pnlDeliveryGpPct =
+    input.pnlDeliveryGpPct != null
+      ? mapPnlDeliveryGpPct(input.pnlDeliveryGpPct)
+      : mapPnlDeliveryGpPct(prev?.pnlDeliveryGpPct);
   const docBody: VatMonthlyReturn = {
     monthKey: input.monthKey,
     delivery,
@@ -753,6 +779,8 @@ export async function saveVatMonthlyReturn(
     pnlIncome,
     pnlIncomeMode: mode,
     pnlDeliveryGpDeduct,
+    pnlDeliveryGpMode,
+    pnlDeliveryGpPct,
     filedAt: 0,
     filedBy: "",
     updatedAt: Date.now(),

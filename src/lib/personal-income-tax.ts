@@ -165,14 +165,51 @@ export function proposeDeliveryGpDeduct(input: {
   return roundMoney((vatBaht * 100) / pct);
 }
 
+/** โหมดหัก GP ก้อนเดลิเวอรี่ */
+export type GpDeductMode = "pct" | "amount";
+
+/** เรท % คงที่เริ่มต้น — ใช้หาค่าเฉลี่ยหลายเดือน */
+export const DEFAULT_GP_DEDUCT_PCT = 30;
+
 export type IncomeBridge = {
   deliveryGross: number;
   storefrontGross: number;
   grossTotal: number;
+  gpDeductMode: GpDeductMode;
+  gpDeductPct: number;
   gpDeduct: number;
   /** รายได้สุทธิที่ควรใส่ P&L */
   pnlIncome: number;
 };
+
+/** จากยอดประมาณ GP → เสนอเรท % ของรายได้เดลิเวอรี่ */
+export function proposeGpDeductPct(
+  deliveryGross: number,
+  gpProposeAmount: number,
+  fallback = DEFAULT_GP_DEDUCT_PCT,
+): number {
+  const g = normalizeMoney(deliveryGross);
+  const a = normalizeMoney(gpProposeAmount);
+  if (g <= 0) return fallback;
+  if (a <= 0) return fallback;
+  const pct = roundMoney((a / g) * 100);
+  return Math.min(100, Math.max(0.01, pct));
+}
+
+/** คำนวณยอดหัก GP ตามโหมด */
+export function resolveGpDeductAmount(input: {
+  mode: GpDeductMode;
+  pct: number;
+  amount: number;
+  deliveryGross: number;
+}): number {
+  const deliveryGross = Math.max(0, normalizeMoney(input.deliveryGross));
+  if (input.mode === "pct") {
+    const pct = Math.min(100, Math.max(0, Number(input.pct) || 0));
+    return roundMoney((deliveryGross * pct) / 100);
+  }
+  return Math.max(0, normalizeMoney(input.amount));
+}
 
 /** สะพานรายได้ → P&L: แยกร้าน/ส่ง แล้วหัก GP ก้อนเดลิเวอรี่ */
 export function buildIncomeBridge(input: {
@@ -181,7 +218,9 @@ export function buildIncomeBridge(input: {
   storefrontVatBase: number;
   storefrontGrossSales: number;
   mode: "exVat" | "incVat";
-  gpDeduct: number;
+  gpDeductMode?: GpDeductMode;
+  gpDeductPct?: number;
+  gpDeduct?: number;
 }): IncomeBridge {
   const deliveryGross =
     input.mode === "incVat"
@@ -192,7 +231,26 @@ export function buildIncomeBridge(input: {
       ? normalizeMoney(input.storefrontGrossSales)
       : normalizeMoney(input.storefrontVatBase);
   const grossTotal = roundMoney(deliveryGross + storefrontGross);
-  const gpDeduct = Math.max(0, normalizeMoney(input.gpDeduct));
+  const gpDeductMode: GpDeductMode =
+    input.gpDeductMode === "amount" ? "amount" : "pct";
+  const gpDeductPct = Math.min(
+    100,
+    Math.max(0, Number(input.gpDeductPct) || DEFAULT_GP_DEDUCT_PCT),
+  );
+  const gpDeduct = resolveGpDeductAmount({
+    mode: gpDeductMode,
+    pct: gpDeductPct,
+    amount: Number(input.gpDeduct) || 0,
+    deliveryGross,
+  });
   const pnlIncome = roundMoney(Math.max(0, grossTotal - gpDeduct));
-  return { deliveryGross, storefrontGross, grossTotal, gpDeduct, pnlIncome };
+  return {
+    deliveryGross,
+    storefrontGross,
+    grossTotal,
+    gpDeductMode,
+    gpDeductPct,
+    gpDeduct,
+    pnlIncome,
+  };
 }
