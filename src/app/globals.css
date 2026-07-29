@@ -1459,20 +1459,27 @@ body.modal-open .main-panel {
 }
 
 /**
- * คงเหลือบัญชีพนักงาน — ชิดบนตาราง ขวา เหนือคอลัมน์ «เข้า»
- * กล่องกะทัดรัด · ขนาดตัวอักษรเท่า balance-bar เดิม
+ * แถวเดียวเหนือตาราง คชจ. พนักงาน: ค้นหา (~30%) + คงเหลือ (ขวา เหนือคอลัมน์เข้า)
  */
+.ledger-staff-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  margin: 0.08rem 0 0;
+  min-width: 0;
+}
+
 .ledger-balance-over-in {
   display: flex;
   align-items: baseline;
   justify-content: center;
   gap: 0.35rem;
+  flex: 0 0 auto;
   width: fit-content;
-  max-width: 100%;
-  margin: 0.15rem 0 0;
-  margin-left: auto;
-  /* ดันไปใกล้คอลัมน์เข้า (ขวากลางของตาราง) — เหลือที่ให้ คอลัมน์ออก/ประเภท */
-  margin-right: clamp(3.6rem, 22vw, 6.5rem);
+  max-width: 58%;
+  margin: 0;
+  margin-right: clamp(3.2rem, 20vw, 6.2rem);
   padding: 0.12rem 0.4rem;
   border-radius: 0.4rem;
   background: rgba(183, 228, 192, 0.35);
@@ -1504,7 +1511,7 @@ body.modal-open .main-panel {
 
 @media (max-width: 420px) {
   .ledger-balance-over-in {
-    margin-right: clamp(2.4rem, 18vw, 4.2rem);
+    margin-right: clamp(2.2rem, 16vw, 3.8rem);
   }
 }
 
@@ -1837,33 +1844,37 @@ body.modal-open .main-panel {
   font-size: 0.8rem;
 }
 
-/** Ledger: compact slim search · ชิดตาราง */
-.ledger-page .ledger-table-search {
-  gap: 0.28rem;
-  margin: 0 0 0.18rem;
+/** Ledger: search ~30% ความยาวเดิม · แถวเดียวกับคงเหลือ ชิดตาราง */
+.ledger-page .ledger-staff-toolbar .ledger-table-search {
+  flex: 0 0 30%;
+  width: 30%;
+  max-width: 30%;
+  gap: 0.2rem;
+  margin: 0;
+  min-width: 0;
 }
 
 .ledger-page .ledger-table-search input[type="search"] {
   min-height: 1.55rem;
   height: 1.55rem;
-  padding: 0.12rem 0.55rem;
+  padding: 0.12rem 0.4rem;
   border-radius: 0.45rem;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   line-height: 1.2;
 }
 
 .ledger-page .ledger-table-search .table-search-clear {
   min-height: 1.55rem;
   height: 1.55rem;
-  padding: 0.1rem 0.45rem;
-  font-size: 0.72rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.66rem;
   line-height: 1.2;
 }
 
 .ledger-page .ledger-table-search-meta {
-  margin: 0 0 0.18rem;
-  font-size: 0.68rem;
-  line-height: 1.2;
+  margin: 0.1rem 0 0;
+  font-size: 0.66rem;
+  line-height: 1.15;
 }
 
 .ledger-page .ledger-bulk-compact {
@@ -1882,8 +1893,20 @@ body.modal-open .main-panel {
   font-size: 0.66rem;
 }
 
-.ledger-page .ledger-balance-over-in {
-  margin-top: 0.08rem;
+.bill-notice-ai-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.2rem 0 0.35rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.72);
+  text-align: left;
+  cursor: pointer;
+}
+
+.bill-notice-ai-toggle input {
+  margin: 0;
 }
 
 .owner-calc-summary {

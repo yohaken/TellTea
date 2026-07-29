@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -13,6 +14,7 @@ import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import {
   acceptBillNotice,
   addBillNotice,
+  billNoticeBucketLabel,
   BILL_NOTICE_LIVE_MAX,
   BILL_NOTICE_PAGE_SIZE,
   BILL_NOTICE_PRESETS,
@@ -29,6 +31,7 @@ import {
   type BillNoticeStatus,
 } from "@/lib/bill-notices";
 import { guessTypeFromDescription } from "@/lib/ledger-labels";
+import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
   formatDateShort,
@@ -456,15 +459,80 @@ function BillNoticeFormModal({
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() =>
     entry ? getBillNoticeReceiptUrls(entry) : [],
   );
+  /** AI อ่านรูปอัตโนมัติเมื่อแนบบิล — ปิดได้ถ้าจะกรอกเอง */
+  const [aiAssist, setAiAssist] = useState(true);
+  const [typeSource, setTypeSource] = useState(
+    entry?.typeSource || (mode === "edit" ? "staff" : "heuristic"),
+  );
+  const [extractStatus, setExtractStatus] = useState<
+    "idle" | "loading" | "ready" | "error"
+  >("idle");
+  const [extractError, setExtractError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
+  const lastExtractKeyRef = useRef("");
+  const extractBusyRef = useRef(false);
+  const descriptionRef = useRef(description);
+  const amountRef = useRef(amount);
+  const noteRef = useRef(note);
+  descriptionRef.current = description;
+  amountRef.current = amount;
+  noteRef.current = note;
 
   useBodyScrollLock(true);
 
   function reportError(msg: string) {
     setFormError(msg);
     onError(msg);
+  }
+
+  async function runExtractFromPhotos(urls: string[], force = false) {
+    const refs = urls.map((u) => String(u || "").trim()).filter(Boolean).slice(0, 2);
+    if (!refs.length) return;
+    const key = refs.join("|");
+    if (!force && (key === lastExtractKeyRef.current || extractBusyRef.current)) return;
+    extractBusyRef.current = true;
+    setExtractStatus("loading");
+    setExtractError(null);
+    try {
+      const result = await extractOwnerBookFromReceipt(refs);
+      lastExtractKeyRef.current = key;
+      if (result.date) setDate(result.date);
+      if (result.description) {
+        const bucket = billNoticeBucketLabel(result.description);
+        const nextDesc =
+          bucket !== "อื่นๆ" ? bucket : result.description.trim();
+        if (force || mode === "add" || !descriptionRef.current.trim()) {
+          setDescription(nextDesc);
+        }
+      }
+      if (result.amountOut != null) {
+        if (force || mode === "add" || !amountRef.current.trim()) {
+          setAmount(String(result.amountOut));
+        }
+      }
+      if (result.note) {
+        if (force || mode === "add" || !noteRef.current.trim()) {
+          setNote(result.note);
+        }
+      }
+      setTypeSource("ai");
+      setExtractStatus("ready");
+    } catch (err) {
+      setExtractStatus("error");
+      setExtractError((err as Error).message || "อ่านบิลไม่สำเร็จ");
+    } finally {
+      extractBusyRef.current = false;
+    }
+  }
+
+  function onReceiptUrlsChange(next: string[]) {
+    const prev = receiptUrls;
+    setReceiptUrls(next);
+    if (!aiAssist) return;
+    const added = next.some((u) => !prev.includes(u));
+    if (added) void runExtractFromPhotos(next);
   }
 
   async function onSave(e: FormEvent) {
@@ -482,13 +550,15 @@ function BillNoticeFormModal({
       // Utility bills are sga; keep heuristic only when it already yields sga/asset.
       const guessed = guessTypeFromDescription(desc) || "sga";
       const type = guessed === "cogs" ? "sga" : guessed;
+      const source =
+        typeSource === "ai" && extractStatus === "ready" ? "ai" : "staff";
       if (mode === "add") {
         await addBillNotice({
           date: dateMs,
           description: desc,
           amountOut,
           type,
-          typeSource: "heuristic",
+          typeSource: source,
           note,
           receiptUrls,
           createdBy: actorId,
@@ -500,7 +570,7 @@ function BillNoticeFormModal({
           description: desc,
           amountOut,
           type,
-          typeSource: "heuristic",
+          typeSource: source,
           note,
           receiptUrls,
           staffName,
@@ -562,13 +632,32 @@ function BillNoticeFormModal({
           <PhotoAttachMultiField
             label="อัพบิล"
             values={receiptUrls}
-            onChange={setReceiptUrls}
+            onChange={onReceiptUrlsChange}
             onError={reportError}
             max={BILL_NOTICE_RECEIPT_MAX}
             storageFolder="bill-notices"
             storageSlotKey={`${mode}-${entry?.id || actorId || "new"}`}
-            hint="ถ่ายรูปบิลค่าไฟ ค่าน้ำ หรือบิลอื่นๆ ให้เจ้าของจ่าย"
+            hint="ถ่ายรูปบิล — AI อ่านวันที่ รายการ ยอดให้อัตโนมัติ · แก้เองได้ทุกช่อง"
           />
+          <label className="bill-notice-ai-toggle">
+            <input
+              type="checkbox"
+              checked={aiAssist}
+              onChange={(e) => setAiAssist(e.target.checked)}
+            />
+            AI อ่านรูปให้อัตโนมัติ
+          </label>
+          {extractStatus === "loading" ? (
+            <p className="muted form-hint-inline">AI กำลังอ่านบิล…</p>
+          ) : null}
+          {extractStatus === "ready" ? (
+            <p className="muted form-hint-inline">
+              อ่านจากรูปแล้ว — ไม่พอใจแก้เองได้ทุกช่อง หรืออ่านอีกครั้ง
+            </p>
+          ) : null}
+          {extractStatus === "error" && extractError ? (
+            <p className="error-text ot-form-error">{extractError}</p>
+          ) : null}
           {receiptUrls.length ? (
             <div className="entry-actions" style={{ marginBottom: "0.55rem" }}>
               <button
@@ -577,6 +666,17 @@ function BillNoticeFormModal({
                 onClick={() => setPreviewUrls(receiptUrls)}
               >
                 ดูรูป ({receiptUrls.length})
+              </button>
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={extractStatus === "loading" || busy}
+                onClick={() => {
+                  lastExtractKeyRef.current = "";
+                  void runExtractFromPhotos(receiptUrls, true);
+                }}
+              >
+                {extractStatus === "loading" ? "กำลังอ่าน…" : "อ่านจากรูปอีกครั้ง"}
               </button>
             </div>
           ) : null}
@@ -587,7 +687,10 @@ function BillNoticeFormModal({
               id="bn-date"
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(e) => {
+                setDate(e.target.value);
+                setTypeSource("staff");
+              }}
               required
             />
           </div>
@@ -596,7 +699,10 @@ function BillNoticeFormModal({
             <input
               id="bn-desc"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setTypeSource("staff");
+              }}
               autoComplete="off"
               required
               placeholder="เช่น ค่าไฟ / ค่าน้ำ"
@@ -607,7 +713,10 @@ function BillNoticeFormModal({
                   key={item}
                   type="button"
                   className="suggest-chip"
-                  onClick={() => setDescription(item)}
+                  onClick={() => {
+                    setDescription(item);
+                    setTypeSource("staff");
+                  }}
                 >
                   {item}
                 </button>
@@ -623,7 +732,10 @@ function BillNoticeFormModal({
               step="0.01"
               inputMode="decimal"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                setAmount(e.target.value);
+                setTypeSource("staff");
+              }}
               required
             />
           </div>
@@ -632,14 +744,17 @@ function BillNoticeFormModal({
             <input
               id="bn-note"
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e) => {
+                setNote(e.target.value);
+                setTypeSource("staff");
+              }}
               autoComplete="off"
               placeholder="เช่น รอบมิ.ย. / เลขมิเตอร์"
             />
           </div>
 
           <div className="entry-actions">
-            <button type="submit" className="primary-btn" disabled={busy}>
+            <button type="submit" className="primary-btn" disabled={busy || extractStatus === "loading"}>
               {busy ? "กำลังบันทึก..." : "บันทึก"}
             </button>
             <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>

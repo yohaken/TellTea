@@ -393,16 +393,6 @@ function LedgerView() {
   const cashInStaffName =
     personalProfileLabel(staff) || staff?.displayName || staff?.email || "";
 
-  const balanceChip = (
-    <div className="ledger-balance-over-in" aria-label="คงเหลือบัญชีพนักงาน">
-      <span>
-        คงเหลือ
-        {refreshing ? <span className="sync-dot" aria-hidden> ·</span> : null}
-      </span>
-      <strong>{balance == null ? "…" : `฿${formatPlainNumber(balance)}`}</strong>
-    </div>
-  );
-
   return (
     <div className="ledger-page module-page">
       {actorId ? (
@@ -423,35 +413,6 @@ function LedgerView() {
           forceOpen={billNoticeForceOpen}
           onForceOpenConsumed={() => setBillNoticeForceOpen(false)}
         />
-      ) : null}
-
-      <div className="table-search ledger-table-search">
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="ค้นหา รายการ / ประเภท / ยอด / วันที่…"
-          autoComplete="off"
-          enterKeyHint="search"
-          aria-label="ค้นหาในตาราง"
-        />
-        {query.trim() ? (
-          <button
-            type="button"
-            className="ghost-btn table-search-clear"
-            onClick={() => setQuery("")}
-            aria-label="ล้างคำค้น"
-          >
-            ล้าง
-          </button>
-        ) : null}
-      </div>
-      {deferredQuery ? (
-        <p className="muted table-search-meta ledger-table-search-meta">
-          {searchLoading
-            ? "กำลังค้นหาทั้งบัญชี…"
-            : `พบ ${filteredEntries.length} รายการ`}
-        </p>
       ) : null}
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -488,7 +449,45 @@ function LedgerView() {
         </div>
       ) : null}
 
-      {!loading ? balanceChip : null}
+      {!loading ? (
+        <div className="ledger-staff-toolbar">
+          <div className="table-search ledger-table-search">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="ค้นหา…"
+              autoComplete="off"
+              enterKeyHint="search"
+              aria-label="ค้นหาในตาราง"
+            />
+            {query.trim() ? (
+              <button
+                type="button"
+                className="ghost-btn table-search-clear"
+                onClick={() => setQuery("")}
+                aria-label="ล้างคำค้น"
+              >
+                ล้าง
+              </button>
+            ) : null}
+          </div>
+          <div className="ledger-balance-over-in" aria-label="คงเหลือบัญชีพนักงาน">
+            <span>
+              คงเหลือ
+              {refreshing ? <span className="sync-dot" aria-hidden> ·</span> : null}
+            </span>
+            <strong>{balance == null ? "…" : `฿${formatPlainNumber(balance)}`}</strong>
+          </div>
+        </div>
+      ) : null}
+      {deferredQuery ? (
+        <p className="muted table-search-meta ledger-table-search-meta">
+          {searchLoading
+            ? "กำลังค้นหาทั้งบัญชี…"
+            : `พบ ${filteredEntries.length} รายการ`}
+        </p>
+      ) : null}
 
       {!loading && entries.length === 0 ? (
         <p className="empty">ยังไม่มีรายการ — เริ่มจากบันทึกเงินออก</p>
