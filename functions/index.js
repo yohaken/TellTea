@@ -7,6 +7,7 @@ const { completePosSaleAdmin, isPosCaller } = require("./pos-complete-sale");
 const evidenceUpload = require("./evidence-upload");
 const classifyLedger = require("./classify-ledger");
 const extractOwnerBook = require("./extract-owner-book");
+const extractCashDeposit = require("./extract-cash-deposit");
 
 initializeApp();
 
@@ -15,6 +16,7 @@ exports.finalizeEvidenceUpload = evidenceUpload.finalizeEvidenceUpload;
 exports.uploadEvidencePhoto = evidenceUpload.uploadEvidencePhoto;
 exports.classifyLedgerType = classifyLedger.classifyLedgerType;
 exports.extractOwnerBookFromReceipt = extractOwnerBook.extractOwnerBookFromReceipt;
+exports.extractCashDepositSlip = extractCashDeposit.extractCashDepositSlip;
 exports.reportNposDiagnose = require("./npos-diagnose").reportNposDiagnose;
 exports.nposDeviceHeartbeat = require("./npos-heartbeat").nposDeviceHeartbeat;
 exports.reportNposOpsLog = require("./npos-ops-log").reportNposOpsLog;

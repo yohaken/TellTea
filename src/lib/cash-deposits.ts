@@ -29,6 +29,9 @@ export type CashSlipKind = "daily" | "shift" | "unknown";
 
 export type CashDepositStatus = "pending" | "matched" | "mismatch" | "void";
 
+/** Who filled a numeric/date field — AI read from slip vs staff typed */
+export type CashFillSource = "ai" | "staff" | "";
+
 export type CashDepositDayLine = {
   id: string;
   /** Local midnight ms of the sales day on the slip */
@@ -43,6 +46,9 @@ export type CashDepositDayLine = {
    * Useful for till variance; bank reconcile still uses cashAmount sum.
    */
   drawerCloseAmount: number;
+  cashAmountSource: CashFillSource;
+  drawerCloseAmountSource: CashFillSource;
+  dateSource: CashFillSource;
   note: string;
   slipUrls: string[];
 };
@@ -57,12 +63,20 @@ export type CashDeposit = {
   createdBy: string;
   createdAt: number;
   updatedAt: number;
-  /** Amount on the bank transfer slip */
+  /** Amount on the bank transfer slip (เข้าบัญชี) */
   bankAmount: number;
+  /** Transfer fee on slip (ค่าธรรมเนียม) — 0 if none */
+  transferFee: number;
+  bankAmountSource: CashFillSource;
+  transferFeeSource: CashFillSource;
   bankSlipUrls: string[];
   bankRef: string;
   days: CashDepositDayLine[];
   expectedCashTotal: number;
+  /**
+   * bankAmount + transferFee − expectedCashTotal
+   * 0 = ตรงหลังหัก/รวม fee
+   */
   variance: number;
   status: CashDepositStatus;
   note: string;
@@ -78,6 +92,9 @@ export type CashDepositInput = {
   staffName: string;
   createdBy: string;
   bankAmount: number;
+  transferFee?: number;
+  bankAmountSource?: CashFillSource;
+  transferFeeSource?: CashFillSource;
   bankSlipUrls?: string[];
   bankRef?: string;
   days: Omit<CashDepositDayLine, "id">[] | CashDepositDayLine[];
@@ -125,8 +142,26 @@ export function labelCashDepositRound(
   return `${formatCashDayShort(start)}–${formatCashDayShort(end)}`;
 }
 
-export function cashDepositVariance(bankAmount: number, expectedCashTotal: number) {
-  return Math.round((Number(bankAmount) - Number(expectedCashTotal)) * 100) / 100;
+/**
+ * ผลต่างหลังคิดค่าธรรมเนียม:
+ * (ยอดเข้าบัญชี + ค่าธรรมเนียม) − รวมเงินสดจากสลิป
+ * = 0 แปลว่าตรง
+ */
+export function cashDepositVariance(
+  bankAmount: number,
+  expectedCashTotal: number,
+  transferFee = 0,
+) {
+  const bank = Number(bankAmount) || 0;
+  const fee = Math.max(0, Number(transferFee) || 0);
+  const cash = Number(expectedCashTotal) || 0;
+  return Math.round((bank + fee - cash) * 100) / 100;
+}
+
+export function normalizeCashFillSource(raw: unknown): CashFillSource {
+  const s = String(raw || "").trim();
+  if (s === "ai" || s === "staff") return s;
+  return "";
 }
 
 export function labelCashDepositStatus(status: CashDepositStatus) {
@@ -176,6 +211,9 @@ function normalizeDay(raw: unknown): CashDepositDayLine | null {
     shiftLabel: typeof d.shiftLabel === "string" ? d.shiftLabel : "",
     cashAmount,
     drawerCloseAmount: Math.max(0, Number(d.drawerCloseAmount) || 0),
+    cashAmountSource: normalizeCashFillSource(d.cashAmountSource),
+    drawerCloseAmountSource: normalizeCashFillSource(d.drawerCloseAmountSource),
+    dateSource: normalizeCashFillSource(d.dateSource),
     note: typeof d.note === "string" ? d.note : "",
     slipUrls: normalizeUrls(d.slipUrls, CASH_DEPOSIT_DAY_SLIP_MAX),
   };
@@ -203,6 +241,9 @@ function mapEntry(d: QueryDocumentSnapshot): CashDeposit {
     createdAt,
     updatedAt: Number(data.updatedAt) || createdAt,
     bankAmount,
+    transferFee: Math.max(0, Number(data.transferFee) || 0),
+    bankAmountSource: normalizeCashFillSource(data.bankAmountSource),
+    transferFeeSource: normalizeCashFillSource(data.transferFeeSource),
     bankSlipUrls: normalizeUrls(data.bankSlipUrls, CASH_DEPOSIT_BANK_SLIP_MAX),
     bankRef: typeof data.bankRef === "string" ? data.bankRef : "",
     days,
@@ -210,7 +251,11 @@ function mapEntry(d: QueryDocumentSnapshot): CashDeposit {
     variance:
       Number.isFinite(Number(data.variance))
         ? Number(data.variance)
-        : cashDepositVariance(bankAmount, expectedCashTotal),
+        : cashDepositVariance(
+            bankAmount,
+            expectedCashTotal,
+            Math.max(0, Number(data.transferFee) || 0),
+          ),
     status: STATUS_SET.has(statusRaw) ? statusRaw : "pending",
     note: typeof data.note === "string" ? data.note : "",
     ownerNote: typeof data.ownerNote === "string" ? data.ownerNote : "",
@@ -465,6 +510,7 @@ function buildPayload(
   const periodEnd = coverage.periodEnd;
   if (!periodStart || periodEnd < periodStart) throw new Error("ช่วงวันไม่ถูกต้อง");
   const expectedCashTotal = sumCashDepositDays(days);
+  const transferFee = Math.max(0, Number(input.transferFee) || 0);
   const bankSlipUrls = normalizeUrls(input.bankSlipUrls, CASH_DEPOSIT_BANK_SLIP_MAX);
   if (bankSlipUrls.some((u) => u.startsWith("data:"))) {
     throw new Error("รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่");
@@ -481,11 +527,14 @@ function buildPayload(
     staffName: input.staffName.trim(),
     createdBy: input.createdBy.trim(),
     bankAmount: Number(input.bankAmount),
+    transferFee,
+    bankAmountSource: normalizeCashFillSource(input.bankAmountSource),
+    transferFeeSource: normalizeCashFillSource(input.transferFeeSource),
     bankSlipUrls,
     bankRef: (input.bankRef || "").trim(),
     days: [...days].sort((a, b) => a.date - b.date),
     expectedCashTotal,
-    variance: cashDepositVariance(input.bankAmount, expectedCashTotal),
+    variance: cashDepositVariance(input.bankAmount, expectedCashTotal, transferFee),
     note: (input.note || "").trim(),
   };
 }
@@ -607,6 +656,9 @@ export function emptyCashDepositDay(dateMs: number): CashDepositDayLine {
     shiftLabel: "",
     cashAmount: 0,
     drawerCloseAmount: 0,
+    cashAmountSource: "",
+    drawerCloseAmountSource: "",
+    dateSource: "",
     note: "",
     slipUrls: [],
   };
