@@ -1,5 +1,0 @@
-# One-shot marker: pushing this file on main runs purge-stock-count-sessions (APPLY=1).
-# Delete this file after a successful purge so it does not run again.
-purge=stockCountSessions+stockMovements
-keep=stock
-requested=2026-07-30
