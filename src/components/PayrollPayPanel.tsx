@@ -299,8 +299,8 @@ export function PayrollPayPanel({
             : "ยังไม่มีรายการจ่ายของคุณในเดือนนี้"}
         </p>
       ) : (
-        <div className="sheet-scroll payroll-sheet">
-          <table className="sheet-table payroll-table">
+        <div className="sheet-scroll payroll-sheet sheet-bleed">
+          <table className="sheet-table payroll-table sheet-table--dense">
             <thead>
               <tr>
                 {shopView ? <th className="payroll-col-name">ชื่อ</th> : null}

@@ -1458,8 +1458,8 @@ function OtSheetTable({
   const slotCount = groups[0]?.slots.length || 3;
 
   return (
-    <div className="sheet-wrap ot-sheet-wrap">
-      <table className="sheet-table ot-table">
+    <div className="sheet-wrap ot-sheet-wrap sheet-bleed">
+      <table className="sheet-table ot-table sheet-table--dense">
         <thead>
           <tr>
             {isOwner ? (

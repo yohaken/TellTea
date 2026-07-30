@@ -693,8 +693,8 @@ function ProdTable({
       {!filtered.length && isOwner ? (
         <p className="empty">ไม่มีรายการในเดือนนี้</p>
       ) : (
-        <div className="sheet-wrap">
-          <table className="sheet-table prod-table">
+        <div className="sheet-wrap sheet-bleed">
+          <table className="sheet-table prod-table sheet-table--dense">
             <thead>
               <tr>
                 {isOwner ? (

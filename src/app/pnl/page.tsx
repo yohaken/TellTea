@@ -59,8 +59,8 @@ function CategoryTable({
   return (
     <div className={`pnl-block pnl-${tone}`}>
       <h3 className="pnl-block-title">{title}</h3>
-      <div className="sheet-wrap">
-        <table className="sheet-table pnl-table">
+      <div className="sheet-wrap sheet-bleed">
+        <table className="sheet-table pnl-table sheet-table--dense">
           <thead>
             <tr>
               <th>เดือน</th>
@@ -320,8 +320,8 @@ function PnlView() {
                 ? "รายได้ใส่จากแผง VAT ด้านบน หรือกรอกเองแล้วกดบันทึกทีละเดือน"
                 : "กรอก income แล้วกดบันทึกทีละเดือน — โหมดสรุปตัดเดือนที่ยังไม่มีรายได้ออกจากทุกตาราง"}
             </p>
-            <div className="sheet-wrap pnl-scroll">
-              <table className="sheet-table pnl-table pnl-wide">
+            <div className="sheet-wrap pnl-scroll sheet-bleed">
+              <table className="sheet-table pnl-table pnl-wide sheet-table--dense">
                 <thead>
                   <tr>
                     <th>เดือน</th>

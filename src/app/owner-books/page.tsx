@@ -416,8 +416,8 @@ function OwnerBooksView() {
         <p className="empty">ยังไม่มีรายการ — กดบันทึกเงินออกเพื่อเริ่ม</p>
       ) : !loading ? (
         <>
-          <div className="sheet-wrap">
-            <table className="sheet-table">
+          <div className="sheet-wrap sheet-bleed">
+            <table className="sheet-table sheet-table--dense">
               <thead>
                 <tr>
                   <th className="bulk-check-col" aria-label="เลือก">

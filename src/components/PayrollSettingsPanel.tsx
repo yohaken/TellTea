@@ -209,8 +209,8 @@ export function PayrollSettingsPanel({
             ยังไม่ได้เชื่อมชื่อกับรายชื่อร้าน — ไปโปรไฟล์เชื่อมชื่อก่อน จะเห็นเงินเดือนและคิวจ่ายของตัวเอง
           </p>
         ) : (
-          <div className="sheet-scroll payroll-sheet">
-            <table className="sheet-table payroll-table payroll-table--self">
+          <div className="sheet-scroll payroll-sheet sheet-bleed">
+            <table className="sheet-table payroll-table payroll-table--self sheet-table--dense">
               <tbody>
                 <tr>
                   <th scope="row">ชื่อ</th>
@@ -356,8 +356,8 @@ export function PayrollSettingsPanel({
           <p className="empty">ยังไม่มีพนักงานใช้งาน — เพิ่มชื่อที่ศูนย์พนักงานก่อน</p>
         ) : (
           <>
-            <div className="sheet-scroll payroll-sheet">
-              <table className="sheet-table payroll-table">
+            <div className="sheet-scroll payroll-sheet sheet-bleed">
+              <table className="sheet-table payroll-table sheet-table--dense">
                 <thead>
                   <tr>
                     <th className="payroll-col-name">ชื่อ</th>

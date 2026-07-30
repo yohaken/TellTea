@@ -393,8 +393,8 @@ function OccurrencesTable({
   }
 
   return (
-    <div className="sheet-wrap tasks-sheet">
-      <table className="sheet-table tasks-table">
+    <div className="sheet-wrap tasks-sheet sheet-bleed">
+      <table className="sheet-table tasks-table sheet-table--dense">
         <thead>
           <tr>
             <th className="tasks-col-title">งาน</th>

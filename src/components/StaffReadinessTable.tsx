@@ -87,8 +87,8 @@ export function StaffReadinessTable({
         {summary.rosterOnly ? ` · รอสร้างบัญชี (ขั้นที่ 2) ${summary.rosterOnly}` : ""}
       </p>
 
-      <div className="sheet-wrap staff-readiness-wrap">
-        <table className="sheet-table staff-readiness-table">
+      <div className="sheet-wrap staff-readiness-wrap sheet-bleed">
+        <table className="sheet-table staff-readiness-table sheet-table--dense">
           <thead>
             <tr>
               <th className="staff-ready-col-name">ชื่อในร้าน</th>

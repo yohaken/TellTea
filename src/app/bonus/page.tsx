@@ -449,8 +449,8 @@ function BonusDeductionSummaryTable({
   const lines = report.deductionLines;
 
   return (
-    <div className="sheet-wrap bonus-deduct-wrap">
-      <table className="sheet-table bonus-deduct-table">
+    <div className="sheet-wrap bonus-deduct-wrap sheet-bleed">
+      <table className="sheet-table bonus-deduct-table sheet-table--dense">
         <thead>
           <tr>
             <th>รายการ</th>
@@ -532,8 +532,8 @@ function BonusTable({
   }
 
   return (
-    <div className="sheet-wrap bonus-sheet-wrap">
-      <table className="sheet-table bonus-table">
+    <div className="sheet-wrap bonus-sheet-wrap sheet-bleed">
+      <table className="sheet-table bonus-table sheet-table--dense">
         <thead>
           <tr>
             <th className="bonus-th-name">ชื่อ</th>

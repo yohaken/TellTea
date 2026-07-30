@@ -409,8 +409,8 @@ function LedgerView() {
         <p className="empty">ไม่พบรายการที่ตรงกับคำค้น</p>
       ) : !loading ? (
         <>
-          <div className="sheet-wrap ledger-staff-sheet">
-            <table className="sheet-table">
+          <div className="sheet-wrap ledger-staff-sheet sheet-bleed">
+            <table className="sheet-table sheet-table--dense">
               <thead>
                 <tr>
                   <th className="col-date">วันที่</th>
