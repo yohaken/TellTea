@@ -217,8 +217,8 @@ export function RateSchedulePanel({
       {loading ? <p className="empty">กำลังโหลดตารางเรท...</p> : null}
 
       {!loading ? (
-        <div className="sheet-wrap bonus-rate-current-wrap">
-          <table className="sheet-table bonus-rate-current-table">
+        <div className="sheet-wrap bonus-rate-current-wrap sheet-bleed">
+          <table className="sheet-table bonus-rate-current-table sheet-table--dense">
             <thead>
               <tr>
                 <th>รายการ</th>
