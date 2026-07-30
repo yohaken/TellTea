@@ -117,9 +117,9 @@ export function bangkokDateKey(ms: number): string {
   }).format(new Date(ms));
 }
 
-/** Short date in Asia/Bangkok — e.g. 30/7/26 (not device timezone). */
-export function formatDateShort(ms: number) {
-  if (!ms) return "—";
+/** Asia/Bangkok day/month/year parts for table cells. */
+export function bangkokDateParts(ms: number): { day: number; month: number; year2: string } | null {
+  if (!ms) return null;
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Bangkok",
     day: "numeric",
@@ -127,7 +127,18 @@ export function formatDateShort(ms: number) {
     year: "2-digit",
   }).formatToParts(new Date(ms));
   const get = (type: string) => parts.find((p) => p.type === type)?.value || "";
-  return `${Number(get("day"))}/${Number(get("month"))}/${get("year")}`;
+  const day = Number(get("day"));
+  const month = Number(get("month"));
+  const year2 = get("year");
+  if (!day || !month || !year2) return null;
+  return { day, month, year2 };
+}
+
+/** Short date in Asia/Bangkok — e.g. 30/7/26 (not device timezone). */
+export function formatDateShort(ms: number) {
+  const p = bangkokDateParts(ms);
+  if (!p) return "—";
+  return `${p.day}/${p.month}/${p.year2}`;
 }
 
 /** Short date + time for «แก้ไขล่าสุด» — Asia/Bangkok. */

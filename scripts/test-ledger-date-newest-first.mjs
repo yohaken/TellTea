@@ -34,7 +34,7 @@ assert.match(ownerPage, /sortByDateNewestFirst\(filterOwnerBookRows/);
 assert.match(ledgerLib, /date: toEpochMs/);
 assert.match(ledgerLib, /orderBy\("date", "desc"\)/);
 
-assert.match(version, /APP_BUILD = 463/);
+assert.match(version, /APP_BUILD = 464/);
 
 // Runtime: Bangkok day key beats raw ms when midnights are mixed.
 function toEpochMs(value) {

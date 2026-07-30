@@ -20,6 +20,7 @@ import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { OwnerBooksModeSwitch } from "@/components/OwnerBooksModeSwitch";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
+import { SheetDateCell } from "@/components/SheetDateCell";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
@@ -132,7 +133,7 @@ function OwnerBooksView() {
     const unsub = subscribeOwnerBooksPage(
       liveLimit,
       (page) => {
-        setEntries(page.entries);
+        setEntries(sortByDateNewestFirst(page.entries));
         setHasMore(page.hasMore);
         setLoading(false);
         setLoadingMore(false);
@@ -477,7 +478,7 @@ function OwnerBooksView() {
                       </label>
                     </td>
                     <td className="col-date" onClick={openEdit}>
-                      {formatDateShort(row.date)}
+                      <SheetDateCell ms={row.date} />
                     </td>
                     <td className="col-desc">
                       <div className="desc-with-photo">

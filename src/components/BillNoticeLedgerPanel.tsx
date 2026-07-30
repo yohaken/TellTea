@@ -265,7 +265,9 @@ export function BillNoticeLedgerPanel({
                           .join(" ")}
                         title={tip}
                       >
-                        <td className="col-date">{formatDateShort(row.date)}</td>
+                        <td className="col-date">
+                          <SheetDateCell ms={row.date} />
+                        </td>
                         <td className="col-desc">
                           {canEdit ? (
                             <button

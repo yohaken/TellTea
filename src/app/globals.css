@@ -1507,7 +1507,11 @@ body.modal-open .main-panel {
 }
 
 .ledger-page .ledger-staff-sheet .sheet-table .col-date {
-  width: 2.4rem;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  max-width: 3.1rem;
+  white-space: normal;
+  vertical-align: middle;
 }
 
 .ledger-page .ledger-staff-sheet .sheet-table .col-desc {
@@ -5490,9 +5494,43 @@ body.modal-open .main-panel {
 
 .sheet-table .col-date {
   width: 2.9rem;
+  min-width: 2.75rem;
   white-space: nowrap;
   color: rgba(28, 42, 31, 0.6);
   font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+
+/* Dense date stack: day/month on top (scan newest→oldest), year below */
+.date-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.02rem;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.date-stack-dm {
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.82);
+  white-space: nowrap;
+}
+
+.date-stack-yy {
+  font-size: 0.9em;
+  font-weight: 500;
+  color: rgba(28, 42, 31, 0.45);
+  white-space: nowrap;
+}
+
+.sheet-table--dense .date-stack-dm {
+  font-size: 0.62rem;
+}
+
+.sheet-table--dense .date-stack-yy {
+  font-size: 0.54rem;
 }
 
 .sheet-table .col-desc {
