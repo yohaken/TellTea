@@ -73,6 +73,13 @@ import {
 import {
   subscribeVatImportMonthMerged,
 } from "@/lib/vat-import-month-sync";
+import {
+  computeSfSendAmount,
+  loadSfSendPct,
+  loadSfSendSource,
+  saveSfSendPct,
+  saveSfSendSource,
+} from "@/lib/vat-storefront-send";
 
 function fmt(n: number) {
   if (!Number.isFinite(n)) return "—";
@@ -194,6 +201,10 @@ export function VatMonthBooks({ actor }: Props) {
   const [openDeliverySales, setOpenDeliverySales] = useState(true);
   const [openStorefrontSales, setOpenStorefrontSales] = useState(true);
   const [importMap, setImportMap] = useState<ImportIntoBooksMap | null>(null);
+
+  /** A) แถบส่งหน้าร้าน → ตาราง — ไม่แตะ import/ช่องอื่น */
+  const [sfSendSourceStr, setSfSendSourceStr] = useState("");
+  const [sfSendPct, setSfSendPct] = useState(100);
 
   const draftRef = useRef(draft);
   draftRef.current = draft;
@@ -380,6 +391,45 @@ export function VatMonthBooks({ actor }: Props) {
     setDraft((d) => patchTransfer(d, key, parseVatMoneyInput(raw)));
     markDirty();
   }
+
+  // โหลด % ล่าสุด + ยอดต้นทางของเดือน (ไม่เขียนทับตารางจนกว่าจะเลื่อน/แก้ยอด)
+  useEffect(() => {
+    setSfSendPct(loadSfSendPct());
+    const src = loadSfSendSource(month);
+    setSfSendSourceStr(src > 0 ? moneyFieldValue(src) : "");
+  }, [month]);
+
+  const applySfSendToTable = useCallback(
+    (source: number, pct: number) => {
+      if (locked) return;
+      const sent = computeSfSendAmount(source, pct);
+      setDraft((d) => patchTransfer(d, "storefront", sent));
+      markDirty();
+    },
+    [locked, markDirty],
+  );
+
+  function onSfSendSourceChange(raw: string) {
+    setSfSendSourceStr(raw);
+    if (locked) return;
+    const source = parseVatMoneyInput(raw);
+    saveSfSendSource(month, source);
+    applySfSendToTable(source, sfSendPct);
+  }
+
+  function onSfSendPctChange(next: number) {
+    const pct = Math.min(100, Math.max(0, Math.round(next)));
+    setSfSendPct(pct);
+    saveSfSendPct(pct);
+    if (locked) return;
+    const source = parseVatMoneyInput(sfSendSourceStr);
+    applySfSendToTable(source, pct);
+  }
+
+  const sfSendPreview = useMemo(
+    () => computeSfSendAmount(parseVatMoneyInput(sfSendSourceStr), sfSendPct),
+    [sfSendSourceStr, sfSendPct],
+  );
 
   function setGpField(key: MonthChannel, raw: string) {
     if (locked) return;
@@ -755,6 +805,38 @@ export function VatMonthBooks({ actor }: Props) {
             <h2 className="vat-table-title">
               A) รายได้ถึงร้าน — {formatThaiMonthKey(month)}
             </h2>
+            <div
+              className="vat-sf-send"
+              title="ใส่ยอดหน้าร้าน แล้วเลื่อน % ส่งเข้าช่องหน้าร้านในตาราง"
+            >
+              <span className="vat-sf-send-label">หน้าร้าน</span>
+              <input
+                className="vat-sales-input vat-sf-send-input"
+                inputMode="decimal"
+                disabled={locked}
+                value={sfSendSourceStr}
+                placeholder="0"
+                aria-label="ยอดหน้าร้านต้นทาง"
+                onChange={(e) => onSfSendSourceChange(e.target.value)}
+                onBlur={() => {
+                  const next = normalizeMoneyFieldText(sfSendSourceStr);
+                  if (next !== sfSendSourceStr) setSfSendSourceStr(next);
+                }}
+              />
+              <input
+                type="range"
+                className="vat-sf-send-range"
+                min={0}
+                max={100}
+                step={1}
+                disabled={locked}
+                value={sfSendPct}
+                aria-label="เปอร์เซ็นต์ส่งเข้ารายได้ถึงร้าน"
+                onChange={(e) => onSfSendPctChange(Number(e.target.value))}
+              />
+              <span className="vat-sf-send-pct">{sfSendPct}%</span>
+              <span className="vat-sf-send-out">→ {fmt(sfSendPreview)}</span>
+            </div>
             <div className="sheet-wrap vat-month-slim-wrap">
               <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
                 <thead>

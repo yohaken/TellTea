@@ -17621,6 +17621,67 @@ a.ghost-btn {
   margin-bottom: 0.65rem;
 }
 
+/* A) แถบส่งหน้าร้าน → ตาราง — แถวเดียว กระชับ */
+.vat-sf-send {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.1rem 0 0.35rem;
+  min-height: 1.45rem;
+  font-size: 0.68rem;
+  line-height: 1.1;
+  color: rgba(28, 42, 31, 0.78);
+}
+
+.vat-sf-send-label {
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 0.66rem;
+}
+
+.vat-sf-send-input {
+  width: 5.4rem;
+  min-height: 1.35rem !important;
+  height: 1.35rem;
+  padding: 0.1rem 0.28rem !important;
+  font-size: 0.68rem !important;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.vat-sf-send-range {
+  flex: 1 1 5rem;
+  min-width: 4.5rem;
+  max-width: 11rem;
+  height: 0.9rem;
+  margin: 0;
+  accent-color: #2f6b4f;
+  cursor: pointer;
+}
+
+.vat-sf-send-range:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.vat-sf-send-pct {
+  flex-shrink: 0;
+  min-width: 2.1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 0.66rem;
+  text-align: right;
+}
+
+.vat-sf-send-out {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: #1b4332;
+  white-space: nowrap;
+}
+
 .vat-net-strip {
   display: flex;
   flex-wrap: wrap;
