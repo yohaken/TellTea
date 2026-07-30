@@ -675,7 +675,6 @@ function AddOutModal({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [typeFreq, setTypeFreq] = useState<string[]>([]);
   const [receiptUrls, setReceiptUrls] = useState<string[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
   const [previewType, setPreviewType] = useState("");
   const [previewReason, setPreviewReason] = useState("");
   const [previewSource, setPreviewSource] = useState<LedgerTypeSource>("heuristic");
@@ -699,8 +698,8 @@ function AddOutModal({
 
   const filteredSuggestions = useMemo(() => {
     const q = description.trim().toLowerCase();
-    if (!q) return suggestions.slice(0, 8);
-    return suggestions.filter((s) => s.toLowerCase().includes(q)).slice(0, 8);
+    if (!q) return suggestions.slice(0, 6);
+    return suggestions.filter((s) => s.toLowerCase().includes(q)).slice(0, 6);
   }, [description, suggestions]);
 
   useEffect(() => {
@@ -856,7 +855,10 @@ function AddOutModal({
   }
 
   return (
-    <div className="modal-backdrop edit-modal is-module-form" role="presentation">
+    <div
+      className="modal-backdrop edit-modal is-module-form is-compact-form"
+      role="presentation"
+    >
       <div className="modal-card" role="dialog" aria-modal="true" aria-label="บันทึกเงินออก">
         <div className="entry-toolbar module-form-head">
           <h2 className="panel-title">บันทึกเงินออก</h2>
@@ -865,27 +867,6 @@ function AddOutModal({
           </button>
         </div>
         <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
-          <aside className="ledger-photo-tip is-in-form" role="note" aria-label="คำแนะนำถ่ายหลักฐาน">
-            <p className="ledger-photo-tip-title">แนบรูปก่อน — AI อ่าน VAT จากบิล</p>
-            <p className="ledger-photo-tip-text">
-              ใบเสร็จแม็คโคร/ท็อปส์ ฯลฯ ให้เห็นบรรทัดภาษีชัด · อย่าใช้ยอดจ่าย×7/107 แทนบิล
-            </p>
-          </aside>
-          <PhotoAttachMultiField
-            label="รูปใบเสร็จ"
-            values={receiptUrls}
-            onChange={(next) => {
-              const prev = receiptUrls;
-              setReceiptUrls(next);
-              const added = next.some((u) => !prev.includes(u));
-              if (added) void runExtractFromPhotos(next);
-            }}
-            onError={onError}
-            max={LEDGER_RECEIPT_MAX}
-            storageFolder="ledger-receipts"
-            storageSlotKey={`add-${createdBy || "new"}`}
-            hint="ถ่ายหรือแนบ — AI ใส่วันที่ รายการ ยอด และ VAT จากบิล"
-          />
           <div className="field">
             <label htmlFor="add-out-date">วันที่</label>
             <input id="add-out-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
@@ -911,7 +892,7 @@ function AddOutModal({
             ) : null}
           </div>
           <div className="field">
-            <label htmlFor="add-out-amount">จำนวนเงินออก</label>
+            <label htmlFor="add-out-amount">เงินออก</label>
             <input
               id="add-out-amount"
               type="number"
@@ -923,6 +904,21 @@ function AddOutModal({
               required
             />
           </div>
+          <PhotoAttachMultiField
+            label="รูปใบเสร็จ"
+            values={receiptUrls}
+            onChange={(next) => {
+              const prev = receiptUrls;
+              setReceiptUrls(next);
+              const added = next.some((u) => !prev.includes(u));
+              if (added) void runExtractFromPhotos(next);
+            }}
+            onError={onError}
+            max={LEDGER_RECEIPT_MAX}
+            storageFolder="ledger-receipts"
+            storageSlotKey={`add-${createdBy || "new"}`}
+            hint="ถ่าย/แนบ — AI อ่านรายการ ยอด VAT"
+          />
           <EntryVatFieldset
             idPrefix="add-out"
             disabled={busy}
@@ -958,16 +954,6 @@ function AddOutModal({
               void runExtractFromPhotos(receiptUrls);
             }}
           />
-          {receiptUrls.length ? (
-            <button
-              type="button"
-              className="ghost-btn"
-              style={{ marginBottom: "0.55rem" }}
-              onClick={() => setPreviewUrls(receiptUrls)}
-            >
-              ดูรูป ({receiptUrls.length})
-            </button>
-          ) : null}
           <LedgerTypeField
             id="add-out-type"
             isOwner={isOwner}
@@ -994,18 +980,8 @@ function AddOutModal({
             <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
               ออก
             </button>
-            <span aria-hidden style={{ width: "2.6rem" }} />
           </div>
         </form>
-        {previewUrls ? (
-          <ImagePreviewModal
-            urls={previewUrls}
-            title="รูป"
-            entryDateMs={parseDateInput(date)}
-            showCaptureMeta={isOwner}
-            onClose={() => setPreviewUrls(null)}
-          />
-        ) : null}
       </div>
       {saveStage ? (
         <AiSaveProgressModal stage={saveStage} detail={description.trim()} />
@@ -1070,7 +1046,6 @@ function EditEntryModal({
   descriptionRef.current = description;
   amountRef.current = amount;
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getLedgerReceiptUrls(entry));
-  const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
   const [previewType, setPreviewType] = useState(entry.type || "");
   const [previewReason, setPreviewReason] = useState(entry.typeAiReason || "");
   const [previewSource, setPreviewSource] = useState<LedgerTypeSource>(initialSource);
@@ -1085,8 +1060,8 @@ function EditEntryModal({
 
   const filteredSuggestions = useMemo(() => {
     const q = description.trim().toLowerCase();
-    if (!q) return suggestions.slice(0, 10);
-    return suggestions.filter((s) => s.toLowerCase().includes(q)).slice(0, 10);
+    if (!q) return suggestions.slice(0, 6);
+    return suggestions.filter((s) => s.toLowerCase().includes(q)).slice(0, 6);
   }, [description, suggestions]);
 
   useEffect(() => {
@@ -1257,7 +1232,10 @@ function EditEntryModal({
   }
 
   return (
-    <div className="modal-backdrop edit-modal is-module-form" role="presentation">
+    <div
+      className="modal-backdrop edit-modal is-module-form is-compact-form"
+      role="presentation"
+    >
       <div
         className="modal-card"
         role="dialog"
@@ -1371,7 +1349,7 @@ function EditEntryModal({
               max={LEDGER_RECEIPT_MAX}
               storageFolder="ledger-receipts"
               storageSlotKey={`edit-${entry.id}`}
-              hint="แนบรูป → AI อ่าน VAT จากบิลก่อน"
+              hint="ถ่าย/แนบ — AI อ่าน VAT"
             />
           ) : (
             <PhotoAttachMultiField
@@ -1423,16 +1401,6 @@ function EditEntryModal({
               }}
             />
           ) : null}
-          {receiptUrls.length ? (
-            <button
-              type="button"
-              className="ghost-btn"
-              style={{ marginBottom: "0.55rem" }}
-              onClick={() => setPreviewUrls(receiptUrls)}
-            >
-              ดูรูป ({receiptUrls.length})
-            </button>
-          ) : null}
 
           {!isIn ? (
             <>
@@ -1446,7 +1414,7 @@ function EditEntryModal({
                 aiSource={previewSource}
                 aiStatus={previewStatus}
                 aiError={previewError}
-                    ownerLocked={ownerLocked}
+                ownerLocked={ownerLocked}
                 typeMode={typeMode}
                 frequent={typeFreq}
                 onTypeModeChange={(value) => {
@@ -1456,7 +1424,14 @@ function EditEntryModal({
                 onReclassify={() => void runOwnerPreview()}
               />
               {!isOwner ? (
-                <label className="ledger-ai-use-images">
+                <label
+                  className="ledger-ai-use-images"
+                  title={
+                    descChanged
+                      ? "เปิดอัตโนมัติเพราะแก้ชื่อรายการ"
+                      : "จัดประเภทใหม่ด้วย AI เมื่อบันทึก"
+                  }
+                >
                   <input
                     type="checkbox"
                     checked={forceReclassify || descChanged}
@@ -1464,9 +1439,9 @@ function EditEntryModal({
                     disabled={busy || descChanged}
                   />
                   <span>
-                    จัดประเภทใหม่ด้วย AI เมื่อบันทึก
+                    จัดประเภทใหม่ตอนบันทึก
                     {descChanged ? (
-                      <span className="ledger-ai-use-images-hint"> — เปิดอัตโนมัติเพราะแก้ชื่อรายการ</span>
+                      <span className="ledger-ai-use-images-hint"> · เปิดอัตโนมัติ</span>
                     ) : null}
                   </span>
                 </label>
@@ -1481,27 +1456,8 @@ function EditEntryModal({
             <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
               ออก
             </button>
-            <button
-              type="button"
-              className="trash-btn"
-              aria-label="ลบรายการ"
-              title="ลบรายการ"
-              disabled={busy}
-              onClick={() => void onDelete()}
-            >
-              <Trash2 size={16} />
-            </button>
           </div>
         </form>
-        {previewUrls ? (
-          <ImagePreviewModal
-            urls={previewUrls}
-            title="รูป"
-            entryDateMs={parseDateInput(date)}
-            showCaptureMeta={isOwner}
-            onClose={() => setPreviewUrls(null)}
-          />
-        ) : null}
       </div>
       {saveStage ? (
         <AiSaveProgressModal stage={saveStage} detail={description.trim()} />

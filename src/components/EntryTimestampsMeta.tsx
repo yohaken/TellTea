@@ -31,13 +31,13 @@ export function EntryTimestampsMeta({
   return (
     <p className="entry-detail-meta muted" aria-live="polite">
       <span>
-        วันที่รายการ <strong>{dateText}</strong>
+        รายการ <strong>{dateText}</strong>
       </span>
       <span aria-hidden className="entry-detail-meta-sep">
         ·
       </span>
       <span>
-        อัปเดต <strong>{updatedText}</strong>
+        อัป <strong>{updatedText}</strong>
       </span>
     </p>
   );

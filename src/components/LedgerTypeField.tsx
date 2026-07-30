@@ -54,19 +54,19 @@ export function LedgerTypeField({
     return (
       <div className="field ledger-type-ai-field" aria-live="polite">
         <label>ประเภทบัญชี</label>
-        <div className="ledger-type-ai-card">
+        <div
+          className="ledger-type-ai-card"
+          title="ระบบจัดประเภทตอนกดบันทึก จากชื่อรายการ + โปรไฟล์กิจการ"
+        >
           <div className="ledger-type-ai-head">
             <Sparkles size={14} aria-hidden />
-            <span>จัดประเภทอัตโนมัติเมื่อกดบันทึก</span>
+            <span>จัดอัตโนมัติตอนบันทึก</span>
           </div>
           {shown ? (
             <p className="ledger-type-ai-value">{labelLedgerType(shown)}</p>
           ) : (
-            <p className="ledger-type-ai-reason">ไม่ต้องเลือกเอง — ระบบจัดให้ตอนบันทึก</p>
+            <p className="ledger-type-ai-reason">ไม่ต้องเลือกเอง</p>
           )}
-          <p className="ledger-type-ai-hint">
-            พนักงานรอหน้าต่างสถานะสั้นๆ ตอนกดบันทึก — จัดจากชื่อรายการ + โปรไฟล์กิจการ
-          </p>
         </div>
       </div>
     );
@@ -78,25 +78,27 @@ export function LedgerTypeField({
       : aiStatus === "error"
         ? "ใช้ค่าสำรองจากชื่อรายการ"
         : aiSource === "ai"
-          ? "จัดประเภทบัญชีโดย AI"
+          ? "จัดโดย AI"
           : aiSource === "owner"
             ? "กำหนดโดยเจ้าของ"
             : aiSource === "legacy"
-              ? "ประเภทเดิมในระบบ (ยังไม่ผ่าน AI)"
-              : "จัดจากชื่อรายการ / ตอนบันทึก";
+              ? "ประเภทเดิมในระบบ"
+              : "จัดจากชื่อรายการ";
 
   return (
     <div className="ledger-type-owner-wrap">
       <div className="ledger-type-ai-card is-owner">
         <div className="ledger-type-ai-head">
           <Sparkles size={14} aria-hidden />
-          <span>{ownerLocked ? "คุณแก้ประเภทเองแล้ว" : statusLabel}</span>
+          <span>{ownerLocked ? "แก้ประเภทเองแล้ว" : statusLabel}</span>
         </div>
         <p className="ledger-type-ai-value">
           {labelLedgerType(shown || aiType || "cogs")}
         </p>
         {aiReason && !ownerLocked ? (
-          <p className="ledger-type-ai-reason">{aiReason}</p>
+          <p className="ledger-type-ai-reason" title={aiReason}>
+            {aiReason}
+          </p>
         ) : null}
         {aiError ? (
           <p className="muted" style={{ margin: "0.25rem 0 0", fontSize: "0.75rem" }}>
@@ -108,19 +110,18 @@ export function LedgerTypeField({
           className="ghost-btn ledger-type-reset-ai"
           disabled={busy}
           onClick={onReclassify}
+          title="จัดประเภทใหม่ด้วย AI (พรีวิว)"
         >
           <RefreshCw size={14} aria-hidden />
-          {busy ? "กำลังจัดใหม่…" : "จัดประเภทใหม่ด้วย AI (พรีวิว)"}
+          {busy ? "กำลังจัดใหม่…" : "จัดใหม่ด้วย AI"}
         </button>
         {!ownerLocked ? (
-          <p className="ledger-type-ai-hint">
-            ถ้าไม่ล็อกประเภทเอง ระบบจะจัดอีกครั้งตอนกดบันทึก
-          </p>
+          <p className="ledger-type-ai-hint">ไม่ล็อกเอง = จัดอีกครั้งตอนบันทึก</p>
         ) : null}
       </div>
       <TypePicker
         id={id}
-        label="แก้ประเภท (เจ้าของเท่านั้น)"
+        label="แก้ประเภท (เจ้าของ)"
         value={typeMode}
         onChange={onTypeModeChange}
         frequent={frequent}
