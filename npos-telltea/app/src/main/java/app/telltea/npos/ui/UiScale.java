@@ -118,8 +118,8 @@ public final class UiScale {
     // Tall pay CTA — ~15–18% cart Y feel on counter tablets.
     int payPrimaryMinPx = Math.max(dp(density, 72), Math.round(72 * density * scale));
     int paySecondaryMinPx = Math.max(dp(density, 44), Math.round(44 * density * scale));
-    // Number pad only — restore pre-shrink tall keys (not all chips).
-    int padKeyMinPx = Math.max(dp(density, 56), Math.round(64 * density * scale));
+    // Number pad — ~30% smaller than prior 56/64dp so cash/float dialogs sit mid-screen.
+    int padKeyMinPx = Math.max(dp(density, 40), Math.round(45 * density * scale));
     // Web media max-height ~5.5rem — shrink tiles so ~5 rows fit, scroll vertically.
     int menuMediaMaxPx = Math.max(dp(density, 48), Math.round(5.2f * 16f * density * scale));
 
@@ -183,7 +183,7 @@ public final class UiScale {
     int rowGaps = 4 * Math.max(dp(4), gapPx);
     int available = maxCard - chromePx - dialogChromePx - rowGaps;
     int perKey = available / 4;
-    int floor = Math.max(dp(48), touchMinPx);
+    int floor = Math.max(dp(40), Math.min(touchMinPx, dp(44)));
     return clampInt(perKey, floor, padKeyMinPx);
   }
 
@@ -193,8 +193,8 @@ public final class UiScale {
    */
   public int padAmountMinPx(int chromeAbovePadDp) {
     int key = padKeyMinPxForChrome(chromeAbovePadDp);
-    int ideal = Math.max(dp(48), Math.round(key * 0.95f));
-    return clampInt(ideal, dp(48), payPrimaryMinPx);
+    int ideal = Math.max(dp(36), Math.round(key * 0.90f));
+    return clampInt(ideal, dp(36), Math.max(dp(56), payPrimaryMinPx * 3 / 4));
   }
 
   public void applyMinHeight(View view, int minPx) {

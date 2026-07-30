@@ -339,6 +339,16 @@
     <string name="change_display_manual">ปิดด้วยตนเอง (กด ✕)</string>
     <string name="change_display_current_fmt">ตอนนี้: %1$s</string>
     <string name="sell_hub_change_display_fmt">เวลาแสดงเงินทอน · %1$s</string>
+    <string name="payment_voice_title">เสียงพูดรับเงิน / ทอน</string>
+    <string name="payment_voice_hint">หลังขายสด พูดไทยสั้น «รับมา … ทอน …»\nค่าเริ่มต้นเปิด · ปิดได้ที่นี่\nต้องมีเสียงภาษาไทยบนเครื่อง (เช่น Google TTS) — ไม่พูดอังกฤษแทน</string>
+    <string name="payment_voice_toggle_btn">เปิด/ปิดเสียงพูด</string>
+    <string name="payment_voice_current_fmt">ตอนนี้: %1$s</string>
+    <string name="payment_voice_on_checking">เปิด · กำลังตรวจเสียงไทย</string>
+    <string name="payment_voice_on_ready">เปิด · พร้อมพูดไทย</string>
+    <string name="payment_voice_on_no_thai">เปิด · ยังไม่มีเสียงไทยบนเครื่อง</string>
+    <string name="payment_voice_off">ปิด</string>
+    <string name="sell_hub_refresh_menu">รีเฟรชเมนู</string>
+    <string name="sell_menu_refreshed_toast">อัปเดตเมนูจากหลังร้านแล้ว</string>
     <string name="sell_last_change_fmt">ทอนล่าสุด ฿%.0f</string>
     <string name="change_hold_dismiss_countdown">✕ · %d</string>
     <string name="change_hold_dismiss_x">✕ ปิด</string>

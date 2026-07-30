@@ -206,6 +206,7 @@ exports.nposDeviceHeartbeat = functions
       const claim = await claimStatusForHeartbeat(db, installId, after);
 
       let heartbeatIntervalSec = 5;
+      let menuVersion = 0;
       try {
         const metaPos = await db.collection("meta").doc("pos").get();
         const raw = metaPos.exists ? metaPos.get("heartbeatIntervalSec") : null;
@@ -213,8 +214,11 @@ exports.nposDeviceHeartbeat = functions
         if (Number.isFinite(n)) {
           heartbeatIntervalSec = Math.max(5, Math.min(600, Math.round(n)));
         }
+        const mv = metaPos.exists ? metaPos.get("menuVersion") : null;
+        const mvn = typeof mv === "number" ? mv : Number(mv);
+        if (Number.isFinite(mvn) && mvn > 0) menuVersion = Math.round(mvn);
       } catch (err) {
-        console.warn("nposDeviceHeartbeat heartbeatIntervalSec read failed", err);
+        console.warn("nposDeviceHeartbeat meta/pos read failed", err);
       }
       const captureRequestAt =
         typeof after.captureRequestAt === "number" ? after.captureRequestAt : 0;
@@ -337,6 +341,7 @@ exports.nposDeviceHeartbeat = functions
         storeClaimCodeHash: claim.storeClaimCodeHash || "",
         storeClaimUpdatedAt: claim.storeClaimUpdatedAt || 0,
         heartbeatIntervalSec,
+        menuVersion,
         sessionId: clientSessionId || "",
         sessionStatus,
         sessionRemoteClosed,

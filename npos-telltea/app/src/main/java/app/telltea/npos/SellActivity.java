@@ -48,12 +48,14 @@ import app.telltea.npos.diagnose.ChangeDisplayPrefs;
 import app.telltea.npos.diagnose.CustomerDisplayController;
 import app.telltea.npos.diagnose.CustomerDisplayPresentation;
 import app.telltea.npos.diagnose.OpsLogger;
+import app.telltea.npos.diagnose.PaymentVoice;
 import app.telltea.npos.diagnose.ForegroundHeartbeat;
 import app.telltea.npos.diagnose.StoreClaimPrefs;
 import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.ImageLoader;
 import app.telltea.npos.sell.MenuModels;
 import app.telltea.npos.sell.MenuRepository;
+import app.telltea.npos.sell.MenuSyncCoordinator;
 import app.telltea.npos.sell.OptionPickerLogic;
 import app.telltea.npos.sell.PaymentMethods;
 import app.telltea.npos.sell.SaleSync;
@@ -74,7 +76,7 @@ import app.telltea.npos.update.UpdatePromptController;
  * Sell screen — front-counter only: categories, menu images, options, cart, discount,
  * cash / bank-transfer pay (PromptPay POS-QR parked), sold-out long-press. No delivery price channel.
  */
-public class SellActivity extends Activity {
+public class SellActivity extends Activity implements MenuSyncCoordinator.Listener {
   private LinearLayout categoryBar;
   private GridLayout menuGrid;
   private LinearLayout cartList;
@@ -182,6 +184,8 @@ public class SellActivity extends Activity {
     saleSync = new SaleSync();
     customerDisplay = new CustomerDisplayController();
     customerDisplay.bind(this);
+    PaymentVoice.warm(this);
+    MenuSyncCoordinator.bind(this);
     // Tap menu/cart while change bar is up → dismiss hold (touch still reaches the control).
     View content = findViewById(R.id.sellContentRow);
     if (content != null) {
@@ -611,10 +615,11 @@ public class SellActivity extends Activity {
             4,
             getString(
                 R.string.sell_hub_change_display_fmt, ChangeDisplayPrefs.label(this)));
-    popup.getMenu().add(0, 4, 5, R.string.btn_settings_device);
-    popup.getMenu().add(0, 5, 6, R.string.sell_hub_x_report);
-    popup.getMenu().add(0, 6, 7, R.string.sell_hub_close_shift);
-    popup.getMenu().add(0, 7, 8, R.string.nav_lock_pin);
+    popup.getMenu().add(0, 10, 5, R.string.sell_hub_refresh_menu);
+    popup.getMenu().add(0, 4, 6, R.string.btn_settings_device);
+    popup.getMenu().add(0, 5, 7, R.string.sell_hub_x_report);
+    popup.getMenu().add(0, 6, 8, R.string.sell_hub_close_shift);
+    popup.getMenu().add(0, 7, 9, R.string.nav_lock_pin);
     popup.setOnMenuItemClickListener(
         (MenuItem item) -> {
           int id = item.getItemId();
@@ -644,6 +649,11 @@ public class SellActivity extends Activity {
                 .show();
             return true;
           }
+          if (id == 10) {
+            reloadMenu(true);
+            Toast.makeText(this, R.string.sell_menu_syncing, Toast.LENGTH_SHORT).show();
+            return true;
+          }
           if (id == 4) {
             PosShellNav.openSettings(this);
             return true;
@@ -663,6 +673,16 @@ public class SellActivity extends Activity {
           return false;
         });
     popup.show();
+  }
+
+  @Override
+  public void onMenuVersionChanged(long serverVersion) {
+    runOnUiThread(
+        () -> {
+          if (isFinishing()) return;
+          reloadMenu(true);
+          Toast.makeText(this, R.string.sell_menu_refreshed_toast, Toast.LENGTH_SHORT).show();
+        });
   }
 
   /** No Sale — open cash drawer via receipt printer; always logged. */
@@ -1139,6 +1159,7 @@ public class SellActivity extends Activity {
   @Override
   protected void onDestroy() {
     dutyHandler.removeCallbacks(dutyTick);
+    MenuSyncCoordinator.unbind(this);
     if (customerDisplay != null) {
       customerDisplay.release();
       customerDisplay = null;
@@ -2736,6 +2757,10 @@ public class SellActivity extends Activity {
                             if (customerDisplay != null) {
                               customerDisplay.showSuccessThenStandby(
                                   thanks, total, changeForCustomer);
+                            }
+                            if (PaymentMethods.isCash(method)) {
+                              PaymentVoice.speakCash(
+                                  SellActivity.this, cashReceived, changeForCustomer);
                             }
                             cart.clear();
                             discountBaht = 0;

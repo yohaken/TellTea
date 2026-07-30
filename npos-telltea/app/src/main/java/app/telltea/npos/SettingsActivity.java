@@ -21,6 +21,8 @@ import app.telltea.npos.diagnose.ChangeDisplayPrefs;
 import app.telltea.npos.diagnose.CustomerAmountPresentation;
 import app.telltea.npos.diagnose.DisplayProbe;
 import app.telltea.npos.diagnose.OpsLogger;
+import app.telltea.npos.diagnose.PaymentVoice;
+import app.telltea.npos.diagnose.PaymentVoicePrefs;
 import app.telltea.npos.diagnose.PermissionBootstrap;
 import app.telltea.npos.printer.EscPos;
 import app.telltea.npos.printer.PrinterEndpoint;
@@ -131,6 +133,29 @@ public class SettingsActivity extends Activity {
                     });
         }
         refreshChangeDisplaySetting();
+        View voiceToggle = findViewById(R.id.paymentVoiceToggleButton);
+        if (voiceToggle != null) {
+            voiceToggle.setOnClickListener(
+                    v -> {
+                        PaymentVoice.warm(this);
+                        boolean on = PaymentVoicePrefs.toggle(this);
+                        refreshPaymentVoiceSetting();
+                        OpsLogger.info(
+                                this,
+                                "settings",
+                                "ตั้งค่าเสียงพูดรับเงิน",
+                                on ? "เปิด" : "ปิด");
+                        Toast.makeText(
+                                        this,
+                                        getString(
+                                                R.string.payment_voice_current_fmt,
+                                                PaymentVoicePrefs.statusLabel(this)),
+                                        Toast.LENGTH_SHORT)
+                                .show();
+                    });
+        }
+        PaymentVoice.warm(this);
+        refreshPaymentVoiceSetting();
         View paper80 = findViewById(R.id.paperWidth80Button);
         View paper58 = findViewById(R.id.paperWidth58Button);
         if (paper80 != null) {
@@ -177,6 +202,14 @@ public class SettingsActivity extends Activity {
                 getString(R.string.change_display_current_fmt, ChangeDisplayPrefs.label(this)));
     }
 
+    private void refreshPaymentVoiceSetting() {
+        TextView v = findViewById(R.id.paymentVoiceValue);
+        if (v == null) return;
+        v.setText(
+                getString(
+                        R.string.payment_voice_current_fmt, PaymentVoicePrefs.statusLabel(this)));
+    }
+
     private void refreshPermissionStatus() {
         TextView v = findViewById(R.id.permStatusSettings);
         if (v == null) return;
@@ -220,6 +253,7 @@ public class SettingsActivity extends Activity {
     protected void onResume() {
         super.onResume();
         refreshPermissionStatus();
+        refreshPaymentVoiceSetting();
         maybeAutoCheck();
     }
 
