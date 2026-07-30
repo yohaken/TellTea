@@ -4558,6 +4558,25 @@ body.modal-open .main-panel {
   overflow-x: auto;
 }
 
+/*
+ * Phase 9 table layout — สต็อก (.stock-history-sheet).
+ * Date/row sizing from ledger-staff-sheet prototype; bleed via shared .sheet-bleed.
+ * Scoped under .stock-page so other modules stay untouched.
+ */
+.stock-page .stock-history-sheet .sheet-table--dense th,
+.stock-page .stock-history-sheet .sheet-table--dense td {
+  padding: 0.18rem 0.3rem;
+  line-height: 1.15;
+}
+
+.stock-page .stock-history-sheet .stock-history-th-date,
+.stock-page .stock-history-sheet .stock-history-date {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 4.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .stock-history-table {
   min-width: max-content;
 }
@@ -4571,7 +4590,7 @@ body.modal-open .main-panel {
 }
 
 .stock-history-th-date {
-  width: 4.2rem;
+  width: 3.55rem;
   text-align: left;
   position: sticky;
   left: 0;

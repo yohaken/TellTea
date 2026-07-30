@@ -35,7 +35,7 @@ import {
   type StockHistoryTimelineRow,
 } from "@/lib/stock-history";
 import { seedStockItemsIfEmpty, subscribeStockItems } from "@/lib/stock";
-import { formatDateShort, formatStockQty, parseDateInput } from "@/lib/utils";
+import { formatDateShortBe, formatStockQty, parseDateInput } from "@/lib/utils";
 
 type DraftLine = {
   itemId: string;
@@ -103,7 +103,7 @@ function StockView() {
   const showHistory = !showCatalog;
 
   return (
-    <div className="module-page stock-module">
+    <div className="module-page stock-module stock-page">
       <div className="module-page-head">
         <h1 className="panel-title module-page-title">
           <Boxes size={18} aria-hidden />
@@ -273,8 +273,8 @@ function StockHistoryView({
       </p>
 
       {rows.length ? (
-        <div className="sheet-wrap stock-history-wrap">
-          <table className="sheet-table stock-history-table">
+        <div className="sheet-wrap stock-history-wrap stock-history-sheet sheet-bleed">
+          <table className="sheet-table stock-history-table sheet-table--dense">
             <thead>
               <tr>
                 <th className="stock-history-th-date">รอบ</th>
@@ -390,7 +390,7 @@ function StockCountDetailModal({
         <div className="modal-head">
           <div>
             <h2 className="panel-title" style={{ fontSize: "1rem" }}>
-              {timelineRoundLabel(row)} · {formatDateShort(row.dateMs)}
+              {timelineRoundLabel(row)} · {formatDateShortBe(row.dateMs)}
             </h2>
             <p className="muted check-detail-sub">
               {session.inspector} · {formatStockCountTimeShort(session.submittedAt)}
