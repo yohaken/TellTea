@@ -501,7 +501,7 @@ function BillNoticeFormModal({
     try {
       const result = await extractOwnerBookFromReceipt(refs);
       lastExtractKeyRef.current = key;
-      if (result.date) setDate(result.date);
+      // Keep accounting date — AI must not overwrite (พ.ศ. years corrupt the field).
       if (result.description) {
         const bucket = billNoticeBucketLabel(result.description);
         const nextDesc =

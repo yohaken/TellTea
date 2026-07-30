@@ -97,8 +97,10 @@ export function toEpochMs(value: unknown): number {
     const t = value.trim();
     if (/^\d+(\.\d+)?$/.test(t)) return toEpochMs(Number(t));
     if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
-      const ms = Date.parse(`${t}T00:00:00+07:00`);
-      return Number.isFinite(ms) ? ms : 0;
+      const fixed = normalizeAccountingDateKey(t);
+      if (!fixed) return 0;
+      const parsed = Date.parse(`${fixed}T00:00:00+07:00`);
+      return Number.isFinite(parsed) ? parsed : 0;
     }
     if (/^\d{4}-\d{2}-\d{2}T/.test(t)) {
       const ms = Date.parse(t);
@@ -197,7 +199,34 @@ export function entryUpdatedAt(entry: { updatedAt?: number; createdAt?: number }
   return toEpochMs(entry.updatedAt) || toEpochMs(entry.createdAt) || 0;
 }
 
-/** parse D/M/YYYY or YYYY-MM-DD → Asia/Bangkok midnight ms */
+/**
+ * ปี ค.ศ. จาก ค.ศ. / พ.ศ. / ปีสั้นพ.ศ. (68 → 2025).
+ * ใบเสร็จไทยมักเป็น พ.ศ. — ถ้าเก็บดิบจะได้ปี 2568 แล้ว iOS โชว์ 3111 (+543 ซ้ำ).
+ */
+export function toCeYear(raw: number): number | null {
+  if (!Number.isFinite(raw)) return null;
+  let n = raw;
+  // Peel พ.ศ. (and double-converted 2568+543≈3111)
+  while (n >= 2400 && n < 4000) n -= 543;
+  if (n >= 1900 && n <= 2100) return n;
+  if (n >= 0 && n < 100) return 2500 + n - 543;
+  return null;
+}
+
+/** Normalize YYYY-MM-DD to Gregorian CE in range 2000–2100; else "". */
+export function normalizeAccountingDateKey(value: string): string {
+  const s = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return "";
+  const [ys, ms, ds] = s.split("-").map(Number);
+  const y = toCeYear(ys ?? NaN);
+  if (y == null || y < 2000 || y > 2100) return "";
+  if (!ms || ms < 1 || ms > 12 || !ds || ds < 1 || ds > 31) return "";
+  const key = `${y}-${String(ms).padStart(2, "0")}-${String(ds).padStart(2, "0")}`;
+  const t = Date.parse(`${key}T12:00:00+07:00`);
+  return Number.isFinite(t) ? key : "";
+}
+
+/** parse D/M/YYYY or YYYY-MM-DD → Asia/Bangkok midnight ms (CE year). */
 export function parseDateInput(value: string): number {
   let y: number;
   let m: number;
@@ -209,18 +238,22 @@ export function parseDateInput(value: string): number {
     if (parts.length !== 3) throw new Error("รูปแบบวันที่ไม่ถูกต้อง");
     [day, m, y] = parts;
   }
-  if (!y || !m || !day) throw new Error("รูปแบบวันที่ไม่ถูกต้อง");
-  const ms = Date.parse(
-    `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}T00:00:00+07:00`,
+  const ce = toCeYear(y);
+  if (ce == null || !m || !day) throw new Error("รูปแบบวันที่ไม่ถูกต้อง");
+  const key = normalizeAccountingDateKey(
+    `${ce}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
   );
+  if (!key) throw new Error("วันที่นอกช่วงที่รองรับ (ค.ศ. 2000–2100)");
+  const ms = Date.parse(`${key}T00:00:00+07:00`);
   if (!Number.isFinite(ms)) throw new Error("รูปแบบวันที่ไม่ถูกต้อง");
   return ms;
 }
 
-/** YYYY-MM-DD for `<input type="date">` — Asia/Bangkok calendar day. */
+/** YYYY-MM-DD for `<input type="date">` — Asia/Bangkok, CE (fixes พ.ศ. stored as year). */
 export function todayInputValue(date: Date | number = new Date()) {
   const ms = typeof date === "number" ? date : date.getTime();
-  return bangkokDateKey(ms) || bangkokDateKey(Date.now());
+  const key = bangkokDateKey(ms) || bangkokDateKey(Date.now());
+  return normalizeAccountingDateKey(key) || normalizeAccountingDateKey(bangkokDateKey(Date.now())) || "2026-01-01";
 }
 
 export function startOfLocalDay(date: Date | number = new Date()) {

@@ -728,7 +728,7 @@ function OwnerEntryModal({
     try {
       const result = await extractOwnerBookFromReceipt(refs);
       lastExtractKeyRef.current = key;
-      if (result.date) setDate(result.date);
+      // Keep accounting date — AI must not overwrite (BE years like 2568 broke iOS → 3112).
       if (result.description) {
         if (mode === "add" || !descriptionRef.current.trim()) {
           setDescription(result.description);

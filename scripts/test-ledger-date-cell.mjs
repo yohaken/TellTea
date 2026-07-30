@@ -19,6 +19,6 @@ assert.doesNotMatch(cell, /date-stack/);
 assert.match(css, /\.sheet-date-cell\b/);
 assert.doesNotMatch(css, /\.date-stack-yy\b/);
 assert.match(css, /width: 3\.4rem/);
-assert.match(version, /APP_BUILD = 465/);
+assert.match(version, /APP_BUILD = 466/);
 
 console.log("OK test-ledger-date-cell");

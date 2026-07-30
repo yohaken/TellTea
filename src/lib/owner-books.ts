@@ -26,7 +26,12 @@ import {
 } from "./entry-vat";
 import { getDb } from "./firebase";
 import type { LedgerEntry } from "./types";
-import { startOfLocalDay, toEpochMs } from "./utils";
+import {
+  bangkokDateKey,
+  normalizeAccountingDateKey,
+  startOfLocalDay,
+  toEpochMs,
+} from "./utils";
 import { normalizeMoney, roundMoney } from "./vat-sales";
 import type { ImportOwnerBookRow } from "./xlsx-import";
 
@@ -124,7 +129,10 @@ function mapEntry(d: QueryDocumentSnapshot): OwnerBookEntry {
     ...data,
     date: (() => {
       const raw = toEpochMs((data as { date?: unknown }).date);
-      return raw ? startOfLocalDay(raw) : 0;
+      if (!raw) return 0;
+      const fixed = normalizeAccountingDateKey(bangkokDateKey(raw));
+      if (fixed) return Date.parse(`${fixed}T00:00:00+07:00`);
+      return startOfLocalDay(raw);
     })(),
     amountIn: 0,
     amountOut,
