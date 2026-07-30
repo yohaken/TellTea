@@ -44,6 +44,11 @@ export type Employee = {
    * หักจากรอบเงินเดือน/โบนัสตอนสร้างคิวจ่าย — ตัดยอดจริงตอน mark จ่ายแล้ว
    */
   advanceBalance?: number;
+  /**
+   * true = ข้ามตอนกด «สร้างเงินเดือน/โบนัส» กลุ่ม
+   * ใช้กับพนักงานใหม่ที่จ่ายแยกก่อนเข้าวรรอบปกติ
+   */
+  skipGroupPayroll?: boolean;
   createdAt: number;
   updatedAt: number;
 };
@@ -149,6 +154,7 @@ export async function updateEmployee(
       | "payAccountNo"
       | "payAccountName"
       | "advanceBalance"
+      | "skipGroupPayroll"
     >
   >,
 ): Promise<void> {
@@ -208,6 +214,9 @@ export async function updateEmployee(
       patch.advanceBalance == null || !Number.isFinite(n) || n <= 0
         ? deleteField()
         : Math.round(n * 100) / 100;
+  }
+  if (patch.skipGroupPayroll !== undefined) {
+    next.skipGroupPayroll = patch.skipGroupPayroll ? true : deleteField();
   }
   await updateDoc(doc(getDb(), "employees", id), next);
 }
