@@ -62,8 +62,19 @@ public final class SaleSync {
     }
 
     public void openSession(Context context, double openingCash, Runnable done) {
+        openSession(context, openingCash, "", "", done);
+    }
+
+    public void openSession(
+            Context context,
+            double openingCash,
+            String openedByEmployeeId,
+            String openedByName,
+            Runnable done) {
         Context app = context.getApplicationContext();
         final double opening = Math.max(0, openingCash);
+        final String openerId = openedByEmployeeId == null ? "" : openedByEmployeeId.trim();
+        final String openerName = openedByName == null ? "" : openedByName.trim();
         executor.execute(
                 () -> {
                     try {
@@ -79,8 +90,13 @@ public final class SaleSync {
                         // Local-first: unlock UI immediately, reconcile with server in background.
                         long openedAt = System.currentTimeMillis();
                         String sessionId = DeviceIdentity.getOrCreateInstallId(app) + "_" + openedAt;
-                        ShiftPrefs.open(app, sessionId, "morning", openedAt, opening);
-                        OpsLogger.info(app, "shift", "เปิดรอบ local-first", sessionId);
+                        ShiftPrefs.open(
+                                app, sessionId, "morning", openedAt, opening, openerId, openerName);
+                        OpsLogger.info(
+                                app,
+                                "shift",
+                                "เปิดรอบ local-first",
+                                sessionId + (openerName.isEmpty() ? "" : " · " + openerName));
                         if (done != null) done.run();
 
                         try {
@@ -88,6 +104,7 @@ public final class SaleSync {
                             body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
                             body.put("sessionId", sessionId);
                             body.put("openingCash", opening);
+                            putOpenedBy(body, openerId, openerName);
                             JSONObject res = MenuRepository.postJson(OPEN_URL, body, 4_000, 6_000);
                             if (res.optBoolean("ok", false)) {
                                 String sid = res.optString("sessionId", sessionId);
@@ -113,12 +130,22 @@ public final class SaleSync {
                                             res.optInt("saleCount", 0),
                                             res.optInt("voidedCount", 0),
                                             res.optDouble("discountTotal", 0));
+                                    applyOpenedByFromServer(app, res);
                                     OpsLogger.info(app, "shift", "ต่อรอบเดิมหลังสลับเครื่อง", sid);
                                 } else if (!sid.equals(sessionId)) {
-                                    ShiftPrefs.open(app, sid, shiftName, serverOpened, opening);
+                                    ShiftPrefs.open(
+                                            app,
+                                            sid,
+                                            shiftName,
+                                            serverOpened,
+                                            opening,
+                                            openerId,
+                                            openerName);
+                                    applyOpenedByFromServer(app, res);
                                     ShiftPrefs.markServerSessionSynced(app, true);
                                     OpsLogger.info(app, "shift", "เปิดรอบเซิร์ฟเวอร์", sid);
                                 } else {
+                                    applyOpenedByFromServer(app, res);
                                     ShiftPrefs.markServerSessionSynced(app, true);
                                     OpsLogger.info(app, "shift", "ซิงก์รอบแล้ว", sid);
                                 }
@@ -162,6 +189,23 @@ public final class SaleSync {
                 });
     }
 
+    private static void putOpenedBy(JSONObject body, String openedByEmployeeId, String openedByName)
+            throws Exception {
+        String id = openedByEmployeeId == null ? "" : openedByEmployeeId.trim();
+        String name = openedByName == null ? "" : openedByName.trim();
+        if (!id.isEmpty()) body.put("openedByEmployeeId", id);
+        if (!name.isEmpty()) body.put("openedByName", name);
+    }
+
+    private static void applyOpenedByFromServer(Context context, JSONObject data) {
+        if (context == null || data == null) return;
+        String id = data.optString("openedByEmployeeId", "");
+        String name = data.optString("openedByName", "");
+        if (!id.isEmpty() || !name.isEmpty()) {
+            ShiftPrefs.setOpenedBy(context, id, name);
+        }
+    }
+
     /**
      * If local shift is open but CF open never landed, retry until BO can see the session.
      * Called from flushPending + heartbeat pulse.
@@ -179,6 +223,10 @@ public final class SaleSync {
             body.put("sessionId", sessionId);
             body.put("openingCash", ShiftPrefs.openingCash(app));
             body.put("shift", ShiftPrefs.shift(app));
+            putOpenedBy(
+                    body,
+                    ShiftPrefs.openedByEmployeeId(app),
+                    ShiftPrefs.openedByName(app));
             JSONObject res = MenuRepository.postJson(OPEN_URL, body, 4_000, 6_000);
             if (res.optBoolean("ok", false)) {
                 String sid = res.optString("sessionId", sessionId);
@@ -195,7 +243,9 @@ public final class SaleSync {
                             res.optInt("saleCount", ShiftPrefs.saleCount(app)),
                             res.optInt("voidedCount", ShiftPrefs.voidedCount(app)),
                             res.optDouble("discountTotal", ShiftPrefs.discountTotal(app)));
+                    applyOpenedByFromServer(app, res);
                 } else {
+                    applyOpenedByFromServer(app, res);
                     ShiftPrefs.markServerSessionSynced(app, true);
                 }
                 OpsLogger.info(app, "shift", "ซิงก์รอบค้างสำเร็จ", sid);
@@ -305,17 +355,19 @@ public final class SaleSync {
                         if (report != null) {
                             ShiftPrefs.setNextOpeningCash(app, report.leaveFloat);
                         }
-                        String staff = "";
-                        try {
-                            String shopRaw =
-                                    app.getSharedPreferences("npos_menu", Context.MODE_PRIVATE)
-                                            .getString("shopJson", "{}");
-                            staff =
-                                    new JSONObject(shopRaw == null ? "{}" : shopRaw)
-                                            .optString("receiptStaffName", "")
-                                            .trim();
-                        } catch (Exception ignored) {
-                            /* optional */
+                        String staff = ShiftPrefs.openedByName(app);
+                        if (staff == null || staff.trim().isEmpty()) {
+                            try {
+                                String shopRaw =
+                                        app.getSharedPreferences("npos_menu", Context.MODE_PRIVATE)
+                                                .getString("shopJson", "{}");
+                                staff =
+                                        new JSONObject(shopRaw == null ? "{}" : shopRaw)
+                                                .optString("receiptStaffName", "")
+                                                .trim();
+                            } catch (Exception ignored) {
+                                /* optional */
+                            }
                         }
                         SessionHistory.rememberClose(
                                 app, report, staff, DeviceIdentity.getOrCreateInstallId(app));
@@ -812,6 +864,14 @@ public final class SaleSync {
                             OpsLogger.warn(app, "printer", "ข้ามพิมพ์สรุปรอบ — ยังไม่เลือกปริ้นเตอร์", reportKind);
                         } else {
                             JSONObject shop = loadShopJson(app);
+                            try {
+                                String opener = ShiftPrefs.openedByName(app);
+                                if (opener != null && !opener.trim().isEmpty()) {
+                                    shop.put("openedByName", opener.trim());
+                                }
+                            } catch (Exception ignored) {
+                                /* optional */
+                            }
                             double cash = ShiftPrefs.cashTotal(app);
                             double pp = ShiftPrefs.promptpayTotal(app);
                             double transfer = ShiftPrefs.transferTotal(app);

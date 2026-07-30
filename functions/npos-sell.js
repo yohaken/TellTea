@@ -229,6 +229,27 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
     } catch (_) {
       /* optional */
     }
+    // Active employee roster for clock-in name picker (not OT shift table).
+    let employees = [];
+    try {
+      const empSnap = await db.collection("employees").orderBy("name").limit(80).get();
+      employees = empSnap.docs
+        .map((doc) => {
+          const d = doc.data() || {};
+          if (d.active === false) return null;
+          const name = asString(d.name, 80);
+          if (!name) return null;
+          return {
+            id: doc.id,
+            name,
+            nickname: asString(d.nickname, 40),
+          };
+        })
+        .filter(Boolean);
+    } catch (empErr) {
+      console.warn("nposShopSettings employees", empErr && empErr.message);
+      employees = [];
+    }
     res.status(200).json({
       ok: true,
       shopName: asString(x.shopName, 120) || "TellTea",
@@ -240,6 +261,7 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
       receiptStaffName: asString(x.receiptStaffName, 80) || "หน้าร้าน",
       receiptFooterNote: asString(x.receiptFooterNote, 160),
       brandLogo,
+      employees,
       menuArrangeMode: x.menuArrangeMode === "bestsellers" ? "bestsellers" : "fix",
       bestsellerWindowDays:
         typeof x.bestsellerWindowDays === "number" && x.bestsellerWindowDays >= 7
@@ -332,6 +354,8 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
           transferTotal: Number(best.data.transferTotal) || 0,
           voidedCount: Number(best.data.voidedCount) || 0,
           discountTotal: Number(best.data.discountTotal) || 0,
+          openedByEmployeeId: asString(best.data.openedByEmployeeId, 64),
+          openedByName: asString(best.data.openedByName, 80),
         });
         return;
       }
@@ -339,6 +363,8 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
 
     const requestedId = asString(body.sessionId, 80) || `${installId}_${now}`;
     const openingCash = Number(body.openingCash);
+    const openedByEmployeeId = asString(body.openedByEmployeeId, 64);
+    const openedByName = asString(body.openedByName, 80);
 
     // Never revive a BO-force / already-closed round via merge — tablet must settle then open new.
     if (requestedId) {
@@ -360,22 +386,32 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
     }
 
     const sessionId = requestedId || `${installId}_${now}`;
-    await db.doc(`posSessions/${sessionId}`).set(
-      {
-        deviceId: installId,
-        date: startOfBangkokDay(now),
-        shift,
-        openedAt: now,
-        status: "open",
-        saleCount: 0,
-        totalSales: 0,
-        openingCash: Number.isFinite(openingCash) && openingCash >= 0 ? openingCash : 0,
-        updatedAt: now,
-        source: "npos-telltea",
-      },
-      { merge: true },
-    );
-    res.status(200).json({ ok: true, sessionId, shift, openedAt: now, resumed: false });
+    const patch = {
+      deviceId: installId,
+      date: startOfBangkokDay(now),
+      shift,
+      openedAt: now,
+      status: "open",
+      saleCount: 0,
+      totalSales: 0,
+      openingCash: Number.isFinite(openingCash) && openingCash >= 0 ? openingCash : 0,
+      updatedAt: now,
+      source: "npos-telltea",
+    };
+    if (openedByName) {
+      patch.openedByName = openedByName;
+      patch.openedByEmployeeId = openedByEmployeeId || "";
+    }
+    await db.doc(`posSessions/${sessionId}`).set(patch, { merge: true });
+    res.status(200).json({
+      ok: true,
+      sessionId,
+      shift,
+      openedAt: now,
+      resumed: false,
+      openedByName: openedByName || "",
+      openedByEmployeeId: openedByEmployeeId || "",
+    });
   } catch (err) {
     console.error("nposSessionOpen", err);
     res.status(500).json({ ok: false, error: "session_open_failed" });

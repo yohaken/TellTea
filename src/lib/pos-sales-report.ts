@@ -166,6 +166,8 @@ function mapSession(id: string, data: Record<string, unknown>): PosSession {
     discrepancyNote: str("discrepancyNote"),
     discrepancyLabel: str("discrepancyLabel"),
     source: str("source"),
+    openedByEmployeeId: str("openedByEmployeeId"),
+    openedByName: str("openedByName"),
   };
 }
 
