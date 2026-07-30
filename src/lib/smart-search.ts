@@ -1,5 +1,10 @@
 import { labelLedgerType } from "./ledger-labels";
-import { formatDateShort, formatPlainNumber } from "./utils";
+import {
+  bangkokDateKey,
+  formatDateShort,
+  formatPlainNumber,
+  toEpochMs,
+} from "./utils";
 
 function normalizeText(value: string) {
   return value
@@ -27,13 +32,16 @@ type DatedRow = {
 };
 
 /**
- * UI list order — always newest calendar date first, then newest createdAt.
- * Search pools often arrive oldest→newest from Firestore range queries.
+ * UI list order — Asia/Bangkok calendar day newest→oldest, then createdAt.
+ * Uses Bangkok day keys so mixed UTC/Bangkok midnights still match the date column.
  */
 export function sortByDateNewestFirst<T extends DatedRow>(rows: T[]): T[] {
-  return [...rows].sort(
-    (a, b) => b.date - a.date || (b.createdAt || 0) - (a.createdAt || 0),
-  );
+  return [...rows].sort((a, b) => {
+    const aKey = bangkokDateKey(toEpochMs(a.date));
+    const bKey = bangkokDateKey(toEpochMs(b.date));
+    if (aKey !== bKey) return bKey.localeCompare(aKey);
+    return toEpochMs(b.createdAt) - toEpochMs(a.createdAt);
+  });
 }
 
 type SearchableOwnerRow = {

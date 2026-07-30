@@ -26,6 +26,7 @@ import {
 } from "./entry-vat";
 import { getDb } from "./firebase";
 import type { LedgerEntry } from "./types";
+import { startOfLocalDay, toEpochMs } from "./utils";
 import { normalizeMoney, roundMoney } from "./vat-sales";
 import type { ImportOwnerBookRow } from "./xlsx-import";
 
@@ -99,7 +100,7 @@ function normalizeReceiptFields(input: {
 
 function mapEntry(d: QueryDocumentSnapshot): OwnerBookEntry {
   const data = d.data() as Omit<OwnerBookEntry, "id">;
-  const createdAt = Number(data.createdAt) || 0;
+  const createdAt = toEpochMs((data as { createdAt?: unknown }).createdAt);
   const amountOut = Number(data.amountOut) || 0;
   const { receiptUrl, receiptUrls } = normalizeReceiptFields({
     receiptUrl: data.receiptUrl,
@@ -121,10 +122,11 @@ function mapEntry(d: QueryDocumentSnapshot): OwnerBookEntry {
   return {
     id: d.id,
     ...data,
+    date: toEpochMs((data as { date?: unknown }).date),
     amountIn: 0,
     amountOut,
     createdAt,
-    updatedAt: Number(data.updatedAt) || createdAt,
+    updatedAt: toEpochMs((data as { updatedAt?: unknown }).updatedAt) || createdAt,
     note: typeof data.note === "string" ? data.note : "",
     receiptUrl,
     receiptUrls,
@@ -254,7 +256,7 @@ export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<str
     throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล หรือกดใช้ประมาณ");
   }
   const payload = {
-    date: input.date,
+    date: startOfLocalDay(toEpochMs(input.date) || input.date),
     description: input.description.trim(),
     amountIn: 0,
     amountOut,
@@ -314,7 +316,7 @@ export async function updateOwnerBookEntry(
   const next: Record<string, string | number | boolean | string[]> = {
     updatedAt: Date.now(),
   };
-  if (patch.date != null) next.date = patch.date;
+  if (patch.date != null) next.date = startOfLocalDay(toEpochMs(patch.date) || patch.date);
   if (patch.description != null) next.description = patch.description.trim();
   if (patch.amountOut != null) next.amountOut = Number(patch.amountOut);
   if (patch.type != null) next.type = patch.type.trim();
