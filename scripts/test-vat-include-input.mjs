@@ -28,6 +28,6 @@ assert.match(ui, /view\.inputVatApplied/);
 assert.match(ui, /ยังไม่หัก/);
 
 const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
-assert.match(version, /APP_BUILD = 509/);
+assert.match(version, /APP_BUILD = 510/);
 
 console.log("OK test-vat-include-input");
