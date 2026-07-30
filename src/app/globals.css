@@ -3251,6 +3251,53 @@ body.modal-open .main-panel {
   min-width: 38rem;
 }
 
+/*
+ * Phase 5 table layout — ผลิตสินค้า (.production-sheet).
+ * Date/row sizing from ledger-staff-sheet prototype; bleed via shared .sheet-bleed.
+ * Scoped under .production-page so OT / other modules stay untouched.
+ */
+.production-page .production-sheet .sheet-table--dense th,
+.production-page .production-sheet .sheet-table--dense td {
+  padding: 0.18rem 0.3rem;
+  line-height: 1.15;
+}
+
+.production-page .production-sheet .sheet-table .col-date {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  white-space: nowrap;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+.production-page .production-sheet .prod-table .prod-col-worker {
+  font-size: 0.62rem;
+}
+
+.production-page .production-sheet .prod-name-row .desc-link {
+  font-size: 0.66rem;
+  line-height: 1.15;
+}
+
+.production-page .production-sheet .sheet-table .col-out {
+  min-width: 2.55rem;
+  padding-left: 0.18rem;
+  padding-right: 0.28rem;
+  font-size: 0.66rem;
+}
+
+.production-page .production-sheet .sheet-table .col-note {
+  max-width: 3.6rem;
+  font-size: 0.58rem;
+}
+
+.production-page .production-sheet .bulk-check-col {
+  width: 1.45rem;
+  min-width: 1.45rem;
+  padding: 0.12rem !important;
+}
+
 /* prod density via .sheet-table--dense */
 
 .prod-table .prod-col-worker {
