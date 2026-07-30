@@ -11,6 +11,7 @@ import { ChevronDown, ChevronUp, Trash2, X } from "lucide-react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
+import { SheetDateCell } from "@/components/SheetDateCell";
 import {
   acceptBillNotice,
   addBillNotice,
