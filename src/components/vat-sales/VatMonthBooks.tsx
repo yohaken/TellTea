@@ -74,7 +74,10 @@ import {
   subscribeVatImportMonthMerged,
 } from "@/lib/vat-import-month-sync";
 import {
+  computeNetProfitMarginPct,
+  computeRealProfitAfterVat,
   computeSfSendAmount,
+  computeSfUnsentAmount,
   loadSfSendPct,
   loadSfSendSource,
   saveSfSendPct,
@@ -426,9 +429,25 @@ export function VatMonthBooks({ actor }: Props) {
     applySfSendToTable(source, pct);
   }
 
+  const sfSendSourceNum = useMemo(
+    () => parseVatMoneyInput(sfSendSourceStr),
+    [sfSendSourceStr],
+  );
   const sfSendPreview = useMemo(
-    () => computeSfSendAmount(parseVatMoneyInput(sfSendSourceStr), sfSendPct),
-    [sfSendSourceStr, sfSendPct],
+    () => computeSfSendAmount(sfSendSourceNum, sfSendPct),
+    [sfSendSourceNum, sfSendPct],
+  );
+  const sfUnsent = useMemo(
+    () => computeSfUnsentAmount(sfSendSourceNum, sfSendPct),
+    [sfSendSourceNum, sfSendPct],
+  );
+  const realProfitAfterVat = useMemo(
+    () => computeRealProfitAfterVat(view.profitAfterVat, sfUnsent),
+    [view.profitAfterVat, sfUnsent],
+  );
+  const netProfitMarginPct = useMemo(
+    () => computeNetProfitMarginPct(view.profitAfterVat, view.incomeTotal),
+    [view.profitAfterVat, view.incomeTotal],
   );
 
   function setGpField(key: MonthChannel, raw: string) {
@@ -835,7 +854,15 @@ export function VatMonthBooks({ actor }: Props) {
                 onChange={(e) => onSfSendPctChange(Number(e.target.value))}
               />
               <span className="vat-sf-send-pct">{sfSendPct}%</span>
-              <span className="vat-sf-send-out">→ {fmt(sfSendPreview)}</span>
+              <span className="vat-sf-send-out" title="ยอดที่ส่งเข้าตาราง">
+                → {fmt(sfSendPreview)}
+              </span>
+              <span
+                className="vat-sf-send-unsent"
+                title="ส่วนหน้าร้านที่ไม่ถูกส่งเข้าตาราง"
+              >
+                ค้าง {fmt(sfUnsent)}
+              </span>
             </div>
             <div className="sheet-wrap vat-month-slim-wrap">
               <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
@@ -1101,12 +1128,23 @@ export function VatMonthBooks({ actor }: Props) {
                 </tbody>
               </table>
             </div>
-            <p className="muted vat-sales-hint vat-hint-one-line">
-              ใช้เข้า ภ.ง.ด.: รายได้ถึงร้าน {fmt(view.incomeTotal)}
-              {view.booksOpex != null
-                ? ` · กำไรประมาณการ ${fmt(view.monthProfit ?? 0)}`
-                : " · กำลังผสานคชจ.บช.…"}{" "}
-              · กำไรสุทธิหลัง VAT = เงินเหลือดูเอง (ยังไม่ส่งเข้า P&L อัตโนมัติ)
+            <p
+              className="muted vat-sales-hint vat-hint-one-line vat-c-real-note"
+              title="โน้ตดูเอง — ไม่แก้ VAT / ภ.ง.ด. / P&L"
+            >
+              อัตรากำไรสุทธิ{" "}
+              {netProfitMarginPct == null ? "—" : `${fmt(netProfitMarginPct)}%`}
+              <span className="vat-c-real-sep">·</span>
+              กำไรจริง{" "}
+              {realProfitAfterVat == null ? "—" : fmt(realProfitAfterVat)}
+              <span className="muted">
+                {" "}
+                (= สุทธิหลัง VAT
+                {view.profitAfterVat == null
+                  ? ""
+                  : ` ${fmt(view.profitAfterVat)}`}{" "}
+                + ค้างหน้าร้าน {fmt(sfUnsent)})
+              </span>
             </p>
 
             <h2 className="vat-table-title" style={{ marginTop: "0.55rem" }}>

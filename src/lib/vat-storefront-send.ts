@@ -14,11 +14,48 @@ export function clampSfSendPct(n: number): number {
   return Math.min(100, Math.max(0, Math.round(n)));
 }
 
+function normalizeSource(source: number): number {
+  return Number.isFinite(source) && source > 0 ? source : 0;
+}
+
 /** ยอดส่งเข้าตาราง = source × pct/100 (ปัดสตางค์) */
 export function computeSfSendAmount(source: number, pct: number): number {
-  const s = Number.isFinite(source) && source > 0 ? source : 0;
+  const s = normalizeSource(source);
   const p = clampSfSendPct(pct);
   return Math.round(((s * p) / 100) * 100) / 100;
+}
+
+/** ส่วนหน้าร้านที่ไม่ถูกส่ง = source − ยอดส่ง */
+export function computeSfUnsentAmount(source: number, pct: number): number {
+  const s = normalizeSource(source);
+  const sent = computeSfSendAmount(s, pct);
+  return Math.round((s - sent) * 100) / 100;
+}
+
+/**
+ * กำไรจริง (ดูเอง) = กำไรสุทธิหลัง VAT + ส่วนหน้าร้านที่ไม่ถูกส่ง
+ * ไม่แตะสูตร VAT / ภ.ง.ด. / P&L
+ */
+export function computeRealProfitAfterVat(
+  profitAfterVat: number | null,
+  unsentStorefront: number,
+): number | null {
+  if (profitAfterVat == null || !Number.isFinite(profitAfterVat)) return null;
+  const u =
+    Number.isFinite(unsentStorefront) && unsentStorefront > 0
+      ? unsentStorefront
+      : 0;
+  return Math.round((profitAfterVat + u) * 100) / 100;
+}
+
+/** อัตรากำไรสุทธิ % เทียบรายได้ถึงร้าน */
+export function computeNetProfitMarginPct(
+  profitAfterVat: number | null,
+  incomeTotal: number,
+): number | null {
+  if (profitAfterVat == null || !Number.isFinite(profitAfterVat)) return null;
+  if (!Number.isFinite(incomeTotal) || incomeTotal <= 0) return null;
+  return Math.round((profitAfterVat / incomeTotal) * 10000) / 100;
 }
 
 export function loadSfSendPct(): number {

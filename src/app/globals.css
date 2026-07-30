@@ -17682,6 +17682,25 @@ a.ghost-btn {
   white-space: nowrap;
 }
 
+.vat-sf-send-unsent {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.64rem;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.55);
+  white-space: nowrap;
+}
+
+.vat-c-real-note {
+  font-size: 0.7rem !important;
+  line-height: 1.35;
+}
+
+.vat-c-real-sep {
+  margin: 0 0.28rem;
+  opacity: 0.45;
+}
+
 .vat-net-strip {
   display: flex;
   flex-wrap: wrap;
