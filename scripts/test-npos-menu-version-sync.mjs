@@ -48,7 +48,10 @@ const hbNative = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/diagnose/DeviceHeartbeat.java",
 );
 assert.match(hbNative, /MenuSyncCoordinator\.applyFromServer/);
+assert.match(hbNative, /import app\.telltea\.npos\.sell\.MenuSyncCoordinator/);
 assert.match(hbNative, /menuVersion/);
+// FQN after local Context `app` shadows package `app.telltea…` and breaks javac.
+assert.doesNotMatch(hbNative, /\bapp\.telltea\.npos\.sell\.MenuSyncCoordinator\.applyFromServer/);
 
 const repo = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/sell/MenuRepository.java",
