@@ -25,6 +25,8 @@ const steps = [
   { name: "counter-ops-phases", cmd: ["node", "scripts/test-npos-counter-ops-phases.mjs"] },
   { name: "shift-opener", cmd: ["node", "scripts/test-npos-shift-opener.mjs"] },
   { name: "session-cash-detail", cmd: ["node", "scripts/test-npos-session-cash-detail.mjs"] },
+  { name: "menu-version-sync", cmd: ["node", "scripts/test-npos-menu-version-sync.mjs"] },
+  { name: "payment-voice", cmd: ["node", "scripts/test-npos-payment-voice.mjs"] },
   { name: "receipt-readable", cmd: ["node", "scripts/test-npos-receipt-readable.mjs"] },
   { name: "thermal-all-docs", cmd: ["node", "scripts/test-npos-thermal-all-docs.mjs"] },
   { name: "z-sunmi-print", cmd: ["node", "scripts/test-npos-z-sunmi-print.mjs"] },

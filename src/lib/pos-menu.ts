@@ -16,8 +16,11 @@ import {
 import { getMenuDb, menuErrorHint, type MenuPriceChannel } from "./pos-menu-db";
 import { mapFirestoreError } from "./firestore-errors";
 import { listMenuOptionGroups, subscribeMenuOptionGroups } from "./pos-menu-options";
+import { bumpMenuVersion } from "./pos-menu-version";
 import { sanitizeMenuLabel } from "./pos-menu-text";
 import type { MenuCategory, MenuItem, MenuOptionGroup } from "./types";
+
+export { bumpMenuVersion } from "./pos-menu-version";
 
 export const MENU_CATEGORIES_COL = "menuCategories";
 export const MENU_ITEMS_COL = "menuItems";
@@ -213,6 +216,7 @@ export async function addMenuCategory(name: string): Promise<string> {
       updatedAt: now,
       source: "manual",
     });
+    void bumpMenuVersion();
     return ref.id;
   } catch (err) {
     throw new Error(mapFirestoreError(err, "เพิ่มหมวดเมนู", menuErrorHint()));
@@ -229,6 +233,7 @@ export async function updateMenuCategory(
   if (patch.sortOrder != null) next.sortOrder = patch.sortOrder;
   try {
     await updateDoc(doc(getMenuDb(), MENU_CATEGORIES_COL, id), next);
+    void bumpMenuVersion();
   } catch (err) {
     throw new Error(mapFirestoreError(err, "อัปเดตหมวดเมนู", menuErrorHint()));
   }
@@ -237,6 +242,7 @@ export async function updateMenuCategory(
 export async function deleteMenuCategory(id: string): Promise<void> {
   try {
     await deleteDoc(doc(getMenuDb(), MENU_CATEGORIES_COL, id));
+    void bumpMenuVersion();
   } catch (err) {
     throw new Error(mapFirestoreError(err, "ลบหมวดเมนู", menuErrorHint()));
   }
@@ -252,6 +258,7 @@ export async function restoreMenuCategory(id: string): Promise<void> {
 
 export async function reorderMenuCategories(ids: string[]): Promise<void> {
   await Promise.all(ids.map((id, i) => updateMenuCategory(id, { sortOrder: (i + 1) * 1000 })));
+  void bumpMenuVersion();
 }
 
 export async function reorderMenuItemsInCategory(categoryId: string, ids: string[]): Promise<void> {
@@ -282,6 +289,7 @@ export async function addMenuItem(input: {
       row.deliveryPrice = Math.max(0, input.deliveryPrice);
     }
     const ref = await addDoc(itemsCol(), row);
+    void bumpMenuVersion();
     return ref.id;
   } catch (err) {
     throw new Error(mapFirestoreError(err, "เพิ่มเมนู", menuErrorHint()));
@@ -294,6 +302,7 @@ export async function toggleMenuItemSoldOut(id: string, soldOut: boolean): Promi
       active: !soldOut,
       updatedAt: Date.now(),
     });
+    void bumpMenuVersion();
   } catch (err) {
     throw new Error(mapFirestoreError(err, soldOut ? "ปิดเมนูของหมด" : "เปิดเมนูขาย", menuErrorHint()));
   }
@@ -348,6 +357,7 @@ export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<
   }
   try {
     await updateDoc(doc(getMenuDb(), MENU_ITEMS_COL, id), next);
+    void bumpMenuVersion();
   } catch (err) {
     throw new Error(mapFirestoreError(err, "อัปเดตเมนู", menuErrorHint()));
   }
@@ -356,6 +366,7 @@ export async function updateMenuItem(id: string, patch: MenuItemPatch): Promise<
 export async function deleteMenuItem(id: string): Promise<void> {
   try {
     await deleteDoc(doc(getMenuDb(), MENU_ITEMS_COL, id));
+    void bumpMenuVersion();
   } catch (err) {
     throw new Error(mapFirestoreError(err, "ลบเมนู", menuErrorHint()));
   }

@@ -9,6 +9,7 @@ import android.widget.Toast;
 import java.lang.ref.WeakReference;
 
 import app.telltea.npos.diagnose.ForegroundHeartbeat;
+import app.telltea.npos.diagnose.PaymentVoice;
 import app.telltea.npos.diagnose.StoreClaimPrefs;
 import app.telltea.npos.printer.SunmiInnerPrinter;
 import app.telltea.npos.sell.MenuWarmup;
@@ -33,6 +34,11 @@ public final class NposApp extends Application {
       SunmiInnerPrinter.autoSelectIfNeeded(this);
     } catch (RuntimeException ignored) {
       /* never block boot */
+    }
+    try {
+      PaymentVoice.warm(this);
+    } catch (RuntimeException ignored) {
+      /* OEM TTS must not block boot */
     }
     registerActivityLifecycleCallbacks(
         new ActivityLifecycleCallbacks() {

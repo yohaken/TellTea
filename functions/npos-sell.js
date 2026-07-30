@@ -176,9 +176,20 @@ exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(a
       items = ordered.items;
     }
 
+    let menuVersion = 0;
+    try {
+      const metaPos = await db.doc("meta/pos").get();
+      const mv = metaPos.exists ? (metaPos.data() || {}).menuVersion : 0;
+      const mvn = typeof mv === "number" ? mv : Number(mv);
+      if (Number.isFinite(mvn) && mvn > 0) menuVersion = Math.round(mvn);
+    } catch (_) {
+      /* optional */
+    }
+
     res.status(200).json({
       ok: true,
       fetchedAt: Date.now(),
+      menuVersion,
       menuArrangeMode,
       windowDays: rankPack.windowDays || rank.windowDays || 7,
       rank,
@@ -280,6 +291,10 @@ exports.nposShopSettings = functions.region("asia-southeast1").https.onRequest(a
       receiptFooterNote: asString(x.receiptFooterNote, 160),
       brandLogo,
       employees,
+      menuVersion:
+        typeof x.menuVersion === "number" && x.menuVersion > 0
+          ? Math.round(x.menuVersion)
+          : 0,
       menuArrangeMode: x.menuArrangeMode === "bestsellers" ? "bestsellers" : "fix",
       bestsellerWindowDays:
         typeof x.bestsellerWindowDays === "number" && x.bestsellerWindowDays >= 7

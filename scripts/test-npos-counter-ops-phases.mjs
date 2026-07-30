@@ -50,5 +50,9 @@ assert.match(read("scripts/check-npos-shop.mjs"), /shift-opener/);
 assert.match(read("scripts/check-npos-shop.mjs"), /session-cash-detail/);
 assert.ok(existsSync(join(root, "scripts/test-npos-shift-opener.mjs")));
 assert.ok(existsSync(join(root, "scripts/test-npos-session-cash-detail.mjs")));
+assert.ok(existsSync(join(root, "scripts/test-npos-menu-version-sync.mjs")));
+assert.ok(existsSync(join(root, "scripts/test-npos-payment-voice.mjs")));
+assert.match(read("scripts/check-npos-shop.mjs"), /menu-version-sync/);
+assert.match(read("scripts/check-npos-shop.mjs"), /payment-voice/);
 
 console.log("OK test-npos-counter-ops-phases");

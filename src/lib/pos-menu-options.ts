@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { getMenuDb, menuErrorHint, type MenuPriceChannel } from "./pos-menu-db";
 import { mapFirestoreError } from "./firestore-errors";
+import { bumpMenuVersion } from "./pos-menu-version";
 import { sanitizeMenuLabel } from "./pos-menu-text";
 import type { MenuOptionChoice, MenuOptionGroup, MenuOptionSelectionType } from "./types";
 
@@ -125,6 +126,7 @@ export async function addMenuOptionGroup(name: string): Promise<string> {
       createdAt: now,
       updatedAt: now,
     });
+    void bumpMenuVersion();
     return ref.id;
   } catch (err) {
     throw new Error(mapFirestoreError(err, "เพิ่มกลุ่มตัวเลือก", menuErrorHint()));
@@ -160,6 +162,7 @@ export async function updateMenuOptionGroup(
   if (patch.active != null) next.active = patch.active;
   try {
     await updateDoc(doc(getMenuDb(), MENU_OPTION_GROUPS_COL, id), next);
+    void bumpMenuVersion();
   } catch (err) {
     throw new Error(mapFirestoreError(err, "อัปเดตกลุ่มตัวเลือก", menuErrorHint()));
   }
@@ -168,6 +171,7 @@ export async function updateMenuOptionGroup(
 export async function deleteMenuOptionGroup(id: string): Promise<void> {
   try {
     await deleteDoc(doc(getMenuDb(), MENU_OPTION_GROUPS_COL, id));
+    void bumpMenuVersion();
   } catch (err) {
     throw new Error(mapFirestoreError(err, "ลบกลุ่มตัวเลือก", menuErrorHint()));
   }
@@ -277,6 +281,7 @@ export async function saveMenuOptionGroupFull(id: string, input: MenuOptionGroup
 
   try {
     await updateDoc(doc(getMenuDb(), MENU_OPTION_GROUPS_COL, id), next);
+    void bumpMenuVersion();
   } catch (err) {
     throw new Error(mapFirestoreError(err, "อัปเดตกลุ่มตัวเลือก", menuErrorHint()));
   }
