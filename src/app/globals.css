@@ -4619,6 +4619,22 @@ body.modal-open .main-panel {
   text-align: left;
 }
 
+.stock-history-round-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
 .stock-history-meta-inline {
   display: block;
   font-size: 0.48rem;
@@ -18923,25 +18939,32 @@ a.ghost-btn {
 }
 
 @media (max-width: 640px) {
+  /* Phone: stack เทียบเงินเข้า / แจ้งบิล top→bottom (full width). */
   .ledger-ops-duo {
-    gap: 0.22rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.4rem;
   }
 
-  .ledger-ops-duo .bill-notice-slim .col-note,
-  .ledger-ops-duo .bill-notice-slim .col-status {
-    display: none;
+  .ledger-ops-duo .cash-in-panel-title,
+  .ledger-ops-duo .bill-notice-panel-title {
+    font-size: 0.8rem;
   }
 
-  .ledger-ops-duo .bill-notice-slim .col-act {
-    width: 3.2rem;
+  .ledger-ops-duo .cash-in-panel-meta,
+  .ledger-ops-duo .bill-notice-panel-meta {
+    font-size: 0.64rem;
   }
 
-  .ledger-ops-duo .cash-in-slim .col-type {
-    display: none;
+  .ledger-ops-duo .cash-in-slim,
+  .ledger-ops-duo .bill-notice-slim {
+    font-size: 0.66rem;
   }
 
-  .ledger-ops-duo .cash-in-create-field span {
-    display: none;
+  .ledger-ops-duo .cash-in-slim .col-date,
+  .ledger-ops-duo .bill-notice-slim .col-date {
+    width: 3.55rem;
+    min-width: 3.55rem;
+    max-width: 3.55rem;
   }
 }
 

@@ -19,7 +19,7 @@ const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
 const assertRules = read("scripts/assert-firestore-rules.mjs");
 
-assert.match(version, /APP_BUILD\s*=\s*482/);
+assert.match(version, /APP_BUILD\s*=\s*483/);
 assert.equal(existsSync(join(root, "src/components/LedgerModeSwitch.tsx")), false);
 assert.match(ledger, /CashInLedgerPanel/);
 assert.match(ledger, /ledger-ops-duo/);
@@ -65,6 +65,7 @@ assert.match(css, /\.cash-in-slim \.col-date/);
 assert.match(css, /width: 3\.55rem/);
 assert.match(css, /\.ledger-ops-duo\b/);
 assert.match(css, /grid-template-columns:\s*minmax\(0,\s*1fr\)\s*minmax\(0,\s*1fr\)/);
+assert.match(css, /Phone: stack/);
 assert.match(lib, /export function formatCashDayShort/);
 assert.match(lib, /getFullYear\(\) \+ 543/);
 

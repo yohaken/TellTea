@@ -103,9 +103,43 @@ export function stockRoundDateLabelBe(
   return `${dayOfMonth}/${month + 1}/${String(yearBe).slice(-2)}`;
 }
 
-/** All 1·10·20 slots — empty future rows stay for plan-ahead. */
+/** All 1·10·20 slots in a month (past uncounted + plan-ahead). */
 function applicableRounds(_year: number, _month: number): StockCountRound[] {
   return STOCK_COUNT_ROUNDS;
+}
+
+export type StockRoundSlot = {
+  year: number;
+  month: number;
+  dayOfMonth: StockCountRound;
+  dateMs: number;
+};
+
+/** Next N round slots on/after `from` (system plan-ahead — default 3). */
+export function upcomingStockRounds(
+  count = 3,
+  from: Date = new Date(),
+): StockRoundSlot[] {
+  const start = new Date(from);
+  start.setHours(0, 0, 0, 0);
+  const startMs = start.getTime();
+  const out: StockRoundSlot[] = [];
+  let y = start.getFullYear();
+  let m = start.getMonth();
+  for (let guard = 0; guard < 36 && out.length < count; guard += 1) {
+    for (const dayOfMonth of STOCK_COUNT_ROUNDS) {
+      const dateMs = roundDateMs(y, m, dayOfMonth);
+      if (dateMs < startMs) continue;
+      out.push({ year: y, month: m, dayOfMonth, dateMs });
+      if (out.length >= count) break;
+    }
+    m += 1;
+    if (m > 11) {
+      m = 0;
+      y += 1;
+    }
+  }
+  return out;
 }
 
 function latestSessionMap(sessions: StockCountSession[]): Map<string, StockCountSession> {
@@ -146,14 +180,23 @@ export function buildStockHistoryTimeline(
   let maxYear: number;
   let maxMonth: number;
 
+  // Always reserve the next 3 rounds ahead (system-created plan slots).
+  const ahead = upcomingStockRounds(3, today);
+  const aheadEnd = ahead[ahead.length - 1];
+
   if (sessions.length) {
     const dates = sessions.map((s) => s.date);
     const minD = new Date(Math.min(...dates));
-    const maxD = new Date(Math.max(...dates, todayMs));
+    const maxD = new Date(Math.max(...dates, todayMs, aheadEnd?.dateMs ?? todayMs));
     minYear = minD.getFullYear();
     minMonth = minD.getMonth();
     maxYear = maxD.getFullYear();
     maxMonth = maxD.getMonth();
+  } else if (aheadEnd) {
+    minYear = today.getFullYear();
+    minMonth = today.getMonth();
+    maxYear = aheadEnd.year;
+    maxMonth = aheadEnd.month;
   } else {
     minYear = maxYear = today.getFullYear();
     minMonth = maxMonth = today.getMonth();
@@ -186,7 +229,8 @@ export function buildStockHistoryTimeline(
   }
 
   const filledRounds = rows.filter((r) => r.session).length;
-  rows.sort((a, b) => b.dateMs - a.dateMs);
+  // Always newest → oldest by round date (plan-ahead + past uncounted).
+  rows.sort((a, b) => b.dateMs - a.dateMs || b.dayOfMonth - a.dayOfMonth);
   const oldest = rows[rows.length - 1];
   const newest = rows[0];
   const rangeLabel =

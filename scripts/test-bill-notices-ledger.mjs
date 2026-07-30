@@ -57,7 +57,7 @@ assert.match(css, /\.bill-notice-slim \.col-out/);
 assert.match(css, /\.bill-notice-slim \.col-out[\s\S]*?overflow:\s*visible/);
 assert.match(css, /\.ledger-ops-duo\b/);
 assert.match(ledger, /ledger-ops-duo/);
-assert.match(version, /APP_BUILD\s*=\s*482/);
+assert.match(version, /APP_BUILD\s*=\s*483/);
 
 assert.match(lib, /export async function addBillNotice/);
 assert.match(lib, /export async function acceptBillNotice/);
