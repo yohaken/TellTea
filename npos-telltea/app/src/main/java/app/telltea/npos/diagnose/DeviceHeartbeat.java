@@ -86,6 +86,10 @@ public final class DeviceHeartbeat {
                 if (res.has("heartbeatIntervalSec")) {
                     OpsPulsePrefs.applyFromServer(app, res.optInt("heartbeatIntervalSec", 5));
                 }
+                if (res.has("menuVersion")) {
+                    app.telltea.npos.sell.MenuSyncCoordinator.applyFromServer(
+                            app, res.optLong("menuVersion", 0L));
+                }
                 // Kick ≠ close: BO-closed round settles via sessionRemoteClosed (seat kept).
                 if (res.optBoolean("sessionRemoteClosed", false)
                         && ShiftPrefs.isOpen(app)

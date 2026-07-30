@@ -70,6 +70,10 @@ public final class MenuRepository {
                                     .putString(KEY_MENU, nextRaw)
                                     .putLong("menuSavedAt", System.currentTimeMillis())
                                     .apply();
+                            long menuVersion = res.optLong("menuVersion", 0L);
+                            if (menuVersion > 0) {
+                                MenuSyncCoordinator.markSynced(app, menuVersion);
+                            }
                             // Smooth: skip UI churn when snapshot unchanged.
                             if (prevRaw == null || !prevRaw.equals(nextRaw) || forceNetwork) {
                                 callback.onReady(MenuModels.fromJson(res));

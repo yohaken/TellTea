@@ -102,7 +102,7 @@ public final class OpenShiftFlow {
             true,
             chrome));
 
-    NposConfirmDialog.custom(
+    NposConfirmDialog.customMedium(
         activity,
         activity.getString(R.string.open_shift_float_title),
         null,
@@ -153,17 +153,18 @@ public final class OpenShiftFlow {
       LinearLayout chips = new LinearLayout(activity);
       chips.setOrientation(LinearLayout.VERTICAL);
       sc.addView(chips);
+      // Mid-size roster — not a full-screen profile wall.
       LinearLayout.LayoutParams scLp =
           new LinearLayout.LayoutParams(
-              LinearLayout.LayoutParams.MATCH_PARENT, ui.dp(220));
+              LinearLayout.LayoutParams.MATCH_PARENT, ui.dp(148));
       box.addView(sc, scLp);
 
       for (EmployeeRoster.Person p : roster) {
         TextView chip = new TextView(activity);
         chip.setText(p.label());
-        chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(15f, ui.bodySp));
+        chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(14f, ui.bodySp));
         chip.setTypeface(NposFonts.semibold(activity));
-        chip.setPadding(ui.dp(12), ui.dp(12), ui.dp(12), ui.dp(12));
+        chip.setPadding(ui.dp(10), ui.dp(8), ui.dp(10), ui.dp(8));
         chip.setBackgroundColor(
             p.id.equals(pickId[0]) || p.name.equals(pickName[0])
                 ? 0xFF1B6B3A
@@ -176,7 +177,7 @@ public final class OpenShiftFlow {
             new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = ui.dp(6);
+        lp.bottomMargin = ui.dp(4);
         chip.setLayoutParams(lp);
         chip.setOnClickListener(
             v -> {
@@ -201,7 +202,7 @@ public final class OpenShiftFlow {
 
     box.addView(typed);
 
-    NposConfirmDialog.custom(
+    NposConfirmDialog.customMedium(
         activity,
         activity.getString(R.string.open_shift_who_title),
         null,

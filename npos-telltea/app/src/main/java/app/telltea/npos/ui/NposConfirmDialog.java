@@ -121,7 +121,37 @@ public final class NposConfirmDialog {
         false,
         cancelable,
         onConfirm,
-        onCancel);
+        onCancel,
+        0.94f,
+        0.92f);
+  }
+
+  /**
+   * Mid-size card (~72% width · ~82% height) for open-shift / who-opened — not full-bleed.
+   */
+  public static AlertDialog customMedium(
+      Activity activity,
+      CharSequence title,
+      CharSequence message,
+      View content,
+      CharSequence confirmLabel,
+      CharSequence cancelLabel,
+      boolean cancelable,
+      ConfirmAction onConfirm,
+      Runnable onCancel) {
+    return show(
+        activity,
+        title,
+        message,
+        content,
+        confirmLabel,
+        cancelLabel,
+        false,
+        cancelable,
+        onConfirm,
+        onCancel,
+        0.72f,
+        0.82f);
   }
 
   public static AlertDialog custom(
@@ -154,12 +184,40 @@ public final class NposConfirmDialog {
       boolean cancelable,
       ConfirmAction onConfirm,
       Runnable onCancel) {
+    return show(
+        activity,
+        title,
+        message,
+        content,
+        confirmLabel,
+        cancelLabel,
+        destructive,
+        cancelable,
+        onConfirm,
+        onCancel,
+        0.94f,
+        0.92f);
+  }
+
+  private static AlertDialog show(
+      Activity activity,
+      CharSequence title,
+      CharSequence message,
+      View content,
+      CharSequence confirmLabel,
+      CharSequence cancelLabel,
+      boolean destructive,
+      boolean cancelable,
+      ConfirmAction onConfirm,
+      Runnable onCancel,
+      float widthFraction,
+      float heightFraction) {
     if (activity == null || activity.isFinishing()) return null;
 
     LinearLayout root = new LinearLayout(activity);
     root.setOrientation(LinearLayout.VERTICAL);
     root.setBackgroundColor(NposUi.color(activity, R.color.npos_surface));
-    int pad = NposUi.dp(activity, 20);
+    int pad = NposUi.dp(activity, widthFraction < 0.85f ? 14 : 20);
     root.setPadding(pad, pad, pad, pad);
 
     if (title != null && title.length() > 0) {
@@ -252,7 +310,10 @@ public final class NposConfirmDialog {
       if (window != null) {
         window.setBackgroundDrawableResource(android.R.color.transparent);
         DisplayMetrics dm = activity.getResources().getDisplayMetrics();
-        int maxW = Math.round(dm.widthPixels * 0.94f);
+        float wf = widthFraction <= 0.2f || widthFraction > 1f ? 0.94f : widthFraction;
+        float hf = heightFraction <= 0.2f || heightFraction > 1f ? 0.92f : heightFraction;
+        int maxW = Math.round(dm.widthPixels * wf);
+        int maxH = Math.round(dm.heightPixels * hf);
         try {
           window.setLayout(Math.min(maxW, dm.widthPixels), ViewGroup.LayoutParams.WRAP_CONTENT);
         } catch (RuntimeException ignored) {
@@ -264,8 +325,14 @@ public final class NposConfirmDialog {
               WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
                   | WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
           focusFirstEditText(root);
+          // Cap height so who-opened / typed-name cards stay mid-size.
+          try {
+            window.setLayout(Math.min(maxW, dm.widthPixels), Math.min(maxH, dm.heightPixels));
+          } catch (RuntimeException ignored) {
+            /* OEM */
+          }
         } else {
-          fitCardToWindow(window, scroll, root);
+          fitCardToWindow(window, scroll, root, wf, hf);
         }
       }
     } catch (RuntimeException e) {
@@ -328,11 +395,18 @@ public final class NposConfirmDialog {
    * <p>Do not use when the dialog has an {@link EditText} — scaling breaks typing.
    */
   static void fitCardToWindow(Window window, View scroll, View card) {
+    fitCardToWindow(window, scroll, card, 0.94f, 0.92f);
+  }
+
+  static void fitCardToWindow(
+      Window window, View scroll, View card, float widthFraction, float heightFraction) {
     if (window == null || scroll == null || card == null) return;
     if (containsEditText(card) || containsEditText(scroll)) return;
     DisplayMetrics dm = card.getResources().getDisplayMetrics();
-    final int maxH = Math.round(dm.heightPixels * 0.92f);
-    final int maxW = Math.round(dm.widthPixels * 0.94f);
+    float wf = widthFraction <= 0.2f || widthFraction > 1f ? 0.94f : widthFraction;
+    float hf = heightFraction <= 0.2f || heightFraction > 1f ? 0.92f : heightFraction;
+    final int maxH = Math.round(dm.heightPixels * hf);
+    final int maxW = Math.round(dm.widthPixels * wf);
     try {
       window.setLayout(Math.min(maxW, dm.widthPixels), ViewGroup.LayoutParams.WRAP_CONTENT);
     } catch (RuntimeException ignored) {
