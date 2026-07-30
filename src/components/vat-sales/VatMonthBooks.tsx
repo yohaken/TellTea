@@ -113,15 +113,17 @@ function MoneyCell({
   locked,
   ariaLabel,
   onChange,
+  pulse,
 }: {
   value: string;
   locked: boolean;
   ariaLabel: string;
   onChange: (v: string) => void;
+  pulse?: boolean;
 }) {
   return (
     <input
-      className="vat-sales-input"
+      className={`vat-sales-input${pulse ? " is-sf-pulse" : ""}`}
       inputMode="decimal"
       disabled={locked}
       value={value}
@@ -134,6 +136,20 @@ function MoneyCell({
       }}
     />
   );
+}
+
+/** เมื่อติ๊กหักภาษีซื้อ → คชจ.ลดตาม VAT · ยกเลิก → คชจ.คืนบิลเต็ม */
+function applyClaimCostDelta(
+  row: MonthCategoryRow | null,
+  vatDeltaToCost: number,
+): MonthCategoryRow | null {
+  if (!row || !Number.isFinite(vatDeltaToCost) || vatDeltaToCost === 0) {
+    return row;
+  }
+  return {
+    ...row,
+    cogs: Math.max(0, Math.round(((row.cogs || 0) + vatDeltaToCost) * 100) / 100),
+  };
 }
 
 function ExpandBtn({
@@ -202,9 +218,11 @@ export function VatMonthBooks({ actor }: Props) {
   const [openStorefrontSales, setOpenStorefrontSales] = useState(true);
   const [importMap, setImportMap] = useState<ImportIntoBooksMap | null>(null);
 
-  /** A) แถบส่งหน้าร้าน → ตาราง — ไม่แตะ import/ช่องอื่น */
+  /** A) แถบส่งหน้าร้าน → ตาราง — ไม่แตะ import/ช่องอื่น / VAT */
   const [sfSendSourceStr, setSfSendSourceStr] = useState("");
   const [sfSendPct, setSfSendPct] = useState(100);
+  const [sfPulse, setSfPulse] = useState(false);
+  const sfPulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const draftRef = useRef(draft);
   draftRef.current = draft;
@@ -397,24 +415,44 @@ export function VatMonthBooks({ actor }: Props) {
     setSfSendPct(loadSfSendPct());
     const src = loadSfSendSource(month);
     setSfSendSourceStr(src > 0 ? moneyFieldValue(src) : "");
+    setSfPulse(false);
   }, [month]);
+
+  const flashSfCell = useCallback(() => {
+    setSfPulse(true);
+    if (sfPulseTimer.current) clearTimeout(sfPulseTimer.current);
+    sfPulseTimer.current = setTimeout(() => setSfPulse(false), 900);
+  }, []);
 
   const applySfSendToTable = useCallback(
     (source: number, pct: number) => {
       if (locked) return;
+      if (!(source > 0)) return; // ห้ามเขียน 0 ทับยอดในตารางเมื่อยังไม่มีต้นทาง
       const sent = computeSfSendAmount(source, pct);
-      setDraft((d) => patchTransfer(d, "storefront", sent));
+      setDraft((d) => {
+        if (Math.abs((d.transfer.storefront || 0) - sent) < 0.009) return d;
+        return patchTransfer(d, "storefront", sent);
+      });
       markDirty();
+      flashSfCell();
     },
-    [locked, markDirty],
+    [locked, markDirty, flashSfCell],
   );
+
+  /** ต้นทางแถบส่ง — ช่องกรอก หรือยอดหน้าร้านในตาราง (ถ้ายังไม่กรอก) */
+  function resolveSfSendSource(rawStr: string): number {
+    const typed = parseVatMoneyInput(rawStr);
+    if (typed > 0) return typed;
+    const fromTable = Number(draftRef.current.transfer.storefront) || 0;
+    return fromTable > 0 ? fromTable : 0;
+  }
 
   function onSfSendSourceChange(raw: string) {
     setSfSendSourceStr(raw);
     if (locked) return;
     const source = parseVatMoneyInput(raw);
     saveSfSendSource(month, source);
-    applySfSendToTable(source, sfSendPct);
+    if (source > 0) applySfSendToTable(source, sfSendPct);
   }
 
   function onSfSendPctChange(next: number) {
@@ -422,7 +460,16 @@ export function VatMonthBooks({ actor }: Props) {
     setSfSendPct(pct);
     saveSfSendPct(pct);
     if (locked) return;
-    const source = parseVatMoneyInput(sfSendSourceStr);
+    let source = resolveSfSendSource(sfSendSourceStr);
+    if (!(source > 0)) {
+      setMsg("ใส่ยอดหน้าร้านต้นทางก่อน แล้วค่อยเลื่อน % ส่งเข้าตาราง");
+      return;
+    }
+    // ถ้ายังไม่กรอกต้นทาง — เติมจากยอดในตารางแล้วค่อยคิด %
+    if (!(parseVatMoneyInput(sfSendSourceStr) > 0)) {
+      setSfSendSourceStr(moneyFieldValue(source));
+      saveSfSendSource(month, source);
+    }
     applySfSendToTable(source, pct);
   }
 
@@ -466,17 +513,29 @@ export function VatMonthBooks({ actor }: Props) {
   }
 
   const toggleLineClaim = async (line: BooksVatLine, nextClaim: boolean) => {
-    if (locked) return;
+    if (locked || line.vatClaim === nextClaim) return;
     const nextLines = booksLines.map((l) =>
       l.id === line.id && l.book === line.book
         ? { ...l, vatClaim: nextClaim }
         : l,
     );
     const nextVat = sumClaimedBooksVat(nextLines);
-    // อัปเดตยอดทันที → ภาษีซื้อ / VAT สุทธิขยับในรอบเรนเดอร์นี้
+    const vat = Number(line.vatInput) || 0;
+    // หักภาษีซื้อ → คชจ.ลด · ยกเลิก → คชจ.คืนเป็นบิลเต็ม
+    const costDelta = nextClaim ? -vat : vat;
     setBooksLines(nextLines);
     setDraft((d) => ({ ...d, ingredientVat: nextVat }));
+    if (line.book === "ledger") {
+      setBookStaff((r) => applyClaimCostDelta(r, costDelta));
+    } else {
+      setBookOwner((r) => applyClaimCostDelta(r, costDelta));
+    }
     markDirty();
+    setMsg(
+      nextClaim
+        ? `หักภาษีซื้อ ${fmt(vat)} · ภาษีซื้อสองบช.เพิ่ม · คชจ.ลด`
+        : `ยกเลิกหัก · ภาษีซื้อสองบช.ลด · คชจ.ใช้บิลเต็ม (+${fmt(vat)})`,
+    );
     try {
       if (line.book === "ledger") {
         await updateLedgerEntry(line.id, { vatClaim: nextClaim });
@@ -495,21 +554,36 @@ export function VatMonthBooks({ actor }: Props) {
 
   const toggleClaimAll = async (nextClaim: boolean) => {
     if (locked || booksLines.length === 0) return;
+    const changing = booksLines.filter((line) => line.vatClaim !== nextClaim);
+    if (changing.length === 0) return;
     const nextLines = booksLines.map((l) => ({ ...l, vatClaim: nextClaim }));
     const nextVat = sumClaimedBooksVat(nextLines);
+    let staffDelta = 0;
+    let ownerDelta = 0;
+    for (const line of changing) {
+      const vat = Number(line.vatInput) || 0;
+      const d = nextClaim ? -vat : vat;
+      if (line.book === "ledger") staffDelta += d;
+      else ownerDelta += d;
+    }
     setBooksLines(nextLines);
     setDraft((d) => ({ ...d, ingredientVat: nextVat }));
+    if (staffDelta) setBookStaff((r) => applyClaimCostDelta(r, staffDelta));
+    if (ownerDelta) setBookOwner((r) => applyClaimCostDelta(r, ownerDelta));
     markDirty();
+    setMsg(
+      nextClaim
+        ? `ติ๊กหักภาษีซื้อทั้งหมด · ภาษีซื้อสองบช. ${fmt(nextVat)}`
+        : "ยกเลิกหักทั้งหมด · คชจ.กลับเป็นบิลเต็ม · ภาษีซื้อสองบช. = 0",
+    );
     setBooksVatBusy(true);
     try {
       await Promise.all(
-        booksLines
-          .filter((line) => line.vatClaim !== nextClaim)
-          .map((line) =>
-            line.book === "ledger"
-              ? updateLedgerEntry(line.id, { vatClaim: nextClaim })
-              : updateOwnerBookEntry(line.id, { vatClaim: nextClaim }),
-          ),
+        changing.map((line) =>
+          line.book === "ledger"
+            ? updateLedgerEntry(line.id, { vatClaim: nextClaim })
+            : updateOwnerBookEntry(line.id, { vatClaim: nextClaim }),
+        ),
       );
       await syncBooksFromLedgers(month, {
         writeVat: true,
@@ -823,15 +897,15 @@ export function VatMonthBooks({ actor }: Props) {
             </h2>
             <div
               className="vat-sf-send"
-              title="ใส่ยอดหน้าร้าน แล้วเลื่อน % ส่งเข้าช่องหน้าร้านในตาราง"
+              title="ใส่ยอดหน้าร้านต้นทาง แล้วเลื่อน % — ยอดส่งเข้าช่อง「หน้าร้าน」ในตารางรายได้เท่านั้น · ไม่แตะภาษีขาย/ภาษีซื้อ"
             >
-              <span className="vat-sf-send-label">หน้าร้าน</span>
+              <span className="vat-sf-send-label">ส่งหน้าร้าน</span>
               <input
                 className="vat-sales-input vat-sf-send-input"
                 inputMode="decimal"
                 disabled={locked}
                 value={sfSendSourceStr}
-                placeholder="0"
+                placeholder="ยอดต้นทาง"
                 aria-label="ยอดหน้าร้านต้นทาง"
                 onChange={(e) => onSfSendSourceChange(e.target.value)}
                 onBlur={() => {
@@ -851,16 +925,26 @@ export function VatMonthBooks({ actor }: Props) {
                 onChange={(e) => onSfSendPctChange(Number(e.target.value))}
               />
               <span className="vat-sf-send-pct">{sfSendPct}%</span>
-              <span className="vat-sf-send-out" title="ยอดที่ส่งเข้าตาราง">
-                → {fmt(sfSendPreview)}
+              <span
+                className={`vat-sf-send-out${sfSendSourceNum > 0 ? " is-live" : ""}`}
+                title="ยอดที่ส่งเข้าช่องหน้าร้านในตาราง A"
+              >
+                → โอน {fmt(sfSendPreview)}
               </span>
               <span
                 className="vat-sf-send-unsent"
-                title="ส่วนหน้าร้านที่ไม่ถูกส่งเข้าตาราง"
+                title="ส่วนหน้าร้านที่ไม่ถูกส่งเข้าตารางรายได้"
               >
                 ค้าง {fmt(sfUnsent)}
               </span>
             </div>
+            <p className="muted vat-sales-hint vat-sf-send-hint">
+              แถบนี้ส่งเข้า「ยอดโอนหน้าร้าน」ในตาราง A เท่านั้น ·{" "}
+              <strong>ไม่เปลี่ยนภาษีขาย/ภาษีซื้อ</strong>
+              {sfSendSourceNum > 0
+                ? ""
+                : " · ใส่ยอดต้นทางก่อน แล้วเลื่อน % (หรือเลื่อนเพื่อใช้ยอดในตารางเป็นฐาน)"}
+            </p>
             <div className="sheet-wrap vat-month-slim-wrap">
               <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
                 <thead>
@@ -916,6 +1000,7 @@ export function VatMonthBooks({ actor }: Props) {
                         value={moneyFieldValue(draft.transfer.storefront)}
                         locked={locked}
                         ariaLabel="ยอดหน้าร้าน"
+                        pulse={sfPulse}
                         onChange={(v) => setTransferField("storefront", v)}
                       />
                     </td>
@@ -1358,6 +1443,11 @@ export function VatMonthBooks({ actor }: Props) {
 
             <section className="vat-table-block">
               <h3 className="vat-table-subtitle">ภาษีซื้อ — GP + สองบช.</h3>
+              <p className="muted vat-sales-hint vat-books-claim-hint">
+                ติ๊ก「หักภาษีซื้อ」= นับ VAT ในงบนี้ + ต้นทุนในคชจ.ลดลงตามภาษี ·
+                ไม่ติ๊ก「ซื้อไปเหอะ」= ไม่นับภาษีซื้อ · คชจ.ใช้บิลเต็ม ·{" "}
+                <strong>ภาษีขายด้านบนไม่เปลี่ยนจากติ๊กนี้</strong>
+              </p>
               <div className="sheet-wrap vat-month-slim-wrap">
                 <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
                   <thead>
@@ -1401,7 +1491,7 @@ export function VatMonthBooks({ actor }: Props) {
                           />
                           <span
                             className="vat-seg-label"
-                            title="ยอดจากรายการที่ติ๊ก「รวมเข้างบ」ในสองบช. — หักจากภาษีขายในแถบสุทธิ"
+                            title="ยอดจากรายการที่ติ๊ก「หักภาษีซื้อ」ในสองบช. — หักจากภาษีขายในแถบสุทธิ"
                           >
                             ภาษีซื้อสองบช.
                             {booksVatBusy ? " …" : ""}
@@ -1447,10 +1537,10 @@ export function VatMonthBooks({ actor }: Props) {
                                 onChange={(e) =>
                                   void toggleClaimAll(e.target.checked)
                                 }
-                                aria-label="ติ๊กรวมเข้างบทั้งหมด"
-                                title="ติ๊กรวมเข้างบทั้งหมด"
+                                aria-label="ติ๊กหักภาษีซื้อทั้งหมด"
+                                title="ติ๊กหักภาษีซื้อทั้งหมด"
                               />{" "}
-                              ติ๊กรวมเข้างบทั้งหมด ({booksLines.length})
+                              ติ๊กหักภาษีซื้อทั้งหมด ({booksLines.length})
                             </label>
                           </td>
                         </tr>
@@ -1472,7 +1562,11 @@ export function VatMonthBooks({ actor }: Props) {
                                       e.target.checked,
                                     )
                                   }
-                                  title="รวมเข้างบ — หักภาษีซื้อทันที"
+                                  title={
+                                    line.vatClaim
+                                      ? "กำลังหักภาษีซื้อ — แตะเพื่อยกเลิก (คชจ.กลับเป็นบิลเต็ม)"
+                                      : "ยังไม่หัก — แตะเพื่อหักภาษีซื้อ (คชจ.ลดตาม VAT)"
+                                  }
                                 />{" "}
                                 <button
                                   type="button"
@@ -1484,6 +1578,11 @@ export function VatMonthBooks({ actor }: Props) {
                                   {formatDateShort(line.date)} ·{" "}
                                   {line.description}
                                 </button>
+                                <span className="vat-claim-line-mode">
+                                  {line.vatClaim
+                                    ? `หักภาษีซื้อ · ต้นทุน ${fmt(Math.max(0, line.amountOut - line.vatInput))}`
+                                    : `ซื้อไปเหอะ · ต้นทุนบิลเต็ม ${fmt(line.amountOut)}`}
+                                </span>
                               </label>
                             </td>
                             <td className="col-num">{fmt(line.vatInput)}</td>

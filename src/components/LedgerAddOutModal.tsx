@@ -441,6 +441,7 @@ export function LedgerAddOutModal({
               vatClaim={vatClaim}
               onVatClaimChange={setVatClaim}
               disabled={busy}
+              amountInclusive={Number(amount) || 0}
               onEditVat={() => {
                 setVatVerified(false);
                 setVatFirstPhase("manual");

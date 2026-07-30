@@ -1,5 +1,6 @@
 "use client";
 
+import { VatClaimModeToggle } from "@/components/EntryVatFieldset";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { parseVatInputStr } from "@/lib/entry-vat";
 import type { VatFirstPhase } from "@/lib/ledger-vat-first";
@@ -182,6 +183,7 @@ export function VatFirstFormSummary({
   vatClaim = false,
   onVatClaimChange,
   disabled,
+  amountInclusive = 0,
 }: {
   hasVat: boolean;
   vatInput: number;
@@ -190,6 +192,7 @@ export function VatFirstFormSummary({
   vatClaim?: boolean;
   onVatClaimChange?: (claim: boolean) => void;
   disabled?: boolean;
+  amountInclusive?: number;
 }) {
   if (!hasVat) {
     return <p className="muted vat-first-summary-no">ไม่มี VAT · กรอกรายการได้เลย</p>;
@@ -206,31 +209,13 @@ export function VatFirstFormSummary({
         </button>
       </div>
       {vatInput > 0 && onVatClaimChange ? (
-        <div className="vat-claim-mode" role="group" aria-label="โหมดภาษีซื้อกับต้นทุน">
-          <p className="vat-claim-mode-label">ต้นทุนบัญชี</p>
-          <div className="vat-claim-mode-toggle">
-            <button
-              type="button"
-              className={`vat-claim-mode-btn${!vatClaim ? " is-active" : ""}`}
-              disabled={disabled}
-              aria-pressed={!vatClaim}
-              onClick={() => onVatClaimChange(false)}
-            >
-              ซื้อไปเหอะ
-              <span className="vat-claim-mode-sub">บิลเต็มเป็นต้นทุน</span>
-            </button>
-            <button
-              type="button"
-              className={`vat-claim-mode-btn${vatClaim ? " is-active" : ""}`}
-              disabled={disabled}
-              aria-pressed={vatClaim}
-              onClick={() => onVatClaimChange(true)}
-            >
-              หักภาษีซื้อ
-              <span className="vat-claim-mode-sub">ต้นทุนแยก VAT</span>
-            </button>
-          </div>
-        </div>
+        <VatClaimModeToggle
+          vatClaim={vatClaim}
+          disabled={disabled}
+          onChange={onVatClaimChange}
+          amountInclusive={amountInclusive}
+          vatInput={vatInput}
+        />
       ) : null}
     </div>
   );

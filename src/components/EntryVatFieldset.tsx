@@ -36,20 +36,31 @@ type Props = {
 
 /**
  * สลับโหมด: หักภาษีซื้อ vs ซื้อไปเหอะ (ต้นทุนรวม VAT)
- * ใช้ซ้ำในฟอร์มบช. + สรุป VAT-first
  */
 export function VatClaimModeToggle({
   vatClaim,
   disabled,
   onChange,
+  amountInclusive = 0,
+  vatInput = 0,
 }: {
   vatClaim: boolean;
   disabled?: boolean;
   onChange: (claim: boolean) => void;
+  amountInclusive?: number;
+  vatInput?: number;
 }) {
+  const hasNums = amountInclusive > 0 && vatInput > 0;
+  const costClaim = hasNums
+    ? businessCostOut(amountInclusive, true, vatInput, true)
+    : 0;
+  const costAbsorb = hasNums
+    ? businessCostOut(amountInclusive, true, vatInput, false)
+    : 0;
+
   return (
     <div className="vat-claim-mode" role="group" aria-label="โหมดภาษีซื้อกับต้นทุน">
-      <p className="vat-claim-mode-label">ต้นทุนบัญชี</p>
+      <p className="vat-claim-mode-label">จะเอาภาษีซื้อไปหัก VAT เดือนไหม?</p>
       <div className="vat-claim-mode-toggle">
         <button
           type="button"
@@ -58,8 +69,11 @@ export function VatClaimModeToggle({
           aria-pressed={!vatClaim}
           onClick={() => onChange(false)}
         >
-          ซื้อไปเหอะ
-          <span className="vat-claim-mode-sub">บิลเต็มเป็นต้นทุน</span>
+          ซื้อไปเหอะ · ไม่หัก VAT
+          <span className="vat-claim-mode-sub">
+            ต้นทุน = บิลเต็ม
+            {hasNums ? ` ${formatVatMoney(costAbsorb)}` : ""}
+          </span>
         </button>
         <button
           type="button"
@@ -68,17 +82,28 @@ export function VatClaimModeToggle({
           aria-pressed={vatClaim}
           onClick={() => onChange(true)}
         >
-          หักภาษีซื้อ
-          <span className="vat-claim-mode-sub">ต้นทุนแยก VAT</span>
+          หักภาษีซื้อใน VAT เดือน
+          <span className="vat-claim-mode-sub">
+            ต้นทุน = แยก VAT
+            {hasNums ? ` ${formatVatMoney(costClaim)}` : ""}
+          </span>
         </button>
       </div>
+      <p className="muted vat-claim-mode-hint">
+        {vatClaim
+          ? hasNums
+            ? `หักภาษีซื้อ ${formatVatMoney(vatInput)} บาทออกจากต้นทุน → ใช้ต้นทุน ${formatVatMoney(costClaim)} หักรายได้ · และนับภาษีซื้อในงบ VAT`
+            : "หักภาษีซื้อออกจากต้นทุน · นับยอด VAT ในงบเดือน"
+          : hasNums
+            ? `ไม่หักภาษีซื้อ → ใช้บิลเต็ม ${formatVatMoney(costAbsorb)} เป็นต้นทุน/คชจ. · ไม่นับภาษีซื้อในงบ VAT`
+            : "ไม่หักภาษีซื้อ → บิลเต็มเป็นต้นทุน · ไม่นับในงบ VAT"}
+      </p>
     </div>
   );
 }
 
 /**
  * ช่อง VAT — AI อ่านก่อน · ติ๊กตรวจตรงบิล · กรอกเอง / ประมาณเป็นทางเลือก
- * Compact copy: สถานะสั้น · ปุ่มสั้น · ไม่ซ้ำ intro ยาว
  */
 export function EntryVatFieldset({
   idPrefix,
@@ -170,7 +195,6 @@ export function EntryVatFieldset({
               onVatClaimChange?.(false);
               return;
             }
-            // ไม่ auto ใส่ 7/107 — ให้กรอกเองหรือรอ AI
             if (!vatInputStr.trim()) onVatSourceChange("manual");
           }}
         />
@@ -262,25 +286,20 @@ export function EntryVatFieldset({
               vatClaim={vatClaim}
               disabled={disabled}
               onChange={onVatClaimChange}
+              amountInclusive={amountInclusive || 0}
+              vatInput={vatNum}
             />
           ) : null}
 
           {hasVatAmount && costBooks > 0 ? (
-            <p
-              className="muted form-hint-inline"
-              title={
-                vatClaim
-                  ? "หักภาษีซื้อแล้ว · เงินออกยังรวม VAT · รายงานกำไรใช้ต้นทุนหลังหัก"
-                  : "ไม่หักภาษีซื้อ · ใช้บิลเต็มเป็นต้นทุน/ค่าใช้จ่าย"
-              }
-            >
+            <p className="muted form-hint-inline">
               {vatClaim
-                ? `ต้นทุนบัญชี ≈ ${formatVatMoney(costBooks)} (เงินออก − ภาษีซื้อ)`
-                : `ต้นทุนบัญชี ≈ ${formatVatMoney(costBooks)} (บิลเต็ม · รวม VAT)`}
+                ? `สรุป: ต้นทุนบัญชี ${formatVatMoney(costBooks)} · ภาษีซื้อ ${formatVatMoney(vatNum)} ไปหักใน VAT เดือน`
+                : `สรุป: ต้นทุนบัญชี ${formatVatMoney(costBooks)} (บิลเต็ม) · ไม่หักภาษีซื้อใน VAT เดือน`}
             </p>
           ) : hasVat ? (
             <p className="muted form-hint-inline">
-              ใส่ภาษีซื้อแล้ว แล้วเลือกโหมดต้นทุน
+              ใส่ภาษีซื้อแล้ว แล้วเลือกโหมดด้านบน
             </p>
           ) : null}
 

@@ -54,9 +54,17 @@ const ui = readFileSync(
   "utf8",
 );
 assert.match(ui, /vat-sf-send-unsent/);
+assert.match(ui, /vat-sf-send-hint/);
+assert.match(ui, /resolveSfSendSource/);
+assert.match(ui, /ไม่เปลี่ยนภาษีขาย\/ภาษีซื้อ/);
+assert.match(ui, /applyClaimCostDelta/);
+assert.match(ui, /หักภาษีซื้อทั้งหมด/);
 assert.match(ui, /vat-c-real-note/);
 assert.match(ui, /กำไรจริง/);
 assert.match(ui, /อัตรากำไรสุทธิ/);
 assert.match(ui, /computeSfUnsentAmount/);
+
+const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
+assert.match(version, /APP_BUILD = 503/);
 
 console.log("OK test-vat-storefront-send");
