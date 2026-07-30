@@ -16,11 +16,12 @@ const {
   DEFAULT_MODEL,
   DEFAULT_BUSINESS_CONTEXT,
   formatBusinessProfile,
-  MAX_IMAGES,
 } = require("./classify-ledger");
 const { mergeExtractResults, normalizeDocKind } = require("./merge-receipt-extract");
 
 const MAX_IMAGE_BYTES = 3.5 * 1024 * 1024;
+/** Slip + packing/delivery + tax invoice (+ spare). Client LEDGER_RECEIPT_MAX is 6. */
+const EXTRACT_MAX_IMAGES = 4;
 const BOOTSTRAP_GEMINI_API_KEY = "";
 
 const EXTRACT_SYSTEM_PROMPT = `คุณเป็นผู้ช่วยอ่านใบเสร็จ/หลักฐานการจ่ายเงินสำหรับร้านเครื่องดื่ม/เบเกอรี่ในไทย
@@ -31,26 +32,27 @@ const EXTRACT_SYSTEM_PROMPT = `คุณเป็นผู้ช่วยอ่�
 
 กฎ:
 - docKind:
-  - tax_invoice = ใบเสร็จรับเงิน / ใบกำกับภาษี / ใบกำกับอย่างย่อ / บิลห้าง (ท็อปเวิลด์ ท็อปส์ แม็คโคร ฯลฯ)
+  - tax_invoice = ใบเสร็จรับเงิน / ใบกำกับภาษี / ใบกำกับอย่างย่อ / บิลห้าง / ใบแจ้งค่าขนส่งที่มี VAT (ท็อปเวิลด์ ท็อปส์ แม็คโคร SCG ฯลฯ)
   - bank_slip = สลิปโอนเงิน / PromptPay / แอปธนาคาร / หลักฐานโอน — **ไม่มี VAT บนสลิปนี้**
-  - other = อื่นๆ
+  - other = อื่นๆ (ใบแพ็กกิ้ง/รายการสินค้าที่ไม่มีบรรทัดภาษี)
 - ถ้า docKind=bank_slip → hasVat=false, vatInput=null, vatBase=null เสมอ (อย่าเดา VAT จากยอดโอน)
 - date = วันที่บนเอกสารเป็น **ค.ศ. YYYY-MM-DD เท่านั้น** (เช่น 2025-07-22) — ถ้าบิลเป็นพ.ศ. ให้ลบ 543 ก่อน ห้ามส่งปีพ.ศ. ถ้าไม่ชัดให้ ""
-- description = สรุปสั้น ชัด (เช่น "ท็อปเวิลด์" "นมสดแม็คโคร" "โอนค่าของ")
+- description = สรุปสั้น ชัด (เช่น "ท็อปเวิลด์" "แม็คโคร" "ค่าขนส่งแม็คโคร" "โอนค่าของ")
 - amountOut = ยอดบนเอกสารนั้น (ตัวเลข ไม่มี comma) ถ้าไม่ชัดให้ null
-- type: cogs=วัตถุดิบ/บรรจุภัณฑ์ · sga=ค่าแรง/ค่าไฟ/ค่าเช่า/ซ่อม · asset=เครื่องจักร · อื่นๆ=ไม่ชัด
+- type: cogs=วัตถุดิบ/บรรจุภัณฑ์/ค่าขนส่งวัตถุดิบ · sga=ค่าแรง/ค่าไฟ/ค่าเช่า/ซ่อม · asset=เครื่องจักร · อื่นๆ=ไม่ชัด
 - **VAT — อ่านตัวเลขที่พิมพ์บนใบกำกับเท่านั้น ห้ามคำนวณ ×7/107 จากยอดรวม**
   (บางรายการสินค้าไม่มี VAT การคูณยอดรวมจะผิด)
   - โฟกัสท้ายบิลใต้ยอดรวมตัวหนา: หา "ภาษีมูลค่าเพิ่ม" / "ภาษีมูลค่าเพิ่ม 7%" / "VAT" / "VAT 7%"
   - ท็อปเวิลด์มักมีคู่ "ฐานภาษี 7%" และ "ภาษีมูลค่าเพิ่ม 7%" ใต้ยอดรวม — อ่านตัวเลขขวาสุดของแต่ละบรรทัด
+  - แม็คโคร / ค่าขนส่ง: มักมีใบกำกับหรือใบแจ้งหนี้แยกจากสลิปโอน — อ่าน VAT จากใบที่มีบรรทัดภาษีชัด (อย่าทิ้งเพราะชื่อว่าค่าขนส่ง)
   - ตัว "V" ท้ายรายการสินค้า = สินค้าเสีย VAT ไม่ใช่ยอดภาษี
   - vatInput = ตัวเลขข้างป้ายภาษีมูลค่าเพิ่มเท่านั้น
   - vatBase = ตัวเลขข้างป้ายฐานภาษี ถ้าเห็น
   - ถ้าไม่เห็นบรรทัดภาษีชัด → hasVat=false, vatInput=null
 - ห้ามแต่งข้อมูลที่มองไม่เห็นในรูป`;
 
-const VAT_RETRY_SYSTEM_PROMPT = `คุณเป็นผู้ช่วย OCR ใบเสร็จไทย — โฟกัสเฉพาะยอดภาษีมูลค่าเพิ่มที่พิมพ์บนใบกำกับ/ใบเสร็จ
-ข้ามสลิปโอนเงิน — รูปนี้ควรเป็นใบเสร็จห้างหรือใบกำกับภาษีเท่านั้น
+const VAT_RETRY_SYSTEM_PROMPT = `คุณเป็นผู้ช่วย OCR ใบเสร็จไทย — โฟกัสเฉพาะยอดภาษีมูลค่าเพิ่มที่พิมพ์บนใบกำกับ/ใบเสร็จ/ใบแจ้งค่าขนส่ง
+ข้ามสลิปโอนเงิน — รูปนี้ควรเป็นใบเสร็จห้าง ใบกำกับ หรือใบค่าขนส่งที่มี VAT (เช่น แม็คโคร)
 
 ตอบเป็น JSON เท่านั้น:
 {"hasVat":trueหรือfalse,"vatInput":จำนวนภาษีเป็นตัวเลขหรือ null,"vatBase":มูลค่าฐานภาษีหรือ null,"vatInvoiceNo":"เลขที่ใบกำกับหรือว่าง","vatSeenOnBill":trueหรือfalse,"vatReason":"สั้นๆ"}
@@ -305,8 +307,8 @@ async function extractOneImage({ apiKey, model, imagePart, businessContext, imag
     imageParts: [imagePart],
     systemText: buildExtractSystemPrompt(businessContext),
     userText: `อ่านเอกสารในรูปนี้ (รูปที่ ${imageIndex}/${imageCount}) แล้วดึง JSON
-ก่อนอื่นตัดสิน docKind: สลิปโอนเงิน=bank_slip / ใบเสร็จ-ใบกำกับ=tax_invoice
-ถ้าเป็นใบเสร็จห้าง/ใบกำกับ ให้อ่านบรรทัดภาษีมูลค่าเพิ่มที่พิมพ์บนบิล (ห้าม×7/107)
+ก่อนอื่นตัดสิน docKind: สลิปโอนเงิน=bank_slip / ใบเสร็จ-ใบกำกับ-ใบแจ้งค่าขนส่งที่มี VAT=tax_invoice / อื่น=other
+ถ้าเป็นใบเสร็จห้าง/ใบกำกับ/แม็คโคร/ค่าขนส่งที่มีบรรทัดภาษี — อ่านภาษีมูลค่าเพิ่มที่พิมพ์บนบิล (ห้าม×7/107)
 ถ้าเป็นสลิปโอน ให้ hasVat=false`,
   });
 
@@ -322,7 +324,9 @@ async function extractOneImage({ apiKey, model, imagePart, businessContext, imag
     if (/สลิป|โอนเงิน|promptpay|ธนาคาร|เป๋าตัง|พร้อมเพย์/i.test(blob)) {
       docKind = "bank_slip";
     } else if (
-      /ท็อปเวิลด์|ท็อปส์|แม็คโคร|ใบกำกับ|ใบเสร็จ|ภาษีมูลค่าเพิ่ม|top\s*world/i.test(blob)
+      /ท็อปเวิลด์|ท็อปส์|แม็คโคร|makro|ค่าขนส่ง|ใบกำกับ|ใบเสร็จ|ภาษีมูลค่าเพิ่ม|top\s*world/i.test(
+        blob,
+      )
     ) {
       docKind = "tax_invoice";
     }
@@ -421,7 +425,7 @@ exports.extractOwnerBookFromReceipt = functions
     const imageRefs = rawRefs
       .map((u) => String(u || "").trim())
       .filter(Boolean)
-      .slice(0, MAX_IMAGES);
+      .slice(0, EXTRACT_MAX_IMAGES);
 
     if (!imageRefs.length) {
       throw new functions.https.HttpsError("invalid-argument", "ต้องมีรูปอย่างน้อย 1 รูป");
@@ -445,7 +449,7 @@ exports.extractOwnerBookFromReceipt = functions
 
     const imageParts = [];
     for (const ref of imageRefs) {
-      if (imageParts.length >= MAX_IMAGES) break;
+      if (imageParts.length >= EXTRACT_MAX_IMAGES) break;
       try {
         imageParts.push(await resolveImagePart(db, ref));
       } catch (err) {
@@ -484,3 +488,4 @@ exports.extractOwnerBookFromReceipt = functions
 // Test hooks (no firebase)
 exports._mergeExtractResults = mergeExtractResults;
 exports._normalizeDocKind = normalizeDocKind;
+exports.EXTRACT_MAX_IMAGES = EXTRACT_MAX_IMAGES;

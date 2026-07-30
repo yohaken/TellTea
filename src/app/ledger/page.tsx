@@ -55,7 +55,10 @@ import {
   parseVatInputStr,
   type VatSource,
 } from "@/lib/entry-vat";
-import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
+import {
+  EXTRACT_RECEIPT_MAX,
+  extractOwnerBookFromReceipt,
+} from "@/lib/owner-books-ai";
 import { friendlyFirestoreWriteError, saveImageToDevice } from "@/lib/receipts";
 import {
   type PhotoUploadProgress,
@@ -715,7 +718,10 @@ function AddOutModal({
   }, []);
 
   async function runExtractFromPhotos(urls: string[]) {
-    const refs = urls.map((u) => String(u || "").trim()).filter(Boolean).slice(0, 2);
+    const refs = urls
+      .map((u) => String(u || "").trim())
+      .filter(Boolean)
+      .slice(0, EXTRACT_RECEIPT_MAX);
     if (!refs.length) return;
     const key = refs.join("|");
     if (key === lastExtractKeyRef.current || extractBusyRef.current) return;
@@ -1078,7 +1084,10 @@ function EditEntryModal({
 
   async function runExtractFromPhotos(urls: string[]) {
     if (isIn) return;
-    const refs = urls.map((u) => String(u || "").trim()).filter(Boolean).slice(0, 2);
+    const refs = urls
+      .map((u) => String(u || "").trim())
+      .filter(Boolean)
+      .slice(0, EXTRACT_RECEIPT_MAX);
     if (!refs.length) return;
     const key = refs.join("|");
     if (key === lastExtractKeyRef.current || extractBusyRef.current) return;

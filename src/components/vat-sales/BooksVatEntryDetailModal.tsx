@@ -16,7 +16,10 @@ import {
   LEDGER_RECEIPT_MAX,
   updateLedgerEntry,
 } from "@/lib/ledger";
-import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
+import {
+  EXTRACT_RECEIPT_MAX,
+  extractOwnerBookFromReceipt,
+} from "@/lib/owner-books-ai";
 import {
   getOwnerBookEntry,
   getOwnerBookReceiptUrls,
@@ -136,7 +139,7 @@ export function BooksVatEntryDetailModal({
     const refs = urls
       .map((u) => String(u || "").trim())
       .filter(Boolean)
-      .slice(0, 2);
+      .slice(0, EXTRACT_RECEIPT_MAX);
     if (!refs.length || locked) return;
     const key = refs.join("|");
     if (key === lastExtractKeyRef.current || extractBusyRef.current) return;

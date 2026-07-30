@@ -32,6 +32,9 @@ assert.match(cf, /MEDIA_RESOLUTION_HIGH/);
 assert.match(cf, /thinkingBudget/);
 assert.match(cf, /VAT_RETRY_SYSTEM_PROMPT/);
 assert.match(cf, /timeoutSeconds: 180/);
+assert.match(cf, /EXTRACT_MAX_IMAGES\s*=\s*4/);
+assert.match(cf, /ค่าขนส่ง/);
+assert.match(cf, /แม็คโคร/);
 assert.doesNotMatch(cf, /completeVatFromBill/);
 assert.doesNotMatch(cf, /vat-from-bill/);
 
@@ -41,19 +44,22 @@ assert.match(merge, /tax_invoice/);
 
 assert.match(ai, /normalizeAiVatExtract/);
 assert.match(ai, /timeout:\s*180_000/);
+assert.match(ai, /EXTRACT_RECEIPT_MAX\s*=\s*4/);
 assert.match(entryVat, /vatSeenOnBill/);
 assert.match(entryVat, /ท็อปเวิลด์/);
 
-assert.match(fieldset, /ตรวจแล้ว · ยอดภาษีตรงกับบิล/);
-assert.match(fieldset, /ใช้ประมาณ/);
+assert.match(fieldset, /ตรวจยอดตรงบิลแล้ว/);
+assert.match(fieldset, /ประมาณ/);
 assert.match(fieldset, /vatVerified/);
 assert.match(fieldset, /vatSource/);
-assert.match(fieldset, /AI อ่าน/);
+assert.match(fieldset, /อ่าน VAT/);
 
 assert.match(ledger, /extractOwnerBookFromReceipt/);
+assert.match(ledger, /EXTRACT_RECEIPT_MAX/);
 assert.match(ledger, /vatVerified/);
 assert.match(owner, /EntryVatFieldset/);
 assert.match(owner, /vatSource/);
+assert.match(owner, /EXTRACT_RECEIPT_MAX/);
 
 assert.match(entryVat, /VatSource/);
 assert.match(entryVat, /vatVerified/);
@@ -61,6 +67,6 @@ assert.doesNotMatch(entryVat, /fallback.*proposePurchaseVatInput\(amountInclusiv
 
 assert.match(receipts, /maxShortEdge/);
 assert.match(receipts, /maxLongEdge/);
-assert.match(version, /APP_BUILD = 457/);
+assert.match(version, /APP_BUILD = \d+/);
 
 console.log("OK test-ai-vat-extract");

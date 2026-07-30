@@ -80,4 +80,47 @@ const taxNoVat = mergeExtractResults([
 assert.equal(taxNoVat.hasVat, false);
 assert.equal(taxNoVat.vatInput, null);
 
+// Makro shipping: 3 docs — slip + packing list + tax invoice with VAT on the 3rd
+const packing = {
+  docKind: "other",
+  date: "2026-07-29",
+  description: "รายการสินค้าแม็คโคร",
+  amountOut: 1200,
+  type: "cogs",
+  note: "",
+  reason: "ใบแพ็กกิ้ง",
+  hasVat: false,
+  vatInput: null,
+  vatBase: null,
+  vatInvoiceNo: "",
+  vatSeenOnBill: false,
+  vatReason: "ไม่มีบรรทัดภาษี",
+};
+const makroTax = {
+  docKind: "tax_invoice",
+  date: "2026-07-29",
+  description: "ค่าขนส่งแม็คโคร",
+  amountOut: 214,
+  type: "cogs",
+  note: "",
+  reason: "ใบกำกับค่าขนส่ง",
+  hasVat: true,
+  vatInput: 14,
+  vatBase: 200,
+  vatInvoiceNo: "MK-DEL-1",
+  vatSeenOnBill: true,
+  vatReason: "ภาษีมูลค่าเพิ่ม 7% บนใบค่าขนส่ง",
+};
+const makro3 = mergeExtractResults([bank, packing, makroTax]);
+assert.equal(makro3.hasVat, true);
+assert.equal(makro3.vatInput, 14);
+assert.equal(makro3.vatBase, 200);
+assert.equal(makro3.description, "ค่าขนส่งแม็คโคร");
+assert.equal(makro3.amountOut, 214);
+assert.match(String(makro3.vatInvoiceNo), /MK-DEL-1/);
+
+// VAT on 3rd doc even if order puts invoice last
+const makro3b = mergeExtractResults([packing, bank, makroTax]);
+assert.equal(makro3b.vatInput, 14);
+
 console.log("OK test-merge-receipt-extract");

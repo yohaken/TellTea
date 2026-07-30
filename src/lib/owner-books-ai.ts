@@ -21,12 +21,18 @@ export type ExtractOwnerBookResult = {
 
 const ALLOWED = new Set(["cogs", "sga", "asset", "อื่นๆ"]);
 
+/** Max images sent to extractOwnerBookFromReceipt (slip + packing + invoice + spare). */
+export const EXTRACT_RECEIPT_MAX = 4;
+
 /** Client → Cloud Function: อ่านใบเสร็จจากรูป (รวม VAT จากบิล) */
 export async function extractOwnerBookFromReceipt(
   imageRefs: string[],
   opts?: { model?: string },
 ): Promise<ExtractOwnerBookResult> {
-  const refs = imageRefs.map((u) => String(u || "").trim()).filter(Boolean).slice(0, 2);
+  const refs = imageRefs
+    .map((u) => String(u || "").trim())
+    .filter(Boolean)
+    .slice(0, EXTRACT_RECEIPT_MAX);
   if (!refs.length) {
     throw new Error("ต้องมีรูปอย่างน้อย 1 รูป");
   }

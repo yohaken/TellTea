@@ -56,7 +56,10 @@ import {
   updateOwnerBookEntry,
   type OwnerBookEntry,
 } from "@/lib/owner-books";
-import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
+import {
+  EXTRACT_RECEIPT_MAX,
+  extractOwnerBookFromReceipt,
+} from "@/lib/owner-books-ai";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
   formatBaht,
@@ -717,7 +720,10 @@ function OwnerEntryModal({
   }
 
   async function runExtractFromPhotos(urls: string[]) {
-    const refs = urls.map((u) => String(u || "").trim()).filter(Boolean).slice(0, 2);
+    const refs = urls
+      .map((u) => String(u || "").trim())
+      .filter(Boolean)
+      .slice(0, EXTRACT_RECEIPT_MAX);
     if (!refs.length) return;
     const key = refs.join("|");
     if (key === lastExtractKeyRef.current || extractBusyRef.current) return;

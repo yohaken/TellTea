@@ -32,7 +32,10 @@ import {
   type BillNoticeStatus,
 } from "@/lib/bill-notices";
 import { guessTypeFromDescription } from "@/lib/ledger-labels";
-import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
+import {
+  EXTRACT_RECEIPT_MAX,
+  extractOwnerBookFromReceipt,
+} from "@/lib/owner-books-ai";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
   formatPlainNumber,
@@ -490,7 +493,10 @@ function BillNoticeFormModal({
   }
 
   async function runExtractFromPhotos(urls: string[], force = false) {
-    const refs = urls.map((u) => String(u || "").trim()).filter(Boolean).slice(0, 2);
+    const refs = urls
+      .map((u) => String(u || "").trim())
+      .filter(Boolean)
+      .slice(0, EXTRACT_RECEIPT_MAX);
     if (!refs.length) return;
     const key = refs.join("|");
     if (!force && (key === lastExtractKeyRef.current || extractBusyRef.current)) return;
