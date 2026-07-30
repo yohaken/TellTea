@@ -23,10 +23,17 @@ export type BonusDeductionSettings = {
 /** จำนวนหักทั้งร้านต่อเดือน — เจ้าของกรอกสิ้นเดือน */
 export type BonusDeductionMonthCounts = Record<BonusDeductionRuleId, number>;
 
+/** รูปหลักฐานหักโบนัสต่องวด (แคปฟีดแบค ฯลฯ) */
+export const BONUS_DEDUCTION_EVIDENCE_MAX = 8;
+
 export type BonusDeductionMonthDoc = {
   year: number;
   month: number;
   counts: BonusDeductionMonthCounts;
+  /** แคปสาเหตุตัดคะแนน / ฟีดแบคลูกค้า ฯลฯ */
+  evidenceUrls: string[];
+  /** โน้ตสั้นอธิบายการหักงวดนี้ */
+  note: string;
   updatedAt: number;
 };
 
@@ -89,6 +96,14 @@ function normalizeMonthCounts(raw: Partial<BonusDeductionMonthCounts> | undefine
   };
 }
 
+function normalizeEvidenceUrls(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((u) => String(u || "").trim())
+    .filter(Boolean)
+    .slice(0, BONUS_DEDUCTION_EVIDENCE_MAX);
+}
+
 /** รองรับข้อมูลเก่าที่เก็บแยกรายคน — ไม่ migrate อัตโนมัติ */
 export function normalizeBonusDeductionMonthDoc(
   year: number,
@@ -99,6 +114,8 @@ export function normalizeBonusDeductionMonthDoc(
     year,
     month,
     counts: normalizeMonthCounts(data?.counts),
+    evidenceUrls: normalizeEvidenceUrls(data?.evidenceUrls),
+    note: typeof data?.note === "string" ? data.note.trim() : "",
     updatedAt: Number(data?.updatedAt) || 0,
   };
 }
@@ -216,10 +233,42 @@ export async function saveBonusDeductionMonthQty(
     ...current.counts,
     [ruleId]: Math.max(0, Number(qty) || 0),
   };
-  await setDoc(monthRef(year, month), {
+  await setDoc(
+    monthRef(year, month),
+    {
+      year,
+      month,
+      counts,
+      updatedAt: Date.now(),
+    },
+    { merge: true },
+  );
+}
+
+/** แนบหลักฐาน + โน้ตหักโบนัสของงวด (เก็บตามเดือน — ย้อนหลังได้) */
+export async function saveBonusDeductionMonthEvidence(
+  year: number,
+  month: number,
+  input: { evidenceUrls?: string[]; note?: string },
+): Promise<BonusDeductionMonthDoc> {
+  const current = await getBonusDeductionMonth(year, month);
+  const evidenceUrls =
+    input.evidenceUrls != null
+      ? normalizeEvidenceUrls(input.evidenceUrls)
+      : current.evidenceUrls;
+  if (evidenceUrls.some((u) => u.startsWith("data:"))) {
+    throw new Error("รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่");
+  }
+  const note =
+    input.note != null ? String(input.note).trim().slice(0, 500) : current.note;
+  const next: BonusDeductionMonthDoc = {
     year,
     month,
-    counts,
+    counts: current.counts,
+    evidenceUrls,
+    note,
     updatedAt: Date.now(),
-  });
+  };
+  await setDoc(monthRef(year, month), next, { merge: true });
+  return next;
 }

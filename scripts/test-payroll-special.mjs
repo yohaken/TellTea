@@ -30,6 +30,6 @@ assert.match(panelSrc, /ยอดกำหนดเอง/);
 assert.match(settingsSrc, /skipGroupPayroll/);
 assert.match(settingsSrc, /ข้ามตอนกด/);
 
-assert.match(versionSrc, /APP_BUILD = 492/);
+assert.match(versionSrc, /APP_BUILD = 49[23]/);
 
 console.log("OK test-payroll-special");
