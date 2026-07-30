@@ -19271,19 +19271,30 @@ a.ghost-btn {
   text-overflow: ellipsis;
 }
 
+/*
+ * Phase 3 table layout — แจ้งบิล (.bill-notice-slim).
+ * Row/date sizing from ledger-staff-sheet prototype; bleed cancels panel-body pad (0.65rem).
+ * Scoped here so ledger-staff-sheet / owner-books-sheet stay untouched.
+ */
 .bill-notice-panel-table-wrap {
-  margin: 0.2rem 0 0.3rem;
+  margin: 0.2rem -0.65rem 0.3rem;
+  width: calc(100% + 1.3rem);
+  max-width: none;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  box-shadow: none;
 }
 
 .bill-notice-slim {
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   table-layout: fixed;
   width: 100%;
 }
 
 .bill-notice-slim th,
 .bill-notice-slim td {
-  padding: 0.18rem 0.22rem !important;
+  padding: 0.18rem 0.3rem !important;
   vertical-align: middle;
   white-space: nowrap;
   overflow: hidden;
@@ -19292,38 +19303,46 @@ a.ghost-btn {
 }
 
 .bill-notice-slim th {
-  font-size: 0.64rem;
+  font-size: 0.6rem;
 }
 
 .bill-notice-slim .col-date {
-  width: 3.4rem;
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .bill-notice-slim .col-desc {
   width: auto;
+  min-width: 0;
 }
 
 .bill-notice-slim .col-photo {
-  width: 2rem;
+  width: 1.9rem;
   text-align: center;
 }
 
 .bill-notice-slim .col-out {
-  width: 3.6rem;
+  width: 2.55rem;
+  min-width: 2.55rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  font-size: 0.66rem;
 }
 
 .bill-notice-slim .col-note {
-  width: 4.2rem;
+  width: 3.6rem;
+  font-size: 0.58rem;
 }
 
 .bill-notice-slim .col-status {
-  width: 3.2rem;
+  width: 2.9rem;
+  font-size: 0.58rem;
 }
 
 .bill-notice-slim .col-act {
-  width: 4.6rem;
+  width: 4.4rem;
   text-align: right;
   overflow: visible;
 }

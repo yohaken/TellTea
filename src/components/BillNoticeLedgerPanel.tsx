@@ -35,7 +35,6 @@ import { guessTypeFromDescription } from "@/lib/ledger-labels";
 import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
-  formatDateShort,
   formatPlainNumber,
   parseDateInput,
   todayInputValue,
@@ -267,7 +266,7 @@ export function BillNoticeLedgerPanel({
                         title={tip}
                       >
                         <td className="col-date">
-                          <SheetDateCell ms={row.date} />
+                          <SheetDateCell ms={row.date} era="be" />
                         </td>
                         <td className="col-desc">
                           {canEdit ? (
@@ -628,6 +627,7 @@ function BillNoticeFormModal({
             entryDate={entry.date}
             createdAt={entry.createdAt}
             updatedAt={entry.updatedAt}
+            era="be"
           />
         ) : null}
         {formError ? <p className="error-text ot-form-error">{formError}</p> : null}

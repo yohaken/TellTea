@@ -48,6 +48,12 @@ assert.match(panel, /bill-notice-line/);
 assert.match(panel, /shortLabelBillNoticeStatus/);
 assert.match(panel, /bill-notice-act-row/);
 assert.match(panel, /BILL_NOTICE_PRESETS/);
+assert.match(panel, /SheetDateCell ms=\{row\.date\} era="be"/);
+assert.match(panel, /era="be"/);
+assert.match(css, /Phase 3 table layout/);
+assert.match(css, /\.bill-notice-slim \.col-date/);
+assert.match(css, /width: 3\.55rem/);
+assert.match(version, /APP_BUILD\s*=\s*469/);
 
 assert.match(lib, /export async function addBillNotice/);
 assert.match(lib, /export async function acceptBillNotice/);
