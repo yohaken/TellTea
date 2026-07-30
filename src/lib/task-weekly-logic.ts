@@ -14,6 +14,9 @@ export const WEEKDAY_LABELS = [
   "เสาร์",
 ] as const;
 
+/** ย่อวันสำหรับแถบกติกากะทัดรัด */
+export const WEEKDAY_SHORT_LABELS = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"] as const;
+
 export type CompletedKind = "on_time" | "late" | "backfill";
 export type OccurrenceTab = "thisWeek" | "missed" | "history";
 
@@ -66,6 +69,10 @@ export function occurrenceDocId(templateId: string, periodKey: string) {
 
 export function labelWeekday(weekday: number) {
   return WEEKDAY_LABELS[weekday] ?? `วัน ${weekday}`;
+}
+
+export function labelWeekdayShort(weekday: number) {
+  return WEEKDAY_SHORT_LABELS[weekday] ?? String(weekday);
 }
 
 /** วันรับผิดชอบของสัปดาห์ที่มี `ms` (ปฏิทินไทย) */

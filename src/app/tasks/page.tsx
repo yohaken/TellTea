@@ -46,6 +46,7 @@ import {
   isOccurrenceOpenSoon,
   labelCompletedKind,
   labelWeekday,
+  labelWeekdayShort,
   newChecklistItemId,
   TASK_PROOF_MAX,
   validateTaskCompleteInput,
@@ -53,6 +54,25 @@ import {
   type OccurrenceTab,
 } from "@/lib/task-weekly-logic";
 import { formatDateShortBe } from "@/lib/utils";
+
+/** ลบกติกาถาวร + รอบที่ยังไม่ส่ง (ประวัติที่ส่งแล้วคงไว้) */
+async function purgeTaskTemplate(
+  template: TaskTemplate,
+  occurrences: TaskOccurrence[],
+): Promise<void> {
+  const pending = occurrences.filter(
+    (o) =>
+      o.templateId === template.id &&
+      (o.status === "pending" || o.status === "missed"),
+  );
+  if (pending.length) {
+    for (const occ of pending) {
+      await dismissTaskPeriod(occ.templateId, occ.periodKey);
+    }
+    await deleteTaskOccurrences(pending.map((o) => o.id));
+  }
+  await deleteTaskTemplate(template.id);
+}
 
 const TASK_PRESETS: { title: string; weekday: number; checklist: string[] }[] = [
   {
@@ -91,6 +111,9 @@ function TasksView() {
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
   const [submitOcc, setSubmitOcc] = useState<TaskOccurrence | null>(null);
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
+  /** แถบกติกาพับได้ — ค่าเริ่ม: เปิดถ้า ≤2, เยอะแล้วพับ */
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const rulesInitRef = useRef(false);
   const syncedRef = useRef(false);
 
   const doSync = useCallback(async (tpls: TaskTemplate[], occs: TaskOccurrence[]) => {
@@ -188,6 +211,13 @@ function TasksView() {
   const visible = useMemo(() => filterOccurrencesByTab(occurrences, tab), [occurrences, tab]);
   const activeTemplates = useMemo(() => templates.filter((t) => t.active), [templates]);
 
+  useEffect(() => {
+    if (rulesInitRef.current || loading) return;
+    if (!isOwnerManager) return;
+    rulesInitRef.current = true;
+    setRulesOpen(activeTemplates.length <= 2);
+  }, [loading, isOwnerManager, activeTemplates.length]);
+
   const thisWeekCount = filterOccurrencesByTab(occurrences, "thisWeek").length;
   const missedCount = filterOccurrencesByTab(occurrences, "missed").length;
 
@@ -202,7 +232,7 @@ function TasksView() {
         </h1>
         <p className="muted tasks-page-hint">
           {isOwnerManager
-            ? "ตารางภาพรวม · ส่งได้ทุกวัน · เจ้าของแก้ไข/ปิด/ลบกติกาได้"
+            ? "กติกา = งานประจำสัปดาห์ · ทำแล้วจบรอบนี้ สัปดาห์หน้าเด้งใหม่ · ปิด/ลบกติกาได้ · ลบรอบในตารางได้"
             : "งานที่มอบให้คุณ · แตะชื่องานหรือปุ่มส่งเมื่อครบ checklist + รูป"}
         </p>
       </div>
@@ -222,36 +252,97 @@ function TasksView() {
       {!loading && (myEmployeeId || isOwnerManager) ? (
         <>
           {isOwnerManager && activeTemplates.length ? (
-            <div className="tasks-template-bar">
-              <span className="field-label">กติกาที่เปิดอยู่</span>
-              <div className="tasks-template-chips">
-                {activeTemplates.map((tpl) => (
-                  <span key={tpl.id} className="tasks-template-chip">
-                    {tpl.title} · ทุก{labelWeekday(tpl.weekday)}
-                    <button
-                      type="button"
-                      className="tasks-template-edit"
-                      aria-label="แก้ไขกติกา"
-                      onClick={() => setEditingTemplate(tpl)}
-                    >
-                      <Pencil size={11} />
-                    </button>
-                    <button
-                      type="button"
-                      className="tasks-template-off"
-                      aria-label="ปิดกติกา"
-                      onClick={() => {
-                        if (!window.confirm(`ปิดกติกา "${tpl.title}"? รอบใหม่จะไม่ถูกสร้าง`)) return;
-                        void deactivateTaskTemplate(tpl.id).catch((err) =>
-                          setError((err as Error).message || "ปิดกติกาไม่สำเร็จ"),
-                        );
-                      }}
-                    >
-                      <X size={12} />
-                    </button>
+            <div className={`tasks-template-bar${rulesOpen ? " is-open" : ""}`}>
+              <button
+                type="button"
+                className="tasks-template-toggle"
+                aria-expanded={rulesOpen}
+                onClick={() => setRulesOpen((v) => !v)}
+              >
+                <span className="tasks-template-toggle-label">
+                  กติกา {activeTemplates.length}
+                  <span className="muted tasks-template-toggle-hint">
+                    {" "}
+                    · ปิด=หยุดสร้างรอบ · ลบ=ถาวร
                   </span>
-                ))}
-              </div>
+                </span>
+                <span className="tasks-template-toggle-meta" aria-hidden>
+                  {rulesOpen
+                    ? "ย่อ"
+                    : activeTemplates
+                        .slice(0, 4)
+                        .map((t) => labelWeekdayShort(t.weekday))
+                        .join("·") + (activeTemplates.length > 4 ? "…" : "")}
+                </span>
+              </button>
+              {rulesOpen ? (
+                <ul className="tasks-template-list">
+                  {activeTemplates.map((tpl) => (
+                    <li key={tpl.id} className="tasks-template-row">
+                      <span className="tasks-template-row-main" title={tpl.title}>
+                        <span className="tasks-template-row-day">
+                          {labelWeekdayShort(tpl.weekday)}
+                        </span>
+                        <span className="tasks-template-row-title">{tpl.title}</span>
+                      </span>
+                      <span className="tasks-template-row-acts">
+                        <button
+                          type="button"
+                          className="tasks-template-act"
+                          onClick={() => setEditingTemplate(tpl)}
+                        >
+                          <Pencil size={11} aria-hidden /> แก้
+                        </button>
+                        <button
+                          type="button"
+                          className="tasks-template-act"
+                          title="หยุดสร้างรอบใหม่ — กติกายังอยู่ในระบบ"
+                          onClick={() => {
+                            if (
+                              !window.confirm(
+                                `ปิดกติกา "${tpl.title}"?\nรอบใหม่จะไม่ถูกสร้าง (งานประจำหยุด)`,
+                              )
+                            ) {
+                              return;
+                            }
+                            void deactivateTaskTemplate(tpl.id).catch((err) =>
+                              setError((err as Error).message || "ปิดกติกาไม่สำเร็จ"),
+                            );
+                          }}
+                        >
+                          <X size={11} aria-hidden /> ปิด
+                        </button>
+                        <button
+                          type="button"
+                          className="tasks-template-act is-danger"
+                          title="ลบกติกาถาวร"
+                          onClick={() => {
+                            const pendingN = occurrences.filter(
+                              (o) =>
+                                o.templateId === tpl.id &&
+                                (o.status === "pending" || o.status === "missed"),
+                            ).length;
+                            const msg =
+                              pendingN > 0
+                                ? `ลบกติกา "${tpl.title}" ถาวร?\nรอบที่ยังไม่ส่ง ${pendingN} รายการจะถูกลบ\nประวัติที่ส่งแล้วยังอยู่`
+                                : `ลบกติกา "${tpl.title}" ถาวร?`;
+                            if (!window.confirm(msg)) return;
+                            void purgeTaskTemplate(tpl, occurrences)
+                              .then(() => {
+                                syncedRef.current = false;
+                              })
+                              .catch((err) =>
+                                setError((err as Error).message || "ลบกติกาไม่สำเร็จ"),
+                              );
+                          }}
+                        >
+                          <Trash2 size={11} aria-hidden /> ลบ
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           ) : null}
 
@@ -383,7 +474,13 @@ function OccurrencesTable({
   onError: (msg: string) => void;
 }) {
   async function onDelete(occ: TaskOccurrence) {
-    if (!window.confirm(`ลบรอบงาน "${occ.title}" (${formatDateShortBe(occ.dueDate)})?`)) return;
+    if (
+      !window.confirm(
+        `ลบรอบนี้ "${occ.title}" (${formatDateShortBe(occ.dueDate)})?\nกติกายังอยู่ — สัปดาห์หน้ายังสร้างรอบใหม่ได้`,
+      )
+    ) {
+      return;
+    }
     try {
       await dismissTaskPeriod(occ.templateId, occ.periodKey);
       await deleteTaskOccurrences([occ.id]);
@@ -488,9 +585,10 @@ function OccurrencesTable({
                       <button
                         type="button"
                         className="ghost-btn tasks-delete-btn"
+                        title="ลบเฉพาะรอบนี้"
                         onClick={() => void onDelete(occ)}
                       >
-                        <Trash2 size={13} aria-hidden /> ลบ
+                        <Trash2 size={13} aria-hidden /> ลบรอบ
                       </button>
                     ) : null}
                   </div>
@@ -610,29 +708,20 @@ function TemplateFormModal({
 
   async function onDeleteTemplate() {
     if (!template) return;
-    const pendingIds = occurrences
-      .filter(
-        (o) =>
-          o.templateId === template.id &&
-          (o.status === "pending" || o.status === "missed"),
-      )
-      .map((o) => o.id);
+    const pendingN = occurrences.filter(
+      (o) =>
+        o.templateId === template.id &&
+        (o.status === "pending" || o.status === "missed"),
+    ).length;
     const msg =
-      pendingIds.length > 0
-        ? `ลบกติกา "${template.title}" ถาวร?\nรอบที่ยังไม่ส่ง ${pendingIds.length} รายการจะถูกลบ\nประวัติที่ส่งแล้วยังอยู่`
+      pendingN > 0
+        ? `ลบกติกา "${template.title}" ถาวร?\nรอบที่ยังไม่ส่ง ${pendingN} รายการจะถูกลบ\nประวัติที่ส่งแล้วยังอยู่`
         : `ลบกติกา "${template.title}" ถาวร?`;
     if (!window.confirm(msg)) return;
     setBusy(true);
     onError("");
     try {
-      if (pendingIds.length) {
-        for (const id of pendingIds) {
-          const occ = occurrences.find((o) => o.id === id);
-          if (occ) await dismissTaskPeriod(occ.templateId, occ.periodKey);
-        }
-        await deleteTaskOccurrences(pendingIds);
-      }
-      await deleteTaskTemplate(template.id);
+      await purgeTaskTemplate(template, occurrences);
       onSaved();
     } catch (err) {
       onError((err as Error).message || "ลบกติกาไม่สำเร็จ");
