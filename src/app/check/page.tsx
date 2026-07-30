@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  type ReactNode,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -190,6 +191,38 @@ function CheckView() {
     setFormSeed({});
   }
 
+  const ownerTabs = isOwner ? (
+    <div className="stock-owner-tabs stock-owner-tabs--inline" role="tablist" aria-label="มุมมองเช็คเจ้าของ">
+      <button
+        type="button"
+        role="tab"
+        className={ownerView === "history" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+        aria-selected={ownerView === "history"}
+        onClick={() => {
+          setOwnerView("history");
+          setFormOpen(false);
+          router.replace("/check/", { scroll: false });
+        }}
+      >
+        ประวัติเช็ค
+      </button>
+      <button
+        type="button"
+        role="tab"
+        className={ownerView === "setup" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+        aria-selected={ownerView === "setup"}
+        onClick={() => {
+          setOwnerView("setup");
+          setFormOpen(false);
+          router.replace("/check/?tab=setup", { scroll: false });
+        }}
+      >
+        รายการ SOP
+        {items.length ? ` (${items.length})` : ""}
+      </button>
+    </div>
+  ) : null;
+
   return (
     <div className="module-page check-page">
       <div className="module-page-head">
@@ -197,47 +230,21 @@ function CheckView() {
           <ClipboardCheck size={18} aria-hidden />
           SmartCheck SOP
         </h1>
-        {isOwner ? (
-          <div className="stock-owner-tabs" role="tablist" aria-label="มุมมองเช็คเจ้าของ">
-            <button
-              type="button"
-              role="tab"
-              className={ownerView === "history" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-              aria-selected={ownerView === "history"}
-              onClick={() => {
-                setOwnerView("history");
-                setFormOpen(false);
-                router.replace("/check/", { scroll: false });
-              }}
-            >
-              ประวัติเช็ค
-            </button>
-            <button
-              type="button"
-              role="tab"
-              className={ownerView === "setup" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-              aria-selected={ownerView === "setup"}
-              onClick={() => {
-                setOwnerView("setup");
-                setFormOpen(false);
-                router.replace("/check/?tab=setup", { scroll: false });
-              }}
-            >
-              รายการ SOP
-              {items.length ? ` (${items.length})` : ""}
-            </button>
-          </div>
-        ) : null}
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading && showSetup ? (
-        <ChecklistSetup
-          onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
-          onError={setError}
-        />
+        <>
+          {ownerTabs ? (
+            <div className="ot-toolbar-slim module-toolbar-slim">{ownerTabs}</div>
+          ) : null}
+          <ChecklistSetup
+            onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
+            onError={setError}
+          />
+        </>
       ) : null}
 
       {!loading && showHistory ? (
@@ -248,6 +255,7 @@ function CheckView() {
           isOwner={isOwner}
           onError={setError}
           onStartCheck={openFormForSlot}
+          toolbarLeading={ownerTabs}
         />
       ) : null}
 
@@ -854,6 +862,7 @@ function CheckSummary({
   isOwner,
   onError,
   onStartCheck,
+  toolbarLeading,
 }: {
   records: ChecklistRecord[];
   month: string;
@@ -861,6 +870,7 @@ function CheckSummary({
   isOwner: boolean;
   onError: (msg: string) => void;
   onStartCheck: (dateMs: number, shift: CheckShiftId) => void;
+  toolbarLeading?: ReactNode;
 }) {
   const [filter, setFilter] = useState<HistoryFilter>("all");
   const [detail, setDetail] = useState<HistoryDetail | null>(null);
@@ -901,7 +911,8 @@ function CheckSummary({
 
   return (
     <div className="check-summary-view">
-      <div className="check-history-toolbar">
+      <div className="check-history-toolbar ot-toolbar-slim module-toolbar-slim">
+        {toolbarLeading}
         <input
           type="month"
           className="ot-slim-input"
@@ -925,15 +936,17 @@ function CheckSummary({
             มีปัญหา
           </button>
         </div>
-        <p className="muted check-history-stats">
+        <p className="muted check-history-stats module-slim-stats">
           {stats.sessions}/{stats.expectedSessions} กะ · ไม่ผ {stats.failItems}
           {stats.daysWithIssues ? ` · ${stats.daysWithIssues} วันมีปัญหา` : ""}
         </p>
+        <span
+          className="ot-slim-hint muted module-slim-hint"
+          title={`ตารางแสดงล่วงหน้า ${CHECK_PLAN_AHEAD_DAYS} วัน — วันนี้/ย้อนหลังแตะ "เช็ค" ได้ทุกกะ · วันล่วงหน้ายังเปิดไม่ได้`}
+        >
+          ล่วงหน้า {CHECK_PLAN_AHEAD_DAYS} วัน · แตะช่องเช็ค
+        </span>
       </div>
-
-      <p className="muted check-history-hint">
-        ตารางแสดงล่วงหน้า {CHECK_PLAN_AHEAD_DAYS} วัน — วันนี้/ย้อนหลังแตะ &quot;เช็ค&quot; ได้ทุกกะ · วันล่วงหน้ายังเปิดไม่ได้
-      </p>
 
       {rows.length ? (
         <div className="sheet-wrap check-history-wrap check-history-sheet sheet-bleed">

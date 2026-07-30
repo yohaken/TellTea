@@ -1251,10 +1251,7 @@ function OtTable({
 
   return (
     <div className="ot-table-view">
-      <div className="ot-toolbar-slim">
-        <span className="ot-slim-hint muted">
-          {OT_HISTORY_LOOKBACK_DAYS} วันล่าสุด · ใหม่ → เก่า · 3 กะ/วัน · ล่วงหน้า 3 วัน
-        </span>
+      <div className="ot-toolbar-slim module-toolbar-slim">
         <select
           id="ot-status-filter"
           className="ot-slim-input"
@@ -1271,6 +1268,30 @@ function OtTable({
             <input type="checkbox" checked={mineOnly} onChange={(e) => setMineOnly(e.target.checked)} />
             ของฉัน
           </label>
+        ) : null}
+        <span
+          className="ot-summary-inline muted module-slim-stats"
+          title={`${OT_HISTORY_LOOKBACK_DAYS} วันล่าสุด · ใหม่ → เก่า · 3 กะ/วัน · ล่วงหน้า 3 วัน`}
+        >
+          รอบ {summary.shiftCount} · หน่วย {formatPlainNumber(summary.summaryQty)} ·{" "}
+          {mineOnly ? "ของฉัน" : "รวม"} ฿{formatPlainNumber(mineOnly ? summary.myBonus : summary.totalBonus)} ·{" "}
+          เตรียมจ่าย ฿{formatPlainNumber(summary.pendingBonus)}
+        </span>
+        <span
+          className="ot-slim-hint muted module-slim-hint"
+          title="สถานะล็อกเมื่อปิดเดือนโบนัสที่ จ่าย/โบนัส — ไม่เปลี่ยนสถานะเป็นกลุ่มที่นี่"
+        >
+          ล็อกเมื่อปิดเดือนโบนัส
+        </span>
+        {isOwner ? (
+          <PhotoForensicsPanel
+            rows={forensicsRows}
+            onReport={setPhotoReport}
+            onPickEntry={(id) => {
+              const row = filtered.find((r) => r.id === id);
+              if (row) onEdit(row);
+            }}
+          />
         ) : null}
         <div className="ot-view-toggle ot-view-toggle-slim" role="group" aria-label="มุมมองตาราง">
           <button
@@ -1293,27 +1314,6 @@ function OtTable({
           </button>
         </div>
       </div>
-
-      <p className="ot-summary-inline muted">
-        รอบ {summary.shiftCount} · หน่วย {formatPlainNumber(summary.summaryQty)} ·{" "}
-        {mineOnly ? "ของฉัน" : "รวม"} ฿{formatPlainNumber(mineOnly ? summary.myBonus : summary.totalBonus)} ·{" "}
-        เตรียมจ่าย ฿{formatPlainNumber(summary.pendingBonus)}
-      </p>
-
-      <p className="muted check-history-hint" style={{ margin: "0 0 0.45rem" }}>
-        สถานะล็อกเมื่อปิดเดือนโบนัสที่ จ่าย/โบนัส — ไม่เปลี่ยนสถานะเป็นกลุ่มที่นี่
-      </p>
-
-      {isOwner ? (
-        <PhotoForensicsPanel
-          rows={forensicsRows}
-          onReport={setPhotoReport}
-          onPickEntry={(id) => {
-            const row = filtered.find((r) => r.id === id);
-            if (row) onEdit(row);
-          }}
-        />
-      ) : null}
 
       {tableView === "sheet" ? (
         <OtSheetTable

@@ -16,6 +16,7 @@ export function PhotoForensicsPanel({
   onPickEntry,
   onReport,
   lookbackDays = PHOTO_FORENSICS_LOOKBACK_DAYS,
+  className,
 }: {
   /** Prefer all loaded entries — panel scopes to lookbackDays */
   rows: PhotoForensicsRowInput[];
@@ -23,6 +24,7 @@ export function PhotoForensicsPanel({
   /** Notify parent so table can highlight */
   onReport?: (report: PhotoForensicsReport | null) => void;
   lookbackDays?: number;
+  className?: string;
 }) {
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<PhotoForensicsReport | null>(null);
@@ -59,13 +61,14 @@ export function PhotoForensicsPanel({
     : 0;
 
   return (
-    <div className="photo-forensics-panel">
+    <div className={["photo-forensics-panel", className].filter(Boolean).join(" ")}>
       <div className="photo-forensics-bar">
         <button
           type="button"
           className="ghost-btn bulk-status-chip"
           disabled={busy || !scopedCount}
           onClick={() => void runScan()}
+          title={`ย้อน ${lookbackDays} วัน · ${scopedCount} รายการ · วันถ่าย/อัปโหลด + รูปซ้ำ`}
         >
           {busy ? "กำลังตรวจ…" : `ตรวจ ${lookbackDays} วัน`}
         </button>

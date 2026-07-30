@@ -5,6 +5,7 @@ import {
   useMemo,
   useState,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
 import { Boxes, X } from "lucide-react";
@@ -104,6 +105,36 @@ function StockView() {
   const showCatalog = isOwner && ownerView === "catalog";
   const showHistory = !showCatalog;
 
+  const ownerTabs = isOwner ? (
+    <div className="stock-owner-tabs stock-owner-tabs--inline" role="tablist" aria-label="มุมมองคลังเจ้าของ">
+      <button
+        type="button"
+        role="tab"
+        className={ownerView === "history" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+        aria-selected={ownerView === "history"}
+        onClick={() => {
+          setOwnerView("history");
+          setCountTarget(null);
+        }}
+      >
+        ประวัตินับ
+      </button>
+      <button
+        type="button"
+        role="tab"
+        className={ownerView === "catalog" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+        aria-selected={ownerView === "catalog"}
+        onClick={() => {
+          setOwnerView("catalog");
+          setCountTarget(null);
+        }}
+      >
+        รายการวัตถุดิบ
+        {items.length ? ` (${items.length})` : ""}
+      </button>
+    </div>
+  ) : null;
+
   return (
     <div className="module-page stock-module stock-page">
       <div className="module-page-head">
@@ -116,41 +147,19 @@ function StockView() {
             ? "จัดการรายการ — ตั้งชื่อ · เพิ่ม/ลด · ลบ (เจ้าของ)"
             : "นับสต๊อกคงเหลือ — ระบบเปิดรอบ 1 · 10 · 20 ล่วงหน้า 3 รอบ · เรียงใหม่→เก่า"}
         </p>
-        {isOwner ? (
-          <div className="stock-owner-tabs" role="tablist" aria-label="มุมมองคลังเจ้าของ">
-            <button
-              type="button"
-              role="tab"
-              className={ownerView === "history" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-              aria-selected={ownerView === "history"}
-              onClick={() => {
-                setOwnerView("history");
-                setCountTarget(null);
-              }}
-            >
-              ประวัตินับ
-            </button>
-            <button
-              type="button"
-              role="tab"
-              className={ownerView === "catalog" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-              aria-selected={ownerView === "catalog"}
-              onClick={() => {
-                setOwnerView("catalog");
-                setCountTarget(null);
-              }}
-            >
-              รายการวัตถุดิบ
-              {items.length ? ` (${items.length})` : ""}
-            </button>
-          </div>
-        ) : null}
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading && showCatalog ? <StockCatalogSetup onError={setError} /> : null}
+      {!loading && showCatalog ? (
+        <>
+          {ownerTabs ? (
+            <div className="ot-toolbar-slim module-toolbar-slim">{ownerTabs}</div>
+          ) : null}
+          <StockCatalogSetup onError={setError} />
+        </>
+      ) : null}
 
       {!loading && showHistory ? (
         <StockHistoryView
@@ -166,6 +175,7 @@ function StockView() {
               dayOfMonth: row.dayOfMonth,
             })
           }
+          toolbarLeading={ownerTabs}
         />
       ) : null}
 
@@ -199,6 +209,7 @@ function StockHistoryView({
   onError,
   onOpenCatalog,
   onCountRound,
+  toolbarLeading,
 }: {
   items: StockItem[];
   sessions: StockCountSession[];
@@ -206,6 +217,7 @@ function StockHistoryView({
   onError: (msg: string | null) => void;
   onOpenCatalog?: () => void;
   onCountRound: (row: StockHistoryTimelineRow) => void;
+  toolbarLeading?: ReactNode;
 }) {
   const [filter, setFilter] = useState<"all" | "missing">("all");
   const [detail, setDetail] = useState<StockHistoryTimelineRow | null>(null);
@@ -252,7 +264,8 @@ function StockHistoryView({
 
   return (
     <div className="stock-summary-view">
-      <div className="check-history-toolbar stock-history-toolbar">
+      <div className="check-history-toolbar stock-history-toolbar ot-toolbar-slim module-toolbar-slim">
+        {toolbarLeading}
         <div className="check-filter-pills" role="group" aria-label="ตัวกรอง">
           <button
             type="button"
@@ -269,15 +282,17 @@ function StockHistoryView({
             ยังไม่นับ
           </button>
         </div>
-        <p className="muted check-history-stats">
+        <p className="muted check-history-stats module-slim-stats">
           {stats.filledRounds}/{stats.totalRounds} รอบ · {stats.itemsTracked} รายการ
           {stats.rangeLabel !== "—" ? ` · ${stats.rangeLabel}` : ""}
         </p>
+        <span
+          className="ot-slim-hint muted module-slim-hint"
+          title="เรียงวันที่ใหม่→เก่า · ระบบเปิดรอบล่วงหน้า 3 รอบ · แตะแถวว่างเพื่อกรอก · แตะช่องที่นับแล้วดูรายละเอียด"
+        >
+          ใหม่→เก่า · แตะแถวว่างเพื่อนับ
+        </span>
       </div>
-
-      <p className="muted check-history-hint">
-        เรียงวันที่ใหม่→เก่า · ระบบเปิดรอบล่วงหน้า 3 รอบ · แตะแถวว่างเพื่อกรอก · แตะช่องที่นับแล้วดูรายละเอียด
-      </p>
 
       {rows.length ? (
         <div className="sheet-wrap stock-history-wrap stock-history-sheet sheet-bleed">
@@ -351,7 +366,7 @@ function StockHistoryRow({
             title={`กรอกนับรอบ ${timelineRoundLabel(row)}`}
           >
             {timelineRoundLabel(row)}
-            <span className="stock-history-missing-tag">ยังไม่นับ · แตะกรอก</span>
+            <span className="stock-history-missing-tag">ยังไม่นับ</span>
           </button>
         ) : (
           <>

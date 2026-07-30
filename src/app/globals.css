@@ -3182,30 +3182,53 @@ body.modal-open .main-panel {
   font-weight: 700;
 }
 
-.ot-toolbar-slim {
+.ot-toolbar-slim,
+.module-toolbar-slim {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.3rem;
-  margin-bottom: 0.35rem;
+  gap: 0.28rem;
+  margin-bottom: 0.28rem;
+  row-gap: 0.22rem;
 }
 
 .ot-slim-hint {
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 600;
   white-space: nowrap;
 }
 
+.module-slim-hint {
+  flex: 1 1 7rem;
+  min-width: 0;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.module-slim-stats {
+  margin: 0 !important;
+  flex: 1 1 8rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6rem;
+  line-height: 1.2;
+  text-align: left;
+}
+
 .ot-slim-input {
   font: inherit;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  padding: 0.28rem 0.45rem;
+  padding: 0.16rem 0.4rem;
   border-radius: 999px;
   border: 1px solid rgba(28, 42, 31, 0.14);
   background: rgba(255, 255, 255, 0.78);
   color: rgba(28, 42, 31, 0.82);
-  min-height: 1.85rem;
+  min-height: 1.55rem;
   max-width: 7.5rem;
 }
 
@@ -3213,15 +3236,16 @@ body.modal-open .main-panel {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 700;
-  padding: 0.28rem 0.5rem;
+  padding: 0.16rem 0.42rem;
   border-radius: 999px;
   border: 1px solid rgba(28, 42, 31, 0.12);
   background: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  min-height: 1.55rem;
 }
 
 .ot-slim-chip:has(input:checked) {
@@ -3235,16 +3259,67 @@ body.modal-open .main-panel {
 }
 
 .ot-view-toggle-slim .ot-view-btn {
-  padding: 0.28rem 0.4rem;
-  min-width: 1.85rem;
+  padding: 0.16rem 0.32rem;
+  min-width: 1.55rem;
+  min-height: 1.55rem;
   justify-content: center;
 }
 
 .ot-summary-inline {
-  margin: 0 0 0.4rem;
-  font-size: 0.68rem;
+  margin: 0;
+  font-size: 0.6rem;
   text-align: left;
-  line-height: 1.35;
+  line-height: 1.2;
+}
+
+.stock-owner-tabs--inline {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 0.2rem;
+  margin: 0;
+}
+
+.stock-owner-tabs--inline .stock-owner-tab {
+  font-size: 0.68rem;
+  font-weight: 650;
+  padding: 0.16rem 0.48rem;
+  min-height: 1.55rem;
+}
+
+/* Forensics chips join the slim toolbar row; body wraps full-width below */
+.module-toolbar-slim .photo-forensics-panel,
+.ot-toolbar-slim .photo-forensics-panel {
+  display: contents;
+}
+
+.module-toolbar-slim .photo-forensics-bar,
+.ot-toolbar-slim .photo-forensics-bar {
+  display: contents;
+}
+
+.module-toolbar-slim .photo-forensics-hint,
+.ot-toolbar-slim .photo-forensics-hint {
+  display: none;
+}
+
+.module-toolbar-slim .photo-forensics-body,
+.ot-toolbar-slim .photo-forensics-body {
+  flex: 1 1 100%;
+  margin-top: 0.12rem;
+}
+
+.module-toolbar-slim .bulk-status-chip,
+.ot-toolbar-slim .bulk-status-chip {
+  font-size: 0.64rem;
+  padding: 0.14rem 0.4rem;
+  min-height: 1.55rem;
+}
+
+.module-toolbar-slim .error-text,
+.ot-toolbar-slim .error-text {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.62rem;
 }
 
 .prod-table {
@@ -3258,8 +3333,8 @@ body.modal-open .main-panel {
  */
 .production-page .production-sheet .sheet-table--dense th,
 .production-page .production-sheet .sheet-table--dense td {
-  padding: 0.18rem 0.3rem;
-  line-height: 1.15;
+  padding: 0.12rem 0.26rem;
+  line-height: 1.12;
 }
 
 .production-page .production-sheet .sheet-table .col-date {
@@ -3310,13 +3385,15 @@ body.modal-open .main-panel {
 }
 
 .prod-table .prod-col-product {
-  min-width: 6.25rem;
-  max-width: 9rem;
+  min-width: 5.5rem;
+  max-width: 8.5rem;
   word-break: keep-all;
-  overflow-wrap: anywhere;
-  white-space: normal;
-  line-height: 1.3;
-  vertical-align: top;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  line-height: 1.15;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .prod-table .prod-col-product .desc-with-photo {
@@ -3325,11 +3402,14 @@ body.modal-open .main-panel {
 }
 
 .prod-table .prod-col-product .desc-link {
-  min-width: 4.5rem;
+  min-width: 0;
   text-align: left;
   word-break: keep-all;
-  overflow-wrap: anywhere;
-  line-height: 1.3;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.15;
 }
 
 .prod-name-row {
@@ -3410,9 +3490,9 @@ body.modal-open .main-panel {
 
 .prod-status-pill {
   display: inline-block;
-  font-size: 0.65rem;
+  font-size: 0.55rem;
   font-weight: 700;
-  padding: 0.15rem 0.4rem;
+  padding: 0.06rem 0.28rem;
   border-radius: 999px;
   background: #fff3cd;
   color: #7a4e00;
@@ -3659,8 +3739,8 @@ body.modal-open .main-panel {
  */
 .ot-page .ot-sheet-wrap .sheet-table--dense th,
 .ot-page .ot-sheet-wrap .sheet-table--dense td {
-  padding: 0.18rem 0.3rem;
-  line-height: 1.15;
+  padding: 0.12rem 0.26rem;
+  line-height: 1.12;
 }
 
 .ot-page .ot-sheet-wrap .ot-table .ot-col-date {
@@ -3777,9 +3857,13 @@ body.modal-open .main-panel {
 }
 
 .ot-worker-names {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 600;
-  word-break: break-word;
+  word-break: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .ot-worker-meta {
@@ -3840,11 +3924,11 @@ body.modal-open .main-panel {
 
 .ot-day-summary td {
   background: rgba(149, 213, 178, 0.22);
-  font-size: 0.68rem;
+  font-size: 0.6rem;
   font-weight: 700;
   color: #1b4332;
   text-align: left;
-  padding: 0.35rem 0.5rem;
+  padding: 0.18rem 0.35rem;
 }
 
 .ot-table tr.ot-slot-empty td {
@@ -3858,10 +3942,10 @@ body.modal-open .main-panel {
 }
 
 .ot-slot-edit-btn {
-  font-size: 0.62rem;
+  font-size: 0.56rem;
   font-weight: 700;
-  padding: 0.2rem 0.45rem;
-  min-height: 1.6rem;
+  padding: 0.1rem 0.32rem;
+  min-height: 1.3rem;
   border-radius: 999px;
   white-space: nowrap;
 }
@@ -4184,23 +4268,25 @@ body.modal-open .main-panel {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.28rem;
+  margin-bottom: 0.28rem;
 }
 
 .check-filter-pills {
   display: inline-flex;
-  gap: 0.2rem;
+  gap: 0.18rem;
 }
 
 .check-filter-pill {
   border: 1px solid rgba(28, 42, 31, 0.12);
   border-radius: 999px;
-  padding: 0.2rem 0.55rem;
+  padding: 0.14rem 0.45rem;
   font: inherit;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 600;
   background: rgba(255, 255, 255, 0.75);
   cursor: pointer;
+  min-height: 1.55rem;
 }
 
 .check-filter-pill.is-active {
@@ -4210,15 +4296,19 @@ body.modal-open .main-panel {
 }
 
 .check-history-stats {
-  flex: 1 1 100%;
+  flex: 1 1 auto;
   margin: 0;
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   text-align: left;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .check-history-hint {
-  margin: 0 0 0.35rem;
-  font-size: 0.62rem;
+  margin: 0 0 0.28rem;
+  font-size: 0.6rem;
   text-align: left;
 }
 
@@ -4233,8 +4323,8 @@ body.modal-open .main-panel {
  */
 .check-page .check-history-sheet .sheet-table--dense th,
 .check-page .check-history-sheet .sheet-table--dense td {
-  padding: 0.18rem 0.3rem;
-  line-height: 1.15;
+  padding: 0.1rem 0.22rem;
+  line-height: 1.12;
 }
 
 .check-page .check-history-sheet .check-history-th-date,
@@ -4291,10 +4381,11 @@ body.modal-open .main-panel {
 .check-history-today-tag,
 .check-history-missing-tag,
 .check-history-future-tag {
-  display: block;
-  font-size: 0.5rem;
+  display: inline;
+  margin-left: 0.22rem;
+  font-size: 0.48rem;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
 .check-history-today-tag {
@@ -4338,13 +4429,17 @@ body.modal-open .main-panel {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 1.55rem;
+  min-height: 1.2rem;
   border: none;
-  border-radius: 0.35rem;
-  padding: 0.12rem 0.08rem;
+  border-radius: 0.28rem;
+  padding: 0.06rem 0.06rem;
   font: inherit;
   cursor: pointer;
   text-align: center;
+}
+
+.check-history-cell .check-history-meta {
+  display: none;
 }
 
 .check-history-cell.is-pending {
@@ -4565,8 +4660,8 @@ body.modal-open .main-panel {
  */
 .stock-page .stock-history-sheet .sheet-table--dense th,
 .stock-page .stock-history-sheet .sheet-table--dense td {
-  padding: 0.18rem 0.3rem;
-  line-height: 1.15;
+  padding: 0.1rem 0.2rem;
+  line-height: 1.12;
 }
 
 .stock-page .stock-history-sheet .stock-history-th-date,
@@ -4620,11 +4715,12 @@ body.modal-open .main-panel {
 }
 
 .stock-history-round-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.05rem;
-  width: 100%;
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0.22rem;
+  max-width: 100%;
   padding: 0;
   border: 0;
   background: transparent;
@@ -4633,20 +4729,26 @@ body.modal-open .main-panel {
   font-weight: 600;
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .stock-history-meta-inline {
-  display: block;
+  display: inline;
+  margin-left: 0.22rem;
   font-size: 0.48rem;
   font-weight: 500;
   color: rgba(28, 42, 31, 0.52);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stock-history-missing-tag {
-  display: block;
+  display: inline;
   font-size: 0.48rem;
   font-weight: 600;
   color: #c45a1a;
+  white-space: nowrap;
 }
 
 .stock-history-row-missing {
@@ -4661,13 +4763,13 @@ body.modal-open .main-panel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2rem;
-  min-height: 1.4rem;
+  min-width: 1.85rem;
+  min-height: 1.15rem;
   border: none;
-  border-radius: 0.3rem;
-  padding: 0.1rem 0.15rem;
+  border-radius: 0.25rem;
+  padding: 0.05rem 0.12rem;
   font: inherit;
-  font-size: 0.58rem;
+  font-size: 0.56rem;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
 }

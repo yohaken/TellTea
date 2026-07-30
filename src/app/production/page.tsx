@@ -5,6 +5,7 @@ import {
   useMemo,
   useState,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
 import { ChefHat, Lock, Trash2, X } from "lucide-react";
@@ -150,6 +151,36 @@ function ProductionView() {
     setEditing(null);
   }
 
+  const ownerTabs = isOwner ? (
+    <div className="stock-owner-tabs stock-owner-tabs--inline" role="tablist" aria-label="มุมมองผลิตเจ้าของ">
+      <button
+        type="button"
+        role="tab"
+        className={ownerView === "log" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+        aria-selected={ownerView === "log"}
+        onClick={() => {
+          setOwnerView("log");
+          setFormOpen(false);
+        }}
+      >
+        บันทึกผลิต
+      </button>
+      <button
+        type="button"
+        role="tab"
+        className={ownerView === "catalog" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+        aria-selected={ownerView === "catalog"}
+        onClick={() => {
+          setOwnerView("catalog");
+          setFormOpen(false);
+        }}
+      >
+        สินค้า / เรท
+        {products.length ? ` (${products.length})` : ""}
+      </button>
+    </div>
+  ) : null;
+
   return (
     <div className="module-page production-page">
       <div className="module-page-head">
@@ -162,50 +193,26 @@ function ProductionView() {
             ? "จัดการสินค้า + เรทเริ่มต้น (เจ้าของ)"
             : "บันทึกยอดผลิตประจำวัน"}
         </p>
-        {isOwner ? (
-          <div className="stock-owner-tabs" role="tablist" aria-label="มุมมองผลิตเจ้าของ">
-            <button
-              type="button"
-              role="tab"
-              className={ownerView === "log" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-              aria-selected={ownerView === "log"}
-              onClick={() => {
-                setOwnerView("log");
-                setFormOpen(false);
-              }}
-            >
-              บันทึกผลิต
-            </button>
-            <button
-              type="button"
-              role="tab"
-              className={ownerView === "catalog" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-              aria-selected={ownerView === "catalog"}
-              onClick={() => {
-                setOwnerView("catalog");
-                setFormOpen(false);
-              }}
-            >
-              สินค้า / เรท
-              {products.length ? ` (${products.length})` : ""}
-            </button>
-          </div>
-        ) : null}
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading && showCatalog ? (
-        <ProdCatalogSetup
-          products={products}
-          shopSalesRate={
-            resolveRateForDate(rateSchedule, "bakerySales", Date.now())?.rate ??
-            undefined
-          }
-          onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
-          onError={setError}
-        />
+        <>
+          {ownerTabs ? (
+            <div className="ot-toolbar-slim module-toolbar-slim">{ownerTabs}</div>
+          ) : null}
+          <ProdCatalogSetup
+            products={products}
+            shopSalesRate={
+              resolveRateForDate(rateSchedule, "bakerySales", Date.now())?.rate ??
+              undefined
+            }
+            onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
+            onError={setError}
+          />
+        </>
       ) : null}
 
       {!loading && showLog ? (
@@ -216,6 +223,7 @@ function ProductionView() {
           onMonthChange={setLogMonth}
           onEdit={openEdit}
           onError={setError}
+          toolbarLeading={ownerTabs}
         />
       ) : null}
 
@@ -548,6 +556,7 @@ function ProdTable({
   onMonthChange,
   onEdit,
   onError,
+  toolbarLeading,
 }: {
   entries: ProdEntry[];
   isOwner: boolean;
@@ -555,6 +564,7 @@ function ProdTable({
   onMonthChange: (month: string) => void;
   onEdit: (row: ProdEntry) => void;
   onError: (msg: string | null) => void;
+  toolbarLeading?: ReactNode;
 }) {
   const [preview, setPreview] = useState<{
     urls: string[];
@@ -592,17 +602,11 @@ function ProdTable({
     }
   }
 
-  if (!entries.length) {
-    return <p className="empty">ยังไม่มีรายการผลิต — กด + กรอก ด้านล่างเพื่อเริ่ม</p>;
-  }
-
   return (
     <>
-      <p className="muted check-history-hint" style={{ margin: "0 0 0.45rem" }}>
-        สถานะล็อกเมื่อปิดเดือนโบนัสที่ จ่าย/โบนัส — ไม่เปลี่ยนสถานะเป็นกลุ่มที่นี่
-      </p>
-      {isOwner ? (
-        <div className="prod-month-bar" style={{ marginBottom: "0.4rem" }}>
+      <div className="ot-toolbar-slim module-toolbar-slim">
+        {toolbarLeading}
+        {isOwner ? (
           <input
             type="month"
             className="ot-slim-input"
@@ -610,21 +614,28 @@ function ProdTable({
             onChange={(e) => onMonthChange(e.target.value)}
             aria-label="เดือน"
           />
-        </div>
-      ) : null}
+        ) : null}
+        <span
+          className="ot-slim-hint muted module-slim-hint"
+          title="สถานะล็อกเมื่อปิดเดือนโบนัสที่ จ่าย/โบนัส — ไม่เปลี่ยนสถานะเป็นกลุ่มที่นี่"
+        >
+          ล็อกเมื่อปิดเดือนโบนัส
+        </span>
+        {isOwner ? (
+          <PhotoForensicsPanel
+            rows={forensicsRows}
+            onReport={setPhotoReport}
+            onPickEntry={(id) => {
+              const row = filtered.find((r) => r.id === id);
+              if (row) onEdit(row);
+            }}
+          />
+        ) : null}
+      </div>
 
-      {isOwner ? (
-        <PhotoForensicsPanel
-          rows={forensicsRows}
-          onReport={setPhotoReport}
-          onPickEntry={(id) => {
-            const row = filtered.find((r) => r.id === id);
-            if (row) onEdit(row);
-          }}
-        />
-      ) : null}
-
-      {!filtered.length && isOwner ? (
+      {!entries.length ? (
+        <p className="empty">ยังไม่มีรายการผลิต — กด + กรอก ด้านล่างเพื่อเริ่ม</p>
+      ) : !filtered.length && isOwner ? (
         <p className="empty">ไม่มีรายการในเดือนนี้</p>
       ) : (
         <div className="sheet-wrap production-sheet sheet-bleed">
