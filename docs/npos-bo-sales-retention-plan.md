@@ -46,8 +46,11 @@
 ### P3 — ฟิลด์เพิ่มเมื่อมี use-case ⬜
 | ฟิลด์ | ทำไม | เมื่อไหร่ |
 |-------|------|----------|
-| `staffName` / `staffId` | ตรวจผลงานกะ | เมื่อผูกพนักงานเคาน์เตอร์ |
+| `openedByName` / `openedByEmployeeId` | รู้ใครเข้ากะ | **เฟส O1** — [npos-shift-opener-checklist.md](./npos-shift-opener-checklist.md) |
+| `cashDropNotes` + สรุปการ์ดรอบ | ตรวจเบิก/นำส่ง | **เฟส O2** — [npos-session-cash-detail-checklist.md](./npos-session-cash-detail-checklist.md) |
 | `channel` | วิเคราะห์ช่องทาง | เมื่อเปิดหลายช่องจริง |
+
+แผนรวม: [npos-counter-ops-phases.md](./npos-counter-ops-phases.md)
 
 ### ไม่ควรทำ
 - เก็บใบเสร็จภาพ/ESC ดิบทุกบิลใน Firestore  
