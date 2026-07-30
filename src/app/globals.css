@@ -3652,6 +3652,49 @@ body.modal-open .main-panel {
   min-width: 52rem;
 }
 
+/*
+ * Phase 6 table layout — OT (.ot-sheet-wrap).
+ * Date/row sizing from ledger-staff-sheet prototype; bleed via shared .sheet-bleed.
+ * Scoped under .ot-page so production / other modules stay untouched.
+ */
+.ot-page .ot-sheet-wrap .sheet-table--dense th,
+.ot-page .ot-sheet-wrap .sheet-table--dense td {
+  padding: 0.18rem 0.3rem;
+  line-height: 1.15;
+}
+
+.ot-page .ot-sheet-wrap .ot-table .ot-col-date {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ot-page .ot-sheet-wrap .ot-table .ot-col-worker {
+  font-size: 0.62rem;
+}
+
+.ot-page .ot-sheet-wrap .ot-table .ot-col-shift {
+  font-size: 0.58rem;
+}
+
+.ot-page .ot-sheet-wrap .ot-table .col-out {
+  min-width: 2.35rem;
+  padding-left: 0.14rem;
+  padding-right: 0.22rem;
+  font-size: 0.66rem;
+}
+
+.ot-page .ot-sheet-wrap .ot-table .col-note {
+  max-width: 3.4rem;
+  font-size: 0.58rem;
+}
+
+.ot-page .ot-list .ot-card-meta {
+  font-variant-numeric: tabular-nums;
+}
+
 /* ot density via .sheet-table--dense */
 
 .ot-table .ot-th-staff {

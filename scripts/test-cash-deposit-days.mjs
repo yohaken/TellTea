@@ -13,7 +13,7 @@ const panel = readFileSync(join(root, "src/components/CashInLedgerPanel.tsx"), "
 const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
 const rules = readFileSync(join(root, "firestore.rules"), "utf8");
 
-assert.match(version, /APP_BUILD\s*=\s*471/);
+assert.match(version, /APP_BUILD\s*=\s*472/);
 assert.match(lib, /CASH_DEPOSIT_DAY_MAX = 31/);
 assert.match(lib, /export function analyzeCashDepositDays/);
 assert.match(lib, /export function buildCashDepositRoundDays/);

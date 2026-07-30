@@ -92,8 +92,8 @@ import {
   todayShiftBannerLabel,
 } from "@/lib/shift-session";
 import {
-  formatDateShort,
-  formatDateTimeShort,
+  formatDateShortBe,
+  formatDateTimeShortBe,
   formatPlainNumber,
   parseDateInput,
   startOfLocalDay,
@@ -319,7 +319,7 @@ function OtView() {
   }
 
   return (
-    <div className="module-page">
+    <div className="module-page ot-page">
       <div className="module-page-head">
         <h1 className="panel-title module-page-title">
           <Coffee size={18} aria-hidden />
@@ -820,6 +820,7 @@ function OtEntryForm({
           entryDate={entry.date}
           createdAt={entry.createdAt}
           updatedAt={entry.updatedAt}
+          era="be"
         />
       ) : null}
 
@@ -847,7 +848,7 @@ function OtEntryForm({
 
         {slotFixed ? (
           <p className="ot-form-slot-bar">
-            {formatDateShort(parseDateInput(date))} · {labelOtShift(shift)}
+            {formatDateShortBe(parseDateInput(date))} · {labelOtShift(shift)}
             {" · "}
             เรท {formatPlainNumber(rate)}
             {rateLocked ? " (ติดแถวแล้ว)" : " (ตามวันในตาราง)"}
@@ -930,7 +931,7 @@ function OtEntryForm({
                 <div className="check-existing-banner check-existing-banner--warn">
                   <AlertTriangle size={16} aria-hidden />
                   <span>
-                    SmartCheck กะนี้บันทึกแล้ว ({formatDateTimeShort(checkSession.submittedAt)}) —{" "}
+                    SmartCheck กะนี้บันทึกแล้ว ({formatDateTimeShortBe(checkSession.submittedAt)}) —{" "}
                     {checkSession.failed ? `${checkSession.failed} ไม่ผ่าน` : "ผ่าน 100%"}
                     <br />
                     <strong>หมายเหตุ:</strong> {processOrderHint}
@@ -940,7 +941,7 @@ function OtEntryForm({
                 <div className="check-existing-banner check-existing-banner--ok">
                   <CheckCircle2 size={16} aria-hidden />
                   <span>
-                    SmartCheck กะนี้เช็คแล้ว ({formatDateTimeShort(checkSession.submittedAt)}) —{" "}
+                    SmartCheck กะนี้เช็คแล้ว ({formatDateTimeShortBe(checkSession.submittedAt)}) —{" "}
                     {checkSession.failed ? `${checkSession.failed} ไม่ผ่าน` : "ผ่าน 100%"} · ไม่ต้องเช็คซ้ำ
                   </span>
                 </div>
@@ -1250,7 +1251,7 @@ function OtTable({
       entries.map((row) => ({
         entryId: row.id,
         entryDate: row.date,
-        label: `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`,
+        label: `${formatDateShortBe(row.date)} ${labelOtShift(row.shift)}`,
         imageUrls: getOtImageUrls(row),
       })),
     [entries],
@@ -1569,14 +1570,14 @@ function OtSheetTable({
                             type="checkbox"
                             checked={selected.has(row.id)}
                             onChange={() => onToggleRow(row.id)}
-                            aria-label={`เลือก ${formatDateShort(group.date)} ${slot.shiftLabel}`}
+                            aria-label={`เลือก ${formatDateShortBe(group.date)} ${slot.shiftLabel}`}
                           />
                         ) : null}
                       </td>
                     ) : null}
                     {idx === 0 ? (
                       <td className="col-sticky-left ot-col-date ot-date-cell" rowSpan={slotCount}>
-                        {formatDateShort(group.date)}
+                        {formatDateShortBe(group.date)}
                       </td>
                     ) : null}
                     <td className="ot-col-worker">
@@ -1603,13 +1604,13 @@ function OtSheetTable({
                             ) : null}
                             <EntryPhotoIndicator
                               imageUrls={getOtImageUrls(row!)}
-                              label={`${formatDateShort(group.date)} ${slot.shiftLabel}`}
+                              label={`${formatDateShortBe(group.date)} ${slot.shiftLabel}`}
                               flagged={photoFlagged}
                               flagTitle={photoFlagHints.join(" · ") || undefined}
                               onView={(urls) =>
                                 onViewPhoto(
                                   urls,
-                                  `${formatDateShort(group.date)} ${slot.shiftLabel}`,
+                                  `${formatDateShortBe(group.date)} ${slot.shiftLabel}`,
                                   group.date,
                                 )
                               }
@@ -1718,7 +1719,7 @@ function OtSheetTable({
               })}
               <tr className="ot-day-summary">
                 <td colSpan={colCount}>
-                  สรุป {formatDateShort(group.date)}: {group.filledCount}/{group.slots.length} กะ · สรุปหน่วย{" "}
+                  สรุป {formatDateShortBe(group.date)}: {group.filledCount}/{group.slots.length} กะ · สรุปหน่วย{" "}
                   {formatPlainNumber(group.summaryQty)} · โบนัสรวม ฿{formatPlainNumber(group.totalBonus)}
                 </td>
               </tr>
@@ -1807,7 +1808,7 @@ function OtCardList({
                   />
                 ) : null}
                 <button type="button" className="desc-link ot-card-date" onClick={() => onEdit(row)}>
-                  {isOtEntryLocked(row) ? <Lock size={11} aria-hidden /> : null} {formatDateShort(row.date)}
+                  {isOtEntryLocked(row) ? <Lock size={11} aria-hidden /> : null} {formatDateShortBe(row.date)}
                 </button>
                 <span className="ot-card-shift">{labelOtShift(row.shift)}</span>
               </div>
@@ -1857,13 +1858,13 @@ function OtCardList({
                 ) : null}
                 <EntryPhotoIndicator
                   imageUrls={getOtImageUrls(row)}
-                  label={`${formatDateShort(row.date)} ${labelOtShift(row.shift)}`}
+                  label={`${formatDateShortBe(row.date)} ${labelOtShift(row.shift)}`}
                   flagged={isOwner && entryHasPhotoFlag(photoReport, row.id)}
                   flagTitle={photoReport?.byEntryId[row.id]?.hints?.join(" · ") || undefined}
                   onView={(urls) =>
                     onViewPhoto(
                       urls,
-                      `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`,
+                      `${formatDateShortBe(row.date)} ${labelOtShift(row.shift)}`,
                       row.date,
                     )
                   }
