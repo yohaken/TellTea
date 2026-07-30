@@ -20,7 +20,7 @@ assert.match(page, /ภาษีต้นทุน/);
 assert.match(page, /ภาษีคชจ\./);
 assert.match(page, /รวมภาษีซื้อ/);
 assert.match(xlsx, /ภาษีซื้อ\(ต้นทุน\)/);
-assert.match(version, /APP_BUILD = 503/);
+assert.match(version, /APP_BUILD = 504/);
 
 function businessCostOut(amountOut, hasVat, vatInput, vatClaim) {
   const out = Number(amountOut) || 0;

@@ -460,7 +460,7 @@ export function VatMonthBooks({ actor }: Props) {
     setSfSendPct(pct);
     saveSfSendPct(pct);
     if (locked) return;
-    let source = resolveSfSendSource(sfSendSourceStr);
+    const source = resolveSfSendSource(sfSendSourceStr);
     if (!(source > 0)) {
       setMsg("ใส่ยอดหน้าร้านต้นทางก่อน แล้วค่อยเลื่อน % ส่งเข้าตาราง");
       return;

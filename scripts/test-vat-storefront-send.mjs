@@ -65,6 +65,6 @@ assert.match(ui, /อัตรากำไรสุทธิ/);
 assert.match(ui, /computeSfUnsentAmount/);
 
 const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
-assert.match(version, /APP_BUILD = 503/);
+assert.match(version, /APP_BUILD = 504/);
 
 console.log("OK test-vat-storefront-send");
