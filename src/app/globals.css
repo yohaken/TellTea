@@ -18537,6 +18537,25 @@ a.ghost-btn {
   opacity: 0.45;
 }
 
+.vat-month-books .vat-cost-layer-head td {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.72);
+  padding-top: 0.35rem !important;
+  border-top: 1px dashed rgba(28, 42, 31, 0.14);
+}
+
+.vat-month-books .vat-cost-layer td {
+  font-size: 0.62rem;
+  line-height: 1.25;
+  color: rgba(28, 42, 31, 0.68);
+}
+
+.vat-month-books .vat-cost-layer-sub {
+  font-size: 0.58rem;
+  font-weight: 500;
+}
+
 .vat-net-strip {
   display: flex;
   flex-wrap: wrap;

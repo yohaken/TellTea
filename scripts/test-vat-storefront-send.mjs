@@ -1,5 +1,5 @@
 /**
- * Unit: storefront send slider math + clamp + real-profit note.
+ * Unit: storefront send slider → A income + D sales transfer + cost layers.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -11,11 +11,12 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const src = readFileSync(join(root, "src/lib/vat-storefront-send.ts"), "utf8");
 assert.match(src, /computeSfSendAmount/);
 assert.match(src, /computeSfUnsentAmount/);
-assert.match(src, /computeRealProfitAfterVat/);
-assert.match(src, /computeNetProfitMarginPct/);
-assert.match(src, /clampSfSendPct/);
 assert.match(src, /SF_SEND_PCT_KEY/);
-assert.match(src, /telltea\.vat\.sfSendPct/);
+
+const books = readFileSync(join(root, "src/lib/vat-month-books.ts"), "utf8");
+assert.match(books, /patchSfSendIntoDraft/);
+assert.match(books, /storefrontTransfer: n/);
+assert.match(books, /storefrontCash: 0/);
 
 function clampSfSendPct(n) {
   if (!Number.isFinite(n)) return 100;
@@ -26,45 +27,26 @@ function computeSfSendAmount(source, pct) {
   const p = clampSfSendPct(pct);
   return Math.round(((s * p) / 100) * 100) / 100;
 }
-function computeSfUnsentAmount(source, pct) {
-  const s = Number.isFinite(source) && source > 0 ? source : 0;
-  return Math.round((s - computeSfSendAmount(s, pct)) * 100) / 100;
-}
-function computeRealProfitAfterVat(profitAfterVat, unsent) {
-  if (profitAfterVat == null || !Number.isFinite(profitAfterVat)) return null;
-  const u = Number.isFinite(unsent) && unsent > 0 ? unsent : 0;
-  return Math.round((profitAfterVat + u) * 100) / 100;
-}
-function computeNetProfitMarginPct(profitAfterVat, incomeTotal) {
-  if (profitAfterVat == null || !Number.isFinite(profitAfterVat)) return null;
-  if (!Number.isFinite(incomeTotal) || incomeTotal <= 0) return null;
-  return Math.round((profitAfterVat / incomeTotal) * 10000) / 100;
-}
-
 assert.equal(computeSfSendAmount(150000, 70), 105000);
-assert.equal(computeSfUnsentAmount(150000, 70), 45000);
-assert.equal(computeSfUnsentAmount(150000, 100), 0);
-assert.equal(computeRealProfitAfterVat(20000, 45000), 65000);
-assert.equal(computeRealProfitAfterVat(null, 45000), null);
-assert.equal(computeNetProfitMarginPct(20000, 100000), 20);
-assert.equal(computeNetProfitMarginPct(20000, 0), null);
 
 const ui = readFileSync(
   join(root, "src/components/vat-sales/VatMonthBooks.tsx"),
   "utf8",
 );
-assert.match(ui, /vat-sf-send-unsent/);
-assert.match(ui, /vat-sf-send-hint/);
-assert.match(ui, /resolveSfSendSource/);
-assert.match(ui, /ไม่เปลี่ยนภาษีขาย\/ภาษีซื้อ/);
-assert.match(ui, /applyClaimCostDelta/);
-assert.match(ui, /หักภาษีซื้อทั้งหมด/);
-assert.match(ui, /vat-c-real-note/);
-assert.match(ui, /กำไรจริง/);
-assert.match(ui, /อัตรากำไรสุทธิ/);
-assert.match(ui, /computeSfUnsentAmount/);
+assert.match(ui, /patchSfSendIntoDraft/);
+assert.match(ui, /ยอดขายโอน/);
+assert.match(ui, /คิดภาษีขายอัตโนมัติ/);
+assert.match(ui, /vat-cost-layer/);
+assert.match(ui, /ชั้นคิดต้นทุนบช/);
+assert.match(ui, /ติ๊กหักภาษีซื้อ → ต้นทุน = บิล − VAT/);
+assert.match(ui, /ไม่ติ๊ก → ต้นทุน = บิลรวม VAT ทั้งก้อน/);
+assert.match(ui, /โอน ← จากแถบ A/);
+
+const entryVat = readFileSync(join(root, "src/lib/entry-vat.ts"), "utf8");
+assert.match(entryVat, /export function businessCostOut/);
+assert.match(entryVat, /vatClaim && vat > 0/);
 
 const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
-assert.match(version, /APP_BUILD = 504/);
+assert.match(version, /APP_BUILD = 505/);
 
 console.log("OK test-vat-storefront-send");

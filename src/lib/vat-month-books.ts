@@ -401,6 +401,26 @@ export function patchSales(
   };
 }
 
+/**
+ * แถบส่งหน้าร้าน → A รายได้ถึงร้าน + D ยอดขายโอนทั้งก้อน (คิดภาษีขาย)
+ * เคลียร์ยอดสดกันนับซ้ำในภาษีขาย
+ */
+export function patchSfSendIntoDraft(
+  draft: MonthBooksDraft,
+  sent: number,
+): MonthBooksDraft {
+  const n = normalizeMoney(sent);
+  const next = patchTransfer(draft, "storefront", n);
+  return {
+    ...next,
+    sales: {
+      ...next.sales,
+      storefrontTransfer: n,
+      storefrontCash: 0,
+    },
+  };
+}
+
 export function incomeBreakdownLabel(draft: MonthBooksDraft): string {
   const parts = MONTH_CHANNELS.map(
     (k) =>

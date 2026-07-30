@@ -38,6 +38,7 @@ import {
   patchGpFee,
   patchGpVat,
   patchSales,
+  patchSfSendIntoDraft,
   patchTransfer,
   retToMonthBooksDraft,
   type MonthBooksDraft,
@@ -248,6 +249,10 @@ export function VatMonthBooks({ actor }: Props) {
       sga: bookStaff.sga + bookOwner.sga,
       other: bookStaff.other + bookOwner.other,
       asset: bookStaff.asset + bookOwner.asset,
+      vatCogs: (bookStaff.vatCogs || 0) + (bookOwner.vatCogs || 0),
+      vatSga: (bookStaff.vatSga || 0) + (bookOwner.vatSga || 0),
+      vatOther: (bookStaff.vatOther || 0) + (bookOwner.vatOther || 0),
+      vatAsset: (bookStaff.vatAsset || 0) + (bookOwner.vatAsset || 0),
     };
   }, [bookStaff, bookOwner]);
 
@@ -430,8 +435,14 @@ export function VatMonthBooks({ actor }: Props) {
       if (!(source > 0)) return; // ห้ามเขียน 0 ทับยอดในตารางเมื่อยังไม่มีต้นทาง
       const sent = computeSfSendAmount(source, pct);
       setDraft((d) => {
-        if (Math.abs((d.transfer.storefront || 0) - sent) < 0.009) return d;
-        return patchTransfer(d, "storefront", sent);
+        const sameIncome =
+          Math.abs((d.transfer.storefront || 0) - sent) < 0.009;
+        const sameSales =
+          Math.abs((d.sales.storefrontTransfer || 0) - sent) < 0.009 &&
+          Math.abs((d.sales.storefrontCash || 0)) < 0.009;
+        if (sameIncome && sameSales) return d;
+        // A รายได้ถึงร้าน + D ยอดขายโอนทั้งก้อน → ภาษีขาย
+        return patchSfSendIntoDraft(d, sent);
       });
       markDirty();
       flashSfCell();
@@ -939,11 +950,11 @@ export function VatMonthBooks({ actor }: Props) {
               </span>
             </div>
             <p className="muted vat-sales-hint vat-sf-send-hint">
-              แถบนี้ส่งเข้า「ยอดโอนหน้าร้าน」ในตาราง A เท่านั้น ·{" "}
-              <strong>ไม่เปลี่ยนภาษีขาย/ภาษีซื้อ</strong>
+              ส่งเข้า A「ยอดโอนหน้าร้าน」+ D「ยอดขายโอน」ทั้งก้อน → คิดภาษีขายอัตโนมัติ ·{" "}
+              ไม่แตะภาษีซื้อ
               {sfSendSourceNum > 0
                 ? ""
-                : " · ใส่ยอดต้นทางก่อน แล้วเลื่อน % (หรือเลื่อนเพื่อใช้ยอดในตารางเป็นฐาน)"}
+                : " · ใส่ยอดต้นทางก่อน แล้วเลื่อน %"}
             </p>
             <div className="sheet-wrap vat-month-slim-wrap">
               <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
@@ -1107,6 +1118,46 @@ export function VatMonthBooks({ actor }: Props) {
                         </td>
                         <td className="col-num">{fmt(view.booksAsset)}</td>
                       </tr>
+                      <tr className="vat-row-child vat-cost-layer-head">
+                        <td className="col-seg col-child" colSpan={2}>
+                          ชั้นคิดต้นทุนบช. (นักบัญชี / สรรพากร)
+                        </td>
+                      </tr>
+                      <tr className="vat-row-child vat-cost-layer">
+                        <td
+                          className="col-seg col-child"
+                          title="รายการที่ติ๊กหักภาษีซื้อ — VAT ถูกตัดออกจากต้นทุน ไปหักภาษีขายใน D"
+                        >
+                          1) ติ๊กหักภาษีซื้อ → ต้นทุน = บิล − VAT
+                        </td>
+                        <td className="col-num">
+                          {fmt(booksCombo?.cogs ?? 0)}
+                          <span className="muted vat-cost-layer-sub">
+                            {" "}
+                            COGS
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="vat-row-child vat-cost-layer">
+                        <td
+                          className="col-seg col-child"
+                          title="ภาษีซื้อจากรายการที่เคลม — ไม่ปนในต้นทุน · ไปหักภาษีขายใน D"
+                        >
+                          · VAT ที่ตัดออกจากต้นทุน → D
+                        </td>
+                        <td className="col-num">
+                          {fmt(booksCombo?.vatCogs ?? 0)}
+                        </td>
+                      </tr>
+                      <tr className="vat-row-child vat-cost-layer">
+                        <td
+                          className="col-seg col-child"
+                          title="รายการไม่ติ๊ก — ใช้ยอดบิลรวม VAT ทั้งก้อนเป็นต้นทุน · ไม่นับภาษีซื้อใน D"
+                        >
+                          2) ไม่ติ๊ก → ต้นทุน = บิลรวม VAT ทั้งก้อน
+                        </td>
+                        <td className="col-num muted">รวมในคชจ.ด้านบน</td>
+                      </tr>
                     </>
                   ) : null}
                   <tr className="vat-sales-totals-row">
@@ -1124,7 +1175,8 @@ export function VatMonthBooks({ actor }: Props) {
               </table>
             </div>
             <p className="muted vat-sales-hint vat-hint-one-line">
-              คชจ.บช.ผสานอัตโนมัติ · กำไรหักแค่บช. · GP ใช้ติดตาม + ภาษีซื้อใน D
+              คชจ.บช. = ต้นทุนหลังตัด VAT ที่ติ๊กหัก · VAT ที่ตัดไปหักภาษีขายใน D ·
+              ไม่ติ๊ก = คชจ.บิลเต็ม
               {booksPulledAt
                 ? ` · อัปเดต ${formatDateShort(booksPulledAt)}`
                 : ""}
@@ -1398,7 +1450,12 @@ export function VatMonthBooks({ actor }: Props) {
                     {openStorefrontSales ? (
                       <>
                         <tr className="vat-row-child">
-                          <td className="col-seg col-child">โอน</td>
+                          <td
+                            className="col-seg col-child"
+                            title="เติมอัตโนมัติจากแถบส่งหน้าร้านใน A (ยอดหลัง %) — คิดภาษีขาย"
+                          >
+                            โอน ← จากแถบ A
+                          </td>
                           <td className="col-num col-input">
                             <MoneyCell
                               value={moneyFieldValue(
@@ -1444,8 +1501,8 @@ export function VatMonthBooks({ actor }: Props) {
             <section className="vat-table-block">
               <h3 className="vat-table-subtitle">ภาษีซื้อ — GP + สองบช.</h3>
               <p className="muted vat-sales-hint vat-books-claim-hint">
-                ติ๊ก「หักภาษีซื้อ」= นับ VAT ในงบนี้ + ต้นทุนในคชจ.ลดลงตามภาษี ·
-                ไม่ติ๊ก「ซื้อไปเหอะ」= ไม่นับภาษีซื้อ · คชจ.ใช้บิลเต็ม ·{" "}
+                ชั้นภาษีซื้อ: ติ๊กหัก = VAT ไปหักภาษีขาย + ต้นทุนใน B = บิล−VAT ·
+                ไม่ติ๊ก = ไม่นับภาษีซื้อ · ต้นทุนใน B = บิลรวม VAT ·{" "}
                 <strong>ภาษีขายด้านบนไม่เปลี่ยนจากติ๊กนี้</strong>
               </p>
               <div className="sheet-wrap vat-month-slim-wrap">
