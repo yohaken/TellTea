@@ -7246,6 +7246,106 @@ body.modal-open .main-panel {
   min-height: 2.25rem;
 }
 
+/* Staff VAT-first gate — cash-out create only */
+.vat-first-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.15rem 0 0.35rem;
+  text-align: left;
+}
+
+.vat-first-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.92);
+}
+
+.vat-first-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.vat-first-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.vat-first-actions .primary-btn,
+.vat-first-actions .ghost-btn {
+  min-height: 2.35rem;
+  width: 100%;
+  font-size: 0.88rem;
+}
+
+.vat-first-cancel {
+  min-height: 2.15rem;
+  width: 100%;
+}
+
+.vat-first-status {
+  margin: 0;
+  font-size: 0.72rem;
+}
+
+.vat-first-confirm,
+.vat-first-manual {
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(40, 90, 60, 0.28);
+  background: rgba(40, 90, 60, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.vat-first-confirm-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: rgba(28, 42, 31, 0.62);
+}
+
+.vat-first-confirm-amount {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #1a5c3a;
+}
+
+.vat-first-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+
+.vat-first-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin: 0 0 0.45rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.45rem;
+  background: rgba(183, 228, 192, 0.35);
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: #1b4332;
+}
+
+.vat-first-summary-no {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+}
+
 .trash-btn {
   width: 2.6rem;
   height: 2.6rem;
