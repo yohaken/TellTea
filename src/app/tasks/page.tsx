@@ -52,7 +52,7 @@ import {
   WEEKDAY_LABELS,
   type OccurrenceTab,
 } from "@/lib/task-weekly-logic";
-import { formatDateShort } from "@/lib/utils";
+import { formatDateShortBe } from "@/lib/utils";
 
 const TASK_PRESETS: { title: string; weekday: number; checklist: string[] }[] = [
   {
@@ -383,7 +383,7 @@ function OccurrencesTable({
   onError: (msg: string) => void;
 }) {
   async function onDelete(occ: TaskOccurrence) {
-    if (!window.confirm(`ลบรอบงาน "${occ.title}" (${formatDateShort(occ.dueDate)})?`)) return;
+    if (!window.confirm(`ลบรอบงาน "${occ.title}" (${formatDateShortBe(occ.dueDate)})?`)) return;
     try {
       await dismissTaskPeriod(occ.templateId, occ.periodKey);
       await deleteTaskOccurrences([occ.id]);
@@ -449,10 +449,10 @@ function OccurrencesTable({
                   )}
                 </td>
                 <td className="tasks-col-due">
-                  <span className="tasks-due-main">{formatDateShort(occ.dueDate)}</span>
+                  <span className="tasks-due-main">{formatDateShortBe(occ.dueDate)}</span>
                   <span className="tasks-due-sub">ทุก{weekday}</span>
                   {soon ? (
-                    <span className="tasks-due-sub">เปิด {formatDateShort(occ.openAt)}</span>
+                    <span className="tasks-due-sub">เปิด {formatDateShortBe(occ.openAt)}</span>
                   ) : null}
                 </td>
                 <td className="tasks-col-who">{occ.assigneeNames.join(", ") || "—"}</td>
@@ -847,7 +847,7 @@ function SubmitOccurrenceModal({
 
           <p className="tasks-form-slot-bar">{occ.title}</p>
           <p className="muted form-hint-inline">
-            รอบ {formatDateShort(occ.dueDate)} — ติ๊กทุกข้อ แล้วแนบรูปหลักฐาน
+            รอบ {formatDateShortBe(occ.dueDate)} — ติ๊กทุกข้อ แล้วแนบรูปหลักฐาน
           </p>
 
           <ul className="tasks-check-submit">

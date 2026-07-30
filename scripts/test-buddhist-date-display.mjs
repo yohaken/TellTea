@@ -7,6 +7,7 @@
  * Phase 5: production formatDateShortBe + layout from ledger prototype.
  * Phase 6: OT formatDateShortBe + layout from ledger prototype.
  * Phase 7: check formatDateShortBe + layout from ledger prototype.
+ * Phase 8: tasks formatDateShortBe + layout from ledger prototype.
  * Later phases keep default ค.ศ. until their turn.
  */
 import assert from "node:assert/strict";
@@ -28,6 +29,7 @@ const cashPanel = read("src/components/CashInLedgerPanel.tsx");
 const production = read("src/app/production/page.tsx");
 const ot = read("src/app/ot/page.tsx");
 const check = read("src/app/check/page.tsx");
+const tasks = read("src/app/tasks/page.tsx");
 const smart = read("src/lib/smart-search.ts");
 const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
@@ -66,6 +68,10 @@ assert.match(check, /check-page/);
 assert.match(check, /check-history-sheet/);
 assert.doesNotMatch(check, /[^B]formatDateShort\(|^formatDateShort\(/);
 assert.doesNotMatch(check, /[^B]formatDateTimeShort\(|^formatDateTimeShort\(/);
+assert.match(tasks, /formatDateShortBe/);
+assert.match(tasks, /tasks-page/);
+assert.match(tasks, /tasks-sheet/);
+assert.doesNotMatch(tasks, /[^B]formatDateShort\(|^formatDateShort\(/);
 assert.match(smart, /formatDateShortBe\(row\.date\)/);
 assert.match(css, /Prototype table layout/);
 assert.match(css, /Phase 2 table layout/);
@@ -74,6 +80,7 @@ assert.match(css, /Phase 4 table layout/);
 assert.match(css, /Phase 5 table layout/);
 assert.match(css, /Phase 6 table layout/);
 assert.match(css, /Phase 7 table layout/);
+assert.match(css, /Phase 8 table layout/);
 assert.match(css, /\.ledger-page \.ledger-staff-sheet \.sheet-table \.col-date/);
 assert.match(css, /\.owner-books-page \.owner-books-sheet \.sheet-table \.col-date/);
 assert.match(css, /\.bill-notice-slim \.col-date/);
@@ -81,8 +88,9 @@ assert.match(css, /\.cash-in-slim \.col-date/);
 assert.match(css, /\.production-page \.production-sheet \.sheet-table \.col-date/);
 assert.match(css, /\.ot-page \.ot-sheet-wrap \.ot-table \.ot-col-date/);
 assert.match(css, /\.check-page \.check-history-sheet \.check-history-date/);
+assert.match(css, /\.tasks-page \.tasks-sheet \.tasks-col-due/);
 assert.match(css, /width: 3\.55rem/);
-assert.match(version, /APP_BUILD = 473/);
+assert.match(version, /APP_BUILD = 474/);
 
 function bangkokDateKey(ms) {
   return new Intl.DateTimeFormat("en-CA", {

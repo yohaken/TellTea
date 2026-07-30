@@ -9500,6 +9500,44 @@ body.modal-open .main-panel {
   margin-bottom: 0.35rem;
 }
 
+/*
+ * Phase 8 table layout — งาน (.tasks-sheet).
+ * Date/row sizing from ledger-staff-sheet prototype; bleed via shared .sheet-bleed.
+ * Scoped under .tasks-page so other modules stay untouched.
+ */
+.tasks-page .tasks-sheet .sheet-table--dense th,
+.tasks-page .tasks-sheet .sheet-table--dense td {
+  padding: 0.18rem 0.3rem;
+  line-height: 1.15;
+}
+
+.tasks-page .tasks-sheet .tasks-col-due {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tasks-page .tasks-sheet .tasks-due-main {
+  font-size: 0.66rem;
+}
+
+.tasks-page .tasks-sheet .tasks-due-sub {
+  font-size: 0.58rem;
+}
+
+.tasks-page .tasks-sheet .tasks-col-title {
+  font-size: 0.66rem;
+  min-width: 0;
+}
+
+.tasks-page .tasks-sheet .tasks-col-who,
+.tasks-page .tasks-sheet .tasks-col-check,
+.tasks-page .tasks-sheet .tasks-col-note {
+  font-size: 0.62rem;
+}
+
 .tasks-table.sheet-table {
   min-width: 36rem;
 }
@@ -9541,7 +9579,7 @@ body.modal-open .main-panel {
 }
 
 .tasks-col-due {
-  width: 4.2rem;
+  width: 3.55rem;
   white-space: nowrap;
 }
 
