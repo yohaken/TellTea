@@ -69,6 +69,7 @@ function mapOccurrence(id: string, data: Record<string, unknown>): TaskOccurrenc
       : data.proofImg
         ? [String(data.proofImg)]
         : [],
+    completionNote: data.completionNote ? String(data.completionNote) : undefined,
     completedAt: data.completedAt != null ? Number(data.completedAt) : undefined,
     completedBy: data.completedBy ? String(data.completedBy) : undefined,
     completedKind: data.completedKind as TaskOccurrence["completedKind"],
@@ -184,6 +185,7 @@ export async function completeTaskOccurrence(
     checklistDone: string[];
     proofImg?: string;
     proofImgs?: string[];
+    completionNote?: string;
     completedBy: string;
   },
 ): Promise<void> {
@@ -194,10 +196,12 @@ export async function completeTaskOccurrence(
     .map((u) => u.trim())
     .filter(Boolean)
     .slice(0, 6);
+  const completionNote = (patch.completionNote || "").trim().slice(0, 280);
   await updateDoc(doc(getDb(), "taskOccurrences", occ.id), {
     checklistDone: patch.checklistDone,
     proofImg: proofImgs[0] || "",
     proofImgs,
+    completionNote,
     status: "completed",
     completedAt: now,
     completedBy: patch.completedBy,

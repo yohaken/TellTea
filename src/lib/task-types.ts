@@ -47,6 +47,8 @@ export type TaskOccurrence = {
   proofImg?: string;
   /** รูปหลักฐานหลายรูป — ถ้าว่างใช้ proofImg */
   proofImgs?: string[];
+  /** ข้อความจากพนักงานตอนส่ง — feedback ถึงเจ้าของ */
+  completionNote?: string;
   completedAt?: number;
   completedBy?: string;
   completedKind?: "on_time" | "late" | "backfill";

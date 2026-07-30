@@ -10414,6 +10414,122 @@ body.modal-open .main-panel {
   color: #a71d2a;
 }
 
+.tasks-owner-timeline {
+  margin: 0.2rem 0 0.45rem;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.55);
+  overflow: hidden;
+}
+
+.tasks-owner-timeline-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.28rem 0.5rem 0.15rem;
+}
+
+.tasks-owner-timeline-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--tea-leaf);
+}
+
+.tasks-owner-timeline-hint {
+  font-size: 0.62rem;
+  font-weight: 500;
+}
+
+.tasks-timeline-sheet {
+  margin: 0;
+  max-height: 11.5rem;
+  overflow: auto;
+}
+
+.tasks-timeline-table.sheet-table {
+  min-width: 28rem;
+}
+
+.tasks-page .tasks-timeline-sheet .sheet-table--dense th,
+.tasks-page .tasks-timeline-sheet .sheet-table--dense td {
+  padding: 0.12rem 0.28rem;
+  font-size: 0.62rem;
+  line-height: 1.2;
+  vertical-align: middle;
+}
+
+.tasks-timeline-title {
+  font-weight: 700;
+  max-width: 7.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tasks-timeline-who,
+.tasks-timeline-note {
+  max-width: 5.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tasks-timeline-when {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tasks-timeline-kind,
+.tasks-timeline-status {
+  display: inline-block;
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 0.08rem 0.28rem;
+  border-radius: 0.28rem;
+  white-space: nowrap;
+}
+
+.tasks-timeline-kind.is-soft {
+  background: rgba(74, 107, 62, 0.12);
+  color: #2d6a4f;
+}
+
+.tasks-timeline-kind.is-deadline {
+  background: rgba(193, 18, 31, 0.1);
+  color: #a71d2a;
+}
+
+.tasks-timeline-status.is-pending {
+  background: rgba(255, 193, 7, 0.18);
+  color: #7a5a00;
+}
+
+.tasks-timeline-status.is-missed {
+  background: rgba(220, 53, 69, 0.12);
+  color: #a71d2a;
+}
+
+.tasks-timeline-status.is-done {
+  background: rgba(45, 106, 79, 0.12);
+  color: #1b4332;
+}
+
+.tasks-timeline-proof-btn {
+  font-size: 0.6rem;
+  min-height: 1.35rem;
+  padding: 0.12rem 0.35rem;
+  gap: 0.15rem;
+}
+
+.tasks-completion-note {
+  width: 100%;
+  resize: vertical;
+  min-height: 2.6rem;
+  font: inherit;
+  font-size: 0.82rem;
+}
+
 .tasks-template-bar {
   margin: 0.25rem 0 0.4rem;
   border: 1px solid rgba(28, 42, 31, 0.1);

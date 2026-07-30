@@ -37,6 +37,10 @@ import {
   updateTaskTemplate,
 } from "@/lib/task-templates";
 import { runTaskOccurrenceSync } from "@/lib/task-sync";
+import {
+  buildOwnerTaskTimeline,
+  type OwnerTimelineRow,
+} from "@/lib/task-owner-timeline";
 import type { TaskChecklistItem, TaskOccurrence, TaskTemplate } from "@/lib/task-types";
 import {
   bangkokCalendarParts,
@@ -53,7 +57,7 @@ import {
   WEEKDAY_LABELS,
   type OccurrenceTab,
 } from "@/lib/task-weekly-logic";
-import { formatDateShortBe } from "@/lib/utils";
+import { formatDateShortBe, formatDateTimeShortBe } from "@/lib/utils";
 
 /** ลบกติกาถาวร + รอบที่ยังไม่ส่ง (ประวัติที่ส่งแล้วคงไว้) */
 async function purgeTaskTemplate(
@@ -232,8 +236,8 @@ function TasksView() {
         </h1>
         <p className="muted tasks-page-hint">
           {isOwnerManager
-            ? "กติกา = งานประจำสัปดาห์ · ทำแล้วจบรอบนี้ สัปดาห์หน้าเด้งใหม่ · ปิด/ลบกติกาได้ · ลบรอบในตารางได้"
-            : "งานที่มอบให้คุณ · แตะชื่องานหรือปุ่มส่งเมื่อครบ checklist + รูป"}
+            ? "กติกาประจำสัปดาห์ · มินิไทม์ไลน์ติดตามส่ง/feedback · ปิด/ลบกติกาและลบรอบได้"
+            : "งานที่มอบให้คุณ · ติ๊ก checklist + รูป · ใส่ข้อความถึงเจ้าของได้"}
         </p>
       </div>
 
@@ -346,6 +350,13 @@ function TasksView() {
             </div>
           ) : null}
 
+          {isOwnerManager ? (
+            <OwnerTaskTimeline
+              rows={buildOwnerTaskTimeline(occurrences)}
+              onViewPhoto={(urls) => setPreviewUrls(urls)}
+            />
+          ) : null}
+
           <div className="tasks-filter-bar">
             <button
               type="button"
@@ -384,6 +395,7 @@ function TasksView() {
             <OccurrencesTable
               rows={visible}
               canManage={isOwnerManager}
+              showFeedback={tab === "history"}
               onSubmit={(occ) => setSubmitOcc(occ)}
               onViewPhoto={(urls) => setPreviewUrls(urls)}
               onError={setError}
@@ -460,15 +472,113 @@ function statusClass(occ: TaskOccurrence) {
   return "is-pending";
 }
 
+function OwnerTaskTimeline({
+  rows,
+  onViewPhoto,
+}: {
+  rows: OwnerTimelineRow[];
+  onViewPhoto: (urls: string[]) => void;
+}) {
+  if (!rows.length) {
+    return (
+      <div className="tasks-owner-timeline">
+        <div className="tasks-owner-timeline-head">
+          <span className="tasks-owner-timeline-title">ติดตามหลังร้าน</span>
+          <span className="muted tasks-owner-timeline-hint">ยังไม่มีรอบเปิดหรือประวัติส่ง</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="tasks-owner-timeline">
+      <div className="tasks-owner-timeline-head">
+        <span className="tasks-owner-timeline-title">ติดตามหลังร้าน</span>
+        <span className="muted tasks-owner-timeline-hint">
+          ค้าง + ส่งล่าสุด · เบา/กำหนด · feedback
+        </span>
+      </div>
+      <div className="sheet-wrap tasks-timeline-sheet sheet-bleed">
+        <table className="sheet-table tasks-timeline-table sheet-table--dense">
+          <thead>
+            <tr>
+              <th>งาน</th>
+              <th>ชนิด</th>
+              <th>ใคร</th>
+              <th>เมื่อ</th>
+              <th>สถานะ</th>
+              <th>ข้อความ</th>
+              <th>รูป</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr
+                key={row.id}
+                className={`tasks-timeline-row is-${row.statusTone}`}
+              >
+                <td className="tasks-timeline-title" title={row.title}>
+                  {row.title}
+                </td>
+                <td>
+                  <span
+                    className={`tasks-timeline-kind is-${row.nudgeKind}`}
+                    title={row.nudgeKind === "soft" ? "แจ้งเบาๆ" : "มีกำหนด"}
+                  >
+                    {row.nudgeKind === "soft" ? "เบา" : "กำหนด"}
+                  </span>
+                </td>
+                <td className="tasks-timeline-who" title={row.who}>
+                  {row.who}
+                </td>
+                <td className="tasks-timeline-when">
+                  {row.whenMs
+                    ? row.isOpen
+                      ? formatDateShortBe(row.whenMs)
+                      : formatDateTimeShortBe(row.whenMs)
+                    : "—"}
+                </td>
+                <td>
+                  <span className={`tasks-timeline-status is-${row.statusTone}`}>
+                    {row.statusLabel}
+                  </span>
+                </td>
+                <td className="tasks-timeline-note" title={row.feedback || undefined}>
+                  {row.feedback || "—"}
+                </td>
+                <td className="tasks-timeline-proof">
+                  {row.proofUrls.length ? (
+                    <button
+                      type="button"
+                      className="ghost-btn tasks-timeline-proof-btn"
+                      onClick={() => onViewPhoto(row.proofUrls)}
+                    >
+                      <ImageIcon size={12} aria-hidden /> {row.proofUrls.length}
+                    </button>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function OccurrencesTable({
   rows,
   canManage,
+  showFeedback = false,
   onSubmit,
   onViewPhoto,
   onError,
 }: {
   rows: TaskOccurrence[];
   canManage: boolean;
+  showFeedback?: boolean;
   onSubmit: (occ: TaskOccurrence) => void;
   onViewPhoto: (urls: string[]) => void;
   onError: (msg: string) => void;
@@ -498,7 +608,7 @@ function OccurrencesTable({
             <th className="tasks-col-due">รอบ</th>
             <th className="tasks-col-who">มอบให้</th>
             <th className="tasks-col-check">checklist</th>
-            <th className="tasks-col-note">note</th>
+            <th className="tasks-col-note">{showFeedback ? "feedback" : "note"}</th>
             <th className="tasks-col-status">สถานะ</th>
             <th className="tasks-col-act">ทำ</th>
           </tr>
@@ -556,7 +666,18 @@ function OccurrencesTable({
                 <td className="tasks-col-check" title={checkText}>
                   {checkText || "—"}
                 </td>
-                <td className="tasks-col-note">{occ.note || "—"}</td>
+                <td
+                  className="tasks-col-note"
+                  title={
+                    showFeedback
+                      ? occ.completionNote || undefined
+                      : occ.note || undefined
+                  }
+                >
+                  {showFeedback
+                    ? (occ.completionNote || "").trim() || "—"
+                    : occ.note || "—"}
+                </td>
                 <td className="tasks-col-status">
                   <span className={`tasks-status-pill ${statusClass(occ)}`}>{statusLabel(occ)}</span>
                 </td>
@@ -905,6 +1026,7 @@ function SubmitOccurrenceModal({
 }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [completionNote, setCompletionNote] = useState("");
   const [busy, setBusy] = useState(false);
 
   function toggleItem(id: string) {
@@ -941,6 +1063,7 @@ function SubmitOccurrenceModal({
         checklistDone: checkedIds,
         proofImgs: urls,
         proofImg: urls[0] || "",
+        completionNote,
         completedBy: actorId,
       });
       onSaved();
@@ -997,6 +1120,19 @@ function SubmitOccurrenceModal({
             storageSlotKey="proof"
             hint={`บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${TASK_PROOF_MAX} รูป`}
           />
+
+          <label className="field">
+            <span className="field-label">ข้อความถึงเจ้าของ (ไม่บังคับ)</span>
+            <textarea
+              className="tasks-completion-note"
+              rows={2}
+              maxLength={280}
+              value={completionNote}
+              onChange={(e) => setCompletionNote(e.target.value)}
+              placeholder="เช่น โพสต์แล้วช่วงเช้า / รอแก้แคปชัน"
+              disabled={busy}
+            />
+          </label>
 
           <div className="entry-actions module-form-actions">
             <button type="submit" className="primary-btn" disabled={busy || !allDone || !imageUrls.length}>
