@@ -328,8 +328,8 @@ export function RateSchedulePanel({
 
       {!loading && showHistory ? (
         history.length ? (
-          <div className="sheet-wrap bonus-rate-history-wrap">
-            <table className="sheet-table bonus-rate-history-table">
+          <div className="sheet-wrap bonus-rate-history-wrap sheet-bleed">
+            <table className="sheet-table bonus-rate-history-table sheet-table--dense">
               <thead>
                 <tr>
                   <th>ชนิด</th>
