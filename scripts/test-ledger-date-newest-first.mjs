@@ -26,7 +26,7 @@ assert.match(cell, /formatDateShort/);
 assert.doesNotMatch(cell, /date-stack-yy/);
 assert.match(css, /sheet-date-cell/);
 assert.doesNotMatch(css, /\.date-stack-yy\b/);
-assert.match(version, /APP_BUILD = 475/);
+assert.match(version, /APP_BUILD = 476/);
 
 function toEpochMs(value) {
   if (typeof value === "number" && Number.isFinite(value)) {

@@ -5414,6 +5414,52 @@ body.modal-open .main-panel {
   background: rgba(255, 255, 255, 0.78);
 }
 
+/*
+ * Phase 10 table layout — เงินเดือน / เรท (.payroll-sheet, .bonus-rate-*).
+ * Date/row sizing from ledger-staff-sheet prototype; bleed via shared .sheet-bleed.
+ * Scoped under .bonus-page so other modules stay untouched.
+ */
+.bonus-page .payroll-sheet .sheet-table--dense th,
+.bonus-page .payroll-sheet .sheet-table--dense td {
+  padding: 0.18rem 0.3rem;
+  line-height: 1.15;
+}
+
+.bonus-page .payroll-sheet .payroll-col-due {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.66rem;
+}
+
+.bonus-page .payroll-sheet .payroll-col-name,
+.bonus-page .payroll-sheet .payroll-col-kind {
+  font-size: 0.66rem;
+}
+
+.bonus-page .payroll-sheet .payroll-cell-meta {
+  font-size: 0.58rem;
+}
+
+.bonus-page .bonus-rate-current-wrap .sheet-table--dense th,
+.bonus-page .bonus-rate-current-wrap .sheet-table--dense td,
+.bonus-page .bonus-rate-history-wrap .sheet-table--dense th,
+.bonus-page .bonus-rate-history-wrap .sheet-table--dense td {
+  padding: 0.18rem 0.3rem;
+  line-height: 1.15;
+}
+
+.bonus-page .bonus-rate-current-table td:nth-child(3),
+.bonus-page .bonus-rate-history-table td:nth-child(2) {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.66rem;
+}
+
 .payroll-table.sheet-table {
   min-width: 28rem;
   margin: 0;
@@ -5456,7 +5502,7 @@ body.modal-open .main-panel {
 }
 
 .payroll-col-due {
-  width: 4.2rem;
+  width: 3.55rem;
 }
 
 .payroll-col-amt {

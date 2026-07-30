@@ -19,7 +19,7 @@ import {
   repairOtBonusRatesFromSchedule,
   type OtRateRepairReport,
 } from "@/lib/ot-rate-repair";
-import { formatDateShort, formatPlainNumber, todayInputValue } from "@/lib/utils";
+import { formatDateShortBe, formatPlainNumber, todayInputValue } from "@/lib/utils";
 
 type EditTarget = {
   kind: RateKind;
@@ -234,7 +234,7 @@ export function RateSchedulePanel({
                   row.rate == null ? "—" : formatPlainNumber(row.rate);
                 const sinceLabel =
                   row.fromSchedule && row.since != null
-                    ? formatDateShort(row.since)
+                    ? formatDateShortBe(row.since)
                     : "—";
                 return (
                   <Fragment key={row.key}>
@@ -343,7 +343,7 @@ export function RateSchedulePanel({
                 {history.map((row) => (
                   <tr key={row.id}>
                     <td>{rateHistoryLabel(row)}</td>
-                    <td>{formatDateShort(row.effectiveFrom)}</td>
+                    <td>{formatDateShortBe(row.effectiveFrom)}</td>
                     <td className="col-out">{formatPlainNumber(row.rate)}</td>
                     <td className="muted">{row.note || "—"}</td>
                     {isOwner ? (

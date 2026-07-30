@@ -220,7 +220,7 @@ function BonusView() {
   if (!canView) return null;
 
   return (
-    <div className="module-page">
+    <div className="module-page bonus-page">
       <div className="module-page-head">
         <h1 className="panel-title module-page-title">
           <CircleDollarSign size={18} aria-hidden />
