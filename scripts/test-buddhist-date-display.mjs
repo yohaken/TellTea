@@ -8,7 +8,7 @@
  * Phase 6: OT formatDateShortBe + layout from ledger prototype.
  * Phase 7: check formatDateShortBe + layout from ledger prototype.
  * Phase 8: tasks formatDateShortBe + layout from ledger prototype.
- * Phase 9: stock monthLabel/formatDateShortBe + layout from ledger prototype.
+ * Phase 9: stock round labels full พ.ศ. D/M/YY + layout from ledger prototype.
  * Phase 10: payroll/rates formatDateShortBe + layout from ledger prototype.
  * Phase 11–13: default formatDateShort/Time → พ.ศ.; VAT/export/POS unify.
  * Storage / <input type="date"> remain ค.ศ.
@@ -87,11 +87,12 @@ assert.match(tasks, /formatDateShortBe/);
 assert.match(tasks, /tasks-page/);
 assert.match(tasks, /tasks-sheet/);
 assert.doesNotMatch(tasks, /[^B]formatDateShort\(|^formatDateShort\(/);
-assert.match(stock, /formatDateShortBe/);
+assert.match(stock, /timelineRoundLabel/);
 assert.match(stock, /stock-page/);
 assert.match(stock, /stock-history-sheet/);
 assert.doesNotMatch(stock, /[^B]formatDateShort\(|^formatDateShort\(/);
-assert.match(stockHist, /year \+ 543/);
+assert.match(stockHist, /stockRoundDateLabelBe/);
+assert.match(stockHist, /toBeYear/);
 assert.match(payroll, /formatDateShortBe/);
 assert.match(rates, /formatDateShortBe/);
 assert.match(bonus, /bonus-page/);
@@ -124,7 +125,7 @@ assert.match(css, /\.tasks-page \.tasks-sheet \.tasks-col-due/);
 assert.match(css, /\.stock-page \.stock-history-sheet \.stock-history-date/);
 assert.match(css, /\.bonus-page \.payroll-sheet \.payroll-col-due/);
 assert.match(css, /width: 3\.55rem/);
-assert.match(version, /APP_BUILD = 478/);
+assert.match(version, /APP_BUILD = 482/);
 
 function bangkokDateKey(ms) {
   return new Intl.DateTimeFormat("en-CA", {

@@ -4,6 +4,7 @@ import {
   stockCountSessionId,
 } from "./stock-count";
 import type { StockCountRound, StockCountSession, StockItem } from "./types";
+import { toBeYear } from "./utils";
 
 export type StockHistoryItemCol = {
   itemId: string;
@@ -91,16 +92,20 @@ function iterMonths(fromYear: number, fromMonth: number, toYear: number, toMonth
   return out;
 }
 
-function applicableRounds(year: number, month: number): StockCountRound[] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
-  const todayDay = today.getDate();
+/** Full short date พ.ศ. from CE year/month/day — e.g. 20/7/69 (no TZ shift). */
+export function stockRoundDateLabelBe(
+  year: number,
+  month: number,
+  dayOfMonth: number,
+) {
+  const yearBe = toBeYear(year);
+  if (yearBe == null) return "—";
+  return `${dayOfMonth}/${month + 1}/${String(yearBe).slice(-2)}`;
+}
 
-  return STOCK_COUNT_ROUNDS.filter((day) => {
-    if (!isCurrentMonth) return true;
-    return day <= todayDay;
-  });
+/** All 1·10·20 slots — empty future rows stay for plan-ahead. */
+function applicableRounds(_year: number, _month: number): StockCountRound[] {
+  return STOCK_COUNT_ROUNDS;
 }
 
 function latestSessionMap(sessions: StockCountSession[]): Map<string, StockCountSession> {
@@ -168,8 +173,8 @@ export function buildStockHistoryTimeline(
         rowKey,
         year,
         month,
-        // Display พ.ศ. short year (storage year stays CE).
-        monthLabel: `${month + 1}/${String(year + 543).slice(-2)}`,
+        // Full date พ.ศ. D/M/YY (storage year stays CE).
+        monthLabel: stockRoundDateLabelBe(year, month, dayOfMonth),
         dayOfMonth,
         dateMs: roundDateMs(year, month, dayOfMonth),
         session,
@@ -187,7 +192,7 @@ export function buildStockHistoryTimeline(
   const rangeLabel =
     oldest && newest
       ? oldest.rowKey === newest.rowKey
-        ? `${newest.monthLabel} · ${newest.dayOfMonth}`
+        ? newest.monthLabel
         : `${oldest.monthLabel} → ${newest.monthLabel}`
       : "—";
 
@@ -245,5 +250,5 @@ export function roundLabel(dayOfMonth: StockCountRound) {
 }
 
 export function timelineRoundLabel(row: StockHistoryTimelineRow) {
-  return `${row.monthLabel} · ${row.dayOfMonth}`;
+  return row.monthLabel || stockRoundDateLabelBe(row.year, row.month, row.dayOfMonth);
 }

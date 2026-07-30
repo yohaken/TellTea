@@ -35,7 +35,7 @@ import {
   type StockHistoryTimelineRow,
 } from "@/lib/stock-history";
 import { seedStockItemsIfEmpty, subscribeStockItems } from "@/lib/stock";
-import { formatDateShortBe, formatStockQty, parseDateInput } from "@/lib/utils";
+import { formatStockQty, parseDateInput } from "@/lib/utils";
 
 type DraftLine = {
   itemId: string;
@@ -390,7 +390,7 @@ function StockCountDetailModal({
         <div className="modal-head">
           <div>
             <h2 className="panel-title" style={{ fontSize: "1rem" }}>
-              {timelineRoundLabel(row)} · {formatDateShortBe(row.dateMs)}
+              {timelineRoundLabel(row)}
             </h2>
             <p className="muted check-detail-sub">
               {session.inspector} · {formatStockCountTimeShort(session.submittedAt)}
