@@ -12,6 +12,7 @@ import {
   loadPnlReport,
   loadStaffMonthBreakdown,
   saveMonthlyIncome,
+  emptyMonthCategoryRow,
   type MonthCategoryRow,
 } from "@/lib/pnl";
 import {
@@ -89,12 +90,8 @@ function fmt(n: number) {
   return formatVatMoney(n);
 }
 
-function emptyBookRow(month: string): MonthCategoryRow {
-  return { month, asset: 0, cogs: 0, sga: 0, other: 0 };
-}
-
 function pickBookRow(rows: MonthCategoryRow[], month: string): MonthCategoryRow {
-  return rows.find((r) => r.month === month) || emptyBookRow(month);
+  return rows.find((r) => r.month === month) || emptyMonthCategoryRow(month);
 }
 
 function bookOpEx(row: MonthCategoryRow | null) {
