@@ -234,7 +234,9 @@ public final class ShiftReportFormBuilder {
     String shopTh = firstNonEmpty(opt(shop, "shopNameTh"), DEFAULT_SHOP_TH);
     String shopAddress = opt(shop, "shopAddress");
     String shopPhone = opt(shop, "shopPhone");
-    String staff = firstNonEmpty(opt(shop, "receiptStaffName"), "หน้าร้าน");
+    // Prefer who opened this round; fall back to shop receipt staff label.
+    String staff =
+        firstNonEmpty(opt(shop, "openedByName"), opt(shop, "receiptStaffName"), "หน้าร้าน");
     String device =
         firstNonEmpty(deviceCode, opt(shop, "pairingCode"), "-");
     String sessionShort =

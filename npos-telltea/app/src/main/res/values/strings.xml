@@ -254,7 +254,13 @@
     <string name="open_shift_float_title">เงินทอนเริ่มกะ</string>
     <string name="open_shift_float_hint">นับเงินทอนในลิ้นชักแล้วกรอก · ค่าเริ่มจากกะก่อน (ทอนค้าง) แก้ได้</string>
     <string name="open_shift_float_hint_field">เงินทอนเริ่มต้น (บาท)</string>
-    <string name="open_shift_float_confirm">เข้างาน</string>
+    <string name="open_shift_float_confirm">ถัดไป</string>
+    <string name="open_shift_who_title">ใครเข้ากะ</string>
+    <string name="open_shift_who_hint">เลือกชื่อจากรายชื่อพนักงาน · ไม่ผูกตารางกะ</string>
+    <string name="open_shift_who_or_type">หรือพิมพ์ชื่อ</string>
+    <string name="open_shift_who_type_hint">ชื่อผู้เข้ากะ</string>
+    <string name="open_shift_who_confirm">เข้างาน</string>
+    <string name="open_shift_who_required">เลือกหรือพิมพ์ชื่อผู้เข้ากะ</string>
     <string name="btn_grant_all_perms">อนุญาตสิทธิ์ทั้งหมด</string>
     <string name="perm_gate_hint">กดครั้งเดียว — Bluetooth · แจ้งเตือน · ติดตั้งอัปเดต · แบตเตอรี่\nพนักงานไม่ต้องเข้าตั้งค่าเอง</string>
     <string name="capture_consent_title">อนุญาตแคปจอ</string>

@@ -322,6 +322,9 @@ export type PosSession = {
   discrepancyNote?: string;
   discrepancyLabel?: string;
   source?: string;
+  /** Who opened this nPos round (name pick at clock-in — not OT-linked). */
+  openedByEmployeeId?: string;
+  openedByName?: string;
 };
 
 export type PosSalePaymentMethod = "cash" | "promptpay" | "transfer";

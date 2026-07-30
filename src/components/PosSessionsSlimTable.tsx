@@ -76,6 +76,7 @@ type RowModel = {
   cashIn: number | undefined;
   cashDrops: number | undefined;
   note: string;
+  openedBy: string;
   searchBlob: string;
 };
 
@@ -119,6 +120,7 @@ function buildRows(
     const sessionCode = posSessionCode(session.id);
     const dateLabel = formatDateShort(dayMs);
     const note = session.discrepancyNote || "";
+    const openedBy = (session.openedByName || "").trim();
     return {
       session,
       deviceLabel,
@@ -142,6 +144,7 @@ function buildRows(
       cashIn: session.cashInTotal,
       cashDrops: session.cashDropCount,
       note,
+      openedBy,
       searchBlob: [
         pairing,
         sessionCode,
@@ -151,6 +154,7 @@ function buildRows(
         dateLabel,
         open ? "เปิด" : "ปิด",
         note,
+        openedBy,
         session.shift || "",
       ]
         .join(" ")
@@ -612,9 +616,16 @@ export function PosSessionsSlimTable({
                   <span
                     role="cell"
                     className="npos-slim-code"
-                    title={`${row.deviceLabel} · ${row.session.deviceId}`}
+                    title={
+                      row.openedBy
+                        ? `${row.deviceLabel} · ผู้เปิด ${row.openedBy} · ${row.session.deviceId}`
+                        : `${row.deviceLabel} · ${row.session.deviceId}`
+                    }
                   >
                     {row.pairingCode}
+                    {row.openedBy ? (
+                      <span className="npos-slim-opener muted"> · {row.openedBy}</span>
+                    ) : null}
                   </span>
                   <span
                     role="cell"
@@ -671,6 +682,7 @@ export function PosSessionsSlimTable({
                 {selected ? (
                   <div className="npos-slim-detail" role="row">
                     <span>
+                      {row.openedBy ? `ผู้เปิดกะ ${row.openedBy} · ` : ""}
                       ทอนเริ่ม {moneyOrDash(row.opening)}
                       {row.open ? ` · ระหว่างกะ · ยอดจากบิล realtime` : ""}
                       {(row.cashOut != null && row.cashOut > 0) ||
