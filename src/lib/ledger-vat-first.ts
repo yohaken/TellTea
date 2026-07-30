@@ -1,6 +1,7 @@
 /**
- * VAT-first flow for ledger cash-out create (staff + owner on /ledger/).
- * Not used for bill notices / transfer-in / edit.
+ * VAT-first flow for cash-out / bill create:
+ * /ledger/ บันทึกเงินออก, /owner-books/ โอนออก, แจ้งบิล (add only).
+ * Not used for transfer-in / edit.
  */
 
 export type VatFirstPhase =
