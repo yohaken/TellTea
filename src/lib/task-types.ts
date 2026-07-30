@@ -28,7 +28,8 @@ export type TaskTemplate = {
   updatedAt: number;
 };
 
-export type TaskOccurrenceStatus = "pending" | "completed" | "missed";
+/** waiting = พนักงานรายงานแล้ว (เช่น ส่งซ่อมแล้วรอ) — หยุดแจ้งเตือน แต่ยังติดตามในหลังร้าน */
+export type TaskOccurrenceStatus = "pending" | "waiting" | "completed" | "missed";
 
 export type TaskOccurrence = {
   id: string;

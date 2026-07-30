@@ -39,6 +39,11 @@ function occurrencesCol() {
   return collection(getDb(), "taskOccurrences");
 }
 
+function normalizeOccurrenceStatus(raw: unknown): TaskOccurrenceStatus {
+  if (raw === "waiting" || raw === "completed" || raw === "missed") return raw;
+  return "pending";
+}
+
 function mapOccurrence(id: string, data: Record<string, unknown>): TaskOccurrence {
   const checklist = Array.isArray(data.checklist)
     ? (data.checklist as { id: string; label: string }[]).map((c) => ({
@@ -60,7 +65,7 @@ function mapOccurrence(id: string, data: Record<string, unknown>): TaskOccurrenc
     assigneeNames: Array.isArray(data.assigneeNames) ? (data.assigneeNames as string[]) : [],
     dueDate: Number(data.dueDate) || 0,
     openAt: Number(data.openAt) || 0,
-    status: (data.status as TaskOccurrenceStatus) || "pending",
+    status: normalizeOccurrenceStatus(data.status),
     nudgeKind: normalizeTaskNudgeKind(data.nudgeKind),
     checklistDone,
     proofImg: data.proofImg ? String(data.proofImg) : undefined,
@@ -179,6 +184,48 @@ export async function applySyncOperations(
   await batch.commit();
 }
 
+function normalizeProofImgs(patch: { proofImg?: string; proofImgs?: string[] }) {
+  return (patch.proofImgs || (patch.proofImg ? [patch.proofImg] : []))
+    .map((u) => u.trim())
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
+/** พนักงานรายงานว่าทำขั้นกลางแล้ว — หยุดแจ้งเตือน · ค้างติดตามหลังร้าน */
+export async function reportTaskOccurrenceWaiting(
+  occ: TaskOccurrence,
+  patch: {
+    checklistDone?: string[];
+    proofImg?: string;
+    proofImgs?: string[];
+    completionNote: string;
+    completedBy: string;
+  },
+): Promise<void> {
+  const completionNote = (patch.completionNote || "").trim().slice(0, 280);
+  if (!completionNote) {
+    throw new Error("ใส่ข้อความ เช่น ส่งซ่อมแล้ว กำลังรอร้าน");
+  }
+  const now = Date.now();
+  const proofImgs = normalizeProofImgs(patch);
+  await updateDoc(doc(getDb(), "taskOccurrences", occ.id), {
+    checklistDone: patch.checklistDone || occ.checklistDone || [],
+    proofImg: proofImgs[0] || occ.proofImg || "",
+    proofImgs: proofImgs.length ? proofImgs : getExistingProofs(occ),
+    completionNote,
+    status: "waiting",
+    completedBy: patch.completedBy,
+    updatedAt: now,
+  });
+}
+
+function getExistingProofs(occ: TaskOccurrence): string[] {
+  if (Array.isArray(occ.proofImgs) && occ.proofImgs.length) {
+    return occ.proofImgs.map(String).filter((u) => u.trim()).slice(0, 6);
+  }
+  return occ.proofImg ? [occ.proofImg] : [];
+}
+
 export async function completeTaskOccurrence(
   occ: TaskOccurrence,
   patch: {
@@ -192,10 +239,7 @@ export async function completeTaskOccurrence(
   const now = Date.now();
   const wasMissed = occ.status === "missed";
   const completedKind = computeCompletedKind(occ.dueDate, now, wasMissed);
-  const proofImgs = (patch.proofImgs || (patch.proofImg ? [patch.proofImg] : []))
-    .map((u) => u.trim())
-    .filter(Boolean)
-    .slice(0, 6);
+  const proofImgs = normalizeProofImgs(patch);
   const completionNote = (patch.completionNote || "").trim().slice(0, 280);
   await updateDoc(doc(getDb(), "taskOccurrences", occ.id), {
     checklistDone: patch.checklistDone,

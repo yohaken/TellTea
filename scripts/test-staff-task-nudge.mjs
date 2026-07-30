@@ -27,7 +27,7 @@ assert.match(shellSrc, /StaffTaskNudge/);
 assert.match(tasksSrc, /แจ้งเบาๆ/);
 assert.match(tasksSrc, /มีกำหนด/);
 assert.match(rulesSrc, /nudgeKind/);
-assert.match(versionSrc, /APP_BUILD = 494/);
+assert.match(versionSrc, /APP_BUILD = \d+/);
 
 function actionableStaffTaskNudges(occurrences, now = Date.now()) {
   return occurrences

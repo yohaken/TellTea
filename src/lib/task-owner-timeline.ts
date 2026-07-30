@@ -1,5 +1,5 @@
 /**
- * มินิไทม์ไลน์หลังร้าน — เจ้าของติดตามค้าง + ประวัติส่ง (รวม soft)
+ * มินิไทม์ไลน์หลังร้าน — เจ้าของติดตามค้าง / รอ / ประวัติส่ง (รวม soft)
  */
 import {
   normalizeTaskNudgeKind,
@@ -13,9 +13,9 @@ export type OwnerTimelineRow = {
   nudgeKind: "soft" | "deadline";
   who: string;
   whenMs: number;
-  /** ค้าง | พลาด | ตรงเวลา | ส่งช้า | ย้อนหลัง */
+  /** ค้าง | รอ | พลาด | ตรงเวลา | ส่งช้า | ย้อนหลัง */
   statusLabel: string;
-  statusTone: "pending" | "missed" | "done";
+  statusTone: "pending" | "waiting" | "missed" | "done";
   feedback: string;
   proofUrls: string[];
   isOpen: boolean;
@@ -53,6 +53,22 @@ export function buildOwnerTaskTimeline(
       continue;
     }
 
+    if (o.status === "waiting") {
+      open.push({
+        id: o.id,
+        title: (o.title || "").trim() || "งาน",
+        nudgeKind,
+        who,
+        whenMs: Number(o.updatedAt) || Number(o.dueDate) || 0,
+        statusLabel: "รอ",
+        statusTone: "waiting",
+        feedback,
+        proofUrls,
+        isOpen: true,
+      });
+      continue;
+    }
+
     if (o.status === "missed") {
       open.push({
         id: o.id,
@@ -85,17 +101,20 @@ export function buildOwnerTaskTimeline(
     });
   }
 
+  const toneRank = (t: OwnerTimelineRow["statusTone"]) =>
+    t === "waiting" ? 0 : t === "missed" ? 1 : t === "pending" ? 2 : 3;
+
   open.sort((a, b) => {
-    if (a.statusTone !== b.statusTone) {
-      return a.statusTone === "missed" ? -1 : 1;
-    }
-    if (a.whenMs !== b.whenMs) return a.whenMs - b.whenMs;
+    const ra = toneRank(a.statusTone);
+    const rb = toneRank(b.statusTone);
+    if (ra !== rb) return ra - rb;
+    if (a.whenMs !== b.whenMs) return b.whenMs - a.whenMs;
     return a.title.localeCompare(b.title, "th");
   });
 
   done.sort((a, b) => b.whenMs - a.whenMs);
 
-  const openCap = Math.min(open.length, Math.max(4, Math.floor(max / 2)));
+  const openCap = Math.min(open.length, Math.max(5, Math.floor(max / 2)));
   const rest = Math.max(0, max - openCap);
   return [...open.slice(0, openCap), ...done.slice(0, rest)];
 }

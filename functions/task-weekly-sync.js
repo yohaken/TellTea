@@ -136,21 +136,30 @@ function computeSyncOperations(templates, occurrences, now = Date.now()) {
     const dues = dueDatesToEnsure(now, tpl.weekday, openDays);
     const ensuredKeys = new Set(dues.map((due) => periodKeyFromDue(due)));
 
-    for (const dueDate of dues) {
-      const periodKey = periodKeyFromDue(dueDate);
-      const key = `${tpl.id}:${periodKey}`;
-      if (!byKey.has(key) && !isPeriodDismissed(tpl, periodKey)) {
-        create.push({
-          templateId: tpl.id,
-          periodKey,
-          dueDate,
-          openAt: openAtForDue(dueDate, openDays),
-          title: tpl.title,
-          note: tpl.note || "",
-          checklist: tpl.checklist || [],
-          assigneeIds: tpl.assigneeIds || [],
-          assigneeNames: tpl.assigneeNames || [],
-        });
+    const hasWaiting = occurrences.some(
+      (o) =>
+        o.templateId === tpl.id &&
+        o.status === "waiting" &&
+        !deletedIds.has(o.id),
+    );
+
+    if (!hasWaiting) {
+      for (const dueDate of dues) {
+        const periodKey = periodKeyFromDue(dueDate);
+        const key = `${tpl.id}:${periodKey}`;
+        if (!byKey.has(key) && !isPeriodDismissed(tpl, periodKey)) {
+          create.push({
+            templateId: tpl.id,
+            periodKey,
+            dueDate,
+            openAt: openAtForDue(dueDate, openDays),
+            title: tpl.title,
+            note: tpl.note || "",
+            checklist: tpl.checklist || [],
+            assigneeIds: tpl.assigneeIds || [],
+            assigneeNames: tpl.assigneeNames || [],
+          });
+        }
       }
     }
 
@@ -158,6 +167,10 @@ function computeSyncOperations(templates, occurrences, now = Date.now()) {
     for (const occ of occurrences) {
       if (occ.templateId !== tpl.id) continue;
       if (deletedIds.has(occ.id)) continue;
+      if (occ.status === "waiting") {
+        openPending.push(occ);
+        continue;
+      }
       if (occ.status !== "pending") continue;
       if (shouldMarkMissed(occ.dueDate, now, openDays)) {
         pushMissed(occ.id);
@@ -167,14 +180,25 @@ function computeSyncOperations(templates, occurrences, now = Date.now()) {
     }
 
     if (openPending.length > 1) {
-      const preferred = openPending.filter((o) => ensuredKeys.has(o.periodKey));
-      const pool = preferred.length ? preferred : openPending;
-      pool.sort(
-        (a, b) => b.dueDate - a.dueDate || (b.updatedAt || 0) - (a.updatedAt || 0),
-      );
-      const keepId = pool[0].id;
+      const waiting = openPending.filter((o) => o.status === "waiting");
+      let keepId;
+      if (waiting.length) {
+        waiting.sort(
+          (a, b) => b.dueDate - a.dueDate || (b.updatedAt || 0) - (a.updatedAt || 0),
+        );
+        keepId = waiting[0].id;
+      } else {
+        const preferred = openPending.filter((o) => ensuredKeys.has(o.periodKey));
+        const pool = preferred.length ? preferred : openPending;
+        pool.sort(
+          (a, b) => b.dueDate - a.dueDate || (b.updatedAt || 0) - (a.updatedAt || 0),
+        );
+        keepId = pool[0].id;
+      }
       for (const occ of openPending) {
-        if (occ.id !== keepId) pushMissed(occ.id);
+        if (occ.id === keepId) continue;
+        if (occ.status === "waiting") continue;
+        pushMissed(occ.id);
       }
     }
   }

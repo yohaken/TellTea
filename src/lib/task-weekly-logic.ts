@@ -140,7 +140,7 @@ export function canSubmitOccurrence(
   now = Date.now(),
 ) {
   if (occ.status === "completed") return false;
-  if (occ.status === "missed") return true;
+  if (occ.status === "missed" || occ.status === "waiting") return true;
   return now >= occ.openAt;
 }
 
@@ -227,23 +227,32 @@ export function computeSyncOperations(
     const openDays = tpl.openDaysBefore ?? DEFAULT_OPEN_DAYS_BEFORE;
     const dues = dueDatesToEnsure(now, tpl.weekday, openDays);
     const ensuredKeys = new Set(dues.map((due) => periodKeyFromDue(due)));
+    const hasWaiting = occurrences.some(
+      (o) =>
+        o.templateId === tpl.id &&
+        o.status === "waiting" &&
+        !deletedIds.has(o.id),
+    );
 
-    for (const dueDate of dues) {
-      const periodKey = periodKeyFromDue(dueDate);
-      const key = `${tpl.id}:${periodKey}`;
-      if (!byKey.has(key) && !isPeriodDismissed(tpl, periodKey)) {
-        create.push({
-          templateId: tpl.id,
-          periodKey,
-          dueDate,
-          openAt: openAtForDue(dueDate, openDays),
-          title: tpl.title,
-          note: tpl.note,
-          checklist: tpl.checklist,
-          assigneeIds: tpl.assigneeIds,
-          assigneeNames: tpl.assigneeNames,
-          nudgeKind: tpl.nudgeKind === "soft" ? "soft" : "deadline",
-        });
+    // มีรอบ "รอ" ค้าง — ไม่สร้างรอบใหม่จนกว่าจะจบ/ลบ
+    if (!hasWaiting) {
+      for (const dueDate of dues) {
+        const periodKey = periodKeyFromDue(dueDate);
+        const key = `${tpl.id}:${periodKey}`;
+        if (!byKey.has(key) && !isPeriodDismissed(tpl, periodKey)) {
+          create.push({
+            templateId: tpl.id,
+            periodKey,
+            dueDate,
+            openAt: openAtForDue(dueDate, openDays),
+            title: tpl.title,
+            note: tpl.note,
+            checklist: tpl.checklist,
+            assigneeIds: tpl.assigneeIds,
+            assigneeNames: tpl.assigneeNames,
+            nudgeKind: tpl.nudgeKind === "soft" ? "soft" : "deadline",
+          });
+        }
       }
     }
 
@@ -251,6 +260,10 @@ export function computeSyncOperations(
     for (const occ of occurrences) {
       if (occ.templateId !== tpl.id) continue;
       if (deletedIds.has(occ.id)) continue;
+      if (occ.status === "waiting") {
+        openPending.push(occ);
+        continue;
+      }
       if (occ.status !== "pending") continue;
       if (shouldMarkMissed(occ.dueDate, now, openDays)) {
         pushMissed(occ.id);
@@ -259,14 +272,25 @@ export function computeSyncOperations(
       openPending.push(occ);
     }
 
-    // ค้างเปิดได้แค่ 1 รอบต่อกติกา — เก็บรอบที่อยู่ใน ensured / due ล่าสุด
+    // ค้างเปิดได้แค่ 1 รอบต่อกติกา — เก็บรอบที่อยู่ใน ensured / due ล่าสุด · รออยู่ไม่ถูกพลาดอัตโนมัติ
     if (openPending.length > 1) {
-      const preferred = openPending.filter((o) => ensuredKeys.has(o.periodKey));
-      const pool = preferred.length ? preferred : openPending;
-      pool.sort((a, b) => b.dueDate - a.dueDate || (b.updatedAt || 0) - (a.updatedAt || 0));
-      const keepId = pool[0]!.id;
+      const waiting = openPending.filter((o) => o.status === "waiting");
+      let keepId: string;
+      if (waiting.length) {
+        waiting.sort(
+          (a, b) => b.dueDate - a.dueDate || (b.updatedAt || 0) - (a.updatedAt || 0),
+        );
+        keepId = waiting[0]!.id;
+      } else {
+        const preferred = openPending.filter((o) => ensuredKeys.has(o.periodKey));
+        const pool = preferred.length ? preferred : openPending;
+        pool.sort((a, b) => b.dueDate - a.dueDate || (b.updatedAt || 0) - (a.updatedAt || 0));
+        keepId = pool[0]!.id;
+      }
       for (const occ of openPending) {
-        if (occ.id !== keepId) pushMissed(occ.id);
+        if (occ.id === keepId) continue;
+        if (occ.status === "waiting") continue;
+        pushMissed(occ.id);
       }
     }
   }
@@ -302,19 +326,24 @@ export function filterOccurrencesByTab(
     });
   }
 
-  // สัปดาห์นี้ / ค้างเปิด — การ์ดเดียวต่อกติกา
+  // สัปดาห์นี้ / ค้างเปิด — การ์ดเดียวต่อกติกา (รวมสถานะรอ)
   const open = sorted.filter((o) => {
+    if (o.status === "waiting") return true;
     if (o.status !== "pending") return false;
     return !shouldMarkMissed(o.dueDate, now, openDaysFromOcc(o));
   });
   const byTpl = new Map<string, TaskOccurrence>();
   for (const o of open) {
     const prev = byTpl.get(o.templateId);
+    const preferWaiting =
+      o.status === "waiting" && (!prev || prev.status !== "waiting");
     if (
+      preferWaiting ||
       !prev ||
       o.dueDate > prev.dueDate ||
       (o.dueDate === prev.dueDate && (o.updatedAt || 0) > (prev.updatedAt || 0))
     ) {
+      if (prev?.status === "waiting" && o.status !== "waiting") continue;
       byTpl.set(o.templateId, o);
     }
   }

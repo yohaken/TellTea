@@ -10505,6 +10505,11 @@ body.modal-open .main-panel {
   color: #7a5a00;
 }
 
+.tasks-timeline-status.is-waiting {
+  background: rgba(13, 110, 253, 0.12);
+  color: #0b5ed7;
+}
+
 .tasks-timeline-status.is-missed {
   background: rgba(220, 53, 69, 0.12);
   color: #a71d2a;
@@ -10513,6 +10518,16 @@ body.modal-open .main-panel {
 .tasks-timeline-status.is-done {
   background: rgba(45, 106, 79, 0.12);
   color: #1b4332;
+}
+
+.tasks-status-pill.is-waiting {
+  background: rgba(13, 110, 253, 0.12);
+  color: #0b5ed7;
+}
+
+.tasks-row.is-waiting .tasks-title-text,
+.tasks-row.is-waiting .tasks-title-link {
+  color: #0b5ed7;
 }
 
 .tasks-timeline-proof-btn {
