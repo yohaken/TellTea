@@ -11,10 +11,6 @@ on:
         description: "Also delete stockMovements (default 1)"
         required: false
         default: "1"
-  push:
-    branches: [main]
-    paths:
-      - "data/RUN_PURGE_STOCK_SESSIONS"
 
 jobs:
   purge:
@@ -37,7 +33,6 @@ jobs:
       - name: Purge stock count sessions (+ movements)
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          # Marker-file push = apply for real; workflow_dispatch uses input.
-          APPLY: ${{ github.event_name == 'push' && '1' || inputs.apply }}
-          PURGE_MOVEMENTS: ${{ github.event_name == 'push' && '1' || inputs.purge_movements }}
+          APPLY: ${{ inputs.apply }}
+          PURGE_MOVEMENTS: ${{ inputs.purge_movements }}
         run: node scripts/purge-stock-count-sessions.mjs
