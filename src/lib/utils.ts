@@ -152,7 +152,7 @@ export function bangkokDateKey(ms: number): string {
   }).format(new Date(ms));
 }
 
-/** Asia/Bangkok day/month/year parts for table cells. */
+/** Asia/Bangkok day/month/year parts for table cells (Gregorian CE). */
 export function bangkokDateParts(ms: number): { day: number; month: number; year2: string } | null {
   if (!ms) return null;
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -169,14 +169,44 @@ export function bangkokDateParts(ms: number): { day: number; month: number; year
   return { day, month, year2 };
 }
 
-/** Short date in Asia/Bangkok — e.g. 30/7/26 (not device timezone). */
+/** ค.ศ. → พ.ศ. (2025 → 2568). Storage stays CE; display may use BE. */
+export function toBeYear(ceYear: number): number | null {
+  if (!Number.isFinite(ceYear)) return null;
+  if (ceYear < 1900 || ceYear > 2100) return null;
+  return ceYear + 543;
+}
+
+/**
+ * Asia/Bangkok day/month/พ.ศ. parts for UI cells.
+ * Derived from Bangkok CE key so engines without `calendar: "buddhist"` stay consistent.
+ */
+export function bangkokDatePartsBe(
+  ms: number,
+): { day: number; month: number; yearBe: number; year2: string } | null {
+  if (!ms) return null;
+  const key = bangkokDateKey(ms);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return null;
+  const [ys, msPart, ds] = key.split("-").map(Number);
+  const yearBe = toBeYear(ys ?? NaN);
+  if (yearBe == null || !msPart || !ds) return null;
+  return { day: ds, month: msPart, yearBe, year2: String(yearBe).slice(-2) };
+}
+
+/** Short date in Asia/Bangkok — e.g. 30/7/26 ค.ศ. (not device timezone). */
 export function formatDateShort(ms: number) {
   const p = bangkokDateParts(ms);
   if (!p) return "—";
   return `${p.day}/${p.month}/${p.year2}`;
 }
 
-/** Short date + time for «แก้ไขล่าสุด» — Asia/Bangkok. */
+/** Short date พ.ศ. in Asia/Bangkok — e.g. 30/7/69 (storage remains CE). */
+export function formatDateShortBe(ms: number) {
+  const p = bangkokDatePartsBe(ms);
+  if (!p) return "—";
+  return `${p.day}/${p.month}/${p.year2}`;
+}
+
+/** Short date + time for «แก้ไขล่าสุด» — Asia/Bangkok, ค.ศ. */
 export function formatDateTimeShort(ms: number) {
   if (!ms) return "—";
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -192,6 +222,23 @@ export function formatDateTimeShort(ms: number) {
   const hh = String(get("hour")).padStart(2, "0");
   const mi = String(get("minute")).padStart(2, "0");
   return `${Number(get("day"))}/${Number(get("month"))}/${get("year")} ${hh}:${mi}`;
+}
+
+/** Short date + time พ.ศ. — Asia/Bangkok (storage remains CE). */
+export function formatDateTimeShortBe(ms: number) {
+  if (!ms) return "—";
+  const p = bangkokDatePartsBe(ms);
+  if (!p) return "—";
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Bangkok",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(ms));
+  const get = (type: string) => parts.find((p) => p.type === type)?.value || "";
+  const hh = String(get("hour")).padStart(2, "0");
+  const mi = String(get("minute")).padStart(2, "0");
+  return `${p.day}/${p.month}/${p.year2} ${hh}:${mi}`;
 }
 
 /** Prefer updatedAt; fall back to createdAt for legacy rows. */

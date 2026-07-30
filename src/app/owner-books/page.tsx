@@ -60,7 +60,6 @@ import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
   formatBaht,
-  formatDateShort,
   formatPlainNumber,
   parseDateInput,
   todayInputValue,
@@ -418,7 +417,7 @@ function OwnerBooksView() {
         <p className="empty">ยังไม่มีรายการ — กดบันทึกเงินออกเพื่อเริ่ม</p>
       ) : !loading ? (
         <>
-          <div className="sheet-wrap sheet-bleed">
+          <div className="sheet-wrap owner-books-sheet sheet-bleed">
             <table className="sheet-table sheet-table--dense">
               <thead>
                 <tr>
@@ -478,7 +477,7 @@ function OwnerBooksView() {
                       </label>
                     </td>
                     <td className="col-date" onClick={openEdit}>
-                      <SheetDateCell ms={row.date} />
+                      <SheetDateCell ms={row.date} era="be" />
                     </td>
                     <td className="col-desc">
                       <div className="desc-with-photo">
@@ -929,6 +928,7 @@ function OwnerEntryModal({
             entryDate={entry.date}
             createdAt={entry.createdAt}
             updatedAt={entry.updatedAt}
+            era="be"
           />
         ) : null}
         {formError ? <p className="error-text ot-form-error">{formError}</p> : null}

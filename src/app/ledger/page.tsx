@@ -66,7 +66,6 @@ import { daysAgoMs } from "@/lib/query-window";
 import { filterLedgerRows, sortByDateNewestFirst } from "@/lib/smart-search";
 import { SheetDateCell } from "@/components/SheetDateCell";
 import {
-  formatDateShort,
   formatPlainNumber,
   parseDateInput,
   todayInputValue,
@@ -431,7 +430,7 @@ function LedgerView() {
                     className={row.amountIn > 0 ? "row-in" : "row-out"}
                   >
                     <td className="col-date">
-                      <SheetDateCell ms={row.date} />
+                      <SheetDateCell ms={row.date} era="be" />
                     </td>
                     <td className="col-desc">
                       <div className="desc-with-photo">
@@ -1294,6 +1293,7 @@ function EditEntryModal({
           entryDate={entry.date}
           createdAt={entry.createdAt}
           updatedAt={entry.updatedAt}
+          era="be"
         />
         <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
           <div className="field">

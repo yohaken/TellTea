@@ -1501,20 +1501,34 @@ body.modal-open .main-panel {
   white-space: nowrap;
 }
 
-/* Bleed / density live on shared .sheet-bleed + .sheet-table--dense */
+/*
+ * Prototype table layout — บัญชีพนักงาน (.ledger-staff-sheet).
+ * Later phases copy these column/row/bleed rules per-page (do not change other sheets here).
+ * Bleed: .sheet-bleed cancels .main-panel horizontal padding (1rem).
+ * Density: shared .sheet-table--dense + overrides below for row/column sizing.
+ */
 .ledger-page .sheet-wrap.ledger-staff-sheet {
   margin-top: 0.1rem;
 }
 
+.ledger-page .ledger-staff-sheet .sheet-table--dense th,
+.ledger-page .ledger-staff-sheet .sheet-table--dense td {
+  padding: 0.18rem 0.3rem;
+  line-height: 1.15;
+}
+
 .ledger-page .ledger-staff-sheet .sheet-table .col-date {
-  width: 3.4rem;
-  min-width: 3.4rem;
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
   white-space: nowrap;
   vertical-align: middle;
+  font-variant-numeric: tabular-nums;
 }
 
 .ledger-page .ledger-staff-sheet .sheet-table .col-desc {
   line-height: 1.15;
+  min-width: 0;
 }
 
 .ledger-page .ledger-staff-sheet .desc-link {
@@ -1524,7 +1538,24 @@ body.modal-open .main-panel {
   overflow-wrap: anywhere;
 }
 
+.ledger-page .ledger-staff-sheet .sheet-table .col-in,
+.ledger-page .ledger-staff-sheet .sheet-table .col-out {
+  min-width: 2.55rem;
+  padding-left: 0.18rem;
+  padding-right: 0.28rem;
+  font-size: 0.66rem;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-vat {
+  width: 2.35rem;
+  min-width: 2.35rem;
+  padding-left: 0.12rem;
+  padding-right: 0.22rem;
+  font-size: 0.6rem;
+}
+
 .ledger-page .ledger-staff-sheet .sheet-table .col-type {
+  max-width: 3.7rem;
   font-size: 0.58rem;
   white-space: nowrap;
 }
@@ -2152,8 +2183,89 @@ body.modal-open .main-panel {
   margin-top: 0.2rem;
 }
 
-/* Owner-books table follows /ledger/ sheet-table auto layout.
-   Keep only page chrome + exclude/note extras — do not override column widths. */
+/*
+ * Phase 2 table layout — สมุดบัญชีเจ้าของ (.owner-books-sheet).
+ * Copied from ledger-staff-sheet prototype; extras: bulk-check, exclude, note.
+ * Scoped here so other sheets are untouched.
+ */
+.owner-books-page .sheet-wrap.owner-books-sheet {
+  margin-top: 0.1rem;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table--dense th,
+.owner-books-page .owner-books-sheet .sheet-table--dense td {
+  padding: 0.18rem 0.3rem;
+  line-height: 1.15;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table .col-date {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  white-space: nowrap;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table .col-desc {
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.owner-books-page .owner-books-sheet .desc-link {
+  font-size: 0.66rem;
+  line-height: 1.15;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table .col-out {
+  min-width: 2.55rem;
+  padding-left: 0.18rem;
+  padding-right: 0.28rem;
+  font-size: 0.66rem;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table .col-vat {
+  width: 2.35rem;
+  min-width: 2.35rem;
+  padding-left: 0.12rem;
+  padding-right: 0.22rem;
+  font-size: 0.6rem;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table .col-type {
+  max-width: 3.7rem;
+  font-size: 0.58rem;
+  white-space: nowrap;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table .col-note {
+  max-width: 3.6rem;
+  font-size: 0.58rem;
+}
+
+.owner-books-page .owner-books-sheet .bulk-check-col {
+  width: 1.45rem;
+  min-width: 1.45rem;
+  padding: 0.12rem !important;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table .col-exclude {
+  width: 1.65rem;
+  min-width: 1.65rem;
+  max-width: 1.65rem;
+  padding-left: 0.1rem;
+  padding-right: 0.1rem;
+}
+
+.owner-books-page .owner-books-sheet .photo-status {
+  width: 1.15rem;
+  height: 1.15rem;
+  min-width: 1.15rem;
+  min-height: 1.15rem;
+}
+
 .owner-books-page .bulk-status-toolbar {
   margin-bottom: 0.35rem;
 }
@@ -2164,7 +2276,7 @@ body.modal-open .main-panel {
 }
 
 @media (max-width: 640px) {
-  .owner-books-page .sheet-table .col-note {
+  .owner-books-page .owner-books-sheet .sheet-table .col-note {
     display: none;
   }
 }
