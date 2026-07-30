@@ -574,9 +574,12 @@ export function analyzeCashDepositDays(
   };
 }
 
+/** Short day label for cash-in UI — พ.ศ. e.g. 22/7/68 (storage stays CE). */
 export function formatCashDayShort(ms: number) {
+  if (!ms) return "—";
   const d = new Date(cashDepositDayKey(ms));
-  return `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(-2)}`;
+  const beYear = d.getFullYear() + 543;
+  return `${d.getDate()}/${d.getMonth() + 1}/${String(beYear).slice(-2)}`;
 }
 
 /** Build occupancy maps from existing deposits (skip void). */
