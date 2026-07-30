@@ -155,6 +155,7 @@ export type SyncCreateOp = {
   checklist: TaskChecklistItem[];
   assigneeIds: string[];
   assigneeNames: string[];
+  nudgeKind: import("./task-types").TaskNudgeKind;
 };
 
 export type SyncMissedOp = { occurrenceId: string };
@@ -234,6 +235,7 @@ export function computeSyncOperations(
           checklist: tpl.checklist,
           assigneeIds: tpl.assigneeIds,
           assigneeNames: tpl.assigneeNames,
+          nudgeKind: tpl.nudgeKind === "soft" ? "soft" : "deadline",
         });
       }
     }

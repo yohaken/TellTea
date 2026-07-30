@@ -673,6 +673,7 @@ service cloud.firestore {
         && after.dueDate == before.dueDate
         && after.openAt == before.openAt
         && after.createdAt == before.createdAt
+        && after.get('nudgeKind', 'deadline') == before.get('nudgeKind', 'deadline')
         && after.diff(before).affectedKeys().hasOnly([
           'checklistDone',
           'proofImg',

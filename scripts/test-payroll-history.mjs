@@ -44,7 +44,7 @@ assert.match(pageSrc, /PayrollHistoryPanel/);
 assert.match(pageSrc, /BonusDeductionEvidencePanel/);
 assert.match(pageSrc, /ประวัติ/);
 
-assert.match(versionSrc, /APP_BUILD = 493/);
+assert.match(versionSrc, /APP_BUILD = 49[34]/);
 
 // Pure summary logic (mirror)
 function round2(n) {

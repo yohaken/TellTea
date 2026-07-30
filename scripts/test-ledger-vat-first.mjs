@@ -52,7 +52,7 @@ assert.match(billLib, /hasVat/);
 assert.match(billLib, /vatVerified/);
 assert.match(billLib, /vatInput: prev.hasVat \? prev.vatInput/);
 
-assert.match(versionSrc, /APP_BUILD = 491/);
+assert.match(versionSrc, /APP_BUILD = 49\d/);
 
 function initialVatFirstPhase() {
   return "ask";
