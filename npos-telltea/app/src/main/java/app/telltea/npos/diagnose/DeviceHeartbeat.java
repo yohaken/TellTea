@@ -8,6 +8,7 @@ import android.view.WindowManager;
 
 import app.telltea.npos.printer.PrinterPrefs;
 import app.telltea.npos.printer.SunmiInnerPrinter;
+import app.telltea.npos.sell.MenuSyncCoordinator;
 import app.telltea.npos.shift.ShiftPrefs;
 
 import org.json.JSONObject;
@@ -87,8 +88,7 @@ public final class DeviceHeartbeat {
                     OpsPulsePrefs.applyFromServer(app, res.optInt("heartbeatIntervalSec", 5));
                 }
                 if (res.has("menuVersion")) {
-                    app.telltea.npos.sell.MenuSyncCoordinator.applyFromServer(
-                            app, res.optLong("menuVersion", 0L));
+                    MenuSyncCoordinator.applyFromServer(app, res.optLong("menuVersion", 0L));
                 }
                 // Kick ≠ close: BO-closed round settles via sessionRemoteClosed (seat kept).
                 if (res.optBoolean("sessionRemoteClosed", false)
