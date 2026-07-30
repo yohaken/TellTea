@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
-import type { Employee } from "@/lib/employees";
+import { listActiveEmployees, type Employee } from "@/lib/employees";
 import type { OtEntry } from "@/lib/ot";
 import {
+  createSpecialPayrollItem,
   generatePayrollForPeriod,
   kindUsesMonthEndAccount,
   markPayrollPaid,
@@ -35,9 +36,17 @@ type PayTarget = {
   note: string;
 };
 
+type SpecialDraft = {
+  employeeId: string;
+  amount: string;
+  note: string;
+  skipGroup: boolean;
+};
+
 function shortKind(kind: PayrollKind): string {
   if (kind === "salary_mid") return "กลางเดือน";
   if (kind === "salary_month_end") return "สิ้นเดือน";
+  if (kind === "salary_special") return "จ่ายแยก";
   return "โบนัส";
 }
 
@@ -55,6 +64,7 @@ export function PayrollPayPanel({
   canPay,
   onError,
   onInfo,
+  onEmployeesChange,
 }: {
   isOwner: boolean;
   /** true = เห็นคิวทั้งร้าน (เจ้าของ / คนโอน) · false = เฉพาะของตัวเอง */
@@ -70,12 +80,20 @@ export function PayrollPayPanel({
   canPay: boolean;
   onError: (msg: string) => void;
   onInfo?: (msg: string) => void;
+  onEmployeesChange?: (emps: Employee[]) => void;
 }) {
   const [filter, setFilter] = useState<"pending" | "all" | "void" | PayrollKind>("pending");
   const [busy, setBusy] = useState(false);
   const [payTarget, setPayTarget] = useState<PayTarget | null>(null);
+  const [specialOpen, setSpecialOpen] = useState(false);
+  const [specialDraft, setSpecialDraft] = useState<SpecialDraft>({
+    employeeId: "",
+    amount: "",
+    note: "",
+    skipGroup: true,
+  });
 
-  useBodyScrollLock(!!payTarget);
+  useBodyScrollLock(!!payTarget || specialOpen);
 
   const periodItems = useMemo(
     () => items.filter((i) => i.periodMonth === periodMonth),
@@ -113,8 +131,68 @@ export function PayrollPayPanel({
     () => employees.filter((e) => e.active && !(Number(e.monthlySalary) > 0)).length,
     [employees],
   );
+  const skipGroupCount = useMemo(
+    () => employees.filter((e) => e.active && e.skipGroupPayroll).length,
+    [employees],
+  );
+  const activeRoster = useMemo(
+    () =>
+      [...employees]
+        .filter((e) => e.active)
+        .sort((a, b) => a.name.localeCompare(b.name, "th")),
+    [employees],
+  );
 
   const showActions = shopView && (isOwner || canPay);
+
+  function openSpecialForm() {
+    setSpecialDraft({
+      employeeId: activeRoster[0]?.id || "",
+      amount: "",
+      note: "",
+      skipGroup: true,
+    });
+    setSpecialOpen(true);
+  }
+
+  async function onCreateSpecial() {
+    if (!isOwner) return;
+    const emp = activeRoster.find((e) => e.id === specialDraft.employeeId);
+    if (!emp) {
+      onError("เลือกพนักงานก่อน");
+      return;
+    }
+    const amountNum = Number(specialDraft.amount);
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      onError("ใส่ยอดจ่ายแยกให้ถูกต้อง");
+      return;
+    }
+    setBusy(true);
+    try {
+      await createSpecialPayrollItem({
+        employee: emp,
+        periodMonth,
+        grossAmount: amountNum,
+        createdBy: actorId,
+        note: specialDraft.note,
+        markSkipGroupPayroll: specialDraft.skipGroup,
+      });
+      if (specialDraft.skipGroup || onEmployeesChange) {
+        const refreshed = await listActiveEmployees();
+        onEmployeesChange?.(refreshed);
+      }
+      setSpecialOpen(false);
+      setFilter("pending");
+      onInfo?.(
+        `สร้างจ่ายแยก · ${emp.name} · ฿${fmt(amountNum)}` +
+          (specialDraft.skipGroup ? " · ข้ามรอบกลุ่มไว้ก่อน" : ""),
+      );
+    } catch (err) {
+      onError((err as Error).message || "สร้างจ่ายแยกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function onGenerate(scope: PayrollGenerateScope) {
     if (!isOwner) return;
@@ -251,12 +329,25 @@ export function PayrollPayPanel({
             >
               สร้างโบนัส
             </button>
+            <button
+              type="button"
+              className="ghost-btn"
+              disabled={busy || !activeRoster.length}
+              onClick={openSpecialForm}
+              title="พนักงานใหม่ / แปลงประจำ — ใส่ยอดเองเข้าคิวรอโอน"
+            >
+              จ่ายแยก
+            </button>
           </div>
           <p className="muted payroll-actions-hint">
             แยกสร้าง: เงินเดือนได้เลย · โบนัสหลังปิดเดือนที่สรุปโบนัส · สิ้นเดือนลงบัญชีวันสิ้นเดือน (โอนวันที่{" "}
-            {schedule.salarySplits[1]?.dayOfMonth ?? 1}) · หักเบิกค้างอัตโนมัติ · ยกเลิกแล้วกดสร้างใหม่ได้
+            {schedule.salarySplits[1]?.dayOfMonth ?? 1}) · จ่ายแยก = ยอดกำหนดเองเข้าคิวเดียวกัน ·
+            หักเบิกค้างอัตโนมัติ · ยกเลิกแล้วกดสร้างใหม่ได้
             {missingSalary
               ? ` · ยังไม่มีเงินเดือน ${missingSalary} คน — ไปแท็บตั้งค่าจ่าย`
+              : ""}
+            {skipGroupCount
+              ? ` · ข้ามรอบกลุ่ม ${skipGroupCount} คน (ตั้งค่าจ่าย / จ่ายแยก)`
               : ""}
           </p>
         </div>
@@ -276,6 +367,7 @@ export function PayrollPayPanel({
             ["void", voidCount ? `ยกเลิก (${voidCount})` : "ยกเลิก"],
             ["salary_mid", "กลางเดือน"],
             ["salary_month_end", "ปลายเดือน"],
+            ["salary_special", "จ่ายแยก"],
             ["bonus", "โบนัส"],
           ] as const
         ).map(([key, label]) => (
@@ -462,6 +554,106 @@ export function PayrollPayPanel({
                 onClick={() => void onConfirmPay()}
               >
                 {busy ? "กำลังบันทึก..." : "ยืนยันจ่าย"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {specialOpen ? (
+        <div
+          className="modal-backdrop edit-modal is-module-form"
+          onClick={() => !busy && setSpecialOpen(false)}
+        >
+          <div
+            className="modal-card module-form-card"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="สร้างจ่ายแยก"
+          >
+            <h2 className="panel-title" style={{ fontSize: "1rem", marginBottom: "0.45rem" }}>
+              จ่ายแยก · ยอดกำหนดเอง
+            </h2>
+            <p className="muted" style={{ marginBottom: "0.75rem" }}>
+              รับพนักงานใหม่ / แปลงประจำก่อนรอบกลุ่ม — ใส่ยอดแล้วเข้าคิวรอโอนเหมือนเงินเดือน
+            </p>
+            <label className="field">
+              <span>พนักงาน</span>
+              <select
+                value={specialDraft.employeeId}
+                onChange={(e) =>
+                  setSpecialDraft((d) => ({ ...d, employeeId: e.target.value }))
+                }
+                disabled={busy}
+              >
+                {activeRoster.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name}
+                    {emp.skipGroupPayroll ? " · ข้ามรอบกลุ่ม" : ""}
+                    {Number(emp.monthlySalary) > 0
+                      ? ` · เดือน ฿${fmt(Number(emp.monthlySalary))}`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>ยอดโอน (บาท)</span>
+              <input
+                type="number"
+                min={0.01}
+                step={100}
+                inputMode="decimal"
+                value={specialDraft.amount}
+                onChange={(e) =>
+                  setSpecialDraft((d) => ({ ...d, amount: e.target.value }))
+                }
+                disabled={busy}
+                placeholder="เช่น 7500"
+                autoFocus
+              />
+            </label>
+            <label className="field">
+              <span>หมายเหตุ</span>
+              <input
+                value={specialDraft.note}
+                onChange={(e) =>
+                  setSpecialDraft((d) => ({ ...d, note: e.target.value }))
+                }
+                disabled={busy}
+                placeholder="เช่น แปลงประจำ · จ่ายก่อนรอบ 1"
+              />
+            </label>
+            <label className="payroll-special-skip">
+              <input
+                type="checkbox"
+                checked={specialDraft.skipGroup}
+                onChange={(e) =>
+                  setSpecialDraft((d) => ({ ...d, skipGroup: e.target.checked }))
+                }
+                disabled={busy}
+              />
+              ยังไม่รวมตอนกด «สร้างเงินเดือน» กลุ่ม (แนะนำ)
+            </label>
+            <p className="muted form-hint-inline">
+              เดือนอ้างอิง {periodMonth} · วันโอน/ลงบัญชี = วันนี้ · หักเบิกค้างถ้ามี
+            </p>
+            <div className="module-form-actions">
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={busy}
+                onClick={() => setSpecialOpen(false)}
+              >
+                ออก
+              </button>
+              <button
+                type="button"
+                className="primary-btn"
+                disabled={busy}
+                onClick={() => void onCreateSpecial()}
+              >
+                {busy ? "กำลังสร้าง..." : "สร้างคิวรอโอน"}
               </button>
             </div>
           </div>

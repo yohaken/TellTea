@@ -19,14 +19,23 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { isInMonth, namesMatch } from "./bonus";
-import { adjustEmployeeAdvanceBalance, type Employee } from "./employees";
+import {
+  adjustEmployeeAdvanceBalance,
+  updateEmployee,
+  type Employee,
+} from "./employees";
 import { getDb } from "./firebase";
 import { addOwnerBookEntry } from "./owner-books";
 import { bangkokCalendarParts } from "./task-weekly-logic";
 import { bulkUpdateOtEntryStatus, type OtEntry } from "./ot";
 import { bulkUpdateProdEntryStatus, type ProdEntry } from "./production";
 
-export type PayrollKind = "salary_mid" | "salary_month_end" | "bonus";
+export type PayrollKind =
+  | "salary_mid"
+  | "salary_month_end"
+  | "bonus"
+  /** จ่ายแยก / ยอดกำหนดเอง — ไม่ทับรอบกลาง-ปลาย */
+  | "salary_special";
 export type PayrollStatus = "pending" | "paid" | "void";
 
 export type PayrollSalarySplit = {
@@ -113,6 +122,7 @@ export const PAYROLL_KIND_LABELS: Record<PayrollKind, string> = {
   salary_mid: "เงินเดือนงวดกลาง",
   salary_month_end: "เงินเดือนสิ้นเดือน",
   bonus: "โบนัส",
+  salary_special: "เงินเดือนจ่ายแยก",
 };
 
 export const PAYROLL_STATUS_LABELS: Record<PayrollStatus, string> = {
@@ -190,10 +200,23 @@ export function shiftPeriodMonth(key: string, deltaMonths: number): string {
 export function payrollItemDocId(
   employeeId: string,
   periodMonth: string,
-  kind: PayrollKind,
+  kind: Exclude<PayrollKind, "salary_special">,
 ): string {
   const safeEmp = employeeId.replace(/[^\w-]/g, "_").slice(0, 80);
   return `${safeEmp}_${periodMonth}_${kind}`;
+}
+
+/** จ่ายแยกได้หลายรายการต่อเดือน — ใส่ suffix ไม่ชน id */
+export function payrollSpecialItemDocId(
+  employeeId: string,
+  periodMonth: string,
+  suffix: string,
+): string {
+  const safeEmp = employeeId.replace(/[^\w-]/g, "_").slice(0, 80);
+  const safeSuffix = String(suffix || Date.now())
+    .replace(/[^\w-]/g, "_")
+    .slice(0, 40);
+  return `${safeEmp}_${periodMonth}_salary_special_${safeSuffix}`;
 }
 
 export function normalizePayrollSchedule(
@@ -233,7 +256,10 @@ export function normalizePayrollSchedule(
 function mapPayrollItem(id: string, data: Record<string, unknown>): PayrollItem {
   const kindRaw = String(data.kind || "");
   const kind: PayrollKind =
-    kindRaw === "salary_month_end" || kindRaw === "bonus" || kindRaw === "salary_mid"
+    kindRaw === "salary_month_end" ||
+    kindRaw === "bonus" ||
+    kindRaw === "salary_mid" ||
+    kindRaw === "salary_special"
       ? kindRaw
       : "salary_mid";
   const statusRaw = String(data.status || "");
@@ -420,7 +446,7 @@ export async function generatePayrollForPeriod(input: {
   if (!createdBy) throw new Error("ไม่พบผู้สร้างรายการ");
   parsePeriodMonth(input.periodMonth);
 
-  const active = input.employees.filter((e) => e.active);
+  const active = input.employees.filter((e) => e.active && !e.skipGroupPayroll);
   const now = Date.now();
   let created = 0;
   let restored = 0;
@@ -428,7 +454,7 @@ export async function generatePayrollForPeriod(input: {
   const ids: string[] = [];
 
   const plans: Array<{
-    kind: PayrollKind;
+    kind: Exclude<PayrollKind, "salary_special">;
     dayOfMonth: number;
     forPreviousMonth: boolean;
     amountFor: (emp: Employee) => number;
@@ -577,8 +603,94 @@ export async function generatePayrollForPeriod(input: {
   return { created, restored, skipped, ids };
 }
 
+/**
+ * สร้างคิวจ่ายแยก ยอดกำหนดเอง (พนักงานใหม่ / แปลงประจำก่อนรอบกลุ่ม)
+ * — เข้าคิวรอโอนเหมือนเงินเดือนปกติ · ไม่ทับงวดกลาง/ปลาย
+ */
+export async function createSpecialPayrollItem(input: {
+  employee: Employee;
+  periodMonth: string;
+  grossAmount: number;
+  createdBy: string;
+  note?: string;
+  /** วันโอน — ค่าเริ่มต้นวันนี้ (ICT) */
+  dueDate?: number;
+  /** วันลงบัญชี — ค่าเริ่มต้น = dueDate */
+  accountDate?: number;
+  /** true = ติ๊กข้ามสร้างเงินเดือนกลุ่ม (แนะนำตอนรับใหม่จ่ายแยก) */
+  markSkipGroupPayroll?: boolean;
+}): Promise<string> {
+  const createdBy = input.createdBy.trim();
+  if (!createdBy) throw new Error("ไม่พบผู้สร้างรายการ");
+  parsePeriodMonth(input.periodMonth);
+  const emp = input.employee;
+  if (!emp?.id) throw new Error("ไม่พบพนักงาน");
+  if (!emp.active) throw new Error("พนักงานนี้ปิดอยู่ — เปิดใช้งานก่อน");
+  const grossAmount = round2(Number(input.grossAmount) || 0);
+  if (!(grossAmount > 0)) throw new Error("ใส่ยอดจ่ายแยกให้มากกว่า 0");
+
+  const { y, m, d } = bangkokCalendarParts(Date.now());
+  const dueDate =
+    Number(input.dueDate) > 0
+      ? Number(input.dueDate)
+      : bangkokNoonMs(y, m - 1, d);
+  const accountDate =
+    Number(input.accountDate) > 0 ? Number(input.accountDate) : dueDate;
+  const note = (input.note || "").trim();
+
+  // หักเบิกค้างที่ยังไม่ถูกกันในคิวรอโอนอื่น
+  let reserved = 0;
+  const pendingSnap = await getDocs(query(payrollCol(), where("status", "==", "pending")));
+  for (const rowDoc of pendingSnap.docs) {
+    const row = mapPayrollItem(rowDoc.id, rowDoc.data() as Record<string, unknown>);
+    if (row.employeeId === emp.id && row.advanceDeduct > 0 && !row.advanceApplied) {
+      reserved = round2(reserved + row.advanceDeduct);
+    }
+  }
+  const advanceLeft = round2(
+    Math.max(0, (Number(emp.advanceBalance) || 0) - reserved),
+  );
+  const advanceDeduct = round2(Math.min(advanceLeft, grossAmount));
+  const amount = round2(grossAmount - advanceDeduct);
+
+  const now = Date.now();
+  const id = payrollSpecialItemDocId(emp.id, input.periodMonth, now.toString(36));
+  const ref = doc(getDb(), "payrollItems", id);
+  await setDoc(ref, {
+    employeeId: emp.id,
+    employeeName: emp.name,
+    periodMonth: input.periodMonth,
+    kind: "salary_special" satisfies PayrollKind,
+    dueDate,
+    accountDate,
+    grossAmount,
+    advanceDeduct,
+    amount,
+    status: "pending" satisfies PayrollStatus,
+    slipUrls: [] as string[],
+    note:
+      note ||
+      (advanceDeduct > 0 ? `หักเบิก ฿${advanceDeduct.toFixed(2)}` : ""),
+    paidAt: 0,
+    paidBy: "",
+    ownerBookId: "",
+    salaryBase: round2(Number(emp.monthlySalary) || 0),
+    bonusRemaining: 0,
+    advanceApplied: false,
+    createdAt: now,
+    updatedAt: now,
+    createdBy,
+  });
+
+  if (input.markSkipGroupPayroll) {
+    await updateEmployee(emp.id, { skipGroupPayroll: true });
+  }
+
+  return id;
+}
+
 export function payrollDescription(item: Pick<PayrollItem, "kind" | "periodMonth" | "employeeName">): string {
-  const label = PAYROLL_KIND_LABELS[item.kind];
+  const label = PAYROLL_KIND_LABELS[item.kind] || item.kind;
   return `${label} ${item.periodMonth} — ${item.employeeName}`;
 }
 
@@ -697,7 +809,12 @@ export async function markPayrollPaid(input: {
     amountOut: item.amount,
     type: "sga",
     typeSource: "payroll",
-    typeAiReason: item.kind === "bonus" ? "โบนัสพนักงาน" : "เงินเดือนพนักงาน",
+    typeAiReason:
+      item.kind === "bonus"
+        ? "โบนัสพนักงาน"
+        : item.kind === "salary_special"
+          ? "เงินเดือนจ่ายแยก"
+          : "เงินเดือนพนักงาน",
     createdBy: paidBy,
     receiptUrls: slipUrls,
     note: bookNote,

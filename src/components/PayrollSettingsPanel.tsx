@@ -21,6 +21,7 @@ type DraftSalary = {
   payAccountNo: string;
   payAccountName: string;
   advanceBalance: string;
+  skipGroupPayroll: boolean;
 };
 
 function draftFromEmployee(emp: Employee): DraftSalary {
@@ -32,6 +33,7 @@ function draftFromEmployee(emp: Employee): DraftSalary {
     payAccountName: emp.payAccountName || "",
     advanceBalance:
       emp.advanceBalance != null && emp.advanceBalance > 0 ? String(emp.advanceBalance) : "",
+    skipGroupPayroll: Boolean(emp.skipGroupPayroll),
   };
 }
 
@@ -90,6 +92,7 @@ export function PayrollSettingsPanel({
 
   const missingSalary = roster.filter((e) => !(Number(e.monthlySalary) > 0)).length;
   const withAdvance = roster.filter((e) => Number(e.advanceBalance) > 0).length;
+  const skipGroupCount = roster.filter((e) => e.skipGroupPayroll).length;
   const midPctN = Number(midPct) || 0;
   const endPctN = Number(endPct) || 0;
 
@@ -170,13 +173,18 @@ export function PayrollSettingsPanel({
         payAccountNo: draft.payAccountNo.trim(),
         payAccountName: draft.payAccountName.trim(),
         advanceBalance: advNum,
+        skipGroupPayroll: draft.skipGroupPayroll,
       });
       const refreshed = await listActiveEmployees();
       onEmployeesChange?.(refreshed);
       onInfo?.(
-        advNum > 0
-          ? `บันทึกแล้ว · ${emp.name} · เบิกค้าง ฿${fmt(advNum)}`
-          : `บันทึกเงินเดือน · ${emp.name}`,
+        [
+          `บันทึก · ${emp.name}`,
+          advNum > 0 ? `เบิกค้าง ฿${fmt(advNum)}` : "",
+          draft.skipGroupPayroll ? "ข้ามรอบกลุ่ม" : "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
       );
       setExpandedId(null);
     } catch (err) {
@@ -347,9 +355,11 @@ export function PayrollSettingsPanel({
       <div className="payroll-settings-block">
         <h2 className="payroll-settings-title">2) เงินเดือนพนักงาน</h2>
         <p className="muted payroll-settings-hint">
-          ใส่ยอดต่อเดือน + เบิกค้าง (ถ้ามี) · ระบบหักเบิกจากรอบจ่ายอัตโนมัติ
+          ใส่ยอดต่อเดือน + เบิกค้าง (ถ้ามี) · ระบบหักเบิกจากรอบจ่ายอัตโนมัติ ·
+          ติ๊กข้ามรอบกลุ่มได้ถ้าจ่ายแยกก่อน
           {missingSalary ? ` · ยังไม่ตั้งเงินเดือน ${missingSalary} คน` : ""}
           {withAdvance ? ` · มีเบิกค้าง ${withAdvance} คน` : ""}
+          {skipGroupCount ? ` · ข้ามรอบกลุ่ม ${skipGroupCount} คน` : ""}
         </p>
 
         {!roster.length ? (
@@ -390,9 +400,17 @@ export function PayrollSettingsPanel({
                       >
                         <td className="payroll-col-name">
                           <strong>{emp.name}</strong>
-                          {(draft.payBank || draft.payAccountNo) && !open ? (
+                          {(draft.skipGroupPayroll ||
+                            ((draft.payBank || draft.payAccountNo) && !open)) ? (
                             <div className="muted payroll-cell-meta">
-                              {[draft.payBank, draft.payAccountNo].filter(Boolean).join(" ")}
+                              {[
+                                draft.skipGroupPayroll ? "ข้ามรอบกลุ่ม" : "",
+                                !open
+                                  ? [draft.payBank, draft.payAccountNo].filter(Boolean).join(" ")
+                                  : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
                             </div>
                           ) : null}
                         </td>
@@ -488,6 +506,17 @@ export function PayrollSettingsPanel({
                           disabled={busy}
                           placeholder="เช่น 2000 — ว่าง = ไม่มี"
                         />
+                      </label>
+                      <label className="payroll-special-skip">
+                        <input
+                          type="checkbox"
+                          checked={draft.skipGroupPayroll}
+                          onChange={(e) =>
+                            patchDraft(emp.id, { skipGroupPayroll: e.target.checked })
+                          }
+                          disabled={busy}
+                        />
+                        ข้ามตอนกด «สร้างเงินเดือน/โบนัส» กลุ่ม — ใช้ตอนจ่ายแยกก่อนเข้ารอบปกติ
                       </label>
                       <p className="muted form-hint-inline">
                         เบิกค้างเดิมใส่ยอดอย่างเดียว (ไม่ลงสมุดซ้ำ) · ระบบจะหักจากรอบจ่ายถัดไปจนครบ

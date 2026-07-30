@@ -395,6 +395,7 @@ function BonusView() {
             otEntries={otEntries}
             canPay={canPay}
             onError={setError}
+            onEmployeesChange={setEmployees}
             onInfo={(msg) => {
               setInfo(msg);
               setError(null);
