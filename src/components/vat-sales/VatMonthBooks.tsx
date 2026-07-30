@@ -92,6 +92,15 @@ function bookOpEx(row: MonthCategoryRow | null) {
   return (row.cogs || 0) + (row.sga || 0) + (row.other || 0);
 }
 
+/** รวมภาษีซื้อจากรายการที่ติ๊กรวมเข้างบ */
+function sumClaimedBooksVat(lines: BooksVatLine[]) {
+  let s = 0;
+  for (const l of lines) {
+    if (l.vatClaim) s += Number(l.vatInput) || 0;
+  }
+  return Math.round(s * 100) / 100;
+}
+
 function MoneyCell({
   value,
   locked,
@@ -248,6 +257,7 @@ export function VatMonthBooks({ actor }: Props) {
         setBookOwner(pickBookRow(ownerRows, m));
         setBooksPulledAt(Date.now());
         setBooksLines(bundle.lines);
+        if (bundle.lines.length > 0) setOpenBooksLines(true);
         const writeVat = opts?.writeVat !== false;
         if (!writeVat) return bundle;
         const prev =
@@ -391,20 +401,39 @@ export function VatMonthBooks({ actor }: Props) {
 
   const toggleLineClaim = async (line: BooksVatLine, nextClaim: boolean) => {
     if (locked) return;
+    const nextLines = booksLines.map((l) =>
+      l.id === line.id && l.book === line.book
+        ? { ...l, vatClaim: nextClaim }
+        : l,
+    );
+    const nextVat = sumClaimedBooksVat(nextLines);
+    // อัปเดตยอดทันที → ภาษีซื้อ / VAT สุทธิขยับในรอบเรนเดอร์นี้
+    setBooksLines(nextLines);
+    setDraft((d) => ({ ...d, ingredientVat: nextVat }));
+    markDirty();
     try {
       if (line.book === "ledger") {
         await updateLedgerEntry(line.id, { vatClaim: nextClaim });
       } else {
         await updateOwnerBookEntry(line.id, { vatClaim: nextClaim });
       }
-      await syncBooksFromLedgers(month, { writeVat: true });
+      await syncBooksFromLedgers(month, {
+        writeVat: true,
+        prevIngredient: nextVat,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      void syncBooksFromLedgers(month, { writeVat: true });
     }
   };
 
   const toggleClaimAll = async (nextClaim: boolean) => {
     if (locked || booksLines.length === 0) return;
+    const nextLines = booksLines.map((l) => ({ ...l, vatClaim: nextClaim }));
+    const nextVat = sumClaimedBooksVat(nextLines);
+    setBooksLines(nextLines);
+    setDraft((d) => ({ ...d, ingredientVat: nextVat }));
+    markDirty();
     setBooksVatBusy(true);
     try {
       await Promise.all(
@@ -416,9 +445,13 @@ export function VatMonthBooks({ actor }: Props) {
               : updateOwnerBookEntry(line.id, { vatClaim: nextClaim }),
           ),
       );
-      await syncBooksFromLedgers(month, { writeVat: true });
+      await syncBooksFromLedgers(month, {
+        writeVat: true,
+        prevIngredient: nextVat,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      void syncBooksFromLedgers(month, { writeVat: true });
     } finally {
       setBooksVatBusy(false);
     }
@@ -1207,7 +1240,7 @@ export function VatMonthBooks({ actor }: Props) {
             </section>
 
             <section className="vat-table-block">
-              <h3 className="vat-table-subtitle">ภาษีซื้อ — GP + บช.</h3>
+              <h3 className="vat-table-subtitle">ภาษีซื้อ — GP + สองบช.</h3>
               <div className="sheet-wrap vat-month-slim-wrap">
                 <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
                   <thead>
@@ -1222,7 +1255,7 @@ export function VatMonthBooks({ actor }: Props) {
                         className="col-seg"
                         title="จากนำเข้าคอลัมน์ GP≠ หรือประมาณคชจ.×7/107"
                       >
-                        ภาษีซื้อ GP เดลิเวอรี่ (รวม)
+                        ภาษีซื้อ GP (รวม)
                       </td>
                       <td className="col-num col-net">{fmt(view.inputGpVat)}</td>
                     </tr>
@@ -1251,9 +1284,9 @@ export function VatMonthBooks({ actor }: Props) {
                           />
                           <span
                             className="vat-seg-label"
-                            title="ผสานจากรายการที่ติ๊กรวมเข้าระบบในสองบช.อัตโนมัติ"
+                            title="ยอดจากรายการที่ติ๊ก「รวมเข้างบ」ในสองบช. — หักจากภาษีขายในแถบสุทธิ"
                           >
-                            ภาษีซื้อจากสองบช.
+                            ภาษีซื้อสองบช.
                             {booksVatBusy ? " …" : ""}
                           </span>
                         </span>
@@ -1262,7 +1295,7 @@ export function VatMonthBooks({ actor }: Props) {
                         <MoneyCell
                           value={moneyFieldValue(draft.ingredientVat)}
                           locked={locked}
-                          ariaLabel="ภาษีซื้อวัตถุดิบ/บช."
+                          ariaLabel="ภาษีซื้อสองบช."
                           onChange={(v) => {
                             setDraft((d) => ({
                               ...d,
@@ -1271,6 +1304,17 @@ export function VatMonthBooks({ actor }: Props) {
                             markDirty();
                           }}
                         />
+                      </td>
+                    </tr>
+                    <tr className="vat-row-child">
+                      <td
+                        className="col-seg col-child"
+                        title="ค่าหลัง claim / ปัด — คือยอดที่หักจากภาษีขายจริง"
+                      >
+                        → หักจากภาษีขาย
+                      </td>
+                      <td className="col-num col-net">
+                        {fmt(view.inputBooksVat)}
                       </td>
                     </tr>
                     {openBooksLines && booksLines.length > 0 ? (
@@ -1286,10 +1330,10 @@ export function VatMonthBooks({ actor }: Props) {
                                 onChange={(e) =>
                                   void toggleClaimAll(e.target.checked)
                                 }
-                                aria-label="ติ๊กรวมเข้าระบบทั้งหมด"
-                                title="ติ๊กรวมยอดทั้งหมด"
+                                aria-label="ติ๊กรวมเข้างบทั้งหมด"
+                                title="ติ๊กรวมเข้างบทั้งหมด"
                               />{" "}
-                              รายการจากสองบช. ({booksLines.length})
+                              ติ๊กรวมเข้างบทั้งหมด ({booksLines.length})
                             </label>
                           </td>
                         </tr>
@@ -1311,7 +1355,7 @@ export function VatMonthBooks({ actor }: Props) {
                                       e.target.checked,
                                     )
                                   }
-                                  title="รวมเข้าระบบ"
+                                  title="รวมเข้างบ — หักภาษีซื้อทันที"
                                 />{" "}
                                 <button
                                   type="button"
@@ -1331,7 +1375,12 @@ export function VatMonthBooks({ actor }: Props) {
                       </>
                     ) : null}
                     <tr className="vat-sales-totals-row">
-                      <td className="col-seg">รวมภาษีซื้อ</td>
+                      <td
+                        className="col-seg"
+                        title="ภาษีซื้อ GP + ภาษีซื้อสองบช. ที่หักจากภาษีขาย"
+                      >
+                        รวมภาษีซื้อ (หักจากภาษีขาย)
+                      </td>
                       <td className="col-num col-net">{fmt(view.inputVat)}</td>
                     </tr>
                   </tbody>
@@ -1340,8 +1389,11 @@ export function VatMonthBooks({ actor }: Props) {
             </section>
 
             <p className="vat-net-strip" role="status">
-              ภาษีขาย {fmt(view.outputVat)} − ภาษีซื้อ {fmt(view.inputVat)} ={" "}
-              <strong>VAT สุทธิ {fmt(view.netVat)}</strong>
+              ภาษีขาย {fmt(view.outputVat)} − ภาษีซื้อ {fmt(view.inputVat)}{" "}
+              <span className="muted">
+                (GP {fmt(view.inputGpVat)} + สองบช. {fmt(view.inputBooksVat)})
+              </span>{" "}
+              = <strong>VAT สุทธิ {fmt(view.netVat)}</strong>
             </p>
           </div>
 

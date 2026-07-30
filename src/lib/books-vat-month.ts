@@ -3,7 +3,7 @@
  *
  * สูตร VAT เดือน:
  *   ภาษีซื้อรวม = GP (เดลิเวอรี่) + วัตถุดิบ
- *   วัตถุดิบ ← ผลรวม vatInput ของรายการที่ติ๊ก「รวมเข้าระบบ」(vatClaim) ในเดือนนั้น
+ *   วัตถุดิบ ← ผลรวม vatInput ของรายการที่ติ๊ก「รวมเข้างบ」(vatClaim) ในเดือนนั้น
  *
  * รายการที่มียอด VAT บนบิล (hasVat) แสดงในตาราง + ทั้งหมด
  * แต่ดึงเข้าระบบเฉพาะที่ vatClaim
@@ -33,7 +33,7 @@ export type BooksVatLine = {
 
 export type BooksVatMonthSum = {
   monthKey: string;
-  /** ยอดที่ติ๊กรวมเข้าระบบเท่านั้น */
+  /** ยอดที่ติ๊กรวมเข้างบเท่านั้น */
   ledgerVat: number;
   ledgerCount: number;
   ownerVat: number;

@@ -18154,6 +18154,47 @@ a.ghost-btn {
   margin-top: 0.45rem;
 }
 
+/* รายการสองบช. ในงบเดือน — ฟอนต์ให้เข้าตาราง slim */
+.vat-month-books .vat-claim-all,
+.vat-month-books .vat-claim-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.2;
+  max-width: 100%;
+}
+
+.vat-month-books .vat-books-line-btn {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vat-month-books .vat-books-line-row td {
+  font-size: 0.68rem;
+}
+
+.vat-month-books .vat-claim-check {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+}
+
 .vat-books-breakdown-head {
   display: flex;
   align-items: center;

@@ -43,7 +43,7 @@ type Props = {
 
 /**
  * มุมมองรายการแบบบช. — เปิดจากตาราง VAT เดือน (+)
- * ดูรูป / ยอด / VAT / ติ๊ก「รวมเข้าระบบ」ได้ทันที
+ * ดูรูป / ยอด / VAT / ติ๊ก「รวมเข้างบ」ได้ทันที
  */
 export function BooksVatEntryDetailModal({
   book,
@@ -159,7 +159,7 @@ export function BooksVatEntryDetailModal({
         if (result.vatInvoiceNo) setVatInvoiceNo(result.vatInvoiceNo);
         setVatSource("ai");
         setVatVerified(false);
-        // ไม่ auto รวมเข้าระบบ — ให้คนติ๊กเอง
+        // ไม่ auto รวมเข้างบ — ให้คนติ๊กเอง
       } else {
         setAiVatReason(
           result.vatReason ||
@@ -377,7 +377,7 @@ export function BooksVatEntryDetailModal({
                     disabled={busy || locked}
                     onChange={(e) => setVatClaim(e.target.checked)}
                   />
-                  รวมเข้าระบบ · หักภาษีซื้อ VAT เดือนนี้
+                  รวมเข้างบ · หักภาษีซื้อ VAT เดือนนี้
                 </label>
               ) : null}
 

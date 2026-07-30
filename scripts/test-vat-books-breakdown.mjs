@@ -25,17 +25,21 @@ assert.match(ui, /openBooksLines/);
 assert.match(ui, /รายการจากสองบช/);
 assert.match(ui, /vat-books-breakdown/);
 assert.match(ui, /ExpandBtn/);
-assert.match(ui, /รวมเข้าระบบ|vat-claim-check/);
+assert.match(ui, /รวมเข้างบ|vat-claim-check/);
 assert.match(ui, /BooksVatEntryDetailModal/);
 assert.match(ui, /toggleLineClaim/);
 assert.match(ui, /toggleClaimAll/);
-assert.match(ui, /ติ๊กรวมยอดทั้งหมด|aria-label=\"ติ๊กรวมเข้าระบบทั้งหมด\"/);
+assert.match(ui, /ติ๊กรวมเข้างบทั้งหมด/);
+assert.match(ui, /หักจากภาษีขาย/);
+assert.match(ui, /ingredientVat:\s*nextVat/);
+assert.match(ui, /sumClaimedBooksVat/);
+assert.match(ui, /vat-books-line-btn/);
 
 const detail = readFileSync(
   join(root, "src/components/vat-sales/BooksVatEntryDetailModal.tsx"),
   "utf8",
 );
-assert.match(detail, /รวมเข้าระบบ/);
+assert.match(detail, /รวมเข้างบ/);
 assert.match(detail, /EntryVatFieldset/);
 assert.match(detail, /getLedgerEntry|getOwnerBookEntry/);
 
