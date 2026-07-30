@@ -21,6 +21,21 @@ function haystackMatch(haystack: string, tokens: string[]) {
   return tokens.every((t) => h.includes(t));
 }
 
+type DatedRow = {
+  date: number;
+  createdAt?: number;
+};
+
+/**
+ * UI list order — always newest calendar date first, then newest createdAt.
+ * Search pools often arrive oldest→newest from Firestore range queries.
+ */
+export function sortByDateNewestFirst<T extends DatedRow>(rows: T[]): T[] {
+  return [...rows].sort(
+    (a, b) => b.date - a.date || (b.createdAt || 0) - (a.createdAt || 0),
+  );
+}
+
 type SearchableOwnerRow = {
   date: number;
   description: string;

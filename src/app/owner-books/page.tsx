@@ -65,7 +65,7 @@ import {
   todayInputValue,
 } from "@/lib/utils";
 import { daysAgoMs } from "@/lib/query-window";
-import { filterOwnerBookRows } from "@/lib/smart-search";
+import { filterOwnerBookRows, sortByDateNewestFirst } from "@/lib/smart-search";
 import { exportOwnerBooksXlsx } from "@/lib/xlsx-export";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { formatVatMoney } from "@/lib/vat-number-format";
@@ -171,7 +171,8 @@ function OwnerBooksView() {
 
   const filteredEntries = useMemo(() => {
     const source = deferredQuery ? searchPool ?? entries : entries;
-    return filterOwnerBookRows(source, deferredQuery);
+    // Live list is already date desc; search pool is asc — always show newest→oldest.
+    return sortByDateNewestFirst(filterOwnerBookRows(source, deferredQuery));
   }, [entries, searchPool, deferredQuery]);
 
   useEffect(() => {
