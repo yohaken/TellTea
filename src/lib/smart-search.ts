@@ -72,7 +72,9 @@ export function filterOwnerBookRows<T extends SearchableOwnerRow>(
       row.type || "",
       typeLabel,
       row.note || "",
+      // Owner-books UI shows พ.ศ.; keep ค.ศ. too so both search styles match.
       formatDateShort(row.date),
+      formatDateShortBe(row.date),
       formatPlainNumber(row.amountOut || 0),
       String(row.amountOut || ""),
       String(row.amountOut || "").replace(/,/g, ""),

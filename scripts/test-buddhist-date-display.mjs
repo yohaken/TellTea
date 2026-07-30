@@ -1,6 +1,8 @@
 /**
  * Phase 0: shared พ.ศ. display helpers (storage stays CE).
- * Phase 1: ledger opt-in via era="be" — other tables keep default ค.ศ.
+ * Phase 1: ledger opt-in via era="be".
+ * Phase 2: owner-books opt-in via era="be" + layout from ledger prototype.
+ * Later phases keep default ค.ศ. until their turn.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -30,13 +32,17 @@ assert.match(meta, /era\?: EntryTimestampEra/);
 assert.match(meta, /formatDateShortBe/);
 assert.match(ledger, /SheetDateCell ms=\{row\.date\} era="be"/);
 assert.match(ledger, /era="be"/);
-assert.doesNotMatch(owner, /SheetDateCell[^>]*era="be"/);
+assert.match(owner, /SheetDateCell ms=\{row\.date\} era="be"/);
+assert.match(owner, /owner-books-sheet/);
+assert.match(owner, /era="be"/);
 assert.doesNotMatch(bill, /SheetDateCell[^>]*era="be"/);
 assert.match(smart, /formatDateShortBe\(row\.date\)/);
 assert.match(css, /Prototype table layout/);
+assert.match(css, /Phase 2 table layout/);
 assert.match(css, /\.ledger-page \.ledger-staff-sheet \.sheet-table \.col-date/);
+assert.match(css, /\.owner-books-page \.owner-books-sheet \.sheet-table \.col-date/);
 assert.match(css, /width: 3\.55rem/);
-assert.match(version, /APP_BUILD = 467/);
+assert.match(version, /APP_BUILD = 468/);
 
 function bangkokDateKey(ms) {
   return new Intl.DateTimeFormat("en-CA", {
