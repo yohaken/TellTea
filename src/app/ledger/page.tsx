@@ -63,7 +63,7 @@ import {
 } from "@/lib/photo-upload";
 import type { LedgerEntry } from "@/lib/types";
 import { daysAgoMs } from "@/lib/query-window";
-import { filterLedgerRows } from "@/lib/smart-search";
+import { filterLedgerRows, sortByDateNewestFirst } from "@/lib/smart-search";
 import {
   formatDateShort,
   formatPlainNumber,
@@ -268,7 +268,8 @@ function LedgerView() {
 
   const filteredEntries = useMemo(() => {
     const source = deferredQuery ? searchPool ?? entries : entries;
-    return filterLedgerRows(source, deferredQuery);
+    // Live list is already date desc; search pool is asc — always show newest→oldest.
+    return sortByDateNewestFirst(filterLedgerRows(source, deferredQuery));
   }, [entries, searchPool, deferredQuery]);
 
   const loadMore = useCallback(() => {

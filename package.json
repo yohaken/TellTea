@@ -62,6 +62,7 @@
     "test:ledger-bulk-retype-owner": "node scripts/test-ledger-bulk-retype-owner.mjs",
     "test:ledger-ai-keep-date": "node scripts/test-ledger-ai-keep-date.mjs",
     "test:ledger-entry-timestamps": "node scripts/test-ledger-entry-timestamps.mjs",
+    "test:ledger-date-newest-first": "node scripts/test-ledger-date-newest-first.mjs",
     "test:photo-forensics-meta": "node scripts/test-photo-forensics-meta.mjs",
     "test:photo-forensics-report": "node scripts/test-photo-forensics-report.mjs",
     "test:photo-forensics-lookback": "node scripts/test-photo-forensics-lookback.mjs",
