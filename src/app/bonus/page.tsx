@@ -82,7 +82,6 @@ function BonusView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(isOwner);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
 
   const canView = can(staff, "bonus");
@@ -329,7 +328,8 @@ function BonusView() {
         <>
           {loading || !report ? <p className="empty">กำลังโหลด...</p> : null}
 
-          {report ? (
+          {/* สรุปพูลทั้งร้าน + ตารางรายคน: เจ้าของ / คนโอนเท่านั้น — พนักงานเห็นแค่ของฉัน */}
+          {report && shopPayView ? (
             <div className="bonus-summary-bar">
               <div className="bonus-summary-pool">
                 <span className="bonus-summary-label">โบนัสขายเบเกอรี่ รวม</span>
@@ -377,33 +377,26 @@ function BonusView() {
                 </div>
               </dl>
               <p className="muted bonus-live-note">
-                หัก% จากตารางสรุปทั้งร้าน · อัปเดตทันทีเมื่อมีการกรอกชง / ผลิต
+                หักตามกติการ้าน · อัปเดตเมื่อมีการกรอกชง / ผลิต · ไม่แสดงยอดคนอื่น
               </p>
             </section>
           ) : null}
 
-          {!loading && report && !myRow && staff?.displayName ? (
+          {!loading && report && !myRow && !shopPayView ? (
             <p className="muted bonus-no-match">
-              ไม่พบชื่อ &quot;{staff.displayName}&quot; ในรายชื่อพนักงาน — ตรวจที่{" "}
+              {staff?.displayName
+                ? <>ไม่พบชื่อ &quot;{staff.displayName}&quot; ในรายชื่อพนักงาน — ตรวจที่{" "}</>
+                : <>ยังไม่ได้เชื่อมชื่อกับรายชื่อร้าน — ไปที่{" "}</>}
               <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
+              {" "}หรือโปรไฟล์ เพื่อเห็นโบนัสของตัวเอง
             </p>
           ) : null}
 
-          {!isOwner && report ? (
-            <button
-              type="button"
-              className="ghost-btn bonus-toggle-all"
-              onClick={() => setShowAll((v) => !v)}
-            >
-              {showAll ? "ซ่อนตารางทั้งร้าน" : "ดูตารางทั้งร้าน"}
-            </button>
-          ) : null}
-
-          {!loading && report && (isOwner || showAll) ? (
+          {!loading && report && shopPayView ? (
             <BonusTable report={report} highlightName={myRow?.workerName} />
           ) : null}
 
-          {report ? (
+          {report && shopPayView ? (
             <p className="muted bonus-footnote">
               ขาย = จำนวนผลิต × เรทขายจากตารางเรท (ตามวันผลิต) แล้วหารคนที่ลงทะเบียนทำงานในเดือน
               (ผลิตหรือชง) — มีชื่ออย่างเดียวไม่หาร · ผลิต/ชง จากยอดจริง · เจ้าของกรอกจำนวนหักทั้งร้านสิ้นเดือน ·
@@ -521,7 +514,7 @@ function BonusDeductionSummaryTable({
       <p className="muted bonus-deduct-note">
         {isOwner
           ? "กรอกจำนวนสิ้นเดือน · แตะเรท% แก้ถาวร · รวม% นำไปหักทุกคน"
-          : "สรุปหักโบนัสทั้งร้าน — ใช้หักโบนัสรายคนด้านล่าง"}
+          : "กติกาหักโบนัสทั้งร้าน — ไม่แสดงยอดรายคน"}
       </p>
     </div>
   );
