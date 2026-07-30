@@ -48,6 +48,22 @@ export function proposePurchaseVatInput(amountInclusive: number): number {
 }
 
 /**
+ * ต้นทุนกิจการตามบัญชี — หลังหักภาษีซื้อ
+ * เงินสดยังใช้ amountOut (รวม VAT) · รายงานกำไร/ต้นทุนใช้ค่านี้
+ */
+export function businessCostOut(
+  amountOut: number,
+  hasVat: boolean | undefined,
+  vatInput: number | undefined,
+): number {
+  const out = normalizeMoney(amountOut);
+  if (!(out > 0)) return 0;
+  const vat = normalizeMoney(vatInput);
+  if (hasVat && vat > 0) return roundMoney(Math.max(0, out - vat));
+  return out;
+}
+
+/**
  * normalize ตอนโหลด/บันทึก
  * hasVat = เก็บยอดบนบิล · vatClaim = รวมเข้า VAT เดือน
  * vatClaim ต้องติ๊กเองที่ VAT เดือน — รายการใหม่/เก่าที่ไม่มีฟิลด์ = ยังไม่รวม

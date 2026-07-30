@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  businessCostOut,
   COMMON_VAT_VENDORS,
   proposePurchaseVatInput,
   type VatSource,
@@ -57,6 +58,9 @@ export function EntryVatFieldset({
   const proposed = proposePurchaseVatInput(amountInclusive || 0);
   const vatNum = Number(String(vatInputStr).replace(/,/g, ""));
   const hasVatAmount = Number.isFinite(vatNum) && vatNum > 0;
+  const costExVat = hasVat
+    ? businessCostOut(amountInclusive || 0, true, hasVatAmount ? vatNum : 0)
+    : 0;
 
   function sourceLabel() {
     if (vatSource === "ai") return "AI";
@@ -197,6 +201,16 @@ export function EntryVatFieldset({
           {vatSource === "propose" ? (
             <p className="muted form-hint-inline">
               ประมาณจากยอดจ่าย — ตรวจบิลก่อนติ๊ก
+            </p>
+          ) : null}
+
+          {hasVatAmount && costExVat > 0 ? (
+            <p className="muted form-hint-inline" title="เงินออกยังรวม VAT · รายงานกำไรใช้ต้นทุนหลังหัก">
+              ต้นทุนบัญชี ≈ {formatVatMoney(costExVat)} (เงินออก − ภาษีซื้อ)
+            </p>
+          ) : hasVat ? (
+            <p className="muted form-hint-inline">
+              ใส่ภาษีซื้อแล้ว · ต้นทุนบัญชี = เงินออก − ภาษีซื้อ
             </p>
           ) : null}
 

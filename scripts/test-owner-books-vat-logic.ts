@@ -3,6 +3,7 @@
  */
 import assert from "node:assert/strict";
 import {
+  businessCostOut,
   normalizeAiVatExtract,
   normalizePurchaseVat,
   parseVatInputStr,
@@ -88,6 +89,15 @@ assert.equal(parseVatInputStr("12.5"), 12.5);
   // AI ไม่มีตัวเลข → ไม่ถือว่ามี VAT
   const ai = normalizeAiVatExtract({ hasVat: true, vatInput: null });
   assert.equal(ai.hasVat, false);
+}
+
+{
+  // ต้นทุนบัญชี = เงินออก − ภาษีซื้อ (เงินสดยังรวม VAT)
+  assert.equal(businessCostOut(107, true, 7), 100);
+  assert.equal(businessCostOut(100, false, 0), 100);
+  assert.equal(businessCostOut(107, true, 0), 107);
+  assert.equal(businessCostOut(5, true, 7), 0);
+  assert.equal(businessCostOut(0, true, 7), 0);
 }
 
 console.log("test-owner-books-vat-logic: ok");

@@ -15,6 +15,7 @@ import {
   type CategoryBucket,
   type PnlCategory,
 } from "./categories";
+import { businessCostOut } from "./entry-vat";
 
 /** P&L บนเว็บโหลดแค่ช่วงนี้ — ไม่สแกนบัญชีทั้งประวัติ */
 export const PNL_LOOKBACK_MONTHS = 18;
@@ -92,7 +93,12 @@ export async function loadStaffMonthBreakdown(
   const entries = await listLedgerEntriesSince(sinceMs);
   const map = new Map<string, Record<CategoryBucket, number>>();
   for (const e of entries) {
-    accumulateOut(map, e.date, e.amountOut, e.type);
+    accumulateOut(
+      map,
+      e.date,
+      businessCostOut(e.amountOut, e.hasVat, e.vatInput),
+      e.type,
+    );
   }
   return mapToRows(map);
 }
@@ -103,7 +109,12 @@ export async function loadOwnerMonthBreakdown(
   const entries = await listOwnerBookEntriesSince(sinceMs);
   const map = new Map<string, Record<CategoryBucket, number>>();
   for (const e of entries) {
-    accumulateOut(map, e.date, e.amountOut, e.type);
+    accumulateOut(
+      map,
+      e.date,
+      businessCostOut(e.amountOut, e.hasVat, e.vatInput),
+      e.type,
+    );
   }
   return mapToRows(map);
 }
