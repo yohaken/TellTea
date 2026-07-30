@@ -27,7 +27,12 @@ import {
 import { normalizePurchaseVat, normalizeVatSource } from "./entry-vat";
 import { getDb } from "./firebase";
 import type { LedgerEntry, LedgerEntryInput } from "./types";
-import { startOfLocalDay, toEpochMs } from "./utils";
+import {
+  bangkokDateKey,
+  normalizeAccountingDateKey,
+  startOfLocalDay,
+  toEpochMs,
+} from "./utils";
 import { normalizeMoney, roundMoney } from "./vat-sales";
 import type { ImportLedgerRow } from "./xlsx-import";
 
@@ -95,7 +100,11 @@ function mapEntry(d: QueryDocumentSnapshot): LedgerEntry {
     ...data,
     date: (() => {
       const raw = toEpochMs((data as { date?: unknown }).date);
-      return raw ? startOfLocalDay(raw) : 0;
+      if (!raw) return 0;
+      // Repair พ.ศ. stored as Gregorian year (2568 → 2025) for display/sort.
+      const fixed = normalizeAccountingDateKey(bangkokDateKey(raw));
+      if (fixed) return Date.parse(`${fixed}T00:00:00+07:00`);
+      return startOfLocalDay(raw);
     })(),
     amountIn,
     amountOut,

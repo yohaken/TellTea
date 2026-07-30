@@ -145,7 +145,7 @@ export function BooksVatEntryDetailModal({
     try {
       const result = await extractOwnerBookFromReceipt(refs);
       lastExtractKeyRef.current = key;
-      if (result.date) setDate(result.date);
+      // Keep accounting date — AI must not overwrite.
       if (result.description && !descriptionRef.current.trim()) {
         setDescription(result.description);
       }

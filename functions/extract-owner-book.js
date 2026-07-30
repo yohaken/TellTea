@@ -35,7 +35,7 @@ const EXTRACT_SYSTEM_PROMPT = `คุณเป็นผู้ช่วยอ่�
   - bank_slip = สลิปโอนเงิน / PromptPay / แอปธนาคาร / หลักฐานโอน — **ไม่มี VAT บนสลิปนี้**
   - other = อื่นๆ
 - ถ้า docKind=bank_slip → hasVat=false, vatInput=null, vatBase=null เสมอ (อย่าเดา VAT จากยอดโอน)
-- date = วันที่บนเอกสาร (ไม่ใช่วันที่อัปโหลด) ถ้าไม่ชัดให้ ""
+- date = วันที่บนเอกสารเป็น **ค.ศ. YYYY-MM-DD เท่านั้น** (เช่น 2025-07-22) — ถ้าบิลเป็นพ.ศ. ให้ลบ 543 ก่อน ห้ามส่งปีพ.ศ. ถ้าไม่ชัดให้ ""
 - description = สรุปสั้น ชัด (เช่น "ท็อปเวิลด์" "นมสดแม็คโคร" "โอนค่าของ")
 - amountOut = ยอดบนเอกสารนั้น (ตัวเลข ไม่มี comma) ถ้าไม่ชัดให้ null
 - type: cogs=วัตถุดิบ/บรรจุภัณฑ์ · sga=ค่าแรง/ค่าไฟ/ค่าเช่า/ซ่อม · asset=เครื่องจักร · อื่นๆ=ไม่ชัด
@@ -156,12 +156,27 @@ async function resolveImagePart(db, ref) {
   throw new Error("รองรับเฉพาะรูปหลักฐานหรือลิงก์ Storage");
 }
 
+/** พ.ศ. → ค.ศ. (2568 → 2025). ใบเสร็จไทยมักเป็นพ.ศ. */
+function toCeYear(n) {
+  if (!Number.isFinite(n)) return null;
+  let y = n;
+  while (y >= 2400 && y < 4000) y -= 543;
+  if (y >= 1900 && y <= 2100) return y;
+  if (y >= 0 && y < 100) return 2500 + y - 543;
+  return null;
+}
+
 function normalizeDate(raw) {
   const s = String(raw || "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return "";
-  const t = Date.parse(`${s}T12:00:00`);
+  const [ys, ms, ds] = s.split("-").map(Number);
+  const y = toCeYear(ys);
+  if (y == null || y < 2000 || y > 2100) return "";
+  if (!ms || ms < 1 || ms > 12 || !ds || ds < 1 || ds > 31) return "";
+  const out = `${y}-${String(ms).padStart(2, "0")}-${String(ds).padStart(2, "0")}`;
+  const t = Date.parse(`${out}T12:00:00+07:00`);
   if (Number.isNaN(t)) return "";
-  return s;
+  return out;
 }
 
 function normalizeAmount(raw) {

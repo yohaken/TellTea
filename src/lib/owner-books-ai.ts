@@ -5,6 +5,7 @@ import {
 } from "./entry-vat";
 import { getFirebaseFunctions } from "./firebase";
 import { normalizeLedgerOutType } from "./ledger-ai";
+import { normalizeAccountingDateKey } from "./utils";
 
 export type ExtractOwnerBookResult = {
   date: string;
@@ -48,7 +49,7 @@ export async function extractOwnerBookFromReceipt(
   const amountOut = Number(data.amountOut);
   const vat = normalizeAiVatExtract(data);
   return {
-    date: String(data.date || "").trim(),
+    date: normalizeAccountingDateKey(String(data.date || "").trim()),
     description: String(data.description || "").trim(),
     amountOut: Number.isFinite(amountOut) && amountOut > 0 ? amountOut : null,
     type,
