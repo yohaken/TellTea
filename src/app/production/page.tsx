@@ -52,7 +52,7 @@ import {
   type RateScheduleEntry,
 } from "@/lib/rate-schedule";
 import {
-  formatDateShort,
+  formatDateShortBe,
   formatPlainNumber,
   parseDateInput,
   todayInputValue,
@@ -155,7 +155,7 @@ function ProductionView() {
   }
 
   return (
-    <div className="module-page">
+    <div className="module-page production-page">
       <div className="module-page-head">
         <h1 className="panel-title module-page-title">
           <ChefHat size={18} aria-hidden />
@@ -390,6 +390,7 @@ function ProdEntryForm({
           entryDate={entry.date}
           createdAt={entry.createdAt}
           updatedAt={entry.updatedAt}
+          era="be"
         />
       ) : null}
 
@@ -578,7 +579,7 @@ function ProdTable({
       entries.map((row) => ({
         entryId: row.id,
         entryDate: row.date,
-        label: `${formatDateShort(row.date)} ${row.productName}`,
+        label: `${formatDateShortBe(row.date)} ${row.productName}`,
         imageUrls: getProdImageUrls(row),
       })),
     [entries],
@@ -693,7 +694,7 @@ function ProdTable({
       {!filtered.length && isOwner ? (
         <p className="empty">ไม่มีรายการในเดือนนี้</p>
       ) : (
-        <div className="sheet-wrap sheet-bleed">
+        <div className="sheet-wrap production-sheet sheet-bleed">
           <table className="sheet-table prod-table sheet-table--dense">
             <thead>
               <tr>
@@ -754,7 +755,7 @@ function ProdTable({
                         />
                       </td>
                     ) : null}
-                    <td className="col-date">{formatDateShort(row.date)}</td>
+                    <td className="col-date">{formatDateShortBe(row.date)}</td>
                     <td className="col-desc prod-col-worker">{row.workerNames.join(", ")}</td>
                     <td className="col-desc prod-col-product col-sticky-left">
                       <div className="prod-name-row">

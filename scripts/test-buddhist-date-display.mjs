@@ -4,6 +4,7 @@
  * Phase 2: owner-books opt-in via era="be" + layout from ledger prototype.
  * Phase 3: bill-notices opt-in via era="be" + layout from ledger prototype.
  * Phase 4: cash-in formatCashDayShort → พ.ศ. + layout from ledger prototype.
+ * Phase 5: production formatDateShortBe + layout from ledger prototype.
  * Later phases keep default ค.ศ. until their turn.
  */
 import assert from "node:assert/strict";
@@ -22,6 +23,7 @@ const owner = read("src/app/owner-books/page.tsx");
 const bill = read("src/components/BillNoticeLedgerPanel.tsx");
 const cashLib = read("src/lib/cash-deposits.ts");
 const cashPanel = read("src/components/CashInLedgerPanel.tsx");
+const production = read("src/app/production/page.tsx");
 const smart = read("src/lib/smart-search.ts");
 const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
@@ -44,17 +46,23 @@ assert.match(bill, /era="be"/);
 assert.match(cashLib, /export function formatCashDayShort/);
 assert.match(cashLib, /getFullYear\(\) \+ 543/);
 assert.match(cashPanel, /formatCashDayShort/);
+assert.match(production, /formatDateShortBe/);
+assert.match(production, /production-sheet/);
+assert.match(production, /era="be"/);
+assert.doesNotMatch(production, /[^B]formatDateShort\(|^formatDateShort\(/);
 assert.match(smart, /formatDateShortBe\(row\.date\)/);
 assert.match(css, /Prototype table layout/);
 assert.match(css, /Phase 2 table layout/);
 assert.match(css, /Phase 3 table layout/);
 assert.match(css, /Phase 4 table layout/);
+assert.match(css, /Phase 5 table layout/);
 assert.match(css, /\.ledger-page \.ledger-staff-sheet \.sheet-table \.col-date/);
 assert.match(css, /\.owner-books-page \.owner-books-sheet \.sheet-table \.col-date/);
 assert.match(css, /\.bill-notice-slim \.col-date/);
 assert.match(css, /\.cash-in-slim \.col-date/);
+assert.match(css, /\.production-page \.production-sheet \.sheet-table \.col-date/);
 assert.match(css, /width: 3\.55rem/);
-assert.match(version, /APP_BUILD = 470/);
+assert.match(version, /APP_BUILD = 471/);
 
 function bangkokDateKey(ms) {
   return new Intl.DateTimeFormat("en-CA", {
