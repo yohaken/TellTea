@@ -1650,9 +1650,15 @@ export function VatMonthBooks({ actor }: Props) {
                     <tr className="vat-sales-totals-row">
                       <td
                         className="col-seg"
-                        title="ภาษีซื้อ GP + ภาษีซื้อสองบช. ที่หักจากภาษีขาย"
+                        title={
+                          view.includeInputVat
+                            ? "ภาษีซื้อ GP + สองบช. ที่นำมาหักจากภาษีขาย"
+                            : "คำนวณภาษีซื้อไว้โชว์ — ยังไม่หักจากภาษีขาย (ปิดติ๊กด้านล่าง)"
+                        }
                       >
-                        รวมภาษีซื้อ (หักจากภาษีขาย)
+                        {view.includeInputVat
+                          ? "รวมภาษีซื้อ (หักจากภาษีขาย)"
+                          : "รวมภาษีซื้อ (ยังไม่หัก)"}
                       </td>
                       <td className="col-num col-net">{fmt(view.inputVat)}</td>
                     </tr>
@@ -1661,10 +1667,41 @@ export function VatMonthBooks({ actor }: Props) {
               </div>
             </section>
 
-            <p className="vat-net-strip" role="status">
-              ภาษีขาย {fmt(view.outputVat)} − ภาษีซื้อ {fmt(view.inputVat)}{" "}
+            <label
+              className="vat-include-input-toggle"
+              title="ช่วงจด VAT ขอคืนไม่ได้ — ปิดติ๊กเพื่อเตรียมจ่ายภาษีขายเต็ม · ภาษีขายคำนวณเสมอ"
+            >
+              <input
+                type="checkbox"
+                className="vat-claim-check"
+                disabled={locked}
+                checked={draft.includeInputVat}
+                onChange={(e) => {
+                  if (locked) return;
+                  setDraft((d) => ({
+                    ...d,
+                    includeInputVat: e.target.checked,
+                  }));
+                  markDirty();
+                }}
+              />{" "}
+              นำภาษีซื้อมารวมหักจากภาษีขาย
               <span className="muted">
-                (GP {fmt(view.inputGpVat)} + สองบช. {fmt(view.inputBooksVat)})
+                {" "}
+                · ภาษีขายคำนวณเสมอ
+                {!draft.includeInputVat
+                  ? " · ตอนนี้เตรียมจ่ายขายเต็ม (ช่วงจด VAT)"
+                  : ""}
+              </span>
+            </label>
+
+            <p className="vat-net-strip" role="status">
+              ภาษีขาย {fmt(view.outputVat)} − ภาษีซื้อ{" "}
+              {fmt(view.inputVatApplied)}{" "}
+              <span className="muted">
+                {view.includeInputVat
+                  ? `(GP ${fmt(view.inputGpVat)} + สองบช. ${fmt(view.inputBooksVat)})`
+                  : `(มี ${fmt(view.inputVat)} แต่ยังไม่หัก)`}
               </span>{" "}
               = <strong>VAT สุทธิ {fmt(view.netVat)}</strong>
             </p>

@@ -371,6 +371,11 @@ export type VatMonthlyReturn = {
   pnlDeliveryGpPct: number;
   /** หัก GP แยกช่องทาง (Shopee/Grab/LM/หน้าร้าน) · % หรือยอดบาท */
   pnlGpByChannel: GpByChannel;
+  /**
+   * นำภาษีซื้อมารวมหักจากภาษีขายในงบเดือนหรือไม่
+   * false = ช่วงจด VAT / ขอคืนไม่ได้ → เตรียมจ่ายภาษีขายเต็ม · default true (งบปกติ)
+   */
+  includeInputVat: boolean;
   filedAt: number;
   filedBy: string;
   updatedAt: number;
@@ -640,6 +645,8 @@ export function mapVatMonthlyReturn(
         amount: mapPnlDeliveryGpDeduct(data?.pnlDeliveryGpDeduct),
       },
     ),
+    // ของเก่าไม่มีฟิลด์ = หักภาษีซื้อตามปกติ
+    includeInputVat: data?.includeInputVat !== false,
     filedAt: Number(data?.filedAt) || 0,
     filedBy: String(data?.filedBy || ""),
     updatedAt: Number(data?.updatedAt) || 0,
@@ -752,6 +759,8 @@ export type VatMonthlySaveInput = {
   pnlDeliveryGpPct?: number;
   /** หัก GP รายช่องทาง */
   pnlGpByChannel?: GpByChannel;
+  /** นำภาษีซื้อมารวมหักจากภาษีขาย · ไม่ส่ง = คงค่าเดิม / true */
+  includeInputVat?: boolean;
   status?: "draft" | "saved";
 };
 
@@ -802,6 +811,10 @@ export async function saveVatMonthlyReturn(
       amount: pnlDeliveryGpDeduct,
     },
   );
+  const includeInputVat =
+    input.includeInputVat != null
+      ? Boolean(input.includeInputVat)
+      : prev?.includeInputVat !== false;
   const docBody: VatMonthlyReturn = {
     monthKey: input.monthKey,
     delivery,
@@ -815,6 +828,7 @@ export async function saveVatMonthlyReturn(
     pnlDeliveryGpMode,
     pnlDeliveryGpPct,
     pnlGpByChannel,
+    includeInputVat,
     filedAt: 0,
     filedBy: "",
     updatedAt: Date.now(),
