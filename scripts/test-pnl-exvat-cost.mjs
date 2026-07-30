@@ -21,6 +21,6 @@ assert.match(pnl, /purchaseVatTotal/);
 assert.match(fieldset, /ต้นทุนบัญชี/);
 assert.match(pnlPage, /ภาษีต้นทุน/);
 assert.match(pnlPage, /รวมภาษีซื้อ/);
-assert.match(version, /APP_BUILD = 500/);
+assert.match(version, /APP_BUILD = 501/);
 
 console.log("OK test-pnl-exvat-cost");
