@@ -20120,6 +20120,191 @@ a.ghost-btn {
   font-size: 0.9rem;
 }
 
+/* งานค้างกึ่งแจ้งเตือน — พนักงานรายคน */
+.staff-task-nudge-float {
+  position: fixed;
+  left: 0.65rem;
+  right: 0.65rem;
+  bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px));
+  z-index: 46;
+  pointer-events: none;
+}
+
+.staff-task-nudge-float-card {
+  pointer-events: auto;
+  max-width: 26rem;
+  margin: 0 auto;
+  padding: 0.55rem 0.65rem 0.6rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(45, 106, 79, 0.28);
+  background: rgba(255, 252, 247, 0.97);
+  box-shadow: 0 6px 20px rgba(28, 42, 31, 0.12);
+}
+
+.staff-task-nudge-float-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.staff-task-nudge-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(45, 106, 79, 0.95);
+}
+
+.staff-task-nudge-pill {
+  font-size: 0.65rem;
+  font-weight: 650;
+  padding: 0.08rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.staff-task-nudge-pill.is-deadline {
+  background: rgba(180, 83, 9, 0.12);
+  border-color: rgba(180, 83, 9, 0.28);
+  color: #9a3412;
+}
+
+.staff-task-nudge-pill.is-soft {
+  background: rgba(45, 106, 79, 0.1);
+  border-color: rgba(45, 106, 79, 0.22);
+  color: #2d6a4f;
+}
+
+.staff-task-nudge-close {
+  border: 0;
+  background: transparent;
+  padding: 0.1rem;
+  line-height: 0;
+  color: inherit;
+  opacity: 0.65;
+}
+
+.staff-task-nudge-headline {
+  margin: 0.3rem 0 0.45rem;
+  font-size: 0.86rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.staff-task-nudge-float-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.staff-task-nudge-btn {
+  min-height: 2rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.staff-task-nudge-strip {
+  position: fixed;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: calc(3.55rem + env(safe-area-inset-bottom, 0px));
+  z-index: 44;
+  max-width: 28rem;
+  margin: 0 auto;
+  border-radius: 0.65rem 0.65rem 0.4rem 0.4rem;
+  border: 1px solid rgba(45, 106, 79, 0.22);
+  background: rgba(255, 252, 247, 0.96);
+  box-shadow: 0 4px 14px rgba(28, 42, 31, 0.1);
+  overflow: hidden;
+}
+
+.staff-task-nudge-strip-main {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  background: transparent;
+  padding: 0.4rem 0.55rem;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.staff-task-nudge-strip-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.staff-task-nudge-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.55rem 0.45rem;
+  display: grid;
+  gap: 0.28rem;
+  border-top: 1px solid rgba(45, 106, 79, 0.12);
+}
+
+.staff-task-nudge-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  line-height: 1.3;
+  padding-top: 0.28rem;
+}
+
+.staff-task-nudge-kind {
+  flex: 0 0 auto;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.05rem 0.28rem;
+  border-radius: 0.3rem;
+}
+
+.staff-task-nudge-kind.is-deadline {
+  background: rgba(180, 83, 9, 0.12);
+  color: #9a3412;
+}
+
+.staff-task-nudge-kind.is-soft {
+  background: rgba(45, 106, 79, 0.1);
+  color: #2d6a4f;
+}
+
+.staff-task-nudge-list-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.staff-task-nudge-list-due {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+}
+
+.staff-task-nudge-list-foot {
+  justify-content: flex-end;
+}
+
+.staff-task-nudge-link {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #2d6a4f;
+}
+
 .staff-news-editor {
   list-style: none;
   margin: 0.35rem 0 0.75rem;

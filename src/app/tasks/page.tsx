@@ -525,6 +525,9 @@ function TemplateFormModal({
   const [title, setTitle] = useState(template?.title || "");
   const [note, setNote] = useState(template?.note || "");
   const [weekday, setWeekday] = useState(template?.weekday ?? 1);
+  const [nudgeKind, setNudgeKind] = useState<"soft" | "deadline">(
+    template?.nudgeKind === "soft" ? "soft" : "deadline",
+  );
   const [selected, setSelected] = useState<string[]>(template?.assigneeIds || []);
   const [checklist, setChecklist] = useState<TaskChecklistItem[]>(
     template?.checklist.length
@@ -566,6 +569,7 @@ function TemplateFormModal({
       checklist: steps,
       assigneeIds: chosen.map((w) => w.id),
       assigneeNames: chosen.map((w) => w.name),
+      nudgeKind,
     };
     setBusy(true);
     onError("");
@@ -588,6 +592,7 @@ function TemplateFormModal({
               checklist: steps,
               assigneeIds: payload.assigneeIds,
               assigneeNames: payload.assigneeNames,
+              nudgeKind: payload.nudgeKind,
             },
             pendingIds,
           );
@@ -673,6 +678,31 @@ function TemplateFormModal({
               placeholder="โพสต์ Facebook ประจำสัปดาห์"
               required
             />
+          </div>
+
+          <div className="field">
+            <span className="field-label">ชนิดเตือนพนักงาน</span>
+            <div className="suggest-list">
+              <button
+                type="button"
+                className={nudgeKind === "soft" ? "suggest-chip is-active" : "suggest-chip"}
+                onClick={() => setNudgeKind("soft")}
+              >
+                แจ้งเบาๆ
+              </button>
+              <button
+                type="button"
+                className={nudgeKind === "deadline" ? "suggest-chip is-active" : "suggest-chip"}
+                onClick={() => setNudgeKind("deadline")}
+              >
+                มีกำหนด
+              </button>
+            </div>
+            <p className="muted form-hint-inline">
+              {nudgeKind === "soft"
+                ? "โชว์แถบ/ป๊อปเบา · ปิดได้ · ไม่เน้นเส้นตาย"
+                : "โชว์วันครบ · แถบค้างชัดจนกว่าจะส่ง"}
+            </p>
           </div>
 
           <div className="field">

@@ -12,7 +12,12 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
-import type { TaskChecklistItem, TaskTemplate, TaskTemplateInput } from "./task-types";
+import {
+  normalizeTaskNudgeKind,
+  type TaskChecklistItem,
+  type TaskTemplate,
+  type TaskTemplateInput,
+} from "./task-types";
 import { DEFAULT_OPEN_DAYS_BEFORE } from "./task-weekly-logic";
 
 function templatesCol() {
@@ -35,6 +40,7 @@ function mapTemplate(id: string, data: Record<string, unknown>): TaskTemplate {
     checklist,
     assigneeIds: Array.isArray(data.assigneeIds) ? (data.assigneeIds as string[]) : [],
     assigneeNames: Array.isArray(data.assigneeNames) ? (data.assigneeNames as string[]) : [],
+    nudgeKind: normalizeTaskNudgeKind(data.nudgeKind),
     active: data.active !== false,
     dismissedPeriodKeys: Array.isArray(data.dismissedPeriodKeys)
       ? (data.dismissedPeriodKeys as string[]).map(String)
@@ -75,6 +81,7 @@ export async function createTaskTemplate(input: TaskTemplateInput): Promise<stri
     checklist,
     assigneeIds: input.assigneeIds,
     assigneeNames: input.assigneeNames,
+    nudgeKind: normalizeTaskNudgeKind(input.nudgeKind),
     active: true,
     createdBy: input.createdBy,
     createdAt: now,
@@ -98,6 +105,7 @@ export type TaskTemplatePatch = {
   checklist: TaskChecklistItem[];
   assigneeIds: string[];
   assigneeNames: string[];
+  nudgeKind?: import("./task-types").TaskNudgeKind;
 };
 
 function validateTemplatePatch(input: TaskTemplatePatch) {
@@ -121,6 +129,7 @@ export async function updateTaskTemplate(id: string, input: TaskTemplatePatch): 
     checklist,
     assigneeIds: input.assigneeIds,
     assigneeNames: input.assigneeNames,
+    nudgeKind: normalizeTaskNudgeKind(input.nudgeKind),
     updatedAt: Date.now(),
   });
 }

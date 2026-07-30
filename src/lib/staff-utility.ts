@@ -23,7 +23,7 @@ export const STAFF_UTILITY_CATALOG: Record<StaffUtilitySlot, StaffUtilitySlotMet
   tasks: {
     key: "tasks",
     label: "งาน",
-    scaffold: true,
+    scaffold: false,
     href: "/tasks/",
   },
 };

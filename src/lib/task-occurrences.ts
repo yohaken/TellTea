@@ -12,7 +12,11 @@ import {
 } from "firebase/firestore";
 import { getDb } from "./firebase";
 import { daysAgoMs } from "./query-window";
-import type { TaskOccurrence, TaskOccurrenceStatus } from "./task-types";
+import {
+  normalizeTaskNudgeKind,
+  type TaskOccurrence,
+  type TaskOccurrenceStatus,
+} from "./task-types";
 import {
   computeCompletedKind,
   occurrenceDocId,
@@ -57,6 +61,7 @@ function mapOccurrence(id: string, data: Record<string, unknown>): TaskOccurrenc
     dueDate: Number(data.dueDate) || 0,
     openAt: Number(data.openAt) || 0,
     status: (data.status as TaskOccurrenceStatus) || "pending",
+    nudgeKind: normalizeTaskNudgeKind(data.nudgeKind),
     checklistDone,
     proofImg: data.proofImg ? String(data.proofImg) : undefined,
     proofImgs: Array.isArray(data.proofImgs)
@@ -155,6 +160,7 @@ export async function applySyncOperations(
       dueDate: op.dueDate,
       openAt: op.openAt,
       status: "pending",
+      nudgeKind: normalizeTaskNudgeKind(op.nudgeKind),
       checklistDone: [],
       proofImg: "",
       createdAt: now,
@@ -217,6 +223,7 @@ export async function syncPendingOccurrencesFromTemplate(
     checklist: TaskOccurrence["checklist"];
     assigneeIds: string[];
     assigneeNames: string[];
+    nudgeKind?: TaskOccurrence["nudgeKind"];
   },
   occurrenceIds: string[],
 ): Promise<void> {
@@ -230,6 +237,7 @@ export async function syncPendingOccurrencesFromTemplate(
       checklist: template.checklist,
       assigneeIds: template.assigneeIds,
       assigneeNames: template.assigneeNames,
+      nudgeKind: normalizeTaskNudgeKind(template.nudgeKind),
       updatedAt: now,
     });
   }
