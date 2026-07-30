@@ -9,6 +9,7 @@
  * Phase 7: check formatDateShortBe + layout from ledger prototype.
  * Phase 8: tasks formatDateShortBe + layout from ledger prototype.
  * Phase 9: stock monthLabel/formatDateShortBe + layout from ledger prototype.
+ * Phase 10: payroll/rates formatDateShortBe + layout from ledger prototype.
  * Later phases keep default ค.ศ. until their turn.
  */
 import assert from "node:assert/strict";
@@ -33,6 +34,9 @@ const check = read("src/app/check/page.tsx");
 const tasks = read("src/app/tasks/page.tsx");
 const stock = read("src/app/stock/page.tsx");
 const stockHist = read("src/lib/stock-history.ts");
+const payroll = read("src/components/PayrollPayPanel.tsx");
+const rates = read("src/components/RateSchedulePanel.tsx");
+const bonus = read("src/app/bonus/page.tsx");
 const smart = read("src/lib/smart-search.ts");
 const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
@@ -80,6 +84,11 @@ assert.match(stock, /stock-page/);
 assert.match(stock, /stock-history-sheet/);
 assert.doesNotMatch(stock, /[^B]formatDateShort\(|^formatDateShort\(/);
 assert.match(stockHist, /year \+ 543/);
+assert.match(payroll, /formatDateShortBe/);
+assert.match(rates, /formatDateShortBe/);
+assert.match(bonus, /bonus-page/);
+assert.doesNotMatch(payroll, /[^B]formatDateShort\(|^formatDateShort\(/);
+assert.doesNotMatch(rates, /[^B]formatDateShort\(|^formatDateShort\(/);
 assert.match(smart, /formatDateShortBe\(row\.date\)/);
 assert.match(css, /Prototype table layout/);
 assert.match(css, /Phase 2 table layout/);
@@ -90,6 +99,7 @@ assert.match(css, /Phase 6 table layout/);
 assert.match(css, /Phase 7 table layout/);
 assert.match(css, /Phase 8 table layout/);
 assert.match(css, /Phase 9 table layout/);
+assert.match(css, /Phase 10 table layout/);
 assert.match(css, /\.ledger-page \.ledger-staff-sheet \.sheet-table \.col-date/);
 assert.match(css, /\.owner-books-page \.owner-books-sheet \.sheet-table \.col-date/);
 assert.match(css, /\.bill-notice-slim \.col-date/);
@@ -99,8 +109,9 @@ assert.match(css, /\.ot-page \.ot-sheet-wrap \.ot-table \.ot-col-date/);
 assert.match(css, /\.check-page \.check-history-sheet \.check-history-date/);
 assert.match(css, /\.tasks-page \.tasks-sheet \.tasks-col-due/);
 assert.match(css, /\.stock-page \.stock-history-sheet \.stock-history-date/);
+assert.match(css, /\.bonus-page \.payroll-sheet \.payroll-col-due/);
 assert.match(css, /width: 3\.55rem/);
-assert.match(version, /APP_BUILD = 475/);
+assert.match(version, /APP_BUILD = 476/);
 
 function bangkokDateKey(ms) {
   return new Intl.DateTimeFormat("en-CA", {

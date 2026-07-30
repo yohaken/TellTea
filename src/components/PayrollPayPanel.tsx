@@ -22,7 +22,7 @@ import {
   type PayrollSchedule,
 } from "@/lib/payroll";
 import type { ProdEntry } from "@/lib/production";
-import { formatDateShort, formatPlainNumber } from "@/lib/utils";
+import { formatDateShortBe, formatPlainNumber } from "@/lib/utils";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 function fmt(n: number) {
@@ -318,11 +318,11 @@ export function PayrollPayPanel({
                   .map((s) => (s || "").trim())
                   .filter(Boolean);
                 const dueLabel = kindUsesMonthEndAccount(item.kind)
-                  ? `${formatDateShort(item.dueDate)}`
-                  : formatDateShort(item.dueDate);
+                  ? `${formatDateShortBe(item.dueDate)}`
+                  : formatDateShortBe(item.dueDate);
                 const metaBits: string[] = [];
                 if (kindUsesMonthEndAccount(item.kind)) {
-                  metaBits.push(`บช.${formatDateShort(item.accountDate || item.dueDate)}`);
+                  metaBits.push(`บช.${formatDateShortBe(item.accountDate || item.dueDate)}`);
                 }
                 if (item.advanceDeduct > 0) {
                   metaBits.push(`หักเบิก ฿${fmt(item.advanceDeduct)}`);
