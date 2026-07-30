@@ -77,58 +77,113 @@ export function formatStockQty(amount: number) {
   }).format(Math.round(amount));
 }
 
-export function formatDateShort(ms: number) {
-  const d = new Date(ms);
-  return `${d.getDate()}/${d.getMonth() + 1}/${String(d.getFullYear()).slice(-2)}`;
-}
-
-/** Short date + time for «แก้ไขล่าสุด» column — e.g. 12/7/26 10:42 */
-export function formatDateTimeShort(ms: number) {
-  if (!ms) return "—";
-  const d = new Date(ms);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${formatDateShort(ms)} ${hh}:${mi}`;
-}
-
-/** Prefer updatedAt; fall back to createdAt for legacy rows. */
-export function entryUpdatedAt(entry: { updatedAt?: number; createdAt?: number }) {
-  return Number(entry.updatedAt) || Number(entry.createdAt) || 0;
-}
-
-/** parse D/M/YYYY or YYYY-MM-DD to local midnight */
-export function parseDateInput(value: string): number {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const [y, m, day] = value.split("-").map(Number);
-    return new Date(y, m - 1, day).getTime();
+/**
+ * Coerce Firestore number | Timestamp | numeric string → epoch ms.
+ * Timestamp objects must not be subtracted directly (valueOf is not numeric).
+ */
+export function toEpochMs(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
   }
-  const parts = value.split("/").map(Number);
-  if (parts.length === 3) {
-    const [day, m, y] = parts;
-    return new Date(y, m - 1, day).getTime();
+  if (value && typeof value === "object") {
+    const v = value as {
+      toMillis?: () => number;
+      seconds?: unknown;
+      nanoseconds?: unknown;
+    };
+    if (typeof v.toMillis === "function") {
+      const ms = v.toMillis();
+      if (Number.isFinite(ms)) return ms;
+    }
+    if (v.seconds != null) {
+      const s = Number(v.seconds);
+      const ns = Number(v.nanoseconds) || 0;
+      if (Number.isFinite(s)) return s * 1000 + Math.floor(ns / 1e6);
+    }
   }
-  throw new Error("รูปแบบวันที่ไม่ถูกต้อง");
+  return 0;
 }
 
-export function todayInputValue(date = new Date()) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-export function startOfLocalDay(date = new Date()) {
-  // Always Asia/Bangkok calendar day (matches Cloud Functions bangkok-day.js).
-  // Host timezone must not affect POS day buckets.
-  const parts = new Intl.DateTimeFormat("en-CA", {
+/** Asia/Bangkok calendar day as YYYY-MM-DD — stable sort/display key. */
+export function bangkokDateKey(ms: number): string {
+  if (!ms) return "";
+  return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Bangkok",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).formatToParts(date instanceof Date ? date : new Date(date));
-  const get = (type: string) => parts.find((p) => p.type === type)?.value || "0";
-  const y = Number(get("year"));
-  const m = Number(get("month"));
-  const d = Number(get("day"));
-  return Date.UTC(y, m - 1, d) - 7 * 60 * 60 * 1000;
+  }).format(new Date(ms));
+}
+
+/** Short date in Asia/Bangkok — e.g. 30/7/26 (not device timezone). */
+export function formatDateShort(ms: number) {
+  if (!ms) return "—";
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Bangkok",
+    day: "numeric",
+    month: "numeric",
+    year: "2-digit",
+  }).formatToParts(new Date(ms));
+  const get = (type: string) => parts.find((p) => p.type === type)?.value || "";
+  return `${Number(get("day"))}/${Number(get("month"))}/${get("year")}`;
+}
+
+/** Short date + time for «แก้ไขล่าสุด» — Asia/Bangkok. */
+export function formatDateTimeShort(ms: number) {
+  if (!ms) return "—";
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Bangkok",
+    day: "numeric",
+    month: "numeric",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(ms));
+  const get = (type: string) => parts.find((p) => p.type === type)?.value || "";
+  const hh = String(get("hour")).padStart(2, "0");
+  const mi = String(get("minute")).padStart(2, "0");
+  return `${Number(get("day"))}/${Number(get("month"))}/${get("year")} ${hh}:${mi}`;
+}
+
+/** Prefer updatedAt; fall back to createdAt for legacy rows. */
+export function entryUpdatedAt(entry: { updatedAt?: number; createdAt?: number }) {
+  return toEpochMs(entry.updatedAt) || toEpochMs(entry.createdAt) || 0;
+}
+
+/** parse D/M/YYYY or YYYY-MM-DD → Asia/Bangkok midnight ms */
+export function parseDateInput(value: string): number {
+  let y: number;
+  let m: number;
+  let day: number;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    [y, m, day] = value.split("-").map(Number);
+  } else {
+    const parts = value.split("/").map(Number);
+    if (parts.length !== 3) throw new Error("รูปแบบวันที่ไม่ถูกต้อง");
+    [day, m, y] = parts;
+  }
+  if (!y || !m || !day) throw new Error("รูปแบบวันที่ไม่ถูกต้อง");
+  const ms = Date.parse(
+    `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}T00:00:00+07:00`,
+  );
+  if (!Number.isFinite(ms)) throw new Error("รูปแบบวันที่ไม่ถูกต้อง");
+  return ms;
+}
+
+/** YYYY-MM-DD for `<input type="date">` — Asia/Bangkok calendar day. */
+export function todayInputValue(date: Date | number = new Date()) {
+  const ms = typeof date === "number" ? date : date.getTime();
+  return bangkokDateKey(ms) || bangkokDateKey(Date.now());
+}
+
+export function startOfLocalDay(date: Date | number = new Date()) {
+  // Always Asia/Bangkok calendar day (matches Cloud Functions bangkok-day.js).
+  // Host timezone must not affect POS day buckets.
+  const ms = typeof date === "number" ? date : date instanceof Date ? date.getTime() : Date.now();
+  const key = bangkokDateKey(ms);
+  if (!key) return Date.UTC(1970, 0, 1) - 7 * 60 * 60 * 1000;
+  return Date.parse(`${key}T00:00:00+07:00`);
 }
