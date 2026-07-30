@@ -5,6 +5,7 @@ import {
 } from "./entry-vat";
 import { getFirebaseFunctions } from "./firebase";
 import { normalizeLedgerOutType } from "./ledger-ai";
+import { normalizeAccountingDateKey } from "./utils";
 
 export type ExtractOwnerBookResult = {
   date: string;
@@ -20,19 +21,28 @@ export type ExtractOwnerBookResult = {
 
 const ALLOWED = new Set(["cogs", "sga", "asset", "อื่นๆ"]);
 
+/** Max images sent to extractOwnerBookFromReceipt (slip + packing + invoice + spare). */
+export const EXTRACT_RECEIPT_MAX = 4;
+
 /** Client → Cloud Function: อ่านใบเสร็จจากรูป (รวม VAT จากบิล) */
 export async function extractOwnerBookFromReceipt(
   imageRefs: string[],
   opts?: { model?: string },
 ): Promise<ExtractOwnerBookResult> {
-  const refs = imageRefs.map((u) => String(u || "").trim()).filter(Boolean).slice(0, 2);
+  const refs = imageRefs
+    .map((u) => String(u || "").trim())
+    .filter(Boolean)
+    .slice(0, EXTRACT_RECEIPT_MAX);
   if (!refs.length) {
     throw new Error("ต้องมีรูปอย่างน้อย 1 รูป");
   }
   const fn = httpsCallable<
     { imageRefs: string[]; model?: string },
     Record<string, unknown>
-  >(getFirebaseFunctions(), "extractOwnerBookFromReceipt");
+  >(getFirebaseFunctions(), "extractOwnerBookFromReceipt", {
+    // Per-image extract when transfer slip + tax invoice are attached.
+    timeout: 180_000,
+  });
   const result = await fn({
     imageRefs: refs,
     ...(opts?.model ? { model: opts.model } : {}),
@@ -45,7 +55,7 @@ export async function extractOwnerBookFromReceipt(
   const amountOut = Number(data.amountOut);
   const vat = normalizeAiVatExtract(data);
   return {
-    date: String(data.date || "").trim(),
+    date: normalizeAccountingDateKey(String(data.date || "").trim()),
     description: String(data.description || "").trim(),
     amountOut: Number.isFinite(amountOut) && amountOut > 0 ? amountOut : null,
     type,

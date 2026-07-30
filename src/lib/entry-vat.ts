@@ -29,6 +29,7 @@ export type EntryVatFields = {
 /** ผู้ขายที่พบบ่อย — hint UI */
 export const COMMON_VAT_VENDORS = [
   "แม็คโคร",
+  "ท็อปเวิลด์",
   "ท็อปส์",
   "ท็อปแวลู",
   "บิ๊กซี",
@@ -44,6 +45,28 @@ export function normalizeVatSource(raw: unknown): VatSource {
 /** ประมาณจากยอดจ่าย ×7/107 — ใช้เมื่อกดเองเท่านั้น ไม่ใช้แทนบิล */
 export function proposePurchaseVatInput(amountInclusive: number): number {
   return computeVatFromGross(normalizeMoney(amountInclusive)).vatOutput;
+}
+
+/**
+ * ต้นทุนกิจการตามบัญชี (PnL / ต้นทุน)
+ * เงินสดยังใช้ amountOut (รวม VAT) เสมอ
+ *
+ * - ติ๊กหักภาษีซื้อ (vatClaim) → ต้นทุน = เงินออก − ภาษีซื้อ
+ * - ไม่ติ๊ก (ซื้อไปเหอะ) → ต้นทุน = บิลเต็ม รวม VAT
+ */
+export function businessCostOut(
+  amountOut: number,
+  hasVat: boolean | undefined,
+  vatInput: number | undefined,
+  vatClaim?: boolean | undefined,
+): number {
+  const out = normalizeMoney(amountOut);
+  if (!(out > 0)) return 0;
+  const vat = normalizeMoney(vatInput);
+  if (hasVat && vatClaim && vat > 0) {
+    return roundMoney(Math.max(0, out - vat));
+  }
+  return out;
 }
 
 /**

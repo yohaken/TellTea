@@ -13,6 +13,7 @@ import {
   filterCategoryRowsByMonths,
   filterPnlRowsByMonths,
   loadPnlReport,
+  purchaseVatTotal,
   saveMonthlyIncome,
   sumCategoryRows,
   summarizePnlRows,
@@ -59,20 +60,35 @@ function CategoryTable({
   return (
     <div className={`pnl-block pnl-${tone}`}>
       <h3 className="pnl-block-title">{title}</h3>
-      <div className="sheet-wrap">
-        <table className="sheet-table pnl-table">
+      <p className="muted pnl-cat-vat-hint">
+        ต้นทุน/คชจ./สินทรัพย์ = หลังหัก VAT · คอลัมน์ภาษี = ภาษีซื้อของหมวดนั้น
+      </p>
+      <div className="sheet-wrap sheet-bleed">
+        <table className="sheet-table pnl-table pnl-cat-vat-table sheet-table--dense">
           <thead>
             <tr>
               <th>เดือน</th>
-              <th className="col-num">{categoryLabel("asset")}</th>
               <th className="col-num">{categoryLabel("cogs")}</th>
+              <th className="col-num" title="ภาษีซื้อของต้นทุน/วัตถุดิบ">
+                ภาษีต้นทุน
+              </th>
               <th className="col-num">{categoryLabel("sga")}</th>
+              <th className="col-num" title="ภาษีซื้อของค่าใช้จ่าย">
+                ภาษีคชจ.
+              </th>
+              <th className="col-num">{categoryLabel("asset")}</th>
+              <th className="col-num" title="ภาษีซื้อของสินทรัพย์">
+                ภาษีสท.
+              </th>
+              <th className="col-num" title="รวมภาษีซื้อ">
+                รวมภาษีซื้อ
+              </th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={4} className="empty">
+                <td colSpan={8} className="empty">
                   ยังไม่มีข้อมูล
                 </td>
               </tr>
@@ -80,9 +96,13 @@ function CategoryTable({
               rows.map((r) => (
                 <tr key={r.month}>
                   <td className="col-date">{r.month}</td>
-                  <td className="col-num">{fmt(r.asset)}</td>
                   <td className="col-num">{fmt(r.cogs)}</td>
+                  <td className="col-num pnl-vat-cell">{fmt(r.vatCogs)}</td>
                   <td className="col-num">{fmt(r.sga)}</td>
+                  <td className="col-num pnl-vat-cell">{fmt(r.vatSga)}</td>
+                  <td className="col-num">{fmt(r.asset)}</td>
+                  <td className="col-num pnl-vat-cell">{fmt(r.vatAsset)}</td>
+                  <td className="col-num pnl-vat-cell">{fmt(purchaseVatTotal(r))}</td>
                 </tr>
               ))
             )}
@@ -91,15 +111,23 @@ function CategoryTable({
             <tfoot>
               <tr className="pnl-totals-row">
                 <td className="col-date">รวม</td>
-                <td className="col-num">{fmt(totals.asset)}</td>
                 <td className="col-num">{fmt(totals.cogs)}</td>
+                <td className="col-num pnl-vat-cell">{fmt(totals.vatCogs)}</td>
                 <td className="col-num">{fmt(totals.sga)}</td>
+                <td className="col-num pnl-vat-cell">{fmt(totals.vatSga)}</td>
+                <td className="col-num">{fmt(totals.asset)}</td>
+                <td className="col-num pnl-vat-cell">{fmt(totals.vatAsset)}</td>
+                <td className="col-num pnl-vat-cell">{fmt(purchaseVatTotal(totals))}</td>
               </tr>
               <tr className="pnl-averages-row">
                 <td className="col-date">เฉลี่ย</td>
-                <td className="col-num">{fmt(averages.asset)}</td>
                 <td className="col-num">{fmt(averages.cogs)}</td>
+                <td className="col-num pnl-vat-cell">{fmt(averages.vatCogs)}</td>
                 <td className="col-num">{fmt(averages.sga)}</td>
+                <td className="col-num pnl-vat-cell">{fmt(averages.vatSga)}</td>
+                <td className="col-num">{fmt(averages.asset)}</td>
+                <td className="col-num pnl-vat-cell">{fmt(averages.vatAsset)}</td>
+                <td className="col-num pnl-vat-cell">{fmt(purchaseVatTotal(averages))}</td>
               </tr>
             </tfoot>
           ) : null}
@@ -239,8 +267,8 @@ function PnlView() {
       <h1 className="panel-title">สรุปรายเดือน</h1>
       <p className="muted" style={{ marginBottom: "0.85rem", textAlign: "left" }}>
         {isOwner
-          ? "แยกบช. → รวม → กำไรขาดทุน · รายได้จากยอดขาย/VAT หรือกรอกเอง"
-          : "แยกบช. → รวม → กำไรขาดทุน · income กรอกเอง"}
+          ? "แยกบช. → รวม → กำไรขาดทุน · ต้นทุนกับภาษีซื้อแยกคอลัมน์ · รายได้จากยอดขาย/VAT หรือกรอกเอง"
+          : "แยกบช. → รวม → กำไรขาดทุน · ต้นทุนกับภาษีซื้อแยกคอลัมน์ · income กรอกเอง"}
       </p>
 
       {isOwner ? (
@@ -317,11 +345,11 @@ function PnlView() {
             <h2 className="pnl-section-title">3) สรุปกำไร–ขาดทุน</h2>
             <p className="muted" style={{ marginBottom: "0.55rem", textAlign: "left", fontSize: "0.85rem" }}>
               {isOwner
-                ? "รายได้ใส่จากแผง VAT ด้านบน หรือกรอกเองแล้วกดบันทึกทีละเดือน"
+                ? "รายได้ใส่จากแผง VAT ด้านบน หรือกรอกเองแล้วกดบันทึกทีละเดือน · ต้นทุน/คชจ.ไม่รวมภาษีซื้อ · คอลัมน์ภาษีซื้อแยกไว้หักภาษีขาย"
                 : "กรอก income แล้วกดบันทึกทีละเดือน — โหมดสรุปตัดเดือนที่ยังไม่มีรายได้ออกจากทุกตาราง"}
             </p>
-            <div className="sheet-wrap pnl-scroll">
-              <table className="sheet-table pnl-table pnl-wide">
+            <div className="sheet-wrap pnl-scroll sheet-bleed">
+              <table className="sheet-table pnl-table pnl-wide sheet-table--dense">
                 <thead>
                   <tr>
                     <th>เดือน</th>
@@ -329,13 +357,25 @@ function PnlView() {
                     <th className="col-num">/วัน</th>
                     <th className="col-num">{categoryLabel("cogs")}</th>
                     <th className="col-num">%</th>
+                    <th className="col-num" title="ภาษีซื้อวัตถุดิบ/ต้นทุน">
+                      ภาษีต้นทุน
+                    </th>
                     <th className="col-num">กำไรขั้นต้น</th>
                     <th className="col-num">%</th>
                     <th className="col-num">{categoryLabel("sga")}</th>
                     <th className="col-num">%</th>
+                    <th className="col-num" title="ภาษีซื้อค่าใช้จ่าย">
+                      ภาษีคชจ.
+                    </th>
                     <th className="col-num">สุทธิ</th>
                     <th className="col-num">%</th>
                     <th className="col-num">{categoryLabel("asset")}</th>
+                    <th className="col-num" title="ภาษีซื้อสินทรัพย์">
+                      ภาษีสท.
+                    </th>
+                    <th className="col-num" title="รวมภาษีซื้อ — ไม่หักซ้ำในกำไร">
+                      รวมภาษีซื้อ
+                    </th>
                     <th className="col-num">invest/net</th>
                     <th className="col-num">Cash+</th>
                     <th className="col-num">เงินสด/รายได้</th>
@@ -345,7 +385,7 @@ function PnlView() {
                 <tbody>
                   {viewPnl.length === 0 ? (
                     <tr>
-                      <td colSpan={16} className="empty">
+                      <td colSpan={20} className="empty">
                         {summaryMode
                           ? "ไม่มีเดือนที่มีรายได้ให้สรุป"
                           : "ยังไม่มีเดือนให้สรุป"}
@@ -373,13 +413,17 @@ function PnlView() {
                         <td className="col-num">{fmt(row.incomePerDay)}</td>
                         <td className="col-num">{fmt(row.cogs)}</td>
                         <td className="col-num">{fmtPct(row.cogsPct)}</td>
+                        <td className="col-num pnl-vat-cell">{fmt(row.vatCogs)}</td>
                         <td className="col-num">{fmt(row.gross)}</td>
                         <td className="col-num">{fmtPct(row.grossPct)}</td>
                         <td className="col-num">{fmt(row.sga)}</td>
                         <td className="col-num">{fmtPct(row.sgaPct)}</td>
+                        <td className="col-num pnl-vat-cell">{fmt(row.vatSga)}</td>
                         <td className="col-num">{fmt(row.net)}</td>
                         <td className="col-num">{fmtPct(row.netPct)}</td>
                         <td className="col-num">{fmt(row.asset)}</td>
+                        <td className="col-num pnl-vat-cell">{fmt(row.vatAsset)}</td>
+                        <td className="col-num pnl-vat-cell">{fmt(row.purchaseVat)}</td>
                         <td className="col-num">{fmtPct(row.investOverNet)}</td>
                         <td className="col-num">{fmt(row.cashPlus)}</td>
                         <td className="col-num">{fmtPct(row.cashOverIncome)}</td>
@@ -405,13 +449,17 @@ function PnlView() {
                       <td className="col-num">{fmt(pnlTotals.incomePerDay)}</td>
                       <td className="col-num">{fmt(pnlTotals.cogs)}</td>
                       <td className="col-num">{fmtPct(pnlTotals.cogsPct)}</td>
+                      <td className="col-num pnl-vat-cell">{fmt(pnlTotals.vatCogs)}</td>
                       <td className="col-num">{fmt(pnlTotals.gross)}</td>
                       <td className="col-num">{fmtPct(pnlTotals.grossPct)}</td>
                       <td className="col-num">{fmt(pnlTotals.sga)}</td>
                       <td className="col-num">{fmtPct(pnlTotals.sgaPct)}</td>
+                      <td className="col-num pnl-vat-cell">{fmt(pnlTotals.vatSga)}</td>
                       <td className="col-num">{fmt(pnlTotals.net)}</td>
                       <td className="col-num">{fmtPct(pnlTotals.netPct)}</td>
                       <td className="col-num">{fmt(pnlTotals.asset)}</td>
+                      <td className="col-num pnl-vat-cell">{fmt(pnlTotals.vatAsset)}</td>
+                      <td className="col-num pnl-vat-cell">{fmt(pnlTotals.purchaseVat)}</td>
                       <td className="col-num">{fmtPct(pnlTotals.investOverNet)}</td>
                       <td className="col-num">{fmt(pnlTotals.cashPlus)}</td>
                       <td className="col-num">{fmtPct(pnlTotals.cashOverIncome)}</td>
@@ -423,13 +471,17 @@ function PnlView() {
                       <td className="col-num">{fmt(pnlAverages.incomePerDay)}</td>
                       <td className="col-num">{fmt(pnlAverages.cogs)}</td>
                       <td className="col-num">{fmtPct(pnlAverages.cogsPct)}</td>
+                      <td className="col-num pnl-vat-cell">{fmt(pnlAverages.vatCogs)}</td>
                       <td className="col-num">{fmt(pnlAverages.gross)}</td>
                       <td className="col-num">{fmtPct(pnlAverages.grossPct)}</td>
                       <td className="col-num">{fmt(pnlAverages.sga)}</td>
                       <td className="col-num">{fmtPct(pnlAverages.sgaPct)}</td>
+                      <td className="col-num pnl-vat-cell">{fmt(pnlAverages.vatSga)}</td>
                       <td className="col-num">{fmt(pnlAverages.net)}</td>
                       <td className="col-num">{fmtPct(pnlAverages.netPct)}</td>
                       <td className="col-num">{fmt(pnlAverages.asset)}</td>
+                      <td className="col-num pnl-vat-cell">{fmt(pnlAverages.vatAsset)}</td>
+                      <td className="col-num pnl-vat-cell">{fmt(pnlAverages.purchaseVat)}</td>
                       <td className="col-num">{fmtPct(pnlAverages.investOverNet)}</td>
                       <td className="col-num">{fmt(pnlAverages.cashPlus)}</td>
                       <td className="col-num">{fmtPct(pnlAverages.cashOverIncome)}</td>

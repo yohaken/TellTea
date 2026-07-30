@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { CircleDollarSign } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
+import { BonusDeductionEvidencePanel } from "@/components/BonusDeductionEvidencePanel";
+import { PayrollHistoryPanel } from "@/components/PayrollHistoryPanel";
 import { PayrollPayPanel } from "@/components/PayrollPayPanel";
 import { PayrollSettingsPanel } from "@/components/PayrollSettingsPanel";
 import { useAuth } from "@/lib/auth";
@@ -19,13 +21,21 @@ import {
 } from "@/lib/bonus-deductions";
 import {
   computeMonthBonus,
+  namesMatch,
   parseMonthInput,
   pickMyBonusRow,
   thaiMonthYearLabel,
   type MonthBonusReport,
 } from "@/lib/bonus";
+import {
+  closeBonusMonth,
+  reportFromCloseSnapshot,
+  subscribeBonusMonthClose,
+  unlockBonusMonth,
+  type BonusMonthCloseDoc,
+} from "@/lib/bonus-month-close";
 import { RateSchedulePanel } from "@/components/RateSchedulePanel";
-import { listActiveEmployees, type Employee } from "@/lib/employees";
+import { listActiveEmployees, resolveLinkedEmployee, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import { getOtSettings, subscribeOtEntries, type OtEntry } from "@/lib/ot";
 import {
@@ -38,7 +48,7 @@ import {
 } from "@/lib/payroll";
 import { subscribeProdEntries, type ProdEntry } from "@/lib/production";
 import { subscribeRateSchedule, type RateScheduleEntry } from "@/lib/rate-schedule";
-import { formatPlainNumber } from "@/lib/utils";
+import { formatDateShortBe, formatPlainNumber } from "@/lib/utils";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 function fmt(n: number) {
@@ -53,7 +63,7 @@ type EditTarget =
   | { kind: "rate"; rule: BonusDeductionRule }
   | { kind: "qty"; rule: BonusDeductionRule; qty: number };
 
-type PayTab = "pay" | "bonus" | "settings";
+type PayTab = "pay" | "bonus" | "history" | "settings";
 
 export default function BonusPage() {
   return (
@@ -79,13 +89,17 @@ function BonusView() {
   const [payrollSchedule, setPayrollSchedule] = useState<PayrollSchedule>(DEFAULT_PAYROLL_SCHEDULE);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [closeBusy, setCloseBusy] = useState(false);
+  const [monthClose, setMonthClose] = useState<BonusMonthCloseDoc | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(isOwner);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
+  const [historyEmployeeId, setHistoryEmployeeId] = useState("");
 
   const canView = can(staff, "bonus");
   const canPay = isOwner || can(staff, "ownerBooks");
+  /** คิวทั้งร้าน: เจ้าของ หรือคนที่มีสิทธิ์โอน — พนักงานทั่วไปเห็นเฉพาะของตัวเอง */
+  const shopPayView = isOwner || canPay;
   const { year, month: monthIdx } = parseMonthInput(month);
 
   useBodyScrollLock(!!editTarget);
@@ -107,8 +121,8 @@ function BonusView() {
 
     const monthSince = new Date(year, monthIdx, 1).getTime();
     const monthUntil = new Date(year, monthIdx + 1, 1).getTime();
-    // payroll dueDate อาจข้ามเดือน — เผื่อเดือนก่อน/หลังเล็กน้อย
-    const payrollSince = new Date(year, monthIdx - 1, 1).getTime();
+    // ประวัติ + คิว — โหลดย้อนหลัง ~14 เดือน (dueDate อาจข้ามเดือน)
+    const payrollSince = new Date(year, monthIdx - 13, 1).getTime();
     const unsubOt = subscribeOtEntries(
       (rows) => setOtEntries(rows),
       (err) => setError(err.message),
@@ -157,7 +171,17 @@ function BonusView() {
     return () => unsubMonth();
   }, [canView, year, monthIdx]);
 
-  const report = useMemo(() => {
+  useEffect(() => {
+    if (!canView) return;
+    const unsub = subscribeBonusMonthClose(
+      month,
+      (doc) => setMonthClose(doc),
+      (err) => setError(err.message),
+    );
+    return () => unsub();
+  }, [canView, month]);
+
+  const liveReport = useMemo(() => {
     if (!deductionSettings || !deductionMonth) return null;
     return computeMonthBonus(
       otEntries,
@@ -180,10 +204,38 @@ function BonusView() {
     rateSchedule,
   ]);
 
-  const myRow = useMemo(
-    () => (report ? pickMyBonusRow(report, employees, staff?.displayName) : null),
-    [report, employees, staff?.displayName],
+  /** Closed month shows frozen snapshot; open month uses live calc. */
+  const report = useMemo(() => {
+    if (monthClose?.status === "closed") return reportFromCloseSnapshot(monthClose);
+    return liveReport;
+  }, [monthClose, liveReport]);
+
+  const monthClosed = monthClose?.status === "closed";
+
+  const myEmployee = useMemo(
+    () => resolveLinkedEmployee(employees, staff),
+    [employees, staff],
   );
+
+  useEffect(() => {
+    if (historyEmployeeId) return;
+    if (myEmployee?.id) {
+      setHistoryEmployeeId(myEmployee.id);
+      return;
+    }
+    const first = employees.find((e) => e.active);
+    if (first) setHistoryEmployeeId(first.id);
+  }, [myEmployee?.id, employees, historyEmployeeId]);
+
+  const myRow = useMemo(() => {
+    if (!report) return null;
+    if (myEmployee) {
+      const byId = report.rows.find((r) => r.workerId === myEmployee.id);
+      if (byId) return byId;
+      return report.rows.find((r) => namesMatch(r.workerName, myEmployee.name)) || null;
+    }
+    return pickMyBonusRow(report, employees, staff?.displayName);
+  }, [report, employees, staff?.displayName, myEmployee]);
 
   const bonusByEmployee = useMemo(() => {
     const map: Record<string, number> = {};
@@ -194,15 +246,66 @@ function BonusView() {
     return map;
   }, [report]);
 
+  async function onCloseMonth() {
+    if (!isOwner || !actorId || !liveReport || monthClosed) return;
+    if (
+      !window.confirm(
+        `ปิดเดือน ${month}?\nจะล็อกตารางชง+ผลิตทั้งเดือน และเก็บยอดโบนัสคงที่ — แล้วไปสร้างคิวโบนัสที่แท็บรอโอน`,
+      )
+    ) {
+      return;
+    }
+    setCloseBusy(true);
+    setError(null);
+    try {
+      const closed = await closeBonusMonth({
+        periodMonth: month,
+        closedBy: actorId,
+        report: liveReport,
+        prodEntries,
+        otEntries,
+      });
+      setInfo(
+        `ปิดเดือน ${month} แล้ว · ล็อกผลิต ${closed.lockedProd} · ชง ${closed.lockedOt} · ไปแท็บรอโอนเพื่อสร้างโบนัส`,
+      );
+      setTab("pay");
+    } catch (err) {
+      setError((err as Error).message || "ปิดเดือนไม่สำเร็จ");
+    } finally {
+      setCloseBusy(false);
+    }
+  }
+
+  async function onUnlockMonth() {
+    if (!isOwner || !monthClosed) return;
+    if (!window.confirm(`ปลดปิดเดือน ${month}? แถวที่จ่ายแล้ว/ล็อกยอดยังแก้ไม่ได้`)) return;
+    setCloseBusy(true);
+    setError(null);
+    try {
+      await unlockBonusMonth(month);
+      setInfo(`ปลดปิดเดือน ${month} แล้ว`);
+    } catch (err) {
+      setError((err as Error).message || "ปลดปิดไม่สำเร็จ");
+    } finally {
+      setCloseBusy(false);
+    }
+  }
+
+  const visiblePayrollItems = useMemo(() => {
+    if (shopPayView) return payrollItems;
+    if (!myEmployee) return [];
+    return payrollItems.filter((i) => i.employeeId === myEmployee.id);
+  }, [payrollItems, shopPayView, myEmployee]);
+
   const pendingCount = useMemo(
-    () => payrollItems.filter((i) => i.status === "pending").length,
-    [payrollItems],
+    () => visiblePayrollItems.filter((i) => i.status === "pending").length,
+    [visiblePayrollItems],
   );
 
   if (!canView) return null;
 
   return (
-    <div className="module-page">
+    <div className="module-page bonus-page">
       <div className="module-page-head">
         <h1 className="panel-title module-page-title">
           <CircleDollarSign size={18} aria-hidden />
@@ -232,15 +335,24 @@ function BonusView() {
         <button
           type="button"
           role="tab"
+          className={tab === "history" ? "is-active" : ""}
+          aria-selected={tab === "history"}
+          onClick={() => setTab("history")}
+        >
+          ประวัติ
+        </button>
+        <button
+          type="button"
+          role="tab"
           className={tab === "settings" ? "is-active" : ""}
           aria-selected={tab === "settings"}
           onClick={() => setTab("settings")}
         >
-          ตั้งค่าจ่าย
+          {isOwner ? "ตั้งค่าจ่าย" : "เงินเดือนฉัน"}
         </button>
       </div>
 
-      {tab !== "settings" ? (
+      {tab === "bonus" || tab === "pay" ? (
         <div className="bonus-toolbar">
           <input
             type="month"
@@ -253,11 +365,39 @@ function BonusView() {
             {report
               ? `${thaiMonthYearLabel(report.year, report.month)} · หารขาย ${report.employeeCount} คน`
               : "…"}
+            {monthClosed ? " · ปิดเดือนแล้ว" : ""}
           </span>
+          {isOwner && tab === "bonus" ? (
+            monthClosed ? (
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={closeBusy}
+                onClick={() => void onUnlockMonth()}
+              >
+                ปลดปิดเดือน
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="primary-btn"
+                disabled={closeBusy || !liveReport}
+                onClick={() => void onCloseMonth()}
+              >
+                {closeBusy ? "กำลังปิด…" : "ปิดเดือนนี้"}
+              </button>
+            )
+          ) : null}
         </div>
+      ) : tab === "history" ? (
+        <p className="muted bonus-toolbar-meta" style={{ margin: "0.25rem 0 0.65rem" }}>
+          ประวัติเงินเดือน + โบนัส · แตะเดือนดูรายการและสลิปโอน
+        </p>
       ) : (
         <p className="muted bonus-toolbar-meta" style={{ margin: "0.25rem 0 0.65rem" }}>
-          ตั้งเงินเดือนและรอบจ่ายที่นี่ · ไม่ต้องไปหน้าอื่น
+          {isOwner
+            ? "ตั้งเงินเดือนและรอบจ่ายที่นี่ · ไม่ต้องไปหน้าอื่น"
+            : "ดูเงินเดือนและรอบจ่ายของตัวเอง · ไม่เห็นยอดคนอื่น"}
         </p>
       )}
 
@@ -270,16 +410,18 @@ function BonusView() {
         ) : (
           <PayrollPayPanel
             isOwner={isOwner}
+            shopView={shopPayView}
             actorId={actorId}
             periodMonth={month}
             employees={employees}
             schedule={payrollSchedule}
-            items={payrollItems}
+            items={visiblePayrollItems}
             bonusByEmployee={bonusByEmployee}
             prodEntries={prodEntries}
             otEntries={otEntries}
             canPay={canPay}
             onError={setError}
+            onEmployeesChange={setEmployees}
             onInfo={(msg) => {
               setInfo(msg);
               setError(null);
@@ -293,6 +435,7 @@ function BonusView() {
           schedule={payrollSchedule}
           employees={employees}
           isOwner={isOwner}
+          selfEmployeeId={myEmployee?.id ?? null}
           onEmployeesChange={setEmployees}
           onError={setError}
           onInfo={(msg) => {
@@ -302,17 +445,42 @@ function BonusView() {
         />
       ) : null}
 
+      {tab === "history" ? (
+        <PayrollHistoryPanel
+          isOwner={isOwner}
+          shopView={shopPayView}
+          employeeId={
+            shopPayView ? historyEmployeeId : myEmployee?.id || historyEmployeeId
+          }
+          employees={employees}
+          items={
+            shopPayView
+              ? payrollItems
+              : payrollItems.filter(
+                  (i) => myEmployee && i.employeeId === myEmployee.id,
+                )
+          }
+          onEmployeeIdChange={
+            shopPayView && isOwner ? setHistoryEmployeeId : undefined
+          }
+        />
+      ) : null}
+
       {tab === "bonus" ? (
         <>
           {loading || !report ? <p className="empty">กำลังโหลด...</p> : null}
 
-          {report ? (
+          {/* สรุปพูลทั้งร้าน + ตารางรายคน: เจ้าของ / คนโอนเท่านั้น — พนักงานเห็นแค่ของฉัน */}
+          {report && shopPayView ? (
             <div className="bonus-summary-bar">
               <div className="bonus-summary-pool">
                 <span className="bonus-summary-label">โบนัสขายเบเกอรี่ รวม</span>
                 <strong className="bonus-summary-pool-amt">฿{fmt(report.totalSalesPool)}</strong>
                 <span className="muted bonus-summary-pool-meta">
                   จากผลิต {fmt(report.totalProdQty)} ชิ้น × เรทขายตามวัน (ตารางเรท)
+                  {monthClosed && monthClose
+                    ? ` · ปิด ${formatDateShortBe(monthClose.closedAt)}`
+                    : ""}
                 </span>
               </div>
               <div className="bonus-summary-total">
@@ -320,6 +488,12 @@ function BonusView() {
                 <strong>฿{fmt(report.totalRemaining)}</strong>
               </div>
             </div>
+          ) : null}
+
+          {monthClosed && shopPayView ? (
+            <p className="muted bonus-live-note">
+              เดือนนี้ปิดแล้ว — ชง/ผลิตล็อกห้ามลงย้อนหลัง · ยอดด้านบนเป็น snapshot · สร้างโบนัสที่แท็บรอโอน
+            </p>
           ) : null}
 
           {!loading && report && myRow ? (
@@ -354,33 +528,26 @@ function BonusView() {
                 </div>
               </dl>
               <p className="muted bonus-live-note">
-                หัก% จากตารางสรุปทั้งร้าน · อัปเดตทันทีเมื่อมีการกรอกชง / ผลิต
+                หักตามกติการ้าน · อัปเดตเมื่อมีการกรอกชง / ผลิต · ไม่แสดงยอดคนอื่น
               </p>
             </section>
           ) : null}
 
-          {!loading && report && !myRow && staff?.displayName ? (
+          {!loading && report && !myRow && !shopPayView ? (
             <p className="muted bonus-no-match">
-              ไม่พบชื่อ &quot;{staff.displayName}&quot; ในรายชื่อพนักงาน — ตรวจที่{" "}
+              {staff?.displayName
+                ? <>ไม่พบชื่อ &quot;{staff.displayName}&quot; ในรายชื่อพนักงาน — ตรวจที่{" "}</>
+                : <>ยังไม่ได้เชื่อมชื่อกับรายชื่อร้าน — ไปที่{" "}</>}
               <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
+              {" "}หรือโปรไฟล์ เพื่อเห็นโบนัสของตัวเอง
             </p>
           ) : null}
 
-          {!isOwner && report ? (
-            <button
-              type="button"
-              className="ghost-btn bonus-toggle-all"
-              onClick={() => setShowAll((v) => !v)}
-            >
-              {showAll ? "ซ่อนตารางทั้งร้าน" : "ดูตารางทั้งร้าน"}
-            </button>
-          ) : null}
-
-          {!loading && report && (isOwner || showAll) ? (
+          {!loading && report && shopPayView ? (
             <BonusTable report={report} highlightName={myRow?.workerName} />
           ) : null}
 
-          {report ? (
+          {report && shopPayView ? (
             <p className="muted bonus-footnote">
               ขาย = จำนวนผลิต × เรทขายจากตารางเรท (ตามวันผลิต) แล้วหารคนที่ลงทะเบียนทำงานในเดือน
               (ผลิตหรือชง) — มีชื่ออย่างเดียวไม่หาร · ผลิต/ชง จากยอดจริง · เจ้าของกรอกจำนวนหักทั้งร้านสิ้นเดือน ·
@@ -394,6 +561,22 @@ function BonusView() {
               isOwner={isOwner}
               onEditRate={(rule) => setEditTarget({ kind: "rate", rule })}
               onEditQty={(rule, qty) => setEditTarget({ kind: "qty", rule, qty })}
+            />
+          ) : null}
+
+          {report ? (
+            <BonusDeductionEvidencePanel
+              year={year}
+              month={monthIdx}
+              periodMonth={month}
+              doc={deductionMonth}
+              isOwner={isOwner}
+              onError={setError}
+              onInfo={(msg) => {
+                setInfo(msg);
+                setError(null);
+              }}
+              onSaved={(next) => setDeductionMonth(next)}
             />
           ) : null}
 
@@ -433,8 +616,8 @@ function BonusDeductionSummaryTable({
   const lines = report.deductionLines;
 
   return (
-    <div className="sheet-wrap bonus-deduct-wrap">
-      <table className="sheet-table bonus-deduct-table">
+    <div className="sheet-wrap bonus-deduct-wrap sheet-bleed">
+      <table className="sheet-table bonus-deduct-table sheet-table--dense">
         <thead>
           <tr>
             <th>รายการ</th>
@@ -497,8 +680,8 @@ function BonusDeductionSummaryTable({
       </table>
       <p className="muted bonus-deduct-note">
         {isOwner
-          ? "กรอกจำนวนสิ้นเดือน · แตะเรท% แก้ถาวร · รวม% นำไปหักทุกคน"
-          : "สรุปหักโบนัสทั้งร้าน — ใช้หักโบนัสรายคนด้านล่าง"}
+          ? "กรอกจำนวนสิ้นเดือน · แตะเรท% แก้ถาวร · รวม% นำไปหักทุกคน · หลักฐานแนบด้านล่าง"
+          : "กติกาหักโบนัสทั้งร้าน · ดูหลักฐานงวดได้ด้านล่าง — ไม่แสดงยอดรายคน"}
       </p>
     </div>
   );
@@ -516,8 +699,8 @@ function BonusTable({
   }
 
   return (
-    <div className="sheet-wrap bonus-sheet-wrap">
-      <table className="sheet-table bonus-table">
+    <div className="sheet-wrap bonus-sheet-wrap sheet-bleed">
+      <table className="sheet-table bonus-table sheet-table--dense">
         <thead>
           <tr>
             <th className="bonus-th-name">ชื่อ</th>

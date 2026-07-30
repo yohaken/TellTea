@@ -1,5 +1,11 @@
 import { labelLedgerType } from "./ledger-labels";
-import { formatDateShort, formatPlainNumber } from "./utils";
+import {
+  accountingDayMs,
+  formatDateShortBe,
+  formatDateShortCe,
+  formatPlainNumber,
+  toEpochMs,
+} from "./utils";
 
 function normalizeText(value: string) {
   return value
@@ -19,6 +25,28 @@ export function searchTokens(query: string): string[] {
 function haystackMatch(haystack: string, tokens: string[]) {
   const h = normalizeText(haystack);
   return tokens.every((t) => h.includes(t));
+}
+
+type DatedRow = {
+  date: number;
+  createdAt?: number;
+};
+
+/**
+ * UI list order — Asia/Bangkok calendar day newest→oldest, then createdAt.
+ * Numeric day ms (not string localeCompare) so mixed Firestore date types unify.
+ */
+export function sortByDateNewestFirst<T extends DatedRow>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => {
+    const aDay = accountingDayMs(a.date);
+    const bDay = accountingDayMs(b.date);
+    if (aDay !== bDay) return bDay - aDay;
+    const byCreated = toEpochMs(b.createdAt) - toEpochMs(a.createdAt);
+    if (byCreated) return byCreated;
+    return String((b as { id?: string }).id || "").localeCompare(
+      String((a as { id?: string }).id || ""),
+    );
+  });
 }
 
 type SearchableOwnerRow = {
@@ -44,7 +72,9 @@ export function filterOwnerBookRows<T extends SearchableOwnerRow>(
       row.type || "",
       typeLabel,
       row.note || "",
-      formatDateShort(row.date),
+      // Match both พ.ศ. UI labels and ค.ศ. typed searches.
+      formatDateShortBe(row.date),
+      formatDateShortCe(row.date),
       formatPlainNumber(row.amountOut || 0),
       String(row.amountOut || ""),
       String(row.amountOut || "").replace(/,/g, ""),
@@ -74,7 +104,9 @@ export function filterLedgerRows<T extends SearchableLedgerRow>(
       row.description || "",
       row.type || "",
       typeLabel,
-      formatDateShort(row.date),
+      // Match both พ.ศ. UI labels and ค.ศ. typed searches.
+      formatDateShortBe(row.date),
+      formatDateShortCe(row.date),
       formatPlainNumber(row.amountIn || 0),
       formatPlainNumber(row.amountOut || 0),
       String(row.amountIn || ""),

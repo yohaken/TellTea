@@ -10,7 +10,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Coffee, CheckCircle2, AlertTriangle, LayoutGrid, Lock, Table2, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
-import { BulkStatusToolbar } from "@/components/BulkStatusToolbar";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
@@ -31,7 +30,6 @@ import {
   OT_IMAGE_PAYLOAD_BUDGET,
   addOtEntry,
   assertOtImageUrlsFit,
-  bulkUpdateOtEntryStatus,
   computeOtBonus,
   deleteOtEntry,
   getOtSettings,
@@ -92,8 +90,8 @@ import {
   todayShiftBannerLabel,
 } from "@/lib/shift-session";
 import {
-  formatDateShort,
-  formatDateTimeShort,
+  formatDateShortBe,
+  formatDateTimeShortBe,
   formatPlainNumber,
   parseDateInput,
   startOfLocalDay,
@@ -319,7 +317,7 @@ function OtView() {
   }
 
   return (
-    <div className="module-page">
+    <div className="module-page ot-page">
       <div className="module-page-head">
         <h1 className="panel-title module-page-title">
           <Coffee size={18} aria-hidden />
@@ -820,6 +818,7 @@ function OtEntryForm({
           entryDate={entry.date}
           createdAt={entry.createdAt}
           updatedAt={entry.updatedAt}
+          era="be"
         />
       ) : null}
 
@@ -847,7 +846,7 @@ function OtEntryForm({
 
         {slotFixed ? (
           <p className="ot-form-slot-bar">
-            {formatDateShort(parseDateInput(date))} · {labelOtShift(shift)}
+            {formatDateShortBe(parseDateInput(date))} · {labelOtShift(shift)}
             {" · "}
             เรท {formatPlainNumber(rate)}
             {rateLocked ? " (ติดแถวแล้ว)" : " (ตามวันในตาราง)"}
@@ -930,7 +929,7 @@ function OtEntryForm({
                 <div className="check-existing-banner check-existing-banner--warn">
                   <AlertTriangle size={16} aria-hidden />
                   <span>
-                    SmartCheck กะนี้บันทึกแล้ว ({formatDateTimeShort(checkSession.submittedAt)}) —{" "}
+                    SmartCheck กะนี้บันทึกแล้ว ({formatDateTimeShortBe(checkSession.submittedAt)}) —{" "}
                     {checkSession.failed ? `${checkSession.failed} ไม่ผ่าน` : "ผ่าน 100%"}
                     <br />
                     <strong>หมายเหตุ:</strong> {processOrderHint}
@@ -940,7 +939,7 @@ function OtEntryForm({
                 <div className="check-existing-banner check-existing-banner--ok">
                   <CheckCircle2 size={16} aria-hidden />
                   <span>
-                    SmartCheck กะนี้เช็คแล้ว ({formatDateTimeShort(checkSession.submittedAt)}) —{" "}
+                    SmartCheck กะนี้เช็คแล้ว ({formatDateTimeShortBe(checkSession.submittedAt)}) —{" "}
                     {checkSession.failed ? `${checkSession.failed} ไม่ผ่าน` : "ผ่าน 100%"} · ไม่ต้องเช็คซ้ำ
                   </span>
                 </div>
@@ -1197,8 +1196,6 @@ function OtTable({
     title: string;
     entryDateMs?: number;
   } | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkBusy, setBulkBusy] = useState(false);
   const [photoReport, setPhotoReport] = useState<PhotoForensicsReport | null>(null);
 
   useBodyScrollLock(!!preview);
@@ -1237,20 +1234,12 @@ function OtTable({
     [filtered, historySinceMs],
   );
 
-  const pendingIds = useMemo(
-    () => filtered.filter((r) => r.status === "pending").map((r) => r.id),
-    [filtered],
-  );
-  const visibleIds = useMemo(() => filtered.map((r) => r.id), [filtered]);
-  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
-  const someSelected = selected.size > 0;
-
   const forensicsRows = useMemo(
     () =>
       entries.map((row) => ({
         entryId: row.id,
         entryDate: row.date,
-        label: `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`,
+        label: `${formatDateShortBe(row.date)} ${labelOtShift(row.shift)}`,
         imageUrls: getOtImageUrls(row),
       })),
     [entries],
@@ -1260,29 +1249,9 @@ function OtTable({
     setPhotoReport(null);
   }, [statusFilter, mineOnly, tableView, entries.length]);
 
-  async function onBulkStatus(status: OtStatus) {
-    const ids = [...selected];
-    if (!ids.length) return;
-    const label = labelOtStatus(status);
-    if (!window.confirm(`เปลี่ยนสถานะ ${ids.length} รายการเป็น "${label}"?`)) return;
-    setBulkBusy(true);
-    onError("");
-    try {
-      await bulkUpdateOtEntryStatus(ids, status);
-      setSelected(new Set());
-    } catch (err) {
-      onError((err as Error).message || "อัปเดตกลุ่มไม่สำเร็จ");
-    } finally {
-      setBulkBusy(false);
-    }
-  }
-
   return (
     <div className="ot-table-view">
-      <div className="ot-toolbar-slim">
-        <span className="ot-slim-hint muted">
-          {OT_HISTORY_LOOKBACK_DAYS} วันล่าสุด · ใหม่ → เก่า · 3 กะ/วัน · ล่วงหน้า 3 วัน
-        </span>
+      <div className="ot-toolbar-slim module-toolbar-slim">
         <select
           id="ot-status-filter"
           className="ot-slim-input"
@@ -1299,6 +1268,30 @@ function OtTable({
             <input type="checkbox" checked={mineOnly} onChange={(e) => setMineOnly(e.target.checked)} />
             ของฉัน
           </label>
+        ) : null}
+        <span
+          className="ot-summary-inline muted module-slim-stats"
+          title={`${OT_HISTORY_LOOKBACK_DAYS} วันล่าสุด · ใหม่ → เก่า · 3 กะ/วัน · ล่วงหน้า 3 วัน`}
+        >
+          รอบ {summary.shiftCount} · หน่วย {formatPlainNumber(summary.summaryQty)} ·{" "}
+          {mineOnly ? "ของฉัน" : "รวม"} ฿{formatPlainNumber(mineOnly ? summary.myBonus : summary.totalBonus)} ·{" "}
+          เตรียมจ่าย ฿{formatPlainNumber(summary.pendingBonus)}
+        </span>
+        <span
+          className="ot-slim-hint muted module-slim-hint"
+          title="สถานะล็อกเมื่อปิดเดือนโบนัสที่ จ่าย/โบนัส — ไม่เปลี่ยนสถานะเป็นกลุ่มที่นี่"
+        >
+          ล็อกเมื่อปิดเดือนโบนัส
+        </span>
+        {isOwner ? (
+          <PhotoForensicsPanel
+            rows={forensicsRows}
+            onReport={setPhotoReport}
+            onPickEntry={(id) => {
+              const row = filtered.find((r) => r.id === id);
+              if (row) onEdit(row);
+            }}
+          />
         ) : null}
         <div className="ot-view-toggle ot-view-toggle-slim" role="group" aria-label="มุมมองตาราง">
           <button
@@ -1322,36 +1315,6 @@ function OtTable({
         </div>
       </div>
 
-      <p className="ot-summary-inline muted">
-        รอบ {summary.shiftCount} · หน่วย {formatPlainNumber(summary.summaryQty)} ·{" "}
-        {mineOnly ? "ของฉัน" : "รวม"} ฿{formatPlainNumber(mineOnly ? summary.myBonus : summary.totalBonus)} ·{" "}
-        เตรียมจ่าย ฿{formatPlainNumber(summary.pendingBonus)}
-      </p>
-
-      {isOwner ? (
-        <BulkStatusToolbar
-          selectedCount={selected.size}
-          onSelectUnpaid={() => setSelected(new Set(pendingIds))}
-          onSelectVisible={() => setSelected(new Set(visibleIds))}
-          onClear={() => setSelected(new Set())}
-          onSetStatus={(s) => void onBulkStatus(s as OtStatus)}
-          busy={bulkBusy}
-          visibleCount={visibleIds.length}
-          unpaidCount={pendingIds.length}
-        />
-      ) : null}
-
-      {isOwner ? (
-        <PhotoForensicsPanel
-          rows={forensicsRows}
-          onReport={setPhotoReport}
-          onPickEntry={(id) => {
-            const row = filtered.find((r) => r.id === id);
-            if (row) onEdit(row);
-          }}
-        />
-      ) : null}
-
       {tableView === "sheet" ? (
         <OtSheetTable
           groups={dateGroups}
@@ -1361,20 +1324,6 @@ function OtTable({
           closingItems={closingItems}
           isOwner={isOwner}
           photoReport={photoReport}
-          selected={selected}
-          allVisibleSelected={allVisibleSelected}
-          someSelected={someSelected}
-          onToggleRow={(id) =>
-            setSelected((prev) => {
-              const next = new Set(prev);
-              if (next.has(id)) next.delete(id);
-              else next.add(id);
-              return next;
-            })
-          }
-          onToggleAllVisible={() =>
-            setSelected(allVisibleSelected ? new Set() : new Set(visibleIds))
-          }
           onEditSlot={onEditSlot}
           onError={onError}
           onViewPhoto={(urls, title, entryDateMs) => setPreview({ urls, title, entryDateMs })}
@@ -1386,15 +1335,6 @@ function OtTable({
           entries={sortOtEntries(filtered)}
           isOwner={isOwner}
           photoReport={photoReport}
-          selected={selected}
-          onToggleRow={(id) =>
-            setSelected((prev) => {
-              const next = new Set(prev);
-              if (next.has(id)) next.delete(id);
-              else next.add(id);
-              return next;
-            })
-          }
           onEdit={onEdit}
           onError={onError}
           onViewPhoto={(urls, title, entryDateMs) => setPreview({ urls, title, entryDateMs })}
@@ -1421,11 +1361,6 @@ function OtSheetTable({
   closingItems,
   isOwner,
   photoReport,
-  selected,
-  allVisibleSelected,
-  someSelected,
-  onToggleRow,
-  onToggleAllVisible,
   onEditSlot,
   onError,
   onViewPhoto,
@@ -1437,44 +1372,18 @@ function OtSheetTable({
   closingItems: ChecklistItem[];
   isOwner: boolean;
   photoReport: PhotoForensicsReport | null;
-  selected: Set<string>;
-  allVisibleSelected: boolean;
-  someSelected: boolean;
-  onToggleRow: (id: string) => void;
-  onToggleAllVisible: () => void;
   onEditSlot: (target: OtSlotTarget) => void;
   onError: (msg: string) => void;
   onViewPhoto: (urls: string[], title: string, entryDateMs?: number) => void;
 }) {
-  async function setStatus(row: OtEntry, status: OtStatus) {
-    try {
-      await updateOtEntry(row.id, { status });
-    } catch (err) {
-      onError((err as Error).message || "อัปเดตสถานะไม่สำเร็จ");
-    }
-  }
-
-  const colCount = 19 + (isOwner ? 2 : 0);
+  const colCount = 19 + (isOwner ? 1 : 0);
   const slotCount = groups[0]?.slots.length || 3;
 
   return (
-    <div className="sheet-wrap ot-sheet-wrap">
-      <table className="sheet-table ot-table">
+    <div className="sheet-wrap ot-sheet-wrap sheet-bleed">
+      <table className="sheet-table ot-table sheet-table--dense">
         <thead>
           <tr>
-            {isOwner ? (
-              <th className="col-act bulk-check-col">
-                <input
-                  type="checkbox"
-                  checked={allVisibleSelected}
-                  ref={(el) => {
-                    if (el) el.indeterminate = someSelected && !allVisibleSelected;
-                  }}
-                  onChange={onToggleAllVisible}
-                  aria-label="เลือกทั้งหมดที่แสดง"
-                />
-              </th>
-            ) : null}
             <th className="ot-th-staff col-sticky-left ot-col-date">วันที่</th>
             <th className="ot-th-staff ot-col-worker">พนักงาน</th>
             <th className="ot-th-staff ot-col-shift">รอบงาน</th>
@@ -1562,21 +1471,9 @@ function OtSheetTable({
                     key={`${group.date}-${slot.shiftId}`}
                     className={photoFlagged ? `${rowClass} is-photo-flag` : rowClass}
                   >
-                    {isOwner ? (
-                      <td className="col-act bulk-check-col">
-                        {row ? (
-                          <input
-                            type="checkbox"
-                            checked={selected.has(row.id)}
-                            onChange={() => onToggleRow(row.id)}
-                            aria-label={`เลือก ${formatDateShort(group.date)} ${slot.shiftLabel}`}
-                          />
-                        ) : null}
-                      </td>
-                    ) : null}
                     {idx === 0 ? (
                       <td className="col-sticky-left ot-col-date ot-date-cell" rowSpan={slotCount}>
-                        {formatDateShort(group.date)}
+                        {formatDateShortBe(group.date)}
                       </td>
                     ) : null}
                     <td className="ot-col-worker">
@@ -1603,13 +1500,13 @@ function OtSheetTable({
                             ) : null}
                             <EntryPhotoIndicator
                               imageUrls={getOtImageUrls(row!)}
-                              label={`${formatDateShort(group.date)} ${slot.shiftLabel}`}
+                              label={`${formatDateShortBe(group.date)} ${slot.shiftLabel}`}
                               flagged={photoFlagged}
                               flagTitle={photoFlagHints.join(" · ") || undefined}
                               onView={(urls) =>
                                 onViewPhoto(
                                   urls,
-                                  `${formatDateShort(group.date)} ${slot.shiftLabel}`,
+                                  `${formatDateShortBe(group.date)} ${slot.shiftLabel}`,
                                   group.date,
                                 )
                               }
@@ -1664,21 +1561,9 @@ function OtSheetTable({
                     <td className="col-act">{c ? c.workerCount : "—"}</td>
                     <td className="col-act">
                       {row ? (
-                        isOwner ? (
-                          <select
-                            className={`prod-status ${statusClass}`}
-                            value={row.status}
-                            onChange={(e) => void setStatus(row, e.target.value as OtStatus)}
-                            aria-label="สถานะโบนัส"
-                          >
-                            <option value="pending">เตรียมจ่าย</option>
-                            <option value="paid">จ่ายแล้ว</option>
-                          </select>
-                        ) : (
-                          <span className={`prod-status-pill ${statusClass}`}>
-                            {labelOtStatus(row.status)}
-                          </span>
-                        )
+                        <span className={`prod-status-pill ${statusClass}`}>
+                          {labelOtStatus(row.status)}
+                        </span>
                       ) : (
                         "—"
                       )}
@@ -1718,7 +1603,7 @@ function OtSheetTable({
               })}
               <tr className="ot-day-summary">
                 <td colSpan={colCount}>
-                  สรุป {formatDateShort(group.date)}: {group.filledCount}/{group.slots.length} กะ · สรุปหน่วย{" "}
+                  สรุป {formatDateShortBe(group.date)}: {group.filledCount}/{group.slots.length} กะ · สรุปหน่วย{" "}
                   {formatPlainNumber(group.summaryQty)} · โบนัสรวม ฿{formatPlainNumber(group.totalBonus)}
                 </td>
               </tr>
@@ -1735,8 +1620,6 @@ function OtCardList({
   entries,
   isOwner,
   photoReport,
-  selected,
-  onToggleRow,
   onEdit,
   onError,
   onViewPhoto,
@@ -1744,20 +1627,10 @@ function OtCardList({
   entries: OtEntry[];
   isOwner: boolean;
   photoReport: PhotoForensicsReport | null;
-  selected: Set<string>;
-  onToggleRow: (id: string) => void;
   onEdit: (row: OtEntry) => void;
   onError: (msg: string) => void;
   onViewPhoto: (urls: string[], title: string, entryDateMs?: number) => void;
 }) {
-  async function setStatus(row: OtEntry, status: OtStatus) {
-    try {
-      await updateOtEntry(row.id, { status });
-    } catch (err) {
-      onError((err as Error).message || "อัปเดตสถานะไม่สำเร็จ");
-    }
-  }
-
   return (
     <div className="ot-list">
       {entries.map((row) => {
@@ -1797,36 +1670,15 @@ function OtCardList({
           >
             <header className="ot-card-head">
               <div className="ot-card-meta">
-                {isOwner ? (
-                  <input
-                    type="checkbox"
-                    className="ot-card-check"
-                    checked={selected.has(row.id)}
-                    onChange={() => onToggleRow(row.id)}
-                    aria-label="เลือกรายการ"
-                  />
-                ) : null}
                 <button type="button" className="desc-link ot-card-date" onClick={() => onEdit(row)}>
-                  {isOtEntryLocked(row) ? <Lock size={11} aria-hidden /> : null} {formatDateShort(row.date)}
+                  {isOtEntryLocked(row) ? <Lock size={11} aria-hidden /> : null} {formatDateShortBe(row.date)}
                 </button>
                 <span className="ot-card-shift">{labelOtShift(row.shift)}</span>
               </div>
               <div className="ot-card-actions">
-                {isOwner ? (
-                  <select
-                    className={`prod-status ot-card-status ${statusClass}`}
-                    value={row.status}
-                    onChange={(e) => void setStatus(row, e.target.value as OtStatus)}
-                    aria-label="สถานะโบนัส"
-                  >
-                    <option value="pending">เตรียมจ่าย</option>
-                    <option value="paid">จ่ายแล้ว</option>
-                  </select>
-                ) : (
-                  <span className={`prod-status-pill ${statusClass}`}>
-                    {labelOtStatus(row.status)}
-                  </span>
-                )}
+                <span className={`prod-status-pill ${statusClass}`}>
+                  {labelOtStatus(row.status)}
+                </span>
                 {isOwner && !isOtEntryLocked(row) ? (
                   <button
                     type="button"
@@ -1857,13 +1709,13 @@ function OtCardList({
                 ) : null}
                 <EntryPhotoIndicator
                   imageUrls={getOtImageUrls(row)}
-                  label={`${formatDateShort(row.date)} ${labelOtShift(row.shift)}`}
+                  label={`${formatDateShortBe(row.date)} ${labelOtShift(row.shift)}`}
                   flagged={isOwner && entryHasPhotoFlag(photoReport, row.id)}
                   flagTitle={photoReport?.byEntryId[row.id]?.hints?.join(" · ") || undefined}
                   onView={(urls) =>
                     onViewPhoto(
                       urls,
-                      `${formatDateShort(row.date)} ${labelOtShift(row.shift)}`,
+                      `${formatDateShortBe(row.date)} ${labelOtShift(row.shift)}`,
                       row.date,
                     )
                   }

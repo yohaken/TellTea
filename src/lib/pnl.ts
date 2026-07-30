@@ -15,16 +15,24 @@ import {
   type CategoryBucket,
   type PnlCategory,
 } from "./categories";
+import { businessCostOut } from "./entry-vat";
+import { normalizeMoney } from "./vat-sales";
 
 /** P&L บนเว็บโหลดแค่ช่วงนี้ — ไม่สแกนบัญชีทั้งประวัติ */
 export const PNL_LOOKBACK_MONTHS = 18;
 
 export type MonthCategoryRow = {
   month: string;
+  /** ต้นทุน/คชจ./สินทรัพย์ — หลังหักภาษีซื้อ */
   asset: number;
   cogs: number;
   sga: number;
   other: number;
+  /** ภาษีซื้อแยกตามประเภท — ไม่ปนในต้นทุน */
+  vatAsset: number;
+  vatCogs: number;
+  vatSga: number;
+  vatOther: number;
 };
 
 export type CombinedMonthRow = MonthCategoryRow;
@@ -50,28 +58,94 @@ export type PnlMonthRow = {
   cashPlus: number;
   /** เงินสด+ ต่อรายได้ (Cash+ / income) — กระแสเงินสดต่อรายได้จริง */
   cashOverIncome: number | null;
+  /** รวมภาษีซื้อจากบิล (ไม่หักซ้ำในกำไร — ไปหักภาษีขาย) */
+  purchaseVat: number;
+  vatCogs: number;
+  vatSga: number;
+  vatAsset: number;
 };
 
-function emptyCats(): Record<CategoryBucket, number> {
-  return { asset: 0, cogs: 0, sga: 0, other: 0 };
+type MonthAcc = {
+  asset: number;
+  cogs: number;
+  sga: number;
+  other: number;
+  vatAsset: number;
+  vatCogs: number;
+  vatSga: number;
+  vatOther: number;
+};
+
+function emptyMonthAcc(): MonthAcc {
+  return {
+    asset: 0,
+    cogs: 0,
+    sga: 0,
+    other: 0,
+    vatAsset: 0,
+    vatCogs: 0,
+    vatSga: 0,
+    vatOther: 0,
+  };
 }
 
-function accumulateOut(
-  map: Map<string, Record<CategoryBucket, number>>,
+export function emptyMonthCategoryRow(month: string): MonthCategoryRow {
+  return { month, ...emptyMonthAcc() };
+}
+
+export function purchaseVatTotal(
+  row: Pick<MonthCategoryRow, "vatAsset" | "vatCogs" | "vatSga" | "vatOther">,
+): number {
+  return (
+    (Number(row.vatAsset) || 0) +
+    (Number(row.vatCogs) || 0) +
+    (Number(row.vatSga) || 0) +
+    (Number(row.vatOther) || 0)
+  );
+}
+
+function addVatToAcc(acc: MonthAcc, cat: CategoryBucket, vat: number) {
+  if (!(vat > 0)) return;
+  if (cat === "asset") acc.vatAsset += vat;
+  else if (cat === "cogs") acc.vatCogs += vat;
+  else if (cat === "sga") acc.vatSga += vat;
+  else acc.vatOther += vat;
+}
+
+function accumulateEntry(
+  map: Map<string, MonthAcc>,
   dateMs: number,
-  amountOut: number,
-  type: string,
+  entry: {
+    amountOut: number;
+    type: string;
+    hasVat?: boolean;
+    vatInput?: number;
+    vatClaim?: boolean;
+  },
 ) {
-  const out = Number(amountOut) || 0;
-  if (out <= 0) return;
+  const cost = businessCostOut(
+    entry.amountOut,
+    entry.hasVat,
+    entry.vatInput,
+    entry.vatClaim,
+  );
+  // คอลัมน์ภาษีซื้อใน PnL นับเฉพาะที่ติ๊กหัก (vatClaim)
+  const vat =
+    entry.hasVat &&
+    entry.vatClaim &&
+    normalizeMoney(entry.vatInput) > 0
+      ? normalizeMoney(entry.vatInput)
+      : 0;
+  if (!(cost > 0) && !(vat > 0)) return;
   const month = monthKeyFromMs(dateMs);
-  const cat = normalizeCategory(type);
-  const row = map.get(month) || emptyCats();
-  row[cat] += out;
+  const cat = normalizeCategory(entry.type);
+  const row = map.get(month) || emptyMonthAcc();
+  if (cost > 0) row[cat] += cost;
+  addVatToAcc(row, cat, vat);
   map.set(month, row);
 }
 
-function mapToRows(map: Map<string, Record<CategoryBucket, number>>): MonthCategoryRow[] {
+function mapToRows(map: Map<string, MonthAcc>): MonthCategoryRow[] {
   return [...map.keys()]
     .sort()
     .map((month) => {
@@ -82,17 +156,32 @@ function mapToRows(map: Map<string, Record<CategoryBucket, number>>): MonthCateg
         cogs: c.cogs,
         sga: c.sga,
         other: c.other,
+        vatAsset: c.vatAsset,
+        vatCogs: c.vatCogs,
+        vatSga: c.vatSga,
+        vatOther: c.vatOther,
       };
     });
+}
+
+function addCategoryRows(into: MonthAcc, row: MonthCategoryRow) {
+  into.asset += row.asset;
+  into.cogs += row.cogs;
+  into.sga += row.sga;
+  into.other += row.other;
+  into.vatAsset += row.vatAsset;
+  into.vatCogs += row.vatCogs;
+  into.vatSga += row.vatSga;
+  into.vatOther += row.vatOther;
 }
 
 export async function loadStaffMonthBreakdown(
   sinceMs = monthsAgoStartMs(PNL_LOOKBACK_MONTHS),
 ): Promise<MonthCategoryRow[]> {
   const entries = await listLedgerEntriesSince(sinceMs);
-  const map = new Map<string, Record<CategoryBucket, number>>();
+  const map = new Map<string, MonthAcc>();
   for (const e of entries) {
-    accumulateOut(map, e.date, e.amountOut, e.type);
+    accumulateEntry(map, e.date, e);
   }
   return mapToRows(map);
 }
@@ -101,9 +190,9 @@ export async function loadOwnerMonthBreakdown(
   sinceMs = monthsAgoStartMs(PNL_LOOKBACK_MONTHS),
 ): Promise<MonthCategoryRow[]> {
   const entries = await listOwnerBookEntriesSince(sinceMs);
-  const map = new Map<string, Record<CategoryBucket, number>>();
+  const map = new Map<string, MonthAcc>();
   for (const e of entries) {
-    accumulateOut(map, e.date, e.amountOut, e.type);
+    accumulateEntry(map, e.date, e);
   }
   return mapToRows(map);
 }
@@ -112,14 +201,11 @@ export function combineMonthBreakdowns(
   staff: MonthCategoryRow[],
   owner: MonthCategoryRow[],
 ): CombinedMonthRow[] {
-  const map = new Map<string, Record<CategoryBucket, number>>();
+  const map = new Map<string, MonthAcc>();
   for (const src of [staff, owner]) {
     for (const row of src) {
-      const cur = map.get(row.month) || emptyCats();
-      cur.asset += row.asset;
-      cur.cogs += row.cogs;
-      cur.sga += row.sga;
-      cur.other += row.other;
+      const cur = map.get(row.month) || emptyMonthAcc();
+      addCategoryRows(cur, row);
       map.set(row.month, cur);
     }
   }
@@ -179,10 +265,7 @@ export function filterCategoryRowsByMonths(
 ): MonthCategoryRow[] {
   const byMonth = new Map(rows.map((r) => [r.month, r]));
   // Pad missing months with zeros so every summary month is a row (average ÷ same n).
-  return months.map(
-    (month) =>
-      byMonth.get(month) || { month, asset: 0, cogs: 0, sga: 0, other: 0 },
-  );
+  return months.map((month) => byMonth.get(month) || emptyMonthCategoryRow(month));
 }
 
 export function filterPnlRowsByMonths(rows: PnlMonthRow[], months: string[]): PnlMonthRow[] {
@@ -195,6 +278,10 @@ export type CategoryTotals = {
   cogs: number;
   sga: number;
   other: number;
+  vatAsset: number;
+  vatCogs: number;
+  vatSga: number;
+  vatOther: number;
 };
 
 export function sumCategoryRows(rows: MonthCategoryRow[]): CategoryTotals {
@@ -204,8 +291,12 @@ export function sumCategoryRows(rows: MonthCategoryRow[]): CategoryTotals {
       cogs: acc.cogs + r.cogs,
       sga: acc.sga + r.sga,
       other: acc.other + r.other,
+      vatAsset: acc.vatAsset + r.vatAsset,
+      vatCogs: acc.vatCogs + r.vatCogs,
+      vatSga: acc.vatSga + r.vatSga,
+      vatOther: acc.vatOther + r.vatOther,
     }),
-    { asset: 0, cogs: 0, sga: 0, other: 0 },
+    emptyMonthAcc(),
   );
 }
 
@@ -219,6 +310,10 @@ export function averageCategoryRows(rows: MonthCategoryRow[]): CategoryTotals | 
     cogs: t.cogs / n,
     sga: t.sga / n,
     other: t.other / n,
+    vatAsset: t.vatAsset / n,
+    vatCogs: t.vatCogs / n,
+    vatSga: t.vatSga / n,
+    vatOther: t.vatOther / n,
   };
 }
 
@@ -244,12 +339,20 @@ export function summarizePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
   let cogs = 0;
   let sga = 0;
   let asset = 0;
+  let purchaseVat = 0;
+  let vatCogs = 0;
+  let vatSga = 0;
+  let vatAsset = 0;
   let days = 0;
   for (const r of rows) {
     income += r.income;
     cogs += r.cogs;
     sga += r.sga;
     asset += r.asset;
+    purchaseVat += r.purchaseVat;
+    vatCogs += r.vatCogs;
+    vatSga += r.vatSga;
+    vatAsset += r.vatAsset;
     days += daysInMonthKey(r.month) || 0;
   }
   days = days || 1;
@@ -277,6 +380,10 @@ export function summarizePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
     investOverNet: pct(asset, net),
     cashPlus,
     cashOverIncome: pct(cashPlus, income),
+    purchaseVat,
+    vatCogs,
+    vatSga,
+    vatAsset,
   };
 }
 
@@ -297,6 +404,10 @@ export function averagePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
   const ebitda = rows.reduce((s, r) => s + r.ebitda, 0) / n;
   const net = rows.reduce((s, r) => s + r.net, 0) / n;
   const cashPlus = rows.reduce((s, r) => s + r.cashPlus, 0) / n;
+  const purchaseVat = rows.reduce((s, r) => s + r.purchaseVat, 0) / n;
+  const vatCogs = rows.reduce((s, r) => s + r.vatCogs, 0) / n;
+  const vatSga = rows.reduce((s, r) => s + r.vatSga, 0) / n;
+  const vatAsset = rows.reduce((s, r) => s + r.vatAsset, 0) / n;
   return {
     month: "เฉลี่ย",
     income,
@@ -335,6 +446,10 @@ export function averagePnlRows(rows: PnlMonthRow[]): PnlMonthRow | null {
       rows.map((r) => r.cashOverIncome),
       n,
     ),
+    purchaseVat,
+    vatCogs,
+    vatSga,
+    vatAsset,
   };
 }
 
@@ -345,7 +460,8 @@ export function buildPnlRows(
   return combined.map((row) => {
     const income = Number(incomeByMonth[row.month]) || 0;
     const days = daysInMonthKey(row.month) || 1;
-    const { cogs, sga, asset } = row;
+    const { cogs, sga, asset, vatCogs, vatSga, vatAsset } = row;
+    const purchaseVat = purchaseVatTotal(row);
     const gross = income - cogs;
     const ebitda = gross - sga;
     const net = ebitda;
@@ -370,6 +486,10 @@ export function buildPnlRows(
       investOverNet: pct(asset, net),
       cashPlus,
       cashOverIncome: pct(cashPlus, income),
+      purchaseVat,
+      vatCogs,
+      vatSga,
+      vatAsset,
     };
   });
 }

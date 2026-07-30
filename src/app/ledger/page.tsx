@@ -16,7 +16,6 @@ import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import {
   addLedgerEntry,
-  bulkUpdateLedgerTypes,
   deleteLedgerEntry,
   frequentDescriptions,
   getLedgerReceiptUrls,
@@ -40,10 +39,15 @@ import { CashInLedgerPanel } from "@/components/CashInLedgerPanel";
 import { BillNoticeLedgerPanel } from "@/components/BillNoticeLedgerPanel";
 import { LedgerAiSettingsPanel } from "@/components/LedgerAiSettingsPanel";
 import { EntryVatFieldset } from "@/components/EntryVatFieldset";
+import { LedgerAddOutModal } from "@/components/LedgerAddOutModal";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { personalProfileLabel } from "@/lib/profile";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
-import { BASE_TYPE_OPTIONS, frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
+import {
+  frequentTypes,
+  isLedgerAssetType,
+  labelLedgerType,
+} from "@/lib/ledger-labels";
 import {
   classifyLedgerTypeHeuristic,
   classifyLedgerTypeWithAi,
@@ -56,7 +60,10 @@ import {
   parseVatInputStr,
   type VatSource,
 } from "@/lib/entry-vat";
-import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
+import {
+  EXTRACT_RECEIPT_MAX,
+  extractOwnerBookFromReceipt,
+} from "@/lib/owner-books-ai";
 import { friendlyFirestoreWriteError, saveImageToDevice } from "@/lib/receipts";
 import {
   type PhotoUploadProgress,
@@ -64,9 +71,9 @@ import {
 } from "@/lib/photo-upload";
 import type { LedgerEntry } from "@/lib/types";
 import { daysAgoMs } from "@/lib/query-window";
-import { filterLedgerRows } from "@/lib/smart-search";
+import { filterLedgerRows, sortByDateNewestFirst } from "@/lib/smart-search";
+import { SheetDateCell } from "@/components/SheetDateCell";
 import {
-  formatDateShort,
   formatPlainNumber,
   parseDateInput,
   todayInputValue,
@@ -74,8 +81,6 @@ import {
 import { formatVatMoney } from "@/lib/vat-number-format";
 import { ArrowDownLeft, Trash2, X } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
-
-const BULK_TYPE_OPTIONS = BASE_TYPE_OPTIONS.filter((o) => o.value !== "auto");
 
 export default function LedgerPage() {
   return (
@@ -119,8 +124,6 @@ function LedgerView() {
   const [query, setQuery] = useState("");
   const [searchPool, setSearchPool] = useState<LedgerEntry[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [bulkBusy, setBulkBusy] = useState(false);
   const photoEntryRef = useRef<LedgerEntry | null>(null);
   const photoCameraRef = useRef<HTMLInputElement>(null);
   const photoGalleryRef = useRef<HTMLInputElement>(null);
@@ -164,7 +167,7 @@ function LedgerView() {
   useLayoutEffect(() => {
     const cached = loadCachedLedger();
     if (cached?.entries.length) {
-      setEntries(cached.entries);
+      setEntries(sortByDateNewestFirst(cached.entries));
       if (cached.balance != null) {
         setBalance(cached.balance);
         balanceRef.current = cached.balance;
@@ -227,13 +230,14 @@ function LedgerView() {
     const unsub = subscribeLedgerPage(
       liveLimit,
       (page) => {
-        setEntries(page.entries);
+        const next = sortByDateNewestFirst(page.entries);
+        setEntries(next);
         setHasMore(page.hasMore && liveLimit < LEDGER_LIVE_MAX);
-        hasRowsRef.current = page.entries.length > 0;
+        hasRowsRef.current = next.length > 0;
         setLoading(false);
         setLoadingMore(false);
         setRefreshing(false);
-        persistSnapshot(page.entries, page.hasMore, balanceRef.current);
+        persistSnapshot(next, page.hasMore, balanceRef.current);
       },
       (err) => {
         setLoading(false);
@@ -273,67 +277,9 @@ function LedgerView() {
 
   const filteredEntries = useMemo(() => {
     const source = deferredQuery ? searchPool ?? entries : entries;
-    return filterLedgerRows(source, deferredQuery);
+    // Live list is already date desc; search pool is asc — always show newest→oldest.
+    return sortByDateNewestFirst(filterLedgerRows(source, deferredQuery));
   }, [entries, searchPool, deferredQuery]);
-
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [deferredQuery]);
-
-  useEffect(() => {
-    if (!isOwner) setSelectedIds(new Set());
-  }, [isOwner]);
-
-  const visibleIds = useMemo(() => filteredEntries.map((r) => r.id), [filteredEntries]);
-  const allVisibleSelected =
-    isOwner && visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
-  const someVisibleSelected = isOwner && visibleIds.some((id) => selectedIds.has(id));
-
-  function toggleSelected(id: string) {
-    if (!isOwner) return;
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleSelectAllVisible() {
-    if (!isOwner) return;
-    setSelectedIds((prev) => {
-      if (visibleIds.length === 0) return prev;
-      const allOn = visibleIds.every((id) => prev.has(id));
-      if (allOn) {
-        const next = new Set(prev);
-        for (const id of visibleIds) next.delete(id);
-        return next;
-      }
-      const next = new Set(prev);
-      for (const id of visibleIds) next.add(id);
-      return next;
-    });
-  }
-
-  function clearSelected() {
-    setSelectedIds(new Set());
-  }
-
-  async function onBulkRetype(type: string) {
-    if (!isOwner) return;
-    const ids = Array.from(selectedIds);
-    if (!ids.length || bulkBusy) return;
-    setBulkBusy(true);
-    setError(null);
-    try {
-      await bulkUpdateLedgerTypes(ids, type);
-      setSelectedIds(new Set());
-    } catch (err) {
-      setError(friendlyFirestoreWriteError(err, "จัดประเภทกลุ่มไม่สำเร็จ"));
-    } finally {
-      setBulkBusy(false);
-    }
-  }
 
   const loadMore = useCallback(() => {
     if (deferredQuery) return;
@@ -405,58 +351,26 @@ function LedgerView() {
   return (
     <div className="ledger-page module-page">
       {actorId ? (
-        <CashInLedgerPanel
-          actorId={actorId}
-          isOwner={!!isOwner}
-          staffName={cashInStaffName}
-          forceOpen={cashInForceOpen}
-          onForceOpenConsumed={() => setCashInForceOpen(false)}
-        />
-      ) : null}
-
-      {actorId ? (
-        <BillNoticeLedgerPanel
-          actorId={actorId}
-          isOwner={!!isOwner}
-          staffName={cashInStaffName}
-          forceOpen={billNoticeForceOpen}
-          onForceOpenConsumed={() => setBillNoticeForceOpen(false)}
-        />
+        <div className="ledger-ops-duo" aria-label="เทียบเงินเข้าและแจ้งบิล">
+          <CashInLedgerPanel
+            actorId={actorId}
+            isOwner={!!isOwner}
+            staffName={cashInStaffName}
+            forceOpen={cashInForceOpen}
+            onForceOpenConsumed={() => setCashInForceOpen(false)}
+          />
+          <BillNoticeLedgerPanel
+            actorId={actorId}
+            isOwner={!!isOwner}
+            staffName={cashInStaffName}
+            forceOpen={billNoticeForceOpen}
+            onForceOpenConsumed={() => setBillNoticeForceOpen(false)}
+          />
+        </div>
       ) : null}
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
-
-      {isOwner && selectedIds.size > 0 ? (
-        <div
-          className="bulk-status-toolbar ledger-bulk-compact"
-          role="group"
-          aria-label="จัดประเภทหลายรายการ"
-        >
-          <div className="bulk-status-actions" role="group" aria-label="ตั้งประเภทกลุ่ม">
-            <span className="bulk-status-count">{selectedIds.size}</span>
-            {BULK_TYPE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                className="ghost-btn bulk-status-btn"
-                disabled={bulkBusy}
-                onClick={() => void onBulkRetype(opt.value)}
-              >
-                {opt.label}
-              </button>
-            ))}
-            <button
-              type="button"
-              className="ghost-btn bulk-status-clear"
-              disabled={bulkBusy}
-              onClick={clearSelected}
-            >
-              ยกเลิก
-            </button>
-          </div>
-        </div>
-      ) : null}
 
       {!loading ? (
         <div className="ledger-staff-toolbar">
@@ -504,23 +418,10 @@ function LedgerView() {
         <p className="empty">ไม่พบรายการที่ตรงกับคำค้น</p>
       ) : !loading ? (
         <>
-          <div className="sheet-wrap ledger-staff-sheet">
-            <table className="sheet-table">
+          <div className="sheet-wrap ledger-staff-sheet sheet-bleed">
+            <table className="sheet-table sheet-table--dense">
               <thead>
                 <tr>
-                  {isOwner ? (
-                    <th className="bulk-check-col" aria-label="เลือก">
-                      <input
-                        type="checkbox"
-                        checked={allVisibleSelected}
-                        ref={(el) => {
-                          if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected;
-                        }}
-                        onChange={toggleSelectAllVisible}
-                        aria-label="เลือกทั้งหมดที่แสดง"
-                      />
-                    </th>
-                  ) : null}
                   <th className="col-date">วันที่</th>
                   <th className="col-desc">รายการ</th>
                   <th className="col-in">เข้า</th>
@@ -529,90 +430,80 @@ function LedgerView() {
                   <th className="col-type">ประเภท</th>
                 </tr>
               </thead>
-                <tbody>
-                  {filteredEntries.map((row) => {
-                    const selected = isOwner && selectedIds.has(row.id);
-                    return (
-                    <tr
-                      key={row.id}
-                      className={[
-                        row.amountIn > 0 ? "row-in" : "row-out",
-                        selected ? "is-bulk-selected" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      {isOwner ? (
-                        <td className="bulk-check-col">
-                          <input
-                            type="checkbox"
-                            checked={selected}
-                            onChange={() => toggleSelected(row.id)}
-                            aria-label={`เลือก ${row.description}`}
+              <tbody>
+                {filteredEntries.map((row) => (
+                  <tr
+                    key={row.id}
+                    className={row.amountIn > 0 ? "row-in" : "row-out"}
+                  >
+                    <td className="col-date">
+                      <SheetDateCell ms={row.date} era="be" />
+                    </td>
+                    <td className="col-desc">
+                      <div className="desc-with-photo">
+                        <button
+                          type="button"
+                          className="desc-link"
+                          title="แตะเพื่อแก้ไข · ช่อง VAT ในกล่อง"
+                          onClick={() => setEditing(row)}
+                        >
+                          {row.description}
+                        </button>
+                        {getLedgerReceiptUrls(row).length ? (
+                          <EntryPhotoIndicator
+                            imageUrls={getLedgerReceiptUrls(row)}
+                            label={row.description}
+                            onView={(urls) =>
+                              setImagePreview({
+                                urls,
+                                title: row.description,
+                                entryDateMs: row.date,
+                              })
+                            }
                           />
-                        </td>
-                      ) : null}
-                      <td className="col-date">{formatDateShort(row.date)}</td>
-                      <td className="col-desc">
-                        <div className="desc-with-photo">
+                        ) : (
                           <button
                             type="button"
-                            className="desc-link"
-                            title="แตะเพื่อแก้ไข · ช่อง VAT ในกล่อง"
-                            onClick={() => setEditing(row)}
+                            className="photo-status"
+                            onClick={() => {
+                              photoEntryRef.current = row;
+                              setPhotoUploadRowId(row.id);
+                            }}
+                            title="เพิ่มรูป"
+                            aria-label="เพิ่มรูป"
                           >
-                            {row.description}
+                            <span className="photo-status-plus" aria-hidden>+</span>
                           </button>
-                          {getLedgerReceiptUrls(row).length ? (
-                            <EntryPhotoIndicator
-                              imageUrls={getLedgerReceiptUrls(row)}
-                              label={row.description}
-                              onView={(urls) =>
-                                setImagePreview({
-                                  urls,
-                                  title: row.description,
-                                  entryDateMs: row.date,
-                                })
-                              }
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              className="photo-status"
-                              onClick={() => {
-                                photoEntryRef.current = row;
-                                setPhotoUploadRowId(row.id);
-                              }}
-                              title="เพิ่มรูป"
-                              aria-label="เพิ่มรูป"
-                            >
-                              <span className="photo-status-plus" aria-hidden>+</span>
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>
-                      <td className="col-out">{row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}</td>
-                      <td className="col-vat">
-                        {row.amountOut > 0 && row.hasVat && (row.vatInput || 0) > 0 ? (
-                          <span className="owner-vat-badge" title="ภาษีซื้อ">
-                            {formatVatMoney(row.vatInput || 0)}
-                          </span>
-                        ) : (
-                          <span className="muted owner-vat-empty">—</span>
                         )}
-                      </td>
-                      <td className="col-type">
-                        <span className="muted" style={{ fontSize: "0.72rem" }}>
-                          {row.type ? labelLedgerType(row.type) : "—"}
+                      </div>
+                    </td>
+                    <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>
+                    <td className="col-out">{row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}</td>
+                    <td className="col-vat">
+                      {row.amountOut > 0 && row.hasVat && (row.vatInput || 0) > 0 ? (
+                        <span className="owner-vat-badge" title="ภาษีซื้อ">
+                          {formatVatMoney(row.vatInput || 0)}
                         </span>
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      ) : (
+                        <span className="muted owner-vat-empty">—</span>
+                      )}
+                    </td>
+                    <td
+                      className={
+                        isLedgerAssetType(row.type)
+                          ? "col-type is-asset-type"
+                          : "col-type"
+                      }
+                    >
+                      <span className="muted">
+                        {row.type ? labelLedgerType(row.type) : "—"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {!deferredQuery ? (
             <>
               <div ref={sentinelRef} className="load-more-sentinel" aria-hidden />
@@ -775,366 +666,14 @@ function toDateInput(ms: number) {
   return todayInputValue(d);
 }
 
-function AddOutModal({
-  createdBy,
-  isOwner,
-  onClose,
-  onSaved,
-  onError,
-}: {
+function AddOutModal(props: {
   createdBy: string;
   isOwner: boolean;
   onClose: () => void;
   onSaved: () => void;
   onError: (msg: string) => void;
 }) {
-  const [date, setDate] = useState(todayInputValue());
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("");
-  const [typeMode, setTypeMode] = useState("auto");
-  const [ownerLocked, setOwnerLocked] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [saveStage, setSaveStage] = useState<AiSaveStage | null>(null);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [typeFreq, setTypeFreq] = useState<string[]>([]);
-  const [receiptUrls, setReceiptUrls] = useState<string[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
-  const [previewType, setPreviewType] = useState("");
-  const [previewReason, setPreviewReason] = useState("");
-  const [previewSource, setPreviewSource] = useState<LedgerTypeSource>("heuristic");
-  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
-  const [previewError, setPreviewError] = useState<string | null>(null);
-  const [hasVat, setHasVat] = useState(false);
-  const [vatInputStr, setVatInputStr] = useState("");
-  const [vatInvoiceNo, setVatInvoiceNo] = useState("");
-  const [vatSource, setVatSource] = useState<VatSource>("");
-  const [vatVerified, setVatVerified] = useState(false);
-  const [aiVatReason, setAiVatReason] = useState("");
-  const [extractStatus, setExtractStatus] = useState<"idle" | "loading" | "ready" | "error">(
-    "idle",
-  );
-  const lastExtractKeyRef = useRef("");
-  const extractBusyRef = useRef(false);
-  const descriptionRef = useRef(description);
-  const amountRef = useRef(amount);
-  descriptionRef.current = description;
-  amountRef.current = amount;
-
-  const filteredSuggestions = useMemo(() => {
-    const q = description.trim().toLowerCase();
-    if (!q) return suggestions.slice(0, 8);
-    return suggestions.filter((s) => s.toLowerCase().includes(q)).slice(0, 8);
-  }, [description, suggestions]);
-
-  useEffect(() => {
-    void listRecentLedgerEntries(200)
-      .then((rows) => {
-        setSuggestions(frequentDescriptions(rows));
-        setTypeFreq(frequentTypes(rows));
-      })
-      .catch(() => {
-        setSuggestions([]);
-        setTypeFreq([]);
-      });
-  }, []);
-
-  async function runExtractFromPhotos(urls: string[]) {
-    const refs = urls.map((u) => String(u || "").trim()).filter(Boolean).slice(0, 2);
-    if (!refs.length) return;
-    const key = refs.join("|");
-    if (key === lastExtractKeyRef.current || extractBusyRef.current) return;
-    extractBusyRef.current = true;
-    setExtractStatus("loading");
-    try {
-      const result = await extractOwnerBookFromReceipt(refs);
-      lastExtractKeyRef.current = key;
-      if (result.date) setDate(result.date);
-      if (result.description && !descriptionRef.current.trim()) {
-        setDescription(result.description);
-      }
-      if (result.amountOut != null && !amountRef.current.trim()) {
-        setAmount(String(result.amountOut));
-      }
-      if (!ownerLocked && result.type) {
-        setTypeMode("auto");
-        setPreviewType(result.type);
-        setPreviewReason(result.reason || "อ่านจากรูปใบเสร็จ");
-        setPreviewSource("ai");
-        setPreviewStatus("ready");
-      }
-      setAiVatReason(result.vatReason || result.reason || "");
-      if (result.hasVat && result.vatInput != null && result.vatInput > 0) {
-        setHasVat(true);
-        setVatInputStr(String(result.vatInput));
-        if (result.vatInvoiceNo) setVatInvoiceNo(result.vatInvoiceNo);
-        setVatSource("ai");
-        setVatVerified(false);
-      } else {
-        setAiVatReason(
-          result.vatReason ||
-            "AI ไม่เห็นบรรทัดภาษีบนบิล — กรอกเองหรือไม่ติ๊ก VAT",
-        );
-      }
-      setExtractStatus("ready");
-    } catch {
-      setExtractStatus("error");
-      setAiVatReason("อ่านจากรูปไม่สำเร็จ — กรอก VAT เองได้");
-    } finally {
-      extractBusyRef.current = false;
-    }
-  }
-
-  async function runOwnerPreview() {
-    const text = description.trim();
-    if (!text) {
-      onError("ใส่ชื่อรายการก่อนจัดประเภท");
-      return;
-    }
-    setOwnerLocked(false);
-    setTypeMode("auto");
-    setPreviewStatus("loading");
-    setPreviewError(null);
-    try {
-      const result = await classifyLedgerTypeWithAi(text);
-      setPreviewType(result.type);
-      setPreviewReason(result.reason);
-      setPreviewSource("ai");
-      setPreviewStatus("ready");
-    } catch (err) {
-      const fallback = classifyLedgerTypeHeuristic(text);
-      setPreviewType(fallback.type);
-      setPreviewReason(fallback.reason);
-      setPreviewSource("heuristic");
-      setPreviewStatus("error");
-      setPreviewError((err as Error).message || "AI ไม่พร้อม");
-    }
-  }
-
-  async function onSave(e: FormEvent) {
-    e.preventDefault();
-    if (!description.trim()) {
-      onError("ต้องใส่รายการ");
-      return;
-    }
-    setBusy(true);
-    setSaveStage("sending");
-    try {
-      let type = previewType || "cogs";
-      let typeSource: LedgerTypeSource = previewSource;
-      let typeAiReason = previewReason;
-
-      if (isOwner && ownerLocked && typeMode !== "auto") {
-        type = typeMode;
-        typeSource = "owner";
-        typeAiReason = "";
-      } else {
-        setSaveStage("sending");
-        await new Promise((r) => setTimeout(r, 30));
-        setSaveStage("classifying");
-        try {
-          const result = await classifyLedgerTypeWithAi(description);
-          type = result.type;
-          typeSource = "ai";
-          typeAiReason = result.reason;
-        } catch {
-          const fallback = classifyLedgerTypeHeuristic(description);
-          type = fallback.type;
-          typeSource = "heuristic";
-          typeAiReason = fallback.reason;
-        }
-      }
-
-      const amountOut = Number(amount);
-      const vatInputNum = parseVatInputStr(vatInputStr);
-      if (hasVat && vatInputNum <= 0) {
-        throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล หรือกดใช้ประมาณ ×7/107");
-      }
-      setSaveStage("saving");
-      await addLedgerEntry({
-        date: parseDateInput(date),
-        description,
-        amountIn: 0,
-        amountOut,
-        type,
-        typeSource,
-        typeAiReason,
-        createdBy,
-        receiptUrls,
-        hasVat,
-        vatInput: hasVat ? vatInputNum : 0,
-        vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
-        vatSource: hasVat ? vatSource || "manual" : "",
-        vatVerified: hasVat ? vatVerified : false,
-        // รวมเข้า VAT เดือน — ติ๊กที่ตารางเดือน (+) ไม่ auto จาก AI
-        vatClaim: false,
-      });
-      setSaveStage("done");
-      onSaved();
-    } catch (err) {
-      onError((err as Error).message || "บันทึกไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-      setSaveStage(null);
-    }
-  }
-
-  return (
-    <div className="modal-backdrop edit-modal is-module-form" role="presentation">
-      <div className="modal-card" role="dialog" aria-modal="true" aria-label="บันทึกเงินออก">
-        <div className="entry-toolbar module-form-head">
-          <h2 className="panel-title">บันทึกเงินออก</h2>
-          <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
-        <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
-          <aside className="ledger-photo-tip is-in-form" role="note" aria-label="คำแนะนำถ่ายหลักฐาน">
-            <p className="ledger-photo-tip-title">แนบรูปก่อน — AI อ่าน VAT จากบิล</p>
-            <p className="ledger-photo-tip-text">
-              ใบเสร็จแม็คโคร/ท็อปส์ ฯลฯ ให้เห็นบรรทัดภาษีชัด · อย่าใช้ยอดจ่าย×7/107 แทนบิล
-            </p>
-          </aside>
-          <PhotoAttachMultiField
-            label="รูปใบเสร็จ"
-            values={receiptUrls}
-            onChange={(next) => {
-              const prev = receiptUrls;
-              setReceiptUrls(next);
-              const added = next.some((u) => !prev.includes(u));
-              if (added) void runExtractFromPhotos(next);
-            }}
-            onError={onError}
-            max={LEDGER_RECEIPT_MAX}
-            storageFolder="ledger-receipts"
-            storageSlotKey={`add-${createdBy || "new"}`}
-            hint="ถ่ายหรือแนบ — AI ใส่วันที่ รายการ ยอด และ VAT จากบิล"
-          />
-          <div className="field">
-            <label htmlFor="add-out-date">วันที่</label>
-            <input id="add-out-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-          </div>
-          <div className="field">
-            <label htmlFor="add-out-desc">รายการ</label>
-            <input
-              id="add-out-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="เช่น ค่าน้ำแข็ง / แม็คโคร"
-              autoComplete="off"
-              required
-            />
-            {filteredSuggestions.length > 0 ? (
-              <div className="suggest-list" role="listbox" aria-label="รายการที่ใช้บ่อย">
-                {filteredSuggestions.map((item) => (
-                  <button key={item} type="button" className="suggest-chip" onClick={() => setDescription(item)}>
-                    {item}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-          <div className="field">
-            <label htmlFor="add-out-amount">จำนวนเงินออก</label>
-            <input
-              id="add-out-amount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              inputMode="decimal"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
-          </div>
-          <EntryVatFieldset
-            idPrefix="add-out"
-            disabled={busy}
-            amountInclusive={Number(amount) || 0}
-            hasVat={hasVat}
-            vatInputStr={vatInputStr}
-            vatInvoiceNo={vatInvoiceNo}
-            vatSource={vatSource}
-            vatVerified={vatVerified}
-            aiStatus={
-              receiptUrls.length === 0
-                ? "none"
-                : extractStatus === "loading"
-                  ? "loading"
-                  : extractStatus === "error"
-                    ? "error"
-                    : extractStatus === "ready"
-                      ? "ready"
-                      : "idle"
-            }
-            aiVatReason={aiVatReason}
-            onHasVatChange={setHasVat}
-            onVatInputChange={setVatInputStr}
-            onVatInvoiceNoChange={setVatInvoiceNo}
-            onVatSourceChange={setVatSource}
-            onVatVerifiedChange={setVatVerified}
-            onVendorHint={(name) => {
-              if (!description.trim()) setDescription(name);
-            }}
-            canRereadAi={receiptUrls.length > 0}
-            onRereadAi={() => {
-              lastExtractKeyRef.current = "";
-              void runExtractFromPhotos(receiptUrls);
-            }}
-          />
-          {receiptUrls.length ? (
-            <button
-              type="button"
-              className="ghost-btn"
-              style={{ marginBottom: "0.55rem" }}
-              onClick={() => setPreviewUrls(receiptUrls)}
-            >
-              ดูรูป ({receiptUrls.length})
-            </button>
-          ) : null}
-          <LedgerTypeField
-            id="add-out-type"
-            isOwner={isOwner}
-            mode={isOwner ? "live" : "deferred"}
-            displayType={isOwner ? previewType : ""}
-            aiType={previewType || "cogs"}
-            aiReason={previewReason}
-            aiSource={previewSource}
-            aiStatus={previewStatus}
-            aiError={previewError}
-            ownerLocked={ownerLocked}
-            typeMode={typeMode}
-            frequent={typeFreq}
-            onTypeModeChange={(value) => {
-              setTypeMode(value);
-              setOwnerLocked(value !== "auto");
-            }}
-            onReclassify={() => void runOwnerPreview()}
-          />
-          <div className="entry-actions">
-            <button type="submit" className="primary-btn action-out" disabled={busy}>
-              {busy ? "กำลังบันทึก..." : "บันทึก"}
-            </button>
-            <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
-              ออก
-            </button>
-            <span aria-hidden style={{ width: "2.6rem" }} />
-          </div>
-        </form>
-        {previewUrls ? (
-          <ImagePreviewModal
-            urls={previewUrls}
-            title="รูป"
-            entryDateMs={parseDateInput(date)}
-            showCaptureMeta={isOwner}
-            onClose={() => setPreviewUrls(null)}
-          />
-        ) : null}
-      </div>
-      {saveStage ? (
-        <AiSaveProgressModal stage={saveStage} detail={description.trim()} />
-      ) : null}
-    </div>
-  );
+  return <LedgerAddOutModal {...props} />;
 }
 
 function EditEntryModal({
@@ -1182,6 +721,9 @@ function EditEntryModal({
   const [vatVerified, setVatVerified] = useState(
     Boolean(!isIn && entry.vatVerified),
   );
+  const [vatClaim, setVatClaim] = useState(
+    Boolean(!isIn && entry.hasVat && entry.vatClaim),
+  );
   const [aiVatReason, setAiVatReason] = useState("");
   const [extractStatus, setExtractStatus] = useState<"idle" | "loading" | "ready" | "error">(
     "idle",
@@ -1193,7 +735,6 @@ function EditEntryModal({
   descriptionRef.current = description;
   amountRef.current = amount;
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getLedgerReceiptUrls(entry));
-  const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
   const [previewType, setPreviewType] = useState(entry.type || "");
   const [previewReason, setPreviewReason] = useState(entry.typeAiReason || "");
   const [previewSource, setPreviewSource] = useState<LedgerTypeSource>(initialSource);
@@ -1208,8 +749,8 @@ function EditEntryModal({
 
   const filteredSuggestions = useMemo(() => {
     const q = description.trim().toLowerCase();
-    if (!q) return suggestions.slice(0, 10);
-    return suggestions.filter((s) => s.toLowerCase().includes(q)).slice(0, 10);
+    if (!q) return suggestions.slice(0, 6);
+    return suggestions.filter((s) => s.toLowerCase().includes(q)).slice(0, 6);
   }, [description, suggestions]);
 
   useEffect(() => {
@@ -1226,7 +767,10 @@ function EditEntryModal({
 
   async function runExtractFromPhotos(urls: string[]) {
     if (isIn) return;
-    const refs = urls.map((u) => String(u || "").trim()).filter(Boolean).slice(0, 2);
+    const refs = urls
+      .map((u) => String(u || "").trim())
+      .filter(Boolean)
+      .slice(0, EXTRACT_RECEIPT_MAX);
     if (!refs.length) return;
     const key = refs.join("|");
     if (key === lastExtractKeyRef.current || extractBusyRef.current) return;
@@ -1235,7 +779,7 @@ function EditEntryModal({
     try {
       const result = await extractOwnerBookFromReceipt(refs);
       lastExtractKeyRef.current = key;
-      if (result.date) setDate(result.date);
+      // Keep the saved accounting date — AI must not change it on re-read.
       if (result.description && !descriptionRef.current.trim()) {
         setDescription(result.description);
       }
@@ -1353,8 +897,7 @@ function EditEntryModal({
               vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
               vatSource: hasVat ? vatSource || "manual" : "",
               vatVerified: hasVat ? vatVerified : false,
-              // แก้ที่บช. — คงสถานะรวมเข้าระบบเดิม (ติ๊กหลักอยู่ที่ VAT เดือน)
-              vatClaim: hasVat ? Boolean(entry.vatClaim) : false,
+              vatClaim: hasVat && vatInputNum > 0 ? vatClaim : false,
             }),
       });
       onSaved();
@@ -1380,7 +923,10 @@ function EditEntryModal({
   }
 
   return (
-    <div className="modal-backdrop edit-modal is-module-form" role="presentation">
+    <div
+      className="modal-backdrop edit-modal is-module-form is-compact-form"
+      role="presentation"
+    >
       <div
         className="modal-card"
         role="dialog"
@@ -1415,6 +961,7 @@ function EditEntryModal({
           entryDate={entry.date}
           createdAt={entry.createdAt}
           updatedAt={entry.updatedAt}
+          era="be"
         />
         <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
           <div className="field">
@@ -1493,7 +1040,7 @@ function EditEntryModal({
               max={LEDGER_RECEIPT_MAX}
               storageFolder="ledger-receipts"
               storageSlotKey={`edit-${entry.id}`}
-              hint="แนบรูป → AI อ่าน VAT จากบิลก่อน"
+              hint="ถ่าย/แนบ — AI อ่าน VAT"
             />
           ) : (
             <PhotoAttachMultiField
@@ -1518,6 +1065,8 @@ function EditEntryModal({
               vatInvoiceNo={vatInvoiceNo}
               vatSource={vatSource}
               vatVerified={vatVerified}
+              vatClaim={vatClaim}
+              onVatClaimChange={setVatClaim}
               aiStatus={
                 receiptUrls.length === 0
                   ? "none"
@@ -1545,16 +1094,6 @@ function EditEntryModal({
               }}
             />
           ) : null}
-          {receiptUrls.length ? (
-            <button
-              type="button"
-              className="ghost-btn"
-              style={{ marginBottom: "0.55rem" }}
-              onClick={() => setPreviewUrls(receiptUrls)}
-            >
-              ดูรูป ({receiptUrls.length})
-            </button>
-          ) : null}
 
           {!isIn ? (
             <>
@@ -1568,7 +1107,7 @@ function EditEntryModal({
                 aiSource={previewSource}
                 aiStatus={previewStatus}
                 aiError={previewError}
-                    ownerLocked={ownerLocked}
+                ownerLocked={ownerLocked}
                 typeMode={typeMode}
                 frequent={typeFreq}
                 onTypeModeChange={(value) => {
@@ -1578,7 +1117,14 @@ function EditEntryModal({
                 onReclassify={() => void runOwnerPreview()}
               />
               {!isOwner ? (
-                <label className="ledger-ai-use-images">
+                <label
+                  className="ledger-ai-use-images"
+                  title={
+                    descChanged
+                      ? "เปิดอัตโนมัติเพราะแก้ชื่อรายการ"
+                      : "จัดประเภทใหม่ด้วย AI เมื่อบันทึก"
+                  }
+                >
                   <input
                     type="checkbox"
                     checked={forceReclassify || descChanged}
@@ -1586,9 +1132,9 @@ function EditEntryModal({
                     disabled={busy || descChanged}
                   />
                   <span>
-                    จัดประเภทใหม่ด้วย AI เมื่อบันทึก
+                    จัดประเภทใหม่ตอนบันทึก
                     {descChanged ? (
-                      <span className="ledger-ai-use-images-hint"> — เปิดอัตโนมัติเพราะแก้ชื่อรายการ</span>
+                      <span className="ledger-ai-use-images-hint"> · เปิดอัตโนมัติ</span>
                     ) : null}
                   </span>
                 </label>
@@ -1603,27 +1149,8 @@ function EditEntryModal({
             <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
               ออก
             </button>
-            <button
-              type="button"
-              className="trash-btn"
-              aria-label="ลบรายการ"
-              title="ลบรายการ"
-              disabled={busy}
-              onClick={() => void onDelete()}
-            >
-              <Trash2 size={16} />
-            </button>
           </div>
         </form>
-        {previewUrls ? (
-          <ImagePreviewModal
-            urls={previewUrls}
-            title="รูป"
-            entryDateMs={parseDateInput(date)}
-            showCaptureMeta={isOwner}
-            onClose={() => setPreviewUrls(null)}
-          />
-        ) : null}
       </div>
       {saveStage ? (
         <AiSaveProgressModal stage={saveStage} detail={description.trim()} />

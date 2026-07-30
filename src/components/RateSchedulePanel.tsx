@@ -19,7 +19,7 @@ import {
   repairOtBonusRatesFromSchedule,
   type OtRateRepairReport,
 } from "@/lib/ot-rate-repair";
-import { formatDateShort, formatPlainNumber, todayInputValue } from "@/lib/utils";
+import { formatDateShortBe, formatPlainNumber, todayInputValue } from "@/lib/utils";
 
 type EditTarget = {
   kind: RateKind;
@@ -217,8 +217,8 @@ export function RateSchedulePanel({
       {loading ? <p className="empty">กำลังโหลดตารางเรท...</p> : null}
 
       {!loading ? (
-        <div className="sheet-wrap bonus-rate-current-wrap">
-          <table className="sheet-table bonus-rate-current-table">
+        <div className="sheet-wrap bonus-rate-current-wrap sheet-bleed">
+          <table className="sheet-table bonus-rate-current-table sheet-table--dense">
             <thead>
               <tr>
                 <th>รายการ</th>
@@ -234,7 +234,7 @@ export function RateSchedulePanel({
                   row.rate == null ? "—" : formatPlainNumber(row.rate);
                 const sinceLabel =
                   row.fromSchedule && row.since != null
-                    ? formatDateShort(row.since)
+                    ? formatDateShortBe(row.since)
                     : "—";
                 return (
                   <Fragment key={row.key}>
@@ -328,8 +328,8 @@ export function RateSchedulePanel({
 
       {!loading && showHistory ? (
         history.length ? (
-          <div className="sheet-wrap bonus-rate-history-wrap">
-            <table className="sheet-table bonus-rate-history-table">
+          <div className="sheet-wrap bonus-rate-history-wrap sheet-bleed">
+            <table className="sheet-table bonus-rate-history-table sheet-table--dense">
               <thead>
                 <tr>
                   <th>ชนิด</th>
@@ -343,7 +343,7 @@ export function RateSchedulePanel({
                 {history.map((row) => (
                   <tr key={row.id}>
                     <td>{rateHistoryLabel(row)}</td>
-                    <td>{formatDateShort(row.effectiveFrom)}</td>
+                    <td>{formatDateShortBe(row.effectiveFrom)}</td>
                     <td className="col-out">{formatPlainNumber(row.rate)}</td>
                     <td className="muted">{row.note || "—"}</td>
                     {isOwner ? (

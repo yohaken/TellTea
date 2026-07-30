@@ -979,12 +979,10 @@ body.modal-open .main-panel {
 
 .staff-readiness-table {
   min-width: 34rem;
-  font-size: 0.82rem;
 }
 
 .staff-readiness-table th,
 .staff-readiness-table td {
-  padding: 0.4rem 0.35rem;
   vertical-align: middle;
 }
 
@@ -1503,10 +1501,98 @@ body.modal-open .main-panel {
   white-space: nowrap;
 }
 
+/*
+ * Prototype table layout — บัญชีพนักงาน (.ledger-staff-sheet).
+ * Later phases copy these column/row/bleed rules per-page (do not change other sheets here).
+ * Bleed: .sheet-bleed cancels .main-panel horizontal padding (1rem).
+ * Density: shared .sheet-table--dense + overrides below for row/column sizing.
+ */
 .ledger-page .sheet-wrap.ledger-staff-sheet {
-  margin-top: 0;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+  margin-top: 0.1rem;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table--dense th,
+.ledger-page .ledger-staff-sheet .sheet-table--dense td {
+  padding: 0.18rem 0.3rem;
+  line-height: 1.15;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-date {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  white-space: nowrap;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-desc {
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.ledger-page .ledger-staff-sheet .desc-link {
+  font-size: 0.66rem;
+  line-height: 1.15;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-in,
+.ledger-page .ledger-staff-sheet .sheet-table .col-out {
+  min-width: 2.55rem;
+  padding-left: 0.18rem;
+  padding-right: 0.28rem;
+  font-size: 0.66rem;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-vat {
+  width: 2.35rem;
+  min-width: 2.35rem;
+  padding-left: 0.12rem;
+  padding-right: 0.22rem;
+  font-size: 0.6rem;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-type {
+  max-width: 3.7rem;
+  font-size: 0.58rem;
+  white-space: nowrap;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-type .muted {
+  font-size: inherit;
+  max-width: none;
+}
+
+/* สินทรัพย์/ทรัพย์สิน — แถบม่วงที่เซลล์ประเภท */
+.ledger-page .ledger-staff-sheet .sheet-table .col-type.is-asset-type,
+.owner-books-page .owner-books-sheet .sheet-table .col-type.is-asset-type {
+  box-shadow: inset 3px 0 0 0 #7c3aed;
+  background: rgba(124, 58, 237, 0.08);
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-type.is-asset-type .muted,
+.owner-books-page .owner-books-sheet .sheet-table .col-type.is-asset-type .muted {
+  color: #5b21b6;
+  font-weight: 700;
+}
+
+.ledger-page .ledger-staff-sheet .owner-vat-badge,
+.ledger-page .ledger-staff-sheet .owner-vat-empty {
+  font-size: 0.6rem;
+}
+
+.ledger-page .ledger-staff-sheet .photo-status {
+  width: 1.15rem;
+  height: 1.15rem;
+  min-width: 1.15rem;
+  min-height: 1.15rem;
+}
+
+.ledger-page .ledger-staff-toolbar {
+  margin-left: -0.15rem;
+  margin-right: -0.15rem;
 }
 
 @media (max-width: 420px) {
@@ -2110,8 +2196,89 @@ body.modal-open .main-panel {
   margin-top: 0.2rem;
 }
 
-/* Owner-books table follows /ledger/ sheet-table auto layout.
-   Keep only page chrome + exclude/note extras — do not override column widths. */
+/*
+ * Phase 2 table layout — สมุดบัญชีเจ้าของ (.owner-books-sheet).
+ * Copied from ledger-staff-sheet prototype; extras: bulk-check, exclude, note.
+ * Scoped here so other sheets are untouched.
+ */
+.owner-books-page .sheet-wrap.owner-books-sheet {
+  margin-top: 0.1rem;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table--dense th,
+.owner-books-page .owner-books-sheet .sheet-table--dense td {
+  padding: 0.18rem 0.3rem;
+  line-height: 1.15;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table .col-date {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  white-space: nowrap;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table .col-desc {
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.owner-books-page .owner-books-sheet .desc-link {
+  font-size: 0.66rem;
+  line-height: 1.15;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table .col-out {
+  min-width: 2.55rem;
+  padding-left: 0.18rem;
+  padding-right: 0.28rem;
+  font-size: 0.66rem;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table .col-vat {
+  width: 2.35rem;
+  min-width: 2.35rem;
+  padding-left: 0.12rem;
+  padding-right: 0.22rem;
+  font-size: 0.6rem;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table .col-type {
+  max-width: 3.7rem;
+  font-size: 0.58rem;
+  white-space: nowrap;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table .col-note {
+  max-width: 3.6rem;
+  font-size: 0.58rem;
+}
+
+.owner-books-page .owner-books-sheet .bulk-check-col {
+  width: 1.45rem;
+  min-width: 1.45rem;
+  padding: 0.12rem !important;
+}
+
+.owner-books-page .owner-books-sheet .sheet-table .col-exclude {
+  width: 1.65rem;
+  min-width: 1.65rem;
+  max-width: 1.65rem;
+  padding-left: 0.1rem;
+  padding-right: 0.1rem;
+}
+
+.owner-books-page .owner-books-sheet .photo-status {
+  width: 1.15rem;
+  height: 1.15rem;
+  min-width: 1.15rem;
+  min-height: 1.15rem;
+}
+
 .owner-books-page .bulk-status-toolbar {
   margin-bottom: 0.35rem;
 }
@@ -2122,7 +2289,7 @@ body.modal-open .main-panel {
 }
 
 @media (max-width: 640px) {
-  .owner-books-page .sheet-table .col-note {
+  .owner-books-page .owner-books-sheet .sheet-table .col-note {
     display: none;
   }
 }
@@ -2132,7 +2299,7 @@ body.modal-open .main-panel {
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  font-size: 0.78rem;
+  font-size: 0.66rem;
 }
 
 .owner-books-page .owner-vat-badge,
@@ -2144,7 +2311,7 @@ body.modal-open .main-panel {
 
 .owner-books-page .owner-vat-empty,
 .owner-vat-empty {
-  font-size: 0.78rem;
+  font-size: 0.6rem;
 }
 
 .entry-vat-box {
@@ -2205,6 +2372,104 @@ body.modal-open .main-panel {
   padding: 0.35rem 0.4rem;
   border-radius: 0.5rem;
   background: rgba(40, 90, 60, 0.08);
+}
+
+.vat-claim-mode {
+  margin: 0.45rem 0 0.25rem;
+}
+
+.vat-claim-mode-label {
+  margin: 0 0 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.72);
+}
+
+.vat-claim-mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+}
+
+.vat-claim-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  min-height: 2.65rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(40, 90, 60, 0.28);
+  background: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.62);
+  cursor: pointer;
+  text-align: left;
+}
+
+.vat-claim-mode-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.vat-claim-mode-btn.is-active {
+  background: rgba(40, 90, 60, 0.12);
+  border-color: #1a5c3a;
+  color: #1a5c3a;
+}
+
+.vat-claim-mode-sub {
+  font-size: 0.68rem;
+  font-weight: 600;
+  opacity: 0.78;
+}
+
+.vat-claim-mode-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.vat-first-summary-block {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.45rem;
+}
+
+.vat-sf-send-hint {
+  margin: 0 0 0.35rem;
+  font-size: 0.66rem !important;
+  line-height: 1.3;
+}
+
+.vat-sf-send-out.is-live {
+  color: #0b6b3a;
+}
+
+.vat-sales-input.is-sf-pulse {
+  outline: 2px solid #2f6b4f;
+  background: rgba(47, 107, 79, 0.12);
+  transition: background 0.35s ease, outline-color 0.35s ease;
+}
+
+.vat-books-claim-hint {
+  margin: 0.25rem 0 0.4rem;
+  font-size: 0.68rem !important;
+  line-height: 1.35;
+}
+
+.vat-claim-line-mode {
+  display: block;
+  margin-top: 0.12rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.vat-books-line-row.is-claimed .vat-claim-line-mode {
+  color: #1a5c3a;
 }
 
 .entry-toolbar-actions {
@@ -3028,30 +3293,53 @@ body.modal-open .main-panel {
   font-weight: 700;
 }
 
-.ot-toolbar-slim {
+.ot-toolbar-slim,
+.module-toolbar-slim {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.3rem;
-  margin-bottom: 0.35rem;
+  gap: 0.28rem;
+  margin-bottom: 0.28rem;
+  row-gap: 0.22rem;
 }
 
 .ot-slim-hint {
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 600;
   white-space: nowrap;
 }
 
+.module-slim-hint {
+  flex: 1 1 7rem;
+  min-width: 0;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.module-slim-stats {
+  margin: 0 !important;
+  flex: 1 1 8rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6rem;
+  line-height: 1.2;
+  text-align: left;
+}
+
 .ot-slim-input {
   font: inherit;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  padding: 0.28rem 0.45rem;
+  padding: 0.16rem 0.4rem;
   border-radius: 999px;
   border: 1px solid rgba(28, 42, 31, 0.14);
   background: rgba(255, 255, 255, 0.78);
   color: rgba(28, 42, 31, 0.82);
-  min-height: 1.85rem;
+  min-height: 1.55rem;
   max-width: 7.5rem;
 }
 
@@ -3059,15 +3347,16 @@ body.modal-open .main-panel {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 700;
-  padding: 0.28rem 0.5rem;
+  padding: 0.16rem 0.42rem;
   border-radius: 999px;
   border: 1px solid rgba(28, 42, 31, 0.12);
   background: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  min-height: 1.55rem;
 }
 
 .ot-slim-chip:has(input:checked) {
@@ -3081,26 +3370,121 @@ body.modal-open .main-panel {
 }
 
 .ot-view-toggle-slim .ot-view-btn {
-  padding: 0.28rem 0.4rem;
-  min-width: 1.85rem;
+  padding: 0.16rem 0.32rem;
+  min-width: 1.55rem;
+  min-height: 1.55rem;
   justify-content: center;
 }
 
 .ot-summary-inline {
-  margin: 0 0 0.4rem;
-  font-size: 0.68rem;
+  margin: 0;
+  font-size: 0.6rem;
   text-align: left;
-  line-height: 1.35;
+  line-height: 1.2;
+}
+
+.stock-owner-tabs--inline {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 0.2rem;
+  margin: 0;
+}
+
+.stock-owner-tabs--inline .stock-owner-tab {
+  font-size: 0.68rem;
+  font-weight: 650;
+  padding: 0.16rem 0.48rem;
+  min-height: 1.55rem;
+}
+
+/* Forensics chips join the slim toolbar row; body wraps full-width below */
+.module-toolbar-slim .photo-forensics-panel,
+.ot-toolbar-slim .photo-forensics-panel {
+  display: contents;
+}
+
+.module-toolbar-slim .photo-forensics-bar,
+.ot-toolbar-slim .photo-forensics-bar {
+  display: contents;
+}
+
+.module-toolbar-slim .photo-forensics-hint,
+.ot-toolbar-slim .photo-forensics-hint {
+  display: none;
+}
+
+.module-toolbar-slim .photo-forensics-body,
+.ot-toolbar-slim .photo-forensics-body {
+  flex: 1 1 100%;
+  margin-top: 0.12rem;
+}
+
+.module-toolbar-slim .bulk-status-chip,
+.ot-toolbar-slim .bulk-status-chip {
+  font-size: 0.64rem;
+  padding: 0.14rem 0.4rem;
+  min-height: 1.55rem;
+}
+
+.module-toolbar-slim .error-text,
+.ot-toolbar-slim .error-text {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.62rem;
 }
 
 .prod-table {
   min-width: 38rem;
 }
 
-.prod-table.sheet-table th,
-.prod-table.sheet-table td {
-  font-size: 0.68rem;
+/*
+ * Phase 5 table layout — ผลิตสินค้า (.production-sheet).
+ * Date/row sizing from ledger-staff-sheet prototype; bleed via shared .sheet-bleed.
+ * Scoped under .production-page so OT / other modules stay untouched.
+ */
+.production-page .production-sheet .sheet-table--dense th,
+.production-page .production-sheet .sheet-table--dense td {
+  padding: 0.12rem 0.26rem;
+  line-height: 1.12;
 }
+
+.production-page .production-sheet .sheet-table .col-date {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  white-space: nowrap;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+.production-page .production-sheet .prod-table .prod-col-worker {
+  font-size: 0.62rem;
+}
+
+.production-page .production-sheet .prod-name-row .desc-link {
+  font-size: 0.66rem;
+  line-height: 1.15;
+}
+
+.production-page .production-sheet .sheet-table .col-out {
+  min-width: 2.55rem;
+  padding-left: 0.18rem;
+  padding-right: 0.28rem;
+  font-size: 0.66rem;
+}
+
+.production-page .production-sheet .sheet-table .col-note {
+  max-width: 3.6rem;
+  font-size: 0.58rem;
+}
+
+.production-page .production-sheet .bulk-check-col {
+  width: 1.45rem;
+  min-width: 1.45rem;
+  padding: 0.12rem !important;
+}
+
+/* prod density via .sheet-table--dense */
 
 .prod-table .prod-col-worker {
   min-width: 2.6rem;
@@ -3112,13 +3496,15 @@ body.modal-open .main-panel {
 }
 
 .prod-table .prod-col-product {
-  min-width: 6.25rem;
-  max-width: 9rem;
+  min-width: 5.5rem;
+  max-width: 8.5rem;
   word-break: keep-all;
-  overflow-wrap: anywhere;
-  white-space: normal;
-  line-height: 1.3;
-  vertical-align: top;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  line-height: 1.15;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .prod-table .prod-col-product .desc-with-photo {
@@ -3127,11 +3513,14 @@ body.modal-open .main-panel {
 }
 
 .prod-table .prod-col-product .desc-link {
-  min-width: 4.5rem;
+  min-width: 0;
   text-align: left;
   word-break: keep-all;
-  overflow-wrap: anywhere;
-  line-height: 1.3;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.15;
 }
 
 .prod-name-row {
@@ -3212,9 +3601,9 @@ body.modal-open .main-panel {
 
 .prod-status-pill {
   display: inline-block;
-  font-size: 0.65rem;
+  font-size: 0.55rem;
   font-weight: 700;
-  padding: 0.15rem 0.4rem;
+  padding: 0.06rem 0.28rem;
   border-radius: 999px;
   background: #fff3cd;
   color: #7a4e00;
@@ -3454,10 +3843,50 @@ body.modal-open .main-panel {
   min-width: 52rem;
 }
 
-.ot-table.sheet-table th,
-.ot-table.sheet-table td {
-  font-size: 0.65rem;
+/*
+ * Phase 6 table layout — OT (.ot-sheet-wrap).
+ * Date/row sizing from ledger-staff-sheet prototype; bleed via shared .sheet-bleed.
+ * Scoped under .ot-page so production / other modules stay untouched.
+ */
+.ot-page .ot-sheet-wrap .sheet-table--dense th,
+.ot-page .ot-sheet-wrap .sheet-table--dense td {
+  padding: 0.12rem 0.26rem;
+  line-height: 1.12;
 }
+
+.ot-page .ot-sheet-wrap .ot-table .ot-col-date {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ot-page .ot-sheet-wrap .ot-table .ot-col-worker {
+  font-size: 0.62rem;
+}
+
+.ot-page .ot-sheet-wrap .ot-table .ot-col-shift {
+  font-size: 0.58rem;
+}
+
+.ot-page .ot-sheet-wrap .ot-table .col-out {
+  min-width: 2.35rem;
+  padding-left: 0.14rem;
+  padding-right: 0.22rem;
+  font-size: 0.66rem;
+}
+
+.ot-page .ot-sheet-wrap .ot-table .col-note {
+  max-width: 3.4rem;
+  font-size: 0.58rem;
+}
+
+.ot-page .ot-list .ot-card-meta {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ot density via .sheet-table--dense */
 
 .ot-table .ot-th-staff {
   background: #b7e4c0;
@@ -3539,9 +3968,13 @@ body.modal-open .main-panel {
 }
 
 .ot-worker-names {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 600;
-  word-break: break-word;
+  word-break: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .ot-worker-meta {
@@ -3602,11 +4035,11 @@ body.modal-open .main-panel {
 
 .ot-day-summary td {
   background: rgba(149, 213, 178, 0.22);
-  font-size: 0.68rem;
+  font-size: 0.6rem;
   font-weight: 700;
   color: #1b4332;
   text-align: left;
-  padding: 0.35rem 0.5rem;
+  padding: 0.18rem 0.35rem;
 }
 
 .ot-table tr.ot-slot-empty td {
@@ -3620,10 +4053,10 @@ body.modal-open .main-panel {
 }
 
 .ot-slot-edit-btn {
-  font-size: 0.62rem;
+  font-size: 0.56rem;
   font-weight: 700;
-  padding: 0.2rem 0.45rem;
-  min-height: 1.6rem;
+  padding: 0.1rem 0.32rem;
+  min-height: 1.3rem;
   border-radius: 999px;
   white-space: nowrap;
 }
@@ -3946,23 +4379,25 @@ body.modal-open .main-panel {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.28rem;
+  margin-bottom: 0.28rem;
 }
 
 .check-filter-pills {
   display: inline-flex;
-  gap: 0.2rem;
+  gap: 0.18rem;
 }
 
 .check-filter-pill {
   border: 1px solid rgba(28, 42, 31, 0.12);
   border-radius: 999px;
-  padding: 0.2rem 0.55rem;
+  padding: 0.14rem 0.45rem;
   font: inherit;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 600;
   background: rgba(255, 255, 255, 0.75);
   cursor: pointer;
+  min-height: 1.55rem;
 }
 
 .check-filter-pill.is-active {
@@ -3972,20 +4407,43 @@ body.modal-open .main-panel {
 }
 
 .check-history-stats {
-  flex: 1 1 100%;
+  flex: 1 1 auto;
   margin: 0;
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   text-align: left;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .check-history-hint {
-  margin: 0 0 0.35rem;
-  font-size: 0.62rem;
+  margin: 0 0 0.28rem;
+  font-size: 0.6rem;
   text-align: left;
 }
 
 .check-history-wrap {
   margin-top: 0.15rem;
+}
+
+/*
+ * Phase 7 table layout — เช็ค (.check-history-sheet).
+ * Date/row sizing from ledger-staff-sheet prototype; bleed via shared .sheet-bleed.
+ * Scoped under .check-page so other modules stay untouched.
+ */
+.check-page .check-history-sheet .sheet-table--dense th,
+.check-page .check-history-sheet .sheet-table--dense td {
+  padding: 0.1rem 0.22rem;
+  line-height: 1.12;
+}
+
+.check-page .check-history-sheet .check-history-th-date,
+.check-page .check-history-sheet .check-history-date {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .check-history-table {
@@ -4001,7 +4459,7 @@ body.modal-open .main-panel {
 }
 
 .check-history-th-date {
-  width: 3.1rem;
+  width: 3.55rem;
   text-align: left;
   position: sticky;
   left: 0;
@@ -4034,10 +4492,11 @@ body.modal-open .main-panel {
 .check-history-today-tag,
 .check-history-missing-tag,
 .check-history-future-tag {
-  display: block;
-  font-size: 0.5rem;
+  display: inline;
+  margin-left: 0.22rem;
+  font-size: 0.48rem;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
 .check-history-today-tag {
@@ -4081,13 +4540,17 @@ body.modal-open .main-panel {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 1.55rem;
+  min-height: 1.2rem;
   border: none;
-  border-radius: 0.35rem;
-  padding: 0.12rem 0.08rem;
+  border-radius: 0.28rem;
+  padding: 0.06rem 0.06rem;
   font: inherit;
   cursor: pointer;
   text-align: center;
+}
+
+.check-history-cell .check-history-meta {
+  display: none;
 }
 
 .check-history-cell.is-pending {
@@ -4301,6 +4764,25 @@ body.modal-open .main-panel {
   overflow-x: auto;
 }
 
+/*
+ * Phase 9 table layout — สต็อก (.stock-history-sheet).
+ * Date/row sizing from ledger-staff-sheet prototype; bleed via shared .sheet-bleed.
+ * Scoped under .stock-page so other modules stay untouched.
+ */
+.stock-page .stock-history-sheet .sheet-table--dense th,
+.stock-page .stock-history-sheet .sheet-table--dense td {
+  padding: 0.1rem 0.2rem;
+  line-height: 1.12;
+}
+
+.stock-page .stock-history-sheet .stock-history-th-date,
+.stock-page .stock-history-sheet .stock-history-date {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 5.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .stock-history-table {
   min-width: max-content;
 }
@@ -4314,7 +4796,7 @@ body.modal-open .main-panel {
 }
 
 .stock-history-th-date {
-  width: 4.2rem;
+  width: 3.55rem;
   text-align: left;
   position: sticky;
   left: 0;
@@ -4343,18 +4825,41 @@ body.modal-open .main-panel {
   text-align: left;
 }
 
+.stock-history-round-btn {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0.22rem;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+
 .stock-history-meta-inline {
-  display: block;
+  display: inline;
+  margin-left: 0.22rem;
   font-size: 0.48rem;
   font-weight: 500;
   color: rgba(28, 42, 31, 0.52);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stock-history-missing-tag {
-  display: block;
+  display: inline;
   font-size: 0.48rem;
   font-weight: 600;
   color: #c45a1a;
+  white-space: nowrap;
 }
 
 .stock-history-row-missing {
@@ -4369,13 +4874,13 @@ body.modal-open .main-panel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2rem;
-  min-height: 1.4rem;
+  min-width: 1.85rem;
+  min-height: 1.15rem;
   border: none;
-  border-radius: 0.3rem;
-  padding: 0.1rem 0.15rem;
+  border-radius: 0.25rem;
+  padding: 0.05rem 0.12rem;
   font: inherit;
-  font-size: 0.58rem;
+  font-size: 0.56rem;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
 }
@@ -4950,12 +5455,6 @@ body.modal-open .main-panel {
   margin-bottom: 0.55rem;
 }
 
-.bonus-toggle-all {
-  width: 100%;
-  margin-bottom: 0.5rem;
-  font-size: 0.78rem;
-}
-
 .bonus-footnote {
   margin: 0.65rem 0 0;
   font-size: 0.65rem;
@@ -5065,10 +5564,7 @@ body.modal-open .main-panel {
   font-weight: 700;
 }
 
-.bonus-table th,
-.bonus-table td {
-  font-size: 0.68rem;
-}
+/* bonus density via .sheet-table--dense */
 
 .bonus-th-name {
   text-align: left;
@@ -5118,25 +5614,260 @@ body.modal-open .main-panel {
 .payroll-summary-bar {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.55rem;
-  margin-bottom: 0.75rem;
+  gap: 0.4rem;
+  margin-bottom: 0.55rem;
+}
+
+.payroll-summary-bar--solo {
+  grid-template-columns: 1fr;
 }
 
 .payroll-summary-bar > div {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.55rem 0.65rem;
-  border-radius: 0.75rem;
-  background: rgba(149, 213, 178, 0.18);
+  gap: 0.1rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.45rem;
+  background: rgba(149, 213, 178, 0.14);
 }
 
 .payroll-summary-bar strong {
-  font-size: 1.05rem;
+  font-size: 0.98rem;
+}
+
+.payroll-sheet {
+  margin-top: 0.35rem;
+  border: 1px solid var(--tea-line);
+  border-radius: 0.45rem;
+  overflow: auto;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+/*
+ * Phase 10 table layout — เงินเดือน / เรท (.payroll-sheet, .bonus-rate-*).
+ * Date/row sizing from ledger-staff-sheet prototype; bleed via shared .sheet-bleed.
+ * Scoped under .bonus-page so other modules stay untouched.
+ */
+.bonus-page .payroll-sheet .sheet-table--dense th,
+.bonus-page .payroll-sheet .sheet-table--dense td {
+  padding: 0.18rem 0.3rem;
+  line-height: 1.15;
+}
+
+.bonus-page .payroll-sheet .payroll-col-due {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.66rem;
+}
+
+.bonus-page .payroll-sheet .payroll-col-name,
+.bonus-page .payroll-sheet .payroll-col-kind {
+  font-size: 0.66rem;
+}
+
+.bonus-page .payroll-sheet .payroll-cell-meta {
+  font-size: 0.58rem;
+}
+
+.bonus-page .bonus-rate-current-wrap .sheet-table--dense th,
+.bonus-page .bonus-rate-current-wrap .sheet-table--dense td,
+.bonus-page .bonus-rate-history-wrap .sheet-table--dense th,
+.bonus-page .bonus-rate-history-wrap .sheet-table--dense td {
+  padding: 0.18rem 0.3rem;
+  line-height: 1.15;
+}
+
+.bonus-page .bonus-rate-current-table td:nth-child(3),
+.bonus-page .bonus-rate-history-table td:nth-child(2) {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.66rem;
+}
+
+.payroll-table.sheet-table {
+  min-width: 28rem;
+  margin: 0;
+}
+
+.payroll-table.sheet-table th,
+.payroll-table.sheet-table td {
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.payroll-table--self {
+  min-width: 0;
+  width: 100%;
+}
+
+.payroll-table--self th[scope="row"] {
+  width: 7.5rem;
+  text-align: left;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.72);
+  white-space: normal;
+}
+
+.payroll-table--self td {
+  white-space: normal;
+}
+
+.payroll-col-name {
+  min-width: 5.5rem;
+  white-space: normal !important;
+}
+
+.payroll-col-kind {
+  min-width: 4.2rem;
+}
+
+.payroll-col-status {
+  width: 3.6rem;
+}
+
+.payroll-col-due {
+  width: 3.55rem;
+}
+
+.payroll-col-amt {
+  width: 4.5rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.payroll-col-split,
+.payroll-col-adv {
+  width: 4.2rem;
+  text-align: right;
+}
+
+.payroll-col-slip {
+  width: 3.2rem;
+  text-align: center;
+}
+
+.payroll-history-pick {
+  max-width: 18rem;
+  margin: 0 0 0.55rem;
+}
+
+.payroll-history-table .payroll-history-month td {
+  vertical-align: top;
+}
+
+.payroll-history-table tr.is-detail td {
+  background: rgba(45, 106, 79, 0.04);
+  font-size: 0.78rem;
+}
+
+.bonus-evidence-panel {
+  margin: 0.85rem 0 1rem;
+  padding: 0.75rem 0.85rem 0.9rem;
+  border: 1px solid var(--tea-line);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.bonus-evidence-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.bonus-evidence-hint,
+.bonus-evidence-empty {
+  margin: 0.25rem 0 0.55rem;
+  font-size: 0.78rem;
+}
+
+.bonus-evidence-note {
+  margin: 0 0 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.bonus-evidence-staff-photos {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.payroll-col-act {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.payroll-cell-meta {
+  font-size: 0.66rem;
+  line-height: 1.25;
+  margin-top: 0.1rem;
+  white-space: normal;
+}
+
+.payroll-tr.status-paid {
+  opacity: 0.72;
+}
+
+.payroll-tr.status-void {
+  opacity: 0.5;
+}
+
+.payroll-tr.is-missing-salary td {
+  background: rgba(244, 162, 97, 0.08);
+}
+
+.payroll-tr.is-expanded td {
+  background: rgba(45, 106, 79, 0.06);
+}
+
+.payroll-inline-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: flex-end;
+}
+
+.payroll-table-btn {
+  padding: 0.2rem 0.4rem !important;
+  font-size: 0.7rem !important;
+  min-height: 0 !important;
+  border-radius: 0.35rem !important;
+}
+
+.payroll-salary-edit-title {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.15rem;
 }
 
 .payroll-actions {
   margin-bottom: 0.75rem;
+}
+
+.payroll-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.payroll-special-skip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0.55rem 0 0.35rem;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.payroll-special-skip input {
+  margin-top: 0.15rem;
 }
 
 .payroll-actions-hint,
@@ -5146,57 +5877,13 @@ body.modal-open .main-panel {
   line-height: 1.35;
 }
 
-.payroll-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.payroll-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  padding: 0.65rem 0.7rem;
-  border: 1px solid var(--tea-line);
-  border-radius: 0.8rem;
-  background: rgba(255, 255, 255, 0.45);
-}
-
-.payroll-row.status-paid {
-  opacity: 0.72;
-}
-
-.payroll-row.status-void {
-  opacity: 0.5;
-}
-
-.payroll-row-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  align-items: baseline;
-}
-
-.payroll-row-meta {
-  font-size: 0.72rem;
-  line-height: 1.35;
-}
-
-.payroll-row-amt {
-  font-weight: 800;
-  font-size: 1.05rem;
-  margin-top: 0.15rem;
-}
-
 .payroll-status {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 700;
-  padding: 0.12rem 0.4rem;
-  border-radius: 0.45rem;
+  padding: 0.08rem 0.32rem;
+  border-radius: 0.3rem;
   background: rgba(244, 162, 97, 0.25);
+  display: inline-block;
 }
 
 .payroll-status.status-paid {
@@ -5205,12 +5892,6 @@ body.modal-open .main-panel {
 
 .payroll-status.status-void {
   background: rgba(120, 120, 120, 0.18);
-}
-
-.payroll-row-actions {
-  display: flex;
-  gap: 0.35rem;
-  justify-content: flex-end;
 }
 
 .payroll-settings-grid {
@@ -5265,51 +5946,14 @@ body.modal-open .main-panel {
   margin: 0;
 }
 
-.payroll-salary-list,
-.payroll-salary-readonly {
-  list-style: none;
-  margin: 0.55rem 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.payroll-salary-readonly li {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.45rem 0;
-  border-bottom: 1px solid var(--tea-line);
-  font-size: 0.85rem;
-}
-
-.payroll-salary-row {
-  padding: 0.65rem 0.7rem;
-  border: 1px solid var(--tea-line);
-  border-radius: 0.8rem;
-  background: rgba(255, 255, 255, 0.45);
-}
-
-.payroll-salary-row-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.payroll-salary-meta {
-  font-size: 0.72rem;
-  margin-top: 0.15rem;
-  line-height: 1.35;
-}
-
 .payroll-salary-edit {
   display: grid;
   gap: 0.45rem;
-  margin-top: 0.65rem;
-  padding-top: 0.55rem;
-  border-top: 1px dashed var(--tea-line);
+  margin-top: 0.55rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--tea-line);
+  border-radius: 0.45rem;
+  background: rgba(255, 255, 255, 0.45);
 }
 
 .payroll-settings-foot {
@@ -5353,6 +5997,43 @@ body.modal-open .main-panel {
   box-shadow: 0 10px 30px rgba(28, 42, 31, 0.06);
 }
 
+/* Shared: edge-bleed + dense cells (ledger-style) — CSS only, no logic change */
+.sheet-bleed {
+  margin-left: -1rem;
+  margin-right: -1rem;
+  width: calc(100% + 2rem);
+  max-width: none;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  box-shadow: none;
+}
+
+.sheet-table--dense {
+  font-size: 0.66rem;
+}
+
+.sheet-table--dense th,
+.sheet-table--dense td {
+  padding: 0.16rem 0.28rem;
+  line-height: 1.15;
+}
+
+.sheet-table--dense th {
+  font-size: 0.6rem;
+}
+
+.sheet-table--dense .col-date {
+  font-size: 0.6rem;
+}
+
+.sheet-table--dense input[type="checkbox"] {
+  width: 0.85rem;
+  height: 0.85rem;
+  min-width: 0.85rem;
+  min-height: 0.85rem;
+}
+
 .sheet-table {
   width: 100%;
   border-collapse: collapse;
@@ -5392,10 +6073,24 @@ body.modal-open .main-panel {
 }
 
 .sheet-table .col-date {
-  width: 2.9rem;
+  width: 3.4rem;
+  min-width: 3.4rem;
   white-space: nowrap;
   color: rgba(28, 42, 31, 0.6);
   font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+
+.sheet-date-cell {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+  font-weight: inherit;
+}
+
+.sheet-table--dense .sheet-date-cell {
+  font-size: 0.6rem;
 }
 
 .sheet-table .col-desc {
@@ -6530,6 +7225,26 @@ body.modal-open .main-panel {
   background: linear-gradient(180deg, transparent, rgba(247, 243, 232, 0.96) 28%);
 }
 
+.entry-actions--inline {
+  display: flex;
+  flex-wrap: wrap;
+  position: static;
+  grid-template-columns: unset;
+  margin-top: 0;
+  padding: 0;
+  background: none;
+  gap: 0.35rem;
+}
+
+.entry-actions--inline .ghost-btn,
+.entry-actions--inline .primary-btn {
+  width: auto;
+  min-width: 0;
+  min-height: 2.15rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.82rem;
+}
+
 .entry-actions .primary-btn {
   width: 100%;
   min-height: 2.6rem;
@@ -6539,6 +7254,273 @@ body.modal-open .main-panel {
   min-width: 4.5rem;
   min-height: 2.6rem;
   padding: 0.55rem 0.85rem;
+}
+
+/*
+ * Compact popup pattern — ledger first; reuse on other modals via .is-compact-form
+ * Keep touch targets ≥ ~2.15rem so staff can tap reliably on phones.
+ */
+.modal-backdrop.edit-modal.is-compact-form .modal-card {
+  width: min(100%, 21.5rem);
+  max-height: min(86dvh, 34rem);
+  padding: 0.5rem 0.65rem 0.35rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .module-form-head .panel-title {
+  font-size: 0.9rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .entry-detail-meta {
+  margin: -0.05rem 0 0.35rem;
+  font-size: 0.66rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .entry-form .field {
+  margin-bottom: 0.32rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .entry-form .field label,
+.modal-backdrop.edit-modal.is-compact-form .entry-form .field-label {
+  font-size: 0.74rem;
+  margin-bottom: 0.18rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .entry-form .field input,
+.modal-backdrop.edit-modal.is-compact-form .entry-form .field select,
+.modal-backdrop.edit-modal.is-compact-form .entry-form .field textarea {
+  min-height: 2.2rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .suggest-list {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 0.28rem;
+  margin-top: 0.3rem;
+  padding-bottom: 0.1rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .suggest-chip {
+  flex-shrink: 0;
+  padding: 0.28rem 0.5rem;
+  font-size: 0.74rem;
+  min-height: 1.85rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .form-hint-inline {
+  margin: 0 0 0.28rem;
+  font-size: 0.68rem;
+  line-height: 1.3;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .photo-attach-field .receipt-actions .primary-btn,
+.modal-backdrop.edit-modal.is-compact-form .photo-attach-field .receipt-actions .ghost-btn {
+  min-height: 2.2rem;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.84rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .photo-attach-multi-grid .photo-attach-preview {
+  max-height: 3.6rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .entry-vat-box,
+.modal-backdrop.edit-modal.is-compact-form .owner-vat-box {
+  margin: 0.25rem 0 0.4rem;
+  padding: 0.4rem 0.5rem 0.35rem;
+  border-radius: 0.5rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .entry-vat-box legend,
+.modal-backdrop.edit-modal.is-compact-form .owner-vat-box legend {
+  font-size: 0.74rem;
+  padding: 0 0.25rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .owner-vat-toggle {
+  font-size: 0.8rem;
+  gap: 0.4rem;
+  min-height: 2.15rem;
+  align-items: center;
+  padding: 0.15rem 0;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .owner-vat-toggle input {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .ledger-type-ai-card {
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.55rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .ledger-type-ai-head {
+  font-size: 0.7rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .ledger-type-ai-value {
+  margin: 0.15rem 0 0;
+  font-size: 0.86rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .ledger-type-ai-reason {
+  font-size: 0.72rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .ledger-type-ai-hint {
+  margin: 0.2rem 0 0;
+  font-size: 0.68rem;
+  line-height: 1.3;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .ledger-type-reset-ai {
+  min-height: 2.15rem;
+  margin-top: 0.3rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .ledger-ai-use-images {
+  font-size: 0.78rem;
+  gap: 0.4rem;
+  min-height: 2.2rem;
+  align-items: center;
+  margin: 0 0 0.4rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .ledger-ai-use-images input {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .entry-actions:not(.entry-actions--inline) {
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  padding: 0.45rem 0 calc(0.28rem + var(--safe-bottom));
+}
+
+.modal-backdrop.edit-modal.is-compact-form .entry-actions:not(.entry-actions--inline) .primary-btn,
+.modal-backdrop.edit-modal.is-compact-form .entry-actions:not(.entry-actions--inline) .ghost-btn {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.88rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .entry-toolbar-actions .trash-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  min-height: 2.25rem;
+}
+
+.modal-backdrop.edit-modal.is-compact-form .entry-toolbar-actions .icon-btn {
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+}
+
+/* Staff VAT-first gate — cash-out create only */
+.vat-first-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.15rem 0 0.35rem;
+  text-align: left;
+}
+
+.vat-first-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.92);
+}
+
+.vat-first-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.vat-first-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.vat-first-actions .primary-btn,
+.vat-first-actions .ghost-btn {
+  min-height: 2.35rem;
+  width: 100%;
+  font-size: 0.88rem;
+}
+
+.vat-first-cancel {
+  min-height: 2.15rem;
+  width: 100%;
+}
+
+.vat-first-status {
+  margin: 0;
+  font-size: 0.72rem;
+}
+
+.vat-first-confirm,
+.vat-first-manual {
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(40, 90, 60, 0.28);
+  background: rgba(40, 90, 60, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.vat-first-confirm-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: rgba(28, 42, 31, 0.62);
+}
+
+.vat-first-confirm-amount {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #1a5c3a;
+}
+
+.vat-first-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+
+.vat-first-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin: 0 0 0.45rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.45rem;
+  background: rgba(183, 228, 192, 0.35);
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: #1b4332;
+}
+
+.vat-first-summary-no {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
 }
 
 .trash-btn {
@@ -9064,6 +10046,17 @@ body.modal-open .main-panel {
   font-weight: 700;
 }
 
+.pnl-cat-vat-hint {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+  text-align: left;
+}
+
+.pnl-vat-cell {
+  color: #5b21b6;
+  font-weight: 650;
+}
+
 .pnl-staff .pnl-block-title {
   color: #9a3412;
 }
@@ -9078,7 +10071,6 @@ body.modal-open .main-panel {
 
 .pnl-table {
   min-width: 0;
-  font-size: 0.78rem;
 }
 
 .pnl-table .col-num {
@@ -9092,7 +10084,11 @@ body.modal-open .main-panel {
 }
 
 .pnl-wide {
-  min-width: 860px;
+  min-width: 1080px;
+}
+
+.pnl-cat-vat-table {
+  min-width: 32rem;
 }
 
 .pnl-income-cell {
@@ -9101,14 +10097,14 @@ body.modal-open .main-panel {
 
 .pnl-income-input {
   width: 100%;
-  min-height: 2rem;
-  border-radius: 0.45rem;
+  min-height: 1.65rem;
+  border-radius: 0.35rem;
   border: 1px solid var(--tea-line);
   background: rgba(255, 255, 255, 0.95);
-  padding: 0.25rem 0.35rem;
+  padding: 0.12rem 0.28rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
-  font-size: 0.78rem;
+  font-size: 0.66rem;
 }
 
 /* ── Assigned tasks (/tasks/) ── */
@@ -9166,22 +10162,56 @@ body.modal-open .main-panel {
   margin-bottom: 0.35rem;
 }
 
+/*
+ * Phase 8 table layout — งาน (.tasks-sheet).
+ * Date/row sizing from ledger-staff-sheet prototype; bleed via shared .sheet-bleed.
+ * Scoped under .tasks-page so other modules stay untouched.
+ */
+.tasks-page .tasks-sheet .sheet-table--dense th,
+.tasks-page .tasks-sheet .sheet-table--dense td {
+  padding: 0.18rem 0.3rem;
+  line-height: 1.15;
+}
+
+.tasks-page .tasks-sheet .tasks-col-due {
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tasks-page .tasks-sheet .tasks-due-main {
+  font-size: 0.66rem;
+}
+
+.tasks-page .tasks-sheet .tasks-due-sub {
+  font-size: 0.58rem;
+}
+
+.tasks-page .tasks-sheet .tasks-col-title {
+  font-size: 0.66rem;
+  min-width: 0;
+}
+
+.tasks-page .tasks-sheet .tasks-col-who,
+.tasks-page .tasks-sheet .tasks-col-check,
+.tasks-page .tasks-sheet .tasks-col-note {
+  font-size: 0.62rem;
+}
+
 .tasks-table.sheet-table {
-  font-size: 0.78rem;
   min-width: 36rem;
 }
 
 .tasks-table.sheet-table th,
 .tasks-table.sheet-table td {
-  padding: 0.32rem 0.35rem;
   vertical-align: top;
   white-space: normal;
   word-break: break-word;
-  line-height: 1.35;
 }
 
 .tasks-table.sheet-table th {
-  font-size: 0.7rem;
   white-space: nowrap;
 }
 
@@ -9211,7 +10241,7 @@ body.modal-open .main-panel {
 }
 
 .tasks-col-due {
-  width: 4.2rem;
+  width: 3.55rem;
   white-space: nowrap;
 }
 
@@ -9510,10 +10540,260 @@ body.modal-open .main-panel {
   color: #a71d2a;
 }
 
-.tasks-template-bar {
-  margin: 0.35rem 0 0.55rem;
+.tasks-owner-timeline {
+  margin: 0.2rem 0 0.45rem;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.55);
+  overflow: hidden;
 }
 
+.tasks-owner-timeline-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.28rem 0.5rem 0.15rem;
+}
+
+.tasks-owner-timeline-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--tea-leaf);
+}
+
+.tasks-owner-timeline-hint {
+  font-size: 0.62rem;
+  font-weight: 500;
+}
+
+.tasks-timeline-sheet {
+  margin: 0;
+  max-height: 11.5rem;
+  overflow: auto;
+}
+
+.tasks-timeline-table.sheet-table {
+  min-width: 28rem;
+}
+
+.tasks-page .tasks-timeline-sheet .sheet-table--dense th,
+.tasks-page .tasks-timeline-sheet .sheet-table--dense td {
+  padding: 0.12rem 0.28rem;
+  font-size: 0.62rem;
+  line-height: 1.2;
+  vertical-align: middle;
+}
+
+.tasks-timeline-title {
+  font-weight: 700;
+  max-width: 7.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tasks-timeline-who,
+.tasks-timeline-note {
+  max-width: 5.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tasks-timeline-when {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tasks-timeline-kind,
+.tasks-timeline-status {
+  display: inline-block;
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 0.08rem 0.28rem;
+  border-radius: 0.28rem;
+  white-space: nowrap;
+}
+
+.tasks-timeline-kind.is-soft {
+  background: rgba(74, 107, 62, 0.12);
+  color: #2d6a4f;
+}
+
+.tasks-timeline-kind.is-deadline {
+  background: rgba(193, 18, 31, 0.1);
+  color: #a71d2a;
+}
+
+.tasks-timeline-status.is-pending {
+  background: rgba(255, 193, 7, 0.18);
+  color: #7a5a00;
+}
+
+.tasks-timeline-status.is-waiting {
+  background: rgba(13, 110, 253, 0.12);
+  color: #0b5ed7;
+}
+
+.tasks-timeline-status.is-missed {
+  background: rgba(220, 53, 69, 0.12);
+  color: #a71d2a;
+}
+
+.tasks-timeline-status.is-done {
+  background: rgba(45, 106, 79, 0.12);
+  color: #1b4332;
+}
+
+.tasks-status-pill.is-waiting {
+  background: rgba(13, 110, 253, 0.12);
+  color: #0b5ed7;
+}
+
+.tasks-row.is-waiting .tasks-title-text,
+.tasks-row.is-waiting .tasks-title-link {
+  color: #0b5ed7;
+}
+
+.tasks-timeline-proof-btn {
+  font-size: 0.6rem;
+  min-height: 1.35rem;
+  padding: 0.12rem 0.35rem;
+  gap: 0.15rem;
+}
+
+.tasks-completion-note {
+  width: 100%;
+  resize: vertical;
+  min-height: 2.6rem;
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.tasks-template-bar {
+  margin: 0.25rem 0 0.4rem;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.55);
+  overflow: hidden;
+}
+
+.tasks-template-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.32rem 0.5rem;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--tea-leaf);
+  cursor: pointer;
+  text-align: left;
+  min-height: 1.9rem;
+}
+
+.tasks-template-toggle-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tasks-template-toggle-hint {
+  font-weight: 500;
+  font-size: 0.64rem;
+}
+
+.tasks-template-toggle-meta {
+  flex-shrink: 0;
+  font-size: 0.64rem;
+  font-weight: 600;
+  opacity: 0.72;
+}
+
+.tasks-template-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.3rem 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-height: 9.5rem;
+  overflow: auto;
+}
+
+.tasks-template-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  min-height: 1.65rem;
+  padding: 0.12rem 0.25rem;
+  border-radius: 0.35rem;
+  background: rgba(74, 107, 62, 0.08);
+}
+
+.tasks-template-row-main {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.tasks-template-row-day {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 800;
+  width: 1.35rem;
+  text-align: center;
+  color: rgba(27, 67, 50, 0.85);
+}
+
+.tasks-template-row-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(28, 42, 31, 0.92);
+}
+
+.tasks-template-row-acts {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.12rem;
+  flex-shrink: 0;
+}
+
+.tasks-template-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.12rem;
+  border: 0;
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(28, 42, 31, 0.78);
+  font: inherit;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.18rem 0.28rem;
+  border-radius: 0.3rem;
+  cursor: pointer;
+  min-height: 1.35rem;
+}
+
+.tasks-template-act.is-danger {
+  color: #a71d2a;
+  background: rgba(220, 53, 69, 0.1);
+}
+
+/* legacy chips (unused) kept harmless if referenced */
 .tasks-template-chips {
   display: flex;
   flex-wrap: wrap;
@@ -9533,18 +10813,7 @@ body.modal-open .main-panel {
   color: var(--tea-leaf);
 }
 
-.tasks-template-off {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  color: inherit;
-  opacity: 0.65;
-  cursor: pointer;
-  padding: 0;
-}
-
+.tasks-template-off,
 .tasks-template-edit {
   display: inline-flex;
   align-items: center;
@@ -9552,7 +10821,7 @@ body.modal-open .main-panel {
   border: none;
   background: transparent;
   color: inherit;
-  opacity: 0.75;
+  opacity: 0.7;
   cursor: pointer;
   padding: 0;
 }
@@ -16428,6 +17697,17 @@ body.modal-open .main-panel {
   white-space: nowrap;
 }
 
+/*
+ * Phase 11–13 table layout — VAT date/time columns (พ.ศ. via shared formatters).
+ * Scoped under .vat-sales-page; other modules stay untouched.
+ */
+.vat-sales-page .vat-sales-table--slim .col-date,
+.vat-sales-page .vat-mail-table.vat-sales-table--slim .col-date {
+  min-width: 3.55rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .vat-sales-table--slim .col-date {
   width: 1.55rem;
   padding-left: 0.16rem;
@@ -16508,7 +17788,8 @@ body.modal-open .main-panel {
 }
 
 .vat-mail-table.vat-sales-table--slim .col-date {
-  width: 3.4rem;
+  width: 3.55rem;
+  min-width: 3.55rem;
 }
 
 .vat-mail-table.vat-sales-table--slim .col-act {
@@ -17176,6 +18457,127 @@ a.ghost-btn {
   margin-bottom: 0.65rem;
 }
 
+/* A) แถบส่งหน้าร้าน → ตาราง — แถวเดียว กระชับ */
+.vat-sf-send {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.1rem 0 0.35rem;
+  min-height: 1.45rem;
+  font-size: 0.68rem;
+  line-height: 1.1;
+  color: rgba(28, 42, 31, 0.78);
+}
+
+.vat-sf-send-label {
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 0.66rem;
+}
+
+.vat-sf-send-input {
+  width: 5.4rem;
+  min-height: 1.35rem !important;
+  height: 1.35rem;
+  padding: 0.1rem 0.28rem !important;
+  font-size: 0.68rem !important;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.vat-sf-send-range {
+  flex: 1 1 5rem;
+  min-width: 4.5rem;
+  max-width: 11rem;
+  height: 0.9rem;
+  margin: 0;
+  accent-color: #2f6b4f;
+  cursor: pointer;
+}
+
+.vat-sf-send-range:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.vat-sf-send-pct {
+  flex-shrink: 0;
+  min-width: 2.1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 0.66rem;
+  text-align: right;
+}
+
+.vat-sf-send-out {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: #1b4332;
+  white-space: nowrap;
+}
+
+.vat-sf-send-unsent {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.64rem;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.55);
+  white-space: nowrap;
+}
+
+.vat-c-real-note {
+  font-size: 0.7rem !important;
+  line-height: 1.35;
+}
+
+.vat-c-real-sep {
+  margin: 0 0.28rem;
+  opacity: 0.45;
+}
+
+.vat-month-books .vat-cost-layer-head td {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.72);
+  padding-top: 0.35rem !important;
+  border-top: 1px dashed rgba(28, 42, 31, 0.14);
+}
+
+.vat-month-books .vat-cost-layer td {
+  font-size: 0.62rem;
+  line-height: 1.25;
+  color: rgba(28, 42, 31, 0.68);
+}
+
+.vat-month-books .vat-cost-layer-sub {
+  font-size: 0.58rem;
+  font-weight: 500;
+}
+
+.vat-include-input-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.35rem;
+  margin: 0.35rem 0 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: rgba(28, 42, 31, 0.82);
+  cursor: pointer;
+}
+
+.vat-include-input-toggle input:disabled {
+  cursor: not-allowed;
+}
+
+.vat-include-input-toggle .muted {
+  font-weight: 500;
+  font-size: 0.64rem;
+}
+
 .vat-net-strip {
   display: flex;
   flex-wrap: wrap;
@@ -17281,6 +18683,10 @@ a.ghost-btn {
 
 .vat-import-row--empty td {
   background: rgba(28, 42, 31, 0.02);
+}
+
+.vat-import-row--skipped td {
+  opacity: 0.55;
 }
 
 /* AI-only scratchpad: full text in DOM, nearly invisible to humans */
@@ -18046,6 +19452,47 @@ a.ghost-btn {
   margin-top: 0.45rem;
 }
 
+/* รายการสองบช. ในงบเดือน — ฟอนต์ให้เข้าตาราง slim */
+.vat-month-books .vat-claim-all,
+.vat-month-books .vat-claim-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.2;
+  max-width: 100%;
+}
+
+.vat-month-books .vat-books-line-btn {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vat-month-books .vat-books-line-row td {
+  font-size: 0.68rem;
+}
+
+.vat-month-books .vat-claim-check {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+}
+
 .vat-books-breakdown-head {
   display: flex;
   align-items: center;
@@ -18197,6 +19644,191 @@ a.ghost-btn {
 
 
 /* —— ตารางเทียบเงินนำเข้า (หุบบน /ledger/) —— */
+/*
+ * Ledger ops duo — เทียบเงินเข้า + แจ้งบิล side-by-side on phone & desktop.
+ * Each half scrolls its own sheet; amount cols never ellipsis.
+ */
+.ledger-ops-duo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.3rem;
+  margin: 0 0 0.45rem;
+  align-items: start;
+}
+
+.ledger-ops-duo > .cash-in-panel,
+.ledger-ops-duo > .bill-notice-panel {
+  margin: 0;
+  min-width: 0;
+  border-radius: 0.55rem;
+}
+
+.ledger-ops-duo .cash-in-panel-toggle,
+.ledger-ops-duo .bill-notice-panel-toggle {
+  padding: 0.38rem 0.45rem;
+  gap: 0.28rem;
+}
+
+.ledger-ops-duo .cash-in-panel-title,
+.ledger-ops-duo .bill-notice-panel-title {
+  font-size: 0.72rem;
+  line-height: 1.15;
+}
+
+.ledger-ops-duo .cash-in-panel-meta,
+.ledger-ops-duo .bill-notice-panel-meta {
+  font-size: 0.58rem;
+  line-height: 1.15;
+}
+
+.ledger-ops-duo .cash-in-panel-body,
+.ledger-ops-duo .bill-notice-panel-body {
+  padding: 0 0.4rem 0.4rem;
+}
+
+.ledger-ops-duo .cash-in-hint,
+.ledger-ops-duo .bill-notice-hint {
+  display: none;
+}
+
+.ledger-ops-duo .cash-in-create-bar {
+  gap: 0.22rem;
+  margin: 0.28rem 0 0.3rem;
+}
+
+.ledger-ops-duo .cash-in-create-field {
+  font-size: 0.58rem;
+}
+
+.ledger-ops-duo .cash-in-create-field input {
+  min-height: 1.45rem;
+  padding: 0.1rem 0.22rem;
+  font-size: 0.66rem;
+  max-width: 7.2rem;
+}
+
+.ledger-ops-duo .cash-in-create-days input {
+  max-width: 2.6rem;
+}
+
+.ledger-ops-duo .cash-in-create-btn {
+  min-height: 1.45rem;
+  padding: 0.12rem 0.42rem;
+  font-size: 0.68rem;
+}
+
+.ledger-ops-duo .cash-in-round-chips {
+  gap: 0.18rem;
+  margin: 0 0 0.28rem;
+}
+
+.ledger-ops-duo .cash-in-round-chip {
+  min-height: 1.35rem;
+  padding: 0.08rem 0.32rem;
+  font-size: 0.6rem;
+}
+
+.ledger-ops-duo .cash-in-panel-table-wrap,
+.ledger-ops-duo .bill-notice-panel-table-wrap {
+  margin: 0.15rem -0.4rem 0.25rem;
+  width: calc(100% + 0.8rem);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ledger-ops-duo .cash-in-slim,
+.ledger-ops-duo .bill-notice-slim {
+  font-size: 0.58rem;
+}
+
+.ledger-ops-duo .cash-in-slim th,
+.ledger-ops-duo .cash-in-slim td,
+.ledger-ops-duo .bill-notice-slim th,
+.ledger-ops-duo .bill-notice-slim td {
+  padding: 0.12rem 0.2rem !important;
+}
+
+.ledger-ops-duo .cash-in-slim th,
+.ledger-ops-duo .bill-notice-slim th {
+  font-size: 0.52rem;
+}
+
+.ledger-ops-duo .cash-in-slim .col-date,
+.ledger-ops-duo .bill-notice-slim .col-date {
+  width: 3.1rem;
+  min-width: 3.1rem;
+  max-width: 3.1rem;
+}
+
+.ledger-ops-duo .cash-in-slim .col-num {
+  min-width: 2.2rem;
+  font-size: 0.58rem;
+}
+
+.ledger-ops-duo .bill-notice-slim .col-out {
+  width: auto;
+  min-width: 3.6rem;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+  font-size: 0.58rem;
+}
+
+.ledger-ops-duo .bill-notice-summary {
+  margin: 0 0 0.25rem;
+  padding: 0.18rem 0.28rem;
+}
+
+.ledger-ops-duo .bill-notice-summary-text {
+  font-size: 0.56rem;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+.ledger-ops-duo .bill-notice-panel-add {
+  margin-top: 0.25rem;
+  min-height: 1.55rem;
+  font-size: 0.7rem;
+}
+
+.ledger-ops-duo .cash-in-panel-add {
+  margin-top: 0.25rem;
+  min-height: 1.55rem;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 640px) {
+  /* Phone: stack เทียบเงินเข้า / แจ้งบิล top→bottom (full width). */
+  .ledger-ops-duo {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.4rem;
+  }
+
+  .ledger-ops-duo .cash-in-panel-title,
+  .ledger-ops-duo .bill-notice-panel-title {
+    font-size: 0.8rem;
+  }
+
+  .ledger-ops-duo .cash-in-panel-meta,
+  .ledger-ops-duo .bill-notice-panel-meta {
+    font-size: 0.64rem;
+  }
+
+  .ledger-ops-duo .cash-in-slim,
+  .ledger-ops-duo .bill-notice-slim {
+    font-size: 0.66rem;
+  }
+
+  .ledger-ops-duo .cash-in-slim .col-date,
+  .ledger-ops-duo .bill-notice-slim .col-date {
+    width: 3.55rem;
+    min-width: 3.55rem;
+    max-width: 3.55rem;
+  }
+}
+
 .cash-in-panel {
   margin: 0 0 0.55rem;
   border-radius: 0.75rem;
@@ -18243,8 +19875,19 @@ a.ghost-btn {
   border-top: 1px solid rgba(28, 42, 31, 0.08);
 }
 
+/*
+ * Phase 4 table layout — เทียบเงินนำเข้า (.cash-in-slim).
+ * Bleed cancels .cash-in-panel-body pad (0.65rem); date/row sizing from ledger prototype.
+ * Scoped here so other sheets stay untouched.
+ */
 .cash-in-panel-table-wrap {
-  margin: 0.25rem 0 0.35rem;
+  margin: 0.25rem -0.65rem 0.35rem;
+  width: calc(100% + 1.3rem);
+  max-width: none;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  box-shadow: none;
 }
 
 .cash-in-panel-add {
@@ -18343,40 +19986,46 @@ a.ghost-btn {
 }
 
 .cash-in-slim {
-  font-size: 0.72rem;
+  font-size: 0.66rem;
 }
 
 .cash-in-slim th,
 .cash-in-slim td {
-  padding: 0.22rem 0.28rem !important;
+  padding: 0.18rem 0.3rem !important;
   vertical-align: middle;
+  line-height: 1.15;
 }
 
 .cash-in-slim th {
-  font-size: 0.66rem;
+  font-size: 0.6rem;
   white-space: nowrap;
 }
 
 .cash-in-slim .col-round {
-  width: 3.6rem;
-  max-width: 4.2rem;
-  font-size: 0.68rem;
+  width: 3.4rem;
+  max-width: 3.8rem;
+  font-size: 0.62rem;
   font-weight: 650;
 }
 
 .cash-in-slim .col-date {
-  width: 4.8rem;
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .cash-in-slim .col-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  min-width: 3.4rem;
+  min-width: 2.55rem;
+  font-size: 0.66rem;
 }
 
 .cash-in-slim .col-slip {
-  width: 2.2rem;
+  width: 1.9rem;
   text-align: center;
 }
 
@@ -18877,6 +20526,191 @@ a.ghost-btn {
   font-size: 0.9rem;
 }
 
+/* งานค้างกึ่งแจ้งเตือน — พนักงานรายคน */
+.staff-task-nudge-float {
+  position: fixed;
+  left: 0.65rem;
+  right: 0.65rem;
+  bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px));
+  z-index: 46;
+  pointer-events: none;
+}
+
+.staff-task-nudge-float-card {
+  pointer-events: auto;
+  max-width: 26rem;
+  margin: 0 auto;
+  padding: 0.55rem 0.65rem 0.6rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(45, 106, 79, 0.28);
+  background: rgba(255, 252, 247, 0.97);
+  box-shadow: 0 6px 20px rgba(28, 42, 31, 0.12);
+}
+
+.staff-task-nudge-float-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.staff-task-nudge-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(45, 106, 79, 0.95);
+}
+
+.staff-task-nudge-pill {
+  font-size: 0.65rem;
+  font-weight: 650;
+  padding: 0.08rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.staff-task-nudge-pill.is-deadline {
+  background: rgba(180, 83, 9, 0.12);
+  border-color: rgba(180, 83, 9, 0.28);
+  color: #9a3412;
+}
+
+.staff-task-nudge-pill.is-soft {
+  background: rgba(45, 106, 79, 0.1);
+  border-color: rgba(45, 106, 79, 0.22);
+  color: #2d6a4f;
+}
+
+.staff-task-nudge-close {
+  border: 0;
+  background: transparent;
+  padding: 0.1rem;
+  line-height: 0;
+  color: inherit;
+  opacity: 0.65;
+}
+
+.staff-task-nudge-headline {
+  margin: 0.3rem 0 0.45rem;
+  font-size: 0.86rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.staff-task-nudge-float-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.staff-task-nudge-btn {
+  min-height: 2rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.staff-task-nudge-strip {
+  position: fixed;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: calc(3.55rem + env(safe-area-inset-bottom, 0px));
+  z-index: 44;
+  max-width: 28rem;
+  margin: 0 auto;
+  border-radius: 0.65rem 0.65rem 0.4rem 0.4rem;
+  border: 1px solid rgba(45, 106, 79, 0.22);
+  background: rgba(255, 252, 247, 0.96);
+  box-shadow: 0 4px 14px rgba(28, 42, 31, 0.1);
+  overflow: hidden;
+}
+
+.staff-task-nudge-strip-main {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  background: transparent;
+  padding: 0.4rem 0.55rem;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.staff-task-nudge-strip-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.staff-task-nudge-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.55rem 0.45rem;
+  display: grid;
+  gap: 0.28rem;
+  border-top: 1px solid rgba(45, 106, 79, 0.12);
+}
+
+.staff-task-nudge-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  line-height: 1.3;
+  padding-top: 0.28rem;
+}
+
+.staff-task-nudge-kind {
+  flex: 0 0 auto;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.05rem 0.28rem;
+  border-radius: 0.3rem;
+}
+
+.staff-task-nudge-kind.is-deadline {
+  background: rgba(180, 83, 9, 0.12);
+  color: #9a3412;
+}
+
+.staff-task-nudge-kind.is-soft {
+  background: rgba(45, 106, 79, 0.1);
+  color: #2d6a4f;
+}
+
+.staff-task-nudge-list-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.staff-task-nudge-list-due {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+}
+
+.staff-task-nudge-list-foot {
+  justify-content: flex-end;
+}
+
+.staff-task-nudge-link {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #2d6a4f;
+}
+
 .staff-news-editor {
   list-style: none;
   margin: 0.35rem 0 0.75rem;
@@ -19005,19 +20839,30 @@ a.ghost-btn {
   text-overflow: ellipsis;
 }
 
+/*
+ * Phase 3 table layout — แจ้งบิล (.bill-notice-slim).
+ * Row/date sizing from ledger-staff-sheet prototype; bleed cancels panel-body pad (0.65rem).
+ * Scoped here so ledger-staff-sheet / owner-books-sheet stay untouched.
+ */
 .bill-notice-panel-table-wrap {
-  margin: 0.2rem 0 0.3rem;
+  margin: 0.2rem -0.65rem 0.3rem;
+  width: calc(100% + 1.3rem);
+  max-width: none;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  box-shadow: none;
 }
 
 .bill-notice-slim {
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   table-layout: fixed;
   width: 100%;
 }
 
 .bill-notice-slim th,
 .bill-notice-slim td {
-  padding: 0.18rem 0.22rem !important;
+  padding: 0.18rem 0.3rem !important;
   vertical-align: middle;
   white-space: nowrap;
   overflow: hidden;
@@ -19026,38 +20871,49 @@ a.ghost-btn {
 }
 
 .bill-notice-slim th {
-  font-size: 0.64rem;
+  font-size: 0.6rem;
 }
 
 .bill-notice-slim .col-date {
-  width: 3.4rem;
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .bill-notice-slim .col-desc {
   width: auto;
+  min-width: 0;
 }
 
 .bill-notice-slim .col-photo {
-  width: 2rem;
+  width: 1.9rem;
   text-align: center;
 }
 
 .bill-notice-slim .col-out {
-  width: 3.6rem;
+  width: auto;
+  min-width: 3.8rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
+  font-size: 0.66rem;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .bill-notice-slim .col-note {
-  width: 4.2rem;
+  width: 3.6rem;
+  font-size: 0.58rem;
 }
 
 .bill-notice-slim .col-status {
-  width: 3.2rem;
+  width: 2.9rem;
+  font-size: 0.58rem;
 }
 
 .bill-notice-slim .col-act {
-  width: 4.6rem;
+  width: 4.4rem;
   text-align: right;
   overflow: visible;
 }

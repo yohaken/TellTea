@@ -21,7 +21,7 @@ const assertRules = read("scripts/assert-firestore-rules.mjs");
 const ownerBooks = read("src/lib/owner-books.ts");
 const ownerAi = read("src/lib/owner-books-ai.ts");
 
-assert.match(version, /APP_BUILD = 386/);
+assert.match(version, /APP_BUILD\s*=\s*\d+/);
 assert.ok(existsSync(join(root, "src/lib/bill-notices.ts")));
 assert.ok(existsSync(join(root, "src/components/BillNoticeLedgerPanel.tsx")));
 
@@ -48,6 +48,16 @@ assert.match(panel, /bill-notice-line/);
 assert.match(panel, /shortLabelBillNoticeStatus/);
 assert.match(panel, /bill-notice-act-row/);
 assert.match(panel, /BILL_NOTICE_PRESETS/);
+assert.match(panel, /SheetDateCell ms=\{row\.date\} era="be"/);
+assert.match(panel, /era="be"/);
+assert.match(css, /Phase 3 table layout/);
+assert.match(css, /\.bill-notice-slim \.col-date/);
+assert.match(css, /width: 3\.55rem/);
+assert.match(css, /\.bill-notice-slim \.col-out/);
+assert.match(css, /\.bill-notice-slim \.col-out[\s\S]*?overflow:\s*visible/);
+assert.match(css, /\.ledger-ops-duo\b/);
+assert.match(ledger, /ledger-ops-duo/);
+assert.match(version, /APP_BUILD\s*=\s*485/);
 
 assert.match(lib, /export async function addBillNotice/);
 assert.match(lib, /export async function acceptBillNotice/);

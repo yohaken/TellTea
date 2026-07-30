@@ -57,6 +57,11 @@ export type MonthBooksDraft = {
   outputPct: number;
   note: string;
   status: VatMonthlyReturn["status"];
+  /**
+   * นำภาษีซื้อมารวมหักจากภาษีขาย
+   * false = ช่วงจด VAT ขอคืนไม่ได้ → เตรียมจ่ายภาษีขายเต็ม
+   */
+  includeInputVat: boolean;
 };
 
 export type MonthBooksView = {
@@ -83,8 +88,12 @@ export type MonthBooksView = {
   outputVat: number;
   inputGpVat: number;
   inputBooksVat: number;
+  /** ภาษีซื้อที่คำนวณได้ (โชว์เสมอ) */
   inputVat: number;
+  /** ภาษีซื้อที่นำมาหักจริง (0 ถ้าปิดติ๊ก) */
+  inputVatApplied: number;
   netVat: number;
+  includeInputVat: boolean;
   delivery: VatSegmentState;
   storefront: VatSegmentState;
   gpByChannel: GpByChannel;
@@ -119,6 +128,7 @@ export function emptyMonthBooksDraft(monthKey: string): MonthBooksDraft {
     outputPct: 7,
     note: "",
     status: "draft",
+    includeInputVat: true,
   };
 }
 
@@ -156,6 +166,7 @@ export function retToMonthBooksDraft(ret: VatMonthlyReturn): MonthBooksDraft {
     outputPct: normalizeMoney(ret.delivery.rates.outputPct) || 7,
     note: ret.note || "",
     status: ret.status,
+    includeInputVat: ret.includeInputVat !== false,
   };
 }
 
@@ -288,7 +299,10 @@ export function deriveMonthBooksView(
   const inputGpVat = bridge.deliveryGpVat;
   const inputBooksVat = normalizeMoney(storefront.ingredientVatClaimed);
   const inputVat = roundMoney(inputGpVat + inputBooksVat);
-  const netVat = roundMoney(outputVat - inputVat);
+  // ภาษีขายหลีกเลี่ยงไม่ได้ · ภาษีซื้อหักได้เฉพาะเมื่อติ๊ก includeInputVat
+  const includeInputVat = draft.includeInputVat !== false;
+  const inputVatApplied = includeInputVat ? inputVat : 0;
+  const netVat = roundMoney(outputVat - inputVatApplied);
   // กำไรสุทธิหลัง VAT = กำไรประมาณการ − VAT สุทธิ (VAT ติดลบ = ได้คืน → บวกเข้า)
   const profitAfterVat =
     monthProfit == null ? null : roundMoney(monthProfit - netVat);
@@ -308,7 +322,9 @@ export function deriveMonthBooksView(
     inputGpVat,
     inputBooksVat,
     inputVat,
+    inputVatApplied,
     netVat,
+    includeInputVat,
     delivery,
     storefront,
     gpByChannel,
@@ -353,6 +369,7 @@ export function draftToSaveInput(
     pnlDeliveryGpMode: "amount",
     pnlDeliveryGpPct: 0,
     pnlGpByChannel: view.gpByChannel,
+    includeInputVat: draft.includeInputVat !== false,
     status,
   };
 }
@@ -398,6 +415,26 @@ export function patchSales(
   return {
     ...draft,
     sales: { ...draft.sales, [key]: normalizeMoney(value) },
+  };
+}
+
+/**
+ * แถบส่งหน้าร้าน → A รายได้ถึงร้าน + D ยอดขายโอนทั้งก้อน (คิดภาษีขาย)
+ * เคลียร์ยอดสดกันนับซ้ำในภาษีขาย
+ */
+export function patchSfSendIntoDraft(
+  draft: MonthBooksDraft,
+  sent: number,
+): MonthBooksDraft {
+  const n = normalizeMoney(sent);
+  const next = patchTransfer(draft, "storefront", n);
+  return {
+    ...next,
+    sales: {
+      ...next.sales,
+      storefrontTransfer: n,
+      storefrontCash: 0,
+    },
   };
 }
 

@@ -38,6 +38,7 @@ const REQUIRED_MATCHES = [
   "stock",
   "employees",
   "payrollItems",
+  "bonusMonthCloses",
   "prodEntries",
   "otEntries",
   "checklistRecords",

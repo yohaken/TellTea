@@ -27,6 +27,12 @@ import {
 import { normalizePurchaseVat, normalizeVatSource } from "./entry-vat";
 import { getDb } from "./firebase";
 import type { LedgerEntry, LedgerEntryInput } from "./types";
+import {
+  bangkokDateKey,
+  normalizeAccountingDateKey,
+  startOfLocalDay,
+  toEpochMs,
+} from "./utils";
 import { normalizeMoney, roundMoney } from "./vat-sales";
 import type { ImportLedgerRow } from "./xlsx-import";
 
@@ -68,7 +74,7 @@ function normalizeReceiptFields(input: {
 
 function mapEntry(d: QueryDocumentSnapshot): LedgerEntry {
   const data = d.data() as Omit<LedgerEntry, "id">;
-  const createdAt = Number(data.createdAt) || 0;
+  const createdAt = toEpochMs((data as { createdAt?: unknown }).createdAt);
   const amountIn = Number(data.amountIn) || 0;
   const amountOut = Number(data.amountOut) || 0;
   const { receiptUrl, receiptUrls } = normalizeReceiptFields({
@@ -92,10 +98,18 @@ function mapEntry(d: QueryDocumentSnapshot): LedgerEntry {
   return {
     id: d.id,
     ...data,
+    date: (() => {
+      const raw = toEpochMs((data as { date?: unknown }).date);
+      if (!raw) return 0;
+      // Repair พ.ศ. stored as Gregorian year (2568 → 2025) for display/sort.
+      const fixed = normalizeAccountingDateKey(bangkokDateKey(raw));
+      if (fixed) return Date.parse(`${fixed}T00:00:00+07:00`);
+      return startOfLocalDay(raw);
+    })(),
     amountIn,
     amountOut,
     createdAt,
-    updatedAt: Number(data.updatedAt) || createdAt,
+    updatedAt: toEpochMs((data as { updatedAt?: unknown }).updatedAt) || createdAt,
     receiptUrl,
     receiptUrls,
     ...vat,
@@ -407,7 +421,7 @@ export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
     throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล หรือกดใช้ประมาณ");
   }
   const payload = {
-    date: input.date,
+    date: startOfLocalDay(toEpochMs(input.date) || input.date),
     description: input.description.trim(),
     amountIn,
     amountOut,
@@ -467,7 +481,7 @@ export async function updateLedgerEntry(
   const next: Record<string, string | number | boolean | string[]> = {
     updatedAt: Date.now(),
   };
-  if (patch.date != null) next.date = patch.date;
+  if (patch.date != null) next.date = startOfLocalDay(toEpochMs(patch.date) || patch.date);
   if (patch.description != null) next.description = patch.description.trim();
   if (patch.amountIn != null) next.amountIn = Number(patch.amountIn);
   if (patch.amountOut != null) next.amountOut = Number(patch.amountOut);

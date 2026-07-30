@@ -11,6 +11,12 @@ import { ChevronDown, ChevronUp, Trash2, X } from "lucide-react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
+import { SheetDateCell } from "@/components/SheetDateCell";
+import {
+  VatFirstAskPanel,
+  VatFirstCapturePanel,
+  VatFirstFormSummary,
+} from "@/components/VatFirstSteps";
 import {
   acceptBillNotice,
   addBillNotice,
@@ -30,11 +36,22 @@ import {
   type BillNotice,
   type BillNoticeStatus,
 } from "@/lib/bill-notices";
+import { parseVatInputStr, type VatSource } from "@/lib/entry-vat";
+import {
+  initialVatFirstPhase,
+  phaseAfterAiVatExtract,
+  phaseAfterVatAsk,
+  vatFirstDetailsUnlocked,
+  vatFirstReadyToSave,
+  type VatFirstPhase,
+} from "@/lib/ledger-vat-first";
 import { guessTypeFromDescription } from "@/lib/ledger-labels";
-import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
+import {
+  EXTRACT_RECEIPT_MAX,
+  extractOwnerBookFromReceipt,
+} from "@/lib/owner-books-ai";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
-  formatDateShort,
   formatPlainNumber,
   parseDateInput,
   todayInputValue,
@@ -265,7 +282,9 @@ export function BillNoticeLedgerPanel({
                           .join(" ")}
                         title={tip}
                       >
-                        <td className="col-date">{formatDateShort(row.date)}</td>
+                        <td className="col-date">
+                          <SheetDateCell ms={row.date} era="be" />
+                        </td>
                         <td className="col-desc">
                           {canEdit ? (
                             <button
@@ -459,7 +478,21 @@ function BillNoticeFormModal({
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() =>
     entry ? getBillNoticeReceiptUrls(entry) : [],
   );
-  /** AI อ่านรูปอัตโนมัติเมื่อแนบบิล — ปิดได้ถ้าจะกรอกเอง */
+  const [vatFirstPhase, setVatFirstPhase] = useState<VatFirstPhase>(() =>
+    mode === "add" ? initialVatFirstPhase() : "form",
+  );
+  const [hasVat, setHasVat] = useState(Boolean(entry?.hasVat));
+  const [vatInputStr, setVatInputStr] = useState(() =>
+    entry?.hasVat && (entry.vatInput || 0) > 0 ? String(entry.vatInput) : "",
+  );
+  const [vatInvoiceNo, setVatInvoiceNo] = useState(entry?.vatInvoiceNo || "");
+  const [vatSource, setVatSource] = useState<VatSource>(
+    () => (entry?.vatSource as VatSource) || "",
+  );
+  const [vatVerified, setVatVerified] = useState(Boolean(entry?.vatVerified));
+  const [aiVatReason, setAiVatReason] = useState("");
+  const [pendingAiVat, setPendingAiVat] = useState<number | null>(null);
+  /** AI อ่านรูปอัตโนมัติเมื่อแนบบิล — ปิดได้ถ้าจะกรอกเอง (edit) */
   const [aiAssist, setAiAssist] = useState(true);
   const [typeSource, setTypeSource] = useState(
     entry?.typeSource || (mode === "edit" ? "staff" : "heuristic"),
@@ -476,9 +509,15 @@ function BillNoticeFormModal({
   const descriptionRef = useRef(description);
   const amountRef = useRef(amount);
   const noteRef = useRef(note);
+  const vatFirstPhaseRef = useRef(vatFirstPhase);
   descriptionRef.current = description;
   amountRef.current = amount;
   noteRef.current = note;
+  vatFirstPhaseRef.current = vatFirstPhase;
+
+  const useVatFirst = mode === "add";
+  const detailsUnlocked = !useVatFirst || vatFirstDetailsUnlocked(vatFirstPhase);
+  const vatInputNum = parseVatInputStr(vatInputStr);
 
   useBodyScrollLock(true);
 
@@ -487,18 +526,82 @@ function BillNoticeFormModal({
     onError(msg);
   }
 
+  function chooseHasVatDocument(yes: boolean) {
+    const next = phaseAfterVatAsk(yes);
+    setHasVat(yes);
+    setVatVerified(false);
+    setVatInputStr("");
+    setVatInvoiceNo("");
+    setVatSource("");
+    setPendingAiVat(null);
+    setAiVatReason("");
+    setExtractStatus("idle");
+    lastExtractKeyRef.current = "";
+    setVatFirstPhase(next);
+  }
+
+  function confirmAiVatMatches() {
+    if (pendingAiVat == null || pendingAiVat <= 0) return;
+    setHasVat(true);
+    setVatInputStr(String(pendingAiVat));
+    setVatSource("ai");
+    setVatVerified(true);
+    setVatFirstPhase("form");
+  }
+
+  function rejectAiVat() {
+    setPendingAiVat(null);
+    setVatVerified(false);
+    setVatInputStr("");
+    setVatSource("");
+    setVatFirstPhase("manual");
+  }
+
+  function confirmManualVat() {
+    const n = parseVatInputStr(vatInputStr);
+    if (n <= 0) {
+      reportError("ใส่ยอดภาษีมูลค่าเพิ่ม (บาท) จากเอกสารก่อน");
+      return;
+    }
+    setHasVat(true);
+    setVatSource("manual");
+    setVatVerified(true);
+    setVatFirstPhase("form");
+  }
+
+  function resetVatFirstAsk() {
+    setVatFirstPhase("ask");
+    setHasVat(false);
+    setVatVerified(false);
+    setVatInputStr("");
+    setVatInvoiceNo("");
+    setVatSource("");
+    setPendingAiVat(null);
+    setAiVatReason("");
+    setExtractStatus("idle");
+    lastExtractKeyRef.current = "";
+  }
+
   async function runExtractFromPhotos(urls: string[], force = false) {
-    const refs = urls.map((u) => String(u || "").trim()).filter(Boolean).slice(0, 2);
+    const refs = urls
+      .map((u) => String(u || "").trim())
+      .filter(Boolean)
+      .slice(0, EXTRACT_RECEIPT_MAX);
     if (!refs.length) return;
     const key = refs.join("|");
     if (!force && (key === lastExtractKeyRef.current || extractBusyRef.current)) return;
     extractBusyRef.current = true;
     setExtractStatus("loading");
     setExtractError(null);
+    const inVatFirstUpload =
+      useVatFirst &&
+      (vatFirstPhaseRef.current === "upload" ||
+        vatFirstPhaseRef.current === "confirm_ai" ||
+        vatFirstPhaseRef.current === "manual");
     try {
       const result = await extractOwnerBookFromReceipt(refs);
       lastExtractKeyRef.current = key;
-      if (result.date) setDate(result.date);
+      // Keep accounting date — AI must not overwrite (พ.ศ. years corrupt the field).
       if (result.description) {
         const bucket = billNoticeBucketLabel(result.description);
         const nextDesc =
@@ -518,10 +621,46 @@ function BillNoticeFormModal({
         }
       }
       setTypeSource("ai");
+      setAiVatReason(result.vatReason || result.reason || "");
+      const aiVat =
+        result.hasVat && result.vatInput != null && result.vatInput > 0
+          ? result.vatInput
+          : null;
+      if (result.vatInvoiceNo) setVatInvoiceNo(result.vatInvoiceNo);
+
+      if (inVatFirstUpload) {
+        setHasVat(true);
+        if (aiVat != null) {
+          setPendingAiVat(aiVat);
+          setVatInputStr(String(aiVat));
+          setVatSource("ai");
+          setVatVerified(false);
+          setVatFirstPhase(phaseAfterAiVatExtract(aiVat));
+        } else {
+          setPendingAiVat(null);
+          setVatInputStr("");
+          setVatSource("");
+          setVatVerified(false);
+          setAiVatReason(
+            result.vatReason ||
+              "AI ไม่เห็นยอดภาษีมูลค่าเพิ่มบนบิล — กรอกเองจากเอกสาร",
+          );
+          setVatFirstPhase("manual");
+        }
+      } else if (aiVat != null) {
+        setHasVat(true);
+        setVatInputStr(String(aiVat));
+        setVatSource("ai");
+        setVatVerified(false);
+      }
       setExtractStatus("ready");
     } catch (err) {
       setExtractStatus("error");
       setExtractError((err as Error).message || "อ่านบิลไม่สำเร็จ");
+      if (inVatFirstUpload) {
+        setPendingAiVat(null);
+        setVatFirstPhase("manual");
+      }
     } finally {
       extractBusyRef.current = false;
     }
@@ -530,7 +669,7 @@ function BillNoticeFormModal({
   function onReceiptUrlsChange(next: string[]) {
     const prev = receiptUrls;
     setReceiptUrls(next);
-    if (!aiAssist) return;
+    if (!aiAssist && !useVatFirst) return;
     const added = next.some((u) => !prev.includes(u));
     if (added) void runExtractFromPhotos(next);
   }
@@ -547,11 +686,37 @@ function BillNoticeFormModal({
       if (!dateMs) throw new Error("ต้องใส่วันที่บิล");
       if (!desc) throw new Error("ต้องใส่รายการ");
       if (!(amountOut > 0)) throw new Error("ต้องใส่จำนวนเงินออก");
+      const vatNum = parseVatInputStr(vatInputStr);
+      if (
+        useVatFirst &&
+        !vatFirstReadyToSave({
+          phase: vatFirstPhase,
+          hasVat,
+          vatVerified,
+          vatInput: vatNum,
+        })
+      ) {
+        throw new Error(
+          hasVat
+            ? "ยืนยันยอดภาษีมูลค่าเพิ่มให้ตรงเอกสารก่อนบันทึก"
+            : "ทำขั้นตอน VAT ให้ครบก่อนบันทึก",
+        );
+      }
+      if (hasVat && vatNum <= 0) {
+        throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล");
+      }
       // Utility bills are sga; keep heuristic only when it already yields sga/asset.
       const guessed = guessTypeFromDescription(desc) || "sga";
       const type = guessed === "cogs" ? "sga" : guessed;
       const source =
         typeSource === "ai" && extractStatus === "ready" ? "ai" : "staff";
+      const vatPayload = {
+        hasVat,
+        vatInput: hasVat ? vatNum : 0,
+        vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
+        vatSource: hasVat ? vatSource || "manual" : "",
+        vatVerified: hasVat ? vatVerified : false,
+      };
       if (mode === "add") {
         await addBillNotice({
           date: dateMs,
@@ -563,6 +728,7 @@ function BillNoticeFormModal({
           receiptUrls,
           createdBy: actorId,
           staffName,
+          ...vatPayload,
         });
       } else if (entry) {
         await updateBillNotice(entry.id, {
@@ -574,6 +740,7 @@ function BillNoticeFormModal({
           note,
           receiptUrls,
           staffName,
+          ...vatPayload,
         });
       }
       onSaved();
@@ -625,10 +792,81 @@ function BillNoticeFormModal({
             entryDate={entry.date}
             createdAt={entry.createdAt}
             updatedAt={entry.updatedAt}
+            era="be"
           />
         ) : null}
         {formError ? <p className="error-text ot-form-error">{formError}</p> : null}
+
+        {useVatFirst && vatFirstPhase === "ask" ? (
+          <VatFirstAskPanel onChooseHasVat={chooseHasVatDocument} onClose={onClose} />
+        ) : null}
+
+        {useVatFirst &&
+        (vatFirstPhase === "upload" ||
+          vatFirstPhase === "confirm_ai" ||
+          vatFirstPhase === "manual") ? (
+          <VatFirstCapturePanel
+            phase={vatFirstPhase}
+            receiptUrls={receiptUrls}
+            onReceiptUrlsChange={(next) => {
+              const prev = receiptUrls;
+              setReceiptUrls(next);
+              const added = next.some((u) => !prev.includes(u));
+              if (added) {
+                if (vatFirstPhase === "confirm_ai" || vatFirstPhase === "manual") {
+                  setVatFirstPhase("upload");
+                  setPendingAiVat(null);
+                  setVatVerified(false);
+                }
+                void runExtractFromPhotos(next);
+              }
+            }}
+            onError={reportError}
+            maxPhotos={BILL_NOTICE_RECEIPT_MAX}
+            storageFolder="bill-notices"
+            storageSlotKey={`${mode}-${entry?.id || actorId || "new"}`}
+            extractStatus={extractStatus}
+            aiVatReason={aiVatReason}
+            pendingAiVat={pendingAiVat}
+            vatInputStr={vatInputStr}
+            onVatInputStrChange={(value) => {
+              setVatInputStr(value);
+              setVatSource("manual");
+              setVatVerified(false);
+            }}
+            onConfirmAi={confirmAiVatMatches}
+            onRejectAi={rejectAiVat}
+            onConfirmManual={confirmManualVat}
+            onResetAsk={resetVatFirstAsk}
+            onRereadAi={() => {
+              lastExtractKeyRef.current = "";
+              setVatFirstPhase("upload");
+              void runExtractFromPhotos(receiptUrls, true);
+            }}
+            onClose={onClose}
+            manualInputId="bn-vat-manual"
+          />
+        ) : null}
+
+        {detailsUnlocked ? (
         <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
+          {useVatFirst ? (
+            <VatFirstFormSummary
+              hasVat={hasVat}
+              vatInput={vatInputNum}
+              vatSource={vatSource}
+              onEditVat={() => {
+                setVatVerified(false);
+                setVatFirstPhase("manual");
+              }}
+            />
+          ) : entry?.hasVat ? (
+            <p className="muted vat-first-summary-no">
+              VAT จากแจ้งบิล · {entry.vatInput || 0} บาท
+              {entry.vatVerified ? " · ยืนยันแล้ว" : ""}
+            </p>
+          ) : null}
+
           <PhotoAttachMultiField
             label="อัพบิล"
             values={receiptUrls}
@@ -637,25 +875,33 @@ function BillNoticeFormModal({
             max={BILL_NOTICE_RECEIPT_MAX}
             storageFolder="bill-notices"
             storageSlotKey={`${mode}-${entry?.id || actorId || "new"}`}
-            hint="ถ่ายรูปบิล — AI อ่านวันที่ รายการ ยอดให้อัตโนมัติ · แก้เองได้ทุกช่อง"
+            hint={
+              useVatFirst
+                ? hasVat
+                  ? "เพิ่มรูปได้ · VAT ยืนยันแล้ว"
+                  : "ถ่ายรูปบิล — AI อ่านรายการ ยอด"
+                : "ถ่ายรูปบิล — AI อ่านวันที่ รายการ ยอดให้อัตโนมัติ · แก้เองได้ทุกช่อง"
+            }
           />
-          <label className="bill-notice-ai-toggle">
-            <input
-              type="checkbox"
-              checked={aiAssist}
-              onChange={(e) => setAiAssist(e.target.checked)}
-            />
-            AI อ่านรูปให้อัตโนมัติ
-          </label>
-          {extractStatus === "loading" ? (
+          {!useVatFirst ? (
+            <label className="bill-notice-ai-toggle">
+              <input
+                type="checkbox"
+                checked={aiAssist}
+                onChange={(e) => setAiAssist(e.target.checked)}
+              />
+              AI อ่านรูปให้อัตโนมัติ
+            </label>
+          ) : null}
+          {!useVatFirst && extractStatus === "loading" ? (
             <p className="muted form-hint-inline">AI กำลังอ่านบิล…</p>
           ) : null}
-          {extractStatus === "ready" ? (
+          {!useVatFirst && extractStatus === "ready" ? (
             <p className="muted form-hint-inline">
               อ่านจากรูปแล้ว — ไม่พอใจแก้เองได้ทุกช่อง หรืออ่านอีกครั้ง
             </p>
           ) : null}
-          {extractStatus === "error" && extractError ? (
+          {!useVatFirst && extractStatus === "error" && extractError ? (
             <p className="error-text ot-form-error">{extractError}</p>
           ) : null}
           {receiptUrls.length ? (
@@ -667,17 +913,19 @@ function BillNoticeFormModal({
               >
                 ดูรูป ({receiptUrls.length})
               </button>
-              <button
-                type="button"
-                className="ghost-btn"
-                disabled={extractStatus === "loading" || busy}
-                onClick={() => {
-                  lastExtractKeyRef.current = "";
-                  void runExtractFromPhotos(receiptUrls, true);
-                }}
-              >
-                {extractStatus === "loading" ? "กำลังอ่าน…" : "อ่านจากรูปอีกครั้ง"}
-              </button>
+              {!useVatFirst ? (
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  disabled={extractStatus === "loading" || busy}
+                  onClick={() => {
+                    lastExtractKeyRef.current = "";
+                    void runExtractFromPhotos(receiptUrls, true);
+                  }}
+                >
+                  {extractStatus === "loading" ? "กำลังอ่าน…" : "อ่านจากรูปอีกครั้ง"}
+                </button>
+              ) : null}
             </div>
           ) : null}
 
@@ -776,6 +1024,7 @@ function BillNoticeFormModal({
             )}
           </div>
         </form>
+        ) : null}
         {previewUrls ? (
           <ImagePreviewModal
             urls={previewUrls}

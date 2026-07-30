@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  businessCostOut,
   COMMON_VAT_VENDORS,
   proposePurchaseVatInput,
   type VatSource,
@@ -16,6 +17,9 @@ type Props = {
   vatInvoiceNo: string;
   vatSource: VatSource;
   vatVerified: boolean;
+  /** ติ๊กหักภาษีซื้อ · false = ซื้อไปเหอะ ต้นทุนรวม VAT */
+  vatClaim?: boolean;
+  onVatClaimChange?: (claim: boolean) => void;
   /** สถานะอ่าน AI */
   aiStatus?: "idle" | "loading" | "ready" | "error" | "none";
   aiVatReason?: string;
@@ -31,6 +35,74 @@ type Props = {
 };
 
 /**
+ * สลับโหมด: หักภาษีซื้อ vs ซื้อไปเหอะ (ต้นทุนรวม VAT)
+ */
+export function VatClaimModeToggle({
+  vatClaim,
+  disabled,
+  onChange,
+  amountInclusive = 0,
+  vatInput = 0,
+}: {
+  vatClaim: boolean;
+  disabled?: boolean;
+  onChange: (claim: boolean) => void;
+  amountInclusive?: number;
+  vatInput?: number;
+}) {
+  const hasNums = amountInclusive > 0 && vatInput > 0;
+  const costClaim = hasNums
+    ? businessCostOut(amountInclusive, true, vatInput, true)
+    : 0;
+  const costAbsorb = hasNums
+    ? businessCostOut(amountInclusive, true, vatInput, false)
+    : 0;
+
+  return (
+    <div className="vat-claim-mode" role="group" aria-label="โหมดภาษีซื้อกับต้นทุน">
+      <p className="vat-claim-mode-label">จะเอาภาษีซื้อไปหัก VAT เดือนไหม?</p>
+      <div className="vat-claim-mode-toggle">
+        <button
+          type="button"
+          className={`vat-claim-mode-btn${!vatClaim ? " is-active" : ""}`}
+          disabled={disabled}
+          aria-pressed={!vatClaim}
+          onClick={() => onChange(false)}
+        >
+          ซื้อไปเหอะ · ไม่หัก VAT
+          <span className="vat-claim-mode-sub">
+            ต้นทุน = บิลเต็ม
+            {hasNums ? ` ${formatVatMoney(costAbsorb)}` : ""}
+          </span>
+        </button>
+        <button
+          type="button"
+          className={`vat-claim-mode-btn${vatClaim ? " is-active" : ""}`}
+          disabled={disabled}
+          aria-pressed={vatClaim}
+          onClick={() => onChange(true)}
+        >
+          หักภาษีซื้อใน VAT เดือน
+          <span className="vat-claim-mode-sub">
+            ต้นทุน = แยก VAT
+            {hasNums ? ` ${formatVatMoney(costClaim)}` : ""}
+          </span>
+        </button>
+      </div>
+      <p className="muted vat-claim-mode-hint">
+        {vatClaim
+          ? hasNums
+            ? `หักภาษีซื้อ ${formatVatMoney(vatInput)} บาทออกจากต้นทุน → ใช้ต้นทุน ${formatVatMoney(costClaim)} หักรายได้ · และนับภาษีซื้อในงบ VAT`
+            : "หักภาษีซื้อออกจากต้นทุน · นับยอด VAT ในงบเดือน"
+          : hasNums
+            ? `ไม่หักภาษีซื้อ → ใช้บิลเต็ม ${formatVatMoney(costAbsorb)} เป็นต้นทุน/คชจ. · ไม่นับภาษีซื้อในงบ VAT`
+            : "ไม่หักภาษีซื้อ → บิลเต็มเป็นต้นทุน · ไม่นับในงบ VAT"}
+      </p>
+    </div>
+  );
+}
+
+/**
  * ช่อง VAT — AI อ่านก่อน · ติ๊กตรวจตรงบิล · กรอกเอง / ประมาณเป็นทางเลือก
  */
 export function EntryVatFieldset({
@@ -42,6 +114,8 @@ export function EntryVatFieldset({
   vatInvoiceNo,
   vatSource,
   vatVerified,
+  vatClaim = false,
+  onVatClaimChange,
   aiStatus = "idle",
   aiVatReason = "",
   onHasVatChange,
@@ -56,48 +130,53 @@ export function EntryVatFieldset({
   const proposed = proposePurchaseVatInput(amountInclusive || 0);
   const vatNum = Number(String(vatInputStr).replace(/,/g, ""));
   const hasVatAmount = Number.isFinite(vatNum) && vatNum > 0;
+  const costBooks = hasVat
+    ? businessCostOut(
+        amountInclusive || 0,
+        true,
+        hasVatAmount ? vatNum : 0,
+        vatClaim,
+      )
+    : 0;
 
   function sourceLabel() {
-    if (vatSource === "ai") return "จาก AI อ่านบิล";
-    if (vatSource === "propose") return "ประมาณ ×7/107 (ไม่ใช่จากบิล)";
+    if (vatSource === "ai") return "AI";
+    if (vatSource === "propose") return "ประมาณ";
     if (vatSource === "manual") return "กรอกเอง";
     return "";
   }
 
   return (
     <fieldset className="entry-vat-box owner-vat-box">
-      <legend>ช่อง VAT · ภาษีซื้อ</legend>
-      <p className="muted form-hint-inline" style={{ marginTop: 0 }}>
-        หลัก: แนบรูป → AI อ่านยอดภาษีบนบิลก่อน · รวมเข้า VAT เดือนติ๊กที่ตารางเดือน (+) ·
-        อย่าใช้ยอดจ่าย×7/107 แทนบิล
-      </p>
+      <legend>VAT · ภาษีซื้อ</legend>
 
       {aiStatus === "loading" ? (
-        <p className="muted form-hint-inline">AI กำลังอ่าน VAT จากรูป…</p>
+        <p className="muted form-hint-inline">กำลังอ่าน VAT…</p>
       ) : null}
       {aiStatus === "error" ? (
-        <p className="error-text ot-form-error" style={{ fontSize: "0.82rem" }}>
-          อ่าน VAT จากรูปไม่สำเร็จ — กรอกเองด้านล่างได้
+        <p className="error-text ot-form-error" style={{ fontSize: "0.78rem" }}>
+          อ่าน VAT ไม่สำเร็จ — กรอกเองได้
         </p>
       ) : null}
       {aiStatus === "ready" && aiVatReason ? (
-        <p className="muted form-hint-inline">AI: {aiVatReason}</p>
+        <p className="muted form-hint-inline" title={aiVatReason}>
+          AI: {aiVatReason}
+        </p>
       ) : null}
       {aiStatus === "none" ? (
-        <p className="muted form-hint-inline">
-          ยังไม่มีรูป — แนบใบเสร็จให้ AI อ่าน หรือติ๊กแล้วกรอกเอง
-        </p>
+        <p className="muted form-hint-inline">แนบรูปให้ AI อ่าน หรือติ๊กแล้วกรอกเอง</p>
       ) : null}
 
       {canRereadAi && onRereadAi ? (
-        <div className="entry-actions" style={{ marginBottom: "0.4rem" }}>
+        <div className="entry-actions entry-actions--inline" style={{ marginBottom: "0.35rem" }}>
           <button
             type="button"
             className="ghost-btn"
             disabled={disabled || aiStatus === "loading"}
             onClick={onRereadAi}
+            title="ให้ AI อ่าน VAT จากรูปอีกครั้ง"
           >
-            {aiStatus === "loading" ? "กำลังอ่าน…" : "ให้ AI อ่าน VAT จากรูปอีกครั้ง"}
+            {aiStatus === "loading" ? "กำลังอ่าน…" : "อ่าน VAT"}
           </button>
         </div>
       ) : null}
@@ -113,13 +192,13 @@ export function EntryVatFieldset({
             onVatVerifiedChange(false);
             if (!on) {
               onVatSourceChange("");
+              onVatClaimChange?.(false);
               return;
             }
-            // ไม่ auto ใส่ 7/107 — ให้กรอกเองหรือรอ AI
             if (!vatInputStr.trim()) onVatSourceChange("manual");
           }}
         />
-        มีใบกำกับภาษี · เก็บยอดภาษีซื้อ
+        มีใบกำกับภาษี
       </label>
 
       {hasVat ? (
@@ -155,7 +234,7 @@ export function EntryVatFieldset({
               inputMode="decimal"
               value={vatInputStr}
               disabled={disabled}
-              placeholder="ใส่ตามบิล"
+              placeholder="ตามบิล"
               onChange={(e) => {
                 onVatInputChange(e.target.value);
                 onVatSourceChange("manual");
@@ -165,13 +244,13 @@ export function EntryVatFieldset({
           </div>
 
           <div className="field">
-            <label htmlFor={`${idPrefix}-vat-inv`}>เลขที่ใบกำกับ (ถ้ามี)</label>
+            <label htmlFor={`${idPrefix}-vat-inv`}>เลขที่ใบกำกับ</label>
             <input
               id={`${idPrefix}-vat-inv`}
               value={vatInvoiceNo}
               disabled={disabled}
               autoComplete="off"
-              placeholder="เช่น จากแม็คโคร / ท็อปส์"
+              placeholder="ถ้ามี"
               onChange={(e) => {
                 onVatInvoiceNoChange(e.target.value);
                 if (vatSource === "ai") {
@@ -184,33 +263,53 @@ export function EntryVatFieldset({
             />
           </div>
 
-          <label className="owner-vat-toggle owner-vat-verify">
+          <label
+            className="owner-vat-toggle owner-vat-verify"
+            title="แนะนำยืนยันก่อนบันทึก โดยเฉพาะเมื่อมาจาก AI หรือประมาณ"
+          >
             <input
               type="checkbox"
               checked={vatVerified}
               disabled={disabled || !hasVatAmount}
               onChange={(e) => onVatVerifiedChange(e.target.checked)}
             />
-            ตรวจแล้ว · ยอดภาษีตรงกับบิล
+            ตรวจยอดตรงบิลแล้ว
           </label>
-          {hasVatAmount && !vatVerified ? (
-            <p className="muted form-hint-inline">
-              แนะนำติ๊กยืนยันก่อนบันทึก — โดยเฉพาะเมื่อมาจาก AI หรือประมาณ
-            </p>
-          ) : null}
           {vatSource === "propose" ? (
             <p className="muted form-hint-inline">
-              ค่านี้ประมาณจากยอดจ่าย ไม่ใช่บรรทัดภาษีบนบิล — ตรวจใบเสร็จก่อนติ๊ก
+              ประมาณจากยอดจ่าย — ตรวจบิลก่อนติ๊ก
+            </p>
+          ) : null}
+
+          {hasVatAmount && onVatClaimChange ? (
+            <VatClaimModeToggle
+              vatClaim={vatClaim}
+              disabled={disabled}
+              onChange={onVatClaimChange}
+              amountInclusive={amountInclusive || 0}
+              vatInput={vatNum}
+            />
+          ) : null}
+
+          {hasVatAmount && costBooks > 0 ? (
+            <p className="muted form-hint-inline">
+              {vatClaim
+                ? `สรุป: ต้นทุนบัญชี ${formatVatMoney(costBooks)} · ภาษีซื้อ ${formatVatMoney(vatNum)} ไปหักใน VAT เดือน`
+                : `สรุป: ต้นทุนบัญชี ${formatVatMoney(costBooks)} (บิลเต็ม) · ไม่หักภาษีซื้อใน VAT เดือน`}
+            </p>
+          ) : hasVat ? (
+            <p className="muted form-hint-inline">
+              ใส่ภาษีซื้อแล้ว แล้วเลือกโหมดด้านบน
             </p>
           ) : null}
 
           {proposed > 0 ? (
-            <div className="entry-actions" style={{ marginTop: "0.35rem" }}>
+            <div className="entry-actions entry-actions--inline" style={{ marginTop: "0.3rem" }}>
               <button
                 type="button"
                 className="ghost-btn"
                 disabled={disabled}
-                title="ใช้เมื่อบิลไม่ชัดเท่านั้น"
+                title="ใช้เมื่อบิลไม่ชัดเท่านั้น — ไม่ใช่ยอดภาษีบนบิล"
                 onClick={() => {
                   onVatInputChange(String(proposed));
                   onVatSourceChange("propose");
@@ -218,16 +317,12 @@ export function EntryVatFieldset({
                   onHasVatChange(true);
                 }}
               >
-                ใช้ประมาณ {formatVatMoney(proposed)} (×7/107)
+                ประมาณ {formatVatMoney(proposed)}
               </button>
             </div>
           ) : null}
         </>
-      ) : (
-        <p className="muted form-hint-inline">
-          ถ้าบิลไม่มี VAT / ใบกำกับย่อ — ไม่ต้องติ๊ก · บันทึกเป็นเงินออกปกติ
-        </p>
-      )}
+      ) : null}
     </fieldset>
   );
 }

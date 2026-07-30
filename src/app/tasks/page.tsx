@@ -23,6 +23,7 @@ import { isAppOwnerEmail } from "@/lib/firebase";
 import {
   completeTaskOccurrence,
   deleteTaskOccurrences,
+  reportTaskOccurrenceWaiting,
   subscribeTaskOccurrences,
   subscribeTaskOccurrencesForAssignee,
   syncPendingOccurrencesFromTemplate,
@@ -37,6 +38,10 @@ import {
   updateTaskTemplate,
 } from "@/lib/task-templates";
 import { runTaskOccurrenceSync } from "@/lib/task-sync";
+import {
+  buildOwnerTaskTimeline,
+  type OwnerTimelineRow,
+} from "@/lib/task-owner-timeline";
 import type { TaskChecklistItem, TaskOccurrence, TaskTemplate } from "@/lib/task-types";
 import {
   bangkokCalendarParts,
@@ -46,13 +51,35 @@ import {
   isOccurrenceOpenSoon,
   labelCompletedKind,
   labelWeekday,
+  labelWeekdayShort,
   newChecklistItemId,
   TASK_PROOF_MAX,
   validateTaskCompleteInput,
   WEEKDAY_LABELS,
   type OccurrenceTab,
 } from "@/lib/task-weekly-logic";
-import { formatDateShort } from "@/lib/utils";
+import { formatDateShortBe, formatDateTimeShortBe } from "@/lib/utils";
+
+/** ลบกติกาถาวร + รอบที่ยังไม่ส่ง (ประวัติที่ส่งแล้วคงไว้) */
+function isOpenOccurrenceStatus(status: TaskOccurrence["status"]) {
+  return status === "pending" || status === "missed" || status === "waiting";
+}
+
+async function purgeTaskTemplate(
+  template: TaskTemplate,
+  occurrences: TaskOccurrence[],
+): Promise<void> {
+  const pending = occurrences.filter(
+    (o) => o.templateId === template.id && isOpenOccurrenceStatus(o.status),
+  );
+  if (pending.length) {
+    for (const occ of pending) {
+      await dismissTaskPeriod(occ.templateId, occ.periodKey);
+    }
+    await deleteTaskOccurrences(pending.map((o) => o.id));
+  }
+  await deleteTaskTemplate(template.id);
+}
 
 const TASK_PRESETS: { title: string; weekday: number; checklist: string[] }[] = [
   {
@@ -91,6 +118,9 @@ function TasksView() {
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
   const [submitOcc, setSubmitOcc] = useState<TaskOccurrence | null>(null);
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
+  /** แถบกติกาพับได้ — ค่าเริ่ม: เปิดถ้า ≤2, เยอะแล้วพับ */
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const rulesInitRef = useRef(false);
   const syncedRef = useRef(false);
 
   const doSync = useCallback(async (tpls: TaskTemplate[], occs: TaskOccurrence[]) => {
@@ -188,6 +218,13 @@ function TasksView() {
   const visible = useMemo(() => filterOccurrencesByTab(occurrences, tab), [occurrences, tab]);
   const activeTemplates = useMemo(() => templates.filter((t) => t.active), [templates]);
 
+  useEffect(() => {
+    if (rulesInitRef.current || loading) return;
+    if (!isOwnerManager) return;
+    rulesInitRef.current = true;
+    setRulesOpen(activeTemplates.length <= 2);
+  }, [loading, isOwnerManager, activeTemplates.length]);
+
   const thisWeekCount = filterOccurrencesByTab(occurrences, "thisWeek").length;
   const missedCount = filterOccurrencesByTab(occurrences, "missed").length;
 
@@ -202,8 +239,8 @@ function TasksView() {
         </h1>
         <p className="muted tasks-page-hint">
           {isOwnerManager
-            ? "ตารางภาพรวม · ส่งได้ทุกวัน · เจ้าของแก้ไข/ปิด/ลบกติกาได้"
-            : "งานที่มอบให้คุณ · แตะชื่องานหรือปุ่มส่งเมื่อครบ checklist + รูป"}
+            ? "กติกาประจำสัปดาห์ · มินิไทม์ไลน์ติดตามส่ง/feedback · ปิด/ลบกติกาและลบรอบได้"
+            : "งานที่มอบให้คุณ · ติ๊ก checklist + รูป · ใส่ข้อความถึงเจ้าของได้"}
         </p>
       </div>
 
@@ -222,37 +259,105 @@ function TasksView() {
       {!loading && (myEmployeeId || isOwnerManager) ? (
         <>
           {isOwnerManager && activeTemplates.length ? (
-            <div className="tasks-template-bar">
-              <span className="field-label">กติกาที่เปิดอยู่</span>
-              <div className="tasks-template-chips">
-                {activeTemplates.map((tpl) => (
-                  <span key={tpl.id} className="tasks-template-chip">
-                    {tpl.title} · ทุก{labelWeekday(tpl.weekday)}
-                    <button
-                      type="button"
-                      className="tasks-template-edit"
-                      aria-label="แก้ไขกติกา"
-                      onClick={() => setEditingTemplate(tpl)}
-                    >
-                      <Pencil size={11} />
-                    </button>
-                    <button
-                      type="button"
-                      className="tasks-template-off"
-                      aria-label="ปิดกติกา"
-                      onClick={() => {
-                        if (!window.confirm(`ปิดกติกา "${tpl.title}"? รอบใหม่จะไม่ถูกสร้าง`)) return;
-                        void deactivateTaskTemplate(tpl.id).catch((err) =>
-                          setError((err as Error).message || "ปิดกติกาไม่สำเร็จ"),
-                        );
-                      }}
-                    >
-                      <X size={12} />
-                    </button>
+            <div className={`tasks-template-bar${rulesOpen ? " is-open" : ""}`}>
+              <button
+                type="button"
+                className="tasks-template-toggle"
+                aria-expanded={rulesOpen}
+                onClick={() => setRulesOpen((v) => !v)}
+              >
+                <span className="tasks-template-toggle-label">
+                  กติกา {activeTemplates.length}
+                  <span className="muted tasks-template-toggle-hint">
+                    {" "}
+                    · ปิด=หยุดสร้างรอบ · ลบ=ถาวร
                   </span>
-                ))}
-              </div>
+                </span>
+                <span className="tasks-template-toggle-meta" aria-hidden>
+                  {rulesOpen
+                    ? "ย่อ"
+                    : activeTemplates
+                        .slice(0, 4)
+                        .map((t) => labelWeekdayShort(t.weekday))
+                        .join("·") + (activeTemplates.length > 4 ? "…" : "")}
+                </span>
+              </button>
+              {rulesOpen ? (
+                <ul className="tasks-template-list">
+                  {activeTemplates.map((tpl) => (
+                    <li key={tpl.id} className="tasks-template-row">
+                      <span className="tasks-template-row-main" title={tpl.title}>
+                        <span className="tasks-template-row-day">
+                          {labelWeekdayShort(tpl.weekday)}
+                        </span>
+                        <span className="tasks-template-row-title">{tpl.title}</span>
+                      </span>
+                      <span className="tasks-template-row-acts">
+                        <button
+                          type="button"
+                          className="tasks-template-act"
+                          onClick={() => setEditingTemplate(tpl)}
+                        >
+                          <Pencil size={11} aria-hidden /> แก้
+                        </button>
+                        <button
+                          type="button"
+                          className="tasks-template-act"
+                          title="หยุดสร้างรอบใหม่ — กติกายังอยู่ในระบบ"
+                          onClick={() => {
+                            if (
+                              !window.confirm(
+                                `ปิดกติกา "${tpl.title}"?\nรอบใหม่จะไม่ถูกสร้าง (งานประจำหยุด)`,
+                              )
+                            ) {
+                              return;
+                            }
+                            void deactivateTaskTemplate(tpl.id).catch((err) =>
+                              setError((err as Error).message || "ปิดกติกาไม่สำเร็จ"),
+                            );
+                          }}
+                        >
+                          <X size={11} aria-hidden /> ปิด
+                        </button>
+                        <button
+                          type="button"
+                          className="tasks-template-act is-danger"
+                          title="ลบกติกาถาวร"
+                          onClick={() => {
+                            const pendingN = occurrences.filter(
+                              (o) =>
+                                o.templateId === tpl.id &&
+                                isOpenOccurrenceStatus(o.status),
+                            ).length;
+                            const msg =
+                              pendingN > 0
+                                ? `ลบกติกา "${tpl.title}" ถาวร?\nรอบที่ยังไม่ส่ง ${pendingN} รายการจะถูกลบ\nประวัติที่ส่งแล้วยังอยู่`
+                                : `ลบกติกา "${tpl.title}" ถาวร?`;
+                            if (!window.confirm(msg)) return;
+                            void purgeTaskTemplate(tpl, occurrences)
+                              .then(() => {
+                                syncedRef.current = false;
+                              })
+                              .catch((err) =>
+                                setError((err as Error).message || "ลบกติกาไม่สำเร็จ"),
+                              );
+                          }}
+                        >
+                          <Trash2 size={11} aria-hidden /> ลบ
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
+          ) : null}
+
+          {isOwnerManager ? (
+            <OwnerTaskTimeline
+              rows={buildOwnerTaskTimeline(occurrences)}
+              onViewPhoto={(urls) => setPreviewUrls(urls)}
+            />
           ) : null}
 
           <div className="tasks-filter-bar">
@@ -293,6 +398,7 @@ function TasksView() {
             <OccurrencesTable
               rows={visible}
               canManage={isOwnerManager}
+              showFeedback={tab === "history"}
               onSubmit={(occ) => setSubmitOcc(occ)}
               onViewPhoto={(urls) => setPreviewUrls(urls)}
               onError={setError}
@@ -357,6 +463,7 @@ function TasksView() {
 
 function statusLabel(occ: TaskOccurrence) {
   if (occ.status === "completed") return labelCompletedKind(occ.completedKind || "on_time");
+  if (occ.status === "waiting") return "รออยู่";
   if (occ.status === "missed") return "พลาด";
   if (isOccurrenceOpenSoon(occ)) return "ยังไม่เปิดส่ง";
   return "ค้างส่ง";
@@ -364,26 +471,131 @@ function statusLabel(occ: TaskOccurrence) {
 
 function statusClass(occ: TaskOccurrence) {
   if (occ.status === "completed") return "is-done";
+  if (occ.status === "waiting") return "is-waiting";
   if (occ.status === "missed") return "is-overdue";
   if (isOccurrenceOpenSoon(occ)) return "is-future";
   return "is-pending";
 }
 
+function OwnerTaskTimeline({
+  rows,
+  onViewPhoto,
+}: {
+  rows: OwnerTimelineRow[];
+  onViewPhoto: (urls: string[]) => void;
+}) {
+  if (!rows.length) {
+    return (
+      <div className="tasks-owner-timeline">
+        <div className="tasks-owner-timeline-head">
+          <span className="tasks-owner-timeline-title">ติดตามหลังร้าน</span>
+          <span className="muted tasks-owner-timeline-hint">ยังไม่มีรอบเปิดหรือประวัติส่ง</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="tasks-owner-timeline">
+      <div className="tasks-owner-timeline-head">
+        <span className="tasks-owner-timeline-title">ติดตามหลังร้าน</span>
+        <span className="muted tasks-owner-timeline-hint">
+          ค้าง/รอ + ส่งล่าสุด · เบา/กำหนด · ข้อความ
+        </span>
+      </div>
+      <div className="sheet-wrap tasks-timeline-sheet sheet-bleed">
+        <table className="sheet-table tasks-timeline-table sheet-table--dense">
+          <thead>
+            <tr>
+              <th>งาน</th>
+              <th>ชนิด</th>
+              <th>ใคร</th>
+              <th>เมื่อ</th>
+              <th>สถานะ</th>
+              <th>ข้อความ</th>
+              <th>รูป</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr
+                key={row.id}
+                className={`tasks-timeline-row is-${row.statusTone}`}
+              >
+                <td className="tasks-timeline-title" title={row.title}>
+                  {row.title}
+                </td>
+                <td>
+                  <span
+                    className={`tasks-timeline-kind is-${row.nudgeKind}`}
+                    title={row.nudgeKind === "soft" ? "แจ้งเบาๆ" : "มีกำหนด"}
+                  >
+                    {row.nudgeKind === "soft" ? "เบา" : "กำหนด"}
+                  </span>
+                </td>
+                <td className="tasks-timeline-who" title={row.who}>
+                  {row.who}
+                </td>
+                <td className="tasks-timeline-when">
+                  {row.whenMs
+                    ? row.isOpen
+                      ? formatDateShortBe(row.whenMs)
+                      : formatDateTimeShortBe(row.whenMs)
+                    : "—"}
+                </td>
+                <td>
+                  <span className={`tasks-timeline-status is-${row.statusTone}`}>
+                    {row.statusLabel}
+                  </span>
+                </td>
+                <td className="tasks-timeline-note" title={row.feedback || undefined}>
+                  {row.feedback || "—"}
+                </td>
+                <td className="tasks-timeline-proof">
+                  {row.proofUrls.length ? (
+                    <button
+                      type="button"
+                      className="ghost-btn tasks-timeline-proof-btn"
+                      onClick={() => onViewPhoto(row.proofUrls)}
+                    >
+                      <ImageIcon size={12} aria-hidden /> {row.proofUrls.length}
+                    </button>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function OccurrencesTable({
   rows,
   canManage,
+  showFeedback = false,
   onSubmit,
   onViewPhoto,
   onError,
 }: {
   rows: TaskOccurrence[];
   canManage: boolean;
+  showFeedback?: boolean;
   onSubmit: (occ: TaskOccurrence) => void;
   onViewPhoto: (urls: string[]) => void;
   onError: (msg: string) => void;
 }) {
   async function onDelete(occ: TaskOccurrence) {
-    if (!window.confirm(`ลบรอบงาน "${occ.title}" (${formatDateShort(occ.dueDate)})?`)) return;
+    if (
+      !window.confirm(
+        `ลบรอบนี้ "${occ.title}" (${formatDateShortBe(occ.dueDate)})?\nกติกายังอยู่ — สัปดาห์หน้ายังสร้างรอบใหม่ได้`,
+      )
+    ) {
+      return;
+    }
     try {
       await dismissTaskPeriod(occ.templateId, occ.periodKey);
       await deleteTaskOccurrences([occ.id]);
@@ -393,15 +605,15 @@ function OccurrencesTable({
   }
 
   return (
-    <div className="sheet-wrap tasks-sheet">
-      <table className="sheet-table tasks-table">
+    <div className="sheet-wrap tasks-sheet sheet-bleed">
+      <table className="sheet-table tasks-table sheet-table--dense">
         <thead>
           <tr>
             <th className="tasks-col-title">งาน</th>
             <th className="tasks-col-due">รอบ</th>
             <th className="tasks-col-who">มอบให้</th>
             <th className="tasks-col-check">checklist</th>
-            <th className="tasks-col-note">note</th>
+            <th className="tasks-col-note">{showFeedback ? "feedback" : "note"}</th>
             <th className="tasks-col-status">สถานะ</th>
             <th className="tasks-col-act">ทำ</th>
           </tr>
@@ -411,13 +623,18 @@ function OccurrencesTable({
             const soon = isOccurrenceOpenSoon(occ);
             const canSubmit = canSubmitOccurrence(occ);
             const done = occ.status === "completed";
+            const waiting = occ.status === "waiting";
             const missed = occ.status === "missed";
             const canDelete = canManage && !done;
             const proofImgs = getTaskProofImgs(occ);
             const weekday = labelWeekday(bangkokCalendarParts(occ.dueDate).weekday);
+            const noteText = waiting || showFeedback
+              ? (occ.completionNote || "").trim()
+              : occ.note || "";
             const checkText = occ.checklist
               .map((item) => {
-                const checked = done ? occ.checklistDone.includes(item.id) : false;
+                const checked =
+                  done || waiting ? occ.checklistDone.includes(item.id) : false;
                 return `${checked ? "✓" : "○"} ${item.label}`;
               })
               .join(" · ");
@@ -428,6 +645,7 @@ function OccurrencesTable({
                 className={[
                   "tasks-row",
                   done ? "is-done" : "",
+                  waiting ? "is-waiting" : "",
                   missed ? "is-overdue" : "",
                   soon ? "is-future" : "",
                 ]
@@ -440,7 +658,7 @@ function OccurrencesTable({
                       type="button"
                       className="tasks-title-link"
                       onClick={() => onSubmit(occ)}
-                      title="แตะเพื่อส่งงาน"
+                      title={waiting ? "แตะเพื่ออัปเดต/จบ" : "แตะเพื่อส่งงาน"}
                     >
                       {occ.title}
                     </button>
@@ -449,17 +667,19 @@ function OccurrencesTable({
                   )}
                 </td>
                 <td className="tasks-col-due">
-                  <span className="tasks-due-main">{formatDateShort(occ.dueDate)}</span>
+                  <span className="tasks-due-main">{formatDateShortBe(occ.dueDate)}</span>
                   <span className="tasks-due-sub">ทุก{weekday}</span>
                   {soon ? (
-                    <span className="tasks-due-sub">เปิด {formatDateShort(occ.openAt)}</span>
+                    <span className="tasks-due-sub">เปิด {formatDateShortBe(occ.openAt)}</span>
                   ) : null}
                 </td>
                 <td className="tasks-col-who">{occ.assigneeNames.join(", ") || "—"}</td>
                 <td className="tasks-col-check" title={checkText}>
                   {checkText || "—"}
                 </td>
-                <td className="tasks-col-note">{occ.note || "—"}</td>
+                <td className="tasks-col-note" title={noteText || undefined}>
+                  {noteText || (waiting || showFeedback ? "—" : occ.note || "—")}
+                </td>
                 <td className="tasks-col-status">
                   <span className={`tasks-status-pill ${statusClass(occ)}`}>{statusLabel(occ)}</span>
                 </td>
@@ -471,10 +691,11 @@ function OccurrencesTable({
                         className="primary-btn tasks-submit-btn"
                         onClick={() => onSubmit(occ)}
                       >
-                        <Camera size={14} aria-hidden /> {missed ? "ส่งย้อนหลัง" : "ส่งงาน"}
+                        <Camera size={14} aria-hidden />{" "}
+                        {waiting ? "อัปเดต/จบ" : missed ? "ส่งย้อนหลัง" : "ส่งงาน"}
                       </button>
                     ) : null}
-                    {done && proofImgs.length ? (
+                    {(done || waiting) && proofImgs.length ? (
                       <button
                         type="button"
                         className="ghost-btn tasks-proof-btn"
@@ -488,9 +709,10 @@ function OccurrencesTable({
                       <button
                         type="button"
                         className="ghost-btn tasks-delete-btn"
+                        title="ลบเฉพาะรอบนี้"
                         onClick={() => void onDelete(occ)}
                       >
-                        <Trash2 size={13} aria-hidden /> ลบ
+                        <Trash2 size={13} aria-hidden /> ลบรอบ
                       </button>
                     ) : null}
                   </div>
@@ -525,6 +747,9 @@ function TemplateFormModal({
   const [title, setTitle] = useState(template?.title || "");
   const [note, setNote] = useState(template?.note || "");
   const [weekday, setWeekday] = useState(template?.weekday ?? 1);
+  const [nudgeKind, setNudgeKind] = useState<"soft" | "deadline">(
+    template?.nudgeKind === "soft" ? "soft" : "deadline",
+  );
   const [selected, setSelected] = useState<string[]>(template?.assigneeIds || []);
   const [checklist, setChecklist] = useState<TaskChecklistItem[]>(
     template?.checklist.length
@@ -566,6 +791,7 @@ function TemplateFormModal({
       checklist: steps,
       assigneeIds: chosen.map((w) => w.id),
       assigneeNames: chosen.map((w) => w.name),
+      nudgeKind,
     };
     setBusy(true);
     onError("");
@@ -588,6 +814,7 @@ function TemplateFormModal({
               checklist: steps,
               assigneeIds: payload.assigneeIds,
               assigneeNames: payload.assigneeNames,
+              nudgeKind: payload.nudgeKind,
             },
             pendingIds,
           );
@@ -605,29 +832,18 @@ function TemplateFormModal({
 
   async function onDeleteTemplate() {
     if (!template) return;
-    const pendingIds = occurrences
-      .filter(
-        (o) =>
-          o.templateId === template.id &&
-          (o.status === "pending" || o.status === "missed"),
-      )
-      .map((o) => o.id);
+    const pendingN = occurrences.filter(
+      (o) => o.templateId === template.id && isOpenOccurrenceStatus(o.status),
+    ).length;
     const msg =
-      pendingIds.length > 0
-        ? `ลบกติกา "${template.title}" ถาวร?\nรอบที่ยังไม่ส่ง ${pendingIds.length} รายการจะถูกลบ\nประวัติที่ส่งแล้วยังอยู่`
+      pendingN > 0
+        ? `ลบกติกา "${template.title}" ถาวร?\nรอบที่ยังไม่ส่ง ${pendingN} รายการจะถูกลบ\nประวัติที่ส่งแล้วยังอยู่`
         : `ลบกติกา "${template.title}" ถาวร?`;
     if (!window.confirm(msg)) return;
     setBusy(true);
     onError("");
     try {
-      if (pendingIds.length) {
-        for (const id of pendingIds) {
-          const occ = occurrences.find((o) => o.id === id);
-          if (occ) await dismissTaskPeriod(occ.templateId, occ.periodKey);
-        }
-        await deleteTaskOccurrences(pendingIds);
-      }
-      await deleteTaskTemplate(template.id);
+      await purgeTaskTemplate(template, occurrences);
       onSaved();
     } catch (err) {
       onError((err as Error).message || "ลบกติกาไม่สำเร็จ");
@@ -673,6 +889,31 @@ function TemplateFormModal({
               placeholder="โพสต์ Facebook ประจำสัปดาห์"
               required
             />
+          </div>
+
+          <div className="field">
+            <span className="field-label">ชนิดเตือนพนักงาน</span>
+            <div className="suggest-list">
+              <button
+                type="button"
+                className={nudgeKind === "soft" ? "suggest-chip is-active" : "suggest-chip"}
+                onClick={() => setNudgeKind("soft")}
+              >
+                แจ้งเบาๆ
+              </button>
+              <button
+                type="button"
+                className={nudgeKind === "deadline" ? "suggest-chip is-active" : "suggest-chip"}
+                onClick={() => setNudgeKind("deadline")}
+              >
+                มีกำหนด
+              </button>
+            </div>
+            <p className="muted form-hint-inline">
+              {nudgeKind === "soft"
+                ? "โชว์แถบ/ป๊อปเบา · ปิดได้ · ไม่เน้นเส้นตาย"
+                : "โชว์วันครบ · แถบค้างชัดจนกว่าจะส่ง"}
+            </p>
           </div>
 
           <div className="field">
@@ -784,8 +1025,14 @@ function SubmitOccurrenceModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [checked, setChecked] = useState<Set<string>>(
+    () => new Set(occ.checklistDone || []),
+  );
+  const [imageUrls, setImageUrls] = useState<string[]>(() => getTaskProofImgs(occ));
+  const [completionNote, setCompletionNote] = useState(occ.completionNote || "");
+  const [outcome, setOutcome] = useState<"done" | "waiting">(
+    occ.status === "waiting" ? "waiting" : "done",
+  );
   const [busy, setBusy] = useState(false);
 
   function toggleItem(id: string) {
@@ -806,6 +1053,31 @@ function SubmitOccurrenceModal({
       onError("รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่เพื่อบันทึกเข้าคลังหลักฐาน");
       return;
     }
+
+    if (outcome === "waiting") {
+      if (!(completionNote || "").trim()) {
+        onError("ใส่ข้อความสถานะ เช่น ส่งซ่อมแล้ว กำลังรอร้าน");
+        return;
+      }
+      setBusy(true);
+      onError("");
+      try {
+        await reportTaskOccurrenceWaiting(occ, {
+          checklistDone: checkedIds,
+          proofImgs: urls,
+          proofImg: urls[0] || "",
+          completionNote,
+          completedBy: actorId,
+        });
+        onSaved();
+      } catch (err) {
+        onError((err as Error).message || "บันทึกสถานะรอไม่สำเร็จ");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     const validation = validateTaskCompleteInput({
       checklist: occ.checklist,
       checkedIds,
@@ -822,6 +1094,7 @@ function SubmitOccurrenceModal({
         checklistDone: checkedIds,
         proofImgs: urls,
         proofImg: urls[0] || "",
+        completionNote,
         completedBy: actorId,
       });
       onSaved();
@@ -833,13 +1106,21 @@ function SubmitOccurrenceModal({
   }
 
   const allDone = occ.checklist.every((c) => checked.has(c.id));
+  const canSubmitDone = allDone && imageUrls.length > 0;
+  const canSubmitWaiting = !!(completionNote || "").trim();
+  const title =
+    occ.status === "missed"
+      ? "ส่งย้อนหลัง"
+      : occ.status === "waiting"
+        ? "อัปเดตงานที่รอ"
+        : "ส่งงาน";
 
   return (
     <div className="modal-backdrop edit-modal is-module-form is-tasks-form" onClick={onClose}>
       <div className="modal-card tasks-form-card" onClick={(e) => e.stopPropagation()}>
         <form className="form-card entry-form module-entry-form tasks-entry-form" onSubmit={(e) => void onSubmit(e)}>
           <div className="entry-toolbar module-form-head">
-            <h2 className="panel-title">{occ.status === "missed" ? "ส่งย้อนหลัง" : "ส่งงาน"}</h2>
+            <h2 className="panel-title">{title}</h2>
             <button type="button" className="ghost-btn icon-btn" aria-label="ปิด" disabled={busy} onClick={onClose}>
               <X size={18} />
             </button>
@@ -847,8 +1128,33 @@ function SubmitOccurrenceModal({
 
           <p className="tasks-form-slot-bar">{occ.title}</p>
           <p className="muted form-hint-inline">
-            รอบ {formatDateShort(occ.dueDate)} — ติ๊กทุกข้อ แล้วแนบรูปหลักฐาน
+            รอบ {formatDateShortBe(occ.dueDate)} — เลือกจบงาน หรือรายงานว่ารออยู่ (หยุดแจ้งเตือน)
           </p>
+
+          <div className="field">
+            <span className="field-label">ผลตอนนี้</span>
+            <div className="suggest-list">
+              <button
+                type="button"
+                className={outcome === "done" ? "suggest-chip is-active" : "suggest-chip"}
+                onClick={() => setOutcome("done")}
+              >
+                จบงาน
+              </button>
+              <button
+                type="button"
+                className={outcome === "waiting" ? "suggest-chip is-active" : "suggest-chip"}
+                onClick={() => setOutcome("waiting")}
+              >
+                ส่งแล้ว รอผล
+              </button>
+            </div>
+            <p className="muted form-hint-inline">
+              {outcome === "waiting"
+                ? "หยุดป๊อป/แถบแจ้งเตือน · ข้อความค้างในตารางหลังร้านจนกว่าจะจบ"
+                : "ติ๊กครบ + รูปหลักฐาน · ปิดรอบนี้"}
+            </p>
+          </div>
 
           <ul className="tasks-check-submit">
             {occ.checklist.map((item) => {
@@ -872,16 +1178,47 @@ function SubmitOccurrenceModal({
             values={imageUrls}
             onChange={setImageUrls}
             onError={onError}
-            label="รูปหลักฐาน (บังคับ)"
+            label={outcome === "waiting" ? "รูปหลักฐาน (ถ้ามี)" : "รูปหลักฐาน (บังคับ)"}
             max={TASK_PROOF_MAX}
             storageFolder="tasks"
             storageSlotKey="proof"
-            hint={`บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${TASK_PROOF_MAX} รูป`}
+            hint={
+              outcome === "waiting"
+                ? `เช่น สลิปส่งซ่อม · สูงสุด ${TASK_PROOF_MAX} รูป`
+                : `บันทึกหลักฐานเข้าฐานข้อมูล · สูงสุด ${TASK_PROOF_MAX} รูป`
+            }
           />
 
+          <label className="field">
+            <span className="field-label">
+              {outcome === "waiting"
+                ? "ข้อความถึงเจ้าของ (บังคับ)"
+                : "ข้อความถึงเจ้าของ (ไม่บังคับ)"}
+            </span>
+            <textarea
+              className="tasks-completion-note"
+              rows={2}
+              maxLength={280}
+              value={completionNote}
+              onChange={(e) => setCompletionNote(e.target.value)}
+              placeholder="เช่น ส่งซ่อมแล้ว กำลังรออะไหล่ / รับเครื่องกลับแล้ว"
+              disabled={busy}
+            />
+          </label>
+
           <div className="entry-actions module-form-actions">
-            <button type="submit" className="primary-btn" disabled={busy || !allDone || !imageUrls.length}>
-              {busy ? "กำลังส่ง..." : "ส่งงาน"}
+            <button
+              type="submit"
+              className="primary-btn"
+              disabled={
+                busy || (outcome === "waiting" ? !canSubmitWaiting : !canSubmitDone)
+              }
+            >
+              {busy
+                ? "กำลังบันทึก..."
+                : outcome === "waiting"
+                  ? "บันทึกว่ากำลังรอ"
+                  : "ส่งงานจบ"}
             </button>
             <button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>
               ออก

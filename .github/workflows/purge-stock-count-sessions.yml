@@ -1,0 +1,38 @@
+name: Purge stock count sessions
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Set to 1 to delete for real (otherwise dry-run)"
+        required: true
+        default: "0"
+      purge_movements:
+        description: "Also delete stockMovements (default 1)"
+        required: false
+        default: "1"
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Purge stock count sessions (+ movements)
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          APPLY: ${{ inputs.apply }}
+          PURGE_MOVEMENTS: ${{ inputs.purge_movements }}
+        run: node scripts/purge-stock-count-sessions.mjs

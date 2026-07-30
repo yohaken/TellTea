@@ -14,6 +14,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
+import { assertBonusMonthOpenForDate } from "./bonus-month-guard";
 
 /** หน้าชงโหลดเฉพาะช่วงนี้ — ไม่ดึงประวัติทั้งก้อน (เดิมช้าเพราะ unbounded onSnapshot) */
 export const OT_HISTORY_LOOKBACK_DAYS = 60;
@@ -427,6 +428,7 @@ export function subscribeOtEntries(
 
 export async function addOtEntry(input: OtEntryInput): Promise<string> {
   if (!input.shift) throw new Error("เลือกรอบงาน");
+  await assertBonusMonthOpenForDate(input.date);
   const now = Date.now();
   const imageUrls = (input.imageUrls || []).map((u) => u.trim()).filter(Boolean);
   const legacyUrl = (input.imageUrl || "").trim();
@@ -503,6 +505,23 @@ export async function updateOtEntry(
   if (!snap.exists()) throw new Error("ไม่พบรายการ");
   const current = mapOtEntryDoc(snap.id, snap.data() as Record<string, unknown>);
   assertOtEntryEditable(current, patch);
+  const touchesQty =
+    patch.date != null ||
+    patch.shift != null ||
+    patch.workerIds != null ||
+    patch.workerNames != null ||
+    patch.machineCount != null ||
+    patch.otherCups != null ||
+    patch.iceCreamCones != null ||
+    patch.breadSlices != null ||
+    patch.claimCups != null ||
+    patch.deductQty != null ||
+    patch.addQty != null ||
+    patch.bonusRate != null;
+  if (touchesQty) {
+    await assertBonusMonthOpenForDate(current.date);
+    if (patch.date != null) await assertBonusMonthOpenForDate(patch.date);
+  }
 
   const next: Record<string, string | number | boolean | string[]> = {
     updatedAt: Date.now(),

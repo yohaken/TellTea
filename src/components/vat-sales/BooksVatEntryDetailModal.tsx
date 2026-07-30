@@ -16,7 +16,10 @@ import {
   LEDGER_RECEIPT_MAX,
   updateLedgerEntry,
 } from "@/lib/ledger";
-import { extractOwnerBookFromReceipt } from "@/lib/owner-books-ai";
+import {
+  EXTRACT_RECEIPT_MAX,
+  extractOwnerBookFromReceipt,
+} from "@/lib/owner-books-ai";
 import {
   getOwnerBookEntry,
   getOwnerBookReceiptUrls,
@@ -43,7 +46,7 @@ type Props = {
 
 /**
  * มุมมองรายการแบบบช. — เปิดจากตาราง VAT เดือน (+)
- * ดูรูป / ยอด / VAT / ติ๊ก「รวมเข้าระบบ」ได้ทันที
+ * ดูรูป / ยอด / VAT / ติ๊ก「รวมเข้างบ」ได้ทันที
  */
 export function BooksVatEntryDetailModal({
   book,
@@ -136,7 +139,7 @@ export function BooksVatEntryDetailModal({
     const refs = urls
       .map((u) => String(u || "").trim())
       .filter(Boolean)
-      .slice(0, 2);
+      .slice(0, EXTRACT_RECEIPT_MAX);
     if (!refs.length || locked) return;
     const key = refs.join("|");
     if (key === lastExtractKeyRef.current || extractBusyRef.current) return;
@@ -145,7 +148,7 @@ export function BooksVatEntryDetailModal({
     try {
       const result = await extractOwnerBookFromReceipt(refs);
       lastExtractKeyRef.current = key;
-      if (result.date) setDate(result.date);
+      // Keep accounting date — AI must not overwrite.
       if (result.description && !descriptionRef.current.trim()) {
         setDescription(result.description);
       }
@@ -159,7 +162,7 @@ export function BooksVatEntryDetailModal({
         if (result.vatInvoiceNo) setVatInvoiceNo(result.vatInvoiceNo);
         setVatSource("ai");
         setVatVerified(false);
-        // ไม่ auto รวมเข้าระบบ — ให้คนติ๊กเอง
+        // ไม่ auto รวมเข้างบ — ให้คนติ๊กเอง
       } else {
         setAiVatReason(
           result.vatReason ||
@@ -342,6 +345,8 @@ export function BooksVatEntryDetailModal({
                 vatInvoiceNo={vatInvoiceNo}
                 vatSource={vatSource}
                 vatVerified={vatVerified}
+                vatClaim={vatClaim}
+                onVatClaimChange={setVatClaim}
                 aiStatus={
                   receiptUrls.length === 0
                     ? "none"
@@ -368,18 +373,6 @@ export function BooksVatEntryDetailModal({
                   void runExtractFromPhotos(receiptUrls);
                 }}
               />
-
-              {hasVat && parseVatInputStr(vatInputStr) > 0 ? (
-                <label className="owner-vat-toggle vat-claim-toggle">
-                  <input
-                    type="checkbox"
-                    checked={vatClaim}
-                    disabled={busy || locked}
-                    onChange={(e) => setVatClaim(e.target.checked)}
-                  />
-                  รวมเข้าระบบ · หักภาษีซื้อ VAT เดือนนี้
-                </label>
-              ) : null}
 
               <div className="entry-actions module-form-actions">
                 <button

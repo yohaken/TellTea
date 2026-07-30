@@ -66,7 +66,18 @@ assert.ok(Math.abs(meanOverRowCount([0.4, 0.2], 2) - 0.3) < 1e-9);
 function filterCategoryRowsByMonths(rows, months) {
   const byMonth = new Map(rows.map((r) => [r.month, r]));
   return months.map(
-    (month) => byMonth.get(month) || { month, asset: 0, cogs: 0, sga: 0, other: 0 },
+    (month) =>
+      byMonth.get(month) || {
+        month,
+        asset: 0,
+        cogs: 0,
+        sga: 0,
+        other: 0,
+        vatAsset: 0,
+        vatCogs: 0,
+        vatSga: 0,
+        vatOther: 0,
+      },
   );
 }
 

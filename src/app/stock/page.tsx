@@ -5,11 +5,11 @@ import {
   useMemo,
   useState,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
 import { Boxes, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
-import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { StockCatalogSetup } from "@/components/StockCatalogSetup";
 import { useAuth } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
@@ -18,7 +18,6 @@ import { can } from "@/lib/permissions";
 import {
   deleteStockCountSession,
   getSessionForRound,
-  STOCK_COUNT_ROUNDS,
   submitStockCountSession,
   stockCountSinceMs,
   subscribeStockCountSessions,
@@ -28,14 +27,14 @@ import {
   buildStockHistoryTimeline,
   formatStockCountTimeShort,
   inspectorShort,
-  parseStockMonthInput,
   roundLabel,
+  stockRoundDateLabelBe,
   timelineRoundLabel,
   type StockHistoryItemCol,
   type StockHistoryTimelineRow,
 } from "@/lib/stock-history";
 import { seedStockItemsIfEmpty, subscribeStockItems } from "@/lib/stock";
-import { formatDateShort, formatStockQty, parseDateInput } from "@/lib/utils";
+import { formatStockQty, parseDateInput } from "@/lib/utils";
 
 type DraftLine = {
   itemId: string;
@@ -59,7 +58,11 @@ function StockView() {
   const isOwner = staff?.role === "owner";
   const canUseStock = can(staff, "stock");
   const [ownerView, setOwnerView] = useState<StockOwnerView>("history");
-  const [formOpen, setFormOpen] = useState(false);
+  const [countTarget, setCountTarget] = useState<{
+    year: number;
+    month: number;
+    dayOfMonth: StockCountRound;
+  } | null>(null);
   const [items, setItems] = useState<StockItem[]>([]);
   const [sessions, setSessions] = useState<StockCountSession[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -95,15 +98,45 @@ function StockView() {
     };
   }, [canUseStock, actorId]);
 
-  useBodyScrollLock(formOpen);
+  useBodyScrollLock(!!countTarget);
 
   if (!canUseStock) return null;
 
   const showCatalog = isOwner && ownerView === "catalog";
   const showHistory = !showCatalog;
 
+  const ownerTabs = isOwner ? (
+    <div className="stock-owner-tabs stock-owner-tabs--inline" role="tablist" aria-label="มุมมองคลังเจ้าของ">
+      <button
+        type="button"
+        role="tab"
+        className={ownerView === "history" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+        aria-selected={ownerView === "history"}
+        onClick={() => {
+          setOwnerView("history");
+          setCountTarget(null);
+        }}
+      >
+        ประวัตินับ
+      </button>
+      <button
+        type="button"
+        role="tab"
+        className={ownerView === "catalog" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+        aria-selected={ownerView === "catalog"}
+        onClick={() => {
+          setOwnerView("catalog");
+          setCountTarget(null);
+        }}
+      >
+        รายการวัตถุดิบ
+        {items.length ? ` (${items.length})` : ""}
+      </button>
+    </div>
+  ) : null;
+
   return (
-    <div className="module-page stock-module">
+    <div className="module-page stock-module stock-page">
       <div className="module-page-head">
         <h1 className="panel-title module-page-title">
           <Boxes size={18} aria-hidden />
@@ -112,43 +145,21 @@ function StockView() {
         <p className="muted stock-subtitle">
           {showCatalog
             ? "จัดการรายการ — ตั้งชื่อ · เพิ่ม/ลด · ลบ (เจ้าของ)"
-            : "นับสต๊อกคงเหลือ — วันที่ 1 · 10 · 20 ของเดือน"}
+            : "นับสต๊อกคงเหลือ — ระบบเปิดรอบ 1 · 10 · 20 ล่วงหน้า 3 รอบ · เรียงใหม่→เก่า"}
         </p>
-        {isOwner ? (
-          <div className="stock-owner-tabs" role="tablist" aria-label="มุมมองคลังเจ้าของ">
-            <button
-              type="button"
-              role="tab"
-              className={ownerView === "history" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-              aria-selected={ownerView === "history"}
-              onClick={() => {
-                setOwnerView("history");
-                setFormOpen(false);
-              }}
-            >
-              ประวัตินับ
-            </button>
-            <button
-              type="button"
-              role="tab"
-              className={ownerView === "catalog" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-              aria-selected={ownerView === "catalog"}
-              onClick={() => {
-                setOwnerView("catalog");
-                setFormOpen(false);
-              }}
-            >
-              รายการวัตถุดิบ
-              {items.length ? ` (${items.length})` : ""}
-            </button>
-          </div>
-        ) : null}
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {!loading && showCatalog ? <StockCatalogSetup onError={setError} /> : null}
+      {!loading && showCatalog ? (
+        <>
+          {ownerTabs ? (
+            <div className="ot-toolbar-slim module-toolbar-slim">{ownerTabs}</div>
+          ) : null}
+          <StockCatalogSetup onError={setError} />
+        </>
+      ) : null}
 
       {!loading && showHistory ? (
         <StockHistoryView
@@ -157,32 +168,35 @@ function StockView() {
           isOwner={isOwner}
           onError={setError}
           onOpenCatalog={isOwner ? () => setOwnerView("catalog") : undefined}
+          onCountRound={(row) =>
+            setCountTarget({
+              year: row.year,
+              month: row.month,
+              dayOfMonth: row.dayOfMonth,
+            })
+          }
+          toolbarLeading={ownerTabs}
         />
       ) : null}
 
-      {formOpen && !loading && showHistory ? (
-        <div className="modal-backdrop edit-modal is-module-form is-stock-form" onClick={() => setFormOpen(false)}>
+      {countTarget && !loading && showHistory ? (
+        <div
+          className="modal-backdrop edit-modal is-module-form is-stock-form"
+          onClick={() => setCountTarget(null)}
+        >
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <StockCountForm
               items={items}
               employees={employees}
               createdBy={actorId}
               isOwner={isOwner}
+              lockedRound={countTarget}
               onError={setError}
-              onClose={() => setFormOpen(false)}
+              onClose={() => setCountTarget(null)}
               onOpenCatalog={isOwner ? () => setOwnerView("catalog") : undefined}
             />
           </div>
         </div>
-      ) : null}
-
-      {showHistory ? (
-        <ModuleTabDock
-          ariaLabel="มุมมองคลัง"
-          formOpen={formOpen}
-          onAdd={() => setFormOpen(true)}
-          addLabel="+ นับสต็อก"
-        />
       ) : null}
     </div>
   );
@@ -194,12 +208,16 @@ function StockHistoryView({
   isOwner,
   onError,
   onOpenCatalog,
+  onCountRound,
+  toolbarLeading,
 }: {
   items: StockItem[];
   sessions: StockCountSession[];
   isOwner: boolean;
   onError: (msg: string | null) => void;
   onOpenCatalog?: () => void;
+  onCountRound: (row: StockHistoryTimelineRow) => void;
+  toolbarLeading?: ReactNode;
 }) {
   const [filter, setFilter] = useState<"all" | "missing">("all");
   const [detail, setDetail] = useState<StockHistoryTimelineRow | null>(null);
@@ -211,6 +229,7 @@ function StockHistoryView({
     [sessions, items],
   );
 
+  // Preserve newest → oldest from timeline builder.
   const rows = useMemo(
     () => (filter === "missing" ? grid.rows.filter((r) => !r.session) : grid.rows),
     [grid.rows, filter],
@@ -245,7 +264,8 @@ function StockHistoryView({
 
   return (
     <div className="stock-summary-view">
-      <div className="check-history-toolbar stock-history-toolbar">
+      <div className="check-history-toolbar stock-history-toolbar ot-toolbar-slim module-toolbar-slim">
+        {toolbarLeading}
         <div className="check-filter-pills" role="group" aria-label="ตัวกรอง">
           <button
             type="button"
@@ -262,19 +282,21 @@ function StockHistoryView({
             ยังไม่นับ
           </button>
         </div>
-        <p className="muted check-history-stats">
+        <p className="muted check-history-stats module-slim-stats">
           {stats.filledRounds}/{stats.totalRounds} รอบ · {stats.itemsTracked} รายการ
           {stats.rangeLabel !== "—" ? ` · ${stats.rangeLabel}` : ""}
         </p>
+        <span
+          className="ot-slim-hint muted module-slim-hint"
+          title="เรียงวันที่ใหม่→เก่า · ระบบเปิดรอบล่วงหน้า 3 รอบ · แตะแถวว่างเพื่อกรอก · แตะช่องที่นับแล้วดูรายละเอียด"
+        >
+          ใหม่→เก่า · แตะแถวว่างเพื่อนับ
+        </span>
       </div>
 
-      <p className="muted check-history-hint">
-        ประวัติย้อนหลังทุกเดือนที่มีข้อมูล · แถว = รอบนับ (1 · 10 · 20) · แตะช่องดูรายละเอียด
-      </p>
-
       {rows.length ? (
-        <div className="sheet-wrap stock-history-wrap">
-          <table className="sheet-table stock-history-table">
+        <div className="sheet-wrap stock-history-wrap stock-history-sheet sheet-bleed">
+          <table className="sheet-table stock-history-table sheet-table--dense">
             <thead>
               <tr>
                 <th className="stock-history-th-date">รอบ</th>
@@ -291,7 +313,8 @@ function StockHistoryView({
                   key={row.rowKey}
                   row={row}
                   columns={grid.columns}
-                  onOpen={() => row.session && setDetail(row)}
+                  onOpenFilled={() => row.session && setDetail(row)}
+                  onCountMissing={() => onCountRound(row)}
                 />
               ))}
             </tbody>
@@ -301,7 +324,7 @@ function StockHistoryView({
         <p className="empty">
           {filter === "missing"
             ? "ครบทุกรอบในช่วงนี้แล้ว"
-            : "ยังไม่มีประวัติ — กด + นับสต็อก"}
+            : "ยังไม่มีรอบนับ — ระบบจะเปิดรอบ 1 · 10 · 20 ให้อัตโนมัติ"}
         </p>
       )}
 
@@ -321,11 +344,13 @@ function StockHistoryView({
 function StockHistoryRow({
   row,
   columns,
-  onOpen,
+  onOpenFilled,
+  onCountMissing,
 }: {
   row: StockHistoryTimelineRow;
   columns: StockHistoryItemCol[];
-  onOpen: () => void;
+  onOpenFilled: () => void;
+  onCountMissing: () => void;
 }) {
   const hasSession = !!row.session;
   const isMissing = !hasSession;
@@ -333,13 +358,24 @@ function StockHistoryRow({
   return (
     <tr className={isMissing ? "stock-history-row-missing" : "stock-history-row-filled"}>
       <td className="stock-history-date">
-        {timelineRoundLabel(row)}
-        {hasSession ? (
-          <span className="stock-history-meta-inline">
-            {inspectorShort(row.session!.inspector)} · {formatStockCountTimeShort(row.session!.submittedAt)}
-          </span>
+        {isMissing ? (
+          <button
+            type="button"
+            className="stock-history-round-btn"
+            onClick={onCountMissing}
+            title={`กรอกนับรอบ ${timelineRoundLabel(row)}`}
+          >
+            {timelineRoundLabel(row)}
+            <span className="stock-history-missing-tag">ยังไม่นับ</span>
+          </button>
         ) : (
-          <span className="stock-history-missing-tag">ยังไม่นับ</span>
+          <>
+            {timelineRoundLabel(row)}
+            <span className="stock-history-meta-inline">
+              {inspectorShort(row.session!.inspector)} ·{" "}
+              {formatStockCountTimeShort(row.session!.submittedAt)}
+            </span>
+          </>
         )}
       </td>
       {columns.map((col, idx) => {
@@ -348,7 +384,14 @@ function StockHistoryRow({
         if (!hasSession) {
           return (
             <td key={col.itemId}>
-              <span className="stock-history-cell is-pending">—</span>
+              <button
+                type="button"
+                className="stock-history-cell is-pending"
+                onClick={onCountMissing}
+                title={`กรอกนับรอบ ${timelineRoundLabel(row)}`}
+              >
+                —
+              </button>
             </td>
           );
         }
@@ -357,7 +400,7 @@ function StockHistoryRow({
             <button
               type="button"
               className="stock-history-cell is-filled"
-              onClick={onOpen}
+              onClick={onOpenFilled}
               title={`${col.name}: ${qty != null ? formatStockQty(qty) : "—"} ${col.unit}`}
             >
               {qty != null ? formatStockQty(qty) : "—"}
@@ -390,7 +433,7 @@ function StockCountDetailModal({
         <div className="modal-head">
           <div>
             <h2 className="panel-title" style={{ fontSize: "1rem" }}>
-              {timelineRoundLabel(row)} · {formatDateShort(row.dateMs)}
+              {timelineRoundLabel(row)}
             </h2>
             <p className="muted check-detail-sub">
               {session.inspector} · {formatStockCountTimeShort(session.submittedAt)}
@@ -438,6 +481,7 @@ function StockCountForm({
   employees,
   createdBy,
   isOwner,
+  lockedRound,
   onError,
   onClose,
   onOpenCatalog,
@@ -446,25 +490,21 @@ function StockCountForm({
   employees: Employee[];
   createdBy: string;
   isOwner: boolean;
+  /** System round only — no free month/round picker. */
+  lockedRound: { year: number; month: number; dayOfMonth: StockCountRound };
   onError: (msg: string | null) => void;
   onClose: () => void;
   onOpenCatalog?: () => void;
 }) {
-  const now = new Date();
-  const defaultRound = nearestRound(now.getDate());
-  const defaultDate = new Date(now.getFullYear(), now.getMonth(), defaultRound);
-
+  const { year, month, dayOfMonth } = lockedRound;
   const [step, setStep] = useState<"setup" | "count" | "done">("setup");
-  const [year, setYear] = useState(defaultDate.getFullYear());
-  const [month, setMonth] = useState(defaultDate.getMonth());
-  const [dayOfMonth, setDayOfMonth] = useState<StockCountRound>(defaultRound);
   const [inspectorId, setInspectorId] = useState("");
   const [drafts, setDrafts] = useState<DraftLine[]>([]);
   const [existingSession, setExistingSession] = useState<StockCountSession | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const monthInput = `${year}-${String(month + 1).padStart(2, "0")}`;
   const inspector = employees.find((e) => e.id === inspectorId);
+  const roundDateLabel = stockRoundDateLabelBe(year, month, dayOfMonth);
 
   useEffect(() => {
     if (step !== "setup") return;
@@ -472,14 +512,6 @@ function StockCountForm({
       .then(setExistingSession)
       .catch(() => setExistingSession(null));
   }, [step, year, month, dayOfMonth]);
-
-  function onMonthChange(value: string) {
-    const { year: y, month: m } = parseStockMonthInput(value);
-    setYear(y);
-    setMonth(m);
-    const round = nearestRoundForMonth(y, m);
-    setDayOfMonth(round);
-  }
 
   function startCount() {
     if (!inspector) {
@@ -565,8 +597,12 @@ function StockCountForm({
     return (
       <div className="check-form">
         <h2 className="panel-title">บันทึกแล้ว</h2>
-        <p className="muted">รอบ {roundLabel(dayOfMonth)} · {inspector?.name}</p>
-        <button type="button" className="primary-btn" onClick={onClose}>ปิด</button>
+        <p className="muted">
+          รอบ {roundDateLabel} · {inspector?.name}
+        </p>
+        <button type="button" className="primary-btn" onClick={onClose}>
+          ปิด
+        </button>
       </div>
     );
   }
@@ -575,29 +611,9 @@ function StockCountForm({
     return (
       <div className="check-form">
         <h2 className="panel-title">นับสต็อก</h2>
-        <div className="field">
-          <label htmlFor="stock-count-month">เดือน</label>
-          <input
-            id="stock-count-month"
-            type="month"
-            value={monthInput}
-            onChange={(e) => onMonthChange(e.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="stock-count-round">รอบนับ</label>
-          <select
-            id="stock-count-round"
-            value={dayOfMonth}
-            onChange={(e) => setDayOfMonth(Number(e.target.value) as StockCountRound)}
-          >
-            {STOCK_COUNT_ROUNDS.map((d) => (
-              <option key={d} value={d}>
-                วันที่ {d}
-              </option>
-            ))}
-          </select>
-        </div>
+        <p className="muted check-hint">
+          รอบที่ระบบเปิดไว้ · <strong>{roundDateLabel}</strong> ({roundLabel(dayOfMonth)})
+        </p>
         <div className="field">
           <label htmlFor="stock-count-inspector">ผู้ตรวจนับ</label>
           <select
@@ -620,7 +636,9 @@ function StockCountForm({
           </p>
         ) : null}
         <div className="check-form-actions">
-          <button type="button" className="ghost-btn" onClick={onClose}>ยกเลิก</button>
+          <button type="button" className="ghost-btn" onClick={onClose}>
+            ยกเลิก
+          </button>
           <button type="button" className="primary-btn" onClick={startCount}>
             ถัดไป — กรอกจำนวน
           </button>
@@ -637,7 +655,7 @@ function StockCountForm({
   return (
     <form className="check-form stock-count-form" onSubmit={(e) => void onSubmit(e)}>
       <h2 className="panel-title">
-        {roundLabel(dayOfMonth)} · {inspector?.name}
+        {roundDateLabel} · {inspector?.name}
       </h2>
       <div className="stock-count-form-head">
         <p className="muted check-hint">กรอกยอดคงเหลือที่นับได้ (snapshot)</p>
@@ -682,16 +700,3 @@ function StockCountForm({
   );
 }
 
-function nearestRound(day: number): StockCountRound {
-  if (day <= 1) return 1;
-  if (day <= 10) return 10;
-  return 20;
-}
-
-function nearestRoundForMonth(year: number, month: number): StockCountRound {
-  const today = new Date();
-  if (today.getFullYear() !== year || today.getMonth() !== month) {
-    return 1;
-  }
-  return nearestRound(today.getDate());
-}

@@ -18,6 +18,10 @@
 /out/
 /out-pos/
 
+# Generated at build (write-version-json.mjs) — do not commit stale snapshots
+/public/version.json
+/public/pos-version.json
+
 # production
 /build
 

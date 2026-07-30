@@ -673,10 +673,12 @@ service cloud.firestore {
         && after.dueDate == before.dueDate
         && after.openAt == before.openAt
         && after.createdAt == before.createdAt
+        && after.get('nudgeKind', 'deadline') == before.get('nudgeKind', 'deadline')
         && after.diff(before).affectedKeys().hasOnly([
           'checklistDone',
           'proofImg',
           'proofImgs',
+          'completionNote',
           'status',
           'completedAt',
           'completedBy',
@@ -752,6 +754,12 @@ service cloud.firestore {
      * อ่าน: มีสิทธิ bonus · สร้าง/แก้/จ่าย: เจ้าของ
      */
     match /payrollItems/{id} {
+      allow read: if hasPerm('bonus');
+      allow create, update, delete: if isOwner();
+    }
+
+    /** ปิดเดือนโบนัส — snapshot + ล็อกชง/ผลิต */
+    match /bonusMonthCloses/{monthId} {
       allow read: if hasPerm('bonus');
       allow create, update, delete: if isOwner();
     }

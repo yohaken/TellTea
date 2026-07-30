@@ -40,10 +40,11 @@ function formatHm(ts: number): string {
 
 function formatDateShort(ts: number): string {
   if (!ts) return "—";
-  return new Date(ts).toLocaleDateString("th-TH", {
+  return new Intl.DateTimeFormat("th-TH", {
+    timeZone: "Asia/Bangkok",
     day: "numeric",
     month: "short",
-  });
+  }).format(new Date(ts));
 }
 
 function moneyOrDash(n: number | undefined): string {

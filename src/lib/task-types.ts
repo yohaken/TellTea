@@ -3,6 +3,12 @@ export type TaskChecklistItem = {
   label: string;
 };
 
+/**
+ * soft = แจ้งเบาๆ (ปิดได้ · ไม่เน้นเส้นตาย)
+ * deadline = ต้องทำตามกำหนด (โชว์วันครบ · แถบค้างชัด)
+ */
+export type TaskNudgeKind = "soft" | "deadline";
+
 export type TaskTemplate = {
   id: string;
   title: string;
@@ -12,6 +18,8 @@ export type TaskTemplate = {
   checklist: TaskChecklistItem[];
   assigneeIds: string[];
   assigneeNames: string[];
+  /** ค่าเริ่มต้น deadline — งานประจำเดิม */
+  nudgeKind: TaskNudgeKind;
   active: boolean;
   /** รอบที่เจ้าของลบแล้ว — sync จะไม่สร้างซ้ำ */
   dismissedPeriodKeys?: string[];
@@ -20,7 +28,8 @@ export type TaskTemplate = {
   updatedAt: number;
 };
 
-export type TaskOccurrenceStatus = "pending" | "completed" | "missed";
+/** waiting = พนักงานรายงานแล้ว (เช่น ส่งซ่อมแล้วรอ) — หยุดแจ้งเตือน แต่ยังติดตามในหลังร้าน */
+export type TaskOccurrenceStatus = "pending" | "waiting" | "completed" | "missed";
 
 export type TaskOccurrence = {
   id: string;
@@ -34,10 +43,13 @@ export type TaskOccurrence = {
   dueDate: number;
   openAt: number;
   status: TaskOccurrenceStatus;
+  nudgeKind: TaskNudgeKind;
   checklistDone: string[];
   proofImg?: string;
   /** รูปหลักฐานหลายรูป — ถ้าว่างใช้ proofImg */
   proofImgs?: string[];
+  /** ข้อความจากพนักงานตอนส่ง — feedback ถึงเจ้าของ */
+  completionNote?: string;
   completedAt?: number;
   completedBy?: string;
   completedKind?: "on_time" | "late" | "backfill";
@@ -54,5 +66,10 @@ export type TaskTemplateInput = {
   checklist: TaskChecklistItem[];
   assigneeIds: string[];
   assigneeNames: string[];
+  nudgeKind?: TaskNudgeKind;
   createdBy: string;
 };
+
+export function normalizeTaskNudgeKind(raw: unknown): TaskNudgeKind {
+  return raw === "soft" ? "soft" : "deadline";
+}

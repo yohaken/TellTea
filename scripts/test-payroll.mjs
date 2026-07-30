@@ -79,7 +79,36 @@ assert.equal(
   "emp1_2026-06_salary_mid",
 );
 
+function payrollSpecialItemDocId(employeeId, periodMonth, suffix) {
+  const safeEmp = employeeId.replace(/[^\w-]/g, "_").slice(0, 80);
+  const safeSuffix = String(suffix || Date.now())
+    .replace(/[^\w-]/g, "_")
+    .slice(0, 40);
+  return `${safeEmp}_${periodMonth}_salary_special_${safeSuffix}`;
+}
+
+assert.equal(
+  payrollSpecialItemDocId("emp1", "2026-07", "abc123"),
+  "emp1_2026-07_salary_special_abc123",
+);
+
+// หลายรายการจ่ายแยกต่อเดือนได้ — suffix ต่างกัน
+assert.notEqual(
+  payrollSpecialItemDocId("emp1", "2026-07", "a"),
+  payrollSpecialItemDocId("emp1", "2026-07", "b"),
+);
+
 assert.equal(clampDay(0), 1);
 assert.equal(clampDay(31), 28);
+
+function periodMonthEndMs(periodMonth) {
+  const { year, monthIndex } = parsePeriodMonth(periodMonth);
+  const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  return bangkokNoonMs(year, monthIndex, lastDay);
+}
+
+// มิ.ย. 2026 สิ้นเดือน = 30
+assert.equal(periodMonthEndMs("2026-06"), bangkokNoonMs(2026, 5, 30));
+assert.equal(periodMonthEndMs("2026-02"), bangkokNoonMs(2026, 1, 28));
 
 console.log("test-payroll: ok");

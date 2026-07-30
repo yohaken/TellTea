@@ -4,6 +4,7 @@ import {
   deleteDoc,
   deleteField,
   doc,
+  getDoc,
   getDocs,
   orderBy,
   query,
@@ -38,6 +39,16 @@ export type Employee = {
   payAccountNo?: string;
   /** ชื่อบัญชีรับโอน (optional) */
   payAccountName?: string;
+  /**
+   * ยอดเบิกล่วงหน้าค้างหัก (บาท)
+   * หักจากรอบเงินเดือน/โบนัสตอนสร้างคิวจ่าย — ตัดยอดจริงตอน mark จ่ายแล้ว
+   */
+  advanceBalance?: number;
+  /**
+   * true = ข้ามตอนกด «สร้างเงินเดือน/โบนัส» กลุ่ม
+   * ใช้กับพนักงานใหม่ที่จ่ายแยกก่อนเข้าวรรอบปกติ
+   */
+  skipGroupPayroll?: boolean;
   createdAt: number;
   updatedAt: number;
 };
@@ -55,6 +66,28 @@ function isLinkedToStaff(emp: Employee, staff: StaffMember): boolean {
     return normalizePhone(emp.linkedPhone) === normalizePhone(staff.phone);
   }
   return false;
+}
+
+/**
+ * หาแถวพนักงานที่ผูกกับบัญชี staff — ใช้กรองคิวจ่าย/เงินเดือนมุมพนักงาน
+ * ลำดับ: staff.employeeId → linkedStaffId/email/phone → ชื่อตรง displayName
+ */
+export function resolveLinkedEmployee(
+  employees: Employee[],
+  staff: Pick<StaffMember, "id" | "email" | "phone" | "displayName" | "employeeId"> | null | undefined,
+): Employee | null {
+  if (!staff || !employees.length) return null;
+  if (staff.employeeId) {
+    const byId = employees.find((e) => e.id === staff.employeeId);
+    if (byId) return byId;
+  }
+  const linked = employees.find((e) => isLinkedToStaff(e, staff as StaffMember));
+  if (linked) return linked;
+  const name = (staff.displayName || "").trim().toLowerCase();
+  if (!name) return null;
+  return (
+    employees.find((e) => e.active && e.name.trim().toLowerCase() === name) || null
+  );
 }
 
 function isUnlinked(emp: Employee): boolean {
@@ -120,6 +153,8 @@ export async function updateEmployee(
       | "payBank"
       | "payAccountNo"
       | "payAccountName"
+      | "advanceBalance"
+      | "skipGroupPayroll"
     >
   >,
 ): Promise<void> {
@@ -173,7 +208,34 @@ export async function updateEmployee(
     const v = (patch.payAccountName || "").trim();
     next.payAccountName = v ? v : deleteField();
   }
+  if (patch.advanceBalance !== undefined) {
+    const n = Number(patch.advanceBalance);
+    next.advanceBalance =
+      patch.advanceBalance == null || !Number.isFinite(n) || n <= 0
+        ? deleteField()
+        : Math.round(n * 100) / 100;
+  }
+  if (patch.skipGroupPayroll !== undefined) {
+    next.skipGroupPayroll = patch.skipGroupPayroll ? true : deleteField();
+  }
   await updateDoc(doc(getDb(), "employees", id), next);
+}
+
+/** ปรับยอดเบิกค้าง (+ เพิ่มเมื่อเบิกใหม่ / − ตอนหักจากเงินเดือน) */
+export async function adjustEmployeeAdvanceBalance(
+  id: string,
+  delta: number,
+): Promise<number> {
+  const ref = doc(getDb(), "employees", id);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("ไม่พบพนักงาน");
+  const prev = Math.max(0, Number(snap.data().advanceBalance) || 0);
+  const next = Math.round(Math.max(0, prev + (Number(delta) || 0)) * 100) / 100;
+  await updateDoc(ref, {
+    advanceBalance: next > 0 ? next : deleteField(),
+    updatedAt: Date.now(),
+  });
+  return next;
 }
 
 export async function deleteEmployee(id: string): Promise<void> {

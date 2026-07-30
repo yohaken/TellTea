@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  type ReactNode,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -59,8 +60,8 @@ import {
   type CheckSessionSummary,
 } from "@/lib/checklist";
 import {
-  formatDateShort,
-  formatDateTimeShort,
+  formatDateShortBe,
+  formatDateTimeShortBe,
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
@@ -190,54 +191,60 @@ function CheckView() {
     setFormSeed({});
   }
 
+  const ownerTabs = isOwner ? (
+    <div className="stock-owner-tabs stock-owner-tabs--inline" role="tablist" aria-label="มุมมองเช็คเจ้าของ">
+      <button
+        type="button"
+        role="tab"
+        className={ownerView === "history" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+        aria-selected={ownerView === "history"}
+        onClick={() => {
+          setOwnerView("history");
+          setFormOpen(false);
+          router.replace("/check/", { scroll: false });
+        }}
+      >
+        ประวัติเช็ค
+      </button>
+      <button
+        type="button"
+        role="tab"
+        className={ownerView === "setup" ? "stock-owner-tab is-active" : "stock-owner-tab"}
+        aria-selected={ownerView === "setup"}
+        onClick={() => {
+          setOwnerView("setup");
+          setFormOpen(false);
+          router.replace("/check/?tab=setup", { scroll: false });
+        }}
+      >
+        รายการ SOP
+        {items.length ? ` (${items.length})` : ""}
+      </button>
+    </div>
+  ) : null;
+
   return (
-    <div className="module-page">
+    <div className="module-page check-page">
       <div className="module-page-head">
         <h1 className="panel-title module-page-title">
           <ClipboardCheck size={18} aria-hidden />
           SmartCheck SOP
         </h1>
-        {isOwner ? (
-          <div className="stock-owner-tabs" role="tablist" aria-label="มุมมองเช็คเจ้าของ">
-            <button
-              type="button"
-              role="tab"
-              className={ownerView === "history" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-              aria-selected={ownerView === "history"}
-              onClick={() => {
-                setOwnerView("history");
-                setFormOpen(false);
-                router.replace("/check/", { scroll: false });
-              }}
-            >
-              ประวัติเช็ค
-            </button>
-            <button
-              type="button"
-              role="tab"
-              className={ownerView === "setup" ? "stock-owner-tab is-active" : "stock-owner-tab"}
-              aria-selected={ownerView === "setup"}
-              onClick={() => {
-                setOwnerView("setup");
-                setFormOpen(false);
-                router.replace("/check/?tab=setup", { scroll: false });
-              }}
-            >
-              รายการ SOP
-              {items.length ? ` (${items.length})` : ""}
-            </button>
-          </div>
-        ) : null}
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading && showSetup ? (
-        <ChecklistSetup
-          onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
-          onError={setError}
-        />
+        <>
+          {ownerTabs ? (
+            <div className="ot-toolbar-slim module-toolbar-slim">{ownerTabs}</div>
+          ) : null}
+          <ChecklistSetup
+            onReload={() => void reloadCatalog().catch((err) => setError((err as Error).message))}
+            onError={setError}
+          />
+        </>
       ) : null}
 
       {!loading && showHistory ? (
@@ -248,6 +255,7 @@ function CheckView() {
           isOwner={isOwner}
           onError={setError}
           onStartCheck={openFormForSlot}
+          toolbarLeading={ownerTabs}
         />
       ) : null}
 
@@ -473,7 +481,7 @@ function CheckForm({
         <div className="check-done-card">
           <CheckCircle2 size={40} className="check-done-icon" aria-hidden />
           <p className="muted">
-            {formatDateShort(parseDateInput(date))} · {labelCheckShift(shift)} · ผู้ตรวจ {inspector?.name}
+            {formatDateShortBe(parseDateInput(date))} · {labelCheckShift(shift)} · ผู้ตรวจ {inspector?.name}
           </p>
           <p className="muted">
             ผ่าน {passCount} · ไม่ผ่าน {failCount}
@@ -552,7 +560,7 @@ function CheckForm({
             <div className="check-existing-banner check-existing-banner--ok">
               <CheckCircle2 size={16} aria-hidden />
               <span>
-                กะนี้เช็คแล้ว ({formatDateTimeShort(existingSession.submittedAt)}) —{" "}
+                กะนี้เช็คแล้ว ({formatDateTimeShortBe(existingSession.submittedAt)}) —{" "}
                 {existingSession.failed ? `${existingSession.failed} ไม่ผ่าน` : "ผ่าน 100%"} · ไม่ต้องเช็คซ้ำ
               </span>
             </div>
@@ -590,7 +598,7 @@ function CheckForm({
 
       <div className="check-list-header">
         <div>
-          <strong>{formatDateShort(parseDateInput(date))}</strong>
+          <strong>{formatDateShortBe(parseDateInput(date))}</strong>
           <span className="muted"> · {labelCheckShift(shift)} · {inspector?.name}</span>
         </div>
         <div className="check-progress-wrap">
@@ -854,6 +862,7 @@ function CheckSummary({
   isOwner,
   onError,
   onStartCheck,
+  toolbarLeading,
 }: {
   records: ChecklistRecord[];
   month: string;
@@ -861,6 +870,7 @@ function CheckSummary({
   isOwner: boolean;
   onError: (msg: string) => void;
   onStartCheck: (dateMs: number, shift: CheckShiftId) => void;
+  toolbarLeading?: ReactNode;
 }) {
   const [filter, setFilter] = useState<HistoryFilter>("all");
   const [detail, setDetail] = useState<HistoryDetail | null>(null);
@@ -901,7 +911,8 @@ function CheckSummary({
 
   return (
     <div className="check-summary-view">
-      <div className="check-history-toolbar">
+      <div className="check-history-toolbar ot-toolbar-slim module-toolbar-slim">
+        {toolbarLeading}
         <input
           type="month"
           className="ot-slim-input"
@@ -925,19 +936,21 @@ function CheckSummary({
             มีปัญหา
           </button>
         </div>
-        <p className="muted check-history-stats">
+        <p className="muted check-history-stats module-slim-stats">
           {stats.sessions}/{stats.expectedSessions} กะ · ไม่ผ {stats.failItems}
           {stats.daysWithIssues ? ` · ${stats.daysWithIssues} วันมีปัญหา` : ""}
         </p>
+        <span
+          className="ot-slim-hint muted module-slim-hint"
+          title={`ตารางแสดงล่วงหน้า ${CHECK_PLAN_AHEAD_DAYS} วัน — วันนี้/ย้อนหลังแตะ "เช็ค" ได้ทุกกะ · วันล่วงหน้ายังเปิดไม่ได้`}
+        >
+          ล่วงหน้า {CHECK_PLAN_AHEAD_DAYS} วัน · แตะช่องเช็ค
+        </span>
       </div>
 
-      <p className="muted check-history-hint">
-        ตารางแสดงล่วงหน้า {CHECK_PLAN_AHEAD_DAYS} วัน — วันนี้/ย้อนหลังแตะ &quot;เช็ค&quot; ได้ทุกกะ · วันล่วงหน้ายังเปิดไม่ได้
-      </p>
-
       {rows.length ? (
-        <div className="sheet-wrap check-history-wrap">
-          <table className="sheet-table check-history-table">
+        <div className="sheet-wrap check-history-wrap check-history-sheet sheet-bleed">
+          <table className="sheet-table check-history-table sheet-table--dense">
             <thead>
               <tr>
                 <th className="check-history-th-date">วันที่</th>
@@ -1010,7 +1023,7 @@ function CheckHistoryRow({
   return (
     <tr className={rowClass}>
       <td className="check-history-date">
-        {formatDateShort(row.dateMs)}
+        {formatDateShortBe(row.dateMs)}
         {isToday ? <span className="check-history-today-tag">วันนี้</span> : null}
         {isFuture ? <span className="check-history-future-tag">ล่วงหน้า</span> : null}
         {(isToday || row.dateMs < todayMs) && overdueShifts ? (
@@ -1120,10 +1133,10 @@ function CheckShiftDetailModal({
           <div className="check-modal-head">
             <div>
               <h2 className="panel-title" style={{ fontSize: "1rem", margin: 0 }}>
-                {formatDateShort(dateMs)} · {cell.label}
+                {formatDateShortBe(dateMs)} · {cell.label}
               </h2>
               <p className="muted check-detail-sub">
-                {session.inspector} · {formatDateTimeShort(session.submittedAt)} ·{" "}
+                {session.inspector} · {formatDateTimeShortBe(session.submittedAt)} ·{" "}
                 {session.failed ? `${session.failed} ไม่ผ่าน` : "ผ่านครบ"}
               </p>
             </div>

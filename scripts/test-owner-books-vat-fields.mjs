@@ -33,8 +33,8 @@ assert.match(pageSrc, /className="trash-btn"/);
 assert.match(pageSrc, /col-vat/);
 
 assert.match(vatSrc, /loadBothBooksVatByMonth/);
-assert.match(vatSrc, /ดึงภาษีซื้อจากสองบช/);
-assert.match(vatSrc, /รายการจากสองบช/);
+assert.match(vatSrc, /ภาษีซื้อจากสองบช/);
+assert.match(vatSrc, /syncBooksFromLedgers|รายการจากสองบช/);
 assert.match(vatSrc, /BooksVatEntryDetailModal/);
 
 const booksSrc = readFileSync(join(root, "src/lib/books-vat-month.ts"), "utf8");

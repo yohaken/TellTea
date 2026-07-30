@@ -15,6 +15,9 @@ const PROJECT = "mypeer-501909";
 const CREATED_BY = process.env.CREATED_BY || "yohaken@gmail.com";
 const YEAR = Number(process.env.STOCK_YEAR || 2026);
 const MONTH = Number(process.env.STOCK_MONTH || 7);
+/** Set IMPORT_SESSIONS=1 to also write stockCountSessions from CSV columns. */
+const IMPORT_SESSIONS =
+  process.env.IMPORT_SESSIONS === "1" || process.env.IMPORT_SESSIONS === "true";
 
 function resolveCsvPath() {
   if (process.argv[2]) return process.argv[2];
@@ -157,41 +160,49 @@ async function main() {
     });
   }
 
-  const sessions = buildCountSessionsFromPreview(preview, itemIdByName);
-  for (const s of sessions) {
-    const id = stockCountSessionId(s.year, s.month, s.dayOfMonth);
-    writes.push({
-      update: {
-        name: `projects/${PROJECT}/databases/(default)/documents/stockCountSessions/${id}`,
-        fields: docFields({
-          date: s.date,
-          dayOfMonth: s.dayOfMonth,
-          year: s.year,
-          month: s.month,
-          inspector: "Import CSV",
-          inspectorId: null,
-          submittedAt: s.date,
-          createdBy: CREATED_BY,
-          lines: s.lines.map((line) => ({
-            itemId: line.itemId,
-            itemName: line.itemName,
-            qty: line.qty,
-          })),
-          updatedAt: now,
-          source: "csv-import",
-        }),
-      },
-    });
+  let sessionCount = 0;
+  if (IMPORT_SESSIONS) {
+    const sessions = buildCountSessionsFromPreview(preview, itemIdByName);
+    sessionCount = sessions.length;
+    for (const s of sessions) {
+      const id = stockCountSessionId(s.year, s.month, s.dayOfMonth);
+      writes.push({
+        update: {
+          name: `projects/${PROJECT}/databases/(default)/documents/stockCountSessions/${id}`,
+          fields: docFields({
+            date: s.date,
+            dayOfMonth: s.dayOfMonth,
+            year: s.year,
+            month: s.month,
+            inspector: "Import CSV",
+            inspectorId: null,
+            submittedAt: s.date,
+            createdBy: CREATED_BY,
+            lines: s.lines.map((line) => ({
+              itemId: line.itemId,
+              itemName: line.itemName,
+              qty: line.qty,
+            })),
+            updatedAt: now,
+            source: "csv-import",
+          }),
+        },
+      });
+    }
   }
 
   preview.products.forEach((p) =>
     console.log(`  ${p.name}: ${p.qty} (${p.counts.length} counts)`),
   );
-  console.log(`  → ${sessions.length} count sessions`);
+  console.log(
+    IMPORT_SESSIONS
+      ? `  → ${sessionCount} count sessions`
+      : "  → skip count sessions (IMPORT_SESSIONS≠1)",
+  );
 
   await commitWrites(token, writes);
   console.log(
-    `done — upsert ${preview.products.length} products, ${sessions.length} count sessions`,
+    `done — upsert ${preview.products.length} products, ${sessionCount} count sessions`,
   );
 }
 
