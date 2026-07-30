@@ -12,12 +12,26 @@ function formatLiveClock(now: Date) {
 }
 
 function formatLiveDate(now: Date) {
-  return now.toLocaleDateString("th-TH", {
+  // Asia/Bangkok + พ.ศ. year (avoid device TZ / double-era issues).
+  const weekday = new Intl.DateTimeFormat("th-TH", {
+    timeZone: "Asia/Bangkok",
     weekday: "long",
-    day: "numeric",
+  }).format(now);
+  const month = new Intl.DateTimeFormat("th-TH", {
+    timeZone: "Asia/Bangkok",
     month: "long",
+  }).format(now);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
     year: "numeric",
-  });
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value || "";
+  const day = Number(get("day"));
+  const yearCe = Number(get("year"));
+  if (!day || !yearCe) return "—";
+  return `${weekday}ที่ ${day} ${month} พ.ศ. ${yearCe + 543}`;
 }
 
 /** หน้าพร้อมขาย — นาฬิกาจริง + เข้า/ออกงาน (ยังไม่ผูกกะหลังบ้าน) */

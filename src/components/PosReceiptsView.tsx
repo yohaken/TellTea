@@ -110,12 +110,26 @@ export function PosReceiptsView() {
         <header className="pos-receipts-head">
           <h2>ประวัติใบเสร็จ</h2>
           <p className="muted">
-            {new Date(dayStart).toLocaleDateString("th-TH", {
-              weekday: "short",
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })}
+            {(() => {
+              const d = new Date(dayStart);
+              const weekday = new Intl.DateTimeFormat("th-TH", {
+                timeZone: "Asia/Bangkok",
+                weekday: "short",
+              }).format(d);
+              const month = new Intl.DateTimeFormat("th-TH", {
+                timeZone: "Asia/Bangkok",
+                month: "short",
+              }).format(d);
+              const parts = new Intl.DateTimeFormat("en-CA", {
+                timeZone: "Asia/Bangkok",
+                year: "numeric",
+                day: "2-digit",
+              }).formatToParts(d);
+              const get = (t: string) => parts.find((p) => p.type === t)?.value || "";
+              const day = get("day");
+              const yearCe = Number(get("year"));
+              return `${weekday} ${day} ${month} ${yearCe + 543}`;
+            })()}
             {pendingCount > 0 ? ` · รอส่ง ${pendingCount}` : ""}
           </p>
           <div className="pos-receipts-filters">

@@ -1,19 +1,18 @@
-import { formatDateShort, formatDateShortBe } from "@/lib/utils";
+import { formatDateShortBe, formatDateShortCe } from "@/lib/utils";
 
 export type SheetDateEra = "ce" | "be";
 
 /**
  * Single-line Bangkok date for dense sheets — normal color.
- * Default ค.ศ. (e.g. 29/7/26). Pass era="be" for พ.ศ. (e.g. 29/7/69).
- * Opt-in per table so phased rollout does not change other sheets.
+ * Default พ.ศ. (e.g. 29/7/69). Pass era="ce" only when Gregorian is required.
  */
 export function SheetDateCell({
   ms,
-  era = "ce",
+  era = "be",
 }: {
   ms: number;
   era?: SheetDateEra;
 }) {
-  const text = era === "be" ? formatDateShortBe(ms) : formatDateShort(ms);
+  const text = era === "ce" ? formatDateShortCe(ms) : formatDateShortBe(ms);
   return <span className="sheet-date-cell">{text}</span>;
 }

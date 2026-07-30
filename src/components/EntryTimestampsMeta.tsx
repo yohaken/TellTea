@@ -1,10 +1,10 @@
 "use client";
 
 import {
-  formatDateShort,
   formatDateShortBe,
-  formatDateTimeShort,
+  formatDateShortCe,
   formatDateTimeShortBe,
+  formatDateTimeShortCe,
   entryUpdatedAt,
 } from "@/lib/utils";
 
@@ -15,19 +15,19 @@ export function EntryTimestampsMeta({
   entryDate,
   createdAt,
   updatedAt,
-  era = "ce",
+  era = "be",
 }: {
   entryDate: number;
   createdAt?: number;
   updatedAt?: number;
-  /** Opt-in พ.ศ. display — default ค.ศ. so other modules stay unchanged. */
+  /** Default พ.ศ.; pass era="ce" only when Gregorian display is required. */
   era?: EntryTimestampEra;
 }) {
   const updated = entryUpdatedAt({ updatedAt, createdAt });
   const dateText =
-    era === "be" ? formatDateShortBe(entryDate) : formatDateShort(entryDate);
+    era === "ce" ? formatDateShortCe(entryDate) : formatDateShortBe(entryDate);
   const updatedText =
-    era === "be" ? formatDateTimeShortBe(updated) : formatDateTimeShort(updated);
+    era === "ce" ? formatDateTimeShortCe(updated) : formatDateTimeShortBe(updated);
   return (
     <p className="entry-detail-meta muted" aria-live="polite">
       <span>
