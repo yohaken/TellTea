@@ -1,6 +1,6 @@
 /**
- * Staff VAT-first flow for ledger cash-out create (not bill notices).
- * Owner skips this and uses the normal form.
+ * VAT-first flow for ledger cash-out create (staff + owner on /ledger/).
+ * Not used for bill notices / transfer-in / edit.
  */
 
 export type VatFirstPhase =
@@ -10,9 +10,9 @@ export type VatFirstPhase =
   | "manual"
   | "form";
 
-/** Staff starts at ask; owner goes straight to the form. */
-export function initialVatFirstPhase(isOwner: boolean): VatFirstPhase {
-  return isOwner ? "form" : "ask";
+/** Everyone creating cash-out on staff ledger starts at the VAT ask. */
+export function initialVatFirstPhase(_isOwner?: boolean): VatFirstPhase {
+  return "ask";
 }
 
 export function phaseAfterVatAsk(hasVatDocument: boolean): VatFirstPhase {
@@ -31,16 +31,25 @@ export function vatFirstDetailsUnlocked(phase: VatFirstPhase): boolean {
   return phase === "form";
 }
 
-/** Staff may save only when VAT path is resolved (no VAT, or verified amount). */
-export function staffVatReadyToSave(opts: {
-  isOwner: boolean;
+/** Save only when VAT path is resolved (no VAT, or verified amount). */
+export function vatFirstReadyToSave(opts: {
   phase: VatFirstPhase;
   hasVat: boolean;
   vatVerified: boolean;
   vatInput: number;
 }): boolean {
-  if (opts.isOwner) return true;
   if (opts.phase !== "form") return false;
   if (!opts.hasVat) return true;
   return opts.vatVerified && opts.vatInput > 0;
+}
+
+/** @deprecated use vatFirstReadyToSave — kept for older imports/tests */
+export function staffVatReadyToSave(opts: {
+  isOwner?: boolean;
+  phase: VatFirstPhase;
+  hasVat: boolean;
+  vatVerified: boolean;
+  vatInput: number;
+}): boolean {
+  return vatFirstReadyToSave(opts);
 }

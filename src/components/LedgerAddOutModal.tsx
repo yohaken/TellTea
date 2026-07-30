@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
-import { EntryVatFieldset } from "@/components/EntryVatFieldset";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import {
@@ -26,8 +25,8 @@ import {
   initialVatFirstPhase,
   phaseAfterAiVatExtract,
   phaseAfterVatAsk,
-  staffVatReadyToSave,
   vatFirstDetailsUnlocked,
+  vatFirstReadyToSave,
   type VatFirstPhase,
 } from "@/lib/ledger-vat-first";
 import {
@@ -38,9 +37,8 @@ import { parseDateInput, todayInputValue } from "@/lib/utils";
 import { formatVatMoney } from "@/lib/vat-number-format";
 
 /**
- * Create cash-out modal.
- * Staff: VAT-first gate (ask → upload/AI confirm or manual → details).
- * Owner: normal compact form (skips ask).
+ * Create cash-out modal on /ledger/.
+ * VAT-first for staff and owner (ask → upload/AI confirm or manual → details).
  */
 export function LedgerAddOutModal({
   createdBy,
@@ -93,7 +91,8 @@ export function LedgerAddOutModal({
   vatFirstPhaseRef.current = vatFirstPhase;
 
   const detailsUnlocked = vatFirstDetailsUnlocked(vatFirstPhase);
-  const staffVatGate = !isOwner;
+  /** VAT-first UI for everyone creating cash-out here (owner testing + staff). */
+  const vatFirstGate = true;
   const vatInputNum = parseVatInputStr(vatInputStr);
 
   const filteredSuggestions = useMemo(() => {
@@ -181,7 +180,7 @@ export function LedgerAddOutModal({
     extractBusyRef.current = true;
     setExtractStatus("loading");
     const inVatFirstUpload =
-      staffVatGate &&
+      vatFirstGate &&
       (vatFirstPhaseRef.current === "upload" ||
         vatFirstPhaseRef.current === "confirm_ai" ||
         vatFirstPhaseRef.current === "manual");
@@ -285,8 +284,7 @@ export function LedgerAddOutModal({
     }
     const vatNum = parseVatInputStr(vatInputStr);
     if (
-      !staffVatReadyToSave({
-        isOwner,
+      !vatFirstReadyToSave({
         phase: vatFirstPhase,
         hasVat,
         vatVerified,
@@ -522,7 +520,7 @@ export function LedgerAddOutModal({
 
         {detailsUnlocked ? (
           <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
-            {staffVatGate && hasVat ? (
+            {hasVat ? (
               <div className="vat-first-summary" aria-live="polite">
                 <span>
                   VAT ยืนยันแล้ว · {formatVatMoney(vatInputNum)} บาท
@@ -539,10 +537,9 @@ export function LedgerAddOutModal({
                   แก้ยอด VAT
                 </button>
               </div>
-            ) : null}
-            {staffVatGate && !hasVat ? (
+            ) : (
               <p className="muted vat-first-summary-no">ไม่มี VAT · กรอกรายการได้เลย</p>
-            ) : null}
+            )}
 
             <div className="field">
               <label htmlFor="add-out-date">วันที่</label>
@@ -606,48 +603,11 @@ export function LedgerAddOutModal({
               storageFolder="ledger-receipts"
               storageSlotKey={`add-${createdBy || "new"}`}
               hint={
-                staffVatGate && hasVat
+                hasVat
                   ? "เพิ่มรูปได้ · VAT ยืนยันแล้ว"
                   : "ถ่าย/แนบ — AI อ่านรายการ ยอด VAT"
               }
             />
-            {isOwner ? (
-              <EntryVatFieldset
-                idPrefix="add-out"
-                disabled={busy}
-                amountInclusive={Number(amount) || 0}
-                hasVat={hasVat}
-                vatInputStr={vatInputStr}
-                vatInvoiceNo={vatInvoiceNo}
-                vatSource={vatSource}
-                vatVerified={vatVerified}
-                aiStatus={
-                  receiptUrls.length === 0
-                    ? "none"
-                    : extractStatus === "loading"
-                      ? "loading"
-                      : extractStatus === "error"
-                        ? "error"
-                        : extractStatus === "ready"
-                          ? "ready"
-                          : "idle"
-                }
-                aiVatReason={aiVatReason}
-                onHasVatChange={setHasVat}
-                onVatInputChange={setVatInputStr}
-                onVatInvoiceNoChange={setVatInvoiceNo}
-                onVatSourceChange={setVatSource}
-                onVatVerifiedChange={setVatVerified}
-                onVendorHint={(name) => {
-                  if (!description.trim()) setDescription(name);
-                }}
-                canRereadAi={receiptUrls.length > 0}
-                onRereadAi={() => {
-                  lastExtractKeyRef.current = "";
-                  void runExtractFromPhotos(receiptUrls);
-                }}
-              />
-            ) : null}
             <LedgerTypeField
               id="add-out-type"
               isOwner={isOwner}
