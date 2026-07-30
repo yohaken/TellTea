@@ -38,8 +38,11 @@
 - [ ] สลิปมีช่องผู้ส่ง/ผู้รับ
 
 ### S5 ทีหลัง
-- [ ] login พนักงานรายคน (ถ้าต้องการ)
+- [ ] **ใครเข้ากะแบบเลือกชื่อเรียบง่าย** → ย้ายไปเฟส **O1** [npos-shift-opener-checklist.md](./npos-shift-opener-checklist.md) (ยังไม่ทำ PIN)
+- [ ] login พนักงานรายคน / PIN (หลัง O1 ถ้าต้องการล็อกสิทธิ์)
 - [ ] Room / เก็บยาวเมื่อคิวโต
+
+แผนรวมเคาน์เตอร์ถัดไป: [npos-counter-ops-phases.md](./npos-counter-ops-phases.md)
 
 ---
 

@@ -22,6 +22,7 @@ const steps = [
   { name: "customer-display", cmd: ["node", "scripts/test-npos-customer-display.mjs"] },
   { name: "customer-focus", cmd: ["node", "scripts/test-npos-customer-focus.mjs"] },
   { name: "change-display-setting", cmd: ["node", "scripts/test-npos-change-display-setting.mjs"] },
+  { name: "counter-ops-phases", cmd: ["node", "scripts/test-npos-counter-ops-phases.mjs"] },
   { name: "receipt-readable", cmd: ["node", "scripts/test-npos-receipt-readable.mjs"] },
   { name: "thermal-all-docs", cmd: ["node", "scripts/test-npos-thermal-all-docs.mjs"] },
   { name: "z-sunmi-print", cmd: ["node", "scripts/test-npos-z-sunmi-print.mjs"] },
