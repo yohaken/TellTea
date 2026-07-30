@@ -59,8 +59,8 @@ import {
   type CheckSessionSummary,
 } from "@/lib/checklist";
 import {
-  formatDateShort,
-  formatDateTimeShort,
+  formatDateShortBe,
+  formatDateTimeShortBe,
   parseDateInput,
   todayInputValue,
 } from "@/lib/utils";
@@ -191,7 +191,7 @@ function CheckView() {
   }
 
   return (
-    <div className="module-page">
+    <div className="module-page check-page">
       <div className="module-page-head">
         <h1 className="panel-title module-page-title">
           <ClipboardCheck size={18} aria-hidden />
@@ -473,7 +473,7 @@ function CheckForm({
         <div className="check-done-card">
           <CheckCircle2 size={40} className="check-done-icon" aria-hidden />
           <p className="muted">
-            {formatDateShort(parseDateInput(date))} · {labelCheckShift(shift)} · ผู้ตรวจ {inspector?.name}
+            {formatDateShortBe(parseDateInput(date))} · {labelCheckShift(shift)} · ผู้ตรวจ {inspector?.name}
           </p>
           <p className="muted">
             ผ่าน {passCount} · ไม่ผ่าน {failCount}
@@ -552,7 +552,7 @@ function CheckForm({
             <div className="check-existing-banner check-existing-banner--ok">
               <CheckCircle2 size={16} aria-hidden />
               <span>
-                กะนี้เช็คแล้ว ({formatDateTimeShort(existingSession.submittedAt)}) —{" "}
+                กะนี้เช็คแล้ว ({formatDateTimeShortBe(existingSession.submittedAt)}) —{" "}
                 {existingSession.failed ? `${existingSession.failed} ไม่ผ่าน` : "ผ่าน 100%"} · ไม่ต้องเช็คซ้ำ
               </span>
             </div>
@@ -590,7 +590,7 @@ function CheckForm({
 
       <div className="check-list-header">
         <div>
-          <strong>{formatDateShort(parseDateInput(date))}</strong>
+          <strong>{formatDateShortBe(parseDateInput(date))}</strong>
           <span className="muted"> · {labelCheckShift(shift)} · {inspector?.name}</span>
         </div>
         <div className="check-progress-wrap">
@@ -936,8 +936,8 @@ function CheckSummary({
       </p>
 
       {rows.length ? (
-        <div className="sheet-wrap check-history-wrap">
-          <table className="sheet-table check-history-table">
+        <div className="sheet-wrap check-history-wrap check-history-sheet sheet-bleed">
+          <table className="sheet-table check-history-table sheet-table--dense">
             <thead>
               <tr>
                 <th className="check-history-th-date">วันที่</th>
@@ -1010,7 +1010,7 @@ function CheckHistoryRow({
   return (
     <tr className={rowClass}>
       <td className="check-history-date">
-        {formatDateShort(row.dateMs)}
+        {formatDateShortBe(row.dateMs)}
         {isToday ? <span className="check-history-today-tag">วันนี้</span> : null}
         {isFuture ? <span className="check-history-future-tag">ล่วงหน้า</span> : null}
         {(isToday || row.dateMs < todayMs) && overdueShifts ? (
@@ -1120,10 +1120,10 @@ function CheckShiftDetailModal({
           <div className="check-modal-head">
             <div>
               <h2 className="panel-title" style={{ fontSize: "1rem", margin: 0 }}>
-                {formatDateShort(dateMs)} · {cell.label}
+                {formatDateShortBe(dateMs)} · {cell.label}
               </h2>
               <p className="muted check-detail-sub">
-                {session.inspector} · {formatDateTimeShort(session.submittedAt)} ·{" "}
+                {session.inspector} · {formatDateTimeShortBe(session.submittedAt)} ·{" "}
                 {session.failed ? `${session.failed} ไม่ผ่าน` : "ผ่านครบ"}
               </p>
             </div>
