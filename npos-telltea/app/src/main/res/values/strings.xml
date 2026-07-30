@@ -340,11 +340,12 @@
     <string name="change_display_current_fmt">ตอนนี้: %1$s</string>
     <string name="sell_hub_change_display_fmt">เวลาแสดงเงินทอน · %1$s</string>
     <string name="payment_voice_title">เสียงพูดรับเงิน / ทอน</string>
-    <string name="payment_voice_hint">หลังขายสด พูดไทยสั้น «รับมา … ทอน …»\nค่าเริ่มต้นเปิด · ปิดได้ที่นี่\nต้องมีเสียงภาษาไทยบนเครื่อง (เช่น Google TTS) — ไม่พูดอังกฤษแทน</string>
+    <string name="payment_voice_hint">หลังขายสด พูดไทยสั้น «รับมา … ทอน …»\nเสียงฝังในแอปแล้ว — ไม่ต้องติดตั้ง Google TTS\nค่าเริ่มต้นเปิด · ปิดได้ที่นี่</string>
     <string name="payment_voice_toggle_btn">เปิด/ปิดเสียงพูด</string>
     <string name="payment_voice_current_fmt">ตอนนี้: %1$s</string>
     <string name="payment_voice_on_checking">เปิด · กำลังตรวจเสียงไทย</string>
     <string name="payment_voice_on_ready">เปิด · พร้อมพูดไทย</string>
+    <string name="payment_voice_on_bundled">เปิด · เสียงในแอป (ออฟไลน์)</string>
     <string name="payment_voice_on_no_thai">เปิด · ยังไม่มีเสียงไทยบนเครื่อง</string>
     <string name="payment_voice_off">ปิด</string>
     <string name="sell_hub_refresh_menu">รีเฟรชเมนู</string>
