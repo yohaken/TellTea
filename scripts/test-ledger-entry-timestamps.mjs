@@ -18,6 +18,6 @@ assert.match(metaSrc, /วันที่รายการ/);
 assert.match(metaSrc, /อัปเดต/);
 assert.match(metaSrc, /formatDateShortBe/);
 assert.match(cssSrc, /\.entry-detail-meta\b/);
-assert.match(versionSrc, /APP_BUILD\s*=\s*476/);
+assert.match(versionSrc, /APP_BUILD\s*=\s*477/);
 
 console.log("OK test-ledger-entry-timestamps");

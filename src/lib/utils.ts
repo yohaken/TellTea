@@ -192,8 +192,8 @@ export function bangkokDatePartsBe(
   return { day: ds, month: msPart, yearBe, year2: String(yearBe).slice(-2) };
 }
 
-/** Short date in Asia/Bangkok — e.g. 30/7/26 ค.ศ. (not device timezone). */
-export function formatDateShort(ms: number) {
+/** Short date ค.ศ. in Asia/Bangkok — e.g. 30/7/26 (storage/UI opt-out). */
+export function formatDateShortCe(ms: number) {
   const p = bangkokDateParts(ms);
   if (!p) return "—";
   return `${p.day}/${p.month}/${p.year2}`;
@@ -206,8 +206,16 @@ export function formatDateShortBe(ms: number) {
   return `${p.day}/${p.month}/${p.year2}`;
 }
 
-/** Short date + time for «แก้ไขล่าสุด» — Asia/Bangkok, ค.ศ. */
-export function formatDateTimeShort(ms: number) {
+/**
+ * Default UI short date — พ.ศ. Asia/Bangkok (phases 0–13).
+ * Use formatDateShortCe only when Gregorian display is required.
+ */
+export function formatDateShort(ms: number) {
+  return formatDateShortBe(ms);
+}
+
+/** Short date + time ค.ศ. — Asia/Bangkok. */
+export function formatDateTimeShortCe(ms: number) {
   if (!ms) return "—";
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Bangkok",
@@ -239,6 +247,11 @@ export function formatDateTimeShortBe(ms: number) {
   const hh = String(get("hour")).padStart(2, "0");
   const mi = String(get("minute")).padStart(2, "0");
   return `${p.day}/${p.month}/${p.year2} ${hh}:${mi}`;
+}
+
+/** Default UI short date+time — พ.ศ. Asia/Bangkok. */
+export function formatDateTimeShort(ms: number) {
+  return formatDateTimeShortBe(ms);
 }
 
 /** Prefer updatedAt; fall back to createdAt for legacy rows. */

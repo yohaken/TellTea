@@ -1,8 +1,8 @@
 import { labelLedgerType } from "./ledger-labels";
 import {
   accountingDayMs,
-  formatDateShort,
   formatDateShortBe,
+  formatDateShortCe,
   formatPlainNumber,
   toEpochMs,
 } from "./utils";
@@ -72,9 +72,9 @@ export function filterOwnerBookRows<T extends SearchableOwnerRow>(
       row.type || "",
       typeLabel,
       row.note || "",
-      // Owner-books UI shows พ.ศ.; keep ค.ศ. too so both search styles match.
-      formatDateShort(row.date),
+      // Match both พ.ศ. UI labels and ค.ศ. typed searches.
       formatDateShortBe(row.date),
+      formatDateShortCe(row.date),
       formatPlainNumber(row.amountOut || 0),
       String(row.amountOut || ""),
       String(row.amountOut || "").replace(/,/g, ""),
@@ -104,9 +104,9 @@ export function filterLedgerRows<T extends SearchableLedgerRow>(
       row.description || "",
       row.type || "",
       typeLabel,
-      // Ledger UI shows พ.ศ.; keep ค.ศ. too so both search styles match.
-      formatDateShort(row.date),
+      // Match both พ.ศ. UI labels and ค.ศ. typed searches.
       formatDateShortBe(row.date),
+      formatDateShortCe(row.date),
       formatPlainNumber(row.amountIn || 0),
       formatPlainNumber(row.amountOut || 0),
       String(row.amountIn || ""),

@@ -16861,6 +16861,17 @@ body.modal-open .main-panel {
   white-space: nowrap;
 }
 
+/*
+ * Phase 11–13 table layout — VAT date/time columns (พ.ศ. via shared formatters).
+ * Scoped under .vat-sales-page; other modules stay untouched.
+ */
+.vat-sales-page .vat-sales-table--slim .col-date,
+.vat-sales-page .vat-mail-table.vat-sales-table--slim .col-date {
+  min-width: 3.55rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .vat-sales-table--slim .col-date {
   width: 1.55rem;
   padding-left: 0.16rem;
@@ -16941,7 +16952,8 @@ body.modal-open .main-panel {
 }
 
 .vat-mail-table.vat-sales-table--slim .col-date {
-  width: 3.4rem;
+  width: 3.55rem;
+  min-width: 3.55rem;
 }
 
 .vat-mail-table.vat-sales-table--slim .col-act {

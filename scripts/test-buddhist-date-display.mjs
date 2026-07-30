@@ -10,7 +10,8 @@
  * Phase 8: tasks formatDateShortBe + layout from ledger prototype.
  * Phase 9: stock monthLabel/formatDateShortBe + layout from ledger prototype.
  * Phase 10: payroll/rates formatDateShortBe + layout from ledger prototype.
- * Later phases keep default ค.ศ. until their turn.
+ * Phase 11–13: default formatDateShort/Time → พ.ศ.; VAT/export/POS unify.
+ * Storage / <input type="date"> remain ค.ศ.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -37,6 +38,8 @@ const stockHist = read("src/lib/stock-history.ts");
 const payroll = read("src/components/PayrollPayPanel.tsx");
 const rates = read("src/components/RateSchedulePanel.tsx");
 const bonus = read("src/app/bonus/page.tsx");
+const posReport = read("src/lib/pos-sales-report.ts");
+const xlsx = read("src/lib/xlsx-export.ts");
 const smart = read("src/lib/smart-search.ts");
 const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
@@ -44,7 +47,12 @@ const version = read("src/lib/version.ts");
 assert.match(utils, /export function toBeYear/);
 assert.match(utils, /export function bangkokDatePartsBe/);
 assert.match(utils, /export function formatDateShortBe/);
+assert.match(utils, /export function formatDateShortCe/);
+assert.match(utils, /export function formatDateTimeShortCe/);
 assert.match(utils, /export function formatDateTimeShortBe/);
+assert.match(utils, /export function formatDateShort\(ms: number\)/);
+assert.match(utils, /return formatDateShortBe\(ms\)/);
+assert.match(utils, /return formatDateTimeShortBe\(ms\)/);
 assert.match(cell, /era\?: SheetDateEra/);
 assert.match(cell, /formatDateShortBe/);
 assert.match(meta, /era\?: EntryTimestampEra/);
@@ -87,6 +95,10 @@ assert.match(stockHist, /year \+ 543/);
 assert.match(payroll, /formatDateShortBe/);
 assert.match(rates, /formatDateShortBe/);
 assert.match(bonus, /bonus-page/);
+assert.match(posReport, /yearCe \+ 543/);
+assert.match(xlsx, /formatDateShort\(/);
+assert.match(xlsx, /formatDateTimeShort\(/);
+assert.match(smart, /formatDateShortCe\(row\.date\)/);
 assert.doesNotMatch(payroll, /[^B]formatDateShort\(|^formatDateShort\(/);
 assert.doesNotMatch(rates, /[^B]formatDateShort\(|^formatDateShort\(/);
 assert.match(smart, /formatDateShortBe\(row\.date\)/);
@@ -100,6 +112,7 @@ assert.match(css, /Phase 7 table layout/);
 assert.match(css, /Phase 8 table layout/);
 assert.match(css, /Phase 9 table layout/);
 assert.match(css, /Phase 10 table layout/);
+assert.match(css, /Phase 11.\s*13 table layout/);
 assert.match(css, /\.ledger-page \.ledger-staff-sheet \.sheet-table \.col-date/);
 assert.match(css, /\.owner-books-page \.owner-books-sheet \.sheet-table \.col-date/);
 assert.match(css, /\.bill-notice-slim \.col-date/);
@@ -111,7 +124,7 @@ assert.match(css, /\.tasks-page \.tasks-sheet \.tasks-col-due/);
 assert.match(css, /\.stock-page \.stock-history-sheet \.stock-history-date/);
 assert.match(css, /\.bonus-page \.payroll-sheet \.payroll-col-due/);
 assert.match(css, /width: 3\.55rem/);
-assert.match(version, /APP_BUILD = 476/);
+assert.match(version, /APP_BUILD = 477/);
 
 function bangkokDateKey(ms) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -164,6 +177,8 @@ assert.equal(toBeYear(2568), null);
 
 const ms = Date.parse("2025-07-22T12:00:00+07:00");
 assert.equal(formatDateShortBe(ms), "22/7/68");
+function formatDateShortAlias(ms) { return formatDateShortBe(ms); }
+assert.equal(formatDateShortAlias(ms), "22/7/68");
 assert.equal(bangkokDatePartsBe(ms)?.yearBe, 2568);
 
 const ms2 = Date.parse("2026-07-29T15:04:00+07:00");

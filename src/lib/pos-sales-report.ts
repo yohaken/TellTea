@@ -622,11 +622,26 @@ export function shiftDayMs(offsetDays = 0): number {
   return startOfLocalDay() + offsetDays * 24 * 60 * 60 * 1000;
 }
 
+/** POS report day label — Asia/Bangkok, พ.ศ. year (no device-TZ drift). */
 export function formatPosReportDate(ms: number): string {
-  return new Date(ms).toLocaleDateString("th-TH", {
+  if (!ms) return "—";
+  const weekday = new Intl.DateTimeFormat("th-TH", {
+    timeZone: "Asia/Bangkok",
     weekday: "short",
-    day: "numeric",
+  }).format(new Date(ms));
+  const month = new Intl.DateTimeFormat("th-TH", {
+    timeZone: "Asia/Bangkok",
     month: "short",
+  }).format(new Date(ms));
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
     year: "numeric",
-  });
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(ms));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value || "";
+  const day = Number(get("day"));
+  const yearCe = Number(get("year"));
+  if (!day || !yearCe) return "—";
+  return `${weekday} ${day} ${month} ${yearCe + 543}`;
 }
