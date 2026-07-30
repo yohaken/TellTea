@@ -6,6 +6,11 @@ import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgre
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import {
+  VatFirstAskPanel,
+  VatFirstCapturePanel,
+  VatFirstFormSummary,
+} from "@/components/VatFirstSteps";
+import {
   classifyLedgerTypeHeuristic,
   classifyLedgerTypeWithAi,
   type LedgerTypeSource,
@@ -34,7 +39,6 @@ import {
   extractOwnerBookFromReceipt,
 } from "@/lib/owner-books-ai";
 import { parseDateInput, todayInputValue } from "@/lib/utils";
-import { formatVatMoney } from "@/lib/vat-number-format";
 
 /**
  * Create cash-out modal on /ledger/.
@@ -378,168 +382,66 @@ export function LedgerAddOutModal({
         </div>
 
         {vatFirstPhase === "ask" ? (
-          <div className="vat-first-panel" role="group" aria-label="ถาม VAT ก่อนบันทึก">
-            <p className="vat-first-title">เอกสารนี้มี VAT หรือไม่?</p>
-            <p className="muted vat-first-hint">
-              หมายถึงยอดภาษีมูลค่าเพิ่มบนใบกำกับ/ใบเสร็จ — ไม่ใช่ยอดจ่ายรวม
-            </p>
-            <div className="vat-first-actions">
-              <button
-                type="button"
-                className="primary-btn"
-                onClick={() => chooseHasVatDocument(true)}
-              >
-                มี VAT
-              </button>
-              <button
-                type="button"
-                className="ghost-btn"
-                onClick={() => chooseHasVatDocument(false)}
-              >
-                ไม่มี VAT
-              </button>
-            </div>
-            <button type="button" className="ghost-btn vat-first-cancel" onClick={onClose}>
-              ออก
-            </button>
-          </div>
+          <VatFirstAskPanel onChooseHasVat={chooseHasVatDocument} onClose={onClose} />
         ) : null}
 
         {vatFirstPhase === "upload" ||
         vatFirstPhase === "confirm_ai" ||
         vatFirstPhase === "manual" ? (
-          <div className="vat-first-panel">
-            <p className="vat-first-title">ขั้นที่ 1 · ยอดภาษีมูลค่าเพิ่ม</p>
-            <p className="muted vat-first-hint">
-              แนบบิลให้ครบ (สลิป + ใบกำกับ) — ระบบอ่านยอดภาษีก่อน แล้วค่อยกรอกรายการ
-            </p>
-            <PhotoAttachMultiField
-              label="รูปใบเสร็จ / ใบกำกับ"
-              values={receiptUrls}
-              onChange={(next) => {
-                const prev = receiptUrls;
-                setReceiptUrls(next);
-                const added = next.some((u) => !prev.includes(u));
-                if (added) {
-                  if (vatFirstPhase === "confirm_ai" || vatFirstPhase === "manual") {
-                    setVatFirstPhase("upload");
-                    setPendingAiVat(null);
-                    setVatVerified(false);
-                  }
-                  void runExtractFromPhotos(next);
+          <VatFirstCapturePanel
+            phase={vatFirstPhase}
+            receiptUrls={receiptUrls}
+            onReceiptUrlsChange={(next) => {
+              const prev = receiptUrls;
+              setReceiptUrls(next);
+              const added = next.some((u) => !prev.includes(u));
+              if (added) {
+                if (vatFirstPhase === "confirm_ai" || vatFirstPhase === "manual") {
+                  setVatFirstPhase("upload");
+                  setPendingAiVat(null);
+                  setVatVerified(false);
                 }
-              }}
-              onError={onError}
-              max={LEDGER_RECEIPT_MAX}
-              storageFolder="ledger-receipts"
-              storageSlotKey={`add-${createdBy || "new"}`}
-              hint="ถ่าย/แนบ — AI อ่านยอดภาษีมูลค่าเพิ่มก่อน"
-            />
-            {extractStatus === "loading" ? (
-              <p className="muted vat-first-status" aria-live="polite">
-                กำลังอ่านยอดภาษีจากรูป…
-              </p>
-            ) : null}
-            {aiVatReason && extractStatus !== "loading" ? (
-              <p className="muted vat-first-status">{aiVatReason}</p>
-            ) : null}
-
-            {vatFirstPhase === "confirm_ai" && pendingAiVat != null ? (
-              <div className="vat-first-confirm" role="group" aria-label="ยืนยันยอด VAT จาก AI">
-                <p className="vat-first-confirm-label">ยอดภาษีมูลค่าเพิ่มจากเอกสาร</p>
-                <p className="vat-first-confirm-amount">{formatVatMoney(pendingAiVat)}</p>
-                <p className="muted vat-first-hint">ตัวเลขนี้ตรงกับเอกสารหรือไม่?</p>
-                <div className="vat-first-actions">
-                  <button type="button" className="primary-btn" onClick={confirmAiVatMatches}>
-                    ตรงกับเอกสาร
-                  </button>
-                  <button type="button" className="ghost-btn" onClick={rejectAiVat}>
-                    ไม่ตรง · กรอกเอง
-                  </button>
-                </div>
-              </div>
-            ) : null}
-
-            {vatFirstPhase === "manual" ? (
-              <div className="vat-first-manual" role="group" aria-label="กรอกยอด VAT เอง">
-                <div className="field">
-                  <label htmlFor="add-out-vat-manual">ยอดภาษีมูลค่าเพิ่ม (บาท)</label>
-                  <input
-                    id="add-out-vat-manual"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={vatInputStr}
-                    onChange={(e) => {
-                      setVatInputStr(e.target.value);
-                      setVatSource("manual");
-                      setVatVerified(false);
-                    }}
-                    placeholder="ตามบิล"
-                    autoFocus
-                  />
-                </div>
-                <div className="vat-first-actions">
-                  <button
-                    type="button"
-                    className="primary-btn"
-                    disabled={vatInputNum <= 0}
-                    onClick={confirmManualVat}
-                  >
-                    ยืนยันยอดนี้
-                  </button>
-                  {receiptUrls.length ? (
-                    <button
-                      type="button"
-                      className="ghost-btn"
-                      disabled={extractStatus === "loading"}
-                      onClick={() => {
-                        lastExtractKeyRef.current = "";
-                        setVatFirstPhase("upload");
-                        void runExtractFromPhotos(receiptUrls);
-                      }}
-                    >
-                      ให้ AI อ่านอีกครั้ง
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
-
-            <div className="vat-first-footer-links">
-              <button type="button" className="linkish-btn" onClick={resetVatFirstAsk}>
-                ← เปลี่ยนเป็นไม่มี VAT
-              </button>
-              <button type="button" className="ghost-btn" onClick={onClose}>
-                ออก
-              </button>
-            </div>
-          </div>
+                void runExtractFromPhotos(next);
+              }
+            }}
+            onError={onError}
+            maxPhotos={LEDGER_RECEIPT_MAX}
+            storageFolder="ledger-receipts"
+            storageSlotKey={`add-${createdBy || "new"}`}
+            extractStatus={extractStatus}
+            aiVatReason={aiVatReason}
+            pendingAiVat={pendingAiVat}
+            vatInputStr={vatInputStr}
+            onVatInputStrChange={(value) => {
+              setVatInputStr(value);
+              setVatSource("manual");
+              setVatVerified(false);
+            }}
+            onConfirmAi={confirmAiVatMatches}
+            onRejectAi={rejectAiVat}
+            onConfirmManual={confirmManualVat}
+            onResetAsk={resetVatFirstAsk}
+            onRereadAi={() => {
+              lastExtractKeyRef.current = "";
+              setVatFirstPhase("upload");
+              void runExtractFromPhotos(receiptUrls);
+            }}
+            onClose={onClose}
+            manualInputId="add-out-vat-manual"
+          />
         ) : null}
 
         {detailsUnlocked ? (
           <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
-            {hasVat ? (
-              <div className="vat-first-summary" aria-live="polite">
-                <span>
-                  VAT ยืนยันแล้ว · {formatVatMoney(vatInputNum)} บาท
-                  {vatSource === "ai" ? " · จาก AI" : " · กรอกเอง"}
-                </span>
-                <button
-                  type="button"
-                  className="linkish-btn"
-                  onClick={() => {
-                    setVatVerified(false);
-                    setVatFirstPhase("manual");
-                  }}
-                >
-                  แก้ยอด VAT
-                </button>
-              </div>
-            ) : (
-              <p className="muted vat-first-summary-no">ไม่มี VAT · กรอกรายการได้เลย</p>
-            )}
+            <VatFirstFormSummary
+              hasVat={hasVat}
+              vatInput={vatInputNum}
+              vatSource={vatSource}
+              onEditVat={() => {
+                setVatVerified(false);
+                setVatFirstPhase("manual");
+              }}
+            />
 
             <div className="field">
               <label htmlFor="add-out-date">วันที่</label>

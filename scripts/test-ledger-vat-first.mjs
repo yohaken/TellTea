@@ -1,5 +1,5 @@
 /**
- * VAT-first phase machine for ledger cash-out create (staff + owner).
+ * VAT-first phase machine for cash-out create (ledger + owner-books + bill notice).
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -9,9 +9,13 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const helperSrc = readFileSync(join(root, "src/lib/ledger-vat-first.ts"), "utf8");
+const stepsSrc = readFileSync(join(root, "src/components/VatFirstSteps.tsx"), "utf8");
 const modalSrc = readFileSync(join(root, "src/components/LedgerAddOutModal.tsx"), "utf8");
 const pageSrc = readFileSync(join(root, "src/app/ledger/page.tsx"), "utf8");
+const ownerSrc = readFileSync(join(root, "src/app/owner-books/page.tsx"), "utf8");
 const billSrc = readFileSync(join(root, "src/components/BillNoticeLedgerPanel.tsx"), "utf8");
+const billLib = readFileSync(join(root, "src/lib/bill-notices.ts"), "utf8");
+const versionSrc = readFileSync(join(root, "src/lib/version.ts"), "utf8");
 
 assert.match(helperSrc, /VatFirstPhase/);
 assert.match(helperSrc, /initialVatFirstPhase/);
@@ -21,16 +25,34 @@ assert.match(helperSrc, /vatFirstReadyToSave/);
 assert.match(helperSrc, /return "ask"/);
 assert.doesNotMatch(helperSrc, /isOwner \? "form"/);
 
+assert.match(stepsSrc, /VatFirstAskPanel/);
+assert.match(stepsSrc, /VatFirstCapturePanel/);
+assert.match(stepsSrc, /VatFirstFormSummary/);
+assert.match(stepsSrc, /เอกสารนี้มี VAT หรือไม่/);
+assert.match(stepsSrc, /ยอดภาษีมูลค่าเพิ่ม/);
+assert.match(stepsSrc, /ตรงกับเอกสาร/);
+
 assert.match(modalSrc, /vatFirstPhase/);
-assert.match(modalSrc, /เอกสารนี้มี VAT หรือไม่/);
-assert.match(modalSrc, /ยอดภาษีมูลค่าเพิ่ม/);
-assert.match(modalSrc, /ตรงกับเอกสาร/);
+assert.match(modalSrc, /VatFirstAskPanel/);
 assert.match(modalSrc, /initialVatFirstPhase/);
 assert.match(modalSrc, /vatFirstReadyToSave/);
 assert.match(modalSrc, /vatFirstGate = true/);
 assert.match(pageSrc, /LedgerAddOutModal/);
-assert.doesNotMatch(billSrc, /vatFirstPhase/);
-assert.doesNotMatch(billSrc, /เอกสารนี้มี VAT หรือไม่/);
+
+assert.match(ownerSrc, /vatFirstPhase/);
+assert.match(ownerSrc, /VatFirstAskPanel/);
+assert.match(ownerSrc, /useVatFirst/);
+assert.match(ownerSrc, /vatFirstReadyToSave/);
+
+assert.match(billSrc, /vatFirstPhase/);
+assert.match(billSrc, /VatFirstAskPanel/);
+assert.match(billSrc, /useVatFirst/);
+assert.match(billSrc, /vatFirstReadyToSave/);
+assert.match(billLib, /hasVat/);
+assert.match(billLib, /vatVerified/);
+assert.match(billLib, /vatInput: prev.hasVat \? prev.vatInput/);
+
+assert.match(versionSrc, /APP_BUILD = 491/);
 
 function initialVatFirstPhase() {
   return "ask";

@@ -21,6 +21,11 @@ import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { OwnerBooksModeSwitch } from "@/components/OwnerBooksModeSwitch";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { SheetDateCell } from "@/components/SheetDateCell";
+import {
+  VatFirstAskPanel,
+  VatFirstCapturePanel,
+  VatFirstFormSummary,
+} from "@/components/VatFirstSteps";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
@@ -34,6 +39,14 @@ import {
   resolveStoredTypeSource,
   type LedgerTypeSource,
 } from "@/lib/ledger-ai";
+import {
+  initialVatFirstPhase,
+  phaseAfterAiVatExtract,
+  phaseAfterVatAsk,
+  vatFirstDetailsUnlocked,
+  vatFirstReadyToSave,
+  type VatFirstPhase,
+} from "@/lib/ledger-vat-first";
 import {
   BASE_TYPE_OPTIONS,
   frequentTypes,
@@ -629,6 +642,9 @@ function OwnerEntryModal({
   );
   const [ownerLocked, setOwnerLocked] = useState(wasOwnerType);
   const [note, setNote] = useState(entry?.note || "");
+  const [vatFirstPhase, setVatFirstPhase] = useState<VatFirstPhase>(() =>
+    mode === "add" ? initialVatFirstPhase(true) : "form",
+  );
   const [hasVat, setHasVat] = useState(Boolean(entry?.hasVat));
   const [vatInputStr, setVatInputStr] = useState(() =>
     entry?.hasVat && (entry.vatInput || 0) > 0 ? String(entry.vatInput) : "",
@@ -639,6 +655,7 @@ function OwnerEntryModal({
   );
   const [vatVerified, setVatVerified] = useState(Boolean(entry?.vatVerified));
   const [aiVatReason, setAiVatReason] = useState("");
+  const [pendingAiVat, setPendingAiVat] = useState<number | null>(null);
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getOwnerBookReceiptUrls(entry));
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
   const [formError, setFormError] = useState("");
@@ -665,10 +682,16 @@ function OwnerEntryModal({
   const amountRef = useRef(amount);
   const noteRef = useRef(note);
   const ownerLockedRef = useRef(ownerLocked);
+  const vatFirstPhaseRef = useRef(vatFirstPhase);
   descriptionRef.current = description;
   amountRef.current = amount;
   noteRef.current = note;
   ownerLockedRef.current = ownerLocked;
+  vatFirstPhaseRef.current = vatFirstPhase;
+
+  const useVatFirst = mode === "add";
+  const detailsUnlocked = !useVatFirst || vatFirstDetailsUnlocked(vatFirstPhase);
+  const vatInputNum = parseVatInputStr(vatInputStr);
 
   const filteredSuggestions = useMemo(() => {
     const q = description.trim().toLowerCase();
@@ -691,6 +714,62 @@ function OwnerEntryModal({
   function reportError(msg: string) {
     setFormError(msg);
     onError(msg);
+  }
+
+  function chooseHasVatDocument(yes: boolean) {
+    const next = phaseAfterVatAsk(yes);
+    setHasVat(yes);
+    setVatVerified(false);
+    setVatInputStr("");
+    setVatInvoiceNo("");
+    setVatSource("");
+    setPendingAiVat(null);
+    setAiVatReason("");
+    setExtractStatus("idle");
+    lastExtractKeyRef.current = "";
+    setVatFirstPhase(next);
+  }
+
+  function confirmAiVatMatches() {
+    if (pendingAiVat == null || pendingAiVat <= 0) return;
+    setHasVat(true);
+    setVatInputStr(String(pendingAiVat));
+    setVatSource("ai");
+    setVatVerified(true);
+    setVatFirstPhase("form");
+  }
+
+  function rejectAiVat() {
+    setPendingAiVat(null);
+    setVatVerified(false);
+    setVatInputStr("");
+    setVatSource("");
+    setVatFirstPhase("manual");
+  }
+
+  function confirmManualVat() {
+    const n = parseVatInputStr(vatInputStr);
+    if (n <= 0) {
+      reportError("ใส่ยอดภาษีมูลค่าเพิ่ม (บาท) จากเอกสารก่อน");
+      return;
+    }
+    setHasVat(true);
+    setVatSource("manual");
+    setVatVerified(true);
+    setVatFirstPhase("form");
+  }
+
+  function resetVatFirstAsk() {
+    setVatFirstPhase("ask");
+    setHasVat(false);
+    setVatVerified(false);
+    setVatInputStr("");
+    setVatInvoiceNo("");
+    setVatSource("");
+    setPendingAiVat(null);
+    setAiVatReason("");
+    setExtractStatus("idle");
+    lastExtractKeyRef.current = "";
   }
 
   async function runOwnerPreview() {
@@ -730,6 +809,11 @@ function OwnerEntryModal({
     extractBusyRef.current = true;
     setExtractStatus("loading");
     setExtractError(null);
+    const inVatFirstUpload =
+      useVatFirst &&
+      (vatFirstPhaseRef.current === "upload" ||
+        vatFirstPhaseRef.current === "confirm_ai" ||
+        vatFirstPhaseRef.current === "manual");
     try {
       const result = await extractOwnerBookFromReceipt(refs);
       lastExtractKeyRef.current = key;
@@ -759,10 +843,34 @@ function OwnerEntryModal({
       }
       // VAT: AI อ่านจากบิลก่อน — ไม่คำนวณ ×7/107
       setAiVatReason(result.vatReason || result.reason || "");
-      if (result.hasVat && result.vatInput != null && result.vatInput > 0) {
+      const aiVat =
+        result.hasVat && result.vatInput != null && result.vatInput > 0
+          ? result.vatInput
+          : null;
+      if (result.vatInvoiceNo) setVatInvoiceNo(result.vatInvoiceNo);
+
+      if (inVatFirstUpload) {
         setHasVat(true);
-        setVatInputStr(String(result.vatInput));
-        if (result.vatInvoiceNo) setVatInvoiceNo(result.vatInvoiceNo);
+        if (aiVat != null) {
+          setPendingAiVat(aiVat);
+          setVatInputStr(String(aiVat));
+          setVatSource("ai");
+          setVatVerified(false);
+          setVatFirstPhase(phaseAfterAiVatExtract(aiVat));
+        } else {
+          setPendingAiVat(null);
+          setVatInputStr("");
+          setVatSource("");
+          setVatVerified(false);
+          setAiVatReason(
+            result.vatReason ||
+              "AI ไม่เห็นยอดภาษีมูลค่าเพิ่มบนบิล — กรอกเองจากเอกสาร",
+          );
+          setVatFirstPhase("manual");
+        }
+      } else if (aiVat != null) {
+        setHasVat(true);
+        setVatInputStr(String(aiVat));
         setVatSource("ai");
         setVatVerified(false);
       } else {
@@ -775,6 +883,10 @@ function OwnerEntryModal({
     } catch (err) {
       setExtractStatus("error");
       setExtractError((err as Error).message || "อ่านใบเสร็จไม่สำเร็จ");
+      if (inVatFirstUpload) {
+        setPendingAiVat(null);
+        setVatFirstPhase("manual");
+      }
     } finally {
       extractBusyRef.current = false;
     }
@@ -797,6 +909,23 @@ function OwnerEntryModal({
       if (urls.some((u) => u.startsWith("data:"))) {
         throw new Error(
           "รูปเก่ายังฝังในเอกสาร — ลบแล้วแนบใหม่เพื่อบันทึกเข้าคลังหลักฐาน",
+        );
+      }
+
+      const vatNum = parseVatInputStr(vatInputStr);
+      if (
+        useVatFirst &&
+        !vatFirstReadyToSave({
+          phase: vatFirstPhase,
+          hasVat,
+          vatVerified,
+          vatInput: vatNum,
+        })
+      ) {
+        throw new Error(
+          hasVat
+            ? "ยืนยันยอดภาษีมูลค่าเพิ่มให้ตรงเอกสารก่อนบันทึก"
+            : "ทำขั้นตอน VAT ให้ครบก่อนบันทึก",
         );
       }
 
@@ -827,13 +956,12 @@ function OwnerEntryModal({
       }
 
       const amountOut = Number(amount);
-      const vatInputNum = parseVatInputStr(vatInputStr);
-      if (hasVat && vatInputNum <= 0) {
+      if (hasVat && vatNum <= 0) {
         throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล หรือกดใช้ประมาณ ×7/107");
       }
       const vatPayload = {
         hasVat,
-        vatInput: hasVat ? vatInputNum : 0,
+        vatInput: hasVat ? vatNum : 0,
         vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
         vatSource: hasVat ? vatSource || "manual" : "",
         vatVerified: hasVat ? vatVerified : false,
@@ -938,7 +1066,72 @@ function OwnerEntryModal({
           />
         ) : null}
         {formError ? <p className="error-text ot-form-error">{formError}</p> : null}
+
+        {useVatFirst && vatFirstPhase === "ask" ? (
+          <VatFirstAskPanel onChooseHasVat={chooseHasVatDocument} onClose={onClose} />
+        ) : null}
+
+        {useVatFirst &&
+        (vatFirstPhase === "upload" ||
+          vatFirstPhase === "confirm_ai" ||
+          vatFirstPhase === "manual") ? (
+          <VatFirstCapturePanel
+            phase={vatFirstPhase}
+            receiptUrls={receiptUrls}
+            onReceiptUrlsChange={(next) => {
+              const prev = receiptUrls;
+              setReceiptUrls(next);
+              const added = next.some((u) => !prev.includes(u));
+              if (added) {
+                if (vatFirstPhase === "confirm_ai" || vatFirstPhase === "manual") {
+                  setVatFirstPhase("upload");
+                  setPendingAiVat(null);
+                  setVatVerified(false);
+                }
+                void runExtractFromPhotos(next);
+              }
+            }}
+            onError={reportError}
+            maxPhotos={OWNER_BOOKS_RECEIPT_MAX}
+            storageFolder="owner-books"
+            storageSlotKey={`${mode}-${entry?.id || createdBy || "new"}`}
+            extractStatus={extractStatus}
+            aiVatReason={aiVatReason}
+            pendingAiVat={pendingAiVat}
+            vatInputStr={vatInputStr}
+            onVatInputStrChange={(value) => {
+              setVatInputStr(value);
+              setVatSource("manual");
+              setVatVerified(false);
+            }}
+            onConfirmAi={confirmAiVatMatches}
+            onRejectAi={rejectAiVat}
+            onConfirmManual={confirmManualVat}
+            onResetAsk={resetVatFirstAsk}
+            onRereadAi={() => {
+              lastExtractKeyRef.current = "";
+              setVatFirstPhase("upload");
+              void runExtractFromPhotos(receiptUrls);
+            }}
+            onClose={onClose}
+            manualInputId="ob-vat-manual"
+          />
+        ) : null}
+
+        {detailsUnlocked ? (
         <form className="form-card entry-form" onSubmit={(e) => void onSave(e)}>
+          {useVatFirst ? (
+            <VatFirstFormSummary
+              hasVat={hasVat}
+              vatInput={vatInputNum}
+              vatSource={vatSource}
+              onEditVat={() => {
+                setVatVerified(false);
+                setVatFirstPhase("manual");
+              }}
+            />
+          ) : null}
+
           <PhotoAttachMultiField
             label="รูปใบเสร็จ"
             values={receiptUrls}
@@ -947,15 +1140,21 @@ function OwnerEntryModal({
             max={OWNER_BOOKS_RECEIPT_MAX}
             storageFolder="owner-books"
             storageSlotKey={`${mode}-${entry?.id || createdBy || "new"}`}
-            hint="ถ่ายหรือแนบ — AI ใส่วันที่ รายการ และยอดให้อัตโนมัติ"
+            hint={
+              useVatFirst
+                ? hasVat
+                  ? "เพิ่มรูปได้ · VAT ยืนยันแล้ว"
+                  : "ถ่าย/แนบ — AI อ่านรายการ ยอด"
+                : "ถ่ายหรือแนบ — AI ใส่วันที่ รายการ และยอดให้อัตโนมัติ"
+            }
           />
-          {extractStatus === "loading" ? (
+          {!useVatFirst && extractStatus === "loading" ? (
             <p className="muted form-hint-inline">AI กำลังอ่านใบเสร็จ…</p>
           ) : null}
-          {extractStatus === "ready" ? (
+          {!useVatFirst && extractStatus === "ready" ? (
             <p className="muted form-hint-inline">อ่านจากรูปแล้ว — ตรวจก่อนบันทึกได้</p>
           ) : null}
-          {extractStatus === "error" && extractError ? (
+          {!useVatFirst && extractStatus === "error" && extractError ? (
             <p className="error-text ot-form-error">{extractError}</p>
           ) : null}
           {receiptUrls.length ? (
@@ -967,17 +1166,19 @@ function OwnerEntryModal({
               >
                 ดูรูป ({receiptUrls.length})
               </button>
-              <button
-                type="button"
-                className="ghost-btn"
-                disabled={extractStatus === "loading" || busy}
-                onClick={() => {
-                  lastExtractKeyRef.current = "";
-                  void runExtractFromPhotos(receiptUrls);
-                }}
-              >
-                {extractStatus === "loading" ? "กำลังอ่าน…" : "อ่านจากรูปอีกครั้ง"}
-              </button>
+              {!useVatFirst ? (
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  disabled={extractStatus === "loading" || busy}
+                  onClick={() => {
+                    lastExtractKeyRef.current = "";
+                    void runExtractFromPhotos(receiptUrls);
+                  }}
+                >
+                  {extractStatus === "loading" ? "กำลังอ่าน…" : "อ่านจากรูปอีกครั้ง"}
+                </button>
+              ) : null}
             </div>
           ) : null}
 
@@ -1029,41 +1230,43 @@ function OwnerEntryModal({
             />
           </div>
 
-          <EntryVatFieldset
-            idPrefix="ob"
-            disabled={busy}
-            amountInclusive={Number(amount) || 0}
-            hasVat={hasVat}
-            vatInputStr={vatInputStr}
-            vatInvoiceNo={vatInvoiceNo}
-            vatSource={vatSource}
-            vatVerified={vatVerified}
-            aiStatus={
-              receiptUrls.length === 0
-                ? "none"
-                : extractStatus === "loading"
-                  ? "loading"
-                  : extractStatus === "error"
-                    ? "error"
-                    : extractStatus === "ready"
-                      ? "ready"
-                      : "idle"
-            }
-            aiVatReason={aiVatReason}
-            onHasVatChange={setHasVat}
-            onVatInputChange={setVatInputStr}
-            onVatInvoiceNoChange={setVatInvoiceNo}
-            onVatSourceChange={setVatSource}
-            onVatVerifiedChange={setVatVerified}
-            onVendorHint={(name) => {
-              if (!description.trim()) setDescription(name);
-            }}
-            canRereadAi={receiptUrls.length > 0}
-            onRereadAi={() => {
-              lastExtractKeyRef.current = "";
-              void runExtractFromPhotos(receiptUrls);
-            }}
-          />
+          {!useVatFirst ? (
+            <EntryVatFieldset
+              idPrefix="ob"
+              disabled={busy}
+              amountInclusive={Number(amount) || 0}
+              hasVat={hasVat}
+              vatInputStr={vatInputStr}
+              vatInvoiceNo={vatInvoiceNo}
+              vatSource={vatSource}
+              vatVerified={vatVerified}
+              aiStatus={
+                receiptUrls.length === 0
+                  ? "none"
+                  : extractStatus === "loading"
+                    ? "loading"
+                    : extractStatus === "error"
+                      ? "error"
+                      : extractStatus === "ready"
+                        ? "ready"
+                        : "idle"
+              }
+              aiVatReason={aiVatReason}
+              onHasVatChange={setHasVat}
+              onVatInputChange={setVatInputStr}
+              onVatInvoiceNoChange={setVatInvoiceNo}
+              onVatSourceChange={setVatSource}
+              onVatVerifiedChange={setVatVerified}
+              onVendorHint={(name) => {
+                if (!description.trim()) setDescription(name);
+              }}
+              canRereadAi={receiptUrls.length > 0}
+              onRereadAi={() => {
+                lastExtractKeyRef.current = "";
+                void runExtractFromPhotos(receiptUrls);
+              }}
+            />
+          ) : null}
 
           <LedgerTypeField
             id="ob-type"
@@ -1118,6 +1321,7 @@ function OwnerEntryModal({
             )}
           </div>
         </form>
+        ) : null}
         {previewUrls ? (
           <ImagePreviewModal
             urls={previewUrls}

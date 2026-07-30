@@ -44,6 +44,11 @@ export type BillNotice = {
   verifiedAt: number;
   /** Set when accepted into บช.เจ้าของ */
   ownerBookId: string;
+  hasVat: boolean;
+  vatInput: number;
+  vatInvoiceNo: string;
+  vatSource: string;
+  vatVerified: boolean;
 };
 
 export type BillNoticeInput = {
@@ -58,6 +63,11 @@ export type BillNoticeInput = {
   receiptUrls?: string[];
   createdBy: string;
   staffName: string;
+  hasVat?: boolean;
+  vatInput?: number;
+  vatInvoiceNo?: string;
+  vatSource?: string;
+  vatVerified?: boolean;
 };
 
 export type BillNoticePage = {
@@ -148,6 +158,11 @@ function mapData(id: string, data: Record<string, unknown>): BillNotice {
     verifiedBy: typeof data.verifiedBy === "string" ? data.verifiedBy : "",
     verifiedAt: Number(data.verifiedAt) || 0,
     ownerBookId: typeof data.ownerBookId === "string" ? data.ownerBookId : "",
+    hasVat: Boolean(data.hasVat),
+    vatInput: Number(data.vatInput) || 0,
+    vatInvoiceNo: typeof data.vatInvoiceNo === "string" ? data.vatInvoiceNo : "",
+    vatSource: typeof data.vatSource === "string" ? data.vatSource : "",
+    vatVerified: Boolean(data.vatVerified),
   };
 }
 
@@ -308,6 +323,11 @@ function buildPayload(input: BillNoticeInput) {
     (input.type || "").trim() || guessTypeFromDescription(description) || "sga";
   // Bill notices are owner utilities — never default free-text to cogs.
   const type = guessed === "cogs" ? "sga" : guessed;
+  const hasVat = Boolean(input.hasVat);
+  const vatInput = hasVat ? Number(input.vatInput) || 0 : 0;
+  if (hasVat && vatInput <= 0) {
+    throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล");
+  }
   const payload = {
     date: Number(input.date) || 0,
     description,
@@ -320,6 +340,11 @@ function buildPayload(input: BillNoticeInput) {
     receiptUrls,
     createdBy: input.createdBy.trim(),
     staffName: input.staffName.trim(),
+    hasVat,
+    vatInput,
+    vatInvoiceNo: hasVat ? (input.vatInvoiceNo || "").trim() : "",
+    vatSource: hasVat ? (input.vatSource || "manual").trim() : "",
+    vatVerified: hasVat ? Boolean(input.vatVerified) : false,
   };
   validatePayload(payload);
   return payload;
@@ -435,6 +460,12 @@ export async function acceptBillNotice(input: {
     receiptUrl: prev.receiptUrl,
     receiptUrls: prev.receiptUrls,
     note: [prev.note, input.ownerNote].filter((s) => String(s || "").trim()).join(" · "),
+    hasVat: prev.hasVat,
+    vatInput: prev.hasVat ? prev.vatInput : 0,
+    vatInvoiceNo: prev.hasVat ? prev.vatInvoiceNo : "",
+    vatSource: prev.hasVat ? prev.vatSource || "manual" : "",
+    vatVerified: prev.hasVat ? prev.vatVerified : false,
+    vatClaim: false,
   });
 
   await updateDoc(entryRef, {
