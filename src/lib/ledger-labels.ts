@@ -31,6 +31,8 @@ const TYPE_ALIASES: Record<string, string> = {
   capex: "asset",
   "สินทรัพย์": "asset",
   "สินทรัพย์ (asset)": "asset",
+  "ทรัพย์สิน": "asset",
+  "ทรัพย์สิน (asset)": "asset",
   other: "อื่นๆ",
   others: "อื่นๆ",
   อื่นๆ: "อื่นๆ",
@@ -70,6 +72,11 @@ export function labelLedgerType(type: string) {
   if (!type) return "";
   const key = canonicalLedgerType(type);
   return TYPE_LABELS[key] || key;
+}
+
+/** ประเภทสินทรัพย์/ทรัพย์สิน — ใช้ทำแถบสีในคอลัมน์ประเภท */
+export function isLedgerAssetType(type: string | undefined | null): boolean {
+  return canonicalLedgerType(type) === "asset";
 }
 
 /** ป้ายสั้นในตารางแคบ (มือถือ) — ไม่ใส่คำอังกฤษในวงเล็บ */

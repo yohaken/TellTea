@@ -43,7 +43,11 @@ import { LedgerAddOutModal } from "@/components/LedgerAddOutModal";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { personalProfileLabel } from "@/lib/profile";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
-import { frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
+import {
+  frequentTypes,
+  isLedgerAssetType,
+  labelLedgerType,
+} from "@/lib/ledger-labels";
 import {
   classifyLedgerTypeHeuristic,
   classifyLedgerTypeWithAi,
@@ -484,7 +488,13 @@ function LedgerView() {
                         <span className="muted owner-vat-empty">—</span>
                       )}
                     </td>
-                    <td className="col-type">
+                    <td
+                      className={
+                        isLedgerAssetType(row.type)
+                          ? "col-type is-asset-type"
+                          : "col-type"
+                      }
+                    >
                       <span className="muted">
                         {row.type ? labelLedgerType(row.type) : "—"}
                       </span>

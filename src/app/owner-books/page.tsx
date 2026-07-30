@@ -50,6 +50,7 @@ import {
 import {
   BASE_TYPE_OPTIONS,
   frequentTypes,
+  isLedgerAssetType,
   labelLedgerType,
 } from "@/lib/ledger-labels";
 import {
@@ -544,7 +545,14 @@ function OwnerBooksView() {
                         <span className="muted owner-vat-empty">—</span>
                       )}
                     </td>
-                    <td className="col-type" onClick={openEdit}>
+                    <td
+                      className={
+                        isLedgerAssetType(row.type)
+                          ? "col-type is-asset-type"
+                          : "col-type"
+                      }
+                      onClick={openEdit}
+                    >
                       <span className="muted" style={{ fontSize: "0.72rem" }}>
                         {row.type ? labelLedgerType(row.type) : "—"}
                       </span>

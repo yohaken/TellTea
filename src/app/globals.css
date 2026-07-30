@@ -1565,6 +1565,19 @@ body.modal-open .main-panel {
   max-width: none;
 }
 
+/* สินทรัพย์/ทรัพย์สิน — แถบม่วงที่เซลล์ประเภท */
+.ledger-page .ledger-staff-sheet .sheet-table .col-type.is-asset-type,
+.owner-books-page .owner-books-sheet .sheet-table .col-type.is-asset-type {
+  box-shadow: inset 3px 0 0 0 #7c3aed;
+  background: rgba(124, 58, 237, 0.08);
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-type.is-asset-type .muted,
+.owner-books-page .owner-books-sheet .sheet-table .col-type.is-asset-type .muted {
+  color: #5b21b6;
+  font-weight: 700;
+}
+
 .ledger-page .ledger-staff-sheet .owner-vat-badge,
 .ledger-page .ledger-staff-sheet .owner-vat-empty {
   font-size: 0.6rem;
