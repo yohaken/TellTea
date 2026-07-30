@@ -168,7 +168,8 @@ export function buildStockHistoryTimeline(
         rowKey,
         year,
         month,
-        monthLabel: `${month + 1}/${String(year).slice(-2)}`,
+        // Display พ.ศ. short year (storage year stays CE).
+        monthLabel: `${month + 1}/${String(year + 543).slice(-2)}`,
         dayOfMonth,
         dateMs: roundDateMs(year, month, dayOfMonth),
         session,
