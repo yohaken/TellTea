@@ -25,6 +25,13 @@ import {
   thaiMonthYearLabel,
   type MonthBonusReport,
 } from "@/lib/bonus";
+import {
+  closeBonusMonth,
+  reportFromCloseSnapshot,
+  subscribeBonusMonthClose,
+  unlockBonusMonth,
+  type BonusMonthCloseDoc,
+} from "@/lib/bonus-month-close";
 import { RateSchedulePanel } from "@/components/RateSchedulePanel";
 import { listActiveEmployees, resolveLinkedEmployee, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
@@ -39,7 +46,7 @@ import {
 } from "@/lib/payroll";
 import { subscribeProdEntries, type ProdEntry } from "@/lib/production";
 import { subscribeRateSchedule, type RateScheduleEntry } from "@/lib/rate-schedule";
-import { formatPlainNumber } from "@/lib/utils";
+import { formatDateShortBe, formatPlainNumber } from "@/lib/utils";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 function fmt(n: number) {
@@ -80,6 +87,8 @@ function BonusView() {
   const [payrollSchedule, setPayrollSchedule] = useState<PayrollSchedule>(DEFAULT_PAYROLL_SCHEDULE);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [closeBusy, setCloseBusy] = useState(false);
+  const [monthClose, setMonthClose] = useState<BonusMonthCloseDoc | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
@@ -159,7 +168,17 @@ function BonusView() {
     return () => unsubMonth();
   }, [canView, year, monthIdx]);
 
-  const report = useMemo(() => {
+  useEffect(() => {
+    if (!canView) return;
+    const unsub = subscribeBonusMonthClose(
+      month,
+      (doc) => setMonthClose(doc),
+      (err) => setError(err.message),
+    );
+    return () => unsub();
+  }, [canView, month]);
+
+  const liveReport = useMemo(() => {
     if (!deductionSettings || !deductionMonth) return null;
     return computeMonthBonus(
       otEntries,
@@ -181,6 +200,14 @@ function BonusView() {
     monthIdx,
     rateSchedule,
   ]);
+
+  /** Closed month shows frozen snapshot; open month uses live calc. */
+  const report = useMemo(() => {
+    if (monthClose?.status === "closed") return reportFromCloseSnapshot(monthClose);
+    return liveReport;
+  }, [monthClose, liveReport]);
+
+  const monthClosed = monthClose?.status === "closed";
 
   const myEmployee = useMemo(
     () => resolveLinkedEmployee(employees, staff),
@@ -205,6 +232,51 @@ function BonusView() {
     }
     return map;
   }, [report]);
+
+  async function onCloseMonth() {
+    if (!isOwner || !actorId || !liveReport || monthClosed) return;
+    if (
+      !window.confirm(
+        `ปิดเดือน ${month}?\nจะล็อกตารางชง+ผลิตทั้งเดือน และเก็บยอดโบนัสคงที่ — แล้วไปสร้างคิวโบนัสที่แท็บรอโอน`,
+      )
+    ) {
+      return;
+    }
+    setCloseBusy(true);
+    setError(null);
+    try {
+      const closed = await closeBonusMonth({
+        periodMonth: month,
+        closedBy: actorId,
+        report: liveReport,
+        prodEntries,
+        otEntries,
+      });
+      setInfo(
+        `ปิดเดือน ${month} แล้ว · ล็อกผลิต ${closed.lockedProd} · ชง ${closed.lockedOt} · ไปแท็บรอโอนเพื่อสร้างโบนัส`,
+      );
+      setTab("pay");
+    } catch (err) {
+      setError((err as Error).message || "ปิดเดือนไม่สำเร็จ");
+    } finally {
+      setCloseBusy(false);
+    }
+  }
+
+  async function onUnlockMonth() {
+    if (!isOwner || !monthClosed) return;
+    if (!window.confirm(`ปลดปิดเดือน ${month}? แถวที่จ่ายแล้ว/ล็อกยอดยังแก้ไม่ได้`)) return;
+    setCloseBusy(true);
+    setError(null);
+    try {
+      await unlockBonusMonth(month);
+      setInfo(`ปลดปิดเดือน ${month} แล้ว`);
+    } catch (err) {
+      setError((err as Error).message || "ปลดปิดไม่สำเร็จ");
+    } finally {
+      setCloseBusy(false);
+    }
+  }
 
   const visiblePayrollItems = useMemo(() => {
     if (shopPayView) return payrollItems;
@@ -271,7 +343,29 @@ function BonusView() {
             {report
               ? `${thaiMonthYearLabel(report.year, report.month)} · หารขาย ${report.employeeCount} คน`
               : "…"}
+            {monthClosed ? " · ปิดเดือนแล้ว" : ""}
           </span>
+          {isOwner && tab === "bonus" ? (
+            monthClosed ? (
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={closeBusy}
+                onClick={() => void onUnlockMonth()}
+              >
+                ปลดปิดเดือน
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="primary-btn"
+                disabled={closeBusy || !liveReport}
+                onClick={() => void onCloseMonth()}
+              >
+                {closeBusy ? "กำลังปิด…" : "ปิดเดือนนี้"}
+              </button>
+            )
+          ) : null}
         </div>
       ) : (
         <p className="muted bonus-toolbar-meta" style={{ margin: "0.25rem 0 0.65rem" }}>
@@ -336,6 +430,9 @@ function BonusView() {
                 <strong className="bonus-summary-pool-amt">฿{fmt(report.totalSalesPool)}</strong>
                 <span className="muted bonus-summary-pool-meta">
                   จากผลิต {fmt(report.totalProdQty)} ชิ้น × เรทขายตามวัน (ตารางเรท)
+                  {monthClosed && monthClose
+                    ? ` · ปิด ${formatDateShortBe(monthClose.closedAt)}`
+                    : ""}
                 </span>
               </div>
               <div className="bonus-summary-total">
@@ -343,6 +440,12 @@ function BonusView() {
                 <strong>฿{fmt(report.totalRemaining)}</strong>
               </div>
             </div>
+          ) : null}
+
+          {monthClosed && shopPayView ? (
+            <p className="muted bonus-live-note">
+              เดือนนี้ปิดแล้ว — ชง/ผลิตล็อกห้ามลงย้อนหลัง · ยอดด้านบนเป็น snapshot · สร้างโบนัสที่แท็บรอโอน
+            </p>
           ) : null}
 
           {!loading && report && myRow ? (

@@ -9,7 +9,6 @@ import {
 import { useRouter } from "next/navigation";
 import { ChefHat, Lock, Trash2, X } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
-import { BulkStatusToolbar } from "@/components/BulkStatusToolbar";
 import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { ProdCatalogSetup } from "@/components/ProdCatalogSetup";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
@@ -26,13 +25,11 @@ import {
 } from "@/lib/photo-forensics-scan";
 import {
   addProdEntry,
-  bulkUpdateProdEntryStatus,
   computeProdBonus,
   deleteProdEntry,
   getProdImageUrls,
   isProdEntryLocked,
   labelProdStatus,
-  normalizeProdStatus,
   listProdProducts,
   listProdWorkers,
   PROD_IMAGE_MAX,
@@ -43,7 +40,6 @@ import {
   updateProdEntry,
   type ProdEntry,
   type ProdProduct,
-  type ProdStatus,
   type ProdWorker,
 } from "@/lib/production";
 import {
@@ -565,8 +561,6 @@ function ProdTable({
     title: string;
     entryDateMs?: number;
   } | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkBusy, setBulkBusy] = useState(false);
   const [photoReport, setPhotoReport] = useState<PhotoForensicsReport | null>(null);
 
   useBodyScrollLock(!!preview);
@@ -589,67 +583,10 @@ function ProdTable({
     setPhotoReport(null);
   }, [month, entries.length]);
 
-  const unpaidIds = useMemo(
-    () => filtered.filter((r) => normalizeProdStatus(r.status) === "unpaid").map((r) => r.id),
-    [filtered],
-  );
-
-  const visibleIds = useMemo(() => filtered.map((r) => r.id), [filtered]);
-
-  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
-  const someSelected = selected.size > 0;
-
-  function toggleRow(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleAllVisible() {
-    if (allVisibleSelected) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(visibleIds));
-    }
-  }
-
-  async function setStatus(row: ProdEntry, status: ProdStatus) {
-    try {
-      await updateProdEntry(row.id, { status });
-    } catch (err) {
-      onError((err as Error).message || "อัปเดตสถานะไม่สำเร็จ");
-    }
-  }
-
-  async function onBulkStatus(status: ProdStatus) {
-    const ids = [...selected];
-    if (!ids.length) return;
-    const label = labelProdStatus(status);
-    if (!window.confirm(`เปลี่ยนสถานะ ${ids.length} รายการเป็น "${label}"?`)) return;
-    setBulkBusy(true);
-    onError(null);
-    try {
-      await bulkUpdateProdEntryStatus(ids, status);
-      setSelected(new Set());
-    } catch (err) {
-      onError((err as Error).message || "อัปเดตกลุ่มไม่สำเร็จ");
-    } finally {
-      setBulkBusy(false);
-    }
-  }
-
   async function onDelete(row: ProdEntry) {
     if (!window.confirm("ลบรายการนี้?")) return;
     try {
       await deleteProdEntry(row.id);
-      setSelected((prev) => {
-        const next = new Set(prev);
-        next.delete(row.id);
-        return next;
-      });
     } catch (err) {
       onError((err as Error).message || "ลบไม่สำเร็จ");
     }
@@ -661,23 +598,19 @@ function ProdTable({
 
   return (
     <>
+      <p className="muted check-history-hint" style={{ margin: "0 0 0.45rem" }}>
+        สถานะล็อกเมื่อปิดเดือนโบนัสที่ จ่าย/โบนัส — ไม่เปลี่ยนสถานะเป็นกลุ่มที่นี่
+      </p>
       {isOwner ? (
-        <BulkStatusToolbar
-          variant="prod"
-          selectedCount={selected.size}
-          month={month}
-          onMonthChange={(v) => {
-            onMonthChange(v);
-            setSelected(new Set());
-          }}
-          onSelectUnpaid={() => setSelected(new Set(unpaidIds))}
-          onSelectVisible={() => setSelected(new Set(visibleIds))}
-          onClear={() => setSelected(new Set())}
-          onSetStatus={(s) => void onBulkStatus(s as ProdStatus)}
-          busy={bulkBusy}
-          visibleCount={visibleIds.length}
-          unpaidCount={unpaidIds.length}
-        />
+        <div className="prod-month-bar" style={{ marginBottom: "0.4rem" }}>
+          <input
+            type="month"
+            className="ot-slim-input"
+            value={month}
+            onChange={(e) => onMonthChange(e.target.value)}
+            aria-label="เดือน"
+          />
+        </div>
       ) : null}
 
       {isOwner ? (
@@ -698,19 +631,6 @@ function ProdTable({
           <table className="sheet-table prod-table sheet-table--dense">
             <thead>
               <tr>
-                {isOwner ? (
-                  <th className="col-act bulk-check-col">
-                    <input
-                      type="checkbox"
-                      checked={allVisibleSelected}
-                      ref={(el) => {
-                        if (el) el.indeterminate = someSelected && !allVisibleSelected;
-                      }}
-                      onChange={toggleAllVisible}
-                      aria-label="เลือกทั้งหมดที่แสดง"
-                    />
-                  </th>
-                ) : null}
                 <th className="col-date">วันที่</th>
                 <th className="col-desc prod-col-worker">พนักงาน</th>
                 <th className="col-desc prod-col-product col-sticky-left">สินค้า</th>
@@ -745,16 +665,6 @@ function ProdTable({
                       .filter(Boolean)
                       .join(" ")}
                   >
-                    {isOwner ? (
-                      <td className="col-act bulk-check-col">
-                        <input
-                          type="checkbox"
-                          checked={selected.has(row.id)}
-                          onChange={() => toggleRow(row.id)}
-                          aria-label={`เลือก ${row.productName}`}
-                        />
-                      </td>
-                    ) : null}
                     <td className="col-date">{formatDateShortBe(row.date)}</td>
                     <td className="col-desc prod-col-worker">{row.workerNames.join(", ")}</td>
                     <td className="col-desc prod-col-product col-sticky-left">
@@ -791,25 +701,13 @@ function ProdTable({
                     ) : null}
                     <td className="col-out">{formatPlainNumber(c.bonusPerPerson)}</td>
                     <td className="col-act">
-                      {isOwner ? (
-                        <select
-                          className={row.status === "paid" ? "prod-status is-paid" : "prod-status"}
-                          value={row.status === "paid" ? "paid" : "unpaid"}
-                          onChange={(e) => void setStatus(row, e.target.value as ProdStatus)}
-                          aria-label="สถานะโบนัส"
-                        >
-                          <option value="unpaid">รอจ่าย</option>
-                          <option value="paid">จ่ายแล้ว</option>
-                        </select>
-                      ) : (
-                        <span
-                          className={
-                            row.status === "paid" ? "prod-status-pill is-paid" : "prod-status-pill"
-                          }
-                        >
-                          {labelProdStatus(row.status)}
-                        </span>
-                      )}
+                      <span
+                        className={
+                          row.status === "paid" ? "prod-status-pill is-paid" : "prod-status-pill"
+                        }
+                      >
+                        {labelProdStatus(row.status)}
+                      </span>
                     </td>
                     <td className="col-act">
                       {isOwner && !locked ? (

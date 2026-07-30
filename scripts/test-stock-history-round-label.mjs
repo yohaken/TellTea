@@ -15,7 +15,7 @@ const stockPage = read("src/app/stock/page.tsx");
 const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD\s*=\s*483/);
+assert.match(version, /APP_BUILD\s*=\s*484/);
 assert.match(histSrc, /export function stockRoundDateLabelBe/);
 assert.match(histSrc, /export function upcomingStockRounds/);
 assert.match(histSrc, /upcomingStockRounds\(3/);

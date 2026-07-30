@@ -756,6 +756,12 @@ service cloud.firestore {
       allow create, update, delete: if isOwner();
     }
 
+    /** ปิดเดือนโบนัส — snapshot + ล็อกชง/ผลิต */
+    match /bonusMonthCloses/{monthId} {
+      allow read: if hasPerm('bonus');
+      allow create, update, delete: if isOwner();
+    }
+
     match /meta/{docId} {
       // brandLogo + businessProfile text are public (no secrets) so login can show the mark
       // aiSettings holds Gemini API key — owner-only read

@@ -36,6 +36,7 @@ import {
   resolveBakerySalesRateForNewEntry,
   type RateScheduleEntry,
 } from "./rate-schedule";
+import { assertBonusMonthOpenForDate } from "./bonus-month-guard";
 
 export type ProdStatus = "unpaid" | "paid";
 
@@ -43,9 +44,12 @@ export function normalizeProdStatus(raw: unknown): ProdStatus {
   return raw === "paid" ? "paid" : "unpaid";
 }
 
-/** รายการที่ยังนับในโบนัส real-time */
-export function prodEntryCountsTowardBonus(entry: Pick<ProdEntry, "status">) {
-  return normalizeProdStatus(entry.status) === "unpaid";
+/**
+ * Bonus calc counts all month rows; `paid` only means locked after month-close / pay.
+ * Kept for call-site compatibility.
+ */
+export function prodEntryCountsTowardBonus(_entry: Pick<ProdEntry, "status">) {
+  return true;
 }
 
 export type ProdProduct = {
@@ -335,6 +339,7 @@ export async function addProdEntry(input: ProdEntryInput): Promise<string> {
   if (!input.workerNames.length) throw new Error("เลือกพนักงานอย่างน้อย 1 คน");
   if (!input.productId) throw new Error("เลือกสินค้า");
   if (!(input.qtyProduced > 0)) throw new Error("ใส่จำนวนผลิต");
+  await assertBonusMonthOpenForDate(input.date);
   const now = Date.now();
   const ref = await addDoc(entriesCol(), {
     date: input.date,
@@ -386,6 +391,19 @@ export async function updateProdEntry(
   if (!snap.exists()) throw new Error("ไม่พบรายการ");
   const current = mapProdEntryDoc(snap.id, snap.data() as Record<string, unknown>);
   assertProdEntryEditable(current, patch);
+  const touchesQty =
+    patch.date != null ||
+    patch.workerIds != null ||
+    patch.workerNames != null ||
+    patch.productId != null ||
+    patch.qtyProduced != null ||
+    patch.qtyWaste != null ||
+    patch.salesRate != null ||
+    patch.prodRate != null;
+  if (touchesQty) {
+    await assertBonusMonthOpenForDate(current.date);
+    if (patch.date != null) await assertBonusMonthOpenForDate(patch.date);
+  }
 
   const next: Record<string, string | number | boolean | string[]> = {
     updatedAt: Date.now(),
