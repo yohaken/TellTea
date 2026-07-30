@@ -1,6 +1,6 @@
 # nPos — ใครเข้ากะ (เลือกชื่อเรียบง่าย)
 
-อัปเดต: **1.14.86** · vc **109** · `APP_BUILD` 507 · `POS_BUILD` 139  
+อัปเดต: **1.14.87** · vc **110** · `APP_BUILD` 508 · `POS_BUILD` 140  
 ดูเฟส [npos-counter-ops-phases.md](./npos-counter-ops-phases.md)  
 อ้างอิง: [npos-bo-shift-readonly-checklist.md](./npos-bo-shift-readonly-checklist.md) S5 · [npos-bo-sales-retention-plan.md](./npos-bo-sales-retention-plan.md) P3
 

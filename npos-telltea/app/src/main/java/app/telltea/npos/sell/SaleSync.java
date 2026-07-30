@@ -422,6 +422,9 @@ public final class SaleSync {
         body.put("discountTotal", ShiftPrefs.discountTotal(app));
         body.put("voidedCount", ShiftPrefs.voidedCount(app));
         body.put("saleCount", ShiftPrefs.saleCount(app));
+        body.put("cashBillCount", ShiftPrefs.cashBillCount(app));
+        body.put("promptpayBillCount", ShiftPrefs.promptpayBillCount(app));
+        body.put("transferBillCount", ShiftPrefs.transferBillCount(app));
         if (report != null) {
             body.put("closingCashCounted", report.countedCash);
             body.put("expectedCash", report.expectedCash);
@@ -432,6 +435,9 @@ public final class SaleSync {
             body.put("cashOutTotal", report.cashOutTotal);
             body.put("cashInTotal", report.cashInTotal);
             body.put("cashDropCount", report.cashDropCount);
+            body.put(
+                    "remitAmount",
+                    Math.max(0, report.countedCash - Math.max(0, report.leaveFloat)));
         } else {
             body.put("cashOutTotal", ShiftPrefs.cashOutTotal(app));
             body.put("cashInTotal", ShiftPrefs.cashInTotal(app));

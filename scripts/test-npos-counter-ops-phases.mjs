@@ -47,6 +47,8 @@ assert.match(voice, /Locale|th_TH|"th"/);
 assert.match(read("docs/npos-remaining-checklist.md"), /npos-counter-ops-phases/);
 assert.match(read("scripts/check-npos-shop.mjs"), /counter-ops-phases/);
 assert.match(read("scripts/check-npos-shop.mjs"), /shift-opener/);
+assert.match(read("scripts/check-npos-shop.mjs"), /session-cash-detail/);
 assert.ok(existsSync(join(root, "scripts/test-npos-shift-opener.mjs")));
+assert.ok(existsSync(join(root, "scripts/test-npos-session-cash-detail.mjs")));
 
 console.log("OK test-npos-counter-ops-phases");

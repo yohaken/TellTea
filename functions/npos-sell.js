@@ -59,6 +59,24 @@ function shiftFromHour(h) {
   return "evening";
 }
 
+/** Mid-shift cash-drop lines from tablet close body — cap size for Firestore. */
+function sanitizeCashDropNotes(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  const slice = raw.length > 50 ? raw.slice(raw.length - 50) : raw;
+  for (const row of slice) {
+    if (!row || typeof row !== "object") continue;
+    const amount = Number(row.amount);
+    if (!Number.isFinite(amount) || amount <= 0) continue;
+    out.push({
+      amount,
+      reason: String(row.reason || "").trim().slice(0, 120),
+      at: Number(row.at) > 0 ? Number(row.at) : 0,
+    });
+  }
+  return out;
+}
+
 exports.nposMenuSnapshot = functions.region("asia-southeast1").https.onRequest(async (req, res) => {
   cors(res);
   if (req.method === "OPTIONS") {
@@ -456,6 +474,10 @@ exports.nposSessionClose = functions.region("asia-southeast1").https.onRequest(a
     const alreadyClosed = asString(data.status, 16) === "closed";
     // Keep original BO force-close clock; tablet Z can still finalize cash fields.
     const closedAt = alreadyClosed && Number(data.closedAt) ? Number(data.closedAt) : now;
+    const closingCashCounted = Number(body.closingCashCounted) || 0;
+    const leaveFloat = Number(body.leaveFloat) || 0;
+    const cashDropNotes = sanitizeCashDropNotes(body.cashDropNotes);
+    const cashDropCountBody = Number(body.cashDropCount);
     const patch = {
       status: "closed",
       closedAt,
@@ -466,10 +488,12 @@ exports.nposSessionClose = functions.region("asia-southeast1").https.onRequest(a
       promptpayTotal: Number(body.promptpayTotal) || 0,
       transferTotal: Number(body.transferTotal) || 0,
       openingCash: Number(body.openingCash) || 0,
-      closingCashCounted: Number(body.closingCashCounted) || 0,
+      closingCashCounted,
       expectedCash: Number(body.expectedCash) || 0,
       cashDifference: Number(body.cashDifference) || 0,
-      leaveFloat: Number(body.leaveFloat) || 0,
+      leaveFloat,
+      // Cash to remit upstairs = counted drawer − leave float for next round.
+      remitAmount: Math.max(0, closingCashCounted - leaveFloat),
       discountTotal: Number(body.discountTotal) || 0,
       voidedCount: Number(body.voidedCount) || 0,
       saleCountLocal: Number(body.saleCount) || 0,
@@ -477,7 +501,13 @@ exports.nposSessionClose = functions.region("asia-southeast1").https.onRequest(a
       discrepancyLabel: String(body.discrepancyLabel || "").slice(0, 40),
       cashOutTotal: Number(body.cashOutTotal) || 0,
       cashInTotal: Number(body.cashInTotal) || 0,
-      cashDropCount: Number(body.cashDropCount) || 0,
+      cashDropCount: Number.isFinite(cashDropCountBody)
+        ? Math.max(0, Math.round(cashDropCountBody))
+        : cashDropNotes.length,
+      cashDropNotes,
+      cashBillCount: Math.max(0, Math.round(Number(body.cashBillCount) || 0)),
+      promptpayBillCount: Math.max(0, Math.round(Number(body.promptpayBillCount) || 0)),
+      transferBillCount: Math.max(0, Math.round(Number(body.transferBillCount) || 0)),
     };
     if (alreadyClosed) {
       patch.zFinalizedAt = now;
