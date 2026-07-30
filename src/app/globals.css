@@ -9948,6 +9948,17 @@ body.modal-open .main-panel {
   font-weight: 700;
 }
 
+.pnl-cat-vat-hint {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+  text-align: left;
+}
+
+.pnl-vat-cell {
+  color: #5b21b6;
+  font-weight: 650;
+}
+
 .pnl-staff .pnl-block-title {
   color: #9a3412;
 }
@@ -9975,7 +9986,11 @@ body.modal-open .main-panel {
 }
 
 .pnl-wide {
-  min-width: 860px;
+  min-width: 1080px;
+}
+
+.pnl-cat-vat-table {
+  min-width: 32rem;
 }
 
 .pnl-income-cell {

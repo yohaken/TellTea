@@ -33,6 +33,7 @@
     "test:task-owner-timeline": "node scripts/test-task-owner-timeline.mjs",
     "test:ledger-asset-type-bar": "node scripts/test-ledger-asset-type-bar.mjs",
     "test:pnl-exvat-cost": "node scripts/test-pnl-exvat-cost.mjs",
+    "test:pnl-purchase-vat-split": "node scripts/test-pnl-purchase-vat-split.mjs",
     "test:resolve-linked-employee": "node scripts/test-resolve-linked-employee.mjs",
     "repair:ot-rates": "node scripts/repair-ot-bonus-rates.mjs",
     "test:ledger-multi-photo": "node scripts/test-ledger-multi-photo.mjs",

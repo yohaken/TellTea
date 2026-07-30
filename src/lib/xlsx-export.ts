@@ -53,32 +53,23 @@ function categorySheetRows(rows: MonthCategoryRow[], includeTotals: boolean) {
   const colCogs = categoryLabel("cogs");
   const colSga = categoryLabel("sga");
   const colOther = categoryLabel("other");
-  const out = rows.map((r) => ({
-    เดือน: r.month,
-    [colAsset]: r.asset,
+  const mapRow = (r: MonthCategoryRow | ReturnType<typeof sumCategoryRows>, month: string) => ({
+    เดือน: month,
     [colCogs]: r.cogs,
+    "ภาษีซื้อ(ต้นทุน)": r.vatCogs,
     [colSga]: r.sga,
+    "ภาษีซื้อ(คชจ.)": r.vatSga,
+    [colAsset]: r.asset,
+    "ภาษีซื้อ(สินทรัพย์)": r.vatAsset,
     [colOther]: r.other,
-  }));
+    "รวมภาษีซื้อ": r.vatAsset + r.vatCogs + r.vatSga + r.vatOther,
+  });
+  const out = rows.map((r) => mapRow(r, r.month));
   if (includeTotals && rows.length) {
     const t = sumCategoryRows(rows);
     const a = averageCategoryRows(rows);
-    out.push({
-      เดือน: "รวม",
-      [colAsset]: t.asset,
-      [colCogs]: t.cogs,
-      [colSga]: t.sga,
-      [colOther]: t.other,
-    });
-    if (a) {
-      out.push({
-        เดือน: "เฉลี่ย",
-        [colAsset]: a.asset,
-        [colCogs]: a.cogs,
-        [colSga]: a.sga,
-        [colOther]: a.other,
-      });
-    }
+    out.push(mapRow(t, "รวม"));
+    if (a) out.push(mapRow(a, "เฉลี่ย"));
   }
   return out;
 }
@@ -98,13 +89,17 @@ function pnlSheetRows(rows: PnlMonthRow[], includeTotals: boolean) {
     "รายได้/วัน": Number(r.incomePerDay.toFixed(2)),
     [colCogs]: r.cogs,
     [`${colCogs}%`]: pctCell(r.cogsPct),
+    "ภาษีซื้อ(ต้นทุน)": r.vatCogs,
     กำไรขั้นต้น: r.gross,
     "กำไรขั้นต้น%": pctCell(r.grossPct),
     [colSga]: r.sga,
     [`${colSga}%`]: pctCell(r.sgaPct),
+    "ภาษีซื้อ(คชจ.)": r.vatSga,
     สุทธิ: r.net,
     "สุทธิ%": pctCell(r.netPct),
     [colAsset]: r.asset,
+    "ภาษีซื้อ(สินทรัพย์)": r.vatAsset,
+    รวมภาษีซื้อ: r.purchaseVat,
     "invest/net%": pctCell(r.investOverNet),
     "เงินสด+": r.cashPlus,
     "เงินสดต่อรายได้%": pctCell(r.cashOverIncome),

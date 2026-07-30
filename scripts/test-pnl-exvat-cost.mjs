@@ -1,5 +1,5 @@
 /**
- * PnL uses businessCostOut (ex-VAT) wiring check.
+ * PnL uses businessCostOut (ex-VAT) + purchase VAT columns wiring check.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -15,9 +15,12 @@ const pnlPage = readFileSync(join(root, "src/app/pnl/page.tsx"), "utf8");
 const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
 
 assert.match(entryVat, /export function businessCostOut/);
-assert.match(pnl, /businessCostOut\(e\.amountOut, e\.hasVat, e\.vatInput\)/);
+assert.match(pnl, /businessCostOut\(entry\.amountOut, entry\.hasVat, entry\.vatInput\)/);
+assert.match(pnl, /vatCogs/);
+assert.match(pnl, /purchaseVatTotal/);
 assert.match(fieldset, /ต้นทุนบัญชี/);
-assert.match(pnlPage, /ต้นทุนหลังหักภาษีซื้อ/);
-assert.match(version, /APP_BUILD = 499/);
+assert.match(pnlPage, /ภาษีต้นทุน/);
+assert.match(pnlPage, /รวมภาษีซื้อ/);
+assert.match(version, /APP_BUILD = 500/);
 
 console.log("OK test-pnl-exvat-cost");
