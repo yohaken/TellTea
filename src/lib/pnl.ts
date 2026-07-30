@@ -120,11 +120,20 @@ function accumulateEntry(
     type: string;
     hasVat?: boolean;
     vatInput?: number;
+    vatClaim?: boolean;
   },
 ) {
-  const cost = businessCostOut(entry.amountOut, entry.hasVat, entry.vatInput);
+  const cost = businessCostOut(
+    entry.amountOut,
+    entry.hasVat,
+    entry.vatInput,
+    entry.vatClaim,
+  );
+  // คอลัมน์ภาษีซื้อใน PnL นับเฉพาะที่ติ๊กหัก (vatClaim)
   const vat =
-    entry.hasVat && normalizeMoney(entry.vatInput) > 0
+    entry.hasVat &&
+    entry.vatClaim &&
+    normalizeMoney(entry.vatInput) > 0
       ? normalizeMoney(entry.vatInput)
       : 0;
   if (!(cost > 0) && !(vat > 0)) return;

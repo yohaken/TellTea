@@ -662,6 +662,9 @@ function OwnerEntryModal({
     normalizeVatSource(entry?.vatSource),
   );
   const [vatVerified, setVatVerified] = useState(Boolean(entry?.vatVerified));
+  const [vatClaim, setVatClaim] = useState(
+    Boolean(entry?.hasVat && entry?.vatClaim),
+  );
   const [aiVatReason, setAiVatReason] = useState("");
   const [pendingAiVat, setPendingAiVat] = useState<number | null>(null);
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getOwnerBookReceiptUrls(entry));
@@ -973,13 +976,7 @@ function OwnerEntryModal({
         vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
         vatSource: hasVat ? vatSource || "manual" : "",
         vatVerified: hasVat ? vatVerified : false,
-        // รายการใหม่ไม่ auto รวม · แก้รายการคงสถานะเดิม (ติ๊กหลักที่ VAT เดือน)
-        vatClaim:
-          mode === "add"
-            ? false
-            : hasVat
-              ? Boolean(entry?.vatClaim)
-              : false,
+        vatClaim: hasVat && vatNum > 0 ? vatClaim : false,
       };
 
       if (mode === "add") {
@@ -1133,6 +1130,9 @@ function OwnerEntryModal({
               hasVat={hasVat}
               vatInput={vatInputNum}
               vatSource={vatSource}
+              vatClaim={vatClaim}
+              onVatClaimChange={setVatClaim}
+              disabled={busy}
               onEditVat={() => {
                 setVatVerified(false);
                 setVatFirstPhase("manual");
@@ -1248,6 +1248,8 @@ function OwnerEntryModal({
               vatInvoiceNo={vatInvoiceNo}
               vatSource={vatSource}
               vatVerified={vatVerified}
+              vatClaim={vatClaim}
+              onVatClaimChange={setVatClaim}
               aiStatus={
                 receiptUrls.length === 0
                   ? "none"

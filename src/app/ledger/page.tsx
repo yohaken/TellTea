@@ -721,6 +721,9 @@ function EditEntryModal({
   const [vatVerified, setVatVerified] = useState(
     Boolean(!isIn && entry.vatVerified),
   );
+  const [vatClaim, setVatClaim] = useState(
+    Boolean(!isIn && entry.hasVat && entry.vatClaim),
+  );
   const [aiVatReason, setAiVatReason] = useState("");
   const [extractStatus, setExtractStatus] = useState<"idle" | "loading" | "ready" | "error">(
     "idle",
@@ -894,8 +897,7 @@ function EditEntryModal({
               vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
               vatSource: hasVat ? vatSource || "manual" : "",
               vatVerified: hasVat ? vatVerified : false,
-              // แก้ที่บช. — คงสถานะรวมเข้าระบบเดิม (ติ๊กหลักอยู่ที่ VAT เดือน)
-              vatClaim: hasVat ? Boolean(entry.vatClaim) : false,
+              vatClaim: hasVat && vatInputNum > 0 ? vatClaim : false,
             }),
       });
       onSaved();
@@ -1063,6 +1065,8 @@ function EditEntryModal({
               vatInvoiceNo={vatInvoiceNo}
               vatSource={vatSource}
               vatVerified={vatVerified}
+              vatClaim={vatClaim}
+              onVatClaimChange={setVatClaim}
               aiStatus={
                 receiptUrls.length === 0
                   ? "none"

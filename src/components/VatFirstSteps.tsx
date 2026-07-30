@@ -179,24 +179,59 @@ export function VatFirstFormSummary({
   vatInput,
   vatSource,
   onEditVat,
+  vatClaim = false,
+  onVatClaimChange,
+  disabled,
 }: {
   hasVat: boolean;
   vatInput: number;
   vatSource: string;
   onEditVat: () => void;
+  vatClaim?: boolean;
+  onVatClaimChange?: (claim: boolean) => void;
+  disabled?: boolean;
 }) {
   if (!hasVat) {
     return <p className="muted vat-first-summary-no">ไม่มี VAT · กรอกรายการได้เลย</p>;
   }
   return (
-    <div className="vat-first-summary" aria-live="polite">
-      <span>
-        VAT ยืนยันแล้ว · {formatVatMoney(vatInput)} บาท
-        {vatSource === "ai" ? " · จาก AI" : " · กรอกเอง"}
-      </span>
-      <button type="button" className="linkish-btn" onClick={onEditVat}>
-        แก้ยอด VAT
-      </button>
+    <div className="vat-first-summary-block" aria-live="polite">
+      <div className="vat-first-summary">
+        <span>
+          VAT ยืนยันแล้ว · {formatVatMoney(vatInput)} บาท
+          {vatSource === "ai" ? " · จาก AI" : " · กรอกเอง"}
+        </span>
+        <button type="button" className="linkish-btn" onClick={onEditVat}>
+          แก้ยอด VAT
+        </button>
+      </div>
+      {vatInput > 0 && onVatClaimChange ? (
+        <div className="vat-claim-mode" role="group" aria-label="โหมดภาษีซื้อกับต้นทุน">
+          <p className="vat-claim-mode-label">ต้นทุนบัญชี</p>
+          <div className="vat-claim-mode-toggle">
+            <button
+              type="button"
+              className={`vat-claim-mode-btn${!vatClaim ? " is-active" : ""}`}
+              disabled={disabled}
+              aria-pressed={!vatClaim}
+              onClick={() => onVatClaimChange(false)}
+            >
+              ซื้อไปเหอะ
+              <span className="vat-claim-mode-sub">บิลเต็มเป็นต้นทุน</span>
+            </button>
+            <button
+              type="button"
+              className={`vat-claim-mode-btn${vatClaim ? " is-active" : ""}`}
+              disabled={disabled}
+              aria-pressed={vatClaim}
+              onClick={() => onVatClaimChange(true)}
+            >
+              หักภาษีซื้อ
+              <span className="vat-claim-mode-sub">ต้นทุนแยก VAT</span>
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -80,6 +80,7 @@ export function LedgerAddOutModal({
   const [vatInvoiceNo, setVatInvoiceNo] = useState("");
   const [vatSource, setVatSource] = useState<VatSource>("");
   const [vatVerified, setVatVerified] = useState(false);
+  const [vatClaim, setVatClaim] = useState(false);
   const [aiVatReason, setAiVatReason] = useState("");
   const [pendingAiVat, setPendingAiVat] = useState<number | null>(null);
   const [extractStatus, setExtractStatus] = useState<"idle" | "loading" | "ready" | "error">(
@@ -350,7 +351,7 @@ export function LedgerAddOutModal({
         vatInvoiceNo: hasVat ? vatInvoiceNo.trim() : "",
         vatSource: hasVat ? vatSource || "manual" : "",
         vatVerified: hasVat ? vatVerified : false,
-        vatClaim: false,
+        vatClaim: hasVat && vatNum > 0 ? vatClaim : false,
       });
       setSaveStage("done");
       onSaved();
@@ -437,6 +438,9 @@ export function LedgerAddOutModal({
               hasVat={hasVat}
               vatInput={vatInputNum}
               vatSource={vatSource}
+              vatClaim={vatClaim}
+              onVatClaimChange={setVatClaim}
+              disabled={busy}
               onEditVat={() => {
                 setVatVerified(false);
                 setVatFirstPhase("manual");

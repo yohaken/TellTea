@@ -48,18 +48,24 @@ export function proposePurchaseVatInput(amountInclusive: number): number {
 }
 
 /**
- * ต้นทุนกิจการตามบัญชี — หลังหักภาษีซื้อ
- * เงินสดยังใช้ amountOut (รวม VAT) · รายงานกำไร/ต้นทุนใช้ค่านี้
+ * ต้นทุนกิจการตามบัญชี (PnL / ต้นทุน)
+ * เงินสดยังใช้ amountOut (รวม VAT) เสมอ
+ *
+ * - ติ๊กหักภาษีซื้อ (vatClaim) → ต้นทุน = เงินออก − ภาษีซื้อ
+ * - ไม่ติ๊ก (ซื้อไปเหอะ) → ต้นทุน = บิลเต็ม รวม VAT
  */
 export function businessCostOut(
   amountOut: number,
   hasVat: boolean | undefined,
   vatInput: number | undefined,
+  vatClaim?: boolean | undefined,
 ): number {
   const out = normalizeMoney(amountOut);
   if (!(out > 0)) return 0;
   const vat = normalizeMoney(vatInput);
-  if (hasVat && vat > 0) return roundMoney(Math.max(0, out - vat));
+  if (hasVat && vatClaim && vat > 0) {
+    return roundMoney(Math.max(0, out - vat));
+  }
   return out;
 }
 

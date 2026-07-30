@@ -92,12 +92,14 @@ assert.equal(parseVatInputStr("12.5"), 12.5);
 }
 
 {
-  // ต้นทุนบัญชี = เงินออก − ภาษีซื้อ (เงินสดยังรวม VAT)
-  assert.equal(businessCostOut(107, true, 7), 100);
+  // ติ๊กหักภาษีซื้อ → ต้นทุน = เงินออก − VAT · ไม่ติ๊ก → บิลเต็ม
+  assert.equal(businessCostOut(107, true, 7, true), 100);
+  assert.equal(businessCostOut(107, true, 7, false), 107);
+  assert.equal(businessCostOut(107, true, 7), 107); // ไม่ส่ง claim = ไม่หัก
   assert.equal(businessCostOut(100, false, 0), 100);
-  assert.equal(businessCostOut(107, true, 0), 107);
-  assert.equal(businessCostOut(5, true, 7), 0);
-  assert.equal(businessCostOut(0, true, 7), 0);
+  assert.equal(businessCostOut(107, true, 0, true), 107);
+  assert.equal(businessCostOut(5, true, 7, true), 0);
+  assert.equal(businessCostOut(0, true, 7, true), 0);
 }
 
 console.log("test-owner-books-vat-logic: ok");

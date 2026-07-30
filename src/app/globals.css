@@ -2374,6 +2374,64 @@ body.modal-open .main-panel {
   background: rgba(40, 90, 60, 0.08);
 }
 
+.vat-claim-mode {
+  margin: 0.45rem 0 0.25rem;
+}
+
+.vat-claim-mode-label {
+  margin: 0 0 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.72);
+}
+
+.vat-claim-mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+}
+
+.vat-claim-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  min-height: 2.65rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(40, 90, 60, 0.28);
+  background: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.62);
+  cursor: pointer;
+  text-align: left;
+}
+
+.vat-claim-mode-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.vat-claim-mode-btn.is-active {
+  background: rgba(40, 90, 60, 0.12);
+  border-color: #1a5c3a;
+  color: #1a5c3a;
+}
+
+.vat-claim-mode-sub {
+  font-size: 0.68rem;
+  font-weight: 600;
+  opacity: 0.78;
+}
+
+.vat-first-summary-block {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.45rem;
+}
+
 .entry-toolbar-actions {
   display: flex;
   align-items: center;

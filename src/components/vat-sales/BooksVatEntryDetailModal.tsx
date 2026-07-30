@@ -345,6 +345,8 @@ export function BooksVatEntryDetailModal({
                 vatInvoiceNo={vatInvoiceNo}
                 vatSource={vatSource}
                 vatVerified={vatVerified}
+                vatClaim={vatClaim}
+                onVatClaimChange={setVatClaim}
                 aiStatus={
                   receiptUrls.length === 0
                     ? "none"
@@ -371,18 +373,6 @@ export function BooksVatEntryDetailModal({
                   void runExtractFromPhotos(receiptUrls);
                 }}
               />
-
-              {hasVat && parseVatInputStr(vatInputStr) > 0 ? (
-                <label className="owner-vat-toggle vat-claim-toggle">
-                  <input
-                    type="checkbox"
-                    checked={vatClaim}
-                    disabled={busy || locked}
-                    onChange={(e) => setVatClaim(e.target.checked)}
-                  />
-                  รวมเข้างบ · หักภาษีซื้อ VAT เดือนนี้
-                </label>
-              ) : null}
 
               <div className="entry-actions module-form-actions">
                 <button

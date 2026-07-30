@@ -17,6 +17,9 @@ type Props = {
   vatInvoiceNo: string;
   vatSource: VatSource;
   vatVerified: boolean;
+  /** ติ๊กหักภาษีซื้อ · false = ซื้อไปเหอะ ต้นทุนรวม VAT */
+  vatClaim?: boolean;
+  onVatClaimChange?: (claim: boolean) => void;
   /** สถานะอ่าน AI */
   aiStatus?: "idle" | "loading" | "ready" | "error" | "none";
   aiVatReason?: string;
@@ -32,6 +35,48 @@ type Props = {
 };
 
 /**
+ * สลับโหมด: หักภาษีซื้อ vs ซื้อไปเหอะ (ต้นทุนรวม VAT)
+ * ใช้ซ้ำในฟอร์มบช. + สรุป VAT-first
+ */
+export function VatClaimModeToggle({
+  vatClaim,
+  disabled,
+  onChange,
+}: {
+  vatClaim: boolean;
+  disabled?: boolean;
+  onChange: (claim: boolean) => void;
+}) {
+  return (
+    <div className="vat-claim-mode" role="group" aria-label="โหมดภาษีซื้อกับต้นทุน">
+      <p className="vat-claim-mode-label">ต้นทุนบัญชี</p>
+      <div className="vat-claim-mode-toggle">
+        <button
+          type="button"
+          className={`vat-claim-mode-btn${!vatClaim ? " is-active" : ""}`}
+          disabled={disabled}
+          aria-pressed={!vatClaim}
+          onClick={() => onChange(false)}
+        >
+          ซื้อไปเหอะ
+          <span className="vat-claim-mode-sub">บิลเต็มเป็นต้นทุน</span>
+        </button>
+        <button
+          type="button"
+          className={`vat-claim-mode-btn${vatClaim ? " is-active" : ""}`}
+          disabled={disabled}
+          aria-pressed={vatClaim}
+          onClick={() => onChange(true)}
+        >
+          หักภาษีซื้อ
+          <span className="vat-claim-mode-sub">ต้นทุนแยก VAT</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
  * ช่อง VAT — AI อ่านก่อน · ติ๊กตรวจตรงบิล · กรอกเอง / ประมาณเป็นทางเลือก
  * Compact copy: สถานะสั้น · ปุ่มสั้น · ไม่ซ้ำ intro ยาว
  */
@@ -44,6 +89,8 @@ export function EntryVatFieldset({
   vatInvoiceNo,
   vatSource,
   vatVerified,
+  vatClaim = false,
+  onVatClaimChange,
   aiStatus = "idle",
   aiVatReason = "",
   onHasVatChange,
@@ -58,8 +105,13 @@ export function EntryVatFieldset({
   const proposed = proposePurchaseVatInput(amountInclusive || 0);
   const vatNum = Number(String(vatInputStr).replace(/,/g, ""));
   const hasVatAmount = Number.isFinite(vatNum) && vatNum > 0;
-  const costExVat = hasVat
-    ? businessCostOut(amountInclusive || 0, true, hasVatAmount ? vatNum : 0)
+  const costBooks = hasVat
+    ? businessCostOut(
+        amountInclusive || 0,
+        true,
+        hasVatAmount ? vatNum : 0,
+        vatClaim,
+      )
     : 0;
 
   function sourceLabel() {
@@ -115,6 +167,7 @@ export function EntryVatFieldset({
             onVatVerifiedChange(false);
             if (!on) {
               onVatSourceChange("");
+              onVatClaimChange?.(false);
               return;
             }
             // ไม่ auto ใส่ 7/107 — ให้กรอกเองหรือรอ AI
@@ -204,13 +257,30 @@ export function EntryVatFieldset({
             </p>
           ) : null}
 
-          {hasVatAmount && costExVat > 0 ? (
-            <p className="muted form-hint-inline" title="เงินออกยังรวม VAT · รายงานกำไรใช้ต้นทุนหลังหัก">
-              ต้นทุนบัญชี ≈ {formatVatMoney(costExVat)} (เงินออก − ภาษีซื้อ)
+          {hasVatAmount && onVatClaimChange ? (
+            <VatClaimModeToggle
+              vatClaim={vatClaim}
+              disabled={disabled}
+              onChange={onVatClaimChange}
+            />
+          ) : null}
+
+          {hasVatAmount && costBooks > 0 ? (
+            <p
+              className="muted form-hint-inline"
+              title={
+                vatClaim
+                  ? "หักภาษีซื้อแล้ว · เงินออกยังรวม VAT · รายงานกำไรใช้ต้นทุนหลังหัก"
+                  : "ไม่หักภาษีซื้อ · ใช้บิลเต็มเป็นต้นทุน/ค่าใช้จ่าย"
+              }
+            >
+              {vatClaim
+                ? `ต้นทุนบัญชี ≈ ${formatVatMoney(costBooks)} (เงินออก − ภาษีซื้อ)`
+                : `ต้นทุนบัญชี ≈ ${formatVatMoney(costBooks)} (บิลเต็ม · รวม VAT)`}
             </p>
           ) : hasVat ? (
             <p className="muted form-hint-inline">
-              ใส่ภาษีซื้อแล้ว · ต้นทุนบัญชี = เงินออก − ภาษีซื้อ
+              ใส่ภาษีซื้อแล้ว แล้วเลือกโหมดต้นทุน
             </p>
           ) : null}
 
