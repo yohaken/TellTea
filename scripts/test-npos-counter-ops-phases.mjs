@@ -26,7 +26,7 @@ assert.match(phases, /npos-shift-opener-checklist/);
 assert.match(phases, /npos-session-cash-detail-checklist/);
 assert.match(phases, /npos-menu-version-sync-checklist/);
 assert.match(phases, /npos-payment-voice-checklist/);
-assert.match(phases, /ใครเข้ากะ|menuVersion|TextToSpeech|cashDropNotes/);
+assert.match(phases, /ใครเข้ากะ|menuVersion|cashDropNotes|voice_\*|MediaPlayer|ฝังคลิป|TextToSpeech/);
 assert.match(phases, /นอกเฟส/);
 
 const opener = read("docs/npos-shift-opener-checklist.md");
@@ -41,8 +41,8 @@ assert.match(menu, /menuVersion|reloadMenu|O3\./);
 assert.match(menu, /นอกสcope|delta/);
 
 const voice = read("docs/npos-payment-voice-checklist.md");
-assert.match(voice, /TextToSpeech|รับมา|ทอน|O4\./);
-assert.match(voice, /Locale|th_TH|"th"/);
+assert.match(voice, /รับมา|ทอน|O4\.|bundled|ฝัง/);
+assert.match(voice, /voice_\*|res\/raw|MediaPlayer|ออฟไลน์/);
 
 assert.match(read("docs/npos-remaining-checklist.md"), /npos-counter-ops-phases/);
 assert.match(read("scripts/check-npos-shop.mjs"), /counter-ops-phases/);

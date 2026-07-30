@@ -1,6 +1,6 @@
 # nPos / หลังร้าน — รายละเอียดเงินรอบ (เบิก + สรุปการ์ด)
 
-อัปเดต: **ship O2 1.14.87** · pin ปัจจุบัน APK **1.14.88** · vc **111** · `APP_BUILD` 509 · `POS_BUILD` 141  
+อัปเดต: **ship O2 1.14.87** · pin ปัจจุบัน APK **1.14.89** · vc **112** · `APP_BUILD` 509 · `POS_BUILD` 141  
 ดูเฟส [npos-counter-ops-phases.md](./npos-counter-ops-phases.md)  
 อ้างอิง: [npos-void-cashout-reason-checklist.md](./npos-void-cashout-reason-checklist.md) · [npos-z-cash-remit-checklist.md](./npos-z-cash-remit-checklist.md) · [npos-bo-slim-sessions-checklist.md](./npos-bo-slim-sessions-checklist.md)
 

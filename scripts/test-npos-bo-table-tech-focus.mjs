@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 510/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 511/);
 
 const gradle = read("npos-telltea/app/build.gradle");
 const code = Number((gradle.match(/versionCode\s+(\d+)/) || [])[1] || 0);
