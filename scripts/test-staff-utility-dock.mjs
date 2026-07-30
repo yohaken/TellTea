@@ -21,7 +21,7 @@ const css = read("src/app/globals.css");
 const rules = read("firestore.rules");
 const assertRules = read("scripts/assert-firestore-rules.mjs");
 
-assert.match(version, /APP_BUILD = 510/);
+assert.match(version, /APP_BUILD = 511/);
 assert.match(shell, /StaffUtilityDock/);
 assert.match(shell, /\/utility/);
 assert.match(dock, /staff-utility-fab/);

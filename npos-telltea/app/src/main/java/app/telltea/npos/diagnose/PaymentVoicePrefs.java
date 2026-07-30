@@ -18,7 +18,7 @@ public final class PaymentVoicePrefs {
     return context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
   }
 
-  /** Default ON — silent automatically if Thai TTS unavailable. */
+  /** Default ON — bundled clips ship in APK (no OEM TTS required). */
   public static boolean isEnabled(Context context) {
     return prefs(context).getBoolean(KEY_ENABLED, true);
   }
@@ -42,23 +42,17 @@ public final class PaymentVoicePrefs {
   }
 
   public static boolean thaiReady(Context context) {
-    return prefs(context).getBoolean(KEY_THAI_READY, false);
+    // Bundled voice is always present in 1.14.89+; warm() sets the flag.
+    return prefs(context).getBoolean(KEY_THAI_READY, true);
   }
 
   public static boolean thaiChecked(Context context) {
-    return prefs(context).getBoolean(KEY_THAI_CHECKED, false);
+    return prefs(context).getBoolean(KEY_THAI_CHECKED, true);
   }
 
   public static String statusLabel(Context context) {
     boolean on = isEnabled(context);
-    if (!thaiChecked(context)) {
-      return context.getString(
-          on ? R.string.payment_voice_on_checking : R.string.payment_voice_off);
-    }
-    if (!thaiReady(context)) {
-      return context.getString(
-          on ? R.string.payment_voice_on_no_thai : R.string.payment_voice_off);
-    }
-    return context.getString(on ? R.string.payment_voice_on_ready : R.string.payment_voice_off);
+    if (!on) return context.getString(R.string.payment_voice_off);
+    return context.getString(R.string.payment_voice_on_bundled);
   }
 }

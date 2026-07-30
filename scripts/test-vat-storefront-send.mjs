@@ -47,6 +47,6 @@ assert.match(entryVat, /export function businessCostOut/);
 assert.match(entryVat, /vatClaim && vat > 0/);
 
 const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
-assert.match(version, /APP_BUILD = 510/);
+assert.match(version, /APP_BUILD = 511/);
 
 console.log("OK test-vat-storefront-send");
