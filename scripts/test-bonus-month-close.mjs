@@ -20,7 +20,7 @@ const prodLib = read("src/lib/production.ts");
 const rules = read("firestore.rules");
 const assertRules = read("scripts/assert-firestore-rules.mjs");
 
-assert.match(version, /APP_BUILD\s*=\s*484/);
+assert.match(version, /APP_BUILD\s*=\s*485/);
 assert.equal(existsSync(join(root, "src/components/BulkStatusToolbar.tsx")), false);
 
 assert.match(guard, /export async function assertBonusMonthOpenForDate/);

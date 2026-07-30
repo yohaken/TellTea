@@ -125,7 +125,7 @@ assert.match(css, /\.tasks-page \.tasks-sheet \.tasks-col-due/);
 assert.match(css, /\.stock-page \.stock-history-sheet \.stock-history-date/);
 assert.match(css, /\.bonus-page \.payroll-sheet \.payroll-col-due/);
 assert.match(css, /width: 3\.55rem/);
-assert.match(version, /APP_BUILD = 484/);
+assert.match(version, /APP_BUILD = 485/);
 
 function bangkokDateKey(ms) {
   return new Intl.DateTimeFormat("en-CA", {
