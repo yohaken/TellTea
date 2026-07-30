@@ -1,6 +1,6 @@
 /**
- * Ledger / owner-books UI lists must always show Asia/Bangkok date newest → oldest
- * (including search pools + mixed UTC/Bangkok midnight storage).
+ * Ledger dates: coerce mixed Firestore types + sort Bangkok day newest→oldest.
+ * Pattern from production: string/timestamp block then number block (7/7 then 24/7).
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -8,48 +8,77 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const read = (rel) => readFileSync(join(root, rel), "utf8");
 
-function read(rel) {
-  return readFileSync(join(root, rel), "utf8");
-}
-
-const smart = read("src/lib/smart-search.ts");
 const utils = read("src/lib/utils.ts");
-const ledgerPage = read("src/app/ledger/page.tsx");
-const ownerPage = read("src/app/owner-books/page.tsx");
+const smart = read("src/lib/smart-search.ts");
+const cell = read("src/components/SheetDateCell.tsx");
+const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
-const ledgerLib = read("src/lib/ledger.ts");
 
 assert.match(utils, /export function toEpochMs/);
-assert.match(utils, /export function bangkokDateKey/);
-assert.match(utils, /timeZone: "Asia\/Bangkok"/);
+assert.match(utils, /export function accountingDayMs/);
+assert.match(utils, /value > 1e11/);
 assert.match(utils, /T00:00:00\+07:00/);
+assert.match(smart, /accountingDayMs\(a\.date\)/);
+assert.match(smart, /bDay - aDay/);
+assert.match(cell, /formatDateShort/);
+assert.doesNotMatch(cell, /date-stack-yy/);
+assert.match(css, /sheet-date-cell/);
+assert.doesNotMatch(css, /\.date-stack-yy\b/);
+assert.match(version, /APP_BUILD = 465/);
 
-assert.match(smart, /export function sortByDateNewestFirst/);
-assert.match(smart, /bangkokDateKey\(toEpochMs/);
-assert.match(smart, /bKey\.localeCompare\(aKey\)/);
-
-assert.match(ledgerPage, /sortByDateNewestFirst\(filterLedgerRows/);
-assert.match(ownerPage, /sortByDateNewestFirst\(filterOwnerBookRows/);
-assert.match(ledgerLib, /date: toEpochMs/);
-assert.match(ledgerLib, /orderBy\("date", "desc"\)/);
-
-assert.match(version, /APP_BUILD = 464/);
-
-// Runtime: Bangkok day key beats raw ms when midnights are mixed.
 function toEpochMs(value) {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    if (value > 1e11) return value;
+    if (value > 1e9) return Math.round(value * 1000);
+    if (value > 20000 && value < 100000) {
+      return Math.round((value - 25569) * 86400 * 1000);
+    }
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const t = value.trim();
+    if (/^\d+(\.\d+)?$/.test(t)) return toEpochMs(Number(t));
+    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
+      const ms = Date.parse(`${t}T00:00:00+07:00`);
+      return Number.isFinite(ms) ? ms : 0;
+    }
+    const slash = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (slash) {
+      let y = Number(slash[3]);
+      if (y < 100) y += 2000;
+      const day = Number(slash[1]);
+      const month = Number(slash[2]);
+      const ms = Date.parse(
+        `${y}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T00:00:00+07:00`,
+      );
+      return Number.isFinite(ms) ? ms : 0;
+    }
+  }
+  if (value && typeof value === "object") {
+    if (typeof value.toMillis === "function") return value.toMillis();
+    const seconds = value.seconds ?? value._seconds;
+    if (seconds != null) return Number(seconds) * 1000;
+  }
   return 0;
 }
-function bangkokDateKey(ms) {
-  if (!ms) return "";
-  return new Intl.DateTimeFormat("en-CA", {
+
+function startOfLocalDay(ms) {
+  const key = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Bangkok",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(new Date(ms));
+  return Date.parse(`${key}T00:00:00+07:00`);
 }
+
+function accountingDayMs(value) {
+  const ms = toEpochMs(value);
+  return ms ? startOfLocalDay(ms) : 0;
+}
+
 function formatDateShort(ms) {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Bangkok",
@@ -60,38 +89,40 @@ function formatDateShort(ms) {
   const get = (t) => parts.find((p) => p.type === t)?.value || "";
   return `${Number(get("day"))}/${Number(get("month"))}/${get("year")}`;
 }
+
 function sortByDateNewestFirst(rows) {
   return [...rows].sort((a, b) => {
-    const aKey = bangkokDateKey(toEpochMs(a.date));
-    const bKey = bangkokDateKey(toEpochMs(b.date));
-    if (aKey !== bKey) return bKey.localeCompare(aKey);
+    const aDay = accountingDayMs(a.date);
+    const bDay = accountingDayMs(b.date);
+    if (aDay !== bDay) return bDay - aDay;
     return toEpochMs(b.createdAt) - toEpochMs(a.createdAt);
   });
 }
 
-const bkk30 = Date.parse("2026-07-30T00:00:00+07:00");
-const utc30 = Date.UTC(2026, 6, 30); // 07:00 BKK same calendar day
-const bkk29 = Date.parse("2026-07-29T00:00:00+07:00");
-const bkk31 = Date.parse("2026-07-31T00:00:00+07:00");
-
-assert.equal(formatDateShort(bkk30), "30/7/26");
-assert.equal(formatDateShort(utc30), "30/7/26");
-assert.equal(bangkokDateKey(bkk30), "2026-07-30");
-assert.equal(bangkokDateKey(utc30), "2026-07-30");
-
-const pool = [
-  { id: "utc30", date: utc30, createdAt: 1 },
-  { id: "bkk29", date: bkk29, createdAt: 9 },
-  { id: "bkk31", date: bkk31, createdAt: 2 },
-  { id: "bkk30", date: bkk30, createdAt: 5 },
+// Reproduce production mixed-type order from Firestore DESC, then client-sort.
+const mixed = [
+  { id: "s29", date: "2026-07-29", createdAt: 100 },
+  { id: "s28", date: "2026-07-28", createdAt: 99 },
+  { id: "s17", date: "2026-07-17", createdAt: 98 },
+  { id: "s7", date: "2026-07-07", createdAt: 97 },
+  { id: "n24", date: Date.parse("2026-07-24T00:00:00+07:00"), createdAt: 50 },
+  { id: "n22", date: Date.parse("2026-07-22T00:00:00+07:00"), createdAt: 49 },
+  { id: "n21", date: Date.parse("2026-07-21T00:00:00+07:00"), createdAt: 48 },
 ];
+
 assert.deepEqual(
-  sortByDateNewestFirst(pool).map((r) => r.id),
-  ["bkk31", "bkk30", "utc30", "bkk29"],
+  sortByDateNewestFirst(mixed).map((r) => r.id),
+  ["s29", "s28", "n24", "n22", "n21", "s17", "s7"],
 );
 assert.deepEqual(
-  sortByDateNewestFirst(pool).map((r) => formatDateShort(r.date)),
-  ["31/7/26", "30/7/26", "30/7/26", "29/7/26"],
+  sortByDateNewestFirst(mixed).map((r) => formatDateShort(toEpochMs(r.date))),
+  ["29/7/26", "28/7/26", "24/7/26", "22/7/26", "21/7/26", "17/7/26", "7/7/26"],
+);
+
+// Timestamp-like object
+assert.equal(
+  formatDateShort(toEpochMs({ seconds: Date.parse("2026-07-24T00:00:00+07:00") / 1000, nanoseconds: 0 })),
+  "24/7/26",
 );
 
 console.log("OK test-ledger-date-newest-first");

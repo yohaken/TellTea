@@ -93,7 +93,10 @@ function mapEntry(d: QueryDocumentSnapshot): LedgerEntry {
   return {
     id: d.id,
     ...data,
-    date: toEpochMs((data as { date?: unknown }).date),
+    date: (() => {
+      const raw = toEpochMs((data as { date?: unknown }).date);
+      return raw ? startOfLocalDay(raw) : 0;
+    })(),
     amountIn,
     amountOut,
     createdAt,

@@ -1,6 +1,6 @@
 import { labelLedgerType } from "./ledger-labels";
 import {
-  bangkokDateKey,
+  accountingDayMs,
   formatDateShort,
   formatPlainNumber,
   toEpochMs,
@@ -33,14 +33,18 @@ type DatedRow = {
 
 /**
  * UI list order — Asia/Bangkok calendar day newest→oldest, then createdAt.
- * Uses Bangkok day keys so mixed UTC/Bangkok midnights still match the date column.
+ * Numeric day ms (not string localeCompare) so mixed Firestore date types unify.
  */
 export function sortByDateNewestFirst<T extends DatedRow>(rows: T[]): T[] {
   return [...rows].sort((a, b) => {
-    const aKey = bangkokDateKey(toEpochMs(a.date));
-    const bKey = bangkokDateKey(toEpochMs(b.date));
-    if (aKey !== bKey) return bKey.localeCompare(aKey);
-    return toEpochMs(b.createdAt) - toEpochMs(a.createdAt);
+    const aDay = accountingDayMs(a.date);
+    const bDay = accountingDayMs(b.date);
+    if (aDay !== bDay) return bDay - aDay;
+    const byCreated = toEpochMs(b.createdAt) - toEpochMs(a.createdAt);
+    if (byCreated) return byCreated;
+    return String((b as { id?: string }).id || "").localeCompare(
+      String((a as { id?: string }).id || ""),
+    );
   });
 }
 
