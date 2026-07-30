@@ -2,6 +2,7 @@ import { labelLedgerType } from "./ledger-labels";
 import {
   accountingDayMs,
   formatDateShort,
+  formatDateShortBe,
   formatPlainNumber,
   toEpochMs,
 } from "./utils";
@@ -101,7 +102,9 @@ export function filterLedgerRows<T extends SearchableLedgerRow>(
       row.description || "",
       row.type || "",
       typeLabel,
+      // Ledger UI shows พ.ศ.; keep ค.ศ. too so both search styles match.
       formatDateShort(row.date),
+      formatDateShortBe(row.date),
       formatPlainNumber(row.amountIn || 0),
       formatPlainNumber(row.amountOut || 0),
       String(row.amountIn || ""),

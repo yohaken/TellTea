@@ -1501,20 +1501,34 @@ body.modal-open .main-panel {
   white-space: nowrap;
 }
 
-/* Bleed / density live on shared .sheet-bleed + .sheet-table--dense */
+/*
+ * Prototype table layout — บัญชีพนักงาน (.ledger-staff-sheet).
+ * Later phases copy these column/row/bleed rules per-page (do not change other sheets here).
+ * Bleed: .sheet-bleed cancels .main-panel horizontal padding (1rem).
+ * Density: shared .sheet-table--dense + overrides below for row/column sizing.
+ */
 .ledger-page .sheet-wrap.ledger-staff-sheet {
   margin-top: 0.1rem;
 }
 
+.ledger-page .ledger-staff-sheet .sheet-table--dense th,
+.ledger-page .ledger-staff-sheet .sheet-table--dense td {
+  padding: 0.18rem 0.3rem;
+  line-height: 1.15;
+}
+
 .ledger-page .ledger-staff-sheet .sheet-table .col-date {
-  width: 3.4rem;
-  min-width: 3.4rem;
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
   white-space: nowrap;
   vertical-align: middle;
+  font-variant-numeric: tabular-nums;
 }
 
 .ledger-page .ledger-staff-sheet .sheet-table .col-desc {
   line-height: 1.15;
+  min-width: 0;
 }
 
 .ledger-page .ledger-staff-sheet .desc-link {
@@ -1524,7 +1538,24 @@ body.modal-open .main-panel {
   overflow-wrap: anywhere;
 }
 
+.ledger-page .ledger-staff-sheet .sheet-table .col-in,
+.ledger-page .ledger-staff-sheet .sheet-table .col-out {
+  min-width: 2.55rem;
+  padding-left: 0.18rem;
+  padding-right: 0.28rem;
+  font-size: 0.66rem;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-vat {
+  width: 2.35rem;
+  min-width: 2.35rem;
+  padding-left: 0.12rem;
+  padding-right: 0.22rem;
+  font-size: 0.6rem;
+}
+
 .ledger-page .ledger-staff-sheet .sheet-table .col-type {
+  max-width: 3.7rem;
   font-size: 0.58rem;
   white-space: nowrap;
 }
