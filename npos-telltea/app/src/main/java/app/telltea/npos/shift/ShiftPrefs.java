@@ -32,6 +32,11 @@ public final class ShiftPrefs {
   private static final String KEY_VOIDED = "voidedCount";
   private static final String KEY_OPENING_CASH = "openingCash";
   private static final String KEY_NEXT_OPENING = "nextOpeningCash";
+  private static final String KEY_OPENED_BY_ID = "openedByEmployeeId";
+  private static final String KEY_OPENED_BY_NAME = "openedByName";
+  /** Remember last picker choice on this tablet (not OT-linked). */
+  private static final String KEY_LAST_OPENED_BY_ID = "lastOpenedByEmployeeId";
+  private static final String KEY_LAST_OPENED_BY_NAME = "lastOpenedByName";
   private static final String KEY_LAST_RESUMED = "lastOpenResumed";
   private static final String KEY_CASH_OUT = "cashOutTotal";
   private static final String KEY_CASH_IN = "cashInTotal";
@@ -287,33 +292,91 @@ public final class ShiftPrefs {
 
   public static void open(
       Context context, String sessionId, String shift, long openedAt, double openingCash) {
+    open(context, sessionId, shift, openedAt, openingCash, openedByEmployeeId(context), openedByName(context));
+  }
+
+  public static void open(
+      Context context,
+      String sessionId,
+      String shift,
+      long openedAt,
+      double openingCash,
+      String openedByEmployeeId,
+      String openedByName) {
     SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-    prefs
-        .edit()
-        .putBoolean(KEY_OPEN, true)
-        .putLong(KEY_OPENED_AT, openedAt)
-        .putString(KEY_SESSION, sessionId == null ? "" : sessionId)
-        .putString(KEY_SHIFT, shift == null ? "morning" : shift)
-        .putLong(KEY_OPENING_CASH, Double.doubleToRawLongBits(Math.max(0, openingCash)))
-        .putLong(KEY_NEXT_OPENING, Double.doubleToRawLongBits(0))
-        .putLong(KEY_CASH, Double.doubleToRawLongBits(0))
-        .putLong(KEY_PP, Double.doubleToRawLongBits(0))
-        .putLong(KEY_TRANSFER, Double.doubleToRawLongBits(0))
-        .putInt(KEY_SALE_COUNT, 0)
-        .putInt(KEY_CASH_BILLS, 0)
-        .putInt(KEY_PP_BILLS, 0)
-        .putInt(KEY_TRANSFER_BILLS, 0)
-        .putLong(KEY_DISCOUNT, Double.doubleToRawLongBits(0))
-        .putInt(KEY_VOIDED, 0)
-        .putLong(KEY_CASH_OUT, Double.doubleToRawLongBits(0))
-        .putLong(KEY_CASH_IN, Double.doubleToRawLongBits(0))
-        .putInt(KEY_CASH_DROP_COUNT, 0)
-        .putString(KEY_CASH_DROP_NOTES, "[]")
-        .putBoolean(KEY_LAST_RESUMED, false)
-        .putBoolean(KEY_SERVER_SYNCED, false)
-        .putBoolean(KEY_REMOTE_CLOSED_PENDING, false)
-        .putString(KEY_REMOTE_CLOSE_SOURCE, "")
-        .commit();
+    String id = openedByEmployeeId == null ? "" : openedByEmployeeId.trim();
+    String name = openedByName == null ? "" : openedByName.trim();
+    SharedPreferences.Editor ed =
+        prefs
+            .edit()
+            .putBoolean(KEY_OPEN, true)
+            .putLong(KEY_OPENED_AT, openedAt)
+            .putString(KEY_SESSION, sessionId == null ? "" : sessionId)
+            .putString(KEY_SHIFT, shift == null ? "morning" : shift)
+            .putLong(KEY_OPENING_CASH, Double.doubleToRawLongBits(Math.max(0, openingCash)))
+            .putLong(KEY_NEXT_OPENING, Double.doubleToRawLongBits(0))
+            .putLong(KEY_CASH, Double.doubleToRawLongBits(0))
+            .putLong(KEY_PP, Double.doubleToRawLongBits(0))
+            .putLong(KEY_TRANSFER, Double.doubleToRawLongBits(0))
+            .putInt(KEY_SALE_COUNT, 0)
+            .putInt(KEY_CASH_BILLS, 0)
+            .putInt(KEY_PP_BILLS, 0)
+            .putInt(KEY_TRANSFER_BILLS, 0)
+            .putLong(KEY_DISCOUNT, Double.doubleToRawLongBits(0))
+            .putInt(KEY_VOIDED, 0)
+            .putLong(KEY_CASH_OUT, Double.doubleToRawLongBits(0))
+            .putLong(KEY_CASH_IN, Double.doubleToRawLongBits(0))
+            .putInt(KEY_CASH_DROP_COUNT, 0)
+            .putString(KEY_CASH_DROP_NOTES, "[]")
+            .putString(KEY_OPENED_BY_ID, id)
+            .putString(KEY_OPENED_BY_NAME, name)
+            .putBoolean(KEY_LAST_RESUMED, false)
+            .putBoolean(KEY_SERVER_SYNCED, false)
+            .putBoolean(KEY_REMOTE_CLOSED_PENDING, false)
+            .putString(KEY_REMOTE_CLOSE_SOURCE, "");
+    if (!name.isEmpty()) {
+      ed.putString(KEY_LAST_OPENED_BY_ID, id).putString(KEY_LAST_OPENED_BY_NAME, name);
+    }
+    ed.commit();
+  }
+
+  public static String openedByEmployeeId(Context context) {
+    return context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .getString(KEY_OPENED_BY_ID, "");
+  }
+
+  public static String openedByName(Context context) {
+    return context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .getString(KEY_OPENED_BY_NAME, "");
+  }
+
+  public static String lastOpenedByEmployeeId(Context context) {
+    return context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .getString(KEY_LAST_OPENED_BY_ID, "");
+  }
+
+  public static String lastOpenedByName(Context context) {
+    return context
+        .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .getString(KEY_LAST_OPENED_BY_NAME, "");
+  }
+
+  public static void setOpenedBy(Context context, String employeeId, String name) {
+    String id = employeeId == null ? "" : employeeId.trim();
+    String n = name == null ? "" : name.trim();
+    SharedPreferences.Editor ed =
+        context
+            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_OPENED_BY_ID, id)
+            .putString(KEY_OPENED_BY_NAME, n);
+    if (!n.isEmpty()) {
+      ed.putString(KEY_LAST_OPENED_BY_ID, id).putString(KEY_LAST_OPENED_BY_NAME, n);
+    }
+    ed.apply();
   }
 
   /**
@@ -380,6 +443,7 @@ public final class ShiftPrefs {
         .putBoolean(KEY_REMOTE_CLOSED_PENDING, false)
         .putString(KEY_REMOTE_CLOSE_SOURCE, "")
         .commit();
+    // Opener for resumed rounds is applied separately via setOpenedBy from server fields.
   }
 
   public static boolean consumeLastResumed(Context context) {
