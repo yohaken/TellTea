@@ -30,7 +30,7 @@ import {
   salesForSession,
   voidedForSession,
 } from "@/lib/pos-sales-report";
-import type { PosSale, PosSession } from "@/lib/types";
+import type { PosSale, PosSession, PosSessionCashDropNote } from "@/lib/types";
 import { formatPlainNumber } from "@/lib/utils";
 
 function formatHm(ts: number): string {
@@ -77,6 +77,13 @@ type RowModel = {
   cashDrops: number | undefined;
   note: string;
   openedBy: string;
+  discrepancyLabel: string;
+  remit: number | undefined;
+  discount: number | undefined;
+  cashBills: number | undefined;
+  ppBills: number | undefined;
+  transferBills: number | undefined;
+  dropNotes: PosSessionCashDropNote[];
   searchBlob: string;
 };
 
@@ -121,6 +128,14 @@ function buildRows(
     const dateLabel = formatDateShort(dayMs);
     const note = session.discrepancyNote || "";
     const openedBy = (session.openedByName || "").trim();
+    const discrepancyLabel = (session.discrepancyLabel || "").trim();
+    const dropNotes = session.cashDropNotes || [];
+    const remit =
+      session.remitAmount != null
+        ? session.remitAmount
+        : session.closingCashCounted != null && session.leaveFloat != null
+          ? Math.max(0, session.closingCashCounted - session.leaveFloat)
+          : undefined;
     return {
       session,
       deviceLabel,
@@ -145,6 +160,13 @@ function buildRows(
       cashDrops: session.cashDropCount,
       note,
       openedBy,
+      discrepancyLabel,
+      remit,
+      discount: session.discountTotal,
+      cashBills: session.cashBillCount,
+      ppBills: session.promptpayBillCount,
+      transferBills: session.transferBillCount,
+      dropNotes,
       searchBlob: [
         pairing,
         sessionCode,
@@ -155,6 +177,8 @@ function buildRows(
         open ? "เปิด" : "ปิด",
         note,
         openedBy,
+        discrepancyLabel,
+        ...dropNotes.map((n) => n.reason),
         session.shift || "",
       ]
         .join(" ")
@@ -697,8 +721,24 @@ export function PosSessionsSlimTable({
                       {!row.open && row.counted != null
                         ? ` · นับ ${moneyOrDash(row.counted)} · ควรมี ${moneyOrDash(row.expected)} · ส่วนต่าง ${moneyOrDash(row.diff)}`
                         : ""}
+                      {!row.open && row.discrepancyLabel
+                        ? ` · ${row.discrepancyLabel}`
+                        : ""}
                       {!row.open && row.leave != null
                         ? ` · ทอนค้าง ${moneyOrDash(row.leave)}`
+                        : ""}
+                      {!row.open && row.remit != null
+                        ? ` · นำส่ง ${moneyOrDash(row.remit)}`
+                        : ""}
+                      {!row.open && row.discount != null && row.discount > 0
+                        ? ` · ส่วนลด ${moneyOrDash(row.discount)}`
+                        : ""}
+                      {!row.open && row.voids > 0 ? ` · void ${row.voids}` : ""}
+                      {!row.open &&
+                      ((row.cashBills != null && row.cashBills > 0) ||
+                        (row.ppBills != null && row.ppBills > 0) ||
+                        (row.transferBills != null && row.transferBills > 0))
+                        ? ` · บิล สด ${row.cashBills ?? 0} / โอน ${row.transferBills ?? 0} / PP ${row.ppBills ?? 0}`
                         : ""}
                       {row.note ? ` · ${row.note}` : ""}
                       {row.open ? ` · เวลารวม ${row.durationLabel}` : ` · รวม ${row.durationLabel}`}
@@ -712,6 +752,16 @@ export function PosSessionsSlimTable({
                         แสดงทุกบิล
                       </button>
                     </span>
+                    {row.dropNotes.length > 0 ? (
+                      <ul className="npos-slim-drop-notes">
+                        {row.dropNotes.map((n, i) => (
+                          <li key={`${row.session.id}-drop-${i}-${n.at}`}>
+                            ถอน {formatHm(n.at)} · ฿{moneyOrDash(n.amount)}
+                            {n.reason ? ` · ${n.reason}` : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

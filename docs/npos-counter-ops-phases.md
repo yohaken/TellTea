@@ -1,6 +1,6 @@
 # nPos / หลังร้าน — เฟสงานเคาน์เตอร์ถัดไป (รอบกะ · เมนู · เสียง)
 
-อัปเดต: **O1 ship 1.14.86** · อ้างอิง `/pos-sales` + nPos 1.14.86  
+อัปเดต: **O2 ship 1.14.87** · อ้างอิง `/pos-sales` + nPos 1.14.87  
 หลัก: **ทำทีละเฟสให้จบและเทสได้** · ไม่ขยาย PIN / delta เมนู / cloud TTS ในรอบแรก
 
 ดูเช็คลิสย่อย:
@@ -76,7 +76,7 @@ O0 คนเทสฐาน → O1 ใครเข้ากะ → O2 ราย�
 
 ---
 
-## O2 — รายละเอียดเงินรอบ (เบิก + สรุปการ์ด)
+## O2 — รายละเอียดเงินรอบ (เบิก + สรุปการ์ด) · **ship 1.14.87**
 
 **ปัญหา:** รู้ยอดเบิกรวม แต่ไม่รู้ทีละครั้ง · การ์ดรอบยังขาดบางตัวเลขที่มีอยู่แล้ว  
 **เป้า:** เก็บ/โชว์รายการเบิก + สรุปปิดรอบให้ครบโดยไม่ต้องเปิดบิลทีละใบ
@@ -84,11 +84,11 @@ O0 คนเทสฐาน → O1 ใครเข้ากะ → O2 ราย�
 เช็คลิส: [npos-session-cash-detail-checklist.md](./npos-session-cash-detail-checklist.md)
 
 ### งานย่อ
-- [ ] O2.1 CF `nposSessionClose` persist `cashDropNotes[]`
-- [ ] O2.2 `PosSession` + `mapSession` อ่าน notes / discrepancyLabel / discount / voided / tender bill counts / remit
-- [ ] O2.3 UI expand รอบ: รายการเบิก · ป้ายตรง/เกิน/ขาด · ยอดนำส่ง
-- [ ] O2.4 (ถัดไปใน O2 หรือแยก) UI รับเงินเข้ากลางรอบ ถ้าต้องการจริง
-- [ ] O2.5 Gate + คนเทส
+- [x] O2.1 CF `nposSessionClose` persist `cashDropNotes[]`
+- [x] O2.2 `PosSession` + `mapSession` อ่าน notes / discrepancyLabel / discount / voided / tender bill counts / remit
+- [x] O2.3 UI expand รอบ: รายการเบิก · ป้ายตรง/เกิน/ขาด · ยอดนำส่ง
+- [x] O2.4 UI รับเงินเข้ากลางรอบ — **เลื่อน** (มี `cashInTotal` พอสำหรับรอบนี้)
+- [x] O2.5 Gate · คนเทสค้างหน้างาน
 
 **จบเมื่อ:** เบิก 2 ครั้งคนละเหตุผล → หลังร้านเห็นทั้ง 2 บรรทัดหลังปิดกะ
 

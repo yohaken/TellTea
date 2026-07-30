@@ -10,7 +10,7 @@ import {
 import { getDb } from "./firebase";
 import { POS_SALES_COL } from "./pos-sales";
 import { POS_SESSIONS_COL } from "./pos-session";
-import type { PosSale, PosSession } from "./types";
+import type { PosSale, PosSession, PosSessionCashDropNote } from "./types";
 import { startOfLocalDay } from "./utils";
 
 /** Initial slim-table page size (scroll for the rest of the window). */
@@ -135,11 +135,37 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
   };
 }
 
+function mapCashDropNotes(raw: unknown): PosSessionCashDropNote[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: PosSessionCashDropNote[] = [];
+  for (const row of raw) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const amount = typeof r.amount === "number" ? r.amount : Number(r.amount);
+    if (!Number.isFinite(amount) || amount <= 0) continue;
+    out.push({
+      amount,
+      reason: typeof r.reason === "string" ? r.reason : "",
+      at: typeof r.at === "number" && r.at > 0 ? r.at : 0,
+    });
+  }
+  return out;
+}
+
 function mapSession(id: string, data: Record<string, unknown>): PosSession {
   const num = (key: string) =>
     typeof data[key] === "number" ? (data[key] as number) : undefined;
   const str = (key: string) =>
     typeof data[key] === "string" ? (data[key] as string) : undefined;
+  const counted = num("closingCashCounted");
+  const leave = num("leaveFloat");
+  const remitStored = num("remitAmount");
+  const remitAmount =
+    remitStored != null
+      ? remitStored
+      : counted != null && leave != null
+        ? Math.max(0, counted - leave)
+        : undefined;
   return {
     id,
     deviceId: typeof data.deviceId === "string" ? data.deviceId : "",
@@ -154,17 +180,22 @@ function mapSession(id: string, data: Record<string, unknown>): PosSession {
     cashTotal: num("cashTotal"),
     promptpayTotal: num("promptpayTotal"),
     transferTotal: num("transferTotal"),
-    closingCashCounted: num("closingCashCounted"),
+    closingCashCounted: counted,
     expectedCash: num("expectedCash"),
     cashDifference: num("cashDifference"),
-    leaveFloat: num("leaveFloat"),
+    leaveFloat: leave,
     discountTotal: num("discountTotal"),
     voidedCount: num("voidedCount"),
     cashOutTotal: num("cashOutTotal"),
     cashInTotal: num("cashInTotal"),
     cashDropCount: num("cashDropCount"),
+    cashDropNotes: mapCashDropNotes(data.cashDropNotes),
     discrepancyNote: str("discrepancyNote"),
     discrepancyLabel: str("discrepancyLabel"),
+    remitAmount,
+    cashBillCount: num("cashBillCount"),
+    promptpayBillCount: num("promptpayBillCount"),
+    transferBillCount: num("transferBillCount"),
     source: str("source"),
     openedByEmployeeId: str("openedByEmployeeId"),
     openedByName: str("openedByName"),
