@@ -64,6 +64,7 @@ import {
 import type { LedgerEntry } from "@/lib/types";
 import { daysAgoMs } from "@/lib/query-window";
 import { filterLedgerRows, sortByDateNewestFirst } from "@/lib/smart-search";
+import { SheetDateCell } from "@/components/SheetDateCell";
 import {
   formatDateShort,
   formatPlainNumber,
@@ -159,7 +160,7 @@ function LedgerView() {
   useLayoutEffect(() => {
     const cached = loadCachedLedger();
     if (cached?.entries.length) {
-      setEntries(cached.entries);
+      setEntries(sortByDateNewestFirst(cached.entries));
       if (cached.balance != null) {
         setBalance(cached.balance);
         balanceRef.current = cached.balance;
@@ -222,13 +223,14 @@ function LedgerView() {
     const unsub = subscribeLedgerPage(
       liveLimit,
       (page) => {
-        setEntries(page.entries);
+        const next = sortByDateNewestFirst(page.entries);
+        setEntries(next);
         setHasMore(page.hasMore && liveLimit < LEDGER_LIVE_MAX);
-        hasRowsRef.current = page.entries.length > 0;
+        hasRowsRef.current = next.length > 0;
         setLoading(false);
         setLoadingMore(false);
         setRefreshing(false);
-        persistSnapshot(page.entries, page.hasMore, balanceRef.current);
+        persistSnapshot(next, page.hasMore, balanceRef.current);
       },
       (err) => {
         setLoading(false);
@@ -428,7 +430,9 @@ function LedgerView() {
                     key={row.id}
                     className={row.amountIn > 0 ? "row-in" : "row-out"}
                   >
-                    <td className="col-date">{formatDateShort(row.date)}</td>
+                    <td className="col-date">
+                      <SheetDateCell ms={row.date} />
+                    </td>
                     <td className="col-desc">
                       <div className="desc-with-photo">
                         <button
