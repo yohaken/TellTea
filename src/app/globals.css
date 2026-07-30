@@ -18509,8 +18509,19 @@ a.ghost-btn {
   border-top: 1px solid rgba(28, 42, 31, 0.08);
 }
 
+/*
+ * Phase 4 table layout — เทียบเงินนำเข้า (.cash-in-slim).
+ * Bleed cancels .cash-in-panel-body pad (0.65rem); date/row sizing from ledger prototype.
+ * Scoped here so other sheets stay untouched.
+ */
 .cash-in-panel-table-wrap {
-  margin: 0.25rem 0 0.35rem;
+  margin: 0.25rem -0.65rem 0.35rem;
+  width: calc(100% + 1.3rem);
+  max-width: none;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  box-shadow: none;
 }
 
 .cash-in-panel-add {
@@ -18609,40 +18620,46 @@ a.ghost-btn {
 }
 
 .cash-in-slim {
-  font-size: 0.72rem;
+  font-size: 0.66rem;
 }
 
 .cash-in-slim th,
 .cash-in-slim td {
-  padding: 0.22rem 0.28rem !important;
+  padding: 0.18rem 0.3rem !important;
   vertical-align: middle;
+  line-height: 1.15;
 }
 
 .cash-in-slim th {
-  font-size: 0.66rem;
+  font-size: 0.6rem;
   white-space: nowrap;
 }
 
 .cash-in-slim .col-round {
-  width: 3.6rem;
-  max-width: 4.2rem;
-  font-size: 0.68rem;
+  width: 3.4rem;
+  max-width: 3.8rem;
+  font-size: 0.62rem;
   font-weight: 650;
 }
 
 .cash-in-slim .col-date {
-  width: 4.8rem;
+  width: 3.55rem;
+  min-width: 3.55rem;
+  max-width: 3.55rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .cash-in-slim .col-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  min-width: 3.4rem;
+  min-width: 2.55rem;
+  font-size: 0.66rem;
 }
 
 .cash-in-slim .col-slip {
-  width: 2.2rem;
+  width: 1.9rem;
   text-align: center;
 }
 
