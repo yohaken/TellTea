@@ -293,6 +293,12 @@ export type PosSaleLine = {
 };
 
 /** POS — รอบขาย (เปิดกะขายบนเครื่อง) · ไม่ใช่กะ OT เช้า/เย็น */
+export type PosSessionCashDropNote = {
+  amount: number;
+  reason: string;
+  at: number;
+};
+
 export type PosSession = {
   id: string;
   deviceId: string;
@@ -319,8 +325,15 @@ export type PosSession = {
   cashOutTotal?: number;
   cashInTotal?: number;
   cashDropCount?: number;
+  /** รายการเบิกกลางกะ (amount · reason · at) — persist ตอนปิดรอบ */
+  cashDropNotes?: PosSessionCashDropNote[];
   discrepancyNote?: string;
   discrepancyLabel?: string;
+  /** ยอดนำส่ง = นับลิ้นชัก − ทอนค้าง */
+  remitAmount?: number;
+  cashBillCount?: number;
+  promptpayBillCount?: number;
+  transferBillCount?: number;
   source?: string;
   /** Who opened this nPos round (name pick at clock-in — not OT-linked). */
   openedByEmployeeId?: string;

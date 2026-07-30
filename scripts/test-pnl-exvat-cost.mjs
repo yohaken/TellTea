@@ -27,7 +27,7 @@ assert.match(fieldset, /VatClaimModeToggle/);
 assert.match(fieldset, /ซื้อไปเหอะ/);
 assert.match(pnlPage, /ภาษีต้นทุน/);
 assert.match(pnlPage, /รวมภาษีซื้อ/);
-assert.match(version, /APP_BUILD = 507/);
+assert.match(version, /APP_BUILD = 508/);
 assert.match(fieldset, /จะเอาภาษีซื้อไปหัก VAT เดือนไหม/);
 
 console.log("OK test-pnl-exvat-cost");

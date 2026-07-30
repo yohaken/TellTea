@@ -9191,6 +9191,17 @@ body.modal-open .main-panel {
   line-height: 1.35;
 }
 
+.npos-slim-drop-notes {
+  margin: 0.35rem 0 0;
+  padding: 0 0 0 1.1rem;
+  list-style: disc;
+  color: #4a5560;
+}
+
+.npos-slim-drop-notes li {
+  margin: 0.1rem 0;
+}
+
 .npos-slim-row--compact {
   grid-template-columns: minmax(4rem, 1fr) minmax(2.4rem, max-content) minmax(3.2rem, max-content);
   min-width: 16rem;
