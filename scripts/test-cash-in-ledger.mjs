@@ -19,13 +19,15 @@ const css = read("src/app/globals.css");
 const version = read("src/lib/version.ts");
 const assertRules = read("scripts/assert-firestore-rules.mjs");
 
-assert.match(version, /APP_BUILD\s*=\s*478/);
+assert.match(version, /APP_BUILD\s*=\s*481/);
 assert.equal(existsSync(join(root, "src/components/LedgerModeSwitch.tsx")), false);
 assert.match(ledger, /CashInLedgerPanel/);
+assert.match(ledger, /ledger-ops-duo/);
 assert.match(ledger, /cashInForceOpen|cashIn=1/);
 assert.match(redirect, /ledger\/\?cashIn=1/);
 assert.match(panel, /export function CashInLedgerPanel/);
 assert.match(panel, /สร้างรอบ/);
+assert.match(panel, /\+รอบ/);
 assert.match(panel, /cash-in-slim/);
 assert.match(panel, /cash-in-bank-table/);
 assert.match(panel, /\+ สลิปโอน/);
@@ -61,6 +63,8 @@ assert.match(css, /\.cash-in-remain\b/);
 assert.match(css, /Phase 4 table layout/);
 assert.match(css, /\.cash-in-slim \.col-date/);
 assert.match(css, /width: 3\.55rem/);
+assert.match(css, /\.ledger-ops-duo\b/);
+assert.match(css, /grid-template-columns:\s*minmax\(0,\s*1fr\)\s*minmax\(0,\s*1fr\)/);
 assert.match(lib, /export function formatCashDayShort/);
 assert.match(lib, /getFullYear\(\) \+ 543/);
 

@@ -18767,6 +18767,184 @@ a.ghost-btn {
 
 
 /* —— ตารางเทียบเงินนำเข้า (หุบบน /ledger/) —— */
+/*
+ * Ledger ops duo — เทียบเงินเข้า + แจ้งบิล side-by-side on phone & desktop.
+ * Each half scrolls its own sheet; amount cols never ellipsis.
+ */
+.ledger-ops-duo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.3rem;
+  margin: 0 0 0.45rem;
+  align-items: start;
+}
+
+.ledger-ops-duo > .cash-in-panel,
+.ledger-ops-duo > .bill-notice-panel {
+  margin: 0;
+  min-width: 0;
+  border-radius: 0.55rem;
+}
+
+.ledger-ops-duo .cash-in-panel-toggle,
+.ledger-ops-duo .bill-notice-panel-toggle {
+  padding: 0.38rem 0.45rem;
+  gap: 0.28rem;
+}
+
+.ledger-ops-duo .cash-in-panel-title,
+.ledger-ops-duo .bill-notice-panel-title {
+  font-size: 0.72rem;
+  line-height: 1.15;
+}
+
+.ledger-ops-duo .cash-in-panel-meta,
+.ledger-ops-duo .bill-notice-panel-meta {
+  font-size: 0.58rem;
+  line-height: 1.15;
+}
+
+.ledger-ops-duo .cash-in-panel-body,
+.ledger-ops-duo .bill-notice-panel-body {
+  padding: 0 0.4rem 0.4rem;
+}
+
+.ledger-ops-duo .cash-in-hint,
+.ledger-ops-duo .bill-notice-hint {
+  display: none;
+}
+
+.ledger-ops-duo .cash-in-create-bar {
+  gap: 0.22rem;
+  margin: 0.28rem 0 0.3rem;
+}
+
+.ledger-ops-duo .cash-in-create-field {
+  font-size: 0.58rem;
+}
+
+.ledger-ops-duo .cash-in-create-field input {
+  min-height: 1.45rem;
+  padding: 0.1rem 0.22rem;
+  font-size: 0.66rem;
+  max-width: 7.2rem;
+}
+
+.ledger-ops-duo .cash-in-create-days input {
+  max-width: 2.6rem;
+}
+
+.ledger-ops-duo .cash-in-create-btn {
+  min-height: 1.45rem;
+  padding: 0.12rem 0.42rem;
+  font-size: 0.68rem;
+}
+
+.ledger-ops-duo .cash-in-round-chips {
+  gap: 0.18rem;
+  margin: 0 0 0.28rem;
+}
+
+.ledger-ops-duo .cash-in-round-chip {
+  min-height: 1.35rem;
+  padding: 0.08rem 0.32rem;
+  font-size: 0.6rem;
+}
+
+.ledger-ops-duo .cash-in-panel-table-wrap,
+.ledger-ops-duo .bill-notice-panel-table-wrap {
+  margin: 0.15rem -0.4rem 0.25rem;
+  width: calc(100% + 0.8rem);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ledger-ops-duo .cash-in-slim,
+.ledger-ops-duo .bill-notice-slim {
+  font-size: 0.58rem;
+}
+
+.ledger-ops-duo .cash-in-slim th,
+.ledger-ops-duo .cash-in-slim td,
+.ledger-ops-duo .bill-notice-slim th,
+.ledger-ops-duo .bill-notice-slim td {
+  padding: 0.12rem 0.2rem !important;
+}
+
+.ledger-ops-duo .cash-in-slim th,
+.ledger-ops-duo .bill-notice-slim th {
+  font-size: 0.52rem;
+}
+
+.ledger-ops-duo .cash-in-slim .col-date,
+.ledger-ops-duo .bill-notice-slim .col-date {
+  width: 3.1rem;
+  min-width: 3.1rem;
+  max-width: 3.1rem;
+}
+
+.ledger-ops-duo .cash-in-slim .col-num {
+  min-width: 2.2rem;
+  font-size: 0.58rem;
+}
+
+.ledger-ops-duo .bill-notice-slim .col-out {
+  width: auto;
+  min-width: 3.6rem;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+  font-size: 0.58rem;
+}
+
+.ledger-ops-duo .bill-notice-summary {
+  margin: 0 0 0.25rem;
+  padding: 0.18rem 0.28rem;
+}
+
+.ledger-ops-duo .bill-notice-summary-text {
+  font-size: 0.56rem;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+.ledger-ops-duo .bill-notice-panel-add {
+  margin-top: 0.25rem;
+  min-height: 1.55rem;
+  font-size: 0.7rem;
+}
+
+.ledger-ops-duo .cash-in-panel-add {
+  margin-top: 0.25rem;
+  min-height: 1.55rem;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 640px) {
+  .ledger-ops-duo {
+    gap: 0.22rem;
+  }
+
+  .ledger-ops-duo .bill-notice-slim .col-note,
+  .ledger-ops-duo .bill-notice-slim .col-status {
+    display: none;
+  }
+
+  .ledger-ops-duo .bill-notice-slim .col-act {
+    width: 3.2rem;
+  }
+
+  .ledger-ops-duo .cash-in-slim .col-type {
+    display: none;
+  }
+
+  .ledger-ops-duo .cash-in-create-field span {
+    display: none;
+  }
+}
+
 .cash-in-panel {
   margin: 0 0 0.55rem;
   border-radius: 0.75rem;
@@ -19645,11 +19823,14 @@ a.ghost-btn {
 }
 
 .bill-notice-slim .col-out {
-  width: 2.55rem;
-  min-width: 2.55rem;
+  width: auto;
+  min-width: 3.8rem;
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-size: 0.66rem;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .bill-notice-slim .col-note {

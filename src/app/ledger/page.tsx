@@ -343,23 +343,22 @@ function LedgerView() {
   return (
     <div className="ledger-page module-page">
       {actorId ? (
-        <CashInLedgerPanel
-          actorId={actorId}
-          isOwner={!!isOwner}
-          staffName={cashInStaffName}
-          forceOpen={cashInForceOpen}
-          onForceOpenConsumed={() => setCashInForceOpen(false)}
-        />
-      ) : null}
-
-      {actorId ? (
-        <BillNoticeLedgerPanel
-          actorId={actorId}
-          isOwner={!!isOwner}
-          staffName={cashInStaffName}
-          forceOpen={billNoticeForceOpen}
-          onForceOpenConsumed={() => setBillNoticeForceOpen(false)}
-        />
+        <div className="ledger-ops-duo" aria-label="เทียบเงินเข้าและแจ้งบิล">
+          <CashInLedgerPanel
+            actorId={actorId}
+            isOwner={!!isOwner}
+            staffName={cashInStaffName}
+            forceOpen={cashInForceOpen}
+            onForceOpenConsumed={() => setCashInForceOpen(false)}
+          />
+          <BillNoticeLedgerPanel
+            actorId={actorId}
+            isOwner={!!isOwner}
+            staffName={cashInStaffName}
+            forceOpen={billNoticeForceOpen}
+            onForceOpenConsumed={() => setBillNoticeForceOpen(false)}
+          />
+        </div>
       ) : null}
 
       {error ? <p className="error-text">{error}</p> : null}

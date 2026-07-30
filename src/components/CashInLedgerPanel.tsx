@@ -817,7 +817,7 @@ export function CashInLedgerPanel({
               />
             </label>
             <label className="cash-in-create-field cash-in-create-days">
-              <span>กี่วัน</span>
+              <span>วัน</span>
               <input
                 type="number"
                 min={1}
@@ -833,8 +833,9 @@ export function CashInLedgerPanel({
               className="primary-btn action-in cash-in-create-btn"
               disabled={busy || !!draft}
               onClick={startCreateRound}
+              title="สร้างรอบ"
             >
-              สร้างรอบ
+              +รอบ
             </button>
           </div>
 

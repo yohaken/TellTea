@@ -53,7 +53,11 @@ assert.match(panel, /era="be"/);
 assert.match(css, /Phase 3 table layout/);
 assert.match(css, /\.bill-notice-slim \.col-date/);
 assert.match(css, /width: 3\.55rem/);
-assert.match(version, /APP_BUILD\s*=\s*478/);
+assert.match(css, /\.bill-notice-slim \.col-out/);
+assert.match(css, /\.bill-notice-slim \.col-out[\s\S]*?overflow:\s*visible/);
+assert.match(css, /\.ledger-ops-duo\b/);
+assert.match(ledger, /ledger-ops-duo/);
+assert.match(version, /APP_BUILD\s*=\s*481/);
 
 assert.match(lib, /export async function addBillNotice/);
 assert.match(lib, /export async function acceptBillNotice/);
