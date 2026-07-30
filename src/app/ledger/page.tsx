@@ -16,7 +16,6 @@ import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
 import {
   addLedgerEntry,
-  bulkUpdateLedgerTypes,
   deleteLedgerEntry,
   frequentDescriptions,
   getLedgerReceiptUrls,
@@ -43,7 +42,7 @@ import { EntryVatFieldset } from "@/components/EntryVatFieldset";
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { personalProfileLabel } from "@/lib/profile";
 import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgressModal";
-import { BASE_TYPE_OPTIONS, frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
+import { frequentTypes, labelLedgerType } from "@/lib/ledger-labels";
 import {
   classifyLedgerTypeHeuristic,
   classifyLedgerTypeWithAi,
@@ -74,8 +73,6 @@ import {
 import { formatVatMoney } from "@/lib/vat-number-format";
 import { ArrowDownLeft, Trash2, X } from "lucide-react";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
-
-const BULK_TYPE_OPTIONS = BASE_TYPE_OPTIONS.filter((o) => o.value !== "auto");
 
 export default function LedgerPage() {
   return (
@@ -119,8 +116,6 @@ function LedgerView() {
   const [query, setQuery] = useState("");
   const [searchPool, setSearchPool] = useState<LedgerEntry[] | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [bulkBusy, setBulkBusy] = useState(false);
   const photoEntryRef = useRef<LedgerEntry | null>(null);
   const photoCameraRef = useRef<HTMLInputElement>(null);
   const photoGalleryRef = useRef<HTMLInputElement>(null);
@@ -276,65 +271,6 @@ function LedgerView() {
     return filterLedgerRows(source, deferredQuery);
   }, [entries, searchPool, deferredQuery]);
 
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [deferredQuery]);
-
-  useEffect(() => {
-    if (!isOwner) setSelectedIds(new Set());
-  }, [isOwner]);
-
-  const visibleIds = useMemo(() => filteredEntries.map((r) => r.id), [filteredEntries]);
-  const allVisibleSelected =
-    isOwner && visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
-  const someVisibleSelected = isOwner && visibleIds.some((id) => selectedIds.has(id));
-
-  function toggleSelected(id: string) {
-    if (!isOwner) return;
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleSelectAllVisible() {
-    if (!isOwner) return;
-    setSelectedIds((prev) => {
-      if (visibleIds.length === 0) return prev;
-      const allOn = visibleIds.every((id) => prev.has(id));
-      if (allOn) {
-        const next = new Set(prev);
-        for (const id of visibleIds) next.delete(id);
-        return next;
-      }
-      const next = new Set(prev);
-      for (const id of visibleIds) next.add(id);
-      return next;
-    });
-  }
-
-  function clearSelected() {
-    setSelectedIds(new Set());
-  }
-
-  async function onBulkRetype(type: string) {
-    if (!isOwner) return;
-    const ids = Array.from(selectedIds);
-    if (!ids.length || bulkBusy) return;
-    setBulkBusy(true);
-    setError(null);
-    try {
-      await bulkUpdateLedgerTypes(ids, type);
-      setSelectedIds(new Set());
-    } catch (err) {
-      setError(friendlyFirestoreWriteError(err, "จัดประเภทกลุ่มไม่สำเร็จ"));
-    } finally {
-      setBulkBusy(false);
-    }
-  }
-
   const loadMore = useCallback(() => {
     if (deferredQuery) return;
     if (!hasMore || loadingMore || liveLimit >= LEDGER_LIVE_MAX) return;
@@ -427,37 +363,6 @@ function LedgerView() {
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
-      {isOwner && selectedIds.size > 0 ? (
-        <div
-          className="bulk-status-toolbar ledger-bulk-compact"
-          role="group"
-          aria-label="จัดประเภทหลายรายการ"
-        >
-          <div className="bulk-status-actions" role="group" aria-label="ตั้งประเภทกลุ่ม">
-            <span className="bulk-status-count">{selectedIds.size}</span>
-            {BULK_TYPE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                className="ghost-btn bulk-status-btn"
-                disabled={bulkBusy}
-                onClick={() => void onBulkRetype(opt.value)}
-              >
-                {opt.label}
-              </button>
-            ))}
-            <button
-              type="button"
-              className="ghost-btn bulk-status-clear"
-              disabled={bulkBusy}
-              onClick={clearSelected}
-            >
-              ยกเลิก
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       {!loading ? (
         <div className="ledger-staff-toolbar">
           <div className="table-search ledger-table-search">
@@ -508,19 +413,6 @@ function LedgerView() {
             <table className="sheet-table">
               <thead>
                 <tr>
-                  {isOwner ? (
-                    <th className="bulk-check-col" aria-label="เลือก">
-                      <input
-                        type="checkbox"
-                        checked={allVisibleSelected}
-                        ref={(el) => {
-                          if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected;
-                        }}
-                        onChange={toggleSelectAllVisible}
-                        aria-label="เลือกทั้งหมดที่แสดง"
-                      />
-                    </th>
-                  ) : null}
                   <th className="col-date">วันที่</th>
                   <th className="col-desc">รายการ</th>
                   <th className="col-in">เข้า</th>
@@ -529,90 +421,72 @@ function LedgerView() {
                   <th className="col-type">ประเภท</th>
                 </tr>
               </thead>
-                <tbody>
-                  {filteredEntries.map((row) => {
-                    const selected = isOwner && selectedIds.has(row.id);
-                    return (
-                    <tr
-                      key={row.id}
-                      className={[
-                        row.amountIn > 0 ? "row-in" : "row-out",
-                        selected ? "is-bulk-selected" : "",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      {isOwner ? (
-                        <td className="bulk-check-col">
-                          <input
-                            type="checkbox"
-                            checked={selected}
-                            onChange={() => toggleSelected(row.id)}
-                            aria-label={`เลือก ${row.description}`}
+              <tbody>
+                {filteredEntries.map((row) => (
+                  <tr
+                    key={row.id}
+                    className={row.amountIn > 0 ? "row-in" : "row-out"}
+                  >
+                    <td className="col-date">{formatDateShort(row.date)}</td>
+                    <td className="col-desc">
+                      <div className="desc-with-photo">
+                        <button
+                          type="button"
+                          className="desc-link"
+                          title="แตะเพื่อแก้ไข · ช่อง VAT ในกล่อง"
+                          onClick={() => setEditing(row)}
+                        >
+                          {row.description}
+                        </button>
+                        {getLedgerReceiptUrls(row).length ? (
+                          <EntryPhotoIndicator
+                            imageUrls={getLedgerReceiptUrls(row)}
+                            label={row.description}
+                            onView={(urls) =>
+                              setImagePreview({
+                                urls,
+                                title: row.description,
+                                entryDateMs: row.date,
+                              })
+                            }
                           />
-                        </td>
-                      ) : null}
-                      <td className="col-date">{formatDateShort(row.date)}</td>
-                      <td className="col-desc">
-                        <div className="desc-with-photo">
+                        ) : (
                           <button
                             type="button"
-                            className="desc-link"
-                            title="แตะเพื่อแก้ไข · ช่อง VAT ในกล่อง"
-                            onClick={() => setEditing(row)}
+                            className="photo-status"
+                            onClick={() => {
+                              photoEntryRef.current = row;
+                              setPhotoUploadRowId(row.id);
+                            }}
+                            title="เพิ่มรูป"
+                            aria-label="เพิ่มรูป"
                           >
-                            {row.description}
+                            <span className="photo-status-plus" aria-hidden>+</span>
                           </button>
-                          {getLedgerReceiptUrls(row).length ? (
-                            <EntryPhotoIndicator
-                              imageUrls={getLedgerReceiptUrls(row)}
-                              label={row.description}
-                              onView={(urls) =>
-                                setImagePreview({
-                                  urls,
-                                  title: row.description,
-                                  entryDateMs: row.date,
-                                })
-                              }
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              className="photo-status"
-                              onClick={() => {
-                                photoEntryRef.current = row;
-                                setPhotoUploadRowId(row.id);
-                              }}
-                              title="เพิ่มรูป"
-                              aria-label="เพิ่มรูป"
-                            >
-                              <span className="photo-status-plus" aria-hidden>+</span>
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>
-                      <td className="col-out">{row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}</td>
-                      <td className="col-vat">
-                        {row.amountOut > 0 && row.hasVat && (row.vatInput || 0) > 0 ? (
-                          <span className="owner-vat-badge" title="ภาษีซื้อ">
-                            {formatVatMoney(row.vatInput || 0)}
-                          </span>
-                        ) : (
-                          <span className="muted owner-vat-empty">—</span>
                         )}
-                      </td>
-                      <td className="col-type">
-                        <span className="muted" style={{ fontSize: "0.72rem" }}>
-                          {row.type ? labelLedgerType(row.type) : "—"}
+                      </div>
+                    </td>
+                    <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>
+                    <td className="col-out">{row.amountOut > 0 ? formatPlainNumber(row.amountOut) : ""}</td>
+                    <td className="col-vat">
+                      {row.amountOut > 0 && row.hasVat && (row.vatInput || 0) > 0 ? (
+                        <span className="owner-vat-badge" title="ภาษีซื้อ">
+                          {formatVatMoney(row.vatInput || 0)}
                         </span>
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      ) : (
+                        <span className="muted owner-vat-empty">—</span>
+                      )}
+                    </td>
+                    <td className="col-type">
+                      <span className="muted">
+                        {row.type ? labelLedgerType(row.type) : "—"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {!deferredQuery ? (
             <>
               <div ref={sentinelRef} className="load-more-sentinel" aria-hidden />
@@ -848,7 +722,7 @@ function AddOutModal({
     try {
       const result = await extractOwnerBookFromReceipt(refs);
       lastExtractKeyRef.current = key;
-      if (result.date) setDate(result.date);
+      // Keep the accounting date the user set — do not overwrite from receipt OCR.
       if (result.description && !descriptionRef.current.trim()) {
         setDescription(result.description);
       }
@@ -1235,7 +1109,7 @@ function EditEntryModal({
     try {
       const result = await extractOwnerBookFromReceipt(refs);
       lastExtractKeyRef.current = key;
-      if (result.date) setDate(result.date);
+      // Keep the saved accounting date — AI must not change it on re-read.
       if (result.description && !descriptionRef.current.trim()) {
         setDescription(result.description);
       }

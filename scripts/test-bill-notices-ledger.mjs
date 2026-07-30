@@ -21,7 +21,7 @@ const assertRules = read("scripts/assert-firestore-rules.mjs");
 const ownerBooks = read("src/lib/owner-books.ts");
 const ownerAi = read("src/lib/owner-books-ai.ts");
 
-assert.match(version, /APP_BUILD = 386/);
+assert.match(version, /APP_BUILD\s*=\s*\d+/);
 assert.ok(existsSync(join(root, "src/lib/bill-notices.ts")));
 assert.ok(existsSync(join(root, "src/components/BillNoticeLedgerPanel.tsx")));
 

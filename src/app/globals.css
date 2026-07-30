@@ -1504,9 +1504,71 @@ body.modal-open .main-panel {
 }
 
 .ledger-page .sheet-wrap.ledger-staff-sheet {
-  margin-top: 0;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+  /* Bleed to screen edges — reclaim space after removing bulk check column */
+  margin: 0.1rem -1rem 0;
+  width: calc(100% + 2rem);
+  max-width: none;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  box-shadow: none;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table {
+  font-size: 0.66rem;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table th,
+.ledger-page .ledger-staff-sheet .sheet-table td {
+  padding: 0.16rem 0.28rem;
+  line-height: 1.15;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table th {
+  font-size: 0.6rem;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-date {
+  width: 2.4rem;
+  font-size: 0.6rem;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-desc {
+  line-height: 1.15;
+}
+
+.ledger-page .ledger-staff-sheet .desc-link {
+  font-size: 0.66rem;
+  line-height: 1.15;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-type {
+  font-size: 0.58rem;
+  white-space: nowrap;
+}
+
+.ledger-page .ledger-staff-sheet .sheet-table .col-type .muted {
+  font-size: inherit;
+  max-width: none;
+}
+
+.ledger-page .ledger-staff-sheet .owner-vat-badge,
+.ledger-page .ledger-staff-sheet .owner-vat-empty {
+  font-size: 0.6rem;
+}
+
+.ledger-page .ledger-staff-sheet .photo-status {
+  width: 1.15rem;
+  height: 1.15rem;
+  min-width: 1.15rem;
+  min-height: 1.15rem;
+}
+
+.ledger-page .ledger-staff-toolbar {
+  margin-left: -0.15rem;
+  margin-right: -0.15rem;
 }
 
 @media (max-width: 420px) {

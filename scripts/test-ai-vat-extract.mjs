@@ -61,6 +61,6 @@ assert.doesNotMatch(entryVat, /fallback.*proposePurchaseVatInput\(amountInclusiv
 
 assert.match(receipts, /maxShortEdge/);
 assert.match(receipts, /maxLongEdge/);
-assert.match(version, /APP_BUILD = 456/);
+assert.match(version, /APP_BUILD = 457/);
 
 console.log("OK test-ai-vat-extract");
