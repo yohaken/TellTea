@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import type { OtEntry } from "@/lib/ot";
@@ -92,8 +93,12 @@ export function PayrollPayPanel({
     note: "",
     skipGroup: true,
   });
+  const [slipPreview, setSlipPreview] = useState<{
+    urls: string[];
+    title: string;
+  } | null>(null);
 
-  useBodyScrollLock(!!payTarget || specialOpen);
+  useBodyScrollLock(!!payTarget || specialOpen || !!slipPreview);
 
   const periodItems = useMemo(
     () => items.filter((i) => i.periodMonth === periodMonth),
@@ -400,6 +405,7 @@ export function PayrollPayPanel({
                 <th className="payroll-col-status">สถานะ</th>
                 <th className="payroll-col-due">โอน</th>
                 <th className="payroll-col-amt col-out">ยอด</th>
+                <th className="payroll-col-slip">สลิป</th>
                 {showActions ? <th className="payroll-col-act col-act" /> : null}
               </tr>
             </thead>
@@ -422,6 +428,7 @@ export function PayrollPayPanel({
                 if (shopView && accountBits.length) {
                   metaBits.push(accountBits.join(" "));
                 }
+                const hasSlips = item.slipUrls.length > 0;
                 return (
                   <tr key={item.id} className={`payroll-tr status-${item.status}`}>
                     {shopView ? (
@@ -445,6 +452,22 @@ export function PayrollPayPanel({
                     </td>
                     <td className="payroll-col-due">{dueLabel}</td>
                     <td className="payroll-col-amt col-out">฿{fmt(item.amount)}</td>
+                    <td className="payroll-col-slip">
+                      {hasSlips ? (
+                        <EntryPhotoIndicator
+                          imageUrls={item.slipUrls}
+                          label="สลิป"
+                          onView={() =>
+                            setSlipPreview({
+                              urls: item.slipUrls,
+                              title: payrollDescription(item),
+                            })
+                          }
+                        />
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
                     {showActions ? (
                       <td className="payroll-col-act col-act">
                         {item.status === "pending" && canPay ? (
@@ -558,6 +581,14 @@ export function PayrollPayPanel({
             </div>
           </div>
         </div>
+      ) : null}
+
+      {slipPreview ? (
+        <ImagePreviewModal
+          urls={slipPreview.urls}
+          title={slipPreview.title}
+          onClose={() => setSlipPreview(null)}
+        />
       ) : null}
 
       {specialOpen ? (

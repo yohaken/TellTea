@@ -5635,6 +5635,58 @@ body.modal-open .main-panel {
   text-align: right;
 }
 
+.payroll-col-slip {
+  width: 3.2rem;
+  text-align: center;
+}
+
+.payroll-history-pick {
+  max-width: 18rem;
+  margin: 0 0 0.55rem;
+}
+
+.payroll-history-table .payroll-history-month td {
+  vertical-align: top;
+}
+
+.payroll-history-table tr.is-detail td {
+  background: rgba(45, 106, 79, 0.04);
+  font-size: 0.78rem;
+}
+
+.bonus-evidence-panel {
+  margin: 0.85rem 0 1rem;
+  padding: 0.75rem 0.85rem 0.9rem;
+  border: 1px solid var(--tea-line);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.bonus-evidence-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.bonus-evidence-hint,
+.bonus-evidence-empty {
+  margin: 0.25rem 0 0.55rem;
+  font-size: 0.78rem;
+}
+
+.bonus-evidence-note {
+  margin: 0 0 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.bonus-evidence-staff-photos {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
 .payroll-col-act {
   width: 1%;
   white-space: nowrap;
