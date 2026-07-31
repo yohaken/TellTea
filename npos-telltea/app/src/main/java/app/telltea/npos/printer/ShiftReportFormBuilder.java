@@ -445,22 +445,33 @@ public final class ShiftReportFormBuilder {
       }
     }
 
-    // --- Frame 12: รายการขายแยกตามบิล ---
-    if (!detail.billBlocks.isEmpty()) {
-      sb.append(rule(width)).append('\n');
-      sb.append('\n');
-      sb.append(EscPos.BOLD_ON)
-          .append("รายการขายแยกตามบิล (" + detail.billBlocks.size() + ")")
-          .append(EscPos.BOLD_OFF)
+    // --- Frame 12: สรุปบิล (สถิติ) — ไม่แจกแจงรายบิล/รายการย่อย (สั้น อ่านเร็ว) ---
+    sb.append(rule(width)).append('\n');
+    sb.append('\n');
+    sb.append(EscPos.BOLD_ON).append("สรุปบิล (สถิติ)").append(EscPos.BOLD_OFF).append('\n');
+    sb.append(pairRow("จำนวนบิลขาย", String.valueOf(customerCount), width)).append('\n');
+    sb.append(
+            pairRow(
+                "จำนวนชิ้น",
+                String.valueOf(detail.itemQty > 0 ? detail.itemQty : customerCount),
+                width))
+        .append('\n');
+    sb.append(pairRow("ยอดเฉลี่ยต่อบิล", money(avgPerBill), width)).append('\n');
+    if (discountCount > 0) {
+      sb.append(
+              pairRow(
+                  "บิลมีส่วนลด",
+                  discountCount + " / -" + money(discountTotal),
+                  width))
           .append('\n');
-      int shown = 0;
-      for (String block : detail.billBlocks) {
-        if (shown++ >= 25) {
-          sb.append(center("...", width)).append('\n');
-          break;
-        }
-        sb.append(block);
-      }
+    }
+    if (voidedCount > 0) {
+      sb.append(
+              pairRow(
+                  "ทำลายบิล",
+                  voidedCount + " / " + money(detail.voidedTotal),
+                  width))
+          .append('\n');
     }
 
     // --- Frame 13: footer (+ Z checklist + signatures) ---
@@ -660,7 +671,6 @@ public final class ShiftReportFormBuilder {
     double voidedTotal;
     List<NamedAmt> byCategory = new ArrayList<>();
     List<NamedAmt> byItem = new ArrayList<>();
-    List<String> billBlocks = new ArrayList<>();
     List<String> voidedHeads = new ArrayList<>();
 
     static DetailAgg fromReceipts(JSONArray receipts, String sessionId) {
@@ -679,12 +689,10 @@ public final class ShiftReportFormBuilder {
         boolean voided = r.optBoolean("voided", false);
         double total = r.optDouble("total", 0);
         double disc = r.optDouble("discountBaht", 0);
-        String billNo = r.optString("billNo", "-");
-        long at = r.optLong("at", System.currentTimeMillis());
-        String pay = r.optString("paymentMethod", "cash");
-        String payLabel = app.telltea.npos.sell.PaymentMethods.labelShort(pay);
         if (voided) {
           d.voidedTotal += total;
+          String billNo = r.optString("billNo", "-");
+          long at = r.optLong("at", System.currentTimeMillis());
           d.voidedHeads.add(
               "#" + billNo + " " + formatTime(at) + " / " + money(total));
           continue;
@@ -695,15 +703,7 @@ public final class ShiftReportFormBuilder {
           d.discountCount += 1;
         }
         JSONArray lines = r.optJSONArray("lines");
-        StringBuilder block = new StringBuilder();
-        block
-            .append("#")
-            .append(billNo)
-            .append(" / ")
-            .append(formatTime(at))
-            .append(" / ")
-            .append(payLabel)
-            .append('\n');
+        // Aggregate stats only — no per-bill dump on X/Z paper (BOH preview uses same form).
         if (lines != null && lines.length() > 0) {
           d.hasLines = true;
           for (int j = 0; j < lines.length(); j++) {
@@ -733,14 +733,6 @@ public final class ShiftReportFormBuilder {
             }
             it.qty += qty;
             it.amount += amount;
-            block
-                .append("  ")
-                .append(name)
-                .append(" x")
-                .append(qty)
-                .append("  ")
-                .append(money(amount))
-                .append('\n');
           }
         } else {
           d.grossSales += total + disc;
@@ -751,13 +743,7 @@ public final class ShiftReportFormBuilder {
           }
           c.qty += 1;
           c.amount += total + disc;
-          block.append("  (ไม่มีรายการรายละเอียด)\n");
         }
-        if (disc > 0.0001) {
-          block.append("  ส่วนลด  -").append(money(disc)).append('\n');
-        }
-        block.append("  รวมบิล  ").append(money(total)).append('\n');
-        d.billBlocks.add(block.toString());
       }
       d.byCategory = sortedAmts(cats);
       d.byItem = sortedAmts(items);

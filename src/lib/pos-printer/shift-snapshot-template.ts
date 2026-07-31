@@ -2,7 +2,7 @@ import { formatPlainNumber } from "../utils";
 import { escapeReceiptHtml } from "./receipt-template";
 import type { ShiftReportPayload } from "../pos-shift-report";
 
-/** เอกสารจำลอง X/Z สำหรับตั้งค่าร้าน — ครบหมวด+รายบิล+ส่วนลด+void */
+/** เอกสารจำลอง X/Z สำหรับตั้งค่าร้าน — ฟอร์มเดียวกับพิมพ์หน้างาน (สถิติ ไม่แจกแจงรายบิล) */
 export function sampleShiftReportPayload(
   kind: "snapshot" | "close",
   shop?: {
@@ -332,41 +332,24 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
     : `<hr class="rule" />
   <div class="row"><span>ทำลายบิล</span><span>${s.voidedCount}</span></div>`;
 
-  const billsBlock =
-    d?.bills?.length
-      ? `<hr class="rule" />
-  <div class="sec">รายการขายแยกตามบิล (${d.bills.length})</div>
-  ${d.bills
-    .map((b) => {
-      const linesHtml =
-        b.lines.length > 0
-          ? b.lines
-              .map((line) => {
-                const opt = line.optionText
-                  ? `<div class="opt">${escapeReceiptHtml(line.optionText)}</div>`
-                  : "";
-                const qtySuffix = line.qty >= 2 ? ` x${line.qty}` : "";
-                return `<div class="line">
-            <div class="line-row"><span>${escapeReceiptHtml(line.name)}${qtySuffix}</span><span>${money(line.amount)}</span></div>
-            ${opt}
-          </div>`;
-              })
-              .join("")
-          : `<div class="muted tiny">ไม่มีรายการรายละเอียด</div>`;
-      const disc =
-        b.discountBaht > 0
-          ? `<div class="line-row muted"><span>ส่วนลด</span><span>-${money(b.discountBaht)}</span></div>`
-          : "";
-      const pending = b.pending ? " · รอส่ง" : "";
-      return `<div class="bill">
-        <div class="bill-head">#${escapeReceiptHtml(b.billNo)} · ${escapeReceiptHtml(formatTime(b.createdAt))} · ${payLabel(b.paymentMethod)}${pending}</div>
-        ${linesHtml}
-        ${disc}
-        <div class="line-row strong"><span>รวมบิล</span><span>${money(b.total)}</span></div>
-      </div>`;
-    })
-    .join("")}`
-      : "";
+  // Per-bill line dump removed — keep category / item / pay stats only (short Z/X paper).
+  const billsBlock = d
+    ? `<hr class="rule" />
+  <div class="sec">สรุปบิล (สถิติ)</div>
+  <div class="row"><span>จำนวนบิลขาย</span><span>${d.customerCount}</span></div>
+  <div class="row"><span>จำนวนชิ้น</span><span>${d.itemQty}</span></div>
+  <div class="row"><span>ยอดเฉลี่ยต่อบิล</span><span>${money(d.avgPerBill)}</span></div>
+  ${
+    d.discountCount > 0
+      ? `<div class="row"><span>บิลมีส่วนลด</span><span>${d.discountCount} · -${money(d.discountTotal)}</span></div>`
+      : ""
+  }
+  ${
+    s.voidedCount > 0
+      ? `<div class="row"><span>ทำลายบิล</span><span>${s.voidedCount} · ${money(d.voidedTotal)}</span></div>`
+      : ""
+  }`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="th">
