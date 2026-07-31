@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 assert.match(read("src/lib/version.ts"), /APP_BUILD = 525/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 144/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 145/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+114/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.91"/);
 assert.ok(existsSync(join(root, "docs/npos-shift-dashboard-checklist.md")));
