@@ -868,7 +868,8 @@ export async function markPayrollPaid(input: {
 
 /**
  * บันทึกเบิกล่วงหน้าใหม่ — เพิ่มยอดค้างหัก
- * @param postToBooks ถ้า true ลงบช.เจ้าของเป็นเงินออก (ใช้เมื่อเพิ่งจ่ายเงินสดจริง)
+ * @param postToBooks ถ้า true ลงบช.เจ้าของเป็นเงินออก (จ่ายเงินจริงวันนี้)
+ * @param slipUrls แนบสลิปลงบช.เจ้าของเมื่อ postToBooks
  */
 export async function recordEmployeeAdvance(input: {
   employeeId: string;
@@ -877,12 +878,18 @@ export async function recordEmployeeAdvance(input: {
   createdBy: string;
   date?: number;
   note?: string;
+  slipUrls?: string[];
   postToBooks?: boolean;
 }): Promise<{ advanceBalance: number; ownerBookId: string }> {
   const amount = round2(Number(input.amount) || 0);
   if (!(amount > 0)) throw new Error("ยอดเบิกต้องมากกว่า 0");
   const createdBy = input.createdBy.trim();
   if (!createdBy) throw new Error("ไม่พบผู้บันทึก");
+
+  const slipUrls = (input.slipUrls || [])
+    .map((u) => u.trim())
+    .filter(Boolean)
+    .slice(0, PAYROLL_SLIP_MAX);
 
   const advanceBalance = await adjustEmployeeAdvanceBalance(input.employeeId, amount);
   let ownerBookId = "";
@@ -895,10 +902,30 @@ export async function recordEmployeeAdvance(input: {
       typeSource: "payroll-advance",
       typeAiReason: "เบิกเงินเดือนล่วงหน้า",
       createdBy,
+      receiptUrls: slipUrls,
       note: (input.note || "").trim() || "จะหักจากรอบจ่ายถัดไป",
     });
   }
   return { advanceBalance, ownerBookId };
+}
+
+/** คิวรอโอนของคนนี้ที่ยังไม่หักเบิก — ต้องยกเลิกแล้วสร้างใหม่หลังบันทึกเบิก */
+export function pendingPayrollNeedingAdvanceRefresh(
+  items: PayrollItem[],
+  employeeId: string,
+  periodMonth: string,
+): PayrollItem[] {
+  return items.filter(
+    (i) =>
+      i.employeeId === employeeId &&
+      i.periodMonth === periodMonth &&
+      i.status === "pending" &&
+      (i.kind === "salary_mid" ||
+        i.kind === "salary_month_end" ||
+        i.kind === "bonus" ||
+        i.kind === "salary_special") &&
+      !(i.advanceDeduct > 0),
+  );
 }
 
 function entryHasEmployee(
