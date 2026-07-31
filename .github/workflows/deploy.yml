@@ -124,13 +124,6 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: node scripts/repair-ot-bonus-rates.mjs
 
-      # One-shot: ยกเลิกคิวเงินเดือนกลุ่มที่รอโอน — แฟล็ก meta กันรันซ้ำ
-      - name: Void pending group salary queues (one-shot regen)
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          APPLY: "1"
-        run: node scripts/void-pending-group-salary.mjs
-
       - name: Install Cloud Functions deps
         run: npm ci
         working-directory: functions
