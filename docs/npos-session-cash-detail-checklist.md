@@ -1,6 +1,6 @@
 # nPos / หลังร้าน — รายละเอียดเงินรอบ (เบิก + สรุปการ์ด)
 
-อัปเดต: **ship O2 1.14.87** · pin ปัจจุบัน APK **1.14.89** · vc **112** · `APP_BUILD` 509 · `POS_BUILD` 141  
+อัปเดต: **คอลัมน์นับ/นำส่ง** · `APP_BUILD` 512 · `POS_BUILD` 144 · APK **1.14.89**  
 ดูเฟส [npos-counter-ops-phases.md](./npos-counter-ops-phases.md)  
 อ้างอิง: [npos-void-cashout-reason-checklist.md](./npos-void-cashout-reason-checklist.md) · [npos-z-cash-remit-checklist.md](./npos-z-cash-remit-checklist.md) · [npos-bo-slim-sessions-checklist.md](./npos-bo-slim-sessions-checklist.md)
 
@@ -11,13 +11,13 @@
 
 | ข้อมูล | เครื่อง | เซิร์ฟเวอร์ | โชว์ BO |
 |--------|---------|-------------|---------|
-| opening / counted / expected / diff / leaveFloat | ใช่ | ใช่ | ใช่ (expand) |
+| opening / counted / expected / diff / leaveFloat | ใช่ | ใช่ | **นับ** ในคอลัมน์ + detail expand |
 | cashOutTotal / cashDropCount | ใช่ | ใช่ | ใช่ |
 | cashDropNotes[] (amount·reason·at) | ส่งแล้ว | **persist 1.14.87** | **ใช่** |
 | discrepancyLabel | ใช่ | ใช่ | ใช่ |
 | discountTotal / voidedCount บนรอบ | ใช่ | ใช่ | ใช่ (expand) |
 | จำนวนบิลต่อวิธีจ่าย | ใช่ | ใช่ | ใช่ (expand) |
-| ยอดนำส่ง (counted − leaveFloat) | คำนวณบน Z | **remitAmount** | ใช่ |
+| ยอดนำส่ง (counted − leaveFloat) | คำนวณบน Z | **remitAmount** | **คอลัมน์นำส่ง** |
 
 ## งาน
 
