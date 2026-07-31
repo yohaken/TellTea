@@ -168,12 +168,6 @@ public class MenuItemEditActivity extends Activity {
     groupsBox.setOrientation(LinearLayout.VERTICAL);
     form.addView(groupsBox);
 
-    saveBtn = NposUi.primary(this, getString(R.string.menu_item_save));
-    saveBtn.setLayoutParams(NposUi.matchWidth(this, 8));
-    saveBtn.setMaxWidth(Integer.MAX_VALUE);
-    saveBtn.setOnClickListener(v -> save());
-    form.addView(saveBtn);
-
     if (!itemId.isEmpty()) {
       TextView archive = NposUi.secondary(this, getString(R.string.menu_item_archive));
       archive.setLayoutParams(NposUi.matchWidth(this, 8));
@@ -187,6 +181,19 @@ public class MenuItemEditActivity extends Activity {
       dup.setOnClickListener(v -> duplicate());
       form.addView(dup);
     }
+
+    // Sticky footer (~12–15% feel) — save always visible on short tablets.
+    LinearLayout footer = new LinearLayout(this);
+    footer.setOrientation(LinearLayout.VERTICAL);
+    footer.setPadding(0, NposUi.dp(this, 8), 0, 0);
+    footer.setBackgroundColor(NposUi.color(this, R.color.npos_bg));
+    saveBtn = NposUi.primary(this, getString(R.string.menu_item_save));
+    saveBtn.setLayoutParams(NposUi.matchWidth(this, 0));
+    saveBtn.setMaxWidth(Integer.MAX_VALUE);
+    saveBtn.setMinHeight(NposUi.dp(this, 52));
+    saveBtn.setOnClickListener(v -> save());
+    footer.addView(saveBtn);
+    page.addView(footer);
 
     setContentView(page);
     reload();

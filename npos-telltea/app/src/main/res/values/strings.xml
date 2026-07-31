@@ -317,7 +317,9 @@
     <string name="menu_admin_status_on">พร้อมขาย</string>
     <string name="menu_admin_status_off">ของหมด</string>
     <string name="menu_admin_btn_sold_out">ปิดของหมด</string>
+    <string name="menu_admin_btn_sold_out_short">ของหมด</string>
     <string name="menu_admin_btn_restore">เปิดขาย</string>
+    <string name="menu_admin_search_hint">ค้นหา</string>
     <string name="menu_admin_saving">กำลังบันทึก…</string>
     <string name="menu_admin_saved">บันทึกแล้ว</string>
     <string name="menu_admin_sold_out_toast">ตั้งของหมดแล้ว</string>
