@@ -9,8 +9,8 @@ import {
 /** ลำดับแสดงในตาราง — เย็น → เช้า → ดึก (ล่างสุด = ดึก · ไล่ขึ้น = ดึก→เช้า→เย็น) */
 export const OT_SHIFT_DISPLAY_ORDER: OtShiftId[] = ["evening", "morning", "late"];
 
-/** วางแผนล่วงหน้าได้กี่วัน (นับจากวันนี้) */
-export const OT_PLAN_AHEAD_DAYS = 3;
+/** วางแผนล่วงหน้าได้กี่วัน (นับจากวันนี้) — รวมช่วงคาบเกี่ยวปลายเดือน */
+export const OT_PLAN_AHEAD_DAYS = 4;
 
 export type OtShiftSlot = {
   shiftId: OtShiftId;
@@ -102,6 +102,11 @@ export type BuildOtGridOptions = {
   minDate?: number;
   /** วันสิ้นสุด (ใหม่สุด) — default วันนี้ */
   maxDate?: number;
+  /**
+   * true = ใช้เฉพาะ minDate..maxDate ไม่ขยายจาก entries / plan-ahead
+   * (หน้าชงส่งช่วงจาก otViewWindow)
+   */
+  strictRange?: boolean;
 };
 
 /**
@@ -113,15 +118,18 @@ export function buildOtGrid(entries: OtEntry[], options: BuildOtGridOptions = {}
   let oldest = options.minDate != null ? startOfLocalDay(options.minDate) : today;
   let newest = options.maxDate != null ? startOfLocalDay(options.maxDate) : today;
 
-  for (const row of entries) {
-    const d = startOfLocalDay(row.date);
-    if (d < oldest) oldest = d;
-    if (d > newest) newest = d;
+  if (!options.strictRange) {
+    for (const row of entries) {
+      const d = startOfLocalDay(row.date);
+      if (d < oldest) oldest = d;
+      if (d > newest) newest = d;
+    }
+
+    if (newest < today) newest = today;
+    const planHorizon = addLocalDays(today, OT_PLAN_AHEAD_DAYS);
+    if (newest < planHorizon) newest = planHorizon;
   }
 
-  if (newest < today) newest = today;
-  const planHorizon = addLocalDays(today, OT_PLAN_AHEAD_DAYS);
-  if (newest < planHorizon) newest = planHorizon;
   if (oldest > newest) oldest = newest;
 
   const slotMap = indexEntriesBySlot(entries);

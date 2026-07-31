@@ -16,7 +16,10 @@ import {
 import { getDb } from "./firebase";
 import { assertBonusMonthOpenForDate } from "./bonus-month-guard";
 
-/** หน้าชงโหลดเฉพาะช่วงนี้ — ไม่ดึงประวัติทั้งก้อน (เดิมช้าเพราะ unbounded onSnapshot) */
+/**
+ * Lookback แบบกลิ้ง (legacy) — หน้าชงใช้ otViewWindow แทนแล้ว
+ * คง helper ไว้ให้ checklist / สคริปต์อื่นที่ยังอ้าง
+ */
 export const OT_HISTORY_LOOKBACK_DAYS = 60;
 
 export function otHistorySinceMs(

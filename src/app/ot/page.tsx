@@ -24,8 +24,8 @@ import {
   entryHasPhotoFlag,
   type PhotoForensicsReport,
 } from "@/lib/photo-forensics-scan";
+import { monthInputValue } from "@/lib/bonus";
 import {
-  OT_HISTORY_LOOKBACK_DAYS,
   OT_SHIFTS,
   OT_IMAGE_MAX,
   OT_IMAGE_PAYLOAD_BUDGET,
@@ -41,7 +41,6 @@ import {
   isOtEntryClosed,
   labelOtShift,
   labelOtStatus,
-  otHistorySinceMs,
   subscribeOtEntries,
   updateOtEntry,
   type OtEntry,
@@ -55,12 +54,14 @@ import {
 } from "@/lib/rate-schedule";
 import { friendlyFirestoreWriteError } from "@/lib/receipts";
 import {
+  OT_PLAN_AHEAD_DAYS,
   buildOtGrid,
   findOtEntryForSlot,
   isFutureLocalDay,
   type OtDayGroup,
   type OtSlotTarget,
 } from "@/lib/ot-grid";
+import { otViewWindow } from "@/lib/ot-view-window";
 import type { StaffMember } from "@/lib/types";
 import { ShiftOwnerFlags, ShiftProgressSteps, ShiftTodayBanner } from "@/components/ShiftProgressSteps";
 import {
@@ -70,7 +71,6 @@ import {
   type SopDraftItem,
 } from "@/components/ShiftSopSection";
 import {
-  checkHistorySinceMs,
   listActiveChecklistItems,
   subscribeChecklistRecords,
   type ChecklistItem,
@@ -222,8 +222,10 @@ function OtView() {
   const [slotDraft, setSlotDraft] = useState<{ date: number; shift: OtShiftId } | null>(null);
   const [checkItems, setCheckItems] = useState<ChecklistItem[]>([]);
   const [checkRecords, setCheckRecords] = useState<ChecklistRecord[]>([]);
+  /** ค่าเริ่มต้น = เดือนนี้ · เลือกเดือนอื่นเมื่อต้องการดูย้อนหลัง/ปิดบัญชี */
+  const [viewMonth, setViewMonth] = useState(() => monthInputValue());
   const loading = !catalogReady || !entriesReady || !checksReady;
-  const historySinceMs = useMemo(() => otHistorySinceMs(), []);
+  const viewWindow = useMemo(() => otViewWindow(viewMonth), [viewMonth]);
 
   async function reloadCatalog() {
     const [emps, settings, items] = await Promise.all([
@@ -250,7 +252,7 @@ function OtView() {
     let cancelled = false;
     let unsubOt: (() => void) | undefined;
 
-    const since = historySinceMs;
+    const { since, until } = viewWindow;
     const unsubSchedule = subscribeRateSchedule(
       (doc) => setRateSchedule(doc.entries),
       (err) => setError(err.message),
@@ -264,7 +266,7 @@ function OtView() {
         setError(err.message || "โหลด SOP ไม่สำเร็จ");
         setChecksReady(true);
       },
-      { since: checkHistorySinceMs() },
+      { since, until },
     );
 
     void reloadCatalog()
@@ -291,7 +293,7 @@ function OtView() {
             setError(err.message || "โหลดรายการไม่สำเร็จ");
             setEntriesReady(true);
           },
-          { since, ...(filterId ? { workerId: filterId } : {}) },
+          { since, until, ...(filterId ? { workerId: filterId } : {}) },
         );
       })
       .catch((err) => {
@@ -307,7 +309,7 @@ function OtView() {
       unsubOt?.();
       unsubCheck();
     };
-  }, [staff, historySinceMs, shopOtView]);
+  }, [staff, viewWindow, shopOtView]);
 
   const openingItems = useMemo(() => openingItemsFromCatalog(checkItems), [checkItems]);
   const closingItems = useMemo(() => closingItemsFromCatalog(checkItems), [checkItems]);
@@ -379,19 +381,25 @@ function OtView() {
           <ShiftTodayBanner
             shiftLabel={todayShiftBannerLabel(todayShift)}
             progress={todayProgress}
-            onOpen={() =>
+            onOpen={() => {
+              const live = monthInputValue();
+              if (viewMonth !== live) setViewMonth(live);
               openSlot({
                 date: todayMs,
                 shift: todayShift,
                 entry: todayEntry,
-              })
-            }
+              });
+            }}
           />
           <OtTable
             entries={entries}
             checkRecords={checkRecords}
             checkRecordsByDayShift={checkRecordsByDayShift}
-            historySinceMs={historySinceMs}
+            viewMonth={viewMonth}
+            onViewMonthChange={setViewMonth}
+            gridMin={viewWindow.gridMin}
+            gridMax={viewWindow.gridMax}
+            isLiveWindow={viewWindow.isLive}
             openingItems={openingItems}
             closingItems={closingItems}
             workers={workers}
@@ -1214,7 +1222,11 @@ function OtTable({
   entries,
   checkRecords,
   checkRecordsByDayShift,
-  historySinceMs,
+  viewMonth,
+  onViewMonthChange,
+  gridMin,
+  gridMax,
+  isLiveWindow,
   openingItems,
   closingItems,
   workers,
@@ -1227,7 +1239,11 @@ function OtTable({
   entries: OtEntry[];
   checkRecords: ChecklistRecord[];
   checkRecordsByDayShift: Map<string, ChecklistRecord[]>;
-  historySinceMs: number;
+  viewMonth: string;
+  onViewMonthChange: (month: string) => void;
+  gridMin: number;
+  gridMax: number;
+  isLiveWindow: boolean;
   openingItems: ChecklistItem[];
   closingItems: ChecklistItem[];
   workers: Employee[];
@@ -1293,9 +1309,19 @@ function OtTable({
   }, [filtered, me]);
 
   const dateGroups = useMemo(
-    () => buildOtGrid(filtered, { minDate: historySinceMs }),
-    [filtered, historySinceMs],
+    () =>
+      buildOtGrid(filtered, {
+        minDate: gridMin,
+        maxDate: gridMax,
+        strictRange: true,
+      }),
+    [filtered, gridMin, gridMax],
   );
+
+  const liveMonth = monthInputValue();
+  const rangeTitle = isLiveWindow
+    ? `เดือนนี้ · ล่วงหน้า ${OT_PLAN_AHEAD_DAYS} วัน (ข้ามเดือนได้) · 3 กะ/วัน`
+    : `เดือนที่เลือก · เต็มเดือน · 3 กะ/วัน · เลือกเดือนปัจจุบันเพื่อวางแผนล่วงหน้า`;
 
   const forensicsRows = useMemo(
     () =>
@@ -1315,6 +1341,24 @@ function OtTable({
   return (
     <div className="ot-table-view">
       <div className="ot-toolbar-slim module-toolbar-slim">
+        <input
+          type="month"
+          className="ot-slim-input"
+          value={viewMonth}
+          onChange={(e) => onViewMonthChange(e.target.value)}
+          aria-label="เดือนที่ดู"
+          title={rangeTitle}
+        />
+        {viewMonth !== liveMonth ? (
+          <button
+            type="button"
+            className="ot-slim-chip"
+            onClick={() => onViewMonthChange(liveMonth)}
+            title="กลับเดือนปัจจุบัน + วันล่วงหน้า"
+          >
+            เดือนนี้
+          </button>
+        ) : null}
         <select
           id="ot-status-filter"
           className="ot-slim-input"
@@ -1334,7 +1378,7 @@ function OtTable({
         ) : null}
         <span
           className="ot-summary-inline muted module-slim-stats"
-          title={`${OT_HISTORY_LOOKBACK_DAYS} วันล่าสุด · ใหม่ → เก่า · 3 กะ/วัน · ล่วงหน้า 3 วัน`}
+          title={rangeTitle}
         >
           รอบ {summary.shiftCount} · หน่วย {formatPlainNumber(summary.summaryQty)} ·{" "}
           {mineOnly ? "ของฉัน" : "รวม"} ฿{formatPlainNumber(mineOnly ? summary.myBonus : summary.totalBonus)} ·{" "}
