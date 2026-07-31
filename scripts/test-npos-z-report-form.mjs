@@ -1,6 +1,6 @@
 /**
  * Gate: native Z/X shift report form (shop header, times, signature lines).
- * Extended for web-parity labels (1.14.101+).
+ * Extended for web-parity labels (1.14.102+).
  */
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
@@ -10,10 +10,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 543/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 155/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+124/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.101"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 544/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 156/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+125/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.102"/);
 
 assert.ok(existsSync(join(root, "docs/npos-z-report-form-checklist.md")));
 const doc = read("docs/npos-z-report-form-checklist.md");

@@ -9,16 +9,16 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 543/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 155/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+124/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.101"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 544/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 156/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+125/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.102"/);
 
 assert.ok(existsSync(join(root, "docs/npos-capture-projection-checklist.md")));
 const doc = read("docs/npos-capture-projection-checklist.md");
-assert.match(doc, /1.14.101/);
+assert.match(doc, /1.14.102/);
 assert.match(doc, /MediaProjection/);
-assert.match(doc, /เด้งจนกว่าจะรับ|nag-until-grant|2\.5/);
+assert.match(doc, /acquireLatestImage|thread แยก|no_usable_frame/);
 
 const manifest = read("npos-telltea/app/src/main/AndroidManifest.xml");
 assert.match(manifest, /FOREGROUND_SERVICE_MEDIA_PROJECTION/);
@@ -41,6 +41,9 @@ assert.match(capture, /MediaProjection|CaptureProjectionService/);
 assert.match(capture, /grabPrimary/);
 assert.match(capture, /isMostlyBrandGreen/);
 assert.match(capture, /shouldAutoPrompt|CaptureConsentActivity/);
+assert.match(capture, /draw_decor|drawDecorBitmap/);
+// Older tablets must not dead-end on PixelCopy-only API.
+assert.doesNotMatch(capture, /return CaptureShot\.fail\("api_lt_26"\)/);
 // Ack only when hasImages — empty report must retry via heartbeat.
 assert.match(capture, /if \(hasImages\)[\s\S]*setLastAckRequestAt/);
 assert.match(capture, /จะลองใหม่/);
@@ -64,6 +67,9 @@ const proj = read(
 );
 assert.match(proj, /isMostlyBlackOrEmpty/);
 assert.match(proj, /no_usable_frame|markProjectionDead/);
+assert.match(proj, /acquireLatestImage/);
+assert.match(proj, /npos-vd-grab|new Thread/);
+assert.match(proj, /VIRTUAL_DISPLAY_FLAG_PUBLIC/);
 
 const consent = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/diagnose/CaptureConsentActivity.java",

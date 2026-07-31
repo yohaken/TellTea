@@ -152,7 +152,11 @@ public final class CaptureProjectionService extends Service {
         projection.registerCallback(projectionCallback, workerHandler);
         instance = this;
         CaptureProjectionPrefs.markGranted(this);
-        OpsLogger.info(this, "display", "แคปจอ · พร้อม MediaProjection", "live");
+        OpsLogger.info(
+            this,
+            "display",
+            "แคปจอ · พร้อม MediaProjection",
+            "live · api=" + Build.VERSION.SDK_INT);
       } catch (Exception e) {
         projection = null;
         OpsLogger.error(
@@ -170,118 +174,60 @@ public final class CaptureProjectionService extends Service {
     CountDownLatch latch = new CountDownLatch(1);
     AtomicReference<Bitmap> out = new AtomicReference<>();
     AtomicReference<Exception> err = new AtomicReference<>();
-    workerHandler.post(
-        () -> {
-          VirtualDisplay vd = null;
-          ImageReader reader = null;
-          try {
-            MediaProjection proj;
-            synchronized (LOCK) {
-              proj = projection;
-            }
-            if (proj == null) {
-              latch.countDown();
-              return;
-            }
-            DisplayMetrics metrics = new DisplayMetrics();
-            WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
-            if (wm != null && wm.getDefaultDisplay() != null) {
-              wm.getDefaultDisplay().getRealMetrics(metrics);
-            }
-            int width = Math.max(1, metrics.widthPixels);
-            int height = Math.max(1, metrics.heightPixels);
-            int dpi = Math.max(160, metrics.densityDpi);
-
-            // Cap memory: still sharp for BO (matches ScreenCapture MAX_EDGE path later).
-            int maxEdge = 1920;
-            int edge = Math.max(width, height);
-            if (edge > maxEdge) {
-              float s = maxEdge / (float) edge;
-              width = Math.max(1, Math.round(width * s));
-              height = Math.max(1, Math.round(height * s));
-            }
-
-            reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2);
-            final AtomicReference<Image> latest = new AtomicReference<>();
-            reader.setOnImageAvailableListener(
-                r -> {
-                  Image img = null;
-                  try {
-                    img = r.acquireLatestImage();
-                    if (img != null) {
-                      Image prev = latest.getAndSet(img);
-                      if (prev != null) prev.close();
-                    }
-                  } catch (Exception ignored) {
-                    if (img != null) img.close();
-                  }
-                },
-                workerHandler);
-
-            vd =
-                proj.createVirtualDisplay(
-                    "npos-capture",
-                    width,
-                    height,
-                    dpi,
-                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                    reader.getSurface(),
-                    null,
-                    workerHandler);
-
-            long deadline =
-                System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(Math.max(800L, timeoutMs));
-            Bitmap chosen = null;
-            // First VirtualDisplay frames are often black — poll until a usable frame.
-            while (System.nanoTime() < deadline) {
-              Image image = latest.getAndSet(null);
-              if (image != null) {
-                Bitmap bmp;
-                try {
-                  bmp = imageToBitmap(image);
-                } finally {
-                  image.close();
+    // Run off the MediaProjection callback HandlerThread. Polling+sleep on that same
+    // looper used to starve ImageReader callbacks → permanent no_usable_frame.
+    new Thread(
+            () -> {
+              try {
+                MediaProjection proj;
+                synchronized (LOCK) {
+                  proj = projection;
                 }
-                if (bmp != null) {
-                  if (!isMostlyBlackOrEmpty(bmp)) {
-                    chosen = bmp;
-                    break;
-                  }
-                  bmp.recycle();
+                if (proj == null) {
+                  latch.countDown();
+                  return;
                 }
+                DisplayMetrics metrics = new DisplayMetrics();
+                WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
+                if (wm != null && wm.getDefaultDisplay() != null) {
+                  wm.getDefaultDisplay().getRealMetrics(metrics);
+                }
+                int width = Math.max(1, metrics.widthPixels);
+                int height = Math.max(1, metrics.heightPixels);
+                int dpi = Math.max(160, metrics.densityDpi);
+
+                // Cap memory: still sharp for BO (matches ScreenCapture MAX_EDGE path later).
+                int maxEdge = 1920;
+                int edge = Math.max(width, height);
+                if (edge > maxEdge) {
+                  float s = maxEdge / (float) edge;
+                  width = Math.max(1, Math.round(width * s));
+                  height = Math.max(1, Math.round(height * s));
+                }
+
+                Bitmap chosen =
+                    grabUsableFrame(proj, width, height, dpi, Math.max(1200L, timeoutMs));
+                if (chosen == null && (width > 720 || height > 720)) {
+                  // Some old POS firmwares only mirror smaller VirtualDisplays.
+                  int hw = Math.max(1, width / 2);
+                  int hh = Math.max(1, height / 2);
+                  chosen = grabUsableFrame(proj, hw, hh, dpi, 1500L);
+                }
+                if (chosen == null) {
+                  throw new IllegalStateException(
+                      "no_usable_frame · api=" + Build.VERSION.SDK_INT);
+                }
+                out.set(chosen);
+              } catch (Exception e) {
+                err.set(e);
+              } finally {
+                latch.countDown();
               }
-              try {
-                Thread.sleep(40L);
-              } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                break;
-              }
-            }
-            if (chosen == null) throw new IllegalStateException("no_usable_frame");
-            out.set(chosen);
-          } catch (Exception e) {
-            err.set(e);
-          } finally {
-            if (vd != null) {
-              try {
-                vd.release();
-              } catch (Exception ignored) {
-                /* ignore */
-              }
-            }
-            if (reader != null) {
-              try {
-                reader.setOnImageAvailableListener(null, null);
-                reader.close();
-              } catch (Exception ignored) {
-                /* ignore */
-              }
-            }
-            latch.countDown();
-          }
-        });
+            },
+            "npos-vd-grab")
+        .start();
     try {
-      if (!latch.await(timeoutMs + 1500L, TimeUnit.MILLISECONDS)) {
+      if (!latch.await(timeoutMs + 2500L, TimeUnit.MILLISECONDS)) {
         return null;
       }
     } catch (InterruptedException e) {
@@ -299,6 +245,109 @@ public final class CaptureProjectionService extends Service {
     return out.get();
   }
 
+  /**
+   * Create a VirtualDisplay and poll {@link ImageReader#acquireLatestImage()} on this thread.
+   * Do not deliver ImageReader callbacks onto a Handler that this method blocks.
+   */
+  private Bitmap grabUsableFrame(
+      MediaProjection proj, int width, int height, int dpi, long timeoutMs) {
+    VirtualDisplay vd = null;
+    ImageReader reader = null;
+    try {
+      reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 3);
+      int flags =
+          DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR
+              | DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
+      vd =
+          proj.createVirtualDisplay(
+              "npos-capture",
+              width,
+              height,
+              dpi,
+              flags,
+              reader.getSurface(),
+              null,
+              null);
+
+      // Let the mirror attach before polling.
+      try {
+        Thread.sleep(180L);
+      } catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
+        return null;
+      }
+
+      long deadline =
+          System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(Math.max(600L, timeoutMs));
+      Bitmap chosen = null;
+      int saw = 0;
+      int rejected = 0;
+      while (System.nanoTime() < deadline) {
+        Image image = null;
+        try {
+          image = reader.acquireLatestImage();
+          if (image != null) {
+            saw++;
+            Bitmap bmp = imageToBitmap(image);
+            if (bmp != null) {
+              if (!isMostlyBlackOrEmpty(bmp)) {
+                chosen = bmp;
+                break;
+              }
+              rejected++;
+              bmp.recycle();
+            }
+          }
+        } catch (Exception ignored) {
+          /* keep polling */
+        } finally {
+          if (image != null) {
+            try {
+              image.close();
+            } catch (Exception ignored) {
+              /* ignore */
+            }
+          }
+        }
+        try {
+          Thread.sleep(40L);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
+      if (chosen == null && saw > 0) {
+        OpsLogger.warn(
+            this,
+            "display",
+            "แคปจอ · เฟรม VirtualDisplay ใช้ไม่ได้",
+            "saw=" + saw + " rejectBlack=" + rejected + " " + width + "x" + height);
+      }
+      return chosen;
+    } catch (Exception e) {
+      OpsLogger.warn(
+          this,
+          "display",
+          "แคปจอ · สร้าง VirtualDisplay ไม่สำเร็จ",
+          e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+      return null;
+    } finally {
+      if (vd != null) {
+        try {
+          vd.release();
+        } catch (Exception ignored) {
+          /* ignore */
+        }
+      }
+      if (reader != null) {
+        try {
+          reader.close();
+        } catch (Exception ignored) {
+          /* ignore */
+        }
+      }
+    }
+  }
 
   /** Reject empty / first-frame black mirrors so we keep waiting for a real UI frame. */
   private static boolean isMostlyBlackOrEmpty(Bitmap bmp) {
@@ -338,9 +387,12 @@ public final class CaptureProjectionService extends Service {
     int rowStride = planes[0].getRowStride();
     int width = image.getWidth();
     int height = image.getHeight();
+    if (pixelStride <= 0) return null;
     int rowPadding = rowStride - pixelStride * width;
     Bitmap bitmap =
-        Bitmap.createBitmap(width + rowPadding / pixelStride, height, Bitmap.Config.ARGB_8888);
+        Bitmap.createBitmap(
+            width + Math.max(0, rowPadding / pixelStride), height, Bitmap.Config.ARGB_8888);
+    buffer.rewind();
     bitmap.copyPixelsFromBuffer(buffer);
     if (rowPadding == 0) return bitmap;
     Bitmap cropped = Bitmap.createBitmap(bitmap, 0, 0, width, height);
