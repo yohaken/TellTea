@@ -119,6 +119,43 @@ export function isPeriodDismissed(
   return (template.dismissedPeriodKeys || []).includes(periodKey);
 }
 
+/** รวม period ที่เพิ่ง dismiss ฝั่ง client — กัน sync สร้างซ้ำก่อน snapshot ตามทัน */
+export function mergeDismissedPeriodKeys(
+  template: TaskTemplate,
+  extraKeys: string[],
+): TaskTemplate {
+  if (!extraKeys.length) return template;
+  const set = new Set([...(template.dismissedPeriodKeys || []), ...extraKeys.map(String)]);
+  return { ...template, dismissedPeriodKeys: [...set] };
+}
+
+/**
+ * ใส่ dismissedPeriodKeys จากบล็อก session ลงเทมเพลตก่อน sync
+ * blockKeys รูปแบบ `${templateId}:${periodKey}`
+ */
+export function applyDismissBlocksToTemplates(
+  templates: TaskTemplate[],
+  blockKeys: Iterable<string>,
+): TaskTemplate[] {
+  const byTpl = new Map<string, string[]>();
+  for (const raw of blockKeys) {
+    const s = String(raw || "");
+    const i = s.indexOf(":");
+    if (i <= 0) continue;
+    const tid = s.slice(0, i);
+    const pk = s.slice(i + 1);
+    if (!tid || !pk) continue;
+    const arr = byTpl.get(tid) || [];
+    arr.push(pk);
+    byTpl.set(tid, arr);
+  }
+  if (!byTpl.size) return templates;
+  return templates.map((tpl) => {
+    const extra = byTpl.get(tpl.id);
+    return extra?.length ? mergeDismissedPeriodKeys(tpl, extra) : tpl;
+  });
+}
+
 export function computeCompletedKind(
   dueDate: number,
   completedAt: number,

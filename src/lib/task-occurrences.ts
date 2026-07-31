@@ -330,11 +330,12 @@ export async function dismissAndDeleteOpenTaskOccurrences(
 export async function deactivateTaskTemplateClearingOpen(
   templateId: string,
   occurrences: TaskOccurrence[],
-): Promise<void> {
+): Promise<{ deletedIds: string[]; periodKeys: string[] }> {
   const tid = String(templateId || "").trim();
   if (!tid) throw new Error("ไม่พบกติกางาน");
   const open = collectOpenTaskOccurrences(tid, occurrences);
   const periodKeys = [...new Set(open.map((o) => o.periodKey).filter(Boolean))];
+  const ids = open.map((o) => o.id);
   const batch = writeBatch(getDb());
   const patch: Record<string, unknown> = {
     active: false,
@@ -344,10 +345,11 @@ export async function deactivateTaskTemplateClearingOpen(
     patch.dismissedPeriodKeys = arrayUnion(...periodKeys);
   }
   batch.update(doc(getDb(), "taskTemplates", tid), patch);
-  for (const o of open) {
-    batch.delete(doc(getDb(), "taskOccurrences", o.id));
+  for (const id of ids) {
+    batch.delete(doc(getDb(), "taskOccurrences", id));
   }
   await batch.commit();
+  return { deletedIds: ids, periodKeys };
 }
 
 export async function syncPendingOccurrencesFromTemplate(
