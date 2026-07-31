@@ -80,14 +80,13 @@ import { saveShiftClose } from "@/lib/shift-close";
 import {
   computeLiveShiftProgress,
   computeShiftProgress,
-  computeShiftQuality,
   closingItemsFromCatalog,
   getCurrentShiftId,
   indexChecklistRecordsByDayShift,
   openingItemsFromCatalog,
   ownerQualityHints,
-  hasOtProcessOrderIssue,
-  staffProcessOrderHint,
+  otIncompleteWarnTitle,
+  shouldShowOtIncompleteWarn,
   todayShiftBannerLabel,
 } from "@/lib/shift-session";
 import {
@@ -641,7 +640,6 @@ function OtEntryForm({
     ],
   );
   const ownerHints = isOwner ? ownerQualityHints(liveProgress.quality) : [];
-  const processOrderHint = staffProcessOrderHint(liveProgress.quality);
 
   const formTitle = locked
     ? "ดูรายการ (จ่ายแล้ว)"
@@ -980,25 +978,19 @@ function OtEntryForm({
             {checkLoading ? (
               <p className="muted form-hint-inline">กำลังตรวจสอบ SmartCheck...</p>
             ) : checkSession ? (
-              processOrderHint ? (
-                <div className="check-existing-banner check-existing-banner--warn">
-                  <AlertTriangle size={16} aria-hidden />
-                  <span>
-                    SmartCheck กะนี้บันทึกแล้ว ({formatDateTimeShortBe(checkSession.submittedAt)}) —{" "}
-                    {checkSession.failed ? `${checkSession.failed} ไม่ผ่าน` : "ผ่าน 100%"}
-                    <br />
-                    <strong>หมายเหตุ:</strong> {processOrderHint}
-                  </span>
-                </div>
-              ) : (
-                <div className="check-existing-banner check-existing-banner--ok">
-                  <CheckCircle2 size={16} aria-hidden />
-                  <span>
-                    SmartCheck กะนี้เช็คแล้ว ({formatDateTimeShortBe(checkSession.submittedAt)}) —{" "}
-                    {checkSession.failed ? `${checkSession.failed} ไม่ผ่าน` : "ผ่าน 100%"} · ไม่ต้องเช็คซ้ำ
-                  </span>
-                </div>
-              )
+              <div className="check-existing-banner check-existing-banner--ok">
+                <CheckCircle2 size={16} aria-hidden />
+                <span>
+                  SmartCheck / SOP กะนี้เช็คแล้ว ({formatDateTimeShortBe(checkSession.submittedAt)}) —{" "}
+                  {checkSession.failed ? `${checkSession.failed} ไม่ผ่าน` : "ผ่าน 100%"} · ไม่ต้องเช็คซ้ำ
+                  {ownerHints.length ? (
+                    <>
+                      <br />
+                      <span className="muted">เจ้าของ: {ownerHints.join(" · ")}</span>
+                    </>
+                  ) : null}
+                </span>
+              </div>
             ) : (
               <div className="check-existing-banner">
                 <AlertTriangle size={16} aria-hidden />
@@ -1536,9 +1528,8 @@ function OtSheetTable({
                   recordsByDayShift: checkRecordsByDayShift,
                 });
                 const slotStatus = slotProgress.status;
-                const slotHints = isOwner ? ownerQualityHints(slotProgress.quality) : [];
-                const processIssue = hasOtProcessOrderIssue(slotProgress.quality);
-                const processHint = staffProcessOrderHint(slotProgress.quality);
+                const incompleteWarn = shouldShowOtIncompleteWarn(slotProgress);
+                const incompleteTitle = otIncompleteWarnTitle(slotProgress);
                 const c = row ? computeOtBonus(row) : null;
                 const statusClass =
                   row?.status === "paid"
@@ -1605,10 +1596,10 @@ function OtSheetTable({
                                 {statusPill}
                               </span>
                             ) : null}
-                            {processIssue ? (
+                            {incompleteWarn ? (
                               <span
                                 className="ot-owner-hint-pill"
-                                title={processHint || slotHints.join(" · ")}
+                                title={incompleteTitle}
                               >
                                 ⚠
                               </span>
@@ -1753,8 +1744,6 @@ function OtCardList({
       {entries.map((row) => {
         const c = computeOtBonus(row);
         const statusClass = row.status === "paid" ? "is-paid" : "is-pending";
-        const quality = computeShiftQuality(row);
-        const processHint = staffProcessOrderHint(quality);
         const workerLabel =
           resolveWorkerDisplayNames(row.workerIds, row.workerNames, workers)
             .filter(Boolean)
@@ -1821,11 +1810,6 @@ function OtCardList({
             <div className="ot-worker-cell">
               <div className="ot-worker-names">{workerLabel}</div>
               <div className="ot-worker-meta">
-                {processHint ? (
-                  <span className="ot-owner-hint-pill" title={processHint}>
-                    ⚠
-                  </span>
-                ) : null}
                 <EntryPhotoIndicator
                   imageUrls={getOtImageUrls(row)}
                   label={`${formatDateShortBe(row.date)} ${labelOtShift(row.shift)}`}
