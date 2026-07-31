@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 const version = read("src/lib/version.ts");
-assert.match(version, /APP_BUILD = 525/);
+assert.match(version, /APP_BUILD = 526/);
 
 const qw = read("src/lib/query-window.ts");
 assert.match(qw, /export function daysAgoMs/);
