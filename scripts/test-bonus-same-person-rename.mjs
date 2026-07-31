@@ -13,7 +13,7 @@ const bonus = read("src/lib/bonus.ts");
 const emp = read("src/lib/employees.ts");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 526/);
+assert.match(version, /APP_BUILD = 527/);
 assert.match(bonus, /employeeMatchesName/);
 assert.match(bonus, /คีย์ด้วย employeeId/);
 assert.match(bonus, /ensureByEmployee/);

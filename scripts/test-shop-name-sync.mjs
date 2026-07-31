@@ -17,7 +17,7 @@ const ot = read("src/app/ot/page.tsx");
 const staffPage = read("src/app/staff/page.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 526/);
+assert.match(version, /APP_BUILD = 527/);
 assert.match(emp, /planEmployeeIdentityPatch/);
 assert.match(emp, /syncLinkedStaffDisplayName/);
 assert.match(emp, /mergePreviousNames/);
