@@ -45,6 +45,9 @@ assert.match(policySrc, /evidenceReadyToSave/);
 assert.match(policySrc, /สลิปโอน \+ แชท/);
 assert.match(policySrc, /ใบกำกับภาษี/);
 assert.match(policySrc, /สรรพากร/);
+assert.match(policySrc, /goods_only|isGoodsOnlySignal/);
+assert.match(policySrc, /ถ่ายแค่สินค้า/);
+assert.match(policySrc, /do not dismiss forever|ทุกครั้ง|always-on/i);
 
 assert.match(stepsSrc, /EvidenceDocNotice/);
 assert.match(stepsSrc, /evidence-doc-notice/);
@@ -105,22 +108,33 @@ function isSlipOnlySignal(opts) {
   return /สลิป/.test(reason) && !/ใบกำกับ|ใบเสร็จ|tax\s*invoice/i.test(reason);
 }
 
+function isGoodsOnlySignal(opts) {
+  if (opts.goodsOnly === true) return true;
+  if (opts.hasVat === true) return false;
+  const kind = String(opts.docKind || "").toLowerCase();
+  if (kind === "tax_invoice" || kind === "bank_slip") return false;
+  if (kind === "other") return true;
+  return false;
+}
+
+function evidenceWeakKind(opts) {
+  if (isSlipOnlySignal(opts)) return "slip_only";
+  if (isGoodsOnlySignal(opts)) return "goods_only";
+  return "none";
+}
+
 function evidenceNoticeCopy(opts) {
   const policy = evidenceDocPolicy(opts.description);
-  const slipOnly =
-    policy === "purchase" &&
-    isSlipOnlySignal({
-      slipOnly: opts.slipOnly,
-      vatReason: opts.vatReason,
-      docKind: opts.docKind,
-    });
+  const weak = policy === "purchase" ? evidenceWeakKind(opts) : "none";
   if (policy === "staff_transfer") {
-    return { policy, escalate: false, titleIncludes: "พนักงาน" };
+    return { policy, escalate: false, weakKind: "none", titleIncludes: "พนักงาน" };
   }
   return {
     policy,
-    escalate: slipOnly,
-    titleIncludes: slipOnly ? "สลิป" : "เอกสาร",
+    escalate: weak !== "none",
+    weakKind: weak,
+    titleIncludes:
+      weak === "slip_only" ? "สลิป" : weak === "goods_only" ? "สินค้า" : "เอกสาร",
   };
 }
 
@@ -145,6 +159,22 @@ assert.equal(
   evidenceNoticeCopy({ description: "ค่าแรง", slipOnly: true }).escalate,
   false,
 );
+assert.equal(
+  evidenceNoticeCopy({ description: "ซื้อแก้ว", goodsOnly: true }).weakKind,
+  "goods_only",
+);
+assert.equal(
+  evidenceNoticeCopy({ description: "ซื้อแก้ว", docKind: "other" }).weakKind,
+  "goods_only",
+);
+assert.equal(
+  evidenceNoticeCopy({
+    description: "ซื้อแก้ว",
+    docKind: "other",
+    hasVat: true,
+  }).weakKind,
+  "none",
+);
 assert.equal(evidenceReadyToSave({ required: true, acked: false }), false);
 assert.equal(evidenceReadyToSave({ required: true, acked: true }), true);
 
@@ -168,6 +198,27 @@ const single = merge.mergeExtractResults([
 ]);
 assert.equal(single.slipOnly, true);
 assert.equal(single.docKind, "bank_slip");
+assert.equal(single.goodsOnly, false);
+
+const goods = merge.mergeExtractResults([
+  {
+    docKind: "other",
+    date: "2026-07-01",
+    description: "แก้ว",
+    amountOut: null,
+    type: "cogs",
+    note: "",
+    reason: "รูปสินค้า",
+    hasVat: false,
+    vatInput: null,
+    vatBase: null,
+    vatInvoiceNo: "",
+    vatSeenOnBill: false,
+    vatReason: "ไม่มีบรรทัดภาษี",
+  },
+]);
+assert.equal(goods.goodsOnly, true);
+assert.equal(goods.slipOnly, false);
 
 const mixed = merge.mergeExtractResults([
   {

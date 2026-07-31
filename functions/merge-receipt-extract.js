@@ -79,6 +79,12 @@ function mergeExtractResults(results) {
   }
 
   const slipOnly = bankOnes.length > 0 && taxOnes.length === 0 && !vatFrom;
+  const goodsOnly =
+    !slipOnly &&
+    taxOnes.length === 0 &&
+    !vatFrom &&
+    bankOnes.length === 0 &&
+    rows.every((r) => String(r.docKind || "other") === "other");
 
   return {
     date: String(descFrom.date || amountFrom.date || primary.date || ""),
@@ -99,12 +105,15 @@ function mergeExtractResults(results) {
         ? "tax_invoice"
         : String(primary.docKind || "other"),
     slipOnly,
+    goodsOnly,
   };
 }
 
 function publicFields(row) {
   const docKind = String(row.docKind || "other");
+  const hasVat = Boolean(row.hasVat && row.vatInput != null);
   const slipOnly = docKind === "bank_slip";
+  const goodsOnly = docKind === "other" && !hasVat;
   return {
     date: String(row.date || ""),
     description: String(row.description || ""),
@@ -112,7 +121,7 @@ function publicFields(row) {
     type: String(row.type || "อื่นๆ"),
     note: String(row.note || ""),
     reason: String(row.reason || ""),
-    hasVat: Boolean(row.hasVat && row.vatInput != null),
+    hasVat,
     vatInput: row.vatInput ?? null,
     vatBase: row.vatBase ?? null,
     vatInvoiceNo: String(row.vatInvoiceNo || ""),
@@ -120,6 +129,7 @@ function publicFields(row) {
     vatReason: String(row.vatReason || "").slice(0, 80),
     docKind,
     slipOnly,
+    goodsOnly,
   };
 }
 

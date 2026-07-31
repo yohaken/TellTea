@@ -231,8 +231,10 @@ export function EvidenceDocNotice({
   acked,
   onAckChange,
   slipOnly = false,
+  goodsOnly = false,
   vatReason = "",
   docKind = "",
+  hasVat = false,
   disabled,
   idPrefix = "evidence-doc",
 }: {
@@ -240,16 +242,20 @@ export function EvidenceDocNotice({
   acked: boolean;
   onAckChange: (acked: boolean) => void;
   slipOnly?: boolean;
+  goodsOnly?: boolean;
   vatReason?: string;
   docKind?: string;
+  hasVat?: boolean;
   disabled?: boolean;
   idPrefix?: string;
 }) {
   const copy = evidenceNoticeCopy({
     description,
     slipOnly,
+    goodsOnly,
     vatReason,
     docKind,
+    hasVat,
   });
   const checkboxId = `${idPrefix}-ack`;
 
@@ -263,6 +269,7 @@ export function EvidenceDocNotice({
       role="group"
       aria-label="หลักฐานเอกสารรายการจ่าย"
       data-policy={copy.policy}
+      data-weak={copy.weakKind}
     >
       <p className="evidence-doc-title">{copy.title}</p>
       <p className="evidence-doc-body">{copy.body}</p>

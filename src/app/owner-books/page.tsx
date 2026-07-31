@@ -673,6 +673,7 @@ function OwnerEntryModal({
   );
   const [aiVatReason, setAiVatReason] = useState("");
   const [extractSlipOnly, setExtractSlipOnly] = useState(false);
+  const [extractGoodsOnly, setExtractGoodsOnly] = useState(false);
   const [extractDocKind, setExtractDocKind] = useState("");
   const [evidenceDocAck, setEvidenceDocAck] = useState(false);
   const [pendingAiVat, setPendingAiVat] = useState<number | null>(null);
@@ -746,6 +747,7 @@ function OwnerEntryModal({
     setPendingAiVat(null);
     setAiVatReason("");
     setExtractSlipOnly(false);
+    setExtractGoodsOnly(false);
     setExtractDocKind("");
     setEvidenceDocAck(false);
     setExtractStatus("idle");
@@ -792,6 +794,7 @@ function OwnerEntryModal({
     setPendingAiVat(null);
     setAiVatReason("");
     setExtractSlipOnly(false);
+    setExtractGoodsOnly(false);
     setExtractDocKind("");
     setEvidenceDocAck(false);
     setExtractStatus("idle");
@@ -870,6 +873,7 @@ function OwnerEntryModal({
       // VAT: AI อ่านจากบิลก่อน — ไม่คำนวณ ×7/107
       setAiVatReason(result.vatReason || result.reason || "");
       setExtractSlipOnly(Boolean(result.slipOnly));
+      setExtractGoodsOnly(Boolean(result.goodsOnly));
       setExtractDocKind(String(result.docKind || ""));
       const aiVat =
         result.hasVat && result.vatInput != null && result.vatInput > 0
@@ -1174,8 +1178,10 @@ function OwnerEntryModal({
               acked={evidenceDocAck}
               onAckChange={setEvidenceDocAck}
               slipOnly={extractSlipOnly}
+              goodsOnly={extractGoodsOnly}
               vatReason={aiVatReason}
               docKind={extractDocKind}
+              hasVat={hasVat}
               disabled={busy}
               idPrefix="ob-evidence"
             />

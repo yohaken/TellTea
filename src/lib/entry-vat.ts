@@ -141,6 +141,8 @@ export type AiVatExtract = {
   docKind: string;
   /** มีแต่สลิปโอน — ยังไม่มีใบกำกับ/ใบเสร็จ */
   slipOnly: boolean;
+  /** มีแต่รูปสินค้า/แพ็กกิ้ง — ไม่มีใบเสร็จ/สลิป */
+  goodsOnly: boolean;
 };
 
 export function normalizeAiVatExtract(raw: {
@@ -152,6 +154,7 @@ export function normalizeAiVatExtract(raw: {
   vatReason?: unknown;
   docKind?: unknown;
   slipOnly?: unknown;
+  goodsOnly?: unknown;
 }): AiVatExtract {
   const vatInputRaw = Number(raw.vatInput);
   const vatInput =
@@ -178,6 +181,11 @@ export function normalizeAiVatExtract(raw: {
     raw.slipOnly === true ||
     raw.slipOnly === "true" ||
     docKind === "bank_slip";
+  const goodsOnly =
+    !slipOnly &&
+    (raw.goodsOnly === true ||
+      raw.goodsOnly === "true" ||
+      (docKind === "other" && !(hasVat && vatInput != null)));
   return {
     hasVat: Boolean(hasVat && vatInput != null),
     vatInput,
@@ -187,5 +195,6 @@ export function normalizeAiVatExtract(raw: {
     vatReason: String(raw.vatReason || "").trim().slice(0, 80),
     docKind: docKind || (slipOnly ? "bank_slip" : ""),
     slipOnly: Boolean(slipOnly),
+    goodsOnly: Boolean(goodsOnly),
   };
 }
