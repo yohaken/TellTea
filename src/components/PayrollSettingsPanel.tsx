@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { listActiveEmployees, updateEmployee, type Employee } from "@/lib/employees";
+import { listActiveEmployeesWithPay, updateEmployee, type Employee } from "@/lib/employees";
 import {
   DEFAULT_PAYROLL_SCHEDULE,
   salaryAmountForSplit,
@@ -175,7 +175,7 @@ export function PayrollSettingsPanel({
         advanceBalance: advNum,
         skipGroupPayroll: draft.skipGroupPayroll,
       });
-      const refreshed = await listActiveEmployees();
+      const refreshed = await listActiveEmployeesWithPay();
       onEmployeesChange?.(refreshed);
       onInfo?.(
         [

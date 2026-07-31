@@ -61,6 +61,11 @@ function mapStockDoc(id: string, data: Record<string, unknown>): StockItem {
   };
 }
 
+/** ซ่อนต้นทุนฝั่ง client สำหรับพนักงาน — rules ยังอ่าน doc ได้จนกว่าจะแยก collection */
+export function redactStockUnitCosts(items: StockItem[]): StockItem[] {
+  return items.map((item) => (item.unitCost ? { ...item, unitCost: 0 } : item));
+}
+
 function mapMovementDoc(id: string, data: Record<string, unknown>): StockMovement {
   return {
     id,

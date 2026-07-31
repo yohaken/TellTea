@@ -20,6 +20,7 @@ type Props = {
   target: StaffReadinessEditTarget;
   employees: Employee[];
   busy: boolean;
+  hideElevated?: boolean;
   onClose: () => void;
   onSave: (input: {
     email: string;
@@ -33,6 +34,7 @@ export function StaffReadinessEditModal({
   target,
   employees,
   busy,
+  hideElevated = false,
   onClose,
   onSave,
 }: Props) {
@@ -136,7 +138,12 @@ export function StaffReadinessEditModal({
           </div>
           <div className="field field-permissions">
             <span className="field-label">สิทธิ์การใช้งาน</span>
-            <PermissionPicker value={perms} onChange={setPerms} disabled={busy} />
+            <PermissionPicker
+              value={perms}
+              onChange={setPerms}
+              disabled={busy}
+              hideElevated={hideElevated}
+            />
           </div>
           <div className="btn-row" style={{ marginTop: "0.75rem" }}>
             <button type="button" className="ghost-btn" onClick={onClose} disabled={busy}>

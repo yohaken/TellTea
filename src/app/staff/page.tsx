@@ -10,7 +10,8 @@ import {
   deleteEmployee,
   employeeLinkLabel,
   employeesForLink,
-  listEmployees,
+  listEmployeesWithPay,
+  migrateAllLegacyEmployeePay,
   updateEmployee,
   type Employee,
 } from "@/lib/employees";
@@ -25,6 +26,7 @@ import type { StaffMember } from "@/lib/types";
 import {
   DEFAULT_STAFF_PERMISSIONS,
   can,
+  clampPermissionsForNonOwner,
   normalizePermissions,
   type StaffPermissions,
 } from "@/lib/permissions";
@@ -93,7 +95,12 @@ function StaffView() {
     let staffOk = true;
 
     try {
-      emps = await listEmployees();
+      try {
+        await migrateAllLegacyEmployeePay();
+      } catch {
+        /* best-effort — ต้องมีสิทธิ์เขียน employeePay */
+      }
+      emps = await listEmployeesWithPay();
     } catch (err) {
       employeesOk = false;
       errors.push(mapFirestoreError(err, "โหลดรายชื่อร้านไม่สำเร็จ"));
@@ -196,11 +203,12 @@ function StaffView() {
       const linkedName = linkEmployeeId
         ? employees.find((e) => e.id === linkEmployeeId)?.name
         : undefined;
+      const safePerms = isOwner ? perms : clampPermissionsForNonOwner(perms);
       await upsertStaffWithLink({
         email: email.trim() || undefined,
         phone: phone.trim() || undefined,
         role: "staff",
-        permissions: perms,
+        permissions: safePerms,
         employeeId: linkEmployeeId || undefined,
       });
       const account = email.trim() || phone.trim();
@@ -253,7 +261,8 @@ function StaffView() {
     setBusy(true);
     setError(null);
     try {
-      await updateStaffPermissions(member.id, next);
+      const safe = isOwner ? next : clampPermissionsForNonOwner(next);
+      await updateStaffPermissions(member.id, safe);
       await reload();
       await refreshStaff();
       setEditingStaffId(null);
@@ -283,11 +292,14 @@ function StaffView() {
       const linkedName = input.linkEmployeeId
         ? employees.find((e) => e.id === input.linkEmployeeId)?.name
         : undefined;
+      const safePerms = isOwner
+        ? input.permissions
+        : clampPermissionsForNonOwner(input.permissions);
       await upsertStaffWithLink({
         email: input.email.trim() || undefined,
         phone: input.phone.trim() || undefined,
         role: "staff",
-        permissions: input.permissions,
+        permissions: safePerms,
         employeeId: input.linkEmployeeId || row.employeeId || undefined,
       });
       const account = input.email.trim() || input.phone.trim();
@@ -349,6 +361,7 @@ function StaffView() {
         target={editTarget}
         employees={employees}
         busy={busy}
+        hideElevated={!isOwner}
         onClose={() => setEditTarget(null)}
         onSave={saveReadinessEdit}
       />
@@ -449,7 +462,12 @@ function StaffView() {
           </div>
           <div className="field field-permissions">
             <span className="field-label">สิทธิ์การใช้งาน</span>
-            <PermissionPicker value={perms} onChange={setPerms} disabled={busy} />
+            <PermissionPicker
+              value={perms}
+              onChange={setPerms}
+              disabled={busy}
+              hideElevated={!isOwner}
+            />
           </div>
           <button type="submit" className="primary-btn" disabled={busy}>
             {busy ? "กำลังบันทึก..." : "เพิ่ม / อัปเดตบัญชี"}
@@ -517,6 +535,7 @@ function StaffView() {
                   <MemberPermEditor
                     initial={memberPerms}
                     busy={busy}
+                    hideElevated={!isOwner}
                     onSave={(next) => void saveMemberPerms(member, next)}
                   />
                 ) : null}
@@ -747,16 +766,23 @@ function EmployeeRosterRow({
 function MemberPermEditor({
   initial,
   busy,
+  hideElevated = false,
   onSave,
 }: {
   initial: StaffPermissions;
   busy: boolean;
+  hideElevated?: boolean;
   onSave: (next: StaffPermissions) => void;
 }) {
   const [perms, setPerms] = useState(initial);
   return (
     <div className="permission-editor">
-      <PermissionPicker value={perms} onChange={setPerms} disabled={busy} />
+      <PermissionPicker
+        value={perms}
+        onChange={setPerms}
+        disabled={busy}
+        hideElevated={hideElevated}
+      />
       <button
         type="button"
         className="primary-btn"

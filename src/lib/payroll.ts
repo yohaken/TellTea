@@ -351,13 +351,30 @@ export async function savePayrollSchedule(
 export function subscribePayrollItems(
   onData: (items: PayrollItem[]) => void,
   onError?: (err: Error) => void,
-  opts?: { since?: number },
+  opts?: { since?: number; employeeId?: string },
 ): Unsubscribe {
   const since = opts?.since;
-  const q =
-    since != null
-      ? query(payrollCol(), where("dueDate", ">=", since), orderBy("dueDate", "desc"))
-      : query(payrollCol(), orderBy("dueDate", "desc"));
+  const employeeId = (opts?.employeeId || "").trim();
+  // พนักงานต้องกรอง employeeId — rules อนุญาต list เฉพาะเมื่อ query จำกัดแค่ของตัวเอง
+  let q;
+  if (employeeId && since != null) {
+    q = query(
+      payrollCol(),
+      where("employeeId", "==", employeeId),
+      where("dueDate", ">=", since),
+      orderBy("dueDate", "desc"),
+    );
+  } else if (employeeId) {
+    q = query(
+      payrollCol(),
+      where("employeeId", "==", employeeId),
+      orderBy("dueDate", "desc"),
+    );
+  } else if (since != null) {
+    q = query(payrollCol(), where("dueDate", ">=", since), orderBy("dueDate", "desc"));
+  } else {
+    q = query(payrollCol(), orderBy("dueDate", "desc"));
+  }
   return onSnapshot(
     q,
     (snap) => {

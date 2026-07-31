@@ -60,8 +60,71 @@ service cloud.firestore {
       return hasEmail() ? authEmail() : authPhone();
     }
 
+    /** employeeId ที่ผูกกับบัญชี staff — ใช้จำกัดคิวจ่าย/ข้อมูลจ่ายของตัวเอง */
+    function staffEmployeeId() {
+      return isStaff() && get(staffPath()).data.keys().hasAny(['employeeId'])
+        ? get(staffPath()).data.employeeId
+        : '';
+    }
+
+    function employeeDocPath(empId) {
+      return /databases/$(database)/documents/employees/$(empId);
+    }
+
+    /** อ่าน employeePay: เจ้าของ / คนจ่ายทั้งร้าน / ของตัวเอง */
+    function canReadEmployeePay(empId) {
+      return isOwner() || isOwnerEmail() || hasPerm('payrollPay')
+        || (isStaff() && staffEmployeeId() == empId)
+        || (isStaff() && exists(employeeDocPath(empId))
+            && (
+              (get(employeeDocPath(empId)).data.keys().hasAny(['linkedStaffId'])
+                && get(employeeDocPath(empId)).data.linkedStaffId == resolvedStaffId())
+              || (hasEmail()
+                  && get(employeeDocPath(empId)).data.keys().hasAny(['linkedEmail'])
+                  && get(employeeDocPath(empId)).data.linkedEmail == authEmail())
+              || (hasPhone()
+                  && get(employeeDocPath(empId)).data.keys().hasAny(['linkedPhone'])
+                  && get(employeeDocPath(empId)).data.linkedPhone == authPhone())
+            ));
+    }
+
+    function permissionsHaveElevated(data) {
+      return data.keys().hasAny(['permissions'])
+        && (
+          data.permissions.ownerBooks == true
+          || data.permissions.pnl == true
+          || data.permissions.transferIn == true
+          || data.permissions.exportData == true
+          || data.permissions.staffManage == true
+          || data.permissions.payrollPay == true
+        );
+    }
+
+    function staffHubCreateOk() {
+      return isOwner() || isOwnerEmail()
+        || (hasPerm('staffManage')
+            && request.resource.data.role == 'staff'
+            && !permissionsHaveElevated(request.resource.data));
+    }
+
+    function staffHubUpdateOk(targetStaffId) {
+      let before = resource.data;
+      let after = request.resource.data;
+      return after.createdAt == before.createdAt
+        && (
+          isOwner() || isOwnerEmail()
+          || (
+            hasPerm('staffManage')
+            && before.role == 'staff'
+            && after.role == 'staff'
+            && targetStaffId != resolvedStaffId()
+            && !permissionsHaveElevated(after)
+          )
+        );
+    }
+
     // Fine-grained permissions on staff doc; owners always pass.
-    // Staff without permissions map: ledger+stock only (legacy default).
+    // Staff without permissions map: daily modules only (legacy default).
     function hasPerm(p) {
       return isOwner()
         || (isStaff()
@@ -370,14 +433,15 @@ service cloud.firestore {
     match /staff/{staffId} {
       allow get: if signedIn() && (staffId == resolvedStaffId() || staffHubManage());
       allow list: if staffHubManage();
-      allow create: if staffHubManage()
+      allow create: if staffHubCreateOk()
         || (isOwnerEmail()
             && staffId == authEmail()
             && request.resource.data.email == authEmail()
             && request.resource.data.role == 'owner');
-      allow update: if staffHubManage()
+      allow update: if (staffHubManage() && staffHubUpdateOk(staffId))
         || (signedIn() && staffId == resolvedStaffId() && staffSelfProfileUpdate());
-      allow delete: if staffHubManage();
+      allow delete: if isOwner() || isOwnerEmail()
+        || (hasPerm('staffManage') && resource.data.role == 'staff');
     }
 
     match /staffPhones/{phoneId} {
@@ -406,7 +470,20 @@ service cloud.firestore {
           (request.resource.data.amountIn > 0 && request.resource.data.amountOut == 0 && hasPerm('transferIn'))
           || (request.resource.data.amountOut > 0 && request.resource.data.amountIn == 0)
         ));
-      allow update, delete: if hasPerm('ledger');
+      // พนักงานแก้/ลบได้เฉพาะรายการออกที่ตัวเองสร้าง — โอนเข้าและรายการคนอื่น = เจ้าของ
+      allow update: if hasPerm('ledger') && (
+        isOwner() || isOwnerEmail()
+        || (
+          resource.data.createdBy == actorId()
+          && resource.data.amountIn == 0
+          && request.resource.data.amountIn == 0
+          && request.resource.data.createdBy == resource.data.createdBy
+        )
+      );
+      allow delete: if hasPerm('ledger') && (
+        isOwner() || isOwnerEmail()
+        || (resource.data.createdBy == actorId() && resource.data.amountIn == 0)
+      );
     }
 
     /**
@@ -481,7 +558,12 @@ service cloud.firestore {
 
     /** One tax-evidence photo per doc — keeps ownerBooks/ledger rows small. */
     match /evidencePhotos/{photoId} {
-      allow read: if signedIn();
+      allow read: if isOwner() || isOwnerEmail()
+        || (signedIn() && resource.data.folder in [
+          'ledger-receipts', 'ot-photos', 'bill-notices',
+          'checklist', 'tasks', 'production', 'staff-id'
+        ])
+        || (hasPerm('ownerBooks') && resource.data.folder == 'owner-books');
       allow create: if signedIn()
         && request.resource.data.keys().hasAll([
           'dataUrl', 'contentType', 'fileName', 'folder', 'slotKey', 'createdBy', 'createdAt'
@@ -491,9 +573,17 @@ service cloud.firestore {
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.createdAt is number
         && request.resource.data.folder is string
-        && request.resource.data.slotKey is string;
+        && request.resource.data.slotKey is string
+        && (
+          request.resource.data.folder in [
+            'ledger-receipts', 'ot-photos', 'bill-notices',
+            'checklist', 'tasks', 'production', 'staff-id'
+          ]
+          || ((isOwner() || isOwnerEmail() || hasPerm('ownerBooks'))
+              && request.resource.data.folder == 'owner-books')
+        );
       allow update: if false;
-      allow delete: if isOwner() || resource.data.createdBy == request.auth.uid;
+      allow delete: if isOwner() || isOwnerEmail() || resource.data.createdBy == request.auth.uid;
     }
 
     match /monthlyIncome/{monthId} {
@@ -562,12 +652,15 @@ service cloud.firestore {
     match /stock/{itemId} {
       allow read: if hasPerm('stock');
       allow create, delete: if isOwner();
-      allow update: if hasPerm('stock')
-        && request.resource.data.name is string
-        && request.resource.data.qty is number
-        && request.resource.data.qty >= 0
-        && request.resource.data.minQty is number
-        && request.resource.data.minQty >= 0;
+      // พนักงานปรับยอดได้ — ห้ามเปลี่ยนชื่อ/ต้นทุน (unitCost ยังอยู่ใน doc แต่ UI ซ่อน; ห้ามเขียนทับ)
+      allow update: if isOwner()
+        || (hasPerm('stock')
+            && request.resource.data.name == resource.data.name
+            && request.resource.data.unitCost == resource.data.unitCost
+            && request.resource.data.qty is number
+            && request.resource.data.qty >= 0
+            && request.resource.data.minQty is number
+            && request.resource.data.minQty >= 0);
     }
 
     match /stockMovements/{logId} {
@@ -598,11 +691,32 @@ service cloud.firestore {
       allow delete: if isOwner();
     }
 
-    // ศูนย์รวมรายชื่อพนักงานร้าน — เพิ่มที่เดียว ใช้ร่วมหลายหมวด
+    // ลบ field จ่าย legacy ออกจาก employees หลังย้ายไป employeePay
+    function employeePayMigrateStrip() {
+      return (isOwner() || isOwnerEmail() || hasPerm('payrollPay') || staffHubManage())
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly([
+              'monthlySalary', 'payBank', 'payAccountNo', 'payAccountName',
+              'advanceBalance', 'skipGroupPayroll', 'updatedAt'
+            ]);
+    }
+
+    // ศูนย์รวมรายชื่อพนักงานร้าน — ชื่อ/สถานะ/ลิงก์ (ไม่มีเงินเดือน — อยู่ employeePay)
     match /employees/{id} {
       allow read: if isStaff();
       allow create, delete: if staffHubManage();
-      allow update: if staffHubManage() || employeeSelfLinkUpdate();
+      allow update: if staffHubManage() || employeeSelfLinkUpdate() || employeePayMigrateStrip();
+    }
+
+    /**
+     * เงินเดือน / บัญชีรับโอน / เบิกค้าง — แยกจากรายชื่อร้าน
+     * อ่าน: เจ้าของ · payrollPay · ของตัวเอง · เขียน: เจ้าของ / payrollPay / staffManage (ตั้งค่า)
+     */
+    match /employeePay/{empId} {
+      allow get: if canReadEmployeePay(empId);
+      allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || staffHubManage();
+      allow create, update, delete: if isOwner() || isOwnerEmail() || hasPerm('payrollPay')
+        || staffHubManage();
     }
 
     // ผลิต / โบนัส — พนักงานกรอกแถว · เจ้าของตั้งสินค้า
@@ -751,11 +865,14 @@ service cloud.firestore {
 
     /**
      * คิวจ่ายเงินเดือน + โบนัส — ระบบสร้างรายการรอโอนให้เจ้าของแนบสลิป
-     * อ่าน: มีสิทธิ bonus · สร้าง/แก้/จ่าย: เจ้าของ
+     * อ่านทั้งร้าน: เจ้าของ / payrollPay · พนักงาน(bonus): เฉพาะ employeeId ของตัวเอง (ต้อง query กรอง)
+     * สร้าง/แก้/จ่าย: เจ้าของ
      */
     match /payrollItems/{id} {
-      allow read: if hasPerm('bonus');
-      allow create, update, delete: if isOwner();
+      allow get: if isOwner() || isOwnerEmail() || hasPerm('payrollPay')
+        || (hasPerm('bonus') && resource.data.employeeId == staffEmployeeId());
+      allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm('bonus');
+      allow create, update, delete: if isOwner() || isOwnerEmail();
     }
 
     /** ปิดเดือนโบนัส — snapshot + ล็อกชง/ผลิต */

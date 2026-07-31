@@ -103,6 +103,12 @@ function LedgerView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isOwner = staff?.role === "owner";
+  /** พนักงานแก้/เพิ่มรูปได้เฉพาะรายการออกที่ตัวเองสร้าง */
+  function canMutateLedgerRow(row: { createdBy?: string; amountIn?: number }) {
+    if (isOwner) return true;
+    if (!actorId) return false;
+    return row.createdBy === actorId && !(Number(row.amountIn) > 0);
+  }
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -441,14 +447,20 @@ function LedgerView() {
                     </td>
                     <td className="col-desc">
                       <div className="desc-with-photo">
-                        <button
-                          type="button"
-                          className="desc-link"
-                          title="แตะเพื่อแก้ไข · ช่อง VAT ในกล่อง"
-                          onClick={() => setEditing(row)}
-                        >
-                          {row.description}
-                        </button>
+                        {canMutateLedgerRow(row) ? (
+                          <button
+                            type="button"
+                            className="desc-link"
+                            title="แตะเพื่อแก้ไข · ช่อง VAT ในกล่อง"
+                            onClick={() => setEditing(row)}
+                          >
+                            {row.description}
+                          </button>
+                        ) : (
+                          <span className="desc-link desc-link--readonly" title="ดูอย่างเดียว">
+                            {row.description}
+                          </span>
+                        )}
                         {getLedgerReceiptUrls(row).length ? (
                           <EntryPhotoIndicator
                             imageUrls={getLedgerReceiptUrls(row)}
@@ -461,7 +473,7 @@ function LedgerView() {
                               })
                             }
                           />
-                        ) : (
+                        ) : canMutateLedgerRow(row) ? (
                           <button
                             type="button"
                             className="photo-status"
@@ -474,7 +486,7 @@ function LedgerView() {
                           >
                             <span className="photo-status-plus" aria-hidden>+</span>
                           </button>
-                        )}
+                        ) : null}
                       </div>
                     </td>
                     <td className="col-in">{row.amountIn > 0 ? formatPlainNumber(row.amountIn) : ""}</td>

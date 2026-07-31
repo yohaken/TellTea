@@ -1,11 +1,65 @@
 rules_version = '2';
 // Firebase Storage — TellTea app photos (mypeer-501909)
 // Evidence photos (tax slips) may be up to ~10MB; rule ceiling 12MB.
+// owner-books / vat-imports = เจ้าของ (หรือสิทธิ์ ownerBooks) เท่านั้น
 service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() {
       return request.auth != null
         && (request.auth.token.email != null || request.auth.token.phone_number != null);
+    }
+
+    function hasEmail() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function hasPhone() {
+      return request.auth != null && request.auth.token.phone_number != null;
+    }
+
+    function authEmail() {
+      return hasEmail() ? request.auth.token.email.lower() : '';
+    }
+
+    function authPhone() {
+      return hasPhone() ? request.auth.token.phone_number : '';
+    }
+
+    function phoneDigits() {
+      return hasPhone() && authPhone().size() > 1 ? authPhone()[1:] : '';
+    }
+
+    function resolvedStaffId() {
+      return hasEmail()
+        ? authEmail()
+        : firestore.get(/databases/(default)/documents/staffPhones/$(phoneDigits())).data.staffId;
+    }
+
+    function staffPath() {
+      return /databases/(default)/documents/staff/$(resolvedStaffId());
+    }
+
+    function isStaff() {
+      return signedIn() && firestore.exists(staffPath());
+    }
+
+    function isOwner() {
+      return isStaff() && firestore.get(staffPath()).data.role == 'owner';
+    }
+
+    function isOwnerEmail() {
+      return hasEmail() && authEmail() == 'yohaken@gmail.com';
+    }
+
+    function hasPerm(p) {
+      return isOwner()
+        || (isStaff()
+            && firestore.get(staffPath()).data.keys().hasAny(['permissions'])
+            && firestore.get(staffPath()).data.permissions[p] == true);
+    }
+
+    function canOwnerBooksStorage() {
+      return isOwner() || isOwnerEmail() || hasPerm('ownerBooks');
     }
 
     function evidenceImageOk() {
@@ -20,9 +74,9 @@ service firebase.storage {
     }
 
     match /owner-books/{allPaths=**} {
-      allow read: if signedIn();
-      allow write: if signedIn() && evidenceImageOk();
-      allow delete: if signedIn();
+      allow read: if canOwnerBooksStorage();
+      allow write: if canOwnerBooksStorage() && evidenceImageOk();
+      allow delete: if canOwnerBooksStorage();
     }
 
     match /ledger-receipts/{allPaths=**} {
@@ -42,7 +96,7 @@ service firebase.storage {
       allow read, write: if false;
     }
 
-    // VAT import files (Excel/PDF/CSV/images) — owner-gated page; signed-in write.
+    // VAT import files (Excel/PDF/CSV/images) — owner only.
     function vatImportFileOk() {
       return request.resource.size < 25 * 1024 * 1024
         && (
@@ -56,9 +110,9 @@ service firebase.storage {
     }
 
     match /vat-imports/{allPaths=**} {
-      allow read: if signedIn();
-      allow write: if signedIn() && vatImportFileOk();
-      allow delete: if signedIn();
+      allow read: if isOwner() || isOwnerEmail();
+      allow write: if (isOwner() || isOwnerEmail()) && vatImportFileOk();
+      allow delete: if isOwner() || isOwnerEmail();
     }
   }
 }

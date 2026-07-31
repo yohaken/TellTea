@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
-import { listActiveEmployees, type Employee } from "@/lib/employees";
+import { listActiveEmployeesWithPay, type Employee } from "@/lib/employees";
 import type { OtEntry } from "@/lib/ot";
 import {
   createSpecialPayrollItem,
@@ -183,7 +183,7 @@ export function PayrollPayPanel({
         markSkipGroupPayroll: specialDraft.skipGroup,
       });
       if (specialDraft.skipGroup || onEmployeesChange) {
-        const refreshed = await listActiveEmployees();
+        const refreshed = await listActiveEmployeesWithPay();
         onEmployeesChange?.(refreshed);
       }
       setSpecialOpen(false);

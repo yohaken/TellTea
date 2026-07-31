@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ELEVATED_PERMISSION_KEYS,
   PERMISSION_GROUPS,
   PERMISSION_LABELS,
   type PermissionKey,
@@ -11,10 +12,13 @@ export function PermissionPicker({
   value,
   onChange,
   disabled,
+  /** ซ่อนสิทธิ์ระดับเจ้าของ — ใช้ตอนคนที่ไม่ใช่เจ้าของจัดการพนักงาน */
+  hideElevated = false,
 }: {
   value: StaffPermissions;
   onChange: (next: StaffPermissions) => void;
   disabled?: boolean;
+  hideElevated?: boolean;
 }) {
   function toggle(key: PermissionKey, checked: boolean) {
     onChange({ ...value, [key]: checked });
@@ -26,11 +30,17 @@ export function PermissionPicker({
     onChange(next);
   }
 
+  const elevated = new Set<PermissionKey>(ELEVATED_PERMISSION_KEYS);
+
   return (
     <div className="permission-picker">
       {PERMISSION_GROUPS.map((group) => {
-        const enabled = group.keys.filter((k) => value[k]).length;
-        const allOn = enabled === group.keys.length;
+        const keys = hideElevated
+          ? group.keys.filter((k) => !elevated.has(k))
+          : group.keys;
+        if (!keys.length) return null;
+        const enabled = keys.filter((k) => value[k]).length;
+        const allOn = enabled === keys.length;
         return (
           <section key={group.title} className="permission-group">
             <div className="permission-group-head">
@@ -42,13 +52,13 @@ export function PermissionPicker({
                 type="button"
                 className="ghost-btn permission-group-toggle"
                 disabled={disabled}
-                onClick={() => setGroup(group.keys, !allOn)}
+                onClick={() => setGroup(keys, !allOn)}
               >
                 {allOn ? "ปิดทั้งกลุ่ม" : "เปิดทั้งกลุ่ม"}
               </button>
             </div>
             <ul className="permission-list">
-              {group.keys.map((key) => (
+              {keys.map((key) => (
                 <li key={key}>
                   <label className="permission-row">
                     <input
@@ -65,7 +75,7 @@ export function PermissionPicker({
               ))}
             </ul>
             <p className="permission-group-count muted">
-              เปิด {enabled}/{group.keys.length}
+              เปิด {enabled}/{keys.length}
             </p>
           </section>
         );

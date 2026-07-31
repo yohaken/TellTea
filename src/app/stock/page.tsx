@@ -84,7 +84,12 @@ function StockView() {
       .finally(() => setLoading(false));
 
     const unsubItems = subscribeStockItems(
-      (rows) => setItems(rows),
+      (rows) =>
+        setItems(
+          isOwner
+            ? rows
+            : rows.map((row) => (row.unitCost ? { ...row, unitCost: 0 } : row)),
+        ),
       (err) => setError(err.message),
     );
     const unsubSessions = subscribeStockCountSessions(
@@ -96,7 +101,7 @@ function StockView() {
       unsubItems();
       unsubSessions();
     };
-  }, [canUseStock, actorId]);
+  }, [canUseStock, actorId, isOwner]);
 
   useBodyScrollLock(!!countTarget);
 

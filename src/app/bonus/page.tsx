@@ -35,8 +35,16 @@ import {
   type BonusMonthCloseDoc,
 } from "@/lib/bonus-month-close";
 import { RateSchedulePanel } from "@/components/RateSchedulePanel";
-import { listActiveEmployees, resolveLinkedEmployee, type Employee } from "@/lib/employees";
+import {
+  getEmployeeWithPay,
+  listActiveEmployees,
+  listActiveEmployeesWithPay,
+  migrateAllLegacyEmployeePay,
+  resolveLinkedEmployee,
+  type Employee,
+} from "@/lib/employees";
 import { can } from "@/lib/permissions";
+import { updateStaffProfile } from "@/lib/staff";
 import { getOtSettings, subscribeOtEntries, type OtEntry } from "@/lib/ot";
 import {
   DEFAULT_PAYROLL_SCHEDULE,
@@ -97,8 +105,9 @@ function BonusView() {
   const [historyEmployeeId, setHistoryEmployeeId] = useState("");
 
   const canView = can(staff, "bonus");
-  const canPay = isOwner || can(staff, "ownerBooks");
-  /** คิวทั้งร้าน: เจ้าของ หรือคนที่มีสิทธิ์โอน — พนักงานทั่วไปเห็นเฉพาะของตัวเอง */
+  /** จ่ายทั้งร้าน — แยกจากบช.เจ้าของ (payrollPay) */
+  const canPay = isOwner || can(staff, "payrollPay");
+  /** คิวทั้งร้าน: เจ้าของ หรือคนมีสิทธิ์จ่ายเงินเดือน — พนักงานทั่วไปเห็นเฉพาะของตัวเอง */
   const shopPayView = isOwner || canPay;
   const { year, month: monthIdx } = parseMonthInput(month);
 
@@ -111,18 +120,48 @@ function BonusView() {
   useEffect(() => {
     if (!canView) return;
     setLoading(true);
-    void Promise.all([listActiveEmployees(), getOtSettings()])
-      .then(([emps, otSettings]) => {
-        setEmployees(emps);
+    let cancelled = false;
+    void (async () => {
+      try {
+        if (shopPayView) {
+          try {
+            await migrateAllLegacyEmployeePay();
+          } catch {
+            /* migrate best-effort — ไม่บล็อกหน้า */
+          }
+        }
+        const [emps, otSettings] = await Promise.all([
+          shopPayView ? listActiveEmployeesWithPay() : listActiveEmployees(),
+          getOtSettings(),
+        ]);
+        if (cancelled) return;
+        let nextEmps = emps;
+        if (!shopPayView) {
+          const linked = resolveLinkedEmployee(emps, staff);
+          const payId = staff?.employeeId || linked?.id;
+          if (payId) {
+            try {
+              const self = await getEmployeeWithPay(payId);
+              if (self) {
+                nextEmps = emps.map((e) => (e.id === self.id ? self : e));
+                if (!nextEmps.some((e) => e.id === self.id)) nextEmps = [...nextEmps, self];
+              }
+            } catch {
+              /* own pay optional until linked */
+            }
+          }
+        }
+        setEmployees(nextEmps);
         setOtSettingsRate(otSettings.bonusRate);
-      })
-      .catch((err) => setError((err as Error).message || "โหลดพนักงานไม่สำเร็จ"))
-      .finally(() => setLoading(false));
+      } catch (err) {
+        if (!cancelled) setError((err as Error).message || "โหลดพนักงานไม่สำเร็จ");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
 
     const monthSince = new Date(year, monthIdx, 1).getTime();
     const monthUntil = new Date(year, monthIdx + 1, 1).getTime();
-    // ประวัติ + คิว — โหลดย้อนหลัง ~14 เดือน (dueDate อาจข้ามเดือน)
-    const payrollSince = new Date(year, monthIdx - 13, 1).getTime();
     const unsubOt = subscribeOtEntries(
       (rows) => setOtEntries(rows),
       (err) => setError(err.message),
@@ -145,20 +184,41 @@ function BonusView() {
       (doc) => setPayrollSchedule(doc),
       (err) => setError(err.message),
     );
-    const unsubPayrollItems = subscribePayrollItems(
-      (rows) => setPayrollItems(rows),
-      (err) => setError(err.message),
-      { since: payrollSince },
-    );
     return () => {
+      cancelled = true;
       unsubOt();
       unsubProd();
       unsubSettings();
       unsubSchedule();
       unsubPayrollSchedule();
-      unsubPayrollItems();
     };
-  }, [staff, canView, year, monthIdx]);
+  }, [staff, canView, shopPayView, year, monthIdx]);
+
+  // คิวจ่าย — ทั้งร้านหรือเฉพาะตัวเอง (rules บังคับกรอง employeeId)
+  useEffect(() => {
+    if (!canView) return;
+    const payrollSince = new Date(year, monthIdx - 13, 1).getTime();
+    if (shopPayView) {
+      return subscribePayrollItems(
+        (rows) => setPayrollItems(rows),
+        (err) => setError(err.message),
+        { since: payrollSince },
+      );
+    }
+    const selfId =
+      staff?.employeeId ||
+      resolveLinkedEmployee(employees, staff)?.id ||
+      "";
+    if (!selfId) {
+      setPayrollItems([]);
+      return;
+    }
+    return subscribePayrollItems(
+      (rows) => setPayrollItems(rows),
+      (err) => setError(err.message),
+      { since: payrollSince, employeeId: selfId },
+    );
+  }, [canView, shopPayView, year, monthIdx, staff, employees]);
 
   useEffect(() => {
     if (!canView) return;
@@ -216,6 +276,17 @@ function BonusView() {
     () => resolveLinkedEmployee(employees, staff),
     [employees, staff],
   );
+
+  // ให้ staff.employeeId ตรงกับชื่อที่ลิงก์ — จำเป็นต่อ rules อ่าน payrollItems
+  useEffect(() => {
+    if (!staff || staff.role === "owner" || !myEmployee) return;
+    if (staff.employeeId === myEmployee.id) return;
+    void updateStaffProfile(staff.id, {
+      employeeId: myEmployee.id,
+      displayName: myEmployee.name,
+      profileComplete: true,
+    }).catch(() => undefined);
+  }, [staff, myEmployee]);
 
   useEffect(() => {
     if (historyEmployeeId) return;

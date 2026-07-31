@@ -12,9 +12,21 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
+import {
+  adjustEmployeePayAdvanceBalance,
+  getEmployeePay,
+  legacyPayFromEmployeeDoc,
+  listEmployeePayMap,
+  mergeEmployeePay,
+  migrateAllLegacyEmployeePay,
+  setEmployeePay,
+  stripPayFields,
+} from "./employee-pay";
 import { getDb } from "./firebase";
 import type { StaffMember } from "./types";
 import { normalizeEmail, normalizePhone } from "./utils";
+
+export { migrateAllLegacyEmployeePay };
 
 /** Shared shop employee roster — one place, used by production and future modules. */
 export type Employee = {
@@ -94,16 +106,66 @@ function isUnlinked(emp: Employee): boolean {
   return !emp.linkedStaffId && !emp.linkedEmail && !emp.linkedPhone;
 }
 
+function mapEmployeeRoster(id: string, data: Record<string, unknown>): Employee {
+  const clean = stripPayFields(data);
+  return {
+    id,
+    name: String(clean.name || ""),
+    nickname: clean.nickname ? String(clean.nickname) : undefined,
+    active: clean.active !== false,
+    linkedEmail: clean.linkedEmail ? String(clean.linkedEmail) : undefined,
+    linkedPhone: clean.linkedPhone ? String(clean.linkedPhone) : undefined,
+    linkedStaffId: clean.linkedStaffId ? String(clean.linkedStaffId) : undefined,
+    unitRate:
+      clean.unitRate != null && Number(clean.unitRate) > 0
+        ? Number(clean.unitRate)
+        : undefined,
+    createdAt: Number(clean.createdAt) || 0,
+    updatedAt: Number(clean.updatedAt) || 0,
+  };
+}
+
+/** รายชื่อร้านเท่านั้น — ไม่รวมเงินเดือน/บัญชี (แม้ legacy field ยังอยู่ใน doc) */
 export async function listEmployees(): Promise<Employee[]> {
   const snap = await getDocs(query(employeesCol(), orderBy("name", "asc")));
-  return snap.docs.map((d) => ({
-    id: d.id,
-    ...(d.data() as Omit<Employee, "id">),
-  }));
+  return snap.docs.map((d) => mapEmployeeRoster(d.id, d.data() as Record<string, unknown>));
 }
 
 export async function listActiveEmployees(): Promise<Employee[]> {
   return (await listEmployees()).filter((e) => e.active);
+}
+
+/**
+ * รายชื่อ + ข้อมูลจ่าย (employeePay + legacy ระหว่าง migrate)
+ * ใช้เฉพาะเจ้าของ / คนมีสิทธิ์ payrollPay — staff ทั่วไปเรียกแล้ว rules จะบล็อก list employeePay
+ */
+export async function listEmployeesWithPay(): Promise<Employee[]> {
+  const [raw, payMap] = await Promise.all([
+    getDocs(query(employeesCol(), orderBy("name", "asc"))),
+    listEmployeePayMap(),
+  ]);
+  return raw.docs.map((d) => {
+    const roster = mapEmployeeRoster(d.id, d.data() as Record<string, unknown>);
+    const fromLegacy = legacyPayFromEmployeeDoc(d.data());
+    const fromPay = payMap.get(d.id);
+    return mergeEmployeePay(roster, { ...fromLegacy, ...fromPay });
+  });
+}
+
+export async function listActiveEmployeesWithPay(): Promise<Employee[]> {
+  return (await listEmployeesWithPay()).filter((e) => e.active);
+}
+
+/** โหลดข้อมูลจ่ายของแถวเดียว (ตัวเอง หรือคนมีสิทธิ์) */
+export async function getEmployeeWithPay(employeeId: string): Promise<Employee | null> {
+  const snap = await getDoc(doc(getDb(), "employees", employeeId));
+  if (!snap.exists()) return null;
+  const roster = mapEmployeeRoster(employeeId, snap.data() as Record<string, unknown>);
+  let pay = await getEmployeePay(employeeId);
+  if (!Object.keys(pay).length) {
+    pay = legacyPayFromEmployeeDoc(snap.data());
+  }
+  return mergeEmployeePay(roster, pay);
 }
 
 export async function addEmployee(name: string, nickname?: string): Promise<string> {
@@ -189,34 +251,42 @@ export async function updateEmployee(
     next.unitRate =
       patch.unitRate == null || patch.unitRate === 0 ? deleteField() : patch.unitRate;
   }
+
+  const payPatch: Parameters<typeof setEmployeePay>[1] = {};
+  let hasPayPatch = false;
   if (patch.monthlySalary !== undefined) {
-    const n = Number(patch.monthlySalary);
-    next.monthlySalary =
-      patch.monthlySalary == null || !Number.isFinite(n) || n <= 0
-        ? deleteField()
-        : Math.round(n * 100) / 100;
+    payPatch.monthlySalary = patch.monthlySalary;
+    hasPayPatch = true;
+    next.monthlySalary = deleteField();
   }
   if (patch.payBank !== undefined) {
-    const v = (patch.payBank || "").trim();
-    next.payBank = v ? v : deleteField();
+    payPatch.payBank = patch.payBank;
+    hasPayPatch = true;
+    next.payBank = deleteField();
   }
   if (patch.payAccountNo !== undefined) {
-    const v = (patch.payAccountNo || "").trim();
-    next.payAccountNo = v ? v : deleteField();
+    payPatch.payAccountNo = patch.payAccountNo;
+    hasPayPatch = true;
+    next.payAccountNo = deleteField();
   }
   if (patch.payAccountName !== undefined) {
-    const v = (patch.payAccountName || "").trim();
-    next.payAccountName = v ? v : deleteField();
+    payPatch.payAccountName = patch.payAccountName;
+    hasPayPatch = true;
+    next.payAccountName = deleteField();
   }
   if (patch.advanceBalance !== undefined) {
-    const n = Number(patch.advanceBalance);
-    next.advanceBalance =
-      patch.advanceBalance == null || !Number.isFinite(n) || n <= 0
-        ? deleteField()
-        : Math.round(n * 100) / 100;
+    payPatch.advanceBalance = patch.advanceBalance;
+    hasPayPatch = true;
+    next.advanceBalance = deleteField();
   }
   if (patch.skipGroupPayroll !== undefined) {
-    next.skipGroupPayroll = patch.skipGroupPayroll ? true : deleteField();
+    payPatch.skipGroupPayroll = patch.skipGroupPayroll;
+    hasPayPatch = true;
+    next.skipGroupPayroll = deleteField();
+  }
+
+  if (hasPayPatch) {
+    await setEmployeePay(id, payPatch);
   }
   await updateDoc(doc(getDb(), "employees", id), next);
 }
@@ -226,16 +296,9 @@ export async function adjustEmployeeAdvanceBalance(
   id: string,
   delta: number,
 ): Promise<number> {
-  const ref = doc(getDb(), "employees", id);
-  const snap = await getDoc(ref);
+  const snap = await getDoc(doc(getDb(), "employees", id));
   if (!snap.exists()) throw new Error("ไม่พบพนักงาน");
-  const prev = Math.max(0, Number(snap.data().advanceBalance) || 0);
-  const next = Math.round(Math.max(0, prev + (Number(delta) || 0)) * 100) / 100;
-  await updateDoc(ref, {
-    advanceBalance: next > 0 ? next : deleteField(),
-    updatedAt: Date.now(),
-  });
-  return next;
+  return adjustEmployeePayAdvanceBalance(id, delta);
 }
 
 export async function deleteEmployee(id: string): Promise<void> {

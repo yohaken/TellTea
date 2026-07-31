@@ -35,15 +35,25 @@ function ExportView() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const canOwnerBooks = can(staff, "ownerBooks");
+  const canPnl = can(staff, "pnl");
+
   useEffect(() => {
     if (staff && !can(staff, "exportData")) router.replace("/ledger/");
   }, [staff, router]);
 
+  useEffect(() => {
+    if (!canOwnerBooks) setOwnerBooks(false);
+    if (!canPnl) setPnl(false);
+  }, [canOwnerBooks, canPnl]);
+
   if (!can(staff, "exportData")) return null;
 
   async function onExport() {
-    if (!ledger && !ownerBooks && !pnl) {
-      setError("เลือกอย่างน้อย 1 รายการ");
+    const wantOwner = ownerBooks && canOwnerBooks;
+    const wantPnl = pnl && canPnl;
+    if (!ledger && !wantOwner && !wantPnl) {
+      setError("เลือกอย่างน้อย 1 รายการที่คุณมีสิทธิ์");
       return;
     }
     setBusy(true);
@@ -58,12 +68,12 @@ function ExportView() {
         payload.ledger = rows;
         parts.push(`พนักงาน ${rows.length}`);
       }
-      if (ownerBooks) {
+      if (wantOwner) {
         const rows = await listOwnerBookEntries();
         payload.ownerBooks = rows;
         parts.push(`เจ้าของ ${rows.length}`);
       }
-      if (pnl) {
+      if (wantPnl) {
         const report = await loadPnlReport();
         if (pnlSummaryOnly) {
           const months = completePnlMonths(report.pnl, report.incomeByMonth);
@@ -122,19 +132,23 @@ function ExportView() {
           <input type="checkbox" checked={ledger} onChange={(e) => setLedger(e.target.checked)} />
           บช.พนักงาน (ledger) → แผ่นงาน «บช.พนักงาน»
         </label>
-        <label className="check-row">
-          <input
-            type="checkbox"
-            checked={ownerBooks}
-            onChange={(e) => setOwnerBooks(e.target.checked)}
-          />
-          บช.เจ้าของ (รวม note) → แผ่นงาน «บช.เจ้าของ»
-        </label>
-        <label className="check-row">
-          <input type="checkbox" checked={pnl} onChange={(e) => setPnl(e.target.checked)} />
-          รายงานสรุป P&amp;L → 4 แผ่นงาน (พนักงาน / เจ้าของ / รวม / กำไรขาดทุน)
-        </label>
-        {pnl ? (
+        {canOwnerBooks ? (
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={ownerBooks}
+              onChange={(e) => setOwnerBooks(e.target.checked)}
+            />
+            บช.เจ้าของ (รวม note) → แผ่นงาน «บช.เจ้าของ»
+          </label>
+        ) : null}
+        {canPnl ? (
+          <label className="check-row">
+            <input type="checkbox" checked={pnl} onChange={(e) => setPnl(e.target.checked)} />
+            รายงานสรุป P&amp;L → 4 แผ่นงาน (พนักงาน / เจ้าของ / รวม / กำไรขาดทุน)
+          </label>
+        ) : null}
+        {pnl && canPnl ? (
           <label className="check-row" style={{ marginLeft: "1.25rem" }}>
             <input
               type="checkbox"

@@ -8,6 +8,7 @@
     "smoke:hosting": "node scripts/smoke-hosting-export.mjs",
     "smoke:pos-hosting": "node scripts/smoke-pos-hosting.mjs",
     "test:firestore-rules": "node scripts/assert-firestore-rules.mjs",
+    "test:staff-rbac": "node scripts/test-staff-rbac-phases.mjs",
     "test:vat-p1-p4": "npx --yes tsx scripts/test-vat-p1-p4.ts",
     "test:vat-p5": "npx --yes tsx scripts/test-vat-p5.ts",
     "test:vat-p6": "npx --yes tsx scripts/test-vat-p6.ts",

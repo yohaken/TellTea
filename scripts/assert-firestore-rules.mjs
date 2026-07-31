@@ -37,6 +37,7 @@ const REQUIRED_MATCHES = [
   "monthlyIncome",
   "stock",
   "employees",
+  "employeePay",
   "payrollItems",
   "bonusMonthCloses",
   "prodEntries",
@@ -88,7 +89,15 @@ for (const name of SHARED_APP_MATCHES) {
 
 assert.match(rules, /function isStaff\(/);
 assert.match(rules, /function hasPerm\(/);
+assert.match(rules, /function canReadEmployeePay\(/);
+assert.match(rules, /function staffHubUpdateOk\(/);
+assert.match(rules, /payrollPay/);
 assert.match(rules, /yohaken@gmail\.com/);
+// ledger: staff cannot freely update/delete all rows
+assert.match(rules, /resource\.data\.createdBy == actorId\(\)/);
+assert.match(rules, /resource\.data\.amountIn == 0/);
+// payrollItems: self-scoped get for bonus staff
+assert.match(rules, /resource\.data\.employeeId == staffEmployeeId\(\)/);
 assert.match(
   rules,
   /Never deploy a Tax-only firestore\.rules|Canonical Firestore rules|TaxTag/,

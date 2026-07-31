@@ -13,6 +13,7 @@ export const PERMISSION_KEYS = [
   "transferIn",
   "exportData",
   "staffManage",
+  "payrollPay",
 ] as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
@@ -32,7 +33,18 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   transferIn: "โอนเข้า",
   exportData: "ส่งออกข้อมูล",
   staffManage: "จัดการพนักงาน",
+  payrollPay: "จ่ายเงินเดือนทั้งร้าน",
 };
+
+/** สิทธิ์ระดับเจ้าของ — คนมี staffManage ธรรมดามอบให้คนอื่นไม่ได้ */
+export const ELEVATED_PERMISSION_KEYS: PermissionKey[] = [
+  "ownerBooks",
+  "pnl",
+  "transferIn",
+  "exportData",
+  "staffManage",
+  "payrollPay",
+];
 
 /** จัดกลุ่มสิทธิ์ให้เลือกใน UI ศูนย์พนักงาน */
 export const PERMISSION_GROUPS: { title: string; hint?: string; keys: PermissionKey[] }[] = [
@@ -44,7 +56,7 @@ export const PERMISSION_GROUPS: { title: string; hint?: string; keys: Permission
   {
     title: "อื่นๆ — เครื่องมือเพิ่ม",
     hint: "แสดงแท็บ อื่นๆ เมื่อเปิดอย่างน้อย 1 สิทธิในกลุ่มนี้",
-    keys: ["ownerBooks", "pnl", "transferIn", "exportData", "staffManage", "assignTasks"],
+    keys: ["ownerBooks", "pnl", "transferIn", "exportData", "staffManage", "payrollPay", "assignTasks"],
   },
 ];
 
@@ -61,6 +73,7 @@ export const DEFAULT_STAFF_PERMISSIONS: StaffPermissions = {
   transferIn: false,
   exportData: false,
   staffManage: false,
+  payrollPay: false,
 };
 
 export const OWNER_PERMISSIONS: StaffPermissions = {
@@ -76,6 +89,7 @@ export const OWNER_PERMISSIONS: StaffPermissions = {
   transferIn: true,
   exportData: true,
   staffManage: true,
+  payrollPay: true,
 };
 
 export function normalizePermissions(
@@ -87,6 +101,17 @@ export function normalizePermissions(
   if (!input) return base;
   for (const key of PERMISSION_KEYS) {
     if (typeof input[key] === "boolean") base[key] = input[key]!;
+  }
+  return base;
+}
+
+/** ตัดสิทธิ์ระดับเจ้าของออก — ใช้ตอนคนที่ไม่ใช่เจ้าของบันทึกสิทธิ์พนักงาน */
+export function clampPermissionsForNonOwner(
+  input?: Partial<StaffPermissions> | null,
+): StaffPermissions {
+  const base = normalizePermissions(input, "staff");
+  for (const key of ELEVATED_PERMISSION_KEYS) {
+    base[key] = false;
   }
   return base;
 }
@@ -110,6 +135,7 @@ export function hasAnyExtraPermission(member: StaffMember | null | undefined): b
     p.pnl ||
     p.transferIn ||
     p.exportData ||
-    p.staffManage
+    p.staffManage ||
+    p.payrollPay
   );
 }
