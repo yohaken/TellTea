@@ -93,4 +93,5 @@ Push ไป `main` → GitHub Actions deploy Hosting + Firestore rules
 
 ถ้าแก้หน้าจอ/JS แล้ว: **bump `src/lib/version.ts` → `APP_BUILD`** ทุกครั้ง  
 แท็บที่เปิดค้างจะเห็นแบนเนอร์อัปเดต และรีเฟรชเองเมื่อว่างกรอก (~90 วินาที) — หรือ Settings → บังคับอัปเดตทันที  
-รายละเอียด: `docs/deploy-version.md`
+รายละเอียด: `docs/deploy-version.md`  
+เบิกล่วงหน้า → หักเงินเดือน: `docs/payroll-advance-checklist.md`
