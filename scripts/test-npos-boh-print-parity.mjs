@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 535/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 149/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+118/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.95"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 536/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 150/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+119/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.96"/);
 
 const boh = read("src/lib/pos-boh-print-docs.ts");
 assert.match(boh, /buildUnifiedReceiptBody/);
@@ -38,8 +38,15 @@ const shiftTpl = read("src/lib/pos-printer/shift-snapshot-template.ts");
 assert.match(shiftTpl, /ยอดเงินสดที่ต้องนำส่ง/);
 assert.match(shiftTpl, /discrepancyNote/);
 assert.match(shiftTpl, /shiftLabel/);
-assert.match(shiftTpl, / x\$\{line\.qty\}/);
-assert.doesNotMatch(shiftTpl, /×\$\{line\.qty\}/);
+assert.match(shiftTpl, /สรุปบิล \(สถิติ\)/);
+assert.doesNotMatch(shiftTpl, /รายการขายแยกตามบิล/);
+
+const javaShift = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/printer/ShiftReportFormBuilder.java",
+);
+assert.match(javaShift, /สรุปบิล \(สถิติ\)/);
+assert.doesNotMatch(javaShift, /รายการขายแยกตามบิล/);
+assert.doesNotMatch(javaShift, /billBlocks/);
 
 const payload = read("src/lib/pos-shift-report.ts");
 assert.match(payload, /discrepancyNote/);

@@ -19,11 +19,12 @@ assert.match(templateSrc, /ยอดขายตามหมวดหมู่/)
 assert.match(templateSrc, /สรุปยอด/);
 assert.match(templateSrc, /ส่วนลด &amp; โปรโมชั่น/);
 assert.match(templateSrc, /ยอดขายตามการชำระเงิน/);
-assert.match(templateSrc, /ยอดขายตามประเภทออเดอร์/);
 assert.match(templateSrc, /รอบการขาย \(เงินสด\)/);
-assert.match(templateSrc, /รายการขายแยกตามบิล/);
+assert.match(templateSrc, /สรุปบิล \(สถิติ\)/);
+assert.doesNotMatch(templateSrc, /รายการขายแยกตามบิล/);
 assert.match(templateSrc, /ยอดขายตามรายการ/);
 assert.match(templateSrc, /ทำลายบิล \/ ยกเลิก/);
+assert.doesNotMatch(templateSrc, /ยอดขายตามประเภทออเดอร์/);
 
 const localSrc = readFileSync(join(root, "src/lib/pos-local-receipts.ts"), "utf8");
 assert.match(localSrc, /discountBaht\?:/);
@@ -36,11 +37,10 @@ assert.match(sellSrc, /discountBaht: discountBaht > 0 \? discountBaht : undefine
 const shiftSrc = readFileSync(join(root, "src/components/PosShiftView.tsx"), "utf8");
 assert.match(shiftSrc, /loadPosMenuCache/);
 assert.match(shiftSrc, /receipts: sessionReceipts/);
-assert.match(shiftSrc, /receipts: closedReceipts/);
 assert.match(shiftSrc, /receipts: sales/);
 
 const versionSrc = readFileSync(join(root, "src/lib/pos-version.ts"), "utf8");
-assert.match(versionSrc, /POS_BUILD = 41/);
+assert.match(versionSrc, /POS_BUILD = 150/);
 
 // Pure aggregation mirror for numeric checks
 function round2(n) {

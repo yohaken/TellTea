@@ -88,7 +88,7 @@ function DocPreview({ shop }: { shop: PosShopSettings }) {
           </div>
         ) : (
           <p className="pos-biz-preview-hint muted">
-            {doc === "x" ? "กลางรอบ" : "ปิดรอบ"} · ฟอร์มเดียวกับพิมพ์
+            {doc === "x" ? "กลางรอบ" : "ปิดรอบ"} · ฟอร์มเดียวกับพิมพ์หน้างาน / หลังร้าน
           </p>
         )}
       </div>

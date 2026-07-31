@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 535/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 149/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+118/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.95"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 536/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 150/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+119/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.96"/);
 
 const confirm = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/ui/NposConfirmDialog.java",
@@ -55,13 +55,18 @@ assert.match(
 const biz = read("src/components/PosBusinessSettingsView.tsx");
 assert.match(biz, /DocPreview|sampleReceiptCases|sampleShiftReportPayload/);
 assert.match(biz, /buildUnifiedReceiptBody|buildShiftReportHtml/);
+assert.match(biz, /applyShopToReceiptSample/);
+assert.match(biz, /ฟอร์มเดียวกับพิมพ์หน้างาน/);
 
 const samples = read("src/lib/pos-printer/receipt-template.ts");
 assert.match(samples, /sampleReceiptCases/);
 assert.match(samples, /cash_change|discount|pending/);
-assert.match(read("src/lib/pos-printer/shift-snapshot-template.ts"), /sampleShiftReportPayload/);
+const shiftSample = read("src/lib/pos-printer/shift-snapshot-template.ts");
+assert.match(shiftSample, /sampleShiftReportPayload/);
+assert.match(shiftSample, /สรุปบิล \(สถิติ\)/);
+assert.doesNotMatch(shiftSample, /รายการขายแยกตามบิล/);
 
-assert.match(read("src/components/PosSalesReport.tsx"), /pos-sales-bill-id/);
+assert.match(read("src/components/PosSalesReport.tsx"), /sale\.billNo/);
 assert.match(read("src/components/PosPendingSyncPanel.tsx"), /pos-sales-bill-id/);
 assert.match(read("src/components/NposDevicesPanel.tsx"), /PosConfirmDialog/);
 assert.doesNotMatch(read("src/components/NposDevicesPanel.tsx"), /window\.confirm/);
