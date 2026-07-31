@@ -461,6 +461,30 @@ export async function updateEmployee(
 
   if (wroteName) {
     await syncLinkedStaffDisplayName(id, wroteName, linkedStaffIdForSync);
+    // ชื่อเปลี่ยน = คนเดิม — กระจายชื่อใหม่ไปชง/ผลิต/งาน/คิวจ่าย (ไม่สร้าง id ใหม่)
+    const oldNames = currentForAlias
+      ? mergePreviousNames(currentForAlias, {
+          name: effective.name,
+          nickname: effective.nickname,
+        })
+      : [];
+    if (
+      currentForAlias &&
+      (currentForAlias.name.trim() !== wroteName || oldNames.length > 0)
+    ) {
+      try {
+        const { propagateEmployeeRename } = await import("./employee-rename-propagate");
+        await propagateEmployeeRename(id, wroteName, [
+          currentForAlias.name,
+          currentForAlias.nickname || "",
+          ...oldNames,
+        ]);
+      } catch (err) {
+        if (typeof console !== "undefined") {
+          console.warn("[updateEmployee] rename propagate failed", err);
+        }
+      }
+    }
   }
 }
 

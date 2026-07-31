@@ -18,6 +18,7 @@ import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
+import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { isAppOwnerEmail } from "@/lib/firebase";
 import {
@@ -436,6 +437,7 @@ function TasksView() {
             <OccurrencesTable
               rows={visible}
               allOccurrences={occurrences}
+              employees={employees}
               canManage={isOwnerManager}
               showFeedback={tab === "history"}
               onSubmit={(occ) => setSubmitOcc(occ)}
@@ -634,6 +636,7 @@ function OwnerTaskTimeline({
 function OccurrencesTable({
   rows,
   allOccurrences,
+  employees = [],
   canManage,
   showFeedback = false,
   onSubmit,
@@ -643,6 +646,7 @@ function OccurrencesTable({
 }: {
   rows: TaskOccurrence[];
   allOccurrences: TaskOccurrence[];
+  employees?: Employee[];
   canManage: boolean;
   showFeedback?: boolean;
   onSubmit: (occ: TaskOccurrence) => void;
@@ -750,7 +754,13 @@ function OccurrencesTable({
                     <span className="tasks-due-sub">เปิด {formatDateShortBe(occ.openAt)}</span>
                   ) : null}
                 </td>
-                <td className="tasks-col-who">{occ.assigneeNames.join(", ") || "—"}</td>
+                <td className="tasks-col-who">
+                  {resolveWorkerDisplayNames(
+                    occ.assigneeIds,
+                    occ.assigneeNames,
+                    employees,
+                  ).join(", ") || "—"}
+                </td>
                 <td className="tasks-col-check" title={checkText}>
                   {checkText || "—"}
                 </td>

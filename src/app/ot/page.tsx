@@ -17,6 +17,7 @@ import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
+import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
 import { listActiveEmployees, resolveLinkedEmployee, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import {
@@ -1384,6 +1385,7 @@ function OtTable({
           checkRecordsByDayShift={checkRecordsByDayShift}
           openingItems={openingItems}
           closingItems={closingItems}
+          workers={workers}
           isOwner={isOwner}
           photoReport={photoReport}
           onEditSlot={onEditSlot}
@@ -1395,6 +1397,7 @@ function OtTable({
       ) : (
         <OtCardList
           entries={sortOtEntries(filtered)}
+          workers={workers}
           isOwner={isOwner}
           photoReport={photoReport}
           onEdit={onEdit}
@@ -1421,6 +1424,7 @@ function OtSheetTable({
   checkRecordsByDayShift,
   openingItems,
   closingItems,
+  workers,
   isOwner,
   photoReport,
   onEditSlot,
@@ -1432,6 +1436,7 @@ function OtSheetTable({
   checkRecordsByDayShift: Map<string, ChecklistRecord[]>;
   openingItems: ChecklistItem[];
   closingItems: ChecklistItem[];
+  workers: Employee[];
   isOwner: boolean;
   photoReport: PhotoForensicsReport | null;
   onEditSlot: (target: OtSlotTarget) => void;
@@ -1495,7 +1500,11 @@ function OtSheetTable({
                   row?.status === "paid"
                     ? "is-paid"
                     : "is-pending";
-                const workerNames = (row?.workerNames || []).filter(Boolean);
+                const workerNames = row
+                  ? resolveWorkerDisplayNames(row.workerIds, row.workerNames, workers).filter(
+                      Boolean,
+                    )
+                  : [];
                 const statusPill =
                   slotStatus === "planned"
                     ? "วางแผน"
@@ -1680,6 +1689,7 @@ function OtSheetTable({
 
 function OtCardList({
   entries,
+  workers,
   isOwner,
   photoReport,
   onEdit,
@@ -1687,6 +1697,7 @@ function OtCardList({
   onViewPhoto,
 }: {
   entries: OtEntry[];
+  workers: Employee[];
   isOwner: boolean;
   photoReport: PhotoForensicsReport | null;
   onEdit: (row: OtEntry) => void;
@@ -1700,6 +1711,10 @@ function OtCardList({
         const statusClass = row.status === "paid" ? "is-paid" : "is-pending";
         const quality = computeShiftQuality(row);
         const processHint = staffProcessOrderHint(quality);
+        const workerLabel =
+          resolveWorkerDisplayNames(row.workerIds, row.workerNames, workers)
+            .filter(Boolean)
+            .join(" · ") || "—";
         const detailItems = [
           { label: "เครื่อง", value: formatPlainNumber(row.machineCount) },
           { label: "อื่นๆ", value: otQtyCell(row.otherCups || 0) },
@@ -1760,9 +1775,7 @@ function OtCardList({
             </header>
 
             <div className="ot-worker-cell">
-              <div className="ot-worker-names">
-                {(row.workerNames || []).filter(Boolean).join(" · ") || "—"}
-              </div>
+              <div className="ot-worker-names">{workerLabel}</div>
               <div className="ot-worker-meta">
                 {processHint ? (
                   <span className="ot-owner-hint-pill" title={processHint}>
