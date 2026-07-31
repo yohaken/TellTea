@@ -22,6 +22,7 @@ import { deleteDoc, doc, getDoc } from "firebase/firestore";
 import { clearAppCaches, loadCachedStaff, saveCachedStaff } from "./cache";
 import { getDb, getFirebaseAuth, isFirebaseConfigured } from "./firebase";
 import { confirmPhoneOtp, resetPhoneRecaptcha, sendPhoneOtp } from "./phone-auth";
+import { migrateAllBonusCloseSideDocs } from "./bonus-close-migrate";
 import { migrateAllLegacyEmployeePay } from "./employees";
 import { migrateAllLegacyStockCosts } from "./stock";
 import {
@@ -264,6 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (member.role === "owner") {
             void migrateAllLegacyEmployeePay().catch(() => undefined);
             void migrateAllLegacyStockCosts().catch(() => undefined);
+            void migrateAllBonusCloseSideDocs().catch(() => undefined);
           }
         } else {
           clearAppCaches();

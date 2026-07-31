@@ -59,8 +59,17 @@ Checklist สิทธิ์หลังร้าน (TellTea). เป้าห�
 - [x] `isOwnerEmail` hardcode คงไว้คู่ `role==owner` (bootstrap / VAT mentor) — เอกสารนี้
 - [x] static rules guards: `test:firestore-rules` + `test:staff-rbac` (ไม่มี emulator ใน repo)
 
+## Bonus / เงินเดือน — self-only (พนักงาน)
+
+- [x] `bonusMonthCloses` อ่านได้เฉพาะเจ้าของ / `payrollPay` (มียอดทุกคน)
+- [x] `bonusMonthStatus/{month}` — ธงปิดเดือนอย่างเดียว (staff อ่านเพื่อล็อกชง/ผลิต)
+- [x] `bonusPersonalCloses/{month}_{employeeId}` — snapshot โบนัสรายคน · get เฉพาะของตัวเอง
+- [x] ปิด/ปลดเดือนเขียน/ลบ side docs · owner login migrate จาก close เก่า
+- [x] หน้าโบนัส staff: ไม่โหลดตารางทั้งร้าน · เดือนปิดใช้ personal close
+
 ## หลัง deploy
 
 เข้าสู่ระบบด้วยบัญชี**เจ้าของ** หนึ่งครั้ง เพื่อ migrate:
 - `employees` pay fields → `employeePay`
 - `stock.unitCost` → `stockCosts`
+- `bonusMonthCloses` → `bonusMonthStatus` + `bonusPersonalCloses`

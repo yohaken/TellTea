@@ -48,6 +48,25 @@ assert.match(bonus, /employeeId: selfId/);
 assert.match(bonus, /computePersonalBonusRow/);
 assert.match(bonus, /saveBonusLivePool/);
 assert.match(bonus, /workerId: selfId/);
+assert.match(bonus, /subscribeBonusMonthStatus/);
+assert.match(bonus, /subscribeBonusPersonalClose/);
+assert.match(bonus, /workerRowFromPersonalClose/);
+assert.match(bonus, /migrateAllBonusCloseSideDocs/);
+
+assert.match(rules, /match \/bonusMonthStatus\/\{monthId\}/);
+assert.match(rules, /match \/bonusPersonalCloses\/\{id\}/);
+assert.match(
+  rules,
+  /match \/bonusMonthCloses\/\{monthId\}[\s\S]*?allow read: if isOwner\(\) \|\| isOwnerEmail\(\) \|\| hasPerm\('payrollPay'\)/,
+);
+
+const personalClose = read("src/lib/bonus-personal-close.ts");
+assert.match(personalClose, /BONUS_PERSONAL_CLOSE_COL/);
+assert.match(personalClose, /writeBonusCloseSideDocs/);
+assert.match(personalClose, /employeeId/);
+
+const closeMigrate = read("src/lib/bonus-close-migrate.ts");
+assert.match(closeMigrate, /migrateAllBonusCloseSideDocs/);
 
 const exportPage = read("src/app/export/page.tsx");
 assert.match(exportPage, /canOwnerBooks/);
@@ -70,6 +89,8 @@ assert.match(bonusLib, /computePersonalBonusRow/);
 const assertRules = read("scripts/assert-firestore-rules.mjs");
 assert.match(assertRules, /stockCosts/);
 assert.match(assertRules, /bonusLivePool/);
+assert.match(assertRules, /bonusMonthStatus/);
+assert.match(assertRules, /bonusPersonalCloses/);
 
 const indexes = read("firestore.indexes.json");
 assert.match(indexes, /"workerIds"/);

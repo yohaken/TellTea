@@ -905,10 +905,28 @@ service cloud.firestore {
       allow create, update, delete: if isOwner() || isOwnerEmail();
     }
 
-    /** ปิดเดือนโบนัส — snapshot + ล็อกชง/ผลิต */
+    /**
+     * ปิดเดือนโบนัส — snapshot ทั้งร้าน (มียอดทุกคน)
+     * อ่าน: เจ้าของ / payrollPay เท่านั้น — พนักงานห้าม (ดู bonusPersonalCloses ของตัวเอง)
+     */
     match /bonusMonthCloses/{monthId} {
-      allow read: if hasPerm('bonus');
-      allow create, update, delete: if isOwner();
+      allow read: if isOwner() || isOwnerEmail() || hasPerm('payrollPay');
+      allow create, update, delete: if isOwner() || isOwnerEmail();
+    }
+
+    /** สถานะปิดเดือนอย่างเดียว (ไม่มียอดรายคน) — พนักงานอ่านได้เพื่อล็อกชง/ผลิต */
+    match /bonusMonthStatus/{monthId} {
+      allow read: if hasPerm('bonus') || hasPerm('otBonus') || hasPerm('production');
+      allow create, update, delete: if isOwner() || isOwnerEmail();
+    }
+
+    /** Snapshot โบนัสรายคนหลังปิดเดือน — เห็นได้แค่ของตัวเอง */
+    match /bonusPersonalCloses/{id} {
+      allow get: if isOwner() || isOwnerEmail() || hasPerm('payrollPay')
+        || (hasPerm('bonus') && resource.data.employeeId == staffEmployeeId());
+      allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay')
+        || (hasPerm('bonus') && resource.data.employeeId == staffEmployeeId());
+      allow create, update, delete: if isOwner() || isOwnerEmail();
     }
 
     match /meta/{docId} {

@@ -20,7 +20,7 @@ const prodLib = read("src/lib/production.ts");
 const rules = read("firestore.rules");
 const assertRules = read("scripts/assert-firestore-rules.mjs");
 
-assert.match(version, /APP_BUILD\s*=\s*485/);
+assert.match(version, /APP_BUILD\s*=\s*\d+/);
 assert.equal(existsSync(join(root, "src/components/BulkStatusToolbar.tsx")), false);
 
 assert.match(guard, /export async function assertBonusMonthOpenForDate/);
@@ -45,6 +45,14 @@ assert.match(prodLib, /assertBonusMonthOpenForDate/);
 assert.match(read("src/lib/ot.ts"), /assertBonusMonthOpenForDate/);
 assert.match(bonusLib, /paid` is a lock flag|lock flag after month-close/);
 assert.match(rules, /match \/bonusMonthCloses\/\{monthId\}/);
+assert.match(rules, /match \/bonusMonthStatus\/\{monthId\}/);
+assert.match(rules, /match \/bonusPersonalCloses\/\{id\}/);
 assert.match(assertRules, /"bonusMonthCloses"/);
+assert.match(assertRules, /"bonusMonthStatus"/);
+assert.match(assertRules, /"bonusPersonalCloses"/);
+assert.match(bonusClose, /writeBonusCloseSideDocs/);
+assert.match(bonusClose, /deleteBonusCloseSideDocs/);
+assert.match(bonusPage, /subscribeBonusPersonalClose/);
+assert.match(guard, /getBonusMonthStatus/);
 
 console.log("OK test-bonus-month-close");

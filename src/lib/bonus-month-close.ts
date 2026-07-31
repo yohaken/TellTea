@@ -9,6 +9,10 @@ import {
   getBonusMonthClose,
   type BonusMonthCloseDoc,
 } from "./bonus-month-guard";
+import {
+  deleteBonusCloseSideDocs,
+  writeBonusCloseSideDocs,
+} from "./bonus-personal-close";
 import { getDb } from "./firebase";
 import { bulkUpdateOtEntryStatus, type OtEntry } from "./ot";
 import { parsePeriodMonth } from "./payroll";
@@ -105,6 +109,7 @@ export async function closeBonusMonth(input: {
     lockedOt: ot,
   };
   await setDoc(closeRef(month), docData);
+  await writeBonusCloseSideDocs(docData);
   return docData;
 }
 
@@ -114,6 +119,7 @@ export async function unlockBonusMonth(periodMonth: string): Promise<void> {
   const existing = await getBonusMonthClose(periodMonth);
   if (!existing) throw new Error("เดือนนี้ยังไม่ถูกปิด");
   await deleteDoc(closeRef(periodMonth));
+  await deleteBonusCloseSideDocs(periodMonth);
 }
 
 export function reportFromCloseSnapshot(close: BonusMonthCloseDoc): MonthBonusReport {

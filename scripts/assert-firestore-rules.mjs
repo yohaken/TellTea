@@ -42,6 +42,8 @@ const REQUIRED_MATCHES = [
   "payrollItems",
   "bonusLivePool",
   "bonusMonthCloses",
+  "bonusMonthStatus",
+  "bonusPersonalCloses",
   "prodEntries",
   "otEntries",
   "checklistRecords",
@@ -92,6 +94,12 @@ for (const name of SHARED_APP_MATCHES) {
 assert.match(rules, /function isStaff\(/);
 assert.match(rules, /function hasPerm\(/);
 assert.match(rules, /function canReadEmployeePay\(/);
+assert.match(rules, /match \/bonusMonthStatus\/\{monthId\}/);
+assert.match(rules, /match \/bonusPersonalCloses\/\{id\}/);
+assert.match(
+  rules,
+  /match \/bonusMonthCloses\/\{monthId\}[\s\S]*?allow read: if isOwner\(\) \|\| isOwnerEmail\(\) \|\| hasPerm\('payrollPay'\)/,
+);
 assert.match(rules, /function staffHubUpdateOk\(/);
 assert.match(rules, /payrollPay/);
 assert.match(rules, /yohaken@gmail\.com/);
