@@ -16,7 +16,7 @@ const receipts = read("src/lib/receipts.ts");
 const otPage = read("src/app/ot/page.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD\s*=\s*548/);
+assert.match(version, /APP_BUILD\s*=\s*549/);
 assert.match(
   rules,
   /function canReadBonusEntry\(perm\) \{[\s\S]*?hasPerm\(perm\);/,
