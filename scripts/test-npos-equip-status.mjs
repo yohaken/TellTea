@@ -13,7 +13,7 @@ assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+117/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.94"/);
 assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 117/);
 assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 148/);
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 531/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 532/);
 
 const transport = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/printer/PrinterTransport.java",
