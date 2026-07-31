@@ -9,14 +9,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 530/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 147/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+116/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.93"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 531/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 148/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+117/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.94"/);
 
 assert.ok(existsSync(join(root, "docs/npos-capture-projection-checklist.md")));
 const doc = read("docs/npos-capture-projection-checklist.md");
-assert.match(doc, /1\.14\.93/);
+assert.match(doc, /1\.14\.94/);
 assert.match(doc, /MediaProjection/);
 assert.match(doc, /เด้งจนกว่าจะรับ|nag-until-grant|2\.5/);
 

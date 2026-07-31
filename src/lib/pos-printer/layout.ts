@@ -1,3 +1,4 @@
+import { formatReceiptModifierText } from "../pos-receipt-format";
 import { getLayoutForPrinter } from "./profiles";
 import {
   buildUnifiedReceiptBody,
@@ -26,7 +27,7 @@ function formatLineOptions(line: import("../types").PosSaleLine, compact: boolea
       tallies.set(label, (tallies.get(label) ?? 0) + 1);
     }
   }
-  return [...tallies.entries()].map(([label, n]) => `${label} x${Math.max(1, n)}`);
+  return [...tallies.entries()].map(([label, n]) => formatReceiptModifierText(label, n));
 }
 
 /** สลิปใบเสร็จรูปแบบเดียว — รวมแบบ FoodStory / ShopeeFood / LINE MAN */

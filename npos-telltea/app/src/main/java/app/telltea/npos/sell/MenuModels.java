@@ -312,6 +312,10 @@ public final class MenuModels {
       return sb.toString();
     }
 
+    /**
+     * Receipt-style option lines for staff cart / kitchen read:
+     * {@code - เย็น} or {@code - ไข่มุก x2} — xN only when count ≥ 2.
+     */
     public List<String> optionsLines() {
       List<String> out = new ArrayList<>();
       if (optionsJson == null || optionsJson.length() == 0) return out;
@@ -330,7 +334,8 @@ public final class MenuModels {
             byName.put(n, byName.getOrDefault(n, 0) + 1);
           }
           for (java.util.Map.Entry<String, Integer> e : byName.entrySet()) {
-            out.add("- " + e.getKey() + " x" + e.getValue());
+            int n = Math.max(1, e.getValue());
+            out.add(n >= 2 ? "- " + e.getKey() + " x" + n : "- " + e.getKey());
           }
         }
       } catch (Exception ignored) {

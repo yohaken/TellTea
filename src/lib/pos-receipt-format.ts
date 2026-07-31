@@ -38,7 +38,8 @@ export function tallyLocalLineModifiers(line: PosLocalReceiptLine): ReceiptModif
   return [...tallies.entries()].map(([label, count]) => ({ label, count }));
 }
 
-/** ข้อความตัวเลือกย่อย — โชว์ xN เสมอ (ASCII · เครื่องพิมพ์ TIS-620 อ่านได้) */
+/** ข้อความตัวเลือกย่อย — xN เฉพาะเมื่อ ≥2 (ASCII · เครื่องพิมพ์ TIS-620 อ่านได้) */
 export function formatReceiptModifierText(label: string, count: number): string {
-  return `${label} x${Math.max(1, count)}`;
+  const n = Math.max(1, count);
+  return n >= 2 ? `${label} x${n}` : label;
 }
