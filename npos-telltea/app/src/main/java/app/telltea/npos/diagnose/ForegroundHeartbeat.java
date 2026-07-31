@@ -69,14 +69,25 @@ public final class ForegroundHeartbeat {
                     lastError = "";
                     inFlight = false;
                     notifyListener();
-                    if (app != null) {
-                        UpdateCheckCoordinator.onServerSyncPulse(app);
-                        // Flush sales outbox + retry open-session sync so BO sees live rounds.
-                        try {
-                            new app.telltea.npos.sell.SaleSync().flushPending(app);
-                        } catch (Throwable ignored) {
-                            /* never break heartbeat */
-                        }
+                    // Heartbeat callback runs on a worker thread — UI update checks must
+                    // hop to main or Android throws CalledFromWrongThreadException and the
+                    // failure is logged as 「ส่งสัญญาณไม่สำเร็จ」 even when the HTTP ok'd.
+                    final Context appCtx = app;
+                    if (appCtx != null) {
+                        MAIN.post(
+                                () -> {
+                                    try {
+                                        UpdateCheckCoordinator.onServerSyncPulse(appCtx);
+                                    } catch (Throwable ignored) {
+                                        /* never break heartbeat */
+                                    }
+                                    try {
+                                        // Flush sales outbox + retry open-session sync.
+                                        new app.telltea.npos.sell.SaleSync().flushPending(appCtx);
+                                    } catch (Throwable ignored) {
+                                        /* never break heartbeat */
+                                    }
+                                });
                     }
                 }
 

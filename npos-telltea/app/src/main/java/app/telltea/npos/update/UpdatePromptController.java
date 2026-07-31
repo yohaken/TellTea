@@ -160,6 +160,10 @@ public final class UpdatePromptController {
    * Sync pulse with a known newer build — always re-show when idle (no snooze).
    */
   void reassertPendingUpdate() {
+    if (Looper.myLooper() != Looper.getMainLooper()) {
+      main.post(this::reassertPendingUpdate);
+      return;
+    }
     if (activity.isFinishing() || busy) return;
     if (!hasPendingUpdate()) return;
     ResumePrefs.clearPopupDismiss(activity);
@@ -172,6 +176,10 @@ public final class UpdatePromptController {
 
   /** Invoked by {@link UpdateCheckCoordinator} after throttle allows. */
   void runAutoCheck(String reason) {
+    if (Looper.myLooper() != Looper.getMainLooper()) {
+      main.post(() -> runAutoCheck(reason));
+      return;
+    }
     if (activity.isFinishing()) return;
     if (popup == null) return;
     ResumePrefs.clearPopupDismiss(activity);

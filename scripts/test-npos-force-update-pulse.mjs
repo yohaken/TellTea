@@ -90,3 +90,13 @@ assert.match(
 );
 
 console.log("OK test-npos-force-update-pulse");
+
+const hb = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/diagnose/ForegroundHeartbeat.java",
+);
+assert.match(hb, /MAIN\.post/);
+assert.match(hb, /onServerSyncPulse/);
+assert.match(
+  read("npos-telltea/app/src/main/java/app/telltea/npos/update/UpdatePromptController.java"),
+  /Looper\.getMainLooper/,
+);
