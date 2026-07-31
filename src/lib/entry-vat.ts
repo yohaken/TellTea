@@ -137,6 +137,12 @@ export type AiVatExtract = {
   /** AI มองเห็นบรรทัดภาษีบนบิลชัดหรือไม่ */
   vatSeenOnBill: boolean;
   vatReason: string;
+  /** tax_invoice | bank_slip | other — จาก merge รูป */
+  docKind: string;
+  /** มีแต่สลิปโอน — ยังไม่มีใบกำกับ/ใบเสร็จ */
+  slipOnly: boolean;
+  /** มีแต่รูปสินค้า/แพ็กกิ้ง — ไม่มีใบเสร็จ/สลิป */
+  goodsOnly: boolean;
 };
 
 export function normalizeAiVatExtract(raw: {
@@ -146,6 +152,9 @@ export function normalizeAiVatExtract(raw: {
   vatInvoiceNo?: unknown;
   vatSeenOnBill?: unknown;
   vatReason?: unknown;
+  docKind?: unknown;
+  slipOnly?: unknown;
+  goodsOnly?: unknown;
 }): AiVatExtract {
   const vatInputRaw = Number(raw.vatInput);
   const vatInput =
@@ -165,6 +174,18 @@ export function normalizeAiVatExtract(raw: {
     raw.vatSeenOnBill === true ||
     raw.vatSeenOnBill === "true" ||
     (hasVat && vatInput != null);
+  const docKind = String(raw.docKind || "")
+    .trim()
+    .toLowerCase();
+  const slipOnly =
+    raw.slipOnly === true ||
+    raw.slipOnly === "true" ||
+    docKind === "bank_slip";
+  const goodsOnly =
+    !slipOnly &&
+    (raw.goodsOnly === true ||
+      raw.goodsOnly === "true" ||
+      (docKind === "other" && !(hasVat && vatInput != null)));
   return {
     hasVat: Boolean(hasVat && vatInput != null),
     vatInput,
@@ -172,5 +193,8 @@ export function normalizeAiVatExtract(raw: {
     vatInvoiceNo: String(raw.vatInvoiceNo || "").trim().slice(0, 80),
     vatSeenOnBill: Boolean(vatSeenOnBill && vatInput != null),
     vatReason: String(raw.vatReason || "").trim().slice(0, 80),
+    docKind: docKind || (slipOnly ? "bank_slip" : ""),
+    slipOnly: Boolean(slipOnly),
+    goodsOnly: Boolean(goodsOnly),
   };
 }

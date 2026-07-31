@@ -13,6 +13,7 @@ import { EntryTimestampsMeta } from "@/components/EntryTimestampsMeta";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { SheetDateCell } from "@/components/SheetDateCell";
 import {
+  EvidenceDocNotice,
   VatFirstAskPanel,
   VatFirstCapturePanel,
   VatFirstFormSummary,
@@ -37,6 +38,11 @@ import {
   type BillNoticeStatus,
 } from "@/lib/bill-notices";
 import { parseVatInputStr, type VatSource } from "@/lib/entry-vat";
+import {
+  evidenceAckRequired,
+  evidenceDocPolicy,
+  evidenceReadyToSave,
+} from "@/lib/ledger-evidence-policy";
 import {
   initialVatFirstPhase,
   phaseAfterAiVatExtract,
@@ -491,6 +497,10 @@ function BillNoticeFormModal({
   );
   const [vatVerified, setVatVerified] = useState(Boolean(entry?.vatVerified));
   const [aiVatReason, setAiVatReason] = useState("");
+  const [extractSlipOnly, setExtractSlipOnly] = useState(false);
+  const [extractGoodsOnly, setExtractGoodsOnly] = useState(false);
+  const [extractDocKind, setExtractDocKind] = useState("");
+  const [evidenceDocAck, setEvidenceDocAck] = useState(false);
   const [pendingAiVat, setPendingAiVat] = useState<number | null>(null);
   /** AI อ่านรูปอัตโนมัติเมื่อแนบบิล — ปิดได้ถ้าจะกรอกเอง (edit) */
   const [aiAssist, setAiAssist] = useState(true);
@@ -535,6 +545,10 @@ function BillNoticeFormModal({
     setVatSource("");
     setPendingAiVat(null);
     setAiVatReason("");
+    setExtractSlipOnly(false);
+    setExtractGoodsOnly(false);
+    setExtractDocKind("");
+    setEvidenceDocAck(false);
     setExtractStatus("idle");
     lastExtractKeyRef.current = "";
     setVatFirstPhase(next);
@@ -578,6 +592,10 @@ function BillNoticeFormModal({
     setVatSource("");
     setPendingAiVat(null);
     setAiVatReason("");
+    setExtractSlipOnly(false);
+    setExtractGoodsOnly(false);
+    setExtractDocKind("");
+    setEvidenceDocAck(false);
     setExtractStatus("idle");
     lastExtractKeyRef.current = "";
   }
@@ -622,6 +640,9 @@ function BillNoticeFormModal({
       }
       setTypeSource("ai");
       setAiVatReason(result.vatReason || result.reason || "");
+      setExtractSlipOnly(Boolean(result.slipOnly));
+      setExtractGoodsOnly(Boolean(result.goodsOnly));
+      setExtractDocKind(String(result.docKind || ""));
       const aiVat =
         result.hasVat && result.vatInput != null && result.vatInput > 0
           ? result.vatInput
@@ -702,6 +723,15 @@ function BillNoticeFormModal({
             : "ทำขั้นตอน VAT ให้ครบก่อนบันทึก",
         );
       }
+      if (
+        mode === "add" &&
+        !evidenceReadyToSave({
+          required: evidenceAckRequired(),
+          acked: evidenceDocAck,
+        })
+      ) {
+        throw new Error("ติ๊กยืนยันเรื่องเอกสารหลักฐานก่อนบันทึก");
+      }
       if (hasVat && vatNum <= 0) {
         throw new Error("มี VAT — ใส่ยอดภาษีซื้อจากบิล");
       }
@@ -729,6 +759,8 @@ function BillNoticeFormModal({
           createdBy: actorId,
           staffName,
           ...vatPayload,
+          evidenceDocPolicy: evidenceDocPolicy(desc),
+          evidenceDocAck: true,
         });
       } else if (entry) {
         await updateBillNotice(entry.id, {
@@ -866,9 +898,23 @@ function BillNoticeFormModal({
               {entry.vatVerified ? " · ยืนยันแล้ว" : ""}
             </p>
           ) : null}
+          {mode === "add" ? (
+            <EvidenceDocNotice
+              description={description}
+              acked={evidenceDocAck}
+              onAckChange={setEvidenceDocAck}
+              slipOnly={extractSlipOnly}
+              goodsOnly={extractGoodsOnly}
+              vatReason={aiVatReason}
+              docKind={extractDocKind}
+              hasVat={hasVat}
+              disabled={busy}
+              idPrefix="bn-evidence"
+            />
+          ) : null}
 
           <PhotoAttachMultiField
-            label="อัพบิล"
+            label="อัพบิล / แคปแชท"
             values={receiptUrls}
             onChange={onReceiptUrlsChange}
             onError={reportError}
@@ -879,8 +925,8 @@ function BillNoticeFormModal({
               useVatFirst
                 ? hasVat
                   ? "เพิ่มรูปได้ · VAT ยืนยันแล้ว"
-                  : "ถ่ายรูปบิล — AI อ่านรายการ ยอด"
-                : "ถ่ายรูปบิล — AI อ่านวันที่ รายการ ยอดให้อัตโนมัติ · แก้เองได้ทุกช่อง"
+                  : "บิล หรือแคปแชทถ้าไม่มีบิล · AI อ่านยอด"
+                : "บิลหรือแคปแชท — AI อ่านวันที่ รายการ ยอด"
             }
           />
           {!useVatFirst ? (

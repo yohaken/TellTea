@@ -73,6 +73,10 @@ export type LedgerEntry = {
   vatVerified?: boolean;
   /** รวมเข้าหักภาษีซื้อ VAT เดือน — ติ๊กที่ตารางเดือนเป็นหลัก */
   vatClaim?: boolean;
+  /** purchase | staff_transfer — กติกาหลักฐานตอนสร้างรายการ */
+  evidenceDocPolicy?: string;
+  /** พนักงาน/เจ้าของติ๊กเข้าใจกติกาหลักฐานแล้ว */
+  evidenceDocAck?: boolean;
 };
 
 export type LedgerEntryInput = {
@@ -93,6 +97,8 @@ export type LedgerEntryInput = {
   vatSource?: string;
   vatVerified?: boolean;
   vatClaim?: boolean;
+  evidenceDocPolicy?: string;
+  evidenceDocAck?: boolean;
 };
 
 /** Perpetual inventory — วัตถุดิบร้าน (Products) */
