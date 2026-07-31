@@ -14,6 +14,8 @@ import {
   PAYROLL_SLIP_MAX,
   PAYROLL_STATUS_LABELS,
   payrollDescription,
+  pendingPayrollNeedingAdvanceRefresh,
+  recordEmployeeAdvance,
   restorePayrollItem,
   summarizePayrollItems,
   voidPayrollItem,
@@ -24,7 +26,12 @@ import {
   type PayrollSchedule,
 } from "@/lib/payroll";
 import type { ProdEntry } from "@/lib/production";
-import { formatDateShortBe, formatPlainNumber } from "@/lib/utils";
+import {
+  formatDateShortBe,
+  formatPlainNumber,
+  parseDateInput,
+  todayInputValue,
+} from "@/lib/utils";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 function fmt(n: number) {
@@ -42,6 +49,15 @@ type SpecialDraft = {
   amount: string;
   note: string;
   skipGroup: boolean;
+};
+
+type AdvanceDraft = {
+  employeeId: string;
+  amount: string;
+  date: string;
+  note: string;
+  slipUrls: string[];
+  voidPendingThenHint: boolean;
 };
 
 function shortKind(kind: PayrollKind): string {
@@ -93,12 +109,21 @@ export function PayrollPayPanel({
     note: "",
     skipGroup: true,
   });
+  const [advanceOpen, setAdvanceOpen] = useState(false);
+  const [advanceDraft, setAdvanceDraft] = useState<AdvanceDraft>({
+    employeeId: "",
+    amount: "",
+    date: todayInputValue(),
+    note: "",
+    slipUrls: [],
+    voidPendingThenHint: true,
+  });
   const [slipPreview, setSlipPreview] = useState<{
     urls: string[];
     title: string;
   } | null>(null);
 
-  useBodyScrollLock(!!payTarget || specialOpen || !!slipPreview);
+  useBodyScrollLock(!!payTarget || specialOpen || advanceOpen || !!slipPreview);
 
   const periodItems = useMemo(
     () => items.filter((i) => i.periodMonth === periodMonth),
@@ -148,6 +173,15 @@ export function PayrollPayPanel({
     [employees],
   );
 
+  const advancePendingRows = useMemo(() => {
+    if (!advanceDraft.employeeId) return [];
+    return pendingPayrollNeedingAdvanceRefresh(
+      periodItems,
+      advanceDraft.employeeId,
+      periodMonth,
+    );
+  }, [advanceDraft.employeeId, periodItems, periodMonth]);
+
   const showActions = shopView && (isOwner || canPay);
 
   function openSpecialForm() {
@@ -158,6 +192,83 @@ export function PayrollPayPanel({
       skipGroup: true,
     });
     setSpecialOpen(true);
+  }
+
+  function openAdvanceForm(employeeId?: string) {
+    setAdvanceDraft({
+      employeeId: employeeId || activeRoster[0]?.id || "",
+      amount: "",
+      date: todayInputValue(),
+      note: "",
+      slipUrls: [],
+      voidPendingThenHint: true,
+    });
+    setAdvanceOpen(true);
+  }
+
+  async function onRecordAdvance() {
+    if (!isOwner) return;
+    const emp = activeRoster.find((e) => e.id === advanceDraft.employeeId);
+    if (!emp) {
+      onError("เลือกพนักงานก่อน");
+      return;
+    }
+    const amountNum = Number(advanceDraft.amount);
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      onError("ใส่ยอดเบิกให้ถูกต้อง");
+      return;
+    }
+    let dateMs: number;
+    try {
+      dateMs = parseDateInput(advanceDraft.date);
+    } catch {
+      onError("ใส่วันที่เบิกให้ถูกต้อง");
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await recordEmployeeAdvance({
+        employeeId: emp.id,
+        employeeName: emp.name,
+        amount: amountNum,
+        createdBy: actorId,
+        date: dateMs,
+        note: advanceDraft.note,
+        slipUrls: advanceDraft.slipUrls,
+        postToBooks: true,
+      });
+
+      let voided = 0;
+      if (advanceDraft.voidPendingThenHint && advancePendingRows.length) {
+        for (const row of advancePendingRows) {
+          await voidPayrollItem(row.id, actorId);
+          voided += 1;
+        }
+      }
+
+      const refreshed = await listActiveEmployeesWithPay();
+      onEmployeesChange?.(refreshed);
+      setAdvanceOpen(false);
+      if (voided > 0) {
+        setFilter("void");
+        onInfo?.(
+          `บันทึกเบิก · ${emp.name} · ฿${fmt(amountNum)} · ค้างหัก ฿${fmt(result.advanceBalance)} · ลงบช.เจ้าของแล้ว` +
+            (advanceDraft.slipUrls.length ? " · มีสลิป" : "") +
+            ` · ยกเลิกคิว ${voided} รายการ — กด「สร้างเงินเดือน」เพื่อหักเบิกใหม่`,
+        );
+      } else {
+        setFilter("pending");
+        onInfo?.(
+          `บันทึกเบิก · ${emp.name} · ฿${fmt(amountNum)} · ค้างหัก ฿${fmt(result.advanceBalance)} · ลงบช.เจ้าของแล้ว` +
+            (advanceDraft.slipUrls.length ? " · มีสลิป" : "") +
+            " · กด「สร้างเงินเดือน」ถ้ายังไม่มีคิว (หรือยกเลิกคิวเก่าก่อนถ้ามีแล้วไม่หักเบิก)",
+        );
+      }
+    } catch (err) {
+      onError((err as Error).message || "บันทึกเบิกไม่สำเร็จ");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onCreateSpecial() {
@@ -343,11 +454,20 @@ export function PayrollPayPanel({
             >
               จ่ายแยก
             </button>
+            <button
+              type="button"
+              className="ghost-btn"
+              disabled={busy || !activeRoster.length}
+              onClick={() => openAdvanceForm()}
+              title="บันทึกเบิกล่วงหน้า — วันที่ + สลิป + ลงบช.เจ้าของ แล้วหักจากรอบจ่าย"
+            >
+              บันทึกเบิก
+            </button>
           </div>
           <p className="muted payroll-actions-hint">
-            แยกสร้าง: เงินเดือนได้เลย · โบนัสหลังปิดเดือนที่สรุปโบนัส · สิ้นเดือนลงบัญชีวันสิ้นเดือน (โอนวันที่{" "}
-            {schedule.salarySplits[1]?.dayOfMonth ?? 1}) · จ่ายแยก = ยอดกำหนดเองเข้าคิวเดียวกัน ·
-            หักเบิกค้างอัตโนมัติ · ยกเลิกแล้วกดสร้างใหม่ได้
+            เบิกเงินก่อนรอบ (เช่น วันที่ 28) →「บันทึกเบิก」วัน+สลิปลงบช. · ถ้ามีคิวรอโอนอยู่แล้วให้ยกเลิกแล้วกด「สร้างเงินเดือน」หักอัตโนมัติ ·
+            จ่ายแยก = ยอดกำหนดเอง · สิ้นเดือนลงบัญชีวันสิ้นเดือน (โอนวันที่{" "}
+            {schedule.salarySplits[1]?.dayOfMonth ?? 1})
             {missingSalary
               ? ` · ยังไม่มีเงินเดือน ${missingSalary} คน — ไปแท็บตั้งค่าจ่าย`
               : ""}
@@ -589,6 +709,134 @@ export function PayrollPayPanel({
           title={slipPreview.title}
           onClose={() => setSlipPreview(null)}
         />
+      ) : null}
+
+      {advanceOpen ? (
+        <div
+          className="modal-backdrop edit-modal is-module-form"
+          onClick={() => !busy && setAdvanceOpen(false)}
+        >
+          <div
+            className="modal-card module-form-card"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="บันทึกเบิกล่วงหน้า"
+          >
+            <h2 className="panel-title" style={{ fontSize: "1rem", marginBottom: "0.45rem" }}>
+              บันทึกเบิก · ลงบช.เจ้าของ
+            </h2>
+            <p className="muted" style={{ marginBottom: "0.75rem" }}>
+              จ่ายเงินล่วงหน้า (เช่น วันที่ 28) — ระบบเพิ่มเบิกค้าง หักจากรอบจ่ายถัดไป · สลิปไปโพสต์บช.ส่วนตัว
+            </p>
+            <label className="field">
+              <span>พนักงาน</span>
+              <select
+                value={advanceDraft.employeeId}
+                onChange={(e) =>
+                  setAdvanceDraft((d) => ({ ...d, employeeId: e.target.value }))
+                }
+                disabled={busy}
+              >
+                {activeRoster.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name}
+                    {Number(emp.advanceBalance) > 0
+                      ? ` · ค้าง ฿${fmt(Number(emp.advanceBalance))}`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>วันที่เบิก</span>
+              <input
+                type="date"
+                value={advanceDraft.date}
+                onChange={(e) =>
+                  setAdvanceDraft((d) => ({ ...d, date: e.target.value }))
+                }
+                disabled={busy}
+                required
+              />
+            </label>
+            <label className="field">
+              <span>ยอดเบิก (บาท)</span>
+              <input
+                type="number"
+                min={0.01}
+                step={100}
+                inputMode="decimal"
+                value={advanceDraft.amount}
+                onChange={(e) =>
+                  setAdvanceDraft((d) => ({ ...d, amount: e.target.value }))
+                }
+                disabled={busy}
+                placeholder="เช่น 7500"
+                autoFocus
+              />
+            </label>
+            <label className="field">
+              <span>หมายเหตุ</span>
+              <input
+                value={advanceDraft.note}
+                onChange={(e) =>
+                  setAdvanceDraft((d) => ({ ...d, note: e.target.value }))
+                }
+                disabled={busy}
+                placeholder="optional"
+              />
+            </label>
+            <PhotoAttachMultiField
+              label="สลิปโอน/จ่ายเบิก"
+              values={advanceDraft.slipUrls}
+              onChange={(urls) => setAdvanceDraft((d) => ({ ...d, slipUrls: urls }))}
+              onError={onError}
+              max={PAYROLL_SLIP_MAX}
+              storageFolder="payroll"
+              storageSlotKey={`advance-${advanceDraft.employeeId || "new"}`}
+              hint="แนบสลิป — ไปกับแถวบช.เจ้าของ"
+            />
+            {advancePendingRows.length ? (
+              <label className="payroll-special-skip" style={{ marginTop: "0.65rem" }}>
+                <input
+                  type="checkbox"
+                  checked={advanceDraft.voidPendingThenHint}
+                  onChange={(e) =>
+                    setAdvanceDraft((d) => ({
+                      ...d,
+                      voidPendingThenHint: e.target.checked,
+                    }))
+                  }
+                  disabled={busy}
+                />
+                ยกเลิกคิวรอโอนของคนนี้ในเดือนนี้ ({advancePendingRows.length} รายการที่ยังไม่หักเบิก)
+                — แล้วกดสร้างเงินเดือนใหม่ให้หัก
+              </label>
+            ) : (
+              <p className="muted form-hint-inline" style={{ marginTop: "0.65rem" }}>
+                ยังไม่มีคิวรอโอนที่ต้องรีเซ็ต — หลังบันทึกกด「สร้างเงินเดือน」ได้เลยถ้ายังไม่สร้าง
+              </p>
+            )}
+            <div className="module-form-actions">
+              <button
+                type="button"
+                className="ghost-btn"
+                disabled={busy}
+                onClick={() => setAdvanceOpen(false)}
+              >
+                ออก
+              </button>
+              <button
+                type="button"
+                className="primary-btn"
+                disabled={busy}
+                onClick={() => void onRecordAdvance()}
+              >
+                {busy ? "กำลังบันทึก..." : "บันทึกเบิก + ลงบช."}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {specialOpen ? (

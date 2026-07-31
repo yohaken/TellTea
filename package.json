@@ -29,6 +29,7 @@
     "test:rate-schedule": "node scripts/test-rate-schedule.mjs",
     "test:payroll": "node scripts/test-payroll.mjs",
     "test:payroll-special": "node scripts/test-payroll-special.mjs",
+    "test:payroll-advance": "node scripts/test-payroll-advance.mjs",
     "test:payroll-history": "node scripts/test-payroll-history.mjs",
     "test:staff-task-nudge": "node scripts/test-staff-task-nudge.mjs",
     "test:task-owner-timeline": "node scripts/test-task-owner-timeline.mjs",
