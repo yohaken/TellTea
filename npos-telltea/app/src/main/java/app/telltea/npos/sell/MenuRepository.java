@@ -165,6 +165,10 @@ public final class MenuRepository {
                         JSONObject res = postJson(TOGGLE_SOLD_URL, body);
                         boolean ok = res.optBoolean("ok", false);
                         if (ok) {
+                            long menuVersion = res.optLong("menuVersion", 0L);
+                            if (menuVersion > 0) {
+                                MenuSyncCoordinator.markSyncedAndNotify(app, menuVersion);
+                            }
                             OpsLogger.info(
                                     app,
                                     "menu",

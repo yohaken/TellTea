@@ -51,6 +51,11 @@
             android:label="@string/sell_title" />
 
         <activity
+            android:name=".MenuAdminActivity"
+            android:exported="false"
+            android:label="@string/menu_admin_title" />
+
+        <activity
             android:name=".ShiftActivity"
             android:exported="false"
             android:label="@string/nav_shift" />

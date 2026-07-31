@@ -50,6 +50,22 @@ public final class MenuSyncCoordinator {
         .apply();
   }
 
+  /**
+   * After a local write that already bumped server menuVersion — stamp local + notify
+   * other open screens (Sell / MenuAdmin) to reload.
+   */
+  public static void markSyncedAndNotify(Context context, long version) {
+    if (context == null || version <= 0) return;
+    markSynced(context, version);
+    for (Listener l : listeners) {
+      try {
+        l.onMenuVersionChanged(version);
+      } catch (RuntimeException ignored) {
+        /* one bad listener must not block others */
+      }
+    }
+  }
+
   /** From heartbeat / shop / menu payload. */
   public static void applyFromServer(Context context, long serverVersion) {
     if (context == null || serverVersion <= 0) return;

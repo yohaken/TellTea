@@ -232,7 +232,9 @@ exports.nposToggleSoldOut = functions.region("asia-southeast1").https.onRequest(
       return;
     }
     await ref.set({ active: !soldOut, updatedAt: Date.now(), soldOutBy: installId }, { merge: true });
-    res.status(200).json({ ok: true, itemId, active: !soldOut, soldOut });
+    const menuVersion = Date.now();
+    await db.doc("meta/pos").set({ menuVersion }, { merge: true });
+    res.status(200).json({ ok: true, itemId, active: !soldOut, soldOut, menuVersion });
   } catch (err) {
     console.error("nposToggleSoldOut", err);
     res.status(500).json({ ok: false, error: "toggle_failed" });
@@ -666,7 +668,9 @@ exports.nposReorderCategories = functions.region("asia-southeast1").https.onRequ
       return;
     }
     await batch.commit();
-    res.status(200).json({ ok: true, count: n });
+    const menuVersion = Date.now();
+    await db.doc("meta/pos").set({ menuVersion }, { merge: true });
+    res.status(200).json({ ok: true, count: n, menuVersion });
   } catch (err) {
     console.error("nposReorderCategories", err);
     res.status(500).json({ ok: false, error: "reorder_failed" });

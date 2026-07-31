@@ -680,8 +680,8 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     runOnUiThread(
         () -> {
           if (isFinishing()) return;
+          // Quiet reload — sold-out / BOH edits already show their own status.
           reloadMenu(true);
-          Toast.makeText(this, R.string.sell_menu_refreshed_toast, Toast.LENGTH_SHORT).show();
         });
   }
 
@@ -1473,7 +1473,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       }
       cell.setOnLongClickListener(
           v -> {
-            confirmToggleSoldOut(item);
+            showItemActionsSheet(item);
             return true;
           });
       menuGrid.addView(cell);
@@ -1530,39 +1530,129 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     showOptionPicker(item);
   }
 
-  private void confirmToggleSoldOut(MenuModels.Item item) {
+  /** Long-press on grid: sold-out toggle + jump to menu admin editor. */
+  private void showItemActionsSheet(MenuModels.Item item) {
+    if (item == null) return;
+    if (uiScale == null) uiScale = UiScale.from(this);
+
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    int pad = uiScale.dp(12);
+    box.setPadding(pad, pad, pad, pad);
+
+    TextView name = NposUi.section(this, item.name);
+    name.setPadding(0, 0, 0, uiScale.dp(4));
+    box.addView(name);
+
+    TextView status =
+        NposUi.caption(
+            this,
+            getString(
+                item.active ? R.string.menu_admin_status_on : R.string.menu_admin_status_off));
+    status.setPadding(0, 0, 0, uiScale.dp(12));
+    box.addView(status);
+
+    final android.app.AlertDialog[] holder = new android.app.AlertDialog[1];
+
+    TextView toggle =
+        item.active
+            ? NposUi.primary(this, getString(R.string.menu_item_action_sold_out))
+            : NposUi.primary(this, getString(R.string.menu_item_action_restore));
+    toggle.setMaxWidth(Integer.MAX_VALUE);
+    toggle.setMinHeight(uiScale.payPrimaryMinPx);
+    LinearLayout.LayoutParams tLp =
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    tLp.bottomMargin = uiScale.dp(10);
+    toggle.setLayoutParams(tLp);
+    toggle.setOnClickListener(
+        v -> {
+          if (holder[0] != null) holder[0].dismiss();
+          runToggleSoldOut(item);
+        });
+    box.addView(toggle);
+
+    TextView edit = NposUi.secondary(this, getString(R.string.menu_item_action_edit));
+    edit.setMaxWidth(Integer.MAX_VALUE);
+    edit.setMinHeight(uiScale.payPrimaryMinPx);
+    LinearLayout.LayoutParams eLp =
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+    eLp.bottomMargin = uiScale.dp(10);
+    edit.setLayoutParams(eLp);
+    edit.setOnClickListener(
+        v -> {
+          if (holder[0] != null) holder[0].dismiss();
+          Intent intent = new Intent(this, MenuAdminActivity.class);
+          intent.putExtra(MenuAdminActivity.EXTRA_FOCUS_ITEM_ID, item.id);
+          startActivity(intent);
+        });
+    box.addView(edit);
+
+    TextView cancel = NposUi.ghost(this, getString(android.R.string.cancel));
+    cancel.setMaxWidth(Integer.MAX_VALUE);
+    cancel.setLayoutParams(
+        new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+    cancel.setOnClickListener(
+        v -> {
+          if (holder[0] != null) holder[0].dismiss();
+        });
+    box.addView(cancel);
+
+    holder[0] =
+        new android.app.AlertDialog.Builder(this)
+            .setTitle(R.string.menu_item_actions_title)
+            .setView(box)
+            .create();
+    holder[0].show();
+    if (holder[0].getWindow() != null) {
+      int w =
+          Math.min(
+              (int) (getResources().getDisplayMetrics().widthPixels * 0.42f), uiScale.dp(420));
+      w = Math.max(w, uiScale.dp(320));
+      holder[0]
+          .getWindow()
+          .setLayout(w, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+    }
+  }
+
+  private void runToggleSoldOut(MenuModels.Item item) {
     if (menu != null && menu.demo) {
       Toast.makeText(this, R.string.sold_out_demo_blocked, Toast.LENGTH_SHORT).show();
       return;
     }
     boolean toSoldOut = item.active;
-    NposConfirmDialog.confirm(
+    Toast.makeText(this, R.string.sold_out_saving, Toast.LENGTH_SHORT).show();
+    menuRepo.toggleSoldOut(
         this,
-        getString(toSoldOut ? R.string.sold_out_confirm_title : R.string.sold_out_restore_title),
-        item.name,
-        getString(android.R.string.ok),
-        () ->
-            menuRepo.toggleSoldOut(
-                this,
-                item.id,
-                toSoldOut,
-                (ok, active, err) ->
-                    runOnUiThread(
-                        () -> {
-                          if (!ok) {
-                            Toast.makeText(this, R.string.sold_out_fail, Toast.LENGTH_LONG).show();
-                            return;
-                          }
-                          replaceItemActive(item.id, active);
-                          // Clear cart lines for sold-out item (web parity)
-                          if (!active) {
-                            for (int i = cart.size() - 1; i >= 0; i--) {
-                              if (item.id.equals(cart.get(i).menuItemId)) cart.remove(i);
-                            }
-                            renderCart();
-                          }
-                          renderMenu();
-                        })));
+        item.id,
+        toSoldOut,
+        (ok, active, err) ->
+            runOnUiThread(
+                () -> {
+                  if (!ok) {
+                    Toast.makeText(this, R.string.sold_out_fail, Toast.LENGTH_LONG).show();
+                    return;
+                  }
+                  replaceItemActive(item.id, active);
+                  // Clear cart lines for sold-out item (web parity)
+                  if (!active) {
+                    for (int i = cart.size() - 1; i >= 0; i--) {
+                      if (item.id.equals(cart.get(i).menuItemId)) cart.remove(i);
+                    }
+                    renderCart();
+                  }
+                  renderMenu();
+                  // menuVersion notify may also reload — one success toast here is enough.
+                  Toast.makeText(
+                          this,
+                          active
+                              ? R.string.menu_admin_restored_toast
+                              : R.string.menu_admin_sold_out_toast,
+                          Toast.LENGTH_SHORT)
+                      .show();
+                }));
   }
 
   private void replaceItemActive(String id, boolean active) {
@@ -1576,6 +1666,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
                 it.categoryId,
                 it.name,
                 it.price,
+                it.deliveryPrice,
                 it.optionGroupIds,
                 it.imageUrl,
                 active,
