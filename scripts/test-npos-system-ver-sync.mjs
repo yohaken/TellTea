@@ -41,6 +41,6 @@ assert.match(hosting, /"source":\s*"\/downloads\/\*\*"/);
 assert.match(hosting, /Access-Control-Allow-Origin/);
 
 assert.match(read("src/lib/version.ts"), /APP_BUILD = 525/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 144/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 145/);
 
 console.log(`OK test-npos-system-ver-sync ${name} (${code})`);
