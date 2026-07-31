@@ -253,12 +253,15 @@ async function main() {
       salesMissingSessionDoc: salesMissingSessionDoc.length,
       mutationsKeep,
       mutationsOutside: mutationsOutside.length,
+      mutationsNoSaleId,
+      keepSaleIds: keepSaleIds.size,
     },
     leftoverProblem:
       completedOutside +
         voidedOutside +
         orphanSales.length +
         salesMissingSessionDoc.length +
+        mutationsOutside.length +
         (sessions.length - keepSessions.length) >
       0,
     devices,
