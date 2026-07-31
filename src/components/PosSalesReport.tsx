@@ -630,13 +630,11 @@ export function PosSalesReportPage() {
 
       {error ? <p className="error-text">{error}</p> : null}
 
-      <section id="pos-sales-report" className="pos-hub-section" aria-label="รายงานยอดขาย">
-        <h2 className="pos-hub-section-title">ยอดขาย</h2>
+      <section id="pos-sales-report" className="pos-hub-section" aria-label="ยอดขาย">
         <PosSalesReport onError={setError} />
       </section>
 
       <section id="pos-manage" className="pos-hub-section" aria-label="จัดการ">
-        <h2 className="pos-hub-section-title">จัดการ</h2>
         <PosManagePanel onError={setError} />
       </section>
     </div>

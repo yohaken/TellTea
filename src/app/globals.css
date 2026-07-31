@@ -8871,11 +8871,18 @@ body.modal-open .main-panel {
 /* Unified POS hub: report + manage stacked, mini compact */
 .pos-sales-report-page--unified {
   --pos-hub-fs: 0.74rem;
+  --pos-hub-fs-em: 0.8rem;
+  --pos-hub-fs-micro: 0.68rem;
+  --pos-hub-gap: 0.35rem;
+  --pos-hub-space: 0.4rem;
+  --pos-hub-radius: 0.55rem;
+  --pos-hub-pad-y: 0.4rem;
+  --pos-hub-pad-x: 0.55rem;
 }
 
 .pos-sales-report-page--unified .npos-bo-page-head {
-  margin-bottom: 0.4rem;
-  gap: 0.35rem 0.75rem;
+  margin-bottom: var(--pos-hub-space);
+  gap: 0.3rem 0.65rem;
   align-items: baseline;
 }
 
@@ -8887,8 +8894,8 @@ body.modal-open .main-panel {
 
 .pos-sales-report-page--unified .pos-sales-page-lead,
 .pos-sales-report-page--unified .pos-manage-lead {
-  margin: 0.1rem 0 0;
-  font-size: 0.7rem;
+  margin: 0.08rem 0 0;
+  font-size: var(--pos-hub-fs-micro);
   line-height: 1.25;
   white-space: nowrap;
   overflow-x: auto;
@@ -8915,19 +8922,36 @@ body.modal-open .main-panel {
   white-space: nowrap;
 }
 
+/* Phase 2 — jump tabs + card titles already orient; hide duplicate h2 */
+.pos-sales-report-page--unified .pos-hub-section-title {
+  display: none;
+}
+
+.pos-sales-report-page--unified .pos-hub-section {
+  margin-bottom: var(--pos-hub-space);
+}
+
+.pos-sales-report-page--unified .pos-hub-section + .pos-hub-section {
+  padding-top: var(--pos-hub-space);
+  margin-top: 0.1rem;
+}
+
+/* Phase 1 — one card rhythm (pad / radius / gaps) */
 .pos-sales-report-page--unified .npos-slim-sessions {
-  margin-bottom: 0.45rem;
-  padding: 0.45rem 0.55rem 0.4rem;
-  border-radius: 0.55rem;
+  margin-bottom: var(--pos-hub-space);
+  padding: var(--pos-hub-pad-y) var(--pos-hub-pad-x) 0.35rem;
+  border-radius: var(--pos-hub-radius);
+  box-shadow: none;
 }
 
 .pos-sales-report-page--unified .npos-slim-sessions-head {
-  margin-bottom: 0.28rem;
-  padding-bottom: 0.28rem;
+  margin-bottom: 0.22rem;
+  padding-bottom: 0.22rem;
+  gap: 0.25rem 0.55rem;
 }
 
 .pos-sales-report-page--unified .npos-slim-sessions-head h3 {
-  font-size: 0.8rem;
+  font-size: var(--pos-hub-fs-em);
 }
 
 .pos-sales-report-page--unified .npos-slim-summary,
@@ -8937,8 +8961,53 @@ body.modal-open .main-panel {
   font-size: var(--pos-hub-fs);
 }
 
+.pos-sales-report-page--unified .npos-slim-summary {
+  margin-bottom: 0.28rem;
+  padding: 0.18rem 0;
+  gap: 0.15rem 0.35rem;
+}
+
 .pos-sales-report-page--unified .npos-slim-summary strong {
-  font-size: 0.84rem;
+  font-size: var(--pos-hub-fs-em);
+}
+
+.pos-sales-report-page--unified .npos-slim-filters,
+.pos-sales-report-page--unified .npos-slim-search,
+.pos-sales-report-page--unified .npos-slim-bulk {
+  margin-bottom: 0.28rem;
+  gap: 0.1rem 0.3rem;
+}
+
+.pos-sales-report-page--unified .npos-slim-search input[type="search"] {
+  font-size: var(--pos-hub-fs);
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.35rem;
+  line-height: 1.25;
+}
+
+.pos-sales-report-page--unified .npos-slim-pulse {
+  gap: 0.08rem 0.28rem;
+}
+
+.pos-sales-report-page--unified .npos-slim-pulse-label,
+.pos-sales-report-page--unified .npos-slim-pulse-hint {
+  font-size: var(--pos-hub-fs-micro);
+}
+
+.pos-sales-report-page--unified .npos-slim-empty,
+.pos-sales-report-page--unified .npos-slim-foot {
+  margin-top: 0.22rem;
+  font-size: var(--pos-hub-fs-micro);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.pos-sales-report-page--unified .npos-slim-bulk .bulk-status-hint {
+  font-size: var(--pos-hub-fs-micro);
+  margin: 0.08rem 0 0;
+  white-space: nowrap;
+  overflow-x: auto;
 }
 
 .pos-sales-report-page--unified .npos-slim-row,
@@ -8948,47 +9017,199 @@ body.modal-open .main-panel {
   white-space: nowrap;
 }
 
+/* Phase 4 — hairline row density */
+.pos-sales-report-page--unified .npos-slim-row {
+  padding-top: 0.28rem;
+  padding-bottom: 0.28rem;
+  line-height: 1.25;
+}
+
 .pos-sales-report-page--unified .npos-slim-row td,
 .pos-sales-report-page--unified .npos-slim-row th,
 .pos-sales-report-page--unified table.sheet-table--dense td,
 .pos-sales-report-page--unified table.sheet-table--dense th {
   white-space: nowrap;
   font-size: var(--pos-hub-fs);
-  padding-top: 0.22rem;
-  padding-bottom: 0.22rem;
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
   line-height: 1.25;
 }
 
-.pos-sales-report-page--unified .pos-sales-issue-lead {
-  margin: 0.2rem 0 0;
+.pos-sales-report-page--unified .npos-slim-detail {
+  padding: 0.2rem 0.15rem 0.35rem;
+  font-size: var(--pos-hub-fs-micro);
+  line-height: 1.3;
+}
+
+.pos-sales-report-page--unified .npos-slim-code {
   font-size: 0.7rem;
+}
+
+.pos-sales-report-page--unified .npos-bills-slim-more {
+  padding: 0.25rem;
+  font-size: var(--pos-hub-fs-micro);
+}
+
+.pos-sales-report-page--unified .pos-sales-issue-lead {
+  margin: 0.15rem 0 0;
+  font-size: var(--pos-hub-fs-micro);
   line-height: 1.3;
   white-space: nowrap;
   overflow-x: auto;
 }
 
 .pos-sales-report-page--unified .pos-manage-stack--slim {
-  gap: 0.35rem;
+  gap: var(--pos-hub-gap);
 }
 
 .pos-sales-report-page--unified .pos-manage-stack--slim .settings-fold-title {
-  font-size: 0.78rem;
+  font-size: var(--pos-hub-fs-em);
 }
 
 .pos-sales-report-page--unified .pos-manage-stack--slim .settings-fold-hint,
 .pos-sales-report-page--unified .pos-manage-stack--slim .settings-fold-hint--collapsed {
-  font-size: 0.68rem;
-  margin: 0.12rem 0.55rem 0.35rem;
+  font-size: var(--pos-hub-fs-micro);
+  margin: 0.1rem 0.5rem 0.3rem;
   white-space: nowrap;
   overflow-x: auto;
 }
 
 .pos-sales-report-page--unified .pos-manage-stack--slim .settings-fold-toggle {
-  padding: 0.35rem 0.55rem;
+  padding: 0.32rem 0.5rem;
 }
 
 .pos-sales-report-page--unified .npos-manage-embed-head {
   font-size: 0.72rem;
+}
+
+/* Phase 3 — bill toolbar + fold chrome (iframe heights unchanged) */
+.pos-sales-report-page--unified .pos-sales-bill-toolbar {
+  gap: 0.3rem 0.45rem;
+  margin: 0.18rem 0 0.32rem;
+  align-items: center;
+}
+
+.pos-sales-report-page--unified .pos-sales-bill-search {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: min(100%, 13rem);
+}
+
+.pos-sales-report-page--unified .pos-sales-bill-search > span {
+  font-size: var(--pos-hub-fs-micro);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pos-sales-report-page--unified .pos-sales-bill-search input {
+  font-size: var(--pos-hub-fs);
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.35rem;
+  line-height: 1.25;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.pos-sales-report-page--unified .pos-sales-bills-summary {
+  font-size: var(--pos-hub-fs-em);
+  gap: 0.25rem 0.55rem;
+  padding: 0.05rem 0;
+}
+
+.pos-sales-report-page--unified .pos-sales-bills-fold {
+  margin-top: 0.28rem;
+}
+
+.pos-sales-report-page--unified.pos-sales-report-page--slim .pos-sales-bills-section {
+  margin-top: 0.28rem;
+  padding: var(--pos-hub-pad-y) var(--pos-hub-pad-x) 0.4rem;
+  border-radius: var(--pos-hub-radius);
+}
+
+.pos-sales-report-page--unified .pos-sales-fold--slim {
+  margin-top: 0.35rem;
+  padding: 0.35rem var(--pos-hub-pad-x) 0.4rem;
+  border-radius: var(--pos-hub-radius);
+}
+
+.pos-sales-report-page--unified .pos-sales-fold--slim > summary {
+  font-size: var(--pos-hub-fs-em);
+  font-weight: 700;
+  padding: 0.1rem 0;
+}
+
+.pos-sales-report-page--unified .pos-sales-fold--slim .pos-sales-report-section {
+  margin-top: 0.35rem;
+  padding-top: 0.28rem;
+}
+
+.pos-sales-report-page--unified .pos-sales-fold--slim .pos-sales-report-section h3 {
+  font-size: var(--pos-hub-fs-em);
+  margin: 0 0 0.2rem;
+}
+
+.pos-sales-report-page--unified .pos-sales-bill-split {
+  gap: 0.45rem;
+}
+
+.pos-sales-report-page--unified .pos-sales-bill-detail-note {
+  margin-top: 0.3rem;
+  font-size: var(--pos-hub-fs-micro);
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs {
+  margin: 0.32rem 0 0.35rem;
+  padding: var(--pos-hub-pad-y) var(--pos-hub-pad-x) 0.4rem;
+  border-radius: var(--pos-hub-radius);
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs-head {
+  margin-bottom: 0.28rem;
+  gap: 0.3rem 0.55rem;
+  align-items: baseline;
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs-title {
+  font-size: var(--pos-hub-fs-em);
+  font-weight: 700;
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs-sub,
+.pos-sales-report-page--unified .pos-session-print-docs-hint {
+  font-size: var(--pos-hub-fs-micro);
+  margin-top: 0.08rem;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs-hint {
+  margin: 0 0 0.28rem;
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs-tabs {
+  gap: 0.12rem 0.3rem;
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs-tabs button {
+  border: 0;
+  background: transparent;
+  border-radius: 0.2rem;
+  padding: 0.1rem 0.18rem;
+  font-size: var(--pos-hub-fs);
+  font-weight: 600;
+  color: #5a6570;
+}
+
+.pos-sales-report-page--unified .pos-session-print-docs-tabs button.is-active {
+  background: transparent;
+  color: #e85d04;
+  border-color: transparent;
+  font-weight: 700;
 }
 
 .npos-slim-text-btn {
