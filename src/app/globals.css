@@ -8868,6 +8868,129 @@ body.modal-open .main-panel {
   align-items: center;
 }
 
+/* Unified POS hub: report + manage stacked, mini compact */
+.pos-sales-report-page--unified {
+  --pos-hub-fs: 0.74rem;
+}
+
+.pos-sales-report-page--unified .npos-bo-page-head {
+  margin-bottom: 0.4rem;
+  gap: 0.35rem 0.75rem;
+  align-items: baseline;
+}
+
+.pos-sales-report-page--unified .pos-sales-page-title {
+  font-size: 0.98rem;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.pos-sales-report-page--unified .pos-sales-page-lead,
+.pos-sales-report-page--unified .pos-manage-lead {
+  margin: 0.1rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.pos-hub-section {
+  margin: 0 0 0.55rem;
+  scroll-margin-top: 0.5rem;
+}
+
+.pos-hub-section + .pos-hub-section {
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.1);
+}
+
+.pos-hub-section-title {
+  margin: 0 0 0.28rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #5a6570;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.pos-sales-report-page--unified .npos-slim-sessions {
+  margin-bottom: 0.45rem;
+  padding: 0.45rem 0.55rem 0.4rem;
+  border-radius: 0.55rem;
+}
+
+.pos-sales-report-page--unified .npos-slim-sessions-head {
+  margin-bottom: 0.28rem;
+  padding-bottom: 0.28rem;
+}
+
+.pos-sales-report-page--unified .npos-slim-sessions-head h3 {
+  font-size: 0.8rem;
+}
+
+.pos-sales-report-page--unified .npos-slim-summary,
+.pos-sales-report-page--unified .npos-slim-text-btn,
+.pos-sales-report-page--unified .pos-sales-bills-count,
+.pos-sales-report-page--unified .pos-sales-bill-chips button {
+  font-size: var(--pos-hub-fs);
+}
+
+.pos-sales-report-page--unified .npos-slim-summary strong {
+  font-size: 0.84rem;
+}
+
+.pos-sales-report-page--unified .npos-slim-row,
+.pos-sales-report-page--unified .npos-slim-row--device,
+.pos-sales-report-page--unified .pos-sales-row {
+  font-size: var(--pos-hub-fs);
+  white-space: nowrap;
+}
+
+.pos-sales-report-page--unified .npos-slim-row td,
+.pos-sales-report-page--unified .npos-slim-row th,
+.pos-sales-report-page--unified table.sheet-table--dense td,
+.pos-sales-report-page--unified table.sheet-table--dense th {
+  white-space: nowrap;
+  font-size: var(--pos-hub-fs);
+  padding-top: 0.22rem;
+  padding-bottom: 0.22rem;
+  line-height: 1.25;
+}
+
+.pos-sales-report-page--unified .pos-sales-issue-lead {
+  margin: 0.2rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.pos-sales-report-page--unified .pos-manage-stack--slim {
+  gap: 0.35rem;
+}
+
+.pos-sales-report-page--unified .pos-manage-stack--slim .settings-fold-title {
+  font-size: 0.78rem;
+}
+
+.pos-sales-report-page--unified .pos-manage-stack--slim .settings-fold-hint,
+.pos-sales-report-page--unified .pos-manage-stack--slim .settings-fold-hint--collapsed {
+  font-size: 0.68rem;
+  margin: 0.12rem 0.55rem 0.35rem;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.pos-sales-report-page--unified .pos-manage-stack--slim .settings-fold-toggle {
+  padding: 0.35rem 0.55rem;
+}
+
+.pos-sales-report-page--unified .npos-manage-embed-head {
+  font-size: 0.72rem;
+}
+
 .npos-slim-text-btn {
   appearance: none;
   border: 0;

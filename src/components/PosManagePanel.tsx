@@ -18,9 +18,7 @@ import { PosTabletSyncPanel } from "@/components/PosTabletSyncPanel";
 export function PosManagePanel({ onError }: { onError: (msg: string | null) => void }) {
   return (
     <div className="owner-settings-stack pos-manage-stack pos-manage-stack--dense pos-manage-stack--slim pos-manage-stack--consolidated">
-      <p className="muted pos-manage-lead">
-        เครื่อง · สัญญาณ · ตั้งค่า — แตะหมวดเพื่อเปิด · พับเป็นค่าเริ่ม · โฟกัส 570F0F
-      </p>
+      <p className="muted pos-manage-lead">เครื่อง · สัญญาณ · ตั้งค่า · 570F0F</p>
 
       {/* 1 — เปลี่ยนบ่อยสุด */}
       <NposDevicesPanel onError={onError} />

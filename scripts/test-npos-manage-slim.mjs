@@ -9,13 +9,13 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 544/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 156/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 545/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 157/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+125/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.102"/);
 
 assert.ok(existsSync(join(root, "docs/npos-manage-slim-checklist.md")));
-assert.match(read("docs/npos-manage-slim-checklist.md"), /570F0F|ตั้งค่า|สัญญาณ/);
+assert.match(read("docs/npos-manage-slim-checklist.md"), /570F0F|ตั้งค่า|สัญญาณ|หน้าเดียว/);
 
 const manage = read("src/components/PosManagePanel.tsx");
 assert.match(manage, /pos-manage-stack--slim/);
@@ -32,6 +32,15 @@ const signalAt = manage.indexOf("pos-manage-signal-fold");
 const settingsAt = manage.indexOf("pos-manage-settings-fold");
 assert.ok(devicesAt > 0 && signalAt > devicesAt && settingsAt > signalAt);
 
+const report = read("src/components/PosSalesReport.tsx");
+assert.match(report, /pos-sales-report-page--unified/);
+assert.match(report, /id="pos-sales-report"/);
+assert.match(report, /id="pos-manage"/);
+assert.match(report, /PosManagePanel/);
+assert.match(report, /PosSalesReport/);
+assert.match(report, /tab=manage/);
+assert.doesNotMatch(report, /tab === "manage" \? <PosManagePanel/);
+
 const devices = read("src/components/NposDevicesPanel.tsx");
 assert.match(devices, /npos-slim-row--device/);
 assert.match(devices, /NPOS_SHOP_KEEP_PAIRING_CODE|570F0F/);
@@ -46,7 +55,6 @@ const devicesLib = read("src/lib/pos-devices.ts");
 assert.match(devicesLib, /NPOS_SHOP_KEEP_PAIRING_CODE/);
 assert.match(devicesLib, /keepPairingCode/);
 
-const report = read("src/components/PosSalesReport.tsx");
 assert.match(report, /ช่องทาง · เมนูขายดี/);
 assert.doesNotMatch(report, /สรุปยอด · รอบ nPos · เมนูขายดี/);
 assert.doesNotMatch(report, /แยกตามรอบ nPos/);
@@ -61,5 +69,7 @@ assert.match(read("src/components/ManageEmbedSection.tsx"), /npos-manage-embed/)
 const css = read("src/app/globals.css");
 assert.match(css, /\.pos-manage-stack--slim/);
 assert.match(css, /\.npos-manage-embed/);
+assert.match(css, /\.pos-sales-report-page--unified/);
+assert.match(css, /\.pos-hub-section-title/);
 
 console.log("ok: npos-manage-slim gate");
