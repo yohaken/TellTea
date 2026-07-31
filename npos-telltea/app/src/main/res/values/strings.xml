@@ -246,6 +246,14 @@
     <string name="menu_admin_add_category">สร้างหมวด</string>
     <string name="menu_admin_add_item">สร้างเมนู</string>
     <string name="menu_admin_rename">แก้ชื่อ</string>
+    <string name="menu_admin_move_up">ขึ้น</string>
+    <string name="menu_admin_move_down">ลง</string>
+    <string name="menu_admin_archive_cat">เก็บ</string>
+    <string name="menu_admin_archive_cat_title">เก็บหมวด \"%1$s\"?</string>
+    <string name="menu_admin_archive_cat_msg">ซ่อนจากลิสต์ใช้งาน — เมนูในหมวดยังอยู่ · กู้คืนได้จากดูคลัง</string>
+    <string name="menu_admin_delete_cat">ลบถาวร</string>
+    <string name="menu_admin_delete_cat_title">ลบหมวดถาวร \"%1$s\"?</string>
+    <string name="menu_admin_delete_cat_msg">เมนูในหมวดยังอยู่ (เปลี่ยนหมวดเองถ้าต้องการ) · กู้คืนไม่ได้</string>
     <string name="menu_admin_show_archived">ดูคลัง</string>
     <string name="menu_admin_archived">คลัง</string>
     <string name="menu_admin_restore">เปิดคืน</string>

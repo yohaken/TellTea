@@ -196,16 +196,25 @@ public final class CaptureConsentActivity extends Activity {
       CaptureProjectionPrefs.clearNagUntilGrant(this);
       CaptureProjectionService.startWithConsent(getApplicationContext(), resultCode, data);
       OpsLogger.info(this, "display", "แคปจอ · อนุญาตแล้ว", pendingReason);
-      // Retry pending BO capture shortly after FGS binds projection.
+      // Wait until FGS holds a live projection (up to ~3s) before capturing —
+      // a fixed 600ms often races startForegroundService and re-opens the dialog.
       if (pendingRequestAt > 0 || "after_update".equals(pendingReason)) {
         final long reqAt =
             pendingRequestAt > 0 ? pendingRequestAt : System.currentTimeMillis();
         final String reason = pendingReason;
-        getWindow()
-            .getDecorView()
-            .postDelayed(
-                () -> ScreenCapture.requestCapture(getApplicationContext(), reqAt, reason),
-                600);
+        final Context appCtx = getApplicationContext();
+        final Runnable[] attempt = new Runnable[1];
+        final long deadline = System.currentTimeMillis() + 3200L;
+        attempt[0] =
+            () -> {
+              if (CaptureProjectionService.hasLiveProjection()
+                  || System.currentTimeMillis() >= deadline) {
+                ScreenCapture.requestCapture(appCtx, reqAt, reason);
+                return;
+              }
+              MAIN.postDelayed(attempt[0], 200L);
+            };
+        MAIN.postDelayed(attempt[0], 400L);
       }
       SHOWING.set(false);
     } else {

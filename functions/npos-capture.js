@@ -181,15 +181,15 @@ exports.reportNposScreenCapture = functions
         secondaryShot = await saveJpeg(installId, "secondary", secondaryMeta.jpegBase64);
       }
 
+      const failDetail = [
+        primaryMeta.ok === true ? "primary_upload_empty" : asString(primaryMeta.detail, 40) || "primary_fail",
+        secondaryMeta.ok === true
+          ? "secondary_upload_empty"
+          : asString(secondaryMeta.detail, 40) || "secondary_fail",
+      ].join(" · ");
       if (!primaryShot && !secondaryShot) {
         // Still record failure metadata so BO can see why (ops already logs on device).
-        const detail = [
-          primaryMeta.ok === true ? "primary_upload_empty" : asString(primaryMeta.detail, 40) || "primary_fail",
-          secondaryMeta.ok === true
-            ? "secondary_upload_empty"
-            : asString(secondaryMeta.detail, 40) || "secondary_fail",
-        ].join(" · ");
-        console.warn("reportNposScreenCapture no images", installId, detail);
+        console.warn("reportNposScreenCapture no images", installId, failDetail);
       }
 
       const db = getFirestore();
@@ -201,6 +201,7 @@ exports.reportNposScreenCapture = functions
       const secondaryUrl = secondaryShot
         ? captureMediaUrl(shotId, "secondary") || secondaryShot.downloadUrl || ""
         : "";
+      const hasImages = !!(primaryUrl || secondaryUrl);
       const doc = {
         id: shotId,
         installId,
@@ -240,15 +241,17 @@ exports.reportNposScreenCapture = functions
 
       // Keep newest N only — drop oldest excess (Storage + docs).
       let pruned = 0;
-      try {
-        const prune = await pruneNposShotsForInstall(installId, MAX_SHOTS_PER_INSTALL);
-        pruned = Number(prune?.pruned) || 0;
-      } catch (pruneErr) {
-        console.warn("npos-capture prune failed", installId, pruneErr?.message || pruneErr);
+      if (hasImages) {
+        try {
+          const prune = await pruneNposShotsForInstall(installId, MAX_SHOTS_PER_INSTALL);
+          pruned = Number(prune?.pruned) || 0;
+        } catch (pruneErr) {
+          console.warn("npos-capture prune failed", installId, pruneErr?.message || pruneErr);
+        }
       }
 
-      // Keep updatedAt fresh so BO orderBy("updatedAt") includes capture-only docs
-      // (orderBy reportedAt previously hid docs that never ran full diagnose).
+      // Keep updatedAt fresh so BO orderBy("updatedAt") includes capture-only docs.
+      // On empty capture: do NOT wipe last good URLs or ack the request — heartbeat retries.
       const diagnoseAt = Date.now();
       await db
         .collection("nposDiagnose")
@@ -259,11 +262,18 @@ exports.reportNposScreenCapture = functions
             stableKey,
             customerDisplay,
             ...(displays.length ? { displays } : {}),
-            latestCaptureAt: capturedAt,
-            latestCaptureId: shotId,
-            latestPrimaryUrl: doc.primary.url || "",
-            latestSecondaryUrl: doc.secondary.url || "",
-            latestCaptureReason: reason,
+            ...(hasImages
+              ? {
+                  latestCaptureAt: capturedAt,
+                  latestCaptureId: shotId,
+                  latestPrimaryUrl: doc.primary.url || "",
+                  latestSecondaryUrl: doc.secondary.url || "",
+                  latestCaptureReason: reason,
+                }
+              : {
+                  latestCaptureFailAt: capturedAt,
+                  latestCaptureFailDetail: failDetail,
+                }),
             updatedAt: diagnoseAt,
           },
           { merge: true },
@@ -274,11 +284,18 @@ exports.reportNposScreenCapture = functions
         .doc(installId)
         .set(
           {
-            lastCaptureAckAt: requestAt,
-            lastCaptureAt: capturedAt,
+            ...(hasImages
+              ? {
+                  lastCaptureAckAt: requestAt,
+                  lastCaptureAt: capturedAt,
+                  latestPrimaryUrl: doc.primary.url || "",
+                  latestSecondaryUrl: doc.secondary.url || "",
+                }
+              : {
+                  lastCaptureFailAt: capturedAt,
+                  lastCaptureFailDetail: failDetail,
+                }),
             customerDisplay,
-            latestPrimaryUrl: doc.primary.url || "",
-            latestSecondaryUrl: doc.secondary.url || "",
             updatedAt: Date.now(),
           },
           { merge: true },
@@ -291,7 +308,7 @@ exports.reportNposScreenCapture = functions
         primaryUrl: doc.primary.url || null,
         secondaryUrl: doc.secondary.url || null,
         capturedAt,
-        hasImages: !!(doc.primary.url || doc.secondary.url),
+        hasImages,
         pruned,
         maxShots: MAX_SHOTS_PER_INSTALL,
       });

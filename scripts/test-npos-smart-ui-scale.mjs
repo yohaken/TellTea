@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 528/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+115/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.92"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 530/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+116/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.93"/);
 assert.match(read("docs/npos-smart-ui-scale-checklist.md"), /UiScale|เลื่อน|คิดเงิน|เวอร์ชัน/);
 
 assert.ok(

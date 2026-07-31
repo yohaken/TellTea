@@ -330,8 +330,13 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
       listRoot.addView(emptyLine(getString(R.string.menu_admin_empty_items)));
       return;
     }
+    List<MenuModels.Category> visibleCats = new ArrayList<>();
     for (MenuModels.Category cat : menu.categories) {
       if (!showArchived && !cat.active) continue;
+      visibleCats.add(cat);
+    }
+    for (int i = 0; i < visibleCats.size(); i++) {
+      MenuModels.Category cat = visibleCats.get(i);
       List<MenuModels.Item> inCat = itemsInCategory(cat.id);
       LinearLayout head = new LinearLayout(this);
       head.setOrientation(LinearLayout.HORIZONTAL);
@@ -348,7 +353,22 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
       catHead.setLayoutParams(
           new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
       head.addView(catHead);
+
+      boolean canWrite = menu != null && !menu.demo && !toggleBusy;
+      if (cat.active && !showArchived && visibleCats.size() > 1) {
+        TextView up = NposUi.chip(this, getString(R.string.menu_admin_move_up));
+        up.setEnabled(canWrite && i > 0);
+        final int idx = i;
+        up.setOnClickListener(v -> moveCategory(visibleCats, idx, -1));
+        head.addView(up);
+        TextView down = NposUi.chip(this, getString(R.string.menu_admin_move_down));
+        down.setEnabled(canWrite && i < visibleCats.size() - 1);
+        down.setOnClickListener(v -> moveCategory(visibleCats, idx, +1));
+        head.addView(down);
+      }
+
       TextView rename = NposUi.chip(this, getString(R.string.menu_admin_rename));
+      rename.setEnabled(canWrite);
       rename.setOnClickListener(
           v ->
               promptText(
@@ -360,6 +380,24 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
                           new JSONObject().put("id", cat.id).put("name", name),
                           true)));
       head.addView(rename);
+
+      if (cat.active) {
+        TextView archive = NposUi.chip(this, getString(R.string.menu_admin_archive_cat));
+        archive.setEnabled(canWrite);
+        archive.setOnClickListener(v -> confirmArchiveCategory(cat));
+        head.addView(archive);
+      } else {
+        TextView restore = NposUi.chip(this, getString(R.string.menu_admin_restore));
+        restore.setEnabled(canWrite);
+        restore.setOnClickListener(
+            v -> mutate("restoreCategory", jsonId(cat.id), true));
+        head.addView(restore);
+        TextView hardDel = NposUi.chip(this, getString(R.string.menu_admin_delete_cat));
+        hardDel.setEnabled(canWrite);
+        hardDel.setOnClickListener(v -> confirmDeleteCategory(cat));
+        head.addView(hardDel);
+      }
+
       listRoot.addView(head);
       if (inCat.isEmpty()) {
         listRoot.addView(NposUi.caption(this, getString(R.string.menu_admin_empty_items)));
@@ -370,6 +408,44 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
         listRoot.addView(itemRow(item));
       }
     }
+  }
+
+  /** ↑↓ among currently visible active categories — BOH PosSortableList parity. */
+  private void moveCategory(List<MenuModels.Category> visible, int index, int delta) {
+    if (menu == null || menu.demo || toggleBusy) return;
+    int j = index + delta;
+    if (index < 0 || j < 0 || index >= visible.size() || j >= visible.size()) return;
+    List<String> ids = new ArrayList<>();
+    for (MenuModels.Category c : visible) ids.add(c.id);
+    String tmp = ids.get(index);
+    ids.set(index, ids.get(j));
+    ids.set(j, tmp);
+    try {
+      org.json.JSONArray arr = new org.json.JSONArray();
+      for (String id : ids) arr.put(id);
+      mutate("reorderCategories", new JSONObject().put("categoryIds", arr), true);
+      Toast.makeText(this, R.string.category_reordered, Toast.LENGTH_SHORT).show();
+    } catch (Exception e) {
+      Toast.makeText(this, R.string.menu_admin_save_fail, Toast.LENGTH_LONG).show();
+    }
+  }
+
+  private void confirmArchiveCategory(MenuModels.Category cat) {
+    NposConfirmDialog.confirmDestructive(
+        this,
+        getString(R.string.menu_admin_archive_cat_title, cat.name),
+        getString(R.string.menu_admin_archive_cat_msg),
+        getString(R.string.menu_admin_archive_cat),
+        () -> mutate("archiveCategory", jsonId(cat.id), true));
+  }
+
+  private void confirmDeleteCategory(MenuModels.Category cat) {
+    NposConfirmDialog.confirmDestructive(
+        this,
+        getString(R.string.menu_admin_delete_cat_title, cat.name),
+        getString(R.string.menu_admin_delete_cat_msg),
+        getString(R.string.menu_admin_delete_cat),
+        () -> mutate("deleteCategory", jsonId(cat.id), true));
   }
 
   private View itemRow(MenuModels.Item item) {

@@ -12,19 +12,20 @@ export function nposCaptureMediaUrl(
 }
 
 /**
- * Prefer media-proxy URL when we have shotId. Fall back to stored URL only if it
- * is already a proxy URL (or signed GCS). Skip bare Firebase token URLs — they
- * 412 on the project OT bucket and show blank thumbs in BO.
+ * Prefer media-proxy URL when this role actually has an image (non-empty storedUrl).
+ * Never invent a proxy URL from shotId alone — empty roles 404 and look like
+ * 「โหลดรูปไม่สำเร็จ」 even when the other role succeeded.
+ * Skip bare Firebase token URLs — they 412 on the project OT bucket.
  */
 export function resolveNposCaptureDisplayUrl(opts: {
   shotId?: string | null;
   role: "primary" | "secondary";
   storedUrl?: string | null;
 }): string {
-  const proxy = nposCaptureMediaUrl(opts.shotId, opts.role);
-  if (proxy) return proxy;
   const stored = String(opts.storedUrl || "").trim();
   if (!stored) return "";
+  const proxy = nposCaptureMediaUrl(opts.shotId, opts.role);
+  if (proxy) return proxy;
   if (stored.includes("nposCaptureMedia")) return stored;
   if (stored.includes("storage.googleapis.com") && stored.includes("X-Goog-")) return stored;
   // Known-broken for this project: firebasestorage.googleapis.com …&token=

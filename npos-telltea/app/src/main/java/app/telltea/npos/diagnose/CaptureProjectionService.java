@@ -143,6 +143,8 @@ public final class CaptureProjectionService extends Service {
                 synchronized (LOCK) {
                   projection = null;
                 }
+                // Prefs said "granted" but token is dead — clear so next BO capture re-prompts.
+                CaptureProjectionPrefs.markProjectionDead(CaptureProjectionService.this);
                 stopForeground(true);
                 stopSelf();
               }
@@ -200,9 +202,8 @@ public final class CaptureProjectionService extends Service {
             }
 
             reader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2);
-            final CountDownLatch frameLatch = new CountDownLatch(1);
             final AtomicReference<Image> latest = new AtomicReference<>();
-            ImageReader.OnImageAvailableListener listener =
+            reader.setOnImageAvailableListener(
                 r -> {
                   Image img = null;
                   try {
@@ -210,13 +211,12 @@ public final class CaptureProjectionService extends Service {
                     if (img != null) {
                       Image prev = latest.getAndSet(img);
                       if (prev != null) prev.close();
-                      frameLatch.countDown();
                     }
                   } catch (Exception ignored) {
                     if (img != null) img.close();
                   }
-                };
-            reader.setOnImageAvailableListener(listener, workerHandler);
+                },
+                workerHandler);
 
             vd =
                 proj.createVirtualDisplay(
@@ -229,16 +229,36 @@ public final class CaptureProjectionService extends Service {
                     null,
                     workerHandler);
 
-            if (!frameLatch.await(Math.max(800L, timeoutMs), TimeUnit.MILLISECONDS)) {
-              throw new IllegalStateException("frame_timeout");
+            long deadline =
+                System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(Math.max(800L, timeoutMs));
+            Bitmap chosen = null;
+            // First VirtualDisplay frames are often black — poll until a usable frame.
+            while (System.nanoTime() < deadline) {
+              Image image = latest.getAndSet(null);
+              if (image != null) {
+                Bitmap bmp;
+                try {
+                  bmp = imageToBitmap(image);
+                } finally {
+                  image.close();
+                }
+                if (bmp != null) {
+                  if (!isMostlyBlackOrEmpty(bmp)) {
+                    chosen = bmp;
+                    break;
+                  }
+                  bmp.recycle();
+                }
+              }
+              try {
+                Thread.sleep(40L);
+              } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                break;
+              }
             }
-            Image image = latest.getAndSet(null);
-            if (image == null) throw new IllegalStateException("no_frame");
-            try {
-              out.set(imageToBitmap(image));
-            } finally {
-              image.close();
-            }
+            if (chosen == null) throw new IllegalStateException("no_usable_frame");
+            out.set(chosen);
           } catch (Exception e) {
             err.set(e);
           } finally {
@@ -277,6 +297,37 @@ public final class CaptureProjectionService extends Service {
       return null;
     }
     return out.get();
+  }
+
+
+  /** Reject empty / first-frame black mirrors so we keep waiting for a real UI frame. */
+  private static boolean isMostlyBlackOrEmpty(Bitmap bmp) {
+    int w = bmp.getWidth();
+    int h = bmp.getHeight();
+    if (w < 8 || h < 8) return true;
+    int samples = 0;
+    int dark = 0;
+    long sum = 0;
+    long sumSq = 0;
+    int stepX = Math.max(1, w / 12);
+    int stepY = Math.max(1, h / 12);
+    for (int y = stepY / 2; y < h; y += stepY) {
+      for (int x = stepX / 2; x < w; x += stepX) {
+        int c = bmp.getPixel(x, y);
+        int r = (c >> 16) & 0xff;
+        int g = (c >> 8) & 0xff;
+        int b = c & 0xff;
+        int yv = (r * 30 + g * 59 + b * 11) / 100;
+        sum += yv;
+        sumSq += (long) yv * yv;
+        samples++;
+        if (yv < 18) dark++;
+      }
+    }
+    if (samples <= 0) return true;
+    double mean = sum / (double) samples;
+    double var = sumSq / (double) samples - mean * mean;
+    return mean < 12.0 || (var < 25.0 && dark * 100 / samples >= 92);
   }
 
   private static Bitmap imageToBitmap(Image image) {

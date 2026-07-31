@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+115/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.92"/);
-assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1\.14\.92"/);
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 528/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+116/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.93"/);
+assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1\.14\.93"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 530/);
 
 assert.ok(existsSync(join(root, "functions/npos-menu-admin.js")));
 const cf = read("functions/npos-menu-admin.js");
@@ -25,6 +25,10 @@ for (const action of [
   "duplicateItem",
   "addCategory",
   "updateCategory",
+  "archiveCategory",
+  "restoreCategory",
+  "deleteCategory",
+  "reorderCategories",
   "addGroup",
   "updateGroup",
   "archiveGroup",
@@ -68,7 +72,16 @@ assert.match(admin, /loadAdminMenu/);
 assert.match(admin, /MenuItemEditActivity/);
 assert.match(admin, /MenuGroupEditActivity/);
 assert.match(admin, /editPrice|showArchived/);
+assert.match(admin, /reorderCategories|moveCategory/);
+assert.match(admin, /archiveCategory|confirmArchiveCategory/);
+assert.match(admin, /deleteCategory|confirmDeleteCategory/);
+assert.match(admin, /restoreCategory/);
 assert.doesNotMatch(admin, /โปรโม|promotions/);
+
+const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
+assert.match(strings, /menu_admin_move_up/);
+assert.match(strings, /menu_admin_delete_cat/);
+assert.match(strings, /menu_admin_archive_cat/);
 
 const manifest = read("npos-telltea/app/src/main/AndroidManifest.xml");
 assert.match(manifest, /MenuItemEditActivity/);
@@ -85,6 +98,6 @@ assert.match(boh, /subscribeMenuItems/);
 
 const phases = read("docs/npos-menu-management-phases.md");
 assert.match(phases, /Phase 3|P3/);
-assert.match(phases, /1\.14\.92|nposMenuMutate/);
+assert.match(phases, /1\.14\.93|nposMenuMutate/);
 
 console.log("OK test-npos-menu-admin-crud");
