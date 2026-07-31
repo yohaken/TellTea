@@ -12,10 +12,16 @@ public final class MenuModels {
   public static final class Category {
     public final String id;
     public final String name;
+    public final boolean active;
 
     public Category(String id, String name) {
+      this(id, name, true);
+    }
+
+    public Category(String id, String name, boolean active) {
       this.id = id;
       this.name = name;
+      this.active = active;
     }
   }
 
@@ -25,16 +31,23 @@ public final class MenuModels {
     public final double priceDelta;
     /** Delivery channel addon; NaN = use priceDelta. */
     public final double deliveryPriceDelta;
+    public final boolean active;
 
     public Option(String id, String name, double priceDelta) {
-      this(id, name, priceDelta, Double.NaN);
+      this(id, name, priceDelta, Double.NaN, true);
     }
 
     public Option(String id, String name, double priceDelta, double deliveryPriceDelta) {
+      this(id, name, priceDelta, deliveryPriceDelta, true);
+    }
+
+    public Option(
+        String id, String name, double priceDelta, double deliveryPriceDelta, boolean active) {
       this.id = id;
       this.name = name;
       this.priceDelta = priceDelta;
       this.deliveryPriceDelta = deliveryPriceDelta;
+      this.active = active;
     }
 
     public double priceDeltaForChannel(boolean delivery) {
@@ -52,6 +65,7 @@ public final class MenuModels {
     public final int minSelect;
     public final int maxSelect;
     public final List<Option> options;
+    public final boolean active;
 
     public OptionGroup(
         String id,
@@ -61,6 +75,18 @@ public final class MenuModels {
         int minSelect,
         int maxSelect,
         List<Option> options) {
+      this(id, name, required, selectionType, minSelect, maxSelect, options, true);
+    }
+
+    public OptionGroup(
+        String id,
+        String name,
+        boolean required,
+        String selectionType,
+        int minSelect,
+        int maxSelect,
+        List<Option> options,
+        boolean active) {
       this.id = id;
       this.name = name;
       this.required = required;
@@ -69,6 +95,7 @@ public final class MenuModels {
       this.minSelect = minSelect;
       this.maxSelect = maxSelect;
       this.options = options;
+      this.active = active;
     }
 
     public boolean isSingle() {
@@ -93,6 +120,9 @@ public final class MenuModels {
     public final String id;
     public final String categoryId;
     public final String name;
+    public final String nameEn;
+    public final String code;
+    public final String description;
     public final double price;
     /** Delivery channel price; NaN = use price. */
     public final double deliveryPrice;
@@ -100,6 +130,8 @@ public final class MenuModels {
     public final String imageUrl;
     /** false = sold out (ของหมด) — still shown on sell grid like web. */
     public final boolean active;
+    /** false + !active = archived (hidden from sell). */
+    public final boolean visibleOnPos;
     public final boolean recommended;
 
     public Item(
@@ -111,7 +143,20 @@ public final class MenuModels {
         String imageUrl,
         boolean active,
         boolean recommended) {
-      this(id, categoryId, name, price, Double.NaN, optionGroupIds, imageUrl, active, recommended);
+      this(
+          id,
+          categoryId,
+          name,
+          "",
+          "",
+          "",
+          price,
+          Double.NaN,
+          optionGroupIds,
+          imageUrl,
+          active,
+          true,
+          recommended);
     }
 
     public Item(
@@ -124,15 +169,53 @@ public final class MenuModels {
         String imageUrl,
         boolean active,
         boolean recommended) {
+      this(
+          id,
+          categoryId,
+          name,
+          "",
+          "",
+          "",
+          price,
+          deliveryPrice,
+          optionGroupIds,
+          imageUrl,
+          active,
+          true,
+          recommended);
+    }
+
+    public Item(
+        String id,
+        String categoryId,
+        String name,
+        String nameEn,
+        String code,
+        String description,
+        double price,
+        double deliveryPrice,
+        List<String> optionGroupIds,
+        String imageUrl,
+        boolean active,
+        boolean visibleOnPos,
+        boolean recommended) {
       this.id = id;
       this.categoryId = categoryId;
       this.name = name;
+      this.nameEn = nameEn == null ? "" : nameEn;
+      this.code = code == null ? "" : code;
+      this.description = description == null ? "" : description;
       this.price = price;
       this.deliveryPrice = deliveryPrice;
       this.optionGroupIds = optionGroupIds;
       this.imageUrl = imageUrl == null ? "" : imageUrl;
       this.active = active;
+      this.visibleOnPos = visibleOnPos;
       this.recommended = recommended;
+    }
+
+    public boolean isArchived() {
+      return !active && !visibleOnPos;
     }
 
     public double priceForChannel(boolean delivery) {
@@ -153,6 +236,7 @@ public final class MenuModels {
     public final long fetchedAt;
     /** fix | bestsellers */
     public final String menuArrangeMode;
+    public final boolean admin;
 
     public Bundle(
         List<Category> categories,
@@ -160,7 +244,7 @@ public final class MenuModels {
         List<OptionGroup> optionGroups,
         boolean demo,
         long fetchedAt) {
-      this(categories, items, optionGroups, demo, fetchedAt, "fix");
+      this(categories, items, optionGroups, demo, fetchedAt, "fix", false);
     }
 
     public Bundle(
@@ -170,6 +254,17 @@ public final class MenuModels {
         boolean demo,
         long fetchedAt,
         String menuArrangeMode) {
+      this(categories, items, optionGroups, demo, fetchedAt, menuArrangeMode, false);
+    }
+
+    public Bundle(
+        List<Category> categories,
+        List<Item> items,
+        List<OptionGroup> optionGroups,
+        boolean demo,
+        long fetchedAt,
+        String menuArrangeMode,
+        boolean admin) {
       this.categories = categories;
       this.items = items;
       this.optionGroups = optionGroups;
@@ -177,6 +272,7 @@ public final class MenuModels {
       this.fetchedAt = fetchedAt;
       this.menuArrangeMode =
           "bestsellers".equals(menuArrangeMode) ? "bestsellers" : "fix";
+      this.admin = admin;
     }
 
     public boolean isBestsellers() {
@@ -204,7 +300,6 @@ public final class MenuModels {
       return unitPrice * qty;
     }
 
-    /** Short option/topping text for customer display (single line). */
     public String optionsSummary() {
       List<String> lines = optionsLines();
       if (lines.isEmpty()) return "";
@@ -217,10 +312,6 @@ public final class MenuModels {
       return sb.toString();
     }
 
-    /**
-     * Receipt-style option lines for staff cart / kitchen read:
-     * {@code - เย็น x1} one option per line (aggregated counts).
-     */
     public List<String> optionsLines() {
       List<String> out = new ArrayList<>();
       if (optionsJson == null || optionsJson.length() == 0) return out;
@@ -275,7 +366,7 @@ public final class MenuModels {
     if (cArr != null) {
       for (int i = 0; i < cArr.length(); i++) {
         JSONObject o = cArr.getJSONObject(i);
-        cats.add(new Category(o.optString("id"), o.optString("name")));
+        cats.add(new Category(o.optString("id"), o.optString("name"), o.optBoolean("active", true)));
       }
     }
     List<Item> items = new ArrayList<>();
@@ -293,11 +384,15 @@ public final class MenuModels {
                 o.optString("id"),
                 o.optString("categoryId"),
                 o.optString("name"),
+                o.optString("nameEn", ""),
+                o.optString("code", ""),
+                o.optString("description", ""),
                 o.optDouble("price", 0),
                 o.has("deliveryPrice") ? o.optDouble("deliveryPrice", 0) : Double.NaN,
                 gids,
                 o.optString("imageUrl", ""),
                 o.optBoolean("active", true),
+                o.optBoolean("visibleOnPos", true),
                 o.optBoolean("recommended", false)));
       }
     }
@@ -318,21 +413,37 @@ public final class MenuModels {
                     op.optDouble("priceDelta", 0),
                     op.has("deliveryPriceDelta")
                         ? op.optDouble("deliveryPriceDelta", 0)
-                        : Double.NaN));
+                        : Double.NaN,
+                    op.optBoolean("active", true)));
           }
         }
         String sel = o.optString("selectionType", "single");
         boolean required = o.optBoolean("required", false);
         int min = o.has("minSelect") ? o.optInt("minSelect", 0) : 0;
         int max = o.has("maxSelect") ? o.optInt("maxSelect", 0) : 0;
-        groups.add(new OptionGroup(o.optString("id"), o.optString("name"), required, sel, min, max, opts));
+        groups.add(
+            new OptionGroup(
+                o.optString("id"),
+                o.optString("name"),
+                required,
+                sel,
+                min,
+                max,
+                opts,
+                o.optBoolean("active", true)));
       }
     }
-    boolean demo = cats.isEmpty() || items.isEmpty();
+    boolean admin = root.optBoolean("admin", false);
+    boolean demo = !admin && (cats.isEmpty() || items.isEmpty());
     if (demo) return demoBundle();
     String mode = root.optString("menuArrangeMode", "fix");
-    // Snapshot already ordered for bestsellers; keep mode for UI gating.
     return new Bundle(
-        cats, items, groups, false, root.optLong("fetchedAt", System.currentTimeMillis()), mode);
+        cats,
+        items,
+        groups,
+        false,
+        root.optLong("fetchedAt", System.currentTimeMillis()),
+        mode,
+        admin);
   }
 }

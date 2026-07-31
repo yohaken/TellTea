@@ -28,6 +28,10 @@ public final class MenuRepository {
             "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposToggleSoldOut";
     public static final String REORDER_CAT_URL =
             "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposReorderCategories";
+    public static final String ADMIN_SNAPSHOT_URL =
+            "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposMenuAdminSnapshot";
+    public static final String MUTATE_URL =
+            "https://asia-southeast1-mypeer-501909.cloudfunctions.net/nposMenuMutate";
 
     private static final String PREFS = "npos_menu";
     private static final String KEY_MENU = "menuJson";
@@ -39,6 +43,10 @@ public final class MenuRepository {
 
     public interface ShopCallback {
         void onReady(JSONObject shop);
+    }
+
+    public interface MutateCallback {
+        void onDone(boolean ok, JSONObject res, String error);
     }
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -184,6 +192,65 @@ public final class MenuRepository {
                         String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
                         OpsLogger.warn(app, "menu", "ตั้งของหมดไม่สำเร็จ", msg);
                         if (cb != null) cb.onDone(false, !soldOut, msg);
+                    }
+                });
+    }
+
+    /** Full catalog for MenuAdmin (includes archived). Does not overwrite sell cache. */
+    public void loadAdminMenu(Context context, MenuCallback callback) {
+        Context app = context.getApplicationContext();
+        executor.execute(
+                () -> {
+                    try {
+                        JSONObject body = new JSONObject();
+                        body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
+                        JSONObject res = postJson(ADMIN_SNAPSHOT_URL, body, 8_000, 25_000);
+                        if (res.optBoolean("ok", false)) {
+                            long menuVersion = res.optLong("menuVersion", 0L);
+                            if (menuVersion > 0) {
+                                MenuSyncCoordinator.markSynced(app, menuVersion);
+                            }
+                            if (callback != null) callback.onReady(MenuModels.fromJson(res));
+                            return;
+                        }
+                        throw new IllegalStateException(res.optString("error", "admin_menu_failed"));
+                    } catch (Exception e) {
+                        OpsLogger.warn(
+                                app,
+                                "menu",
+                                "โหลดเมนูแอดมินไม่สำเร็จ",
+                                e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+                        // Fall back to sell snapshot / cache so staff can still toggle.
+                        loadMenu(context, true, callback);
+                    }
+                });
+    }
+
+    public void mutate(Context context, JSONObject body, MutateCallback cb) {
+        Context app = context.getApplicationContext();
+        executor.execute(
+                () -> {
+                    try {
+                        if (body == null) throw new IllegalArgumentException("body_required");
+                        body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
+                        JSONObject res = postJson(MUTATE_URL, body, 8_000, 30_000);
+                        boolean ok = res.optBoolean("ok", false);
+                        if (ok) {
+                            long menuVersion = res.optLong("menuVersion", 0L);
+                            if (menuVersion > 0) {
+                                MenuSyncCoordinator.markSyncedAndNotify(app, menuVersion);
+                            }
+                            OpsLogger.info(app, "menu", "แก้เมนูแล้ว", body.optString("action", ""));
+                            if (cb != null) cb.onDone(true, res, null);
+                        } else {
+                            String err = res.optString("error", "mutate_failed");
+                            OpsLogger.warn(app, "menu", "แก้เมนูไม่สำเร็จ", err);
+                            if (cb != null) cb.onDone(false, res, err);
+                        }
+                    } catch (Exception e) {
+                        String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+                        OpsLogger.warn(app, "menu", "แก้เมนูไม่สำเร็จ", msg);
+                        if (cb != null) cb.onDone(false, null, msg);
                     }
                 });
     }

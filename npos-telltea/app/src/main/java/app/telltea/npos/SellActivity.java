@@ -1665,11 +1665,15 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
                 it.id,
                 it.categoryId,
                 it.name,
+                it.nameEn,
+                it.code,
+                it.description,
                 it.price,
                 it.deliveryPrice,
                 it.optionGroupIds,
                 it.imageUrl,
                 active,
+                it.visibleOnPos,
                 it.recommended));
       } else {
         next.add(it);
@@ -1682,7 +1686,8 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
             menu.optionGroups,
             menu.demo,
             menu.fetchedAt,
-            menu.menuArrangeMode);
+            menu.menuArrangeMode,
+            menu.admin);
   }
 
   private void showOptionPicker(MenuModels.Item item) {

@@ -1,6 +1,6 @@
 # nPos / หลังร้าน — รายละเอียดเงินรอบ (เบิก + สรุปการ์ด)
 
-อัปเดต: **คอลัมน์นับ/นำส่ง** · `APP_BUILD` 512 · `POS_BUILD` 144 · APK **1.14.90**  
+อัปเดต: **คอลัมน์นับ/นำส่ง** · `APP_BUILD` 512 · `POS_BUILD` 144 · APK **1.14.91**  
 ดูเฟส [npos-counter-ops-phases.md](./npos-counter-ops-phases.md)  
 อ้างอิง: [npos-void-cashout-reason-checklist.md](./npos-void-cashout-reason-checklist.md) · [npos-z-cash-remit-checklist.md](./npos-z-cash-remit-checklist.md) · [npos-bo-slim-sessions-checklist.md](./npos-bo-slim-sessions-checklist.md)
 

@@ -1,17 +1,22 @@
 package app.telltea.npos;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,15 +28,17 @@ import app.telltea.npos.sell.MenuModels;
 import app.telltea.npos.sell.MenuRepository;
 import app.telltea.npos.sell.MenuSyncCoordinator;
 import app.telltea.npos.shift.ShiftPrefs;
+import app.telltea.npos.ui.NposConfirmDialog;
 import app.telltea.npos.ui.NposFonts;
 import app.telltea.npos.ui.NposUi;
 
 /**
- * Native menu catalog admin (BOH /menu/ parity — read + sold-out toggle in P1/P2).
- * Entry: Hub tile 「เมนู」 after Sell · requires open shift.
+ * Native menu catalog admin — BOH /menu/ parity (P1–P4).
+ * Hub「เมนู」 · requires open shift.
  */
 public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.Listener {
   public static final String EXTRA_FOCUS_ITEM_ID = "focusItemId";
+  private static final int REQ_EDIT = 7201;
 
   private enum Tab {
     ITEMS,
@@ -44,6 +51,7 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
   private Tab tab = Tab.ITEMS;
   private String focusItemId = "";
   private boolean toggleBusy;
+  private boolean showArchived;
 
   private TextView statusLine;
   private TextView tabItems;
@@ -76,7 +84,7 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
 
     page.addView(NposUi.headerBar(this, getString(R.string.menu_admin_title)));
 
-    TextView hint = NposUi.caption(this, getString(R.string.menu_admin_hint));
+    TextView hint = NposUi.caption(this, getString(R.string.menu_admin_hint_full));
     hint.setPadding(0, 0, 0, NposUi.dp(this, 8));
     page.addView(hint);
 
@@ -86,17 +94,33 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
     statusLine.setPadding(0, 0, 0, NposUi.dp(this, 6));
     page.addView(statusLine);
 
+    LinearLayout tools = new LinearLayout(this);
+    tools.setOrientation(LinearLayout.HORIZONTAL);
+    tools.setGravity(Gravity.CENTER_VERTICAL);
     TextView refresh = NposUi.secondary(this, getString(R.string.btn_refresh_menu));
-    refresh.setLayoutParams(NposUi.cta(this, 8));
     refresh.setOnClickListener(v -> reload(true));
-    page.addView(refresh);
+    TextView add = NposUi.primary(this, getString(R.string.menu_admin_add));
+    add.setOnClickListener(v -> onAdd());
+    TextView arch = NposUi.chip(this, getString(R.string.menu_admin_show_archived));
+    arch.setOnClickListener(
+        v -> {
+          showArchived = !showArchived;
+          NposUi.applyBtn(arch, showArchived ? NposUi.Btn.CHIP_PRIMARY : NposUi.Btn.CHIP);
+          render();
+        });
+    refresh.setLayoutParams(NposUi.wrap(this, 8, 8));
+    add.setLayoutParams(NposUi.wrap(this, 8, 8));
+    arch.setLayoutParams(NposUi.wrap(this, 0, 8));
+    tools.addView(refresh);
+    tools.addView(add);
+    tools.addView(arch);
+    page.addView(tools);
 
     ScrollView scroll = new ScrollView(this);
     scroll.setFillViewport(true);
-    LinearLayout.LayoutParams slp =
+    scroll.setLayoutParams(
         new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-    scroll.setLayoutParams(slp);
+            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
     listRoot = new LinearLayout(this);
     listRoot.setOrientation(LinearLayout.VERTICAL);
     scroll.addView(listRoot);
@@ -124,6 +148,12 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
   }
 
   @Override
+  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+    if (requestCode == REQ_EDIT && resultCode == RESULT_OK) reload(true);
+  }
+
+  @Override
   protected void onDestroy() {
     MenuSyncCoordinator.unbind(this);
     menuRepo.shutdown();
@@ -135,7 +165,6 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
     runOnUiThread(
         () -> {
           if (isFinishing() || toggleBusy) return;
-          // Quiet refresh — avoid double toast after our own sold-out write.
           reload(true);
         });
   }
@@ -145,7 +174,6 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
     hsv.setHorizontalScrollBarEnabled(false);
     LinearLayout row = new LinearLayout(this);
     row.setOrientation(LinearLayout.HORIZONTAL);
-    row.setGravity(Gravity.CENTER_VERTICAL);
     tabItems = NposUi.chip(this, getString(R.string.menu_admin_tab_items));
     tabGroups = NposUi.chip(this, getString(R.string.menu_admin_tab_groups));
     tabPrices = NposUi.chip(this, getString(R.string.menu_admin_tab_prices));
@@ -167,8 +195,7 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
           paintTabs();
           render();
         });
-    LinearLayout.LayoutParams lp = NposUi.wrap(this, 8, 0);
-    tabItems.setLayoutParams(lp);
+    tabItems.setLayoutParams(NposUi.wrap(this, 8, 0));
     tabGroups.setLayoutParams(NposUi.wrap(this, 8, 0));
     tabPrices.setLayoutParams(NposUi.wrap(this, 0, 0));
     row.addView(tabItems);
@@ -183,25 +210,15 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
   }
 
   private void paintTabs() {
-    styleTab(tabItems, tab == Tab.ITEMS);
-    styleTab(tabGroups, tab == Tab.GROUPS);
-    styleTab(tabPrices, tab == Tab.PRICES);
-  }
-
-  private void styleTab(TextView tv, boolean on) {
-    if (tv == null) return;
-    NposUi.applyBtn(tv, on ? NposUi.Btn.CHIP_PRIMARY : NposUi.Btn.CHIP);
+    NposUi.applyBtn(tabItems, tab == Tab.ITEMS ? NposUi.Btn.CHIP_PRIMARY : NposUi.Btn.CHIP);
+    NposUi.applyBtn(tabGroups, tab == Tab.GROUPS ? NposUi.Btn.CHIP_PRIMARY : NposUi.Btn.CHIP);
+    NposUi.applyBtn(tabPrices, tab == Tab.PRICES ? NposUi.Btn.CHIP_PRIMARY : NposUi.Btn.CHIP);
   }
 
   private void reload(boolean forceNetwork) {
-    if (menu == null) {
-      statusLine.setText(R.string.sell_loading_menu);
-    } else if (forceNetwork) {
-      statusLine.setText(R.string.sell_menu_syncing);
-    }
-    menuRepo.loadMenu(
+    statusLine.setText(forceNetwork ? R.string.sell_menu_syncing : R.string.sell_loading_menu);
+    menuRepo.loadAdminMenu(
         this,
-        forceNetwork,
         bundle ->
             runOnUiThread(
                 () -> {
@@ -220,6 +237,71 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
                   render();
                   scrollFocusIntoView();
                 }));
+  }
+
+  private void onAdd() {
+    if (menu != null && menu.demo) {
+      Toast.makeText(this, R.string.sold_out_demo_blocked, Toast.LENGTH_SHORT).show();
+      return;
+    }
+    if (tab == Tab.GROUPS) {
+      promptText(
+          getString(R.string.menu_group_new_title),
+          "",
+          name -> mutate("addGroup", new JSONObject().put("name", name), true));
+      return;
+    }
+    if (tab == Tab.PRICES) {
+      tab = Tab.ITEMS;
+      paintTabs();
+      render();
+    }
+    // Category or item
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    int pad = NposUi.dp(this, 12);
+    box.setPadding(pad, pad, pad, pad);
+    final AlertDialog[] holder = new AlertDialog[1];
+    TextView addCat = NposUi.primary(this, getString(R.string.menu_admin_add_category));
+    addCat.setMaxWidth(Integer.MAX_VALUE);
+    addCat.setLayoutParams(NposUi.matchWidth(this, 8));
+    addCat.setOnClickListener(
+        v -> {
+          if (holder[0] != null) holder[0].dismiss();
+          promptText(
+              getString(R.string.menu_admin_add_category),
+              "",
+              name -> mutate("addCategory", new JSONObject().put("name", name), true));
+        });
+    box.addView(addCat);
+    TextView addItem = NposUi.secondary(this, getString(R.string.menu_admin_add_item));
+    addItem.setMaxWidth(Integer.MAX_VALUE);
+    addItem.setLayoutParams(NposUi.matchWidth(this, 8));
+    addItem.setOnClickListener(
+        v -> {
+          if (holder[0] != null) holder[0].dismiss();
+          Intent intent = new Intent(this, MenuItemEditActivity.class);
+          if (menu != null && menu.categories != null) {
+            for (MenuModels.Category c : menu.categories) {
+              if (c.active) {
+                intent.putExtra(MenuItemEditActivity.EXTRA_CATEGORY_ID, c.id);
+                break;
+              }
+            }
+          }
+          startActivityForResult(intent, REQ_EDIT);
+        });
+    box.addView(addItem);
+    TextView cancel = NposUi.ghost(this, getString(android.R.string.cancel));
+    cancel.setMaxWidth(Integer.MAX_VALUE);
+    cancel.setOnClickListener(
+        v -> {
+          if (holder[0] != null) holder[0].dismiss();
+        });
+    box.addView(cancel);
+    holder[0] =
+        new AlertDialog.Builder(this).setTitle(R.string.menu_admin_add).setView(box).create();
+    holder[0].show();
   }
 
   private void render() {
@@ -248,35 +330,45 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
       listRoot.addView(emptyLine(getString(R.string.menu_admin_empty_items)));
       return;
     }
-    listRoot.addView(tableHeader(getString(R.string.menu_admin_col_name), getString(R.string.menu_admin_col_price), getString(R.string.menu_admin_col_status)));
-    int shown = 0;
     for (MenuModels.Category cat : menu.categories) {
+      if (!showArchived && !cat.active) continue;
       List<MenuModels.Item> inCat = itemsInCategory(cat.id);
-      if (inCat.isEmpty()) continue;
-      TextView catHead = NposUi.section(this, cat.name);
-      catHead.setPadding(0, NposUi.dp(this, 12), 0, NposUi.dp(this, 4));
-      listRoot.addView(catHead);
+      LinearLayout head = new LinearLayout(this);
+      head.setOrientation(LinearLayout.HORIZONTAL);
+      head.setGravity(Gravity.CENTER_VERTICAL);
+      head.setPadding(0, NposUi.dp(this, 12), 0, NposUi.dp(this, 4));
+      TextView catHead =
+          NposUi.section(
+              this,
+              cat.name
+                  + (cat.active ? "" : " · " + getString(R.string.menu_admin_archived))
+                  + " ("
+                  + inCat.size()
+                  + ")");
+      catHead.setLayoutParams(
+          new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+      head.addView(catHead);
+      TextView rename = NposUi.chip(this, getString(R.string.menu_admin_rename));
+      rename.setOnClickListener(
+          v ->
+              promptText(
+                  getString(R.string.menu_admin_rename),
+                  cat.name,
+                  name ->
+                      mutate(
+                          "updateCategory",
+                          new JSONObject().put("id", cat.id).put("name", name),
+                          true)));
+      head.addView(rename);
+      listRoot.addView(head);
+      if (inCat.isEmpty()) {
+        listRoot.addView(NposUi.caption(this, getString(R.string.menu_admin_empty_items)));
+        continue;
+      }
       for (MenuModels.Item item : inCat) {
+        if (!showArchived && item.isArchived()) continue;
         listRoot.addView(itemRow(item));
-        shown++;
       }
-    }
-    // Orphans (no matching category)
-    List<MenuModels.Item> orphans = new ArrayList<>();
-    for (MenuModels.Item item : menu.items) {
-      if (findCategoryName(item.categoryId) == null) orphans.add(item);
-    }
-    if (!orphans.isEmpty()) {
-      TextView catHead = NposUi.section(this, getString(R.string.menu_admin_uncategorized));
-      catHead.setPadding(0, NposUi.dp(this, 12), 0, NposUi.dp(this, 4));
-      listRoot.addView(catHead);
-      for (MenuModels.Item item : orphans) {
-        listRoot.addView(itemRow(item));
-        shown++;
-      }
-    }
-    if (shown == 0) {
-      listRoot.addView(emptyLine(getString(R.string.menu_admin_empty_items)));
     }
   }
 
@@ -290,58 +382,67 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
 
     LinearLayout textCol = new LinearLayout(this);
     textCol.setOrientation(LinearLayout.VERTICAL);
-    LinearLayout.LayoutParams tlp =
-        new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
-    textCol.setLayoutParams(tlp);
-
+    textCol.setLayoutParams(
+        new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f));
     TextView name = NposUi.body(this, item.name);
     name.setTextColor(NposUi.color(this, R.color.npos_ink));
     name.setTypeface(NposFonts.semibold(this));
     textCol.addView(name);
-
-    TextView meta =
+    textCol.addView(
         NposUi.caption(
             this,
             String.format(
                 Locale.getDefault(),
-                "฿%.0f%s",
+                "฿%.0f%s%s",
                 item.price,
                 Double.isNaN(item.deliveryPrice)
                     ? ""
-                    : String.format(Locale.getDefault(), " · ส่ง ฿%.0f", item.deliveryPrice)));
-    textCol.addView(meta);
+                    : String.format(Locale.getDefault(), " · ส่ง ฿%.0f", item.deliveryPrice),
+                item.isArchived() ? " · " + getString(R.string.menu_admin_archived) : "")));
     row.addView(textCol);
 
     TextView status =
         NposUi.caption(
             this,
-            getString(item.active ? R.string.menu_admin_status_on : R.string.menu_admin_status_off));
+            getString(
+                item.isArchived()
+                    ? R.string.menu_admin_archived
+                    : item.active
+                        ? R.string.menu_admin_status_on
+                        : R.string.menu_admin_status_off));
     status.setTextColor(
-        item.active
+        item.active && !item.isArchived()
             ? NposUi.color(this, R.color.npos_ink)
             : NposUi.color(this, R.color.npos_orange));
-    status.setGravity(Gravity.CENTER);
-    LinearLayout.LayoutParams slp =
-        new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.7f);
-    status.setLayoutParams(slp);
+    status.setLayoutParams(
+        new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.6f));
     row.addView(status);
 
-    TextView toggle =
-        item.active
-            ? NposUi.secondary(this, getString(R.string.menu_admin_btn_sold_out))
-            : NposUi.primary(this, getString(R.string.menu_admin_btn_restore));
-    toggle.setMaxWidth(NposUi.dp(this, 160));
-    toggle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-    toggle.setMinHeight(NposUi.dp(this, 44));
-    toggle.setEnabled(!toggleBusy && menu != null && !menu.demo);
-    toggle.setOnClickListener(v -> runToggle(item));
-    LinearLayout.LayoutParams blp =
-        new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-    blp.setMarginStart(NposUi.dp(this, 6));
-    toggle.setLayoutParams(blp);
-    row.addView(toggle);
+    if (!item.isArchived()) {
+      TextView toggle =
+          item.active
+              ? NposUi.secondary(this, getString(R.string.menu_admin_btn_sold_out))
+              : NposUi.primary(this, getString(R.string.menu_admin_btn_restore));
+      toggle.setMaxWidth(NposUi.dp(this, 140));
+      toggle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+      toggle.setEnabled(!toggleBusy && menu != null && !menu.demo);
+      toggle.setOnClickListener(v -> runToggle(item));
+      row.addView(toggle);
+    } else {
+      TextView restore = NposUi.primary(this, getString(R.string.menu_admin_restore));
+      restore.setMaxWidth(NposUi.dp(this, 140));
+      restore.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+      restore.setOnClickListener(
+          v -> mutate("restoreItem", jsonId(item.id), true));
+      row.addView(restore);
+    }
 
+    row.setOnClickListener(
+        v -> {
+          Intent intent = new Intent(this, MenuItemEditActivity.class);
+          intent.putExtra(MenuItemEditActivity.EXTRA_ITEM_ID, item.id);
+          startActivityForResult(intent, REQ_EDIT);
+        });
     itemRowById.put(item.id, row);
     return row;
   }
@@ -352,37 +453,45 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
       return;
     }
     for (MenuModels.OptionGroup g : menu.optionGroups) {
+      if (!showArchived && !g.active) continue;
       int used = countItemsUsingGroup(g.id);
-      String sel =
-          g.isSingle()
-              ? getString(R.string.menu_admin_sel_single)
-              : "unlimited".equals(g.selectionType)
-                  ? getString(R.string.menu_admin_sel_unlimited)
-                  : getString(R.string.menu_admin_sel_multi);
       String line =
           g.name
+              + (g.active ? "" : " · " + getString(R.string.menu_admin_archived))
               + (g.required ? " · " + getString(R.string.menu_admin_required) : "")
-              + " · "
-              + sel
               + " · "
               + getString(R.string.menu_admin_used_by_fmt, used);
       TextView head = NposUi.section(this, line);
       head.setPadding(0, NposUi.dp(this, 10), 0, NposUi.dp(this, 4));
+      head.setOnClickListener(
+          v -> {
+            Intent intent = new Intent(this, MenuGroupEditActivity.class);
+            intent.putExtra(MenuGroupEditActivity.EXTRA_GROUP_ID, g.id);
+            startActivityForResult(intent, REQ_EDIT);
+          });
       listRoot.addView(head);
       if (g.options != null) {
         for (MenuModels.Option opt : g.options) {
+          if (!showArchived && !opt.active) continue;
           String price =
               String.format(
                   Locale.getDefault(),
-                  "%s  +฿%.0f%s",
+                  "%s  +฿%.0f%s%s",
                   opt.name,
                   opt.priceDelta,
                   Double.isNaN(opt.deliveryPriceDelta)
                       ? ""
                       : String.format(
-                          Locale.getDefault(), " · ส่ง +฿%.0f", opt.deliveryPriceDelta));
+                          Locale.getDefault(), " · ส่ง +฿%.0f", opt.deliveryPriceDelta),
+                  opt.active ? "" : " · " + getString(R.string.menu_admin_status_off));
           TextView row = NposUi.body(this, price);
           row.setPadding(NposUi.dp(this, 12), NposUi.dp(this, 4), 0, NposUi.dp(this, 4));
+          row.setOnClickListener(
+              v -> {
+                Intent intent = new Intent(this, MenuGroupEditActivity.class);
+                intent.putExtra(MenuGroupEditActivity.EXTRA_GROUP_ID, g.id);
+                startActivityForResult(intent, REQ_EDIT);
+              });
           listRoot.addView(row);
         }
       }
@@ -400,31 +509,61 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
       return;
     }
     for (MenuModels.Item item : menu.items) {
+      if (!showArchived && item.isArchived()) continue;
       LinearLayout row = new LinearLayout(this);
       row.setOrientation(LinearLayout.HORIZONTAL);
       row.setPadding(NposUi.dp(this, 8), NposUi.dp(this, 6), NposUi.dp(this, 8), NposUi.dp(this, 6));
       TextView name = NposUi.body(this, item.name);
-      name.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f));
+      name.setLayoutParams(
+          new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f));
       row.addView(name);
       TextView store =
-          NposUi.body(this, String.format(Locale.getDefault(), "฿%.0f", item.price));
-      store.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.6f));
-      store.setGravity(Gravity.END);
+          NposUi.secondary(
+              this, String.format(Locale.getDefault(), "฿%.0f", item.price));
+      store.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+      store.setOnClickListener(v -> editPrice(item, false));
+      store.setLayoutParams(
+          new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.7f));
       row.addView(store);
       String del =
           Double.isNaN(item.deliveryPrice)
               ? "—"
               : String.format(Locale.getDefault(), "฿%.0f", item.deliveryPrice);
-      TextView delivery = NposUi.body(this, del);
+      TextView delivery = NposUi.secondary(this, del);
+      delivery.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+      delivery.setOnClickListener(v -> editPrice(item, true));
       delivery.setLayoutParams(
-          new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.6f));
-      delivery.setGravity(Gravity.END);
+          new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.7f));
       row.addView(delivery);
       listRoot.addView(row);
     }
-    TextView note = NposUi.caption(this, getString(R.string.menu_admin_prices_readonly));
+    TextView note = NposUi.caption(this, getString(R.string.menu_admin_prices_hint));
     note.setPadding(0, NposUi.dp(this, 12), 0, 0);
     listRoot.addView(note);
+  }
+
+  private void editPrice(MenuModels.Item item, boolean delivery) {
+    String current =
+        delivery
+            ? (Double.isNaN(item.deliveryPrice) ? "" : String.format(Locale.US, "%.0f", item.deliveryPrice))
+            : String.format(Locale.US, "%.0f", item.price);
+    promptText(
+        getString(delivery ? R.string.menu_admin_col_delivery : R.string.menu_admin_col_store)
+            + " · "
+            + item.name,
+        current,
+        value -> {
+          JSONObject body = new JSONObject();
+          body.put("action", "updateItem");
+          body.put("id", item.id);
+          if (delivery) {
+            if (value.trim().isEmpty()) body.put("deliveryPrice", JSONObject.NULL);
+            else body.put("deliveryPrice", Double.parseDouble(value.replaceAll("[^\\d.]", "")));
+          } else {
+            body.put("price", Double.parseDouble(value.replaceAll("[^\\d.]", "")));
+          }
+          mutate("updateItem", body, true);
+        });
   }
 
   private LinearLayout tableHeader(String c1, String c2, String c3) {
@@ -441,7 +580,7 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
     TextView c = NposUi.caption(this, c3);
     c.setTypeface(NposFonts.semibold(this));
     c.setGravity(Gravity.END);
-    c.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f));
+    c.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.7f));
     row.addView(a);
     row.addView(b);
     row.addView(c);
@@ -463,14 +602,6 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
     return out;
   }
 
-  private String findCategoryName(String categoryId) {
-    if (menu == null || menu.categories == null || categoryId == null) return null;
-    for (MenuModels.Category c : menu.categories) {
-      if (categoryId.equals(c.id)) return c.name;
-    }
-    return null;
-  }
-
   private int countItemsUsingGroup(String groupId) {
     if (menu == null || menu.items == null || groupId == null) return 0;
     int n = 0;
@@ -489,7 +620,6 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
     boolean toSoldOut = item.active;
     toggleBusy = true;
     statusLine.setText(R.string.menu_admin_saving);
-    render();
     menuRepo.toggleSoldOut(
         this,
         item.id,
@@ -501,11 +631,8 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
                   if (!ok) {
                     statusLine.setText(R.string.sold_out_fail);
                     Toast.makeText(this, R.string.sold_out_fail, Toast.LENGTH_LONG).show();
-                    render();
                     return;
                   }
-                  replaceItemActive(item.id, active);
-                  statusLine.setText(R.string.menu_admin_saved);
                   Toast.makeText(
                           this,
                           active
@@ -513,40 +640,68 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
                               : R.string.menu_admin_sold_out_toast,
                           Toast.LENGTH_SHORT)
                       .show();
-                  render();
-                  // Pull snapshot so cache + other listeners stay aligned.
                   reload(true);
                 }));
   }
 
-  private void replaceItemActive(String id, boolean active) {
-    if (menu == null) return;
-    List<MenuModels.Item> next = new ArrayList<>();
-    for (MenuModels.Item it : menu.items) {
-      if (it.id.equals(id)) {
-        next.add(
-            new MenuModels.Item(
-                it.id,
-                it.categoryId,
-                it.name,
-                it.price,
-                it.deliveryPrice,
-                it.optionGroupIds,
-                it.imageUrl,
-                active,
-                it.recommended));
-      } else {
-        next.add(it);
-      }
+  private interface TextConsumer {
+    void accept(String value) throws Exception;
+  }
+
+  private void promptText(String title, String initial, TextConsumer onOk) {
+    EditText field = NposUi.field(this);
+    field.setInputType(InputType.TYPE_CLASS_TEXT);
+    field.setText(initial == null ? "" : initial);
+    field.setSelectAllOnFocus(true);
+    NposConfirmDialog.custom(
+        this,
+        title,
+        null,
+        field,
+        getString(android.R.string.ok),
+        getString(android.R.string.cancel),
+        true,
+        () -> {
+          try {
+            onOk.accept(field.getText() == null ? "" : field.getText().toString().trim());
+          } catch (Exception e) {
+            Toast.makeText(this, R.string.menu_admin_save_fail, Toast.LENGTH_LONG).show();
+          }
+          return true;
+        },
+        null);
+  }
+
+  private JSONObject jsonId(String id) {
+    try {
+      return new JSONObject().put("id", id);
+    } catch (Exception e) {
+      return new JSONObject();
     }
-    menu =
-        new MenuModels.Bundle(
-            menu.categories,
-            next,
-            menu.optionGroups,
-            menu.demo,
-            menu.fetchedAt,
-            menu.menuArrangeMode);
+  }
+
+  private void mutate(String action, JSONObject body, boolean reloadAfter) {
+    try {
+      if (body == null) body = new JSONObject();
+      body.put("action", action);
+      statusLine.setText(R.string.menu_admin_saving);
+      menuRepo.mutate(
+          this,
+          body,
+          (ok, res, err) ->
+              runOnUiThread(
+                  () -> {
+                    if (!ok) {
+                      statusLine.setText(R.string.menu_admin_save_fail);
+                      Toast.makeText(this, R.string.menu_admin_save_fail, Toast.LENGTH_LONG).show();
+                      return;
+                    }
+                    statusLine.setText(R.string.menu_admin_saved);
+                    if (reloadAfter) reload(true);
+                  }));
+    } catch (Exception e) {
+      Toast.makeText(this, R.string.menu_admin_save_fail, Toast.LENGTH_LONG).show();
+    }
   }
 
   private void scrollFocusIntoView() {

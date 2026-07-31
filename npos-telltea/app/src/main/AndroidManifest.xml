@@ -56,6 +56,18 @@
             android:label="@string/menu_admin_title" />
 
         <activity
+            android:name=".MenuItemEditActivity"
+            android:exported="false"
+            android:label="@string/menu_item_edit_title"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".MenuGroupEditActivity"
+            android:exported="false"
+            android:label="@string/menu_group_edit_title"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".ShiftActivity"
             android:exported="false"
             android:label="@string/nav_shift" />
