@@ -24,8 +24,8 @@ import app.telltea.npos.ui.UiScale;
  *
  * <ul>
  *   <li>Always mandatory when a newer build is published — no Later / snooze.
- *   <li>While sell is busy (cart / pay): hide popup, do not install, stop voice.
- *   <li>When idle: show forced popup + nag voice + open install permission if needed;
+ *   <li>Always force immediately — do not wait for idle cart / pay sheet.
+ *   <li>Show forced popup + nag voice + open install permission if needed;
  *       auto-start download/install once permission is granted.
  * </ul>
  */
@@ -48,7 +48,6 @@ public final class UpdatePromptController {
   private final UpdateDownloader downloader = new UpdateDownloader();
   private final Handler main = new Handler(Looper.getMainLooper());
   private BeforeInstall beforeInstall;
-  private UpdateBusyGate busyGate;
   private UpdateManifest pending;
   private boolean busy;
   private boolean autoInstallScheduled;
@@ -91,7 +90,7 @@ public final class UpdatePromptController {
       }
       flp.setMarginStart(start);
       flp.topMargin = ui.dp(12);
-      // Wider forced card so counter staff cannot miss it when idle.
+      // Wider forced card so counter staff cannot miss it.
       flp.width = Math.min(ui.dp(420), activity.getResources().getDisplayMetrics().widthPixels - start - ui.dp(12));
       popup.setLayoutParams(flp);
     }
@@ -101,30 +100,13 @@ public final class UpdatePromptController {
     beforeInstall = hook;
   }
 
-  /** Sell: block forced install while cart / pay is active. Hub: leave null. */
-  public void setBusyGate(UpdateBusyGate gate) {
-    busyGate = gate;
-  }
-
-  /** Call after cart clears / pay sheet closes so deferred force-update can run. */
-  public void onBusyStateChanged() {
-    if (activity.isFinishing()) return;
-    if (!hasPendingUpdate()) return;
-    if (isSellBusy()) {
-      deferWhileBusy();
-    } else {
-      showPending();
-    }
-  }
-
   public void onResume() {
     UpdateCheckCoordinator.bind(this);
     if (popup == null) return;
     ResumePrefs.clearPopupDismiss(activity);
     permissionSettingsOpened = false;
     if (hasPendingUpdate()) {
-      if (isSellBusy()) deferWhileBusy();
-      else showPending();
+      showPending();
     }
     UpdateCheckCoordinator.requestCheck(activity, "resume");
   }
@@ -145,8 +127,7 @@ public final class UpdatePromptController {
     ResumePrefs.clearPopupDismiss(activity);
     if (popup == null) return;
     if (pending != null && pending.isNewerThan(localVersionCode)) {
-      if (isSellBusy()) deferWhileBusy();
-      else showPending();
+      showPending();
       return;
     }
     UpdateCheckCoordinator.requestCheck(activity, "force");
@@ -157,7 +138,7 @@ public final class UpdatePromptController {
   }
 
   /**
-   * Sync pulse with a known newer build — always re-show when idle (no snooze).
+   * Sync pulse with a known newer build — always re-show (no snooze, no idle wait).
    */
   void reassertPendingUpdate() {
     if (Looper.myLooper() != Looper.getMainLooper()) {
@@ -167,10 +148,6 @@ public final class UpdatePromptController {
     if (activity.isFinishing() || busy) return;
     if (!hasPendingUpdate()) return;
     ResumePrefs.clearPopupDismiss(activity);
-    if (isSellBusy()) {
-      deferWhileBusy();
-      return;
-    }
     showPending();
   }
 
@@ -197,14 +174,6 @@ public final class UpdatePromptController {
             ? UpdateConfig.MANIFEST_URL
             : BuildConfig.UPDATE_MANIFEST_URL;
     checker.check(manifestUrl, callback);
-  }
-
-  private boolean isSellBusy() {
-    try {
-      return busyGate != null && busyGate.blocksForceUpdate();
-    } catch (Exception e) {
-      return false;
-    }
   }
 
   private void startCheck() {
@@ -237,33 +206,11 @@ public final class UpdatePromptController {
     }
     pending = manifest;
     ResumePrefs.clearPopupDismiss(activity);
-    if (isSellBusy()) {
-      deferWhileBusy();
-      OpsLogger.info(
-          activity,
-          "update",
-          "มีอัปเดต — รอตะกร้าว่างก่อนบังคับ",
-          manifest.versionName + " (" + manifest.versionCode + ")");
-      return;
-    }
     showPending();
-  }
-
-  /** Keep update pending but do not cover the pay / cart UI. */
-  private void deferWhileBusy() {
-    stopNag();
-    main.removeCallbacks(autoInstallTask);
-    main.removeCallbacks(permissionNudgeTask);
-    autoInstallScheduled = false;
-    hide();
   }
 
   private void showPending() {
     if (pending == null || !pending.isNewerThan(localVersionCode)) return;
-    if (isSellBusy()) {
-      deferWhileBusy();
-      return;
-    }
     boolean canInstall = ApkInstaller.canInstallPackages(activity);
     if (body != null) {
       if (canInstall) {
@@ -295,7 +242,7 @@ public final class UpdatePromptController {
     OpsLogger.info(
         activity,
         "update",
-        "บังคับอัปเดต (ว่างแล้ว)",
+        "บังคับอัปเดตทันที",
         pending.versionName
             + " ("
             + pending.versionCode
@@ -333,7 +280,7 @@ public final class UpdatePromptController {
 
   private void runPermissionNudge() {
     if (activity == null || activity.isFinishing() || busy) return;
-    if (!hasPendingUpdate() || isSellBusy()) return;
+    if (!hasPendingUpdate()) return;
     if (ApkInstaller.canInstallPackages(activity)) {
       maybeAutoInstall();
       return;
@@ -353,7 +300,7 @@ public final class UpdatePromptController {
   private void maybeAutoInstall() {
     autoInstallScheduled = false;
     if (activity.isFinishing() || busy) return;
-    if (!hasPendingUpdate() || isSellBusy()) return;
+    if (!hasPendingUpdate()) return;
     if (!ApkInstaller.canInstallPackages(activity)) {
       openInstallPermission();
       schedulePermissionNudge();
@@ -364,11 +311,6 @@ public final class UpdatePromptController {
 
   private void onGo() {
     if (busy) return;
-    if (isSellBusy()) {
-      deferWhileBusy();
-      Toast.makeText(activity, R.string.update_wait_cart_clear, Toast.LENGTH_SHORT).show();
-      return;
-    }
     if (pending == null || !pending.isNewerThan(localVersionCode)) {
       startCheck();
       return;
@@ -440,11 +382,9 @@ public final class UpdatePromptController {
                     progress.setText(activity.getString(R.string.status_error, msg));
                   }
                   OpsLogger.error(activity, "update", "ดาวน์โหลดอัปเดตไม่สำเร็จ", msg);
-                  // Keep forcing — retry when idle.
-                  if (!isSellBusy()) {
-                    UpdateNagVoice.start(activity);
-                    scheduleAutoInstall();
-                  }
+                  // Keep forcing — retry.
+                  UpdateNagVoice.start(activity);
+                  scheduleAutoInstall();
                 });
           }
         });
@@ -469,10 +409,8 @@ public final class UpdatePromptController {
       String msg = e.getMessage() == null ? "install" : e.getMessage();
       if (progress != null) progress.setText(activity.getString(R.string.status_error, msg));
       OpsLogger.error(activity, "update", "ติดตั้งอัปเดตไม่สำเร็จ", msg);
-      if (!isSellBusy()) {
-        UpdateNagVoice.start(activity);
-        scheduleAutoInstall();
-      }
+      UpdateNagVoice.start(activity);
+      scheduleAutoInstall();
     }
   }
 

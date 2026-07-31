@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+122/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.99"/);
-assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1\.14\.99"/);
-assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 122/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+123/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.100"/);
+assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1.14.100"/);
+assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 123/);
 
 assert.ok(existsSync(join(root, "docs/npos-menu-management-phases.md")));
 const phases = read("docs/npos-menu-management-phases.md");
