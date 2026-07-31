@@ -42,8 +42,6 @@ function saleIsToday(sale: PosSale, todayMs: number): boolean {
   return startOfLocalDay(new Date(sale.createdAt || 0)) === todayMs;
 }
 
-type PosSalesHubTab = "report" | "manage";
-
 export function PosSalesReport({
   onError,
   compact = false,
@@ -235,12 +233,11 @@ export function PosSalesReport({
 
       {dataIssues.length ? (
         <div className="pos-sales-reconcile-warn-note" role="status">
-          <p className="muted">
-            พบข้อมูลผิดปกติ {dataIssues.length} รอบในหน้าต่างนี้ — ตรวจแถวรอบ + รายบิล
-          </p>
-          <ul className="pos-sales-data-issue-list">
-            {dataIssues.slice(0, 8).map((row) => (
-              <li key={row.sessionId}>
+          <p className="muted pos-sales-issue-lead">
+            ผิดปกติ {dataIssues.length} รอบ
+            {dataIssues.slice(0, 4).map((row) => (
+              <span key={row.sessionId}>
+                {" · "}
                 <button
                   type="button"
                   className="npos-slim-text-btn"
@@ -251,13 +248,11 @@ export function PosSalesReport({
                 >
                   {row.label}
                 </button>
-                <span className="muted"> · {row.issues.join(" · ")}</span>
-              </li>
+                <span> {row.issues.join(" · ")}</span>
+              </span>
             ))}
-            {dataIssues.length > 8 ? (
-              <li className="muted">…และอีก {dataIssues.length - 8} รอบ</li>
-            ) : null}
-          </ul>
+            {dataIssues.length > 4 ? ` · +${dataIssues.length - 4}` : ""}
+          </p>
         </div>
       ) : null}
 
@@ -592,39 +587,41 @@ export function PosSalesReportPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const tab: PosSalesHubTab = tabParam === "manage" ? "manage" : "report";
   const [error, setError] = useState<string | null>(null);
 
-  function setTab(next: PosSalesHubTab) {
+  useEffect(() => {
+    if (tabParam !== "manage") return;
+    const id = window.setTimeout(() => {
+      document.getElementById("pos-manage")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+    return () => window.clearTimeout(id);
+  }, [tabParam]);
+
+  function jump(section: "report" | "manage") {
     setError(null);
-    router.replace(next === "manage" ? "/pos-sales/?tab=manage" : "/pos-sales/", { scroll: false });
+    const href = section === "manage" ? "/pos-sales/?tab=manage" : "/pos-sales/";
+    router.replace(href, { scroll: false });
+    const elId = section === "manage" ? "pos-manage" : "pos-sales-report";
+    requestAnimationFrame(() => {
+      document.getElementById(elId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   return (
-    <div className="module-page pos-sales-report-page pos-sales-report-page--dense pos-sales-report-page--slim">
+    <div className="module-page pos-sales-report-page pos-sales-report-page--dense pos-sales-report-page--slim pos-sales-report-page--unified">
       <header className="npos-bo-page-head">
         <div>
           <h1 className="panel-title pos-sales-page-title">POS</h1>
-          <p className="muted pos-sales-page-lead">
-            รอบ + บิล · โฟกัสเครื่อง 570F0F · ไม่ใช่กะ OT
-          </p>
+          <p className="muted pos-sales-page-lead">รอบ · บิล · เครื่อง · 570F0F</p>
         </div>
-        <nav className="npos-bo-page-tabs" role="tablist" aria-label="หมวด POS">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "report"}
-            className={tab === "report" ? "npos-slim-text-btn is-active" : "npos-slim-text-btn"}
-            onClick={() => setTab("report")}
-          >
-            รายงานยอดขาย
+        <nav className="npos-bo-page-tabs" aria-label="ข้ามหมวด POS">
+          <button type="button" className="npos-slim-text-btn" onClick={() => jump("report")}>
+            ยอดขาย
           </button>
           <button
             type="button"
-            role="tab"
-            aria-selected={tab === "manage"}
-            className={tab === "manage" ? "npos-slim-text-btn is-active" : "npos-slim-text-btn"}
-            onClick={() => setTab("manage")}
+            className={tabParam === "manage" ? "npos-slim-text-btn is-active" : "npos-slim-text-btn"}
+            onClick={() => jump("manage")}
           >
             จัดการ
           </button>
@@ -633,7 +630,15 @@ export function PosSalesReportPage() {
 
       {error ? <p className="error-text">{error}</p> : null}
 
-      {tab === "manage" ? <PosManagePanel onError={setError} /> : <PosSalesReport onError={setError} />}
+      <section id="pos-sales-report" className="pos-hub-section" aria-label="รายงานยอดขาย">
+        <h2 className="pos-hub-section-title">ยอดขาย</h2>
+        <PosSalesReport onError={setError} />
+      </section>
+
+      <section id="pos-manage" className="pos-hub-section" aria-label="จัดการ">
+        <h2 className="pos-hub-section-title">จัดการ</h2>
+        <PosManagePanel onError={setError} />
+      </section>
     </div>
   );
 }
