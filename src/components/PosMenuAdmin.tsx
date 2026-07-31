@@ -134,10 +134,24 @@ export function PosMenuAdmin({
   const freshItemIdRef = useRef<string | null>(null);
   const freshCategoryIdRef = useRef<string | null>(null);
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  /** Soft pulse when Firestore pushes a change (e.g. nPos sold-out / CRUD). */
+  const [liveSyncNote, setLiveSyncNote] = useState("");
+  const itemsCountRef = useRef(0);
 
   useEffect(() => {
     freshItemIdRef.current = freshItemId;
   }, [freshItemId]);
+
+  useEffect(() => {
+    if (!authReady) return;
+    const prev = itemsCountRef.current;
+    itemsCountRef.current = items.length;
+    if (prev > 0 && items.length !== prev) {
+      setLiveSyncNote("อัปเดตจากเครื่องขาย / หลังร้านแล้ว");
+      const t = window.setTimeout(() => setLiveSyncNote(""), 2500);
+      return () => window.clearTimeout(t);
+    }
+  }, [items, authReady]);
 
   useEffect(() => {
     setMenuDbMode(authMode);
@@ -470,6 +484,7 @@ export function PosMenuAdmin({
                   {tab === "groups" ? "กลุ่ม" : "หมวด"}
                 </button>
               ) : null}
+              {liveSyncNote ? <p className="muted pos-menu-live-sync">{liveSyncNote}</p> : null}
             </header>
           ) : (
             <div className="pos-menu-tabs">

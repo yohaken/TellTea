@@ -1,6 +1,6 @@
 # nPos — ซิงก์เมนูตอนแอปเปิดค้าง (`menuVersion`)
 
-อัปเดต: **ship O3 → 1.14.89** · ดูเฟส [npos-counter-ops-phases.md](./npos-counter-ops-phases.md)  
+อัปเดต: **ship O3 → 1.14.91** · ดูเฟส [npos-counter-ops-phases.md](./npos-counter-ops-phases.md)  
 อ้างอิง: [npos-sell-layout-checklist.md](./npos-sell-layout-checklist.md) · [npos-force-update-pulse-checklist.md](./npos-force-update-pulse-checklist.md) (คนละเรื่อง — อันนั้นคือ APK)
 
 ## เป้า

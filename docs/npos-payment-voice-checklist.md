@@ -1,6 +1,6 @@
 # nPos — เสียงพูดรับเงิน / ทอน (ฝังใน APK)
 
-อัปเดต: **ship 1.14.89** · เสียง **bundled** ใน `res/raw/voice_*.mp3`  
+อัปเดต: **ship 1.14.91** · เสียง **bundled** ใน `res/raw/voice_*.mp3`  
 ดูเฟส [npos-counter-ops-phases.md](./npos-counter-ops-phases.md)
 
 ## เป้า

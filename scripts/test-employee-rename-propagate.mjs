@@ -16,7 +16,7 @@ const prod = read("src/app/production/page.tsx");
 const tasks = read("src/app/tasks/page.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 524/);
+assert.match(version, /APP_BUILD = 525/);
 assert.match(prop, /propagateEmployeeRename/);
 assert.match(prop, /rewriteAlignedNames/);
 assert.match(prop, /resolveWorkerDisplayNames/);

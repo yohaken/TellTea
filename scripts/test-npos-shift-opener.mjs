@@ -9,16 +9,16 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 512/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 525/);
 assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 144/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+112/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.89"/);
-assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1.14.89"/);
-assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 112/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+114/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.91"/);
+assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1.14.91"/);
+assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 114/);
 
 assert.ok(existsSync(join(root, "docs/npos-shift-opener-checklist.md")));
 const doc = read("docs/npos-shift-opener-checklist.md");
-assert.match(doc, /1\.14\.89|openedByName|OpenShiftFlow/);
+assert.match(doc, /1\.14\.91|openedByName|OpenShiftFlow/);
 assert.match(doc, /ไม่ผูก|ไม่.*OT|นอกสcope/);
 
 const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
@@ -85,7 +85,7 @@ assert.match(slim, /searchBlob/);
 
 const phases = read("docs/npos-counter-ops-phases.md");
 assert.match(phases, /O1/);
-assert.match(phases, /1\.14\.89/);
+assert.match(phases, /1\.14\.91/);
 
 assert.match(read("scripts/check-npos-shop.mjs"), /shift-opener/);
 

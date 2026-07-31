@@ -26,6 +26,8 @@ const steps = [
   { name: "shift-opener", cmd: ["node", "scripts/test-npos-shift-opener.mjs"] },
   { name: "session-cash-detail", cmd: ["node", "scripts/test-npos-session-cash-detail.mjs"] },
   { name: "menu-version-sync", cmd: ["node", "scripts/test-npos-menu-version-sync.mjs"] },
+  { name: "menu-admin", cmd: ["node", "scripts/test-npos-menu-admin.mjs"] },
+  { name: "menu-admin-crud", cmd: ["node", "scripts/test-npos-menu-admin-crud.mjs"] },
   { name: "payment-voice", cmd: ["node", "scripts/test-npos-payment-voice.mjs"] },
   { name: "receipt-readable", cmd: ["node", "scripts/test-npos-receipt-readable.mjs"] },
   { name: "thermal-all-docs", cmd: ["node", "scripts/test-npos-thermal-all-docs.mjs"] },
