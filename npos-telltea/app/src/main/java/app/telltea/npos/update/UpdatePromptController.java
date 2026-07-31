@@ -17,7 +17,6 @@ import java.io.File;
 import app.telltea.npos.BuildConfig;
 import app.telltea.npos.R;
 import app.telltea.npos.diagnose.OpsLogger;
-import app.telltea.npos.ui.UiScale;
 
 /**
  * Forced APK update popup on sell/hub.
@@ -79,19 +78,16 @@ public final class UpdatePromptController {
 
   private void positionPopup() {
     if (popup == null) return;
-    UiScale ui = UiScale.from(activity);
     ViewGroup.LayoutParams lp = popup.getLayoutParams();
     if (lp instanceof FrameLayout.LayoutParams) {
       FrameLayout.LayoutParams flp = (FrameLayout.LayoutParams) lp;
-      View sidebar = activity.findViewById(R.id.posSidebar);
-      int start = ui.dp(12);
-      if (sidebar != null && sidebar.getVisibility() == View.VISIBLE) {
-        start = ui.navWidthPx + ui.dp(12);
-      }
-      flp.setMarginStart(start);
-      flp.topMargin = ui.dp(12);
-      // Wider forced card so counter staff cannot miss it.
-      flp.width = Math.min(ui.dp(420), activity.getResources().getDisplayMetrics().widthPixels - start - ui.dp(12));
+      // Full-bleed dim overlay; compact card is centered inside the layout XML.
+      flp.width = ViewGroup.LayoutParams.MATCH_PARENT;
+      flp.height = ViewGroup.LayoutParams.MATCH_PARENT;
+      flp.gravity = android.view.Gravity.CENTER;
+      flp.setMargins(0, 0, 0, 0);
+      flp.setMarginStart(0);
+      flp.setMarginEnd(0);
       popup.setLayoutParams(flp);
     }
   }
