@@ -12,7 +12,7 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+115/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.92"/);
 assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1\.14\.92"/);
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 527/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 528/);
 
 assert.ok(existsSync(join(root, "functions/npos-menu-admin.js")));
 const cf = read("functions/npos-menu-admin.js");
