@@ -60,9 +60,11 @@ service cloud.firestore {
       return hasEmail() ? authEmail() : authPhone();
     }
 
-    /** employeeId ที่ผูกกับบัญชี staff — ใช้จำกัดคิวจ่าย/ข้อมูลจ่ายของตัวเอง */
+    /** employeeId ที่ผูกกับบัญชี staff — คิวจ่าย / งานมอบหมาย / ข้อมูลจ่ายของตัวเอง */
     function staffEmployeeId() {
-      return isStaff() && get(staffPath()).data.keys().hasAny(['employeeId'])
+      return isStaff()
+        && get(staffPath()).data.keys().hasAny(['employeeId'])
+        && get(staffPath()).data.employeeId is string
         ? get(staffPath()).data.employeeId
         : '';
     }
@@ -385,14 +387,6 @@ service cloud.firestore {
         && after.sortOrder == before.sortOrder
         && after.createdAt == before.createdAt
         && after.active is bool;
-    }
-
-    function staffEmployeeId() {
-      return isStaff()
-        && get(staffPath()).data.keys().hasAny(['employeeId'])
-        && get(staffPath()).data.employeeId is string
-        ? get(staffPath()).data.employeeId
-        : '';
     }
 
     function isAssignTaskAssignee() {
