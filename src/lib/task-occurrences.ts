@@ -1,5 +1,6 @@
 import {
   addDoc,
+  arrayUnion,
   collection,
   doc,
   onSnapshot,
@@ -260,6 +261,91 @@ export async function deleteTaskOccurrences(ids: string[]): Promise<void> {
   const batch = writeBatch(getDb());
   for (const id of ids) {
     batch.delete(doc(getDb(), "taskOccurrences", id));
+  }
+  await batch.commit();
+}
+
+/** รอบที่ยังไม่จบ — pending / waiting / missed */
+export function isOpenTaskOccurrenceStatus(status: TaskOccurrenceStatus) {
+  return status === "pending" || status === "missed" || status === "waiting";
+}
+
+/**
+ * รวบรวมรอบที่ยังไม่จบของกติกา + เอกสารซ้ำ periodKey เดียวกัน
+ * (ตาราง thisWeek โชว์แค่ 1 แถว/กติกา — ลบแถวเดียวแล้วพี่น้องโผล่แทน)
+ */
+export function collectOpenTaskOccurrences(
+  templateId: string,
+  occurrences: TaskOccurrence[],
+): TaskOccurrence[] {
+  const tid = String(templateId || "").trim();
+  if (!tid) return [];
+  const open = occurrences.filter(
+    (o) => o.templateId === tid && isOpenTaskOccurrenceStatus(o.status),
+  );
+  const periodKeys = new Set(open.map((o) => o.periodKey).filter(Boolean));
+  const byId = new Map<string, TaskOccurrence>();
+  for (const o of occurrences) {
+    if (o.templateId !== tid) continue;
+    if (o.status === "completed") continue;
+    if (periodKeys.has(o.periodKey) || isOpenTaskOccurrenceStatus(o.status)) {
+      byId.set(o.id, o);
+    }
+  }
+  return [...byId.values()];
+}
+
+/**
+ * dismiss periodKeys + ลบรอบที่ยังไม่จบ ใน batch เดียว
+ * กัน sync สร้างซ้ำ และกันลบแล้วแถวพี่น้องโผล่แทน
+ */
+export async function dismissAndDeleteOpenTaskOccurrences(
+  templateId: string,
+  occurrences: TaskOccurrence[],
+): Promise<{ deletedIds: string[]; periodKeys: string[] }> {
+  const tid = String(templateId || "").trim();
+  if (!tid) throw new Error("ไม่พบกติกางาน");
+  const open = collectOpenTaskOccurrences(tid, occurrences);
+  const periodKeys = [...new Set(open.map((o) => o.periodKey).filter(Boolean))];
+  const ids = open.map((o) => o.id);
+  if (!ids.length && !periodKeys.length) {
+    return { deletedIds: [], periodKeys: [] };
+  }
+
+  const batch = writeBatch(getDb());
+  if (periodKeys.length) {
+    batch.update(doc(getDb(), "taskTemplates", tid), {
+      dismissedPeriodKeys: arrayUnion(...periodKeys),
+      updatedAt: Date.now(),
+    });
+  }
+  for (const id of ids) {
+    batch.delete(doc(getDb(), "taskOccurrences", id));
+  }
+  await batch.commit();
+  return { deletedIds: ids, periodKeys };
+}
+
+/** ปิดกติกา + ลบรอบที่ยังไม่จบออกจากตารางทันที */
+export async function deactivateTaskTemplateClearingOpen(
+  templateId: string,
+  occurrences: TaskOccurrence[],
+): Promise<void> {
+  const tid = String(templateId || "").trim();
+  if (!tid) throw new Error("ไม่พบกติกางาน");
+  const open = collectOpenTaskOccurrences(tid, occurrences);
+  const periodKeys = [...new Set(open.map((o) => o.periodKey).filter(Boolean))];
+  const batch = writeBatch(getDb());
+  const patch: Record<string, unknown> = {
+    active: false,
+    updatedAt: Date.now(),
+  };
+  if (periodKeys.length) {
+    patch.dismissedPeriodKeys = arrayUnion(...periodKeys);
+  }
+  batch.update(doc(getDb(), "taskTemplates", tid), patch);
+  for (const o of open) {
+    batch.delete(doc(getDb(), "taskOccurrences", o.id));
   }
   await batch.commit();
 }
