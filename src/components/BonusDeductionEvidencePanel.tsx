@@ -1,18 +1,76 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import {
   BONUS_DEDUCTION_EVIDENCE_MAX,
+  bonusEvidencePileHasContent,
+  bonusEvidenceViewedStorageKey,
+  bonusEvidenceViewOrder,
   saveBonusDeductionMonthEvidence,
   type BonusDeductionMonthDoc,
+  type BonusEvidencePileId,
 } from "@/lib/bonus-deductions";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
+type Slide =
+  | { pile: BonusEvidencePileId; kind: "note"; text: string }
+  | { pile: BonusEvidencePileId; kind: "photo"; url: string; photoIndex: number; photoTotal: number };
+
+function pileLabel(pile: BonusEvidencePileId): string {
+  return pile === "caution" ? "ระวัง" : "ตัด";
+}
+
+function pileHint(pile: BonusEvidencePileId): string {
+  return pile === "caution"
+    ? "เตือนให้ระมัดระวัง — ไม่ตัดโบนัส"
+    : "หลักฐานที่ตัดโบนัสจริง — หักคะแนนงวดนี้";
+}
+
+function buildForcedSlides(doc: BonusDeductionMonthDoc): Slide[] {
+  const slides: Slide[] = [];
+  for (const pile of bonusEvidenceViewOrder(doc)) {
+    const note = pile === "caution" ? doc.cautionNote : doc.note;
+    const urls = pile === "caution" ? doc.cautionUrls : doc.evidenceUrls;
+    if (note.trim()) {
+      slides.push({ pile, kind: "note", text: note.trim() });
+    }
+    urls.forEach((url, i) => {
+      slides.push({
+        pile,
+        kind: "photo",
+        url,
+        photoIndex: i + 1,
+        photoTotal: urls.length,
+      });
+    });
+  }
+  return slides;
+}
+
+function readViewed(actorId: string, periodMonth: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(bonusEvidenceViewedStorageKey(actorId, periodMonth)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeViewed(actorId: string, periodMonth: string) {
+  try {
+    window.localStorage.setItem(bonusEvidenceViewedStorageKey(actorId, periodMonth), "1");
+  } catch {
+    /* ignore quota */
+  }
+}
+
 /**
- * หลักฐานหักโบนัสต่องวด — แนบที่ตัดคะแนน (ไม่ปนตารางคน)
- * พนักงานอ่านได้ · เจ้าของแก้รูป+โน้ต
+ * หลักฐานโบนัสต่องวด — กองระวัง (ไม่ตัด) + กองตัด (หักจริง)
+ * พนักงานต้องสไลด์ดู ระวัง → ตัด ตามลำดับ
  */
 export function BonusDeductionEvidencePanel({
   year,
@@ -20,6 +78,7 @@ export function BonusDeductionEvidencePanel({
   periodMonth,
   doc,
   isOwner,
+  actorId = "",
   onError,
   onInfo,
   onSaved,
@@ -29,34 +88,78 @@ export function BonusDeductionEvidencePanel({
   periodMonth: string;
   doc: BonusDeductionMonthDoc | null;
   isOwner: boolean;
+  /** ใช้จำว่าพนักงานดูครบงวดนี้แล้ว (เครื่องนี้) */
+  actorId?: string;
   onError: (msg: string) => void;
   onInfo?: (msg: string) => void;
   onSaved?: (next: BonusDeductionMonthDoc) => void;
 }) {
-  const [urls, setUrls] = useState<string[]>([]);
-  const [note, setNote] = useState("");
+  const [cutUrls, setCutUrls] = useState<string[]>([]);
+  const [cutNote, setCutNote] = useState("");
+  const [cautionUrls, setCautionUrls] = useState<string[]>([]);
+  const [cautionNote, setCautionNote] = useState("");
   const [busy, setBusy] = useState(false);
-  const [preview, setPreview] = useState(false);
+  const [ownerPreview, setOwnerPreview] = useState<{
+    pile: BonusEvidencePileId;
+    urls: string[];
+  } | null>(null);
+  const [forcedOpen, setForcedOpen] = useState(false);
+  const [viewedComplete, setViewedComplete] = useState(false);
 
-  useBodyScrollLock(preview);
+  useBodyScrollLock(!!ownerPreview || forcedOpen);
 
   useEffect(() => {
-    setUrls(doc?.evidenceUrls || []);
-    setNote(doc?.note || "");
-  }, [doc?.evidenceUrls, doc?.note, periodMonth]);
+    setCutUrls(doc?.evidenceUrls || []);
+    setCutNote(doc?.note || "");
+    setCautionUrls(doc?.cautionUrls || []);
+    setCautionNote(doc?.cautionNote || "");
+  }, [
+    doc?.evidenceUrls,
+    doc?.note,
+    doc?.cautionUrls,
+    doc?.cautionNote,
+    periodMonth,
+  ]);
 
-  const hasEvidence = urls.length > 0 || Boolean(note.trim());
+  useEffect(() => {
+    setViewedComplete(readViewed(actorId, periodMonth));
+  }, [actorId, periodMonth]);
+
+  const liveDoc: BonusDeductionMonthDoc = doc || {
+    year,
+    month,
+    counts: { generalFail: 0, waste: 0 },
+    evidenceUrls: [],
+    note: "",
+    cautionUrls: [],
+    cautionNote: "",
+    updatedAt: 0,
+  };
+  const viewOrder = useMemo(
+    () => bonusEvidenceViewOrder(liveDoc),
+    [
+      liveDoc.cautionUrls,
+      liveDoc.cautionNote,
+      liveDoc.evidenceUrls,
+      liveDoc.note,
+    ],
+  );
+  const hasAny = viewOrder.length > 0;
+  const hasCaution = bonusEvidencePileHasContent(liveDoc, "caution");
+  const hasCut = bonusEvidencePileHasContent(liveDoc, "cut");
 
   async function onSave() {
     if (!isOwner) return;
     setBusy(true);
     try {
       const next = await saveBonusDeductionMonthEvidence(year, month, {
-        evidenceUrls: urls,
-        note,
+        evidenceUrls: cutUrls,
+        note: cutNote,
+        cautionUrls,
+        cautionNote,
       });
       onSaved?.(next);
-      onInfo?.(`บันทึกหลักฐานหัก · ${periodMonth}`);
+      onInfo?.(`บันทึกหลักฐาน · ${periodMonth} · ระวัง ${cautionUrls.length} · ตัด ${cutUrls.length}`);
     } catch (err) {
       onError((err as Error).message || "บันทึกหลักฐานไม่สำเร็จ");
     } finally {
@@ -65,37 +168,88 @@ export function BonusDeductionEvidencePanel({
   }
 
   return (
-    <section className="bonus-evidence-panel" aria-label="หลักฐานหักโบนัส">
+    <section className="bonus-evidence-panel" aria-label="หลักฐานระวังและตัดโบนัส">
       <header className="bonus-evidence-head">
-        <h3 className="bonus-evidence-title">หลักฐานหักโบนัส · {periodMonth}</h3>
+        <h3 className="bonus-evidence-title">หลักฐานโบนัส · {periodMonth}</h3>
         <p className="muted bonus-evidence-hint">
-          แคปฟีดแบคลูกค้า / สาเหตุตัดคะแนน — เก็บตามงวด ย้อนหลังได้ด้วยตัวเลือกเดือนด้านบน
+          ส่งรูปแยก 2 กอง: <strong>ระวัง</strong> (ไม่ตัด) แล้วค่อย{" "}
+          <strong>ตัด</strong> (หักโบนัสจริง) — พนักงานต้องดูระวังก่อนถึงตัด
         </p>
       </header>
 
       {isOwner ? (
         <>
-          <PhotoAttachMultiField
-            label="รูปหลักฐาน"
-            values={urls}
-            onChange={setUrls}
-            onError={onError}
-            max={BONUS_DEDUCTION_EVIDENCE_MAX}
-            storageFolder="bonus-deductions"
-            storageSlotKey={`deduct-${periodMonth}`}
-            hint="ถ่ายหรือแนบแคป — พนักงานดูได้เพื่อความโปร่งใส"
-          />
-          <label className="field">
-            <span>โน้ตสาเหตุ (สั้นๆ)</span>
-            <input
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              disabled={busy}
-              placeholder="เช่น ฟีดแบคบริการ · ของเสียรอบ X"
-              maxLength={500}
+          <div className="bonus-evidence-pile bonus-evidence-pile--caution">
+            <h4 className="bonus-evidence-pile-title">1 · ระวัง</h4>
+            <p className="muted bonus-evidence-pile-hint">{pileHint("caution")}</p>
+            <PhotoAttachMultiField
+              label="รูประวัง"
+              values={cautionUrls}
+              onChange={setCautionUrls}
+              onError={onError}
+              max={BONUS_DEDUCTION_EVIDENCE_MAX}
+              storageFolder="bonus-deductions"
+              storageSlotKey={`caution-${periodMonth}`}
+              hint="ลำดับรูป = ลำดับที่พนักงานจะเห็น"
             />
-          </label>
-          <div className="module-form-actions" style={{ marginTop: "0.5rem" }}>
+            <label className="field">
+              <span>โน้ตระวัง (สั้นๆ)</span>
+              <input
+                value={cautionNote}
+                onChange={(e) => setCautionNote(e.target.value)}
+                disabled={busy}
+                placeholder="เช่น ระวังจุดนี้ในกะเย็น"
+                maxLength={500}
+              />
+            </label>
+            {cautionUrls.length ? (
+              <button
+                type="button"
+                className="ghost-btn"
+                style={{ marginTop: "0.35rem" }}
+                onClick={() => setOwnerPreview({ pile: "caution", urls: cautionUrls })}
+              >
+                ดูตัวอย่างกองระวัง ({cautionUrls.length})
+              </button>
+            ) : null}
+          </div>
+
+          <div className="bonus-evidence-pile bonus-evidence-pile--cut">
+            <h4 className="bonus-evidence-pile-title">2 · ตัด</h4>
+            <p className="muted bonus-evidence-pile-hint">{pileHint("cut")}</p>
+            <PhotoAttachMultiField
+              label="รูปตัด"
+              values={cutUrls}
+              onChange={setCutUrls}
+              onError={onError}
+              max={BONUS_DEDUCTION_EVIDENCE_MAX}
+              storageFolder="bonus-deductions"
+              storageSlotKey={`cut-${periodMonth}`}
+              hint="แคปฟีดแบค / สาเหตุหักคะแนน"
+            />
+            <label className="field">
+              <span>โน้ตตัด (สั้นๆ)</span>
+              <input
+                value={cutNote}
+                onChange={(e) => setCutNote(e.target.value)}
+                disabled={busy}
+                placeholder="เช่น ฟีดแบคบริการ · ของเสียรอบ X"
+                maxLength={500}
+              />
+            </label>
+            {cutUrls.length ? (
+              <button
+                type="button"
+                className="ghost-btn"
+                style={{ marginTop: "0.35rem" }}
+                onClick={() => setOwnerPreview({ pile: "cut", urls: cutUrls })}
+              >
+                ดูตัวอย่างกองตัด ({cutUrls.length})
+              </button>
+            ) : null}
+          </div>
+
+          <div className="module-form-actions" style={{ marginTop: "0.65rem" }}>
             <button
               type="button"
               className="primary-btn"
@@ -106,41 +260,221 @@ export function BonusDeductionEvidencePanel({
             </button>
           </div>
         </>
-      ) : hasEvidence ? (
+      ) : hasAny ? (
         <div className="bonus-evidence-staff">
-          {note ? <p className="bonus-evidence-note">{note}</p> : null}
-          {urls.length ? (
-            <div className="bonus-evidence-staff-photos">
-              <EntryPhotoIndicator
-                imageUrls={urls}
-                label="หลักฐานหัก"
-                onView={() => setPreview(true)}
-              />
-              <button
-                type="button"
-                className="ghost-btn"
-                onClick={() => setPreview(true)}
-              >
-                ดูหลักฐาน ({urls.length})
-              </button>
+          <div className="bonus-evidence-staff-piles">
+            <div className="bonus-evidence-staff-pile">
+              <strong>ระวัง</strong>
+              <span className="muted">
+                {hasCaution
+                  ? [
+                      liveDoc.cautionNote ? "มีโน้ต" : "",
+                      liveDoc.cautionUrls.length
+                        ? `${liveDoc.cautionUrls.length} รูป`
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")
+                  : "ไม่มี"}
+              </span>
+              {liveDoc.cautionUrls.length ? (
+                <EntryPhotoIndicator
+                  imageUrls={liveDoc.cautionUrls}
+                  label="ระวัง"
+                  onView={() => setForcedOpen(true)}
+                />
+              ) : null}
             </div>
-          ) : (
-            <p className="muted">มีโน้ตหัก — ยังไม่มีรูป</p>
-          )}
+            <div className="bonus-evidence-staff-pile">
+              <strong>ตัด</strong>
+              <span className="muted">
+                {hasCut
+                  ? [
+                      liveDoc.note ? "มีโน้ต" : "",
+                      liveDoc.evidenceUrls.length
+                        ? `${liveDoc.evidenceUrls.length} รูป`
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")
+                  : "ไม่มี"}
+              </span>
+              {liveDoc.evidenceUrls.length ? (
+                <EntryPhotoIndicator
+                  imageUrls={liveDoc.evidenceUrls}
+                  label="ตัด"
+                  onView={() => setForcedOpen(true)}
+                />
+              ) : null}
+            </div>
+          </div>
+          <p className="muted bonus-evidence-staff-order">
+            ต้องดูตามลำดับ:{" "}
+            {viewOrder.map((p) => pileLabel(p)).join(" → ") || "—"}
+            {viewedComplete ? " · ดูครบแล้วบนเครื่องนี้" : " · ยังดูไม่ครบ"}
+          </p>
+          <button
+            type="button"
+            className="primary-btn"
+            onClick={() => setForcedOpen(true)}
+          >
+            {viewedComplete ? "ดูอีกครั้งตามลำดับ" : "เริ่มดู · ระวังก่อน แล้วตัด"}
+          </button>
         </div>
       ) : (
         <p className="muted bonus-evidence-empty">
-          ยังไม่มีหลักฐานหักในงวดนี้ — เจ้าของแนบตอนตัดคะแนนสิ้นเดือน
+          ยังไม่มีหลักฐานระวัง/ตัดในงวดนี้ — เจ้าของแนบตอนปิดเดือน
         </p>
       )}
 
-      {preview && urls.length ? (
+      {ownerPreview ? (
         <ImagePreviewModal
-          urls={urls}
-          title={`หลักฐานหัก · ${periodMonth}`}
-          onClose={() => setPreview(false)}
+          urls={ownerPreview.urls}
+          title={`หลักฐาน${pileLabel(ownerPreview.pile)} · ${periodMonth}`}
+          onClose={() => setOwnerPreview(null)}
+        />
+      ) : null}
+
+      {forcedOpen ? (
+        <BonusEvidenceForcedViewer
+          periodMonth={periodMonth}
+          doc={liveDoc}
+          onClose={() => setForcedOpen(false)}
+          onComplete={() => {
+            writeViewed(actorId, periodMonth);
+            setViewedComplete(true);
+            onInfo?.(`ดูหลักฐานครบ · ${periodMonth}`);
+          }}
         />
       ) : null}
     </section>
   );
+}
+
+function BonusEvidenceForcedViewer({
+  periodMonth,
+  doc,
+  onClose,
+  onComplete,
+}: {
+  periodMonth: string;
+  doc: BonusDeductionMonthDoc;
+  onClose: () => void;
+  onComplete: () => void;
+}) {
+  const slides = useMemo(() => buildForcedSlides(doc), [doc]);
+  const [idx, setIdx] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useBodyScrollLock(true);
+
+  useEffect(() => {
+    const token = `bonus-ev:${Date.now()}`;
+    window.history.pushState({ bonusEv: token }, "");
+    let closedByPop = false;
+    const onPop = () => {
+      closedByPop = true;
+      onClose();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      if (
+        !closedByPop &&
+        window.history.state &&
+        (window.history.state as { bonusEv?: string }).bonusEv === token
+      ) {
+        window.history.back();
+      }
+    };
+  }, [onClose]);
+
+  if (!slides.length) {
+    return null;
+  }
+
+  const slide = slides[idx]!;
+  const atEnd = idx >= slides.length - 1;
+  const pile = slide.pile;
+
+  function goNext() {
+    if (atEnd) {
+      onComplete();
+      onClose();
+      return;
+    }
+    setIdx((i) => Math.min(slides.length - 1, i + 1));
+  }
+
+  function goPrev() {
+    setIdx((i) => Math.max(0, i - 1));
+  }
+
+  const node = (
+    <div className="bonus-forced-backdrop" role="dialog" aria-label="ดูหลักฐานตามลำดับ">
+      <div className="bonus-forced-card">
+        <header className="bonus-forced-head">
+          <div>
+            <p className="bonus-forced-pile">
+              กอง {pileLabel(pile)} · {periodMonth}
+            </p>
+            <p className="muted bonus-forced-sub">{pileHint(pile)}</p>
+          </div>
+          <button
+            type="button"
+            className="ghost-btn bonus-forced-close"
+            aria-label="ปิด"
+            onClick={onClose}
+          >
+            <X size={18} aria-hidden />
+          </button>
+        </header>
+
+        <p className="muted bonus-forced-progress">
+          สไลด์ {idx + 1}/{slides.length}
+          {slide.kind === "photo"
+            ? ` · รูป ${slide.photoIndex}/${slide.photoTotal} ในกองนี้`
+            : " · โน้ต"}
+        </p>
+
+        <div className="bonus-forced-stage">
+          {slide.kind === "note" ? (
+            <p className="bonus-forced-note">{slide.text}</p>
+          ) : (
+            <img src={slide.url} alt={`หลักฐาน${pileLabel(pile)}`} className="bonus-forced-img" />
+          )}
+        </div>
+
+        <div className="bonus-forced-actions">
+          <button
+            type="button"
+            className="ghost-btn"
+            disabled={idx === 0}
+            onClick={goPrev}
+          >
+            <ChevronLeft size={16} aria-hidden /> ก่อนหน้า
+          </button>
+          <button type="button" className="primary-btn" onClick={goNext}>
+            {atEnd ? (
+              "ดูครบแล้ว"
+            ) : (
+              <>
+                ต่อไป <ChevronRight size={16} aria-hidden />
+              </>
+            )}
+          </button>
+        </div>
+        <p className="muted bonus-forced-foot">
+          ต้องไล่ครบทุกสไลด์ (ระวังก่อน แล้วตัด) — ปิดก่อนจบจะยังไม่นับว่าดูครบ
+        </p>
+      </div>
+    </div>
+  );
+
+  if (!mounted) return null;
+  return createPortal(node, document.body);
 }

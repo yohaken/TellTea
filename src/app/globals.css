@@ -5785,17 +5785,144 @@ body.modal-open .main-panel {
   font-size: 0.78rem;
 }
 
+.bonus-evidence-pile {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--tea-line);
+}
+
+.bonus-evidence-pile-title {
+  margin: 0 0 0.15rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.bonus-evidence-pile-hint {
+  margin: 0 0 0.45rem;
+  font-size: 0.76rem;
+}
+
+.bonus-evidence-pile--caution .bonus-evidence-pile-title {
+  color: #8a5a12;
+}
+
+.bonus-evidence-pile--cut .bonus-evidence-pile-title {
+  color: #8b2e2e;
+}
+
 .bonus-evidence-note {
   margin: 0 0 0.5rem;
   font-size: 0.88rem;
   font-weight: 600;
 }
 
-.bonus-evidence-staff-photos {
+.bonus-evidence-staff-photos,
+.bonus-evidence-staff-piles {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.bonus-evidence-staff-pile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 7rem;
+}
+
+.bonus-evidence-staff-order {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+}
+
+.bonus-forced-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(20, 16, 12, 0.72);
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  flex-wrap: wrap;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.bonus-forced-card {
+  width: min(36rem, 100%);
+  max-height: min(92vh, 44rem);
+  overflow: auto;
+  background: #fffaf3;
+  border-radius: 0.85rem;
+  padding: 0.85rem 0.95rem 1rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+}
+
+.bonus-forced-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.bonus-forced-pile {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.bonus-forced-sub {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+}
+
+.bonus-forced-close {
+  padding: 0.25rem;
+  min-width: 2rem;
+}
+
+.bonus-forced-progress {
+  margin: 0.55rem 0 0.4rem;
+  font-size: 0.78rem;
+}
+
+.bonus-forced-stage {
+  min-height: 12rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1c1814;
+  border-radius: 0.55rem;
+  overflow: hidden;
+  padding: 0.5rem;
+}
+
+.bonus-forced-img {
+  max-width: 100%;
+  max-height: min(55vh, 28rem);
+  object-fit: contain;
+}
+
+.bonus-forced-note {
+  margin: 0;
+  padding: 1rem;
+  color: #fff8ef;
+  font-size: 1.05rem;
+  line-height: 1.45;
+  font-weight: 600;
+  text-align: center;
+}
+
+.bonus-forced-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.bonus-forced-foot {
+  margin: 0.55rem 0 0;
+  font-size: 0.72rem;
 }
 
 .payroll-col-act {

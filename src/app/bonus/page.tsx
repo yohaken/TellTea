@@ -814,6 +814,7 @@ function BonusView() {
               periodMonth={month}
               doc={deductionMonth}
               isOwner={isOwner}
+              actorId={actorId || ""}
               onError={setError}
               onInfo={(msg) => {
                 setInfo(msg);
