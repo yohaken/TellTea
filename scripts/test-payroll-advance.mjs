@@ -21,7 +21,10 @@ assert.match(payrollSrc, /pendingPayrollNeedingAdvanceRefresh/);
 assert.match(payrollSrc, /payroll-advance/);
 assert.match(payrollSrc, /updated/);
 assert.match(payrollSrc, /skippedGroupNames/);
+assert.match(payrollSrc, /forceIncludedNames/);
+assert.match(payrollSrc, /issues/);
 assert.match(payrollSrc, /inScope/);
+assert.match(payrollSrc, /skipGroupPayroll: false/);
 
 assert.match(panelSrc, /บันทึกเบิก/);
 assert.match(panelSrc, /recordEmployeeAdvance/);

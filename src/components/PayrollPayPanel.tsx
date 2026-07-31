@@ -250,11 +250,15 @@ export function PayrollPayPanel({
       onEmployeesChange?.(refreshed);
       setAdvanceOpen(false);
       setFilter("pending");
+      const noSalary = !(Number(emp.monthlySalary) > 0);
       onInfo?.(
         `บันทึกเบิก · ${emp.name} · ฿${fmt(amountNum)} · ค้างหัก ฿${fmt(result.advanceBalance)} · ลงบช.เจ้าของแล้ว` +
           (advanceDraft.slipUrls.length ? " · มีสลิป" : "") +
           (voided > 0 ? ` · ยกเลิกคิวเก่า ${voided}` : "") +
-          " · กด「สร้างเงินเดือน」เพื่อหักเบิกในคิว (ดูแท็บรอโอน)",
+          " · เปิดเข้ารอบกลุ่มแล้ว" +
+          (noSalary
+            ? " · ยังไม่ตั้งเงินเดือน — ไปตั้งค่าจ่ายใส่ยอดก่อน แล้วค่อยสร้างเงินเดือน"
+            : " · กด「สร้างเงินเดือน」แล้วดูแท็บรอโอน"),
       );
     } catch (err) {
       onError((err as Error).message || "บันทึกเบิกไม่สำเร็จ");
@@ -323,25 +327,40 @@ export function PayrollPayPanel({
       if (result.created > 0) parts.push(`สร้าง ${result.created}`);
       if (result.restored > 0) parts.push(`กู้คืน ${result.restored}`);
       if (result.updated > 0) parts.push(`อัปเดตหักเบิก ${result.updated}`);
+      if (result.forceIncludedNames.length) {
+        parts.push(
+          `รวมคนมีเบิกค้าง ${result.forceIncludedNames.slice(0, 4).join(", ")}`,
+        );
+      }
+      const issueNote = result.issues.length
+        ? " · " +
+          result.issues
+            .slice(0, 4)
+            .map((i) => `${i.employeeName}: ${i.reason}`)
+            .join(" | ") +
+          (result.issues.length > 4 ? ` (+${result.issues.length - 4})` : "")
+        : "";
       const skipGroupNote = result.skippedGroupNames.length
         ? ` · ข้ามรอบกลุ่ม: ${result.skippedGroupNames.slice(0, 5).join(", ")}` +
           (result.skippedGroupNames.length > 5
             ? ` (+${result.skippedGroupNames.length - 5})`
             : "") +
-          " — ปิดที่ตั้งค่าจ่ายถ้าต้องการรวม"
+          " — ปิดติ๊กที่ตั้งค่าจ่าย"
         : "";
+      setFilter("pending");
       if (parts.length) {
-        setFilter("pending");
         onInfo?.(
-          `${scopeLabel}: ${parts.join(" · ")} รายการรอโอน` +
+          `${scopeLabel}: ${parts.join(" · ")} → ดูแท็บรอโอน` +
             (result.skipped ? ` · ข้าม ${result.skipped}` : "") +
-            skipGroupNote,
+            skipGroupNote +
+            issueNote,
         );
-      } else if (result.skipped) {
-        setFilter("pending");
+      } else if (issueNote || result.skipped) {
         onInfo?.(
-          `${scopeLabel}: ไม่มีรายการใหม่ (ข้าม ${result.skipped} — จ่ายแล้ว / ยอด 0 / ไม่เปลี่ยน)` +
-            skipGroupNote,
+          `${scopeLabel}: ไม่มีคิวใหม่` +
+            (result.skipped ? ` (ข้าม ${result.skipped})` : "") +
+            skipGroupNote +
+            issueNote,
         );
       } else {
         onInfo?.(

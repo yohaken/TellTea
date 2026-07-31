@@ -408,6 +408,12 @@ export function salaryAmountForSplit(monthlySalary: number, percent: number): nu
 
 export type BonusAmountByEmployee = Record<string, number>;
 
+export type PayrollGenerateIssue = {
+  employeeId: string;
+  employeeName: string;
+  reason: string;
+};
+
 export type GeneratePayrollResult = {
   created: number;
   /** รายการที่เคยยกเลิก (void) แล้วเปิดกลับเป็นรอโอน */
@@ -418,6 +424,10 @@ export type GeneratePayrollResult = {
   ids: string[];
   /** คนที่ข้ามรอบกลุ่ม (skipGroupPayroll) — ไม่เข้า generate */
   skippedGroupNames: string[];
+  /** คนข้ามรอบกลุ่มแต่มีเบิกค้าง — บังคับรวมรอบนี้ */
+  forceIncludedNames: string[];
+  /** เหตุผลที่ไม่มีคิว (ไม่มีเงินเดือน / จ่ายแล้ว / ข้ามกลุ่ม ฯลฯ) */
+  issues: PayrollGenerateIssue[];
 };
 
 function resolvePeriodAndDue(
@@ -468,10 +478,27 @@ export async function generatePayrollForPeriod(input: {
   if (!createdBy) throw new Error("ไม่พบผู้สร้างรายการ");
   parsePeriodMonth(input.periodMonth);
 
-  const skippedGroupNames = input.employees
-    .filter((e) => e.active && e.skipGroupPayroll)
-    .map((e) => e.name);
-  const active = input.employees.filter((e) => e.active && !e.skipGroupPayroll);
+  const skippedGroupNames: string[] = [];
+  const forceIncludedNames: string[] = [];
+  const issues: PayrollGenerateIssue[] = [];
+
+  // มีเบิกค้าง = ต้องเข้าคิวจ่ายกลุ่มแม้เคยติ๊กข้ามรอบ (เคสเบิกแล้วสร้างเงินเดือนไม่ขึ้น)
+  const active = input.employees.filter((e) => {
+    if (!e.active) return false;
+    if (!e.skipGroupPayroll) return true;
+    if ((Number(e.advanceBalance) || 0) > 0) {
+      forceIncludedNames.push(e.name);
+      return true;
+    }
+    skippedGroupNames.push(e.name);
+    issues.push({
+      employeeId: e.id,
+      employeeName: e.name,
+      reason: "ข้ามรอบกลุ่ม — ปิดติ๊กที่ตั้งค่าจ่าย หรือบันทึกเบิกเพื่อบังคับรวม",
+    });
+    return false;
+  });
+
   const now = Date.now();
   let created = 0;
   let restored = 0;
@@ -551,11 +578,16 @@ export async function generatePayrollForPeriod(input: {
     let advanceLeft = round2(
       Math.max(0, (Number(emp.advanceBalance) || 0) - (reservedAdvance.get(emp.id) || 0)),
     );
+    let empWrote = 0;
+    let empPaidPlans = 0;
+    let empZeroGross = 0;
+    let empUnchanged = 0;
 
     for (const plan of plans) {
       const grossAmount = plan.amountFor(emp);
       if (!(grossAmount > 0)) {
         skipped += 1;
+        empZeroGross += 1;
         continue;
       }
 
@@ -578,6 +610,7 @@ export async function generatePayrollForPeriod(input: {
         if (prev.status === "paid") {
           // จ่ายแล้วไม่ทับ — เบิกถูกตัดจาก advanceBalance ตอน mark จ่ายแล้ว
           skipped += 1;
+          empPaidPlans += 1;
           continue;
         }
       }
@@ -618,6 +651,7 @@ export async function generatePayrollForPeriod(input: {
           });
           ops += 1;
           restored += 1;
+          empWrote += 1;
           ids.push(id);
           if (ops >= 400) await flush();
           continue;
@@ -632,6 +666,8 @@ export async function generatePayrollForPeriod(input: {
           prev.accountDate === accountDate;
         if (unchanged) {
           skipped += 1;
+          empUnchanged += 1;
+          empWrote += 1; // มีคิวอยู่แล้วในรอโอน
           continue;
         }
         batch.set(ref, {
@@ -645,6 +681,7 @@ export async function generatePayrollForPeriod(input: {
         });
         ops += 1;
         updated += 1;
+        empWrote += 1;
         ids.push(id);
         if (ops >= 400) await flush();
         continue;
@@ -656,12 +693,47 @@ export async function generatePayrollForPeriod(input: {
       });
       ops += 1;
       created += 1;
+      empWrote += 1;
       ids.push(id);
       if (ops >= 400) await flush();
     }
+
+    // คนที่มีเบิกค้าง / ถูกบังคับรวม แต่ไม่มีคิวในเดือนนี้ — บอกเหตุผลชัด
+    const cares =
+      (Number(emp.advanceBalance) || 0) > 0 || forceIncludedNames.includes(emp.name);
+    if (cares && empWrote === 0) {
+      let reason: string;
+      if (!(Number(emp.monthlySalary) > 0) && (scope === "salary" || scope === "all")) {
+        reason = `ยังไม่ตั้งเงินเดือนในตั้งค่าจ่าย — ใส่ยอด/เดือนแล้วกดสร้างอีกครั้ง`;
+      } else if (empPaidPlans > 0 && empPaidPlans >= plans.length - empZeroGross) {
+        reason = `งวดในเดือน ${input.periodMonth} จ่ายครบแล้ว — ดูแท็บทั้งหมด/ประวัติ หรือเปลี่ยนเดือนอ้างอิง`;
+      } else if (empZeroGross === plans.length) {
+        reason = `ยอดงวดเป็น 0 ในเดือน ${input.periodMonth} — ตรวจเงินเดือน/โบนัส`;
+      } else {
+        reason = `ไม่ถูกสร้างคิวในเดือน ${input.periodMonth} — ตรวจฟิลเตอร์รอโอนและเดือนอ้างอิง`;
+      }
+      issues.push({ employeeId: emp.id, employeeName: emp.name, reason });
+    } else if (
+      cares &&
+      empWrote > 0 &&
+      empUnchanged === empWrote &&
+      (Number(emp.advanceBalance) || 0) > 0
+    ) {
+      // มีคิวแล้วและยอดไม่เปลี่ยน — อาจหักเบิกครบแล้วหรือ balance ไม่เข้า generate
+      /* silent — คิวอยู่ในรอโอนแล้ว */
+    }
   }
   await flush();
-  return { created, restored, updated, skipped, ids, skippedGroupNames };
+  return {
+    created,
+    restored,
+    updated,
+    skipped,
+    ids,
+    skippedGroupNames,
+    forceIncludedNames,
+    issues,
+  };
 }
 
 /**
@@ -936,6 +1008,12 @@ export async function recordEmployeeAdvance(input: {
     .slice(0, PAYROLL_SLIP_MAX);
 
   const advanceBalance = await adjustEmployeeAdvanceBalance(input.employeeId, amount);
+  // เบิกแล้วต้องกลับเข้ารอบกลุ่ม — ไม่งั้นกดสร้างเงินเดือนจะไม่ขึ้นชื่อ
+  try {
+    await updateEmployee(input.employeeId, { skipGroupPayroll: false });
+  } catch {
+    /* best-effort */
+  }
   let ownerBookId = "";
   if (input.postToBooks) {
     ownerBookId = await addOwnerBookEntry({
