@@ -56,18 +56,8 @@ public final class UpdatePromptController {
   private int localVersionCode = 1;
 
   private final Runnable autoInstallTask = this::maybeAutoInstall;
-  private final Runnable permissionNudgeTask =
-      () -> {
-        if (activity.isFinishing() || busy) return;
-        if (!hasPendingUpdate() || isSellBusy()) return;
-        if (ApkInstaller.canInstallPackages(activity)) {
-          maybeAutoInstall();
-          return;
-        }
-        // Staff returned from settings without grant — open again + keep nagging.
-        openInstallPermission();
-        schedulePermissionNudge();
-      };
+  /** Method-ref so field init does not read {@code activity} before the constructor assigns it. */
+  private final Runnable permissionNudgeTask = this::runPermissionNudge;
 
   public UpdatePromptController(Activity activity) {
     this.activity = activity;
@@ -331,6 +321,18 @@ public final class UpdatePromptController {
   private void schedulePermissionNudge() {
     main.removeCallbacks(permissionNudgeTask);
     main.postDelayed(permissionNudgeTask, PERMISSION_NUDGE_MS);
+  }
+
+  private void runPermissionNudge() {
+    if (activity == null || activity.isFinishing() || busy) return;
+    if (!hasPendingUpdate() || isSellBusy()) return;
+    if (ApkInstaller.canInstallPackages(activity)) {
+      maybeAutoInstall();
+      return;
+    }
+    // Staff returned from settings without grant — open again + keep nagging.
+    openInstallPermission();
+    schedulePermissionNudge();
   }
 
   private void scheduleAutoInstall() {

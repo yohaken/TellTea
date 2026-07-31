@@ -33,6 +33,7 @@ assert.match(prompt, /clearPopupDismiss/);
 assert.match(prompt, /UpdateBusyGate|isSellBusy|deferWhileBusy/);
 assert.match(prompt, /UpdateNagVoice/);
 assert.match(prompt, /maybeAutoInstall|openInstallPermission|canInstallPackages/);
+assert.match(prompt, /runPermissionNudge|permissionNudgeTask = this::runPermissionNudge/);
 assert.match(prompt, /รอตะกร้าว่าง|บังคับอัปเดต/);
 assert.doesNotMatch(prompt, /dismissPopupFor\(activity,\s*UpdateConfig\.POPUP_SNOOZE_MS\)/);
 assert.doesNotMatch(prompt, /30 \* 60_000L/);

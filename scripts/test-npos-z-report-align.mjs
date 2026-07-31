@@ -10,14 +10,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 537/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 151/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+120/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.97"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 538/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 152/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+121/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.98"/);
 
 assert.ok(existsSync(join(root, "docs/npos-z-report-align-checklist.md")));
 const doc = read("docs/npos-z-report-align-checklist.md");
-assert.match(doc, /1\.14\.97/);
+assert.match(doc, /1\.14\.98/);
 assert.match(doc, /tripleRow|table-layout/);
 assert.match(doc, /ตรวจก่อนเซ็น/);
 
