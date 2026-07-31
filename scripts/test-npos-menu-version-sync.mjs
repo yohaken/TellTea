@@ -9,17 +9,17 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 545/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 157/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+125/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.102"/);
-assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1.14.102"/);
-assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 125/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 546/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 158/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+126/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.103"/);
+assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1.14.103"/);
+assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 126/);
 
 assert.ok(existsSync(join(root, "docs/npos-menu-version-sync-checklist.md")));
 const doc = read("docs/npos-menu-version-sync-checklist.md");
 assert.match(doc, /menuVersion|reloadMenu|O3\./);
-assert.match(doc, /1.14.102|ship/);
+assert.match(doc, /1.14.103|ship/);
 
 const bump = read("src/lib/pos-menu-version.ts");
 assert.match(bump, /bumpMenuVersion/);
@@ -79,7 +79,7 @@ assert.match(strings, /sell_hub_refresh_menu/);
 assert.match(strings, /sell_menu_refreshed_toast/);
 
 assert.match(read("docs/npos-counter-ops-phases.md"), /O3/);
-assert.match(read("docs/npos-counter-ops-phases.md"), /1.14.102/);
+assert.match(read("docs/npos-counter-ops-phases.md"), /1.14.103/);
 assert.match(read("scripts/check-npos-shop.mjs"), /menu-version-sync/);
 assert.match(read("docs/npos-remaining-checklist.md"), /npos-menu-version-sync-checklist|O3/);
 

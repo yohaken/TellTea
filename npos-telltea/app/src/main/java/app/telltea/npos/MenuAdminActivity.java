@@ -5,7 +5,9 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.InputType;
+import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -57,6 +59,8 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
   private TextView tabItems;
   private TextView tabGroups;
   private TextView tabPrices;
+  private EditText searchField;
+  private String searchQuery = "";
   private LinearLayout listRoot;
   private final Map<String, View> itemRowById = new HashMap<>();
 
@@ -110,10 +114,37 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
         });
     refresh.setLayoutParams(NposUi.wrap(this, 8, 8));
     add.setLayoutParams(NposUi.wrap(this, 8, 8));
-    arch.setLayoutParams(NposUi.wrap(this, 0, 8));
+    arch.setLayoutParams(NposUi.wrap(this, 8, 8));
     tools.addView(refresh);
     tools.addView(add);
     tools.addView(arch);
+    // Tiny search — ~20% width cap; does not dominate the toolbar.
+    searchField = NposUi.field(this);
+    searchField.setHint(R.string.menu_admin_search_hint);
+    searchField.setSingleLine(true);
+    searchField.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+    searchField.setMinHeight(NposUi.dp(this, 40));
+    LinearLayout.LayoutParams searchLp =
+        new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.22f);
+    searchLp.setMarginStart(NposUi.dp(this, 4));
+    searchLp.bottomMargin = NposUi.dp(this, 8);
+    searchField.setLayoutParams(searchLp);
+    searchField.setMaxWidth(NposUi.dp(this, 168));
+    searchField.addTextChangedListener(
+        new TextWatcher() {
+          @Override
+          public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+          @Override
+          public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+          @Override
+          public void afterTextChanged(Editable s) {
+            searchQuery = s == null ? "" : s.toString().trim();
+            render();
+          }
+        });
+    tools.addView(searchField);
     page.addView(tools);
 
     ScrollView scroll = new ScrollView(this);
@@ -335,9 +366,20 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
       if (!showArchived && !cat.active) continue;
       visibleCats.add(cat);
     }
+    int shownItems = 0;
     for (int i = 0; i < visibleCats.size(); i++) {
       MenuModels.Category cat = visibleCats.get(i);
       List<MenuModels.Item> inCat = itemsInCategory(cat.id);
+      List<MenuModels.Item> filtered = new ArrayList<>();
+      for (MenuModels.Item item : inCat) {
+        if (!showArchived && item.isArchived()) continue;
+        if (!matchesSearch(cat, item)) continue;
+        filtered.add(item);
+      }
+      // Hide empty categories when searching (keep all when query empty).
+      if (!searchQuery.isEmpty() && filtered.isEmpty() && !categoryNameMatches(cat)) {
+        continue;
+      }
       LinearLayout head = new LinearLayout(this);
       head.setOrientation(LinearLayout.HORIZONTAL);
       head.setGravity(Gravity.CENTER_VERTICAL);
@@ -348,11 +390,18 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
               cat.name
                   + (cat.active ? "" : " · " + getString(R.string.menu_admin_archived))
                   + " ("
-                  + inCat.size()
+                  + filtered.size()
                   + ")");
-      catHead.setLayoutParams(
-          new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+      catHead.setSingleLine(true);
+      // Cap title ~35% so action chips keep room; chips scroll horizontally.
+      LinearLayout.LayoutParams titleLp =
+          new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.35f);
+      catHead.setLayoutParams(titleLp);
       head.addView(catHead);
+
+      LinearLayout chips = new LinearLayout(this);
+      chips.setOrientation(LinearLayout.HORIZONTAL);
+      chips.setGravity(Gravity.CENTER_VERTICAL);
 
       boolean canWrite = menu != null && !menu.demo && !toggleBusy;
       if (cat.active && !showArchived && visibleCats.size() > 1) {
@@ -360,11 +409,11 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
         up.setEnabled(canWrite && i > 0);
         final int idx = i;
         up.setOnClickListener(v -> moveCategory(visibleCats, idx, -1));
-        head.addView(up);
+        chips.addView(up);
         TextView down = NposUi.chip(this, getString(R.string.menu_admin_move_down));
         down.setEnabled(canWrite && i < visibleCats.size() - 1);
         down.setOnClickListener(v -> moveCategory(visibleCats, idx, +1));
-        head.addView(down);
+        chips.addView(down);
       }
 
       TextView rename = NposUi.chip(this, getString(R.string.menu_admin_rename));
@@ -379,35 +428,65 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
                           "updateCategory",
                           new JSONObject().put("id", cat.id).put("name", name),
                           true)));
-      head.addView(rename);
+      chips.addView(rename);
 
       if (cat.active) {
         TextView archive = NposUi.chip(this, getString(R.string.menu_admin_archive_cat));
         archive.setEnabled(canWrite);
         archive.setOnClickListener(v -> confirmArchiveCategory(cat));
-        head.addView(archive);
+        chips.addView(archive);
       } else {
         TextView restore = NposUi.chip(this, getString(R.string.menu_admin_restore));
         restore.setEnabled(canWrite);
         restore.setOnClickListener(
             v -> mutate("restoreCategory", jsonId(cat.id), true));
-        head.addView(restore);
+        chips.addView(restore);
         TextView hardDel = NposUi.chip(this, getString(R.string.menu_admin_delete_cat));
         hardDel.setEnabled(canWrite);
         hardDel.setOnClickListener(v -> confirmDeleteCategory(cat));
-        head.addView(hardDel);
+        chips.addView(hardDel);
       }
 
+      HorizontalScrollView chipScroll = new HorizontalScrollView(this);
+      chipScroll.setHorizontalScrollBarEnabled(false);
+      chipScroll.setFillViewport(false);
+      chipScroll.addView(chips);
+      LinearLayout.LayoutParams chipLp =
+          new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.65f);
+      chipScroll.setLayoutParams(chipLp);
+      head.addView(chipScroll);
+
       listRoot.addView(head);
-      if (inCat.isEmpty()) {
-        listRoot.addView(NposUi.caption(this, getString(R.string.menu_admin_empty_items)));
+      if (filtered.isEmpty()) {
+        if (searchQuery.isEmpty()) {
+          listRoot.addView(NposUi.caption(this, getString(R.string.menu_admin_empty_items)));
+        }
         continue;
       }
-      for (MenuModels.Item item : inCat) {
-        if (!showArchived && item.isArchived()) continue;
+      for (MenuModels.Item item : filtered) {
         listRoot.addView(itemRow(item));
+        shownItems++;
       }
     }
+    if (!searchQuery.isEmpty() && shownItems == 0) {
+      listRoot.addView(emptyLine(getString(R.string.menu_admin_empty_items)));
+    }
+  }
+
+  private boolean categoryNameMatches(MenuModels.Category cat) {
+    if (searchQuery.isEmpty()) return true;
+    String q = searchQuery.toLowerCase(Locale.getDefault());
+    String n = cat.name == null ? "" : cat.name.toLowerCase(Locale.getDefault());
+    return n.contains(q);
+  }
+
+  private boolean matchesSearch(MenuModels.Category cat, MenuModels.Item item) {
+    if (searchQuery.isEmpty()) return true;
+    String q = searchQuery.toLowerCase(Locale.getDefault());
+    String name = item.name == null ? "" : item.name.toLowerCase(Locale.getDefault());
+    String catName = cat == null || cat.name == null ? "" : cat.name.toLowerCase(Locale.getDefault());
+    String code = item.code == null ? "" : item.code.toLowerCase(Locale.getDefault());
+    return name.contains(q) || catName.contains(q) || code.contains(q);
   }
 
   /** ↑↓ among currently visible active categories — BOH PosSortableList parity. */
@@ -495,19 +574,33 @@ public class MenuAdminActivity extends Activity implements MenuSyncCoordinator.L
     row.addView(status);
 
     if (!item.isArchived()) {
+      // Short label + secondary/primary outline — distinct from the tap-to-edit row body.
       TextView toggle =
           item.active
-              ? NposUi.secondary(this, getString(R.string.menu_admin_btn_sold_out))
+              ? NposUi.secondary(this, getString(R.string.menu_admin_btn_sold_out_short))
               : NposUi.primary(this, getString(R.string.menu_admin_btn_restore));
-      toggle.setMaxWidth(NposUi.dp(this, 140));
-      toggle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+      toggle.setMinWidth(NposUi.dp(this, 88));
+      toggle.setMaxWidth(NposUi.dp(this, 120));
+      toggle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+      toggle.setSingleLine(true);
+      LinearLayout.LayoutParams tlp =
+          new LinearLayout.LayoutParams(
+              LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+      tlp.setMarginStart(NposUi.dp(this, 8));
+      toggle.setLayoutParams(tlp);
       toggle.setEnabled(!toggleBusy && menu != null && !menu.demo);
       toggle.setOnClickListener(v -> runToggle(item));
       row.addView(toggle);
     } else {
       TextView restore = NposUi.primary(this, getString(R.string.menu_admin_restore));
-      restore.setMaxWidth(NposUi.dp(this, 140));
-      restore.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+      restore.setMinWidth(NposUi.dp(this, 88));
+      restore.setMaxWidth(NposUi.dp(this, 120));
+      restore.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+      LinearLayout.LayoutParams rlp =
+          new LinearLayout.LayoutParams(
+              LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+      rlp.setMarginStart(NposUi.dp(this, 8));
+      restore.setLayoutParams(rlp);
       restore.setOnClickListener(
           v -> mutate("restoreItem", jsonId(item.id), true));
       row.addView(restore);
