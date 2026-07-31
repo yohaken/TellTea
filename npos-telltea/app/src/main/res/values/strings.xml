@@ -9,10 +9,12 @@
     <string name="status_available">มีเวอร์ชันใหม่ %1$s (%2$d)</string>
     <string name="status_downloading">กำลังดาวน์โหลดอัปเดต… %1$d%%</string>
     <string name="status_installing">กำลังเปิดตัวติดตั้ง…</string>
-    <string name="status_allow_install">อนุญาตติดตั้งแอปนี้ก่อน แล้วกดอัปเดตอีกครั้ง</string>
+    <string name="status_allow_install">อนุญาต「ติดตั้งแอปนี้」ก่อน — ระบบจะอัปเดตต่อทันที</string>
     <string name="status_error">เช็คอัปเดตไม่สำเร็จ: %1$s</string>
     <string name="btn_check_update">เช็คอัปเดต</string>
     <string name="btn_install_update">อัปเดตเลย</string>
+    <string name="btn_allow_install_permission">เปิดสิทธิ์ติดตั้ง</string>
+    <string name="update_wait_cart_clear">รอเก็บเงิน / ตะกร้าว่างก่อนอัปเดต</string>
     <string name="btn_diagnose">ตรวจจอ / ฮาร์ดแวร์ (มือ)</string>
     <string name="btn_open_install_page">เปิดหน้าติดตั้ง (ลิงก์)</string>
     <string name="btn_back">← กลับ</string>
@@ -29,6 +31,8 @@
     <string name="banner_update">มีเวอร์ชันใหม่ — กดอัปเดตเลย</string>
     <string name="update_popup_title">ต้องอัปเดตแอป</string>
     <string name="update_popup_body">เวอร์ชันเซิร์ฟเวอร์ใหม่กว่า — อัปเดตเป็น %1$s (%2$d) ทันที · กลับหน้าร้านอัตโนมัติ · ปิดไว้ก่อนได้สั้นๆ แล้วระบบจะเตือนอีก</string>
+    <string name="update_popup_body_force">เวอร์ชันใหม่ %1$s (%2$d) — กำลังบังคับอัปเดต · กลับหน้าขายอัตโนมัติหลังติดตั้ง</string>
+    <string name="update_popup_body_need_permission">เวอร์ชันใหม่ %1$s (%2$d) — เปิดสิทธิ์「ติดตั้งแอปที่ไม่รู้จัก」ให้ nPos ก่อน แล้วระบบจะอัปเดตต่อเอง</string>
     <string name="update_popup_later">ปิดชั่วคราว</string>
     <string name="nav_lock_pin">กลับหน้าหลัก</string>
     <string name="nav_web_open_fail">เปิดลิงก์ไม่สำเร็จ</string>

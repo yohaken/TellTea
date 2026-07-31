@@ -20,13 +20,23 @@ import app.telltea.npos.diagnose.OpsLogger;
 import app.telltea.npos.ui.UiScale;
 
 /**
- * Top-left update popup on sell/hub — check → one-tap install → resume sell after restart.
+ * Forced APK update popup on sell/hub.
+ *
+ * <ul>
+ *   <li>Always mandatory when a newer build is published — no Later / snooze.
+ *   <li>While sell is busy (cart / pay): hide popup, do not install, stop voice.
+ *   <li>When idle: show forced popup + nag voice + open install permission if needed;
+ *       auto-start download/install once permission is granted.
+ * </ul>
  */
 public final class UpdatePromptController {
   public interface BeforeInstall {
     /** Persist cart / work so update restart feels seamless. */
     void onBeforeInstall();
   }
+
+  private static final long AUTO_INSTALL_DELAY_MS = 900L;
+  private static final long PERMISSION_NUDGE_MS = 8_000L;
 
   private final Activity activity;
   private final View popup;
@@ -38,9 +48,26 @@ public final class UpdatePromptController {
   private final UpdateDownloader downloader = new UpdateDownloader();
   private final Handler main = new Handler(Looper.getMainLooper());
   private BeforeInstall beforeInstall;
+  private UpdateBusyGate busyGate;
   private UpdateManifest pending;
   private boolean busy;
+  private boolean autoInstallScheduled;
+  private boolean permissionSettingsOpened;
   private int localVersionCode = 1;
+
+  private final Runnable autoInstallTask = this::maybeAutoInstall;
+  private final Runnable permissionNudgeTask =
+      () -> {
+        if (activity.isFinishing() || busy) return;
+        if (!hasPendingUpdate() || isSellBusy()) return;
+        if (ApkInstaller.canInstallPackages(activity)) {
+          maybeAutoInstall();
+          return;
+        }
+        // Staff returned from settings without grant — open again + keep nagging.
+        openInstallPermission();
+        schedulePermissionNudge();
+      };
 
   public UpdatePromptController(Activity activity) {
     this.activity = activity;
@@ -74,6 +101,8 @@ public final class UpdatePromptController {
       }
       flp.setMarginStart(start);
       flp.topMargin = ui.dp(12);
+      // Wider forced card so counter staff cannot miss it when idle.
+      flp.width = Math.min(ui.dp(420), activity.getResources().getDisplayMetrics().widthPixels - start - ui.dp(12));
       popup.setLayoutParams(flp);
     }
   }
@@ -82,12 +111,30 @@ public final class UpdatePromptController {
     beforeInstall = hook;
   }
 
+  /** Sell: block forced install while cart / pay is active. Hub: leave null. */
+  public void setBusyGate(UpdateBusyGate gate) {
+    busyGate = gate;
+  }
+
+  /** Call after cart clears / pay sheet closes so deferred force-update can run. */
+  public void onBusyStateChanged() {
+    if (activity.isFinishing()) return;
+    if (!hasPendingUpdate()) return;
+    if (isSellBusy()) {
+      deferWhileBusy();
+    } else {
+      showPending();
+    }
+  }
+
   public void onResume() {
     UpdateCheckCoordinator.bind(this);
     if (popup == null) return;
     ResumePrefs.clearPopupDismiss(activity);
+    permissionSettingsOpened = false;
     if (hasPendingUpdate()) {
-      showPending();
+      if (isSellBusy()) deferWhileBusy();
+      else showPending();
     }
     UpdateCheckCoordinator.requestCheck(activity, "resume");
   }
@@ -95,6 +142,10 @@ public final class UpdatePromptController {
   /** Drop live host so background activities do not steal sync-pulse UI. */
   public void onPause() {
     UpdateCheckCoordinator.unbind(this);
+    stopNag();
+    main.removeCallbacks(autoInstallTask);
+    main.removeCallbacks(permissionNudgeTask);
+    autoInstallScheduled = false;
   }
 
   /** Claim / kick gate — poll sooner than sell auto-check. */
@@ -104,7 +155,8 @@ public final class UpdatePromptController {
     ResumePrefs.clearPopupDismiss(activity);
     if (popup == null) return;
     if (pending != null && pending.isNewerThan(localVersionCode)) {
-      showPending();
+      if (isSellBusy()) deferWhileBusy();
+      else showPending();
       return;
     }
     UpdateCheckCoordinator.requestCheck(activity, "force");
@@ -115,12 +167,16 @@ public final class UpdatePromptController {
   }
 
   /**
-   * Sync pulse with a known newer build — always re-show (no snooze).
+   * Sync pulse with a known newer build — always re-show when idle (no snooze).
    */
   void reassertPendingUpdate() {
     if (activity.isFinishing() || busy) return;
     if (!hasPendingUpdate()) return;
     ResumePrefs.clearPopupDismiss(activity);
+    if (isSellBusy()) {
+      deferWhileBusy();
+      return;
+    }
     showPending();
   }
 
@@ -143,6 +199,14 @@ public final class UpdatePromptController {
             ? UpdateConfig.MANIFEST_URL
             : BuildConfig.UPDATE_MANIFEST_URL;
     checker.check(manifestUrl, callback);
+  }
+
+  private boolean isSellBusy() {
+    try {
+      return busyGate != null && busyGate.blocksForceUpdate();
+    } catch (Exception e) {
+      return false;
+    }
   }
 
   private void startCheck() {
@@ -169,45 +233,154 @@ public final class UpdatePromptController {
   private void applyManifest(UpdateManifest manifest) {
     if (manifest == null || !manifest.isNewerThan(localVersionCode)) {
       pending = null;
+      stopNag();
       hide();
       return;
     }
     pending = manifest;
     ResumePrefs.clearPopupDismiss(activity);
+    if (isSellBusy()) {
+      deferWhileBusy();
+      OpsLogger.info(
+          activity,
+          "update",
+          "มีอัปเดต — รอตะกร้าว่างก่อนบังคับ",
+          manifest.versionName + " (" + manifest.versionCode + ")");
+      return;
+    }
     showPending();
+  }
+
+  /** Keep update pending but do not cover the pay / cart UI. */
+  private void deferWhileBusy() {
+    stopNag();
+    main.removeCallbacks(autoInstallTask);
+    main.removeCallbacks(permissionNudgeTask);
+    autoInstallScheduled = false;
+    hide();
   }
 
   private void showPending() {
     if (pending == null || !pending.isNewerThan(localVersionCode)) return;
+    if (isSellBusy()) {
+      deferWhileBusy();
+      return;
+    }
+    boolean canInstall = ApkInstaller.canInstallPackages(activity);
     if (body != null) {
-      body.setText(
-          activity.getString(
-              R.string.update_popup_body, pending.versionName, pending.versionCode));
+      if (canInstall) {
+        body.setText(
+            activity.getString(
+                R.string.update_popup_body_force, pending.versionName, pending.versionCode));
+      } else {
+        body.setText(
+            activity.getString(
+                R.string.update_popup_body_need_permission,
+                pending.versionName,
+                pending.versionCode));
+      }
     }
     if (progress != null) progress.setVisibility(View.GONE);
     if (goBtn != null) {
       goBtn.setEnabled(true);
-      goBtn.setText(R.string.btn_install_update);
+      goBtn.setText(
+          canInstall ? R.string.btn_install_update : R.string.btn_allow_install_permission);
+      // Make CTA hard to miss.
+      goBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
     }
     if (laterBtn != null) {
       laterBtn.setVisibility(View.GONE);
       laterBtn.setEnabled(false);
     }
     if (popup != null) popup.setVisibility(View.VISIBLE);
+    UpdateNagVoice.start(activity);
+    OpsLogger.info(
+        activity,
+        "update",
+        "บังคับอัปเดต (ว่างแล้ว)",
+        pending.versionName
+            + " ("
+            + pending.versionCode
+            + ")"
+            + (canInstall ? "" : " · รอสิทธิ์ติดตั้ง"));
+
+    if (!canInstall) {
+      openInstallPermission();
+      schedulePermissionNudge();
+      return;
+    }
+    scheduleAutoInstall();
+  }
+
+  private void openInstallPermission() {
+    if (permissionSettingsOpened) return;
+    permissionSettingsOpened = true;
+    try {
+      Toast.makeText(activity, R.string.status_allow_install, Toast.LENGTH_LONG).show();
+      ApkInstaller.openUnknownSourcesSettings(activity);
+      OpsLogger.warn(activity, "update", "ขอสิทธิ์ติดตั้งอัปเดต", "unknown_sources");
+    } catch (Exception e) {
+      OpsLogger.error(
+          activity,
+          "update",
+          "เปิดหน้าสิทธิ์ติดตั้งไม่สำเร็จ",
+          e.getMessage() == null ? "" : e.getMessage());
+    }
+  }
+
+  private void schedulePermissionNudge() {
+    main.removeCallbacks(permissionNudgeTask);
+    main.postDelayed(permissionNudgeTask, PERMISSION_NUDGE_MS);
+  }
+
+  private void scheduleAutoInstall() {
+    if (autoInstallScheduled || busy) return;
+    autoInstallScheduled = true;
+    main.removeCallbacks(autoInstallTask);
+    main.postDelayed(autoInstallTask, AUTO_INSTALL_DELAY_MS);
+  }
+
+  private void maybeAutoInstall() {
+    autoInstallScheduled = false;
+    if (activity.isFinishing() || busy) return;
+    if (!hasPendingUpdate() || isSellBusy()) return;
+    if (!ApkInstaller.canInstallPackages(activity)) {
+      openInstallPermission();
+      schedulePermissionNudge();
+      return;
+    }
+    onGo();
   }
 
   private void onGo() {
     if (busy) return;
+    if (isSellBusy()) {
+      deferWhileBusy();
+      Toast.makeText(activity, R.string.update_wait_cart_clear, Toast.LENGTH_SHORT).show();
+      return;
+    }
     if (pending == null || !pending.isNewerThan(localVersionCode)) {
       startCheck();
       return;
     }
     if (!ApkInstaller.canInstallPackages(activity)) {
-      Toast.makeText(activity, R.string.status_allow_install, Toast.LENGTH_LONG).show();
-      ApkInstaller.openUnknownSourcesSettings(activity);
+      permissionSettingsOpened = false;
+      openInstallPermission();
+      schedulePermissionNudge();
+      if (body != null) {
+        body.setText(
+            activity.getString(
+                R.string.update_popup_body_need_permission,
+                pending.versionName,
+                pending.versionCode));
+      }
+      if (goBtn != null) goBtn.setText(R.string.btn_allow_install_permission);
       return;
     }
     busy = true;
+    stopNag();
+    main.removeCallbacks(autoInstallTask);
+    main.removeCallbacks(permissionNudgeTask);
     if (goBtn != null) goBtn.setEnabled(false);
     if (laterBtn != null) laterBtn.setEnabled(false);
     if (progress != null) {
@@ -250,7 +423,6 @@ public final class UpdatePromptController {
                 () -> {
                   busy = false;
                   if (goBtn != null) goBtn.setEnabled(true);
-                  if (laterBtn != null) laterBtn.setEnabled(true);
                   String msg =
                       error.getMessage() == null ? "download" : error.getMessage();
                   if (progress != null) {
@@ -258,6 +430,11 @@ public final class UpdatePromptController {
                     progress.setText(activity.getString(R.string.status_error, msg));
                   }
                   OpsLogger.error(activity, "update", "ดาวน์โหลดอัปเดตไม่สำเร็จ", msg);
+                  // Keep forcing — retry when idle.
+                  if (!isSellBusy()) {
+                    UpdateNagVoice.start(activity);
+                    scheduleAutoInstall();
+                  }
                 });
           }
         });
@@ -279,11 +456,18 @@ public final class UpdatePromptController {
     } catch (Exception e) {
       busy = false;
       if (goBtn != null) goBtn.setEnabled(true);
-      if (laterBtn != null) laterBtn.setEnabled(true);
       String msg = e.getMessage() == null ? "install" : e.getMessage();
       if (progress != null) progress.setText(activity.getString(R.string.status_error, msg));
       OpsLogger.error(activity, "update", "ติดตั้งอัปเดตไม่สำเร็จ", msg);
+      if (!isSellBusy()) {
+        UpdateNagVoice.start(activity);
+        scheduleAutoInstall();
+      }
     }
+  }
+
+  private void stopNag() {
+    UpdateNagVoice.stop();
   }
 
   private void hide() {

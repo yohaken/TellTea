@@ -30,8 +30,28 @@ const prompt = read(
 assert.match(prompt, /reassertPendingUpdate|showPending/);
 assert.match(prompt, /laterBtn\.setVisibility\(View\.GONE\)/);
 assert.match(prompt, /clearPopupDismiss/);
+assert.match(prompt, /UpdateBusyGate|isSellBusy|deferWhileBusy/);
+assert.match(prompt, /UpdateNagVoice/);
+assert.match(prompt, /maybeAutoInstall|openInstallPermission|canInstallPackages/);
+assert.match(prompt, /รอตะกร้าว่าง|บังคับอัปเดต/);
 assert.doesNotMatch(prompt, /dismissPopupFor\(activity,\s*UpdateConfig\.POPUP_SNOOZE_MS\)/);
 assert.doesNotMatch(prompt, /30 \* 60_000L/);
+
+assert.ok(
+  existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/update/UpdateBusyGate.java")),
+);
+assert.ok(
+  existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/update/UpdateNagVoice.java")),
+);
+const nag = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/update/UpdateNagVoice.java",
+);
+assert.match(nag, /กรุณาอัปเดตโปรแกรม/);
+assert.match(nag, /3000L|3_000L/);
+
+assert.ok(existsSync(join(root, "docs/npos-force-update-idle-checklist.md")));
+const idleDoc = read("docs/npos-force-update-idle-checklist.md");
+assert.match(idleDoc, /บังคับติดตั้งเสมอ|ตะกร้าว่าง|สิทธิ์ติดตั้ง/);
 
 const prefs = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/update/ResumePrefs.java",
@@ -50,6 +70,14 @@ const sell = read(
 assert.match(sell, /refreshMenuButton/);
 assert.match(sell, /setVisibility\(View\.GONE\)/);
 assert.match(sell, /PosShellNav\.bind\(this, PosShellNav\.ACTIVE_SELL, null\)/);
+assert.match(sell, /setBusyGate/);
+assert.match(sell, /onBusyStateChanged/);
+assert.match(sell, /cart\.isEmpty/);
+
+const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
+assert.match(strings, /update_popup_body_force/);
+assert.match(strings, /update_popup_body_need_permission/);
+assert.match(strings, /btn_allow_install_permission/);
 
 assert.match(
   read("npos-telltea/app/src/main/res/layout/activity_sell.xml"),

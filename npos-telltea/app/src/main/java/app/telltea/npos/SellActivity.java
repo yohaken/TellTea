@@ -233,6 +233,8 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     }
     updatePrompt = new UpdatePromptController(this);
     updatePrompt.setBeforeInstall(this::persistWorkBeforeUpdate);
+    // Force-install only when idle — never mid-sale / mid-pay (cart still has lines).
+    updatePrompt.setBusyGate(() -> cart != null && !cart.isEmpty());
     applySmartChrome();
 
     View back = findViewById(R.id.backButton);
@@ -2461,6 +2463,8 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
       }
     }
     updateHoldRestoreButton();
+    // Cart empty after sale → allow deferred forced APK update to surface.
+    if (updatePrompt != null) updatePrompt.onBusyStateChanged();
   }
 
   private void editCartLineOptions(int index) {
