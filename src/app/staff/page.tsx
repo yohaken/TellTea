@@ -12,6 +12,7 @@ import {
   employeesForLink,
   listEmployeesWithPay,
   migrateAllLegacyEmployeePay,
+  planEmployeeIdentityPatch,
   updateEmployee,
   type Employee,
 } from "@/lib/employees";
@@ -618,18 +619,24 @@ function EmployeeRosterRow({
     setSaving(true);
     onError("");
     const nextNick = nickname.trim();
+    const identity = planEmployeeIdentityPatch(emp, {
+      name: nextName,
+      nickname: nextNick,
+    });
+    const saveName = identity.name ?? nextName;
+    const saveNick = identity.nickname ?? nextNick;
     try {
       await updateEmployee(emp.id, {
-        name: nextName,
-        nickname: nextNick,
+        name: saveName,
+        nickname: saveNick,
         monthlySalary: salaryNum,
         payBank: payBank.trim(),
         payAccountNo: payAccountNo.trim(),
         payAccountName: payAccountName.trim(),
       });
       onPatchLocal(emp.id, {
-        name: nextName,
-        nickname: nextNick || undefined,
+        name: saveName,
+        nickname: saveNick || undefined,
         monthlySalary: salaryNum > 0 ? salaryNum : undefined,
         payBank: payBank.trim() || undefined,
         payAccountNo: payAccountNo.trim() || undefined,

@@ -172,6 +172,18 @@ function entryIncludesName(entry: OtEntry, name: string) {
   });
 }
 
+/** กรอง "ของฉัน" — ใช้ employeeId ก่อน แล้วค่อยชื่อร้าน (ไม่พึ่ง staff.displayName ที่อาจค้าง) */
+function entryIncludesMe(
+  entry: OtEntry,
+  me: { employeeId?: string; name?: string; displayName?: string } | null,
+) {
+  if (!me) return false;
+  if (me.employeeId && (entry.workerIds || []).includes(me.employeeId)) return true;
+  if (me.name && entryIncludesName(entry, me.name)) return true;
+  if (me.displayName && entryIncludesName(entry, me.displayName)) return true;
+  return false;
+}
+
 export default function OtPage() {
   return (
     <AuthGate>
@@ -371,6 +383,7 @@ function OtView() {
             historySinceMs={historySinceMs}
             openingItems={openingItems}
             closingItems={closingItems}
+            workers={workers}
             staff={staff}
             isOwner={isOwner}
             onEditSlot={openSlot}
@@ -1193,6 +1206,7 @@ function OtTable({
   historySinceMs,
   openingItems,
   closingItems,
+  workers,
   staff,
   isOwner,
   onEditSlot,
@@ -1205,6 +1219,7 @@ function OtTable({
   historySinceMs: number;
   openingItems: ChecklistItem[];
   closingItems: ChecklistItem[];
+  workers: Employee[];
   staff: StaffMember | null;
   isOwner: boolean;
   onEditSlot: (target: OtSlotTarget) => void;
@@ -1223,15 +1238,27 @@ function OtTable({
 
   useBodyScrollLock(!!preview);
 
-  const myName = staff?.displayName || "";
+  const myEmployee = useMemo(
+    () => resolveLinkedEmployee(workers, staff),
+    [workers, staff],
+  );
+  const me = useMemo(
+    () => ({
+      employeeId: staff?.employeeId || myEmployee?.id,
+      name: myEmployee?.name || "",
+      displayName: staff?.displayName || "",
+    }),
+    [staff, myEmployee],
+  );
+  const myName = me.name || me.displayName || "";
 
   const filtered = useMemo(() => {
     return entries.filter((row) => {
       if (statusFilter !== "all" && row.status !== statusFilter) return false;
-      if (mineOnly && !entryIncludesName(row, myName)) return false;
+      if (mineOnly && !entryIncludesMe(row, me)) return false;
       return true;
     });
-  }, [entries, statusFilter, mineOnly, myName]);
+  }, [entries, statusFilter, mineOnly, me]);
 
   const summary = useMemo(() => {
     let shiftCount = 0;
@@ -1246,11 +1273,11 @@ function OtTable({
       summaryQty += c.summaryQty;
       totalBonus += c.totalBonus;
       if (row.status === "pending") pendingBonus += c.totalBonus;
-      if (entryIncludesName(row, myName)) myBonus += c.bonusPerPerson;
+      if (entryIncludesMe(row, me)) myBonus += c.bonusPerPerson;
     }
 
     return { shiftCount, summaryQty, totalBonus, pendingBonus, myBonus };
-  }, [filtered, myName]);
+  }, [filtered, me]);
 
   const dateGroups = useMemo(
     () => buildOtGrid(filtered, { minDate: historySinceMs }),

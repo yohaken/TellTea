@@ -155,24 +155,44 @@ export function computeMonthBonus(
     return canonical;
   }
 
+  /** นับคนในแถว — ใช้ workerIds ก่อน แล้วค่อยชื่อ (กันเปลี่ยนชื่อแล้วโบนัสแตกเป็น 2 แถว) */
+  function creditEntryWorkers(
+    row: { workerIds?: string[]; workerNames?: string[] },
+    credit: (slot: { otMain: number; prodBonus: number; workedThisMonth: boolean }) => void,
+  ) {
+    const credited = new Set<string>();
+    for (const id of row.workerIds || []) {
+      const emp = active.find((e) => e.id === id);
+      if (!emp) continue;
+      const name = ensureWorker(emp.name);
+      credit(byName.get(name)!);
+      credited.add(emp.id);
+    }
+    for (const rawName of row.workerNames || []) {
+      const matched = active.find((e) => namesMatch(e.name, rawName));
+      if (matched && credited.has(matched.id)) continue;
+      const name = ensureWorker(rawName);
+      const emp = active.find((e) => namesMatch(e.name, name));
+      if (emp && credited.has(emp.id)) continue;
+      credit(byName.get(name)!);
+      if (emp) credited.add(emp.id);
+    }
+  }
+
   for (const row of otMonth) {
     const c = computeOtBonus(row);
-    for (const rawName of row.workerNames) {
-      const name = ensureWorker(rawName);
-      const slot = byName.get(name)!;
+    creditEntryWorkers(row, (slot) => {
       slot.otMain = round2(slot.otMain + c.bonusPerPerson);
       slot.workedThisMonth = true;
-    }
+    });
   }
 
   for (const row of prodMonth) {
     const c = computeProdBonus(row);
-    for (const rawName of row.workerNames) {
-      const name = ensureWorker(rawName);
-      const slot = byName.get(name)!;
+    creditEntryWorkers(row, (slot) => {
       slot.prodBonus = round2(slot.prodBonus + c.bonusPerPerson);
       slot.workedThisMonth = true;
-    }
+    });
   }
 
   const salesSharePeople = [...byName.values()].filter((s) => s.workedThisMonth).length;

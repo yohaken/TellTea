@@ -106,6 +106,61 @@ function isUnlinked(emp: Employee): boolean {
   return !emp.linkedStaffId && !emp.linkedEmail && !emp.linkedPhone;
 }
 
+/**
+ * ถ้าเปลี่ยนชื่อเล่น และชื่อในร้านยังเป็นชื่อเล่นเก่า — ให้ชื่อในร้านตามไปด้วย
+ * (เคสร้านเล็กที่ใช้ชื่อสั้นชื่อเดียวทั้งคู่ เช่น x1 → jay)
+ */
+export function planEmployeeIdentityPatch(
+  current: Pick<Employee, "name" | "nickname">,
+  patch: { name?: string; nickname?: string },
+): { name?: string; nickname?: string } {
+  const oldName = current.name.trim();
+  const oldNick = (current.nickname || "").trim();
+  const nextNick =
+    patch.nickname !== undefined ? patch.nickname.trim() : undefined;
+  let nextName = patch.name !== undefined ? patch.name.trim() : undefined;
+
+  if (nextNick !== undefined && nextNick && nextNick !== oldNick) {
+    const effectiveName = nextName !== undefined ? nextName : oldName;
+    if (effectiveName === oldNick) {
+      nextName = nextNick;
+    }
+  }
+
+  const out: { name?: string; nickname?: string } = {};
+  if (nextName !== undefined) out.name = nextName;
+  if (nextNick !== undefined) out.nickname = nextNick;
+  return out;
+}
+
+/** ซิงก์ staff.displayName ให้ตรงชื่อในร้าน — กันตารางพร้อม/OT/โปรไฟล์ค้างชื่อเก่า */
+async function syncLinkedStaffDisplayName(
+  employeeId: string,
+  displayName: string,
+  linkedStaffId?: string | null,
+): Promise<void> {
+  const name = displayName.trim();
+  if (!name) return;
+  const db = getDb();
+  const staffIds = new Set<string>();
+  if (linkedStaffId?.trim()) staffIds.add(linkedStaffId.trim());
+  try {
+    const byEmp = await getDocs(
+      query(collection(db, "staff"), where("employeeId", "==", employeeId)),
+    );
+    for (const d of byEmp.docs) staffIds.add(d.id);
+  } catch {
+    /* index / offline — still try linkedStaffId */
+  }
+  await Promise.all(
+    [...staffIds].map((sid) =>
+      updateDoc(doc(db, "staff", sid), { displayName: name }).catch(() => {
+        /* best-effort */
+      }),
+    ),
+  );
+}
+
 function mapEmployeeRoster(id: string, data: Record<string, unknown>): Employee {
   const clean = stripPayFields(data);
   return {
@@ -222,16 +277,36 @@ export async function updateEmployee(
 ): Promise<void> {
   // แยก roster (ชื่อ/ชื่อเล่น) กับ pay — เขียน roster ก่อนเสมอ
   // กันกรณี setEmployeePay พังแล้วชื่อเล่นไม่ถูกบันทึก
+  let effective = patch;
+  let linkedStaffIdForSync: string | undefined;
+  if (patch.name != null || patch.nickname !== undefined) {
+    const curSnap = await getDoc(doc(getDb(), "employees", id));
+    if (!curSnap.exists()) throw new Error("ไม่พบพนักงาน");
+    const cur = mapEmployeeRoster(id, curSnap.data() as Record<string, unknown>);
+    linkedStaffIdForSync = cur.linkedStaffId;
+    const identity = planEmployeeIdentityPatch(cur, {
+      name: patch.name,
+      nickname: patch.nickname,
+    });
+    effective = {
+      ...patch,
+      ...(identity.name !== undefined ? { name: identity.name } : {}),
+      ...(identity.nickname !== undefined ? { nickname: identity.nickname } : {}),
+    };
+  }
+
   const roster: Record<string, unknown> = { updatedAt: Date.now() };
   let hasRosterPatch = false;
-  if (patch.name != null) {
-    const n = patch.name.trim();
+  let wroteName: string | undefined;
+  if (effective.name != null) {
+    const n = effective.name.trim();
     if (!n) throw new Error("ต้องใส่ชื่อพนักงาน");
     roster.name = n;
+    wroteName = n;
     hasRosterPatch = true;
   }
-  if (patch.nickname !== undefined) {
-    const nick = patch.nickname?.trim() || "";
+  if (effective.nickname !== undefined) {
+    const nick = effective.nickname?.trim() || "";
     roster.nickname = nick ? nick : deleteField();
     hasRosterPatch = true;
   }
@@ -251,11 +326,12 @@ export async function updateEmployee(
       : deleteField();
     hasRosterPatch = true;
   }
-  if (patch.linkedStaffId !== undefined) {
+  if (effective.linkedStaffId !== undefined) {
     roster.linkedStaffId =
-      patch.linkedStaffId && patch.linkedStaffId.trim()
-        ? patch.linkedStaffId.trim()
+      effective.linkedStaffId && effective.linkedStaffId.trim()
+        ? effective.linkedStaffId.trim()
         : deleteField();
+    linkedStaffIdForSync = effective.linkedStaffId?.trim() || undefined;
     hasRosterPatch = true;
   }
   if (patch.unitRate !== undefined) {
@@ -317,14 +393,18 @@ export async function updateEmployee(
   }
 
   // ยืนยันชื่อเล่นถูกเขียนจริง (กัน UI โชว์ค่าใหม่ทั้งที่ Firestore ยังเป็นค่าเก่า)
-  if (patch.nickname !== undefined) {
+  if (effective.nickname !== undefined) {
     const snap = await getDoc(doc(getDb(), "employees", id));
     if (!snap.exists()) throw new Error("ไม่พบพนักงานหลังบันทึก");
-    const want = patch.nickname.trim();
+    const want = effective.nickname.trim();
     const got = String(snap.data()?.nickname || "").trim();
     if (want !== got) {
       throw new Error("บันทึกชื่อเล่นไม่สำเร็จ — ลองอีกครั้ง");
     }
+  }
+
+  if (wroteName) {
+    await syncLinkedStaffDisplayName(id, wroteName, linkedStaffIdForSync);
   }
 }
 

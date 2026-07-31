@@ -14,7 +14,7 @@ const staffPage = read("src/app/staff/page.tsx");
 const presence = read("src/lib/staff-presence.ts");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 521/);
+assert.match(version, /APP_BUILD = 52[12]/);
 assert.match(emp, /เขียน roster ก่อนเสมอ/);
 assert.match(emp, /ยืนยันชื่อเล่นถูกเขียนจริง/);
 assert.match(emp, /บันทึกชื่อเล่นไม่สำเร็จ/);
