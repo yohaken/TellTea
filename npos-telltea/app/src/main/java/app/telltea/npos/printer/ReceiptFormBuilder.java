@@ -231,8 +231,10 @@ public final class ReceiptFormBuilder {
         .append('\n');
 
     for (ModTally mod : tallyModifiers(line.opt("options"), compact)) {
-      // Indent under name (past qty column). ASCII "-" / "xN". Bold only x2+.
-      String label = "- " + mod.label + " x" + Math.max(1, mod.count);
+      // Indent under name (past qty column). ASCII "-" ; "xN" only when ≥2.
+      int modCount = Math.max(1, mod.count);
+      String label =
+          modCount >= 2 ? "- " + mod.label + " x" + modCount : "- " + mod.label;
       boolean emphasizeQty = qtyEmphasized(mod.count);
       for (String part : wrap("    " + label, width)) {
         if (emphasizeQty) {

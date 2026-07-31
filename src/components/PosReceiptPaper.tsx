@@ -152,20 +152,22 @@ export function PosReceiptPaper({
                       </span>
                     </div>
                   </div>
-                  {mods.map((mod) => (
-                    <p key={`${idx}-${mod.label}`} className="pos-receipt-paper-mod">
-                      - {mod.label}{" "}
-                      <span
-                        className={
-                          mod.count >= 2
-                            ? "pos-receipt-paper-mod-qty is-hot"
-                            : "pos-receipt-paper-mod-qty"
-                        }
-                      >
-                        x{Math.max(1, mod.count)}
-                      </span>
-                    </p>
-                  ))}
+                  {mods.map((mod) => {
+                    const modCount = Math.max(1, mod.count);
+                    return (
+                      <p key={`${idx}-${mod.label}`} className="pos-receipt-paper-mod">
+                        - {mod.label}
+                        {modCount >= 2 ? (
+                          <>
+                            {" "}
+                            <span className="pos-receipt-paper-mod-qty is-hot">
+                              x{modCount}
+                            </span>
+                          </>
+                        ) : null}
+                      </p>
+                    );
+                  })}
                 </li>
               );
             })}

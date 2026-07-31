@@ -82,8 +82,11 @@ function lineModifiers(line: PosSaleLine, compact: boolean): ReceiptModifierTall
 function renderModifierHtml(mod: ReceiptModifierTally): string {
   const label = escapeReceiptHtml(mod.label);
   const count = Math.max(1, mod.count);
-  const qtyClass = count >= 2 ? "mod-qty mod-qty--hot" : "mod-qty";
-  return `<div class="mod-line"><span class="mod-bullet">-</span> <span class="mod-label">${label}</span> <span class="${qtyClass}">x${count}</span></div>`;
+  const qtyHtml =
+    count >= 2
+      ? ` <span class="mod-qty mod-qty--hot">x${count}</span>`
+      : "";
+  return `<div class="mod-line"><span class="mod-bullet">-</span> <span class="mod-label">${label}</span>${qtyHtml}</div>`;
 }
 
 function renderItemQtyHtml(qty: number): string {
