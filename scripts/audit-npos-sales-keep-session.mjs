@@ -193,20 +193,32 @@ async function main() {
     }
   }
 
+  // Mutations store saleId (not sessionId) — classify via keep sale ids.
+  const keepSaleIds = new Set();
+  for (const docSnap of salesSnap.docs) {
+    const sessionId = asString((docSnap.data() || {}).sessionId, 120);
+    if (keepSessionIds.has(sessionId)) keepSaleIds.add(docSnap.id);
+  }
+
   const mutationsOutside = [];
   let mutationsKeep = 0;
+  let mutationsNoSaleId = 0;
   for (const docSnap of mutationsSnap.docs) {
     const data = docSnap.data() || {};
+    const saleId = asString(data.saleId, 80);
     const sessionId = asString(data.sessionId, 120);
-    if (keepSessionIds.has(sessionId)) mutationsKeep += 1;
-    else {
-      mutationsOutside.push({
-        id: docSnap.id,
-        sessionId,
-        sessionCode: posSessionCode(sessionId),
-        deviceId: asString(data.deviceId, 80),
-      });
+    if (saleId && keepSaleIds.has(saleId)) {
+      mutationsKeep += 1;
+      continue;
     }
+    if (!saleId) mutationsNoSaleId += 1;
+    mutationsOutside.push({
+      id: docSnap.id,
+      saleId: saleId || null,
+      sessionId: sessionId || null,
+      sessionCode: sessionId ? posSessionCode(sessionId) : "—",
+      deviceId: asString(data.deviceId, 80),
+    });
   }
 
   const rank = rankSnap.exists ? rankSnap.data() || {} : null;
