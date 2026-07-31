@@ -9,6 +9,7 @@
  *     node scripts/audit-npos-sales-keep-session.mjs
  *
  * Optional: OUT_DIR=artifacts/npos-sales-audit
+ * Recheck after orphan purge (live Firestore).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -321,5 +322,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-
-# recheck 2026-07-31T10:19:02Z
