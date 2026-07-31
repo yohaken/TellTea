@@ -353,7 +353,7 @@ function BonusView() {
       prodEntries,
       employee: myEmployee,
       year,
-      monthIdx,
+      month: monthIdx,
       shopDeductPct,
       totalSalesPool: livePool?.totalSalesPool ?? 0,
       employeeCount: livePool?.employeeCount ?? 0,
