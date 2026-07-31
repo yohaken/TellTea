@@ -65,7 +65,9 @@ function formatReceiptTime(ts: number): string {
 }
 
 function paymentLabel(method: ReceiptPrintPayload["paymentMethod"]): string {
-  return method === "promptpay" ? "PromptPay" : "เงินสด";
+  if (method === "promptpay") return "PromptPay";
+  if (method === "transfer") return "โอนเงิน";
+  return "เงินสด";
 }
 
 function shopDisplayName(data: ReceiptPrintPayload): string {

@@ -9,13 +9,13 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 532/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 148/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+117/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.94"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 534/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 149/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+118/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.95"/);
 
 assert.ok(existsSync(join(root, "docs/npos-receipt-readable-checklist.md")));
-assert.match(read("docs/npos-receipt-readable-checklist.md"), /1\.14\.94/);
+assert.match(read("docs/npos-receipt-readable-checklist.md"), /1\.14\.95/);
 assert.match(read("docs/npos-receipt-readable-checklist.md"), /\?2|TIS-620|x2/);
 
 const java = read(

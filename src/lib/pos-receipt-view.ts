@@ -1,5 +1,8 @@
 import type { PosLocalReceipt, PosLocalReceiptLine } from "./pos-local-receipts";
-import { tallyLocalLineModifiers } from "./pos-receipt-format";
+import {
+  formatReceiptModifierText,
+  tallyLocalLineModifiers,
+} from "./pos-receipt-format";
 import type { PosSaleLine } from "./types";
 import type { ReceiptPrintPayload } from "./pos-printer/types";
 import type { PosShopSettings } from "./pos-settings";
@@ -38,19 +41,28 @@ export function localReceiptToPrintPayload(
   receipt: PosLocalReceipt,
   shop: Pick<
     PosShopSettings,
-    "shopName" | "shopNameTh" | "shopAddress" | "shopPhone" | "receiptStaffName" | "receiptFooterNote"
+    | "shopName"
+    | "shopNameTh"
+    | "shopAddress"
+    | "shopPhone"
+    | "taxId"
+    | "receiptStaffName"
+    | "receiptFooterNote"
   >,
   staffId?: string,
 ): ReceiptPrintPayload {
   const lines = localReceiptLines(receipt).map(localReceiptLineToSaleLine);
   const subtotal = receiptSubtotal(localReceiptLines(receipt));
   const discountBaht = receiptDiscountBaht(receipt);
+  const staffName =
+    receipt.staffName?.trim() || shop.receiptStaffName?.trim() || undefined;
   return {
     kind: "receipt",
     shopName: shop.shopName,
     shopNameTh: shop.shopNameTh,
     shopAddress: shop.shopAddress,
     shopPhone: shop.shopPhone,
+    taxId: shop.taxId?.trim() || undefined,
     billNo: receipt.billNo,
     lines,
     subtotal,
@@ -60,15 +72,19 @@ export function localReceiptToPrintPayload(
     cashReceived: receipt.cashReceived,
     change: receipt.change,
     createdAt: receipt.createdAt,
-    staffName: shop.receiptStaffName,
+    customerName: receipt.customerName?.trim() || undefined,
+    customerPhone: receipt.customerPhone?.trim() || undefined,
+    staffName,
     staffId: staffId || undefined,
     receiptFooterNote: shop.receiptFooterNote,
+    vatBaht: receipt.vatBaht,
+    serviceChargeBaht: receipt.serviceChargeBaht,
   };
 }
 
 export function receiptLineModifierLabels(line: PosLocalReceiptLine): string[] {
   return tallyLocalLineModifiers(line).map((m) =>
-    m.count > 1 ? `${m.label} ×${m.count}` : m.label,
+    formatReceiptModifierText(m.label, m.count),
   );
 }
 

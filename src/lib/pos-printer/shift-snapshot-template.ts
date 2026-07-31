@@ -303,8 +303,13 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
   <div class="row"><span>ควรมีในลิ้นชัก${opening != null || isClose ? "" : "*"}</span><span>${money(expected)}</span></div>
   <div class="row"><span>นับจริงในลิ้นชัก</span><span>${countedLabel}</span></div>
   <div class="row"><span>ส่วนต่าง</span><span>${diffLabel}</span></div>
+  ${
+    data.discrepancyNote
+      ? `<div class="muted tiny">เหตุผล: ${escapeReceiptHtml(data.discrepancyNote)}</div>`
+      : ""
+  }
   ${leave != null ? `<div class="row"><span>ทอนรอบถัดไป</span><span>${money(leave)}</span></div>` : ""}
-  <div class="row"><span>ยอดเงินสดที่ต้องนำส่ง</span><span>${remit != null ? money(remit) : "—"}</span></div>
+  <div class="row strong"><span>ยอดเงินสดที่ต้องนำส่ง</span><span>${remit != null ? money(remit) : "—"}</span></div>
   ${expectedNote}`;
   })();
 
@@ -340,8 +345,9 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
                 const opt = line.optionText
                   ? `<div class="opt">${escapeReceiptHtml(line.optionText)}</div>`
                   : "";
+                const qtySuffix = line.qty >= 2 ? ` x${line.qty}` : "";
                 return `<div class="line">
-            <div class="line-row"><span>${escapeReceiptHtml(line.name)} ×${line.qty}</span><span>${money(line.amount)}</span></div>
+            <div class="line-row"><span>${escapeReceiptHtml(line.name)}${qtySuffix}</span><span>${money(line.amount)}</span></div>
             ${opt}
           </div>`;
               })
@@ -449,6 +455,7 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
   <div class="row"><span>รหัสเครื่อง</span><span>${escapeReceiptHtml(data.deviceCode)} · รอบ ${escapeReceiptHtml(sessionShort)}</span></div>
   <div class="row"><span>เปิดรอบ</span><span>${escapeReceiptHtml(formatTs(data.openedAt))}</span></div>
   ${closedBlock}
+  ${data.shiftLabel ? `<div class="row"><span>รอบงาน</span><span>${escapeReceiptHtml(data.shiftLabel)}</span></div>` : ""}
   ${data.staffName ? `<div class="row"><span>โดย</span><span>${escapeReceiptHtml(data.staffName)}</span></div>` : ""}
   ${categoryBlock}
   ${totalsBlock}

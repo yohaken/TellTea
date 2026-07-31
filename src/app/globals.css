@@ -12753,6 +12753,114 @@ body.modal-open .main-panel {
   font-size: 0.78rem;
 }
 
+/* BOH print-doc parity (receipt / X / Z) — same builders as thermal */
+.pos-print-doc-frame-wrap {
+  background: #fff;
+  border-radius: 0 0 0.35rem 0.35rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.pos-print-doc-zigzag {
+  height: 10px;
+  background:
+    linear-gradient(135deg, #eef0f4 6px, transparent 0) 0 0,
+    linear-gradient(225deg, #eef0f4 6px, transparent 0) 0 0;
+  background-position: left top;
+  background-size: 12px 10px;
+  background-repeat: repeat-x;
+  background-color: #fff;
+}
+
+.pos-print-doc-frame {
+  display: block;
+  width: 100%;
+  height: 28rem;
+  border: 0;
+  background: #fff;
+}
+
+.pos-print-doc-frame-wrap.is-tall .pos-print-doc-frame {
+  height: min(70vh, 40rem);
+}
+
+.pos-receipt-paper--print-parity {
+  box-shadow: none;
+  background: transparent;
+}
+
+.pos-receipt-paper--print-parity .pos-print-doc-frame {
+  height: 26rem;
+}
+
+.pos-receipt-paper-wrap--compact .pos-receipt-paper--print-parity .pos-print-doc-frame {
+  height: 22rem;
+}
+
+.pos-session-print-docs {
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 0.85rem 0.9rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0.5rem;
+  background: #f7f8fa;
+}
+
+.pos-session-print-docs-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
+  margin-bottom: 0.55rem;
+}
+
+.pos-session-print-docs-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.pos-session-print-docs-sub,
+.pos-session-print-docs-hint {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+}
+
+.pos-session-print-docs-hint {
+  margin: 0 0 0.55rem;
+}
+
+.pos-session-print-docs-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.pos-session-print-docs-tabs button {
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pos-session-print-docs-tabs button.is-active {
+  border-color: var(--pos-accent-orange, #e85d24);
+  color: var(--pos-accent-orange, #e85d24);
+  background: rgba(232, 93, 36, 0.08);
+}
+
+.pos-session-print-docs-tabs button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pos-session-print-docs .pos-print-doc-frame-wrap {
+  max-width: 22rem;
+}
+
 @media (max-width: 900px) {
   .pos-sales-bill-split {
     grid-template-columns: 1fr;

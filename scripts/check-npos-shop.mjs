@@ -30,6 +30,7 @@ const steps = [
   { name: "menu-admin-crud", cmd: ["node", "scripts/test-npos-menu-admin-crud.mjs"] },
   { name: "payment-voice", cmd: ["node", "scripts/test-npos-payment-voice.mjs"] },
   { name: "receipt-readable", cmd: ["node", "scripts/test-npos-receipt-readable.mjs"] },
+  { name: "boh-print-parity", cmd: ["node", "scripts/test-npos-boh-print-parity.mjs"] },
   { name: "thermal-all-docs", cmd: ["node", "scripts/test-npos-thermal-all-docs.mjs"] },
   { name: "z-sunmi-print", cmd: ["node", "scripts/test-npos-z-sunmi-print.mjs"] },
   { name: "void-cashout-reason", cmd: ["node", "scripts/test-npos-void-cashout-reason.mjs"] },

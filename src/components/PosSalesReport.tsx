@@ -15,48 +15,20 @@ import {
   subscribePosSessionsRecent,
   summarizePosSalesDetailed,
 } from "@/lib/pos-sales-report";
-import {
-  saleLinesToLocalReceiptLines,
-  type PosLocalReceipt,
-} from "@/lib/pos-local-receipts";
+import { saleToLocalReceipt } from "@/lib/pos-boh-print-docs";
 import type { PosSale, PosSession } from "@/lib/types";
 import { formatPlainNumber, startOfLocalDay } from "@/lib/utils";
+import {
+  getLocalPosShopSettings,
+  setPosSettingsDbMode,
+  subscribePosShopSettings,
+  type PosShopSettings,
+} from "@/lib/pos-settings";
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { PosManagePanel } from "@/components/PosManagePanel";
 import { PosReceiptPaper } from "@/components/PosReceiptPaper";
+import { PosSessionPrintDocs } from "@/components/PosSessionPrintDocs";
 import { PosSessionsSlimTable } from "@/components/PosSessionsSlimTable";
-
-function saleToLocalReceipt(sale: PosSale): PosLocalReceipt {
-  const extra = sale as PosSale & {
-    customerName?: string;
-    customerPhone?: string;
-    staffName?: string;
-    vatBaht?: number;
-    serviceChargeBaht?: number;
-  };
-  return {
-    id: sale.id,
-    billNo: sale.billNo,
-    sessionId: sale.sessionId,
-    total: sale.total,
-    paymentMethod: sale.paymentMethod,
-    linePreview: sale.lines.map((l) => `${l.name}×${l.qty}`).join(", "),
-    lines: saleLinesToLocalReceiptLines(sale.lines),
-    discountBaht: sale.discountBaht,
-    cashReceived: sale.cashReceived,
-    change: sale.change,
-    createdAt: sale.createdAt,
-    pending: false,
-    voided: sale.status === "voided",
-    voidedAt: sale.voidedAt,
-    voidReason: sale.voidReason,
-    customerName: extra.customerName,
-    customerPhone: extra.customerPhone,
-    staffName: extra.staffName,
-    vatBaht: extra.vatBaht,
-    serviceChargeBaht: extra.serviceChargeBaht,
-  };
-}
 
 type BillStatusFilter = "all" | "ok" | "voided";
 type BillPayFilter = "all" | "cash" | "promptpay" | "transfer";
@@ -82,6 +54,7 @@ export function PosSalesReport({
   const { actorId } = useAuth();
   const [sales, setSales] = useState<PosSale[]>([]);
   const [sessions, setSessions] = useState<PosSession[]>([]);
+  const [shop, setShop] = useState<PosShopSettings>(() => getLocalPosShopSettings());
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [voidTarget, setVoidTarget] = useState<PosSale | null>(null);
@@ -120,8 +93,18 @@ export function PosSalesReport({
     };
   }, [onError]);
 
+  useEffect(() => {
+    setPosSettingsDbMode("owner");
+    setShop(getLocalPosShopSettings());
+    return subscribePosShopSettings(setShop);
+  }, []);
+
   const summary = useMemo(() => summarizePosSalesDetailed(sales, sessions), [sales, sessions]);
   const dataIssues = useMemo(() => inspectPosSessionData(sessions, sales), [sessions, sales]);
+  const selectedSession = useMemo(
+    () => sessions.find((s) => s.id === selectedSessionId) ?? null,
+    [sessions, selectedSessionId],
+  );
   const filteredSales = useMemo(() => {
     let list = selectedSessionId
       ? sales.filter((s) => s.sessionId === selectedSessionId)
@@ -276,6 +259,10 @@ export function PosSalesReport({
             ) : null}
           </ul>
         </div>
+      ) : null}
+
+      {selectedSession ? (
+        <PosSessionPrintDocs session={selectedSession} sales={sales} shop={shop} />
       ) : null}
 
       <details
@@ -441,6 +428,7 @@ export function PosSalesReport({
               {selectedSale ? (
                 <PosReceiptPaper
                   compact
+                  shop={shop}
                   receipt={saleToLocalReceipt(selectedSale)}
                   onVoid={
                     saleIsToday(selectedSale, todayMs) && selectedSale.status !== "voided"
@@ -453,7 +441,7 @@ export function PosSalesReport({
                 <p className="muted">เลือกบิลจากรายการ</p>
               )}
               <p className="muted pos-sales-bill-detail-note">
-                สลิปแบบพิมพ์ · หลังบ้านดูอย่างเดียว — พิมพ์ซ้ำที่แท็บเล็ต
+                ใบเสร็จฟอร์มเดียวกับเครื่องพิมพ์หน้างาน · ดู X/Z ของรอบด้านบนเมื่อเลือกรอบ
               </p>
             </aside>
           </div>

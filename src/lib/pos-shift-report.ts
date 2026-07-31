@@ -79,6 +79,8 @@ export type ShiftReportPayload = {
   closedAt?: number | null;
   printedAt: number;
   staffName?: string;
+  /** ป้ายรอบงานจากแท็บเล็ต (เช้า/บ่าย/ดึก) — แสดงเมื่อมี */
+  shiftLabel?: string;
   summary: ShiftReportSummary;
   detail?: ShiftReportDetail;
   /** Blind-close / session float — filled when known (native sync or local session). */
@@ -88,6 +90,8 @@ export type ShiftReportPayload = {
   cashDifference?: number;
   leaveFloat?: number;
   discrepancyLabel?: string;
+  /** เหตุผลส่วนต่างจากปิดกะแท็บเล็ต */
+  discrepancyNote?: string;
   /** Mid-shift cash drop / top-up (บาท) — ใช้คำนวณควรมีในลิ้นชัก + แถวเงินเข้า/เงินออก */
   cashOutTotal?: number;
   cashInTotal?: number;
@@ -103,11 +107,13 @@ function lineAmount(line: PosLocalReceiptLine) {
 
 function optionText(line: PosLocalReceiptLine): string | undefined {
   if (!line.options?.length) return undefined;
+  // Match receipt modifier lines: group: choice · hide solitary x1 noise in prose
   const parts = line.options
-    .map((g) => {
-      const choices = (g.choiceNames || []).filter(Boolean).join(", ");
-      return choices ? `${g.groupName}: ${choices}` : g.groupName;
-    })
+    .flatMap((g) =>
+      (g.choiceNames || [])
+        .filter(Boolean)
+        .map((name) => (g.groupName ? `${g.groupName}: ${name}` : name)),
+    )
     .filter(Boolean);
   return parts.length ? parts.join(" · ") : undefined;
 }
@@ -270,8 +276,12 @@ export function buildShiftReportPayload(input: {
   cashDifference?: number;
   leaveFloat?: number;
   discrepancyLabel?: string;
+  discrepancyNote?: string;
   cashOutTotal?: number;
   cashInTotal?: number;
+  /** Override shop.receiptStaffName (e.g. session openedByName). */
+  staffName?: string;
+  shiftLabel?: string;
 }): ShiftReportPayload {
   const detail =
     input.receipts && input.receipts.length > 0
@@ -287,6 +297,8 @@ export function buildShiftReportPayload(input: {
   // Paper brand = our shop (never competitor POS brands like Wongnai).
   const shopName = (input.shop.shopName || "").trim() || "TELL TEA";
   const shopNameTh = (input.shop.shopNameTh || "").trim() || "เทล ที";
+  const staffName =
+    (input.staffName || "").trim() || (input.shop.receiptStaffName || "").trim() || undefined;
 
   return {
     kind: input.kind,
@@ -299,7 +311,8 @@ export function buildShiftReportPayload(input: {
     openedAt: input.openedAt,
     closedAt: input.closedAt ?? null,
     printedAt: Date.now(),
-    staffName: input.shop.receiptStaffName,
+    staffName,
+    shiftLabel: (input.shiftLabel || "").trim() || undefined,
     summary,
     detail,
     openingCash: input.openingCash,
@@ -308,6 +321,7 @@ export function buildShiftReportPayload(input: {
     cashDifference: input.cashDifference,
     leaveFloat: input.leaveFloat,
     discrepancyLabel: input.discrepancyLabel,
+    discrepancyNote: (input.discrepancyNote || "").trim() || undefined,
     cashOutTotal: input.cashOutTotal,
     cashInTotal: input.cashInTotal,
   };
