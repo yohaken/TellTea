@@ -249,21 +249,13 @@ export function PayrollPayPanel({
       const refreshed = await listActiveEmployeesWithPay();
       onEmployeesChange?.(refreshed);
       setAdvanceOpen(false);
-      if (voided > 0) {
-        setFilter("void");
-        onInfo?.(
-          `บันทึกเบิก · ${emp.name} · ฿${fmt(amountNum)} · ค้างหัก ฿${fmt(result.advanceBalance)} · ลงบช.เจ้าของแล้ว` +
-            (advanceDraft.slipUrls.length ? " · มีสลิป" : "") +
-            ` · ยกเลิกคิว ${voided} รายการ — กด「สร้างเงินเดือน」เพื่อหักเบิกใหม่`,
-        );
-      } else {
-        setFilter("pending");
-        onInfo?.(
-          `บันทึกเบิก · ${emp.name} · ฿${fmt(amountNum)} · ค้างหัก ฿${fmt(result.advanceBalance)} · ลงบช.เจ้าของแล้ว` +
-            (advanceDraft.slipUrls.length ? " · มีสลิป" : "") +
-            " · กด「สร้างเงินเดือน」ถ้ายังไม่มีคิว (หรือยกเลิกคิวเก่าก่อนถ้ามีแล้วไม่หักเบิก)",
-        );
-      }
+      setFilter("pending");
+      onInfo?.(
+        `บันทึกเบิก · ${emp.name} · ฿${fmt(amountNum)} · ค้างหัก ฿${fmt(result.advanceBalance)} · ลงบช.เจ้าของแล้ว` +
+          (advanceDraft.slipUrls.length ? " · มีสลิป" : "") +
+          (voided > 0 ? ` · ยกเลิกคิวเก่า ${voided}` : "") +
+          " · กด「สร้างเงินเดือน」เพื่อหักเบิกในคิว (ดูแท็บรอโอน)",
+      );
     } catch (err) {
       onError((err as Error).message || "บันทึกเบิกไม่สำเร็จ");
     } finally {
@@ -314,9 +306,12 @@ export function PayrollPayPanel({
     if (!isOwner) return;
     setBusy(true);
     try {
+      // โหลดเงินเดือน/เบิกค้างล่าสุดก่อนสร้าง — กันคิวไม่หักหลังบันทึกเบิก
+      const freshEmployees = await listActiveEmployeesWithPay();
+      onEmployeesChange?.(freshEmployees);
       const result = await generatePayrollForPeriod({
         periodMonth,
-        employees,
+        employees: freshEmployees,
         bonusByEmployee,
         createdBy: actorId,
         schedule,
@@ -327,20 +322,32 @@ export function PayrollPayPanel({
       const parts: string[] = [];
       if (result.created > 0) parts.push(`สร้าง ${result.created}`);
       if (result.restored > 0) parts.push(`กู้คืน ${result.restored}`);
+      if (result.updated > 0) parts.push(`อัปเดตหักเบิก ${result.updated}`);
+      const skipGroupNote = result.skippedGroupNames.length
+        ? ` · ข้ามรอบกลุ่ม: ${result.skippedGroupNames.slice(0, 5).join(", ")}` +
+          (result.skippedGroupNames.length > 5
+            ? ` (+${result.skippedGroupNames.length - 5})`
+            : "") +
+          " — ปิดที่ตั้งค่าจ่ายถ้าต้องการรวม"
+        : "";
       if (parts.length) {
+        setFilter("pending");
         onInfo?.(
           `${scopeLabel}: ${parts.join(" · ")} รายการรอโอน` +
-            (result.skipped ? ` · ข้าม ${result.skipped}` : ""),
+            (result.skipped ? ` · ข้าม ${result.skipped}` : "") +
+            skipGroupNote,
         );
       } else if (result.skipped) {
+        setFilter("pending");
         onInfo?.(
-          `${scopeLabel}: ไม่มีรายการใหม่ (ข้าม ${result.skipped} — มีอยู่แล้วหรือยอด 0)`,
+          `${scopeLabel}: ไม่มีรายการใหม่ (ข้าม ${result.skipped} — จ่ายแล้ว / ยอด 0 / ไม่เปลี่ยน)` +
+            skipGroupNote,
         );
       } else {
         onInfo?.(
           scope === "bonus"
             ? "ยังไม่มีโบนัสให้สร้าง — ตรวจสรุปโบนัส/หักก่อน"
-            : "ไม่มีรายการให้สร้าง — ตั้งเงินเดือนที่แท็บตั้งค่าจ่าย",
+            : "ไม่มีรายการให้สร้าง — ตั้งเงินเดือนที่แท็บตั้งค่าจ่าย" + skipGroupNote,
         );
       }
     } catch (err) {
