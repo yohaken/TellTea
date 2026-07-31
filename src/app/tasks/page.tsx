@@ -827,13 +827,9 @@ function TemplateFormModal({
     try {
       if (isEdit && template) {
         await updateTaskTemplate(template.id, payload);
-        const pendingIds = occurrences
-          .filter(
-            (o) =>
-              o.templateId === template.id &&
-              (o.status === "pending" || o.status === "missed"),
-          )
-          .map((o) => o.id);
+        const pendingIds = collectOpenTaskOccurrences(template.id, occurrences).map(
+          (o) => o.id,
+        );
         if (pendingIds.length) {
           await syncPendingOccurrencesFromTemplate(
             {
