@@ -9,11 +9,11 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+126/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.103"/);
-assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 126/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 158/);
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 546/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+127/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.104"/);
+assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 127/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 159/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 548/);
 
 const transport = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/printer/PrinterTransport.java",
@@ -40,7 +40,7 @@ assert.match(fn, /drawerReady/);
 assert.match(fn, /for \(const \[k, v\] of Object\.entries\(created\)/);
 assert.match(fn, /!Object\.prototype\.hasOwnProperty\.call\(patch, k\)/);
 
-assert.match(read("docs/npos-equip-status-checklist.md"), /1.14.103/);
+assert.match(read("docs/npos-equip-status-checklist.md"), /1.14.104/);
 assert.match(read("src/lib/pos-devices.ts"), /posDeviceEquipment/);
 
 console.log("ok: npos-equip-status gate");

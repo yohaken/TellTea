@@ -551,6 +551,25 @@ public final class SaleSync {
                         boolean print = autoPrint;
                         if (shop != null) print = shop.optBoolean("autoPrintReceipt", true);
 
+                        // Fast path: paper (+ cash drawer) as soon as the sale is local.
+                        // Sync still runs next for real billNo on server / history — never double-print.
+                        if (print && !isReceiptPrinted(app, mutationId)) {
+                            maybePrintAndKick(
+                                    app,
+                                    shop,
+                                    payload,
+                                    provisionalBillNo(mutationId),
+                                    total,
+                                    method,
+                                    CashDrawerPolicy.shouldKickAfterSale(method));
+                            markReceiptPrinted(app, mutationId);
+                            try {
+                                payload.put("receiptPrinted", true);
+                            } catch (Exception ignored) {
+                                /* ignore */
+                            }
+                        }
+
                         try {
                             flushOne(app, payload, shop, print, method, callback);
                         } catch (Exception syncErr) {
@@ -560,7 +579,7 @@ public final class SaleSync {
                                             : syncErr.getMessage();
                             markQueueAttempt(app, mutationId, msg, isPermanentSaleError(msg));
                             OpsLogger.warn(app, "sync", "ซิงก์บิลค้างในคิว", msg);
-                            // Offline / sync fail — still give customer paper (provisional #).
+                            // Offline / sync fail — paper already attempted above when autoPrint.
                             if (print && !isReceiptPrinted(app, mutationId)) {
                                 maybePrintAndKick(
                                         app,
