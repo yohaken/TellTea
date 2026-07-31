@@ -30,7 +30,16 @@ assert.match(rules, /resource\.data\.employeeId == staffEmployeeId\(\)/);
 assert.match(rules, /match \/stockCosts\/\{itemId\}/);
 assert.match(rules, /match \/bonusLivePool\/\{monthKey\}/);
 assert.match(rules, /canReadBonusEntry/);
-assert.match(rules, /staffEmployeeId\(\) in resource\.data\.workerIds/);
+// get ต้องคู่ list (hasPerm) — ห้ามจำกัดแค่ workerIds ไม่งั้นลงยอดย้อนหลังพัง
+assert.match(
+  rules,
+  /function canReadBonusEntry\(perm\) \{[\s\S]*?hasPerm\(perm\)/,
+);
+assert.doesNotMatch(
+  rules,
+  /function canReadBonusEntry\(perm\) \{[\s\S]*?workerIds/,
+  "canReadBonusEntry must not require workerIds (breaks backdated OT save)",
+);
 assert.match(rules, /match \/assignTasks\/\{id\}[\s\S]*?allow write: if false/);
 
 const storage = read("storage.rules");

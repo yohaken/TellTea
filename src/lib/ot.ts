@@ -527,11 +527,16 @@ export async function updateOtEntry(
       | "status"
     >
   >,
+  /** แถวจาก UI — ข้าม getDoc ถ้ามี (กันพลาดสิทธิ์ตอนลงย้อนหลัง) */
+  knownCurrent?: OtEntry | null,
 ): Promise<void> {
   const ref = doc(getDb(), "otEntries", id);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) throw new Error("ไม่พบรายการ");
-  const current = mapOtEntryDoc(snap.id, snap.data() as Record<string, unknown>);
+  let current = knownCurrent && knownCurrent.id === id ? knownCurrent : null;
+  if (!current) {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) throw new Error("ไม่พบรายการ");
+    current = mapOtEntryDoc(snap.id, snap.data() as Record<string, unknown>);
+  }
   assertOtEntryEditable(current, patch);
   const touchesQty =
     patch.date != null ||

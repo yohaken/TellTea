@@ -770,7 +770,7 @@ function OtEntryForm({
       onError("");
       try {
         const payload = buildPayload(chosen);
-        await updateOtEntry(entry.id, payload);
+        await updateOtEntry(entry.id, payload, entry);
         onSaved();
       } catch (err) {
         reportError(friendlyFirestoreWriteError(err, "บันทึกรูป/ยอดไม่สำเร็จ"));

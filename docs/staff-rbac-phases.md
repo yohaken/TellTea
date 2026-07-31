@@ -44,9 +44,10 @@ Checklist สิทธิ์หลังร้าน (TellTea). เป้าห�
 
 ## Phase 7 — OT / ผลิตขอบเขต ✅
 
-- [x] rules: staff อ่านได้เฉพาะ entry ที่อยู่ใน `workerIds` (หรือ createdBy)
-- [x] client subscribe กรอง `workerId` บน OT / ผลิต / โบนัส
+- [x] rules: staff ที่มี `otBonus` / `production` อ่าน get+list ได้ (คู่กัน — กันพังตอนลงยอดย้อนหลัง)
+- [x] client subscribe กรอง `workerId` บน OT / ผลิต / โบนัส (มุมมอง UI)
 - [x] `bonusLivePool/{month}` — พนักงานได้ส่วนแบ่งขายโดยไม่อ่าน OT ทั้งร้าน
+- [x] แก้ regression: get จำกัดแค่ workerIds ทำให้บันทึกปิดกะย้อนหลังขึ้น Missing permissions
 
 ## Phase 8 — ส่งออก / P&L ✅
 

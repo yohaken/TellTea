@@ -111,7 +111,11 @@ assert.match(rules, /resource\.data\.employeeId == staffEmployeeId\(\)/);
 assert.match(rules, /match \/stockCosts\/\{itemId\}/);
 assert.match(rules, /match \/bonusLivePool\/\{monthKey\}/);
 assert.match(rules, /canReadBonusEntry/);
-assert.match(rules, /staffEmployeeId\(\) in resource\.data\.workerIds/);
+// get ต้องคู่ list — hasPerm(perm) ไม่จำกัด workerIds (ลงยอดย้อนหลัง)
+assert.match(
+  rules,
+  /function canReadBonusEntry\(perm\) \{[\s\S]*?hasPerm\(perm\);/,
+);
 assert.match(
   rules,
   /Never deploy a Tax-only firestore\.rules|Canonical Firestore rules|TaxTag/,

@@ -739,14 +739,13 @@ service cloud.firestore {
       allow read: if isStaff();
       allow write: if staffHubManage();
     }
-    /** อ่าน entry ผลิต/ชง: ทั้งร้าน = เจ้าของ/payrollPay · พนักงาน = อยู่ใน workerIds หรือเป็นคนสร้าง */
+    /**
+     * อ่าน entry ผลิต/ชง รายเอกสาร — ต้องคู่กับ list
+     * (เดิมจำกัดแค่ workerIds/คนสร้าง ทำให้ getDoc ตอนบันทึกยอดย้อนหลัง
+     * ขึ้น Missing or insufficient permissions แม้เห็นฟอร์มจาก list ได้)
+     */
     function canReadBonusEntry(perm) {
-      return isOwner() || isOwnerEmail() || hasPerm('payrollPay')
-        || (hasPerm(perm)
-            && (
-              (staffEmployeeId() != '' && staffEmployeeId() in resource.data.workerIds)
-              || resource.data.createdBy == actorId()
-            ));
+      return isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm(perm);
     }
 
     match /prodEntries/{id} {

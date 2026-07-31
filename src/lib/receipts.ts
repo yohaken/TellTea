@@ -218,6 +218,16 @@ export function friendlyFirestoreWriteError(err: unknown, fallback: string): str
   ) {
     return "บันทึกไม่สำเร็จ — รูปใหญ่เกินไปหรือแนบหลายรูปเกินลิมิต ลองลบเหลือ 1–2 รูปแล้วบันทึกใหม่";
   }
+  if (
+    /missing or insufficient permissions|permission-denied|PERMISSION_DENIED/i.test(
+      raw,
+    )
+  ) {
+    return (
+      "บันทึกไม่สำเร็จ — สิทธิ์ไม่พอหรือเซสชันหลุด · ลองออกแล้วเข้าใหม่ · " +
+      "ลงยอดย้อนหลังได้ถ้าเดือนยังไม่ปิดโบนัส"
+    );
+  }
   return raw.trim() || fallback;
 }
 
