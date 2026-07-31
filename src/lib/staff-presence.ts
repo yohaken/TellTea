@@ -39,14 +39,24 @@ export function staffShortLabel(source: string, max = 2): string {
   return chars.slice(0, max).join("");
 }
 
+/** หาแถว roster ที่ผูกบัญชี — employeeId ก่อน แล้วค่อย linkedStaffId */
+export function findEmployeeForPresence(
+  member: StaffMember,
+  employees: Employee[],
+): Employee | undefined {
+  if (member.employeeId) {
+    const byId = employees.find((e) => e.id === member.employeeId);
+    if (byId) return byId;
+  }
+  return employees.find((e) => e.linkedStaffId === member.id);
+}
+
 /** ชื่อเล่นเต็มก่อน · ไม่มีชื่อเล่นค่อยย่อจากชื่อจริง */
 export function resolvePresenceLabel(
   member: StaffMember,
   employees: Employee[],
 ): { label: string; fullName: string } {
-  const emp =
-    (member.employeeId && employees.find((e) => e.id === member.employeeId)) ||
-    employees.find((e) => e.linkedStaffId === member.id);
+  const emp = findEmployeeForPresence(member, employees);
   const nick = emp?.nickname?.trim();
   const fullName = (emp?.name || member.displayName || "").trim() || member.id;
   if (nick) {
@@ -134,10 +144,20 @@ export function subscribeEmployeesForPresence(
     query(collection(getDb(), "employees"), orderBy("name", "asc")),
     (snap) => {
       onEmployees(
-        snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<Employee, "id">),
-        })),
+        snap.docs.map((d) => {
+          const data = d.data() as Record<string, unknown>;
+          return {
+            id: d.id,
+            name: String(data.name || ""),
+            nickname: data.nickname ? String(data.nickname) : undefined,
+            active: data.active !== false,
+            linkedEmail: data.linkedEmail ? String(data.linkedEmail) : undefined,
+            linkedPhone: data.linkedPhone ? String(data.linkedPhone) : undefined,
+            linkedStaffId: data.linkedStaffId ? String(data.linkedStaffId) : undefined,
+            createdAt: Number(data.createdAt) || 0,
+            updatedAt: Number(data.updatedAt) || 0,
+          } satisfies Employee;
+        }),
       );
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),

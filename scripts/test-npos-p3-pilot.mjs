@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 512/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+112/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.89"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 531/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+117/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.94"/);
 
 assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/printer/PrinterEndpoint.java"), /NETWORK/);
 assert.match(read("npos-telltea/app/src/main/java/app/telltea/npos/printer/PrinterTransport.java"), /sendTcp/);

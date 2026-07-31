@@ -18,7 +18,7 @@ import {
   writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
-import { isInMonth, namesMatch } from "./bonus";
+import { employeeMatchesName, isInMonth, namesMatch } from "./bonus";
 import {
   adjustEmployeeAdvanceBalance,
   updateEmployee,
@@ -412,8 +412,12 @@ export type GeneratePayrollResult = {
   created: number;
   /** รายการที่เคยยกเลิก (void) แล้วเปิดกลับเป็นรอโอน */
   restored: number;
+  /** รายการรอโอนที่มีอยู่แล้ว แต่คำนวณหักเบิก/ยอดใหม่ */
+  updated: number;
   skipped: number;
   ids: string[];
+  /** คนที่ข้ามรอบกลุ่ม (skipGroupPayroll) — ไม่เข้า generate */
+  skippedGroupNames: string[];
 };
 
 function resolvePeriodAndDue(
@@ -444,7 +448,8 @@ export type PayrollGenerateScope = "salary" | "bonus" | "all";
  * - salary / bonus แยกสร้างได้ (โบนัสควรรอหักนิ่งก่อน)
  * - หักเบิกล่วงหน้าจากยอดโอน (เงินเดือนก่อน แล้วค่อยโบนัส)
  * - งวดสิ้นเดือน+โบนัส: accountDate = สิ้นเดือน (ไม่ใช่วันที่ 1)
- * - เคยยกเลิก (void) → สร้างใหม่/เปิดกลับได้ · pending/paid ไม่ทับ
+ * - void → เปิดกลับ · pending ในเดือน/ขอบเขตนี้ → คำนวณหักเบิกใหม่ (ไม่ข้ามเงียบ)
+ * - paid → ไม่ทับ
  */
 export async function generatePayrollForPeriod(input: {
   periodMonth: string;
@@ -463,10 +468,14 @@ export async function generatePayrollForPeriod(input: {
   if (!createdBy) throw new Error("ไม่พบผู้สร้างรายการ");
   parsePeriodMonth(input.periodMonth);
 
+  const skippedGroupNames = input.employees
+    .filter((e) => e.active && e.skipGroupPayroll)
+    .map((e) => e.name);
   const active = input.employees.filter((e) => e.active && !e.skipGroupPayroll);
   const now = Date.now();
   let created = 0;
   let restored = 0;
+  let updated = 0;
   let skipped = 0;
   const ids: string[] = [];
 
@@ -508,6 +517,8 @@ export async function generatePayrollForPeriod(input: {
 
   if (!plans.length) throw new Error("ไม่มีรอบจ่ายให้สร้าง");
 
+  const planKinds = new Set(plans.map((p) => p.kind));
+
   const db = getDb();
   let batch = writeBatch(db);
   let ops = 0;
@@ -519,11 +530,15 @@ export async function generatePayrollForPeriod(input: {
     ops = 0;
   }
 
-  // ยอดเบิกที่กันไว้ในรายการรอโอนแล้ว — อย่าหักซ้ำตอนสร้างรอบใหม่
+  // กันเบิกเฉพาะคิวนอกขอบเขตรอบนี้ (เดือนอื่น / จ่ายแยก / kind ที่ไม่ regenerate)
+  // คิว pending ในเดือน+scope นี้จะคำนวณใหม่ — อย่านับ deduct เก่ารวม reserved
   const reservedAdvance = new Map<string, number>();
   const pendingSnap = await getDocs(query(payrollCol(), where("status", "==", "pending")));
   for (const d of pendingSnap.docs) {
     const row = mapPayrollItem(d.id, d.data() as Record<string, unknown>);
+    const inScope =
+      row.periodMonth === input.periodMonth && planKinds.has(row.kind as Exclude<PayrollKind, "salary_special">);
+    if (inScope) continue;
     if (row.advanceDeduct > 0 && !row.advanceApplied) {
       reservedAdvance.set(
         row.employeeId,
@@ -560,7 +575,8 @@ export async function generatePayrollForPeriod(input: {
 
       if (existing.exists()) {
         const prev = mapPayrollItem(existing.id, existing.data() as Record<string, unknown>);
-        if (prev.status !== "void") {
+        if (prev.status === "paid") {
+          // จ่ายแล้วไม่ทับ — เบิกถูกตัดจาก advanceBalance ตอน mark จ่ายแล้ว
           skipped += 1;
           continue;
         }
@@ -595,12 +611,40 @@ export async function generatePayrollForPeriod(input: {
 
       if (existing.exists()) {
         const prev = mapPayrollItem(existing.id, existing.data() as Record<string, unknown>);
+        if (prev.status === "void") {
+          batch.set(ref, {
+            ...payload,
+            createdAt: prev.createdAt || now,
+          });
+          ops += 1;
+          restored += 1;
+          ids.push(id);
+          if (ops >= 400) await flush();
+          continue;
+        }
+        // pending — อัปเดตหักเบิก/ยอดใหม่ (เคสบันทึกเบิกหลังสร้างคิว)
+        const unchanged =
+          prev.status === "pending" &&
+          prev.grossAmount === grossAmount &&
+          prev.advanceDeduct === advanceDeduct &&
+          prev.amount === amount &&
+          prev.dueDate === dueDate &&
+          prev.accountDate === accountDate;
+        if (unchanged) {
+          skipped += 1;
+          continue;
+        }
         batch.set(ref, {
           ...payload,
           createdAt: prev.createdAt || now,
+          slipUrls: prev.slipUrls || [],
+          note:
+            advanceDeduct > 0
+              ? `หักเบิก ฿${advanceDeduct.toFixed(2)}`
+              : (prev.note || "").trim(),
         });
         ops += 1;
-        restored += 1;
+        updated += 1;
         ids.push(id);
         if (ops >= 400) await flush();
         continue;
@@ -617,7 +661,7 @@ export async function generatePayrollForPeriod(input: {
     }
   }
   await flush();
-  return { created, restored, skipped, ids };
+  return { created, restored, updated, skipped, ids, skippedGroupNames };
 }
 
 /**
@@ -868,7 +912,8 @@ export async function markPayrollPaid(input: {
 
 /**
  * บันทึกเบิกล่วงหน้าใหม่ — เพิ่มยอดค้างหัก
- * @param postToBooks ถ้า true ลงบช.เจ้าของเป็นเงินออก (ใช้เมื่อเพิ่งจ่ายเงินสดจริง)
+ * @param postToBooks ถ้า true ลงบช.เจ้าของเป็นเงินออก (จ่ายเงินจริงวันนี้)
+ * @param slipUrls แนบสลิปลงบช.เจ้าของเมื่อ postToBooks
  */
 export async function recordEmployeeAdvance(input: {
   employeeId: string;
@@ -877,12 +922,18 @@ export async function recordEmployeeAdvance(input: {
   createdBy: string;
   date?: number;
   note?: string;
+  slipUrls?: string[];
   postToBooks?: boolean;
 }): Promise<{ advanceBalance: number; ownerBookId: string }> {
   const amount = round2(Number(input.amount) || 0);
   if (!(amount > 0)) throw new Error("ยอดเบิกต้องมากกว่า 0");
   const createdBy = input.createdBy.trim();
   if (!createdBy) throw new Error("ไม่พบผู้บันทึก");
+
+  const slipUrls = (input.slipUrls || [])
+    .map((u) => u.trim())
+    .filter(Boolean)
+    .slice(0, PAYROLL_SLIP_MAX);
 
   const advanceBalance = await adjustEmployeeAdvanceBalance(input.employeeId, amount);
   let ownerBookId = "";
@@ -895,18 +946,42 @@ export async function recordEmployeeAdvance(input: {
       typeSource: "payroll-advance",
       typeAiReason: "เบิกเงินเดือนล่วงหน้า",
       createdBy,
+      receiptUrls: slipUrls,
       note: (input.note || "").trim() || "จะหักจากรอบจ่ายถัดไป",
     });
   }
   return { advanceBalance, ownerBookId };
 }
 
+/** คิวรอโอนของคนนี้ที่ยังไม่หักเบิก — ต้องยกเลิกแล้วสร้างใหม่หลังบันทึกเบิก */
+export function pendingPayrollNeedingAdvanceRefresh(
+  items: PayrollItem[],
+  employeeId: string,
+  periodMonth: string,
+): PayrollItem[] {
+  return items.filter(
+    (i) =>
+      i.employeeId === employeeId &&
+      i.periodMonth === periodMonth &&
+      i.status === "pending" &&
+      (i.kind === "salary_mid" ||
+        i.kind === "salary_month_end" ||
+        i.kind === "bonus" ||
+        i.kind === "salary_special") &&
+      !(i.advanceDeduct > 0),
+  );
+}
+
 function entryHasEmployee(
   entry: { workerIds?: string[]; workerNames?: string[] },
   employeeId: string,
   employeeName?: string,
+  employee?: { name: string; nickname?: string; previousNames?: string[] },
 ): boolean {
   if ((entry.workerIds || []).includes(employeeId)) return true;
+  if (employee) {
+    return (entry.workerNames || []).some((n) => employeeMatchesName(employee, n));
+  }
   if (employeeName) {
     return (entry.workerNames || []).some((n) => namesMatch(n, employeeName));
   }

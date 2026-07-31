@@ -12,6 +12,7 @@ import {
   employeesForLink,
   listEmployeesWithPay,
   migrateAllLegacyEmployeePay,
+  planEmployeeIdentityPatch,
   updateEmployee,
   type Employee,
 } from "@/lib/employees";
@@ -409,6 +410,13 @@ function StaffView() {
                 busy={busy}
                 onError={setError}
                 onReload={() => reload().then(() => undefined)}
+                onPatchLocal={(id, patch) => {
+                  setEmployees((prev) =>
+                    prev
+                      .map((e) => (e.id === id ? { ...e, ...patch } : e))
+                      .sort((a, b) => a.name.localeCompare(b.name, "th")),
+                  );
+                }}
                 onDelete={() => void onDeleteEmployee(emp)}
               />
             ))
@@ -553,12 +561,15 @@ function EmployeeRosterRow({
   busy,
   onError,
   onReload,
+  onPatchLocal,
   onDelete,
 }: {
   emp: Employee;
   busy: boolean;
   onError: (msg: string) => void;
   onReload: () => Promise<void>;
+  /** อัปเดต state ทันทีหลังบันทึกสำเร็จ — กัน UI ค้างค่าเก่า */
+  onPatchLocal: (id: string, patch: Partial<Employee>) => void;
   onDelete: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -606,14 +617,31 @@ function EmployeeRosterRow({
       return;
     }
     setSaving(true);
+    onError("");
+    const nextNick = nickname.trim();
+    const identity = planEmployeeIdentityPatch(emp, {
+      name: nextName,
+      nickname: nextNick,
+    });
+    const saveName = identity.name ?? nextName;
+    const saveNick = identity.nickname ?? nextNick;
     try {
       await updateEmployee(emp.id, {
-        name: nextName,
-        nickname: nickname.trim(),
+        name: saveName,
+        nickname: saveNick,
         monthlySalary: salaryNum,
         payBank: payBank.trim(),
         payAccountNo: payAccountNo.trim(),
         payAccountName: payAccountName.trim(),
+      });
+      onPatchLocal(emp.id, {
+        name: saveName,
+        nickname: saveNick || undefined,
+        monthlySalary: salaryNum > 0 ? salaryNum : undefined,
+        payBank: payBank.trim() || undefined,
+        payAccountNo: payAccountNo.trim() || undefined,
+        payAccountName: payAccountName.trim() || undefined,
+        updatedAt: Date.now(),
       });
       setEditing(false);
       await onReload();

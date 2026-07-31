@@ -13,7 +13,7 @@ const occ = read("src/lib/task-occurrences.ts");
 const page = read("src/app/tasks/page.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 518/);
+assert.match(version, /APP_BUILD = 519/);
 assert.match(occ, /collectOpenTaskOccurrences/);
 assert.match(occ, /dismissAndDeleteOpenTaskOccurrences/);
 assert.match(occ, /deactivateTaskTemplateClearingOpen/);

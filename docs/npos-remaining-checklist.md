@@ -5,6 +5,7 @@
 
 ## ทำแล้ว
 - [x] แคปจอ media-proxy — รูปจริงใน BO (**1.14.2**)
+- [x] แคปจอ retry + ไม่ invent URL ว่าง + ข้ามเฟรมดำ (**1.14.94**)
 - [x] จอลูกค้าสองพาเนล + 4 โหมด
 - [x] โคลนผังขาย + local-first เมนู/รูป
 - [x] **W1–W5** เช็คงาน · option · layout 65/35 · outbox · void เซิร์ฟเวอร์ (`nposVoidSale`)
@@ -50,8 +51,8 @@
 - [x] **Customer type scale** จอลูกค้า 10.1" อิง 600px · body~19sp · Prompt (**1.14.73**)
 - [x] **O1 ใครเข้ากะ** เลือกชื่อตอนเปิดกะ · ไม่ผูกตารางกะ · `/pos-sales` โชว์ผู้เปิด (**1.14.86**)
 - [x] **O2 รายละเอียดเงินรอบ** persist `cashDropNotes` · นำส่ง · ป้ายตรง/เกิน/ขาด บน `/pos-sales` (**1.14.87**)
-- [x] **O3 menuVersion sync** heartbeat → reload เมนูตอน Sell ค้าง + ▦ รีเฟรช (**1.14.89**) · [npos-menu-version-sync-checklist](./npos-menu-version-sync-checklist.md)
-- [x] **O4 เสียงพูดรับ/ทอน** คลิปฝังใน APK (ออฟไลน์) + สวิตช์ตั้งค่า (**1.14.89**) · [npos-payment-voice-checklist](./npos-payment-voice-checklist.md)
+- [x] **O3 menuVersion sync** heartbeat → reload เมนูตอน Sell ค้าง + ▦ รีเฟรช (**1.14.91**) · [npos-menu-version-sync-checklist](./npos-menu-version-sync-checklist.md)
+- [x] **O4 เสียงพูดรับ/ทอน** คลิปฝังใน APK (ออฟไลน์) + สวิตช์ตั้งค่า (**1.14.91**) · [npos-payment-voice-checklist](./npos-payment-voice-checklist.md)
 - [x] จิ้มเมนู → จ่าย → ใบเสร็จ → รีเซ็ต · ลิ้นชักตอนสด
 
 ## คิวถัดไป (เฟสก่อนหน้าที่ยังไม่ทำ)

@@ -17,6 +17,7 @@ import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
+import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
 import { listActiveEmployees, resolveLinkedEmployee, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import {
@@ -170,6 +171,28 @@ function entryIncludesName(entry: OtEntry, name: string) {
     const hay = w.trim().toLowerCase();
     return hay === needle || hay.includes(needle) || needle.includes(hay);
   });
+}
+
+/** กรอง "ของฉัน" — ใช้ employeeId ก่อน แล้วค่อยชื่อร้าน/ชื่อเก่า (ไม่พึ่ง displayName อย่างเดียว) */
+function entryIncludesMe(
+  entry: OtEntry,
+  me: {
+    employeeId?: string;
+    name?: string;
+    displayName?: string;
+    nickname?: string;
+    previousNames?: string[];
+  } | null,
+) {
+  if (!me) return false;
+  if (me.employeeId && (entry.workerIds || []).includes(me.employeeId)) return true;
+  const aliases = [
+    me.name,
+    me.nickname,
+    me.displayName,
+    ...(me.previousNames || []),
+  ].filter((n): n is string => !!n?.trim());
+  return aliases.some((n) => entryIncludesName(entry, n));
 }
 
 export default function OtPage() {
@@ -371,6 +394,7 @@ function OtView() {
             historySinceMs={historySinceMs}
             openingItems={openingItems}
             closingItems={closingItems}
+            workers={workers}
             staff={staff}
             isOwner={isOwner}
             onEditSlot={openSlot}
@@ -1193,6 +1217,7 @@ function OtTable({
   historySinceMs,
   openingItems,
   closingItems,
+  workers,
   staff,
   isOwner,
   onEditSlot,
@@ -1205,6 +1230,7 @@ function OtTable({
   historySinceMs: number;
   openingItems: ChecklistItem[];
   closingItems: ChecklistItem[];
+  workers: Employee[];
   staff: StaffMember | null;
   isOwner: boolean;
   onEditSlot: (target: OtSlotTarget) => void;
@@ -1223,15 +1249,29 @@ function OtTable({
 
   useBodyScrollLock(!!preview);
 
-  const myName = staff?.displayName || "";
+  const myEmployee = useMemo(
+    () => resolveLinkedEmployee(workers, staff),
+    [workers, staff],
+  );
+  const me = useMemo(
+    () => ({
+      employeeId: staff?.employeeId || myEmployee?.id,
+      name: myEmployee?.name || "",
+      nickname: myEmployee?.nickname || "",
+      previousNames: myEmployee?.previousNames || [],
+      displayName: staff?.displayName || "",
+    }),
+    [staff, myEmployee],
+  );
+  const myName = me.name || me.displayName || "";
 
   const filtered = useMemo(() => {
     return entries.filter((row) => {
       if (statusFilter !== "all" && row.status !== statusFilter) return false;
-      if (mineOnly && !entryIncludesName(row, myName)) return false;
+      if (mineOnly && !entryIncludesMe(row, me)) return false;
       return true;
     });
-  }, [entries, statusFilter, mineOnly, myName]);
+  }, [entries, statusFilter, mineOnly, me]);
 
   const summary = useMemo(() => {
     let shiftCount = 0;
@@ -1246,11 +1286,11 @@ function OtTable({
       summaryQty += c.summaryQty;
       totalBonus += c.totalBonus;
       if (row.status === "pending") pendingBonus += c.totalBonus;
-      if (entryIncludesName(row, myName)) myBonus += c.bonusPerPerson;
+      if (entryIncludesMe(row, me)) myBonus += c.bonusPerPerson;
     }
 
     return { shiftCount, summaryQty, totalBonus, pendingBonus, myBonus };
-  }, [filtered, myName]);
+  }, [filtered, me]);
 
   const dateGroups = useMemo(
     () => buildOtGrid(filtered, { minDate: historySinceMs }),
@@ -1345,6 +1385,7 @@ function OtTable({
           checkRecordsByDayShift={checkRecordsByDayShift}
           openingItems={openingItems}
           closingItems={closingItems}
+          workers={workers}
           isOwner={isOwner}
           photoReport={photoReport}
           onEditSlot={onEditSlot}
@@ -1356,6 +1397,7 @@ function OtTable({
       ) : (
         <OtCardList
           entries={sortOtEntries(filtered)}
+          workers={workers}
           isOwner={isOwner}
           photoReport={photoReport}
           onEdit={onEdit}
@@ -1382,6 +1424,7 @@ function OtSheetTable({
   checkRecordsByDayShift,
   openingItems,
   closingItems,
+  workers,
   isOwner,
   photoReport,
   onEditSlot,
@@ -1393,6 +1436,7 @@ function OtSheetTable({
   checkRecordsByDayShift: Map<string, ChecklistRecord[]>;
   openingItems: ChecklistItem[];
   closingItems: ChecklistItem[];
+  workers: Employee[];
   isOwner: boolean;
   photoReport: PhotoForensicsReport | null;
   onEditSlot: (target: OtSlotTarget) => void;
@@ -1456,7 +1500,11 @@ function OtSheetTable({
                   row?.status === "paid"
                     ? "is-paid"
                     : "is-pending";
-                const workerNames = (row?.workerNames || []).filter(Boolean);
+                const workerNames = row
+                  ? resolveWorkerDisplayNames(row.workerIds, row.workerNames, workers).filter(
+                      Boolean,
+                    )
+                  : [];
                 const statusPill =
                   slotStatus === "planned"
                     ? "วางแผน"
@@ -1641,6 +1689,7 @@ function OtSheetTable({
 
 function OtCardList({
   entries,
+  workers,
   isOwner,
   photoReport,
   onEdit,
@@ -1648,6 +1697,7 @@ function OtCardList({
   onViewPhoto,
 }: {
   entries: OtEntry[];
+  workers: Employee[];
   isOwner: boolean;
   photoReport: PhotoForensicsReport | null;
   onEdit: (row: OtEntry) => void;
@@ -1661,6 +1711,10 @@ function OtCardList({
         const statusClass = row.status === "paid" ? "is-paid" : "is-pending";
         const quality = computeShiftQuality(row);
         const processHint = staffProcessOrderHint(quality);
+        const workerLabel =
+          resolveWorkerDisplayNames(row.workerIds, row.workerNames, workers)
+            .filter(Boolean)
+            .join(" · ") || "—";
         const detailItems = [
           { label: "เครื่อง", value: formatPlainNumber(row.machineCount) },
           { label: "อื่นๆ", value: otQtyCell(row.otherCups || 0) },
@@ -1721,9 +1775,7 @@ function OtCardList({
             </header>
 
             <div className="ot-worker-cell">
-              <div className="ot-worker-names">
-                {(row.workerNames || []).filter(Boolean).join(" · ") || "—"}
-              </div>
+              <div className="ot-worker-names">{workerLabel}</div>
               <div className="ot-worker-meta">
                 {processHint ? (
                   <span className="ot-owner-hint-pill" title={processHint}>

@@ -9,14 +9,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 512/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 144/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+112/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.89"/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 531/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 148/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+117/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.94"/);
 
 assert.ok(existsSync(join(root, "docs/npos-capture-projection-checklist.md")));
 const doc = read("docs/npos-capture-projection-checklist.md");
-assert.match(doc, /1\.14\.89/);
+assert.match(doc, /1\.14\.94/);
 assert.match(doc, /MediaProjection/);
 assert.match(doc, /เด้งจนกว่าจะรับ|nag-until-grant|2\.5/);
 
@@ -39,8 +39,11 @@ const capture = read(
 );
 assert.match(capture, /MediaProjection|CaptureProjectionService/);
 assert.match(capture, /grabPrimary/);
-assert.match(capture, /reject_uniform_green|isMostlyBrandGreen/);
+assert.match(capture, /isMostlyBrandGreen/);
 assert.match(capture, /shouldAutoPrompt|CaptureConsentActivity/);
+// Ack only when hasImages — empty report must retry via heartbeat.
+assert.match(capture, /if \(hasImages\)[\s\S]*setLastAckRequestAt/);
+assert.match(capture, /จะลองใหม่/);
 assert.doesNotMatch(capture, /statusShot\(/);
 assert.doesNotMatch(
   capture,
@@ -53,7 +56,14 @@ const prefs = read(
 assert.match(prefs, /markPromptAfterUpdate/);
 assert.match(prefs, /shouldAutoPrompt/);
 assert.match(prefs, /markNagUntilGrant|shouldNagUntilGrant/);
+assert.match(prefs, /markProjectionDead/);
 assert.match(prefs, /6L \* 60L \* 60L/); // interval-only throttle
+
+const proj = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/diagnose/CaptureProjectionService.java",
+);
+assert.match(proj, /isMostlyBlackOrEmpty/);
+assert.match(proj, /no_usable_frame|markProjectionDead/);
 
 const consent = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/diagnose/CaptureConsentActivity.java",
@@ -62,6 +72,16 @@ assert.match(consent, /RETRY_AFTER_DENY_MS/);
 assert.match(consent, /scheduleRetry|relaunchPendingIfNeeded/);
 assert.match(consent, /พนักงานไม่รับสิทธิ์/);
 assert.match(consent, /SHOWING/);
+assert.match(consent, /hasLiveProjection/);
+
+const cf = read("functions/npos-capture.js");
+assert.match(cf, /hasImages/);
+assert.match(cf, /lastCaptureFailAt|lastCaptureFailDetail/);
+assert.match(cf, /\.\.\.\(hasImages/);
+
+const media = read("src/lib/npos-capture-media.ts");
+assert.match(media, /if \(!stored\) return ""/);
+assert.match(media, /Never invent a proxy URL|storedUrl/);
 
 const capPrefs = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/diagnose/CapturePrefs.java",

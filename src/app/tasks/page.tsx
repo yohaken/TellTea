@@ -18,6 +18,7 @@ import { ModuleTabDock } from "@/components/ModuleTabDock";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
+import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
 import { listActiveEmployees, type Employee } from "@/lib/employees";
 import { isAppOwnerEmail } from "@/lib/firebase";
 import {
@@ -45,6 +46,7 @@ import {
 } from "@/lib/task-owner-timeline";
 import type { TaskChecklistItem, TaskOccurrence, TaskTemplate } from "@/lib/task-types";
 import {
+  applyDismissBlocksToTemplates,
   bangkokCalendarParts,
   canSubmitOccurrence,
   filterOccurrencesByTab,
@@ -53,6 +55,7 @@ import {
   labelCompletedKind,
   labelWeekday,
   labelWeekdayShort,
+  mergeDismissedPeriodKeys,
   newChecklistItemId,
   TASK_PROOF_MAX,
   validateTaskCompleteInput,
@@ -65,9 +68,10 @@ import { formatDateShortBe, formatDateTimeShortBe } from "@/lib/utils";
 async function purgeTaskTemplate(
   template: TaskTemplate,
   occurrences: TaskOccurrence[],
-): Promise<void> {
-  await dismissAndDeleteOpenTaskOccurrences(template.id, occurrences);
+): Promise<{ deletedIds: string[]; periodKeys: string[] }> {
+  const result = await dismissAndDeleteOpenTaskOccurrences(template.id, occurrences);
   await deleteTaskTemplate(template.id);
+  return result;
 }
 
 const TASK_PRESETS: { title: string; weekday: number; checklist: string[] }[] = [
@@ -111,11 +115,27 @@ function TasksView() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const rulesInitRef = useRef(false);
   const syncedRef = useRef(false);
+  /** กัน sync สร้างรอบกลับหลังลบ — ก่อน snapshot dismissedPeriodKeys ตามทัน */
+  const dismissBlockRef = useRef<Set<string>>(new Set());
+
+  const rememberDismissed = useCallback((templateId: string, periodKeys: string[]) => {
+    const tid = String(templateId || "").trim();
+    if (!tid) return;
+    for (const pk of periodKeys) {
+      if (pk) dismissBlockRef.current.add(`${tid}:${pk}`);
+    }
+    setTemplates((prev) =>
+      prev.map((tpl) =>
+        tpl.id === tid ? mergeDismissedPeriodKeys(tpl, periodKeys) : tpl,
+      ),
+    );
+  }, []);
 
   const doSync = useCallback(async (tpls: TaskTemplate[], occs: TaskOccurrence[]) => {
     setSyncing(true);
     try {
-      await runTaskOccurrenceSync(tpls, occs);
+      const merged = applyDismissBlocksToTemplates(tpls, dismissBlockRef.current);
+      await runTaskOccurrenceSync(merged, occs);
     } catch (err) {
       setError((err as Error).message || "ซิงก์รอบงานไม่สำเร็จ");
     } finally {
@@ -304,7 +324,13 @@ function TasksView() {
                                 : `ปิดกติกา "${tpl.title}"?\nไม่สร้างรอบใหม่`;
                             if (!window.confirm(msg)) return;
                             void deactivateTaskTemplateClearingOpen(tpl.id, occurrences)
-                              .then(() => {
+                              .then((result) => {
+                                rememberDismissed(tpl.id, result.periodKeys);
+                                setTemplates((prev) =>
+                                  prev.map((t) =>
+                                    t.id === tpl.id ? { ...t, active: false } : t,
+                                  ),
+                                );
                                 setOccurrences((prev) =>
                                   prev.filter(
                                     (o) =>
@@ -314,7 +340,7 @@ function TasksView() {
                                       ),
                                   ),
                                 );
-                                syncedRef.current = false;
+                                // อย่า reset syncedRef — sync ซ้ำด้วย template เก่าจะสร้างรอบกลับ
                               })
                               .catch((err) =>
                                 setError((err as Error).message || "ปิดกติกาไม่สำเร็จ"),
@@ -338,7 +364,9 @@ function TasksView() {
                                 : `ลบกติกา "${tpl.title}" ถาวร?`;
                             if (!window.confirm(msg)) return;
                             void purgeTaskTemplate(tpl, occurrences)
-                              .then(() => {
+                              .then((result) => {
+                                rememberDismissed(tpl.id, result.periodKeys);
+                                setTemplates((prev) => prev.filter((t) => t.id !== tpl.id));
                                 setOccurrences((prev) =>
                                   prev.filter(
                                     (o) =>
@@ -348,7 +376,6 @@ function TasksView() {
                                       ),
                                   ),
                                 );
-                                syncedRef.current = false;
                               })
                               .catch((err) =>
                                 setError((err as Error).message || "ลบกติกาไม่สำเร็จ"),
@@ -410,15 +437,16 @@ function TasksView() {
             <OccurrencesTable
               rows={visible}
               allOccurrences={occurrences}
+              employees={employees}
               canManage={isOwnerManager}
               showFeedback={tab === "history"}
               onSubmit={(occ) => setSubmitOcc(occ)}
               onViewPhoto={(urls) => setPreviewUrls(urls)}
               onError={setError}
-              onDeletedIds={(ids) => {
-                const gone = new Set(ids);
+              onDeleted={(result) => {
+                rememberDismissed(result.templateId, result.periodKeys);
+                const gone = new Set(result.deletedIds);
                 setOccurrences((prev) => prev.filter((o) => !gone.has(o.id)));
-                syncedRef.current = false;
               }}
             />
           )}
@@ -446,8 +474,22 @@ function TasksView() {
           occurrences={occurrences}
           onError={setError}
           onClose={() => setEditingTemplate(null)}
-          onSaved={async () => {
+          onSaved={async (opts) => {
             setEditingTemplate(null);
+            if (opts?.deleted && opts.templateId) {
+              rememberDismissed(opts.templateId, opts.periodKeys || []);
+              setTemplates((prev) => prev.filter((t) => t.id !== opts.templateId));
+              setOccurrences((prev) =>
+                prev.filter(
+                  (o) =>
+                    !(
+                      o.templateId === opts.templateId &&
+                      isOpenTaskOccurrenceStatus(o.status)
+                    ),
+                ),
+              );
+              return;
+            }
             syncedRef.current = false;
           }}
         />
@@ -594,21 +636,27 @@ function OwnerTaskTimeline({
 function OccurrencesTable({
   rows,
   allOccurrences,
+  employees = [],
   canManage,
   showFeedback = false,
   onSubmit,
   onViewPhoto,
   onError,
-  onDeletedIds,
+  onDeleted,
 }: {
   rows: TaskOccurrence[];
   allOccurrences: TaskOccurrence[];
+  employees?: Employee[];
   canManage: boolean;
   showFeedback?: boolean;
   onSubmit: (occ: TaskOccurrence) => void;
   onViewPhoto: (urls: string[]) => void;
   onError: (msg: string) => void;
-  onDeletedIds?: (ids: string[]) => void;
+  onDeleted?: (result: {
+    templateId: string;
+    deletedIds: string[];
+    periodKeys: string[];
+  }) => void;
 }) {
   async function onDelete(occ: TaskOccurrence) {
     const open = collectOpenTaskOccurrences(occ.templateId, allOccurrences);
@@ -623,11 +671,15 @@ function OccurrencesTable({
       return;
     }
     try {
-      const { deletedIds } = await dismissAndDeleteOpenTaskOccurrences(
+      const result = await dismissAndDeleteOpenTaskOccurrences(
         occ.templateId,
         allOccurrences,
       );
-      onDeletedIds?.(deletedIds.length ? deletedIds : [occ.id]);
+      onDeleted?.({
+        templateId: occ.templateId,
+        deletedIds: result.deletedIds.length ? result.deletedIds : [occ.id],
+        periodKeys: result.periodKeys,
+      });
     } catch (err) {
       onError((err as Error).message || "ลบงานไม่สำเร็จ");
     }
@@ -702,7 +754,13 @@ function OccurrencesTable({
                     <span className="tasks-due-sub">เปิด {formatDateShortBe(occ.openAt)}</span>
                   ) : null}
                 </td>
-                <td className="tasks-col-who">{occ.assigneeNames.join(", ") || "—"}</td>
+                <td className="tasks-col-who">
+                  {resolveWorkerDisplayNames(
+                    occ.assigneeIds,
+                    occ.assigneeNames,
+                    employees,
+                  ).join(", ") || "—"}
+                </td>
                 <td className="tasks-col-check" title={checkText}>
                   {checkText || "—"}
                 </td>
@@ -770,7 +828,11 @@ function TemplateFormModal({
   occurrences?: TaskOccurrence[];
   onError: (msg: string) => void;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (opts?: {
+    deleted?: boolean;
+    templateId?: string;
+    periodKeys?: string[];
+  }) => void;
 }) {
   const isEdit = !!template;
   const [title, setTitle] = useState(template?.title || "");
@@ -866,8 +928,12 @@ function TemplateFormModal({
     setBusy(true);
     onError("");
     try {
-      await purgeTaskTemplate(template, occurrences);
-      onSaved();
+      const result = await purgeTaskTemplate(template, occurrences);
+      onSaved({
+        deleted: true,
+        templateId: template.id,
+        periodKeys: result.periodKeys,
+      });
     } catch (err) {
       onError((err as Error).message || "ลบกติกาไม่สำเร็จ");
     } finally {

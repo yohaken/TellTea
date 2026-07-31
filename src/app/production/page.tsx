@@ -19,6 +19,7 @@ import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { monthInputValue, parseMonthInput } from "@/lib/bonus";
+import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
 import { resolveLinkedEmployee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import {
@@ -240,6 +241,7 @@ function ProductionView() {
       {!loading && showLog ? (
         <ProdTable
           entries={entries}
+          workers={workers}
           isOwner={isOwner}
           month={logMonth}
           onMonthChange={setLogMonth}
@@ -573,6 +575,7 @@ function ProdEntryForm({
 
 function ProdTable({
   entries,
+  workers,
   isOwner,
   month,
   onMonthChange,
@@ -581,6 +584,7 @@ function ProdTable({
   toolbarLeading,
 }: {
   entries: ProdEntry[];
+  workers: ProdWorker[];
   isOwner: boolean;
   month: string;
   onMonthChange: (month: string) => void;
@@ -699,7 +703,11 @@ function ProdTable({
                       .join(" ")}
                   >
                     <td className="col-date">{formatDateShortBe(row.date)}</td>
-                    <td className="col-desc prod-col-worker">{row.workerNames.join(", ")}</td>
+                    <td className="col-desc prod-col-worker">
+                      {resolveWorkerDisplayNames(row.workerIds, row.workerNames, workers).join(
+                        ", ",
+                      ) || "—"}
+                    </td>
                     <td className="col-desc prod-col-product col-sticky-left">
                       <div className="prod-name-row">
                         <button

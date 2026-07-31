@@ -35,6 +35,7 @@ import {
   subscribeBonusLivePool,
   type BonusLivePool,
 } from "@/lib/bonus-live-pool";
+import { migrateAllBonusCloseSideDocs } from "@/lib/bonus-close-migrate";
 import {
   closeBonusMonth,
   reportFromCloseSnapshot,
@@ -42,6 +43,13 @@ import {
   unlockBonusMonth,
   type BonusMonthCloseDoc,
 } from "@/lib/bonus-month-close";
+import {
+  subscribeBonusMonthStatus,
+  subscribeBonusPersonalClose,
+  workerRowFromPersonalClose,
+  type BonusMonthStatusDoc,
+  type BonusPersonalCloseDoc,
+} from "@/lib/bonus-personal-close";
 import { RateSchedulePanel } from "@/components/RateSchedulePanel";
 import {
   getEmployeeWithPay,
@@ -108,6 +116,8 @@ function BonusView() {
   const [loading, setLoading] = useState(true);
   const [closeBusy, setCloseBusy] = useState(false);
   const [monthClose, setMonthClose] = useState<BonusMonthCloseDoc | null>(null);
+  const [monthStatus, setMonthStatus] = useState<BonusMonthStatusDoc | null>(null);
+  const [personalClose, setPersonalClose] = useState<BonusPersonalCloseDoc | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
@@ -137,6 +147,11 @@ function BonusView() {
             await migrateAllLegacyEmployeePay();
           } catch {
             /* migrate best-effort — ไม่บล็อกหน้า */
+          }
+          try {
+            await migrateAllBonusCloseSideDocs();
+          } catch {
+            /* best-effort */
           }
         }
         const [emps, otSettings] = await Promise.all([
@@ -274,15 +289,41 @@ function BonusView() {
     return () => unsubMonth();
   }, [canView, year, monthIdx]);
 
+  // เจ้าของ/คนจ่าย: snapshot ทั้งร้าน · พนักงาน: สถานะปิดเดือน + แถวของตัวเองเท่านั้น
   useEffect(() => {
     if (!canView) return;
-    const unsub = subscribeBonusMonthClose(
+    if (shopPayView) {
+      setMonthStatus(null);
+      setPersonalClose(null);
+      return subscribeBonusMonthClose(
+        month,
+        (doc) => setMonthClose(doc),
+        (err) => setError(err.message),
+      );
+    }
+    setMonthClose(null);
+    const unsubStatus = subscribeBonusMonthStatus(
       month,
-      (doc) => setMonthClose(doc),
+      (doc) => setMonthStatus(doc),
       (err) => setError(err.message),
     );
-    return () => unsub();
-  }, [canView, month]);
+    return () => unsubStatus();
+  }, [canView, shopPayView, month]);
+
+  useEffect(() => {
+    if (!canView || shopPayView) return;
+    const empId = staff?.employeeId || resolveLinkedEmployee(employees, staff)?.id || "";
+    if (!empId) {
+      setPersonalClose(null);
+      return;
+    }
+    return subscribeBonusPersonalClose(
+      month,
+      empId,
+      (doc) => setPersonalClose(doc),
+      (err) => setError(err.message),
+    );
+  }, [canView, shopPayView, month, staff, employees]);
 
   const liveReport = useMemo(() => {
     if (!shopPayView) return null;
@@ -322,26 +363,30 @@ function BonusView() {
 
   /** Closed month shows frozen snapshot; open month uses live calc. */
   const report = useMemo(() => {
-    if (monthClose?.status === "closed") return reportFromCloseSnapshot(monthClose);
+    if (shopPayView && monthClose?.status === "closed") {
+      return reportFromCloseSnapshot(monthClose);
+    }
     return liveReport;
-  }, [monthClose, liveReport]);
+  }, [shopPayView, monthClose, liveReport]);
 
-  const monthClosed = monthClose?.status === "closed";
+  const monthClosed = shopPayView
+    ? monthClose?.status === "closed"
+    : monthStatus?.status === "closed" || personalClose?.status === "closed";
 
   const myEmployee = useMemo(
     () => resolveLinkedEmployee(employees, staff),
     [employees, staff],
   );
 
-  // พนักงาน: แถวของตัวเองจาก OT/ผลิตตัวเอง + bonusLivePool (เดือนเปิด)
+  // พนักงาน: เดือนปิด → แถวจาก bonusPersonalCloses · เดือนเปิด → OT/ผลิตตัวเอง + livePool
   const personalRow = useMemo((): WorkerMonthBonus | null => {
     if (shopPayView || !myEmployee) return null;
-    if (monthClosed && report) {
-      return (
-        report.rows.find((r) => r.workerId === myEmployee.id) ||
-        report.rows.find((r) => namesMatch(r.workerName, myEmployee.name)) ||
-        null
-      );
+    if (personalClose?.status === "closed") {
+      return workerRowFromPersonalClose(personalClose);
+    }
+    if (monthClosed) {
+      // ปิดแล้วแต่ยังไม่มี personal doc (รอ migrate) — ไม่โชว์ยอดคนอื่น
+      return null;
     }
     const shopDeductPct =
       livePool?.shopDeductPct ??
@@ -361,8 +406,8 @@ function BonusView() {
   }, [
     shopPayView,
     myEmployee,
+    personalClose,
     monthClosed,
-    report,
     livePool,
     deductionSettings,
     deductionMonth,
@@ -401,8 +446,13 @@ function BonusView() {
       if (byId) return byId;
       return report.rows.find((r) => namesMatch(r.workerName, myEmployee.name)) || null;
     }
-    return pickMyBonusRow(report, employees, staff?.displayName);
-  }, [shopPayView, personalRow, report, employees, staff?.displayName, myEmployee]);
+    return pickMyBonusRow(
+      report,
+      employees,
+      staff?.displayName,
+      staff?.employeeId,
+    );
+  }, [shopPayView, personalRow, report, employees, staff?.displayName, staff?.employeeId, myEmployee]);
 
   const bonusByEmployee = useMemo(() => {
     const map: Record<string, number> = {};
@@ -663,6 +713,12 @@ function BonusView() {
             </p>
           ) : null}
 
+          {monthClosed && !shopPayView ? (
+            <p className="muted bonus-live-note">
+              เดือนนี้ปิดแล้ว — แสดงเฉพาะยอดโบนัสของฉันที่ล็อกไว้ตอนปิดเดือน
+            </p>
+          ) : null}
+
           {!loading && myRow ? (
             <section className="bonus-my-card">
               <header className="bonus-my-head">
@@ -705,11 +761,28 @@ function BonusView() {
 
           {!loading && !myRow && !shopPayView ? (
             <p className="muted bonus-no-match">
-              {staff?.displayName
-                ? <>ไม่พบชื่อ &quot;{staff.displayName}&quot; ในรายชื่อพนักงาน — ตรวจที่{" "}</>
-                : <>ยังไม่ได้เชื่อมชื่อกับรายชื่อร้าน — ไปที่{" "}</>}
-              <a href="/staff/" style={{ fontWeight: 700 }}>ศูนย์รวมพนักงาน</a>
-              {" "}หรือโปรไฟล์ เพื่อเห็นโบนัสของตัวเอง
+              {monthClosed && myEmployee ? (
+                <>
+                  เดือนนี้ปิดแล้ว แต่ยังไม่มีแถวโบนัสของฉัน — ให้เจ้าของร้านเข้าแอปครั้งหนึ่งเพื่อ migrate
+                  ข้อมูลปิดเดือน
+                </>
+              ) : staff?.displayName ? (
+                <>
+                  ไม่พบชื่อ &quot;{staff.displayName}&quot; ในรายชื่อพนักงาน — ตรวจที่{" "}
+                  <a href="/staff/" style={{ fontWeight: 700 }}>
+                    ศูนย์รวมพนักงาน
+                  </a>{" "}
+                  หรือโปรไฟล์ เพื่อเห็นโบนัสของตัวเอง
+                </>
+              ) : (
+                <>
+                  ยังไม่ได้เชื่อมชื่อกับรายชื่อร้าน — ไปที่{" "}
+                  <a href="/staff/" style={{ fontWeight: 700 }}>
+                    ศูนย์รวมพนักงาน
+                  </a>{" "}
+                  หรือโปรไฟล์ เพื่อเห็นโบนัสของตัวเอง
+                </>
+              )}
             </p>
           ) : null}
 
