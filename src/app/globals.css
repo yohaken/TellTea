@@ -8951,8 +8951,10 @@ body.modal-open .main-panel {
     minmax(3rem, max-content)
     minmax(2.4rem, max-content)
     minmax(2.4rem, max-content)
+    minmax(2.8rem, max-content)
+    minmax(2.8rem, max-content)
     minmax(2.2rem, max-content);
-  min-width: 54rem;
+  min-width: 60rem;
 }
 
 .npos-slim-check-col {
@@ -9117,8 +9119,10 @@ body.modal-open .main-panel {
       minmax(3rem, max-content)
       minmax(2.4rem, max-content)
       minmax(2.4rem, max-content)
+      minmax(2.8rem, max-content)
+      minmax(2.8rem, max-content)
       minmax(2.2rem, max-content);
-    min-width: 42rem;
+    min-width: 48rem;
   }
 
   .npos-slim-row--bills-super {

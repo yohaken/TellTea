@@ -12,8 +12,8 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+112/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.89"/);
 assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 108/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 143/);
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 511/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 144/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 512/);
 
 const transport = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/printer/PrinterTransport.java",
