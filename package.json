@@ -39,6 +39,7 @@
     "test:resolve-linked-employee": "node scripts/test-resolve-linked-employee.mjs",
     "repair:ot-rates": "node scripts/repair-ot-bonus-rates.mjs",
     "test:ledger-multi-photo": "node scripts/test-ledger-multi-photo.mjs",
+    "test:ledger-evidence-policy": "node scripts/test-ledger-evidence-policy.mjs",
     "test:ledger-ai-classify": "node scripts/test-ledger-ai-classify.mjs",
     "test:brand-logo-perf": "node scripts/test-brand-logo-perf.mjs",
     "test:stock-catalog-owner": "node scripts/test-stock-catalog-owner.mjs",

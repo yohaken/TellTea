@@ -22,6 +22,7 @@ import { OwnerBooksModeSwitch } from "@/components/OwnerBooksModeSwitch";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { SheetDateCell } from "@/components/SheetDateCell";
 import {
+  EvidenceDocNotice,
   VatFirstAskPanel,
   VatFirstCapturePanel,
   VatFirstFormSummary,
@@ -39,6 +40,11 @@ import {
   resolveStoredTypeSource,
   type LedgerTypeSource,
 } from "@/lib/ledger-ai";
+import {
+  evidenceAckRequired,
+  evidenceDocPolicy,
+  evidenceReadyToSave,
+} from "@/lib/ledger-evidence-policy";
 import {
   initialVatFirstPhase,
   phaseAfterAiVatExtract,
@@ -666,6 +672,9 @@ function OwnerEntryModal({
     Boolean(entry?.hasVat && entry?.vatClaim),
   );
   const [aiVatReason, setAiVatReason] = useState("");
+  const [extractSlipOnly, setExtractSlipOnly] = useState(false);
+  const [extractDocKind, setExtractDocKind] = useState("");
+  const [evidenceDocAck, setEvidenceDocAck] = useState(false);
   const [pendingAiVat, setPendingAiVat] = useState<number | null>(null);
   const [receiptUrls, setReceiptUrls] = useState<string[]>(() => getOwnerBookReceiptUrls(entry));
   const [previewUrls, setPreviewUrls] = useState<string[] | null>(null);
@@ -736,6 +745,9 @@ function OwnerEntryModal({
     setVatSource("");
     setPendingAiVat(null);
     setAiVatReason("");
+    setExtractSlipOnly(false);
+    setExtractDocKind("");
+    setEvidenceDocAck(false);
     setExtractStatus("idle");
     lastExtractKeyRef.current = "";
     setVatFirstPhase(next);
@@ -779,6 +791,9 @@ function OwnerEntryModal({
     setVatSource("");
     setPendingAiVat(null);
     setAiVatReason("");
+    setExtractSlipOnly(false);
+    setExtractDocKind("");
+    setEvidenceDocAck(false);
     setExtractStatus("idle");
     lastExtractKeyRef.current = "";
   }
@@ -854,6 +869,8 @@ function OwnerEntryModal({
       }
       // VAT: AI อ่านจากบิลก่อน — ไม่คำนวณ ×7/107
       setAiVatReason(result.vatReason || result.reason || "");
+      setExtractSlipOnly(Boolean(result.slipOnly));
+      setExtractDocKind(String(result.docKind || ""));
       const aiVat =
         result.hasVat && result.vatInput != null && result.vatInput > 0
           ? result.vatInput
@@ -939,6 +956,15 @@ function OwnerEntryModal({
             : "ทำขั้นตอน VAT ให้ครบก่อนบันทึก",
         );
       }
+      if (
+        mode === "add" &&
+        !evidenceReadyToSave({
+          required: evidenceAckRequired(),
+          acked: evidenceDocAck,
+        })
+      ) {
+        throw new Error("ติ๊กยืนยันเรื่องเอกสารหลักฐานก่อนบันทึก");
+      }
 
       let type = previewType || "cogs";
       let typeSource: LedgerTypeSource = previewSource;
@@ -991,6 +1017,8 @@ function OwnerEntryModal({
           receiptUrls: urls,
           note,
           ...vatPayload,
+          evidenceDocPolicy: evidenceDocPolicy(description),
+          evidenceDocAck: true,
         });
       } else if (entry) {
         await updateOwnerBookEntry(entry.id, {
@@ -1138,6 +1166,18 @@ function OwnerEntryModal({
                 setVatVerified(false);
                 setVatFirstPhase("manual");
               }}
+            />
+          ) : null}
+          {mode === "add" ? (
+            <EvidenceDocNotice
+              description={description}
+              acked={evidenceDocAck}
+              onAckChange={setEvidenceDocAck}
+              slipOnly={extractSlipOnly}
+              vatReason={aiVatReason}
+              docKind={extractDocKind}
+              disabled={busy}
+              idPrefix="ob-evidence"
             />
           ) : null}
 

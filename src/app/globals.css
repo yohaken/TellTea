@@ -7662,6 +7662,58 @@ body.modal-open .main-panel {
   font-size: 0.72rem;
 }
 
+/* Cash-out evidence notice — serious ack, not a VAT-style multi-step gate */
+.evidence-doc-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0 0 0.55rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(120, 72, 24, 0.35);
+  background: rgba(255, 214, 160, 0.28);
+  text-align: left;
+}
+
+.evidence-doc-notice--escalate {
+  border-color: rgba(160, 48, 32, 0.45);
+  background: rgba(255, 196, 180, 0.38);
+}
+
+.evidence-doc-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 750;
+  color: rgba(72, 36, 12, 0.95);
+}
+
+.evidence-doc-notice--escalate .evidence-doc-title {
+  color: rgba(110, 28, 18, 0.96);
+}
+
+.evidence-doc-body {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: rgba(52, 32, 16, 0.88);
+}
+
+.evidence-doc-ack {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0.1rem 0 0;
+  font-size: 0.74rem;
+  font-weight: 650;
+  color: rgba(40, 28, 14, 0.92);
+  cursor: pointer;
+}
+
+.evidence-doc-ack input {
+  margin-top: 0.12rem;
+  flex-shrink: 0;
+}
+
 .trash-btn {
   width: 2.6rem;
   height: 2.6rem;

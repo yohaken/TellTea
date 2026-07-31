@@ -6,6 +6,7 @@ import { AiSaveProgressModal, type AiSaveStage } from "@/components/AiSaveProgre
 import { LedgerTypeField } from "@/components/LedgerTypeField";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import {
+  EvidenceDocNotice,
   VatFirstAskPanel,
   VatFirstCapturePanel,
   VatFirstFormSummary,
@@ -21,6 +22,11 @@ import {
   LEDGER_RECEIPT_MAX,
   listRecentLedgerEntries,
 } from "@/lib/ledger";
+import {
+  evidenceAckRequired,
+  evidenceDocPolicy,
+  evidenceReadyToSave,
+} from "@/lib/ledger-evidence-policy";
 import { frequentTypes } from "@/lib/ledger-labels";
 import {
   parseVatInputStr,
@@ -82,6 +88,9 @@ export function LedgerAddOutModal({
   const [vatVerified, setVatVerified] = useState(false);
   const [vatClaim, setVatClaim] = useState(false);
   const [aiVatReason, setAiVatReason] = useState("");
+  const [extractSlipOnly, setExtractSlipOnly] = useState(false);
+  const [extractDocKind, setExtractDocKind] = useState("");
+  const [evidenceDocAck, setEvidenceDocAck] = useState(false);
   const [pendingAiVat, setPendingAiVat] = useState<number | null>(null);
   const [extractStatus, setExtractStatus] = useState<"idle" | "loading" | "ready" | "error">(
     "idle",
@@ -127,6 +136,9 @@ export function LedgerAddOutModal({
     setVatSource("");
     setPendingAiVat(null);
     setAiVatReason("");
+    setExtractSlipOnly(false);
+    setExtractDocKind("");
+    setEvidenceDocAck(false);
     setExtractStatus("idle");
     lastExtractKeyRef.current = "";
     setVatFirstPhase(next);
@@ -170,6 +182,9 @@ export function LedgerAddOutModal({
     setVatSource("");
     setPendingAiVat(null);
     setAiVatReason("");
+    setExtractSlipOnly(false);
+    setExtractDocKind("");
+    setEvidenceDocAck(false);
     setExtractStatus("idle");
     lastExtractKeyRef.current = "";
   }
@@ -206,6 +221,8 @@ export function LedgerAddOutModal({
         setPreviewStatus("ready");
       }
       setAiVatReason(result.vatReason || result.reason || "");
+      setExtractSlipOnly(Boolean(result.slipOnly));
+      setExtractDocKind(String(result.docKind || ""));
       const aiVat =
         result.hasVat && result.vatInput != null && result.vatInput > 0
           ? result.vatInput
@@ -303,6 +320,15 @@ export function LedgerAddOutModal({
       );
       return;
     }
+    if (
+      !evidenceReadyToSave({
+        required: evidenceAckRequired(),
+        acked: evidenceDocAck,
+      })
+    ) {
+      onError("ติ๊กยืนยันเรื่องเอกสารหลักฐานก่อนบันทึก");
+      return;
+    }
     setBusy(true);
     setSaveStage("sending");
     try {
@@ -352,6 +378,8 @@ export function LedgerAddOutModal({
         vatSource: hasVat ? vatSource || "manual" : "",
         vatVerified: hasVat ? vatVerified : false,
         vatClaim: hasVat && vatNum > 0 ? vatClaim : false,
+        evidenceDocPolicy: evidenceDocPolicy(description),
+        evidenceDocAck: true,
       });
       setSaveStage("done");
       onSaved();
@@ -446,6 +474,16 @@ export function LedgerAddOutModal({
                 setVatVerified(false);
                 setVatFirstPhase("manual");
               }}
+            />
+            <EvidenceDocNotice
+              description={description}
+              acked={evidenceDocAck}
+              onAckChange={setEvidenceDocAck}
+              slipOnly={extractSlipOnly}
+              vatReason={aiVatReason}
+              docKind={extractDocKind}
+              disabled={busy}
+              idPrefix="add-out-evidence"
             />
 
             <div className="field">

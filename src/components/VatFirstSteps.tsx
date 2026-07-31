@@ -3,6 +3,7 @@
 import { VatClaimModeToggle } from "@/components/EntryVatFieldset";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { parseVatInputStr } from "@/lib/entry-vat";
+import { evidenceNoticeCopy } from "@/lib/ledger-evidence-policy";
 import type { VatFirstPhase } from "@/lib/ledger-vat-first";
 import { formatVatMoney } from "@/lib/vat-number-format";
 
@@ -217,6 +218,64 @@ export function VatFirstFormSummary({
           vatInput={vatInput}
         />
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Serious evidence notice + one ack (shared staff ledger / owner books / bill notice).
+ * Not a VAT-style multi-step gate — one checkbox so the rule is always seen.
+ */
+export function EvidenceDocNotice({
+  description,
+  acked,
+  onAckChange,
+  slipOnly = false,
+  vatReason = "",
+  docKind = "",
+  disabled,
+  idPrefix = "evidence-doc",
+}: {
+  description: string;
+  acked: boolean;
+  onAckChange: (acked: boolean) => void;
+  slipOnly?: boolean;
+  vatReason?: string;
+  docKind?: string;
+  disabled?: boolean;
+  idPrefix?: string;
+}) {
+  const copy = evidenceNoticeCopy({
+    description,
+    slipOnly,
+    vatReason,
+    docKind,
+  });
+  const checkboxId = `${idPrefix}-ack`;
+
+  return (
+    <div
+      className={
+        copy.escalate
+          ? "evidence-doc-notice evidence-doc-notice--escalate"
+          : "evidence-doc-notice"
+      }
+      role="group"
+      aria-label="หลักฐานเอกสารรายการจ่าย"
+      data-policy={copy.policy}
+    >
+      <p className="evidence-doc-title">{copy.title}</p>
+      <p className="evidence-doc-body">{copy.body}</p>
+      <label className="evidence-doc-ack" htmlFor={checkboxId}>
+        <input
+          id={checkboxId}
+          type="checkbox"
+          checked={acked}
+          disabled={disabled}
+          onChange={(e) => onAckChange(e.target.checked)}
+        />
+        <span>{copy.ackLabel}</span>
+      </label>
     </div>
   );
 }

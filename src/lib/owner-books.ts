@@ -65,6 +65,8 @@ export type OwnerBookEntryInput = {
   vatSource?: string;
   vatVerified?: boolean;
   vatClaim?: boolean;
+  evidenceDocPolicy?: string;
+  evidenceDocAck?: boolean;
 };
 
 /** @deprecated ใช้ proposePurchaseVatInput จาก entry-vat */
@@ -287,6 +289,8 @@ export async function addOwnerBookEntry(input: OwnerBookEntryInput): Promise<str
     vatSource: vat.vatSource,
     vatVerified: vat.vatVerified,
     vatClaim: vat.vatClaim,
+    evidenceDocPolicy: String(input.evidenceDocPolicy || "").trim(),
+    evidenceDocAck: Boolean(input.evidenceDocAck),
   };
   validateOwnerPayload(payload);
   const ref = await addDoc(ownerBooksCol(), payload);

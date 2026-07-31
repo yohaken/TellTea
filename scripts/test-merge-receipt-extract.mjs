@@ -65,6 +65,9 @@ assert.equal(merged2.vatInput, 375.71);
 const bankOnly = mergeExtractResults([bank]);
 assert.equal(bankOnly.hasVat, false);
 assert.equal(bankOnly.vatInput, null);
+assert.equal(bankOnly.slipOnly, true);
+assert.equal(bankOnly.docKind, "bank_slip");
+assert.equal(merged.slipOnly, false);
 
 // Tax without VAT line — stay null (no ×7/107)
 const taxNoVat = mergeExtractResults([

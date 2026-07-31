@@ -49,6 +49,8 @@ export type BillNotice = {
   vatInvoiceNo: string;
   vatSource: string;
   vatVerified: boolean;
+  evidenceDocPolicy?: string;
+  evidenceDocAck?: boolean;
 };
 
 export type BillNoticeInput = {
@@ -68,6 +70,8 @@ export type BillNoticeInput = {
   vatInvoiceNo?: string;
   vatSource?: string;
   vatVerified?: boolean;
+  evidenceDocPolicy?: string;
+  evidenceDocAck?: boolean;
 };
 
 export type BillNoticePage = {
@@ -163,6 +167,9 @@ function mapData(id: string, data: Record<string, unknown>): BillNotice {
     vatInvoiceNo: typeof data.vatInvoiceNo === "string" ? data.vatInvoiceNo : "",
     vatSource: typeof data.vatSource === "string" ? data.vatSource : "",
     vatVerified: Boolean(data.vatVerified),
+    evidenceDocPolicy:
+      typeof data.evidenceDocPolicy === "string" ? data.evidenceDocPolicy : "",
+    evidenceDocAck: Boolean(data.evidenceDocAck),
   };
 }
 
@@ -345,6 +352,8 @@ function buildPayload(input: BillNoticeInput) {
     vatInvoiceNo: hasVat ? (input.vatInvoiceNo || "").trim() : "",
     vatSource: hasVat ? (input.vatSource || "manual").trim() : "",
     vatVerified: hasVat ? Boolean(input.vatVerified) : false,
+    evidenceDocPolicy: String(input.evidenceDocPolicy || "").trim(),
+    evidenceDocAck: Boolean(input.evidenceDocAck),
   };
   validatePayload(payload);
   return payload;

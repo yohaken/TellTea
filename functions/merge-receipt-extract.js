@@ -51,6 +51,7 @@ function mergeExtractResults(results) {
   }
 
   const taxOnes = rows.filter((r) => r.docKind === "tax_invoice");
+  const bankOnes = rows.filter((r) => r.docKind === "bank_slip");
   const nonBank = rows.filter((r) => r.docKind !== "bank_slip");
   const withVat = rows.filter(hasVatAmount);
 
@@ -69,13 +70,15 @@ function mergeExtractResults(results) {
   let vatReason = "";
   if (vatFrom) {
     vatReason = String(vatFrom.vatReason || "");
-  } else if (rows.some((r) => r.docKind === "bank_slip") && taxOnes.length === 0) {
+  } else if (bankOnes.length > 0 && taxOnes.length === 0) {
     vatReason = "มีสลิปโอน — ยังไม่พบบรรทัดภาษีบนใบกำกับ";
   } else {
     vatReason =
       String(primary.vatReason || "") ||
       "ไม่พบบรรทัดภาษีมูลค่าเพิ่มบนใบเสร็จ";
   }
+
+  const slipOnly = bankOnes.length > 0 && taxOnes.length === 0 && !vatFrom;
 
   return {
     date: String(descFrom.date || amountFrom.date || primary.date || ""),
@@ -90,10 +93,18 @@ function mergeExtractResults(results) {
     vatInvoiceNo: vatFrom ? String(vatFrom.vatInvoiceNo || "") : "",
     vatSeenOnBill: Boolean(vatFrom && vatFrom.vatSeenOnBill),
     vatReason: vatReason.slice(0, 80),
+    docKind: slipOnly
+      ? "bank_slip"
+      : taxOnes.length
+        ? "tax_invoice"
+        : String(primary.docKind || "other"),
+    slipOnly,
   };
 }
 
 function publicFields(row) {
+  const docKind = String(row.docKind || "other");
+  const slipOnly = docKind === "bank_slip";
   return {
     date: String(row.date || ""),
     description: String(row.description || ""),
@@ -107,6 +118,8 @@ function publicFields(row) {
     vatInvoiceNo: String(row.vatInvoiceNo || ""),
     vatSeenOnBill: Boolean(row.vatSeenOnBill && row.vatInput != null),
     vatReason: String(row.vatReason || "").slice(0, 80),
+    docKind,
+    slipOnly,
   };
 }
 

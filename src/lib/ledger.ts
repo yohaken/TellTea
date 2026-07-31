@@ -440,6 +440,8 @@ export async function addLedgerEntry(input: LedgerEntryInput): Promise<string> {
     vatSource: vat.vatSource,
     vatVerified: vat.vatVerified,
     vatClaim: vat.vatClaim,
+    evidenceDocPolicy: String(input.evidenceDocPolicy || "").trim(),
+    evidenceDocAck: Boolean(input.evidenceDocAck),
   };
   validateLedgerPayload(payload);
   const ref = await addDoc(collection(getDb(), "ledger"), payload);
