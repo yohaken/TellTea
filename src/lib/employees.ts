@@ -220,36 +220,52 @@ export async function updateEmployee(
     >
   >,
 ): Promise<void> {
-  const next: Record<string, unknown> = { updatedAt: Date.now() };
+  // แยก roster (ชื่อ/ชื่อเล่น) กับ pay — เขียน roster ก่อนเสมอ
+  // กันกรณี setEmployeePay พังแล้วชื่อเล่นไม่ถูกบันทึก
+  const roster: Record<string, unknown> = { updatedAt: Date.now() };
+  let hasRosterPatch = false;
   if (patch.name != null) {
     const n = patch.name.trim();
     if (!n) throw new Error("ต้องใส่ชื่อพนักงาน");
-    next.name = n;
+    roster.name = n;
+    hasRosterPatch = true;
   }
   if (patch.nickname !== undefined) {
     const nick = patch.nickname?.trim() || "";
-    next.nickname = nick ? nick : deleteField();
+    roster.nickname = nick ? nick : deleteField();
+    hasRosterPatch = true;
   }
-  if (patch.active != null) next.active = patch.active;
+  if (patch.active != null) {
+    roster.active = patch.active;
+    hasRosterPatch = true;
+  }
   if (patch.linkedEmail !== undefined) {
-    next.linkedEmail = patch.linkedEmail
+    roster.linkedEmail = patch.linkedEmail
       ? normalizeEmail(patch.linkedEmail)
       : deleteField();
+    hasRosterPatch = true;
   }
   if (patch.linkedPhone !== undefined) {
-    next.linkedPhone = patch.linkedPhone
+    roster.linkedPhone = patch.linkedPhone
       ? normalizePhone(patch.linkedPhone)
       : deleteField();
+    hasRosterPatch = true;
   }
   if (patch.linkedStaffId !== undefined) {
-    next.linkedStaffId =
+    roster.linkedStaffId =
       patch.linkedStaffId && patch.linkedStaffId.trim()
         ? patch.linkedStaffId.trim()
         : deleteField();
+    hasRosterPatch = true;
   }
   if (patch.unitRate !== undefined) {
-    next.unitRate =
+    roster.unitRate =
       patch.unitRate == null || patch.unitRate === 0 ? deleteField() : patch.unitRate;
+    hasRosterPatch = true;
+  }
+
+  if (hasRosterPatch) {
+    await updateDoc(doc(getDb(), "employees", id), roster);
   }
 
   const payPatch: Parameters<typeof setEmployeePay>[1] = {};
@@ -257,38 +273,59 @@ export async function updateEmployee(
   if (patch.monthlySalary !== undefined) {
     payPatch.monthlySalary = patch.monthlySalary;
     hasPayPatch = true;
-    next.monthlySalary = deleteField();
   }
   if (patch.payBank !== undefined) {
     payPatch.payBank = patch.payBank;
     hasPayPatch = true;
-    next.payBank = deleteField();
   }
   if (patch.payAccountNo !== undefined) {
     payPatch.payAccountNo = patch.payAccountNo;
     hasPayPatch = true;
-    next.payAccountNo = deleteField();
   }
   if (patch.payAccountName !== undefined) {
     payPatch.payAccountName = patch.payAccountName;
     hasPayPatch = true;
-    next.payAccountName = deleteField();
   }
   if (patch.advanceBalance !== undefined) {
     payPatch.advanceBalance = patch.advanceBalance;
     hasPayPatch = true;
-    next.advanceBalance = deleteField();
   }
   if (patch.skipGroupPayroll !== undefined) {
     payPatch.skipGroupPayroll = patch.skipGroupPayroll;
     hasPayPatch = true;
-    next.skipGroupPayroll = deleteField();
   }
 
   if (hasPayPatch) {
     await setEmployeePay(id, payPatch);
+    // ลบ field จ่าย legacy ออกจาก roster (best-effort)
+    const strip: Record<string, unknown> = { updatedAt: Date.now() };
+    for (const key of [
+      "monthlySalary",
+      "payBank",
+      "payAccountNo",
+      "payAccountName",
+      "advanceBalance",
+      "skipGroupPayroll",
+    ] as const) {
+      strip[key] = deleteField();
+    }
+    try {
+      await updateDoc(doc(getDb(), "employees", id), strip);
+    } catch {
+      /* roster may already be clean / offline */
+    }
   }
-  await updateDoc(doc(getDb(), "employees", id), next);
+
+  // ยืนยันชื่อเล่นถูกเขียนจริง (กัน UI โชว์ค่าใหม่ทั้งที่ Firestore ยังเป็นค่าเก่า)
+  if (patch.nickname !== undefined) {
+    const snap = await getDoc(doc(getDb(), "employees", id));
+    if (!snap.exists()) throw new Error("ไม่พบพนักงานหลังบันทึก");
+    const want = patch.nickname.trim();
+    const got = String(snap.data()?.nickname || "").trim();
+    if (want !== got) {
+      throw new Error("บันทึกชื่อเล่นไม่สำเร็จ — ลองอีกครั้ง");
+    }
+  }
 }
 
 /** ปรับยอดเบิกค้าง (+ เพิ่มเมื่อเบิกใหม่ / − ตอนหักจากเงินเดือน) */
