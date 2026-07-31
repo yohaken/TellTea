@@ -172,16 +172,26 @@ function entryIncludesName(entry: OtEntry, name: string) {
   });
 }
 
-/** กรอง "ของฉัน" — ใช้ employeeId ก่อน แล้วค่อยชื่อร้าน (ไม่พึ่ง staff.displayName ที่อาจค้าง) */
+/** กรอง "ของฉัน" — ใช้ employeeId ก่อน แล้วค่อยชื่อร้าน/ชื่อเก่า (ไม่พึ่ง displayName อย่างเดียว) */
 function entryIncludesMe(
   entry: OtEntry,
-  me: { employeeId?: string; name?: string; displayName?: string } | null,
+  me: {
+    employeeId?: string;
+    name?: string;
+    displayName?: string;
+    nickname?: string;
+    previousNames?: string[];
+  } | null,
 ) {
   if (!me) return false;
   if (me.employeeId && (entry.workerIds || []).includes(me.employeeId)) return true;
-  if (me.name && entryIncludesName(entry, me.name)) return true;
-  if (me.displayName && entryIncludesName(entry, me.displayName)) return true;
-  return false;
+  const aliases = [
+    me.name,
+    me.nickname,
+    me.displayName,
+    ...(me.previousNames || []),
+  ].filter((n): n is string => !!n?.trim());
+  return aliases.some((n) => entryIncludesName(entry, n));
 }
 
 export default function OtPage() {
@@ -1246,6 +1256,8 @@ function OtTable({
     () => ({
       employeeId: staff?.employeeId || myEmployee?.id,
       name: myEmployee?.name || "",
+      nickname: myEmployee?.nickname || "",
+      previousNames: myEmployee?.previousNames || [],
       displayName: staff?.displayName || "",
     }),
     [staff, myEmployee],

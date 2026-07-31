@@ -18,7 +18,7 @@ import {
   writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
-import { isInMonth, namesMatch } from "./bonus";
+import { employeeMatchesName, isInMonth, namesMatch } from "./bonus";
 import {
   adjustEmployeeAdvanceBalance,
   updateEmployee,
@@ -905,8 +905,12 @@ function entryHasEmployee(
   entry: { workerIds?: string[]; workerNames?: string[] },
   employeeId: string,
   employeeName?: string,
+  employee?: { name: string; nickname?: string; previousNames?: string[] },
 ): boolean {
   if ((entry.workerIds || []).includes(employeeId)) return true;
+  if (employee) {
+    return (entry.workerNames || []).some((n) => employeeMatchesName(employee, n));
+  }
   if (employeeName) {
     return (entry.workerNames || []).some((n) => namesMatch(n, employeeName));
   }

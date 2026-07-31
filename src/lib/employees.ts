@@ -34,6 +34,11 @@ export type Employee = {
   name: string;
   /** ชื่อเล่นสั้น — ใช้ไอคอน presence ของเจ้าของ (1–2 ตัว) */
   nickname?: string;
+  /**
+   * ชื่อในร้าน/ชื่อเล่นเก่า — ใช้รวมโบนัส/OT/ผลิตหลังเปลี่ยนชื่อ
+   * ให้คนเดิมยังเป็นคนเดียวกันแม้แถวเก่าเก็บชื่อ x1 ไว้
+   */
+  previousNames?: string[];
   active: boolean;
   /** อีเมลบัญชีที่เชื่อม (legacy / Google) */
   linkedEmail?: string;
@@ -161,12 +166,21 @@ async function syncLinkedStaffDisplayName(
   );
 }
 
+function mapPreviousNames(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const names = raw
+    .map((n) => String(n || "").trim())
+    .filter(Boolean);
+  return names.length ? [...new Set(names)] : undefined;
+}
+
 function mapEmployeeRoster(id: string, data: Record<string, unknown>): Employee {
   const clean = stripPayFields(data);
   return {
     id,
     name: String(clean.name || ""),
     nickname: clean.nickname ? String(clean.nickname) : undefined,
+    previousNames: mapPreviousNames(clean.previousNames),
     active: clean.active !== false,
     linkedEmail: clean.linkedEmail ? String(clean.linkedEmail) : undefined,
     linkedPhone: clean.linkedPhone ? String(clean.linkedPhone) : undefined,
@@ -178,6 +192,36 @@ function mapEmployeeRoster(id: string, data: Record<string, unknown>): Employee 
     createdAt: Number(clean.createdAt) || 0,
     updatedAt: Number(clean.updatedAt) || 0,
   };
+}
+
+/** รวมชื่อเก่าไว้บน roster — โบนัส/OT จับคนเดิมได้หลังเปลี่ยนชื่อ */
+export function mergePreviousNames(
+  current: Pick<Employee, "name" | "nickname" | "previousNames">,
+  next: { name?: string; nickname?: string },
+): string[] {
+  const aliases = new Set<string>(
+    (current.previousNames || []).map((n) => n.trim()).filter(Boolean),
+  );
+  const curName = current.name.trim();
+  const curNick = (current.nickname || "").trim();
+  if (next.name != null) {
+    const n = next.name.trim();
+    if (curName && n && curName !== n) aliases.add(curName);
+  }
+  if (next.nickname !== undefined) {
+    const n = next.nickname.trim();
+    if (curNick && n !== curNick) aliases.add(curNick);
+    // ชื่อในร้านตามชื่อเล่นเก่าไปด้วย — เก็บชื่อเล่น/ชื่อเก่าทั้งคู่
+    if (curName && n && curName !== n && curName === curNick) aliases.add(curName);
+  }
+  // อย่าเก็บชื่อปัจจุบันซ้ำใน aliases
+  const live = new Set<string>();
+  if (next.name != null && next.name.trim()) live.add(next.name.trim());
+  else if (curName) live.add(curName);
+  if (next.nickname !== undefined) {
+    if (next.nickname.trim()) live.add(next.nickname.trim());
+  } else if (curNick) live.add(curNick);
+  return [...aliases].filter((a) => !live.has(a));
 }
 
 /** รายชื่อร้านเท่านั้น — ไม่รวมเงินเดือน/บัญชี (แม้ legacy field ยังอยู่ใน doc) */
@@ -279,10 +323,12 @@ export async function updateEmployee(
   // กันกรณี setEmployeePay พังแล้วชื่อเล่นไม่ถูกบันทึก
   let effective = patch;
   let linkedStaffIdForSync: string | undefined;
+  let currentForAlias: Employee | undefined;
   if (patch.name != null || patch.nickname !== undefined) {
     const curSnap = await getDoc(doc(getDb(), "employees", id));
     if (!curSnap.exists()) throw new Error("ไม่พบพนักงาน");
     const cur = mapEmployeeRoster(id, curSnap.data() as Record<string, unknown>);
+    currentForAlias = cur;
     linkedStaffIdForSync = cur.linkedStaffId;
     const identity = planEmployeeIdentityPatch(cur, {
       name: patch.name,
@@ -309,6 +355,16 @@ export async function updateEmployee(
     const nick = effective.nickname?.trim() || "";
     roster.nickname = nick ? nick : deleteField();
     hasRosterPatch = true;
+  }
+  if (currentForAlias && (effective.name != null || effective.nickname !== undefined)) {
+    const aliases = mergePreviousNames(currentForAlias, {
+      name: effective.name,
+      nickname: effective.nickname,
+    });
+    if (aliases.length) {
+      roster.previousNames = aliases;
+      hasRosterPatch = true;
+    }
   }
   if (patch.active != null) {
     roster.active = patch.active;

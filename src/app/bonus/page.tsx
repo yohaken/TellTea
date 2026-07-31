@@ -446,8 +446,13 @@ function BonusView() {
       if (byId) return byId;
       return report.rows.find((r) => namesMatch(r.workerName, myEmployee.name)) || null;
     }
-    return pickMyBonusRow(report, employees, staff?.displayName);
-  }, [shopPayView, personalRow, report, employees, staff?.displayName, myEmployee]);
+    return pickMyBonusRow(
+      report,
+      employees,
+      staff?.displayName,
+      staff?.employeeId,
+    );
+  }, [shopPayView, personalRow, report, employees, staff?.displayName, staff?.employeeId, myEmployee]);
 
   const bonusByEmployee = useMemo(() => {
     const map: Record<string, number> = {};

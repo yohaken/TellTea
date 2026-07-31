@@ -67,14 +67,32 @@ export function namesMatch(a: string, b: string) {
   return x === y || x.includes(y) || y.includes(x);
 }
 
+/** ชื่อปัจจุบัน · ชื่อเล่น · ชื่อเก่า — คนเดียวกันหลังเปลี่ยนชื่อ */
+export function employeeMatchesName(
+  employee: Pick<Employee, "name" | "nickname" | "previousNames">,
+  rawName: string,
+): boolean {
+  if (!rawName.trim()) return false;
+  if (namesMatch(employee.name, rawName)) return true;
+  if (employee.nickname && namesMatch(employee.nickname, rawName)) return true;
+  return (employee.previousNames || []).some((n) => namesMatch(n, rawName));
+}
+
+export function findEmployeeByWorkedName(
+  roster: Employee[],
+  rawName: string,
+): Employee | undefined {
+  return roster.find((e) => employeeMatchesName(e, rawName));
+}
+
 export function findWorkerName(names: string[], roster: Employee[], hint?: string) {
   if (hint) {
-    const fromHint = roster.find((e) => namesMatch(e.name, hint));
+    const fromHint = findEmployeeByWorkedName(roster, hint);
     if (fromHint) return fromHint.name;
     if (names.some((n) => namesMatch(n, hint))) return hint;
   }
   for (const n of names) {
-    const hit = roster.find((e) => namesMatch(e.name, n));
+    const hit = findEmployeeByWorkedName(roster, n);
     if (hit) return hit.name;
   }
   return names[0] || "";
@@ -128,54 +146,86 @@ export function computeMonthBonus(
   const deductionLines = buildBonusDeductionLines(monthCounts, deductionRules);
   const shopDeductPct = computeShopDeductPct(monthCounts, deductionRules);
 
-  const byName = new Map<
-    string,
-    { workerId: string; otMain: number; prodBonus: number; workedThisMonth: boolean }
-  >();
+  type BonusSlot = {
+    workerId: string;
+    workerName: string;
+    otMain: number;
+    prodBonus: number;
+    workedThisMonth: boolean;
+  };
+
+  /** คีย์ด้วย employeeId — คนเดียวกันแม้ชื่อในแถวเก่าเป็น x1 */
+  const byId = new Map<string, BonusSlot>();
 
   for (const emp of active) {
-    byName.set(emp.name, {
+    byId.set(emp.id, {
       workerId: emp.id,
+      workerName: emp.name,
       otMain: 0,
       prodBonus: 0,
       workedThisMonth: false,
     });
   }
 
-  function ensureWorker(name: string) {
-    const canonical = findWorkerName([name], active) || name;
-    if (!byName.has(canonical)) {
-      byName.set(canonical, {
-        workerId: active.find((e) => namesMatch(e.name, canonical))?.id || canonical,
+  function ensureByEmployee(emp: Employee): BonusSlot {
+    let slot = byId.get(emp.id);
+    if (!slot) {
+      slot = {
+        workerId: emp.id,
+        workerName: emp.name,
         otMain: 0,
         prodBonus: 0,
         workedThisMonth: false,
-      });
+      };
+      byId.set(emp.id, slot);
+    } else {
+      slot.workerName = emp.name;
     }
-    return canonical;
+    return slot;
   }
 
-  /** นับคนในแถว — ใช้ workerIds ก่อน แล้วค่อยชื่อ (กันเปลี่ยนชื่อแล้วโบนัสแตกเป็น 2 แถว) */
+  function ensureOrphanName(rawName: string): BonusSlot {
+    const key = `name:${rawName.trim().toLowerCase()}`;
+    let slot = byId.get(key);
+    if (!slot) {
+      slot = {
+        workerId: key,
+        workerName: rawName.trim(),
+        otMain: 0,
+        prodBonus: 0,
+        workedThisMonth: false,
+      };
+      byId.set(key, slot);
+    }
+    return slot;
+  }
+
+  /** นับคนในแถว — workerIds ก่อน · ชื่อ/ชื่อเก่าต่อ · กันแตกเป็น 2 คน */
   function creditEntryWorkers(
     row: { workerIds?: string[]; workerNames?: string[] },
-    credit: (slot: { otMain: number; prodBonus: number; workedThisMonth: boolean }) => void,
+    credit: (slot: BonusSlot) => void,
   ) {
     const credited = new Set<string>();
-    for (const id of row.workerIds || []) {
-      const emp = active.find((e) => e.id === id);
+    const ids = row.workerIds || [];
+    for (const id of ids) {
+      const emp =
+        active.find((e) => e.id === id) || employees.find((e) => e.id === id);
       if (!emp) continue;
-      const name = ensureWorker(emp.name);
-      credit(byName.get(name)!);
+      credit(ensureByEmployee(emp));
       credited.add(emp.id);
     }
     for (const rawName of row.workerNames || []) {
-      const matched = active.find((e) => namesMatch(e.name, rawName));
-      if (matched && credited.has(matched.id)) continue;
-      const name = ensureWorker(rawName);
-      const emp = active.find((e) => namesMatch(e.name, name));
-      if (emp && credited.has(emp.id)) continue;
-      credit(byName.get(name)!);
-      if (emp) credited.add(emp.id);
+      const matched = findEmployeeByWorkedName(active, rawName)
+        || findEmployeeByWorkedName(employees, rawName);
+      if (matched) {
+        if (credited.has(matched.id)) continue;
+        credit(ensureByEmployee(matched));
+        credited.add(matched.id);
+        continue;
+      }
+      // มี id ในแถวแล้ว — ข้ามชื่อเก่าที่แมปไม่ได้ (เช่น x1 หลังเป็น jay)
+      if (ids.length > 0) continue;
+      credit(ensureOrphanName(rawName));
     }
   }
 
@@ -195,20 +245,20 @@ export function computeMonthBonus(
     });
   }
 
-  const salesSharePeople = [...byName.values()].filter((s) => s.workedThisMonth).length;
+  const salesSharePeople = [...byId.values()].filter((s) => s.workedThisMonth).length;
   const employeeCount = salesSharePeople;
   const salesShareEach =
     salesSharePeople > 0 ? round2(totalSalesPool / salesSharePeople) : 0;
 
-  const rows: WorkerMonthBonus[] = [...byName.entries()]
-    .map(([workerName, slot]) => {
+  const rows: WorkerMonthBonus[] = [...byId.values()]
+    .map((slot) => {
       const salesShare = slot.workedThisMonth ? salesShareEach : 0;
       const total = round2(salesShare + slot.prodBonus + slot.otMain);
       const deductAmount = round2(total * (shopDeductPct / 100));
       const remaining = round2(Math.max(0, total - deductAmount));
       return {
         workerId: slot.workerId,
-        workerName,
+        workerName: slot.workerName,
         salesShare,
         prodBonus: slot.prodBonus,
         otMain: slot.otMain,
@@ -242,8 +292,18 @@ export function pickMyBonusRow(
   report: MonthBonusReport,
   roster: Employee[],
   displayName?: string,
+  employeeId?: string,
 ): WorkerMonthBonus | null {
+  if (employeeId) {
+    const byId = report.rows.find((r) => r.workerId === employeeId);
+    if (byId) return byId;
+  }
   if (!displayName?.trim()) return null;
+  const linked = findEmployeeByWorkedName(roster, displayName);
+  if (linked) {
+    const byId = report.rows.find((r) => r.workerId === linked.id);
+    if (byId) return byId;
+  }
   return report.rows.find((r) => namesMatch(r.workerName, displayName)) || null;
 }
 
@@ -273,7 +333,7 @@ export function computePersonalBonusRow(input: {
     const c = computeOtBonus(row);
     const onRow =
       row.workerIds?.includes(employee.id) ||
-      row.workerNames.some((n) => namesMatch(n, employee.name));
+      row.workerNames.some((n) => employeeMatchesName(employee, n));
     if (!onRow) continue;
     otMain = round2(otMain + c.bonusPerPerson);
     worked = true;
@@ -282,7 +342,7 @@ export function computePersonalBonusRow(input: {
     const c = computeProdBonus(row);
     const onRow =
       row.workerIds?.includes(employee.id) ||
-      row.workerNames.some((n) => namesMatch(n, employee.name));
+      row.workerNames.some((n) => employeeMatchesName(employee, n));
     if (!onRow) continue;
     prodBonus = round2(prodBonus + c.bonusPerPerson);
     worked = true;
