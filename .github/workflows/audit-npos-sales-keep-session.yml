@@ -7,6 +7,11 @@ on:
         description: "BO session code to keep (last 12 chars), e.g. 785414397411"
         required: true
         default: "785414397411"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/audit-npos-sales-keep-session.mjs"
+      - ".github/workflows/audit-npos-sales-keep-session.yml"
 
 jobs:
   audit:
@@ -29,7 +34,8 @@ jobs:
       - name: Audit leftover sales/sessions
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          KEEP_SESSION_CODE: ${{ inputs.keep_session_code }}
+          # Prefer dispatch input; on push use default keep session (first real BO round).
+          KEEP_SESSION_CODE: ${{ inputs.keep_session_code || '785414397411' }}
           OUT_DIR: artifacts/npos-sales-audit
         run: |
           mkdir -p artifacts/npos-sales-audit
