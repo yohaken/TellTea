@@ -604,6 +604,20 @@ export function PosSessionsSlimTable({
             <span role="columnheader" className="npos-slim-num">
               PP
             </span>
+            <span
+              role="columnheader"
+              className="npos-slim-num"
+              title="เงินสดที่นับในลิ้นชักตอนปิดกะ"
+            >
+              นับ
+            </span>
+            <span
+              role="columnheader"
+              className="npos-slim-num"
+              title="ยอดนำส่ง = นับ − ทอนค้างรอบถัดไป"
+            >
+              นำส่ง
+            </span>
             <span role="columnheader">ปิดรอบ</span>
           </div>
 
@@ -683,6 +697,32 @@ export function PosSessionsSlimTable({
                   </span>
                   <span role="cell" className="npos-slim-num">
                     {moneyOrDash(row.pp)}
+                  </span>
+                  <span
+                    role="cell"
+                    className="npos-slim-num npos-slim-strong"
+                    title={
+                      row.open
+                        ? "ยังไม่ปิดกะ"
+                        : row.counted != null
+                          ? `นับในลิ้นชัก ${moneyOrDash(row.counted)}`
+                          : "ยังไม่มีตัวเลขนับ (ปิดจากหลังร้านหรือ APK เก่า)"
+                    }
+                  >
+                    {row.open || row.counted == null ? "—" : moneyOrDash(row.counted)}
+                  </span>
+                  <span
+                    role="cell"
+                    className="npos-slim-num"
+                    title={
+                      row.open
+                        ? "ยังไม่ปิดกะ"
+                        : row.remit != null
+                          ? `นำส่ง ${moneyOrDash(row.remit)}`
+                          : "ยังไม่มียอดนำส่ง"
+                    }
+                  >
+                    {row.open || row.remit == null ? "—" : moneyOrDash(row.remit)}
                   </span>
                   <span role="cell" className="npos-slim-close-cell">
                     {row.open && onForceClose ? (
@@ -772,7 +812,8 @@ export function PosSessionsSlimTable({
 
       <p className="muted npos-slim-foot">
         รอบ = กะ nPos · คอลัมน์กระชับ · รหัสรอบซ่อนเมื่อจอแคบ · รอบเปิดอยู่ขึ้นบนพร้อมยอด realtime ·
-        คอลัมน์รวม = เวลารวมของรอบ · ปิดกะที่แท็บเล็ตเท่านั้นเป็นหลัก ·{" "}
+        คอลัมน์รวม = เวลารวมของรอบ · <strong>สด</strong> = ยอดขายเงินสด · <strong>นับ</strong> /
+        <strong>นำส่ง</strong> = เงินที่กรอกตอนปิดกะจากแท็บเล็ต · ปิดกะที่แท็บเล็ตเท่านั้นเป็นหลัก ·{" "}
         <strong>ปิดรอบ</strong> จากหลังร้าน · <strong>ลบที่เลือก</strong> ลบรอบ+บิลถาวร ·
         แท็บเล็ตรับสัญญาณผ่าน heartbeat (~5วิ) · ไม่เตะเครื่อง · จบบิลในตะกร้าได้แล้วเปิดรอบใหม่
       </p>

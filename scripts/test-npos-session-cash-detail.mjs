@@ -9,8 +9,8 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 511/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 143/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 512/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 144/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+112/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.89"/);
 assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1\.14\.89"/);
@@ -48,6 +48,9 @@ assert.match(map, /remitAmount/);
 const slim = read("src/components/PosSessionsSlimTable.tsx");
 assert.match(slim, /dropNotes|npos-slim-drop-notes/);
 assert.match(slim, /นำส่ง|discrepancyLabel/);
+assert.match(slim, /columnheader[^\n]*นับ|title=\"เงินสดที่นับ/);
+assert.match(slim, /row\.counted|closingCashCounted/);
+assert.match(slim, /นำส่ง/);
 
 const css = read("src/app/globals.css");
 assert.match(css, /\.npos-slim-drop-notes/);
