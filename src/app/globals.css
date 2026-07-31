@@ -5803,6 +5803,18 @@ body.modal-open .main-panel {
   white-space: nowrap;
 }
 
+.payroll-combined-hint {
+  margin: 0.35rem 0 0.55rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.payroll-combined-breakdown {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  line-height: 1.45;
+}
+
 .payroll-cell-meta {
   font-size: 0.66rem;
   line-height: 1.25;

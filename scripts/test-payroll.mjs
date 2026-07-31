@@ -111,4 +111,76 @@ function periodMonthEndMs(periodMonth) {
 assert.equal(periodMonthEndMs("2026-06"), bangkokNoonMs(2026, 5, 30));
 assert.equal(periodMonthEndMs("2026-02"), bangkokNoonMs(2026, 1, 28));
 
+function listPendingMonthEndBonusPairs(items, periodMonth) {
+  const pending = items.filter(
+    (i) => i.periodMonth === periodMonth && i.status === "pending",
+  );
+  const byEmp = new Map();
+  for (const item of pending) {
+    const list = byEmp.get(item.employeeId) || [];
+    list.push(item);
+    byEmp.set(item.employeeId, list);
+  }
+  const pairs = [];
+  for (const [, rows] of byEmp) {
+    const salary = rows.find((r) => r.kind === "salary_month_end");
+    const bonus = rows.find((r) => r.kind === "bonus");
+    if (!salary || !bonus) continue;
+    pairs.push({
+      employeeId: salary.employeeId,
+      transferTotal: round2(salary.amount + bonus.amount),
+    });
+  }
+  return pairs;
+}
+
+const pairItems = [
+  {
+    employeeId: "a",
+    periodMonth: "2026-07",
+    status: "pending",
+    kind: "salary_month_end",
+    amount: 4000,
+  },
+  {
+    employeeId: "a",
+    periodMonth: "2026-07",
+    status: "pending",
+    kind: "bonus",
+    amount: 1200,
+  },
+  {
+    employeeId: "a",
+    periodMonth: "2026-07",
+    status: "pending",
+    kind: "salary_mid",
+    amount: 5000,
+  },
+  {
+    employeeId: "b",
+    periodMonth: "2026-07",
+    status: "pending",
+    kind: "salary_month_end",
+    amount: 3000,
+  },
+  {
+    employeeId: "c",
+    periodMonth: "2026-07",
+    status: "paid",
+    kind: "salary_month_end",
+    amount: 3000,
+  },
+  {
+    employeeId: "c",
+    periodMonth: "2026-07",
+    status: "pending",
+    kind: "bonus",
+    amount: 500,
+  },
+];
+const pairs = listPendingMonthEndBonusPairs(pairItems, "2026-07");
+assert.equal(pairs.length, 1);
+assert.equal(pairs[0].employeeId, "a");
+assert.equal(pairs[0].transferTotal, 5200);
+
 console.log("test-payroll: ok");

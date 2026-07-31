@@ -88,9 +88,25 @@ export type PayrollItem = {
   bonusRemaining: number;
   /** true เมื่อตัดยอดเบิกค้างของพนักงานแล้วตอนจ่าย */
   advanceApplied: boolean;
+  /**
+   * รหัสโอนรวมสิ้นเดือน+โบนัส (สลิปเดียว mark จ่าย 2 แถว)
+   * ว่าง = จ่ายแยกรายการ
+   */
+  combinedPayId: string;
   createdAt: number;
   updatedAt: number;
   createdBy: string;
+};
+
+/** คู่รอโอนรวม: เงินเดือนสิ้นเดือน + โบนัส คนเดียวกันในเดือนเดียวกัน */
+export type PayrollMonthEndBonusPair = {
+  employeeId: string;
+  employeeName: string;
+  periodMonth: string;
+  salary: PayrollItem;
+  bonus: PayrollItem;
+  /** ยอดโอนรวมสุทธิ */
+  transferTotal: number;
 };
 
 export const PAYROLL_SLIP_MAX = 4;
@@ -302,10 +318,77 @@ function mapPayrollItem(id: string, data: Record<string, unknown>): PayrollItem 
     salaryBase: round2(Number(data.salaryBase) || 0),
     bonusRemaining: round2(Number(data.bonusRemaining) || 0),
     advanceApplied: Boolean(data.advanceApplied),
+    combinedPayId: String(data.combinedPayId || ""),
     createdAt: Number(data.createdAt) || 0,
     updatedAt: Number(data.updatedAt) || Number(data.createdAt) || 0,
     createdBy: String(data.createdBy || ""),
   };
+}
+
+const KIND_SORT_ORDER: Record<PayrollKind, number> = {
+  salary_mid: 0,
+  salary_month_end: 1,
+  bonus: 2,
+  salary_special: 3,
+};
+
+/** เรียงคิว: ชื่อ → ประเภท (กลาง / สิ้นเดือน / โบนัส / จ่ายแยก) → วันโอน */
+export function comparePayrollQueueRows(a: PayrollItem, b: PayrollItem): number {
+  if (a.status === "pending" && b.status !== "pending") return -1;
+  if (a.status !== "pending" && b.status === "pending") return 1;
+  const byName = a.employeeName.localeCompare(b.employeeName, "th");
+  if (byName) return byName;
+  const byKind = (KIND_SORT_ORDER[a.kind] ?? 9) - (KIND_SORT_ORDER[b.kind] ?? 9);
+  if (byKind) return byKind;
+  return a.dueDate - b.dueDate || a.id.localeCompare(b.id);
+}
+
+/**
+ * จับคู่ pending สิ้นเดือน + โบนัส คนละคู่ในเดือน
+ * (กลางเดือน / จ่ายแยก ไม่เข้าโอนรวม)
+ */
+export function listPendingMonthEndBonusPairs(
+  items: PayrollItem[],
+  periodMonth: string,
+): PayrollMonthEndBonusPair[] {
+  const pending = items.filter(
+    (i) => i.periodMonth === periodMonth && i.status === "pending",
+  );
+  const byEmp = new Map<string, PayrollItem[]>();
+  for (const item of pending) {
+    const list = byEmp.get(item.employeeId) || [];
+    list.push(item);
+    byEmp.set(item.employeeId, list);
+  }
+  const pairs: PayrollMonthEndBonusPair[] = [];
+  for (const [, rows] of byEmp) {
+    const salary = rows.find((r) => r.kind === "salary_month_end");
+    const bonus = rows.find((r) => r.kind === "bonus");
+    if (!salary || !bonus) continue;
+    pairs.push({
+      employeeId: salary.employeeId,
+      employeeName: salary.employeeName || bonus.employeeName,
+      periodMonth,
+      salary,
+      bonus,
+      transferTotal: round2(salary.amount + bonus.amount),
+    });
+  }
+  pairs.sort((a, b) => a.employeeName.localeCompare(b.employeeName, "th"));
+  return pairs;
+}
+
+export function findPendingMonthEndBonusPairForItem(
+  items: PayrollItem[],
+  item: PayrollItem,
+): PayrollMonthEndBonusPair | null {
+  if (item.status !== "pending") return null;
+  if (item.kind !== "salary_month_end" && item.kind !== "bonus") return null;
+  return (
+    listPendingMonthEndBonusPairs(items, item.periodMonth).find(
+      (p) => p.employeeId === item.employeeId,
+    ) || null
+  );
 }
 
 export async function getPayrollSchedule(): Promise<PayrollSchedule> {
@@ -638,6 +721,7 @@ export async function generatePayrollForPeriod(input: {
         salaryBase: plan.salaryBase(emp),
         bonusRemaining: plan.bonusRemaining(emp),
         advanceApplied: false,
+        combinedPayId: "",
         updatedAt: now,
         createdBy,
       };
@@ -810,6 +894,7 @@ export async function createSpecialPayrollItem(input: {
     salaryBase: round2(Number(emp.monthlySalary) || 0),
     bonusRemaining: 0,
     advanceApplied: false,
+    combinedPayId: "",
     createdAt: now,
     updatedAt: now,
     createdBy,
@@ -879,6 +964,8 @@ export async function markPayrollPaid(input: {
   note?: string;
   prodEntries?: ProdEntry[];
   otEntries?: OtEntry[];
+  /** ถ้าระบุ = จ่ายเป็นชุดโอนรวม (เก็บรหัสคู่บนแถว) */
+  combinedPayId?: string;
 }): Promise<string> {
   const paidBy = input.paidBy.trim();
   if (!paidBy) throw new Error("ไม่พบผู้จ่าย");
@@ -896,6 +983,7 @@ export async function markPayrollPaid(input: {
     .filter(Boolean)
     .slice(0, PAYROLL_SLIP_MAX);
   const note = (input.note ?? item.note).trim();
+  const combinedPayId = (input.combinedPayId || "").trim();
   const description = payrollDescription(item);
   const bookDate =
     item.accountDate ||
@@ -906,6 +994,18 @@ export async function markPayrollPaid(input: {
     ) ||
     Date.now();
 
+  const paidPatch = {
+    status: "paid" as const satisfies PayrollStatus,
+    slipUrls,
+    note,
+    paidAt: Date.now(),
+    paidBy,
+    advanceApplied: true,
+    accountDate: bookDate,
+    updatedAt: Date.now(),
+    ...(combinedPayId ? { combinedPayId } : {}),
+  };
+
   // ลงบัญชีตามเงินที่โอนจริง (สุทธิ) — ส่วนหักเบิกเคยลงตอนจ่ายเบิกแล้ว
   // งวดสิ้นเดือนใช้ accountDate = สิ้นเดือน ไม่ใช่วันที่โอน (ม.1)
   if (!(item.amount > 0) && item.advanceDeduct > 0) {
@@ -914,21 +1014,15 @@ export async function markPayrollPaid(input: {
       await adjustEmployeeAdvanceBalance(item.employeeId, -item.advanceDeduct);
     }
     await updateDoc(ref, {
-      status: "paid" satisfies PayrollStatus,
-      slipUrls,
-      note,
-      paidAt: Date.now(),
-      paidBy,
+      ...paidPatch,
       ownerBookId: "",
-      advanceApplied: true,
-      accountDate: bookDate,
-      updatedAt: Date.now(),
     });
     return "";
   }
 
   const bookNote = [
     note,
+    combinedPayId ? "โอนรวมสิ้นเดือน+โบนัส" : "",
     item.advanceDeduct > 0
       ? `ก่อนหัก ฿${item.grossAmount.toFixed(2)} · หักเบิก ฿${item.advanceDeduct.toFixed(2)}`
       : "",
@@ -958,15 +1052,8 @@ export async function markPayrollPaid(input: {
   }
 
   await updateDoc(ref, {
-    status: "paid" satisfies PayrollStatus,
-    slipUrls,
-    note,
-    paidAt: Date.now(),
-    paidBy,
+    ...paidPatch,
     ownerBookId,
-    advanceApplied: true,
-    accountDate: bookDate,
-    updatedAt: Date.now(),
   });
 
   if (item.kind === "bonus" && input.prodEntries && input.otEntries) {
@@ -980,6 +1067,89 @@ export async function markPayrollPaid(input: {
   }
 
   return ownerBookId;
+}
+
+/**
+ * โอนครั้งเดียว: สิ้นเดือน + โบนัส — สลิปเดียวกัน · mark จ่ายทั้ง 2 แถว
+ * ลงบช.แยก 2 แถว (ชนิดชัด) สลิปชุดเดียวกัน · คิวยังแยกให้พนักงานเห็นรายละเอียด
+ */
+export async function markPayrollPaidCombined(input: {
+  salaryId: string;
+  bonusId: string;
+  paidBy: string;
+  slipUrls?: string[];
+  note?: string;
+  prodEntries?: ProdEntry[];
+  otEntries?: OtEntry[];
+}): Promise<{ combinedPayId: string; transferTotal: number }> {
+  const paidBy = input.paidBy.trim();
+  if (!paidBy) throw new Error("ไม่พบผู้จ่าย");
+
+  const salaryRef = doc(getDb(), "payrollItems", input.salaryId);
+  const bonusRef = doc(getDb(), "payrollItems", input.bonusId);
+  const [salarySnap, bonusSnap] = await Promise.all([
+    getDoc(salaryRef),
+    getDoc(bonusRef),
+  ]);
+  if (!salarySnap.exists() || !bonusSnap.exists()) {
+    throw new Error("ไม่พบรายการสิ้นเดือนหรือโบนัส");
+  }
+  const salary = mapPayrollItem(
+    salarySnap.id,
+    salarySnap.data() as Record<string, unknown>,
+  );
+  const bonus = mapPayrollItem(
+    bonusSnap.id,
+    bonusSnap.data() as Record<string, unknown>,
+  );
+  if (salary.kind !== "salary_month_end" || bonus.kind !== "bonus") {
+    throw new Error("โอนรวมใช้ได้เฉพาะสิ้นเดือน + โบนัส");
+  }
+  if (salary.employeeId !== bonus.employeeId) {
+    throw new Error("รายการคนละคน — โอนรวมไม่ได้");
+  }
+  if (salary.periodMonth !== bonus.periodMonth) {
+    throw new Error("รายการคนละเดือน — โอนรวมไม่ได้");
+  }
+  if (salary.status !== "pending" || bonus.status !== "pending") {
+    throw new Error("โอนรวมได้เฉพาะเมื่อทั้งสิ้นเดือนและโบนัสยังรอโอน");
+  }
+
+  const transferTotal = round2(salary.amount + bonus.amount);
+  if (!(transferTotal > 0) && !(salary.advanceDeduct > 0) && !(bonus.advanceDeduct > 0)) {
+    throw new Error("ยอดโอนรวมต้องมากกว่า 0");
+  }
+
+  const slipUrls = (input.slipUrls ?? [])
+    .map((u) => u.trim())
+    .filter(Boolean)
+    .slice(0, PAYROLL_SLIP_MAX);
+  const combinedPayId = `c_${salary.employeeId}_${salary.periodMonth}_${Date.now()}`;
+  const sharedNote = [
+    (input.note || "").trim(),
+    `โอนรวม ฿${transferTotal.toFixed(2)} (สิ้นเดือน ฿${salary.amount.toFixed(2)} + โบนัส ฿${bonus.amount.toFixed(2)})`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  await markPayrollPaid({
+    id: salary.id,
+    paidBy,
+    slipUrls,
+    note: sharedNote,
+    combinedPayId,
+  });
+  await markPayrollPaid({
+    id: bonus.id,
+    paidBy,
+    slipUrls,
+    note: sharedNote,
+    prodEntries: input.prodEntries,
+    otEntries: input.otEntries,
+    combinedPayId,
+  });
+
+  return { combinedPayId, transferTotal };
 }
 
 /**

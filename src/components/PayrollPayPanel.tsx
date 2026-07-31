@@ -6,10 +6,13 @@ import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { listActiveEmployeesWithPay, type Employee } from "@/lib/employees";
 import type { OtEntry } from "@/lib/ot";
 import {
+  comparePayrollQueueRows,
   createSpecialPayrollItem,
   generatePayrollForPeriod,
   kindUsesMonthEndAccount,
+  listPendingMonthEndBonusPairs,
   markPayrollPaid,
+  markPayrollPaidCombined,
   PAYROLL_KIND_LABELS,
   PAYROLL_SLIP_MAX,
   PAYROLL_STATUS_LABELS,
@@ -23,6 +26,7 @@ import {
   type PayrollGenerateScope,
   type PayrollItem,
   type PayrollKind,
+  type PayrollMonthEndBonusPair,
   type PayrollSchedule,
 } from "@/lib/payroll";
 import type { ProdEntry } from "@/lib/production";
@@ -39,7 +43,9 @@ function fmt(n: number) {
 }
 
 type PayTarget = {
+  mode: "single" | "combined";
   item: PayrollItem;
+  pair?: PayrollMonthEndBonusPair;
   slipUrls: string[];
   note: string;
 };
@@ -135,12 +141,18 @@ export function PayrollPayPanel({
     if (filter === "pending") rows = rows.filter((i) => i.status === "pending");
     else if (filter === "void") rows = rows.filter((i) => i.status === "void");
     else if (filter !== "all") rows = rows.filter((i) => i.kind === filter);
-    return [...rows].sort((a, b) => {
-      if (a.status === "pending" && b.status !== "pending") return -1;
-      if (a.status !== "pending" && b.status === "pending") return 1;
-      return a.dueDate - b.dueDate || a.employeeName.localeCompare(b.employeeName, "th");
-    });
+    return [...rows].sort(comparePayrollQueueRows);
   }, [periodItems, filter]);
+
+  const combinedPairs = useMemo(
+    () => listPendingMonthEndBonusPairs(periodItems, periodMonth),
+    [periodItems, periodMonth],
+  );
+  const combinedPairByEmp = useMemo(() => {
+    const map = new Map<string, PayrollMonthEndBonusPair>();
+    for (const p of combinedPairs) map.set(p.employeeId, p);
+    return map;
+  }, [combinedPairs]);
 
   const voidCount = useMemo(
     () => periodItems.filter((i) => i.status === "void").length,
@@ -376,20 +388,58 @@ export function PayrollPayPanel({
     }
   }
 
+  function openSinglePay(item: PayrollItem) {
+    setPayTarget({
+      mode: "single",
+      item,
+      slipUrls: [...item.slipUrls],
+      note: item.note,
+    });
+  }
+
+  function openCombinedPay(pair: PayrollMonthEndBonusPair) {
+    setPayTarget({
+      mode: "combined",
+      item: pair.salary,
+      pair,
+      slipUrls: [...pair.salary.slipUrls, ...pair.bonus.slipUrls].filter(
+        (u, i, arr) => u && arr.indexOf(u) === i,
+      ),
+      note: "",
+    });
+  }
+
   async function onConfirmPay() {
     if (!payTarget || !canPay) return;
     setBusy(true);
     try {
-      await markPayrollPaid({
-        id: payTarget.item.id,
-        paidBy: actorId,
-        slipUrls: payTarget.slipUrls,
-        note: payTarget.note,
-        prodEntries,
-        otEntries,
-      });
-      setPayTarget(null);
-      onInfo?.(`จ่ายแล้ว · ${payrollDescription(payTarget.item)}`);
+      if (payTarget.mode === "combined" && payTarget.pair) {
+        const result = await markPayrollPaidCombined({
+          salaryId: payTarget.pair.salary.id,
+          bonusId: payTarget.pair.bonus.id,
+          paidBy: actorId,
+          slipUrls: payTarget.slipUrls,
+          note: payTarget.note,
+          prodEntries,
+          otEntries,
+        });
+        setPayTarget(null);
+        onInfo?.(
+          `โอนรวมแล้ว · ${payTarget.pair.employeeName} · ฿${fmt(result.transferTotal)}` +
+            ` (สิ้นเดือน ฿${fmt(payTarget.pair.salary.amount)} + โบนัส ฿${fmt(payTarget.pair.bonus.amount)})`,
+        );
+      } else {
+        await markPayrollPaid({
+          id: payTarget.item.id,
+          paidBy: actorId,
+          slipUrls: payTarget.slipUrls,
+          note: payTarget.note,
+          prodEntries,
+          otEntries,
+        });
+        setPayTarget(null);
+        onInfo?.(`จ่ายแล้ว · ${payrollDescription(payTarget.item)}`);
+      }
     } catch (err) {
       onError((err as Error).message || "บันทึกจ่ายไม่สำเร็จ");
     } finally {
@@ -491,7 +541,8 @@ export function PayrollPayPanel({
             </button>
           </div>
           <p className="muted payroll-actions-hint">
-            เบิกเงินก่อนรอบ (เช่น วันที่ 28) →「บันทึกเบิก」วัน+สลิปลงบช. · ถ้ามีคิวรอโอนอยู่แล้วให้ยกเลิกแล้วกด「สร้างเงินเดือน」หักอัตโนมัติ ·
+            ปิดเดือน: สร้างเงินเดือน → หักโบนัสนิ่ง → สร้างโบนัส →「โอนรวม」สลิปเดียว (คิวยังแยกสิ้นเดือน/โบนัสให้พนักงานเห็น) ·
+            อย่ากดโอนเงินเดือนก่อนถ้าจะรวมโบนัส · เบิกก่อนรอบ →「บันทึกเบิก」·
             จ่ายแยก = ยอดกำหนดเอง · สิ้นเดือนลงบัญชีวันสิ้นเดือน (โอนวันที่{" "}
             {schedule.salarySplits[1]?.dayOfMonth ?? 1})
             {missingSalary
@@ -535,6 +586,14 @@ export function PayrollPayPanel({
         ))}
       </div>
 
+      {shopView && combinedPairs.length > 0 && (filter === "pending" || filter === "all") ? (
+        <p className="muted payroll-combined-hint">
+          พร้อมโอนรวม {combinedPairs.length} คน · รวม ฿
+          {fmt(combinedPairs.reduce((s, p) => s + p.transferTotal, 0))} — กด「โอนรวม」ที่แถวสิ้นเดือน
+          (รายการยังแยกสิ้นเดือน/โบนัสให้พนักงานเห็น)
+        </p>
+      ) : null}
+
       {!visible.length ? (
         <p className="empty">
           {shopView
@@ -564,12 +623,28 @@ export function PayrollPayPanel({
                 const dueLabel = kindUsesMonthEndAccount(item.kind)
                   ? `${formatDateShortBe(item.dueDate)}`
                   : formatDateShortBe(item.dueDate);
+                const pair = combinedPairByEmp.get(item.employeeId);
+                const canCombined =
+                  !!pair &&
+                  item.status === "pending" &&
+                  (item.kind === "salary_month_end" || item.kind === "bonus");
+                const showCombinedBtn =
+                  canCombined && item.kind === "salary_month_end" && canPay;
                 const metaBits: string[] = [];
                 if (kindUsesMonthEndAccount(item.kind)) {
                   metaBits.push(`บช.${formatDateShortBe(item.accountDate || item.dueDate)}`);
                 }
                 if (item.advanceDeduct > 0) {
                   metaBits.push(`หักเบิก ฿${fmt(item.advanceDeduct)}`);
+                }
+                if (item.combinedPayId) {
+                  metaBits.push("โอนรวมสิ้นเดือน+โบนัส");
+                } else if (canCombined && item.kind === "bonus") {
+                  metaBits.push(`รวมโอน ฿${fmt(pair!.transferTotal)}`);
+                } else if (canCombined && item.kind === "salary_month_end") {
+                  metaBits.push(
+                    `+โบนัส ฿${fmt(pair!.bonus.amount)} = โอน ฿${fmt(pair!.transferTotal)}`,
+                  );
                 }
                 if (shopView && accountBits.length) {
                   metaBits.push(accountBits.join(" "));
@@ -618,20 +693,33 @@ export function PayrollPayPanel({
                       <td className="payroll-col-act col-act">
                         {item.status === "pending" && canPay ? (
                           <div className="payroll-inline-actions">
+                            {showCombinedBtn ? (
+                              <button
+                                type="button"
+                                className="primary-btn payroll-table-btn"
+                                disabled={busy}
+                                title={`โอนครั้งเดียว ฿${fmt(pair!.transferTotal)} · สิ้นเดือน+โบนัส`}
+                                onClick={() => openCombinedPay(pair!)}
+                              >
+                                โอนรวม
+                              </button>
+                            ) : null}
                             <button
                               type="button"
-                              className="primary-btn payroll-table-btn"
+                              className={
+                                showCombinedBtn
+                                  ? "ghost-btn payroll-table-btn"
+                                  : "primary-btn payroll-table-btn"
+                              }
                               disabled={busy || (!canPay && item.amount > 0)}
                               title={
-                                item.amount > 0 && !canPay ? "ต้องมีสิทธิ์บช.เจ้าของ" : undefined
+                                item.amount > 0 && !canPay
+                                  ? "ต้องมีสิทธิ์บช.เจ้าของ"
+                                  : showCombinedBtn
+                                    ? "โอนเฉพาะรายการนี้ (ไม่รวมโบนัส)"
+                                    : undefined
                               }
-                              onClick={() =>
-                                setPayTarget({
-                                  item,
-                                  slipUrls: [...item.slipUrls],
-                                  note: item.note,
-                                })
-                              }
+                              onClick={() => openSinglePay(item)}
                             >
                               {item.amount > 0 ? "โอน" : "เคลียร์"}
                             </button>
@@ -676,11 +764,33 @@ export function PayrollPayPanel({
             aria-label="ยืนยันการโอน"
           >
             <h2 className="panel-title" style={{ fontSize: "1rem", marginBottom: "0.65rem" }}>
-              ยืนยันโอน · ฿{fmt(payTarget.item.amount)}
+              {payTarget.mode === "combined" && payTarget.pair
+                ? `ยืนยันโอนรวม · ฿${fmt(payTarget.pair.transferTotal)}`
+                : `ยืนยันโอน · ฿${fmt(payTarget.item.amount)}`}
             </h2>
-            <p className="muted" style={{ marginBottom: "0.75rem" }}>
-              {payrollDescription(payTarget.item)}
-            </p>
+            {payTarget.mode === "combined" && payTarget.pair ? (
+              <div className="muted" style={{ marginBottom: "0.75rem" }}>
+                <p style={{ margin: "0 0 0.35rem" }}>
+                  {payTarget.pair.employeeName} · โอนครั้งเดียว สลิปเดียว
+                </p>
+                <ul className="payroll-combined-breakdown">
+                  <li>
+                    สิ้นเดือน ฿{fmt(payTarget.pair.salary.amount)}
+                    {payTarget.pair.salary.advanceDeduct > 0
+                      ? ` (หักเบิก ฿${fmt(payTarget.pair.salary.advanceDeduct)})`
+                      : ""}
+                  </li>
+                  <li>โบนัส ฿{fmt(payTarget.pair.bonus.amount)}</li>
+                </ul>
+                <p style={{ margin: "0.35rem 0 0" }}>
+                  พนักงานยังเห็น 2 รายการแยกในคิวของตัวเอง
+                </p>
+              </div>
+            ) : (
+              <p className="muted" style={{ marginBottom: "0.75rem" }}>
+                {payrollDescription(payTarget.item)}
+              </p>
+            )}
             <PhotoAttachMultiField
               label="สลิปโอน"
               values={payTarget.slipUrls}
@@ -688,8 +798,16 @@ export function PayrollPayPanel({
               onError={onError}
               max={PAYROLL_SLIP_MAX}
               storageFolder="payroll"
-              storageSlotKey={payTarget.item.id}
-              hint="แนบสลิปหลังโอน (ถ้ามี)"
+              storageSlotKey={
+                payTarget.mode === "combined" && payTarget.pair
+                  ? `${payTarget.pair.salary.id}_combined`
+                  : payTarget.item.id
+              }
+              hint={
+                payTarget.mode === "combined"
+                  ? "แนบสลิปหลังโอนยอดรวม (ติดทั้ง 2 รายการ)"
+                  : "แนบสลิปหลังโอน (ถ้ามี)"
+              }
             />
             <label className="field" style={{ marginTop: "0.75rem" }}>
               <span>หมายเหตุ</span>
@@ -703,9 +821,11 @@ export function PayrollPayPanel({
             </label>
             <p className="muted form-hint-inline">
               จะลงบช.เจ้าของเป็นค่าใช้จ่าย (sga)
-              {payTarget.item.kind === "bonus"
-                ? " และล็อกแถวผลิต/ชงของคนนี้ในเดือนอ้างอิง"
-                : ""}
+              {payTarget.mode === "combined"
+                ? " 2 แถว (สิ้นเดือน + โบนัส) สลิปชุดเดียวกัน"
+                : payTarget.item.kind === "bonus"
+                  ? " และล็อกแถวผลิต/ชงของคนนี้ในเดือนอ้างอิง"
+                  : ""}
             </p>
             <div className="module-form-actions">
               <button
@@ -722,7 +842,11 @@ export function PayrollPayPanel({
                 disabled={busy || !canPay}
                 onClick={() => void onConfirmPay()}
               >
-                {busy ? "กำลังบันทึก..." : "ยืนยันจ่าย"}
+                {busy
+                  ? "กำลังบันทึก..."
+                  : payTarget.mode === "combined"
+                    ? "ยืนยันโอนรวม"
+                    : "ยืนยันจ่าย"}
               </button>
             </div>
           </div>
