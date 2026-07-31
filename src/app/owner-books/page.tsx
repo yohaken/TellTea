@@ -1188,7 +1188,7 @@ function OwnerEntryModal({
           ) : null}
 
           <PhotoAttachMultiField
-            label="รูปใบเสร็จ"
+            label="รูปใบเสร็จ / แคปแชท"
             values={receiptUrls}
             onChange={onReceiptUrlsChange}
             onError={reportError}
@@ -1199,8 +1199,8 @@ function OwnerEntryModal({
               useVatFirst
                 ? hasVat
                   ? "เพิ่มรูปได้ · VAT ยืนยันแล้ว"
-                  : "ถ่าย/แนบ — AI อ่านรายการ ยอด"
-                : "ถ่ายหรือแนบ — AI ใส่วันที่ รายการ และยอดให้อัตโนมัติ"
+                  : "บิล หรือแคปแชทถ้าไม่มีบิล · AI อ่านยอด"
+                : "บิลหรือแคปแชท — AI ใส่วันที่ รายการ ยอด"
             }
           />
           {!useVatFirst && extractStatus === "loading" ? (

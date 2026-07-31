@@ -91,14 +91,14 @@ export function VatFirstCapturePanel({
         แนบบิลให้ครบ (สลิป + ใบกำกับ) — ระบบอ่านยอดภาษีก่อน แล้วค่อยกรอกรายการ
       </p>
       <PhotoAttachMultiField
-        label="รูปใบเสร็จ / ใบกำกับ"
+        label="รูปใบเสร็จ / แคปแชท"
         values={receiptUrls}
         onChange={onReceiptUrlsChange}
         onError={onError}
         max={maxPhotos}
         storageFolder={storageFolder}
         storageSlotKey={storageSlotKey}
-        hint="ถ่าย/แนบ — AI อ่านยอดภาษีมูลค่าเพิ่มก่อน"
+        hint="บิล หรือแคปแชทถ้าไม่มีบิล · AI อ่าน VAT ก่อน"
       />
       {extractStatus === "loading" ? (
         <p className="muted vat-first-status" aria-live="polite">

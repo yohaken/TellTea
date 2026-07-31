@@ -1,12 +1,10 @@
 /**
  * Document evidence policy for cash-out create (staff ledger + owner books + bill notice).
  *
- * Product choice: serious always-on notice + one acknowledge checkbox — NOT a second
- * VAT-style multi-step gate. Keep showing on every create (do not dismiss forever):
- * staff who misunderstand are exactly why the reminder must stay visible.
- *
- * Purchase: receipt / tax invoice / PO — not slip-only, not goods photo alone.
- * Staff-pay: transfer slip + chat is enough.
+ * Always-on inline notice + one ack (not a VAT-style multi-step / not a popup).
+ * Purchase: receipt / tax invoice / PO preferred; chat screenshot OK if none.
+ * Not enough alone: transfer slip only, or goods photo only.
+ * Staff-pay: slip + chat.
  */
 
 export type EvidenceDocPolicy = "purchase" | "staff_transfer";
@@ -33,6 +31,9 @@ const STAFF_TRANSFER_HINTS = [
   "ot พนักงาน",
   "โอทีพนักงาน",
 ] as const;
+
+/** Informal sellers with no paper bill (e.g. farm coffee beans via chat). */
+export const EVIDENCE_CHAT_FALLBACK = "ไม่มีบิลจริงๆ → แคปแชท/หน้าสั่งซื้อได้";
 
 export function isStaffTransferDescription(description: string): boolean {
   const text = String(description || "")
@@ -61,7 +62,6 @@ export function isSlipOnlySignal(opts: {
 
 /**
  * มีแต่รูปสินค้า / แพ็กกิ้ง — ไม่มีใบเสร็จ ใบกำกับ หรือสลิป
- * (เกิดขึ้นน้อย แต่พบบ่อยเมื่อพนักงานยังไม่เข้าใจกติกาเอกสาร)
  */
 export function isGoodsOnlySignal(opts: {
   goodsOnly?: boolean;
@@ -118,7 +118,6 @@ export type EvidenceNoticeCopy = {
   title: string;
   body: string;
   ackLabel: string;
-  /** true when AI saw weak evidence on a purchase (escalate tone) */
   escalate: boolean;
   weakKind: EvidenceWeakKind;
 };
@@ -148,9 +147,9 @@ export function evidenceNoticeCopy(opts: {
   if (policy === "staff_transfer") {
     return {
       policy,
-      title: "โอนให้พนักงาน · หลักฐานที่ยอมรับได้",
-      body: "กรณีโอนค่าแรง / ทดลองรายวัน / เบิกเข้าบัญชีพนักงาน — สลิปโอน + แชทยืนยันก็เพียงพอ (ไม่บังคับใบกำกับภาษี)",
-      ackLabel: "เข้าใจแล้ว · มีสลิปและแชทตามนี้",
+      title: "โอนพนักงาน · หลักฐาน",
+      body: "ค่าแรง / ทดลอง / เบิก — สลิปโอน + แคปแชทก็พอ",
+      ackLabel: "เข้าใจแล้ว · มีสลิปและแชท",
       escalate: false,
       weakKind: "none",
     };
@@ -159,9 +158,9 @@ export function evidenceNoticeCopy(opts: {
   if (weak === "slip_only") {
     return {
       policy,
-      title: "พบสลิปโอนอย่างเดียว — ยังไม่พอสำหรับสรรพากร",
-      body: "สลิปโอนอย่างเดียวไม่พอ — ต้องมีใบเสร็จ ใบกำกับภาษี หรือเช็ค/ใบสั่งสินค้าอย่างน้อยหนึ่งอย่าง · ถ่ายแค่สินค้าก็ไม่พอ สรรพากรเรียกตรวจได้",
-      ackLabel: "เข้าใจแล้ว · จะแนบใบเสร็จ/ใบกำกับ ไม่ใช่แค่สลิป",
+      title: "มีแค่สลิปโอน — ยังไม่พอ",
+      body: `ต้องมีใบเสร็จ/ใบกำกับ หรือเช็คสั่ง · ${EVIDENCE_CHAT_FALLBACK}`,
+      ackLabel: "เข้าใจแล้ว · จะแนบบิลหรือแคปแชท",
       escalate: true,
       weakKind: weak,
     };
@@ -170,9 +169,9 @@ export function evidenceNoticeCopy(opts: {
   if (weak === "goods_only") {
     return {
       policy,
-      title: "พบแค่รูปสินค้า — ยังไม่มีเอกสารจ่าย",
-      body: "ถ่ายสินค้า/ของที่ซื้ออย่างเดียวไม่พอ — ต้องมีใบเสร็จ ใบกำกับภาษี หรือเช็คสั่งสินค้า (สลิปโอนอย่างเดียวก็ยังไม่พอ) สรรพากรเรียกตรวจได้",
-      ackLabel: "เข้าใจแล้ว · จะแนบใบเสร็จ/ใบกำกับ ไม่ใช่แค่รูปสินค้า",
+      title: "มีแค่รูปสินค้า — ยังไม่พอ",
+      body: `ต้องมีใบเสร็จ/ใบกำกับ หรือเช็คสั่ง · ${EVIDENCE_CHAT_FALLBACK}`,
+      ackLabel: "เข้าใจแล้ว · จะแนบบิลหรือแคปแชท",
       escalate: true,
       weakKind: weak,
     };
@@ -180,18 +179,15 @@ export function evidenceNoticeCopy(opts: {
 
   return {
     policy,
-    title: "เอกสารหลักฐานรายการจ่าย",
-    body: "รายการซื้อ/จ่ายต้องมีใบเสร็จ ใบกำกับภาษี หรือเช็คสั่งสินค้าอย่างน้อยหนึ่งอย่าง — ไม่ใช้สลิปโอนอย่างเดียว และถ่ายแค่สินค้าก็ไม่พอ เพราะสรรพากรเรียกตรวจได้",
-    ackLabel: "เข้าใจแล้ว · มีเอกสารหลักฐานครบตามนี้",
+    title: "หลักฐานรายการจ่าย",
+    body: `ใบเสร็จ / ใบกำกับ / เช็คสั่ง — ไม่ใช่แค่สลิปหรือรูปสินค้า · ${EVIDENCE_CHAT_FALLBACK}`,
+    ackLabel: "เข้าใจแล้ว · มีบิลหรือแคปแชทแล้ว",
     escalate: false,
     weakKind: "none",
   };
 }
 
-/**
- * Create cash-out always requires one ack (shared staff + owner).
- * Keep showing every create — do not “remember forever” / dismiss permanently.
- */
+/** Create cash-out always requires one ack every time (never dismiss forever). */
 export function evidenceAckRequired(_opts?: { isCreate?: boolean }): boolean {
   return true;
 }

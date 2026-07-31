@@ -914,7 +914,7 @@ function BillNoticeFormModal({
           ) : null}
 
           <PhotoAttachMultiField
-            label="อัพบิล"
+            label="อัพบิล / แคปแชท"
             values={receiptUrls}
             onChange={onReceiptUrlsChange}
             onError={reportError}
@@ -925,8 +925,8 @@ function BillNoticeFormModal({
               useVatFirst
                 ? hasVat
                   ? "เพิ่มรูปได้ · VAT ยืนยันแล้ว"
-                  : "ถ่ายรูปบิล — AI อ่านรายการ ยอด"
-                : "ถ่ายรูปบิล — AI อ่านวันที่ รายการ ยอดให้อัตโนมัติ · แก้เองได้ทุกช่อง"
+                  : "บิล หรือแคปแชทถ้าไม่มีบิล · AI อ่านยอด"
+                : "บิลหรือแคปแชท — AI อ่านวันที่ รายการ ยอด"
             }
           />
           {!useVatFirst ? (

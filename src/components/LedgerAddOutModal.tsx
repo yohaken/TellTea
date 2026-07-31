@@ -541,7 +541,7 @@ export function LedgerAddOutModal({
               />
             </div>
             <PhotoAttachMultiField
-              label="รูปใบเสร็จ"
+              label="รูปใบเสร็จ / แคปแชท"
               values={receiptUrls}
               onChange={(next) => {
                 const prev = receiptUrls;
@@ -556,7 +556,7 @@ export function LedgerAddOutModal({
               hint={
                 hasVat
                   ? "เพิ่มรูปได้ · VAT ยืนยันแล้ว"
-                  : "ถ่าย/แนบ — AI อ่านรายการ ยอด VAT"
+                  : "บิล หรือแคปแชทถ้าไม่มีบิล · AI อ่านยอด"
               }
             />
             <LedgerTypeField
