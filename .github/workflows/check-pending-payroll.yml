@@ -1,0 +1,28 @@
+name: Check pending payroll queues
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/check-pending-payroll.yml"
+      - "scripts/void-pending-group-salary.mjs"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: List pending group salary (dry-run)
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          # Bypass one-shot flag; do not APPLY — list only
+          FORCE: "1"
+        run: node scripts/void-pending-group-salary.mjs
