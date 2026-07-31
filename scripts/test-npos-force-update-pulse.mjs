@@ -1,5 +1,5 @@
 /**
- * Gate: mandatory APK update via BO sync pulse — no Later snooze.
+ * Gate: mandatory APK update via BO sync pulse — no Later snooze, no idle wait.
  */
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
@@ -30,16 +30,18 @@ const prompt = read(
 assert.match(prompt, /reassertPendingUpdate|showPending/);
 assert.match(prompt, /laterBtn\.setVisibility\(View\.GONE\)/);
 assert.match(prompt, /clearPopupDismiss/);
-assert.match(prompt, /UpdateBusyGate|isSellBusy|deferWhileBusy/);
 assert.match(prompt, /UpdateNagVoice/);
 assert.match(prompt, /maybeAutoInstall|openInstallPermission|canInstallPackages/);
 assert.match(prompt, /runPermissionNudge|permissionNudgeTask = this::runPermissionNudge/);
-assert.match(prompt, /รอตะกร้าว่าง|บังคับอัปเดต/);
+assert.match(prompt, /บังคับอัปเดตทันที/);
+assert.doesNotMatch(prompt, /UpdateBusyGate|isSellBusy|deferWhileBusy/);
+assert.doesNotMatch(prompt, /รอตะกร้าว่าง/);
 assert.doesNotMatch(prompt, /dismissPopupFor\(activity,\s*UpdateConfig\.POPUP_SNOOZE_MS\)/);
 assert.doesNotMatch(prompt, /30 \* 60_000L/);
 
 assert.ok(
-  existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/update/UpdateBusyGate.java")),
+  !existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/update/UpdateBusyGate.java")),
+  "UpdateBusyGate removed — force update never waits on cart",
 );
 assert.ok(
   existsSync(join(root, "npos-telltea/app/src/main/java/app/telltea/npos/update/UpdateNagVoice.java")),
@@ -52,7 +54,7 @@ assert.match(nag, /3000L|3_000L/);
 
 assert.ok(existsSync(join(root, "docs/npos-force-update-idle-checklist.md")));
 const idleDoc = read("docs/npos-force-update-idle-checklist.md");
-assert.match(idleDoc, /บังคับติดตั้งเสมอ|ตะกร้าว่าง|สิทธิ์ติดตั้ง/);
+assert.match(idleDoc, /บังคับติดตั้งทันที|ไม่รอ|สิทธิ์ติดตั้ง/);
 
 const prefs = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/update/ResumePrefs.java",
@@ -71,9 +73,9 @@ const sell = read(
 assert.match(sell, /refreshMenuButton/);
 assert.match(sell, /setVisibility\(View\.GONE\)/);
 assert.match(sell, /PosShellNav\.bind\(this, PosShellNav\.ACTIVE_SELL, null\)/);
-assert.match(sell, /setBusyGate/);
-assert.match(sell, /onBusyStateChanged/);
-assert.match(sell, /cart\.isEmpty/);
+assert.match(sell, /setBeforeInstall/);
+assert.doesNotMatch(sell, /setBusyGate/);
+assert.doesNotMatch(sell, /onBusyStateChanged/);
 
 const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
 assert.match(strings, /update_popup_body_force/);
