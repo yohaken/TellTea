@@ -1,40 +1,27 @@
 # nPos — แคปจอจริง (MediaProjection) + สิทธิ์แคปแยก
 
-อัปเดต: **1.14.96** · `versionCode` 119 · `APP_BUILD` 530 · `POS_BUILD` 147
+อัปเดต: **1.14.102** · `versionCode` 125 · `APP_BUILD` 544 · `POS_BUILD` 156
 
-## ปัญหาเดิม
-- BO เห็นจอเขียว เพราะ `statusShot` สีแบรนด์ถูกอัปเป็น `ok=true`
-- PixelCopy ใช้ได้แค่หน้าต่างแอปที่ foreground — พอแอปหลับ/ไม่มี Activity → แคปไม่ติด
-- พนักงานกดไม่รับสิทธิ์แล้วเงียบ — หลังร้านแคปไม่ได้
-- **รายงานว่างแล้วยัง ack** → คำสั่ง「สั่งแคปจอ」หาย · ไม่ retry
-- เฟรมดำแรกของ VirtualDisplay ถูก reject แล้วไม่ fallback
-- BO สร้าง proxy URL จาก `shotId` อย่างเดียว → thumb 404 แม้ไม่มีรูปใน role นั้น
+## รากปัญหาที่ทำให้「ไม่เคยแคปได้」(เครื่อง 12570f0f)
 
-## แก้รอบนี้
+1. **VirtualDisplay poll บล็อก Handler ตัวเดียวกับ ImageReader** → callback เฟรมไม่ทันวิ่ง → `no_usable_frame` ตลอด  
+2. เครื่องนี้ **API &lt; 26** → PixelCopy ใช้ไม่ได้ แต่โค้ดเก่าคืน `api_lt_26` ทันที **ไม่ลอง `View.draw`**  
+3. ผลรวม: MediaProjection “live” แต่ไม่มีรูป · fallback ก็ตาย → ops แดงซ้ำ
+
+## แก้ใน 1.14.102
 
 | หัวข้อ | ทำอย่างไร |
 |--------|----------|
-| แคปจริง | `MediaProjection` + FGS `mediaProjection` + VirtualDisplay 1 เฟรม |
-| ข้ามเฟรมดำ | poll VirtualDisplay จนได้เฟรมที่ไม่ดำ/ว่าง · reject เขียว/ดำ → ลอง PixelCopy ต่อ |
-| ไม่หลอก BO | ไม่ส่ง JPEG ปลอมเขียวเป็นสำเร็จ · ไม่ invent proxy URL เมื่อไม่มีรูป |
-| Ack เมื่อมีรูป | `lastCaptureAckAt` / local ack **เฉพาะเมื่อ `hasImages`** — ว่างแล้ว heartbeat ลองใหม่ |
-| ไม่ลบรูปเก่า | รายงานว่างไม่ wipe `latestPrimaryUrl` |
-| สิทธิ์แคป | แยกจาก BT/แจ้งเตือน — dialog «แชร์หน้าจอ» ของระบบ |
-| หลังอนุญาต | รอ projection live สูงสุด ~3 วิ ก่อนแคป (กัน race เปิด dialog ซ้ำ) |
-| **เด้งจนกว่าจะรับ** | สั่งแคปจาก BO / หลังอัปเดต → ถ้าไม่รับ จะเด้งซ้ำทุก ~2.5 วิ จนกว่าจะกดอนุญาต |
-| interval | หลัง deny ถ่วง 6 ชม. — คนละเรื่องกับคำสั่งแคปมือจาก BO |
-
-## ไฟล์หลัก
-- `CaptureConsentActivity` · `CaptureProjectionService` · `CaptureProjectionPrefs` · `CapturePrefs`
-- `ScreenCapture` · `functions/npos-capture.js` · `src/lib/npos-capture-media.ts`
-- `InstallResultReceiver` · `MainActivity` · `SellActivity`
+| VirtualDisplay | poll `acquireLatestImage()` บน **thread แยก** · ไม่ starve listener |
+| เฟรมดำ | รอ settle · reject ดำ · ลองครึ่งขนาดถ้าเต็มจอล้ม |
+| API &lt; 26 | primary/secondary ใช้ **`View.draw` / draw_decor** เป็น fallback (ไม่คืน `api_lt_26`) |
+| API ≥ 26 | PixelCopy ก่อน แล้วค่อย draw |
+| Ack เมื่อมีรูป | `hasImages` เท่านั้น — ว่างแล้ว heartbeat ลองใหม่ |
 
 ## คนเทสเคาน์เตอร์
-1. อัปเป็น **1.14.96** → เด้งขอแชร์หน้าจอ → กดอนุญาต
-2. หลังร้านสั่งแคป → เห็นจอขายจริง (ไม่ใช่เขียวเปล่า / ไม่ 404)
-3. ปฏิเสธครั้งหนึ่ง → **เด้งอีกภายใน ~2–3 วินาที** จนกว่าจะกดอนุญาต
-4. แจ้งเตือนค้าง «nPos · แคปจอหลังร้าน» = สิทธิ์ยัง live
-5. ถ้าครั้งแรกไม่มีรูป → สถานะยัง「รอแคป…」แล้วได้รูปใน heartbeat ถัดไป
+1. อัปเป็น **1.14.102** → อนุญาตแชร์หน้าจอ  
+2. หลังร้าน「สั่งแคปจอ」→ ต้องมีรูปจอขาย (และจอลูกค้าถ้ามี)  
+3. ops ไม่ควรเหลือ `api_lt_26` / `no_usable_frame` ติดกันเป็นแถว
 
 ```bash
 node scripts/test-npos-capture-projection.mjs

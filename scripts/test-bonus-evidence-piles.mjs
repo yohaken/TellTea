@@ -14,7 +14,7 @@ const panel = read("src/components/BonusDeductionEvidencePanel.tsx");
 const page = read("src/app/bonus/page.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD\s*=\s*543/);
+assert.match(version, /APP_BUILD\s*=\s*544/);
 assert.match(lib, /cautionUrls/);
 assert.match(lib, /cautionNote/);
 assert.match(lib, /export type BonusEvidencePileId/);

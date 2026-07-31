@@ -218,7 +218,7 @@ public final class ScreenCapture {
         // 1) Real screen via MediaProjection (fixes green placeholder / background cases).
         if (CaptureProjectionService.hasLiveProjection()) {
             try {
-                Bitmap proj = CaptureProjectionService.grabPrimary(2500);
+                Bitmap proj = CaptureProjectionService.grabPrimary(3500);
                 CaptureShot shot = acceptRealFrame(proj, "media_projection");
                 if (shot != null) return shot;
             } catch (Exception e) {
@@ -234,17 +234,22 @@ public final class ScreenCapture {
         if (activity == null) {
             return CaptureShot.fail("app_background · ไม่มีหน้าจอ foreground");
         }
-        if (Build.VERSION.SDK_INT < 26) {
-            return CaptureShot.fail("api_lt_26");
-        }
+        // PixelCopy needs API 26+. Older POS tablets (common API 22–25) must use View.draw.
         try {
-            Bitmap bmp = pixelCopyWindow(activity.getWindow(), 2500);
+            Bitmap bmp = null;
+            String detail = null;
+            if (Build.VERSION.SDK_INT >= 26) {
+                bmp = pixelCopyWindow(activity.getWindow(), 2500);
+                if (bmp != null) detail = "pixelcopy";
+            }
             if (bmp == null) {
                 bmp = drawDecorBitmap(activity);
+                if (bmp != null) detail = "draw_decor";
             }
-            CaptureShot shot = acceptRealFrame(bmp, bmp != null ? "pixelcopy" : null);
+            CaptureShot shot = acceptRealFrame(bmp, detail);
             if (shot != null) return shot;
-            return CaptureShot.fail("pixelcopy_null");
+            return CaptureShot.fail(
+                    Build.VERSION.SDK_INT < 26 ? "draw_decor_null" : "pixelcopy_null");
         } catch (Exception e) {
             try {
                 Bitmap fallback = drawDecorBitmap(activity);
@@ -344,9 +349,6 @@ public final class ScreenCapture {
         if (sec == null) {
             return CaptureShot.fail("missing");
         }
-        if (Build.VERSION.SDK_INT < 26) {
-            return CaptureShot.fail("api_lt_26");
-        }
         try {
             // Prefer live customer UI (full detail) — never overwrite with probe if showing.
             Bitmap live = captureLiveCustomerOrNull();
@@ -369,7 +371,10 @@ public final class ScreenCapture {
         if (live == null) return null;
         Window window = live.getWindow();
         if (window == null) return null;
-        Bitmap bmp = pixelCopyWindow(window, 2500);
+        Bitmap bmp = null;
+        if (Build.VERSION.SDK_INT >= 26) {
+            bmp = pixelCopyWindow(window, 2500);
+        }
         if (bmp == null) {
             bmp = drawViewBitmap(live);
         }
@@ -427,7 +432,10 @@ public final class ScreenCapture {
         try {
             Window window = presentation.getWindow();
             if (window == null) throw new IllegalStateException("no_window");
-            Bitmap bmp = pixelCopyWindow(window, 2500);
+            Bitmap bmp = null;
+            if (Build.VERSION.SDK_INT >= 26) {
+                bmp = pixelCopyWindow(window, 2500);
+            }
             if (bmp == null) {
                 bmp = drawViewBitmap(presentation);
             }
@@ -468,6 +476,7 @@ public final class ScreenCapture {
     }
 
     private static Bitmap pixelCopyWindow(Window window, long timeoutMs) throws Exception {
+        if (Build.VERSION.SDK_INT < 26) return null;
         View decor = window.getDecorView();
         int w = decor.getWidth();
         int h = decor.getHeight();
