@@ -15,7 +15,7 @@ assert.match(read("npos-telltea/app/build.gradle"), /com\.sunmi:printerlibrary:1
 assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1\.14\.92"/);
 assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 115/);
 assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 146/);
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 527/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 528/);
 
 assert.match(
   read("npos-telltea/app/src/main/AndroidManifest.xml"),
