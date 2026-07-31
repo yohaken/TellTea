@@ -1,7 +1,7 @@
 # nPos — อัปเดตบังคับจากชีพจรนับถอยหลัง
 
-อัปเดต: **1.14.100** · ดูต่อ [npos-force-update-idle-checklist.md](./npos-force-update-idle-checklist.md)  
-(ต่อจาก 1.14.47 — ปิดปุ่ม「ปิดชั่วคราว」ทั้งหมดใน 1.14.55 · idle-gate ถูกถอดใน 1.14.100 ตามมติเจ้าของ)
+อัปเดต: **1.14.101** · ดูต่อ [npos-force-update-idle-checklist.md](./npos-force-update-idle-checklist.md)  
+(ต่อจาก 1.14.47 — ปิดปุ่ม「ปิดชั่วคราว」ทั้งหมดใน 1.14.55 · idle-gate ถูกถอดใน 1.14.101 ตามมติเจ้าของ)
 
 ## มติ
 

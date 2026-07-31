@@ -81,6 +81,20 @@ const strings = read("npos-telltea/app/src/main/res/values/strings.xml");
 assert.match(strings, /update_popup_body_force/);
 assert.match(strings, /update_popup_body_need_permission/);
 assert.match(strings, /btn_allow_install_permission/);
+assert.match(strings, /btn_install_update">อัปเดต</);
+
+const updateLayout = read(
+  "npos-telltea/app/src/main/res/layout/include_update_popup.xml",
+);
+assert.match(updateLayout, /layout_gravity="center"/);
+assert.match(updateLayout, /288dp/);
+assert.match(updateLayout, /#99000000/);
+assert.match(updateLayout, /updatePopupGo/);
+assert.match(
+  updateLayout,
+  /updatePopupLater[\s\S]*android:visibility="gone"/,
+);
+assert.match(prompt, /MATCH_PARENT/);
 
 assert.match(
   read("npos-telltea/app/src/main/res/layout/activity_sell.xml"),

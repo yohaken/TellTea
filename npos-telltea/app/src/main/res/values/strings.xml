@@ -12,7 +12,7 @@
     <string name="status_allow_install">อนุญาต「ติดตั้งแอปนี้」ก่อน — ระบบจะอัปเดตต่อทันที</string>
     <string name="status_error">เช็คอัปเดตไม่สำเร็จ: %1$s</string>
     <string name="btn_check_update">เช็คอัปเดต</string>
-    <string name="btn_install_update">อัปเดตเลย</string>
+    <string name="btn_install_update">อัปเดต</string>
     <string name="btn_allow_install_permission">เปิดสิทธิ์ติดตั้ง</string>
     <string name="update_wait_cart_clear">รอเก็บเงิน / ตะกร้าว่างก่อนอัปเดต</string>
     <string name="btn_diagnose">ตรวจจอ / ฮาร์ดแวร์ (มือ)</string>
@@ -29,10 +29,10 @@
     <string name="nav_shift">รอบการขาย</string>
     <string name="btn_settings">ตั้งค่า</string>
     <string name="banner_update">มีเวอร์ชันใหม่ — กดอัปเดตเลย</string>
-    <string name="update_popup_title">ต้องอัปเดตแอป</string>
-    <string name="update_popup_body">เวอร์ชันเซิร์ฟเวอร์ใหม่กว่า — อัปเดตเป็น %1$s (%2$d) ทันที · กลับหน้าร้านอัตโนมัติ · ปิดไว้ก่อนได้สั้นๆ แล้วระบบจะเตือนอีก</string>
-    <string name="update_popup_body_force">เวอร์ชันใหม่ %1$s (%2$d) — กำลังบังคับอัปเดต · กลับหน้าขายอัตโนมัติหลังติดตั้ง</string>
-    <string name="update_popup_body_need_permission">เวอร์ชันใหม่ %1$s (%2$d) — เปิดสิทธิ์「ติดตั้งแอปที่ไม่รู้จัก」ให้ nPos ก่อน แล้วระบบจะอัปเดตต่อเอง</string>
+    <string name="update_popup_title">ต้องอัปเดต</string>
+    <string name="update_popup_body">เวอร์ชันใหม่ %1$s (%2$d) — กดอัปเดต</string>
+    <string name="update_popup_body_force">เวอร์ชัน %1$s (%2$d)\nกดอัปเดตเพื่อติดตั้งทันที</string>
+    <string name="update_popup_body_need_permission">เวอร์ชัน %1$s (%2$d)\nเปิดสิทธิ์ติดตั้งแอปก่อน แล้วกดอัปเดต</string>
     <string name="update_popup_later">ปิดชั่วคราว</string>
     <string name="nav_lock_pin">กลับหน้าหลัก</string>
     <string name="nav_web_open_fail">เปิดลิงก์ไม่สำเร็จ</string>
