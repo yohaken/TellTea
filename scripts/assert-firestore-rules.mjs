@@ -36,9 +36,11 @@ const REQUIRED_MATCHES = [
   "evidencePhotos",
   "monthlyIncome",
   "stock",
+  "stockCosts",
   "employees",
   "employeePay",
   "payrollItems",
+  "bonusLivePool",
   "bonusMonthCloses",
   "prodEntries",
   "otEntries",
@@ -98,6 +100,10 @@ assert.match(rules, /resource\.data\.createdBy == actorId\(\)/);
 assert.match(rules, /resource\.data\.amountIn == 0/);
 // payrollItems: self-scoped get for bonus staff
 assert.match(rules, /resource\.data\.employeeId == staffEmployeeId\(\)/);
+assert.match(rules, /match \/stockCosts\/\{itemId\}/);
+assert.match(rules, /match \/bonusLivePool\/\{monthKey\}/);
+assert.match(rules, /canReadBonusEntry/);
+assert.match(rules, /staffEmployeeId\(\) in resource\.data\.workerIds/);
 assert.match(
   rules,
   /Never deploy a Tax-only firestore\.rules|Canonical Firestore rules|TaxTag/,

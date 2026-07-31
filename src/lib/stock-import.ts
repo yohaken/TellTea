@@ -586,7 +586,6 @@ function stockDocFields(
     qty: input.qty,
     minQty: input.minQty,
     safetyStock: input.safetyStock,
-    unitCost: input.unitCost,
     barcode: input.barcode || null,
     note: "",
     updatedAt: now,
@@ -660,6 +659,15 @@ export async function importStockCsvText(
       ),
     );
     ops += 1;
+    const cost = Number(p.unitCost) || 0;
+    if (cost > 0) {
+      batch.set(
+        doc(db, "stockCosts", ref.id),
+        { unitCost: Math.round(cost * 100) / 100, updatedAt: now },
+        { merge: true },
+      );
+      ops += 1;
+    }
     if (ops >= 400) await flush();
   }
 

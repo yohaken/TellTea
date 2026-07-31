@@ -643,18 +643,34 @@ service cloud.firestore {
       allow read, write: if isOwner();
     }
 
+    // ลบ unitCost legacy ออกจาก stock หลังย้ายไป stockCosts
+    function stockCostMigrateStrip() {
+      return (isOwner() || isOwnerEmail())
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['unitCost', 'updatedAt']);
+    }
+
     match /stock/{itemId} {
       allow read: if hasPerm('stock');
       allow create, delete: if isOwner();
-      // พนักงานปรับยอดได้ — ห้ามเปลี่ยนชื่อ/ต้นทุน (unitCost ยังอยู่ใน doc แต่ UI ซ่อน; ห้ามเขียนทับ)
+      // พนักงานปรับยอดได้ — ห้ามเปลี่ยนชื่อ · ต้นทุนอยู่ stockCosts
       allow update: if isOwner()
+        || stockCostMigrateStrip()
         || (hasPerm('stock')
             && request.resource.data.name == resource.data.name
-            && request.resource.data.unitCost == resource.data.unitCost
             && request.resource.data.qty is number
             && request.resource.data.qty >= 0
             && request.resource.data.minQty is number
-            && request.resource.data.minQty >= 0);
+            && request.resource.data.minQty >= 0
+            && (
+              !request.resource.data.keys().hasAny(['unitCost'])
+              || request.resource.data.unitCost == resource.data.get('unitCost', 0)
+            ));
+    }
+
+    /** ต้นทุนวัตถุดิบ — เจ้าของเท่านั้น */
+    match /stockCosts/{itemId} {
+      allow read, write: if isOwner() || isOwnerEmail();
     }
 
     match /stockMovements/{logId} {
@@ -723,8 +739,19 @@ service cloud.firestore {
       allow read: if isStaff();
       allow write: if staffHubManage();
     }
+    /** อ่าน entry ผลิต/ชง: ทั้งร้าน = เจ้าของ/payrollPay · พนักงาน = อยู่ใน workerIds หรือเป็นคนสร้าง */
+    function canReadBonusEntry(perm) {
+      return isOwner() || isOwnerEmail() || hasPerm('payrollPay')
+        || (hasPerm(perm)
+            && (
+              (staffEmployeeId() != '' && staffEmployeeId() in resource.data.workerIds)
+              || resource.data.createdBy == actorId()
+            ));
+    }
+
     match /prodEntries/{id} {
-      allow read: if hasPerm('production');
+      allow get: if canReadBonusEntry('production');
+      allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm('production');
       allow create: if hasPerm('production') && prodEntryCreate();
       allow update: if hasPerm('production')
         && (isOwner() || bonusEntryStaffUpdate());
@@ -733,11 +760,18 @@ service cloud.firestore {
 
     // โบนัสชงเครื่องดื่ม
     match /otEntries/{id} {
-      allow read: if hasPerm('otBonus');
+      allow get: if canReadBonusEntry('otBonus');
+      allow list: if isOwner() || isOwnerEmail() || hasPerm('payrollPay') || hasPerm('otBonus');
       allow create: if hasPerm('otBonus') && otEntryCreate();
       allow update: if hasPerm('otBonus')
         && (isOwner() || bonusEntryStaffUpdate());
       allow delete: if isOwner();
+    }
+
+    /** พูลโบนัสสรุปเดือน — พนักงานอ่านได้ · เขียนโดยเจ้าของ/คนจ่าย */
+    match /bonusLivePool/{monthKey} {
+      allow read: if hasPerm('bonus');
+      allow create, update, delete: if isOwner() || isOwnerEmail() || hasPerm('payrollPay');
     }
 
     // SmartCheck SOP — บันทึกแนวตั้งต่อรายการ
@@ -758,8 +792,10 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    // legacy collection — งานจริงอยู่ taskTemplates / taskOccurrences · ปิดการเขียนใหม่
     match /assignTasks/{id} {
-      allow read, create, update, delete: if isOwnerEmail();
+      allow read: if isOwner() || isOwnerEmail();
+      allow write: if false;
     }
 
     function isTaskOccurrenceAssignee() {

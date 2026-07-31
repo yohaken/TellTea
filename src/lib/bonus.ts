@@ -227,6 +227,69 @@ export function pickMyBonusRow(
   return report.rows.find((r) => namesMatch(r.workerName, displayName)) || null;
 }
 
+/**
+ * คำนวณแถวโบนัสของพนักงานคนเดียว จาก OT/ผลิตของตัวเอง + พูลสรุป (bonusLivePool)
+ * ใช้เมื่อ staff อ่าน entry ทั้งร้านไม่ได้
+ */
+export function computePersonalBonusRow(input: {
+  otEntries: OtEntry[];
+  prodEntries: ProdEntry[];
+  employee: Employee;
+  year: number;
+  month: number;
+  shopDeductPct: number;
+  totalSalesPool: number;
+  employeeCount: number;
+}): WorkerMonthBonus {
+  const { otEntries, prodEntries, employee, year, month } = input;
+  const otMonth = otEntries.filter((e) => isInMonth(e.date, year, month));
+  const prodMonth = prodEntries.filter((e) => isInMonth(e.date, year, month));
+
+  let otMain = 0;
+  let prodBonus = 0;
+  let worked = false;
+
+  for (const row of otMonth) {
+    const c = computeOtBonus(row);
+    const onRow =
+      row.workerIds?.includes(employee.id) ||
+      row.workerNames.some((n) => namesMatch(n, employee.name));
+    if (!onRow) continue;
+    otMain = round2(otMain + c.bonusPerPerson);
+    worked = true;
+  }
+  for (const row of prodMonth) {
+    const c = computeProdBonus(row);
+    const onRow =
+      row.workerIds?.includes(employee.id) ||
+      row.workerNames.some((n) => namesMatch(n, employee.name));
+    if (!onRow) continue;
+    prodBonus = round2(prodBonus + c.bonusPerPerson);
+    worked = true;
+  }
+
+  const salesShare =
+    worked && input.employeeCount > 0
+      ? round2(input.totalSalesPool / input.employeeCount)
+      : 0;
+  const total = round2(salesShare + prodBonus + otMain);
+  const deductAmount = round2(total * (input.shopDeductPct / 100));
+  const remaining = round2(Math.max(0, total - deductAmount));
+
+  return {
+    workerId: employee.id,
+    workerName: employee.name,
+    salesShare,
+    prodBonus,
+    otMain,
+    total,
+    deductPct: input.shopDeductPct,
+    deductAmount,
+    remaining,
+    workedThisMonth: worked,
+  };
+}
+
 export function thaiMonthYearLabel(year: number, month: number) {
   const months = [
     "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",

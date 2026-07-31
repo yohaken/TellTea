@@ -17,7 +17,7 @@ import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
 import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
-import { listActiveEmployees, type Employee } from "@/lib/employees";
+import { listActiveEmployees, resolveLinkedEmployee, type Employee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import {
   entryHasPhotoFlag,
@@ -184,6 +184,8 @@ function OtView() {
   const { actorId, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
+  /** เห็นทั้งร้าน — เจ้าของ / คนจ่ายเงินเดือน · พนักงานเห็นเฉพาะกะที่มีชื่อตัวเอง */
+  const shopOtView = isOwner || can(staff, "payrollPay");
   const [formOpen, setFormOpen] = useState(false);
   const [entries, setEntries] = useState<OtEntry[]>([]);
   const [workers, setWorkers] = useState<Employee[]>([]);
@@ -222,28 +224,13 @@ function OtView() {
     setCatalogReady(false);
     setEntriesReady(false);
     setChecksReady(false);
-    void reloadCatalog()
-      .then(() => setCatalogReady(true))
-      .catch((err) => {
-        setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ");
-        setCatalogReady(true);
-      });
+    let cancelled = false;
+    let unsubOt: (() => void) | undefined;
 
     const since = historySinceMs;
     const unsubSchedule = subscribeRateSchedule(
       (doc) => setRateSchedule(doc.entries),
       (err) => setError(err.message),
-    );
-    const unsubOt = subscribeOtEntries(
-      (rows) => {
-        setEntries(rows);
-        setEntriesReady(true);
-      },
-      (err) => {
-        setError(err.message || "โหลดรายการไม่สำเร็จ");
-        setEntriesReady(true);
-      },
-      { since },
     );
     const unsubCheck = subscribeChecklistRecords(
       (rows) => {
@@ -256,12 +243,48 @@ function OtView() {
       },
       { since: checkHistorySinceMs() },
     );
+
+    void reloadCatalog()
+      .then(async () => {
+        if (cancelled) return;
+        setCatalogReady(true);
+        const emps = await listActiveEmployees();
+        if (cancelled) return;
+        setWorkers(emps);
+        const filterId = shopOtView
+          ? ""
+          : staff?.employeeId || resolveLinkedEmployee(emps, staff)?.id || "";
+        if (!shopOtView && !filterId) {
+          setEntries([]);
+          setEntriesReady(true);
+          return;
+        }
+        unsubOt = subscribeOtEntries(
+          (rows) => {
+            setEntries(rows);
+            setEntriesReady(true);
+          },
+          (err) => {
+            setError(err.message || "โหลดรายการไม่สำเร็จ");
+            setEntriesReady(true);
+          },
+          { since, ...(filterId ? { workerId: filterId } : {}) },
+        );
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ");
+        setCatalogReady(true);
+        setEntriesReady(true);
+      });
+
     return () => {
+      cancelled = true;
       unsubSchedule();
-      unsubOt();
+      unsubOt?.();
       unsubCheck();
     };
-  }, [staff, historySinceMs]);
+  }, [staff, historySinceMs, shopOtView]);
 
   const openingItems = useMemo(() => openingItemsFromCatalog(checkItems), [checkItems]);
   const closingItems = useMemo(() => closingItemsFromCatalog(checkItems), [checkItems]);

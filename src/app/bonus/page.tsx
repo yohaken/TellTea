@@ -10,6 +10,7 @@ import { PayrollPayPanel } from "@/components/PayrollPayPanel";
 import { PayrollSettingsPanel } from "@/components/PayrollSettingsPanel";
 import { useAuth } from "@/lib/auth";
 import {
+  computeShopDeductPct,
   saveBonusDeductionMonthQty,
   saveBonusDeductionRulePct,
   subscribeBonusDeductionMonth,
@@ -21,12 +22,19 @@ import {
 } from "@/lib/bonus-deductions";
 import {
   computeMonthBonus,
+  computePersonalBonusRow,
   namesMatch,
   parseMonthInput,
   pickMyBonusRow,
   thaiMonthYearLabel,
   type MonthBonusReport,
+  type WorkerMonthBonus,
 } from "@/lib/bonus";
+import {
+  saveBonusLivePool,
+  subscribeBonusLivePool,
+  type BonusLivePool,
+} from "@/lib/bonus-live-pool";
 import {
   closeBonusMonth,
   reportFromCloseSnapshot,
@@ -96,6 +104,7 @@ function BonusView() {
   const [rateSchedule, setRateSchedule] = useState<RateScheduleEntry[]>([]);
   const [payrollSchedule, setPayrollSchedule] = useState<PayrollSchedule>(DEFAULT_PAYROLL_SCHEDULE);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
+  const [livePool, setLivePool] = useState<BonusLivePool | null>(null);
   const [loading, setLoading] = useState(true);
   const [closeBusy, setCloseBusy] = useState(false);
   const [monthClose, setMonthClose] = useState<BonusMonthCloseDoc | null>(null);
@@ -160,18 +169,6 @@ function BonusView() {
       }
     })();
 
-    const monthSince = new Date(year, monthIdx, 1).getTime();
-    const monthUntil = new Date(year, monthIdx + 1, 1).getTime();
-    const unsubOt = subscribeOtEntries(
-      (rows) => setOtEntries(rows),
-      (err) => setError(err.message),
-      { since: monthSince, until: monthUntil },
-    );
-    const unsubProd = subscribeProdEntries(
-      (rows) => setProdEntries(rows),
-      (err) => setError(err.message),
-      { since: monthSince, until: monthUntil },
-    );
     const unsubSettings = subscribeBonusDeductionSettings(
       (settings) => setDeductionSettings(settings),
       (err) => setError(err.message),
@@ -184,15 +181,61 @@ function BonusView() {
       (doc) => setPayrollSchedule(doc),
       (err) => setError(err.message),
     );
+    const unsubPool = !shopPayView
+      ? subscribeBonusLivePool(month, setLivePool, (err) => setError(err.message))
+      : () => undefined;
     return () => {
       cancelled = true;
-      unsubOt();
-      unsubProd();
       unsubSettings();
       unsubSchedule();
       unsubPayrollSchedule();
+      unsubPool();
     };
-  }, [staff, canView, shopPayView, year, monthIdx]);
+  }, [staff, canView, shopPayView, year, monthIdx, month]);
+
+  // OT / ผลิต — ทั้งร้านหรือเฉพาะ workerId ของตัวเอง
+  useEffect(() => {
+    if (!canView) return;
+    const monthSince = new Date(year, monthIdx, 1).getTime();
+    const monthUntil = new Date(year, monthIdx + 1, 1).getTime();
+    if (shopPayView) {
+      const unsubOt = subscribeOtEntries(
+        (rows) => setOtEntries(rows),
+        (err) => setError(err.message),
+        { since: monthSince, until: monthUntil },
+      );
+      const unsubProd = subscribeProdEntries(
+        (rows) => setProdEntries(rows),
+        (err) => setError(err.message),
+        { since: monthSince, until: monthUntil },
+      );
+      return () => {
+        unsubOt();
+        unsubProd();
+      };
+    }
+    const selfId =
+      staff?.employeeId || resolveLinkedEmployee(employees, staff)?.id || "";
+    if (!selfId) {
+      setOtEntries([]);
+      setProdEntries([]);
+      return;
+    }
+    const unsubOt = subscribeOtEntries(
+      (rows) => setOtEntries(rows),
+      (err) => setError(err.message),
+      { since: monthSince, until: monthUntil, workerId: selfId },
+    );
+    const unsubProd = subscribeProdEntries(
+      (rows) => setProdEntries(rows),
+      (err) => setError(err.message),
+      { since: monthSince, until: monthUntil, workerId: selfId },
+    );
+    return () => {
+      unsubOt();
+      unsubProd();
+    };
+  }, [canView, shopPayView, year, monthIdx, staff, employees]);
 
   // คิวจ่าย — ทั้งร้านหรือเฉพาะตัวเอง (rules บังคับกรอง employeeId)
   useEffect(() => {
@@ -242,6 +285,7 @@ function BonusView() {
   }, [canView, month]);
 
   const liveReport = useMemo(() => {
+    if (!shopPayView) return null;
     if (!deductionSettings || !deductionMonth) return null;
     return computeMonthBonus(
       otEntries,
@@ -254,6 +298,7 @@ function BonusView() {
       rateSchedule,
     );
   }, [
+    shopPayView,
     otEntries,
     prodEntries,
     employees,
@@ -263,6 +308,17 @@ function BonusView() {
     monthIdx,
     rateSchedule,
   ]);
+
+  // เจ้าของ/คนจ่าย — เผยพูลให้พนักงานอ่านส่วนแบ่งขายได้โดยไม่เห็น OT ทั้งร้าน
+  useEffect(() => {
+    if (!shopPayView || !liveReport || monthClose?.status === "closed") return;
+    void saveBonusLivePool(month, {
+      totalSalesPool: liveReport.totalSalesPool,
+      totalProdQty: liveReport.totalProdQty,
+      employeeCount: liveReport.employeeCount,
+      shopDeductPct: liveReport.shopDeductPct,
+    }).catch(() => undefined);
+  }, [shopPayView, liveReport, month, monthClose?.status]);
 
   /** Closed month shows frozen snapshot; open month uses live calc. */
   const report = useMemo(() => {
@@ -276,6 +332,45 @@ function BonusView() {
     () => resolveLinkedEmployee(employees, staff),
     [employees, staff],
   );
+
+  // พนักงาน: แถวของตัวเองจาก OT/ผลิตตัวเอง + bonusLivePool (เดือนเปิด)
+  const personalRow = useMemo((): WorkerMonthBonus | null => {
+    if (shopPayView || !myEmployee) return null;
+    if (monthClosed && report) {
+      return (
+        report.rows.find((r) => r.workerId === myEmployee.id) ||
+        report.rows.find((r) => namesMatch(r.workerName, myEmployee.name)) ||
+        null
+      );
+    }
+    const shopDeductPct =
+      livePool?.shopDeductPct ??
+      (deductionSettings && deductionMonth
+        ? computeShopDeductPct(deductionMonth.counts, deductionSettings.rules)
+        : 0);
+    return computePersonalBonusRow({
+      otEntries,
+      prodEntries,
+      employee: myEmployee,
+      year,
+      monthIdx,
+      shopDeductPct,
+      totalSalesPool: livePool?.totalSalesPool ?? 0,
+      employeeCount: livePool?.employeeCount ?? 0,
+    });
+  }, [
+    shopPayView,
+    myEmployee,
+    monthClosed,
+    report,
+    livePool,
+    deductionSettings,
+    deductionMonth,
+    otEntries,
+    prodEntries,
+    year,
+    monthIdx,
+  ]);
 
   // ให้ staff.employeeId ตรงกับชื่อที่ลิงก์ — จำเป็นต่อ rules อ่าน payrollItems
   useEffect(() => {
@@ -299,6 +394,7 @@ function BonusView() {
   }, [myEmployee?.id, employees, historyEmployeeId]);
 
   const myRow = useMemo(() => {
+    if (!shopPayView) return personalRow;
     if (!report) return null;
     if (myEmployee) {
       const byId = report.rows.find((r) => r.workerId === myEmployee.id);
@@ -306,7 +402,7 @@ function BonusView() {
       return report.rows.find((r) => namesMatch(r.workerName, myEmployee.name)) || null;
     }
     return pickMyBonusRow(report, employees, staff?.displayName);
-  }, [report, employees, staff?.displayName, myEmployee]);
+  }, [shopPayView, personalRow, report, employees, staff?.displayName, myEmployee]);
 
   const bonusByEmployee = useMemo(() => {
     const map: Record<string, number> = {};
@@ -476,7 +572,7 @@ function BonusView() {
       {info ? <p className="success-text">{info}</p> : null}
 
       {tab === "pay" ? (
-        loading || !report ? (
+        loading || (shopPayView && !report) ? (
           <p className="empty">กำลังโหลด...</p>
         ) : (
           <PayrollPayPanel
@@ -539,7 +635,7 @@ function BonusView() {
 
       {tab === "bonus" ? (
         <>
-          {loading || !report ? <p className="empty">กำลังโหลด...</p> : null}
+          {loading || (shopPayView && !report) ? <p className="empty">กำลังโหลด...</p> : null}
 
           {/* สรุปพูลทั้งร้าน + ตารางรายคน: เจ้าของ / คนโอนเท่านั้น — พนักงานเห็นแค่ของฉัน */}
           {report && shopPayView ? (
@@ -567,7 +663,7 @@ function BonusView() {
             </p>
           ) : null}
 
-          {!loading && report && myRow ? (
+          {!loading && myRow ? (
             <section className="bonus-my-card">
               <header className="bonus-my-head">
                 <div>
@@ -600,11 +696,14 @@ function BonusView() {
               </dl>
               <p className="muted bonus-live-note">
                 หักตามกติการ้าน · อัปเดตเมื่อมีการกรอกชง / ผลิต · ไม่แสดงยอดคนอื่น
+                {!shopPayView && !livePool && !monthClosed
+                  ? " · ส่วนแบ่งขายจะครบเมื่อเจ้าของเปิดหน้านี้ในเดือนนี้"
+                  : ""}
               </p>
             </section>
           ) : null}
 
-          {!loading && report && !myRow && !shopPayView ? (
+          {!loading && !myRow && !shopPayView ? (
             <p className="muted bonus-no-match">
               {staff?.displayName
                 ? <>ไม่พบชื่อ &quot;{staff.displayName}&quot; ในรายชื่อพนักงาน — ตรวจที่{" "}</>

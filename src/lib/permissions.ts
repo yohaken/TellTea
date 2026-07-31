@@ -26,7 +26,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   production: "ผลิต / โบนัสเบเกอรี่",
   otBonus: "โบนัสชง",
   checklist: "SmartCheck SOP",
-  assignTasks: "งานมอบหมาย",
+  assignTasks: "งานมอบหมาย (เลิกใช้ — แท็บงานเปิดให้ทุกคนที่ล็อกอิน)",
   bonus: "จ่าย / โบนัส",
   ownerBooks: "บช.เจ้าของ",
   pnl: "สรุปรายเดือน",
@@ -56,7 +56,7 @@ export const PERMISSION_GROUPS: { title: string; hint?: string; keys: Permission
   {
     title: "อื่นๆ — เครื่องมือเพิ่ม",
     hint: "แสดงแท็บ อื่นๆ เมื่อเปิดอย่างน้อย 1 สิทธิในกลุ่มนี้",
-    keys: ["ownerBooks", "pnl", "transferIn", "exportData", "staffManage", "payrollPay", "assignTasks"],
+    keys: ["ownerBooks", "pnl", "transferIn", "exportData", "staffManage", "payrollPay"],
   },
 ];
 

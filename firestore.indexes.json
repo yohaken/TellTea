@@ -49,6 +49,24 @@
       ]
     },
     {
+      "collectionGroup": "otEntries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "workerIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "date", "order": "DESCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "prodEntries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "workerIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "date", "order": "DESCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "checklistRecords",
       "queryScope": "COLLECTION",
       "fields": [

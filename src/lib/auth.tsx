@@ -23,6 +23,7 @@ import { clearAppCaches, loadCachedStaff, saveCachedStaff } from "./cache";
 import { getDb, getFirebaseAuth, isFirebaseConfigured } from "./firebase";
 import { confirmPhoneOtp, resetPhoneRecaptcha, sendPhoneOtp } from "./phone-auth";
 import { migrateAllLegacyEmployeePay } from "./employees";
+import { migrateAllLegacyStockCosts } from "./stock";
 import {
   ensureOwnerBootstrap,
   getStaffByPhone,
@@ -262,6 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // ย้ายเงินเดือน/บัญชีออกจาก employees → employeePay (ครั้งแรกหลัง deploy)
           if (member.role === "owner") {
             void migrateAllLegacyEmployeePay().catch(() => undefined);
+            void migrateAllLegacyStockCosts().catch(() => undefined);
           }
         } else {
           clearAppCaches();

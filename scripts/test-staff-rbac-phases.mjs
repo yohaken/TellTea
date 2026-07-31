@@ -13,6 +13,12 @@ const perms = read("src/lib/permissions.ts");
 assert.match(perms, /payrollPay/);
 assert.match(perms, /ELEVATED_PERMISSION_KEYS/);
 assert.match(perms, /clampPermissionsForNonOwner/);
+// assignTasks removed from picker groups (legacy)
+assert.doesNotMatch(
+  perms,
+  /keys: \[[^\]]*assignTasks/,
+  "assignTasks should not appear in PERMISSION_GROUPS keys",
+);
 
 const rules = read("firestore.rules");
 assert.match(rules, /match \/employeePay\/\{empId\}/);
@@ -21,6 +27,11 @@ assert.match(rules, /payrollPay/);
 assert.match(rules, /staffHubUpdateOk/);
 assert.match(rules, /employeePayMigrateStrip/);
 assert.match(rules, /resource\.data\.employeeId == staffEmployeeId\(\)/);
+assert.match(rules, /match \/stockCosts\/\{itemId\}/);
+assert.match(rules, /match \/bonusLivePool\/\{monthKey\}/);
+assert.match(rules, /canReadBonusEntry/);
+assert.match(rules, /staffEmployeeId\(\) in resource\.data\.workerIds/);
+assert.match(rules, /match \/assignTasks\/\{id\}[\s\S]*?allow write: if false/);
 
 const storage = read("storage.rules");
 assert.match(storage, /canOwnerBooksStorage/);
@@ -34,6 +45,9 @@ const bonus = read("src/app/bonus/page.tsx");
 assert.match(bonus, /payrollPay/);
 assert.match(bonus, /listActiveEmployeesWithPay/);
 assert.match(bonus, /employeeId: selfId/);
+assert.match(bonus, /computePersonalBonusRow/);
+assert.match(bonus, /saveBonusLivePool/);
+assert.match(bonus, /workerId: selfId/);
 
 const exportPage = read("src/app/export/page.tsx");
 assert.match(exportPage, /canOwnerBooks/);
@@ -42,4 +56,23 @@ assert.match(exportPage, /canPnl/);
 const employeePay = read("src/lib/employee-pay.ts");
 assert.match(employeePay, /migrateAllLegacyEmployeePay/);
 
-console.log("OK staff-rbac-phases guard");
+const stockCosts = read("src/lib/stock-costs.ts");
+assert.match(stockCosts, /migrateAllLegacyStockCosts/);
+assert.match(stockCosts, /stockCosts/);
+
+const stockLib = read("src/lib/stock.ts");
+assert.match(stockLib, /subscribeStockItemsWithCosts/);
+assert.match(stockLib, /setStockUnitCost/);
+
+const bonusLib = read("src/lib/bonus.ts");
+assert.match(bonusLib, /computePersonalBonusRow/);
+
+const assertRules = read("scripts/assert-firestore-rules.mjs");
+assert.match(assertRules, /stockCosts/);
+assert.match(assertRules, /bonusLivePool/);
+
+const indexes = read("firestore.indexes.json");
+assert.match(indexes, /"workerIds"/);
+assert.match(indexes, /"arrayConfig": "CONTAINS"/);
+
+console.log("OK staff-rbac-phases guard (p0–p9)");

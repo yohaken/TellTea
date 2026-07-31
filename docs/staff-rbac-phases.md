@@ -36,22 +36,31 @@ Checklist สิทธิ์หลังร้าน (TellTea). เป้าห�
 
 - [x] `canPay` / `shopPayView` ใช้ `payrollPay`
 
-## Phase 6 — ต้นทุนสต็อก ✅ (บางส่วน)
+## Phase 6 — ต้นทุนสต็อก ✅
 
-- [x] rules: staff update ห้ามเปลี่ยน `unitCost` / ชื่อ
-- [x] client redact unitCost สำหรับ non-owner
-- [ ] (ค้าง) ย้าย `unitCost` ออกจาก stock doc จริงๆ
+- [x] rules: staff update ห้ามเปลี่ยนชื่อ
+- [x] collection `stockCosts/{itemId}` — เจ้าของเท่านั้น
+- [x] migrate unitCost ออกจาก stock + catalog เขียนผ่าน stockCosts
 
-## Phase 7 — OT / ผลิตขอบเขต ⏳
+## Phase 7 — OT / ผลิตขอบเขต ✅
 
-- [ ] staff อ่าน OT/ผลิตเน้นของตัวเอง (ตอนนี้ยังเห็นทั้งเดือนเพื่อคำนวณโบนัส)
+- [x] rules: staff อ่านได้เฉพาะ entry ที่อยู่ใน `workerIds` (หรือ createdBy)
+- [x] client subscribe กรอง `workerId` บน OT / ผลิต / โบนัส
+- [x] `bonusLivePool/{month}` — พนักงานได้ส่วนแบ่งขายโดยไม่อ่าน OT ทั้งร้าน
 
 ## Phase 8 — ส่งออก / P&L ✅
 
 - [x] export ติ๊กบช.เจ้าของ/P&L ได้เฉพาะเมื่อมีสิทธิ์จริง
 
-## Phase 9 — ทำความสะอาด ⏳
+## Phase 9 — ทำความสะอาด ✅
 
-- [ ] ทบทวน `assignTasks` / hardcode owner email
-- [x] เอกสาร matrix นี้
-- [ ] emulator rules tests ครบทุกเคส
+- [x] `assignTasks` เอาออกจากกลุ่มสิทธิ์ UI · collection legacy ห้ามเขียน
+- [x] แท็บงานยัง `signedIn` → `/tasks/` (weekly tasks จริง)
+- [x] `isOwnerEmail` hardcode คงไว้คู่ `role==owner` (bootstrap / VAT mentor) — เอกสารนี้
+- [x] static rules guards: `test:firestore-rules` + `test:staff-rbac` (ไม่มี emulator ใน repo)
+
+## หลัง deploy
+
+เข้าสู่ระบบด้วยบัญชี**เจ้าของ** หนึ่งครั้ง เพื่อ migrate:
+- `employees` pay fields → `employeePay`
+- `stock.unitCost` → `stockCosts`

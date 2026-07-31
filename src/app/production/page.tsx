@@ -19,6 +19,7 @@ import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { monthInputValue, parseMonthInput } from "@/lib/bonus";
+import { resolveLinkedEmployee } from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import {
   entryHasPhotoFlag,
@@ -69,6 +70,7 @@ function ProductionView() {
   const { actorId, staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
+  const shopProdView = isOwner || can(staff, "payrollPay");
   const [ownerView, setOwnerView] = useState<ProdOwnerView>("log");
   const [formOpen, setFormOpen] = useState(false);
   const [entries, setEntries] = useState<ProdEntry[]>([]);
@@ -96,36 +98,56 @@ function ProductionView() {
   useEffect(() => {
     if (!can(staff, "production")) return;
     setLoading(true);
+    let cancelled = false;
+    let unsubEntries: (() => void) | undefined;
+    const unsubSchedule = subscribeRateSchedule(
+      (doc) => setRateSchedule(doc.entries),
+      (err) => setError(err.message),
+    );
+
     void reloadCatalog()
       .then(async () => {
         if (isOwner) {
           const seeded = await seedProdCatalogIfEmpty();
           if (seeded.products || seeded.workers) await reloadCatalog();
         }
+        if (cancelled) return;
+        const w = await listProdWorkers();
+        if (cancelled) return;
+        setWorkers(w);
+        const filterId = shopProdView
+          ? ""
+          : staff?.employeeId || resolveLinkedEmployee(w, staff)?.id || "";
+        const windowOpts = shopProdView
+          ? {
+              since: new Date(logYear, logMonthIdx, 1).getTime(),
+              until: new Date(logYear, logMonthIdx + 1, 1).getTime(),
+            }
+          : {
+              since: prodHistorySinceMs(),
+              ...(filterId ? { workerId: filterId } : {}),
+            };
+        if (!shopProdView && !filterId) {
+          setEntries([]);
+          return;
+        }
+        unsubEntries = subscribeProdEntries(
+          (rows) => setEntries(rows),
+          (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
+          windowOpts,
+        );
       })
       .catch((err) => setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ"))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
-    const windowOpts = isOwner
-      ? {
-          since: new Date(logYear, logMonthIdx, 1).getTime(),
-          until: new Date(logYear, logMonthIdx + 1, 1).getTime(),
-        }
-      : { since: prodHistorySinceMs() };
-    const unsub = subscribeProdEntries(
-      (rows) => setEntries(rows),
-      (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
-      windowOpts,
-    );
-    const unsubSchedule = subscribeRateSchedule(
-      (doc) => setRateSchedule(doc.entries),
-      (err) => setError(err.message),
-    );
     return () => {
-      unsub();
+      cancelled = true;
+      unsubEntries?.();
       unsubSchedule();
     };
-  }, [staff, isOwner, logYear, logMonthIdx]);
+  }, [staff, isOwner, shopProdView, logYear, logMonthIdx]);
 
   useBodyScrollLock(formOpen);
 
