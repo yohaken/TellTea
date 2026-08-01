@@ -9,8 +9,25 @@ import type { DeliveryChannel } from "./vat-sales";
 import { DELIVERY_CHANNELS, roundMoney } from "./vat-sales";
 import type { PlatformEmailReport } from "./vat-sales-mail";
 import { listPlatformEmailReports } from "./vat-sales-mail";
-import { parsePlatformEmail } from "./vat-sales-parse";
+import {
+  parseMailNetTransfer,
+  parsePlatformEmail,
+} from "./vat-sales-parse";
 import { gpVatFromFee } from "./personal-income-tax";
+import {
+  applyChannelSourceToDraft,
+  emptyChannelSource,
+  sumMonthSources,
+  type MonthChannelSource,
+  type MonthSourcesView,
+} from "./vat-month-sources";
+import {
+  draftToSaveInput,
+  retToMonthBooksDraft,
+  type MonthChannel,
+} from "./vat-month-books";
+import { loadVatMonthlyReturn, saveVatMonthlyReturn } from "./vat-monthly";
+import { notifyVatImportMonthMerged } from "./vat-import-month-sync";
 
 export const VAT_DELIVERY_MONTH_PROPOSALS_COL = "vatDeliveryMonthProposals";
 
@@ -157,7 +174,27 @@ function emptyMonthProposal(monthKey: string): VatDeliveryMonthProposal {
 
 type DayAmt = { gross: number; fee: number; net: number; ok: boolean };
 
-function parseReportAmounts(r: PlatformEmailReport): DayAmt {
+function parseReportAmounts(
+  r: PlatformEmailReport,
+  mode: "full" | "net-only" = "full",
+): DayAmt {
+  if (mode === "net-only") {
+    if (r.parsed && r.parsed.netTransfer > 0) {
+      return { gross: 0, fee: 0, net: r.parsed.netTransfer, ok: true };
+    }
+    if (r.channel === "unknown") {
+      return { gross: 0, fee: 0, net: 0, ok: false };
+    }
+    const net = parseMailNetTransfer({
+      channel: r.channel,
+      subject: r.subject,
+      rawText: r.rawText,
+      rawHtml: r.rawHtml,
+    });
+    if (!net.ok) return { gross: 0, fee: 0, net: 0, ok: false };
+    return { gross: 0, fee: 0, net: net.netTransfer, ok: true };
+  }
+
   if (
     r.parsed &&
     (r.parsed.grossInclusive > 0 || r.parsed.netTransfer > 0)
@@ -181,6 +218,16 @@ function parseReportAmounts(r: PlatformEmailReport): DayAmt {
     receivedAt: r.receivedAt,
   });
   if (!res.ok || !res.parsed) {
+    // ลองยอดโอนอย่างเดียวถ้า full parse ไม่ผ่าน
+    const net = parseMailNetTransfer({
+      channel: r.channel,
+      subject: r.subject,
+      rawText: r.rawText,
+      rawHtml: r.rawHtml,
+    });
+    if (net.ok) {
+      return { gross: 0, fee: 0, net: net.netTransfer, ok: true };
+    }
     return { gross: 0, fee: 0, net: 0, ok: false };
   }
   return {
@@ -452,15 +499,19 @@ export function fillProposalAmountsFromReports(
       const transferRows = useful.filter((r) =>
         (r.studyTags || []).includes("lm-รายวัน-โอน"),
       );
-      const salesAmts = (salesRows.length ? salesRows : useful).map(
-        parseReportAmounts,
-      );
-      const transferAmts = transferRows.map(parseReportAmounts);
+      const salesAmts = (salesRows.length ? salesRows : useful)
+        .filter((r) => !(r.studyTags || []).includes("lm-รายวัน-โอน"))
+        .map((r) => parseReportAmounts(r, "full"));
+      const transferAmts = (
+        transferRows.length
+          ? transferRows
+          : useful.filter((r) => (r.studyTags || []).includes("lm-รายวัน-โอน"))
+      ).map((r) => parseReportAmounts(r, "net-only"));
       const salesRoll = rollupToAmounts(salesAmts);
       const transferRoll = rollupToAmounts(transferAmts);
       const appSales = salesRoll.appSales;
       const transfer =
-        transferRoll.transfer != null && transferRoll.parsedOk
+        transferRoll.parsedOk && transferRoll.transfer != null
           ? transferRoll.transfer
           : salesRoll.transfer;
       let fee = 0;
@@ -495,9 +546,12 @@ export function fillProposalAmountsFromReports(
       continue;
     }
 
-    days = useful.map(parseReportAmounts);
+    days = useful.map((r) => parseReportAmounts(r, "full"));
     const roll = rollupToAmounts(days);
-    const has = roll.parsedOk > 0 && roll.appSales != null;
+    const has =
+      roll.parsedOk > 0 &&
+      roll.appSales != null &&
+      Number(roll.appSales) > 0;
     next.channels[ch] = {
       ...prev,
       amounts: has
@@ -565,4 +619,153 @@ export async function rebuildMonthProposalsFromCatalog(opts?: {
     proposals.push(p);
   }
   return { months, proposals, reportCount: reports.length };
+}
+
+/** แปลงข้อเสนอ L3 → ยอดสำหรับผสานงบ (เฉพาะช่องที่มี adapter) */
+export function proposalToMonthSources(
+  proposal: VatDeliveryMonthProposal,
+): MonthSourcesView {
+  const byChannel = {} as Record<MonthChannel, MonthChannelSource>;
+  for (const ch of DELIVERY_CHANNELS) {
+    const c = proposal.channels[ch];
+    const has =
+      c.amountsSource === "adapter" &&
+      c.amounts.appSales != null &&
+      Number(c.amounts.appSales) > 0;
+    const kind =
+      ch === "grab"
+        ? "grab-rollup"
+        : ch === "lineman"
+          ? c.strategy === "monthly-summary"
+            ? "lineman-monthly"
+            : "manual"
+          : c.strategy === "monthly-summary"
+            ? "shopee-monthly"
+            : "manual";
+    byChannel[ch] = {
+      ...emptyChannelSource(ch, kind),
+      sales: has ? Number(c.amounts.appSales) || 0 : 0,
+      transfer: has ? Number(c.amounts.transfer) || 0 : 0,
+      fee: has ? Number(c.amounts.gpExVat) || 0 : 0,
+      gpVat: has ? Number(c.amounts.gpVat) || 0 : 0,
+      dayCount: c.dayCount,
+      note: has
+        ? `จากข้อเสนอ ${proposal.phase} · ${c.note || ""}`.trim()
+        : "",
+    };
+  }
+  return {
+    monthKey: proposal.monthKey,
+    byChannel,
+    totals: sumMonthSources(byChannel),
+  };
+}
+
+/**
+ * D5 — ผสานข้อเสนอเดือนเข้า vatMonthlyReturns (L4)
+ * เฉพาะช่องที่มียอด adapter · ไม่ทับช่องที่ยอดข้อเสนอว่าง
+ */
+export async function mergeProposalIntoBooks(opts: {
+  monthKey: string;
+  actor: string;
+  /** ถ้าไม่ส่ง จะโหลดจาก Firestore */
+  proposal?: VatDeliveryMonthProposal;
+  channels?: DeliveryChannel[];
+}): Promise<{
+  saved: boolean;
+  skipped: boolean;
+  reason?: string;
+  mergedChannels: DeliveryChannel[];
+  proposal: VatDeliveryMonthProposal | null;
+}> {
+  const proposal =
+    opts.proposal || (await loadMonthProposal(opts.monthKey));
+  if (!proposal) {
+    return {
+      saved: false,
+      skipped: true,
+      reason: "ยังไม่มีข้อเสนอเดือนนี้ — สร้าง/เติมยอดก่อน",
+      mergedChannels: [],
+      proposal: null,
+    };
+  }
+
+  const want = new Set(
+    opts.channels?.length ? opts.channels : DELIVERY_CHANNELS,
+  );
+  const sources = proposalToMonthSources(proposal);
+  const mergedChannels: DeliveryChannel[] = [];
+
+  // ล้างช่องที่ไม่ได้ผสานออกจาก sources (ไม่เขียนทับด้วย 0)
+  for (const ch of DELIVERY_CHANNELS) {
+    const c = proposal.channels[ch];
+    const has =
+      want.has(ch) &&
+      c.amountsSource === "adapter" &&
+      c.amounts.appSales != null &&
+      Number(c.amounts.appSales) > 0;
+    if (!has) {
+      sources.byChannel[ch] = {
+        ...emptyChannelSource(ch),
+        // ส่งค่าติดลบพิเศษไม่ได้ — ใช้ merge แบบทีละช่องแทน
+      };
+    } else {
+      mergedChannels.push(ch);
+    }
+  }
+
+  if (!mergedChannels.length) {
+    return {
+      saved: false,
+      skipped: true,
+      reason: "ไม่มีช่องที่มียอดพร้อมผสาน",
+      mergedChannels: [],
+      proposal,
+    };
+  }
+
+  // ผสานทีละช่อง — ไม่ทับช่องอื่นด้วยศูนย์
+  const ret = await loadVatMonthlyReturn(opts.monthKey);
+  if (ret.status === "filed") {
+    return {
+      saved: false,
+      skipped: true,
+      reason: "เดือนปิดงบแล้ว",
+      mergedChannels: [],
+      proposal,
+    };
+  }
+
+  let draft = retToMonthBooksDraft(ret);
+  for (const ch of mergedChannels) {
+    draft = applyChannelSourceToDraft(draft, sources.byChannel[ch]);
+  }
+  const saved = await saveVatMonthlyReturn(
+    draftToSaveInput(draft, ret.status === "saved" ? "saved" : "draft"),
+    opts.actor,
+  );
+  notifyVatImportMonthMerged(opts.monthKey, saved);
+
+  const nextProp: VatDeliveryMonthProposal = {
+    ...proposal,
+    status: "merged",
+    rebuiltAt: Date.now(),
+    rebuiltBy: opts.actor,
+    channels: { ...proposal.channels },
+  };
+  for (const ch of mergedChannels) {
+    nextProp.channels[ch] = {
+      ...nextProp.channels[ch],
+      status: "ready",
+      note: `${nextProp.channels[ch].note} · ผสานงบแล้ว`.trim(),
+    };
+  }
+  await saveMonthProposal(nextProp);
+
+  return {
+    saved: true,
+    skipped: false,
+    mergedChannels,
+    proposal: nextProp,
+  };
 }

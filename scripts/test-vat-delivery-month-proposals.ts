@@ -5,8 +5,10 @@ import {
   fillProposalAmountsFromReports,
   monthKeyFromReport,
   proposalSummaryLine,
+  proposalToMonthSources,
 } from "../src/lib/vat-delivery-month-proposals";
 import type { PlatformEmailReport } from "../src/lib/vat-sales-mail";
+import { parseMailNetTransfer } from "../src/lib/vat-sales-parse";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -137,6 +139,42 @@ assert.match(proposalSummaryLine(july), /grab:2ใช้/);
   assert.ok((filled.channels.grab.amounts.appSales || 0) > 0);
   assert.ok((filled.channels.grab.amounts.transfer || 0) > 0);
   assert.ok((filled.channels.grab.amounts.gpExVat || 0) > 0);
+  const sources = proposalToMonthSources(filled);
+  assert.ok(sources.byChannel.grab.sales > 0);
+}
+
+{
+  const net = parseMailNetTransfer({
+    channel: "lineman",
+    subject: "รายงานยอดโอนออก - LINE MAN Wongnai 01/08/69",
+    rawText: "รายงานยอดโอนออก\nยอดโอนเข้าบัญชี\n฿ 1,234.00\n",
+  });
+  assert.equal(net.ok, true);
+  if (net.ok) assert.equal(net.netTransfer, 1234);
+
+  const lmReports = [
+    stub({
+      id: "lm-s",
+      channel: "lineman",
+      reportDateGuess: "2026-07-01",
+      subject: "รายงานยอดขายรายวัน - LINE MAN Wongnai 01/07/69",
+      studyTags: ["lm-รายวัน-ขาย"],
+      rawText: "รายรับทั้งหมด\n฿ 2,000.00\n",
+    }),
+    stub({
+      id: "lm-t",
+      channel: "lineman",
+      reportDateGuess: "2026-07-01",
+      subject: "รายงานยอดโอนออก - LINE MAN Wongnai 02/07/69",
+      studyTags: ["lm-รายวัน-โอน"],
+      rawText: "ยอดโอนเข้าบัญชี\n฿ 1,700.00\n",
+    }),
+  ];
+  const base = buildMonthProposalFromReports("2026-07", lmReports, "test");
+  const filled = fillProposalAmountsFromReports(base, lmReports, "test");
+  assert.equal(filled.channels.lineman.amounts.appSales, 2000);
+  assert.equal(filled.channels.lineman.amounts.transfer, 1700);
+  assert.ok((filled.channels.lineman.amounts.gpExVat || 0) > 0);
 }
 
 console.log("ok vat-delivery-month-proposals");

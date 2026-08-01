@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   listMonthProposals,
+  mergeProposalIntoBooks,
   proposalSummaryLine,
   rebuildMonthProposalsFromCatalog,
   type VatDeliveryMonthProposal,
@@ -78,16 +79,60 @@ export function VatMonthProposalsPanel({ actor }: Props) {
     }
   };
 
+  const mergeMonth = async (monthKey: string) => {
+    const p = rows.find((x) => x.monthKey === monthKey);
+    const salesHint = p
+      ? DELIVERY_CHANNELS.map((ch) => {
+          const a = p.channels[ch].amounts.appSales;
+          return a != null && a > 0 ? `${ch}:${Math.round(a)}` : null;
+        })
+          .filter(Boolean)
+          .join(" · ")
+      : "";
+    if (
+      !window.confirm(
+        `ผสานข้อเสนอ ${formatThaiMonthKey(monthKey)} เข้าตารางยอดเดลิเวอรี่?\n` +
+          (salesHint || "ไม่มียอด") +
+          "\n(ทับเฉพาะช่องที่มียอดในข้อเสนอ)",
+      )
+    ) {
+      return;
+    }
+    setBusy(`merge:${monthKey}`);
+    setError("");
+    setMsg("");
+    try {
+      const res = await mergeProposalIntoBooks({ monthKey, actor });
+      if (res.skipped) {
+        setMsg(res.reason || "ข้ามการผสาน");
+      } else {
+        setMsg(
+          `D5 ผสานงบแล้ว · ${monthKey} · ช่อง ${res.mergedChannels.join(", ")}`,
+        );
+        if (res.proposal) {
+          setRows((prev) =>
+            prev.map((x) =>
+              x.monthKey === monthKey && res.proposal ? res.proposal : x,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy("");
+    }
+  };
+
   return (
     <section
       className="vat-table-block vat-month-proposals"
       aria-label="ข้อเสนอเดือน"
       data-ai-context="vat-delivery-month-proposals"
     >
-      <h3 className="vat-table-subtitle">ข้อเสนอเดือน (D3→D4)</h3>
+      <h3 className="vat-table-subtitle">ข้อเสนอเดือน (D3→D5)</h3>
       <p className="muted vat-sales-hint">
-        จัดกลุ่มเมล → เติมยอดจาก parse เข้าชั้นข้อเสนอ ·{" "}
-        <strong>ยังไม่ทับตารางงบ</strong>
+        จัดกลุ่มเมล → เติมยอด → ผสานเข้างบเมื่อยืนยัน · ทับเฉพาะช่องที่มียอด
       </p>
 
       <div className="vat-mail-study-toolbar">
@@ -171,7 +216,36 @@ export function VatMonthProposalsPanel({ actor }: Props) {
                         </td>
                       );
                     })}
-                    <td className="col-desc muted">{p.phase}</td>
+                    <td
+                      className="col-desc"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span className="muted">{p.phase}</span>
+                      {p.status === "merged" ? (
+                        <div className="muted">ผสานแล้ว</div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="vat-mini-btn vat-mini-btn--primary"
+                          disabled={
+                            Boolean(busy) ||
+                            !DELIVERY_CHANNELS.some((ch) => {
+                              const a = p.channels[ch].amounts.appSales;
+                              return (
+                                p.channels[ch].amountsSource === "adapter" &&
+                                a != null &&
+                                a > 0
+                              );
+                            })
+                          }
+                          onClick={() => void mergeMonth(p.monthKey)}
+                        >
+                          {busy === `merge:${p.monthKey}`
+                            ? "ผสาน…"
+                            : "ผสานงบ (D5)"}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -187,7 +261,7 @@ export function VatMonthProposalsPanel({ actor }: Props) {
             .map((p) => (
               <div key={p.monthKey}>
                 <p className="muted vat-sales-hint">
-                  {formatThaiMonthKey(p.monthKey)} · {p.phase} · ไม่ทับงบ
+                  {formatThaiMonthKey(p.monthKey)} · {p.phase} · {p.status}
                 </p>
                 {DELIVERY_CHANNELS.map((ch) => {
                   const c = p.channels[ch];
