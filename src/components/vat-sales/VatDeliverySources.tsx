@@ -2,12 +2,16 @@
 
 /**
  * ที่มายอดเดลิเวอรี่ — หน้าแยกจาก VAT เดือน
- * รับยอดจากแหล่งจริง → ผสานเข้าตารางยอดเดลิเวอรี่ทันที
- * รายละเอียดไฟล์/อะแดปเตอร์พัฒนาที่หน้านี้คนละสาย
+ * รับยอด → ผสานเข้าตารางยอดเดลิเวอรี่ทันที
+ * คอลัมน์ที่มา / คู่มือแหล่งไฟล์ — ยังไม่นิ่ง ถอดไว้ก่อน · ใช้โน้ตส่วนตัวแทน
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { VatColHead } from "@/components/vat-sales/VatColHead";
+import {
+  loadVatDeliverySourceNotes,
+  saveVatDeliverySourceNotes,
+} from "@/lib/vat-delivery-source-notes";
 import {
   formatVatMoney,
   moneyFieldValue,
@@ -17,17 +21,13 @@ import {
 import {
   applyChannelSourceToDraft,
   DELIVERY_COL_INFO,
-  DELIVERY_SOURCE_GUIDE,
   draftToMonthSources,
   emptyChannelSource,
   mergeMonthSourcesIntoBooks,
   MONTH_CHANNEL_LABEL,
   MONTH_CHANNEL_SHORT,
-  MONTH_CHANNEL_SOURCE_HINT,
   MONTH_CHANNELS,
-  MONTH_SOURCE_KIND_LABEL,
   type MonthChannelSource,
-  type MonthSourceKind,
 } from "@/lib/vat-month-sources";
 import {
   emptyMonthBooksDraft,
@@ -75,12 +75,6 @@ function MoneyCell({
   );
 }
 
-function defaultKind(channel: MonthChannel): MonthSourceKind {
-  if (channel === "grab") return "grab-rollup";
-  if (channel === "lineman") return "lineman-monthly";
-  return "shopee-monthly";
-}
-
 type Props = { actor: string };
 
 export function VatDeliverySources({ actor }: Props) {
@@ -89,34 +83,23 @@ export function VatDeliverySources({ actor }: Props) {
   const [draft, setDraft] = useState<MonthBooksDraft>(() =>
     emptyMonthBooksDraft(bangkokMonthKey()),
   );
-  const [kinds, setKinds] = useState<Record<MonthChannel, MonthSourceKind>>(
-    () => ({
-      shopee: "shopee-monthly",
-      grab: "grab-rollup",
-      lineman: "lineman-monthly",
-    }),
-  );
   const [loading, setLoading] = useState(true);
   const [locked, setLocked] = useState(false);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
   const [dirty, setDirty] = useState(false);
+  const [note, setNote] = useState("");
+  const [noteDirty, setNoteDirty] = useState(false);
+  const [noteMsg, setNoteMsg] = useState("");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadGen = useRef(0);
   const draftRef = useRef(draft);
   draftRef.current = draft;
+  const noteRef = useRef(note);
+  noteRef.current = note;
 
-  const sources = useMemo(() => {
-    const base = draftToMonthSources(draft);
-    for (const k of MONTH_CHANNELS) {
-      base.byChannel[k] = {
-        ...base.byChannel[k],
-        kind: kinds[k],
-        note: MONTH_CHANNEL_SOURCE_HINT[k],
-      };
-    }
-    return base;
-  }, [draft, kinds]);
+  const sources = useMemo(() => draftToMonthSources(draft), [draft]);
 
   const loadMonth = useCallback(async (m: string) => {
     const gen = ++loadGen.current;
@@ -128,11 +111,6 @@ export function VatDeliverySources({ actor }: Props) {
       if (gen !== loadGen.current) return;
       setDraft(retToMonthBooksDraft(ret));
       setLocked(ret.status === "filed");
-      setKinds({
-        shopee: "shopee-monthly",
-        grab: "grab-rollup",
-        lineman: "lineman-monthly",
-      });
       setDirty(false);
     } catch (e) {
       if (gen !== loadGen.current) return;
@@ -148,16 +126,21 @@ export function VatDeliverySources({ actor }: Props) {
     void loadMonth(month);
   }, [month, loadMonth]);
 
+  useEffect(() => {
+    void (async () => {
+      try {
+        const n = await loadVatDeliverySourceNotes();
+        setNote(n.text);
+        setNoteDirty(false);
+      } catch {
+        /* โน้ตว่างได้ */
+      }
+    })();
+  }, []);
+
   const flushSave = useCallback(async () => {
     if (locked) return;
     const view = draftToMonthSources(draftRef.current);
-    for (const k of MONTH_CHANNELS) {
-      view.byChannel[k] = {
-        ...view.byChannel[k],
-        kind: kinds[k],
-        note: MONTH_CHANNEL_SOURCE_HINT[k],
-      };
-    }
     try {
       const result = await mergeMonthSourcesIntoBooks({
         monthKey: month,
@@ -175,7 +158,7 @@ export function VatDeliverySources({ actor }: Props) {
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, [actor, kinds, locked, month]);
+  }, [actor, locked, month]);
 
   useEffect(() => {
     if (loading || locked || !dirty) return;
@@ -187,6 +170,25 @@ export function VatDeliverySources({ actor }: Props) {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, [dirty, draft, flushSave, loading, locked]);
+
+  useEffect(() => {
+    if (!noteDirty) return;
+    if (noteTimer.current) clearTimeout(noteTimer.current);
+    noteTimer.current = setTimeout(() => {
+      void (async () => {
+        try {
+          await saveVatDeliverySourceNotes(noteRef.current, actor);
+          setNoteDirty(false);
+          setNoteMsg("บันทึกโน้ตแล้ว");
+        } catch (e) {
+          setError(e instanceof Error ? e.message : String(e));
+        }
+      })();
+    }, 800);
+    return () => {
+      if (noteTimer.current) clearTimeout(noteTimer.current);
+    };
+  }, [actor, note, noteDirty]);
 
   function patchField(
     channel: MonthChannel,
@@ -200,7 +202,7 @@ export function VatDeliverySources({ actor }: Props) {
     const value = parseVatMoneyInput(raw);
     setDraft((d) => {
       const src = {
-        ...emptyChannelSource(channel, kinds[channel]),
+        ...emptyChannelSource(channel),
         sales: d.sales[channel],
         transfer: d.transfer[channel],
         fee: d.gpFee[channel],
@@ -248,27 +250,6 @@ export function VatDeliverySources({ actor }: Props) {
       <h2 className="vat-table-title">
         ที่มายอดเดลิเวอรี่ — {formatThaiMonthKey(month)}
       </h2>
-      <p className="muted vat-sales-hint">{DELIVERY_SOURCE_GUIDE.overview}</p>
-
-      <section
-        className="vat-table-block vat-source-guide"
-        aria-label="หลักการแหล่งที่มา"
-      >
-        <h3 className="vat-table-subtitle">หลักการแหล่งที่มา</h3>
-        <ul className="vat-source-guide-list">
-          <li>
-            <strong>Grab</strong> — {DELIVERY_SOURCE_GUIDE.grab}
-          </li>
-          <li>
-            <strong>LINE MAN</strong> — {DELIVERY_SOURCE_GUIDE.lineman}
-          </li>
-          <li>
-            <strong>Shopee</strong> — {DELIVERY_SOURCE_GUIDE.shopee}
-          </li>
-          <li>{DELIVERY_SOURCE_GUIDE.sync}</li>
-          <li className="muted">{DELIVERY_SOURCE_GUIDE.later}</li>
-        </ul>
-      </section>
 
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
@@ -294,17 +275,11 @@ export function VatDeliverySources({ actor }: Props) {
                   label="VAT-ซื้อ"
                   info={DELIVERY_COL_INFO.purchaseVat}
                 />
-                <th
-                  className="col-seg"
-                  title="รูปแบบต้นทางของช่องทางนี้"
-                >
-                  ที่มา
-                </th>
               </tr>
             </thead>
             <tbody>
               {MONTH_CHANNELS.map((k) => (
-                <tr key={k} title={MONTH_CHANNEL_SOURCE_HINT[k]}>
+                <tr key={k}>
                   <td className="col-seg">{MONTH_CHANNEL_LABEL[k]}</td>
                   <td className="col-num col-input">
                     <MoneyCell
@@ -338,9 +313,6 @@ export function VatDeliverySources({ actor }: Props) {
                       onChange={(v) => patchField(k, "gpVat", v)}
                     />
                   </td>
-                  <td className="col-seg muted">
-                    {MONTH_SOURCE_KIND_LABEL[kinds[k] || defaultKind(k)]}
-                  </td>
                 </tr>
               ))}
               <tr className="vat-sales-totals-row">
@@ -351,14 +323,32 @@ export function VatDeliverySources({ actor }: Props) {
                 </td>
                 <td className="col-num col-net">{fmt(sources.totals.fee)}</td>
                 <td className="col-num col-net">{fmt(sources.totals.gpVat)}</td>
-                <td className="col-seg" />
               </tr>
             </tbody>
           </table>
         </div>
-        <p className="muted vat-sales-hint vat-hint-one-line">
-          แก้แล้วผสานอัตโนมัติ · เปิดหน้า VAT เดือนเพื่อดูงบ A/B/C/D
-        </p>
+      </section>
+
+      <section className="vat-table-block vat-source-notes" aria-label="โน้ต">
+        <h3 className="vat-table-subtitle">โน้ต</h3>
+        <textarea
+          className="vat-source-notes-input"
+          value={note}
+          rows={6}
+          spellCheck={false}
+          placeholder="จดโน้ตเอง…"
+          aria-label="โน้ตที่มายอดเดลิเวอรี่"
+          onChange={(e) => {
+            setNote(e.target.value);
+            setNoteDirty(true);
+            setNoteMsg("");
+          }}
+        />
+        {noteMsg ? (
+          <p className="muted vat-sales-hint vat-hint-one-line">{noteMsg}</p>
+        ) : noteDirty ? (
+          <p className="muted vat-sales-hint vat-hint-one-line">กำลังบันทึก…</p>
+        ) : null}
       </section>
     </div>
   );

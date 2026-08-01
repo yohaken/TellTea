@@ -19532,27 +19532,26 @@ a.ghost-btn {
   margin-left: auto;
 }
 
-.vat-source-guide {
-  padding: 0.35rem 0.15rem 0.15rem;
-}
-
-.vat-source-guide-list {
-  margin: 0.25rem 0 0;
-  padding-left: 1.1rem;
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
-
-.vat-source-guide-list li {
-  margin-bottom: 0.2rem;
-}
-
-.vat-source-guide-list strong {
-  font-weight: 600;
-}
-
 .vat-delivery-sources .vat-table-title {
   margin-top: 0.35rem;
+}
+
+.vat-source-notes-input {
+  width: 100%;
+  min-height: 6.5rem;
+  resize: vertical;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.18);
+  border-radius: 4px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  font-family: inherit;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.vat-source-notes-input:focus {
+  outline: 1px solid rgba(87, 15, 15, 0.35);
+  border-color: rgba(87, 15, 15, 0.35);
 }
 
 .vat-month-books .vat-table-block {

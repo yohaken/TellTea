@@ -169,11 +169,9 @@ function testColInfoForHumansAndAi() {
   assert.match(DELIVERY_COL_INFO.transfer, /บัญชีธนาคาร|เงินเข้า/);
   assert.match(DELIVERY_COL_INFO.gpFee, /หักแวท/);
   assert.match(DELIVERY_COL_INFO.purchaseVat, /แวทค่าบริการขาย|VAT-ซื้อ/);
-  assert.match(DELIVERY_SOURCE_GUIDE.grab, /ม้วนรวม|รายวัน/);
-  assert.match(DELIVERY_SOURCE_GUIDE.lineman, /สรุปเดือน/);
-  assert.match(DELIVERY_SOURCE_GUIDE.shopee, /สรุปเดือน/);
-  assert.match(DELIVERY_SOURCE_GUIDE.sync, /ผสาน|VAT เดือน/);
-  console.log("ok delivery col + source guide copy");
+  // DELIVERY_SOURCE_GUIDE คงใน lib สำหรับ docs/AI — UI ถอดแล้วใช้โน้ตส่วนตัว
+  assert.ok(DELIVERY_SOURCE_GUIDE.overview.length > 0);
+  console.log("ok delivery col info copy");
 }
 
 testDraftRoundTrip();

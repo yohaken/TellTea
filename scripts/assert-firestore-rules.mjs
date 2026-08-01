@@ -128,6 +128,7 @@ assert.match(rules, /request\.resource\.data\.dateKey == dateId/);
 assert.match(rules, /vatMonthlyReturns\/\{monthId\}[\s\S]*?isOwner\(\) \|\| isOwnerEmail\(\)/);
 assert.match(rules, /vatSalesSettings' && isOwner\(\)/);
 assert.match(rules, /vatImportAiNotes' && isOwner\(\)/);
+assert.match(rules, /vatDeliverySourceNotes' && isOwner\(\)/);
 assert.match(rules, /match \/vatAgentChat\/\{msgId\}/);
 assert.match(rules, /vatAgentChatPresence'/);
 
