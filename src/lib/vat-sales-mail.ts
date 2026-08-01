@@ -35,6 +35,7 @@ import {
   isTaxInvoiceMail,
   matchMailChannel,
 } from "./vat-mail-channel";
+import { inferMailStudyTags, mergeStudyTags } from "./vat-mail-study";
 
 export type { MailChannelRule, VatMailRules };
 export { DEFAULT_MAIL_RULES, mapMailRules };
@@ -335,25 +336,47 @@ export async function togglePlatformEmailStudyTag(
   return setPlatformEmailStudyTags(id, next);
 }
 
-/** แก้ช่องทางที่จัดผิด + แท็กข้ามเมลขยะ (owner เขียน Firestore ตรง) */
+/** แก้ช่องทาง + แท็กศึกษา D2 (owner เขียน Firestore ตรง · ยังไม่เข้างบ) */
 export async function reclassifyPlatformEmailReports(opts?: {
   max?: number;
   actor?: string;
   rules?: VatMailRules;
-}): Promise<{ scanned: number; reclassified: number; noiseTagged: number }> {
+}): Promise<{
+  scanned: number;
+  reclassified: number;
+  noiseTagged: number;
+  tagged: number;
+}> {
   const rows = await listPlatformEmailReports({ max: opts?.max || 300 });
   const rules = opts?.rules || DEFAULT_MAIL_RULES;
   let reclassified = 0;
   let noiseTagged = 0;
+  let tagged = 0;
   for (const r of rows) {
     const next = matchMailChannel(r.from, r.subject, rules);
     const noise = isNoiseMail(r.from, r.subject) || isTaxInvoiceMail(r.subject);
+    const inferredTags = inferMailStudyTags(
+      {
+        from: r.from,
+        subject: r.subject,
+        snippet: r.snippet,
+        channel: next !== "unknown" ? next : r.channel,
+        reportKind: r.reportKind,
+        pdfFilenames: r.pdfFilenames,
+        studyTags: r.studyTags,
+      },
+      rules,
+    );
+    const { next: studyTags, changed: tagsChanged } = mergeStudyTags(
+      r.studyTags,
+      inferredTags,
+    );
     const patch: Record<string, unknown> = {};
     if (next !== "unknown" && next !== r.channel) {
       patch.channel = next;
     }
-    if (noise && !r.studyTags.includes("ข้าม")) {
-      patch.studyTags = [...r.studyTags, "ข้าม"].slice(0, 20);
+    if (tagsChanged) {
+      patch.studyTags = studyTags;
       patch.studyTagsUpdatedAt = Date.now();
     }
     if (!Object.keys(patch).length) continue;
@@ -361,9 +384,35 @@ export async function reclassifyPlatformEmailReports(opts?: {
     patch.channelReclassifiedBy = opts?.actor || "owner";
     await updateDoc(doc(getDb(), PLATFORM_EMAIL_REPORTS_COL, r.id), patch);
     reclassified += 1;
-    if (patch.studyTags) noiseTagged += 1;
+    if (patch.studyTags) tagged += 1;
+    if (noise && studyTags.includes("ข้าม")) noiseTagged += 1;
   }
-  return { scanned: rows.length, reclassified, noiseTagged };
+  return { scanned: rows.length, reclassified, noiseTagged, tagged };
+}
+
+/** เวอร์ชันจูนศึกษา D2 — เปิดหน้าที่มาแล้วรันอัตโนมัติครั้งหนึ่ง */
+export const VAT_MAIL_STUDY_PASS = 2;
+export const VAT_MAIL_STUDY_PASS_DOC = "vatMailStudyPass";
+
+export async function loadVatMailStudyPass(): Promise<number> {
+  const snap = await getDoc(doc(getDb(), "meta", VAT_MAIL_STUDY_PASS_DOC));
+  if (!snap.exists()) return 0;
+  return Number(snap.data()?.pass) || 0;
+}
+
+export async function saveVatMailStudyPass(
+  pass: number,
+  actor: string,
+): Promise<void> {
+  await setDoc(
+    doc(getDb(), "meta", VAT_MAIL_STUDY_PASS_DOC),
+    {
+      pass,
+      updatedAt: Date.now(),
+      updatedBy: actor || "owner",
+    },
+    { merge: true },
+  );
 }
 
 export type VatMailOAuthConfigPublic = {

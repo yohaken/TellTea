@@ -8,6 +8,7 @@ const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
 const crypto = require("crypto");
 const { matchChannel, isNoiseMail, isTaxInvoiceMail } = require("./vat-mail-channel");
+const { inferMailStudyTags } = require("./vat-mail-study-tags");
 
 const REGION = "asia-southeast1";
 const AGENT_API_DOC = "meta/vatAgentApi";
@@ -95,6 +96,18 @@ exports.vatMailAgentDump = functions
         const from = String(x.from || "");
         const subject = String(x.subject || "");
         const inferred = matchChannel(from, subject, null);
+        const studyTags = Array.isArray(x.studyTags) ? x.studyTags : [];
+        const suggestedTags = inferMailStudyTags(
+          {
+            from,
+            subject,
+            channel: inferred !== "unknown" ? inferred : x.channel,
+            pdfFilenames: x.pdfFilenames,
+            studyTags,
+            reportKind: x.reportKind,
+          },
+          null,
+        );
         return {
           id: d.id,
           channel: String(x.channel || "unknown"),
@@ -105,7 +118,8 @@ exports.vatMailAgentDump = functions
           subject: subject.slice(0, 160),
           from: from.slice(0, 100),
           reportKind: String(x.reportKind || ""),
-          studyTags: Array.isArray(x.studyTags) ? x.studyTags : [],
+          studyTags,
+          suggestedTags,
           files: Array.isArray(x.pdfFilenames)
             ? x.pdfFilenames.slice(0, 8)
             : [],

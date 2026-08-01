@@ -18,6 +18,7 @@ const {
   matchChannel,
   sanitizeChannelRule,
 } = require("./vat-mail-channel");
+const { inferMailStudyTags, tagsChanged } = require("./vat-mail-study-tags");
 
 const REGION = "asia-southeast1";
 const OWNER_EMAIL = String(process.env.TELLTEA_OWNER_EMAIL || "yohaken@gmail.com")
@@ -289,33 +290,41 @@ async function reclassifyStoredReports(db, rules, actorId) {
   const snap = await db.collection(REPORTS_COL).limit(500).get();
   let reclassified = 0;
   let noiseTagged = 0;
+  let tagged = 0;
   for (const docSnap of snap.docs) {
     const d = docSnap.data() || {};
     const from = String(d.from || "");
     const subject = String(d.subject || "");
     const next = matchChannel(from, subject, rules);
     const noise = isNoiseMail(from, subject) || isTaxInvoiceMail(subject);
+    const nextTags = inferMailStudyTags(
+      {
+        from,
+        subject,
+        channel: d.channel,
+        pdfFilenames: d.pdfFilenames,
+        studyTags: d.studyTags,
+        reportKind: d.reportKind,
+      },
+      rules,
+    );
     const patch = {};
     if (next !== "unknown" && next !== d.channel) {
       patch.channel = next;
     }
-    if (noise) {
-      const tags = Array.isArray(d.studyTags)
-        ? d.studyTags.map((t) => String(t))
-        : [];
-      if (!tags.includes("ข้าม")) {
-        patch.studyTags = [...tags, "ข้าม"].slice(0, 20);
-        patch.studyTagsUpdatedAt = Date.now();
-      }
+    if (tagsChanged(d.studyTags, nextTags)) {
+      patch.studyTags = nextTags;
+      patch.studyTagsUpdatedAt = Date.now();
     }
     if (!Object.keys(patch).length) continue;
     patch.channelReclassifiedAt = Date.now();
     patch.channelReclassifiedBy = actorId || "sync";
     await docSnap.ref.set(patch, { merge: true });
     reclassified += 1;
-    if (patch.studyTags) noiseTagged += 1;
+    if (patch.studyTags) tagged += 1;
+    if (noise && nextTags.includes("ข้าม")) noiseTagged += 1;
   }
-  return { reclassified, noiseTagged, scanned: snap.size };
+  return { reclassified, noiseTagged, tagged, scanned: snap.size };
 }
 
 function buildSearchQuery(rule, lookbackDays) {

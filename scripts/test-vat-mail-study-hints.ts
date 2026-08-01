@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   inferMailStudyHints,
+  inferMailStudyTags,
   MAIL_STUDY_TAG_PRESETS,
 } from "../src/lib/vat-mail-study";
 import {
@@ -8,6 +9,7 @@ import {
   defaultVatMailStudyNotesText,
 } from "../src/lib/vat-mail-study-notes";
 import type { PlatformEmailReport } from "../src/lib/vat-sales-mail";
+import { DEFAULT_MAIL_RULES } from "../src/lib/vat-sales";
 
 {
   const h = inferMailStudyHints({
@@ -40,7 +42,44 @@ import type { PlatformEmailReport } from "../src/lib/vat-sales-mail";
 }
 
 assert.ok(MAIL_STUDY_TAG_PRESETS.includes("grab-รายวัน"));
+assert.ok(MAIL_STUDY_TAG_PRESETS.includes("lm-รายวัน-โอน"));
 assert.ok(MAIL_STUDY_TAG_PRESETS.includes("excel"));
+
+{
+  const tags = inferMailStudyTags(
+    {
+      from: "no-reply@grab.com",
+      subject: "สรุปยอดขายสำหรับคำสั่งซื้อ 30 กรกฎาคม 2026 GrabFood",
+      pdfFilenames: ["day.pdf"],
+    },
+    DEFAULT_MAIL_RULES,
+  );
+  assert.ok(tags.includes("grab-รายวัน"));
+  assert.ok(tags.includes("pdf"));
+  assert.ok(!tags.includes("ข้าม"));
+}
+
+{
+  const tags = inferMailStudyTags(
+    {
+      from: "LINE MAN Wongnai <no-reply-merchant@lmwn.com>",
+      subject: "รายงานยอดโอนออก - LINE MAN Wongnai 01/08/69",
+    },
+    DEFAULT_MAIL_RULES,
+  );
+  assert.ok(tags.includes("lm-รายวัน-โอน"));
+}
+
+{
+  const tags = inferMailStudyTags(
+    {
+      from: "Grab <no-reply@grab.com>",
+      subject: "Grab: Receipt/Tax Invoice No. IM20260727011072",
+    },
+    DEFAULT_MAIL_RULES,
+  );
+  assert.ok(tags.includes("ข้าม"));
+}
 
 {
   const empty = buildMailStudyDump([]);

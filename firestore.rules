@@ -950,6 +950,7 @@ service cloud.firestore {
         || (docId == 'vatDeliverySourceNotes' && isOwner())
         || (docId == 'vatMailStudyNotes' && isOwner())
         || (docId == 'vatAgentApi' && isOwner())
+        || (docId == 'vatMailStudyPass' && isOwner())
         || (docId == 'vatDeliveryFreshStart' && isOwner())
         || (docId == 'vatAgentChatPresence' && (isOwner() || isOwnerEmail()))
         || (docId == 'vatMonthlySettings' && (isOwner() || isOwnerEmail()))
@@ -962,7 +963,7 @@ service cloud.firestore {
         || (docId == 'vatMailOAuthConfigOutlook' && isOwner())
         || (docId == 'vatMailOAuthStateOutlook' && isOwner())
         || (docId == 'vatSalesAlertState' && isOwner())
-        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && docId != 'vatSalesSettings' && docId != 'vatImportAiNotes' && docId != 'vatDeliverySourceNotes' && docId != 'vatMailStudyNotes' && docId != 'vatAgentApi' && docId != 'vatDeliveryFreshStart' && docId != 'vatAgentChatPresence' && docId != 'vatMonthlySettings' && docId != 'personalTaxSettings' && docId != 'vatMailOAuth' && docId != 'vatMailOAuthLineman' && docId != 'vatMailOAuthConfig' && docId != 'vatMailOAuthState' && docId != 'vatMailOAuthOutlook' && docId != 'vatMailOAuthConfigOutlook' && docId != 'vatMailOAuthStateOutlook' && docId != 'vatSalesAlertState' && isStaff())
+        || (docId != 'aiSettings' && docId != 'foodstoryAuth' && docId != 'posStoreClaimSecret' && docId != 'vatSalesSettings' && docId != 'vatImportAiNotes' && docId != 'vatDeliverySourceNotes' && docId != 'vatMailStudyNotes' && docId != 'vatAgentApi' && docId != 'vatMailStudyPass' && docId != 'vatDeliveryFreshStart' && docId != 'vatAgentChatPresence' && docId != 'vatMonthlySettings' && docId != 'personalTaxSettings' && docId != 'vatMailOAuth' && docId != 'vatMailOAuthLineman' && docId != 'vatMailOAuthConfig' && docId != 'vatMailOAuthState' && docId != 'vatMailOAuthOutlook' && docId != 'vatMailOAuthConfigOutlook' && docId != 'vatMailOAuthStateOutlook' && docId != 'vatSalesAlertState' && isStaff())
         || (isPosDeviceAuth() && (docId == 'ui' || docId == 'pos' || docId == 'posNativeRelease' || docId == 'posOpsNotes' || docId == 'posMenuRank'));
       allow write: if isOwner()
         || (isOwnerEmail() && (docId == 'vatMonthlySettings' || docId == 'personalTaxSettings' || docId == 'vatAgentChatPresence'))

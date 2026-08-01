@@ -5,7 +5,7 @@
  * — เชื่อมครั้งเดียว · ตารางเมล · แท็กศึกษา (รายวัน / สรุปเดือน · excel/pdf)
  * — ยังไม่ผสานเข้ายอดเดลิเวอรี่จนกว่าจะจูนแล้ว
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateTimeShort } from "@/lib/utils";
 import {
   loadVatSalesSettings,
@@ -23,9 +23,12 @@ import {
   MAIL_STUDY_TAG_PRESETS,
   saveVatMailOAuthConfig,
   startVatMailOAuth,
+  loadVatMailStudyPass,
   reclassifyPlatformEmailReports,
+  saveVatMailStudyPass,
   syncVatMail,
   togglePlatformEmailStudyTag,
+  VAT_MAIL_STUDY_PASS,
   type PlatformEmailReport,
   type VatMailStatus,
 } from "@/lib/vat-sales-mail";
@@ -86,6 +89,7 @@ export function VatMailStudyPanel({ actor }: Props) {
   const [notesUpdatedAt, setNotesUpdatedAt] = useState(0);
   const [agentApi, setAgentApi] = useState<VatAgentApi | null>(null);
   const [showAgentApi, setShowAgentApi] = useState(false);
+  const studyPassStarted = useRef(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -132,6 +136,46 @@ export function VatMailStudyPanel({ actor }: Props) {
       void refresh();
     }
   }, [refresh]);
+
+  /** D2: เปิดหน้าแล้วจูนช่องทาง+แท็กอัตโนมัติครั้งหนึ่งต่อเวอร์ชัน pass */
+  useEffect(() => {
+    if (studyPassStarted.current) return;
+    studyPassStarted.current = true;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const pass = await loadVatMailStudyPass();
+        if (cancelled || pass >= VAT_MAIL_STUDY_PASS) return;
+        setBusy("reclass");
+        const fix = await reclassifyPlatformEmailReports({ max: 300, actor });
+        if (cancelled) return;
+        const rows = await listPlatformEmailReports({ max: 120 });
+        setReports(rows);
+        try {
+          const notes = await refreshVatMailStudyNotesFromReports(rows, actor);
+          setStudyNotes(notes.text);
+          setNotesUpdatedAt(notes.updatedAt);
+        } catch {
+          /* ignore */
+        }
+        await saveVatMailStudyPass(VAT_MAIL_STUDY_PASS, actor);
+        if (!cancelled) {
+          setMsg(
+            `จูนศึกษา D2 · แก้ ${fix.reclassified}` +
+              (fix.tagged ? ` · แท็ก ${fix.tagged}` : "") +
+              (fix.noiseTagged ? ` · ข้าม ${fix.noiseTagged}` : ""),
+          );
+        }
+      } catch {
+        /* ไม่บล็อกหน้า */
+      } finally {
+        if (!cancelled) setBusy("");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [actor]);
 
   const visible = useMemo(() => {
     if (tagFilter === "all") return reports;
@@ -223,9 +267,11 @@ export function VatMailStudyPanel({ actor }: Props) {
       } catch {
         /* ignore */
       }
+      await saveVatMailStudyPass(VAT_MAIL_STUDY_PASS, actor);
       setMsg(
-        `แก้ช่องทางแล้ว · สแกน ${fix.scanned} · แก้ ${fix.reclassified}` +
-          (fix.noiseTagged ? ` · แท็กข้าม ${fix.noiseTagged}` : ""),
+        `จูนศึกษา D2 · สแกน ${fix.scanned} · แก้ ${fix.reclassified}` +
+          (fix.tagged ? ` · แท็ก ${fix.tagged}` : "") +
+          (fix.noiseTagged ? ` · ข้าม ${fix.noiseTagged}` : ""),
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -362,10 +408,10 @@ export function VatMailStudyPanel({ actor }: Props) {
           type="button"
           className="vat-mini-btn"
           disabled={Boolean(busy) || loading}
-          title="จัดช่องทางใหม่จาก From (แก้ Shopee ปน Grab/LM)"
+          title="จูนศึกษา D2: ช่องทางจาก From + แท็กชนิดเมล (ยังไม่เข้างบ)"
           onClick={() => void fixChannels()}
         >
-          {busy === "reclass" ? "แก้ช่อง…" : "แก้ช่องทาง"}
+          {busy === "reclass" ? "จูน…" : "จูนศึกษา D2"}
         </button>
         <button
           type="button"
