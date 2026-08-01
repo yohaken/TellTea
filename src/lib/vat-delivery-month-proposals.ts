@@ -947,13 +947,13 @@ export function applyDriveAiDraftToProposal(
       ? rollupDayMapToAmounts(dayMap)
       : null;
 
-    let appSales =
+    const appSales =
       fromDays?.appSales != null
         ? fromDays.appSales
         : d.appSales == null || !Number.isFinite(Number(d.appSales))
           ? null
           : roundMoney(Number(d.appSales));
-    let transfer =
+    const transfer =
       fromDays?.transfer != null
         ? fromDays.transfer
         : d.transfer == null || !Number.isFinite(Number(d.transfer))
