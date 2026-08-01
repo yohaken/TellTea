@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { VatColHead } from "@/components/vat-sales/VatColHead";
 import { VatSourcesMailBar } from "@/components/vat-sales/VatSourcesMailBar";
+import { VatSourcesDriveSlot } from "@/components/vat-sales/VatSourcesDriveSlot";
 import {
   loadVatDeliverySourceNotes,
   saveVatDeliverySourceNotes,
@@ -428,6 +429,9 @@ export function VatDeliverySources({ actor }: Props) {
           ล้างทุกเดือน
         </button>
       </div>
+
+      {/* ช่องว่างด้านล่าง — แสดงจริงให้เช็ค · เอเจนถัดไปต่อ Drive */}
+      <VatSourcesDriveSlot monthKey={month} />
     </div>
   );
 }

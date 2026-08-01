@@ -19600,6 +19600,49 @@ a.ghost-btn {
   margin: 0.25rem 0 0.5rem;
 }
 
+.vat-sources-drive-slot {
+  margin-top: 0.75rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed rgba(28, 42, 31, 0.18);
+}
+
+.vat-sources-drive-checks {
+  list-style: none;
+  margin: 0.35rem 0 0.55rem;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.vat-sources-drive-check {
+  display: grid;
+  grid-template-columns: 1.1rem 1fr auto;
+  gap: 0.4rem;
+  align-items: baseline;
+  font-size: 0.8rem;
+}
+
+.vat-sources-drive-mark {
+  color: rgba(28, 42, 31, 0.45);
+}
+
+.vat-sources-drive-empty {
+  color: rgba(87, 15, 15, 0.75);
+  font-size: 0.78rem;
+}
+
+.vat-sources-drive-handoff {
+  margin: 0.5rem 0 0;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  border: 1px solid rgba(28, 42, 31, 0.12);
+  background: rgba(28, 42, 31, 0.03);
+  color: rgba(28, 42, 31, 0.7);
+  overflow-x: auto;
+}
+
 .vat-mini-btn--danger {
   border-color: rgba(87, 15, 15, 0.45);
   color: rgba(87, 15, 15, 0.95);
