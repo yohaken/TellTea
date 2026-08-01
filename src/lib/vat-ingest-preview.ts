@@ -77,11 +77,9 @@ export const INGEST_KIND_LABEL: Record<IngestKind, string> = {
 };
 
 export const INGEST_CHANNEL_HINT: Record<MonthChannel, string> = {
-  grab: "อัปโหลดรูปแคปหน้าการเงิน (สรุปทั้งเดือน) · AI อ่านยอด + ตรวจเดือน",
-  shopee:
-    "เมลเข้าต้นเดือนถัดไป แต่สรุปเดือนก่อน · อ่านเนื้อเมล「วันที่รายงาน」ไม่ใช่วันส่ง",
-  lineman:
-    "เมล GP ~สามทุ่ม ต้นเดือนถัดไป · ย้อนโหลดช่วงนั้น · อ่าน REPORT_*.csv ไฟล์แรก",
+  grab: "แคปสรุปการเงิน GrabMerchant ทั้งเดือน",
+  shopee: "แคปเมลสรุปเดือน ShopeeFood (วันที่รายงาน = เดือนจริง)",
+  lineman: "แคปสรุป/เมล GP LINE MAN ประจำเดือน",
 };
 
 function base(

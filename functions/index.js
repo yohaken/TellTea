@@ -48,10 +48,9 @@ exports.vatMailSync = vatMail.vatMailSync;
 exports.vatMailPdfUrl = vatMail.vatMailPdfUrl;
 const vatMailDrive = require("./vat-mail-drive");
 exports.vatMailDriveSync = vatMailDrive.vatMailDriveSync;
-const vatMailMonthlyPull = require("./vat-mail-monthly-pull");
-exports.vatMailPullMonthlySources = vatMailMonthlyPull.vatMailPullMonthlySources;
-const vatGrabImageExtract = require("./vat-grab-image-extract");
-exports.vatGrabImageExtract = vatGrabImageExtract.vatGrabImageExtract;
+const vatDeliveryCaptureExtract = require("./vat-delivery-capture-extract");
+exports.vatDeliveryCaptureExtract =
+  vatDeliveryCaptureExtract.vatDeliveryCaptureExtract;
 const vatMailAgentDump = require("./vat-mail-agent-dump");
 exports.vatMailAgentDump = vatMailAgentDump.vatMailAgentDump;
 const vatMailAgentPropose = require("./vat-mail-agent-propose");
