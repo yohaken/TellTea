@@ -5890,7 +5890,8 @@ body.modal-open .main-panel {
 .bonus-forced-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  /* สูงกว่า preview bar / sheet — ต่ำกว่าบาง modal 220 ก็พอถ้าไม่มีซ้อน */
+  z-index: 200;
   background: rgba(20, 16, 12, 0.72);
   display: flex;
   align-items: center;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
@@ -365,6 +365,11 @@ function BonusEvidenceForcedViewer({
   const slides = useMemo(() => buildForcedSlides(doc), [doc]);
   const [idx, setIdx] = useState(0);
   const [mounted, setMounted] = useState(false);
+  /** กันปิดทันทีเมื่อ parent re-render แล้วสร้าง onClose ใหม่ (ดูแบบพนักงาน / snapshot) */
+  const onCloseRef = useRef(onClose);
+  const onCompleteRef = useRef(onComplete);
+  onCloseRef.current = onClose;
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     setMounted(true);
@@ -378,7 +383,7 @@ function BonusEvidenceForcedViewer({
     let closedByPop = false;
     const onPop = () => {
       closedByPop = true;
-      onClose();
+      onCloseRef.current();
     };
     window.addEventListener("popstate", onPop);
     return () => {
@@ -391,7 +396,7 @@ function BonusEvidenceForcedViewer({
         window.history.back();
       }
     };
-  }, [onClose]);
+  }, []);
 
   if (!slides.length) {
     return null;
@@ -403,8 +408,8 @@ function BonusEvidenceForcedViewer({
 
   function goNext() {
     if (atEnd) {
-      onComplete();
-      onClose();
+      onCompleteRef.current();
+      onCloseRef.current();
       return;
     }
     setIdx((i) => Math.min(slides.length - 1, i + 1));
@@ -428,7 +433,7 @@ function BonusEvidenceForcedViewer({
             type="button"
             className="ghost-btn bonus-forced-close"
             aria-label="ปิด"
-            onClick={onClose}
+            onClick={() => onCloseRef.current()}
           >
             <X size={18} aria-hidden />
           </button>
