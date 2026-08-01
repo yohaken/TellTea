@@ -10,17 +10,15 @@
 | หน้า | Route | งาน |
 |------|-------|-----|
 | **VAT เดือน** | `/vat-sales/` | งบสรุป · ตาราง **ยอดเดลิเวอรี่** · A/B/C/D |
-| **ที่มายอดเดลิเวอรี่** | `/vat-sales/sources/` | กรอกยอดรวมเดือน · ส่งออกเข้างบ · Gmail ขั้นต่ำ |
+| **ที่มายอดเดลิเวอรี่** | `/vat-sales/sources/` | **เฉพาะ** ตารางยอดรวมเดือน (ผสานเข้างบทันที) |
 
 ```
-[ที่มายอดเดลิเวอรี่]  --ส่งออก-->  [ยอดเดลิเวอรี่ ใน VAT เดือน]
-     ↑ กรอกมือ / (ต่อไปไฟล์ Drive)      ↑ vatMonthlyReturns รูปแบบเดิม
+[ที่มายอดเดลิเวอรี่]  --ผสานทันที-->  [ยอดเดลิเวอรี่ ใน VAT เดือน]
+     ↑ กรอกมือ                              ↑ vatMonthlyReturns รูปแบบเดิม
 ```
 
-- หน้าเริ่มใหม่: ไม่มีตารางศึกษาเมล · ไม่มีข้อเสนอ D3–D5 · ไม่มีบันทึก AI บนหน้า
-- ปุ่ม **ส่งออกไป VAT เดือน** → `mergeMonthSourcesIntoBooks` → `vatMonthlyReturns`
-- Gmail: เชื่อม / ซิงก์เมลเท่านั้น (เตรียมสายไฟล์ → Drive ต่อไป)
-- โน้ตส่วนตัว + ล้างเดือน / ล้างทุกเดือน
+- ล้าง UI อื่นออกแล้ว (Gmail / โน้ต / ล้างเดือน / Drive slot / ศึกษาเมล / ข้อเสนอ)
+- กรอกแล้ว debounce ผสาน → `mergeMonthSourcesIntoBooks` → `vatMonthlyReturns`
 
 ---
 
@@ -56,5 +54,4 @@
 |------|------|
 | หน้า | `src/app/vat-sales/sources/page.tsx` |
 | UI | `src/components/vat-sales/VatDeliverySources.tsx` |
-| Gmail ขั้นต่ำ | `src/components/vat-sales/VatSourcesMailBar.tsx` |
-| ส่งออกเข้างบ | `mergeMonthSourcesIntoBooks` ใน `src/lib/vat-month-sources.ts` |
+| ผสานเข้างบ | `mergeMonthSourcesIntoBooks` ใน `src/lib/vat-month-sources.ts` |

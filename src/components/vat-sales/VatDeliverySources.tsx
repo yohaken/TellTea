@@ -1,18 +1,12 @@
 "use client";
 
 /**
- * ที่มายอดเดลิเวอรี่ — หน้าเริ่มใหม่ (ล้าง UI ศึกษา/ข้อเสนอ)
- * กรอกยอด → ส่งออกเข้าตารางยอดเดลิเวอรี่ใน VAT เดือน (รูปแบบเดิม)
+ * ที่มายอดเดลิเวอรี่ — เหลือเฉพาะตารางสรุป
+ * ยอดรวมเดือน (ผสานเข้างบทันที) → vatMonthlyReturns
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { VatColHead } from "@/components/vat-sales/VatColHead";
-import { VatSourcesMailBar } from "@/components/vat-sales/VatSourcesMailBar";
-import { VatSourcesDriveSlot } from "@/components/vat-sales/VatSourcesDriveSlot";
-import {
-  loadVatDeliverySourceNotes,
-  saveVatDeliverySourceNotes,
-} from "@/lib/vat-delivery-source-notes";
 import {
   formatVatMoney,
   moneyFieldValue,
@@ -30,11 +24,6 @@ import {
   MONTH_CHANNELS,
   type MonthChannelSource,
 } from "@/lib/vat-month-sources";
-import {
-  wipeAllDeliveryTotals,
-  wipeDeliveryTotalsForMonth,
-  summarizeWipe,
-} from "@/lib/vat-delivery-wipe";
 import {
   emptyMonthBooksDraft,
   retToMonthBooksDraft,
@@ -94,17 +83,10 @@ export function VatDeliverySources({ actor }: Props) {
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
   const [dirty, setDirty] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [note, setNote] = useState("");
-  const [noteDirty, setNoteDirty] = useState(false);
-  const [noteMsg, setNoteMsg] = useState("");
-  const [wipeBusy, setWipeBusy] = useState(false);
-  const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadGen = useRef(0);
   const draftRef = useRef(draft);
   draftRef.current = draft;
-  const noteRef = useRef(note);
-  noteRef.current = note;
 
   const sources = useMemo(() => draftToMonthSources(draft), [draft]);
 
@@ -133,63 +115,38 @@ export function VatDeliverySources({ actor }: Props) {
     void loadMonth(month);
   }, [month, loadMonth]);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const n = await loadVatDeliverySourceNotes();
-        setNote(n.text);
-        setNoteDirty(false);
-      } catch {
-        /* โน้ตว่างได้ */
-      }
-    })();
-  }, []);
-
-  /** ส่งออกเข้า vatMonthlyReturns — รูปแบบตารางยอดเดลิเวอรี่เดิม */
-  const exportToBooks = useCallback(async () => {
-    if (locked || exporting) return;
-    setExporting(true);
-    setError("");
+  const flushSave = useCallback(async () => {
+    if (locked) return;
+    const view = draftToMonthSources(draftRef.current);
     try {
-      const view = draftToMonthSources(draftRef.current);
       const result = await mergeMonthSourcesIntoBooks({
         monthKey: month,
         sources: view,
         actor,
       });
       if (result.skipped) {
-        setMsg(result.reason || "ข้ามการส่งออก");
+        setMsg(result.reason || "ข้ามการผสาน");
         if (result.reason === "เดือนปิดงบแล้ว") setLocked(true);
         return;
       }
       setDraft(retToMonthBooksDraft(result.saved));
       setDirty(false);
-      setMsg("ส่งออกไป VAT เดือนแล้ว");
+      setMsg("ผสานเข้ายอดเดลิเวอรี่แล้ว");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setExporting(false);
     }
-  }, [actor, exporting, locked, month]);
+  }, [actor, locked, month]);
 
   useEffect(() => {
-    if (!noteDirty) return;
-    if (noteTimer.current) clearTimeout(noteTimer.current);
-    noteTimer.current = setTimeout(() => {
-      void (async () => {
-        try {
-          await saveVatDeliverySourceNotes(noteRef.current, actor);
-          setNoteDirty(false);
-          setNoteMsg("บันทึกโน้ตแล้ว");
-        } catch (e) {
-          setError(e instanceof Error ? e.message : String(e));
-        }
-      })();
-    }, 800);
+    if (loading || locked || !dirty) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      void flushSave();
+    }, 700);
     return () => {
-      if (noteTimer.current) clearTimeout(noteTimer.current);
+      if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [actor, note, noteDirty]);
+  }, [dirty, draft, flushSave, loading, locked]);
 
   function patchField(
     channel: MonthChannel,
@@ -216,53 +173,7 @@ export function VatDeliverySources({ actor }: Props) {
     setMsg("");
   }
 
-  const statusLabel = locked
-    ? "ปิดงบ"
-    : dirty
-      ? "ยังไม่ส่งออก"
-      : exporting
-        ? "กำลังส่งออก…"
-        : "พร้อม";
-
-  async function onWipeMonth() {
-    if (wipeBusy) return;
-    const ok = window.confirm(
-      `ล้างยอดเดลิเวอรี่เดือน ${formatThaiMonthKey(month)} เป็น 0?`,
-    );
-    if (!ok) return;
-    setWipeBusy(true);
-    setError("");
-    try {
-      const saved = await wipeDeliveryTotalsForMonth(month, actor);
-      setDraft(retToMonthBooksDraft(saved));
-      setLocked(saved.status === "filed");
-      setDirty(false);
-      setMsg(`ล้างยอดเดลิเวอรี่ ${formatThaiMonthKey(month)} แล้ว`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setWipeBusy(false);
-    }
-  }
-
-  async function onWipeAll() {
-    if (wipeBusy) return;
-    const ok = window.confirm(
-      "ล้างยอดเดลิเวอรี่ทุกเดือน เป็น 0 และลบแถวนำเข้ารายวันเก่า?",
-    );
-    if (!ok) return;
-    setWipeBusy(true);
-    setError("");
-    try {
-      const report = await wipeAllDeliveryTotals(actor);
-      await loadMonth(month);
-      setMsg(summarizeWipe(report));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setWipeBusy(false);
-    }
-  }
+  const statusLabel = locked ? "ปิดงบ" : dirty ? "กำลังผสาน…" : "พร้อม";
 
   return (
     <div className="vat-delivery-sources">
@@ -272,7 +183,7 @@ export function VatDeliverySources({ actor }: Props) {
           <select
             className="vat-thai-month-select"
             value={month}
-            disabled={loading || wipeBusy}
+            disabled={loading}
             onChange={(e) => setMonth(e.target.value)}
             aria-label="เลือกเดือน"
           >
@@ -289,14 +200,6 @@ export function VatDeliverySources({ actor }: Props) {
         >
           {statusLabel}
         </span>
-        <button
-          type="button"
-          className="vat-mini-btn vat-mini-btn--primary"
-          disabled={locked || loading || exporting || wipeBusy || !dirty}
-          onClick={() => void exportToBooks()}
-        >
-          {exporting ? "ส่งออก…" : "ส่งออกไป VAT เดือน"}
-        </button>
         <Link href="/vat-sales/" className="vat-sales-tab vat-sources-jump">
           → VAT เดือน
         </Link>
@@ -305,16 +208,15 @@ export function VatDeliverySources({ actor }: Props) {
       <h2 className="vat-table-title">
         ที่มายอดเดลิเวอรี่ — {formatThaiMonthKey(month)}
       </h2>
-      <p className="muted vat-sales-hint vat-hint-one-line">
-        กรอกยอดรวมเดือน · กดส่งออกเข้าตารางยอดเดลิเวอรี่ (รูปแบบเดิม)
-      </p>
 
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
       {loading ? <p className="muted">กำลังโหลด…</p> : null}
 
       <section className="vat-table-block vat-month-sources">
-        <h3 className="vat-table-subtitle">ยอดรวมเดือน</h3>
+        <h3 className="vat-table-subtitle">
+          ยอดรวมเดือน (ผสานเข้างบทันที)
+        </h3>
         <div className="sheet-wrap vat-month-slim-wrap">
           <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
             <thead>
@@ -386,52 +288,6 @@ export function VatDeliverySources({ actor }: Props) {
           </table>
         </div>
       </section>
-
-      <VatSourcesMailBar actor={actor} />
-
-      <section className="vat-table-block vat-source-notes" aria-label="โน้ต">
-        <h3 className="vat-table-subtitle">โน้ต</h3>
-        <textarea
-          className="vat-source-notes-input"
-          value={note}
-          rows={5}
-          spellCheck={false}
-          placeholder="จดโน้ตเอง…"
-          aria-label="โน้ตที่มายอดเดลิเวอรี่"
-          onChange={(e) => {
-            setNote(e.target.value);
-            setNoteDirty(true);
-            setNoteMsg("");
-          }}
-        />
-        {noteMsg ? (
-          <p className="muted vat-sales-hint vat-hint-one-line">{noteMsg}</p>
-        ) : noteDirty ? (
-          <p className="muted vat-sales-hint vat-hint-one-line">กำลังบันทึก…</p>
-        ) : null}
-      </section>
-
-      <div className="vat-wipe-actions">
-        <button
-          type="button"
-          className="vat-mini-btn"
-          disabled={wipeBusy || loading}
-          onClick={() => void onWipeMonth()}
-        >
-          ล้างเดือนนี้
-        </button>
-        <button
-          type="button"
-          className="vat-mini-btn vat-mini-btn--danger"
-          disabled={wipeBusy || loading}
-          onClick={() => void onWipeAll()}
-        >
-          ล้างทุกเดือน
-        </button>
-      </div>
-
-      {/* ช่องว่างด้านล่าง — แสดงจริงให้เช็ค · เอเจนถัดไปต่อ Drive */}
-      <VatSourcesDriveSlot monthKey={month} />
     </div>
   );
 }
