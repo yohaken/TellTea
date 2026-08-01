@@ -1,0 +1,37 @@
+# Dump AI mail study notes for cloud agents (Actions logs).
+# Trigger: workflow_dispatch, or push empty commit to branch cursor/dump-vat-mail-notes-2f65
+name: Dump VAT mail study notes
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - cursor/dump-vat-mail-notes-2f65
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Dump mail study notes
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/dump-vat-mail-study-notes.mjs

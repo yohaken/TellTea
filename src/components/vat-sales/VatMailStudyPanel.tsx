@@ -320,6 +320,26 @@ export function VatMailStudyPanel({ actor }: Props) {
         >
           {busy === "notes" ? "บันทึก…" : "อัปเดตบันทึก AI"}
         </button>
+        <button
+          type="button"
+          className="vat-mini-btn"
+          disabled={!studyNotes.trim()}
+          title="คัดลอกบันทึกไปวางในแชท AI"
+          onClick={() => {
+            void (async () => {
+              try {
+                await navigator.clipboard.writeText(
+                  studyNotes || defaultVatMailStudyNotesText(),
+                );
+                setMsg("คัดลอกบันทึก AI แล้ว — วางในแชทได้");
+              } catch (e) {
+                setError(e instanceof Error ? e.message : String(e));
+              }
+            })();
+          }}
+        >
+          คัดลอกบันทึก
+        </button>
       </div>
 
       <aside
