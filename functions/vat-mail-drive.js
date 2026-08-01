@@ -298,7 +298,7 @@ function publicDriveStatus(oauthData, driveMeta) {
 }
 
 /**
- * Owner sync: ensure TellTea-VAT tree + upload attachments from catalogued mail.
+ * Owner sync (retry-ready): ensure TellTea-VAT tree + upload attachments from catalogued mail.
  * data.monthKey optional — จำกัดเดือน (YYYY-MM); ไม่ใส่ = ทุกเดือนในแคตตาล็อกล่าสุด
  */
 exports.vatMailDriveSync = functions

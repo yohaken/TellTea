@@ -82,7 +82,7 @@ Firebase Storage `vat-mail-pdfs/` ยังใช้เป็น cache ถอด
 | **F4** | AI อ่านไฟล์ → ร่างยอดเดือน (ไม่เขียนงบเอง) | ✅ `vatMailAgentPropose` + ปุ่ม「ร่างยอด F4」 |
 | **F5** | Owner ยืนยัน → ลงตารางยอดเดลิเวอรี่ | ✅ 「ยืนยันลงตาราง F5」→ `mergeProposalIntoBooks` |
 
-**หน้า `/vat-sales/sources/` (build 593):**  
+**หน้า `/vat-sales/sources/` (build 594):**  
 1. ตาราง「ยอดรวมเดือน (ผสานเข้างบทันที)」  
 2. บล็อก `#vat-sources-drive-slot` — เช็คลิสต์ F0–F5 · ซิงก์ Drive · ร่างยอด · ยืนยันลงตาราง · กล่องแยกแอพ
 
