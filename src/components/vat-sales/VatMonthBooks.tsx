@@ -1,11 +1,12 @@
 "use client";
 
 /**
- * หน้าเดือน VAT — สรุปรายเดือน (ไม่ใช่รายวัน)
- * สรุปช่องทาง → A รายได้ · B คชจ. · C กำไร+ภ.ง.ด. · D VAT
- * แหล่ง: Grab ม้วนรายวัน · LM/Shopee สรุปเดือน · รายละเอียดค่อยแตกทีหลัง
+ * หน้าเดือน VAT — สรุปรายเดือน (งบ)
+ * ยอดเดลิเวอรี่ → A รายได้ · B คชจ. · C กำไร+ภ.ง.ด. · D VAT
+ * ที่มาไฟล์อยู่หน้า /vat-sales/sources/ คนละสาย · ผสานเข้าตารางนี้
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { formatDateShort } from "@/lib/utils";
 import {
   loadOwnerMonthBreakdown,
@@ -45,10 +46,10 @@ import {
   type MonthChannel,
 } from "@/lib/vat-month-books";
 import {
+  DELIVERY_COL_INFO,
   draftToMonthSources,
-  MONTH_CHANNEL_SOURCE_HINT,
-  MONTH_SOURCE_KIND_LABEL,
 } from "@/lib/vat-month-sources";
+import { subscribeVatImportMonthMerged } from "@/lib/vat-import-month-sync";
 import {
   bookLabel,
   loadBothBooksVatByMonth,
@@ -58,6 +59,7 @@ import {
 import { updateLedgerEntry } from "@/lib/ledger";
 import { updateOwnerBookEntry } from "@/lib/owner-books";
 import { BooksVatEntryDetailModal } from "@/components/vat-sales/BooksVatEntryDetailModal";
+import { VatColHead } from "@/components/vat-sales/VatColHead";
 import { exportPersonalTaxYearXlsx } from "@/lib/xlsx-export";
 import {
   fileVatMonthlyReturn,
@@ -168,28 +170,6 @@ function ExpandBtn({
     >
       {open ? "−" : "+"}
     </button>
-  );
-}
-
-/** หัวคอลัมน์ + ปุ่ม info เล็ก ๆ (title = อธิบายที่มา) */
-function ColHead({
-  label,
-  info,
-  className = "col-num",
-}: {
-  label: string;
-  info: string;
-  className?: string;
-}) {
-  return (
-    <th className={className} title={info}>
-      <span className="vat-col-head">
-        {label}
-        <span className="vat-col-info" aria-label={info} title={info}>
-          i
-        </span>
-      </span>
-    </th>
   );
 }
 
@@ -377,6 +357,17 @@ export function VatMonthBooks({ actor }: Props) {
   useEffect(() => {
     void loadMonth(month);
   }, [month, loadMonth]);
+
+  // รับยอดจากหน้าที่มายอดเดลิเวอรี่ (ผสานทันที)
+  useEffect(() => {
+    return subscribeVatImportMonthMerged((detail) => {
+      if (detail.monthKey !== month) return;
+      if (draftRef.current.status === "filed") return;
+      setDraft(retToMonthBooksDraft(detail.saved));
+      setDirty(false);
+      setMsg("อัปเดตจากที่มายอดเดลิเวอรี่");
+    });
+  }, [month]);
 
   // อัตโนมัติเซฟเบา ๆ
   useEffect(() => {
@@ -827,90 +818,76 @@ export function VatMonthBooks({ actor }: Props) {
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
 
-      {/* ยอดเดลิเวอรี่ — สรุปรายเดือนต่อช่องทาง (ไม่ใช่รายวัน) */}
+      {/* ยอดเดลิเวอรี่ — ตัวเลขงบ (ที่มาไฟล์อยู่หน้าที่แยก) */}
       <section className="vat-table-block vat-month-sources">
         <h2 className="vat-table-title">
           ยอดเดลิเวอรี่ — {formatThaiMonthKey(month)}
+          <Link
+            href="/vat-sales/sources/"
+            className="vat-sources-link"
+            title="เปิดหน้าที่มายอดเดลิเวอรี่"
+          >
+            ที่มา
+          </Link>
         </h2>
-        <p className="muted vat-sales-hint vat-hint-one-line">
-          Grab ม้วนจากหลายไฟล์รายวัน · LINE MAN / Shopee ใช้ไฟล์สรุปเดือน ·
-          รายละเอียดค่อยแตกทีหลัง
-        </p>
         <div className="sheet-wrap vat-month-slim-wrap">
           <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
             <thead>
               <tr>
                 <th className="col-seg">ช่องทาง</th>
-                <ColHead
+                <VatColHead
                   label="ยอดขายแอพ"
-                  info="ยอดขายแอพ = ยอดขายที่แพลตฟอร์มรายงาน (รวม VAT) · ใช้คิดภาษีขาย"
+                  info={DELIVERY_COL_INFO.appSales}
                 />
-                <ColHead
+                <VatColHead
                   label="ยอดโอน"
-                  info="ยอดโอน = ยอดเงินเข้าบัญชีธนาคารหลังหักค่า GP แล้ว · เป็นรายได้ถึงร้าน"
+                  info={DELIVERY_COL_INFO.transfer}
                 />
-                <ColHead
-                  label="คชจ.GP"
-                  info="คชจ.GP = ค่าบริการแพลตฟอร์มที่หักแวทออกแล้ว (ไม่รวม VAT) · อยู่ในยอดโอนแล้ว ไม่หักซ้ำกำไร"
-                />
-                <ColHead
+                <VatColHead label="คชจ.GP" info={DELIVERY_COL_INFO.gpFee} />
+                <VatColHead
                   label="VAT-ซื้อ"
-                  info="VAT-ซื้อ = แวทค่าบริการขาย (ภาษีซื้อจากบิลค่า GP) · ไม่ใช่เงินหักเพิ่มจากโอน"
+                  info={DELIVERY_COL_INFO.purchaseVat}
                 />
-                <th className="col-seg" title="รูปแบบต้นทางของยอดเดือนนี้">
-                  ที่มา
-                </th>
               </tr>
             </thead>
             <tbody>
-              {MONTH_CHANNELS.map((k) => {
-                const kindHint =
-                  k === "grab"
-                    ? "grab-rollup"
-                    : k === "lineman"
-                      ? "lineman-monthly"
-                      : "shopee-monthly";
-                return (
-                  <tr key={k} title={MONTH_CHANNEL_SOURCE_HINT[k]}>
-                    <td className="col-seg">{MONTH_CHANNEL_LABEL[k]}</td>
-                    <td className="col-num col-input">
-                      <MoneyCell
-                        value={moneyFieldValue(draft.sales[k])}
-                        locked={locked}
-                        ariaLabel={`ยอดขายแอพ ${MONTH_CHANNEL_SHORT[k]}`}
-                        onChange={(v) => setSourceSales(k, v)}
-                      />
-                    </td>
-                    <td className="col-num col-input">
-                      <MoneyCell
-                        value={moneyFieldValue(draft.transfer[k])}
-                        locked={locked}
-                        ariaLabel={`ยอดโอน ${MONTH_CHANNEL_SHORT[k]}`}
-                        onChange={(v) => setTransferField(k, v)}
-                      />
-                    </td>
-                    <td className="col-num col-input">
-                      <MoneyCell
-                        value={moneyFieldValue(draft.gpFee[k])}
-                        locked={locked}
-                        ariaLabel={`คชจ.GP ${MONTH_CHANNEL_SHORT[k]}`}
-                        onChange={(v) => setSourceFee(k, v)}
-                      />
-                    </td>
-                    <td className="col-num col-input">
-                      <MoneyCell
-                        value={moneyFieldValue(draft.gpVatOverride[k])}
-                        locked={locked}
-                        ariaLabel={`VAT-ซื้อ ${MONTH_CHANNEL_SHORT[k]}`}
-                        onChange={(v) => setSourceGpVat(k, v)}
-                      />
-                    </td>
-                    <td className="col-seg muted">
-                      {MONTH_SOURCE_KIND_LABEL[kindHint]}
-                    </td>
-                  </tr>
-                );
-              })}
+              {MONTH_CHANNELS.map((k) => (
+                <tr key={k}>
+                  <td className="col-seg">{MONTH_CHANNEL_LABEL[k]}</td>
+                  <td className="col-num col-input">
+                    <MoneyCell
+                      value={moneyFieldValue(draft.sales[k])}
+                      locked={locked}
+                      ariaLabel={`ยอดขายแอพ ${MONTH_CHANNEL_SHORT[k]}`}
+                      onChange={(v) => setSourceSales(k, v)}
+                    />
+                  </td>
+                  <td className="col-num col-input">
+                    <MoneyCell
+                      value={moneyFieldValue(draft.transfer[k])}
+                      locked={locked}
+                      ariaLabel={`ยอดโอน ${MONTH_CHANNEL_SHORT[k]}`}
+                      onChange={(v) => setTransferField(k, v)}
+                    />
+                  </td>
+                  <td className="col-num col-input">
+                    <MoneyCell
+                      value={moneyFieldValue(draft.gpFee[k])}
+                      locked={locked}
+                      ariaLabel={`คชจ.GP ${MONTH_CHANNEL_SHORT[k]}`}
+                      onChange={(v) => setSourceFee(k, v)}
+                    />
+                  </td>
+                  <td className="col-num col-input">
+                    <MoneyCell
+                      value={moneyFieldValue(draft.gpVatOverride[k])}
+                      locked={locked}
+                      ariaLabel={`VAT-ซื้อ ${MONTH_CHANNEL_SHORT[k]}`}
+                      onChange={(v) => setSourceGpVat(k, v)}
+                    />
+                  </td>
+                </tr>
+              ))}
               <tr className="vat-sales-totals-row">
                 <td className="col-seg">รวมเดลิเวอรี่</td>
                 <td className="col-num col-net">
@@ -925,14 +902,10 @@ export function VatMonthBooks({ actor }: Props) {
                 <td className="col-num col-net">
                   {fmt(monthSources.totals.gpVat)}
                 </td>
-                <td className="col-seg" />
               </tr>
             </tbody>
           </table>
         </div>
-        <p className="muted vat-sales-hint vat-hint-one-line">
-          ยอดโอน = เงินเข้าบช. · คชจ.GP หักแวทแล้ว · VAT-ซื้อ = แวทค่าบริการขาย
-        </p>
       </section>
 
       {loading && !hydrated ? (

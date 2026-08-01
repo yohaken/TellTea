@@ -19512,6 +19512,49 @@ a.ghost-btn {
   background: rgba(87, 15, 15, 0.06);
 }
 
+.vat-sources-link {
+  margin-left: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: rgba(28, 42, 31, 0.65);
+}
+
+.vat-sources-link:hover {
+  color: rgba(87, 15, 15, 0.9);
+}
+
+.vat-sources-jump {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  margin-left: auto;
+}
+
+.vat-source-guide {
+  padding: 0.35rem 0.15rem 0.15rem;
+}
+
+.vat-source-guide-list {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.vat-source-guide-list li {
+  margin-bottom: 0.2rem;
+}
+
+.vat-source-guide-list strong {
+  font-weight: 600;
+}
+
+.vat-delivery-sources .vat-table-title {
+  margin-top: 0.35rem;
+}
+
 .vat-month-books .vat-table-block {
   margin-bottom: 0.65rem;
 }

@@ -5,6 +5,8 @@ import assert from "node:assert/strict";
 import {
   applyChannelSourceToDraft,
   applyMonthSourcesToDraft,
+  DELIVERY_COL_INFO,
+  DELIVERY_SOURCE_GUIDE,
   draftToMonthSources,
   emptyChannelSource,
   grabCsvToMonthSource,
@@ -162,9 +164,22 @@ function testApplyAll() {
   console.log("ok apply all channels");
 }
 
+function testColInfoForHumansAndAi() {
+  assert.match(DELIVERY_COL_INFO.appSales, /ยอดขายแอพ/);
+  assert.match(DELIVERY_COL_INFO.transfer, /บัญชีธนาคาร|เงินเข้า/);
+  assert.match(DELIVERY_COL_INFO.gpFee, /หักแวท/);
+  assert.match(DELIVERY_COL_INFO.purchaseVat, /แวทค่าบริการขาย|VAT-ซื้อ/);
+  assert.match(DELIVERY_SOURCE_GUIDE.grab, /ม้วนรวม|รายวัน/);
+  assert.match(DELIVERY_SOURCE_GUIDE.lineman, /สรุปเดือน/);
+  assert.match(DELIVERY_SOURCE_GUIDE.shopee, /สรุปเดือน/);
+  assert.match(DELIVERY_SOURCE_GUIDE.sync, /ผสาน|VAT เดือน/);
+  console.log("ok delivery col + source guide copy");
+}
+
 testDraftRoundTrip();
 testGrabRollup();
 testLinemanMonthly();
 testShopeeHelper();
 testApplyAll();
+testColInfoForHumansAndAi();
 console.log("all vat-month-sources tests passed");
