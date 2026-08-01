@@ -16,6 +16,11 @@ import {
   type IngestPreview,
 } from "@/lib/vat-ingest-preview";
 import {
+  extractGrabFinanceImage,
+  fileToImageDataUrl,
+  grabExtractToIngestPreview,
+} from "@/lib/vat-grab-image-extract";
+import {
   connectGmailForIngest,
   loadMailIngestStatus,
   pieceToIngestPreview,
@@ -83,23 +88,25 @@ function AmountsRow({ preview }: { preview: IngestPreview }) {
 function ChannelSlot({
   channel,
   state,
+  busy,
   onPasteChange,
   onClear,
   onFile,
   onParsePaste,
+  onGrabImage,
 }: {
   channel: MonthChannel;
   state: SlotState;
+  busy?: boolean;
   onPasteChange: (v: string) => void;
   onClear: () => void;
   onFile: (file: File) => void;
   onParsePaste: () => void;
+  onGrabImage?: (file: File) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const short = MONTH_CHANNEL_SHORT[channel];
   const p = state.preview;
-  const accept =
-    channel === "shopee" ? ".txt,.csv,.pdf" : ".csv,.txt,.pdf";
 
   return (
     <section
@@ -117,12 +124,36 @@ function ChannelSlot({
       </header>
 
       <div className="vat-ingest-actions">
-        {channel === "shopee" ? (
+        {channel === "grab" ? (
+          <>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="vat-ingest-file"
+              aria-label="อัปโหลดแคปจอ Grab"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) onGrabImage?.(f);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              className="btn btn-secondary vat-ingest-btn"
+              disabled={busy}
+              onClick={() => inputRef.current?.click()}
+            >
+              {busy ? "AI อ่านรูป…" : "อัปโหลดรูปแคป"}
+            </button>
+          </>
+        ) : channel === "shopee" ? (
           <>
             <textarea
               className="vat-ingest-paste"
               rows={3}
-              placeholder="วางบล็อก「รายงานยอดขายสะสมประจำเดือน」…"
+              placeholder="วางบล็อก「รายงานยอดขายสะสมประจำเดือน」… (สำรองถ้าไม่ดึงจากเมล)"
               value={state.paste}
               onChange={(e) => onPasteChange(e.target.value)}
               aria-label={`วางข้อความเมล ${short}`}
@@ -141,7 +172,7 @@ function ChannelSlot({
             <input
               ref={inputRef}
               type="file"
-              accept={accept}
+              accept=".csv,.txt,.pdf"
               className="vat-ingest-file"
               aria-label={`เลือกไฟล์ ${short}`}
               onChange={(e) => {
@@ -155,12 +186,12 @@ function ChannelSlot({
               className="btn btn-secondary vat-ingest-btn"
               onClick={() => inputRef.current?.click()}
             >
-              เลือกไฟล์
+              เลือกไฟล์ REPORT
             </button>
             <textarea
               className="vat-ingest-paste"
               rows={2}
-              placeholder="หรือวางเนื้อ CSV / ข้อความ…"
+              placeholder="หรือวางเนื้อ CSV…"
               value={state.paste}
               onChange={(e) => onPasteChange(e.target.value)}
               aria-label={`วางข้อความ ${short}`}
@@ -312,6 +343,36 @@ export function VatIngestSources({ actor: _actor }: Props) {
     [runPreview, setSlot],
   );
 
+  const onGrabImage = useCallback(
+    async (file: File) => {
+      setMailBusy("grab-ai");
+      setMailError("");
+      setSlot("grab", { error: "", preview: null });
+      try {
+        const imageDataUrl = await fileToImageDataUrl(file);
+        const extracted = await extractGrabFinanceImage({
+          imageDataUrl,
+          monthKey,
+        });
+        const preview = grabExtractToIngestPreview(extracted);
+        applyPreview("grab", preview);
+        setMailMsg(
+          extracted.monthMatch
+            ? `Grab AI · เดือนตรง ${extracted.monthKey || monthKey} · ขาย ${formatIngestMoney(extracted.sales)}`
+            : `Grab AI · เดือนในรูป ${extracted.monthKey || "?"} ≠ ที่เลือก ${monthKey} — ตรวจก่อน`,
+        );
+      } catch (e) {
+        setSlot("grab", {
+          error: e instanceof Error ? e.message : String(e),
+          preview: null,
+        });
+      } finally {
+        setMailBusy(null);
+      }
+    },
+    [monthKey, applyPreview, setSlot],
+  );
+
   const onConnectGmail = useCallback(async () => {
     setMailBusy("connect");
     setMailError("");
@@ -395,7 +456,7 @@ export function VatIngestSources({ actor: _actor }: Props) {
       <VatSalesSubNav active="sources" />
       <h2 className="vat-table-title">แหล่งนำเข้าเดลิเวอรี่</h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        พรีวิวอย่างเดียว — SF/LM จาก Gmail · Grab วางไฟล์/แคปทีหลัง ·{" "}
+        พรีวิวอย่างเดียว — SF/LM จากเมล (เดือนในรายงาน) · Grab จากรูปแคป+AI ·{" "}
         <strong>ยังไม่เข้าตารางยอดเดลิเวอรี่</strong>
       </p>
 
@@ -453,10 +514,12 @@ export function VatIngestSources({ actor: _actor }: Props) {
           key={ch}
           channel={ch}
           state={slots[ch]}
+          busy={ch === "grab" && mailBusy === "grab-ai"}
           onPasteChange={(v) => setSlot(ch, { paste: v })}
           onClear={() => setSlot(ch, emptySlot())}
           onFile={(f) => void onFile(ch, f)}
           onParsePaste={() => runPreview(ch, slots[ch].paste, "")}
+          onGrabImage={(f) => void onGrabImage(f)}
         />
       ))}
     </div>

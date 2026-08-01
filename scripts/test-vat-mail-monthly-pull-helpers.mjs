@@ -52,4 +52,25 @@ assert.equal(
   "2026-05",
 );
 
+function gmailWindowForReportMonth(monthKey) {
+  if (!/^\d{4}-\d{2}$/.test(String(monthKey || ""))) return "";
+  const y = Number(monthKey.slice(0, 4));
+  const m = Number(monthKey.slice(5, 7));
+  if (!y || !m) return "";
+  const nextY = m === 12 ? y + 1 : y;
+  const nextM = m === 12 ? 1 : m + 1;
+  const after = `${y}/${String(m).padStart(2, "0")}/25`;
+  const before = `${nextY}/${String(nextM).padStart(2, "0")}/12`;
+  return `after:${after} before:${before}`;
+}
+
+assert.equal(
+  gmailWindowForReportMonth("2026-07"),
+  "after:2026/07/25 before:2026/08/12",
+);
+assert.equal(
+  gmailWindowForReportMonth("2026-06"),
+  "after:2026/06/25 before:2026/07/12",
+);
+
 console.log("test-vat-mail-monthly-pull-helpers: ok");

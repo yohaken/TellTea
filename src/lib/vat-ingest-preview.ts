@@ -30,6 +30,7 @@ import { normalizeMoney } from "./vat-sales";
 
 export type IngestKind =
   | "grab-transaction-csv"
+  | "grab-finance-screenshot"
   | "grab-stores-summary-reject"
   | "lineman-report-csv"
   | "lineman-monthly-pdf-text"
@@ -67,6 +68,7 @@ const EMPTY_AMOUNTS: IngestPreviewAmounts = {
 
 export const INGEST_KIND_LABEL: Record<IngestKind, string> = {
   "grab-transaction-csv": "Grab · Transaction_Store CSV",
+  "grab-finance-screenshot": "Grab · แคปสรุปการเงิน (AI)",
   "grab-stores-summary-reject": "Grab · Transaction_Stores (ไม่ใช้)",
   "lineman-report-csv": "LINE MAN · REPORT_*.csv",
   "lineman-monthly-pdf-text": "LINE MAN · รายงานเดือน (ข้อความ/PDF)",
@@ -75,11 +77,11 @@ export const INGEST_KIND_LABEL: Record<IngestKind, string> = {
 };
 
 export const INGEST_CHANNEL_HINT: Record<MonthChannel, string> = {
-  grab: "แคปสรุปการเงิน / ไฟล์ Transaction_Store_….csv · ไม่ใช้ Transaction_Stores_",
+  grab: "อัปโหลดรูปแคปหน้าการเงิน (สรุปทั้งเดือน) · AI อ่านยอด + ตรวจเดือน",
   shopee:
-    "กด「ดึง SF+LM」= อ่านเนื้อเมลสรุปเดือน · หรือวางข้อความบล็อกเองได้",
+    "เมลเข้าต้นเดือนถัดไป แต่สรุปเดือนก่อน · อ่านเนื้อเมล「วันที่รายงาน」ไม่ใช่วันส่ง",
   lineman:
-    "กด「ดึง SF+LM」= อ่าน REPORT_*.csv ไฟล์แรกจากเมล GP · หรืออัปไฟล์เองได้",
+    "เมล GP ~สามทุ่ม ต้นเดือนถัดไป · ย้อนโหลดช่วงนั้น · อ่าน REPORT_*.csv ไฟล์แรก",
 };
 
 function base(

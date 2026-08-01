@@ -207,6 +207,19 @@ function monthKeyFromLinemanSubject(subject) {
   return `${year}-${String(month).padStart(2, "0")}`;
 }
 
+/** เมลสรุปเดือนมักเข้าต้นเดือนถัดไป (SF เช้า · LM ~สามทุ่ม) */
+function gmailWindowForReportMonth(monthKey) {
+  if (!/^\d{4}-\d{2}$/.test(String(monthKey || ""))) return "";
+  const y = Number(monthKey.slice(0, 4));
+  const m = Number(monthKey.slice(5, 7));
+  if (!y || !m) return "";
+  const nextY = m === 12 ? y + 1 : y;
+  const nextM = m === 12 ? 1 : m + 1;
+  const after = `${y}/${String(m).padStart(2, "0")}/25`;
+  const before = `${nextY}/${String(nextM).padStart(2, "0")}/12`;
+  return `after:${after} before:${before}`;
+}
+
 function looksLikeShopeeMonthly(text) {
   const t = String(text || "");
   return (
@@ -215,12 +228,8 @@ function looksLikeShopeeMonthly(text) {
   );
 }
 
-async function pullShopeeMonthly(accessToken, monthKey) {
-  const q =
-    '(from:(noreply.th@shopeefood.com OR shopeefood) OR subject:(ShopeeFood) OR "Kongsi Tea Bar") ' +
-    '("รายงานยอดขายสะสมประจำเดือน" OR "รายงานการโอนเงินสำหรับ ShopeeFood" OR "รายงานการโอนเงิน") ' +
-    "newer_than:400d";
-  const ids = await listMessageIds(accessToken, q, 16);
+async function collectShopeeCandidates(accessToken, query) {
+  const ids = await listMessageIds(accessToken, query, 20);
   const candidates = [];
   for (const id of ids) {
     const msg = await getMessage(accessToken, id);
@@ -238,6 +247,22 @@ async function pullShopeeMonthly(accessToken, monthKey) {
       text,
       internalDate: Number(msg.internalDate) || 0,
     });
+  }
+  return candidates;
+}
+
+async function pullShopeeMonthly(accessToken, monthKey) {
+  // เมลเข้าต้นเดือนถัดไป แต่เดือนจริง = วันที่รายงานในเนื้อหา (เดือนก่อน)
+  const base =
+    '(from:(noreply.th@shopeefood.com OR shopeefood) OR subject:(ShopeeFood) OR "Kongsi Tea Bar") ' +
+    '("รายงานยอดขายสะสมประจำเดือน" OR "รายงานการโอนเงินสำหรับ ShopeeFood" OR "รายงานการโอนเงิน") ';
+  const window = gmailWindowForReportMonth(monthKey);
+  let candidates = await collectShopeeCandidates(
+    accessToken,
+    base + (window || "newer_than:400d"),
+  );
+  if (!candidates.length && window) {
+    candidates = await collectShopeeCandidates(accessToken, `${base}newer_than:400d`);
   }
   if (!candidates.length) {
     return {
@@ -273,15 +298,12 @@ async function pullShopeeMonthly(accessToken, monthKey) {
     fileName: "",
     text: pick.text,
     scanned: candidates.length,
+    note: "ใช้เนื้อเมล · เดือนจาก「วันที่รายงาน」ไม่ใช่วันส่งเมล",
   };
 }
 
-async function pullLinemanReportCsv(accessToken, monthKey) {
-  const q =
-    '(from:(lmwn.com OR "LINE MAN" OR Wongnai) OR subject:(LINE MAN)) ' +
-    '("แจ้งค่าบริการระบบ LINE MAN GP ประจำเดือน" OR "ค่าบริการ GP" OR "ประจำเดือน") ' +
-    "has:attachment newer_than:400d";
-  const ids = await listMessageIds(accessToken, q, 16);
+async function collectLinemanCandidates(accessToken, query) {
+  const ids = await listMessageIds(accessToken, query, 20);
   const candidates = [];
   for (const id of ids) {
     const msg = await getMessage(accessToken, id);
@@ -291,7 +313,9 @@ async function pullLinemanReportCsv(accessToken, monthKey) {
     if (!/LINE\s*MAN|GP|ประจำเดือน|lmwn/i.test(`${subject} ${from}`)) continue;
     const mk = monthKeyFromLinemanSubject(subject);
     const parts = listDriveableParts(msg.payload || {});
-    const reportPart = parts.find((p) => /^REPORT_[A-Za-z0-9]+\.csv$/i.test(p.filename || ""));
+    const reportPart = parts.find((p) =>
+      /^REPORT_[A-Za-z0-9]+\.csv$/i.test(p.filename || ""),
+    );
     if (!reportPart) continue;
     candidates.push({
       messageId: id,
@@ -302,11 +326,29 @@ async function pullLinemanReportCsv(accessToken, monthKey) {
       internalDate: Number(msg.internalDate) || 0,
     });
   }
+  return candidates;
+}
+
+async function pullLinemanReportCsv(accessToken, monthKey) {
+  // เมล GP มักเข้า ~สามทุ่ม ต้นเดือนถัดไป → ย้อนหาช่วงนั้นเพื่อได้เดือนที่เลือก
+  const base =
+    '(from:(lmwn.com OR "LINE MAN" OR Wongnai) OR subject:(LINE MAN)) ' +
+    '("แจ้งค่าบริการระบบ LINE MAN GP ประจำเดือน" OR "ค่าบริการ GP" OR "ประจำเดือน") ' +
+    "has:attachment ";
+  const window = gmailWindowForReportMonth(monthKey);
+  let candidates = await collectLinemanCandidates(
+    accessToken,
+    base + (window || "newer_than:400d"),
+  );
+  if (!candidates.length && window) {
+    candidates = await collectLinemanCandidates(accessToken, `${base}newer_than:400d`);
+  }
   if (!candidates.length) {
     return {
       ok: false,
       channel: "lineman",
-      error: "ไม่พบเมล LINE MAN GP ที่มีไฟล์ REPORT_*.csv",
+      error:
+        "ไม่พบเมล LINE MAN GP ที่มีไฟล์ REPORT_*.csv — ถ้าเป็นต้นเดือนอาจรอบ่ายสามทุ่ม",
     };
   }
   const key = String(monthKey || "").trim();
@@ -348,6 +390,7 @@ async function pullLinemanReportCsv(accessToken, monthKey) {
     fileName: pick.part.filename || "REPORT.csv",
     text,
     scanned: candidates.length,
+    note: "อ่าน REPORT_*.csv ไฟล์แรก · เดือนจากหัวข้อเมล GP ประจำเดือน",
   };
 }
 
