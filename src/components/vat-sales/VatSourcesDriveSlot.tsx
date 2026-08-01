@@ -25,6 +25,7 @@ import {
   draftDriveMonthProposal,
   loadMonthProposal,
   mergeProposalIntoBooks,
+  rollupDayMapToAmounts,
   sortedChannelDays,
   type VatDeliveryMonthProposal,
 } from "@/lib/vat-delivery-month-proposals";
@@ -471,6 +472,12 @@ export function VatSourcesDriveSlot({
           const chChecks = channelCheckMap[ch] || [];
           const chSum = summarizeChannelChecks(chChecks);
           const dayRows = sortedChannelDays(chProp?.days);
+          const dayRoll =
+            dayRows.length > 0
+              ? rollupDayMapToAmounts(
+                  Object.fromEntries(dayRows.map((d) => [d.dateKey, d])),
+                )
+              : null;
           const showDaily =
             dayRows.length > 0 ||
             chProp?.strategy === "daily-rollup" ||
@@ -597,7 +604,13 @@ export function VatSourcesDriveSlot({
                       aria-label={`ตารางรายวัน ${MONTH_CHANNEL_LABEL[ch]}`}
                     >
                       <p className="vat-sources-drive-draft-title">
-                        ตารางรายวัน · ระบบเติม · ซุ่มตรวจ
+                        ตารางรายวัน · แถวล่าง = รวม
+                        {dayRoll
+                          ? ` · เติม ${dayRoll.filledDays} วัน` +
+                            (dayRoll.gapDays
+                              ? ` · ว่าง ${dayRoll.gapDays}`
+                              : "")
+                          : ""}
                       </p>
                       <div className="sheet-wrap vat-sources-drive-daily-wrap">
                         <table className="sheet-table vat-sales-table vat-sales-table--slim vat-sources-drive-daily-table">
@@ -616,7 +629,7 @@ export function VatSourcesDriveSlot({
                               <tr>
                                 <td colSpan={6} className="muted">
                                   {chProp?.strategy === "monthly-summary"
-                                    ? "กลุ่ม A ใช้สรุปเดือน — ตารางรายวันเป็นทางเลือกเทียบ"
+                                    ? "กลุ่ม A ใช้สรุปเดือน — ดูแถวรวมด้านล่าง"
                                     : "ยังไม่มีแถวรายวัน — กด「ระบบเติมยอด F4」"}
                                 </td>
                               </tr>
@@ -659,33 +672,82 @@ export function VatSourcesDriveSlot({
                               ))
                             )}
                           </tbody>
+                          <tfoot>
+                            <tr
+                              className="vat-sources-drive-total-row"
+                              data-total={ch}
+                            >
+                              <th scope="row">รวม</th>
+                              <td className="col-num">
+                                {fmtAmt(
+                                  dayRoll?.appSales ??
+                                    chProp?.amounts.appSales,
+                                )}
+                              </td>
+                              <td className="col-num">
+                                {fmtAmt(
+                                  dayRoll?.transfer ??
+                                    chProp?.amounts.transfer,
+                                )}
+                              </td>
+                              <td className="col-num">
+                                {fmtAmt(
+                                  dayRoll?.gpExVat ?? chProp?.amounts.gpExVat,
+                                )}
+                              </td>
+                              <td className="col-num">
+                                {fmtAmt(
+                                  dayRoll?.gpVat ?? chProp?.amounts.gpVat,
+                                )}
+                              </td>
+                              <td>
+                                {dayRoll
+                                  ? `${dayRoll.filledDays} วัน`
+                                  : chProp?.strategy === "monthly-summary"
+                                    ? "สรุปเดือน"
+                                    : "—"}
+                              </td>
+                            </tr>
+                          </tfoot>
                         </table>
                       </div>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="sheet-wrap vat-sources-drive-daily-wrap">
+                      <table className="sheet-table vat-sales-table vat-sales-table--slim vat-sources-drive-daily-table">
+                        <thead>
+                          <tr>
+                            <th>สรุป</th>
+                            <th>ยอดขายแอพ</th>
+                            <th>ยอดโอน</th>
+                            <th>คชจ.GP</th>
+                            <th>VAT-ซื้อ</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="vat-sources-drive-total-row" data-total={ch}>
+                            <th scope="row">รวมเดือน</th>
+                            <td className="col-num">
+                              {fmtAmt(chProp?.amounts.appSales)}
+                            </td>
+                            <td className="col-num">
+                              {fmtAmt(chProp?.amounts.transfer)}
+                            </td>
+                            <td className="col-num">
+                              {fmtAmt(chProp?.amounts.gpExVat)}
+                            </td>
+                            <td className="col-num">
+                              {fmtAmt(chProp?.amounts.gpVat)}
+                            </td>
+                            <td>สรุปเดือน</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
 
                   <div className="vat-sources-drive-draft" data-draft={ch}>
-                    <p className="vat-sources-drive-draft-title">
-                      รวมเดือน (4 คอลัมน์)
-                    </p>
-                    <dl className="vat-sources-drive-draft-grid">
-                      <div>
-                        <dt>ยอดขายแอพ</dt>
-                        <dd>{fmtAmt(chProp?.amounts.appSales)}</dd>
-                      </div>
-                      <div>
-                        <dt>ยอดโอน</dt>
-                        <dd>{fmtAmt(chProp?.amounts.transfer)}</dd>
-                      </div>
-                      <div>
-                        <dt>คชจ.GP</dt>
-                        <dd>{fmtAmt(chProp?.amounts.gpExVat)}</dd>
-                      </div>
-                      <div>
-                        <dt>VAT-ซื้อ</dt>
-                        <dd>{fmtAmt(chProp?.amounts.gpVat)}</dd>
-                      </div>
-                    </dl>
                     {chProp?.note ? (
                       <p className="muted vat-sources-drive-draft-note">
                         {chProp.note}

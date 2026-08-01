@@ -19846,6 +19846,18 @@ a.ghost-btn {
   border-top: 1px dashed rgba(28, 42, 31, 0.12);
 }
 
+.vat-sources-drive-daily-table tfoot .vat-sources-drive-total-row,
+.vat-sources-drive-daily-table .vat-sources-drive-total-row {
+  font-weight: 650;
+  background: rgba(28, 42, 31, 0.06);
+}
+
+.vat-sources-drive-daily-table tfoot th,
+.vat-sources-drive-daily-table tfoot td {
+  border-top: 1px solid rgba(28, 42, 31, 0.18);
+  padding-top: 0.35rem;
+}
+
 .vat-sources-drive-daily-wrap {
   max-height: 14rem;
   overflow: auto;
