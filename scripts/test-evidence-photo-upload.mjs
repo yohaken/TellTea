@@ -15,6 +15,9 @@ assert.match(src, /keepAsIs/);
 assert.match(src, /No Storage hang|one Firestore doc per photo|evp:/);
 assert.match(evidence, /export async function saveEvidencePhotoDoc/);
 assert.match(evidence, /export async function resolveEvidencePhotoSrc/);
+assert.match(evidence, /EVIDENCE_PHOTO_STAFF_FOLDERS/);
+assert.match(evidence, /bonus-deductions/);
+assert.match(evidence, /payroll/);
 assert.doesNotMatch(src, /uploadViaCloudFunctionBytes/);
 
 console.log("OK test-evidence-photo-upload");

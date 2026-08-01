@@ -550,13 +550,23 @@ service cloud.firestore {
       allow read, write: if hasPerm('ownerBooks');
     }
 
-    /** One tax-evidence photo per doc — keeps ownerBooks/ledger rows small. */
+    /**
+     * One evidence photo per doc — keeps parent rows small (`evp:{id}`).
+     * Staff folders must match every storageFolder used in the app
+     * (bonus-deductions / payroll / cash-deposits / vat-input were missing
+     * → owner/staff got permission-denied = 「ไม่มีสิทธิ์บันทึกรูป」).
+     */
+    function evidencePhotoStaffFolder(folder) {
+      return folder in [
+        'ledger-receipts', 'ot-photos', 'bill-notices',
+        'checklist', 'tasks', 'production', 'staff-id',
+        'bonus-deductions', 'payroll', 'cash-deposits', 'vat-input'
+      ];
+    }
+
     match /evidencePhotos/{photoId} {
       allow read: if isOwner() || isOwnerEmail()
-        || (signedIn() && resource.data.folder in [
-          'ledger-receipts', 'ot-photos', 'bill-notices',
-          'checklist', 'tasks', 'production', 'staff-id'
-        ])
+        || (signedIn() && evidencePhotoStaffFolder(resource.data.folder))
         || (hasPerm('ownerBooks') && resource.data.folder == 'owner-books');
       allow create: if signedIn()
         && request.resource.data.keys().hasAll([
@@ -569,10 +579,7 @@ service cloud.firestore {
         && request.resource.data.folder is string
         && request.resource.data.slotKey is string
         && (
-          request.resource.data.folder in [
-            'ledger-receipts', 'ot-photos', 'bill-notices',
-            'checklist', 'tasks', 'production', 'staff-id'
-          ]
+          evidencePhotoStaffFolder(request.resource.data.folder)
           || ((isOwner() || isOwnerEmail() || hasPerm('ownerBooks'))
               && request.resource.data.folder == 'owner-books')
         );
