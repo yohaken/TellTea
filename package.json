@@ -18,6 +18,7 @@
     "test:vat-mail-study": "npx --yes tsx scripts/test-vat-mail-study-hints.ts",
     "test:vat-mail-channel": "npx --yes tsx scripts/test-vat-mail-channel.ts",
     "test:vat-mail-period": "node scripts/test-vat-mail-period.mjs",
+    "test:vat-delivery-checks": "npx --yes tsx scripts/test-vat-delivery-checks.ts",
     "test:vat-delivery-proposals": "npx --yes tsx scripts/test-vat-delivery-month-proposals.ts",
     "test:personal-income-tax": "npx --yes tsx scripts/test-personal-income-tax.ts",
     "test:vat-import": "npx --yes tsx scripts/test-vat-import.ts",

@@ -28,6 +28,10 @@ import {
   sortedChannelDays,
   type VatDeliveryMonthProposal,
 } from "@/lib/vat-delivery-month-proposals";
+import {
+  buildChannelDeliveryChecks,
+  summarizeChannelChecks,
+} from "@/lib/vat-delivery-checks";
 
 type Props = {
   monthKey: string;
@@ -122,7 +126,7 @@ export function VatSourcesDriveSlot({
         },
         {
           id: "f1" as CheckId,
-          label: "ซิงก์แนบเมล → Drive แยกแอพ/เดือน",
+          label: "ซิงก์แนบเมล → Drive กองรวมต่อแอพ",
           ready: f1Ready,
         },
         {
@@ -153,6 +157,22 @@ export function VatSourcesDriveSlot({
   const confirmableChannels = MONTH_CHANNELS.filter((ch) =>
     channelHasConfirmableAmounts(proposal?.channels[ch]),
   );
+
+  const channelCheckMap = useMemo(() => {
+    const out = {} as Record<
+      MonthChannel,
+      ReturnType<typeof buildChannelDeliveryChecks>
+    >;
+    for (const ch of MONTH_CHANNELS) {
+      out[ch] = buildChannelDeliveryChecks({
+        monthKey,
+        channel: ch,
+        proposal: proposal?.channels[ch],
+        fileCount: (files[ch] || []).length,
+      });
+    }
+    return out;
+  }, [monthKey, proposal, files]);
 
   async function onConnect() {
     setBusy("oauth");
@@ -314,10 +334,10 @@ export function VatSourcesDriveSlot({
       data-month={monthKey}
       aria-label="ช่องไฟล์ Drive — เช็คลิสต์และกล่องแอพ"
     >
-      <h3 className="vat-table-subtitle">ไฟล์ Drive — กองรวมต่อแอพ</h3>
+      <h3 className="vat-table-subtitle">รางงานแยกแอพ — ไฟล์ · เช็ค · ยอด</h3>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        เดือนปิดงบ {formatThaiMonthKey(monthKey)} · Drive ยังไม่แยกเดือน —
-        TellTea-VAT/แอพ/ (กองรวม) · คัดแยกเดือนในระบบ/Gemini ทีหลัง
+        เดือนปิดงบ {formatThaiMonthKey(monthKey)} · แต่ละราง = 1 แอพ (แนวนอน
+        เทียบได้) · Drive กองรวม TellTea-VAT/แอพ/ · A สรุปเดือน / B รายวัน
       </p>
 
       <div className="vat-sources-drive-actions">
@@ -439,182 +459,248 @@ export function VatSourcesDriveSlot({
       </ul>
 
       <div
-        className="vat-sources-drive-boxes"
+        className="vat-sources-drive-tracks"
         data-drive-files={String(fileTotal)}
-        aria-label="กล่องไฟล์แยกแอพ"
+        aria-label="รางงานแยกแอพ — เทียบแนวนอน"
       >
         {MONTH_CHANNELS.map((ch) => {
           const folder = `TellTea-VAT/${CHANNEL_FOLDER[ch]}/`;
           const list = files[ch] || [];
           const chProp = proposal?.channels[ch];
           const canConfirm = channelHasConfirmableAmounts(chProp);
+          const chChecks = channelCheckMap[ch] || [];
+          const chSum = summarizeChannelChecks(chChecks);
+          const dayRows = sortedChannelDays(chProp?.days);
+          const showDaily =
+            dayRows.length > 0 ||
+            chProp?.strategy === "daily-rollup" ||
+            chProp?.strategy === "mixed" ||
+            chProp?.strategy === "unknown" ||
+            chProp?.strategy !== "monthly-summary";
+          const groupLabel =
+            chProp?.strategy === "monthly-summary"
+              ? "กลุ่ม A · สรุปเดือน"
+              : chProp?.strategy === "daily-rollup" ||
+                  chProp?.strategy === "mixed"
+                ? "กลุ่ม B · ม้วนรายวัน"
+                : "รอจัดกลุ่ม";
           return (
             <article
               key={ch}
-              className="vat-sources-drive-box"
+              className="vat-sources-drive-track"
               data-channel={ch}
               data-file-count={String(list.length)}
+              data-check-ready={`${chSum.ready}/${chSum.applicable}`}
             >
-              <header className="vat-sources-drive-box-head">
+              <header className="vat-sources-drive-track-head">
                 <h4 className="vat-sources-drive-box-title">
                   {MONTH_CHANNEL_LABEL[ch]}
                 </h4>
-                {list.length ? (
-                  <span className="vat-sources-drive-count">
-                    {list.length} ไฟล์
-                  </span>
-                ) : (
-                  <span className="vat-sources-drive-empty">ว่าง · 0 ไฟล์</span>
-                )}
-              </header>
-              <p className="muted vat-sources-drive-path">{folder}</p>
-              <ul className="vat-sources-drive-file-list">
-                {list.length === 0 ? (
-                  <li className="muted vat-sources-drive-file-empty">
-                    {loading
-                      ? "กำลังโหลด…"
-                      : "ยังไม่มีไฟล์ — ซิงก์เมล แล้วกด「ซิงก์ไฟล์ → กองแอพ」"}
-                  </li>
-                ) : (
-                  list.map((f) => (
-                    <li key={f.fileId} className="vat-sources-drive-file">
-                      {f.webViewLink ? (
-                        <a
-                          href={f.webViewLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="vat-sources-drive-file-link"
-                        >
-                          {f.name}
-                        </a>
-                      ) : (
-                        <span>{f.name}</span>
-                      )}
-                      {f.monthKey ? (
-                        <span className="muted vat-sources-drive-file-month">
-                          {" "}
-                          · {f.monthKey}
-                        </span>
-                      ) : null}
-                    </li>
-                  ))
-                )}
-              </ul>
-
-              {(() => {
-                const dayRows = sortedChannelDays(chProp?.days);
-                const showDaily =
-                  dayRows.length > 0 ||
-                  chProp?.strategy === "daily-rollup" ||
-                  chProp?.strategy === "mixed" ||
-                  chProp?.strategy === "unknown";
-                return showDaily ? (
-                  <div
-                    className="vat-sources-drive-daily"
-                    data-daily={ch}
-                    aria-label={`ตารางรายวัน ${MONTH_CHANNEL_LABEL[ch]}`}
+                <span className="vat-sources-drive-track-meta">
+                  {groupLabel}
+                  {" · "}
+                  {list.length ? `${list.length} ไฟล์` : "0 ไฟล์"}
+                  {" · เช็ค "}
+                  <span
+                    className={
+                      chSum.allOk
+                        ? "vat-sources-drive-count"
+                        : "vat-sources-drive-empty"
+                    }
                   >
-                    <p className="vat-sources-drive-draft-title">
-                      ตารางรายวัน · ระบบเติม · ซุ่มตรวจ
-                    </p>
-                    <div className="sheet-wrap vat-sources-drive-daily-wrap">
-                      <table className="sheet-table vat-sales-table vat-sales-table--slim vat-sources-drive-daily-table">
-                        <thead>
-                          <tr>
-                            <th>วันที่</th>
-                            <th>ยอดขายแอพ</th>
-                            <th>ยอดโอน</th>
-                            <th>คชจ.GP</th>
-                            <th>VAT-ซื้อ</th>
-                            <th>สถานะ</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {dayRows.length === 0 ? (
-                            <tr>
-                              <td colSpan={6} className="muted">
-                                ยังไม่มีแถวรายวัน — กด「ระบบเติมยอด F4」หรือให้ AI
-                                ส่ง days[]
-                              </td>
-                            </tr>
+                    {chSum.ready}/{chSum.applicable}
+                  </span>
+                </span>
+                <p className="muted vat-sources-drive-path">{folder}</p>
+              </header>
+
+              <div className="vat-sources-drive-track-row">
+                <section
+                  className="vat-sources-drive-track-col vat-sources-drive-track-files"
+                  aria-label={`ไฟล์ ${MONTH_CHANNEL_LABEL[ch]}`}
+                >
+                  <p className="vat-sources-drive-draft-title">ไฟล์กองแอพ</p>
+                  <ul className="vat-sources-drive-file-list">
+                    {list.length === 0 ? (
+                      <li className="muted vat-sources-drive-file-empty">
+                        {loading
+                          ? "กำลังโหลด…"
+                          : "ยังไม่มีไฟล์ — ซิงก์เมล แล้วกด「ซิงก์ไฟล์ → กองแอพ」"}
+                      </li>
+                    ) : (
+                      list.map((f) => (
+                        <li key={f.fileId} className="vat-sources-drive-file">
+                          {f.webViewLink ? (
+                            <a
+                              href={f.webViewLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="vat-sources-drive-file-link"
+                            >
+                              {f.name}
+                            </a>
                           ) : (
-                            dayRows.map((d) => (
-                              <tr
-                                key={d.dateKey}
-                                data-day={d.dateKey}
-                                data-day-status={d.status}
-                              >
-                                <td>{formatThaiDateKey(d.dateKey)}</td>
-                                <td className="col-num">
-                                  {fmtAmt(d.appSales)}
-                                </td>
-                                <td className="col-num">
-                                  {fmtAmt(d.transfer)}
-                                </td>
-                                <td className="col-num">
-                                  {fmtAmt(d.gpExVat)}
-                                </td>
-                                <td className="col-num">{fmtAmt(d.gpVat)}</td>
-                                <td>
-                                  <span
-                                    className={
-                                      d.status === "gap"
-                                        ? "vat-sources-drive-empty"
-                                        : "vat-sources-drive-count"
-                                    }
-                                  >
-                                    {d.status === "gap"
-                                      ? "ว่าง"
-                                      : d.status === "ซุ่มตรวจ"
-                                        ? "ซุ่มตรวจ"
-                                        : "เติมแล้ว"}
-                                  </span>
+                            <span>{f.name}</span>
+                          )}
+                          {f.monthKey ? (
+                            <span className="muted vat-sources-drive-file-month">
+                              {" "}
+                              · {f.monthKey}
+                            </span>
+                          ) : null}
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </section>
+
+                <section
+                  className="vat-sources-drive-track-col vat-sources-drive-track-checks"
+                  aria-label={`เช็คลิสต์ ${MONTH_CHANNEL_LABEL[ch]}`}
+                >
+                  <p className="vat-sources-drive-draft-title">
+                    เช็คลิสต์ความถูกต้อง
+                  </p>
+                  <ul className="vat-sources-drive-verify">
+                    {chChecks.map((item) => (
+                      <li
+                        key={item.id}
+                        className="vat-sources-drive-verify-item"
+                        data-ok={item.applicable && item.ok ? "1" : "0"}
+                        data-na={item.applicable ? "0" : "1"}
+                      >
+                        <span
+                          className="vat-sources-drive-mark"
+                          aria-hidden="true"
+                        >
+                          {!item.applicable ? "·" : item.ok ? "✓" : "○"}
+                        </span>
+                        <span>
+                          {item.label}
+                          {item.detail ? (
+                            <span className="muted"> — {item.detail}</span>
+                          ) : null}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+
+                <section
+                  className="vat-sources-drive-track-col vat-sources-drive-track-work"
+                  aria-label={`ยอด ${MONTH_CHANNEL_LABEL[ch]}`}
+                >
+                  {showDaily ? (
+                    <div
+                      className="vat-sources-drive-daily"
+                      data-daily={ch}
+                      aria-label={`ตารางรายวัน ${MONTH_CHANNEL_LABEL[ch]}`}
+                    >
+                      <p className="vat-sources-drive-draft-title">
+                        ตารางรายวัน · ระบบเติม · ซุ่มตรวจ
+                      </p>
+                      <div className="sheet-wrap vat-sources-drive-daily-wrap">
+                        <table className="sheet-table vat-sales-table vat-sales-table--slim vat-sources-drive-daily-table">
+                          <thead>
+                            <tr>
+                              <th>วันที่</th>
+                              <th>ยอดขายแอพ</th>
+                              <th>ยอดโอน</th>
+                              <th>คชจ.GP</th>
+                              <th>VAT-ซื้อ</th>
+                              <th>สถานะ</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dayRows.length === 0 ? (
+                              <tr>
+                                <td colSpan={6} className="muted">
+                                  {chProp?.strategy === "monthly-summary"
+                                    ? "กลุ่ม A ใช้สรุปเดือน — ตารางรายวันเป็นทางเลือกเทียบ"
+                                    : "ยังไม่มีแถวรายวัน — กด「ระบบเติมยอด F4」"}
                                 </td>
                               </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
+                            ) : (
+                              dayRows.map((d) => (
+                                <tr
+                                  key={d.dateKey}
+                                  data-day={d.dateKey}
+                                  data-day-status={d.status}
+                                >
+                                  <td>{formatThaiDateKey(d.dateKey)}</td>
+                                  <td className="col-num">
+                                    {fmtAmt(d.appSales)}
+                                  </td>
+                                  <td className="col-num">
+                                    {fmtAmt(d.transfer)}
+                                  </td>
+                                  <td className="col-num">
+                                    {fmtAmt(d.gpExVat)}
+                                  </td>
+                                  <td className="col-num">
+                                    {fmtAmt(d.gpVat)}
+                                  </td>
+                                  <td>
+                                    <span
+                                      className={
+                                        d.status === "gap"
+                                          ? "vat-sources-drive-empty"
+                                          : "vat-sources-drive-count"
+                                      }
+                                    >
+                                      {d.status === "gap"
+                                        ? "ว่าง"
+                                        : d.status === "ซุ่มตรวจ"
+                                          ? "ซุ่มตรวจ"
+                                          : "เติมแล้ว"}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
-                ) : null;
-              })()}
+                  ) : null}
 
-              <div className="vat-sources-drive-draft" data-draft={ch}>
-                <p className="vat-sources-drive-draft-title">
-                  รวมเดือน (4 คอลัมน์)
-                </p>
-                <dl className="vat-sources-drive-draft-grid">
-                  <div>
-                    <dt>ยอดขายแอพ</dt>
-                    <dd>{fmtAmt(chProp?.amounts.appSales)}</dd>
+                  <div className="vat-sources-drive-draft" data-draft={ch}>
+                    <p className="vat-sources-drive-draft-title">
+                      รวมเดือน (4 คอลัมน์)
+                    </p>
+                    <dl className="vat-sources-drive-draft-grid">
+                      <div>
+                        <dt>ยอดขายแอพ</dt>
+                        <dd>{fmtAmt(chProp?.amounts.appSales)}</dd>
+                      </div>
+                      <div>
+                        <dt>ยอดโอน</dt>
+                        <dd>{fmtAmt(chProp?.amounts.transfer)}</dd>
+                      </div>
+                      <div>
+                        <dt>คชจ.GP</dt>
+                        <dd>{fmtAmt(chProp?.amounts.gpExVat)}</dd>
+                      </div>
+                      <div>
+                        <dt>VAT-ซื้อ</dt>
+                        <dd>{fmtAmt(chProp?.amounts.gpVat)}</dd>
+                      </div>
+                    </dl>
+                    {chProp?.note ? (
+                      <p className="muted vat-sources-drive-draft-note">
+                        {chProp.note}
+                      </p>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="ghost-btn vat-mini-btn"
+                      disabled={Boolean(busy) || !canConfirm}
+                      onClick={() => void onConfirmF5([ch])}
+                    >
+                      ซุ่มตรวจแล้ว · ยืนยันรางนี้
+                    </button>
                   </div>
-                  <div>
-                    <dt>ยอดโอน</dt>
-                    <dd>{fmtAmt(chProp?.amounts.transfer)}</dd>
-                  </div>
-                  <div>
-                    <dt>คชจ.GP</dt>
-                    <dd>{fmtAmt(chProp?.amounts.gpExVat)}</dd>
-                  </div>
-                  <div>
-                    <dt>VAT-ซื้อ</dt>
-                    <dd>{fmtAmt(chProp?.amounts.gpVat)}</dd>
-                  </div>
-                </dl>
-                {chProp?.note ? (
-                  <p className="muted vat-sources-drive-draft-note">
-                    {chProp.note}
-                  </p>
-                ) : null}
-                <button
-                  type="button"
-                  className="ghost-btn vat-mini-btn"
-                  disabled={Boolean(busy) || !canConfirm}
-                  onClick={() => void onConfirmF5([ch])}
-                >
-                  ซุ่มตรวจแล้ว · ยืนยันช่องนี้
-                </button>
+                </section>
               </div>
             </article>
           );
@@ -634,7 +720,12 @@ rootFolderId=${rootFolderId || "-"}
 proposal=${proposal ? `${proposal.phase}/${proposal.status}` : "none"}
 confirmable=${confirmableChannels.join(",") || "-"}
 checks=F0=${f0Ready ? 1 : 0} F1=${f1Ready ? 1 : 0} F2=1 F3=1 F4=${f4Ready ? 1 : 0} F5=${f5Ready ? 1 : 0}
+verify=${MONTH_CHANNELS.map((ch) => {
+  const s = summarizeChannelChecks(channelCheckMap[ch] || []);
+  return `${ch}:${s.ready}/${s.applicable}`;
+}).join(" ")}
 cols=ยอดขายแอพ|ยอดโอน|คชจ.GP|VAT-ซื้อ
+layout=horizontal-tracks
 owner=ซุ่มตรวจเท่านั้น · ไม่กรอกเอง
 next=${!hasDriveScope ? "reconnect OAuth drive.file" : !fileTotal ? "sync mail + vatMailDriveSync" : !f4Ready ? "ระบบเติม F4 / AI days[] adapter" : !f5Ready ? "owner ซุ่มตรวจ + F5" : "done"}
 doc=docs/vat-delivery-drive-spine.md

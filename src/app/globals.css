@@ -19655,17 +19655,87 @@ a.ghost-btn {
   font-size: 0.78rem;
 }
 
-.vat-sources-drive-boxes {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.55rem;
+/* รางแนวนอนต่อแอพ — เทียบรางจริงจัง (ไฟล์ | เช็ค | ยอด) */
+.vat-sources-drive-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
   margin: 0.35rem 0 0.25rem;
 }
 
-@media (max-width: 720px) {
-  .vat-sources-drive-boxes {
+.vat-sources-drive-track {
+  min-width: 0;
+  padding: 0.5rem 0.6rem 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: rgba(28, 42, 31, 0.025);
+}
+
+.vat-sources-drive-track-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.65rem;
+  margin-bottom: 0.35rem;
+}
+
+.vat-sources-drive-track-meta {
+  font-size: 0.78rem;
+  color: rgba(28, 42, 31, 0.7);
+}
+
+.vat-sources-drive-track-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.9fr) minmax(12rem, 1fr) minmax(16rem, 1.4fr);
+  gap: 0.55rem 0.75rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .vat-sources-drive-track-row {
     grid-template-columns: 1fr;
   }
+}
+
+.vat-sources-drive-track-col {
+  min-width: 0;
+}
+
+.vat-sources-drive-track-checks {
+  padding: 0.15rem 0.35rem 0.15rem 0;
+  border-right: 1px dashed rgba(28, 42, 31, 0.12);
+}
+
+@media (max-width: 900px) {
+  .vat-sources-drive-track-checks {
+    border-right: 0;
+    border-bottom: 1px dashed rgba(28, 42, 31, 0.12);
+    padding: 0 0 0.4rem;
+  }
+}
+
+.vat-sources-drive-verify {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.vat-sources-drive-verify-item {
+  display: grid;
+  grid-template-columns: 1rem 1fr;
+  gap: 0.3rem;
+  align-items: baseline;
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+
+.vat-sources-drive-verify-item[data-ok="1"] .vat-sources-drive-mark {
+  color: rgba(28, 90, 55, 0.85);
+}
+
+.vat-sources-drive-verify-item[data-ok="0"][data-na="0"] .vat-sources-drive-mark {
+  color: rgba(120, 50, 20, 0.8);
 }
 
 .vat-sources-drive-box {
