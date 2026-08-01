@@ -268,18 +268,6 @@ export function CashInLedgerPanel({
     setOwnerNote(selected.ownerNote || "");
   }, [selected, draft, staffName]);
 
-  const editingRound = !!(draft || selected);
-  useEffect(() => {
-    if (!open || !isOwner || !editingRound) {
-      setPosSessions([]);
-      return;
-    }
-    return subscribePosSessionsRecent(
-      setPosSessions,
-      (err) => setError(err.message || "โหลดรอบ nPos ไม่สำเร็จ"),
-    );
-  }, [open, isOwner, editingRound]);
-
   const occupancy = useMemo(
     () => buildCashDepositOccupancy(entries, selected?.id),
     [entries, selected?.id],
@@ -823,6 +811,17 @@ export function CashInLedgerPanel({
   }
 
   const editingRound = !!draft || !!selected;
+
+  useEffect(() => {
+    if (!open || !isOwner || !editingRound) {
+      setPosSessions([]);
+      return;
+    }
+    return subscribePosSessionsRecent(
+      setPosSessions,
+      (err) => setError(err.message || "โหลดรอบ nPos ไม่สำเร็จ"),
+    );
+  }, [open, isOwner, editingRound]);
 
   const refreshOccupancy = useCallback(async () => {
     try {
