@@ -19554,6 +19554,23 @@ a.ghost-btn {
   border-color: rgba(87, 15, 15, 0.35);
 }
 
+.vat-wipe-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.vat-mini-btn--danger {
+  border-color: rgba(87, 15, 15, 0.45);
+  color: rgba(87, 15, 15, 0.95);
+  background: rgba(87, 15, 15, 0.06);
+}
+
+.vat-mini-btn--danger:hover:not(:disabled) {
+  background: rgba(87, 15, 15, 0.12);
+}
+
 .vat-month-books .vat-table-block {
   margin-bottom: 0.65rem;
 }
