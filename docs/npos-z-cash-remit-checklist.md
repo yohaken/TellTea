@@ -1,6 +1,6 @@
 # nPos — สลิป Z = หลักฐานส่งเงินสดประจำวัน
 
-อัปเดต: **1.14.106** · `APP_BUILD` 580 · `POS_BUILD` 165 · `versionCode` 129  
+อัปเดต: **1.14.107** · `APP_BUILD` 581 · `POS_BUILD` 166 · `versionCode` 130  
 ใบสั้นถ่ายรูป: [npos-z-remit-short-slip.md](./npos-z-remit-short-slip.md)
 
 เป้าหมาย: บล็อก «รอบการขาย (เงินสด)» ตรงความเข้าใจพนักงาน (FoodStory/W)  

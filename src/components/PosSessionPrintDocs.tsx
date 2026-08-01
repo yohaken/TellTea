@@ -37,7 +37,7 @@ export function PosSessionPrintDocs({
 
   const title =
     kind === "close"
-      ? `รายงานปิดรอบ · นำส่งเงิน · ${posSessionCode(session.id)}`
+      ? `ใบส่งเงินสด · ${posSessionCode(session.id)}`
       : `Snapshot ระหว่างรอบ · ${posSessionCode(session.id)}`;
 
   return (
@@ -69,7 +69,7 @@ export function PosSessionPrintDocs({
             disabled={!closed}
             title={closed ? undefined : "มีหลังปิดกะที่แท็บเล็ต"}
           >
-            Z · ปิดรอบ / นำส่ง
+            ใบส่งเงินสด
           </button>
         </div>
       </header>
@@ -80,7 +80,7 @@ export function PosSessionPrintDocs({
       ) : null}
       {closed && kind === "close" ? (
         <p className="muted pos-session-print-docs-hint">
-          รวมบล็อก «ยอดเงินสดที่ต้องนำส่ง» เหมือนสลิป Z ที่แท็บเล็ตพิมพ์ตอนปิดรอบ
+          ใบสั้นเหมือนที่แท็บเล็ตพิมพ์ตอนปิดรอบ — ยอดนำส่งเด่น · ไม่มีรายการสินค้า · ถ่ายรูปได้
         </p>
       ) : null}
       <PosPrintDocFrame html={html} title={title} tall />

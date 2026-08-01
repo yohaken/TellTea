@@ -428,7 +428,7 @@ public final class ShiftReportFormBuilder {
       sb.append(pairRow("เงินเข้า/เงินออก", money(netInOut), width)).append('\n');
       sb.append(pairRow("ควรมีในลิ้นชัก", money(expected), width)).append('\n');
       sb.append(pairRow("นับจริงในลิ้นชัก", money(counted), width)).append('\n');
-      sb.append(pairRow("ส่วนต่าง", label + " " + money(diff), width)).append('\n');
+      sb.append(tripleRow("ส่วนต่าง", label, money(diff), width)).append('\n');
       if (leaveFloat > 0.0001) {
         sb.append(pairRow("ทอนรอบถัดไป", money(leaveFloat), width)).append('\n');
       }
@@ -445,7 +445,7 @@ public final class ShiftReportFormBuilder {
       sb.append(pairRow("เงินเข้า/เงินออก", money(netInOut), width)).append('\n');
       sb.append(pairRow("ควรมีในลิ้นชัก*", money(expectedSnap), width)).append('\n');
       sb.append(pairRow("นับจริงในลิ้นชัก", "-", width)).append('\n');
-      sb.append(pairRow("ส่วนต่าง", "-", width)).append('\n');
+      sb.append(tripleRow("ส่วนต่าง", "", "-", width)).append('\n');
       sb.append(pairRow("ยอดเงินสดที่ต้องนำส่ง", "-", width)).append('\n');
       sb.append(center("*ยังไม่ปิดรอบ - ยังไม่นับส่งเงิน", width)).append('\n');
     }
@@ -605,20 +605,18 @@ public final class ShiftReportFormBuilder {
     }
 
     sb.append(rule(width)).append('\n');
-    sb.append(EscPos.BOLD_ON).append("สรุปสั้น").append(EscPos.BOLD_OFF).append('\n');
-    sb.append(pairRow("บิลขาย", String.valueOf(saleCount), width)).append('\n');
-    sb.append(pairRow("ยอดสุทธิ", money(netSales), width)).append('\n');
-    sb.append(
-            pairRow(
-                "สด / โอน / PP",
-                money(cashSales) + " / " + money(transferSales) + " / " + money(promptpaySales),
-                width))
+    sb.append(EscPos.BOLD_ON).append("การชำระเงิน").append(EscPos.BOLD_OFF).append('\n');
+    sb.append(tripleRow("ช่องทาง", "บิล", "ยอด", width)).append('\n');
+    sb.append(tripleRow("เงินสด", String.valueOf(cashBills), money(cashSales), width))
         .append('\n');
     sb.append(
-            pairRow(
-                "บิล สด·โอน·PP",
-                cashBills + " · " + transferBills + " · " + promptpayBills,
-                width))
+            tripleRow("โอนเงิน", String.valueOf(transferBills), money(transferSales), width))
+        .append('\n');
+    sb.append(
+            tripleRow(
+                "PromptPay", String.valueOf(promptpayBills), money(promptpaySales), width))
+        .append('\n');
+    sb.append(tripleRow("รวมสุทธิ", String.valueOf(saleCount), money(netSales), width))
         .append('\n');
     if (voidedCount > 0) {
       sb.append(pairRow("ทำลายบิล", String.valueOf(voidedCount), width)).append('\n');
@@ -634,7 +632,7 @@ public final class ShiftReportFormBuilder {
     String label =
         discrepancyLabel != null && !discrepancyLabel.isEmpty()
             ? discrepancyLabel
-            : (Math.abs(diff) < 0.5 ? "ตรง" : (diff > 0 ? "เกิน (Over)" : "ขาด (Short)"));
+            : (Math.abs(diff) < 0.5 ? "ตรง" : (diff > 0 ? "เกิน" : "ขาด"));
     double remit = Math.max(0, counted - Math.max(0, leaveFloat));
 
     sb.append(rule(width)).append('\n');
@@ -646,7 +644,8 @@ public final class ShiftReportFormBuilder {
     }
     sb.append(pairRow("ควรมีในลิ้นชัก", money(expected), width)).append('\n');
     sb.append(pairRow("นับจริงในลิ้นชัก", money(counted), width)).append('\n');
-    sb.append(pairRow("ส่วนต่าง", label + " " + money(diff), width)).append('\n');
+    // Keep status word left of amount column so numbers stay aligned.
+    sb.append(tripleRow("ส่วนต่าง", label, money(diff), width)).append('\n');
     if (leaveFloat > 0.0001) {
       sb.append(pairRow("ทอนรอบถัดไป", money(leaveFloat), width)).append('\n');
     }
