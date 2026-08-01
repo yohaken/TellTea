@@ -12,8 +12,8 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 assert.ok(existsSync(join(root, "docs/npos-menu-admin-ux-phases.md")));
 assert.match(read("docs/npos-menu-admin-ux-phases.md"), /P1|P2|P3|P4/);
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 553/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 160/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 555/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 161/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+128/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.105"/);
 
