@@ -19485,6 +19485,27 @@ a.ghost-btn {
   color: rgba(28, 42, 31, 0.88);
 }
 
+/* D5 ข้อเสนอ — ให้อยู่บนและเห็นชัด (ไม่จมใต้ตารางเมล) */
+.vat-month-proposals--d5 {
+  margin: 0.35rem 0 0.75rem;
+  padding: 0.45rem 0.55rem 0.55rem;
+  border: 1px solid rgba(87, 15, 15, 0.28);
+  border-radius: 6px;
+  background: rgba(87, 15, 15, 0.04);
+}
+
+.vat-month-proposals--d5 .vat-table-subtitle {
+  color: rgba(87, 15, 15, 0.95);
+  font-size: 0.92rem;
+}
+
+.vat-d5-merged {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(28, 42, 31, 0.7);
+}
+
 .vat-import-into-books .vat-table-title,
 .vat-month-sources .vat-table-title {
   display: flex;
