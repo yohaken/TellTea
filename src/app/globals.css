@@ -19527,6 +19527,31 @@ a.ghost-btn {
   white-space: nowrap;
 }
 
+.vat-col-head-text {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.05rem;
+  line-height: 1.15;
+}
+
+.vat-col-head-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.vat-col-head-role {
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: rgba(28, 42, 31, 0.55);
+  letter-spacing: 0.01em;
+}
+
+.vat-memo-row td {
+  font-style: italic;
+}
+
 .vat-col-info {
   display: inline-flex;
   align-items: center;

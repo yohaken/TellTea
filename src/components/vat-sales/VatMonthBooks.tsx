@@ -46,6 +46,7 @@ import {
 } from "@/lib/vat-month-books";
 import {
   DELIVERY_COL_INFO,
+  DELIVERY_COL_ROLE,
   draftToMonthSources,
 } from "@/lib/vat-month-sources";
 import { subscribeVatImportMonthMerged } from "@/lib/vat-import-month-sync";
@@ -848,15 +849,22 @@ export function VatMonthBooks({ actor }: Props) {
                 <th className="col-seg">ช่องทาง</th>
                 <VatColHead
                   label="ยอดขายแอพ"
+                  role={DELIVERY_COL_ROLE.appSales}
                   info={DELIVERY_COL_INFO.appSales}
                 />
                 <VatColHead
                   label="ยอดโอน"
+                  role={DELIVERY_COL_ROLE.transfer}
                   info={DELIVERY_COL_INFO.transfer}
                 />
-                <VatColHead label="คชจ.GP" info={DELIVERY_COL_INFO.gpFee} />
+                <VatColHead
+                  label="คชจ.GP"
+                  role={DELIVERY_COL_ROLE.gpFee}
+                  info={DELIVERY_COL_INFO.gpFee}
+                />
                 <VatColHead
                   label="VAT-ซื้อ"
+                  role={DELIVERY_COL_ROLE.purchaseVat}
                   info={DELIVERY_COL_INFO.purchaseVat}
                 />
               </tr>
@@ -917,6 +925,12 @@ export function VatMonthBooks({ actor }: Props) {
             </tbody>
           </table>
         </div>
+        <p
+          className="muted vat-sales-hint vat-hint-one-line"
+          title="หลักแยกชั้น: ขาย→VAT · โอน→รายได้/กำไร · GP ไม่หักซ้ำ"
+        >
+          ขายแอพ → VAT · ยอดโอน → รายได้/กำไร · GP อยู่ในโอนแล้ว ไม่หักซ้ำ
+        </p>
       </section>
 
       {loading && !hydrated ? (
@@ -1075,14 +1089,16 @@ export function VatMonthBooks({ actor }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="vat-row-parent">
+                  <tr className="vat-row-parent vat-memo-row">
                     <td
-                      className="col-seg"
-                      title="แพลตฟอร์มหักจากยอดโอนแล้ว — ไม่หักซ้ำตอนคิดกำไร"
+                      className="col-seg muted"
+                      title="แพลตฟอร์มหักจากยอดโอนแล้ว — โชว์อ้างอิง · ไม่หักซ้ำตอนคิดกำไร"
                     >
-                      GP แพลตฯ (หักจากโอนแล้ว · ไม่หักซ้ำ)
+                      GP แพลตฯ (อ้างอิง · ไม่หักกำไร)
                     </td>
-                    <td className="col-num col-net">{fmt(view.gpCostTotal)}</td>
+                    <td className="col-num col-net muted">
+                      {fmt(view.gpCostTotal)}
+                    </td>
                   </tr>
                   {MONTH_CHANNELS.map((k) => (
                     <tr key={k} className="vat-row-child">
@@ -1239,19 +1255,19 @@ export function VatMonthBooks({ actor }: Props) {
                       {view.booksOpex == null ? "—" : fmt(view.booksOpex)}
                     </td>
                   </tr>
-                  <tr className="vat-row-child">
+                  <tr className="vat-row-child vat-memo-row">
                     <td
-                      className="col-seg col-child"
-                      title="อ้างอิงเท่านั้น — หักจากยอดโอนแล้ว"
+                      className="col-seg col-child muted"
+                      title="อ้างอิงเท่านั้น — หักจากยอดโอนแล้ว · ไม่ลบจากกำไร"
                     >
-                      GP แพลตฯ (หักจากโอนแล้ว)
+                      GP แพลตฯ (อ้างอิง · ไม่หัก)
                     </td>
-                    <td className="col-num">{fmt(view.gpCostTotal)}</td>
+                    <td className="col-num muted">{fmt(view.gpCostTotal)}</td>
                   </tr>
                   <tr className="vat-sales-totals-row">
                     <td
                       className="col-seg"
-                      title="รายได้ถึงร้าน − คชจ.บช. · ยังไม่หัก VAT"
+                      title="รายได้ถึงร้าน − คชจ.บช. · ยังไม่หัก VAT · ไม่หัก GP"
                     >
                       = กำไรประมาณการเดือน
                     </td>
@@ -1284,6 +1300,12 @@ export function VatMonthBooks({ actor }: Props) {
                 </tbody>
               </table>
             </div>
+            <p
+              className="muted vat-sales-hint vat-hint-one-line"
+              title="สูตรกำไร — GP ไม่เข้าสมการ"
+            >
+              กำไร ≈ ยอดโอน − คชจ.บช. · GP หักในโอนแล้ว ไม่ลบซ้ำ
+            </p>
             <p
               className="muted vat-sales-hint vat-hint-one-line vat-c-real-note"
               title="โน้ตดูเอง — ไม่แก้ VAT / ภ.ง.ด. / P&L"
