@@ -14,6 +14,7 @@
     "test:vat-p6": "npx --yes tsx scripts/test-vat-p6.ts",
     "test:vat-p7": "npx --yes tsx scripts/test-vat-sales-p7.ts",
     "test:vat-monthly": "npx --yes tsx scripts/test-vat-monthly.ts",
+    "test:vat-month-sources": "npx --yes tsx scripts/test-vat-month-sources.ts",
     "test:personal-income-tax": "npx --yes tsx scripts/test-personal-income-tax.ts",
     "test:vat-import": "npx --yes tsx scripts/test-vat-import.ts",
     "test:vat-import-lineman": "npx --yes tsx scripts/test-vat-import-lineman-monthly.ts",

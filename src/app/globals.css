@@ -19467,11 +19467,49 @@ a.ghost-btn {
   color: rgba(28, 42, 31, 0.88);
 }
 
-.vat-import-into-books .vat-table-title {
+.vat-import-into-books .vat-table-title,
+.vat-month-sources .vat-table-title {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem 0.5rem;
+}
+
+.vat-month-sources .col-seg.muted {
+  color: var(--muted, #6b7280);
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.vat-col-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  white-space: nowrap;
+}
+
+.vat-col-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 50%;
+  border: 1px solid rgba(28, 42, 31, 0.28);
+  color: rgba(28, 42, 31, 0.55);
+  font-size: 0.62rem;
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1;
+  cursor: help;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.vat-col-info:hover {
+  border-color: rgba(87, 15, 15, 0.45);
+  color: rgba(87, 15, 15, 0.85);
+  background: rgba(87, 15, 15, 0.06);
 }
 
 .vat-month-books .vat-table-block {
