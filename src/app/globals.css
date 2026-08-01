@@ -19467,11 +19467,18 @@ a.ghost-btn {
   color: rgba(28, 42, 31, 0.88);
 }
 
-.vat-import-into-books .vat-table-title {
+.vat-import-into-books .vat-table-title,
+.vat-month-sources .vat-table-title {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem 0.5rem;
+}
+
+.vat-month-sources .col-seg.muted {
+  color: var(--muted, #6b7280);
+  font-size: 0.85em;
+  white-space: nowrap;
 }
 
 .vat-month-books .vat-table-block {
