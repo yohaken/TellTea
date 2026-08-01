@@ -14,6 +14,7 @@ const REGION = "asia-southeast1";
 const AGENT_API_DOC = "meta/vatAgentApi";
 const NOTES_DOC = "meta/vatMailStudyNotes";
 const REPORTS_COL = "platformEmailReports";
+const PROPOSALS_COL = "vatDeliveryMonthProposals";
 
 function timingSafeEqualStr(a, b) {
   const aa = Buffer.from(String(a || ""), "utf8");
@@ -128,6 +129,43 @@ exports.vatMailAgentDump = functions
         };
       });
 
+      const propSnap = await db
+        .collection(PROPOSALS_COL)
+        .orderBy("monthKey", "desc")
+        .limit(12)
+        .get()
+        .catch(() => null);
+      const proposals = propSnap
+        ? propSnap.docs.map((d) => {
+            const x = d.data() || {};
+            const channels = x.channels || {};
+            const summarize = (ch) => {
+              const c = channels[ch] || {};
+              return {
+                use: Array.isArray(c.reportIds) ? c.reportIds.length : 0,
+                skip: Array.isArray(c.skipIds) ? c.skipIds.length : 0,
+                strategy: String(c.strategy || "unknown"),
+                dayCount: Number(c.dayCount) || 0,
+                amountsSource: String(c.amountsSource || "none"),
+                hasAmounts: Boolean(
+                  c.amounts &&
+                    (c.amounts.appSales != null ||
+                      c.amounts.transfer != null),
+                ),
+              };
+            };
+            return {
+              monthKey: d.id,
+              phase: String(x.phase || "D3"),
+              status: String(x.status || "studying"),
+              rebuiltAt: Number(x.rebuiltAt) || 0,
+              grab: summarize("grab"),
+              lineman: summarize("lineman"),
+              shopee: summarize("shopee"),
+            };
+          })
+        : [];
+
       await db.doc(AGENT_API_DOC).set(
         {
           lastUsedAt: Date.now(),
@@ -139,6 +177,7 @@ exports.vatMailAgentDump = functions
       res.status(200).json({
         ok: true,
         generatedAt: new Date().toISOString(),
+        phaseHint: "D3-proposals · amounts empty until D4 · never auto-write L4",
         notes: notes
           ? {
               text: String(notes.text || ""),
@@ -148,6 +187,7 @@ exports.vatMailAgentDump = functions
             }
           : null,
         reports,
+        proposals,
         counts: {
           reports: reports.length,
           byChannel: reports.reduce((acc, r) => {
@@ -160,6 +200,7 @@ exports.vatMailAgentDump = functions
           }, {}),
           mismatch: reports.filter((r) => r.channelMismatch).length,
           noise: reports.filter((r) => r.noise).length,
+          proposalMonths: proposals.length,
         },
       });
     } catch (e) {

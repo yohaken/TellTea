@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { VatColHead } from "@/components/vat-sales/VatColHead";
 import { VatMailStudyPanel } from "@/components/vat-sales/VatMailStudyPanel";
+import { VatMonthProposalsPanel } from "@/components/vat-sales/VatMonthProposalsPanel";
 import {
   loadVatDeliverySourceNotes,
   saveVatDeliverySourceNotes,
@@ -350,6 +351,8 @@ export function VatDeliverySources({ actor }: Props) {
       {loading ? <p className="muted">กำลังโหลด…</p> : null}
 
       <VatMailStudyPanel actor={actor} />
+
+      <VatMonthProposalsPanel actor={actor} />
 
       <section className="vat-table-block vat-month-sources">
         <h3 className="vat-table-subtitle">ยอดรวมเดือน (ผสานเข้างบทันที)</h3>
