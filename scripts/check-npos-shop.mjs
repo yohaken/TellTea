@@ -46,6 +46,7 @@ const steps = [
   { name: "z-web-form-parity", cmd: ["node", "scripts/test-npos-z-web-form-parity.mjs"] },
   { name: "z-report-align", cmd: ["node", "scripts/test-npos-z-report-align.mjs"] },
   { name: "z-cash-remit", cmd: ["node", "scripts/test-npos-z-cash-remit.mjs"] },
+  { name: "z-remit-short", cmd: ["node", "scripts/test-npos-z-remit-short.mjs"] },
   { name: "system-ver-sync", cmd: ["node", "scripts/test-npos-system-ver-sync.mjs"] },
   { name: "bo-shift-readonly", cmd: ["node", "scripts/test-npos-bo-shift-readonly.mjs"] },
   { name: "cut-bo-entry", cmd: ["node", "scripts/test-npos-cut-bo-entry.mjs"] },
