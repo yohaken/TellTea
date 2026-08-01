@@ -1,17 +1,25 @@
 /**
- * พรีวิวแคป AI ต่อเดือน — เซฟยอด + รูปไว้ใน Firestore/Storage
+ * พรีวิวแคป AI ต่อเดือน — เซฟยอด + รูป
+ * รูปเก็บใน evidencePhotos (Firestore) — ไม่พึ่ง Firebase Storage ที่เคยค้างเกินเวลา
  * ยังไม่เข้างบจนกว่าจะกดส่งเข้าตารางหลัก
  */
-import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  deleteDoc,
+  doc,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
 import {
   deleteObject,
-  getDownloadURL,
   ref as storageRef,
-  uploadBytes,
 } from "firebase/storage";
+import {
+  evidencePhotoIdFromRef,
+  isEvidencePhotoRef,
+  saveEvidencePhotoDoc,
+} from "./evidence-photos";
 import { getDb, getFirebaseAuth, getFirebaseStorage } from "./firebase";
 import { compressImageForUpload } from "./receipts";
-import { guessContentType, VAT_IMPORT_STORAGE_PREFIX } from "./vat-import";
 import {
   MONTH_CHANNELS,
   type MonthChannel,
@@ -23,11 +31,11 @@ export const VAT_DELIVERY_INGEST_DRAFTS_COL = "vatDeliveryIngestDrafts";
 /** sessionStorage key — ยืนยันเดือนก่อนอัปแคปครั้งแรกของเดือน */
 export const INGEST_MONTH_CONFIRM_PREFIX = "vat-ingest-up-ok:";
 
-const UPLOAD_TIMEOUT_MS = 30_000;
-const SAVE_TIMEOUT_MS = 12_000;
-const COMPRESS_TIMEOUT_MS = 12_000;
-/** ข้ามย่อถ้ารูป JPEG เล็กอยู่แล้ว — ลดเวลาเซฟ */
-const SKIP_COMPRESS_JPEG_BYTES = 420_000;
+const SAVE_TIMEOUT_MS = 15_000;
+const PHOTO_SAVE_TIMEOUT_MS = 25_000;
+/** ย่อแคปก่อนเข้า evidencePhotos — พรีวิวไม่ต้องคมเท่าสลิปภาษี */
+const INGEST_CAPTURE_MAX_EDGE = 1200;
+const INGEST_CAPTURE_QUALITY = 0.68;
 
 export type IngestDraftAmounts = {
   sales: number;
@@ -39,7 +47,9 @@ export type IngestDraftAmounts = {
 export type IngestDraftImage = {
   id: string;
   fileName: string;
+  /** legacy Storage path หรือ evidencePhotos/{id} */
   storagePath: string;
+  /** https Storage URL · หรือ evp:{id} จาก evidencePhotos */
   downloadUrl: string;
   contentHash: string;
   channel: MonthChannel | "unknown";
@@ -83,14 +93,6 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   });
 }
 
-function safeFileName(name: string): string {
-  const base = String(name || "capture")
-    .replace(/[^\w.\-()\u0E00-\u0E7F]+/g, "_")
-    .replace(/_+/g, "_")
-    .slice(0, 120);
-  return base || "capture.jpg";
-}
-
 function mapAmounts(raw: unknown): IngestDraftAmounts {
   const o = (raw || {}) as Record<string, unknown>;
   return {
@@ -103,18 +105,29 @@ function mapAmounts(raw: unknown): IngestDraftAmounts {
 
 function mapImage(raw: unknown): IngestDraftImage | null {
   const o = (raw || {}) as Record<string, unknown>;
-  const storagePath = String(o.storagePath || "").trim();
   const downloadUrl = String(o.downloadUrl || "").trim();
-  if (!storagePath || !downloadUrl) return null;
+  const storagePath = String(o.storagePath || "").trim();
+  if (!downloadUrl) return null;
+  const okUrl =
+    isEvidencePhotoRef(downloadUrl) ||
+    downloadUrl.startsWith("data:image/") ||
+    /^https?:\/\//i.test(downloadUrl);
+  if (!okUrl) return null;
   const ch = String(o.channel || "unknown");
   const channel: MonthChannel | "unknown" =
     ch === "grab" || ch === "shopee" || ch === "lineman" ? ch : "unknown";
+  const evpId = isEvidencePhotoRef(downloadUrl)
+    ? evidencePhotoIdFromRef(downloadUrl)
+    : "";
   return {
-    id: String(o.id || storagePath).slice(0, 80),
+    id: String(o.id || evpId || storagePath || downloadUrl).slice(0, 80),
     fileName: String(o.fileName || "capture.jpg").slice(0, 160),
-    storagePath: storagePath.slice(0, 300),
+    storagePath: (storagePath || (evpId ? `evidencePhotos/${evpId}` : "")).slice(
+      0,
+      300,
+    ),
     downloadUrl: downloadUrl.slice(0, 2000),
-    contentHash: String(o.contentHash || "").slice(0, 80),
+    contentHash: String(o.contentHash || evpId || "").slice(0, 80),
     channel,
   };
 }
@@ -195,19 +208,31 @@ export async function saveIngestDraft(
   return next;
 }
 
+async function deleteIngestImage(img: IngestDraftImage): Promise<void> {
+  if (isEvidencePhotoRef(img.downloadUrl)) {
+    const id = evidencePhotoIdFromRef(img.downloadUrl);
+    if (!id) return;
+    try {
+      await deleteDoc(doc(getDb(), "evidencePhotos", id));
+    } catch {
+      /* อาจถูกลบไปแล้ว */
+    }
+    return;
+  }
+  if (img.storagePath.startsWith("vat-imports/")) {
+    try {
+      await deleteObject(storageRef(getFirebaseStorage(), img.storagePath));
+    } catch {
+      /* ไฟล์อาจถูกลบไปแล้ว */
+    }
+  }
+}
+
 export async function deleteIngestDraft(monthKey: string): Promise<void> {
   if (!isMonthKey(monthKey)) return;
   const existing = await loadIngestDraft(monthKey);
   if (existing?.images?.length) {
-    await Promise.all(
-      existing.images.map(async (img) => {
-        try {
-          await deleteObject(storageRef(getFirebaseStorage(), img.storagePath));
-        } catch {
-          /* ไฟล์อาจถูกลบไปแล้ว */
-        }
-      }),
-    );
+    await Promise.all(existing.images.map((img) => deleteIngestImage(img)));
   }
   if (!existing) return;
   try {
@@ -261,23 +286,10 @@ export function clearIngestMonthConfirmed(monthKey: string): void {
   }
 }
 
-/** ย่อแคปด้วย createImageBitmap+toBlob — เร็วกว่า dataURL loop เดิม */
-async function compressCaptureToJpeg(file: File): Promise<File> {
-  if (typeof document === "undefined") return file;
-  const isJpeg =
-    file.type === "image/jpeg" ||
-    file.type === "image/jpg" ||
-    /\.jpe?g$/i.test(file.name);
-  if (isJpeg && file.size > 0 && file.size <= SKIP_COMPRESS_JPEG_BYTES) {
-    return file;
-  }
-  const out = await compressImageForUpload(file, 1280, 0.72);
-  const base = safeFileName(file.name).replace(/\.[^.]+$/, "") || "capture";
-  if (out.name === `${base}.jpg` && out.type === "image/jpeg") return out;
-  return new File([out], `${base}.jpg`, { type: "image/jpeg" });
-}
-
-/** อัปโหลดแคปพรีวิว → vat-imports/{yyyy}/{mm}/capture/… */
+/**
+ * บันทึกรูปแคปพรีวิว → evidencePhotos (Firestore)
+ * ใช้ path เดียวกับสลิปในแอป — ไม่ผ่าน Storage ที่เคยค้าง
+ */
 export async function uploadIngestCaptureFile(input: {
   file: File;
   monthKey: string;
@@ -285,56 +297,67 @@ export async function uploadIngestCaptureFile(input: {
   const auth = getFirebaseAuth();
   if (!auth.currentUser) throw new Error("ยังไม่ได้เข้าสู่ระบบ");
   if (!isMonthKey(input.monthKey)) throw new Error("เดือนไม่ถูกต้อง");
-  if (!input.file.type.startsWith("image/") && !/\.(png|jpe?g|webp|heic|heif)$/i.test(input.file.name)) {
+  if (
+    !input.file.type.startsWith("image/") &&
+    !/\.(png|jpe?g|webp|heic|heif)$/i.test(input.file.name)
+  ) {
     throw new Error("รองรับเฉพาะรูปภาพ");
   }
 
-  const file = await withTimeout(
-    compressCaptureToJpeg(input.file),
-    COMPRESS_TIMEOUT_MS,
-    "ย่อรูป",
-  );
+  const baseName =
+    String(input.file.name || "capture")
+      .replace(/[^\w.\-()\u0E00-\u0E7F]+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/\.[^.]+$/, "")
+      .slice(0, 100) || "capture";
 
-  const [yyyy, mm] = input.monthKey.split("-");
-  const uploadId = `${Date.now().toString(36)}-${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
-  const fileName = safeFileName(file.name);
-  const storagePath = `${VAT_IMPORT_STORAGE_PREFIX}/${yyyy}/${mm}/capture/${uploadId}-${fileName}`;
-  const contentType = guessContentType(file) || "image/jpeg";
-  const ref = storageRef(getFirebaseStorage(), storagePath);
-
+  let ready = input.file;
   try {
-    await withTimeout(
-      uploadBytes(ref, file, {
-        contentType,
-        customMetadata: {
-          monthKey: input.monthKey,
-          channel: "capture",
-        },
+    if (typeof document !== "undefined") {
+      const compressed = await withTimeout(
+        compressImageForUpload(
+          input.file,
+          INGEST_CAPTURE_MAX_EDGE,
+          INGEST_CAPTURE_QUALITY,
+        ),
+        12_000,
+        "ย่อรูป",
+      );
+      ready = new File([compressed], `${baseName}.jpg`, { type: "image/jpeg" });
+    }
+  } catch {
+    /* ย่อไม่ได้ก็ส่งไฟล์เดิม — saveEvidencePhotoDoc จะย่อเอง */
+    ready = input.file;
+  }
+
+  let evpRef: string;
+  try {
+    evpRef = await withTimeout(
+      saveEvidencePhotoDoc(ready, {
+        folder: "vat-ingest",
+        slotKey: `ingest-${input.monthKey}`,
+        encode: "receipt",
       }),
-      UPLOAD_TIMEOUT_MS,
-      "อัปโหลดรูป",
+      PHOTO_SAVE_TIMEOUT_MS,
+      "บันทึกรูป",
     );
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (/permission|unauthorized|storage\/unauthorized/i.test(msg)) {
-      throw new Error("อัปโหลดรูปไม่ได้ · ไม่มีสิทธิ์ Storage");
+    if (/permission|insufficient|PERMISSION|ไม่มีสิทธิ์/i.test(msg)) {
+      throw new Error("บันทึกรูปไม่ได้ · ไม่มีสิทธิ์ (รีเฟรชแล้วลองใหม่)");
     }
     throw e instanceof Error ? e : new Error(msg);
   }
 
-  const downloadUrl = await withTimeout(
-    getDownloadURL(ref),
-    15_000,
-    "ดึงลิงก์รูป",
-  );
+  const id = evidencePhotoIdFromRef(evpRef);
+  const fileName = `${baseName}.jpg`;
+
   return {
-    id: uploadId,
+    id: id || evpRef.slice(0, 80),
     fileName,
-    storagePath,
-    downloadUrl,
-    contentHash: uploadId,
+    storagePath: id ? `evidencePhotos/${id}` : "",
+    downloadUrl: evpRef,
+    contentHash: id || "",
     channel: "unknown",
   };
 }

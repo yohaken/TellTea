@@ -89,15 +89,27 @@ void saveIngestDraft({
     assert.equal(e instanceof Error ? e.message : String(e), "เดือนไม่ถูกต้อง");
   })
   .then(() => {
-    // ย่อรูปต้องใช้ compressImageForUpload (createImageBitmap) — กัน path ช้าเดิม
+    // รูปต้องเก็บผ่าน evidencePhotos — ไม่พึ่ง Storage uploadBytes
     const draftSrc = fs.readFileSync(
       path.join(process.cwd(), "src/lib/vat-delivery-ingest-draft.ts"),
       "utf8",
     );
+    assert.match(draftSrc, /saveEvidencePhotoDoc/);
+    assert.match(draftSrc, /folder:\s*"vat-ingest"/);
     assert.match(draftSrc, /compressImageForUpload/);
-    assert.doesNotMatch(draftSrc, /toDataURL\("image\/jpeg"/);
-    assert.doesNotMatch(draftSrc, /atob\(/);
-    assert.match(draftSrc, /SKIP_COMPRESS_JPEG_BYTES/);
+    assert.doesNotMatch(draftSrc, /\buploadBytes\b/);
+
+    const evidenceSrc = fs.readFileSync(
+      path.join(process.cwd(), "src/lib/evidence-photos.ts"),
+      "utf8",
+    );
+    assert.match(evidenceSrc, /"vat-ingest"/);
+
+    const rules = fs.readFileSync(
+      path.join(process.cwd(), "firestore.rules"),
+      "utf8",
+    );
+    assert.match(rules, /vat-ingest/);
 
     const uiSrc = fs.readFileSync(
       path.join(process.cwd(), "src/components/vat-sales/VatIngestSources.tsx"),
@@ -106,7 +118,8 @@ void saveIngestDraft({
     assert.match(uiSrc, /defaultVatCloseMonthKey/);
     assert.match(uiSrc, /เดือนถูกต้องไหม/);
     assert.match(uiSrc, /needsIngestMonthConfirm/);
-    assert.match(uiSrc, /onAddCaptureClick/);
+    assert.match(uiSrc, /บันทึกรูป \$\{/);
+    assert.doesNotMatch(uiSrc, /อัปโหลดรูป \$\{/);
 
     const css = fs.readFileSync(
       path.join(process.cwd(), "src/app/globals.css"),
@@ -115,6 +128,24 @@ void saveIngestDraft({
     assert.match(css, /\.vat-ingest-preview-slim \{[\s\S]*?width: 100%;/);
     assert.match(css, /table-layout: fixed;/);
     assert.match(css, /\.vat-ingest-month-confirm/);
+
+    // mapImage รับ evp: ref
+    const evpMapped = mapIngestDraft("2026-07", {
+      byChannel: {},
+      images: [
+        {
+          id: "p1",
+          fileName: "grab.jpg",
+          storagePath: "evidencePhotos/p1",
+          downloadUrl: "evp:p1",
+          channel: "grab",
+        },
+      ],
+      updatedAt: 1,
+      updatedBy: "t",
+    });
+    assert.equal(evpMapped.images.length, 1);
+    assert.equal(evpMapped.images[0].downloadUrl, "evp:p1");
 
     console.log("test-vat-delivery-ingest-draft: ok");
   })

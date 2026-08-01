@@ -27,7 +27,11 @@ export const EVIDENCE_PHOTO_STAFF_FOLDERS = [
   "vat-input",
 ] as const;
 
-export const EVIDENCE_PHOTO_OWNER_FOLDERS = ["owner-books"] as const;
+export const EVIDENCE_PHOTO_OWNER_FOLDERS = [
+  "owner-books",
+  /** พรีวิวแคป VAT delivery — เจ้าของเท่านั้น */
+  "vat-ingest",
+] as const;
 
 export function isAllowedEvidencePhotoFolder(folder: string): boolean {
   const f = String(folder || "").trim();

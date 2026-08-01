@@ -582,6 +582,8 @@ service cloud.firestore {
           evidencePhotoStaffFolder(request.resource.data.folder)
           || ((isOwner() || isOwnerEmail() || hasPerm('ownerBooks'))
               && request.resource.data.folder == 'owner-books')
+          || ((isOwner() || isOwnerEmail())
+              && request.resource.data.folder == 'vat-ingest')
         );
       allow update: if false;
       allow delete: if isOwner() || isOwnerEmail() || resource.data.createdBy == request.auth.uid;

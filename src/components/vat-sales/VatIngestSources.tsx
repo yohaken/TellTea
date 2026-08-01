@@ -444,7 +444,7 @@ export function VatIngestSources({ actor }: Props) {
     const filesToUpload = [...pendingFiles];
     const channelsToUpload = [...pendingChannels];
     try {
-      // 1) เซฟยอดก่อน — UI ได้ feedback เร็ว ไม่รออัปโหลดรูป
+      // 1) เซฟยอดก่อน — UI ได้ feedback เร็ว ไม่รอรูป
       let images = [...savedImages];
       let saved = await saveIngestDraft({
         monthKey,
@@ -462,11 +462,11 @@ export function VatIngestSources({ actor }: Props) {
         return;
       }
 
-      // 2) อัปโหลดรูปใหม่ทีละใบ (ย่อ JPEG เร็วด้วย createImageBitmap)
+      // 2) บันทึกรูปใหม่ทีละใบ → evidencePhotos (ไม่ผ่าน Storage)
       const uploaded: IngestDraftImage[] = [];
       const uploadErrors: string[] = [];
       for (let i = 0; i < filesToUpload.length; i += 1) {
-        setMsg(`อัปโหลดรูป ${i + 1}/${filesToUpload.length}…`);
+        setMsg(`บันทึกรูป ${i + 1}/${filesToUpload.length}…`);
         try {
           const img = await uploadIngestCaptureFile({
             file: filesToUpload[i],
@@ -544,7 +544,7 @@ export function VatIngestSources({ actor }: Props) {
         setMsg("เซฟยอดก่อนส่ง…");
         let images = [...savedImages];
         for (let i = 0; i < pendingFiles.length; i += 1) {
-          setMsg(`อัปโหลดรูป ${i + 1}/${pendingFiles.length}…`);
+          setMsg(`บันทึกรูป ${i + 1}/${pendingFiles.length}…`);
           try {
             const img = await uploadIngestCaptureFile({
               file: pendingFiles[i],
