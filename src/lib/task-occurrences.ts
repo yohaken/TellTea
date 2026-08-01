@@ -3,6 +3,7 @@ import {
   arrayUnion,
   collection,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -270,6 +271,14 @@ export function isOpenTaskOccurrenceStatus(status: TaskOccurrenceStatus) {
   return status === "pending" || status === "missed" || status === "waiting";
 }
 
+/** ตัดขยะจาก id (เช่น ?query) — กัน path เพี้ยนแล้ว update ไม่เจอเอกสาร */
+export function sanitizeTaskTemplateId(raw: string): string {
+  return String(raw || "")
+    .trim()
+    .split(/[?#]/)[0]
+    .trim();
+}
+
 /**
  * รวบรวมรอบที่ยังไม่จบของกติกา + เอกสารซ้ำ periodKey เดียวกัน
  * (ตาราง thisWeek โชว์แค่ 1 แถว/กติกา — ลบแถวเดียวแล้วพี่น้องโผล่แทน)
@@ -278,15 +287,23 @@ export function collectOpenTaskOccurrences(
   templateId: string,
   occurrences: TaskOccurrence[],
 ): TaskOccurrence[] {
-  const tid = String(templateId || "").trim();
-  if (!tid) return [];
+  const tid = sanitizeTaskTemplateId(templateId);
+  const rawTid = String(templateId || "").trim();
+  if (!tid && !rawTid) return [];
+  const matchTid = (raw: string) => {
+    const t = String(raw || "").trim();
+    if (!t) return false;
+    if (rawTid && t === rawTid) return true;
+    if (tid && (t === tid || sanitizeTaskTemplateId(t) === tid)) return true;
+    return false;
+  };
   const open = occurrences.filter(
-    (o) => o.templateId === tid && isOpenTaskOccurrenceStatus(o.status),
+    (o) => matchTid(o.templateId) && isOpenTaskOccurrenceStatus(o.status),
   );
   const periodKeys = new Set(open.map((o) => o.periodKey).filter(Boolean));
   const byId = new Map<string, TaskOccurrence>();
   for (const o of occurrences) {
-    if (o.templateId !== tid) continue;
+    if (!matchTid(o.templateId)) continue;
     if (o.status === "completed") continue;
     if (periodKeys.has(o.periodKey) || isOpenTaskOccurrenceStatus(o.status)) {
       byId.set(o.id, o);
@@ -295,34 +312,82 @@ export function collectOpenTaskOccurrences(
   return [...byId.values()];
 }
 
+async function resolveExistingTaskTemplateRef(rawId: string) {
+  const candidates = [...new Set(
+    [String(rawId || "").trim(), sanitizeTaskTemplateId(rawId)].filter(Boolean),
+  )];
+  for (const id of candidates) {
+    const ref = doc(getDb(), "taskTemplates", id);
+    try {
+      if ((await getDoc(ref)).exists()) return { ref, id };
+    } catch {
+      /* try next */
+    }
+  }
+  return null;
+}
+
+async function commitOpenOccurrenceDeletes(input: {
+  templateId: string;
+  ids: string[];
+  /** ถ้ามีกติกา — อัปเดต dismiss/active; ถ้าไม่มีแล้ว ลบรอบอย่างเดียว */
+  templatePatch?: Record<string, unknown>;
+}): Promise<void> {
+  const existing = input.templatePatch
+    ? await resolveExistingTaskTemplateRef(input.templateId)
+    : null;
+
+  const batch = writeBatch(getDb());
+  if (existing && input.templatePatch) {
+    batch.update(existing.ref, input.templatePatch);
+  }
+  for (const id of input.ids) {
+    batch.delete(doc(getDb(), "taskOccurrences", id));
+  }
+  // มีอย่างน้อยหนึ่งอย่างต้องทำ — ถ้าไม่มีทั้งกติกาและรอบ ก็ไม่ commit
+  if (!input.ids.length && !(existing && input.templatePatch)) {
+    return;
+  }
+  await batch.commit();
+}
+
 /**
  * dismiss periodKeys + ลบรอบที่ยังไม่จบ ใน batch เดียว
  * กัน sync สร้างซ้ำ และกันลบแล้วแถวพี่น้องโผล่แทน
+ * ถ้ากติกาถูกลบไปแล้ว — ยังลบรอบค้างได้ (ไม่ให้ทั้ง batch พังด้วย No document to update)
  */
 export async function dismissAndDeleteOpenTaskOccurrences(
   templateId: string,
   occurrences: TaskOccurrence[],
 ): Promise<{ deletedIds: string[]; periodKeys: string[] }> {
-  const tid = String(templateId || "").trim();
+  const tid = sanitizeTaskTemplateId(templateId);
   if (!tid) throw new Error("ไม่พบกติกางาน");
   const open = collectOpenTaskOccurrences(tid, occurrences);
-  const periodKeys = [...new Set(open.map((o) => o.periodKey).filter(Boolean))];
-  const ids = open.map((o) => o.id);
+  // รองรับ templateId เพี้ยนในแถว — ลองจับจาก occ ที่กดลบผ่านรายการ open ของ id ดิบด้วย
+  const rawTid = String(templateId || "").trim();
+  const openExtra =
+    rawTid !== tid
+      ? collectOpenTaskOccurrences(rawTid, occurrences).filter(
+          (o) => !open.some((x) => x.id === o.id),
+        )
+      : [];
+  const allOpen = [...open, ...openExtra];
+  const periodKeys = [...new Set(allOpen.map((o) => o.periodKey).filter(Boolean))];
+  const ids = [...new Set(allOpen.map((o) => o.id))];
   if (!ids.length && !periodKeys.length) {
     return { deletedIds: [], periodKeys: [] };
   }
 
-  const batch = writeBatch(getDb());
-  if (periodKeys.length) {
-    batch.update(doc(getDb(), "taskTemplates", tid), {
-      dismissedPeriodKeys: arrayUnion(...periodKeys),
-      updatedAt: Date.now(),
-    });
-  }
-  for (const id of ids) {
-    batch.delete(doc(getDb(), "taskOccurrences", id));
-  }
-  await batch.commit();
+  await commitOpenOccurrenceDeletes({
+    templateId: rawTid || tid,
+    ids,
+    templatePatch: periodKeys.length
+      ? {
+          dismissedPeriodKeys: arrayUnion(...periodKeys),
+          updatedAt: Date.now(),
+        }
+      : undefined,
+  });
   return { deletedIds: ids, periodKeys };
 }
 
@@ -331,12 +396,12 @@ export async function deactivateTaskTemplateClearingOpen(
   templateId: string,
   occurrences: TaskOccurrence[],
 ): Promise<{ deletedIds: string[]; periodKeys: string[] }> {
-  const tid = String(templateId || "").trim();
-  if (!tid) throw new Error("ไม่พบกติกางาน");
-  const open = collectOpenTaskOccurrences(tid, occurrences);
+  const tid = sanitizeTaskTemplateId(templateId);
+  const rawTid = String(templateId || "").trim();
+  if (!tid && !rawTid) throw new Error("ไม่พบกติกางาน");
+  const open = collectOpenTaskOccurrences(rawTid || tid, occurrences);
   const periodKeys = [...new Set(open.map((o) => o.periodKey).filter(Boolean))];
   const ids = open.map((o) => o.id);
-  const batch = writeBatch(getDb());
   const patch: Record<string, unknown> = {
     active: false,
     updatedAt: Date.now(),
@@ -344,11 +409,11 @@ export async function deactivateTaskTemplateClearingOpen(
   if (periodKeys.length) {
     patch.dismissedPeriodKeys = arrayUnion(...periodKeys);
   }
-  batch.update(doc(getDb(), "taskTemplates", tid), patch);
-  for (const id of ids) {
-    batch.delete(doc(getDb(), "taskOccurrences", id));
-  }
-  await batch.commit();
+  await commitOpenOccurrenceDeletes({
+    templateId: rawTid || tid,
+    ids,
+    templatePatch: patch,
+  });
   return { deletedIds: ids, periodKeys };
 }
 

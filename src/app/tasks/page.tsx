@@ -675,6 +675,7 @@ function OccurrencesTable({
         occ.templateId,
         allOccurrences,
       );
+      onError("");
       onDeleted?.({
         templateId: occ.templateId,
         deletedIds: result.deletedIds.length ? result.deletedIds : [occ.id],

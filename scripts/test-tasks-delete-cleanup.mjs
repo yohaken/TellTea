@@ -13,11 +13,12 @@ const occ = read("src/lib/task-occurrences.ts");
 const page = read("src/app/tasks/page.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 519/);
+assert.match(version, /APP_BUILD = \d+/);
 assert.match(occ, /collectOpenTaskOccurrences/);
 assert.match(occ, /dismissAndDeleteOpenTaskOccurrences/);
 assert.match(occ, /deactivateTaskTemplateClearingOpen/);
 assert.match(occ, /arrayUnion/);
+assert.match(occ, /sanitizeTaskTemplateId|resolveExistingTaskTemplateRef/);
 assert.match(page, /dismissAndDeleteOpenTaskOccurrences/);
 assert.match(page, /deactivateTaskTemplateClearingOpen/);
 assert.match(page, /เอาออกจากตาราง/);

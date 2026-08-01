@@ -21,7 +21,7 @@ const page = read("src/app/tasks/page.tsx");
 const logic = read("src/lib/task-weekly-logic.ts");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = 519/);
+assert.match(version, /APP_BUILD = \d+/);
 assert.match(logic, /applyDismissBlocksToTemplates/);
 assert.match(logic, /mergeDismissedPeriodKeys/);
 assert.match(page, /dismissBlockRef/);
