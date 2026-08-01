@@ -3303,6 +3303,24 @@ body.modal-open .main-panel {
   row-gap: 0.22rem;
 }
 
+.ot-month-closed-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.55rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(180, 83, 9, 0.35);
+  background: rgba(251, 191, 36, 0.16);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.ot-slim-hint.is-locked {
+  color: rgba(146, 64, 14, 0.95);
+  font-weight: 700;
+}
+
 .ot-slim-hint {
   font-size: 0.62rem;
   font-weight: 600;

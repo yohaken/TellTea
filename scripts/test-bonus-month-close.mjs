@@ -40,9 +40,17 @@ assert.doesNotMatch(prodPage, /เลือกรอจ่าย/);
 assert.doesNotMatch(otPage, /เลือกเตรียมจ่าย/);
 assert.match(prodPage, /ปิดเดือนโบนัส/);
 assert.match(otPage, /ปิดเดือนโบนัส/);
+assert.match(otPage, /subscribeBonusMonthStatus/);
+assert.match(otPage, /viewMonthClosed/);
+assert.match(otPage, /isBonusClosedForDate/);
+assert.match(otPage, /ปิดโบนัสแล้ว · ล็อกชง/);
 
 assert.match(prodLib, /assertBonusMonthOpenForDate/);
-assert.match(read("src/lib/ot.ts"), /assertBonusMonthOpenForDate/);
+const otLib = read("src/lib/ot.ts");
+assert.match(otLib, /assertBonusMonthOpenForDate/);
+assert.match(otLib, /deleteOtEntry/);
+// ลบรายการในเดือนปิดโบนัสต้องโดน assert
+assert.match(otLib, /await assertBonusMonthOpenForDate\(current\.date\)/);
 assert.match(bonusLib, /paid` is a lock flag|lock flag after month-close/);
 assert.match(rules, /match \/bonusMonthCloses\/\{monthId\}/);
 assert.match(rules, /match \/bonusMonthStatus\/\{monthId\}/);

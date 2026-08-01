@@ -538,23 +538,9 @@ export async function updateOtEntry(
     current = mapOtEntryDoc(snap.id, snap.data() as Record<string, unknown>);
   }
   assertOtEntryEditable(current, patch);
-  const touchesQty =
-    patch.date != null ||
-    patch.shift != null ||
-    patch.workerIds != null ||
-    patch.workerNames != null ||
-    patch.machineCount != null ||
-    patch.otherCups != null ||
-    patch.iceCreamCones != null ||
-    patch.breadSlices != null ||
-    patch.claimCups != null ||
-    patch.deductQty != null ||
-    patch.addQty != null ||
-    patch.bonusRate != null;
-  if (touchesQty) {
-    await assertBonusMonthOpenForDate(current.date);
-    if (patch.date != null) await assertBonusMonthOpenForDate(patch.date);
-  }
+  // เดือนปิดโบนัส — ห้ามแก้ทุกอย่าง (ยอด/รูป/SOP) ไม่ใช่แค่ยอด
+  await assertBonusMonthOpenForDate(current.date);
+  if (patch.date != null) await assertBonusMonthOpenForDate(patch.date);
 
   const next: Record<string, string | number | boolean | string[]> = {
     updatedAt: Date.now(),
@@ -632,6 +618,7 @@ export async function deleteOtEntry(id: string): Promise<void> {
     if (isOtEntryLocked(current)) {
       throw new Error("รายการจ่ายแล้ว — ลบไม่ได้");
     }
+    await assertBonusMonthOpenForDate(current.date);
   }
   await deleteDoc(ref);
 }

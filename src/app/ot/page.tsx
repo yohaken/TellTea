@@ -2,6 +2,7 @@
 
 import {
   Fragment,
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -25,6 +26,8 @@ import {
   type PhotoForensicsReport,
 } from "@/lib/photo-forensics-scan";
 import { monthInputValue } from "@/lib/bonus";
+import { periodMonthFromDateMs } from "@/lib/bonus-month-guard";
+import { subscribeBonusMonthStatus } from "@/lib/bonus-personal-close";
 import {
   OT_SHIFTS,
   OT_IMAGE_MAX,
@@ -223,8 +226,24 @@ function OtView() {
   const [checkRecords, setCheckRecords] = useState<ChecklistRecord[]>([]);
   /** ค่าเริ่มต้น = เดือนนี้ · เลือกเดือนอื่นเมื่อต้องการดูย้อนหลัง/ปิดบัญชี */
   const [viewMonth, setViewMonth] = useState(() => monthInputValue());
+  /** เดือนที่ปิดโบนัสแล้ว (YYYY-MM → true) — ล็อก UI ชงทั้งเดือนนั้น */
+  const [closedByMonth, setClosedByMonth] = useState<Record<string, boolean>>({});
   const loading = !catalogReady || !entriesReady || !checksReady;
   const viewWindow = useMemo(() => otViewWindow(viewMonth), [viewMonth]);
+  /** เดือนคาบเกี่ยวตอนดูเดือนปัจจุบัน + วันล่วงหน้า */
+  const spillMonth = useMemo(() => {
+    if (!viewWindow.isLive) return "";
+    const endMonth = periodMonthFromDateMs(viewWindow.gridMax);
+    return endMonth !== viewMonth ? endMonth : "";
+  }, [viewWindow, viewMonth]);
+  const viewMonthClosed = !!closedByMonth[viewMonth];
+  const isBonusClosedForDate = useCallback(
+    (dateMs: number) => {
+      if (!dateMs) return false;
+      return !!closedByMonth[periodMonthFromDateMs(dateMs)];
+    },
+    [closedByMonth],
+  );
 
   async function reloadCatalog() {
     const [emps, settings, items] = await Promise.all([
@@ -242,6 +261,27 @@ function OtView() {
       router.replace("/ledger/");
     }
   }, [staff, router]);
+
+  useEffect(() => {
+    if (!can(staff, "otBonus")) return;
+    const months = [viewMonth, spillMonth].filter(Boolean);
+    const unsubs = months.map((month) =>
+      subscribeBonusMonthStatus(
+        month,
+        (doc) => {
+          setClosedByMonth((prev) => {
+            const next = doc?.status === "closed";
+            if (prev[month] === next) return prev;
+            return { ...prev, [month]: next };
+          });
+        },
+        (err) => setError(err.message),
+      ),
+    );
+    return () => {
+      for (const u of unsubs) u();
+    };
+  }, [staff, viewMonth, spillMonth]);
 
   useEffect(() => {
     if (!can(staff, "otBonus")) return;
@@ -342,6 +382,10 @@ function OtView() {
   if (!can(staff, "otBonus")) return null;
 
   function openAdd() {
+    if (viewMonthClosed && !viewWindow.isLive) {
+      setError(`เดือน ${viewMonth} ปิดโบนัสแล้ว — ลง/แก้ชงย้อนหลังไม่ได้`);
+      return;
+    }
     setEditing(null);
     setSlotDraft(null);
     setFormOpen(true);
@@ -399,6 +443,8 @@ function OtView() {
             gridMin={viewWindow.gridMin}
             gridMax={viewWindow.gridMax}
             isLiveWindow={viewWindow.isLive}
+            viewMonthClosed={viewMonthClosed}
+            isBonusClosedForDate={isBonusClosedForDate}
             openingItems={openingItems}
             closingItems={closingItems}
             workers={workers}
@@ -425,6 +471,7 @@ function OtView() {
               workers={workers}
               staff={staff}
               isOwner={isOwner}
+              isBonusClosedForDate={isBonusClosedForDate}
               bonusRate={bonusRate}
               rateSchedule={rateSchedule}
               createdBy={actorId}
@@ -440,6 +487,7 @@ function OtView() {
         ariaLabel="มุมมองชง"
         formOpen={formOpen}
         onAdd={openAdd}
+        addLabel={viewMonthClosed && !viewWindow.isLive ? "ล็อกเดือน" : "+ กรอก"}
       />
     </div>
   );
@@ -455,6 +503,7 @@ function OtEntryForm({
   workers,
   staff,
   isOwner,
+  isBonusClosedForDate,
   bonusRate,
   rateSchedule,
   createdBy,
@@ -471,6 +520,7 @@ function OtEntryForm({
   workers: Employee[];
   staff: StaffMember | null;
   isOwner: boolean;
+  isBonusClosedForDate: (dateMs: number) => boolean;
   bonusRate: number;
   rateSchedule: RateScheduleEntry[];
   createdBy: string;
@@ -479,10 +529,8 @@ function OtEntryForm({
   onCancelEdit: () => void;
 }) {
   const slotFixed = !!slotDraft || !!entry;
-  const locked = entry ? isOtEntryLocked(entry) : false;
+  const paidLocked = entry ? isOtEntryLocked(entry) : false;
   const plannedEntry = entry ? isOtEntryPlanned(entry) : false;
-  /** แก้รายการที่ปิดกะไปแล้ว — อนุญาตแก้ยอด/รูปโดยไม่บังคับ SmartCheck + ติ๊ก SOP ใหม่ */
-  const amendClosed = !!(entry && !locked && isOtEntryClosed(entry) && !plannedEntry);
 
   const [date, setDate] = useState(
     entry
@@ -529,6 +577,10 @@ function OtEntryForm({
   const [checkLoading, setCheckLoading] = useState(true);
 
   const slotDateMs = parseDateInput(date);
+  const monthBonusClosed = isBonusClosedForDate(slotDateMs);
+  const locked = paidLocked || monthBonusClosed;
+  /** แก้รายการที่ปิดกะไปแล้ว — อนุญาตแก้ยอด/รูปโดยไม่บังคับ SmartCheck + ติ๊ก SOP ใหม่ */
+  const amendClosed = !!(entry && !locked && isOtEntryClosed(entry) && !plannedEntry);
 
   useEffect(() => {
     setCheckLoading(true);
@@ -886,7 +938,10 @@ function OtEntryForm({
       <div className="ot-form-body">
         {locked ? (
           <p className="muted form-hint-inline prod-locked-hint">
-            <Lock size={14} aria-hidden /> จ่ายโบนัสแล้ว — เรทและยอดล็อก · เปลี่ยนสถานะได้ที่ตาราง
+            <Lock size={14} aria-hidden />{" "}
+            {monthBonusClosed && !paidLocked
+              ? "เดือนนี้ปิดโบนัสแล้ว — ลง/แก้ชงไม่ได้ (ปลดได้ที่ จ่าย/โบนัส)"
+              : "จ่ายโบนัสแล้ว — เรทและยอดล็อก"}
           </p>
         ) : null}
 
@@ -1219,6 +1274,8 @@ function OtTable({
   gridMin,
   gridMax,
   isLiveWindow,
+  viewMonthClosed,
+  isBonusClosedForDate,
   openingItems,
   closingItems,
   workers,
@@ -1236,6 +1293,8 @@ function OtTable({
   gridMin: number;
   gridMax: number;
   isLiveWindow: boolean;
+  viewMonthClosed: boolean;
+  isBonusClosedForDate: (dateMs: number) => boolean;
   openingItems: ChecklistItem[];
   closingItems: ChecklistItem[];
   workers: Employee[];
@@ -1377,10 +1436,16 @@ function OtTable({
           เตรียมจ่าย ฿{formatPlainNumber(summary.pendingBonus)}
         </span>
         <span
-          className="ot-slim-hint muted module-slim-hint"
-          title="สถานะล็อกเมื่อปิดเดือนโบนัสที่ จ่าย/โบนัส — ไม่เปลี่ยนสถานะเป็นกลุ่มที่นี่"
+          className={`ot-slim-hint muted module-slim-hint${viewMonthClosed ? " is-locked" : ""}`}
+          title="ปิดเดือนโบนัสที่ จ่าย/โบนัส แล้วล็อกทั้งเดือนบนหน้าชง"
         >
-          ล็อกเมื่อปิดเดือนโบนัส
+          {viewMonthClosed ? (
+            <>
+              <Lock size={12} aria-hidden /> เดือนนี้ปิดโบนัสแล้ว · ล็อกชง
+            </>
+          ) : (
+            "ล็อกเมื่อปิดเดือนโบนัส"
+          )}
         </span>
         {isOwner ? (
           <PhotoForensicsPanel
@@ -1414,6 +1479,13 @@ function OtTable({
         </div>
       </div>
 
+      {viewMonthClosed ? (
+        <p className="muted ot-month-closed-banner">
+          <Lock size={14} aria-hidden /> เดือน {viewMonth} ปิดโบนัสแล้ว — ดูอย่างเดียว ·
+          ลง/แก้/ลบชงไม่ได้ (ปลดที่ จ่าย/โบนัส)
+        </p>
+      ) : null}
+
       {tableView === "sheet" ? (
         <OtSheetTable
           groups={dateGroups}
@@ -1424,6 +1496,7 @@ function OtTable({
           workers={workers}
           isOwner={isOwner}
           photoReport={photoReport}
+          isBonusClosedForDate={isBonusClosedForDate}
           onEditSlot={onEditSlot}
           onError={onError}
           onViewPhoto={(urls, title, entryDateMs) => setPreview({ urls, title, entryDateMs })}
@@ -1436,6 +1509,7 @@ function OtTable({
           workers={workers}
           isOwner={isOwner}
           photoReport={photoReport}
+          isBonusClosedForDate={isBonusClosedForDate}
           onEdit={onEdit}
           onError={onError}
           onViewPhoto={(urls, title, entryDateMs) => setPreview({ urls, title, entryDateMs })}
@@ -1463,6 +1537,7 @@ function OtSheetTable({
   workers,
   isOwner,
   photoReport,
+  isBonusClosedForDate,
   onEditSlot,
   onError,
   onViewPhoto,
@@ -1475,6 +1550,7 @@ function OtSheetTable({
   workers: Employee[];
   isOwner: boolean;
   photoReport: PhotoForensicsReport | null;
+  isBonusClosedForDate: (dateMs: number) => boolean;
   onEditSlot: (target: OtSlotTarget) => void;
   onError: (msg: string) => void;
   onViewPhoto: (urls: string[], title: string, entryDateMs?: number) => void;
@@ -1549,6 +1625,9 @@ function OtSheetTable({
                 const photoFlagged =
                   isOwner && !!row && entryHasPhotoFlag(photoReport, row.id);
                 const photoFlagHints = row ? photoReport?.byEntryId[row.id]?.hints || [] : [];
+                const dayLocked = isBonusClosedForDate(group.date);
+                const slotLocked =
+                  dayLocked || !!(row && isOtEntryLocked(row));
 
                 const rowClass = isEmpty
                   ? futureDay
@@ -1566,7 +1645,7 @@ function OtSheetTable({
                         ? futureDay
                           ? "ot-slot-complete ot-day-future row-out"
                           : "ot-slot-complete row-out"
-                        : isOtEntryLocked(row!)
+                        : slotLocked
                           ? "row-out prod-row-paid"
                           : futureDay
                             ? "ot-day-future row-out"
@@ -1617,7 +1696,7 @@ function OtSheetTable({
                                 )
                               }
                               onAdd={
-                                row && !isOtEntryLocked(row)
+                                row && !slotLocked
                                   ? () =>
                                       onEditSlot({
                                         date: group.date,
@@ -1638,8 +1717,14 @@ function OtSheetTable({
                         onClick={() =>
                           onEditSlot({ date: group.date, shift: slot.shiftId, entry: row })
                         }
+                        title={
+                          dayLocked
+                            ? "เดือนปิดโบนัสแล้ว — ดูอย่างเดียว"
+                            : undefined
+                        }
                       >
                         {slot.shiftLabel}
+                        {dayLocked ? " · ล็อก" : ""}
                       </button>
                     </td>
                     <td className="col-out">{row ? formatPlainNumber(row.machineCount) : "—"}</td>
@@ -1682,10 +1767,16 @@ function OtSheetTable({
                           onEditSlot({ date: group.date, shift: slot.shiftId, entry: row })
                         }
                       >
-                        {isEmpty ? "เพิ่ม" : isPlanned ? "แก้แผน" : "แก้ไข"}
+                        {slotLocked
+                          ? "ดู"
+                          : isEmpty
+                            ? "เพิ่ม"
+                            : isPlanned
+                              ? "แก้แผน"
+                              : "แก้ไข"}
                       </button>
                     </td>
-                    {isOwner && row && !isOtEntryLocked(row) ? (
+                    {isOwner && row && !slotLocked ? (
                       <td className="col-act">
                         <button
                           type="button"
@@ -1727,6 +1818,7 @@ function OtCardList({
   workers,
   isOwner,
   photoReport,
+  isBonusClosedForDate,
   onEdit,
   onError,
   onViewPhoto,
@@ -1735,6 +1827,7 @@ function OtCardList({
   workers: Employee[];
   isOwner: boolean;
   photoReport: PhotoForensicsReport | null;
+  isBonusClosedForDate: (dateMs: number) => boolean;
   onEdit: (row: OtEntry) => void;
   onError: (msg: string) => void;
   onViewPhoto: (urls: string[], title: string, entryDateMs?: number) => void;
@@ -1744,6 +1837,8 @@ function OtCardList({
       {entries.map((row) => {
         const c = computeOtBonus(row);
         const statusClass = row.status === "paid" ? "is-paid" : "is-pending";
+        const slotLocked =
+          isOtEntryLocked(row) || isBonusClosedForDate(row.date);
         const workerLabel =
           resolveWorkerDisplayNames(row.workerIds, row.workerNames, workers)
             .filter(Boolean)
@@ -1772,7 +1867,7 @@ function OtCardList({
           <article
             key={row.id}
             className={[
-              isOtEntryLocked(row) ? "ot-card prod-row-paid" : "ot-card",
+              slotLocked ? "ot-card prod-row-paid" : "ot-card",
               isOwner && entryHasPhotoFlag(photoReport, row.id) ? "is-photo-flag" : "",
             ]
               .filter(Boolean)
@@ -1781,7 +1876,7 @@ function OtCardList({
             <header className="ot-card-head">
               <div className="ot-card-meta">
                 <button type="button" className="desc-link ot-card-date" onClick={() => onEdit(row)}>
-                  {isOtEntryLocked(row) ? <Lock size={11} aria-hidden /> : null} {formatDateShortBe(row.date)}
+                  {slotLocked ? <Lock size={11} aria-hidden /> : null} {formatDateShortBe(row.date)}
                 </button>
                 <span className="ot-card-shift">{labelOtShift(row.shift)}</span>
               </div>
@@ -1789,7 +1884,7 @@ function OtCardList({
                 <span className={`prod-status-pill ${statusClass}`}>
                   {labelOtStatus(row.status)}
                 </span>
-                {isOwner && !isOtEntryLocked(row) ? (
+                {isOwner && !slotLocked ? (
                   <button
                     type="button"
                     className="ghost-btn icon-btn"
@@ -1822,7 +1917,7 @@ function OtCardList({
                       row.date,
                     )
                   }
-                  onAdd={!isOtEntryLocked(row) ? () => onEdit(row) : undefined}
+                  onAdd={!slotLocked ? () => onEdit(row) : undefined}
                 />
               </div>
             </div>
