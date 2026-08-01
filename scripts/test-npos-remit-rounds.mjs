@@ -21,7 +21,11 @@ assert.match(doc, /remitAmount|ส่งเงิน/);
 const version = read("src/lib/version.ts");
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 564, `APP_BUILD >= 564, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 565, `APP_BUILD >= 565, got ${buildMatch[1]}`);
+const pos = read("src/lib/pos-version.ts");
+const posMatch = pos.match(/POS_BUILD\s*=\s*(\d+)/);
+assert.ok(posMatch);
+assert.ok(Number(posMatch[1]) >= 162, `POS_BUILD >= 162, got ${posMatch[1]}`);
 
 const types = read("src/lib/types.ts");
 assert.match(types, /remitStatus\??:/);
