@@ -6,7 +6,6 @@ import { AuthGate } from "@/components/AuthGate";
 import { OwnerBooksModeSwitch } from "@/components/OwnerBooksModeSwitch";
 import { VatAgentChatPopup } from "@/components/vat-sales/VatAgentChatPopup";
 import { VatMonthBooks } from "@/components/vat-sales/VatMonthBooks";
-import { VatSalesSubNav } from "@/components/vat-sales/VatSalesSubNav";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { bangkokMonthKey } from "@/lib/vat-sales";
@@ -35,7 +34,6 @@ function VatSalesGate() {
   return (
     <div className="vat-sales-page vat-sales-page--compact owner-books-page">
       <OwnerBooksModeSwitch active="vat" />
-      <VatSalesSubNav active="month" />
       <VatMonthBooks actor={actor} />
       <VatAgentChatPopup actor={actor} monthKey={bangkokMonthKey()} />
     </div>

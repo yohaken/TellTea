@@ -3,7 +3,7 @@
 /**
  * หน้าเดือน VAT — สรุปรายเดือน (งบ)
  * ยอดเดลิเวอรี่ → A รายได้ · B คชจ. · C กำไร+ภ.ง.ด. · D VAT
- * ที่มาไฟล์อยู่หน้า /vat-sales/sources/ คนละสาย · ผสานเข้าตารางนี้
+ * ตารางยอดเดลิเวอรี่รายเดือน (หน้าที่มายอดพักแล้ว — ไม่ลิงก์ไป sources)
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -365,7 +365,7 @@ export function VatMonthBooks({ actor }: Props) {
       if (draftRef.current.status === "filed") return;
       setDraft(retToMonthBooksDraft(detail.saved));
       setDirty(false);
-      setMsg("อัปเดตจากที่มายอดเดลิเวอรี่");
+      setMsg("อัปเดตยอดเดลิเวอรี่");
     });
   }, [month]);
 
@@ -818,17 +818,10 @@ export function VatMonthBooks({ actor }: Props) {
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
 
-      {/* ยอดเดลิเวอรี่ — ตัวเลขงบ (ที่มาไฟล์อยู่หน้าที่แยก) */}
+      {/* ยอดเดลิเวอรี่ — กรอก/แก้บนงบเดือนโดยตรง */}
       <section className="vat-table-block vat-month-sources">
         <h2 className="vat-table-title">
           ยอดเดลิเวอรี่ — {formatThaiMonthKey(month)}
-          <Link
-            href="/vat-sales/sources/"
-            className="vat-sources-link"
-            title="เปิดหน้าที่มายอดเดลิเวอรี่"
-          >
-            ที่มา
-          </Link>
         </h2>
         <div className="sheet-wrap vat-month-slim-wrap">
           <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">

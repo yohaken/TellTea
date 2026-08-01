@@ -1,11 +1,13 @@
 "use client";
 
+/**
+ * ที่มายอดเดลิเวอรี่ — พักทั้งหน้า · ไม่ลิงก์จาก /vat-sales/ แล้ว
+ */
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { OwnerBooksModeSwitch } from "@/components/OwnerBooksModeSwitch";
 import { VatDeliverySources } from "@/components/vat-sales/VatDeliverySources";
-import { VatSalesSubNav } from "@/components/vat-sales/VatSalesSubNav";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 
@@ -33,7 +35,6 @@ function VatDeliverySourcesGate() {
   return (
     <div className="vat-sales-page vat-sales-page--compact owner-books-page">
       <OwnerBooksModeSwitch active="vat" />
-      <VatSalesSubNav active="sources" />
       <VatDeliverySources actor={actor} />
     </div>
   );
