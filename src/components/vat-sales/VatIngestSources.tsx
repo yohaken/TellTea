@@ -3,8 +3,9 @@
 /**
  * แหล่งนำเข้าเดลิเวอรี่ — พรีวิวกระชับ
  * จำแนกไฟล์/ข้อความ + สรุป 4 ช่อง · ไม่ผสานเข้าตาราง VAT เดือน
+ * Shopee/LM: ดึงจาก Gmail ได้ (เนื้อเมล / REPORT_*.csv ไฟล์แรก)
  */
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { VatSalesSubNav } from "@/components/vat-sales/VatSalesSubNav";
 import {
@@ -15,12 +16,23 @@ import {
   type IngestPreview,
 } from "@/lib/vat-ingest-preview";
 import {
+  connectGmailForIngest,
+  loadMailIngestStatus,
+  pieceToIngestPreview,
+  pullMonthlySourcesFromGmail,
+} from "@/lib/vat-mail-monthly-pull";
+import {
   MONTH_CHANNEL_LABEL,
   MONTH_CHANNEL_SHORT,
   MONTH_CHANNELS,
   type MonthChannel,
 } from "@/lib/vat-month-books";
-import { formatThaiMonthKey } from "@/lib/vat-monthly";
+import {
+  bangkokMonthKey,
+  formatThaiMonthKey,
+  listThaiMonthOptions,
+} from "@/lib/vat-monthly";
+import type { VatMailStatus } from "@/lib/vat-sales-mail";
 
 type Props = { actor: string };
 
@@ -219,15 +231,60 @@ function ChannelSlot({
 }
 
 export function VatIngestSources({ actor: _actor }: Props) {
+  const monthOptions = useMemo(() => listThaiMonthOptions(undefined, 18), []);
+  const [monthKey, setMonthKey] = useState(() => bangkokMonthKey());
+  const [mailStatus, setMailStatus] = useState<VatMailStatus | null>(null);
+  const [mailBusy, setMailBusy] = useState<string | null>(null);
+  const [mailMsg, setMailMsg] = useState("");
+  const [mailError, setMailError] = useState("");
   const [slots, setSlots] = useState<Record<MonthChannel, SlotState>>({
     grab: emptySlot(),
     shopee: emptySlot(),
     lineman: emptySlot(),
   });
 
+  const refreshMailStatus = useCallback(async () => {
+    try {
+      const st = await loadMailIngestStatus();
+      setMailStatus(st);
+    } catch {
+      setMailStatus(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshMailStatus();
+    try {
+      const q = new URLSearchParams(window.location.search);
+      if (q.get("mail") === "connected") {
+        setMailMsg("เชื่อม Gmail แล้ว — กด「ดึง SF+LM」ได้");
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [refreshMailStatus]);
+
   const setSlot = useCallback((ch: MonthChannel, next: Partial<SlotState>) => {
     setSlots((s) => ({ ...s, [ch]: { ...s[ch], ...next } }));
   }, []);
+
+  const applyPreview = useCallback(
+    (ch: MonthChannel, preview: IngestPreview, pasteFallback = "") => {
+      setSlots((s) => ({
+        ...s,
+        [ch]: {
+          ...s[ch],
+          preview,
+          error: "",
+          paste:
+            pasteFallback && pasteFallback.length < 12_000
+              ? pasteFallback
+              : s[ch].paste,
+        },
+      }));
+    },
+    [],
+  );
 
   const runPreview = useCallback(
     (ch: MonthChannel, text: string, fileName: string) => {
@@ -238,17 +295,9 @@ export function VatIngestSources({ actor: _actor }: Props) {
           `จำแนกเป็น ${INGEST_KIND_LABEL[preview.kind]} (ช่องทาง ${MONTH_CHANNEL_SHORT[preview.channel]}) — ไม่ใช่ ${MONTH_CHANNEL_SHORT[ch]}`,
         );
       }
-      setSlots((s) => ({
-        ...s,
-        [ch]: {
-          ...s[ch],
-          preview: { ...preview, warnings },
-          error: "",
-          paste: text.length < 12_000 ? text : s[ch].paste,
-        },
-      }));
+      applyPreview(ch, { ...preview, warnings }, text);
     },
-    [],
+    [applyPreview],
   );
 
   const onFile = useCallback(
@@ -263,6 +312,80 @@ export function VatIngestSources({ actor: _actor }: Props) {
     [runPreview, setSlot],
   );
 
+  const onConnectGmail = useCallback(async () => {
+    setMailBusy("connect");
+    setMailError("");
+    setMailMsg("");
+    try {
+      const url = await connectGmailForIngest();
+      window.location.href = url;
+    } catch (e) {
+      setMailError(e instanceof Error ? e.message : String(e));
+      setMailBusy(null);
+    }
+  }, []);
+
+  const onPullMail = useCallback(async () => {
+    setMailBusy("pull");
+    setMailError("");
+    setMailMsg("");
+    try {
+      const res = await pullMonthlySourcesFromGmail({ monthKey });
+      const notes: string[] = [];
+
+      if (res.shopee?.ok && res.shopee.text) {
+        const sfPrev = pieceToIngestPreview(res.shopee);
+        if (sfPrev) {
+          applyPreview("shopee", sfPrev, res.shopee.text.slice(0, 4000));
+        }
+        notes.push(
+          `SF ${res.shopee.monthKey || "?"} · ขาย ${formatIngestMoney(sfPrev?.amounts?.sales || 0)}`,
+        );
+      } else if (res.shopee) {
+        setSlot("shopee", {
+          error: res.shopee.error || "ดึง Shopee ไม่สำเร็จ",
+        });
+        notes.push(`SF: ${res.shopee.error || "ไม่สำเร็จ"}`);
+      }
+
+      if (res.lineman?.ok && res.lineman.text) {
+        const lmPrev = pieceToIngestPreview(res.lineman);
+        if (lmPrev) {
+          applyPreview(
+            "lineman",
+            lmPrev,
+            res.lineman.text.length < 12_000 ? res.lineman.text : "",
+          );
+        }
+        notes.push(
+          `LM ${res.lineman.fileName || "REPORT"} · ขาย ${formatIngestMoney(lmPrev?.amounts?.sales || 0)}`,
+        );
+      } else if (res.lineman) {
+        setSlot("lineman", {
+          error: res.lineman.error || "ดึง LINE MAN ไม่สำเร็จ",
+        });
+        notes.push(`LM: ${res.lineman.error || "ไม่สำเร็จ"}`);
+      }
+
+      setMailMsg(
+        notes.length
+          ? `ดึงแล้ว · ${notes.join(" · ")} · ยังไม่เข้าตารางสรุป`
+          : "ดึงแล้ว แต่ไม่มีผลลัพธ์",
+      );
+      await refreshMailStatus();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setMailError(msg);
+      if (/ยังไม่ได้เชื่อม Gmail|เชื่อม Gmail/.test(msg)) {
+        setMailMsg("ต้องกด「เชื่อม Gmail」ก่อน");
+      }
+    } finally {
+      setMailBusy(null);
+    }
+  }, [monthKey, applyPreview, setSlot, refreshMailStatus]);
+
+  const connected = Boolean(mailStatus?.connected);
+
   return (
     <div
       className="vat-ingest-page"
@@ -272,13 +395,58 @@ export function VatIngestSources({ actor: _actor }: Props) {
       <VatSalesSubNav active="sources" />
       <h2 className="vat-table-title">แหล่งนำเข้าเดลิเวอรี่</h2>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        พรีวิวอย่างเดียว — จำแนกไฟล์ให้ถูก · สรุป 4 ช่อง ·{" "}
+        พรีวิวอย่างเดียว — SF/LM จาก Gmail · Grab วางไฟล์/แคปทีหลัง ·{" "}
         <strong>ยังไม่เข้าตารางยอดเดลิเวอรี่</strong>
       </p>
-      <p className="muted vat-sales-hint vat-hint-one-line">
-        กลับไปกรอกมือที่{" "}
-        <Link href="/vat-sales/">VAT เดือน</Link> ได้ตามปกติ
-      </p>
+
+      <div className="vat-ingest-mail-bar" aria-label="Gmail สรุปเดือน">
+        <label className="vat-month-pick">
+          <span className="muted">เดือน</span>
+          <select
+            value={monthKey}
+            disabled={Boolean(mailBusy)}
+            onChange={(e) => setMonthKey(e.target.value)}
+            aria-label="เดือนที่ดึงจากเมล"
+          >
+            {monthOptions.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <span className="vat-ingest-mail-status muted" title={mailStatus?.email || ""}>
+          {connected
+            ? `Gmail · ${mailStatus?.email || "เชื่อมแล้ว"}`
+            : mailStatus?.hasConfig
+              ? "ยังไม่เชื่อม Gmail"
+              : "ยังไม่มี OAuth config"}
+        </span>
+        {connected ? (
+          <button
+            type="button"
+            className="btn btn-secondary vat-ingest-btn"
+            disabled={Boolean(mailBusy)}
+            onClick={() => void onPullMail()}
+          >
+            {mailBusy === "pull" ? "กำลังดึง…" : "ดึง SF+LM จากเมล"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-secondary vat-ingest-btn"
+            disabled={Boolean(mailBusy) || mailStatus?.hasConfig === false}
+            onClick={() => void onConnectGmail()}
+          >
+            {mailBusy === "connect" ? "เปิด Google…" : "เชื่อม Gmail"}
+          </button>
+        )}
+        <Link href="/vat-sales/" className="vat-ingest-back muted">
+          VAT เดือน
+        </Link>
+      </div>
+      {mailMsg ? <p className="muted vat-sales-msg">{mailMsg}</p> : null}
+      {mailError ? <p className="error-text">{mailError}</p> : null}
 
       {MONTH_CHANNELS.map((ch) => (
         <ChannelSlot

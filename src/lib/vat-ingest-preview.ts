@@ -75,9 +75,11 @@ export const INGEST_KIND_LABEL: Record<IngestKind, string> = {
 };
 
 export const INGEST_CHANNEL_HINT: Record<MonthChannel, string> = {
-  grab: "ไฟล์ Transaction_Store_….csv (รายละเอียดรายการทั้งหมด) · ไม่ใช้ Transaction_Stores_",
-  shopee: "วางข้อความบล็อก「รายงานยอดขายสะสมประจำเดือน」จากเมล · ไม่ต้องเปิดแนบ",
-  lineman: "ไฟล์แนบ REPORT_*.csv จากเมล GP ประจำเดือน",
+  grab: "แคปสรุปการเงิน / ไฟล์ Transaction_Store_….csv · ไม่ใช้ Transaction_Stores_",
+  shopee:
+    "กด「ดึง SF+LM」= อ่านเนื้อเมลสรุปเดือน · หรือวางข้อความบล็อกเองได้",
+  lineman:
+    "กด「ดึง SF+LM」= อ่าน REPORT_*.csv ไฟล์แรกจากเมล GP · หรืออัปไฟล์เองได้",
 };
 
 function base(

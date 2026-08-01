@@ -19684,6 +19684,24 @@ a.ghost-btn {
   margin: 0 0 1.25rem;
 }
 
+.vat-ingest-mail-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+  margin: 0.35rem 0 0.45rem;
+}
+
+.vat-ingest-mail-status {
+  font-size: 0.72rem;
+}
+
+.vat-ingest-back {
+  font-size: 0.72rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .vat-ingest-slot {
   margin: 0.55rem 0 0.75rem;
   padding: 0.45rem 0 0.35rem;
