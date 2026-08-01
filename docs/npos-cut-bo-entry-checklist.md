@@ -1,6 +1,6 @@
 # nPos — ตัดช่องทางเข้าหลังร้าน / เว็บ BO จากเคาน์เตอร์
 
-อัปเดต: **1.14.104** · ship **1.14.42** · `APP_BUILD` 289 · `POS_BUILD` 84 · `versionCode` 54  
+อัปเดต: **1.14.105** · ship **1.14.42** · `APP_BUILD` 289 · `POS_BUILD` 84 · `versionCode` 54  
 
 ## ทิศทางที่ล็อก
 | ฝั่ง | ทำ | ไม่ทำ |
@@ -23,7 +23,7 @@
 
 ### C2 Native hub / shell
 - [x] `MainActivity.buildHubNav` — native อย่างเดียว (ไม่มี `addHubWeb`) · มี `MenuAdminActivity` ไม่เปิดเว็บ
-- [x] `PosShellNav` — ไม่มีลิงก์เว็บ inventory/menu/ops/shop-settings
+- [x] `PosShellNav` — มี **จัดการเมนู** → Native `MenuAdminActivity` · ไม่มีลิงก์เว็บ inventory/menu/ops/shop-settings
 - [x] `ShiftActivity` — ไม่มีปุ่มเปิดรอบเว็บ
 - [x] `SettingsActivity` — ซ่อนปุ่มเปิด `/pos/menu/`
 

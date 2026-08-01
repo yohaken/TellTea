@@ -600,31 +600,36 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     }
   }
 
-  /** Overflow: settings / shift / history (cart tools live on cart header row). */
+  /** Overflow: settings / shift / history / menu admin (cart tools live on cart header row). */
   private void showSellHubMenu(View anchor) {
     PopupMenu popup = new PopupMenu(this, anchor);
     popup.getMenu().add(0, 1, 0, R.string.nav_open_bills);
-    popup.getMenu().add(0, 2, 1, R.string.nav_receipts);
-    popup.getMenu().add(0, 3, 2, R.string.nav_shift);
-    popup.getMenu().add(0, 8, 3, R.string.sell_hub_open_drawer);
+    popup.getMenu().add(0, 11, 1, R.string.nav_menu);
+    popup.getMenu().add(0, 2, 2, R.string.nav_receipts);
+    popup.getMenu().add(0, 3, 3, R.string.nav_shift);
+    popup.getMenu().add(0, 8, 4, R.string.sell_hub_open_drawer);
     popup
         .getMenu()
         .add(
             0,
             9,
-            4,
+            5,
             getString(
                 R.string.sell_hub_change_display_fmt, ChangeDisplayPrefs.label(this)));
-    popup.getMenu().add(0, 10, 5, R.string.sell_hub_refresh_menu);
-    popup.getMenu().add(0, 4, 6, R.string.btn_settings_device);
-    popup.getMenu().add(0, 5, 7, R.string.sell_hub_x_report);
-    popup.getMenu().add(0, 6, 8, R.string.sell_hub_close_shift);
-    popup.getMenu().add(0, 7, 9, R.string.nav_lock_pin);
+    popup.getMenu().add(0, 10, 6, R.string.sell_hub_refresh_menu);
+    popup.getMenu().add(0, 4, 7, R.string.btn_settings_device);
+    popup.getMenu().add(0, 5, 8, R.string.sell_hub_x_report);
+    popup.getMenu().add(0, 6, 9, R.string.sell_hub_close_shift);
+    popup.getMenu().add(0, 7, 10, R.string.nav_lock_pin);
     popup.setOnMenuItemClickListener(
         (MenuItem item) -> {
           int id = item.getItemId();
           if (id == 1) {
             PosShellNav.openOpenBillsHint(this);
+            return true;
+          }
+          if (id == 11) {
+            PosShellNav.openMenuAdmin(this);
             return true;
           }
           if (id == 2) {

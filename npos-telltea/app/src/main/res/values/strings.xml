@@ -23,7 +23,7 @@
     <string name="btn_settings_device">ตั้งค่าเครื่อง</string>
     <string name="btn_settings_short">ตั้งค่า</string>
     <string name="nav_sell">สั่งและชำระเงิน</string>
-    <string name="nav_menu">เมนู</string>
+    <string name="nav_menu">จัดการเมนู</string>
     <string name="nav_open_bills">บิลที่เปิดอยู่</string>
     <string name="nav_receipts">ประวัติใบเสร็จ</string>
     <string name="nav_shift">รอบการขาย</string>
@@ -116,7 +116,7 @@
     <string name="btn_refresh_menu">รีเฟรช</string>
     <string name="category_reordered">เรียงหมวดแล้ว</string>
     <string name="btn_open_menu_admin">เปิดจัดการเมนู</string>
-    <string name="menu_admin_hint">ใช้เมนูหน้าร้าน → 「เมนู」 เพื่อจัดการแคตตาล็อกบนเครื่อง</string>
+    <string name="menu_admin_hint">ใช้เมนูหน้าร้าน → 「จัดการเมนู」 เพื่อจัดการแคตตาล็อกบนเครื่อง</string>
     <string name="menu_recommended_fmt">★ %1$s</string>
     <string name="option_min">เลือก «%1$s» อย่างน้อย %2$d</string>
     <string name="option_max">«%1$s» เลือกได้สูงสุด %2$d</string>

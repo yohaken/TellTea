@@ -11,14 +11,14 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 
 assert.ok(existsSync(join(root, "docs/npos-print-fast-local-phases.md")));
 assert.match(read("docs/npos-print-fast-local-phases.md"), /P1|P2|P3/);
-assert.match(read("docs/npos-print-fast-local-phases.md"), /1\.14\.104/);
+assert.match(read("docs/npos-print-fast-local-phases.md"), /1.14.105/);
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 549/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 553/);
 assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 160/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+127/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.104"/);
-assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1\.14\.104"/);
-assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 127/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+128/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.105"/);
+assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_NAME = "1.14.105"/);
+assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 128/);
 
 const saleSync = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/sell/SaleSync.java",
@@ -37,7 +37,7 @@ assert.match(
 assert.match(saleSync, /updateReceiptBill/);
 
 const checklist = read("docs/npos-receipt-parity-checklist.md");
-assert.match(checklist, /1\.14\.104/);
+assert.match(checklist, /1.14.105/);
 assert.match(checklist, /ทันทีหลังบันทึกในเครื่อง/);
 assert.match(checklist, /ไม่รอ HTTP/);
 

@@ -9,14 +9,14 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 549/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 553/);
 assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 160/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+127/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.104"/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+128/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.105"/);
 
 assert.ok(existsSync(join(root, "docs/npos-cut-bo-entry-checklist.md")));
 const doc = read("docs/npos-cut-bo-entry-checklist.md");
-assert.match(doc, /1.14.104/);
+assert.match(doc, /1.14.105/);
 assert.match(doc, /ตัดช่องทาง|cut/);
 
 const nav = read("src/lib/pos-nav.ts");
@@ -50,13 +50,15 @@ const main = read("npos-telltea/app/src/main/java/app/telltea/npos/MainActivity.
 assert.match(main, /buildHubNav|addHubNative/);
 assert.doesNotMatch(main, /addHubWeb|openWeb\(/);
 // Native MenuAdminActivity is allowed; no web BO inventory/ops hub tiles.
-assert.match(main, /MenuAdminActivity|nav_menu/);
+assert.match(main, /PosShellNav\.openMenuAdmin|MenuAdminActivity|nav_menu/);
 assert.doesNotMatch(main, /nav_inventory|nav_ops/);
 assert.doesNotMatch(main, /telltea-shop|\/stock|\/pos-sales/);
 
 const shell = read("npos-telltea/app/src/main/java/app/telltea/npos/shell/PosShellNav.java");
 assert.doesNotMatch(shell, /openWeb|ACTION_VIEW|telltea-shop|\/pos\/menu/);
 assert.match(shell, /SellActivity|ReceiptsActivity|ShiftActivity|SettingsActivity/);
+assert.match(shell, /MenuAdminActivity|openMenuAdmin/);
+assert.match(shell, /nav_menu/);
 
 const settings = read("npos-telltea/app/src/main/java/app/telltea/npos/SettingsActivity.java");
 assert.doesNotMatch(settings, /openMenuAdminPage/);

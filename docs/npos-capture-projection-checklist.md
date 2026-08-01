@@ -1,6 +1,6 @@
 # nPos — แคปจอจริง (MediaProjection) + สิทธิ์แคปแยก
 
-อัปเดต: **1.14.104** · `versionCode` 125 · `APP_BUILD` 544 · `POS_BUILD` 156
+อัปเดต: **1.14.105** · `versionCode` 125 · `APP_BUILD` 544 · `POS_BUILD` 156
 
 ## รากปัญหาที่ทำให้「ไม่เคยแคปได้」(เครื่อง 12570f0f)
 

@@ -536,15 +536,7 @@ public class MainActivity extends Activity {
     hubNavList.removeAllViews();
     // 1 ขาย · 2 เมนู (จัดการแคตตาล็อก) · บิลค้าง · ใบเสร็จ · กะ · ตั้งค่า
     addHubNative(R.string.nav_sell, () -> startActivity(new Intent(this, SellActivity.class)));
-    addHubNative(
-        R.string.nav_menu,
-        () -> {
-          if (!ShiftPrefs.isOpen(this)) {
-            Toast.makeText(this, R.string.menu_admin_need_shift, Toast.LENGTH_LONG).show();
-            return;
-          }
-          startActivity(new Intent(this, MenuAdminActivity.class));
-        });
+    addHubNative(R.string.nav_menu, () -> PosShellNav.openMenuAdmin(this));
     addHubNative(
         R.string.nav_open_bills,
         () -> {

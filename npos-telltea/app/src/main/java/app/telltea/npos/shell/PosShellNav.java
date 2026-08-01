@@ -14,6 +14,7 @@ import android.widget.Toast;
 import org.json.JSONObject;
 
 import app.telltea.npos.MainActivity;
+import app.telltea.npos.MenuAdminActivity;
 import app.telltea.npos.R;
 import app.telltea.npos.ReceiptsActivity;
 import app.telltea.npos.SellActivity;
@@ -21,14 +22,17 @@ import app.telltea.npos.SettingsActivity;
 import app.telltea.npos.ShiftActivity;
 import app.telltea.npos.sell.HoldCart;
 import app.telltea.npos.sell.ImageLoader;
+import app.telltea.npos.shift.ShiftPrefs;
 import app.telltea.npos.ui.NposFonts;
 import app.telltea.npos.ui.UiScale;
 
 /**
  * Left rail matching web PosAppShell / POS_NAV_ITEMS — width + type from {@link UiScale}.
+ * Native MenuAdmin is on the rail (hub order 2); web menu-admin route stays cut.
  */
 public final class PosShellNav {
   public static final String ACTIVE_SELL = "sell";
+  public static final String ACTIVE_MENU = "menu";
   public static final String ACTIVE_RECEIPTS = "receipts";
   public static final String ACTIVE_SHIFT = "shift";
   public static final String ACTIVE_SETTINGS = "settings";
@@ -73,6 +77,14 @@ public final class PosShellNav {
         R.string.nav_sell,
         ACTIVE_SELL.equals(activeId),
         () -> openNative(activity, SellActivity.class, activeId));
+    // Native catalog admin (same as MainActivity hub #2) — not web BO.
+    addLink(
+        activity,
+        nav,
+        ui,
+        R.string.nav_menu,
+        ACTIVE_MENU.equals(activeId),
+        () -> openMenuAdmin(activity));
     // members hidden until real CRM (F3)
     addLink(
         activity,
@@ -141,6 +153,16 @@ public final class PosShellNav {
   /** Public openers for Gpos header hub (same destinations as the left rail). */
   public static void openSell(Activity activity) {
     openNative(activity, SellActivity.class, ACTIVE_SELL);
+  }
+
+  /** Open native menu admin — requires an open shift (same gate as MainActivity hub). */
+  public static void openMenuAdmin(Activity activity) {
+    if (activity instanceof MenuAdminActivity) return;
+    if (!ShiftPrefs.isOpen(activity)) {
+      Toast.makeText(activity, R.string.menu_admin_need_shift, Toast.LENGTH_LONG).show();
+      return;
+    }
+    activity.startActivity(new Intent(activity, MenuAdminActivity.class));
   }
 
   public static void openReceipts(Activity activity) {
