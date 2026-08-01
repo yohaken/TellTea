@@ -60,7 +60,6 @@ import { updateLedgerEntry } from "@/lib/ledger";
 import { updateOwnerBookEntry } from "@/lib/owner-books";
 import { BooksVatEntryDetailModal } from "@/components/vat-sales/BooksVatEntryDetailModal";
 import { VatColHead } from "@/components/vat-sales/VatColHead";
-import { VatMonthProcessNotes } from "@/components/vat-sales/VatMonthProcessNotes";
 import { VatSalesSubNav } from "@/components/vat-sales/VatSalesSubNav";
 import { exportPersonalTaxYearXlsx } from "@/lib/xlsx-export";
 import {
@@ -877,8 +876,6 @@ export function VatMonthBooks({ actor }: Props) {
       <p className="muted vat-sales-hint vat-hint-one-line">
         รอบตัดยอด {period.labelInclusive}
       </p>
-
-      <VatMonthProcessNotes actor={actor} />
 
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}

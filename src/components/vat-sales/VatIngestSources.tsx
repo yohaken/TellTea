@@ -1,22 +1,28 @@
 "use client";
 
 /**
- * แหล่งนำเข้าเดลิเวอรี่ — กล่อง AI เดียวรับแคปจอ ≤3 รูป
- * คัดแยก GB / SF / LM → ตารางพรีวิว · ยังไม่ผสานเข้างบเดือน
- * (ยกเลิก Gmail + อัปรูป Grab แยกแล้ว)
+ * แหล่งนำเข้าเดลิเวอรี่ — 4 บล็อกเท่านั้น
+ * 1) โน้ต/พรอมต์  2) กล่อง AI  3) ตารางพรีวิวเดลิเวอรี่  4) ปุ่มอัปเดตเข้าตารางหลัก
  */
 import { useCallback, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import { VatColHead } from "@/components/vat-sales/VatColHead";
+import { VatMonthProcessNotes } from "@/components/vat-sales/VatMonthProcessNotes";
 import { VatSalesSubNav } from "@/components/vat-sales/VatSalesSubNav";
 import {
   captureItemToIngestPreview,
   extractDeliveryCaptures,
   fileToImageDataUrl,
 } from "@/lib/vat-delivery-capture-extract";
+import { formatIngestMoney } from "@/lib/vat-ingest-preview";
 import {
-  formatIngestMoney,
-  type IngestPreview,
-} from "@/lib/vat-ingest-preview";
+  DELIVERY_COL_INFO,
+  DELIVERY_COL_ROLE,
+  emptyChannelSource,
+  mergeMonthSourcesIntoBooks,
+  sumMonthSources,
+  type MonthChannelSource,
+  type MonthSourcesView,
+} from "@/lib/vat-month-sources";
 import {
   MONTH_CHANNEL_LABEL,
   MONTH_CHANNEL_SHORT,
@@ -28,132 +34,280 @@ import {
   formatThaiMonthKey,
   listThaiMonthOptions,
 } from "@/lib/vat-monthly";
+import {
+  moneyFieldValue,
+  normalizeMoneyFieldText,
+  parseVatMoneyInput,
+} from "@/lib/vat-number-format";
+import { normalizeMoney } from "@/lib/vat-sales";
 
 type Props = { actor: string };
 
 const MAX_CAPTURES = 3;
 
-function emptyPreviews(): Record<MonthChannel, IngestPreview | null> {
-  return { grab: null, shopee: null, lineman: null };
+type RowAmounts = {
+  sales: number;
+  transfer: number;
+  fee: number;
+  gpVat: number;
+};
+
+function emptyRows(): Record<MonthChannel, RowAmounts> {
+  return {
+    grab: { sales: 0, transfer: 0, fee: 0, gpVat: 0 },
+    shopee: { sales: 0, transfer: 0, fee: 0, gpVat: 0 },
+    lineman: { sales: 0, transfer: 0, fee: 0, gpVat: 0 },
+  };
 }
 
-function AmountsRow({ preview }: { preview: IngestPreview }) {
-  const a = preview.amounts;
-  if (!a) return null;
+function rowsToSources(
+  monthKey: string,
+  rows: Record<MonthChannel, RowAmounts>,
+): MonthSourcesView {
+  const byChannel = {} as Record<MonthChannel, MonthChannelSource>;
+  for (const k of MONTH_CHANNELS) {
+    const r = rows[k];
+    byChannel[k] = {
+      ...emptyChannelSource(k),
+      sales: normalizeMoney(r.sales),
+      transfer: normalizeMoney(r.transfer),
+      fee: normalizeMoney(r.fee),
+      gpVat: normalizeMoney(r.gpVat),
+      kind:
+        k === "grab"
+          ? "grab-rollup"
+          : k === "shopee"
+            ? "shopee-monthly"
+            : "lineman-monthly",
+      note: "จากแคป AI",
+    };
+  }
+  return { monthKey, byChannel, totals: sumMonthSources(byChannel) };
+}
+
+function MoneyCell({
+  value,
+  locked,
+  ariaLabel,
+  onChange,
+}: {
+  value: string;
+  locked: boolean;
+  ariaLabel: string;
+  onChange: (v: string) => void;
+}) {
   return (
-    <dl className="vat-ingest-amounts">
-      <div>
-        <dt>ขายแอพ</dt>
-        <dd>{formatIngestMoney(a.sales)}</dd>
-      </div>
-      <div>
-        <dt>โอน</dt>
-        <dd>{formatIngestMoney(a.transfer)}</dd>
-      </div>
-      <div>
-        <dt>คชจ.GP</dt>
-        <dd>{formatIngestMoney(a.fee)}</dd>
-      </div>
-      <div>
-        <dt>VAT-ซื้อ</dt>
-        <dd>{formatIngestMoney(a.gpVat)}</dd>
-      </div>
-    </dl>
+    <input
+      className="vat-sales-input"
+      inputMode="decimal"
+      disabled={locked}
+      value={value}
+      placeholder="0.00"
+      aria-label={ariaLabel}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={() => {
+        const next = normalizeMoneyFieldText(value);
+        if (next !== value) onChange(next);
+      }}
+    />
   );
 }
 
-export function VatIngestSources({ actor: _actor }: Props) {
+export function VatIngestSources({ actor }: Props) {
   const monthOptions = useMemo(() => listThaiMonthOptions(undefined, 18), []);
   const [monthKey, setMonthKey] = useState(() => bangkokMonthKey());
   const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] =
-    useState<Record<MonthChannel, IngestPreview | null>>(emptyPreviews);
-  const [busy, setBusy] = useState(false);
+  const [rows, setRows] = useState<Record<MonthChannel, RowAmounts>>(emptyRows);
+  const [strRows, setStrRows] = useState<
+    Record<MonthChannel, Record<keyof RowAmounts, string>>
+  >(() => ({
+    grab: { sales: "", transfer: "", fee: "", gpVat: "" },
+    shopee: { sales: "", transfer: "", fee: "", gpVat: "" },
+    lineman: { sales: "", transfer: "", fee: "", gpVat: "" },
+  }));
+  const [busy, setBusy] = useState<"ai" | "push" | null>(null);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const onPickFiles = useCallback((list: FileList | null) => {
-    if (!list?.length) return;
-    const next = [...files];
-    for (const f of Array.from(list)) {
-      if (!f.type.startsWith("image/")) continue;
-      if (next.length >= MAX_CAPTURES) break;
-      next.push(f);
+  const totals = useMemo(() => {
+    let sales = 0;
+    let transfer = 0;
+    let fee = 0;
+    let gpVat = 0;
+    for (const k of MONTH_CHANNELS) {
+      sales += rows[k].sales;
+      transfer += rows[k].transfer;
+      fee += rows[k].fee;
+      gpVat += rows[k].gpVat;
     }
-    setFiles(next.slice(0, MAX_CAPTURES));
-    setError("");
-  }, [files]);
+    return {
+      sales: normalizeMoney(sales),
+      transfer: normalizeMoney(transfer),
+      fee: normalizeMoney(fee),
+      gpVat: normalizeMoney(gpVat),
+    };
+  }, [rows]);
 
-  const removeFile = useCallback((idx: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== idx));
-  }, []);
+  const hasAny = useMemo(
+    () =>
+      MONTH_CHANNELS.some(
+        (k) =>
+          rows[k].sales > 0 ||
+          rows[k].transfer > 0 ||
+          rows[k].fee > 0 ||
+          rows[k].gpVat > 0,
+      ),
+    [rows],
+  );
 
-  const clearAll = useCallback(() => {
-    setFiles([]);
-    setPreviews(emptyPreviews());
-    setMsg("");
-    setError("");
-  }, []);
+  const setField = useCallback(
+    (ch: MonthChannel, field: keyof RowAmounts, raw: string) => {
+      setStrRows((s) => ({
+        ...s,
+        [ch]: { ...s[ch], [field]: raw },
+      }));
+      setRows((r) => ({
+        ...r,
+        [ch]: { ...r[ch], [field]: parseVatMoneyInput(raw) },
+      }));
+    },
+    [],
+  );
+
+  const onPickFiles = useCallback(
+    (list: FileList | null) => {
+      if (!list?.length) return;
+      const next = [...files];
+      for (const f of Array.from(list)) {
+        if (!f.type.startsWith("image/")) continue;
+        if (next.length >= MAX_CAPTURES) break;
+        next.push(f);
+      }
+      setFiles(next.slice(0, MAX_CAPTURES));
+      setError("");
+    },
+    [files],
+  );
+
+  const applyPreviewRows = useCallback(
+    (next: Record<MonthChannel, RowAmounts>) => {
+      setRows(next);
+      setStrRows({
+        grab: {
+          sales: moneyFieldValue(next.grab.sales),
+          transfer: moneyFieldValue(next.grab.transfer),
+          fee: moneyFieldValue(next.grab.fee),
+          gpVat: moneyFieldValue(next.grab.gpVat),
+        },
+        shopee: {
+          sales: moneyFieldValue(next.shopee.sales),
+          transfer: moneyFieldValue(next.shopee.transfer),
+          fee: moneyFieldValue(next.shopee.fee),
+          gpVat: moneyFieldValue(next.shopee.gpVat),
+        },
+        lineman: {
+          sales: moneyFieldValue(next.lineman.sales),
+          transfer: moneyFieldValue(next.lineman.transfer),
+          fee: moneyFieldValue(next.lineman.fee),
+          gpVat: moneyFieldValue(next.lineman.gpVat),
+        },
+      });
+    },
+    [],
+  );
 
   const runAi = useCallback(async () => {
     if (!files.length) {
-      setError("เลือกแคปจออย่างน้อย 1 รูป (สูงสุด 3 · GB/SF/LM)");
+      setError("เลือกแคปจออย่างน้อย 1 รูป (สูงสุด 3)");
       return;
     }
-    setBusy(true);
+    setBusy("ai");
     setError("");
     setMsg("");
     try {
       const images = await Promise.all(files.map((f) => fileToImageDataUrl(f)));
       const res = await extractDeliveryCaptures({ monthKey, images });
-      const next = emptyPreviews();
+      const next = emptyRows();
       const notes: string[] = [];
       for (const ch of MONTH_CHANNELS) {
         const item = res.byChannel?.[ch];
-        if (item) {
-          next[ch] = captureItemToIngestPreview(item);
-          notes.push(
-            `${MONTH_CHANNEL_SHORT[ch]} ${formatIngestMoney(item.sales)}`,
-          );
-        }
+        if (!item) continue;
+        const p = captureItemToIngestPreview(item);
+        next[ch] = {
+          sales: p.amounts?.sales || 0,
+          transfer: p.amounts?.transfer || 0,
+          fee: p.amounts?.fee || 0,
+          gpVat: p.amounts?.gpVat || 0,
+        };
+        notes.push(
+          `${MONTH_CHANNEL_SHORT[ch]} ${formatIngestMoney(next[ch].sales)}`,
+        );
       }
-      setPreviews(next);
-      if (res.errors?.length) {
-        setError(res.errors.slice(0, 3).join(" · "));
-      }
+      applyPreviewRows(next);
+      if (res.errors?.length) setError(res.errors.slice(0, 3).join(" · "));
       setMsg(
         notes.length
-          ? `AI อ่านแล้ว · ${notes.join(" · ")} · ยังไม่เข้าตารางสรุป`
-          : "AI อ่านแล้ว แต่ยังจัดช่องทางไม่ได้ — ตรวจรูป/เดือน",
+          ? `AI อ่านแล้ว · ${notes.join(" · ")}`
+          : "AI อ่านแล้ว แต่ยังจัดช่องทางไม่ได้",
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
-  }, [files, monthKey]);
+  }, [files, monthKey, applyPreviewRows]);
+
+  const pushToMain = useCallback(async () => {
+    if (!hasAny) {
+      setError("ยังไม่มียอดในตารางพรีวิว");
+      return;
+    }
+    setBusy("push");
+    setError("");
+    setMsg("");
+    try {
+      const sources = rowsToSources(monthKey, rows);
+      const res = await mergeMonthSourcesIntoBooks({
+        monthKey,
+        sources,
+        actor,
+      });
+      if (res.skipped) {
+        setError(res.reason || "ข้ามการอัปเดต");
+        return;
+      }
+      setMsg(
+        `อัปเดตเข้าตารางยอดเดลิเวอรี่แล้ว · ${formatThaiMonthKey(monthKey)}`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  }, [actor, hasAny, monthKey, rows]);
+
+  const locked = busy !== null;
 
   return (
     <div
       className="vat-ingest-page"
       id="vat-delivery-ingest"
-      data-ai-context="vat-delivery-ingest-ai-capture"
+      data-ai-context="vat-delivery-ingest-four-blocks"
     >
       <VatSalesSubNav active="sources" />
-      <h2 className="vat-table-title">แหล่งนำเข้าเดลิเวอรี่</h2>
-      <p className="muted vat-sales-hint vat-hint-one-line">
-        กล่อง AI เดียว · โยนแคปจอ GB + SF + LM (≤3 รูป) · คัดแยกใส่ตารางพรีวิว ·{" "}
-        <strong>ยังไม่เข้าตารางยอดเดลิเวอรี่</strong>
-      </p>
-
-      <div className="vat-ingest-mail-bar" aria-label="เดือนและ AI">
+      <div className="vat-ingest-mail-bar">
         <label className="vat-month-pick">
           <span className="muted">เดือน</span>
           <select
             value={monthKey}
-            disabled={busy}
-            onChange={(e) => setMonthKey(e.target.value)}
+            disabled={locked}
+            onChange={(e) => {
+              setMonthKey(e.target.value);
+              applyPreviewRows(emptyRows());
+              setMsg("");
+              setError("");
+            }}
             aria-label="เดือนเป้าหมาย"
           >
             {monthOptions.map((o) => (
@@ -163,15 +317,13 @@ export function VatIngestSources({ actor: _actor }: Props) {
             ))}
           </select>
         </label>
-        <Link href="/vat-sales/" className="vat-ingest-back muted">
-          VAT เดือน
-        </Link>
       </div>
 
-      <section
-        className="vat-ingest-ai-box"
-        aria-label="อัปโหลดแคปจอให้ AI"
-      >
+      {/* 1) note prompt */}
+      <VatMonthProcessNotes actor={actor} />
+
+      {/* 2) AI box */}
+      <section className="vat-ingest-ai-box" aria-label="กล่อง AI แคปจอ">
         <input
           ref={inputRef}
           type="file"
@@ -188,7 +340,7 @@ export function VatIngestSources({ actor: _actor }: Props) {
           <button
             type="button"
             className="btn btn-secondary vat-ingest-btn"
-            disabled={busy || files.length >= MAX_CAPTURES}
+            disabled={locked || files.length >= MAX_CAPTURES}
             onClick={() => inputRef.current?.click()}
           >
             เลือกแคปจอ
@@ -196,26 +348,22 @@ export function VatIngestSources({ actor: _actor }: Props) {
           <button
             type="button"
             className="btn btn-secondary vat-ingest-btn"
-            disabled={busy || !files.length}
+            disabled={locked || !files.length}
             onClick={() => void runAi()}
           >
-            {busy ? "AI กำลังอ่าน…" : "ให้ AI คัดแยก"}
+            {busy === "ai" ? "AI กำลังอ่าน…" : "ให้ AI คัดแยก"}
           </button>
-          {files.length || MONTH_CHANNELS.some((c) => previews[c]) ? (
+          {files.length ? (
             <button
               type="button"
               className="btn btn-ghost vat-ingest-btn"
-              disabled={busy}
-              onClick={clearAll}
+              disabled={locked}
+              onClick={() => setFiles([])}
             >
-              ล้าง
+              ล้างรูป
             </button>
           ) : null}
         </div>
-        <p className="muted vat-ingest-hint">
-          วางได้สูงสุด 3 รูป — Grab สรุปการเงิน · Shopee เมลสรุปเดือน · LINE MAN
-          รายงาน/เมล GP · เดือนที่เลือก: {formatThaiMonthKey(monthKey)}
-        </p>
         {files.length > 0 ? (
           <ul className="vat-ingest-file-list">
             {files.map((f, i) => (
@@ -226,70 +374,108 @@ export function VatIngestSources({ actor: _actor }: Props) {
                 <button
                   type="button"
                   className="btn btn-ghost vat-ingest-btn"
-                  disabled={busy}
-                  onClick={() => removeFile(i)}
+                  disabled={locked}
+                  onClick={() =>
+                    setFiles((prev) => prev.filter((_, j) => j !== i))
+                  }
                 >
                   ลบ
                 </button>
               </li>
             ))}
           </ul>
-        ) : null}
+        ) : (
+          <p className="muted vat-ingest-hint">
+            แคป ≤3 รูป · GB / SF / LM · เดือน {formatThaiMonthKey(monthKey)}
+          </p>
+        )}
       </section>
 
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
       {error ? <p className="error-text">{error}</p> : null}
 
-      <div className="vat-ingest-preview-grid">
-        {MONTH_CHANNELS.map((ch) => {
-          const p = previews[ch];
-          return (
-            <section
-              key={ch}
-              className="vat-ingest-slot"
-              data-channel={ch}
-              aria-label={`พรีวิว ${MONTH_CHANNEL_LABEL[ch]}`}
-            >
-              <header className="vat-ingest-slot-head">
-                <strong>
-                  {MONTH_CHANNEL_SHORT[ch]} · {MONTH_CHANNEL_LABEL[ch]}
-                </strong>
-              </header>
-              {p ? (
-                <div
-                  className={
-                    p.ok
-                      ? "vat-ingest-result is-ok"
-                      : "vat-ingest-result is-bad"
-                  }
-                >
-                  <p className="vat-ingest-identity">
-                    <span className="vat-ingest-kind">{p.identity}</span>
-                    {p.fileName ? (
-                      <span className="muted"> · {p.fileName}</span>
-                    ) : null}
-                  </p>
-                  <p className="vat-ingest-meta muted">
-                    {p.monthKey
-                      ? `เดือน ${formatThaiMonthKey(p.monthKey)} (${p.monthKey})`
-                      : "ยังไม่อ่านเดือนได้"}
-                    {p.ok ? " · พร้อมสรุป" : " · ยังไม่ครบ"}
-                  </p>
-                  <AmountsRow preview={p} />
-                  {p.warnings.length > 0 ? (
-                    <ul className="vat-ingest-warnings">
-                      {p.warnings.map((w) => (
-                        <li key={w}>{w}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="muted vat-ingest-hint">รอแคปจาก AI</p>
-              )}
-            </section>
-          );
-        })}
+      {/* 3) table delivery preview */}
+      <section className="vat-table-block vat-month-sources">
+        <h2 className="vat-table-title">
+          ยอดเดลิเวอรี่ (พรีวิว) — {formatThaiMonthKey(monthKey)}
+        </h2>
+        <div className="sheet-wrap vat-month-slim-wrap">
+          <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
+            <thead>
+              <tr>
+                <th className="col-seg">ช่องทาง</th>
+                <VatColHead
+                  label="ยอดขายแอพ"
+                  role={DELIVERY_COL_ROLE.appSales}
+                  info={DELIVERY_COL_INFO.appSales}
+                />
+                <VatColHead
+                  label="ยอดโอน"
+                  role={DELIVERY_COL_ROLE.transfer}
+                  info={DELIVERY_COL_INFO.transfer}
+                />
+                <VatColHead
+                  label="คชจ.GP"
+                  role={DELIVERY_COL_ROLE.gpFee}
+                  info={DELIVERY_COL_INFO.gpFee}
+                />
+                <VatColHead
+                  label="VAT-ซื้อ"
+                  role={DELIVERY_COL_ROLE.purchaseVat}
+                  info={DELIVERY_COL_INFO.purchaseVat}
+                />
+              </tr>
+            </thead>
+            <tbody>
+              {MONTH_CHANNELS.map((k) => (
+                <tr key={k}>
+                  <td className="col-seg">{MONTH_CHANNEL_LABEL[k]}</td>
+                  {(
+                    ["sales", "transfer", "fee", "gpVat"] as const
+                  ).map((field) => (
+                    <td key={field} className="col-num col-input">
+                      <MoneyCell
+                        value={strRows[k][field]}
+                        locked={locked}
+                        ariaLabel={`${field} ${MONTH_CHANNEL_SHORT[k]}`}
+                        onChange={(v) => setField(k, field, v)}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              <tr className="vat-sales-totals-row">
+                <td className="col-seg">รวมเดลิเวอรี่</td>
+                <td className="col-num col-net">
+                  {formatIngestMoney(totals.sales)}
+                </td>
+                <td className="col-num col-net">
+                  {formatIngestMoney(totals.transfer)}
+                </td>
+                <td className="col-num col-net">
+                  {formatIngestMoney(totals.fee)}
+                </td>
+                <td className="col-num col-net">
+                  {formatIngestMoney(totals.gpVat)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* 4) update to main table */}
+      <div className="vat-ingest-push-bar">
+        <button
+          type="button"
+          className="btn btn-secondary vat-ingest-btn"
+          disabled={locked || !hasAny}
+          onClick={() => void pushToMain()}
+        >
+          {busy === "push"
+            ? "กำลังอัปเดต…"
+            : "อัปเดตเข้าตารางยอดเดลิเวอรี่"}
+        </button>
       </div>
     </div>
   );

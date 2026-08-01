@@ -112,7 +112,7 @@ export function VatMonthProcessNotes({ actor }: Props) {
       aria-label="โน้ตขั้นตอนดึงยอด"
     >
       <div className="vat-process-notes-head">
-        <h2 className="vat-table-title">โน้ตขั้นตอน</h2>
+        <h2 className="vat-table-title">โน้ต / พรอมต์</h2>
         <span className="muted vat-process-notes-meta">
           {busy ? "กำลังเซฟ…" : err ? "เซฟไม่สำเร็จ" : "เซฟอัตโนมัติ"}
           {updatedAt > 0
