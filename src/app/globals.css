@@ -5942,6 +5942,148 @@ body.modal-open .main-panel {
   line-height: 1.45;
 }
 
+.payroll-pay-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0.35rem 0 1rem;
+}
+
+.payroll-pay-group {
+  border: 1px solid var(--tea-line);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.55);
+  padding: 0.7rem 0.8rem 0.55rem;
+}
+
+.payroll-pay-group-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.45rem;
+}
+
+.payroll-pay-group-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.payroll-pay-group-meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.payroll-combined-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.05rem;
+  min-width: 6.5rem;
+  padding: 0.55rem 0.85rem;
+  border: none;
+  border-radius: 0.65rem;
+  background: #1f7a4c;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1.15;
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(20, 80, 48, 0.35);
+}
+
+.payroll-combined-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.payroll-combined-btn:not(:disabled):active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.payroll-combined-btn-amt {
+  font-size: 0.78rem;
+  font-weight: 700;
+  opacity: 0.95;
+}
+
+.payroll-combined-btn--compact {
+  min-width: 0;
+  flex-direction: row;
+  gap: 0.35rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.payroll-pay-group-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px dashed var(--tea-line);
+}
+
+.payroll-pay-group-line {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.2rem 0.65rem;
+  align-items: center;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.payroll-pay-group-line:last-child {
+  border-bottom: none;
+}
+
+.payroll-pay-group-line-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  grid-column: 1 / -1;
+}
+
+.payroll-pay-group-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.payroll-pay-group-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.08rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(31, 122, 76, 0.12);
+  color: #1f7a4c;
+}
+
+.payroll-pay-group-amt {
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.payroll-pay-group-line-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+}
+
+.payroll-pay-group-line .payroll-cell-meta {
+  grid-column: 1 / -1;
+}
+
 .payroll-cell-meta {
   font-size: 0.66rem;
   line-height: 1.25;

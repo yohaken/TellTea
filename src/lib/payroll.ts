@@ -391,6 +391,62 @@ export function findPendingMonthEndBonusPairForItem(
   );
 }
 
+/** กลุ่มคิวรอโอนต่อคน — ใช้จัดระเบียบ UI เจ้าของ */
+export type PayrollPendingEmpGroup = {
+  employeeId: string;
+  employeeName: string;
+  items: PayrollItem[];
+  pair: PayrollMonthEndBonusPair | null;
+  /** ยอดโอนรวมทุกแถวที่รอในกลุ่ม */
+  groupTotal: number;
+  /** ยอดโอนรวมสิ้นเดือน+โบนัส (ถ้ามีคู่) */
+  combinedTotal: number;
+};
+
+export function groupPendingPayrollByEmployee(
+  items: PayrollItem[],
+  periodMonth: string,
+): PayrollPendingEmpGroup[] {
+  const pending = items
+    .filter((i) => i.periodMonth === periodMonth && i.status === "pending")
+    .sort(comparePayrollQueueRows);
+  const pairs = listPendingMonthEndBonusPairs(items, periodMonth);
+  const pairByEmp = new Map(pairs.map((p) => [p.employeeId, p]));
+  const byEmp = new Map<string, PayrollItem[]>();
+  for (const item of pending) {
+    const list = byEmp.get(item.employeeId) || [];
+    list.push(item);
+    byEmp.set(item.employeeId, list);
+  }
+  const groups: PayrollPendingEmpGroup[] = [];
+  for (const [employeeId, rows] of byEmp) {
+    const pair = pairByEmp.get(employeeId) || null;
+    const name =
+      rows[0]?.employeeName ||
+      pair?.employeeName ||
+      employeeId;
+    groups.push({
+      employeeId,
+      employeeName: name,
+      items: rows,
+      pair,
+      groupTotal: round2(rows.reduce((s, r) => s + r.amount, 0)),
+      combinedTotal: pair ? pair.transferTotal : 0,
+    });
+  }
+  groups.sort((a, b) => a.employeeName.localeCompare(b.employeeName, "th"));
+  return groups;
+}
+
+/** แถวที่อยู่ในคู่โอนรวม — ไม่โชว์ปุ่มโอนแยก (ใช้โอนรวมอย่างเดียว) */
+export function isCombinedPairLine(
+  item: PayrollItem,
+  pair: PayrollMonthEndBonusPair | null,
+): boolean {
+  if (!pair || item.status !== "pending") return false;
+  return item.id === pair.salary.id || item.id === pair.bonus.id;
+}
+
 export async function getPayrollSchedule(): Promise<PayrollSchedule> {
   const snap = await getDoc(scheduleRef());
   return normalizePayrollSchedule(

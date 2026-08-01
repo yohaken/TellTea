@@ -9,6 +9,8 @@ import {
   comparePayrollQueueRows,
   createSpecialPayrollItem,
   generatePayrollForPeriod,
+  groupPendingPayrollByEmployee,
+  isCombinedPairLine,
   kindUsesMonthEndAccount,
   listPendingMonthEndBonusPairs,
   markPayrollPaid,
@@ -153,6 +155,12 @@ export function PayrollPayPanel({
     for (const p of combinedPairs) map.set(p.employeeId, p);
     return map;
   }, [combinedPairs]);
+
+  const pendingGroups = useMemo(
+    () => groupPendingPayrollByEmployee(periodItems, periodMonth),
+    [periodItems, periodMonth],
+  );
+  const useGroupedPending = shopView && filter === "pending";
 
   const voidCount = useMemo(
     () => periodItems.filter((i) => i.status === "void").length,
@@ -586,15 +594,132 @@ export function PayrollPayPanel({
         ))}
       </div>
 
-      {shopView && combinedPairs.length > 0 && (filter === "pending" || filter === "all") ? (
+      {shopView && combinedPairs.length > 0 && filter === "pending" ? (
         <p className="muted payroll-combined-hint">
           พร้อมโอนรวม {combinedPairs.length} คน · รวม ฿
-          {fmt(combinedPairs.reduce((s, p) => s + p.transferTotal, 0))} — กด「โอนรวม」ที่แถวสิ้นเดือน
-          (รายการยังแยกสิ้นเดือน/โบนัสให้พนักงานเห็น)
+          {fmt(combinedPairs.reduce((s, p) => s + p.transferTotal, 0))} — กดปุ่มเขียว「โอนรวม」ต่อคน
+          (รายการเงินเดือน/โบนัสยังแยกให้พนักงานเห็น)
         </p>
       ) : null}
 
-      {!visible.length ? (
+      {useGroupedPending ? (
+        !pendingGroups.length ? (
+          <p className="empty">ยังไม่มีรายการรอโอน — กดสร้างเงินเดือน / สร้างโบนัส</p>
+        ) : (
+          <div className="payroll-pay-groups" aria-label="คิวรอโอนจัดกลุ่มตามพนักงาน">
+            {pendingGroups.map((group) => {
+              const emp = employees.find((e) => e.id === group.employeeId);
+              const accountBits = [emp?.payBank, emp?.payAccountNo]
+                .map((s) => (s || "").trim())
+                .filter(Boolean);
+              const pair = group.pair;
+              return (
+                <article key={group.employeeId} className="payroll-pay-group">
+                  <header className="payroll-pay-group-head">
+                    <div className="payroll-pay-group-who">
+                      <h3 className="payroll-pay-group-name">{group.employeeName}</h3>
+                      <p className="muted payroll-pay-group-meta">
+                        {pair
+                          ? `โอนรวมสิ้นเดือน+โบนัส ฿${fmt(pair.transferTotal)}`
+                          : `รอโอน ฿${fmt(group.groupTotal)}`}
+                        {accountBits.length ? ` · ${accountBits.join(" ")}` : ""}
+                        {group.items.length > (pair ? 2 : 0) && pair
+                          ? ` · อื่นๆในคิว ฿${fmt(
+                              group.groupTotal - pair.transferTotal,
+                            )}`
+                          : ""}
+                      </p>
+                    </div>
+                    {pair && canPay ? (
+                      <button
+                        type="button"
+                        className="payroll-combined-btn"
+                        disabled={busy}
+                        title={`โอนครั้งเดียว ฿${fmt(pair.transferTotal)} · สิ้นเดือน+โบนัส · สลิปเดียว`}
+                        onClick={() => openCombinedPay(pair)}
+                      >
+                        โอนรวม
+                        <span className="payroll-combined-btn-amt">
+                          ฿{fmt(pair.transferTotal)}
+                        </span>
+                      </button>
+                    ) : null}
+                  </header>
+                  <ul className="payroll-pay-group-lines">
+                    {group.items.map((item) => {
+                      const inCombined = isCombinedPairLine(item, pair);
+                      const lineMeta: string[] = [];
+                      if (item.advanceDeduct > 0) {
+                        lineMeta.push(`หักเบิก ฿${fmt(item.advanceDeduct)}`);
+                      }
+                      if (kindUsesMonthEndAccount(item.kind)) {
+                        lineMeta.push(
+                          `บช.${formatDateShortBe(item.accountDate || item.dueDate)}`,
+                        );
+                      }
+                      return (
+                        <li key={item.id} className="payroll-pay-group-line">
+                          <div className="payroll-pay-group-line-main">
+                            <span className="payroll-pay-group-kind">
+                              {shortKind(item.kind)}
+                              {inCombined ? (
+                                <span className="payroll-pay-group-tag">รวมโอน</span>
+                              ) : null}
+                            </span>
+                            <strong className="payroll-pay-group-amt">
+                              ฿{fmt(item.amount)}
+                            </strong>
+                          </div>
+                          {lineMeta.length ? (
+                            <div className="muted payroll-cell-meta">
+                              {lineMeta.join(" · ")}
+                            </div>
+                          ) : null}
+                          <div className="payroll-pay-group-line-actions">
+                            {item.slipUrls.length ? (
+                              <EntryPhotoIndicator
+                                imageUrls={item.slipUrls}
+                                label="สลิป"
+                                onView={() =>
+                                  setSlipPreview({
+                                    urls: item.slipUrls,
+                                    title: payrollDescription(item),
+                                  })
+                                }
+                              />
+                            ) : null}
+                            {/* มีคู่โอนรวมแล้ว — ไม่โชว์โอนแยกบนสิ้นเดือน/โบนัส */}
+                            {!inCombined && canPay ? (
+                              <button
+                                type="button"
+                                className="ghost-btn payroll-table-btn"
+                                disabled={busy}
+                                onClick={() => openSinglePay(item)}
+                              >
+                                {item.amount > 0 ? "โอนแยก" : "เคลียร์"}
+                              </button>
+                            ) : null}
+                            {isOwner ? (
+                              <button
+                                type="button"
+                                className="ghost-btn payroll-table-btn"
+                                disabled={busy}
+                                onClick={() => void onVoid(item)}
+                              >
+                                ยกเลิก
+                              </button>
+                            ) : null}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </article>
+              );
+            })}
+          </div>
+        )
+      ) : !visible.length ? (
         <p className="empty">
           {shopView
             ? "ยังไม่มีรายการในมุมมองนี้ — กดสร้างรายการรอโอน"
@@ -624,12 +749,8 @@ export function PayrollPayPanel({
                   ? `${formatDateShortBe(item.dueDate)}`
                   : formatDateShortBe(item.dueDate);
                 const pair = combinedPairByEmp.get(item.employeeId);
-                const canCombined =
-                  !!pair &&
-                  item.status === "pending" &&
-                  (item.kind === "salary_month_end" || item.kind === "bonus");
-                const showCombinedBtn =
-                  canCombined && item.kind === "salary_month_end" && canPay;
+                const inCombined =
+                  item.status === "pending" && isCombinedPairLine(item, pair || null);
                 const metaBits: string[] = [];
                 if (kindUsesMonthEndAccount(item.kind)) {
                   metaBits.push(`บช.${formatDateShortBe(item.accountDate || item.dueDate)}`);
@@ -639,12 +760,6 @@ export function PayrollPayPanel({
                 }
                 if (item.combinedPayId) {
                   metaBits.push("โอนรวมสิ้นเดือน+โบนัส");
-                } else if (canCombined && item.kind === "bonus") {
-                  metaBits.push(`รวมโอน ฿${fmt(pair!.transferTotal)}`);
-                } else if (canCombined && item.kind === "salary_month_end") {
-                  metaBits.push(
-                    `+โบนัส ฿${fmt(pair!.bonus.amount)} = โอน ฿${fmt(pair!.transferTotal)}`,
-                  );
                 }
                 if (shopView && accountBits.length) {
                   metaBits.push(accountBits.join(" "));
@@ -693,36 +808,26 @@ export function PayrollPayPanel({
                       <td className="payroll-col-act col-act">
                         {item.status === "pending" && canPay ? (
                           <div className="payroll-inline-actions">
-                            {showCombinedBtn ? (
+                            {inCombined && pair && item.kind === "salary_month_end" ? (
+                              <button
+                                type="button"
+                                className="payroll-combined-btn payroll-combined-btn--compact"
+                                disabled={busy}
+                                onClick={() => openCombinedPay(pair)}
+                              >
+                                โอนรวม ฿{fmt(pair.transferTotal)}
+                              </button>
+                            ) : null}
+                            {!inCombined ? (
                               <button
                                 type="button"
                                 className="primary-btn payroll-table-btn"
-                                disabled={busy}
-                                title={`โอนครั้งเดียว ฿${fmt(pair!.transferTotal)} · สิ้นเดือน+โบนัส`}
-                                onClick={() => openCombinedPay(pair!)}
+                                disabled={busy || (!canPay && item.amount > 0)}
+                                onClick={() => openSinglePay(item)}
                               >
-                                โอนรวม
+                                {item.amount > 0 ? "โอน" : "เคลียร์"}
                               </button>
                             ) : null}
-                            <button
-                              type="button"
-                              className={
-                                showCombinedBtn
-                                  ? "ghost-btn payroll-table-btn"
-                                  : "primary-btn payroll-table-btn"
-                              }
-                              disabled={busy || (!canPay && item.amount > 0)}
-                              title={
-                                item.amount > 0 && !canPay
-                                  ? "ต้องมีสิทธิ์บช.เจ้าของ"
-                                  : showCombinedBtn
-                                    ? "โอนเฉพาะรายการนี้ (ไม่รวมโบนัส)"
-                                    : undefined
-                              }
-                              onClick={() => openSinglePay(item)}
-                            >
-                              {item.amount > 0 ? "โอน" : "เคลียร์"}
-                            </button>
                             {isOwner ? (
                               <button
                                 type="button"
