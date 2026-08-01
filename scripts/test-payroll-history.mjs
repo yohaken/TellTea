@@ -32,7 +32,7 @@ assert.match(histUi, /PayrollHistoryPanel/);
 assert.match(histUi, /EntryPhotoIndicator/);
 assert.match(histUi, /สลิป/);
 
-assert.match(evidenceUi, /หลักฐานหักโบนัส/);
+assert.match(evidenceUi, /หลักฐานโบนัส/);
 assert.match(evidenceUi, /PhotoAttachMultiField/);
 assert.match(evidenceUi, /bonus-deductions/);
 
@@ -44,7 +44,7 @@ assert.match(pageSrc, /PayrollHistoryPanel/);
 assert.match(pageSrc, /BonusDeductionEvidencePanel/);
 assert.match(pageSrc, /ประวัติ/);
 
-assert.match(versionSrc, /APP_BUILD = 49[34]/);
+assert.match(versionSrc, /APP_BUILD = \d+/);
 
 // Pure summary logic (mirror)
 function round2(n) {

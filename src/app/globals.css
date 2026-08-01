@@ -5992,6 +5992,75 @@ body.modal-open .main-panel {
   line-height: 1.45;
 }
 
+.payroll-latest-transfer {
+  margin: 0.35rem 0 0.75rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(45, 106, 79, 0.28);
+  border-radius: 0.55rem;
+  background: rgba(149, 213, 178, 0.16);
+}
+
+.payroll-latest-transfer-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.45rem 0.75rem;
+}
+
+.payroll-latest-transfer-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.payroll-latest-transfer-total {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.payroll-latest-transfer-lines {
+  list-style: none;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.payroll-latest-transfer-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.payroll-latest-transfer-note,
+.payroll-latest-transfer-bonus,
+.payroll-latest-transfer-foot {
+  margin: 0.35rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.payroll-latest-transfer-bonus {
+  font-weight: 600;
+}
+
+.payroll-latest-transfer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.payroll-history-combined-banner {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(45, 106, 79, 0.95);
+  margin-bottom: 0.15rem;
+}
+
 .payroll-pay-groups {
   display: flex;
   flex-direction: column;

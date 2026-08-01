@@ -31,6 +31,7 @@
     "test:payroll-special": "node scripts/test-payroll-special.mjs",
     "test:payroll-advance": "node scripts/test-payroll-advance.mjs",
     "test:payroll-history": "node scripts/test-payroll-history.mjs",
+    "test:payroll-staff-receipt": "node scripts/test-payroll-staff-receipt.mjs",
     "test:staff-task-nudge": "node scripts/test-staff-task-nudge.mjs",
     "test:task-owner-timeline": "node scripts/test-task-owner-timeline.mjs",
     "test:ledger-asset-type-bar": "node scripts/test-ledger-asset-type-bar.mjs",

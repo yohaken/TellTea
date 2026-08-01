@@ -6,6 +6,8 @@ import type { Employee } from "@/lib/employees";
 import {
   buildPayrollMonthSummaries,
   filterEmployeePayrollItems,
+  findCombinedTransferTotal,
+  salaryHistoryMetaBits,
   shortPayrollKindLabel,
 } from "@/lib/payroll-history";
 import {
@@ -30,6 +32,7 @@ export function PayrollHistoryPanel({
   employeeId,
   employees,
   items,
+  historySinceLabel,
   onEmployeeIdChange,
 }: {
   isOwner: boolean;
@@ -37,6 +40,8 @@ export function PayrollHistoryPanel({
   employeeId: string;
   employees: Employee[];
   items: PayrollItem[];
+  /** เช่น "โหลดย้อนหลังจาก 2025-06" */
+  historySinceLabel?: string;
   onEmployeeIdChange?: (id: string) => void;
 }) {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
@@ -79,6 +84,7 @@ export function PayrollHistoryPanel({
           <strong>฿{fmt(paidAll)}</strong>
           <span className="muted bonus-summary-pool-meta">
             จ่ายแล้วรวม · รอโอน ฿{fmt(pendingAll)}
+            {historySinceLabel ? ` · ${historySinceLabel}` : ""}
           </span>
         </div>
       </div>
@@ -101,7 +107,8 @@ export function PayrollHistoryPanel({
       ) : null}
 
       <p className="muted payroll-actions-hint">
-        แต่ละเดือน: เงินเดือน · จ่ายแยก · โบนัส · สถานะครบ/รอ · แตะเดือนเพื่อดูรายการและสลิปโอน
+        แยกตามงวดงาน (ไม่ใช่วันเงินเข้าบัญชี) · แต่ละเดือน: เงินเดือน · โบนัส · รวมจ่าย ·
+        แตะเดือนเพื่อดูรายการและสลิปโอน
       </p>
 
       {!employeeId ? (
@@ -139,6 +146,7 @@ export function PayrollHistoryPanel({
                     periodMonth={row.periodMonth}
                     salaryPaid={salaryPaid}
                     salaryPending={salaryPending}
+                    salaryMeta={salaryHistoryMetaBits(row)}
                     bonusPaid={row.bonusPaid}
                     bonusPending={row.bonusPending}
                     paidTotal={row.paidTotal}
@@ -177,6 +185,7 @@ function FragmentMonth({
   periodMonth,
   salaryPaid,
   salaryPending,
+  salaryMeta,
   bonusPaid,
   bonusPending,
   paidTotal,
@@ -191,6 +200,7 @@ function FragmentMonth({
   periodMonth: string;
   salaryPaid: number;
   salaryPending: number;
+  salaryMeta: string[];
   bonusPaid: number;
   bonusPending: number;
   paidTotal: number;
@@ -207,6 +217,8 @@ function FragmentMonth({
       : paidTotal > 0
         ? "บางส่วน"
         : "—";
+
+  const seenCombined = new Set<string>();
 
   return (
     <>
@@ -225,6 +237,9 @@ function FragmentMonth({
         </td>
         <td className="payroll-col-amt col-out">
           ฿{fmt(salaryPaid)}
+          {salaryMeta.length ? (
+            <div className="muted payroll-cell-meta">{salaryMeta.join(" · ")}</div>
+          ) : null}
           {salaryPending > 0 ? (
             <div className="muted payroll-cell-meta">รอ ฿{fmt(salaryPending)}</div>
           ) : null}
@@ -261,15 +276,30 @@ function FragmentMonth({
               ? formatDateShortBe(item.dueDate)
               : formatDateShortBe(item.dueDate);
             const hasSlips = item.slipUrls.length > 0;
+            const cid = (item.combinedPayId || "").trim();
+            let combinedBanner: string | null = null;
+            if (cid && item.status === "paid" && !seenCombined.has(cid)) {
+              seenCombined.add(cid);
+              const total = findCombinedTransferTotal(items, cid);
+              if (total > 0) {
+                combinedBanner = `โอนครั้งเดียว ฿${fmt(total)} (สิ้นเดือน+โบนัส)`;
+              }
+            }
             return (
               <tr key={item.id} className={`payroll-tr status-${item.status} is-detail`}>
                 <td className="payroll-col-kind" colSpan={2}>
+                  {combinedBanner ? (
+                    <div className="payroll-history-combined-banner">
+                      {combinedBanner}
+                    </div>
+                  ) : null}
                   <span>{shortPayrollKindLabel(item.kind)}</span>
                   <div className="muted payroll-cell-meta">
                     โอน {dueLabel}
                     {item.advanceDeduct > 0
                       ? ` · หักเบิก ฿${fmt(item.advanceDeduct)}`
                       : ""}
+                    {cid ? " · โอนรวม" : ""}
                     {item.note ? ` · ${item.note}` : ""}
                   </div>
                 </td>

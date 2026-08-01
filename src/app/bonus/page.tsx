@@ -772,12 +772,21 @@ function BonusView() {
           ) : null}
         </div>
       ) : tab === "history" ? (
-        <p className="muted bonus-toolbar-meta" style={{ margin: "0.25rem 0 0.65rem" }}>
-          ประวัติเงินเดือน + โบนัส · แตะเดือนดูรายการและสลิปโอน
-          {isStaffPreview && previewEmployee
-            ? ` · มุม ${previewEmployee.name}`
-            : ""}
-        </p>
+        <div className="bonus-toolbar">
+          <input
+            type="month"
+            className="ot-slim-input"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            aria-label="เดือนอ้างอิงช่วงประวัติ"
+          />
+          <span className="bonus-toolbar-meta muted">
+            โหลดย้อนหลัง ~14 เดือนจากเดือนที่เลือก · แยกตามงวดงาน
+            {isStaffPreview && previewEmployee
+              ? ` · มุม ${previewEmployee.name}`
+              : ""}
+          </span>
+        </div>
       ) : (
         <p className="muted bonus-toolbar-meta" style={{ margin: "0.25rem 0 0.65rem" }}>
           {uiIsOwner
@@ -805,6 +814,24 @@ function BonusView() {
             prodEntries={prodEntries}
             otEntries={otEntries}
             canPay={uiCanPay}
+            bonusExplain={
+              myRow
+                ? {
+                    total: myRow.total,
+                    deductAmount: myRow.deductAmount,
+                    deductPct: myRow.deductPct,
+                    remaining: myRow.remaining,
+                  }
+                : null
+            }
+            onOpenBonusMonth={(periodMonth) => {
+              setMonth(periodMonth);
+              setTab("bonus");
+            }}
+            onOpenHistory={(periodMonth) => {
+              setMonth(periodMonth);
+              setTab("history");
+            }}
             onError={setError}
             onEmployeesChange={setEmployees}
             onInfo={(msg) => {
@@ -847,6 +874,12 @@ function BonusView() {
               ? payrollItems
               : visiblePayrollItems
           }
+          historySinceLabel={(() => {
+            const since = new Date(year, monthIdx - 13, 1);
+            const y = since.getFullYear();
+            const m = String(since.getMonth() + 1).padStart(2, "0");
+            return `ตั้งแต่ ${y}-${m}`;
+          })()}
           onEmployeeIdChange={
             showShopUi && uiIsOwner
               ? setHistoryEmployeeId

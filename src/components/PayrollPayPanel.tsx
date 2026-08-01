@@ -3,6 +3,10 @@
 import { useMemo, useState } from "react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoAttachMultiField } from "@/components/PhotoAttachMultiField";
+import {
+  StaffLatestTransferCard,
+  type StaffBonusExplain,
+} from "@/components/StaffLatestTransferCard";
 import { listActiveEmployeesWithPay, type Employee } from "@/lib/employees";
 import type { OtEntry } from "@/lib/ot";
 import {
@@ -31,6 +35,7 @@ import {
   type PayrollMonthEndBonusPair,
   type PayrollSchedule,
 } from "@/lib/payroll";
+import { buildCombinedTransferClipboard } from "@/lib/payroll-staff-receipt";
 import type { ProdEntry } from "@/lib/production";
 import {
   formatDateShortBe,
@@ -87,6 +92,9 @@ export function PayrollPayPanel({
   prodEntries,
   otEntries,
   canPay,
+  bonusExplain,
+  onOpenBonusMonth,
+  onOpenHistory,
   onError,
   onInfo,
   onEmployeesChange,
@@ -103,6 +111,10 @@ export function PayrollPayPanel({
   prodEntries: ProdEntry[];
   otEntries: OtEntry[];
   canPay: boolean;
+  /** อธิบายหักโบนัสงวดที่เลือก — มุมพนักงาน */
+  bonusExplain?: StaffBonusExplain | null;
+  onOpenBonusMonth?: (periodMonth: string) => void;
+  onOpenHistory?: (periodMonth: string) => void;
   onError: (msg: string) => void;
   onInfo?: (msg: string) => void;
   onEmployeesChange?: (emps: Employee[]) => void;
@@ -417,6 +429,26 @@ export function PayrollPayPanel({
     });
   }
 
+  async function copyCombinedTransfer(pair: PayrollMonthEndBonusPair) {
+    const emp = employees.find((e) => e.id === pair.employeeId);
+    const text = buildCombinedTransferClipboard({
+      employeeName: pair.employeeName,
+      payBank: emp?.payBank,
+      payAccountNo: emp?.payAccountNo,
+      payAccountName: emp?.payAccountName,
+      transferTotal: pair.transferTotal,
+      salaryAmount: pair.salary.amount,
+      bonusAmount: pair.bonus.amount,
+      advanceDeduct: pair.salary.advanceDeduct,
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      onInfo?.("คัดลอกแล้ว · ชื่อ บัญชี ยอดโอนรวม — วางในแอปธนาคารได้");
+    } catch {
+      onError("คัดลอกไม่สำเร็จ — ลองเลือกข้อความเอง");
+    }
+  }
+
   async function onConfirmPay() {
     if (!payTarget || !canPay) return;
     setBusy(true);
@@ -565,9 +597,19 @@ export function PayrollPayPanel({
         <p className="muted payroll-actions-hint">คิวโอนทั้งร้าน — กดโอนแล้วเมื่อโอนเสร็จ (แนบสลิปได้)</p>
       ) : (
         <p className="muted payroll-actions-hint">
-          รายการจ่ายของคุณ · รอเจ้าของโอน — ไม่เห็นยอดคนอื่น
+          รายการจ่ายของคุณ · รอเจ้าของโอน — ไม่เห็นยอดคนอื่น · ไม่แจ้งแชทตอนโอน
         </p>
       )}
+
+      {!shopView ? (
+        <StaffLatestTransferCard
+          items={items}
+          periodMonth={periodMonth}
+          bonusExplain={bonusExplain}
+          onOpenBonusMonth={onOpenBonusMonth}
+          onOpenHistory={onOpenHistory}
+        />
+      ) : null}
 
       <div className="payroll-filter" role="tablist" aria-label="กรองรายการจ่าย">
         {(
@@ -723,7 +765,9 @@ export function PayrollPayPanel({
         <p className="empty">
           {shopView
             ? "ยังไม่มีรายการในมุมมองนี้ — กดสร้างรายการรอโอน"
-            : "ยังไม่มีรายการจ่ายของคุณในเดือนนี้"}
+            : filter === "pending"
+              ? "ไม่มีรายการรอโอนในเดือนนี้ — ดูรอบล่าสุดด้านบน หรือแท็บทั้งหมด / ประวัติ"
+              : "ยังไม่มีรายการจ่ายของคุณในมุมมองนี้"}
         </p>
       ) : (
         <div className="sheet-scroll payroll-sheet sheet-bleed">
@@ -760,6 +804,9 @@ export function PayrollPayPanel({
                 }
                 if (item.combinedPayId) {
                   metaBits.push("โอนรวมสิ้นเดือน+โบนัส");
+                }
+                if (!shopView && item.note.trim()) {
+                  metaBits.push(item.note.trim());
                 }
                 if (shopView && accountBits.length) {
                   metaBits.push(accountBits.join(" "));
@@ -878,6 +925,26 @@ export function PayrollPayPanel({
                 <p style={{ margin: "0 0 0.35rem" }}>
                   {payTarget.pair.employeeName} · โอนครั้งเดียว สลิปเดียว
                 </p>
+                {(() => {
+                  const emp = employees.find(
+                    (e) => e.id === payTarget.pair!.employeeId,
+                  );
+                  const bankBits = [emp?.payBank, emp?.payAccountNo]
+                    .map((s) => (s || "").trim())
+                    .filter(Boolean);
+                  return bankBits.length ? (
+                    <p style={{ margin: "0 0 0.35rem" }}>
+                      บัญชี {bankBits.join(" ")}
+                      {emp?.payAccountName
+                        ? ` · ${emp.payAccountName}`
+                        : ""}
+                    </p>
+                  ) : (
+                    <p style={{ margin: "0 0 0.35rem" }}>
+                      ยังไม่มีเลขบัญชีในตั้งค่าจ่าย — ใส่ก่อนโอนจะคัดลอกง่ายขึ้น
+                    </p>
+                  );
+                })()}
                 <ul className="payroll-combined-breakdown">
                   <li>
                     สิ้นเดือน ฿{fmt(payTarget.pair.salary.amount)}
@@ -890,6 +957,15 @@ export function PayrollPayPanel({
                 <p style={{ margin: "0.35rem 0 0" }}>
                   พนักงานยังเห็น 2 รายการแยกในคิวของตัวเอง
                 </p>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  style={{ marginTop: "0.5rem" }}
+                  disabled={busy}
+                  onClick={() => void copyCombinedTransfer(payTarget.pair!)}
+                >
+                  คัดลอกบัญชี + ยอดโอน
+                </button>
               </div>
             ) : (
               <p className="muted" style={{ marginBottom: "0.75rem" }}>

@@ -125,3 +125,39 @@ export function shortPayrollKindLabel(kind: PayrollKind): string {
 export function isPayrollSalaryKind(kind: PayrollKind) {
   return isSalaryKind(kind);
 }
+
+/** meta ใต้คอลัมน์เงินเดือนในตารางประวัติ — แยกกลาง/สิ้น/แยก */
+export function salaryHistoryMetaBits(row: PayrollMonthSummary): string[] {
+  const bits: string[] = [];
+  const mid = row.salaryMidPaid + row.salaryMidPending;
+  const end = row.salaryEndPaid + row.salaryEndPending;
+  const special = row.specialPaid + row.specialPending;
+  if (mid > 0) bits.push(`กลาง ฿${formatAmt(mid)}`);
+  if (end > 0) bits.push(`สิ้น ฿${formatAmt(end)}`);
+  if (special > 0) bits.push(`แยก ฿${formatAmt(special)}`);
+  return bits;
+}
+
+function formatAmt(n: number) {
+  const r = round2(n);
+  return Number.isInteger(r)
+    ? String(r)
+    : r.toLocaleString("th-TH", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      });
+}
+
+/** หาคู่โอนรวมในรายการเดือน — สำหรับโชว์ยอดโอนครั้งเดียว */
+export function findCombinedTransferTotal(
+  items: PayrollItem[],
+  combinedPayId: string,
+): number {
+  const id = (combinedPayId || "").trim();
+  if (!id) return 0;
+  return round2(
+    items
+      .filter((i) => i.combinedPayId === id && i.status === "paid")
+      .reduce((s, i) => s + i.amount, 0),
+  );
+}
