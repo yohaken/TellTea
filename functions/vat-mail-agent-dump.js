@@ -194,7 +194,7 @@ exports.vatMailAgentDump = functions
         ok: true,
         generatedAt: new Date().toISOString(),
         phaseHint:
-          "Drive spine F0–F3 · read driveFiles[].webViewLink · never auto-write L4",
+          "Drive spine F0–F5 · read driveFiles[].webViewLink · POST vatMailAgentPropose for F4 · owner confirms F5 on web · never auto-write L4",
         notes: notes
           ? {
               text: String(notes.text || ""),

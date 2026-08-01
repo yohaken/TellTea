@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import {
+  applyDriveAiDraftToProposal,
   buildMonthProposalFromReports,
+  channelHasConfirmableAmounts,
   dayKeyFromReport,
   fillProposalAmountsFromReports,
   monthKeyFromReport,
@@ -32,6 +34,8 @@ function stub(partial: Partial<PlatformEmailReport>): PlatformEmailReport {
     pdfFilenames: [],
     pdfStoragePaths: [],
     pdfError: "",
+    driveFiles: [],
+    driveSyncedAt: 0,
     syncedAt: 0,
     parserVersion: "",
     studyTags: [],
@@ -175,6 +179,30 @@ assert.match(proposalSummaryLine(july), /grab:2ใช้/);
   assert.equal(filled.channels.lineman.amounts.appSales, 2000);
   assert.equal(filled.channels.lineman.amounts.transfer, 1700);
   assert.ok((filled.channels.lineman.amounts.gpExVat || 0) > 0);
+}
+
+{
+  const base = buildMonthProposalFromReports("2026-07", [], "test");
+  const drafted = applyDriveAiDraftToProposal(
+    base,
+    {
+      grab: {
+        appSales: 10000,
+        transfer: 8000,
+        driveFileIds: ["file1"],
+        note: "F4 test",
+      },
+    },
+    "ai",
+  );
+  assert.equal(drafted.phase, "F4");
+  assert.equal(drafted.channels.grab.amountsSource, "drive-ai");
+  assert.equal(drafted.channels.grab.amounts.appSales, 10000);
+  assert.ok(channelHasConfirmableAmounts(drafted.channels.grab));
+  const sources = proposalToMonthSources(drafted);
+  assert.equal(sources.byChannel.grab.sales, 10000);
+  assert.equal(sources.byChannel.grab.transfer, 8000);
+  assert.ok(sources.byChannel.grab.fee > 0);
 }
 
 console.log("ok vat-delivery-month-proposals");

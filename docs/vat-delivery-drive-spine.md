@@ -79,12 +79,12 @@ Firebase Storage `vat-mail-pdfs/` ยังใช้เป็น cache ถอด
 | **F1** | ซิงก์แนบทุกแอพ → Drive แยกเดือน | 🔄 (`vatMailDriveSync` · PDF/Excel/CSV) |
 | **F2** | UI รายการไฟล์บน Drive + เปิดลิงก์ | ✅ `#vat-sources-drive-slot` |
 | **F3** | Agent Dump ส่งรายการไฟล์/ลิงก์ให้ AI | ✅ `driveFiles[]` ใน `vatMailAgentDump` |
-| **F4** | AI อ่านไฟล์ → ร่างยอดเดือน (ไม่เขียนงบเอง) | ⬜ |
-| **F5** | Owner ยืนยัน → ลงตารางยอดเดลิเวอรี่ | ⬜ |
+| **F4** | AI อ่านไฟล์ → ร่างยอดเดือน (ไม่เขียนงบเอง) | ✅ `vatMailAgentPropose` + ปุ่ม「ร่างยอด F4」 |
+| **F5** | Owner ยืนยัน → ลงตารางยอดเดลิเวอรี่ | ✅ 「ยืนยันลงตาราง F5」→ `mergeProposalIntoBooks` |
 
-**หน้า `/vat-sales/sources/` (build 592):**  
+**หน้า `/vat-sales/sources/` (build 593):**  
 1. ตาราง「ยอดรวมเดือน (ผสานเข้างบทันที)」  
-2. บล็อก `#vat-sources-drive-slot` — เช็คลิสต์ F0–F5 · ปุ่มเชื่อม/ซิงก์เมล/ซิงก์ Drive · กล่องไฟล์แยกแอพ
+2. บล็อก `#vat-sources-drive-slot` — เช็คลิสต์ F0–F5 · ซิงก์ Drive · ร่างยอด · ยืนยันลงตาราง · กล่องแยกแอพ
 
 เฟส D3–D5 แบบ parse ม้วนอัตโนมัติ — **พัก** (เก็บโค้ดไว้ ไม่เป็นทางหลัก)
 
@@ -92,10 +92,10 @@ Firebase Storage `vat-mail-pdfs/` ยังใช้เป็น cache ถอด
 
 ## สิ่งที่ owner ทำ
 
-1. ตัดเชื่อม Gmail แล้วเชื่อมใหม่ (รับสิทธิ์ Drive)  
-2. กด **ซิงก์ไฟล์ → Drive**  
-3. เปิดโฟลเดอร์ TellTea-VAT ตรวจว่าไฟล์แยกแอพ/เดือน  
-4. ให้ AI อ่านรายการไฟล์จาก Dump / ลิงก์ Drive
+1. ตัดเชื่อม Gmail แล้วเชื่อมใหม่ (รับสิทธิ์ Drive · เปิด Drive API ใน Google Cloud)  
+2. กด **ซิงก์เมล** แล้ว **ซิงก์ไฟล์ → Drive**  
+3. กด **ร่างยอด F4** (หรือให้ AI POST `vatMailAgentPropose`)  
+4. ตรวจร่างในกล่องแอพ แล้วกด **ยืนยันลงตาราง F5**
 
 ---
 
@@ -105,5 +105,7 @@ Firebase Storage `vat-mail-pdfs/` ยังใช้เป็น cache ถอด
 - แนบ: `functions/vat-mail-pdf.js` · `listDriveableParts` (pdf/xlsx/xls/csv)  
 - OAuth scopes: `functions/vat-mail.js` · `OAUTH_SCOPES` = gmail.readonly + drive.file  
 - Agent Dump: `functions/vat-mail-agent-dump.js` · `driveFiles[]`  
+- Agent Propose (F4): `functions/vat-mail-agent-propose.js` · `vatMailAgentPropose`  
+- ข้อเสนอ/ผสาน: `src/lib/vat-delivery-month-proposals.ts` · `draftDriveMonthProposal` · `mergeProposalIntoBooks`  
 - Client: `src/lib/vat-sales-mail.ts` · `syncVatMailDrive` · `listMonthDriveFiles`  
 - UI: `src/components/vat-sales/VatSourcesDriveSlot.tsx` · `#vat-sources-drive-slot`

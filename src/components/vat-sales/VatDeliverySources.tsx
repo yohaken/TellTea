@@ -290,7 +290,13 @@ export function VatDeliverySources({ actor }: Props) {
         </div>
       </section>
 
-      <VatSourcesDriveSlot monthKey={month} />
+      <VatSourcesDriveSlot
+        monthKey={month}
+        actor={actor}
+        onBooksMerged={() => {
+          void loadMonth(month);
+        }}
+      />
     </div>
   );
 }

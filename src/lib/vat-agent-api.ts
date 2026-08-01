@@ -9,6 +9,9 @@ export const VAT_AGENT_API_DOC = "vatAgentApi";
 export const VAT_MAIL_AGENT_DUMP_URL =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/vatMailAgentDump";
 
+export const VAT_MAIL_AGENT_PROPOSE_URL =
+  "https://asia-southeast1-mypeer-501909.cloudfunctions.net/vatMailAgentPropose";
+
 export type VatAgentApi = {
   token: string;
   enabled: boolean;
@@ -70,4 +73,15 @@ export async function setVatAgentApiEnabled(
 export function agentDumpCurl(token: string): string {
   const t = String(token || "").trim();
   return `curl -sS -H "Authorization: Bearer ${t}" "${VAT_MAIL_AGENT_DUMP_URL}?max=80"`;
+}
+
+export function agentProposeCurl(token: string, monthKey = "2026-07"): string {
+  const t = String(token || "").trim();
+  const body = JSON.stringify({
+    monthKey,
+    channels: {
+      grab: { appSales: 0, transfer: 0, note: "F4 example" },
+    },
+  });
+  return `curl -sS -X POST -H "Authorization: Bearer ${t}" -H "Content-Type: application/json" -d '${body}' "${VAT_MAIL_AGENT_PROPOSE_URL}"`;
 }

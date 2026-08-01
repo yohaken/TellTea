@@ -58,20 +58,35 @@ export type ChannelMonthProposal = {
   /** จำนวนวันที่มีเมลใช้ได้ (เดาจากวันที่รายงาน) */
   dayCount: number;
   amounts: DeliveryAmountProposal;
-  /** D3 = none จนกว่า D4 อะแดปเตอร์ / มือ */
-  amountsSource: "none" | "manual" | "adapter";
+  /** none → adapter/manual/drive-ai (F4) · ยังไม่ใช่ L4 */
+  amountsSource: "none" | "manual" | "adapter" | "drive-ai";
   note: string;
+  /** ไฟล์ Drive ที่ใช้ร่างยอด (F4) */
+  driveFileIds: string[];
 };
 
 export type VatDeliveryMonthProposal = {
   monthKey: string;
-  phase: "D3" | "D4";
+  phase: "D3" | "D4" | "F4";
   status: "studying" | "ready" | "merged";
   channels: Record<DeliveryChannel, ChannelMonthProposal>;
   rebuiltAt: number;
   rebuiltBy: string;
   catalogReportCount: number;
 };
+
+const CONFIRMABLE_SOURCES = new Set(["adapter", "drive-ai", "manual"]);
+
+export function channelHasConfirmableAmounts(
+  c: ChannelMonthProposal | undefined | null,
+): boolean {
+  if (!c) return false;
+  return (
+    CONFIRMABLE_SOURCES.has(c.amountsSource) &&
+    c.amounts.appSales != null &&
+    Number(c.amounts.appSales) > 0
+  );
+}
 
 export function emptyAmounts(): DeliveryAmountProposal {
   return { appSales: null, transfer: null, gpExVat: null, gpVat: null };
@@ -91,6 +106,7 @@ export function emptyChannelProposal(
     amounts: emptyAmounts(),
     amountsSource: "none",
     note: "",
+    driveFileIds: [],
   };
 }
 
@@ -331,6 +347,7 @@ export function buildMonthProposalFromReports(
       amounts: emptyAmounts(),
       amountsSource: "none",
       note,
+      driveFileIds: [],
     };
   }
 
@@ -415,15 +432,20 @@ function mapProposal(
         gpVat: numOrNull(amountsRaw.gpVat),
       },
       amountsSource:
-        c.amountsSource === "manual" || c.amountsSource === "adapter"
+        c.amountsSource === "manual" ||
+        c.amountsSource === "adapter" ||
+        c.amountsSource === "drive-ai"
           ? c.amountsSource
           : "none",
       note: String(c.note || "").slice(0, 400),
+      driveFileIds: Array.isArray(c.driveFileIds)
+        ? c.driveFileIds.map(String).filter(Boolean).slice(0, 40)
+        : [],
     };
   }
   return {
     ...base,
-    phase: raw.phase === "D4" ? "D4" : "D3",
+    phase: raw.phase === "F4" ? "F4" : raw.phase === "D4" ? "D4" : "D3",
     status:
       raw.status === "ready" || raw.status === "merged" || raw.status === "studying"
         ? raw.status
@@ -537,6 +559,7 @@ export function fillProposalAmountsFromReports(
           : emptyAmounts(),
         amountsSource: has ? "adapter" : "none",
         status: has ? "ready" : prev.status,
+        driveFileIds: prev.driveFileIds || [],
         note: has
           ? `D4 จากเมล · parse ผ่าน ${parsedOk}` +
             (parsedFail ? ` · ไม่ผ่าน ${parsedFail}` : "") +
@@ -564,6 +587,7 @@ export function fillProposalAmountsFromReports(
         : emptyAmounts(),
       amountsSource: has ? "adapter" : "none",
       status: has ? "ready" : prev.status,
+      driveFileIds: prev.driveFileIds || [],
       note: has
         ? `D4 ม้วนจากเมล · ผ่าน ${roll.parsedOk}` +
           (roll.parsedFail ? ` · ไม่ผ่าน ${roll.parsedFail}` : "") +
@@ -621,17 +645,14 @@ export async function rebuildMonthProposalsFromCatalog(opts?: {
   return { months, proposals, reportCount: reports.length };
 }
 
-/** แปลงข้อเสนอ L3 → ยอดสำหรับผสานงบ (เฉพาะช่องที่มี adapter) */
+/** แปลงข้อเสนอ L3 → ยอดสำหรับผสานงบ (เฉพาะช่องที่พร้อมยืนยัน) */
 export function proposalToMonthSources(
   proposal: VatDeliveryMonthProposal,
 ): MonthSourcesView {
   const byChannel = {} as Record<MonthChannel, MonthChannelSource>;
   for (const ch of DELIVERY_CHANNELS) {
     const c = proposal.channels[ch];
-    const has =
-      c.amountsSource === "adapter" &&
-      c.amounts.appSales != null &&
-      Number(c.amounts.appSales) > 0;
+    const has = channelHasConfirmableAmounts(c);
     const kind =
       ch === "grab"
         ? "grab-rollup"
@@ -661,9 +682,143 @@ export function proposalToMonthSources(
   };
 }
 
+export type DriveAiChannelDraft = {
+  appSales?: number | null;
+  transfer?: number | null;
+  gpExVat?: number | null;
+  gpVat?: number | null;
+  driveFileIds?: string[];
+  note?: string;
+};
+
+/** F4 — ใส่ร่างยอดจาก AI/มือ ลง L3 เท่านั้น · ไม่ทับงบ */
+export function applyDriveAiDraftToProposal(
+  proposal: VatDeliveryMonthProposal,
+  drafts: Partial<Record<DeliveryChannel, DriveAiChannelDraft>>,
+  actor = "ai",
+): VatDeliveryMonthProposal {
+  const next: VatDeliveryMonthProposal = {
+    ...proposal,
+    phase: "F4",
+    channels: { ...proposal.channels },
+    rebuiltAt: Date.now(),
+    rebuiltBy: actor,
+  };
+
+  for (const ch of DELIVERY_CHANNELS) {
+    const d = drafts[ch];
+    if (!d) continue;
+    const prev = proposal.channels[ch];
+    const appSales =
+      d.appSales == null || !Number.isFinite(Number(d.appSales))
+        ? null
+        : roundMoney(Number(d.appSales));
+    const transfer =
+      d.transfer == null || !Number.isFinite(Number(d.transfer))
+        ? null
+        : roundMoney(Number(d.transfer));
+    let gpExVat =
+      d.gpExVat == null || !Number.isFinite(Number(d.gpExVat))
+        ? null
+        : roundMoney(Number(d.gpExVat));
+    let gpVat =
+      d.gpVat == null || !Number.isFinite(Number(d.gpVat))
+        ? null
+        : roundMoney(Number(d.gpVat));
+    if (
+      gpExVat == null &&
+      gpVat == null &&
+      appSales != null &&
+      transfer != null &&
+      appSales >= transfer
+    ) {
+      const fee = roundMoney(appSales - transfer);
+      gpVat = fee > 0 ? gpVatFromFee(fee, "incVat", 7) : 0;
+      gpExVat = fee > 0 ? roundMoney(fee - gpVat) : 0;
+    }
+    const has = appSales != null && appSales > 0;
+    next.channels[ch] = {
+      ...prev,
+      amounts: has
+        ? {
+            appSales,
+            transfer: transfer ?? 0,
+            gpExVat: gpExVat ?? 0,
+            gpVat: gpVat ?? 0,
+          }
+        : emptyAmounts(),
+      amountsSource: has ? "drive-ai" : "none",
+      status: has ? "ready" : prev.status,
+      driveFileIds: Array.isArray(d.driveFileIds)
+        ? d.driveFileIds.map(String).filter(Boolean).slice(0, 40)
+        : prev.driveFileIds || [],
+      note: has
+        ? String(d.note || "F4 ร่างจากไฟล์ Drive · ยังไม่ทับงบ").slice(0, 400)
+        : String(d.note || prev.note || "").slice(0, 400),
+    };
+  }
+
+  const anyReady = DELIVERY_CHANNELS.some((ch) =>
+    channelHasConfirmableAmounts(next.channels[ch]),
+  );
+  next.status = anyReady ? "ready" : "studying";
+  return next;
+}
+
 /**
- * D5 — ผสานข้อเสนอเดือนเข้า vatMonthlyReturns (L4)
- * เฉพาะช่องที่มียอด adapter · ไม่ทับช่องที่ยอดข้อเสนอว่าง
+ * F4 สำรองบนเว็บ — สร้างข้อเสนอจากเมลที่มีไฟล์ Drive แล้วเติมยอด parse
+ * (แท็ก drive-ai · ยังไม่ทับ L4)
+ */
+export async function draftDriveMonthProposal(opts: {
+  monthKey: string;
+  actor: string;
+}): Promise<VatDeliveryMonthProposal> {
+  const reports = await listPlatformEmailReports({ max: 300 });
+  const monthReports = reports.filter(
+    (r) => monthKeyFromReport(r) === opts.monthKey,
+  );
+  const withDrive = monthReports.filter((r) => r.driveFiles?.length);
+  const base = buildMonthProposalFromReports(
+    opts.monthKey,
+    withDrive.length ? withDrive : monthReports,
+    opts.actor,
+  );
+  let filled = fillProposalAmountsFromReports(
+    base,
+    withDrive.length ? withDrive : monthReports,
+    opts.actor,
+  );
+
+  const drafts: Partial<Record<DeliveryChannel, DriveAiChannelDraft>> = {};
+  for (const ch of DELIVERY_CHANNELS) {
+    const c = filled.channels[ch];
+    if (!channelHasConfirmableAmounts(c)) continue;
+    const fileIds = (withDrive.length ? withDrive : monthReports)
+      .filter((r) => r.channel === ch)
+      .flatMap((r) => r.driveFiles.map((f) => f.fileId))
+      .filter(Boolean)
+      .slice(0, 40);
+    drafts[ch] = {
+      appSales: c.amounts.appSales,
+      transfer: c.amounts.transfer,
+      gpExVat: c.amounts.gpExVat,
+      gpVat: c.amounts.gpVat,
+      driveFileIds: fileIds,
+      note:
+        `F4 จากไฟล์ Drive (${fileIds.length} ไฟล์)` +
+        (withDrive.length ? "" : " · ยังไม่มีไฟล์ Drive ใช้แคตตาล็อกเมล") +
+        " · ยังไม่ทับงบ",
+    };
+  }
+
+  filled = applyDriveAiDraftToProposal(filled, drafts, opts.actor);
+  await saveMonthProposal(filled);
+  return filled;
+}
+
+/**
+ * F5 — ผสานข้อเสนอเดือนเข้า vatMonthlyReturns (L4)
+ * เฉพาะช่องที่มียอดพร้อมยืนยัน · ไม่ทับช่องที่ยอดข้อเสนอว่าง
  */
 export async function mergeProposalIntoBooks(opts: {
   monthKey: string;
@@ -699,11 +854,7 @@ export async function mergeProposalIntoBooks(opts: {
   // ล้างช่องที่ไม่ได้ผสานออกจาก sources (ไม่เขียนทับด้วย 0)
   for (const ch of DELIVERY_CHANNELS) {
     const c = proposal.channels[ch];
-    const has =
-      want.has(ch) &&
-      c.amountsSource === "adapter" &&
-      c.amounts.appSales != null &&
-      Number(c.amounts.appSales) > 0;
+    const has = want.has(ch) && channelHasConfirmableAmounts(c);
     if (!has) {
       sources.byChannel[ch] = {
         ...emptyChannelSource(ch),

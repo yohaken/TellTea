@@ -1,13 +1,13 @@
 "use client";
 
 /**
- * ช่องไฟล์ Drive ด้านล่างหน้าที่มา — เช็คลิสต์ F0–F5 + กล่องแยกแอพ
- * F0/F1: เชื่อม Gmail(+Drive) · ซิงก์เมล · ซิงก์ไฟล์ → Drive
- * ดู docs/vat-delivery-drive-spine.md
+ * ช่องไฟล์ Drive — F0–F5
+ * ซิงก์ไฟล์ · ร่างยอด (F4) · ยืนยันลงตาราง (F5)
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MONTH_CHANNEL_LABEL, MONTH_CHANNELS } from "@/lib/vat-month-sources";
 import { formatThaiMonthKey } from "@/lib/vat-monthly";
+import { formatVatMoney } from "@/lib/vat-number-format";
 import type { MonthChannel } from "@/lib/vat-month-books";
 import {
   disconnectVatMail,
@@ -19,8 +19,19 @@ import {
   type VatMailDriveFile,
   type VatMailStatus,
 } from "@/lib/vat-sales-mail";
+import {
+  channelHasConfirmableAmounts,
+  draftDriveMonthProposal,
+  loadMonthProposal,
+  mergeProposalIntoBooks,
+  type VatDeliveryMonthProposal,
+} from "@/lib/vat-delivery-month-proposals";
 
-type Props = { monthKey: string };
+type Props = {
+  monthKey: string;
+  actor: string;
+  onBooksMerged?: () => void;
+};
 
 const SOURCES_RETURN =
   "https://telltea-shop.web.app/vat-sales/sources/?mail=connected";
@@ -37,12 +48,24 @@ function emptyByChannel(): Record<MonthChannel, VatMailDriveFile[]> {
   return { grab: [], lineman: [], shopee: [] };
 }
 
-export function VatSourcesDriveSlot({ monthKey }: Props) {
+function fmtAmt(n: number | null | undefined) {
+  if (n == null || !Number.isFinite(Number(n))) return "—";
+  return formatVatMoney(Number(n));
+}
+
+export function VatSourcesDriveSlot({
+  monthKey,
+  actor,
+  onBooksMerged,
+}: Props) {
   const [status, setStatus] = useState<VatMailStatus | null>(null);
   const [files, setFiles] = useState<Record<MonthChannel, VatMailDriveFile[]>>(
     () => emptyByChannel(),
   );
   const [fileTotal, setFileTotal] = useState(0);
+  const [proposal, setProposal] = useState<VatDeliveryMonthProposal | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -52,13 +75,15 @@ export function VatSourcesDriveSlot({ monthKey }: Props) {
     setLoading(true);
     setError("");
     try {
-      const [st, listed] = await Promise.all([
+      const [st, listed, prop] = await Promise.all([
         fetchVatMailStatus(),
         listMonthDriveFiles(monthKey),
+        loadMonthProposal(monthKey),
       ]);
       setStatus(st);
       setFiles(listed.byChannel);
       setFileTotal(listed.total);
+      setProposal(prop);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -75,8 +100,15 @@ export function VatSourcesDriveSlot({ monthKey }: Props) {
   const rootFolderId = String(drive?.rootFolderId || "");
   const f0Ready = Boolean(status?.connected && hasDriveScope && rootFolderId);
   const f1Ready = fileTotal > 0 || Number(drive?.lastDriveSyncUploaded) > 0;
-  const f2Ready = true; // UI รายการไฟล์ + เปิดลิงก์ ขึ้นแล้ว
-  const f3Ready = true; // Agent Dump ส่ง driveFiles[].webViewLink แล้ว
+  const f2Ready = true;
+  const f3Ready = true;
+  const f4Ready = Boolean(
+    proposal &&
+      MONTH_CHANNELS.some((ch) =>
+        channelHasConfirmableAmounts(proposal.channels[ch]),
+      ),
+  );
+  const f5Ready = proposal?.status === "merged";
 
   const checks = useMemo(
     () =>
@@ -103,19 +135,22 @@ export function VatSourcesDriveSlot({ monthKey }: Props) {
         },
         {
           id: "f4" as CheckId,
-          label: "AI อ่านไฟล์ → ร่างยอดเดือน",
-          ready: false,
+          label: "AI/ร่างยอดจากไฟล์ → ข้อเสนอเดือน",
+          ready: f4Ready,
         },
         {
           id: "f5" as CheckId,
           label: "Owner ยืนยัน → ลงตารางยอดเดลิเวอรี่",
-          ready: false,
+          ready: f5Ready,
         },
       ] as const,
-    [f0Ready, f1Ready, f2Ready, f3Ready],
+    [f0Ready, f1Ready, f2Ready, f3Ready, f4Ready, f5Ready],
   );
 
   const readyCount = checks.filter((c) => c.ready).length;
+  const confirmableChannels = MONTH_CHANNELS.filter((ch) =>
+    channelHasConfirmableAmounts(proposal?.channels[ch]),
+  );
 
   async function onConnect() {
     setBusy("oauth");
@@ -186,6 +221,59 @@ export function VatSourcesDriveSlot({ monthKey }: Props) {
     }
   }
 
+  async function onDraftF4() {
+    setBusy("draft");
+    setError("");
+    setMsg("");
+    try {
+      const p = await draftDriveMonthProposal({ monthKey, actor });
+      setProposal(p);
+      const n = MONTH_CHANNELS.filter((ch) =>
+        channelHasConfirmableAmounts(p.channels[ch]),
+      ).length;
+      setMsg(
+        n
+          ? `F4 ร่างยอดแล้ว ${n} ช่อง · ยังไม่ทับงบ — กดยืนยัน F5`
+          : "F4 ยังไม่มียอดจากไฟล์/เมล — ซิงก์ Drive หรือให้ AI ยิง propose",
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function onConfirmF5(channels?: MonthChannel[]) {
+    setBusy("confirm");
+    setError("");
+    setMsg("");
+    try {
+      const r = await mergeProposalIntoBooks({
+        monthKey,
+        actor,
+        proposal: proposal || undefined,
+        channels,
+      });
+      if (r.skipped) {
+        setMsg(r.reason || "ข้ามการผสาน");
+        if (r.proposal) setProposal(r.proposal);
+        return;
+      }
+      setProposal(r.proposal);
+      setMsg(
+        `F5 ผสานงบแล้ว · ${r.mergedChannels
+          .map((c) => MONTH_CHANNEL_LABEL[c])
+          .join(", ")}`,
+      );
+      onBooksMerged?.();
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy("");
+    }
+  }
+
   const connectLabel =
     !status?.connected
       ? "เชื่อม Gmail (+Drive)"
@@ -205,7 +293,7 @@ export function VatSourcesDriveSlot({ monthKey }: Props) {
       <h3 className="vat-table-subtitle">ไฟล์ Drive — แยกแอพ</h3>
       <p className="muted vat-sales-hint vat-hint-one-line">
         เดือน {formatThaiMonthKey(monthKey)} · TellTea-VAT/แอพ/{monthKey}/ ·
-        ดึงเมล → อัป Drive → อ่านไฟล์ทีหลัง
+        ซิงก์ไฟล์ → ร่างยอด → ยืนยันลงตาราง
       </p>
 
       <div className="vat-sources-drive-actions">
@@ -247,6 +335,22 @@ export function VatSourcesDriveSlot({ monthKey }: Props) {
         <button
           type="button"
           className="ghost-btn vat-mini-btn"
+          disabled={Boolean(busy)}
+          onClick={() => void onDraftF4()}
+        >
+          {busy === "draft" ? "ร่างยอด…" : "ร่างยอด F4"}
+        </button>
+        <button
+          type="button"
+          className="primary-btn vat-mini-btn"
+          disabled={Boolean(busy) || !confirmableChannels.length}
+          onClick={() => void onConfirmF5()}
+        >
+          {busy === "confirm" ? "กำลังผสาน…" : "ยืนยันลงตาราง F5"}
+        </button>
+        <button
+          type="button"
+          className="ghost-btn vat-mini-btn"
           disabled={Boolean(busy) || loading}
           onClick={() => void refresh()}
         >
@@ -269,9 +373,9 @@ export function VatSourcesDriveSlot({ monthKey }: Props) {
           {status.email || "Gmail"}
           {hasDriveScope ? " · มีสิทธิ์ Drive" : " · ยังไม่มีสิทธิ์ Drive — เชื่อมใหม่"}
           {rootFolderId ? " · มีรากโฟลเดอร์" : " · ยังไม่มีราก (กดซิงก์ Drive)"}
-          {drive?.lastDriveSyncAt
-            ? ` · ซิงก์ล่าสุดอัป ${drive.lastDriveSyncUploaded || 0} ไฟล์`
-            : ""}
+          {proposal
+            ? ` · ข้อเสนอ ${proposal.phase}/${proposal.status}`
+            : " · ยังไม่มีข้อเสนอเดือน"}
         </p>
       ) : (
         <p className="muted vat-sources-drive-status-line">
@@ -310,6 +414,8 @@ export function VatSourcesDriveSlot({ monthKey }: Props) {
         {MONTH_CHANNELS.map((ch) => {
           const folder = `TellTea-VAT/${CHANNEL_FOLDER[ch]}/${monthKey}/`;
           const list = files[ch] || [];
+          const chProp = proposal?.channels[ch];
+          const canConfirm = channelHasConfirmableAmounts(chProp);
           return (
             <article
               key={ch}
@@ -356,6 +462,41 @@ export function VatSourcesDriveSlot({ monthKey }: Props) {
                   ))
                 )}
               </ul>
+
+              <div className="vat-sources-drive-draft" data-draft={ch}>
+                <p className="vat-sources-drive-draft-title">ร่างยอด F4</p>
+                <dl className="vat-sources-drive-draft-grid">
+                  <div>
+                    <dt>ยอดขายแอพ</dt>
+                    <dd>{fmtAmt(chProp?.amounts.appSales)}</dd>
+                  </div>
+                  <div>
+                    <dt>ยอดโอน</dt>
+                    <dd>{fmtAmt(chProp?.amounts.transfer)}</dd>
+                  </div>
+                  <div>
+                    <dt>คชจ.GP</dt>
+                    <dd>{fmtAmt(chProp?.amounts.gpExVat)}</dd>
+                  </div>
+                  <div>
+                    <dt>VAT-ซื้อ</dt>
+                    <dd>{fmtAmt(chProp?.amounts.gpVat)}</dd>
+                  </div>
+                </dl>
+                {chProp?.note ? (
+                  <p className="muted vat-sources-drive-draft-note">
+                    {chProp.note}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  className="ghost-btn vat-mini-btn"
+                  disabled={Boolean(busy) || !canConfirm}
+                  onClick={() => void onConfirmF5([ch])}
+                >
+                  ยืนยันช่องนี้ → ตาราง
+                </button>
+              </div>
             </article>
           );
         })}
@@ -371,8 +512,10 @@ driveReady=${readyCount}/6
 files=${fileTotal}
 hasDriveScope=${hasDriveScope ? 1 : 0}
 rootFolderId=${rootFolderId || "-"}
-checks=F0=${f0Ready ? 1 : 0} F1=${f1Ready ? 1 : 0} F2=1 F3=1 F4=0 F5=0
-next=${!hasDriveScope ? "reconnect OAuth drive.file" : fileTotal ? "F4 AI read files → draft amounts" : "sync mail then vatMailDriveSync"}
+proposal=${proposal ? `${proposal.phase}/${proposal.status}` : "none"}
+confirmable=${confirmableChannels.join(",") || "-"}
+checks=F0=${f0Ready ? 1 : 0} F1=${f1Ready ? 1 : 0} F2=1 F3=1 F4=${f4Ready ? 1 : 0} F5=${f5Ready ? 1 : 0}
+next=${!hasDriveScope ? "reconnect OAuth drive.file" : !fileTotal ? "sync mail + vatMailDriveSync" : !f4Ready ? "draft F4 / agent propose" : !f5Ready ? "owner confirm F5" : "done"}
 doc=docs/vat-delivery-drive-spine.md
 ui=#vat-sources-drive-slot
 `}</pre>
