@@ -19791,6 +19791,11 @@ a.ghost-btn {
   margin: 0.65rem 0 1rem;
 }
 
+.vat-ingest-push-main {
+  font-weight: 600;
+  min-width: 10rem;
+}
+
 .vat-ingest-result {
   margin-top: 0.4rem;
   padding: 0.4rem 0.45rem;

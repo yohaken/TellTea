@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * แหล่งนำเข้าเดลิเวอรี่ — 4 บล็อกเท่านั้น
- * 1) โน้ต/พรอมต์  2) กล่อง AI  3) ตารางพรีวิวเดลิเวอรี่  4) ปุ่มอัปเดตเข้าตารางหลัก
+ * แหล่งนำเข้าเดลิเวอรี่ — 3 บล็อก
+ * 1) กล่อง AI  2) ตารางพรีวิว  3) ล้าง / ส่งเข้าตารางหลัก
+ * พรอมต์+เงื่อนไข VAT อยู่ใน Cloud Function (ไม่โชว์บนจอ)
  */
 import { useCallback, useMemo, useRef, useState } from "react";
 import { VatColHead } from "@/components/vat-sales/VatColHead";
-import { VatMonthProcessNotes } from "@/components/vat-sales/VatMonthProcessNotes";
 import { VatSalesSubNav } from "@/components/vat-sales/VatSalesSubNav";
 import {
   captureItemToIngestPreview,
@@ -57,6 +57,17 @@ function emptyRows(): Record<MonthChannel, RowAmounts> {
     grab: { sales: 0, transfer: 0, fee: 0, gpVat: 0 },
     shopee: { sales: 0, transfer: 0, fee: 0, gpVat: 0 },
     lineman: { sales: 0, transfer: 0, fee: 0, gpVat: 0 },
+  };
+}
+
+function emptyStrRows(): Record<
+  MonthChannel,
+  Record<keyof RowAmounts, string>
+> {
+  return {
+    grab: { sales: "", transfer: "", fee: "", gpVat: "" },
+    shopee: { sales: "", transfer: "", fee: "", gpVat: "" },
+    lineman: { sales: "", transfer: "", fee: "", gpVat: "" },
   };
 }
 
@@ -118,13 +129,10 @@ export function VatIngestSources({ actor }: Props) {
   const [monthKey, setMonthKey] = useState(() => bangkokMonthKey());
   const [files, setFiles] = useState<File[]>([]);
   const [rows, setRows] = useState<Record<MonthChannel, RowAmounts>>(emptyRows);
-  const [strRows, setStrRows] = useState<
-    Record<MonthChannel, Record<keyof RowAmounts, string>>
-  >(() => ({
-    grab: { sales: "", transfer: "", fee: "", gpVat: "" },
-    shopee: { sales: "", transfer: "", fee: "", gpVat: "" },
-    lineman: { sales: "", transfer: "", fee: "", gpVat: "" },
-  }));
+  const [strRows, setStrRows] =
+    useState<Record<MonthChannel, Record<keyof RowAmounts, string>>>(
+      emptyStrRows,
+    );
   const [busy, setBusy] = useState<"ai" | "push" | null>(null);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -217,6 +225,14 @@ export function VatIngestSources({ actor }: Props) {
     [],
   );
 
+  const clearAll = useCallback(() => {
+    setFiles([]);
+    applyPreviewRows(emptyRows());
+    setMsg("");
+    setError("");
+    if (inputRef.current) inputRef.current.value = "";
+  }, [applyPreviewRows]);
+
   const runAi = useCallback(async () => {
     if (!files.length) {
       setError("เลือกแคปจออย่างน้อย 1 รูป (สูงสุด 3)");
@@ -278,7 +294,7 @@ export function VatIngestSources({ actor }: Props) {
         return;
       }
       setMsg(
-        `อัปเดตเข้าตารางยอดเดลิเวอรี่แล้ว · ${formatThaiMonthKey(monthKey)}`,
+        `ส่งเข้าตารางหลักแล้ว · ${formatThaiMonthKey(monthKey)}`,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -293,7 +309,7 @@ export function VatIngestSources({ actor }: Props) {
     <div
       className="vat-ingest-page"
       id="vat-delivery-ingest"
-      data-ai-context="vat-delivery-ingest-four-blocks"
+      data-ai-context="vat-delivery-ingest-ai-preview-push"
     >
       <VatSalesSubNav active="sources" />
       <div className="vat-ingest-mail-bar">
@@ -319,10 +335,6 @@ export function VatIngestSources({ actor }: Props) {
         </label>
       </div>
 
-      {/* 1) note prompt */}
-      <VatMonthProcessNotes actor={actor} />
-
-      {/* 2) AI box */}
       <section className="vat-ingest-ai-box" aria-label="กล่อง AI แคปจอ">
         <input
           ref={inputRef}
@@ -353,16 +365,6 @@ export function VatIngestSources({ actor }: Props) {
           >
             {busy === "ai" ? "AI กำลังอ่าน…" : "ให้ AI คัดแยก"}
           </button>
-          {files.length ? (
-            <button
-              type="button"
-              className="btn btn-ghost vat-ingest-btn"
-              disabled={locked}
-              onClick={() => setFiles([])}
-            >
-              ล้างรูป
-            </button>
-          ) : null}
         </div>
         {files.length > 0 ? (
           <ul className="vat-ingest-file-list">
@@ -394,7 +396,6 @@ export function VatIngestSources({ actor }: Props) {
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
       {error ? <p className="error-text">{error}</p> : null}
 
-      {/* 3) table delivery preview */}
       <section className="vat-table-block vat-month-sources">
         <h2 className="vat-table-title">
           ยอดเดลิเวอรี่ (พรีวิว) — {formatThaiMonthKey(monthKey)}
@@ -464,17 +465,22 @@ export function VatIngestSources({ actor }: Props) {
         </div>
       </section>
 
-      {/* 4) update to main table */}
       <div className="vat-ingest-push-bar">
         <button
           type="button"
-          className="btn btn-secondary vat-ingest-btn"
+          className="btn btn-ghost vat-ingest-btn"
+          disabled={locked || (!files.length && !hasAny)}
+          onClick={clearAll}
+        >
+          ล้าง
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary vat-ingest-btn vat-ingest-push-main"
           disabled={locked || !hasAny}
           onClick={() => void pushToMain()}
         >
-          {busy === "push"
-            ? "กำลังอัปเดต…"
-            : "อัปเดตเข้าตารางยอดเดลิเวอรี่"}
+          {busy === "push" ? "กำลังส่ง…" : "ส่งเข้าตารางหลัก"}
         </button>
       </div>
     </div>

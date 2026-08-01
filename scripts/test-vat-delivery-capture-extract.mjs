@@ -21,7 +21,11 @@ const ui = readFileSync(
 );
 assert.match(ui, /extractDeliveryCaptures/);
 assert.match(ui, /ให้ AI คัดแยก/);
+assert.match(ui, /ส่งเข้าตารางหลัก/);
+assert.match(ui, />\s*ล้าง\s*</);
+assert.doesNotMatch(ui, /VatMonthProcessNotes|โน้ต \/ พรอมต์/);
 assert.doesNotMatch(ui, /เชื่อม Gmail|ดึง SF\+LM|extractGrabFinanceImage/);
+assert.match(fn, /คชจ\.GP ต้องเป็นยอดก่อน VAT|ex-VAT|×7\/107/);
 
 const index = readFileSync(join(root, "functions/index.js"), "utf8");
 assert.match(index, /vatDeliveryCaptureExtract/);

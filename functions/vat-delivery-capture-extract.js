@@ -15,36 +15,37 @@ const BOOTSTRAP_GEMINI_API_KEY = "";
 const MAX_IMAGE_BYTES = 3.5 * 1024 * 1024;
 const MAX_IMAGES = 3;
 
-const SYSTEM_PROMPT = `คุณอ่านแคปจอสรุปยอดเดลิเวอรี่รายเดือนของร้าน TELL TEA / Kongsi Tea Bar ในไทย
-แต่ละรูปเป็นหนึ่งแพลตฟอร์ม: GrabMerchant · ShopeeFood เมล/รายงาน · LINE MAN รายงาน/เมล GP
+const SYSTEM_PROMPT = `คุณอ่านแคปจอสรุปยอดเดลิเวอรี่รายเดือนของร้าน TELL TEA / Kongsi Tea Bar
+แต่ละรูป = หนึ่งแพลตฟอร์ม (GrabMerchant · ShopeeFood · LINE MAN)
 
-ตอบเป็น JSON เท่านั้น:
-{
-  "channel":"grab|shopee|lineman|unknown",
-  "monthKey":"YYYY-MM หรือว่าง",
-  "periodLabel":"ช่วงวันที่บนจอสั้นๆ",
-  "sales":ตัวเลขหรือ null,
-  "transfer":ตัวเลขหรือ null,
-  "fee":ตัวเลขค่าสัมบูรณ์หรือ null,
-  "gpVat":ตัวเลขหรือ null,
-  "monthMatch":trueหรือfalse,
-  "confidence":"high|medium|low",
-  "notes":"สั้นๆ ภาษาไทย"
-}
+ตอบ JSON เท่านั้น:
+{"channel":"grab|shopee|lineman|unknown","monthKey":"YYYY-MM หรือว่าง","periodLabel":"สั้นๆ","sales":ตัวเลข|null,"transfer":ตัวเลข|null,"fee":ตัวเลข|null,"gpVat":ตัวเลข|null,"monthMatch":true|false,"confidence":"high|medium|low","notes":"สั้นๆ"}
 
-กฎจำแนกช่องทาง:
-- grab = GrabMerchant / การเงิน / ยอดขายสุทธิ / ค่าคอมมิชชันแพลตฟอร์ม
-- shopee = Kongsi Tea Bar / ShopeeFood / รายงานยอดขายสะสมประจำเดือน / ยอดรายการ / ค่าธรรมเนียม (GP)
-- lineman = LINE MAN / Wongnai / ค่าบริการ GP / REPORT / ยอดโอนออกให้ร้าน
+จำแนก:
+- grab = GrabMerchant / การเงิน / ยอดขายสุทธิ / ค่าคอมมิชชัน
+- shopee = ShopeeFood / Kongsi Tea Bar / รายงานยอดขายสะสมประจำเดือน / ค่าธรรมเนียม(GP)
+- lineman = LINE MAN / Wongnai / ค่าบริการ GP / ยอดโอนออกให้ร้าน
 
-แมปตัวเลข:
-- grab: sales=ยอดขายสุทธิ · transfer=รายได้/รายได้สุทธิ · feeIncl=ค่าคอมมิชชันแพลตฟอร์ม(สัมบูรณ์ รวม VAT ถ้าจอไม่แยก) · gpVat=ถ้าเห็นแยกใส่ ไม่งั้น null
-- shopee: sales=ยอดรายการ · transfer=ยอดรวมสุทธิประจำเดือน · fee=ค่าธรรมเนียม(GP) อย่างเดียว · gpVat=ยอดภาษีมูลค่าเพิ่มค่าธรรมเนียม (แยกในเมลแล้ว)
-- lineman: sales=ยอดขาย/total revenue · transfer=ยอดโอนออกให้ร้าน/payout · feeIncl=ค่า GP รวม VAT ถ้าจอไม่แยก · gpVat=null ถ้าไม่แยก
-- คชจ.(fee) ต้องไม่รวม VAT · แยกไว้แล้ว→ใช้ตามนั้น · ยังไม่แยก→ส่งยอดรวมใน fee + gpVat=null (ระบบแยก ×7/107)
-- monthKey = เดือนของช่วงรายงาน เป็น ค.ศ. (พ.ศ.ให้ลบ 543) — Shopee/LM ใช้เดือนในรายงาน ไม่ใช่วันส่งเมล
-- monthMatch = true ถ้า monthKey ตรง selectedMonthKey
-- ห้ามแต่งตัวเลขที่มองไม่เห็น`;
+แมปตัวเลข (สำคัญ — อย่าสลับคอลัมน์):
+- sales = ยอดขายแอพ (ฐานคำนวณ VAT ขาย) · ใช้ยอดรวมตามที่แพลตฟอร์มแสดง · ห้ามหัก GP/VAT ออกเอง
+- transfer = ยอดโอนเข้าบัญชีร้าน (= รายได้ในงบ) · ห้ามสลับกับ sales
+- fee = คชจ.GP ต้องเป็นยอดก่อน VAT (ex-VAT) · ห้ามใส่ยอดรวมที่มี VAT ปนถ้าจอแยกไว้แล้ว
+- gpVat = VAT ของค่า GP (VAT-ซื้อ) · คู่กับ fee
+
+กฎ VAT ของคชจ. (ต้องทำตาม):
+1) จอ/เมลแยก fee กับ VAT แล้ว → fee=ยอดก่อน VAT · gpVat=ยอด VAT ตามที่เห็น
+2) จอมีแต่ยอด GP รวม VAT (ไม่แยก) → ส่งยอดรวมใน fee และ gpVat=null (ระบบจะแยก ×7/107 ให้)
+3) ห้ามลบ VAT ออกจาก sales หรือ transfer
+4) ห้ามคิด fee จาก sales−transfer ถ้าจอมีตัวเลข fee/GP ชัดเจนอยู่แล้ว
+
+แมปรายช่องทาง:
+- grab: sales=ยอดขายสุทธิ · transfer=รายได้/รายได้สุทธิ · fee=ค่าคอมมิชชัน · gpVat=ถ้าแยก
+- shopee: sales=ยอดรายการ · transfer=ยอดรวมสุทธิประจำเดือน · fee=ค่าธรรมเนียม(GP) · gpVat=ภาษีมูลค่าเพิ่มค่าธรรมเนียม
+- lineman: sales=ยอดขาย/total revenue · transfer=ยอดโอนออกให้ร้าน · fee=ค่า GP · gpVat=ถ้าแยก
+
+เดือน: monthKey=เดือนของช่วงรายงาน ค.ศ. (พ.ศ.−543) · Shopee/LM ใช้เดือนในรายงาน ไม่ใช่วันส่งเมล
+monthMatch=true ถ้า monthKey ตรง selectedMonthKey
+ห้ามแต่งตัวเลขที่มองไม่เห็น`;
 
 function asString(v, max = 200) {
   if (typeof v !== "string") return "";
@@ -108,12 +109,17 @@ async function loadAiSettings(db) {
 
 function extractJsonObject(text) {
   const s = String(text || "").trim();
+  if (!s) throw new Error("Gemini ไม่ได้คืน JSON");
   const fenced = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const raw = fenced ? fenced[1].trim() : s;
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
   if (start < 0 || end <= start) throw new Error("Gemini ไม่ได้คืน JSON");
-  return JSON.parse(raw.slice(start, end + 1));
+  try {
+    return JSON.parse(raw.slice(start, end + 1));
+  } catch {
+    throw new Error("Gemini คืน JSON ไม่สมบูรณ์");
+  }
 }
 
 function parseDataUrl(imageDataUrl) {
@@ -134,10 +140,18 @@ function parseDataUrl(imageDataUrl) {
   return { mimeType, data, bytes: bytes.length };
 }
 
-async function callGeminiVisionJson({ apiKey, model, mimeType, data, userText }) {
+async function postGeminiVision({ apiKey, model, mimeType, data, userText, withThinking }) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
     model,
   )}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const generationConfig = {
+    temperature: 0.1,
+    maxOutputTokens: 2048,
+    responseMimeType: "application/json",
+  };
+  if (withThinking) {
+    generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  }
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -152,21 +166,53 @@ async function callGeminiVisionJson({ apiKey, model, mimeType, data, userText })
         },
       ],
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 1024,
-        responseMimeType: "application/json",
-      },
+      generationConfig,
     }),
   });
   const json = await res.json().catch(() => ({}));
+  return { res, json };
+}
+
+async function callGeminiVisionJson({ apiKey, model, mimeType, data, userText }) {
+  let { res, json } = await postGeminiVision({
+    apiKey,
+    model,
+    mimeType,
+    data,
+    userText,
+    withThinking: true,
+  });
+  if (!res.ok) {
+    const msg = String(json?.error?.message || `Gemini error (${res.status})`);
+    if (/thinkingConfig|Unknown name|Invalid JSON/i.test(msg)) {
+      ({ res, json } = await postGeminiVision({
+        apiKey,
+        model,
+        mimeType,
+        data,
+        userText,
+        withThinking: false,
+      }));
+    } else {
+      throw new Error(msg.slice(0, 240));
+    }
+  }
   if (!res.ok) {
     throw new Error(
       String(json?.error?.message || `Gemini error (${res.status})`).slice(0, 240),
     );
   }
+  const candidate = json?.candidates?.[0];
+  const finish = String(candidate?.finishReason || "");
   const text =
-    json?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
+    candidate?.content?.parts?.map((p) => p.text || "").join("") || "";
+  if (!text.trim()) {
+    throw new Error(
+      finish && finish !== "STOP"
+        ? `Gemini ว่าง (${finish})`
+        : "Gemini ไม่ได้คืน JSON",
+    );
+  }
   return extractJsonObject(text);
 }
 
