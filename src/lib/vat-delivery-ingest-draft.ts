@@ -10,6 +10,7 @@ import {
   uploadBytes,
 } from "firebase/storage";
 import { getDb, getFirebaseAuth, getFirebaseStorage } from "./firebase";
+import { compressImageForUpload } from "./receipts";
 import { guessContentType, VAT_IMPORT_STORAGE_PREFIX } from "./vat-import";
 import {
   MONTH_CHANNELS,
@@ -19,8 +20,14 @@ import { isMonthKey, normalizeMoney } from "./vat-sales";
 
 export const VAT_DELIVERY_INGEST_DRAFTS_COL = "vatDeliveryIngestDrafts";
 
-const UPLOAD_TIMEOUT_MS = 45_000;
-const SAVE_TIMEOUT_MS = 20_000;
+/** sessionStorage key — ยืนยันเดือนก่อนอัปแคปครั้งแรกของเดือน */
+export const INGEST_MONTH_CONFIRM_PREFIX = "vat-ingest-up-ok:";
+
+const UPLOAD_TIMEOUT_MS = 30_000;
+const SAVE_TIMEOUT_MS = 12_000;
+const COMPRESS_TIMEOUT_MS = 12_000;
+/** ข้ามย่อถ้ารูป JPEG เล็กอยู่แล้ว — ลดเวลาเซฟ */
+const SKIP_COMPRESS_JPEG_BYTES = 420_000;
 
 export type IngestDraftAmounts = {
   sales: number;
@@ -210,44 +217,64 @@ export async function deleteIngestDraft(monthKey: string): Promise<void> {
   }
 }
 
-/** ย่อแคปเป็น JPEG ก่อนอัปโหลด — กันเซฟค้างจากไฟล์ใหญ่ */
+/**
+ * ต้องถามยืนยันเดือนก่อนอัปแคปหรือไม่
+ * — ถามครั้งแรกของเดือนเมื่อยังไม่มีรูปที่เซฟ (กันอัปผิดเดือน)
+ */
+export function needsIngestMonthConfirm(input: {
+  hasSavedImages: boolean;
+  alreadyConfirmed: boolean;
+}): boolean {
+  if (input.hasSavedImages) return false;
+  if (input.alreadyConfirmed) return false;
+  return true;
+}
+
+export function ingestMonthConfirmStorageKey(monthKey: string): string {
+  return `${INGEST_MONTH_CONFIRM_PREFIX}${monthKey}`;
+}
+
+export function readIngestMonthConfirmed(monthKey: string): boolean {
+  if (typeof sessionStorage === "undefined") return false;
+  try {
+    return sessionStorage.getItem(ingestMonthConfirmStorageKey(monthKey)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function writeIngestMonthConfirmed(monthKey: string): void {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.setItem(ingestMonthConfirmStorageKey(monthKey), "1");
+  } catch {
+    /* private mode */
+  }
+}
+
+export function clearIngestMonthConfirmed(monthKey: string): void {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.removeItem(ingestMonthConfirmStorageKey(monthKey));
+  } catch {
+    /* private mode */
+  }
+}
+
+/** ย่อแคปด้วย createImageBitmap+toBlob — เร็วกว่า dataURL loop เดิม */
 async function compressCaptureToJpeg(file: File): Promise<File> {
   if (typeof document === "undefined") return file;
-  const raw = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("อ่านรูปไม่ได้"));
-    reader.readAsDataURL(file);
-  });
-  if (!raw.startsWith("data:image/")) return file;
-
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const maxEdge = 1280;
-      const scale = Math.min(1, maxEdge / Math.max(img.width, img.height));
-      const w = Math.max(1, Math.round(img.width * scale));
-      const h = Math.max(1, Math.round(img.height * scale));
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        resolve(raw);
-        return;
-      }
-      ctx.drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL("image/jpeg", 0.78));
-    };
-    img.onerror = () => reject(new Error("ย่อรูปไม่ได้"));
-    img.src = raw;
-  });
-
-  const bin = atob(dataUrl.split(",")[1] || "");
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+  const isJpeg =
+    file.type === "image/jpeg" ||
+    file.type === "image/jpg" ||
+    /\.jpe?g$/i.test(file.name);
+  if (isJpeg && file.size > 0 && file.size <= SKIP_COMPRESS_JPEG_BYTES) {
+    return file;
+  }
+  const out = await compressImageForUpload(file, 1280, 0.72);
   const base = safeFileName(file.name).replace(/\.[^.]+$/, "") || "capture";
-  return new File([bytes], `${base}.jpg`, { type: "image/jpeg" });
+  if (out.name === `${base}.jpg` && out.type === "image/jpeg") return out;
+  return new File([out], `${base}.jpg`, { type: "image/jpeg" });
 }
 
 /** อัปโหลดแคปพรีวิว → vat-imports/{yyyy}/{mm}/capture/… */
@@ -264,7 +291,7 @@ export async function uploadIngestCaptureFile(input: {
 
   const file = await withTimeout(
     compressCaptureToJpeg(input.file),
-    20_000,
+    COMPRESS_TIMEOUT_MS,
     "ย่อรูป",
   );
 

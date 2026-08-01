@@ -17,8 +17,12 @@ import {
   deleteIngestDraft,
   emptyIngestByChannel,
   loadIngestDraft,
+  clearIngestMonthConfirmed,
+  needsIngestMonthConfirm,
+  readIngestMonthConfirmed,
   saveIngestDraft,
   uploadIngestCaptureFile,
+  writeIngestMonthConfirmed,
   type IngestDraftAmounts,
   type IngestDraftImage,
 } from "@/lib/vat-delivery-ingest-draft";
@@ -36,7 +40,7 @@ import {
   type MonthChannel,
 } from "@/lib/vat-month-books";
 import {
-  bangkokMonthKey,
+  defaultVatCloseMonthKey,
   formatThaiMonthKey,
   listThaiMonthOptions,
 } from "@/lib/vat-monthly";
@@ -123,7 +127,8 @@ function MoneyCell({
 
 export function VatIngestSources({ actor }: Props) {
   const monthOptions = useMemo(() => listThaiMonthOptions(undefined, 18), []);
-  const [monthKey, setMonthKey] = useState(() => bangkokMonthKey());
+  /** ช่วงปิดงบต้นเดือน → เปิดเดือนก่อน (เช่น ส.ค. → ก.ค.) */
+  const [monthKey, setMonthKey] = useState(() => defaultVatCloseMonthKey());
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [pendingChannels, setPendingChannels] = useState<
     Array<MonthChannel | "unknown">
@@ -141,9 +146,15 @@ export function VatIngestSources({ actor }: Props) {
   const [error, setError] = useState("");
   const [draftSavedAt, setDraftSavedAt] = useState(0);
   const [dirty, setDirty] = useState(false);
+  const [monthConfirmOpen, setMonthConfirmOpen] = useState(false);
+  const [confirmMonthKey, setConfirmMonthKey] = useState(() =>
+    defaultVatCloseMonthKey(),
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
+  const pendingPickAfterLoadRef = useRef(false);
+  const confirmedMonthsRef = useRef<Set<string>>(new Set());
 
   const totals = useMemo(() => {
     let sales = 0;
@@ -220,6 +231,10 @@ export function VatIngestSources({ actor }: Props) {
         setSavedImages(draft.images);
         setDraftSavedAt(draft.updatedAt);
         setDirty(false);
+        if (draft.images.length) {
+          confirmedMonthsRef.current.add(key);
+          writeIngestMonthConfirmed(key);
+        }
         setMsg(
           draft.updatedAt
             ? `โหลดพรีวิวที่เซฟไว้ · ${new Date(draft.updatedAt).toLocaleString("th-TH")}`
@@ -231,6 +246,10 @@ export function VatIngestSources({ actor }: Props) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
         setBusy(null);
+        if (pendingPickAfterLoadRef.current) {
+          pendingPickAfterLoadRef.current = false;
+          queueMicrotask(() => inputRef.current?.click());
+        }
       }
     },
     [applyPreviewRows],
@@ -275,6 +294,40 @@ export function VatIngestSources({ actor }: Props) {
     [pendingFiles, savedImages.length],
   );
 
+  const openFilePicker = useCallback(() => {
+    inputRef.current?.click();
+  }, []);
+
+  const onAddCaptureClick = useCallback(() => {
+    const already =
+      confirmedMonthsRef.current.has(monthKey) ||
+      readIngestMonthConfirmed(monthKey);
+    if (
+      needsIngestMonthConfirm({
+        hasSavedImages: savedImages.length > 0,
+        alreadyConfirmed: already,
+      })
+    ) {
+      setConfirmMonthKey(monthKey);
+      setMonthConfirmOpen(true);
+      return;
+    }
+    openFilePicker();
+  }, [monthKey, openFilePicker, savedImages.length]);
+
+  const confirmMonthAndPick = useCallback(() => {
+    const key = confirmMonthKey;
+    confirmedMonthsRef.current.add(key);
+    writeIngestMonthConfirmed(key);
+    setMonthConfirmOpen(false);
+    if (key !== monthKey) {
+      pendingPickAfterLoadRef.current = true;
+      setMonthKey(key);
+      return;
+    }
+    openFilePicker();
+  }, [confirmMonthKey, monthKey, openFilePicker]);
+
   const clearAll = useCallback(async () => {
     setBusy("save");
     setError("");
@@ -287,6 +340,8 @@ export function VatIngestSources({ actor }: Props) {
       applyPreviewRows(emptyRows(), false);
       setDraftSavedAt(0);
       setDirty(false);
+      confirmedMonthsRef.current.delete(monthKey);
+      clearIngestMonthConfirmed(monthKey);
       if (inputRef.current) inputRef.current.value = "";
       setMsg("ล้างพรีวิวแล้ว");
     } catch (e) {
@@ -386,8 +441,10 @@ export function VatIngestSources({ actor }: Props) {
     setBusy("save");
     setError("");
     setMsg("เซฟยอด…");
+    const filesToUpload = [...pendingFiles];
+    const channelsToUpload = [...pendingChannels];
     try {
-      // 1) เซฟยอดก่อน — ไม่รออัปโหลดรูป
+      // 1) เซฟยอดก่อน — UI ได้ feedback เร็ว ไม่รออัปโหลดรูป
       let images = [...savedImages];
       let saved = await saveIngestDraft({
         monthKey,
@@ -397,18 +454,25 @@ export function VatIngestSources({ actor }: Props) {
         updatedBy: actor,
       });
       setDraftSavedAt(saved.updatedAt);
+      setDirty(false);
+      if (!filesToUpload.length) {
+        setMsg(
+          `เซฟแล้ว · รูป ${saved.images.length} · ${formatThaiMonthKey(monthKey)}`,
+        );
+        return;
+      }
 
-      // 2) อัปโหลดรูปใหม่ทีละใบ (ย่อ JPEG แล้ว)
+      // 2) อัปโหลดรูปใหม่ทีละใบ (ย่อ JPEG เร็วด้วย createImageBitmap)
       const uploaded: IngestDraftImage[] = [];
       const uploadErrors: string[] = [];
-      for (let i = 0; i < pendingFiles.length; i += 1) {
-        setMsg(`อัปโหลดรูป ${i + 1}/${pendingFiles.length}…`);
+      for (let i = 0; i < filesToUpload.length; i += 1) {
+        setMsg(`อัปโหลดรูป ${i + 1}/${filesToUpload.length}…`);
         try {
           const img = await uploadIngestCaptureFile({
-            file: pendingFiles[i],
+            file: filesToUpload[i],
             monthKey,
           });
-          const ch = pendingChannels[i];
+          const ch = channelsToUpload[i];
           uploaded.push({
             ...img,
             channel:
@@ -432,6 +496,8 @@ export function VatIngestSources({ actor }: Props) {
           updatedAt: Date.now(),
           updatedBy: actor,
         });
+        confirmedMonthsRef.current.add(monthKey);
+        writeIngestMonthConfirmed(monthKey);
       }
 
       setSavedImages(saved.images);
@@ -548,7 +614,7 @@ export function VatIngestSources({ actor }: Props) {
     <div
       className="vat-ingest-page"
       id="vat-delivery-ingest"
-      data-ai-context="vat-delivery-ingest-save-slim"
+      data-ai-context="vat-delivery-ingest-save-month-confirm"
     >
       <VatSalesSubNav active="sources" />
       <div className="vat-ingest-mail-bar">
@@ -592,7 +658,7 @@ export function VatIngestSources({ actor }: Props) {
             type="button"
             className="ghost-btn vat-sales-act-btn"
             disabled={locked || !canAddMore}
-            onClick={() => inputRef.current?.click()}
+            onClick={onAddCaptureClick}
           >
             เพิ่มแคป
           </button>
@@ -743,6 +809,62 @@ export function VatIngestSources({ actor }: Props) {
           {busy === "push" ? "กำลังส่ง…" : "ส่งเข้าตารางหลัก"}
         </button>
       </div>
+
+      {monthConfirmOpen ? (
+        <div
+          className="modal-backdrop edit-modal is-module-form vat-ingest-month-confirm"
+          role="presentation"
+          onClick={() => setMonthConfirmOpen(false)}
+        >
+          <div
+            className="modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-label="ยืนยันเดือนก่อนเพิ่มแคป"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="entry-toolbar module-form-head">
+              <h2 className="panel-title">เดือนถูกต้องไหม?</h2>
+            </div>
+            <p className="muted form-hint-inline vat-ingest-month-confirm-hint">
+              ถามครั้งแรกของเดือนเมื่อยังไม่เคยอัปแคป — กันอัปผิดเดือน
+            </p>
+            <label className="vat-month-pick vat-ingest-month-confirm-pick">
+              <span className="muted">เดือนเป้าหมาย</span>
+              <select
+                value={confirmMonthKey}
+                onChange={(e) => setConfirmMonthKey(e.target.value)}
+                aria-label="เลือกเดือนเป้าหมาย"
+              >
+                {monthOptions.map((o) => (
+                  <option key={o.key} value={o.key}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="vat-ingest-month-confirm-focus">
+              จะอัปเข้า <strong>{formatThaiMonthKey(confirmMonthKey)}</strong>
+            </p>
+            <div className="entry-actions vat-ingest-month-confirm-actions">
+              <button
+                type="button"
+                className="ghost-btn vat-sales-act-btn"
+                onClick={() => setMonthConfirmOpen(false)}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                className="primary-btn vat-sales-act-btn"
+                onClick={confirmMonthAndPick}
+              >
+                ใช่ · เลือกไฟล์
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -19830,74 +19830,118 @@ a.ghost-btn {
 }
 
 .vat-ingest-preview-wrap {
-  margin: 0.08rem 0 0.15rem;
+  margin: 0.2rem 0 0.35rem;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* คอลัมน์ชิดเนื้อหา — ไม่ยืดเต็มจอ */
+/* ตารางพรีวิวเต็มแถว · ชิดขอบเหมือน vat-month-slim */
 .vat-ingest-preview-slim {
-  width: max-content;
-  max-width: 100%;
+  width: 100%;
+  min-width: 100%;
   border-collapse: collapse;
-  table-layout: auto;
-  font-size: 0.68rem;
+  table-layout: fixed;
+  font-size: 0.72rem;
 }
 
 .vat-ingest-preview-slim th,
 .vat-ingest-preview-slim td {
-  padding: 0.08rem 0.12rem;
-  line-height: 1.15;
+  padding: 0.1rem 0.35rem;
+  line-height: 1.2;
+  height: 1.55rem;
   white-space: nowrap;
   vertical-align: middle;
-  width: 1%;
+  overflow: visible;
+  box-sizing: border-box;
 }
 
 .vat-ingest-preview-slim th {
-  font-size: 0.62rem;
+  font-size: 0.68rem;
   font-weight: 700;
   text-align: right;
+  letter-spacing: 0.01em;
 }
 
 .vat-ingest-preview-slim th:first-child,
 .vat-ingest-preview-slim .col-seg {
   text-align: left;
   font-weight: 600;
-  padding-right: 0.28rem;
+  width: 18%;
 }
 
 .vat-ingest-preview-slim .col-num {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  width: 20.5%;
 }
 
 .vat-ingest-preview-slim .vat-sales-input {
-  display: inline-block;
-  width: 7.2ch;
+  display: block;
+  width: 100%;
   min-width: 0;
   max-width: none;
-  min-height: 1.2rem;
-  height: 1.2rem;
-  padding: 0 0.1rem;
+  min-height: 1.28rem;
+  height: 1.28rem;
+  padding: 0.02rem 0.22rem;
   margin: 0;
   border: 1px solid rgba(28, 42, 31, 0.22);
   border-radius: 2px;
-  font-size: 0.68rem;
-  line-height: 1.1;
+  font-size: 0.72rem;
+  line-height: 1.15;
   text-align: right;
   font-variant-numeric: tabular-nums;
-  box-sizing: content-box;
+  box-sizing: border-box;
   background: rgba(255, 255, 255, 0.75);
 }
 
 .vat-ingest-preview-slim .col-net {
   font-weight: 700;
-  padding: 0.08rem 0.12rem;
+  padding: 0.1rem 0.35rem;
 }
 
 .vat-ingest-total-row td {
   font-weight: 700;
   border-top: 1px solid rgba(28, 42, 31, 0.18);
+}
+
+.vat-ingest-month-confirm .modal-card {
+  max-width: 22rem;
+  width: min(92vw, 22rem);
+  padding: 0.85rem 1rem 1rem;
+}
+
+.vat-ingest-month-confirm-hint {
+  margin: 0.15rem 0 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.vat-ingest-month-confirm-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  width: 100%;
+  margin: 0 0 0.55rem;
+}
+
+.vat-ingest-month-confirm-pick select {
+  width: 100%;
+  min-height: 2.25rem;
+}
+
+.vat-ingest-month-confirm-focus {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.vat-ingest-month-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin: 0;
 }
 
 .vat-ingest-result {
