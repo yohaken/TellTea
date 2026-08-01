@@ -19667,6 +19667,12 @@ a.ghost-btn {
   margin-bottom: 0.55rem;
 }
 
+.vat-autosave-hint {
+  font-size: 0.78rem;
+  margin-right: 0.35rem;
+  align-self: center;
+}
+
 .vat-month-process-notes-input {
   display: block;
   width: 100%;

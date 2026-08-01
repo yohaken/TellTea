@@ -369,26 +369,59 @@ export function VatMonthBooks({ actor }: Props) {
     });
   }, [month]);
 
-  // อัตโนมัติเซฟเบา ๆ
+  // เซฟอัตโนมัติทันทีเมื่อแก้ — ไม่ต้องกดบันทึก (สถานะ saved · ไม่ทับ filed)
   useEffect(() => {
     if (!hydrated || loading || locked || !dirty) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       void (async () => {
-        try {
-          const input = draftToSaveInput(draftRef.current, "draft");
-          const saved = await saveVatMonthlyReturn(input, actor);
-          setDraft((d) => ({ ...d, status: saved.status }));
+        const snap = draftRef.current;
+        if (snap.status === "filed") {
           setDirty(false);
-        } catch {
-          /* silent autosave */
+          return;
+        }
+        try {
+          const saved = await saveVatMonthlyReturn(
+            draftToSaveInput(snap, "saved"),
+            actor,
+          );
+          setDraft((d) =>
+            d.monthKey === saved.monthKey
+              ? { ...d, status: saved.status }
+              : d,
+          );
+          setDirty(false);
+          setMsg("เซฟอัตโนมัติแล้ว");
+          setError("");
+        } catch (e) {
+          setError(
+            e instanceof Error
+              ? `เซฟไม่สำเร็จ: ${e.message}`
+              : "เซฟไม่สำเร็จ",
+          );
         }
       })();
-    }, 900);
+    }, 450);
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, [draft, dirty, hydrated, loading, locked, actor]);
+
+  // ก่อนออกจากหน้า — เซฟค้างถ้ายัง dirty
+  useEffect(() => {
+    const flush = () => {
+      if (!hydrated || locked || !dirty) return;
+      const snap = draftRef.current;
+      if (snap.status === "filed") return;
+      void saveVatMonthlyReturn(draftToSaveInput(snap, "saved"), actor);
+    };
+    const onHide = () => flush();
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      flush();
+    };
+  }, [hydrated, locked, dirty, actor]);
 
   function setTransferField(key: MonthChannel | "storefront", raw: string) {
     if (locked) return;
@@ -607,23 +640,6 @@ export function VatMonthBooks({ actor }: Props) {
     }
   };
 
-  const saveDraft = async (as: "draft" | "saved") => {
-    setBusy(true);
-    setError("");
-    try {
-      const saved = await saveVatMonthlyReturn(
-        draftToSaveInput(draft, as),
-        actor,
-      );
-      hydrateFromReturn(saved);
-      setMsg(as === "draft" ? "บันทึกร่างแล้ว" : "บันทึกแล้ว");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const trialToPnl = async () => {
     setBusy(true);
     setError("");
@@ -804,7 +820,7 @@ export function VatMonthBooks({ actor }: Props) {
         >
           {statusLabel}
           {dirty ? (
-            <span className="vat-dirty-dot" title="มีการแก้ที่ยังไม่บันทึก">
+            <span className="vat-dirty-dot" title="กำลังเซฟอัตโนมัติ…">
               ·
             </span>
           ) : null}
@@ -1716,22 +1732,9 @@ export function VatMonthBooks({ actor }: Props) {
           <div className="vat-month-actions">
             {!locked ? (
               <>
-                <button
-                  type="button"
-                  className="vat-mini-btn"
-                  disabled={busy}
-                  onClick={() => void saveDraft("draft")}
-                >
-                  ร่าง
-                </button>
-                <button
-                  type="button"
-                  className="vat-mini-btn vat-mini-btn--primary"
-                  disabled={busy}
-                  onClick={() => void saveDraft("saved")}
-                >
-                  บันทึก
-                </button>
+                <span className="muted vat-autosave-hint">
+                  {dirty ? "กำลังเซฟ…" : "เซฟอัตโนมัติเมื่อแก้ตัวเลข"}
+                </span>
                 <button
                   type="button"
                   className="vat-mini-btn"
