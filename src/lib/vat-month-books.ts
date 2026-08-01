@@ -143,10 +143,12 @@ export function retToMonthBooksDraft(ret: VatMonthlyReturn): MonthBooksDraft {
     gpFee[k] = normalizeMoney(gp[k].amount);
     gpVatOverride[k] = normalizeMoney(gp[k].gpVatOverride);
   }
-  // หน้าร้าน: โอนจริงจาก gp · ถ้าไม่มี ใช้ยอดขายหน้าร้าน
+  // หน้าร้าน: ยอดที่เซฟใน gp (mode transfer) ต้องจำได้แม้เป็น 0
+  // legacy ที่ยังไม่มีโอน — ค่อย fallback ยอดขาย
   const sfNet = normalizeMoney(gp.storefront.netTransfer);
   const sfSales = normalizeMoney(ret.storefront.reportedGross);
-  transfer.storefront = sfNet > 0 ? sfNet : sfSales;
+  transfer.storefront =
+    gp.storefront.mode === "transfer" || sfNet > 0 ? sfNet : sfSales;
 
   return {
     monthKey: ret.monthKey,

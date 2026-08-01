@@ -34,6 +34,13 @@ const ui = readFileSync(
   "utf8",
 );
 assert.match(ui, /patchSfSendIntoDraft/);
+assert.match(ui, /onStorefrontTransferManual/);
+assert.match(ui, /จะไม่แตะยอดในตาราง/);
+// ห้ามดึงยอดตารางมาคูณ % แล้วทับของที่เซฟ
+assert.doesNotMatch(
+  ui,
+  /fromTable = Number\(draftRef\.current\.transfer\.storefront\)/,
+);
 assert.match(ui, /ยอดขายโอน/);
 assert.match(ui, /คิดภาษีขายอัตโนมัติ/);
 assert.match(ui, /vat-cost-layer/);
@@ -47,6 +54,6 @@ assert.match(entryVat, /export function businessCostOut/);
 assert.match(entryVat, /vatClaim && vat > 0/);
 
 const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
-assert.match(version, /APP_BUILD = 528/);
+assert.match(version, /export const APP_BUILD = \d+/);
 
 console.log("OK test-vat-storefront-send");

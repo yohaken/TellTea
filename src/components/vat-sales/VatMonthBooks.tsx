@@ -360,16 +360,42 @@ export function VatMonthBooks({ actor }: Props) {
     void loadMonth(month);
   }, [month, loadMonth]);
 
-  // รับยอดจากหน้าที่มายอดเดลิเวอรี่ (ผสานทันที)
+  // รับยอดเดลิเวอรี่จากนำเข้า — เก็บยอดหน้าร้านที่กำลังแก้/เซฟไว้แล้ว
   useEffect(() => {
     return subscribeVatImportMonthMerged((detail) => {
       if (detail.monthKey !== month) return;
       if (draftRef.current.status === "filed") return;
-      setDraft(retToMonthBooksDraft(detail.saved));
-      setDirty(false);
-      setMsg("อัปเดตยอดเดลิเวอรี่");
+      const incoming = retToMonthBooksDraft(detail.saved);
+      const cur = draftRef.current;
+      const keepSf =
+        dirty ||
+        cur.transfer.storefront > 0 ||
+        cur.sales.storefrontTransfer > 0 ||
+        cur.sales.storefrontCash > 0;
+      setDraft(
+        keepSf
+          ? {
+              ...incoming,
+              transfer: {
+                ...incoming.transfer,
+                storefront: cur.transfer.storefront,
+              },
+              sales: {
+                ...incoming.sales,
+                storefrontTransfer: cur.sales.storefrontTransfer,
+                storefrontCash: cur.sales.storefrontCash,
+              },
+            }
+          : incoming,
+      );
+      setDirty(keepSf);
+      setMsg(
+        keepSf
+          ? "อัปเดตยอดเดลิเวอรี่ · คงยอดหน้าร้านที่ใส่ไว้"
+          : "อัปเดตยอดเดลิเวอรี่",
+      );
     });
-  }, [month]);
+  }, [month, dirty]);
 
   // เซฟอัตโนมัติทันทีเมื่อแก้ — ไม่ต้องกดบันทึก (สถานะ saved · ไม่ทับ filed)
   useEffect(() => {
@@ -484,12 +510,13 @@ export function VatMonthBooks({ actor }: Props) {
     [locked, markDirty, flashSfCell],
   );
 
-  /** ต้นทางแถบส่ง — ช่องกรอก หรือยอดหน้าร้านในตาราง (ถ้ายังไม่กรอก) */
+  /**
+   * ต้นทางแถบส่ง — ใช้เฉพาะที่พิมพ์ในช่องต้นทาง
+   * ห้ามดึงจากตารางมาคูณ % (เคยทับยอดหน้าร้านที่เซฟไว้แล้ว)
+   */
   function resolveSfSendSource(rawStr: string): number {
     const typed = parseVatMoneyInput(rawStr);
-    if (typed > 0) return typed;
-    const fromTable = Number(draftRef.current.transfer.storefront) || 0;
-    return fromTable > 0 ? fromTable : 0;
+    return typed > 0 ? typed : 0;
   }
 
   function onSfSendSourceChange(raw: string) {
@@ -507,15 +534,32 @@ export function VatMonthBooks({ actor }: Props) {
     if (locked) return;
     const source = resolveSfSendSource(sfSendSourceStr);
     if (!(source > 0)) {
-      setMsg("ใส่ยอดหน้าร้านต้นทางก่อน แล้วค่อยเลื่อน % ส่งเข้าตาราง");
+      setMsg("ใส่ยอดหน้าร้านต้นทางก่อน แล้วค่อยเลื่อน % — จะไม่แตะยอดในตาราง");
       return;
     }
-    // ถ้ายังไม่กรอกต้นทาง — เติมจากยอดในตารางแล้วค่อยคิด %
-    if (!(parseVatMoneyInput(sfSendSourceStr) > 0)) {
-      setSfSendSourceStr(moneyFieldValue(source));
-      saveSfSendSource(month, source);
-    }
     applySfSendToTable(source, pct);
+  }
+
+  /** แก้ยอดหน้าร้านในตารางเอง → จำค่านั้น · ไม่ให้แถบ % มาทับทีหลัง */
+  function onStorefrontTransferManual(raw: string) {
+    if (locked) return;
+    const n = parseVatMoneyInput(raw);
+    setDraft((d) => {
+      let next = patchTransfer(d, "storefront", n);
+      // ให้ A กับ D โอนหน้าร้านสอดคล้องกันเมื่อแก้มือ
+      next = {
+        ...next,
+        sales: {
+          ...next.sales,
+          storefrontTransfer: n,
+        },
+      };
+      return next;
+    });
+    markDirty();
+    // เคลียร์ต้นทางแถบส่งของเดือนนี้ — กันเลื่อน % แล้วทับยอดที่เพิ่งใส่
+    saveSfSendSource(month, 0);
+    setSfSendSourceStr("");
   }
 
   const sfSendSourceNum = useMemo(
@@ -946,7 +990,7 @@ export function VatMonthBooks({ actor }: Props) {
             </h2>
             <div
               className="vat-sf-send"
-              title="ใส่ยอดหน้าร้านต้นทาง แล้วเลื่อน % — ยอดส่งเข้าช่อง「หน้าร้าน」ในตารางรายได้เท่านั้น · ไม่แตะภาษีขาย/ภาษีซื้อ"
+              title="ใส่ยอดต้นทางในช่องนี้ก่อน แล้วเลื่อน % — จึงจะเขียนเข้าตาราง · ถ้าแก้ยอดหน้าร้านในตารางเอง ระบบจะจำค่านั้นและไม่ให้ % ทับ"
             >
               <span className="vat-sf-send-label">ส่งหน้าร้าน</span>
               <input
@@ -1050,7 +1094,7 @@ export function VatMonthBooks({ actor }: Props) {
                         locked={locked}
                         ariaLabel="ยอดหน้าร้าน"
                         pulse={sfPulse}
-                        onChange={(v) => setTransferField("storefront", v)}
+                        onChange={onStorefrontTransferManual}
                       />
                     </td>
                   </tr>
