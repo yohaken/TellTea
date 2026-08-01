@@ -68,6 +68,11 @@ export type CashDepositDayLine = {
   dateSource: CashFillSource;
   note: string;
   slipUrls: string[];
+  /**
+   * Optional link to closed posSessions — when filled from nPos remits,
+   * cashAmount should equal Σ session.remitAmount of these ids.
+   */
+  sessionIds: string[];
 };
 
 export type CashDeposit = {
@@ -272,6 +277,12 @@ function normalizeDay(raw: unknown): CashDepositDayLine | null {
   if (!(cashAmount >= 0)) return null;
   const slipKindRaw = String(d.slipKind || "unknown") as CashSlipKind;
   const slipKind = SLIP_KIND_SET.has(slipKindRaw) ? slipKindRaw : "unknown";
+  const sessionIds = Array.isArray(d.sessionIds)
+    ? d.sessionIds
+        .map((x) => String(x || "").trim())
+        .filter(Boolean)
+        .slice(0, 40)
+    : [];
   return {
     id: String(d.id || newCashDepositDayId()),
     date: Number(d.date) || 0,
@@ -284,6 +295,7 @@ function normalizeDay(raw: unknown): CashDepositDayLine | null {
     dateSource: normalizeCashFillSource(d.dateSource),
     note: typeof d.note === "string" ? d.note : "",
     slipUrls: normalizeUrls(d.slipUrls, CASH_DEPOSIT_DAY_SLIP_MAX),
+    sessionIds,
   };
 }
 
@@ -821,6 +833,7 @@ export function emptyCashDepositDay(dateMs: number): CashDepositDayLine {
     dateSource: "",
     note: "",
     slipUrls: [],
+    sessionIds: [],
   };
 }
 

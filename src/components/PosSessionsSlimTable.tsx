@@ -30,8 +30,17 @@ import {
   salesForSession,
   voidedForSession,
 } from "@/lib/pos-sales-report";
+import {
+  MANUAL_POS_DEVICE_ID,
+  clearPosSessionRemitHandoff,
+  createManualPosSession,
+  deriveRemitStatus,
+  labelRemitStatus,
+  recordPosSessionRemitHandoff,
+  type PosRemitStatus,
+} from "@/lib/pos-session-remit";
 import type { PosSale, PosSession, PosSessionCashDropNote } from "@/lib/types";
-import { formatPlainNumber } from "@/lib/utils";
+import { formatPlainNumber, startOfLocalDay, todayInputValue } from "@/lib/utils";
 
 function formatHm(ts: number): string {
   if (!ts) return "—";
@@ -79,11 +88,14 @@ type RowModel = {
   openedBy: string;
   discrepancyLabel: string;
   remit: number | undefined;
+  remitStatus: PosRemitStatus | undefined;
+  remitHanded: number | undefined;
   discount: number | undefined;
   cashBills: number | undefined;
   ppBills: number | undefined;
   transferBills: number | undefined;
   dropNotes: PosSessionCashDropNote[];
+  isManual: boolean;
   searchBlob: string;
 };
 
@@ -107,10 +119,13 @@ function buildRows(
       .filter((s) => s.paymentMethod === "promptpay")
       .reduce((a, s) => a + s.total, 0);
     const salesTotal = active.reduce((a, s) => a + s.total, 0);
+    const isManual =
+      session.source === "manual" || session.deviceId === MANUAL_POS_DEVICE_ID;
     const device = devicesById.get(session.deviceId);
-    const pairing =
-      device?.pairingCode ||
-      (session.deviceId ? posPairingCodeFromId(session.deviceId) : "—");
+    const pairing = isManual
+      ? "มือ"
+      : device?.pairingCode ||
+        (session.deviceId ? posPairingCodeFromId(session.deviceId) : "—");
     const dayMs = session.date || session.openedAt || 0;
     const total = open ? salesTotal || session.totalSales || 0 : session.totalSales || salesTotal || 0;
     const bills = open ? active.length || session.saleCount || 0 : session.saleCount || active.length || 0;
@@ -119,11 +134,13 @@ function buildRows(
       ? transferSum || session.transferTotal || 0
       : session.transferTotal ?? transferSum;
     const pp = open ? ppSum || session.promptpayTotal || 0 : session.promptpayTotal ?? ppSum;
-    const deviceLabel = device
-      ? posDeviceLabel(device)
-      : session.deviceId
-        ? `#${session.deviceId.slice(-4).toUpperCase()}`
-        : "—";
+    const deviceLabel = isManual
+      ? (session.counterLabel || "รอบมือ").trim()
+      : device
+        ? posDeviceLabel(device)
+        : session.deviceId
+          ? `#${session.deviceId.slice(-4).toUpperCase()}`
+          : "—";
     const sessionCode = posSessionCode(session.id);
     const dateLabel = formatDateShort(dayMs);
     const note = session.discrepancyNote || "";
@@ -136,6 +153,7 @@ function buildRows(
         : session.closingCashCounted != null && session.leaveFloat != null
           ? Math.max(0, session.closingCashCounted - session.leaveFloat)
           : undefined;
+    const remitStatus = deriveRemitStatus(session);
     return {
       session,
       deviceLabel,
@@ -162,11 +180,14 @@ function buildRows(
       openedBy,
       discrepancyLabel,
       remit,
+      remitStatus,
+      remitHanded: session.remitHandedAmount,
       discount: session.discountTotal,
       cashBills: session.cashBillCount,
       ppBills: session.promptpayBillCount,
       transferBills: session.transferBillCount,
       dropNotes,
+      isManual,
       searchBlob: [
         pairing,
         sessionCode,
@@ -178,6 +199,8 @@ function buildRows(
         note,
         openedBy,
         discrepancyLabel,
+        labelRemitStatus(remitStatus),
+        isManual ? "รอบมือ manual" : "",
         ...dropNotes.map((n) => n.reason),
         session.shift || "",
       ]
@@ -230,6 +253,7 @@ export function PosSessionsSlimTable({
   onForceClose,
   forceCloseBusyId = null,
   dayLabel = "ล่าสุด",
+  actorId = "",
 }: {
   sessions: PosSession[];
   sales: PosSale[];
@@ -240,12 +264,15 @@ export function PosSessionsSlimTable({
   onForceClose?: (sessionId: string) => void;
   forceCloseBusyId?: string | null;
   dayLabel?: string;
+  /** Owner actor for remit handoff / manual rounds */
+  actorId?: string;
 }) {
   const [devices, setDevices] = useState<PosDevice[]>([]);
   const [pulseSec, setPulseSec] = useState(5);
   const [pulseBusy, setPulseBusy] = useState(false);
   const [pulseHint, setPulseHint] = useState<string | null>(null);
   const [openOnly, setOpenOnly] = useState(false);
+  const [pendingRemitOnly, setPendingRemitOnly] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [queryText, setQueryText] = useState("");
@@ -253,6 +280,26 @@ export function PosSessionsSlimTable({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [handoffBusyId, setHandoffBusyId] = useState<string | null>(null);
+  const [handoffDraft, setHandoffDraft] = useState<{
+    sessionId: string;
+    amount: string;
+    handedBy: string;
+    receivedBy: string;
+    note: string;
+  } | null>(null);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualBusy, setManualBusy] = useState(false);
+  const [manualForm, setManualForm] = useState({
+    label: "",
+    date: todayInputValue(),
+    remit: "",
+    counted: "",
+    leave: "",
+    cashTotal: "",
+    openedBy: "",
+    note: "",
+  });
 
   useEffect(() => {
     return subscribePosDevicesAdmin(
@@ -308,6 +355,13 @@ export function PosSessionsSlimTable({
 
   const daySum = useMemo(() => daySummaryFromSales(sales), [sales]);
   const openCount = useMemo(() => rows.filter((r) => r.open).length, [rows]);
+  const pendingRemitCount = useMemo(
+    () =>
+      rows.filter(
+        (r) => r.remitStatus === "pending" || r.remitStatus === "mismatch",
+      ).length,
+    [rows],
+  );
 
   const deviceOptions = useMemo(() => {
     const seen = new Map<string, string>();
@@ -322,11 +376,59 @@ export function PosSessionsSlimTable({
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
       if (openOnly && !row.open) return false;
+      if (
+        pendingRemitOnly &&
+        row.remitStatus !== "pending" &&
+        row.remitStatus !== "mismatch"
+      ) {
+        return false;
+      }
       if (deviceId && row.session.deviceId !== deviceId) return false;
       if (deferredQuery && !row.searchBlob.includes(deferredQuery)) return false;
       return true;
     });
-  }, [rows, openOnly, deviceId, deferredQuery]);
+  }, [rows, openOnly, pendingRemitOnly, deviceId, deferredQuery]);
+
+  const handoffSeedKey = useMemo(() => {
+    if (!selectedSessionId) return "";
+    const session = sessions.find((s) => s.id === selectedSessionId);
+    if (!session) return selectedSessionId;
+    return `${session.id}:${session.remitStatus || ""}:${session.remitHandedAt || 0}`;
+  }, [selectedSessionId, sessions]);
+
+  useEffect(() => {
+    if (!selectedSessionId) {
+      setHandoffDraft(null);
+      return;
+    }
+    const session = sessions.find((s) => s.id === selectedSessionId);
+    if (!session || session.status !== "closed") {
+      setHandoffDraft(null);
+      return;
+    }
+    const remit =
+      session.remitAmount != null
+        ? session.remitAmount
+        : session.closingCashCounted != null && session.leaveFloat != null
+          ? Math.max(0, session.closingCashCounted - session.leaveFloat)
+          : undefined;
+    if (remit == null) {
+      setHandoffDraft(null);
+      return;
+    }
+    setHandoffDraft({
+      sessionId: session.id,
+      amount:
+        session.remitHandedAmount != null && session.remitHandedAmount > 0
+          ? String(session.remitHandedAmount)
+          : String(remit),
+      handedBy: session.remitHandedByName || session.openedByName || "",
+      receivedBy: session.remitReceivedByName || "",
+      note: session.remitHandoffNote || "",
+    });
+    // Re-seed on select or after server handoff save — not on unrelated session churn.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handoffSeedKey gates refresh
+  }, [handoffSeedKey]);
 
   const visibleIds = useMemo(
     () => filteredRows.map((r) => r.session.id),
@@ -362,7 +464,79 @@ export function PosSessionsSlimTable({
 
   function resetDayFilters() {
     setOpenOnly(false);
+    setPendingRemitOnly(false);
     setDeviceId(null);
+  }
+
+  async function saveHandoff(session: PosSession) {
+    if (!handoffDraft || handoffDraft.sessionId !== session.id || !actorId) return;
+    setHandoffBusyId(session.id);
+    onError?.(null);
+    try {
+      await recordPosSessionRemitHandoff(session.id, session, {
+        handedAmount: Number(handoffDraft.amount) || 0,
+        handedByName: handoffDraft.handedBy,
+        receivedByName: handoffDraft.receivedBy,
+        note: handoffDraft.note,
+        actorId,
+      });
+    } catch (err) {
+      onError?.(err instanceof Error ? err.message : String(err));
+    } finally {
+      setHandoffBusyId(null);
+    }
+  }
+
+  async function clearHandoff(sessionId: string) {
+    setHandoffBusyId(sessionId);
+    onError?.(null);
+    try {
+      await clearPosSessionRemitHandoff(sessionId);
+    } catch (err) {
+      onError?.(err instanceof Error ? err.message : String(err));
+    } finally {
+      setHandoffBusyId(null);
+    }
+  }
+
+  async function submitManualRound() {
+    if (!actorId || manualBusy) return;
+    setManualBusy(true);
+    onError?.(null);
+    try {
+      const dateMs = startOfLocalDay(
+        new Date(`${manualForm.date}T00:00:00+07:00`),
+      );
+      const id = await createManualPosSession({
+        actorId,
+        label: manualForm.label,
+        date: dateMs,
+        remitAmount: manualForm.remit ? Number(manualForm.remit) : undefined,
+        closingCashCounted: manualForm.counted
+          ? Number(manualForm.counted)
+          : undefined,
+        leaveFloat: manualForm.leave ? Number(manualForm.leave) : undefined,
+        cashTotal: manualForm.cashTotal ? Number(manualForm.cashTotal) : undefined,
+        openedByName: manualForm.openedBy,
+        note: manualForm.note,
+      });
+      setManualOpen(false);
+      setManualForm({
+        label: "",
+        date: todayInputValue(),
+        remit: "",
+        counted: "",
+        leave: "",
+        cashTotal: "",
+        openedBy: "",
+        note: "",
+      });
+      onSelect(id);
+    } catch (err) {
+      onError?.(err instanceof Error ? err.message : String(err));
+    } finally {
+      setManualBusy(false);
+    }
   }
 
   function toggleSelected(id: string) {
@@ -434,14 +608,26 @@ export function PosSessionsSlimTable({
             {filteredRows.length !== rows.length ? `/${rows.length}` : ""} รอบ · วันใหม่→เก่า · ≤
             {POS_SESSIONS_SLIM_LIMIT}
             {openCount ? ` · active ${openCount}` : ""}
+            {pendingRemitCount ? ` · ค้างส่ง ${pendingRemitCount}` : ""}
           </span>
         </div>
-        <PulseChips
-          sec={pulseSec}
-          busy={pulseBusy}
-          hint={pulseHint}
-          onPick={(n) => void savePulse(n)}
-        />
+        <div className="npos-slim-sessions-actions">
+          <button
+            type="button"
+            className="npos-slim-text-btn"
+            disabled={!actorId || manualBusy}
+            title="เพิ่มรอบปิดสำหรับเคาน์เตอร์นอกโปรแกรม"
+            onClick={() => setManualOpen(true)}
+          >
+            +รอบมือ
+          </button>
+          <PulseChips
+            sec={pulseSec}
+            busy={pulseBusy}
+            hint={pulseHint}
+            onPick={(n) => void savePulse(n)}
+          />
+        </div>
       </header>
 
       <p className="npos-slim-summary" aria-label="สรุปยอดในหน้าต่าง">
@@ -463,7 +649,7 @@ export function PosSessionsSlimTable({
           <div className="npos-slim-filters" role="toolbar" aria-label="กรองรอบ">
             <button
               type="button"
-              className={`npos-slim-text-btn ${!openOnly && !deviceId ? "is-active" : ""}`}
+              className={`npos-slim-text-btn ${!openOnly && !pendingRemitOnly && !deviceId ? "is-active" : ""}`}
               onClick={resetDayFilters}
             >
               {dayLabel}
@@ -474,6 +660,14 @@ export function PosSessionsSlimTable({
               onClick={() => setOpenOnly((v) => !v)}
             >
               เปิดอยู่
+            </button>
+            <button
+              type="button"
+              className={`npos-slim-text-btn ${pendingRemitOnly ? "is-active" : ""}`}
+              onClick={() => setPendingRemitOnly((v) => !v)}
+              title="รอบที่ยังไม่ส่งเงิน หรือส่งไม่ตรง"
+            >
+              ค้างส่ง{pendingRemitCount ? ` ${pendingRemitCount}` : ""}
             </button>
             {deviceOptions.length > 1
               ? deviceOptions.map((d) => (
@@ -614,9 +808,12 @@ export function PosSessionsSlimTable({
             <span
               role="columnheader"
               className="npos-slim-num"
-              title="ยอดนำส่ง = นับ − ทอนค้างรอบถัดไป"
+              title="ยอดนำส่ง = นับ − ทอนค้างรอบถัดไป · สถานะส่งเงิน"
             >
               นำส่ง
+            </span>
+            <span role="columnheader" title="สถานะส่งเงินสดตามจริง">
+              ส่งเงิน
             </span>
             <span role="columnheader">ปิดรอบ</span>
           </div>
@@ -724,6 +921,21 @@ export function PosSessionsSlimTable({
                   >
                     {row.open || row.remit == null ? "—" : moneyOrDash(row.remit)}
                   </span>
+                  <span
+                    role="cell"
+                    className={`npos-slim-remit-status is-${row.remitStatus || "none"}`}
+                    title={
+                      row.remitStatus === "handed" && row.remitHanded != null
+                        ? `รับจริง ${moneyOrDash(row.remitHanded)}`
+                        : row.remitStatus === "mismatch" && row.remitHanded != null
+                          ? `รับจริง ${moneyOrDash(row.remitHanded)} ≠ นำส่ง ${moneyOrDash(row.remit)}`
+                          : row.remitStatus === "pending"
+                            ? "ยังไม่ได้บันทึกส่งเงิน"
+                            : "ยังไม่มียอดนำส่ง"
+                    }
+                  >
+                    {labelRemitStatus(row.remitStatus)}
+                  </span>
                   <span role="cell" className="npos-slim-close-cell">
                     {row.open && onForceClose ? (
                       <button
@@ -746,6 +958,7 @@ export function PosSessionsSlimTable({
                 {selected ? (
                   <div className="npos-slim-detail" role="row">
                     <span>
+                      {row.isManual ? "รอบมือ · " : ""}
                       {row.openedBy ? `ผู้เปิดกะ ${row.openedBy} · ` : ""}
                       ทอนเริ่ม {moneyOrDash(row.opening)}
                       {row.open ? ` · ระหว่างกะ · ยอดจากบิล realtime` : ""}
@@ -769,6 +982,9 @@ export function PosSessionsSlimTable({
                         : ""}
                       {!row.open && row.remit != null
                         ? ` · นำส่ง ${moneyOrDash(row.remit)}`
+                        : ""}
+                      {!row.open && row.remitStatus
+                        ? ` · ส่งเงิน ${labelRemitStatus(row.remitStatus)}`
                         : ""}
                       {!row.open && row.discount != null && row.discount > 0
                         ? ` · ส่วนลด ${moneyOrDash(row.discount)}`
@@ -802,6 +1018,101 @@ export function PosSessionsSlimTable({
                         ))}
                       </ul>
                     ) : null}
+                    {!row.open && row.remit != null && handoffDraft?.sessionId === row.session.id ? (
+                      <div
+                        className="npos-slim-remit-handoff"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <p className="npos-slim-remit-handoff-title">
+                          ส่งเงินตามจริง · ต้องนำส่ง ฿{moneyOrDash(row.remit)}
+                        </p>
+                        <div className="npos-slim-remit-handoff-grid">
+                          <label>
+                            รับจริง
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              inputMode="decimal"
+                              value={handoffDraft.amount}
+                              disabled={handoffBusyId === row.session.id}
+                              onChange={(e) =>
+                                setHandoffDraft((d) =>
+                                  d ? { ...d, amount: e.target.value } : d,
+                                )
+                              }
+                            />
+                          </label>
+                          <label>
+                            ผู้ส่ง
+                            <input
+                              type="text"
+                              maxLength={80}
+                              value={handoffDraft.handedBy}
+                              disabled={handoffBusyId === row.session.id}
+                              onChange={(e) =>
+                                setHandoffDraft((d) =>
+                                  d ? { ...d, handedBy: e.target.value } : d,
+                                )
+                              }
+                            />
+                          </label>
+                          <label>
+                            ผู้รับ
+                            <input
+                              type="text"
+                              maxLength={80}
+                              value={handoffDraft.receivedBy}
+                              disabled={handoffBusyId === row.session.id}
+                              onChange={(e) =>
+                                setHandoffDraft((d) =>
+                                  d ? { ...d, receivedBy: e.target.value } : d,
+                                )
+                              }
+                            />
+                          </label>
+                          <label className="npos-slim-remit-handoff-note">
+                            โน้ต
+                            <input
+                              type="text"
+                              maxLength={240}
+                              value={handoffDraft.note}
+                              disabled={handoffBusyId === row.session.id}
+                              onChange={(e) =>
+                                setHandoffDraft((d) =>
+                                  d ? { ...d, note: e.target.value } : d,
+                                )
+                              }
+                            />
+                          </label>
+                        </div>
+                        <div className="npos-slim-remit-handoff-actions">
+                          <button
+                            type="button"
+                            className="npos-slim-text-btn is-active"
+                            disabled={
+                              !actorId || handoffBusyId === row.session.id
+                            }
+                            onClick={() => void saveHandoff(row.session)}
+                          >
+                            {handoffBusyId === row.session.id
+                              ? "…"
+                              : "บันทึกส่งเงิน"}
+                          </button>
+                          {row.remitStatus === "handed" ||
+                          row.remitStatus === "mismatch" ? (
+                            <button
+                              type="button"
+                              className="npos-slim-text-btn"
+                              disabled={handoffBusyId === row.session.id}
+                              onClick={() => void clearHandoff(row.session.id)}
+                            >
+                              กลับเป็นค้าง
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -811,11 +1122,9 @@ export function PosSessionsSlimTable({
       )}
 
       <p className="muted npos-slim-foot">
-        รอบ = กะ nPos · คอลัมน์กระชับ · รหัสรอบซ่อนเมื่อจอแคบ · รอบเปิดอยู่ขึ้นบนพร้อมยอด realtime ·
-        คอลัมน์รวม = เวลารวมของรอบ · <strong>สด</strong> = ยอดขายเงินสด · <strong>นับ</strong> /
-        <strong>นำส่ง</strong> = เงินที่กรอกตอนปิดกะจากแท็บเล็ต · ปิดกะที่แท็บเล็ตเท่านั้นเป็นหลัก ·{" "}
-        <strong>ปิดรอบ</strong> จากหลังร้าน · <strong>ลบที่เลือก</strong> ลบรอบ+บิลถาวร ·
-        แท็บเล็ตรับสัญญาณผ่าน heartbeat (~5วิ) · ไม่เตะเครื่อง · จบบิลในตะกร้าได้แล้วเปิดรอบใหม่
+        รอบ = กะ nPos · <strong>นำส่ง</strong> = นับ − ทอนค้าง · <strong>ส่งเงิน</strong> =
+        บันทึกยอดรับจริงหลังปิดรอบ · <strong>+รอบมือ</strong> = เคาน์เตอร์นอกโปรแกรม ·{" "}
+        <strong>ปิดรอบ</strong> จากหลังร้าน · <strong>ลบที่เลือก</strong> ลบรอบ+บิลถาวร
       </p>
 
       <PosConfirmDialog
@@ -831,6 +1140,142 @@ export function PosSessionsSlimTable({
           if (!bulkBusy) setConfirmDelete(false);
         }}
       />
+
+      {manualOpen ? (
+        <div className="npos-slim-manual-panel" role="region" aria-label="เพิ่มรอบมือ">
+          <header className="npos-slim-manual-head">
+            <h4>เพิ่มรอบมือ</h4>
+            <p className="muted">
+              เคาน์เตอร์นอกโปรแกรม — กรอกยอดนำส่ง (หรือ นับ + ทอนค้าง) เป็นรอบปิด
+            </p>
+          </header>
+          <div className="npos-slim-manual-form">
+            <label>
+              ชื่อเคาน์เตอร์
+              <input
+                type="text"
+                maxLength={80}
+                value={manualForm.label}
+                disabled={manualBusy}
+                placeholder="เช่น หน้าร้าน 2 / FoodStory"
+                onChange={(e) =>
+                  setManualForm((f) => ({ ...f, label: e.target.value }))
+                }
+              />
+            </label>
+            <label>
+              วันที่ขาย
+              <input
+                type="date"
+                value={manualForm.date}
+                disabled={manualBusy}
+                onChange={(e) =>
+                  setManualForm((f) => ({ ...f, date: e.target.value }))
+                }
+              />
+            </label>
+            <label>
+              ยอดนำส่ง
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={manualForm.remit}
+                disabled={manualBusy}
+                placeholder="บาท"
+                onChange={(e) =>
+                  setManualForm((f) => ({ ...f, remit: e.target.value }))
+                }
+              />
+            </label>
+            <label>
+              นับจริง (ถ้ามี)
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={manualForm.counted}
+                disabled={manualBusy}
+                onChange={(e) =>
+                  setManualForm((f) => ({ ...f, counted: e.target.value }))
+                }
+              />
+            </label>
+            <label>
+              ทอนค้าง (ถ้ามี)
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={manualForm.leave}
+                disabled={manualBusy}
+                onChange={(e) =>
+                  setManualForm((f) => ({ ...f, leave: e.target.value }))
+                }
+              />
+            </label>
+            <label>
+              ขายสด (ถ้ามี)
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={manualForm.cashTotal}
+                disabled={manualBusy}
+                onChange={(e) =>
+                  setManualForm((f) => ({ ...f, cashTotal: e.target.value }))
+                }
+              />
+            </label>
+            <label>
+              ผู้ปิดรอบ
+              <input
+                type="text"
+                maxLength={80}
+                value={manualForm.openedBy}
+                disabled={manualBusy}
+                onChange={(e) =>
+                  setManualForm((f) => ({ ...f, openedBy: e.target.value }))
+                }
+              />
+            </label>
+            <label className="npos-slim-manual-form-wide">
+              โน้ต
+              <input
+                type="text"
+                maxLength={240}
+                value={manualForm.note}
+                disabled={manualBusy}
+                onChange={(e) =>
+                  setManualForm((f) => ({ ...f, note: e.target.value }))
+                }
+              />
+            </label>
+          </div>
+          <div className="npos-slim-manual-actions">
+            <button
+              type="button"
+              className="npos-slim-text-btn is-active"
+              disabled={manualBusy || !actorId}
+              onClick={() => void submitManualRound()}
+            >
+              {manualBusy ? "กำลังบันทึก…" : "สร้างรอบ"}
+            </button>
+            <button
+              type="button"
+              className="npos-slim-text-btn"
+              disabled={manualBusy}
+              onClick={() => setManualOpen(false)}
+            >
+              ยกเลิก
+            </button>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

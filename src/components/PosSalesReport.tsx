@@ -214,6 +214,7 @@ export function PosSalesReport({
         sales={sales}
         selectedSessionId={selectedSessionId}
         dayLabel="ล่าสุด"
+        actorId={actorId || ""}
         onSelect={(id) => {
           setSelectedSessionId(id);
           if (id) {

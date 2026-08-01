@@ -193,10 +193,22 @@ function mapSession(id: string, data: Record<string, unknown>): PosSession {
     discrepancyNote: str("discrepancyNote"),
     discrepancyLabel: str("discrepancyLabel"),
     remitAmount,
+    remitStatus: (() => {
+      const r = str("remitStatus");
+      if (r === "pending" || r === "handed" || r === "mismatch") return r;
+      return undefined;
+    })(),
+    remitHandedAmount: num("remitHandedAmount"),
+    remitHandedAt: num("remitHandedAt"),
+    remitHandedBy: str("remitHandedBy"),
+    remitHandedByName: str("remitHandedByName"),
+    remitReceivedByName: str("remitReceivedByName"),
+    remitHandoffNote: str("remitHandoffNote"),
     cashBillCount: num("cashBillCount"),
     promptpayBillCount: num("promptpayBillCount"),
     transferBillCount: num("transferBillCount"),
     source: str("source"),
+    counterLabel: str("counterLabel"),
     openedByEmployeeId: str("openedByEmployeeId"),
     openedByName: str("openedByName"),
   };

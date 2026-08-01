@@ -9750,8 +9750,9 @@ body.modal-open .main-panel {
     minmax(2.4rem, max-content)
     minmax(2.8rem, max-content)
     minmax(2.8rem, max-content)
+    minmax(2.6rem, max-content)
     minmax(2.2rem, max-content);
-  min-width: 60rem;
+  min-width: 63rem;
 }
 
 .npos-slim-check-col {
@@ -9918,8 +9919,9 @@ body.modal-open .main-panel {
       minmax(2.4rem, max-content)
       minmax(2.8rem, max-content)
       minmax(2.8rem, max-content)
+      minmax(2.6rem, max-content)
       minmax(2.2rem, max-content);
-    min-width: 48rem;
+    min-width: 51rem;
   }
 
   .npos-slim-row--bills-super {
@@ -10001,6 +10003,105 @@ body.modal-open .main-panel {
 
 .npos-slim-drop-notes li {
   margin: 0.1rem 0;
+}
+
+.npos-slim-sessions-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+}
+
+.npos-slim-remit-status {
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.npos-slim-remit-status.is-pending {
+  color: #9a5b12;
+}
+
+.npos-slim-remit-status.is-handed {
+  color: #1f6b3a;
+}
+
+.npos-slim-remit-status.is-mismatch {
+  color: #a12828;
+}
+
+.npos-slim-remit-handoff {
+  margin-top: 0.45rem;
+  padding: 0.4rem 0.35rem;
+  border-top: 1px dashed rgba(28, 42, 31, 0.12);
+}
+
+.npos-slim-remit-handoff-title {
+  margin: 0 0 0.3rem;
+  font-size: 0.72rem;
+  color: #2c353c;
+}
+
+.npos-slim-remit-handoff-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 0.3rem 0.45rem;
+}
+
+.npos-slim-remit-handoff-grid label,
+.npos-slim-manual-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  font-size: 0.68rem;
+  color: #5a6570;
+}
+
+.npos-slim-remit-handoff-grid input,
+.npos-slim-manual-form input {
+  min-height: 1.7rem;
+  padding: 0.15rem 0.35rem;
+  border: 1px solid rgba(28, 42, 31, 0.16);
+  border-radius: 0.25rem;
+  font-size: 0.78rem;
+  background: #fff;
+}
+
+.npos-slim-remit-handoff-note {
+  grid-column: 1 / -1;
+}
+
+.npos-slim-remit-handoff-actions,
+.npos-slim-manual-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.npos-slim-manual-panel {
+  margin-top: 0.65rem;
+  padding: 0.55rem 0.45rem 0.65rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.1);
+}
+
+.npos-slim-manual-head h4 {
+  margin: 0 0 0.15rem;
+  font-size: 0.85rem;
+}
+
+.npos-slim-manual-head p {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+}
+
+.npos-slim-manual-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: 0.35rem 0.5rem;
+}
+
+.npos-slim-manual-form-wide {
+  grid-column: 1 / -1;
 }
 
 .npos-slim-row--compact {

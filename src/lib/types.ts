@@ -337,10 +337,25 @@ export type PosSession = {
   discrepancyLabel?: string;
   /** ยอดนำส่ง = นับลิ้นชัก − ทอนค้าง */
   remitAmount?: number;
+  /**
+   * สถานะส่งเงินมือหลังปิดรอบ · ไม่มี =  derivable เป็น pending เมื่อมี remit
+   * pending = ค้างส่ง · handed = ตรง · mismatch = รับจริง ≠ นำส่ง
+   */
+  remitStatus?: "pending" | "handed" | "mismatch";
+  /** ยอดเงินสดที่รับจริงตอนส่ง */
+  remitHandedAmount?: number;
+  remitHandedAt?: number;
+  /** actorId ผู้บันทึก */
+  remitHandedBy?: string;
+  remitHandedByName?: string;
+  remitReceivedByName?: string;
+  remitHandoffNote?: string;
   cashBillCount?: number;
   promptpayBillCount?: number;
   transferBillCount?: number;
   source?: string;
+  /** Manual/external counter label (source === "manual") */
+  counterLabel?: string;
   /** Who opened this nPos round (name pick at clock-in — not OT-linked). */
   openedByEmployeeId?: string;
   openedByName?: string;

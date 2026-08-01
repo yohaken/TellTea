@@ -1,11 +1,12 @@
 # nPos / หลังร้าน — เฟสงานเคาน์เตอร์ถัดไป (รอบกะ · เมนู · เสียง)
 
-อัปเดต: **O3+O4 ship 1.14.96** · อ้างอิง `/pos-sales` + nPos 1.14.96 · ship **1.14.105**
+อัปเดต: **O3+O4 ship 1.14.96** · อ้างอิง `/pos-sales` + nPos 1.14.96 · ship **1.14.105** · remit rounds **APP_BUILD 564**
 หลัก: **ทำทีละเฟสให้จบและเทสได้** · ไม่ขยาย PIN / delta เมนู / cloud TTS ในรอบแรก
 
 ดูเช็คลิสย่อย:
 [npos-shift-opener-checklist.md](./npos-shift-opener-checklist.md) ·
 [npos-session-cash-detail-checklist.md](./npos-session-cash-detail-checklist.md) ·
+[npos-remit-rounds-phases.md](./npos-remit-rounds-phases.md) ·
 [npos-menu-version-sync-checklist.md](./npos-menu-version-sync-checklist.md) ·
 [npos-payment-voice-checklist.md](./npos-payment-voice-checklist.md)
 

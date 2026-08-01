@@ -1004,7 +1004,15 @@ service cloud.firestore {
           resource == null || resource.data.deviceId == request.auth.uid
         ));
       allow list: if isOwner();
-      allow create: if isPosDeviceAuth() && posSessionOpen();
+      // Device open-round OR owner manual/external closed round (เคาน์เตอร์นอกโปรแกรม)
+      allow create: if (isPosDeviceAuth() && posSessionOpen())
+        || (isOwner()
+          && request.resource.data.source == 'manual'
+          && request.resource.data.status == 'closed'
+          && request.resource.data.deviceId == 'manual'
+          && request.resource.data.date is number
+          && request.resource.data.remitAmount is number
+          && request.resource.data.remitAmount >= 0);
       allow update: if (isPosDeviceAuth() && (posSessionSaleBump() || posSessionClose())) || isOwner();
       allow delete: if isOwner();
     }

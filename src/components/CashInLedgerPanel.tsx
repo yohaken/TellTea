@@ -54,6 +54,13 @@ import {
   type PhotoUploadProgress,
   uploadEvidencePhotos,
 } from "@/lib/photo-upload";
+import { subscribePosSessionsRecent } from "@/lib/pos-sales-report";
+import {
+  fillDayCashFromSessions,
+  sessionsForCashDepositDay,
+  sumSessionRemits,
+} from "@/lib/pos-session-remit";
+import type { PosSession } from "@/lib/types";
 import {
   formatPlainNumber,
   parseDateInput,
@@ -193,6 +200,7 @@ export function CashInLedgerPanel({
   const [aiBusy, setAiBusy] = useState(false);
   const [aiHint, setAiHint] = useState<string | null>(null);
   const lastAiKeyRef = useRef("");
+  const [posSessions, setPosSessions] = useState<PosSession[]>([]);
 
   useEffect(() => {
     setOpen(readOpenPref());
@@ -249,10 +257,28 @@ export function CashInLedgerPanel({
         : coerceBankTransfers(selected);
     setEditBankTransfers(ensureTransfers(transfers, selected.transferDate));
     setEditStaff(selected.staffName || staffName);
-    setEditDays(selected.days.map((d) => ({ ...d, slipUrls: [...d.slipUrls] })));
+    setEditDays(
+      selected.days.map((d) => ({
+        ...d,
+        slipUrls: [...d.slipUrls],
+        sessionIds: [...(d.sessionIds || [])],
+      })),
+    );
     setEditNote(selected.note || "");
     setOwnerNote(selected.ownerNote || "");
   }, [selected, draft, staffName]);
+
+  const editingRound = !!(draft || selected);
+  useEffect(() => {
+    if (!open || !isOwner || !editingRound) {
+      setPosSessions([]);
+      return;
+    }
+    return subscribePosSessionsRecent(
+      setPosSessions,
+      (err) => setError(err.message || "โหลดรอบ nPos ไม่สำเร็จ"),
+    );
+  }, [open, isOwner, editingRound]);
 
   const occupancy = useMemo(
     () => buildCashDepositOccupancy(entries, selected?.id),
@@ -414,15 +440,46 @@ export function CashInLedgerPanel({
           ...d,
           ...patch,
           date: patch.date != null ? cashDepositDayKey(patch.date) : d.date,
+          sessionIds: patch.sessionIds != null ? [...patch.sessionIds] : d.sessionIds || [],
         };
         if (!fromAi) {
-          if (patch.cashAmount != null) next.cashAmountSource = "staff";
+          if (patch.cashAmount != null) {
+            next.cashAmountSource = "staff";
+            // Manual amount edit clears session link unless patch keeps ids.
+            if (patch.sessionIds == null) next.sessionIds = [];
+          }
           if (patch.date != null) next.dateSource = "staff";
         }
         return next;
       });
     if (draft) setDraft({ ...draft, days: apply(draft.days) });
     else setEditDays((prev) => apply(prev));
+  }
+
+  /** R2: fill day cashAmount from closed nPos/manual session remits for that day. */
+  function fillDayFromPosSessions(dayId: string) {
+    const day = workingDays.find((d) => d.id === dayId);
+    if (!day) return;
+    const matches = sessionsForCashDepositDay(posSessions, day.date);
+    if (!matches.length) {
+      setError("วันนี้ยังไม่มีรอบปิดที่ยอดนำส่ง — ปิดกะที่แท็บเล็ตหรือเพิ่มรอบมือก่อน");
+      return;
+    }
+    setError(null);
+    const filled = fillDayCashFromSessions(
+      day,
+      matches,
+      matches.map((s) => s.id),
+    );
+    patchDay(dayId, {
+      cashAmount: filled.cashAmount,
+      cashAmountSource: filled.cashAmountSource,
+      sessionIds: filled.sessionIds,
+      note: filled.note,
+    });
+    setAiHint(
+      `ดึงนำส่ง ${matches.length} รอบ = ฿${formatPlainNumber(filled.cashAmount)}`,
+    );
   }
 
   function openDayPhoto(dayId: string) {
@@ -698,6 +755,7 @@ export function CashInLedgerPanel({
         dateSource: d.dateSource || ("" as CashFillSource),
         note: (d.note || "").trim().slice(0, 200),
         slipUrls: [...d.slipUrls],
+        sessionIds: [...(d.sessionIds || [])],
       }));
       const bankTransfers = workingTransfers.map((t) => ({
         ...t,
@@ -1268,6 +1326,30 @@ export function CashInLedgerPanel({
                                 })
                               }
                             />
+                            {isOwner ? (
+                              <button
+                                type="button"
+                                className="ghost-btn cash-in-ai-reread"
+                                disabled={busy}
+                                title={
+                                  (() => {
+                                    const matches = sessionsForCashDepositDay(
+                                      posSessions,
+                                      day.date,
+                                    );
+                                    const sum = sumSessionRemits(matches);
+                                    return matches.length
+                                      ? `ดึง Σ นำส่ง ${matches.length} รอบ = ฿${formatPlainNumber(sum)}`
+                                      : "ดึงยอดนำส่งจากรอบ nPos/มือของวันนี้";
+                                  })()
+                                }
+                                onClick={() => fillDayFromPosSessions(day.id)}
+                              >
+                                {day.sessionIds?.length
+                                  ? `รอบ ${day.sessionIds.length}`
+                                  : "จากรอบ"}
+                              </button>
+                            ) : null}
                           </div>
                         </td>
                         <td className="col-note">
