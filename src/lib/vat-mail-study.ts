@@ -14,6 +14,7 @@ import type { DeliveryChannel } from "./vat-sales";
 /** แท็กศึกษาแนะนำ — จูนร่วม AI · ยังไม่เข้างบ */
 export const MAIL_STUDY_TAG_PRESETS = [
   "grab-รายวัน",
+  "grab-สรุปเดือน",
   "lm-สรุปเดือน",
   "lm-รายวัน-ขาย",
   "lm-รายวัน-โอน",
@@ -34,6 +35,7 @@ export type MailStudyFileKind = "pdf" | "excel" | "csv" | "unknown";
 export function inferMailStudyHints(report: {
   subject: string;
   snippet?: string;
+  rawText?: string;
   reportKind?: string;
   pdfFilenames?: string[];
 }): {
@@ -41,7 +43,7 @@ export function inferMailStudyHints(report: {
   fileKinds: MailStudyFileKind[];
 } {
   const names = (report.pdfFilenames || []).map((n) => n.toLowerCase());
-  const blob = `${report.subject || ""} ${report.snippet || ""} ${names.join(" ")}`.toLowerCase();
+  const blob = `${report.subject || ""} ${report.snippet || ""} ${String(report.rawText || "").slice(0, 4000)} ${names.join(" ")}`.toLowerCase();
   const fileKinds = new Set<MailStudyFileKind>();
   for (const n of names) {
     if (/\.pdf($|\b)/.test(n) || n.includes("pdf")) fileKinds.add("pdf");
@@ -61,7 +63,11 @@ export function inferMailStudyHints(report: {
     report.reportKind === "daily"
       ? report.reportKind
       : "unknown";
-  if (/สรุปเดือน|ประจำเดือน|monthly|ทั้งเดือน|end of month/.test(blob)) {
+  if (
+    /ยอดขายสะสมประจำเดือน|สะสมประจำเดือน|สรุปเดือน|ประจำเดือน|monthly|ทั้งเดือน|end of month/.test(
+      blob,
+    )
+  ) {
     grain = "monthly";
   } else if (/รายสัปดาห์|weekly/.test(blob)) {
     grain = "weekly";
@@ -76,6 +82,7 @@ export function inferMailStudyHints(report: {
 
 const TYPE_TAGS = new Set<string>([
   "grab-รายวัน",
+  "grab-สรุปเดือน",
   "lm-สรุปเดือน",
   "lm-รายวัน-ขาย",
   "lm-รายวัน-โอน",
@@ -83,6 +90,12 @@ const TYPE_TAGS = new Set<string>([
   "sf-โอนรายวัน",
   "ข้าม",
 ]);
+
+function clearChannelTypeTags(tags: Set<string>) {
+  for (const t of TYPE_TAGS) {
+    if (t !== "ข้าม") tags.delete(t);
+  }
+}
 
 /**
  * เสนอแท็กศึกษาจาก From/Subject/ไฟล์ — รวมกับแท็กที่มี (ไม่ลบของคน)
@@ -93,6 +106,7 @@ export function inferMailStudyTags(
     from?: string;
     subject: string;
     snippet?: string;
+    rawText?: string;
     channel?: string;
     reportKind?: string;
     pdfFilenames?: string[];
@@ -108,6 +122,7 @@ export function inferMailStudyTags(
   const tags = new Set(existing);
 
   if (isNoiseMail(from, subject) || isTaxInvoiceMail(subject)) {
+    clearChannelTypeTags(tags);
     tags.add("ข้าม");
     tags.delete("รอแกะ");
     return [...tags].slice(0, 20);
@@ -130,9 +145,10 @@ export function inferMailStudyTags(
 
   const sub = subject.toLowerCase();
   let typed = false;
+  clearChannelTypeTags(tags);
 
   if (channel === "grab") {
-    tags.add("grab-รายวัน");
+    tags.add(hints.grain === "monthly" ? "grab-สรุปเดือน" : "grab-รายวัน");
     typed = true;
   } else if (channel === "lineman") {
     if (hints.grain === "monthly" || /สรุปเดือน|ประจำเดือน|monthly/.test(sub)) {
@@ -149,7 +165,7 @@ export function inferMailStudyTags(
       typed = true;
     }
   } else if (channel === "shopee") {
-    if (hints.grain === "monthly" || /สรุปเดือน|ประจำเดือน|monthly/.test(sub)) {
+    if (hints.grain === "monthly" || /สรุปเดือน|ประจำเดือน|monthly|สะสมประจำเดือน/.test(sub)) {
       tags.add("sf-สรุปเดือน");
       typed = true;
     } else if (/โอนเงิน|settlement|รายงานการโอน/.test(sub)) {

@@ -2,14 +2,15 @@
 
 /**
  * ช่องไฟล์ Drive — F0–F5
- * ซิงก์ไฟล์ · ร่างยอด (F4) · ยืนยันลงตาราง (F5)
+ * ระบบ/AI เติมยอด (รายวัน 4 คอลัมน์) · owner ซุ่มตรวจแล้วยืนยัน F5
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MONTH_CHANNEL_LABEL, MONTH_CHANNELS } from "@/lib/vat-month-sources";
-import { formatThaiMonthKey } from "@/lib/vat-monthly";
+import { formatThaiDateKey, formatThaiMonthKey } from "@/lib/vat-monthly";
 import { formatVatMoney } from "@/lib/vat-number-format";
 import type { MonthChannel } from "@/lib/vat-month-books";
 import {
+  classifyVatMailPeriods,
   disconnectVatMail,
   fetchVatMailStatus,
   listMonthDriveFiles,
@@ -24,6 +25,7 @@ import {
   draftDriveMonthProposal,
   loadMonthProposal,
   mergeProposalIntoBooks,
+  sortedChannelDays,
   type VatDeliveryMonthProposal,
 } from "@/lib/vat-delivery-month-proposals";
 
@@ -222,6 +224,25 @@ export function VatSourcesDriveSlot({
     }
   }
 
+  async function onClassifyPeriod() {
+    setBusy("period");
+    setError("");
+    setMsg("");
+    try {
+      const r = await classifyVatMailPeriods({ monthKey, limit: 30 });
+      setMsg(
+        `คัดแยกเดือนแล้ว · อัปเดต ${r.updated}` +
+          (r.aiCalled ? ` · Gemini ${r.aiCalled}` : ` · heuristic ${r.heuristicOnly}`) +
+          " · แล้วซิงก์ Drive ใหม่ได้",
+      );
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function onDraftF4() {
     setBusy("draft");
     setError("");
@@ -336,10 +357,18 @@ export function VatSourcesDriveSlot({
         <button
           type="button"
           className="ghost-btn vat-mini-btn"
+          disabled={Boolean(busy) || !status?.connected}
+          onClick={() => void onClassifyPeriod()}
+        >
+          {busy === "period" ? "คัดแยกเดือน…" : "คัดแยกเดือน (เนื้อ+Gemini)"}
+        </button>
+        <button
+          type="button"
+          className="ghost-btn vat-mini-btn"
           disabled={Boolean(busy)}
           onClick={() => void onDraftF4()}
         >
-          {busy === "draft" ? "ร่างยอด…" : "ร่างยอด F4"}
+          {busy === "draft" ? "ระบบกำลังเติม…" : "ระบบเติมยอด F4"}
         </button>
         <button
           type="button"
@@ -347,7 +376,7 @@ export function VatSourcesDriveSlot({
           disabled={Boolean(busy) || !confirmableChannels.length}
           onClick={() => void onConfirmF5()}
         >
-          {busy === "confirm" ? "กำลังผสาน…" : "ยืนยันลงตาราง F5"}
+          {busy === "confirm" ? "กำลังผสาน…" : "ซุ่มตรวจแล้ว · ยืนยัน F5"}
         </button>
         <button
           type="button"
@@ -464,8 +493,89 @@ export function VatSourcesDriveSlot({
                 )}
               </ul>
 
+              {(() => {
+                const dayRows = sortedChannelDays(chProp?.days);
+                const showDaily =
+                  dayRows.length > 0 ||
+                  chProp?.strategy === "daily-rollup" ||
+                  chProp?.strategy === "mixed" ||
+                  chProp?.strategy === "unknown";
+                return showDaily ? (
+                  <div
+                    className="vat-sources-drive-daily"
+                    data-daily={ch}
+                    aria-label={`ตารางรายวัน ${MONTH_CHANNEL_LABEL[ch]}`}
+                  >
+                    <p className="vat-sources-drive-draft-title">
+                      ตารางรายวัน · ระบบเติม · ซุ่มตรวจ
+                    </p>
+                    <div className="sheet-wrap vat-sources-drive-daily-wrap">
+                      <table className="sheet-table vat-sales-table vat-sales-table--slim vat-sources-drive-daily-table">
+                        <thead>
+                          <tr>
+                            <th>วันที่</th>
+                            <th>ยอดขายแอพ</th>
+                            <th>ยอดโอน</th>
+                            <th>คชจ.GP</th>
+                            <th>VAT-ซื้อ</th>
+                            <th>สถานะ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dayRows.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="muted">
+                                ยังไม่มีแถวรายวัน — กด「ระบบเติมยอด F4」หรือให้ AI
+                                ส่ง days[]
+                              </td>
+                            </tr>
+                          ) : (
+                            dayRows.map((d) => (
+                              <tr
+                                key={d.dateKey}
+                                data-day={d.dateKey}
+                                data-day-status={d.status}
+                              >
+                                <td>{formatThaiDateKey(d.dateKey)}</td>
+                                <td className="col-num">
+                                  {fmtAmt(d.appSales)}
+                                </td>
+                                <td className="col-num">
+                                  {fmtAmt(d.transfer)}
+                                </td>
+                                <td className="col-num">
+                                  {fmtAmt(d.gpExVat)}
+                                </td>
+                                <td className="col-num">{fmtAmt(d.gpVat)}</td>
+                                <td>
+                                  <span
+                                    className={
+                                      d.status === "gap"
+                                        ? "vat-sources-drive-empty"
+                                        : "vat-sources-drive-count"
+                                    }
+                                  >
+                                    {d.status === "gap"
+                                      ? "ว่าง"
+                                      : d.status === "ซุ่มตรวจ"
+                                        ? "ซุ่มตรวจ"
+                                        : "เติมแล้ว"}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
               <div className="vat-sources-drive-draft" data-draft={ch}>
-                <p className="vat-sources-drive-draft-title">ร่างยอด F4</p>
+                <p className="vat-sources-drive-draft-title">
+                  รวมเดือน (4 คอลัมน์)
+                </p>
                 <dl className="vat-sources-drive-draft-grid">
                   <div>
                     <dt>ยอดขายแอพ</dt>
@@ -495,7 +605,7 @@ export function VatSourcesDriveSlot({
                   disabled={Boolean(busy) || !canConfirm}
                   onClick={() => void onConfirmF5([ch])}
                 >
-                  ยืนยันช่องนี้ → ตาราง
+                  ซุ่มตรวจแล้ว · ยืนยันช่องนี้
                 </button>
               </div>
             </article>
@@ -516,7 +626,9 @@ rootFolderId=${rootFolderId || "-"}
 proposal=${proposal ? `${proposal.phase}/${proposal.status}` : "none"}
 confirmable=${confirmableChannels.join(",") || "-"}
 checks=F0=${f0Ready ? 1 : 0} F1=${f1Ready ? 1 : 0} F2=1 F3=1 F4=${f4Ready ? 1 : 0} F5=${f5Ready ? 1 : 0}
-next=${!hasDriveScope ? "reconnect OAuth drive.file" : !fileTotal ? "sync mail + vatMailDriveSync" : !f4Ready ? "draft F4 / agent propose" : !f5Ready ? "owner confirm F5" : "done"}
+cols=ยอดขายแอพ|ยอดโอน|คชจ.GP|VAT-ซื้อ
+owner=ซุ่มตรวจเท่านั้น · ไม่กรอกเอง
+next=${!hasDriveScope ? "reconnect OAuth drive.file" : !fileTotal ? "sync mail + vatMailDriveSync" : !f4Ready ? "ระบบเติม F4 / AI days[] adapter" : !f5Ready ? "owner ซุ่มตรวจ + F5" : "done"}
 doc=docs/vat-delivery-drive-spine.md
 ui=#vat-sources-drive-slot
 `}</pre>

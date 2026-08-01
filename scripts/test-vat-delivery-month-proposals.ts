@@ -8,6 +8,7 @@ import {
   monthKeyFromReport,
   proposalSummaryLine,
   proposalToMonthSources,
+  sortedChannelDays,
 } from "../src/lib/vat-delivery-month-proposals";
 import type { PlatformEmailReport } from "../src/lib/vat-sales-mail";
 import { parseMailNetTransfer } from "../src/lib/vat-sales-parse";
@@ -203,6 +204,31 @@ assert.match(proposalSummaryLine(july), /grab:2ใช้/);
   assert.equal(sources.byChannel.grab.sales, 10000);
   assert.equal(sources.byChannel.grab.transfer, 8000);
   assert.ok(sources.byChannel.grab.fee > 0);
+}
+
+{
+  // AI ส่งตารางรายวัน 4 คอลัมน์ → ม้วนเดือน
+  const base = buildMonthProposalFromReports("2026-07", [], "test");
+  const drafted = applyDriveAiDraftToProposal(
+    base,
+    {
+      grab: {
+        days: [
+          { dateKey: "2026-07-01", appSales: 1000, transfer: 800 },
+          { dateKey: "2026-07-02", appSales: 2000, transfer: 1600 },
+        ],
+        note: "adapter daily",
+      },
+    },
+    "ai",
+  );
+  const rows = sortedChannelDays(drafted.channels.grab.days);
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].status, "ซุ่มตรวจ");
+  assert.equal(drafted.channels.grab.amounts.appSales, 3000);
+  assert.equal(drafted.channels.grab.amounts.transfer, 2400);
+  assert.ok((drafted.channels.grab.amounts.gpExVat || 0) > 0);
+  assert.ok((drafted.channels.grab.amounts.gpVat || 0) > 0);
 }
 
 console.log("ok vat-delivery-month-proposals");

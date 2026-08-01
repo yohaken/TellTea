@@ -20,6 +20,10 @@ const {
 } = require("./vat-mail-channel");
 const { inferMailStudyTags, tagsChanged } = require("./vat-mail-study-tags");
 const {
+  resolveReportPeriod,
+  periodFieldsFromResolved,
+} = require("./vat-mail-period");
+const {
   publicDriveStatus,
   DRIVE_META_DOC,
 } = require("./vat-mail-drive");
@@ -318,26 +322,47 @@ async function reclassifyStoredReports(db, rules, actorId) {
   let reclassified = 0;
   let noiseTagged = 0;
   let tagged = 0;
+  let periodFixed = 0;
   for (const docSnap of snap.docs) {
     const d = docSnap.data() || {};
     const from = String(d.from || "");
     const subject = String(d.subject || "");
     const next = matchChannel(from, subject, rules);
     const noise = isNoiseMail(from, subject) || isTaxInvoiceMail(subject);
+    const period = periodFieldsFromResolved(
+      resolveReportPeriod({
+        subject,
+        snippet: d.snippet,
+        rawText: d.rawText,
+        receivedAt: d.receivedAt || d.internalDate,
+      }),
+    );
     const nextTags = inferMailStudyTags(
       {
         from,
         subject,
-        channel: d.channel,
+        channel: next !== "unknown" ? next : d.channel,
         pdfFilenames: d.pdfFilenames,
         studyTags: d.studyTags,
-        reportKind: d.reportKind,
+        reportKind: period.reportKind,
+        snippet: d.snippet,
+        rawText: d.rawText,
       },
       rules,
     );
     const patch = {};
     if (next !== "unknown" && next !== d.channel) {
       patch.channel = next;
+    }
+    if (
+      d.reportDateGuess !== period.reportDateGuess ||
+      d.reportKind !== period.reportKind ||
+      d.periodMonthKey !== period.periodMonthKey ||
+      d.periodStart !== period.periodStart ||
+      d.periodEnd !== period.periodEnd
+    ) {
+      Object.assign(patch, period);
+      periodFixed += 1;
     }
     if (tagsChanged(d.studyTags, nextTags)) {
       patch.studyTags = nextTags;
@@ -351,7 +376,7 @@ async function reclassifyStoredReports(db, rules, actorId) {
     if (patch.studyTags) tagged += 1;
     if (noise && nextTags.includes("ข้าม")) noiseTagged += 1;
   }
-  return { reclassified, noiseTagged, tagged, scanned: snap.size };
+  return { reclassified, noiseTagged, tagged, periodFixed, scanned: snap.size };
 }
 
 function unionUnique(a, b, max = 12) {
@@ -837,6 +862,26 @@ exports.vatMailSync = functions
               console.warn("pdf extract", messageId, pdfError);
             }
           }
+          const period = periodFieldsFromResolved(
+            resolveReportPeriod({
+              subject,
+              snippet: msg.snippet,
+              rawText,
+              receivedAt: internalDate,
+            }),
+          );
+          const studyTags = inferMailStudyTags(
+            {
+              from,
+              subject,
+              channel: channelFinal,
+              pdfFilenames,
+              reportKind: period.reportKind,
+              snippet: msg.snippet,
+              rawText,
+            },
+            rules,
+          );
           await db.collection(REPORTS_COL).doc(docId).set({
             channel: channelFinal,
             provider: "gmail",
@@ -852,8 +897,9 @@ exports.vatMailSync = functions
             ...(pdfFilenames.length ? { pdfFilenames } : {}),
             ...(pdfStoragePaths.length ? { pdfStoragePaths } : {}),
             ...(pdfError ? { pdfError } : { pdfError: "" }),
-            reportDateGuess: guessReportDate(subject, internalDate),
-            reportKind: guessReportKind(subject),
+            ...period,
+            studyTags,
+            studyTagsUpdatedAt: Date.now(),
             parseStatus: "pending",
             parseError: "",
             syncedAt: Date.now(),

@@ -117,6 +117,10 @@ function bangkokDateKey(ms = Date.now()) {
 }
 
 function monthKeyFromReport(doc) {
+  const periodMk = String(doc?.periodMonthKey || "").trim();
+  if (/^\d{4}-\d{2}$/.test(periodMk)) return periodMk;
+  const periodEnd = String(doc?.periodEnd || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(periodEnd)) return periodEnd.slice(0, 7);
   const guess = String(doc?.reportDateGuess || "").trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(guess)) return guess.slice(0, 7);
   if (/^\d{4}-\d{2}$/.test(guess)) return guess;
@@ -175,23 +179,22 @@ function reportTouchesMonth(doc, monthKey) {
  * เมื่อวันที่รายงานว่าง/อยู่เดือนข้างเคียงแต่รับในช่วงขอบ
  */
 function resolveDriveMonthKey(doc, preferredMonth) {
-  const guess = String(doc?.reportDateGuess || "").trim();
-  if (/^\d{4}-\d{2}/.test(guess)) {
-    const fromGuess = guess.slice(0, 7);
+  const fromPeriod = monthKeyFromReport(doc);
+  if (/^\d{4}-\d{2}$/.test(fromPeriod)) {
     if (
       preferredMonth &&
-      fromGuess !== preferredMonth &&
-      adjacentMonthKeys(preferredMonth).includes(fromGuess)
+      fromPeriod !== preferredMonth &&
+      adjacentMonthKeys(preferredMonth).includes(fromPeriod)
     ) {
-      // รายงานระบุเดือนก่อน/หลังชัด — เคารพวันที่รายงาน
-      return fromGuess;
+      // รายงานระบุเดือนก่อน/หลังชัด — เคารพช่วงในเนื้อ/period
+      return fromPeriod;
     }
-    return fromGuess;
+    return fromPeriod;
   }
   if (preferredMonth && reportTouchesMonth(doc, preferredMonth)) {
     return preferredMonth;
   }
-  return monthKeyFromReport(doc);
+  return fromPeriod;
 }
 
 function folderCacheKey(channel, monthKey) {

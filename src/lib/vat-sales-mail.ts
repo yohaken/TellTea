@@ -329,6 +329,42 @@ export async function syncVatMail(lookbackDays = 120): Promise<{
   return res.data;
 }
 
+/** คัดแยกเดือน/ชนิดรายงานจากเนื้อเมล — heuristic + Gemini เมื่อไม่ชัวร์ */
+export async function classifyVatMailPeriods(opts?: {
+  monthKey?: string;
+  limit?: number;
+  force?: boolean;
+}): Promise<{
+  scanned: number;
+  updated: number;
+  aiCalled: number;
+  heuristicOnly: number;
+  samples: Array<Record<string, unknown>>;
+}> {
+  const fn = httpsCallable<
+    { monthKey?: string; limit?: number; force?: boolean },
+    {
+      scanned: number;
+      updated: number;
+      aiCalled: number;
+      heuristicOnly: number;
+      samples?: Array<Record<string, unknown>>;
+    }
+  >(getFirebaseFunctions(), "vatMailAiClassifyPeriod");
+  const res = await fn({
+    ...(opts?.monthKey ? { monthKey: opts.monthKey } : {}),
+    ...(opts?.limit != null ? { limit: opts.limit } : {}),
+    ...(opts?.force ? { force: true } : {}),
+  });
+  return {
+    scanned: Number(res.data?.scanned) || 0,
+    updated: Number(res.data?.updated) || 0,
+    aiCalled: Number(res.data?.aiCalled) || 0,
+    heuristicOnly: Number(res.data?.heuristicOnly) || 0,
+    samples: Array.isArray(res.data?.samples) ? res.data.samples : [],
+  };
+}
+
 /** ซิงก์แนบเมล → Google Drive (TellTea-VAT/แอพ/เดือน) */
 export async function syncVatMailDrive(opts?: { monthKey?: string }): Promise<{
   uploaded: number;

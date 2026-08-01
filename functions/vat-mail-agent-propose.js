@@ -7,10 +7,14 @@
  * Body: {
  *   monthKey: "2026-07",
  *   channels: {
- *     grab?: { appSales, transfer, gpExVat?, gpVat?, driveFileIds?, note? },
+ *     grab?: {
+ *       appSales?, transfer?, gpExVat?, gpVat?, driveFileIds?, note?,
+ *       days?: [{ dateKey, appSales, transfer, gpExVat?, gpVat? }]  // 4 คอลัมน์รายวัน
+ *     },
  *     lineman?: …, shopee?: …
  *   }
  * }
+ * คอลัมน์คงที่: ยอดขายแอพ · ยอดโอน · คชจ.GP · VAT-ซื้อ — AI/ระบบเติม · owner ซุ่มตรวจ
  */
 const functions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
@@ -69,6 +73,74 @@ function emptyChannel(channel) {
     amountsSource: "none",
     note: "",
     driveFileIds: [],
+    days: {},
+  };
+}
+
+function feeParts(gross, net) {
+  const fee = Math.max(0, Math.round((Number(gross) - Number(net)) * 100) / 100);
+  const gpVat = fee > 0 ? Math.round(((fee * 7) / 107) * 100) / 100 : 0;
+  const gpExVat = fee > 0 ? Math.round((fee - gpVat) * 100) / 100 : 0;
+  return { gpExVat, gpVat };
+}
+
+function mapDays(rawDays) {
+  const out = {};
+  if (!Array.isArray(rawDays)) return out;
+  for (const row of rawDays) {
+    if (!row || typeof row !== "object") continue;
+    const dateKey = asString(row.dateKey, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) continue;
+    const appSales = numOrNull(row.appSales);
+    const transfer = numOrNull(row.transfer);
+    let gpExVat = numOrNull(row.gpExVat);
+    let gpVat = numOrNull(row.gpVat);
+    if (gpExVat == null && gpVat == null && appSales != null && transfer != null) {
+      const p = feeParts(appSales, transfer);
+      gpExVat = p.gpExVat;
+      gpVat = p.gpVat;
+    }
+    const ok = (appSales != null && appSales > 0) || (transfer != null && transfer > 0);
+    out[dateKey] = {
+      dateKey,
+      appSales: ok ? appSales : null,
+      transfer: ok ? transfer ?? 0 : null,
+      gpExVat: ok ? gpExVat ?? 0 : null,
+      gpVat: ok ? gpVat ?? 0 : null,
+      reportId: asString(row.reportId, 120),
+      status: ok ? "ซุ่มตรวจ" : "gap",
+    };
+  }
+  return out;
+}
+
+function rollupDays(days) {
+  let appSales = 0;
+  let transfer = 0;
+  let gpExVat = 0;
+  let gpVat = 0;
+  let filled = 0;
+  for (const d of Object.values(days || {})) {
+    if (d.status === "gap") continue;
+    if (!(Number(d.appSales) > 0 || Number(d.transfer) > 0)) continue;
+    filled += 1;
+    appSales += Number(d.appSales) || 0;
+    transfer += Number(d.transfer) || 0;
+    gpExVat += Number(d.gpExVat) || 0;
+    gpVat += Number(d.gpVat) || 0;
+  }
+  if (!filled) return null;
+  if (gpExVat <= 0 && gpVat <= 0 && appSales >= transfer) {
+    const p = feeParts(appSales, transfer);
+    gpExVat = p.gpExVat;
+    gpVat = p.gpVat;
+  }
+  return {
+    appSales: Math.round(appSales * 100) / 100,
+    transfer: Math.round(transfer * 100) / 100,
+    gpExVat: Math.round(gpExVat * 100) / 100,
+    gpVat: Math.round(gpVat * 100) / 100,
+    filled,
   };
 }
 
@@ -100,10 +172,12 @@ function applyDraft(proposal, drafts, actor) {
     const d = drafts[ch];
     if (!d || typeof d !== "object") continue;
     const prev = proposal.channels[ch] || emptyChannel(ch);
-    const appSales = numOrNull(d.appSales);
-    const transfer = numOrNull(d.transfer);
-    let gpExVat = numOrNull(d.gpExVat);
-    let gpVat = numOrNull(d.gpVat);
+    const dayMap = Array.isArray(d.days) && d.days.length ? mapDays(d.days) : prev.days || {};
+    const fromDays = Object.keys(dayMap).length ? rollupDays(dayMap) : null;
+    let appSales = fromDays ? fromDays.appSales : numOrNull(d.appSales);
+    let transfer = fromDays ? fromDays.transfer : numOrNull(d.transfer);
+    let gpExVat = fromDays ? fromDays.gpExVat : numOrNull(d.gpExVat);
+    let gpVat = fromDays ? fromDays.gpVat : numOrNull(d.gpVat);
     if (
       gpExVat == null &&
       gpVat == null &&
@@ -111,14 +185,16 @@ function applyDraft(proposal, drafts, actor) {
       transfer != null &&
       appSales >= transfer
     ) {
-      const fee = Math.round((appSales - transfer) * 100) / 100;
-      // VAT 7% รวมในค่า GP
-      gpVat = fee > 0 ? Math.round(((fee * 7) / 107) * 100) / 100 : 0;
-      gpExVat = fee > 0 ? Math.round((fee - gpVat) * 100) / 100 : 0;
+      const p = feeParts(appSales, transfer);
+      gpVat = p.gpVat;
+      gpExVat = p.gpExVat;
     }
     const has = appSales != null && appSales > 0;
+    const dayCount = Object.keys(dayMap).length;
     next.channels[ch] = {
       ...prev,
+      days: dayMap,
+      dayCount: dayCount || prev.dayCount || 0,
       amounts: has
         ? {
             appSales,
@@ -133,7 +209,13 @@ function applyDraft(proposal, drafts, actor) {
         ? d.driveFileIds.map(String).filter(Boolean).slice(0, 40)
         : prev.driveFileIds || [],
       note: has
-        ? asString(d.note || "F4 จาก Agent · ยังไม่ทับงบ", 400)
+        ? asString(
+            d.note ||
+              (dayCount
+                ? `F4 จากตารางรายวัน ${fromDays?.filled || dayCount} วัน · AI adapter · รอซุ่มตรวจ · ยังไม่ทับงบ`
+                : "F4 จาก Agent · รอซุ่มตรวจ · ยังไม่ทับงบ"),
+            400,
+          )
         : asString(d.note || prev.note || "", 400),
     };
   }
@@ -255,10 +337,13 @@ exports.vatMailAgentPropose = functions
               amountsSource: next.channels[ch].amountsSource,
               note: next.channels[ch].note,
               driveFileIds: next.channels[ch].driveFileIds || [],
+              dayCount: Object.keys(next.channels[ch].days || {}).length,
+              days: next.channels[ch].days || {},
             },
           ]),
         ),
-        hint: "Owner ยืนยัน F5 บน /vat-sales/sources/ — ไม่เขียนงบอัตโนมัติ",
+        hint:
+          "คอลัมน์: ยอดขายแอพ·ยอดโอน·คชจ.GP·VAT-ซื้อ · ส่ง days[] ได้เมื่อไม่มีสรุปเดือน · Owner ซุ่มตรวจแล้วกด F5 — ไม่เขียนงบอัตโนมัติ",
       });
     } catch (e) {
       console.error("vatMailAgentPropose", e);

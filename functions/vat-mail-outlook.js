@@ -7,6 +7,11 @@
 const functions = require("firebase-functions/v1");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("crypto");
+const {
+  resolveReportPeriod,
+  periodFieldsFromResolved,
+} = require("./vat-mail-period");
+const { inferMailStudyTags } = require("./vat-mail-study-tags");
 
 const REGION = "asia-southeast1";
 const OWNER_EMAIL = String(process.env.TELLTEA_OWNER_EMAIL || "yohaken@gmail.com")
@@ -422,18 +427,41 @@ exports.vatOutlookSync = functions
           const rawHtml = asString(msg.body?.content, 200000);
           const rawText = msg.body?.contentType === "text" ? rawHtml : stripHtml(rawHtml);
           const matched = matchChannel(from, subject, rules);
+          const channelFinal = matched === "unknown" ? channel : matched;
+          const text = String(rawText || "").slice(0, 200000);
+          const snippet = asString(msg.bodyPreview, 400);
+          const period = periodFieldsFromResolved(
+            resolveReportPeriod({
+              subject,
+              snippet,
+              rawText: text,
+              receivedAt,
+            }),
+          );
+          const studyTags = inferMailStudyTags(
+            {
+              from,
+              subject,
+              channel: channelFinal,
+              reportKind: period.reportKind,
+              snippet,
+              rawText: text,
+            },
+            rules,
+          );
           await db.collection(REPORTS_COL).doc(docId).set({
-            channel: matched === "unknown" ? channel : matched,
+            channel: channelFinal,
             provider: "outlook",
             messageId,
             receivedAt,
             subject,
             from,
-            snippet: asString(msg.bodyPreview, 400),
-            rawText: String(rawText || "").slice(0, 200000),
+            snippet,
+            rawText: text,
             rawHtml: String(rawHtml || "").slice(0, 200000),
-            reportDateGuess: guessReportDate(subject, receivedAt),
-            reportKind: guessReportKind(subject),
+            ...period,
+            studyTags,
+            studyTagsUpdatedAt: Date.now(),
             parseStatus: "pending",
             parseError: "",
             syncedAt: Date.now(),

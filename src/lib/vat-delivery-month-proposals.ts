@@ -48,6 +48,22 @@ export type ChannelProposalStrategy =
   | "mixed"
   | "unknown";
 
+/**
+ * แถวรายวัน — คอลัมน์เดียวกับงบเดลิเวอรี่
+ * ยอดขายแอพ · ยอดโอน · คชจ.GP · VAT-ซื้อ
+ * ระบบ/AI เติม · owner ซุ่มตรวจเท่านั้น
+ */
+export type ChannelDayAmount = {
+  dateKey: string;
+  appSales: number | null;
+  transfer: number | null;
+  gpExVat: number | null;
+  gpVat: number | null;
+  reportId: string;
+  /** filled = ระบบใส่แล้ว · gap = มีเมลแต่ parse ไม่ได้ · ซุ่มตรวจ = พร้อมให้ owner ดู */
+  status: "filled" | "gap" | "ซุ่มตรวจ";
+};
+
 export type ChannelMonthProposal = {
   channel: DeliveryChannel;
   status: "empty" | "studying" | "proposed" | "ready";
@@ -63,6 +79,11 @@ export type ChannelMonthProposal = {
   note: string;
   /** ไฟล์ Drive ที่ใช้ร่างยอด (F4) */
   driveFileIds: string[];
+  /**
+   * ตารางรายวัน (เมื่อไม่มีสรุปเดือน / ม้วนจากรายวัน)
+   * key = YYYY-MM-DD · คอลัมน์เดียวกับ amounts เดือน
+   */
+  days: Record<string, ChannelDayAmount>;
 };
 
 export type VatDeliveryMonthProposal = {
@@ -107,15 +128,116 @@ export function emptyChannelProposal(
     amountsSource: "none",
     note: "",
     driveFileIds: [],
+    days: {},
   };
 }
 
-/** เดาเดือนจากวันที่รายงาน / รับเมล (yyyy-mm) */
+function dayAmtToFeeParts(gross: number, net: number, feeHint: number) {
+  let fee = feeHint;
+  if (fee <= 0 && gross > 0 && net > 0 && gross >= net) {
+    fee = roundMoney(gross - net);
+  }
+  const feeR = roundMoney(fee);
+  const gpVat = feeR > 0 ? gpVatFromFee(feeR, "incVat", 7) : 0;
+  const gpExVat = feeR > 0 ? roundMoney(feeR - gpVat) : 0;
+  return { gpExVat, gpVat, fee: feeR };
+}
+
+/** ม้วนตารางรายวัน → ยอดเดือน (4 คอลัมน์เดิม) */
+export function rollupDayMapToAmounts(
+  days: Record<string, ChannelDayAmount>,
+): DeliveryAmountProposal & { filledDays: number; gapDays: number } {
+  let appSales = 0;
+  let transfer = 0;
+  let gpExVat = 0;
+  let gpVat = 0;
+  let filledDays = 0;
+  let gapDays = 0;
+  for (const d of Object.values(days)) {
+    if (d.status === "gap" || (d.appSales == null && d.transfer == null)) {
+      gapDays += 1;
+      continue;
+    }
+    filledDays += 1;
+    appSales += Number(d.appSales) || 0;
+    transfer += Number(d.transfer) || 0;
+    gpExVat += Number(d.gpExVat) || 0;
+    gpVat += Number(d.gpVat) || 0;
+  }
+  if (!filledDays) {
+    return { ...emptyAmounts(), filledDays: 0, gapDays };
+  }
+  if (gpExVat <= 0 && gpVat <= 0 && appSales > 0 && transfer > 0 && appSales >= transfer) {
+    const parts = dayAmtToFeeParts(appSales, transfer, 0);
+    gpExVat = parts.gpExVat;
+    gpVat = parts.gpVat;
+  }
+  return {
+    appSales: roundMoney(appSales),
+    transfer: roundMoney(transfer),
+    gpExVat: roundMoney(gpExVat),
+    gpVat: roundMoney(gpVat),
+    filledDays,
+    gapDays,
+  };
+}
+
+export function sortedChannelDays(
+  days: Record<string, ChannelDayAmount> | undefined | null,
+): ChannelDayAmount[] {
+  if (!days || typeof days !== "object") return [];
+  return Object.values(days).sort((a, b) =>
+    String(a.dateKey).localeCompare(String(b.dateKey)),
+  );
+}
+
+function mapDayRow(raw: unknown, fallbackDate = ""): ChannelDayAmount | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const dateKey = String(d.dateKey || fallbackDate || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return null;
+  const statusRaw = String(d.status || "");
+  const status: ChannelDayAmount["status"] =
+    statusRaw === "gap" || statusRaw === "ซุ่มตรวจ" || statusRaw === "filled"
+      ? statusRaw
+      : Number(d.appSales) > 0 || Number(d.transfer) > 0
+        ? "ซุ่มตรวจ"
+        : "gap";
+  return {
+    dateKey,
+    appSales:
+      d.appSales == null || d.appSales === ""
+        ? null
+        : roundMoney(Number(d.appSales) || 0),
+    transfer:
+      d.transfer == null || d.transfer === ""
+        ? null
+        : roundMoney(Number(d.transfer) || 0),
+    gpExVat:
+      d.gpExVat == null || d.gpExVat === ""
+        ? null
+        : roundMoney(Number(d.gpExVat) || 0),
+    gpVat:
+      d.gpVat == null || d.gpVat === ""
+        ? null
+        : roundMoney(Number(d.gpVat) || 0),
+    reportId: String(d.reportId || "").slice(0, 120),
+    status,
+  };
+}
+
+/** เดาเดือนจากช่วงในเนื้อ / วันที่รายงาน / รับเมล (yyyy-mm) */
 export function monthKeyFromReport(report: {
+  periodMonthKey?: string;
+  periodEnd?: string;
   reportDateGuess?: string;
   receivedAt?: number;
   parsed?: { reportDate?: string | null } | null;
 }): string {
+  const periodMk = String(report.periodMonthKey || "").trim();
+  if (/^\d{4}-\d{2}$/.test(periodMk)) return periodMk;
+  const periodEnd = String(report.periodEnd || "").trim();
+  if (/^\d{4}-\d{2}/.test(periodEnd)) return periodEnd.slice(0, 7);
   const fromParsed = String(report.parsed?.reportDate || "").trim();
   if (/^\d{4}-\d{2}/.test(fromParsed)) return fromParsed.slice(0, 7);
   const guess = String(report.reportDateGuess || "").trim();
@@ -348,6 +470,7 @@ export function buildMonthProposalFromReports(
       amountsSource: "none",
       note,
       driveFileIds: [],
+      days: {},
     };
   }
 
@@ -441,6 +564,17 @@ function mapProposal(
       driveFileIds: Array.isArray(c.driveFileIds)
         ? c.driveFileIds.map(String).filter(Boolean).slice(0, 40)
         : [],
+      days: (() => {
+        const out: Record<string, ChannelDayAmount> = {};
+        const rawDays = c.days && typeof c.days === "object" ? c.days : {};
+        for (const [dk, row] of Object.entries(
+          rawDays as Record<string, unknown>,
+        )) {
+          const mapped = mapDayRow(row, dk);
+          if (mapped) out[mapped.dateKey] = mapped;
+        }
+        return out;
+      })(),
     };
   }
   return {
@@ -490,8 +624,110 @@ export async function listMonthProposals(
 }
 
 /**
+ * สร้างตารางรายวัน (4 คอลัมน์) จากเมล — ระบบเติม · ไม่ให้ owner กรอก
+ * คอลัมน์: ยอดขายแอพ · ยอดโอน · คชจ.GP · VAT-ซื้อ
+ */
+export function buildChannelDayMapFromReports(
+  channel: DeliveryChannel,
+  reports: PlatformEmailReport[],
+  monthKey: string,
+): Record<string, ChannelDayAmount> {
+  const days: Record<string, ChannelDayAmount> = {};
+
+  if (channel === "lineman") {
+    const salesByDay = new Map<string, { gross: number; fee: number; id: string }>();
+    const transferByDay = new Map<string, { net: number; id: string }>();
+    for (const r of reports) {
+      const dk = dayKeyFromReport(r);
+      if (!dk || !dk.startsWith(monthKey)) continue;
+      const tags = r.studyTags || [];
+      if (tags.includes("ข้าม")) continue;
+      if (tags.includes("lm-รายวัน-โอน") || /ยอดโอนออก/.test(r.subject)) {
+        const amt = parseReportAmounts(r, "net-only");
+        if (amt.ok) {
+          const prev = transferByDay.get(dk);
+          transferByDay.set(dk, {
+            net: roundMoney((prev?.net || 0) + amt.net),
+            id: r.id,
+          });
+        } else if (!transferByDay.has(dk)) {
+          transferByDay.set(dk, { net: 0, id: r.id });
+        }
+        continue;
+      }
+      const amt = parseReportAmounts(r, "full");
+      if (amt.ok) {
+        const prev = salesByDay.get(dk);
+        salesByDay.set(dk, {
+          gross: roundMoney((prev?.gross || 0) + amt.gross),
+          fee: roundMoney((prev?.fee || 0) + amt.fee),
+          id: r.id,
+        });
+      } else if (!salesByDay.has(dk)) {
+        salesByDay.set(dk, { gross: 0, fee: 0, id: r.id });
+      }
+    }
+    const allKeys = new Set([...salesByDay.keys(), ...transferByDay.keys()]);
+    for (const dk of allKeys) {
+      const s = salesByDay.get(dk);
+      const t = transferByDay.get(dk);
+      const gross = s?.gross || 0;
+      const net = t?.net || 0;
+      const parts = dayAmtToFeeParts(gross, net, s?.fee || 0);
+      const ok = gross > 0 || net > 0;
+      days[dk] = {
+        dateKey: dk,
+        appSales: ok ? gross : null,
+        transfer: ok ? net : null,
+        gpExVat: ok ? parts.gpExVat : null,
+        gpVat: ok ? parts.gpVat : null,
+        reportId: s?.id || t?.id || "",
+        status: ok ? "ซุ่มตรวจ" : "gap",
+      };
+    }
+    return days;
+  }
+
+  for (const r of reports) {
+    const dk = dayKeyFromReport(r);
+    if (!dk || !dk.startsWith(monthKey)) continue;
+    if ((r.studyTags || []).includes("ข้าม")) continue;
+    const amt = parseReportAmounts(r, "full");
+    const prev = days[dk];
+    if (!amt.ok) {
+      if (!prev) {
+        days[dk] = {
+          dateKey: dk,
+          appSales: null,
+          transfer: null,
+          gpExVat: null,
+          gpVat: null,
+          reportId: r.id,
+          status: "gap",
+        };
+      }
+      continue;
+    }
+    const gross = roundMoney((prev?.appSales || 0) + amt.gross);
+    const net = roundMoney((prev?.transfer || 0) + amt.net);
+    const parts = dayAmtToFeeParts(gross, net, (prev ? Number(prev.gpExVat) + Number(prev.gpVat) : 0) + amt.fee);
+    days[dk] = {
+      dateKey: dk,
+      appSales: gross,
+      transfer: net,
+      gpExVat: parts.gpExVat,
+      gpVat: parts.gpVat,
+      reportId: r.id,
+      status: "ซุ่มตรวจ",
+    };
+  }
+  return days;
+}
+
+/**
  * เติมยอดในข้อเสนอจาก parse เมล (L3 เท่านั้น · ไม่ทับงบ L4)
- * Grab = ม้วนรายวัน · LM = รวมขายรายวัน + โอนรายวัน · Shopee = จากเมลที่ใช้ได้
+ * สร้างตารางรายวัน 4 คอลัมน์ แล้วม้วนเป็นยอดเดือน
+ * Grab/Shopee/LM = ม้วนรายวันเมื่อไม่มีสรุปเดือน
  */
 export function fillProposalAmountsFromReports(
   proposal: VatDeliveryMonthProposal,
@@ -513,70 +749,18 @@ export function fillProposalAmountsFromReports(
       .map((id) => byId.get(id))
       .filter((r): r is PlatformEmailReport => Boolean(r));
 
-    let days: DayAmt[] = [];
-    if (ch === "lineman") {
-      const salesRows = useful.filter((r) =>
-        (r.studyTags || []).includes("lm-รายวัน-ขาย"),
-      );
-      const transferRows = useful.filter((r) =>
-        (r.studyTags || []).includes("lm-รายวัน-โอน"),
-      );
-      const salesAmts = (salesRows.length ? salesRows : useful)
-        .filter((r) => !(r.studyTags || []).includes("lm-รายวัน-โอน"))
-        .map((r) => parseReportAmounts(r, "full"));
-      const transferAmts = (
-        transferRows.length
-          ? transferRows
-          : useful.filter((r) => (r.studyTags || []).includes("lm-รายวัน-โอน"))
-      ).map((r) => parseReportAmounts(r, "net-only"));
-      const salesRoll = rollupToAmounts(salesAmts);
-      const transferRoll = rollupToAmounts(transferAmts);
-      const appSales = salesRoll.appSales;
-      const transfer =
-        transferRoll.parsedOk && transferRoll.transfer != null
-          ? transferRoll.transfer
-          : salesRoll.transfer;
-      let fee = 0;
-      if (appSales != null && transfer != null && appSales >= transfer) {
-        fee = roundMoney(appSales - transfer);
-      } else if (salesRoll.gpExVat != null && salesRoll.gpVat != null) {
-        fee = roundMoney((salesRoll.gpExVat || 0) + (salesRoll.gpVat || 0));
-      }
-      const gpVat = fee > 0 ? gpVatFromFee(fee, "incVat", 7) : 0;
-      const gpExVat = fee > 0 ? roundMoney(fee - gpVat) : 0;
-      const parsedOk = salesRoll.parsedOk + transferRoll.parsedOk;
-      const parsedFail = salesRoll.parsedFail + transferRoll.parsedFail;
-      const has = parsedOk > 0 && appSales != null;
-      next.channels[ch] = {
-        ...prev,
-        amounts: has
-          ? {
-              appSales,
-              transfer: transfer ?? 0,
-              gpExVat: fee > 0 ? gpExVat : 0,
-              gpVat: fee > 0 ? gpVat : 0,
-            }
-          : emptyAmounts(),
-        amountsSource: has ? "adapter" : "none",
-        status: has ? "ready" : prev.status,
-        driveFileIds: prev.driveFileIds || [],
-        note: has
-          ? `D4 จากเมล · parse ผ่าน ${parsedOk}` +
-            (parsedFail ? ` · ไม่ผ่าน ${parsedFail}` : "") +
-            " · ยังไม่ทับงบ"
-          : `D4 ยังไม่มียอด · parse ไม่ผ่าน ${parsedFail || useful.length}`,
-      };
-      continue;
-    }
-
-    days = useful.map((r) => parseReportAmounts(r, "full"));
-    const roll = rollupToAmounts(days);
-    const has =
-      roll.parsedOk > 0 &&
-      roll.appSales != null &&
-      Number(roll.appSales) > 0;
+    const dayMap = buildChannelDayMapFromReports(
+      ch,
+      useful,
+      proposal.monthKey,
+    );
+    const roll = rollupDayMapToAmounts(dayMap);
+    const has = roll.filledDays > 0 && roll.appSales != null && Number(roll.appSales) > 0;
+    const isMonthly = prev.strategy === "monthly-summary";
     next.channels[ch] = {
       ...prev,
+      days: dayMap,
+      dayCount: Object.keys(dayMap).length || prev.dayCount,
       amounts: has
         ? {
             appSales: roll.appSales,
@@ -589,11 +773,12 @@ export function fillProposalAmountsFromReports(
       status: has ? "ready" : prev.status,
       driveFileIds: prev.driveFileIds || [],
       note: has
-        ? `D4 ม้วนจากเมล · ผ่าน ${roll.parsedOk}` +
-          (roll.parsedFail ? ` · ไม่ผ่าน ${roll.parsedFail}` : "") +
-          " · ยังไม่ทับงบ"
+        ? (isMonthly ? "D4 จากสรุป/รายวัน" : "D4 ตารางรายวัน") +
+          ` · ${roll.filledDays} วัน` +
+          (roll.gapDays ? ` · ช่องว่าง ${roll.gapDays}` : "") +
+          " · ระบบเติม · รอซุ่มตรวจ · ยังไม่ทับงบ"
         : useful.length
-          ? `D4 ยังไม่มียอด · parse ไม่ผ่าน ${roll.parsedFail} (มักอยู่แค่ PDF)`
+          ? `D4 ยังไม่มียอด · gap ${roll.gapDays || useful.length} (รอ AI adapter / ซิงก์ไฟล์)`
           : prev.note || "ไม่มีเมลใช้ได้",
     };
   }
@@ -683,15 +868,25 @@ export function proposalToMonthSources(
 }
 
 export type DriveAiChannelDraft = {
+  /** ยอดเดือน — ถ้าส่ง days จะม้วนจากรายวันแทน */
   appSales?: number | null;
   transfer?: number | null;
   gpExVat?: number | null;
   gpVat?: number | null;
   driveFileIds?: string[];
   note?: string;
+  /** แถวรายวันจาก AI adapter — คอลัมน์เดียวกับงบ */
+  days?: Array<{
+    dateKey: string;
+    appSales?: number | null;
+    transfer?: number | null;
+    gpExVat?: number | null;
+    gpVat?: number | null;
+    reportId?: string;
+  }>;
 };
 
-/** F4 — ใส่ร่างยอดจาก AI/มือ ลง L3 เท่านั้น · ไม่ทับงบ */
+/** F4 — ใส่ร่างยอดจาก AI/adapter ลง L3 เท่านั้น · ไม่ทับงบ · owner ไม่กรอก */
 export function applyDriveAiDraftToProposal(
   proposal: VatDeliveryMonthProposal,
   drafts: Partial<Record<DeliveryChannel, DriveAiChannelDraft>>,
@@ -709,22 +904,73 @@ export function applyDriveAiDraftToProposal(
     const d = drafts[ch];
     if (!d) continue;
     const prev = proposal.channels[ch];
-    const appSales =
-      d.appSales == null || !Number.isFinite(Number(d.appSales))
-        ? null
-        : roundMoney(Number(d.appSales));
-    const transfer =
-      d.transfer == null || !Number.isFinite(Number(d.transfer))
-        ? null
-        : roundMoney(Number(d.transfer));
+
+    let dayMap: Record<string, ChannelDayAmount> = { ...(prev.days || {}) };
+    if (Array.isArray(d.days) && d.days.length) {
+      dayMap = {};
+      for (const row of d.days) {
+        const mapped = mapDayRow(
+          {
+            dateKey: row.dateKey,
+            appSales: row.appSales,
+            transfer: row.transfer,
+            gpExVat: row.gpExVat,
+            gpVat: row.gpVat,
+            reportId: row.reportId || "",
+            status:
+              Number(row.appSales) > 0 || Number(row.transfer) > 0
+                ? "ซุ่มตรวจ"
+                : "gap",
+          },
+          row.dateKey,
+        );
+        if (!mapped) continue;
+        if (
+          mapped.gpExVat == null &&
+          mapped.gpVat == null &&
+          mapped.appSales != null &&
+          mapped.transfer != null
+        ) {
+          const parts = dayAmtToFeeParts(
+            mapped.appSales,
+            mapped.transfer,
+            0,
+          );
+          mapped.gpExVat = parts.gpExVat;
+          mapped.gpVat = parts.gpVat;
+        }
+        dayMap[mapped.dateKey] = mapped;
+      }
+    }
+
+    const fromDays = Object.keys(dayMap).length
+      ? rollupDayMapToAmounts(dayMap)
+      : null;
+
+    let appSales =
+      fromDays?.appSales != null
+        ? fromDays.appSales
+        : d.appSales == null || !Number.isFinite(Number(d.appSales))
+          ? null
+          : roundMoney(Number(d.appSales));
+    let transfer =
+      fromDays?.transfer != null
+        ? fromDays.transfer
+        : d.transfer == null || !Number.isFinite(Number(d.transfer))
+          ? null
+          : roundMoney(Number(d.transfer));
     let gpExVat =
-      d.gpExVat == null || !Number.isFinite(Number(d.gpExVat))
-        ? null
-        : roundMoney(Number(d.gpExVat));
+      fromDays?.gpExVat != null
+        ? fromDays.gpExVat
+        : d.gpExVat == null || !Number.isFinite(Number(d.gpExVat))
+          ? null
+          : roundMoney(Number(d.gpExVat));
     let gpVat =
-      d.gpVat == null || !Number.isFinite(Number(d.gpVat))
-        ? null
-        : roundMoney(Number(d.gpVat));
+      fromDays?.gpVat != null
+        ? fromDays.gpVat
+        : d.gpVat == null || !Number.isFinite(Number(d.gpVat))
+          ? null
+          : roundMoney(Number(d.gpVat));
     if (
       gpExVat == null &&
       gpVat == null &&
@@ -732,13 +978,16 @@ export function applyDriveAiDraftToProposal(
       transfer != null &&
       appSales >= transfer
     ) {
-      const fee = roundMoney(appSales - transfer);
-      gpVat = fee > 0 ? gpVatFromFee(fee, "incVat", 7) : 0;
-      gpExVat = fee > 0 ? roundMoney(fee - gpVat) : 0;
+      const parts = dayAmtToFeeParts(appSales, transfer, 0);
+      gpVat = parts.gpVat;
+      gpExVat = parts.gpExVat;
     }
     const has = appSales != null && appSales > 0;
+    const dayCount = Object.keys(dayMap).length;
     next.channels[ch] = {
       ...prev,
+      days: dayMap,
+      dayCount: dayCount || prev.dayCount,
       amounts: has
         ? {
             appSales,
@@ -753,7 +1002,12 @@ export function applyDriveAiDraftToProposal(
         ? d.driveFileIds.map(String).filter(Boolean).slice(0, 40)
         : prev.driveFileIds || [],
       note: has
-        ? String(d.note || "F4 ร่างจากไฟล์ Drive · ยังไม่ทับงบ").slice(0, 400)
+        ? String(
+            d.note ||
+              (dayCount
+                ? `F4 จากตารางรายวัน ${fromDays?.filledDays || dayCount} วัน · AI adapter · รอซุ่มตรวจ · ยังไม่ทับงบ`
+                : "F4 ร่างจากไฟล์ Drive · รอซุ่มตรวจ · ยังไม่ทับงบ"),
+          ).slice(0, 400)
         : String(d.note || prev.note || "").slice(0, 400),
     };
   }

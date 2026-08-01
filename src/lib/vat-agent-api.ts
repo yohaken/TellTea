@@ -80,7 +80,16 @@ export function agentProposeCurl(token: string, monthKey = "2026-07"): string {
   const body = JSON.stringify({
     monthKey,
     channels: {
-      grab: { appSales: 0, transfer: 0, note: "F4 example" },
+      grab: {
+        note: "F4 daily adapter example",
+        days: [
+          {
+            dateKey: `${monthKey}-01`,
+            appSales: 1000,
+            transfer: 800,
+          },
+        ],
+      },
     },
   });
   return `curl -sS -X POST -H "Authorization: Bearer ${t}" -H "Content-Type: application/json" -d '${body}' "${VAT_MAIL_AGENT_PROPOSE_URL}"`;

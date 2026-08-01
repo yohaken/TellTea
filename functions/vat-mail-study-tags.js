@@ -8,6 +8,16 @@ const {
   matchChannel,
 } = require("./vat-mail-channel");
 
+const CHANNEL_TYPE_TAGS = [
+  "grab-รายวัน",
+  "grab-สรุปเดือน",
+  "lm-สรุปเดือน",
+  "lm-รายวัน-ขาย",
+  "lm-รายวัน-โอน",
+  "sf-สรุปเดือน",
+  "sf-โอนรายวัน",
+];
+
 function inferFileKinds(subject, pdfFilenames) {
   const names = (pdfFilenames || []).map((n) => String(n).toLowerCase());
   const blob = `${subject || ""} ${names.join(" ")}`.toLowerCase();
@@ -27,10 +37,26 @@ function inferFileKinds(subject, pdfFilenames) {
   return [...kinds];
 }
 
-function isMonthly(subject) {
-  return /สรุปเดือน|ประจำเดือน|monthly|ทั้งเดือน|end of month/i.test(
-    String(subject || ""),
+function bodyBlob(report) {
+  return [
+    String(report.subject || ""),
+    String(report.snippet || ""),
+    String(report.rawText || "").slice(0, 4000),
+    String(report.reportKind || ""),
+  ]
+    .join("\n")
+    .toLowerCase();
+}
+
+function isMonthly(report) {
+  if (report.reportKind === "monthly") return true;
+  return /ยอดขายสะสมประจำเดือน|สะสมประจำเดือน|สรุปเดือน|ประจำเดือน|monthly|ทั้งเดือน|end of month/i.test(
+    bodyBlob(report),
   );
+}
+
+function clearChannelTypeTags(tags) {
+  for (const t of CHANNEL_TYPE_TAGS) tags.delete(t);
 }
 
 function inferMailStudyTags(report, rules) {
@@ -42,6 +68,7 @@ function inferMailStudyTags(report, rules) {
   const tags = new Set(existing);
 
   if (isNoiseMail(from, subject) || isTaxInvoiceMail(subject)) {
+    clearChannelTypeTags(tags);
     tags.add("ข้าม");
     tags.delete("รอแกะ");
     return [...tags].slice(0, 20);
@@ -60,13 +87,16 @@ function inferMailStudyTags(report, rules) {
   }
 
   const sub = subject.toLowerCase();
+  const monthly = isMonthly(report);
   let typed = false;
 
+  clearChannelTypeTags(tags);
+
   if (channel === "grab") {
-    tags.add("grab-รายวัน");
+    tags.add(monthly ? "grab-สรุปเดือน" : "grab-รายวัน");
     typed = true;
   } else if (channel === "lineman") {
-    if (isMonthly(subject)) {
+    if (monthly) {
       tags.add("lm-สรุปเดือน");
       typed = true;
     } else if (/ยอดโอนออก|โอนออก/.test(sub)) {
@@ -77,7 +107,7 @@ function inferMailStudyTags(report, rules) {
       typed = true;
     }
   } else if (channel === "shopee") {
-    if (isMonthly(subject)) {
+    if (monthly) {
       tags.add("sf-สรุปเดือน");
       typed = true;
     } else if (/โอนเงิน|settlement|รายงานการโอน/.test(sub)) {
@@ -99,7 +129,9 @@ function tagsChanged(current, next) {
     ? current.map((t) => String(t).trim()).filter(Boolean)
     : [];
   if (cur.length !== next.length) return true;
-  return next.some((t, i) => t !== cur[i]);
+  const a = [...cur].sort();
+  const b = [...next].sort();
+  return b.some((t, i) => t !== a[i]);
 }
 
 module.exports = {
