@@ -12,6 +12,12 @@ const {
   needsPdfEnrich,
   signedPdfReadUrl,
 } = require("./vat-mail-pdf");
+const {
+  isNoiseMail,
+  isTaxInvoiceMail,
+  matchChannel,
+  sanitizeChannelRule,
+} = require("./vat-mail-channel");
 
 const REGION = "asia-southeast1";
 const OWNER_EMAIL = String(process.env.TELLTEA_OWNER_EMAIL || "yohaken@gmail.com")
@@ -36,19 +42,24 @@ function reportDocId(messageId) {
 const DEFAULT_MAIL_RULES = {
   shopee: {
     enabled: true,
-    fromIncludes: ["shopee", "shopeefood"],
-    subjectIncludes: ["shopeefood", "สรุปยอด", "ยอดขาย", "รายงานยอด"],
-    subjectExcludes: ["otp", "verify"],
+    fromIncludes: ["shopeefood.com", "shopeefood", "shopee"],
+    // ห้ามคำกว้างอย่าง สรุปยอด / ยอดขาย — จะไปจับ Grab/LM
+    subjectIncludes: ["shopeefood", "รายงานการโอนเงิน"],
+    subjectExcludes: [
+      "otp",
+      "verify",
+      "chargeback",
+      "รีเซ็ต",
+      "ยืนยันอีเมล",
+    ],
   },
   grab: {
     enabled: true,
     fromIncludes: ["grab.com", "grabfood"],
     subjectIncludes: [
-      "สรุปยอดขาย",
+      "สรุปยอดขายสำหรับคำสั่งซื้อ",
       "grabfood",
       "daily sales",
-      "รายงานยอดขาย",
-      "sales summary",
     ],
     subjectExcludes: [
       "tax invoice",
@@ -56,20 +67,27 @@ const DEFAULT_MAIL_RULES = {
       "receipt/tax",
       "receipt / tax",
       "ใบเสร็จ",
+      "ความเสี่ยง",
+      "account risk",
     ],
   },
   lineman: {
     enabled: true,
-    fromIncludes: ["lineman", "wongnai", "line.me"],
+    fromIncludes: ["lmwn.com", "lmwn", "lineman", "wongnai", "line.me"],
     subjectIncludes: [
       "รายงานยอดขายรายวัน",
+      "รายงานยอดโอนออก",
       "line man",
       "lineman",
-      "wongnai",
-      "สรุปยอด",
-      "ยอดขายรายวัน",
     ],
-    subjectExcludes: ["otp", "verify"],
+    subjectExcludes: [
+      "otp",
+      "verify",
+      "รีเซ็ต",
+      "ยืนยันอีเมล",
+      "password",
+      "reset",
+    ],
   },
 };
 
@@ -247,24 +265,8 @@ function headerMap(headers) {
   return map;
 }
 
-function normalizeRule(raw, fallback) {
-  const o = raw && typeof raw === "object" ? raw : {};
-  const list = (v, fb) => {
-    if (Array.isArray(v) && v.length) {
-      return v.map((x) => String(x).trim().toLowerCase()).filter(Boolean).slice(0, 20);
-    }
-    return [...fb];
-  };
-  const excludes =
-    Array.isArray(o.subjectExcludes) && o.subjectExcludes.length
-      ? o.subjectExcludes.map((x) => String(x).trim().toLowerCase()).filter(Boolean).slice(0, 20)
-      : [...(fallback.subjectExcludes || [])];
-  return {
-    enabled: o.enabled !== false,
-    fromIncludes: list(o.fromIncludes, fallback.fromIncludes),
-    subjectIncludes: list(o.subjectIncludes, fallback.subjectIncludes),
-    subjectExcludes: excludes,
-  };
+function normalizeRule(raw, fallback, channel) {
+  return sanitizeChannelRule(channel, raw, fallback);
 }
 
 function loadMailRules(settings) {
@@ -272,29 +274,48 @@ function loadMailRules(settings) {
     ? settings.mailRules
     : {};
   return {
-    shopee: normalizeRule(raw.shopee, DEFAULT_MAIL_RULES.shopee),
-    grab: normalizeRule(raw.grab, DEFAULT_MAIL_RULES.grab),
-    lineman: normalizeRule(raw.lineman, DEFAULT_MAIL_RULES.lineman),
+    shopee: normalizeRule(raw.shopee, DEFAULT_MAIL_RULES.shopee, "shopee"),
+    grab: normalizeRule(raw.grab, DEFAULT_MAIL_RULES.grab, "grab"),
+    lineman: normalizeRule(raw.lineman, DEFAULT_MAIL_RULES.lineman, "lineman"),
   };
 }
 
-function matchChannel(from, subject, rules) {
+function fromHitsSearchChannel(from, rule) {
   const f = String(from || "").toLowerCase();
-  const s = String(subject || "").toLowerCase();
-  for (const channel of ["shopee", "grab", "lineman"]) {
-    const rule = rules[channel];
-    if (!rule || rule.enabled === false) continue;
-    const excludes = rule.subjectExcludes || [];
-    if (excludes.some((k) => k && s.includes(k))) continue;
-    const fromHit = rule.fromIncludes.some((k) => f.includes(k));
-    const subHit = rule.subjectIncludes.some((k) => s.includes(k));
-    // เงินเข้า: ต้องมีคำในหัวข้อ (กันเมลใบกำกับจาก grab.com)
-    if (subHit) return channel;
-    if (fromHit && /(ยอดขาย|สรุปยอด|daily sales|sales report|รายงานยอด|sales summary)/i.test(s)) {
-      return channel;
+  return (rule?.fromIncludes || []).some((k) => k && f.includes(String(k).toLowerCase()));
+}
+
+async function reclassifyStoredReports(db, rules, actorId) {
+  const snap = await db.collection(REPORTS_COL).limit(500).get();
+  let reclassified = 0;
+  let noiseTagged = 0;
+  for (const docSnap of snap.docs) {
+    const d = docSnap.data() || {};
+    const from = String(d.from || "");
+    const subject = String(d.subject || "");
+    const next = matchChannel(from, subject, rules);
+    const noise = isNoiseMail(from, subject) || isTaxInvoiceMail(subject);
+    const patch = {};
+    if (next !== "unknown" && next !== d.channel) {
+      patch.channel = next;
     }
+    if (noise) {
+      const tags = Array.isArray(d.studyTags)
+        ? d.studyTags.map((t) => String(t))
+        : [];
+      if (!tags.includes("ข้าม")) {
+        patch.studyTags = [...tags, "ข้าม"].slice(0, 20);
+        patch.studyTagsUpdatedAt = Date.now();
+      }
+    }
+    if (!Object.keys(patch).length) continue;
+    patch.channelReclassifiedAt = Date.now();
+    patch.channelReclassifiedBy = actorId || "sync";
+    await docSnap.ref.set(patch, { merge: true });
+    reclassified += 1;
+    if (patch.studyTags) noiseTagged += 1;
   }
-  return "unknown";
+  return { reclassified, noiseTagged, scanned: snap.size };
 }
 
 function buildSearchQuery(rule, lookbackDays) {
@@ -303,14 +324,18 @@ function buildSearchQuery(rule, lookbackDays) {
   const m = String(after.getUTCMonth() + 1).padStart(2, "0");
   const d = String(after.getUTCDate()).padStart(2, "0");
   const parts = [`after:${y}/${m}/${d}`];
+  // ค้นจาก From เป็นหลัก (กัน subject กว้างดึงข้ามช่อง)
   const fromTerms = rule.fromIncludes.slice(0, 4).map((t) => `from:${t}`);
-  const subTerms = rule.subjectIncludes.slice(0, 5).map((t) => {
-    const q = String(t).includes(" ") ? `"${t}"` : t;
-    return `subject:${q}`;
-  });
-  if (fromTerms.length) parts.push(`(${fromTerms.join(" OR ")})`);
-  if (subTerms.length) parts.push(`(${subTerms.join(" OR ")})`);
-  for (const ex of (rule.subjectExcludes || []).slice(0, 5)) {
+  if (fromTerms.length) {
+    parts.push(`(${fromTerms.join(" OR ")})`);
+  } else {
+    const subTerms = rule.subjectIncludes.slice(0, 3).map((t) => {
+      const q = String(t).includes(" ") ? `"${t}"` : t;
+      return `subject:${q}`;
+    });
+    if (subTerms.length) parts.push(`(${subTerms.join(" OR ")})`);
+  }
+  for (const ex of (rule.subjectExcludes || []).slice(0, 6)) {
     const q = String(ex).includes(" ") ? `"${ex}"` : ex;
     parts.push(`-subject:${q}`);
   }
@@ -699,12 +724,20 @@ exports.vatMailSync = functions
             skipped += 1;
             continue;
           }
-          if (/tax\s*invoice|ใบกำกับภาษี|receipt\s*\/\s*tax|receipt\/tax/.test(subjLower)) {
+          if (isTaxInvoiceMail(subject) || isNoiseMail(from, subject)) {
             skipped += 1;
             continue;
           }
           const matched = matchChannel(from, subject, rules);
-          const channelFinal = matched === "unknown" ? channel : matched;
+          let channelFinal = matched;
+          if (matched === "unknown") {
+            // ไม่ fallback เป็นช่องค้นหา — กันเมล LM/Grab ที่โผล่จาก query Shopee
+            if (!fromHitsSearchChannel(from, rules[channel])) {
+              skipped += 1;
+              continue;
+            }
+            channelFinal = channel;
+          }
           let rawText = String(bodies.text || "").slice(0, 200000);
           const rawHtml = String(bodies.html || "").slice(0, 200000);
           let pdfFilenames = [];
@@ -759,6 +792,8 @@ exports.vatMailSync = functions
         }
       }
 
+      const fix = await reclassifyStoredReports(db, rules, actorId);
+
       await db.doc(OAUTH_DOC).set(
         {
           lastSyncAt: Date.now(),
@@ -766,12 +801,22 @@ exports.vatMailSync = functions
           lastSyncAdded: added,
           lastSyncScanned: scanned,
           lastSyncPdfEnriched: pdfEnriched,
+          lastSyncReclassified: fix.reclassified,
           updatedAt: Date.now(),
         },
         { merge: true },
       );
 
-      return { ok: true, scanned, added, skipped, pdfEnriched, lookbackDays };
+      return {
+        ok: true,
+        scanned,
+        added,
+        skipped,
+        pdfEnriched,
+        reclassified: fix.reclassified,
+        noiseTagged: fix.noiseTagged,
+        lookbackDays,
+      };
     } catch (e) {
       const msg = asString(e?.message || String(e), 300);
       await db.doc(OAUTH_DOC).set(

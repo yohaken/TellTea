@@ -18,8 +18,12 @@
 **วิธีทำงานร่วม:** owner ซิงก์เมล → กด「อัปเดตบันทึก AI」→ AI อ่านแคตตาล็อกจากบันทึก/หน้าเว็บ
 
 **ถ้า AI เข้าหน้าเว็บไม่ได้ (ติด login):**  
-- เจ้าของกด「คัดลอกบันทึก」แล้ววางในแชท หรือ  
-- push ไป branch `cursor/dump-vat-mail-notes-2f65` → workflow `Dump VAT mail study notes` พิมพ์ลง Actions log
+- เจ้าของกด「API สำหรับ AI」→ สร้าง token →「คัดลอก curl ให้ AI」วางในแชท (แนะนำ)  
+- หรือกด「คัดลอกบันทึก」แล้ววางในแชท  
+- หรือ push branch `cursor/dump-vat-mail-notes-2f65` → workflow dump ใน Actions log  
+
+**Agent Dump API:** `vatMailAgentDump` · token ใน `meta/vatAgentApi` (owner-only)  
+ไม่ต้องส่ง Gmail Client Secret / refresh token ให้นักพัฒนา AI
 
 ---
 

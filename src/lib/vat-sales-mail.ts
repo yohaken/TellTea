@@ -30,6 +30,11 @@ import {
 } from "./vat-sales";
 import { parsePlatformEmail, type ParsedPlatformReport } from "./vat-sales-parse";
 import { appendVatSalesAudit } from "./vat-sales-audit";
+import {
+  isNoiseMail,
+  isTaxInvoiceMail,
+  matchMailChannel,
+} from "./vat-mail-channel";
 
 export type { MailChannelRule, VatMailRules };
 export { DEFAULT_MAIL_RULES, mapMailRules };
@@ -242,6 +247,8 @@ export async function syncVatMail(lookbackDays = 31): Promise<{
   added: number;
   skipped: number;
   pdfEnriched?: number;
+  reclassified?: number;
+  noiseTagged?: number;
   lookbackDays: number;
 }> {
   const fn = httpsCallable<
@@ -251,6 +258,8 @@ export async function syncVatMail(lookbackDays = 31): Promise<{
       added: number;
       skipped: number;
       pdfEnriched?: number;
+      reclassified?: number;
+      noiseTagged?: number;
       lookbackDays: number;
     }
   >(getFirebaseFunctions(), "vatMailSync");
@@ -324,6 +333,37 @@ export async function togglePlatformEmailStudyTag(
   const has = current.includes(t);
   const next = has ? current.filter((x) => x !== t) : [...current, t];
   return setPlatformEmailStudyTags(id, next);
+}
+
+/** แก้ช่องทางที่จัดผิด + แท็กข้ามเมลขยะ (owner เขียน Firestore ตรง) */
+export async function reclassifyPlatformEmailReports(opts?: {
+  max?: number;
+  actor?: string;
+  rules?: VatMailRules;
+}): Promise<{ scanned: number; reclassified: number; noiseTagged: number }> {
+  const rows = await listPlatformEmailReports({ max: opts?.max || 300 });
+  const rules = opts?.rules || DEFAULT_MAIL_RULES;
+  let reclassified = 0;
+  let noiseTagged = 0;
+  for (const r of rows) {
+    const next = matchMailChannel(r.from, r.subject, rules);
+    const noise = isNoiseMail(r.from, r.subject) || isTaxInvoiceMail(r.subject);
+    const patch: Record<string, unknown> = {};
+    if (next !== "unknown" && next !== r.channel) {
+      patch.channel = next;
+    }
+    if (noise && !r.studyTags.includes("ข้าม")) {
+      patch.studyTags = [...r.studyTags, "ข้าม"].slice(0, 20);
+      patch.studyTagsUpdatedAt = Date.now();
+    }
+    if (!Object.keys(patch).length) continue;
+    patch.channelReclassifiedAt = Date.now();
+    patch.channelReclassifiedBy = opts?.actor || "owner";
+    await updateDoc(doc(getDb(), PLATFORM_EMAIL_REPORTS_COL, r.id), patch);
+    reclassified += 1;
+    if (patch.studyTags) noiseTagged += 1;
+  }
+  return { scanned: rows.length, reclassified, noiseTagged };
 }
 
 export type VatMailOAuthConfigPublic = {

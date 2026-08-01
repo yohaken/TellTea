@@ -53,19 +53,24 @@ export type VatMailRules = Record<DeliveryChannel, MailChannelRule>;
 export const DEFAULT_MAIL_RULES: VatMailRules = {
   shopee: {
     enabled: true,
-    fromIncludes: ["shopee", "shopeefood"],
-    subjectIncludes: ["shopeefood", "สรุปยอด", "ยอดขาย", "รายงานยอด"],
-    subjectExcludes: ["otp", "verify"],
+    fromIncludes: ["shopeefood.com", "shopeefood", "shopee"],
+    // ห้ามคำกว้าง สรุปยอด/ยอดขาย — จะไปจับ Grab/LM
+    subjectIncludes: ["shopeefood", "รายงานการโอนเงิน"],
+    subjectExcludes: [
+      "otp",
+      "verify",
+      "chargeback",
+      "รีเซ็ต",
+      "ยืนยันอีเมล",
+    ],
   },
   grab: {
     enabled: true,
     fromIncludes: ["grab.com", "grabfood"],
     subjectIncludes: [
-      "สรุปยอดขาย",
+      "สรุปยอดขายสำหรับคำสั่งซื้อ",
       "grabfood",
       "daily sales",
-      "รายงานยอดขาย",
-      "sales summary",
     ],
     subjectExcludes: [
       "tax invoice",
@@ -73,25 +78,40 @@ export const DEFAULT_MAIL_RULES: VatMailRules = {
       "receipt/tax",
       "receipt / tax",
       "ใบเสร็จ",
+      "ความเสี่ยง",
+      "account risk",
     ],
   },
   lineman: {
     enabled: true,
-    fromIncludes: ["lineman", "wongnai", "line.me"],
+    fromIncludes: ["lmwn.com", "lmwn", "lineman", "wongnai", "line.me"],
     subjectIncludes: [
       "รายงานยอดขายรายวัน",
+      "รายงานยอดโอนออก",
       "line man",
       "lineman",
-      "wongnai",
-      "สรุปยอด",
-      "ยอดขายรายวัน",
     ],
-    subjectExcludes: ["otp", "verify"],
+    subjectExcludes: [
+      "otp",
+      "verify",
+      "รีเซ็ต",
+      "ยืนยันอีเมล",
+      "password",
+      "reset",
+    ],
   },
 };
 
 export function mapMailRules(raw: unknown): VatMailRules {
   const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const blockShopee = new Set([
+    "สรุปยอด",
+    "ยอดขาย",
+    "รายงานยอด",
+    "รายงาน",
+    "สรุป",
+    "sales",
+  ]);
   const one = (key: DeliveryChannel): MailChannelRule => {
     const src = o[key] && typeof o[key] === "object" ? (o[key] as Record<string, unknown>) : {};
     const fallback = DEFAULT_MAIL_RULES[key];
@@ -99,6 +119,15 @@ export function mapMailRules(raw: unknown): VatMailRules {
       Array.isArray(v) && v.length
         ? v.map((x) => String(x).trim()).filter(Boolean).slice(0, 20)
         : [...fb];
+    let subjectIncludes = list(src.subjectIncludes, fallback.subjectIncludes);
+    if (key === "shopee") {
+      subjectIncludes = subjectIncludes.filter(
+        (t) => !blockShopee.has(t.toLowerCase()),
+      );
+      if (!subjectIncludes.length) {
+        subjectIncludes = [...fallback.subjectIncludes];
+      }
+    }
     const excludes =
       Array.isArray(src.subjectExcludes) && src.subjectExcludes.length
         ? src.subjectExcludes.map((x) => String(x).trim()).filter(Boolean).slice(0, 20)
@@ -106,7 +135,7 @@ export function mapMailRules(raw: unknown): VatMailRules {
     return {
       enabled: src.enabled !== false,
       fromIncludes: list(src.fromIncludes, fallback.fromIncludes),
-      subjectIncludes: list(src.subjectIncludes, fallback.subjectIncludes),
+      subjectIncludes,
       subjectExcludes: excludes,
     };
   };

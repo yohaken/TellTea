@@ -20,9 +20,9 @@
 
 ## กฎคัดเมล (ค่าเริ่ม)
 
-- **ต้องมีคำในหัวข้อ** แบบสรุปยอด/รายงานยอดขายรายวัน (ไม่จับแค่ from:grab.com)
-- **ตัดออก:** `tax invoice` · `ใบกำกับภาษี` · `receipt/tax`
-- Gmail query = `(from:…) (subject:เงินเข้า…) -subject:ใบกำกับ`
+- **จัดช่องทางจาก From ก่อน** (grab.com / lmwn.com / shopeefood) — กันคำหัวข้อกว้างของ Shopee ไปจับ Grab/LM
+- Gmail query ค้นจาก `from:` เป็นหลัก · ตัด `tax invoice` · รีเซ็ตรหัส · ยืนยันอีเมล
+- Subject เฉพาะช่องเท่านั้น (เช่น `GrabFood` · `รายงานยอดขายรายวัน` · `ShopeeFood`)
 
 ## Parse
 

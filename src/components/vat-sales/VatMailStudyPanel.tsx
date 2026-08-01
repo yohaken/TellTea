@@ -23,6 +23,7 @@ import {
   MAIL_STUDY_TAG_PRESETS,
   saveVatMailOAuthConfig,
   startVatMailOAuth,
+  reclassifyPlatformEmailReports,
   syncVatMail,
   togglePlatformEmailStudyTag,
   type PlatformEmailReport,
@@ -33,6 +34,13 @@ import {
   loadVatMailStudyNotes,
   refreshVatMailStudyNotesFromReports,
 } from "@/lib/vat-mail-study-notes";
+import {
+  agentDumpCurl,
+  loadVatAgentApi,
+  rotateVatAgentApiToken,
+  VAT_MAIL_AGENT_DUMP_URL,
+  type VatAgentApi,
+} from "@/lib/vat-agent-api";
 
 const DEFAULT_REDIRECT =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/vatMailOAuthCallback";
@@ -76,17 +84,20 @@ export function VatMailStudyPanel({ actor }: Props) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [studyNotes, setStudyNotes] = useState(defaultVatMailStudyNotesText());
   const [notesUpdatedAt, setNotesUpdatedAt] = useState(0);
+  const [agentApi, setAgentApi] = useState<VatAgentApi | null>(null);
+  const [showAgentApi, setShowAgentApi] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [st, rows, cfg, settings, notes] = await Promise.all([
+      const [st, rows, cfg, settings, notes, api] = await Promise.all([
         fetchVatMailStatus(),
         listPlatformEmailReports({ channel: channelFilter, max: 120 }),
         loadVatMailOAuthConfig().catch(() => null),
         loadVatSalesSettings().catch(() => null),
         loadVatMailStudyNotes().catch(() => null),
+        loadVatAgentApi().catch(() => null),
       ]);
       setStatus(st);
       setReports(rows);
@@ -96,6 +107,7 @@ export function VatMailStudyPanel({ actor }: Props) {
         setHasSecret(cfg.hasSecret);
       }
       if (settings) setMailRules(settings.mailRules);
+      setAgentApi(api);
       if (notes) {
         setStudyNotes(notes.text);
         setNotesUpdatedAt(notes.updatedAt);
@@ -162,6 +174,11 @@ export function VatMailStudyPanel({ actor }: Props) {
     setMsg("");
     try {
       const res = await syncVatMail(45);
+      // ซ่อมช่องทางฝั่ง client ด้วย (เผื่อ functions ยังไม่ทัน deploy / แถวเก่า)
+      const fix = await reclassifyPlatformEmailReports({
+        max: 300,
+        actor,
+      }).catch(() => null);
       const rows = await listPlatformEmailReports({
         channel: channelFilter,
         max: 120,
@@ -177,9 +194,39 @@ export function VatMailStudyPanel({ actor }: Props) {
       setMsg(
         `ซิงก์แล้ว · สแกน ${res.scanned} · เพิ่ม ${res.added} · ข้ามซ้ำ ${res.skipped}` +
           (res.pdfEnriched ? ` · PDF ${res.pdfEnriched}` : "") +
+          (fix?.reclassified || res.reclassified
+            ? ` · แก้ช่องทาง ${fix?.reclassified || res.reclassified}`
+            : "") +
           " · อัปเดตบันทึก AI แล้ว",
       );
       await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const fixChannels = async () => {
+    setBusy("reclass");
+    setError("");
+    try {
+      const fix = await reclassifyPlatformEmailReports({ max: 300, actor });
+      await refresh();
+      try {
+        const notes = await refreshVatMailStudyNotesFromReports(
+          await listPlatformEmailReports({ channel: channelFilter, max: 120 }),
+          actor,
+        );
+        setStudyNotes(notes.text);
+        setNotesUpdatedAt(notes.updatedAt);
+      } catch {
+        /* ignore */
+      }
+      setMsg(
+        `แก้ช่องทางแล้ว · สแกน ${fix.scanned} · แก้ ${fix.reclassified}` +
+          (fix.noiseTagged ? ` · แท็กข้าม ${fix.noiseTagged}` : ""),
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -315,6 +362,15 @@ export function VatMailStudyPanel({ actor }: Props) {
           type="button"
           className="vat-mini-btn"
           disabled={Boolean(busy) || loading}
+          title="จัดช่องทางใหม่จาก From (แก้ Shopee ปน Grab/LM)"
+          onClick={() => void fixChannels()}
+        >
+          {busy === "reclass" ? "แก้ช่อง…" : "แก้ช่องทาง"}
+        </button>
+        <button
+          type="button"
+          className="vat-mini-btn"
+          disabled={Boolean(busy) || loading}
           title="เขียนแคตตาล็อกเมลลงบันทึกให้ AI อ่าน"
           onClick={() => void updateAiNotes()}
         >
@@ -359,8 +415,85 @@ export function VatMailStudyPanel({ actor }: Props) {
           {notesUpdatedAt
             ? ` · ${new Date(notesUpdatedAt).toLocaleString("th-TH")}`
             : " · ยังไม่เคยอัปเดต"}
+          {" · "}
+          <button
+            type="button"
+            className="vat-mini-btn"
+            disabled={Boolean(busy)}
+            onClick={() => setShowAgentApi((v) => !v)}
+          >
+            {showAgentApi ? "ปิด API AI" : "API สำหรับ AI"}
+          </button>
         </p>
       </aside>
+
+      {showAgentApi ? (
+        <div className="vat-mail-study-config" data-ai-context="vat-agent-api">
+          <p className="muted vat-sales-hint">
+            ให้ AI เรียกอ่านแคตตาล็อกเมลได้โดยไม่ login · ไม่ต้องส่ง Gmail secret
+            <br />
+            URL: {VAT_MAIL_AGENT_DUMP_URL}
+          </p>
+          {agentApi?.token ? (
+            <p className="muted vat-sales-hint vat-hint-one-line">
+              มี token แล้ว
+              {agentApi.lastUsedAt
+                ? ` · ใช้ล่าสุด ${new Date(agentApi.lastUsedAt).toLocaleString("th-TH")}`
+                : " · ยังไม่เคยถูกเรียก"}
+            </p>
+          ) : (
+            <p className="muted vat-sales-hint">ยังไม่มี token — กดสร้างครั้งเดียว</p>
+          )}
+          <div className="vat-month-actions vat-month-actions--mini">
+            <button
+              type="button"
+              className="vat-mini-btn vat-mini-btn--primary"
+              disabled={Boolean(busy)}
+              onClick={() => {
+                void (async () => {
+                  setBusy("agentApi");
+                  setError("");
+                  try {
+                    const next = await rotateVatAgentApiToken(actor);
+                    setAgentApi(next);
+                    setMsg("สร้าง token API สำหรับ AI แล้ว — คัดลอกให้ AI ได้");
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : String(e));
+                  } finally {
+                    setBusy("");
+                  }
+                })();
+              }}
+            >
+              {busy === "agentApi"
+                ? "…"
+                : agentApi?.token
+                  ? "หมุน token ใหม่"
+                  : "สร้าง token"}
+            </button>
+            <button
+              type="button"
+              className="vat-mini-btn"
+              disabled={!agentApi?.token}
+              onClick={() => {
+                void (async () => {
+                  if (!agentApi?.token) return;
+                  try {
+                    await navigator.clipboard.writeText(
+                      agentDumpCurl(agentApi.token),
+                    );
+                    setMsg("คัดลอกคำสั่ง curl แล้ว — วางในแชท AI ได้");
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : String(e));
+                  }
+                })();
+              }}
+            >
+              คัดลอก curl ให้ AI
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {showConfig ? (
         <div className="vat-mail-study-config">

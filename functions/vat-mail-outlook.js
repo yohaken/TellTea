@@ -26,18 +26,18 @@ const MAX_MESSAGES = 60;
 const DEFAULT_MAIL_RULES = {
   shopee: {
     enabled: true,
-    fromIncludes: ["shopee", "shopeefood"],
-    subjectIncludes: ["shopee", "shopeefood", "สรุปยอด", "ยอดขาย"],
+    fromIncludes: ["shopeefood.com", "shopeefood", "shopee"],
+    subjectIncludes: ["shopeefood", "รายงานการโอนเงิน"],
   },
   grab: {
     enabled: true,
     fromIncludes: ["grab.com", "grabfood"],
-    subjectIncludes: ["grab", "รายงาน", "สรุป", "sales", "settlement"],
+    subjectIncludes: ["grabfood", "สรุปยอดขายสำหรับคำสั่งซื้อ", "daily sales"],
   },
   lineman: {
     enabled: true,
-    fromIncludes: ["lineman", "line.me", "linedelivery"],
-    subjectIncludes: ["lineman", "line man", "สรุป", "ยอดขาย", "รายงาน"],
+    fromIncludes: ["lmwn.com", "lmwn", "lineman", "wongnai", "line.me"],
+    subjectIncludes: ["รายงานยอดขายรายวัน", "รายงานยอดโอนออก", "line man"],
   },
 };
 
@@ -206,17 +206,10 @@ function loadMailRules(settings) {
   };
 }
 
+const { matchChannel: matchChannelShared } = require("./vat-mail-channel");
+
 function matchChannel(from, subject, rules) {
-  const f = String(from || "").toLowerCase();
-  const s = String(subject || "").toLowerCase();
-  for (const channel of ["shopee", "grab", "lineman"]) {
-    const rule = rules[channel];
-    if (!rule?.enabled) continue;
-    if (rule.fromIncludes.some((k) => f.includes(k)) || rule.subjectIncludes.some((k) => s.includes(k))) {
-      return channel;
-    }
-  }
-  return "unknown";
+  return matchChannelShared(from, subject, rules);
 }
 
 function buildGraphFilter(rule, lookbackDays) {

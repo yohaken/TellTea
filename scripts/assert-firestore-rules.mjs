@@ -130,6 +130,7 @@ assert.match(rules, /vatSalesSettings' && isOwner\(\)/);
 assert.match(rules, /vatImportAiNotes' && isOwner\(\)/);
 assert.match(rules, /vatDeliverySourceNotes' && isOwner\(\)/);
 assert.match(rules, /vatMailStudyNotes' && isOwner\(\)/);
+assert.match(rules, /vatAgentApi' && isOwner\(\)/);
 assert.match(rules, /vatDeliveryFreshStart' && isOwner\(\)/);
 assert.match(rules, /match \/vatAgentChat\/\{msgId\}/);
 assert.match(rules, /vatAgentChatPresence'/);
