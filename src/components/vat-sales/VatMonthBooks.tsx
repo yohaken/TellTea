@@ -815,6 +815,8 @@ export function VatMonthBooks({ actor }: Props) {
         รอบตัดยอด {period.labelInclusive}
       </p>
 
+      <VatMonthProcessNotes actor={actor} />
+
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
 
