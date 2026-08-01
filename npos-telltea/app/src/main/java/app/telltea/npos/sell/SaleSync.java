@@ -585,8 +585,15 @@ public final class SaleSync {
                                                 syncErr.getMessage() == null
                                                         ? syncErr.getClass().getSimpleName()
                                                         : syncErr.getMessage();
-                                        markQueueAttempt(
-                                                app, mutationId, msg, isPermanentSaleError(msg));
+                                        try {
+                                            markQueueAttempt(
+                                                    app,
+                                                    mutationId,
+                                                    msg,
+                                                    isPermanentSaleError(msg));
+                                        } catch (Exception ignored) {
+                                            /* queue mark best-effort */
+                                        }
                                         OpsLogger.warn(app, "sync", "ซิงก์บิลค้างในคิว", msg);
                                         // Offline / sync fail — paper already attempted above when autoPrint.
                                         if (printFlag && !isReceiptPrinted(app, mutationId)) {
