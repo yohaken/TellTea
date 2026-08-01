@@ -188,7 +188,8 @@ export function VatSourcesDriveSlot({
     setError("");
     setMsg("");
     try {
-      const r = await syncVatMail(45);
+      // ครอบคลุมเดือนก่อนทั้งเดือนตอนปิดงบต้นเดือนถัดไป
+      const r = await syncVatMail(62);
       setMsg(
         `ซิงก์เมลแล้ว · ใหม่ ${r.added} · ข้าม ${r.skipped}` +
           (r.pdfEnriched ? ` · PDF ${r.pdfEnriched}` : ""),
@@ -292,8 +293,8 @@ export function VatSourcesDriveSlot({
     >
       <h3 className="vat-table-subtitle">ไฟล์ Drive — แยกแอพ</h3>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        เดือน {formatThaiMonthKey(monthKey)} · TellTea-VAT/แอพ/{monthKey}/ ·
-        ซิงก์ไฟล์ → ร่างยอด → ยืนยันลงตาราง
+        เดือนปิดงบ {formatThaiMonthKey(monthKey)} · TellTea-VAT/แอพ/{monthKey}/
+        · ซิงก์ไฟล์เดือนนี้ → ร่างยอด → ยืนยันลงตารางก่อนปิดงบ
       </p>
 
       <div className="vat-sources-drive-actions">

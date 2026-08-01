@@ -32,7 +32,9 @@ import {
   type MonthChannel,
 } from "@/lib/vat-month-books";
 import {
+  defaultVatCloseMonthKey,
   formatThaiMonthKey,
+  isVatCloseWindow,
   listThaiMonthOptions,
   loadVatMonthlyReturn,
 } from "@/lib/vat-monthly";
@@ -75,10 +77,13 @@ type Props = { actor: string };
 
 export function VatDeliverySources({ actor }: Props) {
   const monthOptions = useMemo(() => listThaiMonthOptions(undefined, 18), []);
-  const [month, setMonth] = useState(() => bangkokMonthKey());
+  /** ช่วงปิดงบต้นเดือน → เปิดเดือนก่อน (เช่น ส.ค. → ก.ค.) */
+  const [month, setMonth] = useState(() => defaultVatCloseMonthKey());
   const [draft, setDraft] = useState<MonthBooksDraft>(() =>
-    emptyMonthBooksDraft(bangkokMonthKey()),
+    emptyMonthBooksDraft(defaultVatCloseMonthKey()),
   );
+  const closeWindow = isVatCloseWindow();
+  const currentCalMonth = bangkokMonthKey();
   const [loading, setLoading] = useState(true);
   const [locked, setLocked] = useState(false);
   const [error, setError] = useState("");
@@ -209,6 +214,13 @@ export function VatDeliverySources({ actor }: Props) {
       <h2 className="vat-table-title">
         ที่มายอดเดลิเวอรี่ — {formatThaiMonthKey(month)}
       </h2>
+      {closeWindow && month !== currentCalMonth ? (
+        <p className="muted vat-sales-hint vat-hint-one-line vat-close-month-hint">
+          ช่วงปิดงบ · โฟกัส {formatThaiMonthKey(month)} (เดือนก่อน{" "}
+          {formatThaiMonthKey(currentCalMonth)}) — ซิงก์ Drive / ร่างยอด / ยืนยัน
+          ให้ครบก่อนปิดงบ
+        </p>
+      ) : null}
 
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
