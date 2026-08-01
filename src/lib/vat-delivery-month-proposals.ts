@@ -3,21 +3,14 @@
  * จัดกลุ่มเมลที่แท็กแล้วเป็นโครงต่อเดือน/ช่องทาง
  * ยังไม่แกะยอด · ยังไม่ทับ vatMonthlyReturns (L4)
  */
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  setDoc,
-} from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
 import { getDb } from "./firebase";
 import type { DeliveryChannel } from "./vat-sales";
-import { DELIVERY_CHANNELS } from "./vat-sales";
+import { DELIVERY_CHANNELS, roundMoney } from "./vat-sales";
 import type { PlatformEmailReport } from "./vat-sales-mail";
 import { listPlatformEmailReports } from "./vat-sales-mail";
+import { parsePlatformEmail } from "./vat-sales-parse";
+import { gpVatFromFee } from "./personal-income-tax";
 
 export const VAT_DELIVERY_MONTH_PROPOSALS_COL = "vatDeliveryMonthProposals";
 
@@ -55,7 +48,7 @@ export type ChannelMonthProposal = {
 
 export type VatDeliveryMonthProposal = {
   monthKey: string;
-  phase: "D3";
+  phase: "D3" | "D4";
   status: "studying" | "ready" | "merged";
   channels: Record<DeliveryChannel, ChannelMonthProposal>;
   rebuiltAt: number;
@@ -162,6 +155,76 @@ function emptyMonthProposal(monthKey: string): VatDeliveryMonthProposal {
   };
 }
 
+type DayAmt = { gross: number; fee: number; net: number; ok: boolean };
+
+function parseReportAmounts(r: PlatformEmailReport): DayAmt {
+  if (
+    r.parsed &&
+    (r.parsed.grossInclusive > 0 || r.parsed.netTransfer > 0)
+  ) {
+    return {
+      gross: r.parsed.grossInclusive || 0,
+      fee: r.parsed.fee || 0,
+      net: r.parsed.netTransfer || 0,
+      ok: true,
+    };
+  }
+  if (r.channel === "unknown") {
+    return { gross: 0, fee: 0, net: 0, ok: false };
+  }
+  const res = parsePlatformEmail({
+    channel: r.channel,
+    subject: r.subject,
+    rawText: r.rawText,
+    rawHtml: r.rawHtml,
+    reportDateGuess: r.reportDateGuess,
+    receivedAt: r.receivedAt,
+  });
+  if (!res.ok || !res.parsed) {
+    return { gross: 0, fee: 0, net: 0, ok: false };
+  }
+  return {
+    gross: res.parsed.grossInclusive || 0,
+    fee: res.parsed.fee || 0,
+    net: res.parsed.netTransfer || 0,
+    ok: true,
+  };
+}
+
+function rollupToAmounts(
+  days: DayAmt[],
+): DeliveryAmountProposal & { parsedOk: number; parsedFail: number } {
+  let appSales = 0;
+  let transfer = 0;
+  let fee = 0;
+  let parsedOk = 0;
+  let parsedFail = 0;
+  for (const d of days) {
+    if (!d.ok) {
+      parsedFail += 1;
+      continue;
+    }
+    parsedOk += 1;
+    appSales += d.gross;
+    transfer += d.net;
+    fee += d.fee;
+  }
+  if (fee <= 0 && appSales > 0 && transfer > 0 && appSales >= transfer) {
+    fee = appSales - transfer;
+  }
+  const feeR = roundMoney(fee);
+  const gpVat = feeR > 0 ? gpVatFromFee(feeR, "incVat", 7) : 0;
+  const gpExVat = feeR > 0 ? roundMoney(feeR - gpVat) : 0;
+  return {
+    appSales: parsedOk ? roundMoney(appSales) : null,
+    transfer: parsedOk ? roundMoney(transfer) : null,
+    gpExVat: parsedOk && feeR > 0 ? gpExVat : parsedOk ? 0 : null,
+    gpVat: parsedOk && feeR > 0 ? gpVat : parsedOk ? 0 : null,
+    parsedOk,
+    parsedFail,
+  };
+}
+
 /** สร้างข้อเสนอเดือนจากแคตตาล็อกที่แท็กแล้ว — ไม่ใส่ยอด */
 export function buildMonthProposalFromReports(
   monthKey: string,
@@ -238,9 +301,13 @@ export function proposalSummaryLine(p: VatDeliveryMonthProposal): string {
     const c = p.channels[ch];
     const n = c.reportIds.length;
     if (!n && !c.skipIds.length) return `${ch}:—`;
-    return `${ch}:${n}ใช้/${c.skipIds.length}ข้าม`;
+    const amt =
+      c.amounts.appSales != null
+        ? `ยอด${Math.round(c.amounts.appSales)}`
+        : "ยอดว่าง";
+    return `${ch}:${n}ใช้/${c.skipIds.length}ข้าม/${amt}`;
   });
-  return `${p.monthKey} · ${parts.join(" · ")} · ยอด=ยังว่าง`;
+  return `${p.monthKey} · ${p.phase} · ${parts.join(" · ")}`;
 }
 
 function mapProposal(
@@ -309,6 +376,7 @@ function mapProposal(
   }
   return {
     ...base,
+    phase: raw.phase === "D4" ? "D4" : "D3",
     status:
       raw.status === "ready" || raw.status === "merged" || raw.status === "studying"
         ? raw.status
@@ -334,7 +402,7 @@ export async function saveMonthProposal(
 ): Promise<void> {
   await setDoc(
     doc(getDb(), VAT_DELIVERY_MONTH_PROPOSALS_COL, proposal.monthKey),
-    { ...proposal, phase: "D3" },
+    { ...proposal },
     { merge: true },
   );
 }
@@ -342,16 +410,121 @@ export async function saveMonthProposal(
 export async function listMonthProposals(
   max = 18,
 ): Promise<VatDeliveryMonthProposal[]> {
+  // ไม่ใช้ orderBy — กันพังถ้ายังไม่มี index / ฟิลด์
   const snap = await getDocs(
-    query(
-      collection(getDb(), VAT_DELIVERY_MONTH_PROPOSALS_COL),
-      orderBy("monthKey", "desc"),
-      limit(max),
-    ),
+    collection(getDb(), VAT_DELIVERY_MONTH_PROPOSALS_COL),
   );
-  return snap.docs.map((d) =>
-    mapProposal(d.id, (d.data() || {}) as Record<string, unknown>),
+  return snap.docs
+    .map((d) => mapProposal(d.id, (d.data() || {}) as Record<string, unknown>))
+    .sort((a, b) => b.monthKey.localeCompare(a.monthKey))
+    .slice(0, max);
+}
+
+/**
+ * เติมยอดในข้อเสนอจาก parse เมล (L3 เท่านั้น · ไม่ทับงบ L4)
+ * Grab = ม้วนรายวัน · LM = รวมขายรายวัน + โอนรายวัน · Shopee = จากเมลที่ใช้ได้
+ */
+export function fillProposalAmountsFromReports(
+  proposal: VatDeliveryMonthProposal,
+  reports: PlatformEmailReport[],
+  actor = "system",
+): VatDeliveryMonthProposal {
+  const byId = new Map(reports.map((r) => [r.id, r]));
+  const next: VatDeliveryMonthProposal = {
+    ...proposal,
+    phase: "D4",
+    channels: { ...proposal.channels },
+    rebuiltAt: Date.now(),
+    rebuiltBy: actor,
+  };
+
+  for (const ch of DELIVERY_CHANNELS) {
+    const prev = proposal.channels[ch];
+    const useful = prev.reportIds
+      .map((id) => byId.get(id))
+      .filter((r): r is PlatformEmailReport => Boolean(r));
+
+    let days: DayAmt[] = [];
+    if (ch === "lineman") {
+      const salesRows = useful.filter((r) =>
+        (r.studyTags || []).includes("lm-รายวัน-ขาย"),
+      );
+      const transferRows = useful.filter((r) =>
+        (r.studyTags || []).includes("lm-รายวัน-โอน"),
+      );
+      const salesAmts = (salesRows.length ? salesRows : useful).map(
+        parseReportAmounts,
+      );
+      const transferAmts = transferRows.map(parseReportAmounts);
+      const salesRoll = rollupToAmounts(salesAmts);
+      const transferRoll = rollupToAmounts(transferAmts);
+      const appSales = salesRoll.appSales;
+      const transfer =
+        transferRoll.transfer != null && transferRoll.parsedOk
+          ? transferRoll.transfer
+          : salesRoll.transfer;
+      let fee = 0;
+      if (appSales != null && transfer != null && appSales >= transfer) {
+        fee = roundMoney(appSales - transfer);
+      } else if (salesRoll.gpExVat != null && salesRoll.gpVat != null) {
+        fee = roundMoney((salesRoll.gpExVat || 0) + (salesRoll.gpVat || 0));
+      }
+      const gpVat = fee > 0 ? gpVatFromFee(fee, "incVat", 7) : 0;
+      const gpExVat = fee > 0 ? roundMoney(fee - gpVat) : 0;
+      const parsedOk = salesRoll.parsedOk + transferRoll.parsedOk;
+      const parsedFail = salesRoll.parsedFail + transferRoll.parsedFail;
+      const has = parsedOk > 0 && appSales != null;
+      next.channels[ch] = {
+        ...prev,
+        amounts: has
+          ? {
+              appSales,
+              transfer: transfer ?? 0,
+              gpExVat: fee > 0 ? gpExVat : 0,
+              gpVat: fee > 0 ? gpVat : 0,
+            }
+          : emptyAmounts(),
+        amountsSource: has ? "adapter" : "none",
+        status: has ? "ready" : prev.status,
+        note: has
+          ? `D4 จากเมล · parse ผ่าน ${parsedOk}` +
+            (parsedFail ? ` · ไม่ผ่าน ${parsedFail}` : "") +
+            " · ยังไม่ทับงบ"
+          : `D4 ยังไม่มียอด · parse ไม่ผ่าน ${parsedFail || useful.length}`,
+      };
+      continue;
+    }
+
+    days = useful.map(parseReportAmounts);
+    const roll = rollupToAmounts(days);
+    const has = roll.parsedOk > 0 && roll.appSales != null;
+    next.channels[ch] = {
+      ...prev,
+      amounts: has
+        ? {
+            appSales: roll.appSales,
+            transfer: roll.transfer,
+            gpExVat: roll.gpExVat,
+            gpVat: roll.gpVat,
+          }
+        : emptyAmounts(),
+      amountsSource: has ? "adapter" : "none",
+      status: has ? "ready" : prev.status,
+      note: has
+        ? `D4 ม้วนจากเมล · ผ่าน ${roll.parsedOk}` +
+          (roll.parsedFail ? ` · ไม่ผ่าน ${roll.parsedFail}` : "") +
+          " · ยังไม่ทับงบ"
+        : useful.length
+          ? `D4 ยังไม่มียอด · parse ไม่ผ่าน ${roll.parsedFail} (มักอยู่แค่ PDF)`
+          : prev.note || "ไม่มีเมลใช้ได้",
+    };
+  }
+
+  const anyReady = DELIVERY_CHANNELS.some(
+    (ch) => next.channels[ch].status === "ready",
   );
+  next.status = anyReady ? "ready" : "studying";
+  return next;
 }
 
 /** สแกนแคตตาล็อก → สร้าง/ทับข้อเสนอทุกเดือนที่พบ (ไม่แตะ L4) */
@@ -359,6 +532,8 @@ export async function rebuildMonthProposalsFromCatalog(opts?: {
   maxReports?: number;
   actor?: string;
   monthKeys?: string[];
+  /** true = เติมยอดจาก parse เมลเข้า L3 (D4) */
+  fillAmounts?: boolean;
 }): Promise<{
   months: string[];
   proposals: VatDeliveryMonthProposal[];
@@ -379,9 +554,13 @@ export async function rebuildMonthProposalsFromCatalog(opts?: {
     .sort()
     .reverse();
 
+  const actor = opts?.actor || "owner";
   const proposals: VatDeliveryMonthProposal[] = [];
   for (const mk of months) {
-    const p = buildMonthProposalFromReports(mk, reports, opts?.actor || "owner");
+    let p = buildMonthProposalFromReports(mk, reports, actor);
+    if (opts?.fillAmounts) {
+      p = fillProposalAmountsFromReports(p, reports, actor);
+    }
     await saveMonthProposal(p);
     proposals.push(p);
   }

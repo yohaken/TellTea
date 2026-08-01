@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * D3 — ข้อเสนอเดือน (L3)
- * โชว์โครงวัตถุดิบต่อเดือน/ช่อง · ยอดยังว่าง · ยังไม่ผสานงบ
+ * D3/D4 — ข้อเสนอเดือน (L3)
+ * D3 โครงเมล · D4 เติมยอดจาก parse · ยังไม่ผสานงบ (L4)
  */
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -14,6 +14,7 @@ import {
 import { DELIVERY_CHANNELS } from "@/lib/vat-sales";
 import { MONTH_CHANNEL_LABEL } from "@/lib/vat-month-sources";
 import { formatThaiMonthKey } from "@/lib/vat-monthly";
+import { formatVatMoney } from "@/lib/vat-number-format";
 
 type Props = { actor: string };
 
@@ -24,10 +25,15 @@ function strategyLabel(s: string) {
   return "—";
 }
 
+function fmtAmt(n: number | null | undefined) {
+  if (n == null || !Number.isFinite(n)) return "—";
+  return formatVatMoney(n);
+}
+
 export function VatMonthProposalsPanel({ actor }: Props) {
   const [rows, setRows] = useState<VatDeliveryMonthProposal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
   const [openMonth, setOpenMonth] = useState<string | null>(null);
@@ -49,23 +55,26 @@ export function VatMonthProposalsPanel({ actor }: Props) {
     void refresh();
   }, [refresh]);
 
-  const rebuild = async () => {
-    setBusy(true);
+  const rebuild = async (fillAmounts: boolean) => {
+    setBusy(fillAmounts ? "fill" : "rebuild");
     setError("");
     setMsg("");
     try {
       const res = await rebuildMonthProposalsFromCatalog({
         maxReports: 300,
         actor,
+        fillAmounts,
       });
       setRows(res.proposals);
       setMsg(
-        `สร้างข้อเสนอแล้ว · ${res.months.length} เดือน จากเมล ${res.reportCount} ฉบับ · ยอดยังว่าง (D3)`,
+        fillAmounts
+          ? `D4 เติมยอดในข้อเสนอแล้ว · ${res.months.length} เดือน · ยังไม่ทับงบ`
+          : `D3 สร้างโครงแล้ว · ${res.months.length} เดือน จากเมล ${res.reportCount} · ยอดยังว่าง`,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setBusy(false);
+      setBusy("");
     }
   };
 
@@ -75,25 +84,33 @@ export function VatMonthProposalsPanel({ actor }: Props) {
       aria-label="ข้อเสนอเดือน"
       data-ai-context="vat-delivery-month-proposals"
     >
-      <h3 className="vat-table-subtitle">ข้อเสนอเดือน (D3)</h3>
+      <h3 className="vat-table-subtitle">ข้อเสนอเดือน (D3→D4)</h3>
       <p className="muted vat-sales-hint">
-        จัดกลุ่มเมลที่แท็กแล้วเป็นโครงต่อเดือน ·{" "}
-        <strong>ยังไม่แกะยอด · ยังไม่ทับงบ</strong> — รอ D4 อะแดปเตอร์
+        จัดกลุ่มเมล → เติมยอดจาก parse เข้าชั้นข้อเสนอ ·{" "}
+        <strong>ยังไม่ทับตารางงบ</strong>
       </p>
 
       <div className="vat-mail-study-toolbar">
         <button
           type="button"
-          className="vat-mini-btn vat-mini-btn--primary"
-          disabled={busy || loading}
-          onClick={() => void rebuild()}
+          className="vat-mini-btn"
+          disabled={Boolean(busy) || loading}
+          onClick={() => void rebuild(false)}
         >
-          {busy ? "สร้าง…" : "สร้าง/รีเฟรชข้อเสนอ"}
+          {busy === "rebuild" ? "สร้าง…" : "สร้างโครง (D3)"}
+        </button>
+        <button
+          type="button"
+          className="vat-mini-btn vat-mini-btn--primary"
+          disabled={Boolean(busy) || loading}
+          onClick={() => void rebuild(true)}
+        >
+          {busy === "fill" ? "เติมยอด…" : "เติมยอดจากเมล (D4)"}
         </button>
         <button
           type="button"
           className="vat-mini-btn"
-          disabled={busy || loading}
+          disabled={Boolean(busy) || loading}
           onClick={() => void refresh()}
         >
           รีโหลด
@@ -107,7 +124,7 @@ export function VatMonthProposalsPanel({ actor }: Props) {
         <p className="muted">กำลังโหลดข้อเสนอ…</p>
       ) : rows.length === 0 ? (
         <p className="muted vat-sales-hint">
-          ยังไม่มีข้อเสนอ — กด「สร้าง/รีเฟรชข้อเสนอ」หลังจูนแท็กเมลแล้ว
+          ยังไม่มีข้อเสนอ — กด「สร้างโครง」หรือ「เติมยอดจากเมล」
         </p>
       ) : (
         <div className="sheet-wrap vat-month-slim-wrap">
@@ -118,7 +135,7 @@ export function VatMonthProposalsPanel({ actor }: Props) {
                 <th className="col-seg">Grab</th>
                 <th className="col-seg">LINE MAN</th>
                 <th className="col-seg">Shopee</th>
-                <th className="col-desc">ยอด</th>
+                <th className="col-desc">เฟส</th>
               </tr>
             </thead>
             <tbody>
@@ -128,9 +145,7 @@ export function VatMonthProposalsPanel({ actor }: Props) {
                   <tr
                     key={p.monthKey}
                     className={open ? "is-open" : undefined}
-                    onClick={() =>
-                      setOpenMonth(open ? null : p.monthKey)
-                    }
+                    onClick={() => setOpenMonth(open ? null : p.monthKey)}
                   >
                     <td className="col-date">
                       {formatThaiMonthKey(p.monthKey)}
@@ -144,10 +159,10 @@ export function VatMonthProposalsPanel({ actor }: Props) {
                         <td key={ch} className="col-seg">
                           {c.reportIds.length ? (
                             <>
-                              {c.reportIds.length}
+                              {fmtAmt(c.amounts.appSales)}
                               <div className="muted">
+                                {c.reportIds.length}ฉบับ ·{" "}
                                 {strategyLabel(c.strategy)}
-                                {c.dayCount ? ` · ${c.dayCount}ว` : ""}
                               </div>
                             </>
                           ) : (
@@ -156,7 +171,7 @@ export function VatMonthProposalsPanel({ actor }: Props) {
                         </td>
                       );
                     })}
-                    <td className="col-desc muted">ว่าง (รอ D4)</td>
+                    <td className="col-desc muted">{p.phase}</td>
                   </tr>
                 );
               })}
@@ -172,7 +187,7 @@ export function VatMonthProposalsPanel({ actor }: Props) {
             .map((p) => (
               <div key={p.monthKey}>
                 <p className="muted vat-sales-hint">
-                  รายละเอียด {formatThaiMonthKey(p.monthKey)} · phase {p.phase}
+                  {formatThaiMonthKey(p.monthKey)} · {p.phase} · ไม่ทับงบ
                 </p>
                 {DELIVERY_CHANNELS.map((ch) => {
                   const c = p.channels[ch];
@@ -180,6 +195,11 @@ export function VatMonthProposalsPanel({ actor }: Props) {
                     <div key={ch} className="vat-mail-study-rule-row">
                       <strong>{MONTH_CHANNEL_LABEL[ch]}</strong>
                       <span className="muted">
+                        ขาย {fmtAmt(c.amounts.appSales)} · โอน{" "}
+                        {fmtAmt(c.amounts.transfer)} · GP{" "}
+                        {fmtAmt(c.amounts.gpExVat)} · VAT-ซื้อ{" "}
+                        {fmtAmt(c.amounts.gpVat)}
+                        <br />
                         ใช้ {c.reportIds.length} · ข้าม {c.skipIds.length} ·{" "}
                         {strategyLabel(c.strategy)}
                         {c.note ? ` · ${c.note}` : ""}

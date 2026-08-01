@@ -2,10 +2,13 @@ import assert from "node:assert/strict";
 import {
   buildMonthProposalFromReports,
   dayKeyFromReport,
+  fillProposalAmountsFromReports,
   monthKeyFromReport,
   proposalSummaryLine,
 } from "../src/lib/vat-delivery-month-proposals";
 import type { PlatformEmailReport } from "../src/lib/vat-sales-mail";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 function stub(partial: Partial<PlatformEmailReport>): PlatformEmailReport {
   return {
@@ -98,7 +101,42 @@ const aug = buildMonthProposalFromReports("2026-08", reports, "test");
 assert.equal(aug.channels.shopee.reportIds.length, 1);
 assert.equal(aug.channels.shopee.strategy, "daily-rollup");
 
-assert.match(proposalSummaryLine(july), /ยอด=ยังว่าง/);
+assert.match(proposalSummaryLine(july), /ยอดว่าง/);
 assert.match(proposalSummaryLine(july), /grab:2ใช้/);
+
+{
+  const pdfBody = readFileSync(
+    join("testdata/vat-mail/grab-daily-from-pdf.txt"),
+    "utf8",
+  );
+  const filledReports = [
+    stub({
+      id: "g1",
+      channel: "grab",
+      reportDateGuess: "2026-07-01",
+      subject: "สรุปยอดขายสำหรับคำสั่งซื้อ 01 กรกฎาคม 2026 GrabFood",
+      studyTags: ["grab-รายวัน", "pdf"],
+      rawText: pdfBody,
+    }),
+    stub({
+      id: "g2",
+      channel: "grab",
+      reportDateGuess: "2026-07-02",
+      subject: "สรุปยอดขายสำหรับคำสั่งซื้อ 02 กรกฎาคม 2026 GrabFood",
+      studyTags: ["grab-รายวัน", "pdf"],
+      rawText: pdfBody.replace(/26\/07\/2024/g, "02/07/2026").replace(
+        /12840\.00/,
+        "1000.00",
+      ).replace(/2568\.00/, "200.00").replace(/10272\.00/, "800.00"),
+    }),
+  ];
+  const base = buildMonthProposalFromReports("2026-07", filledReports, "test");
+  const filled = fillProposalAmountsFromReports(base, filledReports, "test");
+  assert.equal(filled.phase, "D4");
+  assert.equal(filled.channels.grab.amountsSource, "adapter");
+  assert.ok((filled.channels.grab.amounts.appSales || 0) > 0);
+  assert.ok((filled.channels.grab.amounts.transfer || 0) > 0);
+  assert.ok((filled.channels.grab.amounts.gpExVat || 0) > 0);
+}
 
 console.log("ok vat-delivery-month-proposals");

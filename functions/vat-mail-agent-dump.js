@@ -129,29 +129,26 @@ exports.vatMailAgentDump = functions
         };
       });
 
-      const propSnap = await db
-        .collection(PROPOSALS_COL)
-        .orderBy("monthKey", "desc")
-        .limit(12)
-        .get()
-        .catch(() => null);
-      const proposals = propSnap
-        ? propSnap.docs.map((d) => {
+      let proposals = [];
+      try {
+        const propSnap = await db.collection(PROPOSALS_COL).get();
+        proposals = propSnap.docs
+          .map((d) => {
             const x = d.data() || {};
             const channels = x.channels || {};
             const summarize = (ch) => {
               const c = channels[ch] || {};
+              const a = c.amounts || {};
               return {
                 use: Array.isArray(c.reportIds) ? c.reportIds.length : 0,
                 skip: Array.isArray(c.skipIds) ? c.skipIds.length : 0,
                 strategy: String(c.strategy || "unknown"),
                 dayCount: Number(c.dayCount) || 0,
                 amountsSource: String(c.amountsSource || "none"),
-                hasAmounts: Boolean(
-                  c.amounts &&
-                    (c.amounts.appSales != null ||
-                      c.amounts.transfer != null),
-                ),
+                appSales: a.appSales == null ? null : Number(a.appSales),
+                transfer: a.transfer == null ? null : Number(a.transfer),
+                gpExVat: a.gpExVat == null ? null : Number(a.gpExVat),
+                gpVat: a.gpVat == null ? null : Number(a.gpVat),
               };
             };
             return {
@@ -164,7 +161,12 @@ exports.vatMailAgentDump = functions
               shopee: summarize("shopee"),
             };
           })
-        : [];
+          .sort((a, b) => String(b.monthKey).localeCompare(String(a.monthKey)))
+          .slice(0, 18);
+      } catch (e) {
+        console.warn("proposals list", e?.message || e);
+        proposals = [];
+      }
 
       await db.doc(AGENT_API_DOC).set(
         {
@@ -177,7 +179,8 @@ exports.vatMailAgentDump = functions
       res.status(200).json({
         ok: true,
         generatedAt: new Date().toISOString(),
-        phaseHint: "D3-proposals · amounts empty until D4 · never auto-write L4",
+        phaseHint:
+          "D3/D4 proposals in L3 · fill amounts via adapter · never auto-write L4",
         notes: notes
           ? {
               text: String(notes.text || ""),
