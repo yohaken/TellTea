@@ -19658,6 +19658,24 @@ a.ghost-btn {
   gap: 0.2rem;
 }
 
+.vat-mail-study-notes {
+  position: relative;
+  margin: 0.25rem 0 0.35rem;
+}
+
+/* อยู่ใน DOM ให้ AI อ่าน · คนไม่ต้องเลื่อนอ่านยาว */
+.vat-mail-study-notes-body {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: pre;
+  border: 0;
+}
+
 .vat-tag-chip {
   border: 1px solid rgba(28, 42, 31, 0.2);
   background: transparent;

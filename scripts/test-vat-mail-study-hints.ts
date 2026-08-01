@@ -3,6 +3,11 @@ import {
   inferMailStudyHints,
   MAIL_STUDY_TAG_PRESETS,
 } from "../src/lib/vat-mail-study";
+import {
+  buildMailStudyDump,
+  defaultVatMailStudyNotesText,
+} from "../src/lib/vat-mail-study-notes";
+import type { PlatformEmailReport } from "../src/lib/vat-sales-mail";
 
 {
   const h = inferMailStudyHints({
@@ -36,4 +41,30 @@ import {
 
 assert.ok(MAIL_STUDY_TAG_PRESETS.includes("grab-รายวัน"));
 assert.ok(MAIL_STUDY_TAG_PRESETS.includes("excel"));
+
+{
+  const empty = buildMailStudyDump([]);
+  assert.match(empty, /ยังไม่มีเมลซิงก์/);
+  assert.match(defaultVatMailStudyNotesText(), /VAT MAIL STUDY NOTES/);
+}
+
+{
+  const sample = {
+    id: "r1",
+    channel: "grab",
+    subject: "GrabFood Daily Sales",
+    from: "noreply@grab.com",
+    receivedAt: Date.parse("2026-07-15T10:00:00Z"),
+    pdfFilenames: ["day.csv"],
+    studyTags: ["grab-รายวัน", "csv"],
+    reportKind: "daily",
+    snippet: "",
+  } as PlatformEmailReport;
+  const dump = buildMailStudyDump([sample]);
+  assert.match(dump, /grab/);
+  assert.match(dump, /daily/);
+  assert.match(dump, /grab-รายวัน/);
+  assert.match(dump, /#vat-mail-study-notes/);
+}
+
 console.log("ok vat-mail-study-hints");

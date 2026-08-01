@@ -28,6 +28,11 @@ import {
   type PlatformEmailReport,
   type VatMailStatus,
 } from "@/lib/vat-sales-mail";
+import {
+  defaultVatMailStudyNotesText,
+  loadVatMailStudyNotes,
+  refreshVatMailStudyNotesFromReports,
+} from "@/lib/vat-mail-study-notes";
 
 const DEFAULT_REDIRECT =
   "https://asia-southeast1-mypeer-501909.cloudfunctions.net/vatMailOAuthCallback";
@@ -69,16 +74,19 @@ export function VatMailStudyPanel({ actor }: Props) {
   const [hasSecret, setHasSecret] = useState(false);
   const [mailRules, setMailRules] = useState<VatMailRules | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [studyNotes, setStudyNotes] = useState(defaultVatMailStudyNotesText());
+  const [notesUpdatedAt, setNotesUpdatedAt] = useState(0);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [st, rows, cfg, settings] = await Promise.all([
+      const [st, rows, cfg, settings, notes] = await Promise.all([
         fetchVatMailStatus(),
         listPlatformEmailReports({ channel: channelFilter, max: 120 }),
         loadVatMailOAuthConfig().catch(() => null),
         loadVatSalesSettings().catch(() => null),
+        loadVatMailStudyNotes().catch(() => null),
       ]);
       setStatus(st);
       setReports(rows);
@@ -88,6 +96,10 @@ export function VatMailStudyPanel({ actor }: Props) {
         setHasSecret(cfg.hasSecret);
       }
       if (settings) setMailRules(settings.mailRules);
+      if (notes) {
+        setStudyNotes(notes.text);
+        setNotesUpdatedAt(notes.updatedAt);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -150,11 +162,39 @@ export function VatMailStudyPanel({ actor }: Props) {
     setMsg("");
     try {
       const res = await syncVatMail(45);
+      const rows = await listPlatformEmailReports({
+        channel: channelFilter,
+        max: 120,
+      });
+      setReports(rows);
+      try {
+        const notes = await refreshVatMailStudyNotesFromReports(rows, actor);
+        setStudyNotes(notes.text);
+        setNotesUpdatedAt(notes.updatedAt);
+      } catch {
+        /* บันทึก AI ไม่บล็อกซิงก์ */
+      }
       setMsg(
         `ซิงก์แล้ว · สแกน ${res.scanned} · เพิ่ม ${res.added} · ข้ามซ้ำ ${res.skipped}` +
-          (res.pdfEnriched ? ` · PDF ${res.pdfEnriched}` : ""),
+          (res.pdfEnriched ? ` · PDF ${res.pdfEnriched}` : "") +
+          " · อัปเดตบันทึก AI แล้ว",
       );
       await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const updateAiNotes = async () => {
+    setBusy("notes");
+    setError("");
+    try {
+      const notes = await refreshVatMailStudyNotesFromReports(reports, actor);
+      setStudyNotes(notes.text);
+      setNotesUpdatedAt(notes.updatedAt);
+      setMsg(`อัปเดตบันทึก AI แล้ว · ${notes.reportCount} ฉบับ`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -271,7 +311,36 @@ export function VatMailStudyPanel({ actor }: Props) {
         >
           {showRules ? "ปิดกฎคัด" : "กฎคัดเมล"}
         </button>
+        <button
+          type="button"
+          className="vat-mini-btn"
+          disabled={Boolean(busy) || loading}
+          title="เขียนแคตตาล็อกเมลลงบันทึกให้ AI อ่าน"
+          onClick={() => void updateAiNotes()}
+        >
+          {busy === "notes" ? "บันทึก…" : "อัปเดตบันทึก AI"}
+        </button>
       </div>
+
+      <aside
+        className="vat-mail-study-notes"
+        data-ai-context="vat-mail-study-notes"
+        aria-label="บันทึกศึกษาเมลสำหรับ AI"
+      >
+        <pre
+          id="vat-mail-study-notes"
+          className="vat-mail-study-notes-body"
+          data-ai-notes="1"
+        >
+          {studyNotes || defaultVatMailStudyNotesText()}
+        </pre>
+        <p className="muted vat-sales-hint vat-hint-one-line">
+          บันทึก AI · อ่านจาก #vat-mail-study-notes
+          {notesUpdatedAt
+            ? ` · ${new Date(notesUpdatedAt).toLocaleString("th-TH")}`
+            : " · ยังไม่เคยอัปเดต"}
+        </p>
+      </aside>
 
       {showConfig ? (
         <div className="vat-mail-study-config">
