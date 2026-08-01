@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 581/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 166/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+130/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.107"/);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)[1]) >= 583);
+assert.ok(Number(read("src/lib/pos-version.ts").match(/POS_BUILD = (\d+)/)[1]) >= 167);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+131/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.108"/);
 
 const boh = read("src/lib/pos-boh-print-docs.ts");
 assert.match(boh, /buildUnifiedReceiptBody/);
@@ -27,7 +27,7 @@ assert.match(paper, /localReceiptToPrintPayload/);
 
 const sessionDocs = read("src/components/PosSessionPrintDocs.tsx");
 assert.match(sessionDocs, /X · ระหว่างกะ/);
-assert.match(sessionDocs, /Z · ปิดรอบ \/ นำส่ง/);
+assert.match(sessionDocs, /ใบส่งเงินสด/);
 assert.match(sessionDocs, /buildBohSessionReportPreviewHtml/);
 
 const report = read("src/components/PosSalesReport.tsx");

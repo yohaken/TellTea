@@ -11,14 +11,14 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 
 const appBuild = Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)?.[1] || 0);
 const posBuild = Number(read("src/lib/pos-version.ts").match(/POS_BUILD\s*=\s*(\d+)/)?.[1] || 0);
-assert.ok(appBuild >= 580, `APP_BUILD >= 569, got ${appBuild}`);
-assert.ok(posBuild >= 165, `POS_BUILD >= 165, got ${posBuild}`);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+130/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.107"/);
+assert.ok(appBuild >= 583, `APP_BUILD >= 583, got ${appBuild}`);
+assert.ok(posBuild >= 167, `POS_BUILD >= 167, got ${posBuild}`);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+131/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1\.14\.108"/);
 
 assert.ok(existsSync(join(root, "docs/npos-z-cash-remit-checklist.md")));
 const doc = read("docs/npos-z-cash-remit-checklist.md");
-assert.match(doc, /1\.14\.106|ใบส่งเงินสด/);
+assert.match(doc, /1\.14\.108|ใบส่งเงินสด/);
 assert.match(doc, /ยอดเงินสดที่ต้องนำส่ง|นับจริง [-−] ทอนรอบถัดไป/);
 assert.match(doc, /เงินเข้า [-−] เงินออก|cashIn.*cashOut|inAmt - outAmt/);
 

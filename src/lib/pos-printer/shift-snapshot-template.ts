@@ -287,8 +287,8 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
     const label = data.discrepancyLabel || "";
     const openingLabel = opening != null ? money(opening) : "—";
     const countedLabel = counted != null ? money(counted) : "—";
-    const diffLabel =
-      diff == null ? "—" : `${label ? `${escapeReceiptHtml(label)} ` : ""}${money(diff)}`;
+    const diffMid = diff == null ? "" : escapeReceiptHtml(label || "");
+    const diffAmt = diff == null ? "—" : money(diff);
     const isClose =
       data.kind === "close" || data.kind === "close-full" || data.kind === "remit";
     const remit =
@@ -308,7 +308,7 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
   <div class="row"><span>เงินเข้า/เงินออก</span><span>${money(netInOut)}</span></div>
   <div class="row"><span>ควรมีในลิ้นชัก${opening != null || isClose ? "" : "*"}</span><span>${money(expected)}</span></div>
   <div class="row"><span>นับจริงในลิ้นชัก</span><span>${countedLabel}</span></div>
-  <div class="row"><span>ส่วนต่าง</span><span>${diffLabel}</span></div>
+  <table class="pay"><tbody><tr><td>ส่วนต่าง</td><td>${diffMid}</td><td>${diffAmt}</td></tr></tbody></table>
   ${
     data.discrepancyNote
       ? `<div class="muted tiny">เหตุผล: ${escapeReceiptHtml(data.discrepancyNote)}</div>`
@@ -380,8 +380,17 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
     .row {
       display: flex;
       justify-content: space-between;
-      gap: 8px;
+      align-items: baseline;
+      gap: 10px;
       margin: 2px 0;
+    }
+    .row > span:first-child { flex: 1 1 auto; min-width: 0; }
+    .row > span:last-child {
+      flex: 0 0 auto;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
+      min-width: 4.5em;
     }
     .row.strong, .line-row.strong { font-weight: 800; }
     .pay {
@@ -572,10 +581,47 @@ function buildRemitSlipHtml(
     .row {
       display: flex;
       justify-content: space-between;
-      gap: 8px;
+      align-items: baseline;
+      gap: 10px;
       margin: 2px 0;
     }
+    .row > span:first-child { flex: 1 1 auto; min-width: 0; }
+    .row > span:last-child {
+      flex: 0 0 auto;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
+      min-width: 4.5em;
+    }
     .row.strong { font-weight: 800; }
+    .pay {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .pay th, .pay td {
+      padding: 2px 0;
+      text-align: right;
+      font-weight: 600;
+      vertical-align: top;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum" 1;
+    }
+    .pay th:first-child, .pay td:first-child {
+      text-align: left;
+      width: 48%;
+      padding-right: 6px;
+    }
+    .pay th:nth-child(2), .pay td:nth-child(2) {
+      width: 16%;
+      padding-left: 4px;
+      padding-right: 8px;
+    }
+    .pay th:nth-child(3), .pay td:nth-child(3) {
+      width: 36%;
+      padding-left: 4px;
+    }
+    .pay .sum td { border-top: 1px dashed #222; padding-top: 4px; font-weight: 800; }
     .check { margin: 8px 0 4px; }
     .check-item { margin: 2px 0; font-weight: 600; }
     .sign { margin-top: 12px; }
@@ -601,10 +647,16 @@ function buildRemitSlipHtml(
   }
   ${data.staffName ? `<div class="row"><span>โดย</span><span>${escapeReceiptHtml(data.staffName)}</span></div>` : ""}
   <hr class="rule" />
-  <div class="sec">สรุปสั้น</div>
-  <div class="row"><span>บิลขาย</span><span>${s.count}</span></div>
-  <div class="row"><span>ยอดสุทธิ</span><span>${money(s.total)}</span></div>
-  <div class="row"><span>สด / โอน / PP</span><span>${money(s.cashTotal)} / ${money(s.transferTotal ?? 0)} / ${money(s.promptpayTotal)}</span></div>
+  <div class="sec">การชำระเงิน</div>
+  <table class="pay">
+    <thead><tr><th>ช่องทาง</th><th>บิล</th><th>ยอด</th></tr></thead>
+    <tbody>
+      <tr><td>เงินสด</td><td>${s.cashCount}</td><td>${money(s.cashTotal)}</td></tr>
+      <tr><td>โอนเงิน</td><td>${s.transferCount ?? 0}</td><td>${money(s.transferTotal ?? 0)}</td></tr>
+      <tr><td>PromptPay</td><td>${s.promptpayCount}</td><td>${money(s.promptpayTotal)}</td></tr>
+      <tr class="sum"><td>รวมสุทธิ</td><td>${s.count}</td><td>${money(s.total)}</td></tr>
+    </tbody>
+  </table>
   ${s.voidedCount > 0 ? `<div class="row"><span>ทำลายบิล</span><span>${s.voidedCount}</span></div>` : ""}
   <hr class="rule" />
   <div class="sec">เงินสดที่ต้องนำส่ง</div>
@@ -613,7 +665,11 @@ function buildRemitSlipHtml(
   ${Math.abs(netInOut) > 0.0001 ? `<div class="row"><span>เงินเข้า/เงินออก</span><span>${money(netInOut)}</span></div>` : ""}
   <div class="row"><span>ควรมีในลิ้นชัก</span><span>${money(expected)}</span></div>
   <div class="row"><span>นับจริงในลิ้นชัก</span><span>${counted != null ? money(counted) : "—"}</span></div>
-  <div class="row"><span>ส่วนต่าง</span><span>${escapeReceiptHtml(label)} ${money(diff)}</span></div>
+  <table class="pay">
+    <tbody>
+      <tr><td>ส่วนต่าง</td><td>${escapeReceiptHtml(label)}</td><td>${money(diff)}</td></tr>
+    </tbody>
+  </table>
   ${leave > 0.0001 ? `<div class="row"><span>ทอนรอบถัดไป</span><span>${money(leave)}</span></div>` : ""}
   <div class="row strong"><span>ยอดเงินสดที่ต้องนำส่ง</span><span>${remit != null ? money(remit) : "—"}</span></div>
   <div class="muted tiny">*นับจริง − ทอนรอบถัดไป</div>
