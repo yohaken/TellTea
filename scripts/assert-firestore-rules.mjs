@@ -129,6 +129,7 @@ assert.match(rules, /vatMonthlyReturns\/\{monthId\}[\s\S]*?isOwner\(\) \|\| isOw
 assert.match(rules, /vatSalesSettings' && isOwner\(\)/);
 assert.match(rules, /vatImportAiNotes' && isOwner\(\)/);
 assert.match(rules, /vatDeliverySourceNotes' && isOwner\(\)/);
+assert.match(rules, /vatDeliveryFreshStart' && isOwner\(\)/);
 assert.match(rules, /match \/vatAgentChat\/\{msgId\}/);
 assert.match(rules, /vatAgentChatPresence'/);
 

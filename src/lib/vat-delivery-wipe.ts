@@ -7,6 +7,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   setDoc,
 } from "firebase/firestore";
@@ -28,6 +29,10 @@ import {
 import { VAT_IMPORT_ROWS_COL } from "./vat-import";
 import { notifyVatImportMonthMerged } from "./vat-import-month-sync";
 import { normalizeMoney, roundMoney } from "./vat-sales";
+
+/** ครั้งที่ล้างเริ่มใหม่ — เพิ่มเลขเมื่อต้องล้างซ้ำทั้งระบบ */
+export const VAT_DELIVERY_FRESH_START_VERSION = 574;
+export const VAT_DELIVERY_FRESH_START_DOC = "vatDeliveryFreshStart";
 
 export type WipeDeliveryReport = {
   monthsCleared: string[];
@@ -161,6 +166,40 @@ export function summarizeWipe(report: WipeDeliveryReport): string {
     ? report.monthsCleared.join(", ")
     : "ไม่มีเอกสารเดือน";
   return `ล้างเดลิเวอรี่ ${report.monthsCleared.length} เดือน (${months}) · แถวนำเข้า ${report.importRowsDeleted} · ตั้งค่า GP เคลียร์`;
+}
+
+export async function needsDeliveryFreshStart(): Promise<boolean> {
+  const snap = await getDoc(
+    doc(getDb(), "meta", VAT_DELIVERY_FRESH_START_DOC),
+  );
+  if (!snap.exists()) return true;
+  const v = Number(snap.data()?.version) || 0;
+  return v < VAT_DELIVERY_FRESH_START_VERSION;
+}
+
+export async function markDeliveryFreshStart(actor: string): Promise<void> {
+  await setDoc(
+    doc(getDb(), "meta", VAT_DELIVERY_FRESH_START_DOC),
+    {
+      version: VAT_DELIVERY_FRESH_START_VERSION,
+      wipedAt: Date.now(),
+      wipedBy: actor || "owner",
+    },
+    { merge: true },
+  );
+}
+
+/**
+ * ครั้งเดียวต่อเวอร์ชัน fresh-start — ล้างยอดเดลิเวอรี่ค้างจากระบบเก่า
+ * เรียกตอนเปิดหน้าที่มา (owner)
+ */
+export async function runDeliveryFreshStartIfNeeded(
+  actor: string,
+): Promise<WipeDeliveryReport | null> {
+  if (!(await needsDeliveryFreshStart())) return null;
+  const report = await wipeAllDeliveryTotals(actor);
+  await markDeliveryFreshStart(actor);
+  return report;
 }
 
 export { roundMoney };

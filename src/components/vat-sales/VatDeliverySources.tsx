@@ -30,6 +30,7 @@ import {
   type MonthChannelSource,
 } from "@/lib/vat-month-sources";
 import {
+  runDeliveryFreshStartIfNeeded,
   summarizeWipe,
   wipeAllDeliveryTotals,
   wipeDeliveryTotalsForMonth,
@@ -131,6 +132,31 @@ export function VatDeliverySources({ actor }: Props) {
   useEffect(() => {
     void loadMonth(month);
   }, [month, loadMonth]);
+
+  // ครั้งเดียว: ล้างยอดเดลิเวอรี่ค้างจากระบบเก่า (ก.ค./ส.ค. ฯลฯ)
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        setWipeBusy(true);
+        const report = await runDeliveryFreshStartIfNeeded(actor);
+        if (cancelled || !report) return;
+        setMsg(summarizeWipe(report));
+        await loadMonth(month);
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : String(e));
+        }
+      } finally {
+        if (!cancelled) setWipeBusy(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // รันครั้งเดียวตอน mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actor]);
 
   useEffect(() => {
     void (async () => {
