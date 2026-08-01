@@ -1,8 +1,7 @@
 "use client";
 
 /**
- * D3/D4 — ข้อเสนอเดือน (L3)
- * D3 โครงเมล · D4 เติมยอดจาก parse · ยังไม่ผสานงบ (L4)
+ * D3/D4/D5 — ข้อเสนอเดือน (L3) → ผสานงบ (L4) เมื่อยืนยัน
  */
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -29,6 +28,15 @@ function strategyLabel(s: string) {
 function fmtAmt(n: number | null | undefined) {
   if (n == null || !Number.isFinite(n)) return "—";
   return formatVatMoney(n);
+}
+
+function canMerge(p: VatDeliveryMonthProposal): boolean {
+  return DELIVERY_CHANNELS.some((ch) => {
+    const a = p.channels[ch].amounts.appSales;
+    return (
+      p.channels[ch].amountsSource === "adapter" && a != null && a > 0
+    );
+  });
 }
 
 export function VatMonthProposalsPanel({ actor }: Props) {
@@ -69,8 +77,8 @@ export function VatMonthProposalsPanel({ actor }: Props) {
       setRows(res.proposals);
       setMsg(
         fillAmounts
-          ? `D4 เติมยอดในข้อเสนอแล้ว · ${res.months.length} เดือน · ยังไม่ทับงบ`
-          : `D3 สร้างโครงแล้ว · ${res.months.length} เดือน จากเมล ${res.reportCount} · ยอดยังว่าง`,
+          ? `D4 เติมยอดแล้ว · ${res.months.length} เดือน — กด「ผสานงบ D5」รายเดือนด้านล่าง`
+          : `D3 สร้างโครงแล้ว · ${res.months.length} เดือน · ต่อไปกดเติมยอด D4`,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -126,13 +134,15 @@ export function VatMonthProposalsPanel({ actor }: Props) {
 
   return (
     <section
-      className="vat-table-block vat-month-proposals"
-      aria-label="ข้อเสนอเดือน"
+      id="vat-d5-proposals"
+      className="vat-table-block vat-month-proposals vat-month-proposals--d5"
+      aria-label="ข้อเสนอเดือน D5"
       data-ai-context="vat-delivery-month-proposals"
     >
-      <h3 className="vat-table-subtitle">ข้อเสนอเดือน (D3→D5)</h3>
+      <h3 className="vat-table-subtitle">D5 · ผสานข้อเสนอเข้างบ</h3>
       <p className="muted vat-sales-hint">
-        จัดกลุ่มเมล → เติมยอด → ผสานเข้างบเมื่อยืนยัน · ทับเฉพาะช่องที่มียอด
+        1) เติมยอดจากเมล (D4) → 2) กดปุ่มแดง「ผสานงบ D5」รายเดือน ·
+        ทับเฉพาะช่องที่มียอด · อยู่เหนือตารางศึกษาเมล
       </p>
 
       <div className="vat-mail-study-toolbar">
@@ -142,7 +152,7 @@ export function VatMonthProposalsPanel({ actor }: Props) {
           disabled={Boolean(busy) || loading}
           onClick={() => void rebuild(false)}
         >
-          {busy === "rebuild" ? "สร้าง…" : "สร้างโครง (D3)"}
+          {busy === "rebuild" ? "สร้าง…" : "1. สร้างโครง"}
         </button>
         <button
           type="button"
@@ -150,7 +160,7 @@ export function VatMonthProposalsPanel({ actor }: Props) {
           disabled={Boolean(busy) || loading}
           onClick={() => void rebuild(true)}
         >
-          {busy === "fill" ? "เติมยอด…" : "เติมยอดจากเมล (D4)"}
+          {busy === "fill" ? "เติมยอด…" : "2. เติมยอดจากเมล (D4)"}
         </button>
         <button
           type="button"
@@ -169,7 +179,7 @@ export function VatMonthProposalsPanel({ actor }: Props) {
         <p className="muted">กำลังโหลดข้อเสนอ…</p>
       ) : rows.length === 0 ? (
         <p className="muted vat-sales-hint">
-          ยังไม่มีข้อเสนอ — กด「สร้างโครง」หรือ「เติมยอดจากเมล」
+          ยังไม่มีข้อเสนอ — กด「2. เติมยอดจากเมล」ก่อน จะเห็นปุ่ม D5 รายเดือน
         </p>
       ) : (
         <div className="sheet-wrap vat-month-slim-wrap">
@@ -180,12 +190,13 @@ export function VatMonthProposalsPanel({ actor }: Props) {
                 <th className="col-seg">Grab</th>
                 <th className="col-seg">LINE MAN</th>
                 <th className="col-seg">Shopee</th>
-                <th className="col-desc">เฟส</th>
+                <th className="col-desc">D5</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((p) => {
                 const open = openMonth === p.monthKey;
+                const mergeOk = canMerge(p);
                 return (
                   <tr
                     key={p.monthKey}
@@ -220,30 +231,31 @@ export function VatMonthProposalsPanel({ actor }: Props) {
                       className="col-desc"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <span className="muted">{p.phase}</span>
                       {p.status === "merged" ? (
-                        <div className="muted">ผสานแล้ว</div>
+                        <span className="vat-d5-merged">ผสานแล้ว</span>
                       ) : (
-                        <button
-                          type="button"
-                          className="vat-mini-btn vat-mini-btn--primary"
-                          disabled={
-                            Boolean(busy) ||
-                            !DELIVERY_CHANNELS.some((ch) => {
-                              const a = p.channels[ch].amounts.appSales;
-                              return (
-                                p.channels[ch].amountsSource === "adapter" &&
-                                a != null &&
-                                a > 0
-                              );
-                            })
-                          }
-                          onClick={() => void mergeMonth(p.monthKey)}
-                        >
-                          {busy === `merge:${p.monthKey}`
-                            ? "ผสาน…"
-                            : "ผสานงบ (D5)"}
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="vat-mini-btn vat-mini-btn--danger"
+                            disabled={Boolean(busy) || !mergeOk}
+                            title={
+                              mergeOk
+                                ? "ผสานยอดข้อเสนอเข้าตารางยอดเดลิเวอรี่"
+                                : "ยังไม่มียอด — กดเติมยอด D4 ก่อน"
+                            }
+                            onClick={() => void mergeMonth(p.monthKey)}
+                          >
+                            {busy === `merge:${p.monthKey}`
+                              ? "ผสาน…"
+                              : "ผสานงบ D5"}
+                          </button>
+                          {!mergeOk ? (
+                            <div className="muted vat-mail-study-snippet">
+                              ยังไม่มียอด — กด D4 ก่อน
+                            </div>
+                          ) : null}
+                        </>
                       )}
                     </td>
                   </tr>

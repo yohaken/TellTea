@@ -350,9 +350,10 @@ export function VatDeliverySources({ actor }: Props) {
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
       {loading ? <p className="muted">กำลังโหลด…</p> : null}
 
-      <VatMailStudyPanel actor={actor} />
-
+      {/* ข้อเสนอ+D5 อยู่บนสุดของบล็อกงาน — ไม่ให้จมใต้ตารางเมล */}
       <VatMonthProposalsPanel actor={actor} />
+
+      <VatMailStudyPanel actor={actor} />
 
       <section className="vat-table-block vat-month-sources">
         <h3 className="vat-table-subtitle">ยอดรวมเดือน (ผสานเข้างบทันที)</h3>
