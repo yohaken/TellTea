@@ -19678,6 +19678,11 @@ a.ghost-btn {
   margin-bottom: 0.35rem;
 }
 
+.vat-sources-drive-track-head .vat-sources-drive-path {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
 .vat-sources-drive-track-meta {
   font-size: 0.78rem;
   color: rgba(28, 42, 31, 0.7);
