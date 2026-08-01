@@ -30,6 +30,11 @@ import {
   type MonthChannelSource,
 } from "@/lib/vat-month-sources";
 import {
+  summarizeWipe,
+  wipeAllDeliveryTotals,
+  wipeDeliveryTotalsForMonth,
+} from "@/lib/vat-delivery-wipe";
+import {
   emptyMonthBooksDraft,
   retToMonthBooksDraft,
   type MonthBooksDraft,
@@ -91,6 +96,7 @@ export function VatDeliverySources({ actor }: Props) {
   const [note, setNote] = useState("");
   const [noteDirty, setNoteDirty] = useState(false);
   const [noteMsg, setNoteMsg] = useState("");
+  const [wipeBusy, setWipeBusy] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadGen = useRef(0);
@@ -217,6 +223,46 @@ export function VatDeliverySources({ actor }: Props) {
 
   const statusLabel = locked ? "ปิดงบ" : dirty ? "กำลังผสาน…" : "พร้อม";
 
+  async function onWipeMonth() {
+    if (wipeBusy) return;
+    const ok = window.confirm(
+      `ล้างยอดเดลิเวอรี่เดือน ${formatThaiMonthKey(month)} เป็น 0?\n(ข้อมูลเดิมค้างในฐานข้อมูลจากระบบเก่า)`,
+    );
+    if (!ok) return;
+    setWipeBusy(true);
+    setError("");
+    try {
+      const saved = await wipeDeliveryTotalsForMonth(month, actor);
+      setDraft(retToMonthBooksDraft(saved));
+      setLocked(saved.status === "filed");
+      setDirty(false);
+      setMsg(`ล้างยอดเดลิเวอรี่ ${formatThaiMonthKey(month)} แล้ว`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setWipeBusy(false);
+    }
+  }
+
+  async function onWipeAll() {
+    if (wipeBusy) return;
+    const ok = window.confirm(
+      "ล้างยอดเดลิเวอรี่ทุกเดือน เป็น 0 และลบแถวนำเข้ารายวันเก่า?\nตัวเลขที่เห็นตอนนี้มาจากฐานข้อมูลระบบเก่า — ไม่ใช่ข้อมูลใหม่",
+    );
+    if (!ok) return;
+    setWipeBusy(true);
+    setError("");
+    try {
+      const report = await wipeAllDeliveryTotals(actor);
+      await loadMonth(month);
+      setMsg(summarizeWipe(report));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setWipeBusy(false);
+    }
+  }
+
   return (
     <div className="vat-delivery-sources">
       <div className="vat-sales-toolbar">
@@ -225,7 +271,7 @@ export function VatDeliverySources({ actor }: Props) {
           <select
             className="vat-thai-month-select"
             value={month}
-            disabled={loading}
+            disabled={loading || wipeBusy}
             onChange={(e) => setMonth(e.target.value)}
             aria-label="เลือกเดือน"
           >
@@ -250,6 +296,27 @@ export function VatDeliverySources({ actor }: Props) {
       <h2 className="vat-table-title">
         ที่มายอดเดลิเวอรี่ — {formatThaiMonthKey(month)}
       </h2>
+      <p className="muted vat-sales-hint vat-hint-one-line">
+        ตัวเลขที่เห็นอาจค้างจากระบบเก่าในฐานข้อมูล — ไม่ใช่จากหน้านี้โดยตรง
+      </p>
+      <div className="vat-wipe-actions">
+        <button
+          type="button"
+          className="vat-mini-btn"
+          disabled={wipeBusy || loading}
+          onClick={() => void onWipeMonth()}
+        >
+          ล้างเดือนนี้
+        </button>
+        <button
+          type="button"
+          className="vat-mini-btn vat-mini-btn--danger"
+          disabled={wipeBusy || loading}
+          onClick={() => void onWipeAll()}
+        >
+          ล้างทุกเดือน (เริ่มใหม่)
+        </button>
+      </div>
 
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
