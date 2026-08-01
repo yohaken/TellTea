@@ -11,8 +11,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 const require = createRequire(import.meta.url);
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 553/);
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 160/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 555/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 161/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+128/);
 assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.105"/);
 
