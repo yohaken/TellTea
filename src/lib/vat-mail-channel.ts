@@ -78,7 +78,7 @@ export function matchMailChannel(
 
   if (/@?grab\.com\b|grabfood/.test(f) && !isTaxInvoiceMail(s)) return "grab";
   if (/@?lmwn\.com\b|\blmwn\b|lineman|wongnai/.test(f)) return "lineman";
-  if (/shopeefood|@shopee\./.test(f)) return "shopee";
+  if (/shopeefood|@shopee\.|shopee\.co\.th/.test(f)) return "shopee";
 
   if (/grabfood|สรุปยอดขายสำหรับคำสั่งซื้อ|daily sales report/.test(s)) {
     return "grab";
@@ -88,7 +88,11 @@ export function matchMailChannel(
   ) {
     return "lineman";
   }
-  if (/shopeefood|รายงานการโอนเงินสำหรับ\s*shopee/.test(s)) {
+  if (
+    /shopeefood|shopee\s*food|รายงานการโอนเงินสำหรับ\s*shopee|ใบแจ้งยอด.*shopee|shopee.*settlement|ค่าคอมมิชชั่น.*shopee/.test(
+      s,
+    )
+  ) {
     return "shopee";
   }
 

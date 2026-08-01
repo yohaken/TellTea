@@ -53,9 +53,23 @@ export type VatMailRules = Record<DeliveryChannel, MailChannelRule>;
 export const DEFAULT_MAIL_RULES: VatMailRules = {
   shopee: {
     enabled: true,
-    fromIncludes: ["shopeefood.com", "shopeefood", "shopee"],
+    fromIncludes: [
+      "shopeefood.com",
+      "shopeefood",
+      "shopee.co.th",
+      "shopee.com",
+      "shopee",
+    ],
     // ห้ามคำกว้าง สรุปยอด/ยอดขาย — จะไปจับ Grab/LM
-    subjectIncludes: ["shopeefood", "รายงานการโอนเงิน"],
+    subjectIncludes: [
+      "shopeefood",
+      "shopee food",
+      "รายงานการโอนเงิน",
+      "ใบแจ้งยอด",
+      "settlement",
+      "ค่าคอมมิชชั่น",
+      "commission",
+    ],
     subjectExcludes: [
       "otp",
       "verify",

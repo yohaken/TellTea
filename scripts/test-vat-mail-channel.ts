@@ -34,6 +34,15 @@ import { DEFAULT_MAIL_RULES } from "../src/lib/vat-sales";
 }
 
 {
+  const ch = matchMailChannel(
+    "Shopee <no-reply@shopee.co.th>",
+    "ใบแจ้งยอดค่าคอมมิชชั่น ShopeeFood ประจำเดือน",
+    DEFAULT_MAIL_RULES,
+  );
+  assert.equal(ch, "shopee");
+}
+
+{
   // คำกว้างใน subject ต้องไม่ทำให้ Grab กลายเป็น shopee
   const ch = matchMailChannel(
     "no-reply@grab.com",

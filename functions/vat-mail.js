@@ -39,8 +39,10 @@ const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 /** Gmail อ่านเมล + Drive สร้าง/เขียนเฉพาะไฟล์ที่แอพสร้าง */
 const OAUTH_SCOPES = `${GMAIL_SCOPE} ${DRIVE_SCOPE}`;
-const DEFAULT_LOOKBACK_DAYS = 31;
-const MAX_MESSAGES_PER_SYNC = 80;
+/** ปิดงบต้นเดือนต้องย้อนหลายหน้า Gmail + คาบเกี่ยวเดือนก่อน/หลัง */
+const DEFAULT_LOOKBACK_DAYS = 120;
+const MAX_LOOKBACK_DAYS = 180;
+const MAX_MESSAGES_PER_SYNC = 300;
 
 function reportDocId(messageId) {
   const safe = String(messageId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
@@ -50,9 +52,23 @@ function reportDocId(messageId) {
 const DEFAULT_MAIL_RULES = {
   shopee: {
     enabled: true,
-    fromIncludes: ["shopeefood.com", "shopeefood", "shopee"],
+    fromIncludes: [
+      "shopeefood.com",
+      "shopeefood",
+      "shopee.co.th",
+      "shopee.com",
+      "shopee",
+    ],
     // ห้ามคำกว้างอย่าง สรุปยอด / ยอดขาย — จะไปจับ Grab/LM
-    subjectIncludes: ["shopeefood", "รายงานการโอนเงิน"],
+    subjectIncludes: [
+      "shopeefood",
+      "shopee food",
+      "รายงานการโอนเงิน",
+      "ใบแจ้งยอด",
+      "settlement",
+      "ค่าคอมมิชชั่น",
+      "commission",
+    ],
     subjectExcludes: [
       "otp",
       "verify",
@@ -338,24 +354,54 @@ async function reclassifyStoredReports(db, rules, actorId) {
   return { reclassified, noiseTagged, tagged, scanned: snap.size };
 }
 
-function buildSearchQuery(rule, lookbackDays) {
+function unionUnique(a, b, max = 12) {
+  const out = [];
+  const seen = new Set();
+  for (const raw of [...(a || []), ...(b || [])]) {
+    const t = String(raw || "").trim().toLowerCase();
+    if (!t || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+/** รวมกฎที่เซฟไว้กับ default — กัน settings เก่าทำให้ Shopee/ช่วงย้อนหาย */
+function expandRuleForSearch(channel, rule) {
+  const fb = DEFAULT_MAIL_RULES[channel] || rule;
+  return {
+    ...rule,
+    fromIncludes: unionUnique(rule?.fromIncludes, fb.fromIncludes, 8),
+    subjectIncludes: unionUnique(rule?.subjectIncludes, fb.subjectIncludes, 10),
+    subjectExcludes: unionUnique(rule?.subjectExcludes, fb.subjectExcludes, 10),
+  };
+}
+
+function buildSearchQuery(rule, lookbackDays, channel) {
   const after = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000);
   const y = after.getUTCFullYear();
   const m = String(after.getUTCMonth() + 1).padStart(2, "0");
   const d = String(after.getUTCDate()).padStart(2, "0");
   const parts = [`after:${y}/${m}/${d}`];
   // ค้นจาก From เป็นหลัก (กัน subject กว้างดึงข้ามช่อง)
-  const fromTerms = rule.fromIncludes.slice(0, 4).map((t) => `from:${t}`);
+  const fromTerms = (rule.fromIncludes || []).slice(0, 6).map((t) => `from:${t}`);
   if (fromTerms.length) {
     parts.push(`(${fromTerms.join(" OR ")})`);
   } else {
-    const subTerms = rule.subjectIncludes.slice(0, 3).map((t) => {
+    const subTerms = (rule.subjectIncludes || []).slice(0, 5).map((t) => {
       const q = String(t).includes(" ") ? `"${t}"` : t;
       return `subject:${q}`;
     });
     if (subTerms.length) parts.push(`(${subTerms.join(" OR ")})`);
   }
-  for (const ex of (rule.subjectExcludes || []).slice(0, 6)) {
+  // Shopee มักเป็นไฟล์แนบ Excel/CSV — บังคับมีแนบหรือชื่อไฟล์
+  if (channel === "shopee") {
+    parts.push(
+      "(has:attachment OR filename:xlsx OR filename:xls OR filename:csv OR filename:pdf)",
+    );
+  }
+  for (const ex of (rule.subjectExcludes || []).slice(0, 8)) {
     const q = String(ex).includes(" ") ? `"${ex}"` : ex;
     parts.push(`-subject:${q}`);
   }
@@ -629,7 +675,7 @@ exports.vatMailDisconnect = functions
 
 exports.vatMailSync = functions
   .region(REGION)
-  .runWith({ timeoutSeconds: 120, memory: "512MB" })
+  .runWith({ timeoutSeconds: 300, memory: "1GB" })
   .https.onCall(async (data, context) => {
     const { actorId } = await assertOwner(context);
     const db = getFirestore();
@@ -649,7 +695,7 @@ exports.vatMailSync = functions
     }
     const refreshToken = asString(oauthSnap.get("refreshToken"), 500);
     const lookbackDays = Math.min(
-      90,
+      MAX_LOOKBACK_DAYS,
       Math.max(1, Number(data?.lookbackDays) || DEFAULT_LOOKBACK_DAYS),
     );
 
@@ -670,9 +716,9 @@ exports.vatMailSync = functions
 
       for (const channel of channels) {
         if (channelsEnabled[channel] === false) continue;
-        const rule = rules[channel];
+        const rule = expandRuleForSearch(channel, rules[channel]);
         if (!rule.enabled) continue;
-        const q = buildSearchQuery(rule, lookbackDays);
+        const q = buildSearchQuery(rule, lookbackDays, channel);
         const ids = await listMessageIds(accessToken, q, MAX_MESSAGES_PER_SYNC);
         for (const messageId of ids) {
           if (seen.has(messageId)) continue;

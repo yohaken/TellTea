@@ -25,9 +25,13 @@ const REPORTS_COL = "platformEmailReports";
 
 const ROOT_FOLDER_NAME = "TellTea-VAT";
 const CHANNELS = ["grab", "lineman", "shopee"];
-const MAX_REPORTS_PER_SYNC = 40;
-const MAX_FILES_PER_MESSAGE = 4;
+/** ย้อนหลายหน้าแคตตาล็อก · รวมคาบเกี่ยวต้น/ปลายเดือน */
+const MAX_REPORTS_PER_SYNC = 160;
+const MAX_CATALOG_READ = 500;
+const MAX_FILES_PER_MESSAGE = 6;
 const MAX_ATTACH_BYTES = MAX_PDF_BYTES;
+/** วันคาบเกี่ยวรอบขอบเดือน (รับเมลช้า / รายงานข้ามเดือน) */
+const MONTH_OVERLAP_DAYS = 5;
 
 function asString(v, max = 200) {
   if (typeof v !== "string") return "";
@@ -118,6 +122,76 @@ function monthKeyFromReport(doc) {
   if (/^\d{4}-\d{2}$/.test(guess)) return guess;
   const ms = Number(doc?.receivedAt) || Number(doc?.internalDate) || Date.now();
   return bangkokDateKey(ms).slice(0, 7);
+}
+
+function shiftMonthKey(monthKey, delta) {
+  const m = String(monthKey || "");
+  if (!/^\d{4}-\d{2}$/.test(m)) return "";
+  const y = Number(m.slice(0, 4));
+  const mo = Number(m.slice(5, 7));
+  const idx = y * 12 + (mo - 1) + delta;
+  const ny = Math.floor(idx / 12);
+  const nm = (idx % 12) + 1;
+  return `${ny}-${String(nm).padStart(2, "0")}`;
+}
+
+function adjacentMonthKeys(monthKey) {
+  return [
+    shiftMonthKey(monthKey, -1),
+    monthKey,
+    shiftMonthKey(monthKey, 1),
+  ].filter(Boolean);
+}
+
+/** ขอบเดือน ± pad วัน (Asia/Bangkok calendar) */
+function monthWindowMs(monthKey, padDays = MONTH_OVERLAP_DAYS) {
+  const [ys, ms] = String(monthKey).split("-").map(Number);
+  if (!ys || !ms) return null;
+  // Bangkok midnight ≈ UTC-7
+  const startUtc = Date.UTC(ys, ms - 1, 1, 0, 0, 0) - 7 * 60 * 60 * 1000;
+  const endUtc = Date.UTC(ys, ms, 1, 0, 0, 0) - 7 * 60 * 60 * 1000 - 1;
+  const pad = Math.max(0, Number(padDays) || 0) * 24 * 60 * 60 * 1000;
+  return { start: startUtc - pad, end: endUtc + pad };
+}
+
+/**
+ * เมลคาบเกี่ยว: วันที่รายงานชี้เดือนเป้าหมาย หรือรับในช่วงขอบเดือน±pad
+ * ของเดือนเป้าหมาย/เดือนก่อน-หลัง
+ */
+function reportTouchesMonth(doc, monthKey) {
+  if (!monthKey) return true;
+  const mk = monthKeyFromReport(doc);
+  if (mk === monthKey) return true;
+  if (!adjacentMonthKeys(monthKey).includes(mk)) return false;
+  const win = monthWindowMs(monthKey, MONTH_OVERLAP_DAYS);
+  if (!win) return false;
+  const received = Number(doc?.receivedAt) || Number(doc?.internalDate) || 0;
+  if (!received) return mk === monthKey;
+  return received >= win.start && received <= win.end;
+}
+
+/**
+ * เลือกโฟลเดอร์เดือน: วันที่รายงานมาก่อน · ถ้าคาบเกี่ยวและมี preferred ให้ใช้ preferred
+ * เมื่อวันที่รายงานว่าง/อยู่เดือนข้างเคียงแต่รับในช่วงขอบ
+ */
+function resolveDriveMonthKey(doc, preferredMonth) {
+  const guess = String(doc?.reportDateGuess || "").trim();
+  if (/^\d{4}-\d{2}/.test(guess)) {
+    const fromGuess = guess.slice(0, 7);
+    if (
+      preferredMonth &&
+      fromGuess !== preferredMonth &&
+      adjacentMonthKeys(preferredMonth).includes(fromGuess)
+    ) {
+      // รายงานระบุเดือนก่อน/หลังชัด — เคารพวันที่รายงาน
+      return fromGuess;
+    }
+    return fromGuess;
+  }
+  if (preferredMonth && reportTouchesMonth(doc, preferredMonth)) {
+    return preferredMonth;
+  }
+  return monthKeyFromReport(doc);
 }
 
 function folderCacheKey(channel, monthKey) {
@@ -303,7 +377,7 @@ function publicDriveStatus(oauthData, driveMeta) {
  */
 exports.vatMailDriveSync = functions
   .region(REGION)
-  .runWith({ timeoutSeconds: 120, memory: "512MB" })
+  .runWith({ timeoutSeconds: 300, memory: "1GB" })
   .https.onCall(async (data, context) => {
     const { actorId } = await assertOwner(context);
     const db = getFirestore();
@@ -349,7 +423,7 @@ exports.vatMailDriveSync = functions
       const snap = await db
         .collection(REPORTS_COL)
         .orderBy("receivedAt", "desc")
-        .limit(220)
+        .limit(MAX_CATALOG_READ)
         .get();
 
       for (const docSnap of snap.docs) {
@@ -360,8 +434,8 @@ exports.vatMailDriveSync = functions
           skipped += 1;
           continue;
         }
-        const monthKey = monthKeyFromReport(doc);
-        if (monthFilter && monthKey !== monthFilter) continue;
+        if (monthFilter && !reportTouchesMonth(doc, monthFilter)) continue;
+        const monthKey = resolveDriveMonthKey(doc, monthFilter || "");
 
         const messageId = asString(doc.messageId, 120);
         if (!messageId) {
@@ -504,6 +578,9 @@ exports.vatMailDriveSync = functions
 
 exports.publicDriveStatus = publicDriveStatus;
 exports.monthKeyFromReport = monthKeyFromReport;
+exports.resolveDriveMonthKey = resolveDriveMonthKey;
+exports.reportTouchesMonth = reportTouchesMonth;
+exports.adjacentMonthKeys = adjacentMonthKeys;
 exports.scopeHasDrive = scopeHasDrive;
 exports.ROOT_FOLDER_NAME = ROOT_FOLDER_NAME;
 exports.DRIVE_META_DOC = DRIVE_META_DOC;

@@ -58,6 +58,39 @@ assert.equal(
   "2026-08",
 );
 
+// คาบเกี่ยว: รับ 2 ส.ค. แต่รายงาน 31 ก.ค. → โฟลเดอร์ ก.ค.
+assert.equal(
+  drive.resolveDriveMonthKey(
+    {
+      reportDateGuess: "2026-07-31",
+      receivedAt: Date.parse("2026-08-02T03:00:00+07:00"),
+    },
+    "2026-07",
+  ),
+  "2026-07",
+);
+assert.equal(
+  drive.reportTouchesMonth(
+    {
+      reportDateGuess: "2026-07-31",
+      receivedAt: Date.parse("2026-08-02T03:00:00+07:00"),
+    },
+    "2026-07",
+  ),
+  true,
+);
+// รับปลายมิ.ย. ที่รายงานชี้ ก.ค.
+assert.equal(
+  drive.reportTouchesMonth(
+    {
+      reportDateGuess: "2026-07-01",
+      receivedAt: Date.parse("2026-06-28T10:00:00+07:00"),
+    },
+    "2026-07",
+  ),
+  true,
+);
+
 const st = drive.publicDriveStatus(
   { scope: "https://www.googleapis.com/auth/drive.file", refreshToken: "x" },
   { rootFolderId: "root1", rootFolderName: "TellTea-VAT", lastSyncUploaded: 2 },

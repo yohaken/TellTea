@@ -304,7 +304,7 @@ export async function fetchVatMailPdfUrl(
   return url;
 }
 
-export async function syncVatMail(lookbackDays = 31): Promise<{
+export async function syncVatMail(lookbackDays = 120): Promise<{
   scanned: number;
   added: number;
   skipped: number;
@@ -375,7 +375,7 @@ export async function listMonthDriveFiles(monthKey: string): Promise<{
   };
   if (!/^\d{4}-\d{2}$/.test(key)) return empty;
 
-  const rows = await listPlatformEmailReports({ max: 220 });
+  const rows = await listPlatformEmailReports({ max: 300 });
   const byChannel = empty.byChannel;
   const seen = new Set<string>();
 
@@ -384,7 +384,9 @@ export async function listMonthDriveFiles(monthKey: string): Promise<{
       const mk =
         f.monthKey ||
         (row.reportDateGuess ? row.reportDateGuess.slice(0, 7) : "");
-      if (mk !== key) continue;
+      const pathHit = String(f.folderPath || "").includes(`/${key}/`);
+      // รวมไฟล์เดือนนี้ + ที่วางในโฟลเดอร์เดือนนี้แม้คาบเกี่ยว
+      if (mk !== key && !pathHit) continue;
       const ch = f.channel || row.channel;
       if (ch !== "grab" && ch !== "lineman" && ch !== "shopee") continue;
       if (seen.has(f.fileId)) continue;
@@ -412,7 +414,7 @@ export async function listPlatformEmailReports(opts?: {
     query(
       collection(getDb(), PLATFORM_EMAIL_REPORTS_COL),
       orderBy("receivedAt", "desc"),
-      limit(Math.min(300, Math.max(opts?.max || 80, 80))),
+      limit(Math.min(500, Math.max(opts?.max || 120, 80))),
     ),
   );
   let rows = snap.docs.map((d) => mapReport(d.id, d.data() as Record<string, unknown>));
