@@ -59,6 +59,7 @@ const REQUIRED_MATCHES = [
   "dailySales",
   "platformEmailReports",
   "vatDeliveryMonthProposals",
+  "vatDeliveryIngestDrafts",
   "vatMonthCloses",
   "vatMonthlyReturns",
   "vatInputInvoices",

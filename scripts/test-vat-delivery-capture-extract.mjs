@@ -23,6 +23,8 @@ assert.match(ui, /extractDeliveryCaptures/);
 assert.match(ui, /อ่านรูปใหม่/);
 assert.match(ui, /ส่งเข้าตารางหลัก/);
 assert.match(ui, /saveIngestDraft|เซฟ/);
+assert.match(ui, /ghost-btn vat-sales-act-btn/);
+assert.match(ui, /primary-btn vat-sales-act-btn/);
 assert.match(ui, />\s*ล้าง\s*</);
 assert.doesNotMatch(ui, /VatMonthProcessNotes|โน้ต \/ พรอมต์/);
 assert.doesNotMatch(ui, /เชื่อม Gmail|ดึง SF\+LM|extractGrabFinanceImage/);
@@ -35,6 +37,7 @@ const draft = readFileSync(
 );
 assert.match(draft, /vatDeliveryIngestDrafts/);
 assert.match(draft, /uploadIngestCaptureFile/);
+assert.match(draft, /compressCaptureToJpeg|withTimeout/);
 
 const index = readFileSync(join(root, "functions/index.js"), "utf8");
 assert.match(index, /vatDeliveryCaptureExtract/);

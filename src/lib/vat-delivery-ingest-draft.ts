@@ -10,7 +10,6 @@ import {
   uploadBytes,
 } from "firebase/storage";
 import { getDb, getFirebaseAuth, getFirebaseStorage } from "./firebase";
-import { hashFileSha256 } from "./vat-import-hash";
 import { guessContentType, VAT_IMPORT_STORAGE_PREFIX } from "./vat-import";
 import {
   MONTH_CHANNELS,
@@ -19,6 +18,9 @@ import {
 import { isMonthKey, normalizeMoney } from "./vat-sales";
 
 export const VAT_DELIVERY_INGEST_DRAFTS_COL = "vatDeliveryIngestDrafts";
+
+const UPLOAD_TIMEOUT_MS = 45_000;
+const SAVE_TIMEOUT_MS = 20_000;
 
 export type IngestDraftAmounts = {
   sales: number;
@@ -56,12 +58,30 @@ export function emptyIngestByChannel(): Record<MonthChannel, IngestDraftAmounts>
   };
 }
 
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => {
+      reject(new Error(`${label} เกินเวลา (${Math.round(ms / 1000)} วินาที)`));
+    }, ms);
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
+}
+
 function safeFileName(name: string): string {
   const base = String(name || "capture")
     .replace(/[^\w.\-()\u0E00-\u0E7F]+/g, "_")
     .replace(/_+/g, "_")
     .slice(0, 120);
-  return base || "capture.png";
+  return base || "capture.jpg";
 }
 
 function mapAmounts(raw: unknown): IngestDraftAmounts {
@@ -84,7 +104,7 @@ function mapImage(raw: unknown): IngestDraftImage | null {
     ch === "grab" || ch === "shopee" || ch === "lineman" ? ch : "unknown";
   return {
     id: String(o.id || storagePath).slice(0, 80),
-    fileName: String(o.fileName || "capture.png").slice(0, 160),
+    fileName: String(o.fileName || "capture.jpg").slice(0, 160),
     storagePath: storagePath.slice(0, 300),
     downloadUrl: downloadUrl.slice(0, 2000),
     contentHash: String(o.contentHash || "").slice(0, 80),
@@ -117,8 +137,10 @@ export async function loadIngestDraft(
   monthKey: string,
 ): Promise<VatDeliveryIngestDraft | null> {
   if (!isMonthKey(monthKey)) return null;
-  const snap = await getDoc(
-    doc(getDb(), VAT_DELIVERY_INGEST_DRAFTS_COL, monthKey),
+  const snap = await withTimeout(
+    getDoc(doc(getDb(), VAT_DELIVERY_INGEST_DRAFTS_COL, monthKey)),
+    SAVE_TIMEOUT_MS,
+    "โหลดพรีวิว",
   );
   if (!snap.exists()) return null;
   return mapIngestDraft(monthKey, (snap.data() || {}) as Record<string, unknown>);
@@ -146,11 +168,23 @@ export async function saveIngestDraft(
     updatedAt: Date.now(),
     updatedBy: String(draft.updatedBy || "").slice(0, 120),
   };
-  await setDoc(
-    doc(getDb(), VAT_DELIVERY_INGEST_DRAFTS_COL, next.monthKey),
-    { ...next },
-    { merge: true },
-  );
+  try {
+    await withTimeout(
+      setDoc(
+        doc(getDb(), VAT_DELIVERY_INGEST_DRAFTS_COL, next.monthKey),
+        { ...next },
+        { merge: true },
+      ),
+      SAVE_TIMEOUT_MS,
+      "เซฟพรีวิว",
+    );
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/permission|insufficient|PERMISSION/i.test(msg)) {
+      throw new Error("เซฟไม่ได้ · ไม่มีสิทธิ์เขียนพรีวิว (รีเฟรชแล้วลองใหม่)");
+    }
+    throw e instanceof Error ? e : new Error(msg);
+  }
   return next;
 }
 
@@ -176,6 +210,46 @@ export async function deleteIngestDraft(monthKey: string): Promise<void> {
   }
 }
 
+/** ย่อแคปเป็น JPEG ก่อนอัปโหลด — กันเซฟค้างจากไฟล์ใหญ่ */
+async function compressCaptureToJpeg(file: File): Promise<File> {
+  if (typeof document === "undefined") return file;
+  const raw = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("อ่านรูปไม่ได้"));
+    reader.readAsDataURL(file);
+  });
+  if (!raw.startsWith("data:image/")) return file;
+
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxEdge = 1280;
+      const scale = Math.min(1, maxEdge / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(raw);
+        return;
+      }
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.78));
+    };
+    img.onerror = () => reject(new Error("ย่อรูปไม่ได้"));
+    img.src = raw;
+  });
+
+  const bin = atob(dataUrl.split(",")[1] || "");
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+  const base = safeFileName(file.name).replace(/\.[^.]+$/, "") || "capture";
+  return new File([bytes], `${base}.jpg`, { type: "image/jpeg" });
+}
+
 /** อัปโหลดแคปพรีวิว → vat-imports/{yyyy}/{mm}/capture/… */
 export async function uploadIngestCaptureFile(input: {
   file: File;
@@ -184,33 +258,56 @@ export async function uploadIngestCaptureFile(input: {
   const auth = getFirebaseAuth();
   if (!auth.currentUser) throw new Error("ยังไม่ได้เข้าสู่ระบบ");
   if (!isMonthKey(input.monthKey)) throw new Error("เดือนไม่ถูกต้อง");
-  if (!input.file.type.startsWith("image/")) {
+  if (!input.file.type.startsWith("image/") && !/\.(png|jpe?g|webp|heic|heif)$/i.test(input.file.name)) {
     throw new Error("รองรับเฉพาะรูปภาพ");
   }
-  const contentHash = await hashFileSha256(input.file);
+
+  const file = await withTimeout(
+    compressCaptureToJpeg(input.file),
+    20_000,
+    "ย่อรูป",
+  );
+
   const [yyyy, mm] = input.monthKey.split("-");
   const uploadId = `${Date.now().toString(36)}-${Math.random()
     .toString(36)
     .slice(2, 8)}`;
-  const fileName = safeFileName(input.file.name);
+  const fileName = safeFileName(file.name);
   const storagePath = `${VAT_IMPORT_STORAGE_PREFIX}/${yyyy}/${mm}/capture/${uploadId}-${fileName}`;
-  const contentType = guessContentType(input.file);
+  const contentType = guessContentType(file) || "image/jpeg";
   const ref = storageRef(getFirebaseStorage(), storagePath);
-  await uploadBytes(ref, input.file, {
-    contentType,
-    customMetadata: {
-      monthKey: input.monthKey,
-      channel: "capture",
-      contentHash,
-    },
-  });
-  const downloadUrl = await getDownloadURL(ref);
+
+  try {
+    await withTimeout(
+      uploadBytes(ref, file, {
+        contentType,
+        customMetadata: {
+          monthKey: input.monthKey,
+          channel: "capture",
+        },
+      }),
+      UPLOAD_TIMEOUT_MS,
+      "อัปโหลดรูป",
+    );
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/permission|unauthorized|storage\/unauthorized/i.test(msg)) {
+      throw new Error("อัปโหลดรูปไม่ได้ · ไม่มีสิทธิ์ Storage");
+    }
+    throw e instanceof Error ? e : new Error(msg);
+  }
+
+  const downloadUrl = await withTimeout(
+    getDownloadURL(ref),
+    15_000,
+    "ดึงลิงก์รูป",
+  );
   return {
     id: uploadId,
     fileName,
     storagePath,
     downloadUrl,
-    contentHash,
+    contentHash: uploadId,
     channel: "unknown",
   };
 }

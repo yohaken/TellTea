@@ -19778,22 +19778,46 @@ a.ghost-btn {
   background: rgba(255, 255, 255, 0.65);
 }
 
-.vat-ingest-btn {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.55rem;
-}
-
-.vat-ingest-push-bar {
+.vat-ingest-push-bar,
+.vat-ingest-ai-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.45rem;
-  margin: 0.65rem 0 1rem;
+  gap: 0.4rem;
 }
 
-.vat-ingest-push-main {
+.vat-ingest-ai-actions {
+  margin-bottom: 0.25rem;
+}
+
+.vat-ingest-push-bar {
+  margin: 0.55rem 0 1rem;
+}
+
+/* ปุ่มทีมเว็บ · กว้างพอดีตัวอักษร ไม่เต็มแถว / ไม่จิ๋ว */
+.vat-ingest-page .vat-sales-act-btn.primary-btn,
+.vat-ingest-page .vat-sales-act-btn.ghost-btn {
+  width: auto;
+  min-width: 0;
+  min-height: 2.15rem;
+  height: auto;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.88rem;
   font-weight: 600;
-  min-width: 10rem;
+  line-height: 1.2;
+  border-radius: 999px;
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+.vat-ingest-page .vat-sales-act-btn.primary-btn {
+  box-shadow: 0 6px 14px rgba(47, 107, 79, 0.22);
+}
+
+.vat-ingest-file-list .vat-sales-act-btn {
+  min-height: 1.85rem;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.8rem;
 }
 
 .vat-ingest-preview-block {
@@ -19802,45 +19826,78 @@ a.ghost-btn {
 
 .vat-ingest-preview-title {
   font-size: 0.78rem !important;
-  margin: 0 0 0.15rem !important;
+  margin: 0 0 0.12rem !important;
 }
 
 .vat-ingest-preview-wrap {
-  margin: 0.1rem 0 0.2rem;
+  margin: 0.08rem 0 0.15rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
+/* คอลัมน์ชิดเนื้อหา — ไม่ยืดเต็มจอ */
 .vat-ingest-preview-slim {
-  font-size: 0.62rem !important;
+  width: max-content;
+  max-width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 0.68rem;
 }
 
 .vat-ingest-preview-slim th,
 .vat-ingest-preview-slim td {
-  padding: 0.02rem 0.18rem !important;
-  height: 1.2rem !important;
-  line-height: 1.1 !important;
+  padding: 0.08rem 0.12rem;
+  line-height: 1.15;
+  white-space: nowrap;
+  vertical-align: middle;
+  width: 1%;
 }
 
 .vat-ingest-preview-slim th {
-  font-size: 0.58rem !important;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-align: right;
 }
 
-.vat-ingest-preview-slim .vat-col-head-role {
-  font-size: 0.48rem;
-  line-height: 1.05;
-}
-
+.vat-ingest-preview-slim th:first-child,
 .vat-ingest-preview-slim .col-seg {
-  font-size: 0.6rem;
-  padding-right: 0.25rem !important;
+  text-align: left;
+  font-weight: 600;
+  padding-right: 0.28rem;
+}
+
+.vat-ingest-preview-slim .col-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .vat-ingest-preview-slim .vat-sales-input {
-  min-width: 3.4rem !important;
-  max-width: 4.6rem;
-  min-height: 1.05rem !important;
-  height: 1.05rem !important;
-  padding: 0 0.12rem !important;
-  font-size: 0.62rem !important;
+  display: inline-block;
+  width: 7.2ch;
+  min-width: 0;
+  max-width: none;
+  min-height: 1.2rem;
+  height: 1.2rem;
+  padding: 0 0.1rem;
+  margin: 0;
+  border: 1px solid rgba(28, 42, 31, 0.22);
+  border-radius: 2px;
+  font-size: 0.68rem;
+  line-height: 1.1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  box-sizing: content-box;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.vat-ingest-preview-slim .col-net {
+  font-weight: 700;
+  padding: 0.08rem 0.12rem;
+}
+
+.vat-ingest-total-row td {
+  font-weight: 700;
+  border-top: 1px solid rgba(28, 42, 31, 0.18);
 }
 
 .vat-ingest-result {

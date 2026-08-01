@@ -6,7 +6,6 @@
  * อัปโหลดทีหลัง: อ่านเฉพาะรูปใหม่ · คงช่องทางที่เซฟไว้
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { VatColHead } from "@/components/vat-sales/VatColHead";
 import { VatSalesSubNav } from "@/components/vat-sales/VatSalesSubNav";
 import {
   captureItemToIngestPreview,
@@ -25,7 +24,6 @@ import {
 } from "@/lib/vat-delivery-ingest-draft";
 import { formatIngestMoney } from "@/lib/vat-ingest-preview";
 import {
-  DELIVERY_COL_INFO,
   emptyChannelSource,
   mergeMonthSourcesIntoBooks,
   sumMonthSources,
@@ -387,39 +385,73 @@ export function VatIngestSources({ actor }: Props) {
     }
     setBusy("save");
     setError("");
-    setMsg("");
+    setMsg("เซฟยอด…");
     try {
-      const uploaded: IngestDraftImage[] = [];
-      for (let i = 0; i < pendingFiles.length; i += 1) {
-        const img = await uploadIngestCaptureFile({
-          file: pendingFiles[i],
-          monthKey,
-        });
-        const ch = pendingChannels[i];
-        uploaded.push({
-          ...img,
-          channel:
-            ch === "grab" || ch === "shopee" || ch === "lineman" ? ch : "unknown",
-        });
-      }
-      const images = [...savedImages, ...uploaded].slice(0, MAX_CAPTURES);
-      const saved = await saveIngestDraft({
+      // 1) เซฟยอดก่อน — ไม่รออัปโหลดรูป
+      let images = [...savedImages];
+      let saved = await saveIngestDraft({
         monthKey,
         byChannel: rows,
         images,
         updatedAt: Date.now(),
         updatedBy: actor,
       });
+      setDraftSavedAt(saved.updatedAt);
+
+      // 2) อัปโหลดรูปใหม่ทีละใบ (ย่อ JPEG แล้ว)
+      const uploaded: IngestDraftImage[] = [];
+      const uploadErrors: string[] = [];
+      for (let i = 0; i < pendingFiles.length; i += 1) {
+        setMsg(`อัปโหลดรูป ${i + 1}/${pendingFiles.length}…`);
+        try {
+          const img = await uploadIngestCaptureFile({
+            file: pendingFiles[i],
+            monthKey,
+          });
+          const ch = pendingChannels[i];
+          uploaded.push({
+            ...img,
+            channel:
+              ch === "grab" || ch === "shopee" || ch === "lineman"
+                ? ch
+                : "unknown",
+          });
+        } catch (e) {
+          uploadErrors.push(
+            `รูป ${i + 1}: ${e instanceof Error ? e.message : String(e)}`,
+          );
+        }
+      }
+
+      if (uploaded.length) {
+        images = [...savedImages, ...uploaded].slice(0, MAX_CAPTURES);
+        saved = await saveIngestDraft({
+          monthKey,
+          byChannel: rows,
+          images,
+          updatedAt: Date.now(),
+          updatedBy: actor,
+        });
+      }
+
       setSavedImages(saved.images);
       setPendingFiles([]);
       setPendingChannels([]);
       setDraftSavedAt(saved.updatedAt);
       setDirty(false);
-      setMsg(
-        `เซฟพรีวิวแล้ว · รูป ${saved.images.length} · ${formatThaiMonthKey(monthKey)}`,
-      );
+      if (uploadErrors.length) {
+        setError(uploadErrors.slice(0, 2).join(" · "));
+        setMsg(
+          `เซฟยอดแล้ว · รูปบางใบไม่ขึ้น (${saved.images.length} ใบ)`,
+        );
+      } else {
+        setMsg(
+          `เซฟแล้ว · รูป ${saved.images.length} · ${formatThaiMonthKey(monthKey)}`,
+        );
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      setMsg("");
     } finally {
       setBusy(null);
     }
@@ -443,22 +475,28 @@ export function VatIngestSources({ actor }: Props) {
     setMsg("");
     try {
       if (dirty || pendingFiles.length) {
-        const uploaded: IngestDraftImage[] = [];
+        setMsg("เซฟยอดก่อนส่ง…");
+        let images = [...savedImages];
         for (let i = 0; i < pendingFiles.length; i += 1) {
-          const img = await uploadIngestCaptureFile({
-            file: pendingFiles[i],
-            monthKey,
-          });
-          const ch = pendingChannels[i];
-          uploaded.push({
-            ...img,
-            channel:
-              ch === "grab" || ch === "shopee" || ch === "lineman"
-                ? ch
-                : "unknown",
-          });
+          setMsg(`อัปโหลดรูป ${i + 1}/${pendingFiles.length}…`);
+          try {
+            const img = await uploadIngestCaptureFile({
+              file: pendingFiles[i],
+              monthKey,
+            });
+            const ch = pendingChannels[i];
+            images.push({
+              ...img,
+              channel:
+                ch === "grab" || ch === "shopee" || ch === "lineman"
+                  ? ch
+                  : "unknown",
+            });
+          } catch {
+            /* ส่งยอดได้แม้รูปบางใบพลาด */
+          }
         }
-        const images = [...savedImages, ...uploaded].slice(0, MAX_CAPTURES);
+        images = images.slice(0, MAX_CAPTURES);
         const saved = await saveIngestDraft({
           monthKey,
           byChannel: rows,
@@ -552,7 +590,7 @@ export function VatIngestSources({ actor }: Props) {
         <div className="vat-ingest-ai-actions">
           <button
             type="button"
-            className="btn btn-secondary vat-ingest-btn"
+            className="ghost-btn vat-sales-act-btn"
             disabled={locked || !canAddMore}
             onClick={() => inputRef.current?.click()}
           >
@@ -560,7 +598,7 @@ export function VatIngestSources({ actor }: Props) {
           </button>
           <button
             type="button"
-            className="btn btn-secondary vat-ingest-btn"
+            className="primary-btn vat-sales-act-btn"
             disabled={locked || !pendingFiles.length}
             onClick={() => void runAi()}
           >
@@ -580,7 +618,7 @@ export function VatIngestSources({ actor }: Props) {
                 </span>
                 <button
                   type="button"
-                  className="btn btn-ghost vat-ingest-btn"
+                  className="ghost-btn vat-sales-act-btn"
                   disabled={locked}
                   onClick={() => removeSavedImage(img.id)}
                 >
@@ -596,7 +634,7 @@ export function VatIngestSources({ actor }: Props) {
                 </span>
                 <button
                   type="button"
-                  className="btn btn-ghost vat-ingest-btn"
+                  className="ghost-btn vat-sales-act-btn"
                   disabled={locked}
                   onClick={() => {
                     setPendingFiles((prev) => prev.filter((_, j) => j !== i));
@@ -624,27 +662,15 @@ export function VatIngestSources({ actor }: Props) {
         <h2 className="vat-table-title vat-ingest-preview-title">
           พรีวิว — {formatThaiMonthKey(monthKey)}
         </h2>
-        <div className="sheet-wrap vat-month-slim-wrap vat-ingest-preview-wrap">
-          <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-ingest-preview-slim vat-close-table">
+        <div className="vat-ingest-preview-wrap">
+          <table className="vat-ingest-preview-slim">
             <thead>
               <tr>
-                <th className="col-seg">ช่อง</th>
-                <VatColHead
-                  label="ขาย"
-                  info={DELIVERY_COL_INFO.appSales}
-                />
-                <VatColHead
-                  label="โอน"
-                  info={DELIVERY_COL_INFO.transfer}
-                />
-                <VatColHead
-                  label="คชจ."
-                  info={DELIVERY_COL_INFO.gpFee}
-                />
-                <VatColHead
-                  label="VAT"
-                  info={DELIVERY_COL_INFO.purchaseVat}
-                />
+                <th>ช่อง</th>
+                <th title="ยอดขายแอพ → VAT">ขาย</th>
+                <th title="ยอดโอน → รายได้">โอน</th>
+                <th title="คชจ.GP ex-VAT">คชจ.</th>
+                <th title="VAT-ซื้อ ของ GP">VAT</th>
               </tr>
             </thead>
             <tbody>
@@ -654,7 +680,7 @@ export function VatIngestSources({ actor }: Props) {
                   {(
                     ["sales", "transfer", "fee", "gpVat"] as const
                   ).map((field) => (
-                    <td key={field} className="col-num col-input">
+                    <td key={field} className="col-num">
                       <MoneyCell
                         value={strRows[k][field]}
                         locked={locked}
@@ -665,7 +691,7 @@ export function VatIngestSources({ actor }: Props) {
                   ))}
                 </tr>
               ))}
-              <tr className="vat-sales-totals-row">
+              <tr className="vat-ingest-total-row">
                 <td className="col-seg">รวม</td>
                 <td className="col-num col-net">
                   {formatIngestMoney(totals.sales)}
@@ -688,7 +714,7 @@ export function VatIngestSources({ actor }: Props) {
       <div className="vat-ingest-push-bar">
         <button
           type="button"
-          className="btn btn-ghost vat-ingest-btn"
+          className="ghost-btn vat-sales-act-btn"
           disabled={
             locked || (!pendingFiles.length && !savedImages.length && !hasAny)
           }
@@ -698,7 +724,7 @@ export function VatIngestSources({ actor }: Props) {
         </button>
         <button
           type="button"
-          className="btn btn-secondary vat-ingest-btn"
+          className="ghost-btn vat-sales-act-btn"
           disabled={
             locked ||
             (!dirty && !pendingFiles.length && draftSavedAt > 0) ||
@@ -710,7 +736,7 @@ export function VatIngestSources({ actor }: Props) {
         </button>
         <button
           type="button"
-          className="btn btn-secondary vat-ingest-btn vat-ingest-push-main"
+          className="primary-btn vat-sales-act-btn"
           disabled={locked || !hasAny}
           onClick={() => void pushToMain()}
         >
