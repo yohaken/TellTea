@@ -156,11 +156,15 @@ function payLabel(method: "cash" | "promptpay" | "transfer") {
   return "เงินสด";
 }
 
-/** ใบพิมพ์สรุปกะ — Snapshot / รายงานปิดรอบ (แยกหมวด + รายบิล) */
+/** ใบพิมพ์สรุปกะ — Snapshot / ใบส่งเงินสั้น / รายงานปิดรอบเต็ม */
 export function buildShiftReportHtml(data: ShiftReportPayload): string {
   // Header = shop identity only (layout may mirror other POS UX; never their brand).
   const shopName = (data.shopName || "").trim() || "TELL TEA";
   const shopNameTh = (data.shopNameTh || "").trim() || "เทล ที";
+  const shortRemit = data.kind === "close" || data.kind === "remit";
+  if (shortRemit) {
+    return buildRemitSlipHtml(data, shopName, shopNameTh);
+  }
   const title =
     data.kind === "snapshot" ? "Snapshot ระหว่างรอบการขาย" : "รายงานยอดการขาย";
   const footer =
@@ -172,7 +176,8 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
   const d = data.detail;
 
   const closedBlock =
-    data.kind === "close" && data.closedAt
+    (data.kind === "close" || data.kind === "close-full" || data.kind === "remit") &&
+    data.closedAt
       ? `<div class="row"><span>ปิดรอบ</span><span>${escapeReceiptHtml(formatTs(data.closedAt))}</span></div>`
       : "";
 
@@ -284,7 +289,8 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
     const countedLabel = counted != null ? money(counted) : "—";
     const diffLabel =
       diff == null ? "—" : `${label ? `${escapeReceiptHtml(label)} ` : ""}${money(diff)}`;
-    const isClose = data.kind === "close";
+    const isClose =
+      data.kind === "close" || data.kind === "close-full" || data.kind === "remit";
     const remit =
       isClose && counted != null
         ? Math.max(0, counted - Math.max(0, leave ?? 0))
@@ -480,7 +486,7 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
   ${billsBlock}
   <div class="center footer">${escapeReceiptHtml(footer)}</div>
   ${
-    data.kind === "close"
+    data.kind === "close-full"
       ? `<div class="check">
   <div class="sec">ตรวจก่อนเซ็น / ส่งเงิน</div>
   <div class="check-item">[ ] นับรวมเงินทอนเริ่มต้นแล้ว</div>
@@ -496,6 +502,141 @@ export function buildShiftReportHtml(data: ShiftReportPayload): string {
 </div>`
       : ""
   }
+  <script>window.onload=function(){window.print();setTimeout(function(){window.close();},300);};</script>
+</body>
+</html>`;
+}
+
+/** Short cash-remit slip — one phone photo (default on close). */
+function buildRemitSlipHtml(
+  data: ShiftReportPayload,
+  shopName: string,
+  shopNameTh: string,
+): string {
+  const sessionShort = `#${data.sessionId.slice(-4).toUpperCase()}`;
+  const s = data.summary;
+  const opening =
+    typeof data.openingCash === "number" && Number.isFinite(data.openingCash)
+      ? data.openingCash
+      : 0;
+  const outAmt =
+    typeof data.cashOutTotal === "number" && Number.isFinite(data.cashOutTotal)
+      ? Math.max(0, data.cashOutTotal)
+      : 0;
+  const inAmt =
+    typeof data.cashInTotal === "number" && Number.isFinite(data.cashInTotal)
+      ? Math.max(0, data.cashInTotal)
+      : 0;
+  const netInOut = inAmt - outAmt;
+  const counted =
+    typeof data.closingCashCounted === "number" && Number.isFinite(data.closingCashCounted)
+      ? data.closingCashCounted
+      : null;
+  const expected =
+    typeof data.expectedCash === "number" && Number.isFinite(data.expectedCash)
+      ? data.expectedCash
+      : opening + s.cashTotal - outAmt + inAmt;
+  const leave =
+    typeof data.leaveFloat === "number" && Number.isFinite(data.leaveFloat)
+      ? data.leaveFloat
+      : 0;
+  const diff =
+    typeof data.cashDifference === "number" && Number.isFinite(data.cashDifference)
+      ? data.cashDifference
+      : counted != null
+        ? counted - expected
+        : 0;
+  const label = data.discrepancyLabel || (Math.abs(diff) < 0.5 ? "ตรง" : diff > 0 ? "เกิน" : "ขาด");
+  const remit = counted != null ? Math.max(0, counted - Math.max(0, leave)) : null;
+
+  return `<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <title>ใบส่งเงินสด ${escapeReceiptHtml(sessionShort)}</title>
+  <style>
+    @page { size: 80mm auto; margin: 4mm; }
+    body {
+      margin: 0;
+      font-family: "Courier New", ui-monospace, monospace;
+      font-size: 12px;
+      color: #111;
+      width: 72mm;
+    }
+    .center { text-align: center; }
+    .shop { font-weight: 800; font-size: 14px; }
+    .muted { color: #444; }
+    .tiny { font-size: 10px; margin: 2px 0 0; }
+    .rule { border: 0; border-top: 1px dashed #222; margin: 8px 0; }
+    .sec { font-weight: 800; margin: 0 0 4px; }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 2px 0;
+    }
+    .row.strong { font-weight: 800; }
+    .check { margin: 8px 0 4px; }
+    .check-item { margin: 2px 0; font-weight: 600; }
+    .sign { margin-top: 12px; }
+    .sign p { margin: 8px 0 2px; font-weight: 700; }
+    .sign-line { border-bottom: 1px solid #111; height: 28px; margin: 0 8px 10px; }
+  </style>
+</head>
+<body>
+  <div class="center shop">${escapeReceiptHtml(shopName)}</div>
+  ${shopNameTh ? `<div class="center muted">${escapeReceiptHtml(shopNameTh)}</div>` : ""}
+  ${data.shopAddress ? `<div class="center muted">${escapeReceiptHtml(data.shopAddress)}</div>` : ""}
+  ${data.shopPhone ? `<div class="center muted">${escapeReceiptHtml(data.shopPhone)}</div>` : ""}
+  <hr class="rule" />
+  <div class="center" style="font-weight:800">*** ใบส่งเงินสด ***</div>
+  <div class="center muted">(ปิดรอบ — ถ่ายรูปส่งเงิน)</div>
+  <div class="center tiny">ไม่ใช่ใบเสร็จลูกค้า · ไม่มีรายการสินค้า</div>
+  <div class="row"><span>เครื่อง/รอบ</span><span>${escapeReceiptHtml(data.deviceCode)} / ${escapeReceiptHtml(sessionShort)}</span></div>
+  <div class="row"><span>เปิด</span><span>${escapeReceiptHtml(formatTs(data.openedAt))}</span></div>
+  ${
+    data.closedAt
+      ? `<div class="row"><span>ปิด</span><span>${escapeReceiptHtml(formatTs(data.closedAt))}</span></div>`
+      : ""
+  }
+  ${data.staffName ? `<div class="row"><span>โดย</span><span>${escapeReceiptHtml(data.staffName)}</span></div>` : ""}
+  <hr class="rule" />
+  <div class="sec">สรุปสั้น</div>
+  <div class="row"><span>บิลขาย</span><span>${s.count}</span></div>
+  <div class="row"><span>ยอดสุทธิ</span><span>${money(s.total)}</span></div>
+  <div class="row"><span>สด / โอน / PP</span><span>${money(s.cashTotal)} / ${money(s.transferTotal ?? 0)} / ${money(s.promptpayTotal)}</span></div>
+  ${s.voidedCount > 0 ? `<div class="row"><span>ทำลายบิล</span><span>${s.voidedCount}</span></div>` : ""}
+  <hr class="rule" />
+  <div class="sec">เงินสดที่ต้องนำส่ง</div>
+  <div class="row"><span>เงินสดเริ่มต้น</span><span>${money(opening)}</span></div>
+  <div class="row"><span>ยอดขายเงินสด</span><span>${money(s.cashTotal)}</span></div>
+  ${Math.abs(netInOut) > 0.0001 ? `<div class="row"><span>เงินเข้า/เงินออก</span><span>${money(netInOut)}</span></div>` : ""}
+  <div class="row"><span>ควรมีในลิ้นชัก</span><span>${money(expected)}</span></div>
+  <div class="row"><span>นับจริงในลิ้นชัก</span><span>${counted != null ? money(counted) : "—"}</span></div>
+  <div class="row"><span>ส่วนต่าง</span><span>${escapeReceiptHtml(label)} ${money(diff)}</span></div>
+  ${leave > 0.0001 ? `<div class="row"><span>ทอนรอบถัดไป</span><span>${money(leave)}</span></div>` : ""}
+  <div class="row strong"><span>ยอดเงินสดที่ต้องนำส่ง</span><span>${remit != null ? money(remit) : "—"}</span></div>
+  <div class="muted tiny">*นับจริง − ทอนรอบถัดไป</div>
+  ${
+    data.discrepancyNote
+      ? `<div class="muted tiny">เหตุผล: ${escapeReceiptHtml(data.discrepancyNote)}</div>`
+      : ""
+  }
+  <hr class="rule" />
+  <div class="check">
+    <div class="sec">ตรวจก่อนเซ็น / ส่งเงิน</div>
+    <div class="check-item">[ ] นับรวมเงินทอนเริ่มต้นแล้ว</div>
+    <div class="check-item">[ ] ยอดที่ต้องนำส่งตรงกับเงินในมือ</div>
+    <div class="check-item">[ ] โอน/PromptPay ตรวจสลิปแล้ว</div>
+  </div>
+  <div class="sign">
+    <p>ลงชื่อผู้ส่งเงิน</p>
+    <div class="sign-line"></div>
+    <p>ลงชื่อผู้รับเงิน</p>
+    <div class="sign-line"></div>
+  </div>
+  <hr class="rule" />
+  <div class="center tiny">รายการสินค้าดูหลังร้าน / พิมพ์รายงานเต็ม</div>
   <script>window.onload=function(){window.print();setTimeout(function(){window.close();},300);};</script>
 </body>
 </html>`;

@@ -977,7 +977,7 @@ public final class SaleSync {
                                                 "printer",
                                                 result.ok
                                                         ? ("close".equals(reportKind)
-                                                                ? "พิมพ์ปิดรอบแล้ว"
+                                                                ? "พิมพ์ใบส่งเงินสดแล้ว"
                                                                 : "พิมพ์สรุปกลางรอบแล้ว")
                                                         : "พิมพ์สรุปรอบไม่สำเร็จ",
                                                 result.message,

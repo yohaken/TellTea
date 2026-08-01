@@ -4,7 +4,8 @@ import { receiptDiscountBaht } from "./pos-receipt-view";
 import type { PosShopSettings } from "./pos-settings";
 import type { MenuCategory, MenuItem } from "./types";
 
-export type ShiftReportKind = "snapshot" | "close";
+/** close/remit = short cash-remit slip · close-full = long Z with item list */
+export type ShiftReportKind = "snapshot" | "close" | "remit" | "close-full";
 
 export type ShiftReportSummary = {
   count: number;
