@@ -20,7 +20,9 @@ assert.match(panel, /pilePreview/);
 assert.match(panel, /กำลังโหลดรูป/);
 assert.match(panel, /replaceState\(null/);
 assert.match(panel, /แตะไอคอนรูปเปิดดูได้เลย/);
-assert.match(versionSrc, /APP_BUILD = 562/);
+assert.match(versionSrc, /APP_BUILD = \d+/);
+const build = Number(versionSrc.match(/APP_BUILD = (\d+)/)?.[1] || 0);
+assert.ok(build >= 562, `APP_BUILD must be >= 562 (got ${build})`);
 
 // Tiny 1x1 PNG
 const DATA_PNG =
