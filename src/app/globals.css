@@ -20891,6 +20891,74 @@ a.ghost-btn {
   color: rgba(28, 42, 31, 0.5);
 }
 
+.cash-in-panel-meta.is-wait {
+  color: #9a5b12;
+  font-weight: 650;
+}
+
+.cash-in-pending-rounds {
+  margin: 0.4rem 0 0.5rem;
+  padding: 0.35rem 0.3rem 0.4rem;
+  border: 1px solid rgba(154, 91, 18, 0.22);
+  border-radius: 0.35rem;
+  background: rgba(154, 91, 18, 0.05);
+}
+
+.cash-in-pending-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.72rem;
+}
+
+.cash-in-pending-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cash-in-pending-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
+.cash-in-pending-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.45rem;
+  min-width: 0;
+}
+
+.cash-in-pending-date {
+  font-variant-numeric: tabular-nums;
+  color: #5a6570;
+}
+
+.cash-in-pending-label {
+  color: #2c353c;
+}
+
+.cash-in-pending-amt {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.cash-in-pending-more {
+  margin: 0.25rem 0 0;
+  font-size: 0.66rem;
+}
+
 .cash-in-panel-body {
   padding: 0 0.65rem 0.65rem;
   border-top: 1px solid rgba(28, 42, 31, 0.08);

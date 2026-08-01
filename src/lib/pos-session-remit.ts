@@ -265,6 +265,69 @@ export function sessionsForCashDepositDay(
   });
 }
 
+/** Session ids already attached to a non-void cash-deposit day. */
+export function linkedSessionIdsFromDeposits(
+  deposits: { status?: string; days?: { sessionIds?: string[] }[] }[],
+): Set<string> {
+  const out = new Set<string>();
+  for (const dep of deposits) {
+    if (String(dep.status || "") === "void") continue;
+    for (const day of dep.days || []) {
+      for (const id of day.sessionIds || []) {
+        const t = String(id || "").trim();
+        if (t) out.add(t);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Closed rounds with a remit that are not yet in any cash-in deposit —
+ * waiting queue for เทียบเงินนำเข้า.
+ */
+export function pendingDepositSessionsForCashIn(
+  sessions: PosSession[],
+  linkedIds: Set<string> | Iterable<string> = [],
+): PosSession[] {
+  const linked = linkedIds instanceof Set ? linkedIds : new Set(linkedIds);
+  return sessions
+    .filter((s) => {
+      if (s.status !== "closed") return false;
+      if (linked.has(s.id)) return false;
+      const remit = sessionRemitAmount(s);
+      return remit != null && remit > 0;
+    })
+    .sort((a, b) => {
+      const aDay = a.date || 0;
+      const bDay = b.date || 0;
+      if (aDay !== bDay) return bDay - aDay;
+      return (b.closedAt || b.openedAt || 0) - (a.closedAt || a.openedAt || 0);
+    });
+}
+
+export function groupSessionsBySalesDay(
+  sessions: PosSession[],
+): { date: number; sessions: PosSession[] }[] {
+  const map = new Map<number, PosSession[]>();
+  for (const s of sessions) {
+    const day = startOfLocalDay(new Date(s.date || s.openedAt || 0));
+    if (!map.has(day)) map.set(day, []);
+    map.get(day)!.push(s);
+  }
+  return [...map.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([date, list]) => ({ date, sessions: list }));
+}
+
+export function sessionCounterLabel(session: PosSession): string {
+  if (session.source === "manual" || session.deviceId === MANUAL_POS_DEVICE_ID) {
+    return (session.counterLabel || "รอบมือ").trim() || "รอบมือ";
+  }
+  const id = session.deviceId || "";
+  return id ? `#${id.slice(-4).toUpperCase()}` : "—";
+}
+
 export function sumSessionRemits(sessions: PosSession[]): number {
   return roundMoney(
     sessions.reduce((sum, s) => sum + (sessionRemitAmount(s) ?? 0), 0),

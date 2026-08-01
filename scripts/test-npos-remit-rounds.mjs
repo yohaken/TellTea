@@ -21,11 +21,11 @@ assert.match(doc, /remitAmount|ส่งเงิน/);
 const version = read("src/lib/version.ts");
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 566, `APP_BUILD >= 566, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 567, `APP_BUILD >= 567, got ${buildMatch[1]}`);
 const pos = read("src/lib/pos-version.ts");
 const posMatch = pos.match(/POS_BUILD\s*=\s*(\d+)/);
 assert.ok(posMatch);
-assert.ok(Number(posMatch[1]) >= 162, `POS_BUILD >= 162, got ${posMatch[1]}`);
+assert.ok(Number(posMatch[1]) >= 163, `POS_BUILD >= 163, got ${posMatch[1]}`);
 
 const types = read("src/lib/types.ts");
 assert.match(types, /remitStatus\??:/);
@@ -45,6 +45,8 @@ assert.match(lib, /export async function recordPosSessionRemitHandoff/);
 assert.match(lib, /export async function createManualPosSession/);
 assert.match(lib, /export function fillDayCashFromSessions/);
 assert.match(lib, /export function sessionsForCashDepositDay/);
+assert.match(lib, /pendingDepositSessionsForCashIn/);
+assert.match(lib, /linkedSessionIdsFromDeposits/);
 assert.match(lib, /MANUAL_POS_DEVICE_ID/);
 assert.match(lib, /source: "manual"/);
 
@@ -63,15 +65,20 @@ const panel = read("src/components/CashInLedgerPanel.tsx");
 assert.match(panel, /fillDayFromPosSessions/);
 assert.match(panel, /จากรอบ/);
 assert.match(panel, /sessionIds/);
+assert.match(panel, /cash-in-pending-rounds/);
+assert.match(panel, /รอบรอฝาก/);
+assert.match(panel, /ใส่ทุกรอบ/);
 
 const rules = read("firestore.rules");
 assert.match(rules, /source == 'manual'/);
 assert.match(rules, /deviceId == 'manual'/);
+assert.match(rules, /hasPerm\('ledger'\)/);
 
 const css = read("src/app/globals.css");
 assert.match(css, /\.npos-slim-remit-handoff\b/);
 assert.match(css, /\.npos-slim-manual-panel\b/);
 assert.match(css, /\.npos-slim-remit-status\b/);
+assert.match(css, /\.cash-in-pending-rounds\b/);
 
 assert.match(read("scripts/check-npos-shop.mjs"), /remit-rounds/);
 

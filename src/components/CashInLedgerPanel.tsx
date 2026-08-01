@@ -56,10 +56,18 @@ import {
 } from "@/lib/photo-upload";
 import { subscribePosSessionsRecent } from "@/lib/pos-sales-report";
 import {
+  deriveRemitStatus,
   fillDayCashFromSessions,
+  groupSessionsBySalesDay,
+  labelRemitStatus,
+  linkedSessionIdsFromDeposits,
+  pendingDepositSessionsForCashIn,
+  sessionCounterLabel,
+  sessionRemitAmount,
   sessionsForCashDepositDay,
   sumSessionRemits,
 } from "@/lib/pos-session-remit";
+import { posSessionCode } from "@/lib/pos-sales-report";
 import type { PosSession } from "@/lib/types";
 import {
   formatPlainNumber,
@@ -267,6 +275,21 @@ export function CashInLedgerPanel({
     setEditNote(selected.note || "");
     setOwnerNote(selected.ownerNote || "");
   }, [selected, draft, staffName]);
+
+  /** Always load nPos rounds while cash-in is mounted — queue "รอบรอฝาก". */
+  useEffect(() => {
+    return subscribePosSessionsRecent(
+      setPosSessions,
+      (err) => {
+        // Staff without list rights used to fail — rules now allow ledger.
+        if (/permission|insufficient/i.test(err.message || "")) {
+          setPosSessions([]);
+          return;
+        }
+        setError(err.message || "โหลดรอบ nPos ไม่สำเร็จ");
+      },
+    );
+  }, []);
 
   const occupancy = useMemo(
     () => buildCashDepositOccupancy(entries, selected?.id),
@@ -812,16 +835,111 @@ export function CashInLedgerPanel({
 
   const editingRound = !!draft || !!selected;
 
-  useEffect(() => {
-    if (!open || !isOwner || !editingRound) {
-      setPosSessions([]);
+  const linkedSessionIds = useMemo(
+    () => linkedSessionIdsFromDeposits(entries),
+    [entries],
+  );
+  const pendingDepositSessions = useMemo(
+    () => pendingDepositSessionsForCashIn(posSessions, linkedSessionIds),
+    [posSessions, linkedSessionIds],
+  );
+  const pendingDepositSum = useMemo(
+    () => sumSessionRemits(pendingDepositSessions),
+    [pendingDepositSessions],
+  );
+
+  function startDraftFromSessions(sessions: PosSession[]) {
+    if (!sessions.length) {
+      setError("ไม่มีรอบรอฝาก");
       return;
     }
-    return subscribePosSessionsRecent(
-      setPosSessions,
-      (err) => setError(err.message || "โหลดรอบ nPos ไม่สำเร็จ"),
+    const groups = groupSessionsBySalesDay(sessions);
+    if (!groups.length || groups.length > CASH_DEPOSIT_DAY_MAX) {
+      setError(`รอบรอฝากต้องอยู่ระหว่าง 1–${CASH_DEPOSIT_DAY_MAX} วัน`);
+      return;
+    }
+    const endMs = groups[groups.length - 1]!.date;
+    const days = groups.map(({ date, sessions: daySessions }) => {
+      const base = emptyCashDepositDay(date);
+      const filled = fillDayCashFromSessions(
+        base,
+        daySessions,
+        daySessions.map((s) => s.id),
+      );
+      return {
+        ...base,
+        cashAmount: filled.cashAmount,
+        cashAmountSource: filled.cashAmountSource,
+        sessionIds: filled.sessionIds,
+        note: filled.note,
+        slipKind: "shift" as const,
+        shiftLabel: "รอบขาย",
+      };
+    });
+    setError(null);
+    setSelectedId(null);
+    setDraft({
+      key: `draft-pending-${Date.now()}`,
+      transferDate: endMs,
+      dayCount: days.length,
+      staffName: staffName || "",
+      note: `จากรอบรอฝาก ${sessions.length} รอบ`,
+      bankTransfers: [emptyCashDepositBankTransfer(endMs)],
+      days,
+      aiReason: "",
+    });
+    setAiHint(
+      `ใส่ ${sessions.length} รอบรอฝาก · Σ นำส่ง ฿${formatPlainNumber(sumSessionRemits(sessions))}`,
     );
-  }, [open, isOwner, editingRound]);
+    if (!open) {
+      setOpen(true);
+      writeOpenPref(true);
+    }
+  }
+
+  function queueSessionIntoWorking(session: PosSession) {
+    if (!editingRound) {
+      startDraftFromSessions([session]);
+      return;
+    }
+    const dayMs = session.date || session.openedAt || 0;
+    const dayKey = cashDepositDayKey(dayMs);
+    const existing = workingDays.find((d) => cashDepositDayKey(d.date) === dayKey);
+    if (existing) {
+      const ids = [...new Set([...(existing.sessionIds || []), session.id])];
+      const matches = sessionsForCashDepositDay(posSessions, dayKey).filter((s) =>
+        ids.includes(s.id),
+      );
+      const filled = fillDayCashFromSessions(existing, matches, ids);
+      patchDay(existing.id, {
+        cashAmount: filled.cashAmount,
+        cashAmountSource: filled.cashAmountSource,
+        sessionIds: filled.sessionIds,
+        note: filled.note,
+      });
+    } else {
+      if (workingDays.length >= CASH_DEPOSIT_DAY_MAX) {
+        setError(`รอบหนึ่งมีได้สูงสุด ${CASH_DEPOSIT_DAY_MAX} วัน`);
+        return;
+      }
+      const base = emptyCashDepositDay(dayKey);
+      const filled = fillDayCashFromSessions(base, [session], [session.id]);
+      setDays([
+        ...workingDays,
+        {
+          ...base,
+          cashAmount: filled.cashAmount,
+          cashAmountSource: filled.cashAmountSource,
+          sessionIds: filled.sessionIds,
+          note: filled.note,
+          slipKind: "shift",
+          shiftLabel: "รอบขาย",
+        },
+      ]);
+    }
+    setError(null);
+    setAiHint(`ใส่รอบ ${posSessionCode(session.id)} · นำส่ง ฿${formatPlainNumber(sessionRemitAmount(session) || 0)}`);
+  }
 
   const refreshOccupancy = useCallback(async () => {
     try {
@@ -836,6 +954,15 @@ export function CashInLedgerPanel({
     if (open) void refreshOccupancy();
   }, [open, refreshOccupancy]);
 
+  const toggleMeta = (() => {
+    if (pendingDepositSessions.length) {
+      return `รอฝาก ${pendingDepositSessions.length} รอบ · ฿${formatPlainNumber(pendingDepositSum)}`;
+    }
+    if (loading && !entries.length) return "…";
+    if (pendingCount > 0) return `รอตรวจ ${pendingCount} รอบ`;
+    return "ตารางรอบ · หุบไว้ได้";
+  })();
+
   return (
     <aside className="cash-in-panel" aria-label="ตารางเทียบเงินนำเข้า">
       <button
@@ -846,12 +973,10 @@ export function CashInLedgerPanel({
       >
         <span className="cash-in-panel-toggle-left">
           <span className="cash-in-panel-title">เทียบเงินนำเข้า</span>
-          <span className="cash-in-panel-meta">
-            {loading && !entries.length
-              ? "…"
-              : pendingCount > 0
-                ? `รอตรวจ ${pendingCount} รอบ`
-                : "ตารางรอบ · หุบไว้ได้"}
+          <span
+            className={`cash-in-panel-meta${pendingDepositSessions.length ? " is-wait" : ""}`}
+          >
+            {toggleMeta}
           </span>
         </span>
         {open ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
@@ -859,9 +984,77 @@ export function CashInLedgerPanel({
 
       {open ? (
         <div className="cash-in-panel-body">
-          <p className="muted cash-in-hint">
-            สลิปโอนหลายใบได้ · เข้าบช.สุทธิต่อใบ · ดูคงเหลือใต้ตารางโอน
-          </p>
+          {pendingDepositSessions.length ? (
+            <section
+              className="cash-in-pending-rounds"
+              aria-label="รอบขายรอฝากเข้าบัญชี"
+            >
+              <header className="cash-in-pending-head">
+                <div>
+                  <strong>รอบรอฝาก</strong>
+                  <span className="muted">
+                    {" "}
+                    {pendingDepositSessions.length} รอบ · Σ นำส่ง ฿
+                    {formatPlainNumber(pendingDepositSum)}
+                  </span>
+                </div>
+                {!editingRound ? (
+                  <button
+                    type="button"
+                    className="ghost-btn cash-in-ai-reread"
+                    disabled={busy}
+                    onClick={() => startDraftFromSessions(pendingDepositSessions)}
+                  >
+                    ใส่ทุกรอบ
+                  </button>
+                ) : null}
+              </header>
+              <ul className="cash-in-pending-list">
+                {pendingDepositSessions.slice(0, 12).map((s) => {
+                  const remit = sessionRemitAmount(s);
+                  const handoff = deriveRemitStatus(s);
+                  return (
+                    <li key={s.id}>
+                      <span className="cash-in-pending-main">
+                        <span className="cash-in-pending-date">
+                          {formatCashDayShort(s.date || s.openedAt || 0)}
+                        </span>
+                        <span className="cash-in-pending-label">
+                          {sessionCounterLabel(s)} · {posSessionCode(s.id)}
+                        </span>
+                        <span className="cash-in-pending-amt">
+                          ฿{formatPlainNumber(remit || 0)}
+                        </span>
+                        <span
+                          className={`npos-slim-remit-status is-${handoff || "none"}`}
+                          title="สถานะส่งเงินมือ"
+                        >
+                          {labelRemitStatus(handoff)}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        className="ghost-btn cash-in-ai-reread"
+                        disabled={busy}
+                        onClick={() => queueSessionIntoWorking(s)}
+                      >
+                        ใส่
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              {pendingDepositSessions.length > 12 ? (
+                <p className="muted cash-in-pending-more">
+                  +{pendingDepositSessions.length - 12} รอบ — กดใส่ทุกรอบ
+                </p>
+              ) : null}
+            </section>
+          ) : (
+            <p className="muted cash-in-hint">
+              ยังไม่มีรอบรอฝาก · ปิดกะแล้วจะขึ้นคิวที่นี่อัตโนมัติ
+            </p>
+          )}
 
           <div className="cash-in-create-bar">
             <label className="cash-in-create-field">
@@ -1325,30 +1518,28 @@ export function CashInLedgerPanel({
                                 })
                               }
                             />
-                            {isOwner ? (
-                              <button
-                                type="button"
-                                className="ghost-btn cash-in-ai-reread"
-                                disabled={busy}
-                                title={
-                                  (() => {
-                                    const matches = sessionsForCashDepositDay(
-                                      posSessions,
-                                      day.date,
-                                    );
-                                    const sum = sumSessionRemits(matches);
-                                    return matches.length
-                                      ? `ดึง Σ นำส่ง ${matches.length} รอบ = ฿${formatPlainNumber(sum)}`
-                                      : "ดึงยอดนำส่งจากรอบ nPos/มือของวันนี้";
-                                  })()
-                                }
-                                onClick={() => fillDayFromPosSessions(day.id)}
-                              >
-                                {day.sessionIds?.length
-                                  ? `รอบ ${day.sessionIds.length}`
-                                  : "จากรอบ"}
-                              </button>
-                            ) : null}
+                            <button
+                              type="button"
+                              className="ghost-btn cash-in-ai-reread"
+                              disabled={busy}
+                              title={
+                                (() => {
+                                  const matches = sessionsForCashDepositDay(
+                                    posSessions,
+                                    day.date,
+                                  ).filter((s) => !linkedSessionIds.has(s.id) || (day.sessionIds || []).includes(s.id));
+                                  const sum = sumSessionRemits(matches);
+                                  return matches.length
+                                    ? `ดึง Σ นำส่ง ${matches.length} รอบ = ฿${formatPlainNumber(sum)}`
+                                    : "ดึงยอดนำส่งจากรอบ nPos/มือของวันนี้";
+                                })()
+                              }
+                              onClick={() => fillDayFromPosSessions(day.id)}
+                            >
+                              {day.sessionIds?.length
+                                ? `รอบ ${day.sessionIds.length}`
+                                : "จากรอบ"}
+                            </button>
                           </div>
                         </td>
                         <td className="col-note">

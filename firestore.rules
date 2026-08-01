@@ -999,11 +999,13 @@ service cloud.firestore {
     }
 
     match /posSessions/{sessionId} {
+      // Owner + ledger staff (เทียบเงินนำเข้าต้องเห็นรอบค้าง) · device = รอบตัวเอง
       allow read: if isOwner()
+        || hasPerm('ledger')
         || (isPosDeviceAuth() && (
           resource == null || resource.data.deviceId == request.auth.uid
         ));
-      allow list: if isOwner();
+      allow list: if isOwner() || hasPerm('ledger');
       // Device open-round OR owner manual/external closed round (เคาน์เตอร์นอกโปรแกรม)
       allow create: if (isPosDeviceAuth() && posSessionOpen())
         || (isOwner()
