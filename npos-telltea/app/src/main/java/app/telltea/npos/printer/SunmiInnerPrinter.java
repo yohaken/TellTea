@@ -83,17 +83,14 @@ public final class SunmiInnerPrinter {
   /**
    * UTF text path — same family as stock SUNMI / Wongnai receipts.
    *
-   * <p>Short sale slips: toggle bold via {@code sendRAWData(ESC E)} between {@code printText}
-   * chunks. Long X/Z reports have many section headers — chunking aborts mid-slip on Sunmi, so
-   * those print as one {@code printText} (bold markers stripped) to finish the whole document.
+   * <p>Always one-shot {@code printText} (bold ESC E markers stripped). Chunked bold toggles used
+   * many AIDL round-trips and made cash slips feel slow; X/Z already needed one-shot to avoid
+   * mid-slip abort on InnerPrinter.
    */
   public static PrinterTransport.Result printPlain(Context context, String text) {
     String body = text == null ? "" : text;
     if (!body.endsWith("\n")) body = body + "\n";
-    int boldOns = EscPos.boldOnCount(body);
-    boolean hasBold = boldOns > 0 || body.indexOf(EscPos.BOLD_OFF) >= 0;
-    // X/Z has ~10 section titles; chunked ESC E often dies after the banner → tiny scrap.
-    boolean longDoc = boldOns >= 6 || body.length() >= 1200;
+    boolean longDoc = EscPos.boldOnCount(body) >= 6 || body.length() >= 1200;
     try {
       SunmiPrinterService svc = ensureService(context);
       if (svc == null) {
@@ -108,15 +105,7 @@ public final class SunmiInnerPrinter {
       } catch (Exception ignored) {
         /* optional */
       }
-      PrinterTransport.Result printed;
-      if (hasBold && longDoc) {
-        // One shot — avoids mid-slip abort after X/Z banner on InnerPrinter.
-        printed = printTextOnce(svc, EscPos.stripBoldMarkers(body));
-      } else if (hasBold) {
-        printed = printTextBoldSegments(svc, body);
-      } else {
-        printed = printTextOnce(svc, body);
-      }
+      PrinterTransport.Result printed = printTextOnce(svc, EscPos.stripBoldMarkers(body));
       if (!printed.ok) return printed;
       try {
         svc.lineWrap(2, null);

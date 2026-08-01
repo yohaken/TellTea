@@ -20,10 +20,10 @@ const pos = read("src/lib/pos-version.ts");
 assert.ok(Number(pos.match(/POS_BUILD\s*=\s*(\d+)/)[1]) >= 165);
 
 const gradle = read("npos-telltea/app/build.gradle");
-assert.match(gradle, /versionCode\s+129/);
-assert.match(gradle, /versionName\s+"1\.14\.106"/);
+assert.match(gradle, /versionCode\s+130/);
+assert.match(gradle, /versionName\s+"1\.14\.107"/);
 assert.match(read("src/lib/npos-apk-release.ts"), /1\.14\.106/);
-assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 129/);
+assert.match(read("src/lib/npos-apk-release.ts"), /NPOS_SYSTEM_VERSION_CODE = 130/);
 
 const builder = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/printer/ShiftReportFormBuilder.java",

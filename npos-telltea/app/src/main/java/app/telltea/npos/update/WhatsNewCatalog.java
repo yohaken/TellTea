@@ -13,6 +13,18 @@ public final class WhatsNewCatalog {
   private WhatsNewCatalog() {}
 
   public static List<WhatsNewSlide> slidesFor(int versionCode) {
+    if (versionCode == 130) {
+      List<WhatsNewSlide> slides = new ArrayList<>();
+      slides.add(
+          new WhatsNewSlide(
+              "จ่ายสดเร็วขึ้น",
+              "ลิ้นชักเปิดทันทีตอนคิดเงินสด ขณะที่ใบเสร็จพิมพ์ตาม — ไม่ต้องรอตัดกระดาษ"));
+      slides.add(
+          new WhatsNewSlide(
+              "คีย์บิลถัดไปไม่ติดเน็ต",
+              "บันทึกในเครื่องกับพิมพ์ทำก่อน ซิงก์หลังบ้านทำงานพื้นหลัง"));
+      return slides;
+    }
     if (versionCode == 128) {
       List<WhatsNewSlide> slides = new ArrayList<>();
       slides.add(

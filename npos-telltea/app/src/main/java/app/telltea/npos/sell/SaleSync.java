@@ -54,7 +54,10 @@ public final class SaleSync {
         void onError(String humanMessage);
     }
 
+    /** Local save + queue print/drawer — must stay snappy for the next cash sale. */
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    /** HTTP sale sync only — never block local save / paper on network RTT. */
+    private final ExecutorService syncExecutor = Executors.newSingleThreadExecutor();
     private final PrinterTransport transport = new PrinterTransport();
 
     public void openSession(Context context, Runnable done) {
@@ -331,7 +334,8 @@ public final class SaleSync {
     public void flushThenCloseSession(
             Context context, BlindCloseReport report, CloseResult result) {
         Context app = context.getApplicationContext();
-        executor.execute(
+        // Same syncExecutor as sale flushes — close waits for queued bills in order.
+        syncExecutor.execute(
                 () -> {
                     boolean serverOk = false;
                     try {
@@ -551,8 +555,8 @@ public final class SaleSync {
                         boolean print = autoPrint;
                         if (shop != null) print = shop.optBoolean("autoPrintReceipt", true);
 
-                        // Fast path: paper (+ cash drawer) as soon as the sale is local.
-                        // Sync still runs next for real billNo on server / history — never double-print.
+                        // Fast path: drawer (+ paper) as soon as the sale is local.
+                        // HTTP sync runs on syncExecutor so the next cash keypad sale is not blocked.
                         if (print && !isReceiptPrinted(app, mutationId)) {
                             maybePrintAndKick(
                                     app,
@@ -570,36 +574,42 @@ public final class SaleSync {
                             }
                         }
 
-                        try {
-                            flushOne(app, payload, shop, print, method, callback);
-                        } catch (Exception syncErr) {
-                            String msg =
-                                    syncErr.getMessage() == null
-                                            ? syncErr.getClass().getSimpleName()
-                                            : syncErr.getMessage();
-                            markQueueAttempt(app, mutationId, msg, isPermanentSaleError(msg));
-                            OpsLogger.warn(app, "sync", "ซิงก์บิลค้างในคิว", msg);
-                            // Offline / sync fail — paper already attempted above when autoPrint.
-                            if (print && !isReceiptPrinted(app, mutationId)) {
-                                maybePrintAndKick(
-                                        app,
-                                        shop,
-                                        payload,
-                                        provisionalBillNo(mutationId),
-                                        total,
-                                        method,
-                                        CashDrawerPolicy.shouldKickAfterSale(method));
-                                markReceiptPrinted(app, mutationId);
-                                try {
-                                    payload.put("receiptPrinted", true);
-                                } catch (Exception ignored) {
-                                    /* ignore */
-                                }
-                            }
-                            if (callback != null) {
-                                callback.onError("บันทึกในเครื่องแล้ว — รอซิงก์เมื่อมีเน็ต");
-                            }
-                        }
+                        final boolean printFlag = print;
+                        final String payMethod = method;
+                        syncExecutor.execute(
+                                () -> {
+                                    try {
+                                        flushOne(app, payload, shop, printFlag, payMethod, callback);
+                                    } catch (Exception syncErr) {
+                                        String msg =
+                                                syncErr.getMessage() == null
+                                                        ? syncErr.getClass().getSimpleName()
+                                                        : syncErr.getMessage();
+                                        markQueueAttempt(
+                                                app, mutationId, msg, isPermanentSaleError(msg));
+                                        OpsLogger.warn(app, "sync", "ซิงก์บิลค้างในคิว", msg);
+                                        // Offline / sync fail — paper already attempted above when autoPrint.
+                                        if (printFlag && !isReceiptPrinted(app, mutationId)) {
+                                            maybePrintAndKick(
+                                                    app,
+                                                    shop,
+                                                    payload,
+                                                    provisionalBillNo(mutationId),
+                                                    total,
+                                                    payMethod,
+                                                    CashDrawerPolicy.shouldKickAfterSale(payMethod));
+                                            markReceiptPrinted(app, mutationId);
+                                            try {
+                                                payload.put("receiptPrinted", true);
+                                            } catch (Exception ignored) {
+                                                /* ignore */
+                                            }
+                                        }
+                                        if (callback != null) {
+                                            callback.onError("บันทึกในเครื่องแล้ว — รอซิงก์เมื่อมีเน็ต");
+                                        }
+                                    }
+                                });
                     } catch (Exception e) {
                         OpsLogger.error(
                                 app,
@@ -615,13 +625,13 @@ public final class SaleSync {
 
     public void flushPending(Context context) {
         Context app = context.getApplicationContext();
-        executor.execute(() -> flushPendingBlocking(app));
+        syncExecutor.execute(() -> flushPendingBlocking(app));
     }
 
     /** Retry one pending/failed outbox row (clears failed → pending). */
     public void retryPending(Context context, String mutationId, Runnable done) {
         Context app = context.getApplicationContext();
-        executor.execute(
+        syncExecutor.execute(
                 () -> {
                     try {
                         JSONObject row = findQueueRow(app, mutationId);
@@ -1005,6 +1015,7 @@ public final class SaleSync {
     public void shutdown() {
         transport.shutdown();
         executor.shutdownNow();
+        syncExecutor.shutdownNow();
     }
 
     private void flushOne(
@@ -1161,6 +1172,21 @@ public final class SaleSync {
                 /* ignore */
             }
         }
+        // Cash: queue drawer BEFORE paper so staff can make change while the slip prints.
+        // Still cash-only via CashDrawerPolicy; never on reprint / transfer / PromptPay.
+        if (kickDrawer && CashDrawerPolicy.shouldKickAfterSale(paymentMethod)) {
+            transport.send(
+                    app,
+                    ep,
+                    EscPos.drawerKick(),
+                    kick ->
+                            OpsLogger.result(
+                                    app,
+                                    "drawer",
+                                    kick.ok ? "เปิดลิ้นชักหลังขาย" : "ลิ้นชักไม่เปิด",
+                                    kick.message,
+                                    kick.ok));
+        }
         String body = ReceiptFormBuilder.build(shopJson, payload, billNo, total, PrinterPrefs.receiptCols(app));
         byte[] receipt = EscPos.documentReceipt(body);
         transport.send(
@@ -1170,19 +1196,6 @@ public final class SaleSync {
                 result -> {
                     if (result.ok) {
                         OpsLogger.result(app, "printer", "พิมพ์ใบเสร็จแล้ว", billNo, true);
-                        if (kickDrawer && CashDrawerPolicy.shouldKickAfterSale(paymentMethod)) {
-                            transport.send(
-                                    app,
-                                    ep,
-                                    EscPos.drawerKick(),
-                                    kick ->
-                                            OpsLogger.result(
-                                                    app,
-                                                    "drawer",
-                                                    kick.ok ? "เปิดลิ้นชักหลังขาย" : "ลิ้นชักไม่เปิด",
-                                                    kick.message,
-                                                    kick.ok));
-                        }
                     } else {
                         OpsLogger.error(app, "printer", "พิมพ์ใบเสร็จไม่สำเร็จ", result.message);
                     }
