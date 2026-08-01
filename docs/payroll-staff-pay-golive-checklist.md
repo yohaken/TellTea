@@ -67,11 +67,18 @@
 
 ---
 
-## ตรวจอัตโนมัติหลัง deploy 4.560 (agent · 2026-08-01)
+## ตรวจอัตโนมัติหลัง deploy
 
-- [x] GitHub Actions `Deploy TellTea to Firebase Hosting` run 30679930892 = **success**
-- [x] `https://telltea-shop.web.app/version.json` → `"version":"4.560"`
-- [x] Bundle `/bonus/` มีสตริง: `ดูแบบพนักงาน` · `รอบล่าสุด` · `โอนครั้งเดียว` · `คัดลอกเลขบัญชี` · `คัดลอกยอด` · `คัดลอกทั้งคู่`
-- [ ] ล็อกอินเจ้าของคลิกจริง (ต้องการบัญชีมนุษย์) — ใช้รายการด้านบนเป็นมือตรวจครั้งสุดท้าย
+### 4.560 — pay clarity
+- [x] Actions deploy success · `version.json` = 4.560
+- [x] Bundle มี: ดูแบบพนักงาน · รอบล่าสุด · โอนครั้งเดียว · คัดลอกเลขบัญชี/ยอด
+
+### 4.562 — รูประวัง/ตัดมุมพนักงาน (บั๊กแก้แล้ว)
+- [x] สาเหตุ: viewer ใส่ `evp:` ใน `<img>` ตรงๆ → เบราว์เซอร์ไม่โชว์รูป
+- [x] แก้: `resolveEvidencePhotoSrc` ก่อนแสดง + ไอคอนรูปเปิด `ImagePreviewModal` แบบเจ้าของ
+- [x] `version.json` = **4.562**
+- [x] Live chunk มี `กำลังโหลดรูป` · `แตะไอคอนรูปเปิดดูได้เลย` · resolve error string
+- [x] `npm run test:bonus-evidence-viewer` + `test:bonus-evidence-viewer-live` ผ่าน
+- [ ] มือ: ดูแบบพนักงาน → แตะไอคอนรูป / เริ่มดู — ควรเห็นรูปจริง (หลัง 4.562)
 
 PromptPay QR / แจ้งแชท / deep link กสิกร = นอกขอบชุดนี้
