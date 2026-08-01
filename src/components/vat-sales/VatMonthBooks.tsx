@@ -171,6 +171,28 @@ function ExpandBtn({
   );
 }
 
+/** หัวคอลัมน์ + ปุ่ม info เล็ก ๆ (title = อธิบายที่มา) */
+function ColHead({
+  label,
+  info,
+  className = "col-num",
+}: {
+  label: string;
+  info: string;
+  className?: string;
+}) {
+  return (
+    <th className={className} title={info}>
+      <span className="vat-col-head">
+        {label}
+        <span className="vat-col-info" aria-label={info} title={info}>
+          i
+        </span>
+      </span>
+    </th>
+  );
+}
+
 type Props = { actor: string };
 
 export function VatMonthBooks({ actor }: Props) {
@@ -805,10 +827,10 @@ export function VatMonthBooks({ actor }: Props) {
       {error ? <p className="error-text">{error}</p> : null}
       {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
 
-      {/* สรุปยอดรวมเดือนต่อช่องทาง — จุดใส่ยอดหลัก (ไม่ใช่รายวัน) */}
+      {/* ยอดเดลิเวอรี่ — สรุปรายเดือนต่อช่องทาง (ไม่ใช่รายวัน) */}
       <section className="vat-table-block vat-month-sources">
         <h2 className="vat-table-title">
-          สรุปช่องทาง — ยอดรวม {formatThaiMonthKey(month)}
+          ยอดเดลิเวอรี่ — {formatThaiMonthKey(month)}
         </h2>
         <p className="muted vat-sales-hint vat-hint-one-line">
           Grab ม้วนจากหลายไฟล์รายวัน · LINE MAN / Shopee ใช้ไฟล์สรุปเดือน ·
@@ -819,31 +841,23 @@ export function VatMonthBooks({ actor }: Props) {
             <thead>
               <tr>
                 <th className="col-seg">ช่องทาง</th>
-                <th
-                  className="col-num"
-                  title="ยอดขายรวม VAT → กล่อง D คิดภาษีขาย"
-                >
-                  ยอดขาย
-                </th>
-                <th
-                  className="col-num"
-                  title="เงินเข้าบัญชีหลังหัก GP = รายได้ถึงร้าน → กล่อง A"
-                >
-                  ยอดโอน
-                </th>
-                <th
-                  className="col-num"
-                  title="ค่า GP ที่หักจากโอนแล้ว — โชว์ใน B / ไม่หักซ้ำกำไร"
-                >
-                  คชจ.GP
-                </th>
-                <th
-                  className="col-num"
-                  title="VAT บนบิลค่า GP — ไม่ใช่เงินหักเพิ่ม → กล่อง D ภาษีซื้อ"
-                >
-                  แวทซื้อ
-                </th>
-                <th className="col-seg" title="รูปแบบต้นทาง">
+                <ColHead
+                  label="ยอดขายแอพ"
+                  info="ยอดขายแอพ = ยอดขายที่แพลตฟอร์มรายงาน (รวม VAT) · ใช้คิดภาษีขาย"
+                />
+                <ColHead
+                  label="ยอดโอน"
+                  info="ยอดโอน = ยอดเงินเข้าบัญชีธนาคารหลังหักค่า GP แล้ว · เป็นรายได้ถึงร้าน"
+                />
+                <ColHead
+                  label="คชจ.GP"
+                  info="คชจ.GP = ค่าบริการแพลตฟอร์มที่หักแวทออกแล้ว (ไม่รวม VAT) · อยู่ในยอดโอนแล้ว ไม่หักซ้ำกำไร"
+                />
+                <ColHead
+                  label="VAT-ซื้อ"
+                  info="VAT-ซื้อ = แวทค่าบริการขาย (ภาษีซื้อจากบิลค่า GP) · ไม่ใช่เงินหักเพิ่มจากโอน"
+                />
+                <th className="col-seg" title="รูปแบบต้นทางของยอดเดือนนี้">
                   ที่มา
                 </th>
               </tr>
@@ -863,7 +877,7 @@ export function VatMonthBooks({ actor }: Props) {
                       <MoneyCell
                         value={moneyFieldValue(draft.sales[k])}
                         locked={locked}
-                        ariaLabel={`ยอดขาย ${MONTH_CHANNEL_SHORT[k]}`}
+                        ariaLabel={`ยอดขายแอพ ${MONTH_CHANNEL_SHORT[k]}`}
                         onChange={(v) => setSourceSales(k, v)}
                       />
                     </td>
@@ -887,7 +901,7 @@ export function VatMonthBooks({ actor }: Props) {
                       <MoneyCell
                         value={moneyFieldValue(draft.gpVatOverride[k])}
                         locked={locked}
-                        ariaLabel={`แวทซื้อ ${MONTH_CHANNEL_SHORT[k]}`}
+                        ariaLabel={`VAT-ซื้อ ${MONTH_CHANNEL_SHORT[k]}`}
                         onChange={(v) => setSourceGpVat(k, v)}
                       />
                     </td>
@@ -917,7 +931,7 @@ export function VatMonthBooks({ actor }: Props) {
           </table>
         </div>
         <p className="muted vat-sales-hint vat-hint-one-line">
-          โอน = รายได้ถึงร้าน · คชจ.GP อยู่ในโอนแล้วไม่หักซ้ำ · แวทซื้อ = ภาษีซื้อ GP
+          ยอดโอน = เงินเข้าบช. · คชจ.GP หักแวทแล้ว · VAT-ซื้อ = แวทค่าบริการขาย
         </p>
       </section>
 
@@ -987,7 +1001,7 @@ export function VatMonthBooks({ actor }: Props) {
                     <th className="col-seg">รายการ</th>
                     <th
                       className="col-num"
-                      title="เงินถึงร้าน — จากสรุปช่องทางด้านบน หรือแก้ตรงนี้"
+                      title="เงินถึงร้าน — จากยอดเดลิเวอรี่ด้านบน หรือแก้ตรงนี้"
                     >
                       ยอดโอน / ถึงร้าน
                     </th>
@@ -1541,7 +1555,7 @@ export function VatMonthBooks({ actor }: Props) {
                     <tr className="vat-row-parent">
                       <td
                         className="col-seg"
-                        title="จากสรุปช่องทางคอลัมน์แวทซื้อ หรือประมาณคชจ.×7/107"
+                        title="จากยอดเดลิเวอรี่คอลัมน์ VAT-ซื้อ หรือประมาณคชจ.×7/107"
                       >
                         ภาษีซื้อ GP (รวม)
                       </td>
