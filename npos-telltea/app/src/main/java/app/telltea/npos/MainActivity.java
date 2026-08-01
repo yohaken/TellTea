@@ -37,6 +37,7 @@ import app.telltea.npos.ui.UiScale;
 import app.telltea.npos.update.ResumePrefs;
 import app.telltea.npos.update.UpdateManifest;
 import app.telltea.npos.update.UpdatePromptController;
+import app.telltea.npos.update.WhatsNewController;
 
 /**
  * Clock-in + POS hub (clone web POS_NAV_ITEMS). Sell is one tile — not the only screen.
@@ -59,6 +60,7 @@ public class MainActivity extends Activity {
   private AutoHealth autoHealth;
   private SaleSync saleSync;
   private UpdatePromptController updatePrompt;
+  private WhatsNewController whatsNew;
   private final Handler clockHandler = new Handler(Looper.getMainLooper());
   private int localVersionCode = 1;
   private String localVersionName = "1.0";
@@ -203,6 +205,7 @@ public class MainActivity extends Activity {
                       }
                     }));
     updatePrompt = new UpdatePromptController(this);
+    whatsNew = new WhatsNewController(this);
     View claimUpdate = findViewById(R.id.claimUpdateButton);
     if (claimUpdate != null) {
       claimUpdate.setOnClickListener(
@@ -536,15 +539,7 @@ public class MainActivity extends Activity {
     hubNavList.removeAllViews();
     // 1 ขาย · 2 เมนู (จัดการแคตตาล็อก) · บิลค้าง · ใบเสร็จ · กะ · ตั้งค่า
     addHubNative(R.string.nav_sell, () -> startActivity(new Intent(this, SellActivity.class)));
-    addHubNative(
-        R.string.nav_menu,
-        () -> {
-          if (!ShiftPrefs.isOpen(this)) {
-            Toast.makeText(this, R.string.menu_admin_need_shift, Toast.LENGTH_LONG).show();
-            return;
-          }
-          startActivity(new Intent(this, MenuAdminActivity.class));
-        });
+    addHubNative(R.string.nav_menu, () -> PosShellNav.openMenuAdmin(this));
     addHubNative(
         R.string.nav_open_bills,
         () -> {
@@ -625,6 +620,8 @@ public class MainActivity extends Activity {
     saleSync.flushPending(this);
     CaptureConsentActivity.relaunchPendingIfNeeded(this);
     if (updatePrompt != null) updatePrompt.onResume();
+    // Hub after clock-in: show once-per-version notes (skipped if forced update is up).
+    if (canSell && whatsNew != null) whatsNew.maybeShow();
   }
 
   @Override
@@ -633,6 +630,7 @@ public class MainActivity extends Activity {
     clockHandler.removeCallbacks(dutyTick);
     clockHandler.removeCallbacks(claimPollTick);
     if (updatePrompt != null) updatePrompt.onPause();
+    if (whatsNew != null) whatsNew.onPause();
     super.onPause();
   }
 

@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 549/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 553/);
 assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 160/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+127/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.104"/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+128/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.105"/);
 
 assert.ok(existsSync(join(root, "docs/npos-friendly-ui-checklist.md")));
 assert.match(read("docs/npos-friendly-ui-checklist.md"), /NposUi|1\.14\.39/);
@@ -176,6 +176,13 @@ assert.match(
   read("npos-telltea/app/src/main/java/app/telltea/npos/shell/PosShellNav.java"),
   /NposFonts/,
 );
+
+const whatsNew = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewController.java",
+);
+assert.match(whatsNew, /NposUi/);
+assert.doesNotMatch(whatsNew, /new Button\(/);
+assert.doesNotMatch(whatsNew, /\.setItems\s*\(/);
 
 
 assert.match(read("npos-telltea/app/src/main/res/values/styles.xml"), /layout_width">wrap_content/);

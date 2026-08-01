@@ -28,6 +28,7 @@ const steps = [
   { name: "menu-version-sync", cmd: ["node", "scripts/test-npos-menu-version-sync.mjs"] },
   { name: "menu-admin", cmd: ["node", "scripts/test-npos-menu-admin.mjs"] },
   { name: "menu-admin-crud", cmd: ["node", "scripts/test-npos-menu-admin-crud.mjs"] },
+  { name: "whats-new", cmd: ["node", "scripts/test-npos-whats-new.mjs"] },
   { name: "payment-voice", cmd: ["node", "scripts/test-npos-payment-voice.mjs"] },
   { name: "receipt-readable", cmd: ["node", "scripts/test-npos-receipt-readable.mjs"] },
   { name: "boh-print-parity", cmd: ["node", "scripts/test-npos-boh-print-parity.mjs"] },

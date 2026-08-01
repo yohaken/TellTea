@@ -58,7 +58,7 @@
 | ของหมดกดค้าง (confirm ตรง) | `nposToggleSoldOut` · `confirmToggleSoldOut` |
 | เรียงหมวดจากเคาน์เตอร์ | `nposReorderCategories` |
 | Version sync ขาย | `meta/pos.menuVersion` · heartbeat · `MenuSyncCoordinator` |
-| Hub ซ้าย | `MainActivity.buildHubNav` — ตอนนี้: ขาย · บิลค้าง · ใบเสร็จ · กะ · ตั้งค่า |
+| Hub ซ้าย | `MainActivity.buildHubNav` + `PosShellNav` + sell hub: ขาย · **จัดการเมนู** · บิลค้าง · ใบเสร็จ · กะ · ตั้งค่า |
 
 ---
 
