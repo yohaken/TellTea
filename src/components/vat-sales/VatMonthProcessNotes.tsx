@@ -10,17 +10,13 @@ import {
   saveVatDeliverySourceNotes,
 } from "@/lib/vat-delivery-source-notes";
 
-const DEFAULT_NOTE = `ขั้นตอนดึงยอดเดลิเวอรี่ — กล่อง AI เดียว
+const DEFAULT_NOTE = `แคป 3 รูป (GB/SF/LM) → AI คัดแยก → ตรวจพรีวิว
 
-1) เปิด /vat-sales/sources/ เลือกเดือน
-2) แคปจอ 3 ใบ แล้วอัปเข้ากล่อง AI
-   - Grab: หน้าการเงิน→สรุป ทั้งเดือน
-   - Shopee: เมล「รายงานยอดขายสะสมประจำเดือน」(เนื้อหา · เดือนจากวันที่รายงาน)
-   - LINE MAN: รายงาน/เมล GP ประจำเดือน (หรือสรุปที่มีขาย/โอน/GP)
-3) กด「ให้ AI คัดแยก」→ ตรวจ 4 ช่องในตารางพรีวิว
-4) ยังไม่เข้าตารางยอดเดลิเวอรี่จนกว่าจะยืนยัน (ขั้นถัดไป)
+คชจ. ต้องไม่รวม VAT
+• แยกไว้แล้ว → ใช้ตามนั้น
+• ยังไม่แยก → แยก VAT ออก (×7/107)
 
-ไม่ใช้ลิงก์ Gmail แล้ว
+ยังไม่เข้างบจนกว่าจะยืนยัน
 `;
 
 type Props = { actor: string };
@@ -33,15 +29,12 @@ export function VatMonthProcessNotes({ actor }: Props) {
   const [updatedAt, setUpdatedAt] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const draftRef = useRef(draft);
-  const savedRef = useRef(saved);
+  const draftRef = useRef("");
   draftRef.current = draft;
-  savedRef.current = saved;
 
   const refresh = useCallback(async () => {
     try {
       const notes = await loadVatDeliverySourceNotes();
-      // มีของเดิมใน Firestore → ใช้ของเดิม · ว่างจริงค่อยใส่ค่าเริ่ม (และเซฟครั้งแรก)
       const text = notes.text.trim() ? notes.text : DEFAULT_NOTE;
       setDraft(text);
       setSaved(notes.text.trim() ? notes.text : "");
@@ -84,66 +77,54 @@ export function VatMonthProcessNotes({ actor }: Props) {
   );
 
   useEffect(() => {
-    if (!loaded || draft === saved) return;
+    if (!loaded) return;
+    if (draft === saved) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      void persist(draft);
-    }, 400);
+      void persist(draftRef.current);
+    }, 450);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
   }, [draft, saved, loaded, persist]);
 
-  // ออกจากหน้า / รีโหลด — เซฟค้างทันที
   useEffect(() => {
     const flush = () => {
       if (!loaded) return;
-      if (draftRef.current === savedRef.current) return;
+      if (draftRef.current === saved) return;
       void saveVatDeliverySourceNotes(draftRef.current, actor);
     };
     window.addEventListener("pagehide", flush);
-    return () => {
-      window.removeEventListener("pagehide", flush);
-      flush();
-    };
-  }, [loaded, actor]);
+    return () => window.removeEventListener("pagehide", flush);
+  }, [actor, loaded, saved]);
+
+  if (!loaded) {
+    return (
+      <section className="vat-table-block vat-month-process-notes">
+        <p className="muted">กำลังโหลดโน้ต…</p>
+      </section>
+    );
+  }
 
   return (
     <section
       className="vat-table-block vat-month-process-notes"
-      id="vat-month-process-notes"
-      data-ai-context="vat-month-process-notes"
-      aria-label="โน้ตขั้นตอนดึงยอดเดลิเวอรี่"
+      aria-label="โน้ตขั้นตอนดึงยอด"
     >
-      <h2 className="vat-table-title">โน้ตขั้นตอน · AI / Grab / เมล</h2>
-      <p className="muted vat-sales-hint vat-hint-one-line">
-        จดขั้นตอนตรงนี้ · เซฟอัตโนมัติ ไม่ต้องกดบันทึก
-        {updatedAt
-          ? ` · ${new Date(updatedAt).toLocaleString("th-TH")}`
-          : ""}
-        {busy
-          ? " · กำลังบันทึก…"
-          : loaded && draft !== saved
-            ? " · รอเซฟ"
-            : loaded
-              ? " · บันทึกแล้ว"
-              : ""}
-      </p>
+      <div className="vat-process-notes-head">
+        <h2 className="vat-table-title">โน้ตขั้นตอน</h2>
+        <span className="muted vat-process-notes-meta">
+          {busy ? "กำลังเซฟ…" : err ? "เซฟไม่สำเร็จ" : "เซฟอัตโนมัติ"}
+          {updatedAt > 0
+            ? ` · ${new Date(updatedAt).toLocaleString("th-TH")}`
+            : ""}
+        </span>
+      </div>
       {err ? <p className="error-text">{err}</p> : null}
-      <pre
-        id="vat-month-process-notes-text"
-        className="vat-month-process-notes-mirror"
-        data-ai-notes="1"
-        hidden
-      >
-        {draft}
-      </pre>
       <textarea
-        className="vat-month-process-notes-input"
-        value={draft}
+        className="vat-process-notes-area"
         rows={8}
-        spellCheck={false}
-        aria-label="โน้ตขั้นตอนดึงยอด"
+        value={draft}
         placeholder={DEFAULT_NOTE}
         onChange={(e) => setDraft(e.target.value)}
       />

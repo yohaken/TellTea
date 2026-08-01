@@ -38,9 +38,10 @@ const SYSTEM_PROMPT = `คุณอ่านแคปจอสรุปยอด
 - lineman = LINE MAN / Wongnai / ค่าบริการ GP / REPORT / ยอดโอนออกให้ร้าน
 
 แมปตัวเลข:
-- grab: sales=ยอดขายสุทธิ · transfer=รายได้/รายได้สุทธิ · fee=ค่าคอมมิชชันแพลตฟอร์ม(สัมบูรณ์) · gpVat=ถ้าไม่เห็นบนจอให้ null
-- shopee: sales=ยอดรายการ (ถ้าไม่ชัดใช่ยอดที่สรุปขายสุทธิของบล็อก) · transfer=ยอดรวมสุทธิประจำเดือน · fee=ค่าธรรมเนียม(GP)+ยอดภาษีมูลค่าเพิ่มค่าธรรมเนียม · gpVat=ยอดภาษีมูลค่าเพิ่มค่าธรรมเนียม
-- lineman: sales=ยอดขาย/total revenue · transfer=ยอดโอนออกให้ร้าน/payout · fee=ค่า GP รวม VAT · gpVat=null ถ้าไม่แยก
+- grab: sales=ยอดขายสุทธิ · transfer=รายได้/รายได้สุทธิ · feeIncl=ค่าคอมมิชชันแพลตฟอร์ม(สัมบูรณ์ รวม VAT ถ้าจอไม่แยก) · gpVat=ถ้าเห็นแยกใส่ ไม่งั้น null
+- shopee: sales=ยอดรายการ · transfer=ยอดรวมสุทธิประจำเดือน · fee=ค่าธรรมเนียม(GP) อย่างเดียว · gpVat=ยอดภาษีมูลค่าเพิ่มค่าธรรมเนียม (แยกในเมลแล้ว)
+- lineman: sales=ยอดขาย/total revenue · transfer=ยอดโอนออกให้ร้าน/payout · feeIncl=ค่า GP รวม VAT ถ้าจอไม่แยก · gpVat=null ถ้าไม่แยก
+- คชจ.(fee) ต้องไม่รวม VAT · แยกไว้แล้ว→ใช้ตามนั้น · ยังไม่แยก→ส่งยอดรวมใน fee + gpVat=null (ระบบแยก ×7/107)
 - monthKey = เดือนของช่วงรายงาน เป็น ค.ศ. (พ.ศ.ให้ลบ 543) — Shopee/LM ใช้เดือนในรายงาน ไม่ใช่วันส่งเมล
 - monthMatch = true ถ้า monthKey ตรง selectedMonthKey
 - ห้ามแต่งตัวเลขที่มองไม่เห็น`;
@@ -181,25 +182,40 @@ function normalizeChannel(raw) {
   return "unknown";
 }
 
+/** คชจ. ต้องไม่รวม VAT · แยก gpVat ออกถ้าจอรวมมา */
+function splitFeeExVat(feeRaw, vatRaw) {
+  let fee = absMoney(feeRaw);
+  let gpVat =
+    vatRaw == null || vatRaw === "" ? null : absMoney(vatRaw);
+  if (!(fee > 0)) {
+    return { fee: 0, gpVat: gpVat > 0 ? gpVat : 0 };
+  }
+  if (gpVat > 0) {
+    const vatFromEx = roundMoney(fee * 0.07);
+    const vatFromIncl = gpVatFromFee(fee);
+    // fee เป็นยอดไม่รวม VAT อยู่แล้ว (VAT ≈ fee×7%)
+    if (Math.abs(vatFromEx - gpVat) <= 0.05) {
+      return { fee, gpVat };
+    }
+    // fee รวม VAT อยู่ (VAT ≈ fee×7/107) → แยกออก
+    if (Math.abs(vatFromIncl - gpVat) <= 0.05) {
+      return { fee: roundMoney(fee - gpVat), gpVat };
+    }
+    // มี VAT แยกแต่ความสัมพันธ์ไม่ชัด — สมมติ fee ไม่รวม VAT
+    return { fee, gpVat };
+  }
+  // ไม่แยกบนจอ → fee รวม VAT · แยกด้วย ×7/107
+  gpVat = gpVatFromFee(fee);
+  return { fee: roundMoney(fee - gpVat), gpVat };
+}
+
 function normalizeItem(raw, selectedMonthKey, imageIndex) {
   const channel = normalizeChannel(raw.channel);
   const sales = absMoney(raw.sales);
   const transfer = absMoney(raw.transfer);
-  let fee = absMoney(raw.fee);
-  let gpVat =
-    raw.gpVat == null || raw.gpVat === "" ? null : absMoney(raw.gpVat);
-
-  // Shopee: ถ้า fee ≈ GP อย่างเดียว (VAT ≈ fee×7%) → คชจ. = GP+VAT
-  if (channel === "shopee" && gpVat > 0 && fee > 0) {
-    const expectedVat = roundMoney(fee * 0.07);
-    if (Math.abs(expectedVat - gpVat) <= 0.05) {
-      fee = roundMoney(fee + gpVat);
-    }
-  }
-
-  if (!(gpVat > 0) && fee > 0) {
-    gpVat = gpVatFromFee(fee);
-  }
+  const split = splitFeeExVat(raw.fee, raw.gpVat);
+  const fee = split.fee;
+  const gpVat = split.gpVat;
 
   let monthKey = asString(raw.monthKey, 7);
   if (!/^\d{4}-\d{2}$/.test(monthKey)) monthKey = "";
@@ -224,7 +240,7 @@ function normalizeItem(raw, selectedMonthKey, imageIndex) {
     sales,
     transfer,
     fee,
-    gpVat: gpVat || 0,
+    gpVat,
     monthMatch: Boolean(monthMatch),
     confidence: asString(raw.confidence, 16) || "medium",
     notes: asString(raw.notes, 200),
