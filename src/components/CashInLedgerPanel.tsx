@@ -956,7 +956,7 @@ export function CashInLedgerPanel({
 
   const toggleMeta = (() => {
     if (pendingDepositSessions.length) {
-      return `รอฝาก ${pendingDepositSessions.length} รอบ · ฿${formatPlainNumber(pendingDepositSum)}`;
+      return `บิลรอโอน ${pendingDepositSessions.length} ใบ · ฿${formatPlainNumber(pendingDepositSum)}`;
     }
     if (loading && !entries.length) return "…";
     if (pendingCount > 0) return `รอตรวจ ${pendingCount} รอบ`;
@@ -987,14 +987,16 @@ export function CashInLedgerPanel({
           {pendingDepositSessions.length ? (
             <section
               className="cash-in-pending-rounds"
-              aria-label="รอบขายรอฝากเข้าบัญชี"
+              aria-label="บิลนำส่งรอโอนเข้าบัญชี"
             >
               <header className="cash-in-pending-head">
                 <div>
-                  <strong>รอบรอฝาก</strong>
-                  <span className="muted">
-                    {" "}
-                    {pendingDepositSessions.length} รอบ · Σ นำส่ง ฿
+                  <strong>บิลนำส่งรอโอน</strong>
+                  <p className="cash-in-pending-sub">
+                    1 ใบ = 1 รอบปิดกะ · ยอดใหญ่คือเงินสดที่ต้องโอนเข้าบัญชีร้าน
+                  </p>
+                  <span className="muted cash-in-pending-sum">
+                    {pendingDepositSessions.length} ใบ · รวม ฿
                     {formatPlainNumber(pendingDepositSum)}
                   </span>
                 </div>
@@ -1003,42 +1005,58 @@ export function CashInLedgerPanel({
                     type="button"
                     className="ghost-btn cash-in-ai-reread"
                     disabled={busy}
+                    title="สร้างรอบฝากจากบิลทั้งหมด"
                     onClick={() => startDraftFromSessions(pendingDepositSessions)}
                   >
-                    ใส่ทุกรอบ
+                    ใช้ทุกใบ
                   </button>
                 ) : null}
               </header>
               <ul className="cash-in-pending-list">
-                {pendingDepositSessions.slice(0, 12).map((s) => {
-                  const remit = sessionRemitAmount(s);
+                {pendingDepositSessions.slice(0, 12).map((s, idx) => {
+                  const remit = sessionRemitAmount(s) || 0;
                   const handoff = deriveRemitStatus(s);
+                  const opener = (s.openedByName || "").trim();
+                  const billNo = posSessionCode(s.id);
                   return (
-                    <li key={s.id}>
-                      <span className="cash-in-pending-main">
-                        <span className="cash-in-pending-date">
-                          {formatCashDayShort(s.date || s.openedAt || 0)}
+                    <li key={s.id} className="cash-in-bill-card">
+                      <div className="cash-in-bill-card-top">
+                        <span className="cash-in-bill-tag">บิลนำส่ง #{idx + 1}</span>
+                        <span className="cash-in-bill-no" title={s.id}>
+                          เลข {billNo}
                         </span>
-                        <span className="cash-in-pending-label">
-                          {sessionCounterLabel(s)} · {posSessionCode(s.id)}
-                        </span>
-                        <span className="cash-in-pending-amt">
-                          ฿{formatPlainNumber(remit || 0)}
-                        </span>
-                        <span
-                          className={`npos-slim-remit-status is-${handoff || "none"}`}
-                          title="สถานะส่งเงินมือ"
-                        >
-                          {labelRemitStatus(handoff)}
-                        </span>
-                      </span>
+                      </div>
+                      <div className="cash-in-bill-card-body">
+                        <p className="cash-in-bill-amt" aria-label="ยอดต้องโอน">
+                          ฿{formatPlainNumber(remit)}
+                        </p>
+                        <p className="cash-in-bill-meta">
+                          <span>{formatCashDayShort(s.date || s.openedAt || 0)}</span>
+                          <span>·</span>
+                          <span>{sessionCounterLabel(s)}</span>
+                          {opener ? (
+                            <>
+                              <span>·</span>
+                              <span>โดย {opener}</span>
+                            </>
+                          ) : null}
+                        </p>
+                        <p className="cash-in-bill-status">
+                          {handoff === "handed"
+                            ? "ส่งเงินที่ร้านแล้ว · รอโอนเข้าบัญชี"
+                            : handoff === "mismatch"
+                              ? "ส่งเงินไม่ตรง · ตรวจก่อนโอน"
+                              : "ยังไม่บันทึกส่งเงิน · ต้องโอนตามยอดนี้"}
+                        </p>
+                      </div>
                       <button
                         type="button"
-                        className="ghost-btn cash-in-ai-reread"
+                        className="ghost-btn cash-in-bill-use"
                         disabled={busy}
+                        title="ใช้บิลนี้ใส่รอบฝาก"
                         onClick={() => queueSessionIntoWorking(s)}
                       >
-                        ใส่
+                        ใช้บิลนี้
                       </button>
                     </li>
                   );
@@ -1046,13 +1064,13 @@ export function CashInLedgerPanel({
               </ul>
               {pendingDepositSessions.length > 12 ? (
                 <p className="muted cash-in-pending-more">
-                  +{pendingDepositSessions.length - 12} รอบ — กดใส่ทุกรอบ
+                  +{pendingDepositSessions.length - 12} ใบ — กดใช้ทุกใบ
                 </p>
               ) : null}
             </section>
           ) : (
             <p className="muted cash-in-hint">
-              ยังไม่มีรอบรอฝาก · ปิดกะแล้วจะขึ้นคิวที่นี่อัตโนมัติ
+              ยังไม่มีบิลนำส่งรอโอน · ปิดกะแล้วยอดจะขึ้นเป็นใบที่นี่อัตโนมัติ
             </p>
           )}
 
@@ -1154,9 +1172,14 @@ export function CashInLedgerPanel({
                   <table className="sheet-table cash-in-slim">
                     <thead>
                       <tr>
-                        <th className="col-round">รอบ</th>
+                        <th className="col-round">รอบฝาก</th>
                         <th className="col-date">วัน</th>
-                        <th className="col-num">ยอดขายเงินสด</th>
+                        <th
+                          className="col-num"
+                          title="ยอดจากบิลนำส่ง / ยอดขายเงินสดที่ต้องโอนเข้าบัญชี"
+                        >
+                          ยอดบิลนำส่ง
+                        </th>
                         <th className="col-slip">สลิป</th>
                         <th className="col-type">สถานะ</th>
                       </tr>
@@ -1425,7 +1448,7 @@ export function CashInLedgerPanel({
               ) : null}
 
               <p className="cash-in-remain" aria-live="polite">
-                ต้องโอน (Σยอดขายเงินสด) {formatPlainNumber(expected)} · โอนแล้ว
+                ต้องโอน (Σบิลนำส่ง) {formatPlainNumber(expected)} · โอนแล้ว
                 (Σเข้าบช.สุทธิ) {formatPlainNumber(workingBank)} · คงเหลือ{" "}
                 <strong
                   className={
@@ -1458,9 +1481,9 @@ export function CashInLedgerPanel({
                       <th className="col-date">วัน</th>
                       <th
                         className="col-num"
-                        title="จากบิล POS: ยอดขายตามการชำระเงิน → เงินสด"
+                        title="ยอดบิลนำส่ง = เงินสดที่ต้องโอนเข้าบัญชี (จากรอบปิดกะหรือสลิป)"
                       >
-                        ยอดขายเงินสด
+                        ยอดบิลนำส่ง
                       </th>
                       <th className="col-note">โน้ตวัน</th>
                       <th className="col-slip">สลิป</th>
@@ -1652,7 +1675,7 @@ export function CashInLedgerPanel({
 
               <div className="cash-in-math is-slim" aria-live="polite">
                 <span>
-                  Σยอดขายเงินสด {formatPlainNumber(expected)} · Σเข้าบช.สุทธิ{" "}
+                  Σบิลนำส่ง {formatPlainNumber(expected)} · Σเข้าบช.สุทธิ{" "}
                   {formatPlainNumber(workingBank)}
                   {workingFee
                     ? ` · Σคชจ. ${formatPlainNumber(workingFee)}`
@@ -1668,7 +1691,7 @@ export function CashInLedgerPanel({
                   </strong>
                 </span>
                 <span className="muted cash-in-math-formula">
-                  (Σเข้าบช.สุทธิ + Σคชจ) − Σยอดขายเงินสด
+                  (Σเข้าบช.สุทธิ + Σคชจ) − Σบิลนำส่ง
                 </span>
               </div>
 

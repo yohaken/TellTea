@@ -20898,20 +20898,36 @@ a.ghost-btn {
 
 .cash-in-pending-rounds {
   margin: 0.4rem 0 0.5rem;
-  padding: 0.35rem 0.3rem 0.4rem;
+  padding: 0.4rem 0.35rem 0.45rem;
   border: 1px solid rgba(154, 91, 18, 0.22);
-  border-radius: 0.35rem;
+  border-radius: 0.4rem;
   background: rgba(154, 91, 18, 0.05);
 }
 
 .cash-in-pending-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 0.25rem 0.5rem;
-  margin-bottom: 0.25rem;
-  font-size: 0.72rem;
+  gap: 0.3rem 0.55rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.78rem;
+}
+
+.cash-in-pending-head strong {
+  display: block;
+  font-size: 0.84rem;
+}
+
+.cash-in-pending-sub {
+  margin: 0.12rem 0 0.15rem;
+  font-size: 0.68rem;
+  line-height: 1.3;
+  color: #5a6570;
+}
+
+.cash-in-pending-sum {
+  font-size: 0.68rem;
 }
 
 .cash-in-pending-list {
@@ -20920,42 +20936,80 @@ a.ghost-btn {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-}
-
-.cash-in-pending-list li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 0.35rem;
-  font-size: 0.7rem;
-  line-height: 1.25;
 }
 
-.cash-in-pending-main {
+.cash-in-bill-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 0.15rem 0.45rem;
+  padding: 0.4rem 0.45rem;
+  border: 1px dashed rgba(28, 42, 31, 0.18);
+  border-radius: 0.3rem;
+  background: #fffdf8;
+}
+
+.cash-in-bill-card-top {
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.25rem 0.45rem;
+  justify-content: space-between;
+  gap: 0.2rem 0.5rem;
+}
+
+.cash-in-bill-tag {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #7a4a10;
+}
+
+.cash-in-bill-no {
+  font-size: 0.64rem;
+  font-variant-numeric: tabular-nums;
+  color: #6a7380;
+}
+
+.cash-in-bill-card-body {
   min-width: 0;
 }
 
-.cash-in-pending-date {
+.cash-in-bill-amt {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 750;
   font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  color: #1c2a1f;
+}
+
+.cash-in-bill-meta {
+  margin: 0.12rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.35rem;
+  font-size: 0.68rem;
   color: #5a6570;
 }
 
-.cash-in-pending-label {
-  color: #2c353c;
+.cash-in-bill-status {
+  margin: 0.18rem 0 0;
+  font-size: 0.66rem;
+  line-height: 1.3;
+  color: #9a5b12;
 }
 
-.cash-in-pending-amt {
+.cash-in-bill-use {
+  align-self: center;
+  white-space: nowrap;
+  font-size: 0.7rem !important;
   font-weight: 650;
-  font-variant-numeric: tabular-nums;
 }
 
 .cash-in-pending-more {
-  margin: 0.25rem 0 0;
+  margin: 0.3rem 0 0;
   font-size: 0.66rem;
 }
 
