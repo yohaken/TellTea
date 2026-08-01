@@ -209,11 +209,13 @@ export function VatSourcesDriveSlot({
     setError("");
     setMsg("");
     try {
-      const r = await syncVatMailDrive({ monthKey });
+      // กองรวมต่อแอพ — ไม่กรองเดือน (ไฟล์ใหม่อยู่ TellTea-VAT/{แอพ}/)
+      const r = await syncVatMailDrive();
       const errHint = r.errors?.length ? ` · เตือน: ${r.errors[0]}` : "";
       setMsg(
         `Drive · อัป ${r.uploaded} ไฟล์ · สแกน ${r.scanned}` +
           (r.rootCreated ? " · สร้าง TellTea-VAT" : "") +
+          " · กองรวมต่อแอพ" +
           errHint,
       );
       await refresh();
@@ -312,10 +314,10 @@ export function VatSourcesDriveSlot({
       data-month={monthKey}
       aria-label="ช่องไฟล์ Drive — เช็คลิสต์และกล่องแอพ"
     >
-      <h3 className="vat-table-subtitle">ไฟล์ Drive — แยกแอพ</h3>
+      <h3 className="vat-table-subtitle">ไฟล์ Drive — กองรวมต่อแอพ</h3>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        เดือนปิดงบ {formatThaiMonthKey(monthKey)} · ย้อนเมล 120 วัน · รวมคาบเกี่ยว
-        ±5 วันขอบเดือน · TellTea-VAT/แอพ/{monthKey}/
+        เดือนปิดงบ {formatThaiMonthKey(monthKey)} · Drive ยังไม่แยกเดือน —
+        TellTea-VAT/แอพ/ (กองรวม) · คัดแยกเดือนในระบบ/Gemini ทีหลัง
       </p>
 
       <div className="vat-sources-drive-actions">
@@ -352,7 +354,7 @@ export function VatSourcesDriveSlot({
           disabled={Boolean(busy) || !status?.connected || !hasDriveScope}
           onClick={() => void onSyncDrive()}
         >
-          {busy === "drive" ? "ซิงก์ Drive…" : "ซิงก์ไฟล์ → Drive"}
+          {busy === "drive" ? "ซิงก์ Drive…" : "ซิงก์ไฟล์ → กองแอพ"}
         </button>
         <button
           type="button"
@@ -442,7 +444,7 @@ export function VatSourcesDriveSlot({
         aria-label="กล่องไฟล์แยกแอพ"
       >
         {MONTH_CHANNELS.map((ch) => {
-          const folder = `TellTea-VAT/${CHANNEL_FOLDER[ch]}/${monthKey}/`;
+          const folder = `TellTea-VAT/${CHANNEL_FOLDER[ch]}/`;
           const list = files[ch] || [];
           const chProp = proposal?.channels[ch];
           const canConfirm = channelHasConfirmableAmounts(chProp);
@@ -471,7 +473,7 @@ export function VatSourcesDriveSlot({
                   <li className="muted vat-sources-drive-file-empty">
                     {loading
                       ? "กำลังโหลด…"
-                      : "ยังไม่มีไฟล์ — ซิงก์เมล แล้วกดซิงก์ไฟล์ → Drive"}
+                      : "ยังไม่มีไฟล์ — ซิงก์เมล แล้วกด「ซิงก์ไฟล์ → กองแอพ」"}
                   </li>
                 ) : (
                   list.map((f) => (
@@ -488,6 +490,12 @@ export function VatSourcesDriveSlot({
                       ) : (
                         <span>{f.name}</span>
                       )}
+                      {f.monthKey ? (
+                        <span className="muted vat-sources-drive-file-month">
+                          {" "}
+                          · {f.monthKey}
+                        </span>
+                      ) : null}
                     </li>
                   ))
                 )}

@@ -58,7 +58,7 @@ assert.equal(
   "2026-08",
 );
 
-// คาบเกี่ยว: รับ 2 ส.ค. แต่รายงาน 31 ก.ค. → โฟลเดอร์ ก.ค.
+// คาบเกี่ยว: รับ 2 ส.ค. แต่รายงาน 31 ก.ค. → ดัชนีเดือน ก.ค. (Drive กองรวมไม่แยกโฟลเดอร์)
 assert.equal(
   drive.resolveDriveMonthKey(
     {
@@ -69,6 +69,7 @@ assert.equal(
   ),
   "2026-07",
 );
+assert.equal(drive.ROOT_FOLDER_NAME, "TellTea-VAT");
 assert.equal(
   drive.reportTouchesMonth(
     {

@@ -1027,19 +1027,34 @@ export async function draftDriveMonthProposal(opts: {
   monthKey: string;
   actor: string;
 }): Promise<VatDeliveryMonthProposal> {
-  const reports = await listPlatformEmailReports({ max: 300 });
+  const reports = await listPlatformEmailReports({ max: 400 });
   const monthReports = reports.filter(
     (r) => monthKeyFromReport(r) === opts.monthKey,
   );
-  const withDrive = monthReports.filter((r) => r.driveFiles?.length);
+  // Drive เป็นกองรวม — ดึงไฟล์ที่ดัชนีชี้เดือนนี้ด้วย แม้เมลเคยเดาเดือนผิด
+  const withDrive = reports.filter((r) =>
+    (r.driveFiles || []).some(
+      (f) =>
+        f.monthKey === opts.monthKey ||
+        monthKeyFromReport(r) === opts.monthKey,
+    ),
+  );
+  const forAmounts = withDrive.length
+    ? [
+        ...monthReports,
+        ...withDrive.filter(
+          (r) => !monthReports.some((m) => m.id === r.id),
+        ),
+      ]
+    : monthReports;
   const base = buildMonthProposalFromReports(
     opts.monthKey,
-    withDrive.length ? withDrive : monthReports,
+    forAmounts.length ? forAmounts : monthReports,
     opts.actor,
   );
   let filled = fillProposalAmountsFromReports(
     base,
-    withDrive.length ? withDrive : monthReports,
+    forAmounts.length ? forAmounts : monthReports,
     opts.actor,
   );
 
@@ -1047,9 +1062,13 @@ export async function draftDriveMonthProposal(opts: {
   for (const ch of DELIVERY_CHANNELS) {
     const c = filled.channels[ch];
     if (!channelHasConfirmableAmounts(c)) continue;
-    const fileIds = (withDrive.length ? withDrive : monthReports)
+    const allFiles = reports
       .filter((r) => r.channel === ch)
-      .flatMap((r) => r.driveFiles.map((f) => f.fileId))
+      .flatMap((r) => r.driveFiles || []);
+    const preferred = allFiles.filter((f) => f.monthKey === opts.monthKey);
+    const rest = allFiles.filter((f) => f.monthKey !== opts.monthKey);
+    const fileIds = [...preferred, ...rest]
+      .map((f) => f.fileId)
       .filter(Boolean)
       .slice(0, 40);
     drafts[ch] = {

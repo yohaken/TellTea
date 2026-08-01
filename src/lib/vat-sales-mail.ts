@@ -365,8 +365,15 @@ export async function classifyVatMailPeriods(opts?: {
   };
 }
 
-/** ซิงก์แนบเมล → Google Drive (TellTea-VAT/แอพ/เดือน) */
-export async function syncVatMailDrive(opts?: { monthKey?: string }): Promise<{
+/**
+ * ซิงก์แนบเมล → Google Drive กองรวมต่อแอพ
+ * TellTea-VAT/{grab|lineman|shopee}/ — ยังไม่แยกเดือนบน Drive
+ */
+export async function syncVatMailDrive(opts?: {
+  monthKey?: string;
+  /** true = กรองเมลตามเดือน (ไม่แนะนำช่วงนี้) */
+  filterByMonth?: boolean;
+}): Promise<{
   uploaded: number;
   skipped: number;
   scanned: number;
@@ -374,11 +381,12 @@ export async function syncVatMailDrive(opts?: { monthKey?: string }): Promise<{
   rootFolderId: string;
   rootWebViewLink: string;
   monthKey: string;
+  pileMode?: boolean;
   errors: string[];
   drive?: VatMailDriveStatus;
 }> {
   const fn = httpsCallable<
-    { monthKey?: string },
+    { monthKey?: string; filterByMonth?: boolean },
     {
       uploaded: number;
       skipped: number;
@@ -387,20 +395,26 @@ export async function syncVatMailDrive(opts?: { monthKey?: string }): Promise<{
       rootFolderId: string;
       rootWebViewLink: string;
       monthKey: string;
+      pileMode?: boolean;
       errors: string[];
       drive?: VatMailDriveStatus;
     }
   >(getFirebaseFunctions(), "vatMailDriveSync");
-  const res = await fn(opts?.monthKey ? { monthKey: opts.monthKey } : {});
+  const res = await fn({
+    ...(opts?.monthKey ? { monthKey: opts.monthKey } : {}),
+    ...(opts?.filterByMonth ? { filterByMonth: true } : {}),
+  });
   return res.data;
 }
 
-/** รวม driveFiles จากแคตตาล็อกเมล แยกตามช่องทางสำหรับเดือนที่เลือก */
-export async function listMonthDriveFiles(monthKey: string): Promise<{
+/**
+ * รวม driveFiles จากแคตตาล็อก — กองรวมต่อแอพ (ไม่กรองเดือนบน Drive)
+ * monthKey ถ้าใส่ = ใช้ติ๊ก/เรียงเฉยๆ ไม่ซ่อนไฟล์เดือนอื่น
+ */
+export async function listMonthDriveFiles(monthKey?: string): Promise<{
   byChannel: Record<DeliveryChannel, VatMailDriveFile[]>;
   total: number;
 }> {
-  const key = String(monthKey || "").trim();
   const empty = {
     byChannel: {
       grab: [] as VatMailDriveFile[],
@@ -409,20 +423,14 @@ export async function listMonthDriveFiles(monthKey: string): Promise<{
     },
     total: 0,
   };
-  if (!/^\d{4}-\d{2}$/.test(key)) return empty;
 
-  const rows = await listPlatformEmailReports({ max: 300 });
+  const rows = await listPlatformEmailReports({ max: 400 });
   const byChannel = empty.byChannel;
   const seen = new Set<string>();
+  const key = String(monthKey || "").trim();
 
   for (const row of rows) {
     for (const f of row.driveFiles) {
-      const mk =
-        f.monthKey ||
-        (row.reportDateGuess ? row.reportDateGuess.slice(0, 7) : "");
-      const pathHit = String(f.folderPath || "").includes(`/${key}/`);
-      // รวมไฟล์เดือนนี้ + ที่วางในโฟลเดอร์เดือนนี้แม้คาบเกี่ยว
-      if (mk !== key && !pathHit) continue;
       const ch = f.channel || row.channel;
       if (ch !== "grab" && ch !== "lineman" && ch !== "shopee") continue;
       if (seen.has(f.fileId)) continue;
@@ -432,7 +440,20 @@ export async function listMonthDriveFiles(monthKey: string): Promise<{
   }
 
   for (const ch of DELIVERY_CHANNELS) {
-    byChannel[ch].sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+    byChannel[ch].sort((a, b) => {
+      if (/^\d{4}-\d{2}$/.test(key)) {
+        const am =
+          a.monthKey === key || String(a.folderPath || "").includes(`/${key}/`)
+            ? 1
+            : 0;
+        const bm =
+          b.monthKey === key || String(b.folderPath || "").includes(`/${key}/`)
+            ? 1
+            : 0;
+        if (am !== bm) return bm - am;
+      }
+      return (b.uploadedAt || 0) - (a.uploadedAt || 0);
+    });
   }
 
   return {

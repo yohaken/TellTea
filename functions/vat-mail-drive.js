@@ -1,6 +1,7 @@
 /**
  * VAT mail → Google Drive spine (F0/F1)
- * โฟลเดอร์: TellTea-VAT/{grab|lineman|shopee}/{YYYY-MM}/
+ * โฟลเดอร์ชั่วคราว: TellTea-VAT/{grab|lineman|shopee}/  (กองรวม · ยังไม่แยกเดือน)
+ * periodMonthKey เก็บในดัชนีเมลไว้จัดทีหลังเมื่อนิ่ง
  * Meta: meta/vatMailDrive · ดัชนีบน platformEmailReports.driveFiles[]
  * Scope: drive.file (เฉพาะไฟล์ที่แอพสร้าง)
  */
@@ -321,22 +322,20 @@ async function ensureDriveRoot(accessToken, db) {
   };
 }
 
-async function ensureChannelMonthFolder(accessToken, db, root, channel, monthKey) {
-  const key = folderCacheKey(channel, monthKey);
-  const cached = asString(root.folders?.[key], 80);
-  if (cached) return { folderId: cached, path: `${ROOT_FOLDER_NAME}/${key}/`, created: false };
-
-  // channel folder
+/** กองรวมต่อแอพ — TellTea-VAT/{channel}/ (ยังไม่แยกเดือนบน Drive) */
+async function ensureChannelFolder(accessToken, db, root, channel) {
   const channelKey = `${channel}/__root__`;
-  let channelId = asString(root.folders?.[channelKey], 80);
-  if (!channelId) {
-    const ch = await driveCreateFolder(accessToken, channel, root.rootFolderId);
-    channelId = ch.id;
-    root.folders = { ...(root.folders || {}), [channelKey]: channelId };
+  const cached = asString(root.folders?.[channelKey], 80);
+  if (cached) {
+    return {
+      folderId: cached,
+      path: `${ROOT_FOLDER_NAME}/${channel}/`,
+      created: false,
+    };
   }
 
-  const month = await driveCreateFolder(accessToken, monthKey, channelId);
-  root.folders = { ...(root.folders || {}), [key]: month.id };
+  const ch = await driveCreateFolder(accessToken, channel, root.rootFolderId);
+  root.folders = { ...(root.folders || {}), [channelKey]: ch.id };
   await db.doc(DRIVE_META_DOC).set(
     {
       folders: root.folders,
@@ -345,10 +344,15 @@ async function ensureChannelMonthFolder(accessToken, db, root, channel, monthKey
     { merge: true },
   );
   return {
-    folderId: month.id,
-    path: `${ROOT_FOLDER_NAME}/${channel}/${monthKey}/`,
+    folderId: ch.id,
+    path: `${ROOT_FOLDER_NAME}/${channel}/`,
     created: true,
   };
+}
+
+/** @deprecated ใช้ ensureChannelFolder — คงไว้กันเทสเก่า */
+async function ensureChannelMonthFolder(accessToken, db, root, channel, _monthKey) {
+  return ensureChannelFolder(accessToken, db, root, channel);
 }
 
 function alreadyUploaded(driveFiles, filename) {
@@ -375,8 +379,9 @@ function publicDriveStatus(oauthData, driveMeta) {
 }
 
 /**
- * Owner sync (retry-ready): ensure TellTea-VAT tree + upload attachments from catalogued mail.
- * data.monthKey optional — จำกัดเดือน (YYYY-MM); ไม่ใส่ = ทุกเดือนในแคตตาล็อกล่าสุด
+ * Owner sync: TellTea-VAT/{แอพ}/ กองรวม + อัปแนบจากแคตตาล็อกเมล
+ * data.monthKey ถ้ามี = กรองเมล (optional) · ค่าเริ่มต้นอัปทุกเมลในแคตตาล็อกล่าสุด
+ * ไฟล์ใหม่ลงกองแอพ — ไม่สร้างโฟลเดอร์เดือน
  */
 exports.vatMailDriveSync = functions
   .region(REGION)
@@ -406,8 +411,10 @@ exports.vatMailDriveSync = functions
       );
     }
 
+    // กรองเดือนเฉพาะเมื่อส่ง filterByMonth: true — ค่าเริ่มต้นกองรวมทุกเมล
     const monthFilter = asString(data?.monthKey, 10);
-    if (monthFilter && !/^\d{4}-\d{2}$/.test(monthFilter)) {
+    const filterByMonth = data?.filterByMonth === true && /^\d{4}-\d{2}$/.test(monthFilter);
+    if (monthFilter && data?.filterByMonth === true && !/^\d{4}-\d{2}$/.test(monthFilter)) {
       throw new functions.https.HttpsError("invalid-argument", "monthKey ต้องเป็น YYYY-MM");
     }
 
@@ -437,8 +444,9 @@ exports.vatMailDriveSync = functions
           skipped += 1;
           continue;
         }
-        if (monthFilter && !reportTouchesMonth(doc, monthFilter)) continue;
-        const monthKey = resolveDriveMonthKey(doc, monthFilter || "");
+        if (filterByMonth && !reportTouchesMonth(doc, monthFilter)) continue;
+        // เดือนในดัชนีเท่านั้น — ไม่ใช้แยกโฟลเดอร์ Drive
+        const monthKey = resolveDriveMonthKey(doc, filterByMonth ? monthFilter : "");
 
         const messageId = asString(doc.messageId, 120);
         if (!messageId) {
@@ -464,13 +472,7 @@ exports.vatMailDriveSync = functions
           continue;
         }
 
-        const folder = await ensureChannelMonthFolder(
-          accessToken,
-          db,
-          root,
-          channel,
-          monthKey,
-        );
+        const folder = await ensureChannelFolder(accessToken, db, root, channel);
 
         const nextFiles = [...existingFiles];
         let changed = false;
@@ -557,7 +559,8 @@ exports.vatMailDriveSync = functions
         rootCreated,
         rootFolderId: asString(meta.rootFolderId, 80),
         rootWebViewLink: asString(meta.rootWebViewLink, 400),
-        monthKey: monthFilter || "",
+        monthKey: filterByMonth ? monthFilter : "",
+        pileMode: true,
         errors: errors.slice(0, 8),
         drive: publicDriveStatus(oauthData, meta),
       };
@@ -585,5 +588,7 @@ exports.resolveDriveMonthKey = resolveDriveMonthKey;
 exports.reportTouchesMonth = reportTouchesMonth;
 exports.adjacentMonthKeys = adjacentMonthKeys;
 exports.scopeHasDrive = scopeHasDrive;
+exports.ensureChannelFolder = ensureChannelFolder;
+exports.ensureChannelMonthFolder = ensureChannelMonthFolder;
 exports.ROOT_FOLDER_NAME = ROOT_FOLDER_NAME;
 exports.DRIVE_META_DOC = DRIVE_META_DOC;
