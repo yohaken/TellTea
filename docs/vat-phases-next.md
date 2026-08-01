@@ -19,7 +19,7 @@
 | **M3b** | ช่อง VAT ต่อรายการสองบช. | ledger + ownerBooks · ดึงรวมเข้าวัตถุดิบเดือน | ✅ โค้ดฐาน |
 | **M4** | ใช้จริงเดือนแรก | กรอกยอดจริง · เทียบบิล GP/วัตถุดิบ · ปรับเรท | ⬜ รอร้าน |
 | **I0–I10** | นำเข้ารายวัน (เลิกใช้ UI) | ถูกแทนด้วยสรุปเดือน | ⛔ UI ถอด 2026-08-01 |
-| **S0–S3** | แหล่งยอดสรุปเดือน | ยอดรวมต่อช่องทาง · ไม่ใช่รายวัน | S0 ✅ · ดู [`vat-month-sources.md`](./vat-month-sources.md) |
+| **S0–S3** | ที่มายอดเดลิเวอรี่ | หน้าแยก `/vat-sales/sources/` · ผสานเข้างบ | S0+S0b ✅ · [`vat-month-sources.md`](./vat-month-sources.md) |
 | **M5** | เก็บกวาดของเก่า | ถอด UI/Functions รายวัน·เมล·นำเข้าวัน | ⬜ ค่อย ๆ |
 
 รายละเอียด: [`owner-books-vat-slot.md`](./owner-books-vat-slot.md) · ผสานเดือน: [`books-vat-into-month.md`](./books-vat-into-month.md)  

@@ -7,10 +7,13 @@
 import { gpVatFromFee } from "./personal-income-tax";
 import type { GrabCsvParseResult } from "./vat-import-grab-csv";
 import type { LinemanMonthlyParseResult } from "./vat-import-lineman-monthly";
+import { notifyVatImportMonthMerged } from "./vat-import-month-sync";
 import {
+  draftToSaveInput,
   MONTH_CHANNEL_LABEL,
   MONTH_CHANNEL_SHORT,
   MONTH_CHANNELS,
+  retToMonthBooksDraft,
   type MonthBooksDraft,
   type MonthChannel,
   patchGpFee,
@@ -18,6 +21,11 @@ import {
   patchSales,
   patchTransfer,
 } from "./vat-month-books";
+import {
+  loadVatMonthlyReturn,
+  saveVatMonthlyReturn,
+  type VatMonthlyReturn,
+} from "./vat-monthly";
 import { normalizeMoney, roundMoney } from "./vat-sales";
 
 /** ที่มาของยอดสรุปเดือนต่อช่องทาง */
@@ -61,12 +69,46 @@ export const MONTH_SOURCE_KIND_LABEL: Record<MonthSourceKind, string> = {
   "shopee-monthly": "สรุปเดือน",
 };
 
-/** คำอธิบายสั้นต่อช่องทาง — โชว์ใน UI */
+/** คำอธิบายสั้นต่อช่องทาง — โชว์ในหน้าที่มา */
 export const MONTH_CHANNEL_SOURCE_HINT: Record<MonthChannel, string> = {
   shopee: "Shopee — ไฟล์สรุปเดือน",
   grab: "Grab — ม้วนหลายไฟล์รายวัน → ยอดเดือน",
   lineman: "LINE MAN — รายงานสรุปเดือน",
 };
+
+/**
+ * ความหมายคอลัมน์ยอดเดลิเวอรี่ (หลักบัญชี)
+ * — ใช้ทั้งหน้า VAT เดือน (ตารางยอดเดลิเวอรี่) และหน้าที่มา · ให้คน/AI อ่านตรงกัน
+ */
+export const DELIVERY_COL_INFO = {
+  appSales:
+    "ยอดขายแอพ = ยอดขายที่แพลตฟอร์มรายงาน (รวม VAT) · ใช้คิดภาษีขาย",
+  transfer:
+    "ยอดโอน = ยอดเงินเข้าบัญชีธนาคารหลังหักค่า GP แล้ว · เป็นรายได้ถึงร้าน",
+  gpFee:
+    "คชจ.GP = ค่าบริการแพลตฟอร์มที่หักแวทออกแล้ว (ไม่รวม VAT) · อยู่ในยอดโอนแล้ว ไม่หักซ้ำกำไร",
+  purchaseVat:
+    "VAT-ซื้อ = แวทค่าบริการขาย (ภาษีซื้อจากบิลค่า GP) · ไม่ใช่เงินหักเพิ่มจากโอน",
+} as const;
+
+/**
+ * คำอธิบายแหล่งที่มา (หน้าที่มายอดเดลิเวอรี่เท่านั้น — ไม่โชว์ในงบ VAT)
+ * ให้คน/AI เข้าใจว่าไฟล์แต่ละช่องทางเข้าสู่ยอดเดือนอย่างไร
+ */
+export const DELIVERY_SOURCE_GUIDE = {
+  overview:
+    "หน้านี้รวบรวมยอดเดลิเวอรี่จากแหล่งจริง แล้วผสานเข้าตาราง「ยอดเดลิเวอรี่」ในหน้า VAT เดือนทันที",
+  grab:
+    "Grab: ได้หลายไฟล์รายวัน (CSV/เมล) → ม้วนรวมเป็นยอดเดือนก่อนเข้างบ · ยังไม่เก็บรายวันในงบ",
+  lineman:
+    "LINE MAN: มีรายงานสรุปเดือน (PDF) อยู่แล้ว → อ่านยอดรวมเดือนตรง ๆ",
+  shopee:
+    "Shopee: มีไฟล์สรุปเดือนอยู่แล้ว → อ่านยอดรวมเดือนตรง ๆ",
+  sync:
+    "แก้ยอดในหน้านี้แล้วบันทึกอัตโนมัติ → ตารางยอดเดลิเวอรี่หน้า VAT เดือนอัปเดตตาม",
+  later:
+    "รายละเอียดรายวัน / ใบกำกับ / อัปโหลดไฟล์อัตโนมัติ — พัฒนาทีหลังบนหน้านี้ (ไม่ปนหน้า VAT)",
+} as const;
 
 export function emptyChannelSource(
   channel: MonthChannel,
@@ -298,6 +340,36 @@ export function shopeeMonthlySource(input: {
 
 export function channelSourceLabel(channel: MonthChannel): string {
   return `${MONTH_CHANNEL_SHORT[channel]} · ${MONTH_CHANNEL_LABEL[channel]}`;
+}
+
+/**
+ * ผสานยอดจากหน้าที่มา → vatMonthlyReturns แล้วแจ้งหน้า VAT เดือน
+ * (filed = ข้าม · ไม่แก้)
+ */
+export async function mergeMonthSourcesIntoBooks(input: {
+  monthKey: string;
+  sources: MonthSourcesView;
+  actor: string;
+}): Promise<{
+  saved: VatMonthlyReturn;
+  skipped: boolean;
+  reason?: string;
+}> {
+  const ret = await loadVatMonthlyReturn(input.monthKey);
+  if (ret.status === "filed") {
+    return { saved: ret, skipped: true, reason: "เดือนปิดงบแล้ว" };
+  }
+  const draft0 = retToMonthBooksDraft(ret);
+  const next = applyMonthSourcesToDraft(draft0, {
+    ...input.sources,
+    monthKey: input.monthKey,
+  });
+  const saved = await saveVatMonthlyReturn(
+    draftToSaveInput(next, ret.status === "saved" ? "saved" : "draft"),
+    input.actor,
+  );
+  notifyVatImportMonthMerged(input.monthKey, saved);
+  return { saved, skipped: false };
 }
 
 export { MONTH_CHANNELS, MONTH_CHANNEL_SHORT, MONTH_CHANNEL_LABEL };

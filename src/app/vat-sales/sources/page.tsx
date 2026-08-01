@@ -4,22 +4,20 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { OwnerBooksModeSwitch } from "@/components/OwnerBooksModeSwitch";
-import { VatAgentChatPopup } from "@/components/vat-sales/VatAgentChatPopup";
-import { VatMonthBooks } from "@/components/vat-sales/VatMonthBooks";
+import { VatDeliverySources } from "@/components/vat-sales/VatDeliverySources";
 import { VatSalesSubNav } from "@/components/vat-sales/VatSalesSubNav";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { bangkokMonthKey } from "@/lib/vat-sales";
 
-export default function VatSalesPage() {
+export default function VatDeliverySourcesPage() {
   return (
     <AuthGate>
-      <VatSalesGate />
+      <VatDeliverySourcesGate />
     </AuthGate>
   );
 }
 
-function VatSalesGate() {
+function VatDeliverySourcesGate() {
   const { staff } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
@@ -35,9 +33,8 @@ function VatSalesGate() {
   return (
     <div className="vat-sales-page vat-sales-page--compact owner-books-page">
       <OwnerBooksModeSwitch active="vat" />
-      <VatSalesSubNav active="month" />
-      <VatMonthBooks actor={actor} />
-      <VatAgentChatPopup actor={actor} monthKey={bangkokMonthKey()} />
+      <VatSalesSubNav active="sources" />
+      <VatDeliverySources actor={actor} />
     </div>
   );
 }
