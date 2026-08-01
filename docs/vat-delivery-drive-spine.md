@@ -82,8 +82,10 @@ Firebase Storage `vat-mail-pdfs/` ยังใช้เป็น cache ถอด
 | **F4** | AI อ่านไฟล์ → ร่างยอดเดือน (ไม่เขียนงบเอง) | ⬜ |
 | **F5** | Owner ยืนยัน → ลงตารางยอดเดลิเวอรี่ | ⬜ |
 
-**หน้า `/vat-sales/sources/` (build 590):** เหลือเฉพาะตาราง  
-「ยอดรวมเดือน (ผสานเข้างบทันที)」— UI อื่นล้างออกแล้ว
+**หน้า `/vat-sales/sources/` (build 591):**  
+1. ตาราง「ยอดรวมเดือน (ผสานเข้างบทันที)」  
+2. บล็อก `#vat-sources-drive-slot` — เช็คลิสต์ F0–F5 + กล่องว่างแยก Grab / LINE MAN / Shopee  
+   (ยังไม่ซิงก์ไฟล์ — แสดงโครงให้เช็ค/ต่อ F0+)
 
 เฟส D3–D5 แบบ parse ม้วนอัตโนมัติ — **พัก** (เก็บโค้ดไว้ ไม่เป็นทางหลัก)
 
@@ -103,4 +105,4 @@ Firebase Storage `vat-mail-pdfs/` ยังใช้เป็น cache ถอด
 - Drive helper: `functions/vat-mail-drive.js`  
 - แนบ: `functions/vat-mail-pdf.js` (ขยายชนิดไฟล์)  
 - ซิงก์: `functions/vat-mail.js` · callable `vatMailDriveSync`  
-- UI: บล็อก Drive บน `/vat-sales/sources/`
+- UI: `src/components/vat-sales/VatSourcesDriveSlot.tsx` · `#vat-sources-drive-slot`

@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { VatColHead } from "@/components/vat-sales/VatColHead";
+import { VatSourcesDriveSlot } from "@/components/vat-sales/VatSourcesDriveSlot";
 import {
   formatVatMoney,
   moneyFieldValue,
@@ -288,6 +289,8 @@ export function VatDeliverySources({ actor }: Props) {
           </table>
         </div>
       </section>
+
+      <VatSourcesDriveSlot monthKey={month} />
     </div>
   );
 }

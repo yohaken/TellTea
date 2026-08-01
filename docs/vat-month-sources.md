@@ -10,15 +10,17 @@
 | หน้า | Route | งาน |
 |------|-------|-----|
 | **VAT เดือน** | `/vat-sales/` | งบสรุป · ตาราง **ยอดเดลิเวอรี่** · A/B/C/D |
-| **ที่มายอดเดลิเวอรี่** | `/vat-sales/sources/` | **เฉพาะ** ตารางยอดรวมเดือน (ผสานเข้างบทันที) |
+| **ที่มายอดเดลิเวอรี่** | `/vat-sales/sources/` | ตารางยอดรวมเดือน + เช็คลิสต์/กล่องไฟล์ Drive |
 
 ```
 [ที่มายอดเดลิเวอรี่]  --ผสานทันที-->  [ยอดเดลิเวอรี่ ใน VAT เดือน]
      ↑ กรอกมือ                              ↑ vatMonthlyReturns รูปแบบเดิม
+     + #vat-sources-drive-slot (เช็ค F0–F5 · กล่องแยกแอพ)
 ```
 
-- ล้าง UI อื่นออกแล้ว (Gmail / โน้ต / ล้างเดือน / Drive slot / ศึกษาเมล / ข้อเสนอ)
-- กรอกแล้ว debounce ผสาน → `mergeMonthSourcesIntoBooks` → `vatMonthlyReturns`
+- ตารางยอด: debounce ผสาน → `mergeMonthSourcesIntoBooks` → `vatMonthlyReturns`
+- บล็อก Drive: แสดงเช็คลิสต์ F0–F5 + กล่องว่าง Grab / LINE MAN / Shopee (ยังไม่ซิงก์ไฟล์)
+- UI ศึกษาเมล / ข้อเสนอเก่ายังไม่ขึ้นหน้านี้
 
 ---
 
@@ -54,4 +56,5 @@
 |------|------|
 | หน้า | `src/app/vat-sales/sources/page.tsx` |
 | UI | `src/components/vat-sales/VatDeliverySources.tsx` |
+| กล่อง Drive | `src/components/vat-sales/VatSourcesDriveSlot.tsx` |
 | ผสานเข้างบ | `mergeMonthSourcesIntoBooks` ใน `src/lib/vat-month-sources.ts` |

@@ -19626,9 +19626,69 @@ a.ghost-btn {
   color: rgba(28, 42, 31, 0.45);
 }
 
+.vat-sources-drive-phase {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: rgba(28, 42, 31, 0.55);
+}
+
 .vat-sources-drive-empty {
   color: rgba(87, 15, 15, 0.75);
   font-size: 0.78rem;
+}
+
+.vat-sources-drive-boxes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0.35rem 0 0.25rem;
+}
+
+@media (max-width: 720px) {
+  .vat-sources-drive-boxes {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vat-sources-drive-box {
+  min-width: 0;
+  padding: 0.45rem 0.55rem 0.5rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: rgba(28, 42, 31, 0.025);
+}
+
+.vat-sources-drive-box-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+  margin-bottom: 0.15rem;
+}
+
+.vat-sources-drive-box-title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: rgba(28, 42, 31, 0.92);
+}
+
+.vat-sources-drive-path {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  word-break: break-all;
+}
+
+.vat-sources-drive-file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-height: 2.4rem;
+}
+
+.vat-sources-drive-file-empty {
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .vat-sources-drive-handoff {
