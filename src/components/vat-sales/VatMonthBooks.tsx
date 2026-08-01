@@ -59,6 +59,7 @@ import { updateLedgerEntry } from "@/lib/ledger";
 import { updateOwnerBookEntry } from "@/lib/owner-books";
 import { BooksVatEntryDetailModal } from "@/components/vat-sales/BooksVatEntryDetailModal";
 import { VatColHead } from "@/components/vat-sales/VatColHead";
+import { VatMonthProcessNotes } from "@/components/vat-sales/VatMonthProcessNotes";
 import { exportPersonalTaxYearXlsx } from "@/lib/xlsx-export";
 import {
   fileVatMonthlyReturn,

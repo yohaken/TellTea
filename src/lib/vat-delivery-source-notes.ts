@@ -1,5 +1,6 @@
 /**
- * โน้ตส่วนตัวบนหน้าที่มายอดเดลิเวอรี่ — เจ้าของจดเอง
+ * โน้ตขั้นตอนดึงยอดเดลิเวอรี่ — ด้านบน /vat-sales/
+ * (เดิมอยู่หน้าที่มายอด · ย้ายมาหน้างบเดือนหลังพัก sources)
  */
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getDb } from "./firebase";
