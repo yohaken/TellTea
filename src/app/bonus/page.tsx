@@ -10,6 +10,7 @@ import { PayrollPayPanel } from "@/components/PayrollPayPanel";
 import { PayrollSettingsPanel } from "@/components/PayrollSettingsPanel";
 import { useAuth } from "@/lib/auth";
 import {
+  buildBonusDeductionLines,
   computeShopDeductPct,
   saveBonusDeductionMonthQty,
   saveBonusDeductionRulePct,
@@ -463,6 +464,36 @@ function BonusView() {
     return map;
   }, [report]);
 
+  /**
+   * พนักงานไม่มี liveReport ทั้งร้าน — สร้างสรุปกติกาหักจาก settings+เดือน
+   * เพื่อโชว์ตารางหัก + หลักฐานระวัง/ตัด หลังปิดเดือน
+   */
+  const staffRulesReport = useMemo((): MonthBonusReport | null => {
+    if (shopPayView || !deductionSettings || !deductionMonth) return null;
+    const deductionLines = buildBonusDeductionLines(
+      deductionMonth.counts,
+      deductionSettings.rules,
+    );
+    const shopDeductPct = computeShopDeductPct(
+      deductionMonth.counts,
+      deductionSettings.rules,
+    );
+    return {
+      year,
+      month: monthIdx,
+      employeeCount: 0,
+      totalProdQty: 0,
+      totalSalesPool: 0,
+      shopDeductPct,
+      deductionLines,
+      totalDeducted: 0,
+      totalRemaining: 0,
+      rows: [],
+    };
+  }, [shopPayView, deductionSettings, deductionMonth, year, monthIdx]);
+
+  const rulesReport = report || staffRulesReport;
+
   async function onCloseMonth() {
     if (!isOwner || !actorId || !liveReport || monthClosed) return;
     if (
@@ -798,16 +829,17 @@ function BonusView() {
             </p>
           ) : null}
 
-          {report ? (
+          {rulesReport ? (
             <BonusDeductionSummaryTable
-              report={report}
+              report={rulesReport}
               isOwner={isOwner}
               onEditRate={(rule) => setEditTarget({ kind: "rate", rule })}
               onEditQty={(rule, qty) => setEditTarget({ kind: "qty", rule, qty })}
             />
           ) : null}
 
-          {report ? (
+          {/* พนักงานต้องเห็นหลักฐานระวัง/ตัด แม้ไม่มี report ทั้งร้าน */}
+          {rulesReport || !shopPayView ? (
             <BonusDeductionEvidencePanel
               year={year}
               month={monthIdx}
