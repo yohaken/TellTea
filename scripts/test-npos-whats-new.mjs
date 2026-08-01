@@ -9,10 +9,10 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+128/);
-assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.105"/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionCode\s+130/);
+assert.match(read("npos-telltea/app/build.gradle"), /versionName\s+"1.14.107"/);
 assert.ok(existsSync(join(root, "docs/npos-whats-new-checklist.md")));
-assert.match(read("docs/npos-whats-new-checklist.md"), /1\.14\.105|WhatsNewController/);
+assert.match(read("docs/npos-whats-new-checklist.md"), /1\.14\.107|1\.14\.105|WhatsNewController/);
 
 for (const rel of [
   "npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewCatalog.java",
@@ -26,8 +26,8 @@ for (const rel of [
 const catalog = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewCatalog.java",
 );
-assert.match(catalog, /versionCode == 128|== 128/);
-assert.match(catalog, /จัดการเมนู/);
+assert.match(catalog, /versionCode == 130|== 130/);
+assert.match(catalog, /จ่ายสดเร็วขึ้น|ลิ้นชักเปิดทันที/);
 
 const prefs = read(
   "npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewPrefs.java",
