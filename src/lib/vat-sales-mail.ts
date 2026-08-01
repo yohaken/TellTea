@@ -67,6 +67,8 @@ export type PlatformEmailReport = {
   pdfError: string;
   syncedAt: number;
   parserVersion: string;
+  /** แท็กศึกษาบนเว็บ — จูนร่วม AI · ยังไม่เข้างบ */
+  studyTags: string[];
   parsed: {
     reportDate: string;
     reportKind: "daily" | "weekly" | "monthly";
@@ -80,6 +82,12 @@ export type PlatformEmailReport = {
     warnings: string[];
   } | null;
 };
+
+export type { MailStudyFileKind } from "./vat-mail-study";
+export {
+  inferMailStudyHints,
+  MAIL_STUDY_TAG_PRESETS,
+} from "./vat-mail-study";
 
 export type VatMailStatus = {
   hasConfig: boolean;
@@ -162,6 +170,9 @@ function mapReport(id: string, data: Record<string, unknown>): PlatformEmailRepo
     pdfError: String(data.pdfError || ""),
     syncedAt: Number(data.syncedAt) || 0,
     parserVersion: String(data.parserVersion || ""),
+    studyTags: Array.isArray(data.studyTags)
+      ? data.studyTags.map((t) => String(t).trim()).filter(Boolean).slice(0, 20)
+      : [],
     parsed: parsedRaw
       ? {
           reportDate: String(parsedRaw.reportDate || ""),
@@ -285,6 +296,34 @@ export async function setPlatformEmailIgnored(id: string, ignored: boolean): Pro
     parseStatus: ignored ? "ignored" : "pending",
     parseError: "",
   });
+}
+
+/** แท็กศึกษา — จูนร่วม AI · ไม่ผสานงบ */
+export async function setPlatformEmailStudyTags(
+  id: string,
+  tags: string[],
+): Promise<string[]> {
+  const next = [...new Set(tags.map((t) => String(t).trim()).filter(Boolean))].slice(
+    0,
+    20,
+  );
+  await updateDoc(doc(getDb(), PLATFORM_EMAIL_REPORTS_COL, id), {
+    studyTags: next,
+    studyTagsUpdatedAt: Date.now(),
+  });
+  return next;
+}
+
+export async function togglePlatformEmailStudyTag(
+  id: string,
+  current: string[],
+  tag: string,
+): Promise<string[]> {
+  const t = String(tag || "").trim();
+  if (!t) return current;
+  const has = current.includes(t);
+  const next = has ? current.filter((x) => x !== t) : [...current, t];
+  return setPlatformEmailStudyTags(id, next);
 }
 
 export type VatMailOAuthConfigPublic = {
