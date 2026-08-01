@@ -34,6 +34,11 @@
     <string name="update_popup_body_force">เวอร์ชัน %1$s (%2$d)\nกดอัปเดตเพื่อติดตั้งทันที</string>
     <string name="update_popup_body_need_permission">เวอร์ชัน %1$s (%2$d)\nเปิดสิทธิ์ติดตั้งแอปก่อน แล้วกดอัปเดต</string>
     <string name="update_popup_later">ปิดชั่วคราว</string>
+    <string name="whats_new_title">มีอะไรใหม่</string>
+    <string name="whats_new_version_fmt">เวอร์ชัน %1$s (%2$d)</string>
+    <string name="whats_new_next">ถัดไป</string>
+    <string name="whats_new_got_it">เข้าใจแล้ว</string>
+    <string name="whats_new_close">ปิด</string>
     <string name="nav_lock_pin">กลับหน้าหลัก</string>
     <string name="nav_web_open_fail">เปิดลิงก์ไม่สำเร็จ</string>
     <string name="hub_rail_hint">ใช้แถบซ้ายเลือกเมนูหน้าร้าน — เหมือนเว็บ POS</string>

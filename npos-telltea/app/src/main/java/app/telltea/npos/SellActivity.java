@@ -71,6 +71,7 @@ import app.telltea.npos.ui.NposUi;
 import app.telltea.npos.ui.UiScale;
 import app.telltea.npos.update.ResumePrefs;
 import app.telltea.npos.update.UpdatePromptController;
+import app.telltea.npos.update.WhatsNewController;
 
 /**
  * Sell screen — front-counter only: categories, menu images, options, cart, discount,
@@ -121,6 +122,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
   private String draftCartCode = "";
   private CustomerDisplayController customerDisplay;
   private UpdatePromptController updatePrompt;
+  private WhatsNewController whatsNew;
   private UiScale uiScale;
   private final Handler dutyHandler = new Handler(Looper.getMainLooper());
   private final Runnable dutyTick =
@@ -233,6 +235,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     }
     updatePrompt = new UpdatePromptController(this);
     updatePrompt.setBeforeInstall(this::persistWorkBeforeUpdate);
+    whatsNew = new WhatsNewController(this);
     applySmartChrome();
 
     View back = findViewById(R.id.backButton);
@@ -1127,6 +1130,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
     CaptureConsentActivity.launchAfterUpdateIfNeeded(this);
     CaptureConsentActivity.relaunchPendingIfNeeded(this);
     if (updatePrompt != null) updatePrompt.onResume();
+    if (whatsNew != null) whatsNew.maybeShow();
     // Refresh shop name/address from server so BO edits show on next bill.
     if (menuRepo != null) {
       menuRepo.loadShop(
@@ -1158,6 +1162,7 @@ public class SellActivity extends Activity implements MenuSyncCoordinator.Listen
   protected void onPause() {
     dutyHandler.removeCallbacks(dutyTick);
     if (updatePrompt != null) updatePrompt.onPause();
+    if (whatsNew != null) whatsNew.onPause();
     super.onPause();
   }
 

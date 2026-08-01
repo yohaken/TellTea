@@ -177,6 +177,13 @@ assert.match(
   /NposFonts/,
 );
 
+const whatsNew = read(
+  "npos-telltea/app/src/main/java/app/telltea/npos/update/WhatsNewController.java",
+);
+assert.match(whatsNew, /NposUi/);
+assert.doesNotMatch(whatsNew, /new Button\(/);
+assert.doesNotMatch(whatsNew, /\.setItems\s*\(/);
+
 
 assert.match(read("npos-telltea/app/src/main/res/values/styles.xml"), /layout_width">wrap_content/);
 assert.match(read("npos-telltea/app/src/main/res/values/dimens.xml"), /npos_btn_max_w">280dp/);
