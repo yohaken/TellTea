@@ -19637,6 +19637,24 @@ a.ghost-btn {
   font-size: 0.78rem;
 }
 
+.vat-sources-drive-count {
+  font-size: 0.78rem;
+  color: rgba(28, 42, 31, 0.7);
+}
+
+.vat-sources-drive-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0.35rem;
+}
+
+.vat-sources-drive-status-line {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+}
+
 .vat-sources-drive-boxes {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -19689,6 +19707,24 @@ a.ghost-btn {
 .vat-sources-drive-file-empty {
   font-size: 0.78rem;
   line-height: 1.35;
+}
+
+.vat-sources-drive-file {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  padding: 0.1rem 0;
+  border-top: 1px solid rgba(28, 42, 31, 0.06);
+}
+
+.vat-sources-drive-file:first-child {
+  border-top: 0;
+}
+
+.vat-sources-drive-file-link {
+  color: rgba(20, 70, 55, 0.95);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-word;
 }
 
 .vat-sources-drive-handoff {

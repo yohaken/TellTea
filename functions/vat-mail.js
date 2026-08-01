@@ -19,6 +19,10 @@ const {
   sanitizeChannelRule,
 } = require("./vat-mail-channel");
 const { inferMailStudyTags, tagsChanged } = require("./vat-mail-study-tags");
+const {
+  publicDriveStatus,
+  DRIVE_META_DOC,
+} = require("./vat-mail-drive");
 
 const REGION = "asia-southeast1";
 const OWNER_EMAIL = String(process.env.TELLTEA_OWNER_EMAIL || "yohaken@gmail.com")
@@ -32,6 +36,9 @@ const SETTINGS_DOC = "meta/vatSalesSettings";
 const REPORTS_COL = "platformEmailReports";
 
 const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+/** Gmail อ่านเมล + Drive สร้าง/เขียนเฉพาะไฟล์ที่แอพสร้าง */
+const OAUTH_SCOPES = `${GMAIL_SCOPE} ${DRIVE_SCOPE}`;
 const DEFAULT_LOOKBACK_DAYS = 31;
 const MAX_MESSAGES_PER_SYNC = 80;
 
@@ -151,8 +158,9 @@ async function loadOAuthConfig(db) {
   return { clientId, clientSecret, redirectUri, source: "firestore" };
 }
 
-function publicOAuthStatus(oauthData, hasConfig) {
+function publicOAuthStatus(oauthData, hasConfig, driveMeta) {
   const connected = Boolean(oauthData && oauthData.refreshToken);
+  const drive = publicDriveStatus(oauthData, driveMeta || {});
   return {
     hasConfig: Boolean(hasConfig),
     connected,
@@ -162,6 +170,9 @@ function publicOAuthStatus(oauthData, hasConfig) {
     lastSyncAt: connected ? Number(oauthData.lastSyncAt) || 0 : 0,
     lastSyncError: connected ? asString(oauthData.lastSyncError, 300) : "",
     lastSyncAdded: connected ? Number(oauthData.lastSyncAdded) || 0 : 0,
+    scope: connected ? asString(oauthData.scope, 400) : "",
+    hasDriveScope: drive.hasDriveScope,
+    drive,
   };
 }
 
@@ -476,12 +487,17 @@ exports.vatMailStatus = functions
   .https.onCall(async (data, context) => {
     const { actorId } = await assertOwner(context);
     const db = getFirestore();
-    const [oauthSnap, config] = await Promise.all([
+    const [oauthSnap, config, driveSnap] = await Promise.all([
       db.doc(OAUTH_DOC).get(),
       loadOAuthConfig(db),
+      db.doc(DRIVE_META_DOC).get(),
     ]);
     return {
-      ...publicOAuthStatus(oauthSnap.exists ? oauthSnap.data() : null, Boolean(config)),
+      ...publicOAuthStatus(
+        oauthSnap.exists ? oauthSnap.data() : null,
+        Boolean(config),
+        driveSnap.exists ? driveSnap.data() : null,
+      ),
       actorId,
     };
   });
@@ -510,7 +526,7 @@ exports.vatMailOAuthStart = functions
     url.searchParams.set("client_id", config.clientId);
     url.searchParams.set("redirect_uri", config.redirectUri);
     url.searchParams.set("response_type", "code");
-    url.searchParams.set("scope", GMAIL_SCOPE);
+    url.searchParams.set("scope", OAUTH_SCOPES);
     url.searchParams.set("access_type", "offline");
     url.searchParams.set("prompt", "consent select_account");
     url.searchParams.set("state", state);
@@ -564,7 +580,7 @@ exports.vatMailOAuthCallback = functions
           {
             provider: "gmail",
             email,
-            scope: GMAIL_SCOPE,
+            scope: asString(tokenJson.scope, 400) || OAUTH_SCOPES,
             connectedAt: Date.now(),
             connectedBy: asString(stateData.actorId, 120),
             updatedAt: Date.now(),
@@ -578,7 +594,7 @@ exports.vatMailOAuthCallback = functions
             provider: "gmail",
             email,
             refreshToken,
-            scope: GMAIL_SCOPE,
+            scope: asString(tokenJson.scope, 400) || OAUTH_SCOPES,
             connectedAt: Date.now(),
             connectedBy: asString(stateData.actorId, 120),
             lastSyncAt: FieldValue.delete(),

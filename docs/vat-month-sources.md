@@ -19,7 +19,7 @@
 ```
 
 - ตารางยอด: debounce ผสาน → `mergeMonthSourcesIntoBooks` → `vatMonthlyReturns`
-- บล็อก Drive: แสดงเช็คลิสต์ F0–F5 + กล่องว่าง Grab / LINE MAN / Shopee (ยังไม่ซิงก์ไฟล์)
+- บล็อก Drive: เช็คลิสต์ F0–F5 · ปุ่มซิงก์เมล/Drive · กล่องไฟล์แยก Grab / LINE MAN / Shopee
 - UI ศึกษาเมล / ข้อเสนอเก่ายังไม่ขึ้นหน้านี้
 
 ---

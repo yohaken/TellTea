@@ -75,17 +75,16 @@ Firebase Storage `vat-mail-pdfs/` ยังใช้เป็น cache ถอด
 
 | เฟส | งาน | สถานะ |
 |-----|------|--------|
-| **F0** | OAuth + scope Drive · สร้างรากโฟลเดอร์ | ⬜ |
-| **F1** | ซิงก์แนบทุกแอพ → Drive แยกเดือน | ⬜ |
-| **F2** | UI รายการไฟล์บน Drive + เปิดลิงก์ | ⬜ |
-| **F3** | Agent Dump ส่งรายการไฟล์/ลิงก์ให้ AI | ⬜ |
+| **F0** | OAuth + scope Drive · สร้างรากโฟลเดอร์ | 🔄 (โค้ดพร้อม · owner เชื่อมใหม่ + ซิงก์ครั้งแรก) |
+| **F1** | ซิงก์แนบทุกแอพ → Drive แยกเดือน | 🔄 (`vatMailDriveSync` · PDF/Excel/CSV) |
+| **F2** | UI รายการไฟล์บน Drive + เปิดลิงก์ | ✅ `#vat-sources-drive-slot` |
+| **F3** | Agent Dump ส่งรายการไฟล์/ลิงก์ให้ AI | ✅ `driveFiles[]` ใน `vatMailAgentDump` |
 | **F4** | AI อ่านไฟล์ → ร่างยอดเดือน (ไม่เขียนงบเอง) | ⬜ |
 | **F5** | Owner ยืนยัน → ลงตารางยอดเดลิเวอรี่ | ⬜ |
 
-**หน้า `/vat-sales/sources/` (build 591):**  
+**หน้า `/vat-sales/sources/` (build 592):**  
 1. ตาราง「ยอดรวมเดือน (ผสานเข้างบทันที)」  
-2. บล็อก `#vat-sources-drive-slot` — เช็คลิสต์ F0–F5 + กล่องว่างแยก Grab / LINE MAN / Shopee  
-   (ยังไม่ซิงก์ไฟล์ — แสดงโครงให้เช็ค/ต่อ F0+)
+2. บล็อก `#vat-sources-drive-slot` — เช็คลิสต์ F0–F5 · ปุ่มเชื่อม/ซิงก์เมล/ซิงก์ Drive · กล่องไฟล์แยกแอพ
 
 เฟส D3–D5 แบบ parse ม้วนอัตโนมัติ — **พัก** (เก็บโค้ดไว้ ไม่เป็นทางหลัก)
 
@@ -102,7 +101,9 @@ Firebase Storage `vat-mail-pdfs/` ยังใช้เป็น cache ถอด
 
 ## อ้างอิงโค้ด
 
-- Drive helper: `functions/vat-mail-drive.js`  
-- แนบ: `functions/vat-mail-pdf.js` (ขยายชนิดไฟล์)  
-- ซิงก์: `functions/vat-mail.js` · callable `vatMailDriveSync`  
+- Drive helper / sync: `functions/vat-mail-drive.js` · callable `vatMailDriveSync`  
+- แนบ: `functions/vat-mail-pdf.js` · `listDriveableParts` (pdf/xlsx/xls/csv)  
+- OAuth scopes: `functions/vat-mail.js` · `OAUTH_SCOPES` = gmail.readonly + drive.file  
+- Agent Dump: `functions/vat-mail-agent-dump.js` · `driveFiles[]`  
+- Client: `src/lib/vat-sales-mail.ts` · `syncVatMailDrive` · `listMonthDriveFiles`  
 - UI: `src/components/vat-sales/VatSourcesDriveSlot.tsx` · `#vat-sources-drive-slot`

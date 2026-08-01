@@ -1,24 +1,29 @@
 "use client";
 
 /**
- * ช่องไฟล์ Drive ด้านล่างหน้าที่มา — แสดงเช็คลิสต์ F0–F5 + กล่องแยกแอพ
- * ยังไม่ซิงก์ Drive · ยังไม่มีรายการไฟล์
+ * ช่องไฟล์ Drive ด้านล่างหน้าที่มา — เช็คลิสต์ F0–F5 + กล่องแยกแอพ
+ * F0/F1: เชื่อม Gmail(+Drive) · ซิงก์เมล · ซิงก์ไฟล์ → Drive
  * ดู docs/vat-delivery-drive-spine.md
  */
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MONTH_CHANNEL_LABEL, MONTH_CHANNELS } from "@/lib/vat-month-sources";
 import { formatThaiMonthKey } from "@/lib/vat-monthly";
 import type { MonthChannel } from "@/lib/vat-month-books";
+import {
+  disconnectVatMail,
+  fetchVatMailStatus,
+  listMonthDriveFiles,
+  startVatMailOAuth,
+  syncVatMail,
+  syncVatMailDrive,
+  type VatMailDriveFile,
+  type VatMailStatus,
+} from "@/lib/vat-sales-mail";
 
 type Props = { monthKey: string };
 
-const READY_CHECKS = [
-  { id: "f0", label: "OAuth + scope Drive · ราก TellTea-VAT", ready: false },
-  { id: "f1", label: "ซิงก์แนบเมล → Drive แยกแอพ/เดือน", ready: false },
-  { id: "f2", label: "รายการไฟล์บนหน้านี้ + เปิดลิงก์", ready: false },
-  { id: "f3", label: "Agent Dump ส่งลิงก์ไฟล์ให้ AI", ready: false },
-  { id: "f4", label: "AI อ่านไฟล์ → ร่างยอดเดือน", ready: false },
-  { id: "f5", label: "Owner ยืนยัน → ลงตารางยอดเดลิเวอรี่", ready: false },
-] as const;
+const SOURCES_RETURN =
+  "https://telltea-shop.web.app/vat-sales/sources/?mail=connected";
 
 const CHANNEL_FOLDER: Record<MonthChannel, string> = {
   grab: "grab",
@@ -26,8 +31,167 @@ const CHANNEL_FOLDER: Record<MonthChannel, string> = {
   shopee: "shopee",
 };
 
+type CheckId = "f0" | "f1" | "f2" | "f3" | "f4" | "f5";
+
+function emptyByChannel(): Record<MonthChannel, VatMailDriveFile[]> {
+  return { grab: [], lineman: [], shopee: [] };
+}
+
 export function VatSourcesDriveSlot({ monthKey }: Props) {
-  const readyCount = READY_CHECKS.filter((c) => c.ready).length;
+  const [status, setStatus] = useState<VatMailStatus | null>(null);
+  const [files, setFiles] = useState<Record<MonthChannel, VatMailDriveFile[]>>(
+    () => emptyByChannel(),
+  );
+  const [fileTotal, setFileTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const [msg, setMsg] = useState("");
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [st, listed] = await Promise.all([
+        fetchVatMailStatus(),
+        listMonthDriveFiles(monthKey),
+      ]);
+      setStatus(st);
+      setFiles(listed.byChannel);
+      setFileTotal(listed.total);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [monthKey]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const drive = status?.drive;
+  const hasDriveScope = Boolean(status?.hasDriveScope || drive?.hasDriveScope);
+  const rootFolderId = String(drive?.rootFolderId || "");
+  const f0Ready = Boolean(status?.connected && hasDriveScope && rootFolderId);
+  const f1Ready = fileTotal > 0 || Number(drive?.lastDriveSyncUploaded) > 0;
+  const f2Ready = true; // UI รายการไฟล์ + เปิดลิงก์ ขึ้นแล้ว
+  const f3Ready = true; // Agent Dump ส่ง driveFiles[].webViewLink แล้ว
+
+  const checks = useMemo(
+    () =>
+      [
+        {
+          id: "f0" as CheckId,
+          label: "OAuth + scope Drive · ราก TellTea-VAT",
+          ready: f0Ready,
+        },
+        {
+          id: "f1" as CheckId,
+          label: "ซิงก์แนบเมล → Drive แยกแอพ/เดือน",
+          ready: f1Ready,
+        },
+        {
+          id: "f2" as CheckId,
+          label: "รายการไฟล์บนหน้านี้ + เปิดลิงก์",
+          ready: f2Ready,
+        },
+        {
+          id: "f3" as CheckId,
+          label: "Agent Dump ส่งลิงก์ไฟล์ให้ AI",
+          ready: f3Ready,
+        },
+        {
+          id: "f4" as CheckId,
+          label: "AI อ่านไฟล์ → ร่างยอดเดือน",
+          ready: false,
+        },
+        {
+          id: "f5" as CheckId,
+          label: "Owner ยืนยัน → ลงตารางยอดเดลิเวอรี่",
+          ready: false,
+        },
+      ] as const,
+    [f0Ready, f1Ready, f2Ready, f3Ready],
+  );
+
+  const readyCount = checks.filter((c) => c.ready).length;
+
+  async function onConnect() {
+    setBusy("oauth");
+    setError("");
+    setMsg("");
+    try {
+      const url = await startVatMailOAuth(SOURCES_RETURN);
+      window.location.href = url;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy("");
+    }
+  }
+
+  async function onDisconnect() {
+    if (!window.confirm("ตัดเชื่อม Gmail? ต้องเชื่อมใหม่เพื่อรับสิทธิ์ Drive")) {
+      return;
+    }
+    setBusy("disconnect");
+    setError("");
+    setMsg("");
+    try {
+      await disconnectVatMail();
+      setMsg("ตัดเชื่อมแล้ว — กดเชื่อม Gmail (+Drive) อีกครั้ง");
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function onSyncMail() {
+    setBusy("mail");
+    setError("");
+    setMsg("");
+    try {
+      const r = await syncVatMail(45);
+      setMsg(
+        `ซิงก์เมลแล้ว · ใหม่ ${r.added} · ข้าม ${r.skipped}` +
+          (r.pdfEnriched ? ` · PDF ${r.pdfEnriched}` : ""),
+      );
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function onSyncDrive() {
+    setBusy("drive");
+    setError("");
+    setMsg("");
+    try {
+      const r = await syncVatMailDrive({ monthKey });
+      const errHint = r.errors?.length ? ` · เตือน: ${r.errors[0]}` : "";
+      setMsg(
+        `Drive · อัป ${r.uploaded} ไฟล์ · สแกน ${r.scanned}` +
+          (r.rootCreated ? " · สร้าง TellTea-VAT" : "") +
+          errHint,
+      );
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy("");
+    }
+  }
+
+  const connectLabel =
+    !status?.connected
+      ? "เชื่อม Gmail (+Drive)"
+      : !hasDriveScope
+        ? "เชื่อมใหม่ (รับสิทธิ์ Drive)"
+        : "เชื่อม Gmail แล้ว";
 
   return (
     <section
@@ -40,12 +204,86 @@ export function VatSourcesDriveSlot({ monthKey }: Props) {
     >
       <h3 className="vat-table-subtitle">ไฟล์ Drive — แยกแอพ</h3>
       <p className="muted vat-sales-hint vat-hint-one-line">
-        เดือน {formatThaiMonthKey(monthKey)} · ยังไม่มีไฟล์บน Drive ·
-        ดึงเมล → เก็บ TellTea-VAT/แอพ/เดือน → อ่านไฟล์ทีหลัง
+        เดือน {formatThaiMonthKey(monthKey)} · TellTea-VAT/แอพ/{monthKey}/ ·
+        ดึงเมล → อัป Drive → อ่านไฟล์ทีหลัง
       </p>
 
+      <div className="vat-sources-drive-actions">
+        {status?.connected && hasDriveScope ? (
+          <button
+            type="button"
+            className="ghost-btn vat-mini-btn"
+            disabled={Boolean(busy)}
+            onClick={() => void onDisconnect()}
+          >
+            ตัดเชื่อม
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="primary-btn vat-mini-btn"
+            disabled={Boolean(busy) || loading}
+            onClick={() => void onConnect()}
+          >
+            {busy === "oauth" ? "กำลังเปิด…" : connectLabel}
+          </button>
+        )}
+        <button
+          type="button"
+          className="ghost-btn vat-mini-btn"
+          disabled={Boolean(busy) || !status?.connected}
+          onClick={() => void onSyncMail()}
+        >
+          {busy === "mail" ? "ซิงก์เมล…" : "ซิงก์เมล"}
+        </button>
+        <button
+          type="button"
+          className="primary-btn vat-mini-btn"
+          disabled={Boolean(busy) || !status?.connected || !hasDriveScope}
+          onClick={() => void onSyncDrive()}
+        >
+          {busy === "drive" ? "ซิงก์ Drive…" : "ซิงก์ไฟล์ → Drive"}
+        </button>
+        <button
+          type="button"
+          className="ghost-btn vat-mini-btn"
+          disabled={Boolean(busy) || loading}
+          onClick={() => void refresh()}
+        >
+          รีเฟรช
+        </button>
+        {drive?.rootWebViewLink ? (
+          <a
+            className="ghost-btn vat-mini-btn"
+            href={drive.rootWebViewLink}
+            target="_blank"
+            rel="noreferrer"
+          >
+            เปิด TellTea-VAT
+          </a>
+        ) : null}
+      </div>
+
+      {status?.connected ? (
+        <p className="muted vat-sources-drive-status-line">
+          {status.email || "Gmail"}
+          {hasDriveScope ? " · มีสิทธิ์ Drive" : " · ยังไม่มีสิทธิ์ Drive — เชื่อมใหม่"}
+          {rootFolderId ? " · มีรากโฟลเดอร์" : " · ยังไม่มีราก (กดซิงก์ Drive)"}
+          {drive?.lastDriveSyncAt
+            ? ` · ซิงก์ล่าสุดอัป ${drive.lastDriveSyncUploaded || 0} ไฟล์`
+            : ""}
+        </p>
+      ) : (
+        <p className="muted vat-sources-drive-status-line">
+          ยังไม่เชื่อม Gmail — ต้องเชื่อมครั้งหนึ่งเพื่อรับสิทธิ์ Drive
+        </p>
+      )}
+
+      {error ? <p className="error-text">{error}</p> : null}
+      {msg ? <p className="muted vat-sales-msg">{msg}</p> : null}
+
       <ul className="vat-sources-drive-checks" aria-label="เช็คลิสต์ Drive F0–F5">
-        {READY_CHECKS.map((c) => (
+        {checks.map((c) => (
           <li
             key={c.id}
             className="vat-sources-drive-check"
@@ -66,29 +304,57 @@ export function VatSourcesDriveSlot({ monthKey }: Props) {
 
       <div
         className="vat-sources-drive-boxes"
-        data-drive-files="0"
+        data-drive-files={String(fileTotal)}
         aria-label="กล่องไฟล์แยกแอพ"
       >
         {MONTH_CHANNELS.map((ch) => {
           const folder = `TellTea-VAT/${CHANNEL_FOLDER[ch]}/${monthKey}/`;
+          const list = files[ch] || [];
           return (
             <article
               key={ch}
               className="vat-sources-drive-box"
               data-channel={ch}
-              data-file-count="0"
+              data-file-count={String(list.length)}
             >
               <header className="vat-sources-drive-box-head">
                 <h4 className="vat-sources-drive-box-title">
                   {MONTH_CHANNEL_LABEL[ch]}
                 </h4>
-                <span className="vat-sources-drive-empty">ว่าง · 0 ไฟล์</span>
+                {list.length ? (
+                  <span className="vat-sources-drive-count">
+                    {list.length} ไฟล์
+                  </span>
+                ) : (
+                  <span className="vat-sources-drive-empty">ว่าง · 0 ไฟล์</span>
+                )}
               </header>
               <p className="muted vat-sources-drive-path">{folder}</p>
               <ul className="vat-sources-drive-file-list">
-                <li className="muted vat-sources-drive-file-empty">
-                  ยังไม่มีไฟล์ — รอซิงก์ Drive (F1)
-                </li>
+                {list.length === 0 ? (
+                  <li className="muted vat-sources-drive-file-empty">
+                    {loading
+                      ? "กำลังโหลด…"
+                      : "ยังไม่มีไฟล์ — ซิงก์เมล แล้วกดซิงก์ไฟล์ → Drive"}
+                  </li>
+                ) : (
+                  list.map((f) => (
+                    <li key={f.fileId} className="vat-sources-drive-file">
+                      {f.webViewLink ? (
+                        <a
+                          href={f.webViewLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="vat-sources-drive-file-link"
+                        >
+                          {f.name}
+                        </a>
+                      ) : (
+                        <span>{f.name}</span>
+                      )}
+                    </li>
+                  ))
+                )}
               </ul>
             </article>
           );
@@ -102,9 +368,11 @@ export function VatSourcesDriveSlot({ monthKey }: Props) {
       >{`# vat-sources-drive-slot · handoff
 month=${monthKey}
 driveReady=${readyCount}/6
-files=0
-checks=F0–F5 ว่างทั้งหมด
-next=F0 OAuth drive.file + F1 sync attachments → Drive
+files=${fileTotal}
+hasDriveScope=${hasDriveScope ? 1 : 0}
+rootFolderId=${rootFolderId || "-"}
+checks=F0=${f0Ready ? 1 : 0} F1=${f1Ready ? 1 : 0} F2=1 F3=1 F4=0 F5=0
+next=${!hasDriveScope ? "reconnect OAuth drive.file" : fileTotal ? "F4 AI read files → draft amounts" : "sync mail then vatMailDriveSync"}
 doc=docs/vat-delivery-drive-spine.md
 ui=#vat-sources-drive-slot
 `}</pre>

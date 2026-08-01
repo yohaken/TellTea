@@ -124,6 +124,20 @@ exports.vatMailAgentDump = functions
           files: Array.isArray(x.pdfFilenames)
             ? x.pdfFilenames.slice(0, 8)
             : [],
+          driveFiles: Array.isArray(x.driveFiles)
+            ? x.driveFiles
+                .map((f) => ({
+                  fileId: String(f?.fileId || ""),
+                  name: String(f?.name || "").slice(0, 120),
+                  mimeType: String(f?.mimeType || ""),
+                  webViewLink: String(f?.webViewLink || "").slice(0, 300),
+                  folderPath: String(f?.folderPath || "").slice(0, 120),
+                  channel: String(f?.channel || x.channel || ""),
+                  monthKey: String(f?.monthKey || ""),
+                }))
+                .filter((f) => f.fileId && f.name)
+                .slice(0, 8)
+            : [],
           noise: isNoiseMail(from, subject) || isTaxInvoiceMail(subject),
           snippet: String(x.snippet || "").slice(0, 180),
         };
@@ -180,7 +194,7 @@ exports.vatMailAgentDump = functions
         ok: true,
         generatedAt: new Date().toISOString(),
         phaseHint:
-          "D3/D4 proposals in L3 · fill amounts via adapter · never auto-write L4",
+          "Drive spine F0–F3 · read driveFiles[].webViewLink · never auto-write L4",
         notes: notes
           ? {
               text: String(notes.text || ""),
@@ -203,6 +217,7 @@ exports.vatMailAgentDump = functions
           }, {}),
           mismatch: reports.filter((r) => r.channelMismatch).length,
           noise: reports.filter((r) => r.noise).length,
+          withDriveFiles: reports.filter((r) => r.driveFiles.length).length,
           proposalMonths: proposals.length,
         },
       });
