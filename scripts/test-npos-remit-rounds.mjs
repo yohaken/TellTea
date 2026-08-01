@@ -21,11 +21,11 @@ assert.match(doc, /remitAmount|ส่งเงิน/);
 const version = read("src/lib/version.ts");
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 567, `APP_BUILD >= 567, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 568, `APP_BUILD >= 568, got ${buildMatch[1]}`);
 const pos = read("src/lib/pos-version.ts");
 const posMatch = pos.match(/POS_BUILD\s*=\s*(\d+)/);
 assert.ok(posMatch);
-assert.ok(Number(posMatch[1]) >= 163, `POS_BUILD >= 163, got ${posMatch[1]}`);
+assert.ok(Number(posMatch[1]) >= 164, `POS_BUILD >= 164, got ${posMatch[1]}`);
 
 const types = read("src/lib/types.ts");
 assert.match(types, /remitStatus\??:/);
@@ -66,8 +66,10 @@ assert.match(panel, /fillDayFromPosSessions/);
 assert.match(panel, /จากรอบ/);
 assert.match(panel, /sessionIds/);
 assert.match(panel, /cash-in-pending-rounds/);
-assert.match(panel, /รอบรอฝาก/);
-assert.match(panel, /ใส่ทุกรอบ/);
+assert.match(panel, /บิลนำส่งรอโอน|cash-in-bill-card/);
+assert.match(panel, /ใช้บิลนี้|ใช้ทุกใบ/);
+assert.match(panel, /1 ใบ = 1 รอบปิดกะ/);
+assert.match(panel, /ยอดบิลนำส่ง/);
 
 const rules = read("firestore.rules");
 assert.match(rules, /source == 'manual'/);
@@ -79,6 +81,8 @@ assert.match(css, /\.npos-slim-remit-handoff\b/);
 assert.match(css, /\.npos-slim-manual-panel\b/);
 assert.match(css, /\.npos-slim-remit-status\b/);
 assert.match(css, /\.cash-in-pending-rounds\b/);
+assert.match(css, /\.cash-in-bill-card\b/);
+assert.match(css, /\.cash-in-bill-amt\b/);
 
 assert.match(read("scripts/check-npos-shop.mjs"), /remit-rounds/);
 

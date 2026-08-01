@@ -32,7 +32,7 @@ assert.match(panel, /cash-in-slim/);
 assert.match(panel, /cash-in-bank-table/);
 assert.match(panel, /\+ สลิปโอน/);
 assert.match(panel, /เข้าบช\.สุทธิ/);
-assert.match(panel, /ยอดขายเงินสด/);
+assert.match(panel, /ยอดบิลนำส่ง|ยอดขายเงินสด/);
 assert.match(panel, /remainingToTransfer|cash-in-remain/);
 assert.match(panel, /คงเหลือ/);
 assert.doesNotMatch(panel, /ปิดลิ้นชัก/);

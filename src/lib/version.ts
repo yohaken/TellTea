@@ -1,6 +1,10 @@
 /** TellTea web version: 4.xxx — bump APP_BUILD on each production UI/JS ship. */
 export const APP_VERSION_MAJOR = 4;
+<<<<<<< HEAD
 export const APP_BUILD = 569;
+=======
+export const APP_BUILD = 568;
+>>>>>>> origin/main
 
 export const APP_BUILT_AT =
   process.env.NEXT_PUBLIC_APP_BUILT_AT || "1970-01-01T00:00:00.000Z";
