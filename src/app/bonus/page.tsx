@@ -123,12 +123,19 @@ function BonusView() {
   const [info, setInfo] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const [historyEmployeeId, setHistoryEmployeeId] = useState("");
+  /** เจ้าของ/คนจ่ายสลับ UI ให้เหมือนพนักงานคนที่เลือก — สิทธิ์จริงไม่ถอด */
+  const [previewEmployeeId, setPreviewEmployeeId] = useState<string | null>(null);
 
   const canView = can(staff, "bonus");
   /** จ่ายทั้งร้าน — แยกจากบช.เจ้าของ (payrollPay) */
   const canPay = isOwner || can(staff, "payrollPay");
-  /** คิวทั้งร้าน: เจ้าของ หรือคนมีสิทธิ์จ่ายเงินเดือน — พนักงานทั่วไปเห็นเฉพาะของตัวเอง */
+  /** โหลดข้อมูลทั้งร้าน: เจ้าของ หรือคนมีสิทธิ์จ่ายเงินเดือน */
   const shopPayView = isOwner || canPay;
+  const isStaffPreview = shopPayView && !!previewEmployeeId;
+  /** UI มุมร้าน — ปิดเมื่อดูแบบพนักงาน */
+  const showShopUi = shopPayView && !isStaffPreview;
+  const uiIsOwner = isOwner && !isStaffPreview;
+  const uiCanPay = canPay && !isStaffPreview;
   const { year, month: monthIdx } = parseMonthInput(month);
 
   useBodyScrollLock(!!editTarget);
@@ -379,6 +386,21 @@ function BonusView() {
     [employees, staff],
   );
 
+  const previewEmployee = useMemo(() => {
+    if (!previewEmployeeId) return null;
+    return employees.find((e) => e.id === previewEmployeeId) || null;
+  }, [employees, previewEmployeeId]);
+
+  const viewEmployee = isStaffPreview ? previewEmployee : myEmployee;
+
+  const rosterForPreview = useMemo(
+    () =>
+      [...employees]
+        .filter((e) => e.active)
+        .sort((a, b) => a.name.localeCompare(b.name, "th")),
+    [employees],
+  );
+
   // พนักงาน: เดือนปิด → แถวจาก bonusPersonalCloses · เดือนเปิด → OT/ผลิตตัวเอง + livePool
   const personalRow = useMemo((): WorkerMonthBonus | null => {
     if (shopPayView || !myEmployee) return null;
@@ -442,6 +464,15 @@ function BonusView() {
   const myRow = useMemo(() => {
     if (!shopPayView) return personalRow;
     if (!report) return null;
+    if (isStaffPreview) {
+      if (!previewEmployee) return null;
+      const byId = report.rows.find((r) => r.workerId === previewEmployee.id);
+      if (byId) return byId;
+      return (
+        report.rows.find((r) => namesMatch(r.workerName, previewEmployee.name)) ||
+        null
+      );
+    }
     if (myEmployee) {
       const byId = report.rows.find((r) => r.workerId === myEmployee.id);
       if (byId) return byId;
@@ -453,7 +484,17 @@ function BonusView() {
       staff?.displayName,
       staff?.employeeId,
     );
-  }, [shopPayView, personalRow, report, employees, staff?.displayName, staff?.employeeId, myEmployee]);
+  }, [
+    shopPayView,
+    isStaffPreview,
+    personalRow,
+    report,
+    employees,
+    staff?.displayName,
+    staff?.employeeId,
+    myEmployee,
+    previewEmployee,
+  ]);
 
   const bonusByEmployee = useMemo(() => {
     const map: Record<string, number> = {};
@@ -494,8 +535,29 @@ function BonusView() {
 
   const rulesReport = report || staffRulesReport;
 
+  function enterStaffPreview(employeeId?: string) {
+    const id =
+      employeeId ||
+      historyEmployeeId ||
+      myEmployee?.id ||
+      rosterForPreview[0]?.id ||
+      "";
+    if (!id) {
+      setError("ยังไม่มีรายชื่อพนักงานให้ดูแบบพนักงาน");
+      return;
+    }
+    setPreviewEmployeeId(id);
+    setHistoryEmployeeId(id);
+    setInfo(null);
+    setError(null);
+  }
+
+  function exitStaffPreview() {
+    setPreviewEmployeeId(null);
+  }
+
   async function onCloseMonth() {
-    if (!isOwner || !actorId || !liveReport || monthClosed) return;
+    if (!uiIsOwner || !actorId || !liveReport || monthClosed) return;
     if (
       !window.confirm(
         `ปิดเดือน ${month}?\nจะล็อกตารางชง+ผลิตทั้งเดือน และเก็บยอดโบนัสคงที่ — แล้วไปสร้างคิวโบนัสที่แท็บรอโอน`,
@@ -525,7 +587,7 @@ function BonusView() {
   }
 
   async function onUnlockMonth() {
-    if (!isOwner || !monthClosed) return;
+    if (!uiIsOwner || !monthClosed) return;
     if (!window.confirm(`ปลดปิดเดือน ${month}? แถวที่จ่ายแล้ว/ล็อกยอดยังแก้ไม่ได้`)) return;
     setCloseBusy(true);
     setError(null);
@@ -540,10 +602,19 @@ function BonusView() {
   }
 
   const visiblePayrollItems = useMemo(() => {
-    if (shopPayView) return payrollItems;
-    if (!myEmployee) return [];
-    return payrollItems.filter((i) => i.employeeId === myEmployee.id);
-  }, [payrollItems, shopPayView, myEmployee]);
+    if (showShopUi) return payrollItems;
+    const empId = isStaffPreview
+      ? previewEmployeeId
+      : myEmployee?.id || "";
+    if (!empId) return [];
+    return payrollItems.filter((i) => i.employeeId === empId);
+  }, [
+    payrollItems,
+    showShopUi,
+    isStaffPreview,
+    previewEmployeeId,
+    myEmployee,
+  ]);
 
   const pendingCount = useMemo(
     () => visiblePayrollItems.filter((i) => i.status === "pending").length,
@@ -560,6 +631,64 @@ function BonusView() {
           จ่าย / โบนัส
         </h1>
       </div>
+
+      {shopPayView ? (
+        <div
+          className={`payroll-staff-preview-bar${isStaffPreview ? " is-active" : ""}`}
+          role="region"
+          aria-label="ดูแบบพนักงาน"
+        >
+          {isStaffPreview ? (
+            <>
+              <div className="payroll-staff-preview-copy">
+                <strong>กำลังดูแบบพนักงาน</strong>
+                <span className="muted">
+                  UI เหมือนที่พนักงานเห็น · สิทธิ์ร้านยังเป็นของคุณ
+                </span>
+              </div>
+              <label className="payroll-staff-preview-pick">
+                <span className="sr-only">เลือกพนักงาน</span>
+                <select
+                  value={previewEmployeeId || ""}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setPreviewEmployeeId(id);
+                    setHistoryEmployeeId(id);
+                  }}
+                  aria-label="เลือกพนักงานที่ดูแทน"
+                >
+                  {rosterForPreview.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={exitStaffPreview}
+              >
+                กลับมุมร้าน
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="muted payroll-staff-preview-hint">
+                ตรวจว่าพนักงานเห็นยอด/สลิป/หักหลังโอนชัดหรือไม่
+              </p>
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => enterStaffPreview()}
+                disabled={!rosterForPreview.length}
+              >
+                ดูแบบพนักงาน
+              </button>
+            </>
+          )}
+        </div>
+      ) : null}
 
       <div className="payroll-tabs" role="tablist" aria-label="จ่ายและโบนัส">
         <button
@@ -596,7 +725,7 @@ function BonusView() {
           aria-selected={tab === "settings"}
           onClick={() => setTab("settings")}
         >
-          {isOwner ? "ตั้งค่าจ่าย" : "เงินเดือนฉัน"}
+          {uiIsOwner ? "ตั้งค่าจ่าย" : "เงินเดือนฉัน"}
         </button>
       </div>
 
@@ -610,12 +739,17 @@ function BonusView() {
             aria-label="เดือนอ้างอิง"
           />
           <span className="bonus-toolbar-meta muted">
-            {report
+            {showShopUi && report
               ? `${thaiMonthYearLabel(report.year, report.month)} · หารขาย ${report.employeeCount} คน`
-              : "…"}
+              : report
+                ? thaiMonthYearLabel(report.year, report.month)
+                : "…"}
             {monthClosed ? " · ปิดเดือนแล้ว" : ""}
+            {isStaffPreview && previewEmployee
+              ? ` · ดูแบบ ${previewEmployee.name}`
+              : ""}
           </span>
-          {isOwner && tab === "bonus" ? (
+          {uiIsOwner && tab === "bonus" ? (
             monthClosed ? (
               <button
                 type="button"
@@ -640,10 +774,13 @@ function BonusView() {
       ) : tab === "history" ? (
         <p className="muted bonus-toolbar-meta" style={{ margin: "0.25rem 0 0.65rem" }}>
           ประวัติเงินเดือน + โบนัส · แตะเดือนดูรายการและสลิปโอน
+          {isStaffPreview && previewEmployee
+            ? ` · มุม ${previewEmployee.name}`
+            : ""}
         </p>
       ) : (
         <p className="muted bonus-toolbar-meta" style={{ margin: "0.25rem 0 0.65rem" }}>
-          {isOwner
+          {uiIsOwner
             ? "ตั้งเงินเดือนและรอบจ่ายที่นี่ · ไม่ต้องไปหน้าอื่น"
             : "ดูเงินเดือนและรอบจ่ายของตัวเอง · ไม่เห็นยอดคนอื่น"}
         </p>
@@ -653,12 +790,12 @@ function BonusView() {
       {info ? <p className="success-text">{info}</p> : null}
 
       {tab === "pay" ? (
-        loading || (shopPayView && !report) ? (
+        loading || (showShopUi && !report) ? (
           <p className="empty">กำลังโหลด...</p>
         ) : (
           <PayrollPayPanel
-            isOwner={isOwner}
-            shopView={shopPayView}
+            isOwner={uiIsOwner}
+            shopView={showShopUi}
             actorId={actorId}
             periodMonth={month}
             employees={employees}
@@ -667,7 +804,7 @@ function BonusView() {
             bonusByEmployee={bonusByEmployee}
             prodEntries={prodEntries}
             otEntries={otEntries}
-            canPay={canPay}
+            canPay={uiCanPay}
             onError={setError}
             onEmployeesChange={setEmployees}
             onInfo={(msg) => {
@@ -682,8 +819,8 @@ function BonusView() {
         <PayrollSettingsPanel
           schedule={payrollSchedule}
           employees={employees}
-          isOwner={isOwner}
-          selfEmployeeId={myEmployee?.id ?? null}
+          isOwner={uiIsOwner}
+          selfEmployeeId={viewEmployee?.id ?? null}
           onEmployeesChange={setEmployees}
           onError={setError}
           onInfo={(msg) => {
@@ -695,31 +832,35 @@ function BonusView() {
 
       {tab === "history" ? (
         <PayrollHistoryPanel
-          isOwner={isOwner}
-          shopView={shopPayView}
+          isOwner={uiIsOwner}
+          shopView={showShopUi}
           employeeId={
-            shopPayView ? historyEmployeeId : myEmployee?.id || historyEmployeeId
+            isStaffPreview
+              ? previewEmployeeId || ""
+              : showShopUi
+                ? historyEmployeeId
+                : myEmployee?.id || historyEmployeeId
           }
           employees={employees}
           items={
-            shopPayView
+            showShopUi
               ? payrollItems
-              : payrollItems.filter(
-                  (i) => myEmployee && i.employeeId === myEmployee.id,
-                )
+              : visiblePayrollItems
           }
           onEmployeeIdChange={
-            shopPayView && isOwner ? setHistoryEmployeeId : undefined
+            showShopUi && uiIsOwner
+              ? setHistoryEmployeeId
+              : undefined
           }
         />
       ) : null}
 
       {tab === "bonus" ? (
         <>
-          {loading || (shopPayView && !report) ? <p className="empty">กำลังโหลด...</p> : null}
+          {loading || (showShopUi && !report) ? <p className="empty">กำลังโหลด...</p> : null}
 
-          {/* สรุปพูลทั้งร้าน + ตารางรายคน: เจ้าของ / คนโอนเท่านั้น — พนักงานเห็นแค่ของฉัน */}
-          {report && shopPayView ? (
+          {/* สรุปพูลทั้งร้าน + ตารางรายคน: มุมร้านเท่านั้น — พนักงาน/พรีวิวเห็นแค่ของฉัน */}
+          {report && showShopUi ? (
             <div className="bonus-summary-bar">
               <div className="bonus-summary-pool">
                 <span className="bonus-summary-label">โบนัสขายเบเกอรี่ รวม</span>
@@ -738,13 +879,13 @@ function BonusView() {
             </div>
           ) : null}
 
-          {monthClosed && shopPayView ? (
+          {monthClosed && showShopUi ? (
             <p className="muted bonus-live-note">
               เดือนนี้ปิดแล้ว — ชง/ผลิตล็อกห้ามลงย้อนหลัง · ยอดด้านบนเป็น snapshot · สร้างโบนัสที่แท็บรอโอน
             </p>
           ) : null}
 
-          {monthClosed && !shopPayView ? (
+          {monthClosed && !showShopUi ? (
             <p className="muted bonus-live-note">
               เดือนนี้ปิดแล้ว — แสดงเฉพาะยอดโบนัสของฉันที่ล็อกไว้ตอนปิดเดือน
             </p>
@@ -783,16 +924,21 @@ function BonusView() {
               </dl>
               <p className="muted bonus-live-note">
                 หักตามกติการ้าน · อัปเดตเมื่อมีการกรอกชง / ผลิต · ไม่แสดงยอดคนอื่น
-                {!shopPayView && !livePool && !monthClosed
+                {!showShopUi && !isStaffPreview && !livePool && !monthClosed
                   ? " · ส่วนแบ่งขายจะครบเมื่อเจ้าของเปิดหน้านี้ในเดือนนี้"
                   : ""}
               </p>
             </section>
           ) : null}
 
-          {!loading && !myRow && !shopPayView ? (
+          {!loading && !myRow && !showShopUi ? (
             <p className="muted bonus-no-match">
-              {monthClosed && myEmployee ? (
+              {isStaffPreview && previewEmployee ? (
+                <>
+                  ไม่พบแถวโบนัสของ &quot;{previewEmployee.name}&quot; ในเดือนนี้ — อาจยังไม่ปิดเดือน
+                  หรือไม่มีชื่อในสรุปโบนัส
+                </>
+              ) : monthClosed && myEmployee ? (
                 <>
                   เดือนนี้ปิดแล้ว แต่ยังไม่มีแถวโบนัสของฉัน — ให้เจ้าของร้านเข้าแอปครั้งหนึ่งเพื่อ migrate
                   ข้อมูลปิดเดือน
@@ -817,11 +963,11 @@ function BonusView() {
             </p>
           ) : null}
 
-          {!loading && report && shopPayView ? (
+          {!loading && report && showShopUi ? (
             <BonusTable report={report} highlightName={myRow?.workerName} />
           ) : null}
 
-          {report && shopPayView ? (
+          {report && showShopUi ? (
             <p className="muted bonus-footnote">
               ขาย = จำนวนผลิต × เรทขายจากตารางเรท (ตามวันผลิต) แล้วหารคนที่ลงทะเบียนทำงานในเดือน
               (ผลิตหรือชง) — มีชื่ออย่างเดียวไม่หาร · ผลิต/ชง จากยอดจริง · เจ้าของกรอกจำนวนหักทั้งร้านสิ้นเดือน ·
@@ -832,20 +978,20 @@ function BonusView() {
           {rulesReport ? (
             <BonusDeductionSummaryTable
               report={rulesReport}
-              isOwner={isOwner}
+              isOwner={uiIsOwner}
               onEditRate={(rule) => setEditTarget({ kind: "rate", rule })}
               onEditQty={(rule, qty) => setEditTarget({ kind: "qty", rule, qty })}
             />
           ) : null}
 
           {/* พนักงานต้องเห็นหลักฐานระวัง/ตัด แม้ไม่มี report ทั้งร้าน */}
-          {rulesReport || !shopPayView ? (
+          {rulesReport || !showShopUi ? (
             <BonusDeductionEvidencePanel
               year={year}
               month={monthIdx}
               periodMonth={month}
               doc={deductionMonth}
-              isOwner={isOwner}
+              isOwner={uiIsOwner}
               actorId={actorId || ""}
               onError={setError}
               onInfo={(msg) => {
@@ -857,7 +1003,7 @@ function BonusView() {
           ) : null}
 
           <RateSchedulePanel
-            isOwner={isOwner}
+            isOwner={uiIsOwner}
             actorId={actorId}
             otSettingsFallback={otSettingsRate}
             onError={setError}

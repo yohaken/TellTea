@@ -5585,6 +5585,56 @@ body.modal-open .main-panel {
   font-size: 0.72rem;
 }
 
+.payroll-staff-preview-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+  margin: 0.35rem 0 0.15rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--tea-line);
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.payroll-staff-preview-bar.is-active {
+  border-color: rgba(45, 106, 79, 0.4);
+  background: rgba(45, 106, 79, 0.1);
+}
+
+.payroll-staff-preview-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.payroll-staff-preview-copy strong {
+  font-size: 0.82rem;
+}
+
+.payroll-staff-preview-hint {
+  flex: 1 1 10rem;
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.payroll-staff-preview-pick {
+  margin: 0;
+  min-width: 8.5rem;
+}
+
+.payroll-staff-preview-pick select {
+  width: 100%;
+  min-height: 2.15rem;
+  border: 1px solid var(--tea-line);
+  border-radius: 0.55rem;
+  padding: 0.3rem 0.5rem;
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 0.78rem;
+}
+
 .payroll-tabs,
 .payroll-filter {
   display: flex;
