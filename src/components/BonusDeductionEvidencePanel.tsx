@@ -14,6 +14,7 @@ import {
   type BonusDeductionMonthDoc,
   type BonusEvidencePileId,
 } from "@/lib/bonus-deductions";
+import { resolveEvidencePhotoSrc } from "@/lib/evidence-photos";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 type Slide =
@@ -99,14 +100,15 @@ export function BonusDeductionEvidencePanel({
   const [cautionUrls, setCautionUrls] = useState<string[]>([]);
   const [cautionNote, setCautionNote] = useState("");
   const [busy, setBusy] = useState(false);
-  const [ownerPreview, setOwnerPreview] = useState<{
+  /** ดูรูปกองเดียว — เจ้าของ + พนักงาน (resolve evp: ใน ImagePreviewModal) */
+  const [pilePreview, setPilePreview] = useState<{
     pile: BonusEvidencePileId;
     urls: string[];
   } | null>(null);
   const [forcedOpen, setForcedOpen] = useState(false);
   const [viewedComplete, setViewedComplete] = useState(false);
 
-  useBodyScrollLock(!!ownerPreview || forcedOpen);
+  useBodyScrollLock(!!pilePreview || forcedOpen);
 
   useEffect(() => {
     setCutUrls(doc?.evidenceUrls || []);
@@ -207,7 +209,7 @@ export function BonusDeductionEvidencePanel({
                 type="button"
                 className="ghost-btn"
                 style={{ marginTop: "0.35rem" }}
-                onClick={() => setOwnerPreview({ pile: "caution", urls: cautionUrls })}
+                onClick={() => setPilePreview({ pile: "caution", urls: cautionUrls })}
               >
                 ดูตัวอย่างกองระวัง ({cautionUrls.length})
               </button>
@@ -242,7 +244,7 @@ export function BonusDeductionEvidencePanel({
                 type="button"
                 className="ghost-btn"
                 style={{ marginTop: "0.35rem" }}
-                onClick={() => setOwnerPreview({ pile: "cut", urls: cutUrls })}
+                onClick={() => setPilePreview({ pile: "cut", urls: cutUrls })}
               >
                 ดูตัวอย่างกองตัด ({cutUrls.length})
               </button>
@@ -281,7 +283,12 @@ export function BonusDeductionEvidencePanel({
                 <EntryPhotoIndicator
                   imageUrls={liveDoc.cautionUrls}
                   label="ระวัง"
-                  onView={() => setForcedOpen(true)}
+                  onView={() =>
+                    setPilePreview({
+                      pile: "caution",
+                      urls: liveDoc.cautionUrls,
+                    })
+                  }
                 />
               ) : null}
             </div>
@@ -303,7 +310,12 @@ export function BonusDeductionEvidencePanel({
                 <EntryPhotoIndicator
                   imageUrls={liveDoc.evidenceUrls}
                   label="ตัด"
-                  onView={() => setForcedOpen(true)}
+                  onView={() =>
+                    setPilePreview({
+                      pile: "cut",
+                      urls: liveDoc.evidenceUrls,
+                    })
+                  }
                 />
               ) : null}
             </div>
@@ -312,6 +324,7 @@ export function BonusDeductionEvidencePanel({
             ต้องดูตามลำดับ:{" "}
             {viewOrder.map((p) => pileLabel(p)).join(" → ") || "—"}
             {viewedComplete ? " · ดูครบแล้วบนเครื่องนี้" : " · ยังดูไม่ครบ"}
+            {" · แตะไอคอนรูปเปิดดูได้เลย"}
           </p>
           <button
             type="button"
@@ -327,11 +340,11 @@ export function BonusDeductionEvidencePanel({
         </p>
       )}
 
-      {ownerPreview ? (
+      {pilePreview ? (
         <ImagePreviewModal
-          urls={ownerPreview.urls}
-          title={`หลักฐาน${pileLabel(ownerPreview.pile)} · ${periodMonth}`}
-          onClose={() => setOwnerPreview(null)}
+          urls={pilePreview.urls}
+          title={`หลักฐาน${pileLabel(pilePreview.pile)} · ${periodMonth}`}
+          onClose={() => setPilePreview(null)}
         />
       ) : null}
 
@@ -362,9 +375,19 @@ function BonusEvidenceForcedViewer({
   onClose: () => void;
   onComplete: () => void;
 }) {
-  const slides = useMemo(() => buildForcedSlides(doc), [doc]);
+  const slideKey = [
+    doc.cautionNote,
+    doc.note,
+    ...doc.cautionUrls,
+    ...doc.evidenceUrls,
+  ].join("|");
+  const slides = useMemo(() => buildForcedSlides(doc), [slideKey]);
   const [idx, setIdx] = useState(0);
   const [mounted, setMounted] = useState(false);
+  /** ref → displayable src (data:/https) — evp: ต้อง resolve ก่อนใส่ <img> */
+  const [resolvedSrc, setResolvedSrc] = useState<Record<string, string>>({});
+  const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState("");
   /** กันปิดทันทีเมื่อ parent re-render แล้วสร้าง onClose ใหม่ (ดูแบบพนักงาน / snapshot) */
   const onCloseRef = useRef(onClose);
   const onCompleteRef = useRef(onComplete);
@@ -388,15 +411,50 @@ function BonusEvidenceForcedViewer({
     window.addEventListener("popstate", onPop);
     return () => {
       window.removeEventListener("popstate", onPop);
+      // อย่า history.back() — จะไปปิด instance ที่ remount (Strict / parent refresh)
       if (
         !closedByPop &&
         window.history.state &&
         (window.history.state as { bonusEv?: string }).bonusEv === token
       ) {
-        window.history.back();
+        window.history.replaceState(null, "");
       }
     };
   }, []);
+
+  useEffect(() => {
+    const photoRefs = slides
+      .filter((s): s is Extract<Slide, { kind: "photo" }> => s.kind === "photo")
+      .map((s) => s.url);
+    if (!photoRefs.length) {
+      setResolvedSrc({});
+      setResolving(false);
+      setResolveError("");
+      return;
+    }
+    let cancelled = false;
+    setResolving(true);
+    setResolveError("");
+    void (async () => {
+      const map: Record<string, string> = {};
+      try {
+        for (const ref of photoRefs) {
+          if (cancelled) return;
+          map[ref] = await resolveEvidencePhotoSrc(ref);
+        }
+        if (cancelled) return;
+        setResolvedSrc(map);
+        setResolving(false);
+      } catch (err) {
+        if (cancelled) return;
+        setResolveError((err as Error).message || "โหลดรูปไม่สำเร็จ");
+        setResolving(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slideKey]);
 
   if (!slides.length) {
     return null;
@@ -405,6 +463,8 @@ function BonusEvidenceForcedViewer({
   const slide = slides[idx]!;
   const atEnd = idx >= slides.length - 1;
   const pile = slide.pile;
+  const photoSrc =
+    slide.kind === "photo" ? resolvedSrc[slide.url] || "" : "";
 
   function goNext() {
     if (atEnd) {
@@ -449,8 +509,16 @@ function BonusEvidenceForcedViewer({
         <div className="bonus-forced-stage">
           {slide.kind === "note" ? (
             <p className="bonus-forced-note">{slide.text}</p>
+          ) : resolveError ? (
+            <p className="error-text">{resolveError}</p>
+          ) : resolving || !photoSrc ? (
+            <p className="muted">กำลังโหลดรูป…</p>
           ) : (
-            <img src={slide.url} alt={`หลักฐาน${pileLabel(pile)}`} className="bonus-forced-img" />
+            <img
+              src={photoSrc}
+              alt={`หลักฐาน${pileLabel(pile)}`}
+              className="bonus-forced-img"
+            />
           )}
         </div>
 
@@ -463,7 +531,12 @@ function BonusEvidenceForcedViewer({
           >
             <ChevronLeft size={16} aria-hidden /> ก่อนหน้า
           </button>
-          <button type="button" className="primary-btn" onClick={goNext}>
+          <button
+            type="button"
+            className="primary-btn"
+            disabled={slide.kind === "photo" && (resolving || !photoSrc) && !resolveError}
+            onClick={goNext}
+          >
             {atEnd ? (
               "ดูครบแล้ว"
             ) : (
