@@ -105,17 +105,15 @@ export const DELIVERY_COL_ROLE = {
  */
 export const DELIVERY_SOURCE_GUIDE = {
   overview:
-    "หน้านี้รวบรวมยอดเดลิเวอรี่จากแหล่งจริง แล้วผสานเข้าตาราง「ยอดเดลิเวอรี่」ในหน้า VAT เดือนทันที",
+    "หน้าแหล่งนำเข้า: พรีวิวจำแนกไฟล์/ข้อความ + สรุป 4 ช่อง · ยังไม่ผสานเข้าตารางยอดเดลิเวอรี่",
   grab:
-    "Grab: ได้หลายไฟล์รายวัน (CSV/เมล) → ม้วนรวมเป็นยอดเดือนก่อนเข้างบ · ยังไม่เก็บรายวันในงบ",
+    "Grab: ไฟล์ Transaction_Store_….csv (รายละเอียดรายการทั้งหมด) · ไม่ใช้ Transaction_Stores_",
   lineman:
-    "LINE MAN: มีรายงานสรุปเดือน (PDF) อยู่แล้ว → อ่านยอดรวมเดือนตรง ๆ",
+    "LINE MAN: ไฟล์แนบ REPORT_*.csv จากเมล GP ประจำเดือน",
   shopee:
-    "Shopee: มีไฟล์สรุปเดือนอยู่แล้ว → อ่านยอดรวมเดือนตรง ๆ",
-  sync:
-    "แก้ยอดในหน้านี้แล้วบันทึกอัตโนมัติ → ตารางยอดเดลิเวอรี่หน้า VAT เดือนอัปเดตตาม",
-  later:
-    "รายละเอียดรายวัน / ใบกำกับ / อัปโหลดไฟล์อัตโนมัติ — พัฒนาทีหลังบนหน้านี้ (ไม่ปนหน้า VAT)",
+    "Shopee: วางข้อความบล็อก「รายงานยอดขายสะสมประจำเดือน」จากเมล · ไม่ต้องเปิดแนบ",
+  sync: "รอบนี้ยังไม่ซิงก์เข้าตารางสรุป — ตรวจตัวเลขบนหน้านี้ก่อน",
+  later: "ขั้นถัดไป: ยืนยันแล้วค่อยดันเข้าตารางยอดเดลิเวอรี่หน้า VAT เดือน",
 } as const;
 
 export function emptyChannelSource(
@@ -233,10 +231,13 @@ export function grabCsvToMonthSource(
     transfer = roundMoney(transfer + d.netTransfer);
     fee = roundMoney(fee + d.fee);
   }
+  const fromTaxCol = normalizeMoney(parsed.taxColumnTotal || 0);
   const gpVat =
-    fee > 0
-      ? gpVatFromFee(fee, "incVat", 7)
-      : roundMoney(parsed.days.reduce((s, d) => s + d.gpVat, 0));
+    fromTaxCol > 0
+      ? fromTaxCol
+      : fee > 0
+        ? gpVatFromFee(fee, "incVat", 7)
+        : roundMoney(parsed.days.reduce((s, d) => s + d.gpVat, 0));
   return {
     channel: "grab",
     sales: normalizeMoney(sales),

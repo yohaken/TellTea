@@ -61,6 +61,7 @@ import { updateOwnerBookEntry } from "@/lib/owner-books";
 import { BooksVatEntryDetailModal } from "@/components/vat-sales/BooksVatEntryDetailModal";
 import { VatColHead } from "@/components/vat-sales/VatColHead";
 import { VatMonthProcessNotes } from "@/components/vat-sales/VatMonthProcessNotes";
+import { VatSalesSubNav } from "@/components/vat-sales/VatSalesSubNav";
 import { exportPersonalTaxYearXlsx } from "@/lib/xlsx-export";
 import {
   fileVatMonthlyReturn,
@@ -799,6 +800,7 @@ export function VatMonthBooks({ actor }: Props) {
 
   return (
     <div className="vat-month-books">
+      <VatSalesSubNav active="month" />
       <div className="vat-top-bar">
         <label className="vat-month-pick">
           <span className="muted">เดือน</span>

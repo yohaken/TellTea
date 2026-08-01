@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * ที่มายอดเดลิเวอรี่ — พักทั้งหน้า · ไม่ลิงก์จาก /vat-sales/ แล้ว
+ * แหล่งนำเข้าเดลิเวอรี่ — พรีวิวจำแนกไฟล์ · ยังไม่ผสานตารางสรุป
  */
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";

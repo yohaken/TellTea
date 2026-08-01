@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-/** สลับหน้าใต้ VAT: งบเดือน ↔ ที่มายอดเดลิเวอรี่ */
+/** สลับหน้าใต้ VAT: งบเดือน ↔ แหล่งนำเข้า (พรีวิว) */
 export function VatSalesSubNav({
   active,
 }: {
@@ -28,7 +28,7 @@ export function VatSalesSubNav({
           active === "sources" ? "vat-sales-tab is-active" : "vat-sales-tab"
         }
       >
-        ที่มายอดเดลิเวอรี่
+        แหล่งนำเข้า
       </Link>
     </nav>
   );

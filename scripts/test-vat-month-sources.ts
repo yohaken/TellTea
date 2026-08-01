@@ -167,9 +167,9 @@ function testApplyAll() {
 function testColInfoForHumansAndAi() {
   assert.match(DELIVERY_COL_INFO.appSales, /ยอดขายแอพ/);
   assert.match(DELIVERY_COL_INFO.transfer, /บัญชีธนาคาร|เงินเข้า/);
-  assert.match(DELIVERY_COL_INFO.gpFee, /หักแวท/);
-  assert.match(DELIVERY_COL_INFO.purchaseVat, /แวทค่าบริการขาย|VAT-ซื้อ/);
-  // DELIVERY_SOURCE_GUIDE คงใน lib สำหรับ docs/AI — UI ถอดแล้วใช้โน้ตส่วนตัว
+  assert.match(DELIVERY_COL_INFO.gpFee, /ไม่หักซ้ำ|อ้างอิง/);
+  assert.match(DELIVERY_COL_INFO.purchaseVat, /ภาษีซื้อ|VAT-ซื้อ/);
+  assert.match(DELIVERY_SOURCE_GUIDE.overview, /พรีวิว|ยังไม่ผสาน/);
   assert.ok(DELIVERY_SOURCE_GUIDE.overview.length > 0);
   console.log("ok delivery col info copy");
 }

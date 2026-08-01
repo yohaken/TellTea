@@ -19680,6 +19680,131 @@ a.ghost-btn {
   font-size: 0.78rem;
 }
 
+.vat-ingest-page {
+  margin: 0 0 1.25rem;
+}
+
+.vat-ingest-slot {
+  margin: 0.55rem 0 0.75rem;
+  padding: 0.45rem 0 0.35rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.12);
+}
+
+.vat-ingest-slot-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin-bottom: 0.35rem;
+}
+
+.vat-ingest-hint {
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.vat-ingest-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.vat-ingest-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vat-ingest-paste {
+  width: 100%;
+  min-height: 2.4rem;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid rgba(28, 42, 31, 0.22);
+  border-radius: 4px;
+  resize: vertical;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.vat-ingest-btn {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.55rem;
+}
+
+.vat-ingest-result {
+  margin-top: 0.4rem;
+  padding: 0.4rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(28, 42, 31, 0.04);
+}
+
+.vat-ingest-result.is-ok {
+  background: rgba(28, 90, 50, 0.07);
+}
+
+.vat-ingest-result.is-bad {
+  background: rgba(120, 40, 30, 0.06);
+}
+
+.vat-ingest-identity {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.vat-ingest-kind {
+  font-weight: 650;
+}
+
+.vat-ingest-meta {
+  margin: 0.15rem 0 0.3rem;
+  font-size: 0.72rem;
+}
+
+.vat-ingest-amounts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.25rem 0.4rem;
+  margin: 0;
+}
+
+.vat-ingest-amounts dt {
+  margin: 0;
+  font-size: 0.62rem;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.vat-ingest-amounts dd {
+  margin: 0;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.vat-ingest-headers {
+  margin: 0.3rem 0 0;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vat-ingest-warnings {
+  margin: 0.3rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.7rem;
+  color: rgba(100, 40, 30, 0.9);
+}
+
+@media (max-width: 640px) {
+  .vat-ingest-amounts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .vat-sources-paused-body {
   margin: 0.5rem 0 0;
   font-size: 0.9rem;

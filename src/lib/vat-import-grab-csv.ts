@@ -31,6 +31,8 @@ export type GrabCsvParseResult = {
   days: GrabCsvDay[];
   warnings: string[];
   headers: string[];
+  /** รวมภาษีจากคอลัมน์แยก (ถ้ามี) — ไม่คำนวณจาก fee */
+  taxColumnTotal: number;
 };
 
 function splitCsvLine(line: string): string[] {
@@ -116,6 +118,16 @@ export function parseGrabDateCell(raw: string): string {
   return "";
 }
 
+/** ไฟล์สรุปร้านสั้น — ไม่ใช้ (ต้องเป็น Transaction_Store_… รายละเอียดรายการ) */
+export function isGrabStoresSummaryFileName(fileName: string): boolean {
+  return /Transaction_Stores_/i.test(String(fileName || ""));
+}
+
+export function looksLikeGrabTransactionStoreFileName(fileName: string): boolean {
+  const n = String(fileName || "");
+  return /Transaction_Store_/i.test(n) && !isGrabStoresSummaryFileName(n);
+}
+
 export function looksLikeGrabTransactionCsv(text: string): boolean {
   const rows = parseCsv(text);
   if (rows.length < 2) return false;
@@ -123,7 +135,7 @@ export function looksLikeGrabTransactionCsv(text: string): boolean {
   const hasDate =
     /date|วันที่|transaction time|create time/.test(header);
   const hasMoney =
-    /amount|sales|gross|commission|fee|net|payout|ยอด|ค่าคอม|โอน/.test(
+    /amount|sales|gross|commission|fee|net|payout|ยอด|ค่าคอม|โอน|ทั้งหมด/.test(
       header,
     );
   return hasDate && hasMoney;
@@ -140,6 +152,7 @@ export function parseGrabTransactionCsv(text: string): GrabCsvParseResult {
       days: [],
       warnings: ["CSV ว่างหรือไม่มีข้อมูล"],
       headers: [],
+      taxColumnTotal: 0,
     };
   }
   const headers = table[0]!;
@@ -152,6 +165,7 @@ export function parseGrabTransactionCsv(text: string): GrabCsvParseResult {
     /^day$/,
   ]);
   const grossIdx = findCol(headers, [
+    /ยอดขายสุทธิ/,
     /gross sales/,
     /gross amount/,
     /basket amount/,
@@ -161,6 +175,8 @@ export function parseGrabTransactionCsv(text: string): GrabCsvParseResult {
     /^gross$/,
   ]);
   const feeIdx = findCol(headers, [
+    /ค่าคอมมิชชันแพลตฟอร์ม/,
+    /ค่าคอมมิชชั่นแพลตฟอร์ม/,
     /commission/,
     /grab fee/,
     /merchant fee/,
@@ -169,6 +185,7 @@ export function parseGrabTransactionCsv(text: string): GrabCsvParseResult {
     /^fee$/,
   ]);
   const netIdx = findCol(headers, [
+    /^ทั้งหมด$/,
     /net payout/,
     /net sales/,
     /net amount/,
@@ -176,6 +193,12 @@ export function parseGrabTransactionCsv(text: string): GrabCsvParseResult {
     /ยอดโอน/,
     /settlement/,
     /^net$/,
+  ]);
+  const taxIdx = findCol(headers, [
+    /ภาษีค่าคอมมิชชัน/,
+    /ภาษีค่าคอมมิชชั่น/,
+    /commission tax/,
+    /tax on commission/,
   ]);
   const amountIdx = findCol(headers, [/^amount$/, /transaction amount/]);
 
@@ -185,6 +208,7 @@ export function parseGrabTransactionCsv(text: string): GrabCsvParseResult {
   }
 
   const byDay = new Map<string, GrabCsvDay>();
+  let taxColumnTotal = 0;
   for (let r = 1; r < table.length; r++) {
     const row = table[r]!;
     const dateKey = dateIdx >= 0 ? parseGrabDateCell(row[dateIdx] || "") : "";
@@ -192,11 +216,18 @@ export function parseGrabTransactionCsv(text: string): GrabCsvParseResult {
     let gross = grossIdx >= 0 ? parseMoneyCell(row[grossIdx] || "") : 0;
     let fee = feeIdx >= 0 ? parseMoneyCell(row[feeIdx] || "") : 0;
     let net = netIdx >= 0 ? parseMoneyCell(row[netIdx] || "") : 0;
+    const tax = taxIdx >= 0 ? parseMoneyCell(row[taxIdx] || "") : 0;
+    // ค่าคอม/ภาษีใน CSV Grab มักเป็นลบ — ใช้สัมบูรณ์
+    fee = Math.abs(fee);
+    const taxAbs = Math.abs(tax);
+    taxColumnTotal = roundMoney(taxColumnTotal + taxAbs);
     if (!(gross > 0) && amountIdx >= 0) {
       const amt = parseMoneyCell(row[amountIdx] || "");
       // ถ้ามีแค่ Amount และไม่มี fee/net — นับเป็นยอดขาย
       if (amt > 0 && feeIdx < 0 && netIdx < 0) gross = amt;
     }
+    net = Math.abs(net);
+    gross = Math.abs(gross);
     if (!(net > 0) && gross > 0 && fee > 0) {
       net = roundMoney(Math.max(0, gross - fee));
     }
@@ -235,6 +266,7 @@ export function parseGrabTransactionCsv(text: string): GrabCsvParseResult {
     days,
     warnings,
     headers,
+    taxColumnTotal: normalizeMoney(taxColumnTotal),
   };
 }
 
