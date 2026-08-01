@@ -19796,6 +19796,53 @@ a.ghost-btn {
   min-width: 10rem;
 }
 
+.vat-ingest-preview-block {
+  margin-top: 0.35rem;
+}
+
+.vat-ingest-preview-title {
+  font-size: 0.78rem !important;
+  margin: 0 0 0.15rem !important;
+}
+
+.vat-ingest-preview-wrap {
+  margin: 0.1rem 0 0.2rem;
+}
+
+.vat-ingest-preview-slim {
+  font-size: 0.62rem !important;
+}
+
+.vat-ingest-preview-slim th,
+.vat-ingest-preview-slim td {
+  padding: 0.02rem 0.18rem !important;
+  height: 1.2rem !important;
+  line-height: 1.1 !important;
+}
+
+.vat-ingest-preview-slim th {
+  font-size: 0.58rem !important;
+}
+
+.vat-ingest-preview-slim .vat-col-head-role {
+  font-size: 0.48rem;
+  line-height: 1.05;
+}
+
+.vat-ingest-preview-slim .col-seg {
+  font-size: 0.6rem;
+  padding-right: 0.25rem !important;
+}
+
+.vat-ingest-preview-slim .vat-sales-input {
+  min-width: 3.4rem !important;
+  max-width: 4.6rem;
+  min-height: 1.05rem !important;
+  height: 1.05rem !important;
+  padding: 0 0.12rem !important;
+  font-size: 0.62rem !important;
+}
+
 .vat-ingest-result {
   margin-top: 0.4rem;
   padding: 0.4rem 0.45rem;

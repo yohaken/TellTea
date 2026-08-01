@@ -107,18 +107,79 @@ async function loadAiSettings(db) {
   return { enabled, model, apiKey };
 }
 
+function parseJsonScalar(token) {
+  const t = String(token || "").trim();
+  if (!t || t === "null") return null;
+  if (t === "true") return true;
+  if (t === "false") return false;
+  if (t.startsWith('"')) {
+    try {
+      return JSON.parse(t.endsWith('"') ? t : `${t}"`);
+    } catch {
+      return t.slice(1).replace(/\\"/g, '"');
+    }
+  }
+  const n = Number(t);
+  return Number.isFinite(n) ? n : t;
+}
+
+/** ดึงฟิลด์ทีละตัวเมื่อ JSON ตัดกลางคัน */
+function extractLooseFields(text) {
+  const src = String(text || "");
+  const out = {};
+  const keys = [
+    "channel",
+    "monthKey",
+    "periodLabel",
+    "sales",
+    "transfer",
+    "fee",
+    "gpVat",
+    "monthMatch",
+    "confidence",
+    "notes",
+  ];
+  for (const key of keys) {
+    const re = new RegExp(
+      `"${key}"\\s*:\\s*("(?:\\\\.|[^"\\\\])*"|null|true|false|-?\\d+(?:\\.\\d+)?)`,
+      "i",
+    );
+    const m = src.match(re);
+    if (m) out[key] = parseJsonScalar(m[1]);
+  }
+  if (!Object.keys(out).length) return null;
+  return out;
+}
+
 function extractJsonObject(text) {
   const s = String(text || "").trim();
   if (!s) throw new Error("Gemini ไม่ได้คืน JSON");
   const fenced = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const raw = fenced ? fenced[1].trim() : s;
   const start = raw.indexOf("{");
+  if (start < 0) {
+    const loose0 = extractLooseFields(raw);
+    if (loose0) return loose0;
+    throw new Error("Gemini ไม่ได้คืน JSON");
+  }
   const end = raw.lastIndexOf("}");
-  if (start < 0 || end <= start) throw new Error("Gemini ไม่ได้คืน JSON");
+  const slice = end > start ? raw.slice(start, end + 1) : raw.slice(start);
   try {
-    return JSON.parse(raw.slice(start, end + 1));
+    return JSON.parse(slice);
   } catch {
-    throw new Error("Gemini คืน JSON ไม่สมบูรณ์");
+    // ลองปิดวงเล็บที่ขาด
+    let patched = slice;
+    const opens = (patched.match(/{/g) || []).length;
+    const closes = (patched.match(/}/g) || []).length;
+    for (let i = 0; i < opens - closes; i += 1) patched += "}";
+    if ((patched.match(/"/g) || []).length % 2 === 1) patched += '"';
+    try {
+      return JSON.parse(patched);
+    } catch {
+      const loose = extractLooseFields(raw);
+      if (loose) return loose;
+      throw new Error("Gemini คืน JSON ไม่สมบูรณ์");
+    }
   }
 }
 
@@ -146,7 +207,7 @@ async function postGeminiVision({ apiKey, model, mimeType, data, userText, withT
   )}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const generationConfig = {
     temperature: 0.1,
-    maxOutputTokens: 2048,
+    maxOutputTokens: 4096,
     responseMimeType: "application/json",
   };
   if (withThinking) {

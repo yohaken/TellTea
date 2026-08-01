@@ -624,6 +624,11 @@ service cloud.firestore {
       allow read, write: if isOwner() || isOwnerEmail();
     }
 
+    /** พรีวิวแคป AI (ยอด+รูป) ก่อนส่งเข้าตารางหลัก — เจ้าของเท่านั้น */
+    match /vatDeliveryIngestDrafts/{monthId} {
+      allow read, write: if isOwner() || isOwnerEmail();
+    }
+
     /** บันทึกปิดเดือน VAT → monthlyIncome — เจ้าของเท่านั้น */
     match /vatMonthCloses/{monthId} {
       allow read, write: if isOwner();
