@@ -34,15 +34,31 @@ assert.match(receiptSrc, /combinedPayId/);
 assert.match(histSrc, /salaryHistoryMetaBits/);
 assert.match(histSrc, /findCombinedTransferTotal/);
 assert.match(payUi, /StaffLatestTransferCard/);
-assert.match(payUi, /คัดลอกบัญชี \+ ยอดโอน/);
+assert.match(payUi, /คัดลอกเลขบัญชี/);
+assert.match(payUi, /คัดลอกยอด/);
+assert.match(receiptSrc, /digitsOnlyAccount/);
+assert.match(receiptSrc, /plainTransferAmount/);
 assert.match(cardUi, /รอบล่าสุด · เข้าบัญชีคุณ/);
 assert.match(cardUi, /สรุปโบนัส \+ หลักฐานหัก/);
 assert.match(histUi, /โอนครั้งเดียว/);
 assert.match(histUi, /salaryHistoryMetaBits/);
 assert.match(pageSrc, /ดูแบบพนักงาน/);
 assert.match(pageSrc, /onOpenBonusMonth/);
-assert.match(versionSrc, /APP_BUILD = 559/);
+assert.match(versionSrc, /APP_BUILD = 560/);
 assert.match(checklist, /ขึ้นหน้าเว็บจริง/);
+
+function digitsOnlyAccount(payAccountNo) {
+  return String(payAccountNo || "").replace(/\D/g, "");
+}
+function plainTransferAmount(n) {
+  return (Math.round(n * 100) / 100).toFixed(2);
+}
+assert.equal(digitsOnlyAccount("123-4-56789-0"), "1234567890");
+assert.equal(plainTransferAmount(6200), "6200.00");
+assert.equal(
+  `${digitsOnlyAccount("123-4-56789-0")}\n${plainTransferAmount(6200)}`,
+  "1234567890\n6200.00",
+);
 
 function round2(n) {
   return Math.round(n * 100) / 100;

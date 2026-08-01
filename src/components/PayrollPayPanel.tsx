@@ -35,7 +35,11 @@ import {
   type PayrollMonthEndBonusPair,
   type PayrollSchedule,
 } from "@/lib/payroll";
-import { buildCombinedTransferClipboard } from "@/lib/payroll-staff-receipt";
+import {
+  buildCombinedTransferClipboard,
+  digitsOnlyAccount,
+  plainTransferAmount,
+} from "@/lib/payroll-staff-receipt";
 import type { ProdEntry } from "@/lib/production";
 import {
   formatDateShortBe,
@@ -429,24 +433,42 @@ export function PayrollPayPanel({
     });
   }
 
-  async function copyCombinedTransfer(pair: PayrollMonthEndBonusPair) {
-    const emp = employees.find((e) => e.id === pair.employeeId);
-    const text = buildCombinedTransferClipboard({
-      employeeName: pair.employeeName,
-      payBank: emp?.payBank,
-      payAccountNo: emp?.payAccountNo,
-      payAccountName: emp?.payAccountName,
-      transferTotal: pair.transferTotal,
-      salaryAmount: pair.salary.amount,
-      bonusAmount: pair.bonus.amount,
-      advanceDeduct: pair.salary.advanceDeduct,
-    });
+  async function copyPlainText(text: string, okMsg: string) {
+    const value = (text || "").trim();
+    if (!value) {
+      onError("ยังไม่มีตัวเลขให้คัดลอก");
+      return;
+    }
     try {
-      await navigator.clipboard.writeText(text);
-      onInfo?.("คัดลอกแล้ว · ชื่อ บัญชี ยอดโอนรวม — วางในแอปธนาคารได้");
+      await navigator.clipboard.writeText(value);
+      onInfo?.(okMsg);
     } catch {
       onError("คัดลอกไม่สำเร็จ — ลองเลือกข้อความเอง");
     }
+  }
+
+  async function copyCombinedAccount(pair: PayrollMonthEndBonusPair) {
+    const emp = employees.find((e) => e.id === pair.employeeId);
+    await copyPlainText(
+      digitsOnlyAccount(emp?.payAccountNo),
+      "คัดลอกเลขบัญชีแล้ว",
+    );
+  }
+
+  async function copyCombinedAmount(pair: PayrollMonthEndBonusPair) {
+    await copyPlainText(
+      plainTransferAmount(pair.transferTotal),
+      `คัดลอกยอดแล้ว · ${plainTransferAmount(pair.transferTotal)}`,
+    );
+  }
+
+  async function copyCombinedTransfer(pair: PayrollMonthEndBonusPair) {
+    const emp = employees.find((e) => e.id === pair.employeeId);
+    const text = buildCombinedTransferClipboard({
+      payAccountNo: emp?.payAccountNo,
+      transferTotal: pair.transferTotal,
+    });
+    await copyPlainText(text, "คัดลอกเลขบัญชี + ยอดแล้ว (ตัวเลขอย่างเดียว)");
   }
 
   async function onConfirmPay() {
@@ -957,15 +979,36 @@ export function PayrollPayPanel({
                 <p style={{ margin: "0.35rem 0 0" }}>
                   พนักงานยังเห็น 2 รายการแยกในคิวของตัวเอง
                 </p>
-                <button
-                  type="button"
-                  className="ghost-btn"
-                  style={{ marginTop: "0.5rem" }}
-                  disabled={busy}
-                  onClick={() => void copyCombinedTransfer(payTarget.pair!)}
+                <div
+                  className="payroll-copy-digits"
+                  style={{ marginTop: "0.5rem", display: "flex", flexWrap: "wrap", gap: "0.35rem" }}
                 >
-                  คัดลอกบัญชี + ยอดโอน
-                </button>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    disabled={busy}
+                    onClick={() => void copyCombinedAccount(payTarget.pair!)}
+                  >
+                    คัดลอกเลขบัญชี
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    disabled={busy}
+                    onClick={() => void copyCombinedAmount(payTarget.pair!)}
+                  >
+                    คัดลอกยอด
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    disabled={busy}
+                    onClick={() => void copyCombinedTransfer(payTarget.pair!)}
+                    title="เลขบัญชีบรรทัดหนึ่ง · ยอดบรรทัดสอง"
+                  >
+                    คัดลอกทั้งคู่
+                  </button>
+                </div>
               </div>
             ) : (
               <p className="muted" style={{ marginBottom: "0.75rem" }}>

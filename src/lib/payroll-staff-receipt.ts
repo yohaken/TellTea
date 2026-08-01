@@ -125,32 +125,35 @@ export function findLatestStaffTransferReceipt(
   return buildStaffTransferReceipts(items)[0] || null;
 }
 
-/** ข้อความคัดลอกตอนโอนรวม — ชื่อ · ธนาคาร · เลขบัญชี · ยอด */
+/** เลขบัญชีอย่างเดียว — ตัดอักษรออก เหลือตัวเลข (วางในแอปธนาคาร) */
+export function digitsOnlyAccount(payAccountNo?: string): string {
+  return String(payAccountNo || "").replace(/\D/g, "");
+}
+
+/** ยอดโอนเป็นตัวเลขล้วน — ทศนิยม 2 ตำแหน่ง ไม่มี ฿ / คำอธิบาย */
+export function plainTransferAmount(transferTotal: number): string {
+  return round2(transferTotal).toFixed(2);
+}
+
+/**
+ * คัดลอกตอนโอนรวม (ช่วงนี้) — แค่ตัวเลข
+ * บรรทัด 1 = เลขบัญชี · บรรทัด 2 = ยอดโอน
+ */
 export function buildCombinedTransferClipboard(input: {
-  employeeName: string;
+  employeeName?: string;
   payBank?: string;
   payAccountNo?: string;
   payAccountName?: string;
   transferTotal: number;
-  salaryAmount: number;
-  bonusAmount: number;
+  salaryAmount?: number;
+  bonusAmount?: number;
   advanceDeduct?: number;
 }): string {
-  const bank = (input.payBank || "").trim();
-  const acct = (input.payAccountNo || "").trim();
-  const acctName = (input.payAccountName || "").trim();
-  const lines = [
-    input.employeeName.trim(),
-    acctName && acctName !== input.employeeName.trim() ? `ชื่อบัญชี ${acctName}` : "",
-    [bank, acct].filter(Boolean).join(" "),
-    `ยอดโอน ฿${round2(input.transferTotal).toFixed(2)}`,
-    `สิ้นเดือน ฿${round2(input.salaryAmount).toFixed(2)}` +
-      (input.advanceDeduct && input.advanceDeduct > 0
-        ? ` (หักเบิก ฿${round2(input.advanceDeduct).toFixed(2)})`
-        : ""),
-    `โบนัส ฿${round2(input.bonusAmount).toFixed(2)}`,
-  ].filter(Boolean);
-  return lines.join("\n");
+  const acct = digitsOnlyAccount(input.payAccountNo);
+  const amount = plainTransferAmount(input.transferTotal);
+  if (acct && amount) return `${acct}\n${amount}`;
+  if (acct) return acct;
+  return amount;
 }
 
 export function shortTransferKindLabel(kind: PayrollItem["kind"]): string {
