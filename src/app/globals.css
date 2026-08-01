@@ -19655,6 +19655,13 @@ a.ghost-btn {
   font-size: 0.78rem;
 }
 
+.vat-sources-paused-body {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: rgba(28, 42, 31, 0.78);
+}
+
 /* รางแนวนอนต่อแอพ — เทียบรางจริงจัง (ไฟล์ | เช็ค | ยอด) */
 .vat-sources-drive-tracks {
   display: flex;
