@@ -708,11 +708,6 @@ function BillNoticeFormModal({
   }
 
   async function onSave(e: FormEvent) {
-    if (readOnly) {
-      e.preventDefault();
-      setError("พรีวิวมุมพนักงาน — บันทึกไม่ได้");
-      return;
-    }
     e.preventDefault();
     setBusy(true);
     setFormError(null);
@@ -801,7 +796,7 @@ function BillNoticeFormModal({
   }
 
   async function onDelete() {
-    if (readOnly || !entry) return;
+    if (!entry) return;
     if (!window.confirm("ลบแจ้งบิลนี้?")) return;
     setBusy(true);
     try {
