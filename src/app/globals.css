@@ -23776,3 +23776,50 @@ a.ghost-btn {
   border-top: 1px solid rgba(28, 42, 31, 0.1);
   font-weight: 700;
 }
+
+/* POS sales dashboard stock card (phase 5) */
+.pos-dash-stock-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.pos-dash-stock-panel {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.65rem 0.7rem;
+  border-radius: 0.5rem;
+  background: rgba(28, 42, 31, 0.04);
+  font-size: 0.72rem;
+  min-width: 0;
+}
+
+.pos-dash-stock-icon {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 0.45rem;
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.15rem;
+}
+
+.pos-dash-stock-icon--in {
+  background: rgba(91, 192, 222, 0.2);
+  color: #1a8aa8;
+}
+
+.pos-dash-stock-icon--out {
+  background: rgba(240, 160, 106, 0.22);
+  color: #c45f1a;
+}
+
+.pos-dash-stock-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1c2a1f;
+  font-variant-numeric: tabular-nums;
+}
+
+.pos-dash-stock-breakdown {
+  white-space: nowrap;
+}

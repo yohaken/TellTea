@@ -10,6 +10,7 @@ import {
   summarizePosSalesByHour,
   summarizePosSalesByWeekday,
   summarizePosSalesProducts,
+  summarizeStockMovementsForDashboard,
 } from "@/lib/pos-sales-dashboard";
 import {
   clampPosDateRange,
@@ -23,7 +24,8 @@ import {
   type PosDateRange,
 } from "@/lib/pos-sales-report";
 import { subscribeMenuCategories, subscribeMenuItems } from "@/lib/pos-menu";
-import type { MenuCategory, MenuItem, PosSale } from "@/lib/types";
+import { subscribeStockMovements } from "@/lib/stock";
+import type { MenuCategory, MenuItem, PosSale, StockMovement } from "@/lib/types";
 import { formatPlainNumber, parseDateInput, startOfLocalDay } from "@/lib/utils";
 import {
   PosDashDailyAreaChart,
@@ -31,6 +33,9 @@ import {
   PosDashWeekdayBarChart,
 } from "@/components/PosSalesDashboardCharts";
 import { PosSalesDashboardProducts } from "@/components/PosSalesDashboardProducts";
+import { PosSalesDashboardStock } from "@/components/PosSalesDashboardStock";
+import { collection, onSnapshot } from "firebase/firestore";
+import { getDb } from "@/lib/firebase";
 
 function pct(part: number, whole: number): number {
   if (!(whole > 0) || !(part > 0)) return 0;
@@ -81,6 +86,8 @@ export function PosSalesDashboard({
   const [sales, setSales] = useState<PosSale[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
+  const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
+  const [stockCosts, setStockCosts] = useState<Map<string, number>>(() => new Map());
   const [loading, setLoading] = useState(true);
 
   const clamped = useMemo(() => clampPosDateRange(range), [range]);
@@ -121,6 +128,35 @@ export function PosSalesDashboard({
     };
   }, [onError]);
 
+  useEffect(() => {
+    if (rangeTooLong) {
+      setStockMovements([]);
+      return;
+    }
+    return subscribeStockMovements(
+      setStockMovements,
+      (err) => onError?.(err.message),
+      { since: clamped.startMs },
+    );
+  }, [clamped.startMs, rangeTooLong, onError]);
+
+  useEffect(() => {
+    return onSnapshot(
+      collection(getDb(), "stockCosts"),
+      (snap) => {
+        setStockCosts(
+          new Map(
+            snap.docs.map((d) => [
+              d.id,
+              Math.round((Number(d.data().unitCost) || 0) * 100) / 100,
+            ]),
+          ),
+        );
+      },
+      (err) => onError?.(err.message),
+    );
+  }, [onError]);
+
   const summary = useMemo(() => summarizePosSalesDetailed(sales), [sales]);
   const tenders = useMemo(() => tenderSegments(summary), [summary]);
   const byDay = useMemo(() => summarizePosSalesByDay(sales, clamped), [sales, clamped]);
@@ -129,6 +165,10 @@ export function PosSalesDashboard({
   const products = useMemo(
     () => summarizePosSalesProducts(sales, menuItems, menuCategories, 10),
     [sales, menuItems, menuCategories],
+  );
+  const stockSummary = useMemo(
+    () => summarizeStockMovementsForDashboard(stockMovements, clamped, stockCosts),
+    [stockMovements, clamped, stockCosts],
   );
   const label = formatPosDateRangeLabel(clamped);
   const avgBill = averagePerBill(summary.total, summary.activeCount);
@@ -389,6 +429,11 @@ export function PosSalesDashboard({
             />
 
             <div className="pos-dash-bottom-side">
+              <PosSalesDashboardStock
+                stock={stockSummary}
+                onOpenStock={() => router.push("/stock/")}
+              />
+
               <article className="pos-dash-card">
                 <h3 className="pos-dash-card-title">ส่วนลด</h3>
                 <p className="pos-dash-side-value">{formatPlainNumber(summary.discountTotal)} บาท</p>

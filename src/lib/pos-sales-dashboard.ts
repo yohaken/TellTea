@@ -1,7 +1,7 @@
 /**
  * Aggregators for BO `/pos-sales` dashboard charts + product cards.
  */
-import type { MenuCategory, MenuItem, PosSale } from "./types";
+import type { MenuCategory, MenuItem, PosSale, StockMovement } from "./types";
 import {
   clampPosDateRange,
   posDateRangeDayCount,
@@ -256,6 +256,74 @@ export function averagePerBill(netTotal: number, billCount: number): number {
 export function averagePerDay(netTotal: number, range: PosDateRange): number {
   const days = Math.max(1, posDateRangeDayCount(range));
   return round2(netTotal / days);
+}
+
+export type PosDashStockSummary = {
+  inCount: number;
+  inValue: number;
+  outCount: number;
+  outValue: number;
+  adjustCount: number;
+  adjustValue: number;
+  /** OUT + ADJUST combined for the “เบิก/ปรับ” panel */
+  outAdjustCount: number;
+  outAdjustValue: number;
+};
+
+/** Filter movements to an inclusive Bangkok date range. */
+export function filterStockMovementsInRange(
+  movements: StockMovement[],
+  range: PosDateRange,
+): StockMovement[] {
+  const { startMs, endMs } = clampPosDateRange(range);
+  return movements.filter((m) => {
+    const day = startOfLocalDay(m.date || m.createdAt || 0);
+    return day >= startMs && day <= endMs;
+  });
+}
+
+/**
+ * Stock IN / OUT+ADJUST for dashboard.
+ * Value = quantity × unitCost (from `stockCosts`); missing cost → 0 baht but count still rises.
+ */
+export function summarizeStockMovementsForDashboard(
+  movements: StockMovement[],
+  range: PosDateRange,
+  costByItemId: Map<string, number> = new Map(),
+): PosDashStockSummary {
+  const inRange = filterStockMovementsInRange(movements, range);
+  let inCount = 0;
+  let inValue = 0;
+  let outCount = 0;
+  let outValue = 0;
+  let adjustCount = 0;
+  let adjustValue = 0;
+
+  for (const m of inRange) {
+    const cost = costByItemId.get(m.itemId) || 0;
+    const value = round2(Math.max(0, m.quantity) * cost);
+    if (m.type === "IN") {
+      inCount += 1;
+      inValue = round2(inValue + value);
+    } else if (m.type === "OUT") {
+      outCount += 1;
+      outValue = round2(outValue + value);
+    } else if (m.type === "ADJUST") {
+      adjustCount += 1;
+      adjustValue = round2(adjustValue + value);
+    }
+  }
+
+  return {
+    inCount,
+    inValue,
+    outCount,
+    outValue,
+    adjustCount,
+    adjustValue,
+    outAdjustCount: outCount + adjustCount,
+    outAdjustValue: round2(outValue + adjustValue),
+  };
 }
 
 export { WEEKDAY_LABELS };
