@@ -27,11 +27,19 @@ import {
 import { PosConfirmDialog } from "@/components/PosConfirmDialog";
 import { PosManagePanel } from "@/components/PosManagePanel";
 import { PosReceiptPaper } from "@/components/PosReceiptPaper";
+import { PosSalesDashboard } from "@/components/PosSalesDashboard";
 import { PosSessionPrintDocs } from "@/components/PosSessionPrintDocs";
 import { PosSessionsSlimTable } from "@/components/PosSessionsSlimTable";
 
 type BillStatusFilter = "all" | "ok" | "voided";
 type BillPayFilter = "all" | "cash" | "promptpay" | "transfer";
+type PosSalesTab = "dashboard" | "sessions" | "manage";
+
+function resolvePosSalesTab(raw: string | null): PosSalesTab {
+  if (raw === "manage") return "manage";
+  if (raw === "sessions" || raw === "report") return "sessions";
+  return "dashboard";
+}
 
 function formatTime(ts: number) {
   return new Date(ts).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
@@ -45,9 +53,11 @@ function saleIsToday(sale: PosSale, todayMs: number): boolean {
 export function PosSalesReport({
   onError,
   compact = false,
+  initialStatusFilter = "all",
 }: {
   onError?: (msg: string | null) => void;
   compact?: boolean;
+  initialStatusFilter?: BillStatusFilter;
 }) {
   const { actorId } = useAuth();
   const [sales, setSales] = useState<PosSale[]>([]);
@@ -60,12 +70,17 @@ export function PosSalesReport({
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [billQuery, setBillQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<BillStatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<BillStatusFilter>(initialStatusFilter);
   const [payFilter, setPayFilter] = useState<BillPayFilter>("all");
   const [billsVisible, setBillsVisible] = useState(POS_BILLS_SLIM_PAGE);
   const [forceCloseBusyId, setForceCloseBusyId] = useState<string | null>(null);
   const [forceCloseTargetId, setForceCloseTargetId] = useState<string | null>(null);
-  const [billsOpen, setBillsOpen] = useState(false);
+  const [billsOpen, setBillsOpen] = useState(initialStatusFilter === "voided");
+
+  useEffect(() => {
+    setStatusFilter(initialStatusFilter);
+    if (initialStatusFilter === "voided") setBillsOpen(true);
+  }, [initialStatusFilter]);
 
   const todayMs = startOfLocalDay();
 
@@ -587,25 +602,23 @@ export function PosSalesReport({
 export function PosSalesReportPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get("tab");
+  const tab = resolvePosSalesTab(searchParams.get("tab"));
+  const statusParam = searchParams.get("status");
+  const initialStatusFilter: BillStatusFilter =
+    statusParam === "voided" ? "voided" : statusParam === "ok" ? "ok" : "all";
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (tabParam !== "manage") return;
-    const id = window.setTimeout(() => {
-      document.getElementById("pos-manage")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 80);
-    return () => window.clearTimeout(id);
-  }, [tabParam]);
-
-  function jump(section: "report" | "manage") {
+  function jump(section: PosSalesTab, opts?: { status?: BillStatusFilter }) {
     setError(null);
-    const href = section === "manage" ? "/pos-sales/?tab=manage" : "/pos-sales/";
-    router.replace(href, { scroll: false });
-    const elId = section === "manage" ? "pos-manage" : "pos-sales-report";
-    requestAnimationFrame(() => {
-      document.getElementById(elId)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    const params = new URLSearchParams();
+    if (section === "manage") params.set("tab", "manage");
+    else if (section === "sessions") params.set("tab", "sessions");
+    else params.set("tab", "dashboard");
+    if (section === "sessions" && opts?.status && opts.status !== "all") {
+      params.set("status", opts.status);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/pos-sales/?${qs}` : "/pos-sales/", { scroll: false });
   }
 
   return (
@@ -613,15 +626,26 @@ export function PosSalesReportPage() {
       <header className="npos-bo-page-head">
         <div>
           <h1 className="panel-title pos-sales-page-title">POS</h1>
-          <p className="muted pos-sales-page-lead">รอบ · บิล · เครื่อง · 570F0F</p>
+          <p className="muted pos-sales-page-lead">แดชบอร์ด · รอบ · บิล · เครื่อง</p>
         </div>
         <nav className="npos-bo-page-tabs" aria-label="ข้ามหมวด POS">
-          <button type="button" className="npos-slim-text-btn" onClick={() => jump("report")}>
-            ยอดขาย
+          <button
+            type="button"
+            className={tab === "dashboard" ? "npos-slim-text-btn is-active" : "npos-slim-text-btn"}
+            onClick={() => jump("dashboard")}
+          >
+            แดชบอร์ด
           </button>
           <button
             type="button"
-            className={tabParam === "manage" ? "npos-slim-text-btn is-active" : "npos-slim-text-btn"}
+            className={tab === "sessions" ? "npos-slim-text-btn is-active" : "npos-slim-text-btn"}
+            onClick={() => jump("sessions")}
+          >
+            รอบขาย
+          </button>
+          <button
+            type="button"
+            className={tab === "manage" ? "npos-slim-text-btn is-active" : "npos-slim-text-btn"}
             onClick={() => jump("manage")}
           >
             จัดการ
@@ -631,13 +655,28 @@ export function PosSalesReportPage() {
 
       {error ? <p className="error-text">{error}</p> : null}
 
-      <section id="pos-sales-report" className="pos-hub-section" aria-label="ยอดขาย">
-        <PosSalesReport onError={setError} />
-      </section>
+      {tab === "dashboard" ? (
+        <section id="pos-sales-dashboard" className="pos-hub-section" aria-label="แดชบอร์ด">
+          <PosSalesDashboard
+            onError={setError}
+            onOpenSessions={(opts) =>
+              jump("sessions", { status: opts?.voided ? "voided" : "all" })
+            }
+          />
+        </section>
+      ) : null}
 
-      <section id="pos-manage" className="pos-hub-section" aria-label="จัดการ">
-        <PosManagePanel onError={setError} />
-      </section>
+      {tab === "sessions" ? (
+        <section id="pos-sales-report" className="pos-hub-section" aria-label="รอบขาย">
+          <PosSalesReport onError={setError} initialStatusFilter={initialStatusFilter} />
+        </section>
+      ) : null}
+
+      {tab === "manage" ? (
+        <section id="pos-manage" className="pos-hub-section" aria-label="จัดการ">
+          <PosManagePanel onError={setError} />
+        </section>
+      ) : null}
     </div>
   );
 }

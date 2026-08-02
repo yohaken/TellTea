@@ -23194,3 +23194,356 @@ a.ghost-btn {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* POS sales dashboard (phase 0–1) */
+.pos-dash {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.pos-dash-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.75rem;
+}
+
+.pos-dash-range-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.16);
+  background: #fff;
+  font: inherit;
+  font-size: 0.88rem;
+  color: rgba(28, 42, 31, 0.88);
+  cursor: pointer;
+}
+
+.pos-dash-range-btn:hover {
+  border-color: rgba(28, 42, 31, 0.28);
+}
+
+.pos-dash-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.45rem;
+}
+
+.pos-dash-range-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.55rem 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  background: #fff;
+}
+
+.pos-dash-range-panel label {
+  display: grid;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+}
+
+.pos-dash-range-panel input[type="date"] {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.28rem 0.4rem;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: #fff;
+}
+
+.pos-dash-range-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  width: 100%;
+}
+
+.pos-dash-top-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .pos-dash-top-grid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.15fr) minmax(0, 0.85fr);
+    align-items: stretch;
+  }
+}
+
+.pos-dash-card {
+  background: #fff;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  border-radius: 0.75rem;
+  padding: 0.85rem 0.95rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.pos-dash-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.pos-dash-card-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1c2a1f;
+}
+
+.pos-dash-more {
+  color: #1a9bb5 !important;
+  font-size: 0.78rem !important;
+}
+
+.pos-dash-net-value {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: #2f9e44;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.pos-dash-net-value span {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.pos-dash-net-body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .pos-dash-card--net .pos-dash-net-body {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: 0.85rem;
+  }
+}
+
+.pos-dash-tender-bar {
+  display: flex;
+  width: 100%;
+  height: 0.55rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #eef1f3;
+}
+
+.pos-dash-tender-seg--cash {
+  background: #7eb8d8;
+}
+
+.pos-dash-tender-seg--other {
+  background: #f0a06a;
+}
+
+.pos-dash-tender-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+  margin-top: 0.45rem;
+  font-size: 0.72rem;
+  color: rgba(28, 42, 31, 0.72);
+}
+
+.pos-dash-tender-legend strong {
+  font-size: 0.8rem;
+  color: #1c2a1f;
+}
+
+.pos-dash-tender-sub {
+  font-size: 0.68rem;
+}
+
+.pos-dash-breakdown {
+  margin: 0;
+  padding: 0 0 0 0.75rem;
+  border-left: 1px solid rgba(28, 42, 31, 0.12);
+  display: grid;
+  gap: 0.28rem;
+}
+
+.pos-dash-breakdown > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+}
+
+.pos-dash-breakdown dt {
+  margin: 0;
+  color: rgba(28, 42, 31, 0.62);
+}
+
+.pos-dash-breakdown dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.pos-dash-breakdown--total {
+  margin-top: 0.15rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.1);
+  font-weight: 700;
+}
+
+.pos-dash-bills-body {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.pos-dash-donut-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.pos-dash-donut {
+  width: 7.5rem;
+  height: 7.5rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.pos-dash-donut-hole {
+  width: 5.1rem;
+  height: 5.1rem;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 0.05rem;
+  padding: 0.25rem;
+}
+
+.pos-dash-donut-hole strong {
+  font-size: 1.15rem;
+  line-height: 1.1;
+}
+
+.pos-dash-donut-label {
+  font-size: 0.68rem;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.pos-dash-bill-channels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.pos-dash-bill-channels li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "dot name amt"
+    ". count amt";
+  column-gap: 0.4rem;
+  row-gap: 0.05rem;
+  align-items: baseline;
+  font-size: 0.78rem;
+}
+
+.pos-dash-dot {
+  grid-area: dot;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  margin-top: 0.2rem;
+}
+
+.pos-dash-dot--cash {
+  background: #7eb8d8;
+}
+
+.pos-dash-dot--pp {
+  background: #5bc0de;
+}
+
+.pos-dash-dot--transfer {
+  background: #f0a06a;
+}
+
+.pos-dash-channel-name {
+  grid-area: name;
+  font-weight: 600;
+}
+
+.pos-dash-channel-count {
+  grid-area: count;
+  color: rgba(28, 42, 31, 0.55);
+  font-size: 0.7rem;
+}
+
+.pos-dash-channel-amt {
+  grid-area: amt;
+  font-variant-numeric: tabular-nums;
+  background: rgba(126, 184, 216, 0.18);
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.3rem;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.pos-dash-footnote,
+.pos-dash-empty {
+  margin: 0;
+  font-size: 0.72rem;
+}
+
+.pos-dash-void-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(240, 160, 106, 0.55);
+  border-radius: 0.55rem;
+  background: rgba(255, 248, 240, 0.65);
+}
+
+.pos-dash-void-label {
+  display: block;
+  font-size: 0.78rem;
+  color: rgba(28, 42, 31, 0.62);
+  margin-bottom: 0.2rem;
+}
+
+.pos-dash-void-value {
+  margin: 0 0 0.2rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.pos-dash-void-value--void {
+  color: #d97706;
+}
+
+.pos-dash-void-note {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+}
+
+.pos-dash-void-note p {
+  margin: 0;
+}

@@ -174,14 +174,14 @@
 
 **ฟังก์ชัน:** โครงแดชบอร์ดบน `/pos-sales/`
 
-- [ ] เพิ่มแท็บย่อย: `dashboard` · `sessions` · `manage` (default = `dashboard`)
-- [ ] ย้าย UI เดิมของแท็บยอดขาย → `sessions`
-- [ ] คอมโพเนนต์เลือกช่วงวันที่ (UI ตามภาพ: ไอคอนปฏิทิน + `DD/MM/YYYY – DD/MM/YYYY`)
-- [ ] Helper: Bangkok range → `startMs`/`endMs` + รายการ `date` keys
-- [ ] Subscribe/query `posSales` ตามช่วงวันที่ (ไม่ใช้ recent-only)
-- [ ] Empty / loading / ช่วงยาวเกินลิมิต (เช่น เตือนถ้า > 92 วัน)
+- [x] เพิ่มแท็บย่อย: `dashboard` · `sessions` · `manage` (default = `dashboard`)
+- [x] ย้าย UI เดิมของแท็บยอดขาย → `sessions`
+- [x] คอมโพเนนต์เลือกช่วงวันที่ (UI ตามภาพ: ไอคอนปฏิทิน + `DD/MM/YYYY – DD/MM/YYYY`)
+- [x] Helper: Bangkok range → `startMs`/`endMs` + clamp / day count
+- [x] Subscribe/query `posSales` ตามช่วงวันที่ (`subscribePosSalesForDateRange`)
+- [x] Empty / loading / ช่วงยาวเกินลิมิต (92 วัน)
 
-**ออก:** เปิดแท็บแดชบอร์ดว่างได้ + มีข้อมูลบิลครบในช่วง
+**ออก:** เปิดแท็บแดชบอร์ดว่างได้ + มีข้อมูลบิลครบในช่วง · `APP_BUILD` 620
 
 ---
 
@@ -189,11 +189,11 @@
 
 **ฟังก์ชัน:** กล่อง A / B / C
 
-- [ ] Aggregator: net · subtotal · discount · tender split · bill count · void count/total
-- [ ] การ์ด **ยอดขายสุทธิ** (ตัวเลขใหญ่ + แถบชำระ + รายการย่อยที่เรามี)
-- [ ] การ์ด **บิลที่ปิด** (จำนวน + โดนัทช่องทางชำระ หรือรายการ 3 ช่องทาง)
-- [ ] การ์ด **บิลทำลาย** (จำนวน + ยอด) — ไม่มีคอลัมน์คืนเงิน
-- [ ] ลิงก์ “ดูเพิ่มเติม” → แท็บรอบขาย / filter voided
+- [x] Aggregator: net · subtotal · discount · tender split · bill count · void count/total (`summarizePosSalesDetailed`)
+- [x] การ์ด **ยอดขายสุทธิ** (ตัวเลขใหญ่ + แถบชำระ + ยอดขาย/ส่วนลด/สุทธิ)
+- [x] การ์ด **บิลที่ปิด** (จำนวน + โดนัทช่องทางชำระ 3 ช่องทาง)
+- [x] การ์ด **บิลทำลาย** (จำนวน + ยอด) — คืนเงินแสดง “ยังไม่มีในระบบ”
+- [x] ลิงก์ “ดูเพิ่มเติม” → แท็บรอบขาย / `?status=voided`
 
 **ออก:** แถวบนครบ ปรับเข้าข้อมูลจริง ไม่แสดงฟิลด์ปลอม
 

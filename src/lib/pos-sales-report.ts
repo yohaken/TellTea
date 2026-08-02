@@ -11,7 +11,7 @@ import { getDb } from "./firebase";
 import { POS_SALES_COL } from "./pos-sales";
 import { POS_SESSIONS_COL } from "./pos-session";
 import type { PosSale, PosSession, PosSessionCashDropNote } from "./types";
-import { startOfLocalDay } from "./utils";
+import { bangkokDateKey, startOfLocalDay } from "./utils";
 
 /** Initial slim-table page size (scroll for the rest of the window). */
 export const POS_SESSIONS_SLIM_LIMIT = 50;
@@ -661,6 +661,125 @@ export function subscribePosSalesRecent(
     },
     (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
   );
+}
+
+/** Max inclusive calendar days for BO dashboard range query. */
+export const POS_DASHBOARD_MAX_RANGE_DAYS = 92;
+
+export type PosDateRange = {
+  /** Bangkok midnight ms (inclusive) */
+  startMs: number;
+  /** Bangkok midnight ms (inclusive) */
+  endMs: number;
+};
+
+/** Default dashboard window: 1st of Bangkok month → today. */
+export function defaultPosDashboardRange(nowMs = Date.now()): PosDateRange {
+  const endMs = startOfLocalDay(nowMs);
+  const key = bangkokDateKey(endMs);
+  const [y, m] = key.split("-").map(Number);
+  const startMs = Date.parse(
+    `${y}-${String(m).padStart(2, "0")}-01T00:00:00+07:00`,
+  );
+  return { startMs: Number.isFinite(startMs) ? startMs : endMs, endMs };
+}
+
+export function clampPosDateRange(range: PosDateRange): PosDateRange {
+  let startMs = startOfLocalDay(range.startMs);
+  let endMs = startOfLocalDay(range.endMs);
+  if (endMs < startMs) {
+    const tmp = startMs;
+    startMs = endMs;
+    endMs = tmp;
+  }
+  const maxSpan = (POS_DASHBOARD_MAX_RANGE_DAYS - 1) * 24 * 60 * 60 * 1000;
+  if (endMs - startMs > maxSpan) {
+    startMs = endMs - maxSpan;
+  }
+  return { startMs, endMs };
+}
+
+export function posDateRangeDayCount(range: PosDateRange): number {
+  const { startMs, endMs } = clampPosDateRange(range);
+  return Math.floor((endMs - startMs) / (24 * 60 * 60 * 1000)) + 1;
+}
+
+/** Gregorian DD/MM/YYYY for one Bangkok day. */
+export function formatPosRangeDayCe(ms: number): string {
+  const key = bangkokDateKey(ms);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return "—";
+  const [y, m, d] = key.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+/** `01/07/2026 - 31/07/2026` style label. */
+export function formatPosDateRangeLabel(range: PosDateRange): string {
+  const { startMs, endMs } = clampPosDateRange(range);
+  return `${formatPosRangeDayCe(startMs)} - ${formatPosRangeDayCe(endMs)}`;
+}
+
+/** YYYY-MM-DD for `<input type="date">` from Bangkok midnight ms. */
+export function posRangeDayInputValue(ms: number): string {
+  return bangkokDateKey(startOfLocalDay(ms)) || "";
+}
+
+/**
+ * Live bills for a Bangkok date range (inclusive midnights).
+ * Merges legacy UTC+7 twin `date` stamps the same way as single-day subscribe.
+ */
+export function subscribePosSalesForDateRange(
+  range: PosDateRange,
+  onSales: (sales: PosSale[]) => void,
+  onError?: (err: Error) => void,
+): Unsubscribe {
+  const { startMs, endMs } = clampPosDateRange(range);
+  const legacyStart = startMs + 7 * 60 * 60 * 1000;
+  const legacyEnd = endMs + 7 * 60 * 60 * 1000;
+
+  let primary: PosSale[] = [];
+  let legacy: PosSale[] = [];
+
+  const emit = () => {
+    const map = new Map<string, PosSale>();
+    for (const s of primary) map.set(s.id, s);
+    for (const s of legacy) map.set(s.id, s);
+    onSales(
+      [...map.values()].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
+    );
+  };
+
+  const handleErr = (err: Error) => onError?.(err);
+
+  const unsub1 = onSnapshot(
+    query(
+      collection(getDb(), POS_SALES_COL),
+      where("date", ">=", startMs),
+      where("date", "<=", endMs),
+    ),
+    (snap) => {
+      primary = snap.docs.map((d) => mapPosSale(d.id, d.data() as Record<string, unknown>));
+      emit();
+    },
+    (err) => handleErr(err instanceof Error ? err : new Error(String(err))),
+  );
+
+  const unsub2 = onSnapshot(
+    query(
+      collection(getDb(), POS_SALES_COL),
+      where("date", ">=", legacyStart),
+      where("date", "<=", legacyEnd),
+    ),
+    (snap) => {
+      legacy = snap.docs.map((d) => mapPosSale(d.id, d.data() as Record<string, unknown>));
+      emit();
+    },
+    (err) => handleErr(err instanceof Error ? err : new Error(String(err))),
+  );
+
+  return () => {
+    unsub1();
+    unsub2();
+  };
 }
 
 export function shiftDayMs(offsetDays = 0): number {
