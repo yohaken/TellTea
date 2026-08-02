@@ -550,6 +550,10 @@ service cloud.firestore {
       allow read, write: if hasPerm('ownerBooks');
     }
 
+    match /capitalBooks/{entryId} {
+      allow read, write: if hasPerm('ownerBooks');
+    }
+
     /**
      * One evidence photo per doc — keeps parent rows small (`evp:{id}`).
      * Staff folders must match every storageFolder used in the app
@@ -567,7 +571,8 @@ service cloud.firestore {
     match /evidencePhotos/{photoId} {
       allow read: if isOwner() || isOwnerEmail()
         || (signedIn() && evidencePhotoStaffFolder(resource.data.folder))
-        || (hasPerm('ownerBooks') && resource.data.folder == 'owner-books');
+        || (hasPerm('ownerBooks') && resource.data.folder == 'owner-books')
+        || (hasPerm('ownerBooks') && resource.data.folder == 'capital-books');
       allow create: if signedIn()
         && request.resource.data.keys().hasAll([
           'dataUrl', 'contentType', 'fileName', 'folder', 'slotKey', 'createdBy', 'createdAt'
@@ -581,7 +586,8 @@ service cloud.firestore {
         && (
           evidencePhotoStaffFolder(request.resource.data.folder)
           || ((isOwner() || isOwnerEmail() || hasPerm('ownerBooks'))
-              && request.resource.data.folder == 'owner-books')
+              && (request.resource.data.folder == 'owner-books'
+                  || request.resource.data.folder == 'capital-books'))
           || ((isOwner() || isOwnerEmail())
               && request.resource.data.folder == 'vat-ingest')
         );
@@ -985,6 +991,7 @@ service cloud.firestore {
         || (hasPerm('ledger') && (docId == 'ledger' || docId == 'lowBalanceAlert'))
         || (isOwner() && docId == 'lowBalanceAlert')
         || (hasPerm('ownerBooks') && docId == 'ownerBooks')
+        || (hasPerm('ownerBooks') && docId == 'capitalBooks')
         || (isOwner() && docId == 'otSettings')
         || (isPosDeviceAuth() && docId == 'pos' && posMetaBillWrite());
     }

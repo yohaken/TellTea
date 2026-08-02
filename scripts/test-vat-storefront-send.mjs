@@ -36,18 +36,32 @@ const ui = readFileSync(
 assert.match(ui, /patchSfSendIntoDraft/);
 assert.match(ui, /onStorefrontTransferManual/);
 assert.match(ui, /จะไม่แตะยอดในตาราง/);
+// แถบส่งหน้าร้านเดิม → ลอยด้านล่าง
+assert.match(ui, /vat-sf-send--float/);
+assert.match(ui, /has-sf-send-float/);
+assert.match(ui, /แถบส่งหน้าร้าน/);
 // ห้ามดึงยอดตารางมาคูณ % แล้วทับของที่เซฟ
 assert.doesNotMatch(
   ui,
   /fromTable = Number\(draftRef\.current\.transfer\.storefront\)/,
 );
 assert.match(ui, /ยอดขายโอน/);
-assert.match(ui, /คิดภาษีขายอัตโนมัติ/);
 assert.match(ui, /vat-cost-layer/);
 assert.match(ui, /ชั้นคิดต้นทุนบช/);
 assert.match(ui, /ติ๊กหักภาษีซื้อ → ต้นทุน = บิล − VAT/);
 assert.match(ui, /ไม่ติ๊ก → ต้นทุน = บิลรวม VAT ทั้งก้อน/);
 assert.match(ui, /โอน ← จากแถบ A/);
+
+const css = readFileSync(join(root, "src/app/globals.css"), "utf8");
+assert.match(css, /\.vat-sf-send--float\s*\{/);
+assert.match(css, /position:\s*fixed/);
+assert.match(css, /width:\s*fit-content/);
+assert.match(css, /right:\s*calc\(50% \+ 0\.4rem\)/);
+assert.match(css, /owner-quick/);
+assert.match(css, /ไอคอนตัวแรก/);
+// แถบ z ต่ำกว่า dock · dock z สูงขึ้น
+assert.match(css, /\.vat-sf-send--float\s*\{[^}]*z-index:\s*12/s);
+assert.match(css, /\.owner-quick-dock\s*\{[^}]*z-index:\s*16/s);
 
 const entryVat = readFileSync(join(root, "src/lib/entry-vat.ts"), "utf8");
 assert.match(entryVat, /export function businessCostOut/);

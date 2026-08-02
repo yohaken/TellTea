@@ -684,7 +684,8 @@ export function defaultPosDashboardRange(nowMs = Date.now()): PosDateRange {
   return { startMs: Number.isFinite(startMs) ? startMs : endMs, endMs };
 }
 
-export function clampPosDateRange(range: PosDateRange): PosDateRange {
+/** Order start/end as Bangkok midnights — does not enforce max span. */
+export function normalizePosDateRange(range: PosDateRange): PosDateRange {
   let startMs = startOfLocalDay(range.startMs);
   let endMs = startOfLocalDay(range.endMs);
   if (endMs < startMs) {
@@ -692,16 +693,27 @@ export function clampPosDateRange(range: PosDateRange): PosDateRange {
     startMs = endMs;
     endMs = tmp;
   }
+  return { startMs, endMs };
+}
+
+/** Inclusive calendar-day count without max-span clamp (for validation). */
+export function posDateRangeDayCountRaw(range: PosDateRange): number {
+  const { startMs, endMs } = normalizePosDateRange(range);
+  return Math.floor((endMs - startMs) / (24 * 60 * 60 * 1000)) + 1;
+}
+
+/** Normalize + clamp to {@link POS_DASHBOARD_MAX_RANGE_DAYS} (safety for queries). */
+export function clampPosDateRange(range: PosDateRange): PosDateRange {
+  const { startMs, endMs } = normalizePosDateRange(range);
   const maxSpan = (POS_DASHBOARD_MAX_RANGE_DAYS - 1) * 24 * 60 * 60 * 1000;
   if (endMs - startMs > maxSpan) {
-    startMs = endMs - maxSpan;
+    return { startMs: endMs - maxSpan, endMs };
   }
   return { startMs, endMs };
 }
 
 export function posDateRangeDayCount(range: PosDateRange): number {
-  const { startMs, endMs } = clampPosDateRange(range);
-  return Math.floor((endMs - startMs) / (24 * 60 * 60 * 1000)) + 1;
+  return posDateRangeDayCountRaw(clampPosDateRange(range));
 }
 
 /** Gregorian DD/MM/YYYY for one Bangkok day. */
@@ -738,8 +750,12 @@ export function subscribePosSalesForDateRange(
 
   let primary: PosSale[] = [];
   let legacy: PosSale[] = [];
+  let primaryReady = false;
+  let legacyReady = false;
 
   const emit = () => {
+    // Wait for both twin queries so the dashboard does not flash empty/under-count.
+    if (!primaryReady || !legacyReady) return;
     const map = new Map<string, PosSale>();
     for (const s of primary) map.set(s.id, s);
     for (const s of legacy) map.set(s.id, s);
@@ -758,6 +774,7 @@ export function subscribePosSalesForDateRange(
     ),
     (snap) => {
       primary = snap.docs.map((d) => mapPosSale(d.id, d.data() as Record<string, unknown>));
+      primaryReady = true;
       emit();
     },
     (err) => handleErr(err instanceof Error ? err : new Error(String(err))),
@@ -771,6 +788,7 @@ export function subscribePosSalesForDateRange(
     ),
     (snap) => {
       legacy = snap.docs.map((d) => mapPosSale(d.id, d.data() as Record<string, unknown>));
+      legacyReady = true;
       emit();
     },
     (err) => handleErr(err instanceof Error ? err : new Error(String(err))),

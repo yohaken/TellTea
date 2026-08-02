@@ -173,7 +173,7 @@ export function subscribeStockItemsWithCosts(
 export function subscribeStockMovements(
   onData: (rows: StockMovement[]) => void,
   onError?: (err: Error) => void,
-  opts?: { itemId?: string; since?: number },
+  opts?: { itemId?: string; since?: number; until?: number },
 ): Unsubscribe {
   let q = query(collection(getDb(), MOVEMENTS_COL), orderBy("date", "desc"), orderBy("createdAt", "desc"));
   if (opts?.itemId) {
@@ -183,7 +183,15 @@ export function subscribeStockMovements(
       orderBy("date", "desc"),
       orderBy("createdAt", "desc"),
     );
-  } else if (opts?.since) {
+  } else if (opts?.since != null && opts?.until != null) {
+    q = query(
+      collection(getDb(), MOVEMENTS_COL),
+      where("date", ">=", opts.since),
+      where("date", "<=", opts.until),
+      orderBy("date", "desc"),
+      orderBy("createdAt", "desc"),
+    );
+  } else if (opts?.since != null) {
     q = query(
       collection(getDb(), MOVEMENTS_COL),
       where("date", ">=", opts.since),

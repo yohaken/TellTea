@@ -2117,6 +2117,59 @@ body.modal-open .main-panel {
   box-shadow: 0 1px 2px rgba(28, 42, 31, 0.08);
 }
 
+/* บช ทุน — สรุปทุนกล่องชิดตาราง + สลับเข้า/ออกในฟอร์ม */
+.capital-books-page .capital-books-toolbar {
+  margin-bottom: 0.15rem;
+}
+
+.capital-books-page .capital-summary-box {
+  max-width: 70%;
+  margin-right: clamp(2.4rem, 14vw, 5rem);
+  background: rgba(214, 196, 160, 0.28);
+  border-color: rgba(120, 90, 40, 0.18);
+}
+
+.capital-books-page .capital-summary-meta {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.capital-kind-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.capital-kind-toggle .ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-height: 2rem;
+  font-size: 0.8rem;
+}
+
+.capital-kind-toggle .ghost-btn.is-active-in {
+  background: rgba(183, 228, 192, 0.55);
+  border-color: rgba(47, 107, 79, 0.28);
+  color: rgba(28, 42, 31, 0.9);
+  font-weight: 700;
+}
+
+.capital-kind-toggle .ghost-btn.is-active-out {
+  background: rgba(244, 198, 176, 0.55);
+  border-color: rgba(160, 70, 40, 0.28);
+  color: rgba(87, 15, 15, 0.92);
+  font-weight: 700;
+}
+
+.capital-books-page .capital-books-sheet .col-in,
+.capital-books-page .capital-books-sheet .col-out {
+  width: 5.6rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .owner-books-balance {
   margin-bottom: 0.35rem;
   padding: 0.28rem 0.45rem;
@@ -2536,7 +2589,7 @@ body.modal-open .main-panel {
   left: 50%;
   right: max(0.55rem, calc((100vw - var(--shell-max)) / 2 + 0.55rem));
   bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.45rem);
-  z-index: 13;
+  z-index: 16; /* สูงกว่าแถบส่งหน้าร้าน — ไอคอนตัวแรกชัดเสมอ */
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -20409,16 +20462,44 @@ a.ghost-btn {
   margin-bottom: 0.65rem;
 }
 
-/* A) แถบส่งหน้าร้าน → ตาราง — แถวเดียว กระชับ */
+/* A) แถบส่งหน้าร้าน — ลอยซ้าย กระชับตามเนื้อหา · ไม่กินเต็มแถว · ไม่ทับทางลัดเจ้าของ */
+.vat-month-books.has-sf-send-float {
+  padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 5.4rem);
+}
+
 .vat-sf-send {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  flex-wrap: wrap;
+  gap: 0.28rem 0.35rem;
   margin: 0.1rem 0 0.35rem;
   min-height: 1.45rem;
   font-size: 0.68rem;
   line-height: 1.1;
   color: rgba(28, 42, 31, 0.78);
+}
+
+.vat-sf-send--float {
+  position: fixed;
+  /* ชิดซ้ายของไอคอนทางลัดตัวแรก (dock เริ่มที่ left:50%) · เว้นช่อง 0.4rem เสมอ */
+  left: auto;
+  right: calc(50% + 0.4rem);
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.45rem);
+  z-index: 12; /* ต่ำกว่า owner-quick-dock — ไอคอนตัวแรกชัด/แตะได้เสมอ */
+  width: fit-content;
+  /* กันล้นขอบซ้ายจอ + ไม่ข้ามเส้น 50% */
+  max-width: min(16.5rem, calc(50vw - 1.1rem), calc(100vw - 50% - 0.85rem));
+  margin: 0;
+  padding: 0.35rem 0.45rem;
+  min-height: 0;
+  height: auto;
+  border: 1px solid rgba(28, 42, 31, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 253, 248, 0.94);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(20, 30, 22, 0.14);
+  align-content: flex-start;
 }
 
 .vat-sf-send-label {
@@ -20428,7 +20509,7 @@ a.ghost-btn {
 }
 
 .vat-sf-send-input {
-  width: 5.4rem;
+  width: 5.2rem;
   min-height: 1.35rem !important;
   height: 1.35rem;
   padding: 0.1rem 0.28rem !important;
@@ -20438,13 +20519,22 @@ a.ghost-btn {
 }
 
 .vat-sf-send-range {
-  flex: 1 1 5rem;
-  min-width: 4.5rem;
-  max-width: 11rem;
+  flex: 0 1 6.5rem;
+  width: 6.5rem;
+  min-width: 5rem;
+  max-width: 7.5rem;
   height: 0.9rem;
   margin: 0;
   accent-color: #2f6b4f;
   cursor: pointer;
+}
+
+/* ลอย: สไลด์ขึ้นบรรทัดใหม่เต็มความกว้างแถบ (ขยายแนว Y) */
+.vat-sf-send--float .vat-sf-send-range {
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
 }
 
 .vat-sf-send-range:disabled {
@@ -20454,7 +20544,7 @@ a.ghost-btn {
 
 .vat-sf-send-pct {
   flex-shrink: 0;
-  min-width: 2.1rem;
+  min-width: 2rem;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   font-size: 0.66rem;
@@ -20477,6 +20567,14 @@ a.ghost-btn {
   font-weight: 600;
   color: rgba(28, 42, 31, 0.55);
   white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .vat-sf-send--float {
+    right: calc(50% + 0.32rem);
+    max-width: min(14.5rem, calc(50vw - 0.95rem), calc(100vw - 50% - 0.7rem));
+    padding: 0.32rem 0.4rem;
+  }
 }
 
 .vat-c-real-note {

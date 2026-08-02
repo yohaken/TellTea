@@ -234,10 +234,13 @@ export function summarizePosSalesProducts(
   const topItem = topItems[0] || null;
   const topCategory = categoryRows[0] || null;
 
+  const soldMenuCount = itemMap.size;
+  const soldMenuPctRaw = pct(soldMenuCount, activeMenuCount || soldMenuCount || 1);
   return {
-    soldMenuCount: itemMap.size,
+    soldMenuCount,
     activeMenuCount,
-    soldMenuPct: pct(itemMap.size, activeMenuCount || itemMap.size),
+    /** Cap at 100 — sold keys may include discontinued / uncatalogued items. */
+    soldMenuPct: Math.min(100, soldMenuPctRaw),
     topItem,
     topItemPct: topItem ? pct(topItem.total, lineTotal) : 0,
     topCategory,
@@ -301,16 +304,27 @@ export function summarizeStockMovementsForDashboard(
 
   for (const m of inRange) {
     const cost = costByItemId.get(m.itemId) || 0;
-    const value = round2(Math.max(0, m.quantity) * cost);
+    const qty = Math.max(0, m.quantity);
     if (m.type === "IN") {
       inCount += 1;
-      inValue = round2(inValue + value);
+      inValue = round2(inValue + round2(qty * cost));
     } else if (m.type === "OUT") {
       outCount += 1;
-      outValue = round2(outValue + value);
+      outValue = round2(outValue + round2(qty * cost));
     } else if (m.type === "ADJUST") {
       adjustCount += 1;
-      adjustValue = round2(adjustValue + value);
+      // Only downward adjusts count toward “เบิก/ปรับ” value (upward ≠ issue).
+      const before = m.qtyBefore;
+      const after = m.qtyAfter;
+      if (
+        typeof before === "number" &&
+        typeof after === "number" &&
+        Number.isFinite(before) &&
+        Number.isFinite(after) &&
+        after < before
+      ) {
+        adjustValue = round2(adjustValue + round2((before - after) * cost));
+      }
     }
   }
 

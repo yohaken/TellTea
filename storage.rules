@@ -79,6 +79,12 @@ service firebase.storage {
       allow delete: if canOwnerBooksStorage();
     }
 
+    match /capital-books/{allPaths=**} {
+      allow read: if canOwnerBooksStorage();
+      allow write: if canOwnerBooksStorage() && evidenceImageOk();
+      allow delete: if canOwnerBooksStorage();
+    }
+
     match /ledger-receipts/{allPaths=**} {
       allow read: if signedIn();
       allow write: if signedIn() && evidenceImageOk();

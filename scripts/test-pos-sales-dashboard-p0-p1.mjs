@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 62\d/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 624/);
 
 assert.ok(existsSync(join(root, "docs/pos-sales-dashboard-phases.md")));
 const doc = read("docs/pos-sales-dashboard-phases.md");
@@ -21,8 +21,11 @@ const lib = read("src/lib/pos-sales-report.ts");
 assert.match(lib, /subscribePosSalesForDateRange/);
 assert.match(lib, /defaultPosDashboardRange/);
 assert.match(lib, /clampPosDateRange/);
+assert.match(lib, /normalizePosDateRange/);
+assert.match(lib, /posDateRangeDayCountRaw/);
 assert.match(lib, /POS_DASHBOARD_MAX_RANGE_DAYS/);
 assert.match(lib, /formatPosDateRangeLabel/);
+assert.match(lib, /primaryReady|legacyReady/);
 assert.match(lib, /where\("date", ">="/);
 assert.match(lib, /where\("date", "<="/);
 

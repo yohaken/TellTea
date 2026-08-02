@@ -842,7 +842,7 @@ export function VatMonthBooks({ actor }: Props) {
   const ownerOp = bookOpEx(bookOwner);
 
   return (
-    <div className="vat-month-books">
+    <div className="vat-month-books has-sf-send-float">
       <VatSalesSubNav active="month" />
       <div className="vat-top-bar">
         <label className="vat-month-pick">
@@ -980,60 +980,13 @@ export function VatMonthBooks({ actor }: Props) {
         <p className="muted">กำลังโหลด…</p>
       ) : (
         <>
-          {/* A) รายได้ถึงร้าน */}
+          {/* A) รายได้ถึงร้าน — แถบส่งหน้าร้านลอยด้านล่าง (vat-sf-send--float) */}
           <section className="vat-table-block vat-income-bridge">
             <h2 className="vat-table-title">
               A) รายได้ถึงร้าน — {formatThaiMonthKey(month)}
             </h2>
-            <div
-              className="vat-sf-send"
-              title="ใส่ยอดต้นทางในช่องนี้ก่อน แล้วเลื่อน % — จึงจะเขียนเข้าตาราง · ถ้าแก้ยอดหน้าร้านในตารางเอง ระบบจะจำค่านั้นและไม่ให้ % ทับ"
-            >
-              <span className="vat-sf-send-label">ส่งหน้าร้าน</span>
-              <input
-                className="vat-sales-input vat-sf-send-input"
-                inputMode="decimal"
-                disabled={locked}
-                value={sfSendSourceStr}
-                placeholder="ยอดต้นทาง"
-                aria-label="ยอดหน้าร้านต้นทาง"
-                onChange={(e) => onSfSendSourceChange(e.target.value)}
-                onBlur={() => {
-                  const next = normalizeMoneyFieldText(sfSendSourceStr);
-                  if (next !== sfSendSourceStr) setSfSendSourceStr(next);
-                }}
-              />
-              <input
-                type="range"
-                className="vat-sf-send-range"
-                min={0}
-                max={100}
-                step={1}
-                disabled={locked}
-                value={sfSendPct}
-                aria-label="เปอร์เซ็นต์ส่งเข้ารายได้ถึงร้าน"
-                onChange={(e) => onSfSendPctChange(Number(e.target.value))}
-              />
-              <span className="vat-sf-send-pct">{sfSendPct}%</span>
-              <span
-                className={`vat-sf-send-out${sfSendSourceNum > 0 ? " is-live" : ""}`}
-                title="ยอดที่ส่งเข้าช่องหน้าร้านในตาราง A"
-              >
-                → โอน {fmt(sfSendPreview)}
-              </span>
-              <span
-                className="vat-sf-send-unsent"
-                title="ส่วนหน้าร้านที่ไม่ถูกส่งเข้าตารางรายได้"
-              >
-                ค้าง {fmt(sfUnsent)}
-              </span>
-            </div>
             <p className="muted vat-sales-hint vat-sf-send-hint">
-              ส่งเข้า A「ยอดโอนหน้าร้าน」+ D「ยอดขายโอน」ทั้งก้อน → คิดภาษีขายอัตโนมัติ ·{" "}
-              ไม่แตะภาษีซื้อ
-              {sfSendSourceNum > 0
-                ? ""
-                : " · ใส่ยอดต้นทางก่อน แล้วเลื่อน %"}
+              ใช้แถบ「ส่งหน้าร้าน」ลอยด้านล่าง → เข้า A โอน + D ขายโอน · คิดภาษีขาย · ไม่แตะภาษีซื้อ
             </p>
             <div className="sheet-wrap vat-month-slim-wrap">
               <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
@@ -1843,6 +1796,53 @@ export function VatMonthBooks({ actor }: Props) {
           }}
         />
       ) : null}
+
+      {/* แถบส่งหน้าร้านเดิม — ลอยด้านล่าง ซ้าย–กลาง · ไม่ทับ Tune Desk / bottom-nav */}
+      <div
+        className="vat-sf-send vat-sf-send--float"
+        role="region"
+        aria-label="แถบส่งหน้าร้าน"
+        title="ใส่ยอดต้นทางก่อน แล้วเลื่อน % — จึงจะเขียนเข้าตาราง · แก้ยอดในตารางเองแล้วระบบจะไม่ให้ % ทับ"
+      >
+        <span className="vat-sf-send-label">ส่งหน้าร้าน</span>
+        <input
+          className="vat-sales-input vat-sf-send-input"
+          inputMode="decimal"
+          disabled={locked || loading}
+          value={sfSendSourceStr}
+          placeholder="ยอดต้นทาง"
+          aria-label="ยอดหน้าร้านต้นทาง"
+          onChange={(e) => onSfSendSourceChange(e.target.value)}
+          onBlur={() => {
+            const next = normalizeMoneyFieldText(sfSendSourceStr);
+            if (next !== sfSendSourceStr) setSfSendSourceStr(next);
+          }}
+        />
+        <input
+          type="range"
+          className="vat-sf-send-range"
+          min={0}
+          max={100}
+          step={1}
+          disabled={locked || loading}
+          value={sfSendPct}
+          aria-label="เปอร์เซ็นต์ส่งเข้ารายได้ถึงร้าน"
+          onChange={(e) => onSfSendPctChange(Number(e.target.value))}
+        />
+        <span className="vat-sf-send-pct">{sfSendPct}%</span>
+        <span
+          className={`vat-sf-send-out${sfSendSourceNum > 0 ? " is-live" : ""}`}
+          title="ยอดที่ส่งเข้าช่องหน้าร้านในตาราง A + D"
+        >
+          → โอน {fmt(sfSendPreview)}
+        </span>
+        <span
+          className="vat-sf-send-unsent"
+          title="ส่วนหน้าร้านที่ไม่ถูกส่งเข้าตารางรายได้"
+        >
+          ค้าง {fmt(sfUnsent)}
+        </span>
+      </div>
     </div>
   );
 }

@@ -17,7 +17,9 @@ import {
   defaultPosDashboardRange,
   formatPosDateRangeLabel,
   POS_DASHBOARD_MAX_RANGE_DAYS,
+  normalizePosDateRange,
   posDateRangeDayCount,
+  posDateRangeDayCountRaw,
   posRangeDayInputValue,
   subscribePosSalesForDateRange,
   summarizePosSalesDetailed,
@@ -133,12 +135,14 @@ export function PosSalesDashboard({
       setStockMovements([]);
       return;
     }
+    // Clear immediately so widening/narrowing the range cannot flash stale rows.
+    setStockMovements([]);
     return subscribeStockMovements(
       setStockMovements,
       (err) => onError?.(err.message),
-      { since: clamped.startMs },
+      { since: clamped.startMs, until: clamped.endMs },
     );
-  }, [clamped.startMs, rangeTooLong, onError]);
+  }, [clamped.startMs, clamped.endMs, rangeTooLong, onError]);
 
   useEffect(() => {
     return onSnapshot(
@@ -180,8 +184,8 @@ export function PosSalesDashboard({
     try {
       const startMs = startOfLocalDay(parseDateInput(draftStart));
       const endMs = startOfLocalDay(parseDateInput(draftEnd));
-      const next = clampPosDateRange({ startMs, endMs });
-      if (posDateRangeDayCount({ startMs, endMs }) > POS_DASHBOARD_MAX_RANGE_DAYS) {
+      const next = normalizePosDateRange({ startMs, endMs });
+      if (posDateRangeDayCountRaw(next) > POS_DASHBOARD_MAX_RANGE_DAYS) {
         onError?.(`เลือกได้ไม่เกิน ${POS_DASHBOARD_MAX_RANGE_DAYS} วัน`);
         return;
       }

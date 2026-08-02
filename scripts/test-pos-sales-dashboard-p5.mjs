@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.match(read("src/lib/version.ts"), /APP_BUILD = 622/);
+assert.match(read("src/lib/version.ts"), /APP_BUILD = 624/);
 assert.ok(existsSync(join(root, "src/components/PosSalesDashboardStock.tsx")));
 
 const agg = read("src/lib/pos-sales-dashboard.ts");
@@ -27,7 +27,12 @@ const dash = read("src/components/PosSalesDashboard.tsx");
 assert.match(dash, /PosSalesDashboardStock/);
 assert.match(dash, /subscribeStockMovements/);
 assert.match(dash, /stockCosts/);
+assert.match(dash, /until:\s*clamped\.endMs|until: clamped.endMs/);
+assert.match(dash, /posDateRangeDayCountRaw/);
 assert.match(dash, /\/stock\//);
+
+const stockLib = read("src/lib/stock.ts");
+assert.match(stockLib, /until/);
 
 const css = read("src/app/globals.css");
 assert.match(css, /\.pos-dash-stock-split/);

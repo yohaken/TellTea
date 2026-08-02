@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 
-/** สลับโหมดในบช.เจ้าของ: เงินออก ↔ ยอดขาย/VAT (เฉพาะเจ้าของ) */
+/** สลับโหมดในบช.เจ้าของ: เงินออก ↔ VAT เดือน ↔ บช ทุน */
 export function OwnerBooksModeSwitch({
   active,
 }: {
-  active: "out" | "vat";
+  active: "out" | "vat" | "capital";
 }) {
   return (
     <nav className="owner-books-mode" aria-label="โหมดบช.เจ้าของ">
@@ -31,6 +31,17 @@ export function OwnerBooksModeSwitch({
         aria-current={active === "vat" ? "page" : undefined}
       >
         VAT เดือน
+      </Link>
+      <Link
+        href="/capital/"
+        className={
+          active === "capital"
+            ? "owner-books-mode-btn is-active"
+            : "owner-books-mode-btn"
+        }
+        aria-current={active === "capital" ? "page" : undefined}
+      >
+        บช ทุน
       </Link>
     </nav>
   );
