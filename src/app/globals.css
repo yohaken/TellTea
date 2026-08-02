@@ -20465,7 +20465,7 @@ a.ghost-btn {
 
 /* A) แถบส่งหน้าร้าน — ลอยซ้าย กระชับตามเนื้อหา · ไม่กินเต็มแถว · ไม่ทับทางลัดเจ้าของ */
 .vat-month-books.has-sf-send-float {
-  padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 5.4rem);
+  padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 6.1rem);
 }
 
 .vat-sf-send {
@@ -20489,7 +20489,7 @@ a.ghost-btn {
   z-index: 12; /* ต่ำกว่า owner-quick-dock — ไอคอนตัวแรกชัด/แตะได้เสมอ */
   width: fit-content;
   /* กันล้นขอบซ้ายจอ + ไม่ข้ามเส้น 50% */
-  max-width: min(16.5rem, calc(50vw - 1.1rem), calc(100vw - 50% - 0.85rem));
+  max-width: min(17.5rem, calc(50vw - 1.1rem), calc(100vw - 50% - 0.85rem));
   margin: 0;
   padding: 0.35rem 0.45rem;
   min-height: 0;
@@ -20501,6 +20501,42 @@ a.ghost-btn {
   backdrop-filter: blur(8px);
   box-shadow: 0 6px 18px rgba(20, 30, 22, 0.14);
   align-content: flex-start;
+}
+
+.vat-sf-pos-connect {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.08rem 0.28rem 0.08rem 0.18rem;
+  border-radius: 8px;
+  border: 1px solid rgba(28, 42, 31, 0.14);
+  background: rgba(28, 42, 31, 0.04);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: rgba(28, 42, 31, 0.72);
+  cursor: pointer;
+  user-select: none;
+}
+
+.vat-sf-pos-connect.is-on {
+  border-color: rgba(47, 107, 79, 0.45);
+  background: rgba(47, 107, 79, 0.12);
+  color: #1b4332;
+}
+
+.vat-sf-pos-connect input {
+  width: 0.78rem;
+  height: 0.78rem;
+  margin: 0;
+  accent-color: #2f6b4f;
+  cursor: pointer;
+}
+
+.vat-sf-pos-connect input:disabled {
+  cursor: not-allowed;
 }
 
 .vat-sf-send-label {
@@ -20573,7 +20609,7 @@ a.ghost-btn {
 @media (max-width: 420px) {
   .vat-sf-send--float {
     right: calc(50% + 0.32rem);
-    max-width: min(14.5rem, calc(50vw - 0.95rem), calc(100vw - 50% - 0.7rem));
+    max-width: min(15.5rem, calc(50vw - 0.95rem), calc(100vw - 50% - 0.7rem));
     padding: 0.32rem 0.4rem;
   }
 }
