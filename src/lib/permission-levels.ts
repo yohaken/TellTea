@@ -313,3 +313,18 @@ export function permissionsMatchLevel(
   const b = normalizePermissions(level.permissions, "staff");
   return (Object.keys(a) as (keyof StaffPermissions)[]).every((k) => a[k] === b[k]);
 }
+
+/** ป้ายลำดับสิทธิ์สั้นๆ สำหรับตารางทีม / รายชื่อบัญชี */
+export function staffLevelBadgeLabel(
+  member: { role?: string; permissionLevelId?: string; permissionsCustomized?: boolean } | null | undefined,
+  levels: PermissionLevel[],
+): string {
+  if (!member) return "—";
+  if (member.role === "owner") {
+    return findLevel(levels, SEED_LEVEL_IDS.owner)?.name || "เจ้าของ";
+  }
+  const level = findLevel(levels, member.permissionLevelId);
+  if (level) return level.name;
+  if (member.permissionsCustomized) return "กำหนดเอง";
+  return "—";
+}

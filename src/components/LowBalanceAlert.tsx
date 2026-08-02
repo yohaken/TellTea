@@ -11,6 +11,7 @@ import {
   DEFAULT_ALERT_SETTINGS,
 } from "@/lib/settings";
 import { showLocalLowBalanceNotification } from "@/lib/push";
+import { can } from "@/lib/permissions";
 import { formatBaht } from "@/lib/utils";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
@@ -35,6 +36,7 @@ export function LowBalanceAlert() {
   const [open, setOpen] = useState(false);
   const notifiedRef = useRef(false);
   const isOwner = staff?.role === "owner";
+  const canTransferIn = can(staff, "transferIn");
 
   useEffect(() => {
     const unsubBal = subscribeLedgerBalance((next) => setBalance(next));
@@ -92,10 +94,10 @@ export function LowBalanceAlert() {
         <p className="muted" style={{ textAlign: "left", marginBottom: "0.85rem" }}>
           คงเหลือ <strong>{formatBaht(balance)}</strong> — ต่ำกว่าเกณฑ์{" "}
           {formatBaht(settings.lowBalanceThreshold)}
-          {isOwner ? " โอนเงินเข้าได้เลย" : " แจ้งเจ้าของให้โอนเข้า"}
+          {canTransferIn ? " โอนเงินเข้าได้เลย" : " แจ้งเจ้าของให้โอนเข้า"}
         </p>
         <div className="btn-row">
-          {isOwner ? (
+          {canTransferIn ? (
             <Link href="/ledger/?transferIn=1" className="primary-btn" onClick={() => setOpen(false)}>
               โอนเข้า
             </Link>

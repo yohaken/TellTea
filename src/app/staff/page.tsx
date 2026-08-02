@@ -38,6 +38,7 @@ import {
   ensurePermissionLevelSeeds,
   findLevel,
   permissionsMatchLevel,
+  staffLevelBadgeLabel,
 } from "@/lib/permission-levels";
 import { formatPhoneDisplay, staffAccountLabel } from "@/lib/utils";
 import { mapFirestoreError } from "@/lib/firestore-errors";
@@ -443,6 +444,7 @@ function StaffView() {
           <StaffReadinessTable
             members={members}
             employees={employees}
+            levels={levels}
             personalByStaffId={personalMap}
             ownerView={isOwner}
             busy={busy}
@@ -592,11 +594,7 @@ function StaffView() {
               const isSelf = member.id === staff!.id;
               const editing = editingStaffId === member.id;
               const memberPerms = normalizePermissions(member.permissions, member.role);
-              const level = findLevel(levels, member.permissionLevelId);
-              const levelLabel =
-                member.role === "owner"
-                  ? "เจ้าของ"
-                  : level?.name || (member.permissionsCustomized ? "กำหนดเอง" : "—");
+              const levelLabel = staffLevelBadgeLabel(member, levels);
               return (
                 <div key={member.id} className="staff-account-row">
                   <div className="staff-account-main">

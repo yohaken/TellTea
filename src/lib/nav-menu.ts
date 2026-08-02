@@ -106,6 +106,18 @@ export function canAccessNavModule(
   return can(member, perm);
 }
 
+/** หน้าแรกที่เข้าได้เมื่อโดนเด้งจากโมดูลที่ไม่มีสิทธิ์ */
+export function staffHomeHref(member: StaffMember | null | undefined): string {
+  for (const key of DEFAULT_DOCK_TAB_KEYS) {
+    if (canAccessNavModule(member, key)) return NAV_MODULE_HREFS[key];
+  }
+  for (const key of NAV_MODULE_KEYS) {
+    if (canAccessNavModule(member, key)) return NAV_MODULE_HREFS[key];
+  }
+  return "/more/";
+}
+
+
 export function normalizeNavOrder(input?: string[] | null): NavTabKey[] {
   const valid = new Set<string>(NAV_TAB_KEYS);
   const out: NavTabKey[] = [];

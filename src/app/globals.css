@@ -1267,6 +1267,35 @@ body.modal-open .main-panel {
   padding: 0.18rem 0.4rem;
 }
 
+.staff-ready-col-level {
+  min-width: 4.2rem;
+  text-align: left;
+}
+
+.staff-ready-col-level .staff-chip {
+  max-width: 6.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.staff-ready-nick {
+  font-weight: 500;
+  color: rgba(28, 42, 31, 0.55);
+  font-size: 0.75rem;
+}
+
+.staff-readiness-legend {
+  text-align: left;
+  font-size: 0.72rem;
+  margin: 0.45rem 0 0;
+  line-height: 1.35;
+}
+
+.staff-hub .staff-readiness-table {
+  min-width: 30rem;
+}
+
 .staff-readiness-section {
   margin-bottom: 1.25rem;
 }

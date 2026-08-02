@@ -31,6 +31,23 @@ assert.match(staffPage, /ลำดับสิทธิ์/);
 assert.match(staffPage, /PermissionLevelsPanel/);
 assert.match(staffPage, /permissionLevelId/);
 
+const readiness = read("src/components/StaffReadinessTable.tsx");
+assert.match(readiness, /staffLevelBadgeLabel/);
+assert.match(readiness, /staff-ready-col-level/);
+
+const ledger = read("src/app/ledger/page.tsx");
+assert.match(ledger, /can\(staff, "ledger"\)/);
+assert.match(ledger, /can\(staff, "transferIn"\)/);
+assert.match(ledger, /staffHomeHref/);
+assert.doesNotMatch(
+  ledger,
+  /transferInOpen && isOwner/,
+  "transfer-in UI must follow transferIn permission, not owner-only",
+);
+
+const lowBal = read("src/components/LowBalanceAlert.tsx");
+assert.match(lowBal, /canTransferIn/);
+
 const rules = read("firestore.rules");
 assert.match(rules, /match \/permissionLevels\/\{levelId\}/);
 assert.match(rules, /match \/employeePay\/\{empId\}/);
