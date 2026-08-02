@@ -100,5 +100,10 @@ assert.equal(patched.sales.storefrontTransfer, 2800);
 const version = read("src/lib/version.ts");
 const build = Number(version.match(/APP_BUILD = (\d+)/)?.[1] || 0);
 assert.ok(build >= 626, `APP_BUILD should be >= 626, got ${build}`);
+// month-switch persist guards (companion feature)
+assert.match(
+  read("src/components/vat-sales/VatMonthBooks.tsx"),
+  /flushDirtySave|changeMonth/,
+);
 
 console.log("OK test-vat-storefront-pos");

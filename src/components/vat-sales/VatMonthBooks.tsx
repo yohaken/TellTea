@@ -244,6 +244,12 @@ export function VatMonthBooks({ actor }: Props) {
 
   const draftRef = useRef(draft);
   draftRef.current = draft;
+  const dirtyRef = useRef(false);
+  dirtyRef.current = dirty;
+  const actorRef = useRef(actor);
+  actorRef.current = actor;
+  /** เพิ่มขึ้นทุกครั้งที่ dirty — กัน setDirty(false) จากเซฟเก่าหลังเปลี่ยนเดือน/แก้ใหม่ */
+  const dirtySeq = useRef(0);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadGen = useRef(0);
 
@@ -275,11 +281,53 @@ export function VatMonthBooks({ actor }: Props) {
     [month, periodStartDay],
   );
 
-  const markDirty = useCallback(() => setDirty(true), []);
+  const markDirty = useCallback(() => {
+    dirtySeq.current += 1;
+    dirtyRef.current = true;
+    setDirty(true);
+  }, []);
 
   const hydrateFromReturn = useCallback((ret: VatMonthlyReturn) => {
     setDraft(retToMonthBooksDraft(ret));
+    dirtyRef.current = false;
     setDirty(false);
+  }, []);
+
+  /** เซฟยอดค้างก่อนเปลี่ยนเดือน / ออกหน้า — ห้ามทิ้ง draft กลางทาง */
+  const flushDirtySave = useCallback(async () => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    const snap = draftRef.current;
+    if (!dirtyRef.current) return;
+    if (snap.status === "filed") {
+      dirtyRef.current = false;
+      setDirty(false);
+      return;
+    }
+    const seq = dirtySeq.current;
+    const monthKey = snap.monthKey;
+    try {
+      const saved = await saveVatMonthlyReturn(
+        draftToSaveInput(snap, "saved"),
+        actorRef.current,
+      );
+      if (
+        dirtySeq.current === seq &&
+        draftRef.current.monthKey === monthKey
+      ) {
+        setDraft((d) =>
+          d.monthKey === saved.monthKey
+            ? { ...d, status: saved.status }
+            : d,
+        );
+        dirtyRef.current = false;
+        setDirty(false);
+      }
+    } catch (e) {
+      throw e instanceof Error ? e : new Error(String(e));
+    }
   }, []);
 
   /** ผสานคชจ. + ภาษีซื้อจากสองบช. อัตโนมัติ (ไม่ต้องกดดึง) */
@@ -315,6 +363,8 @@ export function VatMonthBooks({ actor }: Props) {
           return { ...d, ingredientVat: bundle.vatInput };
         });
         if (changed && draftRef.current.status !== "filed") {
+          dirtySeq.current += 1;
+          dirtyRef.current = true;
           setDirty(true);
         }
         return bundle;
@@ -328,6 +378,18 @@ export function VatMonthBooks({ actor }: Props) {
 
   const loadMonth = useCallback(
     async (m: string) => {
+      // กันสลับเดือนแล้วทิ้งยอดหน้าร้านที่เพิ่งใส่ (autosave ถูก cancel เมื่อ loading)
+      if (draftRef.current.monthKey !== m && dirtyRef.current) {
+        try {
+          await flushDirtySave();
+        } catch (e) {
+          setError(
+            e instanceof Error
+              ? `เซฟเดือนก่อนไม่สำเร็จ: ${e.message}`
+              : "เซฟเดือนก่อนไม่สำเร็จ",
+          );
+        }
+      }
       const gen = ++loadGen.current;
       setLoading(true);
       setError("");
@@ -366,12 +428,14 @@ export function VatMonthBooks({ actor }: Props) {
         if (gen !== loadGen.current) return;
         setError(e instanceof Error ? e.message : String(e));
         setDraft(emptyMonthBooksDraft(m));
+        dirtyRef.current = false;
+        setDirty(false);
         setHydrated(true);
       } finally {
         if (gen === loadGen.current) setLoading(false);
       }
     },
-    [hydrateFromReturn, syncBooksFromLedgers],
+    [hydrateFromReturn, syncBooksFromLedgers, flushDirtySave],
   );
 
   useEffect(() => {
@@ -406,7 +470,14 @@ export function VatMonthBooks({ actor }: Props) {
             }
           : incoming,
       );
-      setDirty(keepSf);
+      if (keepSf) {
+        dirtySeq.current += 1;
+        dirtyRef.current = true;
+        setDirty(true);
+      } else {
+        dirtyRef.current = false;
+        setDirty(false);
+      }
       setMsg(
         keepSf
           ? "อัปเดตยอดเดลิเวอรี่ · คงยอดหน้าร้านที่ใส่ไว้"
@@ -419,27 +490,42 @@ export function VatMonthBooks({ actor }: Props) {
   useEffect(() => {
     if (!hydrated || loading || locked || !dirty) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    const seq = dirtySeq.current;
+    const monthKey = draftRef.current.monthKey;
     saveTimer.current = setTimeout(() => {
       void (async () => {
         const snap = draftRef.current;
         if (snap.status === "filed") {
-          setDirty(false);
+          if (dirtySeq.current === seq) {
+            dirtyRef.current = false;
+            setDirty(false);
+          }
           return;
         }
+        // เปลี่ยนเดือนไปแล้ว — ห้ามเซฟ/เคลียร์ dirty ของเดือนใหม่
+        if (snap.monthKey !== monthKey) return;
         try {
           const saved = await saveVatMonthlyReturn(
             draftToSaveInput(snap, "saved"),
-            actor,
+            actorRef.current,
           );
+          if (
+            dirtySeq.current !== seq ||
+            draftRef.current.monthKey !== monthKey
+          ) {
+            return;
+          }
           setDraft((d) =>
             d.monthKey === saved.monthKey
               ? { ...d, status: saved.status }
               : d,
           );
+          dirtyRef.current = false;
           setDirty(false);
           setMsg("เซฟอัตโนมัติแล้ว");
           setError("");
         } catch (e) {
+          if (draftRef.current.monthKey !== monthKey) return;
           setError(
             e instanceof Error
               ? `เซฟไม่สำเร็จ: ${e.message}`
@@ -451,23 +537,19 @@ export function VatMonthBooks({ actor }: Props) {
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
-  }, [draft, dirty, hydrated, loading, locked, actor]);
+  }, [draft, dirty, hydrated, loading, locked]);
 
-  // ก่อนออกจากหน้า — เซฟค้างถ้ายัง dirty
+  // ก่อนออกจากหน้า / unmount — เซฟค้างถ้ายัง dirty
   useEffect(() => {
-    const flush = () => {
-      if (!hydrated || locked || !dirty) return;
-      const snap = draftRef.current;
-      if (snap.status === "filed") return;
-      void saveVatMonthlyReturn(draftToSaveInput(snap, "saved"), actor);
+    const onHide = () => {
+      void flushDirtySave();
     };
-    const onHide = () => flush();
     window.addEventListener("pagehide", onHide);
     return () => {
       window.removeEventListener("pagehide", onHide);
-      flush();
+      void flushDirtySave();
     };
-  }, [hydrated, locked, dirty, actor]);
+  }, [flushDirtySave]);
 
   function setTransferField(key: MonthChannel | "storefront", raw: string) {
     if (locked) return;
@@ -564,37 +646,46 @@ export function VatMonthBooks({ actor }: Props) {
   // ดึง nPOS เมื่อติ๊กเปิด · หลังโหลดเดือน · ไม่ทับเดือนที่ filed
   useEffect(() => {
     if (!sfPosConnect || locked || loading || !hydrated) return;
+    // กัน state ติ๊กค้างจากเดือนก่อน — ต้องตรงกับเดือนที่กำลังดู
+    if (draftRef.current.monthKey !== month) return;
+    const fetchMonth = month;
     const gen = ++sfPosFetchGen.current;
     setSfPosBusy(true);
     setMsg("กำลังดึงยอดหน้าร้านจาก nPOS…");
-    void fetchPosStorefrontTenderTotalsByMonth(month)
+    void fetchPosStorefrontTenderTotalsByMonth(fetchMonth)
       .then((t) => {
         if (gen !== sfPosFetchGen.current) return;
+        if (draftRef.current.monthKey !== fetchMonth) return;
         setSfPosTenders(t);
         const gross = t.gross;
-        setSfSendSourceStr(gross > 0 ? moneyFieldValue(gross) : "");
-        saveSfSendSource(month, gross);
         if (gross > 0) {
-          applySfSendToTable(
-            gross,
-            loadSfSendPct(),
-            { cash: t.cash, transfer: t.transfer },
-          );
+          // มียอด POS จริงเท่านั้น — ห้าม saveSfSendSource(0) ลบต้นทางมือ
+          setSfSendSourceStr(moneyFieldValue(gross));
+          saveSfSendSource(fetchMonth, gross);
+          applySfSendToTable(gross, loadSfSendPct(), {
+            cash: t.cash,
+            transfer: t.transfer,
+          });
           setMsg(
             `ดึงจาก nPOS แล้ว · สด ${fmt(t.cash)} · โอน ${fmt(t.transfer)}`,
           );
         } else {
-          setMsg("nPOS เดือนนี้ยังไม่มียอดหน้าร้าน — ยังไม่แตะตาราง");
+          setMsg("nPOS เดือนนี้ยังไม่มียอดหน้าร้าน — คงยอดเดิมในตาราง");
         }
       })
       .catch((e) => {
         if (gen !== sfPosFetchGen.current) return;
+        if (draftRef.current.monthKey !== fetchMonth) return;
         setError(e instanceof Error ? e.message : String(e));
         setMsg("");
       })
       .finally(() => {
         if (gen === sfPosFetchGen.current) setSfPosBusy(false);
       });
+    return () => {
+      // invalidate in-flight เมื่อเปลี่ยนเดือน/ติ๊ก/loading
+      if (sfPosFetchGen.current === gen) sfPosFetchGen.current += 1;
+    };
   }, [
     sfPosConnect,
     month,
@@ -603,6 +694,30 @@ export function VatMonthBooks({ actor }: Props) {
     hydrated,
     applySfSendToTable,
   ]);
+
+  /** สลับเดือนแบบเซฟก่อน + ตั้งติ๊ก nPOS ให้ตรงเดือนปลายทางในเรนเดอร์เดียวกัน */
+  async function changeMonth(next: string) {
+    if (next === month) return;
+    try {
+      await flushDirtySave();
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? `เซฟก่อนเปลี่ยนเดือนไม่สำเร็จ: ${e.message}`
+          : "เซฟก่อนเปลี่ยนเดือนไม่สำเร็จ",
+      );
+      return;
+    }
+    setSfSendPct(loadSfSendPct());
+    const src = loadSfSendSource(next);
+    setSfSendSourceStr(src > 0 ? moneyFieldValue(src) : "");
+    setSfPulse(false);
+    setSfPosConnect(loadSfPosConnect(next));
+    setSfPosTenders(emptyPosStorefrontTenders());
+    setSfPosBusy(false);
+    sfPosFetchGen.current += 1;
+    setMonth(next);
+  }
 
   /**
    * ต้นทางแถบส่ง — ใช้เฉพาะที่พิมพ์ในช่องต้นทาง
@@ -993,7 +1108,9 @@ export function VatMonthBooks({ actor }: Props) {
           <select
             value={month}
             disabled={busy}
-            onChange={(e) => setMonth(e.target.value)}
+            onChange={(e) => {
+              void changeMonth(e.target.value);
+            }}
             aria-label="เลือกเดือน"
           >
             {monthOptions.map((o) => (
