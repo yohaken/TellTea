@@ -21,7 +21,7 @@ const version = read("src/lib/version.ts");
 assert.match(otLib, /opts\?: \{ since\?: number; until\?: number/);
 assert.match(otLib, /where\("date", ">=", since\)/);
 
-assert.match(otGrid, /OT_PLAN_AHEAD_DAYS = 4/);
+assert.match(otGrid, /OT_PLAN_AHEAD_DAYS = 2/);
 assert.match(otGrid, /strictRange/);
 
 assert.match(otWindow, /export function otViewWindow/);
@@ -66,7 +66,7 @@ function addLocalDays(ms, days) {
   return startOfLocalDay(d.getTime());
 }
 
-function otViewWindow(periodMonth, now, planAheadDays = 4) {
+function otViewWindow(periodMonth, now, planAheadDays = 2) {
   const [y, m] = periodMonth.split("-").map(Number);
   const monthStart = new Date(y, m - 1, 1).getTime();
   const nextMonthStart = new Date(y, m, 1).getTime();
@@ -91,23 +91,23 @@ function otViewWindow(periodMonth, now, planAheadDays = 4) {
   };
 }
 
-// Live Jul 30 → includes Aug 1–3 (plan ahead 4 → Aug 3)
+// Live Jul 30 → includes Aug 1 (plan ahead 2 → Aug 1)
 const jul30 = new Date(2026, 6, 30, 12, 0, 0).getTime();
-const live = otViewWindow("2026-07", jul30, 4);
+const live = otViewWindow("2026-07", jul30, 2);
 assert.equal(live.isLive, true);
 assert.equal(live.since, new Date(2026, 6, 1).getTime());
-assert.equal(live.gridMax, new Date(2026, 7, 3).getTime());
-assert.equal(live.until, new Date(2026, 7, 4).getTime());
+assert.equal(live.gridMax, new Date(2026, 7, 1).getTime());
+assert.equal(live.until, new Date(2026, 7, 2).getTime());
 
 // Past closed month — calendar only, no plan spill
-const past = otViewWindow("2026-06", jul30, 4);
+const past = otViewWindow("2026-06", jul30, 2);
 assert.equal(past.isLive, false);
 assert.equal(past.since, new Date(2026, 5, 1).getTime());
 assert.equal(past.until, new Date(2026, 6, 1).getTime());
 assert.equal(past.gridMax, new Date(2026, 5, 30).getTime());
 
 console.log("OK test-ot-load-perf", {
-  planAheadDays: 4,
+  planAheadDays: 2,
   liveUntil: new Date(live.until).toISOString(),
   pastMonth: "2026-06",
 });

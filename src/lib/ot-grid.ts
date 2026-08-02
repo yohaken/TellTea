@@ -10,7 +10,7 @@ import {
 export const OT_SHIFT_DISPLAY_ORDER: OtShiftId[] = ["evening", "morning", "late"];
 
 /** วางแผนล่วงหน้าได้กี่วัน (นับจากวันนี้) — รวมช่วงคาบเกี่ยวปลายเดือน */
-export const OT_PLAN_AHEAD_DAYS = 4;
+export const OT_PLAN_AHEAD_DAYS = 2;
 
 export type OtShiftSlot = {
   shiftId: OtShiftId;
