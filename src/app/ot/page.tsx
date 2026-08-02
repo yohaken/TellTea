@@ -321,22 +321,42 @@ function OtView() {
         const emps = await listActiveEmployees();
         if (cancelled) return;
         setWorkers(emps);
-        const filterId = shopOtView ? "" : resolveMyWorkerId(emps, staff);
-        if (!shopOtView && !filterId) {
+        /**
+         * มุมพนักงาน/พรีวิว: โหลดช่วงเดือนแล้วกรองฝั่ง client ด้วย entryIncludesMe
+         * (workerIds + ชื่อ/ชื่อเล่น/ชื่อเก่า) — แถวเก่าที่ไม่มี workerIds ยังเห็นได้
+         * และไม่พังเมื่อ composite index array-contains ยังไม่พร้อม
+         * ห้ามพึ่ง workerId query อย่างเดียว: พรีวิวที่ identity ไม่ครบจะได้ตารางว่างทั้งเดือน
+         */
+        const linked = shopOtView ? null : resolveLinkedEmployee(emps, staff);
+        const me = shopOtView
+          ? null
+          : {
+              employeeId: staff?.employeeId || linked?.id || resolveMyWorkerId(emps, staff),
+              name: linked?.name || "",
+              nickname: linked?.nickname || "",
+              previousNames: linked?.previousNames || [],
+              displayName: staff?.displayName || "",
+            };
+        if (!shopOtView && me && !me.employeeId && !me.name && !me.nickname && !me.displayName) {
           setEntries([]);
           setEntriesReady(true);
+          setError("ยังไม่ผูกชื่อในรายชื่อร้าน — มุมพนักงานต้องเชื่อมบัญชีกับแถวพนักงาน");
           return;
         }
         unsubOt = subscribeOtEntries(
           (rows) => {
-            setEntries(rows);
+            if (!shopOtView && me) {
+              setEntries(rows.filter((r) => entryIncludesMe(r, me)));
+            } else {
+              setEntries(rows);
+            }
             setEntriesReady(true);
           },
           (err) => {
             setError(err.message || "โหลดรายการไม่สำเร็จ");
             setEntriesReady(true);
           },
-          { since, until, ...(filterId ? { workerId: filterId } : {}) },
+          { since, until },
         );
       })
       .catch((err) => {
@@ -421,6 +441,11 @@ function OtView() {
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
+      {isPermPreview && !loading ? (
+        <p className="muted" style={{ margin: "0 0 0.55rem", fontSize: "0.78rem" }}>
+          พรีวิวมุมพนักงาน — ตารางวัน×กะเหมือนของจริง · ดูได้อย่างเดียว ไม่บันทึก
+        </p>
+      ) : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading ? (
@@ -461,7 +486,7 @@ function OtView() {
         </>
       ) : null}
 
-      {canWrite && formOpen && !loading ? (
+      {formOpen && !loading ? (
         <div className="modal-backdrop edit-modal is-module-form is-ot-form" onClick={closeForm}>
           <div className="modal-card ot-form-card" onClick={(e) => e.stopPropagation()}>
             <OtEntryForm
@@ -479,6 +504,7 @@ function OtView() {
               bonusRate={bonusRate}
               rateSchedule={rateSchedule}
               createdBy={actorId}
+              readOnly={!canWrite}
               onError={setError}
               onSaved={closeForm}
               onCancelEdit={closeForm}
@@ -494,6 +520,19 @@ function OtView() {
           onAdd={openAdd}
           addLabel={viewMonthClosed && !viewWindow.isLive ? "ล็อกเดือน" : "+ กรอก"}
         />
+      ) : isPermPreview ? (
+        <div className="module-tab-dock is-single" role="tablist" aria-label="มุมมองชง">
+          <button
+            type="button"
+            role="tab"
+            className="module-tab is-add"
+            disabled
+            title="พรีวิว — กรอกไม่ได้"
+            aria-disabled="true"
+          >
+            + กรอก
+          </button>
+        </div>
       ) : null}
     </div>
   );
@@ -513,6 +552,7 @@ function OtEntryForm({
   bonusRate,
   rateSchedule,
   createdBy,
+  readOnly = false,
   onError,
   onSaved,
   onCancelEdit,
@@ -530,6 +570,8 @@ function OtEntryForm({
   bonusRate: number;
   rateSchedule: RateScheduleEntry[];
   createdBy: string;
+  /** พรีวิว / อ่านอย่างเดียว — เปิดดูได้แต่บันทึกไม่ได้ */
+  readOnly?: boolean;
   onError: (msg: string) => void;
   onSaved: () => void;
   onCancelEdit: () => void;
@@ -584,7 +626,7 @@ function OtEntryForm({
 
   const slotDateMs = parseDateInput(date);
   const monthBonusClosed = isBonusClosedForDate(slotDateMs);
-  const locked = paidLocked || monthBonusClosed;
+  const locked = readOnly || paidLocked || monthBonusClosed;
   /** แก้รายการที่ปิดกะไปแล้ว — อนุญาตแก้ยอด/รูปโดยไม่บังคับ SmartCheck + ติ๊ก SOP ใหม่ */
   const amendClosed = !!(entry && !locked && isOtEntryClosed(entry) && !plannedEntry);
 
@@ -699,15 +741,17 @@ function OtEntryForm({
   );
   const ownerHints = isOwner ? ownerQualityHints(liveProgress.quality) : [];
 
-  const formTitle = locked
-    ? "ดูรายการ (จ่ายแล้ว)"
-    : detailsOpen
-      ? entry && !plannedEntry
-        ? "แก้ไขปิดกะ"
-        : "ปิดกะ"
-      : plannedEntry
-        ? "แก้ไขแผนกะ"
-        : "วางแผนกะ";
+  const formTitle = readOnly
+    ? "ดูรายการ (พรีวิว)"
+    : locked
+      ? "ดูรายการ (จ่ายแล้ว)"
+      : detailsOpen
+        ? entry && !plannedEntry
+          ? "แก้ไขปิดกะ"
+          : "ปิดกะ"
+        : plannedEntry
+          ? "แก้ไขแผนกะ"
+          : "วางแผนกะ";
 
   function toggleWorker(id: string) {
     if (locked) return;
@@ -945,9 +989,11 @@ function OtEntryForm({
         {locked ? (
           <p className="muted form-hint-inline prod-locked-hint">
             <Lock size={14} aria-hidden />{" "}
-            {monthBonusClosed && !paidLocked
-              ? "เดือนนี้ปิดโบนัสแล้ว — ลง/แก้ชงไม่ได้ (ปลดได้ที่ จ่าย/โบนัส)"
-              : "จ่ายโบนัสแล้ว — เรทและยอดล็อก"}
+            {readOnly
+              ? "พรีวิวมุมพนักงาน — ดูอย่างเดียว ไม่บันทึก"
+              : monthBonusClosed && !paidLocked
+                ? "เดือนนี้ปิดโบนัสแล้ว — ลง/แก้ชงไม่ได้ (ปลดได้ที่ จ่าย/โบนัส)"
+                : "จ่ายโบนัสแล้ว — เรทและยอดล็อก"}
           </p>
         ) : null}
 

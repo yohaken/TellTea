@@ -46,8 +46,8 @@ assert.match(ot, /viewMonth/);
 assert.match(ot, /\{ since, until/);
 
 const prod = read("src/app/production/page.tsx");
-assert.match(prod, /prodHistorySinceMs/);
 assert.match(prod, /logMonth/);
+assert.match(prod, /monthWindow/);
 assert.match(prod, /until: new Date\(logYear, logMonthIdx \+ 1, 1\)\.getTime\(\)/);
 
 const bonus = read("src/app/bonus/page.tsx");

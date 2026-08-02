@@ -8,7 +8,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { getDb } from "./firebase";
-import type { Employee } from "./employees";
+import { resolveLinkedEmployee, type Employee } from "./employees";
 import type { StaffMember } from "./types";
 import { mapFirestoreError } from "./firestore-errors";
 
@@ -39,16 +39,16 @@ export function staffShortLabel(source: string, max = 2): string {
   return chars.slice(0, max).join("");
 }
 
-/** หาแถว roster ที่ผูกบัญชี — employeeId ก่อน แล้วค่อย linkedStaffId */
+/**
+ * หาแถว roster ที่ผูกบัญชี — ลำดับเดียวกับ resolveLinkedEmployee
+ * (employeeId → linkedStaffId/email/phone → ชื่อ/ชื่อเล่น)
+ * ใช้ตอนพรีวิวจาก dock เพื่อส่ง employeeId ครบ
+ */
 export function findEmployeeForPresence(
   member: StaffMember,
   employees: Employee[],
 ): Employee | undefined {
-  if (member.employeeId) {
-    const byId = employees.find((e) => e.id === member.employeeId);
-    if (byId) return byId;
-  }
-  return employees.find((e) => e.linkedStaffId === member.id);
+  return resolveLinkedEmployee(employees, member) || undefined;
 }
 
 /** ชื่อเล่นเต็มก่อน · ไม่มีชื่อเล่นค่อยย่อจากชื่อจริง */

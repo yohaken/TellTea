@@ -16,6 +16,11 @@ export type PermPreviewState = {
   memberId?: string;
   /** employees/{id} — ให้โบนัส/จ่าย รู้ว่าเป็น "ฉัน" คนไหน */
   employeeId?: string;
+  /** อีเมล/เบอร์ของคนที่สวม — ให้ resolveLinkedEmployee หา linkedEmail/Phone ได้เหมือนล็อกอินจริง */
+  email?: string;
+  phone?: string;
+  /** ต้องคงค่าจากสมาชิก — ห้ามบังคับ false แล้วให้ level ทับสิทธิ์ customize */
+  permissionsCustomized?: boolean;
 };
 
 export type PermPreviewStartInput = {
@@ -24,6 +29,9 @@ export type PermPreviewStartInput = {
   levelId?: string;
   memberId?: string;
   employeeId?: string;
+  email?: string;
+  phone?: string;
+  permissionsCustomized?: boolean;
 };
 
 /** เช็คลิสต์ตรวจรับมุมมองพนักงาน (owner) */
@@ -52,6 +60,9 @@ export function loadPermPreview(): PermPreviewState | null {
       levelId: typeof data.levelId === "string" ? data.levelId : undefined,
       memberId: typeof data.memberId === "string" ? data.memberId : undefined,
       employeeId: typeof data.employeeId === "string" ? data.employeeId : undefined,
+      email: typeof data.email === "string" ? data.email : undefined,
+      phone: typeof data.phone === "string" ? data.phone : undefined,
+      permissionsCustomized: data.permissionsCustomized === true,
     };
   } catch {
     return null;
@@ -102,12 +113,16 @@ export function previewFromMember(
     levelId: member.permissionLevelId,
     memberId: member.id,
     employeeId,
+    email: member.email,
+    phone: member.phone,
+    permissionsCustomized: member.permissionsCustomized === true,
   };
 }
 
 /**
  * สวมตัวตนพนักงานสำหรับเมนู/กรองข้อมูล — ใช้ memberId เป็น staff.id
- * เพื่อให้ resolveLinkedEmployee หา linkedStaffId ได้เหมือนล็อกอินจริง
+ * + email/phone/employeeId ของคนนั้น เพื่อให้ resolveLinkedEmployee
+ * หา linkedStaffId / linkedEmail / linkedPhone ได้เหมือนล็อกอินจริง
  * (เขียนข้อมูลยังใช้ actorId / realStaff แยกต่างหาก)
  */
 export function buildPreviewStaff(
@@ -117,14 +132,15 @@ export function buildPreviewStaff(
   const memberId = (preview.memberId || "").trim();
   return {
     id: memberId || real.id,
-    // อย่าใช้ email/phone เจ้าของ — จะไป match roster คนผิด
-    email: memberId ? undefined : real.email,
-    phone: memberId ? undefined : real.phone,
+    // สวม email/phone ของพนักงาน — ห้ามใช้ของเจ้าของ (match roster คนผิด)
+    // และห้ามล้างเป็น undefined (จะทำให้ linkedEmail/Phone หาไม่เจอ)
+    email: memberId ? preview.email : real.email,
+    phone: memberId ? preview.phone : real.phone,
     role: "staff",
     displayName: preview.label,
     permissions: materializePermissions(preview.permissions),
     permissionLevelId: preview.levelId,
-    permissionsCustomized: false,
+    permissionsCustomized: preview.permissionsCustomized === true,
     profileComplete: true,
     personalProfileComplete: true,
     createdAt: real.createdAt,
@@ -139,5 +155,8 @@ export function normalizePreviewInput(input: PermPreviewStartInput): PermPreview
     levelId: input.levelId,
     memberId: input.memberId,
     employeeId: input.employeeId,
+    email: input.email,
+    phone: input.phone,
+    permissionsCustomized: input.permissionsCustomized === true,
   };
 }
