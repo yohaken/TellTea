@@ -60,6 +60,7 @@ import {
   resolveLinkedEmployee,
   type Employee,
 } from "@/lib/employees";
+import { staffHomeHref } from "@/lib/nav-menu";
 import { can } from "@/lib/permissions";
 import { updateStaffProfile } from "@/lib/staff";
 import { getOtSettings, subscribeOtEntries, type OtEntry } from "@/lib/ot";
@@ -100,11 +101,8 @@ export default function BonusPage() {
 }
 
 function BonusView() {
-  const { actorId, staff, realStaff, isPermPreview } = useAuth();
+  const { actorId, staff, isPermPreview } = useAuth();
   const router = useRouter();
-  /** สิทธิ์จริงของคนล็อกอิน — ไม่ถูกพรีวิวทับ */
-  const realIsOwner = realStaff?.role === "owner";
-  const realCanPay = realIsOwner || can(realStaff, "payrollPay");
   const [month, setMonth] = useState(() => suggestPeriodMonthForToday());
   const [tab, setTab] = useState<PayTab>("bonus");
   const [otEntries, setOtEntries] = useState<OtEntry[]>([]);
@@ -127,16 +125,18 @@ function BonusView() {
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const [historyEmployeeId, setHistoryEmployeeId] = useState("");
 
-  const canView = can(staff, "bonus") || realCanPay;
-  /** โหลดข้อมูลทั้งร้านจากสิทธิ์จริง — พรีวิวแค่สลับ UI */
-  const shopPayView = realCanPay;
-  /** มุมพนักงานจากไอคอนบน (รวมทั้งแอป) */
+  /** ใช้สิทธิ์ effective (รวมพรีวิว) — ไม่ดึงสิทธิ์เจ้าของจริงมาทับ */
+  const canPayEffective = can(staff, "payrollPay");
+  const canView = can(staff, "bonus") || canPayEffective;
+  const shopPayView = canPayEffective;
   const previewEmployeeId =
     isPermPreview && staff?.employeeId ? staff.employeeId : null;
-  const isStaffPreview = shopPayView && !!previewEmployeeId;
+  /** พรีวิวทั้งระดับ/คน = มุมพนักงาน (ไม่โชว์ UI จ่ายทั้งร้าน/ปิดเดือน) */
+  const isStaffPreview = isPermPreview;
   const showShopUi = shopPayView && !isStaffPreview;
-  const uiIsOwner = realIsOwner && !isStaffPreview;
-  const uiCanPay = realCanPay && !isStaffPreview;
+  const uiIsOwner = !isPermPreview && staff?.role === "owner";
+  /** พรีวิวห้ามจ่าย/ปิดเดือนจริง — ดูอย่างเดียวแบบพนักงาน */
+  const uiCanPay = !isPermPreview && canPayEffective;
   const isOwner = uiIsOwner;
   const canPay = uiCanPay;
   const { year, month: monthIdx } = parseMonthInput(month);
@@ -144,7 +144,7 @@ function BonusView() {
   useBodyScrollLock(!!editTarget);
 
   useEffect(() => {
-    if (staff && !canView) router.replace("/ledger/");
+    if (staff && !canView) router.replace(staffHomeHref(staff));
   }, [staff, router, canView]);
 
   useEffect(() => {
@@ -930,18 +930,18 @@ function BonusView() {
               ) : staff?.displayName ? (
                 <>
                   ไม่พบชื่อ &quot;{staff.displayName}&quot; ในรายชื่อพนักงาน — ตรวจที่{" "}
-                  <a href="/staff/" style={{ fontWeight: 700 }}>
-                    ศูนย์รวมพนักงาน
+                  <a href="/profile/" style={{ fontWeight: 700 }}>
+                    โปรไฟล์
                   </a>{" "}
-                  หรือโปรไฟล์ เพื่อเห็นโบนัสของตัวเอง
+                  เพื่อเห็นโบนัสของตัวเอง
                 </>
               ) : (
                 <>
                   ยังไม่ได้เชื่อมชื่อกับรายชื่อร้าน — ไปที่{" "}
-                  <a href="/staff/" style={{ fontWeight: 700 }}>
-                    ศูนย์รวมพนักงาน
+                  <a href="/profile/" style={{ fontWeight: 700 }}>
+                    โปรไฟล์
                   </a>{" "}
-                  หรือโปรไฟล์ เพื่อเห็นโบนัสของตัวเอง
+                  เพื่อเห็นโบนัสของตัวเอง
                 </>
               )}
             </p>

@@ -83,6 +83,8 @@ type Props = {
   staffName: string;
   forceOpen?: boolean;
   onForceOpenConsumed?: () => void;
+  /** พรีวิวมุมพนักงาน — ดูได้อย่างเดียว */
+  readOnly?: boolean;
 };
 
 /**
@@ -95,6 +97,7 @@ export function BillNoticeLedgerPanel({
   staffName,
   forceOpen = false,
   onForceOpenConsumed,
+  readOnly = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [entries, setEntries] = useState<BillNotice[]>([]);
@@ -141,6 +144,7 @@ export function BillNoticeLedgerPanel({
   const pendingCount = summary.pendingCount;
 
   async function onAccept(row: BillNotice) {
+    if (readOnly) return;
     if (!isOwner) return;
     const ready = isBillNoticeReadyForOwnerBooks(row);
     if (!ready.ok) {
@@ -166,6 +170,7 @@ export function BillNoticeLedgerPanel({
   }
 
   async function onReject(row: BillNotice) {
+    if (readOnly) return;
     if (!isOwner) return;
     if (!window.confirm(`ไม่รับบิล «${row.description}»?`)) return;
     setBusyId(row.id);
@@ -180,6 +185,7 @@ export function BillNoticeLedgerPanel({
   }
 
   async function onDelete(row: BillNotice) {
+    if (readOnly) return;
     const canDelete = isOwner || row.createdBy === actorId;
     if (!canDelete) return;
     if (row.status !== "pending" && !isOwner) {
@@ -409,20 +415,26 @@ export function BillNoticeLedgerPanel({
             </button>
           ) : null}
 
-          <button
-            type="button"
-            className="primary-btn action-out bill-notice-panel-add"
-            onClick={() => {
-              setError(null);
-              setAdding(true);
-            }}
-          >
-            เพิ่มแจ้งบิล
-          </button>
+          {!readOnly ? (
+            <button
+              type="button"
+              className="primary-btn action-out bill-notice-panel-add"
+              onClick={() => {
+                setError(null);
+                setAdding(true);
+              }}
+            >
+              เพิ่มแจ้งบิล
+            </button>
+          ) : (
+            <p className="muted" style={{ margin: "0.35rem 0 0" }}>
+              พรีวิว — ดูแจ้งบิลได้ · เพิ่มไม่ได้
+            </p>
+          )}
         </div>
       ) : null}
 
-      {adding ? (
+      {!readOnly && adding ? (
         <BillNoticeFormModal
           mode="add"
           actorId={actorId}
@@ -696,6 +708,11 @@ function BillNoticeFormModal({
   }
 
   async function onSave(e: FormEvent) {
+    if (readOnly) {
+      e.preventDefault();
+      setError("พรีวิวมุมพนักงาน — บันทึกไม่ได้");
+      return;
+    }
     e.preventDefault();
     setBusy(true);
     setFormError(null);
@@ -784,7 +801,7 @@ function BillNoticeFormModal({
   }
 
   async function onDelete() {
-    if (!entry) return;
+    if (readOnly || !entry) return;
     if (!window.confirm("ลบแจ้งบิลนี้?")) return;
     setBusy(true);
     try {

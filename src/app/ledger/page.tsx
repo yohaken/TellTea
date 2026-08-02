@@ -101,14 +101,15 @@ export default function LedgerPage() {
 }
 
 function LedgerView() {
-  const { actorId, staff } = useAuth();
+  const { actorId, staff, isPermPreview } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const isOwner = staff?.role === "owner";
   const canUseLedger = can(staff, "ledger");
-  const canTransferIn = can(staff, "transferIn");
-  /** พนักงานแก้/เพิ่มรูปได้เฉพาะรายการออกที่ตัวเองสร้าง */
+  const canTransferIn = can(staff, "transferIn") && !isPermPreview;
+  /** พนักงานแก้/เพิ่มรูปได้เฉพาะรายการออกที่ตัวเองสร้าง · พรีวิว = ดูอย่างเดียว */
   function canMutateLedgerRow(row: { createdBy?: string; amountIn?: number }) {
+    if (isPermPreview) return false;
     if (isOwner) return true;
     if (!actorId) return false;
     return row.createdBy === actorId && !(Number(row.amountIn) > 0);
@@ -376,6 +377,7 @@ function LedgerView() {
             staffName={cashInStaffName}
             forceOpen={cashInForceOpen}
             onForceOpenConsumed={() => setCashInForceOpen(false)}
+            readOnly={isPermPreview}
           />
           <BillNoticeLedgerPanel
             actorId={actorId}
@@ -383,6 +385,7 @@ function LedgerView() {
             staffName={cashInStaffName}
             forceOpen={billNoticeForceOpen}
             onForceOpenConsumed={() => setBillNoticeForceOpen(false)}
+            readOnly={isPermPreview}
           />
         </div>
       ) : null}
@@ -653,16 +656,18 @@ function LedgerView() {
         </div>
       ) : null}
 
-      <ModuleTabDock
-        ariaLabel="บันทึกรายการ"
-        formOpen={adding}
-        onAdd={() => {
-          setTransferInOpen(false);
-          setAdding(true);
-        }}
-        addLabel="+ ออก"
-        variant="glass-out"
-      />
+      {!isPermPreview ? (
+        <ModuleTabDock
+          ariaLabel="บันทึกรายการ"
+          formOpen={adding}
+          onAdd={() => {
+            setTransferInOpen(false);
+            setAdding(true);
+          }}
+          addLabel="+ ออก"
+          variant="glass-out"
+        />
+      ) : null}
 
       {canTransferIn ? (
         <button

@@ -68,10 +68,11 @@ export default function ProductionPage() {
 }
 
 function ProductionView() {
-  const { actorId, staff } = useAuth();
+  const { actorId, staff, isPermPreview } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const shopProdView = isOwner || can(staff, "payrollPay");
+  const canWrite = !!actorId && !isPermPreview;
   const [ownerView, setOwnerView] = useState<ProdOwnerView>("log");
   const [formOpen, setFormOpen] = useState(false);
   const [entries, setEntries] = useState<ProdEntry[]>([]);
@@ -251,7 +252,7 @@ function ProductionView() {
         />
       ) : null}
 
-      {formOpen && !loading && showLog ? (
+      {canWrite && formOpen && !loading && showLog ? (
         <div className="modal-backdrop edit-modal is-module-form" onClick={closeForm}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <ProdEntryForm
@@ -278,7 +279,7 @@ function ProductionView() {
         </div>
       ) : null}
 
-      {showLog ? (
+      {canWrite && showLog ? (
         <ModuleTabDock
           ariaLabel="มุมมองผลิต"
           formOpen={formOpen}

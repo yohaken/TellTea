@@ -60,6 +60,19 @@ assert.match(
   "tasks owner UI must stay off during perm preview",
 );
 
+const bonusPage = read("src/app/bonus/page.tsx");
+assert.match(bonusPage, /isStaffPreview = isPermPreview/);
+assert.equal(
+  bonusPage.includes("realCanPay"),
+  false,
+  "bonus must not use realCanPay during staff preview",
+);
+assert.match(bonusPage, /uiIsOwner = !isPermPreview/);
+assert.match(shell, /pathname\.startsWith\("\/profile"\)/);
+
+const profilePage = read("src/app/profile/page.tsx");
+assert.match(profilePage, /isPermPreview/);
+
 const presence = read("src/components/StaffPresenceDock.tsx");
 assert.match(presence, /ดูในมุมพนักงานคนนี้/);
 assert.match(presence, /stopPermPreview/);
@@ -123,7 +136,8 @@ assert.match(evidence, /assertOwnerBooksFolder/);
 
 const bonus = read("src/app/bonus/page.tsx");
 assert.match(bonus, /isPermPreview/);
-assert.match(bonus, /realCanPay/);
+assert.match(bonus, /canPayEffective/);
+assert.equal(bonus.includes("realCanPay"), false);
 assert.doesNotMatch(bonus, /enterStaffPreview/);
 assert.doesNotMatch(bonus, /payroll-staff-preview-bar/);
 assert.match(bonus, /payrollPay/);

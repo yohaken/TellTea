@@ -169,12 +169,15 @@ export function CashInLedgerPanel({
   staffName,
   forceOpen = false,
   onForceOpenConsumed,
+  readOnly = false,
 }: {
   actorId: string;
   isOwner: boolean;
   staffName: string;
   forceOpen?: boolean;
   onForceOpenConsumed?: () => void;
+  /** พรีวิวมุมพนักงาน — ดูได้อย่างเดียว */
+  readOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [entries, setEntries] = useState<CashDeposit[]>([]);
@@ -359,6 +362,10 @@ export function CashInLedgerPanel({
   }
 
   function startCreateRound() {
+    if (readOnly) {
+      setError("พรีวิวมุมพนักงาน — สร้างรอบไม่ได้");
+      return;
+    }
     const n = Math.round(Number(createDays));
     if (!Number.isFinite(n) || n < 1 || n > CASH_DEPOSIT_DAY_MAX) {
       setError(`จำนวนวันต้องอยู่ระหว่าง 1–${CASH_DEPOSIT_DAY_MAX}`);
@@ -745,6 +752,10 @@ export function CashInLedgerPanel({
   }
 
   async function saveWorking() {
+    if (readOnly) {
+      setError("พรีวิวมุมพนักงาน — บันทึกไม่ได้");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -801,7 +812,7 @@ export function CashInLedgerPanel({
   }
 
   async function onVerify(status: Exclude<CashDepositStatus, "pending">) {
-    if (!selected || !isOwner) return;
+    if (readOnly || !selected || !isOwner) return;
     setBusy(true);
     setError(null);
     try {
@@ -819,6 +830,7 @@ export function CashInLedgerPanel({
   }
 
   async function onDeleteRound() {
+    if (readOnly) return;
     if (!selected) return;
     if (!window.confirm("ลบรอบนำเข้านี้ทั้งรอบ?")) return;
     setBusy(true);
@@ -1074,38 +1086,44 @@ export function CashInLedgerPanel({
             </p>
           )}
 
-          <div className="cash-in-create-bar">
-            <label className="cash-in-create-field">
-              <span>สิ้นสุดรอบ</span>
-              <input
-                type="date"
-                value={createEnd}
-                onChange={(e) => setCreateEnd(e.target.value)}
+          {!readOnly ? (
+            <div className="cash-in-create-bar">
+              <label className="cash-in-create-field">
+                <span>สิ้นสุดรอบ</span>
+                <input
+                  type="date"
+                  value={createEnd}
+                  onChange={(e) => setCreateEnd(e.target.value)}
+                  disabled={busy || !!draft}
+                />
+              </label>
+              <label className="cash-in-create-field cash-in-create-days">
+                <span>วัน</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={CASH_DEPOSIT_DAY_MAX}
+                  inputMode="numeric"
+                  value={createDays}
+                  onChange={(e) => setCreateDays(e.target.value)}
+                  disabled={busy || !!draft}
+                />
+              </label>
+              <button
+                type="button"
+                className="primary-btn action-in cash-in-create-btn"
                 disabled={busy || !!draft}
-              />
-            </label>
-            <label className="cash-in-create-field cash-in-create-days">
-              <span>วัน</span>
-              <input
-                type="number"
-                min={1}
-                max={CASH_DEPOSIT_DAY_MAX}
-                inputMode="numeric"
-                value={createDays}
-                onChange={(e) => setCreateDays(e.target.value)}
-                disabled={busy || !!draft}
-              />
-            </label>
-            <button
-              type="button"
-              className="primary-btn action-in cash-in-create-btn"
-              disabled={busy || !!draft}
-              onClick={startCreateRound}
-              title="สร้างรอบ"
-            >
-              +รอบ
-            </button>
-          </div>
+                onClick={startCreateRound}
+                title="สร้างรอบ"
+              >
+                +รอบ
+              </button>
+            </div>
+          ) : (
+            <p className="muted" style={{ margin: "0.35rem 0" }}>
+              พรีวิว — ดูรอบส่งเงินได้ · สร้าง/บันทึกไม่ได้
+            </p>
+          )}
 
           {error ? <p className="error-text">{error}</p> : null}
 

@@ -97,14 +97,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isPermPreview || !staff) return;
     const home = staffHomeHref(staff);
-    const onStaffHub = pathname.startsWith("/staff");
-    const onOwnerOnly =
+    // โปรไฟล์/ศูนย์พนักงาน/หน้าเจ้าของล้วน — กันแก้บัญชีจริงตอนพรีวิว
+    const blocked =
+      pathname.startsWith("/staff") ||
+      pathname.startsWith("/profile") ||
       pathname.startsWith("/vat-sales") ||
       pathname.startsWith("/menu") ||
       pathname.startsWith("/settings") ||
       pathname.startsWith("/pos-sales") ||
       pathname.startsWith("/business-notes");
-    if (onStaffHub || onOwnerOnly) {
+    if (blocked) {
       router.replace(home);
     }
   }, [isPermPreview, staff, pathname, router]);

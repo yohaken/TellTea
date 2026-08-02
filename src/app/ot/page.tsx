@@ -206,11 +206,12 @@ export default function OtPage() {
 }
 
 function OtView() {
-  const { actorId, staff } = useAuth();
+  const { actorId, staff, isPermPreview } = useAuth();
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   /** เห็นทั้งร้าน — เจ้าของ / คนจ่ายเงินเดือน · พนักงานเห็นเฉพาะกะที่มีชื่อตัวเอง */
   const shopOtView = isOwner || can(staff, "payrollPay");
+  const canWrite = !!actorId && !isPermPreview;
   const [formOpen, setFormOpen] = useState(false);
   const [entries, setEntries] = useState<OtEntry[]>([]);
   const [workers, setWorkers] = useState<Employee[]>([]);
@@ -457,7 +458,7 @@ function OtView() {
         </>
       ) : null}
 
-      {formOpen && !loading ? (
+      {canWrite && formOpen && !loading ? (
         <div className="modal-backdrop edit-modal is-module-form is-ot-form" onClick={closeForm}>
           <div className="modal-card ot-form-card" onClick={(e) => e.stopPropagation()}>
             <OtEntryForm
@@ -483,12 +484,14 @@ function OtView() {
         </div>
       ) : null}
 
-      <ModuleTabDock
-        ariaLabel="มุมมองชง"
-        formOpen={formOpen}
-        onAdd={openAdd}
-        addLabel={viewMonthClosed && !viewWindow.isLive ? "ล็อกเดือน" : "+ กรอก"}
-      />
+      {canWrite ? (
+        <ModuleTabDock
+          ariaLabel="มุมมองชง"
+          formOpen={formOpen}
+          onAdd={openAdd}
+          addLabel={viewMonthClosed && !viewWindow.isLive ? "ล็อกเดือน" : "+ กรอก"}
+        />
+      ) : null}
     </div>
   );
 }

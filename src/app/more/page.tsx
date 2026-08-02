@@ -60,7 +60,7 @@ export default function MorePage() {
 }
 
 function MoreView() {
-  const { staff } = useAuth();
+  const { staff, isPermPreview } = useAuth();
   const router = useRouter();
   const [navUi, setNavUi] = useState<NavUiSettings>(DEFAULT_UI);
 
@@ -131,7 +131,7 @@ function MoreView() {
         โมดูลและเครื่องมือเพิ่มเติมตามสิทธิ์
       </p>
       <div className="more-grid">
-        {profileIncomplete ? (
+        {!isPermPreview && profileIncomplete ? (
           <Link href="/profile/" className="more-card" style={{ borderColor: "rgba(196, 90, 26, 0.35)" }}>
             <UserCircle size={22} />
             <div>
@@ -144,7 +144,7 @@ function MoreView() {
             </div>
           </Link>
         ) : null}
-        {!profileIncomplete && staff?.role === "staff" ? (
+        {!isPermPreview && !profileIncomplete && staff?.role === "staff" ? (
           <Link href="/profile/" className="more-card">
             <UserCircle size={22} />
             <div>
@@ -152,6 +152,15 @@ function MoreView() {
               <p>{personalProfileLabel(staff) || staff.displayName || "ดู/แก้ไขโปรไฟล์"}</p>
             </div>
           </Link>
+        ) : null}
+        {isPermPreview ? (
+          <div className="more-card" style={{ opacity: 0.85, cursor: "default" }}>
+            <UserCircle size={22} />
+            <div>
+              <strong>โปรไฟล์ (พรีวิว)</strong>
+              <p>ดูอย่างเดียว — ออกจากมุมพนักงานก่อนถ้าจะแก้โปรไฟล์จริง</p>
+            </div>
+          </div>
         ) : null}
         <Link href="/utility/" className="more-card">
           <Sparkles size={22} />
