@@ -841,6 +841,30 @@ body.modal-open .main-panel {
   max-width: 100%;
 }
 
+.permission-picker.is-compact {
+  gap: 0.45rem;
+}
+
+.permission-picker.is-compact .permission-group {
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.65rem;
+}
+
+.permission-picker.is-compact .permission-row {
+  padding: 0.28rem 0.4rem;
+  border-radius: 0.45rem;
+}
+
+.permission-picker.is-compact .permission-row-text {
+  font-size: 0.78rem;
+}
+
+.permission-list.is-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.28rem;
+}
+
 .field-permissions {
   display: block;
   width: 100%;
@@ -960,6 +984,287 @@ body.modal-open .main-panel {
 
 .staff-hub-section {
   margin-bottom: 1rem;
+}
+
+/* —— Staff hub compact (หลังร้าน) —— */
+.staff-hub {
+  max-width: 42rem;
+}
+
+.staff-hub-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.staff-hub-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 750;
+  color: var(--tea-leaf);
+  text-align: left;
+  line-height: 1.25;
+}
+
+.staff-hub-sub {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: rgba(28, 42, 31, 0.55);
+  text-align: left;
+}
+
+.staff-hub-loading {
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.staff-hub-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0 0 0.65rem;
+  padding: 0.2rem;
+  border-radius: 0.65rem;
+  background: rgba(28, 42, 31, 0.06);
+}
+
+.staff-hub-tab {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: rgba(28, 42, 31, 0.7);
+  font-size: 0.78rem;
+  font-weight: 650;
+  padding: 0.38rem 0.35rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.staff-hub-tab.is-active {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--tea-leaf);
+  box-shadow: 0 1px 2px rgba(28, 42, 31, 0.08);
+}
+
+.staff-hub-msg {
+  margin: 0 0 0.55rem;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.staff-hub-panel {
+  margin-bottom: 0.85rem;
+}
+
+.staff-hub-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.staff-hub-panel-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--tea-leaf);
+  text-align: left;
+}
+
+.staff-hub-panel-hint {
+  margin: 0.12rem 0 0;
+  font-size: 0.72rem;
+  color: rgba(28, 42, 31, 0.52);
+  text-align: left;
+  line-height: 1.35;
+}
+
+.staff-btn-sm {
+  font-size: 0.72rem !important;
+  padding: 0.28rem 0.5rem !important;
+  min-height: 0 !important;
+  line-height: 1.2 !important;
+  border-radius: 0.45rem !important;
+}
+
+.staff-btn-sm.is-danger {
+  color: #9b2c2c;
+}
+
+.staff-compact-form {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.staff-compact-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+@media (max-width: 520px) {
+  .staff-compact-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.staff-compact-form .field {
+  margin: 0;
+}
+
+.staff-compact-form .field span,
+.staff-compact-form .field label,
+.staff-compact-form .field > span {
+  font-size: 0.72rem;
+}
+
+.staff-compact-form input,
+.staff-compact-form select,
+.staff-compact-select {
+  font-size: 0.84rem;
+  padding: 0.4rem 0.5rem;
+  min-height: 0;
+}
+
+.staff-inline-add {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) auto;
+  align-items: center;
+}
+
+@media (max-width: 520px) {
+  .staff-inline-add {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .staff-inline-add .primary-btn {
+    grid-column: 1 / -1;
+  }
+}
+
+.staff-compact-actions,
+.staff-perm-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.staff-compact-list {
+  margin-top: 0.5rem;
+}
+
+.staff-empty {
+  margin: 0.4rem 0;
+  text-align: left;
+  font-size: 0.8rem;
+}
+
+.staff-level-list {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.staff-level-row,
+.staff-account-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem 0.55rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.staff-level-row.is-inactive {
+  opacity: 0.62;
+}
+
+.staff-level-main,
+.staff-account-main {
+  min-width: 0;
+  flex: 1 1 10rem;
+  text-align: left;
+}
+
+.staff-level-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.staff-level-name-row strong {
+  font-size: 0.86rem;
+}
+
+.staff-level-meta {
+  margin-top: 0.12rem;
+  font-size: 0.72rem;
+}
+
+.staff-level-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.staff-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.65rem;
+  font-weight: 650;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(74, 107, 62, 0.12);
+  color: var(--tea-leaf);
+}
+
+.staff-chip.is-soft {
+  background: rgba(28, 42, 31, 0.08);
+  color: rgba(28, 42, 31, 0.72);
+}
+
+.staff-chip.is-muted {
+  background: rgba(28, 42, 31, 0.05);
+  color: rgba(28, 42, 31, 0.5);
+}
+
+.staff-sync-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  text-align: left;
+  color: rgba(28, 42, 31, 0.72);
+}
+
+.staff-sync-check input {
+  margin-top: 0.15rem;
+}
+
+.staff-account-row .permission-editor {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.staff-hub .staff-readiness-section .panel-title {
+  font-size: 0.95rem;
+}
+
+.staff-hub .staff-readiness-summary {
+  font-size: 0.78rem;
+  margin-bottom: 0.45rem;
+}
+
+.staff-hub .staff-ready-edit-btn {
+  font-size: 0.68rem;
+  padding: 0.18rem 0.4rem;
 }
 
 .staff-readiness-section {

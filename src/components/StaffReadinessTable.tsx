@@ -66,25 +66,19 @@ export function StaffReadinessTable({
   if (!rows.length) {
     return (
       <section className="staff-hub-section staff-readiness-section">
-        <h2 className="panel-title" style={{ fontSize: "1.05rem" }}>
-          สรุปความพร้อมพนักงาน
-        </h2>
-        <p className="muted" style={{ textAlign: "left", margin: 0 }}>
-          ยังไม่มีพนักงานในระบบ — เพิ่มชื่อและบัญชีด้านล่าง
-        </p>
+        <h2 className="staff-hub-panel-title">ทีม</h2>
+        <p className="staff-hub-panel-hint">ยังไม่มีพนักงาน — เพิ่มชื่อด้านล่าง</p>
       </section>
     );
   }
 
   return (
     <section className="staff-hub-section staff-readiness-section">
-      <h2 className="panel-title" style={{ fontSize: "1.05rem" }}>
-        สรุปความพร้อมพนักงาน
-      </h2>
+      <h2 className="staff-hub-panel-title">ทีม</h2>
       <p className="staff-readiness-summary muted">
-        พนักงาน {summary.totalStaff} คน · ครบ {summary.complete} · ยังไม่ครบ {summary.partial}
+        {summary.totalStaff} คน · ครบ {summary.complete} · ค้าง {summary.partial}
         {summary.blocked ? ` · ล็อกอินไม่ได้ ${summary.blocked}` : ""}
-        {summary.rosterOnly ? ` · รอสร้างบัญชี (ขั้นที่ 2) ${summary.rosterOnly}` : ""}
+        {summary.rosterOnly ? ` · รอบัญชี ${summary.rosterOnly}` : ""}
       </p>
 
       <div className="sheet-wrap staff-readiness-wrap sheet-bleed">

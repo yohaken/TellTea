@@ -14,11 +14,14 @@ export function PermissionPicker({
   disabled,
   /** ซ่อนสิทธิ์ระดับเจ้าของ — ใช้ตอนคนที่ไม่ใช่เจ้าของจัดการพนักงาน */
   hideElevated = false,
+  /** แถวแน่นขึ้น สำหรับหลังร้าน */
+  compact = false,
 }: {
   value: StaffPermissions;
   onChange: (next: StaffPermissions) => void;
   disabled?: boolean;
   hideElevated?: boolean;
+  compact?: boolean;
 }) {
   function toggle(key: PermissionKey, checked: boolean) {
     onChange({ ...value, [key]: checked });
@@ -33,11 +36,13 @@ export function PermissionPicker({
   const elevated = new Set<PermissionKey>(ELEVATED_PERMISSION_KEYS);
 
   return (
-    <div className="permission-picker">
+    <div className={`permission-picker${compact ? " is-compact" : ""}`}>
       {PERMISSION_GROUPS.map((group) => {
-        const keys = hideElevated
-          ? group.keys.filter((k) => !elevated.has(k))
-          : group.keys;
+        const keys = group.keys.filter((key) => {
+          if (key === "assignTasks") return false;
+          if (hideElevated && elevated.has(key)) return false;
+          return true;
+        });
         if (!keys.length) return null;
         const enabled = keys.filter((k) => value[k]).length;
         const allOn = enabled === keys.length;
@@ -46,18 +51,20 @@ export function PermissionPicker({
             <div className="permission-group-head">
               <div>
                 <h3 className="permission-group-title">{group.title}</h3>
-                {group.hint ? <p className="permission-group-hint">{group.hint}</p> : null}
+                {!compact && group.hint ? (
+                  <p className="permission-group-hint">{group.hint}</p>
+                ) : null}
               </div>
               <button
                 type="button"
-                className="ghost-btn permission-group-toggle"
+                className="ghost-btn permission-group-toggle staff-btn-sm"
                 disabled={disabled}
                 onClick={() => setGroup(keys, !allOn)}
               >
-                {allOn ? "ปิดทั้งกลุ่ม" : "เปิดทั้งกลุ่ม"}
+                {allOn ? "ปิดกลุ่ม" : "เปิดกลุ่ม"}
               </button>
             </div>
-            <ul className="permission-list">
+            <ul className={`permission-list${compact ? " is-compact-grid" : ""}`}>
               {keys.map((key) => (
                 <li key={key}>
                   <label className="permission-row">
@@ -75,7 +82,7 @@ export function PermissionPicker({
               ))}
             </ul>
             <p className="permission-group-count muted">
-              เปิด {enabled}/{keys.length}
+              {enabled}/{keys.length}
             </p>
           </section>
         );

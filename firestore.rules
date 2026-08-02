@@ -102,6 +102,22 @@ service cloud.firestore {
         );
     }
 
+    function levelPermsElevated(perms) {
+      return perms.ownerBooks == true
+        || perms.pnl == true
+        || perms.transferIn == true
+        || perms.exportData == true
+        || perms.staffManage == true
+        || perms.payrollPay == true;
+    }
+
+    function isSeedPermissionLevelId(levelId) {
+      return levelId == 'shop_staff'
+        || levelId == 'shift_lead'
+        || levelId == 'owner_assist'
+        || levelId == 'owner';
+    }
+
     function staffHubCreateOk() {
       return isOwner() || isOwnerEmail()
         || (hasPerm('staffManage')
@@ -436,6 +452,49 @@ service cloud.firestore {
         || (signedIn() && staffId == resolvedStaffId() && staffSelfProfileUpdate());
       allow delete: if isOwner() || isOwnerEmail()
         || (hasPerm('staffManage') && resource.data.role == 'staff');
+    }
+
+    // ลำดับสิทธิ์ (แม่แบบ) — อ่าน/จัดการที่ศูนย์พนักงาน
+    match /permissionLevels/{levelId} {
+      allow read: if staffHubManage();
+      // seed ครั้งแรก: staffManage สร้างมาตรฐานได้; สร้างใหม่ elevated ได้แค่เจ้าของ
+      allow create: if staffHubManage()
+        && request.resource.data.keys().hasAll(['name', 'sortOrder', 'active', 'permissions', 'createdAt', 'updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.sortOrder is number
+        && request.resource.data.active is bool
+        && request.resource.data.permissions is map
+        && (
+          isOwner() || isOwnerEmail()
+          || (
+            hasPerm('staffManage')
+            && (
+              !levelPermsElevated(request.resource.data.permissions)
+              || (isSeedPermissionLevelId(levelId) && levelId != 'owner')
+            )
+          )
+        )
+        && (levelId != 'owner' || isOwner() || isOwnerEmail());
+      allow update: if staffHubManage()
+        && !(resource.data.isSystem == true && levelId == 'owner')
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (
+          isOwner() || isOwnerEmail()
+          || (
+            hasPerm('staffManage')
+            && resource.data.isSystem != true
+            && !levelPermsElevated(resource.data.permissions)
+            && !levelPermsElevated(request.resource.data.permissions)
+            && request.resource.data.isSystem != true
+          )
+        );
+      allow delete: if (isOwner() || isOwnerEmail() || hasPerm('staffManage'))
+        && resource.data.isSystem != true
+        && levelId != 'owner'
+        && (
+          isOwner() || isOwnerEmail()
+          || !levelPermsElevated(resource.data.permissions)
+        );
     }
 
     match /staffPhones/{phoneId} {

@@ -29,6 +29,7 @@ assert.equal(
 const REQUIRED_MATCHES = [
   "staff",
   "staffPhones",
+  "permissionLevels",
   "ledger",
   "cashDeposits",
   "billNotices",

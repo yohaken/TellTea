@@ -23,8 +23,25 @@ export type StaffMember = {
   createdAt: number;
   /** Fine-grained page/feature access — owners always get full set in resolvePermissions */
   permissions?: Partial<StaffPermissions>;
+  /** อ้างอิง permissionLevels/{id} — แม่แบบสิทธิ์ */
+  permissionLevelId?: string;
+  /** true เมื่อติ๊กสิทธิ์ต่างจากลำดับที่ผูก (ไม่ sync ตามลำดับอัตโนมัติ) */
+  permissionsCustomized?: boolean;
   /** เข้าใช้แอปหลังสุด (heartbeat) — เจ้าของใช้ดูว่าใครอยู่ในระบบ */
   lastSeenAt?: number;
+};
+
+/** ลำดับสิทธิ์ (แม่แบบ) — สร้าง/แก้ได้ที่ศูนย์พนักงาน */
+export type PermissionLevel = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  active: boolean;
+  /** seed/ระบบ — ลบไม่ได้; ลำดับเจ้าของแก้ชุดสิทธิ์ไม่ได้ */
+  isSystem: boolean;
+  permissions: StaffPermissions;
+  createdAt: number;
+  updatedAt: number;
 };
 
 /** ข้อมูลส่วนตัวละเอียดอ่อน — คอลเลกชัน staffPersonal (เจ้าของอ่านได้) */
