@@ -87,7 +87,7 @@ function isLinkedToStaff(emp: Employee, staff: StaffMember): boolean {
 
 /**
  * หาแถวพนักงานที่ผูกกับบัญชี staff — ใช้กรองคิวจ่าย/เงินเดือนมุมพนักงาน
- * ลำดับ: staff.employeeId → linkedStaffId/email/phone → ชื่อตรง displayName
+ * ลำดับ: staff.employeeId → linkedStaffId/email/phone → ชื่อ/ชื่อเล่นตรง displayName
  */
 export function resolveLinkedEmployee(
   employees: Employee[],
@@ -103,8 +103,21 @@ export function resolveLinkedEmployee(
   const name = (staff.displayName || "").trim().toLowerCase();
   if (!name) return null;
   return (
-    employees.find((e) => e.active && e.name.trim().toLowerCase() === name) || null
+    employees.find((e) => {
+      if (!e.active) return false;
+      if (e.name.trim().toLowerCase() === name) return true;
+      const nick = (e.nickname || "").trim().toLowerCase();
+      return !!nick && nick === name;
+    }) || null
   );
+}
+
+/** employees/{id} สำหรับกรองรายการ "ของฉัน" (ผลิต/ชง/โบนัส) */
+export function resolveMyWorkerId(
+  employees: Employee[],
+  staff: Pick<StaffMember, "id" | "email" | "phone" | "displayName" | "employeeId"> | null | undefined,
+): string {
+  return resolveLinkedEmployee(employees, staff)?.id || "";
 }
 
 function isUnlinked(emp: Employee): boolean {

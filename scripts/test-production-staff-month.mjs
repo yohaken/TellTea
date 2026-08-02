@@ -10,6 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const page = readFileSync(join(root, "src/app/production/page.tsx"), "utf8");
 
 assert.match(page, /aria-label="เดือนอ้างอิง"/);
+assert.match(page, /resolveMyWorkerId/);
 assert.match(page, /workerId: filterId/);
 assert.match(page, /monthWindow/);
 assert.doesNotMatch(

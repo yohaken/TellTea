@@ -468,8 +468,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     return realStaff;
   }, [isPermPreview, permPreview, staff, permissionLevels, realStaff]);
-  // เขียนข้อมูลยังเป็นบัญชีจริง — พรีวิวแค่เมนู/สิทธิ์หน้าจอ
-  const actorId = actorIdFromUser(user, staff);
+  // เขียนข้อมูลยังเป็นบัญชีจริง — ห้ามใช้ effectiveStaff (พรีวิวสวม memberId คนอื่น)
+  const actorId = actorIdFromUser(user, realStaff);
 
   const value = useMemo(
     () => ({

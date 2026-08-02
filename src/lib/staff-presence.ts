@@ -109,6 +109,9 @@ export function buildStaffPresenceItems(
 }
 
 function mapStaffDoc(id: string, data: Record<string, unknown>): StaffMember {
+  const permissionLevelId =
+    typeof data.permissionLevelId === "string" ? data.permissionLevelId : undefined;
+  const rawPerms = data.permissions;
   return {
     id,
     email: typeof data.email === "string" ? data.email : undefined,
@@ -116,6 +119,13 @@ function mapStaffDoc(id: string, data: Record<string, unknown>): StaffMember {
     role: data.role === "owner" ? "owner" : "staff",
     displayName: typeof data.displayName === "string" ? data.displayName : undefined,
     employeeId: typeof data.employeeId === "string" ? data.employeeId : undefined,
+    // ต้องมี level/perms ครบ — พรีวิวจาก dock ถึงได้สิทธิ์ + กรองข้อมูลเหมือนล็อกอินจริง
+    permissionLevelId,
+    permissions:
+      rawPerms && typeof rawPerms === "object"
+        ? (rawPerms as StaffMember["permissions"])
+        : undefined,
+    permissionsCustomized: data.permissionsCustomized === true,
     profileComplete: data.profileComplete === true,
     lastSeenAt: typeof data.lastSeenAt === "number" ? data.lastSeenAt : undefined,
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,

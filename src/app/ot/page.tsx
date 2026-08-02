@@ -19,7 +19,12 @@ import { PhotoForensicsPanel } from "@/components/PhotoForensicsPanel";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
-import { listActiveEmployees, resolveLinkedEmployee, type Employee } from "@/lib/employees";
+import {
+  listActiveEmployees,
+  resolveLinkedEmployee,
+  resolveMyWorkerId,
+  type Employee,
+} from "@/lib/employees";
 import { can } from "@/lib/permissions";
 import {
   entryHasPhotoFlag,
@@ -316,9 +321,7 @@ function OtView() {
         const emps = await listActiveEmployees();
         if (cancelled) return;
         setWorkers(emps);
-        const filterId = shopOtView
-          ? ""
-          : staff?.employeeId || resolveLinkedEmployee(emps, staff)?.id || "";
+        const filterId = shopOtView ? "" : resolveMyWorkerId(emps, staff);
         if (!shopOtView && !filterId) {
           setEntries([]);
           setEntriesReady(true);

@@ -15,6 +15,7 @@ import { previewFromMember } from "@/lib/perm-preview";
 import {
   STAFF_PRESENCE_AGE_TICK_MS,
   buildStaffPresenceItems,
+  findEmployeeForPresence,
   formatPresenceAge,
   subscribeEmployeesForPresence,
   subscribeStaffForPresence,
@@ -121,15 +122,27 @@ export function StaffPresenceDock() {
   }
 
   function startViewAs(member: StaffMember, item: StaffPresenceItem) {
+    const emp = findEmployeeForPresence(member, employees);
     startPermPreview(
-      previewFromMember(member, item.fullName || item.label, permissionLevels),
+      previewFromMember(
+        member,
+        item.fullName || item.label,
+        permissionLevels,
+        emp?.id,
+      ),
     );
     closeMenu();
   }
 
   function openBonusAs(member: StaffMember, item: StaffPresenceItem) {
+    const emp = findEmployeeForPresence(member, employees);
     startPermPreview(
-      previewFromMember(member, item.fullName || item.label, permissionLevels),
+      previewFromMember(
+        member,
+        item.fullName || item.label,
+        permissionLevels,
+        emp?.id,
+      ),
     );
     closeMenu();
     router.push("/bonus/");

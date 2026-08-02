@@ -58,6 +58,7 @@ import {
   listActiveEmployeesWithPay,
   migrateAllLegacyEmployeePay,
   resolveLinkedEmployee,
+  resolveMyWorkerId,
   type Employee,
 } from "@/lib/employees";
 import { staffHomeHref } from "@/lib/nav-menu";
@@ -240,8 +241,7 @@ function BonusView() {
         unsubProd();
       };
     }
-    const selfId =
-      staff?.employeeId || resolveLinkedEmployee(employees, staff)?.id || "";
+    const selfId = resolveMyWorkerId(employees, staff);
     if (!selfId) {
       setOtEntries([]);
       setProdEntries([]);
@@ -276,10 +276,7 @@ function BonusView() {
         { since: payrollSince },
       );
     }
-    const selfId =
-      staff?.employeeId ||
-      resolveLinkedEmployee(employees, staff)?.id ||
-      "";
+    const selfId = resolveMyWorkerId(employees, staff);
     if (!selfId) {
       setPayrollItems([]);
       return;
@@ -325,7 +322,7 @@ function BonusView() {
 
   useEffect(() => {
     if (!canView || shopPayView) return;
-    const empId = staff?.employeeId || resolveLinkedEmployee(employees, staff)?.id || "";
+    const empId = resolveMyWorkerId(employees, staff);
     if (!empId) {
       setPersonalClose(null);
       return;

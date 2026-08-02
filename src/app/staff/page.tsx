@@ -140,7 +140,15 @@ function StaffView() {
 
   function beginPreviewFromMember(member: StaffMember) {
     if (!isOwner || member.role !== "staff") return;
-    const preview = previewFromMember(member, undefined, permissionLevels);
+    const emp = member.employeeId
+      ? employees.find((e) => e.id === member.employeeId)
+      : employees.find((e) => e.linkedStaffId === member.id);
+    const preview = previewFromMember(
+      member,
+      undefined,
+      permissionLevels,
+      emp?.id,
+    );
     startPermPreview(preview);
     router.replace(staffHomeHref({
       id: staff!.id,

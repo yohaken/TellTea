@@ -20,7 +20,7 @@ import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { monthInputValue, parseMonthInput } from "@/lib/bonus";
 import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
-import { resolveLinkedEmployee } from "@/lib/employees";
+import { resolveMyWorkerId } from "@/lib/employees";
 import { staffHomeHref } from "@/lib/nav-menu";
 import { can } from "@/lib/permissions";
 import {
@@ -118,10 +118,8 @@ function ProductionView() {
         const w = await listProdWorkers();
         if (cancelled) return;
         setWorkers(w);
-        // มุมพนักงาน/พรีวิว: กรองคนตัวเอง + เดือนที่เลือก (ไม่ดึง lookback ยาวที่ทำให้วันที่ดูแปลก)
-        const filterId = shopProdView
-          ? ""
-          : staff?.employeeId || resolveLinkedEmployee(w, staff)?.id || "";
+        // มุมพนักงาน/พรีวิว: กรองคนตัวเอง + เดือนที่เลือก (พรีวิวต้องมี memberId/employeeId ของคนนั้น)
+        const filterId = shopProdView ? "" : resolveMyWorkerId(w, staff);
         const monthWindow = {
           since: new Date(logYear, logMonthIdx, 1).getTime(),
           until: new Date(logYear, logMonthIdx + 1, 1).getTime(),

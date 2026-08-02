@@ -82,29 +82,44 @@ export function previewFromLevel(level: PermissionLevel): PermPreviewState {
 /**
  * สร้างพรีวิวจากบัญชีพนักงาน — resolve ผ่าน level เหมือนของจริง
  * (ต้องส่ง levels จากแคตตาล็อกล่าสุด)
+ *
+ * `resolvedEmployeeId` — employees/{id} ที่หาจาก linkedStaffId แล้ว
+ * (กรณี staff.employeeId ว่างแต่ roster ผูกไว้)
  */
 export function previewFromMember(
   member: StaffMember,
   labelOverride?: string,
   levels?: PermissionLevel[] | null,
+  resolvedEmployeeId?: string | null,
 ): PermPreviewState {
+  const employeeId =
+    (resolvedEmployeeId || "").trim() ||
+    (member.employeeId || "").trim() ||
+    undefined;
   return {
     label: (labelOverride || staffAccountLabel(member) || member.displayName || member.id).trim(),
     permissions: resolveEffectivePermissions(member, levels),
     levelId: member.permissionLevelId,
     memberId: member.id,
-    employeeId: member.employeeId,
+    employeeId,
   };
 }
 
+/**
+ * สวมตัวตนพนักงานสำหรับเมนู/กรองข้อมูล — ใช้ memberId เป็น staff.id
+ * เพื่อให้ resolveLinkedEmployee หา linkedStaffId ได้เหมือนล็อกอินจริง
+ * (เขียนข้อมูลยังใช้ actorId / realStaff แยกต่างหาก)
+ */
 export function buildPreviewStaff(
   real: StaffMember,
   preview: PermPreviewState,
 ): StaffMember {
+  const memberId = (preview.memberId || "").trim();
   return {
-    id: real.id,
-    email: real.email,
-    phone: real.phone,
+    id: memberId || real.id,
+    // อย่าใช้ email/phone เจ้าของ — จะไป match roster คนผิด
+    email: memberId ? undefined : real.email,
+    phone: memberId ? undefined : real.phone,
     role: "staff",
     displayName: preview.label,
     permissions: materializePermissions(preview.permissions),
