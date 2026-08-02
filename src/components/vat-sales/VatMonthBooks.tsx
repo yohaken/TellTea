@@ -39,11 +39,21 @@ import {
   patchGpVat,
   patchSales,
   patchSfSendIntoDraft,
+  patchSfSendTendersIntoDraft,
   patchTransfer,
   retToMonthBooksDraft,
   type MonthBooksDraft,
   type MonthChannel,
 } from "@/lib/vat-month-books";
+import {
+  emptyPosStorefrontTenders,
+  fetchPosStorefrontTenderTotalsByMonth,
+  loadSfPosConnect,
+  saveSfPosConnect,
+  scaleSfSendTenders,
+  sfSendTendersGross,
+  type PosStorefrontTenderTotals,
+} from "@/lib/vat-storefront-pos";
 import {
   DELIVERY_COL_INFO,
   DELIVERY_COL_ROLE,
@@ -222,6 +232,15 @@ export function VatMonthBooks({ actor }: Props) {
   const [sfSendPct, setSfSendPct] = useState(100);
   const [sfPulse, setSfPulse] = useState(false);
   const sfPulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** ดึงยอดหน้าร้านจาก nPOS (วันบิล) — default เปิดตั้งแต่ 2026-08 */
+  const [sfPosConnect, setSfPosConnect] = useState(() =>
+    loadSfPosConnect(bangkokMonthKey()),
+  );
+  const [sfPosBusy, setSfPosBusy] = useState(false);
+  const [sfPosTenders, setSfPosTenders] = useState<PosStorefrontTenderTotals>(
+    () => emptyPosStorefrontTenders(),
+  );
+  const sfPosFetchGen = useRef(0);
 
   const draftRef = useRef(draft);
   draftRef.current = draft;
@@ -474,12 +493,16 @@ export function VatMonthBooks({ actor }: Props) {
     markDirty();
   }
 
-  // โหลด % ล่าสุด + ยอดต้นทางของเดือน (ไม่เขียนทับตารางจนกว่าจะเลื่อน/แก้ยอด)
+  // โหลด % ล่าสุด + ยอดต้นทาง + ติ๊ก nPOS ของเดือน
   useEffect(() => {
     setSfSendPct(loadSfSendPct());
     const src = loadSfSendSource(month);
     setSfSendSourceStr(src > 0 ? moneyFieldValue(src) : "");
     setSfPulse(false);
+    setSfPosConnect(loadSfPosConnect(month));
+    setSfPosTenders(emptyPosStorefrontTenders());
+    setSfPosBusy(false);
+    sfPosFetchGen.current += 1;
   }, [month]);
 
   const flashSfCell = useCallback(() => {
@@ -488,9 +511,38 @@ export function VatMonthBooks({ actor }: Props) {
     sfPulseTimer.current = setTimeout(() => setSfPulse(false), 900);
   }, []);
 
+  const disconnectSfPos = useCallback(() => {
+    setSfPosConnect((on) => {
+      if (on) saveSfPosConnect(month, false);
+      return false;
+    });
+  }, [month]);
+
   const applySfSendToTable = useCallback(
-    (source: number, pct: number) => {
+    (
+      source: number,
+      pct: number,
+      tenders?: { cash: number; transfer: number } | null,
+    ) => {
       if (locked) return;
+      if (tenders) {
+        const scaled = scaleSfSendTenders(tenders, pct);
+        const sent = sfSendTendersGross(scaled);
+        if (!(sent > 0) && !(sfSendTendersGross(tenders) > 0)) return;
+        if (!(sent > 0)) return; // ห้ามเขียน 0 ทับยอดในตาราง
+        setDraft((d) => {
+          const same =
+            Math.abs((d.transfer.storefront || 0) - sent) < 0.009 &&
+            Math.abs((d.sales.storefrontTransfer || 0) - scaled.transfer) <
+              0.009 &&
+            Math.abs((d.sales.storefrontCash || 0) - scaled.cash) < 0.009;
+          if (same) return d;
+          return patchSfSendTendersIntoDraft(d, scaled);
+        });
+        markDirty();
+        flashSfCell();
+        return;
+      }
       if (!(source > 0)) return; // ห้ามเขียน 0 ทับยอดในตารางเมื่อยังไม่มีต้นทาง
       const sent = computeSfSendAmount(source, pct);
       setDraft((d) => {
@@ -509,6 +561,49 @@ export function VatMonthBooks({ actor }: Props) {
     [locked, markDirty, flashSfCell],
   );
 
+  // ดึง nPOS เมื่อติ๊กเปิด · หลังโหลดเดือน · ไม่ทับเดือนที่ filed
+  useEffect(() => {
+    if (!sfPosConnect || locked || loading || !hydrated) return;
+    const gen = ++sfPosFetchGen.current;
+    setSfPosBusy(true);
+    setMsg("กำลังดึงยอดหน้าร้านจาก nPOS…");
+    void fetchPosStorefrontTenderTotalsByMonth(month)
+      .then((t) => {
+        if (gen !== sfPosFetchGen.current) return;
+        setSfPosTenders(t);
+        const gross = t.gross;
+        setSfSendSourceStr(gross > 0 ? moneyFieldValue(gross) : "");
+        saveSfSendSource(month, gross);
+        if (gross > 0) {
+          applySfSendToTable(
+            gross,
+            loadSfSendPct(),
+            { cash: t.cash, transfer: t.transfer },
+          );
+          setMsg(
+            `ดึงจาก nPOS แล้ว · สด ${fmt(t.cash)} · โอน ${fmt(t.transfer)}`,
+          );
+        } else {
+          setMsg("nPOS เดือนนี้ยังไม่มียอดหน้าร้าน — ยังไม่แตะตาราง");
+        }
+      })
+      .catch((e) => {
+        if (gen !== sfPosFetchGen.current) return;
+        setError(e instanceof Error ? e.message : String(e));
+        setMsg("");
+      })
+      .finally(() => {
+        if (gen === sfPosFetchGen.current) setSfPosBusy(false);
+      });
+  }, [
+    sfPosConnect,
+    month,
+    locked,
+    loading,
+    hydrated,
+    applySfSendToTable,
+  ]);
+
   /**
    * ต้นทางแถบส่ง — ใช้เฉพาะที่พิมพ์ในช่องต้นทาง
    * ห้ามดึงจากตารางมาคูณ % (เคยทับยอดหน้าร้านที่เซฟไว้แล้ว)
@@ -518,7 +613,18 @@ export function VatMonthBooks({ actor }: Props) {
     return typed > 0 ? typed : 0;
   }
 
+  function onSfPosConnectChange(on: boolean) {
+    setSfPosConnect(on);
+    saveSfPosConnect(month, on);
+    if (!on) {
+      setSfPosBusy(false);
+      sfPosFetchGen.current += 1;
+      setMsg("ปิดดึงจาก nPOS — แก้ยอดมือได้");
+    }
+  }
+
   function onSfSendSourceChange(raw: string) {
+    if (sfPosConnect) disconnectSfPos();
     setSfSendSourceStr(raw);
     if (locked) return;
     const source = parseVatMoneyInput(raw);
@@ -531,6 +637,18 @@ export function VatMonthBooks({ actor }: Props) {
     setSfSendPct(pct);
     saveSfSendPct(pct);
     if (locked) return;
+    if (sfPosConnect) {
+      const tenders = {
+        cash: sfPosTenders.cash,
+        transfer: sfPosTenders.transfer,
+      };
+      if (!(sfSendTendersGross(tenders) > 0)) {
+        setMsg("รอยอดจาก nPOS ก่อน แล้วค่อยเลื่อน % — จะไม่แตะยอดในตาราง");
+        return;
+      }
+      applySfSendToTable(sfPosTenders.gross, pct, tenders);
+      return;
+    }
     const source = resolveSfSendSource(sfSendSourceStr);
     if (!(source > 0)) {
       setMsg("ใส่ยอดหน้าร้านต้นทางก่อน แล้วค่อยเลื่อน % — จะไม่แตะยอดในตาราง");
@@ -542,6 +660,7 @@ export function VatMonthBooks({ actor }: Props) {
   /** แก้ยอดหน้าร้านในตารางเอง → จำค่านั้น · ไม่ให้แถบ % มาทับทีหลัง */
   function onStorefrontTransferManual(raw: string) {
     if (locked) return;
+    if (sfPosConnect) disconnectSfPos();
     const n = parseVatMoneyInput(raw);
     setDraft((d) => {
       let next = patchTransfer(d, "storefront", n);
@@ -565,14 +684,32 @@ export function VatMonthBooks({ actor }: Props) {
     () => parseVatMoneyInput(sfSendSourceStr),
     [sfSendSourceStr],
   );
-  const sfSendPreview = useMemo(
-    () => computeSfSendAmount(sfSendSourceNum, sfSendPct),
-    [sfSendSourceNum, sfSendPct],
+  const sfPosScaled = useMemo(
+    () =>
+      scaleSfSendTenders(
+        { cash: sfPosTenders.cash, transfer: sfPosTenders.transfer },
+        sfSendPct,
+      ),
+    [sfPosTenders.cash, sfPosTenders.transfer, sfSendPct],
   );
-  const sfUnsent = useMemo(
-    () => computeSfUnsentAmount(sfSendSourceNum, sfSendPct),
-    [sfSendSourceNum, sfSendPct],
-  );
+  const sfSendPreview = useMemo(() => {
+    if (sfPosConnect && sfSendTendersGross(sfPosTenders) > 0) {
+      return sfSendTendersGross(sfPosScaled);
+    }
+    return computeSfSendAmount(sfSendSourceNum, sfSendPct);
+  }, [sfPosConnect, sfPosTenders, sfPosScaled, sfSendSourceNum, sfSendPct]);
+  const sfUnsent = useMemo(() => {
+    if (sfPosConnect && sfSendTendersGross(sfPosTenders) > 0) {
+      return Math.round((sfPosTenders.gross - sfSendPreview) * 100) / 100;
+    }
+    return computeSfUnsentAmount(sfSendSourceNum, sfSendPct);
+  }, [
+    sfPosConnect,
+    sfPosTenders,
+    sfSendPreview,
+    sfSendSourceNum,
+    sfSendPct,
+  ]);
   const realProfitAfterVat = useMemo(
     () => computeRealProfitAfterVat(view.profitAfterVat, sfUnsent),
     [view.profitAfterVat, sfUnsent],
@@ -596,6 +733,12 @@ export function VatMonthBooks({ actor }: Props) {
 
   function setSalesField(key: keyof MonthBooksDraft["sales"], raw: string) {
     if (locked) return;
+    if (
+      sfPosConnect &&
+      (key === "storefrontCash" || key === "storefrontTransfer")
+    ) {
+      disconnectSfPos();
+    }
     setDraft((d) => patchSales(d, key, parseVatMoneyInput(raw)));
     markDirty();
   }
@@ -986,7 +1129,7 @@ export function VatMonthBooks({ actor }: Props) {
               A) รายได้ถึงร้าน — {formatThaiMonthKey(month)}
             </h2>
             <p className="muted vat-sales-hint vat-sf-send-hint">
-              ใช้แถบ「ส่งหน้าร้าน」ลอยด้านล่าง → เข้า A โอน + D ขายโอน · คิดภาษีขาย · ไม่แตะภาษีซื้อ
+              แถบลอย「ส่งหน้าร้าน」· ติ๊ก nPOS ดึงตามวันบิล (สด/โอน) หรือใส่ยอดมือ → ×% เข้า A+D · ไม่แตะภาษีซื้อ
             </p>
             <div className="sheet-wrap vat-month-slim-wrap">
               <table className="sheet-table vat-sales-table vat-sales-table--slim vat-month-slim vat-close-table">
@@ -1802,13 +1945,26 @@ export function VatMonthBooks({ actor }: Props) {
         className="vat-sf-send vat-sf-send--float"
         role="region"
         aria-label="แถบส่งหน้าร้าน"
-        title="ใส่ยอดต้นทางก่อน แล้วเลื่อน % — จึงจะเขียนเข้าตาราง · แก้ยอดในตารางเองแล้วระบบจะไม่ให้ % ทับ"
+        title="ติ๊กดึงจาก nPOS หรือใส่ยอดต้นทางมือ แล้วเลื่อน % — จึงจะเขียนเข้าตาราง · แก้ยอดในตารางเองแล้วระบบจะไม่ให้ % ทับ"
       >
+        <label
+          className={`vat-sf-pos-connect${sfPosConnect ? " is-on" : ""}`}
+          title="ดึงยอดหน้าร้านจาก nPOS ตามวันบิล (สด / พร้อมเพย์+โอน) · เดือนตั้งแต่ ส.ค. 2026 เปิดเป็นค่าเริ่มต้น"
+        >
+          <input
+            type="checkbox"
+            checked={sfPosConnect}
+            disabled={locked || loading || sfPosBusy}
+            onChange={(e) => onSfPosConnectChange(e.target.checked)}
+            aria-label="ดึงยอดหน้าร้านจาก nPOS"
+          />
+          <span>{sfPosBusy ? "nPOS…" : "nPOS"}</span>
+        </label>
         <span className="vat-sf-send-label">ส่งหน้าร้าน</span>
         <input
           className="vat-sales-input vat-sf-send-input"
           inputMode="decimal"
-          disabled={locked || loading}
+          disabled={locked || loading || sfPosConnect}
           value={sfSendSourceStr}
           placeholder="ยอดต้นทาง"
           aria-label="ยอดหน้าร้านต้นทาง"
@@ -1824,7 +1980,7 @@ export function VatMonthBooks({ actor }: Props) {
           min={0}
           max={100}
           step={1}
-          disabled={locked || loading}
+          disabled={locked || loading || sfPosBusy}
           value={sfSendPct}
           aria-label="เปอร์เซ็นต์ส่งเข้ารายได้ถึงร้าน"
           onChange={(e) => onSfSendPctChange(Number(e.target.value))}
@@ -1832,9 +1988,15 @@ export function VatMonthBooks({ actor }: Props) {
         <span className="vat-sf-send-pct">{sfSendPct}%</span>
         <span
           className={`vat-sf-send-out${sfSendSourceNum > 0 ? " is-live" : ""}`}
-          title="ยอดที่ส่งเข้าช่องหน้าร้านในตาราง A + D"
+          title={
+            sfPosConnect
+              ? "ยอดหลัง % → A รายได้ + D ยอดขาย (สด/โอน ตาม nPOS)"
+              : "ยอดที่ส่งเข้าช่องหน้าร้านในตาราง A + D"
+          }
         >
-          → โอน {fmt(sfSendPreview)}
+          {sfPosConnect && sfSendTendersGross(sfPosTenders) > 0
+            ? `→ สด ${fmt(sfPosScaled.cash)} · โอน ${fmt(sfPosScaled.transfer)}`
+            : `→ โอน ${fmt(sfSendPreview)}`}
         </span>
         <span
           className="vat-sf-send-unsent"

@@ -440,6 +440,28 @@ export function patchSfSendIntoDraft(
   };
 }
 
+/**
+ * แถบส่งหน้าร้านจาก nPOS (แยกสด/โอน) → A รายได้ + D ยอดขาย
+ * A income = cash + transfer · D เก็บทั้ง storefrontCash และ storefrontTransfer
+ */
+export function patchSfSendTendersIntoDraft(
+  draft: MonthBooksDraft,
+  tenders: { cash: number; transfer: number },
+): MonthBooksDraft {
+  const cash = normalizeMoney(tenders.cash);
+  const transfer = normalizeMoney(tenders.transfer);
+  const income = roundMoney(cash + transfer);
+  const next = patchTransfer(draft, "storefront", income);
+  return {
+    ...next,
+    sales: {
+      ...next.sales,
+      storefrontCash: cash,
+      storefrontTransfer: transfer,
+    },
+  };
+}
+
 export function incomeBreakdownLabel(draft: MonthBooksDraft): string {
   const parts = MONTH_CHANNELS.map(
     (k) =>

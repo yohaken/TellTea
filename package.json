@@ -27,6 +27,8 @@
     "test:vat-import-grab": "npx --yes tsx scripts/test-vat-import-grab-csv.ts",
     "test:vat-ingest-preview": "npx --yes tsx scripts/test-vat-ingest-preview.ts",
     "test:vat-delivery-ingest-draft": "npx --yes tsx scripts/test-vat-delivery-ingest-draft.ts",
+    "test:vat-storefront-send": "node scripts/test-vat-storefront-send.mjs",
+    "test:vat-storefront-pos": "node scripts/test-vat-storefront-pos.mjs",
     "test:vat-delivery-capture": "node scripts/test-vat-delivery-capture-extract.mjs",
     "test:vat-import-inbox": "npx --yes tsx scripts/test-vat-import-inbox.ts",
     "test:vat-import-scaffold": "npx --yes tsx scripts/test-vat-import-scaffold.ts",

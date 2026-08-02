@@ -17,6 +17,7 @@ const books = readFileSync(join(root, "src/lib/vat-month-books.ts"), "utf8");
 assert.match(books, /patchSfSendIntoDraft/);
 assert.match(books, /storefrontTransfer: n/);
 assert.match(books, /storefrontCash: 0/);
+assert.match(books, /patchSfSendTendersIntoDraft/);
 
 function clampSfSendPct(n) {
   if (!Number.isFinite(n)) return 100;
@@ -40,6 +41,7 @@ assert.match(ui, /จะไม่แตะยอดในตาราง/);
 assert.match(ui, /vat-sf-send--float/);
 assert.match(ui, /has-sf-send-float/);
 assert.match(ui, /แถบส่งหน้าร้าน/);
+assert.match(ui, /vat-sf-pos-connect/);
 // ห้ามดึงยอดตารางมาคูณ % แล้วทับของที่เซฟ
 assert.doesNotMatch(
   ui,
