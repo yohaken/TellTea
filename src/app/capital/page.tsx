@@ -62,6 +62,14 @@ function toDateInput(ms: number) {
   return todayInputValue(new Date(ms));
 }
 
+function friendlyCapitalError(err: unknown, fallback: string) {
+  const msg = err instanceof Error ? err.message : String(err || "");
+  if (/requires an index|index is currently building|FAILED_PRECONDITION/i.test(msg)) {
+    return "กำลังเตรียมดัชนีข้อมูล — รีเฟรชอีกครั้งในสักครู่";
+  }
+  return msg || fallback;
+}
+
 function CapitalBooksView() {
   const { actorId, staff } = useAuth();
   const router = useRouter();
@@ -111,7 +119,7 @@ function CapitalBooksView() {
     setSeeding(true);
     void ensureCapitalBooksSeeded(actorId)
       .catch((err) => {
-        setError((err as Error).message || "ใส่ข้อมูลย้อนหลังไม่สำเร็จ");
+        setError(friendlyCapitalError(err, "ใส่ข้อมูลย้อนหลังไม่สำเร็จ"));
       })
       .finally(() => setSeeding(false));
   }, [staff, actorId]);
@@ -120,7 +128,7 @@ function CapitalBooksView() {
     if (!can(staff, "ownerBooks")) return;
     return subscribeCapitalBooksSummary(
       (next) => setSummary(next),
-      (err) => setError(err.message || "โหลดสรุปทุนไม่สำเร็จ"),
+      (err) => setError(friendlyCapitalError(err, "โหลดสรุปทุนไม่สำเร็จ")),
     );
   }, [staff]);
 
@@ -134,11 +142,12 @@ function CapitalBooksView() {
         setHasMore(page.hasMore);
         setLoading(false);
         setLoadingMore(false);
+        setError(null);
       },
       (err) => {
         setLoading(false);
         setLoadingMore(false);
-        setError(err.message || "โหลดบัญชีทุนไม่สำเร็จ");
+        setError(friendlyCapitalError(err, "โหลดบัญชีทุนไม่สำเร็จ"));
       },
     );
     return unsub;

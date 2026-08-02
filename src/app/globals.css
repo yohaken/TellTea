@@ -2087,6 +2087,7 @@ body.modal-open .main-panel {
 /* Owner-books page chrome — compact, export de-emphasized */
 .owner-books-mode {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.25rem;
   margin: 0 0 0.4rem;
   padding: 0.12rem;

@@ -135,6 +135,19 @@ function capitalMetaRef() {
   return doc(getDb(), "meta", "capitalBooks");
 }
 
+/** Client tie-break — keep Firestore queries to a single orderBy (no composite index wait). */
+function sortCapitalEntries(
+  entries: CapitalBookEntry[],
+  dir: "asc" | "desc",
+): CapitalBookEntry[] {
+  const sign = dir === "asc" ? 1 : -1;
+  return [...entries].sort((a, b) => {
+    if (a.date !== b.date) return (a.date - b.date) * sign;
+    if (a.createdAt !== b.createdAt) return (a.createdAt - b.createdAt) * sign;
+    return a.id.localeCompare(b.id) * sign;
+  });
+}
+
 function bangkokMidnight(y: number, m: number, d: number): number {
   return Date.parse(
     `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}T00:00:00+07:00`,
@@ -352,17 +365,13 @@ export function subscribeCapitalBooksPage(
   onError?: (err: Error) => void,
 ): Unsubscribe {
   const size = Math.max(1, Math.min(limitCount, CAPITAL_BOOKS_LIVE_MAX));
-  const q = query(
-    capitalBooksCol(),
-    orderBy("date", "desc"),
-    orderBy("createdAt", "desc"),
-    limit(size),
-  );
+  // Single-field orderBy only — composite date+createdAt indexes can lag deploy.
+  const q = query(capitalBooksCol(), orderBy("date", "desc"), limit(size));
   return onSnapshot(
     q,
     (snap) => {
       onPage({
-        entries: snap.docs.map(mapEntry),
+        entries: sortCapitalEntries(snap.docs.map(mapEntry), "desc"),
         hasMore: snap.docs.length >= size,
       });
     },
@@ -374,9 +383,9 @@ export function subscribeCapitalBooksPage(
 
 export async function listCapitalBookEntries(): Promise<CapitalBookEntry[]> {
   const snap = await getDocs(
-    query(capitalBooksCol(), orderBy("date", "asc"), orderBy("createdAt", "asc")),
+    query(capitalBooksCol(), orderBy("date", "asc")),
   );
-  return snap.docs.map(mapEntry);
+  return sortCapitalEntries(snap.docs.map(mapEntry), "asc");
 }
 
 export async function listCapitalBookEntriesSince(
@@ -387,10 +396,9 @@ export async function listCapitalBookEntriesSince(
       capitalBooksCol(),
       where("date", ">=", sinceMs),
       orderBy("date", "asc"),
-      orderBy("createdAt", "asc"),
     ),
   );
-  return snap.docs.map(mapEntry);
+  return sortCapitalEntries(snap.docs.map(mapEntry), "asc");
 }
 
 export async function addCapitalBookEntry(
