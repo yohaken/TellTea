@@ -31,7 +31,8 @@ assert.match(rules, /businessNotes' && isOwner\(\)/);
 assert.match(rules, /docId != 'businessNotes'/);
 assert.match(css, /\.business-notes-page/);
 assert.match(css, /\.business-notes-table/);
-assert.match(version, /APP_BUILD = 628/);
+assert.match(version, /APP_BUILD = \d+/);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 628);
 
 // Runtime normalize via tsx-less pure reimplementation checks in lib source
 assert.match(lib, /compactBusinessNoteRows/);

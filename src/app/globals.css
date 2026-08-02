@@ -2710,6 +2710,49 @@ body.modal-open .main-panel {
   font-size: 0.72rem;
 }
 
+.owner-quick-abbr-input {
+  flex: 0 0 auto;
+  width: 3rem;
+  min-width: 3rem;
+  max-width: 3.4rem;
+  margin: 0;
+  padding: 0.12rem 0.2rem;
+  border: 1px solid rgba(28, 42, 31, 0.18);
+  border-radius: 0.35rem;
+  background: #fff;
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-align: center;
+  line-height: 1.2;
+  color: inherit;
+}
+
+.owner-quick-setup-abbr-input {
+  width: 2.8rem;
+  min-width: 2.8rem;
+}
+
+.owner-quick-settings-list .owner-quick-settings-row.is-on {
+  background: rgba(74, 107, 62, 0.08);
+  border-radius: 0.45rem;
+}
+
+.owner-quick-settings-abbr-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.owner-quick-settings-copy {
+  gap: 0.1rem;
+}
+
+.owner-quick-setup-count {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+}
+
 .owner-quick-setup-label {
   min-width: 0;
   overflow: hidden;

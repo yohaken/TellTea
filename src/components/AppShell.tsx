@@ -55,6 +55,7 @@ const MORE_PREFIXES = [
   "/tasks",
   "/utility",
   "/business-notes",
+  "/capital",
 ];
 
 const NAV_ICONS: Record<NavTabKey, typeof BookOpen> = {

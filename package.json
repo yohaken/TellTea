@@ -144,6 +144,7 @@
     "test:staff-news": "node scripts/test-staff-news.mjs",
     "test:staff-presence": "node scripts/test-staff-presence.mjs",
     "test:owner-quick-dock": "node scripts/test-owner-quick-dock.mjs",
+    "test:owner-quick-dock-lib": "npx --yes tsx scripts/test-owner-quick-dock-lib.ts",
     "test:pos-owner-ping": "node scripts/test-pos-owner-ping.mjs",
     "ping:pos-devices": "node scripts/ping-pos-devices.mjs",
     "check:npos-devices": "node scripts/check-npos-devices-live.mjs",
