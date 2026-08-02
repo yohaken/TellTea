@@ -137,6 +137,8 @@
     "test:npos-n6-sell": "node scripts/test-npos-n6-sell.mjs",
     "test:pos-apk-download": "node scripts/test-pos-apk-download.mjs",
     "test:pos-ops-notes": "node scripts/test-pos-ops-notes.mjs",
+    "test:business-notes": "node scripts/test-business-notes.mjs",
+    "test:business-notes-lib": "npx --yes tsx scripts/test-business-notes-lib.ts",
     "test:staff-news": "node scripts/test-staff-news.mjs",
     "test:staff-presence": "node scripts/test-staff-presence.mjs",
     "test:owner-quick-dock": "node scripts/test-owner-quick-dock.mjs",

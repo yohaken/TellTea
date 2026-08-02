@@ -17,6 +17,7 @@ import {
   Receipt,
   Settings,
   Sparkles,
+  StickyNote,
   UserCircle,
   Users,
   UtensilsCrossed,
@@ -178,6 +179,15 @@ function MoreView() {
             <div>
               <strong>POS</strong>
               <p>ยอดขาย + จัดการ</p>
+            </div>
+          </Link>
+        ) : null}
+        {isOwner ? (
+          <Link href="/business-notes/" className="more-card">
+            <StickyNote size={22} />
+            <div>
+              <strong>โนตกิจการ</strong>
+              <p>จดโนตทั่วไป · พิมพ์แล้วเซฟทันที — ขยายแท็บได้ทีหลัง</p>
             </div>
           </Link>
         ) : null}
