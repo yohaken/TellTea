@@ -20409,16 +20409,39 @@ a.ghost-btn {
   margin-bottom: 0.65rem;
 }
 
-/* A) แถบส่งหน้าร้าน → ตาราง — แถวเดียว กระชับ */
+/* A) แถบส่งหน้าร้าน → ตาราง — ลอยด้านล่าง ซ้าย–กลาง ไม่ทับ FAB/nav */
+.vat-month-books.has-sf-send-float {
+  padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 4.6rem);
+}
+
 .vat-sf-send {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.4rem;
   margin: 0.1rem 0 0.35rem;
   min-height: 1.45rem;
   font-size: 0.68rem;
   line-height: 1.1;
   color: rgba(28, 42, 31, 0.78);
+}
+
+.vat-sf-send--float {
+  position: fixed;
+  left: max(0.45rem, env(safe-area-inset-left, 0px));
+  /* เว้นขวาให้ Tune Desk FAB */
+  right: max(5.6rem, calc(env(safe-area-inset-right, 0px) + 5.4rem));
+  bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.45rem);
+  z-index: 70;
+  margin: 0;
+  padding: 0.42rem 0.55rem;
+  min-height: 2.15rem;
+  border: 1px solid rgba(28, 42, 31, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 253, 248, 0.94);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(20, 30, 22, 0.14);
 }
 
 .vat-sf-send-label {
@@ -20477,6 +20500,18 @@ a.ghost-btn {
   font-weight: 600;
   color: rgba(28, 42, 31, 0.55);
   white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .vat-sf-send--float {
+    right: max(4.85rem, calc(env(safe-area-inset-right, 0px) + 4.6rem));
+    padding: 0.38rem 0.45rem;
+  }
+
+  .vat-sf-send--float .vat-sf-send-range {
+    min-width: 3.6rem;
+    max-width: none;
+  }
 }
 
 .vat-c-real-note {
