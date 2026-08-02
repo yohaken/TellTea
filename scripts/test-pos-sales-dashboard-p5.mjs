@@ -29,7 +29,7 @@ const dash = read("src/components/PosSalesDashboard.tsx");
 assert.match(dash, /PosSalesDashboardStock/);
 assert.match(dash, /subscribeStockMovements/);
 assert.match(dash, /stockCosts/);
-assert.match(dash, /until:\s*clamped\.endMs|until: clamped.endMs/);
+assert.match(dash, /since:\s*clamped\.startMs/);
 assert.match(dash, /posDateRangeDayCountRaw/);
 assert.match(dash, /\/stock\//);
 

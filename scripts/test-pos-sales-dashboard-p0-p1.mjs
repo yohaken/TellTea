@@ -10,9 +10,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
 assert.ok(
-  Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 625,
+  Number(read("src/lib/version.ts").match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 629,
 );
-assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 168/);
+assert.match(read("src/lib/pos-version.ts"), /POS_BUILD = 169/);
+assert.match(read("src/lib/pos-sales-report.ts"), /posDashboardMonthRange/);
 
 assert.ok(existsSync(join(root, "docs/pos-sales-dashboard-phases.md")));
 const doc = read("docs/pos-sales-dashboard-phases.md");

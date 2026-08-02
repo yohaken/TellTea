@@ -24100,3 +24100,58 @@ a.ghost-btn {
 .business-notes-page .bn-del:hover {
   color: rgba(160, 40, 40, 0.9);
 }
+
+/* POS dashboard month picker */
+.pos-dash-month-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0.3rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(28, 42, 31, 0.16);
+  background: #fff;
+}
+
+.pos-dash-month-arrow {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #1c2a1f;
+  width: 1.7rem;
+  height: 1.7rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.35rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.pos-dash-month-arrow:hover:not(:disabled) {
+  background: rgba(28, 42, 31, 0.06);
+}
+
+.pos-dash-month-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pos-dash-month-select-wrap {
+  margin: 0;
+}
+
+.pos-dash-month-select {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 0;
+  background: transparent;
+  color: #1c2a1f;
+  padding: 0.2rem 0.15rem;
+  max-width: 11rem;
+  cursor: pointer;
+}
+
+.pos-dash-stock-note {
+  margin: 0;
+  font-size: 0.75rem;
+}

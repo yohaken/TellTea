@@ -11,6 +11,12 @@ import { getDb } from "./firebase";
 import { POS_SALES_COL } from "./pos-sales";
 import { POS_SESSIONS_COL } from "./pos-session";
 import type { PosSale, PosSession, PosSessionCashDropNote } from "./types";
+import {
+  bangkokMonthKey,
+  dateKeysInMonth,
+  isMonthKey,
+  startMsFromDateKey,
+} from "./vat-sales";
 import { bangkokDateKey, startOfLocalDay } from "./utils";
 
 /** Initial slim-table page size (scroll for the rest of the window). */
@@ -675,13 +681,75 @@ export type PosDateRange = {
 
 /** Default dashboard window: 1st of Bangkok month → today. */
 export function defaultPosDashboardRange(nowMs = Date.now()): PosDateRange {
-  const endMs = startOfLocalDay(nowMs);
-  const key = bangkokDateKey(endMs);
-  const [y, m] = key.split("-").map(Number);
-  const startMs = Date.parse(
-    `${y}-${String(m).padStart(2, "0")}-01T00:00:00+07:00`,
-  );
-  return { startMs: Number.isFinite(startMs) ? startMs : endMs, endMs };
+  return posDashboardMonthRange(bangkokMonthKey(nowMs), nowMs);
+}
+
+/**
+ * Full calendar month in Bangkok.
+ * Current month ends at today; past months use the last day of the month.
+ */
+export function posDashboardMonthRange(monthKey: string, nowMs = Date.now()): PosDateRange {
+  if (!isMonthKey(monthKey)) throw new Error("เดือนไม่ถูกต้อง");
+  const keys = dateKeysInMonth(monthKey);
+  const startMs = startMsFromDateKey(keys[0]);
+  const monthEnd = startMsFromDateKey(keys[keys.length - 1]);
+  const today = startOfLocalDay(nowMs);
+  const endMs =
+    monthKey === bangkokMonthKey(nowMs) ? Math.min(monthEnd, today) : monthEnd;
+  return { startMs, endMs };
+}
+
+/** Shift YYYY-MM by whole months (can go past current — callers clamp). */
+export function shiftPosMonthKey(monthKey: string, deltaMonths: number): string {
+  if (!isMonthKey(monthKey)) throw new Error("เดือนไม่ถูกต้อง");
+  const [y, m] = monthKey.split("-").map(Number);
+  const utc = Date.UTC(y, m - 1 + deltaMonths, 1);
+  const d = new Date(utc);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+export type PosDashMonthOption = { monthKey: string; label: string };
+
+/** Recent Bangkok months newest-first for the dashboard month picker. */
+export function listPosDashboardMonthOptions(
+  nowMs = Date.now(),
+  count = 24,
+): PosDashMonthOption[] {
+  const n = Math.max(1, Math.min(60, count));
+  const cur = bangkokMonthKey(nowMs);
+  const out: PosDashMonthOption[] = [];
+  for (let i = 0; i < n; i++) {
+    const monthKey = shiftPosMonthKey(cur, -i);
+    const startMs = startMsFromDateKey(`${monthKey}-01`);
+    const label = new Intl.DateTimeFormat("th-TH", {
+      timeZone: "Asia/Bangkok",
+      month: "long",
+      year: "numeric",
+    }).format(new Date(startMs + 12 * 60 * 60 * 1000));
+    out.push({ monthKey, label });
+  }
+  return out;
+}
+
+/**
+ * If the range is exactly a dashboard month window, return that YYYY-MM; else null
+ * (custom from–to).
+ */
+export function posRangeMatchedMonthKey(
+  range: PosDateRange,
+  nowMs = Date.now(),
+): string | null {
+  const { startMs, endMs } = normalizePosDateRange(range);
+  const startKey = bangkokDateKey(startMs);
+  if (!/^\d{4}-\d{2}-01$/.test(startKey)) return null;
+  const monthKey = startKey.slice(0, 7);
+  try {
+    const expected = posDashboardMonthRange(monthKey, nowMs);
+    if (expected.startMs === startMs && expected.endMs === endMs) return monthKey;
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 /** Order start/end as Bangkok midnights — does not enforce max span. */

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   averagePerBill,
   averagePerDay,
@@ -16,15 +16,20 @@ import {
   clampPosDateRange,
   defaultPosDashboardRange,
   formatPosDateRangeLabel,
+  listPosDashboardMonthOptions,
   POS_DASHBOARD_MAX_RANGE_DAYS,
   normalizePosDateRange,
+  posDashboardMonthRange,
   posDateRangeDayCount,
   posDateRangeDayCountRaw,
   posRangeDayInputValue,
+  posRangeMatchedMonthKey,
+  shiftPosMonthKey,
   subscribePosSalesForDateRange,
   summarizePosSalesDetailed,
   type PosDateRange,
 } from "@/lib/pos-sales-report";
+import { bangkokMonthKey } from "@/lib/vat-sales";
 import { subscribeMenuCategories, subscribeMenuItems } from "@/lib/pos-menu";
 import { subscribeStockMovements } from "@/lib/stock";
 import type { MenuCategory, MenuItem, PosSale, StockMovement } from "@/lib/types";
@@ -91,10 +96,14 @@ export function PosSalesDashboard({
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [stockCosts, setStockCosts] = useState<Map<string, number>>(() => new Map());
   const [loading, setLoading] = useState(true);
+  const [stockNote, setStockNote] = useState<string | null>(null);
 
   const clamped = useMemo(() => clampPosDateRange(range), [range]);
   const dayCount = useMemo(() => posDateRangeDayCount(clamped), [clamped]);
   const rangeTooLong = dayCount > POS_DASHBOARD_MAX_RANGE_DAYS;
+  const monthOptions = useMemo(() => listPosDashboardMonthOptions(Date.now(), 24), []);
+  const matchedMonthKey = useMemo(() => posRangeMatchedMonthKey(clamped), [clamped]);
+  const currentMonthKey = bangkokMonthKey();
 
   useEffect(() => {
     setDraftStart(posRangeDayInputValue(clamped.startMs));
@@ -113,22 +122,30 @@ export function PosSalesDashboard({
       (list) => {
         setSales(list);
         setLoading(false);
+        onError?.(null);
       },
       (err) => {
-        onError?.(err.message);
+        const msg = err.message || "โหลดยอดขายไม่สำเร็จ";
+        // Surface a clearer hint for the common rules denial on date queries
+        onError?.(
+          /permission|insufficient/i.test(msg)
+            ? "ไม่มีสิทธิ์อ่านยอดขายในช่วงวันที่นี้ (ต้องเป็นเจ้าของ) — ลองรีเฟรชหรือเข้าสู่ระบบใหม่"
+            : msg,
+        );
         setLoading(false);
       },
     );
   }, [clamped, rangeTooLong, onError]);
 
   useEffect(() => {
-    const unsubItems = subscribeMenuItems(setMenuItems, (err) => onError?.(err.message));
-    const unsubCats = subscribeMenuCategories(setMenuCategories, (err) => onError?.(err.message));
+    // Menu is optional for product join — do not block the date toolbar on denial.
+    const unsubItems = subscribeMenuItems(setMenuItems);
+    const unsubCats = subscribeMenuCategories(setMenuCategories);
     return () => {
       unsubItems();
       unsubCats();
     };
-  }, [onError]);
+  }, []);
 
   useEffect(() => {
     if (rangeTooLong) {
@@ -137,12 +154,22 @@ export function PosSalesDashboard({
     }
     // Clear immediately so widening/narrowing the range cannot flash stale rows.
     setStockMovements([]);
+    setStockNote(null);
+    // since-only query (end filtered client-side) — avoids rare composite/until denials
+    // wiping the whole dashboard error line next to the date row.
     return subscribeStockMovements(
       setStockMovements,
-      (err) => onError?.(err.message),
-      { since: clamped.startMs, until: clamped.endMs },
+      (err) => {
+        setStockMovements([]);
+        setStockNote(
+          /permission|insufficient/i.test(err.message || "")
+            ? "ไม่มีสิทธิ์อ่านสต็อก — การ์ดสินค้าคงคลังว่าง"
+            : "โหลดสต็อกไม่สำเร็จ — การ์ดสินค้าคงคลังว่าง",
+        );
+      },
+      { since: clamped.startMs },
     );
-  }, [clamped.startMs, clamped.endMs, rangeTooLong, onError]);
+  }, [clamped.startMs, rangeTooLong]);
 
   useEffect(() => {
     return onSnapshot(
@@ -157,9 +184,12 @@ export function PosSalesDashboard({
           ),
         );
       },
-      (err) => onError?.(err.message),
+      () => {
+        // Costs are owner-only; dashboard still works with 0 baht stock values.
+        setStockCosts(new Map());
+      },
     );
-  }, [onError]);
+  }, []);
 
   const summary = useMemo(() => summarizePosSalesDetailed(sales), [sales]);
   const tenders = useMemo(() => tenderSegments(summary), [summary]);
@@ -197,6 +227,7 @@ export function PosSalesDashboard({
   }
 
   function setPreset(kind: "today" | "month" | "last7") {
+    onError?.(null);
     const today = startOfLocalDay();
     if (kind === "today") {
       setRange({ startMs: today, endMs: today });
@@ -213,13 +244,82 @@ export function PosSalesDashboard({
     setPickerOpen(false);
   }
 
+  function selectMonth(monthKey: string) {
+    onError?.(null);
+    try {
+      const newest = monthOptions[0]?.monthKey || currentMonthKey;
+      const oldest = monthOptions[monthOptions.length - 1]?.monthKey || currentMonthKey;
+      if (monthKey > newest || monthKey < oldest) return;
+      setRange(posDashboardMonthRange(monthKey));
+      setPickerOpen(false);
+    } catch (err) {
+      onError?.((err as Error).message || "เดือนไม่ถูกต้อง");
+    }
+  }
+
+  function shiftMonth(delta: number) {
+    const base = matchedMonthKey || bangkokMonthKey(clamped.startMs);
+    const next = shiftPosMonthKey(base, delta);
+    selectMonth(next);
+  }
+
   const donutStyle = {
     background: conicFromTenders(tenders.cashPct, tenders.promptpayPct, tenders.transferPct),
   } as const;
 
+  const monthSelectValue = matchedMonthKey || "";
+  const canMonthPrev =
+    !!monthOptions.length &&
+    (matchedMonthKey || bangkokMonthKey(clamped.startMs)) > monthOptions[monthOptions.length - 1].monthKey;
+  const canMonthNext =
+    !!monthOptions.length &&
+    (matchedMonthKey || bangkokMonthKey(clamped.startMs)) < monthOptions[0].monthKey;
+
   return (
     <div className="pos-dash">
       <div className="pos-dash-toolbar">
+        <div className="pos-dash-month-nav" role="group" aria-label="เลือกเดือน">
+          <button
+            type="button"
+            className="pos-dash-month-arrow"
+            onClick={() => shiftMonth(-1)}
+            disabled={!canMonthPrev}
+            aria-label="เดือนก่อน"
+          >
+            <ChevronLeft size={16} aria-hidden />
+          </button>
+          <label className="pos-dash-month-select-wrap">
+            <span className="sr-only">เดือน</span>
+            <select
+              className="pos-dash-month-select"
+              value={monthSelectValue}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v) selectMonth(v);
+              }}
+            >
+              {!matchedMonthKey ? (
+                <option value="">กำหนดเอง · {label}</option>
+              ) : null}
+              {monthOptions.map((opt) => (
+                <option key={opt.monthKey} value={opt.monthKey}>
+                  {opt.label}
+                  {opt.monthKey === currentMonthKey ? " (เดือนนี้)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="pos-dash-month-arrow"
+            onClick={() => shiftMonth(1)}
+            disabled={!canMonthNext}
+            aria-label="เดือนถัดไป"
+          >
+            <ChevronRight size={16} aria-hidden />
+          </button>
+        </div>
+
         <button
           type="button"
           className="pos-dash-range-btn"
@@ -263,6 +363,8 @@ export function PosSalesDashboard({
           <p className="muted pos-dash-range-hint">สูงสุด {POS_DASHBOARD_MAX_RANGE_DAYS} วัน</p>
         </div>
       ) : null}
+
+      {stockNote ? <p className="muted pos-dash-stock-note">{stockNote}</p> : null}
 
       {rangeTooLong ? (
         <p className="error-text">ช่วงวันที่ยาวเกิน {POS_DASHBOARD_MAX_RANGE_DAYS} วัน — ย่อช่วงก่อน</p>

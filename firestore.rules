@@ -1046,9 +1046,10 @@ service cloud.firestore {
     }
 
     match /posSales/{id} {
-      allow read: if isOwner();
+      // BO dashboard date-range queries — owner staff role or canonical owner email
+      allow read: if isOwner() || isOwnerEmail();
       allow create: if isPosDeviceAuth() && posSaleCreate();
-      allow update, delete: if isOwner();
+      allow update, delete: if isOwner() || isOwnerEmail();
     }
 
     match /nposDiagnose/{installId} {
