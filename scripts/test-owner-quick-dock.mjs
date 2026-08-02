@@ -19,7 +19,7 @@ const version = read("src/lib/version.ts");
 const ledger = read("src/app/ledger/page.tsx");
 const ownerBooks = read("src/app/owner-books/page.tsx");
 
-assert.match(version, /APP_BUILD = 632/);
+assert.match(version, /APP_BUILD = 633/);
 assert.match(lib, /OWNER_QUICK_KEYS/);
 assert.match(lib, /DEFAULT_OWNER_QUICK_KEYS/);
 assert.match(lib, /ownerQuickKeys/);
@@ -48,6 +48,9 @@ assert.match(ui, /owner-quick-setup-rank/);
 assert.match(ui, /onAbbr/);
 assert.match(ui, /owner-quick-abbr-input/);
 assert.doesNotMatch(ui, /open=\{true\}/);
+/* ต้องไม่ซ่อนทั้ง prefix /pos — จะพลาด /pos-sales/ */
+assert.doesNotMatch(ui, /pathname\.startsWith\("\/pos"\)/);
+assert.match(ui, /แสดงทุกหน้าหลังร้าน|AppShell/);
 
 assert.match(setup, /export function OwnerQuickDockSetup/);
 assert.match(setup, /ไอคอนลอย/);

@@ -54,7 +54,8 @@ export function OwnerQuickDock() {
   useBodyScrollLock(setupOpen);
 
   if (!isOwner) return null;
-  if (pathname.startsWith("/pos")) return null;
+  // แสดงทุกหน้าหลังร้าน (AppShell) — อย่าใช้ startsWith("/pos") เพราะจะซ่อน /pos-sales/ ด้วย
+  // แท็บเล็ต POS (/pos/…) ไม่ผ่าน AppShell อยู่แล้ว
 
   const items = resolveOwnerQuickItems(settings.keys, settings.abbrs);
   const actorId = user?.uid || staff?.id || "";
