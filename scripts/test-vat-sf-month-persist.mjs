@@ -153,6 +153,6 @@ function fakeSaved(input) {
 
 const version = read("src/lib/version.ts");
 const build = Number(version.match(/APP_BUILD = (\d+)/)?.[1] || 0);
-assert.ok(build >= 630, `APP_BUILD should be >= 630, got ${build}`);
+assert.ok(build >= 631, `APP_BUILD should be >= 630, got ${build}`);
 
 console.log("OK test-vat-sf-month-persist");
