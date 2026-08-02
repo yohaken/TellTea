@@ -23547,3 +23547,232 @@ a.ghost-btn {
 .pos-dash-void-note p {
   margin: 0;
 }
+
+/* POS sales dashboard charts + products (phase 2–4) */
+.pos-dash-chart-card {
+  background: #fff;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  border-radius: 0.75rem;
+  padding: 0.85rem 0.95rem 0.55rem;
+  min-width: 0;
+}
+
+.pos-dash-chart-svg-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.pos-dash-chart-svg {
+  display: block;
+  width: 100%;
+  min-width: 280px;
+  height: auto;
+}
+
+.pos-dash-chart-grid {
+  stroke: rgba(28, 42, 31, 0.08);
+  stroke-width: 1;
+}
+
+.pos-dash-chart-axis {
+  fill: rgba(28, 42, 31, 0.5);
+  font-size: 10px;
+  font-family: inherit;
+}
+
+.pos-dash-area-fill {
+  fill: #5bc0de;
+  opacity: 0.55;
+}
+
+.pos-dash-area-line {
+  stroke: #3aa8c5;
+  stroke-width: 2;
+}
+
+.pos-dash-area-dot {
+  fill: #3aa8c5;
+}
+
+.pos-dash-bar--hour {
+  fill: #f0a06a;
+}
+
+.pos-dash-bar--weekday {
+  fill: #8fd19e;
+}
+
+.pos-dash-chart-row {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .pos-dash-chart-row {
+    grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.pos-dash-chart-row__hour,
+.pos-dash-chart-row__weekday {
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.pos-dash-bottom-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .pos-dash-bottom-grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.pos-dash-bottom-side {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.pos-dash-product-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.pos-dash-product-stats > div {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.45rem;
+  background: rgba(28, 42, 31, 0.04);
+  font-size: 0.72rem;
+  min-width: 0;
+}
+
+.pos-dash-product-stats strong {
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pos-dash-subhead {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.pos-dash-top-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.pos-dash-top-items li {
+  display: grid;
+  grid-template-columns: 1.4rem minmax(0, 1fr) auto auto;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.8rem;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid rgba(28, 42, 31, 0.06);
+}
+
+.pos-dash-top-items li:last-child {
+  border-bottom: 0;
+}
+
+.pos-dash-rank {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(28, 42, 31, 0.08);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.pos-dash-item-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pos-dash-item-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: rgba(28, 42, 31, 0.62);
+  font-variant-numeric: tabular-nums;
+}
+
+.pos-dash-item-amt {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 4.5rem;
+  text-align: right;
+}
+
+.pos-dash-side-value {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1c2a1f;
+}
+
+.pos-dash-side-meta {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.pos-dash-stat-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.pos-dash-stat-pair > div {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.5rem;
+  border-radius: 0.45rem;
+  background: rgba(28, 42, 31, 0.04);
+  font-size: 0.72rem;
+}
+
+.pos-dash-stat-pair strong {
+  font-size: 1rem;
+}
+
+.pos-dash-activity {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.pos-dash-activity li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+  padding: 0.15rem 0;
+}
+
+.pos-dash-activity--total {
+  margin-top: 0.2rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(28, 42, 31, 0.1);
+  font-weight: 700;
+}
