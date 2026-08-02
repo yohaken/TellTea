@@ -178,19 +178,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {!isPermPreview ? <StaffPresenceHeartbeat /> : null}
 
         <main className="main-panel">
+          {/* พรีวิวไม่โชว์แบนเนอร์/โมดอลโปรไฟล์จริง — กันแก้บัญชีเจ้าของโดยไม่ตั้งใจ */}
           {!isPermPreview ? <ProfilePromptBanner /> : null}
           {children}
         </main>
 
-        {!isPermPreview ? <StaffNewsPopup /> : null}
-        {!isPermPreview ? <StaffTaskNudge /> : null}
-
-        {!isPermPreview ? <LowBalanceAlert /> : null}
+        {/* มุมพนักงานเป๊ะตอนพรีวิว: ข่าว · แจ้งงานเบา/หนัก · ยูทิล · เตือนยอดต่ำ */}
+        <StaffNewsPopup />
+        <StaffTaskNudge />
+        <LowBalanceAlert />
 
         {!isPermPreview ? <PersonalProfileModal /> : null}
 
         {isOwner ? <OwnerQuickDock /> : null}
-        {!isPermPreview ? <StaffUtilityDock /> : null}
+        <StaffUtilityDock />
 
         <nav
           className={cn(

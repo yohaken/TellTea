@@ -42,6 +42,23 @@ const shell = read("src/components/AppShell.tsx");
 assert.match(shell, /PermPreviewBanner/);
 assert.match(shell, /isPermPreview/);
 assert.match(shell, /realIsOwner \? <StaffPresenceDock/);
+// พรีวิวต้องโชว์แจ้งงานเบา/หนัก + ยูทิลแบบพนักงาน (ไม่ห่อ !isPermPreview)
+assert.match(shell, /<StaffTaskNudge \/>/);
+assert.match(shell, /<StaffUtilityDock \/>/);
+assert.match(shell, /<StaffNewsPopup \/>/);
+assert.doesNotMatch(
+  shell,
+  /\{!isPermPreview \? <StaffTaskNudge/,
+  "StaffTaskNudge must show during perm preview",
+);
+
+const tasksPage = read("src/app/tasks/page.tsx");
+assert.match(tasksPage, /isPermPreview/);
+assert.match(
+  tasksPage,
+  /!isPermPreview &&\s*\([\s\S]*?isAppOwnerEmail/,
+  "tasks owner UI must stay off during perm preview",
+);
 
 const presence = read("src/components/StaffPresenceDock.tsx");
 assert.match(presence, /ดูในมุมพนักงานคนนี้/);

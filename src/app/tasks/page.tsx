@@ -96,8 +96,11 @@ export default function TasksPage() {
 }
 
 function TasksView() {
-  const { actorId, staff, user } = useAuth();
-  const isOwnerManager = staff?.role === "owner" || isAppOwnerEmail(user?.email);
+  const { actorId, staff, user, isPermPreview } = useAuth();
+  // พรีวิวมุมพนักงาน: ห้ามใช้ email เจ้าของดึง UI หลังร้าน (ตารางกติกา/ไทม์ไลน์)
+  const isOwnerManager =
+    !isPermPreview &&
+    (staff?.role === "owner" || isAppOwnerEmail(user?.email));
   const myEmployeeId = staff?.employeeId || "";
 
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
