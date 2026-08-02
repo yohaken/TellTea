@@ -16,8 +16,11 @@ import {
   DEFAULT_STAFF_PERMISSIONS,
   ELEVATED_PERMISSION_KEYS,
   OWNER_PERMISSIONS,
+  SHIFT_LEAD_PERMISSIONS,
   clampPermissionsForNonOwner,
+  materializePermissions,
   normalizePermissions,
+  permissionsEqual,
   type StaffPermissions,
 } from "./permissions";
 import type { PermissionLevel } from "./types";
@@ -35,12 +38,8 @@ export const SEED_LEVEL_IDS = {
 
 export type SeedLevelId = (typeof SEED_LEVEL_IDS)[keyof typeof SEED_LEVEL_IDS];
 
-const SHIFT_LEAD_PERMISSIONS: StaffPermissions = {
-  ...DEFAULT_STAFF_PERMISSIONS,
-};
-
 const OWNER_ASSIST_PERMISSIONS: StaffPermissions = {
-  ...DEFAULT_STAFF_PERMISSIONS,
+  ...SHIFT_LEAD_PERMISSIONS,
   ownerBooks: true,
   pnl: true,
   transferIn: true,
@@ -49,6 +48,13 @@ const OWNER_ASSIST_PERMISSIONS: StaffPermissions = {
   payrollPay: true,
 };
 
+/**
+ * Seed มาตรฐาน
+ * - พนักงานร้าน: พื้นร้าน (ไม่มีบช./คลัง)
+ * - หัวหน้ากะ: +บัญชี +คลัง
+ * - ผู้ช่วยเจ้าของ: เครื่องมือหลังร้าน
+ * - เจ้าของ: เต็ม
+ */
 export const SEED_PERMISSION_LEVELS: Omit<PermissionLevel, "createdAt" | "updatedAt">[] = [
   {
     id: SEED_LEVEL_IDS.shopStaff,
@@ -93,17 +99,16 @@ function levelRef(id: string) {
 }
 
 function mapLevel(id: string, data: Record<string, unknown>): PermissionLevel {
-  const roleHint = id === SEED_LEVEL_IDS.owner ? "owner" : "staff";
+  const isOwnerLevel = id === SEED_LEVEL_IDS.owner;
   return {
     id,
     name: typeof data.name === "string" && data.name.trim() ? data.name.trim() : id,
     sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 50,
     active: data.active !== false,
     isSystem: data.isSystem === true,
-    permissions: normalizePermissions(
-      data.permissions as Partial<StaffPermissions> | undefined,
-      roleHint === "owner" ? "owner" : "staff",
-    ),
+    permissions: isOwnerLevel
+      ? { ...OWNER_PERMISSIONS }
+      : materializePermissions(data.permissions as Partial<StaffPermissions> | undefined),
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
     updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
   };
@@ -169,28 +174,103 @@ export function subscribePermissionLevels(
   );
 }
 
-/** สร้าง seed ถ้ายังไม่มี — เรียกครั้งแรกตอนเปิดศูนย์พนักงาน (ข้ามตัวที่สิทธิ์ไม่พอ) */
+/**
+ * สร้าง/ซ่อม seed
+ * - ลำดับระบบ (shop_staff / owner): merge permissions จากโค้ดเสมอ + sync คนที่ผูกและยังไม่ customize
+ * - ลำดับอื่น: สร้างเฉพาะตอนยังไม่มี (ไม่ทับของที่ร้านแก้เอง)
+ */
 export async function ensurePermissionLevelSeeds(): Promise<PermissionLevel[]> {
   const existing = await listPermissionLevels();
-  const have = new Set(existing.map((l) => l.id));
+  const byId = new Map(existing.map((l) => [l.id, l]));
   const now = Date.now();
   for (const seed of SEED_PERMISSION_LEVELS) {
-    if (have.has(seed.id)) continue;
+    const prev = byId.get(seed.id);
     try {
-      await setDoc(levelRef(seed.id), {
-        name: seed.name,
-        sortOrder: seed.sortOrder,
-        active: seed.active,
-        isSystem: seed.isSystem,
-        permissions: seed.permissions,
-        createdAt: now,
-        updatedAt: now,
-      });
+      if (!prev) {
+        await setDoc(levelRef(seed.id), {
+          name: seed.name,
+          sortOrder: seed.sortOrder,
+          active: seed.active,
+          isSystem: seed.isSystem,
+          permissions: seed.permissions,
+          createdAt: now,
+          updatedAt: now,
+        });
+        continue;
+      }
+      if (!seed.isSystem) continue;
+      const nextPerms = materializePermissions(seed.permissions);
+      const prevPerms = materializePermissions(prev.permissions);
+      if (permissionsEqual(prevPerms, nextPerms) && prev.isSystem) continue;
+      await setDoc(
+        levelRef(seed.id),
+        {
+          name: seed.name,
+          sortOrder: seed.sortOrder,
+          active: seed.active,
+          isSystem: true,
+          permissions: nextPerms,
+          updatedAt: now,
+        },
+        { merge: true },
+      );
+      await syncLevelPermissionsToLinkedStaff(seed.id, nextPerms);
     } catch {
       /* permission-denied / offline — ข้าม seed ที่เขียนไม่ได้ */
     }
   }
+  try {
+    await bindOrphanStaffToShopStaff();
+  } catch {
+    /* best-effort */
+  }
   return listPermissionLevels();
+}
+
+/** พนักงานที่ยังไม่ผูกลำดับและไม่ customize → ผูก shop_staff + เขียนแผนที่พื้นร้าน */
+export async function bindOrphanStaffToShopStaff(): Promise<number> {
+  const staffList = await listStaff();
+  const orphans = staffList.filter(
+    (m) =>
+      m.role === "staff" &&
+      !m.permissionLevelId &&
+      !m.permissionsCustomized,
+  );
+  if (!orphans.length) return 0;
+  const next = materializePermissions(DEFAULT_STAFF_PERMISSIONS);
+  await Promise.all(
+    orphans.map((m) =>
+      updateStaffPermissions(m.id, next, {
+        permissionLevelId: SEED_LEVEL_IDS.shopStaff,
+        permissionsCustomized: false,
+      }),
+    ),
+  );
+  return orphans.length;
+}
+
+/** เขียนสิทธิ์จากลำดับลง staff ที่ผูกและยังไม่ customize */
+export async function syncLevelPermissionsToLinkedStaff(
+  levelId: string,
+  permissions: StaffPermissions,
+): Promise<number> {
+  const next = materializePermissions(permissions);
+  const staffList = await listStaff();
+  const targets = staffList.filter(
+    (m) =>
+      m.role === "staff" &&
+      m.permissionLevelId === levelId &&
+      !m.permissionsCustomized,
+  );
+  await Promise.all(
+    targets.map((m) =>
+      updateStaffPermissions(m.id, next, {
+        permissionLevelId: levelId,
+        permissionsCustomized: false,
+      }),
+    ),
+  );
+  return targets.length;
 }
 
 export type PermissionLevelInput = {
@@ -272,21 +352,10 @@ export async function updatePermissionLevel(
   await updateDoc(levelRef(id), patch);
 
   if (input.syncLinkedStaff && input.permissions) {
-    const nextPerms = normalizePermissions(
+    const nextPerms = materializePermissions(
       (patch.permissions as StaffPermissions) || input.permissions,
-      "staff",
     );
-    const staffList = await listStaff();
-    await Promise.all(
-      staffList
-        .filter(
-          (m) =>
-            m.role === "staff" &&
-            m.permissionLevelId === id &&
-            !m.permissionsCustomized,
-        )
-        .map((m) => updateStaffPermissions(m.id, nextPerms)),
-    );
+    await syncLevelPermissionsToLinkedStaff(id, nextPerms);
   }
 }
 
@@ -309,9 +378,10 @@ export function permissionsMatchLevel(
   memberPerms: Partial<StaffPermissions> | null | undefined,
   level: PermissionLevel,
 ): boolean {
-  const a = normalizePermissions(memberPerms, "staff");
-  const b = normalizePermissions(level.permissions, "staff");
-  return (Object.keys(a) as (keyof StaffPermissions)[]).every((k) => a[k] === b[k]);
+  return permissionsEqual(
+    materializePermissions(memberPerms),
+    materializePermissions(level.permissions),
+  );
 }
 
 /** ป้ายลำดับสิทธิ์สั้นๆ สำหรับตารางทีม / รายชื่อบัญชี */

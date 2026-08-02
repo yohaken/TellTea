@@ -143,14 +143,41 @@ service cloud.firestore {
 
     // Fine-grained permissions on staff doc; owners always pass.
     // Staff without permissions map: daily modules only (legacy default).
+    /** ผูก level และยังไม่ customize → อ่านสิทธิ์จาก permissionLevels */
+    function staffUsesLinkedLevel() {
+      return isStaff()
+        && get(staffPath()).data.permissionsCustomized != true
+        && get(staffPath()).data.keys().hasAny(['permissionLevelId'])
+        && get(staffPath()).data.permissionLevelId is string
+        && get(staffPath()).data.permissionLevelId.size() > 0
+        && exists(/databases/$(database)/documents/permissionLevels/$(get(staffPath()).data.permissionLevelId));
+    }
+
+    function hasPermFromLevel(p) {
+      return staffUsesLinkedLevel()
+        && get(/databases/$(database)/documents/permissionLevels/$(get(staffPath()).data.permissionLevelId)).data.keys().hasAny(['permissions'])
+        && get(/databases/$(database)/documents/permissionLevels/$(get(staffPath()).data.permissionLevelId)).data.permissions[p] == true;
+    }
+
+    function hasPermFromStaffMap(p) {
+      return isStaff()
+        && !staffUsesLinkedLevel()
+        && get(staffPath()).data.keys().hasAny(['permissions'])
+        && get(staffPath()).data.permissions[p] == true;
+    }
+
+    /**
+     * แหล่งความจริงสิทธิ์ (คู่กับ client resolveEffectivePermissions)
+     * 1) owner 2) level ที่ผูก 3) แผนที่บน staff 4) legacy ไม่มีแผนที่ = พื้นร้าน (ไม่มีบช./คลัง)
+     */
     function hasPerm(p) {
       return isOwner()
-        || (isStaff()
-            && get(staffPath()).data.keys().hasAny(['permissions'])
-            && get(staffPath()).data.permissions[p] == true)
+        || hasPermFromLevel(p)
+        || hasPermFromStaffMap(p)
         || (isStaff()
             && !get(staffPath()).data.keys().hasAny(['permissions'])
-            && (p == 'ledger' || p == 'stock' || p == 'production' || p == 'otBonus' || p == 'checklist' || p == 'bonus'));
+            && !staffUsesLinkedLevel()
+            && (p == 'production' || p == 'otBonus' || p == 'checklist' || p == 'bonus'));
     }
 
     function staffSelfProfileUpdate() {
@@ -454,9 +481,9 @@ service cloud.firestore {
         || (hasPerm('staffManage') && resource.data.role == 'staff');
     }
 
-    // ลำดับสิทธิ์ (แม่แบบ) — อ่าน/จัดการที่ศูนย์พนักงาน
+    // ลำดับสิทธิ์ (แม่แบบ) — อ่านได้ทุก staff (resolve สิทธิ์) · เขียนเฉพาะศูนย์พนักงาน
     match /permissionLevels/{levelId} {
-      allow read: if staffHubManage();
+      allow read: if isStaff() || isOwnerEmail();
       // seed ครั้งแรก: staffManage สร้างมาตรฐานได้; สร้างใหม่ elevated ได้แค่เจ้าของ
       allow create: if staffHubManage()
         && request.resource.data.keys().hasAll(['name', 'sortOrder', 'active', 'permissions', 'createdAt', 'updatedAt'])

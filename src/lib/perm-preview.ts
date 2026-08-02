@@ -1,5 +1,6 @@
 import {
-  normalizePermissions,
+  materializePermissions,
+  resolveEffectivePermissions,
   type StaffPermissions,
 } from "./permissions";
 import type { PermissionLevel, StaffMember } from "./types";
@@ -28,14 +29,13 @@ export type PermPreviewStartInput = {
 /** เช็คลิสต์ตรวจรับมุมมองพนักงาน (owner) */
 export const PERM_PREVIEW_CHECKLIST = [
   "แตะไอคอนพนักงานมุมขวาบน → ดูในมุมพนักงานคนนี้",
-  "แท็บล่าง / อื่นๆ / โบนัส เปลี่ยนตามสิทธิ์ทันที",
+  "แท็บล่างตามลำดับสิทธิ์ของคนนั้น (พนักงานร้านไม่มีบัญชี/คลัง)",
   "ไอคอนคนนั้นใหญ่ขึ้น สีเขียวธีม",
   "เปิดหน้าที่ไม่มีสิทธิ์แล้วถูกเด้งออก",
   "VAT / เมนู / settings / โปรไฟล์ / ศูนย์พนักงาน ไม่โชว์ตอนพรีวิว",
   "จ่าย/โบนัส = มุมของคนนั้น (ไม่โชว์จ่ายทั้งร้าน·ปิดเดือน)",
-  "แท็บงาน = งานของคนนั้น (ไม่โชว์กติกา/ไทม์ไลน์เจ้าของ)",
-  "แจ้งเตือนงานเบา/หนัก + แถบค้าง + ยูทิล โชว์เหมือนพนักงานจริง",
-  "บัญชี/ผลิต/ชง/เช็ค/ยูทิล = ดูได้อย่างเดียว ไม่บันทึกจริง",
+  "แท็บงาน = งานของคนนั้น + แจ้งเบา/หนัก",
+  "โมดูลที่เปิด = ดูได้อย่างเดียว ไม่บันทึกจริง",
   "กดออกจากมุมมอง (แถบหรือเมนูไอคอน) กลับเจ้าของ",
 ] as const;
 
@@ -48,7 +48,7 @@ export function loadPermPreview(): PermPreviewState | null {
     if (!data || typeof data.label !== "string" || !data.label.trim()) return null;
     return {
       label: data.label.trim(),
-      permissions: normalizePermissions(data.permissions, "staff"),
+      permissions: materializePermissions(data.permissions),
       levelId: typeof data.levelId === "string" ? data.levelId : undefined,
       memberId: typeof data.memberId === "string" ? data.memberId : undefined,
       employeeId: typeof data.employeeId === "string" ? data.employeeId : undefined,
@@ -74,18 +74,23 @@ export function savePermPreview(state: PermPreviewState | null): void {
 export function previewFromLevel(level: PermissionLevel): PermPreviewState {
   return {
     label: level.name,
-    permissions: normalizePermissions(level.permissions, "staff"),
+    permissions: materializePermissions(level.permissions),
     levelId: level.id,
   };
 }
 
+/**
+ * สร้างพรีวิวจากบัญชีพนักงาน — resolve ผ่าน level เหมือนของจริง
+ * (ต้องส่ง levels จากแคตตาล็อกล่าสุด)
+ */
 export function previewFromMember(
   member: StaffMember,
   labelOverride?: string,
+  levels?: PermissionLevel[] | null,
 ): PermPreviewState {
   return {
     label: (labelOverride || staffAccountLabel(member) || member.displayName || member.id).trim(),
-    permissions: normalizePermissions(member.permissions, member.role),
+    permissions: resolveEffectivePermissions(member, levels),
     levelId: member.permissionLevelId,
     memberId: member.id,
     employeeId: member.employeeId,
@@ -102,7 +107,7 @@ export function buildPreviewStaff(
     phone: real.phone,
     role: "staff",
     displayName: preview.label,
-    permissions: normalizePermissions(preview.permissions, "staff"),
+    permissions: materializePermissions(preview.permissions),
     permissionLevelId: preview.levelId,
     permissionsCustomized: false,
     profileComplete: true,
@@ -115,7 +120,7 @@ export function buildPreviewStaff(
 export function normalizePreviewInput(input: PermPreviewStartInput): PermPreviewState {
   return {
     label: input.label.trim() || "พรีวิว",
-    permissions: normalizePermissions(input.permissions, "staff"),
+    permissions: materializePermissions(input.permissions),
     levelId: input.levelId,
     memberId: input.memberId,
     employeeId: input.employeeId,

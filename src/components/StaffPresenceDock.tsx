@@ -39,6 +39,7 @@ export function StaffPresenceDock() {
     realStaff,
     isPermPreview,
     permPreview,
+    permissionLevels,
     startPermPreview,
     stopPermPreview,
   } = useAuth();
@@ -120,12 +121,16 @@ export function StaffPresenceDock() {
   }
 
   function startViewAs(member: StaffMember, item: StaffPresenceItem) {
-    startPermPreview(previewFromMember(member, item.fullName || item.label));
+    startPermPreview(
+      previewFromMember(member, item.fullName || item.label, permissionLevels),
+    );
     closeMenu();
   }
 
   function openBonusAs(member: StaffMember, item: StaffPresenceItem) {
-    startPermPreview(previewFromMember(member, item.fullName || item.label));
+    startPermPreview(
+      previewFromMember(member, item.fullName || item.label, permissionLevels),
+    );
     closeMenu();
     router.push("/bonus/");
   }

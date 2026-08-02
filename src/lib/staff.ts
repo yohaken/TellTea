@@ -19,7 +19,9 @@ import {
   phoneDocId,
 } from "./utils";
 import {
+  materializePermissions,
   normalizePermissions,
+  OWNER_PERMISSIONS,
   type StaffPermissions,
 } from "./permissions";
 import {
@@ -58,7 +60,16 @@ function mapStaff(staffId: string, data: StaffMember): StaffMember {
   return {
     ...rest,
     id: staffId,
-    permissions: normalizePermissions(data.permissions, data.role),
+    // แผนที่บน doc: materialize (missing=false) · อย่าเติม DEFAULT
+    // ถ้าไม่มีแผนที่ ปล่อยว่าง ให้ resolveEffectivePermissions ใช้ level
+    permissions:
+      data.role === "owner"
+        ? { ...OWNER_PERMISSIONS }
+        : data.permissions != null
+          ? materializePermissions(data.permissions)
+          : undefined,
+    permissionLevelId: data.permissionLevelId,
+    permissionsCustomized: data.permissionsCustomized === true,
   };
 }
 

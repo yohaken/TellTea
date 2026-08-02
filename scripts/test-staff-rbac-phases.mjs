@@ -13,6 +13,9 @@ const perms = read("src/lib/permissions.ts");
 assert.match(perms, /payrollPay/);
 assert.match(perms, /ELEVATED_PERMISSION_KEYS/);
 assert.match(perms, /clampPermissionsForNonOwner/);
+assert.match(perms, /resolveEffectivePermissions/);
+assert.match(perms, /materializePermissions/);
+assert.match(perms, /EMPTY_STAFF_PERMISSIONS/);
 // assignTasks removed from picker groups (legacy)
 assert.doesNotMatch(
   perms,

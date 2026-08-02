@@ -97,7 +97,7 @@ function memberLinkLabel(member: StaffMember, employees: Employee[]): string {
 }
 
 function StaffView() {
-  const { realStaff, refreshStaff, startPermPreview } = useAuth();
+  const { realStaff, refreshStaff, startPermPreview, permissionLevels } = useAuth();
   const router = useRouter();
   const focusAccountId = useAccountFocusParam();
   const [tab, setTab] = useState<HubTab>(focusAccountId ? "accounts" : "team");
@@ -140,7 +140,7 @@ function StaffView() {
 
   function beginPreviewFromMember(member: StaffMember) {
     if (!isOwner || member.role !== "staff") return;
-    const preview = previewFromMember(member);
+    const preview = previewFromMember(member, undefined, permissionLevels);
     startPermPreview(preview);
     router.replace(staffHomeHref({
       id: staff!.id,
