@@ -24,6 +24,7 @@ import {
 import {
   computeMonthBonus,
   computePersonalBonusRow,
+  monthInputValue,
   namesMatch,
   parseMonthInput,
   pickMyBonusRow,
@@ -68,7 +69,6 @@ import { getOtSettings, subscribeOtEntries, type OtEntry } from "@/lib/ot";
 import {
   DEFAULT_PAYROLL_SCHEDULE,
   repairStuckPaidPayrollItems,
-  suggestPeriodMonthForToday,
   subscribePayrollItems,
   subscribePayrollSchedule,
   type PayrollItem,
@@ -104,7 +104,8 @@ export default function BonusPage() {
 function BonusView() {
   const { actorId, staff, isPermPreview } = useAuth();
   const router = useRouter();
-  const [month, setMonth] = useState(() => suggestPeriodMonthForToday());
+  /** สรุปโบนัสเปิดที่เดือนปัจจุบันเป็นหลัก — ไม่จำเครื่อง · ไม่ค้างเดือนที่แล้ว */
+  const [month, setMonth] = useState(() => monthInputValue());
   const [tab, setTab] = useState<PayTab>("bonus");
   const [otEntries, setOtEntries] = useState<OtEntry[]>([]);
   const [prodEntries, setProdEntries] = useState<ProdEntry[]>([]);
