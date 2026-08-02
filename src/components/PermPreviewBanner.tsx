@@ -14,7 +14,9 @@ export function PermPreviewBanner() {
       <div className="perm-preview-banner-text">
         <strong>มุมมองพนักงาน</strong>
         <span className="perm-preview-banner-label">{permPreview.label}</span>
-        <span className="muted perm-preview-banner-hint">ดูอย่างเดียว · อย่าบันทึกรายการจริง</span>
+        <span className="muted perm-preview-banner-hint">
+          ดูอย่างเดียว · แตะไอคอนเขียวซ้ำเพื่อออก
+        </span>
       </div>
       <button
         type="button"

@@ -41,6 +41,13 @@ assert.match(auth, /realStaff/);
 const shell = read("src/components/AppShell.tsx");
 assert.match(shell, /PermPreviewBanner/);
 assert.match(shell, /isPermPreview/);
+assert.match(shell, /realIsOwner \? <StaffPresenceDock/);
+
+const presence = read("src/components/StaffPresenceDock.tsx");
+assert.match(presence, /ดูในมุมพนักงานคนนี้/);
+assert.match(presence, /stopPermPreview/);
+assert.match(presence, /แตะไอคอนคนที่กำลังดูอยู่ซ้ำ/);
+assert.match(presence, /จัดการบัญชี \/ สิทธิ์/);
 
 const staffPage = read("src/app/staff/page.tsx");
 assert.match(staffPage, /ลำดับสิทธิ์/);
@@ -98,6 +105,10 @@ const evidence = read("functions/evidence-upload.js");
 assert.match(evidence, /assertOwnerBooksFolder/);
 
 const bonus = read("src/app/bonus/page.tsx");
+assert.match(bonus, /isPermPreview/);
+assert.match(bonus, /realCanPay/);
+assert.doesNotMatch(bonus, /enterStaffPreview/);
+assert.doesNotMatch(bonus, /payroll-staff-preview-bar/);
 assert.match(bonus, /payrollPay/);
 assert.match(bonus, /listActiveEmployeesWithPay/);
 assert.match(bonus, /employeeId: selfId/);

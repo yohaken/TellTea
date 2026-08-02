@@ -99,9 +99,11 @@ export default function BonusPage() {
 }
 
 function BonusView() {
-  const { actorId, staff } = useAuth();
+  const { actorId, staff, realStaff, isPermPreview } = useAuth();
   const router = useRouter();
-  const isOwner = staff?.role === "owner";
+  /** สิทธิ์จริงของคนล็อกอิน — ไม่ถูกพรีวิวทับ */
+  const realIsOwner = realStaff?.role === "owner";
+  const realCanPay = realIsOwner || can(realStaff, "payrollPay");
   const [month, setMonth] = useState(() => suggestPeriodMonthForToday());
   const [tab, setTab] = useState<PayTab>("bonus");
   const [otEntries, setOtEntries] = useState<OtEntry[]>([]);
@@ -123,19 +125,19 @@ function BonusView() {
   const [info, setInfo] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
   const [historyEmployeeId, setHistoryEmployeeId] = useState("");
-  /** เจ้าของ/คนจ่ายสลับ UI ให้เหมือนพนักงานคนที่เลือก — สิทธิ์จริงไม่ถอด */
-  const [previewEmployeeId, setPreviewEmployeeId] = useState<string | null>(null);
 
-  const canView = can(staff, "bonus");
-  /** จ่ายทั้งร้าน — แยกจากบช.เจ้าของ (payrollPay) */
-  const canPay = isOwner || can(staff, "payrollPay");
-  /** โหลดข้อมูลทั้งร้าน: เจ้าของ หรือคนมีสิทธิ์จ่ายเงินเดือน */
-  const shopPayView = isOwner || canPay;
+  const canView = can(staff, "bonus") || realCanPay;
+  /** โหลดข้อมูลทั้งร้านจากสิทธิ์จริง — พรีวิวแค่สลับ UI */
+  const shopPayView = realCanPay;
+  /** มุมพนักงานจากไอคอนบน (รวมทั้งแอป) */
+  const previewEmployeeId =
+    isPermPreview && staff?.employeeId ? staff.employeeId : null;
   const isStaffPreview = shopPayView && !!previewEmployeeId;
-  /** UI มุมร้าน — ปิดเมื่อดูแบบพนักงาน */
   const showShopUi = shopPayView && !isStaffPreview;
-  const uiIsOwner = isOwner && !isStaffPreview;
-  const uiCanPay = canPay && !isStaffPreview;
+  const uiIsOwner = realIsOwner && !isStaffPreview;
+  const uiCanPay = realCanPay && !isStaffPreview;
+  const isOwner = uiIsOwner;
+  const canPay = uiCanPay;
   const { year, month: monthIdx } = parseMonthInput(month);
 
   useBodyScrollLock(!!editTarget);
@@ -393,14 +395,6 @@ function BonusView() {
 
   const viewEmployee = isStaffPreview ? previewEmployee : myEmployee;
 
-  const rosterForPreview = useMemo(
-    () =>
-      [...employees]
-        .filter((e) => e.active)
-        .sort((a, b) => a.name.localeCompare(b.name, "th")),
-    [employees],
-  );
-
   // พนักงาน: เดือนปิด → แถวจาก bonusPersonalCloses · เดือนเปิด → OT/ผลิตตัวเอง + livePool
   const personalRow = useMemo((): WorkerMonthBonus | null => {
     if (shopPayView || !myEmployee) return null;
@@ -440,8 +434,9 @@ function BonusView() {
     monthIdx,
   ]);
 
-  // ให้ staff.employeeId ตรงกับชื่อที่ลิงก์ — จำเป็นต่อ rules อ่าน payrollItems
+  // ให้ staff.employeeId ตรงกับชื่อที่ลิงก์ — ห้ามเขียนตอนพรีวิว (จะไปทับบัญชีเจ้าของ)
   useEffect(() => {
+    if (isPermPreview) return;
     if (!staff || staff.role === "owner" || !myEmployee) return;
     if (staff.employeeId === myEmployee.id) return;
     void updateStaffProfile(staff.id, {
@@ -449,9 +444,13 @@ function BonusView() {
       displayName: myEmployee.name,
       profileComplete: true,
     }).catch(() => undefined);
-  }, [staff, myEmployee]);
+  }, [staff, myEmployee, isPermPreview]);
 
   useEffect(() => {
+    if (previewEmployeeId) {
+      setHistoryEmployeeId(previewEmployeeId);
+      return;
+    }
     if (historyEmployeeId) return;
     if (myEmployee?.id) {
       setHistoryEmployeeId(myEmployee.id);
@@ -459,7 +458,7 @@ function BonusView() {
     }
     const first = employees.find((e) => e.active);
     if (first) setHistoryEmployeeId(first.id);
-  }, [myEmployee?.id, employees, historyEmployeeId]);
+  }, [myEmployee?.id, employees, historyEmployeeId, previewEmployeeId]);
 
   const myRow = useMemo(() => {
     if (!shopPayView) return personalRow;
@@ -534,27 +533,6 @@ function BonusView() {
   }, [shopPayView, deductionSettings, deductionMonth, year, monthIdx]);
 
   const rulesReport = report || staffRulesReport;
-
-  function enterStaffPreview(employeeId?: string) {
-    const id =
-      employeeId ||
-      historyEmployeeId ||
-      myEmployee?.id ||
-      rosterForPreview[0]?.id ||
-      "";
-    if (!id) {
-      setError("ยังไม่มีรายชื่อพนักงานให้ดูแบบพนักงาน");
-      return;
-    }
-    setPreviewEmployeeId(id);
-    setHistoryEmployeeId(id);
-    setInfo(null);
-    setError(null);
-  }
-
-  function exitStaffPreview() {
-    setPreviewEmployeeId(null);
-  }
 
   async function onCloseMonth() {
     if (!uiIsOwner || !actorId || !liveReport || monthClosed) return;
@@ -632,62 +610,10 @@ function BonusView() {
         </h1>
       </div>
 
-      {shopPayView ? (
-        <div
-          className={`payroll-staff-preview-bar${isStaffPreview ? " is-active" : ""}`}
-          role="region"
-          aria-label="ดูแบบพนักงาน"
-        >
-          {isStaffPreview ? (
-            <>
-              <div className="payroll-staff-preview-copy">
-                <strong>กำลังดูแบบพนักงาน</strong>
-                <span className="muted">
-                  UI เหมือนที่พนักงานเห็น · สิทธิ์ร้านยังเป็นของคุณ
-                </span>
-              </div>
-              <label className="payroll-staff-preview-pick">
-                <span className="sr-only">เลือกพนักงาน</span>
-                <select
-                  value={previewEmployeeId || ""}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    setPreviewEmployeeId(id);
-                    setHistoryEmployeeId(id);
-                  }}
-                  aria-label="เลือกพนักงานที่ดูแทน"
-                >
-                  {rosterForPreview.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className="ghost-btn"
-                onClick={exitStaffPreview}
-              >
-                กลับมุมร้าน
-              </button>
-            </>
-          ) : (
-            <>
-              <p className="muted payroll-staff-preview-hint">
-                ตรวจว่าพนักงานเห็นยอด/สลิป/หักหลังโอนชัดหรือไม่
-              </p>
-              <button
-                type="button"
-                className="ghost-btn"
-                onClick={() => enterStaffPreview()}
-                disabled={!rosterForPreview.length}
-              >
-                ดูแบบพนักงาน
-              </button>
-            </>
-          )}
-        </div>
+      {shopPayView && !isStaffPreview ? (
+        <p className="muted payroll-staff-preview-hint" style={{ margin: "0 0 0.55rem", fontSize: "0.78rem" }}>
+          ดูมุมพนักงาน: แตะไอคอนชื่อมุมขวาบน → ดูในมุมพนักงานคนนี้ · แตะไอคอนเขียวซ้ำเพื่อออก
+        </p>
       ) : null}
 
       <div className="payroll-tabs" role="tablist" aria-label="จ่ายและโบนัส">

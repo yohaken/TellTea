@@ -81,7 +81,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { staff, realStaff, user, signOut, isPermPreview, permPreview } = useAuth();
-  const isOwner = realStaff?.role === "owner" && !isPermPreview;
+  const realIsOwner = realStaff?.role === "owner";
+  const isOwner = realIsOwner && !isPermPreview;
   const emailShort = user?.email?.split("@")[0] || user?.phoneNumber?.slice(-4) || "";
   const userLabel = isPermPreview
     ? permPreview?.label || "พรีวิว"
@@ -172,7 +173,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <PermPreviewBanner />
 
-        {isOwner ? <StaffPresenceDock /> : null}
+        {/* โชว์ตลอดเมื่อเป็นเจ้าของจริง — รวมตอนพรีวิว เพื่อแตะไอคอนเดิมแล้วออก */}
+        {realIsOwner ? <StaffPresenceDock /> : null}
         {!isPermPreview ? <StaffPresenceHeartbeat /> : null}
 
         <main className="main-panel">

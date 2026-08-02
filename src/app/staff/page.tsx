@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { PermissionPicker } from "@/components/PermissionPicker";
 import { PermissionLevelSelect } from "@/components/PermissionLevelSelect";
@@ -65,9 +65,22 @@ type HubTab = "team" | "accounts" | "levels";
 export default function StaffPage() {
   return (
     <AuthGate>
-      <StaffView />
+      <Suspense
+        fallback={
+          <p className="muted" style={{ textAlign: "left" }}>
+            กำลังโหลด...
+          </p>
+        }
+      >
+        <StaffView />
+      </Suspense>
     </AuthGate>
   );
+}
+
+function useAccountFocusParam() {
+  const searchParams = useSearchParams();
+  return searchParams.get("account")?.trim() || "";
 }
 
 function rosterLinkLabel(emp: Employee): string {
@@ -86,7 +99,8 @@ function memberLinkLabel(member: StaffMember, employees: Employee[]): string {
 function StaffView() {
   const { realStaff, refreshStaff, startPermPreview } = useAuth();
   const router = useRouter();
-  const [tab, setTab] = useState<HubTab>("team");
+  const focusAccountId = useAccountFocusParam();
+  const [tab, setTab] = useState<HubTab>(focusAccountId ? "accounts" : "team");
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [members, setMembers] = useState<StaffMember[]>([]);
   const [levels, setLevels] = useState<PermissionLevel[]>([]);
@@ -207,6 +221,14 @@ function StaffView() {
       .catch((err) => setError(mapFirestoreError(err, "โหลดหน้าพนักงานไม่สำเร็จ")))
       .finally(() => setLoading(false));
   }, [staff, router, canManageStaff]);
+
+  useEffect(() => {
+    if (!focusAccountId || loading) return;
+    setTab("accounts");
+    if (members.some((m) => m.id === focusAccountId && m.role === "staff")) {
+      setEditingStaffId(focusAccountId);
+    }
+  }, [focusAccountId, loading, members]);
 
   useEffect(() => {
     if (!linkEmployeeId) return;

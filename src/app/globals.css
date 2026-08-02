@@ -1029,8 +1029,8 @@ body.modal-open .main-panel {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.4rem 0.65rem;
-  background: linear-gradient(90deg, rgba(196, 90, 26, 0.16), rgba(255, 244, 230, 0.95));
-  border-bottom: 1px solid rgba(196, 90, 26, 0.28);
+  background: linear-gradient(90deg, rgba(47, 107, 58, 0.18), rgba(243, 239, 228, 0.95));
+  border-bottom: 1px solid rgba(47, 107, 58, 0.28);
 }
 
 .perm-preview-banner-text {
@@ -1044,7 +1044,7 @@ body.modal-open .main-panel {
 }
 
 .perm-preview-banner-text strong {
-  color: #9a3412;
+  color: var(--tea-leaf, #2f6b3a);
   font-size: 0.76rem;
 }
 
@@ -1062,7 +1062,7 @@ body.modal-open .main-panel {
   align-items: center;
   gap: 0.25rem;
   flex-shrink: 0;
-  background: #c45a1a !important;
+  background: var(--tea-leaf, #2f6b3a) !important;
 }
 
 .staff-hub-title {
@@ -23734,6 +23734,149 @@ a.ghost-btn {
 
 .staff-presence-chip.is-waiting .staff-presence-age {
   background: rgba(28, 42, 31, 0.38);
+}
+
+.staff-presence-chip.is-preview-active {
+  min-width: 2.45rem;
+  max-width: 5.5rem;
+  height: 2.25rem;
+  padding: 0 0.5rem;
+  background: rgba(47, 107, 58, 0.16);
+  border: 2px solid var(--tea-leaf, #2f6b3a);
+  box-shadow:
+    0 0 0 3px rgba(47, 107, 58, 0.18),
+    0 4px 14px rgba(47, 107, 58, 0.22);
+  transform: translateY(-1px) scale(1.08);
+  z-index: 2;
+}
+
+.staff-presence-chip.is-preview-active .staff-presence-name {
+  font-size: 0.72rem;
+  color: var(--tea-leaf, #2f6b3a);
+  font-weight: 800;
+}
+
+.staff-presence-chip.is-preview-active .staff-presence-age {
+  background: var(--tea-leaf, #2f6b3a);
+  font-size: 0.58rem;
+  min-width: 1.35rem;
+  right: -0.28rem;
+  bottom: -0.32rem;
+}
+
+.staff-presence-dock.is-previewing {
+  max-width: min(72%, 18rem);
+}
+
+.staff-presence-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(18, 28, 22, 0.35);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: calc(3.2rem + var(--safe-top)) 0.65rem 1rem;
+}
+
+.staff-presence-menu {
+  width: min(100%, 19.5rem);
+  max-height: min(78vh, 28rem);
+  overflow: auto;
+  border-radius: 0.85rem;
+  background: #f7f3e8;
+  border: 1px solid rgba(47, 107, 58, 0.22);
+  box-shadow: 0 12px 36px rgba(28, 42, 31, 0.22);
+  padding: 0.65rem 0.7rem 0.55rem;
+}
+
+.staff-presence-menu-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.45rem;
+  margin-bottom: 0.45rem;
+}
+
+.staff-presence-menu-kicker {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--tea-leaf, #2f6b3a);
+  text-align: left;
+}
+
+.staff-presence-menu-title {
+  margin: 0.1rem 0 0;
+  font-size: 1rem;
+  font-weight: 750;
+  color: #1c2a1f;
+  text-align: left;
+  line-height: 1.25;
+}
+
+.staff-presence-menu-meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.72rem;
+  text-align: left;
+}
+
+.staff-presence-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.staff-presence-menu-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: flex-start;
+  text-align: left;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.6rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.staff-presence-menu-item strong {
+  display: block;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #1c2a1f;
+}
+
+.staff-presence-menu-item em {
+  display: block;
+  margin-top: 0.12rem;
+  font-size: 0.7rem;
+  font-style: normal;
+  color: rgba(28, 42, 31, 0.55);
+  line-height: 1.35;
+}
+
+.staff-presence-menu-item.is-primary {
+  background: rgba(47, 107, 58, 0.12);
+  border-color: rgba(47, 107, 58, 0.28);
+}
+
+.staff-presence-menu-item.is-primary strong {
+  color: var(--tea-leaf, #2f6b3a);
+}
+
+.staff-presence-menu-item.is-exit {
+  background: rgba(196, 90, 26, 0.1);
+  border-color: rgba(196, 90, 26, 0.28);
+}
+
+.staff-presence-menu-item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .topbar-email--owner-slim {

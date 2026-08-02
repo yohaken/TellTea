@@ -11,7 +11,10 @@ export type PermPreviewState = {
   label: string;
   permissions: StaffPermissions;
   levelId?: string;
+  /** staff/{id} ของคนที่สวมมุมมอง */
   memberId?: string;
+  /** employees/{id} — ให้โบนัส/จ่าย รู้ว่าเป็น "ฉัน" คนไหน */
+  employeeId?: string;
 };
 
 export type PermPreviewStartInput = {
@@ -19,17 +22,18 @@ export type PermPreviewStartInput = {
   permissions: Partial<StaffPermissions> | null | undefined;
   levelId?: string;
   memberId?: string;
+  employeeId?: string;
 };
 
 /** เช็คลิสต์ตรวจรับมุมมองพนักงาน (owner) */
 export const PERM_PREVIEW_CHECKLIST = [
-  "เปิดพรีวิวจากลำดับ หรือจากบัญชีพนักงาน",
-  "แท็บล่างเหลือเฉพาะหน้าที่ลำดับนั้นมีสิทธิ์",
-  "หน้า อื่นๆ โชว์เฉพาะเครื่องมือที่เปิดสิทธิ์",
-  "เปิด deep link หน้าที่ไม่มีสิทธิ์แล้วถูกเด้งออก",
+  "แตะไอคอนพนักงานมุมขวาบน → ดูในมุมพนักงานคนนี้",
+  "แท็บล่าง / อื่นๆ / โบนัส เปลี่ยนตามสิทธิ์ทันที",
+  "ไอคอนคนนั้นใหญ่ขึ้น สีเขียวธีม",
+  "เปิดหน้าที่ไม่มีสิทธิ์แล้วถูกเด้งออก",
   "VAT / เมนู / settings ไม่โชว์ตอนพรีวิว",
-  "แถบพรีวิวเห็นชัด + กดออกแล้วกลับมุมเจ้าของ",
-  "ไม่บันทึกรายการจริงตอนพรีวิว (ดูอย่างเดียว)",
+  "กดออกจากมุมมอง (แถบหรือเมนูไอคอน) กลับเจ้าของ",
+  "ไม่บันทึกรายการจริงตอนพรีวิว",
 ] as const;
 
 export function loadPermPreview(): PermPreviewState | null {
@@ -44,6 +48,7 @@ export function loadPermPreview(): PermPreviewState | null {
       permissions: normalizePermissions(data.permissions, "staff"),
       levelId: typeof data.levelId === "string" ? data.levelId : undefined,
       memberId: typeof data.memberId === "string" ? data.memberId : undefined,
+      employeeId: typeof data.employeeId === "string" ? data.employeeId : undefined,
     };
   } catch {
     return null;
@@ -71,12 +76,16 @@ export function previewFromLevel(level: PermissionLevel): PermPreviewState {
   };
 }
 
-export function previewFromMember(member: StaffMember): PermPreviewState {
+export function previewFromMember(
+  member: StaffMember,
+  labelOverride?: string,
+): PermPreviewState {
   return {
-    label: staffAccountLabel(member) || member.displayName || member.id,
+    label: (labelOverride || staffAccountLabel(member) || member.displayName || member.id).trim(),
     permissions: normalizePermissions(member.permissions, member.role),
     levelId: member.permissionLevelId,
     memberId: member.id,
+    employeeId: member.employeeId,
   };
 }
 
@@ -96,7 +105,7 @@ export function buildPreviewStaff(
     profileComplete: true,
     personalProfileComplete: true,
     createdAt: real.createdAt,
-    employeeId: preview.memberId ? real.employeeId : undefined,
+    employeeId: preview.employeeId || undefined,
   };
 }
 
@@ -106,5 +115,6 @@ export function normalizePreviewInput(input: PermPreviewStartInput): PermPreview
     permissions: normalizePermissions(input.permissions, "staff"),
     levelId: input.levelId,
     memberId: input.memberId,
+    employeeId: input.employeeId,
   };
 }
