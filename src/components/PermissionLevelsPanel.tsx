@@ -27,6 +27,7 @@ type Props = {
   onSuccess: (msg: string | null) => void;
   onReload: () => Promise<void>;
   linkedCountByLevelId: Map<string, number>;
+  onPreviewLevel?: (level: PermissionLevel) => void;
 };
 
 export function PermissionLevelsPanel({
@@ -38,6 +39,7 @@ export function PermissionLevelsPanel({
   onSuccess,
   onReload,
   linkedCountByLevelId,
+  onPreviewLevel,
 }: Props) {
   const sorted = useMemo(
     () => [...levels].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "th")),
@@ -253,6 +255,17 @@ export function PermissionLevelsPanel({
                   </div>
                 </div>
                 <div className="staff-level-actions">
+                  {isOwner && onPreviewLevel && level.active && !isOwnerSystemLevel(level) ? (
+                    <button
+                      type="button"
+                      className="ghost-btn staff-btn-sm"
+                      disabled={busy}
+                      onClick={() => onPreviewLevel(level)}
+                      title="ดูเมนูตามลำดับนี้"
+                    >
+                      ดูแบบนี้
+                    </button>
+                  ) : null}
                   {canEdit ? (
                     <button
                       type="button"

@@ -33,13 +33,27 @@ import {
 } from "./staff";
 import type { StaffMember } from "./types";
 import { normalizeEmail, staffAccountLabel } from "./utils";
+import {
+  buildPreviewStaff,
+  loadPermPreview,
+  normalizePreviewInput,
+  savePermPreview,
+  type PermPreviewStartInput,
+  type PermPreviewState,
+} from "./perm-preview";
 
 type AuthStatus = "loading" | "signedOut" | "denied" | "ready" | "unconfigured";
 
 type AuthContextValue = {
   status: AuthStatus;
   user: User | null;
+  /** สิทธิ์/บทบาทที่ใช้โชว์เมนู — อาจเป็นพรีวิว */
   staff: StaffMember | null;
+  /** บัญชีจริงที่ล็อกอิน (ไม่ถูกพรีวิวทับ) */
+  realStaff: StaffMember | null;
+  /** true เมื่อเจ้าของกำลังดูมุมมองตามสิทธิ์พนักงาน */
+  isPermPreview: boolean;
+  permPreview: PermPreviewState | null;
   actorId: string;
   error: string | null;
   signIn: () => Promise<void>;
@@ -47,6 +61,8 @@ type AuthContextValue = {
   confirmPhoneLoginOtp: (code: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshStaff: () => Promise<void>;
+  startPermPreview: (input: PermPreviewStartInput) => void;
+  stopPermPreview: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -178,6 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const [user, setUser] = useState<User | null>(null);
   const [staff, setStaff] = useState<StaffMember | null>(null);
+  const [permPreview, setPermPreview] = useState<PermPreviewState | null>(() => loadPermPreview());
   const [error, setError] = useState<string | null>(null);
   const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
 
@@ -187,6 +204,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStaff(member);
     setStatus(member ? "ready" : "denied");
   }, [user]);
+
+  const startPermPreview = useCallback(
+    (input: PermPreviewStartInput) => {
+      if (staff?.role !== "owner") return;
+      const next = normalizePreviewInput(input);
+      setPermPreview(next);
+      savePermPreview(next);
+    },
+    [staff?.role],
+  );
+
+  const stopPermPreview = useCallback(() => {
+    setPermPreview(null);
+    savePermPreview(null);
+  }, []);
 
   useEffect(() => {
     if (!isFirebaseConfigured()) {
@@ -239,6 +271,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setPhoneConfirmation(null);
         setUser(null);
         setStaff(null);
+        setPermPreview(null);
+        savePermPreview(null);
         setStatus("signedOut");
         return;
       }
@@ -377,16 +411,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearAppCaches();
     resetPhoneRecaptcha();
     setPhoneConfirmation(null);
+    setPermPreview(null);
+    savePermPreview(null);
     await firebaseSignOut(getFirebaseAuth());
   }, []);
 
-  const actorId = actorIdFromUser(user, staff);
+  const realStaff = staff;
+  const isPermPreview = !!(permPreview && realStaff?.role === "owner");
+  const effectiveStaff =
+    isPermPreview && permPreview && realStaff
+      ? buildPreviewStaff(realStaff, permPreview)
+      : realStaff;
+  // เขียนข้อมูลยังเป็นบัญชีจริง — พรีวิวแค่เมนู/สิทธิ์หน้าจอ
+  const actorId = actorIdFromUser(user, realStaff);
 
   const value = useMemo(
     () => ({
       status,
       user,
-      staff,
+      staff: effectiveStaff,
+      realStaff,
+      isPermPreview,
+      permPreview: isPermPreview ? permPreview : null,
       actorId,
       error,
       signIn,
@@ -394,11 +440,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       confirmPhoneLoginOtp,
       signOut,
       refreshStaff,
+      startPermPreview,
+      stopPermPreview,
     }),
     [
       status,
       user,
-      staff,
+      effectiveStaff,
+      realStaff,
+      isPermPreview,
+      permPreview,
       actorId,
       error,
       signIn,
@@ -406,6 +457,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       confirmPhoneLoginOtp,
       signOut,
       refreshStaff,
+      startPermPreview,
+      stopPermPreview,
     ],
   );
 

@@ -37,12 +37,19 @@ import {
   defaultAssignableLevelId,
   ensurePermissionLevelSeeds,
   findLevel,
+  isOwnerSystemLevel,
   permissionsMatchLevel,
   staffLevelBadgeLabel,
 } from "@/lib/permission-levels";
+import {
+  PERM_PREVIEW_CHECKLIST,
+  previewFromLevel,
+  previewFromMember,
+} from "@/lib/perm-preview";
+import { staffHomeHref } from "@/lib/nav-menu";
 import { formatPhoneDisplay, staffAccountLabel } from "@/lib/utils";
 import { mapFirestoreError } from "@/lib/firestore-errors";
-import { Trash2 } from "lucide-react";
+import { Eye, Trash2 } from "lucide-react";
 import { StaffPersonalInfoButton } from "@/components/StaffPersonalInfoModal";
 import { StaffReadinessTable } from "@/components/StaffReadinessTable";
 import {
@@ -77,7 +84,7 @@ function memberLinkLabel(member: StaffMember, employees: Employee[]): string {
 }
 
 function StaffView() {
-  const { staff, refreshStaff } = useAuth();
+  const { realStaff, refreshStaff, startPermPreview } = useAuth();
   const router = useRouter();
   const [tab, setTab] = useState<HubTab>("team");
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -98,10 +105,36 @@ function StaffView() {
   const [personalMap, setPersonalMap] = useState<Map<string, StaffPersonalData>>(new Map());
   const [loading, setLoading] = useState(true);
   const [editTarget, setEditTarget] = useState<StaffReadinessEditTarget>(null);
+  const [showPreviewCheck, setShowPreviewCheck] = useState(false);
 
   const linkOptions = employeesForLink(employees);
+  const staff = realStaff;
   const isOwner = staff?.role === "owner";
   const canManageStaff = can(staff, "staffManage");
+
+  function beginPreviewFromLevel(level: PermissionLevel) {
+    if (!isOwner || isOwnerSystemLevel(level)) return;
+    const preview = previewFromLevel(level);
+    startPermPreview(preview);
+    router.replace(staffHomeHref({
+      id: staff!.id,
+      role: "staff",
+      permissions: preview.permissions,
+      createdAt: staff!.createdAt,
+    }));
+  }
+
+  function beginPreviewFromMember(member: StaffMember) {
+    if (!isOwner || member.role !== "staff") return;
+    const preview = previewFromMember(member);
+    startPermPreview(preview);
+    router.replace(staffHomeHref({
+      id: staff!.id,
+      role: "staff",
+      permissions: preview.permissions,
+      createdAt: staff!.createdAt,
+    }));
+  }
 
   const linkedCountByLevelId = useMemo(() => {
     const map = new Map<string, number>();
@@ -400,8 +433,33 @@ function StaffView() {
           <h1 className="staff-hub-title">ทีม / พนักงาน</h1>
           <p className="staff-hub-sub">หลังร้าน · จัดการชื่อ บัญชี และลำดับสิทธิ์</p>
         </div>
-        {loading ? <span className="muted staff-hub-loading">โหลด…</span> : null}
+        <div className="staff-hub-head-actions">
+          {isOwner ? (
+            <button
+              type="button"
+              className="ghost-btn staff-btn-sm"
+              onClick={() => setShowPreviewCheck((v) => !v)}
+            >
+              {showPreviewCheck ? "ซ่อนเช็ค" : "เช็คมุมมอง"}
+            </button>
+          ) : null}
+          {loading ? <span className="muted staff-hub-loading">โหลด…</span> : null}
+        </div>
       </header>
+
+      {isOwner && showPreviewCheck ? (
+        <section className="staff-hub-panel staff-preview-check">
+          <h2 className="staff-hub-panel-title">เช็คมุมมองพนักงาน</h2>
+          <p className="staff-hub-panel-hint">
+            กด «ดูแบบนี้» ที่ลำดับ หรือ «ดูแบบเขา» ที่บัญชี — แท็บจะเปลี่ยนตามสิทธิ์ · แถบส้มกดออกกลับเจ้าของ
+          </p>
+          <ol className="staff-preview-check-list">
+            {PERM_PREVIEW_CHECKLIST.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
 
       <nav className="staff-hub-tabs" aria-label="ส่วนจัดการพนักงาน">
         {(
@@ -619,6 +677,17 @@ function StaffView() {
                   </div>
                   <div className="staff-level-actions">
                     {isOwner && member.role === "staff" ? (
+                      <button
+                        type="button"
+                        className="ghost-btn staff-btn-sm"
+                        disabled={busy}
+                        title="ดูเมนูตามสิทธิ์บัญชีนี้"
+                        onClick={() => beginPreviewFromMember(member)}
+                      >
+                        <Eye size={13} aria-hidden /> ดูแบบเขา
+                      </button>
+                    ) : null}
+                    {isOwner && member.role === "staff" ? (
                       <StaffPersonalInfoButton member={member} />
                     ) : null}
                     {member.role === "staff" ? (
@@ -680,6 +749,7 @@ function StaffView() {
           onSuccess={setSuccess}
           onReload={() => reload().then(() => undefined)}
           linkedCountByLevelId={linkedCountByLevelId}
+          onPreviewLevel={isOwner ? beginPreviewFromLevel : undefined}
         />
       ) : null}
     </div>

@@ -26,10 +26,28 @@ assert.match(levels, /shop_staff/);
 assert.match(levels, /ensurePermissionLevelSeeds/);
 assert.match(levels, /permissionsCustomized/);
 
+const preview = read("src/lib/perm-preview.ts");
+assert.match(preview, /PERM_PREVIEW_STORAGE_KEY/);
+assert.match(preview, /PERM_PREVIEW_CHECKLIST/);
+assert.match(preview, /buildPreviewStaff/);
+assert.match(preview, /previewFromLevel/);
+
+const auth = read("src/lib/auth.tsx");
+assert.match(auth, /startPermPreview/);
+assert.match(auth, /stopPermPreview/);
+assert.match(auth, /isPermPreview/);
+assert.match(auth, /realStaff/);
+
+const shell = read("src/components/AppShell.tsx");
+assert.match(shell, /PermPreviewBanner/);
+assert.match(shell, /isPermPreview/);
+
 const staffPage = read("src/app/staff/page.tsx");
 assert.match(staffPage, /ลำดับสิทธิ์/);
 assert.match(staffPage, /PermissionLevelsPanel/);
 assert.match(staffPage, /permissionLevelId/);
+assert.match(staffPage, /beginPreviewFromLevel/);
+assert.match(staffPage, /ดูแบบเขา/);
 
 const readiness = read("src/components/StaffReadinessTable.tsx");
 assert.match(readiness, /staffLevelBadgeLabel/);

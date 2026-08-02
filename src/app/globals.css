@@ -999,6 +999,72 @@ body.modal-open .main-panel {
   margin-bottom: 0.55rem;
 }
 
+.staff-hub-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.staff-preview-check {
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(196, 90, 26, 0.28);
+  background: rgba(255, 244, 230, 0.75);
+}
+
+.staff-preview-check-list {
+  margin: 0.35rem 0 0;
+  padding-left: 1.15rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: rgba(28, 42, 31, 0.78);
+  text-align: left;
+}
+
+.perm-preview-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.65rem;
+  background: linear-gradient(90deg, rgba(196, 90, 26, 0.16), rgba(255, 244, 230, 0.95));
+  border-bottom: 1px solid rgba(196, 90, 26, 0.28);
+}
+
+.perm-preview-banner-text {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.45rem;
+  text-align: left;
+  font-size: 0.78rem;
+}
+
+.perm-preview-banner-text strong {
+  color: #9a3412;
+  font-size: 0.76rem;
+}
+
+.perm-preview-banner-label {
+  font-weight: 700;
+  color: rgba(28, 42, 31, 0.88);
+}
+
+.perm-preview-banner-hint {
+  font-size: 0.68rem;
+}
+
+.perm-preview-exit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  background: #c45a1a !important;
+}
+
 .staff-hub-title {
   margin: 0;
   font-size: 1.15rem;
