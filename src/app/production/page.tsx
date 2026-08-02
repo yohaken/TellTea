@@ -21,6 +21,7 @@ import { useAuth } from "@/lib/auth";
 import { monthInputValue, parseMonthInput } from "@/lib/bonus";
 import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
 import { resolveLinkedEmployee } from "@/lib/employees";
+import { staffHomeHref } from "@/lib/nav-menu";
 import { can } from "@/lib/permissions";
 import {
   entryHasPhotoFlag,
@@ -36,7 +37,6 @@ import {
   listProdProducts,
   listProdWorkers,
   PROD_IMAGE_MAX,
-  prodHistorySinceMs,
   resolveProdEntryRates,
   seedProdCatalogIfEmpty,
   subscribeProdEntries,
@@ -72,6 +72,7 @@ function ProductionView() {
   const router = useRouter();
   const isOwner = staff?.role === "owner";
   const shopProdView = isOwner || can(staff, "payrollPay");
+  /** พรีวิว = มุมพนักงาน: ดู/เลือกเดือนได้ · กรอกไม่ได้ */
   const canWrite = !!actorId && !isPermPreview;
   const [ownerView, setOwnerView] = useState<ProdOwnerView>("log");
   const [formOpen, setFormOpen] = useState(false);
@@ -93,7 +94,7 @@ function ProductionView() {
 
   useEffect(() => {
     if (staff && !can(staff, "production")) {
-      router.replace("/ledger/");
+      router.replace(staffHomeHref(staff));
     }
   }, [staff, router]);
 
@@ -117,18 +118,14 @@ function ProductionView() {
         const w = await listProdWorkers();
         if (cancelled) return;
         setWorkers(w);
+        // มุมพนักงาน/พรีวิว: กรองคนตัวเอง + เดือนที่เลือก (ไม่ดึง lookback ยาวที่ทำให้วันที่ดูแปลก)
         const filterId = shopProdView
           ? ""
           : staff?.employeeId || resolveLinkedEmployee(w, staff)?.id || "";
-        const windowOpts = shopProdView
-          ? {
-              since: new Date(logYear, logMonthIdx, 1).getTime(),
-              until: new Date(logYear, logMonthIdx + 1, 1).getTime(),
-            }
-          : {
-              since: prodHistorySinceMs(),
-              ...(filterId ? { workerId: filterId } : {}),
-            };
+        const monthWindow = {
+          since: new Date(logYear, logMonthIdx, 1).getTime(),
+          until: new Date(logYear, logMonthIdx + 1, 1).getTime(),
+        };
         if (!shopProdView && !filterId) {
           setEntries([]);
           return;
@@ -136,7 +133,9 @@ function ProductionView() {
         unsubEntries = subscribeProdEntries(
           (rows) => setEntries(rows),
           (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
-          windowOpts,
+          shopProdView
+            ? monthWindow
+            : { ...monthWindow, workerId: filterId },
         );
       })
       .catch((err) => setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ"))
@@ -220,6 +219,11 @@ function ProductionView() {
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}
+      {isPermPreview && showLog ? (
+        <p className="muted" style={{ margin: "0 0 0.55rem", fontSize: "0.78rem" }}>
+          พรีวิวมุมพนักงาน — เลือกเดือนดูรายการของคนนี้ได้ · กรอก/แก้ไม่ได้
+        </p>
+      ) : null}
       {loading ? <p className="empty">กำลังโหลด...</p> : null}
 
       {!loading && showCatalog ? (
@@ -244,6 +248,8 @@ function ProductionView() {
           entries={entries}
           workers={workers}
           isOwner={isOwner}
+          mineOnly={!shopProdView}
+          canOpenRow={canWrite}
           month={logMonth}
           onMonthChange={setLogMonth}
           onEdit={openEdit}
@@ -285,6 +291,21 @@ function ProductionView() {
           formOpen={formOpen}
           onAdd={openAdd}
         />
+      ) : null}
+      {/* พรีวิว: โชว์ปุ่ม + กรอกแบบพนักงาน แต่กดไม่ได้ — ให้สภาพแวดล้อมใกล้ของจริง */}
+      {isPermPreview && showLog ? (
+        <div className="module-tab-dock is-single" role="tablist" aria-label="มุมมองผลิต">
+          <button
+            type="button"
+            role="tab"
+            className="module-tab is-add"
+            disabled
+            title="พรีวิว — กรอกไม่ได้"
+            aria-disabled="true"
+          >
+            + กรอก
+          </button>
+        </div>
       ) : null}
     </div>
   );
@@ -578,6 +599,8 @@ function ProdTable({
   entries,
   workers,
   isOwner,
+  mineOnly,
+  canOpenRow,
   month,
   onMonthChange,
   onEdit,
@@ -587,6 +610,10 @@ function ProdTable({
   entries: ProdEntry[];
   workers: ProdWorker[];
   isOwner: boolean;
+  /** true = มุมพนักงาน (รายการของฉัน) — ซ่อนคอลัมน์พนักงาน */
+  mineOnly: boolean;
+  /** false = พรีวิว/อ่านอย่างเดียว — ไม่เปิดฟอร์มแก้ */
+  canOpenRow: boolean;
   month: string;
   onMonthChange: (month: string) => void;
   onEdit: (row: ProdEntry) => void;
@@ -602,7 +629,7 @@ function ProdTable({
 
   useBodyScrollLock(!!preview);
 
-  // entries ถูก scope ตามเดือน/lookback จาก parent แล้ว
+  // entries ถูก scope ตามเดือน (+ workerId มุมพนักงาน) จาก parent แล้ว
   const filtered = entries;
 
   const forensicsRows = useMemo(
@@ -633,20 +660,18 @@ function ProdTable({
     <>
       <div className="ot-toolbar-slim module-toolbar-slim">
         {toolbarLeading}
-        {isOwner ? (
-          <input
-            type="month"
-            className="ot-slim-input"
-            value={month}
-            onChange={(e) => onMonthChange(e.target.value)}
-            aria-label="เดือน"
-          />
-        ) : null}
+        <input
+          type="month"
+          className="ot-slim-input"
+          value={month}
+          onChange={(e) => onMonthChange(e.target.value)}
+          aria-label="เดือนอ้างอิง"
+        />
         <span
           className="ot-slim-hint muted module-slim-hint"
           title="สถานะล็อกเมื่อปิดเดือนโบนัสที่ จ่าย/โบนัส — ไม่เปลี่ยนสถานะเป็นกลุ่มที่นี่"
         >
-          ล็อกเมื่อปิดเดือนโบนัส
+          {mineOnly ? "รายการของฉันในเดือนนี้" : "ล็อกเมื่อปิดเดือนโบนัส"}
         </span>
         {isOwner ? (
           <PhotoForensicsPanel
@@ -654,23 +679,27 @@ function ProdTable({
             onReport={setPhotoReport}
             onPickEntry={(id) => {
               const row = filtered.find((r) => r.id === id);
-              if (row) onEdit(row);
+              if (row && canOpenRow) onEdit(row);
             }}
           />
         ) : null}
       </div>
 
       {!entries.length ? (
-        <p className="empty">ยังไม่มีรายการผลิต — กด + กรอก ด้านล่างเพื่อเริ่ม</p>
-      ) : !filtered.length && isOwner ? (
-        <p className="empty">ไม่มีรายการในเดือนนี้</p>
+        <p className="empty">
+          {mineOnly
+            ? "ยังไม่มีรายการผลิตของคุณในเดือนนี้"
+            : "ยังไม่มีรายการผลิตในเดือนนี้ — กด + กรอก ด้านล่างเพื่อเริ่ม"}
+        </p>
       ) : (
         <div className="sheet-wrap production-sheet sheet-bleed">
           <table className="sheet-table prod-table sheet-table--dense">
             <thead>
               <tr>
                 <th className="col-date">วันที่</th>
-                <th className="col-desc prod-col-worker">พนักงาน</th>
+                {mineOnly ? null : (
+                  <th className="col-desc prod-col-worker">พนักงาน</th>
+                )}
                 <th className="col-desc prod-col-product col-sticky-left">สินค้า</th>
                 <th className="col-out">ผลิต</th>
                 <th className="col-out">ทิ้ง/เสีย</th>
@@ -688,7 +717,7 @@ function ProdTable({
               </tr>
             </thead>
             <tbody>
-              {(isOwner ? filtered : entries).map((row) => {
+              {filtered.map((row) => {
                 const c = computeProdBonus(row);
                 const locked = isProdEntryLocked(row);
                 const photoFlagged = isOwner && entryHasPhotoFlag(photoReport, row.id);
@@ -704,18 +733,27 @@ function ProdTable({
                       .join(" ")}
                   >
                     <td className="col-date">{formatDateShortBe(row.date)}</td>
-                    <td className="col-desc prod-col-worker">
-                      {resolveWorkerDisplayNames(row.workerIds, row.workerNames, workers).join(
-                        ", ",
-                      ) || "—"}
-                    </td>
+                    {mineOnly ? null : (
+                      <td className="col-desc prod-col-worker">
+                        {resolveWorkerDisplayNames(row.workerIds, row.workerNames, workers).join(
+                          ", ",
+                        ) || "—"}
+                      </td>
+                    )}
                     <td className="col-desc prod-col-product col-sticky-left">
                       <div className="prod-name-row">
                         <button
                           type="button"
                           className="desc-link"
-                          title={row.productName}
-                          onClick={() => onEdit(row)}
+                          title={
+                            canOpenRow
+                              ? row.productName
+                              : `${row.productName} · ดูอย่างเดียว`
+                          }
+                          onClick={() => {
+                            if (canOpenRow) onEdit(row);
+                          }}
+                          disabled={!canOpenRow}
                         >
                           {locked ? <Lock size={11} aria-hidden /> : null} {row.productName}
                         </button>

@@ -10,6 +10,7 @@
     "test:firestore-rules": "node scripts/assert-firestore-rules.mjs",
     "test:staff-rbac": "node scripts/test-staff-rbac-phases.mjs",
     "test:permissions-resolve": "node scripts/test-permissions-resolve.mjs",
+    "test:production-staff-month": "node scripts/test-production-staff-month.mjs",
     "test:vat-p1-p4": "npx --yes tsx scripts/test-vat-p1-p4.ts",
     "test:vat-p5": "npx --yes tsx scripts/test-vat-p5.ts",
     "test:vat-p6": "npx --yes tsx scripts/test-vat-p6.ts",
