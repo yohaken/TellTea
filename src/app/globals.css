@@ -2536,7 +2536,7 @@ body.modal-open .main-panel {
   left: 50%;
   right: max(0.55rem, calc((100vw - var(--shell-max)) / 2 + 0.55rem));
   bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.45rem);
-  z-index: 13;
+  z-index: 16; /* สูงกว่าแถบส่งหน้าร้าน — ไอคอนตัวแรกชัดเสมอ */
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -20428,12 +20428,14 @@ a.ghost-btn {
 
 .vat-sf-send--float {
   position: fixed;
-  left: max(0.45rem, env(safe-area-inset-left, 0px));
-  right: auto;
+  /* ชิดซ้ายของไอคอนทางลัดตัวแรก (dock เริ่มที่ left:50%) · เว้นช่อง 0.4rem เสมอ */
+  left: auto;
+  right: calc(50% + 0.4rem);
   bottom: calc(var(--nav-h) + var(--safe-bottom) + 0.45rem);
-  z-index: 14; /* เหนือ nav · ต่ำกว่า Tune Desk · ไม่บัง owner-quick (กลาง→ขวา) */
+  z-index: 12; /* ต่ำกว่า owner-quick-dock — ไอคอนตัวแรกชัด/แตะได้เสมอ */
   width: fit-content;
-  max-width: min(17.5rem, calc(48vw - 0.6rem));
+  /* กันล้นขอบซ้ายจอ + ไม่ข้ามเส้น 50% */
+  max-width: min(16.5rem, calc(50vw - 1.1rem), calc(100vw - 50% - 0.85rem));
   margin: 0;
   padding: 0.35rem 0.45rem;
   min-height: 0;
@@ -20516,7 +20518,8 @@ a.ghost-btn {
 
 @media (max-width: 420px) {
   .vat-sf-send--float {
-    max-width: min(15.5rem, calc(46vw - 0.4rem));
+    right: calc(50% + 0.32rem);
+    max-width: min(14.5rem, calc(50vw - 0.95rem), calc(100vw - 50% - 0.7rem));
     padding: 0.32rem 0.4rem;
   }
 }

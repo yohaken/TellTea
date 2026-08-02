@@ -56,14 +56,12 @@ const css = readFileSync(join(root, "src/app/globals.css"), "utf8");
 assert.match(css, /\.vat-sf-send--float\s*\{/);
 assert.match(css, /position:\s*fixed/);
 assert.match(css, /width:\s*fit-content/);
-assert.match(css, /max-width:\s*min\(17\.5rem/);
+assert.match(css, /right:\s*calc\(50% \+ 0\.4rem\)/);
 assert.match(css, /owner-quick/);
-assert.match(css, /z-index:\s*14/);
-// ห้ามยืดเต็มแถวด้วย left+right พร้อมกัน
-assert.doesNotMatch(
-  css,
-  /\.vat-sf-send--float\s*\{[^}]*right:\s*max\(/s,
-);
+assert.match(css, /ไอคอนตัวแรก/);
+// แถบ z ต่ำกว่า dock · dock z สูงขึ้น
+assert.match(css, /\.vat-sf-send--float\s*\{[^}]*z-index:\s*12/s);
+assert.match(css, /\.owner-quick-dock\s*\{[^}]*z-index:\s*16/s);
 
 const entryVat = readFileSync(join(root, "src/lib/entry-vat.ts"), "utf8");
 assert.match(entryVat, /export function businessCostOut/);
