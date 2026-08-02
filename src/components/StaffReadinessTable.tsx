@@ -7,7 +7,8 @@ import {
   type StaffReadinessRow,
 } from "@/lib/staff-readiness";
 import type { Employee } from "@/lib/employees";
-import type { StaffMember, StaffPersonalData } from "@/lib/types";
+import type { PermissionLevel, StaffMember, StaffPersonalData } from "@/lib/types";
+import { staffLevelBadgeLabel } from "@/lib/permission-levels";
 import { StaffPersonalInfoButton } from "@/components/StaffPersonalInfoModal";
 
 function actionLabel(row: StaffReadinessRow): string {
@@ -47,6 +48,7 @@ function StatusPill({ row }: { row: StaffReadinessRow }) {
 export function StaffReadinessTable({
   members,
   employees,
+  levels = [],
   personalByStaffId,
   ownerView = false,
   busy = false,
@@ -54,6 +56,7 @@ export function StaffReadinessTable({
 }: {
   members: StaffMember[];
   employees: Employee[];
+  levels?: PermissionLevel[];
   personalByStaffId: Map<string, StaffPersonalData>;
   /** เจ้าของเห็นรายละเอียด PDPA/บัตรจาก staffPersonal */
   ownerView?: boolean;
@@ -66,36 +69,30 @@ export function StaffReadinessTable({
   if (!rows.length) {
     return (
       <section className="staff-hub-section staff-readiness-section">
-        <h2 className="panel-title" style={{ fontSize: "1.05rem" }}>
-          สรุปความพร้อมพนักงาน
-        </h2>
-        <p className="muted" style={{ textAlign: "left", margin: 0 }}>
-          ยังไม่มีพนักงานในระบบ — เพิ่มชื่อและบัญชีด้านล่าง
-        </p>
+        <h2 className="staff-hub-panel-title">ทีม</h2>
+        <p className="staff-hub-panel-hint">ยังไม่มีพนักงาน — เพิ่มชื่อด้านล่าง</p>
       </section>
     );
   }
 
   return (
     <section className="staff-hub-section staff-readiness-section">
-      <h2 className="panel-title" style={{ fontSize: "1.05rem" }}>
-        สรุปความพร้อมพนักงาน
-      </h2>
+      <h2 className="staff-hub-panel-title">ทีม</h2>
       <p className="staff-readiness-summary muted">
-        พนักงาน {summary.totalStaff} คน · ครบ {summary.complete} · ยังไม่ครบ {summary.partial}
+        {summary.totalStaff} คน · ครบ {summary.complete} · ค้าง {summary.partial}
         {summary.blocked ? ` · ล็อกอินไม่ได้ ${summary.blocked}` : ""}
-        {summary.rosterOnly ? ` · รอสร้างบัญชี (ขั้นที่ 2) ${summary.rosterOnly}` : ""}
+        {summary.rosterOnly ? ` · รอบัญชี ${summary.rosterOnly}` : ""}
       </p>
 
       <div className="sheet-wrap staff-readiness-wrap sheet-bleed">
         <table className="sheet-table staff-readiness-table sheet-table--dense">
           <thead>
             <tr>
-              <th className="staff-ready-col-name">ชื่อในร้าน</th>
-              <th className="staff-ready-col-nick">ชื่อเล่น</th>
+              <th className="staff-ready-col-name">ชื่อ</th>
+              <th className="staff-ready-col-level">ลำดับ</th>
               <th className="staff-ready-col-account">บัญชี</th>
               <th className="staff-ready-col-check-h">เข้า</th>
-              <th className="staff-ready-col-check-h">ส่วนตัว</th>
+              <th className="staff-ready-col-check-h">ตัว</th>
               <th className="staff-ready-col-check-h">PDPA</th>
               <th className="staff-ready-col-check-h">ร้าน</th>
               <th className="staff-ready-col-status">สรุป</th>
@@ -111,6 +108,14 @@ export function StaffReadinessTable({
               const personalTitle = row.missing
                 .filter((m) => ["ชื่อจริง", "นามสกุล", "รูปบัตร"].includes(m))
                 .join(", ");
+              const member = row.staffId ? members.find((m) => m.id === row.staffId) : undefined;
+              const emp = employees.find((e) => e.id === row.employeeId);
+              const nick = emp?.nickname?.trim();
+              const levelLabel =
+                row.kind === "roster-only"
+                  ? "—"
+                  : staffLevelBadgeLabel(member, levels);
+              const customized = !!member?.permissionsCustomized && !!member.permissionLevelId;
               return (
                 <tr
                   key={row.id}
@@ -124,15 +129,19 @@ export function StaffReadinessTable({
                 >
                   <td className="staff-ready-col-name">
                     <strong>{row.rosterName}</strong>
+                    {nick ? <span className="staff-ready-nick"> · {nick}</span> : null}
                     {row.kind === "roster-only" ? (
-                      <span className="staff-ready-tag is-roster">ขั้นที่ 1 ✓</span>
+                      <span className="staff-ready-tag is-roster">รอบัญชี</span>
                     ) : null}
                   </td>
-                  <td className="staff-ready-col-nick muted">
-                    {(() => {
-                      const emp = employees.find((e) => e.id === row.employeeId);
-                      return emp?.nickname?.trim() || "—";
-                    })()}
+                  <td className="staff-ready-col-level">
+                    <span
+                      className={`staff-chip${levelLabel === "—" ? " is-muted" : " is-soft"}`}
+                      title={customized ? "ผูกลำดับแต่ปรับสิทธิ์เอง" : levelLabel}
+                    >
+                      {levelLabel}
+                      {customized ? "*" : ""}
+                    </span>
                   </td>
                   <td className="staff-ready-col-account muted">{row.accountLabel}</td>
                   <CheckCell ok={row.checks.login} title={row.checks.login ? "ล็อกอินได้" : "ไม่มีอีเมล/เบอร์"} />
@@ -156,13 +165,8 @@ export function StaffReadinessTable({
                         >
                           {actionLabel(row)}
                         </button>
-                        {ownerView && row.staffId ? (
-                          (() => {
-                            const member = members.find((m) => m.id === row.staffId);
-                            return member && member.role === "staff" ? (
-                              <StaffPersonalInfoButton member={member} />
-                            ) : null;
-                          })()
+                        {ownerView && member && member.role === "staff" ? (
+                          <StaffPersonalInfoButton member={member} />
                         ) : null}
                       </div>
                     </td>
@@ -174,9 +178,9 @@ export function StaffReadinessTable({
         </table>
       </div>
 
-      <p className="muted staff-readiness-legend" style={{ textAlign: "left", fontSize: "0.8rem", marginTop: "0.5rem" }}>
-        ขั้นที่ 1 = ชื่อในรายชื่อร้าน · ชื่อเล่น = ไอคอนสั้นมุมบน (แก้ที่รายชื่อ) · ขั้นที่ 2 = บัญชีอีเมล/เบอร์ (เข้า) · ส่วนตัว/PDPA = กรอกที่โปรไฟล์หลังล็อกอิน
-        {!ownerView ? " · รายละเอียดบัตรเห็นได้เฉพาะเจ้าของ" : ""}
+      <p className="muted staff-readiness-legend">
+        ลำดับ = แม่แบบสิทธิ์ (* ปรับเอง) · เข้า/ตัว/PDPA/ร้าน = ความพร้อมบัญชี
+        {!ownerView ? " · บัตรเห็นได้เฉพาะเจ้าของ" : ""}
       </p>
     </section>
   );

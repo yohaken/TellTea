@@ -135,6 +135,8 @@ export type StaffAccountInput = {
   permissions?: Partial<StaffPermissions>;
   displayName?: string;
   employeeId?: string;
+  permissionLevelId?: string | null;
+  permissionsCustomized?: boolean;
 };
 
 /** Create or update account — preserves profile fields. */
@@ -154,6 +156,12 @@ export async function upsertStaffAccount(input: StaffAccountInput): Promise<stri
   if (phone) patch.phone = phone;
   if (input.displayName !== undefined) {
     patch.displayName = input.displayName || deleteField();
+  }
+  if (input.permissionLevelId !== undefined) {
+    patch.permissionLevelId = input.permissionLevelId || deleteField();
+  }
+  if (input.permissionsCustomized !== undefined) {
+    patch.permissionsCustomized = input.permissionsCustomized;
   }
   if (!existing) {
     patch.createdAt = Date.now();
@@ -182,12 +190,23 @@ export async function upsertStaff(
 export async function updateStaffPermissions(
   staffId: string,
   permissions: Partial<StaffPermissions>,
+  opts?: {
+    permissionLevelId?: string | null;
+    permissionsCustomized?: boolean;
+  },
 ): Promise<void> {
   const existing = await getStaffMemberById(staffId);
   if (!existing) throw new Error("ไม่พบบัญชีพนักงาน");
-  await updateDoc(staffRef(staffId), {
+  const patch: Record<string, unknown> = {
     permissions: normalizePermissions(permissions, existing.role),
-  });
+  };
+  if (opts?.permissionLevelId !== undefined) {
+    patch.permissionLevelId = opts.permissionLevelId || deleteField();
+  }
+  if (opts?.permissionsCustomized !== undefined) {
+    patch.permissionsCustomized = opts.permissionsCustomized;
+  }
+  await updateDoc(staffRef(staffId), patch);
 }
 
 /** Owner adds/updates account and optionally links to roster name. */

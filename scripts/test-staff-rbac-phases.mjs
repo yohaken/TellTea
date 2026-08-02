@@ -20,7 +20,36 @@ assert.doesNotMatch(
   "assignTasks should not appear in PERMISSION_GROUPS keys",
 );
 
+const levels = read("src/lib/permission-levels.ts");
+assert.match(levels, /SEED_PERMISSION_LEVELS/);
+assert.match(levels, /shop_staff/);
+assert.match(levels, /ensurePermissionLevelSeeds/);
+assert.match(levels, /permissionsCustomized/);
+
+const staffPage = read("src/app/staff/page.tsx");
+assert.match(staffPage, /ลำดับสิทธิ์/);
+assert.match(staffPage, /PermissionLevelsPanel/);
+assert.match(staffPage, /permissionLevelId/);
+
+const readiness = read("src/components/StaffReadinessTable.tsx");
+assert.match(readiness, /staffLevelBadgeLabel/);
+assert.match(readiness, /staff-ready-col-level/);
+
+const ledger = read("src/app/ledger/page.tsx");
+assert.match(ledger, /can\(staff, "ledger"\)/);
+assert.match(ledger, /can\(staff, "transferIn"\)/);
+assert.match(ledger, /staffHomeHref/);
+assert.doesNotMatch(
+  ledger,
+  /transferInOpen && isOwner/,
+  "transfer-in UI must follow transferIn permission, not owner-only",
+);
+
+const lowBal = read("src/components/LowBalanceAlert.tsx");
+assert.match(lowBal, /canTransferIn/);
+
 const rules = read("firestore.rules");
+assert.match(rules, /match \/permissionLevels\/\{levelId\}/);
 assert.match(rules, /match \/employeePay\/\{empId\}/);
 assert.match(rules, /canReadEmployeePay/);
 assert.match(rules, /payrollPay/);

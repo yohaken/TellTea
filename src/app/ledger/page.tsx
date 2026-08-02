@@ -14,6 +14,8 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthGate } from "@/components/AuthGate";
 import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/permissions";
+import { staffHomeHref } from "@/lib/nav-menu";
 import {
   addLedgerEntry,
   deleteLedgerEntry,
@@ -103,12 +105,18 @@ function LedgerView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isOwner = staff?.role === "owner";
+  const canUseLedger = can(staff, "ledger");
+  const canTransferIn = can(staff, "transferIn");
   /** พนักงานแก้/เพิ่มรูปได้เฉพาะรายการออกที่ตัวเองสร้าง */
   function canMutateLedgerRow(row: { createdBy?: string; amountIn?: number }) {
     if (isOwner) return true;
     if (!actorId) return false;
     return row.createdBy === actorId && !(Number(row.amountIn) > 0);
   }
+
+  useEffect(() => {
+    if (staff && !canUseLedger) router.replace(staffHomeHref(staff));
+  }, [staff, canUseLedger, router]);
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -162,13 +170,13 @@ function LedgerView() {
       router.replace("/ledger/", { scroll: false });
       return;
     }
-    if (!isOwner) return;
+    if (!canTransferIn) return;
     if (searchParams.get("transferIn") === "1") {
       setTransferInOpen(true);
       setAdding(false);
       router.replace("/ledger/", { scroll: false });
     }
-  }, [isOwner, searchParams, router]);
+  }, [canTransferIn, searchParams, router]);
 
   useLayoutEffect(() => {
     const cached = loadCachedLedger();
@@ -196,6 +204,7 @@ function LedgerView() {
   );
 
   useEffect(() => {
+    if (!canUseLedger) return;
     const unsub = subscribeLedgerBalance(
       (next) => {
         setBalance(next);
@@ -226,9 +235,10 @@ function LedgerView() {
     }
 
     return unsub;
-  }, []);
+  }, [canUseLedger]);
 
   useEffect(() => {
+    if (!canUseLedger) return;
     setError(null);
     if (hasRowsRef.current) setRefreshing(true);
     else setLoading(true);
@@ -256,10 +266,10 @@ function LedgerView() {
     );
 
     return () => unsub();
-  }, [liveLimit, persistSnapshot]);
+  }, [canUseLedger, liveLimit, persistSnapshot]);
 
   useEffect(() => {
-    if (!deferredQuery) {
+    if (!canUseLedger || !deferredQuery) {
       setSearchPool(null);
       setSearchLoading(false);
       return;
@@ -279,7 +289,7 @@ function LedgerView() {
     return () => {
       cancelled = true;
     };
-  }, [deferredQuery]);
+  }, [canUseLedger, deferredQuery]);
 
   const filteredEntries = useMemo(() => {
     const source = deferredQuery ? searchPool ?? entries : entries;
@@ -353,6 +363,8 @@ function LedgerView() {
 
   const cashInStaffName =
     personalProfileLabel(staff) || staff?.displayName || staff?.email || "";
+
+  if (!canUseLedger) return null;
 
   return (
     <div className="ledger-page module-page">
@@ -552,7 +564,7 @@ function LedgerView() {
         />
       ) : null}
 
-      {transferInOpen && isOwner && actorId ? (
+      {transferInOpen && canTransferIn && actorId ? (
         <TransferInModal
           createdBy={actorId}
           onClose={() => setTransferInOpen(false)}
@@ -652,7 +664,7 @@ function LedgerView() {
         variant="glass-out"
       />
 
-      {isOwner ? (
+      {canTransferIn ? (
         <button
           type="button"
           className="ledger-transfer-in-fab"
