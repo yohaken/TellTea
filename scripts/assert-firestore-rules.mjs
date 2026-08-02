@@ -33,6 +33,7 @@ const REQUIRED_MATCHES = [
   "cashDeposits",
   "billNotices",
   "ownerBooks",
+  "capitalBooks",
   "evidencePhotos",
   "monthlyIncome",
   "stock",
