@@ -65,6 +65,7 @@ import { updateStaffProfile } from "@/lib/staff";
 import { getOtSettings, subscribeOtEntries, type OtEntry } from "@/lib/ot";
 import {
   DEFAULT_PAYROLL_SCHEDULE,
+  repairStuckPaidPayrollItems,
   suggestPeriodMonthForToday,
   subscribePayrollItems,
   subscribePayrollSchedule,
@@ -267,6 +268,8 @@ function BonusView() {
     if (!canView) return;
     const payrollSince = new Date(year, monthIdx - 13, 1).getTime();
     if (shopPayView) {
+      // Best-effort: แถวที่มีบช./สลิปแล้วแต่สถานะยัง pending → ปิดคิว
+      void repairStuckPaidPayrollItems().catch(() => {});
       return subscribePayrollItems(
         (rows) => setPayrollItems(rows),
         (err) => setError(err.message),
@@ -594,9 +597,21 @@ function BonusView() {
     myEmployee,
   ]);
 
+  /** ตัวเลขแท็บรอโอน = คิวของเดือนที่เลือก ไม่รวมเดือนอื่น */
   const pendingCount = useMemo(
-    () => visiblePayrollItems.filter((i) => i.status === "pending").length,
-    [visiblePayrollItems],
+    () =>
+      visiblePayrollItems.filter(
+        (i) => i.status === "pending" && i.periodMonth === month,
+      ).length,
+    [visiblePayrollItems, month],
+  );
+
+  const otherMonthPendingCount = useMemo(
+    () =>
+      visiblePayrollItems.filter(
+        (i) => i.status === "pending" && i.periodMonth !== month,
+      ).length,
+    [visiblePayrollItems, month],
   );
 
   if (!canView) return null;
@@ -723,6 +738,16 @@ function BonusView() {
 
       {error ? <p className="error-text">{error}</p> : null}
       {info ? <p className="success-text">{info}</p> : null}
+
+      {showShopUi &&
+      (tab === "pay" || tab === "bonus") &&
+      pendingCount === 0 &&
+      otherMonthPendingCount > 0 ? (
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950" style={{ marginBottom: "0.65rem" }}>
+          เดือนนี้เคลียร์แล้ว แต่ยังมีค้างจ่ายอีก {otherMonthPendingCount} รายการในเดือนอื่น
+          — ลองเปลี่ยนเดือนด้านบน (เช่น เดือนก่อน) เพื่อตรวจ / จ่ายให้ครบ
+        </div>
+      ) : null}
 
       {tab === "pay" ? (
         loading || (showShopUi && !report) ? (

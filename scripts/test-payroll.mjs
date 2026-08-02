@@ -183,4 +183,61 @@ assert.equal(pairs.length, 1);
 assert.equal(pairs[0].employeeId, "a");
 assert.equal(pairs[0].transferTotal, 5200);
 
+/** Mirror suggestPeriodMonthForToday (src/lib/payroll.ts) */
+function bangkokCalendarParts(ms) {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = Object.fromEntries(
+    fmt.formatToParts(new Date(ms)).filter((p) => p.type !== "literal").map((p) => [p.type, p.value]),
+  );
+  return {
+    y: Number(parts.year),
+    m: Number(parts.month),
+    d: Number(parts.day),
+  };
+}
+
+function suggestPeriodMonthForToday(ms, schedule = {}) {
+  const bonusDayOfMonth = clampDay(schedule.bonusDayOfMonth ?? 1);
+  const salarySplits = Array.isArray(schedule.salarySplits)
+    ? schedule.salarySplits
+    : [
+        { dayOfMonth: 15, percent: 50, forPreviousMonth: false },
+        { dayOfMonth: 1, percent: 50, forPreviousMonth: true },
+      ];
+  const { y, m, d } = bangkokCalendarParts(ms);
+  const current = periodMonthKey(y, m - 1);
+  const prevMonthPayDays = [
+    bonusDayOfMonth,
+    ...salarySplits.filter((s) => s.forPreviousMonth).map((s) => clampDay(s.dayOfMonth)),
+  ];
+  const midPayDay =
+    clampDay(salarySplits.find((s) => !s.forPreviousMonth)?.dayOfMonth) || 15;
+  const clearUntil = Math.max(midPayDay, ...prevMonthPayDays, 1);
+  if (d <= clearUntil) {
+    return shiftPeriodMonth(current, -1);
+  }
+  return current;
+}
+
+// 2 ส.ค. 2026 (Bangkok) → ยังเคลียร์เดือน ก.ค.
+assert.equal(
+  suggestPeriodMonthForToday(Date.UTC(2026, 7, 2, 5, 0, 0, 0)),
+  "2026-07",
+);
+// 1 ส.ค. → ก.ค.
+assert.equal(
+  suggestPeriodMonthForToday(Date.UTC(2026, 7, 1, 5, 0, 0, 0)),
+  "2026-07",
+);
+// 16 ส.ค. (หลังงวดกลาง 15) → ส.ค.
+assert.equal(
+  suggestPeriodMonthForToday(Date.UTC(2026, 7, 16, 5, 0, 0, 0)),
+  "2026-08",
+);
+
 console.log("test-payroll: ok");

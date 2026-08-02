@@ -1336,16 +1336,53 @@ export function summarizePayrollItems(items: PayrollItem[]) {
   };
 }
 
-/** เดือนอ้างอิงที่ควรเคลียร์ตาม "วันนี้" (วันที่ 1 → เดือนที่แล้ว, อื่นๆ → เดือนปัจจุบัน) */
+/**
+ * เดือนอ้างอิงที่ควรเคลียร์ตาม "วันนี้"
+ * ต้นเดือนถึงวันจ่ายงวดกลาง (ค่าเริ่ม 15) → ชี้เดือนที่แล้ว
+ * (สิ้นเดือน+โบนัสจ่ายวันที่ 1 ของเดือนถัดไป — อย่ากระโดดไปเดือนปัจจุบันเร็วเกิน)
+ */
 export function suggestPeriodMonthForToday(ms = Date.now(), schedule?: PayrollSchedule): string {
   const sch = normalizePayrollSchedule(schedule);
   const { y, m, d } = bangkokCalendarParts(ms);
   const current = periodMonthKey(y, m - 1);
-  // ถ้าวันนี้เป็นวันจ่ายงวดปลาย/โบนัส (มักวันที่ 1) ให้ชี้ไปเดือนที่แล้ว
-  if (d === sch.bonusDayOfMonth || sch.salarySplits.some((s) => s.forPreviousMonth && s.dayOfMonth === d)) {
+  const prevMonthPayDays = [
+    sch.bonusDayOfMonth,
+    ...sch.salarySplits.filter((s) => s.forPreviousMonth).map((s) => s.dayOfMonth),
+  ];
+  const midPayDay =
+    sch.salarySplits.find((s) => !s.forPreviousMonth)?.dayOfMonth ?? 15;
+  // คงชี้เดือนที่แล้วจนผ่านรอบเคลียร์สิ้นเดือน/โบนัส และถึงก่อน/เท่าวันงวดกลาง
+  const clearUntil = Math.max(midPayDay, ...prevMonthPayDays, 1);
+  if (d <= clearUntil) {
     return shiftPeriodMonth(current, -1);
   }
   return current;
+}
+
+/**
+ * ซ่อมคิวที่ลงบช./มีสลิปแล้วแต่สถานะยัง pending (จ่ายค้างกลางทาง)
+ * คืนจำนวนรายการที่แก้
+ */
+export async function repairStuckPaidPayrollItems(): Promise<number> {
+  const snap = await getDocs(query(payrollCol(), where("status", "==", "pending")));
+  let fixed = 0;
+  const now = Date.now();
+  for (const d of snap.docs) {
+    const item = mapPayrollItem(d.id, d.data() as Record<string, unknown>);
+    const hasBook = !!item.ownerBookId?.trim();
+    const hasSlip = (item.slipUrls?.length || 0) > 0;
+    if (!hasBook && !hasSlip) continue;
+    // มีหลักฐานโอนแล้ว — ปิดคิว ไม่ให้ค้างในรอโอน
+    await updateDoc(d.ref, {
+      status: "paid" satisfies PayrollStatus,
+      paidAt: item.paidAt > 0 ? item.paidAt : now,
+      paidBy: item.paidBy?.trim() || "repair",
+      updatedAt: now,
+      advanceApplied: true,
+    });
+    fixed += 1;
+  }
+  return fixed;
 }
 
 export async function listPayrollItemsOnce(): Promise<PayrollItem[]> {
