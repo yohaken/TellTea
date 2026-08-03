@@ -11,10 +11,15 @@ import {
 
 /** ช่วงอุ่นเครื่องหลังเปิดหน้า — ปักถี่ๆ ให้เจ้าของเห็นทันที */
 const WARMUP_FOR_MS = 3 * 60_000;
+/** กันยิงถี่ตอนพิมพ์ — ยังถี่พอให้สถานะตามงานจริง */
+const ACTIVITY_TOUCH_MIN_MS = 20_000;
 
 /**
- * Presence มาตรฐาน: เปิดหน้าเว็บ / เปลี่ยนหน้า / โฟกัสกลับ → ปัก lastSeenAt
- * ไม่ผูกกับงานเฉพาะ (สต็อก/OT) — แค่เข้าใช้งานหลังร้านก็รู้
+ * Presence มาตรฐาน: เปิดหน้า / เปลี่ยนหน้า / พิมพ์ / โฟกัสกลับ → ปัก lastSeenAt
+ *
+ * มือถือเปิดคีย์บอร์ดมักได้ visibility=hidden จน setInterval ถูก throttle —
+ * หน้าชง/คลัง/ผลิตที่กรอกค้างๆ จึงต้องปักจาก input/pointer ด้วย
+ * ไม่ผูกกับงานเฉพาะ — แค่เข้าใช้งานหลังร้านก็รู้
  */
 export function StaffPresenceHeartbeat() {
   const { realStaff, status } = useAuth();
@@ -68,6 +73,16 @@ export function StaffPresenceHeartbeat() {
     window.addEventListener("focus", onVis);
     window.addEventListener("pageshow", onVis);
 
+    // คีย์บอร์ดมือถือ → hidden → interval เงียบ — ปักจาก interaction จริง
+    const onActivity = () => {
+      if (Date.now() - lastTouchAt.current < ACTIVITY_TOUCH_MIN_MS) return;
+      beat({ force: true });
+    };
+    const activityEvents = ["pointerdown", "keydown", "touchstart", "input"] as const;
+    for (const ev of activityEvents) {
+      window.addEventListener(ev, onActivity, { passive: true });
+    }
+
     return () => {
       cancelled = true;
       clearRetries();
@@ -77,6 +92,9 @@ export function StaffPresenceHeartbeat() {
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("focus", onVis);
       window.removeEventListener("pageshow", onVis);
+      for (const ev of activityEvents) {
+        window.removeEventListener(ev, onActivity);
+      }
     };
   }, [staffId, status]);
 

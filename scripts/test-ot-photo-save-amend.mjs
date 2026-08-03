@@ -18,7 +18,7 @@ assert.match(pageSrc, /amendClosed/);
 assert.match(pageSrc, /บันทึกการแก้ไข/);
 assert.match(pageSrc, /saveBlockedReason/);
 assert.match(pageSrc, /canSaveClose/);
-assert.match(pageSrc, /updateOtEntry\(entry\.id, payload\)/);
+assert.match(pageSrc, /updateOtEntry\(entry\.id, payload, entry, createdBy\)/);
 
 const OT_IMAGE_MAX = 10;
 const OT_IMAGE_PAYLOAD_BUDGET = 650_000;

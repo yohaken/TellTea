@@ -364,6 +364,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setError(mapAuthError(err));
           setStaff(cached);
           setStatus("ready");
+          // ยังปัก presence จากแคช — อย่าให้สถานะค้างเพราะ resolve ล้มชั่วคราว
+          void import("./staff-presence")
+            .then(({ touchStaffPresence }) => touchStaffPresence(cached.id))
+            .catch(() => undefined);
           return;
         }
         if (permissionDenied) {

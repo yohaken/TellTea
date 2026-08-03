@@ -164,12 +164,23 @@ function mapStaffDoc(id: string, data: Record<string, unknown>): StaffMember {
   };
 }
 
-/** Firestore อาจส่ง number / numeric string — อย่าทิ้งเป็น undefined แล้วชิปโชว์ — */
+/** Firestore อาจส่ง number / numeric string / Timestamp — อย่าทิ้งเป็น undefined แล้วชิปโชว์ — */
 function coercePresenceMs(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
   if (typeof value === "string" && value.trim()) {
     const n = Number(value);
     if (Number.isFinite(n) && n > 0) return n;
+  }
+  if (value && typeof value === "object") {
+    const ts = value as { toMillis?: () => number; seconds?: number };
+    if (typeof ts.toMillis === "function") {
+      const n = ts.toMillis();
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    if (typeof ts.seconds === "number" && Number.isFinite(ts.seconds)) {
+      const n = ts.seconds * 1000;
+      if (n > 0) return n;
+    }
   }
   return undefined;
 }

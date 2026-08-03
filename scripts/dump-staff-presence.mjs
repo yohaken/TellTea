@@ -289,6 +289,36 @@ async function main() {
           `${r.age.padEnd(6)} ${r.when.padEnd(26)} ${r.kind.padEnd(5)} by=${r.createdBy || "—"}${r.sameBatchUpdate}`,
         );
       }
+
+      // หน้าชงส่วนใหญ่เป็น update — เทียบ updatedAt ล่าสุดกับ lastSeenAt
+      const otUpdateMismatches = [];
+      for (const d of otDocs) {
+        const f = d.fields;
+        const createdAt = Number(parseField(f.createdAt) || 0);
+        const updatedAt = Number(parseField(f.updatedAt) || 0);
+        const createdBy = String(parseField(f.createdBy) || "");
+        // เฉพาะแถวที่ถูกแก้จริง (ไม่ใช่สร้างอย่างเดียว) ใน 24 ชม.
+        if (!createdBy.includes("@")) continue;
+        if (!(updatedAt > createdAt + 60_000)) continue;
+        if (updatedAt < now - 24 * 60 * 60 * 1000) continue;
+        const staff = staffById.get(createdBy);
+        if (!staff) {
+          otUpdateMismatches.push(`${createdBy} updated ot ${formatIct(updatedAt)} but NO staff doc`);
+          continue;
+        }
+        if (!staff.lastSeenAt || staff.lastSeenAt + 60_000 < updatedAt) {
+          otUpdateMismatches.push(
+            `${staff.label} (${createdBy}) ot update ${formatIct(updatedAt)} (${formatAge(updatedAt, now)}) but lastSeen ${staff.lastSeenIct} (${staff.age})`,
+          );
+        }
+      }
+      lines.push("");
+      lines.push(`=== presence vs ot-update mismatches 24h (${otUpdateMismatches.length}) ===`);
+      if (!otUpdateMismatches.length) {
+        lines.push("none — recent ot editors have lastSeenAt >= ot updatedAt");
+      } else {
+        for (const m of otUpdateMismatches.slice(0, 30)) lines.push(`MISMATCH ${m}`);
+      }
     } catch (err) {
       lines.push(`prod/ot dump failed: ${err instanceof Error ? err.message : String(err)}`);
     }

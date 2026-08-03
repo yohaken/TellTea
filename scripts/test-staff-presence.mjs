@@ -9,11 +9,12 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 681);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 682);
 assert.match(read("src/lib/staff-presence.ts"), /touchStaffPresence/);
 assert.match(read("src/lib/staff-presence.ts"), /touchStaffPresenceFromActor/);
 assert.match(read("src/lib/staff-presence.ts"), /resolvePresenceStaffId/);
 assert.match(read("src/lib/staff-presence.ts"), /coercePresenceMs/);
+assert.match(read("src/lib/staff-presence.ts"), /toMillis/);
 assert.match(read("src/lib/staff-presence.ts"), /formatPresenceAge/);
 assert.match(read("src/lib/staff-presence.ts"), /formatPresenceLastLogin/);
 assert.match(read("src/lib/staff-presence.ts"), /staffShortLabel/);
@@ -35,13 +36,24 @@ assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /realStaff/);
 assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /usePathname/);
 assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /Presence มาตรฐาน/);
 assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /เปิดหน้า/);
-// Must not gate presence on stock/visibility — page open is enough
-assert.doesNotMatch(read("src/components/StaffPresenceHeartbeat.tsx"), /visibilityState === \"hidden\"/);
-assert.doesNotMatch(read("src/components/StaffPresenceHeartbeat.tsx"), /pointerdown/);
+assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /ACTIVITY_TOUCH_MIN_MS/);
+assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /pointerdown/);
+assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /input/);
+// Interval path must not skip when keyboard reports hidden
+assert.doesNotMatch(
+  read("src/components/StaffPresenceHeartbeat.tsx"),
+  /if \(\s*document\.visibilityState === \"hidden\"\s*\) return/,
+);
 assert.match(read("src/lib/stock-count.ts"), /await touchStaffPresenceFromActor/);
 assert.match(read("src/lib/ot.ts"), /await touchStaffPresenceFromActor/);
+assert.match(read("src/lib/ot.ts"), /actorId \|\| current\.createdBy/);
 assert.match(read("src/lib/production.ts"), /await touchStaffPresenceFromActor/);
+assert.match(read("src/lib/production.ts"), /actorId \|\| current\.createdBy/);
+assert.match(read("src/lib/checklist.ts"), /await touchStaffPresenceFromActor/);
 assert.match(read("src/lib/auth.tsx"), /touchStaffPresence\(member\.id\)/);
+assert.match(read("src/lib/auth.tsx"), /touchStaffPresence\(cached\.id\)/);
+assert.match(read("src/app/ot/page.tsx"), /updateOtEntry\(entry\.id, payload, entry, createdBy\)/);
+assert.match(read("src/lib/shift-close.ts"), /updateOtEntry\(entry\.id, fullPayload, entry, payload\.createdBy\)/);
 assert.match(read("firestore.rules"), /isOwnStaffDoc/);
 assert.doesNotMatch(
   read("src/components/StaffPresenceHeartbeat.tsx"),
