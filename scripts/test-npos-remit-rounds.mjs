@@ -55,11 +55,12 @@ assert.match(cash, /sessionIds/);
 
 const slim = read("src/components/PosSessionsSlimTable.tsx");
 assert.match(slim, /บันทึกส่งเงิน/);
-assert.match(slim, /\+รอบมือ/);
+assert.match(slim, /CASH_IN_NPOS_REMIT_ONLY/);
 assert.match(slim, /npos-slim-remit-handoff/);
 assert.match(slim, /ค้างส่ง/);
 assert.match(slim, /createManualPosSession/);
 assert.match(slim, /labelRemitStatus/);
+assert.match(slim, /ยอดต้องโอนใช้รอบ nPos อย่างเดียว/);
 
 const panel = read("src/components/CashInLedgerPanel.tsx");
 assert.match(panel, /fillDayFromPosSessions/);
@@ -67,9 +68,17 @@ assert.match(panel, /จากรอบ/);
 assert.match(panel, /sessionIds/);
 assert.match(panel, /cash-in-pending-rounds/);
 assert.match(panel, /บิลนำส่งรอโอน|cash-in-bill-card/);
-assert.match(panel, /ใช้บิลนี้|ใช้ทุกใบ/);
-assert.match(panel, /1 ใบ = 1 รอบปิดกะ/);
+assert.match(panel, /ใส่บิลนี้|มัดรวมทุกใบ/);
+assert.match(panel, /1 ใบ = 1 รอบปิด nPos/);
 assert.match(panel, /ยอดบิลนำส่ง/);
+assert.match(panel, /assertCashDepositDaysNposLinked/);
+assert.match(panel, /suggestedNetBankTransfer|มัดรวม − คชจ|มัดรวม−คชจ/);
+assert.match(panel, /ไม่ต้องเบิก/);
+assert.doesNotMatch(panel, /runAiDay|extractCashDaySlipFromPhotos/);
+
+const remitOnly = read("src/lib/pos-session-remit.ts");
+assert.match(remitOnly, /CASH_IN_NPOS_REMIT_ONLY\s*=\s*true/);
+assert.match(remitOnly, /isCashInRemitSession/);
 
 const rules = read("firestore.rules");
 assert.match(rules, /source == 'manual'/);

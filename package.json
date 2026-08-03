@@ -86,6 +86,7 @@
     "test:pos-sales-dashboard-month-perm": "node scripts/test-pos-sales-dashboard-month-perm.mjs",
     "test:ledger-transfer-in-fab": "node scripts/test-ledger-transfer-in-fab.mjs",
     "test:cash-in-ledger": "node scripts/test-cash-in-ledger.mjs",
+    "test:cash-in-npos-only": "node scripts/test-cash-in-npos-only.mjs",
     "test:bill-notices-ledger": "node scripts/test-bill-notices-ledger.mjs",
     "test:cash-deposit-days": "node scripts/test-cash-deposit-days.mjs",
     "test:cash-deposit-ai": "node scripts/test-cash-deposit-ai.mjs",

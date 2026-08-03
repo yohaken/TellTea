@@ -31,6 +31,7 @@ import {
   voidedForSession,
 } from "@/lib/pos-sales-report";
 import {
+  CASH_IN_NPOS_REMIT_ONLY,
   MANUAL_POS_DEVICE_ID,
   clearPosSessionRemitHandoff,
   createManualPosSession,
@@ -612,15 +613,17 @@ export function PosSessionsSlimTable({
           </span>
         </div>
         <div className="npos-slim-sessions-actions">
-          <button
-            type="button"
-            className="npos-slim-text-btn"
-            disabled={!actorId || manualBusy}
-            title="เพิ่มรอบปิดสำหรับเคาน์เตอร์นอกโปรแกรม"
-            onClick={() => setManualOpen(true)}
-          >
-            +รอบมือ
-          </button>
+          {!CASH_IN_NPOS_REMIT_ONLY ? (
+            <button
+              type="button"
+              className="npos-slim-text-btn"
+              disabled={!actorId || manualBusy}
+              title="เพิ่มรอบปิดสำหรับเคาน์เตอร์นอกโปรแกรม"
+              onClick={() => setManualOpen(true)}
+            >
+              +รอบมือ
+            </button>
+          ) : null}
           <PulseChips
             sec={pulseSec}
             busy={pulseBusy}
@@ -1123,8 +1126,11 @@ export function PosSessionsSlimTable({
 
       <p className="muted npos-slim-foot">
         รอบ = กะ nPos · <strong>นำส่ง</strong> = นับ − ทอนค้าง · <strong>ส่งเงิน</strong> =
-        บันทึกยอดรับจริงหลังปิดรอบ · <strong>+รอบมือ</strong> = เคาน์เตอร์นอกโปรแกรม ·{" "}
-        <strong>ปิดรอบ</strong> จากหลังร้าน · <strong>ลบที่เลือก</strong> ลบรอบ+บิลถาวร
+        บันทึกยอดรับจริงหลังปิดรอบ
+        {CASH_IN_NPOS_REMIT_ONLY
+          ? " · ยอดต้องโอนใช้รอบ nPos อย่างเดียว"
+          : " · +รอบมือ = เคาน์เตอร์นอกโปรแกรม"}{" "}
+        · <strong>ปิดรอบ</strong> จากหลังร้าน · <strong>ลบที่เลือก</strong> ลบรอบ+บิลถาวร
       </p>
 
       <PosConfirmDialog
@@ -1141,7 +1147,7 @@ export function PosSessionsSlimTable({
         }}
       />
 
-      {manualOpen ? (
+      {!CASH_IN_NPOS_REMIT_ONLY && manualOpen ? (
         <div className="npos-slim-manual-panel" role="region" aria-label="เพิ่มรอบมือ">
           <header className="npos-slim-manual-head">
             <h4>เพิ่มรอบมือ</h4>

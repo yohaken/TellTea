@@ -170,6 +170,24 @@ export function sumCashDepositDays(days: Pick<CashDepositDayLine, "cashAmount">[
   return days.reduce((sum, d) => sum + (Number(d.cashAmount) || 0), 0);
 }
 
+/**
+ * Day amounts that count toward 「ต้องโอน」must be linked to nPos remit sessions.
+ * cashAmount 0 (ร้านปิด) is allowed without sessionIds.
+ */
+export function assertCashDepositDaysNposLinked(
+  days: Pick<CashDepositDayLine, "date" | "cashAmount" | "sessionIds">[],
+): void {
+  for (const d of days) {
+    const amt = Number(d.cashAmount) || 0;
+    if (amt <= 0) continue;
+    if ((d.sessionIds || []).some((id) => String(id || "").trim())) continue;
+    const label = d.date ? formatCashDayShort(d.date) : "วันนี้";
+    throw new Error(
+      `${label}: ยอดบิลนำส่งต้องดึงจากรอบปิด nPos เท่านั้น (กด「จากรอบ」หรือใช้บิลรอโอน)`,
+    );
+  }
+}
+
 export function sumBankTransferAmounts(
   rows: Pick<CashDepositBankTransfer, "amount">[],
 ) {
@@ -219,6 +237,9 @@ export function labelCashDepositRound(
  * ผลต่างหลังคิดค่าธรรมเนียม:
  * (ยอดเข้าบัญชี + ค่าธรรมเนียม) − รวมเงินสดจากสลิป
  * = 0 แปลว่าตรง
+ *
+ * พนักงานมัดรวมหลายบิลแล้วโอนครั้งเดียว:
+ * ยอดโอนเข้าบช. = มัดรวมจริง − คชจ.โอน (ไม่ต้องเบิกคชจ.แยก)
  */
 export function cashDepositVariance(
   bankAmount: number,
@@ -229,6 +250,16 @@ export function cashDepositVariance(
   const fee = Math.max(0, Number(transferFee) || 0);
   const cash = Number(expectedCashTotal) || 0;
   return Math.round((bank + fee - cash) * 100) / 100;
+}
+
+/** ยอดที่ควรโอนเข้าบัญชี = มัดรวมบิลนำส่ง − คชจ.โอน */
+export function suggestedNetBankTransfer(
+  bundleCashTotal: number,
+  transferFee = 0,
+) {
+  const cash = Number(bundleCashTotal) || 0;
+  const fee = Math.max(0, Number(transferFee) || 0);
+  return Math.round(Math.max(0, cash - fee) * 100) / 100;
 }
 
 export function normalizeCashFillSource(raw: unknown): CashFillSource {

@@ -22785,6 +22785,12 @@ a.ghost-btn {
   color: rgba(40, 55, 48, 0.92);
   background: rgba(127, 183, 126, 0.12);
   border-radius: 0.35rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.cash-in-remain-line {
+  margin: 0;
 }
 
 .cash-in-remain .is-ok {
