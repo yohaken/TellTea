@@ -268,8 +268,14 @@ jobs:
         run: node scripts/repair-staff-presence-from-activity.mjs
 
   # One-shot: dump staff lastSeenAt when commit message contains [dump-staff-presence]
+  # Wait for repair job when both markers are present (avoid racing before backfill).
   dump-staff-presence:
-    if: contains(github.event.head_commit.message, '[dump-staff-presence]')
+    needs: [repair-staff-presence]
+    if: |
+      always()
+      && contains(github.event.head_commit.message, '[dump-staff-presence]')
+      && (needs.repair-staff-presence.result == 'success'
+          || needs.repair-staff-presence.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -11,6 +12,7 @@ import { getDb } from "./firebase";
 import { resolveLinkedEmployee, type Employee } from "./employees";
 import type { StaffMember } from "./types";
 import { mapFirestoreError } from "./firestore-errors";
+import { normalizeEmail, normalizePhone, phoneDocId } from "./utils";
 
 /** วนปัก lastSeenAt ระหว่างใช้งาน (~2 นาที) — ตาราง staff เป็นแหล่งความจริง */
 export const STAFF_PRESENCE_HEARTBEAT_MS = 2 * 60_000;
@@ -155,9 +157,49 @@ function mapStaffDoc(id: string, data: Record<string, unknown>): StaffMember {
         : undefined,
     permissionsCustomized: data.permissionsCustomized === true,
     profileComplete: data.profileComplete === true,
-    lastSeenAt: typeof data.lastSeenAt === "number" ? data.lastSeenAt : undefined,
+    lastSeenAt: coercePresenceMs(data.lastSeenAt),
     createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
   };
+}
+
+/** Firestore อาจส่ง number / numeric string — อย่าทิ้งเป็น undefined แล้วชิปโชว์ — */
+function coercePresenceMs(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
+  if (typeof value === "string" && value.trim()) {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return undefined;
+}
+
+/**
+ * แปลง actorId จากงาน (อีเมล / E.164 / p_…) → staff doc id
+ * เบอร์โทรต้อง map ผ่าน staffPhones หรือ p_<digits> — ห้าม updateDoc ด้วย +66…
+ */
+export async function resolvePresenceStaffId(
+  actorId: string | null | undefined,
+): Promise<string | null> {
+  const raw = String(actorId || "").trim();
+  if (!raw) return null;
+  if (raw.includes("@")) return normalizeEmail(raw);
+  if (raw.startsWith("p_")) return raw;
+
+  if (raw.startsWith("+") || /^0\d{8,}$/.test(raw)) {
+    try {
+      const e164 = normalizePhone(raw);
+      const digits = e164.slice(1);
+      const index = await getDoc(doc(getDb(), "staffPhones", digits));
+      const mapped = index.exists()
+        ? String((index.data() as { staffId?: string }).staffId || "").trim()
+        : "";
+      if (mapped) return mapped;
+      return phoneDocId(e164);
+    } catch {
+      return null;
+    }
+  }
+
+  return raw;
 }
 
 /** เจ้าของฟังรายชื่อ + lastSeenAt แบบสด */
@@ -217,12 +259,22 @@ export async function touchStaffPresence(staffId: string): Promise<boolean> {
   }
 }
 
+const PRESENCE_TOUCH_RETRIES_MS = [0, 1_500, 5_000] as const;
+
 /**
- * ปัก lastSeenAt หลังบันทึกงานจริง (สต็อก/ผลิต/OT…) — ไม่รอ interval
- * ใช้ staff doc id เท่านั้น (อีเมลหรือ p_…) ไม่ใช่เบอร์ E.164 จาก actorId โทรศัพท์
+ * ปัก lastSeenAt หลังบันทึกงานจริง (สต็อก/ผลิต/OT…) — resolve actor → staff id + retry
+ * มือถือเปิดคีย์บอร์ดมักได้ visibility=hidden ทำให้ heartbeat เงียบ — ทางนี้ไม่พึ่ง interval
  */
-export function touchStaffPresenceFromActor(staffId: string | null | undefined): void {
-  const id = String(staffId || "").trim();
-  if (!id || id.startsWith("+")) return;
-  void touchStaffPresence(id);
+export async function touchStaffPresenceFromActor(
+  actorId: string | null | undefined,
+): Promise<boolean> {
+  const id = await resolvePresenceStaffId(actorId);
+  if (!id) return false;
+  for (const delay of PRESENCE_TOUCH_RETRIES_MS) {
+    if (delay) {
+      await new Promise((r) => setTimeout(r, delay));
+    }
+    if (await touchStaffPresence(id)) return true;
+  }
+  return false;
 }

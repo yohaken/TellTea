@@ -224,6 +224,75 @@ async function main() {
         `${r.age.padEnd(6)} ${r.when.padEnd(26)} inspector=${r.inspector || "—"} createdBy=${r.createdBy || "—"} updatedBy=${r.updatedBy || "—"} id=${r.id}`,
       );
     }
+
+    // Mismatch: stock writer lastSeenAt older than the stock write itself
+    const staffById = new Map(rows.map((r) => [r.id, r]));
+    const mismatches = [];
+    for (const r of stockRows) {
+      const actor = r.updatedBy || r.createdBy;
+      if (!actor || !actor.includes("@")) continue;
+      const staff = staffById.get(actor);
+      if (!staff) {
+        mismatches.push(`${actor} wrote stock ${r.when} but NO staff doc`);
+        continue;
+      }
+      if (!staff.lastSeenAt || staff.lastSeenAt + 60_000 < r.sortAt) {
+        mismatches.push(
+          `${staff.label} (${actor}) stock ${r.when} (${r.age}) but lastSeen ${staff.lastSeenIct} (${staff.age})`,
+        );
+      }
+    }
+    lines.push("");
+    lines.push(`=== presence vs stock mismatches (${mismatches.length}) ===`);
+    if (!mismatches.length) {
+      lines.push("none — stock writers have lastSeenAt >= stock write time");
+    } else {
+      for (const m of mismatches) lines.push(`MISMATCH ${m}`);
+    }
+
+    // Recent prod/ot createdAt (not updatedAt) — who actually created work
+    try {
+      const [prodDocs, otDocs] = await Promise.all([
+        listCollection(token, "prodEntries"),
+        listCollection(token, "otEntries"),
+      ]);
+      const workRows = [];
+      for (const [kind, docs] of [
+        ["prod", prodDocs],
+        ["ot", otDocs],
+      ]) {
+        for (const d of docs) {
+          const f = d.fields;
+          const createdAt = Number(parseField(f.createdAt) || 0);
+          const updatedAt = Number(parseField(f.updatedAt) || 0);
+          if (createdAt < now - 3 * 24 * 60 * 60 * 1000) continue;
+          workRows.push({
+            kind,
+            id: d.id,
+            createdBy: String(parseField(f.createdBy) || ""),
+            createdAt,
+            updatedAt,
+            when: formatIct(createdAt),
+            age: formatAge(createdAt, now),
+            sameBatchUpdate:
+              updatedAt > 0 && Math.abs(updatedAt - createdAt) > 60_000
+                ? ` updatedAt=${formatIct(updatedAt)}`
+                : "",
+          });
+        }
+      }
+      workRows.sort((a, b) => b.createdAt - a.createdAt);
+      lines.push("");
+      lines.push(`=== prod/ot created last 3d (top 20 of ${workRows.length}) ===`);
+      for (const r of workRows.slice(0, 20)) {
+        lines.push(
+          `${r.age.padEnd(6)} ${r.when.padEnd(26)} ${r.kind.padEnd(5)} by=${r.createdBy || "—"}${r.sameBatchUpdate}`,
+        );
+      }
+    } catch (err) {
+      lines.push(`prod/ot dump failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
     globalThis.__stockRows = stockRows;
   } catch (err) {
     lines.push("");

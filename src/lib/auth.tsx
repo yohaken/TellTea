@@ -334,7 +334,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setStatus("ready");
           // ปักเข้าหลังสุดทันทีตอนล็อกอินสำเร็จ (ไม่รอ heartbeat / visibility)
           void import("./staff-presence")
-            .then(({ touchStaffPresence }) => touchStaffPresence(member.id))
+            .then(async ({ touchStaffPresence }) => {
+              if (await touchStaffPresence(member.id)) return;
+              // token/rules ยังไม่พร้อม — ลองใหม่สั้นๆ
+              for (const delay of [2_000, 8_000]) {
+                await new Promise((r) => setTimeout(r, delay));
+                if (await touchStaffPresence(member.id)) return;
+              }
+            })
             .catch(() => undefined);
           // ย้ายเงินเดือน/บัญชีออกจาก employees → employeePay (ครั้งแรกหลัง deploy)
           if (member.role === "owner") {

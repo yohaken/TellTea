@@ -130,9 +130,9 @@ export async function submitStockCountSession(input: StockCountSessionInput): Pr
   };
   if (!payload.inspector) throw new Error("ต้องเลือกผู้ตรวจนับ");
   await setDoc(ref, payload);
-  // ปักเข้าหลังสุดจากงานจริง — กัน heartbeat เงียบทั้งที่เพิ่งบันทึกสต็อก
+  // ปักเข้าหลังสุดจากงานจริง — มือถือเปิดคีย์บอร์ดมักทำให้ heartbeat (visibility) เงียบ
   const { touchStaffPresenceFromActor } = await import("./staff-presence");
-  touchStaffPresenceFromActor(String(payload.updatedBy || payload.createdBy || ""));
+  await touchStaffPresenceFromActor(String(payload.updatedBy || payload.createdBy || ""));
   return id;
 }
 

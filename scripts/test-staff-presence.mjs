@@ -9,9 +9,11 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (p) => readFileSync(join(root, p), "utf8");
 
-assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 679);
+assert.ok(Number(read("src/lib/version.ts").match(/APP_BUILD\s*=\s*(\d+)/)[1]) >= 680);
 assert.match(read("src/lib/staff-presence.ts"), /touchStaffPresence/);
 assert.match(read("src/lib/staff-presence.ts"), /touchStaffPresenceFromActor/);
+assert.match(read("src/lib/staff-presence.ts"), /resolvePresenceStaffId/);
+assert.match(read("src/lib/staff-presence.ts"), /coercePresenceMs/);
 assert.match(read("src/lib/staff-presence.ts"), /formatPresenceAge/);
 assert.match(read("src/lib/staff-presence.ts"), /formatPresenceLastLogin/);
 assert.match(read("src/lib/staff-presence.ts"), /staffShortLabel/);
@@ -29,16 +31,22 @@ assert.match(read("src/components/StaffPresenceDock.tsx"), /formatPresenceLastLo
 assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /STAFF_PRESENCE_HEARTBEAT_MS/);
 assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /realStaff/);
 assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /ignoreVisibility/);
+assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /RECENT_ACTIVITY_MS/);
 assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /pointerdown/);
-assert.match(read("src/lib/stock-count.ts"), /touchStaffPresenceFromActor/);
-assert.match(read("src/lib/ot.ts"), /touchStaffPresenceFromActor/);
-assert.match(read("src/lib/production.ts"), /touchStaffPresenceFromActor/);
+assert.match(read("src/components/StaffPresenceHeartbeat.tsx"), /["']input["']/);
+assert.match(read("src/lib/stock-count.ts"), /await touchStaffPresenceFromActor/);
+assert.match(read("src/lib/ot.ts"), /await touchStaffPresenceFromActor/);
+assert.match(read("src/lib/production.ts"), /await touchStaffPresenceFromActor/);
 assert.match(read("src/lib/auth.tsx"), /touchStaffPresence\(member\.id\)/);
 assert.match(read("firestore.rules"), /isOwnStaffDoc/);
 assert.doesNotMatch(
   read("src/components/StaffPresenceHeartbeat.tsx"),
   /const \{ staff, status \}/,
   "heartbeat must use realStaff, not preview staff",
+);
+assert.match(
+  read("scripts/repair-staff-presence-from-activity.mjs"),
+  /ห้ามใช้ updatedAt/,
 );
 assert.match(read("src/app/globals.css"), /\.staff-presence-name\b/);
 assert.match(read("src/app/globals.css"), /\.is-waiting\b/);

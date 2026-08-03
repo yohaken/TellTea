@@ -388,7 +388,7 @@ export async function addProdEntry(input: ProdEntryInput): Promise<string> {
     updatedAt: now,
   });
   const { touchStaffPresenceFromActor } = await import("./staff-presence");
-  touchStaffPresenceFromActor(input.createdBy);
+  await touchStaffPresenceFromActor(input.createdBy);
   return ref.id;
 }
 

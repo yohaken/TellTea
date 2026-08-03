@@ -103,6 +103,7 @@ async function main() {
   const activity = new Map();
   for (const d of stockDocs) {
     const f = d.fields;
+    // สต็อก: ใช้เวลาบันทึกรอบ — updatedAt (แก้รอบ) หรือ submittedAt (สร้าง)
     const at = Math.max(
       Number(parseField(f.updatedAt) || 0),
       Number(parseField(f.submittedAt) || 0),
@@ -112,10 +113,9 @@ async function main() {
   }
   for (const d of [...prodDocs, ...otDocs]) {
     const f = d.fields;
-    const at = Math.max(
-      Number(parseField(f.updatedAt) || 0),
-      Number(parseField(f.createdAt) || 0),
-    );
+    // ห้ามใช้ updatedAt — สคริปต์ซ่อมเรท/แบตช์มักเขียน updatedAt พร้อมกันหลายแถว
+    // ทำให้หลายคนได้ lastSeen เดียวกันทั้งที่ไม่ได้ล็อกอิน
+    const at = Number(parseField(f.createdAt) || 0);
     if (at < since) continue;
     bump(activity, parseField(f.createdBy), at);
   }
