@@ -238,3 +238,42 @@ jobs:
           path: qa-custom-token.txt
           retention-days: 1
 
+  # One-shot: dump staff lastSeenAt when commit message contains [dump-staff-presence]
+  dump-staff-presence:
+    if: contains(github.event.head_commit.message, '[dump-staff-presence]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Dump staff presence
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          OUT_DIR: artifacts/staff-presence
+        run: |
+          mkdir -p artifacts/staff-presence
+          node scripts/dump-staff-presence.mjs
+
+      - name: Upload dump artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: staff-presence-dump
+          path: artifacts/staff-presence
+          retention-days: 3
+
