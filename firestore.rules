@@ -200,6 +200,12 @@ service cloud.firestore {
         );
     }
 
+    /** heartbeat ออนไลน์ — แก้ได้แค่ lastSeenAt ของตัวเอง (ไม่ผูก createdAt) */
+    function staffPresenceTouch() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSeenAt'])
+        && request.resource.data.lastSeenAt is number;
+    }
+
     function employeeSelfLinkUpdate() {
       let before = resource.data;
       let after = request.resource.data;
@@ -476,7 +482,8 @@ service cloud.firestore {
             && request.resource.data.email == authEmail()
             && request.resource.data.role == 'owner');
       allow update: if (staffHubManage() && staffHubUpdateOk(staffId))
-        || (signedIn() && staffId == resolvedStaffId() && staffSelfProfileUpdate());
+        || (signedIn() && staffId == resolvedStaffId() && staffSelfProfileUpdate())
+        || (signedIn() && staffId == resolvedStaffId() && staffPresenceTouch());
       allow delete: if isOwner() || isOwnerEmail()
         || (hasPerm('staffManage') && resource.data.role == 'staff');
     }

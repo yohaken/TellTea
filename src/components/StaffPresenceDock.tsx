@@ -17,6 +17,7 @@ import {
   buildStaffPresenceItems,
   findEmployeeForPresence,
   formatPresenceAge,
+  formatPresenceLastLogin,
   subscribeEmployeesForPresence,
   subscribeStaffForPresence,
   type StaffPresenceItem,
@@ -55,8 +56,12 @@ export function StaffPresenceDock() {
 
   useEffect(() => {
     if (!isOwner) return;
-    const unsubStaff = subscribeStaffForPresence(setMembers);
-    const unsubEmp = subscribeEmployeesForPresence(setEmployees);
+    const unsubStaff = subscribeStaffForPresence(setMembers, (err) => {
+      if (typeof console !== "undefined") console.warn("staff presence", err.message);
+    });
+    const unsubEmp = subscribeEmployeesForPresence(setEmployees, (err) => {
+      if (typeof console !== "undefined") console.warn("staff presence employees", err.message);
+    });
 
     const refreshNow = () => setNow(Date.now());
     refreshNow();
@@ -218,7 +223,7 @@ export function StaffPresenceDock() {
                 <p className="muted staff-presence-menu-meta">
                   {menuItem.label}
                   {menuItem.lastSeenAt
-                    ? ` · เข้าหลังสุด ${formatPresenceAge(menuItem.lastSeenAt, now)}`
+                    ? ` · เข้า ${formatPresenceLastLogin(menuItem.lastSeenAt, now)} · ${formatPresenceAge(menuItem.lastSeenAt, now)}`
                     : " · ยังไม่เคยเข้า"}
                 </p>
               </div>
@@ -350,7 +355,7 @@ function PresenceChip({
           active
             ? `กำลังดูมุม ${item.fullName} — แตะอีกครั้งเพื่อออก`
             : hasSeen
-              ? `${item.fullName} · เข้าหลังสุด ${age}`
+              ? `${item.fullName} · เข้า ${formatPresenceLastLogin(item.lastSeenAt, now)} (${age})`
               : `${item.fullName} · ยังไม่เคยเข้า`
         }
         aria-label={

@@ -177,7 +177,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* โชว์ตลอดเมื่อเป็นเจ้าของจริง — รวมตอนพรีวิว เพื่อแตะไอคอนเดิมแล้วออก */}
         {realIsOwner ? <StaffPresenceDock /> : null}
-        {!isPermPreview ? <StaffPresenceHeartbeat /> : null}
+        {/* heartbeat ใช้ realStaff เสมอ — รันทั้งตอนพรีวิวเพื่อไม่ให้สถานะออนไลน์ค้าง */}
+        <StaffPresenceHeartbeat />
 
         <main className="main-panel">
           {/* พรีวิวไม่โชว์แบนเนอร์/โมดอลโปรไฟล์จริง — กันแก้บัญชีเจ้าของโดยไม่ตั้งใจ */}
