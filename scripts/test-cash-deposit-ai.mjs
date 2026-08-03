@@ -20,7 +20,7 @@ const version = read("src/lib/version.ts");
 
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 651, `APP_BUILD >= 651, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 652, `APP_BUILD >= 652, got ${buildMatch[1]}`);
 assert.ok(existsSync(join(root, "functions/extract-cash-deposit.js")));
 assert.match(index, /extractCashDepositSlip/);
 assert.match(cf, /mode === "bank"/);
@@ -50,7 +50,7 @@ assert.match(panel, /อ่าน AI ใหม่|ให้อ่านสลิ
 assert.match(panel, /\+ สลิปโอน/);
 assert.match(panel, /cash-in-bank-table/);
 assert.match(panel, /addBankTransfer/);
-assert.match(panel, /evidence only|ยอดบิลนำส่งกด/);
+assert.match(panel, /บิลในมัดรวมนี้|ใส่บิลนี้/);
 assert.match(client, /extractCashDaySlipFromPhotos/);
 
 const runner = `

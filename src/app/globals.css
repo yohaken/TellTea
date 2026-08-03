@@ -22517,6 +22517,64 @@ a.ghost-btn {
   font-weight: 650;
 }
 
+.cash-in-bundle-bills {
+  margin: 0.45rem 0 0.35rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.45rem;
+  background: rgba(40, 70, 55, 0.06);
+  border: 1px solid rgba(40, 70, 55, 0.12);
+}
+
+.cash-in-bundle-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.cash-in-bundle-head strong {
+  font-size: 0.82rem;
+}
+
+.cash-in-bundle-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.cash-in-bundle-row {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.4rem 0.45rem;
+  border-radius: 0.35rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(40, 70, 55, 0.1);
+}
+
+.cash-in-bundle-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.55rem;
+}
+
+.cash-in-bundle-amt {
+  margin-left: auto;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92rem;
+}
+
+.cash-in-bundle-remove {
+  justify-self: start;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+}
+
 .cash-in-pending-more {
   margin: 0.3rem 0 0;
   font-size: 0.66rem;

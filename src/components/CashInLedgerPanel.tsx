@@ -11,16 +11,13 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { EntryPhotoIndicator, ImagePreviewModal } from "@/components/EntryPhotoCell";
 import { PhotoUploadProgressModal } from "@/components/PhotoUploadProgressModal";
 import {
-  addCalendarDays,
   addCashDeposit,
   analyzeCashDepositDays,
   assertCashDepositDaysNposLinked,
   buildCashDepositOccupancy,
-  buildCashDepositRoundDays,
   CASH_DEPOSIT_BANK_SLIP_MAX,
   CASH_DEPOSIT_BANK_TRANSFER_MAX,
   CASH_DEPOSIT_DAY_MAX,
-  CASH_DEPOSIT_DAY_SLIP_MAX,
   CASH_DEPOSIT_LIVE_MAX,
   CASH_DEPOSIT_PAGE_SIZE,
   cashDepositDayKey,
@@ -60,12 +57,10 @@ import {
   deriveRemitStatus,
   fillDayCashFromSessions,
   groupSessionsBySalesDay,
-  labelRemitStatus,
   linkedSessionIdsFromDeposits,
   pendingDepositSessionsForCashIn,
   sessionCounterLabel,
   sessionRemitAmount,
-  sessionsForCashDepositDay,
   sumSessionRemits,
 } from "@/lib/pos-session-remit";
 import { posSessionCode } from "@/lib/pos-sales-report";
@@ -93,11 +88,6 @@ function writeOpenPref(open: boolean) {
   } catch {
     /* ignore */
   }
-}
-
-function toDateInput(ms: number) {
-  if (!ms) return todayInputValue();
-  return todayInputValue(new Date(ms));
 }
 
 function statusClass(status: CashDepositStatus) {
@@ -128,9 +118,7 @@ type PhotoPreviewState = {
   urls: string[];
   title: string;
   /** When set, viewer can delete individual photos */
-  editTarget?:
-    | { kind: "day"; dayId: string }
-    | { kind: "bank"; transferId: string };
+  editTarget?: { kind: "bank"; transferId: string };
 };
 
 function cloneTransfers(rows: CashDepositBankTransfer[]): CashDepositBankTransfer[] {
@@ -188,21 +176,16 @@ export function CashInLedgerPanel({
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftRound | null>(null);
-  const [createEnd, setCreateEnd] = useState(todayInputValue());
-  const [createDays, setCreateDays] = useState("7");
   const [busy, setBusy] = useState(false);
   const [ownerNote, setOwnerNote] = useState("");
   const [editNote, setEditNote] = useState("");
   const [imagePreview, setImagePreview] = useState<PhotoPreviewState | null>(null);
   const [uploadProgress, setUploadProgress] = useState<PhotoUploadProgress | null>(null);
   const uploadCancelRef = useRef(false);
-  const dayPhotoRef = useRef<HTMLInputElement>(null);
   const bankPhotoRef = useRef<HTMLInputElement>(null);
-  const photoTargetRef = useRef<
-    | { kind: "day"; dayId: string }
-    | { kind: "bank"; transferId: string }
-    | null
-  >(null);
+  const photoTargetRef = useRef<{ kind: "bank"; transferId: string } | null>(
+    null,
+  );
 
   const [editStaff, setEditStaff] = useState("");
   const [editBankTransfers, setEditBankTransfers] = useState<CashDepositBankTransfer[]>([
@@ -310,10 +293,17 @@ export function CashInLedgerPanel({
   const remainingToTransfer =
     Math.round((netBankTarget - workingBank) * 100) / 100;
   const variance = cashDepositVariance(workingBank, expected, workingFee);
-  const bundledBillCount = workingDays.reduce(
-    (n, d) => n + (d.sessionIds?.filter((id) => String(id || "").trim()).length || 0),
-    0,
-  );
+  const workingSessionIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const d of workingDays) {
+      for (const id of d.sessionIds || []) {
+        const t = String(id || "").trim();
+        if (t) ids.add(t);
+      }
+    }
+    return ids;
+  }, [workingDays]);
+  const bundledBillCount = workingSessionIds.size;
   const bankSlipUrlCount = flattenBankTransferUrls(workingTransfers).length;
   const coverage = useMemo(
     () =>
@@ -326,6 +316,7 @@ export function CashInLedgerPanel({
           occupiedByDepositId: occupancy.occupiedByDepositId,
           occupiedMonthCounts: occupancy.occupiedMonthCounts,
           excludeDepositId: selected?.id,
+          allowGaps: true,
         },
       ),
     [workingDays, occupancy, selected?.id],
@@ -366,38 +357,6 @@ export function CashInLedgerPanel({
       writeOpenPref(next);
       return next;
     });
-  }
-
-  function startCreateRound() {
-    if (readOnly) {
-      setError("พรีวิวมุมพนักงาน — สร้างรอบไม่ได้");
-      return;
-    }
-    const n = Math.round(Number(createDays));
-    if (!Number.isFinite(n) || n < 1 || n > CASH_DEPOSIT_DAY_MAX) {
-      setError(`จำนวนวันต้องอยู่ระหว่าง 1–${CASH_DEPOSIT_DAY_MAX}`);
-      return;
-    }
-    let endMs: number;
-    try {
-      endMs = parseDateInput(createEnd);
-    } catch {
-      setError("วันสิ้นสุดรอบไม่ถูกต้อง");
-      return;
-    }
-    setError(null);
-    setSelectedId(null);
-    setDraft({
-      key: `draft-${Date.now()}`,
-      transferDate: endMs,
-      dayCount: n,
-      staffName: staffName || "",
-      note: "",
-      bankTransfers: [emptyCashDepositBankTransfer(endMs)],
-      days: buildCashDepositRoundDays(endMs, n),
-      aiReason: "",
-    });
-    setAiHint(null);
   }
 
   function setDays(next: CashDepositDayLine[]) {
@@ -492,102 +451,9 @@ export function CashInLedgerPanel({
     setTransfers(workingTransfers.filter((t) => t.id !== transferId));
   }
 
-  function patchDay(
-    dayId: string,
-    patch: Partial<CashDepositDayLine>,
-    opts?: { fromAi?: boolean },
-  ) {
-    const fromAi = !!opts?.fromAi;
-    const apply = (days: CashDepositDayLine[]) =>
-      days.map((d) => {
-        if (d.id !== dayId) return d;
-        const next: CashDepositDayLine = {
-          ...d,
-          ...patch,
-          date: patch.date != null ? cashDepositDayKey(patch.date) : d.date,
-          sessionIds: patch.sessionIds != null ? [...patch.sessionIds] : d.sessionIds || [],
-        };
-        if (!fromAi) {
-          if (patch.cashAmount != null) {
-            next.cashAmountSource = "staff";
-            // Manual amount edit clears session link unless patch keeps ids.
-            if (patch.sessionIds == null) next.sessionIds = [];
-          }
-          if (patch.date != null) next.dateSource = "staff";
-        }
-        return next;
-      });
-    if (draft) setDraft({ ...draft, days: apply(draft.days) });
-    else setEditDays((prev) => apply(prev));
-  }
-
-  /** R2: fill day cashAmount from closed nPos session remits for that day. */
-  function fillDayFromPosSessions(dayId: string) {
-    const day = workingDays.find((d) => d.id === dayId);
-    if (!day) return;
-    const matches = sessionsForCashDepositDay(posSessions, day.date);
-    if (!matches.length) {
-      setError("วันนี้ยังไม่มีรอบปิด nPos ที่ยอดนำส่ง — ปิดกะที่แท็บเล็ตก่อน");
-      return;
-    }
-    setError(null);
-    const filled = fillDayCashFromSessions(
-      day,
-      matches,
-      matches.map((s) => s.id),
-    );
-    patchDay(dayId, {
-      cashAmount: filled.cashAmount,
-      cashAmountSource: filled.cashAmountSource,
-      sessionIds: filled.sessionIds,
-      note: filled.note,
-    });
-    setAiHint(
-      `ดึงนำส่ง ${matches.length} รอบ = ฿${formatPlainNumber(filled.cashAmount)}`,
-    );
-  }
-
-  function openDayPhoto(dayId: string) {
-    photoTargetRef.current = { kind: "day", dayId };
-    dayPhotoRef.current?.click();
-  }
-
   function openBankPhoto(transferId: string) {
     photoTargetRef.current = { kind: "bank", transferId };
     bankPhotoRef.current?.click();
-  }
-
-  function addDay(where: "start" | "end" = "end") {
-    if (workingDays.length >= CASH_DEPOSIT_DAY_MAX) {
-      setError(`รอบหนึ่งมีได้สูงสุด ${CASH_DEPOSIT_DAY_MAX} วัน`);
-      return;
-    }
-    setError(null);
-    const sorted = [...workingDays].sort((a, b) => a.date - b.date);
-    const fallback = cashDepositDayKey(
-      draft?.transferDate ?? selected?.transferDate ?? Date.now(),
-    );
-    const anchor =
-      where === "end"
-        ? sorted[sorted.length - 1]?.date || fallback
-        : sorted[0]?.date || fallback;
-    const date = addCalendarDays(anchor, where === "end" ? 1 : -1);
-    const day = emptyCashDepositDay(date);
-    setDays(where === "end" ? [...workingDays, day] : [day, ...workingDays]);
-  }
-
-  function removeDay(dayId: string) {
-    if (workingDays.length <= 1) {
-      setError("รอบต้องมีอย่างน้อย 1 วัน");
-      return;
-    }
-    setError(null);
-    setDays(workingDays.filter((d) => d.id !== dayId));
-    setImagePreview((prev) =>
-      prev?.editTarget?.kind === "day" && prev.editTarget.dayId === dayId
-        ? null
-        : prev,
-    );
   }
 
   function setTransferSlipUrls(transferId: string, slipUrls: string[]) {
@@ -597,22 +463,11 @@ export function CashInLedgerPanel({
     else setEditBankTransfers((prev) => apply(prev));
   }
 
-  function setDaySlipUrls(dayId: string, slipUrls: string[]) {
-    const apply = (days: CashDepositDayLine[]) =>
-      days.map((d) => (d.id === dayId ? { ...d, slipUrls } : d));
-    if (draft) setDraft({ ...draft, days: apply(draft.days) });
-    else setEditDays((prev) => apply(prev));
-  }
-
   function removePreviewPhotoAt(index: number) {
     const prev = imagePreview;
     if (!prev?.editTarget) return;
     const nextUrls = prev.urls.filter((_, i) => i !== index);
-    if (prev.editTarget.kind === "bank") {
-      setTransferSlipUrls(prev.editTarget.transferId, nextUrls);
-    } else {
-      setDaySlipUrls(prev.editTarget.dayId, nextUrls);
-    }
+    setTransferSlipUrls(prev.editTarget.transferId, nextUrls);
     if (!nextUrls.length) {
       setImagePreview(null);
       setAiHint("ลบรูปแล้ว — กด + เพื่อถ่าย/แนบใหม่");
@@ -621,28 +476,12 @@ export function CashInLedgerPanel({
     setImagePreview({ ...prev, urls: nextUrls });
   }
 
-  function clearSlipUrls(
-    target: { kind: "day"; dayId: string } | { kind: "bank"; transferId: string },
-  ) {
+  function clearSlipUrls(target: { kind: "bank"; transferId: string }) {
     if (!window.confirm("ลบรูปทั้งหมดของแถวนี้? แล้วถ่าย/แนบใหม่ได้")) return;
-    if (target.kind === "bank") setTransferSlipUrls(target.transferId, []);
-    else setDaySlipUrls(target.dayId, []);
+    setTransferSlipUrls(target.transferId, []);
     setImagePreview((prev) => {
       if (!prev?.editTarget) return prev;
-      if (
-        target.kind === "bank" &&
-        prev.editTarget.kind === "bank" &&
-        prev.editTarget.transferId === target.transferId
-      ) {
-        return null;
-      }
-      if (
-        target.kind === "day" &&
-        prev.editTarget.kind === "day" &&
-        prev.editTarget.dayId === target.dayId
-      ) {
-        return null;
-      }
+      if (prev.editTarget.transferId === target.transferId) return null;
       return prev;
     });
     setAiHint("ลบรูปแล้ว — กด + เพื่อถ่าย/แนบใหม่");
@@ -705,50 +544,29 @@ export function CashInLedgerPanel({
     const target = photoTargetRef.current;
     photoTargetRef.current = null;
     if (!target || !files?.length) return;
-    const batch = Array.from(files).slice(
-      0,
-      target.kind === "bank" ? CASH_DEPOSIT_BANK_SLIP_MAX : CASH_DEPOSIT_DAY_SLIP_MAX,
-    );
+    const batch = Array.from(files).slice(0, CASH_DEPOSIT_BANK_SLIP_MAX);
     uploadCancelRef.current = false;
     setUploadProgress(null);
     setBusy(true);
     try {
       const urls = await uploadEvidencePhotos(batch, {
         folder: "cash-deposits",
-        slotKey:
-          target.kind === "bank"
-            ? `bank-${target.transferId}`
-            : `day-${target.dayId}`,
+        slotKey: `bank-${target.transferId}`,
         cancelRef: uploadCancelRef,
         onProgress: setUploadProgress,
       });
       if (!urls.length) throw new Error("อัปโหลดรูปไม่สำเร็จ");
-      if (target.kind === "bank") {
-        const transferId = target.transferId;
-        let nextUrls: string[] = [];
-        const merge = (rows: CashDepositBankTransfer[]) =>
-          rows.map((t) => {
-            if (t.id !== transferId) return t;
-            nextUrls = [...t.slipUrls, ...urls].slice(0, CASH_DEPOSIT_BANK_SLIP_MAX);
-            return { ...t, slipUrls: nextUrls };
-          });
-        if (draft) setDraft({ ...draft, bankTransfers: merge(draft.bankTransfers) });
-        else setEditBankTransfers((prev) => merge(prev));
-        void runAiBank(transferId, nextUrls);
-      } else {
-        const dayId = target.dayId;
-        let nextDayUrls: string[] = [];
-        const merge = (days: CashDepositDayLine[]) =>
-          days.map((d) => {
-            if (d.id !== dayId) return d;
-            nextDayUrls = [...d.slipUrls, ...urls].slice(0, CASH_DEPOSIT_DAY_SLIP_MAX);
-            return { ...d, slipUrls: nextDayUrls };
-          });
-        if (draft) setDraft({ ...draft, days: merge(draft.days) });
-        else setEditDays((prev) => merge(prev));
-        // Day photos are evidence only — amounts come from nPos remits, not AI/FoodStory slips.
-        setAiHint("แนบรูปวันแล้ว — ยอดบิลนำส่งกด「จากรอบ」หรือใช้บิลรอโอน");
-      }
+      const transferId = target.transferId;
+      let nextUrls: string[] = [];
+      const merge = (rows: CashDepositBankTransfer[]) =>
+        rows.map((t) => {
+          if (t.id !== transferId) return t;
+          nextUrls = [...t.slipUrls, ...urls].slice(0, CASH_DEPOSIT_BANK_SLIP_MAX);
+          return { ...t, slipUrls: nextUrls };
+        });
+      if (draft) setDraft({ ...draft, bankTransfers: merge(draft.bankTransfers) });
+      else setEditBankTransfers((prev) => merge(prev));
+      void runAiBank(transferId, nextUrls);
     } catch (err) {
       if (!uploadCancelRef.current) {
         setError((err as Error).message || "อัปโหลดรูปไม่สำเร็จ");
@@ -756,7 +574,6 @@ export function CashInLedgerPanel({
     } finally {
       setBusy(false);
       setUploadProgress(null);
-      if (dayPhotoRef.current) dayPhotoRef.current.value = "";
       if (bankPhotoRef.current) bankPhotoRef.current.value = "";
     }
   }
@@ -862,14 +679,50 @@ export function CashInLedgerPanel({
     () => linkedSessionIdsFromDeposits(entries),
     [entries],
   );
+  /** Saved deposits + bills already in the open bundle — ไม่โชว์ซ้ำในคิวรอ */
+  const blockedSessionIds = useMemo(() => {
+    const ids = new Set(linkedSessionIds);
+    for (const id of workingSessionIds) ids.add(id);
+    return ids;
+  }, [linkedSessionIds, workingSessionIds]);
   const pendingDepositSessions = useMemo(
-    () => pendingDepositSessionsForCashIn(posSessions, linkedSessionIds),
-    [posSessions, linkedSessionIds],
+    () => pendingDepositSessionsForCashIn(posSessions, blockedSessionIds),
+    [posSessions, blockedSessionIds],
   );
   const pendingDepositSum = useMemo(
     () => sumSessionRemits(pendingDepositSessions),
     [pendingDepositSessions],
   );
+  /** บิลที่อยู่ในมัดรวมตอนนี้ — แสดงรายการชัดๆ */
+  const bundledBills = useMemo(() => {
+    const rows: {
+      session: PosSession | null;
+      sessionId: string;
+      dayId: string;
+      date: number;
+      remit: number;
+    }[] = [];
+    const byId = new Map(posSessions.map((s) => [s.id, s]));
+    for (const day of workingDays) {
+      for (const sid of day.sessionIds || []) {
+        const id = String(sid || "").trim();
+        if (!id) continue;
+        const session = byId.get(id) || null;
+        rows.push({
+          session,
+          sessionId: id,
+          dayId: day.id,
+          date: day.date || session?.date || session?.openedAt || 0,
+          remit: session ? sessionRemitAmount(session) || 0 : 0,
+        });
+      }
+    }
+    rows.sort((a, b) => {
+      if (a.date !== b.date) return b.date - a.date;
+      return a.sessionId.localeCompare(b.sessionId);
+    });
+    return rows;
+  }, [workingDays, posSessions]);
 
   function startDraftFromSessions(sessions: PosSession[]) {
     if (!sessions.length) {
@@ -924,48 +777,161 @@ export function CashInLedgerPanel({
     }
   }
 
+  function refreshBankAmountForBundle(nextDays: CashDepositDayLine[]) {
+    const bundle = sumCashDepositDays(nextDays);
+    if (workingTransfers.length !== 1) return;
+    const only = workingTransfers[0]!;
+    const prevSuggested = suggestedNetBankTransfer(expected, only.fee);
+    const amountLooksAuto =
+      !(Number(only.amount) > 0) ||
+      Math.abs((Number(only.amount) || 0) - prevSuggested) < 0.005 ||
+      only.amountSource !== "staff";
+    if (!amountLooksAuto) return;
+    const net = suggestedNetBankTransfer(bundle, only.fee);
+    patchTransfer(only.id, { amount: net });
+  }
+
+  function mergeSessionsIntoDays(
+    baseDays: CashDepositDayLine[],
+    sessions: PosSession[],
+  ): { days: CashDepositDayLine[]; added: number; skipped: number } {
+    let days = baseDays.map((d) => ({
+      ...d,
+      sessionIds: [...(d.sessionIds || [])],
+      slipUrls: [...(d.slipUrls || [])],
+    }));
+    const have = new Set<string>();
+    for (const d of days) {
+      for (const id of d.sessionIds || []) {
+        const t = String(id || "").trim();
+        if (t) have.add(t);
+      }
+    }
+    let added = 0;
+    let skipped = 0;
+    for (const session of sessions) {
+      if (have.has(session.id) || linkedSessionIds.has(session.id)) {
+        skipped += 1;
+        continue;
+      }
+      const dayKey = cashDepositDayKey(session.date || session.openedAt || 0);
+      const existing = days.find((d) => cashDepositDayKey(d.date) === dayKey);
+      if (existing) {
+        const ids = [...new Set([...(existing.sessionIds || []), session.id])];
+        const matches = posSessions.filter((s) => ids.includes(s.id));
+        // include the new session even if not yet in posSessions snapshot
+        const pool = matches.some((s) => s.id === session.id)
+          ? matches
+          : [...matches, session];
+        const filled = fillDayCashFromSessions(existing, pool, ids);
+        existing.cashAmount = filled.cashAmount;
+        existing.cashAmountSource = filled.cashAmountSource;
+        existing.sessionIds = filled.sessionIds;
+        existing.note = filled.note;
+        have.add(session.id);
+        added += 1;
+        continue;
+      }
+      if (days.length >= CASH_DEPOSIT_DAY_MAX) {
+        skipped += 1;
+        continue;
+      }
+      const base = emptyCashDepositDay(dayKey);
+      const filled = fillDayCashFromSessions(base, [session], [session.id]);
+      days.push({
+        ...base,
+        cashAmount: filled.cashAmount,
+        cashAmountSource: filled.cashAmountSource,
+        sessionIds: filled.sessionIds,
+        note: filled.note,
+        slipKind: "shift",
+        shiftLabel: "รอบขาย",
+      });
+      have.add(session.id);
+      added += 1;
+    }
+    days = [...days].sort((a, b) => a.date - b.date);
+    return { days, added, skipped };
+  }
+
   function queueSessionIntoWorking(session: PosSession) {
+    if (workingSessionIds.has(session.id) || linkedSessionIds.has(session.id)) {
+      setError(`บิล ${posSessionCode(session.id)} อยู่ในรายการแล้ว — ไม่ใส่ซ้ำ`);
+      return;
+    }
     if (!editingRound) {
       startDraftFromSessions([session]);
       return;
     }
-    const dayMs = session.date || session.openedAt || 0;
-    const dayKey = cashDepositDayKey(dayMs);
-    const existing = workingDays.find((d) => cashDepositDayKey(d.date) === dayKey);
-    if (existing) {
-      const ids = [...new Set([...(existing.sessionIds || []), session.id])];
-      const matches = sessionsForCashDepositDay(posSessions, dayKey).filter((s) =>
-        ids.includes(s.id),
-      );
-      const filled = fillDayCashFromSessions(existing, matches, ids);
-      patchDay(existing.id, {
+    const { days: nextDays, added } = mergeSessionsIntoDays(workingDays, [session]);
+    if (!added) {
+      setError(`บิล ${posSessionCode(session.id)} อยู่ในรายการแล้ว — ไม่ใส่ซ้ำ`);
+      return;
+    }
+    setDays(nextDays);
+    refreshBankAmountForBundle(nextDays);
+    setError(null);
+    setAiHint(
+      `ใส่บิล ${posSessionCode(session.id)} · ฿${formatPlainNumber(sessionRemitAmount(session) || 0)} · ในมัดรวม ${workingSessionIds.size + added} ใบ`,
+    );
+  }
+
+  function queueAllPendingIntoWorking() {
+    if (!pendingDepositSessions.length) return;
+    if (!editingRound) {
+      startDraftFromSessions(pendingDepositSessions);
+      return;
+    }
+    const { days: nextDays, added, skipped } = mergeSessionsIntoDays(
+      workingDays,
+      pendingDepositSessions,
+    );
+    if (!added) {
+      setError("ไม่มีบิลใหม่ให้ใส่ — อยู่ในรายการครบแล้ว");
+      return;
+    }
+    setDays(nextDays);
+    refreshBankAmountForBundle(nextDays);
+    setError(null);
+    setAiHint(
+      `ใส่เพิ่ม ${added} บิล` +
+        (skipped ? ` · ข้ามซ้ำ ${skipped}` : "") +
+        ` · มัดรวมรวม ${workingSessionIds.size + added} ใบ`,
+    );
+  }
+
+  function removeSessionFromWorking(sessionId: string) {
+    const id = String(sessionId || "").trim();
+    if (!id) return;
+    const nextDays: CashDepositDayLine[] = [];
+    for (const day of workingDays) {
+      const ids = (day.sessionIds || []).filter((s) => s !== id);
+      if (!ids.length) {
+        // วันไม่มีบิลเหลือ — ตัดออกจากมัดรวม
+        continue;
+      }
+      if (ids.length === (day.sessionIds || []).length) {
+        nextDays.push(day);
+        continue;
+      }
+      const matches = posSessions.filter((s) => ids.includes(s.id));
+      const filled = fillDayCashFromSessions(day, matches, ids);
+      nextDays.push({
+        ...day,
         cashAmount: filled.cashAmount,
         cashAmountSource: filled.cashAmountSource,
         sessionIds: filled.sessionIds,
         note: filled.note,
       });
-    } else {
-      if (workingDays.length >= CASH_DEPOSIT_DAY_MAX) {
-        setError(`รอบหนึ่งมีได้สูงสุด ${CASH_DEPOSIT_DAY_MAX} วัน`);
-        return;
-      }
-      const base = emptyCashDepositDay(dayKey);
-      const filled = fillDayCashFromSessions(base, [session], [session.id]);
-      setDays([
-        ...workingDays,
-        {
-          ...base,
-          cashAmount: filled.cashAmount,
-          cashAmountSource: filled.cashAmountSource,
-          sessionIds: filled.sessionIds,
-          note: filled.note,
-          slipKind: "shift",
-          shiftLabel: "รอบขาย",
-        },
-      ]);
     }
+    if (!nextDays.length) {
+      setError("มัดรวมต้องมีอย่างน้อย 1 บิล");
+      return;
+    }
+    setDays(nextDays);
+    refreshBankAmountForBundle(nextDays);
     setError(null);
-    setAiHint(`ใส่รอบ ${posSessionCode(session.id)} · นำส่ง ฿${formatPlainNumber(sessionRemitAmount(session) || 0)}`);
+    setAiHint(`เอาบิล ${posSessionCode(id)} ออกจากมัดรวมแล้ว`);
   }
 
   const refreshOccupancy = useCallback(async () => {
@@ -982,16 +948,19 @@ export function CashInLedgerPanel({
   }, [open, refreshOccupancy]);
 
   const toggleMeta = (() => {
+    if (editingRound && bundledBillCount) {
+      return `มัดรวม ${bundledBillCount} บิล · ฿${formatPlainNumber(expected)}`;
+    }
     if (pendingDepositSessions.length) {
       return `บิลรอโอน ${pendingDepositSessions.length} ใบ · ฿${formatPlainNumber(pendingDepositSum)}`;
     }
     if (loading && !entries.length) return "…";
     if (pendingCount > 0) return `รอตรวจ ${pendingCount} รอบ`;
-    return "ตารางรอบ · หุบไว้ได้";
+    return "กดใส่บิลมัดรวมโอน · หุบไว้ได้";
   })();
 
   return (
-    <aside className="cash-in-panel" aria-label="ตารางเทียบเงินนำเข้า">
+    <aside className="cash-in-panel" aria-label="มัดรวมบิลนำส่งโอนเข้าบัญชี">
       <button
         type="button"
         className="cash-in-panel-toggle"
@@ -999,7 +968,7 @@ export function CashInLedgerPanel({
         onClick={toggle}
       >
         <span className="cash-in-panel-toggle-left">
-          <span className="cash-in-panel-title">เทียบเงินนำเข้า</span>
+          <span className="cash-in-panel-title">โอนเงินนำเข้า</span>
           <span
             className={`cash-in-panel-meta${pendingDepositSessions.length ? " is-wait" : ""}`}
           >
@@ -1014,34 +983,34 @@ export function CashInLedgerPanel({
           {pendingDepositSessions.length ? (
             <section
               className="cash-in-pending-rounds"
-              aria-label="บิลนำส่งรอโอนเข้าบัญชี"
+              aria-label="บิลนำส่งรอใส่ในมัดรวม"
             >
               <header className="cash-in-pending-head">
                 <div>
-                  <strong>บิลนำส่งรอโอน</strong>
+                  <strong>บิลรอใส่</strong>
                   <p className="cash-in-pending-sub">
-                    1 ใบ = 1 รอบปิด nPos · มัดรวมหลายใบแล้วโอนครั้งเดียวได้ ·
-                    ยอดโอนเข้าบช. = มัดรวม − คชจ. (ไม่ต้องเบิก)
+                    กด「ใส่บิลนี้」สะสมทีละใบ · ไม่ซ้ำ · แล้วโอนครั้งเดียว
+                    (ยอดเข้าบช. = มัดรวม − คชจ.)
                   </p>
                   <span className="muted cash-in-pending-sum">
-                    {pendingDepositSessions.length} ใบ · รวม ฿
+                    เหลือ {pendingDepositSessions.length} ใบ · ฿
                     {formatPlainNumber(pendingDepositSum)}
                   </span>
                 </div>
-                {!editingRound ? (
+                {pendingDepositSessions.length > 1 ? (
                   <button
                     type="button"
                     className="ghost-btn cash-in-ai-reread"
-                    disabled={busy}
-                    title="มัดรวมทุกบิลเป็นรอบโอนเดียว · ยอดเข้าบช. = รวม − คชจ."
-                    onClick={() => startDraftFromSessions(pendingDepositSessions)}
+                    disabled={busy || readOnly}
+                    title="ใส่ทุกบิลที่เหลือเข้ามัดรวม"
+                    onClick={queueAllPendingIntoWorking}
                   >
-                    มัดรวมทุกใบ
+                    ใส่ทุกใบที่เหลือ
                   </button>
                 ) : null}
               </header>
               <ul className="cash-in-pending-list">
-                {pendingDepositSessions.slice(0, 12).map((s, idx) => {
+                {pendingDepositSessions.slice(0, 20).map((s, idx) => {
                   const remit = sessionRemitAmount(s) || 0;
                   const handoff = deriveRemitStatus(s);
                   const opener = (s.openedByName || "").trim();
@@ -1049,13 +1018,13 @@ export function CashInLedgerPanel({
                   return (
                     <li key={s.id} className="cash-in-bill-card">
                       <div className="cash-in-bill-card-top">
-                        <span className="cash-in-bill-tag">บิลนำส่ง #{idx + 1}</span>
+                        <span className="cash-in-bill-tag">รอใส่ #{idx + 1}</span>
                         <span className="cash-in-bill-no" title={s.id}>
                           เลข {billNo}
                         </span>
                       </div>
                       <div className="cash-in-bill-card-body">
-                        <p className="cash-in-bill-amt" aria-label="ยอดต้องโอน">
+                        <p className="cash-in-bill-amt" aria-label="ยอดบิล">
                           ฿{formatPlainNumber(remit)}
                         </p>
                         <p className="cash-in-bill-meta">
@@ -1071,17 +1040,17 @@ export function CashInLedgerPanel({
                         </p>
                         <p className="cash-in-bill-status">
                           {handoff === "handed"
-                            ? "ส่งเงินที่ร้านแล้ว · รอโอนเข้าบัญชี"
+                            ? "ส่งเงินที่ร้านแล้ว · รอโอน"
                             : handoff === "mismatch"
-                              ? "ส่งเงินไม่ตรง · ตรวจก่อนโอน"
-                              : "ยังไม่บันทึกส่งเงิน · ต้องโอนตามยอดนี้"}
+                              ? "ส่งเงินไม่ตรง · ตรวจก่อน"
+                              : "รอใส่เข้ามัดรวมโอน"}
                         </p>
                       </div>
                       <button
                         type="button"
-                        className="ghost-btn cash-in-bill-use"
-                        disabled={busy}
-                        title="ใส่บิลนี้เข้ามัดรวมรอบโอน"
+                        className="primary-btn action-in cash-in-bill-use"
+                        disabled={busy || readOnly}
+                        title="ใส่บิลนี้เข้ามัดรวม"
                         onClick={() => queueSessionIntoWorking(s)}
                       >
                         ใส่บิลนี้
@@ -1090,69 +1059,40 @@ export function CashInLedgerPanel({
                   );
                 })}
               </ul>
-              {pendingDepositSessions.length > 12 ? (
+              {pendingDepositSessions.length > 20 ? (
                 <p className="muted cash-in-pending-more">
-                  +{pendingDepositSessions.length - 12} ใบ — กดมัดรวมทุกใบ
+                  +{pendingDepositSessions.length - 20} ใบ — กดใส่ทุกใบที่เหลือ
                 </p>
               ) : null}
             </section>
+          ) : editingRound ? (
+            <p className="muted cash-in-hint">
+              ใส่บิลในมัดรวมครบแล้วจากคิวนี้ · ตรวจรายการด้านล่างแล้วแนบสลิปโอน
+            </p>
           ) : (
             <p className="muted cash-in-hint">
-              ยังไม่มีบิลนำส่งรอโอน · ปิดกะ nPos แล้วยอดจะขึ้นที่นี่อัตโนมัติ (ระบบใหม่อย่างเดียว)
+              ยังไม่มีบิลรอใส่ · ปิดกะ nPos แล้วบิลจะขึ้นที่นี่ — กด「ใส่บิลนี้」เริ่มมัดรวม
             </p>
           )}
 
-          {!readOnly ? (
-            <div className="cash-in-create-bar">
-              <label className="cash-in-create-field">
-                <span>สิ้นสุดรอบ</span>
-                <input
-                  type="date"
-                  value={createEnd}
-                  onChange={(e) => setCreateEnd(e.target.value)}
-                  disabled={busy || !!draft}
-                />
-              </label>
-              <label className="cash-in-create-field cash-in-create-days">
-                <span>วัน</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={CASH_DEPOSIT_DAY_MAX}
-                  inputMode="numeric"
-                  value={createDays}
-                  onChange={(e) => setCreateDays(e.target.value)}
-                  disabled={busy || !!draft}
-                />
-              </label>
-              <button
-                type="button"
-                className="primary-btn action-in cash-in-create-btn"
-                disabled={busy || !!draft}
-                onClick={startCreateRound}
-                title="สร้างรอบ"
-              >
-                +รอบ
-              </button>
-            </div>
-          ) : (
+          {readOnly ? (
             <p className="muted" style={{ margin: "0.35rem 0" }}>
-              พรีวิว — ดูรอบส่งเงินได้ · สร้าง/บันทึกไม่ได้
+              พรีวิว — ดูได้ · ใส่บิล/บันทึกไม่ได้
             </p>
-          )}
+          ) : null}
 
           {error ? <p className="error-text">{error}</p> : null}
 
           {/* Round chips */}
           {entries.length || draft ? (
-            <div className="cash-in-round-chips" role="tablist" aria-label="เลือกรอบ">
+            <div className="cash-in-round-chips" role="tablist" aria-label="เลือกมัดรวม">
               {draft ? (
                 <button
                   type="button"
                   className="cash-in-round-chip is-active is-draft"
                   aria-selected
                 >
-                  ร่าง {draft.dayCount} วัน
+                  ร่างมัดรวม {bundledBillCount || draft.dayCount} บิล
                 </button>
               ) : null}
               {entries.map((e) => (
@@ -1526,198 +1466,73 @@ export function CashInLedgerPanel({
                 </p>
               ) : null}
 
-              <div className="sheet-wrap cash-in-panel-table-wrap">
-                <table className="sheet-table cash-in-slim is-edit">
-                  <thead>
-                    <tr>
-                      <th className="col-round">#</th>
-                      <th className="col-date">วัน</th>
-                      <th
-                        className="col-num"
-                        title="ยอดบิลนำส่ง = เงินสดที่ต้องโอนเข้าบัญชี จากรอบปิด nPos เท่านั้น"
-                      >
-                        ยอดบิลนำส่ง
-                      </th>
-                      <th className="col-note">โน้ตวัน</th>
-                      <th className="col-slip">สลิป</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {workingDays.map((day, dayIdx) => (
-                      <tr key={day.id}>
-                        <td className="col-round">
-                          <div className="cash-in-bank-idx">
-                            <span>{dayIdx + 1}</span>
-                            {workingDays.length > 1 ? (
-                              <button
-                                type="button"
-                                className="ghost-btn danger-text cash-in-ai-reread"
-                                disabled={busy}
-                                title="ลบวันนี้จากรอบ"
-                                onClick={() => removeDay(day.id)}
-                              >
-                                ×
-                              </button>
-                            ) : null}
+              <section
+                className="cash-in-bundle-bills"
+                aria-label="บิลในมัดรวมนี้"
+              >
+                <header className="cash-in-bundle-head">
+                  <strong>บิลในมัดรวมนี้</strong>
+                  <span className="muted">
+                    {bundledBillCount} ใบ · รวม ฿{formatPlainNumber(expected)}
+                  </span>
+                </header>
+                {bundledBills.length ? (
+                  <ul className="cash-in-bundle-list">
+                    {bundledBills.map((row, idx) => {
+                      const billNo = posSessionCode(row.sessionId);
+                      const opener = (row.session?.openedByName || "").trim();
+                      return (
+                        <li key={row.sessionId} className="cash-in-bundle-row">
+                          <div className="cash-in-bundle-main">
+                            <span className="cash-in-bill-tag">#{idx + 1}</span>
+                            <span className="cash-in-bill-no" title={row.sessionId}>
+                              เลข {billNo}
+                            </span>
+                            <span className="cash-in-bundle-amt">
+                              ฿{formatPlainNumber(row.remit)}
+                            </span>
                           </div>
-                        </td>
-                        <td className="col-date">
-                          <input
-                            type="date"
-                            className="cash-in-cell-input"
-                            value={toDateInput(day.date)}
-                            onChange={(e) => {
-                              try {
-                                patchDay(day.id, {
-                                  date: parseDateInput(e.target.value),
-                                });
-                              } catch {
-                                /* ignore */
-                              }
-                            }}
-                          />
-                        </td>
-                        <td className="col-num">
-                          <div className="cash-in-cell-stack">
-                            {day.sessionIds?.length ? (
-                              <span className="cash-in-src is-staff" title="จากรอบปิด nPos">
-                                nPos
-                              </span>
-                            ) : sourceBadge(day.cashAmountSource)}
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              inputMode="decimal"
-                              className="cash-in-cell-input is-num"
-                              value={day.cashAmount ? String(day.cashAmount) : ""}
-                              placeholder="0"
-                              readOnly
-                              title="ยอดจากรอบปิด nPos เท่านั้น — กด「จากรอบ」หรือใช้บิลรอโอน"
-                            />
+                          <p className="cash-in-bill-meta">
+                            <span>{formatCashDayShort(row.date)}</span>
+                            {row.session ? (
+                              <>
+                                <span>·</span>
+                                <span>{sessionCounterLabel(row.session)}</span>
+                              </>
+                            ) : null}
+                            {opener ? (
+                              <>
+                                <span>·</span>
+                                <span>โดย {opener}</span>
+                              </>
+                            ) : null}
+                          </p>
+                          {!readOnly ? (
                             <button
                               type="button"
-                              className="ghost-btn cash-in-ai-reread"
-                              disabled={busy}
-                              title={
-                                (() => {
-                                  const matches = sessionsForCashDepositDay(
-                                    posSessions,
-                                    day.date,
-                                  ).filter((s) => !linkedSessionIds.has(s.id) || (day.sessionIds || []).includes(s.id));
-                                  const sum = sumSessionRemits(matches);
-                                  return matches.length
-                                    ? `ดึง Σ นำส่ง nPos ${matches.length} รอบ = ฿${formatPlainNumber(sum)}`
-                                    : "ดึงยอดนำส่งจากรอบปิด nPos ของวันนี้";
-                                })()
-                              }
-                              onClick={() => fillDayFromPosSessions(day.id)}
+                              className="ghost-btn danger-text cash-in-bundle-remove"
+                              disabled={busy || bundledBillCount <= 1}
+                              title="เอาบิลนี้ออกจากมัดรวม"
+                              onClick={() => removeSessionFromWorking(row.sessionId)}
                             >
-                              {day.sessionIds?.length
-                                ? `รอบ ${day.sessionIds.length}`
-                                : "จากรอบ"}
+                              เอาออก
                             </button>
-                          </div>
-                        </td>
-                        <td className="col-note">
-                          <input
-                            className="cash-in-cell-input"
-                            value={day.note || ""}
-                            maxLength={200}
-                            placeholder="โน้ต"
-                            title="ข้อความพนักงานสำหรับวันนี้"
-                            onChange={(e) =>
-                              patchDay(day.id, { note: e.target.value })
-                            }
-                          />
-                        </td>
-                        <td className="col-slip">
-                          <div className="cash-in-slip-actions is-col">
-                            <EntryPhotoIndicator
-                              imageUrls={day.slipUrls}
-                              label={formatCashDayShort(day.date)}
-                              onAdd={
-                                day.slipUrls.length === 0
-                                  ? () => openDayPhoto(day.id)
-                                  : undefined
-                              }
-                              onView={(urls) =>
-                                setImagePreview({
-                                  urls,
-                                  title: formatCashDayShort(day.date),
-                                  editTarget: { kind: "day", dayId: day.id },
-                                })
-                              }
-                            />
-                            <div className="cash-in-slip-btn-row">
-                              {day.slipUrls.length > 0 &&
-                              day.slipUrls.length < CASH_DEPOSIT_DAY_SLIP_MAX ? (
-                                <button
-                                  type="button"
-                                  className="ghost-btn cash-in-ai-reread"
-                                  disabled={busy}
-                                  onClick={() => openDayPhoto(day.id)}
-                                  title="ถ่าย/แนบรูปเพิ่ม หรือใส่ใหม่หลังลบ"
-                                >
-                                  +
-                                </button>
-                              ) : null}
-                              {day.slipUrls.length ? (
-                                <button
-                                  type="button"
-                                  className="ghost-btn danger-text cash-in-ai-reread"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    clearSlipUrls({ kind: "day", dayId: day.id })
-                                  }
-                                  title="ลบรูปทั้งหมดของวันนี้"
-                                >
-                                  ลบรูป
-                                </button>
-                              ) : null}
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <td className="col-round" colSpan={2}>
-                        รวม {workingDays.length} วัน
-                      </td>
-                      <td className="col-num">{formatPlainNumber(expected)}</td>
-                      <td colSpan={2} />
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-
-              {workingDays.length < CASH_DEPOSIT_DAY_MAX ? (
-                <div className="cash-in-day-add-bar">
-                  <button
-                    type="button"
-                    className="ghost-btn cash-in-add-transfer"
-                    disabled={busy}
-                    onClick={() => addDay("start")}
-                  >
-                    + วันก่อนหน้า
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost-btn cash-in-add-transfer"
-                    disabled={busy}
-                    onClick={() => addDay("end")}
-                  >
-                    + วันถัดไป
-                  </button>
-                </div>
-              ) : null}
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="muted cash-in-hint">
+                    ยังไม่มีบิลในมัดรวม — กด「ใส่บิลนี้」จากคิวด้านบน
+                  </p>
+                )}
+              </section>
 
               <div className="cash-in-math is-slim" aria-live="polite">
                 <span>
-                  มัดรวม {formatPlainNumber(expected)} · เข้าบช.{" "}
-                  {formatPlainNumber(workingBank)}
+                  มัดรวม {bundledBillCount} บิล · ฿{formatPlainNumber(expected)} ·
+                  เข้าบช. {formatPlainNumber(workingBank)}
                   {" · "}คชจ. {formatPlainNumber(workingFee)}
                   {bankSlipUrlCount
                     ? ` · สลิปโอน ${bankSlipUrlCount} รูป`
@@ -1730,7 +1545,7 @@ export function CashInLedgerPanel({
                   </strong>
                 </span>
                 <span className="muted cash-in-math-formula">
-                  เข้าบช. + คชจ. = มัดรวมบิล · ยอดโอนเข้าบช. = มัดรวม − คชจ. · ไม่ต้องเบิก
+                  เข้าบช. + คชจ. = มัดรวมบิล · ไม่ต้องสร้างรอบกี่วัน · ไม่ต้องเบิก
                 </span>
               </div>
 
@@ -1740,18 +1555,20 @@ export function CashInLedgerPanel({
                     <li key={`${issue.code}-${i}`}>{issue.message}</li>
                   ))}
                 </ul>
-              ) : (
-                <p className="cash-in-issues-ok">วันต่อเนื่อง ไม่ซ้ำ</p>
-              )}
+              ) : bundledBillCount ? (
+                <p className="cash-in-issues-ok">
+                  มัดรวม {bundledBillCount} บิล · ไม่ซ้ำ · พร้อมบันทึกเมื่อสลิปโอนครบ
+                </p>
+              ) : null}
 
               <div className="cash-in-round-actions">
                 <button
                   type="button"
                   className="primary-btn action-in"
-                  disabled={busy || !!coverage.issues.length}
+                  disabled={busy || !!coverage.issues.length || !bundledBillCount}
                   onClick={() => void saveWorking()}
                 >
-                  {busy ? "กำลังบันทึก..." : draft ? "บันทึกรอบ" : "บันทึกการแก้"}
+                  {busy ? "กำลังบันทึก..." : draft ? "บันทึกมัดรวม" : "บันทึกการแก้"}
                 </button>
                 <button
                   type="button"
@@ -1762,7 +1579,7 @@ export function CashInLedgerPanel({
                     setSelectedId(null);
                   }}
                 >
-                  ปิดรอบนี้
+                  ปิดมัดรวมนี้
                 </button>
                 {selected && (isOwner || selected.createdBy === actorId) ? (
                   <button
@@ -1771,7 +1588,7 @@ export function CashInLedgerPanel({
                     disabled={busy}
                     onClick={() => void onDeleteRound()}
                   >
-                    ลบรอบ
+                    ลบมัดรวม
                   </button>
                 ) : null}
               </div>
@@ -1817,14 +1634,6 @@ export function CashInLedgerPanel({
         </div>
       ) : null}
 
-      <input
-        ref={dayPhotoRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="sr-only"
-        onChange={(e) => void onPhotoFiles(e.target.files)}
-      />
       <input
         ref={bankPhotoRef}
         type="file"
