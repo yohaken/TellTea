@@ -63,17 +63,17 @@ assert.match(slim, /labelRemitStatus/);
 assert.match(slim, /ยอดต้องโอนใช้รอบ nPos อย่างเดียว/);
 
 const panel = read("src/components/CashInLedgerPanel.tsx");
-assert.match(panel, /fillDayFromPosSessions/);
-assert.match(panel, /จากรอบ/);
+assert.match(panel, /queueSessionIntoWorking|mergeSessionsIntoDays/);
 assert.match(panel, /sessionIds/);
 assert.match(panel, /cash-in-pending-rounds/);
-assert.match(panel, /บิลนำส่งรอโอน|cash-in-bill-card/);
-assert.match(panel, /ใส่บิลนี้|มัดรวมทุกใบ/);
-assert.match(panel, /1 ใบ = 1 รอบปิด nPos/);
-assert.match(panel, /ยอดบิลนำส่ง/);
+assert.match(panel, /cash-in-bill-card/);
+assert.match(panel, /ใส่บิลนี้/);
+assert.match(panel, /บิลในมัดรวมนี้|cash-in-bundle-bills/);
+assert.match(panel, /เอาออก|removeSessionFromWorking/);
 assert.match(panel, /assertCashDepositDaysNposLinked/);
 assert.match(panel, /suggestedNetBankTransfer|มัดรวม − คชจ|มัดรวม−คชจ/);
 assert.match(panel, /ไม่ต้องเบิก/);
+assert.doesNotMatch(panel, /\+รอบ|cash-in-create-bar/);
 assert.doesNotMatch(panel, /runAiDay|extractCashDaySlipFromPhotos/);
 
 const remitOnly = read("src/lib/pos-session-remit.ts");

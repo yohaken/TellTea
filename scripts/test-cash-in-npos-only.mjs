@@ -14,7 +14,7 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 const version = read("src/lib/version.ts");
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 651, `APP_BUILD >= 651, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 652, `APP_BUILD >= 652, got ${buildMatch[1]}`);
 
 const remit = read("src/lib/pos-session-remit.ts");
 assert.match(remit, /CASH_IN_NPOS_REMIT_ONLY\s*=\s*true/);
@@ -27,20 +27,23 @@ assert.match(cash, /export function assertCashDepositDaysNposLinked/);
 
 const panel = read("src/components/CashInLedgerPanel.tsx");
 assert.match(panel, /assertCashDepositDaysNposLinked/);
-assert.match(panel, /จากรอบปิด nPos เท่านั้น/);
-assert.match(panel, /มัดรวมทุกใบ|มัดรวมหลายใบ/);
+assert.match(panel, /ใส่บิลนี้/);
+assert.match(panel, /บิลในมัดรวมนี้|cash-in-bundle-bills/);
+assert.match(panel, /ใส่ทุกใบที่เหลือ|queueAllPendingIntoWorking/);
+assert.match(panel, /โอนเงินนำเข้า/);
 assert.match(panel, /ไม่ต้องเบิก/);
-assert.match(panel, /readOnly/);
+assert.doesNotMatch(panel, /\+รอบ|startCreateRound|cash-in-create-bar/);
+assert.doesNotMatch(panel, /\+ วันก่อนหน้า|\+ วันถัดไป/);
 assert.doesNotMatch(panel, /runAiDay|extractCashDaySlipFromPhotos/);
-assert.match(panel, /evidence only|ยอดบิลนำส่งกด/);
 assert.match(cash, /suggestedNetBankTransfer/);
+assert.match(cash, /allowGaps/);
 
 const slim = read("src/components/PosSessionsSlimTable.tsx");
 assert.match(slim, /CASH_IN_NPOS_REMIT_ONLY/);
 assert.match(slim, /ยอดต้องโอนใช้รอบ nPos อย่างเดียว/);
 
 const doc = read("docs/npos-remit-rounds-phases.md");
-assert.match(doc, /CASH_IN_NPOS_REMIT_ONLY|nPos only|nPos-only/);
+assert.match(doc, /ใส่บิลนี้|มัดรวม|CASH_IN_NPOS_REMIT_ONLY|nPos-only/);
 
 const runner = `
 import assert from "node:assert/strict";

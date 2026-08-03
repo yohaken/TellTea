@@ -502,8 +502,8 @@ export type CashDayCoverage = {
 };
 
 /**
- * 1 บิล = 1 วันปฏิทิน · รอบยืดหยุ่น (5/7/10…)
- * ตรวจ: ซ้ำในรอบ · ข้ามวัน · ชนกับรอบอื่น · เกินวันในเดือน
+ * มัดรวมบิล nPos · วันอาจไม่ต่อเนื่องได้เมื่อ allowGaps (ค่าเริ่มต้น true)
+ * ตรวจ: ว่าง · ยอดติดลบ · วันซ้ำในรอบ · ชนรอบอื่น · เกินวันในเดือน
  */
 export function analyzeCashDepositDays(
   days: Pick<CashDepositDayLine, "date" | "cashAmount">[],
@@ -513,27 +513,38 @@ export function analyzeCashDepositDays(
     excludeDepositId?: string;
     /** Other deposits' day keys by month for month-cap (excluding self) */
     occupiedMonthCounts?: Map<string, number>;
+    /**
+     * false = บังคับวันต่อเนื่องแบบระบบเดิม
+     * true/omit = มัดรวมบิลข้ามวันได้ (ค่าเริ่มต้น)
+     */
+    allowGaps?: boolean;
   },
 ): CashDayCoverage {
   const issues: CashDayIssue[] = [];
   if (!days.length) {
-    issues.push({ code: "empty", message: "ต้องมีอย่างน้อย 1 วันจากสลิป POS" });
+    issues.push({ code: "empty", message: "ต้องมีอย่างน้อย 1 บิลนำส่งในมัดรวม" });
     return { issues, sortedDates: [], periodStart: 0, periodEnd: 0, dayCount: 0 };
   }
   if (days.length > CASH_DEPOSIT_DAY_MAX) {
     issues.push({
       code: "too_long",
-      message: `รอบหนึ่งใส่ได้สูงสุด ${CASH_DEPOSIT_DAY_MAX} วัน (เท่าเดือนที่ยาวที่สุด)`,
+      message: `มัดรวมหนึ่งมีได้สูงสุด ${CASH_DEPOSIT_DAY_MAX} วัน`,
     });
   }
 
   if (days.some((day) => !day.date)) {
-    issues.push({ code: "empty", message: "ต้องใส่วันที่บนสลิปทุกแถว" });
+    issues.push({ code: "empty", message: "ทุกบิลต้องมีวันที่รอบขาย" });
   }
-  if (days.some((day) => !(Number(day.cashAmount) > 0))) {
+  if (days.some((day) => Number(day.cashAmount) < 0)) {
     issues.push({
       code: "bad_amount",
-      message: "ยอดเงินสดในสลิปต้องมากกว่า 0 ทุกวัน",
+      message: "ยอดบิลนำส่งติดลบไม่ได้",
+    });
+  }
+  if (!days.some((day) => Number(day.cashAmount) > 0)) {
+    issues.push({
+      code: "bad_amount",
+      message: "มัดรวมต้องมียอดบิลนำส่งรวมมากกว่า 0 — กด「ใส่บิลนี้」",
     });
   }
 
@@ -546,7 +557,7 @@ export function analyzeCashDepositDays(
     if (count > 1) {
       issues.push({
         code: "duplicate",
-        message: `บิลซ้ำวันที่ ${formatCashDayShort(key)} — หนึ่งวันมีได้ใบเดียว`,
+        message: `วันซ้ำ ${formatCashDayShort(key)} ในมัดรวม — รวมบิลวันเดียวกันไว้แถวเดียว`,
         dateMs: key,
       });
     }
@@ -556,7 +567,7 @@ export function analyzeCashDepositDays(
   const periodStart = sortedDates[0] || 0;
   const periodEnd = sortedDates[sortedDates.length - 1] || 0;
 
-  if (sortedDates.length >= 2) {
+  if (opts?.allowGaps === false && sortedDates.length >= 2) {
     const expected = calendarDaysInclusive(periodStart, periodEnd);
     const have = new Set(sortedDates);
     const missing = expected.filter((d) => !have.has(d));

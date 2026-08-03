@@ -15,13 +15,13 @@ const rules = readFileSync(join(root, "firestore.rules"), "utf8");
 
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 651, `APP_BUILD >= 651, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 652, `APP_BUILD >= 652, got ${buildMatch[1]}`);
 assert.match(lib, /CASH_DEPOSIT_DAY_MAX = 31/);
 assert.match(lib, /export function analyzeCashDepositDays/);
 assert.match(lib, /export function buildCashDepositRoundDays/);
 assert.match(lib, /drawerCloseAmount/);
-assert.match(lib, /ข้ามวัน|บิลซ้ำ|month_overflow/);
-assert.match(panel, /สร้างรอบ/);
+assert.match(lib, /allowGaps|ข้ามวัน|month_overflow/);
+assert.match(panel, /ใส่บิลนี้|cash-in-bundle-bills/);
 assert.match(panel, /cash-in-slim/);
 assert.match(panel, /cash-in-issues/);
 assert.match(rules, /days\.size\(\) <= 31/);
@@ -56,8 +56,14 @@ const gapDays = [
   { date: addCalendarDays(end, -2), cashAmount: 10 },
   { date: end, cashAmount: 10 },
 ];
-const gap = analyzeCashDepositDays(gapDays);
-assert.ok(gap.issues.some((i) => i.code === "gap"));
+// Default: มัดรวมบิลข้ามวันได้
+const gapOk = analyzeCashDepositDays(gapDays);
+assert.equal(gapOk.issues.filter((i) => i.code === "gap").length, 0);
+const gapStrict = analyzeCashDepositDays(gapDays, { allowGaps: false });
+assert.ok(gapStrict.issues.some((i) => i.code === "gap"));
+// ยอด 0 ทั้งมัดรวม → bad_amount
+const zeroOnly = analyzeCashDepositDays([{ date: end, cashAmount: 0 }]);
+assert.ok(zeroOnly.issues.some((i) => i.code === "bad_amount"));
 
 const occupied = buildCashDepositOccupancy([
   {
