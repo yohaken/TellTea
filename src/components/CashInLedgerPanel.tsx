@@ -748,18 +748,62 @@ export function CashInLedgerPanel({
     }
   }
 
-  function refreshBankAmountForBundle(nextDays: CashDepositDayLine[]) {
-    const bundle = sumCashDepositDays(nextDays);
-    if (workingTransfers.length !== 1) return;
-    const only = workingTransfers[0]!;
-    const prevSuggested = suggestedNetBankTransfer(expected, only.fee);
+  /** Auto-fill เข้าบช. when single slip still looks auto — pure, no setState */
+  function withRefreshedBankAmount(
+    transfers: CashDepositBankTransfer[],
+    nextDays: CashDepositDayLine[],
+    prevExpected: number,
+  ): CashDepositBankTransfer[] {
+    if (transfers.length !== 1) return transfers;
+    const only = transfers[0]!;
+    const prevSuggested = suggestedNetBankTransfer(prevExpected, only.fee);
     const amountLooksAuto =
       !(Number(only.amount) > 0) ||
       Math.abs((Number(only.amount) || 0) - prevSuggested) < 0.005 ||
       only.amountSource !== "staff";
-    if (!amountLooksAuto) return;
+    if (!amountLooksAuto) return transfers;
+    const bundle = sumCashDepositDays(nextDays);
     const net = suggestedNetBankTransfer(bundle, only.fee);
-    patchTransfer(only.id, { amount: net });
+    return [{ ...only, amount: net, amountSource: "staff" }];
+  }
+
+  /**
+   * Apply day-bundle change in one setState — avoids setDays + patchTransfer
+   * racing and wiping the newly ticked bill (needed 2 taps on bill 2+).
+   */
+  function applyWorkingDays(nextDays: CashDepositDayLine[]) {
+    const sorted = [...nextDays].sort((a, b) => a.date - b.date);
+    const prevExpected = expected;
+    if (draft) {
+      setDraft((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          days: sorted,
+          dayCount: sorted.length,
+          bankTransfers: withRefreshedBankAmount(
+            prev.bankTransfers,
+            sorted,
+            prevExpected,
+          ),
+        };
+      });
+      return;
+    }
+    const nextTransfers = withRefreshedBankAmount(
+      editBankTransfers,
+      sorted,
+      prevExpected,
+    );
+    setEditDays(sorted);
+    if (nextTransfers !== editBankTransfers) {
+      setEditBankTransfers(nextTransfers);
+    }
+  }
+
+  /** @deprecated keep name for gates — delegates to applyWorkingDays */
+  function refreshBankAmountForBundle(nextDays: CashDepositDayLine[]) {
+    applyWorkingDays(nextDays);
   }
 
   function mergeSessionsIntoDays(
@@ -840,8 +884,7 @@ export function CashInLedgerPanel({
       setError(`ซ้ำ ${posSessionCode(session.id)}`);
       return;
     }
-    setDays(nextDays);
-    refreshBankAmountForBundle(nextDays);
+    applyWorkingDays(nextDays);
     setError(null);
     setAiHint(
       `+${posSessionCode(session.id)} · ${workingSessionIds.size + added} บิล`,
@@ -862,8 +905,7 @@ export function CashInLedgerPanel({
       setError("ครบแล้ว");
       return;
     }
-    setDays(nextDays);
-    refreshBankAmountForBundle(nextDays);
+    applyWorkingDays(nextDays);
     setError(null);
     setAiHint(
       `+${added}` + (skipped ? ` · ซ้ำ ${skipped}` : "") + ` · รวม ${workingSessionIds.size + added}`,
@@ -954,8 +996,7 @@ export function CashInLedgerPanel({
       setError("มัดรวมต้องมีอย่างน้อย 1 บิล");
       return;
     }
-    setDays(nextDays);
-    refreshBankAmountForBundle(nextDays);
+    applyWorkingDays(nextDays);
     setError(null);
     setAiHint(`−${posSessionCode(id)}`);
   }

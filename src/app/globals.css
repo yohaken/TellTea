@@ -23009,9 +23009,9 @@ a.ghost-btn {
 }
 
 .cash-in-summary-bar {
-  position: sticky;
-  bottom: 0.35rem;
-  z-index: 3;
+  /* not sticky — sticky-bottom was covering bill cards 2+ on mobile */
+  position: relative;
+  z-index: 1;
   margin: 0.45rem 0 0.55rem;
   padding: 0.55rem 0.55rem;
   border-radius: 0.45rem;
