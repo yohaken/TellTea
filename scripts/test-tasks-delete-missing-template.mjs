@@ -13,8 +13,7 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 const occ = read("src/lib/task-occurrences.ts");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = \d+/);
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 563);
+assert.match(version, /APP_BUILD = 563/);
 assert.match(occ, /sanitizeTaskTemplateId/);
 assert.match(occ, /resolveExistingTaskTemplateRef/);
 assert.match(occ, /commitOpenOccurrenceDeletes/);

@@ -441,8 +441,8 @@ export function newChecklistItemId() {
 }
 
 export function validateTaskCompleteInput(input: {
-  checklist: TaskChecklistItem[];
-  checkedIds: string[];
+  checklist?: TaskChecklistItem[];
+  checkedIds?: string[];
   proofImg?: string;
   proofImgs?: string[];
 }): string | null {
@@ -453,11 +453,36 @@ export function validateTaskCompleteInput(input: {
     .map((u) => u.trim())
     .filter(Boolean);
   if (!proofs.length) return "แนบรูปหลักฐานก่อนส่งงาน";
-  const set = new Set(input.checkedIds);
-  if (!input.checklist.every((item) => set.has(item.id))) {
-    return "ติ๊ก checklist ให้ครบทุกข้อก่อนส่ง";
-  }
+  // เลิกบังคับติ๊กเช็คลิสย่อย — ใช้โนตความคืบแทน
   return null;
+}
+
+export function newProgressNoteId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `pn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function formatTaskProgressNotesPreview(
+  notes:
+    | { text?: string; createdByName?: string; createdAt?: number }[]
+    | undefined,
+  max = 2,
+): string {
+  const rows = Array.isArray(notes) ? [...notes] : [];
+  if (!rows.length) return "";
+  rows.sort((a, b) => (Number(a.createdAt) || 0) - (Number(b.createdAt) || 0));
+  return rows
+    .slice(-max)
+    .map((n) => {
+      const who = String(n.createdByName || "").trim();
+      const text = String(n.text || "").trim();
+      if (!text) return "";
+      return who ? `${who}: ${text}` : text;
+    })
+    .filter(Boolean)
+    .join(" · ");
 }
 
 export const TASK_PROOF_MAX = 6;

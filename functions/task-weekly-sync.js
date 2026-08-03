@@ -207,9 +207,75 @@ function computeSyncOperations(templates, occurrences, now = Date.now()) {
 }
 
 async function runSyncWithAdmin(db) {
-  // ยกเลิกระบบ checklist / งานมอบหมายรอบสัปดาห์ — ใช้กระดานโนต taskBoardNotes แทน
-  void db;
-  return { created: 0, markedMissed: 0, deletedDupes: 0, cancelled: true };
+  const now = Date.now();
+  const tplSnap = await db.collection("taskTemplates").where("active", "==", true).get();
+  const templates = tplSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (!templates.length) return { created: 0, markedMissed: 0, deletedDupes: 0 };
+
+  const occSnap = await db.collection("taskOccurrences").get();
+  const occurrences = occSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const { create, markMissed, deleteDupes } = computeSyncOperations(
+    templates,
+    occurrences,
+    now,
+  );
+
+  let batch = db.batch();
+  let ops = 0;
+  const commit = async () => {
+    if (ops > 0) {
+      await batch.commit();
+      batch = db.batch();
+      ops = 0;
+    }
+  };
+
+  for (const op of deleteDupes) {
+    batch.delete(db.collection("taskOccurrences").doc(op.occurrenceId));
+    ops += 1;
+    if (ops >= 400) await commit();
+  }
+
+  for (const op of create) {
+    const ref = db.collection("taskOccurrences").doc(
+      occurrenceDocId(op.templateId, op.periodKey),
+    );
+    batch.set(ref, {
+      templateId: op.templateId,
+      periodKey: op.periodKey,
+      title: op.title,
+      note: op.note,
+      checklist: op.checklist,
+      assigneeIds: op.assigneeIds,
+      assigneeNames: op.assigneeNames,
+      dueDate: op.dueDate,
+      openAt: op.openAt,
+      status: "pending",
+      checklistDone: [],
+      progressNotes: [],
+      proofImg: "",
+      createdAt: now,
+      updatedAt: now,
+    });
+    ops += 1;
+    if (ops >= 400) await commit();
+  }
+
+  for (const op of markMissed) {
+    batch.update(db.collection("taskOccurrences").doc(op.occurrenceId), {
+      status: "missed",
+      updatedAt: now,
+    });
+    ops += 1;
+    if (ops >= 400) await commit();
+  }
+
+  await commit();
+  return {
+    created: create.length,
+    markedMissed: markMissed.length,
+    deletedDupes: deleteDupes.length,
+  };
 }
 
 module.exports = {

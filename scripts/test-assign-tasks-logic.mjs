@@ -1,6 +1,5 @@
 /**
  * Weekly task logic + wiring tests.
- * UI now uses note board; checklist sync is cancelled.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -68,14 +67,13 @@ assert.equal(shouldMarkMissed(dueMon, mon21, 3), true);
 const pageSrc = readFileSync(join(root, "src/app/tasks/page.tsx"), "utf8");
 const rulesSrc = readFileSync(join(root, "firestore.rules"), "utf8");
 const fnSrc = readFileSync(join(root, "functions/index.js"), "utf8");
-const cfSrc = readFileSync(join(root, "functions/task-weekly-sync.js"), "utf8");
 
-assert.match(pageSrc, /TaskBoardNotesView/);
-assert.doesNotMatch(pageSrc, /subscribeTaskTemplates/);
+assert.match(pageSrc, /subscribeTaskTemplates/);
+assert.match(pageSrc, /subscribeTaskOccurrences/);
+assert.match(pageSrc, /subscribeTaskOccurrencesForAssignee/);
+assert.match(pageSrc, /runTaskOccurrenceSync/);
 assert.match(rulesSrc, /match \/taskTemplates\/\{id\}/);
 assert.match(rulesSrc, /match \/taskOccurrences\/\{id\}/);
-assert.match(rulesSrc, /match \/taskBoardNotes\/\{id\}/);
 assert.match(fnSrc, /syncTaskOccurrencesDaily/);
-assert.match(cfSrc, /cancelled: true/);
 
-console.log("OK weekly task logic + note-board wiring");
+console.log("OK weekly task logic + wiring");

@@ -56,7 +56,7 @@ Checklist สิทธิ์หลังร้าน (TellTea). เป้าห�
 ## Phase 9 — ทำความสะอาด ✅
 
 - [x] `assignTasks` เอาออกจากกลุ่มสิทธิ์ UI · collection legacy ห้ามเขียน
-- [x] แท็บงานยัง `signedIn` → `/tasks/` (กระดานโนตพนักงาน+เจ้าของ · ยกเลิก checklist)
+- [x] แท็บงานยัง `signedIn` → `/tasks/` (weekly tasks · โนตความคืบแทนเช็คลิสย่อย)
 - [x] `isOwnerEmail` hardcode คงไว้คู่ `role==owner` (bootstrap / VAT mentor) — เอกสารนี้
 - [x] static rules guards: `test:firestore-rules` + `test:staff-rbac` (ไม่มี emulator ใน repo)
 

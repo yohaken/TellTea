@@ -50,7 +50,7 @@
     "test:bonus-evidence-viewer": "node scripts/test-bonus-evidence-viewer.mjs",
     "test:bonus-evidence-viewer-live": "node scripts/test-bonus-evidence-viewer-live.mjs",
     "test:staff-task-nudge": "node scripts/test-staff-task-nudge.mjs",
-    "test:task-board-notes": "node scripts/test-task-board-notes.mjs",
+    "test:task-progress-notes": "node scripts/test-task-progress-notes.mjs",
     "test:task-owner-timeline": "node scripts/test-task-owner-timeline.mjs",
     "test:ledger-asset-type-bar": "node scripts/test-ledger-asset-type-bar.mjs",
     "test:pnl-exvat-cost": "node scripts/test-pnl-exvat-cost.mjs",

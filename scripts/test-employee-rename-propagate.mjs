@@ -16,8 +16,7 @@ const prod = read("src/app/production/page.tsx");
 const tasks = read("src/app/tasks/page.tsx");
 const version = read("src/lib/version.ts");
 
-assert.match(version, /APP_BUILD = \d+/);
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 528);
+assert.match(version, /APP_BUILD = 528/);
 assert.match(prop, /propagateEmployeeRename/);
 assert.match(prop, /rewriteAlignedNames/);
 assert.match(prop, /resolveWorkerDisplayNames/);
@@ -31,9 +30,7 @@ assert.match(emp, /propagateEmployeeRename/);
 assert.match(emp, /rename propagate/);
 assert.match(ot, /resolveWorkerDisplayNames/);
 assert.match(prod, /resolveWorkerDisplayNames/);
-// /tasks/ เป็นกระดานโนต — ไม่ resolve ชื่อ assignee แล้ว
-assert.match(tasks, /TaskBoardNotesView/);
-assert.doesNotMatch(tasks, /resolveWorkerDisplayNames/);
+assert.match(tasks, /resolveWorkerDisplayNames/);
 
 function rewriteAlignedNames(ids, names, employeeId, newName, oldNames = []) {
   const nextName = newName.trim();

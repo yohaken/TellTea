@@ -19,9 +19,7 @@ const version = read("src/lib/version.ts");
 const ledger = read("src/app/ledger/page.tsx");
 const ownerBooks = read("src/app/owner-books/page.tsx");
 
-assert.match(version, /APP_BUILD = \d+/);
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 633);
-assert.match(lib, /label: "กระดานโนต"/);
+assert.match(version, /APP_BUILD = 633/);
 assert.match(lib, /OWNER_QUICK_KEYS/);
 assert.match(lib, /DEFAULT_OWNER_QUICK_KEYS/);
 assert.match(lib, /ownerQuickKeys/);

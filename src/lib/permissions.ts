@@ -26,7 +26,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   production: "ผลิต / โบนัสเบเกอรี่",
   otBonus: "โบนัสชง",
   checklist: "SmartCheck SOP",
-  assignTasks: "กระดานโนต (เลิกใช้สิทธิ์แยก — แท็บงานเปิดให้ทุกคนที่ล็อกอิน)",
+  assignTasks: "งานมอบหมาย (เลิกใช้ — แท็บงานเปิดให้ทุกคนที่ล็อกอิน)",
   bonus: "จ่าย / โบนัส",
   ownerBooks: "บช.เจ้าของ",
   pnl: "สรุปรายเดือน",

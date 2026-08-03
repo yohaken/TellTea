@@ -11535,193 +11535,10 @@ body.modal-open .main-panel {
   font-size: 0.66rem;
 }
 
-/* ── Assigned tasks (/tasks/) — กระดานโนต ── */
+/* ── Assigned tasks (/tasks/) ── */
 .tasks-page-hint {
   margin: 0.15rem 0 0;
   font-size: 0.72rem;
-}
-
-.task-board-page .task-board-view {
-  margin-top: 0.35rem;
-}
-
-.task-board-compose {
-  display: grid;
-  gap: 0.35rem;
-  margin: 0 0 0.45rem;
-}
-
-.task-board-input {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  margin: 0;
-  padding: 0.55rem 0.65rem;
-  border: 1px solid rgba(28, 42, 31, 0.14);
-  border-radius: 0.55rem;
-  background: rgba(255, 255, 255, 0.92);
-  font: inherit;
-  font-size: 0.84rem;
-  line-height: 1.35;
-  resize: vertical;
-  min-height: 3.2rem;
-}
-
-.task-board-input:focus {
-  outline: none;
-  border-color: rgba(87, 15, 15, 0.35);
-  background: #fff;
-}
-
-.task-board-compose-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.task-board-compose-meta {
-  font-size: 0.65rem;
-}
-
-.task-board-send {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  min-height: 2rem;
-  padding: 0.3rem 0.75rem;
-  font-size: 0.78rem;
-}
-
-.task-board-status {
-  margin: 0.35rem 0;
-  font-size: 0.72rem;
-}
-
-.task-board-page .sheet-wrap.task-board-sheet {
-  margin-top: 0;
-  background: rgba(255, 255, 255, 0.92);
-}
-
-.task-board-page .task-board-table {
-  table-layout: fixed;
-  width: 100%;
-}
-
-.task-board-page .task-board-table .sheet-table--dense th,
-.task-board-page .task-board-table.sheet-table--dense th,
-.task-board-page .task-board-table.sheet-table--dense td {
-  padding: 0.28rem 0.35rem;
-  line-height: 1.25;
-  vertical-align: top;
-}
-
-.task-board-page .tb-col-when {
-  width: 5.6rem;
-  min-width: 5.2rem;
-  max-width: 6.2rem;
-  font-size: 0.62rem;
-  font-variant-numeric: tabular-nums;
-  color: rgba(28, 42, 31, 0.55);
-  white-space: nowrap;
-}
-
-.task-board-page .tb-col-who {
-  width: 6.4rem;
-  min-width: 5.5rem;
-  max-width: 7.5rem;
-}
-
-.task-board-page .tb-col-text {
-  width: auto;
-  text-align: left;
-}
-
-.task-board-page .tb-col-act {
-  width: 1.5rem;
-  min-width: 1.45rem;
-  max-width: 1.55rem;
-  text-align: center;
-  padding-left: 0;
-  padding-right: 0.1rem;
-}
-
-.task-board-role {
-  display: block;
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  line-height: 1.2;
-}
-
-.task-board-role.is-owner {
-  color: rgba(87, 15, 15, 0.85);
-}
-
-.task-board-role.is-staff {
-  color: rgba(28, 42, 31, 0.55);
-}
-
-.task-board-name {
-  display: block;
-  font-size: 0.68rem;
-  font-weight: 600;
-  line-height: 1.25;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.task-board-text {
-  display: block;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 0.78rem;
-  line-height: 1.35;
-}
-
-.task-board-empty {
-  text-align: center;
-  color: rgba(28, 42, 31, 0.45);
-  font-size: 0.74rem;
-  padding: 0.85rem 0.4rem !important;
-}
-
-.task-board-del {
-  min-width: 1.2rem;
-  min-height: 1.2rem;
-  padding: 0;
-  line-height: 1;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: rgba(28, 42, 31, 0.4);
-}
-
-.task-board-del:hover {
-  color: rgba(160, 40, 40, 0.9);
-}
-
-.task-board-row.is-owner .tb-col-text {
-  background: rgba(87, 15, 15, 0.03);
-}
-
-@media (max-width: 640px) {
-  .task-board-page .tb-col-when {
-    width: 4.4rem;
-    font-size: 0.56rem;
-  }
-
-  .task-board-page .tb-col-who {
-    width: 4.8rem;
-  }
-
-  .task-board-name {
-    font-size: 0.62rem;
-  }
-
-  .task-board-text {
-    font-size: 0.74rem;
-  }
 }
 
 .tasks-link-banner {
@@ -12108,6 +11925,90 @@ body.modal-open .main-panel {
   gap: 0.25rem;
   font-size: 0.74rem;
   margin-top: 0.15rem;
+}
+
+.tasks-progress-notes {
+  margin-top: 0.2rem;
+}
+
+.tasks-progress-list {
+  list-style: none;
+  margin: 0.25rem 0 0.4rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 12rem;
+  overflow: auto;
+}
+
+.tasks-progress-empty {
+  margin: 0;
+  padding: 0.45rem 0.2rem;
+  font-size: 0.74rem;
+}
+
+.tasks-progress-item {
+  position: relative;
+  margin: 0;
+  padding: 0.4rem 1.6rem 0.4rem 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(28, 42, 31, 0.1);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.tasks-progress-item.is-owner {
+  border-color: rgba(87, 15, 15, 0.16);
+  background: rgba(87, 15, 15, 0.04);
+}
+
+.tasks-progress-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.55rem;
+  align-items: baseline;
+  font-size: 0.62rem;
+  color: rgba(28, 42, 31, 0.55);
+}
+
+.tasks-progress-who {
+  font-weight: 700;
+}
+
+.tasks-progress-text {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tasks-progress-del {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.15rem;
+  min-width: 1.2rem;
+  min-height: 1.2rem;
+  padding: 0;
+  line-height: 1;
+  font-size: 0.95rem;
+  color: rgba(28, 42, 31, 0.4);
+}
+
+.tasks-progress-compose {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.tasks-progress-send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  justify-self: end;
+  min-height: 2rem;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
 }
 
 .tasks-check-submit {

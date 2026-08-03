@@ -3,6 +3,19 @@ export type TaskChecklistItem = {
   label: string;
 };
 
+/** โนตความคืบในรอบงาน — แทนเช็คลิสย่อย · พนักงาน+เจ้าของโพสต์ได้ */
+export type TaskProgressNote = {
+  id: string;
+  text: string;
+  createdBy: string;
+  createdByName: string;
+  authorRole: "owner" | "staff";
+  createdAt: number;
+};
+
+export const TASK_PROGRESS_NOTE_MAX = 280;
+export const TASK_PROGRESS_NOTES_MAX = 80;
+
 /**
  * soft = แจ้งเบาๆ (ปิดได้ · ไม่เน้นเส้นตาย)
  * deadline = ต้องทำตามกำหนด (โชว์วันครบ · แถบค้างชัด)
@@ -45,6 +58,8 @@ export type TaskOccurrence = {
   status: TaskOccurrenceStatus;
   nudgeKind: TaskNudgeKind;
   checklistDone: string[];
+  /** กระดานโนตความคืบในรอบนี้ (แทนติ๊ก checklist ย่อย) */
+  progressNotes: TaskProgressNote[];
   proofImg?: string;
   /** รูปหลักฐานหลายรูป — ถ้าว่างใช้ proofImg */
   proofImgs?: string[];

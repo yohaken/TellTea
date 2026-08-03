@@ -16,11 +16,15 @@ import { getDb } from "./firebase";
 import { daysAgoMs } from "./query-window";
 import {
   normalizeTaskNudgeKind,
+  TASK_PROGRESS_NOTE_MAX,
+  TASK_PROGRESS_NOTES_MAX,
   type TaskOccurrence,
   type TaskOccurrenceStatus,
+  type TaskProgressNote,
 } from "./task-types";
 import {
   computeCompletedKind,
+  newProgressNoteId,
   occurrenceDocId,
   type SyncCreateOp,
   type SyncDeleteOp,
@@ -44,6 +48,31 @@ function occurrencesCol() {
 function normalizeOccurrenceStatus(raw: unknown): TaskOccurrenceStatus {
   if (raw === "waiting" || raw === "completed" || raw === "missed") return raw;
   return "pending";
+}
+
+export function mapTaskProgressNotes(raw: unknown): TaskProgressNote[] {
+  if (!Array.isArray(raw)) return [];
+  const out: TaskProgressNote[] = [];
+  for (const row of raw) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const text = typeof r.text === "string" ? r.text.trim() : "";
+    if (!text) continue;
+    out.push({
+      id:
+        typeof r.id === "string" && r.id.trim()
+          ? r.id.trim()
+          : newProgressNoteId(),
+      text: text.slice(0, TASK_PROGRESS_NOTE_MAX),
+      createdBy: typeof r.createdBy === "string" ? r.createdBy : "",
+      createdByName:
+        typeof r.createdByName === "string" ? r.createdByName.trim() : "",
+      authorRole: r.authorRole === "owner" ? "owner" : "staff",
+      createdAt: typeof r.createdAt === "number" ? r.createdAt : 0,
+    });
+  }
+  out.sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
+  return out.slice(-TASK_PROGRESS_NOTES_MAX);
 }
 
 function mapOccurrence(id: string, data: Record<string, unknown>): TaskOccurrence {
@@ -70,6 +99,7 @@ function mapOccurrence(id: string, data: Record<string, unknown>): TaskOccurrenc
     status: normalizeOccurrenceStatus(data.status),
     nudgeKind: normalizeTaskNudgeKind(data.nudgeKind),
     checklistDone,
+    progressNotes: mapTaskProgressNotes(data.progressNotes),
     proofImg: data.proofImg ? String(data.proofImg) : undefined,
     proofImgs: Array.isArray(data.proofImgs)
       ? (data.proofImgs as string[]).map(String).filter((u) => u.trim())
@@ -170,6 +200,7 @@ export async function applySyncOperations(
       status: "pending",
       nudgeKind: normalizeTaskNudgeKind(op.nudgeKind),
       checklistDone: [],
+      progressNotes: [],
       proofImg: "",
       createdAt: now,
       updatedAt: now,
@@ -231,7 +262,7 @@ function getExistingProofs(occ: TaskOccurrence): string[] {
 export async function completeTaskOccurrence(
   occ: TaskOccurrence,
   patch: {
-    checklistDone: string[];
+    checklistDone?: string[];
     proofImg?: string;
     proofImgs?: string[];
     completionNote?: string;
@@ -244,7 +275,7 @@ export async function completeTaskOccurrence(
   const proofImgs = normalizeProofImgs(patch);
   const completionNote = (patch.completionNote || "").trim().slice(0, 280);
   await updateDoc(doc(getDb(), "taskOccurrences", occ.id), {
-    checklistDone: patch.checklistDone,
+    checklistDone: patch.checklistDone || occ.checklistDone || [],
     proofImg: proofImgs[0] || "",
     proofImgs,
     completionNote,
@@ -254,6 +285,50 @@ export async function completeTaskOccurrence(
     completedKind,
     wasMissedBeforeBackfill: wasMissed,
     updatedAt: now,
+  });
+}
+
+export async function addTaskProgressNote(
+  occ: TaskOccurrence,
+  input: {
+    text: string;
+    createdBy: string;
+    createdByName: string;
+    authorRole: "owner" | "staff";
+  },
+): Promise<TaskProgressNote> {
+  const text = String(input.text || "").trim().slice(0, TASK_PROGRESS_NOTE_MAX);
+  if (!text) throw new Error("ใส่ข้อความความคืบก่อน");
+  if (!input.createdBy) throw new Error("เข้าสู่ระบบก่อนโพสต์โนต");
+  const existing = mapTaskProgressNotes(occ.progressNotes);
+  if (existing.length >= TASK_PROGRESS_NOTES_MAX) {
+    throw new Error(`โนตเต็มแล้ว (สูงสุด ${TASK_PROGRESS_NOTES_MAX})`);
+  }
+  const note: TaskProgressNote = {
+    id: newProgressNoteId(),
+    text,
+    createdBy: input.createdBy,
+    createdByName: String(input.createdByName || "").trim() || "ไม่ระบุชื่อ",
+    authorRole: input.authorRole === "owner" ? "owner" : "staff",
+    createdAt: Date.now(),
+  };
+  await updateDoc(doc(getDb(), "taskOccurrences", occ.id), {
+    progressNotes: arrayUnion(note),
+    updatedAt: Date.now(),
+  });
+  return note;
+}
+
+export async function deleteTaskProgressNote(
+  occ: TaskOccurrence,
+  noteId: string,
+): Promise<void> {
+  const id = String(noteId || "").trim();
+  if (!id) throw new Error("ไม่พบโนต");
+  const next = mapTaskProgressNotes(occ.progressNotes).filter((n) => n.id !== id);
+  await updateDoc(doc(getDb(), "taskOccurrences", occ.id), {
+    progressNotes: next,
+    updatedAt: Date.now(),
   });
 }
 

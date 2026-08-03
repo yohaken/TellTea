@@ -68,10 +68,10 @@ export async function createTaskTemplate(input: TaskTemplateInput): Promise<stri
   const title = input.title.trim();
   if (!title) throw new Error("ต้องใส่ชื่องาน");
   if (!input.assigneeIds.length) throw new Error("เลือกพนักงานอย่างน้อย 1 คน");
-  const checklist = input.checklist
+  // เลิกบังคับเช็คลิสย่อย — ใช้โนตความคืบในรอบงานแทน (เก็บ [] เพื่อเข้ากับ sync เดิม)
+  const checklist = (input.checklist || [])
     .map((c) => ({ id: c.id, label: c.label.trim() }))
     .filter((c) => c.label);
-  if (!checklist.length) throw new Error("ต้องมี checklist อย่างน้อย 1 ข้อ");
   const now = Date.now();
   const ref = await addDoc(templatesCol(), {
     title,
@@ -112,10 +112,9 @@ function validateTemplatePatch(input: TaskTemplatePatch) {
   const title = input.title.trim();
   if (!title) throw new Error("ต้องใส่ชื่องาน");
   if (!input.assigneeIds.length) throw new Error("เลือกพนักงานอย่างน้อย 1 คน");
-  const checklist = input.checklist
+  const checklist = (input.checklist || [])
     .map((c) => ({ id: c.id, label: c.label.trim() }))
     .filter((c) => c.label);
-  if (!checklist.length) throw new Error("ต้องมี checklist อย่างน้อย 1 ข้อ");
   return { title, checklist };
 }
 

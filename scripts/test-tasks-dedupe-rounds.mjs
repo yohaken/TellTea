@@ -20,8 +20,7 @@ const logic = readFileSync(join(root, "src/lib/task-weekly-logic.ts"), "utf8");
 const occ = readFileSync(join(root, "src/lib/task-occurrences.ts"), "utf8");
 const version = readFileSync(join(root, "src/lib/version.ts"), "utf8");
 
-assert.match(version, /APP_BUILD = \d+/);
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 365);
+assert.match(version, /APP_BUILD = 365/);
 assert.match(logic, /Asia\/Bangkok/);
 assert.match(logic, /occurrenceDocId/);
 assert.match(logic, /deleteDupes/);

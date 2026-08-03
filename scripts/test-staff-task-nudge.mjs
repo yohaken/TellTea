@@ -1,5 +1,5 @@
 /**
- * Legacy staff-task-nudge helpers still exist in lib · UI ถอดออกแล้ว (ใช้กระดานโนต)
+ * Staff task nudge helpers + wiring checks.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -13,6 +13,7 @@ const typesSrc = readFileSync(join(root, "src/lib/task-types.ts"), "utf8");
 const uiSrc = readFileSync(join(root, "src/components/StaffTaskNudge.tsx"), "utf8");
 const shellSrc = readFileSync(join(root, "src/components/AppShell.tsx"), "utf8");
 const tasksSrc = readFileSync(join(root, "src/app/tasks/page.tsx"), "utf8");
+const rulesSrc = readFileSync(join(root, "firestore.rules"), "utf8");
 const versionSrc = readFileSync(join(root, "src/lib/version.ts"), "utf8");
 
 assert.match(nudgeLib, /actionableStaffTaskNudges/);
@@ -21,10 +22,11 @@ assert.match(nudgeLib, /summarizeStaffTaskNudges/);
 assert.match(typesSrc, /TaskNudgeKind/);
 assert.match(typesSrc, /nudgeKind/);
 assert.match(uiSrc, /staff-task-nudge-strip/);
-// ถอดออกจาก shell / หน้า tasks แล้ว
-assert.doesNotMatch(shellSrc, /StaffTaskNudge/);
-assert.match(tasksSrc, /TaskBoardNotesView/);
-assert.doesNotMatch(tasksSrc, /แจ้งเบาๆ/);
+assert.match(uiSrc, /งานค้าง/);
+assert.match(shellSrc, /StaffTaskNudge/);
+assert.match(tasksSrc, /แจ้งเบาๆ/);
+assert.match(tasksSrc, /มีกำหนด/);
+assert.match(rulesSrc, /nudgeKind/);
 assert.match(versionSrc, /APP_BUILD = \d+/);
 
 function actionableStaffTaskNudges(occurrences, now = Date.now()) {
@@ -87,4 +89,4 @@ assert.equal(rows.length, 2);
 assert.equal(rows[0].id, "b");
 assert.equal(rows[1].id, "a");
 
-console.log("test-staff-task-nudge: ok (legacy helpers; UI retired)");
+console.log("OK test-staff-task-nudge");

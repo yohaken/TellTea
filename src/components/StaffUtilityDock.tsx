@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Sparkles, X } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { StaffUtilityPanel } from "@/components/StaffUtilityPanel";
+import { staffUtilityAttentionCount } from "@/lib/staff-utility";
+import {
+  subscribeTaskOccurrencesForAssignee,
+  taskOccurrenceSinceMs,
+} from "@/lib/task-occurrences";
+import { filterOccurrencesByTab } from "@/lib/task-weekly-logic";
+import { cn } from "@/lib/utils";
 
 /**
  * ไอคอนยูทิลิตี้ซ้ายกลางจอ — เฉพาะพนักงาน (ไม่โชว์มุมเจ้าของ)
@@ -16,13 +23,39 @@ export function StaffUtilityDock() {
   const { staff, status } = useAuth();
   const isOwner = staff?.role === "owner";
   const [open, setOpen] = useState(false);
+  const [pendingTasks, setPendingTasks] = useState(0);
 
   const ready = status === "ready" && !!staff && !isOwner;
+  const myEmployeeId = staff?.employeeId || "";
   useBodyScrollLock(open);
 
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!ready || !myEmployeeId) {
+      setPendingTasks(0);
+      return;
+    }
+    return subscribeTaskOccurrencesForAssignee(
+      myEmployeeId,
+      (rows) => {
+        setPendingTasks(filterOccurrencesByTab(rows, "thisWeek").length);
+      },
+      () => setPendingTasks(0),
+      { since: taskOccurrenceSinceMs() },
+    );
+  }, [ready, myEmployeeId]);
+
+  const attention = useMemo(
+    () =>
+      staffUtilityAttentionCount({
+        pendingTaskCount: pendingTasks,
+        pendingSuggestionCount: 0,
+      }),
+    [pendingTasks],
+  );
 
   function closePanel() {
     setOpen(false);
@@ -36,12 +69,21 @@ export function StaffUtilityDock() {
     <>
       <button
         type="button"
-        className="staff-utility-fab"
-        aria-label="ยูทิลิตี้ · ข้อเสนอและกระดานโนต"
-        title="ข้อเสนอ · กระดานโนต"
+        className={cn("staff-utility-fab", attention > 0 && "is-attention")}
+        aria-label={
+          attention > 0
+            ? `ยูทิลิตี้ · มี ${attention} รายการที่ต้องดู`
+            : "ยูทิลิตี้ · ข้อเสนอและงาน"
+        }
+        title="ข้อเสนอ · งาน"
         onClick={() => setOpen(true)}
       >
         <Sparkles size={18} strokeWidth={2.25} aria-hidden />
+        {attention > 0 ? (
+          <span className="staff-utility-fab-badge" aria-hidden>
+            {attention > 9 ? "9+" : attention}
+          </span>
+        ) : null}
       </button>
 
       {open ? (

@@ -56,8 +56,7 @@ assert.match(bonus, /subscribeProdEntries\([\s\S]*\{ since: monthSince, until: m
 assert.match(bonus, /since: payrollSince/);
 
 const tasks = read("src/app/tasks/page.tsx");
-assert.match(tasks, /TaskBoardNotesView/);
-assert.doesNotMatch(tasks, /taskOccurrenceSinceMs\(\)/);
+assert.match(tasks, /taskOccurrenceSinceMs\(\)/);
 
 const stock = read("src/app/stock/page.tsx");
 assert.match(stock, /stockCountSinceMs\(\)/);
@@ -71,11 +70,9 @@ assert.match(owner, /listOwnerBookEntriesSince\(daysAgoMs\(180\)\)/);
 assert.match(owner, /listRecentOwnerBookEntries\(200\)/);
 
 const dock = read("src/components/StaffUtilityDock.tsx");
-assert.doesNotMatch(dock, /taskOccurrenceSinceMs\(\)/);
+assert.match(dock, /taskOccurrenceSinceMs\(\)/);
 const panel = read("src/components/StaffUtilityPanel.tsx");
-assert.doesNotMatch(panel, /taskOccurrenceSinceMs\(\)/);
-const board = read("src/lib/task-board-notes.ts");
-assert.match(board, /subscribeTaskBoardNotes/);
+assert.match(panel, /taskOccurrenceSinceMs\(\)/);
 
 // Pure helper smoke
 function daysAgoMs(days, now) {
