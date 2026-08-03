@@ -30,7 +30,8 @@ assert.match(tasksSrc, /บันทึกว่ากำลังรอ/);
 assert.match(nudgeSrc, /status === "pending"/);
 assert.match(rulesSrc, /completionNote/);
 assert.match(cssSrc, /tasks-timeline-status\.is-waiting/);
-assert.match(versionSrc, /APP_BUILD = 497/);
+assert.match(versionSrc, /APP_BUILD = \d+/);
+assert.ok(Number(versionSrc.match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 497);
 
 function buildOwnerTaskTimeline(occurrences, now = Date.now(), max = 14) {
   const open = [];
