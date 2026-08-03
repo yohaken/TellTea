@@ -337,8 +337,9 @@ public final class SaleSync {
     }
 
     /**
-     * Flush outbox + ensure session open on server, then close CF.
-     * Only clears local shift when server close succeeds — so BO always gets closedAt.
+     * Flush outbox + voids + ensure session on server, then close CF.
+     * Hard gate: cannot close while bills/voids still unsynced, or if server close fails.
+     * Local shift clears only after server accepts close.
      */
     public void flushThenCloseSession(
             Context context, BlindCloseReport report, CloseResult result) {
@@ -351,11 +352,32 @@ public final class SaleSync {
                         ensureOpenSessionSynced(app);
                         flushPendingBlocking(app);
                         ensureOpenSessionSynced(app);
-                        serverOk = postCloseSession(app, report);
-                        if (!serverOk) {
-                            ensureOpenSessionSynced(app);
+                        // Retry once if anything still queued (brief net blip).
+                        if (hasUnsyncedWork(app)) {
                             flushPendingBlocking(app);
+                            ensureOpenSessionSynced(app);
+                        }
+                        if (hasUnsyncedWork(app)) {
+                            OpsLogger.warn(
+                                    app,
+                                    "shift",
+                                    "ปิดรอบถูกบล็อก — ยังมีบิล/ทำลายค้างซิงก์",
+                                    unsyncedWorkSummary(app));
+                        } else {
                             serverOk = postCloseSession(app, report);
+                            if (!serverOk) {
+                                ensureOpenSessionSynced(app);
+                                flushPendingBlocking(app);
+                                if (!hasUnsyncedWork(app)) {
+                                    serverOk = postCloseSession(app, report);
+                                } else {
+                                    OpsLogger.warn(
+                                            app,
+                                            "shift",
+                                            "ปิดรอบถูกบล็อก — ยังมีบิล/ทำลายค้างซิงก์",
+                                            unsyncedWorkSummary(app));
+                                }
+                            }
                         }
                     } catch (Exception e) {
                         OpsLogger.warn(
@@ -390,6 +412,29 @@ public final class SaleSync {
                     }
                     if (result != null) result.onDone(serverOk);
                 });
+    }
+
+    /** True when sale outbox or void queue still has rows — Z-close must wait. */
+    public static boolean hasUnsyncedWork(Context context) {
+        if (context == null) return false;
+        Context app = context.getApplicationContext();
+        int[] box = outboxCounts(app);
+        return box[0] + box[1] > 0 || voidQueueCount(app) > 0;
+    }
+
+    public static int voidQueueCount(Context context) {
+        if (context == null) return 0;
+        try {
+            return readVoidQueue(context.getApplicationContext()).length();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    public static String unsyncedWorkSummary(Context context) {
+        int[] box = outboxCounts(context);
+        int voids = voidQueueCount(context);
+        return "pending=" + box[0] + " failed=" + box[1] + " voids=" + voids;
     }
 
     private void flushPendingBlocking(Context app) {
@@ -524,7 +569,9 @@ public final class SaleSync {
                             JSONObject o = new JSONObject();
                             o.put("menuItemId", line.menuItemId);
                             o.put("name", line.name);
+                            // Server + web use "price"; keep unitPrice for native readers / hold carts.
                             o.put("price", line.unitPrice);
+                            o.put("unitPrice", line.unitPrice);
                             o.put("qty", line.qty);
                             if (line.optionsJson != null && line.optionsJson.length() > 0) {
                                 o.put("options", line.optionsJson);
@@ -753,7 +800,7 @@ public final class SaleSync {
         return new ArrayList<>(all.subList(0, 40));
     }
 
-    /** All stored local receipts, newest first (cap ~60 in prefs). */
+    /** All stored local receipts, newest first (cap ~250 in prefs). */
     public List<JSONObject> listReceiptsNewestFirst(Context context) {
         List<JSONObject> out = new ArrayList<>();
         try {
@@ -915,6 +962,9 @@ public final class SaleSync {
         executor.execute(
                 () -> {
                     try {
+                        // Push pending sales + queued voids before paper so BO "ยอดในระบบ"
+                        // matches the slip (common drift: local void, server still counting cash).
+                        flushPendingBlocking(app);
                         PrinterEndpoint ep = PrinterPrefs.savedOrNull(app);
                         if (ep == null) {
                             OpsLogger.warn(app, "printer", "ข้ามพิมพ์สรุปรอบ — ยังไม่เลือกปริ้นเตอร์", reportKind);
@@ -1435,7 +1485,8 @@ public final class SaleSync {
         String transferRef = payload.optString("transferRef", "").trim();
         if (!transferRef.isEmpty()) row.put("transferRef", transferRef);
         arr.put(row);
-        while (arr.length() > 60) {
+        // Busy morning shifts often exceed 60 bills; X/Z item/category detail needs the full round.
+        while (arr.length() > 250) {
             JSONArray trimmed = new JSONArray();
             for (int i = 1; i < arr.length(); i++) trimmed.put(arr.get(i));
             arr = trimmed;

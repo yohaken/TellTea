@@ -40,6 +40,13 @@ function salesCol() {
   return collection(getDb(), POS_SALES_COL);
 }
 
+function normalizeAdminPaymentMethod(raw: unknown): PosSale["paymentMethod"] {
+  const m = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  if (m === "promptpay") return "promptpay";
+  if (m === "transfer" || m === "bank" || m === "bank_transfer") return "transfer";
+  return "cash";
+}
+
 function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
   const subtotal = typeof data.subtotal === "number" ? data.subtotal : 0;
   const total = typeof data.total === "number" ? data.total : 0;
@@ -61,7 +68,7 @@ function mapPosSale(id: string, data: Record<string, unknown>): PosSale {
     subtotal,
     ...(discountBaht > 0 ? { discountBaht } : {}),
     total,
-    paymentMethod: data.paymentMethod === "promptpay" ? "promptpay" : "cash",
+    paymentMethod: normalizeAdminPaymentMethod(data.paymentMethod),
     cashReceived: typeof data.cashReceived === "number" ? data.cashReceived : 0,
     change: typeof data.change === "number" ? data.change : 0,
     ledgerEntryId: typeof data.ledgerEntryId === "string" ? data.ledgerEntryId : undefined,

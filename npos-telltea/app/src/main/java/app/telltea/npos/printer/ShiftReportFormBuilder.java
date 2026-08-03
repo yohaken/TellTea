@@ -889,9 +889,11 @@ public final class ShiftReportFormBuilder {
             String name = line.optString("name", "รายการ").trim();
             if (name.isEmpty()) name = "รายการ";
             int qty = Math.max(1, line.optInt("qty", 1));
-            double unit = line.optDouble("unitPrice", 0);
+            // SaleSync stores unit as "price" (server/web shape); older/hold carts use unitPrice.
+            double unit = lineUnitPrice(line);
             double amount = qty * unit;
             if (amount <= 0 && line.has("amount")) amount = line.optDouble("amount", 0);
+            if (amount <= 0 && line.has("lineTotal")) amount = line.optDouble("lineTotal", 0);
             d.itemQty += qty;
             d.grossSales += amount;
             String cat = line.optString("categoryName", "").trim();
@@ -941,5 +943,17 @@ public final class ShiftReportFormBuilder {
           });
       return list;
     }
+  }
+
+  /** Prefer {@code price} (nposCompleteSale / SaleSync), then {@code unitPrice} (hold cart). */
+  static double lineUnitPrice(JSONObject line) {
+    if (line == null) return 0;
+    double price = line.optDouble("price", Double.NaN);
+    if (!Double.isNaN(price) && price > 0) return price;
+    double unit = line.optDouble("unitPrice", Double.NaN);
+    if (!Double.isNaN(unit) && unit > 0) return unit;
+    if (!Double.isNaN(price) && price >= 0) return price;
+    if (!Double.isNaN(unit) && unit >= 0) return unit;
+    return 0;
   }
 }

@@ -129,6 +129,8 @@
     "test:pos-menu-cart": "node scripts/test-pos-menu-cart.mjs",
     "test:pos-shift-keypad": "node scripts/test-pos-shift-keypad.mjs",
     "test:pos-shift-report": "node scripts/test-pos-shift-report.mjs",
+    "test:npos-shift-x-cash-print-parity": "node scripts/test-npos-shift-x-cash-print-parity.mjs",
+    "test:npos-boh-print-parity": "node scripts/test-npos-boh-print-parity.mjs",
     "test:pos-menu-item-labels": "node scripts/test-pos-menu-item-labels.mjs",
     "test:pos-sell-density-nav": "node scripts/test-pos-sell-density-nav.mjs",
     "test:pos-sell-cart-density-50": "node scripts/test-pos-sell-cart-density-50.mjs",
