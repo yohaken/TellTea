@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Lightbulb, ListTodo } from "lucide-react";
+import { useMyTaskAssigneeId } from "@/hooks/use-my-task-assignee-id";
 import { useAuth } from "@/lib/auth";
 import {
   countPendingSuggestions,
@@ -53,7 +54,7 @@ export function StaffUtilityPanel({
   const [statusBusyId, setStatusBusyId] = useState<string | null>(null);
 
   const ready = status === "ready" && !!staff;
-  const myEmployeeId = staff?.employeeId || "";
+  const { employeeId: myEmployeeId, ready: assigneeReady } = useMyTaskAssigneeId();
   /** พรีวิว: อ่านข้อเสนอด้วย staff id ของคนที่สวม — ไม่ใช้ actor เจ้าของ */
   const suggestionActorId = isPermPreview
     ? permPreview?.memberId || ""
@@ -73,7 +74,7 @@ export function StaffUtilityPanel({
   }, [ready, isOwner, suggestionActorId]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !assigneeReady) return;
     if (isOwner || !myEmployeeId) {
       setPendingTasks(0);
       return;
@@ -86,7 +87,7 @@ export function StaffUtilityPanel({
       () => setPendingTasks(0),
       { since: taskOccurrenceSinceMs() },
     );
-  }, [ready, isOwner, myEmployeeId]);
+  }, [ready, assigneeReady, isOwner, myEmployeeId]);
 
   const pendingSuggestionCount = useMemo(
     () => (isOwner ? countPendingSuggestions(suggestions) : 0),

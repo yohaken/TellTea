@@ -63,6 +63,15 @@ assert.match(ot, /พรีวิวมุมพนักงาน/);
 
 const employees = read("src/lib/employees.ts");
 assert.match(employees, /export function resolveMyWorkerId/);
+assert.match(employees, /export function resolveTaskAssigneeId/);
 assert.match(employees, /nickname/);
+
+const tasks = read("src/app/tasks/page.tsx");
+assert.match(tasks, /useMyTaskAssigneeId/);
+assert.doesNotMatch(
+  tasks,
+  /const myEmployeeId = staff\?\.employeeId/,
+  "tasks must resolve assignee like production — not staff.employeeId alone",
+);
 
 console.log("OK test-preview-staff-identity");

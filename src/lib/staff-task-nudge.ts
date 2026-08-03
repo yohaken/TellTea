@@ -14,27 +14,39 @@ export type StaffTaskNudgeItem = {
   note: string;
   dueDate: number;
   nudgeKind: TaskNudgeKind;
+  /** pending = ยังไม่ส่ง · waiting = รายงานรอแล้ว (ยังติดตาม) */
+  status: "pending" | "waiting";
   periodKey: string;
 };
 
-/** งานที่เปิดทำได้แล้ว (pending + ถึง openAt) ของพนักงาน */
+function nudgeSortRank(item: StaffTaskNudgeItem): number {
+  if (item.status === "waiting") return 1;
+  return item.nudgeKind === "deadline" ? 0 : 2;
+}
+
+/** งานที่เปิดทำได้แล้ว (pending/waiting + ถึง openAt) ของพนักงาน */
 export function actionableStaffTaskNudges(
   occurrences: TaskOccurrence[],
   now = Date.now(),
 ): StaffTaskNudgeItem[] {
   return occurrences
-    .filter((o) => o.status === "pending" && now >= (o.openAt || 0))
+    .filter(
+      (o) =>
+        (o.status === "pending" || o.status === "waiting") &&
+        now >= (o.openAt || 0),
+    )
     .map((o) => ({
       id: o.id,
       title: (o.title || "").trim() || "งาน",
       note: (o.note || "").trim(),
       dueDate: Number(o.dueDate) || 0,
       nudgeKind: normalizeTaskNudgeKind(o.nudgeKind),
+      status: o.status === "waiting" ? ("waiting" as const) : ("pending" as const),
       periodKey: o.periodKey || "",
     }))
     .sort((a, b) => {
-      const ua = a.nudgeKind === "deadline" ? 0 : 1;
-      const ub = b.nudgeKind === "deadline" ? 0 : 1;
+      const ua = nudgeSortRank(a);
+      const ub = nudgeSortRank(b);
       if (ua !== ub) return ua - ub;
       if (a.dueDate !== b.dueDate) return a.dueDate - b.dueDate;
       return a.title.localeCompare(b.title, "th");
@@ -52,10 +64,13 @@ export function summarizeStaffTaskNudges(items: StaffTaskNudgeItem[]): {
   total: number;
   soft: number;
   deadline: number;
+  waiting: number;
   headline: string;
 } {
-  const soft = items.filter((i) => i.nudgeKind === "soft").length;
-  const deadline = items.filter((i) => i.nudgeKind === "deadline").length;
+  const waiting = items.filter((i) => i.status === "waiting").length;
+  const open = items.filter((i) => i.status === "pending");
+  const soft = open.filter((i) => i.nudgeKind === "soft").length;
+  const deadline = open.filter((i) => i.nudgeKind === "deadline").length;
   const total = items.length;
   const first = items[0];
   const headline = first
@@ -63,7 +78,7 @@ export function summarizeStaffTaskNudges(items: StaffTaskNudgeItem[]): {
       ? first.title
       : `${first.title} · อีก ${total - 1}`
     : "";
-  return { total, soft, deadline, headline };
+  return { total, soft, deadline, waiting, headline };
 }
 
 export const STAFF_TASK_NUDGE_DISMISS_KEY = "telltea_staff_task_nudge_dismiss_v1";

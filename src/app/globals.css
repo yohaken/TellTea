@@ -23584,6 +23584,11 @@ a.ghost-btn {
   color: #9a3412;
 }
 
+.staff-task-nudge-pill.is-waiting {
+  background: color-mix(in srgb, var(--tea-leaf, #3d6b4f) 18%, #fff);
+  color: var(--tea-leaf, #2f5540);
+}
+
 .staff-task-nudge-pill.is-soft {
   background: rgba(45, 106, 79, 0.1);
   border-color: rgba(45, 106, 79, 0.22);
@@ -23688,6 +23693,11 @@ a.ghost-btn {
 .staff-task-nudge-kind.is-deadline {
   background: rgba(180, 83, 9, 0.12);
   color: #9a3412;
+}
+
+.staff-task-nudge-kind.is-waiting {
+  background: color-mix(in srgb, var(--tea-leaf, #3d6b4f) 18%, #fff);
+  color: var(--tea-leaf, #2f5540);
 }
 
 .staff-task-nudge-kind.is-soft {
