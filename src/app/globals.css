@@ -10248,63 +10248,76 @@ body.modal-open .main-panel {
   font-weight: 700;
 }
 
+/* Primary cash-compare cols only — secondary lives in row detail */
 .npos-slim-row--sessions-super {
   grid-template-columns:
-    1.05rem
-    2.35rem
-    2.55rem
-    2.15rem
-    minmax(2.3rem, 0.85fr)
-    2.05rem
-    2.05rem
-    2.1rem
-    1.35rem
-    minmax(2.1rem, max-content)
-    minmax(2.1rem, max-content)
-    minmax(2rem, max-content)
-    minmax(1.7rem, max-content)
-    minmax(2rem, max-content)
-    minmax(2.1rem, max-content)
-    1.9rem
-    1.55rem;
-  gap: 0.1rem 0.24rem;
-  min-width: 0;
-  width: 100%;
-  font-size: 0.72rem;
-  padding-top: 0.2rem;
-  padding-bottom: 0.2rem;
+    1.25rem
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content
+    max-content;
+  column-gap: 0.65rem;
+  row-gap: 0.12rem;
+  justify-content: start;
+  width: max-content;
+  min-width: 100%;
+  font-size: 0.74rem;
+  padding-top: 0.28rem;
+  padding-bottom: 0.28rem;
 }
 
 .npos-slim-row--sessions-super.npos-slim-row--head {
-  font-size: 0.64rem;
+  font-size: 0.66rem;
   letter-spacing: 0.01em;
-  padding-top: 0.1rem;
-  padding-bottom: 0.18rem;
+  padding-top: 0.12rem;
+  padding-bottom: 0.2rem;
 }
 
-.npos-slim-row--sessions-super .npos-slim-device,
-.npos-slim-row--sessions-super .npos-slim-col-session {
+.npos-slim-row--sessions-super > * {
+  min-width: 0;
+  overflow: visible;
+}
+
+.npos-slim-row--sessions-super .npos-slim-device {
+  max-width: 4.5rem;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
+}
+
+.npos-slim-row--sessions-super .npos-slim-time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.npos-slim-row--sessions-super .npos-slim-num {
+  min-width: 3.4rem;
+  white-space: nowrap;
 }
 
 .npos-slim-row--sessions-super .npos-slim-status {
-  gap: 0.15rem;
-  font-size: 0.7rem;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
 }
 
 .npos-slim-row--sessions-super .npos-slim-remit-status {
-  font-size: 0.68rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 0.7rem;
+  white-space: nowrap;
 }
 
 .npos-slim-check-col {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.05rem;
+  width: 1.25rem;
 }
 
 .npos-slim-check-col input[type="checkbox"] {
@@ -10443,58 +10456,14 @@ body.modal-open .main-panel {
   min-width: 0;
 }
 
-/* Secondary session cols — hide early so table fits without x-scroll */
-@media (max-width: 1200px) {
-  .npos-slim-col-session,
-  .npos-slim-col-pp,
-  .npos-slim-col-counted {
-    display: none;
-  }
-
-  .npos-slim-row--sessions-super {
-    grid-template-columns:
-      1.1rem
-      2rem
-      2.6rem
-      2.2rem
-      2.1rem
-      2.1rem
-      2.2rem
-      1.4rem
-      minmax(2.2rem, max-content)
-      minmax(2.2rem, max-content)
-      minmax(2.1rem, max-content)
-      minmax(2.2rem, max-content)
-      2rem
-      1.7rem;
-  }
-}
-
 @media (max-width: 900px) {
-  .npos-slim-col-session,
-  .npos-slim-col-pp,
-  .npos-slim-col-counted {
-    display: none;
+  .npos-slim-row--sessions-super {
+    column-gap: 0.45rem;
+    font-size: 0.7rem;
   }
 
-  .npos-slim-row--sessions-super {
-    grid-template-columns:
-      1.05rem
-      1.85rem
-      2.4rem
-      2rem
-      2rem
-      2rem
-      2rem
-      1.3rem
-      minmax(2rem, max-content)
-      minmax(2rem, max-content)
-      minmax(1.9rem, max-content)
-      minmax(2rem, max-content)
-      1.85rem
-      1.55rem;
-    gap: 0.1rem 0.2rem;
-    font-size: 0.68rem;
+  .npos-slim-row--sessions-super .npos-slim-num {
+    min-width: 3rem;
   }
 
   .npos-slim-row--bills-super {

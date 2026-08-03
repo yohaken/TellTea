@@ -782,14 +782,8 @@ export function PosSessionsSlimTable({
             <span role="columnheader" title="รหัสเครื่อง">
               เครื่อง
             </span>
-            <span role="columnheader" className="npos-slim-col-session" title="รหัสรอบ">
-              รอบ
-            </span>
             <span role="columnheader">เริ่ม</span>
             <span role="columnheader">ปิด</span>
-            <span role="columnheader" className="npos-slim-num" title="เวลารวม">
-              รวม
-            </span>
             <span role="columnheader" className="npos-slim-num">
               บิล
             </span>
@@ -801,16 +795,6 @@ export function PosSessionsSlimTable({
             </span>
             <span role="columnheader" className="npos-slim-num">
               โอน
-            </span>
-            <span role="columnheader" className="npos-slim-num npos-slim-col-pp">
-              PP
-            </span>
-            <span
-              role="columnheader"
-              className="npos-slim-num npos-slim-col-counted"
-              title="เงินสดที่นับในลิ้นชักตอนปิดกะ"
-            >
-              นับ
             </span>
             <span
               role="columnheader"
@@ -868,23 +852,11 @@ export function PosSessionsSlimTable({
                   >
                     {row.pairingCode}
                   </span>
-                  <span
-                    role="cell"
-                    className="npos-slim-code npos-slim-col-session"
-                    title={row.session.id}
-                  >
-                    {row.sessionCode}
+                  <span role="cell" className="npos-slim-time">
+                    {formatHm(row.session.openedAt)}
                   </span>
-                  <span role="cell">{formatHm(row.session.openedAt)}</span>
-                  <span role="cell">
+                  <span role="cell" className="npos-slim-time">
                     {row.session.closedAt ? formatHm(row.session.closedAt) : "—"}
-                  </span>
-                  <span
-                    role="cell"
-                    className="npos-slim-num npos-slim-duration"
-                    title={row.open ? "เวลารวมถึงตอนนี้" : "เวลารวมทั้งรอบ"}
-                  >
-                    {row.durationLabel}
                   </span>
                   <span role="cell" className="npos-slim-num">
                     {row.bills || "—"}
@@ -897,22 +869,6 @@ export function PosSessionsSlimTable({
                   </span>
                   <span role="cell" className="npos-slim-num">
                     {moneyOrDash(row.transfer)}
-                  </span>
-                  <span role="cell" className="npos-slim-num npos-slim-col-pp">
-                    {moneyOrDash(row.pp)}
-                  </span>
-                  <span
-                    role="cell"
-                    className="npos-slim-num npos-slim-strong npos-slim-col-counted"
-                    title={
-                      row.open
-                        ? "ยังไม่ปิดกะ"
-                        : row.counted != null
-                          ? `นับในลิ้นชัก ${moneyOrDash(row.counted)}`
-                          : "ยังไม่มีตัวเลขนับ (ปิดจากหลังร้านหรือ APK เก่า)"
-                    }
-                  >
-                    {row.open || row.counted == null ? "—" : moneyOrDash(row.counted)}
                   </span>
                   <span
                     role="cell"
@@ -967,9 +923,10 @@ export function PosSessionsSlimTable({
                       {row.isManual ? "รอบมือ · " : ""}
                       รอบ {row.sessionCode}
                       {row.openedBy ? ` · ผู้เปิด ${row.openedBy}` : ""}
+                      {` · รวม ${row.durationLabel}`}
                       {` · ทอนเริ่ม ${moneyOrDash(row.opening)}`}
                       {row.open ? " · ระหว่างกะ" : ""}
-                      {` · สด ${moneyOrDash(row.cash)} / โอน ${moneyOrDash(row.transfer)} / PP ${moneyOrDash(row.pp)}`}
+                      {` · PP ${moneyOrDash(row.pp)}`}
                       {(row.cashOut != null && row.cashOut > 0) ||
                       (row.cashDrops != null && row.cashDrops > 0)
                         ? ` · ถอน ${moneyOrDash(row.cashOut)}${
@@ -1005,7 +962,6 @@ export function PosSessionsSlimTable({
                         ? ` · บิล สด ${row.cashBills ?? 0} / โอน ${row.transferBills ?? 0} / PP ${row.ppBills ?? 0}`
                         : ""}
                       {row.note ? ` · ${row.note}` : ""}
-                      {` · รวม ${row.durationLabel}`}
                       {" · "}
                       <button
                         type="button"
@@ -1129,12 +1085,12 @@ export function PosSessionsSlimTable({
       )}
 
       <p className="muted npos-slim-foot">
-        รอบ = กะ nPos · <strong>นำส่ง</strong> = นับ − ทอนค้าง · <strong>ส่งเงิน</strong> =
-        บันทึกยอดรับจริงหลังปิดรอบ
+        แถวหลัก = สถานะ/เวลา/ยอดเงิน · กดแถวดูรหัสรอบ · รวมเวลา · PP · นับ ·{" "}
+        <strong>นำส่ง</strong> = นับ − ทอนค้าง · <strong>ส่ง</strong> = รับจริงหลังปิดรอบ
         {CASH_IN_NPOS_REMIT_ONLY
           ? " · ยอดต้องโอนใช้รอบ nPos อย่างเดียว"
           : " · +รอบมือ = เคาน์เตอร์นอกโปรแกรม"}{" "}
-        · <strong>ปิดรอบ</strong> จากหลังร้าน · <strong>ลบที่เลือก</strong> ลบรอบ+บิลถาวร
+        · <strong>ปิด</strong> จากหลังร้าน · <strong>ลบที่เลือก</strong> ลบรอบ+บิลถาวร
       </p>
 
       <PosConfirmDialog
