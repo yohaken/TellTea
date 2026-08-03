@@ -15,13 +15,13 @@ const rules = readFileSync(join(root, "firestore.rules"), "utf8");
 
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 652, `APP_BUILD >= 652, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 653, `APP_BUILD >= 653, got ${buildMatch[1]}`);
 assert.match(lib, /CASH_DEPOSIT_DAY_MAX = 31/);
 assert.match(lib, /export function analyzeCashDepositDays/);
 assert.match(lib, /export function buildCashDepositRoundDays/);
 assert.match(lib, /drawerCloseAmount/);
 assert.match(lib, /allowGaps|ข้ามวัน|month_overflow/);
-assert.match(panel, /ใส่บิลนี้|cash-in-bundle-bills/);
+assert.match(panel, /is-tap|cash-in-bundle-bills/);
 assert.match(panel, /cash-in-slim/);
 assert.match(panel, /cash-in-issues/);
 assert.match(rules, /days\.size\(\) <= 31/);

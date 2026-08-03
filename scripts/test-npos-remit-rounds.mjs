@@ -67,12 +67,12 @@ assert.match(panel, /queueSessionIntoWorking|mergeSessionsIntoDays/);
 assert.match(panel, /sessionIds/);
 assert.match(panel, /cash-in-pending-rounds/);
 assert.match(panel, /cash-in-bill-card/);
-assert.match(panel, /ใส่บิลนี้/);
-assert.match(panel, /บิลในมัดรวมนี้|cash-in-bundle-bills/);
-assert.match(panel, /เอาออก|removeSessionFromWorking/);
+assert.match(panel, /is-tap|ใส่/);
+assert.match(panel, /ในมัด|cash-in-bundle-bills/);
+assert.match(panel, /removeSessionFromWorking/);
 assert.match(panel, /assertCashDepositDaysNposLinked/);
-assert.match(panel, /suggestedNetBankTransfer|มัดรวม − คชจ|มัดรวม−คชจ/);
-assert.match(panel, /ไม่ต้องเบิก/);
+assert.match(panel, /suggestedNetBankTransfer|ใส่ยอด|netBankTarget/);
+assert.match(panel, /cash-in-compact-btn/);
 assert.doesNotMatch(panel, /\+รอบ|cash-in-create-bar/);
 assert.doesNotMatch(panel, /runAiDay|extractCashDaySlipFromPhotos/);
 
