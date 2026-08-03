@@ -148,7 +148,12 @@ assert.match(bonus, /listActiveEmployeesWithPay/);
 assert.match(bonus, /employeeId: selfId/);
 assert.match(bonus, /computePersonalBonusRow/);
 assert.match(bonus, /saveBonusLivePool/);
-assert.match(bonus, /workerId: selfId/);
+assert.match(bonus, /workEntryIncludesMe/);
+assert.doesNotMatch(
+  bonus,
+  /workerId: selfId/,
+  "staff bonus filters OT/prod client-side after month query",
+);
 assert.match(bonus, /subscribeBonusMonthStatus/);
 assert.match(bonus, /subscribeBonusPersonalClose/);
 assert.match(bonus, /workerRowFromPersonalClose/);

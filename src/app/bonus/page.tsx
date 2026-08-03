@@ -76,6 +76,10 @@ import {
 } from "@/lib/payroll";
 import { subscribeProdEntries, type ProdEntry } from "@/lib/production";
 import { subscribeRateSchedule, type RateScheduleEntry } from "@/lib/rate-schedule";
+import {
+  buildWorkEntryMineIdentity,
+  workEntryIncludesMe,
+} from "@/lib/work-entry-mine";
 import { formatDateShortBe, formatPlainNumber } from "@/lib/utils";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
@@ -221,7 +225,8 @@ function BonusView() {
     };
   }, [staff, canView, shopPayView, year, monthIdx, month]);
 
-  // OT / ผลิต — ทั้งร้านหรือเฉพาะ workerId ของตัวเอง
+  // OT / ผลิต — ทั้งร้าน หรือมุมพนักงาน: โหลดเดือนแล้วกรองฝั่ง client (เหมือนหน้า OT)
+  // ห้ามใช้ array-contains workerId อย่างเดียว — แถวเก่า/ชื่ออย่างเดียว/employeeId ค้างจะทำให้โบนัสเป็น 0
   useEffect(() => {
     if (!canView) return;
     const monthSince = new Date(year, monthIdx, 1).getTime();
@@ -242,21 +247,27 @@ function BonusView() {
         unsubProd();
       };
     }
-    const selfId = resolveMyWorkerId(employees, staff);
-    if (!selfId) {
+    if (!employees.length) {
+      setOtEntries([]);
+      setProdEntries([]);
+      return;
+    }
+    const linked = resolveLinkedEmployee(employees, staff);
+    const me = buildWorkEntryMineIdentity(linked, staff);
+    if (!me.employeeId && !me.name && !me.nickname && !me.displayName) {
       setOtEntries([]);
       setProdEntries([]);
       return;
     }
     const unsubOt = subscribeOtEntries(
-      (rows) => setOtEntries(rows),
+      (rows) => setOtEntries(rows.filter((r) => workEntryIncludesMe(r, me))),
       (err) => setError(err.message),
-      { since: monthSince, until: monthUntil, workerId: selfId },
+      { since: monthSince, until: monthUntil },
     );
     const unsubProd = subscribeProdEntries(
-      (rows) => setProdEntries(rows),
+      (rows) => setProdEntries(rows.filter((r) => workEntryIncludesMe(r, me))),
       (err) => setError(err.message),
-      { since: monthSince, until: monthUntil, workerId: selfId },
+      { since: monthSince, until: monthUntil },
     );
     return () => {
       unsubOt();

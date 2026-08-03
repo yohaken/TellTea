@@ -20,8 +20,12 @@ import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 import { useAuth } from "@/lib/auth";
 import { monthInputValue, parseMonthInput } from "@/lib/bonus";
 import { resolveWorkerDisplayNames } from "@/lib/employee-rename-propagate";
-import { resolveMyWorkerId } from "@/lib/employees";
+import { resolveLinkedEmployee } from "@/lib/employees";
 import { staffHomeHref } from "@/lib/nav-menu";
+import {
+  buildWorkEntryMineIdentity,
+  workEntryIncludesMe,
+} from "@/lib/work-entry-mine";
 import { can } from "@/lib/permissions";
 import {
   entryHasPhotoFlag,
@@ -118,22 +122,29 @@ function ProductionView() {
         const w = await listProdWorkers();
         if (cancelled) return;
         setWorkers(w);
-        // มุมพนักงาน/พรีวิว: กรองคนตัวเอง + เดือนที่เลือก (พรีวิวต้องมี memberId/employeeId ของคนนั้น)
-        const filterId = shopProdView ? "" : resolveMyWorkerId(w, staff);
+        // มุมพนักงาน/พรีวิว: โหลดเดือนแล้วกรองฝั่ง client (id + ชื่อ) — กัน employeeId ค้างแล้วรายการว่าง
         const monthWindow = {
           since: new Date(logYear, logMonthIdx, 1).getTime(),
           until: new Date(logYear, logMonthIdx + 1, 1).getTime(),
         };
-        if (!shopProdView && !filterId) {
-          setEntries([]);
+        if (!shopProdView) {
+          const linked = resolveLinkedEmployee(w, staff);
+          const me = buildWorkEntryMineIdentity(linked, staff);
+          if (!me.employeeId && !me.name && !me.nickname && !me.displayName) {
+            setEntries([]);
+            return;
+          }
+          unsubEntries = subscribeProdEntries(
+            (rows) => setEntries(rows.filter((r) => workEntryIncludesMe(r, me))),
+            (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
+            monthWindow,
+          );
           return;
         }
         unsubEntries = subscribeProdEntries(
           (rows) => setEntries(rows),
           (err) => setError(err.message || "โหลดรายการไม่สำเร็จ"),
-          shopProdView
-            ? monthWindow
-            : { ...monthWindow, workerId: filterId },
+          monthWindow,
         );
       })
       .catch((err) => setError((err as Error).message || "โหลดข้อมูลไม่สำเร็จ"))
@@ -267,6 +278,8 @@ function ProductionView() {
               rateSchedule={rateSchedule}
               createdBy={actorId}
               isOwner={isOwner}
+              staff={staff}
+              mineOnly={!shopProdView}
               onError={setError}
               onSaved={closeForm}
               onCancelEdit={closeForm}
@@ -316,6 +329,8 @@ function ProdEntryForm({
   rateSchedule,
   createdBy,
   isOwner,
+  staff,
+  mineOnly,
   onError,
   onSaved,
   onCancelEdit,
@@ -327,6 +342,8 @@ function ProdEntryForm({
   rateSchedule: RateScheduleEntry[];
   createdBy: string;
   isOwner: boolean;
+  staff: ReturnType<typeof useAuth>["staff"];
+  mineOnly: boolean;
   onError: (msg: string) => void;
   onSaved: () => void;
   onCancelEdit: () => void;
@@ -334,9 +351,13 @@ function ProdEntryForm({
 }) {
   const locked = entry ? isProdEntryLocked(entry) : false;
   const [date, setDate] = useState(entry ? todayInputValue(new Date(entry.date)) : todayInputValue());
-  const [selectedWorkers, setSelectedWorkers] = useState<string[]>(
-    entry?.workerIds?.length ? entry.workerIds : [],
-  );
+  const [selectedWorkers, setSelectedWorkers] = useState<string[]>(() => {
+    if (entry?.workerIds?.length) return entry.workerIds;
+    if (!mineOnly) return [];
+    const linked = resolveLinkedEmployee(workers, staff);
+    if (linked && workers.some((w) => w.id === linked.id)) return [linked.id];
+    return [];
+  });
   const [productId, setProductId] = useState(entry?.productId || products[0]?.id || "");
   const [qty, setQty] = useState(entry ? String(entry.qtyProduced) : "");
   const [waste, setWaste] = useState(entry ? String(entry.qtyWaste || 0) : "");
