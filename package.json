@@ -90,6 +90,7 @@
     "test:cash-in-npos-only": "node scripts/test-cash-in-npos-only.mjs",
     "test:cash-in-tick-summary": "node scripts/test-cash-in-tick-summary.mjs",
     "test:cash-in-actual-compare": "node scripts/test-cash-in-actual-compare.mjs",
+    "test:cash-in-bank-slip-status": "node scripts/test-cash-in-bank-slip-status.mjs",
     "test:bill-notices-ledger": "node scripts/test-bill-notices-ledger.mjs",
     "test:cash-deposit-days": "node scripts/test-cash-deposit-days.mjs",
     "test:cash-deposit-ai": "node scripts/test-cash-deposit-ai.mjs",

@@ -19,7 +19,7 @@ const doc = read("docs/npos-remit-rounds-phases.md");
 
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 669, `APP_BUILD >= 669, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 672, `APP_BUILD >= 672, got ${buildMatch[1]}`);
 
 assert.match(cash, /sessionActualAmounts/);
 assert.match(cash, /normalizeSessionActualAmounts/);
@@ -41,7 +41,7 @@ assert.match(panel, /ไม่ใช่สลิปโอน|ไม่ใช่�
 assert.match(panel, /ใบรอบ/);
 assert.match(panel, /สลิปโอน/);
 assert.match(panel, /bankSlipUrls/);
-assert.match(panel, /title="ใบรอบ POS/);
+assert.match(panel, /deriveCashDepositTransferUiState|รอสลิปโอน/);
 
 assert.match(css, /\.cash-in-bill-compare\b/);
 assert.match(css, /\.cash-in-bill-diff\.is-short\b/);

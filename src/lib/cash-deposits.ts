@@ -289,6 +289,72 @@ export function labelCashDepositStatus(status: CashDepositStatus) {
   }
 }
 
+/** Bank e-slip URLs for a deposit (transfers preferred, legacy flat list fallback). */
+export function cashDepositBankSlipUrls(
+  entry: Pick<CashDeposit, "bankTransfers" | "bankSlipUrls" | "bankAmount" | "transferFee" | "bankRef" | "transferDate" | "bankAmountSource" | "transferFeeSource">,
+): string[] {
+  const transfers = entry.bankTransfers?.length
+    ? entry.bankTransfers
+    : coerceBankTransfers(entry);
+  const fromTransfers = flattenBankTransferUrls(transfers);
+  if (fromTransfers.length) return fromTransfers;
+  return (entry.bankSlipUrls || [])
+    .map((u) => String(u || "").trim())
+    .filter(Boolean)
+    .slice(0, CASH_DEPOSIT_BANK_TRANSFER_MAX * CASH_DEPOSIT_BANK_SLIP_MAX);
+}
+
+export function cashDepositHasBankSlipEvidence(
+  entry: Pick<CashDeposit, "bankTransfers" | "bankSlipUrls" | "bankAmount" | "transferFee" | "bankRef" | "transferDate" | "bankAmountSource" | "transferFeeSource">,
+): boolean {
+  return cashDepositBankSlipUrls(entry).length > 0;
+}
+
+/**
+ * UI transfer state — round-print photos (ใบรอบ) are document compare only.
+ * Without a bank e-slip, never present as 「โอนแล้ว」.
+ */
+export type CashDepositTransferUiState =
+  | "void"
+  | "mismatch"
+  | "awaiting_bank_slip"
+  | "transferred";
+
+export function deriveCashDepositTransferUiState(
+  entry: Pick<
+    CashDeposit,
+    | "status"
+    | "bankTransfers"
+    | "bankSlipUrls"
+    | "bankAmount"
+    | "transferFee"
+    | "bankRef"
+    | "transferDate"
+    | "bankAmountSource"
+    | "transferFeeSource"
+  >,
+): CashDepositTransferUiState {
+  if (entry.status === "void") return "void";
+  if (entry.status === "mismatch") return "mismatch";
+  if (!cashDepositHasBankSlipEvidence(entry)) return "awaiting_bank_slip";
+  return "transferred";
+}
+
+export function labelCashDepositTransferUiState(
+  state: CashDepositTransferUiState,
+): string {
+  switch (state) {
+    case "void":
+      return "ยกเลิก";
+    case "mismatch":
+      return "ไม่ตรง";
+    case "awaiting_bank_slip":
+      return "รอสลิปโอน";
+    default:
+      return "โอนแล้ว";
+  }
+}
+
 export function labelCashSlipKind(kind: CashSlipKind) {
   switch (kind) {
     case "daily":
@@ -755,6 +821,9 @@ function buildPayload(
   const bankAmount = sumBankTransferAmounts(bankTransfers);
   const transferFee = sumBankTransferFees(bankTransfers);
   const bankSlipUrls = flattenBankTransferUrls(bankTransfers);
+  if (!bankSlipUrls.length) {
+    throw new Error("ต้องแนบรูปสลิปโอนเข้าบัญชีอย่างน้อย 1 รูป (ใบรอบ POS ไม่นับ)");
+  }
   const bankRef =
     bankTransfers.map((t) => t.bankRef).find((r) => r.trim()) ||
     (input.bankRef || "").trim();

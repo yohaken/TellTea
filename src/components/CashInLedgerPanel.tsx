@@ -34,8 +34,10 @@ import {
   emptyCashDepositDay,
   flattenBankTransferUrls,
   formatCashDayShort,
+  cashDepositBankSlipUrls,
+  deriveCashDepositTransferUiState,
   labelCashDepositRound,
-  labelCashDepositStatus,
+  labelCashDepositTransferUiState,
   listCashDeposits,
   subscribeCashDepositsPage,
   suggestedNetBankTransfer,
@@ -43,6 +45,7 @@ import {
   sumBankTransferFees,
   sumCashDepositDays,
   updateCashDeposit,
+  type CashDepositTransferUiState,
 } from "@/lib/cash-deposits";
 import { extractCashBankSlipFromPhotos } from "@/lib/cash-deposits-ai";
 import {
@@ -87,15 +90,16 @@ function writeOpenPref(open: boolean) {
   }
 }
 
-function statusClass(status: CashDepositStatus) {
-  switch (status) {
-    case "matched":
+function transferUiClass(state: CashDepositTransferUiState) {
+  switch (state) {
+    case "transferred":
       return "cash-in-status is-matched";
     case "mismatch":
       return "cash-in-status is-mismatch";
     case "void":
       return "cash-in-status is-void";
     default:
+      // awaiting_bank_slip — round docs alone are not a completed transfer
       return "cash-in-status is-pending";
   }
 }
@@ -312,6 +316,7 @@ export function CashInLedgerPanel({
       roundId: string;
       roundLabel: string;
       status: CashDepositStatus;
+      transferUi: CashDepositTransferUiState;
       day: CashDepositDayLine;
       bankAmount: number;
       /** Bank e-slips — transfer evidence (not round-print compare photos) */
@@ -319,16 +324,14 @@ export function CashInLedgerPanel({
     }[] = [];
     for (const entry of entries) {
       const label = labelCashDepositRound(entry);
-      const bankSlipUrls = flattenBankTransferUrls(
-        entry.bankTransfers?.length
-          ? entry.bankTransfers
-          : coerceBankTransfers(entry),
-      );
+      const bankSlipUrls = cashDepositBankSlipUrls(entry);
+      const transferUi = deriveCashDepositTransferUiState(entry);
       for (const day of entry.days) {
         rows.push({
           roundId: entry.id,
           roundLabel: label,
           status: entry.status,
+          transferUi,
           day,
           bankAmount: entry.bankAmount,
           bankSlipUrls,
@@ -583,6 +586,9 @@ export function CashInLedgerPanel({
         if (!(Number(t.amount) > 0)) {
           throw new Error("ยอดเข้าบัญชีในแต่ละสลิปโอนต้องมากกว่า 0");
         }
+      }
+      if (!bankSlipUrlCount) {
+        throw new Error("ต้องแนบรูปสลิปโอนเข้าบัญชีอย่างน้อย 1 รูป (ใบรอบ POS ไม่นับ)");
       }
       const days = workingDays.map((d) => ({
         ...d,
@@ -1520,30 +1526,33 @@ export function CashInLedgerPanel({
                   ร่าง {bundledBillCount || draft.dayCount}
                 </button>
               ) : null}
-              {entries.map((e) => (
-                <button
-                  key={e.id}
-                  type="button"
-                  className={[
-                    "cash-in-round-chip",
-                    !draft && selectedId === e.id ? "is-active" : "",
-                    e.status === "void" ? "is-void" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  aria-selected={!draft && selectedId === e.id}
-                  disabled={!!draft}
-                  onClick={() => {
-                    setDraft(null);
-                    setSelectedId(e.id);
-                  }}
-                >
-                  {labelCashDepositRound(e)}
-                  <span className={statusClass(e.status)}>
-                    {labelCashDepositStatus(e.status)}
-                  </span>
-                </button>
-              ))}
+              {entries.map((e) => {
+                const transferUi = deriveCashDepositTransferUiState(e);
+                return (
+                  <button
+                    key={e.id}
+                    type="button"
+                    className={[
+                      "cash-in-round-chip",
+                      !draft && selectedId === e.id ? "is-active" : "",
+                      e.status === "void" ? "is-void" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    aria-selected={!draft && selectedId === e.id}
+                    disabled={!!draft}
+                    onClick={() => {
+                      setDraft(null);
+                      setSelectedId(e.id);
+                    }}
+                  >
+                    {labelCashDepositRound(e)}
+                    <span className={transferUiClass(transferUi)}>
+                      {labelCashDepositTransferUiState(transferUi)}
+                    </span>
+                  </button>
+                );
+              })}
               {!draft ? (
                 <button
                   type="button"
@@ -1578,13 +1587,7 @@ export function CashInLedgerPanel({
                         </th>
                         <th
                           className="col-slip"
-                          title="ใบรอบ POS — เทียบตัวเลข ไม่ใช่สลิปโอน"
-                        >
-                          ใบรอบ
-                        </th>
-                        <th
-                          className="col-slip"
-                          title="สลิปโอนเข้าบัญชี"
+                          title="สลิปโอนเข้าบัญชี — ใบรอบดูในบิลเมื่อเปิดมัด"
                         >
                           สลิปโอน
                         </th>
@@ -1613,22 +1616,6 @@ export function CashInLedgerPanel({
                               : ""}
                           </td>
                           <td className="col-slip">
-                            {row.day.slipUrls.length ? (
-                              <EntryPhotoIndicator
-                                imageUrls={row.day.slipUrls}
-                                label="ใบรอบ"
-                                onView={(urls) =>
-                                  setImagePreview({
-                                    urls,
-                                    title: `ใบรอบ ${formatCashDayShort(row.day.date)}`,
-                                  })
-                                }
-                              />
-                            ) : (
-                              <span className="muted">—</span>
-                            )}
-                          </td>
-                          <td className="col-slip">
                             {row.bankSlipUrls.length ? (
                               <EntryPhotoIndicator
                                 imageUrls={row.bankSlipUrls}
@@ -1645,8 +1632,8 @@ export function CashInLedgerPanel({
                             )}
                           </td>
                           <td className="col-type">
-                            <span className={statusClass(row.status)}>
-                              {labelCashDepositStatus(row.status)}
+                            <span className={transferUiClass(row.transferUi)}>
+                              {labelCashDepositTransferUiState(row.transferUi)}
                             </span>
                           </td>
                         </tr>

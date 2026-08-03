@@ -18,7 +18,7 @@ const doc = read("docs/npos-remit-rounds-phases.md");
 
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 669, `APP_BUILD >= 669, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 672, `APP_BUILD >= 672, got ${buildMatch[1]}`);
 assert.match(panel, /setSessionActualCash|ได้จริง/);
 assert.match(panel, /cash-in-bill-compare/);
 assert.match(panel, /ใบรอบ/);
