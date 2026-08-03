@@ -524,7 +524,9 @@ public final class SaleSync {
                             JSONObject o = new JSONObject();
                             o.put("menuItemId", line.menuItemId);
                             o.put("name", line.name);
+                            // Server + web use "price"; keep unitPrice for native readers / hold carts.
                             o.put("price", line.unitPrice);
+                            o.put("unitPrice", line.unitPrice);
                             o.put("qty", line.qty);
                             if (line.optionsJson != null && line.optionsJson.length() > 0) {
                                 o.put("options", line.optionsJson);
@@ -753,7 +755,7 @@ public final class SaleSync {
         return new ArrayList<>(all.subList(0, 40));
     }
 
-    /** All stored local receipts, newest first (cap ~60 in prefs). */
+    /** All stored local receipts, newest first (cap ~250 in prefs). */
     public List<JSONObject> listReceiptsNewestFirst(Context context) {
         List<JSONObject> out = new ArrayList<>();
         try {
@@ -915,6 +917,9 @@ public final class SaleSync {
         executor.execute(
                 () -> {
                     try {
+                        // Push pending sales + queued voids before paper so BO "ยอดในระบบ"
+                        // matches the slip (common drift: local void, server still counting cash).
+                        flushPendingBlocking(app);
                         PrinterEndpoint ep = PrinterPrefs.savedOrNull(app);
                         if (ep == null) {
                             OpsLogger.warn(app, "printer", "ข้ามพิมพ์สรุปรอบ — ยังไม่เลือกปริ้นเตอร์", reportKind);
@@ -1435,7 +1440,8 @@ public final class SaleSync {
         String transferRef = payload.optString("transferRef", "").trim();
         if (!transferRef.isEmpty()) row.put("transferRef", transferRef);
         arr.put(row);
-        while (arr.length() > 60) {
+        // Busy morning shifts often exceed 60 bills; X/Z item/category detail needs the full round.
+        while (arr.length() > 250) {
             JSONArray trimmed = new JSONArray();
             for (int i = 1; i < arr.length(); i++) trimmed.put(arr.get(i));
             arr = trimmed;
