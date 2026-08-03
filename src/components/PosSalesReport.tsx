@@ -59,7 +59,7 @@ export function PosSalesReport({
   compact?: boolean;
   initialStatusFilter?: BillStatusFilter;
 }) {
-  const { actorId } = useAuth();
+  const { actorId, staff } = useAuth();
   const [sales, setSales] = useState<PosSale[]>([]);
   const [sessions, setSessions] = useState<PosSession[]>([]);
   const [shop, setShop] = useState<PosShopSettings>(() => getLocalPosShopSettings());
@@ -199,7 +199,15 @@ export function PosSalesReport({
     setForceCloseBusyId(sid);
     onError?.(null);
     try {
-      await closePosSessionAdmin(sid, actorId);
+      const closedByName =
+        (staff?.displayName || "").trim() ||
+        (staff?.email || "").trim() ||
+        (staff?.phone || "").trim() ||
+        "เจ้าของ";
+      await closePosSessionAdmin(sid, actorId, "", {
+        closedByName,
+        closedByEmployeeId: staff?.employeeId || "",
+      });
       setForceCloseTargetId(null);
     } catch (err) {
       onError?.((err as Error).message || "ปิดรอบไม่สำเร็จ");

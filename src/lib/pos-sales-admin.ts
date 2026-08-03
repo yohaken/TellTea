@@ -212,6 +212,7 @@ export async function closePosSessionAdmin(
   sessionId: string,
   actorId: string,
   note = "",
+  opts?: { closedByName?: string; closedByEmployeeId?: string },
 ): Promise<void> {
   const id = (sessionId || "").trim();
   if (!id) throw new Error("ไม่พบรหัสรอบ");
@@ -222,14 +223,21 @@ export async function closePosSessionAdmin(
     const data = snap.data() as Record<string, unknown>;
     if (data.status === "closed") throw new Error("รอบนี้ปิดแล้ว");
     const now = Date.now();
-    await updateDoc(ref, {
+    const closedByName = String(opts?.closedByName || "").trim().slice(0, 80);
+    const closedByEmployeeId = String(opts?.closedByEmployeeId || "")
+      .trim()
+      .slice(0, 64);
+    const patch: Record<string, unknown> = {
       status: "closed",
       closedAt: now,
       updatedAt: now,
       closedBy: actorId || "owner",
       closeSource: "bo-force",
       discrepancyNote: String(note || "ปิดจากหลังร้าน (ทดลอง)").slice(0, 240),
-    });
+    };
+    if (closedByName) patch.closedByName = closedByName;
+    if (closedByEmployeeId) patch.closedByEmployeeId = closedByEmployeeId;
+    await updateDoc(ref, patch);
   } catch (err) {
     if (err instanceof Error && /ไม่พบ|ปิดแล้ว/.test(err.message)) throw err;
     throw new Error(mapFirestoreError(err, "ปิดรอบจากหลังร้าน"));

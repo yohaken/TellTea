@@ -139,6 +139,7 @@
     "test:pos-native-shell": "node scripts/test-pos-native-shell.mjs",
     "test:pos-native-update-foundation": "node scripts/test-pos-native-update-foundation.mjs",
     "test:npos-n2-identity": "node scripts/test-npos-n2-identity.mjs",
+    "test:npos-session-open-close-staff": "node scripts/test-npos-session-open-close-staff.mjs",
     "test:npos-diagnose": "node scripts/test-npos-diagnose.mjs",
     "test:npos-n3-settings": "node scripts/test-npos-n3-settings.mjs",
     "test:npos-n4-n5-ops-log": "node scripts/test-npos-n4-n5-ops-log.mjs",

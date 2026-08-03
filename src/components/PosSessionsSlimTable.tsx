@@ -25,6 +25,7 @@ import { deletePosSessionsAdmin } from "@/lib/pos-sales-admin";
 import {
   POS_SESSIONS_SLIM_LIMIT,
   formatPosSessionDuration,
+  posSessionCloserLabel,
   posSessionCode,
   posSessionDurationMs,
   salesForSession,
@@ -87,6 +88,7 @@ type RowModel = {
   cashDrops: number | undefined;
   note: string;
   openedBy: string;
+  closedBy: string;
   discrepancyLabel: string;
   remit: number | undefined;
   remitStatus: PosRemitStatus | undefined;
@@ -146,6 +148,7 @@ function buildRows(
     const dateLabel = formatDateShort(dayMs);
     const note = session.discrepancyNote || "";
     const openedBy = (session.openedByName || "").trim();
+    const closedBy = posSessionCloserLabel(session);
     const discrepancyLabel = (session.discrepancyLabel || "").trim();
     const dropNotes = session.cashDropNotes || [];
     const remit =
@@ -179,6 +182,7 @@ function buildRows(
       cashDrops: session.cashDropCount,
       note,
       openedBy,
+      closedBy,
       discrepancyLabel,
       remit,
       remitStatus,
@@ -199,6 +203,7 @@ function buildRows(
         open ? "เปิด" : "ปิด",
         note,
         openedBy,
+        closedBy,
         discrepancyLabel,
         labelRemitStatus(remitStatus),
         isManual ? "รอบมือ manual" : "",
@@ -784,6 +789,12 @@ export function PosSessionsSlimTable({
             </span>
             <span role="columnheader">เริ่ม</span>
             <span role="columnheader">ปิด</span>
+            <span role="columnheader" title="พนักงานเปิดรอบ">
+              เข้า
+            </span>
+            <span role="columnheader" title="พนักงานปิดรอบ / ปิดจากหลังร้าน">
+              ปิดโดย
+            </span>
             <span role="columnheader" className="npos-slim-num">
               บิล
             </span>
@@ -858,6 +869,26 @@ export function PosSessionsSlimTable({
                   <span role="cell" className="npos-slim-time">
                     {row.session.closedAt ? formatHm(row.session.closedAt) : "—"}
                   </span>
+                  <span
+                    role="cell"
+                    className="npos-slim-staff"
+                    title={row.openedBy ? `ผู้เปิด ${row.openedBy}` : "ยังไม่มีชื่อผู้เปิด"}
+                  >
+                    {row.openedBy || "—"}
+                  </span>
+                  <span
+                    role="cell"
+                    className="npos-slim-staff"
+                    title={
+                      row.open
+                        ? "ยังไม่ปิดกะ"
+                        : row.closedBy
+                          ? `ผู้ปิด ${row.closedBy}`
+                          : "ยังไม่มีชื่อผู้ปิด (รอบเก่าหรือปิดก่อนอัปเดต)"
+                    }
+                  >
+                    {row.open ? "—" : row.closedBy || "—"}
+                  </span>
                   <span role="cell" className="npos-slim-num">
                     {row.bills || "—"}
                   </span>
@@ -922,7 +953,8 @@ export function PosSessionsSlimTable({
                     <span>
                       {row.isManual ? "รอบมือ · " : ""}
                       รอบ {row.sessionCode}
-                      {row.openedBy ? ` · ผู้เปิด ${row.openedBy}` : ""}
+                      {row.openedBy ? ` · เข้า ${row.openedBy}` : ""}
+                      {!row.open && row.closedBy ? ` · ปิดโดย ${row.closedBy}` : ""}
                       {` · รวม ${row.durationLabel}`}
                       {` · ทอนเริ่ม ${moneyOrDash(row.opening)}`}
                       {row.open ? " · ระหว่างกะ" : ""}
@@ -1085,8 +1117,9 @@ export function PosSessionsSlimTable({
       )}
 
       <p className="muted npos-slim-foot">
-        แถวหลัก = สถานะ/เวลา/ยอดเงิน · กดแถวดูรหัสรอบ · รวมเวลา · PP · นับ ·{" "}
-        <strong>นำส่ง</strong> = นับ − ทอนค้าง · <strong>ส่ง</strong> = รับจริงหลังปิดรอบ
+        แถวหลัก = สถานะ/เวลา/<strong>เข้า</strong>/<strong>ปิดโดย</strong>/ยอดเงิน · กดแถวดูรหัสรอบ
+        · รวมเวลา · PP · นับ · <strong>นำส่ง</strong> = นับ − ทอนค้าง · <strong>ส่ง</strong> =
+        รับจริงหลังปิดรอบ
         {CASH_IN_NPOS_REMIT_ONLY
           ? " · ยอดต้องโอนใช้รอบ nPos อย่างเดียว"
           : " · +รอบมือ = เคาน์เตอร์นอกโปรแกรม"}{" "}
