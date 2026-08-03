@@ -120,7 +120,7 @@ export const OWNER_QUICK_CATALOG: Record<OwnerQuickKey, OwnerQuickItem> = {
   assignTasks: {
     key: "assignTasks",
     abbr: "งาน",
-    label: "งานมอบหมาย",
+    label: "กระดานโนต",
     href: "/tasks/",
   },
   staff: {

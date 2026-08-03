@@ -72,7 +72,7 @@ export const NAV_MODULE_DESCRIPTIONS: Record<NavModuleKey, string> = {
   bonus: "จ่ายเงินเดือน / โบนัส",
   checklist: "SmartCheck SOP",
   stock: "คลังวัตถุดิบ",
-  assignTasks: "งานมอบหมายประจำสัปดาห์",
+  assignTasks: "กระดานโนตความคืบ (พนักงาน+เจ้าของ)",
 };
 
 /** ค่าเริ่มต้น — 5 โมดูลหลักบนแถบล่าง โบนัสไปหน้า อื่นๆ */

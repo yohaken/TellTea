@@ -902,7 +902,7 @@ service cloud.firestore {
       allow update: if false;
     }
 
-    // legacy collection — งานจริงอยู่ taskTemplates / taskOccurrences · ปิดการเขียนใหม่
+    // legacy — ยกเลิก checklist / งานมอบหมายรอบสัปดาห์ · ปิดเขียนใหม่
     match /assignTasks/{id} {
       allow read: if isOwner() || isOwnerEmail();
       allow write: if false;
@@ -913,43 +913,53 @@ service cloud.firestore {
         && staffEmployeeId() in resource.data.assigneeIds;
     }
 
-    function taskOccurrenceAssigneeComplete() {
-      let before = resource.data;
-      let after = request.resource.data;
-      return isTaskOccurrenceAssignee()
-        && after.templateId == before.templateId
-        && after.periodKey == before.periodKey
-        && after.title == before.title
-        && after.note == before.note
-        && after.checklist == before.checklist
-        && after.assigneeIds == before.assigneeIds
-        && after.assigneeNames == before.assigneeNames
-        && after.dueDate == before.dueDate
-        && after.openAt == before.openAt
-        && after.createdAt == before.createdAt
-        && after.get('nudgeKind', 'deadline') == before.get('nudgeKind', 'deadline')
-        && after.diff(before).affectedKeys().hasOnly([
-          'checklistDone',
-          'proofImg',
-          'proofImgs',
-          'completionNote',
-          'status',
-          'completedAt',
-          'completedBy',
-          'completedKind',
-          'wasMissedBeforeBackfill',
-          'updatedAt',
-        ]);
-    }
-
     match /taskTemplates/{id} {
-      allow read, create, update, delete: if isOwner() || isOwnerEmail();
+      allow read: if isOwner() || isOwnerEmail();
+      allow create, update: if false;
+      allow delete: if isOwner() || isOwnerEmail();
     }
 
     match /taskOccurrences/{id} {
       allow read: if isOwner() || isOwnerEmail() || isTaskOccurrenceAssignee();
-      allow create, delete: if isOwner() || isOwnerEmail();
-      allow update: if isOwner() || isOwnerEmail() || taskOccurrenceAssigneeComplete();
+      allow create, update: if false;
+      allow delete: if isOwner() || isOwnerEmail();
+    }
+
+    /**
+     * กระดานโนตงาน (/tasks/) — พนักงาน + เจ้าของโพสต์ข้อความได้
+     * ลบ: คนเขียนเอง หรือเจ้าของ
+     */
+    function taskBoardNoteCreate() {
+      return (isStaff() || isOwnerEmail())
+        && request.resource.data.keys().hasOnly([
+          'text', 'createdBy', 'createdByName', 'authorRole',
+          'employeeId', 'createdAt', 'updatedAt',
+        ])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 500
+        && request.resource.data.createdBy == actorId()
+        && request.resource.data.createdByName is string
+        && request.resource.data.createdByName.size() > 0
+        && request.resource.data.createdByName.size() <= 80
+        && request.resource.data.authorRole in ['owner', 'staff']
+        && request.resource.data.employeeId is string
+        && request.resource.data.employeeId.size() <= 80
+        && request.resource.data.createdAt is number
+        && request.resource.data.updatedAt is number
+        && (
+          (isOwner() || isOwnerEmail())
+            ? request.resource.data.authorRole == 'owner'
+            : request.resource.data.authorRole == 'staff'
+        );
+    }
+
+    match /taskBoardNotes/{id} {
+      allow read: if isStaff() || isOwnerEmail();
+      allow create: if taskBoardNoteCreate();
+      allow update: if false;
+      allow delete: if isOwner() || isOwnerEmail()
+        || (isStaff() && resource.data.createdBy == actorId());
     }
 
     // ข้อเสนอจากพนักงาน (ไอคอนยูทิลิตี้) — ส่งได้ทุกคน · เปลี่ยนสถานะเฉพาะเจ้าของ

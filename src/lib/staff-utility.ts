@@ -1,6 +1,6 @@
 /**
  * ไอคอนยูทิลิตี้พนักงาน (ซ้ายกลางจอ) — ช่องรวมของเล็กๆ
- * ตอนนี้: ข้อเสนอ · โครง: มอบหมายงาน (กระพริบเมื่อมีค้าง)
+ * ตอนนี้: ข้อเสนอ · ลิงก์กระดานโนต (/tasks/)
  */
 
 export const STAFF_UTILITY_SLOTS = ["suggestions", "tasks"] as const;
@@ -22,18 +22,16 @@ export const STAFF_UTILITY_CATALOG: Record<StaffUtilitySlot, StaffUtilitySlotMet
   },
   tasks: {
     key: "tasks",
-    label: "งาน",
+    label: "โนต",
     scaffold: false,
     href: "/tasks/",
   },
 };
 
-/** นับสำหรับกระพริบไอคอน — งานค้าง + ข้อเสนอที่รอเจ้าของดู */
+/** นับสำหรับกระพริบไอคอน — ข้อเสนอที่รอเจ้าของดู (ยกเลิกนับงาน checklist) */
 export function staffUtilityAttentionCount(opts: {
-  pendingTaskCount: number;
+  pendingTaskCount?: number;
   pendingSuggestionCount: number;
 }): number {
-  const tasks = Math.max(0, Math.floor(opts.pendingTaskCount || 0));
-  const suggestions = Math.max(0, Math.floor(opts.pendingSuggestionCount || 0));
-  return tasks + suggestions;
+  return Math.max(0, Math.floor(opts.pendingSuggestionCount || 0));
 }

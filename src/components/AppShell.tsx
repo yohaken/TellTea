@@ -21,7 +21,6 @@ import { PermPreviewBanner } from "@/components/PermPreviewBanner";
 import { PersonalProfileModal } from "@/components/PersonalProfileModal";
 import { ProfilePromptBanner } from "@/components/ProfilePromptBanner";
 import { StaffNewsPopup } from "@/components/StaffNewsPopup";
-import { StaffTaskNudge } from "@/components/StaffTaskNudge";
 import { OwnerQuickDock } from "@/components/OwnerQuickDock";
 import { StaffPresenceDock } from "@/components/StaffPresenceDock";
 import { StaffPresenceHeartbeat } from "@/components/StaffPresenceHeartbeat";
@@ -185,9 +184,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
 
-        {/* มุมพนักงานเป๊ะตอนพรีวิว: ข่าว · แจ้งงานเบา/หนัก · ยูทิล · เตือนยอดต่ำ */}
+        {/* มุมพนักงานเป๊ะตอนพรีวิว: ข่าว · ยูทิล · เตือนยอดต่ำ (ยกเลิกแจ้ง checklist งาน) */}
         <StaffNewsPopup />
-        <StaffTaskNudge />
         <LowBalanceAlert />
 
         {!isPermPreview ? <PersonalProfileModal /> : null}

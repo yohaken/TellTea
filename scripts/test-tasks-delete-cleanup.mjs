@@ -1,5 +1,5 @@
 /**
- * Task delete must clear all open rounds for a template (no sibling reappear).
+ * Legacy task delete helpers still in lib · /tasks/ ไม่เรียกแล้ว
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -19,12 +19,9 @@ assert.match(occ, /dismissAndDeleteOpenTaskOccurrences/);
 assert.match(occ, /deactivateTaskTemplateClearingOpen/);
 assert.match(occ, /arrayUnion/);
 assert.match(occ, /sanitizeTaskTemplateId|resolveExistingTaskTemplateRef/);
-assert.match(page, /dismissAndDeleteOpenTaskOccurrences/);
-assert.match(page, /deactivateTaskTemplateClearingOpen/);
-assert.match(page, /เอาออกจากตาราง/);
-assert.match(page, /allOccurrences/);
-assert.doesNotMatch(page, /deactivateTaskTemplate\(/);
-assert.doesNotMatch(page, /await dismissTaskPeriod/);
+assert.match(page, /TaskBoardNotesView/);
+assert.doesNotMatch(page, /dismissAndDeleteOpenTaskOccurrences/);
+assert.doesNotMatch(page, /deactivateTaskTemplateClearingOpen/);
 
 /** Pure helper mirror for unit check */
 function isOpen(status) {
@@ -42,15 +39,11 @@ function collectOpen(templateId, occurrences) {
   return [...byId.values()];
 }
 
-const rows = [
-  { id: "a", templateId: "t1", periodKey: "2026-07-27", status: "pending" },
-  { id: "b", templateId: "t1", periodKey: "2026-08-03", status: "pending" },
-  { id: "c", templateId: "t1", periodKey: "2026-07-27", status: "pending" }, // dupe
-  { id: "d", templateId: "t1", periodKey: "2026-07-20", status: "completed" },
-  { id: "e", templateId: "t2", periodKey: "2026-07-27", status: "pending" },
-];
-const open = collectOpen("t1", rows);
-assert.equal(open.length, 3);
-assert.deepEqual(open.map((o) => o.id).sort(), ["a", "b", "c"]);
+const rows = collectOpen("t1", [
+  { id: "a", templateId: "t1", periodKey: "2026-01-01", status: "pending" },
+  { id: "b", templateId: "t1", periodKey: "2026-01-01", status: "missed" },
+  { id: "c", templateId: "t2", periodKey: "2026-01-01", status: "pending" },
+]);
+assert.equal(rows.length, 2);
 
-console.log("test-tasks-delete-cleanup: ok");
+console.log("test-tasks-delete-cleanup: ok (legacy helpers; UI retired)");

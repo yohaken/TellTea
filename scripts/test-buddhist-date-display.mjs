@@ -83,9 +83,8 @@ assert.match(check, /check-page/);
 assert.match(check, /check-history-sheet/);
 assert.doesNotMatch(check, /[^B]formatDateShort\(|^formatDateShort\(/);
 assert.doesNotMatch(check, /[^B]formatDateTimeShort\(|^formatDateTimeShort\(/);
-assert.match(tasks, /formatDateShortBe/);
 assert.match(tasks, /tasks-page/);
-assert.match(tasks, /tasks-sheet/);
+assert.match(tasks, /TaskBoardNotesView/);
 assert.doesNotMatch(tasks, /[^B]formatDateShort\(|^formatDateShort\(/);
 assert.match(stock, /timelineRoundLabel/);
 assert.match(stock, /stock-page/);
@@ -121,11 +120,13 @@ assert.match(css, /\.cash-in-slim \.col-date/);
 assert.match(css, /\.production-page \.production-sheet \.sheet-table \.col-date/);
 assert.match(css, /\.ot-page \.ot-sheet-wrap \.ot-table \.ot-col-date/);
 assert.match(css, /\.check-page \.check-history-sheet \.check-history-date/);
-assert.match(css, /\.tasks-page \.tasks-sheet \.tasks-col-due/);
+assert.match(css, /\.task-board-page/);
+assert.match(css, /\.task-board-table/);
 assert.match(css, /\.stock-page \.stock-history-sheet \.stock-history-date/);
 assert.match(css, /\.bonus-page \.payroll-sheet \.payroll-col-due/);
 assert.match(css, /width: 3\.55rem/);
-assert.match(version, /APP_BUILD = 485/);
+assert.match(version, /APP_BUILD = \d+/);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 485);
 
 function bangkokDateKey(ms) {
   return new Intl.DateTimeFormat("en-CA", {

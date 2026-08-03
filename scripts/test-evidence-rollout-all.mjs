@@ -52,11 +52,11 @@ assert.match(check, /CHECK_IMAGE_MAX/);
 assert.match(check, /imageUrls/);
 assert.doesNotMatch(check, /PhotoAttachField/);
 
-assert.match(tasks, /PhotoAttachMultiField/);
-assert.match(tasks, /storageFolder="tasks"/);
-assert.match(tasks, /TASK_PROOF_MAX/);
-assert.match(tasks, /proofImgs/);
+// /tasks/ เป็นกระดานโนตแล้ว — ไม่แนบรูปหลักฐาน checklist
+assert.match(tasks, /TaskBoardNotesView/);
+assert.doesNotMatch(tasks, /PhotoAttachMultiField/);
 assert.doesNotMatch(tasks, /PhotoAttachField/);
+assert.match(taskLogic, /export const TASK_PROOF_MAX/);
 
 assert.match(production, /PhotoAttachMultiField/);
 assert.match(production, /storageFolder="production"/);
@@ -84,13 +84,11 @@ assert.match(productionLib, /export const PROD_IMAGE_MAX/);
 assert.match(productionLib, /getProdImageUrls/);
 assert.match(staffPersonalLib, /export const STAFF_ID_CARD_MAX/);
 assert.match(staffPersonalLib, /getIdCardPhotoUrls/);
-assert.match(taskLogic, /export const TASK_PROOF_MAX/);
 assert.match(taskLogic, /getTaskProofImgs/);
 assert.match(profileLib, /getIdCardPhotoUrls/);
 assert.match(readiness, /getIdCardPhotoUrls/);
 
 const rules = read("firestore.rules");
-assert.match(rules, /'proofImgs'/);
 assert.match(rules, /match \/evidencePhotos\/\{photoId\}/);
 
 // Edit ledger uses edit slot key
@@ -103,7 +101,7 @@ console.log("OK test-evidence-rollout-all", {
     "in",
     "ot",
     "check",
-    "tasks",
+    "task-board",
     "production",
     "profile",
     "personal-modal",

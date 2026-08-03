@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Lightbulb, ListTodo } from "lucide-react";
+import { Lightbulb, StickyNote } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import {
   countPendingSuggestions,
@@ -18,11 +18,6 @@ import {
   STAFF_UTILITY_CATALOG,
   type StaffUtilitySlot,
 } from "@/lib/staff-utility";
-import {
-  subscribeTaskOccurrencesForAssignee,
-  taskOccurrenceSinceMs,
-} from "@/lib/task-occurrences";
-import { filterOccurrencesByTab } from "@/lib/task-weekly-logic";
 import { cn } from "@/lib/utils";
 
 const OWNER_STATUS_ACTIONS: SuggestionStatus[] = ["accepted", "later", "done"];
@@ -45,7 +40,6 @@ export function StaffUtilityPanel({
   const isOwner = staff?.role === "owner";
   const [slot, setSlot] = useState<StaffUtilitySlot>(initialSlot);
   const [suggestions, setSuggestions] = useState<StaffSuggestion[]>([]);
-  const [pendingTasks, setPendingTasks] = useState(0);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -71,22 +65,6 @@ export function StaffUtilityPanel({
       onError: (err) => setError(err.message),
     });
   }, [ready, isOwner, suggestionActorId]);
-
-  useEffect(() => {
-    if (!ready) return;
-    if (isOwner || !myEmployeeId) {
-      setPendingTasks(0);
-      return;
-    }
-    return subscribeTaskOccurrencesForAssignee(
-      myEmployeeId,
-      (rows) => {
-        setPendingTasks(filterOccurrencesByTab(rows, "thisWeek").length);
-      },
-      () => setPendingTasks(0),
-      { since: taskOccurrenceSinceMs() },
-    );
-  }, [ready, isOwner, myEmployeeId]);
 
   const pendingSuggestionCount = useMemo(
     () => (isOwner ? countPendingSuggestions(suggestions) : 0),
@@ -138,11 +116,9 @@ export function StaffUtilityPanel({
         {(Object.keys(STAFF_UTILITY_CATALOG) as StaffUtilitySlot[]).map((key) => {
           const meta = STAFF_UTILITY_CATALOG[key];
           const badge =
-            key === "tasks" && !isOwner && pendingTasks > 0
-              ? pendingTasks
-              : key === "suggestions" && isOwner && pendingSuggestionCount > 0
-                ? pendingSuggestionCount
-                : 0;
+            key === "suggestions" && isOwner && pendingSuggestionCount > 0
+              ? pendingSuggestionCount
+              : 0;
           return (
             <button
               key={key}
@@ -159,7 +135,7 @@ export function StaffUtilityPanel({
               {key === "suggestions" ? (
                 <Lightbulb size={14} aria-hidden />
               ) : (
-                <ListTodo size={14} aria-hidden />
+                <StickyNote size={14} aria-hidden />
               )}
               <span>{meta.label}</span>
               {badge > 0 ? (
@@ -178,7 +154,7 @@ export function StaffUtilityPanel({
             <form className="staff-utility-form" onSubmit={(e) => void onSubmit(e)}>
               {isPermPreview ? (
                 <p className="muted staff-utility-owner-hint">
-                  พรีวิวมุมพนักงาน — ดูข้อเสนอ/งานได้ · ส่งของจริงไม่ได้จนกว่าจะออกจากมุมมอง
+                  พรีวิวมุมพนักงาน — ดูข้อเสนอ/โนตได้ · ส่งของจริงไม่ได้จนกว่าจะออกจากมุมมอง
                 </p>
               ) : null}
               <label>
@@ -260,20 +236,10 @@ export function StaffUtilityPanel({
         </div>
       ) : (
         <div className="staff-utility-body staff-utility-tasks-scaffold">
-          <p>
-            {pendingTasks > 0
-              ? `มีงานค้าง ${pendingTasks} รายการ`
-              : isOwner
-                ? "โครงย้ายงานมอบหมายมาไว้ที่นี่"
-                : "ตอนนี้ยังไม่มีงานค้างเปิดอยู่"}
-          </p>
-          <p className="muted">
-            {isOwner
-              ? "ดูและจัดการงานมอบหมายได้ที่หน้างาน"
-              : "งานนี้ยังเปิดจากแถบล่างได้ — ไอคอนจะกระพริบเมื่อมีค้าง"}
-          </p>
+          <p>กระดานโนต — พนักงานใส่ความคืบ · เจ้าของพิมพ์ได้</p>
+          <p className="muted">ยกเลิกระบบ checklist งานมอบหมายแล้ว · ใช้หน้ากระดานแทน</p>
           <Link href="/tasks/" className="primary-btn staff-utility-tasks-link">
-            เปิดหน้างาน
+            เปิดกระดานโนต
           </Link>
         </div>
       )}
