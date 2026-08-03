@@ -792,7 +792,7 @@ export function PosSessionsSlimTable({
             <span role="columnheader" className="npos-slim-num">
               ยอด
             </span>
-            <span role="columnheader" className="npos-slim-num">
+            <span role="columnheader" className="npos-slim-num npos-slim-cash">
               สด
             </span>
             <span role="columnheader" className="npos-slim-num">
@@ -889,7 +889,7 @@ export function PosSessionsSlimTable({
                   <span role="cell" className="npos-slim-num npos-slim-strong">
                     {moneyOrDash(row.total)}
                   </span>
-                  <span role="cell" className="npos-slim-num">
+                  <span role="cell" className="npos-slim-num npos-slim-cash">
                     {moneyOrDash(row.cash)}
                   </span>
                   <span role="cell" className="npos-slim-num">
