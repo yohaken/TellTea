@@ -187,6 +187,50 @@ async function main() {
     );
   }
 
+
+  // Recent stock count rounds — who wrote stock while presence may be stale
+  try {
+    const stockDocs = await listCollection(token, "stockCountSessions");
+    const stockRows = stockDocs
+      .map((d) => {
+        const f = d.fields;
+        const submittedAt = Number(parseField(f.submittedAt) || 0);
+        const updatedAt = Number(parseField(f.updatedAt) || 0);
+        const createdAt = Number(parseField(f.createdAt) || 0);
+        const sortAt = Math.max(submittedAt, updatedAt, createdAt);
+        return {
+          id: d.id,
+          inspector: String(parseField(f.inspector) || ""),
+          inspectorId: parseField(f.inspectorId) ? String(parseField(f.inspectorId)) : "",
+          createdBy: String(parseField(f.createdBy) || ""),
+          updatedBy: parseField(f.updatedBy) ? String(parseField(f.updatedBy)) : "",
+          dayOfMonth: Number(parseField(f.dayOfMonth) || 0),
+          year: Number(parseField(f.year) || 0),
+          month: Number(parseField(f.month) || 0),
+          submittedAt,
+          updatedAt,
+          createdAt,
+          sortAt,
+          when: formatIct(sortAt),
+          age: formatAge(sortAt, now),
+        };
+      })
+      .filter((r) => r.sortAt > now - 3 * 24 * 60 * 60 * 1000)
+      .sort((a, b) => b.sortAt - a.sortAt);
+    lines.push("");
+    lines.push(`=== stockCountSessions last 3d (${stockRows.length}) ===`);
+    for (const r of stockRows.slice(0, 30)) {
+      lines.push(
+        `${r.age.padEnd(6)} ${r.when.padEnd(26)} inspector=${r.inspector || "—"} createdBy=${r.createdBy || "—"} updatedBy=${r.updatedBy || "—"} id=${r.id}`,
+      );
+    }
+    globalThis.__stockRows = stockRows;
+  } catch (err) {
+    lines.push("");
+    lines.push(`stockCountSessions dump failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+
   const text = lines.join("\n");
   console.log(text);
 
@@ -196,7 +240,7 @@ async function main() {
     writeFileSync(join(outDir, "staff-presence-dump.txt"), `${text}\n`, "utf8");
     writeFileSync(
       join(outDir, "staff-presence-dump.json"),
-      `${JSON.stringify({ now, rows }, null, 2)}\n`,
+      `${JSON.stringify({ now, rows, stockRows: globalThis.__stockRows || [] }, null, 2)}\n`,
       "utf8",
     );
     console.log(`\nwrote ${outDir}/staff-presence-dump.{txt,json}`);
