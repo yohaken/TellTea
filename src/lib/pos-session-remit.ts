@@ -255,7 +255,11 @@ export function buildManualPosSessionDoc(
   if (leave != null) data.leaveFloat = leave;
   if (expected != null) data.expectedCash = expected;
   if (diff != null) data.cashDifference = diff;
-  if (openedByName) data.openedByName = openedByName;
+  if (openedByName) {
+    data.openedByName = openedByName;
+    data.closedByName = openedByName;
+  }
+  data.closedBy = actorId;
   if (note) data.discrepancyNote = note;
   return { id, data };
 }

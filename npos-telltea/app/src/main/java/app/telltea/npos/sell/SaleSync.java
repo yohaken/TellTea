@@ -200,6 +200,15 @@ public final class SaleSync {
         if (!name.isEmpty()) body.put("openedByName", name);
     }
 
+    /** Closer for BO sessions table — defaults to opener when no separate pick UI. */
+    private static void putClosedBy(JSONObject body, String closedByEmployeeId, String closedByName)
+            throws Exception {
+        String id = closedByEmployeeId == null ? "" : closedByEmployeeId.trim();
+        String name = closedByName == null ? "" : closedByName.trim();
+        if (!id.isEmpty()) body.put("closedByEmployeeId", id);
+        if (!name.isEmpty()) body.put("closedByName", name);
+    }
+
     private static void applyOpenedByFromServer(Context context, JSONObject data) {
         if (context == null || data == null) return;
         String id = data.optString("openedByEmployeeId", "");
@@ -452,6 +461,11 @@ public final class SaleSync {
         } catch (Exception ignored) {
             body.put("cashDropNotes", new JSONArray());
         }
+        // Closer defaults to opener (name pick at open) — BO can show พนักงานปิดรอบ.
+        putClosedBy(
+                body,
+                ShiftPrefs.openedByEmployeeId(app),
+                ShiftPrefs.openedByName(app));
         JSONObject res = MenuRepository.postJson(CLOSE_URL, body);
         if (res.optBoolean("ok", false)) {
             OpsLogger.info(

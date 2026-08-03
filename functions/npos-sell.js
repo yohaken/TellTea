@@ -529,6 +529,24 @@ exports.nposSessionClose = functions.region("asia-southeast1").https.onRequest(a
     if (alreadyClosed) {
       patch.zFinalizedAt = now;
       patch.zFinalizedBy = installId;
+      // Keep BO force-close actor; do not overwrite closedByName on Z finalize.
+    } else {
+      const closedByName = asString(body.closedByName, 80);
+      const closedByEmployeeId = asString(body.closedByEmployeeId, 64);
+      const openerName = asString(data.openedByName, 80);
+      const openerId = asString(data.openedByEmployeeId, 64);
+      if (closedByName) {
+        patch.closedByName = closedByName;
+        patch.closedByEmployeeId = closedByEmployeeId || "";
+        patch.closeSource = "tablet";
+      } else if (openerName) {
+        // Default closer = opener when tablet omits explicit closer.
+        patch.closedByName = openerName;
+        patch.closedByEmployeeId = openerId || "";
+        patch.closeSource = "tablet";
+      } else {
+        patch.closeSource = "tablet";
+      }
     }
     await ref.set(patch, { merge: true });
     res.status(200).json({

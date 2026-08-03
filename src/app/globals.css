@@ -10248,7 +10248,7 @@ body.modal-open .main-panel {
   font-weight: 700;
 }
 
-/* Primary cash-compare cols only — secondary lives in row detail */
+/* Primary cash-compare cols + opener/closer — secondary lives in row detail */
 .npos-slim-row--sessions-super {
   grid-template-columns:
     1.25rem
@@ -10263,8 +10263,10 @@ body.modal-open .main-panel {
     max-content
     max-content
     max-content
+    max-content
+    max-content
     max-content;
-  column-gap: 0.65rem;
+  column-gap: 0.55rem;
   row-gap: 0.12rem;
   justify-content: start;
   width: max-content;
@@ -10290,6 +10292,15 @@ body.modal-open .main-panel {
   max-width: 4.5rem;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.npos-slim-row--sessions-super .npos-slim-staff {
+  max-width: 5.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  color: #2f3b35;
 }
 
 .npos-slim-row--sessions-super .npos-slim-time {

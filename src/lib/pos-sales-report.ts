@@ -217,7 +217,22 @@ function mapSession(id: string, data: Record<string, unknown>): PosSession {
     counterLabel: str("counterLabel"),
     openedByEmployeeId: str("openedByEmployeeId"),
     openedByName: str("openedByName"),
+    closedBy: str("closedBy"),
+    closedByEmployeeId: str("closedByEmployeeId"),
+    closedByName: str("closedByName"),
+    closeSource: str("closeSource"),
   };
+}
+
+/** Display label for who closed the round — empty when still open / unknown. */
+export function posSessionCloserLabel(session: PosSession): string {
+  if (session.status !== "closed") return "";
+  const name = (session.closedByName || "").trim();
+  if (name) return name;
+  const source = (session.closeSource || "").trim();
+  if (source === "bo-force" || source === "bo-manual") return "BO";
+  if ((session.closedBy || "").trim()) return "BO";
+  return "";
 }
 
 /** Activity clock for sort — closedAt when closed, else openedAt. */

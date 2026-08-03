@@ -376,6 +376,12 @@ export type PosSession = {
   /** Who opened this nPos round (name pick at clock-in — not OT-linked). */
   openedByEmployeeId?: string;
   openedByName?: string;
+  /** Who closed this round (tablet default = opener · BO force = owner/staff). */
+  closedBy?: string;
+  closedByEmployeeId?: string;
+  closedByName?: string;
+  /** tablet | bo-force | bo-manual */
+  closeSource?: string;
 };
 
 export type PosSalePaymentMethod = "cash" | "promptpay" | "transfer";
