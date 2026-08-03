@@ -364,17 +364,30 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
         const prevDevice = asString(best.data.deviceId, 64);
         const openedAt = Number(best.data.openedAt) || now;
         const correctDate = startOfBangkokDay(openedAt);
-        await best.ref.set(
-          {
-            deviceId: installId,
-            previousDeviceId: prevDevice && prevDevice !== installId ? prevDevice : best.data.previousDeviceId || "",
-            resumedAt: now,
-            updatedAt: now,
-            // Repair legacy UTC-midnight date keys so BO today query matches.
-            date: correctDate,
-          },
-          { merge: true },
-        );
+        // Tablet always sends who clocked in — backfill when the open round still has no opener
+        // (common: resume / seat handoff / sync after local-first open). Do not overwrite a name.
+        const bodyOpenerId = asString(body.openedByEmployeeId, 64);
+        const bodyOpenerName = asString(body.openedByName, 80);
+        const existingOpenerId = asString(best.data.openedByEmployeeId, 64);
+        const existingOpenerName = asString(best.data.openedByName, 80);
+        const resumePatch = {
+          deviceId: installId,
+          previousDeviceId: prevDevice && prevDevice !== installId ? prevDevice : best.data.previousDeviceId || "",
+          resumedAt: now,
+          updatedAt: now,
+          // Repair legacy UTC-midnight date keys so BO today query matches.
+          date: correctDate,
+        };
+        if (bodyOpenerName && !existingOpenerName) {
+          resumePatch.openedByName = bodyOpenerName;
+          resumePatch.openedByEmployeeId = bodyOpenerId || "";
+        }
+        await best.ref.set(resumePatch, { merge: true });
+        const openedByNameOut = resumePatch.openedByName || existingOpenerName;
+        const openedByEmployeeIdOut =
+          typeof resumePatch.openedByEmployeeId === "string"
+            ? resumePatch.openedByEmployeeId
+            : existingOpenerId;
         res.status(200).json({
           ok: true,
           sessionId: best.id,
@@ -389,8 +402,8 @@ exports.nposSessionOpen = functions.region("asia-southeast1").https.onRequest(as
           transferTotal: Number(best.data.transferTotal) || 0,
           voidedCount: Number(best.data.voidedCount) || 0,
           discountTotal: Number(best.data.discountTotal) || 0,
-          openedByEmployeeId: asString(best.data.openedByEmployeeId, 64),
-          openedByName: asString(best.data.openedByName, 80),
+          openedByEmployeeId: openedByEmployeeIdOut,
+          openedByName: openedByNameOut,
         });
         return;
       }

@@ -134,6 +134,7 @@ public final class SaleSync {
                                             res.optInt("voidedCount", 0),
                                             res.optDouble("discountTotal", 0));
                                     applyOpenedByFromServer(app, res);
+                                    noteOpenerSyncResult(app, openerName, res);
                                     OpsLogger.info(app, "shift", "ต่อรอบเดิมหลังสลับเครื่อง", sid);
                                 } else if (!sid.equals(sessionId)) {
                                     ShiftPrefs.open(
@@ -146,10 +147,12 @@ public final class SaleSync {
                                             openerName);
                                     applyOpenedByFromServer(app, res);
                                     ShiftPrefs.markServerSessionSynced(app, true);
+                                    noteOpenerSyncResult(app, openerName, res);
                                     OpsLogger.info(app, "shift", "เปิดรอบเซิร์ฟเวอร์", sid);
                                 } else {
                                     applyOpenedByFromServer(app, res);
                                     ShiftPrefs.markServerSessionSynced(app, true);
+                                    noteOpenerSyncResult(app, openerName, res);
                                     OpsLogger.info(app, "shift", "ซิงก์รอบแล้ว", sid);
                                 }
                             } else if (isRemoteSessionClosed(res)) {
@@ -218,17 +221,34 @@ public final class SaleSync {
         }
     }
 
+    /** Mark opener ack from CF open/resume — keep retrying while BO still has no name. */
+    private static void noteOpenerSyncResult(
+            Context context, String localOpenerName, JSONObject res) {
+        if (context == null) return;
+        String local = localOpenerName == null ? "" : localOpenerName.trim();
+        if (local.isEmpty()) {
+            ShiftPrefs.markOpenerServerOk(context, true);
+            return;
+        }
+        String server = res == null ? "" : res.optString("openedByName", "").trim();
+        ShiftPrefs.markOpenerServerOk(context, !server.isEmpty());
+    }
+
     /**
      * If local shift is open but CF open never landed, retry until BO can see the session.
+     * Also retries while local opener name has not been ack'd on the server session doc.
      * Called from flushPending + heartbeat pulse.
      */
     public void ensureOpenSessionSynced(Context context) {
         Context app = context.getApplicationContext();
         if (!ShiftPrefs.isOpen(app)) return;
-        if (ShiftPrefs.isServerSessionSynced(app)) return;
+        boolean needSession = !ShiftPrefs.isServerSessionSynced(app);
+        boolean needOpener = ShiftPrefs.needsOpenerServerSync(app);
+        if (!needSession && !needOpener) return;
         if (StoreClaimPrefs.blocksWrites(app)) return;
         String sessionId = ShiftPrefs.sessionId(app);
         if (sessionId == null || sessionId.isEmpty()) return;
+        final String localOpener = ShiftPrefs.openedByName(app);
         try {
             JSONObject body = new JSONObject();
             body.put("installId", DeviceIdentity.getOrCreateInstallId(app));
@@ -238,7 +258,7 @@ public final class SaleSync {
             putOpenedBy(
                     body,
                     ShiftPrefs.openedByEmployeeId(app),
-                    ShiftPrefs.openedByName(app));
+                    localOpener);
             JSONObject res = MenuRepository.postJson(OPEN_URL, body, 4_000, 6_000);
             if (res.optBoolean("ok", false)) {
                 String sid = res.optString("sessionId", sessionId);
@@ -260,7 +280,12 @@ public final class SaleSync {
                     applyOpenedByFromServer(app, res);
                     ShiftPrefs.markServerSessionSynced(app, true);
                 }
-                OpsLogger.info(app, "shift", "ซิงก์รอบค้างสำเร็จ", sid);
+                noteOpenerSyncResult(app, localOpener, res);
+                OpsLogger.info(
+                        app,
+                        "shift",
+                        needOpener && !needSession ? "ซิงก์ชื่อผู้เปิดรอบ" : "ซิงก์รอบค้างสำเร็จ",
+                        sid);
             } else if (isRemoteSessionClosed(res)) {
                 ShiftPrefs.applyRemoteSessionClosed(
                         app,
