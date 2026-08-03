@@ -52,6 +52,8 @@ assert.match(lib, /source: "manual"/);
 
 const cash = read("src/lib/cash-deposits.ts");
 assert.match(cash, /sessionIds/);
+assert.match(cash, /sessionActualAmounts/);
+assert.match(lib, /effectiveSessionCashAmount|sessionCashCompareVariance/);
 
 const slim = read("src/components/PosSessionsSlimTable.tsx");
 assert.match(slim, /บันทึกส่งเงิน/);

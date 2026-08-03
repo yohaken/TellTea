@@ -55,6 +55,7 @@ import {
   fillDayCashFromSessions,
   groupSessionsBySalesDay,
   pendingDepositSessionsForCashIn,
+  sessionCashCompareVariance,
   sessionCounterLabel,
   sessionRemitAmount,
   sumSessionRemits,
@@ -241,6 +242,7 @@ export function CashInLedgerPanel({
         ...d,
         slipUrls: [...d.slipUrls],
         sessionIds: [...(d.sessionIds || [])],
+        sessionActualAmounts: { ...(d.sessionActualAmounts || {}) },
       })),
     );
     setEditNote(selected.note || "");
@@ -583,8 +585,10 @@ export function CashInLedgerPanel({
         drawerCloseAmountSource: d.drawerCloseAmountSource || ("" as CashFillSource),
         dateSource: d.dateSource || ("" as CashFillSource),
         note: (d.note || "").trim().slice(0, 200),
+        // Keep prior round-slip photos — staff must not re-attach after UI refresh.
         slipUrls: [...d.slipUrls],
         sessionIds: [...(d.sessionIds || [])],
+        sessionActualAmounts: { ...(d.sessionActualAmounts || {}) },
       }));
       assertCashDepositDaysNposLinked(days);
       const bankTransfers = workingTransfers.map((t) => ({
@@ -697,6 +701,7 @@ export function CashInLedgerPanel({
         cashAmount: filled.cashAmount,
         cashAmountSource: filled.cashAmountSource,
         sessionIds: filled.sessionIds,
+        sessionActualAmounts: filled.sessionActualAmounts,
         note: filled.note,
         slipKind: "shift" as const,
         shiftLabel: "รอบขาย",
@@ -791,6 +796,7 @@ export function CashInLedgerPanel({
       ...d,
       sessionIds: [...(d.sessionIds || [])],
       slipUrls: [...(d.slipUrls || [])],
+      sessionActualAmounts: { ...(d.sessionActualAmounts || {}) },
     }));
     const have = new Set<string>();
     for (const d of days) {
@@ -819,7 +825,9 @@ export function CashInLedgerPanel({
         existing.cashAmount = filled.cashAmount;
         existing.cashAmountSource = filled.cashAmountSource;
         existing.sessionIds = filled.sessionIds;
+        existing.sessionActualAmounts = filled.sessionActualAmounts;
         existing.note = filled.note;
+        // slipUrls untouched — prior round photos stay embedded
         have.add(session.id);
         added += 1;
         continue;
@@ -835,6 +843,7 @@ export function CashInLedgerPanel({
         cashAmount: filled.cashAmount,
         cashAmountSource: filled.cashAmountSource,
         sessionIds: filled.sessionIds,
+        sessionActualAmounts: filled.sessionActualAmounts,
         note: filled.note,
         slipKind: "shift",
         shiftLabel: "รอบขาย",
@@ -960,7 +969,9 @@ export function CashInLedgerPanel({
         cashAmount: filled.cashAmount,
         cashAmountSource: filled.cashAmountSource,
         sessionIds: filled.sessionIds,
+        sessionActualAmounts: filled.sessionActualAmounts,
         note: filled.note,
+        // keep day slipUrls (shared photos for the sales day)
       });
     }
     if (!nextDays.length) {
@@ -976,6 +987,49 @@ export function CashInLedgerPanel({
     applyWorkingDays(nextDays);
     setError(null);
     setAiHint(`−${posSessionCode(id)}`);
+  }
+
+  /**
+   * Staff enter ได้จริง from the physical round slip (document compare).
+   * Empty → fall back to system remit. Does not mark bank transfer.
+   */
+  function setSessionActualCash(session: PosSession, raw: string) {
+    const sid = session.id;
+    const day = dayLineForSession(sid);
+    if (!day) return;
+    const trimmed = raw.trim().replace(/,/g, "");
+    const actuals = { ...(day.sessionActualAmounts || {}) };
+    if (!trimmed) {
+      delete actuals[sid];
+    } else {
+      const n = Number(trimmed);
+      if (!Number.isFinite(n) || n < 0) return;
+      actuals[sid] = Math.round(n * 100) / 100;
+    }
+    const ids = [...(day.sessionIds || [])];
+    const matches = posSessions.filter((s) => ids.includes(s.id));
+    const pool = matches.some((s) => s.id === sid)
+      ? matches
+      : [...matches, session];
+    const filled = fillDayCashFromSessions(
+      { ...day, sessionActualAmounts: actuals },
+      pool,
+      ids,
+    );
+    const nextDays = workingDays.map((d) =>
+      d.id === day.id
+        ? {
+            ...d,
+            cashAmount: filled.cashAmount,
+            cashAmountSource: filled.cashAmountSource,
+            sessionIds: filled.sessionIds,
+            sessionActualAmounts: filled.sessionActualAmounts,
+            note: filled.note,
+            slipUrls: [...d.slipUrls],
+          }
+        : d,
+    );
+    applyWorkingDays(nextDays);
   }
 
   const refreshOccupancy = useCallback(async () => {
@@ -1080,6 +1134,16 @@ export function CashInLedgerPanel({
                   const ticked = workingSessionIds.has(s.id);
                   const dayLine = ticked ? dayLineForSession(s.id) : null;
                   const posSlipCount = dayLine?.slipUrls.length || 0;
+                  const actualOverride =
+                    dayLine?.sessionActualAmounts?.[s.id];
+                  const actualValue =
+                    actualOverride != null && Number.isFinite(actualOverride)
+                      ? actualOverride
+                      : remit;
+                  const compareVar = sessionCashCompareVariance(
+                    remit,
+                    actualValue,
+                  );
                   const statusShort =
                     handoff === "handed"
                       ? "ส่งแล้ว"
@@ -1113,7 +1177,8 @@ export function CashInLedgerPanel({
                           </span>
                           <span className="cash-in-bill-body">
                             <span className="cash-in-bill-amt">
-                              ฿{formatPlainNumber(remit)}
+                              ฿{formatPlainNumber(remit)}{" "}
+                              <span className="cash-in-bill-sys-tag">ระบบ</span>
                             </span>
                             <span className="cash-in-bill-meta">
                               <span>
@@ -1159,12 +1224,60 @@ export function CashInLedgerPanel({
                             type="button"
                             className="ghost-btn cash-in-compact-btn cash-in-bill-attach"
                             disabled={busy || readOnly}
-                            title={`แนบใบรอบ ${billNo}`}
+                            title={`แนบใบรอบเทียบตัวเลข ${billNo} (ไม่ใช่การโอน)`}
                             onClick={() => attachPosPrintForSession(s)}
                           >
                             {posSlipCount ? `แนบ ${posSlipCount}` : "แนบ"}
                           </button>
                         </div>
+                        {ticked && dayLine ? (
+                          <div
+                            className="cash-in-bill-compare"
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          >
+                            <label className="cash-in-bill-actual">
+                              <span>ได้จริง</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                inputMode="decimal"
+                                className="cash-in-cell-input is-num cash-in-bill-actual-input"
+                                placeholder={String(remit || "")}
+                                disabled={busy || readOnly}
+                                value={
+                                  actualOverride != null &&
+                                  Number.isFinite(actualOverride)
+                                    ? String(actualOverride)
+                                    : ""
+                                }
+                                onChange={(e) =>
+                                  setSessionActualCash(s, e.target.value)
+                                }
+                                aria-label={`ได้จริง ${billNo}`}
+                              />
+                            </label>
+                            <span
+                              className={[
+                                "cash-in-bill-diff",
+                                compareVar < -0.005
+                                  ? "is-short"
+                                  : compareVar > 0.005
+                                    ? "is-over"
+                                    : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
+                              title="ได้จริง − ยอดระบบ"
+                            >
+                              ส่วนต่าง{" "}
+                              {compareVar > 0.005
+                                ? `+${formatPlainNumber(compareVar)}`
+                                : formatPlainNumber(compareVar)}
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
                     </li>
                   );

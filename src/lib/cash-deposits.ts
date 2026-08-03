@@ -70,9 +70,16 @@ export type CashDepositDayLine = {
   slipUrls: string[];
   /**
    * Optional link to closed posSessions — when filled from nPos remits,
-   * cashAmount should equal Σ session.remitAmount of these ids.
+   * cashAmount should equal Σ effective cash of these ids
+   * (sessionActualAmounts[id] if set, else session.remitAmount).
    */
   sessionIds: string[];
+  /**
+   * Per-session staff override of cash counted from the physical round slip
+   * (เทียบเอกสาร — not a bank transfer). Keys = sessionIds.
+   * Missing key → use system remit for that session.
+   */
+  sessionActualAmounts: Record<string, number>;
 };
 
 export type CashDeposit = {
@@ -315,6 +322,10 @@ function normalizeDay(raw: unknown): CashDepositDayLine | null {
         .filter(Boolean)
         .slice(0, 40)
     : [];
+  const sessionActualAmounts = normalizeSessionActualAmounts(
+    d.sessionActualAmounts,
+    sessionIds,
+  );
   return {
     id: String(d.id || newCashDepositDayId()),
     date: Number(d.date) || 0,
@@ -328,7 +339,29 @@ function normalizeDay(raw: unknown): CashDepositDayLine | null {
     note: typeof d.note === "string" ? d.note : "",
     slipUrls: normalizeUrls(d.slipUrls, CASH_DEPOSIT_DAY_SLIP_MAX),
     sessionIds,
+    sessionActualAmounts,
   };
+}
+
+/** Keep only non-negative finite overrides for known session ids. */
+export function normalizeSessionActualAmounts(
+  raw: unknown,
+  sessionIds: string[],
+): Record<string, number> {
+  const allow = new Set(
+    sessionIds.map((id) => String(id || "").trim()).filter(Boolean),
+  );
+  const out: Record<string, number> = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  if (!allow.size) return out;
+  for (const [key, val] of Object.entries(raw as Record<string, unknown>)) {
+    const id = String(key || "").trim();
+    if (!id || !allow.has(id)) continue;
+    const n = Number(val);
+    if (!Number.isFinite(n) || n < 0) continue;
+    out[id] = Math.round(n * 100) / 100;
+  }
+  return out;
 }
 
 function normalizeBankTransfer(raw: unknown): CashDepositBankTransfer | null {
@@ -879,6 +912,7 @@ export function emptyCashDepositDay(dateMs: number): CashDepositDayLine {
     note: "",
     slipUrls: [],
     sessionIds: [],
+    sessionActualAmounts: {},
   };
 }
 

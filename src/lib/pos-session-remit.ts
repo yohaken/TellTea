@@ -356,20 +356,64 @@ export function sumSessionRemits(sessions: PosSession[]): number {
   );
 }
 
-/** Fill day-line cashAmount from selected session remits (bank reconcile expected). */
+/**
+ * Effective cash for a session in cash-in: staff "ได้จริง" override if set,
+ * else system remit. Override is document compare — not bank transfer.
+ */
+export function effectiveSessionCashAmount(
+  session: Pick<PosSession, "id" | "remitAmount" | "closingCashCounted" | "leaveFloat">,
+  actualMap?: Record<string, number> | null,
+): number {
+  const system = sessionRemitAmount(session) ?? 0;
+  const raw = actualMap?.[session.id];
+  if (raw != null && Number.isFinite(raw) && raw >= 0) {
+    return roundMoney(raw);
+  }
+  return system;
+}
+
+/** ได้จริง − ยอดระบบ (negative = short / red, positive = over / green). */
+export function sessionCashCompareVariance(system: number, actual: number): number {
+  return roundMoney((Number(actual) || 0) - (Number(system) || 0));
+}
+
+/** Fill day-line cashAmount from selected sessions (actual override or remit). */
 export function fillDayCashFromSessions(
-  day: { cashAmount: number; cashAmountSource?: string; note?: string; sessionIds?: string[] },
+  day: {
+    cashAmount: number;
+    cashAmountSource?: string;
+    note?: string;
+    sessionIds?: string[];
+    sessionActualAmounts?: Record<string, number>;
+  },
   sessions: PosSession[],
   sessionIds: string[],
 ): {
   cashAmount: number;
   cashAmountSource: "staff";
   sessionIds: string[];
+  sessionActualAmounts: Record<string, number>;
   note: string;
 } {
   const idSet = new Set(sessionIds.map((id) => String(id || "").trim()).filter(Boolean));
   const picked = sessions.filter((s) => idSet.has(s.id));
-  const cashAmount = sumSessionRemits(picked);
+  const prevActuals =
+    day.sessionActualAmounts && typeof day.sessionActualAmounts === "object"
+      ? day.sessionActualAmounts
+      : {};
+  const sessionActualAmounts: Record<string, number> = {};
+  for (const s of picked) {
+    const raw = prevActuals[s.id];
+    if (raw != null && Number.isFinite(raw) && raw >= 0) {
+      sessionActualAmounts[s.id] = roundMoney(raw);
+    }
+  }
+  const cashAmount = roundMoney(
+    picked.reduce(
+      (sum, s) => sum + effectiveSessionCashAmount(s, sessionActualAmounts),
+      0,
+    ),
+  );
   const labels = picked
     .map((s) => {
       const code = s.id.includes("_") ? s.id.split("_").pop()?.slice(0, 6) : s.id.slice(-6);
@@ -384,6 +428,7 @@ export function fillDayCashFromSessions(
     cashAmount,
     cashAmountSource: "staff",
     sessionIds: picked.map((s) => s.id),
+    sessionActualAmounts,
     note,
   };
 }
