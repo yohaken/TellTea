@@ -271,13 +271,14 @@ export function normalizeCashFillSource(raw: unknown): CashFillSource {
 export function labelCashDepositStatus(status: CashDepositStatus) {
   switch (status) {
     case "matched":
-      return "ตรง";
+      return "โอนแล้ว";
     case "mismatch":
       return "ไม่ตรง";
     case "void":
       return "ยกเลิก";
     default:
-      return "รอตรวจ";
+      // legacy rows only — new saves auto-match (no owner verify)
+      return "โอนแล้ว";
   }
 }
 
@@ -803,12 +804,14 @@ export async function addCashDeposit(input: CashDepositInput) {
   const occupancy = await loadOccupancy();
   const payload = buildPayload(input, occupancy);
   const now = Date.now();
+  const actor = (input.createdBy || "").trim();
   const ref = await addDoc(cashDepositsCol(), {
     ...payload,
-    status: "pending" satisfies CashDepositStatus,
+    // พนักงานบันทึก = โอนตามระบบแล้ว · ไม่รอเจ้าของตรวจ
+    status: "matched" satisfies CashDepositStatus,
     ownerNote: "",
-    verifiedBy: "",
-    verifiedAt: 0,
+    verifiedBy: actor,
+    verifiedAt: now,
     createdAt: now,
     updatedAt: now,
   });
@@ -823,13 +826,13 @@ export async function updateCashDeposit(id: string, input: CashDepositUpdateInpu
   const payload = buildPayload({ ...input, createdBy: "_" }, occupancy, id);
   const { createdBy: _omit, ...rest } = payload;
   void _omit;
+  const now = Date.now();
   await updateDoc(doc(getDb(), "cashDeposits", id), {
     ...rest,
-    updatedAt: Date.now(),
-    // Editing resets verify state — owner must re-check.
-    status: "pending" satisfies CashDepositStatus,
-    verifiedBy: "",
-    verifiedAt: 0,
+    updatedAt: now,
+    // ไม่รีเซ็ตเป็นรอตรวจ — พนักงานแก้แล้วยังถือว่าโอนตามระบบ
+    status: "matched" satisfies CashDepositStatus,
+    verifiedAt: now,
   });
 }
 

@@ -18,7 +18,7 @@ const doc = read("docs/npos-remit-rounds-phases.md");
 
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 661, `APP_BUILD >= 661, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 665, `APP_BUILD >= 665, got ${buildMatch[1]}`);
 
 assert.match(panel, /function toggleSessionTick/);
 assert.match(panel, /function clearAllTicks/);
@@ -38,6 +38,7 @@ assert.match(panel, /สลิปโอนเงิน/);
 assert.match(panel, /\+สลิปโอน/);
 assert.match(panel, /แนบใบรอบ|attachPosPrintForSession/);
 assert.match(panel, /ล้าง/);
+assert.match(panel, /บันทึกโอน/);
 assert.match(panel, /bundledBillCount >= 1/);
 assert.match(panel, /linkedOutsideWorking/);
 assert.match(panel, /รอโอน/);
@@ -45,13 +46,18 @@ assert.doesNotMatch(panel, /cash-in-bank-table is-edit/);
 assert.doesNotMatch(panel, />\s*ในมัด\s*</);
 assert.doesNotMatch(panel, />\s*ใคร\s*</);
 assert.doesNotMatch(panel, /cash-in-bill-amt-btn/);
+assert.doesNotMatch(panel, /onVerify|cash-in-verify/);
+assert.doesNotMatch(panel, /รอตรวจ/);
 assert.match(cash, /suggestedNetBankTransfer/);
+assert.match(cash, /status: "matched"/);
+assert.match(cash, /โอนแล้ว/);
+assert.doesNotMatch(cash, /Owner must re-check|owner must re-check/);
 assert.match(css, /\.cash-in-summary-bar\b/);
 assert.match(css, /\.cash-in-summary-slips\b/);
 assert.match(css, /\.cash-in-bill-main\b/);
 assert.match(css, /\.cash-in-bill-attach\b/);
 assert.match(css, /\.cash-in-bill-check\b/);
 assert.match(css, /not sticky|covering bill cards/);
-assert.match(doc, /R2\.8|แตะครั้งเดียว|ปุ่มแนบ/);
+assert.match(doc, /R2\.10|ไม่รอตรวจ/);
 
 console.log("OK test-cash-in-tick-summary");

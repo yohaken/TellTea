@@ -14,7 +14,7 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 const version = read("src/lib/version.ts");
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 661, `APP_BUILD >= 661, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 665, `APP_BUILD >= 665, got ${buildMatch[1]}`);
 
 const remit = read("src/lib/pos-session-remit.ts");
 assert.match(remit, /CASH_IN_NPOS_REMIT_ONLY\s*=\s*true/);

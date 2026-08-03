@@ -21,7 +21,10 @@ const assertRules = read("scripts/assert-firestore-rules.mjs");
 
 const buildMatch = version.match(/APP_BUILD\s*=\s*(\d+)/);
 assert.ok(buildMatch);
-assert.ok(Number(buildMatch[1]) >= 661, `APP_BUILD >= 661, got ${buildMatch[1]}`);
+assert.ok(Number(buildMatch[1]) >= 665, `APP_BUILD >= 665, got ${buildMatch[1]}`);
+assert.match(lib, /status: "matched"/);
+assert.match(lib, /โอนแล้ว/);
+assert.doesNotMatch(panel, /onVerify|รอตรวจ/);
 assert.equal(existsSync(join(root, "src/components/LedgerModeSwitch.tsx")), false);
 assert.match(ledger, /CashInLedgerPanel/);
 assert.match(ledger, /ledger-ops-duo/);

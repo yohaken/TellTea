@@ -43,7 +43,6 @@ import {
   sumBankTransferFees,
   sumCashDepositDays,
   updateCashDeposit,
-  verifyCashDeposit,
 } from "@/lib/cash-deposits";
 import { extractCashBankSlipFromPhotos } from "@/lib/cash-deposits-ai";
 import {
@@ -163,7 +162,6 @@ export function CashInLedgerPanel({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftRound | null>(null);
   const [busy, setBusy] = useState(false);
-  const [ownerNote, setOwnerNote] = useState("");
   const [editNote, setEditNote] = useState("");
   const [imagePreview, setImagePreview] = useState<PhotoPreviewState | null>(null);
   const [uploadProgress, setUploadProgress] = useState<PhotoUploadProgress | null>(null);
@@ -246,7 +244,6 @@ export function CashInLedgerPanel({
       })),
     );
     setEditNote(selected.note || "");
-    setOwnerNote(selected.ownerNote || "");
   }, [selected, draft, staffName]);
 
   /** Always load nPos rounds while cash-in is mounted — queue "รอบรอฝาก". */
@@ -306,11 +303,6 @@ export function CashInLedgerPanel({
         },
       ),
     [workingDays, occupancy, selected?.id],
-  );
-
-  const pendingCount = useMemo(
-    () => entries.filter((e) => e.status === "pending").length,
-    [entries],
   );
 
   const flatRows = useMemo(() => {
@@ -614,32 +606,17 @@ export function CashInLedgerPanel({
         days,
       };
       if (draft) {
-        const id = await addCashDeposit({ ...payload, createdBy: actorId });
+        await addCashDeposit({ ...payload, createdBy: actorId });
         setDraft(null);
-        setSelectedId(id);
+        setSelectedId(null);
+        setAiHint("โอนแล้ว");
       } else if (selected) {
         await updateCashDeposit(selected.id, payload);
+        setSelectedId(null);
+        setAiHint("อัปเดตแล้ว");
       }
     } catch (err) {
       setError((err as Error).message || "บันทึกไม่สำเร็จ");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onVerify(status: Exclude<CashDepositStatus, "pending">) {
-    if (readOnly || !selected || !isOwner) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await verifyCashDeposit({
-        id: selected.id,
-        status,
-        ownerNote,
-        verifiedBy: actorId,
-      });
-    } catch (err) {
-      setError((err as Error).message || "บันทึกผลตรวจไม่สำเร็จ");
     } finally {
       setBusy(false);
     }
@@ -1025,7 +1002,6 @@ export function CashInLedgerPanel({
       return `รอ ${pendingDepositSessions.length} · ฿${formatPlainNumber(pendingDepositSum)}`;
     }
     if (loading && !entries.length) return "…";
-    if (pendingCount > 0) return `รอตรวจ ${pendingCount}`;
     return "ติ๊กบิลเพื่อโอน";
   })();
   const primaryTransfer = workingTransfers[0] ?? null;
@@ -1386,7 +1362,7 @@ export function CashInLedgerPanel({
                   disabled={busy || !!coverage.issues.length || !bundledBillCount}
                   onClick={() => void saveWorking()}
                 >
-                  {busy ? "…" : "บันทึก"}
+                  {busy ? "…" : "บันทึกโอน"}
                 </button>
                 <button
                   type="button"
@@ -1548,43 +1524,6 @@ export function CashInLedgerPanel({
             </>
           ) : null}
 
-          {/* Owner verify when opening a saved round */}
-          {selected && isOwner && !draft ? (
-            <div className="cash-in-verify is-slim">
-              <input
-                className="cash-in-cell-input"
-                value={ownerNote}
-                onChange={(e) => setOwnerNote(e.target.value)}
-                placeholder="โน้ตเจ้าของ"
-              />
-              <div className="cash-in-verify-actions">
-                <button
-                  type="button"
-                  className="primary-btn"
-                  disabled={busy}
-                  onClick={() => void onVerify("matched")}
-                >
-                  ตรง
-                </button>
-                <button
-                  type="button"
-                  className="ghost-btn"
-                  disabled={busy}
-                  onClick={() => void onVerify("mismatch")}
-                >
-                  ไม่ตรง
-                </button>
-                <button
-                  type="button"
-                  className="ghost-btn"
-                  disabled={busy}
-                  onClick={() => void onVerify("void")}
-                >
-                  ยกเลิก
-                </button>
-              </div>
-            </div>
-          ) : null}
         </div>
       ) : null}
 

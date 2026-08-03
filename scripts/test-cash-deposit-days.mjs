@@ -21,7 +21,7 @@ assert.match(lib, /export function analyzeCashDepositDays/);
 assert.match(lib, /export function buildCashDepositRoundDays/);
 assert.match(lib, /drawerCloseAmount/);
 assert.match(lib, /allowGaps|ข้ามวัน|month_overflow/);
-assert.match(panel, /is-tap|cash-in-bundle-bills/);
+assert.match(panel, /is-tick|cash-in-bill-main|clearAllTicks/);
 assert.match(panel, /cash-in-slim/);
 assert.match(panel, /cash-in-issues/);
 assert.match(rules, /days\.size\(\) <= 31/);
