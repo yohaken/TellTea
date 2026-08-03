@@ -50,7 +50,7 @@ assert.match(css, /\.task-board-input/);
 assert.doesNotMatch(shell, /StaffTaskNudge/);
 assert.match(nav, /กระดานโนตความคืบ/);
 assert.match(version, /APP_BUILD = \d+/);
-assert.ok(Number(version.match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 655);
+assert.ok(Number(version.match(/APP_BUILD = (\d+)/)?.[1] || 0) >= 656);
 
 assert.match(cf, /cancelled: true/);
 assert.match(utility, /label: "โนต"/);
