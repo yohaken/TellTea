@@ -17,6 +17,7 @@ import {
   buildStaffPresenceItems,
   findEmployeeForPresence,
   formatPresenceAge,
+  formatPresenceChipWhen,
   formatPresenceLastLogin,
   subscribeEmployeesForPresence,
   subscribeStaffForPresence,
@@ -32,8 +33,9 @@ import type { StaffPersonalData } from "@/lib/types";
 import { useBodyScrollLock } from "@/hooks/use-body-scroll-lock";
 
 /**
- * ไอคอนลอยขวาบน — เจ้าของ · แตะแล้วเมนูด่วนต่อคน
- * รวม “ดูในมุมพนักงาน” ทั้งแอป (รวมโบนัส)
+ * ไอคอนลอยขวาบน — เจ้าของ
+ * โชว์ว่าพนักงานคนไหนเข้าใช้ระบบล่าสุดตอนไหน (lastSeenAt)
+ * แตะแล้วเมนูด่วนต่อคน · รวม “ดูในมุมพนักงาน”
  */
 export function StaffPresenceDock() {
   const router = useRouter();
@@ -174,8 +176,8 @@ export function StaffPresenceDock() {
     <>
       <div
         className={`staff-presence-dock${isPermPreview ? " is-previewing" : ""}`}
-        aria-label="พนักงานทั้งหมด"
-        title="แตะชื่อเพื่อเมนูด่วน"
+        aria-label="เข้าใช้ล่าสุดของพนักงาน"
+        title="ชื่อ · เวลาเข้าใช้ล่าสุด — แตะเพื่อเมนูด่วน"
       >
         <ul className="staff-presence-list">
           {items.map((item) => {
@@ -223,8 +225,8 @@ export function StaffPresenceDock() {
                 <p className="muted staff-presence-menu-meta">
                   {menuItem.label}
                   {menuItem.lastSeenAt
-                    ? ` · เข้า ${formatPresenceLastLogin(menuItem.lastSeenAt, now)} · ${formatPresenceAge(menuItem.lastSeenAt, now)}`
-                    : " · ยังไม่เคยเข้า"}
+                    ? ` · เข้าใช้ล่าสุด ${formatPresenceLastLogin(menuItem.lastSeenAt, now)} (${formatPresenceAge(menuItem.lastSeenAt, now)})`
+                    : " · ยังไม่เคยเข้าใช้"}
                 </p>
               </div>
               <button
@@ -339,6 +341,8 @@ function PresenceChip({
   active: boolean;
   onOpen: () => void;
 }) {
+  const when = formatPresenceChipWhen(item.lastSeenAt, now);
+  const lastLogin = formatPresenceLastLogin(item.lastSeenAt, now);
   const age = formatPresenceAge(item.lastSeenAt, now);
   const hasSeen = item.lastSeenAt > 0;
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -355,18 +359,20 @@ function PresenceChip({
           active
             ? `กำลังดูมุม ${item.fullName} — แตะอีกครั้งเพื่อออก`
             : hasSeen
-              ? `${item.fullName} · เข้า ${formatPresenceLastLogin(item.lastSeenAt, now)} (${age})`
-              : `${item.fullName} · ยังไม่เคยเข้า`
+              ? `${item.fullName} · เข้าใช้ล่าสุด ${lastLogin} (${age})`
+              : `${item.fullName} · ยังไม่เคยเข้าใช้`
         }
         aria-label={
           active
             ? `${item.fullName} กำลังดูมุม — แตะเพื่อออก`
-            : item.fullName
+            : hasSeen
+              ? `${item.fullName} เข้าใช้ล่าสุด ${lastLogin}`
+              : `${item.fullName} ยังไม่เคยเข้าใช้`
         }
         onClick={onOpen}
       >
         <span className="staff-presence-name">{item.label}</span>
-        <span className="staff-presence-age">{active ? "ออก" : age}</span>
+        <span className="staff-presence-age">{active ? "ออก" : when}</span>
       </button>
     </li>
   );

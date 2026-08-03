@@ -91,9 +91,10 @@ async function listCollection(token, collectionId) {
 async function main() {
   const now = Date.now();
   const token = await getToken();
-  const [staffDocs, empDocs] = await Promise.all([
+  const [staffDocs, empDocs, phoneDocs] = await Promise.all([
     listCollection(token, "staff"),
     listCollection(token, "employees"),
+    listCollection(token, "staffPhones"),
   ]);
 
   const empByStaffId = new Map();
@@ -150,7 +151,28 @@ async function main() {
 
   const lines = [];
   lines.push(`staff presence dump · now ICT ${formatIct(now)}`);
-  lines.push(`staff docs: ${staffDocs.length} · employees: ${empDocs.length}`);
+  lines.push(
+    `staff docs: ${staffDocs.length} · employees: ${empDocs.length} · staffPhones: ${phoneDocs.length}`,
+  );
+  lines.push("");
+
+  // staffPhones index — ขาดแล้วล็อกอินเบอร์จะปัก lastSeenAt ไม่ได้
+  const phoneByStaffId = new Map();
+  for (const p of phoneDocs) {
+    const staffId = String(parseField(p.fields.staffId) || "");
+    if (!staffId) continue;
+    if (!phoneByStaffId.has(staffId)) phoneByStaffId.set(staffId, []);
+    phoneByStaffId.get(staffId).push(p.id);
+  }
+  lines.push("=== staffPhones map ===");
+  for (const r of rows.filter((x) => x.role === "staff")) {
+    const digits = (r.phone || "").replace(/\D/g, "").replace(/^0/, "66");
+    const mapped = phoneByStaffId.get(r.id) || [];
+    const ok = digits && mapped.includes(digits);
+    lines.push(
+      `${ok ? "OK" : "!!"} ${r.label.padEnd(8)} staff=${r.id} phone=${r.phone || "—"} index=[${mapped.join(",") || "none"}]`,
+    );
+  }
   lines.push("");
   lines.push(
     "role".padEnd(7) +

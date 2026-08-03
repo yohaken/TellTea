@@ -5,6 +5,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  setDoc,
   updateDoc,
   type Unsubscribe,
 } from "firebase/firestore";
@@ -82,24 +83,30 @@ export function formatPresenceAge(lastSeenAt: number, now = Date.now()): string 
   return `${day}ว`;
 }
 
-/** นาฬิกาเข้าล่าสุด — วันนี้/เมื่อวาน/วันที่ · บอกว่าล็อกอินตอนไหน */
-export function formatPresenceLastLogin(lastSeenAt: number, now = Date.now()): string {
-  if (!lastSeenAt || lastSeenAt <= 0) return "ยังไม่เคยเข้า";
-  const time = new Intl.DateTimeFormat("th-TH", {
+function bangkokDayKey(ms: number): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(ms));
+}
+
+function bangkokClock(ms: number): string {
+  return new Intl.DateTimeFormat("th-TH", {
     timeZone: "Asia/Bangkok",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(lastSeenAt));
-  const dayKey = (ms: number) =>
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Bangkok",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date(ms));
-  const seenDay = dayKey(lastSeenAt);
-  const today = dayKey(now);
-  const yDay = dayKey(now - 24 * 60 * 60 * 1000);
+  }).format(new Date(ms));
+}
+
+/** นาฬิกาเข้าล่าสุด — วันนี้/เมื่อวาน/วันที่ · บอกว่าใครเข้าใช้ตอนไหน */
+export function formatPresenceLastLogin(lastSeenAt: number, now = Date.now()): string {
+  if (!lastSeenAt || lastSeenAt <= 0) return "ยังไม่เคยเข้า";
+  const time = bangkokClock(lastSeenAt);
+  const seenDay = bangkokDayKey(lastSeenAt);
+  const today = bangkokDayKey(now);
+  const yDay = bangkokDayKey(now - 24 * 60 * 60 * 1000);
   if (seenDay === today) return `วันนี้ ${time}`;
   if (seenDay === yDay) return `เมื่อวาน ${time}`;
   const date = new Intl.DateTimeFormat("th-TH", {
@@ -108,6 +115,25 @@ export function formatPresenceLastLogin(lastSeenAt: number, now = Date.now()): s
     month: "short",
   }).format(new Date(lastSeenAt));
   return `${date} ${time}`;
+}
+
+/**
+ * ป้ายบนชิป — เน้น “ตอนไหน” ให้เจ้าของอ่านได้ทันที
+ * วันนี้ = นาฬิกา · เมื่อวาน = วาน+เวลา · เก่ากว่า = วันสั้น
+ */
+export function formatPresenceChipWhen(lastSeenAt: number, now = Date.now()): string {
+  if (!lastSeenAt || lastSeenAt <= 0) return "—";
+  const time = bangkokClock(lastSeenAt);
+  const seenDay = bangkokDayKey(lastSeenAt);
+  const today = bangkokDayKey(now);
+  const yDay = bangkokDayKey(now - 24 * 60 * 60 * 1000);
+  if (seenDay === today) return time;
+  if (seenDay === yDay) return `วาน${time}`;
+  return new Intl.DateTimeFormat("th-TH", {
+    timeZone: "Asia/Bangkok",
+    day: "numeric",
+    month: "short",
+  }).format(new Date(lastSeenAt));
 }
 
 /** แสดงพนักงานทุกคน — ยังไม่มี lastSeenAt ก็โชว์รอ (ป้าย —) */
@@ -257,18 +283,25 @@ export function subscribeEmployeesForPresence(
   );
 }
 
-/** พนักงาน/เจ้าของอัปเดตว่ายังอยู่ในระบบ — คืน true เมื่อเขียนสำเร็จ */
+/** พนักงาน/เจ้าของอัปเดตว่าเข้าใช้ล่าสุดเมื่อไหร่ — คืน true เมื่อเขียนสำเร็จ */
 export async function touchStaffPresence(staffId: string): Promise<boolean> {
   if (!staffId) return false;
+  const at = Date.now();
+  const ref = doc(getDb(), "staff", staffId);
   try {
-    await updateDoc(doc(getDb(), "staff", staffId), { lastSeenAt: Date.now() });
+    await updateDoc(ref, { lastSeenAt: at });
     return true;
   } catch (err) {
-    // ไม่รบกวน UI — heartbeat เงียบ (caller อาจ retry)
-    if (typeof console !== "undefined") {
-      console.warn(mapFirestoreError(err, "อัปเดตสถานะออนไลน์", "staff"));
+    // fallback merge — บางเคส update อย่างเดียวสะดุดตอน rules/token ยังไม่พร้อม
+    try {
+      await setDoc(ref, { lastSeenAt: at }, { merge: true });
+      return true;
+    } catch (err2) {
+      if (typeof console !== "undefined") {
+        console.warn(mapFirestoreError(err2 ?? err, "อัปเดตเข้าใช้ล่าสุด", "staff"));
+      }
+      return false;
     }
-    return false;
   }
 }
 

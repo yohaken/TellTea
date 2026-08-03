@@ -97,6 +97,12 @@ for (const name of SHARED_APP_MATCHES) {
 
 assert.match(rules, /function isStaff\(/);
 assert.match(rules, /function hasPerm\(/);
+assert.match(rules, /function staffPresenceTouch\(/);
+assert.match(rules, /function isOwnStaffDoc\(/);
+assert.match(
+  rules,
+  /hasPhone\(\) && exists\(\/databases\/\$\(database\)\/documents\/staffPhones\/\$\(phoneDigits\(\)\)\)/,
+);
 assert.match(rules, /function canReadEmployeePay\(/);
 assert.match(rules, /match \/bonusMonthStatus\/\{monthId\}/);
 assert.match(rules, /match \/bonusPersonalCloses\/\{id\}/);
