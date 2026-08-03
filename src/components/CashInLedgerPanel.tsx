@@ -18,7 +18,6 @@ import {
   CASH_DEPOSIT_BANK_SLIP_MAX,
   CASH_DEPOSIT_BANK_TRANSFER_MAX,
   CASH_DEPOSIT_DAY_MAX,
-  CASH_DEPOSIT_DAY_SLIP_MAX,
   CASH_DEPOSIT_LIVE_MAX,
   CASH_DEPOSIT_PAGE_SIZE,
   cashDepositDayKey,
@@ -58,7 +57,6 @@ import {
   fillDayCashFromSessions,
   groupSessionsBySalesDay,
   pendingDepositSessionsForCashIn,
-  sessionCashCompareVariance,
   sessionCounterLabel,
   sessionRemitAmount,
   sumSessionRemits,
@@ -115,9 +113,7 @@ type DraftRound = {
   aiReason: string;
 };
 
-type PhotoTarget =
-  | { kind: "bank"; transferId: string }
-  | { kind: "day"; dayId: string };
+type PhotoTarget = { kind: "bank"; transferId: string };
 
 type PhotoPreviewState = {
   urls: string[];
@@ -139,8 +135,8 @@ function ensureTransfers(
 }
 
 /**
- * Compact cash-in on /ledger/ — tick bills + top summary.
- * Bank transfer slips are the primary evidence; POS print on bill is optional.
+ * Compact cash-in on /ledger/ — tick bills + bank transfer slips.
+ * Compare: slip amount vs (bundle − fee); no round-print attach.
  */
 export function CashInLedgerPanel({
   actorId,
@@ -173,8 +169,6 @@ export function CashInLedgerPanel({
   const uploadCancelRef = useRef(false);
   const bankPhotoRef = useRef<HTMLInputElement>(null);
   const photoTargetRef = useRef<PhotoTarget | null>(null);
-  /** After tick-from-attach, open POS day photo once day line exists */
-  const pendingPosAttachRef = useRef<string | null>(null);
 
   const [editStaff, setEditStaff] = useState("");
   const [editBankTransfers, setEditBankTransfers] = useState<CashDepositBankTransfer[]>([
@@ -428,11 +422,6 @@ export function CashInLedgerPanel({
     bankPhotoRef.current?.click();
   }
 
-  function openDayPhoto(dayId: string) {
-    photoTargetRef.current = { kind: "day", dayId };
-    bankPhotoRef.current?.click();
-  }
-
   function setTransferSlipUrls(transferId: string, slipUrls: string[]) {
     const apply = (rows: CashDepositBankTransfer[]) =>
       rows.map((t) => (t.id === transferId ? { ...t, slipUrls } : t));
@@ -440,22 +429,11 @@ export function CashInLedgerPanel({
     else setEditBankTransfers((prev) => apply(prev));
   }
 
-  function setDaySlipUrls(dayId: string, slipUrls: string[]) {
-    const apply = (days: CashDepositDayLine[]) =>
-      days.map((d) => (d.id === dayId ? { ...d, slipUrls } : d));
-    if (draft) setDraft({ ...draft, days: apply(draft.days) });
-    else setEditDays((prev) => apply(prev));
-  }
-
   function removePreviewPhotoAt(index: number) {
     const prev = imagePreview;
-    if (!prev?.editTarget) return;
+    if (!prev?.editTarget || prev.editTarget.kind !== "bank") return;
     const nextUrls = prev.urls.filter((_, i) => i !== index);
-    if (prev.editTarget.kind === "bank") {
-      setTransferSlipUrls(prev.editTarget.transferId, nextUrls);
-    } else {
-      setDaySlipUrls(prev.editTarget.dayId, nextUrls);
-    }
+    setTransferSlipUrls(prev.editTarget.transferId, nextUrls);
     if (!nextUrls.length) {
       setImagePreview(null);
       setAiHint("ลบรูปแล้ว");
@@ -517,49 +495,29 @@ export function CashInLedgerPanel({
     const target = photoTargetRef.current;
     photoTargetRef.current = null;
     if (!target || !files?.length) return;
-    const max =
-      target.kind === "bank" ? CASH_DEPOSIT_BANK_SLIP_MAX : CASH_DEPOSIT_DAY_SLIP_MAX;
-    const batch = Array.from(files).slice(0, max);
+    const batch = Array.from(files).slice(0, CASH_DEPOSIT_BANK_SLIP_MAX);
     uploadCancelRef.current = false;
     setUploadProgress(null);
     setBusy(true);
     try {
       const urls = await uploadEvidencePhotos(batch, {
         folder: "cash-deposits",
-        slotKey:
-          target.kind === "bank"
-            ? `bank-${target.transferId}`
-            : `day-${target.dayId}`,
+        slotKey: `bank-${target.transferId}`,
         cancelRef: uploadCancelRef,
         onProgress: setUploadProgress,
       });
       if (!urls.length) throw new Error("อัปโหลดรูปไม่สำเร็จ");
-      if (target.kind === "bank") {
-        const transferId = target.transferId;
-        let nextUrls: string[] = [];
-        const merge = (rows: CashDepositBankTransfer[]) =>
-          rows.map((t) => {
-            if (t.id !== transferId) return t;
-            nextUrls = [...t.slipUrls, ...urls].slice(0, CASH_DEPOSIT_BANK_SLIP_MAX);
-            return { ...t, slipUrls: nextUrls };
-          });
-        if (draft) setDraft({ ...draft, bankTransfers: merge(draft.bankTransfers) });
-        else setEditBankTransfers((prev) => merge(prev));
-        void runAiBank(transferId, nextUrls);
-      } else {
-        const dayId = target.dayId;
-        const mergeDays = (days: CashDepositDayLine[]) =>
-          days.map((d) => {
-            if (d.id !== dayId) return d;
-            return {
-              ...d,
-              slipUrls: [...d.slipUrls, ...urls].slice(0, CASH_DEPOSIT_DAY_SLIP_MAX),
-            };
-          });
-        if (draft) setDraft({ ...draft, days: mergeDays(draft.days) });
-        else setEditDays((prev) => mergeDays(prev));
-        setAiHint("แนบใบ POS แล้ว");
-      }
+      const transferId = target.transferId;
+      let nextUrls: string[] = [];
+      const merge = (rows: CashDepositBankTransfer[]) =>
+        rows.map((t) => {
+          if (t.id !== transferId) return t;
+          nextUrls = [...t.slipUrls, ...urls].slice(0, CASH_DEPOSIT_BANK_SLIP_MAX);
+          return { ...t, slipUrls: nextUrls };
+        });
+      if (draft) setDraft({ ...draft, bankTransfers: merge(draft.bankTransfers) });
+      else setEditBankTransfers((prev) => merge(prev));
+      void runAiBank(transferId, nextUrls);
     } catch (err) {
       if (!uploadCancelRef.current) {
         setError((err as Error).message || "อัปโหลดรูปไม่สำเร็จ");
@@ -588,7 +546,7 @@ export function CashInLedgerPanel({
         }
       }
       if (!bankSlipUrlCount) {
-        throw new Error("ต้องแนบรูปสลิปโอนเข้าบัญชีอย่างน้อย 1 รูป (ใบรอบ POS ไม่นับ)");
+        throw new Error("ต้องแนบรูปสลิปโอนเข้าบัญชีอย่างน้อย 1 รูป");
       }
       const days = workingDays.map((d) => ({
         ...d,
@@ -932,36 +890,6 @@ export function CashInLedgerPanel({
     setAiHint("");
   }
 
-  function dayLineForSession(sessionId: string): CashDepositDayLine | null {
-    const id = String(sessionId || "").trim();
-    if (!id) return null;
-    return (
-      workingDays.find((d) => (d.sessionIds || []).includes(id)) || null
-    );
-  }
-
-  function attachPosPrintForSession(session: PosSession) {
-    if (readOnly) return;
-    const day = dayLineForSession(session.id);
-    if (day) {
-      openDayPhoto(day.id);
-      return;
-    }
-    pendingPosAttachRef.current = session.id;
-    if (!workingSessionIds.has(session.id)) {
-      queueSessionIntoWorking(session);
-    }
-  }
-
-  useEffect(() => {
-    const sid = pendingPosAttachRef.current;
-    if (!sid) return;
-    const day = workingDays.find((d) => (d.sessionIds || []).includes(sid));
-    if (!day) return;
-    pendingPosAttachRef.current = null;
-    openDayPhoto(day.id);
-  }, [workingDays]);
-
   function removeSessionFromWorking(sessionId: string) {
     const id = String(sessionId || "").trim();
     if (!id) return;
@@ -1001,49 +929,6 @@ export function CashInLedgerPanel({
     applyWorkingDays(nextDays);
     setError(null);
     setAiHint(`−${posSessionCode(id)}`);
-  }
-
-  /**
-   * Staff enter ได้จริง from the physical round slip (document compare).
-   * Empty → fall back to system remit. Does not mark bank transfer.
-   */
-  function setSessionActualCash(session: PosSession, raw: string) {
-    const sid = session.id;
-    const day = dayLineForSession(sid);
-    if (!day) return;
-    const trimmed = raw.trim().replace(/,/g, "");
-    const actuals = { ...(day.sessionActualAmounts || {}) };
-    if (!trimmed) {
-      delete actuals[sid];
-    } else {
-      const n = Number(trimmed);
-      if (!Number.isFinite(n) || n < 0) return;
-      actuals[sid] = Math.round(n * 100) / 100;
-    }
-    const ids = [...(day.sessionIds || [])];
-    const matches = posSessions.filter((s) => ids.includes(s.id));
-    const pool = matches.some((s) => s.id === sid)
-      ? matches
-      : [...matches, session];
-    const filled = fillDayCashFromSessions(
-      { ...day, sessionActualAmounts: actuals },
-      pool,
-      ids,
-    );
-    const nextDays = workingDays.map((d) =>
-      d.id === day.id
-        ? {
-            ...d,
-            cashAmount: filled.cashAmount,
-            cashAmountSource: filled.cashAmountSource,
-            sessionIds: filled.sessionIds,
-            sessionActualAmounts: filled.sessionActualAmounts,
-            note: filled.note,
-            slipUrls: [...d.slipUrls],
-          }
-        : d,
-    );
-    applyWorkingDays(nextDays);
   }
 
   const refreshOccupancy = useCallback(async () => {
@@ -1146,18 +1031,6 @@ export function CashInLedgerPanel({
                   const opener = (s.openedByName || "").trim();
                   const billNo = posSessionCode(s.id);
                   const ticked = workingSessionIds.has(s.id);
-                  const dayLine = ticked ? dayLineForSession(s.id) : null;
-                  const posSlipCount = dayLine?.slipUrls.length || 0;
-                  const actualOverride =
-                    dayLine?.sessionActualAmounts?.[s.id];
-                  const actualValue =
-                    actualOverride != null && Number.isFinite(actualOverride)
-                      ? actualOverride
-                      : remit;
-                  const compareVar = sessionCashCompareVariance(
-                    remit,
-                    actualValue,
-                  );
                   const statusShort =
                     handoff === "handed"
                       ? "ส่งแล้ว"
@@ -1166,133 +1039,53 @@ export function CashInLedgerPanel({
                         : "";
                   return (
                     <li key={s.id}>
-                      <div
+                      <button
+                        type="button"
                         className={[
                           "cash-in-bill-card is-tick",
                           ticked ? "is-on" : "",
                         ]
                           .filter(Boolean)
                           .join(" ")}
+                        disabled={busy || readOnly}
+                        title={
+                          ticked
+                            ? `ยกเลิกติ๊ก ${billNo}`
+                            : `ติ๊กบิล ${billNo}`
+                        }
+                        aria-pressed={ticked}
+                        onClick={() => toggleSessionTick(s)}
                       >
-                        <button
-                          type="button"
-                          className="cash-in-bill-main"
-                          disabled={busy || readOnly}
-                          title={
-                            ticked
-                              ? `ยกเลิกติ๊ก ${billNo}`
-                              : `ติ๊กบิล ${billNo}`
-                          }
-                          aria-pressed={ticked}
-                          onClick={() => toggleSessionTick(s)}
-                        >
-                          <span className="cash-in-bill-check" aria-hidden>
-                            {ticked ? "✓" : ""}
+                        <span className="cash-in-bill-check" aria-hidden>
+                          {ticked ? "✓" : ""}
+                        </span>
+                        <span className="cash-in-bill-body">
+                          <span className="cash-in-bill-amt">
+                            ฿{formatPlainNumber(remit)}
                           </span>
-                          <span className="cash-in-bill-body">
-                            <span className="cash-in-bill-amt">
-                              ฿{formatPlainNumber(remit)}{" "}
-                              <span className="cash-in-bill-sys-tag">ระบบ</span>
+                          <span className="cash-in-bill-meta">
+                            <span>
+                              {formatCashDayShort(s.date || s.openedAt || 0)}
                             </span>
-                            <span className="cash-in-bill-meta">
-                              <span>
-                                {formatCashDayShort(s.date || s.openedAt || 0)}
-                              </span>
-                              <span>·</span>
-                              <span>{sessionCounterLabel(s)}</span>
-                              <span>·</span>
-                              <span>{billNo}</span>
-                              {opener ? (
-                                <>
-                                  <span>·</span>
-                                  <span>{opener}</span>
-                                </>
-                              ) : null}
-                              {statusShort ? (
-                                <>
-                                  <span>·</span>
-                                  <span>{statusShort}</span>
-                                </>
-                              ) : null}
-                            </span>
+                            <span>·</span>
+                            <span>{sessionCounterLabel(s)}</span>
+                            <span>·</span>
+                            <span>{billNo}</span>
+                            {opener ? (
+                              <>
+                                <span>·</span>
+                                <span>{opener}</span>
+                              </>
+                            ) : null}
+                            {statusShort ? (
+                              <>
+                                <span>·</span>
+                                <span>{statusShort}</span>
+                              </>
+                            ) : null}
                           </span>
-                        </button>
-                        <div className="cash-in-bill-side">
-                          {dayLine && posSlipCount ? (
-                            <EntryPhotoIndicator
-                              imageUrls={dayLine.slipUrls}
-                              label={`ใบรอบ ${billNo}`}
-                              onView={(urls) =>
-                                setImagePreview({
-                                  urls,
-                                  title: `ใบรอบ ${billNo}`,
-                                  editTarget: {
-                                    kind: "day",
-                                    dayId: dayLine.id,
-                                  },
-                                })
-                              }
-                            />
-                          ) : null}
-                          <button
-                            type="button"
-                            className="ghost-btn cash-in-compact-btn cash-in-bill-attach"
-                            disabled={busy || readOnly}
-                            title={`ใบรอบเทียบตัวเลข ${billNo} (ไม่ใช่สลิปโอน)`}
-                            onClick={() => attachPosPrintForSession(s)}
-                          >
-                            {posSlipCount ? `ใบรอบ ${posSlipCount}` : "ใบรอบ"}
-                          </button>
-                        </div>
-                        {ticked && dayLine ? (
-                          <div
-                            className="cash-in-bill-compare"
-                            onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => e.stopPropagation()}
-                          >
-                            <label className="cash-in-bill-actual">
-                              <span>ได้จริง</span>
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                inputMode="decimal"
-                                className="cash-in-cell-input is-num cash-in-bill-actual-input"
-                                placeholder={String(remit || "")}
-                                disabled={busy || readOnly}
-                                value={
-                                  actualOverride != null &&
-                                  Number.isFinite(actualOverride)
-                                    ? String(actualOverride)
-                                    : ""
-                                }
-                                onChange={(e) =>
-                                  setSessionActualCash(s, e.target.value)
-                                }
-                                aria-label={`ได้จริง ${billNo}`}
-                              />
-                            </label>
-                            <span
-                              className={[
-                                "cash-in-bill-diff",
-                                compareVar < -0.005
-                                  ? "is-short"
-                                  : compareVar > 0.005
-                                    ? "is-over"
-                                    : "",
-                              ]
-                                .filter(Boolean)
-                                .join(" ")}
-                              title="ได้จริง − ยอดระบบ"
-                            >
-                              ส่วนต่าง{" "}
-                              {compareVar > 0.005
-                                ? `+${formatPlainNumber(compareVar)}`
-                                : formatPlainNumber(compareVar)}
-                            </span>
-                          </div>
-                        ) : null}
-                      </div>
+                        </span>
+                      </button>
                     </li>
                   );
                 })}
@@ -1351,20 +1144,43 @@ export function CashInLedgerPanel({
                   )}
                 </div>
                 <div className="cash-in-summary-row is-net">
-                  <span>ยอดเข้าจริง</span>
+                  <span>ควรเข้าบัญชี</span>
                   <strong className="is-ok">
                     ฿{formatPlainNumber(netBankTarget)}
                   </strong>
                 </div>
+                <div className="cash-in-summary-row">
+                  <span>ยอดสลิปโอน</span>
+                  <strong>฿{formatPlainNumber(workingBank)}</strong>
+                </div>
+                <div
+                  className={[
+                    "cash-in-summary-row is-diff",
+                    variance < -0.005
+                      ? "is-short"
+                      : variance > 0.005
+                        ? "is-over"
+                        : "is-ok",
+                  ].join(" ")}
+                >
+                  <span>ส่วนต่าง</span>
+                  <strong title="ยอดสลิป − ควรเข้า (หลังหักคชจ.)">
+                    {Math.abs(variance) < 0.005
+                      ? "ตรง"
+                      : variance > 0
+                        ? `+${formatPlainNumber(variance)}`
+                        : formatPlainNumber(variance)}
+                  </strong>
+                </div>
                 <p className="cash-in-remain-line cash-in-summary-formula">
-                  ยอดโอนรวม {formatPlainNumber(expected)} − คชจ.{" "}
-                  {formatPlainNumber(workingFee)} = ยอดเข้าจริง{" "}
+                  ควรโอน {formatPlainNumber(expected)} − คชจ.{" "}
+                  {formatPlainNumber(workingFee)} = ควรเข้า{" "}
                   {formatPlainNumber(netBankTarget)}
-                  {remainingToTransfer !== 0
-                    ? ` · เหลือใส่ยอดสลิป ${formatPlainNumber(remainingToTransfer)}`
-                    : variance === 0
-                      ? " · ตรง"
-                      : ` · ${variance > 0 ? "+" : ""}${formatPlainNumber(variance)}`}
+                  {Math.abs(remainingToTransfer) > 0.005
+                    ? remainingToTransfer > 0
+                      ? ` · ยังขาดใส่สลิป ${formatPlainNumber(remainingToTransfer)}`
+                      : ` · สลิปเกิน ${formatPlainNumber(-remainingToTransfer)}`
+                    : " · ตรง"}
                 </p>
               </div>
 
@@ -1585,10 +1401,7 @@ export function CashInLedgerPanel({
                         <th className="col-num" title="ยอดบิล">
                           ยอด
                         </th>
-                        <th
-                          className="col-slip"
-                          title="สลิปโอนเข้าบัญชี — ใบรอบดูในบิลเมื่อเปิดมัด"
-                        >
+                        <th className="col-slip" title="สลิปโอนเข้าบัญชี">
                           สลิปโอน
                         </th>
                         <th className="col-type">สถานะ</th>

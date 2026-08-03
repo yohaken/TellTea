@@ -22577,9 +22577,8 @@ a.ghost-btn {
 
 .cash-in-bill-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: 0.35rem;
-  row-gap: 0.2rem;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  column-gap: 0.4rem;
   align-items: center;
   width: 100%;
   margin: 0;
@@ -22590,61 +22589,22 @@ a.ghost-btn {
   text-align: left;
   font: inherit;
   color: inherit;
-}
-
-.cash-in-bill-main {
-  display: grid;
-  grid-template-columns: 1.25rem minmax(0, 1fr);
-  column-gap: 0.4rem;
-  align-items: center;
-  margin: 0;
-  padding: 0.12rem 0.15rem;
-  border: 0;
-  border-radius: 0.25rem;
-  background: transparent;
-  text-align: left;
-  font: inherit;
-  color: inherit;
   cursor: pointer;
-  min-width: 0;
 }
 
-.cash-in-bill-main:disabled {
+.cash-in-bill-card:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
-.cash-in-bill-main:not(:disabled):active {
-  background: rgba(127, 183, 126, 0.14);
+.cash-in-bill-card:not(:disabled):active {
+  background: rgba(127, 183, 126, 0.18);
 }
 
 .cash-in-bill-body {
   display: grid;
   gap: 0.08rem;
   min-width: 0;
-}
-
-.cash-in-bill-side {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.2rem;
-}
-
-.cash-in-bill-attach {
-  flex: 0 0 auto;
-}
-
-.cash-in-bill-card.is-tap:disabled,
-.cash-in-bill-card.is-tick:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.cash-in-bill-card.is-tap:not(:disabled):active,
-.cash-in-bill-card.is-tick:not(:disabled):active {
-  background: rgba(127, 183, 126, 0.18);
 }
 
 .cash-in-bill-card.is-on {
@@ -22695,14 +22655,6 @@ a.ghost-btn {
   color: #1c2a1f;
 }
 
-.cash-in-bill-sys-tag {
-  margin-left: 0.2rem;
-  font-size: 0.62rem;
-  font-weight: 650;
-  color: #6a7380;
-  vertical-align: middle;
-}
-
 .cash-in-bill-meta {
   margin: 0;
   display: flex;
@@ -22710,48 +22662,6 @@ a.ghost-btn {
   gap: 0.15rem 0.3rem;
   font-size: 0.64rem;
   color: #5a6570;
-}
-
-/* Document compare row — not transfer; keeps tick/attach layout */
-.cash-in-bill-compare {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 0.65rem;
-  padding: 0.05rem 0.15rem 0.05rem 1.65rem;
-}
-
-.cash-in-bill-actual {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  margin: 0;
-  font-size: 0.72rem;
-  font-weight: 650;
-  color: #3a453c;
-}
-
-.cash-in-bill-actual-input {
-  width: 5.5rem !important;
-  min-width: 0 !important;
-  padding: 0.18rem 0.35rem !important;
-  font-size: 0.82rem !important;
-}
-
-.cash-in-bill-diff {
-  font-size: 0.72rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: #5a6570;
-}
-
-.cash-in-bill-diff.is-short {
-  color: #b42318;
-}
-
-.cash-in-bill-diff.is-over {
-  color: #1e6036;
 }
 
 .cash-in-bill-use {
@@ -23136,6 +23046,23 @@ a.ghost-btn {
 
 .cash-in-summary-row.is-net strong {
   font-size: 1.05rem;
+}
+
+.cash-in-summary-row.is-diff strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cash-in-summary-row.is-diff.is-short strong {
+  color: #b42318;
+}
+
+.cash-in-summary-row.is-diff.is-over strong {
+  color: #1e6036;
+}
+
+.cash-in-summary-row.is-diff.is-ok strong {
+  color: #1e6036;
 }
 
 .cash-in-summary-row.is-fee {
