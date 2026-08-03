@@ -2,7 +2,9 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { signInWithCustomToken } from "firebase/auth";
 import { useAuth } from "@/lib/auth";
+import { getFirebaseAuth } from "@/lib/firebase";
 import { AppBrand } from "@/components/AppBrand";
 import { cn } from "@/lib/utils";
 
@@ -29,8 +31,39 @@ export default function LoginPage() {
     setInApp(isInAppBrowser());
   }, []);
 
+  /** Agent/QA: /login/?qaToken=<firebase-custom-token>&next=/ledger/?transferIn=1 */
   useEffect(() => {
-    if (status === "ready") router.replace("/ledger/");
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const qaToken = (params.get("qaToken") || "").trim();
+    if (!qaToken) return;
+    let cancelled = false;
+    setBusy(true);
+    setLocalError(null);
+    (async () => {
+      try {
+        await signInWithCustomToken(getFirebaseAuth(), qaToken);
+        if (cancelled) return;
+        const next = (params.get("next") || "/ledger/?transferIn=1").trim() || "/ledger/";
+        router.replace(next.startsWith("/") ? next : "/ledger/");
+      } catch (err) {
+        if (!cancelled) {
+          setLocalError((err as Error).message || "QA token ใช้ไม่ได้");
+          setBusy(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  useEffect(() => {
+    if (status === "ready") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("qaToken")) return;
+      router.replace("/ledger/");
+    }
   }, [status, router]);
 
   const blocked = status === "unconfigured";
